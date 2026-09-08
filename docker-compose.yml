@@ -1,0 +1,26 @@
+# Local Postgres for development. Production uses Supabase (see .env.example).
+#
+#   docker compose up -d      # start Postgres in the background
+#   docker compose down       # stop it (data is kept in the named volume)
+#   docker compose down -v     # stop it and wipe the data
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: connectsphere-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: connectsphere
+      POSTGRES_PASSWORD: connectsphere
+      POSTGRES_DB: connectsphere
+    ports:
+      - "5432:5432"
+    volumes:
+      - connectsphere-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U connectsphere -d connectsphere"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  connectsphere-db-data:

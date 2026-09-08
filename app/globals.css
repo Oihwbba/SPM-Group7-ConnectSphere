@@ -1,0 +1,113 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * =============================================================================
+ * DESIGN TOKENS — the single source of truth for the visual identity.
+ *
+ * Every colour, radius, shadow and blur used anywhere in the app is defined
+ * here as a CSS variable and surfaced to Tailwind in tailwind.config.ts. To
+ * change the whole look you edit THIS file only; no component holds a
+ * hard-coded colour. A hex value in a component is a code-review rejection.
+ *
+ * A single light theme (no dark mode). The canvas is a light grey with a very
+ * soft lavender/periwinkle wash, so the translucent white cards that frost
+ * over it read as glass rather than flat white.
+ * Values are HSL channels (no `hsl()` wrapper) so Tailwind can apply opacity
+ * modifiers like `bg-card/70`.
+ * =============================================================================
+ */
+
+@layer base {
+  :root {
+    /* Surfaces */
+    --background: 228 26% 95%;
+    --foreground: 226 30% 14%;
+    --card: 0 0% 100%;
+    --card-foreground: 226 30% 14%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 226 30% 14%;
+
+    /* Brand / accent */
+    --primary: 226 68% 56%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 228 20% 92%;
+    --secondary-foreground: 226 30% 22%;
+    --accent: 228 20% 92%;
+    --accent-foreground: 226 30% 22%;
+    --muted: 228 20% 92%;
+    --muted-foreground: 228 12% 46%;
+
+    /* Feedback */
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 152 55% 38%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 40 60% 15%;
+    --info: 210 90% 54%;
+    --info-foreground: 0 0% 100%;
+
+    /* Lines & focus */
+    --border: 228 22% 88%;
+    --input: 228 22% 88%;
+    --ring: 226 68% 56%;
+
+    /* Shape */
+    --radius: 1rem;
+
+    /* Glass effect */
+    --blur-glass: 18px;
+    --shadow-glass: 0 10px 34px -14px hsl(226 40% 30% / 0.18);
+    --shadow-glass-sm: 0 2px 12px -4px hsl(226 40% 30% / 0.12);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings:
+      "rlig" 1,
+      "calt" 1;
+    /* A faint blue/lavender wash on the grey canvas — kept subtle for a clean
+       look, with just enough colour for the very transparent cards to pick up.
+       Fixed so it doesn't scroll with content. */
+    background-image:
+      radial-gradient(
+        85% 75% at 100% 0%,
+        hsl(228 70% 86% / 0.4),
+        transparent 62%
+      ),
+      radial-gradient(
+        80% 80% at 0% 100%,
+        hsl(252 60% 88% / 0.34),
+        transparent 64%
+      ),
+      radial-gradient(
+        100% 80% at 50% 50%,
+        hsl(212 65% 90% / 0.22),
+        transparent 70%
+      );
+    background-attachment: fixed;
+  }
+}
+
+/*
+ * Reusable surface primitives. Components compose these instead of repeating
+ * the frosted-glass recipe. Still token-driven — no colours here.
+ * (The login sphere's styles live in components/auth/animated-sphere.module.css.)
+ */
+@layer components {
+  .glass-panel {
+    @apply border border-white/55 bg-card/25 shadow-glass backdrop-blur-glass backdrop-saturate-150;
+  }
+
+  .glass-panel-sm {
+    @apply border border-white/55 bg-card/30 shadow-glass-sm backdrop-blur-glass backdrop-saturate-150;
+  }
+}

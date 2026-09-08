@@ -1,0 +1,312 @@
+/*
+ * Login sphere. Pure CSS — no WebGL, no library. A slowly rotating translucent
+ * glass sphere with blue and violet light ribbons flowing around and through
+ * it. Several wide, blurred, screen-blended bands orbit at different rates and
+ * slowly morph (scaleY) so they read as fluid holographic streams — some behind
+ * the glass reflection, one passing in front — over a soft cyan-blue glow and
+ * atmospheric bloom. Everything is slow and eased for an elegant, futuristic
+ * (not mechanical) feel. Motion is disabled for prefers-reduced-motion.
+ *
+ * The same idea, scaled down and a touch more solid so it stays visible on the
+ * light header, is exported as `.logo` for the app's brand mark
+ * (see components/app/sphere-logo.tsx).
+ */
+
+.stage {
+  position: relative;
+  display: flex;
+  height: 100%;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: transparent;
+  /* Nudge the centred orb (and its halo) up a little. */
+  padding-bottom: 4rem;
+}
+
+/* Soft cyan-blue atmospheric glow behind the sphere. */
+.halo {
+  position: absolute;
+  width: min(74%, 27rem);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    hsl(206 100% 72% / 0.4),
+    hsl(258 90% 72% / 0.16) 45%,
+    transparent 64%
+  );
+  filter: blur(42px);
+  animation: bloom 9s ease-in-out infinite;
+}
+
+/* The glass sphere: translucent, faint blue tint, glassy edges. */
+.orb {
+  position: relative;
+  width: min(54%, 18rem);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  overflow: hidden;
+  background: radial-gradient(
+    circle at 50% 50%,
+    hsl(214 88% 70% / 0.2),
+    hsl(250 80% 66% / 0.1) 55%,
+    transparent 80%
+  );
+  box-shadow:
+    inset 14px 12px 34px hsl(0 0% 100% / 0.5),
+    inset -16px -18px 48px hsl(232 85% 58% / 0.42),
+    inset 0 0 42px hsl(0 0% 100% / 0.24),
+    0 34px 72px -26px hsl(226 70% 50% / 0.34);
+  animation: float 11s ease-in-out infinite;
+}
+
+/* ---- Flowing light ribbons (all clipped to the sphere) ---------------- */
+.ribbon {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 168%;
+  height: 42%;
+  border-radius: 50%;
+  filter: blur(12px);
+  mix-blend-mode: screen;
+  will-change: transform;
+}
+
+/* Ribbon A — blue into violet, orbiting slowly clockwise (behind). */
+.ribbonA {
+  background: linear-gradient(
+    90deg,
+    transparent 4%,
+    hsl(210 100% 66% / 0.5) 32%,
+    hsl(248 96% 72% / 0.5) 58%,
+    hsl(270 92% 70% / 0.45) 74%,
+    transparent 96%
+  );
+  animation: ribbonA 26s linear infinite;
+}
+
+/* Ribbon B — cyan into blue, orbiting counter-clockwise (behind). */
+.ribbonB {
+  height: 38%;
+  background: linear-gradient(
+    90deg,
+    transparent 6%,
+    hsl(190 100% 74% / 0.42) 30%,
+    hsl(216 100% 66% / 0.48) 58%,
+    transparent 94%
+  );
+  animation: ribbonB 33s linear infinite;
+}
+
+/* Ribbon C — violet into blue, brighter, passing in FRONT of the reflection. */
+.ribbonC {
+  height: 34%;
+  background: linear-gradient(
+    90deg,
+    transparent 8%,
+    hsl(264 95% 74% / 0.42) 34%,
+    hsl(220 100% 70% / 0.4) 62%,
+    transparent 92%
+  );
+  animation: ribbonC 21s linear infinite;
+}
+
+/* Soft blue blobs adding liquid depth between the ribbons. */
+.flow {
+  position: absolute;
+  inset: -22%;
+  border-radius: 50%;
+  background:
+    radial-gradient(
+      30% 34% at 40% 42%,
+      hsl(210 100% 68% / 0.4),
+      transparent 60%
+    ),
+    radial-gradient(
+      34% 30% at 66% 60%,
+      hsl(256 100% 70% / 0.36),
+      transparent 62%
+    );
+  filter: blur(13px);
+  mix-blend-mode: screen;
+  animation: flow 14s ease-in-out infinite alternate;
+}
+
+/* Fixed glass lighting: the bright specular highlight top-left + a small glint. */
+.shade {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background:
+    radial-gradient(
+      circle at 30% 24%,
+      hsl(0 0% 100% / 0.82),
+      transparent 24%
+    ),
+    radial-gradient(
+      circle at 72% 80%,
+      hsl(205 100% 92% / 0.4),
+      transparent 20%
+    );
+}
+
+/* Gentle overall brightness, pulsing with the halo. */
+.bloom {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 46% 42%,
+    hsl(200 100% 94% / 0.3),
+    transparent 66%
+  );
+  mix-blend-mode: screen;
+  animation: bloom 9s ease-in-out infinite;
+}
+
+/* Soft inner glow near the edge (no hard outline). */
+.rim {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  box-shadow: inset 0 0 30px hsl(210 100% 86% / 0.3);
+}
+
+/* ---- Small brand mark (a mini sphere) --------------------------------- */
+.logo {
+  position: relative;
+  border-radius: 50%;
+  overflow: hidden;
+  background: radial-gradient(
+    circle at 34% 28%,
+    hsl(210 48% 92%),
+    hsl(224 36% 76%) 46%,
+    hsl(250 34% 56%) 100%
+  );
+  box-shadow:
+    inset -3px -4px 8px hsl(248 40% 30% / 0.5),
+    inset 3px 3px 9px hsl(0 0% 100% / 0.8),
+    0 2px 8px hsl(224 40% 55% / 0.34);
+}
+.logo::before {
+  content: "";
+  position: absolute;
+  inset: -35%;
+  border-radius: 50%;
+  background:
+    radial-gradient(
+      34% 34% at 42% 44%,
+      hsl(200 100% 82% / 0.55),
+      transparent 60%
+    ),
+    conic-gradient(
+      from 0deg,
+      transparent 0deg,
+      hsl(210 70% 86% / 0.4) 70deg,
+      transparent 150deg,
+      hsl(262 55% 82% / 0.34) 260deg,
+      transparent 340deg
+    );
+  filter: blur(2px);
+  animation: spin 9s linear infinite;
+}
+.logo::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 30% 24%,
+    hsl(0 0% 100% / 0.8),
+    transparent 32%
+  );
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes bloom {
+  0%,
+  100% {
+    opacity: 0.62;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.035);
+  }
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(-1.4%);
+  }
+  50% {
+    transform: translateY(1.4%);
+  }
+}
+
+/* Ribbons: rotate a full turn (seamless) while morphing their width, so they
+   look like bands orbiting a sphere — thin edge-on, wide face-on. */
+@keyframes ribbonA {
+  0% {
+    transform: translate(-50%, -50%) rotate(15deg) scaleY(1);
+  }
+  50% {
+    transform: translate(-50%, -50%) rotate(195deg) scaleY(0.7);
+  }
+  100% {
+    transform: translate(-50%, -50%) rotate(375deg) scaleY(1);
+  }
+}
+@keyframes ribbonB {
+  0% {
+    transform: translate(-50%, -50%) rotate(-25deg) scaleY(0.85);
+  }
+  50% {
+    transform: translate(-50%, -50%) rotate(-205deg) scaleY(1.15);
+  }
+  100% {
+    transform: translate(-50%, -50%) rotate(-385deg) scaleY(0.85);
+  }
+}
+@keyframes ribbonC {
+  0% {
+    transform: translate(-50%, -50%) rotate(60deg) scaleY(0.6);
+  }
+  50% {
+    transform: translate(-50%, -50%) rotate(240deg) scaleY(0.95);
+  }
+  100% {
+    transform: translate(-50%, -50%) rotate(420deg) scaleY(0.6);
+  }
+}
+
+@keyframes flow {
+  0% {
+    transform: translate(-4%, -3%) rotate(0deg) scale(1.05);
+  }
+  100% {
+    transform: translate(4%, 5%) rotate(16deg) scale(0.98);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .halo,
+  .orb,
+  .ribbonA,
+  .ribbonB,
+  .ribbonC,
+  .flow,
+  .bloom,
+  .logo::before {
+    animation: none;
+  }
+}

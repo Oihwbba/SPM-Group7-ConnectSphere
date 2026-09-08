@@ -1,0 +1,51 @@
+# dependencies
+/node_modules
+/.pnp
+.pnp.js
+
+# testing
+/coverage
+/playwright-report
+/test-results
+/blob-report
+/playwright/.cache
+
+# next.js
+/.next/
+/out/
+# NOTE: next-env.d.ts is intentionally committed (not ignored) so that
+# `tsc --noEmit` in CI can resolve Next's ambient types (e.g. CSS imports)
+# without a prior `next build`.
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# local env files
+.env
+.env*.local
+.env.development
+.env.production
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+
+# local dev server log (created when running the app in the background)
+.devserver.log
+
+# prisma
+/prisma/*.db
+
+# Claude Code local settings (per-user)
+.claude/settings.local.json

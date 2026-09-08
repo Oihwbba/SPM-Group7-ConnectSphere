@@ -1,0 +1,274 @@
+// ConnectSphere — data model spine.
+//
+// This is the FOUNDATION only. Each feature developer will add fields to
+// their own entity later; do not add feature-specific columns here without
+// agreeing it with the team, because this file is a shared merge surface.
+//
+// Conventions (enforced in review):
+//   - All datetimes are stored in UTC. Display them via lib/datetime.ts.
+//   - Never hard-delete. State changes are status changes (see the enums).
+//   - Index the foreign keys we actually filter on (see @@index below).
+
+generator client {
+  provider = "prisma-client-js"
+  // Engine-free Prisma: `engineType = "client"` generates a client that
+  // compiles queries in JS/WASM and runs them through a driver adapter (the
+  // pure-JS `pg` driver — see lib/db.ts), so there is NO native Rust query
+  // engine at runtime. This is what lets the app run on Windows-on-ARM (which
+  // has no native Prisma query engine); it is fully cross-platform, so
+  // teammates and CI behave identically.
+  engineType = "client"
+}
+
+datasource db {
+  provider = "postgresql"
+  // Pooled connection used by the running app.
+  url = env("DATABASE_URL")
+  // Direct connection used by `prisma migrate` (see docs/adr/0003 + Supabase
+  // trap). Locally both point at the same database.
+  directUrl = env("DIRECT_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum Role {
+  ORGANISER
+  COORDINATOR
+  VENUE_STAFF
+  TECH_SUPPORT
+  ATTENDEE
+}
+
+enum EventStatus {
+  DRAFT
+  SUBMITTED
+  UNDER_REVIEW
+  APPROVED
+  PLANNING
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+  REJECTED
+}
+
+enum BookingStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum RegistrationStatus {
+  REGISTERED
+  WITHDRAWN
+  CANCELLED
+}
+
+// ---------------------------------------------------------------------------
+// Auth.js adapter models + our User extensions
+// ---------------------------------------------------------------------------
+
+model User {
+  id    String @id @default(cuid())
+  email String @unique
+  name  String
+
+  // Added by us — the default Auth.js schema has no password field. Hashed
+  // with bcrypt in the seed script; never store plaintext.
+  passwordHash String
+
+  role Role @default(ATTENDEE)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Auth.js adapter relations.
+  accounts Account[]
+  sessions Session[]
+
+  // Domain relations. Split into two named relations because a User can be
+  // both the organiser of some events and the coordinator of others.
+  organisedEvents   Event[]        @relation("EventOrganiser")
+  coordinatedEvents Event[]        @relation("EventCoordinator")
+  registrations     Registration[]
+  notifications     Notification[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ---------------------------------------------------------------------------
+// Domain
+// ---------------------------------------------------------------------------
+
+model Event {
+  id          String      @id @default(cuid())
+  name        String
+  description String?
+  status      EventStatus @default(DRAFT)
+
+  // Nullable because a DRAFT event is incomplete by definition — an organiser
+  // saves a request with just a name and fills the rest in before submitting
+  // (see the "Draft Event Requests" core feature). Feature developers should
+  // require these when moving an event out of DRAFT, not at the column level.
+  startAt            DateTime?
+  endAt              DateTime?
+  expectedAttendance Int?
+
+  organiserId   String
+  coordinatorId String? // nullable until a coordinator is assigned
+
+  registrationEnabled  Boolean   @default(false)
+  registrationCapacity Int?
+  registrationOpensAt  DateTime?
+  registrationClosesAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  organiser   User  @relation("EventOrganiser", fields: [organiserId], references: [id])
+  coordinator User? @relation("EventCoordinator", fields: [coordinatorId], references: [id])
+
+  bookings      Booking[]
+  reservations  Reservation[]
+  registrations Registration[]
+
+  @@index([organiserId])
+  @@index([coordinatorId])
+}
+
+model Venue {
+  id         String   @id @default(cuid())
+  name       String
+  location   String
+  capacity   Int
+  facilities String[] // e.g. ["projector", "wheelchair-access"]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  bookings Booking[]
+}
+
+model Booking {
+  id      String @id @default(cuid())
+  eventId String
+  venueId String
+
+  // Times are deliberately denormalised onto the booking rather than always
+  // joined from the event (see docs/adr/0003). If the event date later moves,
+  // this booking is visibly out of sync and can be flagged.
+  startAt DateTime
+  endAt   DateTime
+
+  status BookingStatus @default(PENDING)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  event Event @relation(fields: [eventId], references: [id])
+  venue Venue @relation(fields: [venueId], references: [id])
+
+  @@index([venueId])
+  @@index([eventId])
+}
+
+model Equipment {
+  id            String @id @default(cuid())
+  type          String
+  totalQuantity Int
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  reservations Reservation[]
+}
+
+model Reservation {
+  id          String @id @default(cuid())
+  eventId     String
+  equipmentId String
+  quantity    Int
+
+  // Denormalised times, same rationale as Booking (docs/adr/0003).
+  startAt DateTime
+  endAt   DateTime
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  event     Event     @relation(fields: [eventId], references: [id])
+  equipment Equipment @relation(fields: [equipmentId], references: [id])
+
+  @@index([eventId])
+  @@index([equipmentId])
+}
+
+model Registration {
+  id      String             @id @default(cuid())
+  eventId String
+  userId  String
+  status  RegistrationStatus @default(REGISTERED)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  event Event @relation(fields: [eventId], references: [id])
+  user  User  @relation(fields: [userId], references: [id])
+
+  // A user can only hold one registration row per event. Re-registering after
+  // withdrawing flips the status back rather than inserting a second row.
+  @@unique([eventId, userId])
+  @@index([userId])
+}
+
+model Notification {
+  id      String    @id @default(cuid())
+  userId  String
+  type    String
+  message String
+  link    String?
+  readAt  DateTime? // null = unread
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}

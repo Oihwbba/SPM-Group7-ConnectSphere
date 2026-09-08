@@ -1,0 +1,89 @@
+name: CI
+
+# Runs on every push and pull request. The pipeline must be green from the
+# first commit — its date is graded evidence of continuous integration.
+on:
+  push:
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    # Postgres for the whole job: migrations, seed, and the Playwright run all
+    # talk to this service container.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: connectsphere
+          POSTGRES_PASSWORD: connectsphere
+          POSTGRES_DB: connectsphere
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U connectsphere -d connectsphere"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      # Local Postgres needs no pooler, so both URLs point at the same service.
+      DATABASE_URL: postgresql://connectsphere:connectsphere@localhost:5432/connectsphere?schema=public
+      DIRECT_URL: postgresql://connectsphere:connectsphere@localhost:5432/connectsphere?schema=public
+      # A fixed secret is fine for CI — no real users exist here.
+      AUTH_SECRET: ci-not-a-real-secret-please-change-in-prod
+      AUTH_URL: http://localhost:3000
+      AUTH_TRUST_HOST: "true"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      # `npm ci` runs the postinstall `prisma generate`, so the client is ready.
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Apply database migrations
+        run: npm run db:deploy
+
+      - name: Seed the database
+        run: npm run db:seed
+
+      - name: Type-check
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Unit + integration tests (with coverage)
+        run: npm run test:coverage
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage
+          path: coverage/
+          if-no-files-found: warn
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      # playwright.config.ts builds and starts the app itself via `webServer`.
+      - name: End-to-end tests
+        run: npm run test:e2e
+
+      - name: Upload Playwright report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          if-no-files-found: warn
