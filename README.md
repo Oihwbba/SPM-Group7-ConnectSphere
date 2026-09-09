@@ -299,7 +299,16 @@ docs/
   - the transaction-mode pooler (port `6543`, `?pgbouncer=true`) silently
     breaks the prepared statements the `pg` driver adapter relies on.
   Session mode supports migrations and app traffic identically.
-- Set `AUTH_SECRET`, and `AUTH_URL` to the deployed URL.
+- Production needs exactly three variables: `DATABASE_URL`, `DIRECT_URL` and
+  `AUTH_SECRET`. **Paste them without surrounding quotes** — the quotes in
+  `.env.example` are dotenv syntax, and Vercel stores them literally.
+- Do **not** set `AUTH_URL` in production. Preview URLs change per deployment,
+  and a fixed value sends callbacks to the wrong host; the app reads the host
+  from the request instead.
+- Do **not** set `AUTH_TRUST_HOST` either — it lives in code as
+  `trustHost: true` (`auth.config.ts`) so it cannot be forgotten or mis-quoted.
+- After changing any environment variable you must **redeploy**; a running
+  deployment keeps the values it was built with.
 - Deploy migrations with `npm run db:deploy` (`prisma migrate deploy`) —
   never `db:reset` against the shared database.
 - Supabase runs Postgres 17 and permits `CREATE EXTENSION btree_gist`, so the
