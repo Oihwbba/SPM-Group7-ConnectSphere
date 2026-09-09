@@ -23,7 +23,11 @@ declare module "next-auth" {
   }
 }
 
-declare module "next-auth/jwt" {
+// Augment "@auth/core/jwt", NOT "next-auth/jwt". In NextAuth v5 the latter is
+// a bare `export * from "@auth/core/jwt"` and declares no `JWT` of its own, so
+// augmenting it silently creates a SECOND, unrelated interface: the real `JWT`
+// extends `Record<string, unknown>`, and `token.id` stays `unknown`.
+declare module "@auth/core/jwt" {
   interface JWT {
     id: string;
     role: Role;
