@@ -38,13 +38,18 @@ export function UserMenu({
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
-          className="h-10 gap-2 px-2"
+          className="h-auto gap-2 px-2 py-1.5"
           aria-label="Open user menu"
         >
-          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary ring-1 ring-inset ring-primary/20">
+          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
             {initials}
           </span>
-          <span className="hidden text-sm font-medium sm:inline">{name}</span>
+          <span className="hidden flex-col items-start leading-tight sm:flex">
+            <span className="text-sm font-medium">{name}</span>
+            <span className="text-xs font-normal text-primary">
+              {roleLabel}
+            </span>
+          </span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
