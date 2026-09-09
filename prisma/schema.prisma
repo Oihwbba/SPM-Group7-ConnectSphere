@@ -258,7 +258,7 @@ model Event {
   // (SCRUM-39) and the suitability check (SCRUM-40/49); the free-text fields
   // carry everything those two cannot express.
   venueRequirements     String?
-  requiredFacilities    String[]
+  requiredFacilities    String[] @default([])
   accessibilityNeeds    String?
   preferredLayout       String?
   equipmentRequirements String?
@@ -352,9 +352,9 @@ model Venue {
   name                 String
   location             String
   capacity             Int
-  facilities           String[] // e.g. ["projector", "sound-system"]
-  accessibilityFeatures String[] // e.g. ["wheelchair-access", "hearing-loop"]
-  supportedLayouts     String[] // e.g. ["theatre", "banquet", "classroom"]
+  facilities           String[] @default([]) // e.g. ["projector", "sound-system"]
+  accessibilityFeatures String[] @default([]) // e.g. ["wheelchair-access", "hearing-loop"]
+  supportedLayouts     String[] @default([]) // e.g. ["theatre", "banquet", "classroom"]
   operatingHours       String?
   notes                String?
 
@@ -416,7 +416,7 @@ model Booking {
   // SCRUM-50: "Request captures venue, date/time, expected attendance,
   // required facilities/layout, and other relevant event details."
   requestedAttendance Int?
-  requiredFacilities  String[]
+  requiredFacilities  String[] @default([])
   requestedLayout     String?
   requestNotes        String?
 
