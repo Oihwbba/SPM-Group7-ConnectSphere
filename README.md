@@ -192,6 +192,7 @@ transaction. **Do not remove those locks:**
 | Command | What it does |
 |---|---|
 | `npm run dev` | Start the dev server |
+| **`npm run verify`** | **Run before every push** — typecheck + lint + tests, the checks CI fails on |
 | `npm run build` / `npm run start` | Production build / serve |
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm run lint` | ESLint (Next + Prettier config) |
