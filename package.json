@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
@@ -25,7 +25,7 @@
     "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
-    "@auth/prisma-adapter": "2.7.4",
+    "@auth/prisma-adapter": "2.11.3",
     "@hookform/resolvers": "3.10.0",
     "@prisma/adapter-pg": "6.19.3",
     "@prisma/client": "6.19.3",
@@ -38,11 +38,11 @@
     "class-variance-authority": "0.7.1",
     "clsx": "2.1.1",
     "lucide-react": "0.469.0",
-    "next": "15.1.6",
-    "next-auth": "5.0.0-beta.25",
+    "next": "16.3.4",
+    "next-auth": "5.0.0-beta.32",
     "pg": "8.13.1",
-    "react": "19.0.0",
-    "react-dom": "19.0.0",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
     "react-hook-form": "7.54.2",
     "sonner": "1.7.1",
     "tailwind-merge": "2.6.0",
@@ -50,18 +50,18 @@
     "zod": "3.24.1"
   },
   "devDependencies": {
-    "@playwright/test": "1.49.1",
+    "@playwright/test": "1.63.0",
     "@types/bcryptjs": "2.4.6",
     "@types/node": "22.10.5",
     "@types/pg": "8.23.1",
-    "@types/react": "19.0.7",
-    "@types/react-dom": "19.0.3",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.7",
     "@vitejs/plugin-react": "4.3.4",
     "@vitest/coverage-v8": "2.1.8",
     "autoprefixer": "10.4.20",
-    "eslint": "8.57.1",
-    "eslint-config-next": "15.1.6",
-    "eslint-config-prettier": "9.1.0",
+    "eslint": "9.39.5",
+    "eslint-config-next": "16.3.4",
+    "eslint-config-prettier": "10.1.8",
     "postcss": "8.4.49",
     "prettier": "3.4.2",
     "prettier-plugin-tailwindcss": "0.6.9",
@@ -73,6 +73,10 @@
     "vitest": "2.1.8"
   },
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=20.9.0"
+  },
+  "overrides": {
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.7"
   }
 }

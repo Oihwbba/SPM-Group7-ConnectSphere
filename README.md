@@ -27,7 +27,7 @@ no local database needed.
 
 ### Prerequisites
 
-- **Node.js 20+** and npm
+- **Node.js 20.9+** and npm (required by Next.js 16)
 - **The Supabase database password** — from the team lead, or the Supabase
   dashboard (Project Settings → Database)
 - **Docker Desktop** — *optional*, only for the offline fallback below
@@ -236,13 +236,15 @@ README.md                     Run instructions
 docker-compose.yml            Local Postgres — offline fallback only
 .github/workflows/ci.yml      CI: typecheck, lint, migrate, seed, test, e2e
 package.json                  Pinned dependencies (npm's requirements.txt)
+eslint.config.mjs             ESLint flat config (Next 16 removed `next lint`)
+proxy.ts                      Auth gate for every protected route (was middleware.ts)
 prisma/
   schema.prisma               The full Release-1 data model
   migrations/                 Ordered, never rewritten — constraints live here
   seed.ts                     Idempotent demo data
 app/
   (auth)/login/               Login page with the animated sphere
-  (app)/                      Everything behind auth (middleware-protected)
+  (app)/                      Everything behind auth (protected by proxy.ts)
     layout.tsx                Shell: header, role-based nav, user menu
     page.tsx                  Redirects each role to its landing page
     events/                   ⭐ REFERENCE FEATURE — SCRUM-6 event lifecycle

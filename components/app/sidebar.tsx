@@ -46,9 +46,15 @@ export function Sidebar({ role }: { role: Role }) {
   const [collapsed, setCollapsed] = useState(true);
   const pathname = usePathname();
 
+  // Restore the remembered choice after mount. This cannot move into the
+  // useState initialiser: the server has no localStorage, so it would render
+  // a different value than the client and cause a hydration mismatch.
+  // Reading it here — once, on mount — is the trade-off, and the new
+  // react-hooks/set-state-in-effect rule is suppressed for exactly this line.
   useEffect(() => {
     const saved = localStorage.getItem("sidebar-collapsed");
     if (saved !== null) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- syncing from an external store (localStorage) on mount
       setCollapsed(saved === "true");
     }
   }, []);

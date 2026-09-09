@@ -41,9 +41,12 @@ The Prisma adapter is still installed, as the brief requires, and manages the
 
 ## Consequences
 
-- Sessions are stateless: no session table reads on every request, and the
-  Edge middleware can validate a request by decoding the cookie without a
-  database call.
+- Sessions are stateless: no session table reads on every request, so the
+  proxy can validate a request by decoding the cookie without a database call.
+  (This was written when the entry point was Edge middleware. Next.js 16
+  renamed that convention to `proxy.ts`, which always runs on the Node.js
+  runtime — the argument is unchanged, and `auth.config.ts` stays free of
+  Prisma and bcrypt so the proxy remains cheap.)
 - `role` lives in the token, so changing a user's role only takes effect on
   their next sign-in. Acceptable for this system; noted so nobody is surprised.
 - Every server action and page can trust `session.user.role` as a typed value.

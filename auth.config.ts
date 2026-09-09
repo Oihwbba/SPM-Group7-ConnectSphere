@@ -1,4 +1,3 @@
-import type { Role } from "@prisma/client";
 import type { NextAuthConfig } from "next-auth";
 
 /**
@@ -60,19 +59,9 @@ export const authConfig = {
      * components and actions can read `session.user.role`.
      */
     session({ session, token }) {
-      // `token` is typed by next-auth's OWN copy of @auth/core: next-auth pins
-      // 0.37.2 while @auth/prisma-adapter pins 0.37.4, so npm installs two
-      // copies and the `JWT` augmentation in types/next-auth.d.ts can only bind
-      // to the hoisted one. This `token` therefore keeps @auth/core's index
-      // signature (`Record<string, unknown>`), which makes every read `unknown`.
-      //
-      // So narrow here rather than cast blindly. A malformed token leaves the
-      // field unset instead of writing `undefined` in as if it were a real id.
-      if (typeof token.id === "string") {
+      if (token) {
         session.user.id = token.id;
-      }
-      if (typeof token.role === "string") {
-        session.user.role = token.role as Role;
+        session.user.role = token.role;
       }
       return session;
     },
