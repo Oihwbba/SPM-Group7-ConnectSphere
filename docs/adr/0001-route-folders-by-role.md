@@ -1,5 +1,10 @@
 # ADR 0001 — Partition route folders by role
 
+> **Status: superseded on 2026-09-09 by the addendum at the bottom of this
+> file.** Routes are now partitioned by *domain*, not by role. The Context and
+> Decision below record the original reasoning; read the addendum for what the
+> repository actually does today.
+
 ## Context
 
 Five developers build features on this codebase in parallel over four
@@ -50,3 +55,57 @@ and the "no shared `<DataTable>`" rule in CONTRIBUTING.
   not pre-emptively.
 - The folder tree doubles as a map of who owns what, which helps in the oral
   exam and in code review.
+
+---
+
+## Addendum (2026-09-09) — superseded by domain-first folders
+
+### What changed
+
+Route folders are now named for the **domain**, not the role:
+
+```
+events    venues    bookings    equipment    registrations    notifications
+```
+
+A route that several roles use is one folder with one page; that page
+dispatches on `session.user.role` to decide which view to render.
+`app/(app)/events/page.tsx` is the worked example: Organisers get their own
+events table, Coordinators get the review queue, Attendees get the browse
+view.
+
+### Why
+
+Two reasons, in order of weight:
+
+1. **The role split fragmented single features.** "Event request lifecycle"
+   (SCRUM-6) is one feature that spans Organiser, Coordinator and Attendee
+   screens. Under role folders its status transitions, queries and markup were
+   spread across three sibling folders with no single place to read the
+   lifecycle — the thing the marker asks us to explain.
+2. **The conflict-avoidance argument was weaker than it looked.** Ownership
+   was already drifting away from folders, and the files five people actually
+   contend over are the shared ones — `schema.prisma`, `lib/auth/can.ts`,
+   `lib/nav.ts` — which role folders never protected.
+
+This directly reverses the "single `events` area" option rejected above. That
+rejection assumed sharing a folder means sharing a *page*; it does not. The
+role dispatch keeps the permissions, queries and screens as separate as before
+— they are separate components in one file, or separate files in one folder.
+
+### What did NOT change
+
+Authorisation. It never lived in the folder tree: `lib/auth/can.ts` is still
+the single gate (ADR 0004), and every page still calls `requireSession()` and
+checks the role before reading data. Moving folders changed URLs, not who can
+see what.
+
+### Consequences
+
+- A feature is now readable end to end in one folder, which is how the
+  backlog epics are written and how we have to explain them.
+- Two developers working the same domain now share a folder, so they
+  coordinate on one page file instead of merging cleanly in isolation. This is
+  a real cost of the change, accepted deliberately.
+- URLs shortened: `/organiser/events` → `/events`, `/venue-staff/bookings` →
+  `/bookings`, and so on. Any external bookmark to an old URL 404s.

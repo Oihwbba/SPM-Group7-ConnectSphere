@@ -10,8 +10,6 @@ import {
   Building2,
   CalendarCheck,
   CalendarDays,
-  CalendarSearch,
-  ClipboardCheck,
   LayoutGrid,
   Ticket,
   Wrench,
@@ -25,13 +23,11 @@ import { cn } from "@/lib/utils";
 // Icons are a presentation detail attached here on the client, keyed by route.
 // (lib/nav.ts stays string-only so it's safe to import from server components.)
 const ICON_BY_HREF: Record<string, LucideIcon> = {
-  "/organiser/events": CalendarDays,
-  "/coordinator/events": ClipboardCheck,
-  "/coordinator/venues": Building2,
-  "/venue-staff/bookings": CalendarCheck,
-  "/tech-support/equipment": Wrench,
-  "/attendee/events": CalendarSearch,
-  "/attendee/registrations": Ticket,
+  "/events": CalendarDays,
+  "/venues": Building2,
+  "/bookings": CalendarCheck,
+  "/equipment": Wrench,
+  "/registrations": Ticket,
   "/notifications": Bell,
 };
 

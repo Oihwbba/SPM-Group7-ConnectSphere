@@ -1,10 +1,10 @@
-import type { Role } from "@prisma/client";
 import { CalendarPlus } from "lucide-react";
 
 import { prisma } from "@/lib/db";
 import { requireSession } from "@/lib/auth/guard";
 import { formatDate, formatDateTime } from "@/lib/datetime";
 import { Forbidden } from "@/components/app/forbidden";
+import { PagePlaceholder } from "@/components/app/page-placeholder";
 import { StatusBadge } from "@/components/events/status-badge";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -17,20 +17,47 @@ import {
 } from "@/components/ui/table";
 import { CreateEventDialog } from "./create-event-dialog";
 
-// The reference feature. Only Organisers reach it; the query below is scoped
-// to the signed-in organiser, so an Organiser can never see another's events.
-const ALLOWED_ROLES: Role[] = ["ORGANISER"];
-
-export default async function OrganiserEventsPage() {
+// One route, three role views (the domain-first layout — see ADR 0001's
+// addendum). Every role touches "events"; what differs is the view, so the
+// role dispatch lives here and the authorisation itself stays in
+// lib/auth/can.ts (ADR 0004).
+export default async function EventsPage() {
   const session = await requireSession();
-  if (!ALLOWED_ROLES.includes(session.user.role)) {
-    return <Forbidden />;
+
+  switch (session.user.role) {
+    case "ORGANISER":
+      return <OrganiserEvents organiserId={session.user.id} />;
+    case "COORDINATOR":
+      return (
+        <PagePlaceholder
+          title="Event Review"
+          description="Review submitted event requests, request changes, approve or reject."
+          scrumId="SCRUM-12"
+          owner="Jin Hong"
+        />
+      );
+    case "ATTENDEE":
+      return (
+        <PagePlaceholder
+          title="Browse Events"
+          description="Discover events open for registration and sign up to attend."
+          scrumId="SCRUM-41"
+          owner="Caylern"
+        />
+      );
+    default:
+      return <Forbidden />;
   }
+}
+
+/** The reference feature. Only Organisers reach it; the query below is scoped
+ * to the signed-in organiser, so an Organiser can never see another's events. */
+async function OrganiserEvents({ organiserId }: { organiserId: string }) {
 
   // RELATIONSHIP enforced in the query: an organiser only ever loads their own
   // rows. This is the read-side counterpart to `can()`'s relationship check.
   const events = await prisma.event.findMany({
-    where: { organiserId: session.user.id },
+    where: { organiserId },
     orderBy: { createdAt: "desc" },
   });
 

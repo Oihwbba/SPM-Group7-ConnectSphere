@@ -3,7 +3,7 @@ import { z } from "zod";
 /**
  * Zod schemas for the Event entity live here, beside the entity, and are
  * imported by BOTH the form and the server action so validation is written
- * once (see the reference implementation in app/(app)/organiser/events).
+ * once (see the reference implementation in app/(app)/events).
  *
  * This is the foundation's only Event schema. Feature developers add more
  * (submitEventSchema, updateEventSchema, ...) here as they build.

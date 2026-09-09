@@ -4,7 +4,7 @@ import type { Role } from "@prisma/client";
 
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
-import { createDraftEvent } from "./actions";
+import { createDraftEvent } from "@/app/(app)/events/actions";
 
 // The action reaches out to the session and the database; both are mocked so
 // this is a fast unit test that never opens a connection. We assert on the

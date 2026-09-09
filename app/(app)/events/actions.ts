@@ -57,7 +57,7 @@ export async function createDraftEvent(
     });
 
     // Refresh the list this action feeds.
-    revalidatePath("/organiser/events");
+    revalidatePath("/events");
 
     // 5. Success.
     return ok({ id: event.id });

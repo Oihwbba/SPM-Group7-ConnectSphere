@@ -5,9 +5,9 @@ import { Card, CardContent } from "@/components/ui/card";
 
 /**
  * The "Coming soon" screen every not-yet-built feature route renders. It names
- * the backlog item and its owner so the folder-per-developer split is visible
- * at a glance. When a developer builds their feature, they replace this with a
- * real page copied from the organiser/events reference.
+ * the backlog item and its owner, so who is building what is visible at a
+ * glance. When a developer builds their feature, they replace this with a real
+ * page copied from the /events reference (app/(app)/events).
  */
 export function PagePlaceholder({
   title,

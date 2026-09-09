@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 
-import { can, type SessionUser } from "./can";
+import { can, type SessionUser } from "@/lib/auth/can";
 
 // Pure unit test — no mocks, no database. `can()` is the security core, so it
 // is worth pinning both of the checks it makes: role and relationship.

@@ -4,9 +4,9 @@ import { requireSession } from "@/lib/auth/guard";
 import { Forbidden } from "@/components/app/forbidden";
 import { PagePlaceholder } from "@/components/app/page-placeholder";
 
-const ALLOWED_ROLES: Role[] = ["TECH_SUPPORT"];
+const ALLOWED_ROLES: Role[] = ["ATTENDEE"];
 
-export default async function TechSupportEquipmentPage() {
+export default async function RegistrationsPage() {
   const session = await requireSession();
   if (!ALLOWED_ROLES.includes(session.user.role)) {
     return <Forbidden />;
@@ -14,10 +14,10 @@ export default async function TechSupportEquipmentPage() {
 
   return (
     <PagePlaceholder
-      title="Equipment"
-      description="Review equipment requests, check availability and manage reservations."
-      scrumId="SCRUM-31"
-      owner="Felicia"
+      title="My Registrations"
+      description="View your event registrations and withdraw where needed."
+      scrumId="SCRUM-42"
+      owner="Caylern"
     />
   );
 }

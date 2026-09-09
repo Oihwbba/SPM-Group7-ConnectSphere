@@ -16,7 +16,7 @@ test("organiser signs in, views their events, and creates a draft", async ({
   await page.getByRole("button", { name: "Sign in" }).click();
 
   // Landed on the organiser's events page.
-  await page.waitForURL("**/organiser/events");
+  await page.waitForURL("**/events");
   await expect(
     page.getByRole("heading", { name: "My Events" }),
   ).toBeVisible();

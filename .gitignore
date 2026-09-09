@@ -49,3 +49,6 @@ yarn-error.log*
 
 # Claude Code local settings (per-user)
 .claude/settings.local.json
+
+# Playwright MCP scratch output (screenshots, snapshots)
+.playwright-mcp/

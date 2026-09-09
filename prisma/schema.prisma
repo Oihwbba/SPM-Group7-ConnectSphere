@@ -1,13 +1,23 @@
-// ConnectSphere — data model spine.
+// ConnectSphere — complete Release-1 data model.
 //
-// This is the FOUNDATION only. Each feature developer will add fields to
-// their own entity later; do not add feature-specific columns here without
-// agreeing it with the team, because this file is a shared merge surface.
+// Every model and field below traces to an acceptance criterion in the Jira
+// backlog (project SCRUM). The story key is named in the comment above each
+// block; if you cannot find the story that justifies a column, it should not
+// be here.
 //
 // Conventions (enforced in review):
-//   - All datetimes are stored in UTC. Display them via lib/datetime.ts.
+//   - All datetimes are stored in UTC as `timestamp(3)`. Display them via
+//     lib/datetime.ts. Because every value is UTC, Postgres range types over
+//     these columns use `tsrange`, not `tstzrange` (see the constraints
+//     migration).
 //   - Never hard-delete. State changes are status changes (see the enums).
-//   - Index the foreign keys we actually filter on (see @@index below).
+//   - Two periods that touch at an endpoint DO NOT overlap. This is the
+//     project-wide convention (SCRUM-29/30/31/36/38/50/53) and it is enforced
+//     in the database by `[)` half-open ranges.
+//   - Index the foreign keys we actually filter on.
+//   - Rules that protect data integrity live in the DATABASE, not only in
+//     application code. Constraints Prisma cannot express are hand-written in
+//     prisma/migrations/*_domain_constraints/migration.sql.
 
 generator client {
   provider = "prisma-client-js"
@@ -33,6 +43,7 @@ datasource db {
 // Enums
 // ---------------------------------------------------------------------------
 
+/// SCRUM-65/66/67 — the five roles named in the customer briefing.
 enum Role {
   ORGANISER
   COORDINATOR
@@ -41,6 +52,10 @@ enum Role {
   ATTENDEE
 }
 
+/// SCRUM-23/24 — the nine agreed status values, and only these nine.
+/// SCRUM-18's "awaiting clarification" is deliberately NOT a tenth value:
+/// SCRUM-23 fixes the list at nine, so an open clarification is modelled as a
+/// ClarificationRequest row while the event stays UNDER_REVIEW.
 enum EventStatus {
   DRAFT
   SUBMITTED
@@ -53,6 +68,7 @@ enum EventStatus {
   REJECTED
 }
 
+/// SCRUM-50/53 — venue booking request lifecycle.
 enum BookingStatus {
   PENDING
   APPROVED
@@ -60,16 +76,79 @@ enum BookingStatus {
   CANCELLED
 }
 
+/// SCRUM-76 — "Status values cover at least registered, withdrawn and
+/// cancelled." WITHDRAWN is the Attendee's own action (SCRUM-77); CANCELLED
+/// is what happens to their registration when ConnectSphere cancels the event
+/// (SCRUM-82).
 enum RegistrationStatus {
   REGISTERED
   WITHDRAWN
   CANCELLED
 }
 
+/// SCRUM-18 — the clarification loop between Coordinator and Organiser.
+enum ClarificationStatus {
+  OPEN
+  ANSWERED
+  CLOSED
+}
+
+/// SCRUM-27/28 — "saved with the status Pending Review", then "In Review" to
+/// "Approved" or "Rejected".
+enum EquipmentRequestStatus {
+  PENDING_REVIEW
+  IN_REVIEW
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+/// SCRUM-31/32/33 — a reservation is CONFIRMED on creation and can be
+/// cancelled, which returns its quantity to the pool.
+enum ReservationStatus {
+  CONFIRMED
+  CANCELLED
+}
+
+/// SCRUM-29/30 ("Under Maintenance" or "Damaged") and SCRUM-36/37
+/// (non-booking venue unavailability, e.g. maintenance).
+enum UnavailabilityReason {
+  MAINTENANCE
+  DAMAGED
+  CLOSURE
+  OTHER
+}
+
+/// SCRUM-41/43 — change request lifecycle.
+enum ChangeRequestStatus {
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
+}
+
+/// SCRUM-45/46/47/54/56/57/85 — one enum value per notification-producing
+/// story, so every notification in the system has a named, traceable trigger.
+enum NotificationType {
+  EVENT_STATUS_CHANGED // SCRUM-45
+  COORDINATOR_ASSIGNED // SCRUM-46
+  COORDINATOR_REASSIGNED // SCRUM-57
+  CLARIFICATION_REQUESTED // SCRUM-56
+  BOOKING_DECISION // SCRUM-54
+  EQUIPMENT_REQUEST_UPDATED // SCRUM-28
+  RESERVATION_CANCELLED // SCRUM-32
+  CHANGE_REQUEST_OUTCOME // SCRUM-47
+  REGISTRATION_CONFIRMED // SCRUM-85
+  REGISTERED_EVENT_CHANGED // SCRUM-85
+  REGISTERED_EVENT_CANCELLED // SCRUM-85
+}
+
 // ---------------------------------------------------------------------------
 // Auth.js adapter models + our User extensions
 // ---------------------------------------------------------------------------
 
+/// SCRUM-65 — sign in. Account creation is deliberately out of scope (open
+/// customer question: are Attendees self-registered or invited?), so users
+/// arrive through the seed script.
 model User {
   id    String @id @default(cuid())
   email String @unique
@@ -88,12 +167,28 @@ model User {
   accounts Account[]
   sessions Session[]
 
-  // Domain relations. Split into two named relations because a User can be
-  // both the organiser of some events and the coordinator of others.
-  organisedEvents   Event[]        @relation("EventOrganiser")
-  coordinatedEvents Event[]        @relation("EventCoordinator")
-  registrations     Registration[]
-  notifications     Notification[]
+  // Domain relations. Each is a named relation because a User can appear on
+  // the same model in more than one capacity (organiser vs coordinator,
+  // requester vs decider).
+  organisedEvents   Event[] @relation("EventOrganiser")
+  coordinatedEvents Event[] @relation("EventCoordinator")
+  decidedEvents     Event[] @relation("EventDecidedBy")
+  cancelledEvents   Event[] @relation("EventCancelledBy")
+
+  registrations Registration[]
+  notifications Notification[]
+
+  clarificationRequests   ClarificationRequest[] @relation("ClarificationRequestedBy")
+  requestedBookings       Booking[]              @relation("BookingRequestedBy")
+  decidedBookings         Booking[]              @relation("BookingDecidedBy")
+  equipmentRequests       EquipmentRequest[]     @relation("EquipmentRequestedBy")
+  equipmentRequestUpdates EquipmentRequestUpdate[]
+  reservations            Reservation[]          @relation("ReservationReservedBy")
+  requestedChanges        EventChangeRequest[]   @relation("ChangeRequestedBy")
+  decidedChanges          EventChangeRequest[]   @relation("ChangeDecidedBy")
+  venueUnavailability     VenueUnavailability[]
+  equipmentUnavailability EquipmentUnavailability[]
+  auditLogs               AuditLog[]
 }
 
 model Account {
@@ -133,26 +228,67 @@ model VerificationToken {
 }
 
 // ---------------------------------------------------------------------------
-// Domain
+// Event request lifecycle (epic SCRUM-6)
 // ---------------------------------------------------------------------------
 
+/// SCRUM-13 (the request form), SCRUM-14 (submit), SCRUM-15/16 (drafts),
+/// SCRUM-19 (approve/reject with reason), SCRUM-20/21 (coordinator),
+/// SCRUM-23/24 (status), SCRUM-81 (planning → confirmed), SCRUM-82 (cancel),
+/// SCRUM-83 (complete).
 model Event {
   id          String      @id @default(cuid())
   name        String
+  /// SCRUM-13: "Form captures event name, purpose, description, ..."
+  purpose     String?
   description String?
   status      EventStatus @default(DRAFT)
 
   // Nullable because a DRAFT event is incomplete by definition — an organiser
   // saves a request with just a name and fills the rest in before submitting
-  // (see the "Draft Event Requests" core feature). Feature developers should
-  // require these when moving an event out of DRAFT, not at the column level.
+  // (SCRUM-15). Completeness is enforced at the submit transition (SCRUM-14),
+  // not at the column level. The database still refuses impossible values:
+  // see the CHECK constraints in the domain-constraints migration.
   startAt            DateTime?
   endAt              DateTime?
   expectedAttendance Int?
 
-  organiserId   String
-  coordinatorId String? // nullable until a coordinator is assigned
+  // SCRUM-13: "Form captures venue requirements, accessibility needs,
+  // equipment requirements, and registration needs (where relevant)."
+  // `requiredFacilities` is the structured half, consumed by the venue filter
+  // (SCRUM-39) and the suitability check (SCRUM-40/49); the free-text fields
+  // carry everything those two cannot express.
+  venueRequirements     String?
+  requiredFacilities    String[]
+  accessibilityNeeds    String?
+  preferredLayout       String?
+  equipmentRequirements String?
+  registrationNotes     String?
 
+  organiserId   String
+  coordinatorId String? // SCRUM-20: null until a coordinator is assigned
+
+  // SCRUM-14 — when the request left DRAFT. Also how a repeat submission is
+  // detected as a no-op.
+  submittedAt DateTime?
+
+  // SCRUM-19 — "a reason is recorded, and the Organiser can see both the
+  // rejection and the reason".
+  decidedAt      DateTime?
+  decidedById    String?
+  decisionReason String?
+
+  // SCRUM-82 — "A cancellation reason can be recorded and is visible to
+  // anyone who could already view the event."
+  cancelledAt        DateTime?
+  cancelledById      String?
+  cancellationReason String?
+
+  /// SCRUM-83 — set when the event passes its end instant. Its presence is
+  /// what makes a repeat completion check a no-op.
+  completedAt DateTime?
+
+  // SCRUM-72/73/74/75 — registration is per-event and explicitly NOT assumed
+  // to equal the venue's capacity (SCRUM-74's last criterion).
   registrationEnabled  Boolean   @default(false)
   registrationCapacity Int?
   registrationOpensAt  DateTime?
@@ -163,28 +299,107 @@ model Event {
 
   organiser   User  @relation("EventOrganiser", fields: [organiserId], references: [id])
   coordinator User? @relation("EventCoordinator", fields: [coordinatorId], references: [id])
+  decidedBy   User? @relation("EventDecidedBy", fields: [decidedById], references: [id])
+  cancelledBy User? @relation("EventCancelledBy", fields: [cancelledById], references: [id])
 
-  bookings      Booking[]
-  reservations  Reservation[]
-  registrations Registration[]
+  bookings              Booking[]
+  reservations          Reservation[]
+  registrations         Registration[]
+  equipmentRequests     EquipmentRequest[]
+  clarificationRequests ClarificationRequest[]
+  changeRequests        EventChangeRequest[]
+  notifications         Notification[]
 
   @@index([organiserId])
   @@index([coordinatorId])
+  @@index([status])
 }
 
-model Venue {
-  id         String   @id @default(cuid())
-  name       String
-  location   String
-  capacity   Int
-  facilities String[] // e.g. ["projector", "wheelchair-access"]
+/// SCRUM-18 — "Organiser can see exactly what the Coordinator is asking for,
+/// and can respond or amend their request accordingly."
+/// Modelled as its own row rather than a tenth EventStatus value, because
+/// SCRUM-23 fixes the status list at nine.
+model ClarificationRequest {
+  id      String @id @default(cuid())
+  eventId String
+
+  requestedById String
+  message       String
+
+  status      ClarificationStatus @default(OPEN)
+  response    String?
+  respondedAt DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  bookings Booking[]
+  event       Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  requestedBy User  @relation("ClarificationRequestedBy", fields: [requestedById], references: [id])
+
+  @@index([eventId])
+  @@index([status])
 }
 
+// ---------------------------------------------------------------------------
+// Venue management (epic SCRUM-7)
+// ---------------------------------------------------------------------------
+
+/// SCRUM-34 — "displays location, capacity, facilities, accessibility info,
+/// supported layouts, and operating information."
+/// SCRUM-35 — Venue Staff maintain these records.
+model Venue {
+  id                   String   @id @default(cuid())
+  name                 String
+  location             String
+  capacity             Int
+  facilities           String[] // e.g. ["projector", "sound-system"]
+  accessibilityFeatures String[] // e.g. ["wheelchair-access", "hearing-loop"]
+  supportedLayouts     String[] // e.g. ["theatre", "banquet", "classroom"]
+  operatingHours       String?
+  notes                String?
+
+  /// Venues are retired, never deleted — a withdrawn venue must still be
+  /// readable from the historic bookings that reference it.
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  bookings       Booking[]
+  unavailability VenueUnavailability[]
+}
+
+/// SCRUM-36 — "Given other unavailability has been recorded (e.g.
+/// maintenance) ... it appears as unavailable and is visually distinguishable
+/// from a booking."
+/// SCRUM-37 — "Venue Staff can record non-booking unavailability directly."
+model VenueUnavailability {
+  id      String @id @default(cuid())
+  venueId String
+
+  startAt DateTime
+  endAt   DateTime
+  reason  UnavailabilityReason @default(MAINTENANCE)
+  note    String?
+
+  recordedById String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  venue      Venue @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  recordedBy User  @relation(fields: [recordedById], references: [id])
+
+  @@index([venueId])
+}
+
+/// SCRUM-50 (submit), SCRUM-51 (track), SCRUM-52 (review queue),
+/// SCRUM-53 (approve/reject with a required reason), SCRUM-54 (notify).
+///
+/// The database — not the application — guarantees a venue is never
+/// double-booked: an EXCLUDE constraint over `tsrange(startAt, endAt, '[)')`
+/// rejects a second APPROVED booking overlapping the first, including when
+/// two approvals commit at the same instant (SCRUM-53's simultaneous case).
 model Booking {
   id      String @id @default(cuid())
   eventId String
@@ -192,58 +407,236 @@ model Booking {
 
   // Times are deliberately denormalised onto the booking rather than always
   // joined from the event (see docs/adr/0003). If the event date later moves,
-  // this booking is visibly out of sync and can be flagged.
+  // this booking is visibly out of sync and can be flagged (SCRUM-26/44).
   startAt DateTime
   endAt   DateTime
 
   status BookingStatus @default(PENDING)
 
+  // SCRUM-50: "Request captures venue, date/time, expected attendance,
+  // required facilities/layout, and other relevant event details."
+  requestedAttendance Int?
+  requiredFacilities  String[]
+  requestedLayout     String?
+  requestNotes        String?
+
+  requestedById String
+
+  // SCRUM-53: a rejection cannot be saved without a reason (enforced in the
+  // action, since "required only when rejected" is conditional).
+  decidedById    String?
+  decidedAt      DateTime?
+  decisionReason String?
+
+  // SCRUM-44: marked when an approved change touches a major field.
+  needsReconsideration     Boolean   @default(false)
+  reconsiderationFlaggedAt DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  event Event @relation(fields: [eventId], references: [id])
-  venue Venue @relation(fields: [venueId], references: [id])
+  event       Event @relation(fields: [eventId], references: [id])
+  venue       Venue @relation(fields: [venueId], references: [id])
+  requestedBy User  @relation("BookingRequestedBy", fields: [requestedById], references: [id])
+  decidedBy   User? @relation("BookingDecidedBy", fields: [decidedById], references: [id])
 
   @@index([venueId])
   @@index([eventId])
+  @@index([status])
+  @@index([requestedById])
 }
 
+// ---------------------------------------------------------------------------
+// Equipment management (epic SCRUM-10)
+// ---------------------------------------------------------------------------
+
+/// SCRUM-27 — "I can select the equipment type from a predefined system list."
+/// Equipment is a POOLED TYPE with a total quantity, not an individual asset:
+/// availability is `totalQuantity − reserved − unavailable` for a period
+/// (SCRUM-29). Individually-tracked assets were not asked for.
 model Equipment {
-  id            String @id @default(cuid())
-  type          String
+  id            String  @id @default(cuid())
+  type          String  @unique
+  description   String?
+  technicalSpecs String?
   totalQuantity Int
+
+  isActive Boolean @default(true)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  reservations Reservation[]
+  reservations   Reservation[]
+  requestLines   EquipmentRequestLine[]      @relation("RequestLineEquipment")
+  suggestedFor   EquipmentRequestLine[]      @relation("RequestLineSuggestedAlternative")
+  unavailability EquipmentUnavailability[]
 }
 
-model Reservation {
+/// SCRUM-29 — "when equipment is marked 'Under Maintenance' or 'Damaged' for
+/// that date, then it is not shown as available."
+/// SCRUM-30 — "I can see the specific reason ... and the duration."
+/// Carries a quantity because the pool is partially removable: three of ten
+/// projectors can be in for repair without the other seven being unavailable.
+model EquipmentUnavailability {
   id          String @id @default(cuid())
+  equipmentId String
+
+  quantity Int
+  startAt  DateTime
+  endAt    DateTime
+  reason   UnavailabilityReason @default(MAINTENANCE)
+  note     String?
+
+  recordedById String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  equipment  Equipment @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+  recordedBy User      @relation(fields: [recordedById], references: [id])
+
+  @@index([equipmentId])
+}
+
+/// SCRUM-27 (create), SCRUM-28 (review and update).
+/// A partial unique index guarantees SCRUM-27's last criterion — one open
+/// request per event, so a second submission shows the existing one instead
+/// of creating a duplicate.
+model EquipmentRequest {
+  id      String @id @default(cuid())
+  eventId String
+
+  requestedById String
+  status        EquipmentRequestStatus @default(PENDING_REVIEW)
+  notes         String?
+
+  decidedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  event       Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  requestedBy User  @relation("EquipmentRequestedBy", fields: [requestedById], references: [id])
+
+  lines        EquipmentRequestLine[]
+  updates      EquipmentRequestUpdate[]
+  reservations Reservation[]
+
+  @@index([eventId])
+  @@index([status])
+}
+
+/// SCRUM-27 — "Given the same equipment type is already on this request, when
+/// I add it again, then no duplicate line is created" → @@unique below.
+/// SCRUM-28 — "I can manually select alternative available equipment ... to
+/// suggest to the Event Coordinator" → suggestedAlternativeId.
+model EquipmentRequestLine {
+  id          String @id @default(cuid())
+  requestId   String
+  equipmentId String
+
+  quantity              Int
+  technicalRequirements String?
+
+  suggestedAlternativeId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  request             EquipmentRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  equipment           Equipment        @relation("RequestLineEquipment", fields: [equipmentId], references: [id])
+  suggestedAlternative Equipment?      @relation("RequestLineSuggestedAlternative", fields: [suggestedAlternativeId], references: [id])
+
+  @@unique([requestId, equipmentId])
+  @@index([equipmentId])
+}
+
+/// SCRUM-28 — "I can see a chronological history log of all updates made."
+/// Append-only: rows are never updated or deleted.
+model EquipmentRequestUpdate {
+  id        String @id @default(cuid())
+  requestId String
+  actorId   String
+
+  fromStatus EquipmentRequestStatus?
+  toStatus   EquipmentRequestStatus?
+  note       String?
+
+  createdAt DateTime @default(now())
+
+  request EquipmentRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  actor   User             @relation(fields: [actorId], references: [id])
+
+  @@index([requestId])
+}
+
+/// SCRUM-31 (reserve), SCRUM-32 (modify/cancel), SCRUM-33 (view).
+///
+/// NOTE ON CONCURRENCY: unlike a venue booking, this cannot be an EXCLUDE
+/// constraint — equipment is a counted pool, so overlapping reservations are
+/// legal until the sum exceeds `totalQuantity`. SCRUM-31's "two staff reserve
+/// the last unit at the same moment" case is therefore enforced with
+/// `SELECT ... FOR UPDATE` on the Equipment row inside the transaction that
+/// writes the reservation. Do not remove that lock.
+model Reservation {
+  id          String  @id @default(cuid())
   eventId     String
   equipmentId String
-  quantity    Int
+  requestId   String?
+
+  quantity Int
 
   // Denormalised times, same rationale as Booking (docs/adr/0003).
   startAt DateTime
   endAt   DateTime
 
+  status      ReservationStatus @default(CONFIRMED)
+  cancelledAt DateTime?
+
+  reservedById String
+
+  // SCRUM-44
+  needsReconsideration     Boolean   @default(false)
+  reconsiderationFlaggedAt DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  event     Event     @relation(fields: [eventId], references: [id])
-  equipment Equipment @relation(fields: [equipmentId], references: [id])
+  event      Event             @relation(fields: [eventId], references: [id])
+  equipment  Equipment         @relation(fields: [equipmentId], references: [id])
+  request    EquipmentRequest? @relation(fields: [requestId], references: [id])
+  reservedBy User              @relation("ReservationReservedBy", fields: [reservedById], references: [id])
 
   @@index([eventId])
   @@index([equipmentId])
+  @@index([status])
 }
 
+// ---------------------------------------------------------------------------
+// Attendee registration (epic SCRUM-11)
+// ---------------------------------------------------------------------------
+
+/// SCRUM-73 (register), SCRUM-74 (capacity), SCRUM-75 (period),
+/// SCRUM-76 (my registrations), SCRUM-77 (withdraw), SCRUM-78 (manage view).
+///
+/// NOTE ON CONCURRENCY: SCRUM-74's "remaining capacity of one, two Attendees
+/// register at the same moment" is enforced with `SELECT ... FOR UPDATE` on
+/// the Event row inside the registering transaction. The unique index below
+/// only stops the SAME attendee registering twice.
 model Registration {
   id      String             @id @default(cuid())
   eventId String
   userId  String
   status  RegistrationStatus @default(REGISTERED)
+
+  registeredAt DateTime  @default(now())
+  /// SCRUM-77 — set on withdrawal. Its presence is what makes a repeat
+  /// withdrawal a no-op instead of releasing a second place.
+  withdrawnAt  DateTime?
+
+  // SCRUM-44
+  needsReconsideration     Boolean   @default(false)
+  reconsiderationFlaggedAt DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -251,24 +644,131 @@ model Registration {
   event Event @relation(fields: [eventId], references: [id])
   user  User  @relation(fields: [userId], references: [id])
 
-  // A user can only hold one registration row per event. Re-registering after
+  // SCRUM-73: "The same Attendee cannot hold two active registrations for the
+  // same event." One row per (event, attendee) — re-registering after
   // withdrawing flips the status back rather than inserting a second row.
   @@unique([eventId, userId])
   @@index([userId])
+  @@index([eventId, status])
 }
 
-model Notification {
-  id      String    @id @default(cuid())
-  userId  String
-  type    String
-  message String
-  link    String?
-  readAt  DateTime? // null = unread
+// ---------------------------------------------------------------------------
+// Event change & notifications (epic SCRUM-8)
+// ---------------------------------------------------------------------------
+
+/// SCRUM-41 (submit), SCRUM-42 (review, showing old vs new),
+/// SCRUM-43 (approve/reject, reason required on rejection), SCRUM-47 (notify).
+model EventChangeRequest {
+  id      String @id @default(cuid())
+  eventId String
+
+  requestedById String
+  status        ChangeRequestStatus @default(PENDING_REVIEW)
+  reason        String?
+
+  decidedById    String?
+  decidedAt      DateTime?
+  decisionReason String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  user User @relation(fields: [userId], references: [id])
+  event       Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  requestedBy User  @relation("ChangeRequestedBy", fields: [requestedById], references: [id])
+  decidedBy   User? @relation("ChangeDecidedBy", fields: [decidedById], references: [id])
 
-  @@index([userId])
+  fields ChangeRequestField[]
+
+  @@index([eventId])
+  @@index([status])
+}
+
+/// SCRUM-42 — "both the old value and new requested value are displayed for
+/// each changed field." One row per changed field, so the review screen is a
+/// read rather than a diff computed at render time.
+///
+/// Values are stored as text because the fields span several types. The
+/// application parses them back using the field name; keep that mapping in
+/// one place.
+model ChangeRequestField {
+  id              String @id @default(cuid())
+  changeRequestId String
+
+  fieldName String
+  oldValue  String?
+  newValue  String?
+
+  /// SCRUM-44 — true for date, time, attendance, venue and equipment; false
+  /// for everything else (e.g. description). This flag is what decides
+  /// whether dependent records get marked "Needs Reconsideration".
+  isMajor Boolean @default(false)
+
+  changeRequest EventChangeRequest @relation(fields: [changeRequestId], references: [id], onDelete: Cascade)
+
+  @@unique([changeRequestId, fieldName])
+}
+
+/// SCRUM-48 — "all notifications are shown ordered by most recent first";
+/// "Given a user opens an unread notification, when viewed, then it is marked
+/// as read" (readAt).
+/// Every row's `type` names the story that produced it.
+model Notification {
+  id      String           @id @default(cuid())
+  userId  String
+  type    NotificationType
+  title   String
+  message String
+  link    String?
+
+  /// Optional back-reference so a notification can show the event's CURRENT
+  /// name and status rather than a copy made at send time (SCRUM-45).
+  eventId String?
+
+  readAt DateTime? // null = unread
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user  User   @relation(fields: [userId], references: [id])
+  event Event? @relation(fields: [eventId], references: [id])
+
+  @@index([userId, createdAt])
+  @@index([eventId])
+}
+
+// ---------------------------------------------------------------------------
+// Auditability (SCRUM-71, and SCRUM-21's "a record exists of who was
+// previously assigned")
+// ---------------------------------------------------------------------------
+
+/// SCRUM-71 — "Every status change, approval, rejection, assignment and
+/// booking decision records the acting user, the action and a timestamp",
+/// and "Recorded entries cannot be edited or deleted through the
+/// application." Append-only by convention and by the absence of any update
+/// path; there is no `updatedAt` here on purpose.
+///
+/// Auditability is a non-functional requirement, NOT one of the twenty core
+/// Release-1 features. The table exists from the start because SCRUM-21 needs
+/// the previous-assignee record and retrofitting an audit trail is far more
+/// expensive than writing to one.
+model AuditLog {
+  id String @id @default(cuid())
+
+  entityType String // "Event", "Booking", "Reservation", "Registration", ...
+  entityId   String
+  action     String // "STATUS_CHANGED", "ASSIGNED", "APPROVED", ...
+
+  actorId String?
+
+  fieldName String?
+  oldValue  String?
+  newValue  String?
+  summary   String?
+
+  createdAt DateTime @default(now())
+
+  actor User? @relation(fields: [actorId], references: [id])
+
+  @@index([entityType, entityId])
+  @@index([actorId])
 }

@@ -12,29 +12,34 @@ keep.
 
 ## The one pattern to copy
 
-`app/(app)/organiser/events` is the **reference implementation**. Every feature
-is a variation of it. When you build your feature, copy that folder's shape:
+`app/(app)/events` is the **reference implementation**. Every feature is a
+variation of it. When you build your feature, copy that folder's shape:
 
 | File | Role |
 |---|---|
-| `page.tsx` | Server component. Guards the role, fetches data scoped to the user via Prisma, renders it. |
+| `page.tsx` | Server component. Dispatches on role, guards it, fetches data scoped to the user via Prisma, renders it. |
 | `loading.tsx` | Skeleton shown while the server component fetches. |
 | `actions.ts` | Server Actions — the only place data changes. |
 | `create-event-dialog.tsx` | Client component; a form that calls an action and shows the result. |
 | `lib/schemas/<entity>.ts` | The Zod schema, shared by the form and the action. |
 | `components/events/status-badge.tsx` | Shared presentational bits for the entity. |
-| `actions.test.ts` | Vitest test of the action: happy path, validation failure, permission denied. |
+| `tests/<domain>.test.ts` | Vitest test of the action: happy path, validation failure, permission denied. |
 | `e2e/*.spec.ts` | One Playwright test of the main user journey. |
+
+Route folders are named for the **domain**, not the role. A route that several
+roles use is one folder whose `page.tsx` switches on `session.user.role` — see
+`app/(app)/events/page.tsx` and the addendum to ADR 0001.
 
 ## How to add a feature (walkthrough)
 
-Say you're building **Venue Booking Approval** in `venue-staff/bookings`.
+Say you're building **Venue Booking Approval** in `bookings`.
 
-1. **Branch.** `git checkout -b feat/SCRUM-22-booking-approval`. Work inside
-   your own route folder — that's what keeps merges clean (ADR 0001).
+1. **Branch.** `git checkout -b feat/SCRUM-22-booking-approval`. If someone
+   else is in the same domain folder this sprint, agree who owns `page.tsx`
+   before you both edit it.
 2. **Schema first.** Add `approveBookingSchema` to `lib/schemas/booking.ts`.
    The form and the action both import it; validation is written once.
-3. **Action.** In `venue-staff/bookings/actions.ts`, copy the shape of
+3. **Action.** In `bookings/actions.ts`, copy the shape of
    `createDraftEvent`:
    ```ts
    "use server";
@@ -45,7 +50,7 @@ Say you're building **Venue Booking Approval** in `venue-staff/bookings`.
        const parsed = approveBookingSchema.safeParse(input);
        if (!parsed.success) return err("…", parsed.error.flatten().fieldErrors);
        // …do the work…
-       revalidatePath("/venue-staff/bookings");
+       revalidatePath("/bookings");
        return ok(result);
      } catch (e) {
        if (e instanceof PermissionError) return err(e.message);
@@ -99,14 +104,17 @@ Say you're building **Venue Booking Approval** in `venue-staff/bookings`.
 
 1. **JWT sessions** are required by the Credentials provider (ADR 0002). Don't
    switch to database sessions.
-2. **Two database URLs** on Supabase: `DATABASE_URL` (pooled, 6543) for the app
-   and `DIRECT_URL` (direct, 5432) for migrations. Both are documented in
-   `.env.example`.
+2. **Both database URLs go through the Supabase session pooler** (port 5432,
+   user `postgres.<project-ref>@aws-0-<region>.pooler.supabase.com`). The
+   "direct" host `db.<ref>.supabase.co` is IPv6-only (unusable on IPv4
+   networks) and the 6543 transaction pooler breaks the pg adapter's
+   prepared statements. Both URLs are documented in `.env.example`.
 3. **`passwordHash`** is our addition to the Auth.js `User`; it's hashed with
    bcrypt in the seed.
 
 ## Running things
 
-See `README.md`. In short: `npm run db:reset` to get a clean seeded database,
-`npm run dev` to develop, and `npm run typecheck && npm run lint && npm test`
-before you push.
+See `README.md`. In short: `npm run db:deploy && npm run db:seed` to bring
+the shared Supabase database up to date (`db:reset` is the local Docker
+fallback only — it would wipe the shared database), `npm run dev` to develop,
+and `npm run typecheck && npm run lint && npm test` before you push.

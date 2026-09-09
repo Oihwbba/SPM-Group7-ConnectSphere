@@ -4,9 +4,9 @@ import { requireSession } from "@/lib/auth/guard";
 import { Forbidden } from "@/components/app/forbidden";
 import { PagePlaceholder } from "@/components/app/page-placeholder";
 
-const ALLOWED_ROLES: Role[] = ["COORDINATOR"];
+const ALLOWED_ROLES: Role[] = ["VENUE_STAFF"];
 
-export default async function CoordinatorVenuesPage() {
+export default async function BookingsPage() {
   const session = await requireSession();
   if (!ALLOWED_ROLES.includes(session.user.role)) {
     return <Forbidden />;
@@ -14,9 +14,9 @@ export default async function CoordinatorVenuesPage() {
 
   return (
     <PagePlaceholder
-      title="Venue Catalogue"
-      description="Browse, search and check availability of ConnectSphere venues."
-      scrumId="SCRUM-21"
+      title="Venue Bookings"
+      description="Review pending booking requests and approve or reject them."
+      scrumId="SCRUM-22"
       owner="Jun Bin"
     />
   );
