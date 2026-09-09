@@ -33,8 +33,11 @@ jobs:
       DIRECT_URL: postgresql://connectsphere:connectsphere@localhost:5432/connectsphere?schema=public
       # A fixed secret is fine for CI — no real users exist here.
       AUTH_SECRET: ci-not-a-real-secret-please-change-in-prod
+      # Needed here because CI has no proxy to infer the host from. It is
+      # deliberately NOT set in production — see the README.
       AUTH_URL: http://localhost:3000
-      AUTH_TRUST_HOST: "true"
+      # No AUTH_TRUST_HOST: it is `trustHost: true` in auth.config.ts, so it
+      # cannot be forgotten or mis-quoted in any environment.
 
     steps:
       - name: Checkout
