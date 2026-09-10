@@ -67,7 +67,68 @@ Say you're building **Venue Booking Approval** in `bookings`.
 6. **Tests.** Add a Vitest test for the action (happy / invalid / denied) and,
    if the feature has a key journey, a Playwright spec. Trace them back to your
    user story in the test description — the graders check traceability.
-7. **Open a PR.** CI must be green. A teammate reviews against this document.
+7. **Ship it** — `npm run verify`, push, open a PR, merge once CI is green.
+   The next section is that flow in full.
+
+---
+
+## The branch → PR → merge flow
+
+**One branch per SCRUM ticket.** `main` is protected: you cannot push to it
+directly, and a pull request cannot merge until the CI job `build-and-test`
+passes. That is deliberate — `main` is what deploys to production and what the
+graders see, so it stays green by construction rather than by discipline.
+
+```bash
+# 1. Branch off an up-to-date main
+git checkout main && git pull
+git checkout -b feat/SCRUM-22-booking-approval
+
+# 2. Work, then run the same checks CI will run
+npm run verify
+
+# 3. Push
+git add -A && git commit -m "SCRUM-22: approve or reject a booking"
+git push -u origin feat/SCRUM-22-booking-approval
+
+# 4. Open the pull request
+gh pr create --fill        # or use the link git prints
+
+# 5. Merge once the check is green
+gh pr checks               # watch it
+gh pr merge --squash --delete-branch
+```
+
+Pushing the branch starts two things automatically:
+
+| | What happens | Takes |
+|---|---|---|
+| **GitHub Actions** | migrate → seed → typecheck → lint → unit tests → e2e | ~2m30s |
+| **Vercel** | builds a preview at a stable per-branch URL | ~30s |
+
+Merging to `main` runs CI again and deploys production.
+
+### Four things that will otherwise surprise you
+
+1. **`npm run verify` before you push.** It runs typecheck, lint and the unit
+   tests — the three things CI fails on most. Budget a couple of minutes on a
+   cold run; most of that is the first `tsc`, and repeat runs are quicker
+   because typechecking is incremental. The win is not raw speed, it is that a
+   failure lands in your terminal with the error in front of you, instead of
+   as a red cross you have to open CI logs to understand — and it keeps the
+   branch history clean of "fix lint" commits.
+   It does not run the e2e suite (that needs a build and a database), so CI can
+   still catch something `verify` did not.
+2. **Your branch must be up to date with `main` before it can merge.** If
+   someone merges while your PR is open, run `git pull origin main` inside your
+   branch and let CI re-run. This guarantees the combination that was tested is
+   the combination that lands.
+3. **Preview URLs require a Vercel login**, so only the project owner can open
+   them. Everyone else reviews the diff and the CI result. Ask the owner for a
+   screenshot if you need to see a preview rendered.
+4. **Previews share the production database.** A preview deployment of your
+   branch reads and writes the same Supabase data as the live site. Do not use
+   a preview to test destructive changes, and never run `db:reset` against it.
 
 ---
 
