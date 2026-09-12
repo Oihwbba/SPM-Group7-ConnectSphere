@@ -52,3 +52,9 @@ yarn-error.log*
 
 # Playwright MCP scratch output (screenshots, snapshots)
 .playwright-mcp/
+projectdetails.md
+techstack.md
+userstory13.md
+userstory15.md
+workflow.md
+userstory16.md

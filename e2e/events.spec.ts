@@ -178,3 +178,85 @@ test.describe("User Story 15 — Draft Event Request Lifecycle Journey", () => {
   });
 });
 
+/**
+ * End-to-End (E2E) Test Suite for User Story 16: Distinguish Drafts from Submitted Requests.
+ * Tests that draft requests are visually marked alongside submitted requests with distinct labels,
+ * badges, styling, and filter tabs so they cannot be mistaken for submitted or under review requests.
+ */
+test.describe("User Story 16 — Distinguish Drafts from Submitted Requests Journey", () => {
+  test("organiser can visually distinguish draft requests from submitted ones side-by-side and filter by status", async ({
+    page,
+  }) => {
+    // 1. Sign in as seeded event organiser
+    await page.goto("/login");
+    await page.getByLabel("Email", { exact: true }).fill("organiser@test.local");
+    await page.getByLabel("Password", { exact: true }).fill("Password123!");
+    await page.getByRole("button", { name: "Sign in" }).click();
+
+    await page.waitForURL("**/events");
+
+    const draftTitle = `US16 Draft ${Date.now()}`;
+    const submittedTitle = `US16 Submitted ${Date.now()}`;
+
+    // 2. Create a Partial Draft Request
+    await page.getByRole("button", { name: /Create Event Request/i }).first().click();
+    await page.getByLabel("Event Name *").fill(draftTitle);
+    await page.getByRole("button", { name: /Save as Draft/i }).click();
+
+    // 3. Create and Submit a Complete Event Request
+    await page.getByRole("button", { name: /Create Event Request/i }).first().click();
+    await page.getByLabel("Event Name *").fill(submittedTitle);
+    await page.getByLabel("Event Purpose *").fill("US16 visual distinguishability test purpose");
+    await page.getByLabel("Event Description *").fill("US16 visual distinguishability test description");
+    await page.getByRole("button", { name: "Next", exact: true }).click();
+
+    await page.getByLabel("Proposed Start Date & Time *").fill("2027-12-01T09:00");
+    await page.getByLabel("Proposed End Date & Time *").fill("2027-12-01T17:00");
+    await page.getByLabel("Expected Attendance *").fill("80");
+    await page.getByRole("button", { name: "Next", exact: true }).click();
+
+    await page.getByLabel("Venue Requirements *").fill("Standard Seminar Room");
+    await page.getByLabel("Preferred Room Layout *").fill("Classroom");
+    await page.getByLabel("Accessibility Needs *").fill("Standard ramp access");
+    await page.getByRole("button", { name: "Next", exact: true }).click();
+
+    await page.getByLabel("Equipment & Technical Support Requirements *").fill("Microphone & Projector");
+    await page.getByRole("button", { name: "Next", exact: true }).click();
+
+    await page.getByLabel("Registration Needs *").fill("Standard check-in desk");
+    await page.getByRole("button", { name: "Next", exact: true }).click();
+
+    await expect(page.getByRole("heading", { name: /Review Entered Details/i })).toBeVisible();
+    await page.getByRole("button", { name: /Submit Request for Review/i }).click();
+
+    // 4. Verify Both Requests Appear on Table Side-by-Side with Distinct Visual Treatments
+    const draftRow = page.getByRole("row", { name: new RegExp(draftTitle) });
+    const submittedRow = page.getByRole("row", { name: new RegExp(submittedTitle) });
+
+    await expect(draftRow).toBeVisible();
+    await expect(submittedRow).toBeVisible();
+
+    // 5. Verify Draft Row features visual "Draft — Incomplete" tag and "Resume Draft" button (AC 1 & AC 2)
+    await expect(draftRow.getByTestId("draft-label")).toBeVisible();
+    await expect(draftRow.getByText("Draft — Incomplete")).toBeVisible();
+    await expect(draftRow.getByTestId("resume-draft-button")).toBeVisible();
+
+    // 6. Verify Submitted Row features "View Details" button and info badge (not confused with draft)
+    await expect(submittedRow.getByTestId("view-details-button")).toBeVisible();
+
+    // 7. Verify Filter Tabs (Filter by Drafts and Submitted)
+    await page.getByRole("button", { name: /Drafts/i }).click();
+    await expect(page.getByRole("cell", { name: draftTitle })).toBeVisible();
+    await expect(page.getByRole("cell", { name: submittedTitle })).not.toBeVisible();
+
+    await page.getByRole("button", { name: /Submitted/i }).click();
+    await expect(page.getByRole("cell", { name: submittedTitle })).toBeVisible();
+    await expect(page.getByRole("cell", { name: draftTitle })).not.toBeVisible();
+
+    await page.getByRole("button", { name: /All Requests/i }).click();
+    await expect(page.getByRole("cell", { name: draftTitle })).toBeVisible();
+    await expect(page.getByRole("cell", { name: submittedTitle })).toBeVisible();
+  });
+});
+
+

@@ -1,13 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Pencil, Eye, CalendarPlus } from "lucide-react";
+import { Plus, Pencil, Eye, CalendarPlus, FileEdit, Filter } from "lucide-react";
 import type { Event } from "@prisma/client";
 
 import { formatDate, formatDateTime } from "@/lib/datetime";
 import { StatusBadge } from "@/components/events/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 import {
   Table,
   TableBody,
@@ -24,15 +25,32 @@ interface EventsClientProps {
   isCoordinator?: boolean;
 }
 
+type FilterTab = "ALL" | "DRAFT" | "SUBMITTED";
+
 /**
  * EventsClient provides the interactive event list UI for Organisers and Coordinators.
- * Uses clean HTML table actions with controlled single dialog instances to guarantee
- * zero hydration mismatches and prevent action buttons from disappearing.
+ *
+ * User Story 16 — Distinguish drafts from submitted requests:
+ * - Draft requests feature a prominent visual "Draft — Incomplete" tag alongside their title.
+ * - Table rows for drafts have distinct left-border accent styling (border-l-amber-500/border-l-slate-400).
+ * - Muted status badges with FileEdit icons separate DRAFT from SUBMITTED / UNDER_REVIEW (blue info pills with clock/send icons).
+ * - "Resume Draft" primary action button visually separates draft rows from "View Details" on submitted requests.
+ * - Quick status filter tabs allow filtering between All, Drafts, and Submitted requests.
  */
 export function EventsClient({ events, isCoordinator = false }: EventsClientProps) {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [editingDraft, setEditingDraft] = useState<Event | null>(null);
   const [viewingEvent, setViewingEvent] = useState<Event | null>(null);
+  const [activeTab, setActiveTab] = useState<FilterTab>("ALL");
+
+  const filteredEvents = events.filter((evt) => {
+    if (activeTab === "DRAFT") return evt.status === "DRAFT";
+    if (activeTab === "SUBMITTED") return evt.status !== "DRAFT";
+    return true;
+  });
+
+  const draftCount = events.filter((evt) => evt.status === "DRAFT").length;
+  const submittedCount = events.filter((evt) => evt.status !== "DRAFT").length;
 
   return (
     <div className="space-y-6">
@@ -54,6 +72,41 @@ export function EventsClient({ events, isCoordinator = false }: EventsClientProp
           </Button>
         )}
       </div>
+
+      {/* Filter Tabs for Organisers to toggle between All, Drafts, and Submitted Requests */}
+      {!isCoordinator && events.length > 0 && (
+        <div className="flex items-center gap-2 border-b pb-3">
+          <Filter className="h-4 w-4 text-muted-foreground mr-1" />
+          <Button
+            variant={activeTab === "ALL" ? "secondary" : "ghost"}
+            size="sm"
+            className="h-8 text-xs font-medium"
+            onClick={() => setActiveTab("ALL")}
+          >
+            All Requests ({events.length})
+          </Button>
+          <Button
+            variant={activeTab === "DRAFT" ? "secondary" : "ghost"}
+            size="sm"
+            className={cn(
+              "h-8 text-xs font-medium gap-1.5",
+              activeTab === "DRAFT" && "bg-slate-200/80 dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-semibold"
+            )}
+            onClick={() => setActiveTab("DRAFT")}
+          >
+            <FileEdit className="h-3.5 w-3.5" />
+            Drafts ({draftCount})
+          </Button>
+          <Button
+            variant={activeTab === "SUBMITTED" ? "secondary" : "ghost"}
+            size="sm"
+            className="h-8 text-xs font-medium"
+            onClick={() => setActiveTab("SUBMITTED")}
+          >
+            Submitted ({submittedCount})
+          </Button>
+        </div>
+      )}
 
       {events.length === 0 ? (
         <Card>
@@ -79,6 +132,22 @@ export function EventsClient({ events, isCoordinator = false }: EventsClientProp
             )}
           </CardContent>
         </Card>
+      ) : filteredEvents.length === 0 ? (
+        <Card>
+          <CardContent className="flex flex-col items-center gap-2 py-12 text-center">
+            <p className="text-sm font-medium text-muted-foreground">
+              No requests match the selected filter ({activeTab.toLowerCase()}).
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-2 text-xs"
+              onClick={() => setActiveTab("ALL")}
+            >
+              Clear Filter
+            </Button>
+          </CardContent>
+        </Card>
       ) : (
         <Card>
           <CardContent className="p-0">
@@ -93,43 +162,72 @@ export function EventsClient({ events, isCoordinator = false }: EventsClientProp
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {events.map((event) => (
-                  <TableRow key={event.id}>
-                    <TableCell className="font-medium">{event.name}</TableCell>
-                    <TableCell>
-                      <StatusBadge status={event.status} />
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {event.startAt ? formatDateTime(event.startAt) : "—"}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {formatDate(event.createdAt)}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {event.status === "DRAFT" ? (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="gap-1.5 h-8 text-xs"
-                          onClick={() => setEditingDraft(event)}
-                        >
-                          <Pencil className="h-3.5 w-3.5" />
-                          Resume Draft
-                        </Button>
-                      ) : (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="gap-1.5 h-8 text-xs"
-                          onClick={() => setViewingEvent(event)}
-                        >
-                          <Eye className="h-3.5 w-3.5" />
-                          View Details
-                        </Button>
+                {filteredEvents.map((event) => {
+                  const isDraft = event.status === "DRAFT";
+                  return (
+                    <TableRow
+                      key={event.id}
+                      data-status={event.status}
+                      data-testid={isDraft ? "draft-event-row" : "submitted-event-row"}
+                      className={cn(
+                        "transition-colors",
+                        isDraft
+                          ? "bg-slate-50/60 dark:bg-slate-900/40 border-l-4 border-l-slate-400"
+                          : "border-l-4 border-l-transparent"
                       )}
-                    </TableCell>
-                  </TableRow>
-                ))}
+                    >
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span>{event.name}</span>
+                          {/* User Story 16: Draft requests are visually marked with a clear Draft label tag */}
+                          {isDraft && (
+                            <span
+                              className="inline-flex items-center gap-1 rounded bg-slate-100 dark:bg-slate-800 px-2 py-0.5 text-[11px] font-semibold text-slate-700 dark:text-slate-300 border border-slate-300/70 dark:border-slate-700"
+                              data-testid="draft-label"
+                            >
+                              <FileEdit className="h-3 w-3" />
+                              Draft — Incomplete
+                            </span>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <StatusBadge status={event.status} />
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {event.startAt ? formatDateTime(event.startAt) : "—"}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {formatDate(event.createdAt)}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {isDraft ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="gap-1.5 h-8 text-xs border-slate-300 dark:border-slate-700 bg-slate-100/60 hover:bg-slate-200/70 dark:bg-slate-800/60 dark:hover:bg-slate-800 font-medium text-slate-800 dark:text-slate-200"
+                            onClick={() => setEditingDraft(event)}
+                            data-testid="resume-draft-button"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                            Resume Draft
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="gap-1.5 h-8 text-xs"
+                            onClick={() => setViewingEvent(event)}
+                            data-testid="view-details-button"
+                          >
+                            <Eye className="h-3.5 w-3.5" />
+                            View Details
+                          </Button>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </CardContent>
@@ -167,3 +265,4 @@ export function EventsClient({ events, isCoordinator = false }: EventsClientProp
     </div>
   );
 }
+

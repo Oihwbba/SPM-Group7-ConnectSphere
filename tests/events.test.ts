@@ -414,3 +414,66 @@ describe("User Story 15 — Save an event request as draft", () => {
   });
 });
 
+// ============================================================================
+// USER STORY 16 UNIT TESTS — Distinguish drafts from submitted requests
+// ============================================================================
+describe("User Story 16 — Distinguish drafts from submitted requests", () => {
+  it("AC 1 & 2: Draft status is created as DRAFT and differs strictly from SUBMITTED or UNDER_REVIEW", async () => {
+    mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
+    mockCreate.mockResolvedValue({ id: "evt_draft_distinguish", status: "DRAFT" });
+
+    // 1. Create a draft request
+    const draftResult = await createDraftEvent({
+      name: "Unsubmitted Work In Progress",
+    });
+
+    expect(draftResult.ok).toBe(true);
+    expect(mockCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          status: "DRAFT",
+        }),
+      }),
+    );
+  });
+
+  it("AC 2: Draft requests transition to SUBMITTED upon submission and do not retain DRAFT status", async () => {
+    mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
+    mockFindFirst.mockResolvedValue({
+      id: "evt_draft_to_submit",
+      organiserId: "usr_organiser",
+      status: "DRAFT",
+    });
+    mockUpdate.mockResolvedValue({ id: "evt_draft_to_submit", status: "SUBMITTED" });
+
+    const futureStart = new Date(Date.now() + 86400000).toISOString();
+    const futureEnd = new Date(Date.now() + 86400000 + 7200000).toISOString();
+
+    const submittedResult = await submitEventRequest({
+      id: "evt_draft_to_submit",
+      name: "Transitioned Event",
+      purpose: "Testing status transition",
+      description: "Submitting completed draft",
+      startAt: futureStart,
+      endAt: futureEnd,
+      expectedAttendance: 50,
+      venueRequirements: "Small room",
+      preferredLayout: "Classroom",
+      accessibilityNeeds: "None",
+      equipmentRequirements: "Projector",
+      registrationNotes: "None",
+    });
+
+    expect(submittedResult.ok).toBe(true);
+    expect(mockUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "evt_draft_to_submit" },
+        data: expect.objectContaining({
+          status: "SUBMITTED",
+        }),
+      }),
+    );
+  });
+});
+
+
