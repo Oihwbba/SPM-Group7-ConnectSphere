@@ -5,22 +5,15 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { requirePermission, PermissionError } from "@/lib/auth/can";
-import { createDraftEventSchema } from "@/lib/schemas/event";
+import {
+  createDraftEventSchema,
+  submitEventRequestSchema,
+} from "@/lib/schemas/event";
 import { ok, err, type ActionResult } from "@/lib/action-result";
 
 /**
- * THE reference Server Action. Every action follows this exact shape — copy
- * it (see CONTRIBUTING.md):
- *
- *   1. Resolve the signed-in user.
- *   2. requirePermission FIRST — before any parsing or work.
- *   3. Validate input with the shared Zod schema.
- *   4. Do the work.
- *   5. Return an ActionResult (never throw across the boundary for expected
- *      failures).
- *
- * `input` is typed `unknown` on purpose: the trust boundary is Zod, not
- * TypeScript. The client can send anything; step 3 is what makes it safe.
+ * Server action to create or save a DRAFT event request.
+ * Allows partial fields, but validates range constraints if provided.
  */
 export async function createDraftEvent(
   input: unknown,
@@ -29,11 +22,8 @@ export async function createDraftEvent(
   const user = session?.user;
 
   try {
-    // 2. Permission first. Throws PermissionError if the user is missing or
-    //    lacks the capability; we convert that to an ActionResult below.
     requirePermission(user, "event:create");
 
-    // 3. Validate. On failure, return field errors the form can render.
     const parsed = createDraftEventSchema.safeParse(input);
     if (!parsed.success) {
       return err(
@@ -42,30 +32,144 @@ export async function createDraftEvent(
       );
     }
 
-    // 4. Do the work. A draft only needs a name and (optional) description;
-    //    the organiser completes the rest before submitting for review.
-    //    `user` is guaranteed defined here — requirePermission would have
-    //    thrown otherwise.
+    const {
+      name,
+      purpose,
+      description,
+      startAt,
+      endAt,
+      expectedAttendance,
+      venueRequirements,
+      requiredFacilities,
+      accessibilityNeeds,
+      preferredLayout,
+      equipmentRequirements,
+      registrationNotes,
+      programme,
+      specialRequests,
+    } = parsed.data;
+
     const event = await prisma.event.create({
       data: {
-        name: parsed.data.name,
-        description: parsed.data.description ?? null,
+        name,
+        purpose: purpose ?? null,
+        description: description ?? null,
         status: "DRAFT",
+        startAt: startAt ? new Date(startAt) : null,
+        endAt: endAt ? new Date(endAt) : null,
+        expectedAttendance: expectedAttendance ?? null,
+        venueRequirements: venueRequirements ?? null,
+        requiredFacilities: requiredFacilities ?? [],
+        accessibilityNeeds: accessibilityNeeds ?? null,
+        preferredLayout: preferredLayout ?? null,
+        equipmentRequirements: equipmentRequirements ?? null,
+        registrationNotes: registrationNotes ?? null,
+        programme: programme ?? null,
+        specialRequests: specialRequests ?? null,
         organiserId: user!.id,
       },
       select: { id: true },
     });
 
-    // Refresh the list this action feeds.
     revalidatePath("/events");
 
-    // 5. Success.
     return ok({ id: event.id });
   } catch (error) {
     if (error instanceof PermissionError) {
       return err(error.message);
     }
-    // Anything else is a real bug — let it surface.
     throw error;
   }
+}
+
+/**
+ * Server action to SUBMIT an event request for review.
+ * Strictly enforces all mandatory fields required by W4-33 & User Story 13 AC.
+ */
+export async function submitEventRequest(
+  input: unknown,
+): Promise<ActionResult<{ id: string }>> {
+  const session = await auth();
+  const user = session?.user;
+
+  try {
+    requirePermission(user, "event:create");
+
+    const parsed = submitEventRequestSchema.safeParse(input);
+    if (!parsed.success) {
+      return err(
+        "Please fix the highlighted fields before submitting.",
+        parsed.error.flatten().fieldErrors,
+      );
+    }
+
+    const {
+      name,
+      purpose,
+      description,
+      startAt,
+      endAt,
+      expectedAttendance,
+      venueRequirements,
+      requiredFacilities,
+      accessibilityNeeds,
+      preferredLayout,
+      equipmentRequirements,
+      registrationNotes,
+      programme,
+      specialRequests,
+    } = parsed.data;
+
+    const event = await prisma.event.create({
+      data: {
+        name,
+        purpose,
+        description,
+        status: "SUBMITTED",
+        submittedAt: new Date(),
+        startAt: new Date(startAt),
+        endAt: new Date(endAt),
+        expectedAttendance,
+        venueRequirements,
+        requiredFacilities: requiredFacilities ?? [],
+        accessibilityNeeds,
+        preferredLayout,
+        equipmentRequirements,
+        registrationNotes,
+        programme: programme ?? null,
+        specialRequests: specialRequests ?? null,
+        organiserId: user!.id,
+      },
+      select: { id: true },
+    });
+
+    revalidatePath("/events");
+
+    return ok({ id: event.id });
+  } catch (error) {
+    if (error instanceof PermissionError) {
+      return err(error.message);
+    }
+    throw error;
+  }
+}
+
+/**
+ * Fetch available venue list and equipment catalogue for form recommendations.
+ */
+export async function getFormCatalogues(): Promise<{
+  venues: { id: string; name: string; capacity: number; facilities: string[] }[];
+  equipment: { id: string; type: string; totalQuantity: number }[];
+}> {
+  const venues = await prisma.venue.findMany({
+    where: { isActive: true },
+    select: { id: true, name: true, capacity: true, facilities: true },
+  });
+
+  const equipment = await prisma.equipment.findMany({
+    where: { isActive: true },
+    select: { id: true, type: true, totalQuantity: true },
+  });
+
+  return { venues, equipment };
 }

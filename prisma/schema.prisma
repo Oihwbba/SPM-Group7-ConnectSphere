@@ -263,6 +263,8 @@ model Event {
   preferredLayout       String?
   equipmentRequirements String?
   registrationNotes     String?
+  programme             String?
+  specialRequests       String?
 
   organiserId   String
   coordinatorId String? // SCRUM-20: null until a coordinator is assigned
