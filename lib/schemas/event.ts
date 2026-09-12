@@ -15,6 +15,8 @@ const positiveAttendance = z
  */
 export const createDraftEventSchema = z
   .object({
+    /** Optional event ID when updating an existing saved draft (User Story 15) */
+    id: z.string().optional(),
     name: z
       .string()
       .trim()
@@ -95,6 +97,8 @@ export const createDraftEventSchema = z
  */
 export const submitEventRequestSchema = z
   .object({
+    /** Optional event ID when submitting an existing saved draft (User Story 14 / User Story 15) */
+    id: z.string().optional(),
     name: z
       .string()
       .trim()

@@ -12,8 +12,9 @@ import {
 import { ok, err, type ActionResult } from "@/lib/action-result";
 
 /**
- * Server action to create or save a DRAFT event request.
+ * Server action to create or save/update a DRAFT event request.
  * Allows partial fields, but validates range constraints if provided.
+ * Supports updating an existing draft if `id` is passed (User Story 15).
  */
 export async function createDraftEvent(
   input: unknown,
@@ -33,6 +34,7 @@ export async function createDraftEvent(
     }
 
     const {
+      id,
       name,
       purpose,
       description,
@@ -49,31 +51,66 @@ export async function createDraftEvent(
       specialRequests,
     } = parsed.data;
 
-    const event = await prisma.event.create({
-      data: {
-        name,
-        purpose: purpose ?? null,
-        description: description ?? null,
-        status: "DRAFT",
-        startAt: startAt ? new Date(startAt) : null,
-        endAt: endAt ? new Date(endAt) : null,
-        expectedAttendance: expectedAttendance ?? null,
-        venueRequirements: venueRequirements ?? null,
-        requiredFacilities: requiredFacilities ?? [],
-        accessibilityNeeds: accessibilityNeeds ?? null,
-        preferredLayout: preferredLayout ?? null,
-        equipmentRequirements: equipmentRequirements ?? null,
-        registrationNotes: registrationNotes ?? null,
-        programme: programme ?? null,
-        specialRequests: specialRequests ?? null,
-        organiserId: user!.id,
-      },
-      select: { id: true },
-    });
+    let eventId = id;
+
+    if (id) {
+      // User Story 15 AC 2/3: Resume and update an existing saved draft
+      const existing = await prisma.event.findFirst({
+        where: { id, organiserId: user!.id, status: "DRAFT" },
+      });
+
+      if (!existing) {
+        return err("Draft event not found or cannot be modified.");
+      }
+
+      await prisma.event.update({
+        where: { id },
+        data: {
+          name,
+          purpose: purpose ?? null,
+          description: description ?? null,
+          startAt: startAt ? new Date(startAt) : null,
+          endAt: endAt ? new Date(endAt) : null,
+          expectedAttendance: expectedAttendance ?? null,
+          venueRequirements: venueRequirements ?? null,
+          requiredFacilities: requiredFacilities ?? [],
+          accessibilityNeeds: accessibilityNeeds ?? null,
+          preferredLayout: preferredLayout ?? null,
+          equipmentRequirements: equipmentRequirements ?? null,
+          registrationNotes: registrationNotes ?? null,
+          programme: programme ?? null,
+          specialRequests: specialRequests ?? null,
+        },
+      });
+    } else {
+      // User Story 15 AC 1: Save a new incomplete request as draft at any point
+      const created = await prisma.event.create({
+        data: {
+          name,
+          purpose: purpose ?? null,
+          description: description ?? null,
+          status: "DRAFT",
+          startAt: startAt ? new Date(startAt) : null,
+          endAt: endAt ? new Date(endAt) : null,
+          expectedAttendance: expectedAttendance ?? null,
+          venueRequirements: venueRequirements ?? null,
+          requiredFacilities: requiredFacilities ?? [],
+          accessibilityNeeds: accessibilityNeeds ?? null,
+          preferredLayout: preferredLayout ?? null,
+          equipmentRequirements: equipmentRequirements ?? null,
+          registrationNotes: registrationNotes ?? null,
+          programme: programme ?? null,
+          specialRequests: specialRequests ?? null,
+          organiserId: user!.id,
+        },
+        select: { id: true },
+      });
+      eventId = created.id;
+    }
 
     revalidatePath("/events");
 
-    return ok({ id: event.id });
+    return ok({ id: eventId! });
   } catch (error) {
     if (error instanceof PermissionError) {
       return err(error.message);
@@ -85,6 +122,7 @@ export async function createDraftEvent(
 /**
  * Server action to SUBMIT an event request for review.
  * Strictly enforces all mandatory fields required by W4-33 & User Story 13 AC.
+ * Supports submitting an existing saved draft by `id` (User Story 14 / User Story 15).
  */
 export async function submitEventRequest(
   input: unknown,
@@ -104,6 +142,7 @@ export async function submitEventRequest(
     }
 
     const {
+      id,
       name,
       purpose,
       description,
@@ -120,32 +159,69 @@ export async function submitEventRequest(
       specialRequests,
     } = parsed.data;
 
-    const event = await prisma.event.create({
-      data: {
-        name,
-        purpose,
-        description,
-        status: "SUBMITTED",
-        submittedAt: new Date(),
-        startAt: new Date(startAt),
-        endAt: new Date(endAt),
-        expectedAttendance,
-        venueRequirements,
-        requiredFacilities: requiredFacilities ?? [],
-        accessibilityNeeds,
-        preferredLayout,
-        equipmentRequirements,
-        registrationNotes,
-        programme: programme ?? null,
-        specialRequests: specialRequests ?? null,
-        organiserId: user!.id,
-      },
-      select: { id: true },
-    });
+    let eventId = id;
+
+    if (id) {
+      // Submit an existing draft event (US14/US15 transition from DRAFT -> SUBMITTED)
+      const existing = await prisma.event.findFirst({
+        where: { id, organiserId: user!.id, status: "DRAFT" },
+      });
+
+      if (!existing) {
+        return err("Draft event not found or cannot be submitted.");
+      }
+
+      await prisma.event.update({
+        where: { id },
+        data: {
+          name,
+          purpose,
+          description,
+          status: "SUBMITTED",
+          submittedAt: new Date(),
+          startAt: new Date(startAt),
+          endAt: new Date(endAt),
+          expectedAttendance,
+          venueRequirements,
+          requiredFacilities: requiredFacilities ?? [],
+          accessibilityNeeds,
+          preferredLayout,
+          equipmentRequirements,
+          registrationNotes,
+          programme: programme ?? null,
+          specialRequests: specialRequests ?? null,
+        },
+      });
+    } else {
+      // Create and directly submit a new event request
+      const created = await prisma.event.create({
+        data: {
+          name,
+          purpose,
+          description,
+          status: "SUBMITTED",
+          submittedAt: new Date(),
+          startAt: new Date(startAt),
+          endAt: new Date(endAt),
+          expectedAttendance,
+          venueRequirements,
+          requiredFacilities: requiredFacilities ?? [],
+          accessibilityNeeds,
+          preferredLayout,
+          equipmentRequirements,
+          registrationNotes,
+          programme: programme ?? null,
+          specialRequests: specialRequests ?? null,
+          organiserId: user!.id,
+        },
+        select: { id: true },
+      });
+      eventId = created.id;
+    }
 
     revalidatePath("/events");
 
-    return ok({ id: event.id });
+    return ok({ id: eventId! });
   } catch (error) {
     if (error instanceof PermissionError) {
       return err(error.message);

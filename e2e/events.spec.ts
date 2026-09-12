@@ -110,3 +110,71 @@ test.describe("User Story 13 — Event Request Creation Journey", () => {
     await expect(page.getByRole("cell", { name: eventName })).toBeVisible();
   });
 });
+
+/**
+ * End-to-End (E2E) Test Suite for User Story 15: Save an Event Request as Draft.
+ * Tests saving an incomplete draft, locating it on the events table, resuming editing with all fields preserved,
+ * completing mandatory requirements, and submitting for review.
+ */
+test.describe("User Story 15 — Draft Event Request Lifecycle Journey", () => {
+  test("organiser saves partial draft, locates and resumes draft with preserved fields, then completes and submits", async ({
+    page,
+  }) => {
+    // 1. Sign in as seeded event organiser
+    await page.goto("/login");
+    await page.getByLabel("Email", { exact: true }).fill("organiser@test.local");
+    await page.getByLabel("Password", { exact: true }).fill("Password123!");
+    await page.getByRole("button", { name: "Sign in" }).click();
+
+    await page.waitForURL("**/events");
+    const draftName = `Draft To Resume ${Date.now()}`;
+
+    // 2. Open dialog & fill partial fields (Step 1 Name & Step 3 Venue)
+    await page.getByRole("button", { name: /Create Event Request/i }).first().click();
+    await page.getByLabel("Event Name *").fill(draftName);
+
+    // Save as draft at Step 1
+    await page.getByRole("button", { name: /Save as Draft/i }).click();
+
+    // 3. Locate draft row on table with "Resume Draft" button
+    const row = page.getByRole("row", { name: draftName });
+    await expect(row).toBeVisible();
+    await expect(row.getByRole("button", { name: /Resume Draft/i })).toBeVisible();
+
+    // 4. Click "Resume Draft" to reopen saved draft
+    await row.getByRole("button", { name: /Resume Draft/i }).click();
+
+    // 5. Verify modal opens in resume mode and retains previously entered name (AC 2 & AC 3)
+    await expect(page.getByRole("heading", { name: /Resume Draft Event Request/i })).toBeVisible();
+    await expect(page.getByLabel("Event Name *")).toHaveValue(draftName);
+
+    // 6. Complete missing fields across steps
+    await page.getByLabel("Event Purpose *").fill("Draft completion test purpose.");
+    await page.getByLabel("Event Description *").fill("Detailed description for resumed draft.");
+    await page.getByRole("button", { name: "Next", exact: true }).click();
+
+    await page.getByLabel("Proposed Start Date & Time *").fill("2027-11-20T10:00");
+    await page.getByLabel("Proposed End Date & Time *").fill("2027-11-20T18:00");
+    await page.getByLabel("Expected Attendance *").fill("100");
+    await page.getByRole("button", { name: "Next", exact: true }).click();
+
+    await page.getByLabel("Venue Requirements *").fill("Grand Hall");
+    await page.getByLabel("Preferred Room Layout *").fill("Banquet");
+    await page.getByLabel("Accessibility Needs *").fill("Wheelchair ramp");
+    await page.getByRole("button", { name: "Next", exact: true }).click();
+
+    await page.getByLabel("Equipment & Technical Support Requirements *").fill("Projector & Mic");
+    await page.getByRole("button", { name: "Next", exact: true }).click();
+
+    await page.getByLabel("Registration Needs *").fill("Online registration");
+    await page.getByRole("button", { name: "Next", exact: true }).click();
+
+    // 7. Review and Submit
+    await expect(page.getByRole("heading", { name: /Review Entered Details/i })).toBeVisible();
+    await page.getByRole("button", { name: /Submit Request for Review/i }).click();
+
+    // 8. Verify event submitted successfully
+    await expect(page.getByRole("cell", { name: draftName })).toBeVisible();
+  });
+});
+

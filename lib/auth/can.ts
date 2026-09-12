@@ -43,7 +43,7 @@ export type Action =
  * specific row; omit it for create/list actions that are role-gated only.
  */
 export type Resource =
-  | { kind: "event"; organiserId: string; coordinatorId: string | null }
+  | { kind: "event"; organiserId: string; coordinatorId: string | null; status?: string }
   | { kind: "registration"; userId: string }
   | { kind: "notification"; userId: string };
 
@@ -73,13 +73,13 @@ const ROLE_ACTIONS: Record<Role, Action[]> = {
 function hasRelationship(user: SessionUser, resource: Resource): boolean {
   switch (resource.kind) {
     case "event":
-      // Organisers own events; coordinators are assigned to them. No other
-      // role has an ownership relationship to an event in the foundation.
+      // Organisers own events; coordinators are assigned to them or review unassigned submitted requests.
       if (user.role === "ORGANISER") {
         return resource.organiserId === user.id;
       }
       if (user.role === "COORDINATOR") {
-        return resource.coordinatorId === user.id;
+        if (resource.coordinatorId === user.id) return true;
+        return resource.coordinatorId === null && resource.status !== "DRAFT";
       }
       return false;
     case "registration":

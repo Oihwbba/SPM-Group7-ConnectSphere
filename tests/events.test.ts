@@ -13,11 +13,19 @@ import { createDraftEvent, submitEventRequest } from "@/app/(app)/events/actions
 // We mock both modules so tests run quickly in isolation without requiring a live DB connection.
 vi.mock("@/auth", () => ({ auth: vi.fn() }));
 vi.mock("@/lib/db", () => ({
-  prisma: { event: { create: vi.fn() } },
+  prisma: {
+    event: {
+      create: vi.fn(),
+      findFirst: vi.fn(),
+      update: vi.fn(),
+    },
+  },
 }));
 
 const mockAuth = auth as unknown as Mock;
 const mockCreate = prisma.event.create as unknown as Mock;
+const mockFindFirst = prisma.event.findFirst as unknown as Mock;
+const mockUpdate = prisma.event.update as unknown as Mock;
 
 /**
  * Helper utility to create a mock user session with a given role and ID.
@@ -284,3 +292,125 @@ describe("User Story 13 — Event Request Creation", () => {
     });
   });
 });
+
+// ============================================================================
+// USER STORY 15 UNIT TESTS — Save an event request as draft & Resume drafts
+// ============================================================================
+describe("User Story 15 — Save an event request as draft", () => {
+  const futureStart = new Date(Date.now() + 86400000).toISOString();
+  const futureEnd = new Date(Date.now() + 86400000 + 7200000).toISOString();
+
+  it("AC 1: Organiser can save a request at any point with required fields empty", async () => {
+    mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
+    mockCreate.mockResolvedValue({ id: "evt_draft_partial" });
+
+    // Save draft with ONLY a name and no other required fields
+    const result = await createDraftEvent({
+      name: "Incomplete Tech Gathering",
+    });
+
+    expect(result).toEqual({ ok: true, data: { id: "evt_draft_partial" } });
+    expect(mockCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          name: "Incomplete Tech Gathering",
+          status: "DRAFT",
+          organiserId: "usr_organiser",
+          purpose: null,
+          description: null,
+          venueRequirements: null,
+        }),
+      }),
+    );
+  });
+
+  it("AC 2: Saved draft retains all entered fields when updated (updating existing draft)", async () => {
+    mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
+    mockFindFirst.mockResolvedValue({
+      id: "evt_draft_existing",
+      organiserId: "usr_organiser",
+      status: "DRAFT",
+    });
+    mockUpdate.mockResolvedValue({ id: "evt_draft_existing" });
+
+    // Update existing draft with additional fields
+    const result = await createDraftEvent({
+      id: "evt_draft_existing",
+      name: "Incomplete Tech Gathering — Updated",
+      purpose: "New Purpose Added",
+      venueRequirements: "Requires 100 capacity room",
+    });
+
+    expect(result).toEqual({ ok: true, data: { id: "evt_draft_existing" } });
+    expect(mockFindFirst).toHaveBeenCalledWith({
+      where: { id: "evt_draft_existing", organiserId: "usr_organiser", status: "DRAFT" },
+    });
+    expect(mockUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "evt_draft_existing" },
+        data: expect.objectContaining({
+          name: "Incomplete Tech Gathering — Updated",
+          purpose: "New Purpose Added",
+          venueRequirements: "Requires 100 capacity room",
+        }),
+      }),
+    );
+  });
+
+  it("AC 3: Resumed draft can be submitted for review once compulsory fields are complete", async () => {
+    mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
+    mockFindFirst.mockResolvedValue({
+      id: "evt_draft_resumed",
+      organiserId: "usr_organiser",
+      status: "DRAFT",
+    });
+    mockUpdate.mockResolvedValue({ id: "evt_draft_resumed" });
+
+    const completeDraftSubmission = {
+      id: "evt_draft_resumed",
+      name: "Completed Resumed Event",
+      purpose: "Networking",
+      description: "Full description",
+      startAt: futureStart,
+      endAt: futureEnd,
+      expectedAttendance: 100,
+      venueRequirements: "Auditorium",
+      preferredLayout: "Theatre",
+      accessibilityNeeds: "Ramp access",
+      equipmentRequirements: "Microphones",
+      registrationNotes: "Online registration",
+    };
+
+    const result = await submitEventRequest(completeDraftSubmission);
+
+    expect(result).toEqual({ ok: true, data: { id: "evt_draft_resumed" } });
+    expect(mockUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "evt_draft_resumed" },
+        data: expect.objectContaining({
+          name: "Completed Resumed Event",
+          status: "SUBMITTED",
+          submittedAt: expect.any(Date),
+        }),
+      }),
+    );
+  });
+
+  it("Security check: Rejects updating or submitting draft owned by another user", async () => {
+    mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_other_organiser"));
+    // Mock draft belonging to a different user, so findFirst returns null
+    mockFindFirst.mockResolvedValue(null);
+
+    const result = await createDraftEvent({
+      id: "evt_draft_someone_else",
+      name: "Attempted Hijack",
+    });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error).toMatch(/not found or cannot be modified/i);
+    }
+    expect(mockUpdate).not.toHaveBeenCalled();
+  });
+});
+

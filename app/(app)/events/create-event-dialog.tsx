@@ -72,10 +72,78 @@ const LAYOUT_OPTIONS = [
   "Cocktail / Standing",
 ];
 
-export function CreateEventDialog() {
-  const [open, setOpen] = useState(false);
+export interface DraftEventData {
+  id: string;
+  name: string;
+  status?: string;
+  purpose?: string | null;
+  description?: string | null;
+  startAt?: Date | string | null;
+  endAt?: Date | string | null;
+  expectedAttendance?: number | null;
+  venueRequirements?: string | null;
+  requiredFacilities?: string[];
+  accessibilityNeeds?: string | null;
+  preferredLayout?: string | null;
+  equipmentRequirements?: string | null;
+  registrationNotes?: string | null;
+  programme?: string | null;
+  specialRequests?: string | null;
+}
+
+interface CreateEventDialogProps {
+  draftEvent?: DraftEventData | null;
+  readOnly?: boolean;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  trigger?: React.ReactNode;
+}
+
+/** Helper to format Date or ISO string into datetime-local input format (YYYY-MM-DDTHH:mm) */
+function toDatetimeInputString(dateVal: Date | string | null | undefined): string {
+  if (!dateVal) return "";
+  const d = new Date(dateVal);
+  if (isNaN(d.getTime())) return "";
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function getInitialFormData(draftEvent?: DraftEventData | null): FormState {
+  if (!draftEvent) return initialFormState;
+  return {
+    name: draftEvent.name || "",
+    purpose: draftEvent.purpose || "",
+    description: draftEvent.description || "",
+    startAt: toDatetimeInputString(draftEvent.startAt),
+    endAt: toDatetimeInputString(draftEvent.endAt),
+    expectedAttendance:
+      draftEvent.expectedAttendance !== null && draftEvent.expectedAttendance !== undefined
+        ? String(draftEvent.expectedAttendance)
+        : "",
+    venueRequirements: draftEvent.venueRequirements || "",
+    requiredFacilities: draftEvent.requiredFacilities || [],
+    preferredLayout: draftEvent.preferredLayout || "",
+    accessibilityNeeds: draftEvent.accessibilityNeeds || "",
+    equipmentRequirements: draftEvent.equipmentRequirements || "",
+    registrationNotes: draftEvent.registrationNotes || "",
+    programme: draftEvent.programme || "",
+    specialRequests: draftEvent.specialRequests || "",
+  };
+}
+
+export function CreateEventDialog({
+  draftEvent,
+  readOnly,
+  open: openProp,
+  onOpenChange: onOpenChangeProp,
+  trigger,
+}: CreateEventDialogProps = {}) {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const isControlled = openProp !== undefined;
+  const open = isControlled ? openProp : internalOpen;
+
   const [step, setStep] = useState<number>(1);
-  const [formData, setFormData] = useState<FormState>(initialFormState);
+  const [formData, setFormData] = useState<FormState>(() => getInitialFormData(draftEvent));
   const [isPending, startTransition] = useTransition();
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
   const [catalogues, setCatalogues] = useState<{
@@ -83,7 +151,9 @@ export function CreateEventDialog() {
     equipment: { id: string; type: string; totalQuantity: number }[];
   }>({ venues: [], equipment: [] });
 
-  const [minStartDateTime, setMinStartDateTime] = useState<string>("");
+  const isReadOnly = Boolean(readOnly || (draftEvent?.status && draftEvent.status !== "DRAFT"));
+
+  const minStartDateTime = new Date().toISOString().slice(0, 16);
 
   useEffect(() => {
     if (open) {
@@ -92,9 +162,14 @@ export function CreateEventDialog() {
   }, [open]);
 
   function handleOpenChange(isOpen: boolean) {
-    setOpen(isOpen);
+    if (isControlled) {
+      onOpenChangeProp?.(isOpen);
+    } else {
+      setInternalOpen(isOpen);
+    }
+
     if (isOpen) {
-      setMinStartDateTime(new Date().toISOString().slice(0, 16));
+      setFormData(getInitialFormData(draftEvent));
     }
   }
 
@@ -176,6 +251,7 @@ export function CreateEventDialog() {
   async function handleSaveDraft() {
     startTransition(async () => {
       const payload = {
+        id: draftEvent?.id,
         ...formData,
         name: formData.name.trim() || "Draft Event Request",
         expectedAttendance: formData.expectedAttendance !== "" ? Number(formData.expectedAttendance) : undefined,
@@ -188,7 +264,7 @@ export function CreateEventDialog() {
       const result = await createDraftEvent(payload);
 
       if (result.ok) {
-        toast.success("Draft event request saved successfully.");
+        toast.success(draftEvent ? "Draft event request updated successfully." : "Draft event request saved successfully.");
         resetForm();
         return;
       }
@@ -201,6 +277,7 @@ export function CreateEventDialog() {
   async function handleSubmitForReview() {
     startTransition(async () => {
       const payload = {
+        id: draftEvent?.id,
         ...formData,
         expectedAttendance: formData.expectedAttendance !== "" ? Number(formData.expectedAttendance) : undefined,
       };
@@ -222,7 +299,7 @@ export function CreateEventDialog() {
     setFormData(initialFormState);
     setFieldErrors({});
     setStep(1);
-    setOpen(false);
+    handleOpenChange(false);
   }
 
   // Check which mandatory submission fields are currently missing
@@ -244,22 +321,36 @@ export function CreateEventDialog() {
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild>
-        <Button className="gap-2">
-          <Plus className="h-4 w-4" />
-          Create Event Request
-        </Button>
-      </DialogTrigger>
+      {trigger ? (
+        <DialogTrigger asChild>{trigger}</DialogTrigger>
+      ) : (
+        !isControlled && (
+          <DialogTrigger asChild>
+            <Button className="gap-2">
+              <Plus className="h-4 w-4" />
+              Create Event Request
+            </Button>
+          </DialogTrigger>
+        )
+      )}
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold flex items-center justify-between">
-            <span>Create Event Request</span>
+            <span>
+              {draftEvent
+                ? isReadOnly
+                  ? "Submitted Event Request Details"
+                  : "Resume Draft Event Request"
+                : "Create Event Request"}
+            </span>
             <span className="text-xs font-normal px-2.5 py-1 bg-primary/10 text-primary rounded-full">
               Step {step} of 6
             </span>
           </DialogTitle>
           <DialogDescription>
-            Provide your event requirements so ConnectSphere can plan your venue, equipment, and arrangements. You can save as a draft at any step.
+            {isReadOnly
+              ? "Review the submitted details for this event request."
+              : "Provide your event requirements so ConnectSphere can plan your venue, equipment, and arrangements. You can save as a draft at any step."}
           </DialogDescription>
         </DialogHeader>
 
@@ -794,21 +885,27 @@ export function CreateEventDialog() {
                 <ChevronLeft className="h-4 w-4 mr-1" /> Previous
               </Button>
             )}
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              disabled={isPending}
-              onClick={handleSaveDraft}
-            >
-              Save as Draft
-            </Button>
+            {!isReadOnly && (
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                disabled={isPending}
+                onClick={handleSaveDraft}
+              >
+                Save as Draft
+              </Button>
+            )}
           </div>
 
           <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
             {step < 6 ? (
               <Button type="button" size="sm" onClick={nextStep}>
                 Next <ChevronRight className="h-4 w-4 ml-1" />
+              </Button>
+            ) : isReadOnly ? (
+              <Button type="button" variant="secondary" size="sm" onClick={() => handleOpenChange(false)}>
+                Close
               </Button>
             ) : (
               <Button
