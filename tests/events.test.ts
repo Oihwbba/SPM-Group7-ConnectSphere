@@ -6,10 +6,6 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { createDraftEvent, submitEventRequest } from "@/app/(app)/events/actions";
 
-// The action reaches out to the session and the database; both are mocked so
-// this is a fast unit test that never opens a connection. We assert on the
-// three outcomes the §6 convention promises: success, validation failure, and
-// permission denial.
 // ============================================================================
 // MOCKS & SETUP
 // ============================================================================
