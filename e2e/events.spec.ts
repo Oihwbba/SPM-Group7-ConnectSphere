@@ -259,4 +259,74 @@ test.describe("User Story 16 — Distinguish Drafts from Submitted Requests Jour
   });
 });
 
+/**
+ * End-to-End (E2E) Test Suite for User Story 84: Organiser Views Their Own Event Requests.
+ * Tests that an organiser sees all their created event requests regardless of status,
+ * each entry shows event name and status badge, ownership rules are strictly enforced across organisers,
+ * and selecting any entry opens the full event details.
+ */
+test.describe("User Story 84 — Organiser Views Their Own Event Requests Journey", () => {
+  test("organiser views list of their own events with names, status badges, and selects an entry for full detail", async ({
+    page,
+  }) => {
+    // 1. Sign in as seeded event organiser
+    await page.goto("/login");
+    await page.getByLabel("Email", { exact: true }).fill("organiser@test.local");
+    await page.getByLabel("Password", { exact: true }).fill("Password123!");
+    await page.getByRole("button", { name: "Sign in" }).click();
+
+    await page.waitForURL("**/events");
+    await expect(page.getByRole("heading", { name: "My Events" })).toBeVisible();
+
+    const eventTitle = `US84 Event ${Date.now()}`;
+
+    // 2. Create a Draft Event Request
+    await page.getByRole("button", { name: /Create Event Request/i }).first().click();
+    await page.getByLabel("Event Name *").fill(eventTitle);
+    await page.getByRole("button", { name: /Save as Draft/i }).click();
+
+    // 3. Assert event row is displayed with Name and Status Badge (AC 1 & AC 2)
+    const row = page.getByRole("row", { name: new RegExp(eventTitle) });
+    await expect(row).toBeVisible();
+    await expect(row.getByTestId("status-badge")).toBeVisible();
+    await expect(row.getByTestId("status-badge")).toHaveAttribute("data-status", "DRAFT");
+
+    // 4. Select entry (Clicking Event Name Link) opens Full Detail Modal (AC 5)
+    await row.getByTestId("event-name-link").click();
+    await expect(page.getByRole("dialog")).toBeVisible();
+    await expect(page.getByRole("heading", { name: eventTitle })).toBeVisible();
+    await expect(page.getByRole("dialog").getByText(/Draft Event Request/i)).toBeVisible();
+
+    // Close detail modal
+    await page.getByRole("dialog").getByRole("button", { name: "Close" }).first().click();
+    await expect(page.getByRole("dialog")).not.toBeVisible();
+
+    // 5. Select entry via "View Details" button also opens Full Detail Modal (AC 5)
+    await row.getByTestId("view-details-button").click();
+    await expect(page.getByRole("dialog")).toBeVisible();
+    await expect(page.getByRole("heading", { name: eventTitle })).toBeVisible();
+    await page.getByRole("dialog").getByRole("button", { name: "Close" }).first().click();
+  });
+
+  test("enforces ownership isolation: organiser2 sees only their own events (AC 3)", async ({
+    page,
+  }) => {
+    // 1. Sign in as organiser2 (owns evt_other_organiser per seed data)
+    await page.goto("/login");
+    await page.getByLabel("Email", { exact: true }).fill("organiser2@test.local");
+    await page.getByLabel("Password", { exact: true }).fill("Password123!");
+    await page.getByRole("button", { name: "Sign in" }).click();
+
+    await page.waitForURL("**/events");
+    await expect(page.getByRole("heading", { name: "My Events" })).toBeVisible();
+
+    // 2. Organiser 2 sees their own seeded event (evt_other_organiser: "Another Client's Event — Product Launch")
+    await expect(page.getByText("Another Client's Event — Product Launch")).toBeVisible();
+
+    // 3. Organiser 2 does NOT see events belonging to organiser@test.local (e.g. "Draft — Annual Tech Summit")
+    await expect(page.getByText("Draft — Annual Tech Summit")).not.toBeVisible();
+  });
+});
+
+
 

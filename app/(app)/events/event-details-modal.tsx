@@ -46,7 +46,7 @@ export function EventDetailsModal({
             <div>
               <DialogTitle className="text-xl font-bold">{event.name}</DialogTitle>
               <DialogDescription className="text-xs text-muted-foreground mt-1">
-                Submitted Event Request &mdash; Created on {formatDate(event.createdAt)}
+                {event.status === "DRAFT" ? "Draft Event Request" : "Event Request"} &mdash; Created on {formatDate(event.createdAt)}
                 {event.submittedAt && ` • Submitted ${formatDate(event.submittedAt)}`}
               </DialogDescription>
             </div>

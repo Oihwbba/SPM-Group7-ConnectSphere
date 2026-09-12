@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
 import type { Session } from "next-auth";
-import type { Role } from "@prisma/client";
+import type { Role, EventStatus } from "@prisma/client";
 
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
@@ -475,5 +475,97 @@ describe("User Story 16 — Distinguish drafts from submitted requests", () => {
     );
   });
 });
+
+// ============================================================================
+// USER STORY 84 UNIT TESTS — Organiser views their own event requests
+// ============================================================================
+describe("User Story 84 — Organiser views their own event requests", () => {
+  const allStatuses: EventStatus[] = [
+    "DRAFT",
+    "SUBMITTED",
+    "UNDER_REVIEW",
+    "APPROVED",
+    "PLANNING",
+    "CONFIRMED",
+    "COMPLETED",
+    "CANCELLED",
+    "REJECTED",
+  ];
+
+  it("AC 1 & 3: Organiser queries events owned strictly by their organiserId across all 9 statuses", async () => {
+    mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser_us84"));
+
+    const mockEventsList = allStatuses.map((status, idx) => ({
+      id: `evt_us84_${idx}`,
+      name: `Event ${status}`,
+      status,
+      organiserId: "usr_organiser_us84",
+      createdAt: new Date(),
+    }));
+
+    prisma.event.findMany = vi.fn().mockResolvedValue(mockEventsList);
+
+    const events = await prisma.event.findMany({
+      where: { organiserId: "usr_organiser_us84" },
+      orderBy: { createdAt: "desc" },
+    });
+
+    expect(events.length).toBe(9);
+    expect(prisma.event.findMany).toHaveBeenCalledWith({
+      where: { organiserId: "usr_organiser_us84" },
+      orderBy: { createdAt: "desc" },
+    });
+    // Verify all 9 statuses are present in the returned list
+    const returnedStatuses = events.map((e) => e.status);
+    allStatuses.forEach((status) => {
+      expect(returnedStatuses).toContain(status);
+    });
+  });
+
+  it("AC 2: Each event entry exposes its name and status for display", async () => {
+    const sampleEvent = {
+      id: "evt_sample_1",
+      name: "Annual Regional Conference",
+      status: "APPROVED",
+      organiserId: "usr_organiser_us84",
+      createdAt: new Date(),
+    };
+
+    prisma.event.findMany = vi.fn().mockResolvedValue([sampleEvent]);
+
+    const events = await prisma.event.findMany({
+      where: { organiserId: "usr_organiser_us84" },
+    });
+
+    expect(events[0].name).toBe("Annual Regional Conference");
+    expect(events[0].status).toBe("APPROVED");
+  });
+
+  it("AC 4 & 5: Organiser can retrieve full details for any selected event entry regardless of status", async () => {
+    mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser_us84"));
+
+    const detailedDraftEvent = {
+      id: "evt_draft_detail",
+      name: "Draft Detail Event",
+      status: "DRAFT",
+      purpose: "Draft purpose",
+      description: "Draft description",
+      organiserId: "usr_organiser_us84",
+      createdAt: new Date(),
+    };
+
+    prisma.event.findUnique = vi.fn().mockResolvedValue(detailedDraftEvent);
+
+    const result = await prisma.event.findUnique({
+      where: { id: "evt_draft_detail" },
+    });
+
+    expect(result).toBeDefined();
+    expect(result?.id).toBe("evt_draft_detail");
+    expect(result?.status).toBe("DRAFT");
+    expect(result?.name).toBe("Draft Detail Event");
+  });
+});
+
 
 

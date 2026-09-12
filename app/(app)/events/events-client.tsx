@@ -178,7 +178,14 @@ export function EventsClient({ events, isCoordinator = false }: EventsClientProp
                     >
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span>{event.name}</span>
+                          <button
+                            type="button"
+                            onClick={() => setViewingEvent(event)}
+                            className="font-medium text-foreground hover:underline focus:outline-none text-left cursor-pointer"
+                            data-testid="event-name-link"
+                          >
+                            {event.name}
+                          </button>
                           {/* User Story 16: Draft requests are visually marked with a clear Draft label tag */}
                           {isDraft && (
                             <span
@@ -201,18 +208,19 @@ export function EventsClient({ events, isCoordinator = false }: EventsClientProp
                         {formatDate(event.createdAt)}
                       </TableCell>
                       <TableCell className="text-right">
-                        {isDraft ? (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="gap-1.5 h-8 text-xs border-slate-300 dark:border-slate-700 bg-slate-100/60 hover:bg-slate-200/70 dark:bg-slate-800/60 dark:hover:bg-slate-800 font-medium text-slate-800 dark:text-slate-200"
-                            onClick={() => setEditingDraft(event)}
-                            data-testid="resume-draft-button"
-                          >
-                            <Pencil className="h-3.5 w-3.5" />
-                            Resume Draft
-                          </Button>
-                        ) : (
+                        <div className="flex items-center justify-end gap-1.5">
+                          {isDraft && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="gap-1.5 h-8 text-xs border-slate-300 dark:border-slate-700 bg-slate-100/60 hover:bg-slate-200/70 dark:bg-slate-800/60 dark:hover:bg-slate-800 font-medium text-slate-800 dark:text-slate-200"
+                              onClick={() => setEditingDraft(event)}
+                              data-testid="resume-draft-button"
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                              Resume Draft
+                            </Button>
+                          )}
                           <Button
                             variant="ghost"
                             size="sm"
@@ -223,7 +231,7 @@ export function EventsClient({ events, isCoordinator = false }: EventsClientProp
                             <Eye className="h-3.5 w-3.5" />
                             View Details
                           </Button>
-                        )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   );
