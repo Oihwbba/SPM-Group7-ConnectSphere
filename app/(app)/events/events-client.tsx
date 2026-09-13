@@ -32,7 +32,7 @@ type FilterTab = "ALL" | "DRAFT" | "SUBMITTED";
  *
  * User Story 16 — Distinguish drafts from submitted requests:
  * - Draft requests feature a prominent visual "Draft — Incomplete" tag alongside their title.
- * - Table rows for drafts have distinct left-border accent styling (border-l-amber-500/border-l-slate-400).
+ * - Table rows for drafts have a distinct muted left-border accent.
  * - Muted status badges with FileEdit icons separate DRAFT from SUBMITTED / UNDER_REVIEW (blue info pills with clock/send icons).
  * - "Resume Draft" primary action button visually separates draft rows from "View Details" on submitted requests.
  * - Quick status filter tabs allow filtering between All, Drafts, and Submitted requests.
@@ -90,7 +90,7 @@ export function EventsClient({ events, isCoordinator = false }: EventsClientProp
             size="sm"
             className={cn(
               "h-8 text-xs font-medium gap-1.5",
-              activeTab === "DRAFT" && "bg-slate-200/80 dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-semibold"
+              activeTab === "DRAFT" && "font-semibold"
             )}
             onClick={() => setActiveTab("DRAFT")}
           >
@@ -172,7 +172,7 @@ export function EventsClient({ events, isCoordinator = false }: EventsClientProp
                       className={cn(
                         "transition-colors",
                         isDraft
-                          ? "bg-slate-50/60 dark:bg-slate-900/40 border-l-4 border-l-slate-400"
+                          ? "bg-muted/40 border-l-4 border-l-muted-foreground/50"
                           : "border-l-4 border-l-transparent"
                       )}
                     >
@@ -189,7 +189,7 @@ export function EventsClient({ events, isCoordinator = false }: EventsClientProp
                           {/* User Story 16: Draft requests are visually marked with a clear Draft label tag */}
                           {isDraft && (
                             <span
-                              className="inline-flex items-center gap-1 rounded bg-slate-100 dark:bg-slate-800 px-2 py-0.5 text-[11px] font-semibold text-slate-700 dark:text-slate-300 border border-slate-300/70 dark:border-slate-700"
+                              className="inline-flex items-center gap-1 rounded bg-muted px-2 py-0.5 text-[11px] font-semibold text-muted-foreground border border-border"
                               data-testid="draft-label"
                             >
                               <FileEdit className="h-3 w-3" />
@@ -213,7 +213,7 @@ export function EventsClient({ events, isCoordinator = false }: EventsClientProp
                             <Button
                               variant="outline"
                               size="sm"
-                              className="gap-1.5 h-8 text-xs border-slate-300 dark:border-slate-700 bg-slate-100/60 hover:bg-slate-200/70 dark:bg-slate-800/60 dark:hover:bg-slate-800 font-medium text-slate-800 dark:text-slate-200"
+                              className="gap-1.5 h-8 text-xs font-medium"
                               onClick={() => setEditingDraft(event)}
                               data-testid="resume-draft-button"
                             >
