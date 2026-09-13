@@ -232,11 +232,26 @@ export async function submitEventRequest(
 
 /**
  * Fetch available venue list and equipment catalogue for form recommendations.
+ * Gated like the create actions: a "use server" export is a public endpoint,
+ * so only a user who can create an event request may read the catalogue.
  */
-export async function getFormCatalogues(): Promise<{
-  venues: { id: string; name: string; capacity: number; facilities: string[] }[];
-  equipment: { id: string; type: string; totalQuantity: number }[];
-}> {
+export async function getFormCatalogues(): Promise<
+  ActionResult<{
+    venues: { id: string; name: string; capacity: number; facilities: string[] }[];
+    equipment: { id: string; type: string; totalQuantity: number }[];
+  }>
+> {
+  const session = await auth();
+
+  try {
+    requirePermission(session?.user, "event:create");
+  } catch (error) {
+    if (error instanceof PermissionError) {
+      return err(error.message);
+    }
+    throw error;
+  }
+
   const venues = await prisma.venue.findMany({
     where: { isActive: true },
     select: { id: true, name: true, capacity: true, facilities: true },
@@ -247,5 +262,5 @@ export async function getFormCatalogues(): Promise<{
     select: { id: true, type: true, totalQuantity: true },
   });
 
-  return { venues, equipment };
+  return ok({ venues, equipment });
 }

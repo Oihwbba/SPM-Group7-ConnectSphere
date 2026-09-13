@@ -4,7 +4,11 @@ import type { Role, EventStatus } from "@prisma/client";
 
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
-import { createDraftEvent, submitEventRequest } from "@/app/(app)/events/actions";
+import {
+  createDraftEvent,
+  submitEventRequest,
+  getFormCatalogues,
+} from "@/app/(app)/events/actions";
 
 // ============================================================================
 // MOCKS & SETUP
@@ -19,6 +23,8 @@ vi.mock("@/lib/db", () => ({
       findFirst: vi.fn(),
       update: vi.fn(),
     },
+    venue: { findMany: vi.fn() },
+    equipment: { findMany: vi.fn() },
   },
 }));
 
@@ -564,6 +570,55 @@ describe("User Story 84 — Organiser views their own event requests", () => {
     expect(result?.id).toBe("evt_draft_detail");
     expect(result?.status).toBe("DRAFT");
     expect(result?.name).toBe("Draft Detail Event");
+  });
+});
+
+// ============================================================================
+// getFormCatalogues — a "use server" export is a public endpoint, so it must
+// refuse anyone who cannot create an event request.
+// ============================================================================
+describe("getFormCatalogues — permission gate", () => {
+  const mockVenues = prisma.venue.findMany as unknown as Mock;
+  const mockEquipment = prisma.equipment.findMany as unknown as Mock;
+
+  it("returns the venue and equipment catalogue to an organiser", async () => {
+    mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
+    mockVenues.mockResolvedValue([
+      { id: "ven1", name: "Hall A", capacity: 200, facilities: ["projector"] },
+    ]);
+    mockEquipment.mockResolvedValue([
+      { id: "eq1", type: "Microphone", totalQuantity: 10 },
+    ]);
+
+    const result = await getFormCatalogues();
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.data.venues).toHaveLength(1);
+      expect(result.data.equipment).toHaveLength(1);
+    }
+  });
+
+  it.each(["ATTENDEE", "VENUE_STAFF", "TECH_SUPPORT"] as Role[])(
+    "refuses %s and never queries the catalogue",
+    async (role) => {
+      mockAuth.mockResolvedValue(sessionFor(role, `usr_${role.toLowerCase()}`));
+
+      const result = await getFormCatalogues();
+
+      expect(result.ok).toBe(false);
+      expect(mockVenues).not.toHaveBeenCalled();
+      expect(mockEquipment).not.toHaveBeenCalled();
+    },
+  );
+
+  it("refuses a signed-out caller", async () => {
+    mockAuth.mockResolvedValue(null);
+
+    const result = await getFormCatalogues();
+
+    expect(result.ok).toBe(false);
+    expect(mockVenues).not.toHaveBeenCalled();
   });
 });
 

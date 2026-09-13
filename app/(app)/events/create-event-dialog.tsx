@@ -18,7 +18,19 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { formatDateTime } from "@/lib/datetime";
 import { createDraftEvent, submitEventRequest, getFormCatalogues } from "./actions";
+
+/**
+ * A datetime-local value ("2026-09-20T10:00") carries no timezone. Convert it
+ * to a UTC ISO instant HERE, in the browser, where it means the user's local
+ * time — the server runs in UTC and would read the bare string 8 hours off.
+ */
+function toUtcIso(localValue: string): string | undefined {
+  if (!localValue) return undefined;
+  const d = new Date(localValue);
+  return isNaN(d.getTime()) ? undefined : d.toISOString();
+}
 
 interface FormState {
   name: string;
@@ -153,11 +165,17 @@ export function CreateEventDialog({
 
   const isReadOnly = Boolean(readOnly || (draftEvent?.status && draftEvent.status !== "DRAFT"));
 
-  const minStartDateTime = new Date().toISOString().slice(0, 16);
+  // Local wall-clock "now" — the input's min is compared in local time, so a
+  // UTC string would let SG users pick times up to 8 hours in the past.
+  const minStartDateTime = toDatetimeInputString(new Date());
 
   useEffect(() => {
     if (open) {
-      getFormCatalogues().then(setCatalogues).catch(() => {});
+      getFormCatalogues()
+        .then((result) => {
+          if (result.ok) setCatalogues(result.data);
+        })
+        .catch(() => {});
     }
   }, [open]);
 
@@ -257,8 +275,8 @@ export function CreateEventDialog({
         expectedAttendance: formData.expectedAttendance !== "" ? Number(formData.expectedAttendance) : undefined,
         description: formData.description || undefined,
         purpose: formData.purpose || undefined,
-        startAt: formData.startAt || undefined,
-        endAt: formData.endAt || undefined,
+        startAt: toUtcIso(formData.startAt),
+        endAt: toUtcIso(formData.endAt),
       };
 
       const result = await createDraftEvent(payload);
@@ -280,6 +298,9 @@ export function CreateEventDialog({
         id: draftEvent?.id,
         ...formData,
         expectedAttendance: formData.expectedAttendance !== "" ? Number(formData.expectedAttendance) : undefined,
+        // Empty string (not undefined) so a missing date gets the "required" message.
+        startAt: toUtcIso(formData.startAt) ?? "",
+        endAt: toUtcIso(formData.endAt) ?? "",
       };
 
       const result = await submitEventRequest(payload);
@@ -749,8 +770,8 @@ export function CreateEventDialog({
             </h3>
 
             {hasMissingSubmissionFields ? (
-              <div className="bg-amber-500/10 border border-amber-500/30 text-amber-900 dark:text-amber-200 p-3 rounded-lg text-xs flex items-start gap-2.5">
-                <AlertCircle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+              <div className="bg-warning/15 border border-warning/30 text-warning-foreground p-3 rounded-lg text-xs flex items-start gap-2.5">
+                <AlertCircle className="h-4 w-4 text-warning shrink-0 mt-0.5" />
                 <div>
                   <p className="font-semibold">Draft can be saved at any time.</p>
                   <p className="mt-0.5">
@@ -798,11 +819,11 @@ export function CreateEventDialog({
                 <CardContent className="px-4 pb-3 space-y-1 text-xs">
                   <p>
                     <span className="font-semibold">Start:</span>{" "}
-                    {formData.startAt ? new Date(formData.startAt).toLocaleString() : <span className="text-destructive font-medium bg-destructive/10 px-1.5 py-0.5 rounded text-[11px]">Missing (Required to Submit)</span>}
+                    {formData.startAt ? formatDateTime(formData.startAt) :<span className="text-destructive font-medium bg-destructive/10 px-1.5 py-0.5 rounded text-[11px]">Missing (Required to Submit)</span>}
                   </p>
                   <p>
                     <span className="font-semibold">End:</span>{" "}
-                    {formData.endAt ? new Date(formData.endAt).toLocaleString() : <span className="text-destructive font-medium bg-destructive/10 px-1.5 py-0.5 rounded text-[11px]">Missing (Required to Submit)</span>}
+                    {formData.endAt ? formatDateTime(formData.endAt) :<span className="text-destructive font-medium bg-destructive/10 px-1.5 py-0.5 rounded text-[11px]">Missing (Required to Submit)</span>}
                   </p>
                   <p>
                     <span className="font-semibold">Attendance:</span>{" "}
