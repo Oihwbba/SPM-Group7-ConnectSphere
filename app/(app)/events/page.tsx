@@ -43,13 +43,16 @@ async function OrganiserEvents({ organiserId }: { organiserId: string }) {
   return <EventsClient events={events} />;
 }
 
-/** Coordinator view: displays all submitted event requests available for review or assigned. */
+/** Coordinator view: requests assigned to this coordinator, plus submitted
+ * requests no coordinator has picked up yet. */
 async function CoordinatorEvents({ coordinatorId }: { coordinatorId: string }) {
+  // Must mirror `can()`'s coordinator relationship exactly — a looser query
+  // here would list events assigned to OTHER coordinators.
   const events = await prisma.event.findMany({
     where: {
       OR: [
         { coordinatorId },
-        { status: { not: "DRAFT" } },
+        { coordinatorId: null, status: { not: "DRAFT" } },
       ],
     },
     orderBy: { createdAt: "desc" },

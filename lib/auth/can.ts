@@ -1,4 +1,4 @@
-import type { Role } from "@prisma/client";
+import type { EventStatus, Role } from "@prisma/client";
 
 /**
  * Authorisation lives HERE and only here. An inline role check in a feature
@@ -43,7 +43,14 @@ export type Action =
  * specific row; omit it for create/list actions that are role-gated only.
  */
 export type Resource =
-  | { kind: "event"; organiserId: string; coordinatorId: string | null; status?: string }
+  // `status` is required: the coordinator check treats "unassigned and not a
+  // draft" as visible, so an omitted status must not silently count as non-draft.
+  | {
+      kind: "event";
+      organiserId: string;
+      coordinatorId: string | null;
+      status: EventStatus;
+    }
   | { kind: "registration"; userId: string }
   | { kind: "notification"; userId: string };
 

@@ -28,6 +28,7 @@ describe("can — relationship gate", () => {
     kind: "event" as const,
     organiserId: "orgA",
     coordinatorId: "coord",
+    status: "SUBMITTED" as const,
   };
 
   it("lets an organiser read their own event", () => {
@@ -46,6 +47,20 @@ describe("can — relationship gate", () => {
     expect(
       can({ id: "other", role: "COORDINATOR" }, "event:read", eventOwnedByA),
     ).toBe(false);
+  });
+
+  it("lets any coordinator read a submitted request nobody has picked up yet", () => {
+    const unassigned = { ...eventOwnedByA, coordinatorId: null };
+    expect(can(coordinator, "event:read", unassigned)).toBe(true);
+  });
+
+  it("hides an unassigned draft from coordinators", () => {
+    const draft = {
+      ...eventOwnedByA,
+      coordinatorId: null,
+      status: "DRAFT" as const,
+    };
+    expect(can(coordinator, "event:read", draft)).toBe(false);
   });
 
   it("lets an attendee read only their own registration", () => {
