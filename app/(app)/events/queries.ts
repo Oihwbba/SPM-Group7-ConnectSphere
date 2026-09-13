@@ -36,6 +36,7 @@ export async function getEventForUser(id: string) {
     kind: "event",
     organiserId: event.organiserId,
     coordinatorId: event.coordinatorId,
+    status: event.status,
   });
 
   return allowed ? event : null;
