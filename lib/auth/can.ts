@@ -33,6 +33,7 @@ export type Action =
   | "venue:read"
   | "booking:review"
   | "equipment:read"
+  | "equipment:reserve"
   | "event:browse" // attendees browsing events open for registration
   | "registration:read"
   | "notification:read";
@@ -69,7 +70,7 @@ const ROLE_ACTIONS: Record<Role, Action[]> = {
     "notification:read",
   ],
   VENUE_STAFF: ["venue:read", "booking:review", "notification:read"],
-  TECH_SUPPORT: ["equipment:read", "notification:read"],
+  TECH_SUPPORT: ["equipment:read", "equipment:reserve", "notification:read"],
   ATTENDEE: ["event:browse", "registration:read", "notification:read"],
 };
 

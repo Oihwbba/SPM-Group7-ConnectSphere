@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
 
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
@@ -10,6 +11,12 @@ import {
   submitEventRequestSchema,
 } from "@/lib/schemas/event";
 import { ok, err, type ActionResult } from "@/lib/action-result";
+
+const statusTransitionSchema = z.object({
+  eventId: z.string().min(1),
+  nextStatus: z.enum(["UNDER_REVIEW", "APPROVED", "REJECTED"]),
+  decisionReason: z.string().trim().max(2000).optional(),
+});
 
 /**
  * Server action to create or save/update a DRAFT event request.
@@ -56,7 +63,11 @@ export async function createDraftEvent(
     if (id) {
       // User Story 15 AC 2/3: Resume and update an existing saved draft
       const existing = await prisma.event.findFirst({
-        where: { id, organiserId: user!.id, status: "DRAFT" },
+        where: {
+          id,
+          organiserId: user!.id,
+          status: "DRAFT",
+        },
       });
 
       if (!existing) {
@@ -164,11 +175,15 @@ export async function submitEventRequest(
     if (id) {
       // Submit an existing draft event (US14/US15 transition from DRAFT -> SUBMITTED)
       const existing = await prisma.event.findFirst({
-        where: { id, organiserId: user!.id, status: "DRAFT" },
+        where: {
+          id,
+          organiserId: user!.id,
+          status: { in: ["DRAFT", "REJECTED"] },
+        },
       });
 
       if (!existing) {
-        return err("Draft event not found or cannot be submitted.");
+        return err("Draft or rejected event not found or cannot be submitted.");
       }
 
       await prisma.event.update({
@@ -179,6 +194,9 @@ export async function submitEventRequest(
           description,
           status: "SUBMITTED",
           submittedAt: new Date(),
+          decidedAt: null,
+          decidedById: null,
+          decisionReason: null,
           startAt: new Date(startAt),
           endAt: new Date(endAt),
           expectedAttendance,
@@ -237,7 +255,12 @@ export async function submitEventRequest(
  */
 export async function getFormCatalogues(): Promise<
   ActionResult<{
-    venues: { id: string; name: string; capacity: number; facilities: string[] }[];
+    venues: {
+      id: string;
+      name: string;
+      capacity: number;
+      facilities: string[];
+    }[];
     equipment: { id: string; type: string; totalQuantity: number }[];
   }>
 > {
@@ -263,4 +286,101 @@ export async function getFormCatalogues(): Promise<
   });
 
   return ok({ venues, equipment });
+}
+
+/**
+ * SCRUM-24's single status-changing gate for the coordinator-owned lifecycle
+ * actions. The conditional update makes competing review actions safe: only
+ * the caller that still observes the expected current state can change it.
+ */
+export async function transitionEventStatus(
+  input: unknown,
+): Promise<ActionResult<{ status: string }>> {
+  const session = await auth();
+
+  try {
+    const parsed = statusTransitionSchema.safeParse(input);
+    if (!parsed.success) {
+      return err("Please provide a valid event status action.");
+    }
+
+    const { eventId, nextStatus, decisionReason } = parsed.data;
+    const event = await prisma.event.findUnique({
+      where: { id: eventId },
+      select: {
+        id: true,
+        status: true,
+        organiserId: true,
+        coordinatorId: true,
+      },
+    });
+    if (!event) return err("Event not found.");
+
+    requirePermission(session?.user, "event:review", {
+      kind: "event",
+      organiserId: event.organiserId,
+      coordinatorId: event.coordinatorId,
+      status: event.status,
+    });
+
+    const allowed =
+      (event.status === "SUBMITTED" && nextStatus === "UNDER_REVIEW") ||
+      (event.status === "UNDER_REVIEW" &&
+        (nextStatus === "APPROVED" || nextStatus === "REJECTED"));
+    if (!allowed)
+      return err(
+        "That status change is not allowed from the event's current status.",
+      );
+    if (nextStatus === "REJECTED" && !decisionReason) {
+      return err("A rejection reason is required.");
+    }
+
+    const data =
+      nextStatus === "UNDER_REVIEW"
+        ? { status: nextStatus, coordinatorId: session!.user.id }
+        : {
+            status: nextStatus,
+            decidedAt: new Date(),
+            decidedById: session!.user.id,
+            decisionReason: nextStatus === "REJECTED" ? decisionReason : null,
+          };
+    const updated = await prisma.$transaction(async (tx) => {
+      const result = await tx.event.updateMany({
+        where: {
+          id: event.id,
+          status: event.status,
+          ...(event.status === "UNDER_REVIEW"
+            ? { coordinatorId: session!.user.id }
+            : {}),
+        },
+        data,
+      });
+      if (result.count !== 1) return false;
+
+      await tx.auditLog.create({
+        data: {
+          entityType: "Event",
+          entityId: event.id,
+          action: "STATUS_CHANGED",
+          actorId: session!.user.id,
+          fieldName: "status",
+          oldValue: event.status,
+          newValue: nextStatus,
+          summary: decisionReason ?? undefined,
+        },
+      });
+      return true;
+    });
+    if (!updated) {
+      return err(
+        "This event was updated by another user. Refresh and try again.",
+      );
+    }
+    revalidatePath("/events");
+    if (nextStatus === "APPROVED") revalidatePath("/equipment");
+    return ok({ status: nextStatus });
+  } catch (error) {
+    if (error instanceof PermissionError) return err(error.message);
+    throw error;
+  }
 }
