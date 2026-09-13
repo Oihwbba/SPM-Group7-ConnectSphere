@@ -24,6 +24,26 @@ undocumented**, and that linkage is graded evidence. So, without exception:
 
 If the right key for a change is not obvious, ask before starting.
 
+## Check your work against the story, not just against the code
+
+Every story's acceptance criteria are mirrored in the repo at
+`docs/backlog/<KEY>.md` — the same key that is already in your branch name:
+
+```
+branch SCRUM-19-approve-reject  ->  docs/backlog/SCRUM-19.md
+```
+
+Read yours before you start, and again before you open the PR. Every
+criterion should be covered by a test, or visibly still to do — a PR that
+silently drops one is the failure this file exists to prevent. Reviewers
+check the same file, so make it easy for them: name tests after the criterion
+they cover.
+
+**Jira is the source of truth; these files are a generated snapshot.** Never
+edit them by hand — fix the story in Jira and re-sync. If a file disagrees
+with Jira, Jira wins and the sync is overdue. The index at
+`docs/backlog/README.md` records when it was last synced.
+
 ## Board discipline
 
 - Columns: **To Do → In Progress → In Review → Done.**
@@ -56,6 +76,8 @@ module requires us to be transparent about AI assistance.
 - **How to add a feature / PR-rejection rules:** `CONTRIBUTING.md`
 - **Authorisation — the single gate:** `lib/auth/can.ts`. Never write an inline
   role check (`if (session.user.role === …)`) in a feature.
+- **Acceptance criteria, story by story:** `docs/backlog/` (index:
+  `docs/backlog/README.md`)
 - **Data model & story→table map:** `docs/data-model.md`, `prisma/schema.prisma`
 - **Architecture decisions:** `docs/adr/`
 - **Setup, seed accounts, run commands:** `README.md`
