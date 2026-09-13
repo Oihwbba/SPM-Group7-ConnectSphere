@@ -273,12 +273,19 @@ tests/                        Vitest unit/integration suites
   concurrency.test.ts         (empty — SCRUM-31/53/74 simultaneous cases)
 e2e/                          Playwright specs (npm run test:e2e)
 docs/
+  backlog/                    Every story's acceptance criteria, one file
+                              per SCRUM key — generated from Jira; read
+                              yours before you open a PR
   data-model.md               Story-to-table map and modelling decisions
   adr/                        Architecture Decision Records (read these!)
 ```
 
 ## Where to read next
 
+- **`docs/backlog/`** — the acceptance criteria for every story, one file per
+  SCRUM key. Your branch key is the filename: `SCRUM-19-approve-reject` →
+  `docs/backlog/SCRUM-19.md`. Read yours before you open a PR. Generated from
+  Jira — **Jira is the source of truth**, so re-sync rather than editing them.
 - **`docs/data-model.md`** — what each table is for and which story asked for it.
 - **`CONTRIBUTING.md`** — how to add your first feature by copying the reference.
 - **`docs/adr/`** — why the important decisions were made (route split, JWT
