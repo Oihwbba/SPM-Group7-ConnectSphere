@@ -49,7 +49,11 @@ with Jira, Jira wins and the sync is overdue. The index at
 - Columns: **To Do → In Progress → In Review → Done.**
 - Opening a PR moves the story to **In Review**, not Done.
 - **Done** = merged **and** CI green **and** the Product Owner has accepted it.
-- **Never commit to `main`. Never merge your own PR** — Jin Hong reviews.
+- **Never commit to `main`: open a PR.** Merge your own PR once both required
+  checks are green: `build-and-test` (including e2e) and the GLM `review`,
+  which fails on a critical finding or when no review completes. Read the GLM
+  review before you merge. Changes to `.github/`, `package.json`, the test
+  configs or `vercel.json` need Jin Hong's approval (CODEOWNERS).
 - A story is not finished until its tests pass in CI.
 
 ## AI transparency
