@@ -65,3 +65,23 @@ posts inline comments plus one summary comment that is updated in place.
 - `llm_reasoning_effort` is intentionally not set: BigModel's documentation
   does not list a `reasoning_effort` parameter for GLM-5.3, so sending one
   could fail the request. Revisit once a run confirms whether it is accepted.
+
+## Addendum (2026-09-14) — replaces the Copilot review; findings made direct
+
+- **Replaces Copilot.** GLM-5.3 is the team's automated PR reviewer. Copilot
+  was being auto-requested by a personal Copilot setting, not by this repo,
+  and was failing on quota; each developer turns that setting off.
+- **Findings in the review itself.** OpenCodeReview posts a PR review whose
+  body is only a hidden marker, so its findings were hard to find. A follow-up
+  step writes a findings table into that review: severity, a `file:line` link
+  straight to each inline comment, and a one-line gist. The review sits in the
+  Conversation timeline like a Copilot review. When a run posts no review, the
+  same table goes into one sticky comment instead.
+- **Failures are visible, not silent.** The review step uses
+  `continue-on-error`, so without this a failure would show only as a green
+  check. The findings step reports "this run's review did not complete" on
+  the PR, with a link to the run.
+- **Longer timeouts.** The default 300-second request timeout failed #14:
+  GLM-5.3, with forced thinking, sent no response headers within 5 minutes.
+  A successful two-file review on #13 took about 12 minutes and 199k tokens.
+  Requests now get 900 seconds, each file 30 minutes, and the job 60 minutes.
