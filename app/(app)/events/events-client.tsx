@@ -10,7 +10,6 @@ import {
   FileEdit,
   Filter,
   CheckCircle2,
-  SearchCheck,
   XCircle,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -74,7 +73,7 @@ export function EventsClient({
 
   function changeStatus(
     event: Event,
-    nextStatus: "UNDER_REVIEW" | "APPROVED" | "REJECTED",
+    nextStatus: "APPROVED" | "REJECTED",
     decisionReason?: string,
   ) {
     startTransition(async () => {
@@ -294,20 +293,11 @@ export function EventsClient({
                             <Eye className="h-3.5 w-3.5" />
                             View Details
                           </Button>
-                          {isCoordinator && event.status === "SUBMITTED" && (
-                            <Button
-                              size="sm"
-                              className="h-8 gap-1.5 text-xs"
-                              disabled={isPending}
-                              onClick={() =>
-                                changeStatus(event, "UNDER_REVIEW")
-                              }
-                            >
-                              <SearchCheck className="h-3.5 w-3.5" /> Start
-                              Review
-                            </Button>
-                          )}
-                          {isCoordinator && event.status === "UNDER_REVIEW" && (
+                          {/* SCRUM-19: decide a submitted or under-review request.
+                              There is no manual "claim" — SCRUM-20 assigns automatically. */}
+                          {isCoordinator &&
+                            (event.status === "SUBMITTED" ||
+                              event.status === "UNDER_REVIEW") && (
                             <>
                               <Button
                                 size="sm"

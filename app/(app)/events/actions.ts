@@ -5,16 +5,18 @@ import { z } from "zod";
 
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
-import { requirePermission, PermissionError } from "@/lib/auth/can";
+import { can, requirePermission, PermissionError } from "@/lib/auth/can";
 import {
   createDraftEventSchema,
   submitEventRequestSchema,
 } from "@/lib/schemas/event";
 import { ok, err, type ActionResult } from "@/lib/action-result";
 
+// Coordinators decide; they do not claim. `submitted → under review` belongs to
+// SCRUM-20's automatic assignment, so it is deliberately not accepted here.
 const statusTransitionSchema = z.object({
   eventId: z.string().min(1),
-  nextStatus: z.enum(["UNDER_REVIEW", "APPROVED", "REJECTED"]),
+  nextStatus: z.enum(["APPROVED", "REJECTED"]),
   decisionReason: z.string().trim().max(2000).optional(),
 });
 
@@ -289,22 +291,36 @@ export async function getFormCatalogues(): Promise<
 }
 
 /**
- * SCRUM-24's single status-changing gate for the coordinator-owned lifecycle
- * actions. The conditional update makes competing review actions safe: only
- * the caller that still observes the expected current state can change it.
+ * SCRUM-24's single guarded gate for a coordinator's decision on an event
+ * request (the approve / reject transitions themselves are SCRUM-19's).
+ *
+ * - Role is checked BEFORE the event is looked up, and an event the coordinator
+ *   has no relationship to returns exactly the same "not found" as a missing
+ *   one — so the action cannot be used to probe which event ids exist (SCRUM-68).
+ * - The update is conditional on the status and coordinator this caller
+ *   observed, so of two simultaneous decisions only one can win (SCRUM-24).
  */
 export async function transitionEventStatus(
   input: unknown,
 ): Promise<ActionResult<{ status: string }>> {
   const session = await auth();
+  const user = session?.user;
 
   try {
+    requirePermission(user, "event:review");
+
     const parsed = statusTransitionSchema.safeParse(input);
     if (!parsed.success) {
       return err("Please provide a valid event status action.");
     }
 
     const { eventId, nextStatus, decisionReason } = parsed.data;
+    if (nextStatus === "REJECTED" && !decisionReason) {
+      return err("A rejection reason is required.", {
+        decisionReason: ["A rejection reason is required."],
+      });
+    }
+
     const event = await prisma.event.findUnique({
       where: { id: eventId },
       select: {
@@ -314,46 +330,36 @@ export async function transitionEventStatus(
         coordinatorId: true,
       },
     });
-    if (!event) return err("Event not found.");
+    const related =
+      event &&
+      can(user!, "event:review", {
+        kind: "event",
+        organiserId: event.organiserId,
+        coordinatorId: event.coordinatorId,
+        status: event.status,
+      });
+    if (!event || !related) return err("Event not found.");
 
-    requirePermission(session?.user, "event:review", {
-      kind: "event",
-      organiserId: event.organiserId,
-      coordinatorId: event.coordinatorId,
-      status: event.status,
-    });
-
-    const allowed =
-      (event.status === "SUBMITTED" && nextStatus === "UNDER_REVIEW") ||
-      (event.status === "UNDER_REVIEW" &&
-        (nextStatus === "APPROVED" || nextStatus === "REJECTED"));
-    if (!allowed)
+    // SCRUM-19: a submitted (or under-review) request can be decided.
+    if (event.status !== "SUBMITTED" && event.status !== "UNDER_REVIEW") {
       return err(
         "That status change is not allowed from the event's current status.",
       );
-    if (nextStatus === "REJECTED" && !decisionReason) {
-      return err("A rejection reason is required.");
     }
 
-    const data =
-      nextStatus === "UNDER_REVIEW"
-        ? { status: nextStatus, coordinatorId: session!.user.id }
-        : {
-            status: nextStatus,
-            decidedAt: new Date(),
-            decidedById: session!.user.id,
-            decisionReason: nextStatus === "REJECTED" ? decisionReason : null,
-          };
     const updated = await prisma.$transaction(async (tx) => {
       const result = await tx.event.updateMany({
         where: {
           id: event.id,
           status: event.status,
-          ...(event.status === "UNDER_REVIEW"
-            ? { coordinatorId: session!.user.id }
-            : {}),
+          coordinatorId: event.coordinatorId,
         },
-        data,
+        data: {
+          status: nextStatus,
+          decidedAt: new Date(),
+          decidedById: user!.id,
+          decisionReason: nextStatus === "REJECTED" ? decisionReason : null,
+        },
       });
       if (result.count !== 1) return false;
 
@@ -362,7 +368,7 @@ export async function transitionEventStatus(
           entityType: "Event",
           entityId: event.id,
           action: "STATUS_CHANGED",
-          actorId: session!.user.id,
+          actorId: user!.id,
           fieldName: "status",
           oldValue: event.status,
           newValue: nextStatus,
