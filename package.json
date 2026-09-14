@@ -53,7 +53,7 @@
   "devDependencies": {
     "@playwright/test": "1.63.0",
     "@types/bcryptjs": "2.4.6",
-    "@types/node": "22.10.5",
+    "@types/node": "24.13.4",
     "@types/pg": "8.23.1",
     "@types/react": "19.2.18",
     "@types/react-dom": "19.2.7",
@@ -74,7 +74,7 @@
     "vitest": "2.1.8"
   },
   "engines": {
-    "node": ">=20.9.0"
+    "node": ">=24"
   },
   "overrides": {
     "@types/react": "19.2.18",
