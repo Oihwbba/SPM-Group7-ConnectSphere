@@ -105,7 +105,7 @@ Pushing the branch starts two things automatically:
 |---|---|---|
 | **GitHub Actions** | migrate → seed → typecheck → lint → unit tests → e2e | ~2m30s |
 | **Vercel** | builds a preview at a stable per-branch URL | ~30s |
-| **GLM code review** | one AI reviewer reads the whole diff and posts one review (skipped for drafts) | a few minutes |
+| **GLM code review** | one AI reviewer reads the whole diff and posts one long review comment; red on critical/high findings (skipped for drafts) | ~10 minutes |
 
 Merging to `main` runs CI again and deploys production.
 
@@ -130,18 +130,20 @@ Merging to `main` runs CI again and deploys production.
 4. **Previews share the production database.** A preview deployment of your
    branch reads and writes the same Supabase data as the live site. Do not use
    a preview to test destructive changes, and never run `db:reset` against it.
-5. **The GLM review is advisory, not a gate.** Every non-draft PR gets one
-   AI review from GLM-5.3, which reads the whole diff in a single pass
-   (ADR 0008). It replaces the Copilot review: it appears in the
-   **Conversation** tab as a review from `github-actions`, with a findings
-   table whose locations link straight to each inline comment. If a run fails,
-   the review says so. Treat each comment as a suggestion: fix it, or reply
-   with why it doesn't apply. If Copilot still reviews your PRs, turn off
-   automatic Copilot code review in your personal GitHub Copilot settings.
-   It is not a required check, so a missing or wrong AI review never blocks a
-   merge, and it does not replace the human review. Your diff is sent to
-   BigModel (Zhipu), a third-party provider, so never put secrets in a diff.
-   Project-specific review rules live in `.opencodereview/rule.json`.
+5. **Read the GLM review before you merge; it is not a gate.** Every non-draft
+   PR gets one long AI review from GLM-5.3, which reads the whole diff in a
+   single pass (ADR 0008). It appears in the **Conversation** tab as one
+   comment from `github-actions`, updated on every push: a verdict, an
+   overview, and a section per finding with a **Where:** link to the exact line
+   and a suggested fix. There are no inline comments. The **GLM Code Review**
+   check turns **red** when it finds critical or high issues. Fix them, or
+   reply on the PR with why they don't apply. It is not a required check, so it
+   never blocks the merge button, and it does not replace the human review. If
+   GLM itself fails, the comment says so and the check stays green. If Copilot
+   still reviews your PRs, turn off automatic Copilot code review in your
+   personal GitHub Copilot settings. Your diff is sent to BigModel (Zhipu), a
+   third-party provider, so never put secrets in a diff. The reviewer's rules
+   live in `.github/ai-review/instructions.md`.
 
 ---
 

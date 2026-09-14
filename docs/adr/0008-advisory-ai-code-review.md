@@ -104,3 +104,40 @@ per-file audit.
 - A diff over 120,000 characters is truncated, and the review says so.
 - A finding whose line GitHub won't accept for an inline comment stays in the
   table with its detail, without a link.
+
+## Addendum (2026-09-14, later) — one long review comment; red check on critical or high
+
+This supersedes the review format and failure policy in the addendum above.
+
+**Why it changed.** The team found inline comments hard to navigate: reading a
+finding meant jumping from the table to a comment thread in the diff. They want
+the review written like an AI review in the editor, fully readable in one place,
+and they want serious findings to be visible from the checks list.
+
+**Decision.**
+
+- **One long review, posted as a PR comment** in the Conversation tab and
+  **updated in place on every push**, so each pull request has exactly one
+  current review. It contains a verdict, an overview, a findings-at-a-glance
+  table, and a section per finding: severity, title, a **"Where:"** reference
+  that links to the exact line of the PR head's code, the explanation, and a
+  suggested fix. **No inline comments.**
+- **Four severities:** critical, high, medium, low.
+- **The check fails (red) when any finding is critical or high.** The script
+  exits 1 after posting the review. The check is still **not a required
+  status check**, so it never blocks the merge button: `build-and-test`
+  remains the only merge gate, and a human decides whether to fix the finding
+  or accept it.
+- **A GLM or GitHub API failure stays green.** The comment says the review did
+  not complete and links to the run. A provider outage must not turn every PR
+  red.
+- Model-supplied text is normalised before rendering: titles are collapsed to
+  one line, table cells escape `|`, and code suggestions use a fence longer
+  than any backtick run inside them, so the review's formatting can't break.
+
+**Trade-offs.**
+
+- A red check can be a false positive, because GLM decides severity. That is
+  why the check is not required: it draws attention, and a human rules.
+- References link to lines rather than sitting on the diff, so a reader clicks
+  through to see the surrounding code.

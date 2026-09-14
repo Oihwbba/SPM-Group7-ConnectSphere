@@ -1,9 +1,13 @@
 // SCRUM-88 — one GLM-5.3 reviewer for the whole pull request (ADR 0008).
 //
-// Reads the PR diff, asks GLM-5.3 for a review in ONE call, and posts ONE pull
-// request review: a findings table at the top whose rows link straight to the
-// inline comments on the changed lines. The review is advisory, so a problem
-// with GLM or the GitHub API is reported on the PR and this script still exits 0.
+// Reads the PR diff, asks GLM-5.3 for a review in ONE call, and posts ONE long
+// review as a PR comment in the Conversation tab: a verdict, an overview, and a
+// section per finding with a "Where:" reference that links to the exact line.
+// No inline comments. The comment is updated in place on every push.
+//
+// Exit code: 1 (red check) when the review finds critical or high issues, so
+// they are visible at a glance. A problem with GLM or the GitHub API is
+// reported on the PR and exits 0 — an outage must not turn every PR red.
 
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
@@ -12,8 +16,8 @@ import { pathToFileURL } from "node:url";
 const GLM_URL = "https://open.bigmodel.cn/api/paas/v4/chat/completions";
 const GLM_TIMEOUT_MS = 20 * 60 * 1000;
 const MAX_DIFF_CHARS = 120_000;
-const MARKER = "<!-- glm-single-review -->";
-const SUPERSEDED = "<!-- glm-single-review-superseded -->";
+const MAX_FINDINGS = 10;
+const MARKER = "<!-- glm-review -->";
 
 // Docs, lockfiles and generated snapshots don't need an AI review.
 const EXCLUDE = [
@@ -23,12 +27,21 @@ const EXCLUDE = [
   ":(glob,exclude)**/migration_lock.toml",
 ];
 
-const SEVERITY_LABEL = { high: "🔴 high", medium: "🟠 medium", low: "🔵 low" };
+export const SEVERITY = {
+  critical: { rank: 0, label: "🟣 Critical" },
+  high: { rank: 1, label: "🔴 High" },
+  medium: { rank: 2, label: "🟠 Medium" },
+  low: { rank: 3, label: "🔵 Low" },
+};
+
+// Findings at these severities fail the check (it is not a required check, so
+// a red review does not block merging; a human decides).
+const BLOCKING = new Set(["critical", "high"]);
 
 /**
  * Prefixes each added or context line with its line number in the new file, so
- * GLM can cite exact lines, and records which lines can carry an inline comment
- * (GitHub only accepts comments on lines that appear on the new side of a hunk).
+ * GLM can cite exact lines, and records which lines exist on the new side of
+ * each file's hunks.
  */
 export function parseDiff(diff) {
   const commentable = new Map();
@@ -92,77 +105,110 @@ export function parseReview(text) {
     summary: typeof data.summary === "string" ? data.summary.trim() : "",
     findings: findings
       .filter((f) => f && typeof f.path === "string" && typeof f.title === "string")
-      .slice(0, 10)
       .map((f) => {
         const severity = String(f.severity).toLowerCase();
         const line = Number.parseInt(f.line, 10);
         return {
           path: f.path.trim().replace(/^b\//, ""),
           line: Number.isInteger(line) && line > 0 ? line : null,
-          severity: severity in SEVERITY_LABEL ? severity : "medium",
+          severity: severity in SEVERITY ? severity : "medium",
           title: f.title.trim(),
           detail: typeof f.detail === "string" ? f.detail.trim() : "",
           suggestion: typeof f.suggestion === "string" ? f.suggestion.trim() : "",
         };
-      }),
+      })
+      // Most severe first; Array.prototype.sort is stable, so GLM's order holds
+      // within a severity.
+      .sort((a, b) => SEVERITY[a.severity].rank - SEVERITY[b.severity].rank)
+      .slice(0, MAX_FINDINGS),
   };
+}
+
+export function countBlocking(findings) {
+  return findings.filter((f) => BLOCKING.has(f.severity)).length;
+}
+
+/** A link to the exact line of the PR head's code. */
+export function fileLink({ repo, sha, path, line }) {
+  const encoded = path
+    .split("/")
+    .map((part) => encodeURIComponent(part).replace(/\(/g, "%28").replace(/\)/g, "%29"))
+    .join("/");
+  return `https://github.com/${repo}/blob/${sha}/${encoded}${line ? `#L${line}` : ""}`;
+}
+
+/** A code fence longer than any run of backticks in the code, so it can't break out. */
+export function fenceFor(code) {
+  const longest = Math.max(0, ...(code.match(/`+/g) ?? []).map((run) => run.length));
+  return "`".repeat(Math.max(3, longest + 1));
+}
+
+function oneLine(text) {
+  return text.replace(/\s+/g, " ").trim();
+}
+
+function tableCell(text) {
+  return oneLine(text).replace(/\|/g, "\\|");
 }
 
 function formatCount(n) {
   return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }
 
-function tableCell(text) {
-  return text.replace(/\|/g, "\\|").replace(/\s+/g, " ").trim();
+function severityCounts(findings) {
+  return Object.keys(SEVERITY)
+    .map((s) => [s, findings.filter((f) => f.severity === s).length])
+    .filter(([, n]) => n > 0)
+    .map(([s, n]) => `${n} ${s}`)
+    .join(" · ");
 }
 
-function renderComment(finding, model) {
-  const parts = [`**${SEVERITY_LABEL[finding.severity]}** · ${finding.title}`];
-  if (finding.detail) parts.push(finding.detail);
-  if (finding.suggestion) {
-    parts.push(`**Suggested fix:**\n\`\`\`\n${finding.suggestion}\n\`\`\``);
-  }
-  parts.push(`<sub>${model} · advisory</sub>`);
-  return parts.join("\n\n");
-}
+export function renderReview({ model, repo, sha, summary, findings, notes, usage, seconds, runUrl }) {
+  const blocking = countBlocking(findings);
+  const lines = [MARKER, `## 🤖 ${model} code review`, ""];
 
-export function renderBody({ model, summary, findings, links, notes, usage, seconds, runUrl }) {
-  const lines = [MARKER, `### 🤖 ${model} review`, ""];
-  if (summary) lines.push(summary, "");
-
-  if (findings.length === 0) {
-    lines.push("✅ No findings.");
+  if (blocking > 0) {
+    lines.push(`❌ **Blocking issues found:** ${blocking} critical or high finding(s) to fix, or explicitly accept, before merging.`);
+  } else if (findings.length > 0) {
+    lines.push("⚠️ **Issues to consider:** no critical or high findings.");
   } else {
-    lines.push(
-      `**${findings.length} finding(s).** Click a location to jump to the comment. Advisory only (ADR 0008): fix it, or reply with why it doesn't apply.`,
-      "",
-      "| # | Severity | Where | Finding |",
-      "|---|---|---|---|",
-    );
+    lines.push("✅ **No issues found.**");
+  }
+
+  const counts = findings.length ? ` · ${severityCounts(findings)}` : "";
+  lines.push("", `**Commit:** [\`${sha.slice(0, 7)}\`](https://github.com/${repo}/commit/${sha})${counts}`);
+  lines.push("", "### Overview", "", summary || "_GLM returned no overview._");
+
+  if (findings.length > 0) {
+    lines.push("", "### Findings at a glance", "", "| # | Severity | Where | Issue |", "|---|---|---|---|");
     findings.forEach((f, i) => {
       const where = f.line ? `${f.path}:${f.line}` : f.path;
-      const location = links[i] ? `[\`${where}\`](${links[i]})` : `\`${where}\``;
-      lines.push(`| ${i + 1} | ${SEVERITY_LABEL[f.severity]} | ${location} | ${tableCell(f.title)} |`);
+      const link = fileLink({ repo, sha, path: f.path, line: f.line });
+      lines.push(`| ${i + 1} | ${SEVERITY[f.severity].label} | [\`${tableCell(where)}\`](${link}) | ${tableCell(f.title)} |`);
     });
 
-    // Findings GitHub could not anchor to a line keep their detail here.
-    const unanchored = findings
-      .map((f, i) => ({ f, i }))
-      .filter(({ i }) => !links[i] && findings[i].detail);
-    if (unanchored.length) {
-      lines.push("");
-      for (const { f, i } of unanchored) {
-        lines.push(`**${i + 1}. ${f.title}** ${f.detail}`);
+    findings.forEach((f, i) => {
+      const where = f.line ? `${f.path}:${f.line}` : f.path;
+      const link = fileLink({ repo, sha, path: f.path, line: f.line });
+      lines.push("", "---", "", `### ${i + 1}. ${SEVERITY[f.severity].label}: ${oneLine(f.title)}`, "");
+      lines.push(`**Where:** [\`${oneLine(where)}\`](${link})`);
+      if (f.detail) lines.push("", f.detail);
+      if (f.suggestion) {
+        const fence = fenceFor(f.suggestion);
+        lines.push("", "**Suggested fix:**", "", fence, f.suggestion, fence);
       }
-    }
+    });
   }
 
-  for (const note of notes) lines.push("", `> ${note}`);
+  for (const note of notes) lines.push("", `> ${oneLine(note)}`);
 
   const tokens = usage?.total_tokens ? ` · ${formatCount(usage.total_tokens)} tokens` : "";
   lines.push(
     "",
-    `<sub>AI-generated by ${model} in one call · ${seconds}s${tokens} · [workflow run](${runUrl})</sub>`,
+    "---",
+    "",
+    `<sub>AI-generated by ${model} in one call · ${seconds}s${tokens} · [workflow run](${runUrl}) · ` +
+      "Critical or high findings mark the check red; it does not block merging (ADR 0008).</sub>",
   );
   return lines.join("\n");
 }
@@ -234,12 +280,25 @@ function makeGithub(token) {
     });
     const text = await response.text();
     if (!response.ok) {
-      const error = new Error(`GitHub ${method} ${path}: HTTP ${response.status} ${text.slice(0, 300)}`);
-      error.status = response.status;
-      throw error;
+      throw new Error(`GitHub ${method} ${path}: HTTP ${response.status} ${text.slice(0, 300)}`);
     }
     return text ? JSON.parse(text) : null;
   };
+}
+
+/** Updates this PR's single GLM review comment, or creates it on the first run. */
+async function upsertReviewComment(github, repo, prNumber, body) {
+  for (let page = 1; page <= 10; page += 1) {
+    const comments = await github("GET", `/repos/${repo}/issues/${prNumber}/comments?per_page=100&page=${page}`);
+    const existing = comments.find(
+      (c) => c.user?.login === "github-actions[bot]" && c.body?.startsWith(MARKER),
+    );
+    if (existing) {
+      return github("PATCH", `/repos/${repo}/issues/comments/${existing.id}`, { body });
+    }
+    if (comments.length < 100) break;
+  }
+  return github("POST", `/repos/${repo}/issues/${prNumber}/comments`, { body });
 }
 
 async function main() {
@@ -250,8 +309,8 @@ async function main() {
   }
 
   const model = env.GLM_MODEL || "glm-5.3";
+  const repo = env.GITHUB_REPOSITORY;
   const github = makeGithub(env.GITHUB_TOKEN);
-  const pull = `/repos/${env.GITHUB_REPOSITORY}/pulls/${env.PR_NUMBER}`;
   const started = Date.now();
   const elapsed = () => Math.round((Date.now() - started) / 1000);
   const notes = [];
@@ -298,100 +357,51 @@ async function main() {
     const { content, usage } = await askGlm({ apiKey: env.ZHIPU_API_KEY, model, system, user });
     review = { ...parseReview(content), usage };
   } catch (error) {
-    await github("POST", `${pull}/reviews`, {
-      commit_id: env.HEAD_SHA,
-      event: "COMMENT",
-      body: [
+    await upsertReviewComment(
+      github,
+      repo,
+      env.PR_NUMBER,
+      [
         MARKER,
-        `### 🤖 ${model} review`,
+        `## 🤖 ${model} code review`,
         "",
-        `> ⚠️ **The review did not complete:** ${error.message}`,
+        `⚠️ **The review did not complete** for commit \`${env.HEAD_SHA.slice(0, 7)}\`: ${oneLine(error.message)}`,
         "",
         `<sub>${model} · ${elapsed()}s · [workflow run](${env.RUN_URL})</sub>`,
       ].join("\n"),
-    });
+    );
     console.log(`::warning::GLM review did not complete: ${error.message}`);
     return;
   }
 
-  // Anchor each finding to its line when GitHub will accept it there.
-  const inline = [];
-  review.findings.forEach((finding, index) => {
-    if (finding.line && commentable.get(finding.path)?.has(finding.line)) {
-      inline.push({ index, comment: { path: finding.path, line: finding.line, side: "RIGHT", body: renderComment(finding, model) } });
-    }
-  });
-
-  let created;
-  try {
-    created = await github("POST", `${pull}/reviews`, {
-      commit_id: env.HEAD_SHA,
-      event: "COMMENT",
-      body: `${MARKER}\nPosting the ${model} review…`,
-      comments: inline.map((entry) => entry.comment),
-    });
-  } catch (error) {
-    if (error.status !== 422 || inline.length === 0) throw error;
-    // A line GitHub rejects fails the whole review; fall back to the table only.
-    notes.push("Inline comments could not be placed on the diff, so the findings are listed here only.");
-    inline.length = 0;
-    created = await github("POST", `${pull}/reviews`, {
-      commit_id: env.HEAD_SHA,
-      event: "COMMENT",
-      body: `${MARKER}\nPosting the ${model} review…`,
-    });
-  }
-
-  const links = [];
-  if (inline.length) {
-    // The per-review comments endpoint omits `line`, so no location could be
-    // matched. The PR's review comments carry it; keep only this review's.
-    const recent = await github("GET", `${pull}/comments?per_page=100&sort=created&direction=desc`);
-    const posted = recent.filter((c) => c.pull_request_review_id === created.id);
-    for (const entry of inline) {
-      const match = posted.find(
-        (c) => c.path === entry.comment.path && (c.line ?? c.original_line) === entry.comment.line && !c.used,
-      );
-      if (match) {
-        match.used = true;
-        links[entry.index] = match.html_url;
-      }
-    }
-  }
-
-  await github("PUT", `${pull}/reviews/${created.id}`, {
-    body: renderBody({
+  await upsertReviewComment(
+    github,
+    repo,
+    env.PR_NUMBER,
+    renderReview({
       model,
+      repo,
+      sha: env.HEAD_SHA,
       summary: review.summary,
       findings: review.findings,
-      links,
       notes,
       usage: review.usage,
       seconds: elapsed(),
       runUrl: env.RUN_URL,
     }),
-  });
-  console.log(`Posted review ${created.id}: ${review.findings.length} finding(s), ${inline.length} inline, ${elapsed()}s.`);
+  );
 
-  // Earlier GLM reviews on this PR are now stale: collapse each to a pointer at
-  // this one, so a PR with several pushes shows one current review.
-  try {
-    const reviews = await github("GET", `${pull}/reviews?per_page=100`);
-    for (const old of reviews) {
-      if (old.id !== created.id && old.user?.login === "github-actions[bot]" && old.body?.startsWith(MARKER)) {
-        await github("PUT", `${pull}/reviews/${old.id}`, {
-          body: `${SUPERSEDED}\n~~Earlier ${model} review.~~ Superseded by the [latest review](${created.html_url}).`,
-        });
-      }
-    }
-  } catch (error) {
-    console.log(`::warning::Could not mark earlier GLM reviews as superseded: ${error.message}`);
+  const blocking = countBlocking(review.findings);
+  console.log(`Posted the ${model} review: ${review.findings.length} finding(s), ${blocking} critical/high, ${elapsed()}s.`);
+  if (blocking > 0) {
+    console.log(`::error::GLM found ${blocking} critical or high issue(s). See the review comment on the pull request.`);
+    process.exitCode = 1;
   }
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   main().catch((error) => {
-    // Advisory: report and exit 0 so the PR never shows a red check for this.
+    // A crash in the reviewer itself is advisory: warn, don't turn the PR red.
     console.log(`::warning::GLM review step failed: ${error.message}`);
   });
 }

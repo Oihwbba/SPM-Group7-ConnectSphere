@@ -1,10 +1,14 @@
 name: GLM Code Review
 
 # SCRUM-88 — ONE GLM-5.3 reviewer reads the whole pull request diff in one call
-# and posts ONE pull request review: a findings table at the top whose rows link
-# straight to inline comments on the changed lines. It replaces the Copilot
-# review. Advisory only: not a required status check, so `build-and-test` stays
-# the only merge gate and a human still reviews. See docs/adr/0008.
+# and posts ONE long review as a PR comment in the Conversation tab: a verdict,
+# an overview, and a section per finding with a "Where:" reference linking to
+# the exact line. No inline comments; the comment updates in place on each push.
+# It replaces the Copilot review.
+#
+# The check turns red when the review finds critical or high issues. It is not
+# a required status check, so it never blocks merging: `build-and-test` stays
+# the only merge gate and a human decides. See docs/adr/0008.
 #
 # One-time setup (repo owner): Settings -> Secrets and variables -> Actions ->
 # New repository secret `ZHIPU_API_KEY`. Until it exists the review is skipped.
@@ -24,6 +28,7 @@ concurrency:
 
 permissions:
   contents: read
+  # Posts and updates the review comment on the pull request.
   pull-requests: write
 
 jobs:
@@ -47,7 +52,7 @@ jobs:
         with:
           node-version: 24
 
-      - name: GLM-5.3 review (one reviewer, whole diff)
+      - name: GLM-5.3 review (fails on critical or high findings)
         env:
           ZHIPU_API_KEY: ${{ secrets.ZHIPU_API_KEY }}
           GITHUB_TOKEN: ${{ github.token }}
