@@ -13,6 +13,7 @@ const GLM_URL = "https://open.bigmodel.cn/api/paas/v4/chat/completions";
 const GLM_TIMEOUT_MS = 20 * 60 * 1000;
 const MAX_DIFF_CHARS = 120_000;
 const MARKER = "<!-- glm-single-review -->";
+const SUPERSEDED = "<!-- glm-single-review-superseded -->";
 
 // Docs, lockfiles and generated snapshots don't need an AI review.
 const EXCLUDE = [
@@ -272,11 +273,25 @@ async function main() {
     notes.push(`The diff is over ${formatCount(MAX_DIFF_CHARS)} characters, so only its first part was reviewed.`);
   }
 
+  // Files skipped on purpose (docs, lockfiles) still exist in the PR. Say so, or
+  // GLM reports them as missing — it did exactly that on its first run.
+  const skipped = execFileSync("git", ["diff", "--name-only", `${env.BASE_SHA}...${env.HEAD_SHA}`], {
+    encoding: "utf8",
+  })
+    .split("\n")
+    .map((p) => p.trim())
+    .filter((p) => p && !commentable.has(p) && !diff.includes(` b/${p}\n`));
+
   const system = readFileSync(new URL("../ai-review/instructions.md", import.meta.url), "utf8");
+  const skippedNote = skipped.length
+    ? "\n\nAlso changed in this PR but deliberately not shown (docs, lockfiles, generated " +
+      "files). They exist, so do not report them as missing:\n" +
+      skipped.map((p) => `- ${p}`).join("\n")
+    : "";
   const user =
     "Review this pull request diff. Every added (+) or unchanged context line is " +
     "prefixed with its line number in the new file and a tab; removed (-) lines " +
-    `have no number.\n\n${prompt}`;
+    `have no number.${skippedNote}\n\n${prompt}`;
 
   let review;
   try {
@@ -329,7 +344,10 @@ async function main() {
 
   const links = [];
   if (inline.length) {
-    const posted = await github("GET", `${pull}/reviews/${created.id}/comments?per_page=100`);
+    // The per-review comments endpoint omits `line`, so no location could be
+    // matched. The PR's review comments carry it; keep only this review's.
+    const recent = await github("GET", `${pull}/comments?per_page=100&sort=created&direction=desc`);
+    const posted = recent.filter((c) => c.pull_request_review_id === created.id);
     for (const entry of inline) {
       const match = posted.find(
         (c) => c.path === entry.comment.path && (c.line ?? c.original_line) === entry.comment.line && !c.used,
@@ -354,6 +372,21 @@ async function main() {
     }),
   });
   console.log(`Posted review ${created.id}: ${review.findings.length} finding(s), ${inline.length} inline, ${elapsed()}s.`);
+
+  // Earlier GLM reviews on this PR are now stale: collapse each to a pointer at
+  // this one, so a PR with several pushes shows one current review.
+  try {
+    const reviews = await github("GET", `${pull}/reviews?per_page=100`);
+    for (const old of reviews) {
+      if (old.id !== created.id && old.user?.login === "github-actions[bot]" && old.body?.startsWith(MARKER)) {
+        await github("PUT", `${pull}/reviews/${old.id}`, {
+          body: `${SUPERSEDED}\n~~Earlier ${model} review.~~ Superseded by the [latest review](${created.html_url}).`,
+        });
+      }
+    }
+  } catch (error) {
+    console.log(`::warning::Could not mark earlier GLM reviews as superseded: ${error.message}`);
+  }
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
