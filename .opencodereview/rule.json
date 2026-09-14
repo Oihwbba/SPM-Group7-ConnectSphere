@@ -1,5 +1,6 @@
 {
   "exclude": [
+    "**/*.md",
     "docs/backlog/**",
     "package-lock.json",
     "**/migration_lock.toml",

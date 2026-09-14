@@ -85,3 +85,13 @@ posts inline comments plus one summary comment that is updated in place.
   GLM-5.3, with forced thinking, sent no response headers within 5 minutes.
   A successful two-file review on #13 took about 12 minutes and 199k tokens.
   Requests now get 900 seconds, each file 30 minutes, and the job 60 minutes.
+- **Why it was slow, and the speed fixes.** A review is an agent loop: #13
+  made 20 tool calls (file finds, code searches, reads), each a further GLM
+  round trip resending the conversation, so 2 small files cost 147k input
+  tokens. Three changes cut that without lowering `effort: high`:
+  - `stream: true` in the request body, so a response starts as soon as GLM
+    begins answering instead of after all its thinking.
+  - `review_concurrency: 1`, one agent at a time instead of 8 parallel requests
+    queueing on one key.
+  - `**/*.md` excluded in `.opencodereview/rule.json`, so docs, ADRs and
+    backlog files aren't sent for AI review.

@@ -57,7 +57,14 @@ jobs:
           llm_use_anthropic: "false"
           # The action's default DISABLES thinking; BigModel documents that
           # GLM-5.3's thinking is forced on and cannot be disabled.
-          llm_extra_body: '{"thinking": {"type": "enabled"}}'
+          # `stream: true`: without it every request waits for GLM to finish
+          # thinking before any response header arrives, which is how #14 hit
+          # the header timeout. OpenCodeReview then also requests token usage.
+          llm_extra_body: '{"thinking": {"type": "enabled"}, "stream": true}'
+          # One agent at a time. The default ran 8 file reviews concurrently,
+          # queueing parallel requests on one key; a single agent keeps each
+          # request moving.
+          review_concurrency: "1"
           # The default 300s per request timed out on #14: GLM-5.3 did not send
           # response headers within 5 minutes. Give each request 15 minutes and
           # each file 30.
