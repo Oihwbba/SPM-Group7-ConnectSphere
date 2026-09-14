@@ -1,13 +1,14 @@
-name: GLM Automated Code Review
+name: GLM Code Review
 
-# SCRUM-88 — an ADVISORY review of every pull request by GLM-5.3 (BigModel /
-# Zhipu). It replaces the Copilot review: it lands as a PR review in the
-# Conversation tab, with a findings table linking straight to each inline
-# comment. It is deliberately NOT a required status check: `build-and-test`
-# stays the only merge gate and a human still reviews. See docs/adr/0008.
+# SCRUM-88 — ONE GLM-5.3 reviewer reads the whole pull request diff in one call
+# and posts ONE pull request review: a findings table at the top whose rows link
+# straight to inline comments on the changed lines. It replaces the Copilot
+# review. Advisory only: not a required status check, so `build-and-test` stays
+# the only merge gate and a human still reviews. See docs/adr/0008.
 #
 # One-time setup (repo owner): Settings -> Secrets and variables -> Actions ->
-# New repository secret `ZHIPU_API_KEY`. Until it exists this job skips cleanly.
+# New repository secret `ZHIPU_API_KEY`. Until it exists the review is skipped.
+# The reviewer's instructions live in .github/ai-review/instructions.md.
 
 on:
   # `pull_request`, NOT `pull_request_target`: every branch lives in this repo,
@@ -30,147 +31,26 @@ jobs:
     # Drafts are work in progress — don't spend API quota on them.
     if: github.event.pull_request.draft == false
     runs-on: ubuntu-latest
-    # GLM-5.3 thinks before it answers: a two-file review took ~12 minutes.
-    timeout-minutes: 60
-    env:
-      HAS_ZHIPU_KEY: ${{ secrets.ZHIPU_API_KEY != '' }}
+    timeout-minutes: 30
     steps:
-      - name: Skip when no API key is configured
-        if: env.HAS_ZHIPU_KEY != 'true'
-        run: echo "::notice::ZHIPU_API_KEY is not set, so the GLM review was skipped."
-
-      - name: Run GLM-5.3 review (advisory)
-        id: glm
-        if: env.HAS_ZHIPU_KEY == 'true'
-        # Advisory (ADR 0008): a rate limit, exhausted quota, LLM timeout or action
-        # bug must not put a red X on every PR. The next step reports the failure
-        # on the PR instead, so it is never silent.
-        continue-on-error: true
-        # Pinned to the v1.12.0 commit: the action has no floating `v1` tag, and a
-        # SHA can't be moved underneath a job that holds the API key.
-        uses: alibaba/open-code-review@494bf1c8d7a19196ab166960a06fef38d69a1d16 # v1.12.0
+      - name: Checkout
+        uses: actions/checkout@v4
         with:
-          # The tool appends /chat/completions itself.
-          llm_url: https://open.bigmodel.cn/api/paas/v4
-          llm_auth_token: ${{ secrets.ZHIPU_API_KEY }}
-          llm_model: glm-5.3
-          llm_use_anthropic: "false"
-          # The action's default DISABLES thinking; BigModel documents that
-          # GLM-5.3's thinking is forced on and cannot be disabled.
-          # `stream: true`: without it every request waits for GLM to finish
-          # thinking before any response header arrives, which is how #14 hit
-          # the header timeout. OpenCodeReview then also requests token usage.
-          llm_extra_body: '{"thinking": {"type": "enabled"}, "stream": true}'
-          # One agent at a time. The default ran 8 file reviews concurrently,
-          # queueing parallel requests on one key; a single agent keeps each
-          # request moving.
-          review_concurrency: "1"
-          # The default 300s per request timed out on #14: GLM-5.3 did not send
-          # response headers within 5 minutes. Give each request 15 minutes and
-          # each file 30.
-          llm_timeout: "900"
-          review_task_timeout: "30"
-          # OpenCodeReview's own review-depth preset (low | medium | high).
-          effort: high
-          # Keep the CLI in lock-step with the pinned action.
-          ocr_version: "1.12.0"
-          language: English
-          # One summary comment updated in place, and no duplicate inline
-          # comments on lines already commented on by an earlier run.
-          sticky_summary: "true"
-          incremental: "true"
-          # Project conventions live in .opencodereview/rule.json.
+          # The review diffs the PR's base against its head.
+          fetch-depth: 0
 
-      - name: Put GLM's findings straight into the PR review
-        if: always() && env.HAS_ZHIPU_KEY == 'true'
-        continue-on-error: true
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: GLM-5.3 review (one reviewer, whole diff)
         env:
-          GH_TOKEN: ${{ github.token }}
-          REPO: ${{ github.repository }}
-          PR: ${{ github.event.pull_request.number }}
-          RUN_MARKER: ocr-review-run:${{ github.run_id }}-${{ github.run_attempt }}
+          ZHIPU_API_KEY: ${{ secrets.ZHIPU_API_KEY }}
+          GITHUB_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          GLM_OUTCOME: ${{ steps.glm.outcome }}
-        run: |
-          set -euo pipefail
-
-          # One table row per GLM inline comment: severity, a location that links
-          # straight to the comment, and a one-line gist. Regexes avoid
-          # backslashes so they behave the same in every jq build.
-          cat > "$RUNNER_TEMP/rows.jq" <<'JQ'
-          [ .[]
-            | select(.user.login == "github-actions[bot]" and (.body | contains("<!-- ocr-")))
-            | {
-                severity: ((.body | capture("![[](?<s>[^]]+)[]]").s) // "finding"),
-                where: "\(.path):\(.line // .original_line)",
-                outdated: (.line == null),
-                url: .html_url,
-                gist: (.body
-                       | gsub("<!--.*?-->"; "")
-                       | gsub("![[][^]]*[]][(][^)]*[)]"; "")
-                       | split("**Suggestion:**")[0]
-                       | gsub("`"; "")
-                       | gsub("[|]"; "/")
-                       | gsub("[[:space:]]+"; " ")
-                       | ltrimstr(" ")
-                       | if length > 160 then .[0:157] + "..." else . end)
-              }
-          ]
-          | sort_by(.outdated)
-          | to_entries[]
-          | "| \(.key + 1) | \(.value.severity)\(if .value.outdated then " · outdated" else "" end) | [`\(.value.where)`](\(.value.url)) | \(.value.gist) |"
-          JQ
-
-          gh api --paginate "repos/$REPO/pulls/$PR/comments?per_page=100" \
-            | jq -s 'add // []' \
-            | jq -r -f "$RUNNER_TEMP/rows.jq" > "$RUNNER_TEMP/rows.md"
-          COUNT=$(grep -c '^| ' "$RUNNER_TEMP/rows.md" || true)
-
-          {
-            echo "### 🤖 GLM-5.3 code review"
-            echo
-            if [ "$GLM_OUTCOME" = "failure" ]; then
-              echo "> ⚠️ **This run's review did not complete** (for example a BigModel timeout or rate limit), so there may be findings it missed. [See the run]($RUN_URL)."
-              echo
-            fi
-            if [ "$COUNT" -gt 0 ]; then
-              echo "**$COUNT finding(s).** Click a location to jump to the comment. Advisory only (ADR 0008): fix it, or reply with why it doesn't apply."
-              echo
-              echo "| # | Severity | Where | Finding |"
-              echo "|---|---|---|---|"
-              cat "$RUNNER_TEMP/rows.md"
-            elif [ "$GLM_OUTCOME" != "failure" ]; then
-              echo "✅ No findings."
-            fi
-            echo
-            echo "<sub>AI-generated by GLM-5.3 via OpenCodeReview · [workflow run]($RUN_URL)</sub>"
-          } > "$RUNNER_TEMP/digest.md"
-
-          cat "$RUNNER_TEMP/digest.md" >> "$GITHUB_STEP_SUMMARY"
-
-          # Prefer the review this run posted: it sits in the Conversation timeline
-          # beside its inline comments, exactly where a Copilot review appears.
-          # Its marker stays first so OpenCodeReview still recognises it.
-          REVIEW_ID=$(gh api --paginate "repos/$REPO/pulls/$PR/reviews?per_page=100" \
-            | jq -s -r --arg m "$RUN_MARKER" \
-                'add // [] | map(select(.user.login == "github-actions[bot]" and (.body | contains($m)))) | last | .id // empty')
-
-          if [ -n "$REVIEW_ID" ]; then
-            BODY=$(printf '<!-- %s -->\n%s' "$RUN_MARKER" "$(cat "$RUNNER_TEMP/digest.md")")
-            gh api -X PUT "repos/$REPO/pulls/$PR/reviews/$REVIEW_ID" -f body="$BODY" > /dev/null
-            echo "Findings written into review $REVIEW_ID."
-          else
-            # This run posted no review (it failed, or found nothing new): keep one
-            # sticky comment so the outcome is still visible in the Conversation tab.
-            MARK='<!-- glm-review-digest -->'
-            BODY=$(printf '%s\n%s' "$MARK" "$(cat "$RUNNER_TEMP/digest.md")")
-            CID=$(gh api --paginate "repos/$REPO/issues/$PR/comments?per_page=100" \
-              | jq -s -r --arg m "$MARK" \
-                  'add // [] | map(select(.user.login == "github-actions[bot]" and (.body | contains($m)))) | last | .id // empty')
-            if [ -n "$CID" ]; then
-              gh api -X PATCH "repos/$REPO/issues/comments/$CID" -f body="$BODY" > /dev/null
-            else
-              gh api -X POST "repos/$REPO/issues/$PR/comments" -f body="$BODY" > /dev/null
-            fi
-            echo "Findings written into the sticky digest comment."
-          fi
+        # No third-party action and no npm packages: Node's built-in fetch only.
+        run: node .github/scripts/ai-review.mjs
