@@ -1,7 +1,18 @@
 "use client";
 
-import { useState } from "react";
-import { Plus, Pencil, Eye, CalendarPlus, FileEdit, Filter } from "lucide-react";
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import {
+  Plus,
+  Pencil,
+  Eye,
+  CalendarPlus,
+  FileEdit,
+  Filter,
+  CheckCircle2,
+  XCircle,
+} from "lucide-react";
+import { toast } from "sonner";
 import type { Event } from "@prisma/client";
 
 import { formatDate, formatDateTime } from "@/lib/datetime";
@@ -19,6 +30,16 @@ import {
 } from "@/components/ui/table";
 import { CreateEventDialog } from "./create-event-dialog";
 import { EventDetailsModal } from "./event-details-modal";
+import { transitionEventStatus } from "./actions";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface EventsClientProps {
   events: Event[];
@@ -37,11 +58,42 @@ type FilterTab = "ALL" | "DRAFT" | "SUBMITTED";
  * - "Resume Draft" primary action button visually separates draft rows from "View Details" on submitted requests.
  * - Quick status filter tabs allow filtering between All, Drafts, and Submitted requests.
  */
-export function EventsClient({ events, isCoordinator = false }: EventsClientProps) {
+export function EventsClient({
+  events,
+  isCoordinator = false,
+}: EventsClientProps) {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [editingDraft, setEditingDraft] = useState<Event | null>(null);
   const [viewingEvent, setViewingEvent] = useState<Event | null>(null);
   const [activeTab, setActiveTab] = useState<FilterTab>("ALL");
+  const [rejectingEvent, setRejectingEvent] = useState<Event | null>(null);
+  const [rejectionReason, setRejectionReason] = useState("");
+  const [isPending, startTransition] = useTransition();
+  const router = useRouter();
+
+  function changeStatus(
+    event: Event,
+    nextStatus: "APPROVED" | "REJECTED",
+    decisionReason?: string,
+  ) {
+    startTransition(async () => {
+      const result = await transitionEventStatus({
+        eventId: event.id,
+        nextStatus,
+        decisionReason,
+      });
+      if (!result.ok) {
+        toast.error(result.error);
+        return;
+      }
+      toast.success(
+        `Event status updated to ${result.data.status.replace("_", " ").toLowerCase()}.`,
+      );
+      setRejectingEvent(null);
+      setRejectionReason("");
+      router.refresh();
+    });
+  }
 
   const filteredEvents = events.filter((evt) => {
     if (activeTab === "DRAFT") return evt.status === "DRAFT";
@@ -76,7 +128,7 @@ export function EventsClient({ events, isCoordinator = false }: EventsClientProp
       {/* Filter Tabs for Organisers to toggle between All, Drafts, and Submitted Requests */}
       {!isCoordinator && events.length > 0 && (
         <div className="flex items-center gap-2 border-b pb-3">
-          <Filter className="h-4 w-4 text-muted-foreground mr-1" />
+          <Filter className="mr-1 h-4 w-4 text-muted-foreground" />
           <Button
             variant={activeTab === "ALL" ? "secondary" : "ghost"}
             size="sm"
@@ -89,8 +141,8 @@ export function EventsClient({ events, isCoordinator = false }: EventsClientProp
             variant={activeTab === "DRAFT" ? "secondary" : "ghost"}
             size="sm"
             className={cn(
-              "h-8 text-xs font-medium gap-1.5",
-              activeTab === "DRAFT" && "font-semibold"
+              "h-8 gap-1.5 text-xs font-medium",
+              activeTab === "DRAFT" && "font-semibold",
             )}
             onClick={() => setActiveTab("DRAFT")}
           >
@@ -124,7 +176,10 @@ export function EventsClient({ events, isCoordinator = false }: EventsClientProp
             </p>
             {!isCoordinator && (
               <div className="pt-2">
-                <Button className="gap-2" onClick={() => setCreateDialogOpen(true)}>
+                <Button
+                  className="gap-2"
+                  onClick={() => setCreateDialogOpen(true)}
+                >
                   <Plus className="h-4 w-4" />
                   Create Event Request
                 </Button>
@@ -164,24 +219,27 @@ export function EventsClient({ events, isCoordinator = false }: EventsClientProp
               <TableBody>
                 {filteredEvents.map((event) => {
                   const isDraft = event.status === "DRAFT";
+                  const isRejected = event.status === "REJECTED";
                   return (
                     <TableRow
                       key={event.id}
                       data-status={event.status}
-                      data-testid={isDraft ? "draft-event-row" : "submitted-event-row"}
+                      data-testid={
+                        isDraft ? "draft-event-row" : "submitted-event-row"
+                      }
                       className={cn(
                         "transition-colors",
                         isDraft
-                          ? "bg-muted/40 border-l-4 border-l-muted-foreground/50"
-                          : "border-l-4 border-l-transparent"
+                          ? "border-l-4 border-l-muted-foreground/50 bg-muted/40"
+                          : "border-l-4 border-l-transparent",
                       )}
                     >
                       <TableCell className="font-medium">
-                        <div className="flex items-center gap-2 flex-wrap">
+                        <div className="flex flex-wrap items-center gap-2">
                           <button
                             type="button"
                             onClick={() => setViewingEvent(event)}
-                            className="font-medium text-foreground hover:underline focus:outline-none text-left cursor-pointer"
+                            className="cursor-pointer text-left font-medium text-foreground hover:underline focus:outline-none"
                             data-testid="event-name-link"
                           >
                             {event.name}
@@ -189,7 +247,7 @@ export function EventsClient({ events, isCoordinator = false }: EventsClientProp
                           {/* User Story 16: Draft requests are visually marked with a clear Draft label tag */}
                           {isDraft && (
                             <span
-                              className="inline-flex items-center gap-1 rounded bg-muted px-2 py-0.5 text-[11px] font-semibold text-muted-foreground border border-border"
+                              className="inline-flex items-center gap-1 rounded border border-border bg-muted px-2 py-0.5 text-[11px] font-semibold text-muted-foreground"
                               data-testid="draft-label"
                             >
                               <FileEdit className="h-3 w-3" />
@@ -209,28 +267,60 @@ export function EventsClient({ events, isCoordinator = false }: EventsClientProp
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1.5">
-                          {isDraft && (
+                          {(isDraft || (!isCoordinator && isRejected)) && (
                             <Button
                               variant="outline"
                               size="sm"
-                              className="gap-1.5 h-8 text-xs font-medium"
+                              className="h-8 gap-1.5 text-xs font-medium"
                               onClick={() => setEditingDraft(event)}
-                              data-testid="resume-draft-button"
+                              data-testid={
+                                isDraft
+                                  ? "resume-draft-button"
+                                  : "amend-rejected-button"
+                              }
                             >
                               <Pencil className="h-3.5 w-3.5" />
-                              Resume Draft
+                              {isDraft ? "Resume Draft" : "Amend & Resubmit"}
                             </Button>
                           )}
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="gap-1.5 h-8 text-xs"
+                            className="h-8 gap-1.5 text-xs"
                             onClick={() => setViewingEvent(event)}
                             data-testid="view-details-button"
                           >
                             <Eye className="h-3.5 w-3.5" />
                             View Details
                           </Button>
+                          {/* SCRUM-19: decide a submitted or under-review request.
+                              There is no manual "claim" — SCRUM-20 assigns automatically. */}
+                          {isCoordinator &&
+                            (event.status === "SUBMITTED" ||
+                              event.status === "UNDER_REVIEW") && (
+                            <>
+                              <Button
+                                size="sm"
+                                className="h-8 gap-1.5 text-xs"
+                                disabled={isPending}
+                                onClick={() => changeStatus(event, "APPROVED")}
+                              >
+                                <CheckCircle2 className="h-3.5 w-3.5" /> Approve
+                              </Button>
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                className="h-8 gap-1.5 text-xs"
+                                disabled={isPending}
+                                onClick={() => {
+                                  setRejectingEvent(event);
+                                  setRejectionReason("");
+                                }}
+                              >
+                                <XCircle className="h-3.5 w-3.5" /> Reject
+                              </Button>
+                            </>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
@@ -270,7 +360,42 @@ export function EventsClient({ events, isCoordinator = false }: EventsClientProp
           event={viewingEvent}
         />
       )}
+
+      <Dialog
+        open={!!rejectingEvent}
+        onOpenChange={(open) => !open && setRejectingEvent(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reject event request</DialogTitle>
+            <DialogDescription>
+              Give the organiser a clear reason so they can amend and resubmit
+              the request.
+            </DialogDescription>
+          </DialogHeader>
+          <Textarea
+            value={rejectionReason}
+            onChange={(event) => setRejectionReason(event.target.value)}
+            placeholder="Reason for rejection"
+            aria-label="Rejection reason"
+          />
+          <DialogFooter>
+            <Button variant="secondary" onClick={() => setRejectingEvent(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={isPending || !rejectionReason.trim()}
+              onClick={() =>
+                rejectingEvent &&
+                changeStatus(rejectingEvent, "REJECTED", rejectionReason)
+              }
+            >
+              Reject request
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
-

@@ -1,7 +1,19 @@
 "use client";
 
 import { useState, useTransition, useEffect } from "react";
-import { Plus, Check, ChevronRight, ChevronLeft, Eye, Calendar, Building2, Wrench, ClipboardList, Info, AlertCircle } from "lucide-react";
+import {
+  Plus,
+  Check,
+  ChevronRight,
+  ChevronLeft,
+  Eye,
+  Calendar,
+  Building2,
+  Wrench,
+  ClipboardList,
+  Info,
+  AlertCircle,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -19,7 +31,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatDateTime } from "@/lib/datetime";
-import { createDraftEvent, submitEventRequest, getFormCatalogues } from "./actions";
+import {
+  createDraftEvent,
+  submitEventRequest,
+  getFormCatalogues,
+} from "./actions";
 
 /**
  * A datetime-local value ("2026-09-20T10:00") carries no timezone. Convert it
@@ -112,7 +128,9 @@ interface CreateEventDialogProps {
 }
 
 /** Helper to format Date or ISO string into datetime-local input format (YYYY-MM-DDTHH:mm) */
-function toDatetimeInputString(dateVal: Date | string | null | undefined): string {
+function toDatetimeInputString(
+  dateVal: Date | string | null | undefined,
+): string {
   if (!dateVal) return "";
   const d = new Date(dateVal);
   if (isNaN(d.getTime())) return "";
@@ -129,7 +147,8 @@ function getInitialFormData(draftEvent?: DraftEventData | null): FormState {
     startAt: toDatetimeInputString(draftEvent.startAt),
     endAt: toDatetimeInputString(draftEvent.endAt),
     expectedAttendance:
-      draftEvent.expectedAttendance !== null && draftEvent.expectedAttendance !== undefined
+      draftEvent.expectedAttendance !== null &&
+      draftEvent.expectedAttendance !== undefined
         ? String(draftEvent.expectedAttendance)
         : "",
     venueRequirements: draftEvent.venueRequirements || "",
@@ -155,15 +174,28 @@ export function CreateEventDialog({
   const open = isControlled ? openProp : internalOpen;
 
   const [step, setStep] = useState<number>(1);
-  const [formData, setFormData] = useState<FormState>(() => getInitialFormData(draftEvent));
+  const [formData, setFormData] = useState<FormState>(() =>
+    getInitialFormData(draftEvent),
+  );
   const [isPending, startTransition] = useTransition();
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
   const [catalogues, setCatalogues] = useState<{
-    venues: { id: string; name: string; capacity: number; facilities: string[] }[];
+    venues: {
+      id: string;
+      name: string;
+      capacity: number;
+      facilities: string[];
+    }[];
     equipment: { id: string; type: string; totalQuantity: number }[];
   }>({ venues: [], equipment: [] });
 
-  const isReadOnly = Boolean(readOnly || (draftEvent?.status && draftEvent.status !== "DRAFT"));
+  const isReadOnly = Boolean(
+    readOnly ||
+      (draftEvent?.status &&
+        draftEvent.status !== "DRAFT" &&
+        draftEvent.status !== "REJECTED"),
+  );
+  const canSaveDraft = !draftEvent || draftEvent.status === "DRAFT";
 
   // Local wall-clock "now" — the input's min is compared in local time, so a
   // UTC string would let SG users pick times up to 8 hours in the past.
@@ -232,13 +264,17 @@ export function CreateEventDialog({
         const startDate = new Date(formData.startAt);
         const endDate = new Date(formData.endAt);
         if (endDate <= startDate) {
-          errors.endAt = ["Proposed end date and time must be strictly after the start date and time."];
+          errors.endAt = [
+            "Proposed end date and time must be strictly after the start date and time.",
+          ];
         }
       }
       if (formData.expectedAttendance !== "") {
         const num = Number(formData.expectedAttendance);
         if (isNaN(num) || num <= 0 || !Number.isInteger(num)) {
-          errors.expectedAttendance = ["Attendance must be a positive whole number."];
+          errors.expectedAttendance = [
+            "Attendance must be a positive whole number.",
+          ];
         }
       }
     }
@@ -272,7 +308,10 @@ export function CreateEventDialog({
         id: draftEvent?.id,
         ...formData,
         name: formData.name.trim() || "Draft Event Request",
-        expectedAttendance: formData.expectedAttendance !== "" ? Number(formData.expectedAttendance) : undefined,
+        expectedAttendance:
+          formData.expectedAttendance !== ""
+            ? Number(formData.expectedAttendance)
+            : undefined,
         description: formData.description || undefined,
         purpose: formData.purpose || undefined,
         startAt: toUtcIso(formData.startAt),
@@ -282,7 +321,11 @@ export function CreateEventDialog({
       const result = await createDraftEvent(payload);
 
       if (result.ok) {
-        toast.success(draftEvent ? "Draft event request updated successfully." : "Draft event request saved successfully.");
+        toast.success(
+          draftEvent
+            ? "Draft event request updated successfully."
+            : "Draft event request saved successfully.",
+        );
         resetForm();
         return;
       }
@@ -297,7 +340,10 @@ export function CreateEventDialog({
       const payload = {
         id: draftEvent?.id,
         ...formData,
-        expectedAttendance: formData.expectedAttendance !== "" ? Number(formData.expectedAttendance) : undefined,
+        expectedAttendance:
+          formData.expectedAttendance !== ""
+            ? Number(formData.expectedAttendance)
+            : undefined,
         // Empty string (not undefined) so a missing date gets the "required" message.
         startAt: toUtcIso(formData.startAt) ?? "",
         endAt: toUtcIso(formData.endAt) ?? "",
@@ -312,7 +358,10 @@ export function CreateEventDialog({
       }
 
       setFieldErrors(result.fieldErrors ?? {});
-      toast.error(result.error || "Please complete all mandatory fields before submitting.");
+      toast.error(
+        result.error ||
+          "Please complete all mandatory fields before submitting.",
+      );
     });
   }
 
@@ -338,7 +387,9 @@ export function CreateEventDialog({
     registrationNotes: !formData.registrationNotes.trim(),
   };
 
-  const hasMissingSubmissionFields = Object.values(missingSubmissionFields).some(Boolean);
+  const hasMissingSubmissionFields = Object.values(
+    missingSubmissionFields,
+  ).some(Boolean);
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -354,33 +405,37 @@ export function CreateEventDialog({
           </DialogTrigger>
         )
       )}
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-xl font-bold flex items-center justify-between">
+          <DialogTitle className="flex items-center justify-between text-xl font-bold">
             <span>
               {draftEvent
                 ? isReadOnly
                   ? "Submitted Event Request Details"
-                  : "Resume Draft Event Request"
+                  : draftEvent.status === "REJECTED"
+                    ? "Amend Rejected Event Request"
+                    : "Resume Draft Event Request"
                 : "Create Event Request"}
             </span>
-            <span className="text-xs font-normal px-2.5 py-1 bg-primary/10 text-primary rounded-full">
+            <span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-normal text-primary">
               Step {step} of 6
             </span>
           </DialogTitle>
           <DialogDescription>
             {isReadOnly
               ? "Review the submitted details for this event request."
-              : "Provide your event requirements so ConnectSphere can plan your venue, equipment, and arrangements. You can save as a draft at any step."}
+              : draftEvent?.status === "REJECTED"
+                ? "Amend the request using the coordinator's feedback, then resubmit it for review."
+                : "Provide your event requirements so ConnectSphere can plan your venue, equipment, and arrangements. You can save as a draft at any step."}
           </DialogDescription>
         </DialogHeader>
 
         {/* Step Indicator Bar — Allows direct navigation between steps */}
-        <div className="flex items-center justify-between border-b pb-3 mb-4 text-xs font-medium text-muted-foreground overflow-x-auto gap-2">
+        <div className="mb-4 flex items-center justify-between gap-2 overflow-x-auto border-b pb-3 text-xs font-medium text-muted-foreground">
           <button
             type="button"
             onClick={() => goToStep(1)}
-            className={`flex items-center gap-1.5 px-2 py-1 rounded transition-colors ${step === 1 ? "bg-primary text-primary-foreground font-semibold" : "hover:bg-accent"}`}
+            className={`flex items-center gap-1.5 rounded px-2 py-1 transition-colors ${step === 1 ? "bg-primary font-semibold text-primary-foreground" : "hover:bg-accent"}`}
           >
             <Info className="h-3.5 w-3.5" /> 1. Basics
           </button>
@@ -388,7 +443,7 @@ export function CreateEventDialog({
           <button
             type="button"
             onClick={() => goToStep(2)}
-            className={`flex items-center gap-1.5 px-2 py-1 rounded transition-colors ${step === 2 ? "bg-primary text-primary-foreground font-semibold" : "hover:bg-accent"}`}
+            className={`flex items-center gap-1.5 rounded px-2 py-1 transition-colors ${step === 2 ? "bg-primary font-semibold text-primary-foreground" : "hover:bg-accent"}`}
           >
             <Calendar className="h-3.5 w-3.5" /> 2. Schedule
           </button>
@@ -396,7 +451,7 @@ export function CreateEventDialog({
           <button
             type="button"
             onClick={() => goToStep(3)}
-            className={`flex items-center gap-1.5 px-2 py-1 rounded transition-colors ${step === 3 ? "bg-primary text-primary-foreground font-semibold" : "hover:bg-accent"}`}
+            className={`flex items-center gap-1.5 rounded px-2 py-1 transition-colors ${step === 3 ? "bg-primary font-semibold text-primary-foreground" : "hover:bg-accent"}`}
           >
             <Building2 className="h-3.5 w-3.5" /> 3. Venue
           </button>
@@ -404,7 +459,7 @@ export function CreateEventDialog({
           <button
             type="button"
             onClick={() => goToStep(4)}
-            className={`flex items-center gap-1.5 px-2 py-1 rounded transition-colors ${step === 4 ? "bg-primary text-primary-foreground font-semibold" : "hover:bg-accent"}`}
+            className={`flex items-center gap-1.5 rounded px-2 py-1 transition-colors ${step === 4 ? "bg-primary font-semibold text-primary-foreground" : "hover:bg-accent"}`}
           >
             <Wrench className="h-3.5 w-3.5" /> 4. Equipment
           </button>
@@ -412,7 +467,7 @@ export function CreateEventDialog({
           <button
             type="button"
             onClick={() => goToStep(5)}
-            className={`flex items-center gap-1.5 px-2 py-1 rounded transition-colors ${step === 5 ? "bg-primary text-primary-foreground font-semibold" : "hover:bg-accent"}`}
+            className={`flex items-center gap-1.5 rounded px-2 py-1 transition-colors ${step === 5 ? "bg-primary font-semibold text-primary-foreground" : "hover:bg-accent"}`}
           >
             <ClipboardList className="h-3.5 w-3.5" /> 5. Details
           </button>
@@ -420,7 +475,7 @@ export function CreateEventDialog({
           <button
             type="button"
             onClick={() => goToStep(6)}
-            className={`flex items-center gap-1.5 px-2 py-1 rounded transition-colors ${step === 6 ? "bg-primary text-primary-foreground font-semibold" : "hover:bg-accent"}`}
+            className={`flex items-center gap-1.5 rounded px-2 py-1 transition-colors ${step === 6 ? "bg-primary font-semibold text-primary-foreground" : "hover:bg-accent"}`}
           >
             <Eye className="h-3.5 w-3.5" /> 6. Review
           </button>
@@ -429,7 +484,7 @@ export function CreateEventDialog({
         {/* Step 1: Basic Event Information */}
         {step === 1 && (
           <div className="space-y-4">
-            <h3 className="text-base font-semibold border-b pb-2 flex items-center gap-2">
+            <h3 className="flex items-center gap-2 border-b pb-2 text-base font-semibold">
               <Info className="h-4 w-4 text-primary" /> Basic Event Information
             </h3>
             <div className="space-y-2">
@@ -442,7 +497,9 @@ export function CreateEventDialog({
                 aria-invalid={!!fieldErrors.name}
               />
               {fieldErrors.name?.map((msg) => (
-                <p key={msg} className="text-xs text-destructive">{msg}</p>
+                <p key={msg} className="text-xs text-destructive">
+                  {msg}
+                </p>
               ))}
             </div>
 
@@ -457,7 +514,9 @@ export function CreateEventDialog({
                 aria-invalid={!!fieldErrors.purpose}
               />
               {fieldErrors.purpose?.map((msg) => (
-                <p key={msg} className="text-xs text-destructive">{msg}</p>
+                <p key={msg} className="text-xs text-destructive">
+                  {msg}
+                </p>
               ))}
             </div>
 
@@ -472,7 +531,9 @@ export function CreateEventDialog({
                 aria-invalid={!!fieldErrors.description}
               />
               {fieldErrors.description?.map((msg) => (
-                <p key={msg} className="text-xs text-destructive">{msg}</p>
+                <p key={msg} className="text-xs text-destructive">
+                  {msg}
+                </p>
               ))}
             </div>
           </div>
@@ -481,10 +542,11 @@ export function CreateEventDialog({
         {/* Step 2: Proposed Schedule & Attendance */}
         {step === 2 && (
           <div className="space-y-4">
-            <h3 className="text-base font-semibold border-b pb-2 flex items-center gap-2">
-              <Calendar className="h-4 w-4 text-primary" /> Schedule & Attendance
+            <h3 className="flex items-center gap-2 border-b pb-2 text-base font-semibold">
+              <Calendar className="h-4 w-4 text-primary" /> Schedule &
+              Attendance
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="startAt">Proposed Start Date & Time *</Label>
                 <Input
@@ -496,9 +558,13 @@ export function CreateEventDialog({
                   aria-invalid={!!fieldErrors.startAt}
                 />
                 {fieldErrors.startAt?.map((msg) => (
-                  <p key={msg} className="text-xs text-destructive">{msg}</p>
+                  <p key={msg} className="text-xs text-destructive">
+                    {msg}
+                  </p>
                 ))}
-                <p className="text-[11px] text-muted-foreground">Must be a future date & time.</p>
+                <p className="text-[11px] text-muted-foreground">
+                  Must be a future date & time.
+                </p>
               </div>
 
               <div className="space-y-2">
@@ -512,9 +578,13 @@ export function CreateEventDialog({
                   aria-invalid={!!fieldErrors.endAt}
                 />
                 {fieldErrors.endAt?.map((msg) => (
-                  <p key={msg} className="text-xs text-destructive">{msg}</p>
+                  <p key={msg} className="text-xs text-destructive">
+                    {msg}
+                  </p>
                 ))}
-                <p className="text-[11px] text-muted-foreground">Must be strictly after start date & time.</p>
+                <p className="text-[11px] text-muted-foreground">
+                  Must be strictly after start date & time.
+                </p>
               </div>
             </div>
 
@@ -528,7 +598,12 @@ export function CreateEventDialog({
                 placeholder="e.g. 150"
                 value={formData.expectedAttendance}
                 onKeyDown={(e) => {
-                  if (e.key === "-" || e.key === "e" || e.key === "+" || e.key === ".") {
+                  if (
+                    e.key === "-" ||
+                    e.key === "e" ||
+                    e.key === "+" ||
+                    e.key === "."
+                  ) {
                     e.preventDefault();
                   }
                 }}
@@ -541,9 +616,13 @@ export function CreateEventDialog({
                 aria-invalid={!!fieldErrors.expectedAttendance}
               />
               {fieldErrors.expectedAttendance?.map((msg) => (
-                <p key={msg} className="text-xs text-destructive">{msg}</p>
+                <p key={msg} className="text-xs text-destructive">
+                  {msg}
+                </p>
               ))}
-              <p className="text-[11px] text-muted-foreground">Must be a positive whole number greater than 0.</p>
+              <p className="text-[11px] text-muted-foreground">
+                Must be a positive whole number greater than 0.
+              </p>
             </div>
           </div>
         )}
@@ -551,24 +630,27 @@ export function CreateEventDialog({
         {/* Step 3: Venue & Accessibility Requirements (Grouped together) */}
         {step === 3 && (
           <div className="space-y-4">
-            <h3 className="text-base font-semibold border-b pb-2 flex items-center gap-2">
-              <Building2 className="h-4 w-4 text-primary" /> Venue, Layout & Accessibility Requirements
+            <h3 className="flex items-center gap-2 border-b pb-2 text-base font-semibold">
+              <Building2 className="h-4 w-4 text-primary" /> Venue, Layout &
+              Accessibility Requirements
             </h3>
 
             {catalogues.venues.length > 0 && (
-              <div className="bg-muted/40 p-3 rounded-lg border text-xs space-y-1">
-                <p className="font-medium text-foreground">Available ConnectSphere Venues Catalogue:</p>
+              <div className="space-y-1 rounded-lg border bg-muted/40 p-3 text-xs">
+                <p className="font-medium text-foreground">
+                  Available ConnectSphere Venues Catalogue:
+                </p>
                 <div className="flex flex-wrap gap-2 pt-1">
                   {catalogues.venues.map((v) => (
                     <span
                       key={v.id}
-                      className="px-2 py-0.5 bg-background border rounded cursor-pointer hover:bg-accent text-xs"
+                      className="cursor-pointer rounded border bg-background px-2 py-0.5 text-xs hover:bg-accent"
                       onClick={() =>
                         updateField(
                           "venueRequirements",
                           formData.venueRequirements
                             ? `${formData.venueRequirements}, ${v.name}`
-                            : `Preferred venue: ${v.name} (Cap: ${v.capacity})`
+                            : `Preferred venue: ${v.name} (Cap: ${v.capacity})`,
                         )
                       }
                     >
@@ -586,34 +668,43 @@ export function CreateEventDialog({
                 placeholder="Specify space size, hall preference, or specific space requirements..."
                 rows={3}
                 value={formData.venueRequirements}
-                onChange={(e) => updateField("venueRequirements", e.target.value)}
+                onChange={(e) =>
+                  updateField("venueRequirements", e.target.value)
+                }
                 aria-invalid={!!fieldErrors.venueRequirements}
               />
               {fieldErrors.venueRequirements?.map((msg) => (
-                <p key={msg} className="text-xs text-destructive">{msg}</p>
+                <p key={msg} className="text-xs text-destructive">
+                  {msg}
+                </p>
               ))}
             </div>
 
             <div className="space-y-2">
               <Label>Required Venue Facilities</Label>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-1">
+              <div className="grid grid-cols-2 gap-2 pt-1 sm:grid-cols-3">
                 {COMMON_FACILITIES.map((facility) => {
-                  const checked = formData.requiredFacilities.includes(facility);
+                  const checked =
+                    formData.requiredFacilities.includes(facility);
                   return (
                     <button
                       key={facility}
                       type="button"
                       onClick={() => handleFacilityToggle(facility)}
-                      className={`flex items-center gap-2 px-3 py-2 border rounded-md text-xs font-medium transition-colors text-left ${
+                      className={`flex items-center gap-2 rounded-md border px-3 py-2 text-left text-xs font-medium transition-colors ${
                         checked
-                          ? "bg-primary text-primary-foreground border-primary"
-                          : "bg-background hover:bg-accent border-input"
+                          ? "border-primary bg-primary text-primary-foreground"
+                          : "border-input bg-background hover:bg-accent"
                       }`}
                     >
-                      <div className={`h-3.5 w-3.5 rounded border flex items-center justify-center ${checked ? "bg-primary-foreground text-primary" : "border-muted-foreground"}`}>
+                      <div
+                        className={`flex h-3.5 w-3.5 items-center justify-center rounded border ${checked ? "bg-primary-foreground text-primary" : "border-muted-foreground"}`}
+                      >
                         {checked && <Check className="h-3 w-3 stroke-[3]" />}
                       </div>
-                      <span className="capitalize">{facility.replace("-", " ")}</span>
+                      <span className="capitalize">
+                        {facility.replace("-", " ")}
+                      </span>
                     </button>
                   );
                 })}
@@ -622,14 +713,18 @@ export function CreateEventDialog({
 
             <div className="space-y-2">
               <Label htmlFor="preferredLayout">Preferred Room Layout *</Label>
-              <div className="flex flex-wrap gap-2 mb-2">
+              <div className="mb-2 flex flex-wrap gap-2">
                 {LAYOUT_OPTIONS.map((layout) => (
                   <Button
                     key={layout}
                     type="button"
-                    variant={formData.preferredLayout === layout ? "default" : "outline"}
+                    variant={
+                      formData.preferredLayout === layout
+                        ? "default"
+                        : "outline"
+                    }
                     size="sm"
-                    className="text-xs h-8"
+                    className="h-8 text-xs"
                     onClick={() => updateField("preferredLayout", layout)}
                   >
                     {layout}
@@ -644,7 +739,9 @@ export function CreateEventDialog({
                 aria-invalid={!!fieldErrors.preferredLayout}
               />
               {fieldErrors.preferredLayout?.map((msg) => (
-                <p key={msg} className="text-xs text-destructive">{msg}</p>
+                <p key={msg} className="text-xs text-destructive">
+                  {msg}
+                </p>
               ))}
             </div>
 
@@ -655,14 +752,19 @@ export function CreateEventDialog({
                 placeholder="State any wheelchair access, special physical seating, mobility, or facility arrangements required for attendees..."
                 rows={3}
                 value={formData.accessibilityNeeds}
-                onChange={(e) => updateField("accessibilityNeeds", e.target.value)}
+                onChange={(e) =>
+                  updateField("accessibilityNeeds", e.target.value)
+                }
                 aria-invalid={!!fieldErrors.accessibilityNeeds}
               />
               {fieldErrors.accessibilityNeeds?.map((msg) => (
-                <p key={msg} className="text-xs text-destructive">{msg}</p>
+                <p key={msg} className="text-xs text-destructive">
+                  {msg}
+                </p>
               ))}
               <p className="text-[11px] text-muted-foreground">
-                Include wheelchair access, ramp access, physical seating arrangements, or hearing loops.
+                Include wheelchair access, ramp access, physical seating
+                arrangements, or hearing loops.
               </p>
             </div>
           </div>
@@ -671,24 +773,27 @@ export function CreateEventDialog({
         {/* Step 4: Equipment Requirements (Grouped together) */}
         {step === 4 && (
           <div className="space-y-4">
-            <h3 className="text-base font-semibold border-b pb-2 flex items-center gap-2">
-              <Wrench className="h-4 w-4 text-primary" /> Equipment & Technical Support Requirements
+            <h3 className="flex items-center gap-2 border-b pb-2 text-base font-semibold">
+              <Wrench className="h-4 w-4 text-primary" /> Equipment & Technical
+              Support Requirements
             </h3>
 
             {catalogues.equipment.length > 0 && (
-              <div className="bg-muted/40 p-3 rounded-lg border text-xs space-y-1">
-                <p className="font-medium text-foreground">ConnectSphere Equipment Catalogue:</p>
+              <div className="space-y-1 rounded-lg border bg-muted/40 p-3 text-xs">
+                <p className="font-medium text-foreground">
+                  ConnectSphere Equipment Catalogue:
+                </p>
                 <div className="flex flex-wrap gap-2 pt-1">
                   {catalogues.equipment.map((eq) => (
                     <span
                       key={eq.id}
-                      className="px-2 py-0.5 bg-background border rounded cursor-pointer hover:bg-accent text-xs"
+                      className="cursor-pointer rounded border bg-background px-2 py-0.5 text-xs hover:bg-accent"
                       onClick={() =>
                         updateField(
                           "equipmentRequirements",
                           formData.equipmentRequirements
                             ? `${formData.equipmentRequirements}, ${eq.type}`
-                            : `Requested equipment: ${eq.type}`
+                            : `Requested equipment: ${eq.type}`,
                         )
                       }
                     >
@@ -700,17 +805,23 @@ export function CreateEventDialog({
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="equipmentRequirements">Equipment & Technical Support Requirements *</Label>
+              <Label htmlFor="equipmentRequirements">
+                Equipment & Technical Support Requirements *
+              </Label>
               <Textarea
                 id="equipmentRequirements"
                 placeholder="List required technical equipment (microphones, projectors, sound systems, live streaming, technical staff support)..."
                 rows={5}
                 value={formData.equipmentRequirements}
-                onChange={(e) => updateField("equipmentRequirements", e.target.value)}
+                onChange={(e) =>
+                  updateField("equipmentRequirements", e.target.value)
+                }
                 aria-invalid={!!fieldErrors.equipmentRequirements}
               />
               {fieldErrors.equipmentRequirements?.map((msg) => (
-                <p key={msg} className="text-xs text-destructive">{msg}</p>
+                <p key={msg} className="text-xs text-destructive">
+                  {msg}
+                </p>
               ))}
             </div>
           </div>
@@ -719,8 +830,9 @@ export function CreateEventDialog({
         {/* Step 5: Registration Needs & Programme */}
         {step === 5 && (
           <div className="space-y-4">
-            <h3 className="text-base font-semibold border-b pb-2 flex items-center gap-2">
-              <ClipboardList className="h-4 w-4 text-primary" /> Registration & Additional Details
+            <h3 className="flex items-center gap-2 border-b pb-2 text-base font-semibold">
+              <ClipboardList className="h-4 w-4 text-primary" /> Registration &
+              Additional Details
             </h3>
 
             <div className="space-y-2">
@@ -730,11 +842,15 @@ export function CreateEventDialog({
                 placeholder="Describe attendee registration needs (e.g., online registration open to public, max capacity limit, check-in desks)..."
                 rows={3}
                 value={formData.registrationNotes}
-                onChange={(e) => updateField("registrationNotes", e.target.value)}
+                onChange={(e) =>
+                  updateField("registrationNotes", e.target.value)
+                }
                 aria-invalid={!!fieldErrors.registrationNotes}
               />
               {fieldErrors.registrationNotes?.map((msg) => (
-                <p key={msg} className="text-xs text-destructive">{msg}</p>
+                <p key={msg} className="text-xs text-destructive">
+                  {msg}
+                </p>
               ))}
             </div>
 
@@ -750,7 +866,9 @@ export function CreateEventDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="specialRequests">Special Requests / Arrangements (Optional)</Label>
+              <Label htmlFor="specialRequests">
+                Special Requests / Arrangements (Optional)
+              </Label>
               <Textarea
                 id="specialRequests"
                 placeholder="Detail any special catering, security, VIP reception, or custom logistics needed..."
@@ -765,133 +883,229 @@ export function CreateEventDialog({
         {/* Step 6: Review & Confirmation Step */}
         {step === 6 && (
           <div className="space-y-4">
-            <h3 className="text-base font-semibold border-b pb-2 flex items-center gap-2">
+            <h3 className="flex items-center gap-2 border-b pb-2 text-base font-semibold">
               <Eye className="h-4 w-4 text-primary" /> Review Entered Details
             </h3>
 
             {hasMissingSubmissionFields ? (
-              <div className="bg-warning/15 border border-warning/30 text-warning-foreground p-3 rounded-lg text-xs flex items-start gap-2.5">
-                <AlertCircle className="h-4 w-4 text-warning shrink-0 mt-0.5" />
+              <div className="flex items-start gap-2.5 rounded-lg border border-warning/30 bg-warning/15 p-3 text-xs text-warning-foreground">
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
                 <div>
-                  <p className="font-semibold">Draft can be saved at any time.</p>
+                  <p className="font-semibold">
+                    Draft can be saved at any time.
+                  </p>
                   <p className="mt-0.5">
-                    To submit this request for ConnectSphere review, please complete all required fields highlighted in red below.
+                    To submit this request for ConnectSphere review, please
+                    complete all required fields highlighted in red below.
                   </p>
                 </div>
               </div>
             ) : (
               <p className="text-xs text-muted-foreground">
-                All required details have been filled. You can submit this request for review or save it as a draft.
+                All required details have been filled. You can submit this
+                request for review or save it as a draft.
               </p>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <Card>
-                <CardHeader className="py-3 px-4">
-                  <CardTitle className="text-sm font-semibold flex items-center justify-between">
+                <CardHeader className="px-4 py-3">
+                  <CardTitle className="flex items-center justify-between text-sm font-semibold">
                     <span>1. Basic Information</span>
-                    <Button variant="ghost" size="sm" className="h-6 text-xs px-2" onClick={() => setStep(1)}>Edit</Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 px-2 text-xs"
+                      onClick={() => setStep(1)}
+                    >
+                      Edit
+                    </Button>
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="px-4 pb-3 space-y-1 text-xs">
+                <CardContent className="space-y-1 px-4 pb-3 text-xs">
                   <p>
                     <span className="font-semibold">Name:</span>{" "}
-                    {formData.name.trim() || <span className="text-destructive font-medium bg-destructive/10 px-1.5 py-0.5 rounded text-[11px]">Missing (Required to Submit)</span>}
+                    {formData.name.trim() || (
+                      <span className="rounded bg-destructive/10 px-1.5 py-0.5 text-[11px] font-medium text-destructive">
+                        Missing (Required to Submit)
+                      </span>
+                    )}
                   </p>
                   <p>
                     <span className="font-semibold">Purpose:</span>{" "}
-                    {formData.purpose.trim() || <span className="text-destructive font-medium bg-destructive/10 px-1.5 py-0.5 rounded text-[11px]">Missing (Required to Submit)</span>}
+                    {formData.purpose.trim() || (
+                      <span className="rounded bg-destructive/10 px-1.5 py-0.5 text-[11px] font-medium text-destructive">
+                        Missing (Required to Submit)
+                      </span>
+                    )}
                   </p>
                   <p>
                     <span className="font-semibold">Description:</span>{" "}
-                    {formData.description.trim() || <span className="text-destructive font-medium bg-destructive/10 px-1.5 py-0.5 rounded text-[11px]">Missing (Required to Submit)</span>}
+                    {formData.description.trim() || (
+                      <span className="rounded bg-destructive/10 px-1.5 py-0.5 text-[11px] font-medium text-destructive">
+                        Missing (Required to Submit)
+                      </span>
+                    )}
                   </p>
                 </CardContent>
               </Card>
 
               <Card>
-                <CardHeader className="py-3 px-4">
-                  <CardTitle className="text-sm font-semibold flex items-center justify-between">
+                <CardHeader className="px-4 py-3">
+                  <CardTitle className="flex items-center justify-between text-sm font-semibold">
                     <span>2. Schedule & Attendance</span>
-                    <Button variant="ghost" size="sm" className="h-6 text-xs px-2" onClick={() => setStep(2)}>Edit</Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 px-2 text-xs"
+                      onClick={() => setStep(2)}
+                    >
+                      Edit
+                    </Button>
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="px-4 pb-3 space-y-1 text-xs">
+                <CardContent className="space-y-1 px-4 pb-3 text-xs">
                   <p>
                     <span className="font-semibold">Start:</span>{" "}
-                    {formData.startAt ? formatDateTime(formData.startAt) :<span className="text-destructive font-medium bg-destructive/10 px-1.5 py-0.5 rounded text-[11px]">Missing (Required to Submit)</span>}
+                    {formData.startAt ? (
+                      formatDateTime(formData.startAt)
+                    ) : (
+                      <span className="rounded bg-destructive/10 px-1.5 py-0.5 text-[11px] font-medium text-destructive">
+                        Missing (Required to Submit)
+                      </span>
+                    )}
                   </p>
                   <p>
                     <span className="font-semibold">End:</span>{" "}
-                    {formData.endAt ? formatDateTime(formData.endAt) :<span className="text-destructive font-medium bg-destructive/10 px-1.5 py-0.5 rounded text-[11px]">Missing (Required to Submit)</span>}
+                    {formData.endAt ? (
+                      formatDateTime(formData.endAt)
+                    ) : (
+                      <span className="rounded bg-destructive/10 px-1.5 py-0.5 text-[11px] font-medium text-destructive">
+                        Missing (Required to Submit)
+                      </span>
+                    )}
                   </p>
                   <p>
                     <span className="font-semibold">Attendance:</span>{" "}
-                    {formData.expectedAttendance || <span className="text-destructive font-medium bg-destructive/10 px-1.5 py-0.5 rounded text-[11px]">Missing (Required to Submit)</span>}
+                    {formData.expectedAttendance || (
+                      <span className="rounded bg-destructive/10 px-1.5 py-0.5 text-[11px] font-medium text-destructive">
+                        Missing (Required to Submit)
+                      </span>
+                    )}
                   </p>
                 </CardContent>
               </Card>
 
               <Card>
-                <CardHeader className="py-3 px-4">
-                  <CardTitle className="text-sm font-semibold flex items-center justify-between">
+                <CardHeader className="px-4 py-3">
+                  <CardTitle className="flex items-center justify-between text-sm font-semibold">
                     <span>3. Venue & Accessibility</span>
-                    <Button variant="ghost" size="sm" className="h-6 text-xs px-2" onClick={() => setStep(3)}>Edit</Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 px-2 text-xs"
+                      onClick={() => setStep(3)}
+                    >
+                      Edit
+                    </Button>
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="px-4 pb-3 space-y-1 text-xs">
+                <CardContent className="space-y-1 px-4 pb-3 text-xs">
                   <p>
                     <span className="font-semibold">Venue Requirements:</span>{" "}
-                    {formData.venueRequirements.trim() || <span className="text-destructive font-medium bg-destructive/10 px-1.5 py-0.5 rounded text-[11px]">Missing (Required to Submit)</span>}
+                    {formData.venueRequirements.trim() || (
+                      <span className="rounded bg-destructive/10 px-1.5 py-0.5 text-[11px] font-medium text-destructive">
+                        Missing (Required to Submit)
+                      </span>
+                    )}
                   </p>
-                  <p><span className="font-semibold">Facilities:</span> {formData.requiredFacilities.length ? formData.requiredFacilities.join(", ") : "None selected"}</p>
+                  <p>
+                    <span className="font-semibold">Facilities:</span>{" "}
+                    {formData.requiredFacilities.length
+                      ? formData.requiredFacilities.join(", ")
+                      : "None selected"}
+                  </p>
                   <p>
                     <span className="font-semibold">Preferred Layout:</span>{" "}
-                    {formData.preferredLayout.trim() || <span className="text-destructive font-medium bg-destructive/10 px-1.5 py-0.5 rounded text-[11px]">Missing (Required to Submit)</span>}
+                    {formData.preferredLayout.trim() || (
+                      <span className="rounded bg-destructive/10 px-1.5 py-0.5 text-[11px] font-medium text-destructive">
+                        Missing (Required to Submit)
+                      </span>
+                    )}
                   </p>
                   <p>
                     <span className="font-semibold">Accessibility Needs:</span>{" "}
-                    {formData.accessibilityNeeds.trim() || <span className="text-destructive font-medium bg-destructive/10 px-1.5 py-0.5 rounded text-[11px]">Missing (Required to Submit)</span>}
+                    {formData.accessibilityNeeds.trim() || (
+                      <span className="rounded bg-destructive/10 px-1.5 py-0.5 text-[11px] font-medium text-destructive">
+                        Missing (Required to Submit)
+                      </span>
+                    )}
                   </p>
                 </CardContent>
               </Card>
 
               <Card>
-                <CardHeader className="py-3 px-4">
-                  <CardTitle className="text-sm font-semibold flex items-center justify-between">
+                <CardHeader className="px-4 py-3">
+                  <CardTitle className="flex items-center justify-between text-sm font-semibold">
                     <span>4. Equipment & Support</span>
-                    <Button variant="ghost" size="sm" className="h-6 text-xs px-2" onClick={() => setStep(4)}>Edit</Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 px-2 text-xs"
+                      onClick={() => setStep(4)}
+                    >
+                      Edit
+                    </Button>
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="px-4 pb-3 space-y-1 text-xs">
+                <CardContent className="space-y-1 px-4 pb-3 text-xs">
                   <p>
                     <span className="font-semibold">Requirements:</span>{" "}
-                    {formData.equipmentRequirements.trim() || <span className="text-destructive font-medium bg-destructive/10 px-1.5 py-0.5 rounded text-[11px]">Missing (Required to Submit)</span>}
+                    {formData.equipmentRequirements.trim() || (
+                      <span className="rounded bg-destructive/10 px-1.5 py-0.5 text-[11px] font-medium text-destructive">
+                        Missing (Required to Submit)
+                      </span>
+                    )}
                   </p>
                 </CardContent>
               </Card>
 
               <Card className="md:col-span-2">
-                <CardHeader className="py-3 px-4">
-                  <CardTitle className="text-sm font-semibold flex items-center justify-between">
+                <CardHeader className="px-4 py-3">
+                  <CardTitle className="flex items-center justify-between text-sm font-semibold">
                     <span>5. Registration & Additional Details</span>
-                    <Button variant="ghost" size="sm" className="h-6 text-xs px-2" onClick={() => setStep(5)}>Edit</Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 px-2 text-xs"
+                      onClick={() => setStep(5)}
+                    >
+                      Edit
+                    </Button>
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="px-4 pb-3 space-y-1 text-xs grid grid-cols-1 md:grid-cols-3 gap-2">
+                <CardContent className="grid grid-cols-1 gap-2 space-y-1 px-4 pb-3 text-xs md:grid-cols-3">
                   <div>
                     <span className="font-semibold">Registration Needs:</span>
                     <p className="text-muted-foreground">
-                      {formData.registrationNotes.trim() || <span className="text-destructive font-medium bg-destructive/10 px-1.5 py-0.5 rounded text-[11px]">Missing (Required to Submit)</span>}
+                      {formData.registrationNotes.trim() || (
+                        <span className="rounded bg-destructive/10 px-1.5 py-0.5 text-[11px] font-medium text-destructive">
+                          Missing (Required to Submit)
+                        </span>
+                      )}
                     </p>
                   </div>
                   <div>
                     <span className="font-semibold">Programme:</span>
-                    <p className="text-muted-foreground">{formData.programme || "Not specified"}</p>
+                    <p className="text-muted-foreground">
+                      {formData.programme || "Not specified"}
+                    </p>
                   </div>
                   <div>
                     <span className="font-semibold">Special Requests:</span>
-                    <p className="text-muted-foreground">{formData.specialRequests || "None"}</p>
+                    <p className="text-muted-foreground">
+                      {formData.specialRequests || "None"}
+                    </p>
                   </div>
                 </CardContent>
               </Card>
@@ -899,14 +1113,19 @@ export function CreateEventDialog({
           </div>
         )}
 
-        <DialogFooter className="pt-4 border-t flex flex-col sm:flex-row items-center justify-between gap-2">
-          <div className="flex items-center gap-2 w-full sm:w-auto justify-start">
+        <DialogFooter className="flex flex-col items-center justify-between gap-2 border-t pt-4 sm:flex-row">
+          <div className="flex w-full items-center justify-start gap-2 sm:w-auto">
             {step > 1 && (
-              <Button type="button" variant="outline" size="sm" onClick={prevStep}>
-                <ChevronLeft className="h-4 w-4 mr-1" /> Previous
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={prevStep}
+              >
+                <ChevronLeft className="mr-1 h-4 w-4" /> Previous
               </Button>
             )}
-            {!isReadOnly && (
+            {!isReadOnly && canSaveDraft && (
               <Button
                 type="button"
                 variant="secondary"
@@ -919,13 +1138,18 @@ export function CreateEventDialog({
             )}
           </div>
 
-          <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+          <div className="flex w-full items-center justify-end gap-2 sm:w-auto">
             {step < 6 ? (
               <Button type="button" size="sm" onClick={nextStep}>
-                Next <ChevronRight className="h-4 w-4 ml-1" />
+                Next <ChevronRight className="ml-1 h-4 w-4" />
               </Button>
             ) : isReadOnly ? (
-              <Button type="button" variant="secondary" size="sm" onClick={() => handleOpenChange(false)}>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => handleOpenChange(false)}
+              >
                 Close
               </Button>
             ) : (

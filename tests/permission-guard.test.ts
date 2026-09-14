@@ -21,10 +21,17 @@ import { createDraftEvent } from "@/app/(app)/events/actions";
 // This is an INTEGRATION test: it calls the real Server Action against the real
 // (seeded) database and mocks ONLY the session. So "nothing changed" is proven
 // by an actual row count before and after — not by a mock's memory. It needs a
-// migrated + seeded database (CI provides one; locally use `npm run db:reset`
-// or the Docker DB).
+// migrated + seeded database (CI provides one; locally use the Docker DB).
+//
+// It WRITES (creates, then deletes, an Event). Prisma loads `.env` on import,
+// and the team's `.env` points at the shared Supabase database — so the suite
+// only runs against a localhost database and skips itself everywhere else.
 vi.mock("@/auth", () => ({ auth: vi.fn() }));
 const mockAuth = auth as unknown as Mock;
+
+const usesLocalDatabase = /@(localhost|127\.0\.0\.1)[:/]/.test(
+  process.env.DATABASE_URL ?? "",
+);
 
 // Deterministic seed ids (prisma/seed.ts). createDraftEvent writes
 // organiserId = the session user's id, which must be a real User row (FK), so
@@ -61,7 +68,7 @@ afterAll(async () => {
   await prisma.$disconnect();
 });
 
-describe("SCRUM-67 — createDraftEvent is guarded for every role", () => {
+describe.skipIf(!usesLocalDatabase)("SCRUM-67 — createDraftEvent is guarded for every role", () => {
   it.each(FORBIDDEN_ROLES)(
     "refuses %s directly and leaves the database unchanged",
     async (role) => {

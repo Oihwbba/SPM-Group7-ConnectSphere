@@ -1,4 +1,18 @@
 import type { NextAuthConfig } from "next-auth";
+import type { Role } from "@prisma/client";
+
+function isRole(value: unknown): value is Role {
+  return (
+    typeof value === "string" &&
+    [
+      "ORGANISER",
+      "COORDINATOR",
+      "VENUE_STAFF",
+      "TECH_SUPPORT",
+      "ATTENDEE",
+    ].includes(value)
+  );
+}
 
 /**
  * Lightweight half of the Auth.js config. It contains NO database or bcrypt
@@ -64,7 +78,7 @@ export const authConfig = {
     jwt({ token, user }) {
       if (user) {
         token.id = user.id as string;
-        token.role = user.role;
+        if (isRole(user.role)) token.role = user.role;
       }
       return token;
     },
@@ -74,8 +88,10 @@ export const authConfig = {
      * components and actions can read `session.user.role`.
      */
     session({ session, token }) {
-      if (token) {
+      if (typeof token.id === "string") {
         session.user.id = token.id;
+      }
+      if (isRole(token.role)) {
         session.user.role = token.role;
       }
       return session;
