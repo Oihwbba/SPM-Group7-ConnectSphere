@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 
 import {
+  checkCompletion,
   countBlocking,
   extractStoryKeys,
   fenceFor,
@@ -201,11 +202,40 @@ describe("parseReview", () => {
 });
 
 describe("countBlocking", () => {
-  it("counts only critical and high findings, which fail the check", () => {
+  it("counts only critical findings, which fail the required check", () => {
     const findings = [finding("critical", "a"), finding("high", "b"), finding("medium", "c"), finding("low", "d")];
 
-    expect(countBlocking(findings)).toBe(2);
-    expect(countBlocking([finding("medium", "c"), finding("low", "d")])).toBe(0);
+    expect(countBlocking(findings)).toBe(1);
+    expect(countBlocking([finding("high", "b"), finding("medium", "c"), finding("low", "d")])).toBe(0);
+  });
+});
+
+describe("checkCompletion", () => {
+  const usage = { completion_tokens: 64000, completion_tokens_details: { reasoning_tokens: 63900 } };
+
+  it("accepts an answer that finished normally", () => {
+    expect(() => checkCompletion({ content: '{"summary":"ok"}', finishReason: "stop", usage })).not.toThrow();
+  });
+
+  it("explains a run cut off while still thinking, with its token counts", () => {
+    expect(() => checkCompletion({ content: "", finishReason: "length", usage })).toThrow(
+      "GLM stopped before answering: it reached the output token limit while still thinking after 64,000 output tokens (63,900 thinking).",
+    );
+  });
+
+  it("rejects an empty answer even when GLM says it stopped normally", () => {
+    expect(() => checkCompletion({ content: "  ", finishReason: "stop", usage: null })).toThrow(
+      "GLM stopped before answering: it finished with an empty answer.",
+    );
+  });
+
+  it("names an unknown or missing finish reason instead of guessing", () => {
+    expect(() => checkCompletion({ content: "", finishReason: "constructor", usage: null })).toThrow(
+      'finish_reason "constructor"',
+    );
+    expect(() => checkCompletion({ content: "", finishReason: null, usage: null })).toThrow(
+      "the stream ended without a finish reason",
+    );
   });
 });
 
@@ -265,7 +295,7 @@ describe("renderReview", () => {
     const body = renderReview({
       ...base,
       findings: [
-        finding("high", "Unguarded | action", {
+        finding("critical", "Unguarded | action", {
           path: "app/(app)/events/actions.ts",
           line: 42,
           detail: "Anyone can call it.",
@@ -277,13 +307,13 @@ describe("renderReview", () => {
     });
 
     expect(body.startsWith("<!-- glm-review -->")).toBe(true);
-    expect(body).toContain("❌ **Blocking issues found:** 1 critical or high finding(s)");
-    expect(body).toContain("1 high · 2 low");
+    expect(body).toContain("❌ **Blocking issues found:** 1 critical finding(s)");
+    expect(body).toContain("1 critical · 2 low");
     expect(body).toContain("### Overview\n\nAdds reservations.");
     expect(body).toContain(
-      "| 1 | 🔴 High | [`app/(app)/events/actions.ts:42`](https://github.com/o/r/blob/abc1234def5678/app/%28app%29/events/actions.ts#L42) | Unguarded \\| action |",
+      "| 1 | 🟣 Critical | [`app/(app)/events/actions.ts:42`](https://github.com/o/r/blob/abc1234def5678/app/%28app%29/events/actions.ts#L42) | Unguarded \\| action |",
     );
-    expect(body).toContain("### 1. 🔴 High: Unguarded | action");
+    expect(body).toContain("### 1. 🟣 Critical: Unguarded | action");
     expect(body).toContain("Anyone can call it.");
     expect(body).toContain('```\nrequirePermission(user, "event:create");\n```');
     expect(body).toContain("**Where:** [`src/a.ts`](https://github.com/o/r/blob/abc1234def5678/src/a.ts)");
@@ -316,10 +346,10 @@ describe("renderReview", () => {
     expect(body).toContain("_No SCRUM story key was found in the branch name, title or description");
   });
 
-  it("marks medium and low findings as issues to consider, not blocking", () => {
-    const body = renderReview({ ...base, findings: [finding("medium", "Edge case")] });
+  it("marks high, medium and low findings as issues to consider, not blocking", () => {
+    const body = renderReview({ ...base, findings: [finding("high", "Crash"), finding("medium", "Edge case")] });
 
-    expect(body).toContain("⚠️ **Issues to consider:** no critical or high findings.");
+    expect(body).toContain("⚠️ **Issues to consider:** no critical findings, so this doesn't block the merge.");
     expect(body).not.toContain("Blocking issues");
   });
 

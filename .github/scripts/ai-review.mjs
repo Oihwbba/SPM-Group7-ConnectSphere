@@ -11,15 +11,29 @@
 // every SCRUM key the PR names. All of it, and this script itself, is read from
 // the BASE branch, so a pull request can't rewrite the rules it is judged by.
 //
-// Exit code: 1 (red check) when the review finds critical or high issues. A
-// problem with GLM or the GitHub API is reported on the PR and exits 0 — an
-// outage must not turn every PR red.
+// Exit code: 1 (red check, which blocks the merge) when the review finds a
+// critical issue, or when no review could be completed: the check is required,
+// so it must never pass without a review. If GLM stops before answering, it is
+// retried once with less thinking first.
 
 import { execFileSync } from "node:child_process";
 import { pathToFileURL } from "node:url";
 
 const GLM_URL = "https://open.bigmodel.cn/api/paas/v4/chat/completions";
-const GLM_TIMEOUT_MS = 20 * 60 * 1000;
+// GLM-5.3 always thinks before it answers, and the answer only starts once the
+// thinking ends: a replay of PR #22 thought for ~45-48K tokens (10+ minutes)
+// before writing a ~1K-token JSON answer. A run cut off while still thinking
+// returns an empty answer, so allow plenty of output and retry once.
+const GLM_MAX_OUTPUT_TOKENS = 100_000;
+// All attempts share one budget that ends before the job's 30-minute timeout,
+// leaving time to post the comment. A retry needs at least MIN_RETRY_MS left.
+const GLM_BUDGET_MS = 27 * 60 * 1000;
+const MIN_RETRY_MS = 8 * 60 * 1000;
+// Thinking levels (`reasoning_effort`). Without one, GLM-5.3 thinks as much as
+// at "max" — a probe used 145 thinking tokens with no level, 143 at max, 27 at
+// high and 19 at low — which is why reviews ran for 10-15 minutes. Reviews use
+// "high"; the retry uses "low", so it finishes.
+const EFFORTS = ["high", "low"];
 const MAX_DIFF_CHARS = 120_000;
 const MAX_FINDINGS = 10;
 const MAX_STORIES = 6;
@@ -53,9 +67,9 @@ export const CRITERION_STATUS = {
   unclear: "❔ Unclear",
 };
 
-// Findings at these severities fail the check (it is not a required check, so
-// a red review does not block merging; a human decides).
-const BLOCKING = new Set(["critical", "high"]);
+// Findings at these severities fail the check, which is required on `main`, so
+// they block the merge. High findings are listed first but don't block.
+const BLOCKING = new Set(["critical"]);
 
 /**
  * Prefixes each added or context line with its line number in the new file, so
@@ -260,9 +274,9 @@ export function renderReview({
   const lines = [MARKER, `## 🤖 ${model} code review`, ""];
 
   if (blocking > 0) {
-    lines.push(`❌ **Blocking issues found:** ${blocking} critical or high finding(s) to fix, or explicitly accept, before merging.`);
+    lines.push(`❌ **Blocking issues found:** ${blocking} critical finding(s). Fix them and push; this check blocks the merge.`);
   } else if (findings.length > 0) {
-    lines.push("⚠️ **Issues to consider:** no critical or high findings.");
+    lines.push("⚠️ **Issues to consider:** no critical findings, so this doesn't block the merge.");
   } else {
     lines.push("✅ **No issues found.**");
   }
@@ -322,8 +336,31 @@ export function renderReview({
   return lines.join("\n");
 }
 
-/** One streamed GLM call; returns only the answer text (thinking is ignored). */
-async function askGlm({ apiKey, model, system, user }) {
+const STOP_REASONS = new Map([
+  ["stop", "it finished with an empty answer"],
+  ["length", "it reached the output token limit while still thinking"],
+  ["sensitive", "BigModel's content filter stopped it"],
+  ["network_error", "BigModel reported an inference error"],
+  ["model_context_window_exceeded", "the prompt exceeded the context window"],
+]);
+
+/** Throws unless GLM finished its answer, saying why it stopped and how many tokens it used. */
+export function checkCompletion({ content, finishReason, usage }) {
+  if (finishReason === "stop" && content.trim()) return;
+  const why =
+    STOP_REASONS.get(finishReason) ??
+    (finishReason ? `finish_reason "${finishReason}"` : "the stream ended without a finish reason");
+  const output = usage?.completion_tokens;
+  const thinking = usage?.completion_tokens_details?.reasoning_tokens;
+  const tokens =
+    output == null
+      ? ""
+      : ` after ${formatCount(output)} output tokens${thinking == null ? "" : ` (${formatCount(thinking)} thinking)`}`;
+  throw new Error(`GLM stopped before answering: ${why}${tokens}.`);
+}
+
+/** One streamed GLM call; returns the answer text (thinking is ignored), why it stopped, and usage. */
+async function askGlm({ apiKey, model, system, user, timeoutMs, effort }) {
   const response = await fetch(GLM_URL, {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
@@ -333,13 +370,15 @@ async function askGlm({ apiKey, model, system, user }) {
       model,
       stream: true,
       thinking: { type: "enabled" },
+      max_tokens: GLM_MAX_OUTPUT_TOKENS,
+      ...(effort ? { reasoning_effort: effort } : {}),
       temperature: 0.2,
       messages: [
         { role: "system", content: system },
         { role: "user", content: user },
       ],
     }),
-    signal: AbortSignal.timeout(GLM_TIMEOUT_MS),
+    signal: AbortSignal.timeout(timeoutMs),
   });
 
   if (!response.ok) {
@@ -350,6 +389,7 @@ async function askGlm({ apiKey, model, system, user }) {
   const decoder = new TextDecoder();
   let buffer = "";
   let content = "";
+  let finishReason = null;
   let usage = null;
 
   for await (const chunk of response.body) {
@@ -367,12 +407,17 @@ async function askGlm({ apiKey, model, system, user }) {
       } catch {
         continue;
       }
-      content += event.choices?.[0]?.delta?.content ?? "";
+      if (event.error) {
+        throw new Error(`GLM stream error: ${event.error.message ?? JSON.stringify(event.error)}`);
+      }
+      const choice = event.choices?.[0];
+      content += choice?.delta?.content ?? "";
+      if (choice?.finish_reason) finishReason = choice.finish_reason;
       if (event.usage) usage = event.usage;
     }
   }
 
-  return { content, usage };
+  return { content, finishReason, usage };
 }
 
 function makeGithub(token) {
@@ -430,7 +475,9 @@ function capped(text, max) {
 async function main() {
   const env = process.env;
   if (!env.ZHIPU_API_KEY) {
-    console.log("::notice::ZHIPU_API_KEY is not set, so the GLM review was skipped.");
+    // A required check must not pass without a review.
+    console.log("::error::ZHIPU_API_KEY is not set, so no GLM review can run. Add the repository secret.");
+    process.exitCode = 1;
     return;
   }
 
@@ -516,11 +563,35 @@ async function main() {
     .filter(Boolean)
     .join("\n\n");
 
+  // If GLM stops before answering, the retry thinks less: a shorter think is far
+  // less likely to be cut off.
+  const failures = [];
   let review;
-  try {
-    const { content, usage } = await askGlm({ apiKey: env.ZHIPU_API_KEY, model, system, user });
-    review = { ...parseReview(content), usage };
-  } catch (error) {
+  for (const [index, effort] of EFFORTS.entries()) {
+    const remaining = started + GLM_BUDGET_MS - Date.now();
+    if (index > 0 && remaining < MIN_RETRY_MS) {
+      failures.push(`no retry: only ${Math.round(remaining / 60_000)} minute(s) of the time budget were left`);
+      break;
+    }
+    const attemptStarted = Date.now();
+    try {
+      const result = await askGlm({ apiKey: env.ZHIPU_API_KEY, model, system, user, timeoutMs: remaining, effort });
+      console.log(
+        `GLM attempt ${index + 1}${effort ? ` (${effort} effort)` : ""}: finish_reason=${result.finishReason ?? "none"}, ` +
+          `${formatCount(result.usage?.completion_tokens ?? 0)} output tokens ` +
+          `(${formatCount(result.usage?.completion_tokens_details?.reasoning_tokens ?? 0)} thinking), ` +
+          `${Math.round((Date.now() - attemptStarted) / 1000)}s.`,
+      );
+      checkCompletion(result);
+      review = { ...parseReview(result.content), usage: result.usage };
+      break;
+    } catch (error) {
+      failures.push(`attempt ${index + 1}: ${oneLine(error.message)}`);
+      console.log(`::warning::GLM attempt ${index + 1} failed: ${error.message}`);
+    }
+  }
+
+  if (!review) {
     await upsertReviewComment(
       github,
       repo,
@@ -529,13 +600,20 @@ async function main() {
         MARKER,
         `## 🤖 ${model} code review`,
         "",
-        `⚠️ **The review did not complete** for commit \`${env.HEAD_SHA.slice(0, 7)}\`: ${oneLine(error.message)}`,
+        `❌ **The review did not complete** for commit \`${env.HEAD_SHA.slice(0, 7)}\`, so this required check failed. ` +
+          "Re-run the failed **GLM Code Review** job, or push a new commit.",
+        "",
+        ...failures.map((failure) => `- ${failure}`),
         "",
         `<sub>${model} · ${elapsed()}s · [workflow run](${env.RUN_URL})</sub>`,
       ].join("\n"),
     );
-    console.log(`::warning::GLM review did not complete: ${error.message}`);
+    console.log(`::error::The GLM review did not complete: ${failures.join("; ")}`);
+    process.exitCode = 1;
     return;
+  }
+  if (failures.length) {
+    notes.push(`The first GLM attempt didn't finish (${failures[0]}), so this review comes from a retry with less thinking.`);
   }
 
   await upsertReviewComment(
@@ -562,18 +640,19 @@ async function main() {
 
   const blocking = countBlocking(review.findings);
   console.log(
-    `Posted the ${model} review: ${review.findings.length} finding(s), ${blocking} critical/high, ` +
+    `Posted the ${model} review: ${review.findings.length} finding(s), ${blocking} critical, ` +
       `stories ${storiesFound.join(", ") || "none"}, ${review.acceptance.length} criteria, ${elapsed()}s.`,
   );
   if (blocking > 0) {
-    console.log(`::error::GLM found ${blocking} critical or high issue(s). See the review comment on the pull request.`);
+    console.log(`::error::GLM found ${blocking} critical issue(s), which block the merge. See the review comment on the pull request.`);
     process.exitCode = 1;
   }
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   main().catch((error) => {
-    // A crash in the reviewer itself is advisory: warn, don't turn the PR red.
-    console.log(`::warning::GLM review step failed: ${error.message}`);
+    // A crash means no review, so the required check fails.
+    console.log(`::error::GLM review step failed: ${error.message}`);
+    process.exitCode = 1;
   });
 }

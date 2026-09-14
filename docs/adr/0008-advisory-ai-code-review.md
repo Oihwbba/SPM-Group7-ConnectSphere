@@ -183,3 +183,56 @@ for, so it could not say whether the story's acceptance criteria were delivered.
   how many stories the pull request names.
 - **Story files are Jira snapshots.** If they are out of date, the acceptance
   check is too.
+
+## Addendum (2026-09-14, final) — a required merge gate on critical findings
+
+This supersedes "advisory, never a gate" above. Teammates now merge their own
+pull requests, so the checks have to hold the line instead of a person.
+
+**Decision.**
+
+- **`main` requires a pull request and two green checks:** `build-and-test`
+  (typecheck, lint, unit tests and the Playwright e2e suite) and `review` (this
+  GLM review), on a branch that is up to date with `main`. No approval is
+  required, so a teammate can merge once both are green. The repository owner
+  can still bypass the rules.
+- **Only critical findings fail the review.** A high finding is still listed
+  first and should be fixed, but it doesn't block. A required check that fails
+  on one model's judgement of "high" would stop teammates on a false positive
+  that only the owner could override.
+- **No review, no merge.** If no review can be completed, the check turns red
+  and the comment lists why each attempt failed. The same applies to a missing
+  API key and to a crash in the reviewer. A pull request can never merge
+  without a review. The trade-off: during a BigModel outage nothing merges
+  until the job is re-run or the owner merges as admin.
+- **Why a review could fail, and the retry.** GLM-5.3 always thinks before it
+  answers, and the answer starts only when the thinking ends. A replay of PR
+  #22 used 44–48K thinking tokens and 10+ minutes, then wrote a ~1K-token JSON
+  answer in its last 8 seconds. The original run most likely stopped while
+  still thinking (its stop reason wasn't recorded then), returned an empty
+  answer, and the reviewer counted that as passed. A probe then found the root cause: the request set no
+  `reasoning_effort`, and GLM-5.3's default thinks as much as `max` (145
+  thinking tokens on a small question, against 143 at `max`, 27 at `high` and
+  19 at `low`). Reviews now ask for `high`, the level the team chose. The
+  reviewer also asks for up to 100K output tokens, records why GLM stopped and
+  how many tokens it used, and treats any stop other than a finished answer as
+  a failure. It then retries once at `low`, which is far less likely to be cut
+  off. Both attempts share a 27-minute
+  budget inside the job's 30-minute timeout.
+- **Why some reviews take 3 minutes and others 15.** The time is thinking
+  tokens divided by BigModel's speed at that moment, and both vary. A small
+  change to tests thinks briefly (PR #21: 180s), while a change to the review
+  gate itself makes GLM deliberate for tens of thousands of tokens, at between
+  about 40 and 75 tokens a second.
+- **Every edit re-runs the review.** A skipped job counts as a passing required
+  check and replaces an earlier red result on the same commit, so edits are no
+  longer skipped. Drafts still are, and a draft can't be merged.
+- **CODEOWNERS guards the gate.** A `pull_request` run uses the pull request's
+  own workflow files, so a pull request could edit `ci.yml` or `ai-review.yml`
+  to pass. Changes under `.github/`, to `package.json`, the Playwright and
+  Vitest configs, or `vercel.json` need the owner's approval.
+- **No Vercel preview deployments.** `vercel.json` sets
+  `git.deploymentEnabled` to `{"**": false, "main": true}`. The preview check
+  failed on every teammate's pull request (the Hobby plan blocks deploys of
+  commits by non-members), and previews wrote to the production database.
+  Production still deploys from `main`.

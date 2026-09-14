@@ -9,9 +9,10 @@ name: GLM Code Review
 # Context: the PR title, description and branch, CONTRIBUTING.md, CLAUDE.md, and
 # the docs/backlog story file for each SCRUM key the PR names.
 #
-# The check turns red when the review finds critical or high issues. It is not
-# a required status check, so it never blocks merging: `build-and-test` stays
-# the only merge gate and a human decides. See docs/adr/0008.
+# The check turns red when the review finds a critical issue, or when no review
+# could be completed. It is a required status check on `main` alongside
+# `build-and-test`, so neither can merge. If GLM stops before answering, the
+# script retries once with less thinking. See docs/adr/0008.
 #
 # One-time setup (repo owner): Settings -> Secrets and variables -> Actions ->
 # New repository secret `ZHIPU_API_KEY`. Until it exists the review is skipped.
@@ -36,11 +37,10 @@ permissions:
 
 jobs:
   review:
-    # Drafts are work in progress, and an edit that doesn't change the title or
-    # description (e.g. a base-branch change) doesn't need a new review.
-    if: >-
-      github.event.pull_request.draft == false &&
-      (github.event.action != 'edited' || github.event.changes.title || github.event.changes.body)
+    # Drafts are work in progress and can't be merged. Edits are never skipped:
+    # a skipped job counts as a passing required check and would replace a red
+    # result on the same commit.
+    if: github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -59,7 +59,7 @@ jobs:
         with:
           node-version: 24
 
-      - name: GLM-5.3 review (fails on critical or high findings)
+      - name: GLM-5.3 review (fails on a critical finding)
         env:
           ZHIPU_API_KEY: ${{ secrets.ZHIPU_API_KEY }}
           GITHUB_TOKEN: ${{ github.token }}
