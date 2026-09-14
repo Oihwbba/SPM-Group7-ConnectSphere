@@ -1,25 +1,34 @@
 // SCRUM-88 — one GLM-5.3 reviewer for the whole pull request (ADR 0008).
 //
 // Reads the PR diff, asks GLM-5.3 for a review in ONE call, and posts ONE long
-// review as a PR comment in the Conversation tab: a verdict, an overview, and a
-// section per finding with a "Where:" reference that links to the exact line.
-// No inline comments. The comment is updated in place on every push.
+// review as a PR comment in the Conversation tab: a verdict, an overview, the
+// story's acceptance criteria, and a section per finding with a "Where:"
+// reference to the exact line. No inline comments; the comment is updated in
+// place on every push.
 //
-// Exit code: 1 (red check) when the review finds critical or high issues, so
-// they are visible at a glance. A problem with GLM or the GitHub API is
-// reported on the PR and exits 0 — an outage must not turn every PR red.
+// Context GLM gets besides the diff: the PR title, description and branch, the
+// project's CONTRIBUTING.md and CLAUDE.md, and the docs/backlog story file for
+// every SCRUM key the PR names. All of it, and this script itself, is read from
+// the BASE branch, so a pull request can't rewrite the rules it is judged by.
+//
+// Exit code: 1 (red check) when the review finds critical or high issues. A
+// problem with GLM or the GitHub API is reported on the PR and exits 0 — an
+// outage must not turn every PR red.
 
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 
 const GLM_URL = "https://open.bigmodel.cn/api/paas/v4/chat/completions";
 const GLM_TIMEOUT_MS = 20 * 60 * 1000;
 const MAX_DIFF_CHARS = 120_000;
 const MAX_FINDINGS = 10;
+const MAX_STORIES = 6;
+const MAX_DOC_CHARS = 20_000;
+const MAX_STORY_CHARS = 6_000;
+const MAX_BODY_CHARS = 4_000;
 const MARKER = "<!-- glm-review -->";
 
-// Docs, lockfiles and generated snapshots don't need an AI review.
+// Docs, lockfiles and generated snapshots aren't sent as diff to review.
 const EXCLUDE = [
   ":(glob,exclude)**/*.md",
   ":(glob,exclude)**/package-lock.json",
@@ -27,11 +36,21 @@ const EXCLUDE = [
   ":(glob,exclude)**/migration_lock.toml",
 ];
 
+// Project documents GLM reviews against, read from the base branch.
+const PROJECT_DOCS = ["CONTRIBUTING.md", "CLAUDE.md"];
+
 export const SEVERITY = {
   critical: { rank: 0, label: "🟣 Critical" },
   high: { rank: 1, label: "🔴 High" },
   medium: { rank: 2, label: "🟠 Medium" },
   low: { rank: 3, label: "🔵 Low" },
+};
+
+export const CRITERION_STATUS = {
+  met: "✅ Met",
+  partial: "🟡 Partial",
+  missing: "❌ Missing",
+  unclear: "❔ Unclear",
 };
 
 // Findings at these severities fail the check (it is not a required check, so
@@ -91,6 +110,29 @@ export function parseDiff(diff) {
   return { annotated: annotated.join("\n"), commentable };
 }
 
+/**
+ * SCRUM keys the PR names, in first-seen order. A branch like
+ * "SCRUM-13-15-16-84-events" names four stories; "SCRUM-89-node-24" names one,
+ * because the run of numbers stops at the first word.
+ */
+export function extractStoryKeys(...texts) {
+  const keys = [];
+  for (const text of texts) {
+    for (const match of String(text ?? "").matchAll(/SCRUM-(\d+(?:-\d+)*)/gi)) {
+      for (const number of match[1].split("-")) {
+        const key = `SCRUM-${Number(number)}`;
+        if (!keys.includes(key)) keys.push(key);
+      }
+    }
+  }
+  return keys.slice(0, MAX_STORIES);
+}
+
+function ownKey(table, value) {
+  const key = String(value ?? "").trim().toLowerCase();
+  return Object.hasOwn(table, key) ? key : null;
+}
+
 /** Extracts the JSON review from GLM's reply, tolerating stray fences or prose. */
 export function parseReview(text) {
   const start = text.indexOf("{");
@@ -100,18 +142,19 @@ export function parseReview(text) {
   }
   const data = JSON.parse(text.slice(start, end + 1));
   const findings = Array.isArray(data.findings) ? data.findings : [];
+  const acceptance = Array.isArray(data.acceptance) ? data.acceptance : [];
 
   return {
     summary: typeof data.summary === "string" ? data.summary.trim() : "",
     findings: findings
       .filter((f) => f && typeof f.path === "string" && typeof f.title === "string")
       .map((f) => {
-        const severity = String(f.severity).toLowerCase();
         const line = Number.parseInt(f.line, 10);
         return {
           path: f.path.trim().replace(/^b\//, ""),
           line: Number.isInteger(line) && line > 0 ? line : null,
-          severity: severity in SEVERITY ? severity : "medium",
+          // Object.hasOwn, not `in`: "toString" must not pass as a severity.
+          severity: ownKey(SEVERITY, f.severity) ?? "medium",
           title: f.title.trim(),
           detail: typeof f.detail === "string" ? f.detail.trim() : "",
           suggestion: typeof f.suggestion === "string" ? f.suggestion.trim() : "",
@@ -121,6 +164,15 @@ export function parseReview(text) {
       // within a severity.
       .sort((a, b) => SEVERITY[a.severity].rank - SEVERITY[b.severity].rank)
       .slice(0, MAX_FINDINGS),
+    acceptance: acceptance
+      .filter((a) => a && typeof a.criterion === "string" && a.criterion.trim())
+      .slice(0, 40)
+      .map((a) => ({
+        story: typeof a.story === "string" ? a.story.trim().toUpperCase() : "",
+        criterion: a.criterion.trim(),
+        status: ownKey(CRITERION_STATUS, a.status) ?? "unclear",
+        evidence: typeof a.evidence === "string" ? a.evidence.trim() : "",
+      })),
   };
 }
 
@@ -128,13 +180,33 @@ export function countBlocking(findings) {
   return findings.filter((f) => BLOCKING.has(f.severity)).length;
 }
 
-/** A link to the exact line of the PR head's code. */
+/** A link to a file, or to an exact line, of the PR head's code. */
 export function fileLink({ repo, sha, path, line }) {
   const encoded = path
     .split("/")
     .map((part) => encodeURIComponent(part).replace(/\(/g, "%28").replace(/\)/g, "%29"))
     .join("/");
   return `https://github.com/${repo}/blob/${sha}/${encoded}${line ? `#L${line}` : ""}`;
+}
+
+/**
+ * Where a finding points, checked against the diff: an exact-line link only
+ * when the line really is on the new side of the diff, a file link when only
+ * the file is, and no link at all for a path the diff doesn't contain — so a
+ * hallucinated location is never presented as verified.
+ */
+export function locationFor({ repo, sha, commentable, path, line }) {
+  const lines = commentable.get(path);
+  if (!lines) {
+    return { text: `${line ? `${path}:${line}` : path} (not in the diff)`, link: null };
+  }
+  if (line && lines.has(line)) {
+    return { text: `${path}:${line}`, link: fileLink({ repo, sha, path, line }) };
+  }
+  return {
+    text: line ? `${path}:${line} (outside the diff)` : path,
+    link: fileLink({ repo, sha, path, line: null }),
+  };
 }
 
 /** A code fence longer than any run of backticks in the code, so it can't break out. */
@@ -163,7 +235,27 @@ function severityCounts(findings) {
     .join(" · ");
 }
 
-export function renderReview({ model, repo, sha, summary, findings, notes, usage, seconds, runUrl }) {
+function locationMarkdown(location) {
+  const text = `\`${tableCell(location.text)}\``;
+  return location.link ? `[${text}](${location.link})` : text;
+}
+
+export function renderReview({
+  model,
+  repo,
+  sha,
+  baseRef,
+  commentable,
+  summary,
+  findings,
+  stories,
+  storiesFound,
+  acceptance,
+  notes,
+  usage,
+  seconds,
+  runUrl,
+}) {
   const blocking = countBlocking(findings);
   const lines = [MARKER, `## 🤖 ${model} code review`, ""];
 
@@ -179,19 +271,35 @@ export function renderReview({ model, repo, sha, summary, findings, notes, usage
   lines.push("", `**Commit:** [\`${sha.slice(0, 7)}\`](https://github.com/${repo}/commit/${sha})${counts}`);
   lines.push("", "### Overview", "", summary || "_GLM returned no overview._");
 
+  lines.push("", "### Acceptance criteria", "");
+  if (stories.length === 0) {
+    lines.push("_No SCRUM story key was found in the branch name, title or description, so acceptance criteria were not checked._");
+  } else {
+    const missingFiles = stories.filter((key) => !storiesFound.includes(key));
+    lines.push(`Checked against: ${storiesFound.length ? storiesFound.join(", ") : "none"}`);
+    if (missingFiles.length) {
+      lines.push("", `> No \`docs/backlog\` file on \`${baseRef}\` for ${missingFiles.join(", ")}, so those stories could not be checked.`);
+    }
+    if (acceptance.length) {
+      lines.push("", "| Story | Criterion | Status | Evidence |", "|---|---|---|---|");
+      for (const a of acceptance) {
+        lines.push(`| ${tableCell(a.story || "—")} | ${tableCell(a.criterion)} | ${CRITERION_STATUS[a.status]} | ${tableCell(a.evidence || "—")} |`);
+      }
+    } else if (storiesFound.length) {
+      lines.push("", "_GLM did not report on the acceptance criteria._");
+    }
+  }
+
   if (findings.length > 0) {
     lines.push("", "### Findings at a glance", "", "| # | Severity | Where | Issue |", "|---|---|---|---|");
+    const locations = findings.map((f) => locationFor({ repo, sha, commentable, path: f.path, line: f.line }));
     findings.forEach((f, i) => {
-      const where = f.line ? `${f.path}:${f.line}` : f.path;
-      const link = fileLink({ repo, sha, path: f.path, line: f.line });
-      lines.push(`| ${i + 1} | ${SEVERITY[f.severity].label} | [\`${tableCell(where)}\`](${link}) | ${tableCell(f.title)} |`);
+      lines.push(`| ${i + 1} | ${SEVERITY[f.severity].label} | ${locationMarkdown(locations[i])} | ${tableCell(f.title)} |`);
     });
 
     findings.forEach((f, i) => {
-      const where = f.line ? `${f.path}:${f.line}` : f.path;
-      const link = fileLink({ repo, sha, path: f.path, line: f.line });
       lines.push("", "---", "", `### ${i + 1}. ${SEVERITY[f.severity].label}: ${oneLine(f.title)}`, "");
-      lines.push(`**Where:** [\`${oneLine(where)}\`](${link})`);
+      lines.push(`**Where:** ${locationMarkdown(locations[i])}`);
       if (f.detail) lines.push("", f.detail);
       if (f.suggestion) {
         const fence = fenceFor(f.suggestion);
@@ -208,6 +316,7 @@ export function renderReview({ model, repo, sha, summary, findings, notes, usage
     "---",
     "",
     `<sub>AI-generated by ${model} in one call · ${seconds}s${tokens} · [workflow run](${runUrl}) · ` +
+      `Reviewed against ${PROJECT_DOCS.join(", ")} and the story files on \`${baseRef}\` · ` +
       "Critical or high findings mark the check red; it does not block merging (ADR 0008).</sub>",
   );
   return lines.join("\n");
@@ -301,6 +410,23 @@ async function upsertReviewComment(github, repo, prNumber, body) {
   return github("POST", `/repos/${repo}/issues/${prNumber}/comments`, { body });
 }
 
+/** A file's content on the base branch, or null when it doesn't exist there. */
+function readFromBase(baseSha, path) {
+  try {
+    return execFileSync("git", ["show", `${baseSha}:${path}`], {
+      encoding: "utf8",
+      maxBuffer: 16 * 1024 * 1024,
+      stdio: ["ignore", "pipe", "ignore"],
+    });
+  } catch {
+    return null;
+  }
+}
+
+function capped(text, max) {
+  return text.length > max ? `${text.slice(0, max)}\n\n[truncated at ${formatCount(max)} characters]` : text;
+}
+
 async function main() {
   const env = process.env;
   if (!env.ZHIPU_API_KEY) {
@@ -310,6 +436,7 @@ async function main() {
 
   const model = env.GLM_MODEL || "glm-5.3";
   const repo = env.GITHUB_REPOSITORY;
+  const baseRef = env.BASE_REF || "main";
   const github = makeGithub(env.GITHUB_TOKEN);
   const started = Date.now();
   const elapsed = () => Math.round((Date.now() - started) / 1000);
@@ -341,16 +468,53 @@ async function main() {
     .map((p) => p.trim())
     .filter((p) => p && !commentable.has(p) && !diff.includes(` b/${p}\n`));
 
-  const system = readFileSync(new URL("../ai-review/instructions.md", import.meta.url), "utf8");
+  // The reviewer's rules and the project's documents, from the base branch.
+  const instructions = readFromBase(env.BASE_SHA, ".github/ai-review/instructions.md");
+  if (!instructions) throw new Error(`.github/ai-review/instructions.md is missing on ${baseRef}.`);
+  const docs = PROJECT_DOCS.map((path) => [path, readFromBase(env.BASE_SHA, path)]).filter(([, text]) => text);
+  const system = [
+    instructions,
+    "---",
+    `# Project documents (from the ${baseRef} branch)`,
+    ...docs.map(([path, text]) => `## ${path}\n\n${capped(text, MAX_DOC_CHARS)}`),
+  ].join("\n\n");
+
+  // The user stories this PR says it implements.
+  const title = env.PR_TITLE ?? "";
+  const description = env.PR_BODY ?? "";
+  const stories = extractStoryKeys(env.HEAD_REF, title, description);
+  const storyFiles = stories
+    .map((key) => [key, readFromBase(env.BASE_SHA, `docs/backlog/${key}.md`)])
+    .filter(([, text]) => text);
+  const storiesFound = storyFiles.map(([key]) => key);
+
+  const storySection = storyFiles.length
+    ? storyFiles.map(([key, text]) => `### ${key}\n\n${capped(text, MAX_STORY_CHARS)}`).join("\n\n")
+    : stories.length
+      ? `The PR names ${stories.join(", ")}, but no docs/backlog file exists for them, so there are no acceptance criteria to check.`
+      : "No SCRUM story key was found in the branch name, title or description. Return an empty acceptance list.";
+
   const skippedNote = skipped.length
-    ? "\n\nAlso changed in this PR but deliberately not shown (docs, lockfiles, generated " +
+    ? "Also changed in this PR but deliberately not shown (docs, lockfiles, generated " +
       "files). They exist, so do not report them as missing:\n" +
       skipped.map((p) => `- ${p}`).join("\n")
     : "";
-  const user =
-    "Review this pull request diff. Every added (+) or unchanged context line is " +
-    "prefixed with its line number in the new file and a tab; removed (-) lines " +
-    `have no number.${skippedNote}\n\n${prompt}`;
+
+  const user = [
+    "## Pull request",
+    `Title: ${title || "(none)"}`,
+    `Branch: ${env.HEAD_REF || "(unknown)"} → ${baseRef}`,
+    `Description:\n${description.trim() ? capped(description.trim(), MAX_BODY_CHARS) : "(none)"}`,
+    "## User stories this PR implements",
+    storySection,
+    "## Diff",
+    "Every added (+) or unchanged context line is prefixed with its line number in the new " +
+      "file and a tab; removed (-) lines have no number.",
+    skippedNote,
+    prompt,
+  ]
+    .filter(Boolean)
+    .join("\n\n");
 
   let review;
   try {
@@ -382,8 +546,13 @@ async function main() {
       model,
       repo,
       sha: env.HEAD_SHA,
+      baseRef,
+      commentable,
       summary: review.summary,
       findings: review.findings,
+      stories,
+      storiesFound,
+      acceptance: review.acceptance,
       notes,
       usage: review.usage,
       seconds: elapsed(),
@@ -392,7 +561,10 @@ async function main() {
   );
 
   const blocking = countBlocking(review.findings);
-  console.log(`Posted the ${model} review: ${review.findings.length} finding(s), ${blocking} critical/high, ${elapsed()}s.`);
+  console.log(
+    `Posted the ${model} review: ${review.findings.length} finding(s), ${blocking} critical/high, ` +
+      `stories ${storiesFound.join(", ") || "none"}, ${review.acceptance.length} criteria, ${elapsed()}s.`,
+  );
   if (blocking > 0) {
     console.log(`::error::GLM found ${blocking} critical or high issue(s). See the review comment on the pull request.`);
     process.exitCode = 1;

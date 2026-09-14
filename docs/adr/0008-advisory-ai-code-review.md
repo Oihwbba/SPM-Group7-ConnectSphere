@@ -141,3 +141,45 @@ and they want serious findings to be visible from the checks list.
   why the check is not required: it draws attention, and a human rules.
 - References link to lines rather than sitting on the diff, so a reader clicks
   through to see the surrounding code.
+
+## Addendum (2026-09-14, latest) — project and story context; the reviewer runs from the base branch
+
+**Why it changed.** The reviewer saw only the diff and a short summary of the
+team's rules. It could not check a change against CONTRIBUTING.md or
+CLAUDE.md in full, and it could not tell which user story a pull request was
+for, so it could not say whether the story's acceptance criteria were delivered.
+
+**Decision.**
+
+- **Context sent to GLM** besides the diff:
+  - the pull request's title, description and branch name
+  - `CONTRIBUTING.md` and `CLAUDE.md` in full, as the team's authoritative
+    rules, each capped at 20,000 characters
+  - the `docs/backlog/SCRUM-<n>.md` story file for every SCRUM key found in the
+    branch name, title or description (at most 6)
+  - `README.md` and the ADRs are not sent: most of the README is setup, and the
+    ADR rules the reviewer needs are already stated in its instructions
+- **Acceptance criteria.** GLM reports every criterion of each story as met,
+  partial, missing or unclear, with evidence, and the review shows them as a
+  table. A missing criterion becomes a finding only when the pull request
+  claims to deliver the story or the code contradicts it, because a pull request
+  may deliver part of a story on purpose.
+- **Trust boundary: everything comes from the base branch.** The review
+  script, its instructions, CONTRIBUTING.md, CLAUDE.md and the story files are
+  all read from the pull request's base commit, not its head. A pull request
+  therefore cannot edit the reviewer that holds the API key, loosen the rules
+  it is judged by, or rewrite its own acceptance criteria.
+- **Locations are checked against the diff.** A finding links to an exact line
+  only when that line is in the diff; otherwise it links to the file, or shows
+  plain text marked "not in the diff". A made-up location is never presented as
+  verified.
+
+**Trade-offs.**
+
+- **Changes to the reviewer apply after merge.** A pull request that edits the
+  script, its instructions, CONTRIBUTING.md or a story file is still reviewed
+  with `main`'s version.
+- **Each review sends more tokens:** roughly 8–15 thousand extra, depending on
+  how many stories the pull request names.
+- **Story files are Jira snapshots.** If they are out of date, the acceptance
+  check is too.

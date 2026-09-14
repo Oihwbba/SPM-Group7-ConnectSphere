@@ -134,8 +134,14 @@ Merging to `main` runs CI again and deploys production.
    PR gets one long AI review from GLM-5.3, which reads the whole diff in a
    single pass (ADR 0008). It appears in the **Conversation** tab as one
    comment from `github-actions`, updated on every push: a verdict, an
-   overview, and a section per finding with a **Where:** link to the exact line
-   and a suggested fix. There are no inline comments. The **GLM Code Review**
+   overview, an **acceptance criteria** table, and a section per finding with a
+   **Where:** link to the exact line and a suggested fix. There are no inline
+   comments. The reviewer reads your PR title, description and branch name,
+   this file and CLAUDE.md, and the `docs/backlog` story for every SCRUM key you
+   name. **Put the key in your branch name or title** (e.g.
+   `SCRUM-31-reserve-equipment`), or it can't check the acceptance criteria.
+   It reads all of that from `main`, so edits to those documents in your own PR
+   don't change how your PR is reviewed. The **GLM Code Review**
    check turns **red** when it finds critical or high issues. Fix them, or
    reply on the PR with why they don't apply. It is not a required check, so it
    never blocks the merge button, and it does not replace the human review. If

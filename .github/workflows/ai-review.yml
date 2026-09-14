@@ -2,9 +2,12 @@ name: GLM Code Review
 
 # SCRUM-88 — ONE GLM-5.3 reviewer reads the whole pull request diff in one call
 # and posts ONE long review as a PR comment in the Conversation tab: a verdict,
-# an overview, and a section per finding with a "Where:" reference linking to
-# the exact line. No inline comments; the comment updates in place on each push.
-# It replaces the Copilot review.
+# an overview, the story's acceptance criteria, and a section per finding with a
+# "Where:" reference to the exact line. No inline comments; the comment updates
+# in place on each push. It replaces the Copilot review.
+#
+# Context: the PR title, description and branch, CONTRIBUTING.md, CLAUDE.md, and
+# the docs/backlog story file for each SCRUM key the PR names.
 #
 # The check turns red when the review finds critical or high issues. It is not
 # a required status check, so it never blocks merging: `build-and-test` stays
@@ -19,7 +22,7 @@ on:
   # so the secret is still available, and PR code never runs with it in a
   # privileged context.
   pull_request:
-    types: [opened, synchronize, reopened, ready_for_review]
+    types: [opened, synchronize, reopened, ready_for_review, edited]
 
 # A new push to the same PR cancels the review still running for the old diff.
 concurrency:
@@ -33,8 +36,11 @@ permissions:
 
 jobs:
   review:
-    # Drafts are work in progress — don't spend API quota on them.
-    if: github.event.pull_request.draft == false
+    # Drafts are work in progress, and an edit that doesn't change the title or
+    # description (e.g. a base-branch change) doesn't need a new review.
+    if: >-
+      github.event.pull_request.draft == false &&
+      (github.event.action != 'edited' || github.event.changes.title || github.event.changes.body)
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -44,7 +50,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          # The review diffs the PR's base against its head.
+          # The review diffs the PR's base against its head, and reads the
+          # reviewer, its rules and the story files from the base commit.
           fetch-depth: 0
 
       - name: Set up Node
@@ -58,7 +65,18 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          # Untrusted text goes through env, never interpolated into the script.
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-        # No third-party action and no npm packages: Node's built-in fetch only.
-        run: node .github/scripts/ai-review.mjs
+        # Run the reviewer as it exists on the BASE branch, not the PR's copy: a
+        # pull request must not be able to change the code that holds the API
+        # key, or the rules it is judged by. Changes to the reviewer therefore
+        # take effect once they are merged. No third-party action and no npm
+        # packages: Node's built-in fetch only.
+        run: |
+          git show "$BASE_SHA:.github/scripts/ai-review.mjs" > "$RUNNER_TEMP/ai-review.mjs"
+          node "$RUNNER_TEMP/ai-review.mjs"
