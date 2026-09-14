@@ -105,10 +105,11 @@ Pushing the branch starts two things automatically:
 |---|---|---|
 | **GitHub Actions** | migrate → seed → typecheck → lint → unit tests → e2e | ~2m30s |
 | **Vercel** | builds a preview at a stable per-branch URL | ~30s |
+| **GLM code review** | posts an advisory AI review on the PR (skipped for drafts) | a few minutes |
 
 Merging to `main` runs CI again and deploys production.
 
-### Four things that will otherwise surprise you
+### Five things that will otherwise surprise you
 
 1. **`npm run verify` before you push.** It runs typecheck, lint and the unit
    tests — the three things CI fails on most. Budget a couple of minutes on a
@@ -129,6 +130,13 @@ Merging to `main` runs CI again and deploys production.
 4. **Previews share the production database.** A preview deployment of your
    branch reads and writes the same Supabase data as the live site. Do not use
    a preview to test destructive changes, and never run `db:reset` against it.
+5. **The GLM review is advisory, not a gate.** Every non-draft PR gets an
+   AI review from GLM-5.3 as inline comments plus a summary (ADR 0008). Treat
+   each comment as a suggestion: fix it, or reply with why it doesn't apply.
+   It is not a required check, so a missing or wrong AI review never blocks a
+   merge, and it does not replace the human review. Your diff is sent to
+   BigModel (Zhipu), a third-party provider, so never put secrets in a diff.
+   Project-specific review rules live in `.opencodereview/rule.json`.
 
 ---
 
