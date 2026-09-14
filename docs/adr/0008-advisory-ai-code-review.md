@@ -65,3 +65,42 @@ posts inline comments plus one summary comment that is updated in place.
 - `llm_reasoning_effort` is intentionally not set: BigModel's documentation
   does not list a `reasoning_effort` parameter for GLM-5.3, so sending one
   could fail the request. Revisit once a run confirms whether it is accepted.
+
+## Addendum (2026-09-14) — one reviewer, one call; replaces the Copilot review
+
+This supersedes the OpenCodeReview decision above.
+
+**Why it changed.** OpenCodeReview reviews each file separately, and each file
+review is a multi-step agent. On #13 it made 20 tool calls (file finds, code
+searches, reads), each a further GLM round trip resending the conversation: 2
+small files cost 199k tokens and 12 minutes. On #14 a request timed out after
+300 seconds with no response, and on #15 the review ran past 16 minutes. The
+team wants one reviewer that reads the whole pull request once, not a thorough
+per-file audit.
+
+**Decision.**
+
+- `.github/scripts/ai-review.mjs` sends the **whole PR diff** to GLM-5.3 in
+  **one streamed call**, with `.github/ai-review/instructions.md` (the
+  project's review rules) as the system prompt. `*.md`, lockfiles and
+  `docs/backlog/**` are skipped.
+- GLM returns JSON findings, and the script posts **one PR review**: a summary,
+  plus a findings table whose `file:line` locations link straight to inline
+  comments on the changed lines. The review sits in the Conversation timeline
+  like a Copilot review.
+- No third-party action and no npm packages: Node's built-in `fetch` only. That
+  removes the pinned-action and CLI dependencies recorded above.
+- **Replaces Copilot.** Copilot was auto-requested by a personal Copilot
+  setting, not by this repo, and was failing on quota; each developer turns
+  that setting off.
+- **Failures are visible.** If GLM errors, times out or returns unusable output,
+  the script posts a review saying the review did not complete, with a link to
+  the run. It always exits 0, so the check never goes red: advisory, never a gate.
+
+**Trade-offs.**
+
+- One call cannot open other files or search the codebase, so issues that only
+  show up across files the PR doesn't touch are less likely to be caught.
+- A diff over 120,000 characters is truncated, and the review says so.
+- A finding whose line GitHub won't accept for an inline comment stays in the
+  table with its detail, without a link.

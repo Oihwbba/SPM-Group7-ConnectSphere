@@ -1,12 +1,14 @@
-name: GLM Automated Code Review
+name: GLM Code Review
 
-# SCRUM-88 — an ADVISORY first-pass review of every pull request by GLM-5.3
-# (BigModel / Zhipu), posted as inline PR comments plus one summary comment.
-# It is deliberately NOT a required status check: `build-and-test` stays the
-# only merge gate and a human still reviews. See docs/adr/0008.
+# SCRUM-88 — ONE GLM-5.3 reviewer reads the whole pull request diff in one call
+# and posts ONE pull request review: a findings table at the top whose rows link
+# straight to inline comments on the changed lines. It replaces the Copilot
+# review. Advisory only: not a required status check, so `build-and-test` stays
+# the only merge gate and a human still reviews. See docs/adr/0008.
 #
 # One-time setup (repo owner): Settings -> Secrets and variables -> Actions ->
-# New repository secret `ZHIPU_API_KEY`. Until it exists this job skips cleanly.
+# New repository secret `ZHIPU_API_KEY`. Until it exists the review is skipped.
+# The reviewer's instructions live in .github/ai-review/instructions.md.
 
 on:
   # `pull_request`, NOT `pull_request_target`: every branch lives in this repo,
@@ -30,38 +32,28 @@ jobs:
     if: github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    env:
-      HAS_ZHIPU_KEY: ${{ secrets.ZHIPU_API_KEY != '' }}
     steps:
-      - name: Skip when no API key is configured
-        if: env.HAS_ZHIPU_KEY != 'true'
-        run: echo "::notice::ZHIPU_API_KEY is not set, so the GLM review was skipped."
-
-      - name: Run GLM-5.3 review (advisory)
-        if: env.HAS_ZHIPU_KEY == 'true'
-        # Advisory (ADR 0008): a rate limit, exhausted quota, LLM timeout or action
-        # bug surfaces as a warning, not a red X on every PR. build-and-test stays
-        # the only red/green signal.
-        continue-on-error: true
-        # Pinned to the v1.12.0 commit: the action has no floating `v1` tag, and a
-        # SHA can't be moved underneath a job that holds the API key.
-        uses: alibaba/open-code-review@494bf1c8d7a19196ab166960a06fef38d69a1d16 # v1.12.0
+      # Both actions are pinned to commit SHAs, not tags: this job holds the API
+      # key and GitHub token, and a tag can be moved underneath it. v7 runs on
+      # the Node 24 runtime (Node 20 reached end-of-life on 2026-04-30).
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          # The tool appends /chat/completions itself.
-          llm_url: https://open.bigmodel.cn/api/paas/v4
-          llm_auth_token: ${{ secrets.ZHIPU_API_KEY }}
-          llm_model: glm-5.3
-          llm_use_anthropic: "false"
-          # The action's default DISABLES thinking; BigModel documents that
-          # GLM-5.3's thinking is forced on and cannot be disabled.
-          llm_extra_body: '{"thinking": {"type": "enabled"}}'
-          # OpenCodeReview's own review-depth preset (low | medium | high).
-          effort: high
-          # Keep the CLI in lock-step with the pinned action.
-          ocr_version: "1.12.0"
-          language: English
-          # One summary comment updated in place, and no duplicate inline
-          # comments on lines already commented on by an earlier run.
-          sticky_summary: "true"
-          incremental: "true"
-          # Project conventions live in .opencodereview/rule.json.
+          # The review diffs the PR's base against its head.
+          fetch-depth: 0
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+
+      - name: GLM-5.3 review (one reviewer, whole diff)
+        env:
+          ZHIPU_API_KEY: ${{ secrets.ZHIPU_API_KEY }}
+          GITHUB_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        # No third-party action and no npm packages: Node's built-in fetch only.
+        run: node .github/scripts/ai-review.mjs
