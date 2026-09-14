@@ -163,7 +163,7 @@ export function EquipmentClient({
           </div>
           {availability !== null && (
             <p
-              className="text-sm font-medium text-emerald-700 md:col-span-2"
+              className="text-sm font-medium text-success md:col-span-2"
               role="status"
             >
               {availability} unit(s) available for this period.

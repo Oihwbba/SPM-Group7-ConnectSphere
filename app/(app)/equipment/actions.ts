@@ -122,7 +122,8 @@ export async function createReservation(
       if (!availability) return { error: "Equipment type is unavailable." };
       if (quantity > availability.available) {
         return {
-          error: `Only ${availability.available} of ${availability.total} unit(s) are available for this period.`,
+          // SCRUM-31 AC 3: show the shortfall, not just a refusal.
+          error: `Only ${availability.available} of ${availability.total} unit(s) are available for this period — ${quantity - availability.available} short.`,
         };
       }
 
