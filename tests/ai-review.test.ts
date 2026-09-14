@@ -320,6 +320,7 @@ describe("renderReview", () => {
     expect(body).toContain("**Where:** `lib/made-up.ts:3 (not in the diff)`");
     expect(body).toContain("12,345 tokens");
     expect(body).toContain("Reviewed against CONTRIBUTING.md, CLAUDE.md and the story files on `main`");
+    expect(body).toContain("A critical finding fails this required check and blocks the merge (ADR 0008).");
   });
 
   it("renders the acceptance criteria table for the stories it checked", () => {
