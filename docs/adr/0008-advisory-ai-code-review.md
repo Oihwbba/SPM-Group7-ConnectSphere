@@ -22,7 +22,11 @@ the agreed stack. This adds two, both CI-only and not shipped in the app: the
 posts inline comments plus one summary comment that is updated in place.
 
 - **Advisory, never a gate.** It is not a required status check. `build-and-test`
-  remains the only merge gate, and a human still reviews and merges.
+  remains the only merge gate, and a human still reviews and merges. The review
+  step also sets `continue-on-error: true`, so a rate limit, exhausted quota,
+  LLM timeout or action bug shows as a warning instead of a red check on every
+  PR. The trade-off: a broken key or endpoint is also only a warning, so a PR
+  that gets no summary comment is the signal that the reviewer is failing.
 - **Pinned.** The action is pinned to the v1.12.0 commit SHA and the CLI to
   `1.12.0`, so neither can change underneath a job that holds the API key.
 - **Secret handling.** The key is the repository secret `ZHIPU_API_KEY`. The

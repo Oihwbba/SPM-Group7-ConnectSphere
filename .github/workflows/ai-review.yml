@@ -39,6 +39,10 @@ jobs:
 
       - name: Run GLM-5.3 review (advisory)
         if: env.HAS_ZHIPU_KEY == 'true'
+        # Advisory (ADR 0008): a rate limit, exhausted quota, LLM timeout or action
+        # bug surfaces as a warning, not a red X on every PR. build-and-test stays
+        # the only red/green signal.
+        continue-on-error: true
         # Pinned to the v1.12.0 commit: the action has no floating `v1` tag, and a
         # SHA can't be moved underneath a job that holds the API key.
         uses: alibaba/open-code-review@494bf1c8d7a19196ab166960a06fef38d69a1d16 # v1.12.0
