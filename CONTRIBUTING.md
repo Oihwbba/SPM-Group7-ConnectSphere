@@ -147,6 +147,14 @@ Merging to `main` runs CI again and deploys production.
    apply. If GLM stops before answering, the reviewer retries once with less
    thinking. If that also fails, the check turns red and says why: re-run the
    failed **GLM Code Review** job from the PR's Checks tab.
+   It checks coverage against every existing test in `tests/` and `e2e/`:
+   unit tests for new logic, integration tests against a real database for
+   locks and transactions, and a Playwright spec with a success path and a
+   failure path for each new page or journey. In UI code it checks for loading,
+   empty and error states, labelled form controls and pending feedback. The
+   acceptance table shows which tests cover each criterion. Only a
+   `Closes SCRUM-n` or `Part of SCRUM-n` line in the description adds a story;
+   other mentions of a key are ignored.
    Changes to `.github/`, `package.json`, the test configs or `vercel.json`
    need Jin Hong's approval (CODEOWNERS), because they control the checks. If Copilot
    still reviews your PRs, turn off automatic Copilot code review in your

@@ -14,6 +14,9 @@ real problem explained clearly, with where it is and how to fix it.
 - **User stories:** the `docs/backlog` file for each SCRUM story the pull
   request names, with its acceptance criteria. Jira is the source of truth and
   these files are its snapshot.
+- **Existing tests:** every test file under `tests/` and `e2e/` at the pull
+  request's head, with its kind (unit, integration or e2e) and its describe and
+  test titles. A test listed there exists even when it isn't in the diff.
 - **The diff:** the code changes, with Markdown files, lockfiles and backlog
   snapshots left out.
 
@@ -45,8 +48,31 @@ Report real defects, in this order of importance:
    `lib/datetime`; a `datetime-local` value must be converted to a UTC ISO
    instant in the browser before it reaches the server; no new dependencies
    without an ADR; tests trace to a SCRUM key.
-6. **Tests.** Critical logic or an acceptance criterion without a test, or a
-   test that only exercises a mock of the database and so proves nothing.
+6. **Tests.** Judge coverage from the existing-test list as well as the diff.
+   Expect:
+   - **Unit tests** (Vitest) for new logic, including each server action's
+     permission-denied and invalid-input cases.
+   - **Integration tests** against a real Postgres (Vitest files that don't
+     mock `@/lib/db`, such as `tests/concurrency.test.ts`) for anything that
+     depends on the database behaving correctly: row locks, transactions,
+     constraints, counted pools. A mocked database can't prove those.
+   - **An e2e test** (Playwright, `e2e/*.spec.ts`) for each new page or user
+     journey, covering the success path and at least one failure path, such as
+     a refused permission or invalid input.
+   - Test titles that name the acceptance criterion or SCRUM key they cover.
+   A missing test is `medium`, or `high` when the pull request claims to
+   deliver the story; a missing test for minor logic is `low`. Say which test
+   should exist, of which kind, and where.
+7. **UI and UX**, as far as the code shows it, in pages and components: a
+   `loading.tsx` or skeleton for data the page fetches; a real empty state and
+   a visible error state, never a blank screen; every form control has a label
+   (`<label>`, `aria-label` or `aria-labelledby`); icon-only buttons have an
+   accessible name; submit buttons are disabled while pending and show
+   progress; an error appears next to the field it belongs to; clickable
+   elements are real buttons or links, reachable by keyboard; layouts don't
+   break at phone width (no fixed widths wider than a phone). You can't see the
+   page, so don't report visual taste; report what a user would run into.
+   Usually `medium`, or `high` if it stops a user completing the task.
 
 Do **not** report: formatting, naming preferences, anything a linter or the
 TypeScript compiler would catch, praise, or speculative issues you cannot tie
@@ -57,11 +83,17 @@ to a specific line. If the diff is fine, return no findings.
 For every story you are given, go through its acceptance criteria one by one
 and report each in `acceptance`:
 
-- `met`: the diff implements it (and ideally tests it). Cite the evidence.
+- `met`: it is implemented and you can point to the evidence: code in the
+  diff, or an existing test that covers it. Cite it.
 - `partial`: some of it is implemented, or it is implemented but untested.
-- `missing`: nothing in the diff implements it.
-- `unclear`: you can't tell from the diff, for example because it depends on
-  files not shown or on behaviour outside this change.
+- `missing`: nothing in the diff implements it and no existing test covers it.
+- `unclear`: you can't tell, for example because it depends on files not shown.
+
+For each criterion also give `testedBy`: the tests that cover it, by kind and
+file, for example `unit: tests/reservation.test.ts "AC 3: over-allocation is
+refused"; integration: none; e2e: none`. A criterion a user can see in the app
+needs an e2e test; one about data integrity or concurrency needs an
+integration test.
 
 Keep each criterion to a short paraphrase. Don't invent criteria that aren't in
 the story file. A pull request can deliver part of a story on purpose, so a
@@ -82,7 +114,8 @@ Reply with **only** a JSON object, no prose and no code fences:
       "story": "SCRUM-13",
       "criterion": "Organiser can save a request with required fields empty",
       "status": "met",
-      "evidence": "createDraftEvent accepts a partial payload (app/(app)/events/actions.ts:61); tested in tests/events.test.ts"
+      "testedBy": "unit: tests/events.test.ts \"saves a draft with empty fields\"; integration: none; e2e: e2e/events.spec.ts \"organiser saves a draft\"",
+      "evidence": "createDraftEvent accepts a partial payload (app/(app)/events/actions.ts:61)"
     }
   ],
   "findings": [
