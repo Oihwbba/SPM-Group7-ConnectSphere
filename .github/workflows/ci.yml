@@ -6,9 +6,25 @@ on:
   push:
   pull_request:
 
+# Least privilege: the job only checks out code, runs tests and uploads
+# artifacts (which needs no token scope), and a pull_request run executes
+# PR-authored code such as npm's postinstall.
+permissions:
+  contents: read
+
+# A newer push to the same branch or PR cancels the now-stale run. Runs on
+# main are never cancelled: every commit there keeps its own CI result, which
+# is graded evidence of continuous integration.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+    # A normal run takes about 3 minutes; stop a hung Postgres or Playwright
+    # step long before the 360-minute default.
+    timeout-minutes: 20
 
     # Postgres for the whole job: migrations, seed, and the Playwright run all
     # talk to this service container.
@@ -44,11 +60,12 @@ jobs:
         uses: actions/checkout@v7
 
       # Node 24 LTS (SCRUM-89): Node 20 reached end-of-life on 2026-04-30, and
-      # the v7 actions run on the Node 24 runtime. Matches .nvmrc and Vercel.
+      # the v7 actions run on the Node 24 runtime. The version is read from
+      # .nvmrc, the single source of truth for CI and local development.
       - name: Set up Node
         uses: actions/setup-node@v7
         with:
-          node-version: 24
+          node-version-file: .nvmrc
           cache: npm
 
       # `npm ci` runs the postinstall `prisma generate`, so the client is ready.
