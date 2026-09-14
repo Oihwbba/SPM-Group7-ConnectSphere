@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 
 import {
+  checkCompletion,
   countBlocking,
   extractStoryKeys,
   fenceFor,
@@ -206,6 +207,35 @@ describe("countBlocking", () => {
 
     expect(countBlocking(findings)).toBe(1);
     expect(countBlocking([finding("high", "b"), finding("medium", "c"), finding("low", "d")])).toBe(0);
+  });
+});
+
+describe("checkCompletion", () => {
+  const usage = { completion_tokens: 64000, completion_tokens_details: { reasoning_tokens: 63900 } };
+
+  it("accepts an answer that finished normally", () => {
+    expect(() => checkCompletion({ content: '{"summary":"ok"}', finishReason: "stop", usage })).not.toThrow();
+  });
+
+  it("explains a run cut off while still thinking, with its token counts", () => {
+    expect(() => checkCompletion({ content: "", finishReason: "length", usage })).toThrow(
+      "GLM stopped before answering: it reached the output token limit while still thinking after 64,000 output tokens (63,900 thinking).",
+    );
+  });
+
+  it("rejects an empty answer even when GLM says it stopped normally", () => {
+    expect(() => checkCompletion({ content: "  ", finishReason: "stop", usage: null })).toThrow(
+      "GLM stopped before answering: it finished with an empty answer.",
+    );
+  });
+
+  it("names an unknown or missing finish reason instead of guessing", () => {
+    expect(() => checkCompletion({ content: "", finishReason: "constructor", usage: null })).toThrow(
+      'finish_reason "constructor"',
+    );
+    expect(() => checkCompletion({ content: "", finishReason: null, usage: null })).toThrow(
+      "the stream ended without a finish reason",
+    );
   });
 });
 

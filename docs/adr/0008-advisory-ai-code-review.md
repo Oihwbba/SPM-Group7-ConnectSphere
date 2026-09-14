@@ -200,9 +200,30 @@ pull requests, so the checks have to hold the line instead of a person.
   first and should be fixed, but it doesn't block. A required check that fails
   on one model's judgement of "high" would stop teammates on a false positive
   that only the owner could override.
-- **A GLM failure still passes, with a note in the comment.** A BigModel outage,
-  quota limit or missing key must not stop every merge. The trade-off: during an
-  outage a pull request can merge without an AI review, and the comment says so.
+- **No review, no merge.** If no review can be completed, the check turns red
+  and the comment lists why each attempt failed. The same applies to a missing
+  API key and to a crash in the reviewer. A pull request can never merge
+  without a review. The trade-off: during a BigModel outage nothing merges
+  until the job is re-run or the owner merges as admin.
+- **Why a review could fail, and the retry.** GLM-5.3 always thinks before it
+  answers, and the answer starts only when the thinking ends. A replay of PR
+  #22 used 44–48K thinking tokens and 10+ minutes, then wrote a ~1K-token JSON
+  answer in its last 8 seconds. The original run most likely stopped while
+  still thinking (its stop reason wasn't recorded then), returned an empty
+  answer, and the reviewer counted that as passed. A probe then found the root cause: the request set no
+  `reasoning_effort`, and GLM-5.3's default thinks as much as `max` (145
+  thinking tokens on a small question, against 143 at `max`, 27 at `high` and
+  19 at `low`). Reviews now ask for `high`, the level the team chose. The
+  reviewer also asks for up to 100K output tokens, records why GLM stopped and
+  how many tokens it used, and treats any stop other than a finished answer as
+  a failure. It then retries once at `low`, which is far less likely to be cut
+  off. Both attempts share a 27-minute
+  budget inside the job's 30-minute timeout.
+- **Why some reviews take 3 minutes and others 15.** The time is thinking
+  tokens divided by BigModel's speed at that moment, and both vary. A small
+  change to tests thinks briefly (PR #21: 180s), while a change to the review
+  gate itself makes GLM deliberate for tens of thousands of tokens, at between
+  about 40 and 75 tokens a second.
 - **Every edit re-runs the review.** A skipped job counts as a passing required
   check and replaces an earlier red result on the same commit, so edits are no
   longer skipped. Drafts still are, and a draft can't be merged.

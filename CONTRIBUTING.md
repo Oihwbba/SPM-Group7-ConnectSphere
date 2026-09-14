@@ -144,7 +144,9 @@ Merging to `main` runs CI again and deploys production.
    check turns **red** when it finds a critical issue, and it is a required
    check, so the merge button stays disabled until you fix it and push. High
    findings don't block, but fix them or reply on the PR with why they don't
-   apply. If GLM itself fails, the comment says so and the check stays green.
+   apply. If GLM stops before answering, the reviewer retries once with less
+   thinking. If that also fails, the check turns red and says why: re-run the
+   failed **GLM Code Review** job from the PR's Checks tab.
    Changes to `.github/`, `package.json`, the test configs or `vercel.json`
    need Jin Hong's approval (CODEOWNERS), because they control the checks. If Copilot
    still reviews your PRs, turn off automatic Copilot code review in your

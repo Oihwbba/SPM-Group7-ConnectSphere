@@ -9,9 +9,10 @@ name: GLM Code Review
 # Context: the PR title, description and branch, CONTRIBUTING.md, CLAUDE.md, and
 # the docs/backlog story file for each SCRUM key the PR names.
 #
-# The check turns red when the review finds a critical issue. It is a required
-# status check on `main` alongside `build-and-test`, so a critical finding
-# blocks the merge. A GLM outage passes, with a note. See docs/adr/0008.
+# The check turns red when the review finds a critical issue, or when no review
+# could be completed. It is a required status check on `main` alongside
+# `build-and-test`, so neither can merge. If GLM stops before answering, the
+# script retries once with less thinking. See docs/adr/0008.
 #
 # One-time setup (repo owner): Settings -> Secrets and variables -> Actions ->
 # New repository secret `ZHIPU_API_KEY`. Until it exists the review is skipped.
