@@ -189,4 +189,18 @@ describe("getEquipmentAvailability — SCRUM-31", () => {
     expect(result.ok).toBe(false);
     expect(tx.equipment.findFirst).not.toHaveBeenCalled();
   });
+
+  it.each([
+    ["ends before it starts", { startAt: END, endAt: START }],
+    ["has zero length", { startAt: START, endAt: START }],
+  ])("refuses a period that %s, before counting anything", async (_label, period) => {
+    poolWithFiveAvailable();
+
+    const result = await getEquipmentAvailability({ ...validInput, ...period });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.fieldErrors?.endAt).toBeTruthy();
+    expect(tx.equipment.findFirst).not.toHaveBeenCalled();
+    expect(tx.reservation.aggregate).not.toHaveBeenCalled();
+  });
 });
