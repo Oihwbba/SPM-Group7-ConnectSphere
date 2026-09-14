@@ -2,8 +2,10 @@ import { describe, it, expect } from "vitest";
 
 import {
   countBlocking,
+  extractStoryKeys,
   fenceFor,
   fileLink,
+  locationFor,
   parseDiff,
   parseReview,
   renderReview,
@@ -11,8 +13,9 @@ import {
 
 // SCRUM-88 — the GLM reviewer's pure logic. Line numbers must match git's
 // new-side numbering exactly, or every "Where:" reference points at the wrong
-// line; the reply parser, the blocking rule and the renderer decide what is
-// posted on the PR and whether its check turns red.
+// line; story keys decide which acceptance criteria GLM checks; the reply
+// parser, the blocking rule and the renderer decide what is posted on the PR
+// and whether its check turns red.
 
 type Severity = "critical" | "high" | "medium" | "low";
 
@@ -96,6 +99,27 @@ describe("parseDiff", () => {
   });
 });
 
+describe("extractStoryKeys", () => {
+  it("reads every story from a multi-story branch name, title and description, without duplicates", () => {
+    expect(
+      extractStoryKeys(
+        "SCRUM-13-15-16-84-events",
+        "SCRUM-13 SCRUM-15 — Event requests",
+        "Closes SCRUM-16\nCloses scrum-99",
+      ),
+    ).toEqual(["SCRUM-13", "SCRUM-15", "SCRUM-16", "SCRUM-84", "SCRUM-99"]);
+  });
+
+  it("stops at the first word, so a trailing number in the branch isn't a story", () => {
+    expect(extractStoryKeys("SCRUM-89-node-24", "", "")).toEqual(["SCRUM-89"]);
+  });
+
+  it("finds nothing when the PR names no story, and caps the list at 6", () => {
+    expect(extractStoryKeys("fix-typo", "Fix a typo", undefined)).toEqual([]);
+    expect(extractStoryKeys("SCRUM-1-2-3-4-5-6-7-8")).toHaveLength(6);
+  });
+});
+
 describe("parseReview", () => {
   it("extracts the JSON from a fenced reply with surrounding prose and normalises findings", () => {
     const reply = [
@@ -105,7 +129,7 @@ describe("parseReview", () => {
         summary: "Adds X.",
         findings: [
           { path: "b/src/a.ts", line: "11", severity: "BLOCKER", title: "Unknown severity", detail: "d" },
-          { path: "src/a.ts", line: 0, severity: "CRITICAL", title: "Bad line" },
+          { path: "src/a.ts", line: 0, severity: " CRITICAL ", title: "Bad line" },
           { path: "src/a.ts" },
         ],
       }),
@@ -120,6 +144,39 @@ describe("parseReview", () => {
     // Sorted most severe first: the critical finding moves ahead.
     expect(review.findings[0]).toMatchObject({ title: "Bad line", severity: "critical", line: null });
     expect(review.findings[1]).toMatchObject({ path: "src/a.ts", line: 11, severity: "medium" });
+    expect(review.acceptance).toEqual([]);
+  });
+
+  it("does not accept inherited object keys such as toString as a severity or status", () => {
+    const review = parseReview(
+      JSON.stringify({
+        summary: "",
+        findings: [{ path: "a.ts", line: 1, severity: "toString", title: "Sneaky" }],
+        acceptance: [{ story: "scrum-13", criterion: "Saves a draft", status: "constructor", evidence: "" }],
+      }),
+    );
+
+    expect(review.findings[0].severity).toBe("medium");
+    expect(review.acceptance[0]).toMatchObject({ story: "SCRUM-13", status: "unclear" });
+  });
+
+  it("normalises acceptance criteria and drops entries without a criterion", () => {
+    const review = parseReview(
+      JSON.stringify({
+        summary: "",
+        findings: [],
+        acceptance: [
+          { story: "SCRUM-31", criterion: "Over-allocation shows the shortfall", status: "MET", evidence: "actions.ts:125" },
+          { story: "SCRUM-31", criterion: "  ", status: "met" },
+          { story: "SCRUM-31", criterion: "Zero quantity is rejected", status: "partial" },
+        ],
+      }),
+    );
+
+    expect(review.acceptance).toEqual([
+      { story: "SCRUM-31", criterion: "Over-allocation shows the shortfall", status: "met", evidence: "actions.ts:125" },
+      { story: "SCRUM-31", criterion: "Zero quantity is rejected", status: "partial", evidence: "" },
+    ]);
   });
 
   it("orders findings critical, high, medium, low and caps them at 10", () => {
@@ -152,7 +209,9 @@ describe("countBlocking", () => {
   });
 });
 
-describe("fileLink and fenceFor", () => {
+describe("fileLink, locationFor and fenceFor", () => {
+  const commentable = new Map([["app/(app)/events/actions.ts", new Set([40, 41, 42])]]);
+
   it("links to the exact line, encoding route-group parentheses", () => {
     expect(fileLink({ repo: "o/r", sha: "abc123", path: "app/(app)/events/actions.ts", line: 42 })).toBe(
       "https://github.com/o/r/blob/abc123/app/%28app%29/events/actions.ts#L42",
@@ -160,6 +219,20 @@ describe("fileLink and fenceFor", () => {
     expect(fileLink({ repo: "o/r", sha: "abc123", path: "src/a.ts", line: null })).toBe(
       "https://github.com/o/r/blob/abc123/src/a.ts",
     );
+  });
+
+  it("only gives an exact-line link to a line that is really in the diff", () => {
+    const at = (path: string, line: number | null) => locationFor({ repo: "o/r", sha: "abc", commentable, path, line });
+
+    expect(at("app/(app)/events/actions.ts", 42)).toEqual({
+      text: "app/(app)/events/actions.ts:42",
+      link: "https://github.com/o/r/blob/abc/app/%28app%29/events/actions.ts#L42",
+    });
+    expect(at("app/(app)/events/actions.ts", 99)).toEqual({
+      text: "app/(app)/events/actions.ts:99 (outside the diff)",
+      link: "https://github.com/o/r/blob/abc/app/%28app%29/events/actions.ts",
+    });
+    expect(at("lib/made-up.ts", 7)).toEqual({ text: "lib/made-up.ts:7 (not in the diff)", link: null });
   });
 
   it("uses a fence longer than any backtick run in the code", () => {
@@ -173,7 +246,15 @@ describe("renderReview", () => {
     model: "glm-5.3",
     repo: "o/r",
     sha: "abc1234def5678",
+    baseRef: "main",
+    commentable: new Map([
+      ["app/(app)/events/actions.ts", new Set([42])],
+      ["src/a.ts", new Set([11])],
+    ]),
     summary: "Adds reservations.",
+    stories: [] as string[],
+    storiesFound: [] as string[],
+    acceptance: [] as { story: string; criterion: string; status: string; evidence: string }[],
     notes: [],
     usage: { total_tokens: 12345 },
     seconds: 42,
@@ -191,22 +272,48 @@ describe("renderReview", () => {
           suggestion: "requirePermission(user, \"event:create\");",
         }),
         finding("low", "Missing test", { line: null, detail: "Add one." }),
+        finding("low", "Invented file", { path: "lib/made-up.ts", line: 3 }),
       ],
     });
 
     expect(body.startsWith("<!-- glm-review -->")).toBe(true);
     expect(body).toContain("❌ **Blocking issues found:** 1 critical or high finding(s)");
-    expect(body).toContain("1 high · 1 low");
+    expect(body).toContain("1 high · 2 low");
     expect(body).toContain("### Overview\n\nAdds reservations.");
     expect(body).toContain(
       "| 1 | 🔴 High | [`app/(app)/events/actions.ts:42`](https://github.com/o/r/blob/abc1234def5678/app/%28app%29/events/actions.ts#L42) | Unguarded \\| action |",
     );
     expect(body).toContain("### 1. 🔴 High: Unguarded | action");
-    expect(body).toContain("**Where:** [`app/(app)/events/actions.ts:42`]");
     expect(body).toContain("Anyone can call it.");
     expect(body).toContain('```\nrequirePermission(user, "event:create");\n```');
     expect(body).toContain("**Where:** [`src/a.ts`](https://github.com/o/r/blob/abc1234def5678/src/a.ts)");
+    expect(body).toContain("**Where:** `lib/made-up.ts:3 (not in the diff)`");
     expect(body).toContain("12,345 tokens");
+    expect(body).toContain("Reviewed against CONTRIBUTING.md, CLAUDE.md and the story files on `main`");
+  });
+
+  it("renders the acceptance criteria table for the stories it checked", () => {
+    const body = renderReview({
+      ...base,
+      findings: [],
+      stories: ["SCRUM-31", "SCRUM-999"],
+      storiesFound: ["SCRUM-31"],
+      acceptance: [
+        { story: "SCRUM-31", criterion: "Shows the shortfall", status: "met", evidence: "actions.ts:125" },
+        { story: "SCRUM-31", criterion: "Last unit | race", status: "missing", evidence: "" },
+      ],
+    });
+
+    expect(body).toContain("### Acceptance criteria\n\nChecked against: SCRUM-31");
+    expect(body).toContain("No `docs/backlog` file on `main` for SCRUM-999");
+    expect(body).toContain("| SCRUM-31 | Shows the shortfall | ✅ Met | actions.ts:125 |");
+    expect(body).toContain("| SCRUM-31 | Last unit \\| race | ❌ Missing | — |");
+  });
+
+  it("says when the PR names no story", () => {
+    const body = renderReview({ ...base, findings: [] });
+
+    expect(body).toContain("_No SCRUM story key was found in the branch name, title or description");
   });
 
   it("marks medium and low findings as issues to consider, not blocking", () => {
