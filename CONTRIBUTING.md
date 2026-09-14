@@ -75,8 +75,9 @@ Say you're building **Venue Booking Approval** in `bookings`.
 ## The branch → PR → merge flow
 
 **One branch per SCRUM ticket.** `main` is protected: you cannot push to it
-directly, and a pull request cannot merge until the CI job `build-and-test`
-passes. That is deliberate — `main` is what deploys to production and what the
+directly, and a pull request cannot merge until both required checks pass:
+`build-and-test` (including the e2e tests) and the GLM `review`, which fails
+on a critical finding. Once both are green, you can merge your own PR. That is deliberate — `main` is what deploys to production and what the
 graders see, so it stays green by construction rather than by discipline.
 
 ```bash
@@ -104,12 +105,13 @@ Pushing the branch starts two things automatically:
 | | What happens | Takes |
 |---|---|---|
 | **GitHub Actions** | migrate → seed → typecheck → lint → unit tests → e2e | ~2m30s |
-| **Vercel** | builds a preview at a stable per-branch URL | ~30s |
-| **GLM code review** | one AI reviewer reads the whole diff and posts one long review comment; red on critical/high findings (skipped for drafts) | ~10 minutes |
+| **GLM code review** | one AI reviewer reads the whole diff and posts one long review comment; red on a critical finding (skipped for drafts) | ~3–10 minutes |
+
+There are no Vercel preview deployments. Only `main` deploys.
 
 Merging to `main` runs CI again and deploys production.
 
-### Five things that will otherwise surprise you
+### Four things that will otherwise surprise you
 
 1. **`npm run verify` before you push.** It runs typecheck, lint and the unit
    tests — the three things CI fails on most. Budget a couple of minutes on a
@@ -124,13 +126,10 @@ Merging to `main` runs CI again and deploys production.
    someone merges while your PR is open, run `git pull origin main` inside your
    branch and let CI re-run. This guarantees the combination that was tested is
    the combination that lands.
-3. **Preview URLs require a Vercel login**, so only the project owner can open
-   them. Everyone else reviews the diff and the CI result. Ask the owner for a
-   screenshot if you need to see a preview rendered.
-4. **Previews share the production database.** A preview deployment of your
-   branch reads and writes the same Supabase data as the live site. Do not use
-   a preview to test destructive changes, and never run `db:reset` against it.
-5. **Read the GLM review before you merge; it is not a gate.** Every non-draft
+3. **There are no preview deployments.** Check UI changes locally with
+   `npm run dev`; CI's e2e tests check the key journeys. Production uses the
+   shared Supabase database, so never run `db:reset` against it.
+4. **Read the GLM review before you merge; a critical finding blocks it.** Every non-draft
    PR gets one long AI review from GLM-5.3, which reads the whole diff in a
    single pass (ADR 0008). It appears in the **Conversation** tab as one
    comment from `github-actions`, updated on every push: a verdict, an
@@ -142,10 +141,12 @@ Merging to `main` runs CI again and deploys production.
    `SCRUM-31-reserve-equipment`), or it can't check the acceptance criteria.
    It reads all of that from `main`, so edits to those documents in your own PR
    don't change how your PR is reviewed. The **GLM Code Review**
-   check turns **red** when it finds critical or high issues. Fix them, or
-   reply on the PR with why they don't apply. It is not a required check, so it
-   never blocks the merge button, and it does not replace the human review. If
-   GLM itself fails, the comment says so and the check stays green. If Copilot
+   check turns **red** when it finds a critical issue, and it is a required
+   check, so the merge button stays disabled until you fix it and push. High
+   findings don't block, but fix them or reply on the PR with why they don't
+   apply. If GLM itself fails, the comment says so and the check stays green.
+   Changes to `.github/`, `package.json`, the test configs or `vercel.json`
+   need Jin Hong's approval (CODEOWNERS), because they control the checks. If Copilot
    still reviews your PRs, turn off automatic Copilot code review in your
    personal GitHub Copilot settings. Your diff is sent to BigModel (Zhipu), a
    third-party provider, so never put secrets in a diff. The reviewer's rules

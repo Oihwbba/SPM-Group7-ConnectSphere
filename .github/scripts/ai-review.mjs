@@ -11,7 +11,8 @@
 // every SCRUM key the PR names. All of it, and this script itself, is read from
 // the BASE branch, so a pull request can't rewrite the rules it is judged by.
 //
-// Exit code: 1 (red check) when the review finds critical or high issues. A
+// Exit code: 1 (red check, which blocks the merge) when the review finds a
+// critical issue. A
 // problem with GLM or the GitHub API is reported on the PR and exits 0 — an
 // outage must not turn every PR red.
 
@@ -53,9 +54,9 @@ export const CRITERION_STATUS = {
   unclear: "❔ Unclear",
 };
 
-// Findings at these severities fail the check (it is not a required check, so
-// a red review does not block merging; a human decides).
-const BLOCKING = new Set(["critical", "high"]);
+// Findings at these severities fail the check, which is required on `main`, so
+// they block the merge. High findings are listed first but don't block.
+const BLOCKING = new Set(["critical"]);
 
 /**
  * Prefixes each added or context line with its line number in the new file, so
@@ -260,9 +261,9 @@ export function renderReview({
   const lines = [MARKER, `## 🤖 ${model} code review`, ""];
 
   if (blocking > 0) {
-    lines.push(`❌ **Blocking issues found:** ${blocking} critical or high finding(s) to fix, or explicitly accept, before merging.`);
+    lines.push(`❌ **Blocking issues found:** ${blocking} critical finding(s). Fix them and push; this check blocks the merge.`);
   } else if (findings.length > 0) {
-    lines.push("⚠️ **Issues to consider:** no critical or high findings.");
+    lines.push("⚠️ **Issues to consider:** no critical findings, so this doesn't block the merge.");
   } else {
     lines.push("✅ **No issues found.**");
   }
@@ -562,11 +563,11 @@ async function main() {
 
   const blocking = countBlocking(review.findings);
   console.log(
-    `Posted the ${model} review: ${review.findings.length} finding(s), ${blocking} critical/high, ` +
+    `Posted the ${model} review: ${review.findings.length} finding(s), ${blocking} critical, ` +
       `stories ${storiesFound.join(", ") || "none"}, ${review.acceptance.length} criteria, ${elapsed()}s.`,
   );
   if (blocking > 0) {
-    console.log(`::error::GLM found ${blocking} critical or high issue(s). See the review comment on the pull request.`);
+    console.log(`::error::GLM found ${blocking} critical issue(s), which block the merge. See the review comment on the pull request.`);
     process.exitCode = 1;
   }
 }

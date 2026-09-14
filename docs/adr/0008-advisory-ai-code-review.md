@@ -183,3 +183,35 @@ for, so it could not say whether the story's acceptance criteria were delivered.
   how many stories the pull request names.
 - **Story files are Jira snapshots.** If they are out of date, the acceptance
   check is too.
+
+## Addendum (2026-09-14, final) — a required merge gate on critical findings
+
+This supersedes "advisory, never a gate" above. Teammates now merge their own
+pull requests, so the checks have to hold the line instead of a person.
+
+**Decision.**
+
+- **`main` requires a pull request and two green checks:** `build-and-test`
+  (typecheck, lint, unit tests and the Playwright e2e suite) and `review` (this
+  GLM review), on a branch that is up to date with `main`. No approval is
+  required, so a teammate can merge once both are green. The repository owner
+  can still bypass the rules.
+- **Only critical findings fail the review.** A high finding is still listed
+  first and should be fixed, but it doesn't block. A required check that fails
+  on one model's judgement of "high" would stop teammates on a false positive
+  that only the owner could override.
+- **A GLM failure still passes, with a note in the comment.** A BigModel outage,
+  quota limit or missing key must not stop every merge. The trade-off: during an
+  outage a pull request can merge without an AI review, and the comment says so.
+- **Every edit re-runs the review.** A skipped job counts as a passing required
+  check and replaces an earlier red result on the same commit, so edits are no
+  longer skipped. Drafts still are, and a draft can't be merged.
+- **CODEOWNERS guards the gate.** A `pull_request` run uses the pull request's
+  own workflow files, so a pull request could edit `ci.yml` or `ai-review.yml`
+  to pass. Changes under `.github/`, to `package.json`, the Playwright and
+  Vitest configs, or `vercel.json` need the owner's approval.
+- **No Vercel preview deployments.** `vercel.json` sets
+  `git.deploymentEnabled` to `{"**": false, "main": true}`. The preview check
+  failed on every teammate's pull request (the Hobby plan blocks deploys of
+  commits by non-members), and previews wrote to the production database.
+  Production still deploys from `main`.

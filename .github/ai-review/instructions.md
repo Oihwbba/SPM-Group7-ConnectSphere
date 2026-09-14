@@ -111,6 +111,7 @@ Rules for findings:
     claimed acceptance criterion that is missing or contradicted.
   - `medium`: wrong behaviour in an edge case, or a broken project rule.
   - `low`: minor but real, such as a missing test for non-critical logic.
-- Be calibrated: `critical` and `high` mark the pull request's check as failed,
-  so use them only for problems that should be fixed before merging.
+- Be calibrated: `critical` blocks the pull request from merging, so use it
+  only for a problem that must not reach production. `high` is shown first and
+  should be fixed, but doesn't block.
 - At most 10 findings, most severe first. One finding per distinct problem.
