@@ -27,7 +27,9 @@ no local database needed.
 
 ### Prerequisites
 
-- **Node.js 20.9+** and npm (required by Next.js 16)
+- **Node.js 24 LTS** and npm. `.nvmrc` pins it, so run `nvm use` (or
+  `fnm use`). Node 20 reached end-of-life on 2026-04-30; CI and Vercel both
+  run Node 24.
 - **The Supabase database password** — from the team lead, or the Supabase
   dashboard (Project Settings → Database)
 - **Docker Desktop** — *optional*, only for the offline fallback below
