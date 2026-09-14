@@ -40,6 +40,7 @@ const MAX_STORIES = 6;
 const MAX_DOC_CHARS = 20_000;
 const MAX_STORY_CHARS = 6_000;
 const MAX_BODY_CHARS = 4_000;
+const MAX_TEST_INVENTORY_CHARS = 15_000;
 const MARKER = "<!-- glm-review -->";
 
 // Docs, lockfiles and generated snapshots aren't sent as diff to review.
@@ -124,14 +125,23 @@ export function parseDiff(diff) {
   return { annotated: annotated.join("\n"), commentable };
 }
 
+// A description line that says which story the PR is for ("Closes SCRUM-31",
+// "Part of SCRUM-88"). A key anywhere else in the description is just prose:
+// #23 mentioned SCRUM-31 as an example and got SCRUM-31's criteria checked.
+const STORY_LINE = /^\W*(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?|implement(?:s|ed)?|part of|refs?)\b/i;
+
 /**
- * SCRUM keys the PR names, in first-seen order. A branch like
- * "SCRUM-13-15-16-84-events" names four stories; "SCRUM-89-node-24" names one,
- * because the run of numbers stops at the first word.
+ * SCRUM keys the PR names, in first-seen order: every key in the branch name and
+ * title, and the keys on a "Closes …" or "Part of …" line of the description. A
+ * branch like "SCRUM-13-15-16-84-events" names four stories;
+ * "SCRUM-89-node-24" names one, because the run of numbers stops at the first word.
  */
-export function extractStoryKeys(...texts) {
+export function extractStoryKeys(branch, title, description) {
+  const storyLines = String(description ?? "")
+    .split("\n")
+    .filter((line) => STORY_LINE.test(line));
   const keys = [];
-  for (const text of texts) {
+  for (const text of [branch, title, ...storyLines]) {
     for (const match of String(text ?? "").matchAll(/SCRUM-(\d+(?:-\d+)*)/gi)) {
       for (const number of match[1].split("-")) {
         const key = `SCRUM-${Number(number)}`;
@@ -185,6 +195,7 @@ export function parseReview(text) {
         story: typeof a.story === "string" ? a.story.trim().toUpperCase() : "",
         criterion: a.criterion.trim(),
         status: ownKey(CRITERION_STATUS, a.status) ?? "unclear",
+        testedBy: typeof a.testedBy === "string" ? a.testedBy.trim() : "",
         evidence: typeof a.evidence === "string" ? a.evidence.trim() : "",
       })),
   };
@@ -287,7 +298,9 @@ export function renderReview({
 
   lines.push("", "### Acceptance criteria", "");
   if (stories.length === 0) {
-    lines.push("_No SCRUM story key was found in the branch name, title or description, so acceptance criteria were not checked._");
+    lines.push(
+      "_No SCRUM story key was found in the branch name, title or a `Closes`/`Part of` line of the description, so acceptance criteria were not checked._",
+    );
   } else {
     const missingFiles = stories.filter((key) => !storiesFound.includes(key));
     lines.push(`Checked against: ${storiesFound.length ? storiesFound.join(", ") : "none"}`);
@@ -295,9 +308,12 @@ export function renderReview({
       lines.push("", `> No \`docs/backlog\` file on \`${baseRef}\` for ${missingFiles.join(", ")}, so those stories could not be checked.`);
     }
     if (acceptance.length) {
-      lines.push("", "| Story | Criterion | Status | Evidence |", "|---|---|---|---|");
+      lines.push("", "| Story | Criterion | Status | Tested by | Evidence |", "|---|---|---|---|---|");
       for (const a of acceptance) {
-        lines.push(`| ${tableCell(a.story || "—")} | ${tableCell(a.criterion)} | ${CRITERION_STATUS[a.status]} | ${tableCell(a.evidence || "—")} |`);
+        lines.push(
+          `| ${tableCell(a.story || "—")} | ${tableCell(a.criterion)} | ${CRITERION_STATUS[a.status]} | ` +
+            `${tableCell(a.testedBy || "—")} | ${tableCell(a.evidence || "—")} |`,
+        );
       }
     } else if (storiesFound.length) {
       lines.push("", "_GLM did not report on the acceptance criteria._");
@@ -455,7 +471,7 @@ async function upsertReviewComment(github, repo, prNumber, body) {
   return github("POST", `/repos/${repo}/issues/${prNumber}/comments`, { body });
 }
 
-/** A file's content on the base branch, or null when it doesn't exist there. */
+/** A file's content at a commit (usually the base), or null when it doesn't exist there. */
 function readFromBase(baseSha, path) {
   try {
     return execFileSync("git", ["show", `${baseSha}:${path}`], {
@@ -466,6 +482,53 @@ function readFromBase(baseSha, path) {
   } catch {
     return null;
   }
+}
+
+const TEST_FILE = /\.(?:test|spec)\.[cm]?[jt]sx?$/;
+// describe/it/test, any chained modifiers such as .each([...]) or .skipIf(!x),
+// then the title string.
+const TEST_TITLE =
+  /\b(describe|it|test)\b((?:\s*\.\s*\w+(?:\s*\([^()]*(?:\([^()]*\)[^()]*)*\))?)*)\s*\(\s*(["'`])((?:(?!\3)[^\\\n]|\\.)+)\3/g;
+
+/** A test file's kind and its describe/test titles, read from its source. */
+export function describeTestFile(path, source) {
+  const kind = path.startsWith("e2e/")
+    ? "e2e (Playwright)"
+    : /vi\.mock\(\s*["']@\/lib\/db["']/.test(source)
+      ? "unit (Vitest, database mocked)"
+      : "integration or unit (Vitest, real database or none)";
+  const titles = [...source.matchAll(TEST_TITLE)].map(([, fn, chain, , title]) => ({
+    group: fn === "describe" || /\.\s*describe\b/.test(chain),
+    title,
+  }));
+  return { path, kind, titles };
+}
+
+/** The existing-tests section of the prompt: each file, its kind and its titles. */
+export function renderTestInventory(files, max = MAX_TEST_INVENTORY_CHARS) {
+  if (files.length === 0) return "There are no test files under tests/ or e2e/.";
+  const text = files
+    .map((file) =>
+      [
+        `### ${file.path} — ${file.kind}`,
+        ...file.titles.map((t) => (t.group ? `- ${t.title}` : `  - ${t.title}`)),
+      ].join("\n"),
+    )
+    .join("\n\n");
+  return capped(text, max);
+}
+
+// The reviewer's own tests cover tooling, not app features, and their fixtures
+// hold sample test code in strings that the title pattern would misread.
+const NOT_APP_TESTS = new Set(["tests/ai-review.test.ts"]);
+
+/** Every app test file under tests/ and e2e/ at a commit. */
+function listTestFiles(sha) {
+  return execFileSync("git", ["ls-tree", "-r", "--name-only", sha, "--", "tests", "e2e"], { encoding: "utf8" })
+    .split("\n")
+    .map((path) => path.trim())
+    .filter((path) => TEST_FILE.test(path) && !NOT_APP_TESTS.has(path))
+    .map((path) => describeTestFile(path, readFromBase(sha, path) ?? ""));
 }
 
 function capped(text, max) {
@@ -539,7 +602,11 @@ async function main() {
     ? storyFiles.map(([key, text]) => `### ${key}\n\n${capped(text, MAX_STORY_CHARS)}`).join("\n\n")
     : stories.length
       ? `The PR names ${stories.join(", ")}, but no docs/backlog file exists for them, so there are no acceptance criteria to check.`
-      : "No SCRUM story key was found in the branch name, title or description. Return an empty acceptance list.";
+      : "No SCRUM story key was found in the branch name, title or a Closes/Part of line of the description. Return an empty acceptance list.";
+
+  // Every test file at the PR's head, so a test outside the diff still counts as
+  // coverage instead of being reported missing.
+  const testInventory = renderTestInventory(listTestFiles(env.HEAD_SHA));
 
   const skippedNote = skipped.length
     ? "Also changed in this PR but deliberately not shown (docs, lockfiles, generated " +
@@ -554,6 +621,9 @@ async function main() {
     `Description:\n${description.trim() ? capped(description.trim(), MAX_BODY_CHARS) : "(none)"}`,
     "## User stories this PR implements",
     storySection,
+    "## Existing tests (at this PR's head)",
+    "Every test file with its kind and its describe/test titles. Tests this PR adds appear here and in the diff.",
+    testInventory,
     "## Diff",
     "Every added (+) or unchanged context line is prefixed with its line number in the new " +
       "file and a tab; removed (-) lines have no number.",

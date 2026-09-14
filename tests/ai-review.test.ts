@@ -3,6 +3,7 @@ import { describe, it, expect } from "vitest";
 import {
   checkCompletion,
   countBlocking,
+  describeTestFile,
   extractStoryKeys,
   fenceFor,
   fileLink,
@@ -10,6 +11,7 @@ import {
   parseDiff,
   parseReview,
   renderReview,
+  renderTestInventory,
 } from "../.github/scripts/ai-review.mjs";
 
 // SCRUM-88 — the GLM reviewer's pure logic. Line numbers must match git's
@@ -117,7 +119,22 @@ describe("extractStoryKeys", () => {
 
   it("finds nothing when the PR names no story, and caps the list at 6", () => {
     expect(extractStoryKeys("fix-typo", "Fix a typo", undefined)).toEqual([]);
-    expect(extractStoryKeys("SCRUM-1-2-3-4-5-6-7-8")).toHaveLength(6);
+    expect(extractStoryKeys("SCRUM-1-2-3-4-5-6-7-8", "", "")).toHaveLength(6);
+  });
+
+  it("ignores a key the description only mentions in passing", () => {
+    const description = [
+      "The stale footer showed on #24, which rendered a SCRUM-31 acceptance table.",
+      "",
+      "Part of SCRUM-88.",
+      "- Closes SCRUM-19 and SCRUM-20",
+    ].join("\n");
+
+    expect(extractStoryKeys("docs-footer", "Fix the review footer", description)).toEqual([
+      "SCRUM-88",
+      "SCRUM-19",
+      "SCRUM-20",
+    ]);
   });
 });
 
@@ -167,7 +184,13 @@ describe("parseReview", () => {
         summary: "",
         findings: [],
         acceptance: [
-          { story: "SCRUM-31", criterion: "Over-allocation shows the shortfall", status: "MET", evidence: "actions.ts:125" },
+          {
+            story: "SCRUM-31",
+            criterion: "Over-allocation shows the shortfall",
+            status: "MET",
+            testedBy: " unit: tests/reservation.test.ts; e2e: none ",
+            evidence: "actions.ts:125",
+          },
           { story: "SCRUM-31", criterion: "  ", status: "met" },
           { story: "SCRUM-31", criterion: "Zero quantity is rejected", status: "partial" },
         ],
@@ -175,8 +198,14 @@ describe("parseReview", () => {
     );
 
     expect(review.acceptance).toEqual([
-      { story: "SCRUM-31", criterion: "Over-allocation shows the shortfall", status: "met", evidence: "actions.ts:125" },
-      { story: "SCRUM-31", criterion: "Zero quantity is rejected", status: "partial", evidence: "" },
+      {
+        story: "SCRUM-31",
+        criterion: "Over-allocation shows the shortfall",
+        status: "met",
+        testedBy: "unit: tests/reservation.test.ts; e2e: none",
+        evidence: "actions.ts:125",
+      },
+      { story: "SCRUM-31", criterion: "Zero quantity is rejected", status: "partial", testedBy: "", evidence: "" },
     ]);
   });
 
@@ -239,6 +268,71 @@ describe("checkCompletion", () => {
   });
 });
 
+describe("describeTestFile and renderTestInventory", () => {
+  it("reads Vitest titles through .each and .skipIf, and calls a mocked database a unit test", () => {
+    const source = [
+      'vi.mock("@/lib/db", () => ({ prisma: {} }));',
+      'describe("createReservation — SCRUM-31", () => {',
+      '  it("AC 3: over-allocation is refused", async () => {});',
+      '  it.each([0, -1, ""])("AC 6: quantity %s is invalid", async () => {});',
+      "  it(\"doesn't count a touching period\", () => {});",
+      "});",
+      'describe.skipIf(!usesLocalDatabase)("last unit race", () => {});',
+    ].join("\n");
+
+    expect(describeTestFile("tests/reservation.test.ts", source)).toEqual({
+      path: "tests/reservation.test.ts",
+      kind: "unit (Vitest, database mocked)",
+      titles: [
+        { group: true, title: "createReservation — SCRUM-31" },
+        { group: false, title: "AC 3: over-allocation is refused" },
+        { group: false, title: "AC 6: quantity %s is invalid" },
+        { group: false, title: "doesn't count a touching period" },
+        { group: true, title: "last unit race" },
+      ],
+    });
+  });
+
+  it("recognises a Playwright file, a test.describe group, and skips hooks", () => {
+    const source = [
+      'test.describe("Equipment — SCRUM-31", () => {',
+      "  test.beforeEach(async ({ page }) => {});",
+      '  test("tech support reserves equipment", async ({ page }) => {});',
+      "});",
+    ].join("\n");
+
+    const file = describeTestFile("e2e/equipment.spec.ts", source);
+
+    expect(file.kind).toBe("e2e (Playwright)");
+    expect(file.titles).toEqual([
+      { group: true, title: "Equipment — SCRUM-31" },
+      { group: false, title: "tech support reserves equipment" },
+    ]);
+  });
+
+  it("doesn't call a Vitest file without a database mock a unit test", () => {
+    expect(describeTestFile("tests/concurrency.test.ts", 'it("only one wins", () => {});').kind).toBe(
+      "integration or unit (Vitest, real database or none)",
+    );
+  });
+
+  it("lists each file with its kind and indented titles, and says when there are none", () => {
+    const text = renderTestInventory([
+      {
+        path: "e2e/a.spec.ts",
+        kind: "e2e (Playwright)",
+        titles: [
+          { group: true, title: "A" },
+          { group: false, title: "works" },
+        ],
+      },
+    ]);
+
+    expect(text).toBe("### e2e/a.spec.ts — e2e (Playwright)\n- A\n  - works");
+    expect(renderTestInventory([])).toBe("There are no test files under tests/ or e2e/.");
+  });
+});
+
 describe("fileLink, locationFor and fenceFor", () => {
   const commentable = new Map([["app/(app)/events/actions.ts", new Set([40, 41, 42])]]);
 
@@ -284,7 +378,7 @@ describe("renderReview", () => {
     summary: "Adds reservations.",
     stories: [] as string[],
     storiesFound: [] as string[],
-    acceptance: [] as { story: string; criterion: string; status: string; evidence: string }[],
+    acceptance: [] as { story: string; criterion: string; status: string; testedBy?: string; evidence: string }[],
     notes: [],
     usage: { total_tokens: 12345 },
     seconds: 42,
@@ -330,21 +424,28 @@ describe("renderReview", () => {
       stories: ["SCRUM-31", "SCRUM-999"],
       storiesFound: ["SCRUM-31"],
       acceptance: [
-        { story: "SCRUM-31", criterion: "Shows the shortfall", status: "met", evidence: "actions.ts:125" },
+        {
+          story: "SCRUM-31",
+          criterion: "Shows the shortfall",
+          status: "met",
+          testedBy: "unit: tests/reservation.test.ts",
+          evidence: "actions.ts:125",
+        },
         { story: "SCRUM-31", criterion: "Last unit | race", status: "missing", evidence: "" },
       ],
     });
 
     expect(body).toContain("### Acceptance criteria\n\nChecked against: SCRUM-31");
     expect(body).toContain("No `docs/backlog` file on `main` for SCRUM-999");
-    expect(body).toContain("| SCRUM-31 | Shows the shortfall | ✅ Met | actions.ts:125 |");
-    expect(body).toContain("| SCRUM-31 | Last unit \\| race | ❌ Missing | — |");
+    expect(body).toContain("| Story | Criterion | Status | Tested by | Evidence |");
+    expect(body).toContain("| SCRUM-31 | Shows the shortfall | ✅ Met | unit: tests/reservation.test.ts | actions.ts:125 |");
+    expect(body).toContain("| SCRUM-31 | Last unit \\| race | ❌ Missing | — | — |");
   });
 
   it("says when the PR names no story", () => {
     const body = renderReview({ ...base, findings: [] });
 
-    expect(body).toContain("_No SCRUM story key was found in the branch name, title or description");
+    expect(body).toContain("_No SCRUM story key was found in the branch name, title or a `Closes`/`Part of` line");
   });
 
   it("marks high, medium and low findings as issues to consider, not blocking", () => {

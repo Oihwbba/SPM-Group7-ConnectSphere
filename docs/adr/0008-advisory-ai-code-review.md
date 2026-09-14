@@ -224,6 +224,40 @@ pull requests, so the checks have to hold the line instead of a person.
   change to tests thinks briefly (PR #21: 180s), while a change to the review
   gate itself makes GLM deliberate for tens of thousands of tokens, at between
   about 40 and 75 tokens a second.
+
+## Addendum (2026-09-14, test coverage and UI checks)
+
+**Decision.**
+
+- **The reviewer sees every existing test.** Besides the diff, GLM gets each
+  test file under `tests/` and `e2e/` at the pull request's head, with its kind
+  and its describe and test titles (at most 15,000 characters). Before this, a
+  criterion already tested outside the diff was reported as missing, as on #21
+  and #24.
+- **An explicit test checklist:** unit tests for new logic, including the
+  permission-denied and invalid-input cases; integration tests against a real
+  database for locks, transactions and counted pools; and a Playwright spec with
+  a success path and a failure path for each new page or journey.
+- **UI checks, as far as code shows them:** loading, empty and error states,
+  labelled controls, pending feedback, keyboard-reachable controls, and layouts
+  that work at phone width. GLM can't see the page, so visual design isn't
+  reviewed.
+- **A "Tested by" column** in the acceptance table names the unit, integration
+  and e2e tests for each criterion.
+- **Story keys come only from the branch name, the title, and description lines
+  starting "Closes", "Fixes", "Resolves", "Implements", "Part of" or "Refs".**
+  On #23, a passing mention of SCRUM-31 in the description got SCRUM-31's
+  criteria checked.
+
+**Trade-offs.**
+
+- **These findings don't block the merge.** Missing tests and UI states are
+  `medium`, or `high` when the pull request claims its story. Only `critical`
+  blocks.
+- **The file kind is a guess.** A Vitest file that mocks `@/lib/db` is labelled
+  a unit test, and any other Vitest file "integration or unit".
+- **Titles are read with a pattern, not a parser,** so an unusual test
+  declaration can be missed.
 - **Every edit re-runs the review.** A skipped job counts as a passing required
   check and replaces an earlier red result on the same commit, so edits are no
   longer skipped. Drafts still are, and a draft can't be merged.
