@@ -1,0 +1,63 @@
+name: GLM Automated Code Review
+
+# SCRUM-88 — an ADVISORY first-pass review of every pull request by GLM-5.3
+# (BigModel / Zhipu), posted as inline PR comments plus one summary comment.
+# It is deliberately NOT a required status check: `build-and-test` stays the
+# only merge gate and a human still reviews. See docs/adr/0008.
+#
+# One-time setup (repo owner): Settings -> Secrets and variables -> Actions ->
+# New repository secret `ZHIPU_API_KEY`. Until it exists this job skips cleanly.
+
+on:
+  # `pull_request`, NOT `pull_request_target`: every branch lives in this repo,
+  # so the secret is still available, and PR code never runs with it in a
+  # privileged context.
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+# A new push to the same PR cancels the review still running for the old diff.
+concurrency:
+  group: ai-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  review:
+    # Drafts are work in progress — don't spend API quota on them.
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      HAS_ZHIPU_KEY: ${{ secrets.ZHIPU_API_KEY != '' }}
+    steps:
+      - name: Skip when no API key is configured
+        if: env.HAS_ZHIPU_KEY != 'true'
+        run: echo "::notice::ZHIPU_API_KEY is not set, so the GLM review was skipped."
+
+      - name: Run GLM-5.3 review (advisory)
+        if: env.HAS_ZHIPU_KEY == 'true'
+        # Pinned to the v1.12.0 commit: the action has no floating `v1` tag, and a
+        # SHA can't be moved underneath a job that holds the API key.
+        uses: alibaba/open-code-review@494bf1c8d7a19196ab166960a06fef38d69a1d16 # v1.12.0
+        with:
+          # The tool appends /chat/completions itself.
+          llm_url: https://open.bigmodel.cn/api/paas/v4
+          llm_auth_token: ${{ secrets.ZHIPU_API_KEY }}
+          llm_model: glm-5.3
+          llm_use_anthropic: "false"
+          # The action's default DISABLES thinking; BigModel documents that
+          # GLM-5.3's thinking is forced on and cannot be disabled.
+          llm_extra_body: '{"thinking": {"type": "enabled"}}'
+          # OpenCodeReview's own review-depth preset (low | medium | high).
+          effort: high
+          # Keep the CLI in lock-step with the pinned action.
+          ocr_version: "1.12.0"
+          language: English
+          # One summary comment updated in place, and no duplicate inline
+          # comments on lines already commented on by an earlier run.
+          sticky_summary: "true"
+          incremental: "true"
+          # Project conventions live in .opencodereview/rule.json.
