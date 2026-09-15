@@ -60,26 +60,28 @@
     "@types/react": "19.2.18",
     "@types/react-dom": "19.2.7",
     "@vitejs/plugin-react": "4.3.4",
-    "@vitest/coverage-v8": "2.1.8",
+    "@vitest/coverage-v8": "4.1.11",
     "autoprefixer": "10.4.20",
     "eslint": "9.39.5",
     "eslint-config-next": "16.3.4",
     "eslint-config-prettier": "10.1.8",
-    "postcss": "8.4.49",
+    "postcss": "8.5.28",
     "prettier": "3.4.2",
     "prettier-plugin-tailwindcss": "0.6.9",
     "prisma": "6.19.3",
     "tailwindcss": "3.4.17",
-    "tsx": "4.19.2",
+    "tsx": "4.23.13",
     "typescript": "5.7.3",
+    "vite": "6.4.3",
     "vite-tsconfig-paths": "5.1.4",
-    "vitest": "2.1.8"
+    "vitest": "4.1.11"
   },
   "engines": {
     "node": ">=24"
   },
   "overrides": {
     "@types/react": "19.2.18",
-    "@types/react-dom": "19.2.7"
+    "@types/react-dom": "19.2.7",
+    "deepmerge-ts": "8.0.2"
   }
 }
