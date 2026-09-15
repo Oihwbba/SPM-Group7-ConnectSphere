@@ -268,11 +268,10 @@ lib/
   datetime.ts                 The only place dates are formatted (Asia/Singapore)
   db.ts                       Shared Prisma client
 components/ui/                shadcn/ui primitives
-tests/                        Vitest unit/integration suites
-  auth.test.ts                can() — the security core
-  events.test.ts              Event server actions
-  venues.test.ts              (empty — SCRUM-7, to be written)
-  concurrency.test.ts         (empty — SCRUM-31/53/74 simultaneous cases)
+tests/
+  unit/                       Vitest, database mocked (npm run test:unit)
+  integration/                Vitest against a real Postgres: locks, transactions,
+                              simultaneous cases (npm run test:integration)
 e2e/                          Playwright specs (npm run test:e2e)
 docs/
   backlog/                    Every story's acceptance criteria, one file

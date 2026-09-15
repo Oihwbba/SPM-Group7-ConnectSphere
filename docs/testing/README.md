@@ -29,7 +29,7 @@ Copy this block for each case:
 | Test Data | … |
 | Expected Result | … |
 
-**Automated by:** `tests/reservation.test.ts` › "AC 1 & 2: …"
+**Automated by:** `tests/unit/reservation.test.ts` › "AC 1 & 2: …"
 ```
 
 - **Test Case ID:** `TC-<story number>-<two digits>`, e.g. `TC-31-03`. Never
