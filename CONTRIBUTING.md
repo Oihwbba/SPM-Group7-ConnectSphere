@@ -23,7 +23,8 @@ variation of it. When you build your feature, copy that folder's shape:
 | `create-event-dialog.tsx` | Client component; a form that calls an action and shows the result. |
 | `lib/schemas/<entity>.ts` | The Zod schema, shared by the form and the action. |
 | `components/events/status-badge.tsx` | Shared presentational bits for the entity. |
-| `tests/<domain>.test.ts` | Vitest test of the action: happy path, validation failure, permission denied. |
+| `tests/unit/<domain>.test.ts` | Vitest unit test of the action with the database mocked: happy path, validation failure, permission denied. Runs with `npm run test:unit`. |
+| `tests/integration/<domain>.test.ts` | Vitest test against a real Postgres, only where correctness depends on the database: row locks, transactions, constraints. Runs with `npm run test:integration` and needs a local database. |
 | `e2e/*.spec.ts` | One Playwright test of the main user journey. |
 
 Route folders are named for the **domain**, not the role. A route that several
@@ -64,8 +65,10 @@ Say you're building **Venue Booking Approval** in `bookings`.
 5. **Page.** Replace the placeholder `page.tsx` with a server component that
    guards the role, fetches bookings scoped to what this user may see, and
    renders a table. Keep a real empty state and a `loading.tsx`.
-6. **Tests.** Add a Vitest test for the action (happy / invalid / denied) and,
-   if the feature has a key journey, a Playwright spec. Trace them back to your
+6. **Tests.** Add a unit test for the action in `tests/unit/` (happy / invalid /
+   denied); an integration test in `tests/integration/` if it relies on locks,
+   transactions or constraints; and, if the feature has a key journey, a
+   Playwright spec in `e2e/`. Trace them back to your
    user story in the test description — the graders check traceability.
 7. **Ship it** — `npm run verify`, push, open a PR, merge once CI is green.
    The next section is that flow in full.

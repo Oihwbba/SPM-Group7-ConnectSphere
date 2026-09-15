@@ -12,7 +12,7 @@ import {
   parseReview,
   renderReview,
   renderTestInventory,
-} from "../.github/scripts/ai-review.mjs";
+} from "../../.github/scripts/ai-review.mjs";
 
 // SCRUM-88 — the GLM reviewer's pure logic. Line numbers must match git's
 // new-side numbering exactly, or every "Where:" reference points at the wrong
@@ -314,6 +314,15 @@ describe("describeTestFile and renderTestInventory", () => {
     expect(describeTestFile("tests/concurrency.test.ts", 'it("only one wins", () => {});').kind).toBe(
       "integration or unit (Vitest, real database or none)",
     );
+  });
+
+  it("takes the kind from the tests/unit and tests/integration folders, whatever the file mocks", () => {
+    const mocked = 'vi.mock("@/lib/db", () => ({}));\nit("a", () => {});';
+
+    expect(describeTestFile("tests/integration/concurrency.test.ts", mocked).kind).toBe(
+      "integration (Vitest, real database)",
+    );
+    expect(describeTestFile("tests/unit/nav.test.ts", 'it("a", () => {});').kind).toBe("unit (Vitest)");
   });
 
   it("lists each file with its kind and indented titles, and says when there are none", () => {

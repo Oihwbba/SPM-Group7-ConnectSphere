@@ -52,8 +52,8 @@ Report real defects, in this order of importance:
    Expect:
    - **Unit tests** (Vitest) for new logic, including each server action's
      permission-denied and invalid-input cases.
-   - **Integration tests** against a real Postgres (Vitest files that don't
-     mock `@/lib/db`, such as `tests/concurrency.test.ts`) for anything that
+   - **Integration tests** against a real Postgres (Vitest files in
+     `tests/integration/`, such as `concurrency.test.ts`) for anything that
      depends on the database behaving correctly: row locks, transactions,
      constraints, counted pools. A mocked database can't prove those.
    - **An e2e test** (Playwright, `e2e/*.spec.ts`) for each new page or user
@@ -90,7 +90,7 @@ and report each in `acceptance`:
 - `unclear`: you can't tell, for example because it depends on files not shown.
 
 For each criterion also give `testedBy`: the tests that cover it, by kind and
-file, for example `unit: tests/reservation.test.ts "AC 3: over-allocation is
+file, for example `unit: tests/unit/reservation.test.ts "AC 3: over-allocation is
 refused"; integration: none; e2e: none`. A criterion a user can see in the app
 needs an e2e test; one about data integrity or concurrency needs an
 integration test.
@@ -114,7 +114,7 @@ Reply with **only** a JSON object, no prose and no code fences:
       "story": "SCRUM-13",
       "criterion": "Organiser can save a request with required fields empty",
       "status": "met",
-      "testedBy": "unit: tests/events.test.ts \"saves a draft with empty fields\"; integration: none; e2e: e2e/events.spec.ts \"organiser saves a draft\"",
+      "testedBy": "unit: tests/unit/events.test.ts \"saves a draft with empty fields\"; integration: none; e2e: e2e/events.spec.ts \"organiser saves a draft\"",
       "evidence": "createDraftEvent accepts a partial payload (app/(app)/events/actions.ts:61)"
     }
   ],

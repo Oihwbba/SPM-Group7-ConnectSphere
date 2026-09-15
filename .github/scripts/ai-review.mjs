@@ -490,13 +490,21 @@ const TEST_FILE = /\.(?:test|spec)\.[cm]?[jt]sx?$/;
 const TEST_TITLE =
   /\b(describe|it|test)\b((?:\s*\.\s*\w+(?:\s*\([^()]*(?:\([^()]*\)[^()]*)*\))?)*)\s*\(\s*(["'`])((?:(?!\3)[^\\\n]|\\.)+)\3/g;
 
-/** A test file's kind and its describe/test titles, read from its source. */
+/**
+ * A test file's kind and its describe/test titles. The folder decides the kind
+ * (tests/unit, tests/integration, e2e); a file outside them is guessed from
+ * whether it mocks the database.
+ */
 export function describeTestFile(path, source) {
   const kind = path.startsWith("e2e/")
     ? "e2e (Playwright)"
-    : /vi\.mock\(\s*["']@\/lib\/db["']/.test(source)
-      ? "unit (Vitest, database mocked)"
-      : "integration or unit (Vitest, real database or none)";
+    : path.startsWith("tests/integration/")
+      ? "integration (Vitest, real database)"
+      : path.startsWith("tests/unit/")
+        ? "unit (Vitest)"
+        : /vi\.mock\(\s*["']@\/lib\/db["']/.test(source)
+          ? "unit (Vitest, database mocked)"
+          : "integration or unit (Vitest, real database or none)";
   const titles = [...source.matchAll(TEST_TITLE)].map(([, fn, chain, , title]) => ({
     group: fn === "describe" || /\.\s*describe\b/.test(chain),
     title,
@@ -520,7 +528,7 @@ export function renderTestInventory(files, max = MAX_TEST_INVENTORY_CHARS) {
 
 // The reviewer's own tests cover tooling, not app features, and their fixtures
 // hold sample test code in strings that the title pattern would misread.
-const NOT_APP_TESTS = new Set(["tests/ai-review.test.ts"]);
+const NOT_APP_TESTS = new Set(["tests/unit/ai-review.test.ts"]);
 
 /** Every app test file under tests/ and e2e/ at a commit. */
 function listTestFiles(sha) {
