@@ -3,11 +3,13 @@ import { describe, it, expect } from "vitest";
 import {
   buildSystemPrompt,
   checkCompletion,
+  claimsStory,
   countBlocking,
   describeTestFile,
   extractStoryKeys,
   fenceFor,
   fileLink,
+  isBlocking,
   locationFor,
   parseDiff,
   parseReview,
@@ -26,7 +28,7 @@ import {
 type Severity = "critical" | "high" | "medium" | "low";
 
 function finding(severity: Severity, title: string, extra: Record<string, unknown> = {}) {
-  return { path: "src/a.ts", line: 11, severity, title, detail: "", suggestion: "", ...extra };
+  return { path: "src/a.ts", line: 11, severity, category: "correctness", title, detail: "", suggestion: "", ...extra };
 }
 
 describe("parseDiff", () => {
@@ -178,6 +180,8 @@ describe("parseReview", () => {
     );
 
     expect(review.findings[0].severity).toBe("medium");
+    // No valid category, so it counts as correctness and can still block.
+    expect(review.findings[0].category).toBe("correctness");
     expect(review.acceptance[0]).toMatchObject({ story: "SCRUM-13", status: "unclear" });
   });
 
@@ -233,12 +237,47 @@ describe("parseReview", () => {
   });
 });
 
-describe("countBlocking", () => {
-  it("counts only critical findings, which fail the required check", () => {
-    const findings = [finding("critical", "a"), finding("high", "b"), finding("medium", "c"), finding("low", "d")];
+describe("claimsStory, isBlocking and countBlocking", () => {
+  it("treats Closes, Fixes and Resolves lines as finishing a story, but not Part of", () => {
+    expect(claimsStory("Adds cancelling.\n\nCloses SCRUM-32")).toBe(true);
+    expect(claimsStory("- fixes: SCRUM-19")).toBe(true);
+    expect(claimsStory("Resolved SCRUM-20 and SCRUM-21")).toBe(true);
+    expect(claimsStory("Part of SCRUM-31. Doesn't close it.")).toBe(false);
+    expect(claimsStory("Closes nothing on its own; part of SCRUM-88")).toBe(false);
+    expect(claimsStory(undefined)).toBe(false);
+  });
 
-    expect(countBlocking(findings)).toBe(1);
-    expect(countBlocking([finding("high", "b"), finding("medium", "c"), finding("low", "d")])).toBe(0);
+  it("blocks every critical finding, and high security, data and correctness findings", () => {
+    const open = { claimsStory: false };
+
+    expect(isBlocking(finding("critical", "x", { category: "conventions" }), open)).toBe(true);
+    for (const category of ["security", "data", "correctness"]) {
+      expect(isBlocking(finding("high", "x", { category }), open)).toBe(true);
+      expect(isBlocking(finding("medium", "x", { category }), open)).toBe(false);
+    }
+    expect(isBlocking(finding("high", "x", { category: "conventions" }), { claimsStory: true })).toBe(false);
+  });
+
+  it("blocks high story and test findings only when the PR closes its story", () => {
+    for (const category of ["story", "tests"]) {
+      expect(isBlocking(finding("high", "x", { category }), { claimsStory: true })).toBe(true);
+      expect(isBlocking(finding("high", "x", { category }), { claimsStory: false })).toBe(false);
+    }
+  });
+
+  it("counts PR #37's seven findings as six blocking, since it closed SCRUM-32", () => {
+    const pr37 = [
+      finding("critical", "Inline role checks fail open", { category: "security" }),
+      finding("high", "Hard delete", { category: "data" }),
+      finding("high", "Negative quantities accepted", { category: "data" }),
+      finding("high", "No row lock", { category: "data" }),
+      finding("high", "Claims to close SCRUM-32", { category: "story" }),
+      finding("high", "Missing tests", { category: "tests" }),
+      finding("medium", "toLocaleString", { category: "conventions" }),
+    ];
+
+    expect(countBlocking(pr37, { claimsStory: true })).toBe(6);
+    expect(countBlocking(pr37, { claimsStory: false })).toBe(4);
   });
 });
 
@@ -533,20 +572,22 @@ describe("renderReview", () => {
     });
 
     expect(body.startsWith("<!-- glm-review -->")).toBe(true);
-    expect(body).toContain("❌ **Blocking issues found:** 1 critical finding(s)");
+    expect(body).toContain("❌ **Blocking issues found:** 1 finding(s) marked ⛔ block the merge.");
     expect(body).toContain("1 critical · 2 low");
     expect(body).toContain("### Overview\n\nAdds reservations.");
+    expect(body).toContain("| # | Severity | Category | Blocks | Where | Issue |");
     expect(body).toContain(
-      "| 1 | 🟣 Critical | [`app/(app)/events/actions.ts:42`](https://github.com/o/r/blob/abc1234def5678/app/%28app%29/events/actions.ts#L42) | Unguarded \\| action |",
+      "| 1 | 🟣 Critical | Correctness | ⛔ | [`app/(app)/events/actions.ts:42`](https://github.com/o/r/blob/abc1234def5678/app/%28app%29/events/actions.ts#L42) | Unguarded \\| action |",
     );
-    expect(body).toContain("### 1. 🟣 Critical: Unguarded | action");
+    expect(body).toContain("| 2 | 🔵 Low | Correctness | — |");
+    expect(body).toContain("### 1. 🟣 Critical: Unguarded | action\n\n**Category:** Correctness · ⛔ blocks the merge");
     expect(body).toContain("Anyone can call it.");
     expect(body).toContain('```\nrequirePermission(user, "event:create");\n```');
     expect(body).toContain("**Where:** [`src/a.ts`](https://github.com/o/r/blob/abc1234def5678/src/a.ts)");
     expect(body).toContain("**Where:** `lib/made-up.ts:3 (not in the diff)`");
     expect(body).toContain("12,345 tokens");
     expect(body).toContain("Reviewed against CONTRIBUTING.md, CLAUDE.md, the reviewer memory and the story files on `main`");
-    expect(body).toContain("A critical finding fails this required check and blocks the merge (ADR 0008).");
+    expect(body).toContain("⛔ findings fail this required check: any critical finding;");
   });
 
   it("renders the acceptance criteria table for the stories it checked", () => {
@@ -580,11 +621,22 @@ describe("renderReview", () => {
     expect(body).toContain("_No SCRUM story key was found in the branch name, title or a `Closes`/`Part of` line");
   });
 
-  it("marks high, medium and low findings as issues to consider, not blocking", () => {
-    const body = renderReview({ ...base, findings: [finding("high", "Crash"), finding("medium", "Edge case")] });
+  it("marks findings that don't block as issues to consider", () => {
+    const body = renderReview({
+      ...base,
+      findings: [finding("high", "Inline date", { category: "conventions" }), finding("medium", "Edge case")],
+    });
 
-    expect(body).toContain("⚠️ **Issues to consider:** no critical findings, so this doesn't block the merge.");
+    expect(body).toContain("⚠️ **Issues to consider:** nothing here blocks the merge.");
     expect(body).not.toContain("Blocking issues");
+    expect(body).not.toContain("⛔ blocks the merge");
+  });
+
+  it("blocks a high missing-test finding only when the PR closes its story", () => {
+    const findings = [finding("high", "No e2e test", { category: "tests" })];
+
+    expect(renderReview({ ...base, findings, claimsStory: true })).toContain("❌ **Blocking issues found:** 1 finding(s)");
+    expect(renderReview({ ...base, findings, claimsStory: false })).toContain("⚠️ **Issues to consider:**");
   });
 
   it("says so when there are no findings", () => {

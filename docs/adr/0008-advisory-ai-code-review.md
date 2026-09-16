@@ -316,6 +316,47 @@ feature pull requests had diffs over that limit: the foundation commit
 
 **Trade-off.** A genuinely large change must be split, or merged by the owner
 after a human review.
+
+## Addendum (2026-09-16, what blocks the merge)
+
+This supersedes "only critical blocks". A planted test (#37, "Closes
+SCRUM-32") had seven real problems: a permission bypass, a hard delete,
+unvalidated quantities, a race, missing acceptance criteria, missing tests and
+inline date formatting. Only the permission bypass was critical, so a PR with
+just the race or the hard delete would have merged. The team wants complete
+features, complete test coverage and code that doesn't break.
+
+**Decision.**
+
+- **Every finding has a category:** security, data integrity, correctness,
+  story completeness, tests or conventions. GLM gives the category and the
+  severity; the script decides what blocks, from both.
+- **What blocks:**
+  - any critical finding
+  - a high finding in security, data integrity or correctness
+  - a high story-completeness or test finding, when the description closes the
+    story (`Closes`, `Fixes` or `Resolves SCRUM-n`)
+  - conventions, only when critical
+
+  An unknown category counts as correctness.
+- **Partial work doesn't block.** A PR that says `Part of SCRUM-n` delivers
+  part of a story on purpose, so its missing criteria and their tests are at
+  most medium.
+- **Blocking findings are marked ⛔** in the findings table and in each
+  finding's section.
+
+On #37 this blocks 6 of the 7 findings; only the date formatting stays a
+warning.
+
+**Trade-offs.**
+
+- **More PRs block.** A teammate who writes `Closes SCRUM-n` must include every
+  acceptance criterion and its tests, or change it to `Part of SCRUM-n`.
+- **A wrong high finding now blocks** in five categories, not just critical
+  ones. The escape paths are unchanged: reply on the PR with the reason, which
+  GLM checks on the next run, or an admin merge by Jin Hong.
+- **Severity is still GLM's judgement,** so the same problem rated medium in
+  one run doesn't block.
 - **Every edit re-runs the review.** A skipped job counts as a passing required
   check and replaces an earlier red result on the same commit, so edits are no
   longer skipped. Drafts still are, and a draft can't be merged.
