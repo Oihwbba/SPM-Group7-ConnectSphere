@@ -26,8 +26,10 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-89 — recovered event_request_detail
   });
 
   it("creates the four Event columns with the same type, nullability and default as Supabase", async () => {
+    // information_schema returns identifier types (`name`) the Prisma driver
+    // adapter can't deserialize, so every value is cast to text.
     const columns = await prisma.$queryRaw<ColumnDefinition[]>`
-      select column_name, data_type, udt_name, is_nullable, column_default
+      select column_name::text, data_type::text, udt_name::text, is_nullable::text, column_default::text
       from information_schema.columns
       where table_schema = 'public'
         and table_name = 'Event'
