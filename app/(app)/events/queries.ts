@@ -41,3 +41,31 @@ export async function getEventForUser(id: string) {
 
   return allowed ? event : null;
 }
+
+/**
+ * SCRUM-33 — every equipment reservation for an event, with its current status
+ * (cancelled ones included) and the equipment's details and specifications.
+ *
+ * Goes through getEventForUser, so it returns null both for a missing event and
+ * for one the user may not see (SCRUM-68). An event with no reservations gives
+ * an empty list, which the list view shows as "no equipment reserved".
+ */
+export async function listEventReservations(eventId: string) {
+  const event = await getEventForUser(eventId);
+  if (!event) return null;
+
+  return prisma.reservation.findMany({
+    where: { eventId: event.id },
+    select: {
+      id: true,
+      quantity: true,
+      status: true,
+      startAt: true,
+      endAt: true,
+      equipment: {
+        select: { type: true, description: true, technicalSpecs: true },
+      },
+    },
+    orderBy: [{ startAt: "asc" }, { id: "asc" }],
+  });
+}
