@@ -16,12 +16,12 @@ export default function LoginPage() {
         <div className="w-full max-w-sm">
           <div className="mb-8 space-y-2">
             <div className="flex items-center gap-3">
-              {/* A small sphere beside the heading on small screens (the big
-                  left-column sphere shows instead at lg). */}
-              <SphereLogo className="h-10 w-10 lg:hidden" />
               <h1 className="text-2xl font-semibold tracking-tight">
                 Welcome back
               </h1>
+              {/* A small sphere to the right of the heading on small screens
+                  (the big left-column sphere shows instead at lg). */}
+              <SphereLogo className="h-10 w-10 lg:hidden" />
             </div>
             <p className="text-sm text-muted-foreground">
               Sign in to your ConnectSphere account.

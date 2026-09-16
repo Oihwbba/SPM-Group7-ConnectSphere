@@ -36,7 +36,7 @@ export default async function AppLayout({
       <header className="sticky top-0 z-50 flex h-16 items-center gap-4 bg-background/70 px-4 backdrop-blur-glass sm:px-6">
         <div className="flex items-center gap-2">
           <SphereLogo className="h-9 w-9" />
-          <span className="hidden text-lg tracking-tight sm:inline">
+          <span className="text-lg tracking-tight">
             <span className="font-bold">Connect</span>
             <span className="font-light">Sphere</span>
           </span>
