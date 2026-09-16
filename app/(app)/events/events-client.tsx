@@ -105,8 +105,10 @@ export function EventsClient({
   const submittedCount = events.filter((evt) => evt.status !== "DRAFT").length;
 
   // Row/card actions, shared by the desktop table and the mobile card list so
-  // the two presentations can never drift out of sync.
-  const renderActions = (event: Event) => {
+  // the two presentations can never drift out of sync. Both layouts are always
+  // in the DOM (toggled by CSS), so the mobile copy takes a "mobile-" testid
+  // prefix — otherwise a Playwright locator would match the card AND the table.
+  const renderActions = (event: Event, testIdPrefix = "") => {
     const isDraft = event.status === "DRAFT";
     const isRejected = event.status === "REJECTED";
     return (
@@ -118,7 +120,9 @@ export function EventsClient({
             className="h-8 gap-1.5 text-xs font-medium"
             onClick={() => setEditingDraft(event)}
             data-testid={
-              isDraft ? "resume-draft-button" : "amend-rejected-button"
+              isDraft
+                ? `${testIdPrefix}resume-draft-button`
+                : `${testIdPrefix}amend-rejected-button`
             }
           >
             <Pencil className="h-3.5 w-3.5" />
@@ -130,7 +134,7 @@ export function EventsClient({
           size="sm"
           className="h-8 gap-1.5 text-xs"
           onClick={() => setViewingEvent(event)}
-          data-testid="view-details-button"
+          data-testid={`${testIdPrefix}view-details-button`}
         >
           <Eye className="h-3.5 w-3.5" />
           View Details
@@ -317,7 +321,7 @@ export function EventsClient({
                         </dd>
                       </div>
                     </dl>
-                    {renderActions(event)}
+                    {renderActions(event, "mobile-")}
                   </CardContent>
                 </Card>
               );

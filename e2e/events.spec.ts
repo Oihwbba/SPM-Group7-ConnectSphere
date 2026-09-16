@@ -336,5 +336,43 @@ test.describe("User Story 84 — Organiser Views Their Own Event Requests Journe
   });
 });
 
+/**
+ * Mobile presentation (SCRUM-66 / SCRUM-68) — at a phone viewport the events list
+ * renders as stacked cards, not the desktop five-column table, and the card
+ * actions still work. Card and table share markup (events-client.tsx) but the
+ * card copy carries "mobile-"-prefixed testids, so a locator matches only the
+ * visible presentation.
+ */
+test.describe("User Story 84 — Events list on mobile (375x812)", () => {
+  test.use({ viewport: { width: 375, height: 812 } });
+
+  test("shows stacked cards, hides the table, and Resume Draft opens the dialog", async ({
+    page,
+  }) => {
+    await page.goto("/login");
+    await page.getByLabel("Email", { exact: true }).fill("organiser@test.local");
+    await page.getByLabel("Password", { exact: true }).fill("Password123!");
+    await page.getByRole("button", { name: "Sign in" }).click();
+    await page.waitForURL("**/events");
+    await expect(page.getByRole("heading", { name: "My Events" })).toBeVisible();
+
+    // The mobile card list is shown — its actions carry the "mobile-" testids.
+    await expect(
+      page.getByTestId("mobile-view-details-button").first(),
+    ).toBeVisible();
+
+    // The desktop table is hidden at this width.
+    await expect(page.getByRole("table")).not.toBeVisible();
+
+    // Tapping a draft card's Resume Draft opens the resume dialog. The seeded
+    // "Draft — Annual Tech Summit" guarantees at least one draft card exists.
+    await page.getByTestId("mobile-resume-draft-button").first().click();
+    await expect(page.getByRole("dialog")).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: /Resume Draft Event Request/i }),
+    ).toBeVisible();
+  });
+});
+
 
 
