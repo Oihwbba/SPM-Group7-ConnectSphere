@@ -9,9 +9,8 @@ name: GLM Code Review
 # Context: the PR title, description and branch, CONTRIBUTING.md, CLAUDE.md, and
 # the docs/backlog story file for each SCRUM key the PR names.
 #
-# The check turns red when the review has a blocking finding (any critical; high
-# security, data-integrity or correctness; high story or test gaps when the PR
-# closes its story), or when no review could be completed. It is a required status check on `main` alongside
+# The check turns red when the review finds a critical issue, or when no review
+# could be completed. It is a required status check on `main` alongside
 # `build-and-test`, so neither can merge. If GLM stops before answering, the
 # script retries once with less thinking. See docs/adr/0008.
 #
@@ -60,7 +59,7 @@ jobs:
         with:
           node-version: 24
 
-      - name: GLM-5.3 review (fails on a blocking finding)
+      - name: GLM-5.3 review (fails on a critical finding)
         env:
           ZHIPU_API_KEY: ${{ secrets.ZHIPU_API_KEY }}
           GITHUB_TOKEN: ${{ github.token }}

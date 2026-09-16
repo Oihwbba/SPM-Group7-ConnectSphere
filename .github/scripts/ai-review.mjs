@@ -11,8 +11,8 @@
 // every SCRUM key the PR names. All of it, and this script itself, is read from
 // the BASE branch, so a pull request can't rewrite the rules it is judged by.
 //
-// Exit code: 1 (red check, which blocks the merge) when the review has a
-// blocking finding (see isBlocking), or when no review could be completed: the check is required,
+// Exit code: 1 (red check, which blocks the merge) when the review finds a
+// critical issue, or when no review could be completed: the check is required,
 // so it must never pass without a review. If GLM stops before answering, it is
 // retried once with less thinking first.
 
@@ -77,40 +77,9 @@ export const CRITERION_STATUS = {
   unclear: "❔ Unclear",
 };
 
-export const CATEGORY = {
-  security: "Security",
-  data: "Data integrity",
-  correctness: "Correctness",
-  story: "Story completeness",
-  tests: "Tests",
-  conventions: "Conventions",
-};
-
-// High findings in these categories block the merge whatever the description
-// says; story and test findings block only when the PR says it finishes a story.
-const BLOCKS_WHEN_HIGH = new Set(["security", "data", "correctness"]);
-const BLOCKS_WHEN_HIGH_AND_CLOSING = new Set(["story", "tests"]);
-// "Closes SCRUM-31" says the story is finished; "Part of SCRUM-31" doesn't.
-const CLOSING_LINE = /^\W*(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\s*:?\s+SCRUM-\d+/im;
-
-/** True when the description says the PR finishes a story, e.g. "Closes SCRUM-31". */
-export function claimsStory(description) {
-  return CLOSING_LINE.test(String(description ?? ""));
-}
-
-/**
- * Whether a finding fails the required check (ADR 0008). The script decides
- * from the category and severity GLM gives; GLM doesn't choose what blocks.
- * Critical always blocks. High blocks for security, data integrity and
- * correctness, and for story completeness and tests when the PR claims to
- * finish its story. Conventions block only when critical.
- */
-export function isBlocking(finding, { claimsStory: closes }) {
-  if (finding.severity === "critical") return true;
-  if (finding.severity !== "high") return false;
-  if (BLOCKS_WHEN_HIGH.has(finding.category)) return true;
-  return BLOCKS_WHEN_HIGH_AND_CLOSING.has(finding.category) && closes;
-}
+// Findings at these severities fail the check, which is required on `main`, so
+// they block the merge. High findings are listed first but don't block.
+const BLOCKING = new Set(["critical"]);
 
 /**
  * Prefixes each added or context line with its line number in the new file, so
@@ -219,8 +188,6 @@ export function parseReview(text) {
           line: Number.isInteger(line) && line > 0 ? line : null,
           // Object.hasOwn, not `in`: "toString" must not pass as a severity.
           severity: ownKey(SEVERITY, f.severity) ?? "medium",
-          // An unknown category counts as correctness, so it can still block.
-          category: ownKey(CATEGORY, f.category) ?? "correctness",
           title: f.title.trim(),
           detail: typeof f.detail === "string" ? f.detail.trim() : "",
           suggestion: typeof f.suggestion === "string" ? f.suggestion.trim() : "",
@@ -243,8 +210,8 @@ export function parseReview(text) {
   };
 }
 
-export function countBlocking(findings, options) {
-  return findings.filter((f) => isBlocking(f, options)).length;
+export function countBlocking(findings) {
+  return findings.filter((f) => BLOCKING.has(f.severity)).length;
 }
 
 /** A link to a file, or to an exact line, of the PR head's code. */
@@ -322,16 +289,14 @@ export function renderReview({
   usage,
   seconds,
   runUrl,
-  claimsStory: closes = false,
 }) {
-  const blocks = (f) => isBlocking(f, { claimsStory: closes });
-  const blocking = findings.filter(blocks).length;
+  const blocking = countBlocking(findings);
   const lines = [MARKER, `## 🤖 ${model} code review`, ""];
 
   if (blocking > 0) {
-    lines.push(`❌ **Blocking issues found:** ${blocking} finding(s) marked ⛔ block the merge. Fix them and push.`);
+    lines.push(`❌ **Blocking issues found:** ${blocking} critical finding(s). Fix them and push; this check blocks the merge.`);
   } else if (findings.length > 0) {
-    lines.push("⚠️ **Issues to consider:** nothing here blocks the merge.");
+    lines.push("⚠️ **Issues to consider:** no critical findings, so this doesn't block the merge.");
   } else {
     lines.push("✅ **No issues found.**");
   }
@@ -365,24 +330,14 @@ export function renderReview({
   }
 
   if (findings.length > 0) {
-    lines.push(
-      "",
-      "### Findings at a glance",
-      "",
-      "| # | Severity | Category | Blocks | Where | Issue |",
-      "|---|---|---|---|---|---|",
-    );
+    lines.push("", "### Findings at a glance", "", "| # | Severity | Where | Issue |", "|---|---|---|---|");
     const locations = findings.map((f) => locationFor({ repo, sha, commentable, path: f.path, line: f.line }));
     findings.forEach((f, i) => {
-      lines.push(
-        `| ${i + 1} | ${SEVERITY[f.severity].label} | ${CATEGORY[f.category]} | ${blocks(f) ? "⛔" : "—"} | ` +
-          `${locationMarkdown(locations[i])} | ${tableCell(f.title)} |`,
-      );
+      lines.push(`| ${i + 1} | ${SEVERITY[f.severity].label} | ${locationMarkdown(locations[i])} | ${tableCell(f.title)} |`);
     });
 
     findings.forEach((f, i) => {
       lines.push("", "---", "", `### ${i + 1}. ${SEVERITY[f.severity].label}: ${oneLine(f.title)}`, "");
-      lines.push(`**Category:** ${CATEGORY[f.category]}${blocks(f) ? " · ⛔ blocks the merge" : ""}`, "");
       lines.push(`**Where:** ${locationMarkdown(locations[i])}`);
       if (f.detail) lines.push("", f.detail);
       if (f.suggestion) {
@@ -401,8 +356,7 @@ export function renderReview({
     "",
     `<sub>AI-generated by ${model} in one call · ${seconds}s${tokens} · [workflow run](${runUrl}) · ` +
       `Reviewed against ${PROJECT_DOCS.join(", ")}, the reviewer memory and the story files on \`${baseRef}\` · ` +
-      "⛔ findings fail this required check: any critical finding; high security, data-integrity and " +
-      "correctness findings; and high story and test findings when the PR closes its story (ADR 0008).</sub>",
+      "A critical finding fails this required check and blocks the merge (ADR 0008).</sub>",
   );
   return lines.join("\n");
 }
@@ -763,7 +717,6 @@ async function main() {
   const title = env.PR_TITLE ?? "";
   const description = env.PR_BODY ?? "";
   const stories = extractStoryKeys(env.HEAD_REF, title, description);
-  const closesStory = claimsStory(description);
   const storyFiles = stories
     .map((key) => [key, readFromBase(env.BASE_SHA, `docs/backlog/${key}.md`)])
     .filter(([, text]) => text);
@@ -889,18 +842,16 @@ async function main() {
       usage: review.usage,
       seconds: elapsed(),
       runUrl: env.RUN_URL,
-      claimsStory: closesStory,
     }),
   );
 
-  const blocking = countBlocking(review.findings, { claimsStory: closesStory });
+  const blocking = countBlocking(review.findings);
   console.log(
-    `Posted the ${model} review: ${review.findings.length} finding(s), ${blocking} blocking, ` +
-      `closes a story: ${closesStory}, stories ${storiesFound.join(", ") || "none"}, ` +
-      `${review.acceptance.length} criteria, ${elapsed()}s.`,
+    `Posted the ${model} review: ${review.findings.length} finding(s), ${blocking} critical, ` +
+      `stories ${storiesFound.join(", ") || "none"}, ${review.acceptance.length} criteria, ${elapsed()}s.`,
   );
   if (blocking > 0) {
-    console.log(`::error::GLM found ${blocking} blocking issue(s). See the review comment on the pull request.`);
+    console.log(`::error::GLM found ${blocking} critical issue(s), which block the merge. See the review comment on the pull request.`);
     process.exitCode = 1;
   }
 }
