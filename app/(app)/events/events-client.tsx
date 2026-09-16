@@ -104,6 +104,68 @@ export function EventsClient({
   const draftCount = events.filter((evt) => evt.status === "DRAFT").length;
   const submittedCount = events.filter((evt) => evt.status !== "DRAFT").length;
 
+  // Row/card actions, shared by the desktop table and the mobile card list so
+  // the two presentations can never drift out of sync.
+  const renderActions = (event: Event) => {
+    const isDraft = event.status === "DRAFT";
+    const isRejected = event.status === "REJECTED";
+    return (
+      <div className="flex flex-wrap items-center justify-end gap-1.5">
+        {(isDraft || (!isCoordinator && isRejected)) && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 gap-1.5 text-xs font-medium"
+            onClick={() => setEditingDraft(event)}
+            data-testid={
+              isDraft ? "resume-draft-button" : "amend-rejected-button"
+            }
+          >
+            <Pencil className="h-3.5 w-3.5" />
+            {isDraft ? "Resume Draft" : "Amend & Resubmit"}
+          </Button>
+        )}
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-8 gap-1.5 text-xs"
+          onClick={() => setViewingEvent(event)}
+          data-testid="view-details-button"
+        >
+          <Eye className="h-3.5 w-3.5" />
+          View Details
+        </Button>
+        {/* SCRUM-19: decide a submitted or under-review request. There is no
+            manual "claim" — SCRUM-20 assigns automatically. */}
+        {isCoordinator &&
+          (event.status === "SUBMITTED" || event.status === "UNDER_REVIEW") && (
+            <>
+              <Button
+                size="sm"
+                className="h-8 gap-1.5 text-xs"
+                disabled={isPending}
+                onClick={() => changeStatus(event, "APPROVED")}
+              >
+                <CheckCircle2 className="h-3.5 w-3.5" /> Approve
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                className="h-8 gap-1.5 text-xs"
+                disabled={isPending}
+                onClick={() => {
+                  setRejectingEvent(event);
+                  setRejectionReason("");
+                }}
+              >
+                <XCircle className="h-3.5 w-3.5" /> Reject
+              </Button>
+            </>
+          )}
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -204,132 +266,136 @@ export function EventsClient({
           </CardContent>
         </Card>
       ) : (
-        <Card>
-          <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Starts</TableHead>
-                  <TableHead>Created</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredEvents.map((event) => {
-                  const isDraft = event.status === "DRAFT";
-                  const isRejected = event.status === "REJECTED";
-                  return (
-                    <TableRow
-                      key={event.id}
-                      data-status={event.status}
-                      data-testid={
-                        isDraft ? "draft-event-row" : "submitted-event-row"
-                      }
-                      className={cn(
-                        "transition-colors",
-                        isDraft
-                          ? "border-l-4 border-l-muted-foreground/50 bg-muted/40"
-                          : "border-l-4 border-l-transparent",
-                      )}
-                    >
-                      <TableCell className="font-medium">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => setViewingEvent(event)}
-                            className="cursor-pointer text-left font-medium text-foreground hover:underline focus:outline-none"
-                            data-testid="event-name-link"
-                          >
-                            {event.name}
-                          </button>
-                          {/* User Story 16: Draft requests are visually marked with a clear Draft label tag */}
-                          {isDraft && (
-                            <span
-                              className="inline-flex items-center gap-1 rounded border border-border bg-muted px-2 py-0.5 text-[11px] font-semibold text-muted-foreground"
-                              data-testid="draft-label"
+        <>
+          {/* Mobile: a stacked card per event. The table below is hidden on
+              small screens, where five columns cannot fit without a horizontal
+              scroll — here every field stays visible. */}
+          <div className="space-y-3 md:hidden">
+            {filteredEvents.map((event) => {
+              const isDraft = event.status === "DRAFT";
+              return (
+                <Card
+                  key={event.id}
+                  data-status={event.status}
+                  className={cn(
+                    isDraft &&
+                      "border-l-4 border-l-muted-foreground/50 bg-muted/40",
+                  )}
+                >
+                  <CardContent className="space-y-3 p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setViewingEvent(event)}
+                        className="text-left font-medium text-foreground hover:underline focus:outline-none"
+                      >
+                        {event.name}
+                      </button>
+                      <StatusBadge status={event.status} />
+                    </div>
+                    {isDraft && (
+                      <span className="inline-flex w-fit items-center gap-1 rounded border border-border bg-muted px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">
+                        <FileEdit className="h-3 w-3" />
+                        Draft — Incomplete
+                      </span>
+                    )}
+                    <dl className="grid grid-cols-2 gap-3 text-sm">
+                      <div className="space-y-0.5">
+                        <dt className="text-xs text-muted-foreground">
+                          Starts
+                        </dt>
+                        <dd className="text-muted-foreground">
+                          {event.startAt ? formatDateTime(event.startAt) : "—"}
+                        </dd>
+                      </div>
+                      <div className="space-y-0.5">
+                        <dt className="text-xs text-muted-foreground">
+                          Created
+                        </dt>
+                        <dd className="text-muted-foreground">
+                          {formatDate(event.createdAt)}
+                        </dd>
+                      </div>
+                    </dl>
+                    {renderActions(event)}
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+
+          {/* Tablet and up: the full table. */}
+          <Card className="hidden md:block">
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Starts</TableHead>
+                    <TableHead>Created</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredEvents.map((event) => {
+                    const isDraft = event.status === "DRAFT";
+                    return (
+                      <TableRow
+                        key={event.id}
+                        data-status={event.status}
+                        data-testid={
+                          isDraft ? "draft-event-row" : "submitted-event-row"
+                        }
+                        className={cn(
+                          "transition-colors",
+                          isDraft
+                            ? "border-l-4 border-l-muted-foreground/50 bg-muted/40"
+                            : "border-l-4 border-l-transparent",
+                        )}
+                      >
+                        <TableCell className="font-medium">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setViewingEvent(event)}
+                              className="cursor-pointer text-left font-medium text-foreground hover:underline focus:outline-none"
+                              data-testid="event-name-link"
                             >
-                              <FileEdit className="h-3 w-3" />
-                              Draft — Incomplete
-                            </span>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <StatusBadge status={event.status} />
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {event.startAt ? formatDateTime(event.startAt) : "—"}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {formatDate(event.createdAt)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1.5">
-                          {(isDraft || (!isCoordinator && isRejected)) && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-8 gap-1.5 text-xs font-medium"
-                              onClick={() => setEditingDraft(event)}
-                              data-testid={
-                                isDraft
-                                  ? "resume-draft-button"
-                                  : "amend-rejected-button"
-                              }
-                            >
-                              <Pencil className="h-3.5 w-3.5" />
-                              {isDraft ? "Resume Draft" : "Amend & Resubmit"}
-                            </Button>
-                          )}
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 gap-1.5 text-xs"
-                            onClick={() => setViewingEvent(event)}
-                            data-testid="view-details-button"
-                          >
-                            <Eye className="h-3.5 w-3.5" />
-                            View Details
-                          </Button>
-                          {/* SCRUM-19: decide a submitted or under-review request.
-                              There is no manual "claim" — SCRUM-20 assigns automatically. */}
-                          {isCoordinator &&
-                            (event.status === "SUBMITTED" ||
-                              event.status === "UNDER_REVIEW") && (
-                            <>
-                              <Button
-                                size="sm"
-                                className="h-8 gap-1.5 text-xs"
-                                disabled={isPending}
-                                onClick={() => changeStatus(event, "APPROVED")}
+                              {event.name}
+                            </button>
+                            {/* User Story 16: Draft requests are visually marked with a clear Draft label tag */}
+                            {isDraft && (
+                              <span
+                                className="inline-flex items-center gap-1 rounded border border-border bg-muted px-2 py-0.5 text-[11px] font-semibold text-muted-foreground"
+                                data-testid="draft-label"
                               >
-                                <CheckCircle2 className="h-3.5 w-3.5" /> Approve
-                              </Button>
-                              <Button
-                                variant="destructive"
-                                size="sm"
-                                className="h-8 gap-1.5 text-xs"
-                                disabled={isPending}
-                                onClick={() => {
-                                  setRejectingEvent(event);
-                                  setRejectionReason("");
-                                }}
-                              >
-                                <XCircle className="h-3.5 w-3.5" /> Reject
-                              </Button>
-                            </>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+                                <FileEdit className="h-3 w-3" />
+                                Draft — Incomplete
+                              </span>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <StatusBadge status={event.status} />
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {event.startAt ? formatDateTime(event.startAt) : "—"}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {formatDate(event.createdAt)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {renderActions(event)}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </>
       )}
 
       {/* Controlled Dialog Instance for Creating New Event */}

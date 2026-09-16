@@ -320,11 +320,19 @@ test.describe("User Story 84 — Organiser Views Their Own Event Requests Journe
     await page.waitForURL("**/events");
     await expect(page.getByRole("heading", { name: "My Events" })).toBeVisible();
 
-    // 2. Organiser 2 sees their own seeded event (evt_other_organiser: "Another Client's Event — Product Launch")
-    await expect(page.getByText("Another Client's Event — Product Launch")).toBeVisible();
+    // 2. Organiser 2 sees their own seeded event (evt_other_organiser: "Another Client's Event — Product Launch").
+    //    Scoped to the table cell so it matches the one row, not also the
+    //    responsive mobile card that carries the same name off-screen.
+    await expect(
+      page.getByRole("cell", {
+        name: "Another Client's Event — Product Launch",
+      }),
+    ).toBeVisible();
 
     // 3. Organiser 2 does NOT see events belonging to organiser@test.local (e.g. "Draft — Annual Tech Summit")
-    await expect(page.getByText("Draft — Annual Tech Summit")).not.toBeVisible();
+    await expect(
+      page.getByRole("cell", { name: "Draft — Annual Tech Summit" }),
+    ).not.toBeVisible();
   });
 });
 

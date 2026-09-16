@@ -3,15 +3,23 @@ import { LoginForm } from "@/components/auth/login-form";
 
 export default function LoginPage() {
   return (
-    <main className="grid min-h-screen lg:grid-cols-2">
-      {/* Left: the animated sphere. Hidden on small screens where it would
-          crowd the form. */}
+    <main className="relative grid min-h-screen lg:grid-cols-2">
+      {/* Small screens: the sphere sits behind the form as a soft, dimmed
+          backdrop (the two-column split only kicks in at lg). */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 opacity-60 lg:hidden"
+      >
+        <AnimatedSphere />
+      </div>
+
+      {/* Left: the animated sphere as a full column on large screens. */}
       <div className="relative hidden lg:block">
         <AnimatedSphere />
       </div>
 
-      {/* Right: the sign-in card. */}
-      <div className="relative flex items-center justify-center p-6 sm:p-10">
+      {/* Right: the sign-in card. Raised above the mobile backdrop. */}
+      <div className="relative z-10 flex items-center justify-center p-6 sm:p-10">
         <div className="w-full max-w-sm">
           <div className="mb-8 space-y-2">
             <h1 className="text-2xl font-semibold tracking-tight">
