@@ -14,6 +14,7 @@ import {
   renderConversation,
   renderReview,
   renderTestInventory,
+  renderTooLargeReview,
 } from "../../.github/scripts/ai-review.mjs";
 
 // SCRUM-88 — the GLM reviewer's pure logic. Line numbers must match git's
@@ -441,6 +442,26 @@ describe("buildSystemPrompt", () => {
 
     expect(prompt).not.toContain("Reviewer memory");
     expect(prompt.endsWith("claude")).toBe(true);
+  });
+});
+
+describe("renderTooLargeReview", () => {
+  it("says the diff wasn't reviewed, by how much it's over, and what to do", () => {
+    const body = renderTooLargeReview({
+      model: "glm-5.3",
+      sha: "abc1234def5678",
+      size: 412_345,
+      max: 400_000,
+      runUrl: "https://run",
+    });
+
+    expect(body.startsWith("<!-- glm-review -->")).toBe(true);
+    expect(body).toContain(
+      "❌ **Too large to review** for commit `abc1234`: the reviewable diff is 412,345 characters, over the 400,000-character limit",
+    );
+    expect(body).toContain("so this check failed");
+    expect(body).toContain("Split the pull request");
+    expect(body).toContain("no GLM call made · [workflow run](https://run)");
   });
 });
 

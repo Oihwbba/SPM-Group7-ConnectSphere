@@ -295,6 +295,27 @@ the `deepmerge-ts` override (#32), and counting `it.todo` placeholders as tests.
   conversation.
 - **No `/glm remember` command yet.** Automatic lesson capture waits until
   repeated false positives show it's needed.
+
+## Addendum (2026-09-16, oversized diffs fail instead of being cut)
+
+A diff over 120,000 characters used to be cut, with a note, and the review of
+the first part could still pass the required check. Three of the team's
+feature pull requests had diffs over that limit: the foundation commit
+(162,083 characters), #10 (138,815) and #11 (126,005).
+
+**Decision.**
+
+- **The limit is 400,000 characters** of reviewable diff, about 100K tokens.
+  GLM-5.3 accepts 1M input tokens, so the limit keeps a review thorough and
+  within the time budget; it isn't a model limit. It's about 2.5x the largest
+  diff so far.
+- **A diff over the limit fails the check without calling GLM.** The comment
+  gives the size and asks for the pull request to be split. The alternative,
+  an admin merge after a human review, stays available. A partial review can
+  no longer pass.
+
+**Trade-off.** A genuinely large change must be split, or merged by the owner
+after a human review.
 - **Every edit re-runs the review.** A skipped job counts as a passing required
   check and replaces an earlier red result on the same commit, so edits are no
   longer skipped. Drafts still are, and a draft can't be merged.

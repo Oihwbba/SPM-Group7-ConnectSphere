@@ -34,7 +34,12 @@ const MIN_RETRY_MS = 8 * 60 * 1000;
 // high and 19 at low — which is why reviews ran for 10-15 minutes. Reviews use
 // "high"; the retry uses "low", so it finishes.
 const EFFORTS = ["high", "low"];
-const MAX_DIFF_CHARS = 120_000;
+// GLM-5.3 accepts 1M input tokens, so this isn't a model limit: it keeps one
+// review to roughly 100K tokens of diff, about 2.5x the largest diff so far,
+// so the review stays thorough and inside the time budget. A bigger diff fails
+// the check instead of being cut, because a required check must not pass on a
+// review of part of the pull request.
+const MAX_DIFF_CHARS = 400_000;
 const MAX_FINDINGS = 10;
 const MAX_STORIES = 6;
 const MAX_DOC_CHARS = 20_000;
@@ -483,6 +488,23 @@ async function upsertReviewComment(github, repo, prNumber, body) {
     : github("POST", `/repos/${repo}/issues/${prNumber}/comments`, { body });
 }
 
+/** The comment for a diff too large to review in one call; the check then fails. */
+export function renderTooLargeReview({ model, sha, size, max, runUrl }) {
+  return [
+    MARKER,
+    `## 🤖 ${model} code review`,
+    "",
+    `❌ **Too large to review** for commit \`${sha.slice(0, 7)}\`: the reviewable diff is ` +
+      `${formatCount(size)} characters, over the ${formatCount(max)}-character limit for one review. ` +
+      "A required check can't pass on a review of part of the diff, so this check failed.",
+    "",
+    "Split the pull request into smaller ones, for example one per story or step, " +
+      "or ask Jin Hong to merge it as admin after a human review.",
+    "",
+    `<sub>${model} · no GLM call made · [workflow run](${runUrl})</sub>`,
+  ].join("\n");
+}
+
 /** Quotes every line, so text written on a PR can't pose as a prompt section heading. */
 function quoted(text) {
   return text
@@ -649,11 +671,27 @@ async function main() {
   }
 
   const { annotated, commentable } = parseDiff(diff);
-  let prompt = annotated;
-  if (prompt.length > MAX_DIFF_CHARS) {
-    prompt = prompt.slice(0, MAX_DIFF_CHARS);
-    notes.push(`The diff is over ${formatCount(MAX_DIFF_CHARS)} characters, so only its first part was reviewed.`);
+  if (annotated.length > MAX_DIFF_CHARS) {
+    await upsertReviewComment(
+      github,
+      repo,
+      env.PR_NUMBER,
+      renderTooLargeReview({
+        model,
+        sha: env.HEAD_SHA,
+        size: annotated.length,
+        max: MAX_DIFF_CHARS,
+        runUrl: env.RUN_URL,
+      }),
+    );
+    console.log(
+      `::error::The diff is ${formatCount(annotated.length)} characters, over the ` +
+        `${formatCount(MAX_DIFF_CHARS)}-character limit for one review, so it was not reviewed.`,
+    );
+    process.exitCode = 1;
+    return;
   }
+  const prompt = annotated;
 
   // Files skipped on purpose (docs, lockfiles) still exist in the PR. Say so, or
   // GLM reports them as missing — it did exactly that on its first run.
