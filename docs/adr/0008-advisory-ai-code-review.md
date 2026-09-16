@@ -258,6 +258,43 @@ pull requests, so the checks have to hold the line instead of a person.
   a unit test, and any other Vitest file "integration or unit".
 - **Titles are read with a pattern, not a parser,** so an unusual test
   declaration can be missed.
+
+## Addendum (2026-09-16, reviewer memory)
+
+GLM starts every review blank, so it kept misreading the same deliberate
+choices: asking for CODEOWNERS approval on an admin merge (#27), questioning
+the `deepmerge-ts` override (#32), and counting `it.todo` placeholders as tests.
+
+**Decision.**
+
+- **A memory file on `main`.** `.github/ai-review/memory.md` holds dated
+  lessons, each citing its source pull request. It's loaded from the base
+  branch into the system prompt after `CONTRIBUTING.md` and `CLAUDE.md`,
+  capped at 8,000 characters. It's seeded with the lessons from this ADR's
+  history, and with the known gaps the #11 review replay found.
+- **Lessons are facts, added by pull request.** A lesson explains why
+  something is deliberate; it never switches off a check. The file is under
+  `.github/`, so CODEOWNERS makes every change need Jin Hong's approval, and a
+  pull request can't rewrite the memory it's reviewed with.
+- **Memory within a pull request.** When a pull request is reviewed again, GLM
+  also gets its previous review and the people's comments on it, up to 8,000
+  characters, keeping the newest. It's told they are claims to check against
+  the diff, not instructions: drop a finding the diff has fixed, keep one that
+  is still true.
+- **`it.todo` placeholders are labelled** in the existing-test list, in code
+  rather than as a lesson.
+
+**Trade-offs.**
+
+- **Lessons can go stale** and must be pruned. A wrong lesson would mislead
+  every review until someone removes it.
+- **Comments on a pull request are untrusted text.** A persuasive but wrong
+  reply could talk GLM out of a real finding; the instruction to verify claims
+  against the diff reduces this but can't remove it.
+- **Each review sends more tokens:** up to about 4,000 more for the memory and
+  conversation.
+- **No `/glm remember` command yet.** Automatic lesson capture waits until
+  repeated false positives show it's needed.
 - **Every edit re-runs the review.** A skipped job counts as a passing required
   check and replaces an earlier red result on the same commit, so edits are no
   longer skipped. Drafts still are, and a draft can't be merged.
