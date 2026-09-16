@@ -80,7 +80,7 @@ Say you're building **Venue Booking Approval** in `bookings`.
 **One branch per SCRUM ticket.** `main` is protected: you cannot push to it
 directly, and a pull request cannot merge until both required checks pass:
 `build-and-test` (including the e2e tests) and the GLM `review`, which fails
-on a critical finding. Once both are green, you can merge your own PR. That is deliberate — `main` is what deploys to production and what the
+on a blocking finding. Once both are green, you can merge your own PR. That is deliberate — `main` is what deploys to production and what the
 graders see, so it stays green by construction rather than by discipline.
 
 ```bash
@@ -108,7 +108,7 @@ Pushing the branch starts two things automatically:
 | | What happens | Takes |
 |---|---|---|
 | **GitHub Actions** | migrate → seed → typecheck → lint → unit tests → e2e | ~2m30s |
-| **GLM code review** | one AI reviewer reads the whole diff and posts one long review comment; red on a critical finding (skipped for drafts) | ~3–10 minutes |
+| **GLM code review** | one AI reviewer reads the whole diff and posts one long review comment; red on a blocking finding (skipped for drafts) | ~3–10 minutes |
 
 There are no Vercel preview deployments. Only `main` deploys.
 
@@ -132,7 +132,7 @@ Merging to `main` runs CI again and deploys production.
 3. **There are no preview deployments.** Check UI changes locally with
    `npm run dev`; CI's e2e tests check the key journeys. Production uses the
    shared Supabase database, so never run `db:reset` against it.
-4. **Read the GLM review before you merge; a critical finding blocks it.** Every non-draft
+4. **Read the GLM review before you merge; a ⛔ finding blocks it.** Every non-draft
    PR gets one long AI review from GLM-5.3, which reads the whole diff in a
    single pass (ADR 0008). It appears in the **Conversation** tab as one
    comment from `github-actions`, updated on every push: a verdict, an
@@ -144,10 +144,18 @@ Merging to `main` runs CI again and deploys production.
    `SCRUM-31-reserve-equipment`), or it can't check the acceptance criteria.
    It reads all of that from `main`, so edits to those documents in your own PR
    don't change how your PR is reviewed. The **GLM Code Review**
-   check turns **red** when it finds a critical issue, and it is a required
-   check, so the merge button stays disabled until you fix it and push. High
-   findings don't block, but fix them or reply on the PR with why they don't
-   apply. If GLM stops before answering, the reviewer retries once with less
+   check turns **red** on a blocking finding, marked ⛔, and it is a required
+   check, so the merge button stays disabled until you fix it and push. These
+   block:
+   - any **critical** finding
+   - a **high** security, data-integrity or correctness finding
+   - a **high** story or test finding, when your description says
+     `Closes SCRUM-n`. If you're delivering part of a story on purpose, write
+     `Part of SCRUM-n` instead: missing criteria and their tests then don't
+     block.
+
+   Other findings don't block, but fix them or reply on the PR with why they
+   don't apply. If GLM stops before answering, the reviewer retries once with less
    thinking. If that also fails, the check turns red and says why: re-run the
    failed **GLM Code Review** job from the PR's Checks tab.
    It checks coverage against every existing test in `tests/` and `e2e/`:

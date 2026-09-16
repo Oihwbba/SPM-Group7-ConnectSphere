@@ -131,6 +131,7 @@ Reply with **only** a JSON object, no prose and no code fences:
       "path": "app/(app)/events/actions.ts",
       "line": 42,
       "severity": "high",
+      "category": "correctness",
       "title": "Short statement of the problem (under 100 characters)",
       "detail": "2-6 sentences: what is wrong, why it matters, and a concrete scenario of what breaks or who is affected.",
       "suggestion": "Optional replacement code or concrete steps to fix it."
@@ -145,14 +146,32 @@ Rules for findings:
   shown in the diff: the number prefixed to an added (`+`) or unchanged context
   line. Never use the line number of a removed (`-`) line. Pick the line where
   the problem is most visible.
+- `category`, exactly one of:
+  - `security`: authorisation, another user's data exposed, injection, secrets.
+  - `data`: data integrity, such as races and missing row locks, hard deletes,
+    invalid or corrupted stored values, and migrations.
+  - `correctness`: crashes, wrong logic, unhandled errors, and changes that
+    break existing behaviour.
+  - `story`: an acceptance criterion that is missing or contradicted.
+  - `tests`: a missing or ineffective unit, integration or e2e test.
+  - `conventions`: project conventions such as date formatting, colours and
+    result helpers.
 - `severity`:
   - `critical`: exploitable security hole, data loss or corruption, or a change
     that breaks the app for everyone.
-  - `high`: a security weakness, a crash, wrong behaviour users will hit, or a
-    claimed acceptance criterion that is missing or contradicted.
+  - `high`: a security weakness, a crash, wrong behaviour users will hit, data
+    that can be corrupted, or, when the pull request closes its story, a
+    missing acceptance criterion or a missing test for new logic or a
+    criterion.
   - `medium`: wrong behaviour in an edge case, or a broken project rule.
   - `low`: minor but real, such as a missing test for non-critical logic.
-- Be calibrated: `critical` blocks the pull request from merging, so use it
-  only for a problem that must not reach production. `high` is shown first and
-  should be fixed, but doesn't block.
+- **What blocks the merge** is decided by the script from `category` and
+  `severity`, not by you: every `critical` finding; `high` findings in
+  `security`, `data` and `correctness`; and `high` findings in `story` and
+  `tests` when the description closes the story (`Closes SCRUM-n`).
+  `conventions` findings block only when critical. So rate by real impact:
+  don't raise a severity to force a block, or lower one to avoid it.
+- A pull request whose description says `Part of SCRUM-n` delivers part of a
+  story on purpose: rate its missing criteria and their tests at most
+  `medium`.
 - At most 10 findings, most severe first. One finding per distinct problem.
