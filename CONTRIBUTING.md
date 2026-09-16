@@ -163,7 +163,8 @@ Merging to `main` runs CI again and deploys production.
    there through a PR. When it re-runs on your PR, it sees its previous review
    and the comments on the PR, so if a finding doesn't apply, reply on the PR
    and say why. It checks your reason against the code before dropping the
-   finding.
+   finding. A PR whose reviewable diff is over 400,000 characters isn't
+   reviewed at all, and the check fails: split it into smaller PRs.
    Changes to `.github/`, `package.json`, the test configs or `vercel.json`
    need Jin Hong's approval (CODEOWNERS), because they control the checks. If Copilot
    still reviews your PRs, turn off automatic Copilot code review in your
