@@ -127,7 +127,7 @@ export function EventsClient({
 
       {/* Filter Tabs for Organisers to toggle between All, Drafts, and Submitted Requests */}
       {!isCoordinator && events.length > 0 && (
-        <div className="flex items-center gap-2 border-b pb-3">
+        <div className="flex flex-wrap items-center gap-2 border-b pb-3">
           <Filter className="mr-1 h-4 w-4 text-muted-foreground" />
           <Button
             variant={activeTab === "ALL" ? "secondary" : "ghost"}
