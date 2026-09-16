@@ -10,6 +10,7 @@ import {
   locationFor,
   parseDiff,
   parseReview,
+  renderConversation,
   renderReview,
   renderTestInventory,
 } from "../../.github/scripts/ai-review.mjs";
@@ -342,6 +343,63 @@ describe("describeTestFile and renderTestInventory", () => {
   });
 });
 
+describe("it.todo placeholders in the test list", () => {
+  it("marks it.todo titles so a placeholder isn't read as coverage", () => {
+    const source = 'describe("race", () => {\n  it.todo("last place goes to one of two (SCRUM-74)");\n  it("real", () => {});\n});';
+
+    const file = describeTestFile("tests/integration/concurrency.test.ts", source);
+
+    expect(file.titles).toEqual([
+      { group: true, title: "race" },
+      { group: false, title: "last place goes to one of two (SCRUM-74)", todo: true },
+      { group: false, title: "real" },
+    ]);
+    expect(renderTestInventory([file])).toContain("  - last place goes to one of two (SCRUM-74) (todo: not written yet)");
+  });
+});
+
+describe("renderConversation", () => {
+  const review = {
+    user: { login: "github-actions[bot]" },
+    created_at: "2026-09-16T01:00:00Z",
+    body: "<!-- glm-review -->\n## 🤖 glm-5.3 code review\n\n| 1 | 🟠 Medium | Missing loading state |",
+  };
+  const person = (login: string, day: string, body: string) => ({
+    user: { login },
+    created_at: `2026-09-${day}T02:00:00Z`,
+    body,
+  });
+
+  it("returns nothing on a first review, and ignores other bots", () => {
+    expect(renderConversation([])).toBe("");
+    expect(renderConversation([person("vercel[bot]", "16", "Deployed")])).toBe("");
+  });
+
+  it("includes the previous review without its marker, then people's comments oldest first", () => {
+    const text = renderConversation([
+      person("felicia", "15", "loading.tsx is in the next PR"),
+      review,
+      person("vercel[bot]", "16", "Deployed"),
+      person("oihwbba", "16", "agreed"),
+    ]);
+
+    expect(text).toContain("### Your previous review\n\n## 🤖 glm-5.3 code review");
+    expect(text).not.toContain("<!-- glm-review -->");
+    expect(text).not.toContain("Deployed");
+    expect(text.indexOf("**@felicia** (2026-09-15)")).toBeLessThan(text.indexOf("**@oihwbba** (2026-09-16)"));
+  });
+
+  it("keeps the newest comments when the discussion is over budget, and says how many were left out", () => {
+    const comments = ["a", "b", "c"].map((name, i) => person(name, `1${i}`, name.repeat(300)));
+
+    const text = renderConversation(comments, 700);
+
+    expect(text).toContain("[1 older comment(s) left out]");
+    expect(text).not.toContain("**@a**");
+    expect(text).toContain("**@c**");
+  });
+});
+
 describe("fileLink, locationFor and fenceFor", () => {
   const commentable = new Map([["app/(app)/events/actions.ts", new Set([40, 41, 42])]]);
 
@@ -422,7 +480,7 @@ describe("renderReview", () => {
     expect(body).toContain("**Where:** [`src/a.ts`](https://github.com/o/r/blob/abc1234def5678/src/a.ts)");
     expect(body).toContain("**Where:** `lib/made-up.ts:3 (not in the diff)`");
     expect(body).toContain("12,345 tokens");
-    expect(body).toContain("Reviewed against CONTRIBUTING.md, CLAUDE.md and the story files on `main`");
+    expect(body).toContain("Reviewed against CONTRIBUTING.md, CLAUDE.md, the reviewer memory and the story files on `main`");
     expect(body).toContain("A critical finding fails this required check and blocks the merge (ADR 0008).");
   });
 

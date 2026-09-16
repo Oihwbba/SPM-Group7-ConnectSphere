@@ -158,6 +158,12 @@ Merging to `main` runs CI again and deploys production.
    acceptance table shows which tests cover each criterion. Only a
    `Closes SCRUM-n` or `Part of SCRUM-n` line in the description adds a story;
    other mentions of a key are ignored.
+   The reviewer also reads `.github/ai-review/memory.md`, lessons from past
+   reviews. If it keeps misreading something deliberate, add a dated lesson
+   there through a PR. When it re-runs on your PR, it sees its previous review
+   and the comments on the PR, so if a finding doesn't apply, reply on the PR
+   and say why. It checks your reason against the code before dropping the
+   finding.
    Changes to `.github/`, `package.json`, the test configs or `vercel.json`
    need Jin Hong's approval (CODEOWNERS), because they control the checks. If Copilot
    still reviews your PRs, turn off automatic Copilot code review in your
