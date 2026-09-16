@@ -483,10 +483,20 @@ async function upsertReviewComment(github, repo, prNumber, body) {
     : github("POST", `/repos/${repo}/issues/${prNumber}/comments`, { body });
 }
 
+/** Quotes every line, so text written on a PR can't pose as a prompt section heading. */
+function quoted(text) {
+  return text
+    .split("\n")
+    .map((line) => `> ${line}`)
+    .join("\n");
+}
+
 /**
  * The PR's previous review and the people's comments on it, for a re-run. Half
  * the budget goes to the review; the discussion keeps its newest comments.
- * Returns "" on a PR's first review. Comments from other bots are left out.
+ * Every line is quoted, so a comment containing "## Diff" can't forge a
+ * section of the prompt. Returns "" on a PR's first review. Comments from
+ * other bots are left out.
  */
 export function renderConversation(comments, max = MAX_CONVERSATION_CHARS) {
   const review = comments.find(isReviewComment);
@@ -495,14 +505,15 @@ export function renderConversation(comments, max = MAX_CONVERSATION_CHARS) {
 
   const parts = [];
   if (review) {
-    parts.push(`### Your previous review\n\n${capped(review.body.replace(MARKER, "").trim(), Math.floor(max / 2))}`);
+    parts.push(`### Your previous review\n\n${quoted(capped(review.body.replace(MARKER, "").trim(), Math.floor(max / 2)))}`);
   }
   if (discussion.length) {
     const budget = max - parts.join("").length;
     const kept = [];
     let size = 0;
     for (const comment of [...discussion].reverse()) {
-      const entry = `**@${comment.user.login}** (${String(comment.created_at ?? "").slice(0, 10)}):\n${comment.body.trim()}`;
+      const author = comment.user?.login ?? "unknown";
+      const entry = `**@${author}** (${String(comment.created_at ?? "").slice(0, 10)}):\n${quoted(comment.body.trim())}`;
       if (kept.length > 0 && size + entry.length > budget) break;
       kept.unshift(entry);
       size += entry.length + 2;
@@ -517,6 +528,20 @@ export function renderConversation(comments, max = MAX_CONVERSATION_CHARS) {
     );
   }
   return parts.join("\n\n");
+}
+
+/**
+ * The system prompt: the reviewer's instructions, the project documents, then
+ * the reviewer memory, capped, when the base branch has one.
+ */
+export function buildSystemPrompt({ instructions, baseRef, docs, memory }) {
+  return [
+    instructions,
+    "---",
+    `# Project documents (from the ${baseRef} branch)`,
+    ...docs.map(([path, text]) => `## ${path}\n\n${capped(text, MAX_DOC_CHARS)}`),
+    ...(memory ? [`# Reviewer memory (${MEMORY_PATH} on ${baseRef})`, capped(memory, MAX_MEMORY_CHARS)] : []),
+  ].join("\n\n");
 }
 
 /** A file's content at a commit (usually the base), or null when it doesn't exist there. */
@@ -643,14 +668,12 @@ async function main() {
   const instructions = readFromBase(env.BASE_SHA, ".github/ai-review/instructions.md");
   if (!instructions) throw new Error(`.github/ai-review/instructions.md is missing on ${baseRef}.`);
   const docs = PROJECT_DOCS.map((path) => [path, readFromBase(env.BASE_SHA, path)]).filter(([, text]) => text);
-  const memory = readFromBase(env.BASE_SHA, MEMORY_PATH);
-  const system = [
+  const system = buildSystemPrompt({
     instructions,
-    "---",
-    `# Project documents (from the ${baseRef} branch)`,
-    ...docs.map(([path, text]) => `## ${path}\n\n${capped(text, MAX_DOC_CHARS)}`),
-    ...(memory ? [`# Reviewer memory (${MEMORY_PATH} on ${baseRef})`, capped(memory, MAX_MEMORY_CHARS)] : []),
-  ].join("\n\n");
+    baseRef,
+    docs,
+    memory: readFromBase(env.BASE_SHA, MEMORY_PATH),
+  });
 
   // The user stories this PR says it implements.
   const title = env.PR_TITLE ?? "";
