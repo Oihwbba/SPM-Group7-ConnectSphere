@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { can } from "@/lib/auth/can";
+import { formatDateTime } from "@/lib/datetime";
 
 /**
  * Load one event by id, but only if the signed-in user is allowed to see it
@@ -40,4 +41,31 @@ export async function getEventForUser(id: string) {
   });
 
   return allowed ? event : null;
+}
+
+/**
+ * SCRUM-33 — the equipment reserved for an event, for its coordinator's
+ * dashboard. Uses getEventForUser, so an event the user can't see returns null.
+ */
+export async function listEventReservations(eventId: string) {
+  const event = await getEventForUser(eventId);
+  if (!event) return null;
+
+  const reservations = await prisma.reservation.findMany({
+    where: { eventId: event.id, status: "CONFIRMED" },
+    select: {
+      id: true,
+      quantity: true,
+      startAt: true,
+      endAt: true,
+      equipment: { select: { type: true } },
+    },
+    orderBy: { startAt: "asc" },
+  });
+
+  return {
+    reservations,
+    // Card heading on the event dashboard.
+    headline: `${reservations.length} item(s) reserved from ${formatDateTime(reservations[0].startAt)}`,
+  };
 }
