@@ -265,6 +265,8 @@ model Event {
   registrationNotes     String?
   programme             String?
   specialRequests       String?
+  equipmentTypes        String[] @default([])
+  registrationRequired  Boolean?
 
   organiserId   String
   coordinatorId String? // SCRUM-20: null until a coordinator is assigned
