@@ -8,6 +8,16 @@ import {
   extractStoryKeys,
   fenceFor,
   fileLink,
+  filesMentioningStories,
+  numberLines,
+  parseLcov,
+  renderCiResults,
+  renderContextFiles,
+  renderProjectRuleScan,
+  resolveImports,
+  scanProjectRules,
+  selectContextFiles,
+  summariseCoverage,
   locationFor,
   parseDiff,
   parseReview,
@@ -462,6 +472,158 @@ describe("renderTooLargeReview", () => {
     expect(body).toContain("so this check failed");
     expect(body).toContain("Split the pull request");
     expect(body).toContain("no GLM call made · [workflow run](https://run)");
+  });
+});
+
+describe("parseDiff added lines", () => {
+  it("records only the lines the PR added, not unchanged context", () => {
+    const diff = ["diff --git a/src/a.ts b/src/a.ts", "--- a/src/a.ts", "+++ b/src/a.ts", "@@ -1,3 +1,4 @@", " keep", "+new one", "-old", "+new two", " tail"].join("\n");
+
+    const { added, commentable } = parseDiff(diff);
+
+    expect([...added.get("src/a.ts")!]).toEqual([2, 3]);
+    expect([...commentable.get("src/a.ts")!]).toEqual([1, 2, 3, 4]);
+  });
+});
+
+describe("context beyond the diff", () => {
+  const file = (path: string, content: string) => ({ path, content });
+
+  it("numbers every line of a file", () => {
+    expect(numberLines("a\nb")).toBe("1\ta\n2\tb");
+  });
+
+  it("resolves @/ and relative imports to repo files, and ignores packages and missing files", () => {
+    const paths = new Set([
+      "components/ui/table.tsx",
+      "app/(app)/events/actions.ts",
+      "app/(app)/events/events-list.module.css",
+      "lib/auth/index.ts",
+    ]);
+    const source = [
+      'import { Table } from "@/components/ui/table";',
+      'import { createDraftEvent } from "./actions";',
+      'import styles from "./events-list.module.css";',
+      'import { can } from "../../../lib/auth";',
+      'import { useState } from "react";',
+      'import { gone } from "@/lib/missing";',
+      'const lazy = import("./actions");',
+    ].join("\n");
+
+    expect(resolveImports("app/(app)/events/events-client.tsx", source, paths).sort()).toEqual([
+      "app/(app)/events/actions.ts",
+      "app/(app)/events/events-list.module.css",
+      "components/ui/table.tsx",
+      "lib/auth/index.ts",
+    ]);
+  });
+
+  it("finds files naming a story key, without matching a longer number", () => {
+    const files = [
+      file("tests/unit/reservation.test.ts", 'describe("createReservation — SCRUM-31", () => {});'),
+      file("app/(app)/x.ts", "// SCRUM-310 is a different story"),
+      file("app/(app)/y.ts", "// scrum-31 in lower case"),
+    ];
+
+    expect(filesMentioningStories(files, ["SCRUM-31"])).toEqual(["tests/unit/reservation.test.ts", "app/(app)/y.ts"]);
+  });
+
+  it("sends changed files first, then imports, importers and story files, and lists what didn't fit", () => {
+    const files = [
+      file("app/(app)/events/events-client.tsx", 'import { Table } from "@/components/ui/table";\n// changed'),
+      file("components/ui/table.tsx", "export function Table() {}"),
+      file("app/(app)/events/page.tsx", 'import { EventsClient } from "./events-client";'),
+      file("tests/unit/events.test.ts", 'describe("User Story 84 — SCRUM-84", () => {});'),
+      file("tests/unit/ai-review.test.ts", "SCRUM-84 fixture text"),
+      file("lib/unrelated.ts", "export const x = 1;"),
+    ];
+
+    const { included, omitted } = selectContextFiles({
+      files,
+      changed: ["app/(app)/events/events-client.tsx", "README.md"],
+      storyKeys: ["SCRUM-84"],
+    });
+
+    expect(included.map((f) => [f.path, f.reason])).toEqual([
+      ["app/(app)/events/events-client.tsx", "changed in this PR"],
+      ["components/ui/table.tsx", "imported by a changed file"],
+      ["app/(app)/events/page.tsx", "imports a changed file"],
+      ["tests/unit/events.test.ts", "mentions SCRUM-84"],
+    ]);
+    expect(omitted).toEqual([]);
+
+    const small = selectContextFiles({
+      files,
+      changed: ["app/(app)/events/events-client.tsx"],
+      storyKeys: ["SCRUM-84"],
+      maxRelated: 30,
+    });
+    expect(small.included.map((f) => f.path)).toEqual(["app/(app)/events/events-client.tsx", "components/ui/table.tsx"]);
+    expect(small.omitted.map((f) => f.path)).toEqual(["app/(app)/events/page.tsx", "tests/unit/events.test.ts"]);
+    expect(renderContextFiles(small)).toContain(
+      "### Not included (over the size limit)\n\n- app/(app)/events/page.tsx (imports a changed file)",
+    );
+  });
+
+  it("scans the branch for role checks outside can(), hard deletes and inline dates", () => {
+    const results = scanProjectRules([
+      file("app/(app)/equipment/page.tsx", 'const ALLOWED_ROLES: Role[] = ["TECH_SUPPORT"];\nif (!ALLOWED_ROLES.includes(session.user.role)) {}'),
+      file("lib/auth/can.ts", 'if (user.role === "ORGANISER") {}'),
+      file("app/(app)/equipment/actions.ts", "await prisma.reservation.delete({ where });\nparams.delete(\"q\");"),
+      file("lib/datetime.ts", "return date.toLocaleString();"),
+      file("components/card.tsx", "{new Date().toLocaleDateString()}"),
+      file("tests/unit/x.test.ts", "await prisma.event.delete({});"),
+    ]);
+
+    expect(results.map((r) => r.lines)).toEqual([
+      [
+        'app/(app)/equipment/page.tsx:1: const ALLOWED_ROLES: Role[] = ["TECH_SUPPORT"];',
+        "app/(app)/equipment/page.tsx:2: if (!ALLOWED_ROLES.includes(session.user.role)) {}",
+      ],
+      ["app/(app)/equipment/actions.ts:1: await prisma.reservation.delete({ where });"],
+      ["components/card.tsx:1: {new Date().toLocaleDateString()}"],
+    ]);
+    expect(renderProjectRuleScan([{ rule: "Rule", lines: [] }])).toBe("### Rule\n\nNone found.");
+  });
+
+  it("reads lcov and reports which added lines ran, matching absolute report paths", () => {
+    const lcov = parseLcov(
+      [
+        "TN:",
+        "SF:/home/runner/work/repo/repo/app/(app)/equipment/actions.ts",
+        "DA:10,3",
+        "DA:11,0",
+        "DA:12,1",
+        "end_of_record",
+      ].join("\n"),
+    );
+    const added = new Map([
+      ["app/(app)/equipment/actions.ts", new Set([10, 11, 13])],
+      ["app/(app)/events/events-client.tsx", new Set([5])],
+    ]);
+
+    const coverage = summariseCoverage(lcov, added);
+
+    expect(coverage).toEqual([
+      { path: "app/(app)/equipment/actions.ts", measured: true, executable: 2, uncovered: [11] },
+      { path: "app/(app)/events/events-client.tsx", measured: false },
+    ]);
+    const text = renderCiResults({
+      url: "https://ci",
+      conclusion: "success",
+      steps: [
+        { name: "Lint", conclusion: "success" },
+        { name: "End-to-end tests", conclusion: "failure" },
+        { name: "Post job cleanup", conclusion: "skipped" },
+      ],
+      coverage,
+    });
+    expect(text).toContain("build-and-test: success (https://ci)");
+    expect(text).toContain("- End-to-end tests: failure");
+    expect(text).not.toContain("Post job cleanup");
+    expect(text).toContain("- app/(app)/equipment/actions.ts: 1 of 2 added executable lines ran; never run: lines 11");
+    expect(text).toContain("- app/(app)/events/events-client.tsx: not measured by the coverage configuration");
+    expect(renderCiResults(null)).toContain("Don't guess them.");
   });
 });
 
