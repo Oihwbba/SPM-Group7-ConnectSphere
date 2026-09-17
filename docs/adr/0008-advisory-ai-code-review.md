@@ -360,6 +360,17 @@ The instructions change with it:
 - **Some relevance isn't found:** code that relates to a story but neither
   imports the changed files nor names the story key isn't selected, unless the
   rule scan finds it.
+
+**Also: reviews use the GLM Coding Plan address (owner's decision).** The
+reviewer called the general `/api/paas/v4` address, which bills the
+pay-as-you-go balance. When that balance ran out, every review failed with
+BigModel error 1113 while the owner's Coding Plan quota sat unused. It now calls
+`/api/coding/paas/v4`. The owner chose this knowing the risk: BigModel limits
+the Coding Plan to its listed coding tools (Claude Code, Cline, OpenCode and
+others), and a custom GitHub Actions script isn't one of them. BigModel may
+refuse these calls or restrict the plan. If it does, every review fails and the
+required check blocks merges. The fallback is to switch back to `/api/paas/v4`
+with a topped-up balance.
 - **Every edit re-runs the review.** A skipped job counts as a passing required
   check and replaces an earlier red result on the same commit, so edits are no
   longer skipped. Drafts still are, and a draft can't be merged.

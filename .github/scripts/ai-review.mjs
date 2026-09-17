@@ -22,7 +22,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 
-const GLM_URL = "https://open.bigmodel.cn/api/paas/v4/chat/completions";
+// The GLM Coding Plan address, so reviews use the owner's Coding Plan quota
+// instead of the pay-as-you-go balance (/api/paas/v4). The owner's decision,
+// knowing BigModel limits the plan to its listed coding tools: see ADR 0008.
+const GLM_URL = "https://open.bigmodel.cn/api/coding/paas/v4/chat/completions";
 // GLM-5.3 always thinks before it answers, and the answer only starts once the
 // thinking ends: a replay of PR #22 thought for ~45-48K tokens (10+ minutes)
 // before writing a ~1K-token JSON answer. A run cut off while still thinking
