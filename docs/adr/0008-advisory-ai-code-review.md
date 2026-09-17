@@ -401,3 +401,19 @@ claimed criterion.
 **Trade-offs.** It's small: about 2,300 characters (~600 tokens) on #41, capped
 at 20,000. It's a text match, so an assertion rewritten without removing a line
 that looks like one isn't listed, but it still appears in the diff.
+
+The first version missed a locator narrowed on its own line inside an unchanged
+multi-line `expect(`, and counted `.toString()` as an assertion (#43's own
+review). A block now also counts when it removes a locator, or when the
+unchanged lines just before it are inside an `expect(` that hasn't ended; those
+lines are shown with it. Matchers are named in full, and skips come first so
+the cap cuts blocks, not skips.
+
+## Addendum (2026-09-17, failing test output)
+
+The review knew a CI step had failed but not why, so it guessed from the diff.
+When `build-and-test` fails, the script now downloads the failed job's log and
+extracts each failed step's output: from Vitest's "Failed Tests" report or
+Playwright's first numbered failure when present, otherwise the end of the
+output, where compilers and npm print errors. Each step is capped at 6,000
+characters and all of them at 12,000, and a passing run adds nothing.

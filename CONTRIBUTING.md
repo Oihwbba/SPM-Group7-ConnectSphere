@@ -172,7 +172,7 @@ Merging to `main` runs CI again and deploys production.
    - **A scan of the whole branch** for role checks outside `can()`, hard
      deletes and inline date formatting.
    - **CI's results for your commit,** including which lines you added that
-     no test ran. It waits for `build-and-test` first, so its comment arrives a
+     no test ran, and when CI fails, the failing tests and their errors. It waits for `build-and-test` first, so its comment arrives a
      few minutes after CI finishes.
    - **Every test or assertion you removed, changed or skipped,** next to what
      replaced it. It must explain each one, and a check you made weaker (a
