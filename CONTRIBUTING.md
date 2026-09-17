@@ -165,6 +165,15 @@ Merging to `main` runs CI again and deploys production.
    and say why. It checks your reason against the code before dropping the
    finding. A PR whose reviewable diff is over 400,000 characters isn't
    reviewed at all, and the check fails: split it into smaller PRs.
+   Besides your diff, the reviewer reads:
+   - **Your changed files in full**, plus the files they import, the files that
+     import them, and files that mention your SCRUM keys. **Write the key in
+     your code comments and test titles** so it finds them.
+   - **A scan of the whole branch** for role checks outside `can()`, hard
+     deletes and inline date formatting.
+   - **CI's results for your commit,** including which lines you added that
+     no test ran. It waits for `build-and-test` first, so its comment arrives a
+     few minutes after CI finishes.
    Changes to `.github/`, `package.json`, the test configs or `vercel.json`
    need Jin Hong's approval (CODEOWNERS), because they control the checks. If Copilot
    still reviews your PRs, turn off automatic Copilot code review in your

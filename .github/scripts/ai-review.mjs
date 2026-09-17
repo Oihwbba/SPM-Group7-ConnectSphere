@@ -17,9 +17,15 @@
 // retried once with less thinking first.
 
 import { execFileSync } from "node:child_process";
+import { writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 
-const GLM_URL = "https://open.bigmodel.cn/api/paas/v4/chat/completions";
+// The GLM Coding Plan address, so reviews use the owner's Coding Plan quota
+// instead of the pay-as-you-go balance (/api/paas/v4). The owner's decision,
+// knowing BigModel limits the plan to its listed coding tools: see ADR 0008.
+const GLM_URL = "https://open.bigmodel.cn/api/coding/paas/v4/chat/completions";
 // GLM-5.3 always thinks before it answers, and the answer only starts once the
 // thinking ends: a replay of PR #22 thought for ~45-48K tokens (10+ minutes)
 // before writing a ~1K-token JSON answer. A run cut off while still thinking
@@ -48,6 +54,15 @@ const MAX_BODY_CHARS = 4_000;
 const MAX_TEST_INVENTORY_CHARS = 15_000;
 const MAX_MEMORY_CHARS = 8_000;
 const MAX_CONVERSATION_CHARS = 8_000;
+// Beyond the diff (ADR 0008): the changed files in full get their own budget;
+// the related files (imports, importers, story files) share a second one.
+const MAX_CHANGED_FILES_CHARS = 250_000;
+const MAX_RELATED_FILES_CHARS = 150_000;
+const MAX_FILE_CHARS = 60_000;
+// How long the review waits for CI's build-and-test on the same commit.
+const CI_WORKFLOW_NAME = "CI";
+const CI_WAIT_MS = 15 * 60 * 1000;
+const CI_POLL_MS = 20 * 1000;
 // Lessons from past reviews, approved by the team through pull requests.
 const MEMORY_PATH = ".github/ai-review/memory.md";
 const MARKER = "<!-- glm-review -->";
@@ -88,6 +103,8 @@ const BLOCKING = new Set(["critical"]);
  */
 export function parseDiff(diff) {
   const commentable = new Map();
+  // Only the lines this PR added, for coverage of its changes.
+  const added = new Map();
   const annotated = [];
   let path = null;
   let inHunk = false;
@@ -105,7 +122,10 @@ export function parseDiff(diff) {
     if (!inHunk && raw.startsWith("+++ ")) {
       const target = raw.slice(4).trim();
       path = target === "/dev/null" ? null : target.replace(/^b\//, "");
-      if (path && !commentable.has(path)) commentable.set(path, new Set());
+      if (path && !commentable.has(path)) {
+        commentable.set(path, new Set());
+        added.set(path, new Set());
+      }
       annotated.push(raw);
       continue;
     }
@@ -122,6 +142,7 @@ export function parseDiff(diff) {
     }
     if (raw.startsWith("+") || raw.startsWith(" ")) {
       commentable.get(path).add(newLine);
+      if (raw.startsWith("+")) added.get(path).add(newLine);
       annotated.push(`${newLine}\t${raw}`);
       newLine += 1;
     } else if (raw.startsWith("-")) {
@@ -131,7 +152,7 @@ export function parseDiff(diff) {
     }
   }
 
-  return { annotated: annotated.join("\n"), commentable };
+  return { annotated: annotated.join("\n"), commentable, added };
 }
 
 // A description line that says which story the PR is for ("Closes SCRUM-31",
@@ -639,6 +660,292 @@ function listTestFiles(sha) {
     .map((path) => describeTestFile(path, readFromBase(sha, path) ?? ""));
 }
 
+// ---------------------------------------------------------------------------
+// Context beyond the diff (ADR 0008): the changed files in full, the files they
+// import and the files that import them, files naming the PR's stories, a text
+// scan for project rules across the branch, and CI's results for this commit.
+// ---------------------------------------------------------------------------
+
+// Source other code can import, and that is worth sending in full.
+const SOURCE_FILE = /\.(?:[cm]?[jt]sx?|css|prisma)$/;
+const SOURCE_ROOTS = ["app", "lib", "components", "tests", "e2e", "prisma", "auth.ts", "auth.config.ts", "proxy.ts"];
+const IMPORT_SPECIFIER = /(?:\bfrom\s*|\bimport\s*\(\s*|\bimport\s+)["']([^"']+)["']/g;
+const RESOLVE_SUFFIXES = ["", ".ts", ".tsx", ".js", ".mjs", ".mts", ".jsx", ".css", "/index.ts", "/index.tsx", "/index.js"];
+
+/** Every source file at a commit, with its content. Migrations are left out. */
+function listSourceFiles(sha) {
+  return execFileSync("git", ["ls-tree", "-r", "--name-only", sha, "--", ...SOURCE_ROOTS], {
+    encoding: "utf8",
+    maxBuffer: 16 * 1024 * 1024,
+  })
+    .split("\n")
+    .map((path) => path.trim())
+    .filter((path) => path && SOURCE_FILE.test(path) && !path.startsWith("prisma/migrations/"))
+    .map((path) => ({ path, content: readFromBase(sha, path) ?? "" }));
+}
+
+/** Prefixes each line with its number, so GLM can cite lines outside the diff. */
+export function numberLines(content) {
+  return content
+    .split("\n")
+    .map((line, i) => `${i + 1}\t${line}`)
+    .join("\n");
+}
+
+function normalisePath(path) {
+  const parts = [];
+  for (const part of path.split("/")) {
+    if (part === "" || part === ".") continue;
+    if (part === "..") parts.pop();
+    else parts.push(part);
+  }
+  return parts.join("/");
+}
+
+/** The repo files a file imports through "@/..." or a relative path; packages are ignored. */
+export function resolveImports(fromPath, source, paths) {
+  const dir = fromPath.includes("/") ? fromPath.slice(0, fromPath.lastIndexOf("/")) : "";
+  const found = new Set();
+  for (const [, specifier] of source.matchAll(IMPORT_SPECIFIER)) {
+    let base;
+    if (specifier.startsWith("@/")) base = specifier.slice(2);
+    else if (specifier.startsWith("./") || specifier.startsWith("../")) base = normalisePath(`${dir}/${specifier}`);
+    else continue;
+    const match = RESOLVE_SUFFIXES.map((suffix) => `${base}${suffix}`).find((path) => paths.has(path));
+    if (match && match !== fromPath) found.add(match);
+  }
+  return [...found];
+}
+
+/** Paths whose content names one of the SCRUM keys: "SCRUM-31" matches, "SCRUM-310" doesn't. */
+export function filesMentioningStories(files, keys) {
+  const patterns = keys.map((key) => new RegExp(`\\b${key}(?!\\d)`, "i"));
+  return files.filter((file) => patterns.some((pattern) => pattern.test(file.content))).map((file) => file.path);
+}
+
+/**
+ * The files sent to GLM in full, in priority order. Changed files use their own
+ * budget. Then, sharing a second budget: files the changed files import, files
+ * that import a changed file, and files naming the PR's stories. A file over
+ * budget is listed as omitted, never silently dropped.
+ */
+export function selectContextFiles({
+  files,
+  changed,
+  storyKeys,
+  maxChanged = MAX_CHANGED_FILES_CHARS,
+  maxRelated = MAX_RELATED_FILES_CHARS,
+}) {
+  const byPath = new Map(files.map((file) => [file.path, file]));
+  const paths = new Set(byPath.keys());
+  const changedPaths = changed.filter((path) => byPath.has(path));
+  const changedSet = new Set(changedPaths);
+
+  const imported = new Set();
+  for (const path of changedPaths) {
+    for (const dependency of resolveImports(path, byPath.get(path).content, paths)) {
+      if (!changedSet.has(dependency)) imported.add(dependency);
+    }
+  }
+  const importers = files
+    .filter((file) => !changedSet.has(file.path) && !imported.has(file.path) && !NOT_APP_TESTS.has(file.path))
+    .filter((file) => resolveImports(file.path, file.content, paths).some((path) => changedSet.has(path)))
+    .map((file) => file.path);
+  const seen = new Set([...changedSet, ...imported, ...importers]);
+  const storyFiles = storyKeys.length
+    ? filesMentioningStories(
+        files.filter((file) => !seen.has(file.path) && !NOT_APP_TESTS.has(file.path)),
+        storyKeys,
+      )
+    : [];
+
+  const included = [];
+  const omitted = [];
+  const take = (entries, budget) => {
+    let used = 0;
+    for (const entry of entries) {
+      const content = capped(byPath.get(entry.path).content, MAX_FILE_CHARS);
+      if (used + content.length > budget) {
+        omitted.push(entry);
+        continue;
+      }
+      used += content.length;
+      included.push({ ...entry, content });
+    }
+  };
+  take(changedPaths.map((path) => ({ path, reason: "changed in this PR" })), maxChanged);
+  take(
+    [
+      ...[...imported].sort().map((path) => ({ path, reason: "imported by a changed file" })),
+      ...importers.sort().map((path) => ({ path, reason: "imports a changed file" })),
+      ...storyFiles.sort().map((path) => ({ path, reason: `mentions ${storyKeys.join(", ")}` })),
+    ],
+    maxRelated,
+  );
+  return { included, omitted };
+}
+
+export function renderContextFiles({ included, omitted }) {
+  const parts = included.map((file) => `### ${file.path} (${file.reason})\n\n${numberLines(file.content)}`);
+  if (omitted.length) {
+    parts.push(
+      `### Not included (over the size limit)\n\n${omitted.map((file) => `- ${file.path} (${file.reason})`).join("\n")}`,
+    );
+  }
+  return parts.join("\n\n");
+}
+
+// Project rules a text search can check everywhere, so GLM knows about breaches
+// in files a PR doesn't touch (#41: four pages kept their own role lists).
+const PROJECT_RULE_CHECKS = [
+  {
+    rule: "Role check outside lib/auth/can.ts (ADR 0004: all authorisation goes through can())",
+    pattern: /\.user\??\.role\s*[!=]==|\.includes\(\s*session\??\.user\??\.role|\bALLOWED_ROLES\b/,
+    applies: (path) => /^(app|components|lib)\//.test(path) && path !== "lib/auth/can.ts",
+  },
+  {
+    rule: "Hard delete in app code (lifecycle changes are status changes)",
+    pattern: /\b(?:prisma|tx|db)\.\w+\.(?:delete|deleteMany)\s*\(/,
+    applies: (path) => /^(app|lib)\//.test(path),
+  },
+  {
+    rule: "Date formatted inline instead of lib/datetime",
+    pattern: /\.toLocale(?:Date|Time)?String\s*\(/,
+    applies: (path) => /^(app|components|lib)\//.test(path) && path !== "lib/datetime.ts",
+  },
+];
+
+/** Every line on the branch that breaks a project rule a text search can find. */
+export function scanProjectRules(files) {
+  return PROJECT_RULE_CHECKS.map((check) => ({
+    rule: check.rule,
+    lines: files
+      .filter((file) => check.applies(file.path))
+      .flatMap((file) =>
+        file.content
+          .split("\n")
+          .map((line, i) => ({ line, number: i + 1 }))
+          .filter(({ line }) => check.pattern.test(line))
+          .map(({ line, number }) => `${file.path}:${number}: ${line.trim().slice(0, 160)}`),
+      ),
+  }));
+}
+
+export function renderProjectRuleScan(results) {
+  return results
+    .map(({ rule, lines }) => `### ${rule}\n\n${lines.length ? lines.map((line) => `- ${line}`).join("\n") : "None found."}`)
+    .join("\n\n");
+}
+
+/** Hit counts per line from an lcov report, keyed by the source path as written. */
+export function parseLcov(text) {
+  const files = new Map();
+  let current = null;
+  for (const raw of text.split("\n")) {
+    const line = raw.trim();
+    if (line.startsWith("SF:")) {
+      current = new Map();
+      files.set(line.slice(3).replace(/\\/g, "/"), current);
+    } else if (line.startsWith("DA:") && current) {
+      const [number, hits] = line.slice(3).split(",");
+      current.set(Number(number), Number(hits));
+    } else if (line === "end_of_record") {
+      current = null;
+    }
+  }
+  return files;
+}
+
+/**
+ * For each changed source file: whether coverage measures it, and if so how
+ * many of the lines this PR added ran under the tests, and which didn't.
+ */
+export function summariseCoverage(lcov, addedLines) {
+  const measured = [...lcov.keys()];
+  return [...addedLines].map(([path, lines]) => {
+    const source = measured.find((candidate) => candidate === path || candidate.endsWith(`/${path}`));
+    if (!source) return { path, measured: false };
+    const hits = lcov.get(source);
+    const executable = [...lines].filter((line) => hits.has(line)).sort((a, b) => a - b);
+    return { path, measured: true, executable: executable.length, uncovered: executable.filter((line) => hits.get(line) === 0) };
+  });
+}
+
+export function renderCiResults(ci) {
+  if (!ci) {
+    return "CI's build-and-test didn't finish in time for this review, so its results aren't available. Don't guess them.";
+  }
+  const lines = [`build-and-test: ${ci.conclusion} (${ci.url})`, "", "Steps:"];
+  for (const step of ci.steps) {
+    if (step.conclusion && step.conclusion !== "skipped") lines.push(`- ${step.name}: ${step.conclusion}`);
+  }
+  lines.push("", "Coverage of the lines this PR added (Vitest unit and integration tests; e2e runs aren't measured):");
+  if (!ci.coverage) {
+    lines.push("- No coverage report was available.");
+  } else if (ci.coverage.length === 0) {
+    lines.push("- This PR adds no lines to source files.");
+  } else {
+    for (const file of ci.coverage) {
+      if (!file.measured) {
+        lines.push(`- ${file.path}: not measured by the coverage configuration`);
+      } else if (file.executable === 0) {
+        lines.push(`- ${file.path}: no executable added lines`);
+      } else {
+        const ran = file.executable - file.uncovered.length;
+        lines.push(
+          `- ${file.path}: ${ran} of ${file.executable} added executable lines ran; ` +
+            `never run: ${file.uncovered.length ? `lines ${file.uncovered.join(", ")}` : "none"}`,
+        );
+      }
+    }
+  }
+  return lines.join("\n");
+}
+
+async function downloadLcov({ github, token, repo, runId }) {
+  const { artifacts } = await github("GET", `/repos/${repo}/actions/runs/${runId}/artifacts`);
+  const artifact = artifacts.find((a) => a.name === "coverage" && !a.expired);
+  if (!artifact) return null;
+  // GitHub redirects to storage; fetch drops the token on that cross-origin hop.
+  const response = await fetch(artifact.archive_download_url, { headers: { Authorization: `Bearer ${token}` } });
+  if (!response.ok) return null;
+  const zip = join(process.env.RUNNER_TEMP ?? tmpdir(), `coverage-${runId}.zip`);
+  writeFileSync(zip, Buffer.from(await response.arrayBuffer()));
+  try {
+    return execFileSync("unzip", ["-p", zip, "lcov.info"], { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Waits for CI's build-and-test on this commit, then returns its step outcomes
+ * and the coverage of the lines this PR added. Returns null when CI doesn't
+ * finish before the deadline. A pull_request run is preferred to a push run.
+ */
+async function loadCiResults({ github, token, repo, headSha, addedLines, deadline }) {
+  let run;
+  for (;;) {
+    const { workflow_runs: runs } = await github("GET", `/repos/${repo}/actions/runs?head_sha=${headSha}&per_page=30`);
+    const finished = runs.filter(
+      (r) => r.name === CI_WORKFLOW_NAME && r.status === "completed" && r.conclusion !== "cancelled",
+    );
+    run = finished.find((r) => r.event === "pull_request") ?? finished[0];
+    if (run || Date.now() + CI_POLL_MS > deadline) break;
+    await new Promise((resolve) => setTimeout(resolve, CI_POLL_MS));
+  }
+  if (!run) return null;
+
+  const { jobs } = await github("GET", `/repos/${repo}/actions/runs/${run.id}/jobs`);
+  const lcov = await downloadLcov({ github, token, repo, runId: run.id });
+  return {
+    url: run.html_url,
+    conclusion: run.conclusion,
+    steps: jobs.flatMap((job) => (job.steps ?? []).map((step) => ({ name: step.name, conclusion: step.conclusion }))),
+    coverage: lcov ? summariseCoverage(parseLcov(lcov), addedLines) : null,
+  };
+}
+
 function capped(text, max) {
   return text.length > max ? `${text.slice(0, max)}\n\n[truncated at ${formatCount(max)} characters]` : text;
 }
@@ -670,7 +977,7 @@ async function main() {
     return;
   }
 
-  const { annotated, commentable } = parseDiff(diff);
+  const { annotated, commentable, added } = parseDiff(diff);
   if (annotated.length > MAX_DIFF_CHARS) {
     await upsertReviewComment(
       github,
@@ -735,6 +1042,36 @@ async function main() {
   // On a re-run: the previous review and what people replied to it.
   const conversation = renderConversation(await listPrComments(github, repo, env.PR_NUMBER));
 
+  // Beyond the diff: related files in full and a project rule scan, both from
+  // the PR's head, then CI's results for this commit.
+  const sourceFiles = listSourceFiles(env.HEAD_SHA);
+  const context = selectContextFiles({ files: sourceFiles, changed: [...commentable.keys()], storyKeys: stories });
+  if (context.omitted.length) {
+    notes.push(`${context.omitted.length} related file(s) were over the size limit and weren't sent in full.`);
+  }
+  const ruleScan = renderProjectRuleScan(scanProjectRules(sourceFiles.filter((file) => !NOT_APP_TESTS.has(file.path))));
+  const addedSourceLines = new Map(
+    [...added].filter(([path]) => /^(app|lib|components)\//.test(path) && /\.[cm]?[jt]sx?$/.test(path) && !TEST_FILE.test(path)),
+  );
+  let ci = null;
+  try {
+    ci = await loadCiResults({
+      github,
+      token: env.GITHUB_TOKEN,
+      repo,
+      headSha: env.HEAD_SHA,
+      addedLines: addedSourceLines,
+      deadline: Date.now() + CI_WAIT_MS,
+    });
+  } catch (error) {
+    console.log(`::warning::Couldn't load CI results: ${error.message}`);
+  }
+  if (!ci) notes.push("CI's results weren't available for this review.");
+  console.log(
+    `Context: ${context.included.length} file(s) in full, ${context.omitted.length} omitted; ` +
+      `CI ${ci ? ci.conclusion : "unavailable"}.`,
+  );
+
   const skippedNote = skipped.length
     ? "Also changed in this PR but deliberately not shown (docs, lockfiles, generated " +
       "files). They exist, so do not report them as missing:\n" +
@@ -761,6 +1098,18 @@ async function main() {
           conversation,
         ]
       : []),
+    "## CI results for this commit",
+    renderCiResults(ci),
+    "## Project rule scan (text search of the whole branch at this PR's head)",
+    "Every line matching a project rule a text search can find. A line in a file this PR doesn't change " +
+      "is existing code: use it as evidence for acceptance criteria and mention it in the overview, but " +
+      "don't raise it as a finding unless this PR makes it worse.",
+    ruleScan,
+    "## Files in full (at this PR's head)",
+    "Each file is line-numbered. Files changed by this PR are here in full; the diff below shows exactly " +
+      "which lines changed. The related files are the ones changed files import, the ones that import a " +
+      "changed file, and ones that name this PR's stories.",
+    renderContextFiles(context) || "(none)",
     "## Diff",
     "Every added (+) or unchanged context line is prefixed with its line number in the new " +
       "file and a tab; removed (-) lines have no number.",
@@ -774,8 +1123,10 @@ async function main() {
   // less likely to be cut off.
   const failures = [];
   let review;
+  // The GLM budget starts now, so waiting for CI doesn't eat into it.
+  const glmStarted = Date.now();
   for (const [index, effort] of EFFORTS.entries()) {
-    const remaining = started + GLM_BUDGET_MS - Date.now();
+    const remaining = glmStarted + GLM_BUDGET_MS - Date.now();
     if (index > 0 && remaining < MIN_RETRY_MS) {
       failures.push(`no retry: only ${Math.round(remaining / 60_000)} minute(s) of the time budget were left`);
       break;

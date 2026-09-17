@@ -34,6 +34,8 @@ permissions:
   contents: read
   # Posts and updates the review comment on the pull request.
   pull-requests: write
+  # Reads CI's run, step results and coverage artifact for the same commit.
+  actions: read
 
 jobs:
   review:
@@ -42,7 +44,8 @@ jobs:
     # result on the same commit.
     if: github.event.pull_request.draft == false
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # Up to 15 minutes waiting for CI, then up to 27 for GLM, plus posting.
+    timeout-minutes: 50
     steps:
       # Both actions are pinned to commit SHAs, not tags: this job holds the API
       # key and GitHub token, and a tag can be moved underneath it. v7 runs on

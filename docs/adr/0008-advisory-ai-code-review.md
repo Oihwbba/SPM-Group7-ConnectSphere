@@ -316,6 +316,61 @@ feature pull requests had diffs over that limit: the foundation commit
 
 **Trade-off.** A genuinely large change must be split, or merged by the owner
 after a human review.
+
+## Addendum (2026-09-17, context beyond the diff)
+
+GLM saw only the diff, and on #41 that caused four mistakes:
+- **A repeated false alarm:** it said a row "never sets `data-status`", but that
+  attribute is on an unchanged line.
+- **A missed bug:** a mobile card lost its border because of a rule in
+  `components/ui/table.tsx`, a file the PR imports but didn't change.
+- **Three wrong ✅ Met marks** on SCRUM-66 and SCRUM-67 criteria, based on
+  test names, while four pages still hardcode their own role lists.
+- **Guessing about tests** instead of reading CI.
+
+**Decision.** Besides the diff, each review gets:
+
+- **Changed files in full,** line-numbered.
+- **Related files in full:** the repo files a changed file imports, the files
+  that import a changed file, and files naming the PR's SCRUM keys. Changed
+  files have a 250,000-character budget; related files share 150,000, filled in
+  that order. A file that doesn't fit is listed, not silently dropped.
+- **A project rule scan** of the whole branch: role checks outside
+  `lib/auth/can.ts`, hard deletes, and inline date formatting. It's a text
+  search, so it finds every match.
+- **CI results for the same commit.** The review waits up to 15 minutes for
+  `build-and-test`, then reads each step's result and the coverage of the lines
+  the PR added. GLM's 27-minute budget starts after the wait, and the job
+  timeout is 50 minutes.
+
+The instructions change with it:
+- **Met needs direct evidence:** code that implements the criterion, or a test
+  whose title checks that exact criterion.
+- **Codebase-wide criteria** are Met only if the rule scan and the files show
+  it holds everywhere.
+- **Findings stay about this PR.** Problems in untouched code go in the
+  overview.
+
+**Trade-offs.**
+
+- **Reviews start later and take longer:** CI's time (about 3 minutes), plus a
+  larger prompt. #41's context was about 230,000 characters.
+- **Coverage is partial:** it only measures the files the coverage
+  configuration includes, and e2e runs aren't measured.
+- **Some relevance isn't found:** code that relates to a story but neither
+  imports the changed files nor names the story key isn't selected, unless the
+  rule scan finds it.
+
+**Also: reviews use the GLM Coding Plan address (owner's decision).** The
+reviewer called the general `/api/paas/v4` address, which bills the
+pay-as-you-go balance. When that balance ran out, every review failed with
+BigModel error 1113 while the owner's Coding Plan quota sat unused. It now calls
+`/api/coding/paas/v4`. The owner chose this knowing the risk: BigModel limits
+the Coding Plan to its listed coding tools (Claude Code, Cline, OpenCode and
+others), and a custom GitHub Actions script isn't one of them. BigModel may
+refuse these calls or restrict the plan. If it does, every review fails and the
+required check blocks merges. The fallback is to switch back to `/api/paas/v4`
+with a topped-up balance.
 - **Every edit re-runs the review.** A skipped job counts as a passing required
   check and replaces an earlier red result on the same commit, so edits are no
   longer skipped. Drafts still are, and a draft can't be merged.
