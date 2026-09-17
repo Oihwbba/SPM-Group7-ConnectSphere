@@ -321,8 +321,9 @@ test.describe("User Story 84 — Organiser Views Their Own Event Requests Journe
     await expect(page.getByRole("heading", { name: "My Events" })).toBeVisible();
 
     // 2. Organiser 2 sees their own seeded event (evt_other_organiser: "Another Client's Event — Product Launch").
-    //    Scoped to the table cell so it matches the one row, not also the
-    //    responsive mobile card that carries the same name off-screen.
+    //    Scoped to the table cell (not getByText) for robustness: the name also
+    //    appears in the row's other cells' accessible names, and the cell is the
+    //    precise unit we mean. There is one presentation in the DOM.
     await expect(
       page.getByRole("cell", {
         name: "Another Client's Event — Product Launch",
