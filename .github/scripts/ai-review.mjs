@@ -59,6 +59,7 @@ const MAX_CONVERSATION_CHARS = 8_000;
 const MAX_CHANGED_FILES_CHARS = 250_000;
 const MAX_RELATED_FILES_CHARS = 150_000;
 const MAX_FILE_CHARS = 60_000;
+const MAX_TEST_CHANGE_CHARS = 20_000;
 // How long the review waits for CI's build-and-test on the same commit.
 const CI_WORKFLOW_NAME = "CI";
 const CI_WAIT_MS = 15 * 60 * 1000;
@@ -660,6 +661,148 @@ function listTestFiles(sha) {
     .map((path) => describeTestFile(path, readFromBase(sha, path) ?? ""));
 }
 
+/// A line that checks something, or declares a test. #41 narrowed an isolation
+// check from getByText to getByRole("cell") and the review didn't notice.
+// Matchers are named in full, so .toString() or .toISOString() isn't one.
+const ASSERTION =
+  /\bexpect(?:\.soft|\.poll)?\s*\(|\bassert\w*\s*\(|\.(?:not\.)?to(?:Be|Have|Equal|StrictEqual|Contain|Match|Throw|Satisfy|Pass)\w*\s*\(|\.(?:rejects|resolves)\b|\b(?:it|test|describe)(?:\.\w+)*\s*\(/;
+// A locator or query: changing one changes what the check looks at.
+const LOCATOR = /\b(?:getBy|getAllBy|queryBy|queryAllBy|findBy|findAllBy)\w+\s*\(|\.locator\s*\(/;
+const EXPECT_START = /\bexpect(?:\.soft|\.poll)?\s*\(/;
+const STATEMENT_END = /;\s*$/;
+// A test switched off or narrowed to one.
+const SKIPPED_TEST = /\b(?:it|test|describe)(?:\.\w+)*\.(?:skip|only|fixme|todo)\b|\bxit\s*\(|\bxdescribe\s*\(/;
+const MAX_BLOCK_LINES = 30;
+const CONTEXT_LINES = 6;
+
+/** Whether these unchanged lines end inside an expect( statement that hasn't finished. */
+function endsInsideExpect(lines) {
+  let start = -1;
+  lines.forEach((line, i) => {
+    if (EXPECT_START.test(line)) start = i;
+  });
+  return start !== -1 && !lines.slice(start).some((line) => STATEMENT_END.test(line));
+}
+
+/**
+ * Every place a test file lost an assertion or a test, with what replaced it:
+ * each run of removed and added lines that removes a test, an assertion or a
+ * locator, or edits the middle of an assertion. Also every added line that
+ * skips a test or narrows the run with .only.
+ */
+export function findChangedAssertions(diff) {
+  const changes = [];
+  const skips = [];
+  let path = null;
+  let deleted = false;
+  let inHunk = false;
+  let oldLine = 0;
+  let newLine = 0;
+  let block = null;
+  // Unchanged lines just before the current block, to spot an edit inside an
+  // expect( that starts above it.
+  let recent = [];
+
+  const flush = () => {
+    if (block) {
+      const checks = block.removed.some((line) => ASSERTION.test(line) || LOCATOR.test(line));
+      const inside = !deleted && block.removed.length > 0 && endsInsideExpect(block.before);
+      if (checks || inside) {
+        changes.push({
+          ...block,
+          before: inside ? block.before : [],
+          // A deleted file has nothing replacing it; only its checks matter.
+          removed: deleted ? block.removed.filter((line) => ASSERTION.test(line)) : block.removed,
+          deleted,
+        });
+      }
+    }
+    block = null;
+  };
+
+  const open = () => {
+    block ??= { path, oldLine, newLine, before: recent, removed: [], added: [] };
+  };
+
+  for (const raw of diff.split("\n")) {
+    if (raw.startsWith("diff --git ")) {
+      flush();
+      path = null;
+      deleted = false;
+      inHunk = false;
+      recent = [];
+      continue;
+    }
+    if (!inHunk && raw.startsWith("--- ")) {
+      const source = raw.slice(4).trim();
+      path = source === "/dev/null" ? null : source.replace(/^a\//, "");
+      continue;
+    }
+    if (!inHunk && raw.startsWith("+++ ")) {
+      const target = raw.slice(4).trim();
+      deleted = target === "/dev/null";
+      if (!deleted) path = target.replace(/^b\//, "");
+      if (path && (!TEST_FILE.test(path) || NOT_APP_TESTS.has(path))) path = null;
+      continue;
+    }
+    const hunk = /^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@/.exec(raw);
+    if (hunk) {
+      flush();
+      inHunk = true;
+      oldLine = Number(hunk[1]);
+      newLine = Number(hunk[2]);
+      recent = [];
+      continue;
+    }
+    if (!inHunk || !path || raw.startsWith("\\")) continue;
+
+    if (raw.startsWith("-")) {
+      open();
+      block.removed.push(raw.slice(1));
+      oldLine += 1;
+    } else if (raw.startsWith("+")) {
+      if (SKIPPED_TEST.test(raw)) skips.push(`${path}:${newLine}: ${raw.slice(1).trim().slice(0, 160)}`);
+      open();
+      block.added.push(raw.slice(1));
+      newLine += 1;
+    } else {
+      flush();
+      recent = [...recent, raw.slice(1)].slice(-CONTEXT_LINES);
+      oldLine += 1;
+      newLine += 1;
+    }
+  }
+  flush();
+  return { changes, skips };
+}
+
+function blockLines(lines, prefix) {
+  const shown = lines.slice(0, MAX_BLOCK_LINES).map((line) => `${prefix}${line}`);
+  if (lines.length > MAX_BLOCK_LINES) shown.push(`${prefix}… ${lines.length - MAX_BLOCK_LINES} more line(s)`);
+  return shown.join("\n");
+}
+
+export function renderChangedAssertions({ changes, skips }, max = MAX_TEST_CHANGE_CHARS) {
+  if (changes.length === 0 && skips.length === 0) return "No test or assertion was removed, changed or skipped.";
+  // Skips go first: they're short and the strongest signal, so the cap cuts blocks instead.
+  const parts = skips.length
+    ? [`### Tests skipped or narrowed with .only\n\n${skips.map((line) => `- ${line}`).join("\n")}`]
+    : [];
+  changes.forEach((change, i) => {
+    const where = change.deleted
+      ? `${change.path} (file deleted), old line ${change.oldLine}`
+      : `${change.path}, old line ${change.oldLine} → new line ${change.newLine}`;
+    const before = change.before.length ? `Unchanged lines just before:\n${blockLines(change.before, " ")}\n\n` : "";
+    const replacement = change.deleted
+      ? "Replaced by: nothing in this file"
+      : change.added.length
+        ? `Replaced by:\n${blockLines(change.added, "+")}`
+        : "Replaced by: nothing (removed outright)";
+    parts.push(`### ${i + 1}. ${where}\n\n${before}${blockLines(change.removed, "-")}\n\n${replacement}`);
+  });
+  return capped(parts.join("\n\n"), max);
+}
+
 // ---------------------------------------------------------------------------
 // Context beyond the diff (ADR 0008): the changed files in full, the files they
 // import and the files that import them, files naming the PR's stories, a text
@@ -879,6 +1022,17 @@ export function renderCiResults(ci) {
   for (const step of ci.steps) {
     if (step.conclusion && step.conclusion !== "skipped") lines.push(`- ${step.name}: ${step.conclusion}`);
   }
+  if (ci.failures?.length) {
+    const output = ci.failures
+      .map((f) => {
+        const fence = fenceFor(f.output);
+        return `### Failed: ${f.command}\n\n${fence}\n${f.output}\n${fence}`;
+      })
+      .join("\n\n");
+    lines.push("", "Output of the failed steps (from CI's log):", "", capped(output, MAX_FAILURES_CHARS));
+  } else if (ci.conclusion === "failure") {
+    lines.push("", "The failed steps' output couldn't be read from CI's log.");
+  }
   lines.push("", "Coverage of the lines this PR added (Vitest unit and integration tests; e2e runs aren't measured):");
   if (!ci.coverage) {
     lines.push("- No coverage report was available.");
@@ -918,10 +1072,72 @@ async function downloadLcov({ github, token, repo, runId }) {
   }
 }
 
+// Where a tool's failure report starts, so the output skips the passing tests
+// before it: Vitest's "Failed Tests" banner, Playwright's first "1) [project]".
+const FAILURE_REPORT_START = /⎯+ Failed Tests \d+ ⎯+|^\s+1\) \[/;
+const MAX_FAILURE_CHARS = 6_000;
+const MAX_FAILURES_CHARS = 12_000;
+
 /**
- * Waits for CI's build-and-test on this commit, then returns its step outcomes
- * and the coverage of the lines this PR added. Returns null when CI doesn't
- * finish before the deadline. A pull_request run is preferred to a push run.
+ * The output of each step that failed in a GitHub Actions job log: the lines
+ * between the step's "##[group]Run …" header and its "Process completed with
+ * exit code" error, without timestamps, colours or the echoed command and env.
+ * When the output holds a test runner's failure report, it starts there;
+ * otherwise it keeps the end, where compilers and npm print their errors.
+ */
+export function extractFailedSteps(log, max = MAX_FAILURE_CHARS) {
+  const lines = log
+    .split(/\r?\n/)
+    .map((line) => line.replace(/^﻿?\d{4}-\d\d-\d\dT[\d:.]+Z ?/, "").replace(/\x1b\[[0-9;]*[A-Za-z]/g, ""));
+  const failed = [];
+  let step = null;
+  let inHeader = false;
+  for (const line of lines) {
+    const run = /^##\[group\]Run (.*)$/.exec(line);
+    if (run) {
+      step = { command: run[1].trim(), output: [] };
+      inHeader = true;
+      continue;
+    }
+    if (!step) continue;
+    if (inHeader) {
+      if (line.startsWith("##[endgroup]")) inHeader = false;
+      continue;
+    }
+    if (/^##\[error\]Process completed with exit code [1-9]/.test(line)) {
+      const start = step.output.findIndex((l) => FAILURE_REPORT_START.test(l));
+      const text = step.output
+        .slice(start === -1 ? 0 : start)
+        .filter((l) => !/^##\[(?:group|endgroup)\]/.test(l))
+        .join("\n")
+        .replace(/\n{3,}/g, "\n\n")
+        .trim();
+      failed.push({ command: step.command, output: text.length > max ? `…${text.slice(-max)}` : text });
+      step = null;
+      continue;
+    }
+    step.output.push(line);
+  }
+  return failed;
+}
+
+async function loadFailedSteps({ token, repo, jobs }) {
+  const failed = [];
+  for (const job of jobs.filter((j) => j.conclusion === "failure")) {
+    // GitHub redirects to storage; fetch drops the token on that cross-origin hop.
+    const response = await fetch(`https://api.github.com/repos/${repo}/actions/jobs/${job.id}/logs`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (response.ok) failed.push(...extractFailedSteps(await response.text()));
+  }
+  return failed;
+}
+
+/**
+ * Waits for CI's build-and-test on this commit, then returns its step outcomes,
+ * the coverage of the lines this PR added, and the failed steps' output when it
+ * failed. Returns null when CI doesn't finish before the deadline. A
+ * pull_request run is preferred to a push run.
  */
 async function loadCiResults({ github, token, repo, headSha, addedLines, deadline }) {
   let run;
@@ -943,6 +1159,7 @@ async function loadCiResults({ github, token, repo, headSha, addedLines, deadlin
     conclusion: run.conclusion,
     steps: jobs.flatMap((job) => (job.steps ?? []).map((step) => ({ name: step.name, conclusion: step.conclusion }))),
     coverage: lcov ? summariseCoverage(parseLcov(lcov), addedLines) : null,
+    failures: run.conclusion === "failure" ? await loadFailedSteps({ token, repo, jobs }) : [],
   };
 }
 
@@ -1098,6 +1315,10 @@ async function main() {
           conversation,
         ]
       : []),
+    "## Tests this PR removed, changed or skipped",
+    "Each block is a run of lines in a test file that removed a test or an assertion, with the lines " +
+      "that replaced it. Account for every one (see the Tests section of your instructions).",
+    renderChangedAssertions(findChangedAssertions(diff)),
     "## CI results for this commit",
     renderCiResults(ci),
     "## Project rule scan (text search of the whole branch at this PR's head)",
