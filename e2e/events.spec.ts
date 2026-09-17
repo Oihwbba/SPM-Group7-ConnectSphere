@@ -370,6 +370,25 @@ test.describe("User Story 84 — Events list on mobile (375x812)", () => {
       page.getByTestId("view-details-button").first(),
     ).toBeVisible();
 
+    // The field labels the hidden column header dropped are real, visible text
+    // on the card (not CSS ::before) so screen readers announce them. Scoped to
+    // the cell's label span, since the (hidden) column header also reads "Starts".
+    const startsLabel = page.locator('td[data-col="starts"] span').first();
+    await expect(startsLabel).toBeVisible();
+    await expect(startsLabel).toHaveText("Starts");
+    const createdLabel = page.locator('td[data-col="created"] span').first();
+    await expect(createdLabel).toBeVisible();
+    await expect(createdLabel).toHaveText("Created");
+
+    // A draft card keeps its accent: the 4px muted left border only renders
+    // when the row's data-status="DRAFT" drives the CSS, so this guards against
+    // the accent silently dying.
+    const draftBorderLeft = await page
+      .getByTestId("draft-event-row")
+      .first()
+      .evaluate((el) => getComputedStyle(el).borderLeftWidth);
+    expect(draftBorderLeft).toBe("4px");
+
     // No horizontal page overflow at 375px.
     const overflowsX = await page.evaluate(
       () =>

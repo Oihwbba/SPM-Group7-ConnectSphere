@@ -330,12 +330,21 @@ export function EventsClient({
                         data-col="starts"
                         className="text-muted-foreground"
                       >
+                        {/* On mobile the column header is gone, so carry a real
+                            (screen-reader-announced) label; hidden on desktop
+                            where the table header supplies it. */}
+                        <span className="mb-0.5 block text-xs md:hidden">
+                          Starts
+                        </span>
                         {event.startAt ? formatDateTime(event.startAt) : "—"}
                       </TableCell>
                       <TableCell
                         data-col="created"
                         className="text-muted-foreground"
                       >
+                        <span className="mb-0.5 block text-xs md:hidden">
+                          Created
+                        </span>
                         {formatDate(event.createdAt)}
                       </TableCell>
                       <TableCell data-col="actions" className="text-right">

@@ -74,18 +74,7 @@
     grid-area: actions;
   }
 
-  /* Re-supply the field labels the hidden header would have carried. */
-  .list td[data-col="starts"]::before,
-  .list td[data-col="created"]::before {
-    display: block;
-    font-size: 0.75rem;
-    line-height: 1rem;
-    color: hsl(var(--muted-foreground));
-  }
-  .list td[data-col="starts"]::before {
-    content: "Starts";
-  }
-  .list td[data-col="created"]::before {
-    content: "Created";
-  }
+  /* The "Starts"/"Created" field labels are real elements in the cells (see
+     events-client.tsx), not CSS ::before content, so screen readers announce
+     them now that the column header is hidden. */
 }
