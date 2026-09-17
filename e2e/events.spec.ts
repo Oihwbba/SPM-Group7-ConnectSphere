@@ -337,16 +337,16 @@ test.describe("User Story 84 — Organiser Views Their Own Event Requests Journe
 });
 
 /**
- * Mobile presentation (SCRUM-66 / SCRUM-68) — at a phone viewport the events list
- * renders as stacked cards, not the desktop five-column table, and the card
- * actions still work. Card and table share markup (events-client.tsx) but the
- * card copy carries "mobile-"-prefixed testids, so a locator matches only the
- * visible presentation.
+ * Mobile presentation (SCRUM-66 / SCRUM-68) — at a phone viewport the single
+ * events table (events-client.tsx + events-list.module.css) restyles each row
+ * into a stacked card: there is ONE presentation in the DOM, so the actions use
+ * their plain testids (no "mobile-" prefix). This pins the responsive restyle
+ * and that the card actions still work.
  */
 test.describe("User Story 84 — Events list on mobile (375x812)", () => {
   test.use({ viewport: { width: 375, height: 812 } });
 
-  test("shows stacked cards, hides the table, and Resume Draft opens the dialog", async ({
+  test("restyles rows as stacked cards with no page overflow, and Resume Draft opens the dialog", async ({
     page,
   }) => {
     await page.goto("/login");
@@ -356,17 +356,30 @@ test.describe("User Story 84 — Events list on mobile (375x812)", () => {
     await page.waitForURL("**/events");
     await expect(page.getByRole("heading", { name: "My Events" })).toBeVisible();
 
-    // The mobile card list is shown — its actions carry the "mobile-" testids.
+    // Each row is laid out as a stacked card (CSS grid), not an aligned table
+    // row — this is the responsive restyle, on the same single element.
+    const rowDisplay = await page
+      .locator("tbody tr")
+      .first()
+      .evaluate((el) => getComputedStyle(el).display);
+    expect(rowDisplay).toBe("grid");
+
+    // The card's actions render exactly once, under their plain testids.
     await expect(
-      page.getByTestId("mobile-view-details-button").first(),
+      page.getByTestId("view-details-button").first(),
     ).toBeVisible();
 
-    // The desktop table is hidden at this width.
-    await expect(page.getByRole("table")).not.toBeVisible();
+    // No horizontal page overflow at 375px.
+    const overflowsX = await page.evaluate(
+      () =>
+        document.documentElement.scrollWidth >
+        document.documentElement.clientWidth,
+    );
+    expect(overflowsX).toBe(false);
 
     // Tapping a draft card's Resume Draft opens the resume dialog. The seeded
     // "Draft — Annual Tech Summit" guarantees at least one draft card exists.
-    await page.getByTestId("mobile-resume-draft-button").first().click();
+    await page.getByTestId("resume-draft-button").first().click();
     await expect(page.getByRole("dialog")).toBeVisible();
     await expect(
       page.getByRole("heading", { name: /Resume Draft Event Request/i }),

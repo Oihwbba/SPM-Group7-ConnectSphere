@@ -1,0 +1,91 @@
+/*
+ * One events table, two layouts. On tablet and up it is an ordinary aligned
+ * table (unchanged). Below the `md` breakpoint (768px) the same rows restyle
+ * into stacked cards, so every event — and every action control — exists
+ * exactly once in the DOM. No hidden duplicate list, no "mobile-" testid split.
+ *
+ * `md` here matches Tailwind's default 768px breakpoint used elsewhere.
+ */
+
+@media (max-width: 767.98px) {
+  /* Collapse the table wrapper so rows can stack. */
+  .list,
+  .list tbody {
+    display: block;
+  }
+
+  /* The column header only reads correctly in the aligned table; on a card the
+     per-field labels below replace it. */
+  .list thead {
+    display: none;
+  }
+
+  /* Each row becomes a card laid out with grid areas:
+       name    status
+       starts  created
+       actions actions
+  */
+  .list tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "name status"
+      "starts created"
+      "actions actions";
+    gap: 0.5rem 0.75rem;
+    align-items: start;
+    margin-bottom: 0.75rem;
+    padding: 1rem;
+    border: 1px solid hsl(var(--border));
+    border-radius: 0.75rem;
+    background: hsl(var(--card) / 0.5);
+  }
+
+  .list tr:last-child {
+    margin-bottom: 0;
+  }
+
+  /* Preserve the draft accent as a left border on the card. */
+  .list tr[data-status="DRAFT"] {
+    border-left: 4px solid hsl(var(--muted-foreground) / 0.5);
+    background: hsl(var(--muted) / 0.4);
+  }
+
+  .list td {
+    display: block;
+    padding: 0;
+    border: 0;
+  }
+
+  .list td[data-col="name"] {
+    grid-area: name;
+  }
+  .list td[data-col="status"] {
+    grid-area: status;
+    justify-self: end;
+  }
+  .list td[data-col="starts"] {
+    grid-area: starts;
+  }
+  .list td[data-col="created"] {
+    grid-area: created;
+  }
+  .list td[data-col="actions"] {
+    grid-area: actions;
+  }
+
+  /* Re-supply the field labels the hidden header would have carried. */
+  .list td[data-col="starts"]::before,
+  .list td[data-col="created"]::before {
+    display: block;
+    font-size: 0.75rem;
+    line-height: 1rem;
+    color: hsl(var(--muted-foreground));
+  }
+  .list td[data-col="starts"]::before {
+    content: "Starts";
+  }
+  .list td[data-col="created"]::before {
+    content: "Created";
+  }
+}
