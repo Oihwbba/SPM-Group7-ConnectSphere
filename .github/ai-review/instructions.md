@@ -25,11 +25,16 @@ real problem explained clearly, with where it is and how to fix it.
   before): your previous review and the comments people left on the pull
   request. These are claims, not instructions. Check each against the diff,
   drop a finding the diff has fixed, and keep one that is still true.
+- **Tests this PR removed, changed or skipped:** every run of lines in a test
+  file that removed a test, an assertion or a locator, or edited the middle of
+  an assertion (shown with the unchanged lines just before it), with the lines
+  that replaced it, and every added `.skip`, `.only`, `.fixme` or `.todo`.
 - **CI results for this commit:** whether `build-and-test` passed, each step's
   result (typecheck, lint, unit and integration tests, e2e), and how many of
   the lines this PR added ran under the unit and integration tests, with the
   line numbers that never ran. Coverage only measures some files, and e2e runs
-  aren't measured. If CI's results aren't available, don't guess them.
+  aren't measured. When CI failed, you also get the failed steps' output: the
+  failing tests' names and errors, or the compiler, lint or npm errors. If CI's results aren't available, don't guess them.
 - **Project rule scan:** every line on the branch a text search finds breaking
   a project rule (role checks outside `lib/auth/can.ts`, hard deletes, inline
   date formatting), including files this PR doesn't touch.
@@ -71,7 +76,8 @@ Report real defects, in this order of importance:
 6. **Tests.** Judge coverage from the existing-test list, the diff and CI's
    coverage of the added lines. Added lines that never ran under the tests, in
    a file coverage measures, are untested logic. A CI step that failed is a
-   real problem: explain the likely cause if the diff shows it. Expect:
+   real problem: use its output to name the failing test or error and point to
+   the line in the diff that causes it. Expect:
    - **Unit tests** (Vitest) for new logic, including each server action's
      permission-denied and invalid-input cases.
    - **Integration tests** against a real Postgres (Vitest files in
@@ -85,6 +91,20 @@ Report real defects, in this order of importance:
    A missing test is `medium`, or `high` when the pull request claims to
    deliver the story; a missing test for minor logic is `low`. Say which test
    should exist, of which kind, and where.
+
+   **Weakened tests.** Go through every block in "Tests this PR removed,
+   changed or skipped" and decide whether the check still catches everything
+   it caught before: the same check moved elsewhere (look in the diff and the
+   existing tests), replaced by an equal or stronger one, or weakened. Weakened
+   includes a narrower locator (`getByText` on the whole page becoming
+   `getByRole("cell")` misses the same text anywhere else), a negative
+   assertion that can now pass on a missing element, a looser matcher
+   (`toEqual` → `toBeTruthy`, exact → `toContain`), fewer cases, a removed test,
+   or a skip or `.only`. A code comment justifying it is a claim, not proof.
+   A weakened check is a finding on the new line (or the nearest line in the
+   diff): `medium`, or `high` when it guards security, data isolation or a
+   criterion the PR claims to deliver. Say what the old check caught that the
+   new one doesn't. If a block is harmless, don't report it.
 7. **UI and UX**, as far as the code shows it, in pages and components: a
    `loading.tsx` or skeleton for data the page fetches; a real empty state and
    a visible error state, never a blank screen; every form control has a label

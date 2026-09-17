@@ -9,6 +9,9 @@ import {
   fenceFor,
   fileLink,
   filesMentioningStories,
+  extractFailedSteps,
+  findChangedAssertions,
+  renderChangedAssertions,
   numberLines,
   parseLcov,
   renderCiResults,
@@ -486,6 +489,137 @@ describe("parseDiff added lines", () => {
   });
 });
 
+describe("findChangedAssertions and renderChangedAssertions", () => {
+  const diffOf = (path: string, hunk: string, lines: string[]) =>
+    [`diff --git a/${path} b/${path}`, `--- a/${path}`, `+++ b/${path}`, hunk, ...lines].join("\n");
+
+  it("pairs a narrowed assertion with the lines that replaced it (#41)", () => {
+    const diff = diffOf("e2e/events.spec.ts", "@@ -10,3 +10,5 @@", [
+      " test(\"isolation\", async ({ page }) => {",
+      '-  await expect(page.getByText("Draft — Annual Tech Summit")).not.toBeVisible();',
+      "+  await expect(",
+      '+    page.getByRole("cell", { name: "Draft — Annual Tech Summit" }),',
+      "+  ).not.toBeVisible();",
+      " });",
+    ]);
+
+    const { changes, skips } = findChangedAssertions(diff);
+
+    expect(skips).toEqual([]);
+    expect(changes).toHaveLength(1);
+    expect(changes[0]).toMatchObject({ path: "e2e/events.spec.ts", oldLine: 11, newLine: 11, deleted: false });
+    expect(changes[0].removed[0]).toContain("getByText");
+    expect(changes[0].added[1]).toContain('getByRole("cell"');
+  });
+
+  it("ignores edits that remove no assertion and files that aren't tests", () => {
+    const comment = diffOf("tests/unit/a.test.ts", "@@ -1,1 +1,1 @@", ["-// old note", "+// new note"]);
+    const source = diffOf("lib/a.ts", "@@ -1,1 +1,1 @@", ["-expect(x).toBe(1);", "+expect(x).toBe(2);"]);
+
+    expect(findChangedAssertions(`${comment}\n${source}`).changes).toEqual([]);
+  });
+
+  it("lists a deleted test file's checks, and new skips and .only", () => {
+    const deleted = [
+      "diff --git a/tests/unit/gone.test.ts b/tests/unit/gone.test.ts",
+      "--- a/tests/unit/gone.test.ts",
+      "+++ /dev/null",
+      "@@ -1,3 +0,0 @@",
+      '-it("refuses an organiser", () => {',
+      "-  const r = run();",
+      "-  expect(r.ok).toBe(false);",
+    ].join("\n");
+    const skipped = diffOf("e2e/a.spec.ts", "@@ -1,0 +1,1 @@", ['+test.skip("flaky", async () => {});']);
+
+    const result = findChangedAssertions(`${deleted}\n${skipped}`);
+
+    expect(result.changes).toEqual([
+      expect.objectContaining({
+        path: "tests/unit/gone.test.ts",
+        deleted: true,
+        removed: ['it("refuses an organiser", () => {', "  expect(r.ok).toBe(false);"],
+      }),
+    ]);
+    expect(result.skips).toEqual(['e2e/a.spec.ts:1: test.skip("flaky", async () => {});']);
+    const text = renderChangedAssertions(result);
+    expect(text).toContain("(file deleted)");
+    expect(text).toContain("Replaced by: nothing in this file");
+    expect(text).toContain("### Tests skipped or narrowed with .only");
+  });
+
+  it("catches a locator narrowed inside an unchanged multi-line expect (#43 review)", () => {
+    const diff = diffOf("e2e/events.spec.ts", "@@ -20,3 +20,3 @@", [
+      "   await expect(",
+      '-    page.getByText("Draft — Annual Tech Summit"),',
+      '+    page.getByRole("cell", { name: "Draft — Annual Tech Summit" }),',
+      "   ).not.toBeVisible();",
+    ]);
+
+    const { changes } = findChangedAssertions(diff);
+
+    expect(changes).toHaveLength(1);
+    expect(changes[0].removed).toEqual(['    page.getByText("Draft — Annual Tech Summit"),']);
+    expect(renderChangedAssertions({ changes, skips: [] })).toContain("Replaced by:");
+  });
+
+  it("catches an edited expected value inside a multi-line toEqual", () => {
+    const diff = diffOf("tests/unit/a.test.ts", "@@ -5,4 +5,4 @@", [
+      "   expect(result).toEqual({",
+      "     ok: false,",
+      '-    error: "Not found",',
+      "+    error: expect.any(String),",
+      "   });",
+    ]);
+
+    const [change] = findChangedAssertions(diff).changes;
+
+    expect(change.before).toEqual(["  expect(result).toEqual({", "    ok: false,"]);
+    expect(renderChangedAssertions({ changes: [change], skips: [] })).toContain("Unchanged lines just before:");
+  });
+
+  it("doesn't treat .toString() or .toISOString() as an assertion (#43 review)", () => {
+    const diff = diffOf("tests/unit/a.test.ts", "@@ -1,2 +1,2 @@", [
+      "-const iso = start.toISOString();",
+      "+const iso = start.toISOString().slice(0, 10);",
+      "-const label = id.toString();",
+      "+const label = String(id);",
+      " const x = 1;",
+    ]);
+
+    expect(findChangedAssertions(diff).changes).toEqual([]);
+  });
+
+  it("flags .only, .todo and xit, lists skips first, and caps long blocks (#43 review)", () => {
+    const skips = diffOf("tests/unit/a.test.ts", "@@ -1,0 +1,3 @@", [
+      '+it.only("just this one", () => {});',
+      '+describe.todo("later");',
+      '+xit("off", () => {});',
+    ]);
+    const long = diffOf("tests/unit/b.test.ts", "@@ -1,35 +1,0 @@", [
+      ...Array.from({ length: 35 }, (_, i) => `-  expect(value${i}).toBe(${i});`),
+    ]);
+
+    const result = findChangedAssertions(`${skips}\n${long}`);
+
+    expect(result.skips).toEqual([
+      'tests/unit/a.test.ts:1: it.only("just this one", () => {});',
+      'tests/unit/a.test.ts:2: describe.todo("later");',
+      'tests/unit/a.test.ts:3: xit("off", () => {});',
+    ]);
+    const full = renderChangedAssertions(result);
+    expect(full.indexOf("### Tests skipped")).toBeLessThan(full.indexOf("### 1."));
+    expect(full).toContain("-… 5 more line(s)");
+    expect(renderChangedAssertions(result, 200)).toContain("[truncated at 200 characters]");
+    expect(renderChangedAssertions(result, 200)).toContain("it.only");
+  });
+
+  it("says so when no test changed", () => {
+    expect(renderChangedAssertions({ changes: [], skips: [] })).toBe(
+      "No test or assertion was removed, changed or skipped.",
+    );
+  });
+});
+
 describe("context beyond the diff", () => {
   const file = (path: string, content: string) => ({ path, content });
 
@@ -624,6 +758,59 @@ describe("context beyond the diff", () => {
     expect(text).toContain("- app/(app)/equipment/actions.ts: 1 of 2 added executable lines ran; never run: lines 11");
     expect(text).toContain("- app/(app)/events/events-client.tsx: not measured by the coverage configuration");
     expect(renderCiResults(null)).toContain("Don't guess them.");
+  });
+
+  it("extracts only the failed step's failure report from a job log", () => {
+    const log = [
+      "2026-09-16T09:54:50.0000000Z ##[group]Run npm run lint",
+      "2026-09-16T09:54:50.0000000Z npm run lint",
+      "2026-09-16T09:54:50.0000000Z ##[endgroup]",
+      "2026-09-16T09:54:51.0000000Z lint ok",
+      "2026-09-16T09:54:52.0000000Z ##[group]Run npm run test:coverage",
+      "2026-09-16T09:54:52.0000000Z npm run test:coverage",
+      "2026-09-16T09:54:52.0000000Z shell: /usr/bin/bash -e {0}",
+      "2026-09-16T09:54:52.0000000Z ##[endgroup]",
+      "2026-09-16T09:54:58.0000000Z  [32m✓[39m tests/unit/nav.test.ts (5 tests) 7ms",
+      "2026-09-16T09:54:59.0000000Z ⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯",
+      "2026-09-16T09:54:59.0000000Z  FAIL  tests/integration/a.test.ts > SCRUM-89 > creates the columns",
+      "2026-09-16T09:54:59.0000000Z AssertionError: expected 'text' to be 'ARRAY'",
+      "2026-09-16T09:54:59.0000000Z ##[error]Process completed with exit code 1.",
+      "2026-09-16T09:55:00.0000000Z ##[group]Run actions/upload-artifact@v7",
+    ].join("\n");
+
+    const failed = extractFailedSteps(log);
+
+    expect(failed).toEqual([
+      {
+        command: "npm run test:coverage",
+        output: [
+          "⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯",
+          " FAIL  tests/integration/a.test.ts > SCRUM-89 > creates the columns",
+          "AssertionError: expected 'text' to be 'ARRAY'",
+        ].join("\n"),
+      },
+    ]);
+    const text = renderCiResults({ url: "https://ci", conclusion: "failure", steps: [], coverage: null, failures: failed });
+    expect(text).toContain("### Failed: npm run test:coverage");
+    expect(text).toContain("AssertionError: expected 'text' to be 'ARRAY'");
+  });
+
+  it("keeps the end of a failed step with no test report, where the error is", () => {
+    const log = [
+      "##[group]Run npm ci",
+      "##[endgroup]",
+      ...Array.from({ length: 50 }, (_, i) => `npm error line ${i}`),
+      "##[error]Process completed with exit code 1.",
+    ].join("\n");
+
+    const [step] = extractFailedSteps(log, 40);
+
+    expect(step.command).toBe("npm ci");
+    expect(step.output.startsWith("…")).toBe(true);
+    expect(step.output.endsWith("npm error line 49")).toBe(true);
+    expect(renderCiResults({ url: "u", conclusion: "failure", steps: [], coverage: null, failures: [] })).toContain(
+      "couldn't be read from CI's log",
+    );
   });
 });
 
