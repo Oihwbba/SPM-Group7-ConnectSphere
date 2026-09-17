@@ -1072,11 +1072,6 @@ async function downloadLcov({ github, token, repo, runId }) {
   }
 }
 
-/**
- * Waits for CI's build-and-test on this commit, then returns its step outcomes
- * and the coverage of the lines this PR added. Returns null when CI doesn't
- * finish before the deadline. A pull_request run is preferred to a push run.
- */
 // Where a tool's failure report starts, so the output skips the passing tests
 // before it: Vitest's "Failed Tests" banner, Playwright's first "1) [project]".
 const FAILURE_REPORT_START = /⎯+ Failed Tests \d+ ⎯+|^\s+1\) \[/;
@@ -1138,6 +1133,12 @@ async function loadFailedSteps({ token, repo, jobs }) {
   return failed;
 }
 
+/**
+ * Waits for CI's build-and-test on this commit, then returns its step outcomes,
+ * the coverage of the lines this PR added, and the failed steps' output when it
+ * failed. Returns null when CI doesn't finish before the deadline. A
+ * pull_request run is preferred to a push run.
+ */
 async function loadCiResults({ github, token, repo, headSha, addedLines, deadline }) {
   let run;
   for (;;) {
