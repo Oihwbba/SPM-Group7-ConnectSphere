@@ -9,6 +9,8 @@ import {
   fenceFor,
   fileLink,
   filesMentioningStories,
+  findChangedAssertions,
+  renderChangedAssertions,
   numberLines,
   parseLcov,
   renderCiResults,
@@ -483,6 +485,71 @@ describe("parseDiff added lines", () => {
 
     expect([...added.get("src/a.ts")!]).toEqual([2, 3]);
     expect([...commentable.get("src/a.ts")!]).toEqual([1, 2, 3, 4]);
+  });
+});
+
+describe("findChangedAssertions and renderChangedAssertions", () => {
+  const diffOf = (path: string, hunk: string, lines: string[]) =>
+    [`diff --git a/${path} b/${path}`, `--- a/${path}`, `+++ b/${path}`, hunk, ...lines].join("\n");
+
+  it("pairs a narrowed assertion with the lines that replaced it (#41)", () => {
+    const diff = diffOf("e2e/events.spec.ts", "@@ -10,3 +10,5 @@", [
+      " test(\"isolation\", async ({ page }) => {",
+      '-  await expect(page.getByText("Draft — Annual Tech Summit")).not.toBeVisible();',
+      "+  await expect(",
+      '+    page.getByRole("cell", { name: "Draft — Annual Tech Summit" }),',
+      "+  ).not.toBeVisible();",
+      " });",
+    ]);
+
+    const { changes, skips } = findChangedAssertions(diff);
+
+    expect(skips).toEqual([]);
+    expect(changes).toHaveLength(1);
+    expect(changes[0]).toMatchObject({ path: "e2e/events.spec.ts", oldLine: 11, newLine: 11, deleted: false });
+    expect(changes[0].removed[0]).toContain("getByText");
+    expect(changes[0].added[1]).toContain('getByRole("cell"');
+  });
+
+  it("ignores edits that remove no assertion and files that aren't tests", () => {
+    const comment = diffOf("tests/unit/a.test.ts", "@@ -1,1 +1,1 @@", ["-// old note", "+// new note"]);
+    const source = diffOf("lib/a.ts", "@@ -1,1 +1,1 @@", ["-expect(x).toBe(1);", "+expect(x).toBe(2);"]);
+
+    expect(findChangedAssertions(`${comment}\n${source}`).changes).toEqual([]);
+  });
+
+  it("lists a deleted test file's checks, and new skips and .only", () => {
+    const deleted = [
+      "diff --git a/tests/unit/gone.test.ts b/tests/unit/gone.test.ts",
+      "--- a/tests/unit/gone.test.ts",
+      "+++ /dev/null",
+      "@@ -1,3 +0,0 @@",
+      '-it("refuses an organiser", () => {',
+      "-  const r = run();",
+      "-  expect(r.ok).toBe(false);",
+    ].join("\n");
+    const skipped = diffOf("e2e/a.spec.ts", "@@ -1,0 +1,1 @@", ['+test.skip("flaky", async () => {});']);
+
+    const result = findChangedAssertions(`${deleted}\n${skipped}`);
+
+    expect(result.changes).toEqual([
+      expect.objectContaining({
+        path: "tests/unit/gone.test.ts",
+        deleted: true,
+        removed: ['it("refuses an organiser", () => {', "  expect(r.ok).toBe(false);"],
+      }),
+    ]);
+    expect(result.skips).toEqual(['e2e/a.spec.ts:1: test.skip("flaky", async () => {});']);
+    const text = renderChangedAssertions(result);
+    expect(text).toContain("(file deleted)");
+    expect(text).toContain("Replaced by: nothing in this file");
+    expect(text).toContain("### Tests skipped or narrowed with .only");
+  });
+
+  it("says so when no test changed", () => {
+    expect(renderChangedAssertions({ changes: [], skips: [] })).toBe(
+      "No test or assertion was removed, changed or skipped.",
+    );
   });
 });
 

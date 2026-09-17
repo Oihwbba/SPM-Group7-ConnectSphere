@@ -383,3 +383,21 @@ with a topped-up balance.
   failed on every teammate's pull request (the Hobby plan blocks deploys of
   commits by non-members), and previews wrote to the production database.
   Production still deploys from `main`.
+
+## Addendum (2026-09-17, weakened tests)
+
+On #41 an isolation e2e check changed from `getByText` on the whole page to
+`getByRole("cell")`, so it no longer caught the other organiser's event shown
+anywhere outside a table cell. The review didn't notice: it looks for missing
+tests, and a weakened test still exists.
+
+**Decision.** The script lists every run of lines in a test file that removes a
+test or an assertion, next to the lines that replaced it, plus every added
+`.skip`, `.only`, `.fixme` or `.todo`. GLM must account for each one: moved,
+replaced by an equal or stronger check, or weakened. A weakened check is a
+`medium` finding, or `high` when it guards security, data isolation or a
+claimed criterion.
+
+**Trade-offs.** It's small: about 2,300 characters (~600 tokens) on #41, capped
+at 20,000. It's a text match, so an assertion rewritten without removing a line
+that looks like one isn't listed, but it still appears in the diff.

@@ -59,6 +59,7 @@ const MAX_CONVERSATION_CHARS = 8_000;
 const MAX_CHANGED_FILES_CHARS = 250_000;
 const MAX_RELATED_FILES_CHARS = 150_000;
 const MAX_FILE_CHARS = 60_000;
+const MAX_TEST_CHANGE_CHARS = 20_000;
 // How long the review waits for CI's build-and-test on the same commit.
 const CI_WORKFLOW_NAME = "CI";
 const CI_WAIT_MS = 15 * 60 * 1000;
@@ -660,6 +661,115 @@ function listTestFiles(sha) {
     .map((path) => describeTestFile(path, readFromBase(sha, path) ?? ""));
 }
 
+// A line that checks something, or declares a test. #41 narrowed an isolation
+// check from getByText to getByRole("cell") and the review didn't notice.
+const ASSERTION =
+  /\bexpect(?:\.soft|\.poll)?\s*\(|\bassert\w*\s*\(|\.(?:to|not\.to)[A-Z]\w*\s*\(|\.(?:rejects|resolves)\b|\b(?:it|test|describe)(?:\.\w+)*\s*\(/;
+// A test switched off or narrowed to one.
+const SKIPPED_TEST = /\b(?:it|test|describe)(?:\.\w+)*\.(?:skip|only|fixme|todo)\b|\bxit\s*\(|\bxdescribe\s*\(/;
+const MAX_BLOCK_LINES = 30;
+
+/**
+ * Every place a test file lost an assertion or a test, with what replaced it:
+ * each run of removed and added lines that removes one, from the diff. Also
+ * every added line that skips a test or narrows the run with .only.
+ */
+export function findChangedAssertions(diff) {
+  const changes = [];
+  const skips = [];
+  let path = null;
+  let deleted = false;
+  let inHunk = false;
+  let oldLine = 0;
+  let newLine = 0;
+  let block = null;
+
+  const flush = () => {
+    if (block && block.removed.some((line) => ASSERTION.test(line))) {
+      changes.push({
+        ...block,
+        // A deleted file has nothing replacing it; only its checks matter.
+        removed: deleted ? block.removed.filter((line) => ASSERTION.test(line)) : block.removed,
+        deleted,
+      });
+    }
+    block = null;
+  };
+
+  for (const raw of diff.split("\n")) {
+    if (raw.startsWith("diff --git ")) {
+      flush();
+      path = null;
+      deleted = false;
+      inHunk = false;
+      continue;
+    }
+    if (!inHunk && raw.startsWith("--- ")) {
+      const source = raw.slice(4).trim();
+      path = source === "/dev/null" ? null : source.replace(/^a\//, "");
+      continue;
+    }
+    if (!inHunk && raw.startsWith("+++ ")) {
+      const target = raw.slice(4).trim();
+      deleted = target === "/dev/null";
+      if (!deleted) path = target.replace(/^b\//, "");
+      if (path && (!TEST_FILE.test(path) || NOT_APP_TESTS.has(path))) path = null;
+      continue;
+    }
+    const hunk = /^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@/.exec(raw);
+    if (hunk) {
+      flush();
+      inHunk = true;
+      oldLine = Number(hunk[1]);
+      newLine = Number(hunk[2]);
+      continue;
+    }
+    if (!inHunk || !path || raw.startsWith("\\")) continue;
+
+    if (raw.startsWith("-")) {
+      block ??= { path, oldLine, newLine, removed: [], added: [] };
+      block.removed.push(raw.slice(1));
+      oldLine += 1;
+    } else if (raw.startsWith("+")) {
+      if (SKIPPED_TEST.test(raw)) skips.push(`${path}:${newLine}: ${raw.slice(1).trim().slice(0, 160)}`);
+      block ??= { path, oldLine, newLine, removed: [], added: [] };
+      block.added.push(raw.slice(1));
+      newLine += 1;
+    } else {
+      flush();
+      oldLine += 1;
+      newLine += 1;
+    }
+  }
+  flush();
+  return { changes, skips };
+}
+
+function blockLines(lines, prefix) {
+  const shown = lines.slice(0, MAX_BLOCK_LINES).map((line) => `${prefix}${line}`);
+  if (lines.length > MAX_BLOCK_LINES) shown.push(`${prefix}… ${lines.length - MAX_BLOCK_LINES} more line(s)`);
+  return shown.join("\n");
+}
+
+export function renderChangedAssertions({ changes, skips }, max = MAX_TEST_CHANGE_CHARS) {
+  if (changes.length === 0 && skips.length === 0) return "No test or assertion was removed, changed or skipped.";
+  const parts = changes.map((change, i) => {
+    const where = change.deleted
+      ? `${change.path} (file deleted), old line ${change.oldLine}`
+      : `${change.path}, old line ${change.oldLine} → new line ${change.newLine}`;
+    const replacement = change.deleted
+      ? "Replaced by: nothing in this file"
+      : change.added.length
+        ? `Replaced by:\n${blockLines(change.added, "+")}`
+        : "Replaced by: nothing (removed outright)";
+    return `### ${i + 1}. ${where}\n\n${blockLines(change.removed, "-")}\n\n${replacement}`;
+  });
+  if (skips.length) {
+    parts.push(`### Tests skipped or narrowed with .only\n\n${skips.map((line) => `- ${line}`).join("\n")}`);
+  }
+  return capped(parts.join("\n\n"), max);
+}
+
 // ---------------------------------------------------------------------------
 // Context beyond the diff (ADR 0008): the changed files in full, the files they
 // import and the files that import them, files naming the PR's stories, a text
@@ -1098,6 +1208,10 @@ async function main() {
           conversation,
         ]
       : []),
+    "## Tests this PR removed, changed or skipped",
+    "Each block is a run of lines in a test file that removed a test or an assertion, with the lines " +
+      "that replaced it. Account for every one (see the Tests section of your instructions).",
+    renderChangedAssertions(findChangedAssertions(diff)),
     "## CI results for this commit",
     renderCiResults(ci),
     "## Project rule scan (text search of the whole branch at this PR's head)",
