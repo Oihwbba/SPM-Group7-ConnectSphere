@@ -44,15 +44,17 @@ export function EquipmentClient({
   });
   const [availability, setAvailability] = useState<number | null>(null);
   const [allAvailability, setAllAvailability] = useState<AvailabilityMap | null>(null);
+  const [availabilityError, setAvailabilityError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[] | undefined>>({});
   const [pending, startTransition] = useTransition();
 
   const update = (field: keyof typeof form, value: string) => {
     setForm((current) => {
       const next = { ...current, [field]: value };
-      if (!next.startAt || !next.endAt) {
+      if (field === "startAt" || field === "endAt" || !next.startAt || !next.endAt) {
         setAllAvailability(null);
         setAvailability(null);
+        setAvailabilityError(null);
       }
       return next;
     });
@@ -63,27 +65,53 @@ export function EquipmentClient({
 
   // Live calculation: automatically fetch availability whenever startAt & endAt change (debounced)
   useEffect(() => {
-    if (!form.startAt || !form.endAt) return;
+    if (!form.startAt || !form.endAt) {
+      setAllAvailability(null);
+      setAvailability(null);
+      setAvailabilityError(null);
+      return;
+    }
 
     const start = new Date(form.startAt);
     const end = new Date(form.endAt);
-    if (isNaN(start.getTime()) || isNaN(end.getTime()) || end <= start) return;
+    if (isNaN(start.getTime()) || isNaN(end.getTime()) || end <= start) {
+      setAllAvailability(null);
+      setAvailability(null);
+      setAvailabilityError(null);
+      return;
+    }
 
     let isMounted = true;
     const timer = setTimeout(() => {
       startTransition(async () => {
-        const res = await getAllEquipmentAvailability({
-          startAt: toUtcIso(form.startAt),
-          endAt: toUtcIso(form.endAt),
-        });
+        try {
+          const res = await getAllEquipmentAvailability({
+            startAt: toUtcIso(form.startAt),
+            endAt: toUtcIso(form.endAt),
+          });
 
-        if (!isMounted) return;
+          if (!isMounted) return;
 
-        if (res.ok) {
-          setAllAvailability(res.data);
-          if (form.equipmentId && res.data[form.equipmentId]) {
-            setAvailability(res.data[form.equipmentId].available);
+          if (res.ok) {
+            setAllAvailability(res.data);
+            setAvailabilityError(null);
+            if (form.equipmentId && res.data[form.equipmentId]) {
+              setAvailability(res.data[form.equipmentId].available);
+            }
+          } else {
+            setAllAvailability(null);
+            setAvailability(null);
+            setAvailabilityError(
+              res.error || "Couldn't calculate availability — check the period and try again",
+            );
           }
+        } catch {
+          if (!isMounted) return;
+          setAllAvailability(null);
+          setAvailability(null);
+          setAvailabilityError(
+            "Couldn't calculate availability — check the period and try again",
+          );
         }
       });
     }, 300);
@@ -250,9 +278,15 @@ export function EquipmentClient({
         <CardHeader>
           <CardTitle>Live equipment availability</CardTitle>
           <CardDescription>
-            {form.startAt && form.endAt
-              ? "Live availability calculated for the selected period."
-              : "Select start and end dates above to view live equipment availability for that period."}
+            {availabilityError ? (
+              <span className="font-medium text-destructive">{availabilityError}</span>
+            ) : form.startAt && form.endAt && allAvailability ? (
+              "Live availability calculated for the selected period."
+            ) : form.startAt && form.endAt ? (
+              "Calculating live equipment availability..."
+            ) : (
+              "Select start and end dates above to view live equipment availability for that period."
+            )}
           </CardDescription>
         </CardHeader>
         <CardContent>

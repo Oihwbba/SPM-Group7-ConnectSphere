@@ -160,6 +160,8 @@ describe.skipIf(!usesLocalDatabase)("concurrency — status transitions (SCRUM-2
 
     expect(results.filter((r) => r.ok)).toHaveLength(1);
     expect(results.filter((r) => !r.ok)).toHaveLength(1);
+
+    expect(await prisma.auditLog.count({ where: { entityId: eventId } })).toBe(1);
   });
 });
 
