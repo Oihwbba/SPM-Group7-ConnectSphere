@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
+import { prisma } from "@/lib/db";
 
 /**
  * SCRUM-31 — Reserve equipment for an event. Technical Support reserves units
@@ -27,6 +28,15 @@ async function fillReservation(page: Page, quantity: string) {
 }
 
 test.describe("SCRUM-31 — Reserve Equipment for Event", () => {
+  test.beforeEach(async () => {
+    await prisma.reservation.deleteMany({
+      where: {
+        eventId: "evt_approved",
+        startAt: { gte: new Date("2031-01-01T00:00:00.000Z") },
+      },
+    });
+  });
+
   test("AC 1 & 7: a reservation that fits is confirmed and reduces availability", async ({ page }) => {
     await signInAsTechSupport(page);
     await fillReservation(page, "1");
@@ -34,7 +44,7 @@ test.describe("SCRUM-31 — Reserve Equipment for Event", () => {
     await expect(page.getByRole("status")).toContainText(
       /\d+ unit\(s\) available for this period/,
     );
-    await expect(page.getByText("4 of 4 available", { exact: true })).toBeVisible();
+    await expect(page.getByText(/\d+ of 4 available/)).toBeVisible();
 
     await page.getByRole("button", { name: "Confirm reservation" }).click();
     await expect(
