@@ -67,7 +67,6 @@ describe.skipIf(!usesLocalDatabase)("concurrency — equipment pool (SCRUM-31)",
   afterAll(async () => {
     await prisma.reservation.deleteMany({ where: { equipmentId } });
     await prisma.equipment.delete({ where: { id: equipmentId } });
-    await prisma.$disconnect();
   });
 
   it("does not over-allocate equipment when two staff reserve the last unit (SCRUM-31)", async () => {
@@ -150,7 +149,7 @@ describe.skipIf(!usesLocalDatabase)("concurrency — status transitions (SCRUM-2
 
   it("SCRUM-24: the loser of two simultaneous decisions is told to refresh, and no audit entry is written", async () => {
     (auth as unknown as Mock).mockResolvedValue({
-      user: { id: "usr_coord", role: "COORDINATOR", name: "Cody", email: "coordinator@test.local" },
+      user: { id: "usr_coordinator", role: "COORDINATOR", name: "Cody", email: "coordinator@test.local" },
       expires: "2999-01-01T00:00:00.000Z",
     });
 
