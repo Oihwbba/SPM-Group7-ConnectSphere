@@ -16,7 +16,6 @@ import { Label } from "@/components/ui/label";
 import {
   createReservation,
   getAllEquipmentAvailability,
-  getEquipmentAvailability,
 } from "./actions";
 
 type Equipment = { id: string; type: string; totalQuantity: number };
@@ -49,7 +48,14 @@ export function EquipmentClient({
   const [pending, startTransition] = useTransition();
 
   const update = (field: keyof typeof form, value: string) => {
-    setForm((current) => ({ ...current, [field]: value }));
+    setForm((current) => {
+      const next = { ...current, [field]: value };
+      if (!next.startAt || !next.endAt) {
+        setAllAvailability(null);
+        setAvailability(null);
+      }
+      return next;
+    });
     if (fieldErrors[field]) {
       setFieldErrors((current) => ({ ...current, [field]: undefined }));
     }
@@ -57,19 +63,11 @@ export function EquipmentClient({
 
   // Live calculation: automatically fetch availability whenever startAt & endAt change
   useEffect(() => {
-    if (!form.startAt || !form.endAt) {
-      setAllAvailability(null);
-      setAvailability(null);
-      return;
-    }
+    if (!form.startAt || !form.endAt) return;
 
     const start = new Date(form.startAt);
     const end = new Date(form.endAt);
-    if (isNaN(start.getTime()) || isNaN(end.getTime()) || end <= start) {
-      setAllAvailability(null);
-      setAvailability(null);
-      return;
-    }
+    if (isNaN(start.getTime()) || isNaN(end.getTime()) || end <= start) return;
 
     let isMounted = true;
     startTransition(async () => {
@@ -92,33 +90,6 @@ export function EquipmentClient({
       isMounted = false;
     };
   }, [form.startAt, form.endAt, form.equipmentId]);
-
-  const checkAvailability = () =>
-    startTransition(async () => {
-      if (!form.equipmentId || !form.startAt || !form.endAt) {
-        toast.error("Please fill in start time, end time, and equipment type.");
-        return;
-      }
-      const result = await getEquipmentAvailability({
-        ...form,
-        startAt: toUtcIso(form.startAt),
-        endAt: toUtcIso(form.endAt),
-      });
-      if (!result.ok) {
-        toast.error(result.error);
-        return;
-      }
-      setAvailability(result.data.available);
-
-      // Also refresh period-wide availability
-      const allRes = await getAllEquipmentAvailability({
-        startAt: toUtcIso(form.startAt),
-        endAt: toUtcIso(form.endAt),
-      });
-      if (allRes.ok) {
-        setAllAvailability(allRes.data);
-      }
-    });
 
   const reserve = () =>
     startTransition(async () => {
