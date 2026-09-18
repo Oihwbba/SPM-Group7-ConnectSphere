@@ -44,7 +44,7 @@ test.describe("SCRUM-31 — Reserve Equipment for Event", () => {
     await expect(page.getByRole("status")).toContainText(
       /\d+ unit\(s\) available for this period/,
     );
-    await expect(page.getByText(/\d+ of 4 available/)).toBeVisible();
+    await expect(page.locator("span", { hasText: /\d+ of 4 available/ })).toBeVisible();
 
     await page.getByRole("button", { name: "Confirm reservation" }).click();
     await expect(
