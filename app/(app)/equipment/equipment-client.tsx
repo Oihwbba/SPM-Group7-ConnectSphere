@@ -52,6 +52,11 @@ export function EquipmentClient({
   const update = (field: keyof typeof form, value: string) => {
     const nextForm = { ...form, [field]: value };
     setForm(nextForm);
+    if (field === "equipmentId") {
+      setAvailability(
+        value && allAvailability?.[value] ? allAvailability[value].available : null,
+      );
+    }
     if (field === "startAt" || field === "endAt" || !nextForm.startAt || !nextForm.endAt) {
       setAllAvailability(null);
       setAvailability(null);
@@ -95,6 +100,8 @@ export function EquipmentClient({
             setAvailabilityError(null);
             if (form.equipmentId && res.data[form.equipmentId]) {
               setAvailability(res.data[form.equipmentId].available);
+            } else {
+              setAvailability(null);
             }
           } else {
             setAllAvailability(null);
