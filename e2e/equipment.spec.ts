@@ -77,4 +77,14 @@ test.describe("SCRUM-31 — Reserve Equipment for Event", () => {
     await expect(page.getByText("Please fix the reservation details.")).toBeVisible();
     await expect(page.getByText("Quantity must be greater than zero.")).toBeVisible();
   });
+
+  test("AC 4: an invalid period (end earlier than start) triggers live inline error", async ({ page }) => {
+    await signInAsTechSupport(page);
+    await page.getByLabel("Start", { exact: true }).fill("2031-05-10T17:00");
+    await page.getByLabel("End", { exact: true }).fill("2031-05-10T09:00");
+
+    await expect(
+      page.getByText("End time must be after the start time.").first(),
+    ).toBeVisible();
+  });
 });
