@@ -11,40 +11,43 @@ const reservationFields = {
   endAt: z.string().min(1, "Choose a reservation end time."),
 };
 
-const reservationPeriodSchema = z
+function validatePeriod(
+  data: { startAt: string; endAt: string },
+  ctx: z.RefinementCtx,
+) {
+  const startAt = new Date(data.startAt);
+  const endAt = new Date(data.endAt);
+
+  if (Number.isNaN(startAt.getTime())) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["startAt"],
+      message: "Invalid start time.",
+    });
+  }
+  if (Number.isNaN(endAt.getTime())) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["endAt"],
+      message: "Invalid end time.",
+    });
+  }
+  if (
+    !Number.isNaN(startAt.getTime()) &&
+    !Number.isNaN(endAt.getTime()) &&
+    endAt <= startAt
+  ) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["endAt"],
+      message: "End time must be after the start time.",
+    });
+  }
+}
+
+export const reservationSchema = z
   .object(reservationFields)
-  .superRefine((data, ctx) => {
-    const startAt = new Date(data.startAt);
-    const endAt = new Date(data.endAt);
-
-    if (Number.isNaN(startAt.getTime())) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["startAt"],
-        message: "Invalid start time.",
-      });
-    }
-    if (Number.isNaN(endAt.getTime())) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["endAt"],
-        message: "Invalid end time.",
-      });
-    }
-    if (
-      !Number.isNaN(startAt.getTime()) &&
-      !Number.isNaN(endAt.getTime()) &&
-      endAt <= startAt
-    ) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["endAt"],
-        message: "End time must be after the start time.",
-      });
-    }
-  });
-
-export const reservationSchema = reservationPeriodSchema;
+  .superRefine(validatePeriod);
 
 export const availabilitySchema = z
   .object({
@@ -52,65 +55,16 @@ export const availabilitySchema = z
     startAt: reservationFields.startAt,
     endAt: reservationFields.endAt,
   })
-  .superRefine((data, ctx) => {
-    const startAt = new Date(data.startAt);
-    const endAt = new Date(data.endAt);
-    if (Number.isNaN(startAt.getTime()))
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["startAt"],
-        message: "Invalid start time.",
-      });
-    if (Number.isNaN(endAt.getTime()))
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["endAt"],
-        message: "Invalid end time.",
-      });
-    if (
-      !Number.isNaN(startAt.getTime()) &&
-      !Number.isNaN(endAt.getTime()) &&
-      endAt <= startAt
-    )
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["endAt"],
-        message: "End time must be after the start time.",
-      });
-  });
+  .superRefine(validatePeriod);
 
 export const allAvailabilitySchema = z
   .object({
     startAt: reservationFields.startAt,
     endAt: reservationFields.endAt,
   })
-  .superRefine((data, ctx) => {
-    const startAt = new Date(data.startAt);
-    const endAt = new Date(data.endAt);
-    if (Number.isNaN(startAt.getTime()))
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["startAt"],
-        message: "Invalid start time.",
-      });
-    if (Number.isNaN(endAt.getTime()))
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["endAt"],
-        message: "Invalid end time.",
-      });
-    if (
-      !Number.isNaN(startAt.getTime()) &&
-      !Number.isNaN(endAt.getTime()) &&
-      endAt <= startAt
-    )
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["endAt"],
-        message: "End time must be after the start time.",
-      });
-  });
+  .superRefine(validatePeriod);
 
 export type ReservationInput = z.infer<typeof reservationSchema>;
+
 
 

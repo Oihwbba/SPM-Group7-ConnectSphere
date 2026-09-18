@@ -61,7 +61,7 @@ export function EquipmentClient({
     }
   };
 
-  // Live calculation: automatically fetch availability whenever startAt & endAt change
+  // Live calculation: automatically fetch availability whenever startAt & endAt change (debounced)
   useEffect(() => {
     if (!form.startAt || !form.endAt) return;
 
@@ -70,24 +70,27 @@ export function EquipmentClient({
     if (isNaN(start.getTime()) || isNaN(end.getTime()) || end <= start) return;
 
     let isMounted = true;
-    startTransition(async () => {
-      const res = await getAllEquipmentAvailability({
-        startAt: toUtcIso(form.startAt),
-        endAt: toUtcIso(form.endAt),
-      });
+    const timer = setTimeout(() => {
+      startTransition(async () => {
+        const res = await getAllEquipmentAvailability({
+          startAt: toUtcIso(form.startAt),
+          endAt: toUtcIso(form.endAt),
+        });
 
-      if (!isMounted) return;
+        if (!isMounted) return;
 
-      if (res.ok) {
-        setAllAvailability(res.data);
-        if (form.equipmentId && res.data[form.equipmentId]) {
-          setAvailability(res.data[form.equipmentId].available);
+        if (res.ok) {
+          setAllAvailability(res.data);
+          if (form.equipmentId && res.data[form.equipmentId]) {
+            setAvailability(res.data[form.equipmentId].available);
+          }
         }
-      }
-    });
+      });
+    }, 300);
 
     return () => {
       isMounted = false;
+      clearTimeout(timer);
     };
   }, [form.startAt, form.endAt, form.equipmentId]);
 

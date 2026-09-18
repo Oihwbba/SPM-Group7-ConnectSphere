@@ -22,7 +22,7 @@ async function fillReservation(page: Page, quantity: string) {
     .selectOption({ label: "Approved — Research Symposium" });
   await page.getByLabel("Start", { exact: true }).fill("2031-05-10T09:00");
   await page.getByLabel("End", { exact: true }).fill("2031-05-10T17:00");
-  await page.getByLabel("Equipment type").selectOption({ index: 1 });
+  await page.getByLabel("Equipment type").selectOption({ value: "eqp_lectern" });
   await page.getByLabel("Quantity", { exact: true }).fill(quantity);
 }
 
@@ -59,5 +59,6 @@ test.describe("SCRUM-31 — Reserve Equipment for Event", () => {
     await page.getByRole("button", { name: "Confirm reservation" }).click();
 
     await expect(page.getByText("Please fix the reservation details.")).toBeVisible();
+    await expect(page.getByText("Quantity must be greater than zero.")).toBeVisible();
   });
 });

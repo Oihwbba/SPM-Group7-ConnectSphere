@@ -217,5 +217,31 @@ describe("getAllEquipmentAvailability — SCRUM-31", () => {
       expect(result.data.eq1.total).toBe(10);
     }
   });
+
+  it("refuses a period whose end is not after its start", async () => {
+    mockAuth.mockResolvedValue(sessionFor("TECH_SUPPORT", "usr_tech"));
+
+    const result = await getAllEquipmentAvailability({
+      startAt: START,
+      endAt: START,
+    });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toMatch(/valid reservation period/i);
+    expect(tx.equipment.findMany).not.toHaveBeenCalled();
+  });
+
+  it("refuses a role without equipment:read", async () => {
+    mockAuth.mockResolvedValue(sessionFor("ATTENDEE", "usr_attendee"));
+
+    const result = await getAllEquipmentAvailability({
+      startAt: START,
+      endAt: END,
+    });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toMatch(/permission/i);
+    expect(tx.equipment.findMany).not.toHaveBeenCalled();
+  });
 });
 
