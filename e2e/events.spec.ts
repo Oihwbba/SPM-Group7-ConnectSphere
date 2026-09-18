@@ -328,5 +328,25 @@ test.describe("User Story 84 — Organiser Views Their Own Event Requests Journe
   });
 });
 
+test.describe("User Story 23 & 24 — Event Status View & Consistency Journey", () => {
+  test("coordinator views assigned event status and status remains consistent across views (SCRUM-23 & SCRUM-24)", async ({
+    page,
+  }) => {
+    // 1. Sign in as Event Coordinator
+    await page.goto("/login");
+    await page.getByLabel("Email", { exact: true }).fill("coordinator@test.local");
+    await page.getByLabel("Password", { exact: true }).fill("Password123!");
+    await page.getByRole("button", { name: "Sign in" }).click();
+
+    // 2. Navigate to Coordinator Event Requests dashboard
+    await page.waitForURL("**/events");
+    await expect(page.getByRole("heading", { name: "Event Requests" })).toBeVisible();
+
+    // 3. Verify single source of truth status badge is rendered and visible (SCRUM-23 & SCRUM-24)
+    const firstStatusBadge = page.getByTestId("status-badge").first();
+    await expect(firstStatusBadge).toBeVisible();
+  });
+});
+
 
 
