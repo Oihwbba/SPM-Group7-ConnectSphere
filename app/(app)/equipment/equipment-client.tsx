@@ -43,23 +43,23 @@ export function EquipmentClient({
     startAt: "",
     endAt: "",
   });
-  const [availability, setAvailability] = useState<number | null>(null);
   const [allAvailability, setAllAvailability] = useState<AvailabilityMap | null>(null);
   const [availabilityError, setAvailabilityError] = useState<string | null>(null);
+
+  // Derive per-equipment availability at render time — always in sync with both
+  // allAvailability (set by the date-change effect) and form.equipmentId (set by update()).
+  const availability =
+    form.equipmentId && allAvailability?.[form.equipmentId]
+      ? allAvailability[form.equipmentId].available
+      : null;
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[] | undefined>>({});
   const [pending, startTransition] = useTransition();
 
   const update = (field: keyof typeof form, value: string) => {
     const nextForm = { ...form, [field]: value };
     setForm(nextForm);
-    if (field === "equipmentId") {
-      setAvailability(
-        value && allAvailability?.[value] ? allAvailability[value].available : null,
-      );
-    }
     if (field === "startAt" || field === "endAt" || !nextForm.startAt || !nextForm.endAt) {
       setAllAvailability(null);
-      setAvailability(null);
       setAvailabilityError(null);
     }
     if (fieldErrors[field]) {
@@ -82,7 +82,6 @@ export function EquipmentClient({
         if (!parsed.success) {
           if (!isMounted) return;
           setAllAvailability(null);
-          setAvailability(null);
           const errs = parsed.error.flatten().fieldErrors;
           setAvailabilityError(
             errs.endAt?.[0] || errs.startAt?.[0] || "Invalid reservation period.",
@@ -98,14 +97,8 @@ export function EquipmentClient({
           if (res.ok) {
             setAllAvailability(res.data);
             setAvailabilityError(null);
-            if (form.equipmentId && res.data[form.equipmentId]) {
-              setAvailability(res.data[form.equipmentId].available);
-            } else {
-              setAvailability(null);
-            }
           } else {
             setAllAvailability(null);
-            setAvailability(null);
             setAvailabilityError(
               res.error || "Couldn't calculate availability — check the period and try again",
             );
@@ -113,7 +106,6 @@ export function EquipmentClient({
         } catch {
           if (!isMounted) return;
           setAllAvailability(null);
-          setAvailability(null);
           setAvailabilityError(
             "Couldn't calculate availability — check the period and try again",
           );
@@ -143,7 +135,6 @@ export function EquipmentClient({
         return;
       }
       setFieldErrors({});
-      setAvailability(result.data.available);
       toast.success(
         `Reservation confirmed. ${result.data.available} unit(s) remain available.`,
       );
