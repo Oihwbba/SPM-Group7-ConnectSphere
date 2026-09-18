@@ -17,6 +17,7 @@ import {
   createReservation,
   getAllEquipmentAvailability,
 } from "./actions";
+import { allAvailabilitySchema } from "@/lib/schemas/reservation";
 
 type Equipment = { id: string; type: string; totalQuantity: number };
 type Event = { id: string; name: string };
@@ -36,7 +37,7 @@ export function EquipmentClient({
   events: Event[];
 }) {
   const [form, setForm] = useState({
-    eventId: "",
+    eventId: events[0]?.id ?? "",
     equipmentId: "",
     quantity: "1",
     startAt: "",
@@ -49,15 +50,13 @@ export function EquipmentClient({
   const [pending, startTransition] = useTransition();
 
   const update = (field: keyof typeof form, value: string) => {
-    setForm((current) => {
-      const next = { ...current, [field]: value };
-      if (field === "startAt" || field === "endAt" || !next.startAt || !next.endAt) {
-        setAllAvailability(null);
-        setAvailability(null);
-        setAvailabilityError(null);
-      }
-      return next;
-    });
+    const nextForm = { ...form, [field]: value };
+    setForm(nextForm);
+    if (field === "startAt" || field === "endAt" || !nextForm.startAt || !nextForm.endAt) {
+      setAllAvailability(null);
+      setAvailability(null);
+      setAvailabilityError(null);
+    }
     if (fieldErrors[field]) {
       setFieldErrors((current) => ({ ...current, [field]: undefined }));
     }
@@ -67,24 +66,27 @@ export function EquipmentClient({
   useEffect(() => {
     if (!form.startAt || !form.endAt) return;
 
-    const start = new Date(form.startAt);
-    const end = new Date(form.endAt);
     let isMounted = true;
     const timer = setTimeout(() => {
       startTransition(async () => {
-        if (isNaN(start.getTime()) || isNaN(end.getTime()) || end <= start) {
+        const parsed = allAvailabilitySchema.safeParse({
+          startAt: toUtcIso(form.startAt),
+          endAt: toUtcIso(form.endAt),
+        });
+
+        if (!parsed.success) {
           if (!isMounted) return;
           setAllAvailability(null);
           setAvailability(null);
-          setAvailabilityError("End time must be after the start time.");
+          const errs = parsed.error.flatten().fieldErrors;
+          setAvailabilityError(
+            errs.endAt?.[0] || errs.startAt?.[0] || "Invalid reservation period.",
+          );
           return;
         }
 
         try {
-          const res = await getAllEquipmentAvailability({
-            startAt: toUtcIso(form.startAt),
-            endAt: toUtcIso(form.endAt),
-          });
+          const res = await getAllEquipmentAvailability(parsed.data);
 
           if (!isMounted) return;
 
