@@ -65,21 +65,11 @@ export function EquipmentClient({
 
   // Live calculation: automatically fetch availability whenever startAt & endAt change (debounced)
   useEffect(() => {
-    if (!form.startAt || !form.endAt) {
-      setAllAvailability(null);
-      setAvailability(null);
-      setAvailabilityError(null);
-      return;
-    }
+    if (!form.startAt || !form.endAt) return;
 
     const start = new Date(form.startAt);
     const end = new Date(form.endAt);
-    if (isNaN(start.getTime()) || isNaN(end.getTime()) || end <= start) {
-      setAllAvailability(null);
-      setAvailability(null);
-      setAvailabilityError(null);
-      return;
-    }
+    if (isNaN(start.getTime()) || isNaN(end.getTime()) || end <= start) return;
 
     let isMounted = true;
     const timer = setTimeout(() => {

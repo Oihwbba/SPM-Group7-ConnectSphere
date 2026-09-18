@@ -243,5 +243,20 @@ describe("getAllEquipmentAvailability — SCRUM-31", () => {
     if (!result.ok) expect(result.error).toMatch(/permission/i);
     expect(tx.equipment.findMany).not.toHaveBeenCalled();
   });
+
+  it("refuses non-date strings for startAt and endAt with explicit field errors", async () => {
+    mockAuth.mockResolvedValue(sessionFor("TECH_SUPPORT", "usr_tech"));
+
+    const result = await getAllEquipmentAvailability({
+      startAt: "invalid-date",
+      endAt: "invalid-date",
+    });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok && result.fieldErrors) {
+      expect(result.fieldErrors.startAt).toContain("Invalid start time.");
+      expect(result.fieldErrors.endAt).toContain("Invalid end time.");
+    }
+  });
 });
 
