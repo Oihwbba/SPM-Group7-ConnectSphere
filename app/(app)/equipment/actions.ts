@@ -70,18 +70,50 @@ export async function getAllEquipmentAvailability(
 
     const startAt = new Date(parsed.data.startAt);
     const endAt = new Date(parsed.data.endAt);
+    const overlapping = { startAt: { lt: endAt }, endAt: { gt: startAt } };
+    const equipmentIds = allEquipment.map((item) => item.id);
 
-    const entries = await Promise.all(
-      allEquipment.map(async (item) => {
-        const avail = await availabilityForPeriod(prisma, item.id, startAt, endAt);
-        return [
-          item.id,
-          avail ?? { total: item.totalQuantity, available: 0 },
-        ] as const;
+    const [reservedGroups, unavailableGroups] = await Promise.all([
+      prisma.reservation.groupBy({
+        by: ["equipmentId"],
+        where: {
+          equipmentId: { in: equipmentIds },
+          status: "CONFIRMED",
+          ...overlapping,
+        },
+        _sum: { quantity: true },
       }),
+      prisma.equipmentUnavailability.groupBy({
+        by: ["equipmentId"],
+        where: {
+          equipmentId: { in: equipmentIds },
+          ...overlapping,
+        },
+        _sum: { quantity: true },
+      }),
+    ]);
+
+    const reservedMap = new Map<string, number>(
+      reservedGroups.map((g) => [g.equipmentId, g._sum.quantity ?? 0]),
+    );
+    const unavailableMap = new Map<string, number>(
+      unavailableGroups.map((g) => [g.equipmentId, g._sum.quantity ?? 0]),
     );
 
-    return ok(Object.fromEntries(entries));
+    const result: Record<string, Availability> = {};
+    for (const item of allEquipment) {
+      const reservedCount = reservedMap.get(item.id) ?? 0;
+      const unavailableCount = unavailableMap.get(item.id) ?? 0;
+      result[item.id] = {
+        total: item.totalQuantity,
+        available: Math.max(
+          0,
+          item.totalQuantity - reservedCount - unavailableCount,
+        ),
+      };
+    }
+
+    return ok(result);
   } catch (error) {
     if (error instanceof PermissionError) return err(error.message);
     throw error;

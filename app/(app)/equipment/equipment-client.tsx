@@ -37,7 +37,7 @@ export function EquipmentClient({
   events: Event[];
 }) {
   const [form, setForm] = useState({
-    eventId: events[0]?.id ?? "",
+    eventId: "",
     equipmentId: "",
     quantity: "1",
     startAt: "",

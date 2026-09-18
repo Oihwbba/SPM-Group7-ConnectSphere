@@ -27,8 +27,13 @@ async function fillReservation(page: Page, quantity: string) {
   await page.getByLabel("Quantity", { exact: true }).fill(quantity);
 }
 
+const usesLocalDatabase = /@(localhost|127\.0\.0\.1)[:/]/.test(
+  process.env.DATABASE_URL ?? "",
+);
+
 test.describe("SCRUM-31 — Reserve Equipment for Event", () => {
   test.beforeEach(async () => {
+    if (!usesLocalDatabase) return;
     await prisma.reservation.deleteMany({
       where: {
         eventId: "evt_approved",

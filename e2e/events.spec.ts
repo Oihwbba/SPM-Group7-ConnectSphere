@@ -329,8 +329,13 @@ test.describe("User Story 84 — Organiser Views Their Own Event Requests Journe
   });
 });
 
+const usesLocalDatabase = /@(localhost|127\.0\.0\.1)[:/]/.test(
+  process.env.DATABASE_URL ?? "",
+);
+
 test.describe("User Story 23 & 24 — Event Status View & Consistency Journey", () => {
   test.beforeEach(async () => {
+    if (!usesLocalDatabase) return;
     // Reset both events used by tests so CI retries stay green
     await prisma.event.updateMany({
       where: { id: "evt_submitted" },

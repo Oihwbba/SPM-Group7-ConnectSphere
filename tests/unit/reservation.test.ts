@@ -15,8 +15,8 @@ import {
 const tx = vi.hoisted(() => ({
   event: { findFirst: vi.fn() },
   equipment: { findFirst: vi.fn(), findMany: vi.fn() },
-  reservation: { aggregate: vi.fn(), create: vi.fn() },
-  equipmentUnavailability: { aggregate: vi.fn() },
+  reservation: { aggregate: vi.fn(), create: vi.fn(), groupBy: vi.fn() },
+  equipmentUnavailability: { aggregate: vi.fn(), groupBy: vi.fn() },
   $queryRaw: vi.fn(),
 }));
 
@@ -199,11 +199,12 @@ describe("getAllEquipmentAvailability — SCRUM-31", () => {
       { id: "eq1", type: "Lectern", totalQuantity: 10 },
       { id: "eq2", type: "Projector", totalQuantity: 5 },
     ]);
-    tx.equipment.findFirst.mockResolvedValue({ totalQuantity: 10 });
-    tx.reservation.aggregate.mockResolvedValue({ _sum: { quantity: 2 } });
-    tx.equipmentUnavailability.aggregate.mockResolvedValue({
-      _sum: { quantity: 1 },
-    });
+    tx.reservation.groupBy.mockResolvedValue([
+      { equipmentId: "eq1", _sum: { quantity: 2 } },
+    ]);
+    tx.equipmentUnavailability.groupBy.mockResolvedValue([
+      { equipmentId: "eq1", _sum: { quantity: 1 } },
+    ]);
 
     const result = await getAllEquipmentAvailability({
       startAt: START,
@@ -215,6 +216,9 @@ describe("getAllEquipmentAvailability — SCRUM-31", () => {
       expect(result.data.eq1).toBeDefined();
       expect(result.data.eq1.available).toBe(7);
       expect(result.data.eq1.total).toBe(10);
+      expect(result.data.eq2).toBeDefined();
+      expect(result.data.eq2.available).toBe(5);
+      expect(result.data.eq2.total).toBe(5);
     }
   });
 
