@@ -83,6 +83,11 @@ export function EquipmentClient({
           if (!isMounted) return;
           setAllAvailability(null);
           const errs = parsed.error.flatten().fieldErrors;
+          setFieldErrors((current) => ({
+            ...current,
+            startAt: errs.startAt,
+            endAt: errs.endAt,
+          }));
           setAvailabilityError(
             errs.endAt?.[0] || errs.startAt?.[0] || "Invalid reservation period.",
           );
@@ -97,8 +102,19 @@ export function EquipmentClient({
           if (res.ok) {
             setAllAvailability(res.data);
             setAvailabilityError(null);
+            setFieldErrors((current) => ({
+              ...current,
+              startAt: undefined,
+              endAt: undefined,
+            }));
           } else {
             setAllAvailability(null);
+            if (res.fieldErrors) {
+              setFieldErrors((current) => ({
+                ...current,
+                ...res.fieldErrors,
+              }));
+            }
             setAvailabilityError(
               res.error || "Couldn't calculate availability — check the period and try again",
             );
