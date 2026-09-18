@@ -125,7 +125,7 @@ export function EquipmentClient({
       isMounted = false;
       clearTimeout(timer);
     };
-  }, [form.startAt, form.endAt, form.equipmentId]);
+  }, [form.startAt, form.endAt]);
 
   const reserve = () =>
     startTransition(async () => {
