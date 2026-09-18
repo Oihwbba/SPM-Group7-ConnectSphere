@@ -126,7 +126,7 @@ describe.skipIf(!usesLocalDatabase)("concurrency — equipment pool (SCRUM-31)",
 });
 
 describe.skipIf(!usesLocalDatabase)("concurrency — status transitions (SCRUM-24)", () => {
-  let eventId: string;
+  let eventId: string | undefined;
 
   beforeAll(async () => {
     (auth as unknown as Mock).mockResolvedValue(TECH_SUPPORT);
@@ -134,7 +134,7 @@ describe.skipIf(!usesLocalDatabase)("concurrency — status transitions (SCRUM-2
       data: {
         name: `SCRUM-24 Concurrency Event ${Date.now()}`,
         status: "SUBMITTED",
-        organiserId: "usr_org",
+        organiserId: "usr_organiser",
       },
       select: { id: true },
     });
@@ -142,8 +142,10 @@ describe.skipIf(!usesLocalDatabase)("concurrency — status transitions (SCRUM-2
   });
 
   afterAll(async () => {
-    await prisma.auditLog.deleteMany({ where: { entityId: eventId } });
-    await prisma.event.delete({ where: { id: eventId } });
+    if (eventId) {
+      await prisma.auditLog.deleteMany({ where: { entityId: eventId } });
+      await prisma.event.delete({ where: { id: eventId } });
+    }
   });
 
   it("SCRUM-24: the loser of two simultaneous decisions is told to refresh, and no audit entry is written", async () => {
