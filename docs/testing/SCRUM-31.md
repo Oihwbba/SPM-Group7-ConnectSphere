@@ -33,9 +33,9 @@ needs them.
 | Test Case ID | TC-31-01 |
 | Test Scenario | [Positive] AC 1, AC 7: a quantity within availability is reserved as Confirmed, and availability drops by exactly that quantity |
 | Pre-conditions | Signed in as Technical Support. The event "Approved — Research Symposium" is APPROVED. No reservation or maintenance hold overlaps the test period for Lectern. |
-| Test Steps | 1. Open **Equipment**. <br> 2. Choose the approved event, the equipment type and the period. <br> 3. Enter the quantity and click **Check availability**; note the number available. <br> 4. Click **Confirm reservation**. <br> 5. Click **Check availability** again for the same period. |
+| Test Steps | 1. Open **Equipment**. <br> 2. Choose the approved event, start date and end date (live availability table updates automatically). <br> 3. Choose the equipment type, enter the quantity, and verify live availability (or click **Check availability**). <br> 4. Click **Confirm reservation**. <br> 5. Verify the live table and status message reflect the reduced availability for the period. |
 | Test Data | Event: Approved — Research Symposium <br> Equipment type: Lectern (4 total) <br> Start: 2031-05-10 09:00 <br> End: 2031-05-10 17:00 <br> Quantity: 1 |
-| Expected Result | Step 3 shows "N unit(s) available for this period". Step 4 shows "Reservation confirmed. N−1 unit(s) remain available." and a reservation with status CONFIRMED and quantity 1 exists. Step 5 shows N−1 available. |
+| Expected Result | Step 3 shows "N unit(s) available for this period" (and N of total in live table). Step 4 shows "Reservation confirmed. N−1 unit(s) remain available." and a reservation with status CONFIRMED and quantity 1 exists. Step 5 shows N−1 available. |
 
 **Automated by:** `e2e/equipment.spec.ts` › "AC 1 & 7: a reservation that fits is confirmed and reduces availability"; `tests/unit/reservation.test.ts` › "AC 1 & 2: a quantity that fits is CONFIRMED, linked to the event, and availability drops by exactly that amount"
 
@@ -113,7 +113,7 @@ needs them.
 | Pre-conditions | As TC-31-01. |
 | Test Steps | 1. Fill the reservation with a valid event, equipment type and period. <br> 2. Enter one of the quantities below and click **Confirm reservation**. <br> 3. Repeat for each quantity. |
 | Test Data | Equipment type: Lectern <br> Period: 2031-05-10 09:00–17:00 <br> Quantities: 0, -1, 1.5, blank |
-| Expected Result | Each attempt shows "Please fix the reservation details." and Quantity is reported as invalid. No reservation is created and availability is unchanged. <br> **Known gap:** the action returns a Quantity field error, but the page currently shows only the generic message, so the tester can't see which field is wrong. |
+| Expected Result | Each attempt shows "Please fix the reservation details." and an inline error message appears below the Quantity input. No reservation is created and availability is unchanged. |
 
 **Automated by:** `tests/unit/reservation.test.ts` › "AC 6: quantity %s is reported invalid and nothing is created" (0, -1, 1.5, blank); `e2e/equipment.spec.ts` › "AC 6: a quantity of zero is refused"
 
@@ -137,9 +137,9 @@ needs them.
 | Test Case ID | TC-31-09 |
 | Test Scenario | [Negative] [Boundary] a period whose end isn't after its start is refused before anything is counted |
 | Pre-conditions | As TC-31-01. |
-| Test Steps | 1. Fill the reservation with the period below. <br> 2. Click **Check availability**. <br> 3. Click **Confirm reservation**. |
+| Test Steps | 1. Fill the reservation with the period below. <br> 2. Click **Confirm reservation**. |
 | Test Data | Equipment type: Lectern <br> Quantity: 1 <br> Case A (zero length): Start 2031-05-10 09:00, End 2031-05-10 09:00 <br> Case B (reversed): Start 2031-05-10 17:00, End 2031-05-10 09:00 |
-| Expected Result | Both cases are refused with End reported as invalid, and no availability is calculated. No reservation is created. <br> **Known gap:** as in TC-31-07, the field error isn't shown next to End. |
+| Expected Result | Both cases are refused with End reported as invalid via an inline error message below the End field. No reservation is created. |
 
 **Automated by:** `tests/unit/reservation.test.ts` › "refuses a period whose end is not after its start" (reserve, case A). Case B, and both cases on **Check availability**, are **Manual**.
 

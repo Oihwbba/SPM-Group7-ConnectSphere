@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -13,10 +13,15 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { createReservation, getEquipmentAvailability } from "./actions";
+import {
+  createReservation,
+  getAllEquipmentAvailability,
+  getEquipmentAvailability,
+} from "./actions";
 
 type Equipment = { id: string; type: string; totalQuantity: number };
 type Event = { id: string; name: string };
+type AvailabilityMap = Record<string, { available: number; total: number }>;
 
 /** A datetime-local control has no zone. Convert it in the browser so the
  * server receives the instant the Technical Support user selected. */
@@ -39,14 +44,61 @@ export function EquipmentClient({
     endAt: "",
   });
   const [availability, setAvailability] = useState<number | null>(null);
+  const [allAvailability, setAllAvailability] = useState<AvailabilityMap | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string[] | undefined>>({});
   const [pending, startTransition] = useTransition();
+
   const update = (field: keyof typeof form, value: string) => {
     setForm((current) => ({ ...current, [field]: value }));
-    if (field !== "quantity") setAvailability(null);
+    if (fieldErrors[field]) {
+      setFieldErrors((current) => ({ ...current, [field]: undefined }));
+    }
   };
+
+  // Live calculation: automatically fetch availability whenever startAt & endAt change
+  useEffect(() => {
+    if (!form.startAt || !form.endAt) {
+      setAllAvailability(null);
+      setAvailability(null);
+      return;
+    }
+
+    const start = new Date(form.startAt);
+    const end = new Date(form.endAt);
+    if (isNaN(start.getTime()) || isNaN(end.getTime()) || end <= start) {
+      setAllAvailability(null);
+      setAvailability(null);
+      return;
+    }
+
+    let isMounted = true;
+    startTransition(async () => {
+      const res = await getAllEquipmentAvailability({
+        startAt: toUtcIso(form.startAt),
+        endAt: toUtcIso(form.endAt),
+      });
+
+      if (!isMounted) return;
+
+      if (res.ok) {
+        setAllAvailability(res.data);
+        if (form.equipmentId && res.data[form.equipmentId]) {
+          setAvailability(res.data[form.equipmentId].available);
+        }
+      }
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [form.startAt, form.endAt, form.equipmentId]);
 
   const checkAvailability = () =>
     startTransition(async () => {
+      if (!form.equipmentId || !form.startAt || !form.endAt) {
+        toast.error("Please fill in start time, end time, and equipment type.");
+        return;
+      }
       const result = await getEquipmentAvailability({
         ...form,
         startAt: toUtcIso(form.startAt),
@@ -57,23 +109,48 @@ export function EquipmentClient({
         return;
       }
       setAvailability(result.data.available);
+
+      // Also refresh period-wide availability
+      const allRes = await getAllEquipmentAvailability({
+        startAt: toUtcIso(form.startAt),
+        endAt: toUtcIso(form.endAt),
+      });
+      if (allRes.ok) {
+        setAllAvailability(allRes.data);
+      }
     });
 
   const reserve = () =>
     startTransition(async () => {
+      setFieldErrors({});
       const result = await createReservation({
         ...form,
         startAt: toUtcIso(form.startAt),
         endAt: toUtcIso(form.endAt),
       });
       if (!result.ok) {
+        if (result.fieldErrors) {
+          setFieldErrors(result.fieldErrors);
+        }
         toast.error(result.error);
         return;
       }
+      setFieldErrors({});
       setAvailability(result.data.available);
       toast.success(
         `Reservation confirmed. ${result.data.available} unit(s) remain available.`,
       );
+
+      // Refresh live availability map
+      if (form.startAt && form.endAt) {
+        const allRes = await getAllEquipmentAvailability({
+          startAt: toUtcIso(form.startAt),
+          endAt: toUtcIso(form.endAt),
+        });
+        if (allRes.ok) {
+          setAllAvailability(allRes.data);
+        }
+      }
     });
 
   return (
@@ -102,6 +179,9 @@ export function EquipmentClient({
                 </option>
               ))}
             </select>
+            {fieldErrors.eventId?.[0] && (
+              <p className="text-xs text-destructive">{fieldErrors.eventId[0]}</p>
+            )}
           </div>
           <div className="space-y-2">
             <Label htmlFor="equipment">Equipment type</Label>
@@ -112,12 +192,25 @@ export function EquipmentClient({
               onChange={(e) => update("equipmentId", e.target.value)}
             >
               <option value="">Select equipment</option>
-              {equipment.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.type} ({item.totalQuantity} total)
-                </option>
-              ))}
+              {equipment.map((item) => {
+                const liveCount = allAvailability?.[item.id]?.available;
+                const statusSuffix =
+                  liveCount !== undefined
+                    ? ` — ${liveCount} of ${item.totalQuantity} available`
+                    : ` (${item.totalQuantity} total)`;
+                return (
+                  <option key={item.id} value={item.id}>
+                    {item.type}
+                    {statusSuffix}
+                  </option>
+                );
+              })}
             </select>
+            {fieldErrors.equipmentId?.[0] && (
+              <p className="text-xs text-destructive">
+                {fieldErrors.equipmentId[0]}
+              </p>
+            )}
           </div>
           <div className="space-y-2">
             <Label htmlFor="start">Start</Label>
@@ -127,6 +220,9 @@ export function EquipmentClient({
               value={form.startAt}
               onChange={(e) => update("startAt", e.target.value)}
             />
+            {fieldErrors.startAt?.[0] && (
+              <p className="text-xs text-destructive">{fieldErrors.startAt[0]}</p>
+            )}
           </div>
           <div className="space-y-2">
             <Label htmlFor="end">End</Label>
@@ -136,6 +232,9 @@ export function EquipmentClient({
               value={form.endAt}
               onChange={(e) => update("endAt", e.target.value)}
             />
+            {fieldErrors.endAt?.[0] && (
+              <p className="text-xs text-destructive">{fieldErrors.endAt[0]}</p>
+            )}
           </div>
           <div className="space-y-2">
             <Label htmlFor="quantity">Quantity</Label>
@@ -147,16 +246,13 @@ export function EquipmentClient({
               value={form.quantity}
               onChange={(e) => update("quantity", e.target.value)}
             />
+            {fieldErrors.quantity?.[0] && (
+              <p className="text-xs text-destructive">
+                {fieldErrors.quantity[0]}
+              </p>
+            )}
           </div>
-          <div className="flex items-end gap-2">
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={checkAvailability}
-              disabled={pending}
-            >
-              Check availability
-            </Button>
+          <div className="flex items-end">
             <Button type="button" onClick={reserve} disabled={pending}>
               Confirm reservation
             </Button>
@@ -178,25 +274,55 @@ export function EquipmentClient({
       </Card>
       <Card>
         <CardHeader>
-          <CardTitle>Equipment catalogue</CardTitle>
+          <CardTitle>Live equipment availability</CardTitle>
           <CardDescription>
-            Total units by type. Check availability for a period before
-            reserving, as confirmed reservations and maintenance affect it.
+            {form.startAt && form.endAt
+              ? "Live availability calculated for the selected period."
+              : "Select start and end dates above to view live equipment availability for that period."}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-            {equipment.map((item) => (
-              <div key={item.id} className="rounded-md border p-3 text-sm">
-                <p className="font-medium">{item.type}</p>
-                <p className="text-muted-foreground">
-                  {item.totalQuantity} total unit(s)
-                </p>
-              </div>
-            ))}
+            {equipment.map((item) => {
+              const itemAvail = allAvailability?.[item.id];
+              const isPeriodSelected = Boolean(allAvailability);
+              const availableCount = itemAvail ? itemAvail.available : null;
+              const totalCount = item.totalQuantity;
+
+              return (
+                <div
+                  key={item.id}
+                  className="rounded-md border p-3 text-sm flex flex-col justify-between space-y-2"
+                >
+                  <div>
+                    <p className="font-medium">{item.type}</p>
+                    <p className="text-muted-foreground">
+                      {totalCount} total unit(s)
+                    </p>
+                  </div>
+                  {isPeriodSelected && availableCount !== null ? (
+                    <div className="flex items-center gap-2 pt-1 border-t">
+                      <span
+                        className={`inline-block h-2 w-2 rounded-full ${
+                          availableCount > 0 ? "bg-success" : "bg-destructive"
+                        }`}
+                      />
+                      <span className="font-semibold text-foreground">
+                        {availableCount} of {totalCount} available
+                      </span>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground italic pt-1 border-t">
+                      Select period above to calculate
+                    </p>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </CardContent>
       </Card>
     </div>
   );
 }
+

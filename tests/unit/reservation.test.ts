@@ -6,6 +6,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import {
   createReservation,
+  getAllEquipmentAvailability,
   getEquipmentAvailability,
 } from "@/app/(app)/equipment/actions";
 
@@ -13,7 +14,7 @@ import {
 // simultaneous last-unit case runs against real Postgres in concurrency.test.ts.
 const tx = vi.hoisted(() => ({
   event: { findFirst: vi.fn() },
-  equipment: { findFirst: vi.fn() },
+  equipment: { findFirst: vi.fn(), findMany: vi.fn() },
   reservation: { aggregate: vi.fn(), create: vi.fn() },
   equipmentUnavailability: { aggregate: vi.fn() },
   $queryRaw: vi.fn(),
@@ -190,3 +191,31 @@ describe("getEquipmentAvailability — SCRUM-31", () => {
     expect(tx.equipment.findFirst).not.toHaveBeenCalled();
   });
 });
+
+describe("getAllEquipmentAvailability — SCRUM-31", () => {
+  it("calculates live period availability across all equipment types", async () => {
+    mockAuth.mockResolvedValue(sessionFor("TECH_SUPPORT", "usr_tech"));
+    tx.equipment.findMany.mockResolvedValue([
+      { id: "eq1", type: "Lectern", totalQuantity: 10 },
+      { id: "eq2", type: "Projector", totalQuantity: 5 },
+    ]);
+    tx.equipment.findFirst.mockResolvedValue({ totalQuantity: 10 });
+    tx.reservation.aggregate.mockResolvedValue({ _sum: { quantity: 2 } });
+    tx.equipmentUnavailability.aggregate.mockResolvedValue({
+      _sum: { quantity: 1 },
+    });
+
+    const result = await getAllEquipmentAvailability({
+      startAt: START,
+      endAt: END,
+    });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.data.eq1).toBeDefined();
+      expect(result.data.eq1.available).toBe(7);
+      expect(result.data.eq1.total).toBe(10);
+    }
+  });
+});
+

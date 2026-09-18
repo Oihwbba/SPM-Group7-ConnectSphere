@@ -79,4 +79,38 @@ export const availabilitySchema = z
       });
   });
 
+export const allAvailabilitySchema = z
+  .object({
+    startAt: reservationFields.startAt,
+    endAt: reservationFields.endAt,
+  })
+  .superRefine((data, ctx) => {
+    const startAt = new Date(data.startAt);
+    const endAt = new Date(data.endAt);
+    if (Number.isNaN(startAt.getTime()))
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["startAt"],
+        message: "Invalid start time.",
+      });
+    if (Number.isNaN(endAt.getTime()))
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["endAt"],
+        message: "Invalid end time.",
+      });
+    if (
+      !Number.isNaN(startAt.getTime()) &&
+      !Number.isNaN(endAt.getTime()) &&
+      endAt <= startAt
+    )
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["endAt"],
+        message: "End time must be after the start time.",
+      });
+  });
+
 export type ReservationInput = z.infer<typeof reservationSchema>;
+
+

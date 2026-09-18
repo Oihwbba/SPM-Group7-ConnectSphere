@@ -8,6 +8,7 @@ import { err, ok, type ActionResult } from "@/lib/action-result";
 import { requirePermission, PermissionError } from "@/lib/auth/can";
 import { prisma } from "@/lib/db";
 import {
+  allAvailabilitySchema,
   availabilitySchema,
   reservationSchema,
 } from "@/lib/schemas/reservation";
@@ -49,9 +50,48 @@ async function availabilityForPeriod(
   };
 }
 
+export async function getAllEquipmentAvailability(
+  input: unknown,
+): Promise<ActionResult<Record<string, Availability>>> {
+  const session = await auth();
+  try {
+    requirePermission(session?.user, "equipment:read");
+    const parsed = allAvailabilitySchema.safeParse(input);
+    if (!parsed.success)
+      return err(
+        "Enter a valid reservation period.",
+        parsed.error.flatten().fieldErrors,
+      );
+
+    const allEquipment = await prisma.equipment.findMany({
+      where: { isActive: true },
+      select: { id: true, totalQuantity: true },
+    });
+
+    const startAt = new Date(parsed.data.startAt);
+    const endAt = new Date(parsed.data.endAt);
+
+    const entries = await Promise.all(
+      allEquipment.map(async (item) => {
+        const avail = await availabilityForPeriod(prisma, item.id, startAt, endAt);
+        return [
+          item.id,
+          avail ?? { total: item.totalQuantity, available: 0 },
+        ] as const;
+      }),
+    );
+
+    return ok(Object.fromEntries(entries));
+  } catch (error) {
+    if (error instanceof PermissionError) return err(error.message);
+    throw error;
+  }
+}
+
 export async function getEquipmentAvailability(
   input: unknown,
 ): Promise<ActionResult<Availability>> {
+
   const session = await auth();
   try {
     requirePermission(session?.user, "equipment:read");
