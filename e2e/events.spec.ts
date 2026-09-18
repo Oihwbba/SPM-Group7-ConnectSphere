@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { prisma } from "@/lib/db";
 
 /**
  * End-to-End (E2E) Test Suite for User Story 13: Create an Event Request.
@@ -329,6 +330,18 @@ test.describe("User Story 84 — Organiser Views Their Own Event Requests Journe
 });
 
 test.describe("User Story 23 & 24 — Event Status View & Consistency Journey", () => {
+  test.beforeEach(async () => {
+    await prisma.event.updateMany({
+      where: { id: "evt_submitted" },
+      data: {
+        status: "SUBMITTED",
+        decisionReason: null,
+        decidedAt: null,
+        decidedById: null,
+      },
+    });
+  });
+
   test("coordinator views assigned event status and status remains consistent across views (SCRUM-23 & SCRUM-24)", async ({
     page,
   }) => {

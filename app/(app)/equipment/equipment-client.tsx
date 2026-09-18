@@ -69,11 +69,17 @@ export function EquipmentClient({
 
     const start = new Date(form.startAt);
     const end = new Date(form.endAt);
-    if (isNaN(start.getTime()) || isNaN(end.getTime()) || end <= start) return;
-
     let isMounted = true;
     const timer = setTimeout(() => {
       startTransition(async () => {
+        if (isNaN(start.getTime()) || isNaN(end.getTime()) || end <= start) {
+          if (!isMounted) return;
+          setAllAvailability(null);
+          setAvailability(null);
+          setAvailabilityError("End time must be after the start time.");
+          return;
+        }
+
         try {
           const res = await getAllEquipmentAvailability({
             startAt: toUtcIso(form.startAt),
