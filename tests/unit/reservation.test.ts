@@ -258,5 +258,14 @@ describe("getAllEquipmentAvailability — SCRUM-31", () => {
       expect(result.fieldErrors.endAt).toContain("Invalid end time.");
     }
   });
+
+  it("rethrows non-PermissionError exceptions", async () => {
+    mockAuth.mockResolvedValue(sessionFor("TECH_SUPPORT", "usr_tech"));
+    tx.equipment.findMany.mockRejectedValue(new Error("db error"));
+
+    await expect(
+      getAllEquipmentAvailability({ startAt: START, endAt: END }),
+    ).rejects.toThrow("db error");
+  });
 });
 
