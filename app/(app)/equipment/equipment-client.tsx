@@ -139,14 +139,26 @@ export function EquipmentClient({
         `Reservation confirmed. ${result.data.available} unit(s) remain available.`,
       );
 
-      // Refresh live availability map
+      // Refresh live availability map (shared error handling with the effect)
       if (form.startAt && form.endAt) {
-        const allRes = await getAllEquipmentAvailability({
-          startAt: toUtcIso(form.startAt),
-          endAt: toUtcIso(form.endAt),
-        });
-        if (allRes.ok) {
-          setAllAvailability(allRes.data);
+        try {
+          const allRes = await getAllEquipmentAvailability({
+            startAt: toUtcIso(form.startAt),
+            endAt: toUtcIso(form.endAt),
+          });
+          if (allRes.ok) {
+            setAllAvailability(allRes.data);
+          } else {
+            setAllAvailability(null);
+            setAvailabilityError(
+              allRes.error || "Couldn't refresh availability — try changing the period.",
+            );
+          }
+        } catch {
+          setAllAvailability(null);
+          setAvailabilityError(
+            "Couldn't refresh availability — try changing the period.",
+          );
         }
       }
     });

@@ -331,10 +331,20 @@ test.describe("User Story 84 — Organiser Views Their Own Event Requests Journe
 
 test.describe("User Story 23 & 24 — Event Status View & Consistency Journey", () => {
   test.beforeEach(async () => {
+    // Reset both events used by tests so CI retries stay green
     await prisma.event.updateMany({
       where: { id: "evt_submitted" },
       data: {
         status: "SUBMITTED",
+        decisionReason: null,
+        decidedAt: null,
+        decidedById: null,
+      },
+    });
+    await prisma.event.updateMany({
+      where: { id: "evt_under_review" },
+      data: {
+        status: "UNDER_REVIEW",
         decisionReason: null,
         decidedAt: null,
         decidedById: null,
@@ -392,7 +402,33 @@ test.describe("User Story 23 & 24 — Event Status View & Consistency Journey", 
     await expect(detailModal).toBeVisible();
     await expect(detailModal.getByTestId("status-badge")).toHaveAttribute("data-status", "REJECTED");
   });
+
+  test("coordinator approves an under-review event and status flips to APPROVED (SCRUM-24)", async ({
+    page,
+  }) => {
+    // 1. Sign in as Event Coordinator
+    await page.goto("/login");
+    await page.getByLabel("Email", { exact: true }).fill("coordinator@test.local");
+    await page.getByLabel("Password", { exact: true }).fill("Password123!");
+    await page.getByRole("button", { name: "Sign in" }).click();
+
+    // 2. Navigate to Coordinator Event Requests dashboard
+    await page.waitForURL("**/events");
+    await expect(page.getByRole("heading", { name: "Event Requests" })).toBeVisible();
+
+    // 3. Locate the Under Review event and verify its current status
+    const underReviewRow = page.getByRole("row", { name: /Under Review — Career Fair/i });
+    await expect(underReviewRow).toBeVisible();
+    await expect(underReviewRow.getByTestId("status-badge")).toHaveAttribute("data-status", "UNDER_REVIEW");
+
+    // 4. Click Approve and verify the badge flips in the row
+    await underReviewRow.getByRole("button", { name: /Approve/i }).click();
+    await expect(underReviewRow.getByTestId("status-badge")).toHaveAttribute("data-status", "APPROVED");
+
+    // 5. Open detail modal and verify the same APPROVED status
+    await underReviewRow.getByRole("button", { name: /View Details|Details/i }).click();
+    const detailModal = page.getByRole("dialog");
+    await expect(detailModal).toBeVisible();
+    await expect(detailModal.getByTestId("status-badge")).toHaveAttribute("data-status", "APPROVED");
+  });
 });
-
-
-
