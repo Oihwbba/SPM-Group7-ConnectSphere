@@ -261,7 +261,7 @@ test.describe("User Story 16 — Distinguish Drafts from Submitted Requests Jour
     await expect(page.getByRole("cell", { name: submittedTitle })).toBeVisible();
     await expect(page.getByRole("cell", { name: draftTitle })).not.toBeVisible();
 
-    await page.getByRole("button", { name: /All Requests/i }).click();
+    await page.getByRole("button", { name: /^All \(/i }).click();
     await expect(page.getByRole("cell", { name: draftTitle })).toBeVisible();
     await expect(page.getByRole("cell", { name: submittedTitle })).toBeVisible();
   });
@@ -373,7 +373,7 @@ test.describe("User Story 84 — Organiser Views Their Own Event Requests Journe
 
     // Verify warning dialog appears
     await expect(page.getByRole("dialog", { name: /Unsaved Changes/i })).toBeVisible();
-    await expect(page.getByText(/You have unsaved changes in your event request/i)).toBeVisible();
+    await expect(page.getByText(/You have unsaved changes in this event request/i)).toBeVisible();
   });
 
   test("SCRUM-84 AC7-AC9: organiser sorts columns and filters list by status dropdown and search", async ({
