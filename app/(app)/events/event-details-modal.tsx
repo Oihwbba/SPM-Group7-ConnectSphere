@@ -12,13 +12,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "@/components/events/status-badge";
 import { formatDate, formatDateTime } from "@/lib/datetime";
-import { Calendar, Building2, Wrench, ClipboardList, Info } from "lucide-react";
+import { Calendar, Building2, Wrench, ClipboardList, Info, AlertTriangle } from "lucide-react";
 import type { Event } from "@prisma/client";
 
 interface EventDetailsModalProps {
   event: Event | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  isNoLongerAvailable?: boolean;
 }
 
 /**
@@ -29,6 +30,7 @@ export function EventDetailsModal({
   event,
   open,
   onOpenChange,
+  isNoLongerAvailable = false,
 }: EventDetailsModalProps) {
   if (!event) return null;
 
@@ -53,6 +55,19 @@ export function EventDetailsModal({
             <StatusBadge status={event.status} />
           </div>
         </DialogHeader>
+
+        {/* Warning if event was reassigned or removed from review queue during view */}
+        {isNoLongerAvailable && (
+          <div
+            className="flex items-center gap-2 rounded-md border border-warning/30 bg-warning/15 px-3 py-2 text-xs font-medium text-warning-foreground"
+            data-testid="event-no-longer-available-warning"
+          >
+            <AlertTriangle className="h-4 w-4 shrink-0 text-warning" />
+            <span>
+              This event request is no longer available in your view (it may have been reassigned or updated).
+            </span>
+          </div>
+        )}
 
         {/* Singular Page Layout — Displays all entered details at a glance */}
         <div className="space-y-4 py-2">

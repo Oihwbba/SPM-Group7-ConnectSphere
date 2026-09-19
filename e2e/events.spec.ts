@@ -526,4 +526,44 @@ test.describe("User Story 23 & 24 — Event Status View & Consistency Journey", 
     await organiserContext.close();
     await coordinatorContext.close();
   });
+
+  test("open modal remains mounted with warning when viewed event is dropped from review queue (SCRUM-24)", async ({
+    page,
+  }) => {
+    // 1. Sign in as Event Coordinator (coordinator@test.local)
+    await page.goto("/login");
+    await page.getByLabel("Email", { exact: true }).fill("coordinator@test.local");
+    await page.getByLabel("Password", { exact: true }).fill("Password123!");
+    await page.getByRole("button", { name: "Sign in" }).click();
+    await page.waitForURL("**/events");
+
+    // 2. Open details modal for an event currently visible in review queue
+    const submittedRow = page.getByRole("row", { name: /Submitted — Alumni Homecoming/i });
+    await expect(submittedRow).toBeVisible();
+    await submittedRow.getByRole("button", { name: /View Details|Details/i }).click();
+
+    const detailModal = page.getByRole("dialog");
+    await expect(detailModal).toBeVisible();
+    await expect(detailModal.getByTestId("status-badge")).toHaveAttribute("data-status", "SUBMITTED");
+
+    // 3. Reassign this event to coordinator2 in database to simulate mid-view reassignment (SCRUM-20/57)
+    if (usesLocalDatabase) {
+      await prisma.event.update({
+        where: { id: "evt_submitted" },
+        data: { coordinatorId: "usr_coord2" },
+      });
+
+      // 4. On next auto-refresh, event drops from coordinator1's query:
+      // The modal stays mounted and displays the warning notice instead of silently vanishing
+      await expect(
+        detailModal.getByTestId("event-no-longer-available-warning"),
+      ).toBeVisible({ timeout: 12000 });
+
+      // Clean up database state
+      await prisma.event.update({
+        where: { id: "evt_submitted" },
+        data: { coordinatorId: null },
+      });
+    }
+  });
 });

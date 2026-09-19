@@ -64,7 +64,7 @@ export function EventsClient({
 }: EventsClientProps) {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [editingDraft, setEditingDraft] = useState<Event | null>(null);
-  const [viewingEventId, setViewingEventId] = useState<string | null>(null);
+  const [viewingEvent, setViewingEvent] = useState<Event | null>(null);
   const [activeTab, setActiveTab] = useState<FilterTab>("ALL");
   const [rejectingEvent, setRejectingEvent] = useState<Event | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
@@ -82,9 +82,13 @@ export function EventsClient({
     return () => clearInterval(interval);
   }, [router, isPending]);
 
-  const viewingEvent = viewingEventId
-    ? (events.find((e) => e.id === viewingEventId) ?? null)
+  // Derive active event from freshly polled events list if present,
+  // falling back to viewingEvent snapshot if a poll drops it (e.g. reassigned coordinator).
+  const activeEvent = viewingEvent
+    ? (events.find((e) => e.id === viewingEvent.id) ?? null)
     : null;
+  const eventToDisplay = activeEvent ?? viewingEvent;
+  const isEventNoLongerAvailable = Boolean(viewingEvent && !activeEvent);
 
   function changeStatus(
     event: Event,
@@ -253,7 +257,7 @@ export function EventsClient({
                         <div className="flex flex-wrap items-center gap-2">
                           <button
                             type="button"
-                            onClick={() => setViewingEventId(event.id)}
+                            onClick={() => setViewingEvent(event)}
                             className="cursor-pointer text-left font-medium text-foreground hover:underline focus:outline-none"
                             data-testid="event-name-link"
                           >
@@ -302,7 +306,7 @@ export function EventsClient({
                             variant="ghost"
                             size="sm"
                             className="h-8 gap-1.5 text-xs"
-                            onClick={() => setViewingEventId(event.id)}
+                            onClick={() => setViewingEvent(event)}
                             data-testid="view-details-button"
                           >
                             <Eye className="h-3.5 w-3.5" />
@@ -366,13 +370,14 @@ export function EventsClient({
       )}
 
       {/* Controlled Singular-Page Modal for Viewing Submitted Event Details */}
-      {viewingEvent && (
+      {eventToDisplay && (
         <EventDetailsModal
           open={!!viewingEvent}
           onOpenChange={(open) => {
-            if (!open) setViewingEventId(null);
+            if (!open) setViewingEvent(null);
           }}
-          event={viewingEvent}
+          event={eventToDisplay}
+          isNoLongerAvailable={isEventNoLongerAvailable}
         />
       )}
 
