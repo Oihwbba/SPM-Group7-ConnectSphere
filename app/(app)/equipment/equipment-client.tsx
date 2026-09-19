@@ -80,9 +80,9 @@ function getDurationDisplay(startAt: string, endAt: string) {
   if (!startAt || !endAt || !startAt.includes("T") || !endAt.includes("T") || startAt.startsWith("T") || endAt.startsWith("T")) {
     return { primary: "—", secondary: "Select dates & times" };
   }
-  const start = new Date(startAt).getTime();
-  const end = new Date(endAt).getTime();
-  if (Number.isNaN(start) || Number.isNaN(end) || end <= start) {
+  const start = parseSingaporeDateTime(startAt)?.getTime();
+  const end = parseSingaporeDateTime(endAt)?.getTime();
+  if (!start || !end || Number.isNaN(start) || Number.isNaN(end) || end <= start) {
     return { primary: "—", secondary: "Invalid period" };
   }
   const diffMs = end - start;
@@ -743,7 +743,7 @@ export function EquipmentClient({
                           availability === null
                             ? "bg-muted-foreground"
                             : !isQuantityValid
-                            ? "bg-amber-500"
+                            ? "bg-warning"
                             : isQuantityExceeded
                             ? "bg-destructive"
                             : "bg-success"

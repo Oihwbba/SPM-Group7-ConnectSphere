@@ -130,11 +130,17 @@ test.describe("User Story 15 — Draft Event Request Lifecycle Journey", () => {
     await page.waitForURL("**/events");
     const draftName = `Draft To Resume ${Date.now()}`;
 
-    // 2. Open dialog & fill partial fields (Step 1 Name & Step 3 Venue)
+    // 2. Open dialog & fill partial fields (Step 1 Name & Step 2 Date/Time)
     await page.getByRole("button", { name: /Create Event Request/i }).first().click();
     await page.getByLabel("Event Name *").fill(draftName);
+    await page.getByLabel("Event Purpose *").fill("Draft completion test purpose.");
+    await page.getByLabel("Event Description *").fill("Detailed description for resumed draft.");
+    await page.getByRole("button", { name: "Next", exact: true }).click();
 
-    // Save as draft at Step 1
+    await page.getByLabel("Proposed Start Date & Time *").fill("2027-11-20T10:00");
+    await page.getByLabel("Proposed End Date & Time *").fill("2027-11-20T18:00");
+
+    // Save as draft at Step 2
     await page.getByRole("button", { name: /Save as Draft/i }).click();
 
     // 3. Locate draft row on table with "Resume Draft" button
@@ -145,17 +151,16 @@ test.describe("User Story 15 — Draft Event Request Lifecycle Journey", () => {
     // 4. Click "Resume Draft" to reopen saved draft
     await row.getByRole("button", { name: /Resume Draft/i }).click();
 
-    // 5. Verify modal opens in resume mode and retains previously entered name (AC 2 & AC 3)
+    // 5. Verify modal opens in resume mode and retains previously entered fields (AC 2 & AC 3)
     await expect(page.getByRole("heading", { name: /Resume Draft Event Request/i })).toBeVisible();
     await expect(page.getByLabel("Event Name *")).toHaveValue(draftName);
-
-    // 6. Complete missing fields across steps
-    await page.getByLabel("Event Purpose *").fill("Draft completion test purpose.");
-    await page.getByLabel("Event Description *").fill("Detailed description for resumed draft.");
     await page.getByRole("button", { name: "Next", exact: true }).click();
 
-    await page.getByLabel("Proposed Start Date & Time *").fill("2027-11-20T10:00");
-    await page.getByLabel("Proposed End Date & Time *").fill("2027-11-20T18:00");
+    // Verify Singapore wall-time round trip on resumed draft inputs
+    await expect(page.getByLabel("Proposed Start Date & Time *")).toHaveValue("2027-11-20T10:00");
+    await expect(page.getByLabel("Proposed End Date & Time *")).toHaveValue("2027-11-20T18:00");
+
+    // 6. Complete missing fields across steps
     await page.getByLabel("Expected Attendance *").fill("100");
     await page.getByRole("button", { name: "Next", exact: true }).click();
 
@@ -172,6 +177,8 @@ test.describe("User Story 15 — Draft Event Request Lifecycle Journey", () => {
 
     // 7. Review and Submit
     await expect(page.getByRole("heading", { name: /Review Entered Details/i })).toBeVisible();
+    await expect(page.getByRole("dialog").getByText(/Start:\s*20 Nov 2027, 10:00 am/i)).toBeVisible();
+    await expect(page.getByRole("dialog").getByText(/End:\s*20 Nov 2027, 6:00 pm/i)).toBeVisible();
     await page.getByRole("button", { name: /Submit Request for Review/i }).click();
 
     // 8. Verify event submitted successfully
