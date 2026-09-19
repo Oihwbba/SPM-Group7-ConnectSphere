@@ -264,6 +264,7 @@ export function EventsClient({
             </select>
             <input
               type="text"
+              aria-label="Search by name or purpose"
               placeholder="Search by name or purpose..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import {
   Plus,
   ChevronRight,
@@ -62,8 +63,8 @@ function normalizeTimezoneOption(tz?: string | null): string {
   if (!tz) return "Asia/Singapore (+08:00)";
   if (tz === "Asia/Singapore") return "Asia/Singapore (+08:00)";
   if (tz === "Asia/Tokyo") return "Asia/Tokyo (+09:00)";
-  if (tz === "Europe/London") return "Europe/London (GMT/BST)";
-  if (tz === "America/New_York") return "America/New_York (EST/EDT)";
+  if (tz === "Europe/London") return "Europe/London (+00:00)";
+  if (tz === "America/New_York") return "America/New_York (-05:00)";
   if (tz === "UTC") return "UTC (+00:00)";
   return tz;
 }
@@ -199,6 +200,7 @@ export function CreateEventDialog({
   onOpenChange: onOpenChangeProp,
   trigger,
 }: CreateEventDialogProps = {}) {
+  const router = useRouter();
   const [internalOpen, setInternalOpen] = useState(false);
   const isControlled = openProp !== undefined;
   const open = isControlled ? openProp : internalOpen;
@@ -227,9 +229,8 @@ export function CreateEventDialog({
   );
   const canSaveDraft = !draftEvent || draftEvent.status === "DRAFT";
 
-  // Singapore wall-clock "now" in datetime-local format ("YYYY-MM-DDTHH:mm").
-  // ConnectSphere standardizes all wall-clock event and reservation times on Asia/Singapore (+08:00).
-  const minStartDateTime = toDatetimeInputString(new Date());
+  // Minimum start datetime computed in the user's selected event timezone
+  const minStartDateTime = toDatetimeInputString(new Date(), formData.timezone);
 
   useEffect(() => {
     if (open) {
@@ -417,6 +418,7 @@ export function CreateEventDialog({
     setStep(1);
     setIsDirty(false);
     forceCloseDialog(false);
+    router.refresh();
   }
 
   // Check which mandatory submission fields are currently missing

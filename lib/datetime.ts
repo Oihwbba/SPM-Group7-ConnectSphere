@@ -9,6 +9,14 @@
 
 const TIME_ZONE = "Asia/Singapore";
 
+export const TIMEZONE_OPTIONS = [
+  { value: "Asia/Singapore (+08:00)", label: "Asia/Singapore (SGT +08:00)", iana: "Asia/Singapore" },
+  { value: "Asia/Tokyo (+09:00)", label: "Asia/Tokyo (JST +09:00)", iana: "Asia/Tokyo" },
+  { value: "Europe/London (+00:00)", label: "Europe/London (GMT +00:00)", iana: "Europe/London" },
+  { value: "America/New_York (-05:00)", label: "America/New_York (EST -05:00)", iana: "America/New_York" },
+  { value: "UTC (+00:00)", label: "UTC (Coordinated Universal Time)", iana: "UTC" },
+] as const;
+
 const dateTimeFormatter = new Intl.DateTimeFormat("en-SG", {
   timeZone: TIME_ZONE,
   dateStyle: "medium",

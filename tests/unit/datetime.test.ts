@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   formatDate,
   formatDateTime,
+  formatDateTimeInTimezone,
   formatTime,
   parseSingaporeDateTime,
   sgWallTimeToUtcIso,
@@ -80,6 +81,21 @@ describe("lib/datetime helpers — SCRUM-31", () => {
     expect(utcToTimezoneWallTime(undefined)).toBe("");
     expect(utcToTimezoneWallTime("")).toBe("");
     expect(utcToTimezoneWallTime("invalid")).toBe("");
+  });
+
+  it("formats datetimes in specified target timezones with appropriate suffix", () => {
+    // NY Summer (EDT -4): 13:00 UTC => 9:00 AM NY
+    const nyFormatted = formatDateTimeInTimezone("2026-07-15T13:00:00.000Z", "America/New_York (-05:00)");
+    expect(nyFormatted).toContain("America/New_York");
+
+    // Singapore default
+    const sgFormatted = formatDateTimeInTimezone("2026-07-15T13:00:00.000Z", "Asia/Singapore (+08:00)");
+    expect(sgFormatted).not.toContain("Asia/Singapore");
+
+    // Null or empty handling
+    expect(formatDateTimeInTimezone(null)).toBe("—");
+    expect(formatDateTimeInTimezone(undefined)).toBe("—");
+    expect(formatDateTimeInTimezone("invalid")).toBe("—");
   });
 });
 

@@ -350,15 +350,15 @@ test.describe("User Story 84 — Organiser Views Their Own Event Requests Journe
     await page.getByRole("button", { name: "Next", exact: true }).click();
 
     // Select custom timezone on Step 2
-    await page.getByLabel("Event Timezone *").selectOption("America/New_York (EST/EDT)");
+    await page.getByLabel("Event Timezone *").selectOption("America/New_York (-05:00)");
     await page.getByRole("button", { name: /Save as Draft/i }).click();
 
     await expect(page.getByRole("cell", { name: eventName })).toBeVisible();
 
     // Reopen draft & verify saved timezone is restored
-    await page.getByRole("button", { name: "Edit / Resume Draft" }).first().click();
+    await page.getByRole("button", { name: /Resume Draft/i }).first().click();
     await page.getByRole("button", { name: "Next", exact: true }).click();
-    await expect(page.getByLabel("Event Timezone *")).toHaveValue("America/New_York (EST/EDT)");
+    await expect(page.getByLabel("Event Timezone *")).toHaveValue("America/New_York (-05:00)");
   });
 
   test("SCRUM-13 AC6: unsaved changes warning dialog appears when navigating away from edited draft", async ({
@@ -393,15 +393,17 @@ test.describe("User Story 84 — Organiser Views Their Own Event Requests Journe
     // Column Header Sort Toggle test
     const nameHeader = page.getByRole("columnheader", { name: /Name/i });
     await expect(nameHeader).toBeVisible();
-    await nameHeader.click(); // Toggle name sort
+    await page.getByRole("button", { name: "Sort by Name" }).click();
 
-    // Status Select Filter test
+    // Status Select Filter test - select DRAFT and assert draft row is visible
     await page.getByLabel("Filter by status").selectOption("DRAFT");
     await expect(page.getByLabel("Filter by status")).toHaveValue("DRAFT");
+    await expect(page.getByTestId("draft-event-row").first()).toBeVisible();
 
-    // Search query test
+    // Search query test - search for matching event
     await page.getByPlaceholder("Search by name or purpose...").fill("Annual");
     await expect(page.getByPlaceholder("Search by name or purpose...")).toHaveValue("Annual");
+    await expect(page.getByText("Annual Tech Summit")).toBeVisible();
   });
 });
 
