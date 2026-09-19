@@ -548,22 +548,24 @@ test.describe("User Story 23 & 24 — Event Status View & Consistency Journey", 
 
     // 3. Reassign this event to coordinator2 in database to simulate mid-view reassignment (SCRUM-20/57)
     if (usesLocalDatabase) {
-      await prisma.event.update({
-        where: { id: "evt_submitted" },
-        data: { coordinatorId: "usr_coord2" },
-      });
+      try {
+        await prisma.event.update({
+          where: { id: "evt_submitted" },
+          data: { coordinatorId: "usr_coordinator_2" },
+        });
 
-      // 4. On next auto-refresh, event drops from coordinator1's query:
-      // The modal stays mounted and displays the warning notice instead of silently vanishing
-      await expect(
-        detailModal.getByTestId("event-no-longer-available-warning"),
-      ).toBeVisible({ timeout: 12000 });
-
-      // Clean up database state
-      await prisma.event.update({
-        where: { id: "evt_submitted" },
-        data: { coordinatorId: null },
-      });
+        // 4. On next auto-refresh, event drops from coordinator1's query:
+        // The modal stays mounted and displays the warning notice instead of silently vanishing
+        await expect(
+          detailModal.getByTestId("event-no-longer-available-warning"),
+        ).toBeVisible({ timeout: 12000 });
+      } finally {
+        // Clean up database state
+        await prisma.event.update({
+          where: { id: "evt_submitted" },
+          data: { coordinatorId: null },
+        });
+      }
     }
   });
 });
