@@ -1,15 +1,14 @@
-import type { Role } from "@prisma/client";
-
 import { requireSession } from "@/lib/auth/guard";
+import { can } from "@/lib/auth/can";
 import { Forbidden } from "@/components/app/forbidden";
 import { prisma } from "@/lib/db";
 import { EquipmentClient } from "./equipment-client";
 
-const ALLOWED_ROLES: Role[] = ["TECH_SUPPORT"];
-
+// Access is decided by lib/auth/can.ts (the single gate), not a role list here
+// (SCRUM-66 / SCRUM-67).
 export default async function EquipmentPage() {
   const session = await requireSession();
-  if (!ALLOWED_ROLES.includes(session.user.role)) {
+  if (!can(session.user, "equipment:read")) {
     return <Forbidden />;
   }
 

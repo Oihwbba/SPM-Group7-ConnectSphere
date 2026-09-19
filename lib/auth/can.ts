@@ -69,7 +69,11 @@ const ROLE_ACTIONS: Record<Role, Action[]> = {
     "venue:read",
     "notification:read",
   ],
-  VENUE_STAFF: ["venue:read", "booking:review", "notification:read"],
+  // `venue:read` gates the Venue Catalogue page, which is Coordinator-only, so
+  // it is deliberately NOT granted here — Venue Staff act on bookings, not the
+  // catalogue. Grant it here the day Venue Staff need the catalogue; that is the
+  // one-line change SCRUM-66 is about, with no page edits.
+  VENUE_STAFF: ["booking:review", "notification:read"],
   TECH_SUPPORT: ["equipment:read", "equipment:reserve", "notification:read"],
   ATTENDEE: ["event:browse", "registration:read", "notification:read"],
 };
