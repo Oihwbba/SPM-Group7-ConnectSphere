@@ -49,7 +49,7 @@ beforeEach(() => {
 });
 
 // ============================================================================
-// USER STORY 13 UNIT TESTS
+// USER STORY 13 UNIT TESTS — Create an event request
 // ============================================================================
 describe("User Story 13 — Event Request Creation", () => {
   // Relative dates to ensure tests pass reliably regardless of when they run
@@ -58,7 +58,7 @@ describe("User Story 13 — Event Request Creation", () => {
   const pastDate = new Date(Date.now() - 86400000).toISOString(); // 1 day in past
 
   /**
-   * Sample valid form submission payload containing all compulsory fields required by W4-33 & User Story 13 AC.
+   * Sample valid form submission payload containing all compulsory fields required by User Story 13 AC.
    */
   const validSubmissionInput = {
     name: "Regional Tech Conference",
@@ -78,53 +78,10 @@ describe("User Story 13 — Event Request Creation", () => {
   };
 
   // --------------------------------------------------------------------------
-  // 1. DRAFT SAVING TESTS (createDraftEvent)
+  // SUBMISSION VALIDATION TESTS (submitEventRequest)
   // --------------------------------------------------------------------------
-  describe("createDraftEvent Action", () => {
-    it("creates a draft owned by the signed-in organiser (happy path)", async () => {
-      // 1. Mock logged-in user as an Event Organiser
-      mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
-      mockCreate.mockResolvedValue({ id: "evt_draft_1" });
-
-      // 2. Call action with partial draft details
-      const result = await createDraftEvent({
-        name: "Annual Tech Summit",
-        description: "A day of talks.",
-      });
-
-      // 3. Assert success response & database creation call
-      expect(result).toEqual({ ok: true, data: { id: "evt_draft_1" } });
-      expect(mockCreate).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.objectContaining({
-            name: "Annual Tech Summit",
-            status: "DRAFT",
-            organiserId: "usr_organiser",
-          }),
-        }),
-      );
-    });
-
-    it("returns field errors for invalid name (e.g. empty string)", async () => {
-      mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
-
-      // Call action with invalid empty name
-      const result = await createDraftEvent({ name: "" });
-
-      // Assert error return and ensure DB was not touched
-      expect(result.ok).toBe(false);
-      if (!result.ok) {
-        expect(result.fieldErrors?.name).toBeTruthy();
-      }
-      expect(mockCreate).not.toHaveBeenCalled();
-    });
-  });
-
-  // --------------------------------------------------------------------------
-  // 2. SUBMISSION VALIDATION TESTS (submitEventRequest)
-  // --------------------------------------------------------------------------
-  describe("submitEventRequest — Validation Rules (User Story 13 AC)", () => {
-    it("AC 1-5, 11: successfully creates complete event request when valid", async () => {
+  describe("submitEventRequest — Validation Rules", () => {
+    it("AC 1-5: successfully creates complete event request when valid", async () => {
       // 1. Mock logged-in user as Event Organiser
       mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
       mockCreate.mockResolvedValue({ id: "evt_sub_1" });
@@ -145,6 +102,30 @@ describe("User Story 13 — Event Request Creation", () => {
             accessibilityNeeds: "Wheelchair access ramp and front-row physical seating",
             programme: "09:00 Opening Keynote, 12:00 Lunch, 15:00 Panel",
             specialRequests: "VIP catering for keynote speakers",
+          }),
+        }),
+      );
+    });
+
+    it("AC 5, 7: successfully submits request with optional programme, special requests, and required facilities populated", async () => {
+      mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
+      mockCreate.mockResolvedValue({ id: "evt_full_optional" });
+
+      // Submit payload containing all optional fields (programme, specialRequests, requiredFacilities)
+      const result = await submitEventRequest({
+        ...validSubmissionInput,
+        requiredFacilities: ["projector", "sound-system", "wifi"],
+        programme: "09:00 Keynote, 14:00 Workshop",
+        specialRequests: "VIP Security escort and HALAL catering",
+      });
+
+      expect(result.ok).toBe(true);
+      expect(mockCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            requiredFacilities: ["projector", "sound-system", "wifi"],
+            programme: "09:00 Keynote, 14:00 Workshop",
+            specialRequests: "VIP Security escort and HALAL catering",
           }),
         }),
       );
@@ -227,6 +208,26 @@ describe("User Story 13 — Event Request Creation", () => {
       expect(mockCreate).not.toHaveBeenCalled();
     });
 
+    it("AC 9: Rejects zero-duration event where startAt === endAt", async () => {
+      mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
+
+      const sameTime = new Date(Date.now() + 86400000).toISOString();
+
+      const result = await submitEventRequest({
+        ...validSubmissionInput,
+        startAt: sameTime,
+        endAt: sameTime,
+      });
+
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.fieldErrors?.endAt).toContain(
+          "Proposed end date and time must be strictly after the start date and time.",
+        );
+      }
+      expect(mockCreate).not.toHaveBeenCalled();
+    });
+
     it("AC 9: Rejects proposed end date earlier than start date", async () => {
       mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
 
@@ -245,6 +246,33 @@ describe("User Story 13 — Event Request Creation", () => {
         );
       }
       expect(mockCreate).not.toHaveBeenCalled();
+    });
+
+    it("AC 9, 10: Accepts valid cross-midnight overnight event schedules (startAt 23:30, endAt 02:30 next day)", async () => {
+      mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
+      mockCreate.mockResolvedValue({ id: "evt_overnight" });
+
+      // Overnight event: starts 23:30 today, ends 02:30 tomorrow (+27 hours from now)
+      const overnightStart = new Date(Date.now() + 86400000).toISOString();
+      const overnightEnd = new Date(Date.now() + 86400000 + 10800000).toISOString();
+
+      const result = await submitEventRequest({
+        ...validSubmissionInput,
+        name: "Overnight Hackathon Session",
+        startAt: overnightStart,
+        endAt: overnightEnd,
+      });
+
+      expect(result.ok).toBe(true);
+      expect(mockCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            name: "Overnight Hackathon Session",
+            startAt: new Date(overnightStart),
+            endAt: new Date(overnightEnd),
+          }),
+        }),
+      );
     });
 
     it("AC 6: Validates missing mandatory fields upon submission", async () => {
@@ -283,6 +311,26 @@ describe("User Story 13 — Event Request Creation", () => {
       expect(mockCreate).not.toHaveBeenCalled();
     });
 
+    it("AC 6: Rejects whitespace-only entries for required fields upon submission", async () => {
+      mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
+
+      // Submit payload with whitespace-only required fields
+      const result = await submitEventRequest({
+        ...validSubmissionInput,
+        name: "    ",
+        purpose: "\t\n  ",
+        description: "   ",
+      });
+
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.fieldErrors?.name).toBeTruthy();
+        expect(result.fieldErrors?.purpose).toBeTruthy();
+        expect(result.fieldErrors?.description).toBeTruthy();
+      }
+      expect(mockCreate).not.toHaveBeenCalled();
+    });
+
     it("Security Gate: Denies non-organiser user role (e.g. ATTENDEE)", async () => {
       // Mock logged-in user as ATTENDEE instead of ORGANISER
       mockAuth.mockResolvedValue(sessionFor("ATTENDEE", "usr_attendee"));
@@ -296,6 +344,26 @@ describe("User Story 13 — Event Request Creation", () => {
       }
       expect(mockCreate).not.toHaveBeenCalled();
     });
+
+    it("Security Gate: Refuses signed-out callers for createDraftEvent and submitEventRequest", async () => {
+      // Mock signed-out caller
+      mockAuth.mockResolvedValue(null);
+
+      const draftResult = await createDraftEvent({ name: "Unauthenticated Draft" });
+      expect(draftResult.ok).toBe(false);
+      if (!draftResult.ok) {
+        expect(draftResult.error).toMatch(/permission/i);
+      }
+
+      const submitResult = await submitEventRequest(validSubmissionInput);
+      expect(submitResult.ok).toBe(false);
+      if (!submitResult.ok) {
+        expect(submitResult.error).toMatch(/permission/i);
+      }
+
+      expect(mockCreate).not.toHaveBeenCalled();
+      expect(mockUpdate).not.toHaveBeenCalled();
+    });
   });
 });
 
@@ -306,28 +374,38 @@ describe("User Story 15 — Save an event request as draft", () => {
   const futureStart = new Date(Date.now() + 86400000).toISOString();
   const futureEnd = new Date(Date.now() + 86400000 + 7200000).toISOString();
 
-  it("AC 1: Organiser can save a request at any point with required fields empty", async () => {
+  it("AC 1: Organiser can save a new request as draft at any point with required fields empty", async () => {
     mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
-    mockCreate.mockResolvedValue({ id: "evt_draft_partial" });
+    mockCreate.mockResolvedValue({ id: "evt_draft_1" });
 
-    // Save draft with ONLY a name and no other required fields
+    // Call action with partial draft details (only name & description)
     const result = await createDraftEvent({
-      name: "Incomplete Tech Gathering",
+      name: "Annual Tech Summit",
+      description: "A day of talks.",
     });
 
-    expect(result).toEqual({ ok: true, data: { id: "evt_draft_partial" } });
+    expect(result).toEqual({ ok: true, data: { id: "evt_draft_1" } });
     expect(mockCreate).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
-          name: "Incomplete Tech Gathering",
+          name: "Annual Tech Summit",
           status: "DRAFT",
           organiserId: "usr_organiser",
-          purpose: null,
-          description: null,
-          venueRequirements: null,
         }),
       }),
     );
+  });
+
+  it("AC 1: Returns field error when attempting to save draft with empty name", async () => {
+    mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
+
+    const result = await createDraftEvent({ name: "" });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.fieldErrors?.name).toBeTruthy();
+    }
+    expect(mockCreate).not.toHaveBeenCalled();
   });
 
   it("AC 2: Saved draft retains all entered fields when updated (updating existing draft)", async () => {
@@ -358,6 +436,35 @@ describe("User Story 15 — Save an event request as draft", () => {
           name: "Incomplete Tech Gathering — Updated",
           purpose: "New Purpose Added",
           venueRequirements: "Requires 100 capacity room",
+        }),
+      }),
+    );
+  });
+
+  it("AC 2 (Timezone Trap): Re-saving an existing draft multiple times preserves exact UTC timestamp without offset drift", async () => {
+    const fixedUtcIso = "2026-11-20T10:00:00.000Z";
+    mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
+    mockFindFirst.mockResolvedValue({
+      id: "evt_draft_tz",
+      organiserId: "usr_organiser",
+      status: "DRAFT",
+      startAt: new Date(fixedUtcIso),
+    });
+    mockUpdate.mockResolvedValue({ id: "evt_draft_tz" });
+
+    // Re-save draft with startAt to ensure UTC timestamp stability
+    const result = await createDraftEvent({
+      id: "evt_draft_tz",
+      name: "Draft Event - Pass 1",
+      startAt: fixedUtcIso,
+    });
+
+    expect(result.ok).toBe(true);
+    expect(mockUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "evt_draft_tz" },
+        data: expect.objectContaining({
+          startAt: new Date(fixedUtcIso),
         }),
       }),
     );
@@ -402,7 +509,7 @@ describe("User Story 15 — Save an event request as draft", () => {
     );
   });
 
-  it("Security check: Rejects updating or submitting draft owned by another user", async () => {
+  it("AC 3 (Ownership Isolation): Rejects updating or submitting draft owned by another user", async () => {
     mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_other_organiser"));
     // Mock draft belonging to a different user, so findFirst returns null
     mockFindFirst.mockResolvedValue(null);
@@ -621,6 +728,3 @@ describe("getFormCatalogues — permission gate", () => {
     expect(mockVenues).not.toHaveBeenCalled();
   });
 });
-
-
-

@@ -412,7 +412,7 @@ export function CreateEventDialog({
       )}
       <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center justify-between text-xl font-bold">
+          <DialogTitle className="flex items-center justify-between gap-2 pr-8 text-xl font-bold">
             <span>
               {draftEvent
                 ? isReadOnly
@@ -422,7 +422,7 @@ export function CreateEventDialog({
                     : "Resume Draft Event Request"
                 : "Create Event Request"}
             </span>
-            <span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-normal text-primary">
+            <span className="shrink-0 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-normal text-primary">
               Step {step} of 6
             </span>
           </DialogTitle>
@@ -561,6 +561,7 @@ export function CreateEventDialog({
                   value={formData.startAt}
                   onChange={(e) => updateField("startAt", e.target.value)}
                   aria-invalid={!!fieldErrors.startAt}
+                  className="relative w-full max-w-xs cursor-pointer pr-8 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-3 [&::-webkit-calendar-picker-indicator]:top-1/2 [&::-webkit-calendar-picker-indicator]:-translate-y-1/2 [&::-webkit-calendar-picker-indicator]:cursor-pointer"
                 />
                 {fieldErrors.startAt?.map((msg) => (
                   <p key={msg} className="text-xs text-destructive">
@@ -581,6 +582,7 @@ export function CreateEventDialog({
                   value={formData.endAt}
                   onChange={(e) => updateField("endAt", e.target.value)}
                   aria-invalid={!!fieldErrors.endAt}
+                  className="relative w-full max-w-xs cursor-pointer pr-8 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-3 [&::-webkit-calendar-picker-indicator]:top-1/2 [&::-webkit-calendar-picker-indicator]:-translate-y-1/2 [&::-webkit-calendar-picker-indicator]:cursor-pointer"
                 />
                 {fieldErrors.endAt?.map((msg) => (
                   <p key={msg} className="text-xs text-destructive">
@@ -913,7 +915,7 @@ export function CreateEventDialog({
             )}
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <Card>
+              <Card className="overflow-hidden">
                 <CardHeader className="px-4 py-3">
                   <CardTitle className="flex items-center justify-between text-sm font-semibold">
                     <span>1. Basic Information</span>
@@ -955,7 +957,7 @@ export function CreateEventDialog({
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="overflow-hidden">
                 <CardHeader className="px-4 py-3">
                   <CardTitle className="flex items-center justify-between text-sm font-semibold">
                     <span>2. Schedule & Attendance</span>
@@ -1001,7 +1003,7 @@ export function CreateEventDialog({
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="overflow-hidden">
                 <CardHeader className="px-4 py-3">
                   <CardTitle className="flex items-center justify-between text-sm font-semibold">
                     <span>3. Venue & Accessibility</span>
@@ -1049,7 +1051,7 @@ export function CreateEventDialog({
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="overflow-hidden">
                 <CardHeader className="px-4 py-3">
                   <CardTitle className="flex items-center justify-between text-sm font-semibold">
                     <span>4. Equipment & Support</span>
@@ -1075,7 +1077,7 @@ export function CreateEventDialog({
                 </CardContent>
               </Card>
 
-              <Card className="md:col-span-2">
+              <Card className="overflow-hidden md:col-span-2">
                 <CardHeader className="px-4 py-3">
                   <CardTitle className="flex items-center justify-between text-sm font-semibold">
                     <span>5. Registration & Additional Details</span>
