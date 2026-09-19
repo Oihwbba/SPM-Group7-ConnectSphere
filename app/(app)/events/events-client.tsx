@@ -273,8 +273,14 @@ export function EventsClient({
             {/* A single table that restyles into a stacked card per row below
                 the `md` breakpoint (events-list.module.css). Each event — and
                 each action control — exists exactly once in the DOM; there is
-                no hidden duplicate list and no "mobile-" testid split. */}
-            <Table className={styles.list}>
+                no hidden duplicate list and no "mobile-" testid split.
+
+                Explicit ARIA roles are set because the mobile restyle changes
+                the elements' `display` (block/grid), which otherwise strips a
+                table's implicit table/row/cell roles from the accessibility
+                tree. With the roles, a screen reader still reads it as a table
+                of rows and cells on a phone. */}
+            <Table role="table" className={styles.list}>
               <TableHeader>
                 <TableRow>
                   <TableHead>Name</TableHead>
@@ -284,12 +290,13 @@ export function EventsClient({
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
-              <TableBody>
+              <TableBody role="rowgroup">
                 {filteredEvents.map((event) => {
                   const isDraft = event.status === "DRAFT";
                   return (
                     <TableRow
                       key={event.id}
+                      role="row"
                       data-status={event.status}
                       data-testid={
                         isDraft ? "draft-event-row" : "submitted-event-row"
@@ -301,7 +308,11 @@ export function EventsClient({
                           : "border-l-4 border-l-transparent",
                       )}
                     >
-                      <TableCell data-col="name" className="font-medium">
+                      <TableCell
+                        role="cell"
+                        data-col="name"
+                        className="font-medium"
+                      >
                         <div className="flex flex-wrap items-center gap-2">
                           <button
                             type="button"
@@ -323,10 +334,11 @@ export function EventsClient({
                           )}
                         </div>
                       </TableCell>
-                      <TableCell data-col="status">
+                      <TableCell role="cell" data-col="status">
                         <StatusBadge status={event.status} />
                       </TableCell>
                       <TableCell
+                        role="cell"
                         data-col="starts"
                         className="text-muted-foreground"
                       >
@@ -339,6 +351,7 @@ export function EventsClient({
                         {event.startAt ? formatDateTime(event.startAt) : "—"}
                       </TableCell>
                       <TableCell
+                        role="cell"
                         data-col="created"
                         className="text-muted-foreground"
                       >
@@ -347,7 +360,11 @@ export function EventsClient({
                         </span>
                         {formatDate(event.createdAt)}
                       </TableCell>
-                      <TableCell data-col="actions" className="text-right">
+                      <TableCell
+                        role="cell"
+                        data-col="actions"
+                        className="text-right"
+                      >
                         {renderActions(event)}
                       </TableCell>
                     </TableRow>

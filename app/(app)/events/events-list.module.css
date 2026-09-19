@@ -25,7 +25,7 @@
        starts  created
        actions actions
   */
-  .list tr {
+  .list tbody tr {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
     grid-template-areas:
@@ -41,12 +41,18 @@
     background: hsl(var(--card) / 0.5);
   }
 
-  .list tr:last-child {
+  /* Re-assert the border on the last row: the table component zeroes it via
+     `[&_tr:last-child]:border-0`, which would otherwise leave the last card
+     with no outline. `tbody tr:last-child` out-specifies that utility. */
+  .list tbody tr:last-child {
     margin-bottom: 0;
+    border: 1px solid hsl(var(--border));
   }
 
-  /* Preserve the draft accent as a left border on the card. */
-  .list tr[data-status="DRAFT"] {
+  /* Preserve the draft accent as a left border on the card. Declared AFTER the
+     last-child rule so a draft card that happens to be last still wins the tie
+     and keeps its 4px accent. */
+  .list tbody tr[data-status="DRAFT"] {
     border-left: 4px solid hsl(var(--muted-foreground) / 0.5);
     background: hsl(var(--muted) / 0.4);
   }
