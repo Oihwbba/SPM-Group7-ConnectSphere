@@ -401,9 +401,19 @@ export function EquipmentClient({
     return curDate ? `${curDate}T${val}` : `T${val}`;
   };
 
-  const now = new Date();
-  const localToday = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-  const localNowTime = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+  const sgFormatter = new Intl.DateTimeFormat("en-SG", {
+    timeZone: "Asia/Singapore",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+  const sgParts = sgFormatter.formatToParts(new Date());
+  const getSgPart = (type: string) => sgParts.find((p) => p.type === type)?.value ?? "";
+  const sgToday = `${getSgPart("year")}-${getSgPart("month")}-${getSgPart("day")}`;
+  const sgNowTime = `${getSgPart("hour")}:${getSgPart("minute")}`;
 
   const reqQty = parseInt(form.quantity || "1", 10);
   const isQuantityValid = !Number.isNaN(reqQty) && reqQty > 0;
@@ -510,7 +520,7 @@ export function EquipmentClient({
                       type="date"
                       aria-label="Start date"
                       value={startDate}
-                      min={localToday}
+                      min={sgToday}
                       onChange={(e) => update("startAt", updateStartPart("date", e.target.value, form.startAt))}
                       onClick={(e) => {
                         try {
@@ -535,7 +545,7 @@ export function EquipmentClient({
                       type="time"
                       aria-label="Start time"
                       value={startTime}
-                      min={startDate === localToday ? localNowTime : undefined}
+                      min={startDate === sgToday ? sgNowTime : undefined}
                       onChange={(e) => update("startAt", updateStartPart("time", e.target.value, form.startAt))}
                       onClick={(e) => {
                         try {
@@ -574,7 +584,7 @@ export function EquipmentClient({
                       type="date"
                       aria-label="End date"
                       value={endDate}
-                      min={startDate || localToday}
+                      min={startDate || sgToday}
                       onChange={(e) => update("endAt", updateEndPart("date", e.target.value, form.endAt))}
                       onClick={(e) => {
                         try {
@@ -689,7 +699,9 @@ export function EquipmentClient({
                 <>
                   <Calendar className="h-4 w-4" />
                   <span>
-                    Reserve {form.quantity && parseInt(form.quantity, 10) > 0 ? form.quantity : 1} equipment
+                    {isQuantityValid
+                      ? `Reserve ${form.quantity} equipment`
+                      : "Reserve equipment"}
                   </span>
                   <ArrowRight className="h-4 w-4 ml-1" />
                 </>
