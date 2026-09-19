@@ -32,6 +32,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   formatDateTime,
+  parseSingaporeDateTime,
   sgWallTimeToUtcIso,
   utcToSgWallTime,
 } from "@/lib/datetime";
@@ -133,6 +134,13 @@ function toDatetimeInputString(
   dateVal: Date | string | null | undefined,
 ): string {
   return utcToSgWallTime(dateVal);
+}
+
+/** Helper to format a naive Singapore wall-time string (YYYY-MM-DDTHH:mm) for display */
+function formatWallDateTime(val: string | null | undefined): string {
+  if (!val) return "";
+  const d = parseSingaporeDateTime(val);
+  return d ? formatDateTime(d) : val;
 }
 
 function getInitialFormData(draftEvent?: DraftEventData | null): FormState {
@@ -252,15 +260,15 @@ export function CreateEventDialog({
 
     if (currentStep === 2) {
       if (formData.startAt) {
-        const startDate = new Date(formData.startAt);
-        if (startDate < new Date()) {
+        const startDate = parseSingaporeDateTime(formData.startAt);
+        if (startDate && startDate < new Date()) {
           errors.startAt = ["Proposed date cannot be in the past."];
         }
       }
       if (formData.startAt && formData.endAt) {
-        const startDate = new Date(formData.startAt);
-        const endDate = new Date(formData.endAt);
-        if (endDate <= startDate) {
+        const startDate = parseSingaporeDateTime(formData.startAt);
+        const endDate = parseSingaporeDateTime(formData.endAt);
+        if (startDate && endDate && endDate <= startDate) {
           errors.endAt = [
             "Proposed end date and time must be strictly after the start date and time.",
           ];
@@ -965,7 +973,7 @@ export function CreateEventDialog({
                   <p>
                     <span className="font-semibold">Start:</span>{" "}
                     {formData.startAt ? (
-                      formatDateTime(formData.startAt)
+                      formatWallDateTime(formData.startAt)
                     ) : (
                       <span className="rounded bg-destructive/10 px-1.5 py-0.5 text-[11px] font-medium text-destructive">
                         Missing (Required to Submit)
@@ -975,7 +983,7 @@ export function CreateEventDialog({
                   <p>
                     <span className="font-semibold">End:</span>{" "}
                     {formData.endAt ? (
-                      formatDateTime(formData.endAt)
+                      formatWallDateTime(formData.endAt)
                     ) : (
                       <span className="rounded bg-destructive/10 px-1.5 py-0.5 text-[11px] font-medium text-destructive">
                         Missing (Required to Submit)

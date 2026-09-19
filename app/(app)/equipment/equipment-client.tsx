@@ -740,11 +740,13 @@ export function EquipmentClient({
                     <div className="flex items-center gap-2 text-xs md:justify-end min-h-[1.25rem]">
                       <span
                         className={`inline-block h-2 w-2 rounded-full shrink-0 ${
-                          isQuantityExceeded
+                          availability === null
+                            ? "bg-muted-foreground"
+                            : !isQuantityValid
+                            ? "bg-amber-500"
+                            : isQuantityExceeded
                             ? "bg-destructive"
-                            : availability !== null
-                            ? "bg-success"
-                            : "bg-muted-foreground"
+                            : "bg-success"
                         }`}
                       />
                       <p
@@ -753,11 +755,13 @@ export function EquipmentClient({
                         }`}
                         role="status"
                       >
-                        {isQuantityExceeded
+                        {availability === null
+                          ? "Select period above to calculate live availability."
+                          : !isQuantityValid
+                          ? "Enter a quantity of at least 1."
+                          : isQuantityExceeded
                           ? `Requested quantity (${reqQty}) exceeds availability (${availability} unit(s) available for this period).`
-                          : availability !== null
-                          ? `Your requested quantity is available (${availability} unit(s) available for this period).`
-                          : "Select period above to calculate live availability."}
+                          : `Your requested quantity is available (${availability} unit(s) available for this period).`}
                       </p>
                     </div>
                   </div>

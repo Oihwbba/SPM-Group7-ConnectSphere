@@ -79,6 +79,10 @@ test.describe("SCRUM-31 — Reserve Equipment for Event", () => {
     await signInAsTechSupport(page);
     await fillReservation(page, "0");
 
+    await expect(
+      page.getByRole("status"),
+    ).toContainText("Enter a quantity of at least 1.");
+
     await page.getByRole("button", { name: /Reserve.*equipment/ }).click();
 
     await expect(page.getByText("Please fix the reservation details.")).toBeVisible();
