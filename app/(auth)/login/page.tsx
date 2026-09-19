@@ -30,19 +30,24 @@ export default function LoginPage() {
 
           <LoginForm />
 
-          {/* Local dev convenience — all seeded accounts share this password.
-              Safe to keep: seed data only exists locally and in CI. */}
-          <div className="glass-panel-sm mt-8 rounded-lg p-4 text-xs text-muted-foreground">
-            <p className="mb-1 font-medium text-foreground">Demo accounts</p>
-            <p>
-              organiser@test.local · coordinator@test.local ·
-              venuestaff@test.local · techsupport@test.local ·
-              attendee@test.local
-            </p>
-            <p className="mt-1">
-              Password for all: <code className="font-mono">Password123!</code>
-            </p>
-          </div>
+          {/* Demo-account hint — a local/dev convenience only. NEVER rendered in
+              production: the shared Supabase database is seeded there too, so
+              these would be working live credentials published on a public page.
+              Gated on NODE_ENV, which is "production" in the built app. */}
+          {process.env.NODE_ENV !== "production" && (
+            <div className="glass-panel-sm mt-8 rounded-lg p-4 text-xs text-muted-foreground">
+              <p className="mb-1 font-medium text-foreground">Demo accounts</p>
+              <p>
+                organiser@test.local · coordinator@test.local ·
+                venuestaff@test.local · techsupport@test.local ·
+                attendee@test.local
+              </p>
+              <p className="mt-1">
+                Password for all:{" "}
+                <code className="font-mono">Password123!</code>
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </main>
