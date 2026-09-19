@@ -42,13 +42,30 @@ type AvailabilityMap = Record<string, { available: number; total: number }>;
 
 const emptySubscribe = () => () => {};
 
-/** A datetime-local control has no zone. Convert it in the browser so the
- * server receives the instant the Technical Support user selected. */
+function parseSingaporeDateTime(value: string): Date | null {
+  if (!value || !value.includes("T") || value.startsWith("T")) return null;
+  const [datePart, timePart] = value.split("T");
+  if (!datePart || !timePart) return null;
+  const [y, m, d] = datePart.split("-").map(Number);
+  const [h, min] = timePart.slice(0, 5).split(":").map(Number);
+  if (
+    Number.isNaN(y) ||
+    Number.isNaN(m) ||
+    Number.isNaN(d) ||
+    Number.isNaN(h) ||
+    Number.isNaN(min)
+  ) {
+    return null;
+  }
+  return new Date(Date.UTC(y, m - 1, d, h - 8, min, 0));
+}
+
+/** Convert naive Singapore local datetime string into UTC ISO string. */
 function toUtcIso(localValue: string): string {
   if (!localValue) return localValue;
   try {
-    const d = new Date(localValue);
-    return Number.isNaN(d.getTime()) ? localValue : d.toISOString();
+    const d = parseSingaporeDateTime(localValue);
+    return d && !Number.isNaN(d.getTime()) ? d.toISOString() : localValue;
   } catch {
     return localValue;
   }
@@ -100,24 +117,6 @@ function getDurationDisplay(startAt: string, endAt: string) {
     primary: `${hours} ${hours === 1 ? "hour" : "hours"}`,
     secondary: `(${Math.round(diffMs / (1000 * 60))} mins)`,
   };
-}
-
-function parseSingaporeDateTime(value: string): Date | null {
-  if (!value || !value.includes("T") || value.startsWith("T")) return null;
-  const [datePart, timePart] = value.split("T");
-  if (!datePart || !timePart) return null;
-  const [y, m, d] = datePart.split("-").map(Number);
-  const [h, min] = timePart.slice(0, 5).split(":").map(Number);
-  if (
-    Number.isNaN(y) ||
-    Number.isNaN(m) ||
-    Number.isNaN(d) ||
-    Number.isNaN(h) ||
-    Number.isNaN(min)
-  ) {
-    return null;
-  }
-  return new Date(Date.UTC(y, m - 1, d, h - 8, min, 0));
 }
 
 function formatPeriodDisplay(startAt: string, endAt: string): string | null {
@@ -197,7 +196,8 @@ export function EquipmentClient({
     let isMounted = true;
     const timer = setTimeout(() => {
       // Past start time check
-      const startMs = new Date(form.startAt).getTime();
+      const startDateObj = parseSingaporeDateTime(form.startAt);
+      const startMs = startDateObj ? startDateObj.getTime() : NaN;
       if (!Number.isNaN(startMs) && startMs < Date.now() - 60000) {
         if (!isMounted) return;
         setAllAvailability(null);
@@ -301,7 +301,8 @@ export function EquipmentClient({
         return;
       }
 
-      const startMs = new Date(form.startAt).getTime();
+      const startDateObj = parseSingaporeDateTime(form.startAt);
+      const startMs = startDateObj ? startDateObj.getTime() : NaN;
       if (!Number.isNaN(startMs) && startMs < Date.now() - 60000) {
         setFieldErrors((current) => ({
           ...current,
@@ -713,7 +714,7 @@ export function EquipmentClient({
             </div>
             <div>
               <CardTitle className="text-xl font-bold tracking-tight">Live equipment availability</CardTitle>
-              <CardDescription className="text-xs text-muted-foreground h-5 overflow-hidden text-ellipsis whitespace-nowrap mt-0.5">
+              <CardDescription className="text-xs text-muted-foreground min-h-[1.25rem] mt-0.5 leading-normal">
                 {availabilityError ? (
                   <span className="font-medium text-destructive">{availabilityError}</span>
                 ) : periodText && allAvailability ? (
