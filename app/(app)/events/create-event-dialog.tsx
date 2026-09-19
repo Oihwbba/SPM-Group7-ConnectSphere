@@ -30,7 +30,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { formatDateTime } from "@/lib/datetime";
+import { formatDateTime, sgWallTimeToUtcIso } from "@/lib/datetime";
 import {
   createDraftEvent,
   submitEventRequest,
@@ -39,13 +39,10 @@ import {
 
 /**
  * A datetime-local value ("2026-09-20T10:00") carries no timezone. Convert it
- * to a UTC ISO instant HERE, in the browser, where it means the user's local
- * time — the server runs in UTC and would read the bare string 8 hours off.
+ * to a UTC ISO instant representing Singapore time (+08:00).
  */
 function toUtcIso(localValue: string): string | undefined {
-  if (!localValue) return undefined;
-  const d = new Date(localValue);
-  return isNaN(d.getTime()) ? undefined : d.toISOString();
+  return sgWallTimeToUtcIso(localValue);
 }
 
 interface FormState {

@@ -34,7 +34,13 @@ import {
   getAllEquipmentAvailability,
 } from "./actions";
 import { allAvailabilitySchema } from "@/lib/schemas/reservation";
-import { formatDate, formatDateTime, formatTime } from "@/lib/datetime";
+import {
+  formatDate,
+  formatDateTime,
+  formatTime,
+  parseSingaporeDateTime,
+  sgWallTimeToUtcIso,
+} from "@/lib/datetime";
 
 type Equipment = { id: string; type: string; totalQuantity: number };
 type Event = { id: string; name: string };
@@ -42,33 +48,9 @@ type AvailabilityMap = Record<string, { available: number; total: number }>;
 
 const emptySubscribe = () => () => {};
 
-function parseSingaporeDateTime(value: string): Date | null {
-  if (!value || !value.includes("T") || value.startsWith("T")) return null;
-  const [datePart, timePart] = value.split("T");
-  if (!datePart || !timePart) return null;
-  const [y, m, d] = datePart.split("-").map(Number);
-  const [h, min] = timePart.slice(0, 5).split(":").map(Number);
-  if (
-    Number.isNaN(y) ||
-    Number.isNaN(m) ||
-    Number.isNaN(d) ||
-    Number.isNaN(h) ||
-    Number.isNaN(min)
-  ) {
-    return null;
-  }
-  return new Date(Date.UTC(y, m - 1, d, h - 8, min, 0));
-}
-
 /** Convert naive Singapore local datetime string into UTC ISO string. */
 function toUtcIso(localValue: string): string {
-  if (!localValue) return localValue;
-  try {
-    const d = parseSingaporeDateTime(localValue);
-    return d && !Number.isNaN(d.getTime()) ? d.toISOString() : localValue;
-  } catch {
-    return localValue;
-  }
+  return sgWallTimeToUtcIso(localValue) ?? localValue;
 }
 
 function formatDateDisplay(isoString: string): string {

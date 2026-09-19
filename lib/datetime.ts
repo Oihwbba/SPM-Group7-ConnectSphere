@@ -39,3 +39,35 @@ export function formatDate(value: Date | string): string {
 export function formatTime(value: Date | string): string {
   return timeFormatter.format(new Date(value));
 }
+
+/**
+ * Parse a naive "YYYY-MM-DDTHH:mm" wall-time string as an Asia/Singapore (+08:00) instant.
+ * ConnectSphere treats all user-entered wall-clock dates and times as Singapore time.
+ */
+export function parseSingaporeDateTime(value: string): Date | null {
+  if (!value || !value.includes("T") || value.startsWith("T")) return null;
+  const [datePart, timePart] = value.split("T");
+  if (!datePart || !timePart) return null;
+  const [y, m, d] = datePart.split("-").map(Number);
+  const [h, min] = timePart.slice(0, 5).split(":").map(Number);
+  if (
+    Number.isNaN(y) ||
+    Number.isNaN(m) ||
+    Number.isNaN(d) ||
+    Number.isNaN(h) ||
+    Number.isNaN(min)
+  ) {
+    return null;
+  }
+  return new Date(Date.UTC(y, m - 1, d, h - 8, min, 0));
+}
+
+/**
+ * Converts a naive "YYYY-MM-DDTHH:mm" wall-time string entered in Asia/Singapore time
+ * into a UTC ISO string ("...Z") for server storage.
+ */
+export function sgWallTimeToUtcIso(localValue: string): string | undefined {
+  if (!localValue) return undefined;
+  const d = parseSingaporeDateTime(localValue);
+  return d && !Number.isNaN(d.getTime()) ? d.toISOString() : undefined;
+}
