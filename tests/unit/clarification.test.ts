@@ -14,7 +14,12 @@ import {
 // transaction runs its callback against a mock `tx`, same convention as
 // event-status.test.ts and event-auto-assignment.test.ts.
 const tx = vi.hoisted(() => ({
-  clarificationRequest: { create: vi.fn(), update: vi.fn() },
+  $queryRaw: vi.fn(),
+  clarificationRequest: {
+    findFirst: vi.fn(),
+    create: vi.fn(),
+    updateMany: vi.fn(),
+  },
   notification: { create: vi.fn() },
 }));
 
@@ -61,8 +66,10 @@ function eventRow(
 
 beforeEach(() => {
   vi.clearAllMocks();
+  tx.$queryRaw.mockResolvedValue([{ id: "evt1" }]);
+  tx.clarificationRequest.findFirst.mockResolvedValue(null); // no open clarification yet
   tx.clarificationRequest.create.mockResolvedValue({ id: "clar1" });
-  tx.clarificationRequest.update.mockResolvedValue({});
+  tx.clarificationRequest.updateMany.mockResolvedValue({ count: 1 });
   tx.notification.create.mockResolvedValue({});
   mockTransaction.mockImplementation((cb: (t: typeof tx) => unknown) => cb(tx));
 });
@@ -71,7 +78,6 @@ describe("requestClarification — SCRUM-18", () => {
   it("[Positive] AC: coordinator requests clarification, event status is untouched, organiser is notified", async () => {
     mockAuth.mockResolvedValue(sessionFor("COORDINATOR", "usr_coord"));
     mockEventFindUnique.mockResolvedValue(eventRow());
-    mockClarificationFindFirst.mockResolvedValue(null); // no open clarification yet
 
     const result = await requestClarification({
       eventId: "evt1",
@@ -123,7 +129,7 @@ describe("requestClarification — SCRUM-18", () => {
   it("[Boundary] AC: no second open clarification is created for the same event", async () => {
     mockAuth.mockResolvedValue(sessionFor("COORDINATOR", "usr_coord"));
     mockEventFindUnique.mockResolvedValue(eventRow());
-    mockClarificationFindFirst.mockResolvedValue({ id: "clar_already_open" });
+    tx.clarificationRequest.findFirst.mockResolvedValue({ id: "clar_already_open" });
 
     const result = await requestClarification({
       eventId: "evt1",
@@ -131,7 +137,22 @@ describe("requestClarification — SCRUM-18", () => {
     });
 
     expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toMatch(/already an open clarification/i);
     expect(tx.clarificationRequest.create).not.toHaveBeenCalled();
+    expect(tx.notification.create).not.toHaveBeenCalled();
+  });
+
+  it("[Boundary] AC: the open-clarification check runs under a lock on the Event row, so a simultaneous second request sees the first", async () => {
+    mockAuth.mockResolvedValue(sessionFor("COORDINATOR", "usr_coord"));
+    mockEventFindUnique.mockResolvedValue(eventRow());
+
+    await requestClarification({ eventId: "evt1", message: "Question" });
+
+    const lockOrder = tx.$queryRaw.mock.invocationCallOrder[0];
+    const checkOrder = tx.clarificationRequest.findFirst.mock.invocationCallOrder[0];
+    const createOrder = tx.clarificationRequest.create.mock.invocationCallOrder[0];
+    expect(lockOrder).toBeLessThan(checkOrder);
+    expect(checkOrder).toBeLessThan(createOrder);
   });
 
   it("[Negative] a request cannot be clarified while it is still DRAFT", async () => {
@@ -177,9 +198,9 @@ describe("respondToClarification — SCRUM-18", () => {
     });
 
     expect(result.ok).toBe(true);
-    expect(tx.clarificationRequest.update).toHaveBeenCalledWith(
+    expect(tx.clarificationRequest.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { id: "clar1" },
+        where: { id: "clar1", status: "OPEN" },
         data: expect.objectContaining({
           status: "ANSWERED",
           response: "About 200 attendees.",
@@ -202,7 +223,7 @@ describe("respondToClarification — SCRUM-18", () => {
     const result = await respondToClarification({ clarificationId: "clar1", response: "  " });
 
     expect(result.ok).toBe(false);
-    expect(tx.clarificationRequest.update).not.toHaveBeenCalled();
+    expect(tx.clarificationRequest.updateMany).not.toHaveBeenCalled();
   });
 
   it("[Negative] a Coordinator cannot respond on the organiser's behalf", async () => {
@@ -230,7 +251,24 @@ describe("respondToClarification — SCRUM-18", () => {
     });
 
     expect(result.ok).toBe(false);
-    expect(tx.clarificationRequest.update).not.toHaveBeenCalled();
+    expect(tx.clarificationRequest.updateMany).not.toHaveBeenCalled();
+  });
+
+  it("[Boundary] AC: when two replies race, the loser is refused and the coordinator is notified only once", async () => {
+    mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_org"));
+    // Both replies passed the OPEN pre-check, but the other one claimed the
+    // row first, so the conditional update matches nothing.
+    mockClarificationFindUnique.mockResolvedValue(clarificationRow());
+    tx.clarificationRequest.updateMany.mockResolvedValue({ count: 0 });
+
+    const result = await respondToClarification({
+      clarificationId: "clar1",
+      response: "Second reply",
+    });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toMatch(/already been answered/i);
+    expect(tx.notification.create).not.toHaveBeenCalled();
   });
 
   it("[Negative] another organiser's clarification is indistinguishable from a missing one", async () => {

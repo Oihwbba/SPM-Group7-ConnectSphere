@@ -65,16 +65,19 @@ export async function requestClarification(
       );
     }
 
-    const openExisting = await prisma.clarificationRequest.findFirst({
-      where: { eventId, status: "OPEN" },
-      select: { id: true },
-    });
-    // AC: "no second open clarification is created for the same event".
-    if (openExisting) {
-      return err("There is already an open clarification request on this event.");
-    }
-
     const created = await prisma.$transaction(async (tx) => {
+      // AC: "no second open clarification is created for the same event".
+      // The check has to run under a lock on the Event row: with nothing
+      // backing it, two requests could both see no OPEN row and both insert
+      // one. Concurrent requests on the same event queue here, and the loser
+      // sees the winner's row.
+      await tx.$queryRaw`SELECT "id" FROM "Event" WHERE "id" = ${eventId} FOR UPDATE`;
+      const openExisting = await tx.clarificationRequest.findFirst({
+        where: { eventId, status: "OPEN" },
+        select: { id: true },
+      });
+      if (openExisting) return null;
+
       const clarification = await tx.clarificationRequest.create({
         data: { eventId, requestedById: user!.id, message },
         select: { id: true },
@@ -92,6 +95,10 @@ export async function requestClarification(
 
       return clarification;
     });
+
+    if (!created) {
+      return err("There is already an open clarification request on this event.");
+    }
 
     revalidatePath("/events");
     return ok({ id: created.id });
@@ -212,11 +219,16 @@ export async function respondToClarification(
       return err("This clarification request has already been answered.");
     }
 
-    await prisma.$transaction(async (tx) => {
-      await tx.clarificationRequest.update({
-        where: { id: clarificationId },
+    const answered = await prisma.$transaction(async (tx) => {
+      // Claim the OPEN row atomically. The status check above ran before this
+      // transaction, so two simultaneous replies could both pass it; only one
+      // update can still match `status: "OPEN"`, and the other must not
+      // overwrite the first reply or send a second notification.
+      const claimed = await tx.clarificationRequest.updateMany({
+        where: { id: clarificationId, status: "OPEN" },
         data: { status: "ANSWERED", response, respondedAt: new Date() },
       });
+      if (claimed.count === 0) return false;
 
       if (clarification.event.coordinatorId) {
         await tx.notification.create({
@@ -229,7 +241,13 @@ export async function respondToClarification(
           },
         });
       }
+
+      return true;
     });
+
+    if (!answered) {
+      return err("This clarification request has already been answered.");
+    }
 
     revalidatePath("/events");
     return ok({ id: clarificationId });

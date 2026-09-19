@@ -45,17 +45,25 @@ export function ClarificationPanel({
     null,
   );
   const [loading, setLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [response, setResponse] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
     let cancelled = false;
-    getClarificationForEvent(eventId).then((result) => {
-      if (cancelled) return;
-      if (result.ok) setClarification(result.data.clarification);
-      setLoading(false);
-    });
+    getClarificationForEvent(eventId)
+      .then((result) => {
+        if (cancelled) return;
+        if (result.ok) setClarification(result.data.clarification);
+        else setLoadFailed(true);
+      })
+      .catch(() => {
+        if (!cancelled) setLoadFailed(true);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
     return () => {
       cancelled = true;
     };
@@ -83,15 +91,27 @@ export function ClarificationPanel({
     router.refresh();
   }
 
-  if (loading || !clarification) return null;
+  if (loading) return null;
+
+  // Distinct from the intentional empty case below: a failed fetch would
+  // otherwise hide an open question from the organiser with no sign why.
+  if (loadFailed) {
+    return (
+      <p role="alert" className="text-xs text-muted-foreground">
+        Couldn&apos;t load the clarification thread — try reopening this event.
+      </p>
+    );
+  }
+
+  if (!clarification) return null;
 
   const isOpen = clarification.status === "OPEN";
 
   return (
     <Card>
-      <CardHeader className="bg-amber-50 px-4 py-3 dark:bg-amber-950/20">
+      <CardHeader className="bg-warning/15 px-4 py-3">
         <CardTitle className="flex items-center gap-2 text-sm font-semibold">
-          <MessageCircleQuestion className="h-4 w-4 text-amber-600 dark:text-amber-500" />
+          <MessageCircleQuestion className="h-4 w-4 text-warning" />
           Clarification {isOpen ? "requested" : "thread"}
         </CardTitle>
       </CardHeader>
