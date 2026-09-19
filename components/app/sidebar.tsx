@@ -71,19 +71,23 @@ export function Sidebar({ role }: { role: Role }) {
 
   return (
     <aside
+      aria-label="Primary"
       className={cn(
-        "sticky top-16 flex h-[calc(100vh-4rem)] shrink-0 flex-col gap-3 p-3 transition-[width] duration-200",
-        collapsed ? "w-[84px]" : "w-64",
+        // Mobile: a fixed horizontal bar pinned to the bottom, so the page
+        // content gets the full width (the shell adds bottom padding to clear
+        // it). From `md` up it becomes the collapsible vertical rail.
+        "fixed inset-x-0 bottom-0 z-40 border-t border-border/60 bg-card/70 backdrop-blur-glass backdrop-saturate-150",
+        "md:sticky md:inset-x-auto md:bottom-auto md:top-16 md:z-auto md:flex md:h-[calc(100vh-4rem)] md:shrink-0 md:flex-col md:gap-3 md:border-t-0 md:bg-transparent md:p-3 md:backdrop-blur-none md:backdrop-saturate-100 md:transition-[width] md:duration-200",
+        collapsed ? "md:w-[84px]" : "md:w-64",
       )}
     >
-      {/* Toggle at the top. It stretches to the same width as the nav pill
-          below (both fill the rail's content box), so they line up and match. */}
+      {/* Toggle — desktop rail only; the bottom bar needs no collapse. */}
       <button
         type="button"
         onClick={toggle}
         aria-label={collapsed ? "Expand navigation" : "Collapse navigation"}
         className={cn(
-          "flex h-12 w-full shrink-0 items-center rounded-full border border-border/60 bg-card/55 text-muted-foreground shadow-glass-sm backdrop-blur-glass backdrop-saturate-150 transition-colors hover:text-foreground",
+          "hidden h-12 w-full shrink-0 items-center rounded-full border border-border/60 bg-card/55 text-muted-foreground shadow-glass-sm backdrop-blur-glass backdrop-saturate-150 transition-colors hover:text-foreground md:flex",
           collapsed ? "justify-center" : "justify-start gap-2 px-4",
         )}
       >
@@ -97,11 +101,13 @@ export function Sidebar({ role }: { role: Role }) {
         )}
       </button>
 
-      {/* The long vertical rounded container holding the circular icon buttons */}
+      {/* Nav items: a spaced-out row across the bottom bar on mobile; the tall
+          rounded pill container on desktop. */}
       <nav
         className={cn(
-          "flex w-full flex-col gap-2 rounded-[1.9rem] border border-border/60 bg-card/50 p-2 shadow-glass backdrop-blur-glass backdrop-saturate-150",
-          collapsed && "items-center",
+          "flex items-center justify-around gap-1 px-2 py-1.5",
+          "md:w-full md:flex-col md:justify-start md:gap-2 md:rounded-[1.9rem] md:border md:border-border/60 md:bg-card/50 md:px-2 md:py-2 md:shadow-glass md:backdrop-blur-glass md:backdrop-saturate-150",
+          collapsed && "md:items-center",
         )}
       >
         {items.map((item) => {
@@ -112,10 +118,13 @@ export function Sidebar({ role }: { role: Role }) {
             <Link
               key={item.href}
               href={item.href}
-              title={collapsed ? item.label : undefined}
+              title={item.label}
+              aria-label={item.label}
+              aria-current={isActive ? "page" : undefined}
               className={cn(
                 "group flex items-center gap-3 rounded-full transition-colors",
-                collapsed ? "justify-center" : "pr-4",
+                "justify-center",
+                collapsed ? "md:justify-center" : "md:pr-4",
               )}
             >
               <span
@@ -131,7 +140,7 @@ export function Sidebar({ role }: { role: Role }) {
               {!collapsed && (
                 <span
                   className={cn(
-                    "truncate text-sm font-medium",
+                    "hidden truncate text-sm font-medium md:inline",
                     isActive
                       ? "text-foreground"
                       : "text-muted-foreground group-hover:text-foreground",
