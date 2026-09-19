@@ -102,7 +102,7 @@ export function EventDetailsModal({
                 Attendance
               </CardTitle>
             </CardHeader>
-            <CardContent className="grid grid-cols-1 gap-3 p-4 text-xs sm:grid-cols-3">
+            <CardContent className="grid grid-cols-1 gap-3 p-4 text-xs sm:grid-cols-4">
               <div>
                 <span className="font-semibold text-muted-foreground">
                   Proposed Start:
@@ -117,6 +117,14 @@ export function EventDetailsModal({
                 </span>
                 <p className="mt-0.5 text-foreground">
                   {event.endAt ? formatDateTime(event.endAt) : "—"}
+                </p>
+              </div>
+              <div>
+                <span className="font-semibold text-muted-foreground">
+                  Event Timezone:
+                </span>
+                <p className="mt-0.5 text-foreground">
+                  {(event as { timezone?: string | null }).timezone || "Asia/Singapore (+08:00)"}
                 </p>
               </div>
               <div>

@@ -33,6 +33,7 @@ import {
   formatDateTime,
   parseSingaporeDateTime,
   utcToSgWallTime,
+  timezoneWallTimeToUtcIso,
 } from "@/lib/datetime";
 import {
   createDraftEvent,
@@ -45,25 +46,14 @@ import {
  * Converts local wall-time to UTC ISO instant ("...Z") according to selected timezone.
  */
 function toUtcIso(localValue: string, timezoneStr: string = "Asia/Singapore (+08:00)"): string | undefined {
-  if (!localValue || !localValue.includes("T")) return undefined;
-  const [datePart, timePart] = localValue.split("T");
-  if (!datePart || !timePart) return undefined;
-  const [y, m, d] = datePart.split("-").map(Number);
-  const [h, min] = timePart.slice(0, 5).split(":").map(Number);
-  if (isNaN(y) || isNaN(m) || isNaN(d) || isNaN(h) || isNaN(min)) return undefined;
+  if (!localValue) return undefined;
+  let ianaZone = "Asia/Singapore";
+  if (timezoneStr.includes("Tokyo")) ianaZone = "Asia/Tokyo";
+  else if (timezoneStr.includes("London")) ianaZone = "Europe/London";
+  else if (timezoneStr.includes("New_York")) ianaZone = "America/New_York";
+  else if (timezoneStr.includes("UTC")) ianaZone = "UTC";
 
-  // Extract offset hours (e.g., "+08:00" -> 8, "-05:00" -> -5)
-  let offsetHours = 8; // Default Singapore (+08:00)
-  const match = timezoneStr.match(/([+-]\d{2}):\d{2}/);
-  if (match) {
-    offsetHours = parseInt(match[1], 10);
-  } else if (timezoneStr.includes("UTC") || timezoneStr.includes("+00:00")) {
-    offsetHours = 0;
-  }
-
-  // Subtract offset hours to get UTC hours
-  const utcDate = new Date(Date.UTC(y, m - 1, d, h - offsetHours, min, 0));
-  return !isNaN(utcDate.getTime()) ? utcDate.toISOString() : undefined;
+  return timezoneWallTimeToUtcIso(localValue, ianaZone);
 }
 
 interface FormState {
@@ -119,6 +109,7 @@ export interface DraftEventData {
   description?: string | null;
   startAt?: Date | string | null;
   endAt?: Date | string | null;
+  timezone?: string | null;
   expectedAttendance?: number | null;
   venueRequirements?: string | null;
   requiredFacilities?: string[];
@@ -160,7 +151,7 @@ function getInitialFormData(draftEvent?: DraftEventData | null): FormState {
     description: draftEvent.description || "",
     startAt: toDatetimeInputString(draftEvent.startAt),
     endAt: toDatetimeInputString(draftEvent.endAt),
-    timezone: "Asia/Singapore (+08:00)",
+    timezone: draftEvent.timezone || "Asia/Singapore (+08:00)",
     expectedAttendance:
       draftEvent.expectedAttendance !== null &&
       draftEvent.expectedAttendance !== undefined
@@ -1007,6 +998,10 @@ export function CreateEventDialog({
                         Missing (Required to Submit)
                       </span>
                     )}
+                  </p>
+                  <p>
+                    <span className="font-semibold">Timezone:</span>{" "}
+                    {formData.timezone || "Asia/Singapore (+08:00)"}
                   </p>
                   <p>
                     <span className="font-semibold">Attendance:</span>{" "}

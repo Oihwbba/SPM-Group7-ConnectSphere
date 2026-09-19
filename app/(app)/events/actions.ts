@@ -58,6 +58,7 @@ export async function createDraftEvent(
       registrationNotes,
       programme,
       specialRequests,
+      timezone,
     } = parsed.data;
 
     let eventId = id;
@@ -93,7 +94,8 @@ export async function createDraftEvent(
           registrationNotes: registrationNotes ?? null,
           programme: programme ?? null,
           specialRequests: specialRequests ?? null,
-        },
+          timezone: timezone ?? "Asia/Singapore",
+        } as unknown as Parameters<typeof prisma.event.update>[0]["data"],
       });
     } else {
       // User Story 15 AC 1: Save a new incomplete request as draft at any point
@@ -114,8 +116,9 @@ export async function createDraftEvent(
           registrationNotes: registrationNotes ?? null,
           programme: programme ?? null,
           specialRequests: specialRequests ?? null,
+          timezone: timezone ?? "Asia/Singapore",
           organiserId: user!.id,
-        },
+        } as unknown as Parameters<typeof prisma.event.create>[0]["data"],
         select: { id: true },
       });
       eventId = created.id;
@@ -170,6 +173,7 @@ export async function submitEventRequest(
       registrationNotes,
       programme,
       specialRequests,
+      timezone,
     } = parsed.data;
 
     let eventId = id;
@@ -210,7 +214,8 @@ export async function submitEventRequest(
           registrationNotes,
           programme: programme ?? null,
           specialRequests: specialRequests ?? null,
-        },
+          timezone: timezone ?? "Asia/Singapore",
+        } as unknown as Parameters<typeof prisma.event.update>[0]["data"],
       });
     } else {
       // Create and directly submit a new event request
@@ -232,8 +237,9 @@ export async function submitEventRequest(
           registrationNotes,
           programme: programme ?? null,
           specialRequests: specialRequests ?? null,
+          timezone: timezone ?? "Asia/Singapore",
           organiserId: user!.id,
-        },
+        } as unknown as Parameters<typeof prisma.event.create>[0]["data"],
         select: { id: true },
       });
       eventId = created.id;

@@ -72,29 +72,88 @@ export function sgWallTimeToUtcIso(localValue: string): string | undefined {
   return d && !Number.isNaN(d.getTime()) ? d.toISOString() : undefined;
 }
 
-const sgWallTimeFormatter = new Intl.DateTimeFormat("en-SG", {
-  timeZone: TIME_ZONE,
-  year: "numeric",
-  month: "2-digit",
-  day: "2-digit",
-  hour: "2-digit",
-  minute: "2-digit",
-  hourCycle: "h23",
-});
+/**
+ * Convert a naive "YYYY-MM-DDTHH:mm" wall-time string in a specified IANA timezone
+ * to a UTC ISO string ("...Z"). Handles Daylight Saving Time (DST) accurately via Intl.
+ */
+export function timezoneWallTimeToUtcIso(
+  localValue: string | null | undefined,
+  timeZone: string = "Asia/Singapore",
+): string | undefined {
+  if (!localValue || !localValue.includes("T")) return undefined;
+  const [datePart, timePart] = localValue.split("T");
+  if (!datePart || !timePart) return undefined;
+  const [y, m, d] = datePart.split("-").map(Number);
+  const [h, min] = timePart.slice(0, 5).split(":").map(Number);
+  if (
+    Number.isNaN(y) ||
+    Number.isNaN(m) ||
+    Number.isNaN(d) ||
+    Number.isNaN(h) ||
+    Number.isNaN(min)
+  ) {
+    return undefined;
+  }
+
+  // Create a UTC target date first
+  const targetUtcDate = new Date(Date.UTC(y, m - 1, d, h, min, 0));
+
+  // Determine actual offset for the specific target date in the specified IANA timezone
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23",
+  });
+
+  const parts = formatter.formatToParts(targetUtcDate);
+  const getPart = (type: string) =>
+    parseInt(parts.find((p) => p.type === type)?.value ?? "0", 10);
+
+  const tzY = getPart("year");
+  const tzM = getPart("month");
+  const tzD = getPart("day");
+  const tzH = getPart("hour");
+  const tzMin = getPart("minute");
+
+  const asTzUtc = Date.UTC(tzY, tzM - 1, tzD, tzH, tzMin, 0);
+  const offsetMs = asTzUtc - targetUtcDate.getTime();
+
+  // Subtract offset to reach the exact UTC instant matching the wall time in that timezone
+  const finalUtcDate = new Date(targetUtcDate.getTime() - offsetMs);
+  return finalUtcDate.toISOString();
+}
 
 /**
- * Format a Date, ISO string, or timestamp into Singapore wall-time in datetime-local input format ("YYYY-MM-DDTHH:mm").
+ * Format a Date or ISO string into wall-time "YYYY-MM-DDTHH:mm" format for datetime-local input
+ * in a specified IANA timezone.
  */
-export function utcToSgWallTime(
+export function utcToTimezoneWallTime(
   value: Date | string | number | null | undefined,
+  timeZone: string = "Asia/Singapore",
 ): string {
   if (value === null || value === undefined || value === "") return "";
   const d = value instanceof Date ? value : new Date(value);
   if (Number.isNaN(d.getTime())) return "";
 
-  const parts = sgWallTimeFormatter.formatToParts(d);
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  });
+
+  const parts = formatter.formatToParts(d);
   const getPart = (type: string) =>
     parts.find((p) => p.type === type)?.value ?? "";
+
   const year = getPart("year");
   const month = getPart("month");
   const day = getPart("day");
@@ -103,5 +162,11 @@ export function utcToSgWallTime(
 
   if (!year || !month || !day || !hour || !minute) return "";
   return `${year}-${month}-${day}T${hour}:${minute}`;
+}
+
+export function utcToSgWallTime(
+  value: Date | string | number | null | undefined,
+): string {
+  return utcToTimezoneWallTime(value, "Asia/Singapore");
 }
 

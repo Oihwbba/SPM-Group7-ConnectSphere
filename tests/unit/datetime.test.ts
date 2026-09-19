@@ -6,6 +6,8 @@ import {
   parseSingaporeDateTime,
   sgWallTimeToUtcIso,
   utcToSgWallTime,
+  timezoneWallTimeToUtcIso,
+  utcToTimezoneWallTime,
 } from "@/lib/datetime";
 
 describe("lib/datetime helpers — SCRUM-31", () => {
@@ -50,6 +52,20 @@ describe("lib/datetime helpers — SCRUM-31", () => {
     expect(utcToSgWallTime("")).toBe("");
     expect(utcToSgWallTime("invalid")).toBe("");
     expect(utcToSgWallTime(new Date("invalid"))).toBe("");
+  });
+
+  it("converts IANA timezone wall-time to UTC ISO instant handling DST accurately", () => {
+    // Summer date (EDT -04:00): July 15 09:00 NY time => 13:00 UTC
+    expect(timezoneWallTimeToUtcIso("2026-07-15T09:00", "America/New_York")).toBe("2026-07-15T13:00:00.000Z");
+    // Winter date (EST -05:00): Dec 15 09:00 NY time => 14:00 UTC
+    expect(timezoneWallTimeToUtcIso("2026-12-15T09:00", "America/New_York")).toBe("2026-12-15T14:00:00.000Z");
+    // Summer date (BST +01:00): July 15 10:00 London time => 09:00 UTC
+    expect(timezoneWallTimeToUtcIso("2026-07-15T10:00", "Europe/London")).toBe("2026-07-15T09:00:00.000Z");
+  });
+
+  it("formats UTC instant to wall-time string in target IANA timezone", () => {
+    expect(utcToTimezoneWallTime("2026-07-15T13:00:00.000Z", "America/New_York")).toBe("2026-07-15T09:00");
+    expect(utcToTimezoneWallTime("2026-12-15T14:00:00.000Z", "America/New_York")).toBe("2026-12-15T09:00");
   });
 });
 

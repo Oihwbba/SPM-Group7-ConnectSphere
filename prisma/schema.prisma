@@ -265,6 +265,7 @@ model Event {
   registrationNotes     String?
   programme             String?
   specialRequests       String?
+  timezone              String?     @default("Asia/Singapore")
   equipmentTypes        String[] @default([])
   registrationRequired  Boolean?
 
