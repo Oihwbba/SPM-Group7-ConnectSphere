@@ -350,10 +350,15 @@ test.describe("User Story 84 — Organiser Views Their Own Event Requests Journe
     await page.getByRole("button", { name: "Next", exact: true }).click();
 
     // Select custom timezone on Step 2
-    await page.getByLabel("Event Timezone *").selectOption("America/New_York (-05:00)");
+    await page.getByLabel("Event Timezone *").selectOption("America/New_York (EST/EDT)");
     await page.getByRole("button", { name: /Save as Draft/i }).click();
 
     await expect(page.getByRole("cell", { name: eventName })).toBeVisible();
+
+    // Reopen draft & verify saved timezone is restored
+    await page.getByRole("button", { name: "Edit / Resume Draft" }).first().click();
+    await page.getByRole("button", { name: "Next", exact: true }).click();
+    await expect(page.getByLabel("Event Timezone *")).toHaveValue("America/New_York (EST/EDT)");
   });
 
   test("SCRUM-13 AC6: unsaved changes warning dialog appears when navigating away from edited draft", async ({

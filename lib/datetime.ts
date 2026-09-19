@@ -30,6 +30,37 @@ export function formatDateTime(value: Date | string): string {
   return dateTimeFormatter.format(new Date(value));
 }
 
+/** Format a date and time in a specified event timezone string with zone suffix */
+export function formatDateTimeInTimezone(
+  value: Date | string | null | undefined,
+  timezoneStr?: string | null,
+): string {
+  if (!value) return "—";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "—";
+
+  let timeZone = "Asia/Singapore";
+  if (timezoneStr) {
+    if (timezoneStr.includes("Tokyo")) timeZone = "Asia/Tokyo";
+    else if (timezoneStr.includes("London")) timeZone = "Europe/London";
+    else if (timezoneStr.includes("New_York")) timeZone = "America/New_York";
+    else if (timezoneStr.includes("UTC")) timeZone = "UTC";
+  }
+
+  const formatter = new Intl.DateTimeFormat("en-SG", {
+    timeZone,
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
+
+  const formatted = formatter.format(d);
+  const suffix =
+    timezoneStr && !timezoneStr.includes("Singapore")
+      ? ` (${timezoneStr.split(" ")[0]})`
+      : "";
+  return `${formatted}${suffix}`;
+}
+
 /** e.g. "15 Jan 2026" — a date only, in Singapore time. */
 export function formatDate(value: Date | string): string {
   return dateFormatter.format(new Date(value));

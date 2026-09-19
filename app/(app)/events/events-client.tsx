@@ -18,7 +18,7 @@ import {
 import { toast } from "sonner";
 import type { Event } from "@prisma/client";
 
-import { formatDate, formatDateTime } from "@/lib/datetime";
+import { formatDate, formatDateTimeInTimezone } from "@/lib/datetime";
 import { StatusBadge } from "@/components/events/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -481,7 +481,7 @@ export function EventsClient({
                         <StatusBadge status={event.status} />
                       </TableCell>
                       <TableCell className="text-muted-foreground">
-                        {event.startAt ? formatDateTime(event.startAt) : "—"}
+                        {event.startAt ? formatDateTimeInTimezone(event.startAt, event.timezone) : "—"}
                       </TableCell>
                       <TableCell className="text-muted-foreground">
                         {formatDate(event.updatedAt || event.createdAt)}

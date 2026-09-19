@@ -11,7 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "@/components/events/status-badge";
-import { formatDate, formatDateTime } from "@/lib/datetime";
+import { formatDate, formatDateTimeInTimezone } from "@/lib/datetime";
 import { Calendar, Building2, Wrench, ClipboardList, Info } from "lucide-react";
 import type { Event } from "@prisma/client";
 
@@ -108,7 +108,7 @@ export function EventDetailsModal({
                   Proposed Start:
                 </span>
                 <p className="mt-0.5 text-foreground">
-                  {event.startAt ? formatDateTime(event.startAt) : "—"}
+                  {event.startAt ? formatDateTimeInTimezone(event.startAt, event.timezone) : "—"}
                 </p>
               </div>
               <div>
@@ -116,7 +116,7 @@ export function EventDetailsModal({
                   Proposed End:
                 </span>
                 <p className="mt-0.5 text-foreground">
-                  {event.endAt ? formatDateTime(event.endAt) : "—"}
+                  {event.endAt ? formatDateTimeInTimezone(event.endAt, event.timezone) : "—"}
                 </p>
               </div>
               <div>

@@ -30,6 +30,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
+  formatDateTime,
+  parseSingaporeDateTime,
   timezoneWallTimeToUtcIso,
   utcToTimezoneWallTime,
 } from "@/lib/datetime";
@@ -56,14 +58,24 @@ function toUtcIso(localValue: string, timezoneStr: string = "Asia/Singapore (+08
   return timezoneWallTimeToUtcIso(localValue, parseIanaZone(timezoneStr));
 }
 
+function normalizeTimezoneOption(tz?: string | null): string {
+  if (!tz) return "Asia/Singapore (+08:00)";
+  if (tz === "Asia/Singapore") return "Asia/Singapore (+08:00)";
+  if (tz === "Asia/Tokyo") return "Asia/Tokyo (+09:00)";
+  if (tz === "Europe/London") return "Europe/London (GMT/BST)";
+  if (tz === "America/New_York") return "America/New_York (EST/EDT)";
+  if (tz === "UTC") return "UTC (+00:00)";
+  return tz;
+}
+
 const COMMON_FACILITIES = [
-  "AV System",
-  "Projector",
-  "Microphones",
-  "Stage",
-  "Whiteboard",
-  "Wheelchair Access",
-  "Wi-Fi",
+  { value: "av-system", label: "AV System" },
+  { value: "projector", label: "Projector" },
+  { value: "microphones", label: "Microphones" },
+  { value: "stage", label: "Stage" },
+  { value: "whiteboard", label: "Whiteboard" },
+  { value: "wheelchair-access", label: "Wheelchair Access" },
+  { value: "wifi", label: "Wi-Fi" },
 ];
 
 interface FormState {
@@ -150,12 +162,13 @@ function toDatetimeInputString(
 /** Helper to format a naive wall-time string (YYYY-MM-DDTHH:mm) for display */
 function formatWallDateTime(val: string | null | undefined): string {
   if (!val) return "";
-  return val.replace("T", " ");
+  const d = parseSingaporeDateTime(val);
+  return d ? formatDateTime(d) : val.replace("T", " ");
 }
 
 function getInitialFormData(draftEvent?: DraftEventData | null): FormState {
   if (!draftEvent) return initialFormState;
-  const timezone = draftEvent.timezone || "Asia/Singapore (+08:00)";
+  const timezone = normalizeTimezoneOption(draftEvent.timezone);
   return {
     name: draftEvent.name || "",
     purpose: draftEvent.purpose || "",
@@ -720,22 +733,22 @@ export function CreateEventDialog({
               <Label>Required Facilities</Label>
               <div className="flex flex-wrap gap-2">
                 {COMMON_FACILITIES.map((facility) => {
-                  const selected = formData.requiredFacilities.includes(facility);
+                  const selected = formData.requiredFacilities.includes(facility.value);
                   return (
                     <Button
-                      key={facility}
+                      key={facility.value}
                       type="button"
                       variant={selected ? "default" : "outline"}
                       size="sm"
                       className="h-7 text-xs"
                       onClick={() => {
                         const next = selected
-                          ? formData.requiredFacilities.filter((f) => f !== facility)
-                          : [...formData.requiredFacilities, facility];
+                          ? formData.requiredFacilities.filter((f) => f !== facility.value)
+                          : [...formData.requiredFacilities, facility.value];
                         updateField("requiredFacilities", next);
                       }}
                     >
-                      {facility}
+                      {facility.label}
                     </Button>
                   );
                 })}
@@ -1073,6 +1086,14 @@ export function CreateEventDialog({
                       </span>
                     )}
                   </p>
+                  {formData.requiredFacilities.length > 0 && (
+                    <p>
+                      <span className="font-semibold">Facilities:</span>{" "}
+                      {formData.requiredFacilities
+                        .map((f) => COMMON_FACILITIES.find((c) => c.value === f)?.label || f)
+                        .join(", ")}
+                    </p>
+                  )}
                   <p>
                     <span className="font-semibold">Preferred Layout:</span>{" "}
                     {formData.preferredLayout.trim() || (
