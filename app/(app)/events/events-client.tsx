@@ -169,20 +169,25 @@ export function EventsClient({
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className="space-y-4 md:space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-2 md:gap-3">
         <div className="space-y-1">
-          <h1 className="text-2xl font-semibold tracking-tight">
+          <h1 className="text-xl font-semibold tracking-tight md:text-2xl">
             {isCoordinator ? "Submitted Event Requests" : "My Events"}
           </h1>
-          <p className="text-sm text-muted-foreground">
+          {/* Onboarding subtitle — hidden on phones to keep the header compact
+              and leave more room for the list. */}
+          <p className="hidden text-sm text-muted-foreground sm:block">
             {isCoordinator
               ? "Review submitted event requests requiring coordinator review and planning."
               : "Create and track your event requests through their lifecycle."}
           </p>
         </div>
         {!isCoordinator && (
-          <Button className="gap-2" onClick={() => setCreateDialogOpen(true)}>
+          <Button
+            className="h-8 gap-1.5 px-3 text-xs md:h-10 md:gap-2 md:px-4 md:text-sm"
+            onClick={() => setCreateDialogOpen(true)}
+          >
             <Plus className="h-4 w-4" />
             Create Event Request
           </Button>
@@ -191,21 +196,22 @@ export function EventsClient({
 
       {/* Filter Tabs for Organisers to toggle between All, Drafts, and Submitted Requests */}
       {!isCoordinator && events.length > 0 && (
-        <div className="flex flex-wrap items-center gap-2 border-b pb-3">
-          <Filter className="mr-1 h-4 w-4 text-muted-foreground" />
+        <div className="flex flex-nowrap items-center gap-1.5 overflow-x-auto border-b pb-2 md:flex-wrap md:gap-2 md:overflow-visible md:pb-3">
+          <Filter className="mr-0.5 h-4 w-4 shrink-0 text-muted-foreground md:mr-1" />
           <Button
             variant={activeTab === "ALL" ? "secondary" : "ghost"}
             size="sm"
-            className="h-8 text-xs font-medium"
+            className="h-8 shrink-0 text-xs font-medium"
             onClick={() => setActiveTab("ALL")}
           >
-            All Requests ({events.length})
+            All<span className="hidden sm:inline">&nbsp;Requests</span> (
+            {events.length})
           </Button>
           <Button
             variant={activeTab === "DRAFT" ? "secondary" : "ghost"}
             size="sm"
             className={cn(
-              "h-8 gap-1.5 text-xs font-medium",
+              "h-8 shrink-0 gap-1.5 text-xs font-medium",
               activeTab === "DRAFT" && "font-semibold",
             )}
             onClick={() => setActiveTab("DRAFT")}
@@ -216,7 +222,7 @@ export function EventsClient({
           <Button
             variant={activeTab === "SUBMITTED" ? "secondary" : "ghost"}
             size="sm"
-            className="h-8 text-xs font-medium"
+            className="h-8 shrink-0 text-xs font-medium"
             onClick={() => setActiveTab("SUBMITTED")}
           >
             Submitted ({submittedCount})

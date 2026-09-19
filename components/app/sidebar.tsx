@@ -73,11 +73,12 @@ export function Sidebar({ role }: { role: Role }) {
     <aside
       aria-label="Primary"
       className={cn(
-        // Mobile: a fixed horizontal bar pinned to the bottom, so the page
-        // content gets the full width (the shell adds bottom padding to clear
-        // it). From `md` up it becomes the collapsible vertical rail.
-        "fixed inset-x-0 bottom-0 z-40 border-t border-border/60 bg-card/70 backdrop-blur-glass backdrop-saturate-150",
-        "md:sticky md:inset-x-auto md:bottom-auto md:top-16 md:z-auto md:flex md:h-[calc(100vh-4rem)] md:shrink-0 md:flex-col md:gap-3 md:border-t-0 md:bg-transparent md:p-3 md:backdrop-blur-none md:backdrop-saturate-100 md:transition-[width] md:duration-200",
+        // Mobile: a floating, rounded, translucent bar that spans the width
+        // (with a small side margin) and hovers just above the bottom edge; the
+        // shell adds bottom padding to clear it. From `md` up it becomes the
+        // in-flow, collapsible vertical rail.
+        "fixed inset-x-4 bottom-4 z-40 rounded-full border border-border/50 bg-card/45 shadow-glass backdrop-blur-glass backdrop-saturate-150",
+        "md:sticky md:inset-x-auto md:bottom-auto md:top-16 md:z-auto md:flex md:h-[calc(100vh-4rem)] md:shrink-0 md:flex-col md:gap-3 md:rounded-none md:border-0 md:bg-transparent md:p-3 md:shadow-none md:backdrop-blur-none md:backdrop-saturate-100 md:transition-[width] md:duration-200",
         collapsed ? "md:w-[84px]" : "md:w-64",
       )}
     >
@@ -122,14 +123,18 @@ export function Sidebar({ role }: { role: Role }) {
               aria-label={item.label}
               aria-current={isActive ? "page" : undefined}
               className={cn(
-                "group flex items-center gap-3 rounded-full transition-colors",
-                "justify-center",
+                "group flex items-center justify-center gap-3 rounded-full transition-colors",
+                // Mobile: each item takes an equal share of the bar (½ for two
+                // items), so the active highlight can fill that whole segment.
+                "flex-1 md:flex-none",
                 collapsed ? "md:justify-center" : "md:pr-4",
               )}
             >
               <span
                 className={cn(
-                  "flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-colors",
+                  // Mobile: the highlight stretches to fill the item's share;
+                  // on desktop it's the fixed circular icon button.
+                  "flex h-11 w-full shrink-0 items-center justify-center rounded-full transition-colors md:w-11",
                   isActive
                     ? "bg-foreground text-background shadow-glass-sm"
                     : "text-muted-foreground group-hover:bg-secondary group-hover:text-foreground",

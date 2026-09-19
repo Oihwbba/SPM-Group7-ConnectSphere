@@ -68,7 +68,7 @@ export default async function AppLayout({
         <Sidebar role={role} />
         {/* Extra bottom padding on mobile so content clears the fixed bottom
             nav bar; the desktop rail is in-flow so needs none. */}
-        <main className="min-w-0 flex-1 px-4 pb-24 pt-6 sm:px-6 md:pb-10">
+        <main className="min-w-0 flex-1 px-4 pb-24 pt-4 sm:px-6 md:pb-10 md:pt-6">
           {children}
         </main>
       </div>
