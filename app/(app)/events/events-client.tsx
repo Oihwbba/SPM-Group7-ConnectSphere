@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useEffect, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   Plus,
@@ -64,12 +64,27 @@ export function EventsClient({
 }: EventsClientProps) {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [editingDraft, setEditingDraft] = useState<Event | null>(null);
-  const [viewingEvent, setViewingEvent] = useState<Event | null>(null);
+  const [viewingEventId, setViewingEventId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<FilterTab>("ALL");
   const [rejectingEvent, setRejectingEvent] = useState<Event | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
+
+  // SCRUM-24: Auto-refresh event data periodically so concurrent viewers never see conflicting statuses
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (document.visibilityState === "visible" && !isPending) {
+        router.refresh();
+      }
+    }, 4000);
+
+    return () => clearInterval(interval);
+  }, [router, isPending]);
+
+  const viewingEvent = viewingEventId
+    ? (events.find((e) => e.id === viewingEventId) ?? null)
+    : null;
 
   function changeStatus(
     event: Event,
@@ -238,7 +253,7 @@ export function EventsClient({
                         <div className="flex flex-wrap items-center gap-2">
                           <button
                             type="button"
-                            onClick={() => setViewingEvent(event)}
+                            onClick={() => setViewingEventId(event.id)}
                             className="cursor-pointer text-left font-medium text-foreground hover:underline focus:outline-none"
                             data-testid="event-name-link"
                           >
@@ -287,7 +302,7 @@ export function EventsClient({
                             variant="ghost"
                             size="sm"
                             className="h-8 gap-1.5 text-xs"
-                            onClick={() => setViewingEvent(event)}
+                            onClick={() => setViewingEventId(event.id)}
                             data-testid="view-details-button"
                           >
                             <Eye className="h-3.5 w-3.5" />
@@ -355,7 +370,7 @@ export function EventsClient({
         <EventDetailsModal
           open={!!viewingEvent}
           onOpenChange={(open) => {
-            if (!open) setViewingEvent(null);
+            if (!open) setViewingEventId(null);
           }}
           event={viewingEvent}
         />

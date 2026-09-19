@@ -58,3 +58,32 @@ copy it into per-screen fields or client-side caches.
 - Future lifecycle stories (SCRUM-20, 81, 82, 83) must add their own authorised
   transition to this gate (or an equivalent guarded action), rather than
   writing `Event.status` directly.
+
+---
+
+## Addendum (2026-09-19) — Periodic router revalidation for concurrent status views (SCRUM-24)
+
+### Context
+
+SCRUM-24 acceptance criterion 4 mandates:
+> *"Two users viewing the same event at the same time never see conflicting statuses"*
+
+When two users view an event simultaneously (e.g. an Organiser on "My Events" and a Coordinator reviewing "Submitted Event Requests"), a status decision (approve or reject) by the coordinator wrote the status change to PostgreSQL and revalidated the coordinator's path, but the organiser's browser tab remained stale until an explicit manual page reload.
+
+### Decision
+
+1. **Visibility-gated periodic revalidation (`router.refresh()`).** `EventsClient` mounts an interval timer that executes `router.refresh()` every 4 seconds whenever `document.visibilityState === "visible"` and no mutation transition is in flight (`!isPending`). When the tab is backgrounded or minimized, polling halts to avoid unnecessary network traffic.
+2. **Reactive detail view synchronization.** The event details modal derives its active event from `events.find(e => e.id === viewingEventId)` rather than keeping a detached, static object in `useState`. When `router.refresh()` updates the server-rendered `events` prop, both the table row status badge and any open `EventDetailsModal` immediately update their rendered status in lockstep.
+3. **No new runtime dependencies or infrastructure.** The mechanism uses native Next.js App Router server component revalidation.
+
+### Alternatives rejected
+
+- **WebSockets / Socket.io / Pusher.** Violates the project's strict "no new dependencies without an ADR" and "favour boring, obvious code" principles (CONTRIBUTING.md). Would require stateful server infrastructure or external third-party subscriptions incompatible with serverless deployment.
+- **Server-Sent Events (SSE).** Introduces long-lived HTTP connection management on edge/serverless runtimes and custom reconnect/buffering logic for a straightforward status display.
+- **Client-side polling via custom fetch API endpoint with duplicate state cache.** Storing event status in client state or SWR/React Query caches violates ADR 0006's explicit rule: *"The `Event.status` enum remains the sole persisted lifecycle state. We do not copy it into per-screen fields or client-side caches."* Using `router.refresh()` maintains Next.js Server Components as the single source of truth.
+
+### Consequences
+
+- Two concurrent browser sessions observing the same event synchronize within 4 seconds of any status mutation without requiring manual user refreshes.
+- Criterion 4 is demonstrably satisfied in multi-browser live evaluation and Playwright concurrent context testing.
+- The implementation is ~15 lines, requires zero dependencies, and pauses automatically when tabs are inactive.

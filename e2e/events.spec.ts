@@ -443,4 +443,75 @@ test.describe("User Story 23 & 24 — Event Status View & Consistency Journey", 
     await expect(detailModal).toBeVisible();
     await expect(detailModal.getByTestId("status-badge")).toHaveAttribute("data-status", "APPROVED");
   });
+
+  test("two users viewing the same event simultaneously see consistent live status without manual refresh (SCRUM-24)", async ({
+    browser,
+  }) => {
+    // 1. Sign in as Organiser in first browser context
+    const organiserContext = await browser.newContext();
+    const organiserPage = await organiserContext.newPage();
+    await organiserPage.goto("/login");
+    await organiserPage.getByLabel("Email", { exact: true }).fill("organiser@test.local");
+    await organiserPage.getByLabel("Password", { exact: true }).fill("Password123!");
+    await organiserPage.getByRole("button", { name: "Sign in" }).click();
+    await organiserPage.waitForURL("**/events");
+
+    // 2. Organiser creates and submits a new event request
+    const syncEventName = `Live Sync Event ${Date.now()}`;
+    await organiserPage.getByRole("button", { name: /Create Event Request/i }).first().click();
+
+    await organiserPage.getByLabel("Event Name *").fill(syncEventName);
+    await organiserPage.getByLabel("Event Purpose *").fill("Live status synchronization test");
+    await organiserPage.getByLabel("Event Description *").fill("Testing live status updates between two concurrent users");
+    await organiserPage.getByRole("button", { name: "Next", exact: true }).click();
+
+    await organiserPage.getByLabel("Proposed Start Date & Time *").fill("2027-12-15T09:00");
+    await organiserPage.getByLabel("Proposed End Date & Time *").fill("2027-12-15T18:00");
+    await organiserPage.getByLabel("Expected Attendance *").fill("50");
+    await organiserPage.getByRole("button", { name: "Next", exact: true }).click();
+
+    await organiserPage.getByLabel("Venue Requirements *").fill("Conference Room");
+    await organiserPage.getByLabel("Preferred Room Layout *").fill("Boardroom");
+    await organiserPage.getByLabel("Accessibility Needs *").fill("Wheelchair ramp");
+    await organiserPage.getByRole("button", { name: "Next", exact: true }).click();
+
+    await organiserPage.getByLabel("Equipment & Technical Support Requirements *").fill("Projector");
+    await organiserPage.getByRole("button", { name: "Next", exact: true }).click();
+
+    await organiserPage.getByLabel("Registration Needs *").fill("Online registration");
+    await organiserPage.getByRole("button", { name: "Next", exact: true }).click();
+
+    await organiserPage.getByRole("button", { name: /Submit Request for Review/i }).click();
+
+    // Verify submitted event appears on Organiser's table with SUBMITTED status
+    const organiserRow = organiserPage.getByRole("row", { name: new RegExp(syncEventName) });
+    await expect(organiserRow).toBeVisible();
+    await expect(organiserRow.getByTestId("status-badge")).toHaveAttribute("data-status", "SUBMITTED");
+
+    // 3. Sign in as Coordinator in second browser context
+    const coordinatorContext = await browser.newContext();
+    const coordinatorPage = await coordinatorContext.newPage();
+    await coordinatorPage.goto("/login");
+    await coordinatorPage.getByLabel("Email", { exact: true }).fill("coordinator@test.local");
+    await coordinatorPage.getByLabel("Password", { exact: true }).fill("Password123!");
+    await coordinatorPage.getByRole("button", { name: "Sign in" }).click();
+    await coordinatorPage.waitForURL("**/events");
+
+    // Locate the newly submitted event on the Coordinator's dashboard
+    const coordinatorRow = coordinatorPage.getByRole("row", { name: new RegExp(syncEventName) });
+    await expect(coordinatorRow).toBeVisible();
+    await expect(coordinatorRow.getByTestId("status-badge")).toHaveAttribute("data-status", "SUBMITTED");
+
+    // 4. Coordinator approves the submitted request
+    await coordinatorRow.getByRole("button", { name: /Approve/i }).click();
+    await expect(coordinatorRow.getByTestId("status-badge")).toHaveAttribute("data-status", "APPROVED");
+
+    // 5. Organiser page (WITHOUT any manual reload or interaction) receives auto-refresh and updates to APPROVED
+    await expect(organiserRow.getByTestId("status-badge")).toHaveAttribute("data-status", "APPROVED", {
+      timeout: 12000,
+    });
+
+    await organiserContext.close();
+    await coordinatorContext.close();
+  });
 });
