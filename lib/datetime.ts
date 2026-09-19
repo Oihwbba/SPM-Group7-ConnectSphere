@@ -20,6 +20,11 @@ const dateFormatter = new Intl.DateTimeFormat("en-SG", {
   dateStyle: "medium",
 });
 
+const timeFormatter = new Intl.DateTimeFormat("en-SG", {
+  timeZone: TIME_ZONE,
+  timeStyle: "short",
+});
+
 /** e.g. "15 Jan 2026, 10:00 am" — a date and time in Singapore time. */
 export function formatDateTime(value: Date | string): string {
   return dateTimeFormatter.format(new Date(value));
@@ -28,4 +33,9 @@ export function formatDateTime(value: Date | string): string {
 /** e.g. "15 Jan 2026" — a date only, in Singapore time. */
 export function formatDate(value: Date | string): string {
   return dateFormatter.format(new Date(value));
+}
+
+/** e.g. "10:00 am" — a time only, in Singapore time. */
+export function formatTime(value: Date | string): string {
+  return timeFormatter.format(new Date(value));
 }

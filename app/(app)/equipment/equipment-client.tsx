@@ -33,6 +33,7 @@ import {
   getAllEquipmentAvailability,
 } from "./actions";
 import { allAvailabilitySchema } from "@/lib/schemas/reservation";
+import { formatDate, formatDateTime, formatTime } from "@/lib/datetime";
 
 type Equipment = { id: string; type: string; totalQuantity: number };
 type Event = { id: string; name: string };
@@ -43,16 +44,23 @@ const emptySubscribe = () => () => {};
 /** A datetime-local control has no zone. Convert it in the browser so the
  * server receives the instant the Technical Support user selected. */
 function toUtcIso(localValue: string): string {
-  return localValue ? new Date(localValue).toISOString() : localValue;
+  if (!localValue) return localValue;
+  try {
+    const d = new Date(localValue);
+    return Number.isNaN(d.getTime()) ? localValue : d.toISOString();
+  } catch {
+    return localValue;
+  }
 }
 
 function formatDateDisplay(isoString: string): string {
   if (!isoString) return "Select date";
   const dateOnly = isoString.includes("T") ? isoString.split("T")[0] : isoString;
   if (!dateOnly) return "Select date";
-  const d = new Date(`${dateOnly}T00:00:00`);
-  if (Number.isNaN(d.getTime())) return "Select date";
-  return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+  const [y, m, d] = dateOnly.split("-").map((n) => parseInt(n, 10));
+  if (!y || !m || !d) return "Select date";
+  const dateObj = new Date(Date.UTC(y, m - 1, d, 4, 0, 0));
+  return formatDate(dateObj);
 }
 
 function formatTimeDisplay(isoString: string): string {
@@ -63,9 +71,8 @@ function formatTimeDisplay(isoString: string): string {
   const h = parseInt(hStr, 10);
   const m = parseInt(mStr, 10);
   if (Number.isNaN(h) || Number.isNaN(m)) return "Select time";
-  const period = h >= 12 ? "PM" : "AM";
-  const h12 = h % 12 === 0 ? 12 : h % 12;
-  return `${String(h12).padStart(2, "0")}:${String(m).padStart(2, "0")} ${period}`;
+  const dateObj = new Date(Date.UTC(2020, 0, 1, h - 8, m, 0));
+  return formatTime(dateObj);
 }
 
 function getDurationDisplay(startAt: string, endAt: string) {
@@ -95,18 +102,21 @@ function getDurationDisplay(startAt: string, endAt: string) {
 }
 
 function formatPeriodDisplay(startAt: string, endAt: string): string | null {
-  if (!startAt || !endAt || !startAt.includes("T") || !endAt.includes("T") || startAt.startsWith("T") || endAt.startsWith("T")) return null;
+  if (
+    !startAt ||
+    !endAt ||
+    !startAt.includes("T") ||
+    !endAt.includes("T") ||
+    startAt.startsWith("T") ||
+    endAt.startsWith("T")
+  ) {
+    return null;
+  }
   const s = new Date(startAt);
   const e = new Date(endAt);
   if (Number.isNaN(s.getTime()) || Number.isNaN(e.getTime())) return null;
 
-  const fmt = (d: Date) => {
-    const day = d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
-    const time = d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true });
-    return `${day}, ${time}`;
-  };
-
-  return `Availability for ${fmt(s)} → ${fmt(e)}.`;
+  return `Availability for ${formatDateTime(s)} → ${formatDateTime(e)}.`;
 }
 
 function getEquipmentIcon(type: string) {
@@ -153,7 +163,7 @@ export function EquipmentClient({
     if (fieldErrors[field]) {
       setFieldErrors((current) => ({ ...current, [field]: undefined }));
     }
-    if (!nextForm.startAt && !nextForm.endAt) {
+    if (field === "startAt" || field === "endAt") {
       setAllAvailability(null);
       setAvailabilityError(null);
     }
@@ -254,12 +264,30 @@ export function EquipmentClient({
   const reserve = () =>
     startTransition(async () => {
       setFieldErrors({});
-      if (
-        form.startAt &&
+
+      const isStartComplete =
+        Boolean(form.startAt) &&
         form.startAt.includes("T") &&
         !form.startAt.startsWith("T") &&
-        new Date(form.startAt).getTime() < Date.now() - 60000
-      ) {
+        Boolean(form.startAt.split("T")[1]);
+      const isEndComplete =
+        Boolean(form.endAt) &&
+        form.endAt.includes("T") &&
+        !form.endAt.startsWith("T") &&
+        Boolean(form.endAt.split("T")[1]);
+
+      if (!isStartComplete || !isEndComplete) {
+        setFieldErrors((current) => ({
+          ...current,
+          ...(!isStartComplete ? { startAt: ["Choose both a start date and time."] } : {}),
+          ...(!isEndComplete ? { endAt: ["Choose both an end date and time."] } : {}),
+        }));
+        toast.error("Please specify complete start and end dates and times.");
+        return;
+      }
+
+      const startMs = new Date(form.startAt).getTime();
+      if (!Number.isNaN(startMs) && startMs < Date.now() - 60000) {
         setFieldErrors((current) => ({
           ...current,
           startAt: ["Start time cannot be in the past."],
@@ -267,25 +295,26 @@ export function EquipmentClient({
         toast.error("Start time cannot be in the past.");
         return;
       }
-      const result = await createReservation({
-        ...form,
-        startAt: toUtcIso(form.startAt),
-        endAt: toUtcIso(form.endAt),
-      });
-      if (!result.ok) {
-        if (result.fieldErrors) {
-          setFieldErrors(result.fieldErrors);
-        }
-        toast.error(result.error);
-        return;
-      }
-      setFieldErrors({});
-      toast.success(
-        `Reservation confirmed. ${result.data.available} unit(s) remain available.`,
-      );
 
-      // Refresh live availability map (shared error handling with the effect)
-      if (form.startAt && form.endAt) {
+      try {
+        const result = await createReservation({
+          ...form,
+          startAt: toUtcIso(form.startAt),
+          endAt: toUtcIso(form.endAt),
+        });
+        if (!result.ok) {
+          if (result.fieldErrors) {
+            setFieldErrors(result.fieldErrors);
+          }
+          toast.error(result.error);
+          return;
+        }
+        setFieldErrors({});
+        toast.success(
+          `Reservation confirmed. ${result.data.available} unit(s) remain available.`,
+        );
+
+        // Refresh live availability map (shared error handling with the effect)
         try {
           const allRes = await getAllEquipmentAvailability({
             startAt: toUtcIso(form.startAt),
@@ -305,6 +334,8 @@ export function EquipmentClient({
             "Couldn't refresh availability — try changing the period.",
           );
         }
+      } catch {
+        toast.error("An unexpected error occurred while creating the reservation.");
       }
     });
 
@@ -366,7 +397,7 @@ export function EquipmentClient({
       <Card className="border border-border bg-card text-card-foreground shadow-xs backdrop-blur-none backdrop-saturate-100">
         <CardHeader className="pb-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
               <Calendar className="h-6 w-6" />
             </div>
             <div>
@@ -446,7 +477,7 @@ export function EquipmentClient({
             <div className="flex flex-col md:flex-row md:items-start gap-4 pt-1">
               {/* Start Controls */}
               <div className="space-y-1.5 flex-1 max-w-sm">
-                <Label htmlFor="start" className="text-xs font-medium text-muted-foreground">
+                <Label htmlFor="startDate" className="text-xs font-medium text-muted-foreground">
                   Start
                 </Label>
                 <div className="relative flex items-center gap-2">
@@ -457,6 +488,7 @@ export function EquipmentClient({
                       {formatDateDisplay(form.startAt)}
                     </span>
                     <input
+                      id="startDate"
                       type="date"
                       aria-label="Start date"
                       value={startDate}
@@ -481,6 +513,7 @@ export function EquipmentClient({
                     </div>
                     <ChevronDown className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                     <input
+                      id="startTime"
                       type="time"
                       aria-label="Start time"
                       value={startTime}
@@ -494,17 +527,6 @@ export function EquipmentClient({
                       className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:cursor-pointer"
                     />
                   </div>
-
-                  {/* Playwright & accessibility input */}
-                  <Input
-                    id="start"
-                    type="datetime-local"
-                    value={form.startAt}
-                    min={`${localToday}T${localNowTime}`}
-                    onChange={(e) => update("startAt", e.target.value)}
-                    className="absolute inset-0 w-full h-full opacity-0 pointer-events-none -z-10"
-                    tabIndex={-1}
-                  />
                 </div>
                 <div className="min-h-[1.25rem]">
                   {fieldErrors.startAt?.[0] && (
@@ -519,7 +541,7 @@ export function EquipmentClient({
 
               {/* End Controls */}
               <div className="space-y-1.5 flex-1 max-w-sm">
-                <Label htmlFor="end" className="text-xs font-medium text-muted-foreground">
+                <Label htmlFor="endDate" className="text-xs font-medium text-muted-foreground">
                   End
                 </Label>
                 <div className="relative flex items-center gap-2">
@@ -530,6 +552,7 @@ export function EquipmentClient({
                       {formatDateDisplay(form.endAt)}
                     </span>
                     <input
+                      id="endDate"
                       type="date"
                       aria-label="End date"
                       value={endDate}
@@ -554,6 +577,7 @@ export function EquipmentClient({
                     </div>
                     <ChevronDown className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                     <input
+                      id="endTime"
                       type="time"
                       aria-label="End time"
                       value={endTime}
@@ -567,17 +591,6 @@ export function EquipmentClient({
                       className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:cursor-pointer"
                     />
                   </div>
-
-                  {/* Playwright & accessibility input */}
-                  <Input
-                    id="end"
-                    type="datetime-local"
-                    value={form.endAt}
-                    min={form.startAt && form.startAt.includes("T") && !form.startAt.startsWith("T") ? form.startAt : `${localToday}T${localNowTime}`}
-                    onChange={(e) => update("endAt", e.target.value)}
-                    className="absolute inset-0 w-full h-full opacity-0 pointer-events-none -z-10"
-                    tabIndex={-1}
-                  />
                 </div>
                 <div className="min-h-[1.25rem]">
                   {fieldErrors.endAt?.[0] && (
@@ -670,7 +683,7 @@ export function EquipmentClient({
       <Card className="border border-border bg-card text-card-foreground shadow-xs backdrop-blur-none backdrop-saturate-100">
         <CardHeader className="pb-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
               <BarChart2 className="h-6 w-6" />
             </div>
             <div>
@@ -697,7 +710,7 @@ export function EquipmentClient({
               const SelectedIcon = getEquipmentIcon(selectedEquipment.type);
 
               return (
-                <div className="rounded-xl border bg-slate-50/70 dark:bg-slate-900/40 p-4 sm:p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 transition-colors">
+                <div className="rounded-xl border bg-muted/40 p-4 sm:p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 transition-colors">
                   <div className="flex items-center gap-4">
                     <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border bg-background text-foreground shadow-2xs">
                       <SelectedIcon className="h-6 w-6" />
@@ -721,7 +734,7 @@ export function EquipmentClient({
                           isQuantityExceeded
                             ? "bg-destructive"
                             : availability !== null
-                            ? "bg-emerald-500"
+                            ? "bg-success"
                             : "bg-muted-foreground"
                         }`}
                       />
@@ -760,10 +773,11 @@ export function EquipmentClient({
                 const liveCount = allAvailability?.[item.id]?.available ?? null;
 
                 return (
-                  <div
+                  <button
                     key={item.id}
+                    type="button"
                     onClick={() => update("equipmentId", item.id)}
-                    className="rounded-xl border p-4 text-sm flex flex-col justify-between space-y-3 bg-card hover:border-primary/40 transition-colors cursor-pointer"
+                    className="w-full text-left rounded-xl border p-4 text-sm flex flex-col justify-between space-y-3 bg-card hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-colors cursor-pointer"
                   >
                     <div className="flex items-center gap-3">
                       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border bg-muted/20 text-foreground">
@@ -778,7 +792,7 @@ export function EquipmentClient({
                     </div>
 
                     <div className="flex items-center gap-2 text-xs pt-1">
-                      <span className="inline-block h-2 w-2 rounded-full bg-emerald-500 shrink-0" />
+                      <span className="inline-block h-2 w-2 rounded-full bg-success shrink-0" />
                       {liveCount !== null ? (
                         <span className="font-semibold text-foreground">
                           {liveCount} of {item.totalQuantity} available
@@ -789,7 +803,7 @@ export function EquipmentClient({
                         </span>
                       )}
                     </div>
-                  </div>
+                  </button>
                 );
               })}
             </div>

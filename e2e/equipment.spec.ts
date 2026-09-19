@@ -22,8 +22,10 @@ async function fillReservation(page: Page, quantity: string) {
   await page
     .getByLabel("Approved event")
     .selectOption({ label: "Approved — Research Symposium" });
-  await page.getByLabel("Start", { exact: true }).fill("2031-05-10T09:00");
-  await page.getByLabel("End", { exact: true }).fill("2031-05-10T17:00");
+  await page.getByLabel("Start date").fill("2031-05-10");
+  await page.getByLabel("Start time").fill("09:00");
+  await page.getByLabel("End date").fill("2031-05-10");
+  await page.getByLabel("End time").fill("17:00");
   await page.getByLabel("Equipment type").selectOption({ value: "eqp_lectern" });
   await page.getByLabel("Quantity", { exact: true }).fill(quantity);
 }
@@ -81,11 +83,29 @@ test.describe("SCRUM-31 — Reserve Equipment for Event", () => {
 
   test("AC 4: an invalid period (end earlier than start) triggers live inline error", async ({ page }) => {
     await signInAsTechSupport(page);
-    await page.getByLabel("Start", { exact: true }).fill("2031-05-10T17:00");
-    await page.getByLabel("End", { exact: true }).fill("2031-05-10T09:00");
+    await page.getByLabel("Start date").fill("2031-05-10");
+    await page.getByLabel("Start time").fill("17:00");
+    await page.getByLabel("End date").fill("2031-05-10");
+    await page.getByLabel("End time").fill("09:00");
 
     await expect(
       page.getByText("End time must be after the start time.").first(),
     ).toBeVisible();
+  });
+
+  test("AC: incomplete date or time prevents reservation and displays validation error", async ({ page }) => {
+    await signInAsTechSupport(page);
+    await page
+      .getByLabel("Approved event")
+      .selectOption({ label: "Approved — Research Symposium" });
+    await page.getByLabel("Equipment type").selectOption({ value: "eqp_lectern" });
+    await page.getByLabel("Start time").fill("09:00");
+    await page.getByRole("button", { name: "Confirm reservation" }).click();
+
+    await expect(
+      page.getByText("Please specify complete start and end dates and times."),
+    ).toBeVisible();
+    await expect(page.getByText("Choose both a start date and time.")).toBeVisible();
+    await expect(page.getByText("Choose both an end date and time.")).toBeVisible();
   });
 });
