@@ -334,6 +334,70 @@ test.describe("User Story 84 — Organiser Views Their Own Event Requests Journe
     // 3. Organiser 2 does NOT see events belonging to organiser@test.local (e.g. "Draft — Annual Tech Summit")
     await expect(page.getByText("Draft — Annual Tech Summit")).not.toBeVisible();
   });
+
+  test("SCRUM-13: organiser selects custom event timezone when creating request", async ({
+    page,
+  }) => {
+    await page.goto("/login");
+    await page.getByLabel("Email", { exact: true }).fill("organiser@test.local");
+    await page.getByLabel("Password", { exact: true }).fill("Password123!");
+    await page.getByRole("button", { name: "Sign in" }).click();
+    await page.waitForURL("**/events");
+
+    const eventName = `TZ Event ${Date.now()}`;
+    await page.getByRole("button", { name: /Create Event Request/i }).first().click();
+    await page.getByLabel("Event Name *").fill(eventName);
+    await page.getByRole("button", { name: "Next", exact: true }).click();
+
+    // Select custom timezone on Step 2
+    await page.getByLabel("Event Timezone *").selectOption("America/New_York (-05:00)");
+    await page.getByRole("button", { name: /Save as Draft/i }).click();
+
+    await expect(page.getByRole("cell", { name: eventName })).toBeVisible();
+  });
+
+  test("SCRUM-13 AC6: unsaved changes warning dialog appears when navigating away from edited draft", async ({
+    page,
+  }) => {
+    await page.goto("/login");
+    await page.getByLabel("Email", { exact: true }).fill("organiser@test.local");
+    await page.getByLabel("Password", { exact: true }).fill("Password123!");
+    await page.getByRole("button", { name: "Sign in" }).click();
+    await page.waitForURL("**/events");
+
+    await page.getByRole("button", { name: /Create Event Request/i }).first().click();
+    await page.getByLabel("Event Name *").fill("Unsaved Work Draft");
+
+    // Click backdrop/close button to close dirty form
+    await page.keyboard.press("Escape");
+
+    // Verify warning dialog appears
+    await expect(page.getByRole("dialog", { name: /Unsaved Changes/i })).toBeVisible();
+    await expect(page.getByText(/You have unsaved changes in your event request/i)).toBeVisible();
+  });
+
+  test("SCRUM-84 AC7-AC9: organiser sorts columns and filters list by status dropdown and search", async ({
+    page,
+  }) => {
+    await page.goto("/login");
+    await page.getByLabel("Email", { exact: true }).fill("organiser@test.local");
+    await page.getByLabel("Password", { exact: true }).fill("Password123!");
+    await page.getByRole("button", { name: "Sign in" }).click();
+    await page.waitForURL("**/events");
+
+    // Column Header Sort Toggle test
+    const nameHeader = page.getByRole("columnheader", { name: /Name/i });
+    await expect(nameHeader).toBeVisible();
+    await nameHeader.click(); // Toggle name sort
+
+    // Status Select Filter test
+    await page.getByLabel("Filter by status").selectOption("DRAFT");
+    await expect(page.getByLabel("Filter by status")).toHaveValue("DRAFT");
+
+    // Search query test
+    await page.getByPlaceholder("Search by name or purpose...").fill("Annual");
+    await expect(page.getByPlaceholder("Search by name or purpose...")).toHaveValue("Annual");
+  });
 });
 
 const usesLocalDatabase = /@(localhost|127\.0\.0\.1)[:/]/.test(

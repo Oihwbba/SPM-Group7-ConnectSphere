@@ -11,6 +11,9 @@ import {
   Filter,
   CheckCircle2,
   XCircle,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { Event } from "@prisma/client";
@@ -46,17 +49,12 @@ interface EventsClientProps {
   isCoordinator?: boolean;
 }
 
-type FilterTab = "ALL" | "DRAFT" | "SUBMITTED";
+type FilterTab = "ALL" | "DRAFT" | "SUBMITTED" | "APPROVED" | "REJECTED" | "UNDER_REVIEW";
+type SortField = "name" | "status" | "startAt" | "updatedAt";
+type SortOrder = "asc" | "desc";
 
 /**
  * EventsClient provides the interactive event list UI for Organisers and Coordinators.
- *
- * User Story 16 — Distinguish drafts from submitted requests:
- * - Draft requests feature a prominent visual "Draft — Incomplete" tag alongside their title.
- * - Table rows for drafts have a distinct muted left-border accent.
- * - Muted status badges with FileEdit icons separate DRAFT from SUBMITTED / UNDER_REVIEW (blue info pills with clock/send icons).
- * - "Resume Draft" primary action button visually separates draft rows from "View Details" on submitted requests.
- * - Quick status filter tabs allow filtering between All, Drafts, and Submitted requests.
  */
 export function EventsClient({
   events,
@@ -66,10 +64,22 @@ export function EventsClient({
   const [editingDraft, setEditingDraft] = useState<Event | null>(null);
   const [viewingEvent, setViewingEvent] = useState<Event | null>(null);
   const [activeTab, setActiveTab] = useState<FilterTab>("ALL");
+  const [statusFilter, setStatusFilter] = useState<string>("ALL");
+  const [sortField, setSortField] = useState<SortField>("updatedAt");
+  const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
   const [rejectingEvent, setRejectingEvent] = useState<Event | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
+
+  function toggleSort(field: SortField) {
+    if (sortField === field) {
+      setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setSortField(field);
+      setSortOrder(field === "name" ? "asc" : "desc");
+    }
+  }
 
   function changeStatus(
     event: Event,
@@ -95,14 +105,55 @@ export function EventsClient({
     });
   }
 
-  const filteredEvents = events.filter((evt) => {
-    if (activeTab === "DRAFT") return evt.status === "DRAFT";
-    if (activeTab === "SUBMITTED") return evt.status !== "DRAFT";
-    return true;
-  });
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const filteredEvents = events
+    .filter((evt) => {
+      const matchesTab =
+        activeTab === "DRAFT"
+          ? evt.status === "DRAFT"
+          : activeTab === "SUBMITTED"
+            ? evt.status === "SUBMITTED"
+            : activeTab === "APPROVED"
+              ? evt.status === "APPROVED"
+              : activeTab === "REJECTED"
+                ? evt.status === "REJECTED"
+                : activeTab === "UNDER_REVIEW"
+                  ? evt.status === "UNDER_REVIEW"
+                  : true;
+
+      const matchesDropdown =
+        statusFilter === "ALL" ? true : evt.status === statusFilter;
+
+      const matchesSearch =
+        !searchQuery.trim() ||
+        evt.name.toLowerCase().includes(searchQuery.toLowerCase().trim()) ||
+        (evt.purpose && evt.purpose.toLowerCase().includes(searchQuery.toLowerCase().trim()));
+
+      return matchesTab && matchesDropdown && matchesSearch;
+    })
+    .sort((a, b) => {
+      let comparison = 0;
+      if (sortField === "name") {
+        comparison = a.name.localeCompare(b.name);
+      } else if (sortField === "status") {
+        comparison = a.status.localeCompare(b.status);
+      } else if (sortField === "startAt") {
+        const tA = a.startAt ? new Date(a.startAt).getTime() : 0;
+        const tB = b.startAt ? new Date(b.startAt).getTime() : 0;
+        comparison = tA - tB;
+      } else if (sortField === "updatedAt") {
+        const tA = new Date(a.updatedAt).getTime();
+        const tB = new Date(b.updatedAt).getTime();
+        comparison = tA - tB;
+      }
+      return sortOrder === "asc" ? comparison : -comparison;
+    });
 
   const draftCount = events.filter((evt) => evt.status === "DRAFT").length;
-  const submittedCount = events.filter((evt) => evt.status !== "DRAFT").length;
+  const submittedCount = events.filter((evt) => evt.status === "SUBMITTED").length;
+  const approvedCount = events.filter((evt) => evt.status === "APPROVED").length;
+  const rejectedCount = events.filter((evt) => evt.status === "REJECTED").length;
 
   return (
     <div className="space-y-6">
@@ -125,38 +176,100 @@ export function EventsClient({
         )}
       </div>
 
-      {/* Filter Tabs for Organisers to toggle between All, Drafts, and Submitted Requests */}
-      {!isCoordinator && events.length > 0 && (
-        <div className="flex items-center gap-2 border-b pb-3">
-          <Filter className="mr-1 h-4 w-4 text-muted-foreground" />
-          <Button
-            variant={activeTab === "ALL" ? "secondary" : "ghost"}
-            size="sm"
-            className="h-8 text-xs font-medium"
-            onClick={() => setActiveTab("ALL")}
-          >
-            All Requests ({events.length})
-          </Button>
-          <Button
-            variant={activeTab === "DRAFT" ? "secondary" : "ghost"}
-            size="sm"
-            className={cn(
-              "h-8 gap-1.5 text-xs font-medium",
-              activeTab === "DRAFT" && "font-semibold",
+      {/* Filter Tabs & Interactive Search Bar for SCRUM-84 AC6-AC9 */}
+      {events.length > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b pb-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <Filter className="mr-1 h-4 w-4 text-muted-foreground" />
+            <Button
+              variant={activeTab === "ALL" ? "secondary" : "ghost"}
+              size="sm"
+              className="h-8 text-xs font-medium"
+              onClick={() => {
+                setActiveTab("ALL");
+                setStatusFilter("ALL");
+              }}
+            >
+              All ({events.length})
+            </Button>
+            {!isCoordinator && (
+              <Button
+                variant={activeTab === "DRAFT" ? "secondary" : "ghost"}
+                size="sm"
+                className={cn(
+                  "h-8 gap-1.5 text-xs font-medium",
+                  activeTab === "DRAFT" && "font-semibold",
+                )}
+                onClick={() => {
+                  setActiveTab("DRAFT");
+                  setStatusFilter("ALL");
+                }}
+              >
+                <FileEdit className="h-3.5 w-3.5" />
+                Drafts ({draftCount})
+              </Button>
             )}
-            onClick={() => setActiveTab("DRAFT")}
-          >
-            <FileEdit className="h-3.5 w-3.5" />
-            Drafts ({draftCount})
-          </Button>
-          <Button
-            variant={activeTab === "SUBMITTED" ? "secondary" : "ghost"}
-            size="sm"
-            className="h-8 text-xs font-medium"
-            onClick={() => setActiveTab("SUBMITTED")}
-          >
-            Submitted ({submittedCount})
-          </Button>
+            <Button
+              variant={activeTab === "SUBMITTED" ? "secondary" : "ghost"}
+              size="sm"
+              className="h-8 text-xs font-medium"
+              onClick={() => {
+                setActiveTab("SUBMITTED");
+                setStatusFilter("ALL");
+              }}
+            >
+              Submitted ({submittedCount})
+            </Button>
+            <Button
+              variant={activeTab === "APPROVED" ? "secondary" : "ghost"}
+              size="sm"
+              className="h-8 text-xs font-medium"
+              onClick={() => {
+                setActiveTab("APPROVED");
+                setStatusFilter("ALL");
+              }}
+            >
+              Approved ({approvedCount})
+            </Button>
+            <Button
+              variant={activeTab === "REJECTED" ? "secondary" : "ghost"}
+              size="sm"
+              className="h-8 text-xs font-medium"
+              onClick={() => {
+                setActiveTab("REJECTED");
+                setStatusFilter("ALL");
+              }}
+            >
+              Rejected ({rejectedCount})
+            </Button>
+          </div>
+
+          <div className="flex items-center gap-2 w-full max-w-sm">
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="h-8 rounded-md border border-input bg-background px-2 text-xs text-foreground shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              aria-label="Filter by status"
+            >
+              <option value="ALL">All Statuses</option>
+              <option value="DRAFT">Draft</option>
+              <option value="SUBMITTED">Submitted</option>
+              <option value="UNDER_REVIEW">Under Review</option>
+              <option value="APPROVED">Approved</option>
+              <option value="REJECTED">Rejected</option>
+              <option value="PLANNING">Planning</option>
+              <option value="CONFIRMED">Confirmed</option>
+              <option value="COMPLETED">Completed</option>
+              <option value="CANCELLED">Cancelled</option>
+            </select>
+            <input
+              type="text"
+              placeholder="Search by name or purpose..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="flex h-8 w-full rounded-md border border-input bg-background px-3 text-xs shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            />
+          </div>
         </div>
       )}
 
@@ -191,15 +304,19 @@ export function EventsClient({
         <Card>
           <CardContent className="flex flex-col items-center gap-2 py-12 text-center">
             <p className="text-sm font-medium text-muted-foreground">
-              No requests match the selected filter ({activeTab.toLowerCase()}).
+              No requests match the selected filters.
             </p>
             <Button
               variant="outline"
               size="sm"
               className="mt-2 text-xs"
-              onClick={() => setActiveTab("ALL")}
+              onClick={() => {
+                setActiveTab("ALL");
+                setStatusFilter("ALL");
+                setSearchQuery("");
+              }}
             >
-              Clear Filter
+              Clear Filters
             </Button>
           </CardContent>
         </Card>
@@ -209,10 +326,74 @@ export function EventsClient({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Starts</TableHead>
-                  <TableHead>Created</TableHead>
+                  <TableHead
+                    className="cursor-pointer select-none transition-colors hover:bg-muted/50 hover:text-foreground"
+                    onClick={() => toggleSort("name")}
+                  >
+                    <div className="flex items-center gap-1.5 font-semibold">
+                      <span>Name</span>
+                      {sortField === "name" ? (
+                        sortOrder === "asc" ? (
+                          <ArrowUp className="h-3.5 w-3.5 text-primary" />
+                        ) : (
+                          <ArrowDown className="h-3.5 w-3.5 text-primary" />
+                        )
+                      ) : (
+                        <ArrowUpDown className="h-3.5 w-3.5 opacity-40 hover:opacity-100" />
+                      )}
+                    </div>
+                  </TableHead>
+                  <TableHead
+                    className="cursor-pointer select-none transition-colors hover:bg-muted/50 hover:text-foreground"
+                    onClick={() => toggleSort("status")}
+                  >
+                    <div className="flex items-center gap-1.5 font-semibold">
+                      <span>Status</span>
+                      {sortField === "status" ? (
+                        sortOrder === "asc" ? (
+                          <ArrowUp className="h-3.5 w-3.5 text-primary" />
+                        ) : (
+                          <ArrowDown className="h-3.5 w-3.5 text-primary" />
+                        )
+                      ) : (
+                        <ArrowUpDown className="h-3.5 w-3.5 opacity-40 hover:opacity-100" />
+                      )}
+                    </div>
+                  </TableHead>
+                  <TableHead
+                    className="cursor-pointer select-none transition-colors hover:bg-muted/50 hover:text-foreground"
+                    onClick={() => toggleSort("startAt")}
+                  >
+                    <div className="flex items-center gap-1.5 font-semibold">
+                      <span>Starts</span>
+                      {sortField === "startAt" ? (
+                        sortOrder === "asc" ? (
+                          <ArrowUp className="h-3.5 w-3.5 text-primary" />
+                        ) : (
+                          <ArrowDown className="h-3.5 w-3.5 text-primary" />
+                        )
+                      ) : (
+                        <ArrowUpDown className="h-3.5 w-3.5 opacity-40 hover:opacity-100" />
+                      )}
+                    </div>
+                  </TableHead>
+                  <TableHead
+                    className="cursor-pointer select-none transition-colors hover:bg-muted/50 hover:text-foreground"
+                    onClick={() => toggleSort("updatedAt")}
+                  >
+                    <div className="flex items-center gap-1.5 font-semibold">
+                      <span>Updated</span>
+                      {sortField === "updatedAt" ? (
+                        sortOrder === "asc" ? (
+                          <ArrowUp className="h-3.5 w-3.5 text-primary" />
+                        ) : (
+                          <ArrowDown className="h-3.5 w-3.5 text-primary" />
+                        )
+                      ) : (
+                        <ArrowUpDown className="h-3.5 w-3.5 opacity-40 hover:opacity-100" />
+                      )}
+                    </div>
+                  </TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>

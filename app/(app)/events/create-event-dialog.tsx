@@ -42,11 +42,29 @@ import {
 } from "./actions";
 
 /**
- * A datetime-local value ("2026-09-20T10:00") carries no timezone. Convert it
- * to a UTC ISO instant representing Singapore time (+08:00).
+ * A datetime-local value ("2026-09-20T10:00") carries no timezone offset.
+ * Converts local wall-time to UTC ISO instant ("...Z") according to selected timezone.
  */
-function toUtcIso(localValue: string): string | undefined {
-  return sgWallTimeToUtcIso(localValue);
+function toUtcIso(localValue: string, timezoneStr: string = "Asia/Singapore (+08:00)"): string | undefined {
+  if (!localValue || !localValue.includes("T")) return undefined;
+  const [datePart, timePart] = localValue.split("T");
+  if (!datePart || !timePart) return undefined;
+  const [y, m, d] = datePart.split("-").map(Number);
+  const [h, min] = timePart.slice(0, 5).split(":").map(Number);
+  if (isNaN(y) || isNaN(m) || isNaN(d) || isNaN(h) || isNaN(min)) return undefined;
+
+  // Extract offset hours (e.g., "+08:00" -> 8, "-05:00" -> -5)
+  let offsetHours = 8; // Default Singapore (+08:00)
+  const match = timezoneStr.match(/([+-]\d{2}):\d{2}/);
+  if (match) {
+    offsetHours = parseInt(match[1], 10);
+  } else if (timezoneStr.includes("UTC") || timezoneStr.includes("+00:00")) {
+    offsetHours = 0;
+  }
+
+  // Subtract offset hours to get UTC hours
+  const utcDate = new Date(Date.UTC(y, m - 1, d, h - offsetHours, min, 0));
+  return !isNaN(utcDate.getTime()) ? utcDate.toISOString() : undefined;
 }
 
 interface FormState {
@@ -55,6 +73,7 @@ interface FormState {
   description: string;
   startAt: string;
   endAt: string;
+  timezone: string;
   expectedAttendance: string;
   venueRequirements: string;
   requiredFacilities: string[];
@@ -72,6 +91,7 @@ const initialFormState: FormState = {
   description: "",
   startAt: "",
   endAt: "",
+  timezone: "Asia/Singapore (+08:00)",
   expectedAttendance: "",
   venueRequirements: "",
   requiredFacilities: [],
@@ -141,6 +161,7 @@ function getInitialFormData(draftEvent?: DraftEventData | null): FormState {
     description: draftEvent.description || "",
     startAt: toDatetimeInputString(draftEvent.startAt),
     endAt: toDatetimeInputString(draftEvent.endAt),
+    timezone: "Asia/Singapore (+08:00)",
     expectedAttendance:
       draftEvent.expectedAttendance !== null &&
       draftEvent.expectedAttendance !== undefined
@@ -206,7 +227,29 @@ export function CreateEventDialog({
     }
   }, [open]);
 
+  const [isDirty, setIsDirty] = useState(false);
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
+
+  useEffect(() => {
+    if (!isDirty || isReadOnly) return;
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [isDirty, isReadOnly]);
+
   function handleOpenChange(isOpen: boolean) {
+    if (!isOpen && isDirty && !isReadOnly) {
+      setShowExitConfirm(true);
+      return;
+    }
+
+    forceCloseDialog(isOpen);
+  }
+
+  function forceCloseDialog(isOpen: boolean) {
     if (isControlled) {
       onOpenChangeProp?.(isOpen);
     } else {
@@ -215,6 +258,9 @@ export function CreateEventDialog({
 
     if (isOpen) {
       setFormData(getInitialFormData(draftEvent));
+      setIsDirty(false);
+    } else {
+      setIsDirty(false);
     }
   }
 
@@ -222,6 +268,7 @@ export function CreateEventDialog({
 
   function updateField<K extends keyof FormState>(key: K, value: FormState[K]) {
     setFormData((prev) => ({ ...prev, [key]: value }));
+    setIsDirty(true);
     if (fieldErrors[key]) {
       setFieldErrors((prev) => {
         const next = { ...prev };
@@ -299,8 +346,8 @@ export function CreateEventDialog({
             : undefined,
         description: formData.description || undefined,
         purpose: formData.purpose || undefined,
-        startAt: toUtcIso(formData.startAt),
-        endAt: toUtcIso(formData.endAt),
+        startAt: toUtcIso(formData.startAt, formData.timezone),
+        endAt: toUtcIso(formData.endAt, formData.timezone),
       };
 
       const result = await createDraftEvent(payload);
@@ -330,8 +377,8 @@ export function CreateEventDialog({
             ? Number(formData.expectedAttendance)
             : undefined,
         // Empty string (not undefined) so a missing date gets the "required" message.
-        startAt: toUtcIso(formData.startAt) ?? "",
-        endAt: toUtcIso(formData.endAt) ?? "",
+        startAt: toUtcIso(formData.startAt, formData.timezone) ?? "",
+        endAt: toUtcIso(formData.endAt, formData.timezone) ?? "",
       };
 
       const result = await submitEventRequest(payload);
@@ -354,7 +401,8 @@ export function CreateEventDialog({
     setFormData(initialFormState);
     setFieldErrors({});
     setStep(1);
-    handleOpenChange(false);
+    setIsDirty(false);
+    forceCloseDialog(false);
   }
 
   // Check which mandatory submission fields are currently missing
@@ -377,7 +425,8 @@ export function CreateEventDialog({
   ).some(Boolean);
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
+    <>
+      <Dialog open={open} onOpenChange={handleOpenChange}>
       {trigger ? (
         <DialogTrigger asChild>{trigger}</DialogTrigger>
       ) : (
@@ -573,6 +622,25 @@ export function CreateEventDialog({
                   Must be strictly after start date & time.
                 </p>
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="timezone">Event Timezone *</Label>
+              <select
+                id="timezone"
+                value={formData.timezone}
+                onChange={(e) => updateField("timezone", e.target.value)}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <option value="Asia/Singapore (+08:00)">Asia/Singapore (SGT +08:00)</option>
+                <option value="Asia/Tokyo (+09:00)">Asia/Tokyo (JST +09:00)</option>
+                <option value="Europe/London (+00:00)">Europe/London (GMT +00:00)</option>
+                <option value="America/New_York (-05:00)">America/New_York (EST -05:00)</option>
+                <option value="UTC (+00:00)">UTC (Coordinated Universal Time)</option>
+              </select>
+              <p className="text-[11px] text-muted-foreground">
+                Authoritative timezone for schedule interpretation. Persisted instants stored consistently in UTC.
+              </p>
             </div>
 
             <div className="space-y-2">
@@ -1117,5 +1185,33 @@ export function CreateEventDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+    <Dialog open={showExitConfirm} onOpenChange={setShowExitConfirm}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-destructive">
+            <AlertCircle className="h-5 w-5" /> Unsaved Changes
+          </DialogTitle>
+          <DialogDescription>
+            You have unsaved changes in this event request. If you close without saving, your edits will be lost.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter className="gap-2 sm:gap-0">
+          <Button variant="outline" onClick={() => setShowExitConfirm(false)}>
+            Continue Editing
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={() => {
+              setShowExitConfirm(false);
+              forceCloseDialog(false);
+            }}
+          >
+            Discard Changes
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }

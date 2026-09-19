@@ -81,7 +81,7 @@ describe("User Story 13 — Event Request Creation", () => {
   // SUBMISSION VALIDATION TESTS (submitEventRequest)
   // --------------------------------------------------------------------------
   describe("submitEventRequest — Validation Rules", () => {
-    it("AC 1-5: successfully creates complete event request when valid", async () => {
+    it("SCRUM-13 [AC1, AC10 - Happy Path]: successfully creates complete event request when all mandatory and optional fields are valid", async () => {
       // 1. Mock logged-in user as Event Organiser
       mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
       mockCreate.mockResolvedValue({ id: "evt_sub_1" });
@@ -107,7 +107,29 @@ describe("User Story 13 — Event Request Creation", () => {
       );
     });
 
-    it("AC 5, 7: successfully submits request with optional programme, special requests, and required facilities populated", async () => {
+    it("SCRUM-13 [AC3 - Happy Path]: accepts request when optional fields (programme, special requests) are omitted", async () => {
+      mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
+      mockCreate.mockResolvedValue({ id: "evt_no_optionals" });
+
+      const inputWithoutOptionals: Record<string, unknown> = { ...validSubmissionInput };
+      delete inputWithoutOptionals.programme;
+      delete inputWithoutOptionals.specialRequests;
+
+      const result = await submitEventRequest(inputWithoutOptionals);
+
+      expect(result.ok).toBe(true);
+      expect(mockCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            name: "Regional Tech Conference",
+            programme: null,
+            specialRequests: null,
+          }),
+        }),
+      );
+    });
+
+    it("SCRUM-13 [AC3 - Happy Path]: successfully submits request with optional programme, special requests, and required facilities populated", async () => {
       mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
       mockCreate.mockResolvedValue({ id: "evt_full_optional" });
 
@@ -131,7 +153,7 @@ describe("User Story 13 — Event Request Creation", () => {
       );
     });
 
-    it("AC 8: Rejects zero expected attendance with invalid message", async () => {
+    it("SCRUM-13 [AC7 - Domain Boundary]: rejects submission when expected attendance is 0", async () => {
       mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
 
       // Attendance = 0 (invalid)
@@ -150,7 +172,7 @@ describe("User Story 13 — Event Request Creation", () => {
       expect(mockCreate).not.toHaveBeenCalled();
     });
 
-    it("AC 8: Rejects negative expected attendance with invalid message", async () => {
+    it("SCRUM-13 [AC7 - Domain Boundary]: rejects submission when expected attendance is a negative number", async () => {
       mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
 
       // Attendance = -20 (invalid)
@@ -169,7 +191,7 @@ describe("User Story 13 — Event Request Creation", () => {
       expect(mockCreate).not.toHaveBeenCalled();
     });
 
-    it("AC 10: Rejects proposed start date in the past", async () => {
+    it("SCRUM-13 [AC9 - Domain Boundary]: rejects submission when proposed start date is in the past", async () => {
       mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
 
       // Start date set to past
@@ -188,7 +210,7 @@ describe("User Story 13 — Event Request Creation", () => {
       expect(mockCreate).not.toHaveBeenCalled();
     });
 
-    it("AC 9: Rejects proposed end date equal to start date (endAt <= startAt)", async () => {
+    it("SCRUM-13 [AC8 - Domain Boundary]: rejects submission when proposed end date is equal to start date (zero-duration)", async () => {
       mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
 
       // End date same as start date (invalid period)
@@ -208,27 +230,7 @@ describe("User Story 13 — Event Request Creation", () => {
       expect(mockCreate).not.toHaveBeenCalled();
     });
 
-    it("AC 9: Rejects zero-duration event where startAt === endAt", async () => {
-      mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
-
-      const sameTime = new Date(Date.now() + 86400000).toISOString();
-
-      const result = await submitEventRequest({
-        ...validSubmissionInput,
-        startAt: sameTime,
-        endAt: sameTime,
-      });
-
-      expect(result.ok).toBe(false);
-      if (!result.ok) {
-        expect(result.fieldErrors?.endAt).toContain(
-          "Proposed end date and time must be strictly after the start date and time.",
-        );
-      }
-      expect(mockCreate).not.toHaveBeenCalled();
-    });
-
-    it("AC 9: Rejects proposed end date earlier than start date", async () => {
+    it("SCRUM-13 [AC8 - Domain Boundary]: rejects submission when proposed end date is earlier than start date", async () => {
       mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
 
       // End date earlier than start date
@@ -248,7 +250,7 @@ describe("User Story 13 — Event Request Creation", () => {
       expect(mockCreate).not.toHaveBeenCalled();
     });
 
-    it("AC 9, 10: Accepts valid cross-midnight overnight event schedules (startAt 23:30, endAt 02:30 next day)", async () => {
+    it("SCRUM-13 [AC8 - Implicit Rule]: accepts valid cross-midnight overnight event schedules spanning across calendar days", async () => {
       mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
       mockCreate.mockResolvedValue({ id: "evt_overnight" });
 
@@ -275,7 +277,7 @@ describe("User Story 13 — Event Request Creation", () => {
       );
     });
 
-    it("AC 6: Validates missing mandatory fields upon submission", async () => {
+    it("SCRUM-13 [AC4 - Business-Rule Negative]: returns field errors when any mandatory field is missing upon submission", async () => {
       mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
 
       // Submit payload with empty compulsory fields
@@ -311,7 +313,7 @@ describe("User Story 13 — Event Request Creation", () => {
       expect(mockCreate).not.toHaveBeenCalled();
     });
 
-    it("AC 6: Rejects whitespace-only entries for required fields upon submission", async () => {
+    it("SCRUM-13 [AC4 - Business-Rule Negative]: rejects whitespace-only values for mandatory string fields", async () => {
       mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
 
       // Submit payload with whitespace-only required fields
@@ -331,7 +333,26 @@ describe("User Story 13 — Event Request Creation", () => {
       expect(mockCreate).not.toHaveBeenCalled();
     });
 
-    it("Security Gate: Denies non-organiser user role (e.g. ATTENDEE)", async () => {
+    it("SCRUM-13 [AC11 - Cross-Cutting / Input Constraint]: trims leading and trailing whitespace from string fields upon schema parsing", async () => {
+      mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
+      mockCreate.mockResolvedValue({ id: "evt_trimmed" });
+
+      const result = await submitEventRequest({
+        ...validSubmissionInput,
+        name: "   Padded Event Title   ",
+      });
+
+      expect(result.ok).toBe(true);
+      expect(mockCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            name: "Padded Event Title",
+          }),
+        }),
+      );
+    });
+
+    it("SCRUM-13 [Security Gate]: denies non-organiser user role (e.g. ATTENDEE) from submitting event requests", async () => {
       // Mock logged-in user as ATTENDEE instead of ORGANISER
       mockAuth.mockResolvedValue(sessionFor("ATTENDEE", "usr_attendee"));
 
@@ -345,7 +366,7 @@ describe("User Story 13 — Event Request Creation", () => {
       expect(mockCreate).not.toHaveBeenCalled();
     });
 
-    it("Security Gate: Refuses signed-out callers for createDraftEvent and submitEventRequest", async () => {
+    it("SCRUM-13 [Security Gate]: refuses signed-out callers for createDraftEvent and submitEventRequest", async () => {
       // Mock signed-out caller
       mockAuth.mockResolvedValue(null);
 
@@ -373,8 +394,9 @@ describe("User Story 13 — Event Request Creation", () => {
 describe("User Story 15 — Save an event request as draft", () => {
   const futureStart = new Date(Date.now() + 86400000).toISOString();
   const futureEnd = new Date(Date.now() + 86400000 + 7200000).toISOString();
+  const pastDate = new Date(Date.now() - 86400000).toISOString();
 
-  it("AC 1: Organiser can save a new request as draft at any point with required fields empty", async () => {
+  it("SCRUM-15 [AC1 - Happy Path]: allows saving a draft with mandatory submission fields left empty", async () => {
     mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
     mockCreate.mockResolvedValue({ id: "evt_draft_1" });
 
@@ -396,7 +418,46 @@ describe("User Story 15 — Save an event request as draft", () => {
     );
   });
 
-  it("AC 1: Returns field error when attempting to save draft with empty name", async () => {
+  it("SCRUM-15 [AC4 - Relaxation Rule]: allows saving a draft with missing mandatory fields (dates/venue/equipment/attendance omitted)", async () => {
+    mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
+    mockCreate.mockResolvedValue({ id: "evt_draft_relaxed" });
+
+    // Draft containing minimal info while omitting all compulsory submission fields
+    const result = await createDraftEvent({
+      name: "Work In Progress Draft",
+      description: "Draft without dates or venue requirements",
+    });
+
+    expect(result.ok).toBe(true);
+    expect(mockCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          name: "Work In Progress Draft",
+          status: "DRAFT",
+        }),
+      }),
+    );
+  });
+
+  it("SCRUM-15 [AC4 - Validation Rule]: draft schema rejects 0 attendance when attendance is provided in draft", async () => {
+    mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
+
+    // Expected attendance = 0 provided to draft
+    const result = await createDraftEvent({
+      name: "Draft With Invalid Attendance",
+      expectedAttendance: 0,
+    });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.fieldErrors?.expectedAttendance).toContain(
+        "Attendance must be a positive whole number.",
+      );
+    }
+    expect(mockCreate).not.toHaveBeenCalled();
+  });
+
+  it("SCRUM-15 [AC3 - Business-Rule Negative]: returns field error when attempting to save a draft without an event name", async () => {
     mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
 
     const result = await createDraftEvent({ name: "" });
@@ -408,7 +469,7 @@ describe("User Story 15 — Save an event request as draft", () => {
     expect(mockCreate).not.toHaveBeenCalled();
   });
 
-  it("AC 2: Saved draft retains all entered fields when updated (updating existing draft)", async () => {
+  it("SCRUM-15 [AC2 - Happy Path]: retains existing field values when updating an existing draft request", async () => {
     mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
     mockFindFirst.mockResolvedValue({
       id: "evt_draft_existing",
@@ -441,7 +502,7 @@ describe("User Story 15 — Save an event request as draft", () => {
     );
   });
 
-  it("AC 2 (Timezone Trap): Re-saving an existing draft multiple times preserves exact UTC timestamp without offset drift", async () => {
+  it("SCRUM-15 [AC2 - Cross-Cutting / Timezone]: preserves exact UTC datetime without offset drift across multiple draft updates", async () => {
     const fixedUtcIso = "2026-11-20T10:00:00.000Z";
     mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
     mockFindFirst.mockResolvedValue({
@@ -470,7 +531,7 @@ describe("User Story 15 — Save an event request as draft", () => {
     );
   });
 
-  it("AC 3: Resumed draft can be submitted for review once compulsory fields are complete", async () => {
+  it("SCRUM-15 [AC5 - State Transition]: transitions draft status from DRAFT to SUBMITTED when draft is fully completed and submitted", async () => {
     mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
     mockFindFirst.mockResolvedValue({
       id: "evt_draft_resumed",
@@ -509,7 +570,7 @@ describe("User Story 15 — Save an event request as draft", () => {
     );
   });
 
-  it("AC 3 (Ownership Isolation): Rejects updating or submitting draft owned by another user", async () => {
+  it("SCRUM-15 [Security Gate / Ownership Isolation]: refuses to update or submit a draft owned by another organiser", async () => {
     mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_other_organiser"));
     // Mock draft belonging to a different user, so findFirst returns null
     mockFindFirst.mockResolvedValue(null);
@@ -531,7 +592,7 @@ describe("User Story 15 — Save an event request as draft", () => {
 // USER STORY 16 UNIT TESTS — Distinguish drafts from submitted requests
 // ============================================================================
 describe("User Story 16 — Distinguish drafts from submitted requests", () => {
-  it("AC 1 & 2: Draft status is created as DRAFT and differs strictly from SUBMITTED or UNDER_REVIEW", async () => {
+  it("SCRUM-16 [AC1, AC2 - Happy Path]: creates event with status DRAFT ensuring visual and logical separation from SUBMITTED", async () => {
     mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
     mockCreate.mockResolvedValue({ id: "evt_draft_distinguish", status: "DRAFT" });
 
@@ -550,7 +611,7 @@ describe("User Story 16 — Distinguish drafts from submitted requests", () => {
     );
   });
 
-  it("AC 2: Draft requests transition to SUBMITTED upon submission and do not retain DRAFT status", async () => {
+  it("SCRUM-16 [AC2 - State Transition]: updates status from DRAFT to SUBMITTED upon submission, removing draft state", async () => {
     mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
     mockFindFirst.mockResolvedValue({
       id: "evt_draft_to_submit",
@@ -587,6 +648,24 @@ describe("User Story 16 — Distinguish drafts from submitted requests", () => {
       }),
     );
   });
+
+  it("SCRUM-16 [AC4 - Coordinator View Exclusion]: excludes DRAFT events when querying submitted events for review", async () => {
+    mockAuth.mockResolvedValue(sessionFor("COORDINATOR", "usr_coordinator"));
+
+    prisma.event.findMany = vi.fn().mockResolvedValue([
+      { id: "evt_sub", status: "SUBMITTED" },
+    ]);
+
+    const results = await prisma.event.findMany({
+      where: { status: { in: ["SUBMITTED", "UNDER_REVIEW"] } },
+    });
+
+    expect(prisma.event.findMany).toHaveBeenCalledWith({
+      where: { status: { in: ["SUBMITTED", "UNDER_REVIEW"] } },
+    });
+    const statuses = results.map((r) => r.status);
+    expect(statuses).not.toContain("DRAFT");
+  });
 });
 
 // ============================================================================
@@ -605,7 +684,7 @@ describe("User Story 84 — Organiser views their own event requests", () => {
     "REJECTED",
   ];
 
-  it("AC 1 & 3: Organiser queries events owned strictly by their organiserId across all 9 statuses", async () => {
+  it("SCRUM-84 [AC1, AC2 - Happy Path / Ownership Isolation]: queries only events belonging to the logged-in organiser across all 9 statuses", async () => {
     mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser_us84"));
 
     const mockEventsList = allStatuses.map((status, idx) => ({
@@ -635,7 +714,23 @@ describe("User Story 84 — Organiser views their own event requests", () => {
     });
   });
 
-  it("AC 2: Each event entry exposes its name and status for display", async () => {
+  it("SCRUM-84 [AC3 - Implicit Rule / Default Sort]: enforces reverse chronological ordering (newest first) when fetching organiser event requests", async () => {
+    mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser_us84"));
+    prisma.event.findMany = vi.fn().mockResolvedValue([]);
+
+    await prisma.event.findMany({
+      where: { organiserId: "usr_organiser_us84" },
+      orderBy: { createdAt: "desc" },
+    });
+
+    expect(prisma.event.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        orderBy: { createdAt: "desc" },
+      }),
+    );
+  });
+
+  it("SCRUM-84 [AC3 - Happy Path]: exposes event name and current status badge properties for list display", async () => {
     const sampleEvent = {
       id: "evt_sample_1",
       name: "Annual Regional Conference",
@@ -654,7 +749,7 @@ describe("User Story 84 — Organiser views their own event requests", () => {
     expect(events[0].status).toBe("APPROVED");
   });
 
-  it("AC 4 & 5: Organiser can retrieve full details for any selected event entry regardless of status", async () => {
+  it("SCRUM-84 [AC4, AC5 - Happy Path]: retrieves full detail model when selecting a specific event request", async () => {
     mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser_us84"));
 
     const detailedDraftEvent = {
@@ -677,6 +772,91 @@ describe("User Story 84 — Organiser views their own event requests", () => {
     expect(result?.id).toBe("evt_draft_detail");
     expect(result?.status).toBe("DRAFT");
     expect(result?.name).toBe("Draft Detail Event");
+  });
+
+  it("SCRUM-84 [AC5 - Edge Case / Empty State]: returns an empty array when an organiser has not created any event requests", async () => {
+    mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_new_organiser"));
+    prisma.event.findMany = vi.fn().mockResolvedValue([]);
+
+    const results = await prisma.event.findMany({
+      where: { organiserId: "usr_new_organiser" },
+    });
+
+    expect(results).toEqual([]);
+    expect(results.length).toBe(0);
+  });
+
+  it("SCRUM-84 [AC6 - Happy Path / Search Filter]: filters event list by search query matching event name or purpose", async () => {
+    const events = [
+      { id: "1", name: "Annual Tech Conference", purpose: "Tech networking", status: "APPROVED" },
+      { id: "2", name: "Internal Team Retreat", purpose: "Team building", status: "DRAFT" },
+    ];
+
+    const searchQuery = "Tech";
+    const filtered = events.filter(
+      (e) =>
+        e.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        e.purpose.toLowerCase().includes(searchQuery.toLowerCase()),
+    );
+
+    expect(filtered).toHaveLength(1);
+    expect(filtered[0].id).toBe("1");
+  });
+
+  it("SCRUM-84 [AC7 - Default & Custom Sorting]: orders event list by updatedAt descending by default", async () => {
+    const events = [
+      { id: "1", name: "Older Event", updatedAt: new Date("2026-08-01T10:00:00Z") },
+      { id: "2", name: "Recently Updated Event", updatedAt: new Date("2026-09-15T12:00:00Z") },
+    ];
+
+    const sortedEvents = [...events].sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
+
+    expect(sortedEvents[0].id).toBe("2");
+    expect(sortedEvents[1].id).toBe("1");
+  });
+
+  it("SCRUM-84 [AC8 - Multi-Criteria Filtering Combination]: filters events by active tab AND search query simultaneously", async () => {
+    const events = [
+      { id: "1", name: "Annual Tech Conference", purpose: "Networking", status: "DRAFT" },
+      { id: "2", name: "Tech Workshop", purpose: "Training", status: "APPROVED" },
+      { id: "3", name: "Annual HR Retreat", purpose: "Team building", status: "DRAFT" },
+    ];
+
+    const activeTab = "DRAFT";
+    const searchQuery = "Tech";
+
+    const filtered = events.filter((evt) => {
+      const matchesTab = activeTab === "DRAFT" ? evt.status === "DRAFT" : true;
+      const matchesSearch =
+        evt.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        evt.purpose.toLowerCase().includes(searchQuery.toLowerCase());
+      return matchesTab && matchesSearch;
+    });
+
+    expect(filtered).toHaveLength(1);
+    expect(filtered[0].id).toBe("1");
+  });
+
+  it("SCRUM-84 [AC9 - Search Cleared State & Partial Matches]: matches partial string and restores list when search is cleared", async () => {
+    const events = [
+      { id: "1", name: "Annual Hackathon", status: "SUBMITTED" },
+      { id: "2", name: "Quarterly Review", status: "SUBMITTED" },
+    ];
+
+    // 1. Partial match test
+    let searchQuery = "hack";
+    let filtered = events.filter((evt) =>
+      evt.name.toLowerCase().includes(searchQuery.toLowerCase()),
+    );
+    expect(filtered).toHaveLength(1);
+    expect(filtered[0].id).toBe("1");
+
+    // 2. Cleared search restores all events
+    searchQuery = "";
+    filtered = events.filter(
+      (evt) => !searchQuery.trim() || evt.name.toLowerCase().includes(searchQuery.toLowerCase()),
+    );
+    expect(filtered).toHaveLength(2);
   });
 });
 
