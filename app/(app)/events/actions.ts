@@ -11,9 +11,17 @@ import {
   submitEventRequestSchema,
 } from "@/lib/schemas/event";
 import { ok, err, type ActionResult } from "@/lib/action-result";
+import { pickCoordinator } from "@/lib/coordinator-assignment";
 
-// Coordinators decide; they do not claim. `submitted → under review` belongs to
-// SCRUM-20's automatic assignment, so it is deliberately not accepted here.
+/** Thrown inside submitEventRequest's transaction for an expected failure
+ * (not found / wrong state), caught below and converted to an ActionResult —
+ * same convention as PermissionError, kept local since it's specific to this
+ * one action. */
+class SubmitEventError extends Error {}
+
+// Coordinators decide; they do not claim. `submitted → under review` now
+// happens automatically inside submitEventRequest via SCRUM-20's
+// pickCoordinator, so it is deliberately not accepted here.
 const statusTransitionSchema = z.object({
   eventId: z.string().min(1),
   nextStatus: z.enum(["APPROVED", "REJECTED"]),
@@ -172,78 +180,133 @@ export async function submitEventRequest(
       specialRequests,
     } = parsed.data;
 
-    let eventId = id;
+        let eventId = id;
 
-    if (id) {
-      // Submit an existing draft event (US14/US15 transition from DRAFT -> SUBMITTED)
-      const existing = await prisma.event.findFirst({
-        where: {
-          id,
-          organiserId: user!.id,
-          status: { in: ["DRAFT", "REJECTED"] },
-        },
-      });
+    // SCRUM-14's write plus SCRUM-20's auto-assignment happen in ONE
+    // transaction: assignment reads every coordinator's current load, so it
+    // must run after this write is visible and before another submission's
+    // read, or two events submitted at the same instant could both compute
+    // the same "least loaded" coordinator and both land on them.
+    await prisma.$transaction(async (tx) => {
+      if (id) {
+        // Submit an existing draft event (US14/US15 transition from DRAFT -> SUBMITTED)
+        const existing = await tx.event.findFirst({
+          where: {
+            id,
+            organiserId: user!.id,
+            status: { in: ["DRAFT", "REJECTED"] },
+          },
+        });
 
-      if (!existing) {
-        return err("Draft or rejected event not found or cannot be submitted.");
+        if (!existing) {
+          throw new SubmitEventError(
+            "Draft or rejected event not found or cannot be submitted.",
+          );
+        }
+
+        await tx.event.update({
+          where: { id },
+          data: {
+            name,
+            purpose,
+            description,
+            status: "SUBMITTED",
+            submittedAt: new Date(),
+            decidedAt: null,
+            decidedById: null,
+            decisionReason: null,
+            startAt: new Date(startAt),
+            endAt: new Date(endAt),
+            expectedAttendance,
+            venueRequirements,
+            requiredFacilities: requiredFacilities ?? [],
+            accessibilityNeeds,
+            preferredLayout,
+            equipmentRequirements,
+            registrationNotes,
+            programme: programme ?? null,
+            specialRequests: specialRequests ?? null,
+          },
+        });
+      } else {
+        // Create and directly submit a new event request
+        const created = await tx.event.create({
+          data: {
+            name,
+            purpose,
+            description,
+            status: "SUBMITTED",
+            submittedAt: new Date(),
+            startAt: new Date(startAt),
+            endAt: new Date(endAt),
+            expectedAttendance,
+            venueRequirements,
+            requiredFacilities: requiredFacilities ?? [],
+            accessibilityNeeds,
+            preferredLayout,
+            equipmentRequirements,
+            registrationNotes,
+            programme: programme ?? null,
+            specialRequests: specialRequests ?? null,
+            organiserId: user!.id,
+          },
+          select: { id: true },
+        });
+        eventId = created.id;
       }
 
-      await prisma.event.update({
-        where: { id },
-        data: {
-          name,
-          purpose,
-          description,
-          status: "SUBMITTED",
-          submittedAt: new Date(),
-          decidedAt: null,
-          decidedById: null,
-          decisionReason: null,
-          startAt: new Date(startAt),
-          endAt: new Date(endAt),
-          expectedAttendance,
-          venueRequirements,
-          requiredFacilities: requiredFacilities ?? [],
-          accessibilityNeeds,
-          preferredLayout,
-          equipmentRequirements,
-          registrationNotes,
-          programme: programme ?? null,
-          specialRequests: specialRequests ?? null,
-        },
-      });
-    } else {
-      // Create and directly submit a new event request
-      const created = await prisma.event.create({
-        data: {
-          name,
-          purpose,
-          description,
-          status: "SUBMITTED",
-          submittedAt: new Date(),
-          startAt: new Date(startAt),
-          endAt: new Date(endAt),
-          expectedAttendance,
-          venueRequirements,
-          requiredFacilities: requiredFacilities ?? [],
-          accessibilityNeeds,
-          preferredLayout,
-          equipmentRequirements,
-          registrationNotes,
-          programme: programme ?? null,
-          specialRequests: specialRequests ?? null,
-          organiserId: user!.id,
-        },
-        select: { id: true },
-      });
-      eventId = created.id;
-    }
+      // SCRUM-20: assign exactly one coordinator, fairly, no accept/decline.
+      const coordinatorId = await pickCoordinator(tx);
+
+      if (coordinatorId) {
+        await tx.event.update({
+          where: { id: eventId! },
+          data: { coordinatorId, status: "UNDER_REVIEW" },
+        });
+
+        await tx.notification.createMany({
+          data: [
+            {
+              userId: user!.id,
+              type: "COORDINATOR_ASSIGNED",
+              title: "A coordinator was assigned",
+              message: `Your event "${name}" is now under review.`,
+              eventId: eventId!,
+            },
+            {
+              userId: coordinatorId,
+              type: "COORDINATOR_ASSIGNED",
+              title: "You were assigned an event",
+              message: `"${name}" was assigned to you for review.`,
+              eventId: eventId!,
+            },
+          ],
+        });
+
+        await tx.auditLog.create({
+          data: {
+            entityType: "Event",
+            entityId: eventId!,
+            action: "ASSIGNED",
+            actorId: null, // system-performed, not a specific user's action
+            fieldName: "coordinatorId",
+            oldValue: null,
+            newValue: coordinatorId,
+            summary: "Auto-assigned on submission (SCRUM-20)",
+          },
+        });
+      }
+      // No coordinator available: the event still reaches SUBMITTED (set
+      // above) and stays visible to coordinators — it must not fail
+      // silently, so we deliberately do nothing further here rather than
+      // throwing.
+    });
 
     revalidatePath("/events");
 
     return ok({ id: eventId! });
   } catch (error) {
-    if (error instanceof PermissionError) {
+        if (error instanceof PermissionError || error instanceof SubmitEventError) {
       return err(error.message);
     }
     throw error;

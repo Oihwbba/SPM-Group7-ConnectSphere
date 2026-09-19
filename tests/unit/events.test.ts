@@ -25,6 +25,7 @@ vi.mock("@/lib/db", () => ({
     },
     venue: { findMany: vi.fn() },
     equipment: { findMany: vi.fn() },
+    $transaction: vi.fn(),
   },
 }));
 
@@ -32,6 +33,19 @@ const mockAuth = auth as unknown as Mock;
 const mockCreate = prisma.event.create as unknown as Mock;
 const mockFindFirst = prisma.event.findFirst as unknown as Mock;
 const mockUpdate = prisma.event.update as unknown as Mock;
+const mockTransaction = prisma.$transaction as unknown as Mock;
+
+// SCRUM-20: submitEventRequest now runs inside a transaction. These tests
+// only exercise SCRUM-14's write path, so the transaction's "tx" reuses the
+// SAME mock functions as the top-level prisma.event.* mocks above —
+// existing assertions on mockCreate/mockFindFirst/mockUpdate keep working
+// unchanged. tx.user.findMany resolves to [] (no coordinators), so
+// auto-assignment is a no-op here; that logic has its own coverage in
+// tests/unit/coordinator-assignment.test.ts and
+// tests/unit/event-auto-assignment.test.ts.
+const mockTxUserFindMany = vi.fn();
+const mockTxNotificationCreateMany = vi.fn();
+const mockTxAuditLogCreate = vi.fn();
 
 /**
  * Helper utility to create a mock user session with a given role and ID.
@@ -46,6 +60,15 @@ function sessionFor(role: Role, id: string): Session {
 beforeEach(() => {
   // Clear mock history before each test to guarantee test isolation
   vi.clearAllMocks();
+  mockTxUserFindMany.mockResolvedValue([]);
+  mockTransaction.mockImplementation((cb: (tx: unknown) => unknown) =>
+    cb({
+      event: { create: mockCreate, findFirst: mockFindFirst, update: mockUpdate },
+      user: { findMany: mockTxUserFindMany },
+      notification: { createMany: mockTxNotificationCreateMany },
+      auditLog: { create: mockTxAuditLogCreate },
+    }),
+  );
 });
 
 // ============================================================================

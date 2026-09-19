@@ -12,7 +12,7 @@ import type { Session } from "next-auth";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { createReservation } from "@/app/(app)/equipment/actions";
-import { transitionEventStatus } from "@/app/(app)/events/actions";
+import { transitionEventStatus, submitEventRequest } from "@/app/(app)/events/actions";
 
 // The "at the same moment" cases (SCRUM-31/53/74). These are the acceptance
 // criteria the database constraints and row locks exist to satisfy, so each one
@@ -165,3 +165,103 @@ describe.skipIf(!usesLocalDatabase)("concurrency — status transitions (SCRUM-2
   });
 });
 
+
+describe.skipIf(!usesLocalDatabase)("concurrency — coordinator auto-assignment (SCRUM-20)", () => {
+  let coordinatorAId: string;
+  let coordinatorBId: string;
+
+  const ORGANISER: Session = {
+    user: {
+      id: "usr_organiser",
+      role: "ORGANISER",
+      name: "Olivia Organiser",
+      email: "organiser@test.local",
+    },
+    expires: "2999-01-01T00:00:00.000Z",
+  };
+
+  beforeAll(async () => {
+    // Two throwaway coordinators, both starting at zero active events, so the
+    // fairness rule has an actual tie to resolve under concurrency.
+    const [a, b] = await Promise.all([
+      prisma.user.create({
+        data: {
+          email: `concurrency-coord-a-${Date.now()}@test.local`,
+          name: "Concurrency Coord A",
+          role: "COORDINATOR",
+          passwordHash: "not-used-in-this-test",
+        },
+        select: { id: true },
+      }),
+      prisma.user.create({
+        data: {
+          email: `concurrency-coord-b-${Date.now()}@test.local`,
+          name: "Concurrency Coord B",
+          role: "COORDINATOR",
+          passwordHash: "not-used-in-this-test",
+        },
+        select: { id: true },
+      }),
+    ]);
+    coordinatorAId = a.id;
+    coordinatorBId = b.id;
+  });
+
+  afterAll(async () => {
+    await prisma.event.deleteMany({
+      where: { name: { startsWith: "SCRUM-20 Concurrency Event" } },
+    });
+    await prisma.user.deleteMany({
+      where: { id: { in: [coordinatorAId, coordinatorBId] } },
+    });
+  });
+
+  it("SCRUM-20: two events submitted at the same instant each end up with exactly one coordinator, and neither is left unassigned", async () => {
+    (auth as unknown as Mock).mockResolvedValue(ORGANISER);
+
+    const base = {
+      purpose: "Concurrency test",
+      description: "SCRUM-20 concurrency coverage",
+      startAt: "2031-05-01T09:00:00.000Z",
+      endAt: "2031-05-01T17:00:00.000Z",
+      expectedAttendance: 10,
+      venueRequirements: "Any room",
+      accessibilityNeeds: "None",
+      preferredLayout: "Classroom",
+      equipmentRequirements: "None",
+      registrationNotes: "None",
+    };
+
+    const results = await Promise.all([
+      submitEventRequest({ ...base, name: `SCRUM-20 Concurrency Event A ${Date.now()}` }),
+      submitEventRequest({ ...base, name: `SCRUM-20 Concurrency Event B ${Date.now()}` }),
+    ]);
+
+    expect(results.every((r) => r.ok)).toBe(true);
+
+    const events = await prisma.event.findMany({
+      where: { name: { startsWith: "SCRUM-20 Concurrency Event" } },
+      select: { id: true, coordinatorId: true, status: true },
+    });
+
+    expect(events).toHaveLength(2);
+    // AC: "An event has at most one assigned Coordinator at any moment" —
+    // both submissions found a coordinator (there were two available) and
+    // neither was left unassigned.
+    for (const event of events) {
+      expect(event.coordinatorId).not.toBeNull();
+      expect(event.status).toBe("UNDER_REVIEW");
+    }
+
+    // NOTE: this does not assert the two events landed on DIFFERENT
+    // coordinators. Two submissions at the exact same instant can both read
+    // "0 active events" for the same coordinator before either write commits
+    // (no row lock on User, unlike Equipment/Event in the other concurrency
+    // tests), so both may pick the same one. That is a fairness edge case,
+    // not a correctness violation — the acceptance criterion this test
+    // guards is "at most one coordinator per event", which always holds. If
+    // the team wants strict fairness under concurrency too, pickCoordinator
+    // would need a `SELECT ... FOR UPDATE` on the coordinator row it picks,
+    // same pattern as the Equipment pool lock above.
+  });
+});

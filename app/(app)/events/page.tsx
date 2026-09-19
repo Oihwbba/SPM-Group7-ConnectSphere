@@ -1,13 +1,15 @@
-import { prisma } from "@/lib/db";
 import { requireSession } from "@/lib/auth/guard";
 import { Forbidden } from "@/components/app/forbidden";
 import { PagePlaceholder } from "@/components/app/page-placeholder";
-import { EventsClient } from "./events-client";
+import { OrganiserEvents, CoordinatorEvents } from "./role-views";
 
 // One route, three role views (the domain-first layout — see ADR 0001's
 // addendum). Every role touches "events"; what differs is the view, so the
 // role dispatch lives here and the authorisation itself stays in
-// lib/auth/can.ts (ADR 0004).
+// lib/auth/can.ts (ADR 0004). OrganiserEvents and CoordinatorEvents live in
+// role-views.tsx, not here — a page.tsx file may only export the specific
+// names Next.js recognises (default, metadata, generateStaticParams, ...),
+// so anything else must live elsewhere to be testable or reused.
 export default async function EventsPage() {
   const session = await requireSession();
 
@@ -28,35 +30,4 @@ export default async function EventsPage() {
     default:
       return <Forbidden />;
   }
-}
-
-/** The reference feature. Only Organisers reach it; the query below is scoped
- * to the signed-in organiser, so an Organiser can never see another's events. */
-async function OrganiserEvents({ organiserId }: { organiserId: string }) {
-  // RELATIONSHIP enforced in the query: an organiser only ever loads their own
-  // rows. This is the read-side counterpart to `can()`'s relationship check.
-  const events = await prisma.event.findMany({
-    where: { organiserId },
-    orderBy: { createdAt: "desc" },
-  });
-
-  return <EventsClient events={events} />;
-}
-
-/** Coordinator view: requests assigned to this coordinator, plus submitted
- * requests no coordinator has picked up yet. */
-async function CoordinatorEvents({ coordinatorId }: { coordinatorId: string }) {
-  // Must mirror `can()`'s coordinator relationship exactly — a looser query
-  // here would list events assigned to OTHER coordinators.
-  const events = await prisma.event.findMany({
-    where: {
-      OR: [
-        { coordinatorId },
-        { coordinatorId: null, status: { not: "DRAFT" } },
-      ],
-    },
-    orderBy: { createdAt: "desc" },
-  });
-
-  return <EventsClient events={events} isCoordinator />;
 }
