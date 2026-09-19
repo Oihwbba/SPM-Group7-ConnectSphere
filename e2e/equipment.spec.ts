@@ -15,6 +15,7 @@ async function signInAsTechSupport(page: Page) {
   await page.waitForURL((url) => !url.pathname.startsWith("/login"));
   await page.goto("/equipment");
   await expect(page.getByText("Reserve equipment")).toBeVisible();
+  await page.locator('[data-hydrated="true"]').waitFor();
 }
 
 async function fillReservation(page: Page, quantity: string) {
@@ -46,9 +47,9 @@ test.describe("SCRUM-31 — Reserve Equipment for Event", () => {
     await signInAsTechSupport(page);
     await fillReservation(page, "1");
 
-    await expect(page.getByRole("status")).toContainText(
-      /\d+ unit\(s\) available for this period/,
-    );
+    await expect(
+      page.getByRole("status").filter({ hasText: "unit(s) available" }),
+    ).toContainText(/\d+ unit\(s\) available for this period/);
     await expect(page.locator("span", { hasText: /\d+ of 4 available/ })).toBeVisible();
 
     await page.getByRole("button", { name: "Confirm reservation" }).click();
