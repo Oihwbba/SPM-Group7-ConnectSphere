@@ -3,7 +3,6 @@
 import { useState, useTransition, useEffect } from "react";
 import {
   Plus,
-  Check,
   ChevronRight,
   ChevronLeft,
   Eye,
@@ -83,15 +82,6 @@ const initialFormState: FormState = {
   programme: "",
   specialRequests: "",
 };
-
-const COMMON_FACILITIES = [
-  "projector",
-  "sound-system",
-  "stage",
-  "wifi",
-  "whiteboard",
-  "live-streaming",
-];
 
 const LAYOUT_OPTIONS = [
   "Theatre",
@@ -239,16 +229,6 @@ export function CreateEventDialog({
         return next;
       });
     }
-  }
-
-  function handleFacilityToggle(facility: string) {
-    setFormData((prev) => {
-      const exists = prev.requiredFacilities.includes(facility);
-      const nextFacilities = exists
-        ? prev.requiredFacilities.filter((f) => f !== facility)
-        : [...prev.requiredFacilities, facility];
-      return { ...prev, requiredFacilities: nextFacilities };
-    });
   }
 
   /**
@@ -688,37 +668,6 @@ export function CreateEventDialog({
             </div>
 
             <div className="space-y-2">
-              <Label>Required Venue Facilities</Label>
-              <div className="grid grid-cols-2 gap-2 pt-1 sm:grid-cols-3">
-                {COMMON_FACILITIES.map((facility) => {
-                  const checked =
-                    formData.requiredFacilities.includes(facility);
-                  return (
-                    <button
-                      key={facility}
-                      type="button"
-                      onClick={() => handleFacilityToggle(facility)}
-                      className={`flex items-center gap-2 rounded-md border px-3 py-2 text-left text-xs font-medium transition-colors ${
-                        checked
-                          ? "border-primary bg-primary text-primary-foreground"
-                          : "border-input bg-background hover:bg-accent"
-                      }`}
-                    >
-                      <div
-                        className={`flex h-3.5 w-3.5 items-center justify-center rounded border ${checked ? "bg-primary-foreground text-primary" : "border-muted-foreground"}`}
-                      >
-                        {checked && <Check className="h-3 w-3 stroke-[3]" />}
-                      </div>
-                      <span className="capitalize">
-                        {facility.replace("-", " ")}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="space-y-2">
               <Label htmlFor="preferredLayout">Preferred Room Layout *</Label>
               <div className="mb-2 flex flex-wrap gap-2">
                 {LAYOUT_OPTIONS.map((layout) => (
@@ -1025,12 +974,6 @@ export function CreateEventDialog({
                         Missing (Required to Submit)
                       </span>
                     )}
-                  </p>
-                  <p>
-                    <span className="font-semibold">Facilities:</span>{" "}
-                    {formData.requiredFacilities.length
-                      ? formData.requiredFacilities.join(", ")
-                      : "None selected"}
                   </p>
                   <p>
                     <span className="font-semibold">Preferred Layout:</span>{" "}
