@@ -40,6 +40,7 @@ import {
   formatTime,
   parseSingaporeDateTime,
   sgWallTimeToUtcIso,
+  utcToSgWallTime,
 } from "@/lib/datetime";
 
 type Equipment = { id: string; type: string; totalQuantity: number };
@@ -383,19 +384,7 @@ export function EquipmentClient({
     return curDate ? `${curDate}T${val}` : `T${val}`;
   };
 
-  const sgFormatter = new Intl.DateTimeFormat("en-SG", {
-    timeZone: "Asia/Singapore",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  });
-  const sgParts = sgFormatter.formatToParts(new Date());
-  const getSgPart = (type: string) => sgParts.find((p) => p.type === type)?.value ?? "";
-  const sgToday = `${getSgPart("year")}-${getSgPart("month")}-${getSgPart("day")}`;
-  const sgNowTime = `${getSgPart("hour")}:${getSgPart("minute")}`;
+  const [sgToday, sgNowTime] = utcToSgWallTime(new Date()).split("T");
 
   const reqQty = parseInt(form.quantity || "1", 10);
   const isQuantityValid = !Number.isNaN(reqQty) && reqQty > 0;

@@ -5,6 +5,7 @@ import {
   formatTime,
   parseSingaporeDateTime,
   sgWallTimeToUtcIso,
+  utcToSgWallTime,
 } from "@/lib/datetime";
 
 describe("lib/datetime helpers — SCRUM-31", () => {
@@ -38,5 +39,17 @@ describe("lib/datetime helpers — SCRUM-31", () => {
     expect(d?.toISOString()).toBe("2026-09-22T06:42:00.000Z");
     expect(parseSingaporeDateTime("")).toBeNull();
     expect(parseSingaporeDateTime("T14:42")).toBeNull();
+    expect(parseSingaporeDateTime("aaaa-bb-ccTdd:ee")).toBeNull();
+  });
+
+  it("converts UTC instant or Date to Singapore wall-time string (YYYY-MM-DDTHH:mm)", () => {
+    expect(utcToSgWallTime("2026-09-22T06:42:00.000Z")).toBe("2026-09-22T14:42");
+    expect(utcToSgWallTime(new Date("2026-09-22T06:42:00.000Z"))).toBe("2026-09-22T14:42");
+    expect(utcToSgWallTime(null)).toBe("");
+    expect(utcToSgWallTime(undefined)).toBe("");
+    expect(utcToSgWallTime("")).toBe("");
+    expect(utcToSgWallTime("invalid")).toBe("");
+    expect(utcToSgWallTime(new Date("invalid"))).toBe("");
   });
 });
+

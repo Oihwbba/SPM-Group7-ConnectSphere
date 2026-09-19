@@ -71,3 +71,37 @@ export function sgWallTimeToUtcIso(localValue: string): string | undefined {
   const d = parseSingaporeDateTime(localValue);
   return d && !Number.isNaN(d.getTime()) ? d.toISOString() : undefined;
 }
+
+const sgWallTimeFormatter = new Intl.DateTimeFormat("en-SG", {
+  timeZone: TIME_ZONE,
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  hourCycle: "h23",
+});
+
+/**
+ * Format a Date, ISO string, or timestamp into Singapore wall-time in datetime-local input format ("YYYY-MM-DDTHH:mm").
+ */
+export function utcToSgWallTime(
+  value: Date | string | number | null | undefined,
+): string {
+  if (value === null || value === undefined || value === "") return "";
+  const d = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(d.getTime())) return "";
+
+  const parts = sgWallTimeFormatter.formatToParts(d);
+  const getPart = (type: string) =>
+    parts.find((p) => p.type === type)?.value ?? "";
+  const year = getPart("year");
+  const month = getPart("month");
+  const day = getPart("day");
+  const hour = getPart("hour");
+  const minute = getPart("minute");
+
+  if (!year || !month || !day || !hour || !minute) return "";
+  return `${year}-${month}-${day}T${hour}:${minute}`;
+}
+

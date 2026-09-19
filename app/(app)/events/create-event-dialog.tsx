@@ -30,7 +30,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { formatDateTime, sgWallTimeToUtcIso } from "@/lib/datetime";
+import {
+  formatDateTime,
+  sgWallTimeToUtcIso,
+  utcToSgWallTime,
+} from "@/lib/datetime";
 import {
   createDraftEvent,
   submitEventRequest,
@@ -124,15 +128,11 @@ interface CreateEventDialogProps {
   trigger?: React.ReactNode;
 }
 
-/** Helper to format Date or ISO string into datetime-local input format (YYYY-MM-DDTHH:mm) */
+/** Helper to format Date or ISO string into Singapore wall-time datetime-local format (YYYY-MM-DDTHH:mm) */
 function toDatetimeInputString(
   dateVal: Date | string | null | undefined,
 ): string {
-  if (!dateVal) return "";
-  const d = new Date(dateVal);
-  if (isNaN(d.getTime())) return "";
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  return utcToSgWallTime(dateVal);
 }
 
 function getInitialFormData(draftEvent?: DraftEventData | null): FormState {
@@ -194,8 +194,8 @@ export function CreateEventDialog({
   );
   const canSaveDraft = !draftEvent || draftEvent.status === "DRAFT";
 
-  // Local wall-clock "now" — the input's min is compared in local time, so a
-  // UTC string would let SG users pick times up to 8 hours in the past.
+  // Singapore wall-clock "now" in datetime-local format ("YYYY-MM-DDTHH:mm").
+  // ConnectSphere standardizes all wall-clock event and reservation times on Asia/Singapore (+08:00).
   const minStartDateTime = toDatetimeInputString(new Date());
 
   useEffect(() => {
