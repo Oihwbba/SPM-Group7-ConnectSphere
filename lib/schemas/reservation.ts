@@ -34,6 +34,16 @@ function validatePeriod(
   }
   if (
     !Number.isNaN(startAt.getTime()) &&
+    startAt.getTime() < Date.now() - 60000
+  ) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["startAt"],
+      message: "Start time cannot be in the past.",
+    });
+  }
+  if (
+    !Number.isNaN(startAt.getTime()) &&
     !Number.isNaN(endAt.getTime()) &&
     endAt <= startAt
   ) {

@@ -1,4 +1,4 @@
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
 /**
  * Streamed by Next.js while the server component fetches equipment and events.
@@ -7,28 +7,48 @@ import { Card, CardContent } from "@/components/ui/card";
 export default function Loading() {
   return (
     <div className="space-y-6">
-      <Card>
-        <CardContent className="space-y-4 p-6">
-          <div className="h-6 w-44 animate-pulse rounded-md bg-muted" />
-          <div className="grid gap-4 md:grid-cols-2">
-            {Array.from({ length: 5 }).map((_, index) => (
-              <div
-                key={index}
-                className="h-10 w-full animate-pulse rounded-md bg-muted"
-              />
-            ))}
+      {/* 1. Reserve equipment skeleton */}
+      <Card className="border border-border bg-card text-card-foreground shadow-xs backdrop-blur-none">
+        <CardHeader className="pb-4">
+          <div className="flex items-center gap-3">
+            <div className="h-11 w-11 shrink-0 animate-pulse rounded-xl bg-muted" />
+            <div className="space-y-2">
+              <div className="h-6 w-44 animate-pulse rounded-md bg-muted" />
+              <div className="h-4 w-64 animate-pulse rounded-md bg-muted" />
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-6 pt-2">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="h-16 w-full animate-pulse rounded-md bg-muted/40" />
+            <div className="h-16 w-full animate-pulse rounded-md bg-muted/40" />
+          </div>
+          <div className="h-20 w-full animate-pulse rounded-md bg-muted/40" />
+          <div className="flex justify-between pt-2 border-t">
+            <div className="h-10 w-32 animate-pulse rounded-md bg-muted/40" />
+            <div className="h-11 w-44 animate-pulse rounded-md bg-muted/40" />
           </div>
         </CardContent>
       </Card>
 
-      <Card>
-        <CardContent className="space-y-4 p-6">
-          <div className="h-6 w-48 animate-pulse rounded-md bg-muted" />
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-            {Array.from({ length: 6 }).map((_, index) => (
+      {/* 2. Live equipment availability skeleton */}
+      <Card className="border border-border bg-card text-card-foreground shadow-xs backdrop-blur-none">
+        <CardHeader className="pb-4">
+          <div className="flex items-center gap-3">
+            <div className="h-11 w-11 shrink-0 animate-pulse rounded-xl bg-muted" />
+            <div className="space-y-2">
+              <div className="h-6 w-52 animate-pulse rounded-md bg-muted" />
+              <div className="h-4 w-72 animate-pulse rounded-md bg-muted" />
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="h-24 w-full animate-pulse rounded-xl bg-muted/40" />
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {Array.from({ length: 4 }).map((_, index) => (
               <div
                 key={index}
-                className="h-20 w-full animate-pulse rounded-md bg-muted"
+                className="h-28 w-full animate-pulse rounded-xl bg-muted/40"
               />
             ))}
           </div>

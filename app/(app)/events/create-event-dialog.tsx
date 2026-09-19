@@ -30,7 +30,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { formatDateTime } from "@/lib/datetime";
+import {
+  formatDateTime,
+  parseSingaporeDateTime,
+  sgWallTimeToUtcIso,
+  utcToSgWallTime,
+} from "@/lib/datetime";
 import {
   createDraftEvent,
   submitEventRequest,
@@ -39,13 +44,10 @@ import {
 
 /**
  * A datetime-local value ("2026-09-20T10:00") carries no timezone. Convert it
- * to a UTC ISO instant HERE, in the browser, where it means the user's local
- * time — the server runs in UTC and would read the bare string 8 hours off.
+ * to a UTC ISO instant representing Singapore time (+08:00).
  */
 function toUtcIso(localValue: string): string | undefined {
-  if (!localValue) return undefined;
-  const d = new Date(localValue);
-  return isNaN(d.getTime()) ? undefined : d.toISOString();
+  return sgWallTimeToUtcIso(localValue);
 }
 
 interface FormState {
@@ -127,15 +129,18 @@ interface CreateEventDialogProps {
   trigger?: React.ReactNode;
 }
 
-/** Helper to format Date or ISO string into datetime-local input format (YYYY-MM-DDTHH:mm) */
+/** Helper to format Date or ISO string into Singapore wall-time datetime-local format (YYYY-MM-DDTHH:mm) */
 function toDatetimeInputString(
   dateVal: Date | string | null | undefined,
 ): string {
-  if (!dateVal) return "";
-  const d = new Date(dateVal);
-  if (isNaN(d.getTime())) return "";
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  return utcToSgWallTime(dateVal);
+}
+
+/** Helper to format a naive Singapore wall-time string (YYYY-MM-DDTHH:mm) for display */
+function formatWallDateTime(val: string | null | undefined): string {
+  if (!val) return "";
+  const d = parseSingaporeDateTime(val);
+  return d ? formatDateTime(d) : val;
 }
 
 function getInitialFormData(draftEvent?: DraftEventData | null): FormState {
@@ -197,8 +202,8 @@ export function CreateEventDialog({
   );
   const canSaveDraft = !draftEvent || draftEvent.status === "DRAFT";
 
-  // Local wall-clock "now" — the input's min is compared in local time, so a
-  // UTC string would let SG users pick times up to 8 hours in the past.
+  // Singapore wall-clock "now" in datetime-local format ("YYYY-MM-DDTHH:mm").
+  // ConnectSphere standardizes all wall-clock event and reservation times on Asia/Singapore (+08:00).
   const minStartDateTime = toDatetimeInputString(new Date());
 
   useEffect(() => {
@@ -255,15 +260,15 @@ export function CreateEventDialog({
 
     if (currentStep === 2) {
       if (formData.startAt) {
-        const startDate = new Date(formData.startAt);
-        if (startDate < new Date()) {
+        const startDate = parseSingaporeDateTime(formData.startAt);
+        if (startDate && startDate < new Date()) {
           errors.startAt = ["Proposed date cannot be in the past."];
         }
       }
       if (formData.startAt && formData.endAt) {
-        const startDate = new Date(formData.startAt);
-        const endDate = new Date(formData.endAt);
-        if (endDate <= startDate) {
+        const startDate = parseSingaporeDateTime(formData.startAt);
+        const endDate = parseSingaporeDateTime(formData.endAt);
+        if (startDate && endDate && endDate <= startDate) {
           errors.endAt = [
             "Proposed end date and time must be strictly after the start date and time.",
           ];
@@ -968,7 +973,7 @@ export function CreateEventDialog({
                   <p>
                     <span className="font-semibold">Start:</span>{" "}
                     {formData.startAt ? (
-                      formatDateTime(formData.startAt)
+                      formatWallDateTime(formData.startAt)
                     ) : (
                       <span className="rounded bg-destructive/10 px-1.5 py-0.5 text-[11px] font-medium text-destructive">
                         Missing (Required to Submit)
@@ -978,7 +983,7 @@ export function CreateEventDialog({
                   <p>
                     <span className="font-semibold">End:</span>{" "}
                     {formData.endAt ? (
-                      formatDateTime(formData.endAt)
+                      formatWallDateTime(formData.endAt)
                     ) : (
                       <span className="rounded bg-destructive/10 px-1.5 py-0.5 text-[11px] font-medium text-destructive">
                         Missing (Required to Submit)
