@@ -72,9 +72,10 @@ When two users view an event simultaneously (e.g. an Organiser on "My Events" an
 
 ### Decision
 
-1. **Visibility-gated periodic revalidation (`router.refresh()`).** `EventsClient` mounts an interval timer that executes `router.refresh()` every 4 seconds whenever `document.visibilityState === "visible"` and no mutation transition is in flight (`!isPending`). When the tab is backgrounded or minimized, polling halts to avoid unnecessary network traffic.
+1. **Visibility-gated periodic revalidation (`router.refresh()`).** `EventsClient` mounts an interval timer that executes `router.refresh()` every 4 seconds whenever `document.visibilityState === "visible"` and no mutation transition is in flight (`!isPending`). Pausing during active transitions prevents network contention during user form submissions, and halting when the tab is backgrounded or minimized eliminates unnecessary network traffic.
 2. **Reactive detail view synchronization.** The event details modal derives its active event from `events.find(e => e.id === viewingEventId)` rather than keeping a detached, static object in `useState`. When `router.refresh()` updates the server-rendered `events` prop, both the table row status badge and any open `EventDetailsModal` immediately update their rendered status in lockstep.
-3. **No new runtime dependencies or infrastructure.** The mechanism uses native Next.js App Router server component revalidation.
+3. **Multi-browser test verification.** Playwright end-to-end tests (`e2e/events.spec.ts`) simulate two distinct browser sessions (one Organiser with the detail modal open, and one Coordinator). When the Coordinator approves the event, the test verifies that the open modal's status badge automatically flips to `APPROVED` within the 4-second convergence window without page reload.
+4. **No new runtime dependencies or infrastructure.** The mechanism uses native Next.js App Router server component revalidation.
 
 ### Alternatives rejected
 
