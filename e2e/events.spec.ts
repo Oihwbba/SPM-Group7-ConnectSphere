@@ -488,6 +488,12 @@ test.describe("User Story 23 & 24 — Event Status View & Consistency Journey", 
     await expect(organiserRow).toBeVisible();
     await expect(organiserRow.getByTestId("status-badge")).toHaveAttribute("data-status", "SUBMITTED");
 
+    // Organiser opens the EventDetailsModal to view submitted request specifications
+    await organiserRow.getByTestId("view-details-button").click();
+    const organiserModal = organiserPage.getByRole("dialog");
+    await expect(organiserModal).toBeVisible();
+    await expect(organiserModal.getByTestId("status-badge")).toHaveAttribute("data-status", "SUBMITTED");
+
     // 3. Sign in as Coordinator in second browser context
     const coordinatorContext = await browser.newContext();
     const coordinatorPage = await coordinatorContext.newPage();
@@ -506,10 +512,16 @@ test.describe("User Story 23 & 24 — Event Status View & Consistency Journey", 
     await coordinatorRow.getByRole("button", { name: /Approve/i }).click();
     await expect(coordinatorRow.getByTestId("status-badge")).toHaveAttribute("data-status", "APPROVED");
 
-    // 5. Organiser page (WITHOUT any manual reload or interaction) receives auto-refresh and updates to APPROVED
-    await expect(organiserRow.getByTestId("status-badge")).toHaveAttribute("data-status", "APPROVED", {
+    // 5. Organiser page (WITHOUT any manual reload or interaction) receives auto-refresh:
+    // Both the open detail modal badge AND the underlying table row update to APPROVED in lockstep
+    await expect(organiserModal.getByTestId("status-badge")).toHaveAttribute("data-status", "APPROVED", {
       timeout: 12000,
     });
+
+    // Close the modal and confirm underlying table row also reflects APPROVED
+    await organiserModal.getByRole("button", { name: "Close" }).first().click();
+    await expect(organiserModal).not.toBeVisible();
+    await expect(organiserRow.getByTestId("status-badge")).toHaveAttribute("data-status", "APPROVED");
 
     await organiserContext.close();
     await coordinatorContext.close();
