@@ -410,8 +410,32 @@ describe("User Story 15 — Save an event request as draft", () => {
       expect.objectContaining({
         data: expect.objectContaining({
           name: "Annual Tech Summit",
+          description: "A day of talks.",
+          purpose: null,
+          venueRequirements: null,
           status: "DRAFT",
           organiserId: "usr_organiser",
+        }),
+      }),
+    );
+  });
+
+  it("SCRUM-15 [Timezone Persistence]: stores chosen non-Singapore timezone (e.g. America/New_York) in database payload", async () => {
+    mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
+    mockCreate.mockResolvedValue({ id: "evt_draft_ny" });
+
+    const result = await createDraftEvent({
+      name: "NY Global Summit",
+      description: "Remote event in EST",
+      timezone: "America/New_York (EST/EDT)",
+    });
+
+    expect(result.ok).toBe(true);
+    expect(mockCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          name: "NY Global Summit",
+          timezone: "America/New_York (EST/EDT)",
         }),
       }),
     );

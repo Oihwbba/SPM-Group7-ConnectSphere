@@ -67,5 +67,19 @@ describe("lib/datetime helpers — SCRUM-31", () => {
     expect(utcToTimezoneWallTime("2026-07-15T13:00:00.000Z", "America/New_York")).toBe("2026-07-15T09:00");
     expect(utcToTimezoneWallTime("2026-12-15T14:00:00.000Z", "America/New_York")).toBe("2026-12-15T09:00");
   });
+
+  it("handles invalid or edge-case inputs for timezoneWallTimeToUtcIso and utcToTimezoneWallTime", () => {
+    expect(timezoneWallTimeToUtcIso(null)).toBeUndefined();
+    expect(timezoneWallTimeToUtcIso(undefined)).toBeUndefined();
+    expect(timezoneWallTimeToUtcIso("")).toBeUndefined();
+    expect(timezoneWallTimeToUtcIso("invalid")).toBeUndefined();
+    expect(timezoneWallTimeToUtcIso("2026-07-15")).toBeUndefined();
+    expect(timezoneWallTimeToUtcIso("aaaa-bb-ccTdd:ee")).toBeUndefined();
+
+    expect(utcToTimezoneWallTime(null)).toBe("");
+    expect(utcToTimezoneWallTime(undefined)).toBe("");
+    expect(utcToTimezoneWallTime("")).toBe("");
+    expect(utcToTimezoneWallTime("invalid")).toBe("");
+  });
 });
 

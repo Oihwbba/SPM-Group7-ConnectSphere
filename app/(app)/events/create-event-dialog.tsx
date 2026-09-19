@@ -30,10 +30,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  formatDateTime,
-  parseSingaporeDateTime,
-  utcToSgWallTime,
   timezoneWallTimeToUtcIso,
+  utcToTimezoneWallTime,
 } from "@/lib/datetime";
 import {
   createDraftEvent,
@@ -41,20 +39,32 @@ import {
   getFormCatalogues,
 } from "./actions";
 
+function parseIanaZone(timezoneStr: string = "Asia/Singapore (+08:00)"): string {
+  if (timezoneStr.includes("Tokyo")) return "Asia/Tokyo";
+  if (timezoneStr.includes("London")) return "Europe/London";
+  if (timezoneStr.includes("New_York")) return "America/New_York";
+  if (timezoneStr.includes("UTC")) return "UTC";
+  return "Asia/Singapore";
+}
+
 /**
  * A datetime-local value ("2026-09-20T10:00") carries no timezone offset.
  * Converts local wall-time to UTC ISO instant ("...Z") according to selected timezone.
  */
 function toUtcIso(localValue: string, timezoneStr: string = "Asia/Singapore (+08:00)"): string | undefined {
   if (!localValue) return undefined;
-  let ianaZone = "Asia/Singapore";
-  if (timezoneStr.includes("Tokyo")) ianaZone = "Asia/Tokyo";
-  else if (timezoneStr.includes("London")) ianaZone = "Europe/London";
-  else if (timezoneStr.includes("New_York")) ianaZone = "America/New_York";
-  else if (timezoneStr.includes("UTC")) ianaZone = "UTC";
-
-  return timezoneWallTimeToUtcIso(localValue, ianaZone);
+  return timezoneWallTimeToUtcIso(localValue, parseIanaZone(timezoneStr));
 }
+
+const COMMON_FACILITIES = [
+  "AV System",
+  "Projector",
+  "Microphones",
+  "Stage",
+  "Whiteboard",
+  "Wheelchair Access",
+  "Wi-Fi",
+];
 
 interface FormState {
   name: string;
@@ -129,29 +139,30 @@ interface CreateEventDialogProps {
   trigger?: React.ReactNode;
 }
 
-/** Helper to format Date or ISO string into Singapore wall-time datetime-local format (YYYY-MM-DDTHH:mm) */
+/** Helper to format Date or ISO string into wall-time datetime-local format in selected timezone */
 function toDatetimeInputString(
   dateVal: Date | string | null | undefined,
+  timezoneStr: string = "Asia/Singapore (+08:00)",
 ): string {
-  return utcToSgWallTime(dateVal);
+  return utcToTimezoneWallTime(dateVal, parseIanaZone(timezoneStr));
 }
 
-/** Helper to format a naive Singapore wall-time string (YYYY-MM-DDTHH:mm) for display */
+/** Helper to format a naive wall-time string (YYYY-MM-DDTHH:mm) for display */
 function formatWallDateTime(val: string | null | undefined): string {
   if (!val) return "";
-  const d = parseSingaporeDateTime(val);
-  return d ? formatDateTime(d) : val;
+  return val.replace("T", " ");
 }
 
 function getInitialFormData(draftEvent?: DraftEventData | null): FormState {
   if (!draftEvent) return initialFormState;
+  const timezone = draftEvent.timezone || "Asia/Singapore (+08:00)";
   return {
     name: draftEvent.name || "",
     purpose: draftEvent.purpose || "",
     description: draftEvent.description || "",
-    startAt: toDatetimeInputString(draftEvent.startAt),
-    endAt: toDatetimeInputString(draftEvent.endAt),
-    timezone: draftEvent.timezone || "Asia/Singapore (+08:00)",
+    startAt: toDatetimeInputString(draftEvent.startAt, timezone),
+    endAt: toDatetimeInputString(draftEvent.endAt, timezone),
+    timezone,
     expectedAttendance:
       draftEvent.expectedAttendance !== null &&
       draftEvent.expectedAttendance !== undefined
@@ -277,15 +288,15 @@ export function CreateEventDialog({
 
     if (currentStep === 2) {
       if (formData.startAt) {
-        const startDate = parseSingaporeDateTime(formData.startAt);
-        if (startDate && startDate < new Date()) {
+        const startIso = toUtcIso(formData.startAt, formData.timezone);
+        if (startIso && new Date(startIso) < new Date()) {
           errors.startAt = ["Proposed date cannot be in the past."];
         }
       }
       if (formData.startAt && formData.endAt) {
-        const startDate = parseSingaporeDateTime(formData.startAt);
-        const endDate = parseSingaporeDateTime(formData.endAt);
-        if (startDate && endDate && endDate <= startDate) {
+        const startIso = toUtcIso(formData.startAt, formData.timezone);
+        const endIso = toUtcIso(formData.endAt, formData.timezone);
+        if (startIso && endIso && new Date(endIso) <= new Date(startIso)) {
           errors.endAt = [
             "Proposed end date and time must be strictly after the start date and time.",
           ];
@@ -699,12 +710,37 @@ export function CreateEventDialog({
                         )
                       }
                     >
-                      {v.name} (Cap: {v.capacity})
                     </span>
                   ))}
                 </div>
               </div>
             )}
+
+            <div className="space-y-2">
+              <Label>Required Facilities</Label>
+              <div className="flex flex-wrap gap-2">
+                {COMMON_FACILITIES.map((facility) => {
+                  const selected = formData.requiredFacilities.includes(facility);
+                  return (
+                    <Button
+                      key={facility}
+                      type="button"
+                      variant={selected ? "default" : "outline"}
+                      size="sm"
+                      className="h-7 text-xs"
+                      onClick={() => {
+                        const next = selected
+                          ? formData.requiredFacilities.filter((f) => f !== facility)
+                          : [...formData.requiredFacilities, facility];
+                        updateField("requiredFacilities", next);
+                      }}
+                    >
+                      {facility}
+                    </Button>
+                  );
+                })}
+              </div>
+            </div>
 
             <div className="space-y-2">
               <Label htmlFor="venueRequirements">Venue Requirements *</Label>

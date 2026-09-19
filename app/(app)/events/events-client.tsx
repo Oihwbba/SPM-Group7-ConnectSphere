@@ -327,10 +327,20 @@ export function EventsClient({
               <TableHeader>
                 <TableRow>
                   <TableHead
-                    className="cursor-pointer select-none transition-colors hover:bg-muted/50 hover:text-foreground"
-                    onClick={() => toggleSort("name")}
+                    aria-sort={
+                      sortField === "name"
+                        ? sortOrder === "asc"
+                          ? "ascending"
+                          : "descending"
+                        : "none"
+                    }
                   >
-                    <div className="flex items-center gap-1.5 font-semibold">
+                    <button
+                      type="button"
+                      onClick={() => toggleSort("name")}
+                      aria-label="Sort by Name"
+                      className="flex items-center gap-1.5 font-semibold focus:outline-none focus:ring-1 focus:ring-ring rounded px-1 py-0.5 hover:bg-muted/50 transition-colors"
+                    >
                       <span>Name</span>
                       {sortField === "name" ? (
                         sortOrder === "asc" ? (
@@ -341,13 +351,23 @@ export function EventsClient({
                       ) : (
                         <ArrowUpDown className="h-3.5 w-3.5 opacity-40 hover:opacity-100" />
                       )}
-                    </div>
+                    </button>
                   </TableHead>
                   <TableHead
-                    className="cursor-pointer select-none transition-colors hover:bg-muted/50 hover:text-foreground"
-                    onClick={() => toggleSort("status")}
+                    aria-sort={
+                      sortField === "status"
+                        ? sortOrder === "asc"
+                          ? "ascending"
+                          : "descending"
+                        : "none"
+                    }
                   >
-                    <div className="flex items-center gap-1.5 font-semibold">
+                    <button
+                      type="button"
+                      onClick={() => toggleSort("status")}
+                      aria-label="Sort by Status"
+                      className="flex items-center gap-1.5 font-semibold focus:outline-none focus:ring-1 focus:ring-ring rounded px-1 py-0.5 hover:bg-muted/50 transition-colors"
+                    >
                       <span>Status</span>
                       {sortField === "status" ? (
                         sortOrder === "asc" ? (
@@ -358,13 +378,23 @@ export function EventsClient({
                       ) : (
                         <ArrowUpDown className="h-3.5 w-3.5 opacity-40 hover:opacity-100" />
                       )}
-                    </div>
+                    </button>
                   </TableHead>
                   <TableHead
-                    className="cursor-pointer select-none transition-colors hover:bg-muted/50 hover:text-foreground"
-                    onClick={() => toggleSort("startAt")}
+                    aria-sort={
+                      sortField === "startAt"
+                        ? sortOrder === "asc"
+                          ? "ascending"
+                          : "descending"
+                        : "none"
+                    }
                   >
-                    <div className="flex items-center gap-1.5 font-semibold">
+                    <button
+                      type="button"
+                      onClick={() => toggleSort("startAt")}
+                      aria-label="Sort by Starts"
+                      className="flex items-center gap-1.5 font-semibold focus:outline-none focus:ring-1 focus:ring-ring rounded px-1 py-0.5 hover:bg-muted/50 transition-colors"
+                    >
                       <span>Starts</span>
                       {sortField === "startAt" ? (
                         sortOrder === "asc" ? (
@@ -375,13 +405,23 @@ export function EventsClient({
                       ) : (
                         <ArrowUpDown className="h-3.5 w-3.5 opacity-40 hover:opacity-100" />
                       )}
-                    </div>
+                    </button>
                   </TableHead>
                   <TableHead
-                    className="cursor-pointer select-none transition-colors hover:bg-muted/50 hover:text-foreground"
-                    onClick={() => toggleSort("updatedAt")}
+                    aria-sort={
+                      sortField === "updatedAt"
+                        ? sortOrder === "asc"
+                          ? "ascending"
+                          : "descending"
+                        : "none"
+                    }
                   >
-                    <div className="flex items-center gap-1.5 font-semibold">
+                    <button
+                      type="button"
+                      onClick={() => toggleSort("updatedAt")}
+                      aria-label="Sort by Updated"
+                      className="flex items-center gap-1.5 font-semibold focus:outline-none focus:ring-1 focus:ring-ring rounded px-1 py-0.5 hover:bg-muted/50 transition-colors"
+                    >
                       <span>Updated</span>
                       {sortField === "updatedAt" ? (
                         sortOrder === "asc" ? (
@@ -392,7 +432,7 @@ export function EventsClient({
                       ) : (
                         <ArrowUpDown className="h-3.5 w-3.5 opacity-40 hover:opacity-100" />
                       )}
-                    </div>
+                    </button>
                   </TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -444,7 +484,7 @@ export function EventsClient({
                         {event.startAt ? formatDateTime(event.startAt) : "—"}
                       </TableCell>
                       <TableCell className="text-muted-foreground">
-                        {formatDate(event.createdAt)}
+                        {formatDate(event.updatedAt || event.createdAt)}
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1.5">

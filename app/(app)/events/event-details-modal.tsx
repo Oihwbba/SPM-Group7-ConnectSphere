@@ -124,7 +124,7 @@ export function EventDetailsModal({
                   Event Timezone:
                 </span>
                 <p className="mt-0.5 text-foreground">
-                  {(event as { timezone?: string | null }).timezone || "Asia/Singapore (+08:00)"}
+                  {event.timezone || "Asia/Singapore (+08:00)"}
                 </p>
               </div>
               <div>
