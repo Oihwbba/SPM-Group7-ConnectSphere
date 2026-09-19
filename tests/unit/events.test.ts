@@ -394,7 +394,6 @@ describe("User Story 13 — Event Request Creation", () => {
 describe("User Story 15 — Save an event request as draft", () => {
   const futureStart = new Date(Date.now() + 86400000).toISOString();
   const futureEnd = new Date(Date.now() + 86400000 + 7200000).toISOString();
-  const pastDate = new Date(Date.now() - 86400000).toISOString();
 
   it("SCRUM-15 [AC1 - Happy Path]: allows saving a draft with mandatory submission fields left empty", async () => {
     mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));

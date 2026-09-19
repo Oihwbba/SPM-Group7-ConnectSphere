@@ -32,7 +32,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   formatDateTime,
   parseSingaporeDateTime,
-  sgWallTimeToUtcIso,
   utcToSgWallTime,
 } from "@/lib/datetime";
 import {
