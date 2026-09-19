@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 import { prisma } from "@/lib/db";
 
 /**
@@ -442,5 +442,125 @@ test.describe("User Story 23 & 24 — Event Status View & Consistency Journey", 
     const detailModal = page.getByRole("dialog");
     await expect(detailModal).toBeVisible();
     await expect(detailModal.getByTestId("status-badge")).toHaveAttribute("data-status", "APPROVED");
+  });
+});
+
+/**
+ * SCRUM-19 — the user-visible halves of "reject with a reason" and "amend and
+ * resubmit". The event is created straight in the database so this journey
+ * does not depend on (or disturb) the seeded events the tests above reset.
+ */
+test.describe("SCRUM-19 — Reject with a reason, then amend and resubmit", () => {
+  test.skip(!usesLocalDatabase, "writes its own event; local database only");
+
+  let eventId: string;
+  let eventName: string;
+
+  async function signIn(page: Page, email: string) {
+    await page.context().clearCookies();
+    await page.goto("/login");
+    await page.getByLabel("Email", { exact: true }).fill(email);
+    await page.getByLabel("Password", { exact: true }).fill("Password123!");
+    await page.getByRole("button", { name: "Sign in" }).click();
+    await page.waitForURL("**/events");
+  }
+
+  test.beforeEach(async () => {
+    eventName = `SCRUM-19 Reject And Amend ${Date.now()}`;
+    const event = await prisma.event.create({
+      data: {
+        name: eventName,
+        purpose: "Reject and amend journey",
+        description: "Owned by the SCRUM-19 e2e spec.",
+        status: "UNDER_REVIEW",
+        organiserId: "usr_organiser",
+        coordinatorId: "usr_coordinator",
+        startAt: new Date("2031-06-01T02:00:00Z"),
+        endAt: new Date("2031-06-01T10:00:00Z"),
+        expectedAttendance: 60,
+        venueRequirements: "Any room",
+        requiredFacilities: [],
+        accessibilityNeeds: "None",
+        preferredLayout: "Classroom",
+        equipmentRequirements: "None",
+        registrationNotes: "None",
+        submittedAt: new Date(),
+      },
+      select: { id: true },
+    });
+    eventId = event.id;
+  });
+
+  test.afterEach(async () => {
+    await prisma.notification.deleteMany({ where: { eventId } });
+    await prisma.auditLog.deleteMany({ where: { entityId: eventId } });
+    await prisma.event.deleteMany({ where: { id: eventId } });
+  });
+
+  test("coordinator rejects with a reason, organiser sees it, amends and resubmits it back into review", async ({
+    page,
+  }) => {
+    const reason = "Venue is unavailable on that date — please propose another.";
+
+    // --- Coordinator rejects, and a blank reason is refused ---------------
+    await signIn(page, "coordinator@test.local");
+    const coordinatorRow = page.getByRole("row", { name: new RegExp(eventName) });
+    await coordinatorRow.getByRole("button", { name: /Reject/i }).click();
+
+    const rejectDialog = page.getByRole("dialog", { name: /Reject event request/i });
+    const rejectButton = rejectDialog.getByRole("button", { name: "Reject request" });
+    await expect(rejectButton).toBeDisabled();
+    await rejectDialog.getByLabel("Rejection reason").fill("   ");
+    await expect(rejectButton).toBeDisabled();
+
+    await rejectDialog.getByLabel("Rejection reason").fill(reason);
+    await expect(rejectButton).toBeEnabled();
+    await rejectButton.click();
+    await expect(coordinatorRow.getByTestId("status-badge")).toHaveAttribute(
+      "data-status",
+      "REJECTED",
+    );
+
+    // --- Organiser sees the REJECTED badge and the reason -----------------
+    await signIn(page, "organiser@test.local");
+    const organiserRow = page.getByRole("row", { name: new RegExp(eventName) });
+    await expect(organiserRow.getByTestId("status-badge")).toHaveAttribute(
+      "data-status",
+      "REJECTED",
+    );
+    await organiserRow.getByTestId("view-details-button").click();
+    const details = page.getByRole("dialog");
+    await expect(details.getByText("Rejection reason")).toBeVisible();
+    await expect(details.getByText(reason)).toBeVisible();
+    await page.keyboard.press("Escape");
+
+    // --- Organiser amends and resubmits -----------------------------------
+    await organiserRow.getByTestId("amend-rejected-button").click();
+    await expect(
+      page.getByRole("heading", { name: /Amend Rejected Event Request/i }),
+    ).toBeVisible();
+
+    // The form comes back pre-filled from the rejected request; amend one
+    // field (venue requirements, step 3), then walk on to the review step.
+    const next = page.getByRole("button", { name: "Next", exact: true });
+    await next.click();
+    await next.click();
+    await page.getByLabel("Venue Requirements *").fill("Any room — a different date is fine.");
+    for (let i = 0; i < 3; i++) {
+      await next.click();
+    }
+    await expect(page.getByRole("heading", { name: /Review Entered Details/i })).toBeVisible();
+    await page.getByRole("button", { name: /Submit Request for Review/i }).click();
+    await expect(
+      page.getByText("Event request submitted for review successfully!"),
+    ).toBeVisible();
+
+    // It is back in review, and the old decision no longer shows.
+    await expect(organiserRow.getByTestId("status-badge")).toHaveAttribute(
+      "data-status",
+      /^(SUBMITTED|UNDER_REVIEW)$/,
+    );
+    await organiserRow.getByTestId("view-details-button").click();
+    await expect(page.getByRole("dialog").getByText("Rejection reason")).toHaveCount(0);
   });
 });
