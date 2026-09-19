@@ -12,6 +12,7 @@ import type { Session } from "next-auth";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { createReservation } from "@/app/(app)/equipment/actions";
+import { transitionEventStatus } from "@/app/(app)/events/actions";
 
 // The "at the same moment" cases (SCRUM-31/53/74). These are the acceptance
 // criteria the database constraints and row locks exist to satisfy, so each one
@@ -66,7 +67,6 @@ describe.skipIf(!usesLocalDatabase)("concurrency — equipment pool (SCRUM-31)",
   afterAll(async () => {
     await prisma.reservation.deleteMany({ where: { equipmentId } });
     await prisma.equipment.delete({ where: { id: equipmentId } });
-    await prisma.$disconnect();
   });
 
   it("does not over-allocate equipment when two staff reserve the last unit (SCRUM-31)", async () => {
@@ -123,3 +123,45 @@ describe.skipIf(!usesLocalDatabase)("concurrency — equipment pool (SCRUM-31)",
     expect(dawn.ok).toBe(true);
   });
 });
+
+describe.skipIf(!usesLocalDatabase)("concurrency — status transitions (SCRUM-24)", () => {
+  let eventId: string | undefined;
+
+  beforeAll(async () => {
+    (auth as unknown as Mock).mockResolvedValue(TECH_SUPPORT);
+    const event = await prisma.event.create({
+      data: {
+        name: `SCRUM-24 Concurrency Event ${Date.now()}`,
+        status: "SUBMITTED",
+        organiserId: "usr_organiser",
+      },
+      select: { id: true },
+    });
+    eventId = event.id;
+  });
+
+  afterAll(async () => {
+    if (eventId) {
+      await prisma.auditLog.deleteMany({ where: { entityId: eventId } });
+      await prisma.event.delete({ where: { id: eventId } });
+    }
+  });
+
+  it("SCRUM-24: the loser of two simultaneous decisions is told to refresh, and no audit entry is written", async () => {
+    (auth as unknown as Mock).mockResolvedValue({
+      user: { id: "usr_coordinator", role: "COORDINATOR", name: "Cody", email: "coordinator@test.local" },
+      expires: "2999-01-01T00:00:00.000Z",
+    });
+
+    const results = await Promise.all([
+      transitionEventStatus({ eventId, nextStatus: "APPROVED" }),
+      transitionEventStatus({ eventId, nextStatus: "REJECTED", decisionReason: "Too large" }),
+    ]);
+
+    expect(results.filter((r) => r.ok)).toHaveLength(1);
+    expect(results.filter((r) => !r.ok)).toHaveLength(1);
+
+    expect(await prisma.auditLog.count({ where: { entityId: eventId } })).toBe(1);
+  });
+});
+

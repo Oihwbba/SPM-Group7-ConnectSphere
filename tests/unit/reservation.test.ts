@@ -6,6 +6,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import {
   createReservation,
+  getAllEquipmentAvailability,
   getEquipmentAvailability,
 } from "@/app/(app)/equipment/actions";
 
@@ -13,9 +14,9 @@ import {
 // simultaneous last-unit case runs against real Postgres in concurrency.test.ts.
 const tx = vi.hoisted(() => ({
   event: { findFirst: vi.fn() },
-  equipment: { findFirst: vi.fn() },
-  reservation: { aggregate: vi.fn(), create: vi.fn() },
-  equipmentUnavailability: { aggregate: vi.fn() },
+  equipment: { findFirst: vi.fn(), findMany: vi.fn() },
+  reservation: { aggregate: vi.fn(), create: vi.fn(), groupBy: vi.fn() },
+  equipmentUnavailability: { aggregate: vi.fn(), groupBy: vi.fn() },
   $queryRaw: vi.fn(),
 }));
 
@@ -190,3 +191,85 @@ describe("getEquipmentAvailability — SCRUM-31", () => {
     expect(tx.equipment.findFirst).not.toHaveBeenCalled();
   });
 });
+
+describe("getAllEquipmentAvailability — SCRUM-31", () => {
+  it("calculates live period availability across all equipment types", async () => {
+    mockAuth.mockResolvedValue(sessionFor("TECH_SUPPORT", "usr_tech"));
+    tx.equipment.findMany.mockResolvedValue([
+      { id: "eq1", type: "Lectern", totalQuantity: 10 },
+      { id: "eq2", type: "Projector", totalQuantity: 5 },
+    ]);
+    tx.reservation.groupBy.mockResolvedValue([
+      { equipmentId: "eq1", _sum: { quantity: 2 } },
+    ]);
+    tx.equipmentUnavailability.groupBy.mockResolvedValue([
+      { equipmentId: "eq1", _sum: { quantity: 1 } },
+    ]);
+
+    const result = await getAllEquipmentAvailability({
+      startAt: START,
+      endAt: END,
+    });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.data.eq1).toBeDefined();
+      expect(result.data.eq1.available).toBe(7);
+      expect(result.data.eq1.total).toBe(10);
+      expect(result.data.eq2).toBeDefined();
+      expect(result.data.eq2.available).toBe(5);
+      expect(result.data.eq2.total).toBe(5);
+    }
+  });
+
+  it("refuses a period whose end is not after its start", async () => {
+    mockAuth.mockResolvedValue(sessionFor("TECH_SUPPORT", "usr_tech"));
+
+    const result = await getAllEquipmentAvailability({
+      startAt: START,
+      endAt: START,
+    });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toMatch(/valid reservation period/i);
+    expect(tx.equipment.findMany).not.toHaveBeenCalled();
+  });
+
+  it("refuses a role without equipment:read", async () => {
+    mockAuth.mockResolvedValue(sessionFor("ATTENDEE", "usr_attendee"));
+
+    const result = await getAllEquipmentAvailability({
+      startAt: START,
+      endAt: END,
+    });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toMatch(/permission/i);
+    expect(tx.equipment.findMany).not.toHaveBeenCalled();
+  });
+
+  it("refuses non-date strings for startAt and endAt with explicit field errors", async () => {
+    mockAuth.mockResolvedValue(sessionFor("TECH_SUPPORT", "usr_tech"));
+
+    const result = await getAllEquipmentAvailability({
+      startAt: "invalid-date",
+      endAt: "invalid-date",
+    });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok && result.fieldErrors) {
+      expect(result.fieldErrors.startAt).toContain("Invalid start time.");
+      expect(result.fieldErrors.endAt).toContain("Invalid end time.");
+    }
+  });
+
+  it("rethrows non-PermissionError exceptions", async () => {
+    mockAuth.mockResolvedValue(sessionFor("TECH_SUPPORT", "usr_tech"));
+    tx.equipment.findMany.mockRejectedValue(new Error("db error"));
+
+    await expect(
+      getAllEquipmentAvailability({ startAt: START, endAt: END }),
+    ).rejects.toThrow("db error");
+  });
+});
+

@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { prisma } from "@/lib/db";
 
 /**
  * End-to-End (E2E) Test Suite for User Story 13: Create an Event Request.
@@ -328,5 +329,111 @@ test.describe("User Story 84 — Organiser Views Their Own Event Requests Journe
   });
 });
 
+const usesLocalDatabase = /@(localhost|127\.0\.0\.1)[:/]/.test(
+  process.env.DATABASE_URL ?? "",
+);
 
+test.describe("User Story 23 & 24 — Event Status View & Consistency Journey", () => {
+  test.beforeEach(async () => {
+    if (!usesLocalDatabase) return;
+    // Reset both events used by tests so CI retries stay green
+    await prisma.event.updateMany({
+      where: { id: "evt_submitted" },
+      data: {
+        status: "SUBMITTED",
+        decisionReason: null,
+        decidedAt: null,
+        decidedById: null,
+      },
+    });
+    await prisma.event.updateMany({
+      where: { id: "evt_under_review" },
+      data: {
+        status: "UNDER_REVIEW",
+        decisionReason: null,
+        decidedAt: null,
+        decidedById: null,
+      },
+    });
+  });
 
+  test("coordinator views assigned event status and status remains consistent across views (SCRUM-23 & SCRUM-24)", async ({
+    page,
+  }) => {
+    // 1. Sign in as Event Coordinator
+    await page.goto("/login");
+    await page.getByLabel("Email", { exact: true }).fill("coordinator@test.local");
+    await page.getByLabel("Password", { exact: true }).fill("Password123!");
+    await page.getByRole("button", { name: "Sign in" }).click();
+
+    // 2. Navigate to Coordinator Event Requests dashboard
+    await page.waitForURL("**/events");
+    await expect(page.getByRole("heading", { name: "Event Requests" })).toBeVisible();
+
+    // 3. Verify status badge consistency on list view and detail modal for an assigned event
+    const underReviewRow = page.getByRole("row", { name: /Under Review — Career Fair/i });
+    await expect(underReviewRow).toBeVisible();
+    await expect(underReviewRow.getByTestId("status-badge")).toHaveAttribute("data-status", "UNDER_REVIEW");
+
+    // Open detail modal and verify same status badge
+    await underReviewRow.getByRole("button", { name: /View Details|Details/i }).click();
+    const detailModal = page.getByRole("dialog");
+    await expect(detailModal).toBeVisible();
+    await expect(detailModal.getByTestId("status-badge")).toHaveAttribute("data-status", "UNDER_REVIEW");
+    await page.keyboard.press("Escape");
+
+    // 4. Test status transition & decision validation: Reject a submitted event request
+    const submittedRow = page.getByRole("row", { name: /Submitted — Alumni Homecoming/i });
+    await expect(submittedRow).toBeVisible();
+    await expect(submittedRow.getByTestId("status-badge")).toHaveAttribute("data-status", "SUBMITTED");
+
+    // Click Reject button
+    await submittedRow.getByRole("button", { name: /Reject/i }).click();
+    const rejectModal = page.getByRole("dialog", { name: /Reject event request/i });
+    await expect(rejectModal).toBeVisible();
+
+    // Blank reason must keep submit button disabled (refused path)
+    const submitRejectBtn = rejectModal.getByRole("button", { name: "Reject request" });
+    await expect(submitRejectBtn).toBeDisabled();
+
+    // Provide clear rejection reason and submit decision
+    await page.getByPlaceholder("Reason for rejection").fill("Insufficient venue capacity for requested date");
+    await expect(submitRejectBtn).toBeEnabled();
+    await submitRejectBtn.click();
+
+    // 5. Verify updated status is consistent across list and detail views
+    await expect(submittedRow.getByTestId("status-badge")).toHaveAttribute("data-status", "REJECTED");
+    await submittedRow.getByRole("button", { name: /View Details|Details/i }).click();
+    await expect(detailModal).toBeVisible();
+    await expect(detailModal.getByTestId("status-badge")).toHaveAttribute("data-status", "REJECTED");
+  });
+
+  test("coordinator approves an under-review event and status flips to APPROVED (SCRUM-24)", async ({
+    page,
+  }) => {
+    // 1. Sign in as Event Coordinator
+    await page.goto("/login");
+    await page.getByLabel("Email", { exact: true }).fill("coordinator@test.local");
+    await page.getByLabel("Password", { exact: true }).fill("Password123!");
+    await page.getByRole("button", { name: "Sign in" }).click();
+
+    // 2. Navigate to Coordinator Event Requests dashboard
+    await page.waitForURL("**/events");
+    await expect(page.getByRole("heading", { name: "Event Requests" })).toBeVisible();
+
+    // 3. Locate the Under Review event and verify its current status
+    const underReviewRow = page.getByRole("row", { name: /Under Review — Career Fair/i });
+    await expect(underReviewRow).toBeVisible();
+    await expect(underReviewRow.getByTestId("status-badge")).toHaveAttribute("data-status", "UNDER_REVIEW");
+
+    // 4. Click Approve and verify the badge flips in the row
+    await underReviewRow.getByRole("button", { name: /Approve/i }).click();
+    await expect(underReviewRow.getByTestId("status-badge")).toHaveAttribute("data-status", "APPROVED");
+
+    // 5. Open detail modal and verify the same APPROVED status
+    await underReviewRow.getByRole("button", { name: /View Details|Details/i }).click();
+    const detailModal = page.getByRole("dialog");
+    await expect(detailModal).toBeVisible();
+    await expect(detailModal.getByTestId("status-badge")).toHaveAttribute("data-status", "APPROVED");
+  });
+});
