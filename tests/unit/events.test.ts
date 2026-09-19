@@ -43,6 +43,7 @@ const mockTransaction = prisma.$transaction as unknown as Mock;
 // auto-assignment is a no-op here; that logic has its own coverage in
 // tests/unit/coordinator-assignment.test.ts and
 // tests/unit/event-auto-assignment.test.ts.
+const mockTxExecuteRaw = vi.fn();
 const mockTxUserFindMany = vi.fn();
 const mockTxNotificationCreateMany = vi.fn();
 const mockTxAuditLogCreate = vi.fn();
@@ -64,6 +65,7 @@ beforeEach(() => {
   mockTransaction.mockImplementation((cb: (tx: unknown) => unknown) =>
     cb({
       event: { create: mockCreate, findFirst: mockFindFirst, update: mockUpdate },
+      $executeRaw: mockTxExecuteRaw,
       user: { findMany: mockTxUserFindMany },
       notification: { createMany: mockTxNotificationCreateMany },
       auditLog: { create: mockTxAuditLogCreate },
@@ -304,6 +306,64 @@ describe("User Story 13 — Event Request Creation", () => {
         expect(result.fieldErrors?.registrationNotes).toBeTruthy();
       }
       expect(mockCreate).not.toHaveBeenCalled();
+    });
+
+    // SCRUM-14 AC: "no second request is created… no additional notification"
+    // on a repeat submission. Submitting by id only matches an event that is
+    // still DRAFT/REJECTED and owned by the caller, so every other case
+    // (someone else's event, a missing id, an already-submitted event) lands
+    // on the same refusal.
+    it("SCRUM-14 AC: submitting an id that is not the caller's DRAFT/REJECTED event is refused and writes nothing", async () => {
+      mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
+      mockFindFirst.mockResolvedValue(null);
+
+      const result = await submitEventRequest({
+        ...validSubmissionInput,
+        id: "evt_already_submitted",
+      });
+
+      expect(result).toEqual({
+        ok: false,
+        error: "Draft or rejected event not found or cannot be submitted.",
+      });
+      expect(mockFindFirst).toHaveBeenCalledWith({
+        where: {
+          id: "evt_already_submitted",
+          organiserId: "usr_organiser",
+          status: { in: ["DRAFT", "REJECTED"] },
+        },
+      });
+      expect(mockUpdate).not.toHaveBeenCalled();
+      expect(mockCreate).not.toHaveBeenCalled();
+      expect(mockTxNotificationCreateMany).not.toHaveBeenCalled();
+      expect(mockTxAuditLogCreate).not.toHaveBeenCalled();
+    });
+
+    it("SCRUM-21: resubmitting a rejected event records the previous coordinator as the audit oldValue", async () => {
+      mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
+      mockFindFirst.mockResolvedValue({
+        id: "evt_rejected",
+        organiserId: "usr_organiser",
+        status: "REJECTED",
+        coordinatorId: "usr_old_coordinator",
+      });
+      mockTxUserFindMany.mockResolvedValue([
+        { id: "usr_new_coordinator", _count: { coordinatedEvents: 0 } },
+      ]);
+
+      const result = await submitEventRequest({
+        ...validSubmissionInput,
+        id: "evt_rejected",
+      });
+
+      expect(result.ok).toBe(true);
+      expect(mockTxAuditLogCreate).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          action: "ASSIGNED",
+          oldValue: "usr_old_coordinator",
+          newValue: "usr_new_coordinator",
+        }),
+      });
     });
 
     it("Security Gate: Denies non-organiser user role (e.g. ATTENDEE)", async () => {

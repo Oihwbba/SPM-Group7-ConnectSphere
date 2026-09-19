@@ -31,6 +31,7 @@ const tx = vi.hoisted(() => ({
     create: vi.fn(),
     updateMany: vi.fn(),
   },
+  $executeRaw: vi.fn(),
   user: { findMany: vi.fn() },
   notification: { createMany: vi.fn() },
   auditLog: { create: vi.fn() },

@@ -180,13 +180,15 @@ export async function submitEventRequest(
       specialRequests,
     } = parsed.data;
 
-        let eventId = id;
+    let eventId = id;
+    // A resubmitted (previously rejected) event already has a coordinator;
+    // the ASSIGNED audit row below records who held it before.
+    let previousCoordinatorId: string | null = null;
 
     // SCRUM-14's write plus SCRUM-20's auto-assignment happen in ONE
-    // transaction: assignment reads every coordinator's current load, so it
-    // must run after this write is visible and before another submission's
-    // read, or two events submitted at the same instant could both compute
-    // the same "least loaded" coordinator and both land on them.
+    // transaction: pickCoordinator takes an advisory lock that is held until
+    // this transaction commits, so a concurrent submission waits and then
+    // counts this event's assignment when it computes coordinator load.
     await prisma.$transaction(async (tx) => {
       if (id) {
         // Submit an existing draft event (US14/US15 transition from DRAFT -> SUBMITTED)
@@ -203,6 +205,7 @@ export async function submitEventRequest(
             "Draft or rejected event not found or cannot be submitted.",
           );
         }
+        previousCoordinatorId = existing.coordinatorId;
 
         await tx.event.update({
           where: { id },
@@ -290,7 +293,7 @@ export async function submitEventRequest(
             action: "ASSIGNED",
             actorId: null, // system-performed, not a specific user's action
             fieldName: "coordinatorId",
-            oldValue: null,
+            oldValue: previousCoordinatorId,
             newValue: coordinatorId,
             summary: "Auto-assigned on submission (SCRUM-20)",
           },
