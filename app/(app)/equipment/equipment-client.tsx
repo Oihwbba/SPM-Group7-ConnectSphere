@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useTransition, useSyncExternalStore } from "react";
 import { toast } from "sonner";
 import {
   Calendar,
@@ -156,6 +156,7 @@ export function EquipmentClient({
       : null;
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[] | undefined>>({});
   const [pending, startTransition] = useTransition();
+  const requestIdRef = useRef(0);
 
   const update = (field: keyof typeof form, value: string) => {
     const nextForm = { ...form, [field]: value };
@@ -164,6 +165,7 @@ export function EquipmentClient({
       setFieldErrors((current) => ({ ...current, [field]: undefined }));
     }
     if (field === "startAt" || field === "endAt") {
+      requestIdRef.current += 1;
       setAllAvailability(null);
       setAvailabilityError(null);
     }
@@ -224,11 +226,13 @@ export function EquipmentClient({
         endAt: undefined,
       }));
 
+      const reqId = ++requestIdRef.current;
+
       startTransition(async () => {
         try {
           const res = await getAllEquipmentAvailability(parsed.data);
 
-          if (!isMounted) return;
+          if (!isMounted || reqId !== requestIdRef.current) return;
 
           if (res.ok) {
             setAllAvailability(res.data);
@@ -246,7 +250,7 @@ export function EquipmentClient({
             );
           }
         } catch {
-          if (!isMounted) return;
+          if (!isMounted || reqId !== requestIdRef.current) return;
           setAllAvailability(null);
           setAvailabilityError(
             "Couldn't calculate availability — check the period and try again",
@@ -316,10 +320,12 @@ export function EquipmentClient({
 
         // Refresh live availability map (shared error handling with the effect)
         try {
+          const refreshReqId = ++requestIdRef.current;
           const allRes = await getAllEquipmentAvailability({
             startAt: toUtcIso(form.startAt),
             endAt: toUtcIso(form.endAt),
           });
+          if (refreshReqId !== requestIdRef.current) return;
           if (allRes.ok) {
             setAllAvailability(allRes.data);
           } else {
@@ -482,7 +488,7 @@ export function EquipmentClient({
                 </Label>
                 <div className="relative flex items-center gap-2">
                   {/* Visual & Interactive Date Box */}
-                  <div className="relative flex-1 flex items-center gap-2 h-10 px-3 rounded-lg border bg-background text-sm shadow-2xs hover:border-primary/50 transition-colors">
+                  <div className="relative flex-1 flex items-center gap-2 h-10 px-3 rounded-lg border bg-background text-sm shadow-2xs hover:border-primary/50 focus-within:border-primary focus-within:ring-2 focus-within:ring-ring transition-colors">
                     <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
                     <span className={`truncate ${startDate ? "text-foreground font-medium" : "text-muted-foreground"}`}>
                       {formatDateDisplay(form.startAt)}
@@ -504,7 +510,7 @@ export function EquipmentClient({
                   </div>
 
                   {/* Visual & Interactive Time Box */}
-                  <div className="relative flex-1 flex items-center justify-between h-10 px-3 rounded-lg border bg-background text-sm shadow-2xs hover:border-primary/50 transition-colors">
+                  <div className="relative flex-1 flex items-center justify-between h-10 px-3 rounded-lg border bg-background text-sm shadow-2xs hover:border-primary/50 focus-within:border-primary focus-within:ring-2 focus-within:ring-ring transition-colors">
                     <div className="flex items-center gap-2 overflow-hidden">
                       <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
                       <span className={`truncate ${startTime ? "text-foreground font-medium" : "text-muted-foreground"}`}>
@@ -546,7 +552,7 @@ export function EquipmentClient({
                 </Label>
                 <div className="relative flex items-center gap-2">
                   {/* Visual & Interactive Date Box */}
-                  <div className="relative flex-1 flex items-center gap-2 h-10 px-3 rounded-lg border bg-background text-sm shadow-2xs hover:border-primary/50 transition-colors">
+                  <div className="relative flex-1 flex items-center gap-2 h-10 px-3 rounded-lg border bg-background text-sm shadow-2xs hover:border-primary/50 focus-within:border-primary focus-within:ring-2 focus-within:ring-ring transition-colors">
                     <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
                     <span className={`truncate ${endDate ? "text-foreground font-medium" : "text-muted-foreground"}`}>
                       {formatDateDisplay(form.endAt)}
@@ -568,7 +574,7 @@ export function EquipmentClient({
                   </div>
 
                   {/* Visual & Interactive Time Box */}
-                  <div className="relative flex-1 flex items-center justify-between h-10 px-3 rounded-lg border bg-background text-sm shadow-2xs hover:border-primary/50 transition-colors">
+                  <div className="relative flex-1 flex items-center justify-between h-10 px-3 rounded-lg border bg-background text-sm shadow-2xs hover:border-primary/50 focus-within:border-primary focus-within:ring-2 focus-within:ring-ring transition-colors">
                     <div className="flex items-center gap-2 overflow-hidden">
                       <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
                       <span className={`truncate ${endTime ? "text-foreground font-medium" : "text-muted-foreground"}`}>
@@ -660,7 +666,6 @@ export function EquipmentClient({
               type="button"
               onClick={reserve}
               disabled={pending}
-              aria-label="Confirm reservation"
               className="h-11 px-6 rounded-lg bg-primary text-primary-foreground font-medium hover:bg-primary/90 flex items-center gap-2 shadow-xs"
             >
               <Calendar className="h-4 w-4" />

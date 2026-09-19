@@ -54,7 +54,7 @@ test.describe("SCRUM-31 — Reserve Equipment for Event", () => {
     ).toContainText(/\d+ unit\(s\) available for this period/);
     await expect(page.locator("span", { hasText: /\d+ of 4 available/ })).toBeVisible();
 
-    await page.getByRole("button", { name: "Confirm reservation" }).click();
+    await page.getByRole("button", { name: /Reserve .* equipment/ }).click();
     await expect(
       page.getByText(/Reservation confirmed\. \d+ unit\(s\) remain available\./),
     ).toBeVisible();
@@ -64,7 +64,11 @@ test.describe("SCRUM-31 — Reserve Equipment for Event", () => {
     await signInAsTechSupport(page);
     await fillReservation(page, "99");
 
-    await page.getByRole("button", { name: "Confirm reservation" }).click();
+    await expect(
+      page.getByRole("status"),
+    ).toContainText(/Requested quantity \(99\) exceeds availability \(\d+ unit\(s\) available for this period\)\./);
+
+    await page.getByRole("button", { name: /Reserve .* equipment/ }).click();
 
     await expect(
       page.getByText(/Only \d+ of 4 unit\(s\) are available for this period — \d+ short\./),
@@ -75,7 +79,7 @@ test.describe("SCRUM-31 — Reserve Equipment for Event", () => {
     await signInAsTechSupport(page);
     await fillReservation(page, "0");
 
-    await page.getByRole("button", { name: "Confirm reservation" }).click();
+    await page.getByRole("button", { name: /Reserve .* equipment/ }).click();
 
     await expect(page.getByText("Please fix the reservation details.")).toBeVisible();
     await expect(page.getByText("Quantity must be greater than zero.")).toBeVisible();
@@ -93,6 +97,18 @@ test.describe("SCRUM-31 — Reserve Equipment for Event", () => {
     ).toBeVisible();
   });
 
+  test("AC: a start time in the past triggers live inline error and prevents reservation", async ({ page }) => {
+    await signInAsTechSupport(page);
+    await page.getByLabel("Start date").fill("2020-01-01");
+    await page.getByLabel("Start time").fill("09:00");
+    await page.getByLabel("End date").fill("2020-01-01");
+    await page.getByLabel("End time").fill("17:00");
+
+    await expect(
+      page.getByText("Start time cannot be in the past.").first(),
+    ).toBeVisible();
+  });
+
   test("AC: incomplete date or time prevents reservation and displays validation error", async ({ page }) => {
     await signInAsTechSupport(page);
     await page
@@ -100,7 +116,7 @@ test.describe("SCRUM-31 — Reserve Equipment for Event", () => {
       .selectOption({ label: "Approved — Research Symposium" });
     await page.getByLabel("Equipment type").selectOption({ value: "eqp_lectern" });
     await page.getByLabel("Start time").fill("09:00");
-    await page.getByRole("button", { name: "Confirm reservation" }).click();
+    await page.getByRole("button", { name: /Reserve .* equipment/ }).click();
 
     await expect(
       page.getByText("Please specify complete start and end dates and times."),
