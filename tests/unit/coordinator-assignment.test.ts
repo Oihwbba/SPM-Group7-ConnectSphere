@@ -5,10 +5,12 @@ import { pickCoordinator } from "@/lib/coordinator-assignment";
 // These tests exercise that function directly, with a mocked "tx" standing in
 // for the Prisma transaction client, so no real database is needed.
 const tx = {
+  $executeRaw: vi.fn(),
   user: { findMany: vi.fn() },
 };
 
 const mockFindMany = tx.user.findMany as unknown as Mock;
+const mockExecuteRaw = tx.$executeRaw as unknown as Mock;
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -56,6 +58,17 @@ describe("pickCoordinator — SCRUM-20 fairness rule", () => {
           }),
         }),
       }),
+    );
+  });
+
+  it("AC: takes the assignment lock BEFORE reading load, so a concurrent submission counts this one's assignment", async () => {
+    mockFindMany.mockResolvedValue([{ id: "coord_1", _count: { coordinatedEvents: 0 } }]);
+
+    await pickCoordinator(tx as never);
+
+    expect(mockExecuteRaw).toHaveBeenCalledTimes(1);
+    expect(mockExecuteRaw.mock.invocationCallOrder[0]).toBeLessThan(
+      mockFindMany.mock.invocationCallOrder[0],
     );
   });
 

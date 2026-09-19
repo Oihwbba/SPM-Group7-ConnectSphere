@@ -253,15 +253,10 @@ describe.skipIf(!usesLocalDatabase)("concurrency — coordinator auto-assignment
       expect(event.status).toBe("UNDER_REVIEW");
     }
 
-    // NOTE: this does not assert the two events landed on DIFFERENT
-    // coordinators. Two submissions at the exact same instant can both read
-    // "0 active events" for the same coordinator before either write commits
-    // (no row lock on User, unlike Equipment/Event in the other concurrency
-    // tests), so both may pick the same one. That is a fairness edge case,
-    // not a correctness violation — the acceptance criterion this test
-    // guards is "at most one coordinator per event", which always holds. If
-    // the team wants strict fairness under concurrency too, pickCoordinator
-    // would need a `SELECT ... FOR UPDATE` on the coordinator row it picks,
-    // same pattern as the Equipment pool lock above.
+    // Fairness under concurrency: pickCoordinator holds an advisory lock
+    // until the assignment commits, so the second submission sees the first's
+    // load. At least two coordinators (the throwaway pair) start at zero
+    // active events, so a fair rule cannot hand both events to one of them.
+    expect(new Set(events.map((e) => e.coordinatorId)).size).toBe(2);
   });
 });

@@ -17,13 +17,18 @@ import type { Prisma, PrismaClient } from "@prisma/client";
  * visible rather than failing silently — the caller is responsible for that
  * part, this function only picks who to assign).
  *
- * Must be called inside the same transaction that writes the assignment, so
- * two events submitted at the same instant don't both compute the load
- * before either write lands and pick the same "least loaded" Coordinator.
+ * Must be called inside the same transaction that writes the assignment, and
+ * that transaction must not commit before the write. Under READ COMMITTED a
+ * transaction alone does not stop two submissions reading the same loads, so
+ * this takes a transaction-scoped advisory lock first: the second submission
+ * waits here until the first commits, then reads loads that include the
+ * first's assignment.
  */
 export async function pickCoordinator(
   tx: Prisma.TransactionClient | PrismaClient,
 ): Promise<string | null> {
+  await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('connectsphere:assign-coordinator'))`;
+
   const coordinators = await tx.user.findMany({
     where: { role: "COORDINATOR" },
     select: {
