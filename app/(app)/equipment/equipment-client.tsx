@@ -16,6 +16,7 @@ import {
   Projector,
   Presentation,
   Layers,
+  Loader2,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -101,20 +102,30 @@ function getDurationDisplay(startAt: string, endAt: string) {
   };
 }
 
-function formatPeriodDisplay(startAt: string, endAt: string): string | null {
+function parseSingaporeDateTime(value: string): Date | null {
+  if (!value || !value.includes("T") || value.startsWith("T")) return null;
+  const [datePart, timePart] = value.split("T");
+  if (!datePart || !timePart) return null;
+  const [y, m, d] = datePart.split("-").map(Number);
+  const [h, min] = timePart.slice(0, 5).split(":").map(Number);
   if (
-    !startAt ||
-    !endAt ||
-    !startAt.includes("T") ||
-    !endAt.includes("T") ||
-    startAt.startsWith("T") ||
-    endAt.startsWith("T")
+    Number.isNaN(y) ||
+    Number.isNaN(m) ||
+    Number.isNaN(d) ||
+    Number.isNaN(h) ||
+    Number.isNaN(min)
   ) {
     return null;
   }
-  const s = new Date(startAt);
-  const e = new Date(endAt);
-  if (Number.isNaN(s.getTime()) || Number.isNaN(e.getTime())) return null;
+  return new Date(Date.UTC(y, m - 1, d, h - 8, min, 0));
+}
+
+function formatPeriodDisplay(startAt: string, endAt: string): string | null {
+  const s = parseSingaporeDateTime(startAt);
+  const e = parseSingaporeDateTime(endAt);
+  if (!s || !e || Number.isNaN(s.getTime()) || Number.isNaN(e.getTime())) {
+    return null;
+  }
 
   return `Availability for ${formatDateTime(s)} → ${formatDateTime(e)}.`;
 }
@@ -668,11 +679,20 @@ export function EquipmentClient({
               disabled={pending}
               className="h-11 px-6 rounded-lg bg-primary text-primary-foreground font-medium hover:bg-primary/90 flex items-center gap-2 shadow-xs"
             >
-              <Calendar className="h-4 w-4" />
-              <span>
-                Reserve {form.quantity && parseInt(form.quantity, 10) > 0 ? form.quantity : 1} equipment
-              </span>
-              <ArrowRight className="h-4 w-4 ml-1" />
+              {pending ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>Reserving equipment...</span>
+                </>
+              ) : (
+                <>
+                  <Calendar className="h-4 w-4" />
+                  <span>
+                    Reserve {form.quantity && parseInt(form.quantity, 10) > 0 ? form.quantity : 1} equipment
+                  </span>
+                  <ArrowRight className="h-4 w-4 ml-1" />
+                </>
+              )}
             </Button>
           </div>
 
@@ -797,9 +817,21 @@ export function EquipmentClient({
                     </div>
 
                     <div className="flex items-center gap-2 text-xs pt-1">
-                      <span className="inline-block h-2 w-2 rounded-full bg-success shrink-0" />
+                      <span
+                        className={`inline-block h-2 w-2 rounded-full shrink-0 ${
+                          liveCount === null
+                            ? "bg-muted-foreground"
+                            : liveCount === 0
+                            ? "bg-destructive"
+                            : "bg-success"
+                        }`}
+                      />
                       {liveCount !== null ? (
-                        <span className="font-semibold text-foreground">
+                        <span
+                          className={`font-semibold ${
+                            liveCount === 0 ? "text-destructive" : "text-foreground"
+                          }`}
+                        >
                           {liveCount} of {item.totalQuantity} available
                         </span>
                       ) : (

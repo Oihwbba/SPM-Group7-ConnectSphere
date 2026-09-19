@@ -126,6 +126,20 @@ describe("createReservation — SCRUM-31", () => {
     expect(mockTransaction).not.toHaveBeenCalled();
   });
 
+  it("refuses a period whose start time is in the past", async () => {
+    const result = await createReservation({
+      ...validInput,
+      startAt: "2020-01-01T01:00:00.000Z",
+      endAt: "2020-01-01T05:00:00.000Z",
+    });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.fieldErrors?.startAt).toContain("Start time cannot be in the past.");
+    }
+    expect(mockTransaction).not.toHaveBeenCalled();
+  });
+
   it("only reserves for an approved event", async () => {
     poolWithFiveAvailable();
     tx.event.findFirst.mockResolvedValue(null);
