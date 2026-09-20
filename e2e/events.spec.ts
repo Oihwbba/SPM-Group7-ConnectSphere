@@ -479,9 +479,20 @@ test.describe("User Story 84 — Events list on mobile (375x812)", () => {
       await ask.click();
       const dialog = page.getByRole("dialog", { name: /Request clarification/i });
       await expect(dialog).toBeVisible();
-      const send = (await dialog.getByRole("button", { name: "Send request" }).boundingBox())!;
-      const cancel = (await dialog.getByRole("button", { name: "Cancel" }).boundingBox())!;
-      expect(cancel.y - (send.y + send.height)).toBeGreaterThanOrEqual(6);
+      // The dialog animates in, so wait for it to settle and read both buttons
+      // in one call: separate boundingBox() calls sample different frames of
+      // the slide and can report a negative gap on a correct layout.
+      await dialog.evaluate((el) =>
+        Promise.all(el.getAnimations().map((animation) => animation.finished)),
+      );
+      const gap = await dialog.evaluate((el) => {
+        const rectOf = (label: string) =>
+          [...el.querySelectorAll("button")]
+            .find((button) => button.textContent?.trim() === label)!
+            .getBoundingClientRect();
+        return rectOf("Cancel").top - rectOf("Send request").bottom;
+      });
+      expect(gap).toBeGreaterThanOrEqual(6);
     } finally {
       await prisma.notification.deleteMany({ where: { eventId: event.id } });
       await prisma.auditLog.deleteMany({ where: { entityId: event.id } });
