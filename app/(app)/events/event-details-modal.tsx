@@ -167,24 +167,7 @@ export function EventDetailsModal({
                   </p>
                 </div>
               </div>
-              {event.requiredFacilities &&
-                event.requiredFacilities.length > 0 && (
-                  <div>
-                    <span className="font-semibold text-muted-foreground">
-                      Required Facilities:
-                    </span>
-                    <div className="mt-1 flex flex-wrap gap-1.5">
-                      {event.requiredFacilities.map((facility) => (
-                        <span
-                          key={facility}
-                          className="rounded border bg-primary/10 px-2 py-0.5 text-[11px] font-medium capitalize text-primary"
-                        >
-                          {facility.replace("-", " ")}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
+
               <div>
                 <span className="font-semibold text-muted-foreground">
                   Accessibility Needs:

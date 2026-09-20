@@ -74,7 +74,6 @@ describe("User Story 13 — Event Request Creation", () => {
     endAt: futureEnd,
     expectedAttendance: 150,
     venueRequirements: "Large hall capable of hosting 150 people",
-    requiredFacilities: ["projector", "sound-system"],
     preferredLayout: "Theatre",
     accessibilityNeeds: "Wheelchair access ramp and front-row physical seating",
     equipmentRequirements: "2 Wireless Microphones, 1 HD Projector",
@@ -135,14 +134,13 @@ describe("User Story 13 — Event Request Creation", () => {
       );
     });
 
-    it("SCRUM-13 [AC3 - Happy Path]: successfully submits request with optional programme, special requests, and required facilities populated", async () => {
+    it("SCRUM-13 [AC3 - Happy Path]: successfully submits request with optional programme and special requests populated", async () => {
       mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
       mockCreate.mockResolvedValue({ id: "evt_full_optional" });
 
-      // Submit payload containing all optional fields (programme, specialRequests, requiredFacilities)
+      // Submit payload containing optional fields (programme, specialRequests)
       const result = await submitEventRequest({
         ...validSubmissionInput,
-        requiredFacilities: ["projector", "sound-system", "wifi"],
         programme: "09:00 Keynote, 14:00 Workshop",
         specialRequests: "VIP Security escort and HALAL catering",
       });
@@ -151,7 +149,6 @@ describe("User Story 13 — Event Request Creation", () => {
       expect(mockCreate).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
-            requiredFacilities: ["projector", "sound-system", "wifi"],
             programme: "09:00 Keynote, 14:00 Workshop",
             specialRequests: "VIP Security escort and HALAL catering",
           }),

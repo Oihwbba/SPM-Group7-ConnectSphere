@@ -55,15 +55,7 @@ function toUtcIso(localValue: string, timezoneStr: string = "Asia/Singapore (+08
   return timezoneWallTimeToUtcIso(localValue, parseIanaZone(timezoneStr));
 }
 
-const COMMON_FACILITIES = [
-  { value: "av-system", label: "AV System" },
-  { value: "projector", label: "Projector" },
-  { value: "microphones", label: "Microphones" },
-  { value: "stage", label: "Stage" },
-  { value: "whiteboard", label: "Whiteboard" },
-  { value: "wheelchair-access", label: "Wheelchair Access" },
-  { value: "wifi", label: "Wi-Fi" },
-];
+
 
 interface FormState {
   name: string;
@@ -645,23 +637,9 @@ export function CreateEventDialog({
                   <Input
                     type="text"
                     placeholder="Type to filter timezones (e.g. New York, Tokyo, London, Singapore)..."
+                    aria-label="Filter timezones"
                     value={tzSearch}
-                    onChange={(e) => {
-                      const qStr = e.target.value;
-                      setTzSearch(qStr);
-                      if (qStr.trim()) {
-                        const q = qStr.toLowerCase();
-                        const firstMatch = TIMEZONE_OPTIONS.find(
-                          (opt) =>
-                            opt.label.toLowerCase().includes(q) ||
-                            opt.value.toLowerCase().includes(q) ||
-                            opt.iana.toLowerCase().includes(q),
-                        );
-                        if (firstMatch) {
-                          setFormData((prev) => ({ ...prev, timezone: firstMatch.value }));
-                        }
-                      }
-                    }}
+                    onChange={(e) => setTzSearch(e.target.value)}
                     className="pl-9 h-9 text-xs"
                   />
                 </div>
@@ -746,49 +724,27 @@ export function CreateEventDialog({
                 </p>
                 <div className="flex flex-wrap gap-2 pt-1">
                   {catalogues.venues.map((v) => (
-                    <span
+                    <button
                       key={v.id}
-                      className="cursor-pointer rounded border bg-background px-2 py-0.5 text-xs hover:bg-accent"
+                      type="button"
+                      className="cursor-pointer rounded border bg-background px-2 py-0.5 text-xs hover:bg-accent focus:outline-none focus:ring-1 focus:ring-ring"
                       onClick={() =>
                         updateField(
                           "venueRequirements",
                           formData.venueRequirements
                             ? `${formData.venueRequirements}, ${v.name}`
-                            : `Preferred venue: ${v.name} (Cap: ${v.capacity})`,
+                            : `Preferred venue: ${v.name}`,
                         )
                       }
                     >
-                    </span>
+                      {v.name} (Cap: {v.capacity})
+                    </button>
                   ))}
                 </div>
               </div>
             )}
 
-            <div className="space-y-2">
-              <Label>Required Facilities</Label>
-              <div className="flex flex-wrap gap-2">
-                {COMMON_FACILITIES.map((facility) => {
-                  const selected = formData.requiredFacilities.includes(facility.value);
-                  return (
-                    <Button
-                      key={facility.value}
-                      type="button"
-                      variant={selected ? "default" : "outline"}
-                      size="sm"
-                      className="h-7 text-xs"
-                      onClick={() => {
-                        const next = selected
-                          ? formData.requiredFacilities.filter((f) => f !== facility.value)
-                          : [...formData.requiredFacilities, facility.value];
-                        updateField("requiredFacilities", next);
-                      }}
-                    >
-                      {facility.label}
-                    </Button>
-                  );
-                })}
-              </div>
-            </div>
+
 
             <div className="space-y-2">
               <Label htmlFor="venueRequirements">Venue Requirements *</Label>
@@ -1121,14 +1077,7 @@ export function CreateEventDialog({
                       </span>
                     )}
                   </p>
-                  {formData.requiredFacilities.length > 0 && (
-                    <p>
-                      <span className="font-semibold">Facilities:</span>{" "}
-                      {formData.requiredFacilities
-                        .map((f) => COMMON_FACILITIES.find((c) => c.value === f)?.label || f)
-                        .join(", ")}
-                    </p>
-                  )}
+
                   <p>
                     <span className="font-semibold">Preferred Layout:</span>{" "}
                     {formData.preferredLayout.trim() || (

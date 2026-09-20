@@ -371,15 +371,31 @@ test.describe("User Story 84 — Organiser Views Their Own Event Requests Journe
     await page.getByRole("button", { name: "Sign in" }).click();
     await page.waitForURL("**/events");
 
+    const draftTitle = `Unsaved Work Draft ${Date.now()}`;
     await page.getByRole("button", { name: /Create Event Request/i }).first().click();
-    await page.getByLabel("Event Name *").fill("Unsaved Work Draft");
+    await page.getByLabel("Event Name *").fill(draftTitle);
 
-    // Click backdrop/close button to close dirty form
+    // Click backdrop/close button to trigger dirty form exit warning
     await page.keyboard.press("Escape");
 
-    // Verify warning dialog appears
-    await expect(page.getByRole("dialog", { name: /Unsaved Changes/i })).toBeVisible();
+    // 1. Verify warning dialog appears
+    const confirmDialog = page.getByRole("dialog", { name: /Unsaved Changes/i });
+    await expect(confirmDialog).toBeVisible();
     await expect(page.getByText(/You have unsaved changes in this event request/i)).toBeVisible();
+
+    // 2. Click "Continue Editing" — keeps the creation dialog open with typed name intact
+    await confirmDialog.getByRole("button", { name: /Continue Editing/i }).click();
+    await expect(confirmDialog).not.toBeVisible();
+    await expect(page.getByRole("dialog", { name: /Create Event Request/i })).toBeVisible();
+    await expect(page.getByLabel("Event Name *")).toHaveValue(draftTitle);
+
+    // 3. Trigger exit warning again and click "Discard Changes" — closes dialog without saving draft
+    await page.keyboard.press("Escape");
+    await expect(confirmDialog).toBeVisible();
+    await confirmDialog.getByRole("button", { name: /Discard Changes/i }).click();
+
+    await expect(page.getByRole("dialog")).not.toBeVisible();
+    await expect(page.getByRole("cell", { name: draftTitle })).not.toBeVisible();
   });
 
   test("SCRUM-84 AC7-AC9: organiser sorts columns and filters list by status dropdown and search", async ({

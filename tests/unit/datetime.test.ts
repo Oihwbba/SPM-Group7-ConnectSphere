@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import {
   formatDate,
   formatDateTime,
@@ -160,26 +160,37 @@ describe("lib/datetime helpers — SCRUM-31", () => {
     expect(normalizeTimezoneOption(null)).toContain("Asia/Singapore");
   });
 
-  it("covers fallback branches in timezone option generator (Intl.supportedValuesOf catch and GMT/UTC shortOffset)", () => {
-    // Stub Intl.supportedValuesOf to throw to hit catch block (line 23)
+  it("covers fallback branches in timezone option generator (Intl.supportedValuesOf catch, GMT/UTC shortOffset, and unmapped normalize return)", async () => {
+    // 1. Line 23: Stub Intl.supportedValuesOf BEFORE module load using vi.resetModules
     const originalSupportedValuesOf = Intl.supportedValuesOf;
     try {
+      vi.resetModules();
       (Intl as Record<string, unknown>).supportedValuesOf = () => {
         throw new Error("Not supported");
       };
-      // Parsing still succeeds via priority zones fallback
-      expect(parseIanaZone("Asia/Singapore (+08:00)")).toBe("Asia/Singapore");
+      const datetimeModule = await import("@/lib/datetime");
+      expect(datetimeModule.TIMEZONE_OPTIONS.map((o) => o.iana)).toEqual([
+        "Asia/Singapore",
+        "Asia/Tokyo",
+        "Europe/London",
+        "America/New_York",
+        "UTC",
+      ]);
     } finally {
       Intl.supportedValuesOf = originalSupportedValuesOf;
+      vi.resetModules();
     }
 
-    // Formatting GMT / UTC timezone formatting (line 49)
-    const utcFormatted = formatDateTimeInTimezone("2026-07-15T12:00:00.000Z", "UTC");
+    // Restore standard module
+    const { formatDateTimeInTimezone: formatTz, normalizeTimezoneOption: normTz } = await import("@/lib/datetime");
+
+    // 2. Line 49: Formatting GMT / UTC shortOffset
+    const utcFormatted = formatTz("2026-07-15T12:00:00.000Z", "UTC");
     expect(utcFormatted).toContain("12:00 pm");
 
-    // Unmapped timezone string test
-    expect(parseIanaZone("invalid-tz-string")).toBe("Asia/Singapore");
-    expect(normalizeTimezoneOption("unrecognised-tz")).toContain("Asia/Singapore");
+    // 3. Line 138: Stored IANA timezone string absent from TIMEZONE_OPTIONS reaches return tz
+    const unmappedResult = normTz("Africa/Asmara");
+    expect(unmappedResult).toBe("Africa/Asmara");
   });
 });
 
