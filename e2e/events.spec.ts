@@ -505,7 +505,8 @@ test.describe("SCRUM-19 — Reject with a reason, then amend and resubmit", () =
     // --- Coordinator rejects, and a blank reason is refused ---------------
     await signIn(page, "coordinator@test.local");
     const coordinatorRow = page.getByRole("row", { name: new RegExp(eventName) });
-    await coordinatorRow.getByRole("button", { name: /Reject/i }).click();
+    // Exact: the event's own name link also contains the word "Reject".
+    await coordinatorRow.getByRole("button", { name: "Reject", exact: true }).click();
 
     const rejectDialog = page.getByRole("dialog", { name: /Reject event request/i });
     const rejectButton = rejectDialog.getByRole("button", { name: "Reject request" });
