@@ -446,7 +446,7 @@ test.describe("User Story 13 & 84 — timezone, unsaved changes and list control
     await expect(page.getByLabel("Event Timezone *")).toHaveValue(nyOptionValue);
   });
 
-  test("SCRUM-13 AC6: unsaved changes warning dialog appears when navigating away from edited draft", async ({
+  test("SCRUM-13 AC6: unsaved changes warning appears when closing an edited draft dialog", async ({
     page,
   }) => {
     await page.goto("/login");
@@ -624,6 +624,147 @@ test.describe("User Story 23 & 24 — Event Status View & Consistency Journey", 
     const detailModal = page.getByRole("dialog");
     await expect(detailModal).toBeVisible();
     await expect(detailModal.getByTestId("status-badge")).toHaveAttribute("data-status", "APPROVED");
+  });
+
+  test("two users viewing the same event simultaneously see consistent live status without manual refresh (SCRUM-24)", async ({
+    browser,
+  }) => {
+    // Reads the coordinator this request was auto-assigned to, so it needs the
+    // local database the other write-heavy tests use.
+    test.skip(!usesLocalDatabase, "reads its own event; local database only");
+
+    // 1. Sign in as Organiser in first browser context
+    const organiserContext = await browser.newContext();
+    const organiserPage = await organiserContext.newPage();
+    await organiserPage.goto("/login");
+    await organiserPage.getByLabel("Email", { exact: true }).fill("organiser@test.local");
+    await organiserPage.getByLabel("Password", { exact: true }).fill("Password123!");
+    await organiserPage.getByRole("button", { name: "Sign in" }).click();
+    await organiserPage.waitForURL("**/events");
+
+    // 2. Organiser creates and submits a new event request
+    const syncEventName = `Live Sync Event ${Date.now()}`;
+    await organiserPage.getByRole("button", { name: /Create Event Request/i }).first().click();
+
+    await organiserPage.getByLabel("Event Name *").fill(syncEventName);
+    await organiserPage.getByLabel("Event Purpose *").fill("Live status synchronization test");
+    await organiserPage.getByLabel("Event Description *").fill("Testing live status updates between two concurrent users");
+    await organiserPage.getByRole("button", { name: "Next", exact: true }).click();
+
+    await organiserPage.getByLabel("Proposed Start Date & Time *").fill("2027-12-15T09:00");
+    await organiserPage.getByLabel("Proposed End Date & Time *").fill("2027-12-15T18:00");
+    await organiserPage.getByLabel("Expected Attendance *").fill("50");
+    await organiserPage.getByRole("button", { name: "Next", exact: true }).click();
+
+    await organiserPage.getByLabel("Venue Requirements *").fill("Conference Room");
+    await organiserPage.getByLabel("Preferred Room Layout *").fill("Boardroom");
+    await organiserPage.getByLabel("Accessibility Needs *").fill("Wheelchair ramp");
+    await organiserPage.getByRole("button", { name: "Next", exact: true }).click();
+
+    await organiserPage.getByLabel("Equipment & Technical Support Requirements *").fill("Projector");
+    await organiserPage.getByRole("button", { name: "Next", exact: true }).click();
+
+    await organiserPage.getByLabel("Registration Needs *").fill("Online registration");
+    await organiserPage.getByRole("button", { name: "Next", exact: true }).click();
+
+    await organiserPage.getByRole("button", { name: /Submit Request for Review/i }).click();
+
+    // Verify the submitted event appears on the Organiser's table. SCRUM-20
+    // auto-assigns a coordinator on submission, so a freshly submitted request
+    // is already UNDER_REVIEW whenever a coordinator exists (the seed has one).
+    const organiserRow = organiserPage.getByRole("row", { name: new RegExp(syncEventName) });
+    await expect(organiserRow).toBeVisible();
+    await expect(organiserRow.getByTestId("status-badge")).toHaveAttribute("data-status", "UNDER_REVIEW");
+
+    // Organiser opens the EventDetailsModal to view submitted request specifications
+    await organiserRow.getByTestId("view-details-button").click();
+    const organiserModal = organiserPage.getByRole("dialog");
+    await expect(organiserModal).toBeVisible();
+    await expect(organiserModal.getByTestId("status-badge")).toHaveAttribute("data-status", "UNDER_REVIEW");
+
+    // 3. Sign in as the coordinator the request was actually assigned to.
+    //    SCRUM-20 assigns the least-loaded coordinator, and the seed has two,
+    //    so hard-coding one of them makes this test a coin flip: the other
+    //    coordinator does not see an event already assigned away from them.
+    const assignment = await prisma.event.findFirst({
+      where: { name: syncEventName },
+      select: { coordinator: { select: { email: true } } },
+    });
+    const coordinatorEmail =
+      assignment?.coordinator?.email ?? "coordinator@test.local";
+
+    const coordinatorContext = await browser.newContext();
+    const coordinatorPage = await coordinatorContext.newPage();
+    await coordinatorPage.goto("/login");
+    await coordinatorPage.getByLabel("Email", { exact: true }).fill(coordinatorEmail);
+    await coordinatorPage.getByLabel("Password", { exact: true }).fill("Password123!");
+    await coordinatorPage.getByRole("button", { name: "Sign in" }).click();
+    await coordinatorPage.waitForURL("**/events");
+
+    // Locate the newly submitted event on the Coordinator's dashboard
+    const coordinatorRow = coordinatorPage.getByRole("row", { name: new RegExp(syncEventName) });
+    await expect(coordinatorRow).toBeVisible();
+    await expect(coordinatorRow.getByTestId("status-badge")).toHaveAttribute("data-status", "UNDER_REVIEW");
+
+    // 4. Coordinator approves the submitted request
+    await coordinatorRow.getByRole("button", { name: /Approve/i }).click();
+    await expect(coordinatorRow.getByTestId("status-badge")).toHaveAttribute("data-status", "APPROVED");
+
+    // 5. Organiser page (WITHOUT any manual reload or interaction) receives auto-refresh:
+    // Both the open detail modal badge AND the underlying table row update to APPROVED in lockstep
+    await expect(organiserModal.getByTestId("status-badge")).toHaveAttribute("data-status", "APPROVED", {
+      timeout: 12000,
+    });
+
+    // Close the modal and confirm underlying table row also reflects APPROVED
+    await organiserModal.getByRole("button", { name: "Close" }).first().click();
+    await expect(organiserModal).not.toBeVisible();
+    await expect(organiserRow.getByTestId("status-badge")).toHaveAttribute("data-status", "APPROVED");
+
+    await organiserContext.close();
+    await coordinatorContext.close();
+  });
+
+  test("open modal remains mounted with warning when viewed event is dropped from review queue (SCRUM-24)", async ({
+    page,
+  }) => {
+    // 1. Sign in as Event Coordinator (coordinator@test.local)
+    await page.goto("/login");
+    await page.getByLabel("Email", { exact: true }).fill("coordinator@test.local");
+    await page.getByLabel("Password", { exact: true }).fill("Password123!");
+    await page.getByRole("button", { name: "Sign in" }).click();
+    await page.waitForURL("**/events");
+
+    // 2. Open details modal for an event currently visible in review queue
+    const submittedRow = page.getByRole("row", { name: /Submitted — Alumni Homecoming/i });
+    await expect(submittedRow).toBeVisible();
+    await submittedRow.getByRole("button", { name: /View Details|Details/i }).click();
+
+    const detailModal = page.getByRole("dialog");
+    await expect(detailModal).toBeVisible();
+    await expect(detailModal.getByTestId("status-badge")).toHaveAttribute("data-status", "SUBMITTED");
+
+    // 3. Reassign this event to coordinator2 in database to simulate mid-view reassignment (SCRUM-20/57)
+    if (usesLocalDatabase) {
+      try {
+        await prisma.event.update({
+          where: { id: "evt_submitted" },
+          data: { coordinatorId: "usr_coordinator_2" },
+        });
+
+        // 4. On next auto-refresh, event drops from coordinator1's query:
+        // The modal stays mounted and displays the warning notice instead of silently vanishing
+        await expect(
+          detailModal.getByTestId("event-no-longer-available-warning"),
+        ).toBeVisible({ timeout: 12000 });
+      } finally {
+        // Clean up database state
+        await prisma.event.update({
+          where: { id: "evt_submitted" },
+          data: { coordinatorId: null },
+        });
+      }
+    }
   });
 });
 

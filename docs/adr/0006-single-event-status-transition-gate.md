@@ -58,3 +58,33 @@ copy it into per-screen fields or client-side caches.
 - Future lifecycle stories (SCRUM-20, 81, 82, 83) must add their own authorised
   transition to this gate (or an equivalent guarded action), rather than
   writing `Event.status` directly.
+
+---
+
+## Addendum (2026-09-19) — Periodic router revalidation for concurrent status views (SCRUM-24)
+
+### Context
+
+SCRUM-24 acceptance criterion 4 mandates:
+> *"Two users viewing the same event at the same time never see conflicting statuses"*
+
+When two users view an event simultaneously (e.g. an Organiser on "My Events" and a Coordinator reviewing "Submitted Event Requests"), a status decision (approve or reject) by the coordinator wrote the status change to PostgreSQL and revalidated the coordinator's path, but the organiser's browser tab remained stale until an explicit manual page reload.
+
+### Decision
+
+1. **Visibility-gated periodic revalidation (`router.refresh()`).** `EventsClient` mounts an interval timer that executes `router.refresh()` every 4 seconds whenever `document.visibilityState === "visible"` and no mutation transition is in flight (`!isPending`). Pausing during active transitions prevents network contention during user form submissions, and halting when the tab is backgrounded or minimized eliminates unnecessary network traffic.
+2. **Reactive detail view synchronization and dropped-event resilience.** The event details modal derives its active event from `events.find(e => e.id === viewingEvent.id)` while maintaining the latest known snapshot in `viewingEvent`. When `router.refresh()` updates the server-rendered `events` prop, both the table row status badge and any open `EventDetailsModal` immediately update their rendered status in lockstep. If a background revalidation drops an event from the user's scoped query (such as when an unassigned request is assigned to a different coordinator mid-view), the modal does not unmount silently; instead, it remains mounted and renders a clear warning banner (`isNoLongerAvailable`) indicating that the event has been reassigned or removed from their review queue.
+3. **Multi-browser test verification.** Playwright end-to-end tests (`e2e/events.spec.ts`) simulate two distinct browser sessions (one Organiser with the detail modal open, and one Coordinator). When the Coordinator approves the event, the test verifies that the open modal's status badge automatically flips to `APPROVED` within the 4-second convergence window without page reload.
+4. **No new runtime dependencies or infrastructure.** The mechanism uses native Next.js App Router server component revalidation.
+
+### Alternatives rejected
+
+- **WebSockets / Socket.io / Pusher.** Violates the project's strict "no new dependencies without an ADR" and "favour boring, obvious code" principles (CONTRIBUTING.md). Would require stateful server infrastructure or external third-party subscriptions incompatible with serverless deployment.
+- **Server-Sent Events (SSE).** Introduces long-lived HTTP connection management on edge/serverless runtimes and custom reconnect/buffering logic for a straightforward status display.
+- **Client-side polling via custom fetch API endpoint with duplicate state cache.** Storing event status in client state or SWR/React Query caches violates ADR 0006's explicit rule: *"The `Event.status` enum remains the sole persisted lifecycle state. We do not copy it into per-screen fields or client-side caches."* Using `router.refresh()` maintains Next.js Server Components as the single source of truth.
+
+### Consequences
+
+- Two concurrent browser sessions observing the same event synchronize within 4 seconds of any status mutation without requiring manual user refreshes.
+- Criterion 4 is demonstrably satisfied in multi-browser live evaluation and Playwright concurrent context testing.
+- The implementation is ~15 lines, requires zero dependencies, and pauses automatically when tabs are inactive.

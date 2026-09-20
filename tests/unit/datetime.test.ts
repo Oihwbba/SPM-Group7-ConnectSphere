@@ -160,7 +160,7 @@ describe("lib/datetime helpers — SCRUM-31", () => {
     expect(normalizeTimezoneOption(null)).toContain("Asia/Singapore");
   });
 
-  it("covers fallback branches in timezone option generator (Intl.supportedValuesOf catch, GMT/UTC shortOffset, and unmapped normalize return)", async () => {
+  it("covers the Intl.supportedValuesOf catch, UTC formatting and the unmapped normalize return", async () => {
     // 1. Line 23: Stub Intl.supportedValuesOf BEFORE module load using vi.resetModules
     const originalSupportedValuesOf = Intl.supportedValuesOf;
     try {
@@ -184,7 +184,9 @@ describe("lib/datetime helpers — SCRUM-31", () => {
     // Restore standard module
     const { formatDateTimeInTimezone: formatTz, normalizeTimezoneOption: normTz } = await import("@/lib/datetime");
 
-    // 2. Line 49: Formatting GMT / UTC shortOffset
+    // 2. Formatting an instant in UTC. This does NOT re-run the option
+    //    generator, so the GMT/UTC shortOffset branch inside it stays
+    //    uncovered — CI reports that line as never run.
     const utcFormatted = formatTz("2026-07-15T12:00:00.000Z", "UTC");
     expect(utcFormatted).toContain("12:00 pm");
 
