@@ -51,6 +51,13 @@ export async function getCoordinatorEvents(coordinatorId: string) {
   });
 }
 
+/** Server query helper to fetch full details for a specific event scoped to an organiser */
+export async function getEventForUser(eventId: string, organiserId: string) {
+  return prisma.event.findFirst({
+    where: { id: eventId, organiserId },
+  });
+}
+
 /** The reference feature. Only Organisers reach it; the query below is scoped
  * to the signed-in organiser, so an Organiser can never see another's events. */
 async function OrganiserEvents({ organiserId }: { organiserId: string }) {

@@ -159,5 +159,27 @@ describe("lib/datetime helpers — SCRUM-31", () => {
     expect(normalizeTimezoneOption("unrecognised-tz")).toContain("Asia/Singapore");
     expect(normalizeTimezoneOption(null)).toContain("Asia/Singapore");
   });
+
+  it("covers fallback branches in timezone option generator (Intl.supportedValuesOf catch and GMT/UTC shortOffset)", () => {
+    // Stub Intl.supportedValuesOf to throw to hit catch block (line 23)
+    const originalSupportedValuesOf = Intl.supportedValuesOf;
+    try {
+      (Intl as Record<string, unknown>).supportedValuesOf = () => {
+        throw new Error("Not supported");
+      };
+      // Parsing still succeeds via priority zones fallback
+      expect(parseIanaZone("Asia/Singapore (+08:00)")).toBe("Asia/Singapore");
+    } finally {
+      Intl.supportedValuesOf = originalSupportedValuesOf;
+    }
+
+    // Formatting GMT / UTC timezone formatting (line 49)
+    const utcFormatted = formatDateTimeInTimezone("2026-07-15T12:00:00.000Z", "UTC");
+    expect(utcFormatted).toContain("12:00 pm");
+
+    // Unmapped timezone string test
+    expect(parseIanaZone("invalid-tz-string")).toBe("Asia/Singapore");
+    expect(normalizeTimezoneOption("unrecognised-tz")).toContain("Asia/Singapore");
+  });
 });
 

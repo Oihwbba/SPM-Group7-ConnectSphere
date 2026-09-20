@@ -273,6 +273,7 @@ export function CreateEventDialog({
     setFieldErrors({});
     setStep(1);
     setIsDirty(false);
+    setTzSearch("");
   }
 
   const minEndDateTime = formData.startAt ? formData.startAt : minStartDateTime;
@@ -646,18 +647,18 @@ export function CreateEventDialog({
                     placeholder="Type to filter timezones (e.g. New York, Tokyo, London, Singapore)..."
                     value={tzSearch}
                     onChange={(e) => {
-                      const query = e.target.value;
-                      setTzSearch(query);
-                      if (query.trim()) {
-                        const q = query.toLowerCase();
-                        const match = TIMEZONE_OPTIONS.find(
+                      const qStr = e.target.value;
+                      setTzSearch(qStr);
+                      if (qStr.trim()) {
+                        const q = qStr.toLowerCase();
+                        const firstMatch = TIMEZONE_OPTIONS.find(
                           (opt) =>
                             opt.label.toLowerCase().includes(q) ||
                             opt.value.toLowerCase().includes(q) ||
                             opt.iana.toLowerCase().includes(q),
                         );
-                        if (match) {
-                          updateField("timezone", match.value);
+                        if (firstMatch) {
+                          setFormData((prev) => ({ ...prev, timezone: firstMatch.value }));
                         }
                       }
                     }}

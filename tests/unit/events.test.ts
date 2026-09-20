@@ -13,6 +13,7 @@ import { filterAndSortEvents } from "@/app/(app)/events/events-client";
 import {
   getOrganiserEvents,
   getCoordinatorEvents,
+  getEventForUser,
 } from "@/app/(app)/events/page";
 
 // ============================================================================
@@ -836,12 +837,14 @@ describe("User Story 84 — Organiser views their own event requests", () => {
       createdAt: new Date(),
     };
 
-    prisma.event.findUnique = vi.fn().mockResolvedValue(detailedDraftEvent);
+    const mockFindFirst = vi.fn().mockResolvedValue(detailedDraftEvent);
+    prisma.event.findFirst = mockFindFirst;
 
-    const result = await prisma.event.findUnique({
-      where: { id: "evt_draft_detail" },
+    const result = await getEventForUser("evt_draft_detail", "usr_organiser_us84");
+
+    expect(mockFindFirst).toHaveBeenCalledWith({
+      where: { id: "evt_draft_detail", organiserId: "usr_organiser_us84" },
     });
-
     expect(result).toBeDefined();
     expect(result?.id).toBe("evt_draft_detail");
     expect(result?.status).toBe("DRAFT");
