@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useEffect, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   Plus,
@@ -74,6 +74,25 @@ export function EventsClient({
   const [clarificationMessage, setClarificationMessage] = useState("");
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
+
+  // SCRUM-24: Auto-refresh event data periodically so concurrent viewers never see conflicting statuses
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (document.visibilityState === "visible" && !isPending) {
+        router.refresh();
+      }
+    }, 4000);
+
+    return () => clearInterval(interval);
+  }, [router, isPending]);
+
+  // Derive active event from freshly polled events list if present,
+  // falling back to viewingEvent snapshot if a poll drops it (e.g. reassigned coordinator).
+  const activeEvent = viewingEvent
+    ? (events.find((e) => e.id === viewingEvent.id) ?? null)
+    : null;
+  const eventToDisplay = activeEvent ?? viewingEvent;
+  const isEventNoLongerAvailable = Boolean(viewingEvent && !activeEvent);
 
   function changeStatus(
     event: Event,
@@ -387,14 +406,15 @@ export function EventsClient({
       )}
 
       {/* Controlled Singular-Page Modal for Viewing Submitted Event Details */}
-      {viewingEvent && (
+      {eventToDisplay && (
         <EventDetailsModal
           open={!!viewingEvent}
           onOpenChange={(open) => {
             if (!open) setViewingEvent(null);
           }}
-          event={viewingEvent}
+          event={eventToDisplay}
           isCoordinator={isCoordinator}
+          isNoLongerAvailable={isEventNoLongerAvailable}
         />
       )}
 
