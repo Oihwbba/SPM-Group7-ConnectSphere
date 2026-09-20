@@ -9,7 +9,28 @@ import { prisma } from "@/lib/db";
  * the actual database state after submission rather than asserting a
  * specific coordinator's name.
  */
+const usesLocalDatabase = /@(localhost|127\.0\.0\.1)[:/]/.test(
+  process.env.DATABASE_URL ?? "",
+);
+
 test.describe("SCRUM-20 — Auto-assign a coordinator", () => {
+  // The test submits a real event, so against the shared Supabase database it
+  // would write production rows — and every leftover UNDER_REVIEW event would
+  // add to a coordinator's load and skew later auto-assignments.
+  test.skip(!usesLocalDatabase, "writes events; local database only");
+
+  test.afterEach(async () => {
+    const eventIds = (
+      await prisma.event.findMany({
+        where: { name: { startsWith: "SCRUM-20 Assignment Test" } },
+        select: { id: true },
+      })
+    ).map((e) => e.id);
+    await prisma.notification.deleteMany({ where: { eventId: { in: eventIds } } });
+    await prisma.auditLog.deleteMany({ where: { entityId: { in: eventIds } } });
+    await prisma.event.deleteMany({ where: { id: { in: eventIds } } });
+  });
+
   test("submitting an event automatically assigns exactly one coordinator and moves it to Under Review, with no accept/decline step", async ({
     page,
   }) => {
