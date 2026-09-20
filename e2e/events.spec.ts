@@ -483,16 +483,18 @@ test.describe("User Story 23 & 24 — Event Status View & Consistency Journey", 
 
     await organiserPage.getByRole("button", { name: /Submit Request for Review/i }).click();
 
-    // Verify submitted event appears on Organiser's table with SUBMITTED status
+    // Verify the submitted event appears on the Organiser's table. SCRUM-20
+    // auto-assigns a coordinator on submission, so a freshly submitted request
+    // is already UNDER_REVIEW whenever a coordinator exists (the seed has one).
     const organiserRow = organiserPage.getByRole("row", { name: new RegExp(syncEventName) });
     await expect(organiserRow).toBeVisible();
-    await expect(organiserRow.getByTestId("status-badge")).toHaveAttribute("data-status", "SUBMITTED");
+    await expect(organiserRow.getByTestId("status-badge")).toHaveAttribute("data-status", "UNDER_REVIEW");
 
     // Organiser opens the EventDetailsModal to view submitted request specifications
     await organiserRow.getByTestId("view-details-button").click();
     const organiserModal = organiserPage.getByRole("dialog");
     await expect(organiserModal).toBeVisible();
-    await expect(organiserModal.getByTestId("status-badge")).toHaveAttribute("data-status", "SUBMITTED");
+    await expect(organiserModal.getByTestId("status-badge")).toHaveAttribute("data-status", "UNDER_REVIEW");
 
     // 3. Sign in as Coordinator in second browser context
     const coordinatorContext = await browser.newContext();
@@ -506,7 +508,7 @@ test.describe("User Story 23 & 24 — Event Status View & Consistency Journey", 
     // Locate the newly submitted event on the Coordinator's dashboard
     const coordinatorRow = coordinatorPage.getByRole("row", { name: new RegExp(syncEventName) });
     await expect(coordinatorRow).toBeVisible();
-    await expect(coordinatorRow.getByTestId("status-badge")).toHaveAttribute("data-status", "SUBMITTED");
+    await expect(coordinatorRow.getByTestId("status-badge")).toHaveAttribute("data-status", "UNDER_REVIEW");
 
     // 4. Coordinator approves the submitted request
     await coordinatorRow.getByRole("button", { name: /Approve/i }).click();
