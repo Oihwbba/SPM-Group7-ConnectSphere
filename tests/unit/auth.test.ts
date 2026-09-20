@@ -21,6 +21,16 @@ describe("can — role gate", () => {
   it("does not let a venue-staff member review events", () => {
     expect(can({ id: "vs", role: "VENUE_STAFF" }, "event:review")).toBe(false);
   });
+
+  // The Venue Catalogue (venue:read) is Coordinator-only. Pin both sides so a
+  // one-line re-grant of venue:read to VENUE_STAFF can't silently re-open it.
+  it("does not let venue staff read the venue catalogue", () => {
+    expect(can({ id: "vs", role: "VENUE_STAFF" }, "venue:read")).toBe(false);
+  });
+
+  it("lets a coordinator read the venue catalogue", () => {
+    expect(can(coordinator, "venue:read")).toBe(true);
+  });
 });
 
 describe("can — relationship gate", () => {
