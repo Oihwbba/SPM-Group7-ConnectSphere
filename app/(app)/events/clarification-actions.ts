@@ -65,18 +65,29 @@ export async function requestClarification(
       );
     }
 
-    const created = await prisma.$transaction(async (tx) => {
+    const outcome = await prisma.$transaction(async (tx) => {
       // AC: "no second open clarification is created for the same event".
       // The check has to run under a lock on the Event row: with nothing
       // backing it, two requests could both see no OPEN row and both insert
       // one. Concurrent requests on the same event queue here, and the loser
       // sees the winner's row.
-      await tx.$queryRaw`SELECT "id" FROM "Event" WHERE "id" = ${eventId} FOR UPDATE`;
+      const [locked] = await tx.$queryRaw<{ status: string }[]>`
+        SELECT "status" FROM "Event" WHERE "id" = ${eventId} FOR UPDATE
+      `;
+      // The status read above the transaction can be stale: a decision that
+      // committed in between has already closed the event's clarifications, so
+      // inserting here would leave a fresh OPEN one on a decided event.
+      if (
+        !locked ||
+        (locked.status !== "SUBMITTED" && locked.status !== "UNDER_REVIEW")
+      ) {
+        return { kind: "not-reviewable" } as const;
+      }
       const openExisting = await tx.clarificationRequest.findFirst({
         where: { eventId, status: "OPEN" },
         select: { id: true },
       });
-      if (openExisting) return null;
+      if (openExisting) return { kind: "duplicate" } as const;
 
       const clarification = await tx.clarificationRequest.create({
         data: { eventId, requestedById: user!.id, message },
@@ -93,15 +104,20 @@ export async function requestClarification(
         },
       });
 
-      return clarification;
+      return { kind: "created", id: clarification.id } as const;
     });
 
-    if (!created) {
+    if (outcome.kind === "not-reviewable") {
+      return err(
+        "Clarification can only be requested on a submitted or under-review request.",
+      );
+    }
+    if (outcome.kind === "duplicate") {
       return err("There is already an open clarification request on this event.");
     }
 
     revalidatePath("/events");
-    return ok({ id: created.id });
+    return ok({ id: outcome.id });
   } catch (error) {
     if (error instanceof PermissionError) return err(error.message);
     throw error;
@@ -193,6 +209,7 @@ export async function respondToClarification(
       select: {
         id: true,
         status: true,
+        requestedById: true,
         event: {
           select: {
             id: true,
@@ -230,17 +247,23 @@ export async function respondToClarification(
       });
       if (claimed.count === 0) return false;
 
-      if (clarification.event.coordinatorId) {
-        await tx.notification.create({
-          data: {
-            userId: clarification.event.coordinatorId,
-            type: "CLARIFICATION_REQUESTED",
-            title: "Clarification answered",
-            message: `The organiser replied about "${clarification.event.name}".`,
-            eventId: clarification.event.id,
-          },
-        });
-      }
+      // Tell whoever asked: on an unclaimed event there is no coordinatorId
+      // yet, and after a reassignment the current coordinator is interested
+      // too, so notify both when they differ.
+      const recipients = new Set(
+        [clarification.requestedById, clarification.event.coordinatorId].filter(
+          (id): id is string => !!id,
+        ),
+      );
+      await tx.notification.createMany({
+        data: [...recipients].map((userId) => ({
+          userId,
+          type: "CLARIFICATION_REQUESTED" as const,
+          title: "Clarification answered",
+          message: `The organiser replied about "${clarification.event.name}".`,
+          eventId: clarification.event.id,
+        })),
+      });
 
       return true;
     });

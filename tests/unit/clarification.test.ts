@@ -20,7 +20,7 @@ const tx = vi.hoisted(() => ({
     create: vi.fn(),
     updateMany: vi.fn(),
   },
-  notification: { create: vi.fn() },
+  notification: { create: vi.fn(), createMany: vi.fn() },
 }));
 
 vi.mock("@/auth", () => ({ auth: vi.fn() }));
@@ -66,11 +66,12 @@ function eventRow(
 
 beforeEach(() => {
   vi.clearAllMocks();
-  tx.$queryRaw.mockResolvedValue([{ id: "evt1" }]);
+  tx.$queryRaw.mockResolvedValue([{ status: "UNDER_REVIEW" }]);
   tx.clarificationRequest.findFirst.mockResolvedValue(null); // no open clarification yet
   tx.clarificationRequest.create.mockResolvedValue({ id: "clar1" });
   tx.clarificationRequest.updateMany.mockResolvedValue({ count: 1 });
   tx.notification.create.mockResolvedValue({});
+  tx.notification.createMany.mockResolvedValue({ count: 1 });
   mockTransaction.mockImplementation((cb: (t: typeof tx) => unknown) => cb(tx));
 });
 
@@ -155,6 +156,21 @@ describe("requestClarification — SCRUM-18", () => {
     expect(checkOrder).toBeLessThan(createOrder);
   });
 
+  it("[Boundary] a decision that commits before the lock is taken is honoured: no clarification is created on a decided event", async () => {
+    mockAuth.mockResolvedValue(sessionFor("COORDINATOR", "usr_coord"));
+    // Read as UNDER_REVIEW above the transaction, but APPROVED by the time
+    // the row lock is acquired.
+    mockEventFindUnique.mockResolvedValue(eventRow());
+    tx.$queryRaw.mockResolvedValue([{ status: "APPROVED" }]);
+
+    const result = await requestClarification({ eventId: "evt1", message: "Too late?" });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toMatch(/submitted or under-review/i);
+    expect(tx.clarificationRequest.create).not.toHaveBeenCalled();
+    expect(tx.notification.create).not.toHaveBeenCalled();
+  });
+
   it("[Negative] a request cannot be clarified while it is still DRAFT", async () => {
     mockAuth.mockResolvedValue(sessionFor("COORDINATOR", "usr_coord"));
     mockEventFindUnique.mockResolvedValue(eventRow({ status: "DRAFT", coordinatorId: null }));
@@ -178,11 +194,16 @@ describe("requestClarification — SCRUM-18", () => {
 
 describe("respondToClarification — SCRUM-18", () => {
   function clarificationRow(
-    over: Partial<{ status: string }> = {},
+    over: Partial<{
+      status: string;
+      requestedById: string;
+      event: ReturnType<typeof eventRow>;
+    }> = {},
   ) {
     return {
       id: "clar1",
       status: "OPEN",
+      requestedById: "usr_coord",
       event: eventRow(),
       ...over,
     };
@@ -207,14 +228,53 @@ describe("respondToClarification — SCRUM-18", () => {
         }),
       }),
     );
-    expect(tx.notification.create).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: expect.objectContaining({
+    expect(tx.notification.createMany).toHaveBeenCalledWith({
+      data: [
+        expect.objectContaining({
           userId: "usr_coord",
           title: "Clarification answered",
         }),
+      ],
+    });
+  });
+
+  it("[Positive] AC: a question asked on an unclaimed event still notifies the coordinator who asked", async () => {
+    mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_org"));
+    mockClarificationFindUnique.mockResolvedValue(
+      clarificationRow({
+        requestedById: "usr_asker",
+        event: eventRow({ status: "SUBMITTED", coordinatorId: null }),
       }),
     );
+
+    const result = await respondToClarification({
+      clarificationId: "clar1",
+      response: "Answer",
+    });
+
+    expect(result.ok).toBe(true);
+    expect(tx.notification.createMany).toHaveBeenCalledWith({
+      data: [expect.objectContaining({ userId: "usr_asker" })],
+    });
+  });
+
+  it("[Positive] after a reassignment both the asker and the current coordinator are notified", async () => {
+    mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_org"));
+    mockClarificationFindUnique.mockResolvedValue(
+      clarificationRow({
+        requestedById: "usr_asker",
+        event: eventRow({ coordinatorId: "usr_new_coord" }),
+      }),
+    );
+
+    await respondToClarification({ clarificationId: "clar1", response: "Answer" });
+
+    expect(tx.notification.createMany).toHaveBeenCalledWith({
+      data: [
+        expect.objectContaining({ userId: "usr_asker" }),
+        expect.objectContaining({ userId: "usr_new_coord" }),
+      ],
+    });
   });
 
   it("[Negative] AC: an empty response is rejected", async () => {
@@ -268,7 +328,7 @@ describe("respondToClarification — SCRUM-18", () => {
 
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error).toMatch(/already been answered/i);
-    expect(tx.notification.create).not.toHaveBeenCalled();
+    expect(tx.notification.createMany).not.toHaveBeenCalled();
   });
 
   it("[Negative] another organiser's clarification is indistinguishable from a missing one", async () => {

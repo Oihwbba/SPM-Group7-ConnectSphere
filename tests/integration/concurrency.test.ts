@@ -370,6 +370,7 @@ describe.skipIf(!usesLocalDatabase)("concurrency — coordinator auto-assignment
 // prove the calls are made; these prove the database actually serialises them.
 describe.skipIf(!usesLocalDatabase)("concurrency — clarification (SCRUM-18)", () => {
   let eventId: string;
+  const raceEventName = `SCRUM-18 Decision Race Event ${Date.now()}`;
 
   const asCoordinator = () =>
     (auth as unknown as Mock).mockResolvedValue({
@@ -396,10 +397,17 @@ describe.skipIf(!usesLocalDatabase)("concurrency — clarification (SCRUM-18)", 
   });
 
   afterAll(async () => {
-    await prisma.notification.deleteMany({ where: { eventId } });
-    await prisma.clarificationRequest.deleteMany({ where: { eventId } });
-    await prisma.auditLog.deleteMany({ where: { entityId: eventId } });
-    await prisma.event.deleteMany({ where: { id: eventId } });
+    const raceIds = (
+      await prisma.event.findMany({
+        where: { name: raceEventName },
+        select: { id: true },
+      })
+    ).map((e) => e.id);
+    const ids = [eventId, ...raceIds];
+    await prisma.notification.deleteMany({ where: { eventId: { in: ids } } });
+    await prisma.clarificationRequest.deleteMany({ where: { eventId: { in: ids } } });
+    await prisma.auditLog.deleteMany({ where: { entityId: { in: ids } } });
+    await prisma.event.deleteMany({ where: { id: { in: ids } } });
   });
 
   it("SCRUM-18: two simultaneous requests on one event create exactly one OPEN clarification and refuse the other", async () => {
@@ -446,5 +454,35 @@ describe.skipIf(!usesLocalDatabase)("concurrency — clarification (SCRUM-18)", 
         where: { eventId, userId: "usr_coordinator", title: "Clarification answered" },
       }),
     ).toBe(1);
+  });
+
+  it("SCRUM-18: a question asked at the same instant as a decision never leaves an OPEN clarification on the decided event", async () => {
+    asCoordinator();
+    const event = await prisma.event.create({
+      data: {
+        name: raceEventName,
+        status: "UNDER_REVIEW",
+        organiserId: "usr_organiser",
+        coordinatorId: "usr_coordinator",
+      },
+      select: { id: true },
+    });
+
+    // Either order is legal: the question lands first and the decision closes
+    // it, or the decision lands first and the question is refused. What must
+    // never happen is the question slipping in after the decision.
+    await Promise.all([
+      requestClarification({ eventId: event.id, message: "Question during a decision" }),
+      transitionEventStatus({ eventId: event.id, nextStatus: "APPROVED" }),
+    ]);
+
+    expect(
+      await prisma.event.findUniqueOrThrow({ where: { id: event.id } }),
+    ).toMatchObject({ status: "APPROVED" });
+    expect(
+      await prisma.clarificationRequest.count({
+        where: { eventId: event.id, status: "OPEN" },
+      }),
+    ).toBe(0);
   });
 });
