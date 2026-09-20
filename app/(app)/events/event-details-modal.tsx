@@ -13,7 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "@/components/events/status-badge";
 import { ClarificationPanel } from "@/components/events/clarification-panel";
 import { formatDate, formatDateTime } from "@/lib/datetime";
-import { Calendar, Building2, Wrench, ClipboardList, Info } from "lucide-react";
+import { Calendar, Building2, Wrench, ClipboardList, Info, AlertTriangle } from "lucide-react";
 import type { Event } from "@prisma/client";
 
 interface EventDetailsModalProps {
@@ -24,6 +24,7 @@ interface EventDetailsModalProps {
    * clarification panel shows a response box (SCRUM-18). Defaults to false
    * so the Organiser's existing usage needs no changes. */
   isCoordinator?: boolean;
+  isNoLongerAvailable?: boolean;
 }
 
 /**
@@ -35,6 +36,7 @@ export function EventDetailsModal({
   open,
   onOpenChange,
   isCoordinator = false,
+  isNoLongerAvailable = false,
 }: EventDetailsModalProps) {
   if (!event) return null;
 
@@ -59,6 +61,20 @@ export function EventDetailsModal({
             <StatusBadge status={event.status} />
           </div>
         </DialogHeader>
+
+        {/* Warning if event was reassigned or removed from review queue during view */}
+        {isNoLongerAvailable && (
+          <div
+            role="status"
+            className="flex items-center gap-2 rounded-md border border-warning/30 bg-warning/15 px-3 py-2 text-xs font-medium text-warning-foreground"
+            data-testid="event-no-longer-available-warning"
+          >
+            <AlertTriangle aria-hidden="true" className="h-4 w-4 shrink-0 text-warning" />
+            <span>
+              This event request is no longer available in your view (it may have been reassigned or updated).
+            </span>
+          </div>
+        )}
 
         {/* Singular Page Layout — Displays all entered details at a glance */}
         <div className="space-y-4 py-2">
