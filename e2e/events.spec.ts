@@ -410,6 +410,84 @@ test.describe("User Story 84 — Events list on mobile (375x812)", () => {
       page.getByRole("heading", { name: /Resume Draft Event Request/i }),
     ).toBeVisible();
   });
+
+  // SCRUM-18/19 — the coordinator's review actions and the clarification
+  // dialog. Two things broke on a real phone and are pinned here: the four
+  // review buttons wrapped unevenly (Reject alone on a second line), and the
+  // dialog's stacked footer buttons touched.
+  test("SCRUM-18/19: the four review buttons form an even two-column grid and stacked dialog buttons are separated", async ({
+    page,
+  }) => {
+    // Read at run time: the const is declared further down this file.
+    test.skip(!usesLocalDatabase, "writes its own event; local database only");
+
+    const eventName = `SCRUM-18 Mobile Layout ${Date.now()}`;
+    const event = await prisma.event.create({
+      data: {
+        name: eventName,
+        status: "UNDER_REVIEW",
+        organiserId: "usr_organiser",
+        coordinatorId: "usr_coordinator",
+        startAt: new Date("2031-06-01T02:00:00Z"),
+        endAt: new Date("2031-06-01T10:00:00Z"),
+      },
+      select: { id: true },
+    });
+
+    try {
+      await page.goto("/login");
+      await page.getByLabel("Email", { exact: true }).fill("coordinator@test.local");
+      await page.getByLabel("Password", { exact: true }).fill("Password123!");
+      await page.getByRole("button", { name: "Sign in" }).click();
+      await page.waitForURL("**/events");
+
+      // On a phone the row is a card (display: grid), so it is found by its
+      // data-status attribute rather than the table "row" role.
+      const card = page.locator("tr[data-status]", { hasText: eventName });
+      await expect(card).toBeVisible();
+
+      const view = card.getByTestId("view-details-button");
+      const approve = card.getByRole("button", { name: "Approve" });
+      const ask = card.getByRole("button", { name: "Ask" });
+      const reject = card.getByRole("button", { name: "Reject", exact: true });
+
+      const boxes = [];
+      for (const button of [view, approve, ask, reject]) {
+        await expect(button).toBeVisible();
+        boxes.push((await button.boundingBox())!);
+      }
+      const [viewBox, approveBox, askBox, rejectBox] = boxes;
+
+      // Two columns of equal width, two per row: Reject sits beside Ask
+      // instead of wrapping onto a line of its own.
+      for (const box of boxes) {
+        expect(Math.abs(box.width - viewBox.width)).toBeLessThanOrEqual(1);
+      }
+      expect(Math.abs(viewBox.y - approveBox.y)).toBeLessThanOrEqual(1);
+      expect(Math.abs(askBox.y - rejectBox.y)).toBeLessThanOrEqual(1);
+      expect(askBox.y).toBeGreaterThan(viewBox.y);
+
+      // Nothing pushes the page wider than the phone.
+      const overflowsX = await page.evaluate(
+        () =>
+          document.documentElement.scrollWidth >
+          document.documentElement.clientWidth,
+      );
+      expect(overflowsX).toBe(false);
+
+      // The dialog's stacked footer buttons must not touch.
+      await ask.click();
+      const dialog = page.getByRole("dialog", { name: /Request clarification/i });
+      await expect(dialog).toBeVisible();
+      const send = (await dialog.getByRole("button", { name: "Send request" }).boundingBox())!;
+      const cancel = (await dialog.getByRole("button", { name: "Cancel" }).boundingBox())!;
+      expect(cancel.y - (send.y + send.height)).toBeGreaterThanOrEqual(6);
+    } finally {
+      await prisma.notification.deleteMany({ where: { eventId: event.id } });
+      await prisma.auditLog.deleteMany({ where: { entityId: event.id } });
+      await prisma.event.deleteMany({ where: { id: event.id } });
+    }
+  });
 });
 
 /**
