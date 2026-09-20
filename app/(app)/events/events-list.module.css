@@ -1,0 +1,86 @@
+/*
+ * One events table, two layouts. On tablet and up it is an ordinary aligned
+ * table (unchanged). Below the `md` breakpoint (768px) the same rows restyle
+ * into stacked cards, so every event — and every action control — exists
+ * exactly once in the DOM. No hidden duplicate list, no "mobile-" testid split.
+ *
+ * `md` here matches Tailwind's default 768px breakpoint used elsewhere.
+ */
+
+@media (max-width: 767.98px) {
+  /* Collapse the table wrapper so rows can stack. */
+  .list,
+  .list tbody {
+    display: block;
+  }
+
+  /* The column header only reads correctly in the aligned table; on a card the
+     per-field labels below replace it. */
+  .list thead {
+    display: none;
+  }
+
+  /* Each row becomes a card laid out with grid areas:
+       name    status
+       starts  created
+       actions actions
+  */
+  .list tbody tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "name status"
+      "starts created"
+      "actions actions";
+    gap: 0.5rem 0.75rem;
+    align-items: start;
+    margin-bottom: 0.75rem;
+    padding: 1rem;
+    border: 1px solid hsl(var(--border));
+    border-radius: 0.75rem;
+    background: hsl(var(--card) / 0.5);
+  }
+
+  /* Re-assert the border on the last row: the table component zeroes it via
+     `[&_tr:last-child]:border-0`, which would otherwise leave the last card
+     with no outline. `tbody tr:last-child` out-specifies that utility. */
+  .list tbody tr:last-child {
+    margin-bottom: 0;
+    border: 1px solid hsl(var(--border));
+  }
+
+  /* Preserve the draft accent as a left border on the card. Declared AFTER the
+     last-child rule so a draft card that happens to be last still wins the tie
+     and keeps its 4px accent. */
+  .list tbody tr[data-status="DRAFT"] {
+    border-left: 4px solid hsl(var(--muted-foreground) / 0.5);
+    background: hsl(var(--muted) / 0.4);
+  }
+
+  .list td {
+    display: block;
+    padding: 0;
+    border: 0;
+  }
+
+  .list td[data-col="name"] {
+    grid-area: name;
+  }
+  .list td[data-col="status"] {
+    grid-area: status;
+    justify-self: end;
+  }
+  .list td[data-col="starts"] {
+    grid-area: starts;
+  }
+  .list td[data-col="created"] {
+    grid-area: created;
+  }
+  .list td[data-col="actions"] {
+    grid-area: actions;
+  }
+
+  /* The "Starts"/"Created" field labels are real elements in the cells (see
+     events-client.tsx), not CSS ::before content, so screen readers announce
+     them now that the column header is hidden. */
+}
