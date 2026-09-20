@@ -66,6 +66,7 @@ export async function createDraftEvent(
       registrationNotes,
       programme,
       specialRequests,
+      timezone,
     } = parsed.data;
 
     let eventId = id;
@@ -101,6 +102,7 @@ export async function createDraftEvent(
           registrationNotes: registrationNotes ?? null,
           programme: programme ?? null,
           specialRequests: specialRequests ?? null,
+          timezone: timezone ?? "Asia/Singapore",
         },
       });
     } else {
@@ -122,6 +124,7 @@ export async function createDraftEvent(
           registrationNotes: registrationNotes ?? null,
           programme: programme ?? null,
           specialRequests: specialRequests ?? null,
+          timezone: timezone ?? "Asia/Singapore",
           organiserId: user!.id,
         },
         select: { id: true },
@@ -178,6 +181,7 @@ export async function submitEventRequest(
       registrationNotes,
       programme,
       specialRequests,
+      timezone,
     } = parsed.data;
 
     let eventId = id;
@@ -234,6 +238,7 @@ export async function submitEventRequest(
             registrationNotes,
             programme: programme ?? null,
             specialRequests: specialRequests ?? null,
+            timezone: timezone ?? "Asia/Singapore",
           },
         });
       } else {
@@ -256,6 +261,7 @@ export async function submitEventRequest(
             registrationNotes,
             programme: programme ?? null,
             specialRequests: specialRequests ?? null,
+            timezone: timezone ?? "Asia/Singapore",
             organiserId: user!.id,
           },
           select: { id: true },

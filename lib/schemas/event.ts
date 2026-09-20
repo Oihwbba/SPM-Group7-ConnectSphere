@@ -43,6 +43,7 @@ export const createDraftEventSchema = z
     registrationNotes: z.string().trim().optional(),
     programme: z.string().trim().optional(),
     specialRequests: z.string().trim().optional(),
+    timezone: z.string().trim().max(64).optional().default("Asia/Singapore"),
   })
   .superRefine((data, ctx) => {
     const now = new Date();
@@ -148,6 +149,12 @@ export const submitEventRequestSchema = z
       .min(1, "Registration needs are required."),
     programme: z.string().trim().optional(),
     specialRequests: z.string().trim().optional(),
+    timezone: z
+      .string({ required_error: "Event timezone is required." })
+      .trim()
+      .min(1, "Event timezone is required.")
+      .max(64, "Timezone name is too long.")
+      .default("Asia/Singapore"),
   })
   .superRefine((data, ctx) => {
     const now = new Date();
