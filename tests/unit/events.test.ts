@@ -9,6 +9,7 @@ import {
   submitEventRequest,
   getFormCatalogues,
 } from "@/app/(app)/events/actions";
+import { filterAndSortEvents } from "@/app/(app)/events/events-client";
 
 // ============================================================================
 // MOCKS & SETUP
@@ -441,6 +442,66 @@ describe("User Story 15 — Save an event request as draft", () => {
     );
   });
 
+  it("SCRUM-13 [Timezone Persistence / Submission]: persists chosen timezone when submitting a new event request and when submitting from a draft", async () => {
+    mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
+    mockCreate.mockResolvedValue({ id: "evt_submit_tz_new" });
+
+    const submissionData = {
+      name: "Tokyo Regional Forum",
+      purpose: "Networking",
+      description: "Regional gathering",
+      startAt: futureStart,
+      endAt: futureEnd,
+      expectedAttendance: 100,
+      venueRequirements: "Auditorium",
+      preferredLayout: "Theatre",
+      accessibilityNeeds: "Ramp access",
+      equipmentRequirements: "Microphones",
+      registrationNotes: "Online registration",
+      timezone: "Asia/Tokyo (+09:00)",
+    };
+
+    // 1. Submit a new event request with a chosen timezone
+    const resultNew = await submitEventRequest(submissionData);
+
+    expect(resultNew.ok).toBe(true);
+    expect(mockCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          name: "Tokyo Regional Forum",
+          timezone: "Asia/Tokyo (+09:00)",
+        }),
+      }),
+    );
+
+    // 2. Submit a draft-to-SUBMITTED event request with a chosen timezone
+    mockFindFirst.mockResolvedValue({
+      id: "evt_draft_tz_submit",
+      organiserId: "usr_organiser",
+      status: "DRAFT",
+    });
+    mockUpdate.mockResolvedValue({ id: "evt_draft_tz_submit" });
+
+    const resultDraftSubmit = await submitEventRequest({
+      ...submissionData,
+      id: "evt_draft_tz_submit",
+      name: "London Global Forum",
+      timezone: "Europe/London (+00:00)",
+    });
+
+    expect(resultDraftSubmit.ok).toBe(true);
+    expect(mockUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "evt_draft_tz_submit" },
+        data: expect.objectContaining({
+          name: "London Global Forum",
+          timezone: "Europe/London (+00:00)",
+          status: "SUBMITTED",
+        }),
+      }),
+    );
+  });
+
   it("SCRUM-15 [AC4 - Relaxation Rule]: allows saving a draft with missing mandatory fields (dates/venue/equipment/attendance omitted)", async () => {
     mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
     mockCreate.mockResolvedValue({ id: "evt_draft_relaxed" });
@@ -809,77 +870,67 @@ describe("User Story 84 — Organiser views their own event requests", () => {
     expect(results.length).toBe(0);
   });
 
-  it("SCRUM-84 [AC6 - Happy Path / Search Filter]: filters event list by search query matching event name or purpose", async () => {
+  it("SCRUM-84 [AC6 - Happy Path / Search Filter]: filters event list by search query matching event name or purpose via filterAndSortEvents", () => {
     const events = [
-      { id: "1", name: "Annual Tech Conference", purpose: "Tech networking", status: "APPROVED" },
-      { id: "2", name: "Internal Team Retreat", purpose: "Team building", status: "DRAFT" },
+      { id: "1", name: "Annual Tech Conference", purpose: "Tech networking", status: "APPROVED", updatedAt: "2026-09-01T10:00:00Z" },
+      { id: "2", name: "Internal Team Retreat", purpose: "Team building", status: "DRAFT", updatedAt: "2026-09-02T10:00:00Z" },
     ];
 
-    const searchQuery = "Tech";
-    const filtered = events.filter(
-      (e) =>
-        e.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        e.purpose.toLowerCase().includes(searchQuery.toLowerCase()),
-    );
+    const filteredByName = filterAndSortEvents(events, { searchQuery: "Tech" });
+    expect(filteredByName).toHaveLength(1);
+    expect(filteredByName[0].id).toBe("1");
 
-    expect(filtered).toHaveLength(1);
-    expect(filtered[0].id).toBe("1");
+    const filteredByPurpose = filterAndSortEvents(events, { searchQuery: "building" });
+    expect(filteredByPurpose).toHaveLength(1);
+    expect(filteredByPurpose[0].id).toBe("2");
   });
 
-  it("SCRUM-84 [AC7 - Default & Custom Sorting]: orders event list by updatedAt descending by default", async () => {
+  it("SCRUM-84 [AC7 - Default & Custom Sorting]: orders event list by updatedAt descending by default and by name asc when specified", () => {
     const events = [
-      { id: "1", name: "Older Event", updatedAt: new Date("2026-08-01T10:00:00Z") },
-      { id: "2", name: "Recently Updated Event", updatedAt: new Date("2026-09-15T12:00:00Z") },
+      { id: "1", name: "Zebra Expo", status: "DRAFT", updatedAt: new Date("2026-08-01T10:00:00Z") },
+      { id: "2", name: "Alpha Summit", status: "DRAFT", updatedAt: new Date("2026-09-15T12:00:00Z") },
     ];
 
-    const sortedEvents = [...events].sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
+    const sortedByDefault = filterAndSortEvents(events, { sortField: "updatedAt", sortOrder: "desc" });
+    expect(sortedByDefault[0].id).toBe("2");
+    expect(sortedByDefault[1].id).toBe("1");
 
-    expect(sortedEvents[0].id).toBe("2");
-    expect(sortedEvents[1].id).toBe("1");
+    const sortedByNameAsc = filterAndSortEvents(events, { sortField: "name", sortOrder: "asc" });
+    expect(sortedByNameAsc[0].id).toBe("2");
+    expect(sortedByNameAsc[1].id).toBe("1");
   });
 
-  it("SCRUM-84 [AC8 - Multi-Criteria Filtering Combination]: filters events by active tab AND search query simultaneously", async () => {
+  it("SCRUM-84 [AC8 - Multi-Criteria Filtering Combination]: filters events by active tab AND status filter AND search query simultaneously", () => {
     const events = [
-      { id: "1", name: "Annual Tech Conference", purpose: "Networking", status: "DRAFT" },
-      { id: "2", name: "Tech Workshop", purpose: "Training", status: "APPROVED" },
-      { id: "3", name: "Annual HR Retreat", purpose: "Team building", status: "DRAFT" },
+      { id: "1", name: "Annual Tech Conference", purpose: "Networking", status: "DRAFT", updatedAt: new Date() },
+      { id: "2", name: "Tech Workshop", purpose: "Training", status: "APPROVED", updatedAt: new Date() },
+      { id: "3", name: "Annual HR Retreat", purpose: "Team building", status: "DRAFT", updatedAt: new Date() },
     ];
 
-    const activeTab = "DRAFT";
-    const searchQuery = "Tech";
-
-    const filtered = events.filter((evt) => {
-      const matchesTab = activeTab === "DRAFT" ? evt.status === "DRAFT" : true;
-      const matchesSearch =
-        evt.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        evt.purpose.toLowerCase().includes(searchQuery.toLowerCase());
-      return matchesTab && matchesSearch;
+    const filtered = filterAndSortEvents(events, {
+      activeTab: "DRAFT",
+      statusFilter: "DRAFT",
+      searchQuery: "Tech",
     });
 
     expect(filtered).toHaveLength(1);
     expect(filtered[0].id).toBe("1");
   });
 
-  it("SCRUM-84 [AC9 - Search Cleared State & Partial Matches]: matches partial string and restores list when search is cleared", async () => {
+  it("SCRUM-84 [AC9 - Search Cleared State & Partial Matches]: matches partial string and restores list when search is cleared", () => {
     const events = [
-      { id: "1", name: "Annual Hackathon", status: "SUBMITTED" },
-      { id: "2", name: "Quarterly Review", status: "SUBMITTED" },
+      { id: "1", name: "Annual Hackathon", status: "SUBMITTED", updatedAt: new Date() },
+      { id: "2", name: "Quarterly Review", status: "SUBMITTED", updatedAt: new Date() },
     ];
 
     // 1. Partial match test
-    let searchQuery = "hack";
-    let filtered = events.filter((evt) =>
-      evt.name.toLowerCase().includes(searchQuery.toLowerCase()),
-    );
-    expect(filtered).toHaveLength(1);
-    expect(filtered[0].id).toBe("1");
+    const partialFiltered = filterAndSortEvents(events, { searchQuery: "hack" });
+    expect(partialFiltered).toHaveLength(1);
+    expect(partialFiltered[0].id).toBe("1");
 
     // 2. Cleared search restores all events
-    searchQuery = "";
-    filtered = events.filter(
-      (evt) => !searchQuery.trim() || evt.name.toLowerCase().includes(searchQuery.toLowerCase()),
-    );
-    expect(filtered).toHaveLength(2);
+    const clearedFiltered = filterAndSortEvents(events, { searchQuery: "   " });
+    expect(clearedFiltered).toHaveLength(2);
   });
 });
 

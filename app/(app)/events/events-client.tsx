@@ -49,9 +49,81 @@ interface EventsClientProps {
   isCoordinator?: boolean;
 }
 
-type FilterTab = "ALL" | "DRAFT" | "SUBMITTED" | "APPROVED" | "REJECTED" | "UNDER_REVIEW";
-type SortField = "name" | "status" | "startAt" | "updatedAt";
-type SortOrder = "asc" | "desc";
+export type FilterTab = "ALL" | "DRAFT" | "SUBMITTED" | "APPROVED" | "REJECTED" | "UNDER_REVIEW";
+export type SortField = "name" | "status" | "startAt" | "updatedAt";
+export type SortOrder = "asc" | "desc";
+
+export interface FilterAndSortOptions {
+  activeTab?: FilterTab;
+  statusFilter?: string;
+  searchQuery?: string;
+  sortField?: SortField;
+  sortOrder?: SortOrder;
+}
+
+export function filterAndSortEvents<
+  T extends {
+    name: string;
+    status: string;
+    purpose?: string | null;
+    startAt?: Date | string | null;
+    updatedAt?: Date | string | null;
+    createdAt?: Date | string | null;
+  },
+>(events: T[], options: FilterAndSortOptions = {}): T[] {
+  const {
+    activeTab = "ALL",
+    statusFilter = "ALL",
+    searchQuery = "",
+    sortField = "updatedAt",
+    sortOrder = "desc",
+  } = options;
+
+  const q = searchQuery.trim().toLowerCase();
+
+  return events
+    .filter((evt) => {
+      const matchesTab =
+        activeTab === "DRAFT"
+          ? evt.status === "DRAFT"
+          : activeTab === "SUBMITTED"
+            ? evt.status === "SUBMITTED"
+            : activeTab === "APPROVED"
+              ? evt.status === "APPROVED"
+              : activeTab === "REJECTED"
+                ? evt.status === "REJECTED"
+                : activeTab === "UNDER_REVIEW"
+                  ? evt.status === "UNDER_REVIEW"
+                  : true;
+
+      const matchesDropdown =
+        statusFilter === "ALL" ? true : evt.status === statusFilter;
+
+      const matchesSearch =
+        !q ||
+        evt.name.toLowerCase().includes(q) ||
+        Boolean(evt.purpose && evt.purpose.toLowerCase().includes(q));
+
+      return matchesTab && matchesDropdown && matchesSearch;
+    })
+    .sort((a, b) => {
+      let comparison = 0;
+      if (sortField === "name") {
+        comparison = a.name.localeCompare(b.name);
+      } else if (sortField === "status") {
+        comparison = a.status.localeCompare(b.status);
+      } else if (sortField === "startAt") {
+        const tA = a.startAt ? new Date(a.startAt).getTime() : 0;
+        const tB = b.startAt ? new Date(b.startAt).getTime() : 0;
+        comparison = tA - tB;
+      } else if (sortField === "updatedAt") {
+        const tA = a.updatedAt ? new Date(a.updatedAt).getTime() : (a.createdAt ? new Date(a.createdAt).getTime() : 0);
+        const tB = b.updatedAt ? new Date(b.updatedAt).getTime() : (b.createdAt ? new Date(b.createdAt).getTime() : 0);
+        comparison = tA - tB;
+      }
+      return sortOrder === "asc" ? comparison : -comparison;
+    });
+}
 
 /**
  * EventsClient provides the interactive event list UI for Organisers and Coordinators.
@@ -107,48 +179,13 @@ export function EventsClient({
 
   const [searchQuery, setSearchQuery] = useState("");
 
-  const filteredEvents = events
-    .filter((evt) => {
-      const matchesTab =
-        activeTab === "DRAFT"
-          ? evt.status === "DRAFT"
-          : activeTab === "SUBMITTED"
-            ? evt.status === "SUBMITTED"
-            : activeTab === "APPROVED"
-              ? evt.status === "APPROVED"
-              : activeTab === "REJECTED"
-                ? evt.status === "REJECTED"
-                : activeTab === "UNDER_REVIEW"
-                  ? evt.status === "UNDER_REVIEW"
-                  : true;
-
-      const matchesDropdown =
-        statusFilter === "ALL" ? true : evt.status === statusFilter;
-
-      const matchesSearch =
-        !searchQuery.trim() ||
-        evt.name.toLowerCase().includes(searchQuery.toLowerCase().trim()) ||
-        (evt.purpose && evt.purpose.toLowerCase().includes(searchQuery.toLowerCase().trim()));
-
-      return matchesTab && matchesDropdown && matchesSearch;
-    })
-    .sort((a, b) => {
-      let comparison = 0;
-      if (sortField === "name") {
-        comparison = a.name.localeCompare(b.name);
-      } else if (sortField === "status") {
-        comparison = a.status.localeCompare(b.status);
-      } else if (sortField === "startAt") {
-        const tA = a.startAt ? new Date(a.startAt).getTime() : 0;
-        const tB = b.startAt ? new Date(b.startAt).getTime() : 0;
-        comparison = tA - tB;
-      } else if (sortField === "updatedAt") {
-        const tA = new Date(a.updatedAt).getTime();
-        const tB = new Date(b.updatedAt).getTime();
-        comparison = tA - tB;
-      }
-      return sortOrder === "asc" ? comparison : -comparison;
-    });
+  const filteredEvents = filterAndSortEvents(events, {
+    activeTab,
+    statusFilter,
+    searchQuery,
+    sortField,
+    sortOrder,
+  });
 
   const draftCount = events.filter((evt) => evt.status === "DRAFT").length;
   const submittedCount = events.filter((evt) => evt.status === "SUBMITTED").length;
@@ -556,6 +593,7 @@ export function EventsClient({
 
       {/* Controlled Dialog Instance for Creating New Event */}
       <CreateEventDialog
+        key={createDialogOpen ? "create-open" : "create-closed"}
         open={createDialogOpen}
         onOpenChange={setCreateDialogOpen}
       />

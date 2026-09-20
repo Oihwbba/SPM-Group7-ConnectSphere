@@ -9,13 +9,108 @@
 
 const TIME_ZONE = "Asia/Singapore";
 
-export const TIMEZONE_OPTIONS = [
-  { value: "Asia/Singapore (+08:00)", label: "Asia/Singapore (SGT +08:00)", iana: "Asia/Singapore" },
-  { value: "Asia/Tokyo (+09:00)", label: "Asia/Tokyo (JST +09:00)", iana: "Asia/Tokyo" },
-  { value: "Europe/London (+00:00)", label: "Europe/London (GMT +00:00)", iana: "Europe/London" },
-  { value: "America/New_York (-05:00)", label: "America/New_York (EST -05:00)", iana: "America/New_York" },
-  { value: "UTC (+00:00)", label: "UTC (Coordinated Universal Time)", iana: "UTC" },
-] as const;
+export interface TimezoneOption {
+  value: string;
+  label: string;
+  iana: string;
+}
+
+function generateAllTimezoneOptions(): TimezoneOption[] {
+  let zones: string[] = [];
+  try {
+    zones = Intl.supportedValuesOf("timeZone");
+  } catch {
+    zones = [
+      "Asia/Singapore",
+      "Asia/Tokyo",
+      "Europe/London",
+      "America/New_York",
+      "UTC",
+    ];
+  }
+
+  const priorityZones = [
+    "Asia/Singapore",
+    "Asia/Tokyo",
+    "Europe/London",
+    "America/New_York",
+    "UTC",
+  ];
+
+  const formatZoneOption = (iana: string): TimezoneOption => {
+    if (iana === "Asia/Singapore") {
+      return {
+        value: "Asia/Singapore (+08:00)",
+        label: "Asia/Singapore (SGT +08:00)",
+        iana,
+      };
+    }
+    if (iana === "Asia/Tokyo") {
+      return {
+        value: "Asia/Tokyo (+09:00)",
+        label: "Asia/Tokyo (JST +09:00)",
+        iana,
+      };
+    }
+    if (iana === "Europe/London") {
+      return {
+        value: "Europe/London (+00:00)",
+        label: "Europe/London (GMT +00:00)",
+        iana,
+      };
+    }
+    if (iana === "America/New_York") {
+      return {
+        value: "America/New_York (-05:00)",
+        label: "America/New_York (EST -05:00)",
+        iana,
+      };
+    }
+    if (iana === "UTC") {
+      return {
+        value: "UTC (+00:00)",
+        label: "UTC (Coordinated Universal Time)",
+        iana,
+      };
+    }
+
+    let offsetStr = "";
+    try {
+      const parts = new Intl.DateTimeFormat("en-US", {
+        timeZone: iana,
+        timeZoneName: "shortOffset",
+      }).formatToParts(new Date());
+      const tzName = parts.find((p) => p.type === "timeZoneName")?.value ?? "";
+      if (tzName === "GMT" || tzName === "UTC") {
+        offsetStr = "+00:00";
+      } else {
+        const match = tzName.match(/(?:GMT|UTC)([+-])(\d+)(?::(\d+))?/);
+        if (match) {
+          const sign = match[1];
+          const h = match[2].padStart(2, "0");
+          const m = (match[3] || "0").padStart(2, "0");
+          offsetStr = `${sign}${h}:${m}`;
+        }
+      }
+    } catch {}
+
+    const value = offsetStr ? `${iana} (${offsetStr})` : iana;
+    const label = offsetStr ? `${iana} (GMT${offsetStr})` : iana;
+    return { value, label, iana };
+  };
+
+  const priorityOptions = priorityZones.map(formatZoneOption);
+
+  const remainingZones = zones
+    .filter((z) => !priorityZones.includes(z))
+    .sort((a, b) => a.localeCompare(b));
+
+  const remainingOptions = remainingZones.map(formatZoneOption);
+
+  return [...priorityOptions, ...remainingOptions];
+}
+
+export const TIMEZONE_OPTIONS: TimezoneOption[] = generateAllTimezoneOptions();
 
 const dateTimeFormatter = new Intl.DateTimeFormat("en-SG", {
   timeZone: TIME_ZONE,
@@ -38,6 +133,37 @@ export function formatDateTime(value: Date | string): string {
   return dateTimeFormatter.format(new Date(value));
 }
 
+/** Parse an event timezone option string or IANA code into an IANA timezone identifier */
+export function parseIanaZone(timezoneStr: string = "Asia/Singapore (+08:00)"): string {
+  if (!timezoneStr) return "Asia/Singapore";
+  const found = TIMEZONE_OPTIONS.find(
+    (opt) => opt.value === timezoneStr || opt.iana === timezoneStr || timezoneStr.includes(opt.iana),
+  );
+  if (found) return found.iana;
+  if (timezoneStr.includes("Tokyo")) return "Asia/Tokyo";
+  if (timezoneStr.includes("London")) return "Europe/London";
+  if (timezoneStr.includes("New_York")) return "America/New_York";
+  if (timezoneStr.includes("UTC")) return "UTC";
+  if (timezoneStr.includes("Singapore")) return "Asia/Singapore";
+
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: timezoneStr });
+    return timezoneStr;
+  } catch {
+    return "Asia/Singapore";
+  }
+}
+
+/** Normalize stored timezone values to their full option string representation */
+export function normalizeTimezoneOption(tz?: string | null): string {
+  if (!tz) return "Asia/Singapore (+08:00)";
+  const found = TIMEZONE_OPTIONS.find(
+    (opt) => opt.value === tz || opt.iana === tz,
+  );
+  if (found) return found.value;
+  return tz;
+}
+
 /** Format a date and time in a specified event timezone string with zone suffix */
 export function formatDateTimeInTimezone(
   value: Date | string | null | undefined,
@@ -47,13 +173,7 @@ export function formatDateTimeInTimezone(
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return "—";
 
-  let timeZone = "Asia/Singapore";
-  if (timezoneStr) {
-    if (timezoneStr.includes("Tokyo")) timeZone = "Asia/Tokyo";
-    else if (timezoneStr.includes("London")) timeZone = "Europe/London";
-    else if (timezoneStr.includes("New_York")) timeZone = "America/New_York";
-    else if (timezoneStr.includes("UTC")) timeZone = "UTC";
-  }
+  const timeZone = parseIanaZone(timezoneStr ?? undefined);
 
   const formatter = new Intl.DateTimeFormat("en-SG", {
     timeZone,

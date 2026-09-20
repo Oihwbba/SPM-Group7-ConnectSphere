@@ -35,20 +35,15 @@ import {
   parseSingaporeDateTime,
   timezoneWallTimeToUtcIso,
   utcToTimezoneWallTime,
+  TIMEZONE_OPTIONS,
+  parseIanaZone,
+  normalizeTimezoneOption,
 } from "@/lib/datetime";
 import {
   createDraftEvent,
   submitEventRequest,
   getFormCatalogues,
 } from "./actions";
-
-function parseIanaZone(timezoneStr: string = "Asia/Singapore (+08:00)"): string {
-  if (timezoneStr.includes("Tokyo")) return "Asia/Tokyo";
-  if (timezoneStr.includes("London")) return "Europe/London";
-  if (timezoneStr.includes("New_York")) return "America/New_York";
-  if (timezoneStr.includes("UTC")) return "UTC";
-  return "Asia/Singapore";
-}
 
 /**
  * A datetime-local value ("2026-09-20T10:00") carries no timezone offset.
@@ -57,16 +52,6 @@ function parseIanaZone(timezoneStr: string = "Asia/Singapore (+08:00)"): string 
 function toUtcIso(localValue: string, timezoneStr: string = "Asia/Singapore (+08:00)"): string | undefined {
   if (!localValue) return undefined;
   return timezoneWallTimeToUtcIso(localValue, parseIanaZone(timezoneStr));
-}
-
-function normalizeTimezoneOption(tz?: string | null): string {
-  if (!tz) return "Asia/Singapore (+08:00)";
-  if (tz === "Asia/Singapore") return "Asia/Singapore (+08:00)";
-  if (tz === "Asia/Tokyo") return "Asia/Tokyo (+09:00)";
-  if (tz === "Europe/London") return "Europe/London (+00:00)";
-  if (tz === "America/New_York") return "America/New_York (-05:00)";
-  if (tz === "UTC") return "UTC (+00:00)";
-  return tz;
 }
 
 const COMMON_FACILITIES = [
@@ -232,6 +217,20 @@ export function CreateEventDialog({
   // Minimum start datetime computed in the user's selected event timezone
   const minStartDateTime = toDatetimeInputString(new Date(), formData.timezone);
 
+  const [isDirty, setIsDirty] = useState(false);
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
+
+  const [prevOpen, setPrevOpen] = useState(open);
+  if (open !== prevOpen) {
+    setPrevOpen(open);
+    if (open) {
+      setFormData(getInitialFormData(draftEvent));
+      setFieldErrors({});
+      setStep(1);
+      setIsDirty(false);
+    }
+  }
+
   useEffect(() => {
     if (open) {
       getFormCatalogues()
@@ -241,9 +240,6 @@ export function CreateEventDialog({
         .catch(() => {});
     }
   }, [open]);
-
-  const [isDirty, setIsDirty] = useState(false);
-  const [showExitConfirm, setShowExitConfirm] = useState(false);
 
   useEffect(() => {
     if (!isDirty || isReadOnly) return;
@@ -271,12 +267,10 @@ export function CreateEventDialog({
       setInternalOpen(isOpen);
     }
 
-    if (isOpen) {
-      setFormData(getInitialFormData(draftEvent));
-      setIsDirty(false);
-    } else {
-      setIsDirty(false);
-    }
+    setFormData(getInitialFormData(draftEvent));
+    setFieldErrors({});
+    setStep(1);
+    setIsDirty(false);
   }
 
   const minEndDateTime = formData.startAt ? formData.startAt : minStartDateTime;
@@ -648,11 +642,11 @@ export function CreateEventDialog({
                 onChange={(e) => updateField("timezone", e.target.value)}
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                <option value="Asia/Singapore (+08:00)">Asia/Singapore (SGT +08:00)</option>
-                <option value="Asia/Tokyo (+09:00)">Asia/Tokyo (JST +09:00)</option>
-                <option value="Europe/London (+00:00)">Europe/London (GMT +00:00)</option>
-                <option value="America/New_York (-05:00)">America/New_York (EST -05:00)</option>
-                <option value="UTC (+00:00)">UTC (Coordinated Universal Time)</option>
+                {TIMEZONE_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
               </select>
               <p className="text-[11px] text-muted-foreground">
                 Authoritative timezone for schedule interpretation. Persisted instants stored consistently in UTC.

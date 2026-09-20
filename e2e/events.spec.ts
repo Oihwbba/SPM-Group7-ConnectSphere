@@ -390,20 +390,30 @@ test.describe("User Story 84 — Organiser Views Their Own Event Requests Journe
     await page.getByRole("button", { name: "Sign in" }).click();
     await page.waitForURL("**/events");
 
-    // Column Header Sort Toggle test
+    // Column Header Sort Toggle test - sort by Name ascending
     const nameHeader = page.getByRole("columnheader", { name: /Name/i });
     await expect(nameHeader).toBeVisible();
     await page.getByRole("button", { name: "Sort by Name" }).click();
+    await expect(nameHeader).toHaveAttribute("aria-sort", "ascending");
 
-    // Status Select Filter test - select DRAFT and assert draft row is visible
+    // Verify actual row ordering after sorting by Name
+    const firstRowName = await page.getByTestId("event-name-link").first().textContent();
+    const secondRowName = await page.getByTestId("event-name-link").nth(1).textContent();
+    if (firstRowName && secondRowName) {
+      expect(firstRowName.localeCompare(secondRowName)).toBeLessThanOrEqual(0);
+    }
+
+    // Status Select Filter test - select DRAFT and assert draft row is visible while SUBMITTED rows are excluded
     await page.getByLabel("Filter by status").selectOption("DRAFT");
     await expect(page.getByLabel("Filter by status")).toHaveValue("DRAFT");
     await expect(page.getByTestId("draft-event-row").first()).toBeVisible();
+    await expect(page.locator('[data-status="SUBMITTED"]')).not.toBeVisible();
 
-    // Search query test - search for matching event
+    // Search query test - search for matching event and assert non-matching events are excluded
     await page.getByPlaceholder("Search by name or purpose...").fill("Annual");
     await expect(page.getByPlaceholder("Search by name or purpose...")).toHaveValue("Annual");
     await expect(page.getByText("Annual Tech Summit")).toBeVisible();
+    await expect(page.getByText("Career Fair")).not.toBeVisible();
   });
 });
 
