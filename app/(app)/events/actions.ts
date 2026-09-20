@@ -441,6 +441,14 @@ export async function transitionEventStatus(
           summary: decisionReason ?? undefined,
         },
       });
+
+      // SCRUM-18: a decision ends any question still waiting on the organiser.
+      // Left OPEN, it would survive a reject-and-resubmit and block the
+      // coordinator from asking about the amended request.
+      await tx.clarificationRequest.updateMany({
+        where: { eventId: event.id, status: "OPEN" },
+        data: { status: "CLOSED" },
+      });
       return true;
     });
     if (!updated) {
