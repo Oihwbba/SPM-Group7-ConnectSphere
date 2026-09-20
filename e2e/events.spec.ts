@@ -523,6 +523,10 @@ test.describe("User Story 23 & 24 — Event Status View & Consistency Journey", 
   test("two users viewing the same event simultaneously see consistent live status without manual refresh (SCRUM-24)", async ({
     browser,
   }) => {
+    // Reads the coordinator this request was auto-assigned to, so it needs the
+    // local database the other write-heavy tests use.
+    test.skip(!usesLocalDatabase, "reads its own event; local database only");
+
     // 1. Sign in as Organiser in first browser context
     const organiserContext = await browser.newContext();
     const organiserPage = await organiserContext.newPage();
@@ -572,11 +576,21 @@ test.describe("User Story 23 & 24 — Event Status View & Consistency Journey", 
     await expect(organiserModal).toBeVisible();
     await expect(organiserModal.getByTestId("status-badge")).toHaveAttribute("data-status", "UNDER_REVIEW");
 
-    // 3. Sign in as Coordinator in second browser context
+    // 3. Sign in as the coordinator the request was actually assigned to.
+    //    SCRUM-20 assigns the least-loaded coordinator, and the seed has two,
+    //    so hard-coding one of them makes this test a coin flip: the other
+    //    coordinator does not see an event already assigned away from them.
+    const assignment = await prisma.event.findFirst({
+      where: { name: syncEventName },
+      select: { coordinator: { select: { email: true } } },
+    });
+    const coordinatorEmail =
+      assignment?.coordinator?.email ?? "coordinator@test.local";
+
     const coordinatorContext = await browser.newContext();
     const coordinatorPage = await coordinatorContext.newPage();
     await coordinatorPage.goto("/login");
-    await coordinatorPage.getByLabel("Email", { exact: true }).fill("coordinator@test.local");
+    await coordinatorPage.getByLabel("Email", { exact: true }).fill(coordinatorEmail);
     await coordinatorPage.getByLabel("Password", { exact: true }).fill("Password123!");
     await coordinatorPage.getByRole("button", { name: "Sign in" }).click();
     await coordinatorPage.waitForURL("**/events");
