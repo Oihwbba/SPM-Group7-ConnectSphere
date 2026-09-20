@@ -32,6 +32,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import styles from "./events-list.module.css";
 import { CreateEventDialog } from "./create-event-dialog";
 import { EventDetailsModal } from "./event-details-modal";
 import { transitionEventStatus } from "./actions";
@@ -216,21 +217,102 @@ export function EventsClient({
   const approvedCount = events.filter((evt) => evt.status === "APPROVED").length;
   const rejectedCount = events.filter((evt) => evt.status === "REJECTED").length;
 
+  // Row actions. The row is a single element (table row on desktop, stacked
+  // card on mobile — see events-list.module.css), so each control renders once
+  // and its testid is unambiguous without any "mobile-" prefix.
+  const renderActions = (event: Event) => {
+    const isDraft = event.status === "DRAFT";
+    const isRejected = event.status === "REJECTED";
+    return (
+      <div className="flex flex-wrap items-center justify-end gap-1.5">
+        {(isDraft || (!isCoordinator && isRejected)) && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 gap-1.5 text-xs font-medium"
+            onClick={() => setEditingDraft(event)}
+            data-testid={
+              isDraft ? "resume-draft-button" : "amend-rejected-button"
+            }
+          >
+            <Pencil className="h-3.5 w-3.5" />
+            {isDraft ? "Resume Draft" : "Amend & Resubmit"}
+          </Button>
+        )}
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-8 gap-1.5 text-xs"
+          onClick={() => setViewingEvent(event)}
+          data-testid="view-details-button"
+        >
+          <Eye className="h-3.5 w-3.5" />
+          View Details
+        </Button>
+        {/* SCRUM-19: decide a submitted or under-review request. There is no
+            manual "claim" — SCRUM-20 assigns automatically. */}
+        {isCoordinator &&
+          (event.status === "SUBMITTED" || event.status === "UNDER_REVIEW") && (
+            <>
+              <Button
+                size="sm"
+                className="h-8 gap-1.5 text-xs"
+                disabled={isPending}
+                onClick={() => changeStatus(event, "APPROVED")}
+              >
+                <CheckCircle2 className="h-3.5 w-3.5" /> Approve
+              </Button>
+              {/* SCRUM-18: ask the organiser a question instead of deciding. */}
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 gap-1.5 text-xs"
+                disabled={isPending}
+                onClick={() => {
+                  setClarifyingEvent(event);
+                  setClarificationMessage("");
+                }}
+              >
+                <MessageCircleQuestion className="h-3.5 w-3.5" /> Ask
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                className="h-8 gap-1.5 text-xs"
+                disabled={isPending}
+                onClick={() => {
+                  setRejectingEvent(event);
+                  setRejectionReason("");
+                }}
+              >
+                <XCircle className="h-3.5 w-3.5" /> Reject
+              </Button>
+            </>
+          )}
+      </div>
+    );
+  };
+
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className="space-y-4 md:space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-2 md:gap-3">
         <div className="space-y-1">
-          <h1 className="text-2xl font-semibold tracking-tight">
+          <h1 className="text-xl font-semibold tracking-tight md:text-2xl">
             {isCoordinator ? "Submitted Event Requests" : "My Events"}
           </h1>
-          <p className="text-sm text-muted-foreground">
+          {/* Onboarding subtitle — hidden on phones to keep the header compact
+              and leave more room for the list. */}
+          <p className="hidden text-sm text-muted-foreground sm:block">
             {isCoordinator
               ? "Review submitted event requests requiring coordinator review and planning."
               : "Create and track your event requests through their lifecycle."}
           </p>
         </div>
         {!isCoordinator && (
-          <Button className="gap-2" onClick={() => setCreateDialogOpen(true)}>
+          <Button
+            className="h-8 gap-1.5 px-3 text-xs md:h-10 md:gap-2 md:px-4 md:text-sm"
+            onClick={() => setCreateDialogOpen(true)}
+          >
             <Plus className="h-4 w-4" />
             Create Event Request
           </Button>
@@ -240,12 +322,14 @@ export function EventsClient({
       {/* Filter Tabs & Interactive Search Bar for SCRUM-84 AC6-AC9 */}
       {events.length > 0 && (
         <div className="flex flex-wrap items-center justify-between gap-3 border-b pb-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <Filter className="mr-1 h-4 w-4 text-muted-foreground" />
+          {/* Horizontal scroll below md keeps the phone layout free of overflow
+              (SCRUM-84 mobile e2e), wrapping normally from md up. */}
+          <div className="flex w-full flex-nowrap items-center gap-1.5 overflow-x-auto md:w-auto md:flex-wrap md:gap-2 md:overflow-visible">
+            <Filter className="mr-0.5 h-4 w-4 shrink-0 text-muted-foreground md:mr-1" />
             <Button
               variant={activeTab === "ALL" ? "secondary" : "ghost"}
               size="sm"
-              className="h-8 text-xs font-medium"
+              className="h-8 shrink-0 text-xs font-medium"
               onClick={() => {
                 setActiveTab("ALL");
                 setStatusFilter("ALL");
@@ -258,7 +342,7 @@ export function EventsClient({
                 variant={activeTab === "DRAFT" ? "secondary" : "ghost"}
                 size="sm"
                 className={cn(
-                  "h-8 gap-1.5 text-xs font-medium",
+                  "h-8 shrink-0 gap-1.5 text-xs font-medium",
                   activeTab === "DRAFT" && "font-semibold",
                 )}
                 onClick={() => {
@@ -273,7 +357,7 @@ export function EventsClient({
             <Button
               variant={activeTab === "SUBMITTED" ? "secondary" : "ghost"}
               size="sm"
-              className="h-8 text-xs font-medium"
+              className="h-8 shrink-0 text-xs font-medium"
               onClick={() => {
                 setActiveTab("SUBMITTED");
                 setStatusFilter("ALL");
@@ -284,7 +368,7 @@ export function EventsClient({
             <Button
               variant={activeTab === "APPROVED" ? "secondary" : "ghost"}
               size="sm"
-              className="h-8 text-xs font-medium"
+              className="h-8 shrink-0 text-xs font-medium"
               onClick={() => {
                 setActiveTab("APPROVED");
                 setStatusFilter("ALL");
@@ -295,7 +379,7 @@ export function EventsClient({
             <Button
               variant={activeTab === "REJECTED" ? "secondary" : "ghost"}
               size="sm"
-              className="h-8 text-xs font-medium"
+              className="h-8 shrink-0 text-xs font-medium"
               onClick={() => {
                 setActiveTab("REJECTED");
                 setStatusFilter("ALL");
@@ -383,9 +467,19 @@ export function EventsClient({
           </CardContent>
         </Card>
       ) : (
-        <Card>
+        <Card className="max-md:rounded-none max-md:border-0 max-md:bg-transparent max-md:shadow-none max-md:backdrop-blur-none">
           <CardContent className="p-0">
-            <Table>
+            {/* A single table that restyles into a stacked card per row below
+                the `md` breakpoint (events-list.module.css). Each event — and
+                each action control — exists exactly once in the DOM; there is
+                no hidden duplicate list and no "mobile-" testid split.
+
+                Explicit ARIA roles are set because the mobile restyle changes
+                the elements' `display` (block/grid), which otherwise strips a
+                table's implicit table/row/cell roles from the accessibility
+                tree. With the roles, a screen reader still reads it as a table
+                of rows and cells on a phone. */}
+            <Table role="table" className={styles.list}>
               <TableHeader>
                 <TableRow>
                   <TableHead
@@ -499,13 +593,13 @@ export function EventsClient({
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
-              <TableBody>
+              <TableBody role="rowgroup">
                 {filteredEvents.map((event) => {
                   const isDraft = event.status === "DRAFT";
-                  const isRejected = event.status === "REJECTED";
                   return (
                     <TableRow
                       key={event.id}
+                      role="row"
                       data-status={event.status}
                       data-testid={
                         isDraft ? "draft-event-row" : "submitted-event-row"
@@ -517,7 +611,11 @@ export function EventsClient({
                           : "border-l-4 border-l-transparent",
                       )}
                     >
-                      <TableCell className="font-medium">
+                      <TableCell
+                        role="cell"
+                        data-col="name"
+                        className="font-medium"
+                      >
                         <div className="flex flex-wrap items-center gap-2">
                           <button
                             type="button"
@@ -539,84 +637,40 @@ export function EventsClient({
                           )}
                         </div>
                       </TableCell>
-                      <TableCell>
+                      <TableCell role="cell" data-col="status">
                         <StatusBadge status={event.status} />
                       </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {event.startAt ? formatDateTimeInTimezone(event.startAt, event.timezone) : "—"}
+                      <TableCell
+                        role="cell"
+                        data-col="starts"
+                        className="text-muted-foreground"
+                      >
+                        {/* On mobile the column header is gone, so carry a real
+                            (screen-reader-announced) label; hidden on desktop
+                            where the table header supplies it. */}
+                        <span className="mb-0.5 block text-xs md:hidden">
+                          Starts
+                        </span>
+                        {event.startAt
+                          ? formatDateTimeInTimezone(event.startAt, event.timezone)
+                          : "—"}
                       </TableCell>
-                      <TableCell className="text-muted-foreground">
+                      <TableCell
+                        role="cell"
+                        data-col="created"
+                        className="text-muted-foreground"
+                      >
+                        <span className="mb-0.5 block text-xs md:hidden">
+                          Updated
+                        </span>
                         {formatDate(event.updatedAt || event.createdAt)}
                       </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1.5">
-                          {(isDraft || (!isCoordinator && isRejected)) && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-8 gap-1.5 text-xs font-medium"
-                              onClick={() => setEditingDraft(event)}
-                              data-testid={
-                                isDraft
-                                  ? "resume-draft-button"
-                                  : "amend-rejected-button"
-                              }
-                            >
-                              <Pencil className="h-3.5 w-3.5" />
-                              {isDraft ? "Resume Draft" : "Amend & Resubmit"}
-                            </Button>
-                          )}
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 gap-1.5 text-xs"
-                            onClick={() => setViewingEvent(event)}
-                            data-testid="view-details-button"
-                          >
-                            <Eye className="h-3.5 w-3.5" />
-                            View Details
-                          </Button>
-                          {/* SCRUM-19: decide a submitted or under-review request.
-                              There is no manual "claim" — SCRUM-20 assigns automatically. */}
-                          {isCoordinator &&
-                            (event.status === "SUBMITTED" ||
-                              event.status === "UNDER_REVIEW") && (
-                            <>
-                              <Button
-                                size="sm"
-                                className="h-8 gap-1.5 text-xs"
-                                disabled={isPending}
-                                onClick={() => changeStatus(event, "APPROVED")}
-                              >
-                                <CheckCircle2 className="h-3.5 w-3.5" /> Approve
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="h-8 gap-1.5 text-xs"
-                                disabled={isPending}
-                                onClick={() => {
-                                  setClarifyingEvent(event);
-                                  setClarificationMessage("");
-                                }}
-                              >
-                                <MessageCircleQuestion className="h-3.5 w-3.5" /> Ask
-                              </Button>
-                              <Button
-                                variant="destructive"
-                                size="sm"
-                                className="h-8 gap-1.5 text-xs"
-                                disabled={isPending}
-                                onClick={() => {
-                                  setRejectingEvent(event);
-                                  setRejectionReason("");
-                                }}
-                              >
-                                <XCircle className="h-3.5 w-3.5" /> Reject
-                              </Button>
-                            </>
-                          )}
-                        </div>
+                      <TableCell
+                        role="cell"
+                        data-col="actions"
+                        className="text-right"
+                      >
+                        {renderActions(event)}
                       </TableCell>
                     </TableRow>
                   );

@@ -328,11 +328,87 @@ test.describe("User Story 84 — Organiser Views Their Own Event Requests Journe
     await page.waitForURL("**/events");
     await expect(page.getByRole("heading", { name: "My Events" })).toBeVisible();
 
-    // 2. Organiser 2 sees their own seeded event (evt_other_organiser: "Another Client's Event — Product Launch")
-    await expect(page.getByText("Another Client's Event — Product Launch")).toBeVisible();
+    // 2. Organiser 2 sees their own seeded event (evt_other_organiser: "Another Client's Event — Product Launch").
+    await expect(
+      page.getByText("Another Client's Event — Product Launch"),
+    ).toBeVisible();
 
-    // 3. Organiser 2 does NOT see events belonging to organiser@test.local (e.g. "Draft — Annual Tech Summit")
-    await expect(page.getByText("Draft — Annual Tech Summit")).not.toBeVisible();
+    // 3. Organiser 2 does NOT see events belonging to organiser@test.local
+    //    ANYWHERE on the page (not just inside the table): a whole-page check so
+    //    a leak into any other region would fail the test too.
+    await expect(
+      page.getByText("Draft — Annual Tech Summit"),
+    ).not.toBeVisible();
+  });
+});
+
+/**
+ * Mobile presentation (SCRUM-66 / SCRUM-68) — at a phone viewport the single
+ * events table (events-client.tsx + events-list.module.css) restyles each row
+ * into a stacked card: there is ONE presentation in the DOM, so the actions use
+ * their plain testids (no "mobile-" prefix). This pins the responsive restyle
+ * and that the card actions still work.
+ */
+test.describe("User Story 84 — Events list on mobile (375x812)", () => {
+  test.use({ viewport: { width: 375, height: 812 } });
+
+  test("restyles rows as stacked cards with no page overflow, and Resume Draft opens the dialog", async ({
+    page,
+  }) => {
+    await page.goto("/login");
+    await page.getByLabel("Email", { exact: true }).fill("organiser@test.local");
+    await page.getByLabel("Password", { exact: true }).fill("Password123!");
+    await page.getByRole("button", { name: "Sign in" }).click();
+    await page.waitForURL("**/events");
+    await expect(page.getByRole("heading", { name: "My Events" })).toBeVisible();
+
+    // Each row is laid out as a stacked card (CSS grid), not an aligned table
+    // row — this is the responsive restyle, on the same single element.
+    const rowDisplay = await page
+      .locator("tbody tr")
+      .first()
+      .evaluate((el) => getComputedStyle(el).display);
+    expect(rowDisplay).toBe("grid");
+
+    // The card's actions render exactly once, under their plain testids.
+    await expect(
+      page.getByTestId("view-details-button").first(),
+    ).toBeVisible();
+
+    // The field labels the hidden column header dropped are real, visible text
+    // on the card (not CSS ::before) so screen readers announce them. Scoped to
+    // the cell's label span, since the (hidden) column header also reads "Starts".
+    const startsLabel = page.locator('td[data-col="starts"] span').first();
+    await expect(startsLabel).toBeVisible();
+    await expect(startsLabel).toHaveText("Starts");
+    const createdLabel = page.locator('td[data-col="created"] span').first();
+    await expect(createdLabel).toBeVisible();
+    await expect(createdLabel).toHaveText("Created");
+
+    // A draft card keeps its accent: the 4px muted left border only renders
+    // when the row's data-status="DRAFT" drives the CSS, so this guards against
+    // the accent silently dying.
+    const draftBorderLeft = await page
+      .getByTestId("draft-event-row")
+      .first()
+      .evaluate((el) => getComputedStyle(el).borderLeftWidth);
+    expect(draftBorderLeft).toBe("4px");
+
+    // No horizontal page overflow at 375px.
+    const overflowsX = await page.evaluate(
+      () =>
+        document.documentElement.scrollWidth >
+        document.documentElement.clientWidth,
+    );
+    expect(overflowsX).toBe(false);
+
+    // Tapping a draft card's Resume Draft opens the resume dialog. The seeded
+    // "Draft — Annual Tech Summit" guarantees at least one draft card exists.
+    await page.getByTestId("resume-draft-button").first().click();
+    await expect(page.getByRole("dialog")).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: /Resume Draft Event Request/i }),
+    ).toBeVisible();
   });
 
   test("SCRUM-13: organiser selects custom event timezone when creating request", async ({
