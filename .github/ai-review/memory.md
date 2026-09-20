@@ -23,6 +23,14 @@ Rules for a lesson:
   security upgrades arrive as SCRUM-89 pull requests by Jin Hong, tested as one
   change.
 
+- (2026-09-20, #52/#53/#54) Vercel refuses to deploy a commit whose git author
+  is not a project member, and a squash merge credits the pull request author,
+  so merging a teammate's pull request blocks production. Their work is
+  therefore landed through an integration pull request authored by Jin Hong,
+  carrying their commits with `Co-Authored-By` trailers and the conflicts
+  resolved. A pull request that credits someone else in its description is
+  deliberate, not missing attribution.
+
 ## Dependencies
 
 - (2026-09-15, #32) `deepmerge-ts` is overridden to 8.0.2 on purpose. Prisma
@@ -48,6 +56,28 @@ Rules for a lesson:
 - (2026-09-16, #33) `Event.equipmentTypes` and `Event.registrationRequired`
   exist to keep production data. No feature reads or writes them yet.
 
+## Events and status
+
+- (2026-09-20, #51) `submitEventRequest` assigns a coordinator inside the same
+  transaction (SCRUM-20), so a request that was just submitted is
+  `UNDER_REVIEW`, not `SUBMITTED`, whenever any coordinator exists. A test or a
+  screen expecting `SUBMITTED` straight after a submit journey is wrong. The
+  seed has two coordinators and the least-loaded one wins, so which coordinator
+  receives it varies per run: a test must read the assignment instead of
+  hard-coding `coordinator@test.local`.
+- (2026-09-20, #54) The events list's Submitted tab counts and shows both
+  `SUBMITTED` and `UNDER_REVIEW` for that reason. Narrowing it to `SUBMITTED`
+  hides a request the organiser has just sent.
+- (2026-09-20, #51/#54) The events queries live in
+  `app/(app)/events/role-views.tsx`, not `page.tsx`: a `page.tsx` may only
+  export the names Next.js recognises, so helpers that need unit tests belong
+  in `role-views.tsx`.
+- (2026-09-20, #54) `Event.timezone` is nullable with an `Asia/Singapore`
+  default and is already applied to the production database. The create form no
+  longer captures `requiredFacilities`, so new events store `[]` while existing
+  and seeded values are still displayed; whether capture returns is a product
+  decision open for SCRUM-39/40.
+
 ## Tests
 
 - (2026-09-15, #27) Integration tests live in `tests/integration/` and use
@@ -68,10 +98,8 @@ Found by the review replay of #11 (2026-09-14) and still true until a pull
 request fixes them. Raise one only when a pull request touches that code or
 claims that story, and say it was already known.
 
-- SCRUM-24: no integration test for two coordinators deciding the same event at
-  the same moment.
-- SCRUM-19 / SCRUM-24: no Playwright test of the coordinator approve and reject
-  journey.
-- `app/(app)/equipment` has no `loading.tsx`.
+- (closed 2026-09-20) The SCRUM-24 simultaneous-decision integration test, the
+  coordinator approve and reject Playwright journeys, and
+  `app/(app)/equipment/loading.tsx` all exist now. Do not report them missing.
 - Reservation form errors show only a generic toast, not next to the field
   (SCRUM-31 AC 6).
