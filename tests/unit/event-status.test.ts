@@ -32,6 +32,7 @@ const tx = vi.hoisted(() => ({
     updateMany: vi.fn(),
   },
   $executeRaw: vi.fn(),
+  $queryRaw: vi.fn(),
   clarificationRequest: { updateMany: vi.fn() },
   user: { findMany: vi.fn() },
   notification: { createMany: vi.fn() },

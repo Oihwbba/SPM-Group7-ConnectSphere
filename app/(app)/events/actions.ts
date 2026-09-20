@@ -192,6 +192,11 @@ export async function submitEventRequest(
     await prisma.$transaction(async (tx) => {
       if (id) {
         // Submit an existing draft event (US14/US15 transition from DRAFT -> SUBMITTED)
+        // Lock the row before checking its status: the check alone is not
+        // conditional on what the write then sees, so two simultaneous
+        // submissions of one draft would both pass it and both notify. The
+        // second waits here, then finds the event already submitted.
+        await tx.$queryRaw`SELECT "id" FROM "Event" WHERE "id" = ${id} FOR UPDATE`;
         const existing = await tx.event.findFirst({
           where: {
             id,

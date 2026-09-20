@@ -179,6 +179,21 @@ describe.skipIf(!usesLocalDatabase)("event submission — repeat submission (SCR
   const name = `SCRUM-14 Repeat Submission ${Date.now()}`;
   let eventId: string;
 
+  const submission = (id: string, eventName: string) => ({
+    id,
+    name: eventName,
+    purpose: "Repeat submission coverage",
+    description: "SCRUM-14 integration coverage",
+    startAt: "2031-07-01T09:00:00.000Z",
+    endAt: "2031-07-01T17:00:00.000Z",
+    expectedAttendance: 10,
+    venueRequirements: "Any room",
+    accessibilityNeeds: "None",
+    preferredLayout: "Classroom",
+    equipmentRequirements: "None",
+    registrationNotes: "None",
+  });
+
   beforeAll(async () => {
     (auth as unknown as Mock).mockResolvedValue({
       user: { id: "usr_organiser", role: "ORGANISER", name: "Olivia Organiser", email: "organiser@test.local" },
@@ -192,37 +207,53 @@ describe.skipIf(!usesLocalDatabase)("event submission — repeat submission (SCR
   });
 
   afterAll(async () => {
-    await prisma.notification.deleteMany({ where: { eventId } });
-    await prisma.auditLog.deleteMany({ where: { entityId: eventId } });
-    await prisma.event.deleteMany({ where: { id: eventId } });
+    // Every event this block creates is named `${name}…`.
+    const ids = (
+      await prisma.event.findMany({
+        where: { name: { startsWith: name } },
+        select: { id: true },
+      })
+    ).map((e) => e.id);
+    await prisma.notification.deleteMany({ where: { eventId: { in: ids } } });
+    await prisma.auditLog.deleteMany({ where: { entityId: { in: ids } } });
+    await prisma.event.deleteMany({ where: { id: { in: ids } } });
   });
 
   it("SCRUM-14 AC: submitting the same event again is refused, creates no second request and sends no additional notification", async () => {
-    const input = {
-      id: eventId,
-      name,
-      purpose: "Repeat submission coverage",
-      description: "SCRUM-14 integration coverage",
-      startAt: "2031-07-01T09:00:00.000Z",
-      endAt: "2031-07-01T17:00:00.000Z",
-      expectedAttendance: 10,
-      venueRequirements: "Any room",
-      accessibilityNeeds: "None",
-      preferredLayout: "Classroom",
-      equipmentRequirements: "None",
-      registrationNotes: "None",
-    };
-
-    const first = await submitEventRequest(input);
+    const first = await submitEventRequest(submission(eventId, name));
     expect(first.ok).toBe(true);
 
     const notificationsBefore = await prisma.notification.count({ where: { eventId } });
 
-    const second = await submitEventRequest(input);
+    const second = await submitEventRequest(submission(eventId, name));
 
     expect(second.ok).toBe(false);
     expect(await prisma.event.count({ where: { name } })).toBe(1);
     expect(await prisma.notification.count({ where: { eventId } })).toBe(notificationsBefore);
+  });
+
+  it("SCRUM-14 AC: two simultaneous submissions of one draft succeed once and notify once", async () => {
+    const raceName = `${name} (simultaneous)`;
+    const draft = await prisma.event.create({
+      data: { name: raceName, status: "DRAFT", organiserId: "usr_organiser" },
+      select: { id: true },
+    });
+
+    const results = await Promise.all([
+      submitEventRequest(submission(draft.id, raceName)),
+      submitEventRequest(submission(draft.id, raceName)),
+    ]);
+
+    expect(results.filter((r) => r.ok)).toHaveLength(1);
+    expect(results.filter((r) => !r.ok)).toHaveLength(1);
+    // One assignment: one notification each for the organiser and the
+    // coordinator, and a single ASSIGNED audit row.
+    expect(await prisma.notification.count({ where: { eventId: draft.id } })).toBe(2);
+    expect(
+      await prisma.auditLog.count({
+        where: { entityId: draft.id, action: "ASSIGNED" },
+      }),
+    ).toBe(1);
   });
 });
 

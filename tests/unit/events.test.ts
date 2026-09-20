@@ -44,6 +44,7 @@ const mockTransaction = prisma.$transaction as unknown as Mock;
 // tests/unit/coordinator-assignment.test.ts and
 // tests/unit/event-auto-assignment.test.ts.
 const mockTxExecuteRaw = vi.fn();
+const mockTxQueryRaw = vi.fn();
 const mockTxUserFindMany = vi.fn();
 const mockTxNotificationCreateMany = vi.fn();
 const mockTxAuditLogCreate = vi.fn();
@@ -66,6 +67,7 @@ beforeEach(() => {
     cb({
       event: { create: mockCreate, findFirst: mockFindFirst, update: mockUpdate },
       $executeRaw: mockTxExecuteRaw,
+      $queryRaw: mockTxQueryRaw,
       user: { findMany: mockTxUserFindMany },
       notification: { createMany: mockTxNotificationCreateMany },
       auditLog: { create: mockTxAuditLogCreate },
@@ -337,6 +339,23 @@ describe("User Story 13 — Event Request Creation", () => {
       expect(mockCreate).not.toHaveBeenCalled();
       expect(mockTxNotificationCreateMany).not.toHaveBeenCalled();
       expect(mockTxAuditLogCreate).not.toHaveBeenCalled();
+    });
+
+    it("SCRUM-14 AC: the draft row is locked BEFORE its status is checked, so two simultaneous submissions cannot both pass", async () => {
+      mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
+      mockFindFirst.mockResolvedValue({
+        id: "evt_draft_race",
+        organiserId: "usr_organiser",
+        status: "DRAFT",
+        coordinatorId: null,
+      });
+
+      await submitEventRequest({ ...validSubmissionInput, id: "evt_draft_race" });
+
+      expect(mockTxQueryRaw).toHaveBeenCalledTimes(1);
+      expect(mockTxQueryRaw.mock.invocationCallOrder[0]).toBeLessThan(
+        mockFindFirst.mock.invocationCallOrder[0],
+      );
     });
 
     it("SCRUM-21: resubmitting a rejected event records the previous coordinator as the audit oldValue", async () => {
