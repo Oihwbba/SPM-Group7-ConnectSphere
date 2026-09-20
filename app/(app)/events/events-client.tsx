@@ -90,7 +90,9 @@ export function filterAndSortEvents<
         activeTab === "DRAFT"
           ? evt.status === "DRAFT"
           : activeTab === "SUBMITTED"
-            ? evt.status === "SUBMITTED"
+            ? // SCRUM-20 auto-assigns on submission, so a submitted request is
+              // usually already UNDER_REVIEW; both belong on this tab.
+              evt.status === "SUBMITTED" || evt.status === "UNDER_REVIEW"
             : activeTab === "APPROVED"
               ? evt.status === "APPROVED"
               : activeTab === "REJECTED"
@@ -213,7 +215,9 @@ export function EventsClient({
   });
 
   const draftCount = events.filter((evt) => evt.status === "DRAFT").length;
-  const submittedCount = events.filter((evt) => evt.status === "SUBMITTED").length;
+  const submittedCount = events.filter(
+    (evt) => evt.status === "SUBMITTED" || evt.status === "UNDER_REVIEW",
+  ).length;
   const approvedCount = events.filter((evt) => evt.status === "APPROVED").length;
   const rejectedCount = events.filter((evt) => evt.status === "REJECTED").length;
 

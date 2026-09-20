@@ -383,7 +383,7 @@ test.describe("User Story 84 — Events list on mobile (375x812)", () => {
     await expect(startsLabel).toHaveText("Starts");
     const createdLabel = page.locator('td[data-col="created"] span').first();
     await expect(createdLabel).toBeVisible();
-    await expect(createdLabel).toHaveText("Created");
+    await expect(createdLabel).toHaveText("Updated");
 
     // A draft card keeps its accent: the 4px muted left border only renders
     // when the row's data-status="DRAFT" drives the CSS, so this guards against
@@ -410,7 +410,15 @@ test.describe("User Story 84 — Events list on mobile (375x812)", () => {
       page.getByRole("heading", { name: /Resume Draft Event Request/i }),
     ).toBeVisible();
   });
+});
 
+/**
+ * Desktop list controls and dialog behaviour (SCRUM-13 timezone, SCRUM-13 AC6
+ * unsaved-changes guard, SCRUM-84 AC7-AC9 sorting/filtering). These need the
+ * default viewport: below md the table restyles into cards and the column
+ * headers the sort test clicks are hidden.
+ */
+test.describe("User Story 13 & 84 — timezone, unsaved changes and list controls", () => {
   test("SCRUM-13: organiser selects custom event timezone when creating request", async ({
     page,
   }) => {
