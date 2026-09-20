@@ -38,42 +38,6 @@ function generateAllTimezoneOptions(): TimezoneOption[] {
   ];
 
   const formatZoneOption = (iana: string): TimezoneOption => {
-    if (iana === "Asia/Singapore") {
-      return {
-        value: "Asia/Singapore (+08:00)",
-        label: "Asia/Singapore (SGT +08:00)",
-        iana,
-      };
-    }
-    if (iana === "Asia/Tokyo") {
-      return {
-        value: "Asia/Tokyo (+09:00)",
-        label: "Asia/Tokyo (JST +09:00)",
-        iana,
-      };
-    }
-    if (iana === "Europe/London") {
-      return {
-        value: "Europe/London (+00:00)",
-        label: "Europe/London (GMT +00:00)",
-        iana,
-      };
-    }
-    if (iana === "America/New_York") {
-      return {
-        value: "America/New_York (-05:00)",
-        label: "America/New_York (EST -05:00)",
-        iana,
-      };
-    }
-    if (iana === "UTC") {
-      return {
-        value: "UTC (+00:00)",
-        label: "UTC (Coordinated Universal Time)",
-        iana,
-      };
-    }
-
     let offsetStr = "";
     try {
       const parts = new Intl.DateTimeFormat("en-US", {
@@ -94,8 +58,9 @@ function generateAllTimezoneOptions(): TimezoneOption[] {
       }
     } catch {}
 
+    const readableIana = iana.replace(/_/g, " ");
     const value = offsetStr ? `${iana} (${offsetStr})` : iana;
-    const label = offsetStr ? `${iana} (GMT${offsetStr})` : iana;
+    const label = offsetStr ? `${readableIana} (UTC${offsetStr})` : readableIana;
     return { value, label, iana };
   };
 
@@ -137,9 +102,13 @@ export function formatDateTime(value: Date | string): string {
 export function parseIanaZone(timezoneStr: string = "Asia/Singapore (+08:00)"): string {
   if (!timezoneStr) return "Asia/Singapore";
   const found = TIMEZONE_OPTIONS.find(
-    (opt) => opt.value === timezoneStr || opt.iana === timezoneStr || timezoneStr.includes(opt.iana),
+    (opt) => opt.value === timezoneStr || opt.iana === timezoneStr,
   );
   if (found) return found.iana;
+
+  const match = TIMEZONE_OPTIONS.find((opt) => timezoneStr.includes(opt.iana));
+  if (match) return match.iana;
+
   if (timezoneStr.includes("Tokyo")) return "Asia/Tokyo";
   if (timezoneStr.includes("London")) return "Europe/London";
   if (timezoneStr.includes("New_York")) return "America/New_York";
@@ -156,11 +125,16 @@ export function parseIanaZone(timezoneStr: string = "Asia/Singapore (+08:00)"): 
 
 /** Normalize stored timezone values to their full option string representation */
 export function normalizeTimezoneOption(tz?: string | null): string {
-  if (!tz) return "Asia/Singapore (+08:00)";
+  if (!tz) return TIMEZONE_OPTIONS[0].value;
   const found = TIMEZONE_OPTIONS.find(
     (opt) => opt.value === tz || opt.iana === tz,
   );
   if (found) return found.value;
+
+  const parsed = parseIanaZone(tz);
+  const foundParsed = TIMEZONE_OPTIONS.find((opt) => opt.iana === parsed);
+  if (foundParsed) return foundParsed.value;
+
   return tz;
 }
 

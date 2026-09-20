@@ -10,6 +10,10 @@ import {
   getFormCatalogues,
 } from "@/app/(app)/events/actions";
 import { filterAndSortEvents } from "@/app/(app)/events/events-client";
+import {
+  getOrganiserEvents,
+  getCoordinatorEvents,
+} from "@/app/(app)/events/page";
 
 // ============================================================================
 // MOCKS & SETUP
@@ -733,22 +737,25 @@ describe("User Story 16 — Distinguish drafts from submitted requests", () => {
     );
   });
 
-  it("SCRUM-16 [AC4 - Coordinator View Exclusion]: excludes DRAFT events when querying submitted events for review", async () => {
-    mockAuth.mockResolvedValue(sessionFor("COORDINATOR", "usr_coordinator"));
-
-    prisma.event.findMany = vi.fn().mockResolvedValue([
+  it("SCRUM-16 [AC4 - Coordinator View Exclusion]: executes coordinator query excluding DRAFT status events", async () => {
+    const mockFindMany = vi.fn().mockResolvedValue([
       { id: "evt_sub", status: "SUBMITTED" },
     ]);
+    prisma.event.findMany = mockFindMany;
 
-    const results = await prisma.event.findMany({
-      where: { status: { in: ["SUBMITTED", "UNDER_REVIEW"] } },
-    });
+    const results = await getCoordinatorEvents("usr_coord_us16");
 
-    expect(prisma.event.findMany).toHaveBeenCalledWith({
-      where: { status: { in: ["SUBMITTED", "UNDER_REVIEW"] } },
+    expect(mockFindMany).toHaveBeenCalledWith({
+      where: {
+        OR: [
+          { coordinatorId: "usr_coord_us16" },
+          { coordinatorId: null, status: { not: "DRAFT" } },
+        ],
+      },
+      orderBy: { createdAt: "desc" },
     });
-    const statuses = results.map((r) => r.status);
-    expect(statuses).not.toContain("DRAFT");
+    expect(results).toHaveLength(1);
+    expect(results[0].status).toBe("SUBMITTED");
   });
 });
 
@@ -768,9 +775,7 @@ describe("User Story 84 — Organiser views their own event requests", () => {
     "REJECTED",
   ];
 
-  it("SCRUM-84 [AC1, AC2 - Happy Path / Ownership Isolation]: queries only events belonging to the logged-in organiser across all 9 statuses", async () => {
-    mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser_us84"));
-
+  it("SCRUM-84 [AC1, AC2 - Happy Path / Ownership Isolation]: executes organiser query filtering only events belonging to logged-in organiser", async () => {
     const mockEventsList = allStatuses.map((status, idx) => ({
       id: `evt_us84_${idx}`,
       name: `Event ${status}`,
@@ -779,39 +784,28 @@ describe("User Story 84 — Organiser views their own event requests", () => {
       createdAt: new Date(),
     }));
 
-    prisma.event.findMany = vi.fn().mockResolvedValue(mockEventsList);
+    const mockFindMany = vi.fn().mockResolvedValue(mockEventsList);
+    prisma.event.findMany = mockFindMany;
 
-    const events = await prisma.event.findMany({
+    const events = await getOrganiserEvents("usr_organiser_us84");
+
+    expect(mockFindMany).toHaveBeenCalledWith({
       where: { organiserId: "usr_organiser_us84" },
       orderBy: { createdAt: "desc" },
     });
-
-    expect(events.length).toBe(9);
-    expect(prisma.event.findMany).toHaveBeenCalledWith({
-      where: { organiserId: "usr_organiser_us84" },
-      orderBy: { createdAt: "desc" },
-    });
-    // Verify all 9 statuses are present in the returned list
-    const returnedStatuses = events.map((e) => e.status);
-    allStatuses.forEach((status) => {
-      expect(returnedStatuses).toContain(status);
-    });
+    expect(events).toHaveLength(9);
   });
 
-  it("SCRUM-84 [AC3 - Implicit Rule / Default Sort]: enforces reverse chronological ordering (newest first) when fetching organiser event requests", async () => {
-    mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser_us84"));
-    prisma.event.findMany = vi.fn().mockResolvedValue([]);
+  it("SCRUM-84 [AC3 - Implicit Rule / Default Sort]: filterAndSortEvents orders list by updatedAt descending by default", () => {
+    const events = [
+      { id: "1", name: "Older Event", status: "DRAFT", updatedAt: new Date("2026-08-01T10:00:00Z") },
+      { id: "2", name: "Newer Event", status: "DRAFT", updatedAt: new Date("2026-09-15T12:00:00Z") },
+    ];
 
-    await prisma.event.findMany({
-      where: { organiserId: "usr_organiser_us84" },
-      orderBy: { createdAt: "desc" },
-    });
+    const sorted = filterAndSortEvents(events);
 
-    expect(prisma.event.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        orderBy: { createdAt: "desc" },
-      }),
-    );
+    expect(sorted[0].id).toBe("2");
+    expect(sorted[1].id).toBe("1");
   });
 
   it("SCRUM-84 [AC3 - Happy Path]: exposes event name and current status badge properties for list display", async () => {
@@ -825,17 +819,13 @@ describe("User Story 84 — Organiser views their own event requests", () => {
 
     prisma.event.findMany = vi.fn().mockResolvedValue([sampleEvent]);
 
-    const events = await prisma.event.findMany({
-      where: { organiserId: "usr_organiser_us84" },
-    });
+    const events = await getOrganiserEvents("usr_organiser_us84");
 
     expect(events[0].name).toBe("Annual Regional Conference");
     expect(events[0].status).toBe("APPROVED");
   });
 
   it("SCRUM-84 [AC4, AC5 - Happy Path]: retrieves full detail model when selecting a specific event request", async () => {
-    mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser_us84"));
-
     const detailedDraftEvent = {
       id: "evt_draft_detail",
       name: "Draft Detail Event",
@@ -859,12 +849,9 @@ describe("User Story 84 — Organiser views their own event requests", () => {
   });
 
   it("SCRUM-84 [AC5 - Edge Case / Empty State]: returns an empty array when an organiser has not created any event requests", async () => {
-    mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_new_organiser"));
     prisma.event.findMany = vi.fn().mockResolvedValue([]);
 
-    const results = await prisma.event.findMany({
-      where: { organiserId: "usr_new_organiser" },
-    });
+    const results = await getOrganiserEvents("usr_new_organiser");
 
     expect(results).toEqual([]);
     expect(results.length).toBe(0);

@@ -129,17 +129,35 @@ describe("lib/datetime helpers — SCRUM-31", () => {
     expect(parseIanaZone("Pacific/Auckland (+12:00)")).toBe("Pacific/Auckland");
     expect(parseIanaZone("")).toBe("Asia/Singapore");
 
-    expect(normalizeTimezoneOption("UTC")).toBe("UTC (+00:00)");
-    expect(normalizeTimezoneOption("Asia/Tokyo")).toBe("Asia/Tokyo (+09:00)");
-    expect(normalizeTimezoneOption("Europe/London")).toBe("Europe/London (+00:00)");
-    expect(normalizeTimezoneOption("America/New_York")).toBe("America/New_York (-05:00)");
-    expect(normalizeTimezoneOption("Asia/Singapore")).toBe("Asia/Singapore (+08:00)");
+    expect(normalizeTimezoneOption("UTC")).toContain("UTC");
+    expect(normalizeTimezoneOption("Asia/Tokyo")).toContain("Asia/Tokyo");
+    expect(normalizeTimezoneOption("Europe/London")).toContain("Europe/London");
+    expect(normalizeTimezoneOption("America/New_York")).toContain("America/New_York");
+    expect(normalizeTimezoneOption("Asia/Singapore")).toContain("Asia/Singapore");
 
     // Global timezone normalization
     expect(normalizeTimezoneOption("Australia/Sydney")).toContain("Australia/Sydney");
     expect(normalizeTimezoneOption("Asia/Dubai")).toContain("Asia/Dubai");
     expect(normalizeTimezoneOption("America/Los_Angeles")).toContain("America/Los_Angeles");
-    expect(normalizeTimezoneOption(null)).toBe("Asia/Singapore (+08:00)");
+    expect(normalizeTimezoneOption(null)).toContain("Asia/Singapore");
+  });
+
+  it("handles legacy formats, raw IANA IDs, substring heuristics, and invalid string fallbacks in parseIanaZone and normalizeTimezoneOption", () => {
+    // Legacy format string
+    expect(parseIanaZone("America/New_York (EST/EDT)")).toBe("America/New_York");
+    // Raw IANA ID
+    expect(parseIanaZone("Asia/Seoul")).toBe("Asia/Seoul");
+    // Substring heuristic match
+    expect(parseIanaZone("Tokyo Custom Region")).toBe("Asia/Tokyo");
+    expect(parseIanaZone("London UK Base")).toBe("Europe/London");
+    // Invalid / unrecognised string fallback to Singapore
+    expect(parseIanaZone("invalid-timezone-string")).toBe("Asia/Singapore");
+
+    // Normalization fallbacks
+    expect(normalizeTimezoneOption("America/New_York (EST/EDT)")).toContain("America/New_York");
+    expect(normalizeTimezoneOption("Asia/Seoul")).toContain("Asia/Seoul");
+    expect(normalizeTimezoneOption("unrecognised-tz")).toContain("Asia/Singapore");
+    expect(normalizeTimezoneOption(null)).toContain("Asia/Singapore");
   });
 });
 

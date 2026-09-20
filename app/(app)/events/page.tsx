@@ -30,15 +30,33 @@ export default async function EventsPage() {
   }
 }
 
+/** Server query helper to fetch events owned by an organiser */
+export async function getOrganiserEvents(organiserId: string) {
+  return prisma.event.findMany({
+    where: { organiserId },
+    orderBy: { createdAt: "desc" },
+  });
+}
+
+/** Server query helper to fetch events assigned or available to a coordinator */
+export async function getCoordinatorEvents(coordinatorId: string) {
+  return prisma.event.findMany({
+    where: {
+      OR: [
+        { coordinatorId },
+        { coordinatorId: null, status: { not: "DRAFT" } },
+      ],
+    },
+    orderBy: { createdAt: "desc" },
+  });
+}
+
 /** The reference feature. Only Organisers reach it; the query below is scoped
  * to the signed-in organiser, so an Organiser can never see another's events. */
 async function OrganiserEvents({ organiserId }: { organiserId: string }) {
   // RELATIONSHIP enforced in the query: an organiser only ever loads their own
   // rows. This is the read-side counterpart to `can()`'s relationship check.
-  const events = await prisma.event.findMany({
-    where: { organiserId },
-    orderBy: { createdAt: "desc" },
-  });
+  const events = await getOrganiserEvents(organiserId);
 
   return <EventsClient events={events} />;
 }
@@ -48,15 +66,7 @@ async function OrganiserEvents({ organiserId }: { organiserId: string }) {
 async function CoordinatorEvents({ coordinatorId }: { coordinatorId: string }) {
   // Must mirror `can()`'s coordinator relationship exactly — a looser query
   // here would list events assigned to OTHER coordinators.
-  const events = await prisma.event.findMany({
-    where: {
-      OR: [
-        { coordinatorId },
-        { coordinatorId: null, status: { not: "DRAFT" } },
-      ],
-    },
-    orderBy: { createdAt: "desc" },
-  });
+  const events = await getCoordinatorEvents(coordinatorId);
 
   return <EventsClient events={events} isCoordinator />;
 }

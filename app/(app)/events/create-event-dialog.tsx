@@ -13,6 +13,7 @@ import {
   ClipboardList,
   Info,
   AlertCircle,
+  Search,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -219,6 +220,7 @@ export function CreateEventDialog({
 
   const [isDirty, setIsDirty] = useState(false);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
+  const [tzSearch, setTzSearch] = useState("");
 
   const [prevOpen, setPrevOpen] = useState(open);
   if (open !== prevOpen) {
@@ -636,18 +638,54 @@ export function CreateEventDialog({
 
             <div className="space-y-2">
               <Label htmlFor="timezone">Event Timezone *</Label>
-              <select
-                id="timezone"
-                value={formData.timezone}
-                onChange={(e) => updateField("timezone", e.target.value)}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {TIMEZONE_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
+              <div className="space-y-1.5">
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground pointer-events-none" />
+                  <Input
+                    type="text"
+                    placeholder="Type to filter timezones (e.g. New York, Tokyo, London, Singapore)..."
+                    value={tzSearch}
+                    onChange={(e) => {
+                      const query = e.target.value;
+                      setTzSearch(query);
+                      if (query.trim()) {
+                        const q = query.toLowerCase();
+                        const match = TIMEZONE_OPTIONS.find(
+                          (opt) =>
+                            opt.label.toLowerCase().includes(q) ||
+                            opt.value.toLowerCase().includes(q) ||
+                            opt.iana.toLowerCase().includes(q),
+                        );
+                        if (match) {
+                          updateField("timezone", match.value);
+                        }
+                      }
+                    }}
+                    className="pl-9 h-9 text-xs"
+                  />
+                </div>
+                <select
+                  id="timezone"
+                  value={formData.timezone}
+                  onChange={(e) => updateField("timezone", e.target.value)}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {TIMEZONE_OPTIONS.filter((opt) => {
+                    if (opt.value === formData.timezone) return true;
+                    if (!tzSearch.trim()) return true;
+                    const q = tzSearch.toLowerCase();
+                    return (
+                      opt.label.toLowerCase().includes(q) ||
+                      opt.value.toLowerCase().includes(q) ||
+                      opt.iana.toLowerCase().includes(q)
+                    );
+                  }).map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
               <p className="text-[11px] text-muted-foreground">
                 Authoritative timezone for schedule interpretation. Persisted instants stored consistently in UTC.
               </p>
