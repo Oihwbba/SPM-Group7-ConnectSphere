@@ -12,20 +12,37 @@ import {
 // SCRUM-24 (one guarded status gate), SCRUM-19 (approve / reject / resubmit) and
 // SCRUM-68 (not-found parity). Session and database are mocked; the transaction
 // runs its callback against a mock `tx` so the conditional update is observable.
+//
+// SCRUM-20: submitEventRequest also runs inside a transaction now, needing
+// event.findFirst/update/create, user.findMany and notification.createMany.
+// tx.event IS prisma.event below (the same object), so calls made directly
+// (transitionEventStatus's prisma.event.findUnique) and calls made through
+// the transaction (submitEventRequest's tx.event.findFirst) share one set of
+// mocks — existing assertions on mockFindFirst/mockUpdate keep working
+// unchanged. tx.user.findMany defaults to [] (no coordinators), so
+// auto-assignment is a no-op in these tests; it's covered separately in
+// tests/unit/coordinator-assignment.test.ts and
+// tests/unit/event-auto-assignment.test.ts.
 const tx = vi.hoisted(() => ({
-  event: { updateMany: vi.fn() },
+  event: {
+    findUnique: vi.fn(),
+    findFirst: vi.fn(),
+    update: vi.fn(),
+    create: vi.fn(),
+    updateMany: vi.fn(),
+  },
+  $executeRaw: vi.fn(),
+  $queryRaw: vi.fn(),
+  clarificationRequest: { updateMany: vi.fn() },
+  user: { findMany: vi.fn() },
+  notification: { createMany: vi.fn() },
   auditLog: { create: vi.fn() },
 }));
 
 vi.mock("@/auth", () => ({ auth: vi.fn() }));
 vi.mock("@/lib/db", () => ({
   prisma: {
-    event: {
-      findUnique: vi.fn(),
-      findFirst: vi.fn(),
-      update: vi.fn(),
-      create: vi.fn(),
-    },
+    event: tx.event,
     $transaction: vi.fn(),
   },
 }));
@@ -59,6 +76,8 @@ beforeEach(() => {
   vi.clearAllMocks();
   tx.event.updateMany.mockResolvedValue({ count: 1 });
   tx.auditLog.create.mockResolvedValue({});
+  tx.clarificationRequest.updateMany.mockResolvedValue({ count: 0 });
+  tx.user.findMany.mockResolvedValue([]);
   mockTransaction.mockImplementation((cb: (t: typeof tx) => unknown) => cb(tx));
 });
 
@@ -88,6 +107,36 @@ describe("transitionEventStatus — SCRUM-24 single guarded gate", () => {
         newValue: "APPROVED",
       }),
     });
+  });
+
+  it("SCRUM-18: deciding an event closes its still-OPEN clarification so a resubmitted request can be questioned again", async () => {
+    mockAuth.mockResolvedValue(sessionFor("COORDINATOR", "usr_coord"));
+    mockFindUnique.mockResolvedValue(eventRow());
+
+    await transitionEventStatus({
+      eventId: "evt1",
+      nextStatus: "REJECTED",
+      decisionReason: "Not enough detail",
+    });
+
+    expect(tx.clarificationRequest.updateMany).toHaveBeenCalledWith({
+      where: { eventId: "evt1", status: "OPEN" },
+      data: { status: "CLOSED" },
+    });
+  });
+
+  it("SCRUM-18: a lost decision race closes nothing", async () => {
+    mockAuth.mockResolvedValue(sessionFor("COORDINATOR", "usr_coord"));
+    mockFindUnique.mockResolvedValue(eventRow());
+    tx.event.updateMany.mockResolvedValue({ count: 0 });
+
+    const result = await transitionEventStatus({
+      eventId: "evt1",
+      nextStatus: "APPROVED",
+    });
+
+    expect(result.ok).toBe(false);
+    expect(tx.clarificationRequest.updateMany).not.toHaveBeenCalled();
   });
 
   it("SCRUM-19: the assigned coordinator approves an under-review request", async () => {

@@ -25,6 +25,7 @@ vi.mock("@/lib/db", () => ({
     },
     venue: { findMany: vi.fn() },
     equipment: { findMany: vi.fn() },
+    $transaction: vi.fn(),
   },
 }));
 
@@ -32,6 +33,21 @@ const mockAuth = auth as unknown as Mock;
 const mockCreate = prisma.event.create as unknown as Mock;
 const mockFindFirst = prisma.event.findFirst as unknown as Mock;
 const mockUpdate = prisma.event.update as unknown as Mock;
+const mockTransaction = prisma.$transaction as unknown as Mock;
+
+// SCRUM-20: submitEventRequest now runs inside a transaction. These tests
+// only exercise SCRUM-14's write path, so the transaction's "tx" reuses the
+// SAME mock functions as the top-level prisma.event.* mocks above —
+// existing assertions on mockCreate/mockFindFirst/mockUpdate keep working
+// unchanged. tx.user.findMany resolves to [] (no coordinators), so
+// auto-assignment is a no-op here; that logic has its own coverage in
+// tests/unit/coordinator-assignment.test.ts and
+// tests/unit/event-auto-assignment.test.ts.
+const mockTxExecuteRaw = vi.fn();
+const mockTxQueryRaw = vi.fn();
+const mockTxUserFindMany = vi.fn();
+const mockTxNotificationCreateMany = vi.fn();
+const mockTxAuditLogCreate = vi.fn();
 
 /**
  * Helper utility to create a mock user session with a given role and ID.
@@ -46,6 +62,17 @@ function sessionFor(role: Role, id: string): Session {
 beforeEach(() => {
   // Clear mock history before each test to guarantee test isolation
   vi.clearAllMocks();
+  mockTxUserFindMany.mockResolvedValue([]);
+  mockTransaction.mockImplementation((cb: (tx: unknown) => unknown) =>
+    cb({
+      event: { create: mockCreate, findFirst: mockFindFirst, update: mockUpdate },
+      $executeRaw: mockTxExecuteRaw,
+      $queryRaw: mockTxQueryRaw,
+      user: { findMany: mockTxUserFindMany },
+      notification: { createMany: mockTxNotificationCreateMany },
+      auditLog: { create: mockTxAuditLogCreate },
+    }),
+  );
 });
 
 // ============================================================================
@@ -281,6 +308,81 @@ describe("User Story 13 — Event Request Creation", () => {
         expect(result.fieldErrors?.registrationNotes).toBeTruthy();
       }
       expect(mockCreate).not.toHaveBeenCalled();
+    });
+
+    // SCRUM-14 AC: "no second request is created… no additional notification"
+    // on a repeat submission. Submitting by id only matches an event that is
+    // still DRAFT/REJECTED and owned by the caller, so every other case
+    // (someone else's event, a missing id, an already-submitted event) lands
+    // on the same refusal.
+    it("SCRUM-14 AC: submitting an id that is not the caller's DRAFT/REJECTED event is refused and writes nothing", async () => {
+      mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
+      mockFindFirst.mockResolvedValue(null);
+
+      const result = await submitEventRequest({
+        ...validSubmissionInput,
+        id: "evt_already_submitted",
+      });
+
+      expect(result).toEqual({
+        ok: false,
+        error: "Draft or rejected event not found or cannot be submitted.",
+      });
+      expect(mockFindFirst).toHaveBeenCalledWith({
+        where: {
+          id: "evt_already_submitted",
+          organiserId: "usr_organiser",
+          status: { in: ["DRAFT", "REJECTED"] },
+        },
+      });
+      expect(mockUpdate).not.toHaveBeenCalled();
+      expect(mockCreate).not.toHaveBeenCalled();
+      expect(mockTxNotificationCreateMany).not.toHaveBeenCalled();
+      expect(mockTxAuditLogCreate).not.toHaveBeenCalled();
+    });
+
+    it("SCRUM-14 AC: the draft row is locked BEFORE its status is checked, so two simultaneous submissions cannot both pass", async () => {
+      mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
+      mockFindFirst.mockResolvedValue({
+        id: "evt_draft_race",
+        organiserId: "usr_organiser",
+        status: "DRAFT",
+        coordinatorId: null,
+      });
+
+      await submitEventRequest({ ...validSubmissionInput, id: "evt_draft_race" });
+
+      expect(mockTxQueryRaw).toHaveBeenCalledTimes(1);
+      expect(mockTxQueryRaw.mock.invocationCallOrder[0]).toBeLessThan(
+        mockFindFirst.mock.invocationCallOrder[0],
+      );
+    });
+
+    it("SCRUM-21: resubmitting a rejected event records the previous coordinator as the audit oldValue", async () => {
+      mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
+      mockFindFirst.mockResolvedValue({
+        id: "evt_rejected",
+        organiserId: "usr_organiser",
+        status: "REJECTED",
+        coordinatorId: "usr_old_coordinator",
+      });
+      mockTxUserFindMany.mockResolvedValue([
+        { id: "usr_new_coordinator", _count: { coordinatedEvents: 0 } },
+      ]);
+
+      const result = await submitEventRequest({
+        ...validSubmissionInput,
+        id: "evt_rejected",
+      });
+
+      expect(result.ok).toBe(true);
+      expect(mockTxAuditLogCreate).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          action: "ASSIGNED",
+          oldValue: "usr_old_coordinator",
+          newValue: "usr_new_coordinator",
+        }),
+      });
     });
 
     it("Security Gate: Denies non-organiser user role (e.g. ATTENDEE)", async () => {

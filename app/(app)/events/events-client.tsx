@@ -11,6 +11,7 @@ import {
   Filter,
   CheckCircle2,
   XCircle,
+  MessageCircleQuestion,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { Event } from "@prisma/client";
@@ -31,6 +32,7 @@ import {
 import { CreateEventDialog } from "./create-event-dialog";
 import { EventDetailsModal } from "./event-details-modal";
 import { transitionEventStatus } from "./actions";
+import { requestClarification } from "./clarification-actions";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
@@ -66,8 +68,10 @@ export function EventsClient({
   const [editingDraft, setEditingDraft] = useState<Event | null>(null);
   const [viewingEvent, setViewingEvent] = useState<Event | null>(null);
   const [activeTab, setActiveTab] = useState<FilterTab>("ALL");
-  const [rejectingEvent, setRejectingEvent] = useState<Event | null>(null);
+   const [rejectingEvent, setRejectingEvent] = useState<Event | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
+  const [clarifyingEvent, setClarifyingEvent] = useState<Event | null>(null);
+  const [clarificationMessage, setClarificationMessage] = useState("");
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
 
@@ -91,6 +95,26 @@ export function EventsClient({
       );
       setRejectingEvent(null);
       setRejectionReason("");
+      router.refresh();
+    });
+  }
+
+  // SCRUM-18: coordinator asks the organiser a question instead of deciding
+  // yet. The event's own status is untouched.
+  function submitClarification() {
+    if (!clarifyingEvent || !clarificationMessage.trim()) return;
+    startTransition(async () => {
+      const result = await requestClarification({
+        eventId: clarifyingEvent.id,
+        message: clarificationMessage,
+      });
+      if (!result.ok) {
+        toast.error(result.error);
+        return;
+      }
+      toast.success("Clarification request sent to the organiser.");
+      setClarifyingEvent(null);
+      setClarificationMessage("");
       router.refresh();
     });
   }
@@ -308,6 +332,18 @@ export function EventsClient({
                                 <CheckCircle2 className="h-3.5 w-3.5" /> Approve
                               </Button>
                               <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-8 gap-1.5 text-xs"
+                                disabled={isPending}
+                                onClick={() => {
+                                  setClarifyingEvent(event);
+                                  setClarificationMessage("");
+                                }}
+                              >
+                                <MessageCircleQuestion className="h-3.5 w-3.5" /> Ask
+                              </Button>
+                              <Button
                                 variant="destructive"
                                 size="sm"
                                 className="h-8 gap-1.5 text-xs"
@@ -358,6 +394,7 @@ export function EventsClient({
             if (!open) setViewingEvent(null);
           }}
           event={viewingEvent}
+          isCoordinator={isCoordinator}
         />
       )}
 
@@ -392,6 +429,37 @@ export function EventsClient({
               }
             >
               Reject request
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+            <Dialog
+        open={!!clarifyingEvent}
+        onOpenChange={(open) => !open && setClarifyingEvent(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Request clarification</DialogTitle>
+            <DialogDescription>
+              Ask the organiser what you need before deciding. The event
+              stays under review while you wait for their response.
+            </DialogDescription>
+          </DialogHeader>
+          <Textarea
+            value={clarificationMessage}
+            onChange={(event) => setClarificationMessage(event.target.value)}
+            placeholder="What do you need clarified?"
+            aria-label="Clarification message"
+          />
+          <DialogFooter>
+            <Button variant="secondary" onClick={() => setClarifyingEvent(null)}>
+              Cancel
+            </Button>
+            <Button
+              disabled={isPending || !clarificationMessage.trim()}
+              onClick={submitClarification}
+            >
+              Send request
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -30,6 +30,8 @@ export type Action =
   | "event:list" // list the events scoped to me (own / assigned)
   | "event:read" // read one event (relationship-gated)
   | "event:review"
+  | "clarification:request" // SCRUM-18: coordinator asks the organiser a question
+  | "clarification:respond" // SCRUM-18: organiser answers an open question
   | "venue:read"
   | "booking:review"
   | "equipment:read"
@@ -61,11 +63,18 @@ export type Resource =
  * the whole permission model.
  */
 const ROLE_ACTIONS: Record<Role, Action[]> = {
-  ORGANISER: ["event:create", "event:list", "event:read", "notification:read"],
+  ORGANISER: [
+    "event:create",
+    "event:list",
+    "event:read",
+    "clarification:respond",
+    "notification:read",
+  ],
   COORDINATOR: [
     "event:list",
     "event:read",
     "event:review",
+    "clarification:request",
     "venue:read",
     "notification:read",
   ],

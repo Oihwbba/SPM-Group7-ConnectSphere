@@ -11,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "@/components/events/status-badge";
+import { ClarificationPanel } from "@/components/events/clarification-panel";
 import { formatDate, formatDateTime } from "@/lib/datetime";
 import { Calendar, Building2, Wrench, ClipboardList, Info } from "lucide-react";
 import type { Event } from "@prisma/client";
@@ -19,6 +20,10 @@ interface EventDetailsModalProps {
   event: Event | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** True when opened from the Coordinator's view; controls whether the
+   * clarification panel shows a response box (SCRUM-18). Defaults to false
+   * so the Organiser's existing usage needs no changes. */
+  isCoordinator?: boolean;
 }
 
 /**
@@ -29,6 +34,7 @@ export function EventDetailsModal({
   event,
   open,
   onOpenChange,
+  isCoordinator = false,
 }: EventDetailsModalProps) {
   if (!event) return null;
 
@@ -78,8 +84,11 @@ export function EventDetailsModal({
                   {event.description || "—"}
                 </p>
               </div>
-            </CardContent>
+                        </CardContent>
           </Card>
+
+          {/* SCRUM-18: shows nothing if there's no clarification thread */}
+          <ClarificationPanel eventId={event.id} isCoordinator={isCoordinator} />
 
           {event.status === "REJECTED" && event.decisionReason && (
             <Card>
