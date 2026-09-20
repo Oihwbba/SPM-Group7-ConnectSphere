@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useTransition, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import {
   Plus,
-  Check,
   ChevronRight,
   ChevronLeft,
   Eye,
@@ -13,6 +13,7 @@ import {
   ClipboardList,
   Info,
   AlertCircle,
+  Search,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -33,8 +34,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   formatDateTime,
   parseSingaporeDateTime,
-  sgWallTimeToUtcIso,
-  utcToSgWallTime,
+  timezoneWallTimeToUtcIso,
+  utcToTimezoneWallTime,
+  TIMEZONE_OPTIONS,
+  parseIanaZone,
+  normalizeTimezoneOption,
 } from "@/lib/datetime";
 import {
   createDraftEvent,
@@ -43,12 +47,15 @@ import {
 } from "./actions";
 
 /**
- * A datetime-local value ("2026-09-20T10:00") carries no timezone. Convert it
- * to a UTC ISO instant representing Singapore time (+08:00).
+ * A datetime-local value ("2026-09-20T10:00") carries no timezone offset.
+ * Converts local wall-time to UTC ISO instant ("...Z") according to selected timezone.
  */
-function toUtcIso(localValue: string): string | undefined {
-  return sgWallTimeToUtcIso(localValue);
+function toUtcIso(localValue: string, timezoneStr: string = "Asia/Singapore (+08:00)"): string | undefined {
+  if (!localValue) return undefined;
+  return timezoneWallTimeToUtcIso(localValue, parseIanaZone(timezoneStr));
 }
+
+
 
 interface FormState {
   name: string;
@@ -56,6 +63,7 @@ interface FormState {
   description: string;
   startAt: string;
   endAt: string;
+  timezone: string;
   expectedAttendance: string;
   venueRequirements: string;
   requiredFacilities: string[];
@@ -73,6 +81,7 @@ const initialFormState: FormState = {
   description: "",
   startAt: "",
   endAt: "",
+  timezone: "Asia/Singapore (+08:00)",
   expectedAttendance: "",
   venueRequirements: "",
   requiredFacilities: [],
@@ -83,15 +92,6 @@ const initialFormState: FormState = {
   programme: "",
   specialRequests: "",
 };
-
-const COMMON_FACILITIES = [
-  "projector",
-  "sound-system",
-  "stage",
-  "wifi",
-  "whiteboard",
-  "live-streaming",
-];
 
 const LAYOUT_OPTIONS = [
   "Theatre",
@@ -110,6 +110,7 @@ export interface DraftEventData {
   description?: string | null;
   startAt?: Date | string | null;
   endAt?: Date | string | null;
+  timezone?: string | null;
   expectedAttendance?: number | null;
   venueRequirements?: string | null;
   requiredFacilities?: string[];
@@ -129,28 +130,31 @@ interface CreateEventDialogProps {
   trigger?: React.ReactNode;
 }
 
-/** Helper to format Date or ISO string into Singapore wall-time datetime-local format (YYYY-MM-DDTHH:mm) */
+/** Helper to format Date or ISO string into wall-time datetime-local format in selected timezone */
 function toDatetimeInputString(
   dateVal: Date | string | null | undefined,
+  timezoneStr: string = "Asia/Singapore (+08:00)",
 ): string {
-  return utcToSgWallTime(dateVal);
+  return utcToTimezoneWallTime(dateVal, parseIanaZone(timezoneStr));
 }
 
-/** Helper to format a naive Singapore wall-time string (YYYY-MM-DDTHH:mm) for display */
+/** Helper to format a naive wall-time string (YYYY-MM-DDTHH:mm) for display */
 function formatWallDateTime(val: string | null | undefined): string {
   if (!val) return "";
   const d = parseSingaporeDateTime(val);
-  return d ? formatDateTime(d) : val;
+  return d ? formatDateTime(d) : val.replace("T", " ");
 }
 
 function getInitialFormData(draftEvent?: DraftEventData | null): FormState {
   if (!draftEvent) return initialFormState;
+  const timezone = normalizeTimezoneOption(draftEvent.timezone);
   return {
     name: draftEvent.name || "",
     purpose: draftEvent.purpose || "",
     description: draftEvent.description || "",
-    startAt: toDatetimeInputString(draftEvent.startAt),
-    endAt: toDatetimeInputString(draftEvent.endAt),
+    startAt: toDatetimeInputString(draftEvent.startAt, timezone),
+    endAt: toDatetimeInputString(draftEvent.endAt, timezone),
+    timezone,
     expectedAttendance:
       draftEvent.expectedAttendance !== null &&
       draftEvent.expectedAttendance !== undefined
@@ -174,6 +178,7 @@ export function CreateEventDialog({
   onOpenChange: onOpenChangeProp,
   trigger,
 }: CreateEventDialogProps = {}) {
+  const router = useRouter();
   const [internalOpen, setInternalOpen] = useState(false);
   const isControlled = openProp !== undefined;
   const open = isControlled ? openProp : internalOpen;
@@ -202,9 +207,23 @@ export function CreateEventDialog({
   );
   const canSaveDraft = !draftEvent || draftEvent.status === "DRAFT";
 
-  // Singapore wall-clock "now" in datetime-local format ("YYYY-MM-DDTHH:mm").
-  // ConnectSphere standardizes all wall-clock event and reservation times on Asia/Singapore (+08:00).
-  const minStartDateTime = toDatetimeInputString(new Date());
+  // Minimum start datetime computed in the user's selected event timezone
+  const minStartDateTime = toDatetimeInputString(new Date(), formData.timezone);
+
+  const [isDirty, setIsDirty] = useState(false);
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
+  const [tzSearch, setTzSearch] = useState("");
+
+  const [prevOpen, setPrevOpen] = useState(open);
+  if (open !== prevOpen) {
+    setPrevOpen(open);
+    if (open) {
+      setFormData(getInitialFormData(draftEvent));
+      setFieldErrors({});
+      setStep(1);
+      setIsDirty(false);
+    }
+  }
 
   useEffect(() => {
     if (open) {
@@ -216,22 +235,44 @@ export function CreateEventDialog({
     }
   }, [open]);
 
+  useEffect(() => {
+    if (!isDirty || isReadOnly) return;
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [isDirty, isReadOnly]);
+
   function handleOpenChange(isOpen: boolean) {
+    if (!isOpen && isDirty && !isReadOnly) {
+      setShowExitConfirm(true);
+      return;
+    }
+
+    forceCloseDialog(isOpen);
+  }
+
+  function forceCloseDialog(isOpen: boolean) {
     if (isControlled) {
       onOpenChangeProp?.(isOpen);
     } else {
       setInternalOpen(isOpen);
     }
 
-    if (isOpen) {
-      setFormData(getInitialFormData(draftEvent));
-    }
+    setFormData(getInitialFormData(draftEvent));
+    setFieldErrors({});
+    setStep(1);
+    setIsDirty(false);
+    setTzSearch("");
   }
 
   const minEndDateTime = formData.startAt ? formData.startAt : minStartDateTime;
 
   function updateField<K extends keyof FormState>(key: K, value: FormState[K]) {
     setFormData((prev) => ({ ...prev, [key]: value }));
+    setIsDirty(true);
     if (fieldErrors[key]) {
       setFieldErrors((prev) => {
         const next = { ...prev };
@@ -239,16 +280,6 @@ export function CreateEventDialog({
         return next;
       });
     }
-  }
-
-  function handleFacilityToggle(facility: string) {
-    setFormData((prev) => {
-      const exists = prev.requiredFacilities.includes(facility);
-      const nextFacilities = exists
-        ? prev.requiredFacilities.filter((f) => f !== facility)
-        : [...prev.requiredFacilities, facility];
-      return { ...prev, requiredFacilities: nextFacilities };
-    });
   }
 
   /**
@@ -260,15 +291,15 @@ export function CreateEventDialog({
 
     if (currentStep === 2) {
       if (formData.startAt) {
-        const startDate = parseSingaporeDateTime(formData.startAt);
-        if (startDate && startDate < new Date()) {
+        const startIso = toUtcIso(formData.startAt, formData.timezone);
+        if (startIso && new Date(startIso) < new Date()) {
           errors.startAt = ["Proposed date cannot be in the past."];
         }
       }
       if (formData.startAt && formData.endAt) {
-        const startDate = parseSingaporeDateTime(formData.startAt);
-        const endDate = parseSingaporeDateTime(formData.endAt);
-        if (startDate && endDate && endDate <= startDate) {
+        const startIso = toUtcIso(formData.startAt, formData.timezone);
+        const endIso = toUtcIso(formData.endAt, formData.timezone);
+        if (startIso && endIso && new Date(endIso) <= new Date(startIso)) {
           errors.endAt = [
             "Proposed end date and time must be strictly after the start date and time.",
           ];
@@ -319,8 +350,8 @@ export function CreateEventDialog({
             : undefined,
         description: formData.description || undefined,
         purpose: formData.purpose || undefined,
-        startAt: toUtcIso(formData.startAt),
-        endAt: toUtcIso(formData.endAt),
+        startAt: toUtcIso(formData.startAt, formData.timezone),
+        endAt: toUtcIso(formData.endAt, formData.timezone),
       };
 
       const result = await createDraftEvent(payload);
@@ -350,8 +381,8 @@ export function CreateEventDialog({
             ? Number(formData.expectedAttendance)
             : undefined,
         // Empty string (not undefined) so a missing date gets the "required" message.
-        startAt: toUtcIso(formData.startAt) ?? "",
-        endAt: toUtcIso(formData.endAt) ?? "",
+        startAt: toUtcIso(formData.startAt, formData.timezone) ?? "",
+        endAt: toUtcIso(formData.endAt, formData.timezone) ?? "",
       };
 
       const result = await submitEventRequest(payload);
@@ -374,7 +405,9 @@ export function CreateEventDialog({
     setFormData(initialFormState);
     setFieldErrors({});
     setStep(1);
-    handleOpenChange(false);
+    setIsDirty(false);
+    forceCloseDialog(false);
+    router.refresh();
   }
 
   // Check which mandatory submission fields are currently missing
@@ -397,7 +430,8 @@ export function CreateEventDialog({
   ).some(Boolean);
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
+    <>
+      <Dialog open={open} onOpenChange={handleOpenChange}>
       {trigger ? (
         <DialogTrigger asChild>{trigger}</DialogTrigger>
       ) : (
@@ -412,7 +446,7 @@ export function CreateEventDialog({
       )}
       <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center justify-between text-xl font-bold">
+          <DialogTitle className="flex items-center justify-between gap-2 pr-8 text-xl font-bold">
             <span>
               {draftEvent
                 ? isReadOnly
@@ -422,7 +456,7 @@ export function CreateEventDialog({
                     : "Resume Draft Event Request"
                 : "Create Event Request"}
             </span>
-            <span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-normal text-primary">
+            <span className="shrink-0 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-normal text-primary">
               Step {step} of 6
             </span>
           </DialogTitle>
@@ -561,6 +595,7 @@ export function CreateEventDialog({
                   value={formData.startAt}
                   onChange={(e) => updateField("startAt", e.target.value)}
                   aria-invalid={!!fieldErrors.startAt}
+                  className="relative w-full max-w-xs cursor-pointer pr-8 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-3 [&::-webkit-calendar-picker-indicator]:top-1/2 [&::-webkit-calendar-picker-indicator]:-translate-y-1/2 [&::-webkit-calendar-picker-indicator]:cursor-pointer"
                 />
                 {fieldErrors.startAt?.map((msg) => (
                   <p key={msg} className="text-xs text-destructive">
@@ -581,6 +616,7 @@ export function CreateEventDialog({
                   value={formData.endAt}
                   onChange={(e) => updateField("endAt", e.target.value)}
                   aria-invalid={!!fieldErrors.endAt}
+                  className="relative w-full max-w-xs cursor-pointer pr-8 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-3 [&::-webkit-calendar-picker-indicator]:top-1/2 [&::-webkit-calendar-picker-indicator]:-translate-y-1/2 [&::-webkit-calendar-picker-indicator]:cursor-pointer"
                 />
                 {fieldErrors.endAt?.map((msg) => (
                   <p key={msg} className="text-xs text-destructive">
@@ -591,6 +627,47 @@ export function CreateEventDialog({
                   Must be strictly after start date & time.
                 </p>
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="timezone">Event Timezone *</Label>
+              <div className="space-y-1.5">
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground pointer-events-none" />
+                  <Input
+                    type="text"
+                    placeholder="Type to filter timezones (e.g. New York, Tokyo, London, Singapore)..."
+                    aria-label="Filter timezones"
+                    value={tzSearch}
+                    onChange={(e) => setTzSearch(e.target.value)}
+                    className="pl-9 h-9 text-xs"
+                  />
+                </div>
+                <select
+                  id="timezone"
+                  value={formData.timezone}
+                  onChange={(e) => updateField("timezone", e.target.value)}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {TIMEZONE_OPTIONS.filter((opt) => {
+                    if (opt.value === formData.timezone) return true;
+                    if (!tzSearch.trim()) return true;
+                    const q = tzSearch.toLowerCase();
+                    return (
+                      opt.label.toLowerCase().includes(q) ||
+                      opt.value.toLowerCase().includes(q) ||
+                      opt.iana.toLowerCase().includes(q)
+                    );
+                  }).map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                Authoritative timezone for schedule interpretation. Persisted instants stored consistently in UTC.
+              </p>
             </div>
 
             <div className="space-y-2">
@@ -647,24 +724,27 @@ export function CreateEventDialog({
                 </p>
                 <div className="flex flex-wrap gap-2 pt-1">
                   {catalogues.venues.map((v) => (
-                    <span
+                    <button
                       key={v.id}
-                      className="cursor-pointer rounded border bg-background px-2 py-0.5 text-xs hover:bg-accent"
+                      type="button"
+                      className="cursor-pointer rounded border bg-background px-2 py-0.5 text-xs hover:bg-accent focus:outline-none focus:ring-1 focus:ring-ring"
                       onClick={() =>
                         updateField(
                           "venueRequirements",
                           formData.venueRequirements
                             ? `${formData.venueRequirements}, ${v.name}`
-                            : `Preferred venue: ${v.name} (Cap: ${v.capacity})`,
+                            : `Preferred venue: ${v.name}`,
                         )
                       }
                     >
                       {v.name} (Cap: {v.capacity})
-                    </span>
+                    </button>
                   ))}
                 </div>
               </div>
             )}
+
+
 
             <div className="space-y-2">
               <Label htmlFor="venueRequirements">Venue Requirements *</Label>
@@ -683,37 +763,6 @@ export function CreateEventDialog({
                   {msg}
                 </p>
               ))}
-            </div>
-
-            <div className="space-y-2">
-              <Label>Required Venue Facilities</Label>
-              <div className="grid grid-cols-2 gap-2 pt-1 sm:grid-cols-3">
-                {COMMON_FACILITIES.map((facility) => {
-                  const checked =
-                    formData.requiredFacilities.includes(facility);
-                  return (
-                    <button
-                      key={facility}
-                      type="button"
-                      onClick={() => handleFacilityToggle(facility)}
-                      className={`flex items-center gap-2 rounded-md border px-3 py-2 text-left text-xs font-medium transition-colors ${
-                        checked
-                          ? "border-primary bg-primary text-primary-foreground"
-                          : "border-input bg-background hover:bg-accent"
-                      }`}
-                    >
-                      <div
-                        className={`flex h-3.5 w-3.5 items-center justify-center rounded border ${checked ? "bg-primary-foreground text-primary" : "border-muted-foreground"}`}
-                      >
-                        {checked && <Check className="h-3 w-3 stroke-[3]" />}
-                      </div>
-                      <span className="capitalize">
-                        {facility.replace("-", " ")}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
             </div>
 
             <div className="space-y-2">
@@ -913,7 +962,7 @@ export function CreateEventDialog({
             )}
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <Card>
+              <Card className="overflow-hidden">
                 <CardHeader className="px-4 py-3">
                   <CardTitle className="flex items-center justify-between text-sm font-semibold">
                     <span>1. Basic Information</span>
@@ -955,7 +1004,7 @@ export function CreateEventDialog({
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="overflow-hidden">
                 <CardHeader className="px-4 py-3">
                   <CardTitle className="flex items-center justify-between text-sm font-semibold">
                     <span>2. Schedule & Attendance</span>
@@ -991,6 +1040,10 @@ export function CreateEventDialog({
                     )}
                   </p>
                   <p>
+                    <span className="font-semibold">Timezone:</span>{" "}
+                    {formData.timezone || "Asia/Singapore (+08:00)"}
+                  </p>
+                  <p>
                     <span className="font-semibold">Attendance:</span>{" "}
                     {formData.expectedAttendance || (
                       <span className="rounded bg-destructive/10 px-1.5 py-0.5 text-[11px] font-medium text-destructive">
@@ -1001,7 +1054,7 @@ export function CreateEventDialog({
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="overflow-hidden">
                 <CardHeader className="px-4 py-3">
                   <CardTitle className="flex items-center justify-between text-sm font-semibold">
                     <span>3. Venue & Accessibility</span>
@@ -1024,12 +1077,7 @@ export function CreateEventDialog({
                       </span>
                     )}
                   </p>
-                  <p>
-                    <span className="font-semibold">Facilities:</span>{" "}
-                    {formData.requiredFacilities.length
-                      ? formData.requiredFacilities.join(", ")
-                      : "None selected"}
-                  </p>
+
                   <p>
                     <span className="font-semibold">Preferred Layout:</span>{" "}
                     {formData.preferredLayout.trim() || (
@@ -1049,7 +1097,7 @@ export function CreateEventDialog({
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="overflow-hidden">
                 <CardHeader className="px-4 py-3">
                   <CardTitle className="flex items-center justify-between text-sm font-semibold">
                     <span>4. Equipment & Support</span>
@@ -1075,7 +1123,7 @@ export function CreateEventDialog({
                 </CardContent>
               </Card>
 
-              <Card className="md:col-span-2">
+              <Card className="overflow-hidden md:col-span-2">
                 <CardHeader className="px-4 py-3">
                   <CardTitle className="flex items-center justify-between text-sm font-semibold">
                     <span>5. Registration & Additional Details</span>
@@ -1172,5 +1220,33 @@ export function CreateEventDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+    <Dialog open={showExitConfirm} onOpenChange={setShowExitConfirm}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-destructive">
+            <AlertCircle className="h-5 w-5" /> Unsaved Changes
+          </DialogTitle>
+          <DialogDescription>
+            You have unsaved changes in this event request. If you close without saving, your edits will be lost.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter className="gap-2 sm:gap-0">
+          <Button variant="outline" onClick={() => setShowExitConfirm(false)}>
+            Continue Editing
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={() => {
+              setShowExitConfirm(false);
+              forceCloseDialog(false);
+            }}
+          >
+            Discard Changes
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }

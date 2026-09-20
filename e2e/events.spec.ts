@@ -261,7 +261,7 @@ test.describe("User Story 16 — Distinguish Drafts from Submitted Requests Jour
     await expect(page.getByRole("cell", { name: submittedTitle })).toBeVisible();
     await expect(page.getByRole("cell", { name: draftTitle })).not.toBeVisible();
 
-    await page.getByRole("button", { name: /All Requests/i }).click();
+    await page.getByRole("button", { name: /^All \(/i }).click();
     await expect(page.getByRole("cell", { name: draftTitle })).toBeVisible();
     await expect(page.getByRole("cell", { name: submittedTitle })).toBeVisible();
   });
@@ -383,7 +383,7 @@ test.describe("User Story 84 — Events list on mobile (375x812)", () => {
     await expect(startsLabel).toHaveText("Starts");
     const createdLabel = page.locator('td[data-col="created"] span').first();
     await expect(createdLabel).toBeVisible();
-    await expect(createdLabel).toHaveText("Created");
+    await expect(createdLabel).toHaveText("Updated");
 
     // A draft card keeps its accent: the 4px muted left border only renders
     // when the row's data-status="DRAFT" drives the CSS, so this guards against
@@ -409,6 +409,112 @@ test.describe("User Story 84 — Events list on mobile (375x812)", () => {
     await expect(
       page.getByRole("heading", { name: /Resume Draft Event Request/i }),
     ).toBeVisible();
+  });
+});
+
+/**
+ * Desktop list controls and dialog behaviour (SCRUM-13 timezone, SCRUM-13 AC6
+ * unsaved-changes guard, SCRUM-84 AC7-AC9 sorting/filtering). These need the
+ * default viewport: below md the table restyles into cards and the column
+ * headers the sort test clicks are hidden.
+ */
+test.describe("User Story 13 & 84 — timezone, unsaved changes and list controls", () => {
+  test("SCRUM-13: organiser selects custom event timezone when creating request", async ({
+    page,
+  }) => {
+    await page.goto("/login");
+    await page.getByLabel("Email", { exact: true }).fill("organiser@test.local");
+    await page.getByLabel("Password", { exact: true }).fill("Password123!");
+    await page.getByRole("button", { name: "Sign in" }).click();
+    await page.waitForURL("**/events");
+
+    const eventName = `TZ Event ${Date.now()}`;
+    await page.getByRole("button", { name: /Create Event Request/i }).first().click();
+    await page.getByLabel("Event Name *").fill(eventName);
+    await page.getByRole("button", { name: "Next", exact: true }).click();
+
+    // Select custom timezone on Step 2 by matching IANA label text
+    const nyOptionValue = (await page.getByLabel("Event Timezone *").locator("option", { hasText: "America/New York" }).getAttribute("value")) ?? "America/New_York";
+    await page.getByLabel("Event Timezone *").selectOption(nyOptionValue);
+    await page.getByRole("button", { name: /Save as Draft/i }).click();
+
+    await expect(page.getByRole("cell", { name: eventName })).toBeVisible();
+
+    // Reopen draft & verify saved timezone is restored
+    await page.getByRole("button", { name: /Resume Draft/i }).first().click();
+    await page.getByRole("button", { name: "Next", exact: true }).click();
+    await expect(page.getByLabel("Event Timezone *")).toHaveValue(nyOptionValue);
+  });
+
+  test("SCRUM-13 AC6: unsaved changes warning appears when closing an edited draft dialog", async ({
+    page,
+  }) => {
+    await page.goto("/login");
+    await page.getByLabel("Email", { exact: true }).fill("organiser@test.local");
+    await page.getByLabel("Password", { exact: true }).fill("Password123!");
+    await page.getByRole("button", { name: "Sign in" }).click();
+    await page.waitForURL("**/events");
+
+    const draftTitle = `Unsaved Work Draft ${Date.now()}`;
+    await page.getByRole("button", { name: /Create Event Request/i }).first().click();
+    await page.getByLabel("Event Name *").fill(draftTitle);
+
+    // Click backdrop/close button to trigger dirty form exit warning
+    await page.keyboard.press("Escape");
+
+    // 1. Verify warning dialog appears
+    const confirmDialog = page.getByRole("dialog", { name: /Unsaved Changes/i });
+    await expect(confirmDialog).toBeVisible();
+    await expect(page.getByText(/You have unsaved changes in this event request/i)).toBeVisible();
+
+    // 2. Click "Continue Editing" — keeps the creation dialog open with typed name intact
+    await confirmDialog.getByRole("button", { name: /Continue Editing/i }).click();
+    await expect(confirmDialog).not.toBeVisible();
+    await expect(page.getByRole("dialog", { name: /Create Event Request/i })).toBeVisible();
+    await expect(page.getByLabel("Event Name *")).toHaveValue(draftTitle);
+
+    // 3. Trigger exit warning again and click "Discard Changes" — closes dialog without saving draft
+    await page.keyboard.press("Escape");
+    await expect(confirmDialog).toBeVisible();
+    await confirmDialog.getByRole("button", { name: /Discard Changes/i }).click();
+
+    await expect(page.getByRole("dialog")).not.toBeVisible();
+    await expect(page.getByRole("cell", { name: draftTitle })).not.toBeVisible();
+  });
+
+  test("SCRUM-84 AC7-AC9: organiser sorts columns and filters list by status dropdown and search", async ({
+    page,
+  }) => {
+    await page.goto("/login");
+    await page.getByLabel("Email", { exact: true }).fill("organiser@test.local");
+    await page.getByLabel("Password", { exact: true }).fill("Password123!");
+    await page.getByRole("button", { name: "Sign in" }).click();
+    await page.waitForURL("**/events");
+
+    // Column Header Sort Toggle test - sort by Name ascending
+    const nameHeader = page.getByRole("columnheader", { name: /Name/i });
+    await expect(nameHeader).toBeVisible();
+    await page.getByRole("button", { name: "Sort by Name" }).click();
+    await expect(nameHeader).toHaveAttribute("aria-sort", "ascending");
+
+    // Verify actual row ordering after sorting by Name
+    const firstRowName = await page.getByTestId("event-name-link").first().textContent();
+    const secondRowName = await page.getByTestId("event-name-link").nth(1).textContent();
+    if (firstRowName && secondRowName) {
+      expect(firstRowName.localeCompare(secondRowName)).toBeLessThanOrEqual(0);
+    }
+
+    // Status Select Filter test - select DRAFT and assert draft row is visible while SUBMITTED rows are excluded
+    await page.getByLabel("Filter by status").selectOption("DRAFT");
+    await expect(page.getByLabel("Filter by status")).toHaveValue("DRAFT");
+    await expect(page.getByTestId("draft-event-row").first()).toBeVisible();
+    await expect(page.locator('[data-status="SUBMITTED"]')).not.toBeVisible();
+
+    // Search query test - search for matching event and assert non-matching events are excluded
+    await page.getByPlaceholder("Search by name or purpose...").fill("Annual");
+    await expect(page.getByPlaceholder("Search by name or purpose...")).toHaveValue("Annual");
+    await expect(page.getByText("Annual Tech Summit")).toBeVisible();
+    await expect(page.getByText("Career Fair")).not.toBeVisible();
   });
 });
 

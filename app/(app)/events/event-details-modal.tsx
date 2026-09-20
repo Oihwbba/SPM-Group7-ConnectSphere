@@ -12,8 +12,19 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "@/components/events/status-badge";
 import { ClarificationPanel } from "@/components/events/clarification-panel";
-import { formatDate, formatDateTime } from "@/lib/datetime";
-import { Calendar, Building2, Wrench, ClipboardList, Info, AlertTriangle } from "lucide-react";
+import {
+  formatDate,
+  formatDateTimeInTimezone,
+  parseIanaZone,
+} from "@/lib/datetime";
+import {
+  Calendar,
+  Building2,
+  Wrench,
+  ClipboardList,
+  Info,
+  AlertTriangle,
+} from "lucide-react";
 import type { Event } from "@prisma/client";
 
 interface EventDetailsModalProps {
@@ -44,7 +55,7 @@ export function EventDetailsModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
         <DialogHeader>
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b pb-3">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b pb-3 pr-8">
             <div>
               <DialogTitle className="text-xl font-bold">
                 {event.name}
@@ -79,7 +90,7 @@ export function EventDetailsModal({
         {/* Singular Page Layout — Displays all entered details at a glance */}
         <div className="space-y-4 py-2">
           {/* Section 1: Basic Event Information */}
-          <Card>
+          <Card className="overflow-hidden">
             <CardHeader className="bg-muted/30 px-4 py-3">
               <CardTitle className="flex items-center gap-2 text-sm font-semibold">
                 <Info className="h-4 w-4 text-primary" /> Basic Information
@@ -107,7 +118,7 @@ export function EventDetailsModal({
           <ClarificationPanel eventId={event.id} isCoordinator={isCoordinator} />
 
           {event.status === "REJECTED" && event.decisionReason && (
-            <Card>
+            <Card className="overflow-hidden">
               <CardHeader className="bg-destructive/5 px-4 py-3">
                 <CardTitle className="text-sm font-semibold text-destructive">
                   Rejection reason
@@ -120,20 +131,20 @@ export function EventDetailsModal({
           )}
 
           {/* Section 2: Schedule & Expected Attendance */}
-          <Card>
+          <Card className="overflow-hidden">
             <CardHeader className="bg-muted/30 px-4 py-3">
               <CardTitle className="flex items-center gap-2 text-sm font-semibold">
                 <Calendar className="h-4 w-4 text-primary" /> Schedule &
                 Attendance
               </CardTitle>
             </CardHeader>
-            <CardContent className="grid grid-cols-1 gap-3 p-4 text-xs sm:grid-cols-3">
+            <CardContent className="grid grid-cols-1 gap-3 p-4 text-xs sm:grid-cols-4">
               <div>
                 <span className="font-semibold text-muted-foreground">
                   Proposed Start:
                 </span>
                 <p className="mt-0.5 text-foreground">
-                  {event.startAt ? formatDateTime(event.startAt) : "—"}
+                  {event.startAt ? formatDateTimeInTimezone(event.startAt, event.timezone) : "—"}
                 </p>
               </div>
               <div>
@@ -141,7 +152,18 @@ export function EventDetailsModal({
                   Proposed End:
                 </span>
                 <p className="mt-0.5 text-foreground">
-                  {event.endAt ? formatDateTime(event.endAt) : "—"}
+                  {event.endAt ? formatDateTimeInTimezone(event.endAt, event.timezone) : "—"}
+                </p>
+              </div>
+              <div>
+                <span className="font-semibold text-muted-foreground">
+                  Event Timezone:
+                </span>
+                <p className="mt-0.5 text-foreground">
+                  {/* Show the zone itself, not the offset captured when the
+                      request was created: that offset goes stale across a
+                      daylight-saving change and would misreport the event. */}
+                  {parseIanaZone(event.timezone ?? undefined)}
                 </p>
               </div>
               <div>
@@ -158,7 +180,7 @@ export function EventDetailsModal({
           </Card>
 
           {/* Section 3: Venue, Layout & Accessibility Requirements */}
-          <Card>
+          <Card className="overflow-hidden">
             <CardHeader className="bg-muted/30 px-4 py-3">
               <CardTitle className="flex items-center gap-2 text-sm font-semibold">
                 <Building2 className="h-4 w-4 text-primary" /> Venue &
@@ -184,6 +206,10 @@ export function EventDetailsModal({
                   </p>
                 </div>
               </div>
+
+              {/* Existing requests (and the seed) still carry facilities even
+                  though the create form no longer asks for them, so a
+                  coordinator must still be able to see what was requested. */}
               {event.requiredFacilities &&
                 event.requiredFacilities.length > 0 && (
                   <div>
@@ -202,6 +228,7 @@ export function EventDetailsModal({
                     </div>
                   </div>
                 )}
+
               <div>
                 <span className="font-semibold text-muted-foreground">
                   Accessibility Needs:
@@ -214,7 +241,7 @@ export function EventDetailsModal({
           </Card>
 
           {/* Section 4: Equipment & Technical Support */}
-          <Card>
+          <Card className="overflow-hidden">
             <CardHeader className="bg-muted/30 px-4 py-3">
               <CardTitle className="flex items-center gap-2 text-sm font-semibold">
                 <Wrench className="h-4 w-4 text-primary" /> Equipment &
@@ -232,7 +259,7 @@ export function EventDetailsModal({
           </Card>
 
           {/* Section 5: Registration & Additional Details */}
-          <Card>
+          <Card className="overflow-hidden">
             <CardHeader className="bg-muted/30 px-4 py-3">
               <CardTitle className="flex items-center gap-2 text-sm font-semibold">
                 <ClipboardList className="h-4 w-4 text-primary" /> Registration
