@@ -36,7 +36,7 @@ export default async function AppLayout({
       <header className="sticky top-0 z-50 flex h-16 items-center gap-4 bg-background/70 px-4 backdrop-blur-glass sm:px-6">
         <div className="flex items-center gap-2">
           <SphereLogo className="h-9 w-9" />
-          <span className="hidden text-lg tracking-tight sm:inline">
+          <span className="text-lg tracking-tight">
             <span className="font-bold">Connect</span>
             <span className="font-light">Sphere</span>
           </span>
@@ -66,7 +66,9 @@ export default async function AppLayout({
       {/* Below the top bar: nav rail + page content. */}
       <div className="flex flex-1">
         <Sidebar role={role} />
-        <main className="min-w-0 flex-1 px-4 pb-10 pt-6 sm:px-6">
+        {/* Extra bottom padding on mobile so content clears the fixed bottom
+            nav bar; the desktop rail is in-flow so needs none. */}
+        <main className="min-w-0 flex-1 px-4 pb-24 pt-4 sm:px-6 md:pb-10 md:pt-6">
           {children}
         </main>
       </div>
