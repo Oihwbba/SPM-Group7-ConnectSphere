@@ -111,6 +111,17 @@ function hasRelationship(user: SessionUser, resource: Resource): boolean {
 }
 
 /**
+ * Does this role hold this capability at all, before any relationship to a
+ * specific row is considered? `can()` is the gate features use; this is for the
+ * places that only know a role and never see a resource — the navigation map
+ * (SCRUM-66) is the one caller today. It reads the same ROLE_ACTIONS table, so
+ * granting a role an action updates the menu with no second edit.
+ */
+export function roleAllows(role: Role, action: Action): boolean {
+  return ROLE_ACTIONS[role].includes(action);
+}
+
+/**
  * The one function features call to ask "is this allowed?".
  *
  * @param user     the signed-in user (id + role)
@@ -123,7 +134,7 @@ export function can(
   resource?: Resource,
 ): boolean {
   // 1. Role gate.
-  if (!ROLE_ACTIONS[user.role].includes(action)) {
+  if (!roleAllows(user.role, action)) {
     return false;
   }
 
