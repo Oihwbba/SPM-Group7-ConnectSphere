@@ -37,7 +37,7 @@ either covered by a test or visibly not done yet. Reviewers do the same.
 | | |
 |---|---|
 | Stories | **69** |
-| Tasks | **3** |
+| Tasks | **5** |
 | Subtasks | **18** |
 | Total story points | **156** |
 | Points committed to Sprint 1 | **37** |
@@ -161,3 +161,5 @@ _11 stories, 24 points_
 | [SCRUM-87](SCRUM-87.md) | Spike: decide component testing (jsdom + React Testing Library) and enforce a CI coverage threshold | Backlog | To Do |
 | [SCRUM-88](SCRUM-88.md) | Add GLM-5.3 automated code review to pull requests (GitHub Actions) | SCRUM Sprint 1 | Done |
 | [SCRUM-89](SCRUM-89.md) | CI and developer infrastructure: Node 24, CI hardening, test folders, security upgrades, migration sync | SCRUM Sprint 1 | Done |
+| [SCRUM-111](SCRUM-111.md) | GLM reviewer context: never drop a file the PR changed, and measure the budget | Backlog | In Progress |
+| [SCRUM-112](SCRUM-112.md) | The GLM reviewer maintains its own memory instead of being taught by hand | Backlog | In Progress |

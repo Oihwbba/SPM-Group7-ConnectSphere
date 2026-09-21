@@ -2,8 +2,14 @@
 
 Lessons from past reviews, approved by the team. The reviewer reads this file
 from `main` on every pull request, after `CONTRIBUTING.md` and `CLAUDE.md`.
-Add or change a lesson through a pull request; changes under `.github/` need
-Jin Hong's approval (CODEOWNERS).
+
+The reviewer proposes its own lessons: when a pull request merges,
+`.github/scripts/ai-memory.mjs` asks GLM what that pull request taught it and
+opens a pull request here if the answer is anything (SCRUM-112). Nothing lands
+without a human reading it — a lesson shapes every later review, and changes
+under `.github/` need Jin Hong's approval (CODEOWNERS). Editing this file by
+hand is still fine; the job rewrites the whole file, so it will carry your
+lesson forward or delete it once it stops being true.
 
 Rules for a lesson:
 

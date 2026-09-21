@@ -451,3 +451,57 @@ There was room to spare: reviews use 95,000-168,000 tokens and GLM-5.3 accepts
 better review. The claim is tested, not assumed: a pull request carrying the
 seven planted bugs of #37 is re-reviewed after this change, and the budgets are
 dialled back if the reviewer stops finding them.
+
+## Addendum (2026-09-21, SCRUM-112) — the reviewer keeps its own memory
+
+`.github/ai-review/memory.md` was written by hand. Every lesson in it got there
+because a human noticed one and typed it, which is exactly where the reviewer's
+repeated mistakes came from: it re-reported what the team already knew was
+deliberate, and it missed facts nobody got round to writing down. The seeded
+pair of coordinators only became a lesson after CI had broken on it twice.
+
+A merged pull request is the moment a lesson exists. The review has been
+written, CI has passed or failed and been fixed, and a human has accepted the
+result.
+
+**Decision.** `.github/workflows/ai-memory.yml` runs on every merge and asks
+GLM, in one call, whether that pull request taught the reviewer anything. It is
+shown the memory as it stands, the pull request's title, description and diff
+stat, the review it received, and whether CI failed on the way. It answers
+`{"learned": false, ...}` — the normal answer — or hands back the complete
+rewritten file.
+
+- **It rewrites, never appends.** A memory that grows on every merge is a worse
+  memory. The rewrite is how a stale lesson gets deleted.
+- **It never writes to `main`.** A lesson shapes every later review, so a human
+  reads it first. The job pushes one commit on top of `main` to the standing
+  `ai-review/memory` branch and opens or updates a single pull request, so
+  proposals replace one another instead of piling up. CODEOWNERS already
+  requires Jin Hong's approval under `.github/`.
+- **The guards are code, not prompt.** A proposal is refused, with the reason
+  in the run log, if it exceeds the 8,000 characters the reviewer actually
+  reads, loses the file's heading or its own "Rules for a lesson" block, keeps
+  less than 60% of the current file, or arrives with no note saying what it
+  learned. Asking a model for those properties is not the same as enforcing
+  them.
+- **Failing to learn is a warning, never a red check.** The memory simply stays
+  as it was.
+- **It cannot feed itself.** The job skips its own branch, so merging a lesson
+  does not propose another.
+
+**Trade-offs.**
+
+- GitHub does not start workflow runs for a pull request opened with the
+  workflow token, so the memory pull request carries no checks. Nothing in it
+  can break a build — it is one Markdown file read into a prompt — and the
+  repository owner merges it. A pull request that needed checks would need a
+  personal access token, which is a larger secret than this is worth.
+- The model decides what is worth remembering, and it will sometimes propose a
+  lesson that is merely a summary of the pull request. That is what the human
+  read is for; closing the pull request costs nothing.
+- One extra GLM call per merge, on the same key as the review.
+- A lesson that is wrong teaches every later review to be wrong. This is the
+  reason the job stops at a pull request rather than a commit, and the reason
+  the prompt forbids "do not report X" lessons outright: a lesson explains what
+  is deliberate, and must never teach the reviewer to stay quiet about a real
+  defect.

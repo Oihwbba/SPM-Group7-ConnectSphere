@@ -52,7 +52,7 @@ const MAX_DOC_CHARS = 20_000;
 const MAX_STORY_CHARS = 6_000;
 const MAX_BODY_CHARS = 4_000;
 const MAX_TEST_INVENTORY_CHARS = 15_000;
-const MAX_MEMORY_CHARS = 8_000;
+export const MAX_MEMORY_CHARS = 8_000;
 const MAX_CONVERSATION_CHARS = 8_000;
 // Beyond the diff (ADR 0008): the changed files in full get their own budget;
 // the related files (imports, importers, story files) share a second one.
@@ -74,7 +74,7 @@ const CI_WORKFLOW_NAME = "CI";
 const CI_WAIT_MS = 15 * 60 * 1000;
 const CI_POLL_MS = 20 * 1000;
 // Lessons from past reviews, approved by the team through pull requests.
-const MEMORY_PATH = ".github/ai-review/memory.md";
+export const MEMORY_PATH = ".github/ai-review/memory.md";
 const MARKER = "<!-- glm-review -->";
 
 // Docs, lockfiles and generated snapshots aren't sent as diff to review.
@@ -416,7 +416,7 @@ export function checkCompletion({ content, finishReason, usage }) {
 }
 
 /** One streamed GLM call; returns the answer text (thinking is ignored), why it stopped, and usage. */
-async function askGlm({ apiKey, model, system, user, timeoutMs, effort }) {
+export async function askGlm({ apiKey, model, system, user, timeoutMs, effort }) {
   const response = await fetch(GLM_URL, {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
@@ -476,7 +476,7 @@ async function askGlm({ apiKey, model, system, user, timeoutMs, effort }) {
   return { content, finishReason, usage };
 }
 
-function makeGithub(token) {
+export function makeGithub(token) {
   return async function github(method, path, body) {
     const response = await fetch(`https://api.github.com${path}`, {
       method,
