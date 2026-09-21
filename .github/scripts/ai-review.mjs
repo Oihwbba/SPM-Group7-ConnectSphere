@@ -929,23 +929,31 @@ export function selectContextFiles({
   // coverage without it.
   const take = (entries, budget, { mustFit = false } = {}) => {
     let used = 0;
-    for (const entry of entries) {
+    entries.forEach((entry, index) => {
       const full = capped(byPath.get(entry.path).content, MAX_FILE_CHARS);
       const room = budget - used;
       if (full.length <= room) {
         used += full.length;
         included.push({ ...entry, content: full });
-        continue;
+        return;
       }
-      // Too big for what is left: keep the head if a useful amount fits.
-      if (mustFit && room >= MIN_PARTIAL_FILE_CHARS) {
-        const partial = capped(full, room - TRUNCATION_NOTE_CHARS);
+      // Too big for what is left: keep the head, but leave the files behind
+      // it their floor. Entries arrive in diff order, so without this reserve
+      // the first changed files of a wide PR starve the last one — the very
+      // loss this exists to prevent.
+      // A slot is the floor plus the room its truncation note needs, so the
+      // floor stays what it claims to be: 8,000 characters of the file.
+      const slot = MIN_PARTIAL_FILE_CHARS + TRUNCATION_NOTE_CHARS;
+      if (mustFit && room >= slot) {
+        const reserved = (entries.length - index - 1) * slot;
+        const share = Math.min(room, Math.max(room - reserved, slot));
+        const partial = capped(full, share - TRUNCATION_NOTE_CHARS);
         used += partial.length;
         included.push({ ...entry, content: partial, reason: `${entry.reason}, shortened to fit` });
-        continue;
+        return;
       }
       omitted.push(entry);
-    }
+    });
   };
   take(changedPaths.map((path) => ({ path, reason: "changed in this PR" })), maxChanged, {
     mustFit: true,

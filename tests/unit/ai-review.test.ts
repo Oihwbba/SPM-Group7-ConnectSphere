@@ -736,6 +736,30 @@ describe("context beyond the diff", () => {
     expect(omitted.map((f) => f.path)).toEqual(["tests/unit/events.test.ts"]);
   });
 
+  // SCRUM-111 — changed files arrive in diff order and each took whatever
+  // budget was left, so the first of a wide PR could starve the last below the
+  // floor and drop it: the #54 loss again, one file further down the diff.
+  it("gives every changed file its floor instead of letting the first ones eat the budget", () => {
+    const paths = ["a.ts", "b.ts", "c.ts"];
+    const files = paths.map((path) => file(path, "x".repeat(40_000)));
+
+    const { included, omitted } = selectContextFiles({
+      files,
+      changed: paths,
+      storyKeys: [],
+      maxChanged: 30_000,
+    });
+
+    expect(omitted).toEqual([]);
+    expect(included.map((f) => f.path)).toEqual(paths);
+    for (const entry of included) {
+      expect(entry.reason).toBe("changed in this PR, shortened to fit");
+      expect(entry.content.length).toBeGreaterThanOrEqual(8_000);
+    }
+    const total = included.reduce((sum, entry) => sum + entry.content.length, 0);
+    expect(total).toBeLessThanOrEqual(30_000);
+  });
+
   // SCRUM-111 — an e2e test can only assert what the seed writes. #53 broke CI
   // by hard-coding one of the two seeded coordinators.
   it("sends the seed when the PR touches an e2e spec, and not otherwise", () => {
