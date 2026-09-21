@@ -76,7 +76,8 @@ describe("checkProposal", () => {
 
     expect(verdict.accept).toBe(true);
     expect(verdict.note).toBe("Coordinators are seeded twice.");
-    expect(verdict.memory.endsWith("\n")).toBe(true);
+    // Only the accepting branch carries a memory, so TypeScript needs telling.
+    expect(verdict.memory!.endsWith("\n")).toBe(true);
     expect(verdict.memory).toContain("two coordinators");
   });
 
