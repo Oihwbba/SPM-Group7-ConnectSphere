@@ -6,6 +6,7 @@ import {
   CheckCircle2,
   Calendar,
   Check,
+  CheckCheck,
   XCircle,
   AlertCircle,
   type LucideIcon,
@@ -24,11 +25,11 @@ const STATUS_META: Record<
 > = {
   DRAFT: { label: "Draft", variant: "muted", icon: FileEdit },
   SUBMITTED: { label: "Submitted", variant: "info", icon: Send },
-  UNDER_REVIEW: { label: "Under Review", variant: "info", icon: Clock },
-  APPROVED: { label: "Approved", variant: "success", icon: CheckCircle2 },
+  UNDER_REVIEW: { label: "Under Review", variant: "warning", icon: Clock },
+  APPROVED: { label: "Approved", variant: "success", icon: Check },
   PLANNING: { label: "Planning", variant: "default", icon: Calendar },
-  CONFIRMED: { label: "Confirmed", variant: "success", icon: CheckCircle2 },
-  COMPLETED: { label: "Completed", variant: "secondary", icon: Check },
+  CONFIRMED: { label: "Confirmed", variant: "outline", icon: CheckCircle2 },
+  COMPLETED: { label: "Completed", variant: "secondary", icon: CheckCheck },
   CANCELLED: { label: "Cancelled", variant: "muted", icon: AlertCircle },
   REJECTED: { label: "Rejected", variant: "destructive", icon: XCircle },
 };

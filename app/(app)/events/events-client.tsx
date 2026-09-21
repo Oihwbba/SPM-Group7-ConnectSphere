@@ -52,7 +52,7 @@ interface EventsClientProps {
   isCoordinator?: boolean;
 }
 
-export type FilterTab = "ALL" | "DRAFT" | "SUBMITTED" | "APPROVED" | "REJECTED" | "UNDER_REVIEW";
+export type FilterTab = "ALL" | "DRAFT" | "SUBMITTED";
 export type SortField = "name" | "status" | "startAt" | "updatedAt";
 export type SortOrder = "asc" | "desc";
 
@@ -90,16 +90,8 @@ export function filterAndSortEvents<
         activeTab === "DRAFT"
           ? evt.status === "DRAFT"
           : activeTab === "SUBMITTED"
-            ? // SCRUM-20 auto-assigns on submission, so a submitted request is
-              // usually already UNDER_REVIEW; both belong on this tab.
-              evt.status === "SUBMITTED" || evt.status === "UNDER_REVIEW"
-            : activeTab === "APPROVED"
-              ? evt.status === "APPROVED"
-              : activeTab === "REJECTED"
-                ? evt.status === "REJECTED"
-                : activeTab === "UNDER_REVIEW"
-                  ? evt.status === "UNDER_REVIEW"
-                  : true;
+            ? evt.status !== "DRAFT"
+            : true;
 
       const matchesDropdown =
         statusFilter === "ALL" ? true : evt.status === statusFilter;
@@ -233,11 +225,7 @@ export function EventsClient({
   });
 
   const draftCount = events.filter((evt) => evt.status === "DRAFT").length;
-  const submittedCount = events.filter(
-    (evt) => evt.status === "SUBMITTED" || evt.status === "UNDER_REVIEW",
-  ).length;
-  const approvedCount = events.filter((evt) => evt.status === "APPROVED").length;
-  const rejectedCount = events.filter((evt) => evt.status === "REJECTED").length;
+  const submittedCount = events.filter((evt) => evt.status !== "DRAFT").length;
 
   // Row actions. The row is a single element (table row on desktop, stacked
   // card on mobile — see events-list.module.css), so each control renders once
@@ -386,28 +374,6 @@ export function EventsClient({
               }}
             >
               Submitted ({submittedCount})
-            </Button>
-            <Button
-              variant={activeTab === "APPROVED" ? "secondary" : "ghost"}
-              size="sm"
-              className="h-8 shrink-0 text-xs font-medium"
-              onClick={() => {
-                setActiveTab("APPROVED");
-                setStatusFilter("ALL");
-              }}
-            >
-              Approved ({approvedCount})
-            </Button>
-            <Button
-              variant={activeTab === "REJECTED" ? "secondary" : "ghost"}
-              size="sm"
-              className="h-8 shrink-0 text-xs font-medium"
-              onClick={() => {
-                setActiveTab("REJECTED");
-                setStatusFilter("ALL");
-              }}
-            >
-              Rejected ({rejectedCount})
             </Button>
           </div>
 
