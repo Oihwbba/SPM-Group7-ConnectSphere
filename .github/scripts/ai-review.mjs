@@ -56,9 +56,18 @@ const MAX_MEMORY_CHARS = 8_000;
 const MAX_CONVERSATION_CHARS = 8_000;
 // Beyond the diff (ADR 0008): the changed files in full get their own budget;
 // the related files (imports, importers, story files) share a second one.
-const MAX_CHANGED_FILES_CHARS = 250_000;
-const MAX_RELATED_FILES_CHARS = 150_000;
+const MAX_CHANGED_FILES_CHARS = 400_000;
+// Raised from 150,000 after #52, #53, #54 and #57 all dropped related files,
+// but deliberately not to the model's limit: GLM-5.3 takes 1M tokens, yet a
+// much longer prompt makes a model less precise about the specific lines this
+// review exists to find. Measured against the planted bugs in PR #37.
+const MAX_RELATED_FILES_CHARS = 300_000;
 const MAX_FILE_CHARS = 60_000;
+// A changed file is shortened rather than dropped, as long as this much of it
+// still fits; below that the head would be too little to review.
+const MIN_PARTIAL_FILE_CHARS = 8_000;
+const SEED_PATH = "prisma/seed.ts";
+const TRUNCATION_NOTE_CHARS = 100;
 const MAX_TEST_CHANGE_CHARS = 20_000;
 // How long the review waits for CI's build-and-test on the same commit.
 const CI_WORKFLOW_NAME = "CI";
@@ -902,26 +911,51 @@ export function selectContextFiles({
       )
     : [];
 
+  // An e2e test can only assert what the seed puts in the database, so when a
+  // pull request touches one, the seed belongs in the review. #53 hard-coded
+  // coordinator@test.local and broke CI because the seed has two coordinators
+  // and SCRUM-20 assigns the least loaded one.
+  const touchesE2e = changedPaths.some((path) => path.startsWith("e2e/"));
+  const seedFile =
+    touchesE2e && paths.has(SEED_PATH) && !seen.has(SEED_PATH) && !storyFiles.includes(SEED_PATH)
+      ? [SEED_PATH]
+      : [];
+
   const included = [];
   const omitted = [];
-  const take = (entries, budget) => {
+  // `mustFit` files are the pull request's own: sending most of one beats
+  // dropping it, because the review judges exactly those lines. #54 lost a
+  // changed test file that overshot by 1,656 characters, then had to judge test
+  // coverage without it.
+  const take = (entries, budget, { mustFit = false } = {}) => {
     let used = 0;
     for (const entry of entries) {
-      const content = capped(byPath.get(entry.path).content, MAX_FILE_CHARS);
-      if (used + content.length > budget) {
-        omitted.push(entry);
+      const full = capped(byPath.get(entry.path).content, MAX_FILE_CHARS);
+      const room = budget - used;
+      if (full.length <= room) {
+        used += full.length;
+        included.push({ ...entry, content: full });
         continue;
       }
-      used += content.length;
-      included.push({ ...entry, content });
+      // Too big for what is left: keep the head if a useful amount fits.
+      if (mustFit && room >= MIN_PARTIAL_FILE_CHARS) {
+        const partial = capped(full, room - TRUNCATION_NOTE_CHARS);
+        used += partial.length;
+        included.push({ ...entry, content: partial, reason: `${entry.reason}, shortened to fit` });
+        continue;
+      }
+      omitted.push(entry);
     }
   };
-  take(changedPaths.map((path) => ({ path, reason: "changed in this PR" })), maxChanged);
+  take(changedPaths.map((path) => ({ path, reason: "changed in this PR" })), maxChanged, {
+    mustFit: true,
+  });
   take(
     [
       ...[...imported].sort().map((path) => ({ path, reason: "imported by a changed file" })),
       ...importers.sort().map((path) => ({ path, reason: "imports a changed file" })),
       ...storyFiles.sort().map((path) => ({ path, reason: `mentions ${storyKeys.join(", ")}` })),
+      ...seedFile.map((path) => ({ path, reason: "seeded data the e2e tests assert against" })),
     ],
     maxRelated,
   );
@@ -932,7 +966,7 @@ export function renderContextFiles({ included, omitted }) {
   const parts = included.map((file) => `### ${file.path} (${file.reason})\n\n${numberLines(file.content)}`);
   if (omitted.length) {
     parts.push(
-      `### Not included (over the size limit)\n\n${omitted.map((file) => `- ${file.path} (${file.reason})`).join("\n")}`,
+      `### Not included (did not fit the context budget)\n\n${omitted.map((file) => `- ${file.path} (${file.reason})`).join("\n")}`,
     );
   }
   return parts.join("\n\n");
@@ -1264,7 +1298,11 @@ async function main() {
   const sourceFiles = listSourceFiles(env.HEAD_SHA);
   const context = selectContextFiles({ files: sourceFiles, changed: [...commentable.keys()], storyKeys: stories });
   if (context.omitted.length) {
-    notes.push(`${context.omitted.length} related file(s) were over the size limit and weren't sent in full.`);
+    notes.push(
+      `${context.omitted.length} file(s) did not fit the context budget: ${context.omitted
+        .map((file) => file.path)
+        .join(", ")}.`,
+    );
   }
   const ruleScan = renderProjectRuleScan(scanProjectRules(sourceFiles.filter((file) => !NOT_APP_TESTS.has(file.path))));
   const addedSourceLines = new Map(

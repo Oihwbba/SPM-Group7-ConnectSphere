@@ -417,3 +417,37 @@ extracts each failed step's output: from Vitest's "Failed Tests" report or
 Playwright's first numbered failure when present, otherwise the end of the
 output, where compilers and npm print errors. Each step is capped at 6,000
 characters and all of them at 12,000, and a passing run adds nothing.
+
+## Addendum (2026-09-21, context budget)
+
+Files were being dropped from reviews while the model sat far below its limit.
+The note called them "over the size limit", but no file in the repo exceeds the
+60,000-character per-file cap: the largest is 47,700. What ran out was the
+*combined* budget — 250,000 characters for changed files, 150,000 for related
+ones. #54 dropped `tests/unit/events.test.ts`, a file that pull request
+changed, after it overshot by 1,656 characters, and then judged that pull
+request's test coverage without it. #52, #53 and #57 lost 10, 3 and 7 related
+files.
+
+There was room to spare: reviews use 95,000-168,000 tokens and GLM-5.3 accepts
+1,000,000.
+
+**Decision.**
+
+- **A changed file is never dropped.** If it does not fit, the head of it is
+  sent, down to a floor of 8,000 characters. The review judges exactly those
+  files, so most of one beats none of it.
+- **The seed goes in when the diff touches `e2e/`.** An e2e test can only
+  assert what `prisma/seed.ts` writes. #53 hard-coded one of two seeded
+  coordinators and broke CI; the reviewer had no way to see that.
+- **Budgets raised to 400,000 and 300,000 characters**, not to the model's
+  limit. A much longer prompt makes a model less precise about specific lines,
+  and precision is what this review is for. With these numbers, #54 and #57
+  lose nothing.
+- **The wording is honest:** the review names each file that did not fit the
+  budget, instead of implying the file was too big.
+
+**Trade-off, and how it is checked.** More context is not automatically a
+better review. The claim is tested, not assumed: a pull request carrying the
+seven planted bugs of #37 is re-reviewed after this change, and the budgets are
+dialled back if the reviewer stops finding them.
