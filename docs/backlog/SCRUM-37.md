@@ -1,11 +1,12 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-09-13. Jira is the source of truth.
+     Synced from Jira on 2026-09-21. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-37 - Reflect Bookings and Unavailability in Real Time
 
 | | |
 |---|---|
+| **Type** | Story |
 | **Epic** | SCRUM-7 - Venue Management |
 | **Priority** | Highest |
 | **Story points** | 3 |

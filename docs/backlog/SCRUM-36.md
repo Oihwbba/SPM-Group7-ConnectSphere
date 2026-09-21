@@ -1,11 +1,12 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-09-13. Jira is the source of truth.
+     Synced from Jira on 2026-09-21. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-36 - View Venue Availability
 
 | | |
 |---|---|
+| **Type** | Story |
 | **Epic** | SCRUM-7 - Venue Management |
 | **Priority** | Highest |
 | **Story points** | 2 |
@@ -28,9 +29,6 @@ As an Event Coordinator, I want to view a venue's availability across dates and 
 * Given a venue has no bookings or unavailability in the selected range, when the Coordinator views it, then the whole range shows as available rather than showing an empty view.
 * View can be filtered by date range.
 
-**Customer clarification (2026-09-13) — resolves the carried-forward scope question:**
+**Decision record (2026-09-13):** Venue Availability Calendar reflects approved bookings and recorded non-booking unavailability. A standalone unavailability-management feature remains outside Release 1.
 
-* _"Venue Availability Calendar should reflect bookings and other recorded unavailability (e.g. maintenance)."_ Non-booking unavailability is therefore **in scope for Release 1**. The story previously carried this as an open question (Q7 in the Q&A log) because "venue unavailability management" appears on the Week 4 not-required list. The customer has confirmed that the _calendar reflecting_ unavailability is required; what is out of scope is a standalone unavailability-management feature.
-* _"Calendar may be single view or per-venue"_ — the second criterion above records that this is the team's choice.
-
-**Note (2026-09-07):** the touching-periods and empty-range criteria were added following the Week 2 assignment feedback, which asked for boundary behaviour to be stated wherever periods are compared.
+Functionality Area: Venue Management

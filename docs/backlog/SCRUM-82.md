@@ -1,11 +1,12 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-09-13. Jira is the source of truth.
+     Synced from Jira on 2026-09-21. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-82 - Coordinator or Organiser cancels an event
 
 | | |
 |---|---|
+| **Type** | Story |
 | **Epic** | SCRUM-6 - Event Request Lifecycle |
 | **Priority** | High |
 | **Story points** | 3 |
