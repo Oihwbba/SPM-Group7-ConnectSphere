@@ -86,6 +86,10 @@ export function filterAndSortEvents<
 
   return events
     .filter((evt) => {
+      // SCRUM-20 auto-assigns on submission, so narrowing the tab hides just-submitted
+      // requests. Drafts are muted and visually unlike any review-or-later status
+      // (Submitted = info/Send, Under Review = warning/Clock), so activeTab "SUBMITTED"
+      // returns all non-drafts.
       const matchesTab =
         activeTab === "DRAFT"
           ? evt.status === "DRAFT"

@@ -1021,6 +1021,30 @@ describe("User Story 84 — Organiser views their own event requests", () => {
     const clearedFiltered = filterAndSortEvents(events, { searchQuery: "   " });
     expect(clearedFiltered).toHaveLength(2);
   });
+
+  it("SCRUM-84: given events in DRAFT, SUBMITTED, UNDER_REVIEW, APPROVED, REJECTED and COMPLETED, activeTab \"SUBMITTED\" returns all non-drafts and excludes DRAFT, and activeTab \"DRAFT\" returns only drafts", () => {
+    const events = [
+      { id: "1", name: "Draft Event", status: "DRAFT" },
+      { id: "2", name: "Submitted Event", status: "SUBMITTED" },
+      { id: "3", name: "Under Review Event", status: "UNDER_REVIEW" },
+      { id: "4", name: "Approved Event", status: "APPROVED" },
+      { id: "5", name: "Rejected Event", status: "REJECTED" },
+      { id: "6", name: "Completed Event", status: "COMPLETED" },
+    ];
+
+    const submittedTabEvents = filterAndSortEvents(events, { activeTab: "SUBMITTED" });
+    expect(submittedTabEvents.map((e) => e.status)).toEqual([
+      "SUBMITTED",
+      "UNDER_REVIEW",
+      "APPROVED",
+      "REJECTED",
+      "COMPLETED",
+    ]);
+    expect(submittedTabEvents.some((e) => e.status === "DRAFT")).toBe(false);
+
+    const draftTabEvents = filterAndSortEvents(events, { activeTab: "DRAFT" });
+    expect(draftTabEvents.map((e) => e.status)).toEqual(["DRAFT"]);
+  });
 });
 
 // ============================================================================
