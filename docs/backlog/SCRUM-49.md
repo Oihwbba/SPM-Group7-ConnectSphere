@@ -1,11 +1,12 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-09-13. Jira is the source of truth.
+     Synced from Jira on 2026-09-21. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-49 - Show Reason for Unsuitability
 
 | | |
 |---|---|
+| **Type** | Story |
 | **Epic** | SCRUM-7 - Venue Management |
 | **Priority** | Medium |
 | **Story points** | 1 |

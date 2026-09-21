@@ -1,11 +1,12 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-09-13. Jira is the source of truth.
+     Synced from Jira on 2026-09-21. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-42 - Event Coordinator reviews a submitted change request
 
 | | |
 |---|---|
+| **Type** | Story |
 | **Epic** | SCRUM-8 - Event Change & Notifications |
 | **Priority** | High |
 | **Story points** | 3 |

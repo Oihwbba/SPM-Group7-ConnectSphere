@@ -1,15 +1,16 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-09-13. Jira is the source of truth.
+     Synced from Jira on 2026-09-21. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-31 - Reserve Equipment for Event
 
 | | |
 |---|---|
+| **Type** | Story |
 | **Epic** | SCRUM-10 - Equipment Management |
 | **Priority** | Highest |
 | **Story points** | 3 |
-| **Status in Jira** | To Do |
+| **Status in Jira** | Done |
 | **Sprint** | SCRUM Sprint 1 |
 | **Jira** | https://smu-spm-group7.atlassian.net/browse/SCRUM-31 |
 
@@ -26,9 +27,5 @@
     * Given I enter a quantity of zero or a negative number, when I save, then the reservation is not created and the quantity is reported as invalid.
     * Given a reservation is created, when I view equipment availability, then the reserved quantity is deducted from the total available pool.
     
-
-‌
-
-**Note (2026-09-07):** the last-unit simultaneous case, endpoint semantics and quantity validity were added following the Week 2 assignment feedback. The simultaneous case is the equipment counterpart of the "exactly one place remaining" registration scenario the feedback praised.
 
 Functionality Area: Equipment Reservation

@@ -1,11 +1,12 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-09-13. Jira is the source of truth.
+     Synced from Jira on 2026-09-21. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-15 - Save an event request as a draft
 
 | | |
 |---|---|
+| **Type** | Story |
 | **Epic** | SCRUM-6 - Event Request Lifecycle |
 | **Priority** | High |
 | **Story points** | 1 |
@@ -17,13 +18,29 @@
 
 **As an Event Organiser**, I want to save an incomplete event request as a draft, so that I can finish it later without losing my progress.
 
-**Acceptance Criteria:**
+_Acceptance Criteria:_
 
-* Organiser can save a request at any point before submitting, even with required fields empty
-* Saved draft retains all entered fields when reopened
-* Organiser can find and resume any of their saved drafts
+* AC1 (Incomplete entry saving): An Organiser can save an event request as a DRAFT at any point prior to formal submission, even if mandatory fields (such as venue requirements, attendance, or equipment) are incomplete or empty.
+* AC2 (Data retention and fidelity): All partially filled fields are persisted without data loss and accurately restored when the Organiser reopens the draft.
+* AC3 (Saving draft with minimal information):
 
-**INVEST:** Independent (a standalone save action); Negotiable (autosave vs. manual save is a team/UX decision); Valuable (matches the briefing's own example of an incomplete "large room" request); Estimable/Small (one persistence operation); Testable (reopen and check field values match).
+    * Given an Organiser has entered at least an Event Name (or minimal draft identifier),
+    * When they select "Save as Draft",
+    * Then the event is persisted with a status of DRAFT, a success notification is displayed, and the user can exit or continue editing.
+    
+* AC4 (Draft validation relaxation):
+
+    * Given mandatory submission fields are left blank (e.g., zero attendance or missing venue requirement),
+    * When the user selects "Save as Draft",
+    * Then the system bypasses strict submission validation rules and successfully saves the current state.
+    
+* AC5 (Resuming draft edit):
+
+    * Given an existing draft request,
+    * When the Organiser reopens the draft from their request list,
+    * Then the form populates with all previously saved values and remains in DRAFT status until explicitly submitted.
+    
+* AC6 (Auto-save and unsaved changes warning): If an Organiser attempts to navigate away from an edited draft without saving, the system displays a confirmation prompt warning of unsaved changes.
 
 ‌
 

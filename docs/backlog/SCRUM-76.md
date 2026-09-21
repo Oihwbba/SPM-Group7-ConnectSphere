@@ -1,11 +1,12 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-09-13. Jira is the source of truth.
+     Synced from Jira on 2026-09-21. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-76 - View my registration status
 
 | | |
 |---|---|
+| **Type** | Story |
 | **Epic** | SCRUM-11 - Attendee Registration |
 | **Priority** | High |
 | **Story points** | 1 |
