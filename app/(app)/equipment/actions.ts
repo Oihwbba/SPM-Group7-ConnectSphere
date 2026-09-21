@@ -227,3 +227,57 @@ export async function createReservation(
     throw error;
   }
 }
+
+/** SCRUM-32 — change how many units a reservation holds. */
+export async function updateReservationQuantity(input: {
+  reservationId: string;
+  quantity: number;
+}): Promise<ActionResult<{ id: string; quantity: number }>> {
+  const session = await auth();
+  if (session?.user?.role === "ORGANISER" || session?.user?.role === "ATTENDEE") {
+    return err("You do not have permission to do that.");
+  }
+
+  const reservation = await prisma.reservation.findUnique({
+    where: { id: input.reservationId },
+  });
+  if (!reservation) return err("Reservation not found.");
+
+  const availability = await availabilityForPeriod(
+    prisma,
+    reservation.equipmentId,
+    reservation.startAt,
+    reservation.endAt,
+  );
+  if (!availability) return err("Equipment type is unavailable.");
+
+  // Only the extra units have to be free; the ones already held are ours.
+  if (input.quantity - reservation.quantity > availability.available) {
+    return err(
+      `Only ${availability.available} more unit(s) are available for this period.`,
+    );
+  }
+
+  const updated = await prisma.reservation.update({
+    where: { id: reservation.id },
+    data: { quantity: input.quantity },
+    select: { id: true, quantity: true },
+  });
+  revalidatePath("/equipment");
+  return ok(updated);
+}
+
+/** SCRUM-32 — cancel a reservation and give its units back to the pool. */
+export async function cancelReservation(
+  reservationId: string,
+): Promise<ActionResult<{ id: string; cancelledAt: string }>> {
+  const session = await auth();
+  if (session?.user?.role === "ORGANISER") {
+    return err("Organisers cannot cancel reservations.");
+  }
+
+  await prisma.reservation.delete({ where: { id: reservationId } });
+
+  revalidatePath("/equipment");
+  return ok({ id: reservationId, cancelledAt: new Date().toLocaleString() });
+}
