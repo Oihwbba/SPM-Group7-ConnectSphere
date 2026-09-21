@@ -245,13 +245,17 @@ export function EventsClient({
   const renderActions = (event: Event) => {
     const isDraft = event.status === "DRAFT";
     const isRejected = event.status === "REJECTED";
+    // On a phone the actions are a two-column grid of full-width, thumb-sized
+    // buttons, so a fourth button no longer wraps alone onto a second line; from
+    // md up they are the compact inline row the desktop table has always had.
+    const actionButton = "h-10 w-full gap-1.5 text-xs md:h-8 md:w-auto";
     return (
-      <div className="flex flex-wrap items-center justify-end gap-1.5">
+      <div className="grid grid-cols-2 gap-2 md:flex md:flex-wrap md:items-center md:justify-end md:gap-1.5 [&>*:only-child]:col-span-2 md:[&>*:only-child]:col-span-1">
         {(isDraft || (!isCoordinator && isRejected)) && (
           <Button
             variant="outline"
             size="sm"
-            className="h-8 gap-1.5 text-xs font-medium"
+            className={cn(actionButton, "font-medium")}
             onClick={() => setEditingDraft(event)}
             data-testid={
               isDraft ? "resume-draft-button" : "amend-rejected-button"
@@ -264,7 +268,7 @@ export function EventsClient({
         <Button
           variant="ghost"
           size="sm"
-          className="h-8 gap-1.5 text-xs"
+          className={actionButton}
           onClick={() => setViewingEvent(event)}
           data-testid="view-details-button"
         >
@@ -278,7 +282,7 @@ export function EventsClient({
             <>
               <Button
                 size="sm"
-                className="h-8 gap-1.5 text-xs"
+                className={actionButton}
                 disabled={isPending}
                 onClick={() => changeStatus(event, "APPROVED")}
               >
@@ -288,7 +292,7 @@ export function EventsClient({
               <Button
                 variant="outline"
                 size="sm"
-                className="h-8 gap-1.5 text-xs"
+                className={actionButton}
                 disabled={isPending}
                 onClick={() => {
                   setClarifyingEvent(event);
@@ -300,7 +304,7 @@ export function EventsClient({
               <Button
                 variant="destructive"
                 size="sm"
-                className="h-8 gap-1.5 text-xs"
+                className={actionButton}
                 disabled={isPending}
                 onClick={() => {
                   setRejectingEvent(event);

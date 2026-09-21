@@ -1231,7 +1231,7 @@ export function CreateEventDialog({
             You have unsaved changes in this event request. If you close without saving, your edits will be lost.
           </DialogDescription>
         </DialogHeader>
-        <DialogFooter className="gap-2 sm:gap-0">
+        <DialogFooter>
           <Button variant="outline" onClick={() => setShowExitConfirm(false)}>
             Continue Editing
           </Button>
