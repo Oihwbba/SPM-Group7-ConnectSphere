@@ -62,7 +62,15 @@ export interface FilterAndSortOptions {
   searchQuery?: string;
   sortField?: SortField;
   sortOrder?: SortOrder;
+  /** What the second tab means. An organiser wants everything they have sent
+   * ("non-draft"); a coordinator wants the queue they can still act on
+   * ("awaiting-review"), since Approve, Ask and Reject only render on those
+   * two statuses. */
+  submittedMeans?: "non-draft" | "awaiting-review";
 }
+
+/** The statuses a coordinator can still decide on (SCRUM-19). */
+export const AWAITING_REVIEW = ["SUBMITTED", "UNDER_REVIEW"];
 
 export function filterAndSortEvents<
   T extends {
@@ -80,21 +88,24 @@ export function filterAndSortEvents<
     searchQuery = "",
     sortField = "updatedAt",
     sortOrder = "desc",
+    submittedMeans = "non-draft",
   } = options;
 
   const q = searchQuery.trim().toLowerCase();
 
   return events
     .filter((evt) => {
-      // SCRUM-20 auto-assigns on submission, so narrowing the tab hides just-submitted
-      // requests. Drafts are muted and visually unlike any review-or-later status
-      // (Submitted = info/Send, Under Review = warning/Clock), so activeTab "SUBMITTED"
-      // returns all non-drafts.
+      // SCRUM-20 auto-assigns on submission, so a tab scoped to SUBMITTED alone
+      // would hide a request the moment it is sent. For an organiser the tab is
+      // therefore everything that is not a draft; for a coordinator it is the
+      // queue they can still decide on, which is what their page is for.
       const matchesTab =
         activeTab === "DRAFT"
           ? evt.status === "DRAFT"
           : activeTab === "SUBMITTED"
-            ? evt.status !== "DRAFT"
+            ? submittedMeans === "awaiting-review"
+              ? AWAITING_REVIEW.includes(evt.status)
+              : evt.status !== "DRAFT"
             : true;
 
       const matchesDropdown =
@@ -220,16 +231,25 @@ export function EventsClient({
     });
   }
 
+  // A coordinator's second tab is their review queue; an organiser's is
+  // everything they have sent. Both the filter and the count follow this.
+  const submittedMeans = isCoordinator ? "awaiting-review" : "non-draft";
+
   const filteredEvents = filterAndSortEvents(events, {
     activeTab,
     statusFilter,
     searchQuery,
     sortField,
     sortOrder,
+    submittedMeans,
   });
 
   const draftCount = events.filter((evt) => evt.status === "DRAFT").length;
-  const submittedCount = events.filter((evt) => evt.status !== "DRAFT").length;
+  const submittedCount = events.filter((evt) =>
+    submittedMeans === "awaiting-review"
+      ? AWAITING_REVIEW.includes(evt.status)
+      : evt.status !== "DRAFT",
+  ).length;
 
   // Row actions. The row is a single element (table row on desktop, stacked
   // card on mobile — see events-list.module.css), so each control renders once
@@ -381,7 +401,8 @@ export function EventsClient({
                 setStatusFilter("ALL");
               }}
             >
-              Submitted ({submittedCount})
+              {isCoordinator ? "Awaiting review" : "Submitted"} (
+              {submittedCount})
             </Button>
           </div>
 

@@ -1045,6 +1045,49 @@ describe("User Story 84 — Organiser views their own event requests", () => {
     const draftTabEvents = filterAndSortEvents(events, { activeTab: "DRAFT" });
     expect(draftTabEvents.map((e) => e.status)).toEqual(["DRAFT"]);
   });
+
+  // SCRUM-19: Approve, Ask and Reject only render on SUBMITTED and
+  // UNDER_REVIEW rows, so the coordinator's tab has to be exactly that set —
+  // otherwise their queue is buried in decided and cancelled history and the
+  // status dropdown, which matches one value at a time, cannot rebuild it.
+  it("SCRUM-19: a coordinator's second tab is only the requests still awaiting a decision", () => {
+    const events = [
+      { id: "1", name: "Draft Event", status: "DRAFT" },
+      { id: "2", name: "Submitted Event", status: "SUBMITTED" },
+      { id: "3", name: "Under Review Event", status: "UNDER_REVIEW" },
+      { id: "4", name: "Approved Event", status: "APPROVED" },
+      { id: "5", name: "Rejected Event", status: "REJECTED" },
+      { id: "6", name: "Cancelled Event", status: "CANCELLED" },
+    ];
+
+    const reviewQueue = filterAndSortEvents(events, {
+      activeTab: "SUBMITTED",
+      submittedMeans: "awaiting-review",
+    });
+
+    expect(reviewQueue.map((e) => e.status)).toEqual([
+      "SUBMITTED",
+      "UNDER_REVIEW",
+    ]);
+  });
+
+  it("SCRUM-84: an organiser's second tab still holds everything they have sent", () => {
+    const events = [
+      { id: "1", name: "Draft Event", status: "DRAFT" },
+      { id: "2", name: "Approved Event", status: "APPROVED" },
+    ];
+
+    // The default, and what the organiser's view passes.
+    expect(
+      filterAndSortEvents(events, { activeTab: "SUBMITTED" }).map((e) => e.status),
+    ).toEqual(["APPROVED"]);
+    expect(
+      filterAndSortEvents(events, {
+        activeTab: "SUBMITTED",
+        submittedMeans: "non-draft",
+      }).map((e) => e.status),
+    ).toEqual(["APPROVED"]);
+  });
 });
 
 // ============================================================================

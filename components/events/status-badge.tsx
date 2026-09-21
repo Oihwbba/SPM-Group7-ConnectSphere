@@ -19,7 +19,7 @@ import { Badge, type BadgeProps } from "@/components/ui/badge";
  * User Story 16: Draft requests are visually marked with a muted badge and FileEdit icon,
  * making them immediately distinct at a glance.
  */
-const STATUS_META: Record<
+export const STATUS_META: Record<
   EventStatus,
   { label: string; variant: NonNullable<BadgeProps["variant"]>; icon: LucideIcon }
 > = {
