@@ -17,7 +17,7 @@ import { Badge, type BadgeProps } from "@/components/ui/badge";
 /**
  * Renders any of the nine event statuses as a coloured pill with an icon.
  * User Story 16: Draft requests are visually marked with a muted badge and FileEdit icon,
- * making them immediately distinct at a glance from "Submitted" and "Under Review" (blue info pills with clock icons).
+ * making them immediately distinct at a glance.
  */
 const STATUS_META: Record<
   EventStatus,
