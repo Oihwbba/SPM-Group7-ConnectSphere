@@ -491,11 +491,11 @@ rewritten file.
 
 **Trade-offs.**
 
-- GitHub does not start workflow runs for a pull request opened with the
-  workflow token, so the memory pull request carries no checks. Nothing in it
-  can break a build — it is one Markdown file read into a prompt — and the
-  repository owner merges it. A pull request that needed checks would need a
-  personal access token, which is a larger secret than this is worth.
+- A pull request opened with the workflow token has its checks held in an
+  approval-required state: they appear as waiting until someone with write
+  access clicks "Approve and run". That is GitHub's guard against a workflow
+  triggering itself, and one click clears it. Avoiding the click would mean a
+  personal access token or a GitHub App, a larger secret than this is worth.
 - The model decides what is worth remembering, and it will sometimes propose a
   lesson that is merely a summary of the pull request. That is what the human
   read is for; closing the pull request costs nothing.

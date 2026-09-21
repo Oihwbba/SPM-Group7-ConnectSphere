@@ -7,9 +7,9 @@ name: GLM Reviewer Memory
 #
 # It never writes to `main`. A lesson shapes every later review, so a human
 # reads it first, and CODEOWNERS already requires Jin Hong's approval under
-# `.github/`. GitHub does not start workflow runs for a pull request opened
-# with the workflow token, so the memory pull request carries no checks and is
-# merged by the repository owner. See ADR 0008.
+# `.github/`. GitHub holds the checks on a pull request opened with the
+# workflow token until someone with write access clicks "Approve and run".
+# See ADR 0008.
 
 on:
   pull_request:

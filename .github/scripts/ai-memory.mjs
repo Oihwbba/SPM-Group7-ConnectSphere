@@ -279,7 +279,7 @@ async function main() {
     "",
     "Read the lesson before merging — it shapes every later review. A lesson that is wrong, or that would teach the reviewer to stay quiet about a real defect, should be edited on this branch or the pull request closed.",
     "",
-    "GitHub does not run checks on a pull request opened by a workflow token, so this one has none to wait for.",
+    "This pull request was opened by a workflow, so GitHub holds its checks until someone with write access clicks **Approve and run**. One click and they run as usual.",
   ].join("\n");
 
   if (open.length) {
