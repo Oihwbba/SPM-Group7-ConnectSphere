@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-09-13. Jira is the source of truth.
+     Synced from Jira on 2026-09-21. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-70 - Keep my registration records private from other Attendees
@@ -9,7 +9,7 @@
 | **Epic** | SCRUM-9 - Access Control |
 | **Priority** | Medium |
 | **Story points** | 2 |
-| **Status in Jira** | To Do |
+| **Status in Jira** | To Do|
 | **Sprint** | Backlog |
 | **Jira** | https://smu-spm-group7.atlassian.net/browse/SCRUM-70 |
 
@@ -19,9 +19,9 @@
 
 **Acceptance Criteria:**
 
-* Another Attendee's registration, requested directly by its identifier, is refused
-* The refusal is indistinguishable from the registration not existing
-* An Attendee cannot see the full attendee list of an event
+- Another Attendee's registration, requested directly by its identifier, is refused
+- The refusal is indistinguishable from the registration not existing
+- An Attendee cannot see the full attendee list of an event
 
 **Note:** this is the Attendee half of the visibility rule and pairs with the Attendee Registration epic (SCRUM-11). Build it in the same sprint as those stories.
 

@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-09-13. Jira is the source of truth.
+     Synced from Jira on 2026-09-21. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-81 - Move an approved event through planning to confirmed
@@ -9,31 +9,22 @@
 | **Epic** | SCRUM-6 - Event Request Lifecycle |
 | **Priority** | Highest |
 | **Story points** | 5 |
-| **Status in Jira** | To Do |
+| **Status in Jira** | To Do|
 | **Sprint** | Backlog |
 | **Jira** | https://smu-spm-group7.atlassian.net/browse/SCRUM-81 |
 
 ---
 
-**As ConnectSphere**, I want an approved event to move automatically into planning and then to confirmed once its venue booking (and equipment reservation, if one was requested) are both in place, so that the event reaches a state where Attendees can actually register for it.
+**As ConnectSphere**, I want an approved event to move automatically into Planning and then become Confirmed only when the confirmation-readiness rule is satisfied, so that Attendees can register only when the event is ready.
 
 **Acceptance Criteria:**
 
-* Given an event's request is approved, when the approval is saved, then the event's status changes to "planning" in the same action (no separate manual step)
-* Given an event in planning has an approved venue booking and either has no equipment request or has a confirmed equipment reservation, when the last of these conditions is met, then the event's status changes to "confirmed"
-* Given an event in planning whose venue booking is rejected, when the rejection is saved, then the event remains in planning (does not silently advance), and the Coordinator can submit a new booking request
-* Given an event has no stated venue requirement at all, this story treats a venue booking as required before confirmation
-* Two users viewing the same event at the same time never see conflicting statuses (same single-source-of-truth rule as SCRUM-24)
+- Given a request is approved by SCRUM-19, then the event enters **Approved** first and is then automatically advanced to **Planning**; there is no manual action required from the Coordinator.
+- The Approved → Planning transition is owned by this story and uses the single persisted status defined by SCRUM-24.
+- Given an event is Planning, when SCRUM-110's confirmation-readiness conditions become true, then the event changes to **Confirmed**.
+- Given the venue booking is rejected, the event remains Planning and the Coordinator can submit another booking request.
+- Given a Confirmed event has an approved impactful change, SCRUM-43 moves it back to **Planning**; SCRUM-110 must become true again before it can return to Confirmed.
+- Confirmed is the state that gates attendee registration.
+- The Planning → Confirmed transition must be idempotent; repeated readiness checks do not create duplicate transitions or notifications.
 
-**Customer clarification (2026-09-13) — confirms the two gates:** _"Approval = sufficient info for planning. Confirmation = essential arrangements completed."_
-
-This is the customer's own definition and it matches what the story already did:
-
-* **Approval** is a judgement about the _request_ — is there enough information to start planning. It does not assert that anything has been booked.
-* **Confirmation** is a fact about the _arrangements_ — the essential ones are complete. This story's reading of "essential" is: an approved venue booking, plus a confirmed equipment reservation where equipment was requested.
-
-The fourth criterion previously carried "an open question for the customer, see the Q&A doc" about events with no venue requirement. The customer's phrasing — _essential_ arrangements — does not settle whether a venue is essential for every event, so the default is unchanged and the question stays open. It is narrow enough not to block the story.
-
-**Note:** this closes the gap SCRUM-24 flagged from the start. Directly unblocks SCRUM-70, 72 and 73, all of which gate on the event being "confirmed".
-
-Functionality Area: Event Status Management
+**Boundary:** SCRUM-110 owns the definition of readiness. Venue and equipment stories own the actual booking/reservation decisions. SCRUM-43 owns the specific Confirmed → Planning transition after an approved impactful change. SCRUM-81 owns the Approved → Planning and Planning → Confirmed transitions.

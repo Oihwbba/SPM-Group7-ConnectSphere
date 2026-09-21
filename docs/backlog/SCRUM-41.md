@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-09-13. Jira is the source of truth.
+     Synced from Jira on 2026-09-21. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-41 - Event Organiser submits a change request for a submitted event
@@ -9,17 +9,23 @@
 | **Epic** | SCRUM-8 - Event Change & Notifications |
 | **Priority** | High |
 | **Story points** | 2 |
-| **Status in Jira** | To Do |
+| **Status in Jira** | To Do|
 | **Sprint** | Backlog |
 | **Jira** | https://smu-spm-group7.atlassian.net/browse/SCRUM-41 |
 
 ---
 
-As an Event Organiser, I want to submit a change request for an event that has already been submitted, so that I can update details that have changed since submission.
+**As an Event Organiser**, I want to submit a formal change request for an impactful event change, so that material changes are reviewed before they are applied.
 
-Acceptance Criteria:
+**Acceptance Criteria:**
 
-* Given an event with status "Submitted" or later, when the Organiser opens it, then a "Request Change" option is visible.
-* Given a Draft event, when the Organiser looks for this option, then it is NOT visible.
-* Given the Organiser selects field(s) to change and submits, then a new change request record is created with status "Pending Review."
-* Given a change request is submitted, when the Organiser views the event, then they can see the request's current status.
+- A formal change request may be created for an event in **Submitted, Under Review, Approved, Planning or Confirmed** state, except where an open clarification response path or another pending change request already governs the requested edit.
+- **Draft** events use SCRUM-15. **Rejected** events use SCRUM-108. **Cancelled** and **Completed** events cannot be changed.
+- Routine non-impactful edits during Planning use SCRUM-25 and do not create a change request.
+- The formal change-request fields are exactly **date, time, expected attendance, venue and equipment**.
+- The Organiser selects the impactful field(s) and requested values and submits the change request.
+- A submitted change request is recorded with status **Pending Review**.
+- The requested values are not treated as the event's final values until the change request is approved.
+- The Organiser can see the current status of the change request.
+- Coordinator review and decision are owned by SCRUM-42 and SCRUM-43.
+- After an approved impactful change is applied, SCRUM-44 owns dependent-arrangement reconsideration.

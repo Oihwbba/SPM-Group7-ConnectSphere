@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-09-13. Jira is the source of truth.
+     Synced from Jira on 2026-09-21. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # Product backlog - acceptance criteria for every story
@@ -23,9 +23,9 @@ either covered by a test or visibly not done yet. Reviewers do the same.
 
 ## Staleness - read this
 
-**Jira is the source of truth. These files are a snapshot, last synced on 2026-09-13.**
+**Jira is the source of truth. These files are a snapshot, last synced on 2026-09-21.**
 
-Stories change: the customer clarifications of 2026-09-13 rewrote eight
+Stories change: the customer clarifications of 2026-09-21 rewrote eight
 of them. A stale copy is worse than no copy, because people trust it. So:
 
 - Never edit these files by hand. Edit the story in Jira, then re-sync.
@@ -38,7 +38,7 @@ of them. A stale copy is worse than no copy, because people trust it. So:
 |---|---|
 | Stories | **66** |
 | Total story points | **145** |
-| Last synced from Jira | **2026-09-13** |
+| Last synced from Jira | **2026-09-21** |
 
 ## SCRUM-9 - Access Control
 
@@ -47,9 +47,9 @@ _7 stories, 20 points_
 | Story | Summary | Pts | Priority | Sprint | Status |
 |---|---|---|---|---|---|
 | [SCRUM-65](SCRUM-65.md) | Sign in to the system | 2 | Highest | SCRUM Sprint 1 | Done |
-| [SCRUM-66](SCRUM-66.md) | See only the functions my role allows | 3 | Highest | SCRUM Sprint 1 | In Review |
-| [SCRUM-67](SCRUM-67.md) | Be prevented from performing an action my role does not permit | 5 | Highest | SCRUM Sprint 1 | Done |
-| [SCRUM-68](SCRUM-68.md) | View only the events I own | 3 | Highest | SCRUM Sprint 1 | In Review |
+| [SCRUM-66](SCRUM-66.md) | See only the functions my role allows | 3 | Highest | SCRUM Sprint 1 | In Progress |
+| [SCRUM-67](SCRUM-67.md) | Be prevented from performing an action my role does not permit | 5 | Highest | SCRUM Sprint 1 | In Progress |
+| [SCRUM-68](SCRUM-68.md) | View only the events I own | 3 | Highest | SCRUM Sprint 1 | In Progress |
 | [SCRUM-69](SCRUM-69.md) | View only the events assigned to me | 2 | High | Backlog | To Do |
 | [SCRUM-70](SCRUM-70.md) | Keep my registration records private from other Attendees | 2 | Medium | Backlog | To Do |
 | [SCRUM-71](SCRUM-71.md) | Record who changed what and when | 3 | Low | Backlog | To Do |
@@ -61,17 +61,17 @@ _18 stories, 39 points_
 | Story | Summary | Pts | Priority | Sprint | Status |
 |---|---|---|---|---|---|
 | [SCRUM-13](SCRUM-13.md) | Create an event request | 1 | Highest | SCRUM Sprint 1 | In Review |
-| [SCRUM-14](SCRUM-14.md) | Submit an event request for review | 1 | Highest | SCRUM Sprint 1 | To Do |
+| [SCRUM-14](SCRUM-14.md) | Submit an event request for review | 1 | Highest | SCRUM Sprint 1 | In Review |
 | [SCRUM-15](SCRUM-15.md) | Save an event request as a draft | 1 | High | SCRUM Sprint 1 | In Review |
 | [SCRUM-16](SCRUM-16.md) | Distinguish drafts from submitted requests | 1 | Medium | SCRUM Sprint 1 | In Review |
-| [SCRUM-17](SCRUM-17.md) | Review a submitted event request | 1 | Highest | SCRUM Sprint 1 | To Do |
-| [SCRUM-18](SCRUM-18.md) | Request clarification or amendments on a submitted request | 2 | Highest | SCRUM Sprint 1 | To Do |
-| [SCRUM-19](SCRUM-19.md) | Approve or reject an event request | 2 | Highest | SCRUM Sprint 1 | To Do |
-| [SCRUM-20](SCRUM-20.md) | Auto-assign a coordinator to a submitted event | 1 | Highest | SCRUM Sprint 1 | To Do |
+| [SCRUM-17](SCRUM-17.md) | Review a submitted event request | 1 | Highest | SCRUM Sprint 1 | In Review |
+| [SCRUM-18](SCRUM-18.md) | Request clarification or amendments on a submitted request | 2 | Highest | SCRUM Sprint 1 | In Review |
+| [SCRUM-19](SCRUM-19.md) | Approve or reject an event request | 2 | Highest | SCRUM Sprint 1 | In Review |
+| [SCRUM-20](SCRUM-20.md) | Auto-assign a coordinator to a submitted event | 1 | Highest | SCRUM Sprint 1 | In Review |
 | [SCRUM-21](SCRUM-21.md) | Hand an event over to a different coordinator | 2 | Medium | Backlog | To Do |
 | [SCRUM-22](SCRUM-22.md) | See which coordinator is assigned to my event | 3 | High | Backlog | To Do |
-| [SCRUM-23](SCRUM-23.md) | View an event's current status | 1 | Highest | SCRUM Sprint 1 | To Do |
-| [SCRUM-24](SCRUM-24.md) | Keep event status consistent with actions taken | 5 | Highest | SCRUM Sprint 1 | To Do |
+| [SCRUM-23](SCRUM-23.md) | View an event's current status | 1 | Highest | SCRUM Sprint 1 | Done |
+| [SCRUM-24](SCRUM-24.md) | Keep event status consistent with actions taken | 5 | Highest | SCRUM Sprint 1 | In Review |
 | [SCRUM-25](SCRUM-25.md) | Update routine event information during planning | 3 | Medium | Backlog | To Do |
 | [SCRUM-26](SCRUM-26.md) | Flag edits that affect existing arrangements | 3 | High | Backlog | To Do |
 | [SCRUM-81](SCRUM-81.md) | Move an approved event through planning to confirmed | 5 | Highest | Backlog | To Do |
@@ -109,7 +109,7 @@ _8 stories, 19 points_
 | [SCRUM-28](SCRUM-28.md) | Review and Update Equipment Request | 3 | Highest | Backlog | To Do |
 | [SCRUM-29](SCRUM-29.md) | Check Equipment Availability | 3 | Highest | Backlog | To Do |
 | [SCRUM-30](SCRUM-30.md) | View Equipment Conflicts | 2 | Medium | Backlog | To Do |
-| [SCRUM-31](SCRUM-31.md) | Reserve Equipment for Event | 3 | Highest | SCRUM Sprint 1 | To Do |
+| [SCRUM-31](SCRUM-31.md) | Reserve Equipment for Event | 3 | Highest | SCRUM Sprint 1 | Done |
 | [SCRUM-32](SCRUM-32.md) | Modify or Cancel Reservation | 3 | Medium | Backlog | To Do |
 | [SCRUM-33](SCRUM-33.md) | View Event Reservations | 2 | Medium | Backlog | To Do |
 | [SCRUM-55](SCRUM-55.md) | View Equipment Availability Calendar | 2 | Low | Backlog | To Do |

@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-09-13. Jira is the source of truth.
+     Synced from Jira on 2026-09-21. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-79 - Join a waitlist when an event is full
@@ -9,7 +9,7 @@
 | **Epic** | SCRUM-11 - Attendee Registration |
 | **Priority** | Low |
 | **Story points** | 3 |
-| **Status in Jira** | To Do |
+| **Status in Jira** | To Do|
 | **Sprint** | Backlog |
 | **Jira** | https://smu-spm-group7.atlassian.net/browse/SCRUM-79 |
 
@@ -21,11 +21,11 @@
 
 **Acceptance Criteria:**
 
-* An Attendee may join the waitlist for a full event and sees their position
-* When a registration is withdrawn, the first Attendee on the waitlist is offered the place
-* An offered place is held for a stated period before passing to the next Attendee
-* An Attendee may leave the waitlist at any time
-* Waitlist entries do not count toward the registered total
+- An Attendee may join the waitlist for a full event and sees their position
+- When a registration is withdrawn, the first Attendee on the waitlist is offered the place
+- An offered place is held for a stated period before passing to the next Attendee
+- An Attendee may leave the waitlist at any time
+- Waitlist entries do not count toward the registered total
 
 **Note:** the Week 1 customer briefing mentions waitlists, but they are NOT among the twenty core features the customer identified for the first release. Kept in the backlog to show the epic's full shape without committing it to a sprint — the project instructions explicitly invite considering features beyond the first release in the product backlog and C4 models.
 
