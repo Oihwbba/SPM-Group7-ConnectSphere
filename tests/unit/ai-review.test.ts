@@ -695,8 +695,72 @@ describe("context beyond the diff", () => {
     expect(small.included.map((f) => f.path)).toEqual(["app/(app)/events/events-client.tsx", "components/ui/table.tsx"]);
     expect(small.omitted.map((f) => f.path)).toEqual(["app/(app)/events/page.tsx", "tests/unit/events.test.ts"]);
     expect(renderContextFiles(small)).toContain(
-      "### Not included (over the size limit)\n\n- app/(app)/events/page.tsx (imports a changed file)",
+      "### Not included (did not fit the context budget)\n\n- app/(app)/events/page.tsx (imports a changed file)",
     );
+  });
+
+  // SCRUM-111 — the pull request's own files are what the review judges, so a
+  // changed file that overshoots is shortened, never dropped. #54 lost a
+  // changed test file by 1,656 characters and then reviewed its test coverage
+  // without it.
+  it("shortens a changed file that overshoots instead of dropping it", () => {
+    const long = "x".repeat(40_000);
+    const files = [file("tests/unit/events.test.ts", long), file("lib/small.ts", "export const x = 1;")];
+
+    const { included, omitted } = selectContextFiles({
+      files,
+      changed: ["tests/unit/events.test.ts"],
+      storyKeys: [],
+      maxChanged: 20_000,
+    });
+
+    expect(omitted).toEqual([]);
+    expect(included).toHaveLength(1);
+    expect(included[0].path).toBe("tests/unit/events.test.ts");
+    expect(included[0].reason).toBe("changed in this PR, shortened to fit");
+    expect(included[0].content.length).toBeLessThanOrEqual(20_000);
+    expect(included[0].content).toContain("truncated");
+  });
+
+  it("drops a changed file only when too little of it would fit", () => {
+    const files = [file("tests/unit/events.test.ts", "y".repeat(40_000))];
+
+    const { included, omitted } = selectContextFiles({
+      files,
+      changed: ["tests/unit/events.test.ts"],
+      storyKeys: [],
+      maxChanged: 2_000,
+    });
+
+    expect(included).toEqual([]);
+    expect(omitted.map((f) => f.path)).toEqual(["tests/unit/events.test.ts"]);
+  });
+
+  // SCRUM-111 — an e2e test can only assert what the seed writes. #53 broke CI
+  // by hard-coding one of the two seeded coordinators.
+  it("sends the seed when the PR touches an e2e spec, and not otherwise", () => {
+    const files = [
+      file("e2e/events.spec.ts", 'test("x", async () => {});'),
+      file("lib/thing.ts", "export const x = 1;"),
+      file("prisma/seed.ts", "const users = [];"),
+    ];
+
+    const withE2e = selectContextFiles({
+      files,
+      changed: ["e2e/events.spec.ts"],
+      storyKeys: [],
+    });
+    expect(withE2e.included.map((f) => [f.path, f.reason])).toContainEqual([
+      "prisma/seed.ts",
+      "seeded data the e2e tests assert against",
+    ]);
+
+    const withoutE2e = selectContextFiles({
+      files,
+      changed: ["lib/thing.ts"],
+      storyKeys: [],
+    });
+    expect(withoutE2e.included.map((f) => f.path)).not.toContain("prisma/seed.ts");
   });
 
   it("scans the branch for role checks outside can(), hard deletes and inline dates", () => {
