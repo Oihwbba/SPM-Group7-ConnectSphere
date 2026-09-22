@@ -34,12 +34,16 @@ env:
 
 jobs:
   deploy:
+    # A manual run from the Actions tab can pick any branch. Only main ships.
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      # The CLI reads VERCEL_TOKEN from the environment, so the token never
+      # appears on a command line.
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
     steps:
       - name: Require the token
-        env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
           if [ -z "$VERCEL_TOKEN" ]; then
             echo "::error::VERCEL_TOKEN is not set, so production cannot deploy. Add the repository secret (see the top of this workflow)."
@@ -52,15 +56,16 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: 24
+          # The same Node CI tests with, so production cannot build on another.
+          node-version-file: .nvmrc
 
       # Pulls the project settings and the production environment variables,
       # so the build sees exactly what a Vercel-side build would.
       - name: Pull production settings
-        run: npx --yes "$VERCEL_CLI" pull --yes --environment=production --token="${{ secrets.VERCEL_TOKEN }}"
+        run: npx --yes "$VERCEL_CLI" pull --yes --environment=production
 
       - name: Build
-        run: npx --yes "$VERCEL_CLI" build --prod --token="${{ secrets.VERCEL_TOKEN }}"
+        run: npx --yes "$VERCEL_CLI" build --prod
 
       # The CLI reads the commit author out of .git and sends it with the
       # deployment. Removing it after the build means the deployment carries
@@ -71,5 +76,4 @@ jobs:
           rm -rf .git
           npx --yes "$VERCEL_CLI" deploy --prebuilt --prod \
             --meta githubCommitSha="${{ github.sha }}" \
-            --meta githubCommitRef=main \
-            --token="${{ secrets.VERCEL_TOKEN }}"
+            --meta githubCommitRef="${{ github.ref_name }}"
