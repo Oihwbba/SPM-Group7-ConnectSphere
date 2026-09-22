@@ -4,7 +4,6 @@
       "Read(./.env)",
       "Read(./.env.local)",
       "Read(./.env.*.local)",
-      "Read(./node_modules/**)",
       "Read(./.next/**)",
       "Read(./coverage/**)",
       "Read(./test-results/**)",
