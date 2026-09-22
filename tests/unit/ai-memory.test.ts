@@ -4,6 +4,7 @@ import {
   buildMemoryPrompt,
   checkProposal,
   memoryEntries,
+  singaporeDate,
   parseProposal,
   renderFileStat,
   summariseCi,
@@ -175,6 +176,23 @@ describe("checkProposal — SCRUM-112", () => {
 
   it("reads a bullet and its indented lines as one entry, whatever the wrapping", () => {
     expect(memoryEntries("# Title\n\n- one\n  two\n-   three")).toEqual(["# Title", "- one two", "- three"]);
+  });
+
+  // The file's opening paragraph is hard-wrapped flush left; a model returning
+  // it on one line has not changed it.
+  it("reads a flush-left wrapped paragraph as one entry, so re-wrapping it is not a change", () => {
+    const wrapped = "Lessons from past reviews, approved by the team. The reviewer reads this file\nfrom `main` on every pull request.";
+    const oneLine = wrapped.replace("\n", " ");
+
+    expect(memoryEntries(wrapped)).toEqual(memoryEntries(oneLine));
+    expect(memoryEntries(`${wrapped}\n## Tests\n- a`)).toHaveLength(3);
+  });
+
+  // 17:00 UTC is already the next day in Singapore; a UTC date would be a
+  // day behind every evening.
+  it("dates a lesson in Singapore time, not UTC", () => {
+    expect(singaporeDate(new Date("2026-09-22T17:00:00Z"))).toBe("2026-09-23");
+    expect(singaporeDate(new Date("2026-09-22T15:59:00Z"))).toBe("2026-09-22");
   });
 
   it("refuses a reply GLM never gave", () => {

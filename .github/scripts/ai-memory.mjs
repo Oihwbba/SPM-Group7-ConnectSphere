@@ -104,18 +104,31 @@ export function parseProposal(text) {
 }
 
 /**
- * The memory as a list of entries: a bullet with its indented continuation
- * lines is one entry, any other line is its own. Whitespace is collapsed, so
- * re-wrapping a lesson is not a change but altering one word is.
+ * The memory as a list of entries. A heading or a bullet starts one, a blank
+ * line ends one, and every other line continues the entry above — so a
+ * paragraph is one entry however it is wrapped. Whitespace is collapsed, so
+ * re-wrapping is not a change but altering one word is.
  */
 export function memoryEntries(text) {
   const entries = [];
+  let open = false;
   for (const line of text.replace(/\r\n/g, "\n").split("\n")) {
-    if (!line.trim()) continue;
-    if (/^\s/.test(line) && entries.length) entries[entries.length - 1] += ` ${line.trim()}`;
+    if (!line.trim()) {
+      open = false;
+      continue;
+    }
+    const starts = /^\s*(?:[-*]\s|#)/.test(line);
+    if (open && !starts) entries[entries.length - 1] += ` ${line.trim()}`;
     else entries.push(line.trim());
+    // A heading is one line; anything else may run on.
+    open = !/^\s*#/.test(line);
   }
   return entries.map((entry) => entry.replace(/\s+/g, " "));
+}
+
+/** Today's date in Singapore, where the team works, as YYYY-MM-DD. */
+export function singaporeDate(now = new Date()) {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Singapore" }).format(now);
 }
 
 /**
@@ -280,8 +293,7 @@ async function main() {
   const files = await github("GET", `/repos/${repo}/pulls/${prNumber}/files?per_page=100`);
   const stat = renderFileStat(files);
 
-  // The team works in Singapore; a UTC date would be a day behind every morning.
-  const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Singapore" }).format(new Date());
+  const today = singaporeDate();
   const user = buildMemoryPrompt({
     today,
     current,
