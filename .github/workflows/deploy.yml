@@ -1,0 +1,75 @@
+name: Deploy to production
+
+# Vercel's Hobby plan deploys a private repository's commit only when its git
+# author is the account owner, so every teammate-authored merge left
+# production blocked until Jin Hong re-landed the work under his own name.
+# This deploys every push to `main` with the owner's token instead, so who
+# wrote the commit no longer decides whether it ships. Vercel's own Git
+# deployments are switched off in vercel.json, so this is the only path to
+# production. See ADR 0009.
+#
+# One-time setup (repo owner): create a token at
+# https://vercel.com/account/settings/tokens scoped to the Hobby team, then add
+# it as the repository secret VERCEL_TOKEN.
+
+on:
+  push:
+    branches: [main]
+  # Redeploy by hand, e.g. after rotating the token or changing an env var.
+  workflow_dispatch:
+
+# One production deploy at a time, in push order. Never cancel one halfway.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  # Not secrets: they identify the project, and grant nothing without the token.
+  VERCEL_ORG_ID: team_aFWraTFfLZLJVG4QgKaz0XL8
+  VERCEL_PROJECT_ID: prj_E0y6Vwx0hJebdC4PBE1fG7oz1nx3
+  VERCEL_CLI: vercel@59.25.0
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Require the token
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          if [ -z "$VERCEL_TOKEN" ]; then
+            echo "::error::VERCEL_TOKEN is not set, so production cannot deploy. Add the repository secret (see the top of this workflow)."
+            exit 1
+          fi
+
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+
+      # Pulls the project settings and the production environment variables,
+      # so the build sees exactly what a Vercel-side build would.
+      - name: Pull production settings
+        run: npx --yes "$VERCEL_CLI" pull --yes --environment=production --token="${{ secrets.VERCEL_TOKEN }}"
+
+      - name: Build
+        run: npx --yes "$VERCEL_CLI" build --prod --token="${{ secrets.VERCEL_TOKEN }}"
+
+      # The CLI reads the commit author out of .git and sends it with the
+      # deployment. Removing it after the build means the deployment carries
+      # no git author at all and is attributed to the token's owner — the
+      # whole point. The commit is still recorded, as deployment metadata.
+      - name: Deploy
+        run: |
+          rm -rf .git
+          npx --yes "$VERCEL_CLI" deploy --prebuilt --prod \
+            --meta githubCommitSha="${{ github.sha }}" \
+            --meta githubCommitRef=main \
+            --token="${{ secrets.VERCEL_TOKEN }}"
