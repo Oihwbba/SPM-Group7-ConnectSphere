@@ -1,0 +1,63 @@
+name: GLM Reviewer Memory
+
+# SCRUM-112 — when a pull request merges, ask GLM whether it taught the
+# reviewer anything, and open a pull request against
+# .github/ai-review/memory.md if it did. Everything in that file used to be
+# typed there by hand after a human noticed a lesson.
+#
+# It never writes to `main`. A lesson shapes every later review, so a human
+# reads it first, and CODEOWNERS already requires Jin Hong's approval under
+# `.github/`. GitHub holds the checks on a pull request opened with the
+# workflow token until someone with write access clicks "Approve and run".
+# See ADR 0008.
+
+on:
+  pull_request:
+    types: [closed]
+
+# Two merges in quick succession would both rewrite the same branch, and the
+# second must see what the first proposed. Queue them; never cancel, or a
+# lesson is lost.
+concurrency:
+  group: ai-memory
+  cancel-in-progress: false
+
+permissions:
+  # Pushes the proposal branch.
+  contents: write
+  # Opens and updates the memory pull request, and reads the review comment.
+  pull-requests: write
+  # Reads whether CI failed on the way to the merge.
+  actions: read
+
+jobs:
+  remember:
+    # Only merges teach anything — a closed-unmerged pull request was rejected.
+    # The memory branch is excluded so merging a lesson cannot propose another.
+    if: >-
+      github.event.pull_request.merged == true &&
+      github.event.pull_request.head.ref != 'ai-review/memory'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # The script reads the memory from `origin/main` and from the
+          # proposal branch, and commits on top of main.
+          fetch-depth: 0
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+
+      - name: Ask GLM what this merge taught the reviewer
+        env:
+          ZHIPU_API_KEY: ${{ secrets.ZHIPU_API_KEY }}
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        # Runs from the checkout, not from a base commit: the pull request is
+        # already merged, so this is `main`'s own code.
+        run: node .github/scripts/ai-memory.mjs
