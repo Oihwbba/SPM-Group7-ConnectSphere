@@ -487,6 +487,13 @@ rewritten file.
   less than 60% of the current file, or arrives with no note saying what it
   learned. Asking a model for those properties is not the same as enforcing
   them.
+- **An entry is kept exactly, deleted whole, or cites the pull request.**
+  Handing back the whole file puts every lesson at risk of a silent edit. The
+  first live run, on #67, proposed a sound new lesson and also turned an
+  unrelated migration name's underscore into a hyphen. A proposal that changes
+  any entry without citing the merged pull request is now refused; re-wrapping
+  is not a change. GLM is also given today's date (Singapore time), because
+  that run dated its lesson two days ahead.
 - **Failing to learn is a warning, never a red check.** The memory simply stays
   as it was.
 - **It cannot feed itself.** The job skips its own branch, so merging a lesson

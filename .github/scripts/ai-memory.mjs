@@ -104,11 +104,42 @@ export function parseProposal(text) {
 }
 
 /**
+ * The memory as a list of entries. A heading or a bullet starts one, a blank
+ * line ends one, and every other line continues the entry above — so a
+ * paragraph is one entry however it is wrapped. Whitespace is collapsed, so
+ * re-wrapping is not a change but altering one word is.
+ */
+export function memoryEntries(text) {
+  const entries = [];
+  let open = false;
+  for (const line of text.replace(/\r\n/g, "\n").split("\n")) {
+    if (!line.trim()) {
+      open = false;
+      continue;
+    }
+    // A heading needs a space after its hashes, so a citation such as "#33"
+    // wrapped onto the start of a line still continues its entry.
+    const heading = /^\s*#{1,6}\s/.test(line);
+    const starts = heading || /^\s*[-*]\s/.test(line);
+    if (open && !starts) entries[entries.length - 1] += ` ${line.trim()}`;
+    else entries.push(line.trim());
+    // A heading is one line; anything else may run on.
+    open = !heading;
+  }
+  return entries.map((entry) => entry.replace(/\s+/g, " "));
+}
+
+/** Today's date in Singapore, where the team works, as YYYY-MM-DD. */
+export function singaporeDate(now = new Date()) {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Singapore" }).format(now);
+}
+
+/**
  * Whether a proposal may become a pull request. Returns the memory to write,
  * or a reason it was refused — the caller logs the reason either way, so a
  * rejected rewrite is visible in the run instead of silently doing nothing.
  */
-export function checkProposal({ proposal, current }) {
+export function checkProposal({ proposal, current, prNumber }) {
   if (!proposal) return { accept: false, reason: "GLM returned no usable JSON." };
   if (!proposal.learned) {
     return { accept: false, reason: `Nothing learned: ${proposal.note || "no reason given"}` };
@@ -136,6 +167,20 @@ export function checkProposal({ proposal, current }) {
       reason: `The proposed memory is ${memory.length} characters against ${current.trim().length} now, below the ${floor} floor: that is a wipe, not an edit.`,
     };
   }
+  // The whole file comes back, so every entry the model had no business
+  // touching is at risk of a silent edit — the first live run turned an
+  // unrelated migration name's underscore into a hyphen. An entry may be kept
+  // exactly, deleted whole, or added or rewritten while citing this pull request.
+  const before = new Set(memoryEntries(current));
+  // Not a substring test: "#6" must not count as citing #67.
+  const cites = new RegExp(`#${prNumber}(?!\\d)`);
+  const altered = memoryEntries(memory).filter((entry) => !before.has(entry) && !cites.test(entry));
+  if (altered.length) {
+    return {
+      accept: false,
+      reason: `The proposal changes ${altered.length} entry(s) without citing #${prNumber}, starting with: "${altered[0].slice(0, 120)}"`,
+    };
+  }
   if (memory === current.replace(/\r\n/g, "\n").trim()) {
     return { accept: false, reason: "The proposed memory is identical to the current one." };
   }
@@ -150,7 +195,7 @@ export function renderFileStat(files) {
 }
 
 /** What GLM is shown about the merged pull request. */
-export function buildMemoryPrompt({ current, pending, pr, review, ci, stat }) {
+export function buildMemoryPrompt({ current, pending, pr, review, ci, stat, today }) {
   const parts = [
     `# The memory as it stands (${MEMORY_PATH})`,
     current,
@@ -163,6 +208,10 @@ export function buildMemoryPrompt({ current, pending, pr, review, ci, stat }) {
     "",
     "## Files it changed",
     stat.slice(0, MAX_STAT_CHARS) || "(none)",
+    "",
+    "## Dating and citing",
+    `Today is ${today}. Date a lesson you add with it, and cite #${pr.number} in any lesson you add or change. ` +
+      "Every other line must come back exactly as it is, character for character: a proposal that alters an entry without citing this pull request is rejected.",
   ];
   if (review) {
     parts.push("", "## The review it received", review.slice(0, MAX_REVIEW_CHARS));
@@ -247,7 +296,9 @@ async function main() {
   const files = await github("GET", `/repos/${repo}/pulls/${prNumber}/files?per_page=100`);
   const stat = renderFileStat(files);
 
+  const today = singaporeDate();
   const user = buildMemoryPrompt({
+    today,
     current,
     pending: Boolean(pending),
     pr: {
@@ -271,7 +322,7 @@ async function main() {
     timeoutMs: GLM_TIMEOUT_MS,
   });
 
-  const verdict = checkProposal({ proposal: parseProposal(answer.content), current });
+  const verdict = checkProposal({ proposal: parseProposal(answer.content), current, prNumber });
   if (!verdict.accept) {
     console.log(`No memory change for #${prNumber}: ${verdict.reason}`);
     return;
