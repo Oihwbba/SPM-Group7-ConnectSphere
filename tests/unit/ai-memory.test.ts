@@ -36,7 +36,7 @@ function proposal(body: string, note = "Coordinators are seeded twice.") {
   return { learned: true, note, memory: memory(body) };
 }
 
-describe("parseProposal", () => {
+describe("parseProposal — SCRUM-112", () => {
   it("reads the JSON out of a fenced reply with prose around it", () => {
     const reply = [
       "Here is what I learned:",
@@ -68,7 +68,7 @@ describe("parseProposal", () => {
   });
 });
 
-describe("checkProposal", () => {
+describe("checkProposal — SCRUM-112", () => {
   it("accepts a rewrite that keeps the file's shape and adds a lesson", () => {
     const next = proposal("- (2026-09-21, #61) The seed has two coordinators, so a test must read the assignment.");
 
@@ -139,7 +139,7 @@ describe("checkProposal", () => {
   });
 });
 
-describe("summariseCi", () => {
+describe("summariseCi — SCRUM-112", () => {
   it("names the failing checks, because a predictable failure is the lesson", () => {
     const summary = summariseCi([
       { name: "build-and-test", conclusion: "failure" },
@@ -158,7 +158,7 @@ describe("summariseCi", () => {
   });
 });
 
-describe("buildMemoryPrompt", () => {
+describe("buildMemoryPrompt — SCRUM-112", () => {
   const pr = {
     number: 61,
     title: "SCRUM-13 Simplify the filter tabs",

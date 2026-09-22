@@ -491,6 +491,11 @@ rewritten file.
   as it was.
 - **It cannot feed itself.** The job skips its own branch, so merging a lesson
   does not propose another.
+- **A memory pull request is merged with a merge commit, never squashed.** A
+  squash commit is credited to the pull request's author, `github-actions[bot]`,
+  and Vercel refuses to deploy a commit whose author is not a project member,
+  so production would stop. A merge commit is authored by whoever merges. The
+  pull request says so in its own description.
 
 **Trade-offs.**
 

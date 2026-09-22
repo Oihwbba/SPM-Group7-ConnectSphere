@@ -294,6 +294,8 @@ async function main() {
     "Read the lesson before merging — it shapes every later review. A lesson that is wrong, or that would teach the reviewer to stay quiet about a real defect, should be edited on this branch or the pull request closed.",
     "",
     "This pull request was opened by a workflow, so GitHub holds its checks until someone with write access clicks **Approve and run**. One click and they run as usual.",
+    "",
+    "**Merge it with _Create a merge commit_, not squash.** A squash commit is credited to this pull request's author, `github-actions[bot]`, and Vercel refuses to deploy a commit whose author is not a project member — production would stop. A merge commit is authored by whoever merges.",
   ].join("\n");
 
   if (open.length) {
