@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.local)",
+      "Read(./.env.*.local)",
+      "Read(./node_modules/**)",
+      "Read(./.next/**)",
+      "Read(./coverage/**)",
+      "Read(./test-results/**)",
+      "Read(./playwright-report/**)",
+      "Read(./blob-report/**)",
+      "Read(./.playwright-mcp/**)",
+      "Read(./.vercel/**)",
+      "Read(./tsconfig.tsbuildinfo)",
+      "Read(./package-lock.json)"
+    ]
+  }
+}
