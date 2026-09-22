@@ -436,9 +436,10 @@ There was room to spare: reviews use 95,000-168,000 tokens and GLM-5.3 accepts
 
 - **A changed file is never dropped** while the budget can still hold its
   floor — about fifty of them. If it does not fit, the head of it is sent, down
-  to a floor of 8,000 characters, and a file that is shortened leaves the ones
-  behind it in the diff their own floor. The review judges exactly those files,
-  so most of one beats none of it.
+  to a floor of 8,000 characters of the file. No changed file spends what the
+  files behind it in the diff need, whether it was shortened or fitted whole,
+  and a file shorter than the floor reserves only its own length. The review
+  judges exactly those files, so most of one beats none of it.
 - **The seed goes in when the diff touches `e2e/`.** An e2e test can only
   assert what `prisma/seed.ts` writes. #53 hard-coded one of two seeded
   coordinators and broke CI; the reviewer had no way to see that.

@@ -42,6 +42,11 @@ function finding(severity: Severity, title: string, extra: Record<string, unknow
   return { path: "src/a.ts", line: 11, severity, title, detail: "", suggestion: "", ...extra };
 }
 
+/** The file's own characters, without the note that says it was shortened. */
+function fileOnly(content: string): string {
+  return content.replace(/\n\n\[truncated at [\d,]+ characters\]$/, "");
+}
+
 describe("parseDiff", () => {
   it("numbers added and context lines, and treats header-looking lines inside a hunk as content", () => {
     const diff = [
@@ -754,10 +759,51 @@ describe("context beyond the diff", () => {
     expect(included.map((f) => f.path)).toEqual(paths);
     for (const entry of included) {
       expect(entry.reason).toBe("changed in this PR, shortened to fit");
-      expect(entry.content.length).toBeGreaterThanOrEqual(8_000);
+      // The floor is 8,000 characters of the file. Measuring the note as well
+      // would let 7,970 characters plus a note pass as a floor of 8,000.
+      expect(fileOnly(entry.content).length).toBeGreaterThanOrEqual(8_000);
     }
     const total = included.reduce((sum, entry) => sum + entry.content.length, 0);
     expect(total).toBeLessThanOrEqual(30_000);
+  });
+
+  // SCRUM-111 — the reserve first covered only the shortening path, so three
+  // files that each fitted could still spend the budget and leave the last
+  // with nothing: the same loss by a different route.
+  it("keeps a file that fits whole from spending what the files behind it need", () => {
+    const paths = ["a.ts", "b.ts", "c.ts"];
+    const files = [file("a.ts", "x".repeat(25_000)), file("b.ts", "y".repeat(40_000)), file("c.ts", "z".repeat(40_000))];
+
+    const { included, omitted } = selectContextFiles({
+      files,
+      changed: paths,
+      storyKeys: [],
+      maxChanged: 30_000,
+    });
+
+    expect(omitted).toEqual([]);
+    expect(included.map((f) => f.path)).toEqual(paths);
+    for (const entry of included) {
+      expect(fileOnly(entry.content).length).toBeGreaterThanOrEqual(8_000);
+    }
+  });
+
+  // A file shorter than the floor needs only its own length. Reserving a whole
+  // floor for it would shorten an earlier file to make room nobody wanted.
+  it("reserves only what a small file behind it actually needs", () => {
+    const files = [file("big.ts", "x".repeat(40_000)), file("one.ts", "a"), file("two.ts", "b")];
+
+    const { included, omitted } = selectContextFiles({
+      files,
+      changed: ["big.ts", "one.ts", "two.ts"],
+      storyKeys: [],
+      maxChanged: 30_000,
+    });
+
+    expect(omitted).toEqual([]);
+    expect(included.map((f) => f.content)).toEqual([expect.stringContaining("truncated"), "a", "b"]);
+    // The big file keeps nearly the whole budget: two characters were held back.
+    expect(fileOnly(included[0].content).length).toBeGreaterThan(29_000);
   });
 
   // SCRUM-111 — an e2e test can only assert what the seed writes. #53 broke CI
