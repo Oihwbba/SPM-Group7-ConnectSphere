@@ -117,11 +117,14 @@ export function memoryEntries(text) {
       open = false;
       continue;
     }
-    const starts = /^\s*(?:[-*]\s|#)/.test(line);
+    // A heading needs a space after its hashes, so a citation such as "#33"
+    // wrapped onto the start of a line still continues its entry.
+    const heading = /^\s*#{1,6}\s/.test(line);
+    const starts = heading || /^\s*[-*]\s/.test(line);
     if (open && !starts) entries[entries.length - 1] += ` ${line.trim()}`;
     else entries.push(line.trim());
     // A heading is one line; anything else may run on.
-    open = !/^\s*#/.test(line);
+    open = !heading;
   }
   return entries.map((entry) => entry.replace(/\s+/g, " "));
 }

@@ -188,6 +188,16 @@ describe("checkProposal — SCRUM-112", () => {
     expect(memoryEntries(`${wrapped}\n## Tests\n- a`)).toHaveLength(3);
   });
 
+  // Existing lessons cite pull requests mid-sentence ("was recovered in #33"),
+  // and a different wrapping can put the citation at the start of a line.
+  it("does not take a citation wrapped to the start of a line for a heading", () => {
+    const wrapped = "- Migration X was recovered in\n  #33 and is safe everywhere.";
+    const oneLine = "- Migration X was recovered in #33 and is safe everywhere.";
+
+    expect(memoryEntries(wrapped)).toEqual(memoryEntries(oneLine));
+    expect(memoryEntries("Migration X was recovered in\n#33 and is safe.")).toHaveLength(1);
+  });
+
   // 17:00 UTC is already the next day in Singapore; a UTC date would be a
   // day behind every evening.
   it("dates a lesson in Singapore time, not UTC", () => {
