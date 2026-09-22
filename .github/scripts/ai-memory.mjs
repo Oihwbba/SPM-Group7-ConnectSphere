@@ -201,7 +201,10 @@ async function main() {
   const model = env.GLM_MODEL || "glm-5.3";
 
   git("fetch", "--no-tags", "--force", "origin", "main");
-  const mainMemory = git("show", `origin/main:${MEMORY_PATH}`);
+  // actions/checkout does not promise an origin/main ref, so pin the fetched
+  // commit before the next fetch overwrites FETCH_HEAD.
+  const mainSha = git("rev-parse", "FETCH_HEAD");
+  const mainMemory = git("show", `${mainSha}:${MEMORY_PATH}`);
   let pending = "";
   try {
     git("fetch", "--no-tags", "--force", "origin", MEMORY_BRANCH);
@@ -253,7 +256,7 @@ async function main() {
   // Build the proposal as one commit on top of main, so the pull request's
   // diff is always the memory as it would be after merging, and an earlier
   // unmerged proposal is carried forward rather than duplicated.
-  git("checkout", "-B", MEMORY_BRANCH, "origin/main");
+  git("checkout", "-B", MEMORY_BRANCH, mainSha);
   writeFileSync(MEMORY_PATH, verdict.memory);
   if (!git("status", "--porcelain", MEMORY_PATH)) {
     console.log(`No memory change for #${prNumber}: the file on main already says this.`);
