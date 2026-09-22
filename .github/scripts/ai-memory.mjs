@@ -18,7 +18,7 @@ import { execFileSync } from "node:child_process";
 import { writeFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 
-import { askGlm, makeGithub, MAX_MEMORY_CHARS, MEMORY_PATH } from "./ai-review.mjs";
+import { askGlm, extractStoryKeys, makeGithub, MARKER, MAX_MEMORY_CHARS, MEMORY_PATH } from "./ai-review.mjs";
 
 /** The branch every memory proposal lives on, so they replace rather than pile up. */
 export const MEMORY_BRANCH = "ai-review/memory";
@@ -142,6 +142,13 @@ export function checkProposal({ proposal, current }) {
   return { accept: true, memory: `${memory}\n`, note: proposal.note };
 }
 
+/** A diff stat from the pull request's file list: one line per file. */
+export function renderFileStat(files) {
+  return files
+    .map((file) => `${file.filename} | +${file.additions} -${file.deletions}${file.status === "modified" ? "" : ` (${file.status})`}`)
+    .join("\n");
+}
+
 /** What GLM is shown about the merged pull request. */
 export function buildMemoryPrompt({ current, pending, pr, review, ci, stat }) {
   const parts = [
@@ -224,7 +231,7 @@ async function main() {
 
   const pr = await github("GET", `/repos/${repo}/pulls/${prNumber}`);
   const comments = await github("GET", `/repos/${repo}/issues/${prNumber}/comments?per_page=100`);
-  const review = comments.find((comment) => comment.body?.includes("<!-- glm-review -->"))?.body ?? "";
+  const review = comments.find((comment) => comment.body?.includes(MARKER))?.body ?? "";
 
   // Every run on the branch, not just the head commit: required checks make a
   // merged head green by definition, so the failures on the way — the ones
@@ -235,7 +242,10 @@ async function main() {
   );
   const ci = summariseCi((runs.workflow_runs ?? []).filter((run) => run.status === "completed"));
 
-  const stat = git("diff", "--stat", `${pr.base.sha}..${pr.head.sha}`);
+  // From the API, not git: branches are deleted once merged, so the pull
+  // request's head commit is usually no longer anywhere the runner can fetch.
+  const files = await github("GET", `/repos/${repo}/pulls/${prNumber}/files?per_page=100`);
+  const stat = renderFileStat(files);
 
   const user = buildMemoryPrompt({
     current,
@@ -280,7 +290,10 @@ async function main() {
   git("config", "user.name", "github-actions[bot]");
   git("config", "user.email", "41898282+github-actions[bot]@users.noreply.github.com");
   git("add", MEMORY_PATH);
-  git("commit", "-m", `SCRUM-112 Teach the reviewer what #${prNumber} showed\n\n${verdict.note}`);
+  // Filed under the story the lesson came from, so Jira shows it where it
+  // was learned; SCRUM-112 only when that pull request named no story.
+  const keys = extractStoryKeys(pr.head.ref, pr.title, pr.body).join(" ") || "SCRUM-112";
+  git("commit", "-m", `${keys} Teach the reviewer what #${prNumber} showed\n\n${verdict.note}`);
   // Replace exactly the branch this run read, and nothing a human pushed to it
   // since. An empty expectation means "the branch must not exist yet".
   git("push", `--force-with-lease=${MEMORY_BRANCH}:${branchSha}`, "origin", `HEAD:refs/heads/${MEMORY_BRANCH}`);
@@ -299,12 +312,12 @@ async function main() {
   ].join("\n");
 
   if (open.length) {
-    await github("PATCH", `/repos/${repo}/pulls/${open[0].number}`, { body });
+    await github("PATCH", `/repos/${repo}/pulls/${open[0].number}`, { title: `${keys} Reviewer memory from #${prNumber}`, body });
     console.log(`Updated the open memory pull request #${open[0].number} with the lesson from #${prNumber}.`);
     return;
   }
   const created = await github("POST", `/repos/${repo}/pulls`, {
-    title: "SCRUM-112 Reviewer memory",
+    title: `${keys} Reviewer memory from #${prNumber}`,
     head: MEMORY_BRANCH,
     base: "main",
     body,

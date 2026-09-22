@@ -4,6 +4,7 @@ import {
   buildMemoryPrompt,
   checkProposal,
   parseProposal,
+  renderFileStat,
   summariseCi,
 } from "../../.github/scripts/ai-memory.mjs";
 
@@ -155,6 +156,22 @@ describe("summariseCi — SCRUM-112", () => {
   it("says so when CI never failed, and says nothing when there was no CI", () => {
     expect(summariseCi([{ name: "build-and-test", conclusion: "success" }])).toContain("passed");
     expect(summariseCi([])).toBe("");
+  });
+});
+
+// The stat comes from the API because merged branches are deleted, so the
+// pull request's head commit is usually not in the runner's clone.
+describe("renderFileStat — SCRUM-112", () => {
+  it("lists each file with its line counts, and says when it was added or removed", () => {
+    expect(
+      renderFileStat([
+        { filename: "lib/nav.ts", additions: 12, deletions: 3, status: "modified" },
+        { filename: "tests/unit/nav.test.ts", additions: 40, deletions: 0, status: "added" },
+        { filename: "old.ts", additions: 0, deletions: 9, status: "removed" },
+      ]),
+    ).toBe(
+      ["lib/nav.ts | +12 -3", "tests/unit/nav.test.ts | +40 -0 (added)", "old.ts | +0 -9 (removed)"].join("\n"),
+    );
   });
 });
 

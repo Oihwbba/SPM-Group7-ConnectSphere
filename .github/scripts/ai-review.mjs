@@ -75,7 +75,7 @@ const CI_WAIT_MS = 15 * 60 * 1000;
 const CI_POLL_MS = 20 * 1000;
 // Lessons from past reviews, approved by the team through pull requests.
 export const MEMORY_PATH = ".github/ai-review/memory.md";
-const MARKER = "<!-- glm-review -->";
+export const MARKER = "<!-- glm-review -->";
 
 // Docs, lockfiles and generated snapshots aren't sent as diff to review.
 const EXCLUDE = [
