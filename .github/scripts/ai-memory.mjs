@@ -205,21 +205,35 @@ async function main() {
   // commit before the next fetch overwrites FETCH_HEAD.
   const mainSha = git("rev-parse", "FETCH_HEAD");
   const mainMemory = git("show", `${mainSha}:${MEMORY_PATH}`);
-  let pending = "";
+  // The branch outlives its pull request: closing a proposal is how a wrong
+  // lesson is rejected, and closing does not delete the branch. So its memory
+  // counts as pending only while its pull request is still open — otherwise
+  // a rejected lesson would come straight back in the next proposal.
+  let branchSha = "";
+  let branchMemory = "";
   try {
     git("fetch", "--no-tags", "--force", "origin", MEMORY_BRANCH);
-    pending = git("show", `FETCH_HEAD:${MEMORY_PATH}`);
+    branchSha = git("rev-parse", "FETCH_HEAD");
+    branchMemory = git("show", `${branchSha}:${MEMORY_PATH}`);
   } catch {
-    // No proposal is open; the memory on main is the whole story.
+    // No proposal branch yet.
   }
+  const open = await github("GET", `/repos/${repo}/pulls?head=${repo.split("/")[0]}:${MEMORY_BRANCH}&state=open`);
+  const pending = open.length ? branchMemory : "";
   const current = pending || mainMemory;
 
   const pr = await github("GET", `/repos/${repo}/pulls/${prNumber}`);
   const comments = await github("GET", `/repos/${repo}/issues/${prNumber}/comments?per_page=100`);
   const review = comments.find((comment) => comment.body?.includes("<!-- glm-review -->"))?.body ?? "";
 
-  const checks = await github("GET", `/repos/${repo}/commits/${pr.head.sha}/check-runs?per_page=100`);
-  const ci = summariseCi(checks.check_runs ?? []);
+  // Every run on the branch, not just the head commit: required checks make a
+  // merged head green by definition, so the failures on the way — the ones
+  // worth learning from — only show in the history.
+  const runs = await github(
+    "GET",
+    `/repos/${repo}/actions/runs?event=pull_request&branch=${encodeURIComponent(pr.head.ref)}&per_page=100`,
+  );
+  const ci = summariseCi((runs.workflow_runs ?? []).filter((run) => run.status === "completed"));
 
   const stat = git("diff", "--stat", `${pr.base.sha}..${pr.head.sha}`);
 
@@ -267,12 +281,9 @@ async function main() {
   git("config", "user.email", "41898282+github-actions[bot]@users.noreply.github.com");
   git("add", MEMORY_PATH);
   git("commit", "-m", `SCRUM-112 Teach the reviewer what #${prNumber} showed\n\n${verdict.note}`);
-  git("push", "--force-with-lease", "origin", MEMORY_BRANCH);
-
-  const open = await github(
-    "GET",
-    `/repos/${repo}/pulls?head=${repo.split("/")[0]}:${MEMORY_BRANCH}&state=open`,
-  );
+  // Replace exactly the branch this run read, and nothing a human pushed to it
+  // since. An empty expectation means "the branch must not exist yet".
+  git("push", `--force-with-lease=${MEMORY_BRANCH}:${branchSha}`, "origin", `HEAD:refs/heads/${MEMORY_BRANCH}`);
   const body = [
     `The reviewer learned something from #${prNumber}:`,
     "",
