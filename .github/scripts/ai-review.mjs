@@ -928,24 +928,40 @@ export function selectContextFiles({
   // changed test file that overshot by 1,656 characters, then had to judge test
   // coverage without it.
   const take = (entries, budget, { mustFit = false } = {}) => {
+    // A slot is the floor plus the room its truncation note needs, so the
+    // floor stays what it claims to be: 8,000 characters of the file.
+    const slot = MIN_PARTIAL_FILE_CHARS + TRUNCATION_NOTE_CHARS;
+    const sized = entries.map((entry) => ({
+      entry,
+      full: capped(byPath.get(entry.path).content, MAX_FILE_CHARS),
+    }));
+    // Entries arrive in diff order and every one of them is judged, so no file
+    // may spend what the files behind it need — whether it is shortened or
+    // fits whole. A small file needs only its own length: reserving a full
+    // slot for it would shorten an earlier file for nothing.
+    const need = sized.map(({ full }) => (mustFit ? Math.min(full.length, slot) : 0));
+    let behind = need.reduce((sum, chars) => sum + chars, 0);
+
     let used = 0;
-    for (const entry of entries) {
-      const full = capped(byPath.get(entry.path).content, MAX_FILE_CHARS);
+    sized.forEach(({ entry, full }, index) => {
+      behind -= need[index];
       const room = budget - used;
-      if (full.length <= room) {
+      const allowance = Math.min(room, Math.max(room - behind, need[index]));
+      if (full.length <= allowance) {
         used += full.length;
         included.push({ ...entry, content: full });
-        continue;
+        return;
       }
-      // Too big for what is left: keep the head if a useful amount fits.
-      if (mustFit && room >= MIN_PARTIAL_FILE_CHARS) {
-        const partial = capped(full, room - TRUNCATION_NOTE_CHARS);
+      // Too big for its share: keep the head, because most of a file the pull
+      // request changed beats none of it.
+      if (mustFit && allowance >= slot) {
+        const partial = capped(full, allowance - TRUNCATION_NOTE_CHARS);
         used += partial.length;
         included.push({ ...entry, content: partial, reason: `${entry.reason}, shortened to fit` });
-        continue;
+        return;
       }
       omitted.push(entry);
-    }
+    });
   };
   take(changedPaths.map((path) => ({ path, reason: "changed in this PR" })), maxChanged, {
     mustFit: true,
