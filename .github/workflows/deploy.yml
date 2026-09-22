@@ -25,6 +25,9 @@ concurrency:
 
 permissions:
   contents: read
+  # Records each deploy as a GitHub deployment, so the commit shows
+  # "deployed to Production" with a link, as Vercel's own check used to.
+  deployments: write
 
 env:
   # Not secrets: they identify the project, and grant nothing without the token.
@@ -59,6 +62,20 @@ jobs:
           # The same Node CI tests with, so production cannot build on another.
           node-version-file: .nvmrc
 
+      # Shows the deploy on the commit from the start, as "in progress".
+      - name: Open a GitHub deployment
+        id: github-deployment
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          id=$(gh api "repos/${{ github.repository }}/deployments" --jq .id --input - <<JSON
+          {"ref": "${{ github.sha }}", "environment": "Production", "production_environment": true,
+           "auto_merge": false, "required_contexts": []}
+          JSON
+          )
+          echo "id=$id" >> "$GITHUB_OUTPUT"
+          gh api "repos/${{ github.repository }}/deployments/$id/statuses" -f state=in_progress > /dev/null
+
       # Pulls the project settings and the production environment variables,
       # so the build sees exactly what a Vercel-side build would.
       - name: Pull production settings
@@ -72,8 +89,24 @@ jobs:
       # no git author at all and is attributed to the token's owner — the
       # whole point. The commit is still recorded, as deployment metadata.
       - name: Deploy
+        id: vercel
         run: |
           rm -rf .git
           npx --yes "$VERCEL_CLI" deploy --prebuilt --prod \
             --meta githubCommitSha="${{ github.sha }}" \
             --meta githubCommitRef="${{ github.ref_name }}"
+
+      # Success links the commit to production; a failed build or deploy is
+      # marked on the commit too, so a stuck production shows without opening
+      # the Actions tab.
+      - name: Record the result on the commit
+        if: always() && steps.github-deployment.outputs.id
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          state=failure
+          if [ "${{ steps.vercel.outcome }}" = success ]; then state=success; fi
+          gh api "repos/${{ github.repository }}/deployments/${{ steps.github-deployment.outputs.id }}/statuses" \
+            -f state="$state" \
+            -f environment_url=https://spm-group7-connect-sphere.vercel.app \
+            -f log_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" > /dev/null
