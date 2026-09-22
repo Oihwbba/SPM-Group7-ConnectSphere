@@ -3,6 +3,7 @@ import { describe, it, expect } from "vitest";
 import {
   buildMemoryPrompt,
   checkProposal,
+  memoryEntries,
   parseProposal,
   renderFileStat,
   summariseCi,
@@ -73,7 +74,7 @@ describe("checkProposal — SCRUM-112", () => {
   it("accepts a rewrite that keeps the file's shape and adds a lesson", () => {
     const next = proposal("- (2026-09-21, #61) The seed has two coordinators, so a test must read the assignment.");
 
-    const verdict = checkProposal({ proposal: next, current });
+    const verdict = checkProposal({ proposal: next, current, prNumber: 61 });
 
     expect(verdict.accept).toBe(true);
     expect(verdict.note).toBe("Coordinators are seeded twice.");
@@ -86,6 +87,7 @@ describe("checkProposal — SCRUM-112", () => {
     const verdict = checkProposal({
       proposal: { learned: false, note: "A straightforward bug fix.", memory: "" },
       current,
+      prNumber: 61,
     });
 
     expect(verdict.accept).toBe(false);
@@ -95,7 +97,7 @@ describe("checkProposal — SCRUM-112", () => {
   it("refuses a memory the reviewer would not read in full", () => {
     const tooLong = proposal(`- ${"x".repeat(9_000)}`);
 
-    const verdict = checkProposal({ proposal: tooLong, current });
+    const verdict = checkProposal({ proposal: tooLong, current, prNumber: 61 });
 
     expect(verdict.accept).toBe(false);
     expect(verdict.reason).toContain("8000");
@@ -106,7 +108,7 @@ describe("checkProposal — SCRUM-112", () => {
   it("refuses a wipe, and a rewrite that keeps only a fraction of the file", () => {
     const gutted = { learned: true, note: "Tidied up.", memory: `${HEADING}\n\nRules for a lesson:\n` };
 
-    const verdict = checkProposal({ proposal: gutted, current });
+    const verdict = checkProposal({ proposal: gutted, current, prNumber: 61 });
 
     expect(verdict.accept).toBe(false);
     expect(verdict.reason).toContain("wipe");
@@ -116,27 +118,67 @@ describe("checkProposal — SCRUM-112", () => {
     const noHeading = { learned: true, note: "n", memory: current.replace(HEADING, "# Notes") };
     const noRules = { learned: true, note: "n", memory: current.replace("Rules for a lesson:", "Guidance:") };
 
-    expect(checkProposal({ proposal: noHeading, current }).reason).toContain(HEADING);
-    expect(checkProposal({ proposal: noRules, current }).reason).toContain("Rules for a lesson:");
+    expect(checkProposal({ proposal: noHeading, current, prNumber: 61 }).reason).toContain(HEADING);
+    expect(checkProposal({ proposal: noRules, current, prNumber: 61 }).reason).toContain("Rules for a lesson:");
   });
 
   it("refuses a lesson with no note, because the pull request has nothing to say", () => {
     const unexplained = { learned: true, note: "", memory: memory("- (2026-09-21, #61) Something.") };
 
-    expect(checkProposal({ proposal: unexplained, current }).reason).toContain("no note");
+    expect(checkProposal({ proposal: unexplained, current, prNumber: 61 }).reason).toContain("no note");
   });
 
   it("makes no change when the rewrite says exactly what the file already says", () => {
     const same = { learned: true, note: "n", memory: `${current}\r\n` };
 
-    const verdict = checkProposal({ proposal: same, current });
+    const verdict = checkProposal({ proposal: same, current, prNumber: 61 });
 
     expect(verdict.accept).toBe(false);
     expect(verdict.reason).toContain("identical");
   });
 
+  // The first live run, on #67, handed back a correct new lesson and also
+  // turned an unrelated migration name's underscore into a hyphen.
+  describe("entries the pull request had no reason to touch", () => {
+    const migration = [
+      "- (2026-09-16, #33) Migration",
+      "  `20260912120000_add_programme_and_special_requests` uses IF NOT EXISTS.",
+    ].join("\n");
+    const lesson = "- (2026-09-22, #67) Held checks on the memory pull request are GitHub's guard.";
+    const before = memory(migration);
+
+    it("refuses a proposal that edits an old entry without citing the pull request", () => {
+      const corrupted = memory(`${migration.replace("add_programme", "add-programme")}\n${lesson}`);
+
+      const verdict = checkProposal({ proposal: { learned: true, note: "n", memory: corrupted }, current: before, prNumber: 67 });
+
+      expect(verdict.accept).toBe(false);
+      expect(verdict.reason).toContain("without citing #67");
+      expect(verdict.reason).toContain("add-programme");
+    });
+
+    it("accepts a new lesson, a re-wrapped old one, and a stale one deleted whole", () => {
+      const rewrapped = migration.replace("\n  ", " ");
+      const kept = memory(`${rewrapped}\n${lesson}`);
+      const pruned = memory(lesson);
+
+      expect(checkProposal({ proposal: { learned: true, note: "n", memory: kept }, current: before, prNumber: 67 }).accept).toBe(true);
+      expect(checkProposal({ proposal: { learned: true, note: "n", memory: pruned }, current: before, prNumber: 67 }).accept).toBe(true);
+    });
+
+    it("does not take #6 as a citation of #67", () => {
+      const edited = memory(`${migration.replace("uses", "now uses")} (see #67)`);
+
+      expect(checkProposal({ proposal: { learned: true, note: "n", memory: edited }, current: before, prNumber: 6 }).accept).toBe(false);
+    });
+  });
+
+  it("reads a bullet and its indented lines as one entry, whatever the wrapping", () => {
+    expect(memoryEntries("# Title\n\n- one\n  two\n-   three")).toEqual(["# Title", "- one two", "- three"]);
+  });
+
   it("refuses a reply GLM never gave", () => {
-    expect(checkProposal({ proposal: null, current }).accept).toBe(false);
+    expect(checkProposal({ proposal: null, current, prNumber: 61 }).accept).toBe(false);
   });
 });
 
@@ -193,6 +235,7 @@ describe("buildMemoryPrompt — SCRUM-112", () => {
       review: "### 1. Medium: the Submitted tab hides UNDER_REVIEW",
       ci: "CI failed 1 time(s).",
       stat: " app/page.tsx | 2 +-",
+      today: "2026-09-22",
     });
 
     expect(prompt).toContain("Jin Hong merges as admin");
@@ -203,8 +246,15 @@ describe("buildMemoryPrompt — SCRUM-112", () => {
     expect(prompt).not.toContain("not been merged yet");
   });
 
+  it("tells GLM the date and the pull request to cite, so a lesson is dated today", () => {
+    const prompt = buildMemoryPrompt({ current, pending: false, pr, review: "", ci: "", stat: "", today: "2026-09-22" });
+
+    expect(prompt).toContain("Today is 2026-09-22.");
+    expect(prompt).toContain("cite #61");
+  });
+
   it("says when the memory carries lessons still waiting in an open proposal", () => {
-    const prompt = buildMemoryPrompt({ current, pending: true, pr, review: "", ci: "", stat: "" });
+    const prompt = buildMemoryPrompt({ current, pending: true, pr, review: "", ci: "", stat: "", today: "2026-09-22" });
 
     expect(prompt).toContain("not been merged yet");
     expect(prompt).toContain("No CI result was found");
