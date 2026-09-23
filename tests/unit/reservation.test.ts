@@ -35,6 +35,13 @@ function sessionFor(role: Role, id: string): Session {
   };
 }
 
+function sessionWithoutId(role: Role): Session {
+  return {
+    user: { role, name: "Test User", email: "missing-id@test.local" },
+    expires: "2999-01-01T00:00:00.000Z",
+  } as Session;
+}
+
 const START = "2030-06-01T01:00:00.000Z";
 const END = "2030-06-01T05:00:00.000Z";
 
@@ -155,6 +162,55 @@ describe("createReservation — SCRUM-31", () => {
     expect(tx.reservation.create).not.toHaveBeenCalled();
   });
 
+  it("refuses when the authenticated session has no user id", async () => {
+    mockAuth.mockResolvedValue(sessionWithoutId("TECH_SUPPORT"));
+
+    const result = await createReservation(validInput);
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toMatch(/permission/i);
+    expect(mockTransaction).not.toHaveBeenCalled();
+  });
+
+  it("refuses inactive equipment before counting availability", async () => {
+    poolWithFiveAvailable();
+    tx.$queryRaw.mockResolvedValue([]);
+
+    const result = await createReservation(validInput);
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toBe("Equipment type is unavailable.");
+    expect(tx.equipment.findFirst).not.toHaveBeenCalled();
+    expect(tx.reservation.create).not.toHaveBeenCalled();
+  });
+
+  it("rethrows non-PermissionError exceptions", async () => {
+    poolWithFiveAvailable();
+    mockTransaction.mockRejectedValue(new Error("transaction failed"));
+
+    await expect(createReservation(validInput)).rejects.toThrow("transaction failed");
+  });
+
+  it("uses a fallback error when the transaction returns an empty error result", async () => {
+    mockTransaction.mockResolvedValue({ error: undefined });
+
+    const result = await createReservation(validInput);
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toBe("Unable to create the reservation.");
+  });
+
+  it("refuses when equipment disappears while availability is being counted", async () => {
+    poolWithFiveAvailable();
+    tx.equipment.findFirst.mockResolvedValue(null);
+
+    const result = await createReservation(validInput);
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toBe("Equipment type is unavailable.");
+    expect(tx.reservation.create).not.toHaveBeenCalled();
+  });
+
   it.each(["ORGANISER", "COORDINATOR", "VENUE_STAFF", "ATTENDEE"] as Role[])(
     "refuses %s and never opens a transaction",
     async (role) => {
@@ -176,6 +232,52 @@ describe("getEquipmentAvailability — SCRUM-31", () => {
     const result = await getEquipmentAvailability(validInput);
 
     expect(result).toEqual({ ok: true, data: { available: 5, total: 10 } });
+  });
+
+  it("treats missing reservation and maintenance sums as zero", async () => {
+    poolWithFiveAvailable();
+    tx.reservation.aggregate.mockResolvedValue({ _sum: { quantity: null } });
+    tx.equipmentUnavailability.aggregate.mockResolvedValue({
+      _sum: { quantity: null },
+    });
+
+    const result = await getEquipmentAvailability(validInput);
+
+    expect(result).toEqual({ ok: true, data: { available: 10, total: 10 } });
+  });
+
+  it("returns unavailable when the equipment type is inactive", async () => {
+    poolWithFiveAvailable();
+    tx.equipment.findFirst.mockResolvedValue(null);
+
+    const result = await getEquipmentAvailability(validInput);
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toBe("Equipment type is unavailable.");
+  });
+
+  it("refuses invalid availability input before querying equipment", async () => {
+    const result = await getEquipmentAvailability({
+      equipmentId: "",
+      startAt: START,
+      endAt: END,
+    });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error).toMatch(/valid reservation period/i);
+      expect(result.fieldErrors?.equipmentId).toBeTruthy();
+    }
+    expect(tx.equipment.findFirst).not.toHaveBeenCalled();
+  });
+
+  it("rethrows non-PermissionError exceptions", async () => {
+    poolWithFiveAvailable();
+    tx.equipment.findFirst.mockRejectedValue(new Error("lookup failed"));
+
+    await expect(getEquipmentAvailability(validInput)).rejects.toThrow(
+      "lookup failed",
+    );
   });
 
   it("AC 4: overlap is half-open — a period that only touches another does not count against it", async () => {
@@ -233,6 +335,33 @@ describe("getAllEquipmentAvailability — SCRUM-31", () => {
       expect(result.data.eq2).toBeDefined();
       expect(result.data.eq2.available).toBe(5);
       expect(result.data.eq2.total).toBe(5);
+    }
+  });
+
+  it("treats missing grouped sums as zero and caps availability at zero", async () => {
+    mockAuth.mockResolvedValue(sessionFor("TECH_SUPPORT", "usr_tech"));
+    tx.equipment.findMany.mockResolvedValue([
+      { id: "eq1", type: "Lectern", totalQuantity: 2 },
+      { id: "eq2", type: "Projector", totalQuantity: 5 },
+    ]);
+    tx.reservation.groupBy.mockResolvedValue([
+      { equipmentId: "eq1", _sum: { quantity: null } },
+      { equipmentId: "eq2", _sum: { quantity: 7 } },
+    ]);
+    tx.equipmentUnavailability.groupBy.mockResolvedValue([
+      { equipmentId: "eq1", _sum: { quantity: null } },
+      { equipmentId: "eq2", _sum: { quantity: 1 } },
+    ]);
+
+    const result = await getAllEquipmentAvailability({
+      startAt: START,
+      endAt: END,
+    });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.data.eq1.available).toBe(2);
+      expect(result.data.eq2.available).toBe(0);
     }
   });
 
