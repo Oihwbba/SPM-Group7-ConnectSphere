@@ -4,6 +4,7 @@ import type { Role, EventStatus } from "@prisma/client";
 
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
+import { requirePermission } from "@/lib/auth/can";
 import {
   createDraftEvent,
   submitEventRequest,
@@ -22,6 +23,15 @@ import {
 // The actions interact with NextAuth session management and Prisma DB calls.
 // We mock both modules so tests run quickly in isolation without requiring a live DB connection.
 vi.mock("@/auth", () => ({ auth: vi.fn() }));
+// requirePermission is wrapped, not replaced: every existing test keeps
+// exercising the REAL permission gate (can() logic unchanged) via
+// vi.fn(actual.requirePermission) forwarding to it by default. Only the one
+// exit-path test below overrides it with mockImplementationOnce, to prove an
+// error requirePermission itself could throw isn't swallowed.
+vi.mock("@/lib/auth/can", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/auth/can")>();
+  return { ...actual, requirePermission: vi.fn(actual.requirePermission) };
+});
 vi.mock("@/lib/db", () => ({
   prisma: {
     event: {
@@ -554,6 +564,30 @@ describe("User Story 13 — Event Request Creation", () => {
       expect(mockCreate).not.toHaveBeenCalled();
       expect(mockUpdate).not.toHaveBeenCalled();
     });
+
+    // Coverage note: both catch blocks only special-case PermissionError —
+    // everything else must propagate, not be swallowed into a friendly
+    // ActionResult. A regression that widened either catch to `return
+    // err(error.message)` for any error would hide a real DB failure behind
+    // a validation-looking message; these pin the rethrow so that can't
+    // happen silently.
+    it("[Exit path] createDraftEvent rethrows an unexpected (non-permission) error instead of swallowing it", async () => {
+      mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
+      mockCreate.mockRejectedValueOnce(new Error("DB unavailable"));
+
+      await expect(
+        createDraftEvent({ name: "Draft during an outage" }),
+      ).rejects.toThrow("DB unavailable");
+    });
+
+    it("[Exit path] submitEventRequest rethrows an unexpected (non-permission, non-SubmitEventError) error instead of swallowing it", async () => {
+      mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
+      mockCreate.mockRejectedValueOnce(new Error("DB unavailable"));
+
+      await expect(submitEventRequest(validSubmissionInput)).rejects.toThrow(
+        "DB unavailable",
+      );
+    });
   });
 });
 
@@ -719,6 +753,27 @@ describe("User Story 15 — Save an event request as draft", () => {
       expect(result.fieldErrors?.name).toBeTruthy();
     }
     expect(mockCreate).not.toHaveBeenCalled();
+  });
+
+  it("SCRUM-14 [AC4 - Business-Rule Negative]: refuses to edit a caller's own event as a draft once it has been submitted", async () => {
+    mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
+    // Own event, but no longer DRAFT — the findFirst's status filter excludes
+    // it, same as if it belonged to someone else or didn't exist.
+    mockFindFirst.mockResolvedValue(null);
+
+    const result = await createDraftEvent({
+      id: "evt_already_submitted",
+      name: "Attempted post-submission edit",
+    });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error).toMatch(/not found or cannot be modified/i);
+    }
+    expect(mockFindFirst).toHaveBeenCalledWith({
+      where: { id: "evt_already_submitted", organiserId: "usr_organiser", status: "DRAFT" },
+    });
+    expect(mockUpdate).not.toHaveBeenCalled();
   });
 
   it("SCRUM-15 [AC2 - Happy Path]: retains existing field values when updating an existing draft request", async () => {
@@ -1331,40 +1386,16 @@ describe("getFormCatalogues — permission gate", () => {
     expect(mockVenues).not.toHaveBeenCalled();
   });
 
+  // Coverage note: the catch block only special-cases PermissionError.
+  // This forces a non-permission error to prove it is rethrown.
   it("SCRUM-13 [AC2 - Throw Path]: rethrows unexpected permission-gate failures", async () => {
-    const permissionGateFailure = new Error("permission dependency failed");
+    mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
+    (requirePermission as unknown as Mock).mockImplementationOnce(() => {
+      throw new Error("permission dependency failed");
+    });
 
-    vi.resetModules();
-    vi.doMock("@/auth", () => ({
-      auth: vi.fn().mockResolvedValue(sessionFor("ORGANISER", "usr_organiser")),
-    }));
-    vi.doMock("@/lib/db", () => ({
-      prisma: {
-        venue: { findMany: vi.fn() },
-        equipment: { findMany: vi.fn() },
-      },
-    }));
-    vi.doMock("@/lib/auth/can", () => ({
-      PermissionError: class PermissionError extends Error {},
-      requirePermission: vi.fn(() => {
-        throw permissionGateFailure;
-      }),
-      can: vi.fn(),
-    }));
-
-    try {
-      const { getFormCatalogues: isolatedGetFormCatalogues } = await import(
-        "@/app/(app)/events/actions"
-      );
-
-      await expect(isolatedGetFormCatalogues()).rejects.toThrow(
-        "permission dependency failed",
-      );
-    } finally {
-      vi.doUnmock("@/auth");
-      vi.doUnmock("@/lib/db");
-      vi.doUnmock("@/lib/auth/can");
-      vi.resetModules();
-    }
+    await expect(getFormCatalogues()).rejects.toThrow(
+      "permission dependency failed",
+    );
   });
 });

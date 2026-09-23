@@ -112,11 +112,11 @@ test.describe("User Story 13 — Event Request Creation Journey", () => {
   });
 
   /**
-   * TEST 3: SCRUM-13 [AC4] — Submission blocked when mandatory fields are missing.
-   * Verifies that clicking "Submit Request for Review" with no mandatory fields filled
-   * triggers validation feedback and does NOT close the dialog or create an event.
+   * TEST 3: SCRUM-13 [AC4] / SCRUM-14 AC2 — Submission is blocked when mandatory fields are missing.
+   * Step navigation is not blocked by missing values, so this test reaches Review
+   * with empty inputs and verifies submit is rejected with field-level feedback.
    */
-  test("SCRUM-13 [AC4]: submitting with all mandatory fields empty blocks submission and shows validation error feedback", async ({
+  test("SCRUM-13 [AC4] / SCRUM-14 AC2: submitting with mandatory fields left blank is refused and missing fields are indicated", async ({
     page,
   }) => {
     await page.goto("/login");
@@ -125,27 +125,28 @@ test.describe("User Story 13 — Event Request Creation Journey", () => {
     await page.getByRole("button", { name: "Sign in" }).click();
     await page.waitForURL("**/events");
 
-    // Open dialog and navigate all the way to Step 6 (Review) without filling
-    // any mandatory fields. Step navigation does not block on missing values —
-    // only on invalid values (out-of-range dates, etc.) — so clicking Next five
-    // times reaches the review step regardless.
     await page.getByRole("button", { name: /Create Event Request/i }).first().click();
+
+    // Walk every step with nothing entered — Next never blocks on missing
+    // mandatory fields (see TEST 1), only on invalid values.
     for (let i = 0; i < 5; i++) {
       await page.getByRole("button", { name: "Next", exact: true }).click();
     }
+
+    // Review already indicates the request is incomplete before submit.
     await expect(page.getByRole("heading", { name: /Review Entered Details/i })).toBeVisible();
-
-    // AC4: clicking Submit with empty mandatory fields must be blocked.
-    await page.getByRole("button", { name: /Submit Request for Review/i }).click();
-
-    // The action returns validation errors; the dialog stays open and an error
-    // message is visible (either a toast or inline text).
     await expect(
-      page.getByText(/Please fix the highlighted fields|mandatory fields/i),
+      page.getByText(/complete all required fields highlighted in red/i),
     ).toBeVisible();
 
-    // Navigate back to the Basics step and verify the name field shows its error.
-    await page.getByRole("button", { name: /Basics/i }).click();
+    // Submit is server-gated; it must fail and keep the dialog open.
+    await page.getByRole("button", { name: /Submit Request for Review/i }).click();
+    await expect(
+      page.getByText("Please fix the highlighted fields before submitting."),
+    ).toBeVisible();
+
+    await page.getByRole("button", { name: "1. Basics" }).click();
+    await expect(page.getByLabel("Event Name *")).toHaveAttribute("aria-invalid", "true");
     await expect(page.getByText("Event name is required.")).toBeVisible();
   });
 });
@@ -337,6 +338,12 @@ test.describe("User Story 16 — Distinguish Drafts from Submitted Requests Jour
 
     // 6. Verify Submitted Row features "View Details" button and info badge (not confused with draft)
     await expect(submittedRow.getByTestId("view-details-button")).toBeVisible();
+
+    // 6b (SCRUM-14 AC4): once submitted, the request can no longer be edited
+    // as a draft — neither "Resume Draft" nor "Amend & Resubmit" is offered
+    // for a SUBMITTED row (those only apply to DRAFT and REJECTED respectively).
+    await expect(submittedRow.getByTestId("resume-draft-button")).toHaveCount(0);
+    await expect(submittedRow.getByTestId("amend-rejected-button")).toHaveCount(0);
 
     // 7. Verify Filter Tabs (Filter by Drafts and Submitted)
     await page.getByRole("button", { name: /Drafts/i }).click();
@@ -1123,5 +1130,80 @@ test.describe("SCRUM-19 — Reject with a reason, then amend and resubmit", () =
     );
     await organiserRow.getByTestId("view-details-button").click();
     await expect(page.getByRole("dialog").getByText("Rejection reason")).toHaveCount(0);
+  });
+});
+
+/**
+ * SCRUM-17 AC1 — "Coordinator can view all fields the Organiser submitted
+ * (name, purpose, dates, attendance, venue/accessibility/equipment/
+ * registration needs)". Existing tests open View Details as a coordinator
+ * but each only checks a subset (a status badge, a clarification message);
+ * this is the one place every field from the AC's own list is asserted
+ * together, against an event this test fully populates itself rather than
+ * relying on a seeded row that may not carry every field.
+ */
+test.describe("SCRUM-17 — Coordinator reviews a submitted request's full details", () => {
+  test.skip(!usesLocalDatabase, "writes its own event; local database only");
+
+  let eventId: string;
+  let eventName: string;
+
+  test.beforeEach(async () => {
+    eventName = `SCRUM-17 Full Detail ${Date.now()}`;
+    const event = await prisma.event.create({
+      data: {
+        name: eventName,
+        purpose: "Showcase the department's annual research output.",
+        description: "Owned by the SCRUM-17 e2e spec.",
+        status: "UNDER_REVIEW",
+        organiserId: "usr_organiser",
+        coordinatorId: "usr_coordinator",
+        startAt: new Date("2031-08-01T02:00:00Z"),
+        endAt: new Date("2031-08-01T10:00:00Z"),
+        expectedAttendance: 120,
+        venueRequirements: "Auditorium with a raised stage.",
+        requiredFacilities: [],
+        accessibilityNeeds: "Wheelchair-accessible entrance and seating.",
+        preferredLayout: "Theatre",
+        equipmentRequirements: "Two lapel microphones and a projector.",
+        registrationNotes: "Online registration, capped at capacity.",
+        submittedAt: new Date(),
+      },
+      select: { id: true },
+    });
+    eventId = event.id;
+  });
+
+  test.afterEach(async () => {
+    await prisma.notification.deleteMany({ where: { eventId } });
+    await prisma.auditLog.deleteMany({ where: { entityId: eventId } });
+    await prisma.event.deleteMany({ where: { id: eventId } });
+  });
+
+  test("every field the organiser submitted is visible to the assigned coordinator", async ({
+    page,
+  }) => {
+    await page.goto("/login");
+    await page.getByLabel("Email", { exact: true }).fill("coordinator@test.local");
+    await page.getByLabel("Password", { exact: true }).fill("Password123!");
+    await page.getByRole("button", { name: "Sign in" }).click();
+    await page.waitForURL("**/events");
+
+    const row = page.getByRole("row", { name: new RegExp(eventName) });
+    await expect(row).toBeVisible();
+    await row.getByTestId("view-details-button").click();
+
+    const modal = page.getByRole("dialog");
+    await expect(modal.getByRole("heading", { name: eventName })).toBeVisible();
+    await expect(modal.getByText("Showcase the department's annual research output.")).toBeVisible();
+    // Dates: event defaults to Asia/Singapore (+08:00) since no timezone was
+    // set on create, so 02:00Z/10:00Z become 10:00 am / 6:00 pm local.
+    await expect(modal.getByText("1 Aug 2031, 10:00 am")).toBeVisible();
+    await expect(modal.getByText("1 Aug 2031, 6:00 pm")).toBeVisible();
+    await expect(modal.getByText("120 attendees")).toBeVisible();
+    await expect(modal.getByText("Auditorium with a raised stage.")).toBeVisible();
+    await expect(modal.getByText("Wheelchair-accessible entrance and seating.")).toBeVisible();
+    await expect(modal.getByText("Two lapel microphones and a projector.")).toBeVisible();
+    await expect(modal.getByText("Online registration, capped at capacity.")).toBeVisible();
   });
 });
