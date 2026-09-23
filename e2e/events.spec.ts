@@ -266,9 +266,9 @@ test.describe("User Story 15 — Draft Event Request Lifecycle Journey", () => {
       page.getByRole("cell", { name: draftName, exact: true }),
     ).toHaveCount(0);
 
-    // Assert that the cell with the updated name exists.
+    // Assert that the updated draft name remains visible in the row.
     await expect(
-      page.getByRole("cell", { name: updatedName, exact: true }),
+      page.getByRole("button", { name: updatedName, exact: true }),
     ).toBeVisible();
   });
 });
