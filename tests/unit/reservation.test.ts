@@ -72,7 +72,7 @@ beforeEach(() => {
 });
 
 describe("createReservation — SCRUM-31", () => {
-  it("AC 1 & 2: a quantity that fits is CONFIRMED, linked to the event, and availability drops by exactly that amount", async () => {
+  it("SCRUM-31 [AC1, AC2]: creates a confirmed reservation linked to the event and reduces availability by the reserved quantity", async () => {
     poolWithFiveAvailable();
 
     const result = await createReservation(validInput);
@@ -91,7 +91,7 @@ describe("createReservation — SCRUM-31", () => {
     );
   });
 
-  it("AC 3: over-allocation is refused and the shortfall is shown", async () => {
+  it("SCRUM-31 [AC3]: refuses over-allocation and shows the shortfall", async () => {
     poolWithFiveAvailable();
 
     const result = await createReservation({ ...validInput, quantity: 7 });
@@ -104,7 +104,7 @@ describe("createReservation — SCRUM-31", () => {
     expect(tx.reservation.create).not.toHaveBeenCalled();
   });
 
-  it("AC 5: the equipment row is locked before availability is counted", async () => {
+  it("SCRUM-31 [AC5]: locks the equipment row before counting availability", async () => {
     poolWithFiveAvailable();
 
     await createReservation(validInput);
@@ -115,7 +115,7 @@ describe("createReservation — SCRUM-31", () => {
   });
 
   it.each([0, -1, 1.5, ""])(
-    "AC 6: quantity %s is reported invalid and nothing is created",
+    "SCRUM-31 [AC6]: quantity %s is reported invalid and nothing is created",
     async (quantity) => {
       const result = await createReservation({ ...validInput, quantity });
 
@@ -125,7 +125,7 @@ describe("createReservation — SCRUM-31", () => {
     },
   );
 
-  it("refuses a period whose end is not after its start", async () => {
+  it("SCRUM-31 [AC4]: refuses a period whose end is not after its start", async () => {
     const result = await createReservation({ ...validInput, endAt: START });
 
     expect(result.ok).toBe(false);
@@ -133,7 +133,7 @@ describe("createReservation — SCRUM-31", () => {
     expect(mockTransaction).not.toHaveBeenCalled();
   });
 
-  it("refuses a period whose start time is in the past", async () => {
+  it("SCRUM-31 [AC1]: refuses a period whose start time is in the past", async () => {
     const result = await createReservation({
       ...validInput,
       startAt: "2020-01-01T01:00:00.000Z",
@@ -147,7 +147,7 @@ describe("createReservation — SCRUM-31", () => {
     expect(mockTransaction).not.toHaveBeenCalled();
   });
 
-  it("only reserves for an approved event", async () => {
+  it("SCRUM-31 [AC2]: only reserves for an approved event", async () => {
     poolWithFiveAvailable();
     tx.event.findFirst.mockResolvedValue(null);
 
@@ -162,7 +162,7 @@ describe("createReservation — SCRUM-31", () => {
     expect(tx.reservation.create).not.toHaveBeenCalled();
   });
 
-  it("refuses when the authenticated session has no user id", async () => {
+  it("SCRUM-31 [AC1]: refuses reservation when the authenticated session has no user id", async () => {
     mockAuth.mockResolvedValue(sessionWithoutId("TECH_SUPPORT"));
 
     const result = await createReservation(validInput);
@@ -172,7 +172,7 @@ describe("createReservation — SCRUM-31", () => {
     expect(mockTransaction).not.toHaveBeenCalled();
   });
 
-  it("refuses inactive equipment before counting availability", async () => {
+  it("SCRUM-31 [AC1]: refuses inactive equipment before counting availability", async () => {
     poolWithFiveAvailable();
     tx.$queryRaw.mockResolvedValue([]);
 
@@ -184,14 +184,14 @@ describe("createReservation — SCRUM-31", () => {
     expect(tx.reservation.create).not.toHaveBeenCalled();
   });
 
-  it("rethrows non-PermissionError exceptions", async () => {
+  it("SCRUM-31 [AC1]: rethrows unexpected reservation transaction failures", async () => {
     poolWithFiveAvailable();
     mockTransaction.mockRejectedValue(new Error("transaction failed"));
 
     await expect(createReservation(validInput)).rejects.toThrow("transaction failed");
   });
 
-  it("uses a fallback error when the transaction returns an empty error result", async () => {
+  it("SCRUM-31 [AC1]: uses a fallback reservation error when the transaction returns an empty error result", async () => {
     mockTransaction.mockResolvedValue({ error: undefined });
 
     const result = await createReservation(validInput);
@@ -200,7 +200,7 @@ describe("createReservation — SCRUM-31", () => {
     if (!result.ok) expect(result.error).toBe("Unable to create the reservation.");
   });
 
-  it("refuses when equipment disappears while availability is being counted", async () => {
+  it("SCRUM-31 [AC1]: refuses when equipment disappears while availability is being counted", async () => {
     poolWithFiveAvailable();
     tx.equipment.findFirst.mockResolvedValue(null);
 
@@ -212,7 +212,7 @@ describe("createReservation — SCRUM-31", () => {
   });
 
   it.each(["ORGANISER", "COORDINATOR", "VENUE_STAFF", "ATTENDEE"] as Role[])(
-    "refuses %s and never opens a transaction",
+    "SCRUM-31 [AC1]: refuses %s and never opens a transaction",
     async (role) => {
       mockAuth.mockResolvedValue(sessionFor(role, `usr_${role.toLowerCase()}`));
 
@@ -226,7 +226,7 @@ describe("createReservation — SCRUM-31", () => {
 });
 
 describe("getEquipmentAvailability — SCRUM-31", () => {
-  it("AC 7: deducts confirmed reservations and maintenance from the pool", async () => {
+  it("SCRUM-31 [AC7]: deducts confirmed reservations and maintenance from the pool", async () => {
     poolWithFiveAvailable();
 
     const result = await getEquipmentAvailability(validInput);
@@ -234,7 +234,7 @@ describe("getEquipmentAvailability — SCRUM-31", () => {
     expect(result).toEqual({ ok: true, data: { available: 5, total: 10 } });
   });
 
-  it("treats missing reservation and maintenance sums as zero", async () => {
+  it("SCRUM-31 [AC7]: treats missing reservation and maintenance sums as zero", async () => {
     poolWithFiveAvailable();
     tx.reservation.aggregate.mockResolvedValue({ _sum: { quantity: null } });
     tx.equipmentUnavailability.aggregate.mockResolvedValue({
@@ -246,7 +246,7 @@ describe("getEquipmentAvailability — SCRUM-31", () => {
     expect(result).toEqual({ ok: true, data: { available: 10, total: 10 } });
   });
 
-  it("returns unavailable when the equipment type is inactive", async () => {
+  it("SCRUM-31 [AC7]: returns unavailable when the equipment type is inactive", async () => {
     poolWithFiveAvailable();
     tx.equipment.findFirst.mockResolvedValue(null);
 
@@ -256,7 +256,7 @@ describe("getEquipmentAvailability — SCRUM-31", () => {
     if (!result.ok) expect(result.error).toBe("Equipment type is unavailable.");
   });
 
-  it("refuses invalid availability input before querying equipment", async () => {
+  it("SCRUM-31 [AC7]: refuses invalid availability input before querying equipment", async () => {
     const result = await getEquipmentAvailability({
       equipmentId: "",
       startAt: START,
@@ -271,7 +271,7 @@ describe("getEquipmentAvailability — SCRUM-31", () => {
     expect(tx.equipment.findFirst).not.toHaveBeenCalled();
   });
 
-  it("rethrows non-PermissionError exceptions", async () => {
+  it("SCRUM-31 [AC7]: rethrows unexpected equipment availability lookup failures", async () => {
     poolWithFiveAvailable();
     tx.equipment.findFirst.mockRejectedValue(new Error("lookup failed"));
 
@@ -280,7 +280,7 @@ describe("getEquipmentAvailability — SCRUM-31", () => {
     );
   });
 
-  it("AC 4: overlap is half-open — a period that only touches another does not count against it", async () => {
+  it("SCRUM-31 [AC4]: overlap is half-open so a period that only touches another does not count against it", async () => {
     poolWithFiveAvailable();
 
     await getEquipmentAvailability(validInput);
@@ -298,7 +298,7 @@ describe("getEquipmentAvailability — SCRUM-31", () => {
     });
   });
 
-  it("refuses a role without equipment:read", async () => {
+  it("SCRUM-31 [AC7]: refuses a role without equipment:read", async () => {
     mockAuth.mockResolvedValue(sessionFor("ATTENDEE", "usr_attendee"));
 
     const result = await getEquipmentAvailability(validInput);
@@ -309,7 +309,7 @@ describe("getEquipmentAvailability — SCRUM-31", () => {
 });
 
 describe("getAllEquipmentAvailability — SCRUM-31", () => {
-  it("calculates live period availability across all equipment types", async () => {
+  it("SCRUM-31 [AC7]: calculates live period availability across all equipment types", async () => {
     mockAuth.mockResolvedValue(sessionFor("TECH_SUPPORT", "usr_tech"));
     tx.equipment.findMany.mockResolvedValue([
       { id: "eq1", type: "Lectern", totalQuantity: 10 },
@@ -338,7 +338,7 @@ describe("getAllEquipmentAvailability — SCRUM-31", () => {
     }
   });
 
-  it("treats missing grouped sums as zero and caps availability at zero", async () => {
+  it("SCRUM-31 [AC7]: treats missing grouped sums as zero and caps availability at zero", async () => {
     mockAuth.mockResolvedValue(sessionFor("TECH_SUPPORT", "usr_tech"));
     tx.equipment.findMany.mockResolvedValue([
       { id: "eq1", type: "Lectern", totalQuantity: 2 },
@@ -365,7 +365,7 @@ describe("getAllEquipmentAvailability — SCRUM-31", () => {
     }
   });
 
-  it("refuses a period whose end is not after its start", async () => {
+  it("SCRUM-31 [AC4]: refuses a period whose end is not after its start", async () => {
     mockAuth.mockResolvedValue(sessionFor("TECH_SUPPORT", "usr_tech"));
 
     const result = await getAllEquipmentAvailability({
@@ -378,7 +378,7 @@ describe("getAllEquipmentAvailability — SCRUM-31", () => {
     expect(tx.equipment.findMany).not.toHaveBeenCalled();
   });
 
-  it("refuses a role without equipment:read", async () => {
+  it("SCRUM-31 [AC7]: refuses a role without equipment:read", async () => {
     mockAuth.mockResolvedValue(sessionFor("ATTENDEE", "usr_attendee"));
 
     const result = await getAllEquipmentAvailability({
@@ -391,7 +391,7 @@ describe("getAllEquipmentAvailability — SCRUM-31", () => {
     expect(tx.equipment.findMany).not.toHaveBeenCalled();
   });
 
-  it("refuses non-date strings for startAt and endAt with explicit field errors", async () => {
+  it("SCRUM-31 [AC7]: refuses non-date strings for startAt and endAt with explicit field errors", async () => {
     mockAuth.mockResolvedValue(sessionFor("TECH_SUPPORT", "usr_tech"));
 
     const result = await getAllEquipmentAvailability({
@@ -406,7 +406,7 @@ describe("getAllEquipmentAvailability — SCRUM-31", () => {
     }
   });
 
-  it("rethrows non-PermissionError exceptions", async () => {
+  it("SCRUM-31 [AC7]: rethrows unexpected all-equipment availability failures", async () => {
     mockAuth.mockResolvedValue(sessionFor("TECH_SUPPORT", "usr_tech"));
     tx.equipment.findMany.mockRejectedValue(new Error("db error"));
 

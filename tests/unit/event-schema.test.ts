@@ -23,9 +23,9 @@ const validSubmitInput = {
   registrationNotes: "Staff check-in",
 };
 
-describe("event schemas", () => {
-  describe("createDraftEventSchema", () => {
-    it("defaults optional arrays and timezone while accepting Date instances", () => {
+describe("event schemas — SCRUM-13", () => {
+  describe("draft schema — SCRUM-13", () => {
+    it("SCRUM-13 [AC1, AC5, AC6, AC7]: draft schema defaults facilities and timezone while accepting valid attendance and Date instances", () => {
       const parsed = createDraftEventSchema.parse({
         name: " Draft workshop ",
         startAt: new Date(futureStart),
@@ -49,7 +49,7 @@ describe("event schemas", () => {
         futureStart,
         "Proposed end date and time must be strictly after the start date and time.",
       ],
-    ])("reports invalid draft %s values", (_field, startAt, endAt, message) => {
+    ])("SCRUM-13 [AC8, AC9]: draft schema reports invalid date values for %s", (_field, startAt, endAt, message) => {
       const result = createDraftEventSchema.safeParse({
         name: "Draft workshop",
         startAt,
@@ -63,7 +63,7 @@ describe("event schemas", () => {
     });
 
     it.each(["", null, undefined])(
-      "treats empty draft attendance value %s as omitted",
+      "SCRUM-13 [AC5]: draft schema treats empty attendance value %s as omitted",
       (expectedAttendance) => {
         const result = createDraftEventSchema.safeParse({
           name: "Draft workshop",
@@ -76,8 +76,8 @@ describe("event schemas", () => {
     );
   });
 
-  describe("submitEventRequestSchema", () => {
-    it("trims fields, defaults arrays and timezone, and coerces attendance", () => {
+  describe("submit schema — SCRUM-13", () => {
+    it("SCRUM-13 [AC1, AC6, AC7, AC11]: submit schema trims fields, defaults arrays and timezone, and coerces attendance", () => {
       const parsed = submitEventRequestSchema.parse({
         ...validSubmitInput,
         name: " Planning Summit ",
@@ -100,7 +100,7 @@ describe("event schemas", () => {
         futureStart,
         "Proposed end date and time must be strictly after the start date and time.",
       ],
-    ])("reports invalid submit %s values", (_field, startAt, endAt, message) => {
+    ])("SCRUM-13 [AC8, AC9]: submit schema reports invalid date values for %s", (_field, startAt, endAt, message) => {
       const result = submitEventRequestSchema.safeParse({
         ...validSubmitInput,
         startAt,
@@ -114,7 +114,7 @@ describe("event schemas", () => {
     });
 
     it.each(["", null, undefined])(
-      "requires attendance when submit value is %s",
+      "SCRUM-13 [AC4, AC7]: submit schema requires attendance when value is %s",
       (expectedAttendance) => {
         const result = submitEventRequestSchema.safeParse({
           ...validSubmitInput,
