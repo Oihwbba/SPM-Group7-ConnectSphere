@@ -149,6 +149,7 @@ export function EquipmentClient({
     form.equipmentId && allAvailability?.[form.equipmentId]
       ? allAvailability[form.equipmentId].available
       : null;
+  const [scheduleRefresh, setScheduleRefresh] = useState(0);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[] | undefined>>({});
   const [pending, startTransition] = useTransition();
   const requestIdRef = useRef(0);
@@ -314,6 +315,11 @@ export function EquipmentClient({
         toast.success(
           `Reservation confirmed. ${result.data.available} unit(s) remain available.`,
         );
+        // SCRUM-30: the reservation just made is a new commitment, so the
+        // schedule beside this form is now out of date. Bumping this remounts
+        // the panel, which refetches — otherwise the whole point of the panel
+        // fails at exactly the moment someone looks at it.
+        setScheduleRefresh((n) => n + 1);
 
         // Refresh live availability map (shared error handling with the effect)
         try {
@@ -797,7 +803,7 @@ export function EquipmentClient({
               those commitments collide. */}
           {selectedEquipment && (
             <EquipmentSchedulePanel
-              key={selectedEquipment.id}
+              key={`${selectedEquipment.id}:${scheduleRefresh}`}
               equipmentId={selectedEquipment.id}
               equipmentType={selectedEquipment.type}
             />

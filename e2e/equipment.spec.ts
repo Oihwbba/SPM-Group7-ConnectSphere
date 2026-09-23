@@ -277,6 +277,38 @@ test.describe("SCRUM-30 — View Equipment Conflicts", () => {
     ).toHaveCount(0);
   });
 
+  // SCRUM-30 is meant to answer "what is this item committed to". A list that
+  // omits the reservation you just made answers it wrongly at exactly the
+  // moment someone looks.
+  test("AC 1: a reservation made here appears in the commitments without a reload", async ({
+    page,
+  }) => {
+    test.skip(!usesLocalDatabase, "writes its own equipment; local database only");
+    await spareEquipment([]);
+
+    await signInAsTechSupport(page);
+    await page
+      .getByLabel("Approved event")
+      .selectOption({ label: "Approved — Research Symposium" });
+    await page.getByLabel("Start date").fill("2031-07-02");
+    await page.getByLabel("Start time").fill("09:00");
+    await page.getByLabel("End date").fill("2031-07-02");
+    await page.getByLabel("End time").fill("17:00");
+    await page.getByLabel("Equipment type").selectOption({ value: SPARE });
+    await page.getByLabel("Quantity", { exact: true }).fill("1");
+
+    await expect(page.getByTestId("schedule-fully-available")).toBeVisible();
+
+    await page.getByRole("button", { name: /Reserve.*equipment/ }).click();
+    await expect(
+      page.getByText(/Reservation confirmed\. \d+ unit\(s\) remain available\./),
+    ).toBeVisible();
+
+    const schedule = page.getByTestId("equipment-schedule");
+    await expect(schedule.getByTestId("schedule-entry")).toHaveCount(1);
+    await expect(schedule).toContainText("Approved — Research Symposium");
+  });
+
   test("AC 6: an item with nothing committed says so instead of showing an empty list", async ({
     page,
   }) => {
