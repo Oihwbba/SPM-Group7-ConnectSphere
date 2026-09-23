@@ -32,13 +32,22 @@ export function EquipmentSchedulePanel({
     let current = true;
 
     startTransition(async () => {
-      const result = await getEquipmentSchedule({
-        equipmentId,
-        from: new Date().toISOString(),
-      });
-      if (!current) return;
-      if (result.ok) setSchedule(result.data);
-      else setError(result.error);
+      // getEquipmentSchedule rethrows anything that is not a permission
+      // failure, and React sends an error thrown in a transition to the
+      // nearest boundary — which would replace the whole page, reservation
+      // form included, over a transient database blip. This panel degrades
+      // inline instead, as the availability fetch beside it does.
+      try {
+        const result = await getEquipmentSchedule({
+          equipmentId,
+          from: new Date().toISOString(),
+        });
+        if (!current) return;
+        if (result.ok) setSchedule(result.data);
+        else setError(result.error);
+      } catch {
+        if (current) setError("Couldn't load the schedule — try again.");
+      }
     });
 
     return () => {
