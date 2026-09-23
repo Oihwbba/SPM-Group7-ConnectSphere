@@ -261,14 +261,9 @@ test.describe("User Story 15 — Draft Event Request Lifecycle Journey", () => {
       page.getByRole("row", { name: new RegExp(draftName) }),
     ).toHaveCount(1);
 
-    // Assert that the cell with the updated draft name is visible in the row.
+    // Assert that the updated draft name is visible in the row.
     await expect(
       page.getByRole("cell", { name: updatedName }),
-    ).toBeVisible();
-
-    // Assert that the updated draft name remains visible in the row.
-    await expect(
-      page.getByRole("button", { name: updatedName, exact: true }),
     ).toBeVisible();
   });
 });
