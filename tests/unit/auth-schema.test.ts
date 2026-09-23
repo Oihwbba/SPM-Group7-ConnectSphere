@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { loginSchema } from "@/lib/schemas/auth";
 
 describe("login schema", () => {
-  it("accepts valid credentials and reports invalid email/password fields", () => {
+  it("SCRUM-65 [AC1/AC2]: accepts valid credentials and reports invalid email/password fields", () => {
     expect(
       loginSchema.parse({
         email: "organiser@test.local",
