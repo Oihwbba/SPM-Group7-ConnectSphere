@@ -741,7 +741,8 @@ test.describe("User Story 13 & 84 — timezone, unsaved changes and list control
     await page.waitForURL("**/events");
 
     // organiser2 has at least one event; a nonsense search term returns nothing.
-    await page.getByPlaceholder("Search by name or purpose...").fill("xyznonexistent99999");
+    const searchInput = page.getByPlaceholder("Search by name or purpose...");
+    await searchInput.fill("xyznonexistent99999");
 
     // AC5: the empty-state card and the Clear Filters action must appear.
     await expect(
@@ -753,12 +754,10 @@ test.describe("User Story 13 & 84 — timezone, unsaved changes and list control
 
     // Clicking Clear Filters resets the view and restores the event list.
     await page.getByRole("button", { name: "Clear Filters" }).click();
+    await expect(searchInput).toHaveValue("");
     await expect(
       page.getByText("Another Client's Event"),
     ).toBeVisible();
-    await expect(
-      page.getByText("No requests match the selected filters."),
-    ).not.toBeVisible();
   });
 });
 
