@@ -246,6 +246,18 @@ describe("getEquipmentAvailability — SCRUM-31", () => {
     expect(result).toEqual({ ok: true, data: { available: 10, total: 10 } });
   });
 
+  it("SCRUM-31 [AC7]: floors availability at zero when reservations and maintenance exceed the pool", async () => {
+    poolWithFiveAvailable();
+    tx.reservation.aggregate.mockResolvedValue({ _sum: { quantity: 8 } });
+    tx.equipmentUnavailability.aggregate.mockResolvedValue({
+      _sum: { quantity: 5 },
+    });
+
+    const result = await getEquipmentAvailability(validInput);
+
+    expect(result).toEqual({ ok: true, data: { available: 0, total: 10 } });
+  });
+
   it("SCRUM-31 [AC7]: returns unavailable when the equipment type is inactive", async () => {
     poolWithFiveAvailable();
     tx.equipment.findFirst.mockResolvedValue(null);
