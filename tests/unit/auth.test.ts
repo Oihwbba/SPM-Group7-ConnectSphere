@@ -79,4 +79,24 @@ describe("can — relationship gate", () => {
     expect(can(attendee, "registration:read", ownReg)).toBe(true);
     expect(can(attendee, "registration:read", otherReg)).toBe(false);
   });
+
+  it("lets a user read only their own notifications", () => {
+    const own = { kind: "notification" as const, userId: "att" };
+    const other = { kind: "notification" as const, userId: "someone" };
+    expect(can(attendee, "notification:read", own)).toBe(true);
+    expect(can(attendee, "notification:read", other)).toBe(false);
+  });
+
+  it("gives no event relationship to a role that holds an event action but isn't the organiser or coordinator", () => {
+    // ATTENDEE holds event:browse, so the role gate passes and the event
+    // relationship check runs — and must return false (the security fallback).
+    expect(
+      can(attendee, "event:browse", {
+        kind: "event",
+        organiserId: "someone-else",
+        coordinatorId: null,
+        status: "CONFIRMED",
+      }),
+    ).toBe(false);
+  });
 });
