@@ -172,6 +172,15 @@ describe("createReservation — SCRUM-31", () => {
     expect(mockTransaction).not.toHaveBeenCalled();
   });
 
+  it("SCRUM-31 [AC1]: refuses reservation when the caller is signed out", async () => {
+    mockAuth.mockResolvedValue(null);
+
+    const result = await createReservation(validInput);
+
+    expect(result.ok).toBe(false);
+    expect(mockTransaction).not.toHaveBeenCalled();
+  });
+
   it("SCRUM-31 [AC1]: refuses inactive equipment before counting availability", async () => {
     poolWithFiveAvailable();
     tx.$queryRaw.mockResolvedValue([]);
@@ -318,6 +327,15 @@ describe("getEquipmentAvailability — SCRUM-31", () => {
     expect(result.ok).toBe(false);
     expect(tx.equipment.findFirst).not.toHaveBeenCalled();
   });
+
+  it("SCRUM-31 [AC7]: refuses a signed-out caller before querying equipment availability", async () => {
+    mockAuth.mockResolvedValue(null);
+
+    const result = await getEquipmentAvailability(validInput);
+
+    expect(result.ok).toBe(false);
+    expect(tx.equipment.findFirst).not.toHaveBeenCalled();
+  });
 });
 
 describe("getAllEquipmentAvailability — SCRUM-31", () => {
@@ -400,6 +418,18 @@ describe("getAllEquipmentAvailability — SCRUM-31", () => {
 
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error).toMatch(/permission/i);
+    expect(tx.equipment.findMany).not.toHaveBeenCalled();
+  });
+
+  it("SCRUM-31 [AC7]: refuses a signed-out caller before querying all equipment availability", async () => {
+    mockAuth.mockResolvedValue(null);
+
+    const result = await getAllEquipmentAvailability({
+      startAt: START,
+      endAt: END,
+    });
+
+    expect(result.ok).toBe(false);
     expect(tx.equipment.findMany).not.toHaveBeenCalled();
   });
 
