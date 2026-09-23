@@ -6,7 +6,7 @@ import { EventsClient } from "./events-client";
 export async function getOrganiserEvents(organiserId: string) {
   return prisma.event.findMany({
     where: { organiserId },
-    orderBy: { createdAt: "desc" },
+    orderBy: { updatedAt: "desc" },
   });
 }
 

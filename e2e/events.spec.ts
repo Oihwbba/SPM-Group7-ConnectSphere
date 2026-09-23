@@ -110,6 +110,44 @@ test.describe("User Story 13 — Event Request Creation Journey", () => {
     // 5. Verify the submitted event appears in the organiser's events table
     await expect(page.getByRole("cell", { name: eventName })).toBeVisible();
   });
+
+  /**
+   * TEST 3: SCRUM-13 [AC4] — Submission blocked when mandatory fields are missing.
+   * Verifies that clicking "Submit Request for Review" with no mandatory fields filled
+   * triggers validation feedback and does NOT close the dialog or create an event.
+   */
+  test("SCRUM-13 [AC4]: submitting with all mandatory fields empty blocks submission and shows validation error feedback", async ({
+    page,
+  }) => {
+    await page.goto("/login");
+    await page.getByLabel("Email", { exact: true }).fill("organiser@test.local");
+    await page.getByLabel("Password", { exact: true }).fill("Password123!");
+    await page.getByRole("button", { name: "Sign in" }).click();
+    await page.waitForURL("**/events");
+
+    // Open dialog and navigate all the way to Step 6 (Review) without filling
+    // any mandatory fields. Step navigation does not block on missing values —
+    // only on invalid values (out-of-range dates, etc.) — so clicking Next five
+    // times reaches the review step regardless.
+    await page.getByRole("button", { name: /Create Event Request/i }).first().click();
+    for (let i = 0; i < 5; i++) {
+      await page.getByRole("button", { name: "Next", exact: true }).click();
+    }
+    await expect(page.getByRole("heading", { name: /Review Entered Details/i })).toBeVisible();
+
+    // AC4: clicking Submit with empty mandatory fields must be blocked.
+    await page.getByRole("button", { name: /Submit Request for Review/i }).click();
+
+    // The action returns validation errors; the dialog stays open and an error
+    // message is visible (either a toast or inline text).
+    await expect(
+      page.getByText(/Please fix the highlighted fields|mandatory fields/i),
+    ).toBeVisible();
+
+    // Navigate back to the Basics step and verify the name field shows its error.
+    await page.getByRole("button", { name: /Basics/i }).click();
+    await expect(page.getByText("Event name is required.")).toBeVisible();
+  });
 });
 
 /**
@@ -183,6 +221,47 @@ test.describe("User Story 15 — Draft Event Request Lifecycle Journey", () => {
 
     // 8. Verify event submitted successfully
     await expect(page.getByRole("cell", { name: draftName })).toBeVisible();
+  });
+
+  /**
+   * TEST 2: SCRUM-15 [AC7] — Saving the same draft twice updates the record.
+   * Verifies that reopening a saved draft and clicking "Save as Draft" again
+   * updates the existing row rather than creating a duplicate.
+   */
+  test("SCRUM-15 [AC7]: saving an existing draft a second time updates the record without creating a duplicate row", async ({
+    page,
+  }) => {
+    await page.goto("/login");
+    await page.getByLabel("Email", { exact: true }).fill("organiser@test.local");
+    await page.getByLabel("Password", { exact: true }).fill("Password123!");
+    await page.getByRole("button", { name: "Sign in" }).click();
+    await page.waitForURL("**/events");
+
+    const draftName = `Idempotent Draft ${Date.now()}`;
+
+    // 1. Create the initial draft.
+    await page.getByRole("button", { name: /Create Event Request/i }).first().click();
+    await page.getByLabel("Event Name *").fill(draftName);
+    await page.getByRole("button", { name: /Save as Draft/i }).click();
+
+    // Exactly one row must exist.
+    const rows = page.getByRole("row", { name: new RegExp(draftName) });
+    await expect(rows).toHaveCount(1);
+
+    // 2. Reopen the same draft and save again with an updated name.
+    await rows.getByRole("button", { name: /Resume Draft/i }).click();
+    const updatedName = `${draftName} — Updated`;
+    await page.getByLabel("Event Name *").fill(updatedName);
+    await page.getByRole("button", { name: /Save as Draft/i }).click();
+
+    // 3. Still exactly one row, now carrying the updated name (AC7: no duplicate).
+    await expect(
+      page.getByRole("row", { name: new RegExp(updatedName) }),
+    ).toHaveCount(1);
+    // Original name must be gone (was updated in-place, not duplicated).
+    await expect(
+      page.getByRole("row", { name: new RegExp(`^${draftName}$`) }),
+    ).toHaveCount(0);
   });
 });
 
@@ -604,6 +683,69 @@ test.describe("User Story 13 & 84 — timezone, unsaved changes and list control
     await expect(page.getByPlaceholder("Search by name or purpose...")).toHaveValue("Annual");
     await expect(page.getByText("Annual Tech Summit")).toBeVisible();
     await expect(page.getByText("Career Fair")).not.toBeVisible();
+  });
+
+  test("SCRUM-13 [AC9]: entering a past start date on Step 2 blocks navigation to Step 3 and shows an inline error", async ({
+    page,
+  }) => {
+    await page.goto("/login");
+    await page.getByLabel("Email", { exact: true }).fill("organiser@test.local");
+    await page.getByLabel("Password", { exact: true }).fill("Password123!");
+    await page.getByRole("button", { name: "Sign in" }).click();
+    await page.waitForURL("**/events");
+
+    await page.getByRole("button", { name: /Create Event Request/i }).first().click();
+    await page.getByLabel("Event Name *").fill("Past Date Validation Test");
+    await page.getByRole("button", { name: "Next", exact: true }).click();
+
+    // AC9: enter a start date clearly in the past.
+    await page.getByLabel("Proposed Start Date & Time *").fill("2020-01-01T10:00");
+    await page.getByLabel("Proposed End Date & Time *").fill("2020-01-01T12:00");
+    await page.getByRole("button", { name: "Next", exact: true }).click();
+
+    // The step validator should reject the past date and display an inline error.
+    await expect(
+      page.getByText("Proposed date cannot be in the past."),
+    ).toBeVisible();
+
+    // The dialog must NOT have advanced beyond Step 2 (Schedule heading is still visible).
+    await expect(
+      page.getByRole("heading", { name: /Schedule.*Attendance/i }),
+    ).toBeVisible();
+  });
+
+  test("SCRUM-84 [AC5]: filtered empty state shows 'No requests match' card with a Clear Filters CTA when search yields no results", async ({
+    page,
+  }) => {
+    // AC5 covers the organiser seeing an informative message when no requests
+    // match the current view. We test the filtered empty state (a search term
+    // with no results) which exercises the same UI card and Clear Filters path
+    // as the zero-events empty state.
+    await page.goto("/login");
+    await page.getByLabel("Email", { exact: true }).fill("organiser2@test.local");
+    await page.getByLabel("Password", { exact: true }).fill("Password123!");
+    await page.getByRole("button", { name: "Sign in" }).click();
+    await page.waitForURL("**/events");
+
+    // organiser2 has at least one event; a nonsense search term returns nothing.
+    await page.getByPlaceholder("Search by name or purpose...").fill("xyznonexistent99999");
+
+    // AC5: the empty-state card and the Clear Filters action must appear.
+    await expect(
+      page.getByText("No requests match the selected filters."),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Clear Filters" }),
+    ).toBeVisible();
+
+    // Clicking Clear Filters resets the view and restores the event list.
+    await page.getByRole("button", { name: "Clear Filters" }).click();
+    await expect(
+      page.getByText("Another Client's Event"),
+    ).toBeVisible();
+    await expect(
+      page.getByText("No requests match the selected filters."),
+    ).not.toBeVisible();
   });
 });
 
