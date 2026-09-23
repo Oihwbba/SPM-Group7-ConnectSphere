@@ -112,7 +112,6 @@ export function parseIanaZone(timezoneStr: string = "Asia/Singapore (+08:00)"): 
   if (timezoneStr.includes("Tokyo")) return "Asia/Tokyo";
   if (timezoneStr.includes("London")) return "Europe/London";
   if (timezoneStr.includes("New_York")) return "America/New_York";
-  if (timezoneStr.includes("UTC")) return "UTC";
   if (timezoneStr.includes("Singapore")) return "Asia/Singapore";
 
   try {
