@@ -977,3 +977,74 @@ test.describe("SCRUM-19 — Reject with a reason, then amend and resubmit", () =
     await expect(page.getByRole("dialog").getByText("Rejection reason")).toHaveCount(0);
   });
 });
+
+/**
+ * SCRUM-17 AC1 — "Coordinator can view all fields the Organiser submitted
+ * (name, purpose, dates, attendance, venue/accessibility/equipment/
+ * registration needs)". Existing tests open View Details as a coordinator
+ * but each only checks a subset (a status badge, a clarification message);
+ * this is the one place every field from the AC's own list is asserted
+ * together, against an event this test fully populates itself rather than
+ * relying on a seeded row that may not carry every field.
+ */
+test.describe("SCRUM-17 — Coordinator reviews a submitted request's full details", () => {
+  test.skip(!usesLocalDatabase, "writes its own event; local database only");
+
+  let eventId: string;
+  let eventName: string;
+
+  test.beforeEach(async () => {
+    eventName = `SCRUM-17 Full Detail ${Date.now()}`;
+    const event = await prisma.event.create({
+      data: {
+        name: eventName,
+        purpose: "Showcase the department's annual research output.",
+        description: "Owned by the SCRUM-17 e2e spec.",
+        status: "UNDER_REVIEW",
+        organiserId: "usr_organiser",
+        coordinatorId: "usr_coordinator",
+        startAt: new Date("2031-08-01T02:00:00Z"),
+        endAt: new Date("2031-08-01T10:00:00Z"),
+        expectedAttendance: 120,
+        venueRequirements: "Auditorium with a raised stage.",
+        requiredFacilities: [],
+        accessibilityNeeds: "Wheelchair-accessible entrance and seating.",
+        preferredLayout: "Theatre",
+        equipmentRequirements: "Two lapel microphones and a projector.",
+        registrationNotes: "Online registration, capped at capacity.",
+        submittedAt: new Date(),
+      },
+      select: { id: true },
+    });
+    eventId = event.id;
+  });
+
+  test.afterEach(async () => {
+    await prisma.notification.deleteMany({ where: { eventId } });
+    await prisma.auditLog.deleteMany({ where: { entityId: eventId } });
+    await prisma.event.deleteMany({ where: { id: eventId } });
+  });
+
+  test("every field the organiser submitted is visible to the assigned coordinator", async ({
+    page,
+  }) => {
+    await page.goto("/login");
+    await page.getByLabel("Email", { exact: true }).fill("coordinator@test.local");
+    await page.getByLabel("Password", { exact: true }).fill("Password123!");
+    await page.getByRole("button", { name: "Sign in" }).click();
+    await page.waitForURL("**/events");
+
+    const row = page.getByRole("row", { name: new RegExp(eventName) });
+    await expect(row).toBeVisible();
+    await row.getByTestId("view-details-button").click();
+
+    const modal = page.getByRole("dialog");
+    await expect(modal.getByRole("heading", { name: eventName })).toBeVisible();
+    await expect(modal.getByText("Showcase the department's annual research output.")).toBeVisible();
+    await expect(modal.getByText("120 attendees")).toBeVisible();
+    await expect(modal.getByText("Auditorium with a raised stage.")).toBeVisible();
+    await expect(modal.getByText("Wheelchair-accessible entrance and seating.")).toBeVisible();
+    await expect(modal.getByText("Two lapel microphones and a projector.")).toBeVisible();
+    await expect(modal.getByText("Online registration, capped at capacity.")).toBeVisible();
+  });
+});
