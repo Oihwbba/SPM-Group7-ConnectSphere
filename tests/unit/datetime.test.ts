@@ -44,6 +44,7 @@ describe("lib/datetime helpers — SCRUM-31", () => {
     expect(d?.toISOString()).toBe("2026-09-22T06:42:00.000Z");
     expect(parseSingaporeDateTime("")).toBeNull();
     expect(parseSingaporeDateTime("T14:42")).toBeNull();
+    expect(parseSingaporeDateTime("2026-09-22T")).toBeNull();
     expect(parseSingaporeDateTime("aaaa-bb-ccTdd:ee")).toBeNull();
   });
 
@@ -77,6 +78,8 @@ describe("lib/datetime helpers — SCRUM-31", () => {
     expect(timezoneWallTimeToUtcIso("")).toBeUndefined();
     expect(timezoneWallTimeToUtcIso("invalid")).toBeUndefined();
     expect(timezoneWallTimeToUtcIso("2026-07-15")).toBeUndefined();
+    expect(timezoneWallTimeToUtcIso("T09:00")).toBeUndefined();
+    expect(timezoneWallTimeToUtcIso("2026-07-15T")).toBeUndefined();
     expect(timezoneWallTimeToUtcIso("aaaa-bb-ccTdd:ee")).toBeUndefined();
 
     expect(utcToTimezoneWallTime(null)).toBe("");
@@ -106,6 +109,7 @@ describe("lib/datetime helpers — SCRUM-31", () => {
     // Singapore default
     const sgFormatted = formatDateTimeInTimezone("2026-07-15T13:00:00.000Z", "Asia/Singapore (+08:00)");
     expect(sgFormatted).not.toContain("Asia/Singapore");
+    expect(formatDateTimeInTimezone("2026-07-15T13:00:00.000Z")).not.toContain("Asia/Singapore");
 
     // Null or empty handling
     expect(formatDateTimeInTimezone(null)).toBe("—");
@@ -150,6 +154,8 @@ describe("lib/datetime helpers — SCRUM-31", () => {
     // Substring heuristic match
     expect(parseIanaZone("Tokyo Custom Region")).toBe("Asia/Tokyo");
     expect(parseIanaZone("London UK Base")).toBe("Europe/London");
+    expect(parseIanaZone("New_York office")).toBe("America/New_York");
+    expect(parseIanaZone("Singapore office")).toBe("Asia/Singapore");
     // Invalid / unrecognised string fallback to Singapore
     expect(parseIanaZone("invalid-timezone-string")).toBe("Asia/Singapore");
 
@@ -193,6 +199,116 @@ describe("lib/datetime helpers — SCRUM-31", () => {
     // 3. Line 138: Stored IANA timezone string absent from TIMEZONE_OPTIONS reaches return tz
     const unmappedResult = normTz("Africa/Asmara");
     expect(unmappedResult).toBe("Africa/Asmara");
+  });
+
+  it("SCRUM-13 [AC6]: builds UTC timezone options when Intl reports GMT or UTC offset names", async () => {
+    const originalSupportedValuesOf = Intl.supportedValuesOf;
+    const OriginalDateTimeFormat = Intl.DateTimeFormat;
+    try {
+      vi.resetModules();
+      (Intl as Record<string, unknown>).supportedValuesOf = () => ["UTC"];
+      (Intl as Record<string, unknown>).DateTimeFormat = vi.fn(
+        (_locale: string, options: Intl.DateTimeFormatOptions) => {
+          if (options.timeZoneName === "shortOffset") {
+            return {
+              formatToParts: () => [
+                {
+                  type: "timeZoneName",
+                  value: options.timeZone === "UTC" ? "UTC" : "GMT",
+                },
+              ],
+            };
+          }
+          return new OriginalDateTimeFormat(_locale, options);
+        },
+      );
+
+      const datetimeModule = await import("@/lib/datetime");
+
+      expect(
+        datetimeModule.TIMEZONE_OPTIONS.filter((option) =>
+          ["Asia/Singapore", "UTC"].includes(option.iana),
+        ).every((option) => option.value.includes("+00:00")),
+      ).toBe(true);
+    } finally {
+      Intl.supportedValuesOf = originalSupportedValuesOf;
+      Intl.DateTimeFormat = OriginalDateTimeFormat;
+      vi.resetModules();
+    }
+  });
+
+  it("SCRUM-13 [AC6]: keeps timezone option labels readable when offset formatting is unavailable", async () => {
+    const originalSupportedValuesOf = Intl.supportedValuesOf;
+    const OriginalDateTimeFormat = Intl.DateTimeFormat;
+    try {
+      vi.resetModules();
+      (Intl as Record<string, unknown>).supportedValuesOf = () => [
+        "Mars/Base",
+        "Venus_Station",
+      ];
+      (Intl as Record<string, unknown>).DateTimeFormat = vi.fn(
+        (_locale: string, options: Intl.DateTimeFormatOptions) => {
+          if (options.timeZone === "Mars/Base") {
+            return {
+              formatToParts: () => [],
+            };
+          }
+          if (options.timeZone === "Venus_Station") {
+            return {
+              formatToParts: () => {
+                throw new Error("offset unavailable");
+              },
+            };
+          }
+          return new OriginalDateTimeFormat(_locale, options);
+        },
+      );
+
+      const datetimeModule = await import("@/lib/datetime");
+
+      expect(datetimeModule.TIMEZONE_OPTIONS).toContainEqual({
+        value: "Mars/Base",
+        label: "Mars/Base",
+        iana: "Mars/Base",
+      });
+      expect(datetimeModule.TIMEZONE_OPTIONS).toContainEqual({
+        value: "Venus_Station",
+        label: "Venus Station",
+        iana: "Venus_Station",
+      });
+    } finally {
+      Intl.supportedValuesOf = originalSupportedValuesOf;
+      Intl.DateTimeFormat = OriginalDateTimeFormat;
+      vi.resetModules();
+    }
+  });
+
+  it("SCRUM-13 [AC6]: falls back when Intl omits wall-time parts", async () => {
+    const OriginalDateTimeFormat = Intl.DateTimeFormat;
+    try {
+      (Intl as Record<string, unknown>).DateTimeFormat = vi.fn(
+        (locale: string, options: Intl.DateTimeFormatOptions) => {
+          if (options.hourCycle === "h23") {
+            return {
+              formatToParts: () => [
+                { type: "year", value: "2026" },
+                { type: "month", value: "09" },
+                { type: "day", value: "22" },
+                { type: "hour", value: "14" },
+              ],
+            };
+          }
+          return new OriginalDateTimeFormat(locale, options);
+        },
+      );
+
+      expect(timezoneWallTimeToUtcIso("2026-09-22T14:42")).toBe(
+        "2026-09-22T15:24:00.000Z",
+      );
+      expect(utcToTimezoneWallTime("2026-09-22T06:42:00.000Z")).toBe("");
+    } finally {
+      Intl.DateTimeFormat = OriginalDateTimeFormat;
+    }
   });
 });
 

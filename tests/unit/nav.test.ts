@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import type { Role } from "@prisma/client";
 
 import { NAV_BY_ROLE, LANDING_ROUTE_BY_ROLE, ROLE_LABEL, navFor } from "@/lib/nav";
@@ -107,5 +107,24 @@ describe("navigation derives from the permission model — SCRUM-66", () => {
       expect(roleAllows(role, "notification:read")).toBe(true);
       expect(hrefsFor(role)).toContain("/notifications");
     }
+  });
+});
+
+describe("navigation fallback labels — SCRUM-66", () => {
+  it("SCRUM-66 [AC1]: falls back to the href text when a role-specific object label is missing", async () => {
+    vi.resetModules();
+    vi.doMock("@/lib/auth/can", () => ({
+      roleAllows: (role: Role, action: Action) =>
+        role === "VENUE_STAFF" && action === "event:list",
+    }));
+
+    const { navFor: navForWithFallback } = await import("@/lib/nav");
+
+    expect(navForWithFallback("VENUE_STAFF")).toEqual([
+      { href: "/events", label: "events" },
+    ]);
+
+    vi.doUnmock("@/lib/auth/can");
+    vi.resetModules();
   });
 });

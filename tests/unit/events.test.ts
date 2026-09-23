@@ -838,6 +838,52 @@ describe("User Story 15 — Save an event request as draft", () => {
     );
   });
 
+  it("SCRUM-15 [AC2 - Cross-Cutting / Dates]: stores draft start and end dates on create and update paths", async () => {
+    mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
+    mockCreate.mockResolvedValue({ id: "evt_draft_dates" });
+
+    const createResult = await createDraftEvent({
+      name: "Draft With Dates",
+      startAt: futureStart,
+      endAt: futureEnd,
+    });
+
+    expect(createResult.ok).toBe(true);
+    expect(mockCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          startAt: new Date(futureStart),
+          endAt: new Date(futureEnd),
+        }),
+      }),
+    );
+
+    mockFindFirst.mockResolvedValue({
+      id: "evt_draft_dates",
+      organiserId: "usr_organiser",
+      status: "DRAFT",
+    });
+    mockUpdate.mockResolvedValue({ id: "evt_draft_dates" });
+
+    const updateResult = await createDraftEvent({
+      id: "evt_draft_dates",
+      name: "Draft With Dates Updated",
+      startAt: futureStart,
+      endAt: futureEnd,
+    });
+
+    expect(updateResult.ok).toBe(true);
+    expect(mockUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "evt_draft_dates" },
+        data: expect.objectContaining({
+          startAt: new Date(futureStart),
+          endAt: new Date(futureEnd),
+        }),
+      }),
+    );
+  });
+
   it("SCRUM-15 [AC5 - State Transition]: transitions draft status from DRAFT to SUBMITTED when draft is fully completed and submitted", async () => {
     mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
     mockFindFirst.mockResolvedValue({
