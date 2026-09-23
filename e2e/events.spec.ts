@@ -110,6 +110,51 @@ test.describe("User Story 13 — Event Request Creation Journey", () => {
     // 5. Verify the submitted event appears in the organiser's events table
     await expect(page.getByRole("cell", { name: eventName })).toBeVisible();
   });
+
+  /**
+   * TEST 3 (SCRUM-14 AC2): Submission is blocked when mandatory fields are
+   * missing. Step navigation itself is never blocked (TEST 1), so this walks
+   * all the way to Review with nothing filled in and submits from there — the
+   * one place submitEventRequest is actually called with the incomplete data.
+   */
+  test("SCRUM-14 AC2: submitting with mandatory fields left blank is refused and the missing fields are indicated", async ({
+    page,
+  }) => {
+    await page.goto("/login");
+    await page.getByLabel("Email", { exact: true }).fill("organiser@test.local");
+    await page.getByLabel("Password", { exact: true }).fill("Password123!");
+    await page.getByRole("button", { name: "Sign in" }).click();
+    await page.waitForURL("**/events");
+
+    await page.getByRole("button", { name: /Create Event Request/i }).first().click();
+
+    // Walk every step with nothing entered — Next never blocks on missing
+    // mandatory fields (see TEST 1), only on the Step 2 range checks this
+    // form leaves untouched.
+    for (let i = 0; i < 5; i++) {
+      await page.getByRole("button", { name: "Next", exact: true }).click();
+    }
+
+    // The Review step already warns the request cannot be submitted yet.
+    await expect(page.getByRole("heading", { name: /Review Entered Details/i })).toBeVisible();
+    await expect(
+      page.getByText(/complete all required fields highlighted in red/i),
+    ).toBeVisible();
+
+    // Attempt the real submission anyway — the client shows a warning but
+    // does not disable the button; the server is the actual gate.
+    await page.getByRole("button", { name: /Submit Request for Review/i }).click();
+    await expect(
+      page.getByText("Please fix the highlighted fields before submitting."),
+    ).toBeVisible();
+
+    // The dialog stays open (no reset/close on failure) — go back to Step 1
+    // and confirm the missing mandatory field is indicated there, exactly as
+    // the server's fieldErrors reported it.
+    await page.getByRole("button", { name: "1. Basics" }).click();
+    await expect(page.getByLabel("Event Name *")).toHaveAttribute("aria-invalid", "true");
+    await expect(page.getByText("Event name is required.")).toBeVisible();
+  });
 });
 
 /**
@@ -251,6 +296,12 @@ test.describe("User Story 16 — Distinguish Drafts from Submitted Requests Jour
 
     // 6. Verify Submitted Row features "View Details" button and info badge (not confused with draft)
     await expect(submittedRow.getByTestId("view-details-button")).toBeVisible();
+
+    // 6b (SCRUM-14 AC4): once submitted, the request can no longer be edited
+    // as a draft — neither "Resume Draft" nor "Amend & Resubmit" is offered
+    // for a SUBMITTED row (those only apply to DRAFT and REJECTED respectively).
+    await expect(submittedRow.getByTestId("resume-draft-button")).toHaveCount(0);
+    await expect(submittedRow.getByTestId("amend-rejected-button")).toHaveCount(0);
 
     // 7. Verify Filter Tabs (Filter by Drafts and Submitted)
     await page.getByRole("button", { name: /Drafts/i }).click();
