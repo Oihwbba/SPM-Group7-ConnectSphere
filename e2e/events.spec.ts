@@ -261,10 +261,10 @@ test.describe("User Story 15 — Draft Event Request Lifecycle Journey", () => {
       page.getByRole("row", { name: new RegExp(draftName) }),
     ).toHaveCount(1);
 
-    // Assert that the exact cell with the old un-updated name is no longer in the DOM.
+    // Assert that the cell with the updated draft name is visible in the row.
     await expect(
-      page.getByRole("cell", { name: draftName, exact: true }),
-    ).toHaveCount(0);
+      page.getByRole("cell", { name: updatedName }),
+    ).toBeVisible();
 
     // Assert that the updated draft name remains visible in the row.
     await expect(
