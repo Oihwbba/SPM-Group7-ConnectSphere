@@ -46,9 +46,16 @@ export function EquipmentSchedulePanel({
     };
   }, [equipmentId]);
 
+  // `aria-live` rather than `role="status"`: the reservation panel beside this
+  // one owns the page's status role, and a second one would make "the status
+  // message" ambiguous to a screen reader and to a test.
   if (isPending && !schedule) {
     return (
-      <p className="text-xs text-muted-foreground" role="status">
+      <p
+        className="text-xs text-muted-foreground"
+        aria-live="polite"
+        data-testid="schedule-loading"
+      >
         Loading the schedule for {equipmentType}…
       </p>
     );

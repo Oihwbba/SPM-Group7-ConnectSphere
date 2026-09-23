@@ -66,7 +66,11 @@ test.describe("SCRUM-31 — Reserve Equipment for Event", () => {
 
     await expect(
       page.getByRole("status"),
-    ).toContainText(/Requested quantity \(99\) exceeds availability \(\d+ unit\(s\) available for this period\)\./);
+      // SCRUM-29 — the live status now names the shortfall as well as what is
+      // free, so this asserts both halves rather than just the refusal.
+    ).toContainText(
+      /Requested quantity \(99\) exceeds availability \(\d+ unit\(s\) available for this period\) — \d+ short\./,
+    );
 
     await page.getByRole("button", { name: /Reserve.*equipment/ }).click();
 
