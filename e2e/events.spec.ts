@@ -224,11 +224,11 @@ test.describe("User Story 15 — Draft Event Request Lifecycle Journey", () => {
   });
 
   /**
-   * TEST 2: SCRUM-15 [AC7] — Saving the same draft twice updates the record.
+   * TEST 2: SCRUM-15 [AC2, AC7 - Draft Save Idempotency] — Saving the same draft twice updates the record.
    * Verifies that reopening a saved draft and clicking "Save as Draft" again
-   * updates the existing row rather than creating a duplicate.
+   * updates the existing row in-place rather than creating a duplicate row.
    */
-  test("SCRUM-15 [AC7]: saving an existing draft a second time updates the record without creating a duplicate row", async ({
+  test("SCRUM-15 [AC2, AC7 - Draft Save Idempotency]: saving an existing draft a second time updates the record in-place without creating duplicate rows", async ({
     page,
   }) => {
     await page.goto("/login");
@@ -245,23 +245,30 @@ test.describe("User Story 15 — Draft Event Request Lifecycle Journey", () => {
     await page.getByRole("button", { name: /Save as Draft/i }).click();
 
     // Exactly one row must exist.
-    const rows = page.getByRole("row", { name: new RegExp(draftName) });
-    await expect(rows).toHaveCount(1);
+    const initialRows = page.getByRole("row", { name: new RegExp(draftName) });
+    await expect(initialRows).toHaveCount(1);
 
     // 2. Reopen the same draft and save again with an updated name.
-    await rows.getByRole("button", { name: /Resume Draft/i }).click();
+    await initialRows.getByRole("button", { name: /Resume Draft/i }).click();
     const updatedName = `${draftName} — Updated`;
     await page.getByLabel("Event Name *").fill(updatedName);
     await page.getByRole("button", { name: /Save as Draft/i }).click();
 
-    // 3. Still exactly one row, now carrying the updated name (AC7: no duplicate).
+    // 3. Exactly one row total contains the draft substring (draftName is a substring of updatedName).
+    // If a bug created a duplicate row instead of updating, there would be two rows matching draftName (one old, one new).
     await expect(
-      page.getByRole("row", { name: new RegExp(updatedName) }),
+      page.getByRole("row", { name: new RegExp(draftName) }),
     ).toHaveCount(1);
-    // Original name must be gone (was updated in-place, not duplicated).
+
+    // Assert that the exact cell with the old un-updated name is no longer in the DOM.
     await expect(
-      page.getByRole("row", { name: new RegExp(`^${draftName}$`) }),
+      page.getByRole("cell", { name: draftName, exact: true }),
     ).toHaveCount(0);
+
+    // Assert that the cell with the updated name exists.
+    await expect(
+      page.getByRole("cell", { name: updatedName, exact: true }),
+    ).toBeVisible();
   });
 });
 
@@ -395,7 +402,7 @@ test.describe("User Story 84 — Organiser Views Their Own Event Requests Journe
     await page.getByRole("dialog").getByRole("button", { name: "Close" }).first().click();
   });
 
-  test("enforces ownership isolation: organiser2 sees only their own events (AC 3)", async ({
+  test("SCRUM-84 [AC1 - Ownership Data Isolation]: enforces ownership isolation: organiser2 sees only their own events", async ({
     page,
   }) => {
     // 1. Sign in as organiser2 (owns evt_other_organiser per seed data)
@@ -614,7 +621,7 @@ test.describe("User Story 13 & 84 — timezone, unsaved changes and list control
     await expect(page.getByLabel("Event Timezone *")).toHaveValue(nyOptionValue);
   });
 
-  test("SCRUM-13 AC6: unsaved changes warning appears when closing an edited draft dialog", async ({
+  test("SCRUM-15 [AC6 - Unsaved Changes Warning]: unsaved changes warning appears when closing an edited draft dialog", async ({
     page,
   }) => {
     await page.goto("/login");
@@ -714,13 +721,12 @@ test.describe("User Story 13 & 84 — timezone, unsaved changes and list control
     ).toBeVisible();
   });
 
-  test("SCRUM-84 [AC5]: filtered empty state shows 'No requests match' card with a Clear Filters CTA when search yields no results", async ({
+  test("SCRUM-84 [AC6/AC9 - Filtered Empty State & Clear Filters]: filtered empty state shows 'No requests match' card with a Clear Filters CTA when search yields no results", async ({
     page,
   }) => {
-    // AC5 covers the organiser seeing an informative message when no requests
-    // match the current view. We test the filtered empty state (a search term
-    // with no results) which exercises the same UI card and Clear Filters path
-    // as the zero-events empty state.
+    // AC6 & AC9 cover status filtering, search queries, and search cleared behavior.
+    // We test the filtered empty state (a search term with no results) which exercises
+    // the search filtering logic and the Clear Filters restoration path.
     await page.goto("/login");
     await page.getByLabel("Email", { exact: true }).fill("organiser2@test.local");
     await page.getByLabel("Password", { exact: true }).fill("Password123!");

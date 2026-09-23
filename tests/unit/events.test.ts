@@ -478,6 +478,30 @@ describe("User Story 13 — Event Request Creation", () => {
       expect(mockCreate).not.toHaveBeenCalled();
     });
 
+    it("SCRUM-13 [AC11 - Script Injection Sanitisation & React Escaping]: preserves text content safely while trim-sanitising input strings, relying on React's automatic context-aware DOM escaping to prevent script execution", async () => {
+      mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
+      mockCreate.mockResolvedValue({ id: "evt_script_test" });
+
+      const scriptPayload = "<script>alert('xss')</script>";
+      const result = await submitEventRequest({
+        ...validSubmissionInput,
+        name: scriptPayload,
+        description: scriptPayload,
+        specialRequests: scriptPayload,
+      });
+
+      expect(result.ok).toBe(true);
+      expect(mockCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            name: "<script>alert('xss')</script>",
+            description: "<script>alert('xss')</script>",
+            specialRequests: "<script>alert('xss')</script>",
+          }),
+        }),
+      );
+    });
+
     it("SCRUM-13 [AC11 - Cross-Cutting / Input Constraint]: trims leading and trailing whitespace from string fields upon schema parsing", async () => {
       mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
       mockCreate.mockResolvedValue({ id: "evt_trimmed" });
@@ -864,7 +888,7 @@ describe("User Story 15 — Save an event request as draft", () => {
     ).rejects.toThrow("submit draft update failed");
   });
 
-  it("SCRUM-15 [AC9 - Draft Resume with Inactive Catalogue Ref]: draft saves and reopens successfully when venue or equipment fields contain references to inactive catalogue items (stored as free text, no FK constraint)", async () => {
+  it("SCRUM-15 [AC2, AC9 - Inactive Catalogue Reference Retention]: draft saves and reopens successfully when venue or equipment fields contain references to inactive catalogue items (stored as free text, no FK constraint)", async () => {
     mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
     mockFindFirst.mockResolvedValue({
       id: "evt_draft_inactive_ref",
@@ -894,6 +918,28 @@ describe("User Story 15 — Save an event request as draft", () => {
         }),
       }),
     );
+  });
+
+  it("SCRUM-15 [AC4] / SCRUM-13 [AC11 - Draft Path Input Constraint]: createDraftEvent schema enforces character limits on over-limit draft fields (name max 200, purpose max 1000, description max 5000, programme max 5000, specialRequests max 5000)", async () => {
+    mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
+
+    const result = await createDraftEvent({
+      name: "A".repeat(201),
+      purpose: "B".repeat(1001),
+      description: "C".repeat(5001),
+      programme: "D".repeat(5001),
+      specialRequests: "E".repeat(5001),
+    });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.fieldErrors?.name).toBeTruthy();
+      expect(result.fieldErrors?.purpose).toBeTruthy();
+      expect(result.fieldErrors?.description).toBeTruthy();
+      expect(result.fieldErrors?.programme).toBeTruthy();
+      expect(result.fieldErrors?.specialRequests).toBeTruthy();
+    }
+    expect(mockCreate).not.toHaveBeenCalled();
   });
 });
 
@@ -1046,7 +1092,7 @@ describe("User Story 84 — Organiser views their own event requests", () => {
     expect(events[0].status).toBe("APPROVED");
   });
 
-  it("SCRUM-84 [AC4, AC5 - Happy Path]: retrieves full detail model when selecting a specific event request", async () => {
+  it("SCRUM-84 [AC4 - Happy Path]: retrieves full detail model when selecting a specific event request", async () => {
     const detailedDraftEvent = {
       id: "evt_draft_detail",
       name: "Draft Detail Event",
@@ -1219,7 +1265,7 @@ describe("getFormCatalogues — permission gate", () => {
   const mockVenues = prisma.venue.findMany as unknown as Mock;
   const mockEquipment = prisma.equipment.findMany as unknown as Mock;
 
-  it("returns the venue and equipment catalogue to an organiser", async () => {
+  it("SCRUM-13 [AC2 - Happy Path]: returns the venue and equipment catalogue to an organiser", async () => {
     mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
     mockVenues.mockResolvedValue([
       { id: "ven1", name: "Hall A", capacity: 200, facilities: ["projector"] },
