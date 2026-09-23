@@ -33,6 +33,7 @@ import {
   createReservation,
   getAllEquipmentAvailability,
 } from "./actions";
+import { EquipmentSchedulePanel } from "./equipment-schedule-panel";
 import { allAvailabilitySchema } from "@/lib/schemas/reservation";
 import {
   formatDate,
@@ -772,6 +773,16 @@ export function EquipmentClient({
             <div className="rounded-xl border border-dashed p-4 text-center text-xs text-muted-foreground bg-muted/20">
               Select an equipment type above to view detailed availability metrics.
             </div>
+          )}
+
+          {/* SCRUM-30 — what this item is already committed to, and where
+              those commitments collide. */}
+          {selectedEquipment && (
+            <EquipmentSchedulePanel
+              key={selectedEquipment.id}
+              equipmentId={selectedEquipment.id}
+              equipmentType={selectedEquipment.type}
+            />
           )}
 
           {/* Grid of Other Equipment */}

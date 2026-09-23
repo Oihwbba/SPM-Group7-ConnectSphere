@@ -140,3 +140,58 @@ test.describe("SCRUM-31 — Reserve Equipment for Event", () => {
     await expect(page.getByText("Choose both an end date and time.")).toBeVisible();
   });
 });
+
+/**
+ * SCRUM-30 — see what an item is already committed to, so conflicts are
+ * visible before a reservation is attempted. The seed puts one speaker out of
+ * service as DAMAGED and three projectors in for MAINTENANCE.
+ */
+test.describe("SCRUM-30 — View Equipment Conflicts", () => {
+  test("AC 5: selecting an item shows its commitments with the reason and the period", async ({
+    page,
+  }) => {
+    await signInAsTechSupport(page);
+    await page.getByLabel("Equipment type").selectOption({ value: "eqp_speaker" });
+
+    const schedule = page.getByTestId("equipment-schedule");
+    await expect(schedule).toBeVisible();
+    await expect(schedule).toContainText("Damaged");
+    await expect(schedule).toContainText("Blown driver, awaiting write-off.");
+    await expect(schedule.getByTestId("schedule-entry").first()).toContainText(
+      "1 unit(s)",
+    );
+  });
+
+  test("AC 1: the maintenance the pool is committed to is listed", async ({
+    page,
+  }) => {
+    test.skip(!usesLocalDatabase, "reads seeded commitments; local database only");
+    await signInAsTechSupport(page);
+    await page
+      .getByLabel("Equipment type")
+      .selectOption({ value: "eqp_projector" });
+
+    const schedule = page.getByTestId("equipment-schedule");
+    await expect(schedule).toBeVisible();
+    await expect(schedule).toContainText("Under maintenance");
+    await expect(schedule.getByTestId("schedule-entry").first()).toBeVisible();
+  });
+
+  test("AC 6: an item with nothing committed says so instead of showing an empty list", async ({
+    page,
+  }) => {
+    test.skip(!usesLocalDatabase, "clears commitments; local database only");
+    await prisma.reservation.deleteMany({ where: { equipmentId: "eqp_mic" } });
+    await prisma.equipmentUnavailability.deleteMany({
+      where: { equipmentId: "eqp_mic" },
+    });
+
+    await signInAsTechSupport(page);
+    await page.getByLabel("Equipment type").selectOption({ value: "eqp_mic" });
+
+    await expect(page.getByTestId("schedule-fully-available")).toContainText(
+      "nothing is reserved or out of service",
+    );
+    await expect(page.getByTestId("schedule-entry")).toHaveCount(0);
+  });
+});
