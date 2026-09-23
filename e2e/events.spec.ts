@@ -112,12 +112,11 @@ test.describe("User Story 13 — Event Request Creation Journey", () => {
   });
 
   /**
-   * TEST 3 (SCRUM-14 AC2): Submission is blocked when mandatory fields are
-   * missing. Step navigation itself is never blocked (TEST 1), so this walks
-   * all the way to Review with nothing filled in and submits from there — the
-   * one place submitEventRequest is actually called with the incomplete data.
+   * TEST 3: SCRUM-13 [AC4] / SCRUM-14 AC2 — Submission is blocked when mandatory fields are missing.
+   * Step navigation is not blocked by missing values, so this test reaches Review
+   * with empty inputs and verifies submit is rejected with field-level feedback.
    */
-  test("SCRUM-14 AC2: submitting with mandatory fields left blank is refused and the missing fields are indicated", async ({
+  test("SCRUM-13 [AC4] / SCRUM-14 AC2: submitting with mandatory fields left blank is refused and missing fields are indicated", async ({
     page,
   }) => {
     await page.goto("/login");
@@ -129,28 +128,23 @@ test.describe("User Story 13 — Event Request Creation Journey", () => {
     await page.getByRole("button", { name: /Create Event Request/i }).first().click();
 
     // Walk every step with nothing entered — Next never blocks on missing
-    // mandatory fields (see TEST 1), only on the Step 2 range checks this
-    // form leaves untouched.
+    // mandatory fields (see TEST 1), only on invalid values.
     for (let i = 0; i < 5; i++) {
       await page.getByRole("button", { name: "Next", exact: true }).click();
     }
 
-    // The Review step already warns the request cannot be submitted yet.
+    // Review already indicates the request is incomplete before submit.
     await expect(page.getByRole("heading", { name: /Review Entered Details/i })).toBeVisible();
     await expect(
       page.getByText(/complete all required fields highlighted in red/i),
     ).toBeVisible();
 
-    // Attempt the real submission anyway — the client shows a warning but
-    // does not disable the button; the server is the actual gate.
+    // Submit is server-gated; it must fail and keep the dialog open.
     await page.getByRole("button", { name: /Submit Request for Review/i }).click();
     await expect(
       page.getByText("Please fix the highlighted fields before submitting."),
     ).toBeVisible();
 
-    // The dialog stays open (no reset/close on failure) — go back to Step 1
-    // and confirm the missing mandatory field is indicated there, exactly as
-    // the server's fieldErrors reported it.
     await page.getByRole("button", { name: "1. Basics" }).click();
     await expect(page.getByLabel("Event Name *")).toHaveAttribute("aria-invalid", "true");
     await expect(page.getByText("Event name is required.")).toBeVisible();
@@ -228,6 +222,49 @@ test.describe("User Story 15 — Draft Event Request Lifecycle Journey", () => {
 
     // 8. Verify event submitted successfully
     await expect(page.getByRole("cell", { name: draftName })).toBeVisible();
+  });
+
+  /**
+   * TEST 2: SCRUM-15 [AC2, AC7 - Draft Save Idempotency] — Saving the same draft twice updates the record.
+   * Verifies that reopening a saved draft and clicking "Save as Draft" again
+   * updates the existing row in-place rather than creating a duplicate row.
+   */
+  test("SCRUM-15 [AC2, AC7 - Draft Save Idempotency]: saving an existing draft a second time updates the record in-place without creating duplicate rows", async ({
+    page,
+  }) => {
+    await page.goto("/login");
+    await page.getByLabel("Email", { exact: true }).fill("organiser@test.local");
+    await page.getByLabel("Password", { exact: true }).fill("Password123!");
+    await page.getByRole("button", { name: "Sign in" }).click();
+    await page.waitForURL("**/events");
+
+    const draftName = `Idempotent Draft ${Date.now()}`;
+
+    // 1. Create the initial draft.
+    await page.getByRole("button", { name: /Create Event Request/i }).first().click();
+    await page.getByLabel("Event Name *").fill(draftName);
+    await page.getByRole("button", { name: /Save as Draft/i }).click();
+
+    // Exactly one row must exist.
+    const initialRows = page.getByRole("row", { name: new RegExp(draftName) });
+    await expect(initialRows).toHaveCount(1);
+
+    // 2. Reopen the same draft and save again with an updated name.
+    await initialRows.getByRole("button", { name: /Resume Draft/i }).click();
+    const updatedName = `${draftName} — Updated`;
+    await page.getByLabel("Event Name *").fill(updatedName);
+    await page.getByRole("button", { name: /Save as Draft/i }).click();
+
+    // 3. Exactly one row total contains the draft substring (draftName is a substring of updatedName).
+    // If a bug created a duplicate row instead of updating, there would be two rows matching draftName (one old, one new).
+    await expect(
+      page.getByRole("row", { name: new RegExp(draftName) }),
+    ).toHaveCount(1);
+
+    // Assert that the updated draft name is visible in the row.
+    await expect(
+      page.getByRole("cell", { name: updatedName }),
+    ).toBeVisible();
   });
 });
 
@@ -367,7 +404,7 @@ test.describe("User Story 84 — Organiser Views Their Own Event Requests Journe
     await page.getByRole("dialog").getByRole("button", { name: "Close" }).first().click();
   });
 
-  test("enforces ownership isolation: organiser2 sees only their own events (AC 3)", async ({
+  test("SCRUM-84 [AC1 - Ownership Data Isolation]: enforces ownership isolation: organiser2 sees only their own events", async ({
     page,
   }) => {
     // 1. Sign in as organiser2 (owns evt_other_organiser per seed data)
@@ -586,7 +623,7 @@ test.describe("User Story 13 & 84 — timezone, unsaved changes and list control
     await expect(page.getByLabel("Event Timezone *")).toHaveValue(nyOptionValue);
   });
 
-  test("SCRUM-13 AC6: unsaved changes warning appears when closing an edited draft dialog", async ({
+  test("SCRUM-15 [AC6 - Unsaved Changes Warning]: unsaved changes warning appears when closing an edited draft dialog", async ({
     page,
   }) => {
     await page.goto("/login");
@@ -655,6 +692,67 @@ test.describe("User Story 13 & 84 — timezone, unsaved changes and list control
     await expect(page.getByPlaceholder("Search by name or purpose...")).toHaveValue("Annual");
     await expect(page.getByText("Annual Tech Summit")).toBeVisible();
     await expect(page.getByText("Career Fair")).not.toBeVisible();
+  });
+
+  test("SCRUM-13 [AC9]: entering a past start date on Step 2 blocks navigation to Step 3 and shows an inline error", async ({
+    page,
+  }) => {
+    await page.goto("/login");
+    await page.getByLabel("Email", { exact: true }).fill("organiser@test.local");
+    await page.getByLabel("Password", { exact: true }).fill("Password123!");
+    await page.getByRole("button", { name: "Sign in" }).click();
+    await page.waitForURL("**/events");
+
+    await page.getByRole("button", { name: /Create Event Request/i }).first().click();
+    await page.getByLabel("Event Name *").fill("Past Date Validation Test");
+    await page.getByRole("button", { name: "Next", exact: true }).click();
+
+    // AC9: enter a start date clearly in the past.
+    await page.getByLabel("Proposed Start Date & Time *").fill("2020-01-01T10:00");
+    await page.getByLabel("Proposed End Date & Time *").fill("2020-01-01T12:00");
+    await page.getByRole("button", { name: "Next", exact: true }).click();
+
+    // The step validator should reject the past date and display an inline error.
+    await expect(
+      page.getByText("Proposed date cannot be in the past."),
+    ).toBeVisible();
+
+    // The dialog must NOT have advanced beyond Step 2 (Schedule heading is still visible).
+    await expect(
+      page.getByRole("heading", { name: /Schedule.*Attendance/i }),
+    ).toBeVisible();
+  });
+
+  test("SCRUM-84 [AC6/AC9 - Filtered Empty State & Clear Filters]: filtered empty state shows 'No requests match' card with a Clear Filters CTA when search yields no results", async ({
+    page,
+  }) => {
+    // AC6 & AC9 cover status filtering, search queries, and search cleared behavior.
+    // We test the filtered empty state (a search term with no results) which exercises
+    // the search filtering logic and the Clear Filters restoration path.
+    await page.goto("/login");
+    await page.getByLabel("Email", { exact: true }).fill("organiser2@test.local");
+    await page.getByLabel("Password", { exact: true }).fill("Password123!");
+    await page.getByRole("button", { name: "Sign in" }).click();
+    await page.waitForURL("**/events");
+
+    // organiser2 has at least one event; a nonsense search term returns nothing.
+    const searchInput = page.getByPlaceholder("Search by name or purpose...");
+    await searchInput.fill("xyznonexistent99999");
+
+    // AC5: the empty-state card and the Clear Filters action must appear.
+    await expect(
+      page.getByText("No requests match the selected filters."),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Clear Filters" }),
+    ).toBeVisible();
+
+    // Clicking Clear Filters resets the view and restores the event list.
+    await page.getByRole("button", { name: "Clear Filters" }).click();
+    await expect(searchInput).toHaveValue("");
+    await expect(
+      page.getByText("Another Client's Event"),
+    ).toBeVisible();
   });
 });
 

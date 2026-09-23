@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-09-21. Jira is the source of truth.
+     Synced from Jira on 2026-09-23. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-13 - Create an event request
@@ -10,26 +10,23 @@
 | **Epic** | SCRUM-6 - Event Request Lifecycle |
 | **Priority** | Highest |
 | **Story points** | 2 |
-| **Status in Jira** | In Review |
+| **Status in Jira** | Done |
 | **Sprint** | SCRUM Sprint 1 |
 | **Jira** | https://smu-spm-group7.atlassian.net/browse/SCRUM-13 |
 
 ---
 
-_As an Event Organiser_, I want to enter my event's details into a request form, so that ConnectSphere has everything it needs to start planning my event.
+As an Event Organiser, I want to enter my event's details into a request form, so that ConnectSphere has everything it needs to start planning my event.
 
-_Acceptance Criteria:_
-
-**Baseline and Boundary**
+Acceptance Criteria:
 
 * AC1 (Field scope and capture): The request form allows the Organiser to capture event name, purpose, description, proposed start date/time, proposed end date/time, event timezone, expected attendance, venue requirements, accessibility needs (for example, wheelchair access or mobility seating), equipment requirements, room layout, registration needs, event programme, and special requests.
-* AC2 (Catalogue dependencies): Venue and equipment selections within the form reference ConnectSphere’s active venue and equipment catalogues.
+* AC2 (Catalogue dependencies): Venue and equipment selections within the form reference ConnectSphere’s venue and equipment catalogues.
 * AC3 (Optional fields): Event programme/schedule breakdown and special requests/additional notes are optional and are not required to submit the request.
 * AC4 (Mandatory fields): Event name, description, purpose, proposed start and end dates/times, event timezone, expected attendance, venue requirements, accessibility needs, equipment requirements, room layout, and registration needs are mandatory. If any mandatory field is empty, submission is blocked and inline validation errors identify the missing fields.
 * AC5 (Draft saving): The Organiser can save an incomplete request as a draft even when mandatory submission fields are missing. Draft saving and state persistence are governed by SCRUM-15.
 * AC6 (Timezone and storage): The selected event timezone is used to display and interpret event dates and times. Stored date-time values are converted consistently to UTC.
 
-**Validation and Review**
 
 * AC7 (Attendance): If the Organiser attempts to submit an expected attendance of zero or a negative number, submission is blocked and the system states that attendance must be a positive whole number.
 * AC8 (Date range): If the Organiser attempts to submit an end date/time that is earlier than or equal to the start date/time, submission is blocked and the date/time range is reported as invalid.
@@ -37,4 +34,5 @@ _Acceptance Criteria:_
 * AC10 (Review step): When all mandatory fields pass validation and the Organiser proceeds to submit, the system displays a structured summary of all entered details for review before final submission.
 * AC11 (Text input): Event name, description, and special requests have defined maximum character limits and are sanitised to prevent script injection.
 
-_Note:_ SCRUM-13 owns the form and field-level input behaviour. SCRUM-15 owns draft persistence. SCRUM-14 owns the final submission gate. Event timezone is a required event attribute because lifecycle time comparisons must be unambiguous.
+
+Note: SCRUM-13 owns the form and field-level input behaviour. SCRUM-15 owns draft persistence. SCRUM-14 owns the final submission gate. Event timezone is a required event attribute because lifecycle time comparisons must be unambiguous.

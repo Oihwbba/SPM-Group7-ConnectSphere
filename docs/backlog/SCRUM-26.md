@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-09-21. Jira is the source of truth.
+     Synced from Jira on 2026-09-23. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-26 - Flag edits that affect existing arrangements
@@ -16,11 +16,11 @@
 
 ---
 
-**As an Event Coordinator**, I want the system to warn me before an impactful planning edit affects existing arrangements, so that I can re-check those arrangements before confirming the change.
+As an Event Coordinator, I want the system to warn me before an impactful planning edit affects existing arrangements, so that I can re-check those arrangements before confirming the change.
 
-**Acceptance Criteria:**
+Acceptance Criteria:
 
-* The impactful fields are exactly **date, time, expected attendance, venue and equipment**.
+* The impactful fields are exactly date, time, expected attendance, venue and equipment.
 * Given an existing venue booking or equipment reservation, when the Coordinator changes one of those fields to a different value, then a warning is shown before the edit is confirmed.
 * If the field value is unchanged, no warning is raised.
 * If no booking or reservation exists, no arrangement-impact warning is required.

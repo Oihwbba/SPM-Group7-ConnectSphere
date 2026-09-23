@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-09-21. Jira is the source of truth.
+     Synced from Jira on 2026-09-23. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-57 - User is notified when a coordinator is reassigned
@@ -16,9 +16,9 @@
 
 ---
 
-**As an Event Coordinator**, I want the relevant Coordinators to be notified when a handover is accepted, so that responsibility changes are visible.
+As an Event Coordinator, I want the relevant Coordinators to be notified when a handover is accepted, so that responsibility changes are visible.
 
-**Acceptance Criteria:**
+Acceptance Criteria:
 
 * Given a pending coordinator handover, when the incoming Coordinator accepts it, then a notification is created for the outgoing and incoming Coordinators.
 * The notification states the event and identifies the new current Coordinator.

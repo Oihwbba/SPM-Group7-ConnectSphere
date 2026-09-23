@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-09-21. Jira is the source of truth.
+     Synced from Jira on 2026-09-23. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-34 - View Venue Details
@@ -16,10 +16,10 @@
 
 ---
 
-**User Story**
+User Story
 As an Event Coordinator, I want to view a venue's location, capacity, facilities, accessibility features, and supported layouts, so that I can assess it for an event.
 
-**Acceptance Criteria**
+Acceptance Criteria
 
 * Venue detail view displays location, capacity, facilities, accessibility info, supported layouts, and operating information.
 * Information reflects the latest saved record.

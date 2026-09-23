@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-09-21. Jira is the source of truth.
+     Synced from Jira on 2026-09-23. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-40 - Flag Venue Suitability
@@ -16,9 +16,9 @@
 
 ---
 
-**As an Event Coordinator**, I want to see whether a venue appears suitable for my event based on attendance, capacity, required facilities, accessibility and layout, so that I don't pursue unsuitable venues.
+As an Event Coordinator, I want to see whether a venue appears suitable for my event based on attendance, capacity, required facilities, accessibility and layout, so that I don't pursue unsuitable venues.
 
-**Acceptance Criteria**
+Acceptance Criteria
 
 * Given expected attendance is strictly greater than the venue's capacity, when suitability is evaluated, then the venue is marked "not suitable".
 * Given expected attendance is exactly equal to the venue's capacity, when suitability is evaluated, then the venue is marked suitable — the venue is only unsuitable once attendance exceeds capacity.
@@ -28,8 +28,9 @@
 * Given expected attendance is within capacity and every required facility, accessibility need and layout is met, when suitability is evaluated, then the venue is marked suitable.
 * Suitability indicator is visible on search results and venue detail views.
 
-**Decision record (2026-09-13):** Accessibility and layout mismatches count as suitability failures. Suitability therefore covers four dimensions: capacity, facilities, accessibility and supported layout.
 
-**Planning note:** This story should be estimated based on all four dimensions. Event-side fields are defined in SCRUM-13 and venue-side attributes in SCRUM-34/35.
+Decision record (2026-09-13): Accessibility and layout mismatches count as suitability failures. Suitability therefore covers four dimensions: capacity, facilities, accessibility and supported layout.
+
+Planning note: This story should be estimated based on all four dimensions. Event-side fields are defined in SCRUM-13 and venue-side attributes in SCRUM-34/35.
 
 Functionality Area: Venue Management

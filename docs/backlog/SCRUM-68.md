@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-09-21. Jira is the source of truth.
+     Synced from Jira on 2026-09-23. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-68 - View only the events I own
@@ -10,15 +10,15 @@
 | **Epic** | SCRUM-9 - Access Control |
 | **Priority** | Highest |
 | **Story points** | 3 |
-| **Status in Jira** | In Progress |
+| **Status in Jira** | Done |
 | **Sprint** | SCRUM Sprint 1 |
 | **Jira** | https://smu-spm-group7.atlassian.net/browse/SCRUM-68 |
 
 ---
 
-**As an Event Organiser**, I want to see only the events I submitted, so that my event details are not visible to other clients of ConnectSphere.
+As an Event Organiser, I want to see only the events I submitted, so that my event details are not visible to other clients of ConnectSphere.
 
-**Acceptance Criteria:**
+Acceptance Criteria:
 
 * An Organiser's event list contains only events where they are the submitting Organiser.
 * Opening another Organiser's event directly by its identifier is refused.
@@ -26,7 +26,8 @@
 * Drafts are visible only to the Organiser who created them.
 * Release 1 uses the individual Organiser account as the ownership boundary; shared visibility across multiple people in the same external organisation is not supported by this story.
 
-**Boundary:** Coordinator visibility and assignment relationships are owned centrally by SCRUM-69 and SCRUM-20; this story does not restate them.
+
+Boundary: Coordinator visibility and assignment relationships are owned centrally by SCRUM-69 and SCRUM-20; this story does not restate them.
 
 Functionality Area: User Authorisation and Authentication
 
@@ -35,8 +36,8 @@ Functionality Area: User Authorisation and Authentication
 
 | Subtask | Summary | Status |
 |---|---|---|
-| [SCRUM-103](SCRUM-103.md) | Scope the organiser event list to their own organiserId | To Do |
-| [SCRUM-104](SCRUM-104.md) | getEventForUser — foreign event returns null, identical to not-found | To Do |
-| [SCRUM-105](SCRUM-105.md) | Hide drafts from everyone but their creator | To Do |
-| [SCRUM-106](SCRUM-106.md) | Mobile — events list as stacked cards below md, table from md up | To Do |
-| [SCRUM-107](SCRUM-107.md) | Tests — unit (ownership, draft visibility), e2e (organiser isolation, mobile cards) | To Do |
+| [SCRUM-103](SCRUM-103.md) | Scope the organiser event list to their own organiserId | Done |
+| [SCRUM-104](SCRUM-104.md) | getEventForUser — foreign event returns null, identical to not-found | Done |
+| [SCRUM-105](SCRUM-105.md) | Hide drafts from everyone but their creator | Done |
+| [SCRUM-106](SCRUM-106.md) | Mobile — events list as stacked cards below md, table from md up | Done |
+| [SCRUM-107](SCRUM-107.md) | Tests — unit (ownership, draft visibility), e2e (organiser isolation, mobile cards) | Done |

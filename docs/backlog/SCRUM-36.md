@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-09-21. Jira is the source of truth.
+     Synced from Jira on 2026-09-23. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-36 - View Venue Availability
@@ -11,15 +11,15 @@
 | **Priority** | Highest |
 | **Story points** | 2 |
 | **Status in Jira** | To Do |
-| **Sprint** | Backlog |
+| **Sprint** | SCRUM Sprint 2 |
 | **Jira** | https://smu-spm-group7.atlassian.net/browse/SCRUM-36 |
 
 ---
 
-**User Story**
+User Story
 As an Event Coordinator, I want to view a venue's availability across dates and times, so that I know when it can realistically be requested.
 
-**Acceptance Criteria**
+Acceptance Criteria
 
 * Calendar/list view shows available and unavailable periods for a selected venue.
 * The view may be a single calendar across venues or one calendar per venue — the team chooses.
@@ -29,6 +29,7 @@ As an Event Coordinator, I want to view a venue's availability across dates and 
 * Given a venue has no bookings or unavailability in the selected range, when the Coordinator views it, then the whole range shows as available rather than showing an empty view.
 * View can be filtered by date range.
 
-**Decision record (2026-09-13):** Venue Availability Calendar reflects approved bookings and recorded non-booking unavailability. A standalone unavailability-management feature remains outside Release 1.
+
+Decision record (2026-09-13): Venue Availability Calendar reflects approved bookings and recorded non-booking unavailability. A standalone unavailability-management feature remains outside Release 1.
 
 Functionality Area: Venue Management

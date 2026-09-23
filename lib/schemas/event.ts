@@ -41,8 +41,16 @@ export const createDraftEventSchema = z
     preferredLayout: z.string().trim().optional(),
     equipmentRequirements: z.string().trim().optional(),
     registrationNotes: z.string().trim().optional(),
-    programme: z.string().trim().optional(),
-    specialRequests: z.string().trim().optional(),
+    programme: z
+      .string()
+      .trim()
+      .max(5000, "Keep programme under 5000 characters.")
+      .optional(),
+    specialRequests: z
+      .string()
+      .trim()
+      .max(5000, "Keep special requests under 5000 characters.")
+      .optional(),
     timezone: z.string().trim().max(64).optional().default("Asia/Singapore"),
   })
   .superRefine((data, ctx) => {
@@ -147,8 +155,16 @@ export const submitEventRequestSchema = z
       .string()
       .trim()
       .min(1, "Registration needs are required."),
-    programme: z.string().trim().optional(),
-    specialRequests: z.string().trim().optional(),
+    programme: z
+      .string()
+      .trim()
+      .max(5000, "Keep programme under 5000 characters.")
+      .optional(),
+    specialRequests: z
+      .string()
+      .trim()
+      .max(5000, "Keep special requests under 5000 characters.")
+      .optional(),
     timezone: z
       .string({ required_error: "Event timezone is required." })
       .trim()

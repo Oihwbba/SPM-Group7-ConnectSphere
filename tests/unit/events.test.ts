@@ -250,6 +250,25 @@ describe("User Story 13 — Event Request Creation", () => {
       expect(mockCreate).not.toHaveBeenCalled();
     });
 
+    it("SCRUM-13 [AC9 × AC6 - Timezone Interaction]: rejects a UTC ISO start datetime that represents a past moment, confirming timezone-converted wall-times are rejected at the schema layer regardless of selected timezone", async () => {
+      mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
+
+      const oneHourAgoUtcIso = new Date(Date.now() - 3_600_000).toISOString();
+
+      const result = await submitEventRequest({
+        ...validSubmissionInput,
+        startAt: oneHourAgoUtcIso,
+      });
+
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.fieldErrors?.startAt).toContain(
+          "Proposed date cannot be in the past.",
+        );
+      }
+      expect(mockCreate).not.toHaveBeenCalled();
+    });
+
     it("SCRUM-13 [AC8 - Domain Boundary]: rejects submission when proposed end date is equal to start date (zero-duration)", async () => {
       mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
 
@@ -446,6 +465,51 @@ describe("User Story 13 — Event Request Creation", () => {
         expect(result.fieldErrors?.description).toBeTruthy();
       }
       expect(mockCreate).not.toHaveBeenCalled();
+    });
+
+    it("SCRUM-13 [AC1/AC11 - Input Constraint]: rejects event name (AC11, max 200), purpose (AC1 field schema, max 1000), and description and special request (AC11, max 5000) that exceed their character limits", async () => {
+      mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
+
+      const result = await submitEventRequest({
+        ...validSubmissionInput,
+        name: "A".repeat(201),
+        purpose: "B".repeat(1001),
+        description: "C".repeat(5001),
+        specialRequests: "D".repeat(5001),
+      });
+
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.fieldErrors?.name).toBeTruthy();
+        expect(result.fieldErrors?.purpose).toBeTruthy();
+        expect(result.fieldErrors?.description).toBeTruthy();
+        expect(result.fieldErrors?.specialRequests).toBeTruthy();
+      }
+      expect(mockCreate).not.toHaveBeenCalled();
+    });
+
+    it("SCRUM-13 [AC11 - Script Injection Sanitisation & React Escaping]: preserves text content safely while trim-sanitising input strings, relying on React's automatic context-aware DOM escaping to prevent script execution", async () => {
+      mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
+      mockCreate.mockResolvedValue({ id: "evt_script_test" });
+
+      const scriptPayload = "<script>alert('xss')</script>";
+      const result = await submitEventRequest({
+        ...validSubmissionInput,
+        name: scriptPayload,
+        description: scriptPayload,
+        specialRequests: scriptPayload,
+      });
+
+      expect(result.ok).toBe(true);
+      expect(mockCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            name: "<script>alert('xss')</script>",
+            description: "<script>alert('xss')</script>",
+            specialRequests: "<script>alert('xss')</script>",
+          }),
+        }),
+      );
     });
 
     it("SCRUM-13 [AC11 - Cross-Cutting / Input Constraint]: trims leading and trailing whitespace from string fields upon schema parsing", async () => {
@@ -829,6 +893,109 @@ describe("User Story 15 — Save an event request as draft", () => {
     }
     expect(mockUpdate).not.toHaveBeenCalled();
   });
+
+  it("SCRUM-15 [Throw Path / Update]: rethrows unexpected persistence errors when updating an existing draft — covers update-path exit point of createDraftEvent", async () => {
+    const dbFailure = new Error("update draft write failed");
+    mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
+    mockFindFirst.mockResolvedValue({
+      id: "evt_draft_update_fail",
+      organiserId: "usr_organiser",
+      status: "DRAFT",
+    });
+    mockUpdate.mockRejectedValueOnce(dbFailure);
+
+    await expect(
+      createDraftEvent({
+        id: "evt_draft_update_fail",
+        name: "Draft Update Infrastructure Failure",
+      }),
+    ).rejects.toThrow("update draft write failed");
+  });
+
+  it("SCRUM-15 [Throw Path / Submit Update]: rethrows unexpected persistence errors when submitting an existing draft — covers draft-update exit point of submitEventRequest", async () => {
+    const dbFailure = new Error("submit draft update failed");
+    mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
+    mockFindFirst.mockResolvedValue({
+      id: "evt_draft_throw_submit",
+      organiserId: "usr_organiser",
+      status: "DRAFT",
+      coordinatorId: null,
+    });
+    mockUpdate.mockRejectedValueOnce(dbFailure);
+
+    const submissionPayload = {
+      id: "evt_draft_throw_submit",
+      name: "Completed Resumed Event",
+      purpose: "Networking",
+      description: "Full description",
+      startAt: new Date(Date.now() + 86400000).toISOString(),
+      endAt: new Date(Date.now() + 86400000 + 7200000).toISOString(),
+      expectedAttendance: 100,
+      venueRequirements: "Auditorium",
+      preferredLayout: "Theatre",
+      accessibilityNeeds: "Ramp access",
+      equipmentRequirements: "Microphones",
+      registrationNotes: "Online registration",
+    };
+
+    await expect(
+      submitEventRequest(submissionPayload),
+    ).rejects.toThrow("submit draft update failed");
+  });
+
+  it("SCRUM-15 [AC2, AC9 - Inactive Catalogue Reference Retention]: draft saves and reopens successfully when venue or equipment fields contain references to inactive catalogue items (stored as free text, no FK constraint)", async () => {
+    mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
+    mockFindFirst.mockResolvedValue({
+      id: "evt_draft_inactive_ref",
+      organiserId: "usr_organiser",
+      status: "DRAFT",
+    });
+    mockUpdate.mockResolvedValue({ id: "evt_draft_inactive_ref" });
+
+    const result = await createDraftEvent({
+      id: "evt_draft_inactive_ref",
+      name: "Draft With Inactive Catalogue Reference",
+      venueRequirements:
+        "Grand Auditorium (Decommissioned — please update before submitting)",
+      equipmentRequirements:
+        "PA System Model X7 (Retired — please update before submitting)",
+    });
+
+    expect(result.ok).toBe(true);
+    expect(mockUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "evt_draft_inactive_ref" },
+        data: expect.objectContaining({
+          venueRequirements:
+            "Grand Auditorium (Decommissioned — please update before submitting)",
+          equipmentRequirements:
+            "PA System Model X7 (Retired — please update before submitting)",
+        }),
+      }),
+    );
+  });
+
+  it("SCRUM-15 [AC4] / SCRUM-13 [AC11 - Draft Path Input Constraint]: createDraftEvent schema enforces character limits on over-limit draft fields (name max 200, purpose max 1000, description max 5000, programme max 5000, specialRequests max 5000)", async () => {
+    mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
+
+    const result = await createDraftEvent({
+      name: "A".repeat(201),
+      purpose: "B".repeat(1001),
+      description: "C".repeat(5001),
+      programme: "D".repeat(5001),
+      specialRequests: "E".repeat(5001),
+    });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.fieldErrors?.name).toBeTruthy();
+      expect(result.fieldErrors?.purpose).toBeTruthy();
+      expect(result.fieldErrors?.description).toBeTruthy();
+      expect(result.fieldErrors?.programme).toBeTruthy();
+      expect(result.fieldErrors?.specialRequests).toBeTruthy();
+    }
+    expect(mockCreate).not.toHaveBeenCalled();
+  });
 });
 
 // ============================================================================
@@ -946,7 +1113,7 @@ describe("User Story 84 — Organiser views their own event requests", () => {
 
     expect(mockFindMany).toHaveBeenCalledWith({
       where: { organiserId: "usr_organiser_us84" },
-      orderBy: { createdAt: "desc" },
+      orderBy: { updatedAt: "desc" },
     });
     expect(events).toHaveLength(9);
   });
@@ -980,7 +1147,7 @@ describe("User Story 84 — Organiser views their own event requests", () => {
     expect(events[0].status).toBe("APPROVED");
   });
 
-  it("SCRUM-84 [AC4, AC5 - Happy Path]: retrieves full detail model when selecting a specific event request", async () => {
+  it("SCRUM-84 [AC4 - Happy Path]: retrieves full detail model when selecting a specific event request", async () => {
     const detailedDraftEvent = {
       id: "evt_draft_detail",
       name: "Draft Detail Event",
@@ -1153,7 +1320,7 @@ describe("getFormCatalogues — permission gate", () => {
   const mockVenues = prisma.venue.findMany as unknown as Mock;
   const mockEquipment = prisma.equipment.findMany as unknown as Mock;
 
-  it("returns the venue and equipment catalogue to an organiser", async () => {
+  it("SCRUM-13 [AC2 - Happy Path]: returns the venue and equipment catalogue to an organiser", async () => {
     mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
     mockVenues.mockResolvedValue([
       { id: "ven1", name: "Hall A", capacity: 200, facilities: ["projector"] },
@@ -1171,8 +1338,34 @@ describe("getFormCatalogues — permission gate", () => {
     }
   });
 
-  it.each(["ATTENDEE", "VENUE_STAFF", "TECH_SUPPORT"] as Role[])(
-    "refuses %s and never queries the catalogue",
+  it("SCRUM-13 [AC2 - Catalogue Dependencies]: queries only active venue and equipment catalogue entries", async () => {
+    mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
+    mockVenues.mockResolvedValue([]);
+    mockEquipment.mockResolvedValue([]);
+
+    const result = await getFormCatalogues();
+
+    expect(result.ok).toBe(true);
+    expect(mockVenues).toHaveBeenCalledWith({
+      where: { isActive: true },
+      select: { id: true, name: true, capacity: true, facilities: true },
+    });
+    expect(mockEquipment).toHaveBeenCalledWith({
+      where: { isActive: true },
+      select: { id: true, type: true, totalQuantity: true },
+    });
+  });
+
+  it("SCRUM-13 [AC2 - Throw Path]: rethrows unexpected catalogue lookup failures", async () => {
+    const catalogueFailure = new Error("catalogue unavailable");
+    mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
+    mockVenues.mockRejectedValueOnce(catalogueFailure);
+
+    await expect(getFormCatalogues()).rejects.toThrow("catalogue unavailable");
+  });
+
+  it.each(["ATTENDEE", "VENUE_STAFF", "TECH_SUPPORT", "COORDINATOR"] as Role[])(
+    "SCRUM-13 [AC2 - Security Gate]: refuses %s and never queries the catalogue",
     async (role) => {
       mockAuth.mockResolvedValue(sessionFor(role, `usr_${role.toLowerCase()}`));
 
@@ -1184,7 +1377,7 @@ describe("getFormCatalogues — permission gate", () => {
     },
   );
 
-  it("refuses a signed-out caller", async () => {
+  it("SCRUM-13 [AC2 - Security Gate]: refuses a signed-out caller", async () => {
     mockAuth.mockResolvedValue(null);
 
     const result = await getFormCatalogues();
@@ -1193,18 +1386,16 @@ describe("getFormCatalogues — permission gate", () => {
     expect(mockVenues).not.toHaveBeenCalled();
   });
 
-  // Coverage note: the catch block here only special-cases PermissionError.
-  // requirePermission itself never throws anything else today, so this
-  // forces that (otherwise unreachable) branch to prove the rethrow is
-  // real, not just untested dead code that quietly swallows every error.
-  it("[Exit path] rethrows an unexpected (non-permission) error instead of swallowing it", async () => {
+  // Coverage note: the catch block only special-cases PermissionError.
+  // This forces a non-permission error to prove it is rethrown.
+  it("SCRUM-13 [AC2 - Throw Path]: rethrows unexpected permission-gate failures", async () => {
     mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
     (requirePermission as unknown as Mock).mockImplementationOnce(() => {
-      throw new Error("Unexpected auth failure");
+      throw new Error("permission dependency failed");
     });
 
     await expect(getFormCatalogues()).rejects.toThrow(
-      "Unexpected auth failure",
+      "permission dependency failed",
     );
   });
 });
