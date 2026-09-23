@@ -20,7 +20,8 @@ As an Event Organiser, I want to submit my completed event request, so that an E
 
 Acceptance Criteria:
 
-* Given all required fields are filled, when the Organiser submits, then the request's status changes to "submitted" and it becomes visible to Event Coordinators
+* Given all required fields are filled, when the Organiser submits, then the request's status changes to "submitted" and becomes visible to Event Coordinators. If a Coordinator account exists, SCRUM-20's auto-assignment immediately advances the same request to "under review" in the same action; if none exists, it stays "submitted" (see SCRUM-20).
+payload written
 * Given required fields are missing, when the Organiser tries to submit, then submission is blocked and the missing fields are indicated
 * Given a request has already been submitted, when the Organiser submits it again, then no second request is created, the status stays "submitted", and no additional notification is sent to Coordinators
 * Once submitted, the request can no longer be edited as a draft (see "Update routine event information during planning" for authorised edits after submission)
