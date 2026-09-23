@@ -119,8 +119,7 @@ export function EquipmentSchedulePanel({
               </div>
 
               <p className="mt-1 text-muted-foreground">
-                {formatDateTime(entry.startAt.toISOString())} →{" "}
-                {formatDateTime(entry.endAt.toISOString())}
+                {formatDateTime(entry.startAt)} → {formatDateTime(entry.endAt)}
               </p>
 
               {entry.note && (
