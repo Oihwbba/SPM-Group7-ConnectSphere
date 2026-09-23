@@ -1092,6 +1092,10 @@ test.describe("SCRUM-17 — Coordinator reviews a submitted request's full detai
     const modal = page.getByRole("dialog");
     await expect(modal.getByRole("heading", { name: eventName })).toBeVisible();
     await expect(modal.getByText("Showcase the department's annual research output.")).toBeVisible();
+    // Dates: event defaults to Asia/Singapore (+08:00) since no timezone was
+    // set on create, so 02:00Z/10:00Z become 10:00 am / 6:00 pm local.
+    await expect(modal.getByText("1 Aug 2031, 10:00 am")).toBeVisible();
+    await expect(modal.getByText("1 Aug 2031, 6:00 pm")).toBeVisible();
     await expect(modal.getByText("120 attendees")).toBeVisible();
     await expect(modal.getByText("Auditorium with a raised stage.")).toBeVisible();
     await expect(modal.getByText("Wheelchair-accessible entrance and seating.")).toBeVisible();
