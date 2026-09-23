@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-09-21. Jira is the source of truth.
+     Synced from Jira on 2026-09-23. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-51 - Track Booking Request Status
@@ -16,10 +16,10 @@
 
 ---
 
-**User Story**
+User Story
 As an Event Coordinator, I want to view the status of my submitted booking requests, so that I can track progress and plan accordingly.
 
-**Acceptance Criteria**
+Acceptance Criteria
 
 * Coordinator can view a list of their requests with current status.
 * Selecting a request shows full submitted details and, if applicable, Venue Staff's response.

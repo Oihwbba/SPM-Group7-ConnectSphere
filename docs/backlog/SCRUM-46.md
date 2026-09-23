@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-09-21. Jira is the source of truth.
+     Synced from Jira on 2026-09-23. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-46 - User is notified on coordinator assignment
@@ -21,5 +21,6 @@ As a user, I want to receive a notification when a coordinator is assigned to an
 Acceptance Criteria:
 
 * Given a Coordinator is assigned to an event, when the assignment is saved, then a notification is sent to the Organiser and the assigned Coordinator.
+
 
 Note: previously also covered venue booking decisions, duplicating "Notify Coordinator of Booking Outcome" (SCRUM-54) entirely — that bullet removed 2026-09-06 during the full backlog synthesis; SCRUM-54 is the sole owner of that notification.

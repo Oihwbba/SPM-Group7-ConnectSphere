@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-09-21. Jira is the source of truth.
+     Synced from Jira on 2026-09-23. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-110 - Define event confirmation readiness
@@ -11,19 +11,19 @@
 | **Priority** | Highest |
 | **Story points** | 2 |
 | **Status in Jira** | To Do |
-| **Sprint** | Backlog |
+| **Sprint** | SCRUM Sprint 2 |
 | **Jira** | https://smu-spm-group7.atlassian.net/browse/SCRUM-110 |
 
 ---
 
-**Cross-cutting business rule — Event Confirmation Readiness**
+Cross-cutting business rule — Event Confirmation Readiness
 
 This story defines the conditions under which a Planning event is considered ready for confirmation. It does not perform venue or equipment booking itself.
 
-**Acceptance Criteria:**
+Acceptance Criteria:
 
-* A Planning event is confirmation-ready only when an **approved venue booking** exists.
-* If the event has an equipment request, a **confirmed equipment reservation** must also exist.
+* A Planning event is confirmation-ready only when an approved venue booking exists.
+* If the event has an equipment request, a confirmed equipment reservation must also exist.
 * If no equipment is requested, equipment does not block confirmation.
 * A rejected venue booking or unconfirmed required equipment reservation means the event is not confirmation-ready.
 * Release-1 treats a venue booking as an essential arrangement even when the Organiser did not specify a detailed venue requirement.
@@ -32,6 +32,7 @@ This story defines the conditions under which a Planning event is considered rea
 * SCRUM-81 consumes this readiness rule and owns the Planning → Confirmed status transition.
 * The readiness rule is the single authoritative definition; other stories must not introduce a conflicting confirmation gate.
 
-**Business decision:** Approval means sufficient information to begin planning; Confirmation means essential arrangements are complete.
+
+Business decision: Approval means sufficient information to begin planning; Confirmation means essential arrangements are complete.
 
 Functionality Area: Event Status Management
