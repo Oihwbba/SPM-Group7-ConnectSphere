@@ -177,4 +177,30 @@ describe("getEquipmentSchedule — SCRUM-30", () => {
     db.equipment.findFirst.mockResolvedValue(null);
     expect((await getEquipmentSchedule(input)).ok).toBe(false);
   });
+
+  it("rejects a malformed request with field errors and reads nothing", async () => {
+    const result = await getEquipmentSchedule({ equipmentId: "", from: "" });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.fieldErrors?.equipmentId).toBeTruthy();
+      expect(result.fieldErrors?.from).toBeTruthy();
+    }
+    expect(db.equipment.findFirst).not.toHaveBeenCalled();
+  });
+
+  // The schema only checks `from` is non-empty, so a string that is not a date
+  // has to be caught after parsing or `endAt > Invalid Date` would match nothing.
+  it("rejects a `from` that is not a date", async () => {
+    const result = await getEquipmentSchedule({ ...input, from: "not-a-date" });
+
+    expect(result.ok).toBe(false);
+    expect(db.equipment.findFirst).not.toHaveBeenCalled();
+  });
+
+  it("rethrows a non-permission failure instead of reporting it as a refusal", async () => {
+    db.equipment.findFirst.mockRejectedValue(new Error("connection lost"));
+
+    await expect(getEquipmentSchedule(input)).rejects.toThrow("connection lost");
+  });
 });

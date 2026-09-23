@@ -181,17 +181,110 @@ test.describe("SCRUM-30 — View Equipment Conflicts", () => {
     await expect(schedule.getByTestId("schedule-entry").first()).toBeVisible();
   });
 
+  // The cases below need commitments of a known shape, so they use their own
+  // throwaway equipment row rather than mutating seeded data: deleting the
+  // seeded mic reservations would leave "Confirmed — Charity Gala" with no
+  // equipment for every later run and for the sprint demo.
+  const SPARE = "eqp_e2e_conflicts";
+
+  async function spareEquipment(commitments: { from: number; to: number }[]) {
+    await prisma.equipment.upsert({
+      where: { id: SPARE },
+      update: { isActive: true },
+      create: {
+        id: SPARE,
+        type: "E2E Conflict Rig",
+        totalQuantity: 4,
+        isActive: true,
+      },
+    });
+    await prisma.reservation.deleteMany({ where: { equipmentId: SPARE } });
+    const day = new Date();
+    day.setUTCDate(day.getUTCDate() + 40);
+    for (const [index, slot] of commitments.entries()) {
+      const startAt = new Date(day);
+      startAt.setUTCHours(slot.from, 0, 0, 0);
+      const endAt = new Date(day);
+      endAt.setUTCHours(slot.to, 0, 0, 0);
+      await prisma.reservation.create({
+        data: {
+          id: `${SPARE}_res_${index}`,
+          eventId: "evt_approved",
+          equipmentId: SPARE,
+          quantity: 1,
+          startAt,
+          endAt,
+          reservedById: "usr_techsupport",
+          status: "CONFIRMED",
+        },
+      });
+    }
+  }
+
+  async function removeSpareEquipment() {
+    await prisma.reservation.deleteMany({ where: { equipmentId: SPARE } });
+    await prisma.equipment.deleteMany({ where: { id: SPARE } });
+  }
+
+  test.afterEach(async () => {
+    if (!usesLocalDatabase) return;
+    await removeSpareEquipment();
+  });
+
+  test("AC 2 & 4: two reservations that share time are flagged as conflicting", async ({
+    page,
+  }) => {
+    test.skip(!usesLocalDatabase, "writes its own equipment; local database only");
+    await spareEquipment([
+      { from: 9, to: 13 },
+      { from: 11, to: 15 },
+    ]);
+
+    await signInAsTechSupport(page);
+    await page.getByLabel("Equipment type").selectOption({ value: SPARE });
+
+    const schedule = page.getByTestId("equipment-schedule");
+    await expect(schedule).toBeVisible();
+    await expect(schedule.getByTestId("schedule-conflict-count")).toContainText(
+      "2 overlapping",
+    );
+    await expect(
+      schedule.locator('[data-testid="schedule-entry"][data-conflict="true"]'),
+    ).toHaveCount(2);
+    await expect(schedule).toContainText("Overlaps 1 other commitment(s)");
+  });
+
+  test("AC 3: back-to-back reservations are adjacent and are not flagged", async ({
+    page,
+  }) => {
+    test.skip(!usesLocalDatabase, "writes its own equipment; local database only");
+    await spareEquipment([
+      { from: 9, to: 13 },
+      { from: 13, to: 17 },
+    ]);
+
+    await signInAsTechSupport(page);
+    await page.getByLabel("Equipment type").selectOption({ value: SPARE });
+
+    const schedule = page.getByTestId("equipment-schedule");
+    await expect(schedule).toBeVisible();
+    await expect(schedule.getByTestId("schedule-entry")).toHaveCount(2);
+    await expect(
+      schedule.locator('[data-testid="schedule-entry"][data-conflict="true"]'),
+    ).toHaveCount(0);
+    await expect(
+      schedule.getByTestId("schedule-conflict-count"),
+    ).toHaveCount(0);
+  });
+
   test("AC 6: an item with nothing committed says so instead of showing an empty list", async ({
     page,
   }) => {
-    test.skip(!usesLocalDatabase, "clears commitments; local database only");
-    await prisma.reservation.deleteMany({ where: { equipmentId: "eqp_mic" } });
-    await prisma.equipmentUnavailability.deleteMany({
-      where: { equipmentId: "eqp_mic" },
-    });
+    test.skip(!usesLocalDatabase, "writes its own equipment; local database only");
+    await spareEquipment([]);
 
     await signInAsTechSupport(page);
-    await page.getByLabel("Equipment type").selectOption({ value: "eqp_mic" });
+    await page.getByLabel("Equipment type").selectOption({ value: SPARE });
 
     await expect(page.getByTestId("schedule-fully-available")).toContainText(
       "nothing is reserved or out of service",
