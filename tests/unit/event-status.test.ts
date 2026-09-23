@@ -284,6 +284,18 @@ describe("transitionEventStatus — SCRUM-24 single guarded gate", () => {
     expect(mockFindUnique).not.toHaveBeenCalled();
     expect(tx.event.updateMany).not.toHaveBeenCalled();
   });
+
+  // Coverage note: the catch block only special-cases PermissionError —
+  // everything else (e.g. a real DB failure reading the event) must
+  // propagate, not be swallowed into a friendly ActionResult.
+  it("[Exit path] rethrows an unexpected (non-permission) error instead of swallowing it", async () => {
+    mockAuth.mockResolvedValue(sessionFor("COORDINATOR", "usr_coord"));
+    mockFindUnique.mockRejectedValueOnce(new Error("DB unavailable"));
+
+    await expect(
+      transitionEventStatus({ eventId: "evt1", nextStatus: "APPROVED" }),
+    ).rejects.toThrow("DB unavailable");
+  });
 });
 
 describe("submitEventRequest — SCRUM-19/24 rejected → submitted", () => {
