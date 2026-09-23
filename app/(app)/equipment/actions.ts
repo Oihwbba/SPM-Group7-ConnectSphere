@@ -8,17 +8,14 @@ import { err, ok, type ActionResult } from "@/lib/action-result";
 import { requirePermission, PermissionError } from "@/lib/auth/can";
 import { prisma } from "@/lib/db";
 import {
-  checkQuantity,
   markConflicts,
   sortSchedule,
   summariseAvailability,
-  type AvailabilityVerdict,
   type MarkedScheduleEntry,
   type ScheduleEntry,
 } from "@/lib/equipment/availability";
 import {
   allAvailabilitySchema,
-  availabilityCheckSchema,
   availabilitySchema,
   equipmentScheduleSchema,
   reservationSchema,
@@ -158,46 +155,6 @@ export async function getEquipmentAvailability(
     return availability
       ? ok(availability)
       : err("Equipment type is unavailable.");
-  } catch (error) {
-    if (error instanceof PermissionError) return err(error.message);
-    throw error;
-  }
-}
-
-/**
- * SCRUM-29 — "can we fulfil this?", answered on both sides.
- *
- * A sufficient check reports what is free and is safe to proceed to
- * reservation; an insufficient one reports the shortfall. An invalid check
- * (zero, negative or fractional quantity, or an end at or before the start)
- * is refused by the schema and produces no result at all.
- *
- * This only reports. `createReservation` re-checks under a row lock, because
- * anything read here can be taken by someone else before the reservation is
- * written.
- */
-export async function checkAvailability(
-  input: unknown,
-): Promise<ActionResult<AvailabilityVerdict>> {
-  const session = await auth();
-  try {
-    requirePermission(session?.user, "equipment:read");
-    const parsed = availabilityCheckSchema.safeParse(input);
-    if (!parsed.success)
-      return err(
-        "Enter a valid availability check.",
-        parsed.error.flatten().fieldErrors,
-      );
-
-    const availability = await availabilityForPeriod(
-      prisma,
-      parsed.data.equipmentId,
-      new Date(parsed.data.startAt),
-      new Date(parsed.data.endAt),
-    );
-    if (!availability) return err("Equipment type is unavailable.");
-
-    return ok(checkQuantity(availability, parsed.data.quantity));
   } catch (error) {
     if (error instanceof PermissionError) return err(error.message);
     throw error;

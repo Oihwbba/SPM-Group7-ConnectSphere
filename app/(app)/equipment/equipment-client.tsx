@@ -35,6 +35,7 @@ import {
 } from "./actions";
 import { EquipmentSchedulePanel } from "./equipment-schedule-panel";
 import { allAvailabilitySchema } from "@/lib/schemas/reservation";
+import { checkQuantity } from "@/lib/equipment/availability";
 import {
   formatDate,
   formatDateTime,
@@ -389,7 +390,24 @@ export function EquipmentClient({
 
   const reqQty = parseInt(form.quantity || "1", 10);
   const isQuantityValid = !Number.isNaN(reqQty) && reqQty > 0;
-  const isQuantityExceeded = availability !== null && isQuantityValid && reqQty > availability;
+
+  // SCRUM-29 — the verdict comes from the same function the server reserves
+  // with, so the shortfall shown here is the one the reservation would report.
+  const verdict =
+    availability !== null && isQuantityValid
+      ? checkQuantity(
+          {
+            total: selectedEquipment?.totalQuantity ?? availability,
+            available: availability,
+            committed: Math.max(
+              0,
+              (selectedEquipment?.totalQuantity ?? availability) - availability,
+            ),
+          },
+          reqQty,
+        )
+      : null;
+  const isQuantityExceeded = verdict !== null && !verdict.sufficient;
 
   return (
     <div className="space-y-6" data-hydrated={isHydrated}>
@@ -761,7 +779,7 @@ export function EquipmentClient({
                           : !isQuantityValid
                           ? "Enter a quantity of at least 1."
                           : isQuantityExceeded
-                          ? `Requested quantity (${reqQty}) exceeds availability (${availability} unit(s) available for this period).`
+                          ? `Requested quantity (${reqQty}) exceeds availability (${availability} unit(s) available for this period) — ${verdict?.shortfall} short.`
                           : `Your requested quantity is available (${availability} unit(s) available for this period).`}
                       </p>
                     </div>

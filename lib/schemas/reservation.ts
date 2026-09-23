@@ -75,22 +75,6 @@ export const allAvailabilitySchema = z
   .superRefine(validatePeriod);
 
 /**
- * SCRUM-29 — checking whether a quantity can be fulfilled. Unlike
- * `availabilitySchema` this carries the quantity, because the criterion
- * "reports the shortfall" cannot be answered without knowing what was asked
- * for. Zero, a negative, a fraction, or an end at or before the start are all
- * rejected here, so no result is produced for an invalid check.
- */
-export const availabilityCheckSchema = z
-  .object({
-    equipmentId: reservationFields.equipmentId,
-    quantity: reservationFields.quantity,
-    startAt: reservationFields.startAt,
-    endAt: reservationFields.endAt,
-  })
-  .superRefine(validatePeriod);
-
-/**
  * SCRUM-30 — an equipment item's schedule. `from` is the point the schedule
  * is read from, so that "all current and future reservations" excludes ones
  * that finished before it.

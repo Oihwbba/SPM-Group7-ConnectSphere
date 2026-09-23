@@ -3,13 +3,10 @@ import type { Session } from "next-auth";
 import type { Role } from "@prisma/client";
 
 import { auth } from "@/auth";
-import {
-  checkAvailability,
-  getEquipmentSchedule,
-} from "@/app/(app)/equipment/actions";
+import { getEquipmentSchedule } from "@/app/(app)/equipment/actions";
 
-// SCRUM-29 (check availability) and SCRUM-30 (view conflicts). Database
-// mocked; the arithmetic itself is pinned in equipment-availability.test.ts.
+// SCRUM-30 — view what an equipment item is committed to. Database mocked;
+// the overlap and pool arithmetic is pinned in equipment-availability.test.ts.
 const db = vi.hoisted(() => ({
   equipment: { findFirst: vi.fn(), findMany: vi.fn() },
   reservation: { findMany: vi.fn(), create: vi.fn() },
@@ -42,116 +39,6 @@ beforeEach(() => {
   });
   db.reservation.findMany.mockResolvedValue([]);
   db.equipmentUnavailability.findMany.mockResolvedValue([]);
-});
-
-describe("checkAvailability — SCRUM-29", () => {
-  const input = {
-    equipmentId: "eq1",
-    quantity: 4,
-    startAt: START,
-    endAt: END,
-  };
-
-  it("AC 1 & 2: reports the free quantity and that a fitting request may proceed", async () => {
-    db.reservation.findMany.mockResolvedValue([
-      { startAt: new Date(START), endAt: new Date(END), quantity: 6 },
-    ]);
-
-    const result = await checkAvailability(input);
-
-    expect(result.ok).toBe(true);
-    if (result.ok) {
-      expect(result.data).toMatchObject({
-        total: 10,
-        available: 4,
-        requested: 4,
-        sufficient: true,
-        shortfall: 0,
-      });
-    }
-  });
-
-  it("AC 3: reports the shortfall when the request exceeds what is free", async () => {
-    db.reservation.findMany.mockResolvedValue([
-      { startAt: new Date(START), endAt: new Date(END), quantity: 8 },
-    ]);
-
-    const result = await checkAvailability(input);
-
-    expect(result.ok).toBe(true);
-    if (result.ok) {
-      expect(result.data).toMatchObject({
-        available: 2,
-        requested: 4,
-        sufficient: false,
-        shortfall: 2,
-      });
-    }
-  });
-
-  it("AC 4 & 6: counts overlapping reservations and maintenance against the pool", async () => {
-    db.reservation.findMany.mockResolvedValue([
-      { startAt: new Date(START), endAt: new Date(END), quantity: 3 },
-    ]);
-    db.equipmentUnavailability.findMany.mockResolvedValue([
-      { startAt: new Date(START), endAt: new Date(END), quantity: 5 },
-    ]);
-
-    const result = await checkAvailability(input);
-
-    if (result.ok) expect(result.data.available).toBe(2);
-    // Maintenance is filtered by period, not by reason: every reason takes
-    // units out of the pool.
-    expect(db.equipmentUnavailability.findMany).toHaveBeenCalledWith({
-      where: {
-        equipmentId: "eq1",
-        startAt: { lt: new Date(END) },
-        endAt: { gt: new Date(START) },
-      },
-      select: { startAt: true, endAt: true, quantity: true },
-    });
-  });
-
-  it("AC 5: a reservation that ends exactly when the period starts leaves the pool free", async () => {
-    db.reservation.findMany.mockResolvedValue([]);
-
-    const result = await checkAvailability(input);
-
-    if (result.ok) expect(result.data.available).toBe(10);
-    expect(db.reservation.findMany).toHaveBeenCalledWith({
-      where: {
-        equipmentId: "eq1",
-        status: "CONFIRMED",
-        // endAt > START excludes a reservation ending exactly at START.
-        startAt: { lt: new Date(END) },
-        endAt: { gt: new Date(START) },
-      },
-      select: { startAt: true, endAt: true, quantity: true },
-    });
-  });
-
-  // AC 7 — an invalid check produces no result at all, not a zero result.
-  it.each([
-    ["zero", { quantity: 0 }],
-    ["negative", { quantity: -3 }],
-    ["fractional", { quantity: 2.5 }],
-    ["an end before the start", { startAt: END, endAt: START }],
-    ["an end equal to the start", { startAt: START, endAt: START }],
-  ])("AC 7: rejects %s and reads nothing", async (_label, override) => {
-    const result = await checkAvailability({ ...input, ...override });
-
-    expect(result.ok).toBe(false);
-    expect(db.equipment.findFirst).not.toHaveBeenCalled();
-  });
-
-  it("refuses a role without equipment:read", async () => {
-    mockAuth.mockResolvedValue(sessionFor("ATTENDEE", "usr_attendee"));
-
-    const result = await checkAvailability(input);
-
-    expect(result.ok).toBe(false);
-    expect(db.equipment.findFirst).not.toHaveBeenCalled();
-  });
 });
 
 describe("getEquipmentSchedule — SCRUM-30", () => {
