@@ -838,6 +838,56 @@ describe("User Story 15 — Save an event request as draft", () => {
     );
   });
 
+  it("SCRUM-15 [AC1, AC2 - Data retention]: a new draft saved with both proposed dates persists them as UTC instants", async () => {
+    mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
+    mockCreate.mockResolvedValue({ id: "evt_draft_dated" });
+
+    const result = await createDraftEvent({
+      name: "Dated Draft",
+      startAt: futureStart,
+      endAt: futureEnd,
+    });
+
+    expect(result).toEqual({ ok: true, data: { id: "evt_draft_dated" } });
+    expect(mockCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          status: "DRAFT",
+          startAt: new Date(futureStart),
+          endAt: new Date(futureEnd),
+        }),
+      }),
+    );
+  });
+
+  it("SCRUM-15 [AC2, AC7 - Data retention on re-save]: updating a draft with only an end date persists that end and leaves the start empty", async () => {
+    mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
+    mockFindFirst.mockResolvedValue({
+      id: "evt_draft_end_only",
+      organiserId: "usr_organiser",
+      status: "DRAFT",
+    });
+    mockUpdate.mockResolvedValue({ id: "evt_draft_end_only" });
+
+    const result = await createDraftEvent({
+      id: "evt_draft_end_only",
+      name: "End Only Draft",
+      endAt: futureEnd,
+    });
+
+    expect(result).toEqual({ ok: true, data: { id: "evt_draft_end_only" } });
+    expect(mockCreate).not.toHaveBeenCalled();
+    expect(mockUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "evt_draft_end_only" },
+        data: expect.objectContaining({
+          startAt: null,
+          endAt: new Date(futureEnd),
+        }),
+      }),
+    );
+  });
+
   it("SCRUM-15 [AC5 - State Transition]: transitions draft status from DRAFT to SUBMITTED when draft is fully completed and submitted", async () => {
     mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
     mockFindFirst.mockResolvedValue({
