@@ -15,8 +15,8 @@ import {
 const tx = vi.hoisted(() => ({
   event: { findFirst: vi.fn() },
   equipment: { findFirst: vi.fn(), findMany: vi.fn() },
-  reservation: { aggregate: vi.fn(), create: vi.fn(), groupBy: vi.fn() },
-  equipmentUnavailability: { aggregate: vi.fn(), groupBy: vi.fn() },
+  reservation: { findMany: vi.fn(), create: vi.fn() },
+  equipmentUnavailability: { findMany: vi.fn() },
   $queryRaw: vi.fn(),
 }));
 
@@ -53,15 +53,22 @@ const validInput = {
   endAt: END,
 };
 
-/** A pool of 10 with 3 already reserved and 2 under maintenance → 5 available. */
+/**
+ * A pool of 10 with 3 already reserved and 2 under maintenance → 5 available.
+ * Both rows span the whole requested period, so the busiest instant commits
+ * all five. Availability is computed from rows rather than a SQL sum, because
+ * a counted pool's answer is its peak — see lib/equipment/availability.ts.
+ */
 function poolWithFiveAvailable() {
   tx.event.findFirst.mockResolvedValue({ id: "evt_approved" });
   tx.$queryRaw.mockResolvedValue([{ id: "eq1" }]);
   tx.equipment.findFirst.mockResolvedValue({ totalQuantity: 10 });
-  tx.reservation.aggregate.mockResolvedValue({ _sum: { quantity: 3 } });
-  tx.equipmentUnavailability.aggregate.mockResolvedValue({
-    _sum: { quantity: 2 },
-  });
+  tx.reservation.findMany.mockResolvedValue([
+    { startAt: new Date(START), endAt: new Date(END), quantity: 3 },
+  ]);
+  tx.equipmentUnavailability.findMany.mockResolvedValue([
+    { startAt: new Date(START), endAt: new Date(END), quantity: 2 },
+  ]);
   tx.reservation.create.mockResolvedValue({ id: "res1" });
 }
 
@@ -110,7 +117,7 @@ describe("createReservation — SCRUM-31", () => {
     await createReservation(validInput);
 
     const lockedAt = tx.$queryRaw.mock.invocationCallOrder[0];
-    const countedAt = tx.reservation.aggregate.mock.invocationCallOrder[0];
+    const countedAt = tx.reservation.findMany.mock.invocationCallOrder[0];
     expect(lockedAt).toBeLessThan(countedAt);
   });
 
@@ -240,31 +247,42 @@ describe("getEquipmentAvailability — SCRUM-31", () => {
 
     const result = await getEquipmentAvailability(validInput);
 
-    expect(result).toEqual({ ok: true, data: { available: 5, total: 10 } });
+    // `committed` is the peak the pool carries during the period (3 reserved
+    // + 2 under maintenance), which is what the 5 is derived from.
+    expect(result).toEqual({
+      ok: true,
+      data: { available: 5, total: 10, committed: 5 },
+    });
   });
 
-  it("SCRUM-31 [AC7]: treats missing reservation and maintenance sums as zero", async () => {
+  it("SCRUM-31 [AC7]: treats missing reservations and maintenance as zero", async () => {
     poolWithFiveAvailable();
-    tx.reservation.aggregate.mockResolvedValue({ _sum: { quantity: null } });
-    tx.equipmentUnavailability.aggregate.mockResolvedValue({
-      _sum: { quantity: null },
-    });
+    tx.reservation.findMany.mockResolvedValue([]);
+    tx.equipmentUnavailability.findMany.mockResolvedValue([]);
 
     const result = await getEquipmentAvailability(validInput);
 
-    expect(result).toEqual({ ok: true, data: { available: 10, total: 10 } });
+    expect(result).toEqual({
+      ok: true,
+      data: { available: 10, total: 10, committed: 0 },
+    });
   });
 
   it("SCRUM-31 [AC7]: floors availability at zero when reservations and maintenance exceed the pool", async () => {
     poolWithFiveAvailable();
-    tx.reservation.aggregate.mockResolvedValue({ _sum: { quantity: 8 } });
-    tx.equipmentUnavailability.aggregate.mockResolvedValue({
-      _sum: { quantity: 5 },
-    });
+    tx.reservation.findMany.mockResolvedValue([
+      { startAt: new Date(START), endAt: new Date(END), quantity: 8 },
+    ]);
+    tx.equipmentUnavailability.findMany.mockResolvedValue([
+      { startAt: new Date(START), endAt: new Date(END), quantity: 5 },
+    ]);
 
     const result = await getEquipmentAvailability(validInput);
 
-    expect(result).toEqual({ ok: true, data: { available: 0, total: 10 } });
+    expect(result).toEqual({
+      ok: true,
+      data: { available: 0, total: 10, committed: 13 },
+    });
   });
 
   it("SCRUM-31 [AC7]: returns unavailable when the equipment type is inactive", async () => {
@@ -308,14 +326,14 @@ describe("getEquipmentAvailability — SCRUM-31", () => {
 
     // startAt < requestedEnd AND endAt > requestedStart: a reservation ending
     // exactly at START (endAt == START) fails `gt`, so it is not counted.
-    expect(tx.reservation.aggregate).toHaveBeenCalledWith({
+    expect(tx.reservation.findMany).toHaveBeenCalledWith({
       where: {
         equipmentId: "eq1",
         status: "CONFIRMED",
         startAt: { lt: new Date(END) },
         endAt: { gt: new Date(START) },
       },
-      _sum: { quantity: true },
+      select: { startAt: true, endAt: true, quantity: true },
     });
   });
 
@@ -345,11 +363,21 @@ describe("getAllEquipmentAvailability — SCRUM-31", () => {
       { id: "eq1", type: "Lectern", totalQuantity: 10 },
       { id: "eq2", type: "Projector", totalQuantity: 5 },
     ]);
-    tx.reservation.groupBy.mockResolvedValue([
-      { equipmentId: "eq1", _sum: { quantity: 2 } },
+    tx.reservation.findMany.mockResolvedValue([
+      {
+        equipmentId: "eq1",
+        startAt: new Date(START),
+        endAt: new Date(END),
+        quantity: 2,
+      },
     ]);
-    tx.equipmentUnavailability.groupBy.mockResolvedValue([
-      { equipmentId: "eq1", _sum: { quantity: 1 } },
+    tx.equipmentUnavailability.findMany.mockResolvedValue([
+      {
+        equipmentId: "eq1",
+        startAt: new Date(START),
+        endAt: new Date(END),
+        quantity: 1,
+      },
     ]);
 
     const result = await getAllEquipmentAvailability({
@@ -368,19 +396,27 @@ describe("getAllEquipmentAvailability — SCRUM-31", () => {
     }
   });
 
-  it("SCRUM-31 [AC7]: treats missing grouped sums as zero and caps availability at zero", async () => {
+  it("SCRUM-31 [AC7]: treats missing rows as zero and caps availability at zero", async () => {
     mockAuth.mockResolvedValue(sessionFor("TECH_SUPPORT", "usr_tech"));
     tx.equipment.findMany.mockResolvedValue([
       { id: "eq1", type: "Lectern", totalQuantity: 2 },
       { id: "eq2", type: "Projector", totalQuantity: 5 },
     ]);
-    tx.reservation.groupBy.mockResolvedValue([
-      { equipmentId: "eq1", _sum: { quantity: null } },
-      { equipmentId: "eq2", _sum: { quantity: 7 } },
+    tx.reservation.findMany.mockResolvedValue([
+      {
+        equipmentId: "eq2",
+        startAt: new Date(START),
+        endAt: new Date(END),
+        quantity: 7,
+      },
     ]);
-    tx.equipmentUnavailability.groupBy.mockResolvedValue([
-      { equipmentId: "eq1", _sum: { quantity: null } },
-      { equipmentId: "eq2", _sum: { quantity: 1 } },
+    tx.equipmentUnavailability.findMany.mockResolvedValue([
+      {
+        equipmentId: "eq2",
+        startAt: new Date(START),
+        endAt: new Date(END),
+        quantity: 1,
+      },
     ]);
 
     const result = await getAllEquipmentAvailability({
@@ -391,7 +427,9 @@ describe("getAllEquipmentAvailability — SCRUM-31", () => {
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.data.eq1.available).toBe(2);
+      expect(result.data.eq1.committed).toBe(0);
       expect(result.data.eq2.available).toBe(0);
+      expect(result.data.eq2.committed).toBe(8);
     }
   });
 
