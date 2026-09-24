@@ -33,7 +33,9 @@ import {
   createReservation,
   getAllEquipmentAvailability,
 } from "./actions";
+import { EquipmentSchedulePanel } from "./equipment-schedule-panel";
 import { allAvailabilitySchema } from "@/lib/schemas/reservation";
+import { checkQuantity } from "@/lib/equipment/availability";
 import {
   formatDate,
   formatDateTime,
@@ -147,6 +149,7 @@ export function EquipmentClient({
     form.equipmentId && allAvailability?.[form.equipmentId]
       ? allAvailability[form.equipmentId].available
       : null;
+  const [scheduleRefresh, setScheduleRefresh] = useState(0);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[] | undefined>>({});
   const [pending, startTransition] = useTransition();
   const requestIdRef = useRef(0);
@@ -312,6 +315,11 @@ export function EquipmentClient({
         toast.success(
           `Reservation confirmed. ${result.data.available} unit(s) remain available.`,
         );
+        // SCRUM-30: the reservation just made is a new commitment, so the
+        // schedule beside this form is now out of date. Bumping this remounts
+        // the panel, which refetches — otherwise the whole point of the panel
+        // fails at exactly the moment someone looks at it.
+        setScheduleRefresh((n) => n + 1);
 
         // Refresh live availability map (shared error handling with the effect)
         try {
@@ -388,7 +396,24 @@ export function EquipmentClient({
 
   const reqQty = parseInt(form.quantity || "1", 10);
   const isQuantityValid = !Number.isNaN(reqQty) && reqQty > 0;
-  const isQuantityExceeded = availability !== null && isQuantityValid && reqQty > availability;
+
+  // SCRUM-29 — the verdict comes from the same function the server reserves
+  // with, so the shortfall shown here is the one the reservation would report.
+  const verdict =
+    availability !== null && isQuantityValid
+      ? checkQuantity(
+          {
+            total: selectedEquipment?.totalQuantity ?? availability,
+            available: availability,
+            committed: Math.max(
+              0,
+              (selectedEquipment?.totalQuantity ?? availability) - availability,
+            ),
+          },
+          reqQty,
+        )
+      : null;
+  const isQuantityExceeded = verdict !== null && !verdict.sufficient;
 
   return (
     <div className="space-y-6" data-hydrated={isHydrated}>
@@ -760,7 +785,7 @@ export function EquipmentClient({
                           : !isQuantityValid
                           ? "Enter a quantity of at least 1."
                           : isQuantityExceeded
-                          ? `Requested quantity (${reqQty}) exceeds availability (${availability} unit(s) available for this period).`
+                          ? `Requested quantity (${reqQty}) exceeds availability (${availability} unit(s) available for this period) — ${verdict?.shortfall} short.`
                           : `Your requested quantity is available (${availability} unit(s) available for this period).`}
                       </p>
                     </div>
@@ -772,6 +797,16 @@ export function EquipmentClient({
             <div className="rounded-xl border border-dashed p-4 text-center text-xs text-muted-foreground bg-muted/20">
               Select an equipment type above to view detailed availability metrics.
             </div>
+          )}
+
+          {/* SCRUM-30 — what this item is already committed to, and where
+              those commitments collide. */}
+          {selectedEquipment && (
+            <EquipmentSchedulePanel
+              key={`${selectedEquipment.id}:${scheduleRefresh}`}
+              equipmentId={selectedEquipment.id}
+              equipmentType={selectedEquipment.type}
+            />
           )}
 
           {/* Grid of Other Equipment */}

@@ -8,13 +8,29 @@ import { err, ok, type ActionResult } from "@/lib/action-result";
 import { requirePermission, PermissionError } from "@/lib/auth/can";
 import { prisma } from "@/lib/db";
 import {
+  markConflicts,
+  sortSchedule,
+  summariseAvailability,
+  type MarkedScheduleEntry,
+  type ScheduleEntry,
+} from "@/lib/equipment/availability";
+import {
   allAvailabilitySchema,
   availabilitySchema,
+  equipmentScheduleSchema,
   reservationSchema,
 } from "@/lib/schemas/reservation";
 
-type Availability = { available: number; total: number };
+type Availability = { available: number; total: number; committed: number };
 
+/**
+ * SCRUM-29 — what is free for the whole period.
+ *
+ * The rows are read and weighed with `summariseAvailability` rather than
+ * summed in SQL: the pool is counted, so the answer is the busiest instant,
+ * not the total of everything that touches the window. See
+ * lib/equipment/availability.ts for why.
+ */
 async function availabilityForPeriod(
   db: typeof prisma | Prisma.TransactionClient,
   equipmentId: string,
@@ -28,26 +44,25 @@ async function availabilityForPeriod(
   if (!equipment) return null;
 
   const overlapping = { startAt: { lt: endAt }, endAt: { gt: startAt } };
-  const [reserved, unavailable] = await Promise.all([
-    db.reservation.aggregate({
+  const select = { startAt: true, endAt: true, quantity: true } as const;
+  const [reservations, unavailability] = await Promise.all([
+    db.reservation.findMany({
       where: { equipmentId, status: "CONFIRMED", ...overlapping },
-      _sum: { quantity: true },
+      select,
     }),
-    db.equipmentUnavailability.aggregate({
+    db.equipmentUnavailability.findMany({
       where: { equipmentId, ...overlapping },
-      _sum: { quantity: true },
+      select,
     }),
   ]);
 
-  return {
+  return summariseAvailability({
     total: equipment.totalQuantity,
-    available: Math.max(
-      0,
-      equipment.totalQuantity -
-        (reserved._sum.quantity ?? 0) -
-        (unavailable._sum.quantity ?? 0),
-    ),
-  };
+    reservations,
+    unavailability,
+    startAt,
+    endAt,
+  });
 }
 
 export async function getAllEquipmentAvailability(
@@ -72,45 +87,42 @@ export async function getAllEquipmentAvailability(
     const endAt = new Date(parsed.data.endAt);
     const overlapping = { startAt: { lt: endAt }, endAt: { gt: startAt } };
     const equipmentIds = allEquipment.map((item) => item.id);
+    const select = {
+      equipmentId: true,
+      startAt: true,
+      endAt: true,
+      quantity: true,
+    } as const;
 
-    const [reservedGroups, unavailableGroups] = await Promise.all([
-      prisma.reservation.groupBy({
-        by: ["equipmentId"],
+    // Rows, not sums: the pool is counted, so each type's answer is its
+    // busiest instant. Grouping in SQL cannot express that.
+    const [reservations, unavailability] = await Promise.all([
+      prisma.reservation.findMany({
         where: {
           equipmentId: { in: equipmentIds },
           status: "CONFIRMED",
           ...overlapping,
         },
-        _sum: { quantity: true },
+        select,
       }),
-      prisma.equipmentUnavailability.groupBy({
-        by: ["equipmentId"],
-        where: {
-          equipmentId: { in: equipmentIds },
-          ...overlapping,
-        },
-        _sum: { quantity: true },
+      prisma.equipmentUnavailability.findMany({
+        where: { equipmentId: { in: equipmentIds }, ...overlapping },
+        select,
       }),
     ]);
 
-    const reservedMap = new Map<string, number>(
-      reservedGroups.map((g) => [g.equipmentId, g._sum.quantity ?? 0]),
-    );
-    const unavailableMap = new Map<string, number>(
-      unavailableGroups.map((g) => [g.equipmentId, g._sum.quantity ?? 0]),
-    );
+    const by = <T extends { equipmentId: string }>(rows: T[], id: string) =>
+      rows.filter((row) => row.equipmentId === id);
 
     const result: Record<string, Availability> = {};
     for (const item of allEquipment) {
-      const reservedCount = reservedMap.get(item.id) ?? 0;
-      const unavailableCount = unavailableMap.get(item.id) ?? 0;
-      result[item.id] = {
+      result[item.id] = summariseAvailability({
         total: item.totalQuantity,
-        available: Math.max(
-          0,
-          item.totalQuantity - reservedCount - unavailableCount,
-        ),
-      };
+        reservations: by(reservations, item.id),
+        unavailability: by(unavailability, item.id),
+        startAt,
+        endAt,
+      });
     }
 
     return ok(result);
@@ -143,6 +155,109 @@ export async function getEquipmentAvailability(
     return availability
       ? ok(availability)
       : err("Equipment type is unavailable.");
+  } catch (error) {
+    if (error instanceof PermissionError) return err(error.message);
+    throw error;
+  }
+}
+
+export interface EquipmentSchedule {
+  equipmentId: string;
+  type: string;
+  totalQuantity: number;
+  entries: MarkedScheduleEntry[];
+  /** True when nothing is committed from `from` onwards (SCRUM-30). */
+  fullyAvailable: boolean;
+}
+
+/**
+ * SCRUM-30 — everything committed on one equipment item from `from` onwards:
+ * reservations with the event they serve, and unavailability with its reason
+ * and duration. Entries that share time are marked so the view can flag them;
+ * entries that merely touch at an endpoint are not.
+ *
+ * An item with nothing committed returns `fullyAvailable`, so the view can say
+ * so rather than render an empty table.
+ */
+export async function getEquipmentSchedule(
+  input: unknown,
+): Promise<ActionResult<EquipmentSchedule>> {
+  const session = await auth();
+  try {
+    requirePermission(session?.user, "equipment:read");
+    const parsed = equipmentScheduleSchema.safeParse(input);
+    if (!parsed.success)
+      return err(
+        "Enter a valid equipment schedule request.",
+        parsed.error.flatten().fieldErrors,
+      );
+
+    const from = new Date(parsed.data.from);
+    if (Number.isNaN(from.getTime())) return err("Enter a valid date.");
+
+    const equipment = await prisma.equipment.findFirst({
+      where: { id: parsed.data.equipmentId, isActive: true },
+      select: { id: true, type: true, totalQuantity: true },
+    });
+    if (!equipment) return err("Equipment type is unavailable.");
+
+    // "Current and future": anything still running at `from` counts, so the
+    // filter is on the end, not the start.
+    const current = { endAt: { gt: from } };
+    const [reservations, unavailability] = await Promise.all([
+      prisma.reservation.findMany({
+        where: { equipmentId: equipment.id, status: "CONFIRMED", ...current },
+        select: {
+          id: true,
+          startAt: true,
+          endAt: true,
+          quantity: true,
+          event: { select: { name: true } },
+        },
+      }),
+      prisma.equipmentUnavailability.findMany({
+        where: { equipmentId: equipment.id, ...current },
+        select: {
+          id: true,
+          startAt: true,
+          endAt: true,
+          quantity: true,
+          reason: true,
+          note: true,
+        },
+      }),
+    ]);
+
+    const entries: ScheduleEntry[] = [
+      ...reservations.map((row) => ({
+        id: row.id,
+        kind: "reservation" as const,
+        startAt: row.startAt,
+        endAt: row.endAt,
+        quantity: row.quantity,
+        eventName: row.event?.name ?? null,
+        reason: null,
+        note: null,
+      })),
+      ...unavailability.map((row) => ({
+        id: row.id,
+        kind: "unavailability" as const,
+        startAt: row.startAt,
+        endAt: row.endAt,
+        quantity: row.quantity,
+        eventName: null,
+        reason: row.reason,
+        note: row.note,
+      })),
+    ];
+
+    return ok({
+      equipmentId: equipment.id,
+      type: equipment.type,
+      totalQuantity: equipment.totalQuantity,
+      entries: sortSchedule(markConflicts(entries, equipment.totalQuantity)),
+      fullyAvailable: entries.length === 0,
+    });
   } catch (error) {
     if (error instanceof PermissionError) return err(error.message);
     throw error;

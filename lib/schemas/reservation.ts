@@ -74,6 +74,16 @@ export const allAvailabilitySchema = z
   })
   .superRefine(validatePeriod);
 
+/**
+ * SCRUM-30 — an equipment item's schedule. `from` is the point the schedule
+ * is read from, so that "all current and future reservations" excludes ones
+ * that finished before it.
+ */
+export const equipmentScheduleSchema = z.object({
+  equipmentId: reservationFields.equipmentId,
+  from: z.string().min(1, "Choose a date to view from."),
+});
+
 export type ReservationInput = z.infer<typeof reservationSchema>;
 
 
