@@ -743,6 +743,44 @@ describe("User Story 15 — Save an event request as draft", () => {
     expect(mockCreate).not.toHaveBeenCalled();
   });
 
+  it.each([
+    {
+      rule: "an unreadable start date",
+      dates: { startAt: "not-a-date" },
+      field: "startAt",
+      message: "Invalid start date format.",
+    },
+    {
+      rule: "a start date in the past",
+      dates: { startAt: new Date(Date.now() - 86400000).toISOString() },
+      field: "startAt",
+      message: "Proposed date cannot be in the past.",
+    },
+    {
+      rule: "an unreadable end date",
+      dates: { endAt: "not-a-date" },
+      field: "endAt",
+      message: "Invalid end date format.",
+    },
+    {
+      rule: "an end date that is not after the start",
+      dates: { startAt: futureEnd, endAt: futureStart },
+      field: "endAt",
+      message: "Proposed end date and time must be strictly after the start date and time.",
+    },
+  ] as const)(
+    "SCRUM-15 [AC4 - Validation Rule]: a draft with $rule is refused, because dates that are provided must still be valid",
+    async ({ dates, field, message }) => {
+      mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
+
+      const result = await createDraftEvent({ name: "Draft With Bad Dates", ...dates });
+
+      expect(result.ok).toBe(false);
+      if (!result.ok) expect(result.fieldErrors?.[field]).toContain(message);
+      expect(mockCreate).not.toHaveBeenCalled();
+    },
+  );
+
   it("SCRUM-15 [AC3 - Business-Rule Negative]: returns field error when attempting to save a draft without an event name", async () => {
     mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
 
