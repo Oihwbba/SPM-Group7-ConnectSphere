@@ -1,4 +1,4 @@
-# ConnectSphere 
+# ConnectSphere
 
 Event planning and venue booking system for **ConnectSphere Event Services**
 (IS212 Software Project Management).
