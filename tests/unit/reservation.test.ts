@@ -175,7 +175,7 @@ describe("createReservation — SCRUM-31", () => {
     },
   );
 
-  it("SCRUM-31 AC 1: a retired or unknown equipment type cannot be reserved — the row lock finds nothing and nothing is created", async () => {
+  it("SCRUM-31: a retired or unknown equipment type cannot be reserved — the row lock finds nothing and nothing is created", async () => {
     poolWithFiveAvailable();
     tx.$queryRaw.mockResolvedValue([]);
 
@@ -201,7 +201,7 @@ describe("createReservation — SCRUM-31", () => {
     expect(mockTransaction).not.toHaveBeenCalled();
   });
 
-  it("SCRUM-31 AC 1 [Exit path]: a database failure while saving propagates instead of being reported as a refusal", async () => {
+  it("SCRUM-31 [Exit path]: a database failure while saving propagates instead of being reported as a refusal", async () => {
     poolWithFiveAvailable();
     tx.reservation.create.mockRejectedValue(new Error("connection lost"));
 
