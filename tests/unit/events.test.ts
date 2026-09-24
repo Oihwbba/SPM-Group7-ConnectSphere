@@ -309,6 +309,48 @@ describe("User Story 13 — Event Request Creation", () => {
       expect(mockCreate).not.toHaveBeenCalled();
     });
 
+    it.each([
+      { field: "startAt", message: "Invalid start date format." },
+      { field: "endAt", message: "Invalid end date format." },
+    ] as const)(
+      "SCRUM-13 [AC8, AC9 - Date validity]: an unreadable $field is reported as an invalid date and nothing is created",
+      async ({ field, message }) => {
+        mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
+
+        const result = await submitEventRequest({
+          ...validSubmissionInput,
+          [field]: "not-a-date",
+        });
+
+        expect(result.ok).toBe(false);
+        if (!result.ok) expect(result.fieldErrors?.[field]).toContain(message);
+        expect(mockCreate).not.toHaveBeenCalled();
+      },
+    );
+
+    // A cleared date input arrives as "" rather than being left out, so the
+    // date checks must stand aside and let the "required" messages speak.
+    it("SCRUM-13 [AC4 - Business-Rule Negative]: blank start and end dates are reported as required, not as invalid dates", async () => {
+      mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
+
+      const result = await submitEventRequest({
+        ...validSubmissionInput,
+        startAt: "",
+        endAt: "",
+      });
+
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.fieldErrors?.startAt).toEqual([
+          "Proposed start date and time is required.",
+        ]);
+        expect(result.fieldErrors?.endAt).toEqual([
+          "Proposed end date and time is required.",
+        ]);
+      }
+      expect(mockCreate).not.toHaveBeenCalled();
+    });
+
     it("SCRUM-13 [AC8 - Implicit Rule]: accepts valid cross-midnight overnight event schedules spanning across calendar days", async () => {
       mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
       mockCreate.mockResolvedValue({ id: "evt_overnight" });
