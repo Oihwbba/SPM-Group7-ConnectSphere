@@ -235,7 +235,7 @@ export async function getEquipmentSchedule(
         startAt: row.startAt,
         endAt: row.endAt,
         quantity: row.quantity,
-        eventName: row.event?.name ?? null,
+        eventName: row.event.name,
         reason: null,
         note: null,
       })),
@@ -283,7 +283,11 @@ export async function createReservation(
     const startAt = new Date(parsed.data.startAt);
     const endAt = new Date(parsed.data.endAt);
 
-    const result = await prisma.$transaction(async (tx) => {
+    // Typed so that `"error" in result` narrows to the refusal. Left to
+    // inference, TypeScript widens the object literals and `error` becomes
+    // optional on the success arm too.
+    type Outcome = { error: string } | { id: string; available: number };
+    const result = await prisma.$transaction(async (tx): Promise<Outcome> => {
       const event = await tx.event.findFirst({
         where: { id: eventId, status: "APPROVED" },
         select: { id: true },
@@ -333,7 +337,7 @@ export async function createReservation(
     });
 
     if ("error" in result) {
-      return err(result.error ?? "Unable to create the reservation.");
+      return err(result.error);
     }
     revalidatePath("/equipment");
     return ok(result);

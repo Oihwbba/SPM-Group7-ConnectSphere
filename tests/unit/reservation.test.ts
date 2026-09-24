@@ -174,6 +174,54 @@ describe("createReservation — SCRUM-31", () => {
       expect(mockTransaction).not.toHaveBeenCalled();
     },
   );
+
+  // The reservation is recorded against the person who made it, so a session
+  // that passes the role check but carries no user id cannot reserve.
+  it("refuses a session with the right role but no user id", async () => {
+    mockAuth.mockResolvedValue({
+      user: { role: "TECH_SUPPORT", name: "No Id", email: "noid@test.local" },
+      expires: "2999-01-01T00:00:00.000Z",
+    });
+
+    const result = await createReservation(validInput);
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toMatch(/permission/i);
+    expect(mockTransaction).not.toHaveBeenCalled();
+  });
+
+  // FOR UPDATE only returns the row when it exists AND is active, so an empty
+  // lock result is how a retired equipment type is refused.
+  it("refuses equipment that is inactive or missing when the row is locked", async () => {
+    poolWithFiveAvailable();
+    tx.$queryRaw.mockResolvedValueOnce([]);
+
+    const result = await createReservation(validInput);
+
+    expect(result).toEqual({ ok: false, error: "Equipment type is unavailable." });
+    expect(tx.reservation.create).not.toHaveBeenCalled();
+  });
+
+  // The lock succeeded but the row was no longer readable as active — the
+  // equipment was retired between the two statements.
+  it("refuses when availability cannot be read after the lock is taken", async () => {
+    poolWithFiveAvailable();
+    tx.equipment.findFirst.mockResolvedValueOnce(null);
+
+    const result = await createReservation(validInput);
+
+    expect(result).toEqual({ ok: false, error: "Equipment type is unavailable." });
+    expect(tx.reservation.create).not.toHaveBeenCalled();
+  });
+
+  it("rethrows a database failure instead of reporting it as a refusal", async () => {
+    poolWithFiveAvailable();
+    mockTransaction.mockRejectedValueOnce(new Error("deadlock detected"));
+
+    await expect(createReservation(validInput)).rejects.toThrow(
+      "deadlock detected",
+    );
+  });
 });
 
 describe("getEquipmentAvailability — SCRUM-31", () => {
@@ -215,6 +263,40 @@ describe("getEquipmentAvailability — SCRUM-31", () => {
 
     expect(result.ok).toBe(false);
     expect(tx.equipment.findFirst).not.toHaveBeenCalled();
+  });
+
+  // SCRUM-29 AC 7 — an invalid check is rejected and shows no result at all,
+  // not a zero that could be mistaken for "none available".
+  it("SCRUM-29 AC 7: rejects an end before the start with field errors and reads nothing", async () => {
+    const result = await getEquipmentAvailability({
+      ...validInput,
+      startAt: END,
+      endAt: START,
+    });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error).toMatch(/valid reservation period/i);
+      expect(result.fieldErrors?.endAt).toBeTruthy();
+    }
+    expect(tx.equipment.findFirst).not.toHaveBeenCalled();
+  });
+
+  it("SCRUM-29 AC 1: reports an unknown or retired equipment type rather than a count", async () => {
+    tx.equipment.findFirst.mockResolvedValueOnce(null);
+
+    const result = await getEquipmentAvailability(validInput);
+
+    expect(result).toEqual({ ok: false, error: "Equipment type is unavailable." });
+    expect(tx.reservation.findMany).not.toHaveBeenCalled();
+  });
+
+  it("rethrows a database failure instead of reporting it as a refusal", async () => {
+    tx.equipment.findFirst.mockRejectedValueOnce(new Error("connection reset"));
+
+    await expect(getEquipmentAvailability(validInput)).rejects.toThrow(
+      "connection reset",
+    );
   });
 });
 

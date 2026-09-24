@@ -756,7 +756,10 @@ export function EquipmentClient({
                   </div>
 
                   <div className="space-y-1 md:text-right min-w-[220px]">
-                    <span className="text-sm font-bold text-foreground">
+                    <span
+                      className="text-sm font-bold text-foreground"
+                      data-testid="selected-availability"
+                    >
                       {availability !== null
                         ? `${availability} of ${selectedEquipment.totalQuantity} available`
                         : `— of ${selectedEquipment.totalQuantity} available`}
