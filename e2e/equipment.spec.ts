@@ -254,6 +254,7 @@ test.describe("SCRUM-30 — View Equipment Conflicts", () => {
     const schedule = page.getByTestId("equipment-schedule");
     await expect(schedule).toBeVisible();
     await expect(schedule).toContainText("Under maintenance");
+    await expect(schedule.getByTestId("schedule-entry").first()).toBeVisible();
   });
 
   test("AC 1: lists each reservation with the event it serves", async ({ page }) => {
@@ -288,6 +289,7 @@ test.describe("SCRUM-30 — View Equipment Conflicts", () => {
     await page.getByLabel("Equipment type").selectOption({ value: rigId() });
 
     const schedule = page.getByTestId("equipment-schedule");
+    await expect(schedule).toBeVisible();
     await expect(schedule.getByTestId("schedule-conflict-count")).toHaveText("2 overlapping");
     await expect(
       schedule.locator('[data-testid="schedule-entry"][data-conflict="true"]'),
@@ -308,6 +310,7 @@ test.describe("SCRUM-30 — View Equipment Conflicts", () => {
     await page.getByLabel("Equipment type").selectOption({ value: rigId() });
 
     const schedule = page.getByTestId("equipment-schedule");
+    await expect(schedule).toBeVisible();
     await expect(schedule.getByTestId("schedule-entry")).toHaveCount(2);
     await expect(
       schedule.locator('[data-testid="schedule-entry"][data-conflict="true"]'),
