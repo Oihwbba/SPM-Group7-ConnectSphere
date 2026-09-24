@@ -186,6 +186,19 @@ describe("createReservation — SCRUM-31", () => {
     expect(tx.reservation.create).not.toHaveBeenCalled();
   });
 
+  // The row lock and the availability count are two separately written queries.
+  // If their filters ever drift apart, the count can miss a row the lock found;
+  // the reservation must then be refused, not made against an unknown pool.
+  it("SCRUM-31: equipment the availability count cannot find after the row lock is refused and nothing is created", async () => {
+    poolWithFiveAvailable();
+    tx.equipment.findFirst.mockResolvedValue(null);
+
+    const result = await createReservation(validInput);
+
+    expect(result).toEqual({ ok: false, error: "Equipment type is unavailable." });
+    expect(tx.reservation.create).not.toHaveBeenCalled();
+  });
+
   // reservedById is required: a token that passed the role check but carries
   // no id must not produce a reservation nobody can be held to.
   it("SCRUM-31 [Security gate]: a session with a permitted role but no user id is refused before any write", async () => {

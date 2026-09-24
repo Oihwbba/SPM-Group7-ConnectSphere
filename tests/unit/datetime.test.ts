@@ -44,6 +44,7 @@ describe("lib/datetime helpers — SCRUM-31", () => {
     expect(d?.toISOString()).toBe("2026-09-22T06:42:00.000Z");
     expect(parseSingaporeDateTime("")).toBeNull();
     expect(parseSingaporeDateTime("T14:42")).toBeNull();
+    expect(parseSingaporeDateTime("2026-09-22T")).toBeNull();
     expect(parseSingaporeDateTime("aaaa-bb-ccTdd:ee")).toBeNull();
   });
 
