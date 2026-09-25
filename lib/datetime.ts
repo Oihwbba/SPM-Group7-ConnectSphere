@@ -112,7 +112,6 @@ export function parseIanaZone(timezoneStr: string = "Asia/Singapore (+08:00)"): 
   if (timezoneStr.includes("Tokyo")) return "Asia/Tokyo";
   if (timezoneStr.includes("London")) return "Europe/London";
   if (timezoneStr.includes("New_York")) return "America/New_York";
-  if (timezoneStr.includes("UTC")) return "UTC";
   if (timezoneStr.includes("Singapore")) return "Asia/Singapore";
 
   try {
@@ -244,8 +243,7 @@ export function timezoneWallTimeToUtcIso(
   });
 
   const parts = formatter.formatToParts(targetUtcDate);
-  const getPart = (type: string) =>
-    parseInt(parts.find((p) => p.type === type)?.value ?? "0", 10);
+  const getPart = (type: string) => parts.find((p) => p.type === type)?.value;
 
   const tzY = getPart("year");
   const tzM = getPart("month");
@@ -253,7 +251,18 @@ export function timezoneWallTimeToUtcIso(
   const tzH = getPart("hour");
   const tzMin = getPart("minute");
 
-  const asTzUtc = Date.UTC(tzY, tzM - 1, tzD, tzH, tzMin, 0);
+  // Without every part the offset cannot be worked out; treat it like any other
+  // unconvertible input rather than building an instant from zeros.
+  if (!tzY || !tzM || !tzD || !tzH || !tzMin) return undefined;
+
+  const asTzUtc = Date.UTC(
+    Number(tzY),
+    Number(tzM) - 1,
+    Number(tzD),
+    Number(tzH),
+    Number(tzMin),
+    0,
+  );
   const offsetMs = asTzUtc - targetUtcDate.getTime();
 
   // Subtract offset to reach the exact UTC instant matching the wall time in that timezone

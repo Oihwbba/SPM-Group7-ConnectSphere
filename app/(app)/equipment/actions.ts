@@ -22,6 +22,7 @@ import {
 } from "@/lib/schemas/reservation";
 
 type Availability = { available: number; total: number; committed: number };
+type ReserveOutcome = { error: string } | { id: string; available: number };
 
 /**
  * SCRUM-29 — what is free for the whole period.
@@ -235,7 +236,7 @@ export async function getEquipmentSchedule(
         startAt: row.startAt,
         endAt: row.endAt,
         quantity: row.quantity,
-        eventName: row.event?.name ?? null,
+        eventName: row.event.name,
         reason: null,
         note: null,
       })),
@@ -283,7 +284,7 @@ export async function createReservation(
     const startAt = new Date(parsed.data.startAt);
     const endAt = new Date(parsed.data.endAt);
 
-    const result = await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction<ReserveOutcome>(async (tx) => {
       const event = await tx.event.findFirst({
         where: { id: eventId, status: "APPROVED" },
         select: { id: true },
@@ -332,9 +333,7 @@ export async function createReservation(
       };
     });
 
-    if ("error" in result) {
-      return err(result.error ?? "Unable to create the reservation.");
-    }
+    if ("error" in result) return err(result.error);
     revalidatePath("/equipment");
     return ok(result);
   } catch (error) {

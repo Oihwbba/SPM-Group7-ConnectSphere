@@ -44,6 +44,7 @@ describe("lib/datetime helpers — SCRUM-31", () => {
     expect(d?.toISOString()).toBe("2026-09-22T06:42:00.000Z");
     expect(parseSingaporeDateTime("")).toBeNull();
     expect(parseSingaporeDateTime("T14:42")).toBeNull();
+    expect(parseSingaporeDateTime("2026-09-22T")).toBeNull();
     expect(parseSingaporeDateTime("aaaa-bb-ccTdd:ee")).toBeNull();
   });
 
@@ -184,15 +185,79 @@ describe("lib/datetime helpers — SCRUM-31", () => {
     // Restore standard module
     const { formatDateTimeInTimezone: formatTz, normalizeTimezoneOption: normTz } = await import("@/lib/datetime");
 
-    // 2. Formatting an instant in UTC. This does NOT re-run the option
-    //    generator, so the GMT/UTC shortOffset branch inside it stays
-    //    uncovered — CI reports that line as never run.
+    // 2. Formatting an instant in UTC. The GMT/UTC label branch of the option
+    //    generator is pinned separately below, with a stubbed Intl.
     const utcFormatted = formatTz("2026-07-15T12:00:00.000Z", "UTC");
     expect(utcFormatted).toContain("12:00 pm");
 
     // 3. Line 138: Stored IANA timezone string absent from TIMEZONE_OPTIONS reaches return tz
     const unmappedResult = normTz("Africa/Asmara");
     expect(unmappedResult).toBe("Africa/Asmara");
+  });
+
+  // Which label ICU gives a zero offset ("GMT" or "GMT+0") differs between Node
+  // versions, so both label shapes are pinned with a stub instead of relying on
+  // whichever one the runtime happens to produce.
+  it("SCRUM-13 [AC6 - Timezone]: labels a zero-offset zone +00:00 and leaves a zone with no offset name unlabelled", async () => {
+    const RealDateTimeFormat = Intl.DateTimeFormat;
+    const spy = vi.spyOn(Intl, "DateTimeFormat").mockImplementation(function (
+      locales?: string | string[],
+      options?: Intl.DateTimeFormatOptions,
+    ) {
+      if (options?.timeZoneName === "shortOffset" && options.timeZone === "UTC") {
+        return { formatToParts: () => [{ type: "timeZoneName", value: "GMT" }] };
+      }
+      if (options?.timeZoneName === "shortOffset" && options.timeZone === "Asia/Tokyo") {
+        return { formatToParts: () => [] };
+      }
+      return new RealDateTimeFormat(locales, options);
+    } as unknown as typeof Intl.DateTimeFormat);
+
+    try {
+      vi.resetModules();
+      const { TIMEZONE_OPTIONS } = await import("@/lib/datetime");
+
+      expect(TIMEZONE_OPTIONS.find((o) => o.iana === "UTC")).toEqual({
+        value: "UTC (+00:00)",
+        label: "UTC (UTC+00:00)",
+        iana: "UTC",
+      });
+      expect(TIMEZONE_OPTIONS.find((o) => o.iana === "Asia/Tokyo")).toEqual({
+        value: "Asia/Tokyo",
+        label: "Asia/Tokyo",
+        iana: "Asia/Tokyo",
+      });
+    } finally {
+      spy.mockRestore();
+      vi.resetModules();
+    }
+  });
+
+  it("SCRUM-13 [AC6 - Timezone]: maps free-text New York and Singapore labels that name no IANA zone to their zone", () => {
+    expect(parseIanaZone("New_York office")).toBe("America/New_York");
+    expect(parseIanaZone("Singapore HQ")).toBe("Asia/Singapore");
+  });
+
+  it("SCRUM-13 [AC6 - Timezone]: an instant with no stored timezone is shown in Singapore time without a zone suffix", () => {
+    const formatted = formatDateTimeInTimezone("2026-07-15T13:00:00.000Z", null);
+    expect(formatted).toContain("9:00 pm");
+    expect(formatted).not.toContain("(");
+  });
+
+  it("SCRUM-13 [AC6 - Timezone]: a wall-time with a date but no time is not converted", () => {
+    expect(timezoneWallTimeToUtcIso("2026-07-15T")).toBeUndefined();
+  });
+
+  it("SCRUM-13 [AC6 - Timezone]: converts nothing when Intl returns no date parts, rather than building a date from zeros", () => {
+    const spy = vi
+      .spyOn(Intl.DateTimeFormat.prototype, "formatToParts")
+      .mockReturnValue([]);
+    try {
+      expect(timezoneWallTimeToUtcIso("2026-07-15T09:00", "America/New_York")).toBeUndefined();
+      expect(utcToTimezoneWallTime("2026-07-15T13:00:00.000Z", "America/New_York")).toBe("");
+    } finally {
+      spy.mockRestore();
+    }
   });
 });
 

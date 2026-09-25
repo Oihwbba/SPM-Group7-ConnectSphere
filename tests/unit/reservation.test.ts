@@ -174,6 +174,52 @@ describe("createReservation — SCRUM-31", () => {
       expect(mockTransaction).not.toHaveBeenCalled();
     },
   );
+
+  it("SCRUM-31: a retired or unknown equipment type cannot be reserved — the row lock finds nothing and nothing is created", async () => {
+    poolWithFiveAvailable();
+    tx.$queryRaw.mockResolvedValue([]);
+
+    const result = await createReservation(validInput);
+
+    expect(result).toEqual({ ok: false, error: "Equipment type is unavailable." });
+    expect(tx.reservation.findMany).not.toHaveBeenCalled();
+    expect(tx.reservation.create).not.toHaveBeenCalled();
+  });
+
+  // The row lock and the availability count are two separately written queries.
+  // If their filters ever drift apart, the count can miss a row the lock found;
+  // the reservation must then be refused, not made against an unknown pool.
+  it("SCRUM-31: equipment the availability count cannot find after the row lock is refused and nothing is created", async () => {
+    poolWithFiveAvailable();
+    tx.equipment.findFirst.mockResolvedValue(null);
+
+    const result = await createReservation(validInput);
+
+    expect(result).toEqual({ ok: false, error: "Equipment type is unavailable." });
+    expect(tx.reservation.create).not.toHaveBeenCalled();
+  });
+
+  // reservedById is required: a token that passed the role check but carries
+  // no id must not produce a reservation nobody can be held to.
+  it("SCRUM-31 [Security gate]: a session with a permitted role but no user id is refused before any write", async () => {
+    mockAuth.mockResolvedValue({
+      user: { role: "TECH_SUPPORT", name: "Test User" },
+      expires: "2999-01-01T00:00:00.000Z",
+    });
+
+    const result = await createReservation(validInput);
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toMatch(/permission/i);
+    expect(mockTransaction).not.toHaveBeenCalled();
+  });
+
+  it("SCRUM-31 [Exit path]: a database failure while saving propagates instead of being reported as a refusal", async () => {
+    poolWithFiveAvailable();
+    tx.reservation.create.mockRejectedValue(new Error("connection lost"));
+
+    await expect(createReservation(validInput)).rejects.toThrow("connection lost");
+  });
 });
 
 describe("getEquipmentAvailability — SCRUM-31", () => {

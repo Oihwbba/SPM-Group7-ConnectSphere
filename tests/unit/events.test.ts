@@ -309,6 +309,48 @@ describe("User Story 13 — Event Request Creation", () => {
       expect(mockCreate).not.toHaveBeenCalled();
     });
 
+    it.each([
+      { field: "startAt", message: "Invalid start date format." },
+      { field: "endAt", message: "Invalid end date format." },
+    ] as const)(
+      "SCRUM-13 [AC8, AC9 - Date validity]: an unreadable $field is reported as an invalid date and nothing is created",
+      async ({ field, message }) => {
+        mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
+
+        const result = await submitEventRequest({
+          ...validSubmissionInput,
+          [field]: "not-a-date",
+        });
+
+        expect(result.ok).toBe(false);
+        if (!result.ok) expect(result.fieldErrors?.[field]).toContain(message);
+        expect(mockCreate).not.toHaveBeenCalled();
+      },
+    );
+
+    // A cleared date input arrives as "" rather than being left out, so the
+    // date checks must stand aside and let the "required" messages speak.
+    it("SCRUM-13 [AC4 - Business-Rule Negative]: blank start and end dates are reported as required, not as invalid dates", async () => {
+      mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
+
+      const result = await submitEventRequest({
+        ...validSubmissionInput,
+        startAt: "",
+        endAt: "",
+      });
+
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.fieldErrors?.startAt).toEqual([
+          "Proposed start date and time is required.",
+        ]);
+        expect(result.fieldErrors?.endAt).toEqual([
+          "Proposed end date and time is required.",
+        ]);
+      }
+      expect(mockCreate).not.toHaveBeenCalled();
+    });
+
     it("SCRUM-13 [AC8 - Implicit Rule]: accepts valid cross-midnight overnight event schedules spanning across calendar days", async () => {
       mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
       mockCreate.mockResolvedValue({ id: "evt_overnight" });
@@ -743,6 +785,44 @@ describe("User Story 15 — Save an event request as draft", () => {
     expect(mockCreate).not.toHaveBeenCalled();
   });
 
+  it.each([
+    {
+      rule: "an unreadable start date",
+      dates: { startAt: "not-a-date" },
+      field: "startAt",
+      message: "Invalid start date format.",
+    },
+    {
+      rule: "a start date in the past",
+      dates: { startAt: new Date(Date.now() - 86400000).toISOString() },
+      field: "startAt",
+      message: "Proposed date cannot be in the past.",
+    },
+    {
+      rule: "an unreadable end date",
+      dates: { endAt: "not-a-date" },
+      field: "endAt",
+      message: "Invalid end date format.",
+    },
+    {
+      rule: "an end date that is not after the start",
+      dates: { startAt: futureEnd, endAt: futureStart },
+      field: "endAt",
+      message: "Proposed end date and time must be strictly after the start date and time.",
+    },
+  ] as const)(
+    "SCRUM-15 [AC4 - Validation Rule]: a draft with $rule is refused, because dates that are provided must still be valid",
+    async ({ dates, field, message }) => {
+      mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
+
+      const result = await createDraftEvent({ name: "Draft With Bad Dates", ...dates });
+
+      expect(result.ok).toBe(false);
+      if (!result.ok) expect(result.fieldErrors?.[field]).toContain(message);
+      expect(mockCreate).not.toHaveBeenCalled();
+    },
+  );
+
   it("SCRUM-15 [AC3 - Business-Rule Negative]: returns field error when attempting to save a draft without an event name", async () => {
     mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
 
@@ -833,6 +913,56 @@ describe("User Story 15 — Save an event request as draft", () => {
         where: { id: "evt_draft_tz" },
         data: expect.objectContaining({
           startAt: new Date(fixedUtcIso),
+        }),
+      }),
+    );
+  });
+
+  it("SCRUM-15 [AC1, AC2 - Data retention]: a new draft saved with both proposed dates persists them as UTC instants", async () => {
+    mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
+    mockCreate.mockResolvedValue({ id: "evt_draft_dated" });
+
+    const result = await createDraftEvent({
+      name: "Dated Draft",
+      startAt: futureStart,
+      endAt: futureEnd,
+    });
+
+    expect(result).toEqual({ ok: true, data: { id: "evt_draft_dated" } });
+    expect(mockCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          status: "DRAFT",
+          startAt: new Date(futureStart),
+          endAt: new Date(futureEnd),
+        }),
+      }),
+    );
+  });
+
+  it("SCRUM-15 [AC2, AC7 - Data retention on re-save]: updating a draft with only an end date persists that end and leaves the start empty", async () => {
+    mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
+    mockFindFirst.mockResolvedValue({
+      id: "evt_draft_end_only",
+      organiserId: "usr_organiser",
+      status: "DRAFT",
+    });
+    mockUpdate.mockResolvedValue({ id: "evt_draft_end_only" });
+
+    const result = await createDraftEvent({
+      id: "evt_draft_end_only",
+      name: "End Only Draft",
+      endAt: futureEnd,
+    });
+
+    expect(result).toEqual({ ok: true, data: { id: "evt_draft_end_only" } });
+    expect(mockCreate).not.toHaveBeenCalled();
+    expect(mockUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "evt_draft_end_only" },
+        data: expect.objectContaining({
+          startAt: null,
+          endAt: new Date(futureEnd),
         }),
       }),
     );
