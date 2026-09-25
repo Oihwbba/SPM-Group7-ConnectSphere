@@ -1,11 +1,14 @@
 import { Card, CardContent } from "@/components/ui/card";
 
 /**
- * Streamed by Next.js while the server component fetches events. A simple
- * skeleton that matches the table's shape, so the layout does not jump when
- * the real data arrives. Copy this alongside any page that does a DB read.
+ * The events list's loading skeleton. Rendered via an explicit <Suspense>
+ * around just the role-dispatch in page.tsx — deliberately NOT a folder-level
+ * loading.tsx, because that file convention would also wrap every nested
+ * route under events/ (including events/[id], SCRUM-72) in the same Suspense
+ * boundary, which breaks that route's notFound() from producing a real 404
+ * (Next.js has already streamed a 200 shell by the time notFound() resolves).
  */
-export default function Loading() {
+export function EventsListLoading() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-3">

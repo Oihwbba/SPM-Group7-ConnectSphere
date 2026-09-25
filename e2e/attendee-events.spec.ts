@@ -67,18 +67,26 @@ test.describe("SCRUM-72 — Attendee browses confirmed events", () => {
     ).toHaveText("Open");
 
     // AC: not-yet-open and expired periods stay visible with the state shown.
+    // AC: "The registration period ... are shown" — not just the derived
+    // state, the actual configured dates.
     const notOpenCard = page.getByTestId("browsable-event-card").filter({
       hasText: "Registration Not Yet Open — Summer Camp",
     });
     await expect(
       notOpenCard.getByTestId("registration-state-badge"),
     ).toHaveText("Registration not yet open");
+    await expect(notOpenCard.getByTestId("registration-period")).toContainText(
+      "Opens",
+    );
 
     const closedCard = page.getByTestId("browsable-event-card").filter({
       hasText: "Registration Closed — Leadership Retreat",
     });
     await expect(closedCard.getByTestId("registration-state-badge")).toHaveText(
       "Registration closed",
+    );
+    await expect(closedCard.getByTestId("registration-period")).toContainText(
+      "Closes",
     );
 
     // AC: "An event that is Cancelled no longer appears in the attendee
@@ -114,6 +122,27 @@ test.describe("SCRUM-72 — Attendee browses confirmed events", () => {
         "This event is full. You can check back in case a place opens up.",
       ),
     ).toBeVisible();
+  });
+
+  test("AC: an open event's detail page shows the registration period and an honestly-disabled Register button", async ({
+    page,
+  }) => {
+    const notOpenCard = page.getByTestId("browsable-event-card").filter({
+      hasText: "Registration Not Yet Open — Summer Camp",
+    });
+    await notOpenCard.click();
+
+    await expect(
+      page.getByRole("heading", {
+        name: "Registration Not Yet Open — Summer Camp",
+      }),
+    ).toBeVisible();
+    await expect(page.getByTestId("registration-period")).toContainText(
+      "Opens",
+    );
+    // SCRUM-73 owns the actual register action — the button exists so the
+    // control isn't invisible, but it must never look clickable-but-dead.
+    await expect(page.getByTestId("register-button")).toBeDisabled();
   });
 
   test("AC: direct event URLs do not bypass visibility rules — a Cancelled event 404s for an Attendee", async ({
