@@ -41,3 +41,40 @@ export async function getEventForUser(id: string) {
 
   return allowed ? event : null;
 }
+
+/**
+ * SCRUM-72 — one Confirmed, non-Cancelled event with the fields an Attendee's
+ * detail view needs (its approved venue booking, and the count of active
+ * registrations for the remaining-capacity figure).
+ *
+ * Same not-found parity as `getEventForUser`: a Draft/Submitted/Rejected event,
+ * a Cancelled one, and an id that does not exist are all indistinguishable —
+ * the caller `notFound()`s on null either way, so a direct URL cannot be used
+ * to probe which events exist that an Attendee should not yet see.
+ */
+export async function getBrowsableEvent(id: string) {
+  const session = await auth();
+  if (!session?.user || !can(session.user, "event:browse")) {
+    return null;
+  }
+
+  const event = await prisma.event.findUnique({
+    where: { id },
+    include: {
+      bookings: {
+        where: { status: "APPROVED" },
+        take: 1,
+        include: { venue: { select: { name: true, location: true } } },
+      },
+      _count: {
+        select: { registrations: { where: { status: "REGISTERED" } } },
+      },
+    },
+  });
+
+  if (!event || event.status !== "CONFIRMED") {
+    return null;
+  }
+
+  return event;
+}
