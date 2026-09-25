@@ -1,0 +1,79 @@
+import type { Event } from "@prisma/client";
+
+/**
+ * SCRUM-72/73/74 — the registration state of one event, from an Attendee's
+ * point of view. This is the ONE place the rule is defined; the browse list,
+ * the detail page and the register action (SCRUM-73) all call it instead of
+ * re-deriving it, so "why can't I register" always means the same thing
+ * everywhere.
+ *
+ * Precedence, most specific first: a manual close or an expired window is
+ * checked before capacity, because if registration was never open there is
+ * nothing meaningful to say about it being full.
+ */
+export type RegistrationState =
+  | "OPEN"
+  | "FULL"
+  | "NOT_YET_OPEN"
+  | "CLOSED" // registrationEnabled is false — an explicit organiser action
+  | "EXPIRED"; // registrationClosesAt has passed
+
+export const REGISTRATION_STATE_LABEL: Record<RegistrationState, string> = {
+  OPEN: "Open",
+  FULL: "Full",
+  NOT_YET_OPEN: "Registration not yet open",
+  CLOSED: "Registration closed",
+  EXPIRED: "Registration closed",
+};
+
+type CapacityInput = Pick<Event, "expectedAttendance">;
+
+/**
+ * SCRUM-73/74: "the event's expected attendance IS the registration
+ * capacity; there is no separate attendee-capacity value." Deliberately does
+ * NOT read `Event.registrationCapacity` — that column predates this
+ * clarification and must not be treated as a second source of truth.
+ */
+export function totalCapacity(event: CapacityInput): number {
+  return event.expectedAttendance ?? 0;
+}
+
+export function remainingCapacity(
+  event: CapacityInput,
+  activeRegistrationCount: number,
+): number {
+  return Math.max(0, totalCapacity(event) - activeRegistrationCount);
+}
+
+type StateInput = Pick<
+  Event,
+  | "expectedAttendance"
+  | "registrationEnabled"
+  | "registrationOpensAt"
+  | "registrationClosesAt"
+>;
+
+/**
+ * Does not check `status` (CONFIRMED vs anything else) — callers filter that
+ * separately (SCRUM-72's "browse Confirmed events" gate), since an event that
+ * isn't even visible has no registration state to compute.
+ */
+export function computeRegistrationState(
+  event: StateInput,
+  activeRegistrationCount: number,
+  now: Date = new Date(),
+): RegistrationState {
+  if (!event.registrationEnabled) return "CLOSED";
+  if (event.registrationClosesAt && event.registrationClosesAt <= now) {
+    return "EXPIRED";
+  }
+  if (event.registrationOpensAt && event.registrationOpensAt > now) {
+    return "NOT_YET_OPEN";
+  }
+  if (remainingCapacity(event, activeRegistrationCount) <= 0) return "FULL";
+  return "OPEN";
+}
+
+export function canRegisterNow(state: RegistrationState): boolean {
+  return state === "OPEN";
+}

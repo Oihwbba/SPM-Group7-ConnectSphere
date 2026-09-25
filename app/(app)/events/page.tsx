@@ -1,7 +1,10 @@
 import { requireSession } from "@/lib/auth/guard";
 import { Forbidden } from "@/components/app/forbidden";
-import { PagePlaceholder } from "@/components/app/page-placeholder";
-import { OrganiserEvents, CoordinatorEvents } from "./role-views";
+import {
+  OrganiserEvents,
+  CoordinatorEvents,
+  AttendeeEvents,
+} from "./role-views";
 
 // One route, three role views (the domain-first layout — see ADR 0001's
 // addendum). Every role touches "events"; what differs is the view, so the
@@ -19,14 +22,7 @@ export default async function EventsPage() {
     case "COORDINATOR":
       return <CoordinatorEvents coordinatorId={session.user.id} />;
     case "ATTENDEE":
-      return (
-        <PagePlaceholder
-          title="Browse Events"
-          description="Discover events open for registration and sign up to attend."
-          scrumId="SCRUM-41"
-          owner="Caylern"
-        />
-      );
+      return <AttendeeEvents />;
     default:
       return <Forbidden />;
   }
