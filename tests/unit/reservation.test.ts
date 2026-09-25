@@ -262,6 +262,40 @@ describe("getEquipmentAvailability — SCRUM-31", () => {
     expect(result.ok).toBe(false);
     expect(tx.equipment.findFirst).not.toHaveBeenCalled();
   });
+
+  // SCRUM-29 AC 7 — an invalid check is rejected and shows no result at all,
+  // not a zero that could be mistaken for "none available".
+  it("SCRUM-29 AC 7: rejects an end before the start with field errors and reads nothing", async () => {
+    const result = await getEquipmentAvailability({
+      ...validInput,
+      startAt: END,
+      endAt: START,
+    });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error).toMatch(/valid reservation period/i);
+      expect(result.fieldErrors?.endAt).toBeTruthy();
+    }
+    expect(tx.equipment.findFirst).not.toHaveBeenCalled();
+  });
+
+  it("SCRUM-29 AC 1: reports an unknown or retired equipment type rather than a count", async () => {
+    tx.equipment.findFirst.mockResolvedValueOnce(null);
+
+    const result = await getEquipmentAvailability(validInput);
+
+    expect(result).toEqual({ ok: false, error: "Equipment type is unavailable." });
+    expect(tx.reservation.findMany).not.toHaveBeenCalled();
+  });
+
+  it("rethrows a database failure instead of reporting it as a refusal", async () => {
+    tx.equipment.findFirst.mockRejectedValueOnce(new Error("connection reset"));
+
+    await expect(getEquipmentAvailability(validInput)).rejects.toThrow(
+      "connection reset",
+    );
+  });
 });
 
 describe("getAllEquipmentAvailability — SCRUM-31", () => {
