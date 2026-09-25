@@ -9,22 +9,20 @@ import { AttendeeEventDetail } from "../attendee-event-detail";
  * ("Direct event URLs do not bypass the same visibility and registration-
  * state rules").
  *
- * Every other role 404s here, unconditionally — this deliberately preserves
- * the pre-existing behaviour that e2e/access-control.spec.ts pins for
- * Organiser/Coordinator ("no event detail route is exposed by identifier"):
- * this route exists now, but only an Attendee can ever get past the role
- * check, so a non-Attendee hitting any `/events/:id` still 404s regardless of
- * whether the id exists (SCRUM-68's not-found parity, extended to this role).
+ * No role check here: `getBrowsableEvent`'s own `can(user, "event:browse")`
+ * gate already returns null for every role that doesn't hold that action
+ * (ADR 0004 — one authorisation gate, not a second inline check that could
+ * drift from ROLE_ACTIONS). Today only ATTENDEE holds it, so a non-Attendee
+ * hitting any `/events/:id` still 404s regardless of whether the id exists —
+ * this preserves the pre-existing behaviour e2e/access-control.spec.ts pins
+ * for Organiser/Coordinator (SCRUM-68's not-found parity, extended here).
  */
 export default async function EventDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const session = await requireSession();
-  if (session.user.role !== "ATTENDEE") {
-    notFound();
-  }
+  await requireSession();
 
   const { id } = await params;
   const event = await getBrowsableEvent(id);

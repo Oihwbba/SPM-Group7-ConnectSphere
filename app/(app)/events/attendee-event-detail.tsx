@@ -1,14 +1,13 @@
 import Link from "next/link";
-import { ArrowLeft, CalendarDays, MapPin, Users } from "lucide-react";
+import { ArrowLeft, CalendarDays, Clock, MapPin, Users } from "lucide-react";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   computeRegistrationState,
   remainingCapacity,
   totalCapacity,
-  canRegisterNow,
   REGISTRATION_STATE_LABEL,
 } from "@/lib/registration-state";
 import { formatDateTimeInTimezone } from "@/lib/datetime";
@@ -24,8 +23,10 @@ const STATE_BADGE_VARIANT = {
 
 /** SCRUM-72 — the read-only detail view. The register action itself
  * (SCRUM-73) is not wired up here on purpose — this story's boundary line
- * hands that to SCRUM-73–75; this button is disabled whenever the state
- * isn't OPEN so the reason is visible even before that action exists. */
+ * hands that to SCRUM-73–75. The button stays disabled unconditionally
+ * (including for OPEN events): an enabled control with no onClick would be a
+ * dead-looking affordance, worse than an honestly-disabled one until SCRUM-73
+ * actually ships it. */
 export function AttendeeEventDetail({ event }: { event: BrowsableEvent }) {
   const state = computeRegistrationState(event, event._count.registrations);
   const remaining = remainingCapacity(event, event._count.registrations);
@@ -43,7 +44,12 @@ export function AttendeeEventDetail({ event }: { event: BrowsableEvent }) {
       <Card>
         <CardHeader className="space-y-2">
           <div className="flex items-start justify-between gap-3">
-            <CardTitle className="text-xl font-bold">{event.name}</CardTitle>
+            {/* A real heading, not CardTitle's <div> — this is the page's
+                only h1, both for screen-reader navigation and so an
+                automated check can locate the event by name. */}
+            <h1 className="text-xl font-bold leading-none tracking-tight">
+              {event.name}
+            </h1>
             <Badge
               variant={STATE_BADGE_VARIANT[state]}
               data-testid="registration-state-badge"
@@ -88,6 +94,30 @@ export function AttendeeEventDetail({ event }: { event: BrowsableEvent }) {
                 )}
               </div>
             </div>
+            <div className="flex items-start gap-2">
+              <Clock className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground">
+                  Registration period
+                </p>
+                <p
+                  className="text-foreground"
+                  data-testid="registration-period"
+                >
+                  {event.registrationOpensAt || event.registrationClosesAt ? (
+                    <>
+                      {event.registrationOpensAt
+                        ? `Opens ${formatDateTimeInTimezone(event.registrationOpensAt, event.timezone)}`
+                        : "Open now"}
+                      {event.registrationClosesAt &&
+                        ` · Closes ${formatDateTimeInTimezone(event.registrationClosesAt, event.timezone)}`}
+                    </>
+                  ) : (
+                    "No fixed period set"
+                  )}
+                </p>
+              </div>
+            </div>
           </div>
 
           <div className="flex items-center justify-between rounded-lg border border-border bg-muted/30 p-3">
@@ -97,23 +127,21 @@ export function AttendeeEventDetail({ event }: { event: BrowsableEvent }) {
                 {remaining} of {totalCapacity(event)} places remaining
               </span>
             </div>
-            <Button
-              disabled={!canRegisterNow(state)}
-              data-testid="register-button"
-            >
+            {/* Always disabled in SCRUM-72 — see the component doc comment. */}
+            <Button disabled data-testid="register-button">
               Register
             </Button>
           </div>
-          {!canRegisterNow(state) && (
-            <p className="text-xs text-muted-foreground" role="status">
-              {state === "FULL" &&
-                "This event is full. You can check back in case a place opens up."}
-              {state === "NOT_YET_OPEN" &&
-                "Registration for this event hasn't opened yet."}
-              {(state === "CLOSED" || state === "EXPIRED") &&
-                "Registration for this event is closed."}
-            </p>
-          )}
+          <p className="text-xs text-muted-foreground" role="status">
+            {state === "OPEN" &&
+              "Registration is open. Sign-up isn't available in this build yet — check back shortly."}
+            {state === "FULL" &&
+              "This event is full. You can check back in case a place opens up."}
+            {state === "NOT_YET_OPEN" &&
+              "Registration for this event hasn't opened yet."}
+            {(state === "CLOSED" || state === "EXPIRED") &&
+              "Registration for this event is closed."}
+          </p>
         </CardContent>
       </Card>
     </div>

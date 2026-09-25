@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { CalendarDays, MapPin, Users } from "lucide-react";
+import { CalendarDays, Clock, MapPin, Users } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -131,6 +131,23 @@ export function AttendeeEventsClient({ events }: { events: BrowsableEvent[] }) {
                     {remaining} of {totalCapacity(event)} places remaining
                   </span>
                 </div>
+                {/* AC: "The registration period ... are shown" — only when
+                    one is actually configured, so an unrestricted event's
+                    card stays uncluttered. */}
+                {(event.registrationOpensAt || event.registrationClosesAt) && (
+                  <div className="flex items-center gap-1.5">
+                    <Clock className="h-3.5 w-3.5 shrink-0" />
+                    <span data-testid="registration-period">
+                      {event.registrationOpensAt &&
+                        `Opens ${formatDateTimeInTimezone(event.registrationOpensAt, event.timezone)}`}
+                      {event.registrationOpensAt &&
+                        event.registrationClosesAt &&
+                        " · "}
+                      {event.registrationClosesAt &&
+                        `Closes ${formatDateTimeInTimezone(event.registrationClosesAt, event.timezone)}`}
+                    </span>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </Link>
