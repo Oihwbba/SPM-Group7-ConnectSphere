@@ -72,7 +72,11 @@ export function EquipmentSchedulePanel({
 
   if (error) {
     return (
-      <p className="text-xs text-destructive" role="alert">
+      <p
+        className="text-xs text-destructive"
+        role="alert"
+        data-testid="schedule-error"
+      >
         {error}
       </p>
     );

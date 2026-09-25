@@ -146,12 +146,94 @@ test.describe("SCRUM-31 — Reserve Equipment for Event", () => {
 });
 
 /**
+ * SCRUM-29 and SCRUM-30 need commitments of a known shape, so they build a
+ * throwaway equipment row (the "rig") instead of mutating seeded data:
+ * deleting seeded reservations would leave "Confirmed — Charity Gala" with no
+ * equipment for every later run and for the sprint demo.
+ *
+ * Times are Singapore wall time, because that is what the form takes and
+ * converts to UTC — a fixture written in UTC would sit eight hours off the
+ * period the test types in. The rig id carries the worker index: Playwright
+ * runs tests in parallel locally, and two tests sharing one rig would see each
+ * other's reservations.
+ */
+const RIG_DAY = "2032-08-18";
+const RIG_TOTAL = 4;
+const rigId = () => `eqp_e2e_sched_w${test.info().workerIndex}`;
+const sgTime = (hour: number) => `${String(hour).padStart(2, "0")}:00`;
+const sgInstant = (hour: number) => new Date(`${RIG_DAY}T${sgTime(hour)}:00+08:00`);
+
+type Slot = { from: number; to: number; quantity: number };
+type Outage = Slot & { reason: "MAINTENANCE" | "DAMAGED"; note?: string };
+
+async function removeRig() {
+  const id = rigId();
+  await prisma.reservation.deleteMany({ where: { equipmentId: id } });
+  await prisma.equipmentUnavailability.deleteMany({ where: { equipmentId: id } });
+  await prisma.equipment.deleteMany({ where: { id } });
+}
+
+async function buildRig({
+  reservations = [],
+  outages = [],
+}: { reservations?: Slot[]; outages?: Outage[] } = {}) {
+  const id = rigId();
+  await removeRig();
+  await prisma.equipment.create({
+    data: { id, type: `E2E Rig ${id}`, totalQuantity: RIG_TOTAL, isActive: true },
+  });
+  for (const slot of reservations) {
+    await prisma.reservation.create({
+      data: {
+        eventId: "evt_approved",
+        equipmentId: id,
+        quantity: slot.quantity,
+        startAt: sgInstant(slot.from),
+        endAt: sgInstant(slot.to),
+        reservedById: "usr_techsupport",
+        status: "CONFIRMED",
+      },
+    });
+  }
+  for (const outage of outages) {
+    await prisma.equipmentUnavailability.create({
+      data: {
+        equipmentId: id,
+        quantity: outage.quantity,
+        startAt: sgInstant(outage.from),
+        endAt: sgInstant(outage.to),
+        reason: outage.reason,
+        note: outage.note ?? null,
+        recordedById: "usr_techsupport",
+      },
+    });
+  }
+}
+
+/** Fill the reservation form for the rig over [from, to) on RIG_DAY. */
+async function fillRigPeriod(page: Page, from: number, to: number, quantity: string) {
+  await page
+    .getByLabel("Approved event")
+    .selectOption({ label: "Approved — Research Symposium" });
+  await page.getByLabel("Start date").fill(RIG_DAY);
+  await page.getByLabel("Start time").fill(sgTime(from));
+  await page.getByLabel("End date").fill(RIG_DAY);
+  await page.getByLabel("End time").fill(sgTime(to));
+  await page.getByLabel("Equipment type").selectOption({ value: rigId() });
+  await page.getByLabel("Quantity", { exact: true }).fill(quantity);
+}
+
+/**
  * SCRUM-30 — see what an item is already committed to, so conflicts are
  * visible before a reservation is attempted. The seed puts one speaker out of
  * service as DAMAGED and three projectors in for MAINTENANCE.
  */
 test.describe("SCRUM-30 — View Equipment Conflicts", () => {
-  test("AC 5: selecting an item shows its commitments with the reason and the period", async ({
+  test.afterEach(async () => {
+    if (usesLocalDatabase) await removeRig();
+  });
+
+  test("AC 5: selecting a seeded item shows its commitments with the reason", async ({
     page,
   }) => {
     await signInAsTechSupport(page);
@@ -161,19 +243,13 @@ test.describe("SCRUM-30 — View Equipment Conflicts", () => {
     await expect(schedule).toBeVisible();
     await expect(schedule).toContainText("Damaged");
     await expect(schedule).toContainText("Blown driver, awaiting write-off.");
-    await expect(schedule.getByTestId("schedule-entry").first()).toContainText(
-      "1 unit(s)",
-    );
+    await expect(schedule.getByTestId("schedule-entry").first()).toContainText("1 unit(s)");
   });
 
-  test("AC 1: the maintenance the pool is committed to is listed", async ({
-    page,
-  }) => {
+  test("AC 1: the seeded maintenance on the projector pool is listed", async ({ page }) => {
     test.skip(!usesLocalDatabase, "reads seeded commitments; local database only");
     await signInAsTechSupport(page);
-    await page
-      .getByLabel("Equipment type")
-      .selectOption({ value: "eqp_projector" });
+    await page.getByLabel("Equipment type").selectOption({ value: "eqp_projector" });
 
     const schedule = page.getByTestId("equipment-schedule");
     await expect(schedule).toBeVisible();
@@ -181,90 +257,57 @@ test.describe("SCRUM-30 — View Equipment Conflicts", () => {
     await expect(schedule.getByTestId("schedule-entry").first()).toBeVisible();
   });
 
-  // The cases below need commitments of a known shape, so they use their own
-  // throwaway equipment row rather than mutating seeded data: deleting the
-  // seeded mic reservations would leave "Confirmed — Charity Gala" with no
-  // equipment for every later run and for the sprint demo.
-  const SPARE = "eqp_e2e_conflicts";
-
-  async function spareEquipment(commitments: { from: number; to: number }[]) {
-    await prisma.equipment.upsert({
-      where: { id: SPARE },
-      update: { isActive: true },
-      create: {
-        id: SPARE,
-        type: "E2E Conflict Rig",
-        totalQuantity: 4,
-        isActive: true,
-      },
-    });
-    await prisma.reservation.deleteMany({ where: { equipmentId: SPARE } });
-    const day = new Date();
-    day.setUTCDate(day.getUTCDate() + 40);
-    for (const [index, slot] of commitments.entries()) {
-      const startAt = new Date(day);
-      startAt.setUTCHours(slot.from, 0, 0, 0);
-      const endAt = new Date(day);
-      endAt.setUTCHours(slot.to, 0, 0, 0);
-      await prisma.reservation.create({
-        data: {
-          id: `${SPARE}_res_${index}`,
-          eventId: "evt_approved",
-          equipmentId: SPARE,
-          quantity: 1,
-          startAt,
-          endAt,
-          reservedById: "usr_techsupport",
-          status: "CONFIRMED",
-        },
-      });
-    }
-  }
-
-  async function removeSpareEquipment() {
-    await prisma.reservation.deleteMany({ where: { equipmentId: SPARE } });
-    await prisma.equipment.deleteMany({ where: { id: SPARE } });
-  }
-
-  test.afterEach(async () => {
-    if (!usesLocalDatabase) return;
-    await removeSpareEquipment();
-  });
-
-  test("AC 2 & 4: two reservations that share time are flagged as conflicting", async ({
-    page,
-  }) => {
+  test("AC 1: lists each reservation with the event it serves", async ({ page }) => {
     test.skip(!usesLocalDatabase, "writes its own equipment; local database only");
-    await spareEquipment([
-      { from: 9, to: 13 },
-      { from: 11, to: 15 },
-    ]);
+    await buildRig({
+      reservations: [
+        { from: 9, to: 11, quantity: 1 },
+        { from: 14, to: 16, quantity: 2 },
+      ],
+    });
 
     await signInAsTechSupport(page);
-    await page.getByLabel("Equipment type").selectOption({ value: SPARE });
+    await page.getByLabel("Equipment type").selectOption({ value: rigId() });
+
+    const entries = page.getByTestId("schedule-entry");
+    await expect(entries).toHaveCount(2);
+    await expect(entries.first()).toContainText("Approved — Research Symposium");
+    await expect(entries.first()).toContainText("1 unit(s)");
+    await expect(entries.nth(1)).toContainText("2 unit(s)");
+  });
+
+  test("AC 2: reservations that share time are highlighted and counted", async ({ page }) => {
+    test.skip(!usesLocalDatabase, "writes its own equipment; local database only");
+    await buildRig({
+      reservations: [
+        { from: 9, to: 13, quantity: 1 },
+        { from: 11, to: 15, quantity: 1 },
+      ],
+    });
+
+    await signInAsTechSupport(page);
+    await page.getByLabel("Equipment type").selectOption({ value: rigId() });
 
     const schedule = page.getByTestId("equipment-schedule");
     await expect(schedule).toBeVisible();
-    await expect(schedule.getByTestId("schedule-conflict-count")).toContainText(
-      "2 overlapping",
-    );
+    await expect(schedule.getByTestId("schedule-conflict-count")).toHaveText("2 overlapping");
     await expect(
       schedule.locator('[data-testid="schedule-entry"][data-conflict="true"]'),
     ).toHaveCount(2);
-    await expect(schedule).toContainText("Overlaps 1 other commitment(s)");
+    await expect(schedule).toContainText("Overlaps 1 other commitment(s); 2 of 4 unit(s) in use.");
   });
 
-  test("AC 3: back-to-back reservations are adjacent and are not flagged", async ({
-    page,
-  }) => {
+  test("AC 3: back-to-back reservations are adjacent and are not flagged", async ({ page }) => {
     test.skip(!usesLocalDatabase, "writes its own equipment; local database only");
-    await spareEquipment([
-      { from: 9, to: 13 },
-      { from: 13, to: 17 },
-    ]);
+    await buildRig({
+      reservations: [
+        { from: 9, to: 13, quantity: 1 },
+        { from: 13, to: 17, quantity: 1 },
+      ],
+    });
 
     await signInAsTechSupport(page);
-    await page.getByLabel("Equipment type").selectOption({ value: SPARE });
+    await page.getByLabel("Equipment type").selectOption({ value: rigId() });
 
     const schedule = page.getByTestId("equipment-schedule");
     await expect(schedule).toBeVisible();
@@ -272,9 +315,46 @@ test.describe("SCRUM-30 — View Equipment Conflicts", () => {
     await expect(
       schedule.locator('[data-testid="schedule-entry"][data-conflict="true"]'),
     ).toHaveCount(0);
-    await expect(
-      schedule.getByTestId("schedule-conflict-count"),
-    ).toHaveCount(0);
+    await expect(schedule.getByTestId("schedule-conflict-count")).toHaveCount(0);
+  });
+
+  // Written straight to the table: the reservation action refuses this, but
+  // only the action enforces the pool, so the view must say so when the
+  // stored commitments exceed it.
+  test("AC 4: commitments that exceed the pool are flagged as a hard conflict", async ({
+    page,
+  }) => {
+    test.skip(!usesLocalDatabase, "writes its own equipment; local database only");
+    await buildRig({
+      reservations: [
+        { from: 9, to: 12, quantity: 3 },
+        { from: 10, to: 13, quantity: 3 },
+      ],
+    });
+
+    await signInAsTechSupport(page);
+    await page.getByLabel("Equipment type").selectOption({ value: rigId() });
+
+    await expect(page.getByTestId("equipment-schedule")).toContainText(
+      "Hard conflict — 6 unit(s) committed of 4.",
+    );
+  });
+
+  test("AC 5: an outage shows its reason, note and period", async ({ page }) => {
+    test.skip(!usesLocalDatabase, "writes its own equipment; local database only");
+    await buildRig({
+      outages: [{ from: 9, to: 17, quantity: 2, reason: "MAINTENANCE", note: "Annual service" }],
+    });
+
+    await signInAsTechSupport(page);
+    await page.getByLabel("Equipment type").selectOption({ value: rigId() });
+
+    const entry = page.getByTestId("schedule-entry");
+    await expect(entry).toHaveCount(1);
+    await expect(entry).toContainText("Under maintenance");
+    await expect(entry).toContainText("Annual service");
+    await expect(entry).toContainText("2 unit(s)");
+    await expect(entry).toContainText("18 Aug 2032");
   });
 
   // SCRUM-30 is meant to answer "what is this item committed to". A list that
@@ -284,19 +364,10 @@ test.describe("SCRUM-30 — View Equipment Conflicts", () => {
     page,
   }) => {
     test.skip(!usesLocalDatabase, "writes its own equipment; local database only");
-    await spareEquipment([]);
+    await buildRig();
 
     await signInAsTechSupport(page);
-    await page
-      .getByLabel("Approved event")
-      .selectOption({ label: "Approved — Research Symposium" });
-    await page.getByLabel("Start date").fill("2031-07-02");
-    await page.getByLabel("Start time").fill("09:00");
-    await page.getByLabel("End date").fill("2031-07-02");
-    await page.getByLabel("End time").fill("17:00");
-    await page.getByLabel("Equipment type").selectOption({ value: SPARE });
-    await page.getByLabel("Quantity", { exact: true }).fill("1");
-
+    await fillRigPeriod(page, 9, 17, "1");
     await expect(page.getByTestId("schedule-fully-available")).toBeVisible();
 
     await page.getByRole("button", { name: /Reserve.*equipment/ }).click();
@@ -313,14 +384,30 @@ test.describe("SCRUM-30 — View Equipment Conflicts", () => {
     page,
   }) => {
     test.skip(!usesLocalDatabase, "writes its own equipment; local database only");
-    await spareEquipment([]);
+    await buildRig();
 
     await signInAsTechSupport(page);
-    await page.getByLabel("Equipment type").selectOption({ value: SPARE });
+    await page.getByLabel("Equipment type").selectOption({ value: rigId() });
 
     await expect(page.getByTestId("schedule-fully-available")).toContainText(
       "nothing is reserved or out of service",
     );
     await expect(page.getByTestId("schedule-entry")).toHaveCount(0);
+  });
+
+  // The panel must degrade inline rather than take the page down: the
+  // reservation form stays usable when the schedule cannot be read.
+  test("shows the schedule's own error when the item can no longer be read, and keeps the form", async ({
+    page,
+  }) => {
+    test.skip(!usesLocalDatabase, "writes its own equipment; local database only");
+    await buildRig();
+
+    await signInAsTechSupport(page);
+    await prisma.equipment.update({ where: { id: rigId() }, data: { isActive: false } });
+    await page.getByLabel("Equipment type").selectOption({ value: rigId() });
+
+    await expect(page.getByTestId("schedule-error")).toHaveText("Equipment type is unavailable.");
+    await expect(page.getByRole("button", { name: /Reserve.*equipment/ })).toBeVisible();
   });
 });
