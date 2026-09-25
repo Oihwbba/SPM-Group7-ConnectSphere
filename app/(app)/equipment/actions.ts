@@ -22,6 +22,7 @@ import {
 } from "@/lib/schemas/reservation";
 
 type Availability = { available: number; total: number; committed: number };
+type ReserveOutcome = { error: string } | { id: string; available: number };
 
 /**
  * SCRUM-29 — what is free for the whole period.
@@ -283,11 +284,7 @@ export async function createReservation(
     const startAt = new Date(parsed.data.startAt);
     const endAt = new Date(parsed.data.endAt);
 
-    // Typed so that `"error" in result` narrows to the refusal. Left to
-    // inference, TypeScript widens the object literals and `error` becomes
-    // optional on the success arm too.
-    type Outcome = { error: string } | { id: string; available: number };
-    const result = await prisma.$transaction(async (tx): Promise<Outcome> => {
+    const result = await prisma.$transaction<ReserveOutcome>(async (tx) => {
       const event = await tx.event.findFirst({
         where: { id: eventId, status: "APPROVED" },
         select: { id: true },
@@ -336,9 +333,7 @@ export async function createReservation(
       };
     });
 
-    if ("error" in result) {
-      return err(result.error);
-    }
+    if ("error" in result) return err(result.error);
     revalidatePath("/equipment");
     return ok(result);
   } catch (error) {
