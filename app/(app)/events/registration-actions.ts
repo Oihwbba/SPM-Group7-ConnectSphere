@@ -5,7 +5,10 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { requirePermission, PermissionError } from "@/lib/auth/can";
-import { registerForEventSchema } from "@/lib/schemas/registration";
+import {
+  registerForEventSchema,
+  withdrawRegistrationSchema,
+} from "@/lib/schemas/registration";
 import { ok, err, type ActionResult } from "@/lib/action-result";
 import {
   computeRegistrationState,
@@ -112,6 +115,78 @@ export async function registerForEvent(
     if ("error" in result) return err(result.error);
 
     revalidatePath(`/events/${eventId}`);
+    revalidatePath("/events");
+    return ok({ id: result.id });
+  } catch (error) {
+    if (error instanceof PermissionError) return err(error.message);
+    throw error;
+  }
+}
+
+type WithdrawOutcome = { error: string } | { id: string; eventId: string };
+
+/**
+ * SCRUM-74/77 (partial) — an Attendee withdraws their own registration, so a
+ * place they no longer need reopens for someone else. Only the slice SCRUM-74
+ * actually needs is built here: status flips to WITHDRAWN (so it drops out of
+ * the REGISTERED count `registerForEvent` and the browse/detail pages already
+ * query) under the same event-row lock discipline, with the Attendee's own
+ * Withdraw button on the detail page (./withdraw-button.tsx) as its entry
+ * point. No organiser/coordinator registration view and no event-start-instant
+ * cutoff — those are SCRUM-77's own remaining scope, not this one's.
+ */
+export async function withdrawRegistration(
+  input: unknown,
+): Promise<ActionResult<{ id: string }>> {
+  const session = await auth();
+
+  try {
+    requirePermission(session?.user, "registration:withdraw");
+    const userId = session!.user.id;
+
+    const parsed = withdrawRegistrationSchema.safeParse(input);
+    if (!parsed.success) {
+      return err(
+        "Please try again from your registrations.",
+        parsed.error.flatten().fieldErrors,
+      );
+    }
+    const { registrationId } = parsed.data;
+
+    const result = await prisma.$transaction<WithdrawOutcome>(async (tx) => {
+      // Not-found parity: someone else's registration id must look exactly
+      // like a missing one, never "found but forbidden".
+      const registration = await tx.registration.findUnique({
+        where: { id: registrationId },
+        select: { id: true, eventId: true, userId: true, status: true },
+      });
+      if (!registration || registration.userId !== userId) {
+        return { error: "Registration not found." };
+      }
+
+      // Idempotent: withdrawing an already-withdrawn registration changes
+      // nothing and frees no additional place, so no lock is needed — no
+      // capacity-affecting write is about to happen.
+      if (registration.status !== "REGISTERED") {
+        return { id: registration.id, eventId: registration.eventId };
+      }
+
+      // Same discipline as registerForEvent: lock the Event row so a
+      // withdrawal and a concurrent registration for the place it just freed
+      // can never interleave unsafely.
+      await tx.$queryRaw`SELECT "id" FROM "Event" WHERE "id" = ${registration.eventId} FOR UPDATE`;
+
+      await tx.registration.update({
+        where: { id: registrationId },
+        data: { status: "WITHDRAWN", withdrawnAt: new Date() },
+      });
+
+      return { id: registration.id, eventId: registration.eventId };
+    });
+
+    if ("error" in result) return err(result.error);
+
+    revalidatePath(`/events/${result.eventId}`);
     revalidatePath("/events");
     return ok({ id: result.id });
   } catch (error) {

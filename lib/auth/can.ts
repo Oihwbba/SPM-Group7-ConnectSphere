@@ -38,6 +38,7 @@ export type Action =
   | "equipment:reserve"
   | "event:browse" // attendees browsing events open for registration
   | "registration:create" // SCRUM-73: an attendee registers for an event
+  | "registration:withdraw" // SCRUM-74/77: an attendee withdraws their own registration
   | "registration:read"
   | "notification:read";
 
@@ -88,6 +89,7 @@ const ROLE_ACTIONS: Record<Role, Action[]> = {
   ATTENDEE: [
     "event:browse",
     "registration:create",
+    "registration:withdraw",
     "registration:read",
     "notification:read",
   ],

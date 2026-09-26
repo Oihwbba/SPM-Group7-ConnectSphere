@@ -19,6 +19,7 @@ import {
 } from "@/lib/registration-state";
 import { formatDateTimeInTimezone } from "@/lib/datetime";
 import { RegisterButton } from "./register-button";
+import { WithdrawButton } from "./withdraw-button";
 import type { BrowsableEvent } from "./attendee-events-client";
 
 const STATE_BADGE_VARIANT = {
@@ -29,16 +30,17 @@ const STATE_BADGE_VARIANT = {
   EXPIRED: "muted",
 } as const;
 
-/** SCRUM-72/73 — the event detail view: read-only display plus the working
- * Register button (SCRUM-73's actual action, in ./register-button.tsx). The
- * button is disabled whenever the shared registration-state rule says this
- * isn't an OPEN event, so "why can't I register" always matches what the
- * server itself will refuse. */
+/** SCRUM-72/73/74 — the event detail view: read-only display plus the
+ * working Register and Withdraw actions (./register-button.tsx,
+ * ./withdraw-button.tsx). Register is disabled whenever the shared
+ * registration-state rule says this isn't an OPEN event, so "why can't I
+ * register" always matches what the server itself will refuse. */
 export function AttendeeEventDetail({ event }: { event: BrowsableEvent }) {
   const state = computeRegistrationState(event, event._count.registrations);
   const remaining = remainingCapacity(event, event._count.registrations);
   const venue = event.bookings[0];
-  const isRegistered = event.registrations[0]?.status === "REGISTERED";
+  const registration = event.registrations[0];
+  const isRegistered = registration?.status === "REGISTERED";
 
   return (
     <div className="mx-auto max-w-2xl space-y-4">
@@ -136,12 +138,15 @@ export function AttendeeEventDetail({ event }: { event: BrowsableEvent }) {
               </span>
             </div>
             {isRegistered ? (
-              <span
-                className="flex items-center gap-1.5 text-sm font-medium text-success"
-                data-testid="already-registered"
-              >
-                <CheckCircle2 className="h-4 w-4" /> You&apos;re registered
-              </span>
+              <div className="flex items-center gap-3">
+                <span
+                  className="flex items-center gap-1.5 text-sm font-medium text-success"
+                  data-testid="already-registered"
+                >
+                  <CheckCircle2 className="h-4 w-4" /> You&apos;re registered
+                </span>
+                <WithdrawButton registrationId={registration!.id} />
+              </div>
             ) : (
               <RegisterButton
                 eventId={event.id}

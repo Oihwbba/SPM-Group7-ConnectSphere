@@ -5,3 +5,10 @@ import { z } from "zod";
 export const registerForEventSchema = z.object({
   eventId: z.string().min(1, "Missing event."),
 });
+
+/** SCRUM-74's withdraw-reopens-capacity slice of SCRUM-77 — only ever needs
+ * the registration id; ownership is checked against the session, never
+ * trusted from client input. */
+export const withdrawRegistrationSchema = z.object({
+  registrationId: z.string().min(1, "Missing registration."),
+});

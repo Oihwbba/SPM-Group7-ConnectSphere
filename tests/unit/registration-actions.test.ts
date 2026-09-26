@@ -4,7 +4,10 @@ import type { Role } from "@prisma/client";
 
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
-import { registerForEvent } from "@/app/(app)/events/registration-actions";
+import {
+  registerForEvent,
+  withdrawRegistration,
+} from "@/app/(app)/events/registration-actions";
 
 // SCRUM-73/74 — the register action. The transaction runs its callback
 // against a mock `tx`, same convention as clarification.test.ts and
@@ -17,6 +20,7 @@ const tx = vi.hoisted(() => ({
     findUnique: vi.fn(),
     count: vi.fn(),
     upsert: vi.fn(),
+    update: vi.fn(),
   },
 }));
 
@@ -59,6 +63,7 @@ beforeEach(() => {
   tx.registration.findUnique.mockResolvedValue(null);
   tx.registration.count.mockResolvedValue(0);
   tx.registration.upsert.mockResolvedValue({ id: "reg1" });
+  tx.registration.update.mockResolvedValue({ id: "reg1" });
   mockTransaction.mockImplementation((cb: (t: typeof tx) => unknown) => cb(tx));
 });
 
@@ -231,5 +236,120 @@ describe("registerForEvent — SCRUM-73", () => {
     await expect(registerForEvent({ eventId: "evt1" })).rejects.toThrow(
       "DB unavailable",
     );
+  });
+});
+
+describe("withdrawRegistration — SCRUM-74/77 (minimal slice)", () => {
+  it("[Positive] SCRUM-74 AC: withdrawing a REGISTERED registration flips it to WITHDRAWN", async () => {
+    mockAuth.mockResolvedValue(sessionFor("ATTENDEE", "usr_attendee"));
+    tx.registration.findUnique.mockResolvedValue({
+      id: "reg1",
+      eventId: "evt1",
+      userId: "usr_attendee",
+      status: "REGISTERED",
+    });
+
+    const result = await withdrawRegistration({ registrationId: "reg1" });
+
+    expect(result).toEqual({ ok: true, data: { id: "reg1" } });
+    expect(tx.registration.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "reg1" },
+        data: expect.objectContaining({ status: "WITHDRAWN" }),
+      }),
+    );
+  });
+
+  it("[Positive] SCRUM-74 AC: withdrawal locks the Event row before writing, so a concurrent registration for the freed place cannot interleave", async () => {
+    mockAuth.mockResolvedValue(sessionFor("ATTENDEE", "usr_attendee"));
+    tx.registration.findUnique.mockResolvedValue({
+      id: "reg1",
+      eventId: "evt1",
+      userId: "usr_attendee",
+      status: "REGISTERED",
+    });
+
+    await withdrawRegistration({ registrationId: "reg1" });
+
+    expect(tx.$queryRaw).toHaveBeenCalled();
+  });
+
+  it("[Positive] withdrawing an already-WITHDRAWN registration is a no-op — idempotent, no lock taken", async () => {
+    mockAuth.mockResolvedValue(sessionFor("ATTENDEE", "usr_attendee"));
+    tx.registration.findUnique.mockResolvedValue({
+      id: "reg1",
+      eventId: "evt1",
+      userId: "usr_attendee",
+      status: "WITHDRAWN",
+    });
+
+    const result = await withdrawRegistration({ registrationId: "reg1" });
+
+    expect(result).toEqual({ ok: true, data: { id: "reg1" } });
+    expect(tx.$queryRaw).not.toHaveBeenCalled();
+    expect(tx.registration.update).not.toHaveBeenCalled();
+  });
+
+  it("[Negative] not-found parity: an Attendee cannot withdraw another Attendee's registration", async () => {
+    mockAuth.mockResolvedValue(sessionFor("ATTENDEE", "usr_attendee"));
+    tx.registration.findUnique.mockResolvedValue({
+      id: "reg1",
+      eventId: "evt1",
+      userId: "usr_someone_else",
+      status: "REGISTERED",
+    });
+
+    const result = await withdrawRegistration({ registrationId: "reg1" });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toMatch(/not found/i);
+    expect(tx.registration.update).not.toHaveBeenCalled();
+  });
+
+  it("[Negative] a non-existent registration id is refused the same way as someone else's", async () => {
+    mockAuth.mockResolvedValue(sessionFor("ATTENDEE", "usr_attendee"));
+    tx.registration.findUnique.mockResolvedValue(null);
+
+    const result = await withdrawRegistration({ registrationId: "reg1" });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toMatch(/not found/i);
+  });
+
+  it("[Negative] AC: withdrawal is refused for validation failure (missing registrationId)", async () => {
+    mockAuth.mockResolvedValue(sessionFor("ATTENDEE", "usr_attendee"));
+
+    const result = await withdrawRegistration({ registrationId: "" });
+
+    expect(result.ok).toBe(false);
+    expect(mockTransaction).not.toHaveBeenCalled();
+  });
+
+  it("[Security gate] a role without registration:withdraw (e.g. ORGANISER) is refused before the transaction runs", async () => {
+    mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
+
+    const result = await withdrawRegistration({ registrationId: "reg1" });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toMatch(/permission/i);
+    expect(mockTransaction).not.toHaveBeenCalled();
+  });
+
+  it("[Negative] a signed-out caller is refused", async () => {
+    mockAuth.mockResolvedValue(null);
+
+    const result = await withdrawRegistration({ registrationId: "reg1" });
+
+    expect(result.ok).toBe(false);
+    expect(mockTransaction).not.toHaveBeenCalled();
+  });
+
+  it("[Exit path] rethrows an unexpected (non-permission) error instead of swallowing it", async () => {
+    mockAuth.mockResolvedValue(sessionFor("ATTENDEE", "usr_attendee"));
+    mockTransaction.mockRejectedValueOnce(new Error("DB unavailable"));
+
+    await expect(
+      withdrawRegistration({ registrationId: "reg1" }),
+    ).rejects.toThrow("DB unavailable");
   });
 });

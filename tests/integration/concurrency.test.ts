@@ -17,7 +17,10 @@ import {
   requestClarification,
   respondToClarification,
 } from "@/app/(app)/events/clarification-actions";
-import { registerForEvent } from "@/app/(app)/events/registration-actions";
+import {
+  registerForEvent,
+  withdrawRegistration,
+} from "@/app/(app)/events/registration-actions";
 
 // The "at the same moment" cases (SCRUM-31/53/74). These are the acceptance
 // criteria the database constraints and row locks exist to satisfy, so each one
@@ -531,5 +534,73 @@ describe.skipIf(!usesLocalDatabase)("concurrency — registration capacity (SCRU
         where: { eventId: LAST_SEAT_EVENT_ID, status: "REGISTERED" },
       }),
     ).toBe(3);
+  });
+});
+
+// SCRUM-74 — "Given a full event, when an existing Attendee withdraws, then
+// remaining capacity increases by one and registration reopens." A dedicated
+// throwaway event (capacity 1), not a shared seeded fixture: this test both
+// fills and then re-opens the event, which would corrupt any fixture other
+// tests in this file also rely on.
+describe.skipIf(!usesLocalDatabase)("concurrency — withdrawal reopens capacity (SCRUM-74)", () => {
+  let eventId: string;
+  let firstRegistrationId: string;
+
+  const asAttendee = (id: string, email: string) =>
+    (auth as unknown as Mock).mockResolvedValue({
+      user: { id, role: "ATTENDEE", name: "Concurrency Attendee", email },
+      expires: "2999-01-01T00:00:00.000Z",
+    });
+
+  beforeAll(async () => {
+    const event = await prisma.event.create({
+      data: {
+        name: `SCRUM-74 Withdrawal Concurrency Event ${Date.now()}`,
+        status: "CONFIRMED",
+        organiserId: "usr_organiser",
+        expectedAttendance: 1,
+      },
+      select: { id: true },
+    });
+    eventId = event.id;
+  });
+
+  afterAll(async () => {
+    await prisma.registration.deleteMany({ where: { eventId } });
+    await prisma.event.delete({ where: { id: eventId } });
+  });
+
+  it("withdrawing the sole registration on a full event lets a new registration succeed", async () => {
+    asAttendee("usr_attendee_3", "attendee3@test.local");
+    const first = await registerForEvent({ eventId });
+    expect(first.ok).toBe(true);
+    if (!first.ok) return;
+    firstRegistrationId = first.data.id;
+
+    asAttendee("usr_attendee_4", "attendee4@test.local");
+    const whileFull = await registerForEvent({ eventId });
+    expect(whileFull.ok).toBe(false);
+    if (!whileFull.ok) expect(whileFull.error).toMatch(/full/i);
+
+    asAttendee("usr_attendee_3", "attendee3@test.local");
+    const withdrawal = await withdrawRegistration({
+      registrationId: firstRegistrationId,
+    });
+    expect(withdrawal.ok).toBe(true);
+
+    asAttendee("usr_attendee_4", "attendee4@test.local");
+    const afterWithdrawal = await registerForEvent({ eventId });
+    expect(afterWithdrawal.ok).toBe(true);
+
+    expect(
+      await prisma.registration.count({
+        where: { eventId, status: "REGISTERED" },
+      }),
+    ).toBe(1);
+    expect(
+      await prisma.registration.findUniqueOrThrow({
+        where: { id: firstRegistrationId },
+      }),
+    ).toMatchObject({ status: "WITHDRAWN" });
   });
 });

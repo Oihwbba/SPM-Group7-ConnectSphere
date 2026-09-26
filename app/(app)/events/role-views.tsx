@@ -81,7 +81,7 @@ export async function getBrowsableEvents(attendeeId: string) {
       },
       registrations: {
         where: { userId: attendeeId },
-        select: { status: true },
+        select: { id: true, status: true },
         take: 1,
       },
       _count: {

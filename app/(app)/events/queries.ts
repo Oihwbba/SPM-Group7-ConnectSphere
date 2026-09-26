@@ -71,7 +71,7 @@ export async function getBrowsableEvent(id: string) {
       // show "you're registered" instead of an active Register button.
       registrations: {
         where: { userId: session.user.id },
-        select: { status: true },
+        select: { id: true, status: true },
         take: 1,
       },
       _count: {

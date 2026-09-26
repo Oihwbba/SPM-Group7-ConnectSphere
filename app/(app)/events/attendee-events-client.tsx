@@ -33,8 +33,10 @@ export type BrowsableEvent = {
   registrationClosesAt: Date | null;
   bookings: Booking[];
   // The caller's OWN registration row, if any (SCRUM-73: "immediately
-  // visible to the Attendee with a status of registered").
-  registrations: { status: string }[];
+  // visible to the Attendee with a status of registered"). `id` is carried
+  // through so the detail page's Withdraw button (SCRUM-74/77) has something
+  // to act on.
+  registrations: { id: string; status: string }[];
   _count: { registrations: number };
 };
 
