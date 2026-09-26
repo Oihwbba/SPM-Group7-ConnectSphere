@@ -164,9 +164,8 @@ export async function withdrawRegistration(
         return { error: "Registration not found." };
       }
 
-      // Idempotent: withdrawing an already-withdrawn registration changes
-      // nothing and frees no additional place, so no lock is needed — no
-      // capacity-affecting write is about to happen.
+      // Idempotent fast path: an already-terminal registration needs no
+      // write and no lock — no capacity-affecting change is about to happen.
       if (registration.status !== "REGISTERED") {
         return { id: registration.id, eventId: registration.eventId };
       }
@@ -176,8 +175,13 @@ export async function withdrawRegistration(
       // can never interleave unsafely.
       await tx.$queryRaw`SELECT "id" FROM "Event" WHERE "id" = ${registration.eventId} FOR UPDATE`;
 
-      await tx.registration.update({
-        where: { id: registrationId },
+      // Self-guarding write (ADR 0006's discipline, mirrored from
+      // respondToClarification): the update only claims a row still
+      // REGISTERED, so a stale read from before the lock can never overwrite
+      // a status some other transition already moved this row to in the
+      // meantime. Zero rows claimed is just another already-withdrawn no-op.
+      await tx.registration.updateMany({
+        where: { id: registrationId, status: "REGISTERED" },
         data: { status: "WITHDRAWN", withdrawnAt: new Date() },
       });
 

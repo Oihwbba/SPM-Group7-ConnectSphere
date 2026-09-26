@@ -20,7 +20,7 @@ const tx = vi.hoisted(() => ({
     findUnique: vi.fn(),
     count: vi.fn(),
     upsert: vi.fn(),
-    update: vi.fn(),
+    updateMany: vi.fn(),
   },
 }));
 
@@ -63,7 +63,7 @@ beforeEach(() => {
   tx.registration.findUnique.mockResolvedValue(null);
   tx.registration.count.mockResolvedValue(0);
   tx.registration.upsert.mockResolvedValue({ id: "reg1" });
-  tx.registration.update.mockResolvedValue({ id: "reg1" });
+  tx.registration.updateMany.mockResolvedValue({ count: 1 });
   mockTransaction.mockImplementation((cb: (t: typeof tx) => unknown) => cb(tx));
 });
 
@@ -252,9 +252,9 @@ describe("withdrawRegistration — SCRUM-74/77 (minimal slice)", () => {
     const result = await withdrawRegistration({ registrationId: "reg1" });
 
     expect(result).toEqual({ ok: true, data: { id: "reg1" } });
-    expect(tx.registration.update).toHaveBeenCalledWith(
+    expect(tx.registration.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { id: "reg1" },
+        where: { id: "reg1", status: "REGISTERED" },
         data: expect.objectContaining({ status: "WITHDRAWN" }),
       }),
     );
@@ -287,7 +287,27 @@ describe("withdrawRegistration — SCRUM-74/77 (minimal slice)", () => {
 
     expect(result).toEqual({ ok: true, data: { id: "reg1" } });
     expect(tx.$queryRaw).not.toHaveBeenCalled();
-    expect(tx.registration.update).not.toHaveBeenCalled();
+    expect(tx.registration.updateMany).not.toHaveBeenCalled();
+  });
+
+  it("[Positive] ADR 0006: the write is self-guarding — a stale read of REGISTERED still only claims a row still REGISTERED, so it cannot clobber a status changed in the meantime", async () => {
+    mockAuth.mockResolvedValue(sessionFor("ATTENDEE", "usr_attendee"));
+    tx.registration.findUnique.mockResolvedValue({
+      id: "reg1",
+      eventId: "evt1",
+      userId: "usr_attendee",
+      status: "REGISTERED",
+    });
+    // Simulates the row having moved on by the time the write runs (e.g. a
+    // concurrent transition claimed it first): zero rows matched.
+    tx.registration.updateMany.mockResolvedValue({ count: 0 });
+
+    const result = await withdrawRegistration({ registrationId: "reg1" });
+
+    expect(result).toEqual({ ok: true, data: { id: "reg1" } });
+    expect(tx.registration.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: "reg1", status: "REGISTERED" } }),
+    );
   });
 
   it("[Negative] not-found parity: an Attendee cannot withdraw another Attendee's registration", async () => {
@@ -303,7 +323,7 @@ describe("withdrawRegistration — SCRUM-74/77 (minimal slice)", () => {
 
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error).toMatch(/not found/i);
-    expect(tx.registration.update).not.toHaveBeenCalled();
+    expect(tx.registration.updateMany).not.toHaveBeenCalled();
   });
 
   it("[Negative] a non-existent registration id is refused the same way as someone else's", async () => {
