@@ -2,15 +2,16 @@ import { describe, it, expect } from "vitest";
 
 import {
   checkQuantity,
-  markConflicts,
   overlaps,
   peakCommitted,
+  requestedPeriodTone,
   sortSchedule,
+  splitByPeriod,
   summariseAvailability,
   type ScheduleEntry,
 } from "@/lib/equipment/availability";
 
-// SCRUM-29 (check availability) and SCRUM-30 (view conflicts). The overlap
+// SCRUM-29 (check availability) and SCRUM-30 (commitments by requested period). The overlap
 // rule is half-open and is stated in one place; these tests pin both the rule
 // and the counted-pool arithmetic that depends on it.
 
@@ -123,122 +124,135 @@ describe("checkQuantity — an answer on both sides (SCRUM-29)", () => {
   });
 });
 
-describe("markConflicts — SCRUM-30", () => {
-  const entry = (
-    id: string,
-    from: number,
-    to: number,
-    quantity: number,
-    extra: Partial<ScheduleEntry> = {},
-  ): ScheduleEntry => ({
-    id,
-    kind: "reservation",
-    startAt: at(from),
-    endAt: at(to),
-    quantity,
-    eventName: `Event ${id}`,
-    reason: null,
-    note: null,
-    ...extra,
-  });
+const entry = (
+  id: string,
+  from: number,
+  to: number,
+  extra: Partial<ScheduleEntry> = {},
+): ScheduleEntry => ({
+  id,
+  kind: "reservation",
+  startAt: at(from),
+  endAt: at(to),
+  quantity: 1,
+  eventName: `Event ${id}`,
+  reason: null,
+  note: null,
+  ...extra,
+});
 
-  it("flags two reservations that share time, naming each other", () => {
-    const [a, b] = markConflicts([entry("a", 9, 12, 1), entry("b", 11, 13, 1)], 10);
+describe("splitByPeriod — SCRUM-30", () => {
+  const period = { startAt: at(9), endAt: at(12) };
 
-    expect(a.hasConflict).toBe(true);
-    expect(a.conflictsWith).toEqual(["b"]);
-    expect(b.conflictsWith).toEqual(["a"]);
-  });
+  it("AC 8: puts commitments that share time with the requested period under it", () => {
+    const inside = entry("inside", 10, 11);
+    const straddlingStart = entry("start", 8, 10);
+    const straddlingEnd = entry("end", 11, 14);
+    const covering = entry("cover", 6, 18);
 
-  it("does NOT flag reservations that touch at an endpoint", () => {
-    const marked = markConflicts([entry("a", 9, 12, 1), entry("b", 12, 15, 1)], 10);
-
-    expect(marked.every((row) => row.hasConflict)).toBe(false);
-    expect(marked.flatMap((row) => row.conflictsWith)).toEqual([]);
-  });
-
-  // Overlapping is worth showing; over-committed is the actual fault. A pool
-  // of ten carrying two overlapping reservations of two is fine.
-  it("separates a harmless overlap from one that oversubscribes the pool", () => {
-    const fine = markConflicts([entry("a", 9, 12, 2), entry("b", 10, 13, 2)], 10);
-    expect(fine.every((row) => row.hasConflict)).toBe(true);
-    expect(fine.every((row) => row.overCommitted)).toBe(false);
-
-    const broken = markConflicts([entry("a", 9, 12, 6), entry("b", 10, 13, 6)], 10);
-    expect(broken.every((row) => row.overCommitted)).toBe(true);
-    expect(broken[0].committedDuringEntry).toBe(12);
-  });
-
-  it("carries the reason and duration of unavailability through (SCRUM-30)", () => {
-    const [row] = markConflicts(
-      [
-        entry("u", 9, 17, 3, {
-          kind: "unavailability",
-          eventName: null,
-          reason: "MAINTENANCE",
-          note: "Annual service",
-        }),
-      ],
-      10,
+    const { during, other } = splitByPeriod(
+      [inside, straddlingStart, straddlingEnd, covering],
+      period,
     );
 
-    expect(row).toMatchObject({
-      kind: "unavailability",
-      reason: "MAINTENANCE",
-      note: "Annual service",
-      quantity: 3,
-      hasConflict: false,
-    });
-    expect(row.endAt.getTime() - row.startAt.getTime()).toBe(8 * 3600_000);
+    expect(during.map((e) => e.id)).toEqual(["inside", "start", "end", "cover"]);
+    expect(other).toEqual([]);
   });
 
-  it("marks a lone entry as conflict-free", () => {
-    expect(markConflicts([entry("a", 9, 12, 1)], 10)[0]).toMatchObject({
-      hasConflict: false,
-      conflictsWith: [],
-      overCommitted: false,
+  it("AC 3 & 9: a commitment that only touches the period at an endpoint is an other commitment", () => {
+    const endsAtStart = entry("before", 6, 9);
+    const startsAtEnd = entry("after", 12, 15);
+
+    const { during, other } = splitByPeriod([endsAtStart, startsAtEnd], period);
+
+    expect(during).toEqual([]);
+    expect(other.map((e) => e.id)).toEqual(["before", "after"]);
+  });
+
+  it("AC 9: commitments wholly outside the period are other commitments, even if they overlap each other", () => {
+    const early = entry("early", 13, 16);
+    const clashing = entry("clash", 14, 17);
+    const inside = entry("inside", 10, 11);
+
+    const { during, other } = splitByPeriod([inside, early, clashing], period);
+
+    expect(during.map((e) => e.id)).toEqual(["inside"]);
+    expect(other.map((e) => e.id)).toEqual(["early", "clash"]);
+  });
+
+  it("puts everything under other commitments while there is no valid period", () => {
+    const rows = [entry("a", 9, 12), entry("b", 13, 14)];
+
+    expect(splitByPeriod(rows, null)).toEqual({ during: [], other: rows });
+  });
+
+  // The split must agree with the availability number above it: whatever is
+  // "during" is exactly what summariseAvailability weighs for the period.
+  it("splits on the same rule the requested-period availability is computed from", () => {
+    const rows = [entry("a", 6, 9, { quantity: 4 }), entry("b", 10, 11, { quantity: 3 })];
+
+    const { during } = splitByPeriod(rows, period);
+    const availability = summariseAvailability({
+      total: 4,
+      reservations: rows,
+      unavailability: [],
+      startAt: period.startAt,
+      endAt: period.endAt,
     });
+
+    expect(during.reduce((sum, e) => sum + e.quantity, 0)).toBe(availability.committed);
+  });
+
+  it("keeps the schedule's order within each list", () => {
+    const rows = sortSchedule([entry("c", 14, 15), entry("a", 10, 11), entry("b", 11, 12)]);
+
+    const { during, other } = splitByPeriod(rows, period);
+
+    expect(during.map((e) => e.id)).toEqual(["a", "b"]);
+    expect(other.map((e) => e.id)).toEqual(["c"]);
+  });
+});
+
+describe("requestedPeriodTone — SCRUM-30", () => {
+  it("AC 2: amber while the requested quantity can still be fulfilled", () => {
+    expect(requestedPeriodTone({ sufficient: true })).toBe("amber");
+  });
+
+  it("AC 4 & 7: red only when the requested quantity exceeds what is free", () => {
+    expect(requestedPeriodTone({ sufficient: false })).toBe("red");
+  });
+
+  // Nothing has been shown to be short yet — no valid quantity, or no
+  // availability loaded — so the commitments are not flagged as a conflict.
+  it("amber when there is no verdict yet", () => {
+    expect(requestedPeriodTone(null)).toBe("amber");
+  });
+
+  it("agrees with checkQuantity at the boundary: exactly the free quantity is amber, one more is red", () => {
+    const availability = { total: 4, committed: 1, available: 3 };
+
+    expect(requestedPeriodTone(checkQuantity(availability, 3))).toBe("amber");
+    expect(requestedPeriodTone(checkQuantity(availability, 4))).toBe("red");
   });
 });
 
 describe("sortSchedule", () => {
-  it("orders chronologically and stays stable when two start together", () => {
-    const rows = markConflicts(
-      [
-        {
-          id: "late",
-          kind: "reservation",
-          startAt: at(15),
-          endAt: at(16),
-          quantity: 1,
-          eventName: null,
-          reason: null,
-          note: null,
-        },
-        {
-          id: "b",
-          kind: "reservation",
-          startAt: at(9),
-          endAt: at(12),
-          quantity: 1,
-          eventName: null,
-          reason: null,
-          note: null,
-        },
-        {
-          id: "a",
-          kind: "reservation",
-          startAt: at(9),
-          endAt: at(12),
-          quantity: 1,
-          eventName: null,
-          reason: null,
-          note: null,
-        },
-      ],
-      10,
-    );
+  it("orders chronologically, then by end, and stays stable when two rows are identical in time", () => {
+    const rows = [
+      entry("late", 15, 16),
+      entry("b", 9, 12),
+      entry("short", 9, 10),
+      entry("a", 9, 12),
+    ];
 
-    expect(sortSchedule(rows).map((row) => row.id)).toEqual(["a", "b", "late"]);
+    expect(sortSchedule(rows).map((e) => e.id)).toEqual(["short", "a", "b", "late"]);
+  });
+
+  it("does not reorder the list it was given", () => {
+    const rows = [entry("b", 12, 13), entry("a", 9, 10)];
+
+    sortSchedule(rows);
+
+    expect(rows.map((e) => e.id)).toEqual(["b", "a"]);
   });
 });

@@ -140,52 +140,41 @@ export interface ScheduleEntry {
   note: string | null;
 }
 
-export interface MarkedScheduleEntry extends ScheduleEntry {
-  /** Ids of the other entries this one overlaps. Empty when adjacent or alone. */
-  conflictsWith: string[];
-  /** SCRUM-30 — an overlapping commitment is flagged as a hard conflict. */
-  hasConflict: boolean;
-  /** Units committed at this entry's busiest instant, across all entries. */
-  committedDuringEntry: number;
-  /**
-   * The pool is genuinely oversubscribed while this entry runs. Overlapping is
-   * not the same as over-committed: ten projectors can carry three overlapping
-   * reservations of two. This separates "worth looking at" from "broken".
-   */
-  overCommitted: boolean;
+/**
+ * SCRUM-30 — which commitments share time with the requested period.
+ *
+ * `during` is exactly the set that `summariseAvailability` weighs for that
+ * period, because both use `overlaps`: a commitment that only touches the
+ * period at an endpoint is in `other` and does not reduce what is free. With
+ * no valid period yet, nothing can be "during" it, so everything is `other`.
+ * Order is preserved, so a sorted schedule splits into two sorted lists.
+ */
+export function splitByPeriod<T extends { startAt: Date; endAt: Date }>(
+  entries: T[],
+  period: { startAt: Date; endAt: Date } | null,
+): { during: T[]; other: T[] } {
+  const during: T[] = [];
+  const other: T[] = [];
+  for (const entry of entries) {
+    (period && overlaps(entry, period) ? during : other).push(entry);
+  }
+  return { during, other };
 }
 
 /**
- * SCRUM-30 — mark every entry that shares time with another.
+ * SCRUM-30 — how commitments during the requested period are shown.
  *
- * Note for review: the story asks for *any* overlap to be flagged in red, so
- * that is what this does. For a counted pool an overlap is not by itself a
- * fault, which is why `overCommitted` is reported separately — it is the case
- * where the commitments actually exceed the pool.
+ * Amber while the requested quantity still fits: they reduce what is free but
+ * are not a problem. Red only when the request exceeds what is free — the one
+ * case the story calls a hard conflict. With no verdict yet (no valid quantity
+ * or no availability loaded) they are amber, because nothing has been shown to
+ * be short. Commitments outside the period are never toned; they are neutral
+ * even when they overlap one another.
  */
-export function markConflicts(
-  entries: ScheduleEntry[],
-  total: number,
-): MarkedScheduleEntry[] {
-  return entries.map((entry) => {
-    const conflictsWith = entries
-      .filter((other) => other.id !== entry.id && overlaps(entry, other))
-      .map((other) => other.id);
-
-    const committedDuringEntry = peakCommitted(
-      entries,
-      entry.startAt,
-      entry.endAt,
-    );
-
-    return {
-      ...entry,
-      conflictsWith,
-      hasConflict: conflictsWith.length > 0,
-      committedDuringEntry,
-      overCommitted: committedDuringEntry > total,
-    };
-  });
+export function requestedPeriodTone(
+  verdict: Pick<AvailabilityVerdict, "sufficient"> | null,
+): "amber" | "red" {
+  return verdict && !verdict.sufficient ? "red" : "amber";
 }
 
 /** Chronological, earliest first; ties broken by id so the order is stable. */

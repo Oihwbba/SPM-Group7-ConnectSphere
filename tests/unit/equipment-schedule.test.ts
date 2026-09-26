@@ -82,7 +82,11 @@ describe("getEquipmentSchedule — SCRUM-30", () => {
     );
   });
 
-  it("AC 2 & 4: flags reservations that share time as conflicting", async () => {
+  // Whether a commitment is a problem depends on the period and quantity being
+  // requested, which the action does not know. It reports every commitment as
+  // it stands, overlapping or not, and the view judges them against the
+  // request with splitByPeriod and requestedPeriodTone.
+  it("AC 1: reports overlapping reservations as they stand, without judging them", async () => {
     db.reservation.findMany.mockResolvedValue([
       reservation("r1", "2030-06-01T01:00:00.000Z", "2030-06-01T05:00:00.000Z", 2, "A"),
       reservation("r2", "2030-06-01T04:00:00.000Z", "2030-06-01T08:00:00.000Z", 2, "B"),
@@ -90,13 +94,19 @@ describe("getEquipmentSchedule — SCRUM-30", () => {
 
     const result = await getEquipmentSchedule(input);
 
+    expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.data.entries.every((row) => row.hasConflict)).toBe(true);
-      expect(result.data.entries[0].conflictsWith).toEqual(["r2"]);
+      expect(result.data.entries).toEqual([
+        expect.objectContaining({ id: "r1", eventName: "A", quantity: 2 }),
+        expect.objectContaining({ id: "r2", eventName: "B", quantity: 2 }),
+      ]);
+      expect(Object.keys(result.data.entries[0]).sort()).toEqual(
+        ["endAt", "eventName", "id", "kind", "note", "quantity", "reason", "startAt"],
+      );
     }
   });
 
-  it("AC 3: reservations that touch at an endpoint are adjacent, not conflicting", async () => {
+  it("AC 3: reports back-to-back reservations as two separate commitments", async () => {
     db.reservation.findMany.mockResolvedValue([
       reservation("r1", "2030-06-01T01:00:00.000Z", "2030-06-01T05:00:00.000Z", 2, "A"),
       reservation("r2", "2030-06-01T05:00:00.000Z", "2030-06-01T09:00:00.000Z", 2, "B"),
@@ -104,8 +114,10 @@ describe("getEquipmentSchedule — SCRUM-30", () => {
 
     const result = await getEquipmentSchedule(input);
 
+    expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.data.entries.some((row) => row.hasConflict)).toBe(false);
+      expect(result.data.entries.map((row) => row.id)).toEqual(["r1", "r2"]);
+      expect(result.data.entries[0].endAt).toEqual(result.data.entries[1].startAt);
     }
   });
 

@@ -224,14 +224,20 @@ async function fillRigPeriod(page: Page, from: number, to: number, quantity: str
 }
 
 /**
- * SCRUM-30 — see what an item is already committed to, so conflicts are
- * visible before a reservation is attempted. The seed puts one speaker out of
- * service as DAMAGED and three projectors in for MAINTENANCE.
+ * SCRUM-30 — see what an item is already committed to, split by the period
+ * being requested. Commitments that share time with it sit under the selected
+ * item's availability, amber while the request fits and red with the
+ * shortfall once it does not. Everything else sits below the other equipment,
+ * neutral. The seed puts one speaker out of service as DAMAGED and three
+ * projectors in for MAINTENANCE.
  */
 test.describe("SCRUM-30 — View Equipment Conflicts", () => {
   test.afterEach(async () => {
     if (usesLocalDatabase) await removeRig();
   });
+
+  const during = (page: Page) => page.getByTestId("commitments-during");
+  const other = (page: Page) => page.getByTestId("commitments-other");
 
   test("AC 5: selecting a seeded item shows its commitments with the reason", async ({
     page,
@@ -239,11 +245,11 @@ test.describe("SCRUM-30 — View Equipment Conflicts", () => {
     await signInAsTechSupport(page);
     await page.getByLabel("Equipment type").selectOption({ value: "eqp_speaker" });
 
-    const schedule = page.getByTestId("equipment-schedule");
-    await expect(schedule).toBeVisible();
-    await expect(schedule).toContainText("Damaged");
-    await expect(schedule).toContainText("Blown driver, awaiting write-off.");
-    await expect(schedule.getByTestId("schedule-entry").first()).toContainText("1 unit(s)");
+    // No period yet, so nothing can be "during" it: everything is an other commitment.
+    await expect(page.getByTestId("during-no-period")).toBeVisible();
+    await expect(other(page)).toContainText("Damaged");
+    await expect(other(page)).toContainText("Blown driver, awaiting write-off.");
+    await expect(other(page).getByTestId("schedule-entry").first()).toContainText("1 unit(s)");
   });
 
   test("AC 1: the seeded maintenance on the projector pool is listed", async ({ page }) => {
@@ -251,93 +257,135 @@ test.describe("SCRUM-30 — View Equipment Conflicts", () => {
     await signInAsTechSupport(page);
     await page.getByLabel("Equipment type").selectOption({ value: "eqp_projector" });
 
-    const schedule = page.getByTestId("equipment-schedule");
-    await expect(schedule).toBeVisible();
-    await expect(schedule).toContainText("Under maintenance");
-    await expect(schedule.getByTestId("schedule-entry").first()).toBeVisible();
+    await expect(other(page)).toBeVisible();
+    await expect(other(page)).toContainText("Under maintenance");
+    await expect(other(page).getByTestId("schedule-entry").first()).toBeVisible();
   });
 
-  test("AC 1: lists each reservation with the event it serves", async ({ page }) => {
-    test.skip(!usesLocalDatabase, "writes its own equipment; local database only");
-    await buildRig({
-      reservations: [
-        { from: 9, to: 11, quantity: 1 },
-        { from: 14, to: 16, quantity: 2 },
-      ],
-    });
-
-    await signInAsTechSupport(page);
-    await page.getByLabel("Equipment type").selectOption({ value: rigId() });
-
-    const entries = page.getByTestId("schedule-entry");
-    await expect(entries).toHaveCount(2);
-    await expect(entries.first()).toContainText("Approved — Research Symposium");
-    await expect(entries.first()).toContainText("1 unit(s)");
-    await expect(entries.nth(1)).toContainText("2 unit(s)");
-  });
-
-  test("AC 2: reservations that share time are highlighted and counted", async ({ page }) => {
-    test.skip(!usesLocalDatabase, "writes its own equipment; local database only");
-    await buildRig({
-      reservations: [
-        { from: 9, to: 13, quantity: 1 },
-        { from: 11, to: 15, quantity: 1 },
-      ],
-    });
-
-    await signInAsTechSupport(page);
-    await page.getByLabel("Equipment type").selectOption({ value: rigId() });
-
-    const schedule = page.getByTestId("equipment-schedule");
-    await expect(schedule).toBeVisible();
-    await expect(schedule.getByTestId("schedule-conflict-count")).toHaveText("2 overlapping");
-    await expect(
-      schedule.locator('[data-testid="schedule-entry"][data-conflict="true"]'),
-    ).toHaveCount(2);
-    await expect(schedule).toContainText("Overlaps 1 other commitment(s); 2 of 4 unit(s) in use.");
-  });
-
-  test("AC 3: back-to-back reservations are adjacent and are not flagged", async ({ page }) => {
-    test.skip(!usesLocalDatabase, "writes its own equipment; local database only");
-    await buildRig({
-      reservations: [
-        { from: 9, to: 13, quantity: 1 },
-        { from: 13, to: 17, quantity: 1 },
-      ],
-    });
-
-    await signInAsTechSupport(page);
-    await page.getByLabel("Equipment type").selectOption({ value: rigId() });
-
-    const schedule = page.getByTestId("equipment-schedule");
-    await expect(schedule).toBeVisible();
-    await expect(schedule.getByTestId("schedule-entry")).toHaveCount(2);
-    await expect(
-      schedule.locator('[data-testid="schedule-entry"][data-conflict="true"]'),
-    ).toHaveCount(0);
-    await expect(schedule.getByTestId("schedule-conflict-count")).toHaveCount(0);
-  });
-
-  // Written straight to the table: the reservation action refuses this, but
-  // only the action enforces the pool, so the view must say so when the
-  // stored commitments exceed it.
-  test("AC 4: commitments that exceed the pool are flagged as a hard conflict", async ({
+  test("AC 1 & 8: commitments overlapping the requested period are listed under it, the rest under other commitments", async ({
     page,
   }) => {
     test.skip(!usesLocalDatabase, "writes its own equipment; local database only");
     await buildRig({
       reservations: [
-        { from: 9, to: 12, quantity: 3 },
-        { from: 10, to: 13, quantity: 3 },
+        { from: 9, to: 11, quantity: 1 },
+        { from: 13, to: 14, quantity: 2 },
+        { from: 16, to: 18, quantity: 1 },
       ],
     });
 
     await signInAsTechSupport(page);
-    await page.getByLabel("Equipment type").selectOption({ value: rigId() });
+    await fillRigPeriod(page, 12, 15, "1");
 
-    await expect(page.getByTestId("equipment-schedule")).toContainText(
-      "Hard conflict — 6 unit(s) committed of 4.",
+    await expect(during(page).getByTestId("schedule-entry")).toHaveCount(1);
+    await expect(during(page).getByTestId("schedule-entry")).toContainText(
+      "Approved — Research Symposium",
     );
+    await expect(during(page).getByTestId("schedule-entry")).toContainText("2 unit(s)");
+    await expect(other(page).getByTestId("schedule-entry")).toHaveCount(2);
+  });
+
+  test("the requested-period section sits under the selected item, and other commitments below the other equipment", async ({
+    page,
+  }) => {
+    test.skip(!usesLocalDatabase, "writes its own equipment; local database only");
+    await buildRig({ reservations: [{ from: 16, to: 18, quantity: 1 }] });
+
+    await signInAsTechSupport(page);
+    await fillRigPeriod(page, 12, 15, "1");
+
+    const top = async (locator: ReturnType<Page["getByTestId"]>) =>
+      (await locator.boundingBox())!.y;
+    await expect(other(page)).toBeVisible();
+    const selectedCount = await top(page.getByTestId("selected-availability"));
+    const duringTop = await top(during(page));
+    const otherEquipmentTop = (await page
+      .getByText("Other equipment (for the same period)")
+      .boundingBox())!.y;
+    const otherTop = await top(other(page));
+
+    expect(selectedCount).toBeLessThan(duringTop);
+    expect(duringTop).toBeLessThan(otherEquipmentTop);
+    expect(otherEquipmentTop).toBeLessThan(otherTop);
+  });
+
+  test("AC 2: commitments during the period are amber while the requested quantity can still be fulfilled", async ({
+    page,
+  }) => {
+    test.skip(!usesLocalDatabase, "writes its own equipment; local database only");
+    await buildRig({ reservations: [{ from: 13, to: 14, quantity: 2 }] });
+
+    await signInAsTechSupport(page);
+    // Exactly the free quantity: the boundary is still amber.
+    await fillRigPeriod(page, 12, 15, "2");
+
+    await expect(page.getByTestId("selected-availability")).toHaveText("2 of 4 available");
+    await expect(during(page).getByTestId("schedule-entry")).toHaveAttribute("data-tone", "amber");
+    await expect(page.getByTestId("during-summary")).toHaveAttribute("data-tone", "amber");
+    await expect(page.getByTestId("during-summary")).toHaveText(
+      "These commitments leave 2 of 4 unit(s) free — your request for 2 fits.",
+    );
+  });
+
+  test("AC 4 & 7: they turn red with the shortfall only when the requested quantity exceeds what is free", async ({
+    page,
+  }) => {
+    test.skip(!usesLocalDatabase, "writes its own equipment; local database only");
+    await buildRig({ reservations: [{ from: 13, to: 14, quantity: 2 }] });
+
+    await signInAsTechSupport(page);
+    await fillRigPeriod(page, 12, 15, "3");
+
+    await expect(during(page).getByTestId("schedule-entry")).toHaveAttribute("data-tone", "red");
+    await expect(page.getByTestId("during-summary")).toHaveAttribute("data-tone", "red");
+    await expect(page.getByTestId("during-summary")).toHaveText(
+      "Hard conflict — 3 requested but only 2 of 4 unit(s) are free for this period: 1 short.",
+    );
+
+    // Bringing the request back within what is free takes the red away.
+    await page.getByLabel("Quantity", { exact: true }).fill("2");
+    await expect(during(page).getByTestId("schedule-entry")).toHaveAttribute("data-tone", "amber");
+  });
+
+  test("AC 3 & 9: commitments that only touch the period are other commitments and leave it fully available", async ({
+    page,
+  }) => {
+    test.skip(!usesLocalDatabase, "writes its own equipment; local database only");
+    await buildRig({
+      reservations: [
+        { from: 9, to: 12, quantity: 4 },
+        { from: 15, to: 18, quantity: 4 },
+      ],
+    });
+
+    await signInAsTechSupport(page);
+    await fillRigPeriod(page, 12, 15, "4");
+
+    await expect(page.getByTestId("selected-availability")).toHaveText("4 of 4 available");
+    await expect(page.getByTestId("during-fully-available")).toContainText(
+      "Nothing is committed during this period — all 4 unit(s) are free.",
+    );
+    await expect(other(page).getByTestId("schedule-entry")).toHaveCount(2);
+  });
+
+  // Two reservations outside the period that together exceed the pool: they
+  // do not affect this request, so they stay neutral.
+  test("other commitments stay neutral even when they overlap each other", async ({ page }) => {
+    test.skip(!usesLocalDatabase, "writes its own equipment; local database only");
+    await buildRig({
+      reservations: [
+        { from: 16, to: 19, quantity: 3 },
+        { from: 17, to: 20, quantity: 3 },
+      ],
+    });
+
+    await signInAsTechSupport(page);
+    await fillRigPeriod(page, 12, 15, "1");
+
+    const rows = other(page).getByTestId("schedule-entry");
+    await expect(rows).toHaveCount(2);
+    await expect(other(page).locator('[data-tone="neutral"]')).toHaveCount(2);
+    await expect(page.locator('[data-tone="red"], [data-tone="amber"]')).toHaveCount(0);
   });
 
   test("AC 5: an outage shows its reason, note and period", async ({ page }) => {
@@ -347,14 +395,15 @@ test.describe("SCRUM-30 — View Equipment Conflicts", () => {
     });
 
     await signInAsTechSupport(page);
-    await page.getByLabel("Equipment type").selectOption({ value: rigId() });
+    await fillRigPeriod(page, 12, 15, "1");
 
-    const entry = page.getByTestId("schedule-entry");
+    const entry = during(page).getByTestId("schedule-entry");
     await expect(entry).toHaveCount(1);
     await expect(entry).toContainText("Under maintenance");
     await expect(entry).toContainText("Annual service");
     await expect(entry).toContainText("2 unit(s)");
-    await expect(entry).toContainText("18 Aug 2032");
+    await expect(entry).toContainText("18 Aug 2032, 9:00 am");
+    await expect(entry).toContainText("18 Aug 2032, 5:00 pm");
   });
 
   // SCRUM-30 is meant to answer "what is this item committed to". A list that
@@ -368,16 +417,15 @@ test.describe("SCRUM-30 — View Equipment Conflicts", () => {
 
     await signInAsTechSupport(page);
     await fillRigPeriod(page, 9, 17, "1");
-    await expect(page.getByTestId("schedule-fully-available")).toBeVisible();
+    await expect(page.getByTestId("during-fully-available")).toBeVisible();
 
     await page.getByRole("button", { name: /Reserve.*equipment/ }).click();
     await expect(
       page.getByText(/Reservation confirmed\. \d+ unit\(s\) remain available\./),
     ).toBeVisible();
 
-    const schedule = page.getByTestId("equipment-schedule");
-    await expect(schedule.getByTestId("schedule-entry")).toHaveCount(1);
-    await expect(schedule).toContainText("Approved — Research Symposium");
+    await expect(during(page).getByTestId("schedule-entry")).toHaveCount(1);
+    await expect(during(page)).toContainText("Approved — Research Symposium");
   });
 
   test("AC 6: an item with nothing committed says so instead of showing an empty list", async ({
@@ -392,6 +440,10 @@ test.describe("SCRUM-30 — View Equipment Conflicts", () => {
     await expect(page.getByTestId("schedule-fully-available")).toContainText(
       "nothing is reserved or out of service",
     );
+    await expect(page.getByTestId("schedule-entry")).toHaveCount(0);
+
+    await fillRigPeriod(page, 12, 15, "1");
+    await expect(page.getByTestId("during-fully-available")).toBeVisible();
     await expect(page.getByTestId("schedule-entry")).toHaveCount(0);
   });
 
@@ -408,6 +460,7 @@ test.describe("SCRUM-30 — View Equipment Conflicts", () => {
     await page.getByLabel("Equipment type").selectOption({ value: rigId() });
 
     await expect(page.getByTestId("schedule-error")).toHaveText("Equipment type is unavailable.");
+    await expect(other(page)).toHaveCount(0);
     await expect(page.getByRole("button", { name: /Reserve.*equipment/ })).toBeVisible();
   });
 });

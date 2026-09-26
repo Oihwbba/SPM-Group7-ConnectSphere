@@ -12,12 +12,21 @@ import type { Session } from "next-auth";
 
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
-import { getEquipmentSchedule } from "@/app/(app)/equipment/actions";
+import {
+  getEquipmentAvailability,
+  getEquipmentSchedule,
+} from "@/app/(app)/equipment/actions";
+import {
+  checkQuantity,
+  requestedPeriodTone,
+  splitByPeriod,
+} from "@/lib/equipment/availability";
 
 // SCRUM-30 — View Equipment Conflicts, against a real Postgres. The unit tests
 // mock Prisma; these prove the "current and future" filter, the CONFIRMED-only
-// status filter, the event-name join and the conflict marking agree with the
-// rows the database actually returns.
+// status filter and the event-name join agree with the rows the database
+// actually returns, and that splitting those rows by the requested period
+// agrees with the availability the reservation is checked against.
 //
 // They WRITE a throwaway Equipment row and its commitments, removed after each
 // test, so they only run against a localhost database (CI's service container
@@ -121,44 +130,76 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-30 — equipment schedule against Pos
       }
     });
 
-    it("AC 2 & 4: flags reservations that share time, naming each other", async () => {
-      const first = await reserve(9, 12, 1);
-      const second = await reserve(11, 14, 1);
+    // Requested period for the cases below: 12:00–15:00.
+    const period = { startAt: new Date(at(12)), endAt: new Date(at(15)) };
+    const periodInput = { equipmentId: "", startAt: at(12), endAt: at(15) };
+
+    it("AC 3, 8 & 9: splits real commitments by the requested period, with touching ones under other commitments", async () => {
+      const touchesStart = await reserve(9, 12, 1);
+      const inside = await reserve(13, 14, 1);
+      const straddlesEnd = await reserve(14, 17, 1);
+      const touchesEnd = await reserve(15, 18, 1);
+      const later = await reserve(18, 20, 1);
 
       const result = await getEquipmentSchedule({ equipmentId, from: at(0) });
 
       expect(result.ok).toBe(true);
       if (result.ok) {
-        const byId = new Map(result.data.entries.map((e) => [e.id, e]));
-        expect(byId.get(first.id)).toMatchObject({ hasConflict: true, conflictsWith: [second.id] });
-        expect(byId.get(second.id)).toMatchObject({ hasConflict: true, conflictsWith: [first.id] });
+        const { during, other } = splitByPeriod(result.data.entries, period);
+        expect(during.map((e) => e.id)).toEqual([inside.id, straddlesEnd.id]);
+        expect(other.map((e) => e.id)).toEqual([touchesStart.id, touchesEnd.id, later.id]);
       }
     });
 
-    it("AC 3: reservations that touch at an endpoint are adjacent, not conflicting", async () => {
-      await reserve(9, 12, 1);
-      await reserve(12, 15, 1);
+    it("AC 2: commitments during the period are amber while the request still fits", async () => {
+      await reserve(13, 14, 2);
+      await reserve(14, 17, 1);
 
-      const result = await getEquipmentSchedule({ equipmentId, from: at(0) });
+      const availability = await getEquipmentAvailability({ ...periodInput, equipmentId });
 
-      if (result.ok) expect(result.data.entries.some((e) => e.hasConflict)).toBe(false);
-      expect(result.ok).toBe(true);
+      expect(availability).toMatchObject({ ok: true, data: { available: 2 } });
+      if (availability.ok) {
+        const verdict = checkQuantity(availability.data, 2);
+        expect(verdict.sufficient).toBe(true);
+        expect(requestedPeriodTone(verdict)).toBe("amber");
+      }
     });
 
-    // Written straight to the table: the reservation action would refuse
-    // this, but only the action enforces the pool, so the schedule must still
-    // say plainly when the stored commitments exceed it.
-    it("marks commitments that exceed the pool as over-committed", async () => {
-      await reserve(9, 12, 3);
-      await reserve(10, 13, 3);
+    it("AC 4 & 7: they turn red, with the shortfall, once the request exceeds what is free", async () => {
+      await reserve(13, 14, 2);
+      await reserve(14, 17, 1);
 
-      const result = await getEquipmentSchedule({ equipmentId, from: at(0) });
+      const availability = await getEquipmentAvailability({ ...periodInput, equipmentId });
 
-      if (result.ok) {
-        expect(result.data.entries.every((e) => e.overCommitted)).toBe(true);
-        expect(result.data.entries[0].committedDuringEntry).toBe(6);
+      expect(availability.ok).toBe(true);
+      if (availability.ok) {
+        const verdict = checkQuantity(availability.data, 3);
+        expect(verdict).toMatchObject({ sufficient: false, available: 2, shortfall: 1 });
+        expect(requestedPeriodTone(verdict)).toBe("red");
       }
-      expect(result.ok).toBe(true);
+    });
+
+    // Written straight to the table: two reservations outside the period that
+    // together exceed the pool. They are other commitments — neutral, and not
+    // part of what is free during the requested period.
+    it("AC 9: other commitments, even ones that overlap each other, do not reduce the requested period's availability", async () => {
+      await reserve(9, 12, 4); // touches the start
+      await reserve(15, 18, 4); // touches the end
+      await reserve(18, 21, 3);
+      await reserve(19, 22, 3); // overlaps the one before it
+
+      const [schedule, availability] = await Promise.all([
+        getEquipmentSchedule({ equipmentId, from: at(0) }),
+        getEquipmentAvailability({ ...periodInput, equipmentId }),
+      ]);
+
+      expect(availability).toMatchObject({ ok: true, data: { available: 4, committed: 0 } });
+      if (schedule.ok) {
+        const { during, other } = splitByPeriod(schedule.data.entries, period);
+        expect(during).toEqual([]);
+        expect(other).toHaveLength(4);
+      }
+      expect(schedule.ok).toBe(true);
     });
 
     it("AC 5: shows the reason, note and period of unavailability, alongside reservations in time order", async () => {
