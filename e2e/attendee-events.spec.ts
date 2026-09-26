@@ -99,6 +99,20 @@ test.describe("SCRUM-72 — Attendee browses confirmed events", () => {
   test("AC: opening a full event's detail page shows it as full with the register action disabled", async ({
     page,
   }) => {
+    // attendee@test.local (this describe's default, via beforeEach) is
+    // itself one of evt_full's 3 registrations, so it would see
+    // "already-registered" instead of a register-button — sign in instead as
+    // attendee4, the account the seed leaves deliberately unregistered
+    // everywhere, so this actually exercises the disabled-action state.
+    await page.context().clearCookies();
+    await page.goto("/login");
+    await page
+      .getByLabel("Email", { exact: true })
+      .fill("attendee4@test.local");
+    await page.getByLabel("Password", { exact: true }).fill("Password123!");
+    await page.getByRole("button", { name: "Sign in" }).click();
+    await page.waitForURL("**/events");
+
     const fullCard = page.getByTestId("browsable-event-card").filter({
       hasText: "Full — Wine Tasting Evening",
     });
