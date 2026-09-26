@@ -66,6 +66,14 @@ export async function getBrowsableEvent(id: string) {
         take: 1,
         include: { venue: { select: { name: true, location: true } } },
       },
+      // SCRUM-73 AC: "immediately visible to the Attendee with a status of
+      // registered" — the caller's OWN row, not the count, so the page can
+      // show "you're registered" instead of an active Register button.
+      registrations: {
+        where: { userId: session.user.id },
+        select: { status: true },
+        take: 1,
+      },
       _count: {
         select: { registrations: { where: { status: "REGISTERED" } } },
       },

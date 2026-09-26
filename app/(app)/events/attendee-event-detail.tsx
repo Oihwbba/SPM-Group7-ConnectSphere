@@ -1,16 +1,24 @@
 import Link from "next/link";
-import { ArrowLeft, CalendarDays, Clock, MapPin, Users } from "lucide-react";
+import {
+  ArrowLeft,
+  CalendarDays,
+  CheckCircle2,
+  Clock,
+  MapPin,
+  Users,
+} from "lucide-react";
 
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   computeRegistrationState,
   remainingCapacity,
   totalCapacity,
+  canRegisterNow,
   REGISTRATION_STATE_LABEL,
 } from "@/lib/registration-state";
 import { formatDateTimeInTimezone } from "@/lib/datetime";
+import { RegisterButton } from "./register-button";
 import type { BrowsableEvent } from "./attendee-events-client";
 
 const STATE_BADGE_VARIANT = {
@@ -21,16 +29,16 @@ const STATE_BADGE_VARIANT = {
   EXPIRED: "muted",
 } as const;
 
-/** SCRUM-72 — the read-only detail view. The register action itself
- * (SCRUM-73) is not wired up here on purpose — this story's boundary line
- * hands that to SCRUM-73–75. The button stays disabled unconditionally
- * (including for OPEN events): an enabled control with no onClick would be a
- * dead-looking affordance, worse than an honestly-disabled one until SCRUM-73
- * actually ships it. */
+/** SCRUM-72/73 — the event detail view: read-only display plus the working
+ * Register button (SCRUM-73's actual action, in ./register-button.tsx). The
+ * button is disabled whenever the shared registration-state rule says this
+ * isn't an OPEN event, so "why can't I register" always matches what the
+ * server itself will refuse. */
 export function AttendeeEventDetail({ event }: { event: BrowsableEvent }) {
   const state = computeRegistrationState(event, event._count.registrations);
   const remaining = remainingCapacity(event, event._count.registrations);
   const venue = event.bookings[0];
+  const isRegistered = event.registrations[0]?.status === "REGISTERED";
 
   return (
     <div className="mx-auto max-w-2xl space-y-4">
@@ -127,21 +135,30 @@ export function AttendeeEventDetail({ event }: { event: BrowsableEvent }) {
                 {remaining} of {totalCapacity(event)} places remaining
               </span>
             </div>
-            {/* Always disabled in SCRUM-72 — see the component doc comment. */}
-            <Button disabled data-testid="register-button">
-              Register
-            </Button>
+            {isRegistered ? (
+              <span
+                className="flex items-center gap-1.5 text-sm font-medium text-success"
+                data-testid="already-registered"
+              >
+                <CheckCircle2 className="h-4 w-4" /> You&apos;re registered
+              </span>
+            ) : (
+              <RegisterButton
+                eventId={event.id}
+                disabled={!canRegisterNow(state)}
+              />
+            )}
           </div>
-          <p className="text-xs text-muted-foreground" role="status">
-            {state === "OPEN" &&
-              "Registration is open. Sign-up isn't available in this build yet — check back shortly."}
-            {state === "FULL" &&
-              "This event is full. You can check back in case a place opens up."}
-            {state === "NOT_YET_OPEN" &&
-              "Registration for this event hasn't opened yet."}
-            {(state === "CLOSED" || state === "EXPIRED") &&
-              "Registration for this event is closed."}
-          </p>
+          {!isRegistered && !canRegisterNow(state) && (
+            <p className="text-xs text-muted-foreground" role="status">
+              {state === "FULL" &&
+                "This event is full. You can check back in case a place opens up."}
+              {state === "NOT_YET_OPEN" &&
+                "Registration for this event hasn't opened yet."}
+              {(state === "CLOSED" || state === "EXPIRED") &&
+                "Registration for this event is closed."}
+            </p>
+          )}
         </CardContent>
       </Card>
     </div>

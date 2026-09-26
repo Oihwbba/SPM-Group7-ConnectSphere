@@ -46,7 +46,7 @@ async function EventsRoleView({
     case "COORDINATOR":
       return <CoordinatorEvents coordinatorId={userId} />;
     case "ATTENDEE":
-      return <AttendeeEvents />;
+      return <AttendeeEvents attendeeId={userId} />;
     default:
       return <Forbidden />;
   }

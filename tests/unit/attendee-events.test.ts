@@ -104,7 +104,7 @@ describe("getBrowsableEvents — SCRUM-72 browse list", () => {
   it("[Positive] AC: queries only CONFIRMED events, ordered by start date", async () => {
     mockFindMany.mockResolvedValue([eventRow()]);
 
-    const events = await getBrowsableEvents();
+    const events = await getBrowsableEvents("usr_attendee");
 
     expect(events).toHaveLength(1);
     expect(mockFindMany).toHaveBeenCalledWith(
@@ -115,16 +115,19 @@ describe("getBrowsableEvents — SCRUM-72 browse list", () => {
     );
   });
 
-  it("[Positive] AC: fetches the approved booking's venue and the active-registration count for each event", async () => {
+  it("[Positive] AC: fetches the approved booking's venue, the caller's own registration, and the active-registration count for each event", async () => {
     mockFindMany.mockResolvedValue([]);
 
-    await getBrowsableEvents();
+    await getBrowsableEvents("usr_attendee");
 
     const call = mockFindMany.mock.calls[0][0];
     expect(call.include.bookings.where).toEqual({ status: "APPROVED" });
     expect(call.include.bookings.include.venue.select).toEqual({
       name: true,
       location: true,
+    });
+    expect(call.include.registrations.where).toEqual({
+      userId: "usr_attendee",
     });
     expect(call.include._count.select.registrations.where).toEqual({
       status: "REGISTERED",

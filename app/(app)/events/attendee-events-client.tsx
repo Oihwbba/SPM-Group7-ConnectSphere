@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { CalendarDays, Clock, MapPin, Users } from "lucide-react";
+import { CalendarDays, CheckCircle2, Clock, MapPin, Users } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -32,6 +32,9 @@ export type BrowsableEvent = {
   registrationOpensAt: Date | null;
   registrationClosesAt: Date | null;
   bookings: Booking[];
+  // The caller's OWN registration row, if any (SCRUM-73: "immediately
+  // visible to the Attendee with a status of registered").
+  registrations: { status: string }[];
   _count: { registrations: number };
 };
 
@@ -77,6 +80,7 @@ export function AttendeeEventsClient({ events }: { events: BrowsableEvent[] }) {
         );
         const remaining = remainingCapacity(event, event._count.registrations);
         const venue = event.bookings[0];
+        const isRegistered = event.registrations[0]?.status === "REGISTERED";
 
         return (
           <Link
@@ -146,6 +150,15 @@ export function AttendeeEventsClient({ events }: { events: BrowsableEvent[] }) {
                       {event.registrationClosesAt &&
                         `Closes ${formatDateTimeInTimezone(event.registrationClosesAt, event.timezone)}`}
                     </span>
+                  </div>
+                )}
+                {isRegistered && (
+                  <div
+                    className="flex items-center gap-1.5 font-medium text-success"
+                    data-testid="already-registered"
+                  >
+                    <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
+                    <span>You&apos;re registered</span>
                   </div>
                 )}
               </CardContent>
