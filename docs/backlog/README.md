@@ -132,7 +132,7 @@ _8 stories, 19 points_
 | [SCRUM-27](SCRUM-27.md) | Create Equipment Request | 1 | Highest | SCRUM Sprint 2 | To Do |
 | [SCRUM-28](SCRUM-28.md) | Review and Update Equipment Request | 3 | Highest | SCRUM Sprint 2 | To Do |
 | [SCRUM-29](SCRUM-29.md) | Check Equipment Availability | 3 | Highest | SCRUM Sprint 2 | To Do |
-| [SCRUM-30](SCRUM-30.md) | View Equipment Conflicts | 2 | Medium | SCRUM Sprint 2 | To Do |
+| [SCRUM-30](SCRUM-30.md) | View Equipment Conflicts | 2 | Medium | SCRUM Sprint 2 | In Progress |
 | [SCRUM-31](SCRUM-31.md) | Reserve Equipment for Event | 3 | Highest | SCRUM Sprint 1 | Done |
 | [SCRUM-32](SCRUM-32.md) | Modify or Cancel Reservation | 3 | Medium | Backlog | To Do |
 | [SCRUM-33](SCRUM-33.md) | View Event Reservations | 2 | Medium | SCRUM Sprint 2 | To Do |
