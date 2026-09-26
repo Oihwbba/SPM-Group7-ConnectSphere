@@ -21,21 +21,23 @@ Rules for a lesson:
 
 ## Process and merging
 
-- (2026-09-15, #27) Jin Hong owns the repository and merges as admin. An admin
-  merge satisfies CODEOWNERS, so a pull request that changes `.github/`,
-  `package.json`, the test configs or `vercel.json` doesn't need to record that
-  approval in its description.
+- (2026-09-15, #27) Jin Hong owns the repository. Changes to `.github/`,
+  `package.json`, the test configs or `vercel.json` need his approval
+  (CODEOWNERS); when he merges as admin that satisfies it, so the description
+  need not record it. Other teammates may merge too.
 - (2026-09-15, #32) Dependabot pull requests are turned off. Dependency and
   security upgrades arrive as SCRUM-89 pull requests by Jin Hong, tested as one
   change.
 
-- (2026-09-20, #52/#53/#54) Vercel refuses to deploy a commit whose git author
-  is not a project member, and a squash merge credits the pull request author,
-  so merging a teammate's pull request blocks production. Their work is
-  therefore landed through an integration pull request authored by Jin Hong,
-  carrying their commits with `Co-Authored-By` trailers and the conflicts
-  resolved. A pull request that credits someone else in its description is
-  deliberate, not missing attribution.
+- (2026-09-22, #71/#72; retires the #52–#54 re-landing workaround) Production
+  deploys only through `.github/workflows/deploy.yml`: a push to `main` deploys
+  a prebuilt bundle with the owner's `VERCEL_TOKEN`, with `.git` removed so no
+  commit author is attached, and `vercel.json` disables Vercel's own Git
+  deployments (ADR 0009). Teammate-authored merges deploy unmodified — proven
+  by #74, #76, #78, #79, #87 and #88 — so their work is no longer re-landed
+  under Jin Hong's name. The workflow records a GitHub deployment on the
+  commit, so *deployed to Production* shows on merge commits, never on a pull
+  request branch.
 
 ## Dependencies
 
@@ -83,6 +85,16 @@ Rules for a lesson:
   longer captures `requiredFacilities`, so new events store `[]` while existing
   and seeded values are still displayed; whether capture returns is a product
   decision open for SCRUM-39/40.
+- (2026-09-25, #87) The `?? null` fallbacks on optional draft fields in
+  `app/(app)/events/actions.ts` are deliberate: on update, `null` clears a
+  field the organiser emptied, while `undefined` would keep the old value.
+
+## Equipment
+
+- (2026-09-25, #87) The post-lock `if (!availability)` guard in
+  `createReservation` is deliberate: the row lock and the availability count
+  are separate queries, and the guard refuses rather than crashes if their
+  filters ever drift apart.
 
 ## Tests
 
@@ -97,15 +109,27 @@ Rules for a lesson:
   SCRUM-74 cases in `tests/integration/concurrency.test.ts`.
 - (2026-09-15, #26) Test case specifications live in `docs/testing/<KEY>.md`,
   and each case names the automated test that covers it.
+- (2026-09-25, #88) Coverage measures `lib/**/*.ts` and `app/**/actions.ts`
+  only, in a `node` environment with no jsdom, so `.tsx` components never
+  appear in it; Playwright journeys exercise them. Measuring components needs
+  new tooling (SCRUM-87), a team decision. A "100% coverage" claim refers to the
+  measured files only.
+- (2026-09-25, #87) CI runs Node 24 and a developer may run Node 22, whose ICU
+  labels a zero-offset zone differently, so a branch can run locally but never
+  on CI. Tests asserting `Intl` output stub `Intl` rather than trust the ICU.
 
 ## Known open gaps
 
-Found by the review replay of #11 (2026-09-14) and still true until a pull
-request fixes them. Raise one only when a pull request touches that code or
-claims that story, and say it was already known.
+Gaps found by reviews (the #11 replay, 2026-09-14, and later merges), still
+true until a pull request fixes them. Raise one only when a pull request
+touches that code or claims that story, and say it was already known.
 
 - (closed 2026-09-20) The SCRUM-24 simultaneous-decision integration test, the
   coordinator approve and reject Playwright journeys, and
   `app/(app)/equipment/loading.tsx` all exist now. Do not report them missing.
-- Reservation form errors show only a generic toast, not next to the field
-  (SCRUM-31 AC 6).
+- (closed 2026-09-27) Reservation form errors, quantity included, now show next
+  to their fields (SCRUM-31 AC 6). Do not report them as toast-only.
+- (2026-09-23, #76) The organiser events table shows Name, Status, Starts and
+  Updated, but SCRUM-84 AC3 also asks for an Expected Attendance column, which
+  is still missing. Treat it as known when a pull request touches the table or
+  claims SCRUM-84.
