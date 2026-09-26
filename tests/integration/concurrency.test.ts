@@ -559,6 +559,7 @@ describe.skipIf(!usesLocalDatabase)("concurrency — withdrawal reopens capacity
         status: "CONFIRMED",
         organiserId: "usr_organiser",
         expectedAttendance: 1,
+        registrationEnabled: true,
       },
       select: { id: true },
     });
