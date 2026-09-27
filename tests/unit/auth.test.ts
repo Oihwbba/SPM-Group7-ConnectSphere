@@ -127,3 +127,36 @@ describe("can — relationship gate", () => {
     ).toBe(false);
   });
 });
+
+// SCRUM-50/52/53 — who may take part in a venue booking. The booking actions
+// are new capabilities, so they are pinned here alongside the rest.
+describe("can — venue booking capabilities (SCRUM-50/52/53)", () => {
+  const venueStaff: SessionUser = { id: "vs", role: "VENUE_STAFF" };
+  const techSupport: SessionUser = { id: "ts", role: "TECH_SUPPORT" };
+  const assignedEvent = {
+    kind: "event" as const,
+    organiserId: "orgA",
+    coordinatorId: "coord",
+    status: "APPROVED" as const,
+  };
+
+  it("SCRUM-50 — a coordinator may request a venue for an event assigned to them", () => {
+    expect(can(coordinator, "booking:request", assignedEvent)).toBe(true);
+  });
+
+  it("SCRUM-50 — a coordinator may not request a venue for another coordinator's event", () => {
+    expect(
+      can(coordinator, "booking:request", {
+        ...assignedEvent,
+        coordinatorId: "someone-else",
+      }),
+    ).toBe(false);
+  });
+
+  it("SCRUM-50 — no other role may request a venue", () => {
+    for (const user of [organiserA, venueStaff, techSupport, attendee]) {
+      expect(can(user, "booking:request")).toBe(false);
+    }
+  });
+
+});

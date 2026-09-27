@@ -33,6 +33,7 @@ export type Action =
   | "clarification:request" // SCRUM-18: coordinator asks the organiser a question
   | "clarification:respond" // SCRUM-18: organiser answers an open question
   | "venue:read"
+  | "booking:request" // SCRUM-50: coordinator asks for a venue for their event
   | "booking:review"
   | "equipment:read"
   | "equipment:reserve"
@@ -82,6 +83,7 @@ const ROLE_ACTIONS: Record<Role, Action[]> = {
     "venue:read",
     "equipment-request:list",
     "equipment-request:create",
+    "booking:request",
     "notification:read",
   ],
   // `venue:read` gates the Venue Catalogue page, which is Coordinator-only, so
