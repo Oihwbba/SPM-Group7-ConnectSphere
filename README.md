@@ -167,8 +167,8 @@ acceptance criteria hold even when someone forgets a check in a server action.
 - **A venue can never be double-booked.** An `EXCLUDE USING gist` constraint
   rejects a second *approved* booking overlapping an existing one — including
   when two approvals commit at the same instant (SCRUM-53).
-- **No duplicate pending booking request** for the same event, venue and
-  overlapping period (SCRUM-50).
+- **No duplicate pending booking request** from the same Coordinator for the
+  same venue and an overlapping period (SCRUM-50).
 - **One open equipment request per event** — a partial unique index (SCRUM-27).
 - **No duplicate equipment line** on a request (SCRUM-27).
 - **One registration row per attendee per event** (SCRUM-73).

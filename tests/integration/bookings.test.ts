@@ -46,6 +46,8 @@ function sessionFor(id: string, role: "COORDINATOR" | "VENUE_STAFF"): Session {
 }
 const COORDINATOR = sessionFor("usr_coordinator", "COORDINATOR");
 const VENUE_STAFF = sessionFor("usr_venuestaff", "VENUE_STAFF");
+// A second, seeded coordinator, for requests that must come from someone else.
+const COORDINATOR_2 = sessionFor("usr_coordinator_2", "COORDINATOR");
 
 // Seeded events assigned to usr_coordinator (prisma/seed.ts).
 const APPROVED_EVENT = "evt_approved";
@@ -89,7 +91,19 @@ describe.skipIf(!usesLocalDatabase)(
 
     const bookingCount = () => prisma.booking.count({ where: { venueId } });
 
+    /** An approved event assigned to COORDINATOR_2, created for this suite. */
+    let otherEventId: string;
+
     beforeAll(async () => {
+      const other = await prisma.event.create({
+        data: {
+          name: `Booking test event for coordinator 2 ${Date.now()}`,
+          organiserId: "usr_organiser",
+          coordinatorId: "usr_coordinator_2",
+          status: "APPROVED",
+        },
+      });
+      otherEventId = other.id;
       const venue = await prisma.venue.create({
         data: {
           name: `Booking test venue ${Date.now()}`,
@@ -131,6 +145,7 @@ describe.skipIf(!usesLocalDatabase)(
       });
       await prisma.booking.deleteMany({ where: { venueId } });
       await prisma.venue.delete({ where: { id: venueId } });
+      await prisma.event.delete({ where: { id: otherEventId } });
     });
 
     describe("SCRUM-50 — submit a venue booking request", () => {
@@ -192,9 +207,14 @@ describe.skipIf(!usesLocalDatabase)(
         expect(await bookingCount()).toBe(0);
       });
 
-      it("SCRUM-50 AC3 — a PENDING request by someone else does not block a new request", async () => {
-        await submitBookingRequest(request({ eventId: PLANNING_EVENT }));
+      it("SCRUM-50 AC3 — a PENDING request by another coordinator does not block a new request", async () => {
+        mockAuth.mockResolvedValue(COORDINATOR_2);
+        const theirs = await submitBookingRequest(
+          request({ eventId: otherEventId }),
+        );
+        expect(theirs.ok && theirs.data.created).toBe(true);
 
+        mockAuth.mockResolvedValue(COORDINATOR);
         const result = await submitBookingRequest(request());
 
         expect(result.ok && result.data.created).toBe(true);
@@ -274,6 +294,40 @@ describe.skipIf(!usesLocalDatabase)(
 
         expect(later.ok && later.data.created).toBe(true);
         expect(await bookingCount()).toBe(2);
+      });
+
+      it("SCRUM-50 AC6 — the same coordinator asking again under a different event is shown the existing request", async () => {
+        const first = await submitBookingRequest(request());
+        const again = await submitBookingRequest(
+          request({
+            eventId: PLANNING_EVENT,
+            startAt: at(10, 7),
+            endAt: at(10, 9),
+          }),
+        );
+
+        expect(again.ok && again.data.created).toBe(false);
+        if (!first.ok || !again.ok) return;
+        expect(again.data.booking.id).toBe(first.data.booking.id);
+        expect(await bookingCount()).toBe(1);
+      });
+
+      it("SCRUM-50 AC6 — the database itself refuses a second overlapping pending request from the same coordinator, whatever the event", async () => {
+        const row = (eventId: string, start: string, end: string) => ({
+          data: {
+            eventId,
+            venueId,
+            startAt: new Date(start),
+            endAt: new Date(end),
+            requestedById: "usr_coordinator",
+          },
+        });
+        await prisma.booking.create(row(APPROVED_EVENT, at(10, 6), at(10, 8)));
+
+        await expect(
+          prisma.booking.create(row(PLANNING_EVENT, at(10, 7), at(10, 9))),
+        ).rejects.toThrow(/booking_no_duplicate_pending_request/);
+        expect(await bookingCount()).toBe(1);
       });
 
       it("SCRUM-50 — the form offers only approved events the coordinator may act on, exactly as can() allows", async () => {
@@ -386,8 +440,11 @@ describe.skipIf(!usesLocalDatabase)(
     });
 
     describe("SCRUM-53 — approve or reject a booking request", () => {
-      async function pending(overrides: Record<string, unknown> = {}) {
-        mockAuth.mockResolvedValue(COORDINATOR);
+      async function pending(
+        overrides: Record<string, unknown> = {},
+        requester: Session = COORDINATOR,
+      ) {
+        mockAuth.mockResolvedValue(requester);
         const result = await submitBookingRequest(request(overrides));
         if (!result.ok) throw new Error(result.error);
         mockAuth.mockResolvedValue(VENUE_STAFF);
@@ -473,11 +530,11 @@ describe.skipIf(!usesLocalDatabase)(
 
       it("SCRUM-53 AC4 — approving a request that overlaps an already-approved booking is returned as conflicting", async () => {
         const first = await pending();
-        const second = await pending({
-          eventId: PLANNING_EVENT,
-          startAt: at(10, 7),
-          endAt: at(10, 9),
-        });
+        // Overlapping pending requests come from different coordinators.
+        const second = await pending(
+          { eventId: otherEventId, startAt: at(10, 7), endAt: at(10, 9) },
+          COORDINATOR_2,
+        );
         await decideBookingRequest({ bookingId: first, decision: "APPROVED" });
 
         const result = await decideBookingRequest({

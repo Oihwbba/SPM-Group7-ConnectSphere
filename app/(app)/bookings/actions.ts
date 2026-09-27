@@ -85,8 +85,9 @@ async function onceMoreOnDeadlock<T>(attempt: () => Promise<T>): Promise<T> {
  * SCRUM-50 — an Event Coordinator asks for a venue for one of their events.
  *
  * - An invalid period is refused before anything else (AC5).
- * - Resubmitting over an overlapping pending request for the same event and
- *   venue creates nothing and returns the existing one (AC6).
+ * - If this Coordinator already has a pending request for the same venue
+ *   and an overlapping period, whichever event it was for, nothing is
+ *   created and the existing one is returned (AC6).
  * - A venue that is approved-booked or unavailable for any part of the period
  *   refuses the request outright — no row is written (AC3). Touching at an
  *   endpoint is not an overlap (AC4).
@@ -146,7 +147,7 @@ export async function submitBookingRequest(
     const existingPending = () =>
       prisma.booking.findFirst({
         where: {
-          eventId: data.eventId,
+          requestedById: user!.id,
           venueId: data.venueId,
           status: "PENDING",
           ...overlapping(period),
