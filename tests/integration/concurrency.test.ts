@@ -20,6 +20,7 @@ import {
   respondToClarification,
 } from "@/app/(app)/events/clarification-actions";
 import { decideBookingRequest } from "@/app/(app)/bookings/actions";
+import { recordUnavailability } from "@/app/(app)/venues/availability/actions";
 
 // The "at the same moment" cases (SCRUM-31/53/74). These are the acceptance
 // criteria the database constraints and row locks exist to satisfy, so each one
@@ -357,6 +358,89 @@ describe.skipIf(!usesLocalDatabase)(
 
       expect(results.every((r) => r.ok)).toBe(true);
       expect(await approvedCount()).toBe(2);
+    });
+  },
+);
+
+// SCRUM-37 — "a venue cannot end up simultaneously booked and closed for
+// maintenance". An approval and a maintenance record for the same venue and
+// an overlapping period, at the same moment. No EXCLUDE constraint spans the
+// two tables, so the occupancy triggers do it (ADR 0010, 2026-09-28 addendum).
+describe.skipIf(!usesLocalDatabase)(
+  "concurrency — approval vs recorded maintenance (SCRUM-37)",
+  () => {
+    let venueId: string;
+    const staff: Session = {
+      user: {
+        id: "usr_venuestaff",
+        role: "VENUE_STAFF",
+        name: "Vera Venue",
+        email: "venuestaff@test.local",
+      },
+      expires: "2999-01-01T00:00:00.000Z",
+    };
+
+    beforeAll(async () => {
+      const venue = await prisma.venue.create({
+        data: {
+          name: `Occupancy race venue ${Date.now()}`,
+          location: "Test block",
+          capacity: 50,
+        },
+        select: { id: true },
+      });
+      venueId = venue.id;
+    });
+
+    afterAll(async () => {
+      approvalBarrier.parties = 0;
+      const ids = (
+        await prisma.booking.findMany({ where: { venueId }, select: { id: true } })
+      ).map((b) => b.id);
+      await prisma.auditLog.deleteMany({
+        where: { entityType: "Booking", entityId: { in: ids } },
+      });
+      await prisma.booking.deleteMany({ where: { venueId } });
+      await prisma.venueUnavailability.deleteMany({ where: { venueId } });
+      await prisma.venue.delete({ where: { id: venueId } });
+    });
+
+    it("SCRUM-37 AC4 — an approval and a maintenance record for overlapping periods at the same moment: exactly one is saved", async () => {
+      const pending = await prisma.booking.create({
+        data: {
+          eventId: "evt_approved",
+          venueId,
+          startAt: new Date("2033-05-01T02:00:00.000Z"),
+          endAt: new Date("2033-05-01T06:00:00.000Z"),
+          requestedById: "usr_coordinator",
+        },
+        select: { id: true },
+      });
+      (auth as unknown as Mock).mockResolvedValue(staff);
+
+      // Both pass the application's own check before either writes.
+      approvalBarrier.parties = 2;
+      const results = await Promise.all([
+        decideBookingRequest({ bookingId: pending.id, decision: "APPROVED" }),
+        recordUnavailability({
+          venueId,
+          startAt: "2033-05-01T04:00:00.000Z",
+          endAt: "2033-05-01T08:00:00.000Z",
+          reason: "MAINTENANCE",
+        }),
+      ]);
+
+      expect(results.filter((r) => r.ok)).toHaveLength(1);
+      expect(results.filter((r) => !r.ok)).toHaveLength(1);
+
+      // Never both booked and unavailable for that period.
+      const approved = await prisma.booking.count({
+        where: { venueId, status: "APPROVED" },
+      });
+      const unavailable = await prisma.venueUnavailability.count({
+        where: { venueId },
+      });
+      expect(approved + unavailable).toBe(1);
     });
   },
 );
