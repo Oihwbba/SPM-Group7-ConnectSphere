@@ -221,6 +221,30 @@ test.describe("SCRUM-50 / 52 / 53 — venue booking request, review and decision
     );
   });
 
+  test("SCRUM-50 — attendance over the chosen venue's capacity is flagged as it is typed, and Submit is disabled", async ({
+    browser,
+  }) => {
+    const coordinator = await signedIn(browser, "coordinator@test.local");
+    await openRequestForm(coordinator);
+    await choose(coordinator, "Venue", /^Exhibition Hall/);
+    const attendance = coordinator.getByLabel("Expected attendance");
+    const submit = coordinator.getByRole("button", { name: "Submit request" });
+
+    await attendance.fill("250");
+    await expect(
+      coordinator.getByText(
+        "Exhibition Hall holds up to 200 people; 250 expected is over its capacity.",
+      ),
+    ).toBeVisible();
+    await expect(attendance).toHaveAttribute("aria-invalid", "true");
+    await expect(submit).toBeDisabled();
+
+    // Exactly at capacity fits.
+    await attendance.fill("200");
+    await expect(coordinator.getByText(/over its capacity/)).toHaveCount(0);
+    await expect(submit).toBeEnabled();
+  });
+
   test("SCRUM-53 AC2 — rejecting needs a written reason, and the reason is saved", async ({
     browser,
   }, testInfo) => {

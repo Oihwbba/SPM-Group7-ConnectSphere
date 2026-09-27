@@ -6,6 +6,19 @@ import { isValidPeriod } from "@/lib/period";
 /** A venue is requested only for an event that has already been approved. */
 export const BOOKABLE_EVENT_STATUSES: EventStatus[] = ["APPROVED", "PLANNING"];
 
+/**
+ * Expected attendance above what the venue holds is refused, on the form and
+ * by the server. Attendance exactly equal to capacity fits (the same boundary
+ * SCRUM-40 uses for suitability).
+ */
+export function overCapacityMessage(
+  venueName: string,
+  capacity: number,
+  attendance: number,
+): string {
+  return `${venueName} holds up to ${capacity} people; ${attendance} expected is over its capacity.`;
+}
+
 export const INVALID_PERIOD_MESSAGE =
   "The requested period is invalid: the end must be after the start.";
 

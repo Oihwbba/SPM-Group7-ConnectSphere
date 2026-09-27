@@ -12,6 +12,7 @@ import {
   bookingDecisionSchema,
   bookingRequestSchema,
   INVALID_PERIOD_MESSAGE,
+  overCapacityMessage,
 } from "@/lib/schemas/booking";
 import { overlapping } from "@/lib/period";
 import { describeBlocker, findVenueBlockers } from "@/lib/venue-availability";
@@ -85,6 +86,7 @@ async function onceMoreOnDeadlock<T>(attempt: () => Promise<T>): Promise<T> {
  * SCRUM-50 — an Event Coordinator asks for a venue for one of their events.
  *
  * - An invalid period is refused before anything else (AC5).
+ * - Expected attendance above the venue's capacity is refused.
  * - If this Coordinator already has a pending request for the same venue
  *   and an overlapping period, whichever event it was for, nothing is
  *   created and the existing one is returned (AC6).
@@ -140,9 +142,17 @@ export async function submitBookingRequest(
 
     const venue = await prisma.venue.findFirst({
       where: { id: data.venueId, isActive: true },
-      select: { name: true },
+      select: { name: true, capacity: true },
     });
     if (!venue) return err("Venue not found.");
+    if (data.requestedAttendance > venue.capacity) {
+      const message = overCapacityMessage(
+        venue.name,
+        venue.capacity,
+        data.requestedAttendance,
+      );
+      return err(message, { requestedAttendance: [message] });
+    }
 
     const existingPending = () =>
       prisma.booking.findFirst({
