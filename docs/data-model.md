@@ -152,7 +152,7 @@ EXCLUDE constraint that protects venues. That is why §4.4 exists.
 
 | Rule | How it is enforced | Why |
 |---|---|---|
-| A venue is never double-booked (SCRUM-53) | `EXCLUDE USING gist` on approved bookings | A venue is a single resource: any overlap is a conflict, which is exactly what an exclusion constraint expresses. |
+| A venue is never double-booked (SCRUM-53, ADR 0010) | `EXCLUDE USING gist` on approved bookings | A venue is a single resource: any overlap is a conflict, which is exactly what an exclusion constraint expresses. |
 | Equipment is never over-allocated (SCRUM-31) | `SELECT … FOR UPDATE` on the `Equipment` row | Overlapping reservations are *legal* until the sum exceeds the pool. A constraint cannot express "the sum of overlapping rows must not exceed a column on another table". |
 | An event is never oversubscribed (SCRUM-74) | `SELECT … FOR UPDATE` on the `Event` row | Same shape: capacity is a count, not a slot. |
 
