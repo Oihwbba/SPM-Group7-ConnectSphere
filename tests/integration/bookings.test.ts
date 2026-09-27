@@ -46,8 +46,6 @@ function sessionFor(id: string, role: "COORDINATOR" | "VENUE_STAFF"): Session {
 }
 const COORDINATOR = sessionFor("usr_coordinator", "COORDINATOR");
 const VENUE_STAFF = sessionFor("usr_venuestaff", "VENUE_STAFF");
-// A second, seeded coordinator, for requests that must come from someone else.
-const COORDINATOR_2 = sessionFor("usr_coordinator_2", "COORDINATOR");
 
 // Seeded events assigned to usr_coordinator (prisma/seed.ts).
 const APPROVED_EVENT = "evt_approved";
@@ -91,19 +89,25 @@ describe.skipIf(!usesLocalDatabase)(
 
     const bookingCount = () => prisma.booking.count({ where: { venueId } });
 
-    /** An approved event assigned to COORDINATOR_2, created for this suite. */
-    let otherEventId: string;
-
-    beforeAll(async () => {
-      const other = await prisma.event.create({
+    /**
+     * A PENDING request from the second seeded coordinator, written directly.
+     * Written rather than submitted so this suite never has to create an
+     * Event of its own: other suites count Event rows while running in
+     * parallel (tests/integration/permission-guard.test.ts).
+     */
+    async function pendingFromAnotherCoordinator(start: string, end: string) {
+      return prisma.booking.create({
         data: {
-          name: `Booking test event for coordinator 2 ${Date.now()}`,
-          organiserId: "usr_organiser",
-          coordinatorId: "usr_coordinator_2",
-          status: "APPROVED",
+          eventId: PLANNING_EVENT,
+          venueId,
+          startAt: new Date(start),
+          endAt: new Date(end),
+          requestedById: "usr_coordinator_2",
         },
       });
-      otherEventId = other.id;
+    }
+
+    beforeAll(async () => {
       const venue = await prisma.venue.create({
         data: {
           name: `Booking test venue ${Date.now()}`,
@@ -145,7 +149,6 @@ describe.skipIf(!usesLocalDatabase)(
       });
       await prisma.booking.deleteMany({ where: { venueId } });
       await prisma.venue.delete({ where: { id: venueId } });
-      await prisma.event.delete({ where: { id: otherEventId } });
     });
 
     describe("SCRUM-50 — submit a venue booking request", () => {
@@ -208,13 +211,8 @@ describe.skipIf(!usesLocalDatabase)(
       });
 
       it("SCRUM-50 AC3 — a PENDING request by another coordinator does not block a new request", async () => {
-        mockAuth.mockResolvedValue(COORDINATOR_2);
-        const theirs = await submitBookingRequest(
-          request({ eventId: otherEventId }),
-        );
-        expect(theirs.ok && theirs.data.created).toBe(true);
+        await pendingFromAnotherCoordinator(at(10, 6), at(10, 8));
 
-        mockAuth.mockResolvedValue(COORDINATOR);
         const result = await submitBookingRequest(request());
 
         expect(result.ok && result.data.created).toBe(true);
@@ -460,11 +458,8 @@ describe.skipIf(!usesLocalDatabase)(
     });
 
     describe("SCRUM-53 — approve or reject a booking request", () => {
-      async function pending(
-        overrides: Record<string, unknown> = {},
-        requester: Session = COORDINATOR,
-      ) {
-        mockAuth.mockResolvedValue(requester);
+      async function pending(overrides: Record<string, unknown> = {}) {
+        mockAuth.mockResolvedValue(COORDINATOR);
         const result = await submitBookingRequest(request(overrides));
         if (!result.ok) throw new Error(result.error);
         mockAuth.mockResolvedValue(VENUE_STAFF);
@@ -551,9 +546,9 @@ describe.skipIf(!usesLocalDatabase)(
       it("SCRUM-53 AC4 — approving a request that overlaps an already-approved booking is returned as conflicting", async () => {
         const first = await pending();
         // Overlapping pending requests come from different coordinators.
-        const second = await pending(
-          { eventId: otherEventId, startAt: at(10, 7), endAt: at(10, 9) },
-          COORDINATOR_2,
+        const { id: second } = await pendingFromAnotherCoordinator(
+          at(10, 7),
+          at(10, 9),
         );
         await decideBookingRequest({ bookingId: first, decision: "APPROVED" });
 
