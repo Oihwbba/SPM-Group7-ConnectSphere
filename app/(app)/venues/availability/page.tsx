@@ -12,6 +12,7 @@ import {
 import { AvailabilityCalendar } from "./availability-calendar";
 import { parseRange } from "./range";
 import { RangeControls } from "./range-controls";
+import { RecordUnavailabilityForm } from "./record-unavailability-form";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 const one = (value: string | string[] | undefined) =>
@@ -73,6 +74,13 @@ export default async function AvailabilityPage({
             from={from}
             to={to}
           />
+          {can(session.user, "unavailability:record") && (
+            <RecordUnavailabilityForm
+              key={venue.id}
+              venueId={venue.id}
+              venueName={venue.name}
+            />
+          )}
           <AvailabilityCalendar
             venueName={venue.name}
             days={availabilityByDay(blockers, from, to)}
