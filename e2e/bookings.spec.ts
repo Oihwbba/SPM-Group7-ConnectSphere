@@ -128,13 +128,13 @@ test.describe("SCRUM-50 / 52 / 53 — venue booking request, review and decision
       "Exhibition Hall is unavailable for that period: already booked from 10 Mar 2035, 9:00 am to 10 Mar 2035, 1:00 pm.",
     );
     await testInfo.attach("SCRUM-50 refusal when the venue is already booked", {
-      body: await coordinator.screenshot({ fullPage: true }),
+      body: await coordinator.screenshot({ fullPage: false }),
       contentType: "image/png",
     });
     if (process.env.EVIDENCE_DIR) {
       await coordinator.screenshot({
         path: `${process.env.EVIDENCE_DIR}/SCRUM-50-venue-unavailable-refusal.png`,
-        fullPage: true,
+        fullPage: false,
       });
     }
 
