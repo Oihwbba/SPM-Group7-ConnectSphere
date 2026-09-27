@@ -250,6 +250,7 @@ export function RequestForm({
                     </option>
                   ))}
                 </select>
+                {fieldError("requestedLayout")}
               </div>
             </div>
 
@@ -282,6 +283,7 @@ export function RequestForm({
                 onChange={(e) => update("notes", e.target.value)}
                 placeholder="Setup time, access needs, anything else they should know"
               />
+              {fieldError("requestNotes")}
             </div>
 
             <div className="flex justify-end border-t pt-4">

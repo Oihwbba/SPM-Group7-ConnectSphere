@@ -145,6 +145,19 @@ describe("submitBookingRequest — SCRUM-50", () => {
     );
   });
 
+  it("SCRUM-50 AC1 — over-long notes are refused against the notes field, so the form can show it there", async () => {
+    const result = await submitBookingRequest({
+      ...validRequest,
+      requestNotes: "x".repeat(2001),
+    });
+
+    expect(result).toMatchObject({
+      ok: false,
+      fieldErrors: { requestNotes: [expect.any(String)] },
+    });
+    expect(db.booking.create).not.toHaveBeenCalled();
+  });
+
   it("SCRUM-50 — every role except Event Coordinator is refused before anything is read", async () => {
     for (const role of [
       "ORGANISER",
