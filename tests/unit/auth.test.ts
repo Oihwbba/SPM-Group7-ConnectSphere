@@ -166,4 +166,10 @@ describe("can — venue booking capabilities (SCRUM-50/52/53)", () => {
     }
   });
 
+  it("SCRUM-53 — only venue staff may approve or reject a request", () => {
+    expect(can(venueStaff, "booking:decide")).toBe(true);
+    for (const user of [organiserA, coordinator, techSupport, attendee]) {
+      expect(can(user, "booking:decide")).toBe(false);
+    }
+  });
 });
