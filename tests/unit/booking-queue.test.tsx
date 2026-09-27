@@ -1,7 +1,10 @@
 import { describe, it, expect, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 
-import { BookingQueue } from "@/app/(app)/bookings/booking-queue";
+import {
+  BookingQueue,
+  matchesSearch,
+} from "@/app/(app)/bookings/booking-queue";
 import type { PendingBookingRow } from "@/app/(app)/bookings/queries";
 
 // SCRUM-52 / SCRUM-53 — what Venue Staff see. Rendering only: the decision
@@ -67,5 +70,32 @@ describe("BookingQueue", () => {
       );
     expect(buttons(withControls)).toEqual(["Reject", "Approve"]);
     expect(buttons(withoutControls)).toEqual([]);
+  });
+});
+
+describe("matchesSearch — SCRUM-52 search", () => {
+  it("SCRUM-52 — matches on event, venue, location, coordinator, email, facility, layout and date, ignoring case", () => {
+    for (const query of [
+      "research symposium",
+      "EXHIBITION",
+      "block c",
+      "cody",
+      "coordinator@test.local",
+      "stage",
+      "banquet",
+      "10 Mar 2035",
+    ]) {
+      expect(matchesSearch(row, query), query).toBe(true);
+    }
+  });
+
+  it("SCRUM-52 — every word must match somewhere, so extra words narrow the results", () => {
+    expect(matchesSearch(row, "hall projector")).toBe(true);
+    expect(matchesSearch(row, "hall boardroom")).toBe(false);
+  });
+
+  it("SCRUM-52 — an empty or blank search shows everything", () => {
+    expect(matchesSearch(row, "")).toBe(true);
+    expect(matchesSearch(row, "   ")).toBe(true);
   });
 });
