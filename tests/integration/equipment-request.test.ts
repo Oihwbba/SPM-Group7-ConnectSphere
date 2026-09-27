@@ -26,9 +26,14 @@ import {
 // submissions racing — the unique line per type (AC 4), and that the
 // coordinator's reads return exactly the rows can() allows.
 //
-// They WRITE a throwaway event and its requests, removed after each test, so
-// they only run against a localhost database (CI's service container or the
-// Docker DB) — never the shared Supabase database `.env` points at.
+// They use the seeded "Approved — Research Symposium" rather than creating
+// events: other suites count Event rows while this one runs in parallel
+// (permission-guard.test.ts), so it must never add or remove one. The seed
+// gives that event no request; each test removes the ones it created.
+//
+// They WRITE requests, so they only run against a localhost database (CI's
+// service container or the Docker DB) — never the shared Supabase database
+// `.env` points at.
 vi.mock("@/auth", () => ({ auth: vi.fn() }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
@@ -36,10 +41,11 @@ const usesLocalDatabase = /@(localhost|127\.0\.0\.1)[:/]/.test(
   process.env.DATABASE_URL ?? "",
 );
 
-// Seeded accounts and equipment (prisma/seed.ts).
+// Seeded accounts, events and equipment (prisma/seed.ts).
 const COORDINATOR = "usr_coordinator";
 const OTHER_COORDINATOR = "usr_coordinator_2";
-const ORGANISER = "usr_organiser";
+const eventId = "evt_approved"; // APPROVED, coordinated by COORDINATOR
+const UNDER_REVIEW_EVENT = "evt_under_review"; // also COORDINATOR's
 
 const coordinatorSession = (id: string): Session => ({
   user: { id, role: "COORDINATOR", name: "Casey", email: `${id}@test.local` },
@@ -62,23 +68,9 @@ const request = (eventId: string) => ({
 describe.skipIf(!usesLocalDatabase)(
   "SCRUM-27 — equipment requests against Postgres",
   () => {
-    let eventId: string;
-
-    const makeEvent = (
-      status: "APPROVED" | "UNDER_REVIEW",
-      coordinatorId: string,
-    ) =>
-      prisma.event.create({
-        data: {
-          name: `Equipment request test ${status} ${Date.now()}-${Math.random()}`,
-          status,
-          startAt: new Date("2034-04-01T01:00:00.000Z"),
-          endAt: new Date("2034-04-01T09:00:00.000Z"),
-          organiserId: ORGANISER,
-          coordinatorId,
-        },
-        select: { id: true },
-      });
+    // Lines and history cascade with their request.
+    const removeRequests = () =>
+      prisma.equipmentRequest.deleteMany({ where: { eventId } });
 
     beforeAll(() => {
       (auth as unknown as Mock).mockResolvedValue(
@@ -87,17 +79,14 @@ describe.skipIf(!usesLocalDatabase)(
     });
 
     beforeEach(async () => {
-      eventId = (await makeEvent("APPROVED", COORDINATOR)).id;
+      await removeRequests();
     });
 
     afterEach(async () => {
       (auth as unknown as Mock).mockResolvedValue(
         coordinatorSession(COORDINATOR),
       );
-      // Requests, lines and history cascade with the event.
-      await prisma.event.deleteMany({
-        where: { name: { startsWith: "Equipment request test " } },
-      });
+      await removeRequests();
     });
 
     afterAll(async () => {
@@ -228,17 +217,18 @@ describe.skipIf(!usesLocalDatabase)(
     });
 
     it("AC 1: offers the coordinator their going-ahead events, and not one still under review or someone else's", async () => {
-      const underReview = (await makeEvent("UNDER_REVIEW", COORDINATOR)).id;
-      const othersEvent = (await makeEvent("APPROVED", OTHER_COORDINATOR)).id;
-
       const offered = (await getRequestableEvents(COORDINATOR)).map(
         (event) => event.id,
       );
+      const offeredToOther = (
+        await getRequestableEvents(OTHER_COORDINATOR)
+      ).map((event) => event.id);
 
       expect(offered).toContain(eventId);
-      expect(offered).toContain("evt_approved");
-      expect(offered).not.toContain(underReview);
-      expect(offered).not.toContain(othersEvent);
+      expect(offered).toContain("evt_planning");
+      expect(offered).toContain("evt_confirmed");
+      expect(offered).not.toContain(UNDER_REVIEW_EVENT);
+      expect(offeredToOther).not.toContain(eventId);
     });
 
     it("lists a request for its coordinator only", async () => {
