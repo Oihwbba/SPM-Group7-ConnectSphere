@@ -89,6 +89,28 @@ describe("getCoordinatorEquipmentRequests — SCRUM-27", () => {
       { id: "asc" },
     ]);
   });
+
+  // SCRUM-28 — "so that Event Coordinators know the exact status": the
+  // coordinator sees what Technical Support suggested and every update made.
+  it("SCRUM-28 AC 3 & 5: includes suggested alternatives and the history, oldest first", async () => {
+    await getCoordinatorEquipmentRequests("usr_coord");
+
+    const query = db.equipmentRequest.findMany.mock.calls[0][0];
+    expect(query.select.lines.select.suggestedAlternative).toEqual({
+      select: { id: true, type: true },
+    });
+    expect(query.select.updates).toEqual({
+      select: {
+        id: true,
+        createdAt: true,
+        fromStatus: true,
+        toStatus: true,
+        note: true,
+        actor: { select: { name: true } },
+      },
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+    });
+  });
 });
 
 describe("getEquipmentCatalogue — SCRUM-27 AC 2", () => {

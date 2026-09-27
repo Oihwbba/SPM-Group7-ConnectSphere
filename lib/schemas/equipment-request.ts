@@ -61,6 +61,33 @@ export const createEquipmentRequestSchema = z
   });
 
 /**
+ * SCRUM-28 AC 2 — Technical Support moves a request on. A rejection must say
+ * why: the coordinator is the one who has to act on it.
+ */
+export const reviewEquipmentRequestSchema = z
+  .object({
+    requestId: z.string().min(1),
+    toStatus: z.enum(["IN_REVIEW", "APPROVED", "REJECTED"]),
+    note: optionalText(1000, "Keep the note under 1,000 characters."),
+  })
+  .superRefine((data, ctx) => {
+    if (data.toStatus === "REJECTED" && !data.note) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["note"],
+        message: "Give the coordinator a reason for rejecting the request.",
+      });
+    }
+  });
+
+/** SCRUM-28 AC 3 — suggest another type for one line of a request. */
+export const suggestAlternativeSchema = z.object({
+  requestId: z.string().min(1),
+  lineId: z.string().min(1),
+  alternativeId: z.string().min(1, "Choose the equipment to suggest."),
+});
+
+/**
  * Zod's `flatten()` keeps only the top-level key, so every line's error would
  * collapse into "lines". Keying by the full path ("lines.1.quantity") lets the
  * form put each message on the line it belongs to.

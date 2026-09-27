@@ -50,6 +50,14 @@ describe("role-based navigation — SCRUM-66", () => {
     expect(LANDING_ROUTE_BY_ROLE.COORDINATOR).toBe("/events");
   });
 
+  // SCRUM-28 — Technical Support reviews the requests coordinators raise.
+  it("shows Technical Support the equipment pool and the requests to review", () => {
+    const hrefs = hrefsFor("TECH_SUPPORT");
+    expect(hrefs).toContain("/equipment");
+    expect(hrefs).toContain("/equipment-requests");
+    expect(LANDING_ROUTE_BY_ROLE.TECH_SUPPORT).toBe("/equipment");
+  });
+
   it("gives an attendee only their events and registrations", () => {
     const hrefs = hrefsFor("ATTENDEE");
     expect(hrefs).toContain("/events");
