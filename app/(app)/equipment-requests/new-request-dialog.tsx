@@ -298,6 +298,11 @@ export function NewRequestDialog({
                 placeholder="For example: HDMI to the lectern, spare batteries"
                 value={draft.technicalRequirements}
                 aria-invalid={Boolean(draftErrors.technicalRequirements)}
+                aria-describedby={
+                  draftErrors.technicalRequirements
+                    ? "draft-requirements-error"
+                    : undefined
+                }
                 onChange={(e) =>
                   updateDraft("technicalRequirements", e.target.value)
                 }
@@ -382,7 +387,14 @@ export function NewRequestDialog({
               id="request-notes"
               rows={3}
               value={notes}
-              onChange={(e) => setNotes(e.target.value)}
+              aria-invalid={Boolean(errors.notes)}
+              aria-describedby={
+                errors.notes ? "request-notes-error" : undefined
+              }
+              onChange={(e) => {
+                setNotes(e.target.value);
+                setErrors((current) => ({ ...current, notes: undefined }));
+              }}
             />
             <FieldError id="request-notes-error" messages={errors.notes} />
           </div>

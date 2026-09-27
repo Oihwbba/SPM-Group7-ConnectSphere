@@ -88,8 +88,15 @@ export async function createEquipmentRequest(
       return err("Please fix the highlighted fields.", unknownLines);
     }
 
+    // The open request may have been raised after the coordinator's page
+    // loaded, so the list is refreshed for it to be there to highlight.
+    const showExisting = (id: string) => {
+      revalidatePath("/equipment-requests");
+      return ok({ id, existing: true });
+    };
+
     const open = await findOpenRequest(eventId);
-    if (open) return ok({ id: open.id, existing: true });
+    if (open) return showExisting(open.id);
 
     try {
       const created = await prisma.$transaction(async (tx) => {
@@ -130,7 +137,7 @@ export async function createEquipmentRequest(
         error.code === "P2002"
       ) {
         const winner = await findOpenRequest(eventId);
-        if (winner) return ok({ id: winner.id, existing: true });
+        if (winner) return showExisting(winner.id);
       }
       throw error;
     }
