@@ -110,7 +110,7 @@ export function BookingQueue({
               {canDecide && (
                 <div className="flex justify-end gap-2 border-t pt-4">
                   <Button
-                    variant="outline"
+                    variant="destructive"
                     disabled={isPending}
                     onClick={() => {
                       setRejecting(booking);
@@ -122,6 +122,7 @@ export function BookingQueue({
                   <Button
                     disabled={isPending}
                     onClick={() => decide(booking, "APPROVED")}
+                    className="border-transparent bg-success text-success-foreground hover:border-transparent hover:bg-success/90"
                   >
                     <CheckCircle2 className="h-4 w-4" /> Approve
                   </Button>
