@@ -10,6 +10,7 @@ import {
   Building2,
   CalendarCheck,
   CalendarPlus,
+  CalendarRange,
   CalendarDays,
   LayoutGrid,
   Ticket,
@@ -28,6 +29,7 @@ const ICON_BY_HREF: Record<string, LucideIcon> = {
   "/venues": Building2,
   "/bookings": CalendarCheck,
   "/bookings/new": CalendarPlus,
+  "/venues/availability": CalendarRange,
   "/equipment": Wrench,
   "/registrations": Ticket,
   "/notifications": Bell,
@@ -70,6 +72,12 @@ export function Sidebar({ role }: { role: Role }) {
   }
 
   const items = NAV_BY_ROLE[role];
+  // The most specific link that matches wins, so /venues/availability does
+  // not also light up /venues.
+  const activeHref = items
+    .map((item) => item.href)
+    .filter((href) => pathname === href || pathname.startsWith(`${href}/`))
+    .sort((a, b) => b.length - a.length)[0];
 
   return (
     <aside
@@ -117,8 +125,7 @@ export function Sidebar({ role }: { role: Role }) {
       >
         {items.map((item) => {
           const Icon = ICON_BY_HREF[item.href] ?? LayoutGrid;
-          const isActive =
-            pathname === item.href || pathname.startsWith(`${item.href}/`);
+          const isActive = item.href === activeHref;
           return (
             <Link
               key={item.href}

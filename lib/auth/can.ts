@@ -33,6 +33,7 @@ export type Action =
   | "clarification:request" // SCRUM-18: coordinator asks the organiser a question
   | "clarification:respond" // SCRUM-18: organiser answers an open question
   | "venue:read"
+  | "venue:availability" // SCRUM-36: view a venue's availability calendar
   | "booking:request" // SCRUM-50: coordinator asks for a venue for their event
   | "booking:review" // SCRUM-52: read the pending-request queue
   | "booking:decide" // SCRUM-53: approve or reject a pending request
@@ -79,6 +80,7 @@ const ROLE_ACTIONS: Record<Role, Action[]> = {
     "event:review",
     "clarification:request",
     "venue:read",
+    "venue:availability",
     "booking:request",
     "notification:read",
   ],
@@ -89,6 +91,7 @@ const ROLE_ACTIONS: Record<Role, Action[]> = {
   VENUE_STAFF: [
     "booking:review",
     "booking:decide",
+    "venue:availability",
     "unavailability:record",
     "notification:read",
   ],
