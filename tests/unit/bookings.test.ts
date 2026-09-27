@@ -3,7 +3,10 @@ import type { Session } from "next-auth";
 import type { Role } from "@prisma/client";
 
 import { auth } from "@/auth";
-import { submitBookingRequest } from "@/app/(app)/bookings/actions";
+import {
+  decideBookingRequest,
+  submitBookingRequest,
+} from "@/app/(app)/bookings/actions";
 
 // SCRUM-50 / SCRUM-53 server actions with the database mocked: permission,
 // validation and every refusal branch. The same criteria are proven against a
@@ -49,6 +52,11 @@ const duplicatePending = () =>
   postgresRefusal(
     "23P01",
     'conflicting key value violates exclusion constraint "booking_no_duplicate_pending_request"',
+  );
+const doubleBooking = () =>
+  postgresRefusal(
+    "23P01",
+    'conflicting key value violates exclusion constraint "booking_no_double_booking"',
   );
 const deadlock = () => postgresRefusal("40P01", "deadlock detected");
 
@@ -288,5 +296,221 @@ describe("submitBookingRequest — SCRUM-50", () => {
     await expect(submitBookingRequest(validRequest)).rejects.toThrow(
       "connection lost",
     );
+  });
+});
+
+describe("decideBookingRequest — SCRUM-53", () => {
+  const pendingBooking = {
+    id: "bkg_1",
+    venueId: "ven_1",
+    startAt: new Date(START),
+    endAt: new Date(END),
+    status: "PENDING",
+    venue: { name: "Seminar Room" },
+  };
+
+  beforeEach(() => {
+    mockAuth.mockResolvedValue(sessionFor("VENUE_STAFF", "usr_staff"));
+    db.booking.findUnique.mockResolvedValue(pendingBooking);
+    db.booking.updateMany.mockResolvedValue({ count: 1 });
+  });
+
+  it("SCRUM-53 AC1 & AC3 — approving sets the request APPROVED and records who decided, when, and an audit entry", async () => {
+    const result = await decideBookingRequest({
+      bookingId: "bkg_1",
+      decision: "APPROVED",
+    });
+
+    expect(result).toEqual({ ok: true, data: { status: "APPROVED" } });
+    expect(db.booking.updateMany).toHaveBeenCalledWith({
+      where: { id: "bkg_1", status: "PENDING" },
+      data: expect.objectContaining({
+        status: "APPROVED",
+        decidedById: "usr_staff",
+        decidedAt: expect.any(Date),
+        decisionReason: null,
+      }),
+    });
+    expect(db.auditLog.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        entityType: "Booking",
+        entityId: "bkg_1",
+        action: "APPROVED",
+        actorId: "usr_staff",
+        oldValue: "PENDING",
+        newValue: "APPROVED",
+      }),
+    });
+  });
+
+  it("SCRUM-53 AC2 — rejecting saves the trimmed free-text reason", async () => {
+    const result = await decideBookingRequest({
+      bookingId: "bkg_1",
+      decision: "REJECTED",
+      reason: "  Too small for 40.  ",
+    });
+
+    expect(result).toEqual({ ok: true, data: { status: "REJECTED" } });
+    expect(db.booking.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          status: "REJECTED",
+          decisionReason: "Too small for 40.",
+        }),
+      }),
+    );
+    // Rejecting never needs the venue's availability.
+    expect(db.booking.findMany).not.toHaveBeenCalled();
+  });
+
+  it("SCRUM-53 AC2 — rejecting with a blank reason is refused and nothing is read or written", async () => {
+    for (const reason of [undefined, "", "   "]) {
+      const result = await decideBookingRequest({
+        bookingId: "bkg_1",
+        decision: "REJECTED",
+        reason,
+      });
+      expect(result).toMatchObject({
+        ok: false,
+        error: "A reason is required to reject a booking request.",
+        fieldErrors: {
+          reason: ["A reason is required to reject a booking request."],
+        },
+      });
+    }
+    expect(db.booking.findUnique).not.toHaveBeenCalled();
+    expect(db.booking.updateMany).not.toHaveBeenCalled();
+  });
+
+  it("SCRUM-53 — a malformed decision is refused", async () => {
+    const result = await decideBookingRequest({
+      bookingId: "bkg_1",
+      decision: "MAYBE",
+    });
+
+    expect(result).toMatchObject({
+      ok: false,
+      error: "Please provide a valid decision.",
+    });
+  });
+
+  it("SCRUM-53 — every role except Venue Staff is refused", async () => {
+    for (const role of [
+      "ORGANISER",
+      "COORDINATOR",
+      "TECH_SUPPORT",
+      "ATTENDEE",
+    ] as Role[]) {
+      mockAuth.mockResolvedValue(sessionFor(role));
+      const result = await decideBookingRequest({
+        bookingId: "bkg_1",
+        decision: "APPROVED",
+      });
+      expect(result).toEqual({
+        ok: false,
+        error: "You do not have permission to do that.",
+      });
+    }
+    expect(db.booking.updateMany).not.toHaveBeenCalled();
+  });
+
+  it("SCRUM-53 — an unknown request is reported as not found", async () => {
+    db.booking.findUnique.mockResolvedValue(null);
+
+    expect(
+      await decideBookingRequest({ bookingId: "nope", decision: "APPROVED" }),
+    ).toEqual({ ok: false, error: "Booking request not found." });
+  });
+
+  it("SCRUM-53 AC6 — a request that has already been decided keeps its first decision", async () => {
+    db.booking.findUnique.mockResolvedValue({
+      ...pendingBooking,
+      status: "REJECTED",
+    });
+
+    expect(
+      await decideBookingRequest({ bookingId: "bkg_1", decision: "APPROVED" }),
+    ).toEqual({
+      ok: false,
+      error:
+        "This request has already been rejected; the original decision stands.",
+    });
+    expect(db.booking.updateMany).not.toHaveBeenCalled();
+  });
+
+  it("SCRUM-53 AC6 — a decision that lands after another one wins writes nothing and says what stands", async () => {
+    db.booking.updateMany.mockResolvedValue({ count: 0 });
+    db.booking.findUniqueOrThrow.mockResolvedValue({ status: "APPROVED" });
+
+    expect(
+      await decideBookingRequest({
+        bookingId: "bkg_1",
+        decision: "REJECTED",
+        reason: "No.",
+      }),
+    ).toEqual({
+      ok: false,
+      error:
+        "This request has already been approved; the original decision stands.",
+    });
+    expect(db.auditLog.create).not.toHaveBeenCalled();
+  });
+
+  it("SCRUM-53 AC4 — approving over an approved booking or recorded unavailability is returned as conflicting", async () => {
+    db.venueUnavailability.findMany.mockResolvedValue([
+      {
+        id: "vun_1",
+        startAt: new Date("2030-06-01T07:00:00.000Z"),
+        endAt: new Date("2030-06-01T10:00:00.000Z"),
+        reason: "MAINTENANCE",
+      },
+    ]);
+
+    expect(
+      await decideBookingRequest({ bookingId: "bkg_1", decision: "APPROVED" }),
+    ).toEqual({
+      ok: false,
+      error:
+        "Conflicting: Seminar Room is unavailable (maintenance) from 1 Jun 2030, 3:00 pm to 1 Jun 2030, 6:00 pm. This request is still pending.",
+    });
+    expect(db.booking.updateMany).not.toHaveBeenCalled();
+  });
+
+  it("SCRUM-53 AC4 — when the database refuses a simultaneous overlapping approval, it is returned as conflicting", async () => {
+    db.$transaction.mockRejectedValue(doubleBooking());
+
+    const result = await decideBookingRequest({
+      bookingId: "bkg_1",
+      decision: "APPROVED",
+    });
+
+    expect(result).toMatchObject({
+      ok: false,
+      error: expect.stringMatching(
+        /^Conflicting: .*approved at the same moment/,
+      ),
+    });
+  });
+
+  it("SCRUM-53 AC4 — a deadlock between simultaneous approvals is retried once", async () => {
+    db.$transaction
+      .mockRejectedValueOnce(deadlock())
+      .mockImplementationOnce((cb: (tx: typeof db) => unknown) => cb(db));
+
+    const result = await decideBookingRequest({
+      bookingId: "bkg_1",
+      decision: "APPROVED",
+    });
+
+    expect(result).toEqual({ ok: true, data: { status: "APPROVED" } });
+    expect(db.$transaction).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not swallow an unexpected database error", async () => {
+    db.$transaction.mockRejectedValue(new Error("connection lost"));
+
+    await expect(
+      decideBookingRequest({ bookingId: "bkg_1", decision: "APPROVED" }),
+    ).rejects.toThrow("connection lost");
   });
 });

@@ -8,6 +8,7 @@ import { prisma } from "@/lib/db";
 import { can, requirePermission, PermissionError } from "@/lib/auth/can";
 import { err, ok, type ActionResult } from "@/lib/action-result";
 import {
+  bookingDecisionSchema,
   bookingRequestSchema,
   INVALID_PERIOD_MESSAGE,
 } from "@/lib/schemas/booking";
@@ -201,4 +202,131 @@ export async function submitBookingRequest(
     if (error instanceof PermissionError) return err(error.message);
     throw error;
   }
+}
+
+/** Thrown inside the decision transaction for an expected refusal. */
+class DecisionError extends Error {}
+
+/**
+ * SCRUM-53 — Venue Staff approve or reject a pending request.
+ *
+ * - Rejecting needs a free-text reason (AC2); the database also refuses a
+ *   REJECTED row without one (`booking_rejection_has_reason`).
+ * - The update is conditional on the row still being PENDING, so a request
+ *   that has already been decided keeps its first decision and no second
+ *   outcome or audit entry is recorded (AC6).
+ * - Approving makes the venue unavailable for that period (AC3). If an
+ *   overlapping booking is already approved, or the venue is recorded as
+ *   unavailable, the approval is refused as conflicting and the request stays
+ *   pending for staff to reject.
+ * - Two simultaneous approvals of overlapping requests (AC4): both can pass
+ *   the check above before either commits, so the check alone is not enough.
+ *   The `booking_no_double_booking` EXCLUDE constraint makes the database
+ *   refuse the second; that refusal is reported as the same conflict (or, if
+ *   Postgres aborted it as a deadlock, the retry reports it). See
+ *   docs/adr/0010-database-prevents-venue-double-booking.md.
+ */
+export async function decideBookingRequest(
+  input: unknown,
+): Promise<ActionResult<{ status: BookingStatus }>> {
+  const session = await auth();
+  const user = session?.user;
+
+  try {
+    requirePermission(user, "booking:decide");
+
+    const parsed = bookingDecisionSchema.safeParse(input);
+    if (!parsed.success) {
+      const fieldErrors = parsed.error.flatten().fieldErrors;
+      return err(
+        fieldErrors.reason?.[0] ?? "Please provide a valid decision.",
+        fieldErrors,
+      );
+    }
+    const { bookingId, decision, reason } = parsed.data;
+
+    const booking = await prisma.booking.findUnique({
+      where: { id: bookingId },
+      select: {
+        id: true,
+        venueId: true,
+        startAt: true,
+        endAt: true,
+        status: true,
+        venue: { select: { name: true } },
+      },
+    });
+    if (!booking) return err("Booking request not found.");
+    if (booking.status !== "PENDING") {
+      return err(alreadyDecided(booking.status));
+    }
+
+    const conflict = (detail: string) =>
+      `Conflicting: ${booking.venue.name} is ${detail}. This request is still pending.`;
+
+    const decide = () =>
+      prisma.$transaction(async (tx) => {
+        if (decision === "APPROVED") {
+          const blockers = await findVenueBlockers(
+            tx,
+            booking.venueId,
+            booking,
+          );
+          if (blockers.length > 0) {
+            throw new DecisionError(
+              conflict(blockers.map(describeBlocker).join("; ")),
+            );
+          }
+        }
+
+        const updated = await tx.booking.updateMany({
+          where: { id: booking.id, status: "PENDING" },
+          data: {
+            status: decision,
+            decidedById: user!.id,
+            decidedAt: new Date(),
+            decisionReason: decision === "REJECTED" ? reason : null,
+          },
+        });
+        if (updated.count !== 1) {
+          const current = await tx.booking.findUniqueOrThrow({
+            where: { id: booking.id },
+            select: { status: true },
+          });
+          throw new DecisionError(alreadyDecided(current.status));
+        }
+
+        // SCRUM-71: a booking decision records who, what and when.
+        await tx.auditLog.create({
+          data: {
+            entityType: "Booking",
+            entityId: booking.id,
+            action: decision,
+            actorId: user!.id,
+            fieldName: "status",
+            oldValue: "PENDING",
+            newValue: decision,
+            summary: decision === "REJECTED" ? reason : undefined,
+          },
+        });
+      });
+    await onceMoreOnDeadlock(decide);
+
+    revalidatePath("/bookings");
+    return ok({ status: decision });
+  } catch (error) {
+    if (error instanceof PermissionError || error instanceof DecisionError) {
+      return err(error.message);
+    }
+    if (violatesExclusion(error, "booking_no_double_booking")) {
+      return err(
+        "Conflicting: another booking overlapping this period was approved at the same moment. This request is still pending.",
+      );
+    }
+    throw error;
+  }
+}
+
+function alreadyDecided(status: BookingStatus): string {
+  return `This request has already been ${status.toLowerCase()}; the original decision stands.`;
 }
