@@ -1,10 +1,11 @@
 /**
  * SCRUM-29 (check availability) and SCRUM-30 (view conflicts).
  *
- * THE overlap rule for equipment, stated once. A period is half-open,
- * `[startAt, endAt)`: a reservation that ends at exactly the moment another
- * begins does NOT overlap it. SCRUM-29, SCRUM-30 and SCRUM-31 all state this
- * criterion, so they all call `overlaps` rather than restating the comparison.
+ * The overlap rule itself lives in lib/period.ts, shared with venue bookings.
+ * A period is half-open, `[startAt, endAt)`: a reservation that ends at
+ * exactly the moment another begins does NOT overlap it. SCRUM-29, SCRUM-30
+ * and SCRUM-31 all state this criterion, so they all call `overlaps` rather
+ * than restating the comparison.
  *
  * WHY A PEAK AND NOT A SUM. Equipment is a counted pool, so what matters is
  * how many units are committed at the busiest single instant of the period —
@@ -16,6 +17,8 @@
  * for the whole period" read backwards.
  */
 
+import { overlaps } from "@/lib/period";
+
 /** A span of time that commits `quantity` units of one equipment type. */
 export interface Commitment {
   startAt: Date;
@@ -23,13 +26,7 @@ export interface Commitment {
   quantity: number;
 }
 
-/** Half-open comparison: touching at an endpoint is adjacent, not overlapping. */
-export function overlaps(
-  a: { startAt: Date; endAt: Date },
-  b: { startAt: Date; endAt: Date },
-): boolean {
-  return a.startAt < b.endAt && b.startAt < a.endAt;
-}
+export { overlaps };
 
 /**
  * The greatest number of units committed at any single instant inside
