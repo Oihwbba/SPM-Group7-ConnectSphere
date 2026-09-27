@@ -88,6 +88,12 @@ const dateFormatter = new Intl.DateTimeFormat("en-SG", {
   dateStyle: "medium",
 });
 
+const monthFormatter = new Intl.DateTimeFormat("en-SG", {
+  timeZone: TIME_ZONE,
+  month: "long",
+  year: "numeric",
+});
+
 const timeFormatter = new Intl.DateTimeFormat("en-SG", {
   timeZone: TIME_ZONE,
   timeStyle: "short",
@@ -160,6 +166,11 @@ export function formatDateTimeInTimezone(
       ? ` (${timezoneStr.split(" ")[0]})`
       : "";
   return `${formatted}${suffix}`;
+}
+
+/** e.g. "January 2026" — a calendar month's heading, in Singapore time. */
+export function formatMonth(value: Date | string): string {
+  return monthFormatter.format(new Date(value));
 }
 
 /** e.g. "15 Jan 2026" — a date only, in Singapore time. */
