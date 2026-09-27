@@ -173,3 +173,19 @@ describe("can — venue booking capabilities (SCRUM-50/52/53)", () => {
     }
   });
 });
+
+// SCRUM-37 — only Venue Staff record non-booking unavailability.
+describe("can — recording venue unavailability (SCRUM-37)", () => {
+  const venueStaff: SessionUser = { id: "vs", role: "VENUE_STAFF" };
+  const techSupport: SessionUser = { id: "ts", role: "TECH_SUPPORT" };
+
+  it("SCRUM-37 AC2 — venue staff may record unavailability", () => {
+    expect(can(venueStaff, "unavailability:record")).toBe(true);
+  });
+
+  it("SCRUM-37 AC2 — no other role may record unavailability", () => {
+    for (const user of [organiserA, coordinator, techSupport, attendee]) {
+      expect(can(user, "unavailability:record")).toBe(false);
+    }
+  });
+});
