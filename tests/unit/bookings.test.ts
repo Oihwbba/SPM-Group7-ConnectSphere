@@ -128,6 +128,23 @@ describe("submitBookingRequest — SCRUM-50", () => {
     );
   });
 
+  it('SCRUM-50 AC1 — a layout or notes left blank ("No preference") is stored as not stated', async () => {
+    await submitBookingRequest({
+      ...validRequest,
+      requestedLayout: "",
+      requestNotes: "   ",
+    });
+
+    expect(db.booking.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          requestedLayout: null,
+          requestNotes: null,
+        }),
+      }),
+    );
+  });
+
   it("SCRUM-50 — every role except Event Coordinator is refused before anything is read", async () => {
     for (const role of [
       "ORGANISER",
