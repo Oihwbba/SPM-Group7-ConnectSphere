@@ -14,6 +14,7 @@ seed holds one pending request (`bkg_pending`, Seminar Room 2.1).
 | [TC-52-02](#tc-52-02) | Positive | AC 3 | Integration, e2e |
 | [TC-52-03](#tc-52-03) | Positive | AC 1 | Integration, e2e |
 | [TC-52-04](#tc-52-04) | Negative | Venue Staff only | Unit, e2e |
+| [TC-52-05](#tc-52-05) | Positive | AC 1 (finding a request in the queue) | Unit, e2e |
 
 ---
 
@@ -68,3 +69,16 @@ seed holds one pending request (`bkg_pending`, Seminar Room 2.1).
 | Expected Result | No Bookings link. The server renders "Access denied" rather than the queue. |
 
 **Automated by:** `e2e/bookings.spec.ts` › "SCRUM-52 — a coordinator typing the queue's address is refused by the server"; `tests/unit/auth.test.ts` › "SCRUM-52 — only venue staff may read the pending-request queue"; `e2e/access-control.spec.ts` › "Coordinator sees only …"
+
+### TC-52-05
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-52-05 |
+| Test Scenario | [Positive] AC 1: Venue Staff search the queue to find a request |
+| Pre-conditions | Several pending requests. |
+| Test Steps | 1. Type a word from a request (event, venue, location, coordinator, email, facility, layout, notes or a date such as "10 Mar 2035") into **Search pending requests**. <br> 2. Add a second word that no request has. <br> 3. Click **Clear search**. |
+| Test Data | "seminar"; "seminar boardroom" |
+| Expected Result | Step 1: only matching requests are listed, with "Showing N of M requests". Step 2: "No requests match …" with a **Clear search** button, because every word must match. Step 3: the full queue returns. Case does not matter. |
+
+**Automated by:** `tests/unit/booking-queue.test.tsx` › the three "SCRUM-52 — …" matchesSearch cases; `e2e/bookings.spec.ts` › "SCRUM-53 AC2 — rejecting needs a written reason, and the reason is saved" (search step)

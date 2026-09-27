@@ -12,6 +12,7 @@ import {
   Inbox,
   LayoutGrid,
   Mail,
+  Search,
   MapPin,
   MessageSquareText,
   UserRound,
@@ -25,6 +26,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
@@ -34,10 +36,39 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { formatDateTime } from "@/lib/datetime";
+import { formatDate, formatDateTime } from "@/lib/datetime";
 import { describeBlocker } from "@/lib/venue-availability";
 import { decideBookingRequest } from "./actions";
 import type { PendingBookingRow } from "./queries";
+
+/**
+ * SCRUM-52 — does a queued request match what staff typed? Every word must
+ * appear somewhere on the card: event, venue, location, coordinator, email,
+ * facility, layout, notes or date. Case does not matter; an empty search
+ * matches everything.
+ */
+export function matchesSearch(booking: PendingBookingRow, query: string) {
+  const text = [
+    booking.event.name,
+    booking.venue.name,
+    booking.venue.location,
+    booking.requestedBy.name,
+    booking.requestedBy.email,
+    booking.requestedLayout,
+    booking.requestNotes,
+    formatDate(booking.startAt),
+    formatDate(booking.endAt),
+    ...booking.requiredFacilities,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+  return query
+    .toLowerCase()
+    .split(/\s+/)
+    .filter(Boolean)
+    .every((word) => text.includes(word));
+}
 
 /**
  * SCRUM-52 — the pending queue. Each card carries what the request asks for
@@ -53,6 +84,7 @@ export function BookingQueue({
   canDecide: boolean;
 }) {
   const [rejecting, setRejecting] = useState<PendingBookingRow | null>(null);
+  const [query, setQuery] = useState("");
   const [reason, setReason] = useState("");
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
@@ -101,10 +133,45 @@ export function BookingQueue({
     );
   }
 
+  const shown = queue.filter((booking) => matchesSearch(booking, query));
+
   return (
     <>
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative w-full max-w-md">
+          <Search
+            className="pointer-events-none absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+            aria-hidden
+          />
+          <Input
+            type="search"
+            aria-label="Search pending requests"
+            placeholder="Search by event, venue, coordinator, facility or date"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <p className="text-sm text-muted-foreground" aria-live="polite">
+          {query
+            ? `Showing ${shown.length} of ${queue.length} requests`
+            : `${queue.length} pending ${queue.length === 1 ? "request" : "requests"}`}
+        </p>
+      </div>
+
+      {shown.length === 0 && (
+        <Card>
+          <CardContent className="flex flex-col items-center gap-3 py-12 text-center">
+            <p className="text-base font-medium">No requests match “{query}”</p>
+            <Button variant="outline" onClick={() => setQuery("")}>
+              Clear search
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       <ul className="space-y-4">
-        {queue.map((booking) => (
+        {shown.map((booking) => (
           <li key={booking.id}>
             <RequestCard booking={booking}>
               {canDecide && (

@@ -262,6 +262,15 @@ test.describe("SCRUM-50 / 52 / 53 — venue booking request, review and decision
     const staff = await signedIn(browser, "venuestaff@test.local");
     await staff.goto("/bookings");
     const card = staff.getByTestId(/^booking-/).filter({ hasText: tag });
+
+    // SCRUM-52 — search narrows the queue to matching requests.
+    const search = staff.getByLabel("Search pending requests");
+    await search.fill("no-such-request-anywhere");
+    await expect(staff.getByText(/^No requests match/)).toBeVisible();
+    await search.fill(tag);
+    await expect(staff.getByTestId(/^booking-/)).toHaveCount(1);
+    await expect(card).toHaveCount(1);
+
     await card.getByRole("button", { name: "Reject" }).click();
 
     const confirm = staff.getByRole("button", { name: "Reject request" });
