@@ -5,9 +5,11 @@ import {
   vi,
   beforeAll,
   afterAll,
+  afterEach,
   type Mock,
 } from "vitest";
 import type { Session } from "next-auth";
+import { Prisma } from "@prisma/client";
 
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
@@ -21,6 +23,7 @@ import {
   registerForEvent,
   withdrawRegistration,
 } from "@/app/(app)/events/registration-actions";
+import { decideBookingRequest } from "@/app/(app)/bookings/actions";
 
 // The "at the same moment" cases (SCRUM-31/53/74). These are the acceptance
 // criteria the database constraints and row locks exist to satisfy, so each one
@@ -41,6 +44,38 @@ describe("concurrency", () => {
 // run against a localhost database — CI's service container, or the Docker DB —
 // and never against the shared Supabase database that `.env` points at.
 vi.mock("@/auth", () => ({ auth: vi.fn() }));
+
+// SCRUM-53 — a one-shot barrier around the approval's conflict check. When
+// armed with `parties = 2`, each approval waits after its check until the other
+// has checked too, so BOTH have seen "no conflict" before EITHER writes. That
+// is the exact interleaving a check-then-write design gets wrong, forced every
+// run instead of left to timing. Disarmed (the default), it changes nothing.
+const approvalBarrier = vi.hoisted(() => ({
+  parties: 0,
+  waiting: [] as Array<() => void>,
+}));
+vi.mock("@/lib/venue-availability", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("@/lib/venue-availability")>();
+  return {
+    ...actual,
+    findVenueBlockers: async (
+      ...args: Parameters<typeof actual.findVenueBlockers>
+    ) => {
+      const blockers = await actual.findVenueBlockers(...args);
+      if (approvalBarrier.parties > 0) {
+        await new Promise<void>((release) => {
+          approvalBarrier.waiting.push(release);
+          if (approvalBarrier.waiting.length === approvalBarrier.parties) {
+            approvalBarrier.parties = 0;
+            approvalBarrier.waiting.splice(0).forEach((go) => go());
+          }
+        });
+      }
+      return blockers;
+    },
+  };
+});
 
 const usesLocalDatabase = /@(localhost|127\.0\.0\.1)[:/]/.test(
   process.env.DATABASE_URL ?? "",
@@ -131,6 +166,196 @@ describe.skipIf(!usesLocalDatabase)("concurrency — equipment pool (SCRUM-31)",
     expect(dawn.ok).toBe(true);
   });
 });
+
+// SCRUM-53 AC4 — "two pending requests for the same venue cover overlapping
+// periods, Venue Staff approve both at the same moment, only one approval
+// succeeds and the other is returned as conflicting — the venue is never
+// double-booked." Enforced by the `booking_no_double_booking` EXCLUDE
+// constraint (docs/adr/0010). A mock cannot race, so this needs real Postgres.
+describe.skipIf(!usesLocalDatabase)(
+  "concurrency — venue double-booking (SCRUM-53)",
+  () => {
+    let venueId: string;
+    const SECOND_STAFF_ID = `usr_venuestaff_concurrency_${Date.now()}`;
+
+    const staff = (id: string): Session => ({
+      user: { id, role: "VENUE_STAFF", name: id, email: `${id}@test.local` },
+      expires: "2999-01-01T00:00:00.000Z",
+    });
+
+    /** A PENDING request on the test venue, written directly. */
+    async function pendingRequest(eventId: string, start: string, end: string) {
+      const row = await prisma.booking.create({
+        data: {
+          eventId,
+          venueId,
+          startAt: new Date(start),
+          endAt: new Date(end),
+          requestedById: "usr_coordinator",
+        },
+        select: { id: true },
+      });
+      return row.id;
+    }
+
+    const approvedCount = () =>
+      prisma.booking.count({ where: { venueId, status: "APPROVED" } });
+
+    beforeAll(async () => {
+      // Two different members of Venue Staff, as the criterion describes.
+      await prisma.user.create({
+        data: {
+          id: SECOND_STAFF_ID,
+          email: `${SECOND_STAFF_ID}@test.local`,
+          name: "Second Venue Staff",
+          passwordHash: "not-a-real-hash-test-user-cannot-sign-in",
+          role: "VENUE_STAFF",
+        },
+      });
+      const venue = await prisma.venue.create({
+        data: {
+          name: `Concurrency test venue ${Date.now()}`,
+          location: "Test block",
+          capacity: 50,
+        },
+        select: { id: true },
+      });
+      venueId = venue.id;
+    });
+
+    afterEach(async () => {
+      approvalBarrier.parties = 0;
+      const ids = await prisma.booking.findMany({
+        where: { venueId },
+        select: { id: true },
+      });
+      await prisma.auditLog.deleteMany({
+        where: {
+          entityType: "Booking",
+          entityId: { in: ids.map((b) => b.id) },
+        },
+      });
+      await prisma.booking.deleteMany({ where: { venueId } });
+    });
+
+    afterAll(async () => {
+      await prisma.venue.delete({ where: { id: venueId } });
+      await prisma.user.delete({ where: { id: SECOND_STAFF_ID } });
+    });
+
+    it("SCRUM-53 AC4 — two staff approve overlapping requests at the same moment: one succeeds, one is returned as conflicting", async () => {
+      const first = await pendingRequest(
+        "evt_approved",
+        "2033-02-01T02:00:00.000Z",
+        "2033-02-01T06:00:00.000Z",
+      );
+      const second = await pendingRequest(
+        "evt_planning",
+        "2033-02-01T04:00:00.000Z",
+        "2033-02-01T08:00:00.000Z",
+      );
+      (auth as unknown as Mock)
+        .mockResolvedValueOnce(staff("usr_venuestaff"))
+        .mockResolvedValueOnce(staff(SECOND_STAFF_ID));
+
+      // Both approvals pass the application's own conflict check before either
+      // writes — only the database can now tell them apart.
+      approvalBarrier.parties = 2;
+      const results = await Promise.all([
+        decideBookingRequest({ bookingId: first, decision: "APPROVED" }),
+        decideBookingRequest({ bookingId: second, decision: "APPROVED" }),
+      ]);
+
+      expect(results.filter((r) => r.ok)).toHaveLength(1);
+      const refused = results.filter((r) => !r.ok);
+      expect(refused).toHaveLength(1);
+      expect(refused[0]).toMatchObject({
+        error: expect.stringMatching(/^Conflicting:/),
+      });
+
+      // Never double-booked, and the loser is still pending for staff to reject.
+      expect(await approvedCount()).toBe(1);
+      const statuses = await prisma.booking.findMany({
+        where: { id: { in: [first, second] } },
+        select: { status: true },
+      });
+      expect(statuses.map((b) => b.status).sort()).toEqual([
+        "APPROVED",
+        "PENDING",
+      ]);
+      // One decision, one audit entry.
+      expect(
+        await prisma.auditLog.count({
+          where: { entityType: "Booking", entityId: { in: [first, second] } },
+        }),
+      ).toBe(1);
+    });
+
+    it("SCRUM-53 AC4 — the database alone refuses the second of two simultaneous overlapping approvals, however the rows are written", async () => {
+      const first = await pendingRequest(
+        "evt_approved",
+        "2033-03-01T02:00:00.000Z",
+        "2033-03-01T06:00:00.000Z",
+      );
+      const second = await pendingRequest(
+        "evt_planning",
+        "2033-03-01T05:00:00.000Z",
+        "2033-03-01T09:00:00.000Z",
+      );
+
+      // No application code at all: two raw transactions. The first approves
+      // and holds its transaction open; the second approves an overlapping row
+      // while the first is still uncommitted, then the first commits.
+      let firstWrote!: () => void;
+      const firstHasWritten = new Promise<void>((r) => (firstWrote = r));
+      const approve = (id: string) =>
+        Prisma.sql`UPDATE "Booking" SET "status" = 'APPROVED' WHERE "id" = ${id}`;
+
+      const results = await Promise.allSettled([
+        prisma.$transaction(async (tx) => {
+          await tx.$executeRaw(approve(first));
+          firstWrote();
+          await new Promise((r) => setTimeout(r, 300));
+        }),
+        firstHasWritten.then(() =>
+          prisma.$transaction((tx) => tx.$executeRaw(approve(second))),
+        ),
+      ]);
+
+      expect(results[0].status).toBe("fulfilled");
+      expect(results[1].status).toBe("rejected");
+      expect(String((results[1] as PromiseRejectedResult).reason)).toMatch(
+        /booking_no_double_booking/,
+      );
+      expect(await approvedCount()).toBe(1);
+    });
+
+    it("SCRUM-53 AC5 — two staff approve requests that touch at an endpoint at the same moment: both succeed", async () => {
+      const morning = await pendingRequest(
+        "evt_approved",
+        "2033-04-01T02:00:00.000Z",
+        "2033-04-01T06:00:00.000Z",
+      );
+      const afternoon = await pendingRequest(
+        "evt_planning",
+        "2033-04-01T06:00:00.000Z",
+        "2033-04-01T10:00:00.000Z",
+      );
+      (auth as unknown as Mock)
+        .mockResolvedValueOnce(staff("usr_venuestaff"))
+        .mockResolvedValueOnce(staff(SECOND_STAFF_ID));
+
+      approvalBarrier.parties = 2;
+      const results = await Promise.all([
+        decideBookingRequest({ bookingId: morning, decision: "APPROVED" }),
+        decideBookingRequest({ bookingId: afternoon, decision: "APPROVED" }),
+      ]);
+
+      expect(results.every((r) => r.ok)).toBe(true);
+      expect(await approvedCount()).toBe(2);
+    });
+  },
+);
 
 describe.skipIf(!usesLocalDatabase)("concurrency — status transitions (SCRUM-24)", () => {
   let eventId: string | undefined;

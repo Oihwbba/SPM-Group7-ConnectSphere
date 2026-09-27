@@ -42,4 +42,25 @@ export const bookingRequestSchema = z
     }
   });
 
+/**
+ * SCRUM-53 — approve, or reject with a free-text reason. A blank or
+ * whitespace-only reason is not a reason (customer clarification 2026-09-13).
+ */
+export const bookingDecisionSchema = z
+  .object({
+    bookingId: z.string().min(1),
+    decision: z.enum(["APPROVED", "REJECTED"]),
+    reason: z.string().trim().max(2000).optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.decision === "REJECTED" && !data.reason) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["reason"],
+        message: "A reason is required to reject a booking request.",
+      });
+    }
+  });
+
 export type BookingRequestInput = z.input<typeof bookingRequestSchema>;
+export type BookingDecisionInput = z.input<typeof bookingDecisionSchema>;

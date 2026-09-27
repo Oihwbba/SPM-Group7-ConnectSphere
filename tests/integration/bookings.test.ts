@@ -12,7 +12,10 @@ import type { Session } from "next-auth";
 
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
-import { submitBookingRequest } from "@/app/(app)/bookings/actions";
+import {
+  decideBookingRequest,
+  submitBookingRequest,
+} from "@/app/(app)/bookings/actions";
 
 // SCRUM-50 / SCRUM-53 against a real, seeded Postgres. The session is the only
 // thing mocked, so "not created" and "the first decision stands" are proven by
@@ -36,6 +39,7 @@ function sessionFor(id: string, role: "COORDINATOR" | "VENUE_STAFF"): Session {
   };
 }
 const COORDINATOR = sessionFor("usr_coordinator", "COORDINATOR");
+const VENUE_STAFF = sessionFor("usr_venuestaff", "VENUE_STAFF");
 
 // Seeded events assigned to usr_coordinator (prisma/seed.ts).
 const APPROVED_EVENT = "evt_approved";
@@ -264,6 +268,236 @@ describe.skipIf(!usesLocalDatabase)(
 
         expect(later.ok && later.data.created).toBe(true);
         expect(await bookingCount()).toBe(2);
+      });
+    });
+
+    describe("SCRUM-53 — approve or reject a booking request", () => {
+      async function pending(overrides: Record<string, unknown> = {}) {
+        mockAuth.mockResolvedValue(COORDINATOR);
+        const result = await submitBookingRequest(request(overrides));
+        if (!result.ok) throw new Error(result.error);
+        mockAuth.mockResolvedValue(VENUE_STAFF);
+        return result.data.booking.id;
+      }
+
+      it("SCRUM-53 AC1 & AC2 — rejecting with a reason saves the rejection, the reason, and an audit entry", async () => {
+        const id = await pending();
+
+        const result = await decideBookingRequest({
+          bookingId: id,
+          decision: "REJECTED",
+          reason: "  Room is being refitted that week.  ",
+        });
+
+        expect(result).toEqual({ ok: true, data: { status: "REJECTED" } });
+        const row = await prisma.booking.findUniqueOrThrow({ where: { id } });
+        expect(row).toMatchObject({
+          status: "REJECTED",
+          decisionReason: "Room is being refitted that week.",
+          decidedById: "usr_venuestaff",
+        });
+        expect(row.decidedAt).toBeInstanceOf(Date);
+        expect(
+          await prisma.auditLog.count({
+            where: { entityType: "Booking", entityId: id, action: "REJECTED" },
+          }),
+        ).toBe(1);
+      });
+
+      it("SCRUM-53 AC2 — rejecting with a blank reason is refused and the request stays pending", async () => {
+        const id = await pending();
+
+        for (const reason of [undefined, "", "   "]) {
+          const result = await decideBookingRequest({
+            bookingId: id,
+            decision: "REJECTED",
+            reason,
+          });
+          expect(result).toMatchObject({
+            ok: false,
+            error: "A reason is required to reject a booking request.",
+          });
+        }
+
+        const row = await prisma.booking.findUniqueOrThrow({ where: { id } });
+        expect(row.status).toBe("PENDING");
+        expect(row.decisionReason).toBeNull();
+      });
+
+      it("SCRUM-53 AC2 — the database itself refuses a rejection without a reason", async () => {
+        const id = await pending();
+
+        await expect(
+          prisma.booking.update({
+            where: { id },
+            data: { status: "REJECTED", decisionReason: " " },
+          }),
+        ).rejects.toThrow(/booking_rejection_has_reason/);
+      });
+
+      it("SCRUM-53 AC1 & AC3 — approving makes the venue unavailable: a later overlapping request is refused", async () => {
+        const id = await pending();
+
+        const result = await decideBookingRequest({
+          bookingId: id,
+          decision: "APPROVED",
+        });
+        expect(result).toEqual({ ok: true, data: { status: "APPROVED" } });
+
+        mockAuth.mockResolvedValue(COORDINATOR);
+        const later = await submitBookingRequest(
+          request({
+            eventId: PLANNING_EVENT,
+            startAt: at(10, 7),
+            endAt: at(10, 9),
+          }),
+        );
+        expect(later.ok).toBe(false);
+        if (later.ok) return;
+        expect(later.error).toMatch(/already booked/);
+      });
+
+      it("SCRUM-53 AC4 — approving a request that overlaps an already-approved booking is returned as conflicting", async () => {
+        const first = await pending();
+        const second = await pending({
+          eventId: PLANNING_EVENT,
+          startAt: at(10, 7),
+          endAt: at(10, 9),
+        });
+        await decideBookingRequest({ bookingId: first, decision: "APPROVED" });
+
+        const result = await decideBookingRequest({
+          bookingId: second,
+          decision: "APPROVED",
+        });
+
+        expect(result.ok).toBe(false);
+        if (result.ok) return;
+        expect(result.error).toMatch(/^Conflicting:/);
+        const row = await prisma.booking.findUniqueOrThrow({
+          where: { id: second },
+        });
+        expect(row.status).toBe("PENDING");
+      });
+
+      it("SCRUM-53 AC4 — approving over recorded unavailability is returned as conflicting", async () => {
+        const id = await pending();
+        await prisma.venueUnavailability.create({
+          data: {
+            venueId,
+            startAt: new Date(at(10, 7)),
+            endAt: new Date(at(10, 8)),
+            reason: "CLOSURE",
+            recordedById: "usr_venuestaff",
+          },
+        });
+
+        const result = await decideBookingRequest({
+          bookingId: id,
+          decision: "APPROVED",
+        });
+
+        expect(result.ok).toBe(false);
+        if (result.ok) return;
+        expect(result.error).toMatch(
+          /^Conflicting: .* unavailable \(closure\)/,
+        );
+      });
+
+      it("SCRUM-53 AC5 — two requests that touch at an endpoint can both be approved", async () => {
+        const morning = await pending();
+        const afternoon = await pending({
+          eventId: PLANNING_EVENT,
+          startAt: at(10, 8),
+          endAt: at(10, 10),
+        });
+
+        const results = [
+          await decideBookingRequest({
+            bookingId: morning,
+            decision: "APPROVED",
+          }),
+          await decideBookingRequest({
+            bookingId: afternoon,
+            decision: "APPROVED",
+          }),
+        ];
+
+        expect(results.every((r) => r.ok)).toBe(true);
+        expect(
+          await prisma.booking.count({
+            where: { venueId, status: "APPROVED" },
+          }),
+        ).toBe(2);
+      });
+
+      it("SCRUM-53 AC6 — deciding an already-approved request leaves the approval standing and records no second outcome", async () => {
+        const id = await pending();
+        await decideBookingRequest({ bookingId: id, decision: "APPROVED" });
+
+        const second = await decideBookingRequest({
+          bookingId: id,
+          decision: "REJECTED",
+          reason: "Changed my mind.",
+        });
+
+        expect(second).toMatchObject({
+          ok: false,
+          error:
+            "This request has already been approved; the original decision stands.",
+        });
+        const row = await prisma.booking.findUniqueOrThrow({ where: { id } });
+        expect(row).toMatchObject({ status: "APPROVED", decisionReason: null });
+        expect(
+          await prisma.auditLog.count({
+            where: { entityType: "Booking", entityId: id },
+          }),
+        ).toBe(1);
+      });
+
+      it("SCRUM-53 AC6 — deciding an already-rejected request leaves the rejection standing", async () => {
+        const id = await pending();
+        await decideBookingRequest({
+          bookingId: id,
+          decision: "REJECTED",
+          reason: "Too small.",
+        });
+
+        const second = await decideBookingRequest({
+          bookingId: id,
+          decision: "APPROVED",
+        });
+
+        expect(second).toMatchObject({
+          ok: false,
+          error:
+            "This request has already been rejected; the original decision stands.",
+        });
+        const row = await prisma.booking.findUniqueOrThrow({ where: { id } });
+        expect(row).toMatchObject({
+          status: "REJECTED",
+          decisionReason: "Too small.",
+        });
+      });
+
+      it("SCRUM-53 AC6 — an approve and a reject of the same request at the same instant: exactly one outcome is recorded", async () => {
+        const id = await pending();
+
+        const results = await Promise.all([
+          decideBookingRequest({ bookingId: id, decision: "APPROVED" }),
+          decideBookingRequest({
+            bookingId: id,
+            decision: "REJECTED",
+            reason: "No.",
+          }),
+        ]);
+
+        expect(results.filter((r) => r.ok)).toHaveLength(1);
+        expect(
+          await prisma.auditLog.count({
+            where: { entityType: "Booking", entityId: id },
+          }),
+        ).toBe(1);
       });
     });
   },
