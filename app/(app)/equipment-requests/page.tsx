@@ -9,13 +9,19 @@ import {
 import { CoordinatorRequests } from "./coordinator-requests";
 import { ReviewQueue } from "./review-queue";
 
-// SCRUM-27/28. Which view a user gets follows from what lib/auth/can.ts lets
-// them do, not from a role list here (SCRUM-66 / SCRUM-67): whoever reviews
-// requests gets the review queue; whoever raises them sees their own requests
-// and the form to raise one.
+// SCRUM-27/28. Access follows lib/auth/can.ts, not a role list here (SCRUM-66
+// / SCRUM-67), and uses the same action the nav binds this route to
+// (equipment-request:list), so the link and the page can never disagree.
+// Whoever reviews requests gets the review queue; everyone else sees their own
+// requests, and the form to raise one if they may. Each action checks its own
+// permission again on the server.
 export default async function EquipmentRequestsPage() {
   const session = await requireSession();
   const { user } = session;
+
+  if (!can(user, "equipment-request:list")) {
+    return <Forbidden />;
+  }
 
   if (can(user, "equipment-request:review")) {
     return <ReviewQueue requests={await getEquipmentRequestQueue()} />;
