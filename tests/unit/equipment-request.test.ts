@@ -215,6 +215,9 @@ describe("createEquipmentRequest — SCRUM-27", () => {
       select: { id: true },
     });
     expect(db.$transaction).not.toHaveBeenCalled();
+    // The existing request may postdate the coordinator's page, so the list
+    // is refreshed for it to be there to highlight.
+    expect(revalidatePath).toHaveBeenCalledWith("/equipment-requests");
   });
 
   it("AC 7: when a simultaneous submission wins the race, the loser is shown the winner's request", async () => {
@@ -229,7 +232,7 @@ describe("createEquipmentRequest — SCRUM-27", () => {
       ok: true,
       data: { id: "eqr_winner", existing: true },
     });
-    expect(revalidatePath).not.toHaveBeenCalled();
+    expect(revalidatePath).toHaveBeenCalledWith("/equipment-requests");
   });
 
   it("rethrows a unique violation that no open request explains, rather than hiding it", async () => {
