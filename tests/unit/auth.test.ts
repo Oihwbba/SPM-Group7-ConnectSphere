@@ -159,4 +159,11 @@ describe("can — venue booking capabilities (SCRUM-50/52/53)", () => {
     }
   });
 
+  it("SCRUM-52 — only venue staff may read the pending-request queue", () => {
+    expect(can(venueStaff, "booking:review")).toBe(true);
+    for (const user of [organiserA, coordinator, techSupport, attendee]) {
+      expect(can(user, "booking:review")).toBe(false);
+    }
+  });
+
 });

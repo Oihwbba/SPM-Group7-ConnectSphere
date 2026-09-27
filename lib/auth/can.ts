@@ -34,7 +34,7 @@ export type Action =
   | "clarification:respond" // SCRUM-18: organiser answers an open question
   | "venue:read"
   | "booking:request" // SCRUM-50: coordinator asks for a venue for their event
-  | "booking:review"
+  | "booking:review" // SCRUM-52: read the pending-request queue
   | "equipment:read"
   | "equipment:reserve"
   | "equipment-request:list" // SCRUM-27: see the equipment requests scoped to me
