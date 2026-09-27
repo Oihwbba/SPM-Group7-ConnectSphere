@@ -162,6 +162,85 @@ test.describe("SCRUM-36 / SCRUM-37 — venue availability calendar and recorded 
     }
   });
 
+  test("SCRUM-36 AC6 — a venue with nothing in the range reads as available throughout, not blank", async ({
+    browser,
+  }) => {
+    const coordinator = await signedIn(browser, "coordinator@test.local");
+    await coordinator.goto(
+      calendarFor("ven_boardroom", "2036-06-01", "2036-06-07"),
+    );
+
+    await expect(coordinator.getByTestId("range-free")).toContainText(
+      "Executive Boardroom is available for the whole range",
+    );
+    await expect(coordinator.locator("li[data-day]")).toHaveCount(7);
+    for (const day of ["2036-06-01", "2036-06-07"]) {
+      expect(await stretches(coordinator, day)).toEqual([
+        ["free", "Available all day"],
+      ]);
+    }
+  });
+
+  test("SCRUM-36 AC7 — the calendar can be narrowed to a date range", async ({
+    browser,
+  }) => {
+    const coordinator = await signedIn(browser, "coordinator@test.local");
+    await coordinator.goto(calendarFor("ven_hall", "2036-02-01", "2036-02-03"));
+
+    await expect(coordinator.locator("li[data-day]")).toHaveCount(3);
+    await expect(
+      coordinator.getByRole("heading", { name: /Exhibition Hall/ }),
+    ).toContainText("1 Feb 2036 to 3 Feb 2036");
+  });
+
+  test("SCRUM-36 — a screen reader hears the venue and date for each day", async ({
+    browser,
+  }) => {
+    const coordinator = await signedIn(browser, "coordinator@test.local");
+    await coordinator.goto(calendarFor("ven_hall", "2036-02-01"));
+
+    await expect(
+      coordinator.getByRole("listitem", {
+        name: "Exhibition Hall, Fri, 1 Feb 2036",
+      }),
+    ).toBeVisible();
+  });
+
+  test("SCRUM-36 — the calendar works at phone width", async ({
+    browser,
+  }, testInfo) => {
+    const context = await browser.newContext({
+      viewport: { width: 390, height: 844 },
+    });
+    const phone = await context.newPage();
+    await phone.goto("/login");
+    await phone
+      .getByLabel("Email", { exact: true })
+      .fill("coordinator@test.local");
+    await phone.getByLabel("Password", { exact: true }).fill("Password123!");
+    await phone.getByRole("button", { name: "Sign in" }).click();
+    await phone.waitForURL((url) => !url.pathname.startsWith("/login"));
+    await phone.goto(calendarFor("ven_seminar", "2026-10-07", "2026-10-10"));
+
+    // Nothing is wider than the screen.
+    const overflow = await phone.evaluate(
+      () => document.documentElement.scrollWidth - window.innerWidth,
+    );
+    expect(overflow).toBeLessThanOrEqual(0);
+    await expect(phone.locator("li[data-day]").first()).toBeVisible();
+
+    await testInfo.attach("SCRUM-36 calendar at phone width", {
+      body: await phone.screenshot({ fullPage: true }),
+      contentType: "image/png",
+    });
+    if (process.env.EVIDENCE_DIR) {
+      await phone.screenshot({
+        path: `${process.env.EVIDENCE_DIR}/SCRUM-36-calendar-phone-width.png`,
+        fullPage: true,
+      });
+    }
+  });
+
   test("SCRUM-36 / SCRUM-37 — who can see the calendar and record unavailability", async ({
     browser,
   }) => {
