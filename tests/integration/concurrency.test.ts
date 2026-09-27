@@ -183,15 +183,24 @@ describe.skipIf(!usesLocalDatabase)(
       expires: "2999-01-01T00:00:00.000Z",
     });
 
-    /** A PENDING request on the test venue, written directly. */
-    async function pendingRequest(eventId: string, start: string, end: string) {
+    /**
+     * A PENDING request on the test venue, written directly. Overlapping
+     * pending requests must come from different coordinators (SCRUM-50 AC6),
+     * so the second of each pair is requested by coordinator 2.
+     */
+    async function pendingRequest(
+      eventId: string,
+      start: string,
+      end: string,
+      requestedById = "usr_coordinator",
+    ) {
       const row = await prisma.booking.create({
         data: {
           eventId,
           venueId,
           startAt: new Date(start),
           endAt: new Date(end),
-          requestedById: "usr_coordinator",
+          requestedById,
         },
         select: { id: true },
       });
@@ -253,6 +262,7 @@ describe.skipIf(!usesLocalDatabase)(
         "evt_planning",
         "2033-02-01T04:00:00.000Z",
         "2033-02-01T08:00:00.000Z",
+        "usr_coordinator_2",
       );
       (auth as unknown as Mock)
         .mockResolvedValueOnce(staff("usr_venuestaff"))
@@ -301,6 +311,7 @@ describe.skipIf(!usesLocalDatabase)(
         "evt_planning",
         "2033-03-01T05:00:00.000Z",
         "2033-03-01T09:00:00.000Z",
+        "usr_coordinator_2",
       );
 
       // No application code at all: two raw transactions. The first approves
@@ -340,6 +351,7 @@ describe.skipIf(!usesLocalDatabase)(
         "evt_planning",
         "2033-04-01T06:00:00.000Z",
         "2033-04-01T10:00:00.000Z",
+        "usr_coordinator_2",
       );
       (auth as unknown as Mock)
         .mockResolvedValueOnce(staff("usr_venuestaff"))

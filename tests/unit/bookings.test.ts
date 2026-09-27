@@ -248,7 +248,7 @@ describe("submitBookingRequest — SCRUM-50", () => {
     });
   });
 
-  it("SCRUM-50 AC6 — an overlapping pending request for the same event and venue is returned instead of a new one", async () => {
+  it("SCRUM-50 AC6 — this coordinator's overlapping pending request for the same venue is returned instead of a new one, whatever its event", async () => {
     db.booking.findFirst.mockResolvedValue(summaryRow);
 
     const result = await submitBookingRequest(validRequest);
@@ -260,11 +260,13 @@ describe("submitBookingRequest — SCRUM-50", () => {
     expect(db.booking.create).not.toHaveBeenCalled();
     expect(db.booking.findFirst).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: expect.objectContaining({
-          eventId: "evt_1",
+        where: {
+          requestedById: "usr_coord",
           venueId: "ven_1",
           status: "PENDING",
-        }),
+          startAt: { lt: new Date(END) },
+          endAt: { gt: new Date(START) },
+        },
       }),
     );
   });

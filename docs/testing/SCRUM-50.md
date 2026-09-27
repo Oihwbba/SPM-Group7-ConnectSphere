@@ -69,13 +69,13 @@ nothing seeded overlaps them. Times are Singapore time.
 | Item | Content |
 |---|---|
 | Test Case ID | TC-50-04 |
-| Test Scenario | [Positive] AC 3: a pending request by someone else does not make the venue unavailable |
-| Pre-conditions | A PENDING (not approved) request exists for the period. |
-| Test Steps | 1. Request the same venue and period for a different event. |
-| Test Data | Two events, same venue, same period |
+| Test Scenario | [Positive] AC 3: a pending request by another coordinator does not make the venue unavailable |
+| Pre-conditions | Another coordinator has a PENDING (not approved) request for the period. |
+| Test Steps | 1. As the first coordinator, request the same venue and period. |
+| Test Data | `coordinator2@test.local` then `coordinator@test.local`, same venue, same period |
 | Expected Result | The second request is also created Pending. Staff choose between them. |
 
-**Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-50 AC3 — a PENDING request by someone else does not block a new request"; `tests/unit/venue-availability.test.ts` › "SCRUM-50 AC3 — asks only for APPROVED bookings that overlap the period — a pending request blocks nobody"
+**Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-50 AC3 — a PENDING request by another coordinator does not block a new request"; `tests/unit/venue-availability.test.ts` › "SCRUM-50 AC3 — asks only for APPROVED bookings that overlap the period — a pending request blocks nobody"
 
 ### TC-50-05
 
@@ -108,13 +108,13 @@ nothing seeded overlaps them. Times are Singapore time.
 | Item | Content |
 |---|---|
 | Test Case ID | TC-50-07 |
-| Test Scenario | [Negative] AC 6: resubmitting a pending request shows the existing one and creates nothing |
+| Test Scenario | [Negative] AC 6: a coordinator who already has a pending request for the same venue and an overlapping period is shown it, and nothing is created, whichever event they ask under |
 | Pre-conditions | TC-50-01 is still pending. |
-| Test Steps | 1. Click **Submit request** again with the same details. |
+| Test Steps | 1. Click **Submit request** again with the same details. <br> 2. Choose a different event and an overlapping period (11:00–15:00) at the same venue, and submit. |
 | Test Data | As TC-50-01 |
-| Expected Result | "You already have a pending request for this venue and period" with the existing request's details. Still one booking row. A later, non-overlapping period is a new request. |
+| Expected Result | "You already have a pending request for this venue and period" with the existing request's details, both times. Still one booking row. The database's `booking_no_duplicate_pending_request` constraint enforces the same rule, keyed on the coordinator. A later, non-overlapping period is a new request. |
 
-**Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-50 AC6 — submitting the same request twice leaves one request and shows the existing one" and "…a pending request for a different, non-overlapping period is a new request"; `tests/unit/bookings.test.ts` › "SCRUM-50 AC6 — an overlapping pending request for the same event and venue is returned instead of a new one"; `e2e/bookings.spec.ts` › journey
+**Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-50 AC6 — submitting the same request twice leaves one request and shows the existing one" "…the same coordinator asking again under a different event is shown the existing request", "…the database itself refuses a second overlapping pending request from the same coordinator, whatever the event" and "…a pending request for a different, non-overlapping period is a new request"; `tests/unit/bookings.test.ts` › "SCRUM-50 AC6 — this coordinator's overlapping pending request for the same venue is returned instead of a new one, whatever its event"; `e2e/bookings.spec.ts` › journey
 
 ### TC-50-08
 
