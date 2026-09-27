@@ -138,9 +138,8 @@ test.describe("SCRUM-50 / 52 / 53 — venue booking request, review and decision
       "10 Mar 2035, 9:00 am to 10 Mar 2035, 1:00 pm",
     );
     await expect(card).toContainText("120 expected · venue holds 200");
-    await expect(card).toContainText(
-      "Cody Coordinator (coordinator@test.local)",
-    );
+    await expect(card).toContainText("Requested by Cody Coordinator");
+    await expect(card).toContainText("coordinator@test.local");
     await expect(card).toContainText("Free for this period");
 
     // SCRUM-53 AC1 — approve.

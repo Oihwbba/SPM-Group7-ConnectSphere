@@ -26,7 +26,7 @@ seed holds one pending request (`bkg_pending`, Seminar Room 2.1).
 | Pre-conditions | A Coordinator has submitted TC-50-01. |
 | Test Steps | 1. Open **Bookings**. <br> 2. Find the Exhibition Hall request. |
 | Test Data | As TC-50-01 |
-| Expected Result | The card shows the event, "10 Mar 2035, 9:00 am to 10 Mar 2035, 1:00 pm", "Cody Coordinator (coordinator@test.local)", Exhibition Hall and its location, "120 expected · venue holds 200", the facilities and layout asked for, and the notes. Soonest request first. |
+| Expected Result | The card shows the event, "10 Mar 2035, 9:00 am to 10 Mar 2035, 1:00 pm", "Requested by Cody Coordinator" with "coordinator@test.local", Exhibition Hall and its location, "120 expected · venue holds 200", the facilities (as green or red pills) and layout asked for, and the notes, each fact led by its own icon. Soonest request first. |
 
 **Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-52 AC1 & AC2 — the queue lists pending requests with venue, timing, attendance, needs and the requesting coordinator"; `e2e/bookings.spec.ts` › "SCRUM-50 AC2, SCRUM-52 AC1-3, SCRUM-53 AC1 & AC3 — …"
 
