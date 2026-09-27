@@ -35,10 +35,13 @@ function eventPeriod(event: { startAt: Date | null; endAt: Date | null }) {
  */
 export function CoordinatorRequests({
   requests,
+  canCreate,
   events,
   equipment,
 }: {
   requests: CoordinatorEquipmentRequest[];
+  /** Whether this user may raise requests (equipment-request:create). */
+  canCreate: boolean;
   events: EventOption[];
   equipment: EquipmentOption[];
 }) {
@@ -52,12 +55,12 @@ export function CoordinatorRequests({
       ?.scrollIntoView({ behavior: "smooth", block: "center" });
   }, [highlightedId, requests]);
 
-  const canRequest = events.length > 0;
-  const newRequestButton = (
+  const hasEvents = events.length > 0;
+  const newRequestButton = canCreate && (
     <Button
       className="gap-2"
       onClick={() => setDialogOpen(true)}
-      disabled={!canRequest}
+      disabled={!hasEvents}
     >
       <Plus className="h-4 w-4" />
       New request
@@ -79,7 +82,7 @@ export function CoordinatorRequests({
         {newRequestButton}
       </div>
 
-      {!canRequest && (
+      {canCreate && !hasEvents && (
         <p
           className="text-sm text-muted-foreground"
           data-testid="no-requestable-events"
@@ -100,7 +103,9 @@ export function CoordinatorRequests({
               Ask for projectors, microphones and anything else from the
               equipment list for one of your approved events.
             </p>
-            {canRequest && <div className="pt-2">{newRequestButton}</div>}
+            {hasEvents && newRequestButton && (
+              <div className="pt-2">{newRequestButton}</div>
+            )}
           </CardContent>
         </Card>
       ) : (
@@ -116,16 +121,18 @@ export function CoordinatorRequests({
         </ul>
       )}
 
-      <NewRequestDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        events={events}
-        equipment={equipment}
-        onDone={(id) => {
-          setDialogOpen(false);
-          setHighlightedId(id);
-        }}
-      />
+      {canCreate && (
+        <NewRequestDialog
+          open={dialogOpen}
+          onOpenChange={setDialogOpen}
+          events={events}
+          equipment={equipment}
+          onDone={(id) => {
+            setDialogOpen(false);
+            setHighlightedId(id);
+          }}
+        />
+      )}
     </div>
   );
 }
