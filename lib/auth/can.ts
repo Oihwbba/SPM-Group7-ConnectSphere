@@ -36,6 +36,7 @@ export type Action =
   | "booking:request" // SCRUM-50: coordinator asks for a venue for their event
   | "booking:review" // SCRUM-52: read the pending-request queue
   | "booking:decide" // SCRUM-53: approve or reject a pending request
+  | "unavailability:record" // SCRUM-37: record maintenance, closure, etc.
   | "equipment:read"
   | "equipment:reserve"
   | "event:browse" // attendees browsing events open for registration
@@ -85,7 +86,12 @@ const ROLE_ACTIONS: Record<Role, Action[]> = {
   // it is deliberately NOT granted here — Venue Staff act on bookings, not the
   // catalogue. Grant it here the day Venue Staff need the catalogue; that is the
   // one-line change SCRUM-66 is about, with no page edits.
-  VENUE_STAFF: ["booking:review", "booking:decide", "notification:read"],
+  VENUE_STAFF: [
+    "booking:review",
+    "booking:decide",
+    "unavailability:record",
+    "notification:read",
+  ],
   TECH_SUPPORT: ["equipment:read", "equipment:reserve", "notification:read"],
   ATTENDEE: ["event:browse", "registration:read", "notification:read"],
 };
