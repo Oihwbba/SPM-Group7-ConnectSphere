@@ -230,13 +230,13 @@ test.describe("SCRUM-36 / SCRUM-37 — venue availability calendar and recorded 
     await expect(phone.locator("li[data-day]").first()).toBeVisible();
 
     await testInfo.attach("SCRUM-36 calendar at phone width", {
-      body: await phone.screenshot({ fullPage: true }),
+      body: await phone.screenshot({ fullPage: false }),
       contentType: "image/png",
     });
     if (process.env.EVIDENCE_DIR) {
       await phone.screenshot({
         path: `${process.env.EVIDENCE_DIR}/SCRUM-36-calendar-phone-width.png`,
-        fullPage: true,
+        fullPage: false,
       });
     }
   });
