@@ -15,6 +15,7 @@ import {
   overCapacityMessage,
   PAST_START_MESSAGE,
 } from "@/lib/schemas/booking";
+import { onceMoreOnDeadlock, violatesExclusion } from "@/lib/db-errors";
 import { overlapping } from "@/lib/period";
 import { describeBlocker, findVenueBlockers } from "@/lib/venue-availability";
 
@@ -43,44 +44,6 @@ function toSummary(row: {
 }): BookingSummary {
   const { venue, ...rest } = row;
   return { ...rest, venueName: venue.name };
-}
-
-/**
- * The PostgreSQL error code and message behind a failed query. Through the
- * `pg` driver adapter, Prisma surfaces a database refusal as a
- * DriverAdapterError whose `cause` carries the original code and message.
- */
-function postgresError(error: unknown) {
-  const cause = (error as { cause?: unknown } | null)?.cause as
-    | { originalCode?: string; originalMessage?: string }
-    | undefined;
-  return { code: cause?.originalCode, message: cause?.originalMessage ?? "" };
-}
-
-/** The write was refused by the exclusion constraint named `constraint`. */
-function violatesExclusion(error: unknown, constraint: string): boolean {
-  const pg = postgresError(error);
-  return pg.code === "23P01" && pg.message.includes(`"${constraint}"`);
-}
-
-/**
- * Runs `attempt`, and runs it once more if PostgreSQL aborted it as a
- * deadlock (SQLSTATE 40P01).
- *
- * Why this exists: when two overlapping rows are written at the same instant,
- * each can be left waiting for the other's uncommitted row in the exclusion
- * constraint. Postgres breaks that cycle by aborting one of them as a deadlock
- * rather than reporting a constraint violation. The survivor carries on. On
- * the retry the survivor's row is (or is about to be) committed, so the retry
- * gets the ordinary answer — the existing request, or a conflict.
- */
-async function onceMoreOnDeadlock<T>(attempt: () => Promise<T>): Promise<T> {
-  try {
-    return await attempt();
-  } catch (error) {
-    if (postgresError(error).code !== "40P01") throw error;
-    return attempt();
-  }
 }
 
 /**
@@ -324,6 +287,8 @@ export async function decideBookingRequest(
     await onceMoreOnDeadlock(decide);
 
     revalidatePath("/bookings");
+    // SCRUM-37 AC1: the availability calendar is never stale.
+    if (decision === "APPROVED") revalidatePath("/venues/availability");
     return ok({ status: decision });
   } catch (error) {
     if (error instanceof PermissionError || error instanceof DecisionError) {
@@ -332,6 +297,13 @@ export async function decideBookingRequest(
     if (violatesExclusion(error, "booking_no_double_booking")) {
       return err(
         "Conflicting: another booking overlapping this period was approved at the same moment. This request is still pending.",
+      );
+    }
+    // SCRUM-37: maintenance recorded at the same instant, refused by the
+    // database's occupancy trigger (ADR 0010).
+    if (violatesExclusion(error, "booking_overlaps_unavailability")) {
+      return err(
+        "Conflicting: the venue was recorded as unavailable for this period at the same moment. This request is still pending.",
       );
     }
     throw error;
