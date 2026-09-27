@@ -10,8 +10,9 @@ import { prisma } from "@/lib/db";
  * and clears those rows first so a local re-run or a CI retry starts clean.
  */
 const HALL = "ven_hall";
-const APPROVED_EVENT = "evt_approved";
-const PLANNING_EVENT = "evt_planning";
+// Seeded events assigned to coordinator@test.local, by their on-screen names.
+const APPROVED_EVENT = "Approved — Research Symposium";
+const PLANNING_EVENT = "Planning — Freshman Orientation";
 
 const usesLocalDatabase = /@(localhost|127\.0\.0\.1)[:/]/.test(
   process.env.DATABASE_URL ?? "",
@@ -32,23 +33,55 @@ async function openRequestForm(page: Page) {
   await page.locator('[data-hydrated="true"]').waitFor();
 }
 
-/** Fill and submit the form. Times are Singapore wall time. */
+/** A half-hour option's on-screen label, e.g. "13:30" -> "1:30 pm". */
+function timeOption(hhmm: string): RegExp {
+  const [h, m] = hhmm.split(":").map(Number);
+  const hour12 = h % 12 === 0 ? 12 : h % 12;
+  const minutes = String(m).padStart(2, "0");
+  return new RegExp(`^${hour12}:${minutes}\\s${h < 12 ? "am" : "pm"}$`);
+}
+
+async function choose(page: Page, label: string, option: string | RegExp) {
+  await page.getByLabel(label, { exact: true }).click();
+  await page.getByRole("option", { name: option }).click();
+}
+
+/** Set one end of the period. Times are Singapore wall time, "YYYY-MM-DDTHH:mm". */
+async function setTime(page: Page, which: "Start" | "End", wallTime: string) {
+  const [date, time] = wallTime.split("T");
+  await page.getByLabel(`${which} date`).fill(date);
+  await choose(page, `${which} time`, timeOption(time));
+}
+
+/** Fill and submit the form. */
 async function requestHall(
   page: Page,
   {
-    eventId,
+    event,
     start,
     end,
     notes = "",
-  }: { eventId: string; start: string; end: string; notes?: string },
+  }: { event: string; start: string; end: string; notes?: string },
 ) {
-  await page.getByLabel("Event", { exact: true }).selectOption(eventId);
-  await page.getByLabel("Venue", { exact: true }).selectOption(HALL);
-  await page.getByLabel("Start", { exact: true }).fill(start);
-  await page.getByLabel("End", { exact: true }).fill(end);
+  await choose(page, "Event", event);
+  await choose(page, "Venue", /^Exhibition Hall/);
+  await setTime(page, "Start", start);
+  await setTime(page, "End", end);
   await page.getByLabel("Expected attendance").fill("120");
   await page.getByLabel("Other details for Venue Staff").fill(notes);
   await page.getByRole("button", { name: "Submit request" }).click();
+}
+
+/** SCRUM-50 AC2 — the success pop-up, dismissed; the form is then cleared. */
+async function expectSubmitted(page: Page) {
+  const dialog = page.getByTestId("booking-success");
+  await expect(dialog).toContainText("Request submitted");
+  await expect(dialog).toContainText("pending a Venue Staff decision");
+  await dialog.getByRole("button", { name: "Done" }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(page.getByLabel("Other details for Venue Staff")).toHaveValue(
+    "",
+  );
 }
 
 test.describe("SCRUM-50 / 52 / 53 — venue booking request, review and decision", () => {
@@ -78,17 +111,19 @@ test.describe("SCRUM-50 / 52 / 53 — venue booking request, review and decision
     const coordinator = await signedIn(browser, "coordinator@test.local");
     await openRequestForm(coordinator);
     await requestHall(coordinator, {
-      eventId: APPROVED_EVENT,
+      event: APPROVED_EVENT,
       start: "2035-03-10T09:00",
       end: "2035-03-10T13:00",
       notes: tag,
     });
-    await expect(coordinator.getByTestId("booking-outcome")).toContainText(
-      "Request submitted — pending a Venue Staff decision",
-    );
+    await expectSubmitted(coordinator);
 
     // SCRUM-50 AC6 — submitting it again shows the existing request instead.
-    await coordinator.getByRole("button", { name: "Submit request" }).click();
+    await requestHall(coordinator, {
+      event: APPROVED_EVENT,
+      start: "2035-03-10T09:00",
+      end: "2035-03-10T13:00",
+    });
     await expect(coordinator.getByTestId("booking-outcome")).toContainText(
       "You already have a pending request for this venue and period",
     );
@@ -118,7 +153,7 @@ test.describe("SCRUM-50 / 52 / 53 — venue booking request, review and decision
     // SCRUM-53 AC3 / SCRUM-50 AC3 — the period is now unavailable.
     await openRequestForm(coordinator);
     await requestHall(coordinator, {
-      eventId: PLANNING_EVENT,
+      event: PLANNING_EVENT,
       start: "2035-03-10T11:00",
       end: "2035-03-10T15:00",
     });
@@ -139,16 +174,10 @@ test.describe("SCRUM-50 / 52 / 53 — venue booking request, review and decision
     }
 
     // SCRUM-50 AC4 — a period beginning exactly when the booking ends is accepted.
-    await coordinator
-      .getByLabel("Start", { exact: true })
-      .fill("2035-03-10T13:00");
-    await coordinator
-      .getByLabel("End", { exact: true })
-      .fill("2035-03-10T15:00");
+    await setTime(coordinator, "Start", "2035-03-10T13:00");
+    await setTime(coordinator, "End", "2035-03-10T15:00");
     await coordinator.getByRole("button", { name: "Submit request" }).click();
-    await expect(coordinator.getByTestId("booking-outcome")).toContainText(
-      "Request submitted",
-    );
+    await expectSubmitted(coordinator);
   });
 
   test("SCRUM-50 AC5 — an end before the start is reported as an invalid period", async ({
@@ -157,7 +186,7 @@ test.describe("SCRUM-50 / 52 / 53 — venue booking request, review and decision
     const coordinator = await signedIn(browser, "coordinator@test.local");
     await openRequestForm(coordinator);
     await requestHall(coordinator, {
-      eventId: APPROVED_EVENT,
+      event: APPROVED_EVENT,
       start: "2035-04-01T15:00",
       end: "2035-04-01T09:00",
     });
@@ -174,14 +203,12 @@ test.describe("SCRUM-50 / 52 / 53 — venue booking request, review and decision
     const coordinator = await signedIn(browser, "coordinator@test.local");
     await openRequestForm(coordinator);
     await requestHall(coordinator, {
-      eventId: APPROVED_EVENT,
+      event: APPROVED_EVENT,
       start: "2035-05-01T09:00",
       end: "2035-05-01T12:00",
       notes: tag,
     });
-    await expect(coordinator.getByTestId("booking-outcome")).toContainText(
-      "Request submitted",
-    );
+    await expectSubmitted(coordinator);
 
     const staff = await signedIn(browser, "venuestaff@test.local");
     await staff.goto("/bookings");

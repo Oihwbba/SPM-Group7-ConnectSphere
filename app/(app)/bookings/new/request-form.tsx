@@ -3,22 +3,43 @@
 import { useState, useSyncExternalStore, useTransition } from "react";
 import {
   AlertCircle,
+  Calendar,
   CalendarX,
-  CheckCircle2,
+  Check,
+  Clock,
   Info,
   Loader2,
+  User,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  formatDate,
   formatDateTime,
+  formatTime,
+  parseSingaporeDateTime,
   sgWallTimeToUtcIso,
   utcToSgWallTime,
 } from "@/lib/datetime";
+import { cn } from "@/lib/utils";
 import { submitBookingRequest, type BookingSummary } from "../actions";
 import type { BookableEvent, RequestableVenue } from "../queries";
 
@@ -37,10 +58,39 @@ const emptyForm = {
   notes: "",
 };
 
+/** Radix Select cannot use "" as an item value, so "no preference" has its own. */
+const NO_LAYOUT = "none";
+
+/** Every half hour of the day as "HH:mm", the steps the time pickers offer. */
+export const HALF_HOUR_TIMES = Array.from({ length: 48 }, (_, i) => {
+  const hours = String(Math.floor(i / 2)).padStart(2, "0");
+  return `${hours}:${i % 2 === 0 ? "00" : "30"}`;
+});
+
+/**
+ * Snap a "YYYY-MM-DDTHH:mm" wall time onto the half-hour grid: a start rounds
+ * down and an end rounds up, so a pre-filled event period is never shortened.
+ */
+export function snapToHalfHour(
+  wallTime: string,
+  direction: "down" | "up",
+): string {
+  if (!wallTime.includes("T")) return wallTime;
+  const date = parseSingaporeDateTime(wallTime);
+  if (!date) return wallTime;
+  const step = 30 * 60 * 1000;
+  const snapped =
+    direction === "down"
+      ? Math.floor(date.getTime() / step) * step
+      : Math.ceil(date.getTime() / step) * step;
+  return utcToSgWallTime(snapped);
+}
+
 const emptySubscribe = () => () => {};
 
-const selectClass =
-  "flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring";
+/** The bordered, icon-led field box the equipment page uses for dates and times. */
+const fieldBox =
+  "relative flex h-10 items-center gap-2 rounded-lg border bg-background px-3 text-sm shadow-2xs transition-colors hover:border-primary/50 focus-within:border-primary focus-within:ring-2 focus-within:ring-ring";
 
 /**
  * SCRUM-50 — the Coordinator's request form. Choosing an event pre-fills its
@@ -88,8 +138,8 @@ export function RequestForm({
       ...prev,
       eventId,
       ...(event && {
-        start: utcToSgWallTime(event.startAt),
-        end: utcToSgWallTime(event.endAt),
+        start: snapToHalfHour(utcToSgWallTime(event.startAt), "down"),
+        end: snapToHalfHour(utcToSgWallTime(event.endAt), "up"),
         attendance: event.expectedAttendance?.toString() ?? "",
         facilities: event.requiredFacilities,
         layout: event.preferredLayout ?? "",
@@ -121,6 +171,7 @@ export function RequestForm({
       });
       if (result.ok) {
         setFieldErrors({});
+        if (result.data.created) setForm(emptyForm);
         setOutcome({
           kind: result.data.created ? "created" : "existing",
           booking: result.data.booking,
@@ -159,7 +210,13 @@ export function RequestForm({
 
   return (
     <div className="space-y-4" data-hydrated={isHydrated}>
-      {outcome && <OutcomePanel outcome={outcome} />}
+      {outcome && outcome.kind !== "created" && (
+        <OutcomePanel outcome={outcome} />
+      )}
+      <SuccessDialog
+        booking={outcome?.kind === "created" ? outcome.booking : null}
+        onClose={() => setOutcome(null)}
+      />
 
       <Card>
         <CardContent className="pt-6">
@@ -167,61 +224,63 @@ export function RequestForm({
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="eventId">Event</Label>
-                <select
-                  id="eventId"
-                  className={selectClass}
-                  value={form.eventId}
-                  onChange={(e) => chooseEvent(e.target.value)}
-                >
-                  <option value="">Select an approved event</option>
-                  {events.map((event) => (
-                    <option key={event.id} value={event.id}>
-                      {event.name}
-                    </option>
-                  ))}
-                </select>
+                <Select value={form.eventId} onValueChange={chooseEvent}>
+                  <SelectTrigger id="eventId">
+                    <SelectValue placeholder="Select an approved event" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {events.map((event) => (
+                      <SelectItem key={event.id} value={event.id}>
+                        {event.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 {fieldError("eventId")}
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="venueId">Venue</Label>
-                <select
-                  id="venueId"
-                  className={selectClass}
+                <Select
                   value={form.venueId}
-                  onChange={(e) => update("venueId", e.target.value)}
+                  onValueChange={(value) => update("venueId", value)}
                 >
-                  <option value="">Select a venue</option>
-                  {venues.map((venue) => (
-                    <option key={venue.id} value={venue.id}>
-                      {venue.name} (holds {venue.capacity})
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger id="venueId">
+                    <SelectValue placeholder="Select a venue" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {venues.map((venue) => (
+                      <SelectItem key={venue.id} value={venue.id}>
+                        <span className="flex items-center gap-2">
+                          {venue.name}
+                          <span
+                            className="inline-flex items-center gap-1 text-muted-foreground"
+                            title={`Holds up to ${venue.capacity} people`}
+                          >
+                            <User className="h-3.5 w-3.5" aria-hidden />
+                            <span className="sr-only">max capacity</span>
+                            {venue.capacity}
+                          </span>
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 {fieldError("venueId")}
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="start">Start</Label>
-                <Input
-                  id="start"
-                  type="datetime-local"
-                  value={form.start}
-                  onChange={(e) => update("start", e.target.value)}
-                />
-                {fieldError("startAt")}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="end">End</Label>
-                <Input
-                  id="end"
-                  type="datetime-local"
-                  value={form.end}
-                  onChange={(e) => update("end", e.target.value)}
-                />
-                {fieldError("endAt")}
-              </div>
+              <DateTimeField
+                name="Start"
+                value={form.start}
+                onChange={(value) => update("start", value)}
+                error={fieldError("startAt")}
+              />
+              <DateTimeField
+                name="End"
+                value={form.end}
+                onChange={(value) => update("end", value)}
+                error={fieldError("endAt")}
+              />
 
               <div className="space-y-2">
                 <Label htmlFor="attendance">Expected attendance</Label>
@@ -237,19 +296,24 @@ export function RequestForm({
 
               <div className="space-y-2">
                 <Label htmlFor="layout">Room layout</Label>
-                <select
-                  id="layout"
-                  className={selectClass}
-                  value={form.layout}
-                  onChange={(e) => update("layout", e.target.value)}
+                <Select
+                  value={form.layout || NO_LAYOUT}
+                  onValueChange={(value) =>
+                    update("layout", value === NO_LAYOUT ? "" : value)
+                  }
                 >
-                  <option value="">No preference</option>
-                  {layoutOptions.map((layout) => (
-                    <option key={layout} value={layout}>
-                      {layout}
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger id="layout">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={NO_LAYOUT}>No preference</SelectItem>
+                    {layoutOptions.map((layout) => (
+                      <SelectItem key={layout} value={layout}>
+                        {layout}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 {fieldError("requestedLayout")}
               </div>
             </div>
@@ -258,20 +322,27 @@ export function RequestForm({
               <legend className="text-sm font-medium">
                 Required facilities
               </legend>
-              <div className="flex flex-wrap gap-x-5 gap-y-2">
-                {facilityOptions.map((facility) => (
-                  <label
-                    key={facility}
-                    className="flex items-center gap-2 text-sm"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={form.facilities.includes(facility)}
-                      onChange={() => toggleFacility(facility)}
-                    />
-                    {facility}
-                  </label>
-                ))}
+              <div className="flex flex-wrap gap-2">
+                {facilityOptions.map((facility) => {
+                  const selected = form.facilities.includes(facility);
+                  return (
+                    <button
+                      key={facility}
+                      type="button"
+                      aria-pressed={selected}
+                      onClick={() => toggleFacility(facility)}
+                      className={cn(
+                        "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                        selected
+                          ? "border-foreground bg-foreground text-background"
+                          : "border-border bg-background text-muted-foreground hover:border-primary/50 hover:text-foreground",
+                      )}
+                    >
+                      {selected && <Check className="h-3.5 w-3.5" />}
+                      {facility}
+                    </button>
+                  );
+                })}
               </div>
             </fieldset>
 
@@ -299,7 +370,126 @@ export function RequestForm({
   );
 }
 
-function OutcomePanel({ outcome }: { outcome: Outcome }) {
+/**
+ * A date box and a half-hour time picker for one end of the period, holding
+ * a single "YYYY-MM-DDTHH:mm" Singapore wall time between them.
+ */
+function DateTimeField({
+  name,
+  value,
+  onChange,
+  error,
+}: {
+  name: "Start" | "End";
+  value: string;
+  onChange: (value: string) => void;
+  error: React.ReactNode;
+}) {
+  const [date = "", time = ""] = value.split("T");
+  const id = name.toLowerCase();
+  const join = (d: string, t: string) => (d || t ? `${d}T${t}` : "");
+
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={`${id}Date`}>{name}</Label>
+      <div className="flex gap-2">
+        <div className={cn(fieldBox, "flex-1")}>
+          <Calendar className="h-4 w-4 shrink-0 text-muted-foreground" />
+          <span
+            className={cn(
+              "truncate",
+              date ? "font-medium text-foreground" : "text-muted-foreground",
+            )}
+          >
+            {date
+              ? formatDate(parseSingaporeDateTime(`${date}T12:00`) ?? date)
+              : "Select date"}
+          </span>
+          <input
+            id={`${id}Date`}
+            type="date"
+            aria-label={`${name} date`}
+            value={date}
+            onChange={(e) => onChange(join(e.target.value, time))}
+            onClick={(e) => {
+              try {
+                e.currentTarget.showPicker();
+              } catch {}
+            }}
+            className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0"
+          />
+        </div>
+        <Select value={time} onValueChange={(t) => onChange(join(date, t))}>
+          <SelectTrigger
+            aria-label={`${name} time`}
+            className="shadow-2xs w-36 justify-start gap-2 rounded-lg bg-background hover:border-primary/50 [&>svg:last-of-type]:ml-auto"
+          >
+            <Clock className="h-4 w-4 shrink-0 text-muted-foreground" />
+            <SelectValue placeholder="Time" />
+          </SelectTrigger>
+          <SelectContent className="max-h-64">
+            {HALF_HOUR_TIMES.map((t) => (
+              <SelectItem key={t} value={t}>
+                {formatTime(parseSingaporeDateTime(`2000-01-01T${t}`)!)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      {error}
+    </div>
+  );
+}
+
+/** SCRUM-50 AC2 — the confirmation that the request went through. */
+function SuccessDialog({
+  booking,
+  onClose,
+}: {
+  booking: BookingSummary | null;
+  onClose: () => void;
+}) {
+  return (
+    <Dialog open={booking !== null} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent
+        data-testid="booking-success"
+        className="max-w-sm text-center sm:text-center"
+      >
+        <div className="mx-auto mt-2 flex h-20 w-20 items-center justify-center">
+          <span className="absolute h-20 w-20 animate-ping rounded-full bg-success/20 [animation-iteration-count:2]" />
+          <span className="relative flex h-20 w-20 items-center justify-center rounded-full bg-success text-success-foreground shadow-lg duration-500 animate-in zoom-in-50">
+            <Check
+              className="h-10 w-10 delay-200 duration-500 animate-in fade-in-0 zoom-in-0 fill-mode-both"
+              strokeWidth={3}
+            />
+          </span>
+        </div>
+        <DialogTitle className="text-xl">Request submitted</DialogTitle>
+        <DialogDescription>
+          {booking && (
+            <>
+              {booking.venueName}, {formatDateTime(booking.startAt)} to{" "}
+              {formatDateTime(booking.endAt)}. It is pending a Venue Staff
+              decision.
+            </>
+          )}
+        </DialogDescription>
+        <DialogFooter className="sm:justify-center">
+          <Button onClick={onClose} className="w-full sm:w-auto">
+            Done
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/** A duplicate or a refusal stays on the page beside the form. */
+function OutcomePanel({
+  outcome,
+}: {
+  outcome: Exclude<Outcome, { kind: "created" }>;
+}) {
   if (outcome.kind === "refused") {
     return (
       <div
@@ -317,24 +507,16 @@ function OutcomePanel({ outcome }: { outcome: Outcome }) {
   }
 
   const { booking } = outcome;
-  const created = outcome.kind === "created";
-  const Icon = created ? CheckCircle2 : Info;
   return (
     <div
       role="status"
       data-testid="booking-outcome"
-      className={
-        created
-          ? "flex gap-3 rounded-lg border border-success/30 bg-success/10 p-4 text-sm"
-          : "flex gap-3 rounded-lg border border-info/30 bg-info/10 p-4 text-sm"
-      }
+      className="flex gap-3 rounded-lg border border-info/30 bg-info/10 p-4 text-sm"
     >
-      <Icon className="mt-0.5 h-5 w-5 shrink-0" />
+      <Info className="mt-0.5 h-5 w-5 shrink-0" />
       <div>
         <p className="font-semibold">
-          {created
-            ? "Request submitted — pending a Venue Staff decision"
-            : "You already have a pending request for this venue and period"}
+          You already have a pending request for this venue and period
         </p>
         <p>
           {booking.venueName}, {formatDateTime(booking.startAt)} to{" "}
