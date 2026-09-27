@@ -17,7 +17,10 @@ import {
   decideBookingRequest,
   submitBookingRequest,
 } from "@/app/(app)/bookings/actions";
-import { getBookableEvents } from "@/app/(app)/bookings/queries";
+import {
+  getBookableEvents,
+  getPendingBookingQueue,
+} from "@/app/(app)/bookings/queries";
 
 // SCRUM-50 / SCRUM-53 against a real, seeded Postgres. The session is the only
 // thing mocked, so "not created" and "the first decision stands" are proven by
@@ -298,6 +301,61 @@ describe.skipIf(!usesLocalDatabase)(
         // Another coordinator is never offered usr_coordinator's events.
         const theirs = await getBookableEvents("usr_coordinator_2");
         expect(theirs.map((e) => e.id)).not.toContain(APPROVED_EVENT);
+      });
+    });
+
+    describe("SCRUM-52 — review pending booking requests", () => {
+      it("SCRUM-52 AC1 & AC2 — the queue lists pending requests with venue, timing, attendance, needs and the requesting coordinator", async () => {
+        const submitted = await submitBookingRequest(
+          request({ requestNotes: "Stage access from 8am." }),
+        );
+        if (!submitted.ok) throw new Error(submitted.error);
+
+        const queue = await getPendingBookingQueue();
+        const row = queue.find((b) => b.id === submitted.data.booking.id);
+
+        expect(row).toMatchObject({
+          startAt: new Date(at(10, 6)),
+          endAt: new Date(at(10, 8)),
+          requestedAttendance: 40,
+          requiredFacilities: ["projector"],
+          requestedLayout: "classroom",
+          requestNotes: "Stage access from 8am.",
+          event: { name: expect.any(String) },
+          requestedBy: {
+            name: expect.any(String),
+            email: "coordinator@test.local",
+          },
+          venue: {
+            id: venueId,
+            capacity: 80,
+            facilities: ["projector"],
+            supportedLayouts: ["classroom"],
+          },
+          blockers: [],
+        });
+      });
+
+      it("SCRUM-52 AC1 — decided requests leave the queue", async () => {
+        const approved = await approvedBooking(at(12, 6), at(12, 8));
+
+        const queue = await getPendingBookingQueue();
+
+        expect(queue.map((b) => b.id)).not.toContain(approved.id);
+      });
+
+      it("SCRUM-52 AC3 — each request carries the venue's current availability for its period", async () => {
+        const submitted = await submitBookingRequest(request());
+        if (!submitted.ok) throw new Error(submitted.error);
+        // Another request for the slot is approved after this one was made.
+        const clash = await approvedBooking(at(10, 7), at(10, 9));
+
+        const queue = await getPendingBookingQueue();
+        const row = queue.find((b) => b.id === submitted.data.booking.id);
+
+        expect(row?.blockers).toEqual([
+          expect.objectContaining({ kind: "booking", id: clash.id }),
+        ]);
       });
     });
 
