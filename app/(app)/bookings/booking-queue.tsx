@@ -1,11 +1,25 @@
 "use client";
 
-import { Check, Inbox, X } from "lucide-react";
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { Check, CheckCircle2, Inbox, X, XCircle } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 import { formatDateTime } from "@/lib/datetime";
 import { describeBlocker } from "@/lib/venue-availability";
+import { decideBookingRequest } from "./actions";
 import type { PendingBookingRow } from "./queries";
 
 /**
@@ -14,7 +28,46 @@ import type { PendingBookingRow } from "./queries";
  * marks are a side-by-side comparison, not a suitability verdict — that is
  * SCRUM-40's job.
  */
-export function BookingQueue({ queue }: { queue: PendingBookingRow[] }) {
+export function BookingQueue({
+  queue,
+  canDecide,
+}: {
+  queue: PendingBookingRow[];
+  canDecide: boolean;
+}) {
+  const [rejecting, setRejecting] = useState<PendingBookingRow | null>(null);
+  const [reason, setReason] = useState("");
+  const [isPending, startTransition] = useTransition();
+  const router = useRouter();
+
+  // SCRUM-53 — the server action decides; a conflict or an already-decided
+  // request comes back as an error and the queue is refreshed either way.
+  function decide(
+    booking: PendingBookingRow,
+    decision: "APPROVED" | "REJECTED",
+    decisionReason?: string,
+  ) {
+    startTransition(async () => {
+      const result = await decideBookingRequest({
+        bookingId: booking.id,
+        decision,
+        reason: decisionReason,
+      });
+      if (result.ok) {
+        toast.success(
+          decision === "APPROVED"
+            ? `Approved: ${booking.venue.name} is now booked for ${booking.event.name}.`
+            : `Rejected the request for ${booking.event.name}.`,
+        );
+        setRejecting(null);
+        setReason("");
+      } else {
+        toast.error(result.error);
+      }
+      router.refresh();
+    });
+  }
+
   if (queue.length === 0) {
     return (
       <Card>
@@ -32,17 +85,79 @@ export function BookingQueue({ queue }: { queue: PendingBookingRow[] }) {
   }
 
   return (
-    <ul className="space-y-4">
-      {queue.map((booking) => (
-        <li key={booking.id}>
-          <RequestCard booking={booking} />
-        </li>
-      ))}
-    </ul>
+    <>
+      <ul className="space-y-4">
+        {queue.map((booking) => (
+          <li key={booking.id}>
+            <RequestCard booking={booking}>
+              {canDecide && (
+                <div className="flex justify-end gap-2 border-t pt-4">
+                  <Button
+                    variant="outline"
+                    disabled={isPending}
+                    onClick={() => {
+                      setRejecting(booking);
+                      setReason("");
+                    }}
+                  >
+                    <XCircle className="h-4 w-4" /> Reject
+                  </Button>
+                  <Button
+                    disabled={isPending}
+                    onClick={() => decide(booking, "APPROVED")}
+                  >
+                    <CheckCircle2 className="h-4 w-4" /> Approve
+                  </Button>
+                </div>
+              )}
+            </RequestCard>
+          </li>
+        ))}
+      </ul>
+
+      <Dialog
+        open={!!rejecting}
+        onOpenChange={(open) => !open && setRejecting(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reject booking request</DialogTitle>
+            <DialogDescription>
+              A reason is required. Give the coordinator enough to continue
+              planning, such as what would make the request acceptable.
+            </DialogDescription>
+          </DialogHeader>
+          <Textarea
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            placeholder="Reason for rejection"
+            aria-label="Rejection reason"
+          />
+          <DialogFooter>
+            <Button variant="secondary" onClick={() => setRejecting(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={isPending || !reason.trim()}
+              onClick={() => rejecting && decide(rejecting, "REJECTED", reason)}
+            >
+              Reject request
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 
-function RequestCard({ booking }: { booking: PendingBookingRow }) {
+function RequestCard({
+  booking,
+  children,
+}: {
+  booking: PendingBookingRow;
+  children?: React.ReactNode;
+}) {
   const { venue } = booking;
   const free = booking.blockers.length === 0;
   const fits =
@@ -114,6 +229,7 @@ function RequestCard({ booking }: { booking: PendingBookingRow }) {
             <Fact label="Other details">{booking.requestNotes}</Fact>
           )}
         </dl>
+        {children}
       </CardContent>
     </Card>
   );

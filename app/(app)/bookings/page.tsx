@@ -27,7 +27,10 @@ export default async function BookingsPage() {
           decide. Times are Singapore time.
         </p>
       </div>
-      <BookingQueue queue={queue} />
+      <BookingQueue
+        queue={queue}
+        canDecide={can(session.user, "booking:decide")}
+      />
     </div>
   );
 }
