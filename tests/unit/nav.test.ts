@@ -38,6 +38,7 @@ describe("role-based navigation — SCRUM-66", () => {
     expect(hrefsFor("VENUE_STAFF")).toContain("/bookings");
     expect(hrefsFor("TECH_SUPPORT")).toContain("/equipment");
     expect(hrefsFor("COORDINATOR")).toContain("/venues");
+    expect(hrefsFor("COORDINATOR")).toContain("/bookings/new");
   });
 
   // SCRUM-27 — coordinators raise equipment requests from their own page;
@@ -74,6 +75,7 @@ describe("navigation derives from the permission model — SCRUM-66", () => {
     { href: "/events", actions: ["event:list", "event:browse"] },
     { href: "/venues", actions: ["venue:read"] },
     { href: "/bookings", actions: ["booking:review"] },
+    { href: "/bookings/new", actions: ["booking:request"] },
     { href: "/equipment", actions: ["equipment:read"] },
     { href: "/equipment-requests", actions: ["equipment-request:list"] },
     { href: "/registrations", actions: ["registration:read"] },

@@ -1,6 +1,10 @@
 import { z } from "zod";
+import type { EventStatus } from "@prisma/client";
 
 import { isValidPeriod } from "@/lib/period";
+
+/** A venue is requested only for an event that has already been approved. */
+export const BOOKABLE_EVENT_STATUSES: EventStatus[] = ["APPROVED", "PLANNING"];
 
 export const INVALID_PERIOD_MESSAGE =
   "The requested period is invalid: the end must be after the start.";

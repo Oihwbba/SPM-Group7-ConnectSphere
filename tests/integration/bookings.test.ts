@@ -12,10 +12,12 @@ import type { Session } from "next-auth";
 
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
+import { can } from "@/lib/auth/can";
 import {
   decideBookingRequest,
   submitBookingRequest,
 } from "@/app/(app)/bookings/actions";
+import { getBookableEvents } from "@/app/(app)/bookings/queries";
 
 // SCRUM-50 / SCRUM-53 against a real, seeded Postgres. The session is the only
 // thing mocked, so "not created" and "the first decision stands" are proven by
@@ -268,6 +270,34 @@ describe.skipIf(!usesLocalDatabase)(
 
         expect(later.ok && later.data.created).toBe(true);
         expect(await bookingCount()).toBe(2);
+      });
+
+      it("SCRUM-50 — the form offers only approved events the coordinator may act on, exactly as can() allows", async () => {
+        const offered = await getBookableEvents("usr_coordinator");
+        const ids = offered.map((e) => e.id);
+
+        expect(ids).toEqual(
+          expect.arrayContaining([APPROVED_EVENT, PLANNING_EVENT]),
+        );
+        const rows = await prisma.event.findMany({
+          where: { id: { in: ids } },
+          select: {
+            id: true,
+            organiserId: true,
+            coordinatorId: true,
+            status: true,
+          },
+        });
+        for (const row of rows) {
+          expect(
+            can(COORDINATOR.user, "booking:request", { kind: "event", ...row }),
+          ).toBe(true);
+          expect(["APPROVED", "PLANNING"]).toContain(row.status);
+        }
+
+        // Another coordinator is never offered usr_coordinator's events.
+        const theirs = await getBookableEvents("usr_coordinator_2");
+        expect(theirs.map((e) => e.id)).not.toContain(APPROVED_EVENT);
       });
     });
 
