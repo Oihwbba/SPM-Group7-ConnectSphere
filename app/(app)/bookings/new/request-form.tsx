@@ -1,7 +1,13 @@
 "use client";
 
 import { useState, useSyncExternalStore, useTransition } from "react";
-import { AlertCircle, CheckCircle2, Info, Loader2 } from "lucide-react";
+import {
+  AlertCircle,
+  CalendarX,
+  CheckCircle2,
+  Info,
+  Loader2,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -124,6 +130,26 @@ export function RequestForm({
         setOutcome({ kind: "refused", message: result.error });
       }
     });
+  }
+
+  // Nothing to request a venue for yet: say why, rather than show a form
+  // that can never succeed.
+  if (events.length === 0) {
+    return (
+      <Card data-hydrated={isHydrated}>
+        <CardContent className="flex flex-col items-center gap-3 py-16 text-center">
+          <span className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+            <CalendarX className="h-6 w-6" />
+          </span>
+          <p className="text-base font-medium">No approved events yet</p>
+          <p className="max-w-md text-sm text-muted-foreground">
+            A venue can be requested once one of your events has been approved.
+            Events still in draft or under review will appear here after
+            approval.
+          </p>
+        </CardContent>
+      </Card>
+    );
   }
 
   const fieldError = (key: string) =>
