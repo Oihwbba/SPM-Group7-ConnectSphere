@@ -3,7 +3,6 @@
 import { useState, useSyncExternalStore, useTransition } from "react";
 import {
   AlertCircle,
-  Calendar,
   CalendarX,
   Check,
   Clock,
@@ -32,7 +31,6 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  formatDate,
   formatDateTime,
   formatTime,
   parseSingaporeDateTime,
@@ -41,6 +39,7 @@ import {
 } from "@/lib/datetime";
 import { cn } from "@/lib/utils";
 import { submitBookingRequest, type BookingSummary } from "../actions";
+import { DatePicker } from "./date-picker";
 import type { BookableEvent, RequestableVenue } from "../queries";
 
 type Outcome =
@@ -87,10 +86,6 @@ export function snapToHalfHour(
 }
 
 const emptySubscribe = () => () => {};
-
-/** The bordered, icon-led field box the equipment page uses for dates and times. */
-const fieldBox =
-  "relative flex h-10 items-center gap-2 rounded-lg border bg-background px-3 text-sm shadow-2xs transition-colors hover:border-primary/50 focus-within:border-primary focus-within:ring-2 focus-within:ring-ring";
 
 /**
  * SCRUM-50 — the Coordinator's request form. Choosing an event pre-fills its
@@ -278,6 +273,7 @@ export function RequestForm({
               <DateTimeField
                 name="End"
                 value={form.end}
+                openOn={form.start.split("T")[0]}
                 onChange={(value) => update("end", value)}
                 error={fieldError("endAt")}
               />
@@ -378,11 +374,14 @@ function DateTimeField({
   name,
   value,
   onChange,
+  openOn,
   error,
 }: {
   name: "Start" | "End";
   value: string;
   onChange: (value: string) => void;
+  /** Where the calendar opens when no date is chosen yet. */
+  openOn?: string;
   error: React.ReactNode;
 }) {
   const [date = "", time = ""] = value.split("T");
@@ -393,32 +392,14 @@ function DateTimeField({
     <div className="space-y-2">
       <Label htmlFor={`${id}Date`}>{name}</Label>
       <div className="flex gap-2">
-        <div className={cn(fieldBox, "flex-1")}>
-          <Calendar className="h-4 w-4 shrink-0 text-muted-foreground" />
-          <span
-            className={cn(
-              "truncate",
-              date ? "font-medium text-foreground" : "text-muted-foreground",
-            )}
-          >
-            {date
-              ? formatDate(parseSingaporeDateTime(`${date}T12:00`) ?? date)
-              : "Select date"}
-          </span>
-          <input
-            id={`${id}Date`}
-            type="date"
-            aria-label={`${name} date`}
-            value={date}
-            onChange={(e) => onChange(join(e.target.value, time))}
-            onClick={(e) => {
-              try {
-                e.currentTarget.showPicker();
-              } catch {}
-            }}
-            className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0"
-          />
-        </div>
+        <DatePicker
+          id={`${id}Date`}
+          label={name}
+          value={date}
+          openOn={openOn}
+          onChange={(day) => onChange(join(day, time))}
+          className="flex-1"
+        />
         <Select value={time} onValueChange={(t) => onChange(join(date, t))}>
           <SelectTrigger
             aria-label={`${name} time`}

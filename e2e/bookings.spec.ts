@@ -49,8 +49,32 @@ async function choose(page: Page, label: string, option: string | RegExp) {
 /** Set one end of the period. Times are Singapore wall time, "YYYY-MM-DDTHH:mm". */
 async function setTime(page: Page, which: "Start" | "End", wallTime: string) {
   const [date, time] = wallTime.split("T");
-  await page.getByLabel(`${which} date`).fill(date);
+  await pickDate(page, which, date);
   await choose(page, `${which} time`, timeOption(time));
+}
+
+/** Open the in-app calendar, page to the target month, and pick the day. */
+async function pickDate(page: Page, which: "Start" | "End", day: string) {
+  await page.getByLabel(`${which} date`).click();
+  const heading = page.locator("[data-month]");
+  const [targetYear, targetMonth] = day.split("-").map(Number);
+  for (;;) {
+    const [y, m] = (await heading.getAttribute("data-month"))!
+      .split("-")
+      .map(Number);
+    const months = targetYear * 12 + targetMonth - (y * 12 + m);
+    if (months === 0) break;
+    const step =
+      Math.abs(months) >= 12
+        ? months > 0
+          ? "Next year"
+          : "Previous year"
+        : months > 0
+          ? "Next month"
+          : "Previous month";
+    await page.getByRole("menuitem", { name: step }).click();
+  }
+  await page.locator(`[data-date="${day}"]`).click();
 }
 
 /** Fill and submit the form. */
@@ -105,6 +129,8 @@ test.describe("SCRUM-50 / 52 / 53 — venue booking request, review and decision
   test("SCRUM-50 AC2, SCRUM-52 AC1-3, SCRUM-53 AC1 & AC3 — a coordinator requests, staff approve, and the venue becomes unavailable", async ({
     browser,
   }, testInfo) => {
+    // The longest journey: two users, four requests, a decision.
+    test.setTimeout(90_000);
     const tag = `e2e-journey-${testInfo.retry}`;
 
     // SCRUM-50 AC2 — a free period is submitted and shown as pending.
