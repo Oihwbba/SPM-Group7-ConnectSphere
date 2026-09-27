@@ -23,6 +23,7 @@ nothing seeded overlaps them. Times are Singapore time.
 | [TC-50-08](#tc-50-08) | Concurrency | AC 6 | Unit, integration |
 | [TC-50-09](#tc-50-09) | Negative | Coordinators only, own events only | Unit, integration, e2e |
 | [TC-50-10](#tc-50-10) | Negative, Boundary | Attendance within venue capacity | Unit, integration, e2e |
+| [TC-50-11](#tc-50-11) | Negative, Boundary | No period that has already started | Unit, integration |
 
 ---
 
@@ -155,3 +156,16 @@ nothing seeded overlaps them. Times are Singapore time.
 | Expected Result | Step 2: "Exhibition Hall holds up to 200 people; 250 expected is over its capacity." appears under the field, and **Submit request** is disabled. The server refuses the same request if sent directly, and nothing is written. Step 3: the error clears and Submit is enabled. |
 
 **Automated by:** `e2e/bookings.spec.ts` › "SCRUM-50 — attendance over the chosen venue's capacity is flagged as it is typed, and Submit is disabled"; `tests/unit/bookings.test.ts` › "SCRUM-50 — expected attendance above the venue's capacity is refused…" and "…exactly equal to the venue's capacity fits"; `tests/integration/bookings.test.ts` › "SCRUM-50 — attendance over the venue's capacity is refused and nothing is written; exactly at capacity is accepted"
+
+### TC-50-11
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-50-11 |
+| Test Scenario | [Negative, Boundary] A period that has already started cannot be requested. This rule is not in the SCRUM-50 criteria; it was added on 2026-09-28 after the GLM review of #96, mirroring the equipment form (SCRUM-31). |
+| Pre-conditions | — |
+| Test Steps | 1. Pick today's date in **Start**, and open the time picker. <br> 2. Send a request whose start is in the past directly to the server. |
+| Test Data | Today; a start of 1 Jan 2020 |
+| Expected Result | Step 1: times earlier than now are disabled; the half hour starting at this minute and later ones can be picked; earlier days cannot be picked in the calendar. Step 2: "The start time cannot be in the past." against the start field, and nothing is written. A start less than a minute ago still counts as now. |
+
+**Automated by:** `tests/unit/bookings.test.ts` › "SCRUM-50 — a period that has already started is refused against the start field…" and "…a start less than a minute ago still counts as now"; `tests/integration/bookings.test.ts` › "SCRUM-50 — a period that has already started is refused and nothing is written"; `tests/unit/request-form.test.tsx` › the three isPastSlot cases

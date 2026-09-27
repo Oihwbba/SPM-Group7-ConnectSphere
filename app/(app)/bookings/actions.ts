@@ -13,6 +13,7 @@ import {
   bookingRequestSchema,
   INVALID_PERIOD_MESSAGE,
   overCapacityMessage,
+  PAST_START_MESSAGE,
 } from "@/lib/schemas/booking";
 import { overlapping } from "@/lib/period";
 import { describeBlocker, findVenueBlockers } from "@/lib/venue-availability";
@@ -85,7 +86,8 @@ async function onceMoreOnDeadlock<T>(attempt: () => Promise<T>): Promise<T> {
 /**
  * SCRUM-50 — an Event Coordinator asks for a venue for one of their events.
  *
- * - An invalid period is refused before anything else (AC5).
+ * - An invalid period, or one starting in the past, is refused before
+ *   anything else (AC5).
  * - Expected attendance above the venue's capacity is refused.
  * - If this Coordinator already has a pending request for the same venue
  *   and an overlapping period, whichever event it was for, nothing is
@@ -112,13 +114,13 @@ export async function submitBookingRequest(
     const parsed = bookingRequestSchema.safeParse(input);
     if (!parsed.success) {
       const fieldErrors = parsed.error.flatten().fieldErrors;
-      const invalidPeriod = fieldErrors.endAt?.includes(INVALID_PERIOD_MESSAGE);
-      return err(
-        invalidPeriod
-          ? INVALID_PERIOD_MESSAGE
-          : "Please fix the highlighted fields.",
-        fieldErrors,
-      );
+      // Name a period problem outright; anything else points at the fields.
+      const message = fieldErrors.endAt?.includes(INVALID_PERIOD_MESSAGE)
+        ? INVALID_PERIOD_MESSAGE
+        : fieldErrors.startAt?.includes(PAST_START_MESSAGE)
+          ? PAST_START_MESSAGE
+          : "Please fix the highlighted fields.";
+      return err(message, fieldErrors);
     }
 
     const data = parsed.data;

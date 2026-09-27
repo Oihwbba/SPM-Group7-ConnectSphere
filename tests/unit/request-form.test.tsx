@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 
 import {
   HALF_HOUR_TIMES,
+  isPastSlot,
   RequestForm,
   snapToHalfHour,
 } from "@/app/(app)/bookings/new/request-form";
@@ -88,5 +89,24 @@ describe("the half-hour time grid — SCRUM-50", () => {
     expect(snapToHalfHour("2035-03-10T09:30", "down")).toBe("2035-03-10T09:30");
     expect(snapToHalfHour("2035-03-10T09:30", "up")).toBe("2035-03-10T09:30");
     expect(snapToHalfHour("", "up")).toBe("");
+  });
+});
+
+describe("isPastSlot — no picking a time that has already passed today", () => {
+  const now = "2035-03-10T14:10";
+
+  it("disables today's slots that began before now", () => {
+    expect(isPastSlot("2035-03-10", "14:00", now)).toBe(true);
+    expect(isPastSlot("2035-03-10", "09:30", now)).toBe(true);
+  });
+
+  it("keeps later slots today, and every slot on a later day", () => {
+    expect(isPastSlot("2035-03-10", "14:30", now)).toBe(false);
+    expect(isPastSlot("2035-03-11", "00:00", now)).toBe(false);
+  });
+
+  it("keeps the slot starting at this very minute, and disables nothing before a date is chosen", () => {
+    expect(isPastSlot("2035-03-10", "14:00", "2035-03-10T14:00")).toBe(false);
+    expect(isPastSlot("", "09:00", now)).toBe(false);
   });
 });

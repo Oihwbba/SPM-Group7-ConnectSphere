@@ -348,6 +348,21 @@ describe.skipIf(!usesLocalDatabase)(
         expect(atCapacity.ok && atCapacity.data.created).toBe(true);
       });
 
+      it("SCRUM-50 — a period that has already started is refused and nothing is written", async () => {
+        const result = await submitBookingRequest(
+          request({
+            startAt: "2020-01-01T01:00:00.000Z",
+            endAt: "2020-01-01T03:00:00.000Z",
+          }),
+        );
+
+        expect(result).toMatchObject({
+          ok: false,
+          error: "The start time cannot be in the past.",
+        });
+        expect(await bookingCount()).toBe(0);
+      });
+
       it("SCRUM-50 — the form offers only approved events the coordinator may act on, exactly as can() allows", async () => {
         const offered = await getBookableEvents("usr_coordinator");
         const ids = offered.map((e) => e.id);

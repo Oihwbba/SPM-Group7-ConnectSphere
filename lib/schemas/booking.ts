@@ -19,6 +19,15 @@ export function overCapacityMessage(
   return `${venueName} holds up to ${capacity} people; ${attendance} expected is over its capacity.`;
 }
 
+export const PAST_START_MESSAGE = "The start time cannot be in the past.";
+
+/**
+ * How far in the past a start may be and still count as "now": a request
+ * started at the current half hour is not refused over the seconds it took to
+ * submit. The equipment form allows the same minute (SCRUM-31).
+ */
+const PAST_START_GRACE_MS = 60_000;
+
 export const INVALID_PERIOD_MESSAGE =
   "The requested period is invalid: the end must be after the start.";
 
@@ -55,6 +64,14 @@ export const bookingRequestSchema = z
         code: z.ZodIssueCode.custom,
         path: ["endAt"],
         message: INVALID_PERIOD_MESSAGE,
+      });
+    }
+    // A booking for a period that has already started cannot be honoured.
+    if (period.startAt.getTime() < Date.now() - PAST_START_GRACE_MS) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["startAt"],
+        message: PAST_START_MESSAGE,
       });
     }
   });

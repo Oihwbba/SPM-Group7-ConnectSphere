@@ -68,6 +68,15 @@ export const HALF_HOUR_TIMES = Array.from({ length: 48 }, (_, i) => {
 });
 
 /**
+ * Has this half-hour slot already begun, in Singapore time? `now` is a
+ * "YYYY-MM-DDTHH:mm" wall time. The slot that starts at this very minute is
+ * still open; the server allows the same (lib/schemas/booking.ts).
+ */
+export function isPastSlot(date: string, time: string, now: string): boolean {
+  return `${date}T${time}` < now.slice(0, 16);
+}
+
+/**
  * Snap a "YYYY-MM-DDTHH:mm" wall time onto the half-hour grid: a start rounds
  * down and an end rounds up, so a pre-filled event period is never shortened.
  */
@@ -443,7 +452,11 @@ function DateTimeField({
           </SelectTrigger>
           <SelectContent className="max-h-64">
             {HALF_HOUR_TIMES.map((t) => (
-              <SelectItem key={t} value={t}>
+              <SelectItem
+                key={t}
+                value={t}
+                disabled={isPastSlot(date, t, utcToSgWallTime(new Date()))}
+              >
                 {formatTime(parseSingaporeDateTime(`2000-01-01T${t}`)!)}
               </SelectItem>
             ))}
