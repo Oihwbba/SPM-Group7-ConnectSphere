@@ -10,6 +10,7 @@ import {
   Building2,
   CalendarCheck,
   CalendarDays,
+  ClipboardList,
   LayoutGrid,
   Ticket,
   Wrench,
@@ -27,6 +28,7 @@ const ICON_BY_HREF: Record<string, LucideIcon> = {
   "/venues": Building2,
   "/bookings": CalendarCheck,
   "/equipment": Wrench,
+  "/equipment-requests": ClipboardList,
   "/registrations": Ticket,
   "/notifications": Bell,
 };

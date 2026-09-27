@@ -46,6 +46,11 @@ const NAV_ROUTES: NavRoute[] = [
   { action: "booking:review", href: "/bookings", label: "Bookings" },
   { action: "equipment:read", href: "/equipment", label: "Equipment" },
   {
+    action: "equipment-request:list",
+    href: "/equipment-requests",
+    label: "Equipment Requests",
+  },
+  {
     action: "registration:read",
     href: "/registrations",
     label: "My Registrations",

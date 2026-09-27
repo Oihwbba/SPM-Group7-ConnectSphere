@@ -40,6 +40,15 @@ describe("role-based navigation — SCRUM-66", () => {
     expect(hrefsFor("COORDINATOR")).toContain("/venues");
   });
 
+  // SCRUM-27 — coordinators raise equipment requests from their own page;
+  // the equipment pool itself stays Technical Support's.
+  it("shows a coordinator equipment requests but not the equipment pool", () => {
+    const hrefs = hrefsFor("COORDINATOR");
+    expect(hrefs).toContain("/equipment-requests");
+    expect(hrefs).not.toContain("/equipment");
+    expect(LANDING_ROUTE_BY_ROLE.COORDINATOR).toBe("/events");
+  });
+
   it("gives an attendee only their events and registrations", () => {
     const hrefs = hrefsFor("ATTENDEE");
     expect(hrefs).toContain("/events");
@@ -66,6 +75,7 @@ describe("navigation derives from the permission model — SCRUM-66", () => {
     { href: "/venues", actions: ["venue:read"] },
     { href: "/bookings", actions: ["booking:review"] },
     { href: "/equipment", actions: ["equipment:read"] },
+    { href: "/equipment-requests", actions: ["equipment-request:list"] },
     { href: "/registrations", actions: ["registration:read"] },
     { href: "/notifications", actions: ["notification:read"] },
   ];
