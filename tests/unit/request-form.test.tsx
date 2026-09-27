@@ -1,7 +1,11 @@
 import { describe, it, expect, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 
-import { RequestForm } from "@/app/(app)/bookings/new/request-form";
+import {
+  HALF_HOUR_TIMES,
+  RequestForm,
+  snapToHalfHour,
+} from "@/app/(app)/bookings/new/request-form";
 
 // SCRUM-50 — what a coordinator sees before submitting. The server action is
 // never called here, so its dependencies are stubbed out.
@@ -53,8 +57,36 @@ describe("RequestForm — SCRUM-50", () => {
     ]) {
       expect(html).toContain(label);
     }
-    expect(html).toContain("Approved — Research Symposium");
-    expect(html).toContain("Seminar Room (holds 60)");
     expect(html).toContain("Submit request");
+  });
+
+  it("SCRUM-50 AC1 — required facilities are toggle pills, none chosen until the coordinator picks", () => {
+    const html = renderToStaticMarkup(
+      <RequestForm events={[event]} venues={[venue]} />,
+    );
+
+    expect(html).toMatch(
+      /<button[^>]*aria-pressed="false"[^>]*>projector<\/button>/,
+    );
+  });
+});
+
+describe("the half-hour time grid — SCRUM-50", () => {
+  it("offers every half hour of the day, and nothing in between", () => {
+    expect(HALF_HOUR_TIMES).toHaveLength(48);
+    expect(HALF_HOUR_TIMES.slice(0, 3)).toEqual(["00:00", "00:30", "01:00"]);
+    expect(HALF_HOUR_TIMES.at(-1)).toBe("23:30");
+  });
+
+  it("rounds a pre-filled start down and end up, so the event's period is never shortened", () => {
+    expect(snapToHalfHour("2035-03-10T09:10", "down")).toBe("2035-03-10T09:00");
+    expect(snapToHalfHour("2035-03-10T16:45", "up")).toBe("2035-03-10T17:00");
+    expect(snapToHalfHour("2035-03-10T23:50", "up")).toBe("2035-03-11T00:00");
+  });
+
+  it("leaves a time already on the grid, or an empty value, alone", () => {
+    expect(snapToHalfHour("2035-03-10T09:30", "down")).toBe("2035-03-10T09:30");
+    expect(snapToHalfHour("2035-03-10T09:30", "up")).toBe("2035-03-10T09:30");
+    expect(snapToHalfHour("", "up")).toBe("");
   });
 });
