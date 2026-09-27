@@ -327,13 +327,16 @@ export async function suggestAlternativeEquipment(
       );
     }
     const pool = await getPoolAvailability(startAt, endAt);
-    const requested = pool[line.equipment.id] ?? { available: 0, total: 0 };
+    // A type missing from the pool (deactivated since it was looked up) has
+    // nothing free, so it is refused rather than read as undefined.
+    const none = { available: 0, total: 0 };
+    const requested = pool[line.equipment.id] ?? none;
     if (requested.available >= line.quantity) {
       return err(
         `${line.equipment.type} has enough free for this event, so there is nothing to replace.`,
       );
     }
-    const offered = pool[alternative.id];
+    const offered = pool[alternative.id] ?? none;
     if (offered.available < line.quantity) {
       return invalid(
         `Only ${offered.available} of ${offered.total} ${alternative.type} are free for this event: ${line.quantity - offered.available} short.`,

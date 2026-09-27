@@ -405,6 +405,23 @@ describe("suggestAlternativeEquipment — SCRUM-28 AC 3", () => {
     expect(db.$transaction).not.toHaveBeenCalled();
   });
 
+  // regression (GLM review of #95): a type deactivated between the lookup and
+  // the availability read is missing from the pool, and used to crash here.
+  it("regression: an alternative missing from the availability snapshot is refused as having nothing free", async () => {
+    mockPool.mockResolvedValue({ eqp_lectern: { available: 1, total: 4 } });
+
+    const result = await suggestAlternativeEquipment(input);
+
+    expect(result).toEqual({
+      ok: false,
+      error: "Please fix the highlighted fields.",
+      fieldErrors: {
+        alternativeId: ["Only 0 of 0 Laptop are free for this event: 3 short."],
+      },
+    });
+    expect(db.$transaction).not.toHaveBeenCalled();
+  });
+
   it("AC 3: the alternative must be a different type from the inventory", async () => {
     const same = await suggestAlternativeEquipment({
       ...input,
