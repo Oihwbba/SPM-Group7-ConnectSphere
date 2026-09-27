@@ -3,7 +3,24 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Check, CheckCircle2, Inbox, X, XCircle } from "lucide-react";
+import {
+  Building2,
+  CalendarCheck,
+  CalendarClock,
+  Check,
+  CheckCircle2,
+  Inbox,
+  LayoutGrid,
+  Mail,
+  MapPin,
+  MessageSquareText,
+  UserRound,
+  Users,
+  Wrench,
+  X,
+  XCircle,
+  type LucideIcon,
+} from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -168,26 +185,35 @@ function RequestCard({
     <Card data-testid={`booking-${booking.id}`}>
       <CardContent className="space-y-4 pt-6">
         <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="space-y-1">
+          <div className="space-y-1.5">
             <p className="text-base font-semibold">{booking.event.name}</p>
-            <p className="text-sm text-muted-foreground">
+            <p className="flex items-center gap-2 text-sm text-muted-foreground">
+              <CalendarClock className="h-4 w-4 shrink-0" aria-hidden />
               {formatDateTime(booking.startAt)} to{" "}
               {formatDateTime(booking.endAt)}
             </p>
-            <p className="text-sm text-muted-foreground">
-              Requested by {booking.requestedBy.name} (
-              {booking.requestedBy.email}) on{" "}
-              {formatDateTime(booking.createdAt)}
+            <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
+              <UserRound className="h-4 w-4 shrink-0" aria-hidden />
+              Requested by {booking.requestedBy.name}
+              <span className="inline-flex items-center gap-1">
+                <Mail className="h-3.5 w-3.5" aria-hidden />
+                {booking.requestedBy.email}
+              </span>
+              on {formatDateTime(booking.createdAt)}
             </p>
           </div>
           <Badge variant="warning">Pending</Badge>
         </div>
 
-        <dl className="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
-          <Fact label="Venue">
-            {venue.name} · {venue.location}
+        <dl className="grid gap-x-6 gap-y-4 text-sm sm:grid-cols-2">
+          <Fact icon={Building2} label="Venue">
+            <span className="font-medium">{venue.name}</span>
+            <span className="flex items-center gap-1 text-muted-foreground">
+              <MapPin className="h-3.5 w-3.5" aria-hidden />
+              {venue.location}
+            </span>
           </Fact>
-          <Fact label="Availability">
+          <Fact icon={CalendarCheck} label="Availability">
             {free ? (
               <Mark ok>Free for this period</Mark>
             ) : (
@@ -198,13 +224,13 @@ function RequestCard({
               ))
             )}
           </Fact>
-          <Fact label="Attendance">
+          <Fact icon={Users} label="Attendance">
             <Mark ok={fits}>
               {booking.requestedAttendance ?? "Not stated"} expected · venue
               holds {venue.capacity}
             </Mark>
           </Fact>
-          <Fact label="Layout">
+          <Fact icon={LayoutGrid} label="Layout">
             {booking.requestedLayout ? (
               <Mark
                 ok={venue.supportedLayouts.includes(booking.requestedLayout)}
@@ -216,17 +242,25 @@ function RequestCard({
               "No preference"
             )}
           </Fact>
-          <Fact label="Facilities needed">
-            {booking.requiredFacilities.length === 0
-              ? "None stated"
-              : booking.requiredFacilities.map((facility) => (
-                  <Mark key={facility} ok={venue.facilities.includes(facility)}>
-                    {facility}
-                  </Mark>
+          <Fact icon={Wrench} label="Facilities needed">
+            {booking.requiredFacilities.length === 0 ? (
+              "None stated"
+            ) : (
+              <span className="flex flex-wrap gap-1.5">
+                {booking.requiredFacilities.map((facility) => (
+                  <FacilityPill
+                    key={facility}
+                    facility={facility}
+                    ok={venue.facilities.includes(facility)}
+                  />
                 ))}
+              </span>
+            )}
           </Fact>
           {booking.requestNotes && (
-            <Fact label="Other details">{booking.requestNotes}</Fact>
+            <Fact icon={MessageSquareText} label="Other details">
+              {booking.requestNotes}
+            </Fact>
           )}
         </dl>
         {children}
@@ -235,24 +269,32 @@ function RequestCard({
   );
 }
 
+/** One fact about the request, led by an icon so it can be found at a glance. */
 function Fact({
+  icon: Icon,
   label,
   children,
 }: {
+  icon: LucideIcon;
   label: string;
   children: React.ReactNode;
 }) {
   return (
-    <div className="space-y-1">
-      <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-        {label}
-      </dt>
-      <dd className="space-y-0.5">{children}</dd>
+    <div className="flex gap-3">
+      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+        <Icon className="h-4 w-4" aria-hidden />
+      </span>
+      <div className="min-w-0 space-y-1">
+        <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          {label}
+        </dt>
+        <dd className="space-y-0.5">{children}</dd>
+      </div>
     </div>
   );
 }
 
-/** One compared fact: a tick when the venue meets it, a cross when it does not. */
+/** One compared fact: a green tick when the venue meets it, a red cross when it does not. */
 function Mark({ ok, children }: { ok: boolean; children: React.ReactNode }) {
   const Icon = ok ? Check : X;
   return (
@@ -264,10 +306,27 @@ function Mark({ ok, children }: { ok: boolean; children: React.ReactNode }) {
       }
     >
       <Icon
-        className="h-4 w-4 shrink-0"
+        className={ok ? "h-4 w-4 shrink-0 text-success" : "h-4 w-4 shrink-0"}
         aria-label={ok ? "meets" : "does not meet"}
       />
       {children}
+    </span>
+  );
+}
+
+/** A required facility as a pill: green when the venue has it, red when not. */
+function FacilityPill({ facility, ok }: { facility: string; ok: boolean }) {
+  const Icon = ok ? Check : X;
+  return (
+    <span
+      className={
+        ok
+          ? "inline-flex items-center gap-1 rounded-full border border-success/30 bg-success/10 px-2.5 py-0.5 text-xs font-medium text-success"
+          : "inline-flex items-center gap-1 rounded-full border border-destructive/30 bg-destructive/10 px-2.5 py-0.5 text-xs font-medium text-destructive"
+      }
+    >
+      <Icon className="h-3 w-3" aria-label={ok ? "meets" : "does not meet"} />
+      {facility}
     </span>
   );
 }
