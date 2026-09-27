@@ -84,6 +84,16 @@ test.describe("SCRUM-50 / 52 / 53 — venue booking request, review and decision
     );
   });
 
+  test("SCRUM-52 — a coordinator typing the queue's address is refused by the server", async ({
+    browser,
+  }) => {
+    const coordinator = await signedIn(browser, "coordinator@test.local");
+    await coordinator.goto("/bookings");
+    await expect(
+      coordinator.getByRole("heading", { name: "Access denied" }),
+    ).toBeVisible();
+  });
+
   test("SCRUM-50 — venue staff typing the request form's address are refused by the server", async ({
     browser,
   }) => {
