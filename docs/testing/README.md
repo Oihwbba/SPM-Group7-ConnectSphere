@@ -86,6 +86,6 @@ defect, e.g. `regression: a blank rejection reason was accepted`.
 |---|---|---|---|
 | [SCRUM-27](SCRUM-27.md) | Jin Hong | 13 | Written with the story; every case automated |
 | [SCRUM-31](SCRUM-31.md) | Jun Bin | 11 | Written from the acceptance criteria and existing tests; TC-31-04, -05 and -09 are partly manual |
-| [SCRUM-50](SCRUM-50.md) | TBC | 9 | Every case automated |
+| [SCRUM-50](SCRUM-50.md) | Caylern Goh | 9 | Every case automated |
 | [SCRUM-52](SCRUM-52.md) | TBC | 4 | Every case automated |
 | [SCRUM-53](SCRUM-53.md) | TBC | 8 | Every case automated; AC 3's calendar view follows with SCRUM-36 |
