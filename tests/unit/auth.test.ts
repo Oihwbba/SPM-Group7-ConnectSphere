@@ -189,3 +189,21 @@ describe("can — recording venue unavailability (SCRUM-37)", () => {
     }
   });
 });
+
+// SCRUM-36 — the availability calendar is for the internal roles that plan
+// venues: Coordinators requesting them and Venue Staff deciding on them.
+describe("can — viewing venue availability (SCRUM-36)", () => {
+  const venueStaff: SessionUser = { id: "vs", role: "VENUE_STAFF" };
+  const techSupport: SessionUser = { id: "ts", role: "TECH_SUPPORT" };
+
+  it("SCRUM-36 AC1 — coordinators and venue staff may view venue availability", () => {
+    expect(can(coordinator, "venue:availability")).toBe(true);
+    expect(can(venueStaff, "venue:availability")).toBe(true);
+  });
+
+  it("SCRUM-36 AC1 — organisers, tech support and attendees may not", () => {
+    for (const user of [organiserA, techSupport, attendee]) {
+      expect(can(user, "venue:availability")).toBe(false);
+    }
+  });
+});
