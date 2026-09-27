@@ -330,6 +330,26 @@ describe.skipIf(!usesLocalDatabase)(
         expect(await bookingCount()).toBe(1);
       });
 
+      it("SCRUM-50 — attendance over the venue's capacity is refused and nothing is written; exactly at capacity is accepted", async () => {
+        const over = await submitBookingRequest(
+          request({ requestedAttendance: 81 }),
+        );
+        expect(over).toMatchObject({
+          ok: false,
+          fieldErrors: {
+            requestedAttendance: [
+              expect.stringMatching(/holds up to 80 people; 81 expected/),
+            ],
+          },
+        });
+        expect(await bookingCount()).toBe(0);
+
+        const atCapacity = await submitBookingRequest(
+          request({ requestedAttendance: 80 }),
+        );
+        expect(atCapacity.ok && atCapacity.data.created).toBe(true);
+      });
+
       it("SCRUM-50 — the form offers only approved events the coordinator may act on, exactly as can() allows", async () => {
         const offered = await getBookableEvents("usr_coordinator");
         const ids = offered.map((e) => e.id);

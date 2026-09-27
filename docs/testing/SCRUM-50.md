@@ -22,6 +22,7 @@ nothing seeded overlaps them. Times are Singapore time.
 | [TC-50-07](#tc-50-07) | Negative | AC 6 | Unit, integration, e2e |
 | [TC-50-08](#tc-50-08) | Concurrency | AC 6 | Unit, integration |
 | [TC-50-09](#tc-50-09) | Negative | Coordinators only, own events only | Unit, integration, e2e |
+| [TC-50-10](#tc-50-10) | Negative, Boundary | Attendance within venue capacity | Unit, integration, e2e |
 
 ---
 
@@ -141,3 +142,16 @@ nothing seeded overlaps them. Times are Singapore time.
 | Expected Result | Venue Staff see "Access denied". The event list holds only APPROVED or PLANNING events the coordinator may act on. Another coordinator's event is refused as "Event not found." |
 
 **Automated by:** `e2e/bookings.spec.ts` › "SCRUM-50 — venue staff typing the request form's address are refused by the server"; `tests/unit/auth.test.ts` › the three "SCRUM-50 — …" cases; `tests/unit/bookings.test.ts` › "SCRUM-50 — every role except Event Coordinator is refused…", "…an event that does not exist, or is another coordinator's, reads as not found", "…a venue cannot be requested for an event that has not been approved"; `tests/integration/bookings.test.ts` › "SCRUM-50 — the form offers only approved events the coordinator may act on, exactly as can() allows"
+
+### TC-50-10
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-50-10 |
+| Test Scenario | [Negative, Boundary] Expected attendance above the chosen venue's capacity is refused; exactly at capacity fits. This rule is not in the SCRUM-50 criteria; the team added it on 2026-09-27. |
+| Pre-conditions | — |
+| Test Steps | 1. Choose Exhibition Hall (holds 200). <br> 2. Enter 250 as expected attendance. <br> 3. Change it to 200. |
+| Test Data | Exhibition Hall; attendance 250, then 200 |
+| Expected Result | Step 2: "Exhibition Hall holds up to 200 people; 250 expected is over its capacity." appears under the field, and **Submit request** is disabled. The server refuses the same request if sent directly, and nothing is written. Step 3: the error clears and Submit is enabled. |
+
+**Automated by:** `e2e/bookings.spec.ts` › "SCRUM-50 — attendance over the chosen venue's capacity is flagged as it is typed, and Submit is disabled"; `tests/unit/bookings.test.ts` › "SCRUM-50 — expected attendance above the venue's capacity is refused…" and "…exactly equal to the venue's capacity fits"; `tests/integration/bookings.test.ts` › "SCRUM-50 — attendance over the venue's capacity is refused and nothing is written; exactly at capacity is accepted"

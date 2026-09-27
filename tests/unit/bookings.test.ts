@@ -99,7 +99,7 @@ beforeEach(() => {
     coordinatorId: "usr_coord",
     status: "APPROVED",
   });
-  db.venue.findFirst.mockResolvedValue({ name: "Seminar Room" });
+  db.venue.findFirst.mockResolvedValue({ name: "Seminar Room", capacity: 60 });
   db.booking.findFirst.mockResolvedValue(null);
   db.booking.findMany.mockResolvedValue([]);
   db.venueUnavailability.findMany.mockResolvedValue([]);
@@ -156,6 +156,32 @@ describe("submitBookingRequest — SCRUM-50", () => {
       fieldErrors: { requestNotes: [expect.any(String)] },
     });
     expect(db.booking.create).not.toHaveBeenCalled();
+  });
+
+  it("SCRUM-50 — expected attendance above the venue's capacity is refused against the attendance field, and nothing is written", async () => {
+    const result = await submitBookingRequest({
+      ...validRequest,
+      requestedAttendance: 61,
+    });
+
+    const message =
+      "Seminar Room holds up to 60 people; 61 expected is over its capacity.";
+    expect(result).toEqual({
+      ok: false,
+      error: message,
+      fieldErrors: { requestedAttendance: [message] },
+    });
+    expect(db.booking.create).not.toHaveBeenCalled();
+  });
+
+  it("SCRUM-50 — expected attendance exactly equal to the venue's capacity fits", async () => {
+    const result = await submitBookingRequest({
+      ...validRequest,
+      requestedAttendance: 60,
+    });
+
+    expect(result.ok).toBe(true);
+    expect(db.booking.create).toHaveBeenCalled();
   });
 
   it("SCRUM-50 — every role except Event Coordinator is refused before anything is read", async () => {

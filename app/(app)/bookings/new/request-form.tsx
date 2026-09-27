@@ -38,6 +38,7 @@ import {
   utcToSgWallTime,
 } from "@/lib/datetime";
 import { cn } from "@/lib/utils";
+import { overCapacityMessage } from "@/lib/schemas/booking";
 import { submitBookingRequest, type BookingSummary } from "../actions";
 import { DatePicker } from "./date-picker";
 import type { BookableEvent, RequestableVenue } from "../queries";
@@ -198,6 +199,18 @@ export function RequestForm({
     );
   }
 
+  // Caught as it is typed; the server refuses the same thing (actions.ts).
+  const selectedVenue = venues.find((v) => v.id === form.venueId);
+  const attendance = Number(form.attendance);
+  const overCapacity =
+    selectedVenue && attendance > selectedVenue.capacity
+      ? overCapacityMessage(
+          selectedVenue.name,
+          selectedVenue.capacity,
+          attendance,
+        )
+      : null;
+
   const fieldError = (key: string) =>
     fieldErrors[key]?.[0] && (
       <p className="text-xs text-destructive">{fieldErrors[key][0]}</p>
@@ -286,8 +299,25 @@ export function RequestForm({
                   min={1}
                   value={form.attendance}
                   onChange={(e) => update("attendance", e.target.value)}
+                  aria-invalid={overCapacity ? true : undefined}
+                  aria-describedby={
+                    overCapacity ? "attendance-capacity" : undefined
+                  }
+                  className={cn(
+                    overCapacity &&
+                      "border-destructive focus-visible:ring-destructive",
+                  )}
                 />
-                {fieldError("requestedAttendance")}
+                {overCapacity ? (
+                  <p
+                    id="attendance-capacity"
+                    className="text-xs text-destructive"
+                  >
+                    {overCapacity}
+                  </p>
+                ) : (
+                  fieldError("requestedAttendance")
+                )}
               </div>
 
               <div className="space-y-2">
@@ -354,7 +384,10 @@ export function RequestForm({
             </div>
 
             <div className="flex justify-end border-t pt-4">
-              <Button type="submit" disabled={isPending}>
+              <Button
+                type="submit"
+                disabled={isPending || overCapacity !== null}
+              >
                 {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
                 Submit request
               </Button>
