@@ -20,6 +20,7 @@ import {
 import {
   getBookableEvents,
   getPendingBookingQueue,
+  getRequestableVenues,
 } from "@/app/(app)/bookings/queries";
 
 // SCRUM-50 / SCRUM-53 against a real, seeded Postgres. The session is the only
@@ -301,6 +302,31 @@ describe.skipIf(!usesLocalDatabase)(
         // Another coordinator is never offered usr_coordinator's events.
         const theirs = await getBookableEvents("usr_coordinator_2");
         expect(theirs.map((e) => e.id)).not.toContain(APPROVED_EVENT);
+      });
+    });
+
+    describe("SCRUM-50 — venues offered on the request form", () => {
+      it("SCRUM-50 — a retired venue is never offered, and is refused if requested directly", async () => {
+        const retired = await prisma.venue.create({
+          data: {
+            name: `Retired test venue ${Date.now()}`,
+            location: "Test block",
+            capacity: 30,
+            isActive: false,
+          },
+        });
+        try {
+          const offered = await getRequestableVenues();
+          expect(offered.map((v) => v.id)).toContain(venueId);
+          expect(offered.map((v) => v.id)).not.toContain(retired.id);
+
+          const result = await submitBookingRequest(
+            request({ venueId: retired.id }),
+          );
+          expect(result).toEqual({ ok: false, error: "Venue not found." });
+        } finally {
+          await prisma.venue.delete({ where: { id: retired.id } });
+        }
       });
     });
 
