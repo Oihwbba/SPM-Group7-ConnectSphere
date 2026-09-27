@@ -1,22 +1,20 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import type { BookingStatus, EventStatus } from "@prisma/client";
+import type { BookingStatus } from "@prisma/client";
 
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { can, requirePermission, PermissionError } from "@/lib/auth/can";
 import { err, ok, type ActionResult } from "@/lib/action-result";
 import {
+  BOOKABLE_EVENT_STATUSES,
   bookingDecisionSchema,
   bookingRequestSchema,
   INVALID_PERIOD_MESSAGE,
 } from "@/lib/schemas/booking";
 import { overlapping } from "@/lib/period";
 import { describeBlocker, findVenueBlockers } from "@/lib/venue-availability";
-
-/** An event must have been approved before a venue is requested for it. */
-const BOOKABLE_EVENT_STATUSES: EventStatus[] = ["APPROVED", "PLANNING"];
 
 export type BookingSummary = {
   id: string;
