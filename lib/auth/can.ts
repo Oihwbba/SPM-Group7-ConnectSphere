@@ -36,6 +36,8 @@ export type Action =
   | "booking:review"
   | "equipment:read"
   | "equipment:reserve"
+  | "equipment-request:list" // SCRUM-27: see the equipment requests scoped to me
+  | "equipment-request:create" // SCRUM-27: coordinator raises one for their event
   | "event:browse" // attendees browsing events open for registration
   | "registration:create" // SCRUM-73: an attendee registers for an event
   | "registration:withdraw" // SCRUM-74/77: an attendee withdraws their own registration
@@ -78,6 +80,8 @@ const ROLE_ACTIONS: Record<Role, Action[]> = {
     "event:review",
     "clarification:request",
     "venue:read",
+    "equipment-request:list",
+    "equipment-request:create",
     "notification:read",
   ],
   // `venue:read` gates the Venue Catalogue page, which is Coordinator-only, so
