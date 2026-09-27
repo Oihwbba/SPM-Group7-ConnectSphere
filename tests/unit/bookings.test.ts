@@ -1,4 +1,12 @@
-import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
+import {
+  describe,
+  it,
+  expect,
+  vi,
+  beforeEach,
+  afterEach,
+  type Mock,
+} from "vitest";
 import type { Session } from "next-auth";
 import type { Role } from "@prisma/client";
 
@@ -182,6 +190,34 @@ describe("submitBookingRequest — SCRUM-50", () => {
 
     expect(result.ok).toBe(true);
     expect(db.booking.create).toHaveBeenCalled();
+  });
+
+  describe("a start in the past", () => {
+    afterEach(() => vi.useRealTimers());
+
+    it("SCRUM-50 — a period that has already started is refused against the start field, and nothing is read or written", async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date(new Date(START).getTime() + 2 * 60_000));
+
+      const result = await submitBookingRequest(validRequest);
+
+      expect(result).toMatchObject({
+        ok: false,
+        error: "The start time cannot be in the past.",
+        fieldErrors: { startAt: ["The start time cannot be in the past."] },
+      });
+      expect(db.event.findUnique).not.toHaveBeenCalled();
+      expect(db.booking.create).not.toHaveBeenCalled();
+    });
+
+    it("SCRUM-50 — a start less than a minute ago still counts as now", async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date(new Date(START).getTime() + 30_000));
+
+      const result = await submitBookingRequest(validRequest);
+
+      expect(result.ok).toBe(true);
+    });
   });
 
   it("SCRUM-50 — every role except Event Coordinator is refused before anything is read", async () => {
