@@ -10,6 +10,8 @@ import {
 import type { Session } from "next-auth";
 import type { Role } from "@prisma/client";
 
+import { revalidatePath } from "next/cache";
+
 import { auth } from "@/auth";
 import {
   decideBookingRequest,
@@ -60,6 +62,11 @@ const duplicatePending = () =>
   postgresRefusal(
     "23P01",
     'conflicting key value violates exclusion constraint "booking_no_duplicate_pending_request"',
+  );
+const overlapsUnavailability = () =>
+  postgresRefusal(
+    "23P01",
+    'conflicting key value violates exclusion constraint "booking_overlaps_unavailability"',
   );
 const doubleBooking = () =>
   postgresRefusal(
@@ -598,6 +605,35 @@ describe("decideBookingRequest — SCRUM-53", () => {
 
     expect(result).toEqual({ ok: true, data: { status: "APPROVED" } });
     expect(db.$transaction).toHaveBeenCalledTimes(2);
+  });
+
+  it("SCRUM-37 AC4 — maintenance recorded at the same instant as an approval: the database refuses the approval, and it is returned as conflicting", async () => {
+    db.$transaction.mockRejectedValue(overlapsUnavailability());
+
+    const result = await decideBookingRequest({
+      bookingId: "bkg_1",
+      decision: "APPROVED",
+    });
+
+    expect(result).toMatchObject({
+      ok: false,
+      error: expect.stringMatching(
+        /^Conflicting: the venue was recorded as unavailable/,
+      ),
+    });
+  });
+
+  it("SCRUM-37 AC1 — approving refreshes the availability calendar; rejecting does not need to", async () => {
+    await decideBookingRequest({ bookingId: "bkg_1", decision: "APPROVED" });
+    expect(revalidatePath).toHaveBeenCalledWith("/venues/availability");
+
+    vi.mocked(revalidatePath).mockClear();
+    await decideBookingRequest({
+      bookingId: "bkg_1",
+      decision: "REJECTED",
+      reason: "No.",
+    });
+    expect(revalidatePath).not.toHaveBeenCalledWith("/venues/availability");
   });
 
   it("does not swallow an unexpected database error", async () => {
