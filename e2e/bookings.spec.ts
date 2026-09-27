@@ -109,6 +109,10 @@ async function expectSubmitted(page: Page) {
 }
 
 test.describe("SCRUM-50 / 52 / 53 — venue booking request, review and decision", () => {
+  // Picking 2035 dates pages the calendar about nine years forward, and two
+  // users sign in; these journeys need more than the default 30 seconds.
+  test.describe.configure({ timeout: 90_000 });
+
   test.beforeEach(async () => {
     if (!usesLocalDatabase) return;
     const rows = await prisma.booking.findMany({
@@ -129,8 +133,6 @@ test.describe("SCRUM-50 / 52 / 53 — venue booking request, review and decision
   test("SCRUM-50 AC2, SCRUM-52 AC1-3, SCRUM-53 AC1 & AC3 — a coordinator requests, staff approve, and the venue becomes unavailable", async ({
     browser,
   }, testInfo) => {
-    // The longest journey: two users, four requests, a decision.
-    test.setTimeout(90_000);
     const tag = `e2e-journey-${testInfo.retry}`;
 
     // SCRUM-50 AC2 — a free period is submitted and shown as pending.
