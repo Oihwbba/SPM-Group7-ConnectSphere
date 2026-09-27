@@ -35,7 +35,7 @@ nothing seeded overlaps them. Times are Singapore time.
 | Pre-conditions | Signed in as a Coordinator. No approved booking or unavailability on the Exhibition Hall overlaps the test period. |
 | Test Steps | 1. Open **Request Venue**. <br> 2. Choose the event, the venue, start and end, attendance and notes. <br> 3. Click **Submit request**. |
 | Test Data | Event: Approved — Research Symposium <br> Venue: Exhibition Hall <br> Start: 2035-03-10 09:00 <br> End: 2035-03-10 13:00 <br> Attendance: 120 |
-| Expected Result | "Request submitted — pending a Venue Staff decision" with the venue and times. One PENDING booking exists holding the venue, times, attendance, facilities, layout, notes and the requesting coordinator. |
+| Expected Result | A pop-up with a green tick: "Request submitted", the venue and times, and "It is pending Venue Staff approval." The form is then cleared. One PENDING booking exists holding the venue, times, attendance, facilities, layout, notes and the requesting coordinator. |
 
 **Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-50 AC1 & AC2 — a request for a free period is created PENDING with everything the staff need"; `tests/unit/bookings.test.ts` › "SCRUM-50 AC2 — a request for a free period is created PENDING"; `e2e/bookings.spec.ts` › "SCRUM-50 AC2, SCRUM-52 AC1-3, SCRUM-53 AC1 & AC3 — …"
 

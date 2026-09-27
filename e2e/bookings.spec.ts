@@ -100,7 +100,7 @@ async function requestHall(
 async function expectSubmitted(page: Page) {
   const dialog = page.getByTestId("booking-success");
   await expect(dialog).toContainText("Request submitted");
-  await expect(dialog).toContainText("pending a Venue Staff decision");
+  await expect(dialog).toContainText("pending Venue Staff approval");
   await dialog.getByRole("button", { name: "Done" }).click();
   await expect(dialog).toHaveCount(0);
   await expect(page.getByLabel("Other details for Venue Staff")).toHaveValue(

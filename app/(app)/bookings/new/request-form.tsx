@@ -483,8 +483,8 @@ function SuccessDialog({
           {booking && (
             <>
               {booking.venueName}, {formatDateTime(booking.startAt)} to{" "}
-              {formatDateTime(booking.endAt)}. It is pending a Venue Staff
-              decision.
+              {formatDateTime(booking.endAt)}. It is pending Venue Staff
+              approval.
             </>
           )}
         </DialogDescription>
