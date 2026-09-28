@@ -31,6 +31,20 @@ describe("can — role gate", () => {
   it("lets a coordinator read the venue catalogue", () => {
     expect(can(coordinator, "venue:read")).toBe(true);
   });
+
+  // SCRUM-27 — "As an Event Coordinator, I want to create an equipment
+  // request". Only coordinators raise requests; Technical Support reviews them.
+  it("lets a coordinator create and list equipment requests", () => {
+    expect(can(coordinator, "equipment-request:create")).toBe(true);
+    expect(can(coordinator, "equipment-request:list")).toBe(true);
+  });
+
+  it.each(["ORGANISER", "VENUE_STAFF", "TECH_SUPPORT", "ATTENDEE"] as const)(
+    "does not let %s create an equipment request",
+    (role) => {
+      expect(can({ id: "x", role }, "equipment-request:create")).toBe(false);
+    },
+  );
 });
 
 describe("can — relationship gate", () => {
@@ -85,6 +99,19 @@ describe("can — relationship gate", () => {
     const other = { kind: "notification" as const, userId: "someone" };
     expect(can(attendee, "notification:read", own)).toBe(true);
     expect(can(attendee, "notification:read", other)).toBe(false);
+  });
+
+  // SCRUM-27 — a request is raised for the coordinator's own event, so the
+  // create action carries the same event relationship as reading it.
+  it("lets a coordinator request equipment only for an event they coordinate", () => {
+    expect(can(coordinator, "equipment-request:create", eventOwnedByA)).toBe(true);
+    expect(
+      can(
+        { id: "other", role: "COORDINATOR" },
+        "equipment-request:create",
+        eventOwnedByA,
+      ),
+    ).toBe(false);
   });
 
   it("gives no event relationship to a role that holds an event action but isn't the organiser or coordinator", () => {
