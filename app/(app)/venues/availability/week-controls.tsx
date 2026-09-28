@@ -32,8 +32,7 @@ function useShow(venueId: string, week: string) {
 
 /**
  * SCRUM-36 AC7 — which week the calendar shows: arrows either side of the
- * week's dates, and the dates themselves open a calendar to jump to any week.
- * Also keeps an open calendar fresh (SCRUM-37 AC1).
+ * week's dates. Also keeps an open calendar fresh (SCRUM-37 AC1).
  */
 export function WeekNav({
   venueId,
@@ -73,16 +72,13 @@ export function WeekNav({
       >
         <ChevronLeft className="h-4 w-4" />
       </Button>
-      <DatePicker
-        id="goToDate"
-        label="Go to"
-        value=""
-        openOn={week}
-        display={label}
-        allowPast
-        onChange={(day) => show({ week: day })}
-        className="min-w-48 justify-center"
-      />
+      <p
+        data-testid="week-range"
+        aria-live="polite"
+        className="flex h-10 min-w-40 items-center justify-center rounded-lg border bg-background px-3 text-sm font-medium"
+      >
+        {label}
+      </p>
       <Button
         variant="outline"
         size="icon"
@@ -92,6 +88,23 @@ export function WeekNav({
         <ChevronRight className="h-4 w-4" />
       </Button>
     </div>
+  );
+}
+
+/** SCRUM-36 AC7 — jump straight to the week containing any date. */
+export function GoToDate({ venueId, week }: { venueId: string; week: string }) {
+  const show = useShow(venueId, week);
+  return (
+    <DatePicker
+      id="goToDate"
+      label="Go to"
+      value=""
+      openOn={week}
+      placeholder="Go to date"
+      allowPast
+      onChange={(day) => show({ week: day })}
+      className="w-44"
+    />
   );
 }
 

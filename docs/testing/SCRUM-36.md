@@ -77,7 +77,7 @@ phone and to a screen reader, where a grid of every venue would not.
 | Pre-conditions | Nothing on the Executive Boardroom in the week of 2 to 8 Jun 2036. |
 | Test Steps | 1. Open the calendar for the Executive Boardroom and go to 4 Jun 2036. |
 | Test Data | — |
-| Expected Result | Seven days, Monday 2 Jun to Sunday 8 Jun, each with "Free all day" under its date, and each read to a screen reader as "Available all day". |
+| Expected Result | Seven days, Monday 2 Jun to Sunday 8 Jun, each with "Available all day" at the top of its column (pinned there while the grid scrolls), and each read to a screen reader as "Available all day". |
 
 **Automated by:** `tests/unit/venue-availability.test.ts` › "SCRUM-36 AC6 — a venue with nothing in the range is free across every day of it, not empty"; `e2e/availability.spec.ts` › "SCRUM-36 AC6 — a venue with nothing in the week reads as available throughout, not blank"
 
@@ -88,9 +88,9 @@ phone and to a screen reader, where a grid of every venue would not.
 | Test Case ID | TC-36-05 |
 | Test Scenario | [Positive, Boundary] AC 7: the view can be filtered by date range: a week at a time, and any week can be shown |
 | Pre-conditions | — |
-| Test Steps | 1. Open **Availability**. <br> 2. Click the week's dates between the arrows and pick 1 Feb 2036 (a Friday). <br> 3. Click the next-week arrow, then the previous-week arrow twice. |
+| Test Steps | 1. Open **Availability**. <br> 2. With **Go to date**, pick 1 Feb 2036 (a Friday). <br> 3. Click the next-week arrow, then the previous-week arrow twice. <br> 4. With **Go to date**, pick 20 Feb 2036 (a Wednesday). |
 | Test Data | — |
-| Expected Result | Step 1: this week, Monday to Sunday, today's column shaded. Step 2: "28 Jan – 3 Feb 2036" between the arrows, and seven days. Step 3: "4 – 10 Feb 2036", then "21 – 27 Jan 2036". The week is in the address, so the view can be shared. |
+| Expected Result | Step 1: this week, Monday to Sunday, today's column shaded. Step 2: "28 Jan – 3 Feb 2036" between the arrows, and seven days. Step 3: "4 – 10 Feb 2036", then "21 – 27 Jan 2036". Step 4: "18 – 24 Feb 2036". The venue, week and Go to date sit on one row. The week is in the address, so the view can be shared. |
 
 **Automated by:** `tests/unit/availability-week.test.ts` › the three "SCRUM-36 AC7 — …" cases, "walks back across a month and year end" and "ignores a malformed or impossible date"; `e2e/availability.spec.ts` › "SCRUM-36 AC7 — the calendar shows a week, Monday to Sunday, and moves between weeks"
 

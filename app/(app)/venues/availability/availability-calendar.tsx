@@ -1,4 +1,4 @@
-import type { CSSProperties, ReactNode } from "react";
+import type { CSSProperties } from "react";
 import {
   CalendarCheck,
   CircleCheck,
@@ -140,13 +140,10 @@ export function AvailabilityCalendar({
   venueName,
   days,
   today,
-  venuePicker,
 }: {
   venueName: string;
   days: AvailabilityDay[];
   today: string;
-  /** The venue filter, shown at the top of the calendar. */
-  venuePicker: ReactNode;
 }) {
   const from = days[0].day;
   const to = days[days.length - 1].day;
@@ -157,8 +154,7 @@ export function AvailabilityCalendar({
       <h2 id="calendar-heading" className="sr-only">
         {venueName}, {range}
       </h2>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        {venuePicker}
+      <div className="flex justify-end">
         <Legend />
       </div>
 
@@ -238,25 +234,13 @@ function WeekGrid({
                     <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
                       {formatWeekdayDate(noon(day)).split(",")[0]}
                     </span>
-                    <span className="flex items-baseline gap-2">
-                      <span
-                        className={cn(
-                          "text-xl font-semibold leading-tight",
-                          isToday && "text-primary",
-                        )}
-                      >
-                        {Number(day.slice(8))}
-                      </span>
-                      {/* A day with nothing on it says so where it is seen. */}
-                      {segments.length === 1 && (
-                        <span
-                          aria-hidden
-                          className="flex items-center gap-1 text-[11px] text-success"
-                        >
-                          <CircleCheck className="h-3 w-3" />
-                          Free all day
-                        </span>
+                    <span
+                      className={cn(
+                        "text-xl font-semibold leading-tight",
+                        isToday && "text-primary",
                       )}
+                    >
+                      {Number(day.slice(8))}
                     </span>
                   </div>
                   <ul
@@ -266,6 +250,18 @@ function WeekGrid({
                       backgroundImage: `repeating-linear-gradient(to bottom, transparent 0 ${HOUR_PX - 1}px, hsl(var(--border) / 0.6) ${HOUR_PX - 1}px ${HOUR_PX}px)`,
                     }}
                   >
+                    {/* A day with nothing on it says so at the top of its
+                        column, pinned under the date while the grid scrolls. */}
+                    {segments.length === 1 && (
+                      <li
+                        aria-hidden
+                        data-free-all-day
+                        className="sticky top-16 z-10 flex items-center gap-1 px-2 py-1.5 text-[11px] font-medium text-success"
+                      >
+                        <CircleCheck className="h-3 w-3 shrink-0" />
+                        Available all day
+                      </li>
+                    )}
                     {segments.map((segment) => {
                       const offset =
                         segment.startAt.getTime() - startOfSgDay(day).getTime();
@@ -331,7 +327,7 @@ function Stretch({
         <span className="sr-only" data-summary>
           {words}
         </span>
-        {segment.kind === "free" && hours >= 2 && (
+        {segment.kind === "free" && hours >= 2 && !wholeDay && (
           <span
             aria-hidden
             className="flex items-center gap-1 px-2 pt-1.5 text-[11px] text-muted-foreground/70"

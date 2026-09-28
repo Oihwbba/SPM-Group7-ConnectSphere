@@ -11,7 +11,7 @@ import {
 } from "@/lib/venue-availability";
 import { AvailabilityCalendar } from "./availability-calendar";
 import { formatWeekRange, parseWeek } from "./week";
-import { VenuePicker, WeekNav } from "./week-controls";
+import { GoToDate, VenuePicker, WeekNav } from "./week-controls";
 import { RecordUnavailabilityForm } from "./record-unavailability-form";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
@@ -68,30 +68,34 @@ export default async function AvailabilityPage({
       </div>
 
       {venue ? (
-        <>
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <WeekNav
-              venueId={venue.id}
-              week={from}
-              label={formatWeekRange(from, to)}
-            />
-            {can(session.user, "unavailability:record") && (
+        <div className="space-y-4">
+          {/* Row 1 — Venue Staff record unavailability, on the right. */}
+          {can(session.user, "unavailability:record") && (
+            <div className="flex justify-end">
               <RecordUnavailabilityForm
                 key={venue.id}
                 venueId={venue.id}
                 venueName={venue.name}
               />
-            )}
+            </div>
+          )}
+          {/* Row 2 — which venue, which week, or jump to a date. */}
+          <div className="flex flex-wrap items-center gap-3">
+            <VenuePicker venues={venues} venueId={venue.id} week={from} />
+            <WeekNav
+              venueId={venue.id}
+              week={from}
+              label={formatWeekRange(from, to)}
+            />
+            <GoToDate venueId={venue.id} week={from} />
           </div>
+          {/* Row 3 (the legend) and the calendar itself. */}
           <AvailabilityCalendar
             venueName={venue.name}
             days={availabilityByDay(blockers, from, to)}
             today={today}
-            venuePicker={
-              <VenuePicker venues={venues} venueId={venue.id} week={from} />
-            }
           />
-        </>
+        </div>
       ) : (
         <p className="text-sm text-muted-foreground">
           There are no venues in the catalogue yet.
