@@ -210,10 +210,12 @@ test.describe("SCRUM-36 / SCRUM-37 — venue availability calendar and recorded 
     const coordinator = await signedIn(browser, "coordinator@test.local");
     await coordinator.goto(calendarFor("ven_boardroom", "2036-06-04"));
 
-    // Every day says so under its date, rather than the grid reading as blank.
-    await expect(
-      coordinator.locator('[data-view="week"]').getByText("Free all day"),
-    ).toHaveCount(7);
+    // Every day says so at the top of its column, rather than reading as blank.
+    const freeAllDay = coordinator.locator(
+      '[data-view="week"] li[data-day] [data-free-all-day]',
+    );
+    await expect(freeAllDay).toHaveCount(7);
+    await expect(freeAllDay.first()).toHaveText("Available all day");
     await expect(
       coordinator.locator('[data-view="week"] li[data-day]'),
     ).toHaveCount(7);
@@ -236,9 +238,9 @@ test.describe("SCRUM-36 / SCRUM-37 — venue availability calendar and recorded 
     });
 
     await expect(heading).toContainText("28 Jan 2036 to 3 Feb 2036");
-    // The week's dates sit between the arrows, and open the date picker.
-    const week = coordinator.getByRole("button", { name: "Go to date" });
-    await expect(week).toContainText("28 Jan – 3 Feb 2036");
+    // The week's dates sit between the arrows.
+    const week = coordinator.getByTestId("week-range");
+    await expect(week).toHaveText("28 Jan – 3 Feb 2036");
     await expect(
       coordinator.locator('[data-view="week"] li[data-day]'),
     ).toHaveCount(7);
@@ -250,7 +252,14 @@ test.describe("SCRUM-36 / SCRUM-37 — venue availability calendar and recorded 
     await expect(heading).toContainText("28 Jan 2036 to 3 Feb 2036");
     await coordinator.getByRole("button", { name: "Previous week" }).click();
     await expect(heading).toContainText("21 Jan 2036 to 27 Jan 2036");
-    await expect(week).toContainText("21 – 27 Jan 2036");
+    await expect(week).toHaveText("21 – 27 Jan 2036");
+
+    // Go to date jumps straight to the week containing the chosen day.
+    await coordinator.getByRole("button", { name: "Go to date" }).click();
+    await coordinator.getByRole("menuitem", { name: "Next month" }).click();
+    // Wed 20 Feb 2036 is in the week of Mon 18 Feb.
+    await coordinator.locator('[data-date="2036-02-20"]').click();
+    await expect(week).toHaveText("18 – 24 Feb 2036");
   });
 
   test("SCRUM-36 — a screen reader hears the venue and date for each day", async ({
