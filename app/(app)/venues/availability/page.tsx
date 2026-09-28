@@ -6,12 +6,12 @@ import { utcToSgWallTime } from "@/lib/datetime";
 import {
   addDays,
   availabilityByDay,
-  findVenueBlockers,
+  findVenueCalendar,
   startOfSgDay,
 } from "@/lib/venue-availability";
 import { AvailabilityCalendar } from "./availability-calendar";
-import { parseRange } from "./range";
-import { RangeControls } from "./range-controls";
+import { parseWeek } from "./week";
+import { WeekControls } from "./week-controls";
 import { RecordUnavailabilityForm } from "./record-unavailability-form";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
@@ -19,9 +19,9 @@ const one = (value: string | string[] | undefined) =>
   Array.isArray(value) ? value[0] : value;
 
 /**
- * SCRUM-36 — a venue's availability across a range of dates. One venue at a
- * time: a single venue across a fortnight reads clearly on a phone and to a
- * screen reader, where a grid of every venue would not.
+ * SCRUM-36 — a venue's availability for a week, Monday to Sunday. One venue
+ * at a time: seven days of one venue stay readable, where a grid of every
+ * venue would not.
  *
  * Only approved bookings and recorded unavailability are shown as taken; a
  * pending request blocks nobody (lib/venue-availability.ts).
@@ -45,10 +45,10 @@ export default async function AvailabilityPage({
   const venue = venues.find((v) => v.id === one(params.venue)) ?? venues[0];
 
   const today = utcToSgWallTime(new Date()).slice(0, 10);
-  const { from, to } = parseRange(one(params.from), one(params.to), today);
+  const { from, to } = parseWeek(one(params.week), today);
 
   const blockers = venue
-    ? await findVenueBlockers(prisma, venue.id, {
+    ? await findVenueCalendar(prisma, venue.id, {
         startAt: startOfSgDay(from),
         endAt: startOfSgDay(addDays(to, 1)),
       })
@@ -61,18 +61,19 @@ export default async function AvailabilityPage({
           Venue availability
         </h1>
         <p className="text-sm text-muted-foreground">
-          When a venue is free, booked, or unavailable for another reason. Times
-          are Singapore time.
+          When a venue is free, booked, or unavailable for another reason, a
+          week at a time. Hover or tap a booking for its details. Times are
+          Singapore time.
         </p>
       </div>
 
       {venue ? (
         <>
-          <RangeControls
+          <WeekControls
             venues={venues}
             venueId={venue.id}
-            from={from}
-            to={to}
+            week={from}
+            today={today}
           />
           {can(session.user, "unavailability:record") && (
             <RecordUnavailabilityForm
@@ -84,8 +85,7 @@ export default async function AvailabilityPage({
           <AvailabilityCalendar
             venueName={venue.name}
             days={availabilityByDay(blockers, from, to)}
-            from={from}
-            to={to}
+            today={today}
           />
         </>
       ) : (

@@ -4,6 +4,7 @@ import {
   availabilityByDay,
   describeBlocker,
   findVenueBlockers,
+  findVenueCalendar,
 } from "@/lib/venue-availability";
 
 // SCRUM-50 AC3 / SCRUM-53 AC3 — what makes a venue unavailable. The query is
@@ -230,5 +231,83 @@ describe("availabilityByDay — SCRUM-36", () => {
       "2035-03-01",
       "2035-03-02",
     ]);
+  });
+});
+
+describe("findVenueCalendar — SCRUM-36 hover details", () => {
+  const booked = {
+    id: "bkg_1",
+    startAt: new Date("2035-03-10T01:00:00.000Z"),
+    endAt: new Date("2035-03-10T05:00:00.000Z"),
+    requestedAttendance: 120,
+    requestedLayout: "theatre",
+    event: { name: "Research Symposium" },
+    requestedBy: { name: "Cody Coordinator" },
+  };
+  const closed = {
+    id: "vun_1",
+    startAt: new Date("2035-03-09T14:00:00.000Z"),
+    endAt: new Date("2035-03-10T01:00:00.000Z"),
+    reason: "MAINTENANCE",
+    note: "Aircon service",
+    recordedBy: { name: "Vera Venue" },
+  };
+
+  it("SCRUM-36 AC3 — like the blocker lookup, asks only for APPROVED bookings overlapping the period", async () => {
+    const db = stubDb([], []);
+
+    await findVenueCalendar(db as never, "ven_1", period);
+
+    expect(db.booking.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          venueId: "ven_1",
+          status: "APPROVED",
+          startAt: { lt: period.endAt },
+          endAt: { gt: period.startAt },
+        },
+      }),
+    );
+  });
+
+  it("SCRUM-36 — carries what a hover shows: the booking's event, requester and needs; the unavailability's note and recorder", async () => {
+    const entries = await findVenueCalendar(
+      stubDb([booked], [closed]) as never,
+      "ven_1",
+      period,
+    );
+
+    // Earliest first.
+    expect(entries.map((e) => e.id)).toEqual(["vun_1", "bkg_1"]);
+    expect(entries[1].details).toEqual({
+      kind: "booking",
+      startAt: booked.startAt,
+      endAt: booked.endAt,
+      eventName: "Research Symposium",
+      requestedBy: "Cody Coordinator",
+      attendance: 120,
+      layout: "theatre",
+    });
+    expect(entries[0]).toMatchObject({
+      kind: "unavailability",
+      reason: "MAINTENANCE",
+      details: { note: "Aircon service", recordedBy: "Vera Venue" },
+    });
+  });
+
+  it("SCRUM-36 — a stretch clipped to one day keeps the whole period in its details", async () => {
+    const entries = await findVenueCalendar(
+      stubDb([], [closed]) as never,
+      "ven_1",
+      period,
+    );
+
+    // 10 pm on 9 Mar to 9 am on 10 Mar, Singapore time: split across two days.
+    const [, day] = availabilityByDay(entries, "2035-03-09", "2035-03-10");
+    const stretch = day.segments[0];
+    expect(stretch.startAt).toEqual(new Date("2035-03-09T16:00:00.000Z"));
+    expect(stretch.kind !== "free" && stretch.details?.startAt).toEqual(
+      closed.startAt,
+    );
   });
 });

@@ -11,9 +11,10 @@ the app is running, and the tester signs in as an Event Coordinator
 Times are Singapore time.
 
 **AC 2 (the team's choice):** one calendar per venue, picked from a list,
-rather than one grid across every venue. A single venue over a fortnight stays
-readable on a phone and to a screen reader, where a grid of every venue would
-not.
+rather than one grid across every venue. It shows a week, Monday to Sunday:
+from tablet width up as seven columns on a 24-hour timeline, and on a phone as
+a list of the same seven days. A single venue over a week stays readable on a
+phone and to a screen reader, where a grid of every venue would not.
 
 | ID | Type | Criterion | Automated |
 |---|---|---|---|
@@ -24,6 +25,7 @@ not.
 | [TC-36-05](#tc-36-05) | Positive, Boundary | AC 7 | Unit, e2e |
 | [TC-36-06](#tc-36-06) | Positive | Screen readers and phones | e2e |
 | [TC-36-07](#tc-36-07) | Negative | Coordinators and Venue Staff only | Unit, e2e |
+| [TC-36-08](#tc-36-08) | Positive | Details on hover | Unit, e2e |
 
 ---
 
@@ -71,26 +73,26 @@ not.
 | Item | Content |
 |---|---|
 | Test Case ID | TC-36-04 |
-| Test Scenario | [Positive] AC 6: a venue with nothing in the range shows as available throughout, not as an empty view |
-| Pre-conditions | Nothing on the Executive Boardroom, 1 to 7 Jun 2036. |
-| Test Steps | 1. Open the calendar for the Executive Boardroom, 1 to 7 Jun 2036. |
+| Test Scenario | [Positive] AC 6: a venue with nothing in the week shows as available throughout, not as an empty view |
+| Pre-conditions | Nothing on the Executive Boardroom in the week of 2 to 8 Jun 2036. |
+| Test Steps | 1. Open the calendar for the Executive Boardroom and go to 4 Jun 2036. |
 | Test Data | — |
-| Expected Result | "Executive Boardroom is available for the whole range, …", and seven days each reading "Available all day". |
+| Expected Result | "Executive Boardroom is available for the whole week, …", and seven days, Monday 2 Jun to Sunday 8 Jun, each reading "Available all day". |
 
-**Automated by:** `tests/unit/venue-availability.test.ts` › "SCRUM-36 AC6 — a venue with nothing in the range is free across every day of it, not empty"; `e2e/availability.spec.ts` › "SCRUM-36 AC6 — a venue with nothing in the range reads as available throughout, not blank"
+**Automated by:** `tests/unit/venue-availability.test.ts` › "SCRUM-36 AC6 — a venue with nothing in the range is free across every day of it, not empty"; `e2e/availability.spec.ts` › "SCRUM-36 AC6 — a venue with nothing in the week reads as available throughout, not blank"
 
 ### TC-36-05
 
 | Item | Content |
 |---|---|
 | Test Case ID | TC-36-05 |
-| Test Scenario | [Positive, Boundary] AC 7: the view can be filtered by date range |
+| Test Scenario | [Positive, Boundary] AC 7: the view can be filtered by date range: a week at a time, and any week can be shown |
 | Pre-conditions | — |
-| Test Steps | 1. Open **Availability** with no range. <br> 2. Choose From 1 Feb 2036 and To 3 Feb 2036. <br> 3. Choose a To earlier than From. <br> 4. Choose a range longer than 31 days. |
+| Test Steps | 1. Open **Availability**. <br> 2. **Go to date** 1 Feb 2036 (a Friday). <br> 3. Click **Next week**, then **Previous week** twice. <br> 4. Click **This week**. |
 | Test Data | — |
-| Expected Result | Step 1: two weeks from today. Step 2: three days, headed "1 Feb 2036 to 3 Feb 2036". Step 3: the dates are swapped rather than showing nothing. Step 4: the first 31 days. The range is in the address, so the view can be shared. |
+| Expected Result | Step 1: this week, Monday to Sunday, today highlighted. Step 2: "28 Jan 2036 to 3 Feb 2036", seven days. Step 3: "4 Feb 2036 to 10 Feb 2036", then "21 Jan 2036 to 27 Jan 2036". Step 4: back to this week. The week is in the address, so the view can be shared. |
 
-**Automated by:** `tests/unit/availability-range.test.ts` › the four "SCRUM-36 AC7 — …" cases, "swaps an end before the start…", "cuts a range longer than 31 days to 31" and "ignores a malformed or impossible date"; `e2e/availability.spec.ts` › "SCRUM-36 AC7 — the calendar can be narrowed to a date range"
+**Automated by:** `tests/unit/availability-week.test.ts` › the three "SCRUM-36 AC7 — …" cases, "walks back across a month and year end" and "ignores a malformed or impossible date"; `e2e/availability.spec.ts` › "SCRUM-36 AC7 — the calendar shows a week, Monday to Sunday, and moves between weeks"
 
 ### TC-36-06
 
@@ -101,7 +103,7 @@ not.
 | Pre-conditions | — |
 | Test Steps | 1. With a screen reader, move through the days. <br> 2. Open the calendar at 390 pixels wide. |
 | Test Data | — |
-| Expected Result | Step 1: each day is announced with the venue and date (e.g. "Exhibition Hall, Fri, 1 Feb 2036"), then each stretch as words ("Available midnight to 9:00 am"). The bar itself is hidden from screen readers. Step 2: nothing is wider than the screen; days stack. |
+| Expected Result | Step 1: each day is announced with the venue and date (e.g. "Exhibition Hall, Fri, 1 Feb 2036"), then each stretch as words ("Available midnight to 9:00 am"); a booking or unavailability also reads its details as its description. The coloured blocks and hour marks are hidden from screen readers. Step 2: the week becomes a list of seven days instead of seven columns, and nothing is wider than the screen. |
 
 **Automated by:** `e2e/availability.spec.ts` › "SCRUM-36 — a screen reader hears the venue and date for each day" and "SCRUM-36 — the calendar works at phone width". Listening with a real screen reader is **Manual**.
 
@@ -117,3 +119,16 @@ not.
 | Expected Result | "Access denied", and no Availability link in their navigation. |
 
 **Automated by:** `tests/unit/auth.test.ts` › both "SCRUM-36 AC1 — …" cases; `e2e/availability.spec.ts` › "SCRUM-36 / SCRUM-37 — who can see the calendar and record unavailability"; `e2e/access-control.spec.ts` › each role's navigation
+
+### TC-36-08
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-36-08 |
+| Test Scenario | [Positive] Hovering (or focusing, or tapping on a phone) a booking or unavailability shows its details |
+| Pre-conditions | The booking and maintenance from TC-36-03. |
+| Test Steps | 1. Hover the booked block. <br> 2. Hover the maintenance block. <br> 3. Tab to the booked block with the keyboard. |
+| Test Data | — |
+| Expected Result | Step 1: a card with the event ("Approved — Research Symposium"), "Booked", the whole period, "Requested by Cody Coordinator", the expected attendance and the layout. Step 2: a card with the reason ("Maintenance"), "Unavailable", the whole period, the note and "Recorded by Vera Venue"; the booking's card closes. Step 3: the same card as step 1, and a screen reader reads it as the block's description. A period that crosses midnight shows its whole span, not just that day's part. The calendar is for internal staff only, so the event is named. |
+
+**Automated by:** `e2e/availability.spec.ts` › "SCRUM-37 AC2-5, SCRUM-36 AC3-5 — …" (hover steps); `tests/unit/venue-availability.test.ts` › "SCRUM-36 — carries what a hover shows…" and "…a stretch clipped to one day keeps the whole period in its details"
