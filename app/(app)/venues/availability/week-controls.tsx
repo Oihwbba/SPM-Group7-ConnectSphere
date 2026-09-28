@@ -120,12 +120,13 @@ export function VenuePicker({
 }) {
   const show = useShow(venueId, week);
   return (
-    <div className="flex items-center gap-3">
+    // Grows to fill the row, so the controls span the page's width.
+    <div className="flex min-w-64 flex-1 items-center gap-3">
       <Label htmlFor="venue" className="shrink-0">
         Venue
       </Label>
       <Select value={venueId} onValueChange={(venue) => show({ venue })}>
-        <SelectTrigger id="venue" className="w-72 max-w-full">
+        <SelectTrigger id="venue" className="w-full">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
