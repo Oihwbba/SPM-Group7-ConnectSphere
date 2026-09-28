@@ -1,6 +1,9 @@
 import { describe, it, expect } from "vitest";
 
-import { parseWeek } from "@/app/(app)/venues/availability/week";
+import {
+  formatWeekRange,
+  parseWeek,
+} from "@/app/(app)/venues/availability/week";
 import { startOfWeek } from "@/lib/venue-availability";
 
 // SCRUM-36 AC7 — "View can be filtered by date range." The calendar shows one
@@ -34,5 +37,25 @@ describe("the calendar's week", () => {
   it("ignores a malformed or impossible date", () => {
     expect(parseWeek("nonsense", today).from).toBe("2035-03-12");
     expect(parseWeek("2035-13-45", today).from).toBe("2035-03-12");
+  });
+});
+
+describe("formatWeekRange — the week shown between the arrows", () => {
+  it("names the month and year once when the week is inside one month", () => {
+    expect(formatWeekRange("2026-10-12", "2026-10-18")).toBe(
+      "12 – 18 Oct 2026",
+    );
+  });
+
+  it("names both months when the week crosses into the next", () => {
+    expect(formatWeekRange("2026-09-28", "2026-10-04")).toMatch(
+      /^28 Sep.? – 4 Oct 2026$/,
+    );
+  });
+
+  it("names both years when the week crosses into the next", () => {
+    expect(formatWeekRange("2035-12-31", "2036-01-06")).toBe(
+      "31 Dec 2035 – 6 Jan 2036",
+    );
   });
 });

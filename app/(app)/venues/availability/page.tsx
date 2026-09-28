@@ -10,8 +10,8 @@ import {
   startOfSgDay,
 } from "@/lib/venue-availability";
 import { AvailabilityCalendar } from "./availability-calendar";
-import { parseWeek } from "./week";
-import { WeekControls } from "./week-controls";
+import { formatWeekRange, parseWeek } from "./week";
+import { VenuePicker, WeekNav } from "./week-controls";
 import { RecordUnavailabilityForm } from "./record-unavailability-form";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
@@ -62,30 +62,34 @@ export default async function AvailabilityPage({
         </h1>
         <p className="text-sm text-muted-foreground">
           When a venue is free, booked, or unavailable for another reason, a
-          week at a time. Hover or tap a booking for its details. Times are
-          Singapore time.
+          week at a time. Hover or tap a booking for more. Times are Singapore
+          time.
         </p>
       </div>
 
       {venue ? (
         <>
-          <WeekControls
-            venues={venues}
-            venueId={venue.id}
-            week={from}
-            today={today}
-          />
-          {can(session.user, "unavailability:record") && (
-            <RecordUnavailabilityForm
-              key={venue.id}
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <WeekNav
               venueId={venue.id}
-              venueName={venue.name}
+              week={from}
+              label={formatWeekRange(from, to)}
             />
-          )}
+            {can(session.user, "unavailability:record") && (
+              <RecordUnavailabilityForm
+                key={venue.id}
+                venueId={venue.id}
+                venueName={venue.name}
+              />
+            )}
+          </div>
           <AvailabilityCalendar
             venueName={venue.name}
             days={availabilityByDay(blockers, from, to)}
             today={today}
+            venuePicker={
+              <VenuePicker venues={venues} venueId={venue.id} week={from} />
+            }
           />
         </>
       ) : (

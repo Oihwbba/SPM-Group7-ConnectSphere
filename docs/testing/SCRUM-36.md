@@ -77,7 +77,7 @@ phone and to a screen reader, where a grid of every venue would not.
 | Pre-conditions | Nothing on the Executive Boardroom in the week of 2 to 8 Jun 2036. |
 | Test Steps | 1. Open the calendar for the Executive Boardroom and go to 4 Jun 2036. |
 | Test Data | — |
-| Expected Result | "Executive Boardroom is available for the whole week, …", and seven days, Monday 2 Jun to Sunday 8 Jun, each reading "Available all day". |
+| Expected Result | Seven days, Monday 2 Jun to Sunday 8 Jun, each with "Free all day" under its date, and each read to a screen reader as "Available all day". |
 
 **Automated by:** `tests/unit/venue-availability.test.ts` › "SCRUM-36 AC6 — a venue with nothing in the range is free across every day of it, not empty"; `e2e/availability.spec.ts` › "SCRUM-36 AC6 — a venue with nothing in the week reads as available throughout, not blank"
 
@@ -88,9 +88,9 @@ phone and to a screen reader, where a grid of every venue would not.
 | Test Case ID | TC-36-05 |
 | Test Scenario | [Positive, Boundary] AC 7: the view can be filtered by date range: a week at a time, and any week can be shown |
 | Pre-conditions | — |
-| Test Steps | 1. Open **Availability**. <br> 2. **Go to date** 1 Feb 2036 (a Friday). <br> 3. Click **Next week**, then **Previous week** twice. <br> 4. Click **This week**. |
+| Test Steps | 1. Open **Availability**. <br> 2. Click the week's dates between the arrows and pick 1 Feb 2036 (a Friday). <br> 3. Click the next-week arrow, then the previous-week arrow twice. |
 | Test Data | — |
-| Expected Result | Step 1: this week, Monday to Sunday, today highlighted. Step 2: "28 Jan 2036 to 3 Feb 2036", seven days. Step 3: "4 Feb 2036 to 10 Feb 2036", then "21 Jan 2036 to 27 Jan 2036". Step 4: back to this week. The week is in the address, so the view can be shared. |
+| Expected Result | Step 1: this week, Monday to Sunday, today's column shaded. Step 2: "28 Jan – 3 Feb 2036" between the arrows, and seven days. Step 3: "4 – 10 Feb 2036", then "21 – 27 Jan 2036". The week is in the address, so the view can be shared. |
 
 **Automated by:** `tests/unit/availability-week.test.ts` › the three "SCRUM-36 AC7 — …" cases, "walks back across a month and year end" and "ignores a malformed or impossible date"; `e2e/availability.spec.ts` › "SCRUM-36 AC7 — the calendar shows a week, Monday to Sunday, and moves between weeks"
 
@@ -125,10 +125,10 @@ phone and to a screen reader, where a grid of every venue would not.
 | Item | Content |
 |---|---|
 | Test Case ID | TC-36-08 |
-| Test Scenario | [Positive] Hovering (or focusing, or tapping on a phone) a booking or unavailability shows its details |
+| Test Scenario | [Positive] Each booking or unavailability shows its key facts on the calendar, and hovering (or focusing, or tapping on a phone) it shows the rest |
 | Pre-conditions | The booking and maintenance from TC-36-03. |
 | Test Steps | 1. Hover the booked block. <br> 2. Hover the maintenance block. <br> 3. Tab to the booked block with the keyboard. |
 | Test Data | — |
-| Expected Result | Step 1: a card with the event ("Approved — Research Symposium"), "Booked", the whole period, "Requested by Cody Coordinator", the expected attendance and the layout. Step 2: a card with the reason ("Maintenance"), "Unavailable", the whole period, the note and "Recorded by Vera Venue"; the booking's card closes. Step 3: the same card as step 1, and a screen reader reads it as the block's description. A period that crosses midnight shows its whole span, not just that day's part. The calendar is for internal staff only, so the event is named. |
+| Expected Result | On the calendar, the booking is a card showing "9:00 am – 1:00 pm", the event, the requester's initials and the attendance; the maintenance is a striped card showing "1:00 pm – 5:00 pm", "Maintenance" and its note. Step 1: a card with the event ("Approved — Research Symposium"), "Booked", the whole period, "Requested by Cody Coordinator", the expected attendance and the layout. Step 2: a card with the reason ("Maintenance"), "Unavailable", the whole period, the note and "Recorded by Vera Venue"; the booking's card closes. Step 3: the same card as step 1, and a screen reader reads it as the block's description. A period that crosses midnight shows its whole span, not just that day's part. The calendar is for internal staff only, so the event is named. |
 
 **Automated by:** `e2e/availability.spec.ts` › "SCRUM-37 AC2-5, SCRUM-36 AC3-5 — …" (hover steps); `tests/unit/venue-availability.test.ts` › "SCRUM-36 — carries what a hover shows…" and "…a stretch clipped to one day keeps the whole period in its details"

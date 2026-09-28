@@ -94,6 +94,12 @@ const monthFormatter = new Intl.DateTimeFormat("en-SG", {
   year: "numeric",
 });
 
+const dayMonthFormatter = new Intl.DateTimeFormat("en-SG", {
+  timeZone: TIME_ZONE,
+  day: "numeric",
+  month: "short",
+});
+
 const weekdayDateFormatter = new Intl.DateTimeFormat("en-SG", {
   timeZone: TIME_ZONE,
   weekday: "short",
@@ -179,6 +185,11 @@ export function formatDateTimeInTimezone(
 /** e.g. "January 2026" — a calendar month's heading, in Singapore time. */
 export function formatMonth(value: Date | string): string {
   return monthFormatter.format(new Date(value));
+}
+
+/** e.g. "15 Jan" — a day and month without the year, in Singapore time. */
+export function formatDayMonth(value: Date | string): string {
+  return dayMonthFormatter.format(new Date(value));
 }
 
 /** e.g. "Thu, 15 Jan 2026" — a day heading, in Singapore time. */
