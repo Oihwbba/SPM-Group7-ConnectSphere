@@ -8,10 +8,8 @@ import { err, ok, type ActionResult } from "@/lib/action-result";
 import { requirePermission, PermissionError } from "@/lib/auth/can";
 import { prisma } from "@/lib/db";
 import {
-  markConflicts,
   sortSchedule,
   summariseAvailability,
-  type MarkedScheduleEntry,
   type ScheduleEntry,
 } from "@/lib/equipment/availability";
 import {
@@ -166,7 +164,7 @@ export interface EquipmentSchedule {
   equipmentId: string;
   type: string;
   totalQuantity: number;
-  entries: MarkedScheduleEntry[];
+  entries: ScheduleEntry[];
   /** True when nothing is committed from `from` onwards (SCRUM-30). */
   fullyAvailable: boolean;
 }
@@ -174,8 +172,12 @@ export interface EquipmentSchedule {
 /**
  * SCRUM-30 — everything committed on one equipment item from `from` onwards:
  * reservations with the event they serve, and unavailability with its reason
- * and duration. Entries that share time are marked so the view can flag them;
- * entries that merely touch at an endpoint are not.
+ * and duration, in time order.
+ *
+ * It reports commitments, not conflicts. Whether a commitment matters depends
+ * on the period and quantity being requested, which change as the form is
+ * filled in, so the view splits and colours them with `splitByPeriod` and
+ * `requestedPeriodTone` against the same availability the reservation uses.
  *
  * An item with nothing committed returns `fullyAvailable`, so the view can say
  * so rather than render an empty table.
@@ -256,7 +258,7 @@ export async function getEquipmentSchedule(
       equipmentId: equipment.id,
       type: equipment.type,
       totalQuantity: equipment.totalQuantity,
-      entries: sortSchedule(markConflicts(entries, equipment.totalQuantity)),
+      entries: sortSchedule(entries),
       fullyAvailable: entries.length === 0,
     });
   } catch (error) {

@@ -33,7 +33,11 @@ import {
   createReservation,
   getAllEquipmentAvailability,
 } from "./actions";
-import { EquipmentSchedulePanel } from "./equipment-schedule-panel";
+import {
+  OtherCommitments,
+  RequestedPeriodCommitments,
+  useEquipmentSchedule,
+} from "./equipment-schedule-panel";
 import { allAvailabilitySchema } from "@/lib/schemas/reservation";
 import { checkQuantity } from "@/lib/equipment/availability";
 import {
@@ -352,6 +356,16 @@ export function EquipmentClient({
   const periodText = formatPeriodDisplay(form.startAt, form.endAt);
   const selectedEquipment = equipment.find((e) => e.id === form.equipmentId);
   const otherEquipment = equipment.filter((e) => e.id !== form.equipmentId);
+  const scheduleState = useEquipmentSchedule(selectedEquipment?.id ?? null, scheduleRefresh);
+
+  // SCRUM-30: the period the commitments are split against. Only a complete
+  // period whose end is after its start counts; until then nothing is "during".
+  const periodStart = parseSingaporeDateTime(form.startAt);
+  const periodEnd = parseSingaporeDateTime(form.endAt);
+  const requestedPeriod =
+    periodStart && periodEnd && periodEnd > periodStart
+      ? { startAt: periodStart, endAt: periodEnd }
+      : null;
 
   const startDate =
     form.startAt && !form.startAt.startsWith("T")
@@ -802,13 +816,15 @@ export function EquipmentClient({
             </div>
           )}
 
-          {/* SCRUM-30 — what this item is already committed to, and where
-              those commitments collide. */}
+          {/* SCRUM-30 — commitments that reduce what is free for the requested
+              period, right under the number they reduce. */}
           {selectedEquipment && (
-            <EquipmentSchedulePanel
-              key={`${selectedEquipment.id}:${scheduleRefresh}`}
-              equipmentId={selectedEquipment.id}
+            <RequestedPeriodCommitments
+              state={scheduleState}
               equipmentType={selectedEquipment.type}
+              totalQuantity={selectedEquipment.totalQuantity}
+              period={requestedPeriod}
+              verdict={verdict}
             />
           )}
 
@@ -871,6 +887,16 @@ export function EquipmentClient({
               })}
             </div>
           </div>
+
+          {/* SCRUM-30 — everything else this item is committed to. Below the
+              other equipment because it does not affect the request. */}
+          {selectedEquipment && (
+            <OtherCommitments
+              state={scheduleState}
+              equipmentType={selectedEquipment.type}
+              period={requestedPeriod}
+            />
+          )}
         </CardContent>
       </Card>
     </div>
