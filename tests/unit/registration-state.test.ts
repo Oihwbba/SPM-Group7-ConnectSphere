@@ -1,0 +1,179 @@
+import { describe, it, expect } from "vitest";
+
+import {
+  computeRegistrationState,
+  remainingCapacity,
+  totalCapacity,
+  canRegisterNow,
+  REGISTRATION_STATE_LABEL,
+} from "@/lib/registration-state";
+
+// SCRUM-72/73/74 — this is the ONE place the registration-state rule is
+// defined, so it gets its own dedicated, pure (no mocking) test file. The
+// browse list, the detail page and the register action all call the same
+// function; these tests are what makes that safe.
+
+function baseEvent(
+  over: Partial<{
+    expectedAttendance: number | null;
+    registrationEnabled: boolean;
+    registrationOpensAt: Date | null;
+    registrationClosesAt: Date | null;
+  }> = {},
+) {
+  return {
+    expectedAttendance: 100,
+    registrationEnabled: true,
+    registrationOpensAt: null,
+    registrationClosesAt: null,
+    ...over,
+  };
+}
+
+describe("totalCapacity — SCRUM-73/74: expected attendance IS the capacity", () => {
+  it("returns expectedAttendance directly", () => {
+    expect(totalCapacity(baseEvent({ expectedAttendance: 50 }))).toBe(50);
+  });
+
+  it("treats a null expectedAttendance as zero capacity rather than throwing", () => {
+    expect(totalCapacity(baseEvent({ expectedAttendance: null }))).toBe(0);
+  });
+});
+
+describe("remainingCapacity", () => {
+  it("AC: subtracts active registrations from the total", () => {
+    expect(remainingCapacity(baseEvent({ expectedAttendance: 100 }), 40)).toBe(
+      60,
+    );
+  });
+
+  it("Boundary: exactly at capacity returns zero, not negative", () => {
+    expect(remainingCapacity(baseEvent({ expectedAttendance: 10 }), 10)).toBe(
+      0,
+    );
+  });
+
+  it("Boundary: over capacity (a pre-existing data anomaly) still floors at zero", () => {
+    expect(remainingCapacity(baseEvent({ expectedAttendance: 10 }), 15)).toBe(
+      0,
+    );
+  });
+
+  it("Boundary: zero registrations against zero capacity is zero remaining, not negative", () => {
+    expect(remainingCapacity(baseEvent({ expectedAttendance: 0 }), 0)).toBe(0);
+  });
+});
+
+describe("computeRegistrationState — precedence and each state", () => {
+  const now = new Date("2031-06-01T12:00:00Z");
+
+  it("[Positive] AC: open, unfilled, no period configured → OPEN", () => {
+    expect(computeRegistrationState(baseEvent(), 0, now)).toBe("OPEN");
+  });
+
+  it("[Negative] AC: registrationEnabled false → CLOSED, regardless of capacity or period", () => {
+    expect(
+      computeRegistrationState(
+        baseEvent({ registrationEnabled: false }),
+        0,
+        now,
+      ),
+    ).toBe("CLOSED");
+  });
+
+  it("[Negative] AC: registrationClosesAt in the past → EXPIRED", () => {
+    expect(
+      computeRegistrationState(
+        baseEvent({ registrationClosesAt: new Date("2031-05-01T00:00:00Z") }),
+        0,
+        now,
+      ),
+    ).toBe("EXPIRED");
+  });
+
+  it("[Boundary] registrationClosesAt exactly now counts as already closed (<=, not <)", () => {
+    expect(
+      computeRegistrationState(
+        baseEvent({ registrationClosesAt: now }),
+        0,
+        now,
+      ),
+    ).toBe("EXPIRED");
+  });
+
+  it("[Negative] AC: registrationOpensAt in the future → NOT_YET_OPEN", () => {
+    expect(
+      computeRegistrationState(
+        baseEvent({ registrationOpensAt: new Date("2031-07-01T00:00:00Z") }),
+        0,
+        now,
+      ),
+    ).toBe("NOT_YET_OPEN");
+  });
+
+  it("[Boundary] registrationOpensAt exactly now already counts as open (not NOT_YET_OPEN)", () => {
+    expect(
+      computeRegistrationState(baseEvent({ registrationOpensAt: now }), 0, now),
+    ).toBe("OPEN");
+  });
+
+  it("[Negative] AC: remaining capacity zero → FULL", () => {
+    expect(
+      computeRegistrationState(baseEvent({ expectedAttendance: 5 }), 5, now),
+    ).toBe("FULL");
+  });
+
+  it("[Boundary] AC: one remaining place → OPEN, not FULL", () => {
+    expect(
+      computeRegistrationState(baseEvent({ expectedAttendance: 5 }), 4, now),
+    ).toBe("OPEN");
+  });
+
+  it("Precedence: a manual close wins over an otherwise-full event", () => {
+    expect(
+      computeRegistrationState(
+        baseEvent({ registrationEnabled: false, expectedAttendance: 5 }),
+        5,
+        now,
+      ),
+    ).toBe("CLOSED");
+  });
+
+  it("Precedence: not-yet-open wins over full (nobody could have filled it yet)", () => {
+    expect(
+      computeRegistrationState(
+        baseEvent({
+          registrationOpensAt: new Date("2031-07-01T00:00:00Z"),
+          expectedAttendance: 5,
+        }),
+        5,
+        now,
+      ),
+    ).toBe("NOT_YET_OPEN");
+  });
+});
+
+describe("canRegisterNow", () => {
+  it("is true only for OPEN", () => {
+    expect(canRegisterNow("OPEN")).toBe(true);
+    expect(canRegisterNow("FULL")).toBe(false);
+    expect(canRegisterNow("NOT_YET_OPEN")).toBe(false);
+    expect(canRegisterNow("CLOSED")).toBe(false);
+    expect(canRegisterNow("EXPIRED")).toBe(false);
+  });
+});
+
+describe("REGISTRATION_STATE_LABEL", () => {
+  it("has a human label for every state (exhaustive at the type level too)", () => {
+    const states: Array<keyof typeof REGISTRATION_STATE_LABEL> = [
+      "OPEN",
+      "FULL",
+      "NOT_YET_OPEN",
+      "CLOSED",
+      "EXPIRED",
+    ];
+    for (const s of states) {
+      expect(REGISTRATION_STATE_LABEL[s]).toBeTruthy();
+    }
+  });
+});

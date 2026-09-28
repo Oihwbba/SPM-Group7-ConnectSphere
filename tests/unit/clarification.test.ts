@@ -34,10 +34,10 @@ vi.mock("@/lib/db", () => ({
 
 const mockAuth = auth as unknown as Mock;
 const mockEventFindUnique = prisma.event.findUnique as unknown as Mock;
-const mockClarificationFindFirst =
-  prisma.clarificationRequest.findFirst as unknown as Mock;
-const mockClarificationFindUnique =
-  prisma.clarificationRequest.findUnique as unknown as Mock;
+const mockClarificationFindFirst = prisma.clarificationRequest
+  .findFirst as unknown as Mock;
+const mockClarificationFindUnique = prisma.clarificationRequest
+  .findUnique as unknown as Mock;
 const mockTransaction = prisma.$transaction as unknown as Mock;
 
 function sessionFor(role: Role, id: string): Session {
@@ -108,7 +108,10 @@ describe("requestClarification — SCRUM-18", () => {
   it("[Negative] AC: a blank message is rejected and nothing is written", async () => {
     mockAuth.mockResolvedValue(sessionFor("COORDINATOR", "usr_coord"));
 
-    const result = await requestClarification({ eventId: "evt1", message: "  " });
+    const result = await requestClarification({
+      eventId: "evt1",
+      message: "  ",
+    });
 
     expect(result.ok).toBe(false);
     expect(tx.clarificationRequest.create).not.toHaveBeenCalled();
@@ -130,7 +133,9 @@ describe("requestClarification — SCRUM-18", () => {
   it("[Boundary] AC: no second open clarification is created for the same event", async () => {
     mockAuth.mockResolvedValue(sessionFor("COORDINATOR", "usr_coord"));
     mockEventFindUnique.mockResolvedValue(eventRow());
-    tx.clarificationRequest.findFirst.mockResolvedValue({ id: "clar_already_open" });
+    tx.clarificationRequest.findFirst.mockResolvedValue({
+      id: "clar_already_open",
+    });
 
     const result = await requestClarification({
       eventId: "evt1",
@@ -138,7 +143,8 @@ describe("requestClarification — SCRUM-18", () => {
     });
 
     expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.error).toMatch(/already an open clarification/i);
+    if (!result.ok)
+      expect(result.error).toMatch(/already an open clarification/i);
     expect(tx.clarificationRequest.create).not.toHaveBeenCalled();
     expect(tx.notification.create).not.toHaveBeenCalled();
   });
@@ -150,8 +156,10 @@ describe("requestClarification — SCRUM-18", () => {
     await requestClarification({ eventId: "evt1", message: "Question" });
 
     const lockOrder = tx.$queryRaw.mock.invocationCallOrder[0];
-    const checkOrder = tx.clarificationRequest.findFirst.mock.invocationCallOrder[0];
-    const createOrder = tx.clarificationRequest.create.mock.invocationCallOrder[0];
+    const checkOrder =
+      tx.clarificationRequest.findFirst.mock.invocationCallOrder[0];
+    const createOrder =
+      tx.clarificationRequest.create.mock.invocationCallOrder[0];
     expect(lockOrder).toBeLessThan(checkOrder);
     expect(checkOrder).toBeLessThan(createOrder);
   });
@@ -163,7 +171,10 @@ describe("requestClarification — SCRUM-18", () => {
     mockEventFindUnique.mockResolvedValue(eventRow());
     tx.$queryRaw.mockResolvedValue([{ status: "APPROVED" }]);
 
-    const result = await requestClarification({ eventId: "evt1", message: "Too late?" });
+    const result = await requestClarification({
+      eventId: "evt1",
+      message: "Too late?",
+    });
 
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error).toMatch(/submitted or under-review/i);
@@ -173,22 +184,53 @@ describe("requestClarification — SCRUM-18", () => {
 
   it("[Negative] a request cannot be clarified while it is still DRAFT", async () => {
     mockAuth.mockResolvedValue(sessionFor("COORDINATOR", "usr_coord"));
-    mockEventFindUnique.mockResolvedValue(eventRow({ status: "DRAFT", coordinatorId: null }));
+    // coordinatorId matches the caller, so can()'s relationship check passes
+    // regardless of status — isolating the DRAFT refusal (line 62) from the
+    // not-found check (line 60), which a null coordinatorId would otherwise
+    // trigger first and hide this branch entirely.
+    mockEventFindUnique.mockResolvedValue(
+      eventRow({ status: "DRAFT", coordinatorId: "usr_coord" }),
+    );
 
-    const result = await requestClarification({ eventId: "evt1", message: "Question" });
+    const result = await requestClarification({
+      eventId: "evt1",
+      message: "Question",
+    });
 
     expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error).toBe(
+        "Clarification can only be requested on a submitted or under-review request.",
+      );
+    }
     expect(tx.clarificationRequest.create).not.toHaveBeenCalled();
   });
 
   it("[Negative] SCRUM-68: another coordinator's event is indistinguishable from a missing one", async () => {
     mockAuth.mockResolvedValue(sessionFor("COORDINATOR", "usr_other_coord"));
-    mockEventFindUnique.mockResolvedValue(eventRow({ coordinatorId: "usr_coord" }));
+    mockEventFindUnique.mockResolvedValue(
+      eventRow({ coordinatorId: "usr_coord" }),
+    );
 
-    const result = await requestClarification({ eventId: "evt1", message: "Question" });
+    const result = await requestClarification({
+      eventId: "evt1",
+      message: "Question",
+    });
 
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error).toBe("Event not found.");
+  });
+
+  // Coverage note: the catch block only special-cases PermissionError —
+  // everything else must propagate, not be swallowed into a friendly
+  // ActionResult.
+  it("[Exit path] rethrows an unexpected (non-permission) error instead of swallowing it", async () => {
+    mockAuth.mockResolvedValue(sessionFor("COORDINATOR", "usr_coord"));
+    mockEventFindUnique.mockRejectedValueOnce(new Error("DB unavailable"));
+
+    await expect(
+      requestClarification({ eventId: "evt1", message: "Question" }),
+    ).rejects.toThrow("DB unavailable");
   });
 });
 
@@ -267,7 +309,10 @@ describe("respondToClarification — SCRUM-18", () => {
       }),
     );
 
-    await respondToClarification({ clarificationId: "clar1", response: "Answer" });
+    await respondToClarification({
+      clarificationId: "clar1",
+      response: "Answer",
+    });
 
     expect(tx.notification.createMany).toHaveBeenCalledWith({
       data: [
@@ -280,7 +325,10 @@ describe("respondToClarification — SCRUM-18", () => {
   it("[Negative] AC: an empty response is rejected", async () => {
     mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_org"));
 
-    const result = await respondToClarification({ clarificationId: "clar1", response: "  " });
+    const result = await respondToClarification({
+      clarificationId: "clar1",
+      response: "  ",
+    });
 
     expect(result.ok).toBe(false);
     expect(tx.clarificationRequest.updateMany).not.toHaveBeenCalled();
@@ -341,11 +389,36 @@ describe("respondToClarification — SCRUM-18", () => {
     });
 
     expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.error).toBe("Clarification request not found.");
+    if (!result.ok)
+      expect(result.error).toBe("Clarification request not found.");
+  });
+
+  // Coverage note: the catch block only special-cases PermissionError —
+  // everything else must propagate, not be swallowed into a friendly
+  // ActionResult.
+  it("[Exit path] rethrows an unexpected (non-permission) error instead of swallowing it", async () => {
+    mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_org"));
+    mockClarificationFindUnique.mockRejectedValueOnce(
+      new Error("DB unavailable"),
+    );
+
+    await expect(
+      respondToClarification({ clarificationId: "clar1", response: "Answer" }),
+    ).rejects.toThrow("DB unavailable");
   });
 });
 
 describe("getClarificationForEvent — SCRUM-18/17 read path", () => {
+  it("[Negative] a signed-out caller is refused", async () => {
+    mockAuth.mockResolvedValue(null);
+
+    const result = await getClarificationForEvent("evt1");
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toBe("Not signed in.");
+    expect(mockEventFindUnique).not.toHaveBeenCalled();
+  });
+
   it("[Positive] returns the latest clarification thread for a related user", async () => {
     mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_org"));
     mockEventFindUnique.mockResolvedValue(eventRow());

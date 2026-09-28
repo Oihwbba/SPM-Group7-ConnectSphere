@@ -1,0 +1,192 @@
+import { test, expect } from "@playwright/test";
+
+/**
+ * SCRUM-72 — Attendee browses Confirmed events and sees registration
+ * availability. Entirely read-only against stable seeded fixtures (no event
+ * is created or mutated here), so unlike the writing specs elsewhere in this
+ * suite it needs no local-database guard and no cleanup — it's safe to run
+ * against the shared database.
+ *
+ * Fixtures used (prisma/seed.ts):
+ *   evt_confirmed   — Confirmed, 120 capacity, 2 active + 1 withdrawn → OPEN
+ *   evt_full        — Confirmed, 3/3 registered → FULL, still visible
+ *   evt_last_seat   — Confirmed, 2/3 registered → OPEN, exactly 1 remaining
+ *   evt_reg_not_open— Confirmed, registrationOpensAt in the future
+ *   evt_reg_closed  — Confirmed, registrationClosesAt in the past
+ *   evt_cancelled   — Cancelled → must NOT appear in the browse list at all
+ */
+test.describe("SCRUM-72 — Attendee browses confirmed events", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto("/login");
+    await page.getByLabel("Email", { exact: true }).fill("attendee@test.local");
+    await page.getByLabel("Password", { exact: true }).fill("Password123!");
+    await page.getByRole("button", { name: "Sign in" }).click();
+    await page.waitForURL("**/events");
+  });
+
+  test("AC: browse list shows Confirmed events with venue, capacity and registration state; excludes Cancelled", async ({
+    page,
+  }) => {
+    const galaCard = page.getByTestId("browsable-event-card").filter({
+      hasText: "Confirmed — Charity Gala",
+    });
+    await expect(galaCard).toBeVisible();
+    await expect(galaCard.getByTestId("venue")).toContainText(
+      "Exhibition Hall",
+    );
+    // 120 capacity, 2 REGISTERED (1 WITHDRAWN does not count) = 118 remaining.
+    await expect(galaCard.getByTestId("remaining-capacity")).toHaveText(
+      "118 of 120 places remaining",
+    );
+    await expect(galaCard.getByTestId("registration-state-badge")).toHaveText(
+      "Open",
+    );
+
+    // AC: "A full event remains visible and is shown as full rather than
+    // disappearing from the browse list."
+    const fullCard = page.getByTestId("browsable-event-card").filter({
+      hasText: "Full — Wine Tasting Evening",
+    });
+    await expect(fullCard).toBeVisible();
+    await expect(fullCard.getByTestId("remaining-capacity")).toHaveText(
+      "0 of 3 places remaining",
+    );
+    await expect(fullCard.getByTestId("registration-state-badge")).toHaveText(
+      "Full",
+    );
+
+    // Boundary: exactly one place left is still OPEN, not FULL.
+    const lastSeatCard = page.getByTestId("browsable-event-card").filter({
+      hasText: "One Place Left — Studio Masterclass",
+    });
+    await expect(lastSeatCard.getByTestId("remaining-capacity")).toHaveText(
+      "1 of 3 places remaining",
+    );
+    await expect(
+      lastSeatCard.getByTestId("registration-state-badge"),
+    ).toHaveText("Open");
+
+    // AC: not-yet-open and expired periods stay visible with the state shown.
+    // AC: "The registration period ... are shown" — not just the derived
+    // state, the actual configured dates.
+    const notOpenCard = page.getByTestId("browsable-event-card").filter({
+      hasText: "Registration Not Yet Open — Summer Camp",
+    });
+    await expect(
+      notOpenCard.getByTestId("registration-state-badge"),
+    ).toHaveText("Registration not yet open");
+    await expect(notOpenCard.getByTestId("registration-period")).toContainText(
+      "Opens",
+    );
+
+    const closedCard = page.getByTestId("browsable-event-card").filter({
+      hasText: "Registration Closed — Leadership Retreat",
+    });
+    await expect(closedCard.getByTestId("registration-state-badge")).toHaveText(
+      "Registration closed",
+    );
+    await expect(closedCard.getByTestId("registration-period")).toContainText(
+      "Closes",
+    );
+
+    // AC: "An event that is Cancelled no longer appears in the attendee
+    // browse list."
+    await expect(
+      page.getByText("Cancelled — Winter Workshop"),
+    ).not.toBeVisible();
+  });
+
+  test("AC: opening a full event's detail page shows it as full with the register action disabled", async ({
+    page,
+  }) => {
+    // attendee@test.local (this describe's default, via beforeEach) is
+    // itself one of evt_full's 3 registrations, so it would see
+    // "already-registered" instead of a register-button — sign in instead as
+    // attendee4, the account the seed leaves deliberately unregistered
+    // everywhere, so this actually exercises the disabled-action state.
+    await page.context().clearCookies();
+    await page.goto("/login");
+    await page
+      .getByLabel("Email", { exact: true })
+      .fill("attendee4@test.local");
+    await page.getByLabel("Password", { exact: true }).fill("Password123!");
+    await page.getByRole("button", { name: "Sign in" }).click();
+    await page.waitForURL("**/events");
+
+    const fullCard = page.getByTestId("browsable-event-card").filter({
+      hasText: "Full — Wine Tasting Evening",
+    });
+    await fullCard.click();
+
+    await expect(
+      page.getByRole("heading", { name: "Full — Wine Tasting Evening" }),
+    ).toBeVisible();
+    await expect(page.getByTestId("registration-state-badge")).toHaveText(
+      "Full",
+    );
+    await expect(page.getByTestId("venue")).toContainText(
+      "Executive Boardroom",
+    );
+    await expect(page.getByTestId("remaining-capacity")).toHaveText(
+      "0 of 3 places remaining",
+    );
+    await expect(page.getByTestId("register-button")).toBeDisabled();
+    await expect(
+      page.getByText(
+        "This event is full. You can check back in case a place opens up.",
+      ),
+    ).toBeVisible();
+  });
+
+  test("AC: an open event's detail page shows the registration period and an honestly-disabled Register button", async ({
+    page,
+  }) => {
+    const notOpenCard = page.getByTestId("browsable-event-card").filter({
+      hasText: "Registration Not Yet Open — Summer Camp",
+    });
+    await notOpenCard.click();
+
+    await expect(
+      page.getByRole("heading", {
+        name: "Registration Not Yet Open — Summer Camp",
+      }),
+    ).toBeVisible();
+    await expect(page.getByTestId("registration-period")).toContainText(
+      "Opens",
+    );
+    // SCRUM-73 owns the actual register action — the button exists so the
+    // control isn't invisible, but it must never look clickable-but-dead.
+    await expect(page.getByTestId("register-button")).toBeDisabled();
+  });
+
+  test("AC: direct event URLs do not bypass visibility rules — a Cancelled event 404s for an Attendee", async ({
+    page,
+  }) => {
+    const response = await page.goto("/events/evt_cancelled");
+    expect(response?.status()).toBe(404);
+  });
+
+  test("a non-existent event id 404s the same way as a real but invisible one", async ({
+    page,
+  }) => {
+    const response = await page.goto("/events/evt_does_not_exist_at_all");
+    expect(response?.status()).toBe(404);
+  });
+});
+
+test.describe("SCRUM-72 — the attendee detail route stays 404 for other roles", () => {
+  test("an Organiser hitting a Confirmed event's attendee-detail URL still 404s (unchanged pre-existing behaviour)", async ({
+    page,
+  }) => {
+    await page.goto("/login");
+    await page
+      .getByLabel("Email", { exact: true })
+      .fill("organiser@test.local");
+    await page.getByLabel("Password", { exact: true }).fill("Password123!");
+    await page.getByRole("button", { name: "Sign in" }).click();
+    await page.waitForURL("**/events");
+
+    const response = await page.goto("/events/evt_confirmed");
+    expect(response?.status()).toBe(404);
+  });
+});

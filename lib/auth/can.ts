@@ -37,6 +37,8 @@ export type Action =
   | "equipment:read"
   | "equipment:reserve"
   | "event:browse" // attendees browsing events open for registration
+  | "registration:create" // SCRUM-73: an attendee registers for an event
+  | "registration:withdraw" // SCRUM-74/77: an attendee withdraws their own registration
   | "registration:read"
   | "notification:read";
 
@@ -84,7 +86,13 @@ const ROLE_ACTIONS: Record<Role, Action[]> = {
   // one-line change SCRUM-66 is about, with no page edits.
   VENUE_STAFF: ["booking:review", "notification:read"],
   TECH_SUPPORT: ["equipment:read", "equipment:reserve", "notification:read"],
-  ATTENDEE: ["event:browse", "registration:read", "notification:read"],
+  ATTENDEE: [
+    "event:browse",
+    "registration:create",
+    "registration:withdraw",
+    "registration:read",
+    "notification:read",
+  ],
 };
 
 /**

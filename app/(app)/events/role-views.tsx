@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { EventsClient } from "./events-client";
+import { AttendeeEventsClient } from "./attendee-events-client";
 
 /** Events owned by one organiser, newest first. Exported so the scoping rule
  * is testable on its own (tests/unit/events.test.ts, SCRUM-16/84). */
@@ -62,4 +63,40 @@ export async function CoordinatorEvents({
   const events = await getCoordinatorEvents(coordinatorId);
 
   return <EventsClient events={events} isCoordinator />;
+}
+
+/** SCRUM-72 — Confirmed events not Cancelled, newest-starting first, each
+ * with its approved venue booking (if any), its active-registration count so
+ * the client can show remaining capacity without a second round trip, and
+ * this caller's OWN registration row (SCRUM-73: "immediately visible ... with
+ * a status of registered" applies to the list too, not just the detail page). */
+export async function getBrowsableEvents(attendeeId: string) {
+  return prisma.event.findMany({
+    where: { status: "CONFIRMED" },
+    include: {
+      bookings: {
+        where: { status: "APPROVED" },
+        take: 1,
+        include: { venue: { select: { name: true, location: true } } },
+      },
+      registrations: {
+        where: { userId: attendeeId },
+        select: { id: true, status: true },
+        take: 1,
+      },
+      _count: {
+        select: { registrations: { where: { status: "REGISTERED" } } },
+      },
+    },
+    orderBy: { startAt: "asc" },
+  });
+}
+
+/** Attendee view: SCRUM-72's browse list. `status: "CONFIRMED"` in the query
+ * above already excludes Cancelled (and every other) status, so nothing
+ * further is filtered here. */
+export async function AttendeeEvents({ attendeeId }: { attendeeId: string }) {
+  const events = await getBrowsableEvents(attendeeId);
+
+  return <AttendeeEventsClient events={events} />;
 }
