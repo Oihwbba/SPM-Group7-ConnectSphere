@@ -58,6 +58,7 @@ export function DatePicker({
   value,
   onChange,
   openOn,
+  placeholder = "Select date",
   className,
 }: {
   id: string;
@@ -67,6 +68,8 @@ export function DatePicker({
   onChange: (day: string) => void;
   /** The day to open on when none is chosen yet; today if not given. */
   openOn?: string;
+  /** What the field says before a day is chosen. */
+  placeholder?: string;
   className?: string;
 }) {
   const [view, setView] = useState({ year: 0, month: 0 });
@@ -119,7 +122,7 @@ export function DatePicker({
               value ? "font-medium text-foreground" : "text-muted-foreground",
             )}
           >
-            {value ? formatDate(noon(value)) : "Select date"}
+            {value ? formatDate(noon(value)) : placeholder}
           </span>
         </button>
       </DropdownMenuTrigger>

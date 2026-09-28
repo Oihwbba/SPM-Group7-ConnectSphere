@@ -9,15 +9,38 @@ import { overlapping, overlaps, type Period } from "@/lib/period";
 
 type Db = PrismaClient | Prisma.TransactionClient;
 
+/**
+ * What the availability calendar shows when a booking or unavailability is
+ * hovered (SCRUM-36). `startAt`/`endAt` are the whole period, even where the
+ * calendar clips it to one day.
+ */
+export type BlockerDetails = { startAt: Date; endAt: Date } & (
+  | {
+      kind: "booking";
+      eventName: string;
+      requestedBy: string;
+      attendance: number | null;
+      layout: string | null;
+    }
+  | { kind: "unavailability"; note: string | null; recordedBy: string }
+);
+
 /** Something that makes a venue unavailable for part of a period. */
 export type VenueBlocker =
-  | { kind: "booking"; id: string; startAt: Date; endAt: Date }
+  | {
+      kind: "booking";
+      id: string;
+      startAt: Date;
+      endAt: Date;
+      details?: BlockerDetails;
+    }
   | {
       kind: "unavailability";
       id: string;
       startAt: Date;
       endAt: Date;
       reason: UnavailabilityReason;
+      details?: BlockerDetails;
     };
 
 /**
@@ -50,6 +73,85 @@ export async function findVenueBlockers(
     ...bookings.map((b) => ({ kind: "booking" as const, ...b })),
     ...unavailability.map((u) => ({ kind: "unavailability" as const, ...u })),
   ].sort((a, b) => a.startAt.getTime() - b.startAt.getTime());
+}
+
+/**
+ * SCRUM-36 — the same blockers as `findVenueBlockers`, carrying what the
+ * calendar shows on hover: the booking's event, who requested it and what it
+ * needs, or the unavailability's note and who recorded it. The calendar is
+ * for internal staff only (Coordinators and Venue Staff), so the event is
+ * named here, unlike in `describeBlocker`.
+ */
+export async function findVenueCalendar(
+  db: Db,
+  venueId: string,
+  period: Period,
+): Promise<VenueBlocker[]> {
+  const where = { venueId, ...overlapping(period) };
+  const [bookings, unavailability] = await Promise.all([
+    db.booking.findMany({
+      where: { ...where, status: "APPROVED" },
+      select: {
+        id: true,
+        startAt: true,
+        endAt: true,
+        requestedAttendance: true,
+        requestedLayout: true,
+        event: { select: { name: true } },
+        requestedBy: { select: { name: true } },
+      },
+    }),
+    db.venueUnavailability.findMany({
+      where,
+      select: {
+        id: true,
+        startAt: true,
+        endAt: true,
+        reason: true,
+        note: true,
+        recordedBy: { select: { name: true } },
+      },
+    }),
+  ]);
+
+  return [
+    ...bookings.map((b) => ({
+      kind: "booking" as const,
+      id: b.id,
+      startAt: b.startAt,
+      endAt: b.endAt,
+      details: {
+        kind: "booking" as const,
+        startAt: b.startAt,
+        endAt: b.endAt,
+        eventName: b.event.name,
+        requestedBy: b.requestedBy.name,
+        attendance: b.requestedAttendance,
+        layout: b.requestedLayout,
+      },
+    })),
+    ...unavailability.map((u) => ({
+      kind: "unavailability" as const,
+      id: u.id,
+      startAt: u.startAt,
+      endAt: u.endAt,
+      reason: u.reason,
+      details: {
+        kind: "unavailability" as const,
+        startAt: u.startAt,
+        endAt: u.endAt,
+        note: u.note,
+        recordedBy: u.recordedBy.name,
+      },
+    })),
+  ].sort((a, b) => a.startAt.getTime() - b.startAt.getTime());
+}
+
+/** The Monday of the week containing `day` ("YYYY-MM-DD"). */
+export function startOfWeek(day: string): string {
+  const [y, m, d] = day.split("-").map(Number);
+  const sinceMonday = (new Date(Date.UTC(y, m - 1, d)).getUTCDay() + 6) % 7;
+  return addDays(day, -sinceMonday);
 }
 
 /**

@@ -17,18 +17,24 @@ const AUDITORIUM = "ven_auditorium";
 const DAY = "2036-01-10";
 const APPROVED_EVENT = "Approved — Research Symposium";
 
-const calendarFor = (venue: string, from: string, to = from) =>
-  `/venues/availability?venue=${venue}&from=${from}&to=${to}`;
+/** The calendar for the week containing `day`. */
+const calendarFor = (venue: string, day: string) =>
+  `/venues/availability?venue=${venue}&week=${day}`;
 
-/** The text stretches listed under one day, in order: [kind, text]. */
+/** One day on the week grid (the phone list is in the page too, hidden). */
+const weekDay = (page: Page, day: string) =>
+  page.locator(`[data-view="week"] li[data-day="${day}"]`);
+
+/** The stretches one day is split into, in order, as spoken: [kind, words]. */
 async function stretches(page: Page, day: string) {
-  const items = page.locator(`li[data-day="${day}"] ul > li`);
-  return items.evaluateAll((lis) =>
-    lis.map((li) => [
-      li.getAttribute("data-kind"),
-      (li.textContent ?? "").replace(/\s+/g, " ").trim(),
-    ]),
-  );
+  return weekDay(page, day)
+    .locator("li[data-kind]")
+    .evaluateAll((lis) =>
+      lis.map((li) => [
+        li.getAttribute("data-kind"),
+        li.querySelector("[data-summary]")?.textContent?.trim() ?? "",
+      ]),
+    );
 }
 
 async function recordMaintenance(page: Page, start: string, end: string) {
@@ -133,6 +139,9 @@ test.describe("SCRUM-36 / SCRUM-37 — venue availability calendar and recorded 
       ["unavailability", "Unavailable (maintenance) 1:00 pm to 5:00 pm"],
       ["free", "Available 5:00 pm to midnight"],
     ]);
+
+    // Tall enough to show the whole working day in the screenshots.
+    await coordinator.setViewportSize({ width: 1280, height: 1100 });
     const shot = await coordinator.screenshot({ fullPage: false });
     await testInfo.attach("SCRUM-36 booking and maintenance side by side", {
       body: shot,
@@ -143,6 +152,39 @@ test.describe("SCRUM-36 / SCRUM-37 — venue availability calendar and recorded 
         path: `${process.env.EVIDENCE_DIR}/SCRUM-36-booking-and-maintenance.png`,
       });
     }
+
+    // SCRUM-36 — hovering a booking or unavailability shows its details.
+    const booking = weekDay(coordinator, DAY).locator(
+      'li[data-kind="booking"]',
+    );
+    await booking.hover();
+    const bookingDetails = booking.getByRole("tooltip");
+    await expect(bookingDetails).toBeVisible();
+    await expect(bookingDetails).toContainText(APPROVED_EVENT);
+    await expect(bookingDetails).toContainText("Requested by Cody Coordinator");
+    await expect(bookingDetails).toContainText("100 expected");
+    // A screen reader hears the same details as the block's description.
+    await expect(
+      booking.getByRole("button", { name: "Booked 9:00 am to 1:00 pm" }),
+    ).toHaveAccessibleDescription(/Requested by Cody Coordinator/);
+    await testInfo.attach("SCRUM-36 details shown on hover", {
+      body: await coordinator.screenshot({ fullPage: false }),
+      contentType: "image/png",
+    });
+    if (process.env.EVIDENCE_DIR) {
+      await coordinator.screenshot({
+        path: `${process.env.EVIDENCE_DIR}/SCRUM-36-hover-details.png`,
+      });
+    }
+
+    const maintenance = weekDay(coordinator, DAY).locator(
+      'li[data-kind="unavailability"]',
+    );
+    await maintenance.hover();
+    await expect(maintenance.getByRole("tooltip")).toContainText(
+      "Recorded by Vera Venue",
+    );
+    await expect(bookingDetails).toBeHidden();
 
     // SCRUM-37 AC4 — maintenance over the approved booking is not saved; the
     // clash is shown instead.
@@ -162,35 +204,48 @@ test.describe("SCRUM-36 / SCRUM-37 — venue availability calendar and recorded 
     }
   });
 
-  test("SCRUM-36 AC6 — a venue with nothing in the range reads as available throughout, not blank", async ({
+  test("SCRUM-36 AC6 — a venue with nothing in the week reads as available throughout, not blank", async ({
     browser,
   }) => {
     const coordinator = await signedIn(browser, "coordinator@test.local");
-    await coordinator.goto(
-      calendarFor("ven_boardroom", "2036-06-01", "2036-06-07"),
-    );
+    await coordinator.goto(calendarFor("ven_boardroom", "2036-06-04"));
 
     await expect(coordinator.getByTestId("range-free")).toContainText(
-      "Executive Boardroom is available for the whole range",
+      "Executive Boardroom is available for the whole week",
     );
-    await expect(coordinator.locator("li[data-day]")).toHaveCount(7);
-    for (const day of ["2036-06-01", "2036-06-07"]) {
+    await expect(
+      coordinator.locator('[data-view="week"] li[data-day]'),
+    ).toHaveCount(7);
+    for (const day of ["2036-06-02", "2036-06-08"]) {
       expect(await stretches(coordinator, day)).toEqual([
         ["free", "Available all day"],
       ]);
     }
   });
 
-  test("SCRUM-36 AC7 — the calendar can be narrowed to a date range", async ({
+  test("SCRUM-36 AC7 — the calendar shows a week, Monday to Sunday, and moves between weeks", async ({
     browser,
   }) => {
     const coordinator = await signedIn(browser, "coordinator@test.local");
-    await coordinator.goto(calendarFor("ven_hall", "2036-02-01", "2036-02-03"));
+    // Fri 1 Feb 2036 is in the week of Mon 28 Jan.
+    await coordinator.goto(calendarFor("ven_hall", "2036-02-01"));
+    await coordinator.locator('[data-hydrated="true"]').waitFor();
+    const heading = coordinator.getByRole("heading", {
+      name: /Exhibition Hall/,
+    });
 
-    await expect(coordinator.locator("li[data-day]")).toHaveCount(3);
+    await expect(heading).toContainText("28 Jan 2036 to 3 Feb 2036");
     await expect(
-      coordinator.getByRole("heading", { name: /Exhibition Hall/ }),
-    ).toContainText("1 Feb 2036 to 3 Feb 2036");
+      coordinator.locator('[data-view="week"] li[data-day]'),
+    ).toHaveCount(7);
+
+    await coordinator.getByRole("button", { name: "Next week" }).click();
+    await expect(heading).toContainText("4 Feb 2036 to 10 Feb 2036");
+
+    await coordinator.getByRole("button", { name: "Previous week" }).click();
+    await expect(heading).toContainText("28 Jan 2036 to 3 Feb 2036");
+    await coordinator.getByRole("button", { name: "Previous week" }).click();
+    await expect(heading).toContainText("21 Jan 2036 to 27 Jan 2036");
   });
 
   test("SCRUM-36 — a screen reader hears the venue and date for each day", async ({
@@ -220,14 +275,18 @@ test.describe("SCRUM-36 / SCRUM-37 — venue availability calendar and recorded 
     await phone.getByLabel("Password", { exact: true }).fill("Password123!");
     await phone.getByRole("button", { name: "Sign in" }).click();
     await phone.waitForURL((url) => !url.pathname.startsWith("/login"));
-    await phone.goto(calendarFor("ven_seminar", "2026-10-07", "2026-10-10"));
+    await phone.goto(calendarFor("ven_seminar", "2026-10-07"));
 
     // Nothing is wider than the screen.
     const overflow = await phone.evaluate(
       () => document.documentElement.scrollWidth - window.innerWidth,
     );
     expect(overflow).toBeLessThanOrEqual(0);
-    await expect(phone.locator("li[data-day]").first()).toBeVisible();
+    // At phone width the week is a list of days, not seven columns.
+    await expect(
+      phone.locator('[data-view="list"] li[data-day]').first(),
+    ).toBeVisible();
+    await expect(phone.locator('[data-view="week"]')).toBeHidden();
 
     await testInfo.attach("SCRUM-36 calendar at phone width", {
       body: await phone.screenshot({ fullPage: false }),

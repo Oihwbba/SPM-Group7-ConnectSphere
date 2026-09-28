@@ -2,9 +2,10 @@
 
 import { useEffect, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
-import { User } from "lucide-react";
+import { ChevronLeft, ChevronRight, User } from "lucide-react";
 
 import { DatePicker } from "@/components/app/date-picker";
+import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -13,6 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { addDays } from "@/lib/venue-availability";
 
 /** How often an open calendar re-reads the server (SCRUM-37 AC1). */
 const REFRESH_MS = 15_000;
@@ -20,20 +22,21 @@ const REFRESH_MS = 15_000;
 const emptySubscribe = () => () => {};
 
 /**
- * SCRUM-36 — which venue and which dates the calendar shows. Each choice is
+ * SCRUM-36 — which venue and which week the calendar shows. Each choice is
  * written to the address, so the server draws the calendar and the view can
  * be shared as a link.
  */
-export function RangeControls({
+export function WeekControls({
   venues,
   venueId,
-  from,
-  to,
+  week,
+  today,
 }: {
   venues: { id: string; name: string; capacity: number }[];
   venueId: string;
-  from: string;
-  to: string;
+  /** The Monday of the week shown, "YYYY-MM-DD". */
+  week: string;
+  today: string;
 }) {
   const router = useRouter();
   const isHydrated = useSyncExternalStore(
@@ -51,15 +54,15 @@ export function RangeControls({
     return () => clearInterval(interval);
   }, [router]);
 
-  function show(change: Partial<{ venue: string; from: string; to: string }>) {
-    const params = new URLSearchParams({ venue: venueId, from, to, ...change });
+  function show(change: Partial<{ venue: string; week: string }>) {
+    const params = new URLSearchParams({ venue: venueId, week, ...change });
     router.push(`/venues/availability?${params}`);
   }
 
   return (
     <div
       data-hydrated={isHydrated}
-      className="grid gap-4 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)]"
+      className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end"
     >
       <div className="space-y-2">
         <Label htmlFor="venue">Venue</Label>
@@ -86,25 +89,39 @@ export function RangeControls({
           </SelectContent>
         </Select>
       </div>
-      <div className="space-y-2">
-        <Label htmlFor="rangeFrom">From</Label>
-        <DatePicker
-          id="rangeFrom"
-          label="From"
-          value={from}
-          onChange={(day) => show({ from: day })}
-          className="w-full"
-        />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="rangeTo">To</Label>
-        <DatePicker
-          id="rangeTo"
-          label="To"
-          value={to}
-          onChange={(day) => show({ to: day })}
-          className="w-full"
-        />
+
+      <div className="flex flex-wrap items-end gap-2">
+        <Button
+          variant="outline"
+          aria-label="Previous week"
+          onClick={() => show({ week: addDays(week, -7) })}
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
+        <Button variant="outline" onClick={() => show({ week: today })}>
+          This week
+        </Button>
+        <Button
+          variant="outline"
+          aria-label="Next week"
+          onClick={() => show({ week: addDays(week, 7) })}
+        >
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+        <div className="space-y-2">
+          <Label htmlFor="goToDate" className="sr-only">
+            Go to date
+          </Label>
+          <DatePicker
+            id="goToDate"
+            label="Go to"
+            value=""
+            openOn={week}
+            placeholder="Go to date"
+            onChange={(day) => show({ week: day })}
+            className="w-44"
+          />
+        </div>
       </div>
     </div>
   );
