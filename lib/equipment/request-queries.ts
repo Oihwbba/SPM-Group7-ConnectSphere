@@ -1,8 +1,16 @@
+import type { Prisma } from "@prisma/client";
+
 import { prisma } from "@/lib/db";
-import { REQUESTABLE_EVENT_STATUSES } from "@/lib/equipment/requests";
+import { summariseAvailability } from "@/lib/equipment/availability";
+import {
+  OPEN_REQUEST_STATUSES,
+  REQUESTABLE_EVENT_STATUSES,
+  reviewLine,
+  type PoolAvailability,
+} from "@/lib/equipment/requests";
 
 /**
- * The reads behind the Equipment Requests page (SCRUM-27). They take the
+ * The reads behind the Equipment Requests page (SCRUM-27/28). They take the
  * signed-in user's id from the page, never from the client, which is why they
  * live here and not in a "use server" file: every export of one of those is a
  * public endpoint, and these must not be callable with someone else's id.
@@ -18,7 +26,27 @@ function coordinatorEventScope(coordinatorId: string) {
   };
 }
 
-/** AC 1 — the events a coordinator can link a request to, with their dates. */
+// Lines are inserted together and can share a timestamp; the id (a cuid,
+// which grows with each insert) keeps them, and history entries, in order.
+const IN_ENTRY_ORDER: Prisma.EquipmentRequestLineOrderByWithRelationInput[] = [
+  { createdAt: "asc" },
+  { id: "asc" },
+];
+
+/** SCRUM-28 AC 5 — the chronological history log of a request. */
+const HISTORY = {
+  select: {
+    id: true,
+    createdAt: true,
+    fromStatus: true,
+    toStatus: true,
+    note: true,
+    actor: { select: { name: true } },
+  },
+  orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+} satisfies Prisma.EquipmentRequest$updatesArgs;
+
+/** SCRUM-27 AC 1 — the events a coordinator can link a request to, with their dates. */
 export async function getRequestableEvents(coordinatorId: string) {
   return prisma.event.findMany({
     where: {
@@ -32,7 +60,7 @@ export async function getRequestableEvents(coordinatorId: string) {
   });
 }
 
-/** AC 2 — the predefined system list of equipment types. */
+/** SCRUM-27 AC 2 — the predefined system list of equipment types. */
 export async function getEquipmentCatalogue() {
   return prisma.equipment.findMany({
     where: { isActive: true },
@@ -41,7 +69,10 @@ export async function getEquipmentCatalogue() {
   });
 }
 
-/** The requests raised for this coordinator's events, newest first. */
+/**
+ * The requests raised for this coordinator's events, newest first, with what
+ * Technical Support suggested and every update made (SCRUM-28 AC 3 and 5).
+ */
 export async function getCoordinatorEquipmentRequests(coordinatorId: string) {
   return prisma.equipmentRequest.findMany({
     where: { event: coordinatorEventScope(coordinatorId) },
@@ -57,11 +88,11 @@ export async function getCoordinatorEquipmentRequests(coordinatorId: string) {
           quantity: true,
           technicalRequirements: true,
           equipment: { select: { id: true, type: true } },
+          suggestedAlternative: { select: { id: true, type: true } },
         },
-        // Lines are inserted together and can share a timestamp; the id
-        // (a cuid, which grows with each insert) keeps them in entry order.
-        orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+        orderBy: IN_ENTRY_ORDER,
       },
+      updates: HISTORY,
     },
     orderBy: { createdAt: "desc" },
   });
@@ -69,4 +100,132 @@ export async function getCoordinatorEquipmentRequests(coordinatorId: string) {
 
 export type CoordinatorEquipmentRequest = Awaited<
   ReturnType<typeof getCoordinatorEquipmentRequests>
+>[number];
+
+/**
+ * SCRUM-28 AC 3 — what each active equipment type has free for a period.
+ * Rows, not sums: the pool is counted, so each type's answer is its busiest
+ * instant, the same rule SCRUM-29's availability check uses.
+ */
+export async function getPoolAvailability(
+  startAt: Date,
+  endAt: Date,
+): Promise<PoolAvailability> {
+  const equipment = await prisma.equipment.findMany({
+    where: { isActive: true },
+    select: { id: true, totalQuantity: true },
+  });
+  const equipmentIds = equipment.map((item) => item.id);
+  const overlapping = { startAt: { lt: endAt }, endAt: { gt: startAt } };
+  const select = {
+    equipmentId: true,
+    startAt: true,
+    endAt: true,
+    quantity: true,
+  } as const;
+  const [reservations, unavailability] = await Promise.all([
+    prisma.reservation.findMany({
+      where: {
+        equipmentId: { in: equipmentIds },
+        status: "CONFIRMED",
+        ...overlapping,
+      },
+      select,
+    }),
+    prisma.equipmentUnavailability.findMany({
+      where: { equipmentId: { in: equipmentIds }, ...overlapping },
+      select,
+    }),
+  ]);
+
+  const pool: PoolAvailability = {};
+  for (const item of equipment) {
+    const { available, total } = summariseAvailability({
+      total: item.totalQuantity,
+      reservations: reservations.filter((row) => row.equipmentId === item.id),
+      unavailability: unavailability.filter(
+        (row) => row.equipmentId === item.id,
+      ),
+      startAt,
+      endAt,
+    });
+    pool[item.id] = { available, total };
+  }
+  return pool;
+}
+
+/**
+ * SCRUM-28 — every request for Technical Support, oldest first: its event,
+ * who asked, each line's equipment details and technical requirements (AC 1),
+ * and the history (AC 5). Each line of an open request also says what is free
+ * for the event and, when short, what could be suggested instead (AC 3).
+ */
+export async function getEquipmentRequestQueue() {
+  const [requests, catalogue] = await Promise.all([
+    prisma.equipmentRequest.findMany({
+      select: {
+        id: true,
+        status: true,
+        notes: true,
+        createdAt: true,
+        decidedAt: true,
+        event: { select: { id: true, name: true, startAt: true, endAt: true } },
+        requestedBy: { select: { name: true } },
+        lines: {
+          select: {
+            id: true,
+            quantity: true,
+            technicalRequirements: true,
+            equipment: {
+              select: {
+                id: true,
+                type: true,
+                technicalSpecs: true,
+                description: true,
+              },
+            },
+            suggestedAlternative: { select: { id: true, type: true } },
+          },
+          orderBy: IN_ENTRY_ORDER,
+        },
+        updates: HISTORY,
+      },
+      orderBy: { createdAt: "asc" },
+    }),
+    prisma.equipment.findMany({
+      where: { isActive: true },
+      select: { id: true, type: true },
+      orderBy: { type: "asc" },
+    }),
+  ]);
+
+  return Promise.all(
+    requests.map(async (request) => {
+      const { startAt, endAt } = request.event;
+      const open = (OPEN_REQUEST_STATUSES as readonly string[]).includes(
+        request.status,
+      );
+      const pool =
+        open && startAt && endAt
+          ? await getPoolAvailability(startAt, endAt)
+          : null;
+      return {
+        ...request,
+        lines: request.lines.map((line) => ({
+          ...line,
+          review: pool
+            ? reviewLine(
+                { equipmentId: line.equipment.id, quantity: line.quantity },
+                pool,
+                catalogue,
+              )
+            : null,
+        })),
+      };
+    }),
+  );
+}
+
+export type QueuedEquipmentRequest = Awaited<
+  ReturnType<typeof getEquipmentRequestQueue>
 >[number];

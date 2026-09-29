@@ -125,6 +125,7 @@ test.describe("SCRUM-66 — each role's navigation shows only its own links", ()
     "/venues",
     "/bookings",
     "/bookings/new",
+    "/venues/availability",
     "/equipment",
     "/registrations",
     "/notifications",
@@ -139,12 +140,18 @@ test.describe("SCRUM-66 — each role's navigation shows only its own links", ()
     {
       email: "coordinator@test.local",
       role: "Coordinator",
-      present: ["/events", "/venues", "/bookings/new", "/notifications"],
+      present: [
+        "/events",
+        "/venues",
+        "/bookings/new",
+        "/venues/availability",
+        "/notifications",
+      ],
     },
     {
       email: "venuestaff@test.local",
       role: "Venue Staff",
-      present: ["/bookings", "/notifications"],
+      present: ["/bookings", "/venues/availability", "/notifications"],
     },
     {
       email: "techsupport@test.local",

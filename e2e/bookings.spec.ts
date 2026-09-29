@@ -1,5 +1,7 @@
-import { test, expect, type Browser, type Page } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 import { prisma } from "@/lib/db";
+
+import { choose, setTime, signedIn, usesLocalDatabase } from "./helpers";
 
 /**
  * SCRUM-50 / 52 / 53 — the venue booking journey in a real browser: a
@@ -14,67 +16,9 @@ const HALL = "ven_hall";
 const APPROVED_EVENT = "Approved — Research Symposium";
 const PLANNING_EVENT = "Planning — Freshman Orientation";
 
-const usesLocalDatabase = /@(localhost|127\.0\.0\.1)[:/]/.test(
-  process.env.DATABASE_URL ?? "",
-);
-
-async function signedIn(browser: Browser, email: string): Promise<Page> {
-  const page = await (await browser.newContext()).newPage();
-  await page.goto("/login");
-  await page.getByLabel("Email", { exact: true }).fill(email);
-  await page.getByLabel("Password", { exact: true }).fill("Password123!");
-  await page.getByRole("button", { name: "Sign in" }).click();
-  await page.waitForURL((url) => !url.pathname.startsWith("/login"));
-  return page;
-}
-
 async function openRequestForm(page: Page) {
   await page.goto("/bookings/new");
   await page.locator('[data-hydrated="true"]').waitFor();
-}
-
-/** A half-hour option's on-screen label, e.g. "13:30" -> "1:30 pm". */
-function timeOption(hhmm: string): RegExp {
-  const [h, m] = hhmm.split(":").map(Number);
-  const hour12 = h % 12 === 0 ? 12 : h % 12;
-  const minutes = String(m).padStart(2, "0");
-  return new RegExp(`^${hour12}:${minutes}\\s${h < 12 ? "am" : "pm"}$`);
-}
-
-async function choose(page: Page, label: string, option: string | RegExp) {
-  await page.getByLabel(label, { exact: true }).click();
-  await page.getByRole("option", { name: option }).click();
-}
-
-/** Set one end of the period. Times are Singapore wall time, "YYYY-MM-DDTHH:mm". */
-async function setTime(page: Page, which: "Start" | "End", wallTime: string) {
-  const [date, time] = wallTime.split("T");
-  await pickDate(page, which, date);
-  await choose(page, `${which} time`, timeOption(time));
-}
-
-/** Open the in-app calendar, page to the target month, and pick the day. */
-async function pickDate(page: Page, which: "Start" | "End", day: string) {
-  await page.getByLabel(`${which} date`).click();
-  const heading = page.locator("[data-month]");
-  const [targetYear, targetMonth] = day.split("-").map(Number);
-  for (;;) {
-    const [y, m] = (await heading.getAttribute("data-month"))!
-      .split("-")
-      .map(Number);
-    const months = targetYear * 12 + targetMonth - (y * 12 + m);
-    if (months === 0) break;
-    const step =
-      Math.abs(months) >= 12
-        ? months > 0
-          ? "Next year"
-          : "Previous year"
-        : months > 0
-          ? "Next month"
-          : "Previous month";
-    await page.getByRole("menuitem", { name: step }).click();
-  }
-  await page.locator(`[data-date="${day}"]`).click();
 }
 
 /** Fill and submit the form. */
@@ -109,6 +53,10 @@ async function expectSubmitted(page: Page) {
 }
 
 test.describe("SCRUM-50 / 52 / 53 — venue booking request, review and decision", () => {
+  // Picking 2035 dates pages the calendar about nine years forward, and two
+  // users sign in; these journeys need more than the default 30 seconds.
+  test.describe.configure({ timeout: 90_000 });
+
   test.beforeEach(async () => {
     if (!usesLocalDatabase) return;
     const rows = await prisma.booking.findMany({
@@ -129,8 +77,6 @@ test.describe("SCRUM-50 / 52 / 53 — venue booking request, review and decision
   test("SCRUM-50 AC2, SCRUM-52 AC1-3, SCRUM-53 AC1 & AC3 — a coordinator requests, staff approve, and the venue becomes unavailable", async ({
     browser,
   }, testInfo) => {
-    // The longest journey: two users, four requests, a decision.
-    test.setTimeout(90_000);
     const tag = `e2e-journey-${testInfo.retry}`;
 
     // SCRUM-50 AC2 — a free period is submitted and shown as pending.

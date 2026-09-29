@@ -58,6 +58,9 @@ export function DatePicker({
   value,
   onChange,
   openOn,
+  placeholder = "Select date",
+  display,
+  allowPast = false,
   className,
 }: {
   id: string;
@@ -67,6 +70,12 @@ export function DatePicker({
   onChange: (day: string) => void;
   /** The day to open on when none is chosen yet; today if not given. */
   openOn?: string;
+  /** What the field says before a day is chosen. */
+  placeholder?: string;
+  /** Text to show on the field instead of the chosen day. */
+  display?: string;
+  /** Let days before today be picked, for looking back rather than booking. */
+  allowPast?: boolean;
   className?: string;
 }) {
   const [view, setView] = useState({ year: 0, month: 0 });
@@ -116,10 +125,12 @@ export function DatePicker({
           <span
             className={cn(
               "truncate",
-              value ? "font-medium text-foreground" : "text-muted-foreground",
+              value || display
+                ? "font-medium text-foreground"
+                : "text-muted-foreground",
             )}
           >
-            {value ? formatDate(noon(value)) : "Select date"}
+            {display ?? (value ? formatDate(noon(value)) : placeholder)}
           </span>
         </button>
       </DropdownMenuTrigger>
@@ -153,7 +164,7 @@ export function DatePicker({
                 key={day}
                 data-date={day}
                 aria-label={formatDate(noon(day))}
-                disabled={day < today}
+                disabled={!allowPast && day < today}
                 onSelect={() => onChange(day)}
                 className={cn(
                   "h-8 justify-center rounded-md p-0 text-sm",
