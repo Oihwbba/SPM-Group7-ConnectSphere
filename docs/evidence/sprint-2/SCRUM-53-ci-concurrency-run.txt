@@ -1,0 +1,25 @@
+CI run: https://github.com/Oihwbba/SPM-Group7-ConnectSphere/actions/runs/36318558404
+Job: build-and-test — conclusion: success
+Commit: e15f44623674801c6dc6b33e90a07b2a6f587a6d (branch SCRUM-50-52-53-venue-booking-flow)
+Database: PostgreSQL 16 service container (real database, not a mock)
+
+Excerpt of the job log (ANSI colours stripped):
+
+2026-09-27T12:20:01.7393220Z stdout | tests/integration/concurrency.test.ts > concurrency — venue double-booking (SCRUM-53) > SCRUM-53 AC4 — two staff approve overlapping requests at the same moment: one succeeds, one is returned as conflicting
+2026-09-27T12:20:02.0824055Z stdout | tests/integration/concurrency.test.ts > concurrency — venue double-booking (SCRUM-53) > SCRUM-53 AC4 — the database alone refuses the second of two simultaneous overlapping approvals, however the rows are written
+2026-09-27T12:20:02.0827376Z Raw query failed. Code: `23P01`. Message: `conflicting key value violates exclusion constraint "booking_no_double_booking"`
+2026-09-27T12:20:02.3741354Z  ✓ tests/integration/concurrency.test.ts (13 tests | 1 todo) 927ms
+2026-09-27T12:20:02.3743245Z      ✓ SCRUM-53 AC4 — the database alone refuses the second of two simultaneous overlapping approvals, however the rows are written  318ms
+2026-09-27T12:20:03.0405074Z stdout | tests/integration/bookings.test.ts > venue booking flow — real database > SCRUM-50 — submit a venue booking request > SCRUM-50 AC6 — two identical requests submitted at the same instant still leave one
+2026-09-27T12:20:03.2292739Z stdout | tests/integration/bookings.test.ts > venue booking flow — real database > SCRUM-53 — approve or reject a booking request > SCRUM-53 AC2 — the database itself refuses a rejection without a reason
+2026-09-27T12:20:03.4458677Z  ✓ tests/integration/bookings.test.ts (25 tests) 796ms
+2026-09-27T12:20:03.6754276Z  ✓ tests/unit/bookings.test.ts (25 tests) 21ms
+2026-09-27T12:20:08.9040987Z  Test Files  27 passed | 1 skipped (28)
+2026-09-27T12:20:08.9042415Z       Tests  434 passed | 5 todo (439)
+2026-09-27T12:21:11.6711754Z   ✓  19 [chromium] › e2e/bookings.spec.ts:72:7 › SCRUM-50 / 52 / 53 — venue booking request, review and decision › SCRUM-50 AC2, SCRUM-52 AC1-3, SCRUM-53 AC1 & AC3 — a coordinator requests, staff approve, and the venue becomes unavailable (3.5s)
+2026-09-27T12:21:12.8574682Z   ✓  20 [chromium] › e2e/bookings.spec.ts:154:7 › SCRUM-50 / 52 / 53 — venue booking request, review and decision › SCRUM-50 AC5 — an end before the start is reported as an invalid period (1.2s)
+2026-09-27T12:21:16.7811869Z   ✓  21 [chromium] › e2e/bookings.spec.ts:170:7 › SCRUM-50 / 52 / 53 — venue booking request, review and decision › SCRUM-53 AC2 — rejecting needs a written reason, and the reason is saved (3.9s)
+2026-09-27T12:21:17.6481456Z   ✓  22 [chromium] › e2e/bookings.spec.ts:215:7 › SCRUM-50 / 52 / 53 — venue booking request, review and decision › SCRUM-52 — a coordinator typing the queue's address is refused by the server (848ms)
+2026-09-27T12:21:18.5863430Z   ✓  23 [chromium] › e2e/bookings.spec.ts:225:7 › SCRUM-50 / 52 / 53 — venue booking request, review and decision › SCRUM-50 — venue staff typing the request form's address are refused by the server (916ms)
+2026-09-27T12:23:06.2473435Z   69 passed (2.5m)
+

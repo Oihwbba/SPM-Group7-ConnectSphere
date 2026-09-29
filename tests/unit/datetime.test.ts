@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import {
   formatDate,
+  formatMonth,
   formatDateTime,
   formatDateTimeInTimezone,
   formatTime,
@@ -261,3 +262,9 @@ describe("lib/datetime helpers — SCRUM-31", () => {
   });
 });
 
+describe("formatMonth — SCRUM-50 calendar heading", () => {
+  it("names the month in Singapore time, even when the UTC instant is still the previous month", () => {
+    // 20:00 UTC on 31 Jan is 04:00 on 1 Feb in Singapore.
+    expect(formatMonth("2035-01-31T20:00:00.000Z")).toBe("February 2035");
+  });
+});

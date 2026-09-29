@@ -1,22 +1,36 @@
 import { requireSession } from "@/lib/auth/guard";
 import { can } from "@/lib/auth/can";
 import { Forbidden } from "@/components/app/forbidden";
-import { PagePlaceholder } from "@/components/app/page-placeholder";
+import { getPendingBookingQueue } from "./queries";
+import { BookingQueue } from "./booking-queue";
 
-// Access is decided by lib/auth/can.ts (the single gate), not a role list here
-// (SCRUM-66 / SCRUM-67).
+// SCRUM-52 — Venue Staff's queue of pending booking requests. Access is
+// decided by lib/auth/can.ts (the single gate), not a role list here, so a
+// Coordinator typing /bookings gets the server-rendered refusal (SCRUM-67).
 export default async function BookingsPage() {
   const session = await requireSession();
   if (!can(session.user, "booking:review")) {
     return <Forbidden />;
   }
 
+  const queue = await getPendingBookingQueue();
+
   return (
-    <PagePlaceholder
-      title="Venue Bookings"
-      description="Review pending booking requests and approve or reject them."
-      scrumId="SCRUM-22"
-      owner="Jun Bin"
-    />
+    <div className="space-y-6">
+      <div className="space-y-1">
+        <h1 className="text-2xl font-semibold tracking-tight">
+          Pending booking requests
+        </h1>
+        <p className="text-sm text-muted-foreground">
+          Soonest first. Each request is shown beside the venue it asks for, so
+          you can check capacity, facilities, layout and availability before you
+          decide. Times are Singapore time.
+        </p>
+      </div>
+      <BookingQueue
+        queue={queue}
+        canDecide={can(session.user, "booking:decide")}
+      />
+    </div>
   );
 }

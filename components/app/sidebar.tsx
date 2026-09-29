@@ -9,6 +9,7 @@ import {
   Bell,
   Building2,
   CalendarCheck,
+  CalendarPlus,
   CalendarDays,
   ClipboardList,
   LayoutGrid,
@@ -27,6 +28,7 @@ const ICON_BY_HREF: Record<string, LucideIcon> = {
   "/events": CalendarDays,
   "/venues": Building2,
   "/bookings": CalendarCheck,
+  "/bookings/new": CalendarPlus,
   "/equipment": Wrench,
   "/equipment-requests": ClipboardList,
   "/registrations": Ticket,
@@ -110,7 +112,9 @@ export function Sidebar({ role }: { role: Role }) {
         className={cn(
           "flex items-center justify-around gap-1 px-2 py-1.5",
           "md:w-full md:flex-col md:justify-start md:gap-2 md:rounded-[1.9rem] md:border md:border-border/60 md:bg-card/50 md:px-2 md:py-2 md:shadow-glass md:backdrop-blur-glass md:backdrop-saturate-150",
-          collapsed && "md:items-center",
+          // Expanded, every item spans the rail so icons and labels line up on
+          // the left; collapsed, the lone icons sit centred.
+          collapsed ? "md:items-center" : "md:items-stretch",
         )}
       >
         {items.map((item) => {
@@ -129,7 +133,7 @@ export function Sidebar({ role }: { role: Role }) {
                 // Mobile: each item takes an equal share of the bar (½ for two
                 // items), so the active highlight can fill that whole segment.
                 "flex-1 md:flex-none",
-                collapsed ? "md:justify-center" : "md:pr-4",
+                collapsed ? "md:justify-center" : "md:justify-start md:pr-4",
               )}
             >
               <span

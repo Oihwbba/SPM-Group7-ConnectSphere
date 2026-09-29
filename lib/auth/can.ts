@@ -33,7 +33,9 @@ export type Action =
   | "clarification:request" // SCRUM-18: coordinator asks the organiser a question
   | "clarification:respond" // SCRUM-18: organiser answers an open question
   | "venue:read"
-  | "booking:review"
+  | "booking:request" // SCRUM-50: coordinator asks for a venue for their event
+  | "booking:review" // SCRUM-52: read the pending-request queue
+  | "booking:decide" // SCRUM-53: approve or reject a pending request
   | "equipment:read"
   | "equipment:reserve"
   | "equipment-request:list" // SCRUM-27: see the equipment requests scoped to me
@@ -82,13 +84,14 @@ const ROLE_ACTIONS: Record<Role, Action[]> = {
     "venue:read",
     "equipment-request:list",
     "equipment-request:create",
+    "booking:request",
     "notification:read",
   ],
   // `venue:read` gates the Venue Catalogue page, which is Coordinator-only, so
   // it is deliberately NOT granted here — Venue Staff act on bookings, not the
   // catalogue. Grant it here the day Venue Staff need the catalogue; that is the
   // one-line change SCRUM-66 is about, with no page edits.
-  VENUE_STAFF: ["booking:review", "notification:read"],
+  VENUE_STAFF: ["booking:review", "booking:decide", "notification:read"],
   TECH_SUPPORT: ["equipment:read", "equipment:reserve", "notification:read"],
   ATTENDEE: [
     "event:browse",
