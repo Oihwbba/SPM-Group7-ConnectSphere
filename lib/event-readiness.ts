@@ -8,6 +8,7 @@ import type { Prisma, PrismaClient } from "@prisma/client";
  *
  * Every gap is reported, not just the first, so the Coordinator sees all
  * outstanding arrangements at once. Test cases: docs/testing/SCRUM-110.md.
+ * Why each rule is the way it is: docs/adr/0011-event-confirmation-readiness-rule.md.
  */
 export type ReadinessGap =
   | "EVENT_NOT_FOUND"

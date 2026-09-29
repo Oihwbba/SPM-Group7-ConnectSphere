@@ -2,7 +2,8 @@
 
 Story and acceptance criteria: [docs/backlog/SCRUM-110.md](../backlog/SCRUM-110.md).
 Format and conventions: [README.md](README.md). The rule itself is
-[lib/event-readiness.ts](../../lib/event-readiness.ts).
+[lib/event-readiness.ts](../../lib/event-readiness.ts); the decisions behind it
+are [ADR 0011](../adr/0011-event-confirmation-readiness-rule.md).
 
 SCRUM-110 is a business rule with no screen of its own: SCRUM-81 calls it
 before moving an event from Planning to Confirmed and shows its answer to the
