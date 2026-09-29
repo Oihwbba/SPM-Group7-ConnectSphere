@@ -1,0 +1,34 @@
+CI run: https://github.com/Oihwbba/SPM-Group7-ConnectSphere/actions/runs/36524269432
+Job: build-and-test — conclusion: success
+Commit: 85c43228e60a7fa416ab0ab6c5c660dd5e284a80 (branch SCRUM-36-37-venue-availability-calendar, PR #98)
+Database: PostgreSQL 16 service container (real database, not a mock)
+
+Excerpt of the job log (ANSI colours stripped; every line verbatim):
+
+2026-09-29T05:03:17.9120162Z stdout | tests/integration/concurrency.test.ts > concurrency — venue double-booking (SCRUM-53) > SCRUM-53 AC4 — two staff approve overlapping requests at the same moment: one succeeds, one is returned as conflicting
+2026-09-29T05:03:18.2469155Z stdout | tests/integration/concurrency.test.ts > concurrency — venue double-booking (SCRUM-53) > SCRUM-53 AC4 — the database alone refuses the second of two simultaneous overlapping approvals, however the rows are written
+2026-09-29T05:03:18.3484598Z stdout | tests/integration/concurrency.test.ts > concurrency — approval vs recorded maintenance (SCRUM-37) > SCRUM-37 AC4 — an approval and a maintenance record for overlapping periods at the same moment: exactly one is saved
+2026-09-29T05:03:18.3490969Z prisma:error conflicting key value violates exclusion constraint "unavailability_overlaps_booking"
+2026-09-29T05:03:18.6348747Z  ✓ tests/integration/concurrency.test.ts (14 tests | 1 todo) 1084ms
+2026-09-29T05:03:22.9768474Z stdout | tests/integration/unavailability.test.ts > recorded venue unavailability — real database (SCRUM-37) > the database's own guarantee (ADR 0010) > SCRUM-37 AC4 — the database alone refuses maintenance written over an approved booking
+2026-09-29T05:03:22.9774685Z Raw query failed. Code: `23P01`. Message: `conflicting key value violates exclusion constraint "unavailability_overlaps_booking"`
+2026-09-29T05:03:23.0185058Z stdout | tests/integration/unavailability.test.ts > recorded venue unavailability — real database (SCRUM-37) > the database's own guarantee (ADR 0010) > SCRUM-37 AC3 — the database alone refuses approving a booking over recorded maintenance
+2026-09-29T05:03:23.0220086Z Raw query failed. Code: `23P01`. Message: `conflicting key value violates exclusion constraint "booking_overlaps_unavailability"`
+2026-09-29T05:03:23.0982020Z  ✓ tests/integration/unavailability.test.ts (12 tests) 574ms
+2026-09-29T05:03:25.3041467Z  ✓ tests/unit/unavailability.test.ts (10 tests) 19ms
+2026-09-29T05:03:31.0936384Z  Test Files  34 passed | 1 skipped (35)
+2026-09-29T05:03:31.0938240Z       Tests  512 passed | 5 todo (517)
+2026-09-29T05:05:14.8743986Z   ✓  19 [chromium] › e2e/availability.spec.ts:89:7 › SCRUM-36 / SCRUM-37 — venue availability calendar and recorded unavailability › SCRUM-37 AC2-5, SCRUM-36 AC3-5 — maintenance is recorded, seen, refused over, sat flush against a booking, and never overwrites one (30.5s)
+2026-09-29T05:05:16.2596953Z   ✓  20 [chromium] › e2e/availability.spec.ts:207:7 › SCRUM-36 / SCRUM-37 — venue availability calendar and recorded unavailability › SCRUM-36 AC6 — a venue with nothing in the week reads as available throughout, not blank (1.3s)
+2026-09-29T05:05:19.6096938Z   ✓  21 [chromium] › e2e/availability.spec.ts:229:7 › SCRUM-36 / SCRUM-37 — venue availability calendar and recorded unavailability › SCRUM-36 AC7 — the calendar shows a week, Monday to Sunday, and moves between weeks (3.3s)
+2026-09-29T05:05:20.8009328Z   ✓  22 [chromium] › e2e/availability.spec.ts:265:7 › SCRUM-36 / SCRUM-37 — venue availability calendar and recorded unavailability › SCRUM-36 — a screen reader hears the venue and date for each day (1.1s)
+2026-09-29T05:05:22.1533765Z   ✓  23 [chromium] › e2e/availability.spec.ts:278:7 › SCRUM-36 / SCRUM-37 — venue availability calendar and recorded unavailability › SCRUM-36 — the calendar works at phone width (1.3s)
+2026-09-29T05:05:39.0606224Z   ✓  24 [chromium] › e2e/availability.spec.ts:317:7 › SCRUM-36 / SCRUM-37 — venue availability calendar and recorded unavailability › SCRUM-37 AC1 — an open calendar picks up a booking approved elsewhere, without a reload (16.9s)
+2026-09-29T05:05:42.7132379Z   ✓  25 [chromium] › e2e/availability.spec.ts:350:7 › SCRUM-36 / SCRUM-37 — venue availability calendar and recorded unavailability › SCRUM-36 / SCRUM-37 — who can see the calendar and record unavailability (3.6s)
+2026-09-29T05:09:46.4234315Z   77 passed (5.8m)
+2026-09-29T05:09:48.3877230Z  2026-09-29 05:03:18.342 UTC [161] ERROR:  conflicting key value violates exclusion constraint "unavailability_overlaps_booking"
+2026-09-29T05:09:48.3878556Z  2026-09-29 05:03:18.342 UTC [161] CONTEXT:  PL/pgSQL function unavailability_overlaps_occupancy() line 13 at RAISE
+2026-09-29T05:09:48.3909300Z  2026-09-29 05:03:22.967 UTC [175] ERROR:  conflicting key value violates exclusion constraint "unavailability_overlaps_booking"
+2026-09-29T05:09:48.3910093Z  2026-09-29 05:03:22.967 UTC [175] CONTEXT:  PL/pgSQL function unavailability_overlaps_occupancy() line 13 at RAISE
+2026-09-29T05:09:48.3912708Z  2026-09-29 05:03:23.015 UTC [177] ERROR:  conflicting key value violates exclusion constraint "booking_overlaps_unavailability"
+2026-09-29T05:09:48.3913482Z  2026-09-29 05:03:23.015 UTC [177] CONTEXT:  PL/pgSQL function booking_overlaps_unavailability() line 11 at RAISE
