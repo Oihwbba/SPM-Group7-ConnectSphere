@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-09-23. Jira is the source of truth.
+     Synced from Jira on 2026-09-30. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-27 - Create Equipment Request
@@ -10,7 +10,7 @@
 | **Epic** | SCRUM-10 - Equipment Management |
 | **Priority** | Highest |
 | **Story points** | 1 |
-| **Status in Jira** | To Do |
+| **Status in Jira** | In Review |
 | **Sprint** | SCRUM Sprint 2 |
 | **Jira** | https://smu-spm-group7.atlassian.net/browse/SCRUM-27 |
 
@@ -18,6 +18,7 @@
 
 * User Story: As an Event Coordinator, I want to create an equipment request for my event, specifying equipment type, quantity, and technical requirements, so that the technical support team knows exactly what equipment I need.
 * Acceptance Criteria:
+
     * Given I am an Event Coordinator, when I create a new equipment request, then I can link it to a specific event name and date.
     * Given I am creating a request, when I add equipment, then I can select the equipment type from a predefined system list.
     * Given I am adding equipment, when I specify quantity, then the system validates that it is a positive whole number.

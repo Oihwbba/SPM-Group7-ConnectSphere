@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-09-23. Jira is the source of truth.
+     Synced from Jira on 2026-09-30. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-53 - Approve or Reject Booking Request
@@ -10,7 +10,7 @@
 | **Epic** | SCRUM-7 - Venue Management |
 | **Priority** | Highest |
 | **Story points** | 2 |
-| **Status in Jira** | To Do |
+| **Status in Jira** | In Review |
 | **Sprint** | SCRUM Sprint 2 |
 | **Jira** | https://smu-spm-group7.atlassian.net/browse/SCRUM-53 |
 
@@ -27,7 +27,6 @@ Acceptance Criteria
 * Given two pending requests for the same venue cover overlapping periods, when Venue Staff approve both at the same moment, then only one approval succeeds and the other is returned as conflicting - the venue is never double-booked.
 * Given two pending requests are for periods that touch at an endpoint but do not overlap, when both are approved, then both succeed.
 * Given a request has already been approved or rejected, when a decision is submitted for it again, then the original decision stands and no second outcome is recorded.
-
 
 Customer clarification (2026-09-13): "Free text reason is reasonable." The second criterion previously said only that a reason was required, without saying what form it takes; it now states free text, matching the same answer applied to SCRUM-19 and SCRUM-43.
 

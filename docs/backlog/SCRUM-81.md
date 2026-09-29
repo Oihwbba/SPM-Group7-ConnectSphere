@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-09-23. Jira is the source of truth.
+     Synced from Jira on 2026-09-30. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-81 - Move an approved event through planning to confirmed
@@ -28,5 +28,4 @@ Acceptance Criteria:
 * Confirmed is the state that gates attendee registration.
 * The Planning → Confirmed transition must be idempotent; repeated readiness checks do not create duplicate transitions or notifications.
 
-
-Boundary: SCRUM-110 owns the definition of readiness. Venue and equipment stories own the actual booking/reservation decisions. SCRUM-43 owns the specific Confirmed → Planning transition after an approved impactful change. SCRUM-81 owns the Approved → Planning and Planning → Confirmed transitions.
+Boundary: SCRUM-110 owns the definition of readiness. Venue and equipment stories own the actual booking/reservation decisions. SCRUM-43 owns the specific Confirmed → Planning transition caused by an approved impactful change. SCRUM-81 owns the Approved → Planning and Planning → Confirmed transitions.

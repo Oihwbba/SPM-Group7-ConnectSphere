@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-09-23. Jira is the source of truth.
+     Synced from Jira on 2026-09-30. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-108 - Edit a rejected event request before resubmission
@@ -30,6 +30,5 @@ Acceptance Criteria:
 * The request cannot be amended by an unrelated user.
 * Repeated resubmission of the same already-submitted request is idempotent and does not create duplicate submissions or assignment/notification events.
 * The amendment and resubmission are recorded by SCRUM-71.
-
 
 Boundary: this story owns the rejected-state amendment/resubmission path. SCRUM-19 owns the rejection decision; SCRUM-14 owns the normal first-time submission validation/transition.
