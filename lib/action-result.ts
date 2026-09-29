@@ -21,3 +21,31 @@ export function err<T = never>(
 ): ActionResult<T> {
   return { ok: false, error, fieldErrors };
 }
+
+/**
+ * Run a Server Action from a client component, turning an unexpected throw into
+ * the same `err(...)` shape an expected failure returns.
+ *
+ * Actions already return `ActionResult` for expected failures, so a client
+ * normally only branches on `result.ok`. But an *unexpected* error — a bug, a
+ * dropped connection, an unhandled rejection in the action — rejects the
+ * promise instead of returning. Inside `startTransition(async () => …)` that
+ * rejection escapes the transition: the pending flag never clears, so the
+ * button stays disabled forever and the user is told nothing.
+ *
+ * Wrapping the call turns that into a normal `err(...)`, which every call site
+ * already renders. Expected failures are unaffected — they never threw.
+ *
+ * The message is deliberately generic: the underlying error is a bug, and its
+ * text is for the console, not the user.
+ */
+export async function runAction<T>(
+  action: () => Promise<ActionResult<T>>,
+): Promise<ActionResult<T>> {
+  try {
+    return await action();
+  } catch (error) {
+    console.error("Server action failed unexpectedly:", error);
+    return err("Something went wrong. Please try again.");
+  }
+}

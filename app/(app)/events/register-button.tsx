@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { runAction } from "@/lib/action-result";
 import { registerForEvent } from "./registration-actions";
 
 /** SCRUM-73 — the working half of the Register button the detail page
@@ -23,7 +24,7 @@ export function RegisterButton({
 
   function handleRegister() {
     startTransition(async () => {
-      const result = await registerForEvent({ eventId });
+      const result = await runAction(() => registerForEvent({ eventId }));
       if (!result.ok) {
         toast.error(result.error);
         return;

@@ -37,6 +37,7 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { formatDate, formatDateTime } from "@/lib/datetime";
+import { runAction } from "@/lib/action-result";
 import { describeBlocker } from "@/lib/venue-availability";
 import { decideBookingRequest } from "./actions";
 import type { PendingBookingRow } from "./queries";
@@ -97,11 +98,13 @@ export function BookingQueue({
     decisionReason?: string,
   ) {
     startTransition(async () => {
-      const result = await decideBookingRequest({
-        bookingId: booking.id,
-        decision,
-        reason: decisionReason,
-      });
+      const result = await runAction(() =>
+        decideBookingRequest({
+          bookingId: booking.id,
+          decision,
+          reason: decisionReason,
+        }),
+      );
       if (result.ok) {
         toast.success(
           decision === "APPROVED"

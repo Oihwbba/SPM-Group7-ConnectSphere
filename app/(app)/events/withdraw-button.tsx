@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { runAction } from "@/lib/action-result";
 import { withdrawRegistration } from "./registration-actions";
 
 /** SCRUM-74/77 (partial) — the working half of the Withdraw button the
@@ -21,7 +22,7 @@ export function WithdrawButton({
 
   function handleWithdraw() {
     startTransition(async () => {
-      const result = await withdrawRegistration({ registrationId });
+      const result = await runAction(() => withdrawRegistration({ registrationId }));
       if (!result.ok) {
         toast.error(result.error);
         return;

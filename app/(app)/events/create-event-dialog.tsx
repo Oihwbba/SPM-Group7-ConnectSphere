@@ -40,6 +40,7 @@ import {
   parseIanaZone,
   normalizeTimezoneOption,
 } from "@/lib/datetime";
+import { runAction } from "@/lib/action-result";
 import {
   createDraftEvent,
   submitEventRequest,
@@ -354,7 +355,7 @@ export function CreateEventDialog({
         endAt: toUtcIso(formData.endAt, formData.timezone),
       };
 
-      const result = await createDraftEvent(payload);
+      const result = await runAction(() => createDraftEvent(payload));
 
       if (result.ok) {
         toast.success(
@@ -385,7 +386,7 @@ export function CreateEventDialog({
         endAt: toUtcIso(formData.endAt, formData.timezone) ?? "",
       };
 
-      const result = await submitEventRequest(payload);
+      const result = await runAction(() => submitEventRequest(payload));
 
       if (result.ok) {
         toast.success("Event request submitted for review successfully!");

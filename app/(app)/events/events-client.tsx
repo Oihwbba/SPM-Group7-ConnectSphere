@@ -20,6 +20,7 @@ import { toast } from "sonner";
 import type { Event } from "@prisma/client";
 
 import { formatDate, formatDateTimeInTimezone } from "@/lib/datetime";
+import { runAction } from "@/lib/action-result";
 import { StatusBadge } from "@/components/events/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -191,11 +192,13 @@ export function EventsClient({
     decisionReason?: string,
   ) {
     startTransition(async () => {
-      const result = await transitionEventStatus({
-        eventId: event.id,
-        nextStatus,
-        decisionReason,
-      });
+      const result = await runAction(() =>
+        transitionEventStatus({
+          eventId: event.id,
+          nextStatus,
+          decisionReason,
+        }),
+      );
       if (!result.ok) {
         toast.error(result.error);
         return;
@@ -216,10 +219,12 @@ export function EventsClient({
   function submitClarification() {
     if (!clarifyingEvent || !clarificationMessage.trim()) return;
     startTransition(async () => {
-      const result = await requestClarification({
-        eventId: clarifyingEvent.id,
-        message: clarificationMessage,
-      });
+      const result = await runAction(() =>
+        requestClarification({
+          eventId: clarifyingEvent.id,
+          message: clarificationMessage,
+        }),
+      );
       if (!result.ok) {
         toast.error(result.error);
         return;

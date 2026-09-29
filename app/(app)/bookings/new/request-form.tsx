@@ -36,6 +36,7 @@ import {
   utcToSgWallTime,
 } from "@/lib/datetime";
 import { cn } from "@/lib/utils";
+import { runAction } from "@/lib/action-result";
 import { overCapacityMessage } from "@/lib/schemas/booking";
 import { submitBookingRequest, type BookingSummary } from "../actions";
 import { DateTimeField } from "@/components/app/date-time-field";
@@ -147,16 +148,18 @@ export function RequestForm({
   function submit(e: React.FormEvent) {
     e.preventDefault();
     startTransition(async () => {
-      const result = await submitBookingRequest({
-        eventId: form.eventId,
-        venueId: form.venueId,
-        startAt: sgWallTimeToUtcIso(form.start) ?? "",
-        endAt: sgWallTimeToUtcIso(form.end) ?? "",
-        requestedAttendance: form.attendance,
-        requiredFacilities: form.facilities,
-        requestedLayout: form.layout,
-        requestNotes: form.notes,
-      });
+      const result = await runAction(() =>
+        submitBookingRequest({
+          eventId: form.eventId,
+          venueId: form.venueId,
+          startAt: sgWallTimeToUtcIso(form.start) ?? "",
+          endAt: sgWallTimeToUtcIso(form.end) ?? "",
+          requestedAttendance: form.attendance,
+          requiredFacilities: form.facilities,
+          requestedLayout: form.layout,
+          requestNotes: form.notes,
+        }),
+      );
       if (result.ok) {
         setFieldErrors({});
         if (result.data.created) setForm(emptyForm);
