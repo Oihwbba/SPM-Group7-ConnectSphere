@@ -45,6 +45,7 @@ order when several apply:
 | [TC-110-12](#tc-110-12) | Negative | Unknown event              | Unit         |
 | [TC-110-13](#tc-110-13) | Positive | Every gap reported at once | Unit         |
 | [TC-110-14](#tc-110-14) | Positive | AC 8, AC 9                 | Unit, review |
+| [TC-110-15](#tc-110-15) | Negative | AC 7                       | Unit         |
 
 ---
 
@@ -167,16 +168,16 @@ order when several apply:
 
 ### TC-110-10
 
-| Item            | Content                                                                                                                                                                                            |
-| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Test Case ID    | TC-110-10                                                                                                                                                                                          |
-| Test Scenario   | [Boundary] AC 7: a flag counts as resolved once it is cleared, or once staff cancel or withdraw the flagged record (the customer's ruling: staff decide, and the Coordinator records the decision) |
-| Pre-conditions  | As TC-110-09, but every flag has been dealt with: cleared on active records, and still set only on a cancelled booking, a cancelled reservation and a withdrawn registration.                      |
-| Test Steps      | 1. Ask the rule whether the event is confirmation-ready.                                                                                                                                           |
-| Test Data       | Flagged booking CANCELLED; flagged reservation CANCELLED; flagged registration WITHDRAWN                                                                                                           |
-| Expected Result | `ready: true`, no gaps.                                                                                                                                                                            |
+| Item            | Content                                                                                                                                                                                                                                                                                  |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Test Case ID    | TC-110-10                                                                                                                                                                                                                                                                                |
+| Test Scenario   | [Boundary] AC 7: a flag counts as resolved once it is cleared, or once staff cancel or reject the flagged booking, cancel the flagged reservation, or the flagged registration is withdrawn or cancelled (the customer's ruling: staff decide, and the Coordinator records the decision) |
+| Pre-conditions  | As TC-110-09, but every flag has been dealt with: cleared on active records, and still set only on a cancelled booking, a rejected booking, a cancelled reservation, and a withdrawn and a cancelled registration.                                                                       |
+| Test Steps      | 1. Ask the rule whether the event is confirmation-ready.                                                                                                                                                                                                                                 |
+| Test Data       | Flagged bookings CANCELLED and REJECTED; flagged reservation CANCELLED; flagged registrations WITHDRAWN and CANCELLED                                                                                                                                                                    |
+| Expected Result | `ready: true`, no gaps.                                                                                                                                                                                                                                                                  |
 
-**Automated by:** `tests/unit/event-readiness.test.ts` › "SCRUM-110 [AC7] TC-110-10: a flag no longer blocks once the flagged booking, reservation or registration is cancelled or withdrawn"
+**Automated by:** `tests/unit/event-readiness.test.ts` › "SCRUM-110 [AC7] TC-110-10: a flag no longer blocks once staff cancel or reject the flagged booking, cancel the reservation, or the registration is withdrawn or cancelled"
 
 ### TC-110-11
 
@@ -229,3 +230,16 @@ order when several apply:
 | Expected Result | Exactly one read, through the client it was given, for that event id. That no other story adds a competing confirmation gate is checked in code review: SCRUM-81 must import this rule rather than restate it. |
 
 **Automated by:** `tests/unit/event-readiness.test.ts` › "SCRUM-110 [AC8, AC9] TC-110-14: reads the one event it is asked about, once, through the client it is given"
+
+### TC-110-15
+
+| Item            | Content                                                                                                                                                                                                                                                                 |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Test Case ID    | TC-110-15                                                                                                                                                                                                                                                               |
+| Test Scenario   | [Negative] AC 7: only registrations flagged for reconsideration are read, so an ordinary registered attendee never blocks confirmation                                                                                                                                  |
+| Pre-conditions  | A Planning event that is otherwise ready, with registered attendees who are not flagged.                                                                                                                                                                                |
+| Test Steps      | 1. Ask the rule whether the event is confirmation-ready. <br> 2. Check how it read the registrations.                                                                                                                                                                   |
+| Test Data       | Registrations REGISTERED, needsReconsideration false                                                                                                                                                                                                                    |
+| Expected Result | `ready: true`. The query asks only for registrations with needsReconsideration = true, so unflagged attendees are never counted as unresolved flags. (Added after review of PR #101: the flag half of this rule runs in the query, which the other unit tests replace.) |
+
+**Automated by:** `tests/unit/event-readiness.test.ts` › "SCRUM-110 [AC7] TC-110-15: only flagged registrations are read, so an ordinary registered attendee never blocks confirmation"

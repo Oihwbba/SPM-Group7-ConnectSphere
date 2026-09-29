@@ -189,12 +189,13 @@ describe("getConfirmationReadiness — SCRUM-110", () => {
     },
   );
 
-  it("SCRUM-110 [AC7] TC-110-10: a flag no longer blocks once the flagged booking, reservation or registration is cancelled or withdrawn", async () => {
+  it("SCRUM-110 [AC7] TC-110-10: a flag no longer blocks once staff cancel or reject the flagged booking, cancel the reservation, or the registration is withdrawn or cancelled", async () => {
     const result = await readinessOf(
       planningEvent({
         bookings: [
           approvedBooking,
           { status: "CANCELLED", needsReconsideration: true },
+          { status: "REJECTED", needsReconsideration: true },
         ],
         equipmentRequests: [{ status: "APPROVED" }],
         reservations: [
@@ -260,5 +261,19 @@ describe("getConfirmationReadiness — SCRUM-110", () => {
 
     expect(findUnique).toHaveBeenCalledTimes(1);
     expect(findUnique.mock.calls[0][0].where).toEqual({ id: "evt_planning" });
+  });
+
+  // The flag half of the registration rule runs in the query, which the other
+  // tests replace. Without this filter every registered attendee would count as
+  // an unresolved flag, and no other test here would notice.
+  it("SCRUM-110 [AC7] TC-110-15: only flagged registrations are read, so an ordinary registered attendee never blocks confirmation", async () => {
+    const { db, findUnique } = clientReturning(planningEvent());
+
+    await getConfirmationReadiness(db, "evt_planning");
+
+    expect(findUnique.mock.calls[0][0].select.registrations).toEqual({
+      where: { needsReconsideration: true },
+      select: { status: true },
+    });
   });
 });
