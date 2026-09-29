@@ -1,5 +1,6 @@
 import { requireSession } from "@/lib/auth/guard";
 import { can } from "@/lib/auth/can";
+import { Forbidden } from "@/components/app/forbidden";
 import {
   getCoordinatorEquipmentRequests,
   getEquipmentCatalogue,
