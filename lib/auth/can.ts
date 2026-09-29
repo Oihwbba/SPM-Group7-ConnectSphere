@@ -42,6 +42,7 @@ export type Action =
   | "equipment:reserve"
   | "equipment-request:list" // SCRUM-27: see the equipment requests scoped to me
   | "equipment-request:create" // SCRUM-27: coordinator raises one for their event
+  | "equipment-request:review" // SCRUM-28: Technical Support updates a request
   | "event:browse" // attendees browsing events open for registration
   | "registration:create" // SCRUM-73: an attendee registers for an event
   | "registration:withdraw" // SCRUM-74/77: an attendee withdraws their own registration
@@ -101,7 +102,13 @@ const ROLE_ACTIONS: Record<Role, Action[]> = {
     "unavailability:record",
     "notification:read",
   ],
-  TECH_SUPPORT: ["equipment:read", "equipment:reserve", "notification:read"],
+  TECH_SUPPORT: [
+    "equipment:read",
+    "equipment:reserve",
+    "equipment-request:list",
+    "equipment-request:review",
+    "notification:read",
+  ],
   ATTENDEE: [
     "event:browse",
     "registration:create",

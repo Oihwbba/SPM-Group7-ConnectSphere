@@ -12,8 +12,10 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { RequestHistory } from "@/components/equipment/request-history";
 import { RequestLines } from "@/components/equipment/request-lines";
 import type { CoordinatorEquipmentRequest } from "@/lib/equipment/request-queries";
+import { formatEventPeriod } from "@/lib/equipment/requests";
 import { formatDateTime } from "@/lib/datetime";
 import { cn } from "@/lib/utils";
 import {
@@ -21,12 +23,6 @@ import {
   type EquipmentOption,
   type EventOption,
 } from "./new-request-dialog";
-
-/** An event's period, or a plain note when its dates aren't set. */
-function eventPeriod(event: { startAt: Date | null; endAt: Date | null }) {
-  if (!event.startAt || !event.endAt) return "Dates to be confirmed";
-  return `${formatDateTime(event.startAt)} – ${formatDateTime(event.endAt)}`;
-}
 
 /**
  * SCRUM-27 — the coordinator's equipment requests and the form to raise one.
@@ -158,7 +154,7 @@ function RequestCard({
       <CardHeader className="flex-row flex-wrap items-start justify-between gap-3 space-y-0">
         <div className="min-w-0 space-y-1">
           <CardTitle className="text-base">{request.event.name}</CardTitle>
-          <CardDescription>{eventPeriod(request.event)}</CardDescription>
+          <CardDescription>{formatEventPeriod(request.event)}</CardDescription>
         </div>
         <RequestStatusBadge status={request.status} />
       </CardHeader>
@@ -173,6 +169,7 @@ function RequestCard({
         <p className="text-xs text-muted-foreground">
           Submitted {formatDateTime(request.createdAt)}
         </p>
+        <RequestHistory entries={request.updates} />
       </CardContent>
     </Card>
   );

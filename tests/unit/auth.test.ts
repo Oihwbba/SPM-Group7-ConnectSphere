@@ -39,6 +39,21 @@ describe("can — role gate", () => {
     expect(can(coordinator, "equipment-request:list")).toBe(true);
   });
 
+  // SCRUM-28 — "As a Technical Support Staff member, I want to review
+  // equipment requests and update them".
+  it("lets Technical Support list and review equipment requests", () => {
+    const tech = { id: "tech", role: "TECH_SUPPORT" } as const;
+    expect(can(tech, "equipment-request:list")).toBe(true);
+    expect(can(tech, "equipment-request:review")).toBe(true);
+  });
+
+  it.each(["ORGANISER", "COORDINATOR", "VENUE_STAFF", "ATTENDEE"] as const)(
+    "does not let %s review an equipment request",
+    (role) => {
+      expect(can({ id: "x", role }, "equipment-request:review")).toBe(false);
+    },
+  );
+
   it.each(["ORGANISER", "VENUE_STAFF", "TECH_SUPPORT", "ATTENDEE"] as const)(
     "does not let %s create an equipment request",
     (role) => {
