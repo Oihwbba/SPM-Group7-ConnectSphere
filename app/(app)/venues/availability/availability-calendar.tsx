@@ -252,7 +252,8 @@ function WeekGrid({
                   >
                     {/* A day with nothing on it says so at the top of its
                         column, pinned under the date while the grid scrolls. */}
-                    {segments.length === 1 && (
+                    {/* One stretch is not enough: a closure can fill a day too. */}
+                    {segments.length === 1 && segments[0].kind === "free" && (
                       <li
                         aria-hidden
                         data-free-all-day
