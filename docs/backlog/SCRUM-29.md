@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-09-23. Jira is the source of truth.
+     Synced from Jira on 2026-09-30. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-29 - Check Equipment Availability
@@ -10,7 +10,7 @@
 | **Epic** | SCRUM-10 - Equipment Management |
 | **Priority** | Highest |
 | **Story points** | 3 |
-| **Status in Jira** | To Do |
+| **Status in Jira** | In Review |
 | **Sprint** | SCRUM Sprint 2 |
 | **Jira** | https://smu-spm-group7.atlassian.net/browse/SCRUM-29 |
 
@@ -18,6 +18,7 @@
 
 * User Story: As a Technical Support Staff member, I want to check if sufficient suitable equipment is available for a specific date and time, so that I can confirm whether we can fulfill equipment requests.
 * Acceptance Criteria:
+
     * Given I am checking availability, when I specify equipment type, date, and time range, then the system displays the total available quantity.
     * Given the requested quantity is at or below the available quantity for the whole period, when I check availability, then the equipment is reported as available and can proceed to reservation.
     * Given the requested quantity exceeds the available quantity, when I check availability, then the system reports the shortfall and prevents the reservation.

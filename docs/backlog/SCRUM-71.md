@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-09-23. Jira is the source of truth.
+     Synced from Jira on 2026-09-30. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-71 - Record who changed what and when
@@ -26,6 +26,5 @@ Acceptance Criteria:
 * Recorded entries cannot be edited or deleted through the application.
 * The history shows the previous and new value for the fields the briefing calls important — date, time, expected attendance, venue and equipment requirements.
 * Event-time timestamps are displayed consistently, with the event timezone used for human-readable event details while persisted audit timestamps remain unambiguous.
-
 
 Functionality Area: User Authorisation and Authentication (non-functional: auditability)
