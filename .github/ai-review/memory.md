@@ -22,12 +22,12 @@ Rules for a lesson:
 ## Process and merging
 
 - (2026-09-15, #27) Jin Hong owns the repository. Changes to `.github/`,
-  `package.json`, the test configs or `vercel.json` need his approval
-  (CODEOWNERS); when he merges as admin that satisfies it, so the description
-  need not record it. Other teammates may merge too.
+`package.json`, the test configs or `vercel.json` need his approval
+(CODEOWNERS); when he merges as admin that satisfies it, so the description
+need not record it. Other teammates may merge too.
 - (2026-09-15, #32) Dependabot pull requests are turned off. Dependency and
-  security upgrades arrive as SCRUM-89 pull requests by Jin Hong, tested as one
-  change.
+security upgrades arrive as SCRUM-89 pull requests by Jin Hong, tested as one
+change.
 
 - (2026-09-22, #71/#72; retires the #52–#54 re-landing workaround) Production
   deploys only through `.github/workflows/deploy.yml`: a push to `main` deploys
@@ -61,8 +61,12 @@ Rules for a lesson:
 - (2026-09-16, #33) Supabase's stored checksums differ from the repo for three
   older migration files. `prisma migrate deploy` ignores checksums, so this is
   known and harmless. Nobody may run `prisma migrate dev` against Supabase.
-- (2026-09-16, #33) `Event.equipmentTypes` and `Event.registrationRequired`
-  exist to keep production data. No feature reads or writes them yet.
+- (2026-09-16, #33; 2026-09-28, #90) `Event.equipmentTypes` and
+  `Event.registrationRequired` exist to keep production data; no feature reads
+  or writes them yet. `Event.registrationCapacity` joined them in #90, which
+  made `expectedAttendance` the registration capacity (SCRUM-73/74): nothing
+  reads the column (the seed still sets 100 while the e2e full event shows
+  "118 of 120"), and dropping it needs a migration decision.
 
 ## Events and status
 
@@ -76,10 +80,6 @@ Rules for a lesson:
 - (2026-09-20, #54) The events list's Submitted tab counts and shows both
   `SUBMITTED` and `UNDER_REVIEW` for that reason. Narrowing it to `SUBMITTED`
   hides a request the organiser has just sent.
-- (2026-09-20, #51/#54) The events queries live in
-  `app/(app)/events/role-views.tsx`, not `page.tsx`: a `page.tsx` may only
-  export the names Next.js recognises, so helpers that need unit tests belong
-  in `role-views.tsx`.
 - (2026-09-20, #54) `Event.timezone` is nullable with an `Asia/Singapore`
   default and is already applied to the production database. The create form no
   longer captures `requiredFacilities`, so new events store `[]` while existing
@@ -88,6 +88,9 @@ Rules for a lesson:
 - (2026-09-25, #87) The `?? null` fallbacks on optional draft fields in
   `app/(app)/events/actions.ts` are deliberate: on update, `null` clears a
   field the organiser emptied, while `undefined` would keep the old value.
+- (2026-09-28, #90) `app/(app)/events/[id]/` has no `loading.tsx` on purpose:
+  a loading boundary would stream a 200 shell and `notFound()` would stop
+  returning a real 404, which the e2e pins.
 
 ## Equipment
 
@@ -95,6 +98,10 @@ Rules for a lesson:
   `createReservation` is deliberate: the row lock and the availability count
   are separate queries, and the guard refuses rather than crashes if their
   filters ever drift apart.
+- (2026-09-28, #94) Reads that take the signed-in user's id live in plain
+  modules (`lib/equipment/request-queries.ts`), never in a `"use server"`
+  file: a server action is callable by anyone with any arguments, so exporting
+  one there would let any caller pass another user's id.
 
 ## Tests
 
@@ -103,10 +110,10 @@ Rules for a lesson:
   run only against CI's Postgres or a local Docker database, never the shared
   Supabase database. Skipping locally isn't missing coverage; CI runs them on
   every pull request.
-- (2026-09-15, #26) `it.todo` entries are placeholders, not coverage. The
-  existing-test list marks them "(todo: not written yet)".
-  `tests/unit/venues.test.ts` is all placeholders, and so are the SCRUM-53 and
-  SCRUM-74 cases in `tests/integration/concurrency.test.ts`.
+- (2026-09-15, #26; 2026-09-28, #90; 2026-09-29, #96) `it.todo` entries are
+  placeholders, not coverage. The existing-test list marks them "(todo: not
+  written yet)". `tests/unit/venues.test.ts` is all placeholders; #90 wrote
+  the SCRUM-74 case for real and #96 the SCRUM-53 concurrency races.
 - (2026-09-15, #26) Test case specifications live in `docs/testing/<KEY>.md`,
   and each case names the automated test that covers it.
 - (2026-09-25, #88) Coverage measures `lib/**/*.ts` and `app/**/actions.ts`
@@ -124,12 +131,11 @@ Gaps found by reviews (the #11 replay, 2026-09-14, and later merges), still
 true until a pull request fixes them. Raise one only when a pull request
 touches that code or claims that story, and say it was already known.
 
-- (closed 2026-09-20) The SCRUM-24 simultaneous-decision integration test, the
-  coordinator approve and reject Playwright journeys, and
-  `app/(app)/equipment/loading.tsx` all exist now. Do not report them missing.
-- (closed 2026-09-27) Reservation form errors, quantity included, now show next
-  to their fields (SCRUM-31 AC 6). Do not report them as toast-only.
 - (2026-09-23, #76) The organiser events table shows Name, Status, Starts and
-  Updated, but SCRUM-84 AC3 also asks for an Expected Attendance column, which
-  is still missing. Treat it as known when a pull request touches the table or
-  claims SCRUM-84.
+Updated, but SCRUM-84 AC3 also asks for an Expected Attendance column, which
+is still missing. Treat it as known when a pull request touches the table or
+claims SCRUM-84.
+- (2026-09-29, #99) Two gaps its review left open: a recorded unavailability
+period can never be removed or shortened from the app, so a wrong record
+blocks its venue until someone edits the database by hand; and the record form
+blocks past start times that the server schema accepts.
