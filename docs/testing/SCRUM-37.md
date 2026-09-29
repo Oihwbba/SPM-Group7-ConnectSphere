@@ -34,7 +34,7 @@ are Singapore time.
 | Test Data | As above |
 | Expected Result | Step 2 shows "Booked 9:00 am to 1:00 pm" straight away. Approving refreshes the calendar page on the server. Step 3: the open calendar picks the change up within 15 seconds without a reload. |
 
-**Automated by:** `e2e/availability.spec.ts` › "SCRUM-37 AC2-5, SCRUM-36 AC3-5 — …" (approval step); `tests/unit/bookings.test.ts` › "SCRUM-37 AC1 — approving refreshes the availability calendar; rejecting does not need to". The 15-second refresh is **Manual**.
+**Automated by:** `e2e/availability.spec.ts` › "SCRUM-37 AC2-5, SCRUM-36 AC3-5 — …" (approval step); `tests/unit/bookings.test.ts` › "SCRUM-37 AC1 — approving refreshes the availability calendar; rejecting does not need to"; `e2e/availability.spec.ts` › "SCRUM-37 AC1 — an open calendar picks up a booking approved elsewhere, without a reload" (step 3).
 
 ### TC-37-02
 

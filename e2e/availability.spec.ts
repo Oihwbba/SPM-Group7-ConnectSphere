@@ -314,6 +314,39 @@ test.describe("SCRUM-36 / SCRUM-37 — venue availability calendar and recorded 
     }
   });
 
+  test("SCRUM-37 AC1 — an open calendar picks up a booking approved elsewhere, without a reload", async ({
+    browser,
+  }) => {
+    // The booking is written straight to the database, as if approved by
+    // someone else, so only a local database can host this test.
+    test.skip(!usesLocalDatabase, "writes to the database");
+    const day = "2036-03-05";
+    const coordinator = await signedIn(browser, "coordinator@test.local");
+    await coordinator.goto(calendarFor(AUDITORIUM, day));
+    await coordinator.locator('[data-hydrated="true"]').waitFor();
+    const booked = weekDay(coordinator, day).locator('li[data-kind="booking"]');
+    await expect(booked).toHaveCount(0);
+
+    await prisma.booking.create({
+      data: {
+        eventId: "evt_planning",
+        venueId: AUDITORIUM,
+        startAt: new Date(`${day}T10:00:00+08:00`),
+        endAt: new Date(`${day}T12:00:00+08:00`),
+        status: "APPROVED",
+        requestedById: "usr_coordinator",
+        decidedById: "usr_venuestaff",
+        decidedAt: new Date(),
+      },
+    });
+
+    // No reload: the calendar refreshes itself every 15 seconds.
+    await expect(booked).toHaveCount(1, { timeout: 25_000 });
+    await expect(booked.getByRole("button")).toHaveAccessibleName(
+      "Booked 10:00 am to 12:00 pm",
+    );
+  });
+
   test("SCRUM-36 / SCRUM-37 — who can see the calendar and record unavailability", async ({
     browser,
   }) => {
