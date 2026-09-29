@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-09-23. Jira is the source of truth.
+     Synced from Jira on 2026-09-30. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-109 - Respond to an event clarification request
@@ -29,6 +29,5 @@ Acceptance Criteria:
 * The response records who answered and when.
 * A clarification response is idempotent: retrying the same completed response does not create a second open/answered clarification or duplicate notification.
 * The response is recorded by SCRUM-71.
-
 
 Boundary: this story owns the edit/response mechanism while clarification is open. SCRUM-18 owns requesting clarification and SCRUM-56 owns the request notification.

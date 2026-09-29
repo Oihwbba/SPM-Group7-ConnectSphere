@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-09-23. Jira is the source of truth.
+     Synced from Jira on 2026-09-30. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-110 - Define event confirmation readiness
@@ -10,7 +10,7 @@
 | **Epic** | SCRUM-6 - Event Request Lifecycle |
 | **Priority** | Highest |
 | **Story points** | 2 |
-| **Status in Jira** | To Do |
+| **Status in Jira** | In Progress |
 | **Sprint** | SCRUM Sprint 2 |
 | **Jira** | https://smu-spm-group7.atlassian.net/browse/SCRUM-110 |
 
@@ -31,7 +31,6 @@ Acceptance Criteria:
 * All resource reconsideration flags that resulted from the impactful change must be explicitly resolved before the event is considered confirmation-ready.
 * SCRUM-81 consumes this readiness rule and owns the Planning → Confirmed status transition.
 * The readiness rule is the single authoritative definition; other stories must not introduce a conflicting confirmation gate.
-
 
 Business decision: Approval means sufficient information to begin planning; Confirmation means essential arrangements are complete.
 

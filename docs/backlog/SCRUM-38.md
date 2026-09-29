@@ -1,20 +1,22 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-09-23. Jira is the source of truth.
+     Synced from Jira on 2026-09-30. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
-# SCRUM-38 - Search Venues by Core Criteria
+# SCRUM-38 - Search and filter venues by criteria and requirements
 
 | | |
 |---|---|
 | **Type** | Story |
 | **Epic** | SCRUM-7 - Venue Management |
 | **Priority** | High |
-| **Story points** | 2 |
+| **Story points** | 3 |
 | **Status in Jira** | To Do |
 | **Sprint** | Backlog |
 | **Jira** | https://smu-spm-group7.atlassian.net/browse/SCRUM-38 |
 
 ---
+
+Merged story (29 Sep 2026): absorbs SCRUM-39 (Filter Venues by Requirements). Any reference to SCRUM-39 elsewhere now means this story.
 
 User Story
 As an Event Coordinator, I want to search venues by date, time, and location, so that I can quickly narrow down options for my event.
@@ -28,5 +30,18 @@ Acceptance Criteria
 * Given no venue matches the criteria, when the search runs, then an explicit "no venues match" message is shown rather than an empty list.
 * Results list shows key details (name, location, capacity) at a glance.
 
-
 Note (2026-09-07): endpoint semantics, the invalid-range case and the no-results case were added following the Week 2 assignment feedback. This story is one of the three that jointly deliver Booking Conflict Detection, so its overlap rule must match SCRUM-50's and SCRUM-37's exactly.
+
+---
+
+Merged from SCRUM-39 — Filter Venues by Requirements
+
+User Story
+As an Event Coordinator, I want to filter search results by expected attendance, capacity, accessibility, supported layout, and required facilities, so that only venues meeting my event's needs are shown.
+
+Acceptance Criteria
+
+* Filters can be applied individually or in combination.
+* Venues with capacity below expected attendance are excluded when applied.
+* Facility and accessibility filters support multi-select.
+* Filters persist alongside the core search criteria (date/time/location).

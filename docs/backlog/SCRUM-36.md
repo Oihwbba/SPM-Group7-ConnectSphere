@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-09-23. Jira is the source of truth.
+     Synced from Jira on 2026-09-30. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-36 - View Venue Availability
@@ -28,7 +28,6 @@ Acceptance Criteria
 * Given one unavailable period ends at exactly the moment another begins, when the Coordinator views the venue, then no gap is shown between them and no time is double-counted as both available and unavailable.
 * Given a venue has no bookings or unavailability in the selected range, when the Coordinator views it, then the whole range shows as available rather than showing an empty view.
 * View can be filtered by date range.
-
 
 Decision record (2026-09-13): Venue Availability Calendar reflects approved bookings and recorded non-booking unavailability. A standalone unavailability-management feature remains outside Release 1.
 
