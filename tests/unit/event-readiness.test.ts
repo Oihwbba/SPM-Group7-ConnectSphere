@@ -1,38 +1,91 @@
 import { describe, it, expect, vi } from "vitest";
 import type { EventStatus, Prisma } from "@prisma/client";
 
-import { getConfirmationReadiness } from "@/lib/event-readiness";
+import {
+  getReadinessChecklist,
+  withoutInternalReasons,
+  type ReadinessChecklist,
+} from "@/lib/event-readiness";
 
-// SCRUM-110 — the confirmation-readiness rule. Test cases: docs/testing/SCRUM-110.md.
+// SCRUM-110 — the readiness checklist. Test cases: docs/testing/SCRUM-110.md.
 // The rule takes the database client as an argument, so each test hands it a
-// client whose one read returns the event's arrangements.
+// client whose one read returns the event and its arrangements.
 
-type Flagged = { status: string; needsReconsideration: boolean };
+const START = new Date("2031-06-01T01:00:00Z"); // 09:00 Singapore
+const END = new Date("2031-06-01T09:00:00Z"); // 17:00 Singapore
+
+type Booking = {
+  status: string;
+  decisionReason: string | null;
+  createdAt: Date;
+};
+type Line = {
+  equipmentId: string;
+  quantity: number;
+  equipment: { type: string };
+};
+type Request = { status: string; createdAt: Date; lines: Line[] };
+type Reservation = {
+  equipmentId: string;
+  quantity: number;
+  status: string;
+  startAt: Date;
+  endAt: Date;
+};
 
 interface Arrangements {
   status: EventStatus;
-  bookings: Flagged[];
-  equipmentRequests: { status: string }[];
-  reservations: Flagged[];
-  registrations: { status: string }[];
+  startAt: Date | null;
+  endAt: Date | null;
+  bookings: Booking[];
+  equipmentRequests: Request[];
+  reservations: Reservation[];
 }
 
-const approvedBooking: Flagged = {
-  status: "APPROVED",
-  needsReconsideration: false,
-};
-const confirmedReservation: Flagged = {
+const day = (n: number) => new Date(Date.UTC(2031, 0, n));
+const booking = (
+  status: string,
+  n = 1,
+  decisionReason: string | null = null,
+): Booking => ({
+  status,
+  decisionReason,
+  createdAt: day(n),
+});
+const line = (equipmentId: string, type: string, quantity: number): Line => ({
+  equipmentId,
+  quantity,
+  equipment: { type },
+});
+const request = (status: string, lines: Line[], n = 1): Request => ({
+  status,
+  lines,
+  createdAt: day(n),
+});
+const reserved = (
+  equipmentId: string,
+  quantity: number,
+  overrides: Partial<Reservation> = {},
+): Reservation => ({
+  equipmentId,
+  quantity,
   status: "CONFIRMED",
-  needsReconsideration: false,
-};
+  startAt: START,
+  endAt: END,
+  ...overrides,
+});
+
+const projectors = (n: number) => line("eqp_projector", "Projector", n);
+const mics = (n: number) => line("eqp_mic", "Wireless Microphone", n);
 
 function planningEvent(overrides: Partial<Arrangements> = {}): Arrangements {
   return {
     status: "PLANNING",
-    bookings: [approvedBooking],
+    startAt: START,
+    endAt: END,
+    bookings: [booking("APPROVED")],
     equipmentRequests: [],
     reservations: [],
-    registrations: [],
     ...overrides,
   };
 }
@@ -43,170 +96,259 @@ function clientReturning(event: Arrangements | null) {
   return { db, findUnique };
 }
 
-async function readinessOf(event: Arrangements | null) {
+async function checklistOf(event: Arrangements | null) {
   const { db } = clientReturning(event);
-  return getConfirmationReadiness(db, "evt_planning");
+  return getReadinessChecklist(db, "evt_test");
 }
 
-describe("getConfirmationReadiness — SCRUM-110", () => {
-  it("SCRUM-110 [AC1, AC3] TC-110-01: a Planning event with an approved venue booking and no equipment request is ready", async () => {
-    expect(await readinessOf(planningEvent())).toEqual({
-      ready: true,
-      gaps: [],
-    });
-  });
+const venue = (c: ReadinessChecklist | null) =>
+  c?.items.find((i) => i.name === "Venue booking");
+const equipment = (c: ReadinessChecklist | null) =>
+  c?.items.find((i) => i.name === "Equipment");
 
-  it("SCRUM-110 [AC1, AC5] TC-110-02: without any venue booking the event is not ready, and the Organiser's venue requirement is never consulted", async () => {
-    const { db, findUnique } = clientReturning(planningEvent({ bookings: [] }));
-
-    const result = await getConfirmationReadiness(db, "evt_planning");
+describe("getReadinessChecklist — SCRUM-110", () => {
+  it("SCRUM-110 [AC1, AC2, AC5] TC-110-01: an approved venue booking and no equipment request is a complete checklist with only the venue, ready to confirm", async () => {
+    const result = await checklistOf(planningEvent());
 
     expect(result).toEqual({
-      ready: false,
-      gaps: ["NO_APPROVED_VENUE_BOOKING"],
+      ready: true,
+      items: [
+        {
+          name: "Venue booking",
+          complete: true,
+          state: "Approved",
+          reason: null,
+          lines: [],
+        },
+      ],
     });
-    expect(findUnique.mock.calls[0][0].select).not.toHaveProperty(
-      "venueRequirements",
-    );
   });
 
-  it.each(["PENDING", "REJECTED", "CANCELLED"])(
-    "SCRUM-110 [AC1, AC4] TC-110-03: a %s booking is not an approved one",
-    async (status) => {
-      const result = await readinessOf(
-        planningEvent({ bookings: [{ status, needsReconsideration: false }] }),
-      );
+  it("SCRUM-110 [AC1] TC-110-02: with no venue booking at all, Venue booking is still listed, as not requested and incomplete", async () => {
+    const result = await checklistOf(planningEvent({ bookings: [] }));
 
-      expect(result).toEqual({
-        ready: false,
-        gaps: ["NO_APPROVED_VENUE_BOOKING"],
-      });
-    },
-  );
+    expect(venue(result)).toMatchObject({
+      complete: false,
+      state: "Not requested",
+    });
+    expect(result?.ready).toBe(false);
+  });
 
-  it("SCRUM-110 [AC1, AC4] TC-110-04: a second booking approved after a rejected one makes the event ready", async () => {
-    const result = await readinessOf(
+  it("SCRUM-110 [AC3] TC-110-03: a pending venue booking shows Pending and is incomplete", async () => {
+    const result = await checklistOf(
+      planningEvent({ bookings: [booking("PENDING")] }),
+    );
+
+    expect(venue(result)).toMatchObject({
+      complete: false,
+      state: "Pending",
+      reason: null,
+    });
+    expect(result?.ready).toBe(false);
+  });
+
+  it("SCRUM-110 [AC3] TC-110-04: a rejected venue booking shows Rejected with its reason and is incomplete", async () => {
+    const result = await checklistOf(
       planningEvent({
         bookings: [
-          { status: "REJECTED", needsReconsideration: false },
-          approvedBooking,
+          booking(
+            "REJECTED",
+            1,
+            "Boardroom seats 14; the event expects 55 attendees.",
+          ),
         ],
       }),
     );
 
-    expect(result).toEqual({ ready: true, gaps: [] });
-  });
-
-  it("SCRUM-110 [AC2] TC-110-05: with an equipment request, an approved booking plus a confirmed reservation is ready", async () => {
-    const result = await readinessOf(
-      planningEvent({
-        equipmentRequests: [{ status: "APPROVED" }],
-        reservations: [confirmedReservation],
-      }),
-    );
-
-    expect(result).toEqual({ ready: true, gaps: [] });
-  });
-
-  it.each([
-    { reservations: [] as Flagged[], description: "no reservation" },
-    {
-      reservations: [{ status: "CANCELLED", needsReconsideration: false }],
-      description: "only a cancelled reservation",
-    },
-  ])(
-    "SCRUM-110 [AC2, AC4] TC-110-06: an equipment request with $description is not ready",
-    async ({ reservations }) => {
-      const result = await readinessOf(
-        planningEvent({
-          equipmentRequests: [{ status: "PENDING_REVIEW" }],
-          reservations,
-        }),
-      );
-
-      expect(result).toEqual({
-        ready: false,
-        gaps: ["NO_CONFIRMED_EQUIPMENT_RESERVATION"],
-      });
-    },
-  );
-
-  it("SCRUM-110 [AC2, AC3] TC-110-07: a request Technical Support rejected still needs equipment; only a cancelled request stops equipment being required", async () => {
-    const rejected = await readinessOf(
-      planningEvent({ equipmentRequests: [{ status: "REJECTED" }] }),
-    );
-    const cancelled = await readinessOf(
-      planningEvent({ equipmentRequests: [{ status: "CANCELLED" }] }),
-    );
-
-    expect(rejected).toEqual({
-      ready: false,
-      gaps: ["NO_CONFIRMED_EQUIPMENT_RESERVATION"],
+    expect(venue(result)).toEqual({
+      name: "Venue booking",
+      complete: false,
+      state: "Rejected",
+      reason: "Boardroom seats 14; the event expects 55 attendees.",
+      lines: [],
     });
-    expect(cancelled).toEqual({ ready: true, gaps: [] });
-  });
-
-  it("SCRUM-110 [AC3] TC-110-08: a reservation made without an equipment request neither blocks nor is required", async () => {
-    const result = await readinessOf(
-      planningEvent({ reservations: [confirmedReservation] }),
-    );
-
-    expect(result).toEqual({ ready: true, gaps: [] });
+    expect(result?.ready).toBe(false);
   });
 
   it.each([
     {
-      record: "booking",
-      flagged: {
-        bookings: [{ status: "APPROVED", needsReconsideration: true }],
-      },
+      when: "a rejected then an approved booking",
+      bookings: [booking("REJECTED", 1, "old"), booking("APPROVED", 2)],
+      expected: { complete: true, state: "Approved", reason: null },
     },
     {
-      record: "reservation",
-      flagged: {
-        reservations: [{ status: "CONFIRMED", needsReconsideration: true }],
-      },
+      when: "a rejected then a pending booking",
+      bookings: [booking("REJECTED", 1, "old"), booking("PENDING", 2)],
+      expected: { complete: false, state: "Pending", reason: null },
     },
     {
-      record: "registration",
-      flagged: { registrations: [{ status: "REGISTERED" }] },
+      when: "two rejections",
+      bookings: [booking("REJECTED", 2, "new"), booking("REJECTED", 1, "old")],
+      expected: { complete: false, state: "Rejected", reason: "new" },
+    },
+    {
+      when: "only a cancelled booking",
+      bookings: [booking("CANCELLED")],
+      expected: { complete: false, state: "Not requested", reason: null },
     },
   ])(
-    "SCRUM-110 [AC6, AC7] TC-110-09: a flagged $record blocks confirmation even when every arrangement is in place",
-    async ({ flagged }) => {
-      const result = await readinessOf(
-        planningEvent({
-          equipmentRequests: [{ status: "APPROVED" }],
-          reservations: [confirmedReservation],
-          ...flagged,
-        }),
-      );
-
-      expect(result).toEqual({
-        ready: false,
-        gaps: ["UNRESOLVED_RECONSIDERATION"],
-      });
+    "SCRUM-110 [AC1, AC3] TC-110-05: with $when, the venue item reads as the most advanced booking",
+    async ({ bookings, expected }) => {
+      expect(
+        venue(await checklistOf(planningEvent({ bookings }))),
+      ).toMatchObject(expected);
     },
   );
 
-  it("SCRUM-110 [AC7] TC-110-10: a flag no longer blocks once staff cancel or reject the flagged booking, cancel the reservation, or the registration is withdrawn or cancelled", async () => {
-    const result = await readinessOf(
+  it("SCRUM-110 [AC2, AC5] TC-110-06: every requested line reserved in full for the event's period completes Equipment, even across several reservations", async () => {
+    const result = await checklistOf(
       planningEvent({
-        bookings: [
-          approvedBooking,
-          { status: "CANCELLED", needsReconsideration: true },
-          { status: "REJECTED", needsReconsideration: true },
-        ],
-        equipmentRequests: [{ status: "APPROVED" }],
+        equipmentRequests: [request("APPROVED", [projectors(5), mics(2)])],
         reservations: [
-          confirmedReservation,
-          { status: "CANCELLED", needsReconsideration: true },
+          reserved("eqp_projector", 3),
+          reserved("eqp_projector", 2),
+          reserved("eqp_mic", 2),
         ],
-        registrations: [{ status: "WITHDRAWN" }, { status: "CANCELLED" }],
       }),
     );
 
-    expect(result).toEqual({ ready: true, gaps: [] });
+    expect(equipment(result)).toEqual({
+      name: "Equipment",
+      complete: true,
+      state: "Reserved",
+      reason: null,
+      lines: ["Projector 5/5 reserved", "Wireless Microphone 2/2 reserved"],
+    });
+    expect(result?.ready).toBe(true);
+  });
+
+  it("SCRUM-110 [AC2, AC4] TC-110-07: a line reserved only in part shows its shortfall and Equipment is incomplete", async () => {
+    const result = await checklistOf(
+      planningEvent({
+        equipmentRequests: [request("PENDING_REVIEW", [projectors(5)])],
+        reservations: [reserved("eqp_projector", 3)],
+      }),
+    );
+
+    expect(equipment(result)).toMatchObject({
+      complete: false,
+      state: "Not fully reserved",
+      lines: ["Projector 3/5 reserved"],
+    });
+    expect(result?.ready).toBe(false);
+  });
+
+  it.each([
+    {
+      when: "covers exactly the event's period",
+      res: reserved("eqp_projector", 2),
+      done: true,
+    },
+    {
+      when: "covers only part of the event",
+      res: reserved("eqp_projector", 2, {
+        endAt: new Date("2031-06-01T04:00:00Z"),
+      }),
+      done: false,
+    },
+    {
+      when: "starts after the event starts",
+      res: reserved("eqp_projector", 2, {
+        startAt: new Date("2031-06-01T02:00:00Z"),
+      }),
+      done: false,
+    },
+    {
+      when: "is cancelled",
+      res: reserved("eqp_projector", 2, { status: "CANCELLED" }),
+      done: false,
+    },
+    {
+      when: "is for a different item",
+      res: reserved("eqp_mic", 2),
+      done: false,
+    },
+  ])(
+    "SCRUM-110 [AC2] TC-110-08: a reservation that $when counts only if it is a confirmed reservation of the requested item for the whole event",
+    async ({ res, done }) => {
+      const result = await checklistOf(
+        planningEvent({
+          equipmentRequests: [request("APPROVED", [projectors(2)])],
+          reservations: [res],
+        }),
+      );
+
+      expect(equipment(result)).toMatchObject({
+        complete: done,
+        lines: [`Projector ${done ? 2 : 0}/2 reserved`],
+      });
+    },
+  );
+
+  it("SCRUM-110 [AC2] TC-110-08: an event with no dates cannot have its equipment reserved in full", async () => {
+    const result = await checklistOf(
+      planningEvent({
+        startAt: null,
+        endAt: null,
+        equipmentRequests: [request("APPROVED", [projectors(2)])],
+        reservations: [reserved("eqp_projector", 2)],
+      }),
+    );
+
+    expect(equipment(result)).toMatchObject({
+      complete: false,
+      lines: ["Projector 0/2 reserved"],
+    });
+  });
+
+  it("SCRUM-110 [AC2] TC-110-09: a cancelled request adds no Equipment item and does not block confirmation", async () => {
+    const result = await checklistOf(
+      planningEvent({
+        equipmentRequests: [request("CANCELLED", [projectors(2)])],
+      }),
+    );
+
+    expect(equipment(result)).toBeUndefined();
+    expect(result?.ready).toBe(true);
+  });
+
+  it("SCRUM-110 [AC2] TC-110-09: a request Technical Support rejected keeps Equipment incomplete until the Coordinator requests again", async () => {
+    const result = await checklistOf(
+      planningEvent({
+        equipmentRequests: [request("REJECTED", [projectors(2)])],
+      }),
+    );
+
+    expect(equipment(result)).toEqual({
+      name: "Equipment",
+      complete: false,
+      state: "Rejected",
+      reason: null,
+      lines: [],
+    });
+    expect(result?.ready).toBe(false);
+  });
+
+  it("SCRUM-110 [AC2] TC-110-09: a new request after a rejection replaces it, and live requests for the same item add up", async () => {
+    const replaced = await checklistOf(
+      planningEvent({
+        equipmentRequests: [
+          request("REJECTED", [projectors(2)], 1),
+          request("PENDING_REVIEW", [line("eqp_laptop", "Laptop", 1)], 2),
+        ],
+      }),
+    );
+    const combined = await checklistOf(
+      planningEvent({
+        equipmentRequests: [
+          request("APPROVED", [projectors(2)], 1),
+          request("IN_REVIEW", [projectors(3)], 2),
+        ],
+      }),
+    );
+
+    expect(equipment(replaced)?.lines).toEqual(["Laptop 0/1 reserved"]);
+    expect(equipment(combined)?.lines).toEqual(["Projector 0/5 reserved"]);
   });
 
   it.each([
@@ -219,61 +361,54 @@ describe("getConfirmationReadiness — SCRUM-110", () => {
     "CANCELLED",
     "REJECTED",
   ] as EventStatus[])(
-    "SCRUM-110 [Planning only] TC-110-11: a %s event is not confirmation-ready, even with every arrangement in place",
+    "SCRUM-110 [AC5] TC-110-10: a %s event is never ready to confirm, even with every item complete",
     async (status) => {
-      const result = await readinessOf(planningEvent({ status }));
+      const result = await checklistOf(planningEvent({ status }));
 
-      expect(result).toEqual({ ready: false, gaps: ["NOT_IN_PLANNING"] });
+      expect(venue(result)?.complete).toBe(true);
+      expect(result?.ready).toBe(false);
     },
   );
 
-  it("SCRUM-110 TC-110-12: an id that matches no event is not ready, and nothing else is reported", async () => {
-    expect(await readinessOf(null)).toEqual({
-      ready: false,
-      gaps: ["EVENT_NOT_FOUND"],
-    });
+  it("SCRUM-110 TC-110-13: an id that matches no event has no checklist", async () => {
+    expect(await checklistOf(null)).toBeNull();
   });
 
-  it("SCRUM-110 TC-110-13: every outstanding arrangement is reported at once, in a fixed order", async () => {
-    const result = await readinessOf({
-      status: "APPROVED",
-      bookings: [],
-      equipmentRequests: [{ status: "IN_REVIEW" }],
-      reservations: [],
-      registrations: [{ status: "REGISTERED" }],
-    });
-
-    expect(result).toEqual({
-      ready: false,
-      gaps: [
-        "NOT_IN_PLANNING",
-        "NO_APPROVED_VENUE_BOOKING",
-        "NO_CONFIRMED_EQUIPMENT_RESERVATION",
-        "UNRESOLVED_RECONSIDERATION",
-      ],
-    });
-  });
-
-  it("SCRUM-110 [AC8, AC9] TC-110-14: reads the one event it is asked about, once, through the client it is given", async () => {
+  it("SCRUM-110 [AC5]: reads the one event it is asked about, once, through the client it is given", async () => {
     const { db, findUnique } = clientReturning(planningEvent());
 
-    await getConfirmationReadiness(db, "evt_planning");
+    await getReadinessChecklist(db, "evt_test");
 
     expect(findUnique).toHaveBeenCalledTimes(1);
-    expect(findUnique.mock.calls[0][0].where).toEqual({ id: "evt_planning" });
+    expect(findUnique.mock.calls[0][0].where).toEqual({ id: "evt_test" });
   });
+});
 
-  // The flag half of the registration rule runs in the query, which the other
-  // tests replace. Without this filter every registered attendee would count as
-  // an unresolved flag, and no other test here would notice.
-  it("SCRUM-110 [AC7] TC-110-15: only flagged registrations are read, so an ordinary registered attendee never blocks confirmation", async () => {
-    const { db, findUnique } = clientReturning(planningEvent());
+describe("withoutInternalReasons — SCRUM-110 AC6", () => {
+  it("SCRUM-110 [AC6] TC-110-12: keeps every item name, state and line but removes internal reasons", () => {
+    const checklist: ReadinessChecklist = {
+      ready: false,
+      items: [
+        {
+          name: "Venue booking",
+          complete: false,
+          state: "Rejected",
+          reason: "Boardroom seats 14; the event expects 55 attendees.",
+          lines: [],
+        },
+        {
+          name: "Equipment",
+          complete: false,
+          state: "Not fully reserved",
+          reason: null,
+          lines: ["Projector 3/5 reserved"],
+        },
+      ],
+    };
 
-    await getConfirmationReadiness(db, "evt_planning");
-
-    expect(findUnique.mock.calls[0][0].select.registrations).toEqual({
-      where: { needsReconsideration: true },
-      select: { status: true },
+    expect(withoutInternalReasons(checklist)).toEqual({
+      ready: false,
+      items: [{ ...checklist.items[0], reason: null }, checklist.items[1]],
     });
   });
 });

@@ -1,245 +1,213 @@
-# SCRUM-110 — Define event confirmation readiness: test cases
+# SCRUM-110 — See an event's readiness checklist: test cases
 
-Story and acceptance criteria: [docs/backlog/SCRUM-110.md](../backlog/SCRUM-110.md).
-Format and conventions: [README.md](README.md). The rule itself is
-[lib/event-readiness.ts](../../lib/event-readiness.ts); the decisions behind it
-are [ADR 0011](../adr/0011-event-confirmation-readiness-rule.md).
+Story and acceptance criteria: [docs/backlog/SCRUM-110.md](../backlog/SCRUM-110.md)
+(rewritten in Jira on 30 Sep 2026). Format and conventions: [README.md](README.md).
+The checklist is built by [lib/event-readiness.ts](../../lib/event-readiness.ts)
+and served, per viewer, by
+[app/(app)/events/readiness-actions.ts](<../../app/(app)/events/readiness-actions.ts>);
+the decisions behind it are [ADR 0011](../adr/0011-event-readiness-checklist.md).
 
-SCRUM-110 is a business rule with no screen of its own: SCRUM-81 calls it
-before moving an event from Planning to Confirmed and shows its answer to the
-Coordinator. Until SCRUM-81 lands, each case is run by arranging the records
-below and asking the rule for its verdict, which the unit tests do. The rule
-only reads, so it needs no integration test (CONTRIBUTING reserves those for
-locks, transactions and constraints) and no Playwright test (it has no page).
+**Shared pre-conditions for every case:** the database is migrated and seeded
+(`npm run db:deploy && npm run db:seed`) and the app is running. Unless the
+case says otherwise, the event is in **Planning**, owned by
+`organiser@test.local` and assigned to `coordinator@test.local` (both
+`Password123!`), and runs on one day in 2031. The checklist appears in the
+event's details window: **Events** → the event's row → **View Details**.
 
-**Shared pre-conditions for every case:** one event in **Planning**, unless
-the case says otherwise. "Approved booking" means a venue booking for that
-event with status APPROVED; "confirmed reservation" means an equipment
-reservation for that event with status CONFIRMED. Nothing is flagged for
-reconsideration unless the case says so.
+**What the checklist shows**
 
-**The verdict** is `ready` (true or false) plus the list of **gaps**, in this
-order when several apply:
+| Item          | Shown                                                              | States                                                                                                                 |
+| ------------- | ------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------- |
+| Venue booking | Always                                                             | Approved (complete) · Pending · Rejected – _reason_ · Not requested                                                    |
+| Equipment     | Only when the event has an equipment request that is not cancelled | Reserved (complete) · Not fully reserved, with one line per requested item such as "Projector 3/5 reserved" · Rejected |
 
-| Gap                                  | Meaning                                         |
-| ------------------------------------ | ----------------------------------------------- |
-| `EVENT_NOT_FOUND`                    | No event has that id                            |
-| `NOT_IN_PLANNING`                    | Only a Planning event can be confirmation-ready |
-| `NO_APPROVED_VENUE_BOOKING`          | AC 1, AC 4, AC 5                                |
-| `NO_CONFIRMED_EQUIPMENT_RESERVATION` | AC 2, AC 4                                      |
-| `UNRESOLVED_RECONSIDERATION`         | AC 6, AC 7                                      |
+When every item is complete and the event is in Planning, the checklist shows
+**Ready to confirm**. The Organiser sees the same items and states, without
+the reason after "Rejected".
 
-| ID                      | Type     | Criterion                  | Automated    |
-| ----------------------- | -------- | -------------------------- | ------------ |
-| [TC-110-01](#tc-110-01) | Positive | AC 1, AC 3                 | Unit         |
-| [TC-110-02](#tc-110-02) | Negative | AC 1, AC 5                 | Unit         |
-| [TC-110-03](#tc-110-03) | Negative | AC 1, AC 4                 | Unit         |
-| [TC-110-04](#tc-110-04) | Boundary | AC 1, AC 4                 | Unit         |
-| [TC-110-05](#tc-110-05) | Positive | AC 2                       | Unit         |
-| [TC-110-06](#tc-110-06) | Negative | AC 2, AC 4                 | Unit         |
-| [TC-110-07](#tc-110-07) | Boundary | AC 2, AC 3                 | Unit         |
-| [TC-110-08](#tc-110-08) | Positive | AC 3                       | Unit         |
-| [TC-110-09](#tc-110-09) | Negative | AC 6, AC 7                 | Unit         |
-| [TC-110-10](#tc-110-10) | Boundary | AC 7                       | Unit         |
-| [TC-110-11](#tc-110-11) | Negative | Planning only; AC 6        | Unit         |
-| [TC-110-12](#tc-110-12) | Negative | Unknown event              | Unit         |
-| [TC-110-13](#tc-110-13) | Positive | Every gap reported at once | Unit         |
-| [TC-110-14](#tc-110-14) | Positive | AC 8, AC 9                 | Unit, review |
-| [TC-110-15](#tc-110-15) | Negative | AC 7                       | Unit         |
+| ID                      | Type     | Criterion        | Automated |
+| ----------------------- | -------- | ---------------- | --------- |
+| [TC-110-01](#tc-110-01) | Positive | AC 1, AC 2, AC 5 | Unit, e2e |
+| [TC-110-02](#tc-110-02) | Negative | AC 1             | Unit      |
+| [TC-110-03](#tc-110-03) | Negative | AC 3             | Unit      |
+| [TC-110-04](#tc-110-04) | Negative | AC 3             | Unit, e2e |
+| [TC-110-05](#tc-110-05) | Boundary | AC 1, AC 3       | Unit      |
+| [TC-110-06](#tc-110-06) | Positive | AC 2, AC 5       | Unit, e2e |
+| [TC-110-07](#tc-110-07) | Negative | AC 2, AC 4       | Unit, e2e |
+| [TC-110-08](#tc-110-08) | Boundary | AC 2             | Unit      |
+| [TC-110-09](#tc-110-09) | Boundary | AC 2             | Unit      |
+| [TC-110-10](#tc-110-10) | Negative | AC 5             | Unit      |
+| [TC-110-11](#tc-110-11) | Positive | AC 6             | Unit, e2e |
+| [TC-110-12](#tc-110-12) | Negative | AC 6             | Unit, e2e |
+| [TC-110-13](#tc-110-13) | Negative | AC 6             | Unit      |
 
 ---
 
 ### TC-110-01
 
-| Item            | Content                                                                                                  |
-| --------------- | -------------------------------------------------------------------------------------------------------- |
-| Test Case ID    | TC-110-01                                                                                                |
-| Test Scenario   | [Positive] AC 1, AC 3: a Planning event with an approved venue booking and no equipment request is ready |
-| Pre-conditions  | Planning event. One approved booking. No equipment request. No reservations.                             |
-| Test Steps      | 1. Ask the rule whether the event is confirmation-ready.                                                 |
-| Test Data       | Event status PLANNING; booking status APPROVED                                                           |
-| Expected Result | `ready: true`, no gaps.                                                                                  |
+| Item            | Content                                                                                                                                                         |
+| --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Test Case ID    | TC-110-01                                                                                                                                                       |
+| Test Scenario   | [Positive] AC 1, AC 2, AC 5: with the venue booking approved and no equipment request, the checklist shows only Venue booking, complete, and "Ready to confirm" |
+| Pre-conditions  | Signed in as the assigned Coordinator. The event has one approved venue booking and no equipment request.                                                       |
+| Test Steps      | 1. Open the event's details. <br> 2. Read the Readiness checklist.                                                                                              |
+| Test Data       | Booking status APPROVED                                                                                                                                         |
+| Expected Result | "Venue booking — Approved", marked complete. No Equipment item. "Ready to confirm" is shown.                                                                    |
 
-**Automated by:** `tests/unit/event-readiness.test.ts` › "SCRUM-110 [AC1, AC3] TC-110-01: a Planning event with an approved venue booking and no equipment request is ready"
+**Automated by:** `tests/unit/event-readiness.test.ts` › "SCRUM-110 [AC1, AC2, AC5] TC-110-01: …"; `e2e/readiness.spec.ts` › "SCRUM-110 [AC5, AC6] TC-110-01, TC-110-06: …"
 
 ### TC-110-02
 
-| Item            | Content                                                                                                                    |
-| --------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| Test Case ID    | TC-110-02                                                                                                                  |
-| Test Scenario   | [Negative] AC 1, AC 5: without any venue booking the event is not ready, even when the Organiser gave no venue requirement |
-| Pre-conditions  | Planning event whose venue requirement is blank. No bookings. No equipment request.                                        |
-| Test Steps      | 1. Ask the rule whether the event is confirmation-ready.                                                                   |
-| Test Data       | Event status PLANNING; venueRequirements empty; no bookings                                                                |
-| Expected Result | `ready: false`, gaps `NO_APPROVED_VENUE_BOOKING`. The venue requirement is never consulted.                                |
+| Item            | Content                                                                                                       |
+| --------------- | ------------------------------------------------------------------------------------------------------------- |
+| Test Case ID    | TC-110-02                                                                                                     |
+| Test Scenario   | [Negative] AC 1: with no venue booking at all, Venue booking is still listed, as not requested and incomplete |
+| Pre-conditions  | The event has no venue booking and no equipment request.                                                      |
+| Test Steps      | 1. Open the event's details. <br> 2. Read the Readiness checklist.                                            |
+| Test Data       | No bookings                                                                                                   |
+| Expected Result | "Venue booking — Not requested", incomplete. "Ready to confirm" is not shown.                                 |
 
-**Automated by:** `tests/unit/event-readiness.test.ts` › "SCRUM-110 [AC1, AC5] TC-110-02: without any venue booking the event is not ready, and the Organiser's venue requirement is never consulted"
+**Automated by:** `tests/unit/event-readiness.test.ts` › "SCRUM-110 [AC1] TC-110-02: …"
 
 ### TC-110-03
 
-| Item            | Content                                                                                            |
-| --------------- | -------------------------------------------------------------------------------------------------- |
-| Test Case ID    | TC-110-03                                                                                          |
-| Test Scenario   | [Negative] AC 1, AC 4: a booking that is pending, rejected or cancelled does not count as approved |
-| Pre-conditions  | Planning event. Its only booking is PENDING (then REJECTED, then CANCELLED).                       |
-| Test Steps      | 1. For each booking status, ask the rule for its verdict.                                          |
-| Test Data       | Booking status PENDING / REJECTED / CANCELLED                                                      |
-| Expected Result | Each time `ready: false`, gaps `NO_APPROVED_VENUE_BOOKING`.                                        |
+| Item            | Content                                                                    |
+| --------------- | -------------------------------------------------------------------------- |
+| Test Case ID    | TC-110-03                                                                  |
+| Test Scenario   | [Negative] AC 3: a pending venue booking shows "Pending" and is incomplete |
+| Pre-conditions  | The event's only venue booking is awaiting Venue Staff.                    |
+| Test Steps      | 1. Open the event's details. <br> 2. Read the Readiness checklist.         |
+| Test Data       | Booking status PENDING                                                     |
+| Expected Result | "Venue booking — Pending", incomplete. Not ready.                          |
 
-**Automated by:** `tests/unit/event-readiness.test.ts` › "SCRUM-110 [AC1, AC4] TC-110-03: a PENDING / REJECTED / CANCELLED booking is not an approved one"
+**Automated by:** `tests/unit/event-readiness.test.ts` › "SCRUM-110 [AC3] TC-110-03: …"
 
 ### TC-110-04
 
-| Item            | Content                                                                                                                                                                   |
-| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Test Case ID    | TC-110-04                                                                                                                                                                 |
-| Test Scenario   | [Boundary] AC 1, AC 4: after a rejected booking, a second booking that is approved makes the event ready (SCRUM-81: "the Coordinator can submit another booking request") |
-| Pre-conditions  | Planning event with one REJECTED booking and one APPROVED booking.                                                                                                        |
-| Test Steps      | 1. Ask the rule whether the event is confirmation-ready.                                                                                                                  |
-| Test Data       | Bookings REJECTED, APPROVED                                                                                                                                               |
-| Expected Result | `ready: true`, no gaps.                                                                                                                                                   |
+| Item            | Content                                                                                                    |
+| --------------- | ---------------------------------------------------------------------------------------------------------- |
+| Test Case ID    | TC-110-04                                                                                                  |
+| Test Scenario   | [Negative] AC 3: a rejected venue booking shows "Rejected – _reason_" to the Coordinator and is incomplete |
+| Pre-conditions  | Signed in as the assigned Coordinator. The event's only venue booking was rejected with a reason.          |
+| Test Steps      | 1. Open the event's details. <br> 2. Read the Readiness checklist.                                         |
+| Test Data       | Booking status REJECTED, reason "Boardroom seats 14; the event expects 55 attendees."                      |
+| Expected Result | "Venue booking — Rejected – Boardroom seats 14; the event expects 55 attendees.", incomplete. Not ready.   |
 
-**Automated by:** `tests/unit/event-readiness.test.ts` › "SCRUM-110 [AC1, AC4] TC-110-04: a second booking approved after a rejected one makes the event ready"
+**Automated by:** `tests/unit/event-readiness.test.ts` › "SCRUM-110 [AC3] TC-110-04: …"; `e2e/readiness.spec.ts` › "SCRUM-110 [AC3, AC4, AC6] TC-110-04, TC-110-07, TC-110-11, TC-110-12: …"
 
 ### TC-110-05
 
-| Item            | Content                                                                                               |
-| --------------- | ----------------------------------------------------------------------------------------------------- |
-| Test Case ID    | TC-110-05                                                                                             |
-| Test Scenario   | [Positive] AC 2: with an equipment request, an approved booking plus a confirmed reservation is ready |
-| Pre-conditions  | Planning event. One approved booking. One equipment request. One confirmed reservation.               |
-| Test Steps      | 1. Ask the rule whether the event is confirmation-ready.                                              |
-| Test Data       | Equipment request APPROVED; reservation CONFIRMED                                                     |
-| Expected Result | `ready: true`, no gaps.                                                                               |
+| Item            | Content                                                                                                                                                     |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Test Case ID    | TC-110-05                                                                                                                                                   |
+| Test Scenario   | [Boundary] AC 1, AC 3: with several bookings, an approved one wins; otherwise a pending one; otherwise the latest rejection. Cancelled bookings are ignored |
+| Pre-conditions  | The event has more than one booking.                                                                                                                        |
+| Test Steps      | 1. Read the checklist for each combination below.                                                                                                           |
+| Test Data       | (a) REJECTED then APPROVED <br> (b) REJECTED then PENDING <br> (c) two REJECTED, reasons "old" then "new" <br> (d) only CANCELLED                           |
+| Expected Result | (a) Approved, complete. (b) Pending. (c) Rejected – new. (d) Not requested.                                                                                 |
 
-**Automated by:** `tests/unit/event-readiness.test.ts` › "SCRUM-110 [AC2] TC-110-05: with an equipment request, an approved booking plus a confirmed reservation is ready"
+**Automated by:** `tests/unit/event-readiness.test.ts` › "SCRUM-110 [AC1, AC3] TC-110-05: …"
 
 ### TC-110-06
 
-| Item            | Content                                                                                                                                |
-| --------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| Test Case ID    | TC-110-06                                                                                                                              |
-| Test Scenario   | [Negative] AC 2, AC 4: an equipment request with no confirmed reservation (none, or only a cancelled one) is not ready                 |
-| Pre-conditions  | Planning event. One approved booking. One equipment request still being reviewed. Either no reservation, or one CANCELLED reservation. |
-| Test Steps      | 1. Ask the rule for its verdict with no reservation. <br> 2. Ask again with only a cancelled reservation.                              |
-| Test Data       | Equipment request PENDING_REVIEW; reservation CANCELLED                                                                                |
-| Expected Result | Both times `ready: false`, gaps `NO_CONFIRMED_EQUIPMENT_RESERVATION`.                                                                  |
+| Item            | Content                                                                                                                                                                                                               |
+| --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Test Case ID    | TC-110-06                                                                                                                                                                                                             |
+| Test Scenario   | [Positive] AC 2, AC 5: when every requested line is reserved in full for the event's period, Equipment is complete and the event is ready                                                                             |
+| Pre-conditions  | Venue booking approved. One equipment request for 5 Projectors and 2 Wireless Microphones. Confirmed reservations covering the whole event: 5 Projectors (in two reservations of 3 and 2) and 2 Wireless Microphones. |
+| Test Steps      | 1. Open the event's details. <br> 2. Read the Readiness checklist.                                                                                                                                                    |
+| Test Data       | Lines Projector × 5, Wireless Microphone × 2                                                                                                                                                                          |
+| Expected Result | "Equipment — Reserved", with "Projector 5/5 reserved" and "Wireless Microphone 2/2 reserved", complete. "Ready to confirm".                                                                                           |
 
-**Automated by:** `tests/unit/event-readiness.test.ts` › "SCRUM-110 [AC2, AC4] TC-110-06: an equipment request with no reservation, or only a cancelled one is not ready"
+**Automated by:** `tests/unit/event-readiness.test.ts` › "SCRUM-110 [AC2, AC5] TC-110-06: …"; `e2e/readiness.spec.ts` › "SCRUM-110 [AC5, AC6] TC-110-01, TC-110-06: …"
 
 ### TC-110-07
 
-| Item            | Content                                                                                                                                    |
-| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| Test Case ID    | TC-110-07                                                                                                                                  |
-| Test Scenario   | [Boundary] AC 2, AC 3: a request Technical Support rejected still needs equipment; only a cancelled request stops equipment being required |
-| Pre-conditions  | Planning event with an approved booking and no reservation. Its only equipment request is REJECTED (then CANCELLED).                       |
-| Test Steps      | 1. Ask the rule for its verdict with the rejected request. <br> 2. Ask again with the request cancelled.                                   |
-| Test Data       | Equipment request REJECTED / CANCELLED                                                                                                     |
-| Expected Result | Rejected: `ready: false`, gaps `NO_CONFIRMED_EQUIPMENT_RESERVATION`. Cancelled: `ready: true`.                                             |
+| Item            | Content                                                                                              |
+| --------------- | ---------------------------------------------------------------------------------------------------- |
+| Test Case ID    | TC-110-07                                                                                            |
+| Test Scenario   | [Negative] AC 2, AC 4: a line reserved only in part shows its shortfall, and Equipment is incomplete |
+| Pre-conditions  | Venue booking approved. Request for 5 Projectors; 3 reserved for the whole event.                    |
+| Test Steps      | 1. Open the event's details. <br> 2. Read the Readiness checklist.                                   |
+| Test Data       | Line Projector × 5; reservation Projector × 3                                                        |
+| Expected Result | "Equipment — Not fully reserved", with "Projector 3/5 reserved". Not ready.                          |
 
-**Automated by:** `tests/unit/event-readiness.test.ts` › "SCRUM-110 [AC2, AC3] TC-110-07: a request Technical Support rejected still needs equipment; only a cancelled request stops equipment being required"
+**Automated by:** `tests/unit/event-readiness.test.ts` › "SCRUM-110 [AC2, AC4] TC-110-07: …"; `e2e/readiness.spec.ts` › "SCRUM-110 [AC3, AC4, AC6] …"
 
 ### TC-110-08
 
-| Item            | Content                                                                                              |
-| --------------- | ---------------------------------------------------------------------------------------------------- |
-| Test Case ID    | TC-110-08                                                                                            |
-| Test Scenario   | [Positive] AC 3: a reservation made without an equipment request does not block, and is not required |
-| Pre-conditions  | Planning event with an approved booking, no equipment request and one confirmed reservation.         |
-| Test Steps      | 1. Ask the rule whether the event is confirmation-ready.                                             |
-| Test Data       | No equipment request; reservation CONFIRMED                                                          |
-| Expected Result | `ready: true`, no gaps.                                                                              |
+| Item            | Content                                                                                                                                                                                |
+| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Test Case ID    | TC-110-08                                                                                                                                                                              |
+| Test Scenario   | [Boundary] AC 2: only a confirmed reservation of the requested item that covers the whole event period counts                                                                          |
+| Pre-conditions  | Request for 2 Projectors. The event runs 09:00–17:00.                                                                                                                                  |
+| Test Steps      | 1. Read the checklist for each reservation below.                                                                                                                                      |
+| Test Data       | (a) 2 Projectors, exactly 09:00–17:00 <br> (b) 2 Projectors, 09:00–12:00 <br> (c) 2 Projectors, CANCELLED <br> (d) 2 Wireless Microphones, 09:00–17:00 <br> (e) the event has no dates |
+| Expected Result | (a) "Projector 2/2 reserved", complete. (b)–(e) "Projector 0/2 reserved", incomplete.                                                                                                  |
 
-**Automated by:** `tests/unit/event-readiness.test.ts` › "SCRUM-110 [AC3] TC-110-08: a reservation made without an equipment request neither blocks nor is required"
+**Automated by:** `tests/unit/event-readiness.test.ts` › "SCRUM-110 [AC2] TC-110-08: …"
 
 ### TC-110-09
 
-| Item            | Content                                                                                                                                                                                                                                      |
-| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Test Case ID    | TC-110-09                                                                                                                                                                                                                                    |
-| Test Scenario   | [Negative] AC 6, AC 7: an arrangement still flagged "needs reconsideration" after an impactful change blocks confirmation, even when everything else is in place                                                                             |
-| Pre-conditions  | Planning event (moved back from Confirmed by an approved impactful change) with an approved booking, an equipment request and a confirmed reservation. One active record is flagged: the booking, then the reservation, then a registration. |
-| Test Steps      | 1. For each flagged record, ask the rule for its verdict.                                                                                                                                                                                    |
-| Test Data       | needsReconsideration = true on the APPROVED booking / CONFIRMED reservation / REGISTERED registration                                                                                                                                        |
-| Expected Result | Each time `ready: false`, gaps `UNRESOLVED_RECONSIDERATION`.                                                                                                                                                                                 |
+| Item            | Content                                                                                                                                                                                                         |
+| --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Test Case ID    | TC-110-09                                                                                                                                                                                                       |
+| Test Scenario   | [Boundary] AC 2: which equipment requests count                                                                                                                                                                 |
+| Pre-conditions  | Venue booking approved. No reservations unless stated.                                                                                                                                                          |
+| Test Steps      | 1. Read the checklist for each set of requests below.                                                                                                                                                           |
+| Test Data       | (a) one CANCELLED request <br> (b) one REJECTED request <br> (c) a REJECTED request, then a new PENDING_REVIEW request for 1 Laptop <br> (d) two live requests that both ask for Projectors (2 and 3)           |
+| Expected Result | (a) No Equipment item; ready. (b) "Equipment — Rejected", incomplete, until the Coordinator requests again. (c) The rejected request is ignored: "Laptop 0/1 reserved". (d) One line, "Projector 0/5 reserved". |
 
-**Automated by:** `tests/unit/event-readiness.test.ts` › "SCRUM-110 [AC6, AC7] TC-110-09: a flagged booking / reservation / registration blocks confirmation even when every arrangement is in place"
+**Automated by:** `tests/unit/event-readiness.test.ts` › "SCRUM-110 [AC2] TC-110-09: …"
 
 ### TC-110-10
 
-| Item            | Content                                                                                                                                                                                                                                                                                  |
-| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Test Case ID    | TC-110-10                                                                                                                                                                                                                                                                                |
-| Test Scenario   | [Boundary] AC 7: a flag counts as resolved once it is cleared, or once staff cancel or reject the flagged booking, cancel the flagged reservation, or the flagged registration is withdrawn or cancelled (the customer's ruling: staff decide, and the Coordinator records the decision) |
-| Pre-conditions  | As TC-110-09, but every flag has been dealt with: cleared on active records, and still set only on a cancelled booking, a rejected booking, a cancelled reservation, and a withdrawn and a cancelled registration.                                                                       |
-| Test Steps      | 1. Ask the rule whether the event is confirmation-ready.                                                                                                                                                                                                                                 |
-| Test Data       | Flagged bookings CANCELLED and REJECTED; flagged reservation CANCELLED; flagged registrations WITHDRAWN and CANCELLED                                                                                                                                                                    |
-| Expected Result | `ready: true`, no gaps.                                                                                                                                                                                                                                                                  |
+| Item            | Content                                                                                                |
+| --------------- | ------------------------------------------------------------------------------------------------------ |
+| Test Case ID    | TC-110-10                                                                                              |
+| Test Scenario   | [Negative] AC 5: only an event in Planning can be "Ready to confirm", even when every item is complete |
+| Pre-conditions  | Venue booking approved, no equipment request.                                                          |
+| Test Steps      | 1. Read the checklist with the event in each status other than Planning.                               |
+| Test Data       | APPROVED, CONFIRMED, UNDER_REVIEW, …                                                                   |
+| Expected Result | Items as in TC-110-01, but not ready.                                                                  |
 
-**Automated by:** `tests/unit/event-readiness.test.ts` › "SCRUM-110 [AC7] TC-110-10: a flag no longer blocks once staff cancel or reject the flagged booking, cancel the reservation, or the registration is withdrawn or cancelled"
+**Automated by:** `tests/unit/event-readiness.test.ts` › "SCRUM-110 [AC5] TC-110-10: …"
 
 ### TC-110-11
 
-| Item            | Content                                                                                                                      |
-| --------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| Test Case ID    | TC-110-11                                                                                                                    |
-| Test Scenario   | [Negative] Planning only, AC 6: an event in any other status is not confirmation-ready, even with every arrangement in place |
-| Pre-conditions  | An event with an approved booking and nothing else outstanding, in each status other than Planning.                          |
-| Test Steps      | 1. For each status, ask the rule for its verdict.                                                                            |
-| Test Data       | DRAFT, SUBMITTED, UNDER_REVIEW, APPROVED, CONFIRMED, COMPLETED, CANCELLED, REJECTED                                          |
-| Expected Result | Each time `ready: false`, gaps `NOT_IN_PLANNING`.                                                                            |
+| Item            | Content                                                                                               |
+| --------------- | ----------------------------------------------------------------------------------------------------- |
+| Test Case ID    | TC-110-11                                                                                             |
+| Test Scenario   | [Positive] AC 6: the assigned Coordinator sees the checklist on the event page, with internal reasons |
+| Pre-conditions  | As TC-110-04.                                                                                         |
+| Test Steps      | 1. Sign in as `coordinator@test.local`. <br> 2. Open the event's details.                             |
+| Test Data       | —                                                                                                     |
+| Expected Result | The Readiness checklist is shown, including the rejection reason.                                     |
 
-**Automated by:** `tests/unit/event-readiness.test.ts` › "SCRUM-110 [Planning only] TC-110-11: an event in any status but Planning is not confirmation-ready, even with every arrangement in place"
+**Automated by:** `tests/unit/readiness-actions.test.ts` › "SCRUM-110 [AC6] TC-110-11: …"; `e2e/readiness.spec.ts` › "SCRUM-110 [AC3, AC4, AC6] …"
 
 ### TC-110-12
 
-| Item            | Content                                                                            |
-| --------------- | ---------------------------------------------------------------------------------- |
-| Test Case ID    | TC-110-12                                                                          |
-| Test Scenario   | [Negative] An id that matches no event is not ready, and nothing else is looked up |
-| Pre-conditions  | No event has the id.                                                               |
-| Test Steps      | 1. Ask the rule for its verdict.                                                   |
-| Test Data       | eventId `evt_missing`                                                              |
-| Expected Result | `ready: false`, gaps `EVENT_NOT_FOUND` only.                                       |
+| Item            | Content                                                                                    |
+| --------------- | ------------------------------------------------------------------------------------------ |
+| Test Case ID    | TC-110-12                                                                                  |
+| Test Scenario   | [Negative] AC 6: the Organiser sees the item names and states but not internal reasons     |
+| Pre-conditions  | As TC-110-04.                                                                              |
+| Test Steps      | 1. Sign in as `organiser@test.local`. <br> 2. Open the event's details.                    |
+| Test Data       | —                                                                                          |
+| Expected Result | "Venue booking — Rejected" and the equipment lines are shown; the rejection reason is not. |
 
-**Automated by:** `tests/unit/event-readiness.test.ts` › "SCRUM-110 TC-110-12: an id that matches no event is not ready, and nothing else is reported"
+**Automated by:** `tests/unit/readiness-actions.test.ts` › "SCRUM-110 [AC6] TC-110-12: …"; `e2e/readiness.spec.ts` › "SCRUM-110 [AC3, AC4, AC6] …"
 
 ### TC-110-13
 
-| Item            | Content                                                                                                                                            |
-| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Test Case ID    | TC-110-13                                                                                                                                          |
-| Test Scenario   | [Positive] Every outstanding arrangement is reported at once, so the Coordinator sees all of them, not just the first                              |
-| Pre-conditions  | Approved (not yet Planning) event. No booking. An open equipment request and no reservation. One flagged registration.                             |
-| Test Steps      | 1. Ask the rule for its verdict.                                                                                                                   |
-| Test Data       | Status APPROVED; equipment request IN_REVIEW; flagged REGISTERED registration                                                                      |
-| Expected Result | `ready: false`, gaps in order: `NOT_IN_PLANNING`, `NO_APPROVED_VENUE_BOOKING`, `NO_CONFIRMED_EQUIPMENT_RESERVATION`, `UNRESOLVED_RECONSIDERATION`. |
+| Item            | Content                                                                                                                                      |
+| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| Test Case ID    | TC-110-13                                                                                                                                    |
+| Test Scenario   | [Negative] AC 6: anyone who is neither the event's Organiser nor its Coordinator cannot read the checklist, and cannot tell the event exists |
+| Pre-conditions  | Signed in as another Organiser, Venue Staff, Technical Support or an Attendee; or signed out.                                                |
+| Test Steps      | 1. Ask for the event's checklist.                                                                                                            |
+| Test Data       | eventId of the test event; also an id that matches no event                                                                                  |
+| Expected Result | "Event not found." in every case, identical for a real and a missing event.                                                                  |
 
-**Automated by:** `tests/unit/event-readiness.test.ts` › "SCRUM-110 TC-110-13: every outstanding arrangement is reported at once, in a fixed order"
-
-### TC-110-14
-
-| Item            | Content                                                                                                                                                                                                        |
-| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Test Case ID    | TC-110-14                                                                                                                                                                                                      |
-| Test Scenario   | [Positive] AC 8, AC 9: the rule is one function that SCRUM-81 can call inside its own transaction, reading one event in one query                                                                              |
-| Pre-conditions  | A transaction client (as SCRUM-81 will pass).                                                                                                                                                                  |
-| Test Steps      | 1. Call the rule with the transaction client. <br> 2. Check which event it read.                                                                                                                               |
-| Test Data       | eventId `evt_planning`                                                                                                                                                                                         |
-| Expected Result | Exactly one read, through the client it was given, for that event id. That no other story adds a competing confirmation gate is checked in code review: SCRUM-81 must import this rule rather than restate it. |
-
-**Automated by:** `tests/unit/event-readiness.test.ts` › "SCRUM-110 [AC8, AC9] TC-110-14: reads the one event it is asked about, once, through the client it is given"
-
-### TC-110-15
-
-| Item            | Content                                                                                                                                                                                                                                                                 |
-| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Test Case ID    | TC-110-15                                                                                                                                                                                                                                                               |
-| Test Scenario   | [Negative] AC 7: only registrations flagged for reconsideration are read, so an ordinary registered attendee never blocks confirmation                                                                                                                                  |
-| Pre-conditions  | A Planning event that is otherwise ready, with registered attendees who are not flagged.                                                                                                                                                                                |
-| Test Steps      | 1. Ask the rule whether the event is confirmation-ready. <br> 2. Check how it read the registrations.                                                                                                                                                                   |
-| Test Data       | Registrations REGISTERED, needsReconsideration false                                                                                                                                                                                                                    |
-| Expected Result | `ready: true`. The query asks only for registrations with needsReconsideration = true, so unflagged attendees are never counted as unresolved flags. (Added after review of PR #101: the flag half of this rule runs in the query, which the other unit tests replace.) |
-
-**Automated by:** `tests/unit/event-readiness.test.ts` › "SCRUM-110 [AC7] TC-110-15: only flagged registrations are read, so an ordinary registered attendee never blocks confirmation"
+**Automated by:** `tests/unit/readiness-actions.test.ts` › "SCRUM-110 [AC6] TC-110-13: …"
