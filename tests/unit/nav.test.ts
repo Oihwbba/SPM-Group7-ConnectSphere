@@ -76,6 +76,7 @@ describe("navigation derives from the permission model — SCRUM-66", () => {
     { href: "/venues", actions: ["venue:read"] },
     { href: "/bookings", actions: ["booking:review"] },
     { href: "/bookings/new", actions: ["booking:request"] },
+    { href: "/venues/availability", actions: ["venue:availability"] },
     { href: "/equipment", actions: ["equipment:read"] },
     { href: "/equipment-requests", actions: ["equipment-request:list"] },
     { href: "/registrations", actions: ["registration:read"] },

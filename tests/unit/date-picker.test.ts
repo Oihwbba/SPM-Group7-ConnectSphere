@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 
-import { monthGrid } from "@/app/(app)/bookings/new/date-picker";
+import { monthGrid } from "@/components/app/date-picker";
 
 // SCRUM-50 — the in-app calendar the Request Venue form opens for its dates.
 describe("monthGrid", () => {

@@ -2,11 +2,10 @@ import { describe, it, expect, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 
 import {
-  HALF_HOUR_TIMES,
-  isPastSlot,
   RequestForm,
   snapToHalfHour,
 } from "@/app/(app)/bookings/new/request-form";
+import { HALF_HOUR_TIMES, isPastSlot } from "@/components/app/date-time-field";
 
 // SCRUM-50 — what a coordinator sees before submitting. The server action is
 // never called here, so its dependencies are stubbed out.

@@ -173,3 +173,37 @@ describe("can — venue booking capabilities (SCRUM-50/52/53)", () => {
     }
   });
 });
+
+// SCRUM-37 — only Venue Staff record non-booking unavailability.
+describe("can — recording venue unavailability (SCRUM-37)", () => {
+  const venueStaff: SessionUser = { id: "vs", role: "VENUE_STAFF" };
+  const techSupport: SessionUser = { id: "ts", role: "TECH_SUPPORT" };
+
+  it("SCRUM-37 AC2 — venue staff may record unavailability", () => {
+    expect(can(venueStaff, "unavailability:record")).toBe(true);
+  });
+
+  it("SCRUM-37 AC2 — no other role may record unavailability", () => {
+    for (const user of [organiserA, coordinator, techSupport, attendee]) {
+      expect(can(user, "unavailability:record")).toBe(false);
+    }
+  });
+});
+
+// SCRUM-36 — the availability calendar is for the internal roles that plan
+// venues: Coordinators requesting them and Venue Staff deciding on them.
+describe("can — viewing venue availability (SCRUM-36)", () => {
+  const venueStaff: SessionUser = { id: "vs", role: "VENUE_STAFF" };
+  const techSupport: SessionUser = { id: "ts", role: "TECH_SUPPORT" };
+
+  it("SCRUM-36 AC1 — coordinators and venue staff may view venue availability", () => {
+    expect(can(coordinator, "venue:availability")).toBe(true);
+    expect(can(venueStaff, "venue:availability")).toBe(true);
+  });
+
+  it("SCRUM-36 AC1 — organisers, tech support and attendees may not", () => {
+    for (const user of [organiserA, techSupport, attendee]) {
+      expect(can(user, "venue:availability")).toBe(false);
+    }
+  });
+});
