@@ -42,7 +42,13 @@ export async function getReadinessChecklist(
       startAt: true,
       endAt: true,
       bookings: {
-        select: { status: true, decisionReason: true, createdAt: true },
+        select: {
+          status: true,
+          decisionReason: true,
+          createdAt: true,
+          startAt: true,
+          endAt: true,
+        },
       },
       equipmentRequests: {
         select: {
@@ -70,7 +76,7 @@ export async function getReadinessChecklist(
   });
   if (!event) return null;
 
-  const items = [venueItem(event.bookings)];
+  const items = [venueItem(event)];
   const equipment = equipmentItem(event);
   if (equipment) items.push(equipment);
 
@@ -80,25 +86,50 @@ export async function getReadinessChecklist(
   };
 }
 
+type Period = { startAt: Date | null; endAt: Date | null };
+
+/**
+ * Does a booking or reservation hold for the whole event? Bookings and
+ * reservations carry their own times (ADR 0003), so after the event moves an
+ * old one no longer covers it. An event without dates is covered by nothing.
+ */
+function coversEvent(
+  held: { startAt: Date; endAt: Date },
+  { startAt, endAt }: Period,
+): boolean {
+  return (
+    startAt !== null &&
+    endAt !== null &&
+    held.startAt <= startAt &&
+    held.endAt >= endAt
+  );
+}
+
 type BookingRow = {
   status: string;
   decisionReason: string | null;
   createdAt: Date;
+  startAt: Date;
+  endAt: Date;
 };
 
-function venueItem(bookings: BookingRow[]): ChecklistItem {
-  const newestFirst = [...bookings].sort(
+function venueItem(event: Period & { bookings: BookingRow[] }): ChecklistItem {
+  const newestFirst = [...event.bookings].sort(
     (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
   );
   const item = { name: "Venue booking" as const, reason: null, lines: [] };
+  const approved = newestFirst.filter((b) => b.status === "APPROVED");
 
-  // After a rejection the Coordinator books again, so the most advanced
-  // booking describes where the venue stands.
-  if (newestFirst.some((b) => b.status === "APPROVED")) {
+  // After a rejection, or after the event moves, the Coordinator books again,
+  // so the most advanced booking describes where the venue stands.
+  if (approved.some((b) => coversEvent(b, event))) {
     return { ...item, complete: true, state: "Approved" };
   }
   if (newestFirst.some((b) => b.status === "PENDING")) {
     return { ...item, complete: false, state: "Pending" };
+  }
+  if (approved.length > 0) {
+    return { ...item, complete: false, state: "Approved for a different time" };
   }
   const rejected = newestFirst.find((b) => b.status === "REJECTED");
   if (rejected) {
@@ -161,7 +192,6 @@ function equipmentItem(event: EventRow): ChecklistItem | null {
     });
   }
 
-  const { startAt, endAt } = event;
   const lines: string[] = [];
   let complete = true;
   for (const [equipmentId, { type, quantity }] of requested) {
@@ -173,10 +203,7 @@ function equipmentItem(event: EventRow): ChecklistItem | null {
         (r) =>
           r.equipmentId === equipmentId &&
           r.status === "CONFIRMED" &&
-          startAt !== null &&
-          endAt !== null &&
-          r.startAt <= startAt &&
-          r.endAt >= endAt,
+          coversEvent(r, event),
       )
       .reduce((sum, r) => sum + r.quantity, 0);
     if (reserved < quantity) complete = false;

@@ -43,11 +43,18 @@ the same answer as a missing event (SCRUM-68).
 
 Where the criteria are silent:
 
-1. **The venue item reads as the most advanced booking.** Any approved booking
-   completes it. Otherwise a pending booking shows "Pending"; otherwise the
-   latest rejection shows "Rejected – _reason_"; otherwise "Not requested".
-   After a rejection the Coordinator books again, so the newer booking is what
-   matters. Cancelled bookings are ignored.
+1. **The venue item reads as the most advanced booking, for the event's
+   time.** An approved booking completes it only if it covers the whole event.
+   Bookings keep their own times (ADR 0003), so after an event moves, its old
+   booking no longer secures the venue. Otherwise a pending booking shows
+   "Pending"; otherwise an approved booking for another time shows "Approved
+   for a different time"; otherwise the latest rejection shows "Rejected –
+   _reason_"; otherwise "Not requested". After a rejection or a move the
+   Coordinator books again, so the newer booking is what matters. Cancelled
+   bookings are ignored. (Added after review of #101: the criteria say only
+   "a venue booking for this event is Approved", but counting a booking for
+   the wrong day would let a moved event read as ready, and equipment already
+   has to cover the event's period.)
 2. **Which equipment requests count.** Pending, in-review and approved requests
    are live, and their lines are added up per item (two live requests for 2 and
    3 Projectors need 5). A cancelled request is no longer wanted. A rejected

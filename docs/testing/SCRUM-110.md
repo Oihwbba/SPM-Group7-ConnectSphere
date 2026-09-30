@@ -18,7 +18,7 @@ event's details window: **Events** → the event's row → **View Details**.
 
 | Item          | Shown                                                              | States                                                                                                                 |
 | ------------- | ------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------- |
-| Venue booking | Always                                                             | Approved (complete) · Pending · Rejected – _reason_ · Not requested                                                    |
+| Venue booking | Always                                                             | Approved (complete) · Pending · Approved for a different time · Rejected – _reason_ · Not requested                    |
 | Equipment     | Only when the event has an equipment request that is not cancelled | Reserved (complete) · Not fully reserved, with one line per requested item such as "Projector 3/5 reserved" · Rejected |
 
 When every item is complete and the event is in Planning, the checklist shows
@@ -40,6 +40,7 @@ the reason after "Rejected".
 | [TC-110-11](#tc-110-11) | Positive | AC 6             | Unit, e2e |
 | [TC-110-12](#tc-110-12) | Negative | AC 6             | Unit, e2e |
 | [TC-110-13](#tc-110-13) | Negative | AC 6             | Unit      |
+| [TC-110-14](#tc-110-14) | Boundary | AC 1             | Unit      |
 
 ---
 
@@ -211,3 +212,16 @@ the reason after "Rejected".
 | Expected Result | "Event not found." in every case, identical for a real and a missing event.                                                                  |
 
 **Automated by:** `tests/unit/readiness-actions.test.ts` › "SCRUM-110 [AC6] TC-110-13: …"
+
+### TC-110-14
+
+| Item            | Content                                                                                                                                                                                                                        |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Test Case ID    | TC-110-14                                                                                                                                                                                                                      |
+| Test Scenario   | [Boundary] AC 1: an approved venue booking completes the item only if it covers the whole event. One for another time, such as the old date after the event moved, shows "Approved for a different time"                       |
+| Pre-conditions  | The event runs 09:00–17:00 on 1 Jun 2031.                                                                                                                                                                                      |
+| Test Steps      | 1. Read the checklist for each booking below.                                                                                                                                                                                  |
+| Test Data       | (a) APPROVED, exactly 09:00–17:00 <br> (b) APPROVED, 10:00–17:00 <br> (c) APPROVED, 09:00–12:00 <br> (d) APPROVED on another day <br> (e) (d), plus a newer PENDING booking for the right time <br> (f) the event has no dates |
+| Expected Result | (a) Approved, complete, ready. (b)–(d), (f) "Approved for a different time", incomplete, not ready. (e) Pending.                                                                                                               |
+
+**Automated by:** `tests/unit/event-readiness.test.ts` › "SCRUM-110 [AC1] TC-110-14: …" (both TC-110-14 tests)

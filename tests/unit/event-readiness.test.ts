@@ -18,6 +18,8 @@ type Booking = {
   status: string;
   decisionReason: string | null;
   createdAt: Date;
+  startAt: Date;
+  endAt: Date;
 };
 type Line = {
   equipmentId: string;
@@ -51,6 +53,8 @@ const booking = (
   status,
   decisionReason,
   createdAt: day(n),
+  startAt: START,
+  endAt: END,
 });
 const line = (equipmentId: string, type: string, quantity: number): Line => ({
   equipmentId,
@@ -199,6 +203,66 @@ describe("getReadinessChecklist — SCRUM-110", () => {
       ).toMatchObject(expected);
     },
   );
+
+  it.each([
+    {
+      when: "covers exactly the event's time",
+      period: {},
+      complete: true,
+      state: "Approved",
+    },
+    {
+      when: "starts after the event starts",
+      period: { startAt: new Date("2031-06-01T02:00:00Z") },
+      complete: false,
+      state: "Approved for a different time",
+    },
+    {
+      when: "ends before the event ends",
+      period: { endAt: new Date("2031-06-01T04:00:00Z") },
+      complete: false,
+      state: "Approved for a different time",
+    },
+    {
+      when: "is for another day, e.g. before the event moved",
+      period: { startAt: day(5), endAt: day(6) },
+      complete: false,
+      state: "Approved for a different time",
+    },
+  ])(
+    "SCRUM-110 [AC1] TC-110-14: an approved booking that $when counts only if it covers the whole event",
+    async ({ period, complete, state }) => {
+      const result = await checklistOf(
+        planningEvent({ bookings: [{ ...booking("APPROVED"), ...period }] }),
+      );
+
+      expect(venue(result)).toMatchObject({ complete, state });
+      expect(result?.ready).toBe(complete);
+    },
+  );
+
+  it("SCRUM-110 [AC1] TC-110-14: a new pending booking for the right time outranks an approved one for the wrong time, and an event with no dates has no venue secured", async () => {
+    const rebooked = await checklistOf(
+      planningEvent({
+        bookings: [
+          { ...booking("APPROVED", 1), startAt: day(5), endAt: day(6) },
+          booking("PENDING", 2),
+        ],
+      }),
+    );
+    const undated = await checklistOf(
+      planningEvent({ startAt: null, endAt: null }),
+    );
+
+    expect(venue(rebooked)).toMatchObject({
+      complete: false,
+      state: "Pending",
+    });
+    expect(venue(undated)).toMatchObject({
+      complete: false,
+      state: "Approved for a different time",
+    });
+  });
 
   it("SCRUM-110 [AC2, AC5] TC-110-06: every requested line reserved in full for the event's period completes Equipment, even across several reservations", async () => {
     const result = await checklistOf(
