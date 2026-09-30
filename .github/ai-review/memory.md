@@ -116,11 +116,12 @@ change.
   the SCRUM-74 case for real and #96 the SCRUM-53 concurrency races.
 - (2026-09-15, #26) Test case specifications live in `docs/testing/<KEY>.md`,
   and each case names the automated test that covers it.
-- (2026-09-25, #88) Coverage measures `lib/**/*.ts` and `app/**/actions.ts`
-  only, in a `node` environment with no jsdom, so `.tsx` components never
-  appear in it; Playwright journeys exercise them. Measuring components needs
-  new tooling (SCRUM-87), a team decision. A "100% coverage" claim refers to the
-  measured files only.
+- (2026-09-25, #88; 2026-09-30, SCRUM-125) Coverage measures every `.ts` file
+  under `lib/` and `app/` (not the Auth.js route re-export), in a `node`
+  environment with no jsdom, so `.tsx` components never appear in it;
+  Playwright journeys exercise them. Measuring components needs new tooling
+  (SCRUM-87), a team decision. CI fails when a measured file drops below 100%,
+  so a "100% coverage" claim refers to the measured files only.
 - (2026-09-25, #87) CI runs Node 24 and a developer may run Node 22, whose ICU
   labels a zero-offset zone differently, so a branch can run locally but never
   on CI. Tests asserting `Intl` output stub `Intl` rather than trust the ICU.

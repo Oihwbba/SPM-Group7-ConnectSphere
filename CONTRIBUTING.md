@@ -27,6 +27,13 @@ variation of it. When you build your feature, copy that folder's shape:
 | `tests/integration/<domain>.test.ts` | Vitest test against a real Postgres, only where correctness depends on the database: row locks, transactions, constraints. Runs with `npm run test:integration` and needs a local database. |
 | `e2e/*.spec.ts` | One Playwright test of the main user journey. |
 
+**Coverage.** Every server-side `.ts` file under `lib/` and `app/` must stay at
+100% statements, branches, functions and lines, whatever the file is named.
+`npm run test:coverage` fails otherwise, naming the file, and so does CI. It
+counts the unit and integration tests together, so run it with the local
+database up. Components (`.tsx`) are not measured; Playwright covers them
+(SCRUM-87).
+
 Route folders are named for the **domain**, not the role. A route that several
 roles use is one folder whose `page.tsx` switches on `session.user.role` — see
 `app/(app)/events/page.tsx` and the addendum to ADR 0001.
