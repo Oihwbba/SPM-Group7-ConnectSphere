@@ -2,6 +2,7 @@ import { requireSession } from "@/lib/auth/guard";
 import { can } from "@/lib/auth/can";
 import { Forbidden } from "@/components/app/forbidden";
 import { prisma } from "@/lib/db";
+import { RESERVABLE_EVENT_STATUSES } from "@/lib/schemas/reservation";
 import { EquipmentClient } from "./equipment-client";
 
 // Access is decided by lib/auth/can.ts (the single gate), not a role list here
@@ -19,7 +20,7 @@ export default async function EquipmentPage() {
       orderBy: { type: "asc" },
     }),
     prisma.event.findMany({
-      where: { status: "APPROVED" },
+      where: { status: { in: RESERVABLE_EVENT_STATUSES } },
       select: { id: true, name: true },
       orderBy: { startAt: "asc" },
     }),

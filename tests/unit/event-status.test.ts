@@ -82,7 +82,7 @@ beforeEach(() => {
 });
 
 describe("transitionEventStatus — SCRUM-24 single guarded gate", () => {
-  it("SCRUM-19: a coordinator approves an unassigned submitted request", async () => {
+  it("SCRUM-19, SCRUM-81 [AC1] TC-81-01: a coordinator approves an unassigned submitted request, becomes its coordinator, and it moves to Planning", async () => {
     mockAuth.mockResolvedValue(sessionFor("COORDINATOR", "usr_coord"));
     mockFindUnique.mockResolvedValue(eventRow());
 
@@ -91,22 +91,64 @@ describe("transitionEventStatus — SCRUM-24 single guarded gate", () => {
       nextStatus: "APPROVED",
     });
 
-    expect(result).toEqual({ ok: true, data: { status: "APPROVED" } });
+    expect(result).toEqual({ ok: true, data: { status: "PLANNING" } });
     expect(tx.event.updateMany).toHaveBeenCalledWith({
       where: { id: "evt1", status: "SUBMITTED", coordinatorId: null },
       data: expect.objectContaining({
-        status: "APPROVED",
+        status: "PLANNING",
+        coordinatorId: "usr_coord",
         decidedById: "usr_coord",
         decisionReason: null,
       }),
     });
-    expect(tx.auditLog.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({
+    // History: the approval by the coordinator, their assignment, then the
+    // automatic move to Planning.
+    expect(tx.auditLog.create.mock.calls.map((c) => c[0].data)).toEqual([
+      expect.objectContaining({
         entityId: "evt1",
+        action: "STATUS_CHANGED",
+        actorId: "usr_coord",
         oldValue: "SUBMITTED",
         newValue: "APPROVED",
       }),
+      expect.objectContaining({
+        action: "ASSIGNED",
+        actorId: "usr_coord",
+        fieldName: "coordinatorId",
+        oldValue: null,
+        newValue: "usr_coord",
+      }),
+      expect.objectContaining({
+        action: "STATUS_CHANGED",
+        actorId: null,
+        oldValue: "APPROVED",
+        newValue: "PLANNING",
+      }),
+    ]);
+  });
+
+  it("SCRUM-81 [AC1] TC-81-01: approving an assigned request moves it to Planning, recording who approved it and when", async () => {
+    mockAuth.mockResolvedValue(sessionFor("COORDINATOR", "usr_coord"));
+    mockFindUnique.mockResolvedValue(
+      eventRow({ status: "UNDER_REVIEW", coordinatorId: "usr_coord" }),
+    );
+
+    const result = await transitionEventStatus({ eventId: "evt1", nextStatus: "APPROVED" });
+
+    expect(result).toEqual({ ok: true, data: { status: "PLANNING" } });
+    expect(tx.event.updateMany).toHaveBeenCalledWith({
+      where: { id: "evt1", status: "UNDER_REVIEW", coordinatorId: "usr_coord" },
+      data: expect.objectContaining({
+        status: "PLANNING",
+        coordinatorId: "usr_coord",
+        decidedById: "usr_coord",
+        decidedAt: expect.any(Date),
+      }),
     });
+    expect(tx.auditLog.create.mock.calls.map((c) => c[0].data)).toEqual([
+      expect.objectContaining({ actorId: "usr_coord", oldValue: "UNDER_REVIEW", newValue: "APPROVED" }),
+      expect.objectContaining({ actorId: null, oldValue: "APPROVED", newValue: "PLANNING" }),
+    ]);
   });
 
   it("SCRUM-18: deciding an event closes its still-OPEN clarification so a resubmitted request can be questioned again", async () => {

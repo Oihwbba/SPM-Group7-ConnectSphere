@@ -143,6 +143,31 @@ describe("can — relationship gate", () => {
   });
 });
 
+// SCRUM-81 AC 6 — confirming is stricter than reviewing: only the event's
+// assigned Coordinator, never any Coordinator looking at an unassigned request.
+describe("can — confirming an event (SCRUM-81)", () => {
+  const planning = {
+    kind: "event" as const,
+    organiserId: "orgA",
+    coordinatorId: "coord",
+    status: "PLANNING" as const,
+  };
+
+  it("SCRUM-81: only the event's assigned Coordinator may confirm it", () => {
+    expect(can(coordinator, "event:confirm", planning)).toBe(true);
+    expect(can({ id: "other", role: "COORDINATOR" }, "event:confirm", planning)).toBe(false);
+    expect(can(organiserA, "event:confirm", planning)).toBe(false);
+    expect(can({ id: "vs", role: "VENUE_STAFF" }, "event:confirm", planning)).toBe(false);
+    expect(can(attendee, "event:confirm", planning)).toBe(false);
+  });
+
+  it("SCRUM-81: no Coordinator may confirm an event nobody is assigned to, though any may still read it", () => {
+    const unassigned = { ...planning, coordinatorId: null };
+    expect(can(coordinator, "event:confirm", unassigned)).toBe(false);
+    expect(can(coordinator, "event:read", unassigned)).toBe(true);
+  });
+});
+
 // SCRUM-50/52/53 — who may take part in a venue booking. The booking actions
 // are new capabilities, so they are pinned here alongside the rest.
 describe("can — venue booking capabilities (SCRUM-50/52/53)", () => {

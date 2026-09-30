@@ -228,3 +228,69 @@ export function withoutInternalReasons(
     items: checklist.items.map((item) => ({ ...item, reason: null })),
   };
 }
+
+export interface ConfirmedArrangements {
+  venue: { name: string; location: string } | null;
+  startAt: Date | null;
+  endAt: Date | null;
+  timezone: string | null;
+  /** e.g. "Projector × 2", one per item reserved for the whole event. */
+  equipment: string[];
+}
+
+/**
+ * SCRUM-81 AC 5 — what a Confirmed event has secured, for its Organiser: the
+ * venue approved for the event's time, the date and time, and the equipment
+ * reserved for the whole event. The same whole-event rule as the checklist.
+ */
+export async function getConfirmedArrangements(
+  db: Prisma.TransactionClient | PrismaClient,
+  eventId: string,
+): Promise<ConfirmedArrangements | null> {
+  const event = await db.event.findUnique({
+    where: { id: eventId },
+    select: {
+      startAt: true,
+      endAt: true,
+      timezone: true,
+      bookings: {
+        select: {
+          status: true,
+          startAt: true,
+          endAt: true,
+          venue: { select: { name: true, location: true } },
+        },
+      },
+      reservations: {
+        select: {
+          status: true,
+          quantity: true,
+          startAt: true,
+          endAt: true,
+          equipment: { select: { type: true } },
+        },
+      },
+    },
+  });
+  if (!event) return null;
+
+  const booking = event.bookings.find(
+    (b) => b.status === "APPROVED" && coversEvent(b, event),
+  );
+  const reserved = new Map<string, number>();
+  for (const r of event.reservations) {
+    if (r.status !== "CONFIRMED" || !coversEvent(r, event)) continue;
+    reserved.set(
+      r.equipment.type,
+      (reserved.get(r.equipment.type) ?? 0) + r.quantity,
+    );
+  }
+
+  return {
+    venue: booking ? booking.venue : null,
+    startAt: event.startAt,
+    endAt: event.endAt,
+    timezone: event.timezone,
+    equipment: [...reserved].map(([type, quantity]) => `${type} × ${quantity}`),
+  };
+}

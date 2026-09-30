@@ -13,6 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "@/components/events/status-badge";
 import { ClarificationPanel } from "@/components/events/clarification-panel";
 import { ReadinessChecklist } from "@/components/events/readiness-checklist";
+import { ConfirmedArrangements } from "@/components/events/confirmed-arrangements";
 import {
   formatDate,
   formatDateTimeInTimezone,
@@ -120,6 +121,8 @@ export function EventDetailsModal({
 
           {/* SCRUM-110: what is still outstanding before the event can be confirmed */}
           {event.status === "PLANNING" && <ReadinessChecklist eventId={event.id} />}
+          {/* SCRUM-81: what a Confirmed event has secured */}
+          {event.status === "CONFIRMED" && <ConfirmedArrangements eventId={event.id} />}
 
           {event.status === "REJECTED" && event.decisionReason && (
             <Card className="overflow-hidden">

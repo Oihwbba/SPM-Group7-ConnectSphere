@@ -1,20 +1,30 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { CheckCircle2, CircleDashed, ListChecks } from "lucide-react";
 
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { confirmEvent } from "@/app/(app)/events/actions";
 import { getEventReadiness } from "@/app/(app)/events/readiness-actions";
 import type { ReadinessChecklist as Checklist } from "@/lib/event-readiness";
 
 /**
- * SCRUM-110 — the readiness checklist on a Planning event's details. The
- * server decides how much each viewer sees (the Organiser gets no internal
- * reasons), so this component only renders what it is given.
+ * SCRUM-110 — the readiness checklist on a Planning event's details, and
+ * SCRUM-81's Confirm action beneath it for the event's assigned Coordinator.
+ * The server decides how much each viewer sees (the Organiser gets no internal
+ * reasons) and who may confirm, so this component only renders what it is
+ * given.
  */
 export function ReadinessChecklist({ eventId }: { eventId: string }) {
-  const [checklist, setChecklist] = useState<Checklist | null>(null);
+  const [checklist, setChecklist] = useState<
+    (Checklist & { canConfirm: boolean }) | null
+  >(null);
   const [loadFailed, setLoadFailed] = useState(false);
+  const [confirming, startConfirm] = useTransition();
+  const router = useRouter();
 
   useEffect(() => {
     let cancelled = false;
@@ -31,6 +41,18 @@ export function ReadinessChecklist({ eventId }: { eventId: string }) {
       cancelled = true;
     };
   }, [eventId]);
+
+  function confirm() {
+    startConfirm(async () => {
+      const result = await confirmEvent({ eventId });
+      if (!result.ok) {
+        toast.error(result.error);
+        return;
+      }
+      toast.success("Event confirmed.");
+      router.refresh();
+    });
+  }
 
   return (
     <Card className="overflow-hidden" data-testid="readiness-checklist">
@@ -93,18 +115,31 @@ export function ReadinessChecklist({ eventId }: { eventId: string }) {
                 </li>
               ))}
             </ul>
-            <p
-              className={
-                checklist.ready
-                  ? "font-semibold text-success"
-                  : "text-muted-foreground"
-              }
-              data-testid="readiness-summary"
-            >
-              {checklist.ready
-                ? "Ready to confirm"
-                : "Not ready to confirm yet: complete the items above."}
-            </p>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p
+                className={
+                  checklist.ready
+                    ? "font-semibold text-success"
+                    : "text-muted-foreground"
+                }
+                data-testid="readiness-summary"
+              >
+                {checklist.ready
+                  ? "Ready to confirm"
+                  : "Not ready to confirm yet: complete the items above."}
+              </p>
+              {/* SCRUM-81: offered only to the assigned Coordinator, and only
+                  usable once every item is complete. */}
+              {checklist.canConfirm && (
+                <Button
+                  size="sm"
+                  onClick={confirm}
+                  disabled={!checklist.ready || confirming}
+                >
+                  {confirming ? "Confirming…" : "Confirm event"}
+                </Button>
+              )}
+            </div>
           </>
         )}
       </CardContent>
