@@ -16,16 +16,14 @@
 
 ---
 
-As ConnectSphere, I want an approved event to move automatically into Planning and then become Confirmed only when the confirmation-readiness rule is satisfied, so that Attendees can register only when the event is ready.
+**As an Event Coordinator**, I want to confirm an event once all its essential arrangements are approved, so that the Organiser knows the event will go ahead and Attendees can register.
 
-Acceptance Criteria:
+**Acceptance Criteria**
 
-* Given a request is approved by SCRUM-19, then the event enters Approved first and is then automatically advanced to Planning; there is no manual action required from the Coordinator.
-* The Approved → Planning transition is owned by this story and uses the single persisted status defined by SCRUM-24.
-* Given an event is Planning, when SCRUM-110's confirmation-readiness conditions become true, then the event changes to Confirmed.
-* Given the venue booking is rejected, the event remains Planning and the Coordinator can submit another booking request.
-* Given a Confirmed event has an approved impactful change, SCRUM-43 moves it back to Planning; SCRUM-110 must become true again before it can return to Confirmed.
-* Confirmed is the state that gates attendee registration.
-* The Planning → Confirmed transition must be idempotent; repeated readiness checks do not create duplicate transitions or notifications.
-
-Boundary: SCRUM-110 owns the definition of readiness. Venue and equipment stories own the actual booking/reservation decisions. SCRUM-43 owns the specific Confirmed → Planning transition caused by an approved impactful change. SCRUM-81 owns the Approved → Planning and Planning → Confirmed transitions.
+* Given I approve an event request, when the approval is saved, then the event shows as **Planning**. The approval (who, when) is recorded in its history.
+* Given an event in Planning whose readiness checklist (SCRUM-110) is complete, when I view it, then a **Confirm event** action is available.
+* Given the checklist is not complete, when I view the event, then Confirm is unavailable and the outstanding items are listed. A direct confirm request is refused and the status doesn't change.
+* Given I confirm a ready event, then its status becomes **Confirmed** and the confirming Coordinator and time are recorded.
+* Given the event is Confirmed, when its Organiser opens it, then they see the confirmed venue, date/time and reserved equipment.
+* Only the event's assigned Coordinator can confirm it; any other user is refused with no status change.
+* Given the event is already Confirmed, when Confirm is submitted again, then nothing changes and no second confirmation is recorded.
