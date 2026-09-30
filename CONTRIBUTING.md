@@ -30,9 +30,12 @@ variation of it. When you build your feature, copy that folder's shape:
 **Coverage.** Every server-side `.ts` file under `lib/` and `app/` must stay at
 100% statements, branches, functions and lines, whatever the file is named.
 `npm run test:coverage` fails otherwise, naming the file, and so does CI. It
-counts the unit and integration tests together, so run it with the local
-database up. Components (`.tsx`) are not measured; Playwright covers them
-(SCRUM-87).
+counts the unit and integration tests together, so it **needs the local
+database** (`docker compose up -d`), like `npm run test:integration`. Without
+it the integration tests skip, and a file only they cover (such as
+`app/(app)/bookings/queries.ts`) fails the run even if you never touched it.
+`npm run verify` doesn't measure coverage, so it is unaffected. Components
+(`.tsx`) are not measured; Playwright covers them (SCRUM-87).
 
 Route folders are named for the **domain**, not the role. A route that several
 roles use is one folder whose `page.tsx` switches on `session.user.role` — see

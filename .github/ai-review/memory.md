@@ -109,7 +109,9 @@ change.
   `describe.skipIf(!usesLocalDatabase)` on purpose: they write data, so they
   run only against CI's Postgres or a local Docker database, never the shared
   Supabase database. Skipping locally isn't missing coverage; CI runs them on
-  every pull request.
+  every pull request. (2026-09-30, SCRUM-125) The one exception is
+  `npm run test:coverage`: with the 100% threshold it needs the local database,
+  as CONTRIBUTING.md says, and a run without it failing is expected.
 - (2026-09-15, #26; 2026-09-28, #90; 2026-09-29, #96) `it.todo` entries are
   placeholders, not coverage. The existing-test list marks them "(todo: not
   written yet)". `tests/unit/venues.test.ts` is all placeholders; #90 wrote
