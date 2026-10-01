@@ -15,7 +15,13 @@ export default defineConfig({
       provider: "v8",
       reporter: ["text", "html", "lcov"],
       reportsDirectory: "./coverage",
-      include: ["lib/**/*.ts", "app/**/actions.ts"],
+      // Every server-side file, whatever it is named. Components (.tsx) need a
+      // DOM environment this suite doesn't have (SCRUM-87).
+      include: ["lib/**/*.ts", "app/**/*.ts"],
+      // Patterns match anywhere in the path, so "*.ts" would also take .tsx.
+      // Auth.js's route handler only re-exports GET and POST from auth.ts.
+      exclude: ["**/*.tsx", "app/api/auth/**"],
+      thresholds: { 100: true, perFile: true },
     },
   },
 });

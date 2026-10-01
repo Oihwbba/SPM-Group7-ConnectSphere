@@ -109,18 +109,21 @@ change.
   `describe.skipIf(!usesLocalDatabase)` on purpose: they write data, so they
   run only against CI's Postgres or a local Docker database, never the shared
   Supabase database. Skipping locally isn't missing coverage; CI runs them on
-  every pull request.
+  every pull request. (2026-09-30, SCRUM-125) The one exception is
+  `npm run test:coverage`: with the 100% threshold it needs the local database,
+  as CONTRIBUTING.md says, and a run without it failing is expected.
 - (2026-09-15, #26; 2026-09-28, #90; 2026-09-29, #96) `it.todo` entries are
   placeholders, not coverage. The existing-test list marks them "(todo: not
   written yet)". `tests/unit/venues.test.ts` is all placeholders; #90 wrote
   the SCRUM-74 case for real and #96 the SCRUM-53 concurrency races.
 - (2026-09-15, #26) Test case specifications live in `docs/testing/<KEY>.md`,
   and each case names the automated test that covers it.
-- (2026-09-25, #88) Coverage measures `lib/**/*.ts` and `app/**/actions.ts`
-  only, in a `node` environment with no jsdom, so `.tsx` components never
-  appear in it; Playwright journeys exercise them. Measuring components needs
-  new tooling (SCRUM-87), a team decision. A "100% coverage" claim refers to the
-  measured files only.
+- (2026-09-25, #88; 2026-09-30, SCRUM-125) Coverage measures every `.ts` file
+  under `lib/` and `app/` (not the Auth.js route re-export), in a `node`
+  environment with no jsdom, so `.tsx` components never appear in it;
+  Playwright journeys exercise them. Measuring components needs new tooling
+  (SCRUM-87), a team decision. CI fails when a measured file drops below 100%,
+  so a "100% coverage" claim refers to the measured files only.
 - (2026-09-25, #87) CI runs Node 24 and a developer may run Node 22, whose ICU
   labels a zero-offset zone differently, so a branch can run locally but never
   on CI. Tests asserting `Intl` output stub `Intl` rather than trust the ICU.
