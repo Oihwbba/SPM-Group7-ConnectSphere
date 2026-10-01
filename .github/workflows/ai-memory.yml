@@ -14,6 +14,14 @@ name: GLM Reviewer Memory
 on:
   pull_request:
     types: [closed]
+  # Re-teach from one merged pull request by hand, e.g. after a lesson was
+  # lost (SCRUM-152: #95's was refused for length and never shown).
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: Merged pull request to learn from
+        required: true
+        type: number
 
 # Two merges in quick succession would both rewrite the same branch, and the
 # second must see what the first proposed. Queue them; never cancel, or a
@@ -35,8 +43,9 @@ jobs:
     # Only merges teach anything — a closed-unmerged pull request was rejected.
     # The memory branch is excluded so merging a lesson cannot propose another.
     if: >-
-      github.event.pull_request.merged == true &&
-      github.event.pull_request.head.ref != 'ai-review/memory'
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.pull_request.merged == true &&
+      github.event.pull_request.head.ref != 'ai-review/memory')
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -57,7 +66,7 @@ jobs:
           ZHIPU_API_KEY: ${{ secrets.ZHIPU_API_KEY }}
           GITHUB_TOKEN: ${{ github.token }}
           GITHUB_REPOSITORY: ${{ github.repository }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_NUMBER: ${{ inputs.pr_number || github.event.pull_request.number }}
         # Runs from the checkout, not from a base commit: the pull request is
         # already merged, so this is `main`'s own code.
         run: node .github/scripts/ai-memory.mjs
