@@ -1,7 +1,10 @@
+import { readFileSync } from "node:fs";
+
 import { describe, it, expect } from "vitest";
 
 import {
   buildMemoryPrompt,
+  buildPruneRequest,
   checkProposal,
   memoryEntries,
   singaporeDate,
@@ -9,6 +12,7 @@ import {
   renderFileStat,
   summariseCi,
 } from "../../.github/scripts/ai-memory.mjs";
+import { MAX_MEMORY_CHARS, MEMORY_PATH } from "../../.github/scripts/ai-review.mjs";
 
 // SCRUM-112 — the reviewer writes its own memory now, and that memory is read
 // before every review. A wiped, gutted or oversized rewrite would quietly
@@ -207,6 +211,41 @@ describe("checkProposal — SCRUM-112", () => {
 
   it("refuses a reply GLM never gave", () => {
     expect(checkProposal({ proposal: null, current, prNumber: 61 }).accept).toBe(false);
+  });
+
+  it("SCRUM-152: marks a proposal refused only for length, so it gets one retry", () => {
+    const tooLong = checkProposal({ proposal: proposal(`- ${"x".repeat(9_000)}`), current, prNumber: 61 });
+    const gutted = checkProposal({
+      proposal: { learned: true, note: "Tidied up.", memory: `${HEADING}\n\nRules for a lesson:\n` },
+      current,
+      prNumber: 61,
+    });
+
+    expect(tooLong.tooLong).toBeGreaterThan(MAX_MEMORY_CHARS);
+    expect(gutted.tooLong).toBeUndefined();
+  });
+});
+
+describe("buildPruneRequest — SCRUM-152", () => {
+  it("SCRUM-152: a proposal rejected only for length is retried with its size and the limit", () => {
+    const request = buildPruneRequest({ length: 8150, prNumber: 95 });
+
+    expect(request).toContain("8150 characters");
+    expect(request).toContain(`at most ${MAX_MEMORY_CHARS}`);
+    expect(request).toContain("Keep your lesson");
+    // Shortening an old entry without citing the pull request is refused by
+    // checkProposal, so the request must say how to shorten one legally.
+    expect(request).toContain("citing #95");
+  });
+});
+
+// #105 edited the memory by hand to 8,181 characters, and for a day the
+// reviewer read it cut off mid-lesson, with nothing to say so.
+describe("the memory on this branch — SCRUM-152", () => {
+  it("SCRUM-152: CI fails when memory.md is longer than the reviewer reads", () => {
+    const length = readFileSync(MEMORY_PATH, "utf8").length;
+
+    expect(length, `${MEMORY_PATH} is ${length} characters`).toBeLessThanOrEqual(MAX_MEMORY_CHARS);
   });
 });
 
