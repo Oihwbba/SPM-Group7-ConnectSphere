@@ -243,6 +243,18 @@ export function buildPruneRequest({ length, prNumber }) {
   ].join("\n");
 }
 
+/**
+ * What a refused run logs. "Nothing learned" is the normal answer; a lesson
+ * found at any attempt and then refused is not, and a plain log line is how
+ * #95's went unnoticed. A prune retry that comes back unparseable or empty
+ * must not hide the lesson the first attempt found.
+ */
+export function refusalLog({ attempts, verdict, prNumber }) {
+  const found = attempts.filter((attempt) => attempt?.learned);
+  const lost = found.length ? `::warning::A lesson was lost (${found.at(-1).note || "no note"}). ` : "";
+  return `${lost}No memory change for #${prNumber}: ${verdict.reason}`;
+}
+
 /** A one-line account of CI: what matters is whether it failed on the way, and at what. */
 export function summariseCi(runs) {
   if (!runs.length) return "";
@@ -338,18 +350,15 @@ async function main() {
   const ask = (prompt) =>
     askGlm({ apiKey: env.ZHIPU_API_KEY, model, system: INSTRUCTIONS, user: prompt, timeoutMs: GLM_TIMEOUT_MS });
 
-  let proposal = parseProposal((await ask(user)).content);
-  let verdict = checkProposal({ proposal, current, prNumber });
+  const attempts = [parseProposal((await ask(user)).content)];
+  let verdict = checkProposal({ proposal: attempts[0], current, prNumber });
   if (verdict.tooLong) {
     console.log(`The lesson from #${prNumber} came back at ${verdict.tooLong} characters; asking GLM to prune.`);
-    proposal = parseProposal((await ask(`${user}\n\n${buildPruneRequest({ length: verdict.tooLong, prNumber })}`)).content);
-    verdict = checkProposal({ proposal, current, prNumber });
+    attempts.push(parseProposal((await ask(`${user}\n\n${buildPruneRequest({ length: verdict.tooLong, prNumber })}`)).content));
+    verdict = checkProposal({ proposal: attempts[1], current, prNumber });
   }
   if (!verdict.accept) {
-    // "Nothing learned" is the normal answer. A lesson that was found and then
-    // refused is not, and a plain log line is how #95's went unnoticed.
-    const lost = proposal?.learned ? `::warning::A lesson was lost (${proposal.note || "no note"}). ` : "";
-    console.log(`${lost}No memory change for #${prNumber}: ${verdict.reason}`);
+    console.log(refusalLog({ attempts, verdict, prNumber }));
     return;
   }
 

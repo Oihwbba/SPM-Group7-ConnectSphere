@@ -6,6 +6,7 @@ import {
   buildMemoryPrompt,
   buildPruneRequest,
   checkProposal,
+  refusalLog,
   memoryEntries,
   singaporeDate,
   parseProposal,
@@ -236,6 +237,48 @@ describe("buildPruneRequest — SCRUM-152", () => {
     // Shortening an old entry without citing the pull request is refused by
     // checkProposal, so the request must say how to shorten one legally.
     expect(request).toContain("citing #95");
+  });
+});
+
+describe("refusalLog — SCRUM-152", () => {
+  const tooLong = { accept: false, reason: "The proposed memory is 8150 characters, over the 8000 the reviewer reads." };
+  const found = { learned: true, note: "Equipment lines are reviewed one by one.", memory: "" };
+
+  it("SCRUM-152: a rejected lesson shows as a warning on the workflow run", () => {
+    const log = refusalLog({ attempts: [found], verdict: tooLong, prNumber: 95 });
+
+    expect(log).toMatch(/^::warning::A lesson was lost \(Equipment lines are reviewed one by one\.\)/);
+    expect(log).toContain("No memory change for #95: The proposed memory is 8150 characters");
+  });
+
+  // The GLM review of #109: the retry replaced the proposal, so an
+  // unparseable or empty retry hid the lesson the first attempt found.
+  it("SCRUM-152: still warns when the prune retry comes back unusable or empty", () => {
+    const unparseable = refusalLog({ attempts: [found, null], verdict: { accept: false, reason: "GLM returned no usable JSON." }, prNumber: 95 });
+    const empty = refusalLog({
+      attempts: [found, { learned: false, note: "Nothing to add.", memory: "" }],
+      verdict: { accept: false, reason: "Nothing learned: Nothing to add." },
+      prNumber: 95,
+    });
+
+    expect(unparseable).toContain("::warning::A lesson was lost (Equipment lines are reviewed one by one.)");
+    expect(empty).toContain("::warning::A lesson was lost (Equipment lines are reviewed one by one.)");
+  });
+
+  it("names the latest attempt's lesson when both found one", () => {
+    const pruned = { learned: true, note: "Equipment lines are reviewed one by one; dropped the #33 checksums note.", memory: "" };
+
+    expect(refusalLog({ attempts: [found, pruned], verdict: tooLong, prNumber: 95 })).toContain("dropped the #33 checksums note");
+  });
+
+  it("logs nothing learned as a plain line, because that is the normal answer", () => {
+    const log = refusalLog({
+      attempts: [{ learned: false, note: "A docs-only sync.", memory: "" }],
+      verdict: { accept: false, reason: "Nothing learned: A docs-only sync." },
+      prNumber: 103,
+    });
+
+    expect(log).toBe("No memory change for #103: Nothing learned: A docs-only sync.");
   });
 });
 
