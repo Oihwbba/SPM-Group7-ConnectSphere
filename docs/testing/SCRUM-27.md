@@ -39,7 +39,7 @@ the seed.
 | Pre-conditions | Signed in as the coordinator. The coordinator is assigned to "Approved — Research Symposium" (APPROVED). |
 | Test Steps | 1. Open **Equipment Requests** and click **New request**. <br> 2. Open the **Event** list. <br> 3. Choose the event. |
 | Test Data | Event: Approved — Research Symposium |
-| Expected Result | The list shows each of the coordinator's approved, planning and confirmed events as "name — date", and nothing still under review or assigned to another coordinator. After step 3, "Runs …" shows the event's full start and end. The saved request's `eventId` is that event. |
+| Expected Result | The list shows each of the coordinator's approved and planning events as "name — date", and nothing confirmed, still under review, or assigned to another coordinator. After step 3, "Runs …" shows the event's full start and end. The saved request's `eventId` is that event. |
 
 **Automated by:** `e2e/equipment-requests.spec.ts` › "AC 1, 2, 5 & 6: a coordinator requests equipment for their event and it is saved as Pending Review"; `tests/unit/equipment-request-queries.test.ts` › "offers only this coordinator's events that are going ahead, soonest first"; `tests/integration/equipment-request.test.ts` › "AC 1: offers the coordinator their going-ahead events, and not one still under review or someone else's"
 
@@ -48,13 +48,13 @@ the seed.
 | Item | Content |
 |---|---|
 | Test Case ID | TC-27-02 |
-| Test Scenario | [Negative] AC 1: a request for an event that isn't the coordinator's, doesn't exist or isn't going ahead is refused, with one message for all three |
+| Test Scenario | [Negative] AC 1: a request for an event that isn't the coordinator's, doesn't exist or can't still take one is refused, with one message for every case |
 | Pre-conditions | Signed in as the coordinator. |
 | Test Steps | 1. Submit a request directly to the action (the page never offers these events) for each event below. |
-| Test Data | Another coordinator's event; a made-up event id; an UNDER_REVIEW event; a CANCELLED event |
+| Test Data | Another coordinator's event; a made-up event id; an UNDER_REVIEW event; a CONFIRMED event; a CANCELLED event |
 | Expected Result | Each is refused with "Choose one of your approved events." next to **Event**. No request is created. The same message for every case means the refusal can't be used to find out which event ids exist. |
 
-**Automated by:** `tests/unit/equipment-request.test.ts` › "AC 1: refuses %s with the same message, and saves nothing" (all four); `tests/integration/equipment-request.test.ts` › "AC 1: another coordinator cannot raise a request for this event, and nothing is written"
+**Automated by:** `tests/unit/equipment-request.test.ts` › "AC 1: refuses %s with the same message, and saves nothing" (all five); `tests/integration/equipment-request.test.ts` › "AC 1: another coordinator cannot raise a request for this event, and nothing is written"
 
 ### TC-27-03
 
@@ -168,7 +168,7 @@ the seed.
 | Test Scenario | [Boundary] AC 7: once an event's request has been decided, a new one can be raised |
 | Pre-conditions | The event's only request is APPROVED. |
 | Test Steps | 1. Submit a new request for the event. |
-| Test Data | Seeded: "Confirmed — Charity Gala" has `eqr_confirmed`, APPROVED |
+| Test Data | Seeded "Approved — Research Symposium" (`evt_approved`), still requestable under AC 1 |
 | Expected Result | A new request is created in Pending Review. The event now has two requests, one of them open. |
 
 **Automated by:** `tests/integration/equipment-request.test.ts` › "AC 7 boundary: once the open request is decided, a new one can be raised"
