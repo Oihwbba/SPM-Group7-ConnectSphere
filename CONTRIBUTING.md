@@ -113,12 +113,16 @@ gh pr checks               # watch it
 gh pr merge --squash --delete-branch
 ```
 
-Pushing the branch starts two things automatically:
+Opening the pull request, and every push to it afterwards, starts two things
+automatically:
 
 | | What happens | Takes |
 |---|---|---|
-| **GitHub Actions** | migrate → seed → typecheck → lint → unit tests → e2e | ~2m30s |
+| **GitHub Actions** | migrate → seed → typecheck → lint → unit tests → e2e | ~7–10 minutes |
 | **GLM code review** | one AI reviewer reads the whole diff and posts one long review comment; red on a critical finding (skipped for drafts) | ~3–10 minutes |
+
+A pushed branch with no pull request gets no CI, so run `npm run verify`
+locally until you open one (SCRUM-151).
 
 There are no Vercel preview deployments. Only `main` deploys.
 
