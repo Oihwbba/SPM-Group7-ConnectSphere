@@ -3,13 +3,10 @@
 Lessons from past reviews, approved by the team. The reviewer reads this file
 from `main` on every pull request, after `CONTRIBUTING.md` and `CLAUDE.md`.
 
-The reviewer proposes its own lessons: when a pull request merges,
-`.github/scripts/ai-memory.mjs` asks GLM what that pull request taught it and
-opens a pull request here if the answer is anything (SCRUM-112). Nothing lands
-without a human reading it — a lesson shapes every later review, and changes
-under `.github/` need Jin Hong's approval (CODEOWNERS). Editing this file by
-hand is still fine; the job rewrites the whole file, so it will carry your
-lesson forward or delete it once it stops being true.
+After each merge, `.github/scripts/ai-memory.mjs` asks GLM what the pull
+request taught and opens a pull request here if anything (SCRUM-112); a human
+reads it first. Hand edits are fine, and CI fails if the file outgrows what the
+reviewer reads (SCRUM-152).
 
 Rules for a lesson:
 
@@ -33,11 +30,9 @@ change.
   deploys only through `.github/workflows/deploy.yml`: a push to `main` deploys
   a prebuilt bundle with the owner's `VERCEL_TOKEN`, with `.git` removed so no
   commit author is attached, and `vercel.json` disables Vercel's own Git
-  deployments (ADR 0009). Teammate-authored merges deploy unmodified — proven
-  by #74, #76, #78, #79, #87 and #88 — so their work is no longer re-landed
-  under Jin Hong's name. The workflow records a GitHub deployment on the
-  commit, so *deployed to Production* shows on merge commits, never on a pull
-  request branch.
+  deployments (ADR 0009). Teammate-authored merges deploy unmodified and are
+  not re-landed. *Deployed to Production* shows on merge commits, never on a
+  pull request branch.
 
 ## Dependencies
 
@@ -51,13 +46,11 @@ change.
 
 ## Database and migrations
 
-- (2026-09-16, #33) The shared Supabase database is also production. Migration
-  `20260912090000_event_request_details` was applied there without being
-  committed and was recovered in #33. It and
-  `20260912120000_add_programme_and_special_requests` use
-  `ADD COLUMN IF NOT EXISTS` on purpose, so both are safe on every database.
-  The rule still holds for everything else: never edit an applied migration;
-  fix forward with a new one.
+- (2026-09-16, #33) The shared Supabase database is also production.
+  `20260912090000_event_request_details` (applied there uncommitted, recovered
+  in #33) and `20260912120000_add_programme_and_special_requests` use
+  `ADD COLUMN IF NOT EXISTS` on purpose, so both are safe everywhere. Otherwise
+  never edit an applied migration; fix forward.
 - (2026-09-16, #33) Supabase's stored checksums differ from the repo for three
   older migration files. `prisma migrate deploy` ignores checksums, so this is
   known and harmless. Nobody may run `prisma migrate dev` against Supabase.
@@ -70,21 +63,18 @@ change.
 
 ## Events and status
 
-- (2026-09-20, #51) `submitEventRequest` assigns a coordinator inside the same
-  transaction (SCRUM-20), so a request that was just submitted is
-  `UNDER_REVIEW`, not `SUBMITTED`, whenever any coordinator exists. A test or a
-  screen expecting `SUBMITTED` straight after a submit journey is wrong. The
-  seed has two coordinators and the least-loaded one wins, so which coordinator
-  receives it varies per run: a test must read the assignment instead of
-  hard-coding `coordinator@test.local`.
+- (2026-09-20, #51) `submitEventRequest` assigns a coordinator in the same
+  transaction (SCRUM-20), so a just-submitted request is `UNDER_REVIEW`, not
+  `SUBMITTED`, whenever a coordinator exists. The least-loaded of the two seeded
+  coordinators wins, so a test reads the assignment rather than hard-coding
+  `coordinator@test.local`.
 - (2026-09-20, #54) The events list's Submitted tab counts and shows both
   `SUBMITTED` and `UNDER_REVIEW` for that reason. Narrowing it to `SUBMITTED`
   hides a request the organiser has just sent.
-- (2026-09-20, #54) `Event.timezone` is nullable with an `Asia/Singapore`
-  default and is already applied to the production database. The create form no
-  longer captures `requiredFacilities`, so new events store `[]` while existing
-  and seeded values are still displayed; whether capture returns is a product
-  decision open for SCRUM-39/40.
+- (2026-09-20, #54) `Event.timezone` is nullable, defaults to `Asia/Singapore`
+  and is applied in production. The create form no longer captures
+  `requiredFacilities`: new events store `[]`, existing values still display,
+  and whether capture returns is open for SCRUM-39/40.
 - (2026-09-25, #87) The `?? null` fallbacks on optional draft fields in
   `app/(app)/events/actions.ts` are deliberate: on update, `null` clears a
   field the organiser emptied, while `undefined` would keep the old value.
@@ -105,13 +95,11 @@ change.
 
 ## Tests
 
-- (2026-09-15, #27) Integration tests live in `tests/integration/` and use
-  `describe.skipIf(!usesLocalDatabase)` on purpose: they write data, so they
-  run only against CI's Postgres or a local Docker database, never the shared
-  Supabase database. Skipping locally isn't missing coverage; CI runs them on
-  every pull request. (2026-09-30, SCRUM-125) The one exception is
-  `npm run test:coverage`: with the 100% threshold it needs the local database,
-  as CONTRIBUTING.md says, and a run without it failing is expected.
+- (2026-09-15, #27; 2026-09-30, SCRUM-125) Integration tests in
+  `tests/integration/` use `describe.skipIf(!usesLocalDatabase)` on purpose:
+  they write data, so they run only against CI's Postgres or local Docker,
+  never Supabase. Skipping locally isn't missing coverage, except that
+  `npm run test:coverage` then fails its 100% threshold, as expected.
 - (2026-09-15, #26; 2026-09-28, #90; 2026-09-29, #96) `it.todo` entries are
   placeholders, not coverage. The existing-test list marks them "(todo: not
   written yet)". `tests/unit/venues.test.ts` is all placeholders; #90 wrote
