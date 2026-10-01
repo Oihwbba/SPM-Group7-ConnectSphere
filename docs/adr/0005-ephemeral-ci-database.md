@@ -42,9 +42,13 @@ broken migration or seed fails the job immediately and no test result can mask
 it; the Playwright run comes last because it is the slowest step and needs
 everything before it.
 
-The job lives in `.github/workflows/ci.yml`. It runs on both `push` (every
-branch) and `pull_request`, which is why a PR shows two `build-and-test`
-entries — both must pass.
+The job lives in `.github/workflows/ci.yml`. It runs on every `pull_request`,
+testing the branch merged into the current `main`, and on every `push` to
+`main`, so each merged commit keeps its own result. It used to run on pushes
+to every branch as well, which ran the same job twice per commit on a branch
+with an open pull request; on 2026-10-01 pushes to other branches were
+dropped, so a pull request shows one `build-and-test`. A branch with no pull
+request open gets no CI until one is.
 
 ## Alternatives rejected
 
