@@ -198,3 +198,29 @@ the seed.
 | Expected Result | "Select an event." under **Event** and "Add at least one equipment item." under **Equipment**. The dialog stays open and nothing is sent. |
 
 **Automated by:** `e2e/equipment-requests.spec.ts` › "a request needs an event and at least one item before it is sent"; `tests/unit/equipment-request-schema.test.ts` › "AC 1: requires the event the request is for", "requires at least one equipment item"
+
+### TC-27-14
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-27-14 |
+| Test Scenario | [Positive] AC 8: the coordinator sees each request's lines, status, any suggested alternative and its history, and a rejected request carries its reason |
+| Pre-conditions | A coordinator has raised a request. Technical Support has suggested an alternative for one line and then rejected the request with a reason. |
+| Test Steps | 1. Sign in as the coordinator. <br> 2. Open **Equipment Requests**. |
+| Test Data | The rig from `e2e/equipment-request-review.spec.ts`, rejected with "Not enough lecterns that day." |
+| Expected Result | The card shows each line's type, quantity and technical requirements; the status badge; the suggested alternative; and the history. When the status is Rejected, the reason is on the card itself, not only inside the collapsed history log. |
+
+**Automated by:** `e2e/equipment-request-review.spec.ts` › "AC 8: the coordinator sees a rejected request with its reason, without opening the history"; `e2e/equipment-requests.spec.ts` › "AC 1, 2, 5 & 6" (lines and status); `tests/unit/equipment-request-queries.test.ts` › "SCRUM-28 AC 3 & 5: includes suggested alternatives and the history, oldest first"
+
+### TC-27-15
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-27-15 |
+| Test Scenario | [Negative] AC 8: a coordinator with no requests is told so, not shown an empty list |
+| Pre-conditions | Signed in as a coordinator who has raised none. |
+| Test Steps | 1. Open **Equipment Requests**. |
+| Test Data | `coordinator2@test.local`, who has no requests. |
+| Expected Result | "No equipment requests yet" is shown and no request cards appear. |
+
+**Automated by:** `e2e/equipment-requests.spec.ts` › "a coordinator with no requests is told how to raise one, not shown an empty list"
