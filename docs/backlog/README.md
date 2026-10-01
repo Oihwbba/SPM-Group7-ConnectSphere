@@ -117,13 +117,13 @@ _8 stories, 19 points_
 
 | Story | Summary | Pts | Priority | Sprint | Status |
 |---|---|---|---|---|---|
-| [SCRUM-27](SCRUM-27.md) | Create Equipment Request | 1 | Highest | SCRUM Sprint 2 | In Review |
-| [SCRUM-28](SCRUM-28.md) | Review and Update Equipment Request | 3 | Highest | SCRUM Sprint 2 | In Review |
-| [SCRUM-29](SCRUM-29.md) | Check Equipment Availability | 3 | Highest | SCRUM Sprint 2 | In Review |
-| [SCRUM-30](SCRUM-30.md) | View Equipment Conflicts | 2 | Medium | SCRUM Sprint 2 | In Progress |
+| [SCRUM-27](SCRUM-27.md) | Create an equipment request | 2 | Highest | SCRUM Sprint 2 | In Review |
+| [SCRUM-28](SCRUM-28.md) | Review and update an equipment request | 3 | Highest | SCRUM Sprint 2 | In Review |
+| [SCRUM-29](SCRUM-29.md) | Check equipment availability | 3 | Highest | SCRUM Sprint 2 | In Review |
+| [SCRUM-30](SCRUM-30.md) | View equipment conflicts | 3 | Medium | SCRUM Sprint 2 | In Progress |
 | [SCRUM-31](SCRUM-31.md) | Reserve Equipment for Event | 3 | Highest | SCRUM Sprint 1 | Done |
 | [SCRUM-32](SCRUM-32.md) | Modify or Cancel Reservation | 3 | Medium | Backlog | To Do |
-| [SCRUM-33](SCRUM-33.md) | View Event Reservations | 2 | Medium | SCRUM Sprint 2 | To Do |
+| [SCRUM-33](SCRUM-33.md) | [MERGED INTO SCRUM-27] View Event Reservations | 0 | Medium | SCRUM Sprint 2 | Done |
 | [SCRUM-55](SCRUM-55.md) | View Equipment Availability Calendar | 2 | Low | Backlog | To Do |
 
 ## SCRUM-11 - Attendee Registration
