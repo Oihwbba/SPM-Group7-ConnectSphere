@@ -250,7 +250,7 @@ describe("User Story 13 — Event Request Creation", () => {
       expect(mockCreate).not.toHaveBeenCalled();
     });
 
-    it("SCRUM-13 [AC9 × AC6 - Timezone Interaction]: rejects a UTC ISO start datetime that represents a past moment, confirming timezone-converted wall-times are rejected at the schema layer regardless of selected timezone", async () => {
+    it("SCRUM-13 [AC9] × SCRUM-129 [AC4]: rejects a UTC ISO start datetime that represents a past moment, confirming converted Singapore wall-times are rejected at the schema layer", async () => {
       mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
 
       const oneHourAgoUtcIso = new Date(Date.now() - 3_600_000).toISOString();
@@ -665,33 +665,50 @@ describe("User Story 15 — Save an event request as draft", () => {
     );
   });
 
-  it("SCRUM-15 [Timezone Persistence]: stores chosen non-Singapore timezone (e.g. America/New_York) in database payload", async () => {
+  it("SCRUM-129 [AC1 - Singapore timezone]: a new draft and an updated draft are stored as Asia/Singapore events", async () => {
     mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
-    mockCreate.mockResolvedValue({ id: "evt_draft_ny" });
+    mockCreate.mockResolvedValue({ id: "evt_draft_sg" });
 
-    const result = await createDraftEvent({
-      name: "NY Global Summit",
-      description: "Remote event in EST",
-      timezone: "America/New_York (EST/EDT)",
-    });
+    const created = await createDraftEvent({ name: "Singapore Summit" });
 
-    expect(result.ok).toBe(true);
+    expect(created.ok).toBe(true);
     expect(mockCreate).toHaveBeenCalledWith(
       expect.objectContaining({
+        data: expect.objectContaining({ timezone: "Asia/Singapore" }),
+      }),
+    );
+
+    mockFindFirst.mockResolvedValue({
+      id: "evt_draft_sg",
+      organiserId: "usr_organiser",
+      status: "DRAFT",
+    });
+    mockUpdate.mockResolvedValue({ id: "evt_draft_sg" });
+
+    const updated = await createDraftEvent({
+      id: "evt_draft_sg",
+      name: "Singapore Summit",
+      startAt: futureStart,
+    });
+
+    expect(updated.ok).toBe(true);
+    expect(mockUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "evt_draft_sg" },
         data: expect.objectContaining({
-          name: "NY Global Summit",
-          timezone: "America/New_York (EST/EDT)",
+          startAt: new Date(futureStart),
+          timezone: "Asia/Singapore",
         }),
       }),
     );
   });
 
-  it("SCRUM-13 [Timezone Persistence / Submission]: persists chosen timezone when submitting a new event request and when submitting from a draft", async () => {
+  it("SCRUM-129 [AC1 - Singapore timezone]: a new submission and a submitted draft are stored as Asia/Singapore events", async () => {
     mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
-    mockCreate.mockResolvedValue({ id: "evt_submit_tz_new" });
+    mockCreate.mockResolvedValue({ id: "evt_submit_sg" });
 
     const submissionData = {
-      name: "Tokyo Regional Forum",
+      name: "Singapore Regional Forum",
       purpose: "Networking",
       description: "Regional gathering",
       startAt: futureStart,
@@ -702,45 +719,61 @@ describe("User Story 15 — Save an event request as draft", () => {
       accessibilityNeeds: "Ramp access",
       equipmentRequirements: "Microphones",
       registrationNotes: "Online registration",
-      timezone: "Asia/Tokyo (+09:00)",
     };
 
-    // 1. Submit a new event request with a chosen timezone
     const resultNew = await submitEventRequest(submissionData);
 
     expect(resultNew.ok).toBe(true);
     expect(mockCreate).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
-          name: "Tokyo Regional Forum",
-          timezone: "Asia/Tokyo (+09:00)",
+          name: "Singapore Regional Forum",
+          timezone: "Asia/Singapore",
         }),
       }),
     );
 
-    // 2. Submit a draft-to-SUBMITTED event request with a chosen timezone
     mockFindFirst.mockResolvedValue({
-      id: "evt_draft_tz_submit",
+      id: "evt_draft_sg_submit",
       organiserId: "usr_organiser",
       status: "DRAFT",
     });
-    mockUpdate.mockResolvedValue({ id: "evt_draft_tz_submit" });
+    mockUpdate.mockResolvedValue({ id: "evt_draft_sg_submit" });
 
     const resultDraftSubmit = await submitEventRequest({
       ...submissionData,
-      id: "evt_draft_tz_submit",
-      name: "London Global Forum",
-      timezone: "Europe/London (+00:00)",
+      id: "evt_draft_sg_submit",
     });
 
     expect(resultDraftSubmit.ok).toBe(true);
     expect(mockUpdate).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { id: "evt_draft_tz_submit" },
+        where: { id: "evt_draft_sg_submit" },
         data: expect.objectContaining({
-          name: "London Global Forum",
-          timezone: "Europe/London (+00:00)",
+          timezone: "Asia/Singapore",
           status: "SUBMITTED",
+        }),
+      }),
+    );
+  });
+
+  it("SCRUM-129 [AC4 - UTC storage]: the submitted UTC instants are stored exactly as sent", async () => {
+    mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
+    mockCreate.mockResolvedValue({ id: "evt_utc" });
+
+    // 10:00-18:00 Singapore time, as the form converts it.
+    const result = await createDraftEvent({
+      name: "UTC Storage",
+      startAt: "2031-08-01T02:00:00.000Z",
+      endAt: "2031-08-01T10:00:00.000Z",
+    });
+
+    expect(result.ok).toBe(true);
+    expect(mockCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          startAt: new Date("2031-08-01T02:00:00.000Z"),
+          endAt: new Date("2031-08-01T10:00:00.000Z"),
         }),
       }),
     );

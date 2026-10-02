@@ -80,7 +80,7 @@ describe("findVenueBlockers", () => {
 describe("describeBlocker", () => {
   it("names an approved booking by its times only — never the other organisation's event", () => {
     expect(describeBlocker({ kind: "booking", id: "b", ...period })).toBe(
-      "already booked from 1 Jun 2030, 2:00 pm to 1 Jun 2030, 4:00 pm",
+      "already booked from 1 Jun 2030, 2:00 pm SGT to 1 Jun 2030, 4:00 pm SGT",
     );
   });
 
@@ -93,7 +93,7 @@ describe("describeBlocker", () => {
         reason: "CLOSURE",
       }),
     ).toBe(
-      "unavailable (closure) from 1 Jun 2030, 2:00 pm to 1 Jun 2030, 4:00 pm",
+      "unavailable (closure) from 1 Jun 2030, 2:00 pm SGT to 1 Jun 2030, 4:00 pm SGT",
     );
   });
 });
