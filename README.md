@@ -178,6 +178,9 @@ acceptance criteria hold even when someone forgets a check in a server action.
 - **One registration row per attendee per event** (SCRUM-73).
 - **Rejections carry a reason.** An event, booking or change request cannot be
   stored as `REJECTED` with a blank reason (SCRUM-19/43/53).
+- **Every event is in Singapore time.** `Event.timezone` is `NOT NULL` and a
+  CHECK refuses anything but `Asia/Singapore` (SCRUM-129, migration
+  `20261002120000_event_timezone_singapore`).
 - **Positive quantities and valid periods.** Attendance, capacities and
   quantities must be `> 0`; every `endAt` must be strictly after its `startAt`
   (SCRUM-13/29/31/32/35/74/75).
