@@ -13,7 +13,6 @@ import {
   ClipboardList,
   Info,
   AlertCircle,
-  Search,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -34,11 +33,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   formatDateTime,
   parseSingaporeDateTime,
-  timezoneWallTimeToUtcIso,
-  utcToTimezoneWallTime,
-  TIMEZONE_OPTIONS,
-  parseIanaZone,
-  normalizeTimezoneOption,
+  sgWallTimeToUtcIso,
+  utcToSgWallTime,
 } from "@/lib/datetime";
 import {
   createDraftEvent,
@@ -46,24 +42,12 @@ import {
   getFormCatalogues,
 } from "./actions";
 
-/**
- * A datetime-local value ("2026-09-20T10:00") carries no timezone offset.
- * Converts local wall-time to UTC ISO instant ("...Z") according to selected timezone.
- */
-function toUtcIso(localValue: string, timezoneStr: string = "Asia/Singapore (+08:00)"): string | undefined {
-  if (!localValue) return undefined;
-  return timezoneWallTimeToUtcIso(localValue, parseIanaZone(timezoneStr));
-}
-
-
-
 interface FormState {
   name: string;
   purpose: string;
   description: string;
   startAt: string;
   endAt: string;
-  timezone: string;
   expectedAttendance: string;
   venueRequirements: string;
   requiredFacilities: string[];
@@ -81,7 +65,6 @@ const initialFormState: FormState = {
   description: "",
   startAt: "",
   endAt: "",
-  timezone: "Asia/Singapore (+08:00)",
   expectedAttendance: "",
   venueRequirements: "",
   requiredFacilities: [],
@@ -110,7 +93,6 @@ export interface DraftEventData {
   description?: string | null;
   startAt?: Date | string | null;
   endAt?: Date | string | null;
-  timezone?: string | null;
   expectedAttendance?: number | null;
   venueRequirements?: string | null;
   requiredFacilities?: string[];
@@ -130,14 +112,6 @@ interface CreateEventDialogProps {
   trigger?: React.ReactNode;
 }
 
-/** Helper to format Date or ISO string into wall-time datetime-local format in selected timezone */
-function toDatetimeInputString(
-  dateVal: Date | string | null | undefined,
-  timezoneStr: string = "Asia/Singapore (+08:00)",
-): string {
-  return utcToTimezoneWallTime(dateVal, parseIanaZone(timezoneStr));
-}
-
 /** Helper to format a naive wall-time string (YYYY-MM-DDTHH:mm) for display */
 function formatWallDateTime(val: string | null | undefined): string {
   if (!val) return "";
@@ -147,14 +121,14 @@ function formatWallDateTime(val: string | null | undefined): string {
 
 function getInitialFormData(draftEvent?: DraftEventData | null): FormState {
   if (!draftEvent) return initialFormState;
-  const timezone = normalizeTimezoneOption(draftEvent.timezone);
+  // SCRUM-129 AC2: a draft saved under another timezone keeps its stored
+  // instants; they are simply shown and edited as Singapore wall time.
   return {
     name: draftEvent.name || "",
     purpose: draftEvent.purpose || "",
     description: draftEvent.description || "",
-    startAt: toDatetimeInputString(draftEvent.startAt, timezone),
-    endAt: toDatetimeInputString(draftEvent.endAt, timezone),
-    timezone,
+    startAt: utcToSgWallTime(draftEvent.startAt),
+    endAt: utcToSgWallTime(draftEvent.endAt),
     expectedAttendance:
       draftEvent.expectedAttendance !== null &&
       draftEvent.expectedAttendance !== undefined
@@ -207,12 +181,10 @@ export function CreateEventDialog({
   );
   const canSaveDraft = !draftEvent || draftEvent.status === "DRAFT";
 
-  // Minimum start datetime computed in the user's selected event timezone
-  const minStartDateTime = toDatetimeInputString(new Date(), formData.timezone);
+  const minStartDateTime = utcToSgWallTime(new Date());
 
   const [isDirty, setIsDirty] = useState(false);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
-  const [tzSearch, setTzSearch] = useState("");
 
   const [prevOpen, setPrevOpen] = useState(open);
   if (open !== prevOpen) {
@@ -265,7 +237,6 @@ export function CreateEventDialog({
     setFieldErrors({});
     setStep(1);
     setIsDirty(false);
-    setTzSearch("");
   }
 
   const minEndDateTime = formData.startAt ? formData.startAt : minStartDateTime;
@@ -291,14 +262,14 @@ export function CreateEventDialog({
 
     if (currentStep === 2) {
       if (formData.startAt) {
-        const startIso = toUtcIso(formData.startAt, formData.timezone);
+        const startIso = sgWallTimeToUtcIso(formData.startAt);
         if (startIso && new Date(startIso) < new Date()) {
           errors.startAt = ["Proposed date cannot be in the past."];
         }
       }
       if (formData.startAt && formData.endAt) {
-        const startIso = toUtcIso(formData.startAt, formData.timezone);
-        const endIso = toUtcIso(formData.endAt, formData.timezone);
+        const startIso = sgWallTimeToUtcIso(formData.startAt);
+        const endIso = sgWallTimeToUtcIso(formData.endAt);
         if (startIso && endIso && new Date(endIso) <= new Date(startIso)) {
           errors.endAt = [
             "Proposed end date and time must be strictly after the start date and time.",
@@ -350,8 +321,8 @@ export function CreateEventDialog({
             : undefined,
         description: formData.description || undefined,
         purpose: formData.purpose || undefined,
-        startAt: toUtcIso(formData.startAt, formData.timezone),
-        endAt: toUtcIso(formData.endAt, formData.timezone),
+        startAt: sgWallTimeToUtcIso(formData.startAt),
+        endAt: sgWallTimeToUtcIso(formData.endAt),
       };
 
       const result = await createDraftEvent(payload);
@@ -381,8 +352,8 @@ export function CreateEventDialog({
             ? Number(formData.expectedAttendance)
             : undefined,
         // Empty string (not undefined) so a missing date gets the "required" message.
-        startAt: toUtcIso(formData.startAt, formData.timezone) ?? "",
-        endAt: toUtcIso(formData.endAt, formData.timezone) ?? "",
+        startAt: sgWallTimeToUtcIso(formData.startAt) ?? "",
+        endAt: sgWallTimeToUtcIso(formData.endAt) ?? "",
       };
 
       const result = await submitEventRequest(payload);
@@ -629,46 +600,9 @@ export function CreateEventDialog({
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="timezone">Event Timezone *</Label>
-              <div className="space-y-1.5">
-                <div className="relative">
-                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground pointer-events-none" />
-                  <Input
-                    type="text"
-                    placeholder="Type to filter timezones (e.g. New York, Tokyo, London, Singapore)..."
-                    aria-label="Filter timezones"
-                    value={tzSearch}
-                    onChange={(e) => setTzSearch(e.target.value)}
-                    className="pl-9 h-9 text-xs"
-                  />
-                </div>
-                <select
-                  id="timezone"
-                  value={formData.timezone}
-                  onChange={(e) => updateField("timezone", e.target.value)}
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {TIMEZONE_OPTIONS.filter((opt) => {
-                    if (opt.value === formData.timezone) return true;
-                    if (!tzSearch.trim()) return true;
-                    const q = tzSearch.toLowerCase();
-                    return (
-                      opt.label.toLowerCase().includes(q) ||
-                      opt.value.toLowerCase().includes(q) ||
-                      opt.iana.toLowerCase().includes(q)
-                    );
-                  }).map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <p className="text-[11px] text-muted-foreground">
-                Authoritative timezone for schedule interpretation. Persisted instants stored consistently in UTC.
-              </p>
-            </div>
+            <p className="text-[11px] text-muted-foreground">
+              All times are Singapore time (SGT, UTC+8).
+            </p>
 
             <div className="space-y-2">
               <Label htmlFor="expectedAttendance">Expected Attendance *</Label>
@@ -1038,10 +972,6 @@ export function CreateEventDialog({
                         Missing (Required to Submit)
                       </span>
                     )}
-                  </p>
-                  <p>
-                    <span className="font-semibold">Timezone:</span>{" "}
-                    {formData.timezone || "Asia/Singapore (+08:00)"}
                   </p>
                   <p>
                     <span className="font-semibold">Attendance:</span>{" "}

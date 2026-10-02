@@ -102,3 +102,24 @@ describe("overlapping — the same rule as a database filter", () => {
     });
   });
 });
+
+describe("SCRUM-129 [AC5 - One period convention]: a period includes its start and excludes its end", () => {
+  it("SCRUM-129 [AC5 - One period convention]: periods that only touch do not overlap, in either order", () => {
+    expect(overlaps(period("09:00", "13:00"), period("13:00", "17:00"))).toBe(false);
+    expect(overlaps(period("13:00", "17:00"), period("09:00", "13:00"))).toBe(false);
+  });
+
+  it("SCRUM-129 [AC5 - One period convention]: the start instant is inside the period and the end instant is not", () => {
+    const booked = period("09:00", "13:00");
+    const instant = (hhmm: string) => ({ startAt: at(hhmm), endAt: new Date(at(hhmm).getTime() + 1) });
+    expect(overlaps(booked, instant("09:00"))).toBe(true);
+    expect(overlaps(booked, instant("13:00"))).toBe(false);
+  });
+
+  it("SCRUM-129 [AC5 - One period convention]: the database filter uses the same bounds", () => {
+    expect(overlapping(period("09:00", "13:00"))).toEqual({
+      startAt: { lt: at("13:00") },
+      endAt: { gt: at("09:00") },
+    });
+  });
+});

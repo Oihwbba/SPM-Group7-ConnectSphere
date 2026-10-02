@@ -12,6 +12,7 @@ import {
 } from "@/lib/schemas/event";
 import { ok, err, type ActionResult } from "@/lib/action-result";
 import { pickCoordinator } from "@/lib/coordinator-assignment";
+import { TIME_ZONE } from "@/lib/datetime";
 
 /** Thrown inside submitEventRequest's transaction for an expected failure
  * (not found / wrong state), caught below and converted to an ActionResult —
@@ -66,7 +67,6 @@ export async function createDraftEvent(
       registrationNotes,
       programme,
       specialRequests,
-      timezone,
     } = parsed.data;
 
     let eventId = id;
@@ -102,7 +102,9 @@ export async function createDraftEvent(
           registrationNotes: registrationNotes ?? null,
           programme: programme ?? null,
           specialRequests: specialRequests ?? null,
-          timezone,
+          // SCRUM-129 AC1/AC2: a draft saved with another timezone was
+          // re-entered in Singapore time, so it is now a Singapore event.
+          timezone: TIME_ZONE,
         },
       });
     } else {
@@ -124,7 +126,7 @@ export async function createDraftEvent(
           registrationNotes: registrationNotes ?? null,
           programme: programme ?? null,
           specialRequests: specialRequests ?? null,
-          timezone,
+          timezone: TIME_ZONE,
           organiserId: user!.id,
         },
         select: { id: true },
@@ -181,7 +183,6 @@ export async function submitEventRequest(
       registrationNotes,
       programme,
       specialRequests,
-      timezone,
     } = parsed.data;
 
     let eventId = id;
@@ -238,7 +239,7 @@ export async function submitEventRequest(
             registrationNotes,
             programme: programme ?? null,
             specialRequests: specialRequests ?? null,
-            timezone,
+            timezone: TIME_ZONE,
           },
         });
       } else {
@@ -261,7 +262,7 @@ export async function submitEventRequest(
             registrationNotes,
             programme: programme ?? null,
             specialRequests: specialRequests ?? null,
-            timezone,
+            timezone: TIME_ZONE,
             organiserId: user!.id,
           },
           select: { id: true },

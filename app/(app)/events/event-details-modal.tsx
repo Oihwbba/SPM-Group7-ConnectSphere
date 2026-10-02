@@ -12,11 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "@/components/events/status-badge";
 import { ClarificationPanel } from "@/components/events/clarification-panel";
-import {
-  formatDate,
-  formatDateTimeInTimezone,
-  parseIanaZone,
-} from "@/lib/datetime";
+import { formatDate, formatDateTime } from "@/lib/datetime";
 import {
   Calendar,
   Building2,
@@ -138,13 +134,13 @@ export function EventDetailsModal({
                 Attendance
               </CardTitle>
             </CardHeader>
-            <CardContent className="grid grid-cols-1 gap-3 p-4 text-xs sm:grid-cols-4">
+            <CardContent className="grid grid-cols-1 gap-3 p-4 text-xs sm:grid-cols-3">
               <div>
                 <span className="font-semibold text-muted-foreground">
                   Proposed Start:
                 </span>
                 <p className="mt-0.5 text-foreground">
-                  {event.startAt ? formatDateTimeInTimezone(event.startAt, event.timezone) : "—"}
+                  {event.startAt ? formatDateTime(event.startAt) : "—"}
                 </p>
               </div>
               <div>
@@ -152,18 +148,7 @@ export function EventDetailsModal({
                   Proposed End:
                 </span>
                 <p className="mt-0.5 text-foreground">
-                  {event.endAt ? formatDateTimeInTimezone(event.endAt, event.timezone) : "—"}
-                </p>
-              </div>
-              <div>
-                <span className="font-semibold text-muted-foreground">
-                  Event Timezone:
-                </span>
-                <p className="mt-0.5 text-foreground">
-                  {/* Show the zone itself, not the offset captured when the
-                      request was created: that offset goes stale across a
-                      daylight-saving change and would misreport the event. */}
-                  {parseIanaZone(event.timezone ?? undefined)}
+                  {event.endAt ? formatDateTime(event.endAt) : "—"}
                 </p>
               </div>
               <div>

@@ -402,8 +402,8 @@ test.describe("SCRUM-30 — View Equipment Conflicts", () => {
     await expect(entry).toContainText("Under maintenance");
     await expect(entry).toContainText("Annual service");
     await expect(entry).toContainText("2 unit(s)");
-    await expect(entry).toContainText("18 Aug 2032, 9:00 am");
-    await expect(entry).toContainText("18 Aug 2032, 5:00 pm");
+    await expect(entry).toContainText("18 Aug 2032, 9:00 am SGT");
+    await expect(entry).toContainText("18 Aug 2032, 5:00 pm SGT");
   });
 
   // SCRUM-30 is meant to answer "what is this item committed to". A list that

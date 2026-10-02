@@ -107,7 +107,7 @@ test.describe("SCRUM-50 / 52 / 53 — venue booking request, review and decision
     await expect(card).toHaveCount(1);
     await expect(card).toContainText("Exhibition Hall");
     await expect(card).toContainText(
-      "10 Mar 2035, 9:00 am to 10 Mar 2035, 1:00 pm",
+      "10 Mar 2035, 9:00 am SGT to 10 Mar 2035, 1:00 pm SGT",
     );
     await expect(card).toContainText("120 expected · venue holds 200");
     await expect(card).toContainText("Requested by Cody Coordinator");
@@ -131,7 +131,7 @@ test.describe("SCRUM-50 / 52 / 53 — venue booking request, review and decision
     const refusal = coordinator.getByTestId("booking-outcome");
     await expect(refusal).toContainText("Request not submitted");
     await expect(refusal).toContainText(
-      "Exhibition Hall is unavailable for that period: already booked from 10 Mar 2035, 9:00 am to 10 Mar 2035, 1:00 pm.",
+      "Exhibition Hall is unavailable for that period: already booked from 10 Mar 2035, 9:00 am SGT to 10 Mar 2035, 1:00 pm SGT.",
     );
     await testInfo.attach("SCRUM-50 refusal when the venue is already booked", {
       body: await coordinator.screenshot({ fullPage: false }),

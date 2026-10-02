@@ -144,7 +144,7 @@ describe("recordUnavailability — SCRUM-37", () => {
     expect(await recordUnavailability(valid)).toEqual({
       ok: false,
       error:
-        "Not recorded: Seminar Room is already booked from 3 May 2034, 8:00 am to 3 May 2034, 10:00 am.",
+        "Not recorded: Seminar Room is already booked from 3 May 2034, 8:00 am SGT to 3 May 2034, 10:00 am SGT.",
     });
     expect(db.venueUnavailability.create).not.toHaveBeenCalled();
   });

@@ -19,7 +19,7 @@ import {
 import { toast } from "sonner";
 import type { Event } from "@prisma/client";
 
-import { formatDate, formatDateTimeInTimezone } from "@/lib/datetime";
+import { formatDate, formatDateTime } from "@/lib/datetime";
 import { StatusBadge } from "@/components/events/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -669,7 +669,7 @@ export function EventsClient({
                           Starts
                         </span>
                         {event.startAt
-                          ? formatDateTimeInTimezone(event.startAt, event.timezone)
+                          ? formatDateTime(event.startAt)
                           : "—"}
                       </TableCell>
                       <TableCell
