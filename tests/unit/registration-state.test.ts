@@ -177,3 +177,17 @@ describe("REGISTRATION_STATE_LABEL", () => {
     }
   });
 });
+
+describe("SCRUM-129 [AC5 - One period convention]: the registration window includes its opening instant and excludes its closing one", () => {
+  const opensAt = new Date("2031-06-01T01:00:00Z");
+  const closesAt = new Date("2031-06-08T01:00:00Z");
+  const windowEvent = baseEvent({ registrationOpensAt: opensAt, registrationClosesAt: closesAt });
+
+  it("SCRUM-129 [AC5 - One period convention]: registration is open at the exact opening instant", () => {
+    expect(computeRegistrationState(windowEvent, 0, opensAt)).toBe("OPEN");
+  });
+
+  it("SCRUM-129 [AC5 - One period convention]: registration is no longer open at the exact closing instant", () => {
+    expect(computeRegistrationState(windowEvent, 0, closesAt)).toBe("EXPIRED");
+  });
+});

@@ -51,7 +51,6 @@ export const createDraftEventSchema = z
       .trim()
       .max(5000, "Keep special requests under 5000 characters.")
       .optional(),
-    timezone: z.string().trim().max(64).optional().default("Asia/Singapore"),
   })
   .superRefine((data, ctx) => {
     const now = new Date();
@@ -165,12 +164,6 @@ export const submitEventRequestSchema = z
       .trim()
       .max(5000, "Keep special requests under 5000 characters.")
       .optional(),
-    timezone: z
-      .string({ required_error: "Event timezone is required." })
-      .trim()
-      .min(1, "Event timezone is required.")
-      .max(64, "Timezone name is too long.")
-      .default("Asia/Singapore"),
   })
   .superRefine((data, ctx) => {
     const now = new Date();

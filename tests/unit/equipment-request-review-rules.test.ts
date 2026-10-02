@@ -123,7 +123,7 @@ describe("formatEventPeriod — SCRUM-27 AC 1", () => {
         startAt: new Date("2031-02-03T01:00:00.000Z"),
         endAt: new Date("2031-02-03T09:30:00.000Z"),
       }),
-    ).toBe("3 Feb 2031, 9:00 am – 3 Feb 2031, 5:30 pm");
+    ).toBe("3 Feb 2031, 9:00 am SGT – 3 Feb 2031, 5:30 pm SGT");
   });
 
   it("says the dates are still to come when an event has none", () => {

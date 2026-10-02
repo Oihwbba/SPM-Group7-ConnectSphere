@@ -216,8 +216,8 @@ test.describe("User Story 15 — Draft Event Request Lifecycle Journey", () => {
 
     // 7. Review and Submit
     await expect(page.getByRole("heading", { name: /Review Entered Details/i })).toBeVisible();
-    await expect(page.getByRole("dialog").getByText(/Start:\s*20 Nov 2027, 10:00 am/i)).toBeVisible();
-    await expect(page.getByRole("dialog").getByText(/End:\s*20 Nov 2027, 6:00 pm/i)).toBeVisible();
+    await expect(page.getByRole("dialog").getByText(/Start:\s*20 Nov 2027, 10:00 am SGT/i)).toBeVisible();
+    await expect(page.getByRole("dialog").getByText(/End:\s*20 Nov 2027, 6:00 pm SGT/i)).toBeVisible();
     await page.getByRole("button", { name: /Submit Request for Review/i }).click();
 
     // 8. Verify event submitted successfully
@@ -590,13 +590,13 @@ test.describe("User Story 84 — Events list on mobile (375x812)", () => {
 });
 
 /**
- * Desktop list controls and dialog behaviour (SCRUM-13 timezone, SCRUM-13 AC6
+ * Desktop list controls and dialog behaviour (SCRUM-129 Singapore time, SCRUM-13 AC6
  * unsaved-changes guard, SCRUM-84 AC7-AC9 sorting/filtering). These need the
  * default viewport: below md the table restyles into cards and the column
  * headers the sort test clicks are hidden.
  */
-test.describe("User Story 13 & 84 — timezone, unsaved changes and list controls", () => {
-  test("SCRUM-13: organiser selects custom event timezone when creating request", async ({
+test.describe("User Story 129, 13 & 84 — Singapore time, unsaved changes and list controls", () => {
+  test("SCRUM-129 [AC1 - Singapore timezone]: the request form has no timezone selector and states its times are SGT", async ({
     page,
   }) => {
     await page.goto("/login");
@@ -605,22 +605,21 @@ test.describe("User Story 13 & 84 — timezone, unsaved changes and list control
     await page.getByRole("button", { name: "Sign in" }).click();
     await page.waitForURL("**/events");
 
-    const eventName = `TZ Event ${Date.now()}`;
     await page.getByRole("button", { name: /Create Event Request/i }).first().click();
-    await page.getByLabel("Event Name *").fill(eventName);
+    await page.getByLabel("Event Name *").fill(`SGT Event ${Date.now()}`);
     await page.getByRole("button", { name: "Next", exact: true }).click();
 
-    // Select custom timezone on Step 2 by matching IANA label text
-    const nyOptionValue = (await page.getByLabel("Event Timezone *").locator("option", { hasText: "America/New York" }).getAttribute("value")) ?? "America/New_York";
-    await page.getByLabel("Event Timezone *").selectOption(nyOptionValue);
-    await page.getByRole("button", { name: /Save as Draft/i }).click();
+    const dialog = page.getByRole("dialog");
+    await expect(dialog.getByText("All times are Singapore time (SGT, UTC+8).")).toBeVisible();
+    await expect(dialog.getByLabel(/timezone/i)).toHaveCount(0);
 
-    await expect(page.getByRole("cell", { name: eventName })).toBeVisible();
-
-    // Reopen draft & verify saved timezone is restored
-    await page.getByRole("button", { name: /Resume Draft/i }).first().click();
-    await page.getByRole("button", { name: "Next", exact: true }).click();
-    await expect(page.getByLabel("Event Timezone *")).toHaveValue(nyOptionValue);
+    // SCRUM-129 AC3: the review step labels the entered times SGT.
+    await page.getByLabel("Proposed Start Date & Time *").fill("2031-11-20T10:00");
+    await page.getByLabel("Proposed End Date & Time *").fill("2031-11-20T18:00");
+    await page.getByRole("button", { name: "6. Review" }).click();
+    await expect(dialog.getByText(/Start:\s*20 Nov 2031, 10:00 am SGT/)).toBeVisible();
+    await expect(dialog.getByText(/End:\s*20 Nov 2031, 6:00 pm SGT/)).toBeVisible();
+    await expect(dialog.getByText(/Timezone:/)).toHaveCount(0);
   });
 
   test("SCRUM-15 [AC6 - Unsaved Changes Warning]: unsaved changes warning appears when closing an edited draft dialog", async ({
@@ -1190,14 +1189,78 @@ test.describe("SCRUM-17 — Coordinator reviews a submitted request's full detai
     const modal = page.getByRole("dialog");
     await expect(modal.getByRole("heading", { name: eventName })).toBeVisible();
     await expect(modal.getByText("Showcase the department's annual research output.")).toBeVisible();
-    // Dates: event defaults to Asia/Singapore (+08:00) since no timezone was
-    // set on create, so 02:00Z/10:00Z become 10:00 am / 6:00 pm local.
-    await expect(modal.getByText("1 Aug 2031, 10:00 am")).toBeVisible();
-    await expect(modal.getByText("1 Aug 2031, 6:00 pm")).toBeVisible();
+    // Dates are shown in Singapore time (SCRUM-129), so 02:00Z/10:00Z become
+    // 10:00 am SGT / 6:00 pm SGT.
+    await expect(modal.getByText("1 Aug 2031, 10:00 am SGT")).toBeVisible();
+    await expect(modal.getByText("1 Aug 2031, 6:00 pm SGT")).toBeVisible();
     await expect(modal.getByText("120 attendees")).toBeVisible();
     await expect(modal.getByText("Auditorium with a raised stage.")).toBeVisible();
     await expect(modal.getByText("Wheelchair-accessible entrance and seating.")).toBeVisible();
     await expect(modal.getByText("Two lapel microphones and a projector.")).toBeVisible();
     await expect(modal.getByText("Online registration, capped at capacity.")).toBeVisible();
+  });
+});
+
+/**
+ * SCRUM-129 AC3 — an event's stored UTC instants are shown in the organiser's
+ * list and details in Singapore time, labelled "SGT", with no timezone field.
+ * AC2 (events saved under another timezone) is the migration's job and is
+ * proven in tests/integration/event-timezone.test.ts.
+ */
+test.describe("SCRUM-129 — Event times are shown in Singapore time", () => {
+  test.skip(!usesLocalDatabase, "writes its own event; local database only");
+
+  let eventId: string;
+  let eventName: string;
+
+  test.beforeEach(async () => {
+    eventName = `SCRUM-129 SGT Display ${Date.now()}`;
+    const event = await prisma.event.create({
+      data: {
+        name: eventName,
+        purpose: "Shows its times in Singapore time.",
+        description: "Owned by the SCRUM-129 e2e spec.",
+        status: "UNDER_REVIEW",
+        organiserId: "usr_organiser",
+        coordinatorId: "usr_coordinator",
+        // 10:00-18:00 SGT, stored as UTC as it always was.
+        startAt: new Date("2031-08-01T02:00:00Z"),
+        endAt: new Date("2031-08-01T10:00:00Z"),
+        expectedAttendance: 80,
+        submittedAt: new Date(),
+      },
+      select: { id: true },
+    });
+    eventId = event.id;
+  });
+
+  test.afterEach(async () => {
+    await prisma.notification.deleteMany({ where: { eventId } });
+    await prisma.auditLog.deleteMany({ where: { entityId: eventId } });
+    await prisma.event.deleteMany({ where: { id: eventId } });
+  });
+
+  test("SCRUM-129 [AC3 - SGT label] × [AC4 - UTC storage]: the list and details show the stored UTC instants in SGT", async ({
+    page,
+  }) => {
+    await page.goto("/login");
+    await page.getByLabel("Email", { exact: true }).fill("organiser@test.local");
+    await page.getByLabel("Password", { exact: true }).fill("Password123!");
+    await page.getByRole("button", { name: "Sign in" }).click();
+    await page.waitForURL("**/events");
+
+    const row = page.getByRole("row", { name: new RegExp(eventName) });
+    await expect(row).toContainText("1 Aug 2031, 10:00 am SGT");
+
+    await row.getByTestId("view-details-button").click();
+    const modal = page.getByRole("dialog");
+    await expect(modal.getByText("1 Aug 2031, 10:00 am SGT")).toBeVisible();
+    await expect(modal.getByText("1 Aug 2031, 6:00 pm SGT")).toBeVisible();
+    await expect(modal.getByText(/Event Timezone/)).toHaveCount(0);
+
+    // The stored instants were not rewritten.
+    const stored = await prisma.event.findUniqueOrThrow({ where: { id: eventId } });
+    expect(stored.startAt?.toISOString()).toBe("2031-08-01T02:00:00.000Z");
+    expect(stored.endAt?.toISOString()).toBe("2031-08-01T10:00:00.000Z");
   });
 });

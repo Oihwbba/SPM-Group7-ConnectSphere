@@ -5,7 +5,7 @@ import { BadgeCheck } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getEventArrangements } from "@/app/(app)/events/readiness-actions";
-import { formatDateTimeInTimezone } from "@/lib/datetime";
+import { formatDateTime } from "@/lib/datetime";
 import type { ConfirmedArrangements as Arrangements } from "@/lib/event-readiness";
 
 /**
@@ -60,15 +60,10 @@ export function ConfirmedArrangements({ eventId }: { eventId: string }) {
             </dd>
             <dt className="font-semibold text-muted-foreground">Date & time</dt>
             <dd>
-              {formatDateTimeInTimezone(
-                arrangements.startAt,
-                arrangements.timezone,
-              )}{" "}
-              to{" "}
-              {formatDateTimeInTimezone(
-                arrangements.endAt,
-                arrangements.timezone,
-              )}
+              {arrangements.startAt
+                ? formatDateTime(arrangements.startAt)
+                : "—"}{" "}
+              to {arrangements.endAt ? formatDateTime(arrangements.endAt) : "—"}
             </dd>
             <dt className="font-semibold text-muted-foreground">Equipment</dt>
             <dd data-testid="confirmed-equipment">

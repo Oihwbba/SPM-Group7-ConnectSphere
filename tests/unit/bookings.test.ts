@@ -354,7 +354,7 @@ describe("submitBookingRequest — SCRUM-50", () => {
     expect(result).toEqual({
       ok: false,
       error:
-        "Seminar Room is unavailable for that period: already booked from 1 Jun 2030, 3:00 pm to 1 Jun 2030, 5:00 pm.",
+        "Seminar Room is unavailable for that period: already booked from 1 Jun 2030, 3:00 pm SGT to 1 Jun 2030, 5:00 pm SGT.",
     });
     expect(db.booking.create).not.toHaveBeenCalled();
   });
@@ -572,7 +572,7 @@ describe("decideBookingRequest — SCRUM-53", () => {
     ).toEqual({
       ok: false,
       error:
-        "Conflicting: Seminar Room is unavailable (maintenance) from 1 Jun 2030, 3:00 pm to 1 Jun 2030, 6:00 pm. This request is still pending.",
+        "Conflicting: Seminar Room is unavailable (maintenance) from 1 Jun 2030, 3:00 pm SGT to 1 Jun 2030, 6:00 pm SGT. This request is still pending.",
     });
     expect(db.booking.updateMany).not.toHaveBeenCalled();
   });

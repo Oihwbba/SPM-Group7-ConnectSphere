@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 import type { Role } from "@prisma/client";
 
 import { NAV_BY_ROLE, LANDING_ROUTE_BY_ROLE, ROLE_LABEL, navFor } from "@/lib/nav";
@@ -128,5 +128,41 @@ describe("navigation derives from the permission model — SCRUM-66", () => {
       expect(roleAllows(role, "notification:read")).toBe(true);
       expect(hrefsFor(role)).toContain("/notifications");
     }
+  });
+});
+
+// SCRUM-66: "granting a role an action shows the matching link with no second
+// edit here". The menus are built when lib/nav.ts loads, so each case reloads
+// it against a changed permission model.
+describe("navigation follows a permission change — SCRUM-66", () => {
+  afterEach(() => {
+    vi.doUnmock("@/lib/auth/can");
+    vi.resetModules();
+  });
+
+  async function navWith(allows: (role: Role, action: Action) => boolean) {
+    vi.resetModules();
+    vi.doMock("@/lib/auth/can", () => ({ roleAllows: allows }));
+    return import("@/lib/nav");
+  }
+
+  it("shows a newly granted route to a role that has no label of its own for it", async () => {
+    const nav = await navWith(
+      (role, action) =>
+        roleAllows(role, action) ||
+        (role === "VENUE_STAFF" && action === "event:list"),
+    );
+
+    expect(nav.NAV_BY_ROLE.VENUE_STAFF).toContainEqual({
+      href: "/events",
+      label: "events",
+    });
+  });
+
+  it("lands a role with no links on its notifications", async () => {
+    const nav = await navWith(() => false);
+
+    expect(nav.NAV_BY_ROLE.ATTENDEE).toEqual([]);
+    expect(nav.LANDING_ROUTE_BY_ROLE.ATTENDEE).toBe("/notifications");
   });
 });

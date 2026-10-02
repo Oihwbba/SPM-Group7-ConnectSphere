@@ -17,7 +17,7 @@ import {
   canRegisterNow,
   REGISTRATION_STATE_LABEL,
 } from "@/lib/registration-state";
-import { formatDateTimeInTimezone } from "@/lib/datetime";
+import { formatDateTime } from "@/lib/datetime";
 import { RegisterButton } from "./register-button";
 import { WithdrawButton } from "./withdraw-button";
 import type { BrowsableEvent } from "./attendee-events-client";
@@ -83,7 +83,7 @@ export function AttendeeEventDetail({ event }: { event: BrowsableEvent }) {
                 </p>
                 <p className="text-foreground">
                   {event.startAt
-                    ? formatDateTimeInTimezone(event.startAt, event.timezone)
+                    ? formatDateTime(event.startAt)
                     : "To be confirmed"}
                 </p>
               </div>
@@ -117,10 +117,10 @@ export function AttendeeEventDetail({ event }: { event: BrowsableEvent }) {
                   {event.registrationOpensAt || event.registrationClosesAt ? (
                     <>
                       {event.registrationOpensAt
-                        ? `Opens ${formatDateTimeInTimezone(event.registrationOpensAt, event.timezone)}`
+                        ? `Opens ${formatDateTime(event.registrationOpensAt)}`
                         : "Open now"}
                       {event.registrationClosesAt &&
-                        ` · Closes ${formatDateTimeInTimezone(event.registrationClosesAt, event.timezone)}`}
+                        ` · Closes ${formatDateTime(event.registrationClosesAt)}`}
                     </>
                   ) : (
                     "No fixed period set"

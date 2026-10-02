@@ -1,9 +1,16 @@
 name: CI
 
-# Runs on every push and pull request. The pipeline must be green from the
-# first commit — its date is graded evidence of continuous integration.
+# Runs on every pull request and every push to main. The pipeline must be
+# green from the first commit — its date is graded evidence of continuous
+# integration.
+#
+# Not on pushes to other branches: a branch with an open pull request would
+# run the same job twice per commit, and the pull_request run is the stronger
+# one — it tests the branch merged into the current main, which is what the
+# merge gate and the GLM reviewer read.
 on:
   push:
+    branches: [main]
   pull_request:
 
 # Least privilege: the job only checks out code, runs tests and uploads

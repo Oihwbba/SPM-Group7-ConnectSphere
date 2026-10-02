@@ -19,12 +19,12 @@ export async function signedIn(browser: Browser, email: string): Promise<Page> {
   return page;
 }
 
-/** A half-hour option's on-screen label, e.g. "13:30" -> "1:30 pm". */
+/** A half-hour option's on-screen label, e.g. "13:30" -> "1:30 pm SGT" (SCRUM-129). */
 export function timeOption(hhmm: string): RegExp {
   const [h, m] = hhmm.split(":").map(Number);
   const hour12 = h % 12 === 0 ? 12 : h % 12;
   const minutes = String(m).padStart(2, "0");
-  return new RegExp(`^${hour12}:${minutes}\\s${h < 12 ? "am" : "pm"}$`);
+  return new RegExp(`^${hour12}:${minutes}\\s${h < 12 ? "am" : "pm"}\\sSGT$`);
 }
 
 export async function choose(
