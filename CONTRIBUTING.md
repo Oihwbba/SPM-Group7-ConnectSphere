@@ -27,6 +27,16 @@ variation of it. When you build your feature, copy that folder's shape:
 | `tests/integration/<domain>.test.ts` | Vitest test against a real Postgres, only where correctness depends on the database: row locks, transactions, constraints. Runs with `npm run test:integration` and needs a local database. |
 | `e2e/*.spec.ts` | One Playwright test of the main user journey. |
 
+**Coverage.** Every server-side `.ts` file under `lib/` and `app/` must stay at
+100% statements, branches, functions and lines, whatever the file is named.
+`npm run test:coverage` fails otherwise, naming the file, and so does CI. It
+counts the unit and integration tests together, so it **needs the local
+database** (`docker compose up -d`), like `npm run test:integration`. Without
+it the integration tests skip, and a file only they cover (such as
+`app/(app)/bookings/queries.ts`) fails the run even if you never touched it.
+`npm run verify` doesn't measure coverage, so it is unaffected. Components
+(`.tsx`) are not measured; Playwright covers them (SCRUM-87).
+
 Route folders are named for the **domain**, not the role. A route that several
 roles use is one folder whose `page.tsx` switches on `session.user.role` — see
 `app/(app)/events/page.tsx` and the addendum to ADR 0001.
@@ -103,12 +113,16 @@ gh pr checks               # watch it
 gh pr merge --squash --delete-branch
 ```
 
-Pushing the branch starts two things automatically:
+Opening the pull request, and every push to it afterwards, starts two things
+automatically:
 
 | | What happens | Takes |
 |---|---|---|
-| **GitHub Actions** | migrate → seed → typecheck → lint → unit tests → e2e | ~2m30s |
+| **GitHub Actions** | migrate → seed → typecheck → lint → unit tests → e2e | ~7–10 minutes |
 | **GLM code review** | one AI reviewer reads the whole diff and posts one long review comment; red on a critical finding (skipped for drafts) | ~3–10 minutes |
+
+A pushed branch with no pull request gets no CI, so run `npm run verify`
+locally until you open one (SCRUM-151).
 
 There are no Vercel preview deployments. Only `main` deploys.
 

@@ -36,17 +36,17 @@ either covered by a test or visibly not done yet. Reviewers do the same.
 
 | | |
 |---|---|
-| Stories | **56** |
+| Stories | **58** |
 | Tasks | **7** |
 | Subtasks | **20** |
-| Total story points | **143** |
+| Total story points | **145** |
 | Points committed to Sprint 1 | **37** |
 | Points committed to Sprint 2 | **44** |
 | Last synced from Jira | **2026-09-30** |
 
 ## SCRUM-6 - Event Request Lifecycle
 
-_19 stories, 47 points_
+_21 stories, 49 points_
 
 | Story | Summary | Pts | Priority | Sprint | Status |
 |---|---|---|---|---|---|
@@ -69,6 +69,8 @@ _19 stories, 47 points_
 | [SCRUM-108](SCRUM-108.md) | Edit a rejected event request before resubmission | 2 | High | SCRUM Sprint 2 | To Do |
 | [SCRUM-109](SCRUM-109.md) | Respond to an event clarification request | 2 | High | SCRUM Sprint 2 | To Do |
 | [SCRUM-110](SCRUM-110.md) | See an event's readiness checklist | 3 | Highest | SCRUM Sprint 2 | In Progress |
+| [SCRUM-129](SCRUM-129.md) | Show and store all event times in Singapore time | 1 | Medium | Backlog | To Do |
+| [SCRUM-130](SCRUM-130.md) | Discard a draft request | 1 | Medium | Backlog | To Do |
 
 ## SCRUM-7 - Venue Management
 
@@ -117,13 +119,13 @@ _8 stories, 19 points_
 
 | Story | Summary | Pts | Priority | Sprint | Status |
 |---|---|---|---|---|---|
-| [SCRUM-27](SCRUM-27.md) | Create Equipment Request | 1 | Highest | SCRUM Sprint 2 | In Review |
-| [SCRUM-28](SCRUM-28.md) | Review and Update Equipment Request | 3 | Highest | SCRUM Sprint 2 | In Review |
-| [SCRUM-29](SCRUM-29.md) | Check Equipment Availability | 3 | Highest | SCRUM Sprint 2 | In Review |
-| [SCRUM-30](SCRUM-30.md) | View Equipment Conflicts | 2 | Medium | SCRUM Sprint 2 | In Progress |
+| [SCRUM-27](SCRUM-27.md) | Create an equipment request | 2 | Highest | SCRUM Sprint 2 | In Review |
+| [SCRUM-28](SCRUM-28.md) | Review and update an equipment request | 3 | Highest | SCRUM Sprint 2 | In Review |
+| [SCRUM-29](SCRUM-29.md) | Check equipment availability | 3 | Highest | SCRUM Sprint 2 | In Review |
+| [SCRUM-30](SCRUM-30.md) | View equipment conflicts | 3 | Medium | SCRUM Sprint 2 | In Progress |
 | [SCRUM-31](SCRUM-31.md) | Reserve Equipment for Event | 3 | Highest | SCRUM Sprint 1 | Done |
 | [SCRUM-32](SCRUM-32.md) | Modify or Cancel Reservation | 3 | Medium | Backlog | To Do |
-| [SCRUM-33](SCRUM-33.md) | View Event Reservations | 2 | Medium | SCRUM Sprint 2 | To Do |
+| [SCRUM-33](SCRUM-33.md) | [MERGED INTO SCRUM-27] View Event Reservations | 0 | Medium | SCRUM Sprint 2 | Done |
 | [SCRUM-55](SCRUM-55.md) | View Equipment Availability Calendar | 2 | Low | Backlog | To Do |
 
 ## SCRUM-11 - Attendee Registration

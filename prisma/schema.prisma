@@ -265,7 +265,9 @@ model Event {
   registrationNotes     String?
   programme             String?
   specialRequests       String?
-  timezone              String?     @default("Asia/Singapore")
+  // SCRUM-129: every event is entered and shown in Singapore time. The
+  // CHECK event_timezone_singapore refuses any other value.
+  timezone              String      @default("Asia/Singapore")
   equipmentTypes        String[] @default([])
   registrationRequired  Boolean?
 

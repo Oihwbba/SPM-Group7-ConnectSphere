@@ -12,7 +12,7 @@ import {
   REGISTRATION_STATE_LABEL,
   type RegistrationState,
 } from "@/lib/registration-state";
-import { formatDateTimeInTimezone } from "@/lib/datetime";
+import { formatDateTime } from "@/lib/datetime";
 
 type Booking = {
   id: string;
@@ -26,7 +26,6 @@ export type BrowsableEvent = {
   description: string | null;
   startAt: Date | null;
   endAt: Date | null;
-  timezone: string | null;
   expectedAttendance: number | null;
   registrationEnabled: boolean;
   registrationOpensAt: Date | null;
@@ -116,7 +115,7 @@ export function AttendeeEventsClient({ events }: { events: BrowsableEvent[] }) {
                   <CalendarDays className="h-3.5 w-3.5 shrink-0" />
                   <span>
                     {event.startAt
-                      ? formatDateTimeInTimezone(event.startAt, event.timezone)
+                      ? formatDateTime(event.startAt)
                       : "Date to be confirmed"}
                   </span>
                 </div>
@@ -145,12 +144,12 @@ export function AttendeeEventsClient({ events }: { events: BrowsableEvent[] }) {
                     <Clock className="h-3.5 w-3.5 shrink-0" />
                     <span data-testid="registration-period">
                       {event.registrationOpensAt &&
-                        `Opens ${formatDateTimeInTimezone(event.registrationOpensAt, event.timezone)}`}
+                        `Opens ${formatDateTime(event.registrationOpensAt)}`}
                       {event.registrationOpensAt &&
                         event.registrationClosesAt &&
                         " · "}
                       {event.registrationClosesAt &&
-                        `Closes ${formatDateTimeInTimezone(event.registrationClosesAt, event.timezone)}`}
+                        `Closes ${formatDateTime(event.registrationClosesAt)}`}
                     </span>
                   </div>
                 )}

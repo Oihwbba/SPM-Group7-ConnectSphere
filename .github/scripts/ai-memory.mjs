@@ -151,6 +151,7 @@ export function checkProposal({ proposal, current, prNumber }) {
   if (memory.length > MAX_MEMORY_CHARS) {
     return {
       accept: false,
+      tooLong: memory.length,
       reason: `The proposed memory is ${memory.length} characters, over the ${MAX_MEMORY_CHARS} the reviewer reads.`,
     };
   }
@@ -227,6 +228,33 @@ export function buildMemoryPrompt({ current, pending, pr, review, ci, stat, toda
   return parts.join("\n");
 }
 
+/**
+ * The follow-up when the only thing wrong with a lesson was its length. GLM
+ * rarely prunes unasked, and once the file is near the limit every lesson
+ * would otherwise be thrown away — #95's was (SCRUM-152).
+ */
+export function buildPruneRequest({ length, prNumber }) {
+  return [
+    "## Your proposal was too long",
+    `It was ${length} characters; the reviewer reads at most ${MAX_MEMORY_CHARS}. ` +
+      `Keep your lesson and hand back the whole file again, under ${MAX_MEMORY_CHARS} characters. ` +
+      `Make room by deleting whole lessons that matter least or have stopped being true, ` +
+      `or by shortening one and citing #${prNumber} in it. Name what you removed in your note.`,
+  ].join("\n");
+}
+
+/**
+ * What a refused run logs. "Nothing learned" is the normal answer; a lesson
+ * found at any attempt and then refused is not, and a plain log line is how
+ * #95's went unnoticed. A prune retry that comes back unparseable or empty
+ * must not hide the lesson the first attempt found.
+ */
+export function refusalLog({ attempts, verdict, prNumber }) {
+  const found = attempts.filter((attempt) => attempt?.learned);
+  const lost = found.length ? `::warning::A lesson was lost (${found.at(-1).note || "no note"}). ` : "";
+  return `${lost}No memory change for #${prNumber}: ${verdict.reason}`;
+}
+
 /** A one-line account of CI: what matters is whether it failed on the way, and at what. */
 export function summariseCi(runs) {
   if (!runs.length) return "";
@@ -279,6 +307,11 @@ async function main() {
   const current = pending || mainMemory;
 
   const pr = await github("GET", `/repos/${repo}/pulls/${prNumber}`);
+  // A manual run names its pull request by hand; only a merge teaches anything.
+  if (!pr.merged_at) {
+    console.log(`::warning::#${prNumber} is not merged, so it has nothing to teach. Skipping.`);
+    return;
+  }
   const comments = await github("GET", `/repos/${repo}/issues/${prNumber}/comments?per_page=100`);
   const review = comments.find((comment) => comment.body?.includes(MARKER))?.body ?? "";
 
@@ -314,17 +347,18 @@ async function main() {
     stat,
   });
 
-  const answer = await askGlm({
-    apiKey: env.ZHIPU_API_KEY,
-    model,
-    system: INSTRUCTIONS,
-    user,
-    timeoutMs: GLM_TIMEOUT_MS,
-  });
+  const ask = (prompt) =>
+    askGlm({ apiKey: env.ZHIPU_API_KEY, model, system: INSTRUCTIONS, user: prompt, timeoutMs: GLM_TIMEOUT_MS });
 
-  const verdict = checkProposal({ proposal: parseProposal(answer.content), current, prNumber });
+  const attempts = [parseProposal((await ask(user)).content)];
+  let verdict = checkProposal({ proposal: attempts[0], current, prNumber });
+  if (verdict.tooLong) {
+    console.log(`The lesson from #${prNumber} came back at ${verdict.tooLong} characters; asking GLM to prune.`);
+    attempts.push(parseProposal((await ask(`${user}\n\n${buildPruneRequest({ length: verdict.tooLong, prNumber })}`)).content));
+    verdict = checkProposal({ proposal: attempts[1], current, prNumber });
+  }
   if (!verdict.accept) {
-    console.log(`No memory change for #${prNumber}: ${verdict.reason}`);
+    console.log(refusalLog({ attempts, verdict, prNumber }));
     return;
   }
 

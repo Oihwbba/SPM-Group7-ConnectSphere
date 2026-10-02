@@ -104,15 +104,15 @@ test.describe("SCRUM-36 / SCRUM-37 — venue availability calendar and recorded 
     // maintenance rather than a booking.
     await coordinator.goto(calendarFor(AUDITORIUM, DAY));
     expect(await stretches(coordinator, DAY)).toEqual([
-      ["free", "Available midnight to 1:00 pm"],
-      ["unavailability", "Unavailable (maintenance) 1:00 pm to 5:00 pm"],
-      ["free", "Available 5:00 pm to midnight"],
+      ["free", "Available midnight to 1:00 pm SGT"],
+      ["unavailability", "Unavailable (maintenance) 1:00 pm SGT to 5:00 pm SGT"],
+      ["free", "Available 5:00 pm SGT to midnight"],
     ]);
 
     // SCRUM-37 AC3 — a request over it is refused, like a booking clash.
     await requestAuditorium(coordinator, `${DAY}T14:00`, `${DAY}T16:00`);
     await expect(coordinator.getByTestId("booking-outcome")).toContainText(
-      "Grand Auditorium is unavailable for that period: unavailable (maintenance) from 10 Jan 2036, 1:00 pm to 10 Jan 2036, 5:00 pm.",
+      "Grand Auditorium is unavailable for that period: unavailable (maintenance) from 10 Jan 2036, 1:00 pm SGT to 10 Jan 2036, 5:00 pm SGT.",
     );
 
     // SCRUM-37 AC5 — a request ending exactly as the maintenance begins is accepted.
@@ -126,7 +126,7 @@ test.describe("SCRUM-36 / SCRUM-37 — venue availability calendar and recorded 
     await staff.goto("/bookings");
     const card = staff
       .getByTestId(/^booking-/)
-      .filter({ hasText: "10 Jan 2036, 9:00 am to 10 Jan 2036, 1:00 pm" });
+      .filter({ hasText: "10 Jan 2036, 9:00 am SGT to 10 Jan 2036, 1:00 pm SGT" });
     await card.getByRole("button", { name: "Approve" }).click();
     await expect(staff.getByText(/^Approved: Grand Auditorium/)).toBeVisible();
 
@@ -134,10 +134,10 @@ test.describe("SCRUM-36 / SCRUM-37 — venue availability calendar and recorded 
     // calendar at once, flush against the maintenance: no gap between them.
     await coordinator.goto(calendarFor(AUDITORIUM, DAY));
     expect(await stretches(coordinator, DAY)).toEqual([
-      ["free", "Available midnight to 9:00 am"],
-      ["booking", "Booked 9:00 am to 1:00 pm"],
-      ["unavailability", "Unavailable (maintenance) 1:00 pm to 5:00 pm"],
-      ["free", "Available 5:00 pm to midnight"],
+      ["free", "Available midnight to 9:00 am SGT"],
+      ["booking", "Booked 9:00 am SGT to 1:00 pm SGT"],
+      ["unavailability", "Unavailable (maintenance) 1:00 pm SGT to 5:00 pm SGT"],
+      ["free", "Available 5:00 pm SGT to midnight"],
     ]);
 
     // Tall enough to show the whole working day in the screenshots.
@@ -165,7 +165,7 @@ test.describe("SCRUM-36 / SCRUM-37 — venue availability calendar and recorded 
     await expect(bookingDetails).toContainText("100 expected");
     // A screen reader hears the same details as the block's description.
     await expect(
-      booking.getByRole("button", { name: "Booked 9:00 am to 1:00 pm" }),
+      booking.getByRole("button", { name: "Booked 9:00 am SGT to 1:00 pm SGT" }),
     ).toHaveAccessibleDescription(/Requested by Cody Coordinator/);
     await testInfo.attach("SCRUM-36 details shown on hover", {
       body: await coordinator.screenshot({ fullPage: false }),
@@ -190,7 +190,7 @@ test.describe("SCRUM-36 / SCRUM-37 — venue availability calendar and recorded 
     // clash is shown instead.
     await recordMaintenance(staff, `${DAY}T10:00`, `${DAY}T12:00`);
     await expect(staff.getByTestId("unavailability-outcome")).toContainText(
-      "Not recorded: Grand Auditorium is already booked from 10 Jan 2036, 9:00 am to 10 Jan 2036, 1:00 pm.",
+      "Not recorded: Grand Auditorium is already booked from 10 Jan 2036, 9:00 am SGT to 10 Jan 2036, 1:00 pm SGT.",
     );
     if (usesLocalDatabase) {
       expect(
@@ -343,7 +343,7 @@ test.describe("SCRUM-36 / SCRUM-37 — venue availability calendar and recorded 
     // No reload: the calendar refreshes itself every 15 seconds.
     await expect(booked).toHaveCount(1, { timeout: 25_000 });
     await expect(booked.getByRole("button")).toHaveAccessibleName(
-      "Booked 10:00 am to 12:00 pm",
+      "Booked 10:00 am SGT to 12:00 pm SGT",
     );
   });
 
