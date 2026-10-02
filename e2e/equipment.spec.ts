@@ -45,6 +45,18 @@ test.describe("SCRUM-31 — Reserve Equipment for Event", () => {
     });
   });
 
+  // SCRUM-27 AC 1 raises equipment requests for a Planning event, so the
+  // reservation has to be able to name one; a Confirmed event cannot take a
+  // request.
+  test("offers Approved and Planning events to reserve for, but not a Confirmed one", async ({ page }) => {
+    await signInAsTechSupport(page);
+    const events = page.getByLabel("Approved event");
+
+    await expect(events.locator("option", { hasText: "Approved — Research Symposium" })).toHaveCount(1);
+    await expect(events.locator("option", { hasText: "Planning — Freshman Orientation" })).toHaveCount(1);
+    await expect(events.locator("option", { hasText: "Confirmed — Charity Gala" })).toHaveCount(0);
+  });
+
   test("AC 1 & 7: a reservation that fits is confirmed and reduces availability", async ({ page }) => {
     await signInAsTechSupport(page);
     await fillReservation(page, "1");
