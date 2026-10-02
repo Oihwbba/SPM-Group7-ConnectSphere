@@ -36,17 +36,17 @@ either covered by a test or visibly not done yet. Reviewers do the same.
 
 | | |
 |---|---|
-| Stories | **56** |
+| Stories | **58** |
 | Tasks | **7** |
 | Subtasks | **20** |
-| Total story points | **143** |
+| Total story points | **145** |
 | Points committed to Sprint 1 | **37** |
 | Points committed to Sprint 2 | **44** |
 | Last synced from Jira | **2026-09-30** |
 
 ## SCRUM-6 - Event Request Lifecycle
 
-_19 stories, 47 points_
+_21 stories, 49 points_
 
 | Story | Summary | Pts | Priority | Sprint | Status |
 |---|---|---|---|---|---|
@@ -69,6 +69,8 @@ _19 stories, 47 points_
 | [SCRUM-108](SCRUM-108.md) | Edit a rejected event request before resubmission | 2 | High | SCRUM Sprint 2 | To Do |
 | [SCRUM-109](SCRUM-109.md) | Respond to an event clarification request | 2 | High | SCRUM Sprint 2 | To Do |
 | [SCRUM-110](SCRUM-110.md) | See an event's readiness checklist | 3 | Highest | SCRUM Sprint 2 | In Progress |
+| [SCRUM-129](SCRUM-129.md) | Show and store all event times in Singapore time | 1 | Medium | Backlog | To Do |
+| [SCRUM-130](SCRUM-130.md) | Discard a draft request | 1 | Medium | Backlog | To Do |
 
 ## SCRUM-7 - Venue Management
 
