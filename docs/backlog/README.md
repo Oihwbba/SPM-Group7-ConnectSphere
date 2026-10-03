@@ -36,17 +36,17 @@ either covered by a test or visibly not done yet. Reviewers do the same.
 
 | | |
 |---|---|
-| Stories | **58** |
+| Stories | **60** |
 | Tasks | **7** |
 | Subtasks | **20** |
-| Total story points | **145** |
+| Total story points | **150** |
 | Points committed to Sprint 1 | **37** |
-| Points committed to Sprint 2 | **44** |
+| Points committed to Sprint 2 | **49** |
 | Last synced from Jira | **2026-09-30** |
 
 ## SCRUM-6 - Event Request Lifecycle
 
-_21 stories, 49 points_
+_23 stories, 54 points_
 
 | Story | Summary | Pts | Priority | Sprint | Status |
 |---|---|---|---|---|---|
@@ -63,12 +63,14 @@ _21 stories, 49 points_
 | [SCRUM-24](SCRUM-24.md) | Keep event status consistent with actions taken | 5 | Highest | SCRUM Sprint 1 | Done |
 | [SCRUM-25](SCRUM-25.md) | Update routine event information during planning | 3 | Medium | Backlog | To Do |
 | [SCRUM-26](SCRUM-26.md) | Flag bookings and reservations affected by an impactful change | 5 | High | Backlog | To Do |
-| [SCRUM-81](SCRUM-81.md) | Move an approved event through planning to confirmed | 5 | Highest | SCRUM Sprint 2 | To Do |
+| [SCRUM-81](SCRUM-81.md) | Move an approved event through planning to confirmed | 5 | Highest | SCRUM Sprint 2 | In Review |
 | [SCRUM-82](SCRUM-82.md) | Close an event: cancel it, or mark it completed once it has passed | 3 | High | Backlog | To Do |
 | [SCRUM-84](SCRUM-84.md) | Organiser views their own event requests | 2 | Highest | SCRUM Sprint 1 | Done |
-| [SCRUM-108](SCRUM-108.md) | Edit a rejected event request before resubmission | 2 | High | SCRUM Sprint 2 | To Do |
-| [SCRUM-109](SCRUM-109.md) | Respond to an event clarification request | 2 | High | SCRUM Sprint 2 | To Do |
-| [SCRUM-110](SCRUM-110.md) | See an event's readiness checklist | 3 | Highest | SCRUM Sprint 2 | In Progress |
+| [SCRUM-108](SCRUM-108.md) | Answer a clarification, or amend and resubmit a rejected request | 5 | High | SCRUM Sprint 2 | To Do |
+| [SCRUM-109](SCRUM-109.md) | [MERGED INTO SCRUM-108] Respond to an event clarification request | 0 | High | SCRUM Sprint 2 | Done |
+| [SCRUM-110](SCRUM-110.md) | See an event's readiness checklist | 3 | Highest | SCRUM Sprint 2 | In Review |
+| [SCRUM-117](SCRUM-117.md) | Reject an event that can't be fulfilled | 2 | Medium | SCRUM Sprint 2 | To Do |
+| [SCRUM-126](SCRUM-126.md) | Coordinator decides whether a rejected request is amended or submitted as new | 2 | Medium | SCRUM Sprint 2 | To Do |
 | [SCRUM-129](SCRUM-129.md) | Show and store all event times in Singapore time | 1 | Medium | Backlog | To Do |
 | [SCRUM-130](SCRUM-130.md) | Discard a draft request | 1 | Medium | Backlog | To Do |
 
