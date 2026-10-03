@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-09-30. Jira is the source of truth.
+     Synced from Jira on 2026-10-03. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-75 - Control and enforce the registration period
@@ -8,7 +8,7 @@
 |---|---|
 | **Type** | Story |
 | **Epic** | SCRUM-11 - Attendee Registration |
-| **Priority** | Medium |
+| **Priority** | High |
 | **Story points** | 3 |
 | **Status in Jira** | To Do |
 | **Sprint** | Backlog |
@@ -16,30 +16,26 @@
 
 ---
 
-As an Event Organiser, I want to control when registration opens and closes, and as an Attendee I want that window enforced, so that nobody registers outside the permitted period.
+**User story:** As an Event Organiser, I want to control when registration opens and closes, and as an Attendee I want that window enforced, so that nobody registers outside the permitted period.
 
-Acceptance Criteria — Organiser control
+**Acceptance criteria**
 
-* The Organiser can set a registration opening instant and closing instant for the event once it is Confirmed; registration cannot open before confirmation.
-* The closing instant must be later than the opening instant and must not be later than the event start instant.
-* Given an open registration period, when the Organiser extends the closing instant to a later valid time, registration remains open through the new instant.
-* Given an open registration period, when the Organiser closes registration manually, it closes immediately.
-* Once manually closed, registration does not reopen automatically unless the Organiser explicitly opens a new valid period.
+1. Given my event needs registration (SCRUM-127) and is in Planning or Confirmed, I can set a registration opening and closing time. The assigned Coordinator can set it on my behalf.
+2. Registration is open from the later of the opening time and the moment the event becomes Confirmed, up to but not including the closing time. It never opens before the event is Confirmed.
+3. The closing time must be after the opening time and no later than the event's start.
+4. Given no window is set, then registration opens when the event is Confirmed (SCRUM-81) and closes at the event's start.
+5. Given registration is open, when I move the closing time to a later valid time, then registration stays open until the new closing time.
+6. Given registration is open, when I close it manually, then it closes immediately and the event stays listed to Attendees as closed (SCRUM-72). It reopens only if I set a new valid window.
+7. Given the current time is before opening, then Attendees can't register and see the opening time. Given it is at or after closing, then Attendees see registration as closed. A direct registration request outside the window is refused.
+8. Registration is never accepted at or after the event's start, whatever the window says.
+9. Given the event returns to Planning (SCRUM-128, SCRUM-26), then registration pauses. When the event is Confirmed again, the same window applies; if its closing time has passed, registration stays closed until I set a new window.
+10. Times are entered and shown in Singapore time (SCRUM-129).
 
+**Customer basis:** "Registration may opens once event is confirmed; organiser control timing." "Registration period can be extended; waiting list supported. At the moment closure is based on Organiser discretion and manually close the registration."
 
-Acceptance Criteria — default and enforcement
+**Change log**
 
-* If no registration period is configured, registration automatically becomes available when the event becomes Confirmed and remains available until the event start instant.
-* Given the current time is before the registration opening instant, when an Attendee views the event, then registration is unavailable and the opening time is shown.
-* Given the current time is at or after the opening instant and before or at the closing instant, when an Attendee registers, then registration is accepted, subject to the capacity rule in SCRUM-74.
-* Given the current time is after the closing instant, when an Attendee views the event, then registration is unavailable and the event is shown as closed.
-* Given the registration period has closed, when a registration request is submitted directly, then it is refused.
-* Registration is never accepted once the event's start instant has passed, even if a stale registration window exists.
-* Opening and closing instants are interpreted consistently with the event timezone defined in SCRUM-13 and persisted as UTC instants.
-
-
-Customer clarification (2026-09-13): Registration may open once the event is confirmed; Organiser controls timing and may manually close. Waiting-list behaviour remains outside Release 1 and is owned by SCRUM-79 for future scope.
-
-INVEST: This story contains Organiser controls plus enforcement. Re-estimate at 3 points or split later if the implementation grows.
+* 2026-10-01: window can be set during Planning; start included, end excluded; behaviour after a return to Planning added.
+* 2026-10-01 (audit): AC1 now depends on the Registration needed choice (SCRUM-127) instead of a flag nothing set. Closing manually is its own state, separate from an event that doesn't need registration, so a closed event stays listed (SCRUM-72). AC8 now carries the start-time cut-off for SCRUM-73, which the merged code doesn't check yet.
 
 Functionality Area: Attendee Registration
