@@ -166,6 +166,42 @@ test.describe("SCRUM-72 — Attendee browses confirmed events", () => {
     expect(response?.status()).toBe(404);
   });
 
+  for (const id of ["evt_draft", "evt_planning", "evt_completed"]) {
+    test(`AC7, AC8: going straight to /events/${id} (not Confirmed) 404s`, async ({
+      page,
+    }) => {
+      const response = await page.goto(`/events/${id}`);
+      expect(response?.status()).toBe(404);
+    });
+  }
+
+  for (const { id, label } of [
+    { id: "evt_reg_closed", label: "Registration closed" },
+    { id: "evt_reg_not_open", label: "Registration not yet open" },
+  ]) {
+    test(`AC4, AC8: going straight to /events/${id} shows "${label}" with Register disabled`, async ({
+      page,
+    }) => {
+      // attendee4 holds no registrations in the seed, so the Register button
+      // is shown rather than "You're registered".
+      await page.context().clearCookies();
+      await page.goto("/login");
+      await page
+        .getByLabel("Email", { exact: true })
+        .fill("attendee4@test.local");
+      await page.getByLabel("Password", { exact: true }).fill("Password123!");
+      await page.getByRole("button", { name: "Sign in" }).click();
+      await page.waitForURL("**/events");
+
+      const response = await page.goto(`/events/${id}`);
+      expect(response?.status()).toBe(200);
+      await expect(page.getByTestId("registration-state-badge")).toHaveText(
+        label,
+      );
+      await expect(page.getByTestId("register-button")).toBeDisabled();
+    });
+  }
+
   test("a non-existent event id 404s the same way as a real but invisible one", async ({
     page,
   }) => {

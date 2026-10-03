@@ -98,6 +98,36 @@ describe("getBrowsableEvent — SCRUM-72 attendee detail read", () => {
     expect(await getBrowsableEvent("evt1")).toBeNull();
     expect(mockFindUnique).not.toHaveBeenCalled();
   });
+
+  it.each([
+    "DRAFT",
+    "SUBMITTED",
+    "UNDER_REVIEW",
+    "APPROVED",
+    "PLANNING",
+    "COMPLETED",
+    "CANCELLED",
+    "REJECTED",
+  ])(
+    "[Negative] AC7, AC8: opening a %s event directly returns the same null as a missing one",
+    async (status) => {
+      mockAuth.mockResolvedValue(sessionFor("ATTENDEE", "usr_attendee"));
+      mockFindUnique.mockResolvedValue(eventRow({ status }));
+
+      expect(await getBrowsableEvent("evt1")).toBeNull();
+    },
+  );
+
+  it.each(["ORGANISER", "COORDINATOR", "VENUE_STAFF", "TECH_SUPPORT"] as const)(
+    "[Security gate] AC8: a %s opening a Confirmed event's attendee URL gets null, before the query runs",
+    async (role) => {
+      mockAuth.mockResolvedValue(sessionFor(role, "usr_other"));
+      mockFindUnique.mockResolvedValue(eventRow());
+
+      expect(await getBrowsableEvent("evt1")).toBeNull();
+      expect(mockFindUnique).not.toHaveBeenCalled();
+    },
+  );
 });
 
 describe("getBrowsableEvents — SCRUM-72 browse list", () => {

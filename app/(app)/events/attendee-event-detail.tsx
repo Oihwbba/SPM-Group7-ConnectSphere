@@ -15,6 +15,7 @@ import {
   remainingCapacity,
   totalCapacity,
   canRegisterNow,
+  registrationPeriodText,
   REGISTRATION_STATE_LABEL,
 } from "@/lib/registration-state";
 import { formatDateTime } from "@/lib/datetime";
@@ -114,17 +115,7 @@ export function AttendeeEventDetail({ event }: { event: BrowsableEvent }) {
                   className="text-foreground"
                   data-testid="registration-period"
                 >
-                  {event.registrationOpensAt || event.registrationClosesAt ? (
-                    <>
-                      {event.registrationOpensAt
-                        ? `Opens ${formatDateTime(event.registrationOpensAt)}`
-                        : "Open now"}
-                      {event.registrationClosesAt &&
-                        ` · Closes ${formatDateTime(event.registrationClosesAt)}`}
-                    </>
-                  ) : (
-                    "No fixed period set"
-                  )}
+                  {registrationPeriodText(event)}
                 </p>
               </div>
             </div>

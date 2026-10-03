@@ -9,6 +9,7 @@ import {
   computeRegistrationState,
   remainingCapacity,
   totalCapacity,
+  registrationPeriodText,
   REGISTRATION_STATE_LABEL,
   type RegistrationState,
 } from "@/lib/registration-state";
@@ -136,23 +137,12 @@ export function AttendeeEventsClient({ events }: { events: BrowsableEvent[] }) {
                     {remaining} of {totalCapacity(event)} places remaining
                   </span>
                 </div>
-                {/* AC: "The registration period ... are shown" — only when
-                    one is actually configured, so an unrestricted event's
-                    card stays uncluttered. */}
-                {(event.registrationOpensAt || event.registrationClosesAt) && (
-                  <div className="flex items-center gap-1.5">
-                    <Clock className="h-3.5 w-3.5 shrink-0" />
-                    <span data-testid="registration-period">
-                      {event.registrationOpensAt &&
-                        `Opens ${formatDateTime(event.registrationOpensAt)}`}
-                      {event.registrationOpensAt &&
-                        event.registrationClosesAt &&
-                        " · "}
-                      {event.registrationClosesAt &&
-                        `Closes ${formatDateTime(event.registrationClosesAt)}`}
-                    </span>
-                  </div>
-                )}
+                <div className="flex items-center gap-1.5">
+                  <Clock className="h-3.5 w-3.5 shrink-0" />
+                  <span data-testid="registration-period">
+                    {registrationPeriodText(event)}
+                  </span>
+                </div>
                 {isRegistered && (
                   <div
                     className="flex items-center gap-1.5 font-medium text-success"
