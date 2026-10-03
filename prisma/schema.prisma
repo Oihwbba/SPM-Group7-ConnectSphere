@@ -119,6 +119,13 @@ enum UnavailabilityReason {
   OTHER
 }
 
+/// SCRUM-126 — what the Organiser may do after a rejection, chosen by the
+/// Coordinator who rejected it.
+enum RejectionOutcome {
+  AMEND_AND_RESUBMIT
+  NEW_REQUEST
+}
+
 /// SCRUM-41/43 — change request lifecycle.
 enum ChangeRequestStatus {
   PENDING_REVIEW
@@ -283,6 +290,9 @@ model Event {
   decidedAt      DateTime?
   decidedById    String?
   decisionReason String?
+  // SCRUM-126 — set with the reason on a rejection; the CHECK
+  // event_rejection_has_outcome refuses a REJECTED event without one.
+  rejectionOutcome RejectionOutcome?
 
   // SCRUM-82 — "A cancellation reason can be recorded and is visible to
   // anyone who could already view the event."

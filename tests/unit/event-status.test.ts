@@ -159,6 +159,7 @@ describe("transitionEventStatus — SCRUM-24 single guarded gate", () => {
       eventId: "evt1",
       nextStatus: "REJECTED",
       decisionReason: "Not enough detail",
+      rejectionOutcome: "AMEND_AND_RESUBMIT",
     });
 
     expect(tx.clarificationRequest.updateMany).toHaveBeenCalledWith({
@@ -208,6 +209,7 @@ describe("transitionEventStatus — SCRUM-24 single guarded gate", () => {
       eventId: "evt1",
       nextStatus: "REJECTED",
       decisionReason: "Expected attendance exceeds every venue.",
+      rejectionOutcome: "AMEND_AND_RESUBMIT",
     });
 
     expect(result).toEqual({ ok: true, data: { status: "REJECTED" } });
@@ -369,7 +371,10 @@ describe("submitEventRequest — SCRUM-19/24 rejected → submitted", () => {
       where: {
         id: "evt1",
         organiserId: "usr_org",
-        status: { in: ["DRAFT", "REJECTED"] },
+        OR: [
+          { status: "DRAFT" },
+          { status: "REJECTED", rejectionOutcome: "AMEND_AND_RESUBMIT" },
+        ],
       },
     });
     expect(mockUpdate).toHaveBeenCalledWith(

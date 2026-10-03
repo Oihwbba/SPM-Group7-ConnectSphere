@@ -488,7 +488,7 @@ describe.skipIf(!usesLocalDatabase)("concurrency — status transitions (SCRUM-2
 
     const results = await Promise.all([
       transitionEventStatus({ eventId, nextStatus: "APPROVED" }),
-      transitionEventStatus({ eventId, nextStatus: "REJECTED", decisionReason: "Too large" }),
+      transitionEventStatus({ eventId, nextStatus: "REJECTED", decisionReason: "Too large", rejectionOutcome: "AMEND_AND_RESUBMIT" }),
     ]);
 
     expect(results.filter((r) => r.ok)).toHaveLength(1);
