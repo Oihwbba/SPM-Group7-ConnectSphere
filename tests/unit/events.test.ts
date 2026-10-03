@@ -436,7 +436,10 @@ describe("User Story 13 — Event Request Creation", () => {
         where: {
           id: "evt_already_submitted",
           organiserId: "usr_organiser",
-          status: { in: ["DRAFT", "REJECTED"] },
+          OR: [
+            { status: "DRAFT" },
+            { status: "REJECTED", rejectionOutcome: "AMEND_AND_RESUBMIT" },
+          ],
         },
       });
       expect(mockUpdate).not.toHaveBeenCalled();

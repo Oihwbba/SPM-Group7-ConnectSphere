@@ -48,7 +48,7 @@ ConnectSphere happens *to an event*.
 
 | Table | Purpose | Stories |
 |---|---|---|
-| `Event` | The request and everything it becomes. Carries the nine-value `status`, the SCRUM-13 form fields, and the decision/cancellation/completion timestamps and reasons. | SCRUM-13–26, 81–84 |
+| `Event` | The request and everything it becomes. Carries the nine-value `status`, the SCRUM-13 form fields, and the decision/cancellation/completion timestamps and reasons. A rejection also carries its `rejectionOutcome` (Amend and resubmit, or Submit as a new request), which the database requires (ADR 0013). | SCRUM-13–26, 81–84, 126 |
 | `ClarificationRequest` | A coordinator's question and the organiser's answer. | SCRUM-18, 56 |
 | `EventChangeRequest` | An organiser's post-submission change request, with its decision. | SCRUM-41, 42, 43, 47 |
 | `ChangeRequestField` | One row per changed field, holding `oldValue`, `newValue` and `isMajor`. | SCRUM-42, 44 |

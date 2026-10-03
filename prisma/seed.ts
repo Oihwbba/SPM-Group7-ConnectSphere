@@ -33,6 +33,7 @@ import {
   UnavailabilityReason,
   ChangeRequestStatus,
   NotificationType,
+  RejectionOutcome,
 } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg";
@@ -421,6 +422,8 @@ async function seedEvents() {
       decidedById: U.coordinator,
       decisionReason:
         "Expected attendance of 2000 exceeds the capacity of every venue in the catalogue (largest is 500).",
+      // SCRUM-126: the database also refuses a rejection without an outcome.
+      rejectionOutcome: RejectionOutcome.AMEND_AND_RESUBMIT,
     },
 
     // --- Registration boundary cases ---------------------------------------
