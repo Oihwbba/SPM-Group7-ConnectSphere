@@ -45,6 +45,7 @@ function eventRow(
     registrationEnabled: boolean;
     registrationOpensAt: Date | null;
     registrationClosesAt: Date | null;
+    startAt: Date | null;
   }> = {},
 ) {
   return {
@@ -52,6 +53,7 @@ function eventRow(
     registrationEnabled: true,
     registrationOpensAt: null,
     registrationClosesAt: null,
+    startAt: null,
     ...over,
   };
 }
@@ -199,6 +201,56 @@ describe("registerForEvent — SCRUM-73", () => {
 
     expect(result.ok).toBe(false);
     expect(tx.registration.upsert).not.toHaveBeenCalled();
+  });
+
+  it("[Positive] AC2: places are first come, first served — the registration is REGISTERED at once, with no approval step", async () => {
+    mockAuth.mockResolvedValue(sessionFor("ATTENDEE", "usr_attendee"));
+    tx.event.findUniqueOrThrow.mockResolvedValue(
+      eventRow({ expectedAttendance: 1 }),
+    );
+
+    const result = await registerForEvent({ eventId: "evt1" });
+
+    expect(result.ok).toBe(true);
+    expect(tx.registration.upsert.mock.calls[0][0].create.status).toBe(
+      "REGISTERED",
+    );
+  });
+
+  it("[Negative] AC5 / SCRUM-75 AC8: registration is refused once the event has started, even with no window set", async () => {
+    mockAuth.mockResolvedValue(sessionFor("ATTENDEE", "usr_attendee"));
+    tx.event.findUniqueOrThrow.mockResolvedValue(
+      eventRow({ startAt: new Date("2000-01-01") }),
+    );
+
+    const result = await registerForEvent({ eventId: "evt1" });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toMatch(/not currently open/i);
+    expect(tx.registration.upsert).not.toHaveBeenCalled();
+  });
+
+  it("[Positive] AC5: the event's start is read inside the lock, so the start cut-off is enforced server-side", async () => {
+    mockAuth.mockResolvedValue(sessionFor("ATTENDEE", "usr_attendee"));
+
+    await registerForEvent({ eventId: "evt1" });
+
+    expect(tx.event.findUniqueOrThrow).toHaveBeenCalledWith(
+      expect.objectContaining({
+        select: expect.objectContaining({ startAt: true }),
+      }),
+    );
+  });
+
+  it("[Negative] AC7: an event back in Planning refuses new registrations and leaves existing ones untouched", async () => {
+    mockAuth.mockResolvedValue(sessionFor("ATTENDEE", "usr_attendee"));
+    tx.$queryRaw.mockResolvedValue([]); // status is PLANNING, not CONFIRMED
+
+    const result = await registerForEvent({ eventId: "evt1" });
+
+    expect(result.ok).toBe(false);
+    expect(tx.registration.upsert).not.toHaveBeenCalled();
+    expect(tx.registration.updateMany).not.toHaveBeenCalled();
   });
 
   it("[Negative] AC: registration is refused for validation failure (missing eventId)", async () => {

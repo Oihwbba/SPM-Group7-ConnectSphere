@@ -1,5 +1,7 @@
 import type { Event } from "@prisma/client";
 
+import { formatDateTime } from "@/lib/datetime";
+
 /**
  * SCRUM-72/73/74 — the registration state of one event, from an Attendee's
  * point of view. This is the ONE place the rule is defined; the browse list,
@@ -16,7 +18,7 @@ export type RegistrationState =
   | "FULL"
   | "NOT_YET_OPEN"
   | "CLOSED" // registrationEnabled is false — an explicit organiser action
-  | "EXPIRED"; // registrationClosesAt has passed
+  | "EXPIRED"; // the closing time or the event start has passed
 
 export const REGISTRATION_STATE_LABEL: Record<RegistrationState, string> = {
   OPEN: "Open",
@@ -51,7 +53,39 @@ type StateInput = Pick<
   | "registrationEnabled"
   | "registrationOpensAt"
   | "registrationClosesAt"
+  | "startAt"
 >;
+
+/**
+ * SCRUM-75 AC4/AC8: with no window, registration closes at the event's start,
+ * and it is never accepted at or after the start whatever the window says —
+ * so the effective close is whichever of the two comes first.
+ */
+export function effectiveClosesAt(
+  event: Pick<Event, "registrationClosesAt" | "startAt">,
+): Date | null {
+  const { registrationClosesAt: closesAt, startAt } = event;
+  if (closesAt && startAt) return closesAt < startAt ? closesAt : startAt;
+  return closesAt ?? startAt;
+}
+
+/**
+ * SCRUM-72 AC3: the registration period as an Attendee reads it. With no
+ * window set this shows the SCRUM-75 AC4 default, e.g.
+ * "Opens on confirmation · Closes 15 Jan 2026, 10:00 am SGT".
+ */
+export function registrationPeriodText(
+  event: Pick<
+    Event,
+    "registrationOpensAt" | "registrationClosesAt" | "startAt"
+  >,
+): string {
+  const opens = event.registrationOpensAt
+    ? `Opens ${formatDateTime(event.registrationOpensAt)}`
+    : "Opens on confirmation";
+  const closesAt = effectiveClosesAt(event);
+  return closesAt ? `${opens} · Closes ${formatDateTime(closesAt)}` : opens;
+}
 
 /**
  * Does not check `status` (CONFIRMED vs anything else) — callers filter that
@@ -64,9 +98,9 @@ export function computeRegistrationState(
   now: Date = new Date(),
 ): RegistrationState {
   if (!event.registrationEnabled) return "CLOSED";
-  if (event.registrationClosesAt && event.registrationClosesAt <= now) {
-    return "EXPIRED";
-  }
+  // SCRUM-75 AC2/AC7: the closing instant itself is already closed.
+  const closesAt = effectiveClosesAt(event);
+  if (closesAt && closesAt <= now) return "EXPIRED";
   if (event.registrationOpensAt && event.registrationOpensAt > now) {
     return "NOT_YET_OPEN";
   }
