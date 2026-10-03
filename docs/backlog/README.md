@@ -36,17 +36,17 @@ either covered by a test or visibly not done yet. Reviewers do the same.
 
 | | |
 |---|---|
-| Stories | **59** |
+| Stories | **60** |
 | Tasks | **7** |
 | Subtasks | **20** |
-| Total story points | **148** |
+| Total story points | **150** |
 | Points committed to Sprint 1 | **37** |
-| Points committed to Sprint 2 | **47** |
+| Points committed to Sprint 2 | **49** |
 | Last synced from Jira | **2026-09-30** |
 
 ## SCRUM-6 - Event Request Lifecycle
 
-_22 stories, 52 points_
+_23 stories, 54 points_
 
 | Story | Summary | Pts | Priority | Sprint | Status |
 |---|---|---|---|---|---|
@@ -70,6 +70,7 @@ _22 stories, 52 points_
 | [SCRUM-109](SCRUM-109.md) | [MERGED INTO SCRUM-108] Respond to an event clarification request | 0 | High | SCRUM Sprint 2 | Done |
 | [SCRUM-110](SCRUM-110.md) | See an event's readiness checklist | 3 | Highest | SCRUM Sprint 2 | In Review |
 | [SCRUM-117](SCRUM-117.md) | Reject an event that can't be fulfilled | 2 | Medium | SCRUM Sprint 2 | To Do |
+| [SCRUM-126](SCRUM-126.md) | Coordinator decides whether a rejected request is amended or submitted as new | 2 | Medium | SCRUM Sprint 2 | To Do |
 | [SCRUM-129](SCRUM-129.md) | Show and store all event times in Singapore time | 1 | Medium | Backlog | To Do |
 | [SCRUM-130](SCRUM-130.md) | Discard a draft request | 1 | Medium | Backlog | To Do |
 
