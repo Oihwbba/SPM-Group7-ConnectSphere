@@ -32,7 +32,7 @@ its own; the history shows the event passed through it.
 
 **The approver becomes the coordinator of an unassigned request.** A
 Coordinator may decide a submitted request nobody was assigned to (SCRUM-19).
-Because only an event's assigned Coordinator may confirm it (AC 6), such an
+Because only an event's assigned Coordinator may confirm it (AC 7), such an
 event would otherwise reach Planning with nobody able to confirm it. Approving
 it therefore assigns the approver, recorded as an ASSIGNED history entry. A
 rejection assigns nobody.
@@ -51,7 +51,7 @@ event)`. The new `event:confirm` capability is granted to Coordinators, and
    `getReadinessChecklist` under the lock, as ADR 0011 requires. Only then set
    CONFIRMED and write one history entry (Planning → Confirmed) carrying the
    confirming Coordinator as actor. The entry's timestamp is the time.
-3. If the event is already Confirmed, report success and write nothing (AC 7).
+3. If the event is already Confirmed, report success and write nothing (AC 8).
    A double-click, or a confirm from a tab opened earlier, therefore records
    one confirmation. Two simultaneous confirms take turns on the lock, and the
    second finds the event already Confirmed.
@@ -109,3 +109,15 @@ and Planning (`RESERVABLE_EVENT_STATUSES`).
 - Notifying the Organiser of the confirmation is left to the notification
   stories, which the customer's notification ruling covers; SCRUM-81's
   criteria do not ask for it.
+
+## Amendment, 3 Oct 2026
+
+SCRUM-81's criteria were renumbered on 1 Oct (a new AC 2 moved the later
+criteria up by one; the numbers above are current), and AC 5 now also opens registration
+when the event is confirmed. Step 2 sets `registrationEnabled` in the same
+update as the status, so a confirmed event can take registrations (SCRUM-73)
+without any seed data. It is set to true unless the event's
+`registrationRequired` is explicitly false: the Organiser's Registration
+needed choice belongs to SCRUM-127 and is not on the form yet, so every
+request made so far leaves it unset, and those events should open. When
+SCRUM-127 lands, a No keeps registration closed with no change here.

@@ -9,7 +9,7 @@ import { formatDateTime } from "@/lib/datetime";
 import type { ConfirmedArrangements as Arrangements } from "@/lib/event-readiness";
 
 /**
- * SCRUM-81 AC 5 — on a Confirmed event, what has been secured: the venue,
+ * SCRUM-81 AC 6 — on a Confirmed event, what has been secured: the venue,
  * the date and time, and the reserved equipment.
  */
 export function ConfirmedArrangements({ eventId }: { eventId: string }) {

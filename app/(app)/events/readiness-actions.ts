@@ -58,7 +58,7 @@ export async function getEventReadiness(
 }
 
 /**
- * SCRUM-81 AC 5 — a Confirmed event's secured venue, date/time and equipment,
+ * SCRUM-81 AC 6 — a Confirmed event's secured venue, date/time and equipment,
  * for its Organiser and Coordinator.
  */
 export async function getEventArrangements(

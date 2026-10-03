@@ -43,7 +43,6 @@ const ready: ReadinessChecklist = {
       complete: true,
       state: "Approved",
       reason: null,
-      lines: [],
     },
   ],
 };
@@ -55,14 +54,12 @@ const notReady: ReadinessChecklist = {
       complete: false,
       state: "Pending",
       reason: null,
-      lines: [],
     },
     {
       name: "Equipment",
       complete: false,
       state: "Not fully reserved",
       reason: null,
-      lines: ["Projector 3/5 reserved"],
     },
   ],
 };
@@ -75,12 +72,17 @@ function sessionFor(role: Role, id: string): Session {
 }
 
 function eventRow(
-  over: Partial<{ status: EventStatus; coordinatorId: string | null }> = {},
+  over: Partial<{
+    status: EventStatus;
+    coordinatorId: string | null;
+    registrationRequired: boolean | null;
+  }> = {},
 ) {
   return {
     organiserId: "usr_organiser",
     coordinatorId: "usr_coordinator" as string | null,
     status: "PLANNING" as EventStatus,
+    registrationRequired: null as boolean | null,
     ...over,
   };
 }
@@ -104,13 +106,13 @@ function expectNothingWritten() {
 }
 
 describe("confirmEvent — SCRUM-81", () => {
-  it("SCRUM-81 [AC4] TC-81-05: confirming a ready event makes it Confirmed and records the confirming Coordinator in its history", async () => {
+  it("SCRUM-81 [AC5] TC-81-05: confirming a ready event makes it Confirmed, opens registration and records the confirming Coordinator in its history", async () => {
     const result = await confirmEvent({ eventId: "evt1" });
 
     expect(result).toEqual({ ok: true, data: { status: "CONFIRMED" } });
     expect(tx.event.update).toHaveBeenCalledWith({
       where: { id: "evt1" },
-      data: { status: "CONFIRMED" },
+      data: { status: "CONFIRMED", registrationEnabled: true },
     });
     expect(tx.auditLog.create).toHaveBeenCalledTimes(1);
     expect(tx.auditLog.create).toHaveBeenCalledWith({
@@ -126,7 +128,31 @@ describe("confirmEvent — SCRUM-81", () => {
     });
   });
 
-  it("SCRUM-81 [AC4, AC7]: readiness is checked inside the transaction, after the event is locked", async () => {
+  it.each([
+    { needed: "Yes", registrationRequired: true, opens: true },
+    {
+      needed: "not chosen (an older request)",
+      registrationRequired: null,
+      opens: true,
+    },
+    { needed: "No", registrationRequired: false, opens: false },
+  ])(
+    "SCRUM-81 [AC5] TC-81-13: with Registration needed $needed, confirming opens registration: $opens",
+    async ({ registrationRequired, opens }) => {
+      tx.event.findUniqueOrThrow.mockResolvedValue(
+        eventRow({ registrationRequired }),
+      );
+
+      await confirmEvent({ eventId: "evt1" });
+
+      expect(tx.event.update).toHaveBeenCalledWith({
+        where: { id: "evt1" },
+        data: { status: "CONFIRMED", registrationEnabled: opens },
+      });
+    },
+  );
+
+  it("SCRUM-81 [AC5, AC8]: readiness is checked inside the transaction, after the event is locked", async () => {
     await confirmEvent({ eventId: "evt1" });
 
     expect(mockChecklist).toHaveBeenCalledWith(tx, "evt1");
@@ -135,7 +161,7 @@ describe("confirmEvent — SCRUM-81", () => {
     );
   });
 
-  it("SCRUM-81 [AC3] TC-81-04: an event that is not ready is refused, the outstanding items are named, and nothing changes", async () => {
+  it("SCRUM-81 [AC4] TC-81-04: an event that is not ready is refused, the outstanding items are named, and nothing changes", async () => {
     mockChecklist.mockResolvedValue(notReady);
 
     const result = await confirmEvent({ eventId: "evt1" });
@@ -158,7 +184,7 @@ describe("confirmEvent — SCRUM-81", () => {
       first: "PLANNING" as EventStatus,
     },
   ])(
-    "SCRUM-81 [AC7] TC-81-09: an event $when is reported as confirmed, with no second confirmation recorded",
+    "SCRUM-81 [AC8] TC-81-09: an event $when is reported as confirmed, with no second confirmation recorded",
     async ({ first }) => {
       mockFindUnique.mockResolvedValue(eventRow({ status: first }));
       tx.event.findUniqueOrThrow.mockResolvedValue(
@@ -179,7 +205,7 @@ describe("confirmEvent — SCRUM-81", () => {
     "CANCELLED",
     "COMPLETED",
   ] as EventStatus[])(
-    "SCRUM-81 [AC4] TC-81-11: a %s event cannot be confirmed",
+    "SCRUM-81 [AC5] TC-81-11: a %s event cannot be confirmed",
     async (status) => {
       mockFindUnique.mockResolvedValue(eventRow({ status }));
       tx.event.findUniqueOrThrow.mockResolvedValue(eventRow({ status }));
@@ -192,7 +218,7 @@ describe("confirmEvent — SCRUM-81", () => {
     },
   );
 
-  it("SCRUM-81 [AC6]: an event reassigned to someone else while this request waited is refused, and nothing changes", async () => {
+  it("SCRUM-81 [AC7]: an event reassigned to someone else while this request waited is refused, and nothing changes", async () => {
     tx.event.findUniqueOrThrow.mockResolvedValue(
       eventRow({ coordinatorId: "usr_coordinator_2" }),
     );
@@ -217,7 +243,7 @@ describe("confirmEvent — SCRUM-81", () => {
     { who: "an Attendee", session: sessionFor("ATTENDEE", "usr_attendee") },
     { who: "a signed-out visitor", session: null },
   ])(
-    "SCRUM-81 [AC6] TC-81-07: $who is refused and nothing changes",
+    "SCRUM-81 [AC7] TC-81-07: $who is refused and nothing changes",
     async ({ session }) => {
       mockAuth.mockResolvedValue(session);
 
@@ -238,7 +264,7 @@ describe("confirmEvent — SCRUM-81", () => {
       event: eventRow({ coordinatorId: null }),
     },
   ])(
-    "SCRUM-81 [AC6] TC-81-07: $who is told the event was not found, and nothing changes",
+    "SCRUM-81 [AC7] TC-81-07: $who is told the event was not found, and nothing changes",
     async ({ event }) => {
       mockAuth.mockResolvedValue(
         sessionFor("COORDINATOR", "usr_coordinator_2"),
@@ -253,7 +279,7 @@ describe("confirmEvent — SCRUM-81", () => {
     },
   );
 
-  it("SCRUM-81 [AC6] TC-81-07: a missing event gives the same answer as one the Coordinator may not confirm", async () => {
+  it("SCRUM-81 [AC7] TC-81-07: a missing event gives the same answer as one the Coordinator may not confirm", async () => {
     mockFindUnique.mockResolvedValue(null);
 
     expect(await confirmEvent({ eventId: "evt_missing" })).toEqual({

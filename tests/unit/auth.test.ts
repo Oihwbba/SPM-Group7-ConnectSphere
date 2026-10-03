@@ -143,7 +143,7 @@ describe("can — relationship gate", () => {
   });
 });
 
-// SCRUM-81 AC 6 — confirming is stricter than reviewing: only the event's
+// SCRUM-81 AC 7 — confirming is stricter than reviewing: only the event's
 // assigned Coordinator, never any Coordinator looking at an unassigned request.
 describe("can — confirming an event (SCRUM-81)", () => {
   const planning = {

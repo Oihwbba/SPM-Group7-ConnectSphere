@@ -77,7 +77,7 @@ test.describe("SCRUM-81 — Move an approved event through planning to confirmed
     eventIds.length = 0;
   });
 
-  test("SCRUM-81 [AC2, AC4, AC5, AC6] TC-81-02, TC-81-05, TC-81-06, TC-81-08: the assigned Coordinator confirms a ready event, and the Organiser then sees its confirmed venue, date and equipment", async ({
+  test("SCRUM-81 [AC3, AC5, AC6, AC7] TC-81-02, TC-81-05, TC-81-06, TC-81-08: the assigned Coordinator confirms a ready event, and the Organiser then sees its confirmed venue, date and equipment", async ({
     page,
   }) => {
     const name = `SCRUM-81 Ready ${Date.now()}`;
@@ -113,7 +113,7 @@ test.describe("SCRUM-81 — Move an approved event through planning to confirmed
       },
     });
 
-    // The Organiser sees the event is ready, but is not offered Confirm (AC 6).
+    // The Organiser sees the event is ready, but is not offered Confirm (AC 7).
     await signIn(page, "organiser@test.local");
     let dialog = await openDetails(page, name);
     await expect(dialog.getByTestId("readiness-summary")).toHaveText(
@@ -123,7 +123,7 @@ test.describe("SCRUM-81 — Move an approved event through planning to confirmed
       dialog.getByRole("button", { name: "Confirm event" }),
     ).toHaveCount(0);
 
-    // The assigned Coordinator confirms it (AC 2, AC 4).
+    // The assigned Coordinator confirms it (AC 3, AC 5).
     await signIn(page, "coordinator@test.local");
     dialog = await openDetails(page, name);
     const confirm = dialog.getByRole("button", { name: "Confirm event" });
@@ -136,15 +136,22 @@ test.describe("SCRUM-81 — Move an approved event through planning to confirmed
     );
     await expect(dialog.getByTestId("readiness-checklist")).toHaveCount(0);
 
-    // The confirmation is recorded once, by that Coordinator (AC 4).
+    // The confirmation is recorded once, by that Coordinator, and
+    // registration is now open to Attendees (AC 5).
     expect(
       await prisma.auditLog.findMany({
         where: { entityId: eventId, newValue: "CONFIRMED" },
         select: { actorId: true },
       }),
     ).toEqual([{ actorId: "usr_coordinator" }]);
+    expect(
+      await prisma.event.findUnique({
+        where: { id: eventId },
+        select: { registrationEnabled: true },
+      }),
+    ).toEqual({ registrationEnabled: true });
 
-    // The Organiser now sees what was secured (AC 5).
+    // The Organiser now sees what was secured (AC 6).
     await signIn(page, "organiser@test.local");
     dialog = await openDetails(page, name);
     const arrangements = dialog.getByTestId("confirmed-arrangements");
@@ -158,7 +165,7 @@ test.describe("SCRUM-81 — Move an approved event through planning to confirmed
     );
   });
 
-  test("SCRUM-81 [AC3] TC-81-03: while the checklist is incomplete, Confirm is unavailable and the outstanding items are listed", async ({
+  test("SCRUM-81 [AC4] TC-81-03: while the checklist is incomplete, Confirm is unavailable and the outstanding items are listed", async ({
     page,
   }) => {
     const name = `SCRUM-81 Not ready ${Date.now()}`;

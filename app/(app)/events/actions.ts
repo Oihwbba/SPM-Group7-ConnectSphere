@@ -519,9 +519,10 @@ export async function transitionEventStatus(
 
 /**
  * SCRUM-81 — the assigned Coordinator confirms a Planning event whose
- * readiness checklist (SCRUM-110) is complete. Confirming an event that is
- * already Confirmed changes nothing (AC 7), so a double-click or an older tab
- * records one confirmation. See ADR 0012.
+ * readiness checklist (SCRUM-110) is complete, which opens its registration
+ * (AC 5). Confirming an event that is already Confirmed changes nothing
+ * (AC 8), so a double-click or an older tab records one confirmation. See
+ * ADR 0012.
  */
 export async function confirmEvent(
   input: unknown,
@@ -551,7 +552,11 @@ export async function confirmEvent(
       await tx.$queryRaw`SELECT "id" FROM "Event" WHERE "id" = ${eventId} FOR UPDATE`;
       const current = await tx.event.findUniqueOrThrow({
         where: { id: eventId },
-        select: { status: true, coordinatorId: true },
+        select: {
+          status: true,
+          coordinatorId: true,
+          registrationRequired: true,
+        },
       });
       if (current.status === "CONFIRMED") return "already-confirmed" as const;
       if (current.status !== "PLANNING") return "not-planning" as const;
@@ -565,11 +570,16 @@ export async function confirmEvent(
           .join(", ");
       }
 
+      // AC 5: registration opens unless the Organiser said it isn't needed
+      // (SCRUM-127). Requests made before that choice existed leave it unset.
       await tx.event.update({
         where: { id: eventId },
-        data: { status: "CONFIRMED" },
+        data: {
+          status: "CONFIRMED",
+          registrationEnabled: current.registrationRequired !== false,
+        },
       });
-      // AC 4: who confirmed it and when (the entry's createdAt).
+      // AC 5: who confirmed it and when (the entry's createdAt).
       await tx.auditLog.create({
         data: {
           entityType: "Event",

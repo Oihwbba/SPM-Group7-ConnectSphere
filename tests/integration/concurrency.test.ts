@@ -502,7 +502,7 @@ describe.skipIf(!usesLocalDatabase)("concurrency — status transitions (SCRUM-2
   });
 });
 
-// SCRUM-81 AC 7 — two confirms of one ready event at the same moment record one
+// SCRUM-81 AC 8 — two confirms of one ready event at the same moment record one
 // confirmation. confirmEvent locks the event row, so the second waits, then
 // finds it already Confirmed.
 describe.skipIf(!usesLocalDatabase)("concurrency — confirming an event (SCRUM-81)", () => {
@@ -545,7 +545,7 @@ describe.skipIf(!usesLocalDatabase)("concurrency — confirming an event (SCRUM-
     }
   });
 
-  it("SCRUM-81 [AC7] TC-81-10: two confirms at the same moment confirm the event once", async () => {
+  it("SCRUM-81 [AC8] TC-81-10: two confirms at the same moment confirm the event once", async () => {
     (auth as unknown as Mock).mockResolvedValue({
       user: { id: "usr_coordinator", role: "COORDINATOR", name: "Cody", email: "coordinator@test.local" },
       expires: "2999-01-01T00:00:00.000Z",

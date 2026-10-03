@@ -161,7 +161,7 @@ const arrangements: ConfirmedArrangements = {
 };
 
 describe("getEventReadiness — SCRUM-81 Confirm action", () => {
-  it("SCRUM-81 [AC2, AC6] TC-81-02, TC-81-08: only the event's assigned Coordinator is offered Confirm", async () => {
+  it("SCRUM-81 [AC3, AC7] TC-81-02, TC-81-08: only the event's assigned Coordinator is offered Confirm", async () => {
     const offered = async (
       session: Session,
       event: {
@@ -189,7 +189,7 @@ describe("getEventReadiness — SCRUM-81 Confirm action", () => {
   });
 });
 
-describe("getEventArrangements — SCRUM-81 AC5", () => {
+describe("getEventArrangements — SCRUM-81 AC6", () => {
   beforeEach(() => {
     mockArrangements.mockResolvedValue(arrangements);
     mockEventFindUnique.mockResolvedValue(eventRow("CONFIRMED"));
@@ -202,7 +202,7 @@ describe("getEventArrangements — SCRUM-81 AC5", () => {
       session: sessionFor("COORDINATOR", "usr_coordinator"),
     },
   ])(
-    "SCRUM-81 [AC5] TC-81-06: $who sees the confirmed venue, date/time and reserved equipment",
+    "SCRUM-81 [AC6] TC-81-06: $who sees the confirmed venue, date/time and reserved equipment",
     async ({ session }) => {
       mockAuth.mockResolvedValue(session);
 
@@ -222,7 +222,7 @@ describe("getEventArrangements — SCRUM-81 AC5", () => {
     { who: "an Attendee", session: sessionFor("ATTENDEE", "usr_attendee") },
     { who: "a signed-out visitor", session: null },
   ])(
-    "SCRUM-81 [AC5]: $who is told the event was not found",
+    "SCRUM-81 [AC6]: $who is told the event was not found",
     async ({ session }) => {
       mockAuth.mockResolvedValue(session);
 
@@ -234,7 +234,7 @@ describe("getEventArrangements — SCRUM-81 AC5", () => {
     },
   );
 
-  it("SCRUM-81 [AC5]: a missing event, or one that vanishes between the reads, is not found", async () => {
+  it("SCRUM-81 [AC6]: a missing event, or one that vanishes between the reads, is not found", async () => {
     mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
     mockEventFindUnique.mockResolvedValueOnce(null);
     expect(await getEventArrangements("evt_missing")).toEqual({

@@ -465,7 +465,7 @@ describe("withoutInternalReasons — SCRUM-110 AC6", () => {
   });
 });
 
-describe("getConfirmedArrangements — SCRUM-81 AC5", () => {
+describe("getConfirmedArrangements — SCRUM-81 AC6", () => {
   const venueRow = (
     status: string,
     overrides: Partial<{ startAt: Date; endAt: Date }> = {},
@@ -506,7 +506,7 @@ describe("getConfirmedArrangements — SCRUM-81 AC5", () => {
     };
   }
 
-  it("SCRUM-81 [AC5] TC-81-06: lists the approved venue for the event's time, its date/time, and the equipment reserved for the whole event", async () => {
+  it("SCRUM-81 [AC6] TC-81-06: lists the approved venue for the event's time, its date/time, and the equipment reserved for the whole event", async () => {
     const { db, findUnique } = eventWith(
       [venueRow("REJECTED"), venueRow("APPROVED"), venueRow("PENDING")],
       [
@@ -530,7 +530,7 @@ describe("getConfirmedArrangements — SCRUM-81 AC5", () => {
     expect(findUnique.mock.calls[0][0].where).toEqual({ id: "evt_test" });
   });
 
-  it("SCRUM-81 [AC5] TC-81-06: with no approved booking for the event's time and nothing reserved, the venue is empty and the equipment list is empty", async () => {
+  it("SCRUM-81 [AC6] TC-81-06: with no approved booking for the event's time and nothing reserved, the venue is empty and the equipment list is empty", async () => {
     const { db } = eventWith(
       [
         venueRow("APPROVED", { startAt: day(5), endAt: day(6) }),
@@ -545,7 +545,7 @@ describe("getConfirmedArrangements — SCRUM-81 AC5", () => {
     });
   });
 
-  it("SCRUM-81 [AC5]: an id that matches no event has no arrangements", async () => {
+  it("SCRUM-81 [AC6]: an id that matches no event has no arrangements", async () => {
     const findUnique = vi.fn().mockResolvedValue(null);
     const db = { event: { findUnique } } as unknown as Prisma.TransactionClient;
 

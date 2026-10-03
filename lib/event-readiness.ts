@@ -221,7 +221,7 @@ export interface ConfirmedArrangements {
 }
 
 /**
- * SCRUM-81 AC 5 — what a Confirmed event has secured, for its Organiser: the
+ * SCRUM-81 AC 6 — what a Confirmed event has secured, for its Organiser: the
  * venue approved for the event's time, the date and time, and the equipment
  * reserved for the whole event. The same whole-event rule as the checklist.
  */

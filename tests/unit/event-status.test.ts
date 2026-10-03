@@ -82,7 +82,7 @@ beforeEach(() => {
 });
 
 describe("transitionEventStatus — SCRUM-24 single guarded gate", () => {
-  it("SCRUM-19, SCRUM-81 [AC1] TC-81-01: a coordinator approves an unassigned submitted request, becomes its coordinator, and it moves to Planning", async () => {
+  it("SCRUM-19, SCRUM-81 [AC1, AC2] TC-81-01: a coordinator approves an unassigned submitted request, becomes its coordinator, and it moves to Planning", async () => {
     mockAuth.mockResolvedValue(sessionFor("COORDINATOR", "usr_coord"));
     mockFindUnique.mockResolvedValue(eventRow());
 

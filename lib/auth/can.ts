@@ -138,7 +138,7 @@ function hasRelationship(
       if (user.role === "COORDINATOR") {
         if (resource.coordinatorId === user.id) return true;
         // Any coordinator may review a request nobody has picked up yet, but
-        // only the event's assigned coordinator may confirm it (SCRUM-81 AC 6).
+        // only the event's assigned coordinator may confirm it (SCRUM-81 AC 7).
         return (
           action !== "event:confirm" &&
           resource.coordinatorId === null &&
