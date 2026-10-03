@@ -139,7 +139,7 @@ _9 stories, 22 points_
 | [SCRUM-72](SCRUM-72.md) | View an event I could attend | 2 | Highest | SCRUM Sprint 2 | In Progress |
 | [SCRUM-73](SCRUM-73.md) | Register for an event | 2 | Highest | SCRUM Sprint 2 | In Review |
 | [SCRUM-74](SCRUM-74.md) | Be prevented from registering for a full event | 3 | High | SCRUM Sprint 2 | In Review |
-| [SCRUM-75](SCRUM-75.md) | Control and enforce the registration period | 3 | Medium | Backlog | To Do |
+| [SCRUM-75](SCRUM-75.md) | Control and enforce the registration period | 3 | High | Backlog | To Do |
 | [SCRUM-76](SCRUM-76.md) | View my registration status | 1 | High | SCRUM Sprint 2 | In Progress |
 | [SCRUM-77](SCRUM-77.md) | Withdraw my registration | 2 | Medium | Backlog | To Do |
 | [SCRUM-79](SCRUM-79.md) | Join a waitlist when an event is full | 3 | Low | Backlog | To Do |
