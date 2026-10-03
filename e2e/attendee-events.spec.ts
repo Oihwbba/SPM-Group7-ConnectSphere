@@ -202,6 +202,32 @@ test.describe("SCRUM-72 — Attendee browses confirmed events", () => {
     });
   }
 
+  test("SCRUM-72 review: typing a keyword narrows the list to matching events, ignoring case", async ({
+    page,
+  }) => {
+    const search = page.getByLabel("Search events by name or description");
+
+    await search.fill("WINE");
+    await expect(
+      page.getByText("Full — Wine Tasting Evening", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByText("Registration Not Yet Open — Summer Camp", {
+        exact: true,
+      }),
+    ).not.toBeVisible();
+
+    await search.fill("no event is called this");
+    await expect(page.getByText("No events match your search.")).toBeVisible();
+
+    await search.fill("");
+    await expect(
+      page.getByText("Registration Not Yet Open — Summer Camp", {
+        exact: true,
+      }),
+    ).toBeVisible();
+  });
+
   test("a non-existent event id 404s the same way as a real but invisible one", async ({
     page,
   }) => {
