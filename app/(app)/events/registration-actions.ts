@@ -68,6 +68,7 @@ export async function registerForEvent(
           registrationEnabled: true,
           registrationOpensAt: true,
           registrationClosesAt: true,
+          startAt: true,
         },
       });
 
