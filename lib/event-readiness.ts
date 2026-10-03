@@ -15,8 +15,6 @@ export interface ChecklistItem {
   state: string;
   /** Internal detail, such as why Venue Staff rejected the booking. Hidden from the Organiser. */
   reason: string | null;
-  /** One line per requested item, e.g. "Projector 3/5 reserved". */
-  lines: string[];
 }
 
 export interface ReadinessChecklist {
@@ -54,13 +52,7 @@ export async function getReadinessChecklist(
         select: {
           status: true,
           createdAt: true,
-          lines: {
-            select: {
-              equipmentId: true,
-              quantity: true,
-              equipment: { select: { type: true } },
-            },
-          },
+          lines: { select: { equipmentId: true, quantity: true } },
         },
       },
       reservations: {
@@ -117,7 +109,7 @@ function venueItem(event: Period & { bookings: BookingRow[] }): ChecklistItem {
   const newestFirst = [...event.bookings].sort(
     (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
   );
-  const item = { name: "Venue booking" as const, reason: null, lines: [] };
+  const item = { name: "Venue booking" as const, reason: null };
   const approved = newestFirst.filter((b) => b.status === "APPROVED");
 
   // After a rejection, or after the event moves, the Coordinator books again,
@@ -149,11 +141,7 @@ type EventRow = {
   equipmentRequests: {
     status: string;
     createdAt: Date;
-    lines: {
-      equipmentId: string;
-      quantity: number;
-      equipment: { type: string };
-    }[];
+    lines: { equipmentId: string; quantity: number }[];
   }[];
   reservations: {
     equipmentId: string;
@@ -179,43 +167,37 @@ function equipmentItem(event: EventRow): ChecklistItem | null {
       complete: false,
       state: "Rejected",
       reason: null,
-      lines: [],
     };
   }
 
-  const requested = new Map<string, { type: string; quantity: number }>();
+  const requested = new Map<string, number>();
   for (const line of live.flatMap((r) => r.lines)) {
-    const current = requested.get(line.equipmentId);
-    requested.set(line.equipmentId, {
-      type: line.equipment.type,
-      quantity: (current?.quantity ?? 0) + line.quantity,
-    });
+    requested.set(
+      line.equipmentId,
+      (requested.get(line.equipmentId) ?? 0) + line.quantity,
+    );
   }
 
-  const lines: string[] = [];
-  let complete = true;
-  for (const [equipmentId, { type, quantity }] of requested) {
-    // "Reserved in full for the event's period": a reservation counts only if
-    // it is confirmed and spans the whole event, so a partial-day hold can't
-    // make the item look complete.
-    const reserved = event.reservations
-      .filter(
-        (r) =>
-          r.equipmentId === equipmentId &&
-          r.status === "CONFIRMED" &&
-          coversEvent(r, event),
-      )
-      .reduce((sum, r) => sum + r.quantity, 0);
-    if (reserved < quantity) complete = false;
-    lines.push(`${type} ${reserved}/${quantity} reserved`);
-  }
+  // "Reserved in full for the event's period": a reservation counts only if
+  // it is confirmed and spans the whole event, so a partial-day hold can't
+  // make the item look complete.
+  const complete = [...requested].every(
+    ([equipmentId, quantity]) =>
+      event.reservations
+        .filter(
+          (r) =>
+            r.equipmentId === equipmentId &&
+            r.status === "CONFIRMED" &&
+            coversEvent(r, event),
+        )
+        .reduce((sum, r) => sum + r.quantity, 0) >= quantity,
+  );
 
   return {
     name: "Equipment",
     complete,
     state: complete ? "Reserved" : "Not fully reserved",
     reason: null,
-    lines,
   };
 }
 

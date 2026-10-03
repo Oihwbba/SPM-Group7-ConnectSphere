@@ -34,14 +34,12 @@ const checklist: ReadinessChecklist = {
       complete: false,
       state: "Rejected",
       reason: REASON,
-      lines: [],
     },
     {
       name: "Equipment",
       complete: false,
       state: "Not fully reserved",
       reason: null,
-      lines: ["Projector 3/5 reserved"],
     },
   ],
 };

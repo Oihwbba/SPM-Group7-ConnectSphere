@@ -71,25 +71,16 @@ export function ReadinessChecklist({ eventId }: { eventId: string }) {
                       className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground"
                     />
                   )}
-                  <div>
-                    <p>
-                      <span className="font-semibold">{item.name}</span>
-                      <span className="sr-only">
-                        {item.complete ? ", complete" : ", incomplete"}
-                      </span>
-                      {" — "}
-                      {item.reason
-                        ? `${item.state} – ${item.reason}`
-                        : item.state}
-                    </p>
-                    {item.lines.length > 0 && (
-                      <ul className="mt-1 space-y-0.5 text-muted-foreground">
-                        {item.lines.map((line) => (
-                          <li key={line}>{line}</li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
+                  <p>
+                    <span className="font-semibold">{item.name}</span>
+                    <span className="sr-only">
+                      {item.complete ? ", complete" : ", incomplete"}
+                    </span>
+                    {" — "}
+                    {item.reason
+                      ? `${item.state} – ${item.reason}`
+                      : item.state}
+                  </p>
                 </li>
               ))}
             </ul>
