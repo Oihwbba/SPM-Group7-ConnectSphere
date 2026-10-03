@@ -29,9 +29,8 @@ cases are not settled by the criteria, so this ADR settles them.
 
 `getReadinessChecklist(db, eventId)` in `lib/event-readiness.ts` builds the
 checklist from the event's records in one read and returns
-`{ ready, items }`. Each item has a name, whether it is complete, a state, an
-internal reason (or none) and, for equipment, one line per requested item such
-as "Projector 3/5 reserved". It never writes, and it takes the database client
+`{ ready, items }`. Each item has a name, whether it is complete, a state and
+an internal reason (or none). It never writes, and it takes the database client
 as a parameter, so SCRUM-81 can call it inside the transaction that confirms.
 
 `getEventReadiness(eventId)` in `app/(app)/events/readiness-actions.ts` serves
@@ -114,3 +113,12 @@ If the alternative should count, that is a small change to decision 3.
 - Decisions 2 and 3 rest on reservations not being linked to request lines. If
   a later story links them, the rule should match reservations to lines
   directly.
+
+## Amendment, 3 Oct 2026
+
+SCRUM-110 AC 4 was simplified with the PO: the Equipment item no longer lists
+one line per requested item ("Projector 3/5 reserved"). It shows only Reserved,
+Not fully reserved or Rejected. When stock is short, Technical Support rejects
+the request rather than reserving part of it, so the per-item count added
+little. The completeness rule is unchanged: a partial reservation still leaves
+Equipment incomplete (AC 3), because nothing yet stops one being made.

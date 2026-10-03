@@ -82,7 +82,7 @@ test.describe("SCRUM-110 — See an event's readiness checklist", () => {
     eventIds.length = 0;
   });
 
-  test("SCRUM-110 [AC3, AC4, AC6] TC-110-04, TC-110-07, TC-110-11, TC-110-12: the Coordinator sees what is outstanding and why; the Organiser sees the same without the reason", async ({
+  test("SCRUM-110 [AC2, AC3, AC6] TC-110-04, TC-110-07, TC-110-11, TC-110-12: the Coordinator sees what is outstanding and why; the Organiser sees the same without the reason", async ({
     page,
   }) => {
     const name = `SCRUM-110 Not ready ${Date.now()}`;
@@ -127,7 +127,8 @@ test.describe("SCRUM-110 — See an event's readiness checklist", () => {
     await expect(venue).toHaveAttribute("data-complete", "false");
     await expect(venue).toContainText(`Rejected – ${REASON}`);
     await expect(equipment).toHaveAttribute("data-complete", "false");
-    await expect(equipment).toContainText("Projector 3/5 reserved");
+    await expect(equipment).toContainText("Not fully reserved");
+    await expect(equipment).not.toContainText("3/5");
     await expect(checklist.getByTestId("readiness-summary")).toHaveText(
       /Not ready to confirm yet/,
     );
@@ -141,10 +142,10 @@ test.describe("SCRUM-110 — See an event's readiness checklist", () => {
     await expect(checklist).not.toContainText(REASON);
     await expect(
       checklist.getByTestId("readiness-item-equipment"),
-    ).toContainText("Projector 3/5 reserved");
+    ).toContainText("Not fully reserved");
   });
 
-  test("SCRUM-110 [AC5, AC6] TC-110-01, TC-110-06: with the venue approved and every requested item reserved, the Coordinator sees Ready to confirm", async ({
+  test("SCRUM-110 [AC3, AC5, AC6] TC-110-01, TC-110-06: with the venue approved and every requested item reserved, the Coordinator sees Ready to confirm", async ({
     page,
   }) => {
     const name = `SCRUM-110 Ready ${Date.now()}`;
@@ -188,7 +189,7 @@ test.describe("SCRUM-110 — See an event's readiness checklist", () => {
     );
     await expect(
       checklist.getByTestId("readiness-item-equipment"),
-    ).toContainText("Projector 2/2 reserved");
+    ).toContainText("Reserved");
     await expect(checklist.getByTestId("readiness-summary")).toHaveText(
       "Ready to confirm",
     );
