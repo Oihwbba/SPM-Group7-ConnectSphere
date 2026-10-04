@@ -1,0 +1,177 @@
+# SCRUM-108 — Answer a clarification, or amend and resubmit a rejected request: test cases
+
+Story and acceptance criteria: [docs/backlog/SCRUM-108.md](../backlog/SCRUM-108.md)
+(AC 11 extended on 4 Oct: rejecting an unassigned request makes the rejecting
+Coordinator its coordinator). Format and conventions: [README.md](README.md).
+Clarifications are handled in
+[app/(app)/events/clarification-actions.ts](<../../app/(app)/events/clarification-actions.ts>),
+resubmission and decisions in
+[app/(app)/events/actions.ts](<../../app/(app)/events/actions.ts>). The
+decisions behind them are [ADR 0014](../adr/0014-clarification-fields-and-resubmission.md).
+
+**Shared pre-conditions for every case:** the database is migrated and seeded
+and the app is running. Unless the case says otherwise, the event is owned by
+`organiser@test.local` and assigned to `coordinator@test.local` (both
+`Password123!`).
+
+| ID                      | Type     | Criterion                | Automated            |
+| ----------------------- | -------- | ------------------------ | -------------------- |
+| [TC-108-01](#tc-108-01) | Positive | AC 1                     | Unit                 |
+| [TC-108-02](#tc-108-02) | Positive | AC 2, AC 3, AC 14        | Unit                 |
+| [TC-108-03](#tc-108-03) | Boundary | AC 4                     | Unit                 |
+| [TC-108-04](#tc-108-04) | Negative | AC 5                     | Unit                 |
+| [TC-108-05](#tc-108-05) | Positive | AC 9, AC 11, AC 14       | Unit                 |
+| [TC-108-06](#tc-108-06) | Boundary | AC 11                    | Unit                 |
+| [TC-108-07](#tc-108-07) | Positive | AC 11                    | Unit                 |
+| [TC-108-08](#tc-108-08) | Negative | AC 12                    | Unit                 |
+| [TC-108-09](#tc-108-09) | Negative | AC 13                    | Unit                 |
+| [TC-108-10](#tc-108-10) | Positive | AC 1, AC 2, AC 3, AC 14  | e2e                  |
+| [TC-108-11](#tc-108-11) | Positive | AC 7, AC 9, AC 11, AC 14 | e2e                  |
+| [TC-108-12](#tc-108-12) | Positive | AC 6, AC 8, AC 10        | Unit, e2e (existing) |
+
+---
+
+### TC-108-01
+
+| Item            | Content                                                                                                                         |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| Test Case ID    | TC-108-01                                                                                                                       |
+| Test Scenario   | [Positive] AC 1: the Coordinator ticks which request-form fields the Organiser may change; none ticked means a text answer only |
+| Pre-conditions  | Signed in as the assigned Coordinator. The event is Under Review.                                                               |
+| Test Steps      | 1. Click **Ask** on the event. <br> 2. Write the question and tick fields (or none). <br> 3. Send.                              |
+| Test Data       | (a) Expected attendance and Date and time <br> (b) no fields <br> (c) a field that isn't on the form (direct request)           |
+| Expected Result | (a) Both are stored with the question, each once. (b) Stored with no fields: text answer only. (c) Refused; nothing created.    |
+
+**Automated by:** `tests/unit/clarification-and-amend.test.ts` › "SCRUM-108 [AC1] TC-108-01: …" (three tests)
+
+### TC-108-02
+
+| Item            | Content                                                                                                                                                                                                                                                                                                                |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Test Scenario   | [Positive] AC 2, AC 3, AC 14: the answer changes the named fields; only changed values are written and each change is recorded with who; the event stays Under Review and the Coordinator is notified                                                                                                                  |
+| Pre-conditions  | An open clarification naming Expected attendance and Room layout. Signed in as the Organiser.                                                                                                                                                                                                                          |
+| Test Steps      | 1. Open the event. <br> 2. Change the named fields, write a response, send.                                                                                                                                                                                                                                            |
+| Test Data       | Attendance 400 → 350, layout unchanged; also a new date and time; also a text-only answer; and invalid values (start without end, past start, end not after start, attendance 0, blank name, a field not on the form)                                                                                                  |
+| Expected Result | Only attendance is written; history has the answer and one change (400 → 350) by the Organiser; the event stays Under Review; the Coordinator is notified. A new date writes start and end together. A text-only answer writes nothing to the event. Invalid values are refused as the request form would refuse them. |
+
+**Automated by:** `tests/unit/clarification-and-amend.test.ts` › "SCRUM-108 [AC2, AC3, AC14] TC-108-02: …", "SCRUM-108 [AC2, AC14] TC-108-02: …", "SCRUM-108 [AC2] TC-108-02: …" (text-only and the validation cases)
+
+### TC-108-03
+
+| Item            | Content                                                                                                         |
+| --------------- | --------------------------------------------------------------------------------------------------------------- |
+| Test Scenario   | [Boundary] AC 4: saving the same answer again changes nothing                                                   |
+| Pre-conditions  | The clarification was answered "Theatre layout."                                                                |
+| Test Steps      | 1. Send the same answer again. <br> 2. Send a different answer.                                                 |
+| Test Data       | —                                                                                                               |
+| Expected Result | (1) Reported as saved; nothing is written. (2) Refused: "This clarification request has already been answered." |
+
+**Automated by:** `tests/unit/clarification-and-amend.test.ts` › "SCRUM-108 [AC4] TC-108-03: …" (both)
+
+### TC-108-04
+
+| Item            | Content                                                                                                                            |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| Test Scenario   | [Negative] AC 5: a field the clarification didn't name can't be changed through the answer                                         |
+| Pre-conditions  | An open clarification naming Expected attendance and Room layout.                                                                  |
+| Test Steps      | 1. Send an answer that also changes the event name (direct request).                                                               |
+| Test Data       | name "Summit 2031"                                                                                                                 |
+| Expected Result | Refused: "Only the fields your coordinator named can be changed here. Use a change request for anything else." Nothing is written. |
+
+**Automated by:** `tests/unit/clarification-and-amend.test.ts` › "SCRUM-108 [AC5] TC-108-04: …"
+
+### TC-108-05
+
+| Item            | Content                                                                                                                                                                                                                          |
+| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Test Scenario   | [Positive] AC 9, AC 11, AC 14: the amended request goes back Under Review to the same Coordinator, without automatic assignment, and the resubmission is recorded                                                                |
+| Pre-conditions  | The event was rejected with Amend and resubmit; its Coordinator still holds the role.                                                                                                                                            |
+| Test Steps      | 1. Amend and resubmit it.                                                                                                                                                                                                        |
+| Test Data       | —                                                                                                                                                                                                                                |
+| Expected Result | The same event is updated (no new event); it ends Under Review with the same Coordinator, who is notified; automatic assignment doesn't run; history records Rejected → Submitted by the Organiser and Submitted → Under Review. |
+
+**Automated by:** `tests/unit/clarification-and-amend.test.ts` › "SCRUM-108 [AC9, AC11, AC14] TC-108-05: …"
+
+### TC-108-06
+
+| Item            | Content                                                                                                                      |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| Test Scenario   | [Boundary] AC 11: automatic assignment picks a Coordinator when the previous one no longer holds the role, or there was none |
+| Pre-conditions  | A rejected event whose Coordinator (a) is no longer a Coordinator, (b) is not set.                                           |
+| Test Steps      | 1. Resubmit it.                                                                                                              |
+| Test Data       | —                                                                                                                            |
+| Expected Result | Automatic assignment runs and the least-loaded Coordinator is assigned.                                                      |
+
+**Automated by:** `tests/unit/clarification-and-amend.test.ts` › "SCRUM-108 [AC11] TC-108-06: …" (both)
+
+### TC-108-07
+
+| Item            | Content                                                                                                                       |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| Test Scenario   | [Positive] AC 11: rejecting a request nobody was assigned to makes the rejecting Coordinator its coordinator                  |
+| Pre-conditions  | A Submitted request with no Coordinator. Signed in as a Coordinator.                                                          |
+| Test Steps      | 1. Reject it with a reason and an outcome.                                                                                    |
+| Test Data       | —                                                                                                                             |
+| Expected Result | It is Rejected with that Coordinator as its coordinator; history records "Assigned to the rejecting coordinator (SCRUM-108)". |
+
+**Automated by:** `tests/unit/clarification-and-amend.test.ts` › "SCRUM-108 [AC11] TC-108-07: …"
+
+### TC-108-08
+
+| Item            | Content                                                                                             |
+| --------------- | --------------------------------------------------------------------------------------------------- |
+| Test Scenario   | [Negative] AC 12: resubmitting twice creates no duplicate submission, history entry or notification |
+| Pre-conditions  | The event was already resubmitted.                                                                  |
+| Test Steps      | 1. Send the resubmission again (e.g. a double-click or an older tab).                               |
+| Test Data       | —                                                                                                   |
+| Expected Result | Refused; no history entry or notification is written.                                               |
+
+**Automated by:** `tests/unit/clarification-and-amend.test.ts` › "SCRUM-108 [AC12] TC-108-08: …"
+
+### TC-108-09
+
+| Item            | Content                                                          |
+| --------------- | ---------------------------------------------------------------- |
+| Test Scenario   | [Negative] AC 13: only the event's Organiser can answer or amend |
+| Pre-conditions  | Signed in as a Coordinator.                                      |
+| Test Steps      | 1. Send an answer. <br> 2. Send a resubmission.                  |
+| Test Data       | —                                                                |
+| Expected Result | Both refused for lack of permission; nothing is read.            |
+
+**Automated by:** `tests/unit/clarification-and-amend.test.ts` › "SCRUM-108 [AC13] TC-108-09: …"
+
+### TC-108-10
+
+| Item            | Content                                                                                                                                                                                                                                           |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Test Scenario   | [Positive] AC 1, AC 2, AC 3, AC 14: the whole clarification journey with one named field                                                                                                                                                          |
+| Pre-conditions  | The event is Under Review with 400 expected attendees, classroom layout.                                                                                                                                                                          |
+| Test Steps      | 1. As the Coordinator, **Ask**, tick **Expected attendance**, send. <br> 2. As the Organiser, open the event, change attendance to 300, respond.                                                                                                  |
+| Test Data       | —                                                                                                                                                                                                                                                 |
+| Expected Result | The Organiser sees "The organiser may change: Expected attendance." and no other field to edit. After sending, attendance is 300, the layout is unchanged, the event is Under Review, and history has the answer and the change by the Organiser. |
+
+**Automated by:** `e2e/clarification-and-amend.spec.ts` › "SCRUM-108 [AC1, AC2, AC3, AC14] TC-108-10: …"
+
+### TC-108-11
+
+| Item            | Content                                                                                                                                                                                     |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Test Scenario   | [Positive] AC 7, AC 9, AC 11, AC 14: amending shows the rejection reason throughout, and the request returns to the same Coordinator                                                        |
+| Pre-conditions  | The event was rejected by `coordinator@test.local` with Amend and resubmit and a reason.                                                                                                    |
+| Test Steps      | 1. As the Organiser, click **Amend & Resubmit**. <br> 2. Change the venue requirements and submit.                                                                                          |
+| Test Data       | —                                                                                                                                                                                           |
+| Expected Result | The rejection reason is shown on the form on every step. The same event ends Under Review with the same Coordinator and no reassignment; history records the resubmission by the Organiser. |
+
+**Automated by:** `e2e/clarification-and-amend.spec.ts` › "SCRUM-108 [AC7, AC9, AC11, AC14] TC-108-11: …"
+
+### TC-108-12
+
+| Item            | Content                                                                                                                                                                             |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Test Scenario   | [Positive] AC 6, AC 8, AC 10: behaviour already built by earlier stories                                                                                                            |
+| Pre-conditions  | —                                                                                                                                                                                   |
+| Test Steps      | —                                                                                                                                                                                   |
+| Test Data       | —                                                                                                                                                                                   |
+| Expected Result | AC 6: a decision closes any open clarification. AC 8: after Submit as a new request, Amend & Resubmit isn't offered. AC 10: resubmitting applies the first submission's validation. |
+
+**Automated by:** AC 6: `tests/unit/event-status.test.ts` › "SCRUM-18: deciding an event closes its still-OPEN clarification …". AC 8: `tests/unit/rejection-outcome.test.ts` › "SCRUM-126 [AC3] TC-126-04: …" and `e2e/rejection-outcome.spec.ts` › TC-126-08. AC 10: `tests/unit/events.test.ts` (the SCRUM-14 submission validation cases).

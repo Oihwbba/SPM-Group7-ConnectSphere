@@ -223,7 +223,10 @@ export function ClarificationPanel({
           <div className="space-y-2 pt-1">
             {named.map((field) =>
               field === "schedule" ? (
-                <div key={field} className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <div
+                  key={field}
+                  className="grid grid-cols-1 gap-2 sm:grid-cols-2"
+                >
                   <label className="space-y-1">
                     <span className="font-medium">Start</span>
                     <Input
@@ -243,7 +246,9 @@ export function ClarificationPanel({
                 </div>
               ) : field === "expectedAttendance" ? (
                 <label key={field} className="block space-y-1">
-                  <span className="font-medium">{CLARIFIABLE_FIELDS[field]}</span>
+                  <span className="font-medium">
+                    {CLARIFIABLE_FIELDS[field]}
+                  </span>
                   <Input
                     type="number"
                     min={1}
@@ -253,7 +258,9 @@ export function ClarificationPanel({
                 </label>
               ) : (
                 <label key={field} className="block space-y-1">
-                  <span className="font-medium">{CLARIFIABLE_FIELDS[field]}</span>
+                  <span className="font-medium">
+                    {CLARIFIABLE_FIELDS[field]}
+                  </span>
                   <Input
                     value={draft[field]}
                     onChange={(e) => set(field)(e.target.value)}

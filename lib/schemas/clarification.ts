@@ -62,7 +62,9 @@ export const clarificationChangesSchema = z
     startAt: z.string().min(1),
     endAt: z.string().min(1),
     expectedAttendance: z
-      .number({ invalid_type_error: "Attendance must be a positive whole number." })
+      .number({
+        invalid_type_error: "Attendance must be a positive whole number.",
+      })
       .int("Attendance must be a positive whole number.")
       .positive("Attendance must be a positive whole number."),
     venueRequirements: requiredText("Venue requirements", 5000),
@@ -110,7 +112,9 @@ export const clarificationChangesSchema = z
 export type ClarificationChanges = z.infer<typeof clarificationChangesSchema>;
 
 /** Which named field each changed value belongs to. */
-export function fieldOfChange(key: keyof ClarificationChanges): ClarifiableField {
+export function fieldOfChange(
+  key: keyof ClarificationChanges,
+): ClarifiableField {
   return key === "startAt" || key === "endAt" ? "schedule" : key;
 }
 
@@ -128,5 +132,9 @@ export const respondClarificationSchema = z.object({
   changes: clarificationChangesSchema.default({}),
 });
 
-export type RequestClarificationInput = z.infer<typeof requestClarificationSchema>;
-export type RespondClarificationInput = z.infer<typeof respondClarificationSchema>;
+export type RequestClarificationInput = z.infer<
+  typeof requestClarificationSchema
+>;
+export type RespondClarificationInput = z.infer<
+  typeof respondClarificationSchema
+>;

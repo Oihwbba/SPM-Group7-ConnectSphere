@@ -163,6 +163,14 @@ export function EventsClient({
     useState<RejectionOutcome | null>(null);
   // Which row's Start New Request is in flight, so only that button says so.
   const [startingFrom, setStartingFrom] = useState<string | null>(null);
+  // The draft just started from a rejection, opened once the refreshed list
+  // has it. A request already submitted from it can't be edited, only found.
+  const [draftToOpen, setDraftToOpen] = useState<string | null>(null);
+  const startedDraft = draftToOpen
+    ? (events.find((e) => e.id === draftToOpen && e.status === "DRAFT") ??
+      null)
+    : null;
+  const draftInEditor = editingDraft ?? startedDraft;
   const [clarifyingEvent, setClarifyingEvent] = useState<Event | null>(null);
   const [clarificationMessage, setClarificationMessage] = useState("");
   const [clarificationFields, setClarificationFields] = useState<
@@ -244,6 +252,7 @@ export function EventsClient({
         // As the Drafts tab button does, so a leftover status filter can't hide it.
         setActiveTab("DRAFT");
         setStatusFilter("ALL");
+        setDraftToOpen(result.data.id);
         router.refresh();
       } finally {
         setStartingFrom(null);
@@ -768,14 +777,17 @@ export function EventsClient({
       />
 
       {/* Controlled Dialog Instance for Editing/Resuming Draft */}
-      {editingDraft && (
+      {draftInEditor && (
         <CreateEventDialog
-          key={editingDraft.id}
-          open={!!editingDraft}
+          key={draftInEditor.id}
+          open={!!draftInEditor}
           onOpenChange={(open) => {
-            if (!open) setEditingDraft(null);
+            if (!open) {
+              setEditingDraft(null);
+              setDraftToOpen(null);
+            }
           }}
-          draftEvent={editingDraft}
+          draftEvent={draftInEditor}
         />
       )}
 

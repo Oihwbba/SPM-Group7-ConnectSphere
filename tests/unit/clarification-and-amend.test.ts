@@ -243,6 +243,25 @@ describe("respondToClarification — SCRUM-108 AC2–AC5, AC14", () => {
     ).toEqual([undefined, "startAt", "endAt"]);
   });
 
+  it("SCRUM-108 [AC14] TC-108-02: a field that had no value is recorded with an empty old value", async () => {
+    tx.clarificationRequest.findUnique.mockResolvedValue({
+      ...clarification({ editableFields: ["preferredLayout"] }),
+      event: { ...event, preferredLayout: null },
+    });
+
+    await respondToClarification({
+      clarificationId: "clr1",
+      response: "Theatre, please.",
+      changes: { preferredLayout: "Theatre" },
+    });
+
+    expect(tx.auditLog.createMany.mock.calls[0][0].data[1]).toMatchObject({
+      fieldName: "preferredLayout",
+      oldValue: null,
+      newValue: "Theatre",
+    });
+  });
+
   it("SCRUM-108 [AC2] TC-108-02: a text-only answer writes nothing to the event but is still recorded", async () => {
     tx.clarificationRequest.findUnique.mockResolvedValue(
       clarification({ editableFields: [] }),
