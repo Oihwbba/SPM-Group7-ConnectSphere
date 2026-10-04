@@ -122,3 +122,12 @@ Not fully reserved or Rejected. When stock is short, Technical Support rejects
 the request rather than reserving part of it, so the per-item count added
 little. The completeness rule is unchanged: a partial reservation still leaves
 Equipment incomplete (AC 3), because nothing yet stops one being made.
+
+## Amendment, 4 Oct 2026
+
+The PO changed SCRUM-110 AC 4 again after testing: with only "Not fully
+reserved", a Coordinator could not tell what was missing (a laptop had been
+reserved where a projector was requested). The Equipment item now names the
+items not reserved in full, without counts, e.g. "Not fully reserved:
+Projector, Laptop", in the order they were requested. Counts stay out, as on
+3 Oct; the completeness rule is unchanged.

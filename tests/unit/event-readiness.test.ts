@@ -21,7 +21,11 @@ type Booking = {
   startAt: Date;
   endAt: Date;
 };
-type Line = { equipmentId: string; quantity: number };
+type Line = {
+  equipmentId: string;
+  quantity: number;
+  equipment: { type: string };
+};
 type Request = { status: string; createdAt: Date; lines: Line[] };
 type Reservation = {
   equipmentId: string;
@@ -52,9 +56,10 @@ const booking = (
   startAt: START,
   endAt: END,
 });
-const line = (equipmentId: string, quantity: number): Line => ({
+const line = (equipmentId: string, type: string, quantity: number): Line => ({
   equipmentId,
   quantity,
+  equipment: { type },
 });
 const request = (status: string, lines: Line[], n = 1): Request => ({
   status,
@@ -74,8 +79,8 @@ const reserved = (
   ...overrides,
 });
 
-const projectors = (n: number) => line("eqp_projector", n);
-const mics = (n: number) => line("eqp_mic", n);
+const projectors = (n: number) => line("eqp_projector", "Projector", n);
+const mics = (n: number) => line("eqp_mic", "Wireless Microphone", n);
 
 function planningEvent(overrides: Partial<Arrangements> = {}): Arrangements {
   return {
@@ -278,7 +283,7 @@ describe("getReadinessChecklist — SCRUM-110", () => {
     expect(result?.ready).toBe(true);
   });
 
-  it("SCRUM-110 [AC3] TC-110-07: a line reserved only in part leaves Equipment not fully reserved and incomplete", async () => {
+  it("SCRUM-110 [AC3, AC4] TC-110-07: a line reserved only in part leaves Equipment incomplete and names that item, without counts", async () => {
     const result = await checklistOf(
       planningEvent({
         equipmentRequests: [request("PENDING_REVIEW", [projectors(5)])],
@@ -286,11 +291,32 @@ describe("getReadinessChecklist — SCRUM-110", () => {
       }),
     );
 
-    expect(equipment(result)).toMatchObject({
+    expect(equipment(result)).toEqual({
+      name: "Equipment",
       complete: false,
-      state: "Not fully reserved",
+      state: "Not fully reserved: Projector",
+      reason: null,
     });
     expect(result?.ready).toBe(false);
+  });
+
+  it("SCRUM-110 [AC4] TC-110-15: every item not reserved in full is named, in the order requested, and an item reserved in full is not", async () => {
+    const result = await checklistOf(
+      planningEvent({
+        equipmentRequests: [
+          request("APPROVED", [
+            projectors(1),
+            mics(2),
+            line("eqp_laptop", "Laptop", 1),
+          ]),
+        ],
+        reservations: [reserved("eqp_mic", 2)],
+      }),
+    );
+
+    expect(equipment(result)?.state).toBe(
+      "Not fully reserved: Projector, Laptop",
+    );
   });
 
   it.each([
@@ -333,7 +359,10 @@ describe("getReadinessChecklist — SCRUM-110", () => {
         }),
       );
 
-      expect(equipment(result)?.complete).toBe(done);
+      expect(equipment(result)).toMatchObject({
+        complete: done,
+        state: done ? "Reserved" : "Not fully reserved: Projector",
+      });
     },
   );
 
@@ -383,7 +412,7 @@ describe("getReadinessChecklist — SCRUM-110", () => {
       planningEvent({
         equipmentRequests: [
           request("REJECTED", [projectors(2)], 1),
-          request("PENDING_REVIEW", [line("eqp_laptop", 1)], 2),
+          request("PENDING_REVIEW", [line("eqp_laptop", "Laptop", 1)], 2),
         ],
         reservations: [reserved("eqp_laptop", 1)],
       }),
@@ -400,7 +429,10 @@ describe("getReadinessChecklist — SCRUM-110", () => {
       );
 
     expect(equipment(replaced)?.complete).toBe(true);
-    expect(equipment(await combined(3))?.complete).toBe(false);
+    // One item named once, however many requests asked for it.
+    expect(equipment(await combined(3))?.state).toBe(
+      "Not fully reserved: Projector",
+    );
     expect(equipment(await combined(5))?.complete).toBe(true);
   });
 
@@ -451,7 +483,7 @@ describe("withoutInternalReasons — SCRUM-110 AC6", () => {
         {
           name: "Equipment",
           complete: false,
-          state: "Not fully reserved",
+          state: "Not fully reserved: Projector",
           reason: null,
         },
       ],
