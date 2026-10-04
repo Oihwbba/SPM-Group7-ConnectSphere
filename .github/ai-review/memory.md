@@ -22,9 +22,6 @@ Rules for a lesson:
 `package.json`, the test configs or `vercel.json` need his approval
 (CODEOWNERS); when he merges as admin that satisfies it, so the description
 need not record it. Other teammates may merge too.
-- (2026-09-15, #32) Dependabot pull requests are turned off. Dependency and
-security upgrades arrive as SCRUM-89 pull requests by Jin Hong, tested as one
-change.
 
 - (2026-09-22, #71/#72; retires the #52–#54 re-landing workaround) Production
   deploys only through `.github/workflows/deploy.yml`: a push to `main` deploys
@@ -33,6 +30,11 @@ change.
   deployments (ADR 0009). Teammate-authored merges deploy unmodified and are
   not re-landed. *Deployed to Production* shows on merge commits, never on a
   pull request branch.
+
+- (2026-10-04, #101) Story files under `docs/backlog` lag Jira: PO decisions
+  land as separate sync pull requests (#103, #115); an earlier review of #101
+  flagged code that met the new AC 4 against the stale copy. Check a story
+  file's change log before reporting a code/story mismatch.
 
 ## Dependencies
 
@@ -54,12 +56,12 @@ change.
 - (2026-09-16, #33) Supabase's stored checksums differ from the repo for three
   older migration files. `prisma migrate deploy` ignores checksums, so this is
   known and harmless. Nobody may run `prisma migrate dev` against Supabase.
-- (2026-09-16, #33; 2026-09-28, #90) `Event.equipmentTypes` and
-  `Event.registrationRequired` exist to keep production data; no feature reads
-  or writes them yet. `Event.registrationCapacity` joined them in #90, which
-  made `expectedAttendance` the registration capacity (SCRUM-73/74): nothing
-  reads the column (the seed still sets 100 while the e2e full event shows
-  "118 of 120"), and dropping it needs a migration decision.
+- (2026-09-16, #33; 2026-09-28, #90; 2026-10-04, #114) `Event.equipmentTypes`
+  and `Event.registrationRequired` exist to keep production data; no feature
+  reads or writes them yet. `Event.registrationCapacity` joined them in #90,
+  which made `expectedAttendance` the registration capacity (SCRUM-73/74):
+  nothing reads the column and dropping it needs a migration decision, so #114
+  left it again.
 
 ## Events and status
 
@@ -71,10 +73,13 @@ change.
 - (2026-09-20, #54) The events list's Submitted tab counts and shows both
   `SUBMITTED` and `UNDER_REVIEW` for that reason. Narrowing it to `SUBMITTED`
   hides a request the organiser has just sent.
-- (2026-09-20, #54) `Event.timezone` is nullable, defaults to `Asia/Singapore`
-  and is applied in production. The create form no longer captures
-  `requiredFacilities`: new events store `[]`, existing values still display,
-  and whether capture returns is open for SCRUM-39/40.
+- (2026-09-20, #54; 2026-10-02, #112) Every event is stored `Asia/Singapore`
+  only since #112 (SCRUM-129 retired SCRUM-13's per-event timezones):
+  `Event.timezone` is `NOT NULL` with `CHECK event_timezone_singapore`, and
+  that migration relabelled existing production rows deliberately — the stored
+  UTC instants were kept, the old zone labels were not. The create form no
+  longer captures `requiredFacilities`: new events store `[]`, existing values
+  still display, and whether capture returns is open for SCRUM-39/40.
 - (2026-09-25, #87) The `?? null` fallbacks on optional draft fields in
   `app/(app)/events/actions.ts` are deliberate: on update, `null` clears a
   field the organiser emptied, while `undefined` would keep the old value.
@@ -100,10 +105,6 @@ change.
   they write data, so they run only against CI's Postgres or local Docker,
   never Supabase. Skipping locally isn't missing coverage, except that
   `npm run test:coverage` then fails its 100% threshold, as expected.
-- (2026-09-15, #26; 2026-09-28, #90; 2026-09-29, #96) `it.todo` entries are
-  placeholders, not coverage. The existing-test list marks them "(todo: not
-  written yet)". `tests/unit/venues.test.ts` is all placeholders; #90 wrote
-  the SCRUM-74 case for real and #96 the SCRUM-53 concurrency races.
 - (2026-09-15, #26) Test case specifications live in `docs/testing/<KEY>.md`,
   and each case names the automated test that covers it.
 - (2026-09-25, #88; 2026-09-30, SCRUM-125) Coverage measures every `.ts` file
@@ -130,3 +131,7 @@ claims SCRUM-84.
 period can never be removed or shortened from the app, so a wrong record
 blocks its venue until someone edits the database by hand; and the record form
 blocks past start times that the server schema accepts.
+- (2026-10-04, #114) `registrationEnabled` defaults to false and nothing sets
+it, so a freshly Confirmed event shows "Registration closed" until SCRUM-81's
+confirm action turns the flag on (SCRUM-73 AC6). Treat it as known when a pull
+request touches confirmation or the attendee registration state.
