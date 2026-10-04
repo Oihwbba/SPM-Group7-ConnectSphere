@@ -189,13 +189,18 @@ test.describe("SCRUM-108 — Answer a clarification, or amend and resubmit", () 
     const next = page.getByRole("button", { name: "Next", exact: true });
     await next.click();
     // Failure path: the amendment is checked like a first submission (AC10),
-    // so an invalid attendance stops it here.
-    await page.getByLabel("Expected Attendance *").fill("0");
+    // so a start date in the past stops it at this step.
+    const start = page.getByLabel("Proposed Start Date & Time *");
+    const end = page.getByLabel("Proposed End Date & Time *");
+    await start.fill("2020-01-01T10:00");
+    await end.fill("2020-01-01T12:00");
     await next.click();
     await expect(
-      page.getByText("Attendance must be a positive whole number."),
+      page.getByText("Proposed date cannot be in the past."),
     ).toBeVisible();
-    await page.getByLabel("Expected Attendance *").fill("120");
+    // Back to the request's own dates (10:00–18:00 SGT on 1 Aug 2031).
+    await start.fill("2031-08-01T10:00");
+    await end.fill("2031-08-01T18:00");
     await next.click();
     await page
       .getByLabel("Venue Requirements *")
