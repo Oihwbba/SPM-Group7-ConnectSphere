@@ -79,7 +79,10 @@ test.describe("SCRUM-76 — Attendee views their registration status", () => {
 
     await expect(page.getByText("No registrations yet")).toBeVisible();
     await expect(page.getByTestId("registration-card")).toHaveCount(0);
-    await page.getByRole("link", { name: "Browse events" }).click();
+    // exact: the sidebar also has a "Browse Events" link.
+    await page
+      .getByRole("link", { name: "Browse events", exact: true })
+      .click();
     await page.waitForURL("**/events");
   });
 
