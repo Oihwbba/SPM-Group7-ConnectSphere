@@ -359,6 +359,47 @@ describe("respondToClarification — SCRUM-108 AC2–AC5, AC14", () => {
     },
   );
 
+  it.each([
+    {
+      when: "the new attendance is 0",
+      input: { response: "Fewer.", changes: { expectedAttendance: 0 } },
+      field: "expectedAttendance",
+    },
+    {
+      when: "only the start is given",
+      input: {
+        response: "Moved.",
+        changes: { startAt: FUTURE_START.toISOString() },
+      },
+      field: "endAt",
+    },
+    {
+      when: "the response is blank",
+      input: { response: "   " },
+      field: "response",
+    },
+    {
+      when: "a field isn't on the form",
+      input: { response: "Also this.", changes: { organiserId: "usr_x" } },
+      field: "changes",
+    },
+  ])(
+    "SCRUM-108 [AC2] TC-108-02: when $when, the error is returned under that field so the panel can show it there, and nothing is read",
+    async ({ input, field }) => {
+      const result = await respondToClarification({
+        clarificationId: "clr1",
+        ...input,
+      });
+
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.error).toBe("Please fix the highlighted fields.");
+        expect(Object.keys(result.fieldErrors ?? {})).toEqual([field]);
+      }
+      expect(tx.clarificationRequest.findUnique).not.toHaveBeenCalled();
+    },
+  );
+
   it("SCRUM-108 [AC2]: changes with no dates at all are valid", () => {
     expect(
       clarificationChangesSchema.safeParse({ preferredLayout: "Theatre" })

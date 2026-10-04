@@ -14,20 +14,20 @@ and the app is running. Unless the case says otherwise, the event is owned by
 `organiser@test.local` and assigned to `coordinator@test.local` (both
 `Password123!`).
 
-| ID                      | Type     | Criterion                | Automated            |
-| ----------------------- | -------- | ------------------------ | -------------------- |
-| [TC-108-01](#tc-108-01) | Positive | AC 1                     | Unit                 |
-| [TC-108-02](#tc-108-02) | Positive | AC 2, AC 3, AC 14        | Unit                 |
-| [TC-108-03](#tc-108-03) | Boundary | AC 4                     | Unit                 |
-| [TC-108-04](#tc-108-04) | Negative | AC 5                     | Unit                 |
-| [TC-108-05](#tc-108-05) | Positive | AC 9, AC 11, AC 14       | Unit                 |
-| [TC-108-06](#tc-108-06) | Boundary | AC 11                    | Unit                 |
-| [TC-108-07](#tc-108-07) | Positive | AC 11                    | Unit                 |
-| [TC-108-08](#tc-108-08) | Negative | AC 12                    | Unit                 |
-| [TC-108-09](#tc-108-09) | Negative | AC 13                    | Unit                 |
-| [TC-108-10](#tc-108-10) | Positive | AC 1, AC 2, AC 3, AC 14  | e2e                  |
-| [TC-108-11](#tc-108-11) | Positive | AC 7, AC 9, AC 11, AC 14 | e2e                  |
-| [TC-108-12](#tc-108-12) | Positive | AC 6, AC 8, AC 10        | Unit, e2e (existing) |
+| ID                      | Type     | Criterion                       | Automated            |
+| ----------------------- | -------- | ------------------------------- | -------------------- |
+| [TC-108-01](#tc-108-01) | Positive | AC 1                            | Unit                 |
+| [TC-108-02](#tc-108-02) | Positive | AC 2, AC 3, AC 14               | Unit                 |
+| [TC-108-03](#tc-108-03) | Boundary | AC 4                            | Unit                 |
+| [TC-108-04](#tc-108-04) | Negative | AC 5                            | Unit                 |
+| [TC-108-05](#tc-108-05) | Positive | AC 9, AC 11, AC 14              | Unit                 |
+| [TC-108-06](#tc-108-06) | Boundary | AC 11                           | Unit                 |
+| [TC-108-07](#tc-108-07) | Positive | AC 11                           | Unit                 |
+| [TC-108-08](#tc-108-08) | Negative | AC 12                           | Unit                 |
+| [TC-108-09](#tc-108-09) | Negative | AC 13                           | Unit                 |
+| [TC-108-10](#tc-108-10) | Positive | AC 1, AC 2, AC 3, AC 14         | e2e                  |
+| [TC-108-11](#tc-108-11) | Positive | AC 7, AC 9, AC 10, AC 11, AC 14 | e2e                  |
+| [TC-108-12](#tc-108-12) | Positive | AC 6, AC 8, AC 10               | Unit, e2e (existing) |
 
 ---
 
@@ -54,7 +54,7 @@ and the app is running. Unless the case says otherwise, the event is owned by
 | Test Data       | Attendance 400 → 350, layout unchanged; also a new date and time; also a text-only answer; and invalid values (start without end, past start, end not after start, attendance 0, blank name, a field not on the form)                                                                                                  |
 | Expected Result | Only attendance is written; history has the answer and one change (400 → 350) by the Organiser; the event stays Under Review; the Coordinator is notified. A new date writes start and end together. A text-only answer writes nothing to the event. Invalid values are refused as the request form would refuse them. |
 
-**Automated by:** `tests/unit/clarification-and-amend.test.ts` › "SCRUM-108 [AC2, AC3, AC14] TC-108-02: …", "SCRUM-108 [AC2, AC14] TC-108-02: …", "SCRUM-108 [AC2] TC-108-02: …" (text-only and the validation cases)
+**Automated by:** `tests/unit/clarification-and-amend.test.ts` › "SCRUM-108 [AC2, AC3, AC14] TC-108-02: …", "SCRUM-108 [AC2, AC14] TC-108-02: …", "SCRUM-108 [AC2] TC-108-02: …" (text-only, the validation cases, and each error returned under its own field)
 
 ### TC-108-03
 
@@ -142,27 +142,27 @@ and the app is running. Unless the case says otherwise, the event is owned by
 
 ### TC-108-10
 
-| Item            | Content                                                                                                                                                                                                                                           |
-| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Test Scenario   | [Positive] AC 1, AC 2, AC 3, AC 14: the whole clarification journey with one named field                                                                                                                                                          |
-| Pre-conditions  | The event is Under Review with 400 expected attendees, classroom layout.                                                                                                                                                                          |
-| Test Steps      | 1. As the Coordinator, **Ask**, tick **Expected attendance**, send. <br> 2. As the Organiser, open the event, change attendance to 300, respond.                                                                                                  |
-| Test Data       | —                                                                                                                                                                                                                                                 |
-| Expected Result | The Organiser sees "The organiser may change: Expected attendance." and no other field to edit. After sending, attendance is 300, the layout is unchanged, the event is Under Review, and history has the answer and the change by the Organiser. |
+| Item            | Content                                                                                                                                                                                                                                                                                                                                                                             |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Test Scenario   | [Positive] AC 1, AC 2, AC 3, AC 14: the whole clarification journey with one named field                                                                                                                                                                                                                                                                                            |
+| Pre-conditions  | The event is Under Review with 400 expected attendees, classroom layout.                                                                                                                                                                                                                                                                                                            |
+| Test Steps      | 1. As the Coordinator, **Ask**, tick **Expected attendance**, send. <br> 2. As the Organiser, open the event, first try attendance 0, then change it to 300 and respond.                                                                                                                                                                                                            |
+| Test Data       | —                                                                                                                                                                                                                                                                                                                                                                                   |
+| Expected Result | The Organiser sees "The organiser may change: Expected attendance." and no other field to edit. Attendance 0 is refused with "Attendance must be a positive whole number." next to the box, and the clarification stays open. After sending 300, attendance is 300, the layout is unchanged, the event is Under Review, and history has the answer and the change by the Organiser. |
 
 **Automated by:** `e2e/clarification-and-amend.spec.ts` › "SCRUM-108 [AC1, AC2, AC3, AC14] TC-108-10: …"
 
 ### TC-108-11
 
-| Item            | Content                                                                                                                                                                                     |
-| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Test Scenario   | [Positive] AC 7, AC 9, AC 11, AC 14: amending shows the rejection reason throughout, and the request returns to the same Coordinator                                                        |
-| Pre-conditions  | The event was rejected by `coordinator@test.local` with Amend and resubmit and a reason.                                                                                                    |
-| Test Steps      | 1. As the Organiser, click **Amend & Resubmit**. <br> 2. Change the venue requirements and submit.                                                                                          |
-| Test Data       | —                                                                                                                                                                                           |
-| Expected Result | The rejection reason is shown on the form on every step. The same event ends Under Review with the same Coordinator and no reassignment; history records the resubmission by the Organiser. |
+| Item            | Content                                                                                                                                                                                                                                               |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Test Scenario   | [Positive] AC 7, AC 9, AC 10, AC 11, AC 14: amending shows the rejection reason throughout, and the request returns to the same Coordinator                                                                                                           |
+| Pre-conditions  | The event was rejected by `coordinator@test.local` with Amend and resubmit and a reason.                                                                                                                                                              |
+| Test Steps      | 1. As the Organiser, click **Amend & Resubmit**. <br> 2. First enter attendance 0 (refused), then 120; change the venue requirements and submit.                                                                                                      |
+| Test Data       | —                                                                                                                                                                                                                                                     |
+| Expected Result | The rejection reason is shown on the form on every step. Attendance 0 is refused as in a first submission (AC 10). The same event ends Under Review with the same Coordinator and no reassignment; history records the resubmission by the Organiser. |
 
-**Automated by:** `e2e/clarification-and-amend.spec.ts` › "SCRUM-108 [AC7, AC9, AC11, AC14] TC-108-11: …"
+**Automated by:** `e2e/clarification-and-amend.spec.ts` › "SCRUM-108 [AC7, AC9, AC10, AC11, AC14] TC-108-11: …"
 
 ### TC-108-12
 

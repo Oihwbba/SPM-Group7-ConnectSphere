@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import type { Prisma } from "@prisma/client";
+import type { z } from "zod";
 
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
@@ -205,10 +206,7 @@ export async function respondToClarification(
 
     const parsed = respondClarificationSchema.safeParse(input);
     if (!parsed.success) {
-      return err(
-        "Please fix the highlighted fields.",
-        parsed.error.flatten().fieldErrors,
-      );
+      return err("Please fix the highlighted fields.", errorsByField(parsed.error));
     }
     const { clarificationId, response, changes } = parsed.data;
 
@@ -363,6 +361,21 @@ export async function respondToClarification(
     if (error instanceof PermissionError) return err(error.message);
     throw error;
   }
+}
+
+/**
+ * Validation errors keyed by the field they belong to, so the panel can show
+ * each next to its input: a changed value under its own name (e.g.
+ * "expectedAttendance", "endAt"), anything else under its top-level name.
+ */
+function errorsByField(error: z.ZodError): Record<string, string[]> {
+  const byField: Record<string, string[]> = {};
+  for (const issue of error.issues) {
+    const [top, nested] = issue.path;
+    const key = String(top === "changes" && nested !== undefined ? nested : top);
+    (byField[key] ??= []).push(issue.message);
+  }
+  return byField;
 }
 
 /** A field's value as the history records it. */

@@ -86,6 +86,28 @@ test.describe("SCRUM-108 — Answer a clarification, or amend and resubmit", () 
       "The organiser may change: Expected attendance.",
     );
     await expect(details.getByLabel("Event name")).toHaveCount(0);
+
+    // Failure path: an invalid value is refused, shown at its field, and
+    // nothing changes; the clarification stays open.
+    await details.getByLabel("Expected attendance").fill("0");
+    await details
+      .getByLabel("Response to clarification")
+      .fill("Actually nobody is coming.");
+    await details.getByRole("button", { name: "Send response" }).click();
+    await expect(
+      details.getByText("Attendance must be a positive whole number."),
+    ).toBeVisible();
+    await expect(details.getByLabel("Expected attendance")).toHaveAttribute(
+      "aria-invalid",
+      "true",
+    );
+    expect(
+      await prisma.clarificationRequest.findFirstOrThrow({
+        where: { eventId },
+        select: { status: true },
+      }),
+    ).toEqual({ status: "OPEN" });
+
     await details.getByLabel("Expected attendance").fill("300");
     await details
       .getByLabel("Response to clarification")
@@ -134,7 +156,7 @@ test.describe("SCRUM-108 — Answer a clarification, or amend and resubmit", () 
     ]);
   });
 
-  test("SCRUM-108 [AC7, AC9, AC11, AC14] TC-108-11: an amended request shows its rejection reason while editing and goes back to the same Coordinator", async ({
+  test("SCRUM-108 [AC7, AC9, AC10, AC11, AC14] TC-108-11: an amended request shows its rejection reason while editing and goes back to the same Coordinator", async ({
     page,
   }) => {
     const name = `SCRUM-108 Amend ${Date.now()}`;
@@ -166,6 +188,14 @@ test.describe("SCRUM-108 — Answer a clarification, or amend and resubmit", () 
 
     const next = page.getByRole("button", { name: "Next", exact: true });
     await next.click();
+    // Failure path: the amendment is checked like a first submission (AC10),
+    // so an invalid attendance stops it here.
+    await page.getByLabel("Expected Attendance *").fill("0");
+    await next.click();
+    await expect(
+      page.getByText("Attendance must be a positive whole number."),
+    ).toBeVisible();
+    await page.getByLabel("Expected Attendance *").fill("120");
     await next.click();
     await page
       .getByLabel("Venue Requirements *")

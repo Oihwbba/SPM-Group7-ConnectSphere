@@ -87,6 +87,15 @@ function changesBetween(
   return changes;
 }
 
+function FieldError({ id, messages }: { id: string; messages?: string[] }) {
+  if (!messages?.[0]) return null;
+  return (
+    <p id={id} role="alert" className="text-xs text-destructive">
+      {messages[0]}
+    </p>
+  );
+}
+
 /**
  * SCRUM-18 — shown inside the event details modal for both roles. A
  * Coordinator sees their question, which fields they let the Organiser change
@@ -108,6 +117,8 @@ export function ClarificationPanel({
   const [loadFailed, setLoadFailed] = useState(false);
   const [response, setResponse] = useState("");
   const [draft, setDraft] = useState<Draft>(() => draftFrom(event));
+  // The server's validation errors, keyed by field (SCRUM-108 AC2).
+  const [errors, setErrors] = useState<Record<string, string[]>>({});
   const [submitting, setSubmitting] = useState(false);
   const router = useRouter();
 
@@ -144,9 +155,11 @@ export function ClarificationPanel({
     });
     setSubmitting(false);
     if (!result.ok) {
+      setErrors(result.fieldErrors ?? {});
       toast.error(result.error);
       return;
     }
+    setErrors({});
     toast.success("Response sent to the coordinator.");
     setClarification({
       ...clarification,
@@ -227,43 +240,45 @@ export function ClarificationPanel({
                   key={field}
                   className="grid grid-cols-1 gap-2 sm:grid-cols-2"
                 >
-                  <label className="space-y-1">
-                    <span className="font-medium">Start</span>
-                    <Input
-                      type="datetime-local"
-                      value={draft.startAt}
-                      onChange={(e) => set("startAt")(e.target.value)}
-                    />
-                  </label>
-                  <label className="space-y-1">
-                    <span className="font-medium">End</span>
-                    <Input
-                      type="datetime-local"
-                      value={draft.endAt}
-                      onChange={(e) => set("endAt")(e.target.value)}
-                    />
-                  </label>
+                  {(["startAt", "endAt"] as const).map((key) => (
+                    <label key={key} className="space-y-1">
+                      <span className="font-medium">
+                        {key === "startAt" ? "Start" : "End"}
+                      </span>
+                      <Input
+                        type="datetime-local"
+                        value={draft[key]}
+                        onChange={(e) => set(key)(e.target.value)}
+                        aria-invalid={Boolean(errors[key])}
+                        aria-describedby={
+                          errors[key] ? `clarify-${key}-error` : undefined
+                        }
+                      />
+                      <FieldError
+                        id={`clarify-${key}-error`}
+                        messages={errors[key]}
+                      />
+                    </label>
+                  ))}
                 </div>
-              ) : field === "expectedAttendance" ? (
-                <label key={field} className="block space-y-1">
-                  <span className="font-medium">
-                    {CLARIFIABLE_FIELDS[field]}
-                  </span>
-                  <Input
-                    type="number"
-                    min={1}
-                    value={draft.expectedAttendance}
-                    onChange={(e) => set(field)(e.target.value)}
-                  />
-                </label>
               ) : (
                 <label key={field} className="block space-y-1">
                   <span className="font-medium">
                     {CLARIFIABLE_FIELDS[field]}
                   </span>
                   <Input
+                    type={field === "expectedAttendance" ? "number" : "text"}
+                    min={field === "expectedAttendance" ? 1 : undefined}
                     value={draft[field]}
                     onChange={(e) => set(field)(e.target.value)}
+                    aria-invalid={Boolean(errors[field])}
+                    aria-describedby={
+                      errors[field] ? `clarify-${field}-error` : undefined
+                    }
+                  />
+                  <FieldError
+                    id={`clarify-${field}-error`}
+                    messages={errors[field]}
                   />
                 </label>
               ),
@@ -273,6 +288,11 @@ export function ClarificationPanel({
               onChange={(e) => setResponse(e.target.value)}
               placeholder="Type your response…"
               aria-label="Response to clarification"
+              aria-invalid={Boolean(errors.response)}
+            />
+            <FieldError
+              id="clarify-response-error"
+              messages={errors.response}
             />
             <Button
               size="sm"
