@@ -11,7 +11,11 @@ import {
   BOOKABLE_EVENT_STATUSES,
   bookingDecisionSchema,
   bookingRequestSchema,
+  EVENT_NOT_SCHEDULED_MESSAGE,
+  eventBookingPeriod,
   INVALID_PERIOD_MESSAGE,
+  notEventAttendanceMessage,
+  notEventPeriodMessage,
   overCapacityMessage,
   PAST_START_MESSAGE,
   venueAvailabilityQuerySchema,
@@ -99,6 +103,9 @@ export async function checkVenueAvailability(
  *
  * - An invalid period, or one starting in the past, is refused before
  *   anything else (AC5).
+ * - The period must be the event's (rounded out to the half hour) and the
+ *   attendance the event's expected attendance; anything else is refused
+ *   (AC1). An event without dates or attendance cannot be booked yet.
  * - Expected attendance above the venue's capacity is refused.
  * - If this Coordinator already has a pending request for the same venue
  *   and an overlapping period, whichever event it was for, nothing is
@@ -142,7 +149,14 @@ export async function submitBookingRequest(
 
     const event = await prisma.event.findUnique({
       where: { id: data.eventId },
-      select: { organiserId: true, coordinatorId: true, status: true },
+      select: {
+        organiserId: true,
+        coordinatorId: true,
+        status: true,
+        startAt: true,
+        endAt: true,
+        expectedAttendance: true,
+      },
     });
     // A related-but-missing event and someone else's event read the same
     // (SCRUM-68 not-found parity).
@@ -151,6 +165,24 @@ export async function submitBookingRequest(
     }
     if (!BOOKABLE_EVENT_STATUSES.includes(event.status)) {
       return err("A venue can only be requested for an approved event.");
+    }
+
+    // AC1: the booking covers the event's period and its expected attendance,
+    // not values the Coordinator chose.
+    const eventPeriod = eventBookingPeriod(event);
+    if (!eventPeriod || event.expectedAttendance === null) {
+      return err(EVENT_NOT_SCHEDULED_MESSAGE);
+    }
+    if (
+      period.startAt.getTime() !== eventPeriod.startAt.getTime() ||
+      period.endAt.getTime() !== eventPeriod.endAt.getTime()
+    ) {
+      const message = notEventPeriodMessage(eventPeriod);
+      return err(message, { startAt: [message] });
+    }
+    if (data.requestedAttendance !== event.expectedAttendance) {
+      const message = notEventAttendanceMessage(event.expectedAttendance);
+      return err(message, { requestedAttendance: [message] });
     }
 
     const venue = await prisma.venue.findFirst({

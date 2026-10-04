@@ -37,13 +37,13 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import {
   formatDateTime,
-  parseSingaporeDateTime,
   sgWallTimeToUtcIso,
   utcToSgWallTime,
 } from "@/lib/datetime";
 import { cn } from "@/lib/utils";
 import { isValidPeriod } from "@/lib/period";
 import {
+  eventBookingPeriod,
   INVALID_PERIOD_MESSAGE,
   overCapacityMessage,
 } from "@/lib/schemas/booking";
@@ -52,7 +52,6 @@ import {
   submitBookingRequest,
   type BookingSummary,
 } from "../actions";
-import { DateTimeField } from "@/components/app/date-time-field";
 import type { BookableEvent, RequestableVenue } from "../queries";
 
 type Outcome =
@@ -72,25 +71,6 @@ const emptyForm = {
 
 /** Radix Select cannot use "" as an item value, so "no preference" has its own. */
 const NO_LAYOUT = "none";
-
-/**
- * Snap a "YYYY-MM-DDTHH:mm" wall time onto the half-hour grid: a start rounds
- * down and an end rounds up, so a pre-filled event period is never shortened.
- */
-export function snapToHalfHour(
-  wallTime: string,
-  direction: "down" | "up",
-): string {
-  if (!wallTime.includes("T")) return wallTime;
-  const date = parseSingaporeDateTime(wallTime);
-  if (!date) return wallTime;
-  const step = 30 * 60 * 1000;
-  const snapped =
-    direction === "down"
-      ? Math.floor(date.getTime() / step) * step
-      : Math.ceil(date.getTime() / step) * step;
-  return utcToSgWallTime(snapped);
-}
 
 /**
  * SCRUM-50 — the venues that support `layout`: the layout is chosen first,
@@ -119,8 +99,9 @@ const LIVE_CHECK_DELAY_MS = 300;
 const emptySubscribe = () => () => {};
 
 /**
- * SCRUM-50 — the Coordinator's request form. Choosing an event pre-fills its
- * times, attendance and needs, which the Coordinator can then adjust. The room
+ * SCRUM-50 — the Coordinator's request form. Choosing an event fills in its
+ * period and expected attendance, which cannot be changed here (AC1), and
+ * pre-selects its facilities and layout, which can. The room
  * layout comes before the venue and narrows the venues offered. Once a venue
  * and period are chosen, the server is asked whether the venue is free and the
  * answer is shown before submitting; a taken venue disables Submit. The
@@ -174,12 +155,13 @@ export function RequestForm({
       event?.preferredLayout && layoutOptions.includes(event.preferredLayout)
         ? event.preferredLayout
         : "";
+    const period = event && eventBookingPeriod(event);
     setForm((prev) => ({
       ...prev,
       eventId,
       ...(event && {
-        start: snapToHalfHour(utcToSgWallTime(event.startAt), "down"),
-        end: snapToHalfHour(utcToSgWallTime(event.endAt), "up"),
+        start: utcToSgWallTime(period?.startAt),
+        end: utcToSgWallTime(period?.endAt),
         attendance: event.expectedAttendance?.toString() ?? "",
         facilities: event.requiredFacilities,
         layout,
@@ -427,15 +409,15 @@ export function RequestForm({
                 <Label htmlFor="attendance">Expected attendance</Label>
                 <Input
                   id="attendance"
-                  type="number"
-                  min={1}
+                  readOnly
                   value={form.attendance}
-                  onChange={(e) => update("attendance", e.target.value)}
+                  placeholder="Taken from the event"
                   aria-invalid={overCapacity ? true : undefined}
                   aria-describedby={
                     overCapacity ? "attendance-capacity" : undefined
                   }
                   className={cn(
+                    "bg-muted/40",
                     overCapacity &&
                       "border-destructive focus-visible:ring-destructive",
                   )}
@@ -452,19 +434,30 @@ export function RequestForm({
                 )}
               </div>
 
-              <DateTimeField
-                name="Start"
-                value={form.start}
-                onChange={(value) => update("start", value)}
-                error={fieldError("startAt")}
-              />
-              <DateTimeField
-                name="End"
-                value={form.end}
-                openOn={form.start.split("T")[0]}
-                onChange={(value) => update("end", value)}
-                error={fieldError("endAt")}
-              />
+              {(["start", "end"] as const).map((which) => {
+                const iso = sgWallTimeToUtcIso(form[which]);
+                const label = which === "start" ? "Start" : "End";
+                return (
+                  <div key={which} className="space-y-2">
+                    <Label htmlFor={which}>{label}</Label>
+                    <Input
+                      id={which}
+                      readOnly
+                      value={iso ? formatDateTime(iso) : ""}
+                      placeholder="Taken from the event"
+                      className="bg-muted/40"
+                    />
+                    {fieldError(which === "start" ? "startAt" : "endAt")}
+                  </div>
+                );
+              })}
+              {form.eventId && (
+                <p className="text-xs text-muted-foreground sm:col-span-2">
+                  The period and attendance are the event&apos;s, with the
+                  period rounded out to the half hour. Change them on the event
+                  if they are wrong.
+                </p>
+              )}
 
               {liveNow && (
                 <LiveAvailability

@@ -11,6 +11,12 @@ signs in as an Event Coordinator (`coordinator@test.local` / `Password123!`)
 unless the case says otherwise. Cases use the Exhibition Hall in 2035, so
 nothing seeded overlaps them. Times are Singapore time.
 
+Since 2026-10-04 a request is always for its event's period and expected
+attendance (AC 1, TC-50-15), so a case that needs a particular period uses an
+event with that period. The e2e spec creates these as PLANNING events for
+`coordinator@test.local` (named "E2E Hall — …") and removes them afterwards;
+a manual tester creates the same events, or edits an event's dates.
+
 | ID | Type | Criterion | Automated |
 |---|---|---|---|
 | [TC-50-01](#tc-50-01) | Positive | AC 1, AC 2 | Unit, integration, e2e |
@@ -18,7 +24,7 @@ nothing seeded overlaps them. Times are Singapore time.
 | [TC-50-03](#tc-50-03) | Negative | AC 3 (unavailability) | Integration |
 | [TC-50-04](#tc-50-04) | Positive | AC 3 (pending blocks nobody) | Unit, integration |
 | [TC-50-05](#tc-50-05) | Boundary | AC 4 | Unit, integration, e2e |
-| [TC-50-06](#tc-50-06) | Negative, Boundary | AC 5 | Unit, integration, e2e |
+| [TC-50-06](#tc-50-06) | Negative, Boundary | AC 5 | Unit, integration |
 | [TC-50-07](#tc-50-07) | Negative | AC 6 | Unit, integration, e2e |
 | [TC-50-08](#tc-50-08) | Concurrency | AC 6 | Unit, integration |
 | [TC-50-09](#tc-50-09) | Negative | Coordinators only, own events only | Unit, integration, e2e |
@@ -27,6 +33,7 @@ nothing seeded overlaps them. Times are Singapore time.
 | [TC-50-12](#tc-50-12) | Positive | AC 1 (room layout before venue) | Unit, e2e |
 | [TC-50-13](#tc-50-13) | Negative, Boundary | AC 3, AC 4, AC 5 shown live, before submitting | Unit, integration, e2e |
 | [TC-50-14](#tc-50-14) | Positive | AC 9 (a new request after a rejection or cancellation) | Integration |
+| [TC-50-15](#tc-50-15) | Negative, Boundary | AC 1 (period and attendance fixed to the event) | Unit, integration, e2e |
 
 ---
 
@@ -37,9 +44,9 @@ nothing seeded overlaps them. Times are Singapore time.
 | Test Case ID | TC-50-01 |
 | Test Scenario | [Positive] AC 1, AC 2: a request for a free period is created Pending, with everything Venue Staff need |
 | Pre-conditions | Signed in as a Coordinator. No approved booking or unavailability on the Exhibition Hall overlaps the test period. |
-| Test Steps | 1. Open **Request Venue**. <br> 2. Choose the event, the venue, start and end, attendance and notes. <br> 3. Click **Submit request**. |
-| Test Data | Event: Approved — Research Symposium <br> Venue: Exhibition Hall <br> Start: 2035-03-10 09:00 <br> End: 2035-03-10 13:00 <br> Attendance: 120 |
-| Expected Result | A pop-up with a green tick: "Request submitted", the venue and times, and "It is pending Venue Staff approval." The form is then cleared. One PENDING booking exists holding the venue, times, attendance, facilities, layout, notes and the requesting coordinator. |
+| Test Steps | 1. Open **Request Venue**. <br> 2. Choose the event, the layout, the venue and notes; the period and attendance come from the event. <br> 3. Click **Submit request**. |
+| Test Data | Event: E2E Hall — Morning Lecture (10 Mar 2035, 09:10–12:45, 120 expected) <br> Layout: theatre <br> Venue: Exhibition Hall |
+| Expected Result | A pop-up with a green tick: "Request submitted", the venue and times (9:00 am to 1:00 pm), and "It is pending Venue Staff approval." The form is then cleared. One PENDING booking exists holding the venue, times, attendance, facilities, layout, notes and the requesting coordinator. |
 
 **Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-50 AC1 & AC2 — a request for a free period is created PENDING with everything the staff need"; `tests/unit/bookings.test.ts` › "SCRUM-50 AC2 — a request for a free period is created PENDING"; `e2e/bookings.spec.ts` › "SCRUM-50 AC2, SCRUM-52 AC1-3, SCRUM-53 AC1 & AC3 — …"
 
@@ -50,8 +57,8 @@ nothing seeded overlaps them. Times are Singapore time.
 | Test Case ID | TC-50-02 |
 | Test Scenario | [Negative] AC 3: a request overlapping an approved booking is refused and nothing is created |
 | Pre-conditions | TC-50-01's request has been approved by Venue Staff (see TC-53-01). |
-| Test Steps | 1. Open **Request Venue**. <br> 2. Request the Exhibition Hall for a period overlapping the approved booking. <br> 3. Read the availability line under the period. <br> 4. Send the same request directly to the server. |
-| Test Data | Event: Planning — Freshman Orientation <br> Start: 2035-03-10 11:00 <br> End: 2035-03-10 15:00 |
+| Test Steps | 1. Open **Request Venue**. <br> 2. Choose an event whose period overlaps the approved booking, and the Exhibition Hall. <br> 3. Read the availability line under the period. <br> 4. Send the same request directly to the server. |
+| Test Data | Event: E2E Hall — Overlapping Talk (10 Mar 2035, 11:00–15:00) |
 | Expected Result | Step 3, before anything is submitted: "Exhibition Hall is unavailable for this period: already booked from 10 Mar 2035, 9:00 am SGT to 10 Mar 2035, 1:00 pm SGT." **Submit request** is disabled. Step 4: the server refuses it with "…is unavailable for that period: …". No new booking row exists. The other booking's event is not named. |
 
 **Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-50 AC3 — a request overlapping an approved booking is refused and nothing is written"; `tests/unit/bookings.test.ts` › "SCRUM-50 AC3 — a venue already booked for part of the period refuses the request and names the clash"; `tests/unit/period.test.ts` › every "SCRUM-50 AC3 — …" case (overlapping, contained, identical, shared start, one minute); `e2e/bookings.spec.ts` › journey (screenshot attached to the report)
@@ -89,8 +96,8 @@ nothing seeded overlaps them. Times are Singapore time.
 | Test Case ID | TC-50-05 |
 | Test Scenario | [Boundary] AC 4: periods touching at an endpoint do not overlap |
 | Pre-conditions | An approved booking 09:00–13:00 (TC-50-02). |
-| Test Steps | 1. Request 13:00–15:00. <br> 2. Separately, request a period ending at exactly 09:00. |
-| Test Data | Start 2035-03-10 13:00, End 2035-03-10 15:00 |
+| Test Steps | 1. Request the hall for an event running 13:00–15:00. <br> 2. Separately, for an event ending at exactly 09:00. |
+| Test Data | Event: E2E Hall — Afternoon Workshop (10 Mar 2035, 13:00–15:00) |
 | Expected Result | Both requests are created Pending. |
 
 **Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-50 AC4 — a period beginning exactly as an approved booking ends is accepted" and "…ending exactly as an approved booking begins is accepted"; `tests/unit/period.test.ts` › every "SCRUM-50 AC4 — …" case; `e2e/bookings.spec.ts` › journey (last step)
@@ -102,11 +109,11 @@ nothing seeded overlaps them. Times are Singapore time.
 | Test Case ID | TC-50-06 |
 | Test Scenario | [Negative, Boundary] AC 5: an end earlier than or equal to the start is an invalid period |
 | Pre-conditions | — |
-| Test Steps | 1. Enter an end before the start and submit. <br> 2. Enter an end equal to the start and submit. |
+| Test Steps | 1. Send a request with an end before the start directly to the server. <br> 2. Send one with an end equal to the start. |
 | Test Data | Start 2035-04-01 15:00, End 2035-04-01 09:00; then Start = End = 15:00 |
-| Expected Result | "The requested period is invalid: the end must be after the start." Nothing is created, and no other check runs first. One minute after the start is valid. |
+| Expected Result | "The requested period is invalid: the end must be after the start." Nothing is created, and no other check runs first. One minute after the start is valid. The form cannot produce such a period, because it uses the event's (TC-50-15); the live check reports the same message if asked. |
 
-**Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-50 AC5 — an end before the start…" and "…an end equal to the start is refused as an invalid period"; `tests/unit/bookings.test.ts` › "SCRUM-50 AC5 — an end before or equal to the start is reported as an invalid period"; `tests/unit/period.test.ts` › every "SCRUM-50 AC5 — …" case; `e2e/bookings.spec.ts` › "SCRUM-50 AC5 — an end before the start is reported as an invalid period before submitting, and Submit is disabled"
+**Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-50 AC5 — an end before the start…" and "…an end equal to the start is refused as an invalid period"; `tests/unit/bookings.test.ts` › "SCRUM-50 AC5 — an end before or equal to the start is reported as an invalid period"; `tests/unit/period.test.ts` › every "SCRUM-50 AC5 — …" case; `tests/unit/bookings.test.ts` › "SCRUM-50 AC5 — an end before or equal to the start, or a missing time, is an invalid period and nothing is read" (live check)
 
 ### TC-50-07
 
@@ -115,11 +122,11 @@ nothing seeded overlaps them. Times are Singapore time.
 | Test Case ID | TC-50-07 |
 | Test Scenario | [Negative] AC 6: a coordinator who already has a pending request for the same venue and an overlapping period is shown it, and nothing is created, whichever event they ask under |
 | Pre-conditions | TC-50-01 is still pending. |
-| Test Steps | 1. Click **Submit request** again with the same details. <br> 2. Choose a different event and an overlapping period (11:00–15:00) at the same venue, and submit. |
+| Test Steps | 1. Click **Submit request** again with the same details. <br> 2. With a pending request of yours under another event overlapping this period at the same venue, submit. |
 | Test Data | As TC-50-01 |
-| Expected Result | "You already have a pending request for this venue and period" with the existing request's details, both times. Still one booking row. The database's `booking_no_duplicate_pending_request` constraint enforces the same rule, keyed on the coordinator. A later, non-overlapping period is a new request. |
+| Expected Result | "You already have a pending request for this venue and period" with the existing request's details, both times. Still one booking row. The database's `booking_no_duplicate_pending_request` constraint enforces the same rule, keyed on the coordinator. |
 
-**Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-50 AC6 — submitting the same request twice leaves one request and shows the existing one" "…the same coordinator asking again under a different event is shown the existing request", "…the database itself refuses a second overlapping pending request from the same coordinator, whatever the event" and "…a pending request for a different, non-overlapping period is a new request"; `tests/unit/bookings.test.ts` › "SCRUM-50 AC6 — this coordinator's overlapping pending request for the same venue is returned instead of a new one, whatever its event"; `e2e/bookings.spec.ts` › journey
+**Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-50 AC6 — submitting the same request twice leaves one request and shows the existing one", "…the same coordinator's overlapping pending request under another event is shown instead" and "…the database itself refuses a second overlapping pending request from the same coordinator, whatever the event"; `tests/unit/bookings.test.ts` › "SCRUM-50 AC6 — this coordinator's overlapping pending request for the same venue is returned instead of a new one, whatever its event"; `e2e/bookings.spec.ts` › journey
 
 ### TC-50-08
 
@@ -154,11 +161,11 @@ nothing seeded overlaps them. Times are Singapore time.
 | Test Case ID | TC-50-10 |
 | Test Scenario | [Negative, Boundary] Expected attendance above the chosen venue's capacity is refused; exactly at capacity fits. This rule is not in the SCRUM-50 criteria; the team added it on 2026-09-27. |
 | Pre-conditions | — |
-| Test Steps | 1. Choose Exhibition Hall (holds 200). <br> 2. Enter 250 as expected attendance. <br> 3. Change it to 200. |
-| Test Data | Exhibition Hall; attendance 250, then 200 |
-| Expected Result | Step 2: "Exhibition Hall holds up to 200 people; 250 expected is over its capacity." appears under the field, and **Submit request** is disabled. The server refuses the same request if sent directly, and nothing is written. Step 3: the error clears and Submit is enabled. |
+| Test Steps | 1. Choose an event expecting 250, and the Exhibition Hall (holds 200). <br> 2. Change to an event expecting 200. |
+| Test Data | E2E Hall — Big Concert (250); E2E Hall — Full House (200) |
+| Expected Result | Step 1: "Exhibition Hall holds up to 200 people; 250 expected is over its capacity." appears under the attendance, and **Submit request** is disabled. The server refuses the same request if sent directly, and nothing is written. Step 2: the error clears and Submit is enabled. |
 
-**Automated by:** `e2e/bookings.spec.ts` › "SCRUM-50 — attendance over the chosen venue's capacity is flagged as it is typed, and Submit is disabled"; `tests/unit/bookings.test.ts` › "SCRUM-50 — expected attendance above the venue's capacity is refused…" and "…exactly equal to the venue's capacity fits"; `tests/integration/bookings.test.ts` › "SCRUM-50 — attendance over the venue's capacity is refused and nothing is written; exactly at capacity is accepted"
+**Automated by:** `e2e/bookings.spec.ts` › "SCRUM-50 — an event's attendance over the chosen venue's capacity is flagged, and Submit is disabled"; `tests/unit/bookings.test.ts` › "SCRUM-50 — expected attendance above the venue's capacity is refused…" and "…exactly equal to the venue's capacity fits"; `tests/integration/bookings.test.ts` › "SCRUM-50 — attendance over the venue's capacity is refused and nothing is written; exactly at capacity is accepted"
 
 ### TC-50-11
 
@@ -193,11 +200,11 @@ nothing seeded overlaps them. Times are Singapore time.
 | Test Case ID | TC-50-13 |
 | Test Scenario | [Negative, Boundary] AC 3, AC 4, AC 5: whether the venue is free is shown live as the period is chosen, and a taken venue or an invalid period disables Submit. Added on 2026-10-04 at the Product Owner's request. |
 | Pre-conditions | An approved booking on the Exhibition Hall 2035-03-10 09:00–13:00 (TC-50-02). |
-| Test Steps | 1. Choose the Exhibition Hall and 11:00–15:00 on that day. <br> 2. Change the period to 13:00–15:00. <br> 3. Change the end to before the start. |
-| Test Data | Exhibition Hall, 2035-03-10 |
-| Expected Result | While the answer is fetched, "Checking whether Exhibition Hall is free…". Step 1: "…is unavailable for this period: already booked from … to …", and Submit is disabled. Step 2: "Exhibition Hall is available for this period.", and Submit is enabled (the touching end is not an overlap). Step 3: "The requested period is invalid: the end must be after the start.", and Submit is disabled. A pending request blocks nobody, so it still reads available. A retired venue reads "Venue not found.", as it does on submit. The check writes nothing. Submitting checks again on the server, because a booking can be approved in between. |
+| Test Steps | 1. Choose the Exhibition Hall and the event running 11:00–15:00 that day. <br> 2. Change to the event running 13:00–15:00. |
+| Test Data | E2E Hall — Overlapping Talk; E2E Hall — Afternoon Workshop |
+| Expected Result | While the answer is fetched, "Checking whether Exhibition Hall is free…". Step 1: "…is unavailable for this period: already booked from … to …", and Submit is disabled. Step 2: "Exhibition Hall is available for this period.", and Submit is enabled (the touching end is not an overlap). An invalid period is reported as "The requested period is invalid: the end must be after the start." and disables Submit. A pending request blocks nobody, so it still reads available. A retired venue reads "Venue not found.", as it does on submit. The check writes nothing. Submitting checks again on the server, because a booking can be approved in between. |
 
-**Automated by:** `tests/unit/bookings.test.ts` › every "checkVenueAvailability — SCRUM-50 live check" case; `tests/integration/bookings.test.ts` › every "SCRUM-50 — the live availability check in the form" case; `e2e/bookings.spec.ts` › journey and "SCRUM-50 AC5 — …"; `e2e/availability.spec.ts` › "SCRUM-37 AC2-5, …" (maintenance shown live)
+**Automated by:** `tests/unit/bookings.test.ts` › every "checkVenueAvailability — SCRUM-50 live check" case; `tests/integration/bookings.test.ts` › every "SCRUM-50 — the live availability check in the form" case; `e2e/bookings.spec.ts` › journey; `e2e/availability.spec.ts` › "SCRUM-37 AC2-5, …" (maintenance shown live)
 
 ### TC-50-14
 
@@ -211,3 +218,16 @@ nothing seeded overlaps them. Times are Singapore time.
 | Expected Result | A new PENDING booking is created with a new id. The earlier booking still exists with its REJECTED or CANCELLED status. Two booking rows exist. |
 
 **Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-50 AC9 — after a rejected request, a new request creates a new booking record and the earlier one is kept" and "…after a cancelled request, …"
+
+### TC-50-15
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-50-15 |
+| Test Scenario | [Negative, Boundary] AC 1: the period and expected attendance are the event's and cannot be edited; the period is rounded out to the half hour. Added on 2026-10-04 after the GLM review of #128. |
+| Pre-conditions | An event running 09:10–12:45 expecting 120. |
+| Test Steps | 1. Choose the event and try to change Start, End and Expected attendance. <br> 2. Send a request directly to the server with a different period, or a different attendance. <br> 3. Send one for an event with no dates or no expected attendance. |
+| Test Data | E2E Hall — Morning Lecture (10 Mar 2035, 09:10–12:45, 120) |
+| Expected Result | Step 1: Start reads "10 Mar 2035, 9:00 am SGT", End "10 Mar 2035, 1:00 pm SGT", attendance "120"; none can be edited. Step 2: "The requested period must be the event's: … to …." or "The expected attendance must be the event's: 120.", against that field, and nothing is written. Step 3: "This event has no dates or expected attendance yet. Set them on the event before requesting a venue." |
+
+**Automated by:** `e2e/bookings.spec.ts` › "SCRUM-50 AC1 — the period and attendance are the event's, rounded out to the half hour, and cannot be edited"; `tests/unit/bookings.test.ts` › every "SCRUM-50 AC1 — the period and attendance are the event's" case; `tests/unit/request-form.test.tsx` › every "eventBookingPeriod — SCRUM-50 AC1" case and "…the period and attendance are shown read-only, taken from the event"; `tests/integration/bookings.test.ts` › "SCRUM-50 AC1 — a period or attendance that is not the event's is refused and nothing is written"

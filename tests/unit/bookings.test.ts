@@ -114,6 +114,9 @@ beforeEach(() => {
     organiserId: "usr_org",
     coordinatorId: "usr_coord",
     status: "APPROVED",
+    startAt: new Date(START),
+    endAt: new Date(END),
+    expectedAttendance: 40,
   });
   db.venue.findFirst.mockResolvedValue({ name: "Seminar Room", capacity: 60 });
   db.booking.findFirst.mockResolvedValue(null);
@@ -175,13 +178,15 @@ describe("submitBookingRequest — SCRUM-50", () => {
   });
 
   it("SCRUM-50 — expected attendance above the venue's capacity is refused against the attendance field, and nothing is written", async () => {
-    const result = await submitBookingRequest({
-      ...validRequest,
-      requestedAttendance: 61,
+    db.venue.findFirst.mockResolvedValue({
+      name: "Seminar Room",
+      capacity: 39,
     });
 
+    const result = await submitBookingRequest(validRequest);
+
     const message =
-      "Seminar Room holds up to 60 people; 61 expected is over its capacity.";
+      "Seminar Room holds up to 39 people; 40 expected is over its capacity.";
     expect(result).toEqual({
       ok: false,
       error: message,
@@ -191,13 +196,100 @@ describe("submitBookingRequest — SCRUM-50", () => {
   });
 
   it("SCRUM-50 — expected attendance exactly equal to the venue's capacity fits", async () => {
-    const result = await submitBookingRequest({
-      ...validRequest,
-      requestedAttendance: 60,
+    db.venue.findFirst.mockResolvedValue({
+      name: "Seminar Room",
+      capacity: 40,
     });
+
+    const result = await submitBookingRequest(validRequest);
 
     expect(result.ok).toBe(true);
     expect(db.booking.create).toHaveBeenCalled();
+  });
+
+  describe("SCRUM-50 AC1 — the period and attendance are the event's", () => {
+    it("SCRUM-50 AC1 — the event's period, rounded out to the half hour, is accepted", async () => {
+      db.event.findUnique.mockResolvedValue({
+        organiserId: "usr_org",
+        coordinatorId: "usr_coord",
+        status: "APPROVED",
+        startAt: new Date("2030-06-01T06:10:00.000Z"),
+        endAt: new Date("2030-06-01T07:45:00.000Z"),
+        expectedAttendance: 40,
+      });
+
+      const result = await submitBookingRequest(validRequest);
+
+      expect(result.ok).toBe(true);
+    });
+
+    it("SCRUM-50 AC1 — a period that is not the event's is refused against the start field, and nothing is written", async () => {
+      for (const changed of [
+        { startAt: "2030-06-01T06:30:00.000Z" },
+        { endAt: "2030-06-01T09:00:00.000Z" },
+        {
+          startAt: "2030-06-02T06:00:00.000Z",
+          endAt: "2030-06-02T08:00:00.000Z",
+        },
+      ]) {
+        const result = await submitBookingRequest({
+          ...validRequest,
+          ...changed,
+        });
+
+        const message =
+          "The requested period must be the event's: 1 Jun 2030, 2:00 pm SGT to 1 Jun 2030, 4:00 pm SGT.";
+        expect(result).toEqual({
+          ok: false,
+          error: message,
+          fieldErrors: { startAt: [message] },
+        });
+      }
+      expect(db.booking.findFirst).not.toHaveBeenCalled();
+      expect(db.booking.create).not.toHaveBeenCalled();
+    });
+
+    it("SCRUM-50 AC1 — an attendance that is not the event's is refused against the attendance field, and nothing is written", async () => {
+      for (const requestedAttendance of [39, 41]) {
+        const result = await submitBookingRequest({
+          ...validRequest,
+          requestedAttendance,
+        });
+
+        const message = "The expected attendance must be the event's: 40.";
+        expect(result).toEqual({
+          ok: false,
+          error: message,
+          fieldErrors: { requestedAttendance: [message] },
+        });
+      }
+      expect(db.booking.create).not.toHaveBeenCalled();
+    });
+
+    it("SCRUM-50 AC1 — an event without dates or expected attendance cannot be booked yet", async () => {
+      for (const missing of [
+        { startAt: null },
+        { endAt: null },
+        { expectedAttendance: null },
+      ]) {
+        db.event.findUnique.mockResolvedValue({
+          organiserId: "usr_org",
+          coordinatorId: "usr_coord",
+          status: "APPROVED",
+          startAt: new Date(START),
+          endAt: new Date(END),
+          expectedAttendance: 40,
+          ...missing,
+        });
+
+        expect(await submitBookingRequest(validRequest)).toEqual({
+          ok: false,
+          error:
+            "This event has no dates or expected attendance yet. Set them on the event before requesting a venue.",
+        });
+      }
+      expect(db.booking.create).not.toHaveBeenCalled();
+    });
   });
 
   describe("a start in the past", () => {

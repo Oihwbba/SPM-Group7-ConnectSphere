@@ -3,9 +3,9 @@ import { renderToStaticMarkup } from "react-dom/server";
 
 import {
   RequestForm,
-  snapToHalfHour,
   venuesForLayout,
 } from "@/app/(app)/bookings/new/request-form";
+import { eventBookingPeriod } from "@/lib/schemas/booking";
 import { HALF_HOUR_TIMES, isPastSlot } from "@/components/app/date-time-field";
 
 // SCRUM-50 — what a coordinator sees before submitting. The server action is
@@ -71,6 +71,18 @@ describe("RequestForm — SCRUM-50", () => {
     expect(html.indexOf("Room layout")).toBeLessThan(html.indexOf("Venue"));
   });
 
+  it("SCRUM-50 AC1 — the period and attendance are shown read-only, taken from the event", () => {
+    const html = renderToStaticMarkup(
+      <RequestForm events={[event]} venues={[venue]} />,
+    );
+
+    for (const id of ["start", "end", "attendance"]) {
+      expect(html).toMatch(
+        new RegExp(`<input[^>]*id="${id}"[^>]*readOnly`, "i"),
+      );
+    }
+  });
+
   it("SCRUM-50 AC1 — required facilities are toggle pills, none chosen until the coordinator picks", () => {
     const html = renderToStaticMarkup(
       <RequestForm events={[event]} venues={[venue]} />,
@@ -103,17 +115,49 @@ describe("the half-hour time grid — SCRUM-50", () => {
     expect(HALF_HOUR_TIMES.slice(0, 3)).toEqual(["00:00", "00:30", "01:00"]);
     expect(HALF_HOUR_TIMES.at(-1)).toBe("23:30");
   });
+});
 
-  it("rounds a pre-filled start down and end up, so the event's period is never shortened", () => {
-    expect(snapToHalfHour("2035-03-10T09:10", "down")).toBe("2035-03-10T09:00");
-    expect(snapToHalfHour("2035-03-10T16:45", "up")).toBe("2035-03-10T17:00");
-    expect(snapToHalfHour("2035-03-10T23:50", "up")).toBe("2035-03-11T00:00");
+describe("eventBookingPeriod — SCRUM-50 AC1", () => {
+  // Singapore times: 09:10 to 16:45, and 23:50 crossing midnight.
+  const sg = (wall: string) => new Date(`${wall}:00+08:00`);
+
+  it("SCRUM-50 AC1 — the event's start rounds down and its end rounds up, so the period is never shortened", () => {
+    expect(
+      eventBookingPeriod({
+        startAt: sg("2035-03-10T09:10"),
+        endAt: sg("2035-03-10T16:45"),
+      }),
+    ).toEqual({
+      startAt: sg("2035-03-10T09:00"),
+      endAt: sg("2035-03-10T17:00"),
+    });
+    expect(
+      eventBookingPeriod({
+        startAt: sg("2035-03-10T22:00"),
+        endAt: sg("2035-03-10T23:50"),
+      })?.endAt,
+    ).toEqual(sg("2035-03-11T00:00"));
   });
 
-  it("leaves a time already on the grid, or an empty value, alone", () => {
-    expect(snapToHalfHour("2035-03-10T09:30", "down")).toBe("2035-03-10T09:30");
-    expect(snapToHalfHour("2035-03-10T09:30", "up")).toBe("2035-03-10T09:30");
-    expect(snapToHalfHour("", "up")).toBe("");
+  it("SCRUM-50 AC1 — times already on the half hour are left alone", () => {
+    expect(
+      eventBookingPeriod({
+        startAt: sg("2035-03-10T09:30"),
+        endAt: "2035-03-10T09:00:00.000Z",
+      }),
+    ).toEqual({
+      startAt: sg("2035-03-10T09:30"),
+      endAt: new Date("2035-03-10T09:00:00.000Z"),
+    });
+  });
+
+  it("SCRUM-50 AC1 — an event without both dates has no period yet", () => {
+    expect(
+      eventBookingPeriod({ startAt: null, endAt: sg("2035-03-10T09:00") }),
+    ).toBeNull();
+    expect(
+      eventBookingPeriod({ startAt: sg("2035-03-10T09:00"), endAt: null }),
+    ).toBeNull();
   });
 });
 

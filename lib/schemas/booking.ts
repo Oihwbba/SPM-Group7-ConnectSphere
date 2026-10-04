@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { EventStatus } from "@prisma/client";
 
+import { formatDateTime } from "@/lib/datetime";
 import { isValidPeriod } from "@/lib/period";
 
 /** A venue is requested only for an event that has already been approved. */
@@ -30,6 +31,42 @@ const PAST_START_GRACE_MS = 60_000;
 
 export const INVALID_PERIOD_MESSAGE =
   "The requested period is invalid: the end must be after the start.";
+
+const HALF_HOUR_MS = 30 * 60 * 1000;
+
+/**
+ * SCRUM-50 AC1 — the period a venue is requested for: the event's own, with
+ * the start rounded down and the end rounded up to the half hour, so it is
+ * never shorter than the event. Singapore is a whole number of hours from
+ * UTC, so rounding the UTC instant rounds the Singapore time the same way.
+ * An event without both dates has no period yet.
+ */
+export function eventBookingPeriod(event: {
+  startAt: Date | string | null;
+  endAt: Date | string | null;
+}): { startAt: Date; endAt: Date } | null {
+  if (!event.startAt || !event.endAt) return null;
+  const start = new Date(event.startAt).getTime();
+  const end = new Date(event.endAt).getTime();
+  return {
+    startAt: new Date(Math.floor(start / HALF_HOUR_MS) * HALF_HOUR_MS),
+    endAt: new Date(Math.ceil(end / HALF_HOUR_MS) * HALF_HOUR_MS),
+  };
+}
+
+export const EVENT_NOT_SCHEDULED_MESSAGE =
+  "This event has no dates or expected attendance yet. Set them on the event before requesting a venue.";
+
+export function notEventPeriodMessage(period: {
+  startAt: Date;
+  endAt: Date;
+}): string {
+  return `The requested period must be the event's: ${formatDateTime(period.startAt)} to ${formatDateTime(period.endAt)}.`;
+}
+
+export function notEventAttendanceMessage(attendance: number): string {
+  return `The expected attendance must be the event's: ${attendance}.`;
+}
 
 /**
  * SCRUM-50 — "Request captures venue, date/time, expected attendance,

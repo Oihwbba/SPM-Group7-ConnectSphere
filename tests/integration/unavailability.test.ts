@@ -13,6 +13,7 @@ import { Prisma } from "@prisma/client";
 
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
+import { eventBookingPeriod } from "@/lib/schemas/booking";
 import { recordUnavailability } from "@/app/(app)/venues/availability/actions";
 import {
   decideBookingRequest,
@@ -48,17 +49,23 @@ describe.skipIf(!usesLocalDatabase)(
   "recorded venue unavailability — real database (SCRUM-37)",
   () => {
     let venueId: string;
+    // SCRUM-50 AC1: a request is always for its event's period and
+    // attendance, so maintenance that should meet it is placed around those.
+    let event: { startAt: Date; endAt: Date; attendance: number };
+    const hoursFrom = (instant: Date, hours: number) =>
+      new Date(instant.getTime() + hours * 60 * 60 * 1000).toISOString();
 
     const record = (start: string, end: string, reason = "MAINTENANCE") =>
       recordUnavailability({ venueId, startAt: start, endAt: end, reason });
 
-    const request = (start: string, end: string) =>
+    /** A request for evt_approved, which covers its own period. */
+    const request = () =>
       submitBookingRequest({
         eventId: "evt_approved",
         venueId,
-        startAt: start,
-        endAt: end,
-        requestedAttendance: 20,
+        startAt: event.startAt.toISOString(),
+        endAt: event.endAt.toISOString(),
+        requestedAttendance: event.attendance,
       });
 
     /** An approved booking to collide with, written directly. */
@@ -94,11 +101,20 @@ describe.skipIf(!usesLocalDatabase)(
     }
 
     beforeAll(async () => {
+      const row = await prisma.event.findUniqueOrThrow({
+        where: { id: "evt_approved" },
+        select: { startAt: true, endAt: true, expectedAttendance: true },
+      });
+      event = {
+        ...eventBookingPeriod(row)!,
+        attendance: row.expectedAttendance!,
+      };
+
       const venue = await prisma.venue.create({
         data: {
           name: `Unavailability test venue ${Date.now()}`,
           location: "Test block",
-          capacity: 50,
+          capacity: 500,
         },
       });
       venueId = venue.id;
@@ -150,10 +166,10 @@ describe.skipIf(!usesLocalDatabase)(
     });
 
     it("SCRUM-37 AC3 — a request over recorded maintenance is refused, with the same message shape as a booking clash", async () => {
-      await record(at(4, 1), at(4, 9));
+      await record(hoursFrom(event.startAt, -1), hoursFrom(event.startAt, 1));
       mockAuth.mockResolvedValue(COORDINATOR);
 
-      const result = await request(at(4, 5), at(4, 7));
+      const result = await request();
 
       expect(result.ok).toBe(false);
       if (result.ok) return;
@@ -216,10 +232,10 @@ describe.skipIf(!usesLocalDatabase)(
     });
 
     it("SCRUM-37 AC5 — maintenance ending exactly as a request begins does not clash", async () => {
-      await record(at(8, 1), at(8, 5));
+      await record(hoursFrom(event.startAt, -4), event.startAt.toISOString());
       mockAuth.mockResolvedValue(COORDINATOR);
 
-      const result = await request(at(8, 5), at(8, 8));
+      const result = await request();
 
       expect(result.ok && result.data.created).toBe(true);
     });
