@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { checkQuantity } from "@/lib/equipment/availability";
+import { checkQuantity, type Availability } from "@/lib/equipment/availability";
 import { formatEventPeriod } from "@/lib/equipment/requests";
 import type { ReservableRequest } from "@/lib/equipment/request-queries";
 import { sgWallTimeToUtcIso, utcToSgWallTime } from "@/lib/datetime";
@@ -25,7 +25,7 @@ import {
 
 type Equipment = { id: string; type: string; totalQuantity: number };
 type Row = { key: number; equipmentId: string; quantity: string };
-type AvailabilityMap = Record<string, { available: number; total: number }>;
+type AvailabilityMap = Record<string, Availability>;
 
 const OFFLINE =
   "Couldn't reach the server. Check your connection and try again.";
@@ -62,6 +62,9 @@ export function ReserveRequestCard({
     null,
   );
   const [previewFailed, setPreviewFailed] = useState(false);
+  // Bumped whenever the free counts may be stale with the period unchanged:
+  // a request is chosen again, or a reservation has just used up stock.
+  const [previewVersion, setPreviewVersion] = useState(0);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -94,7 +97,7 @@ export function ReserveRequestCard({
       current = false;
       clearTimeout(timer);
     };
-  }, [startIso, endIso]);
+  }, [startIso, endIso, previewVersion]);
 
   const clearMessages = () => {
     setFieldErrors({});
@@ -105,6 +108,7 @@ export function ReserveRequestCard({
     clearMessages();
     setAvailability(null);
     setPreviewFailed(false);
+    setPreviewVersion((version) => version + 1);
     setRequestId(id);
     const request = requests.find((candidate) => candidate.id === id);
     setStartAt(utcToSgWallTime(request?.event.startAt));
@@ -164,6 +168,7 @@ export function ReserveRequestCard({
         setRequestId("");
         setRows([]);
         setAvailability(null);
+        setPreviewVersion((version) => version + 1);
       } catch {
         // An unexpected failure rejects instead of returning an error, so the
         // card says so rather than only stopping its spinner.
@@ -260,10 +265,7 @@ export function ReserveRequestCard({
                 const quantity = Number(row.quantity);
                 const verdict =
                   free && Number.isInteger(quantity) && quantity > 0
-                    ? checkQuantity(
-                        { ...free, committed: free.total - free.available },
-                        quantity,
-                      )
+                    ? checkQuantity(free, quantity)
                     : null;
                 const errors = [
                   ...(fieldErrors[`lines.${index}.equipmentId`] ?? []),

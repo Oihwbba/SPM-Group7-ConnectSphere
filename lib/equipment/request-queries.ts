@@ -233,21 +233,29 @@ export type QueuedEquipmentRequest = Awaited<
 
 /**
  * SCRUM-155 AC 1 & 6 — a request Technical Support can reserve: approved, for
- * an event that can still take a reservation, and not reserved yet. The
- * listing and the reserve action share it, so what is offered is exactly what
- * the action accepts. A cancelled reservation releases its stock (SCRUM-32),
- * so only a confirmed one counts as reserved.
+ * an event that can still take a reservation and has not started, with
+ * nothing reserved for that event yet. "Reserved" is judged by the event, not
+ * the request: the one-type form (SCRUM-31) reserves without linking a
+ * request, and the SCRUM-110 checklist counts by event too, so judging by the
+ * request would offer stock that is already held. A cancelled reservation
+ * releases its stock (SCRUM-32), so only a confirmed one counts. The listing
+ * and the reserve action share this, so what is offered is what is accepted.
  */
-export const RESERVABLE_REQUEST = {
-  status: "APPROVED",
-  event: { status: { in: RESERVABLE_EVENT_STATUSES } },
-  reservations: { none: { status: "CONFIRMED" } },
-} satisfies Prisma.EquipmentRequestWhereInput;
+export function reservableRequest(now: Date) {
+  return {
+    status: "APPROVED",
+    event: {
+      status: { in: RESERVABLE_EVENT_STATUSES },
+      startAt: { gt: now },
+      reservations: { none: { status: "CONFIRMED" } },
+    },
+  } satisfies Prisma.EquipmentRequestWhereInput;
+}
 
 /** SCRUM-155 AC 1 & 2 — approved requests to reserve, with what they asked for. */
-export async function getReservableRequests() {
+export async function getReservableRequests(now = new Date()) {
   return prisma.equipmentRequest.findMany({
-    where: RESERVABLE_REQUEST,
+    where: reservableRequest(now),
     select: {
       id: true,
       event: { select: { id: true, name: true, startAt: true, endAt: true } },

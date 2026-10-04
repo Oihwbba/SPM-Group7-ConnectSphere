@@ -12,7 +12,6 @@ import { RESERVABLE_EVENT_STATUSES } from "@/lib/schemas/reservation";
 // tests/integration/request-reservation.test.ts.
 const tx = vi.hoisted(() => ({
   equipmentRequest: { findFirst: vi.fn() },
-  equipment: { findFirst: vi.fn() },
   reservation: { findMany: vi.fn(), createMany: vi.fn() },
   equipmentUnavailability: { findMany: vi.fn() },
   $queryRaw: vi.fn(),
@@ -33,6 +32,7 @@ function sessionFor(role: Role, id: string): Session {
   };
 }
 
+// The event runs 09:00–17:00 Singapore time; reservations default to it.
 const START = "2030-06-01T01:00:00.000Z";
 const END = "2030-06-01T09:00:00.000Z";
 
@@ -46,25 +46,36 @@ const validInput = {
   ],
 };
 
+const POOLS = [
+  { id: "eq_mic", totalQuantity: 4 },
+  { id: "eq_projector", totalQuantity: 10 },
+];
+
 /**
  * An approved request for evt_1. Projectors: 10 in the pool, 5 reserved for
  * the whole period, so 5 are free. Microphones: 4 in the pool, none committed.
+ * The three raw queries are the locks, in order: request, event, equipment.
  */
-function approvedRequestWithStock() {
+function approvedRequestWithStock({
+  pools = POOLS,
+  event = { startAt: new Date(START), endAt: new Date(END) } as {
+    startAt: Date | null;
+    endAt: Date | null;
+  },
+} = {}) {
   tx.$queryRaw
     .mockResolvedValueOnce([{ id: "eqr_1" }])
-    .mockResolvedValueOnce([{ id: "eq_mic" }, { id: "eq_projector" }]);
-  tx.equipmentRequest.findFirst.mockResolvedValue({ eventId: "evt_1" });
-  tx.equipment.findFirst.mockImplementation(({ where }) =>
-    Promise.resolve({ totalQuantity: where.id === "eq_projector" ? 10 : 4 }),
-  );
-  tx.reservation.findMany.mockImplementation(({ where }) =>
-    Promise.resolve(
-      where.equipmentId === "eq_projector"
-        ? [{ startAt: new Date(START), endAt: new Date(END), quantity: 5 }]
-        : [],
-    ),
-  );
+    .mockResolvedValueOnce([{ id: "evt_1" }])
+    .mockResolvedValueOnce(pools);
+  tx.equipmentRequest.findFirst.mockResolvedValue({ eventId: "evt_1", event });
+  tx.reservation.findMany.mockResolvedValue([
+    {
+      equipmentId: "eq_projector",
+      startAt: new Date(START),
+      endAt: new Date(END),
+      quantity: 5,
+    },
+  ]);
   tx.equipmentUnavailability.findMany.mockResolvedValue([]);
   tx.reservation.createMany.mockResolvedValue({ count: 2 });
 }
@@ -150,31 +161,71 @@ describe("reserveEquipmentRequest — SCRUM-155", () => {
     expect(tx.reservation.createMany).not.toHaveBeenCalled();
   });
 
-  it("SCRUM-155 [AC5] TC-155-08: locks the request first, then the equipment rows in id order, before counting anything", async () => {
+  it("SCRUM-155 [AC4] TC-155-05: equipment under maintenance for the period counts against the row, like a reservation", async () => {
+    approvedRequestWithStock();
+    tx.equipmentUnavailability.findMany.mockResolvedValue([
+      {
+        equipmentId: "eq_mic",
+        startAt: new Date(START),
+        endAt: new Date(END),
+        quantity: 2,
+      },
+    ]);
+
+    const result = await reserveEquipmentRequest(validInput);
+
+    expect(result.ok).toBe(false);
+    if (!result.ok)
+      expect(result.fieldErrors).toEqual({
+        "lines.1.quantity": ["Only 2 of 4 free for this period — 1 short."],
+      });
+    expect(tx.reservation.createMany).not.toHaveBeenCalled();
+  });
+
+  it("SCRUM-155 [AC4] counts every type's commitments in two queries, not three per row", async () => {
     approvedRequestWithStock();
 
     await reserveEquipmentRequest(validInput);
 
-    const [requestLock, equipmentLock] = tx.$queryRaw.mock.calls;
+    expect(tx.reservation.findMany).toHaveBeenCalledTimes(1);
+    expect(tx.equipmentUnavailability.findMany).toHaveBeenCalledTimes(1);
+    expect(tx.reservation.findMany.mock.calls[0][0].where).toMatchObject({
+      equipmentId: { in: ["eq_projector", "eq_mic"] },
+      status: "CONFIRMED",
+      startAt: { lt: new Date(END) },
+      endAt: { gt: new Date(START) },
+    });
+  });
+
+  it("SCRUM-155 [AC5] TC-155-08: locks the request, then its event, then the equipment rows in id order, before reading or counting anything", async () => {
+    approvedRequestWithStock();
+
+    await reserveEquipmentRequest(validInput);
+
+    const [requestLock, eventLock, equipmentLock] = tx.$queryRaw.mock.calls;
     expect(requestLock[0].join("?")).toMatch(
       /FROM "EquipmentRequest" WHERE "id" = \? FOR UPDATE/,
     );
     expect(requestLock[1]).toBe("eqr_1");
-    expect(equipmentLock[0].join("?")).toMatch(/ORDER BY "id" FOR UPDATE/);
-    // Rows arrive projector-then-mic; the lock takes them sorted by id.
-    expect(equipmentLock[1].values).toEqual(["eq_mic", "eq_projector"]);
-
-    const [lockRequestAt, lockEquipmentAt] =
-      tx.$queryRaw.mock.invocationCallOrder;
-    expect(lockRequestAt).toBeLessThan(
-      tx.equipmentRequest.findFirst.mock.invocationCallOrder[0],
+    expect(eventLock[0].join("?")).toMatch(
+      /FROM "Event" e[\s\S]*FOR UPDATE OF e/,
     );
-    expect(lockEquipmentAt).toBeLessThan(
+    expect(eventLock[1]).toBe("eqr_1");
+    expect(equipmentLock[0].join("?")).toMatch(/ORDER BY "id" FOR UPDATE/);
+    expect(equipmentLock[1].values).toEqual(["eq_projector", "eq_mic"]);
+
+    const [requestAt, eventAt, equipmentAt] =
+      tx.$queryRaw.mock.invocationCallOrder;
+    const readAt = tx.equipmentRequest.findFirst.mock.invocationCallOrder[0];
+    expect(requestAt).toBeLessThan(eventAt);
+    expect(eventAt).toBeLessThan(readAt);
+    expect(readAt).toBeLessThan(equipmentAt);
+    expect(equipmentAt).toBeLessThan(
       tx.reservation.findMany.mock.invocationCallOrder[0],
     );
   });
 
-  it("SCRUM-155 [AC1, AC6] TC-155-01: only an approved, unreserved request for an Approved or Planning event is accepted", async () => {
+  it("SCRUM-155 [AC1, AC6] TC-155-01: accepts only an approved request for an Approved or Planning event that hasn't started and has nothing reserved yet", async () => {
     approvedRequestWithStock();
 
     await reserveEquipmentRequest(validInput);
@@ -183,14 +234,20 @@ describe("reserveEquipmentRequest — SCRUM-155", () => {
       where: {
         id: "eqr_1",
         status: "APPROVED",
-        event: { status: { in: RESERVABLE_EVENT_STATUSES } },
-        reservations: { none: { status: "CONFIRMED" } },
+        event: {
+          status: { in: RESERVABLE_EVENT_STATUSES },
+          startAt: { gt: expect.any(Date) },
+          reservations: { none: { status: "CONFIRMED" } },
+        },
       },
-      select: { eventId: true },
+      select: {
+        eventId: true,
+        event: { select: { startAt: true, endAt: true } },
+      },
     });
   });
 
-  it("SCRUM-155 [AC1, AC6] TC-155-06, TC-155-10: a request already reserved, or no longer approved, is refused and nothing is written", async () => {
+  it("SCRUM-155 [AC1, AC6] TC-155-06, TC-155-10, TC-155-12: a request already reserved, or no longer approved, is refused and nothing is written", async () => {
     approvedRequestWithStock();
     tx.equipmentRequest.findFirst.mockResolvedValue(null);
 
@@ -202,31 +259,96 @@ describe("reserveEquipmentRequest — SCRUM-155", () => {
     expect(tx.reservation.createMany).not.toHaveBeenCalled();
   });
 
-  it("refuses a retired or unknown equipment type: the row lock finds fewer rows than asked for", async () => {
-    approvedRequestWithStock();
-    tx.$queryRaw.mockReset();
-    tx.$queryRaw
-      .mockResolvedValueOnce([{ id: "eqr_1" }])
-      .mockResolvedValueOnce([{ id: "eq_projector" }]);
+  describe("SCRUM-155 [AC2] TC-155-13: the period may grow but must cover the whole event", () => {
+    it("refuses a period that starts after the event begins, on the start field", async () => {
+      approvedRequestWithStock();
+
+      const result = await reserveEquipmentRequest({
+        ...validInput,
+        startAt: "2030-06-01T02:00:00.000Z",
+      });
+
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.error).toBe(
+          "The reservation must cover the whole event.",
+        );
+        expect(Object.keys(result.fieldErrors ?? {})).toEqual(["startAt"]);
+        expect(result.fieldErrors?.startAt?.[0]).toMatch(
+          /^Start by .*when the event begins\.$/,
+        );
+      }
+      expect(tx.reservation.createMany).not.toHaveBeenCalled();
+    });
+
+    it("refuses a period that ends before the event ends, on the end field", async () => {
+      approvedRequestWithStock();
+
+      const result = await reserveEquipmentRequest({
+        ...validInput,
+        endAt: "2030-06-01T08:00:00.000Z",
+      });
+
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(Object.keys(result.fieldErrors ?? {})).toEqual(["endAt"]);
+        expect(result.fieldErrors?.endAt?.[0]).toMatch(
+          /^End at .*or later, when the event ends\.$/,
+        );
+      }
+      expect(tx.reservation.createMany).not.toHaveBeenCalled();
+    });
+
+    it("accepts a period that extends past both ends, for set-up and pack-down", async () => {
+      approvedRequestWithStock();
+
+      const result = await reserveEquipmentRequest({
+        ...validInput,
+        startAt: "2030-06-01T00:00:00.000Z",
+        endAt: "2030-06-01T10:00:00.000Z",
+      });
+
+      expect(result).toEqual({ ok: true, data: { reserved: 2 } });
+    });
+
+    it("has nothing to check against when the event has no end date", async () => {
+      approvedRequestWithStock({
+        event: { startAt: new Date(START), endAt: null },
+      });
+
+      const result = await reserveEquipmentRequest(validInput);
+
+      expect(result).toEqual({ ok: true, data: { reserved: 2 } });
+    });
+
+    it("has nothing to check against when the event has no start date", async () => {
+      approvedRequestWithStock({
+        event: { startAt: null, endAt: new Date(END) },
+      });
+
+      const result = await reserveEquipmentRequest(validInput);
+
+      expect(result).toEqual({ ok: true, data: { reserved: 2 } });
+    });
+  });
+
+  it("marks the row whose equipment type has been retired, and reserves nothing", async () => {
+    approvedRequestWithStock({
+      pools: [{ id: "eq_projector", totalQuantity: 10 }],
+    });
 
     const result = await reserveEquipmentRequest(validInput);
 
     expect(result).toEqual({
       ok: false,
-      error: "Equipment type is unavailable.",
-      fieldErrors: undefined,
+      error: "Nothing was reserved: an equipment type is no longer available.",
+      fieldErrors: {
+        "lines.1.equipmentId": [
+          "This equipment type is no longer available. Choose another.",
+        ],
+      },
     });
-    expect(tx.reservation.createMany).not.toHaveBeenCalled();
-  });
-
-  it("refuses equipment the availability count cannot find after the row lock", async () => {
-    approvedRequestWithStock();
-    tx.equipment.findFirst.mockResolvedValue(null);
-
-    const result = await reserveEquipmentRequest(validInput);
-
-    expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.error).toBe("Equipment type is unavailable.");
+    expect(tx.reservation.findMany).not.toHaveBeenCalled();
     expect(tx.reservation.createMany).not.toHaveBeenCalled();
   });
 

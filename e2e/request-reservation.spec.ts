@@ -88,7 +88,9 @@ test.describe("SCRUM-155 — Reserve an approved request in one step", () => {
     page,
   }) => {
     const name = `SCRUM-155 prefill ${Date.now()}`;
+    const other = `SCRUM-155 same times ${Date.now()}`;
     await approvedRequest(name);
+    await approvedRequest(other);
     await signInAsTechSupport(page);
 
     await chooseRequest(page, name);
@@ -110,6 +112,13 @@ test.describe("SCRUM-155 — Reserve an approved request in one step", () => {
     );
     await expect(page.getByLabel("Units for item 2")).toHaveValue("2");
     // Each row says whether it fits before anything is saved.
+    await expect(rows.nth(0).getByTestId("row-availability")).toHaveText(
+      /\d+ of 10 free for this period\./,
+    );
+
+    // Switching straight to another request whose event has the same times
+    // checks again rather than leaving the rows blank (code review of #130).
+    await chooseRequest(page, other);
     await expect(rows.nth(0).getByTestId("row-availability")).toHaveText(
       /\d+ of 10 free for this period\./,
     );

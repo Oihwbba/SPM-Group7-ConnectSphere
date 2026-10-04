@@ -28,32 +28,35 @@ Approved and asks for 1 Projector and 2 Wireless Microphones.
 | [TC-155-09](#tc-155-09) | Negative    | AC 7      | Unit                   |
 | [TC-155-10](#tc-155-10) | Negative    | AC 1      | Unit, integration      |
 | [TC-155-11](#tc-155-11) | Negative    | Errors    | e2e                    |
+| [TC-155-12](#tc-155-12) | Negative    | AC 6      | Unit, integration      |
+| [TC-155-13](#tc-155-13) | Negative    | AC 2      | Unit, integration      |
+| [TC-155-14](#tc-155-14) | Negative    | AC 7      | Unit                   |
 
 ---
 
 ### TC-155-01
 
-| Item            | Content                                                                                                                                    |
-| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| Test Case ID    | TC-155-01                                                                                                                                  |
-| Test Scenario   | [Positive] AC 1: only approved, not-yet-reserved requests for an Approved or Planning event are offered                                    |
-| Pre-conditions  | One Approved request for a Planning event, one In Review request, and one Approved request for a Confirmed event.                          |
-| Test Steps      | 1. Open the **Approved request** list.                                                                                                     |
-| Test Data       | —                                                                                                                                          |
-| Expected Result | Only the Approved request for the Planning event is listed, by event name and period. The In Review one and the Confirmed event's are not. |
+| Item            | Content                                                                                                                                                                               |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Test Case ID    | TC-155-01                                                                                                                                                                             |
+| Test Scenario   | [Positive] AC 1: only approved requests for an Approved or Planning event that hasn't started, with nothing reserved for it yet, are offered                                          |
+| Pre-conditions  | One Approved request for a Planning event, one In Review request, one Approved request for a Confirmed event, and one Approved request for a Planning event that has already started. |
+| Test Steps      | 1. Open the **Approved request** list.                                                                                                                                                |
+| Test Data       | —                                                                                                                                                                                     |
+| Expected Result | Only the Approved request for the upcoming Planning event is listed, by event name and period. The In Review one, the Confirmed event's and the started event's are not.              |
 
 **Automated by:** `tests/unit/equipment-request-queries.test.ts` › "SCRUM-155 [AC1, AC6] TC-155-01: …"; `tests/unit/request-reservation.test.ts` › "SCRUM-155 [AC1, AC6] TC-155-01: …"; `tests/integration/request-reservation.test.ts` › "SCRUM-155 [AC1, AC6] TC-155-01, TC-155-06: …"
 
 ### TC-155-02
 
-| Item            | Content                                                                                                                                                                                               |
-| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Test Case ID    | TC-155-02                                                                                                                                                                                             |
-| Test Scenario   | [Positive] AC 2: choosing a request fills in its event's period and one row per line                                                                                                                  |
-| Pre-conditions  | Shared.                                                                                                                                                                                               |
-| Test Steps      | 1. Choose the request under **Approved request**.                                                                                                                                                     |
-| Test Data       | Event 09:00–17:00 Singapore time.                                                                                                                                                                     |
-| Expected Result | **Reservation starts** and **Reservation ends** show 09:00 and 17:00 on the event's day. Item 1 is Projector × 1 and Item 2 is Wireless Microphone × 2, each saying how many are free for the period. |
+| Item            | Content                                                                                                                                                                                                                                                  |
+| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Test Case ID    | TC-155-02                                                                                                                                                                                                                                                |
+| Test Scenario   | [Positive] AC 2: choosing a request fills in its event's period and one row per line                                                                                                                                                                     |
+| Pre-conditions  | Shared.                                                                                                                                                                                                                                                  |
+| Test Steps      | 1. Choose the request under **Approved request**. 2. Choose another request whose event has the same times.                                                                                                                                              |
+| Test Data       | Event 09:00–17:00 Singapore time.                                                                                                                                                                                                                        |
+| Expected Result | **Reservation starts** and **Reservation ends** show 09:00 and 17:00 on the event's day. Item 1 is Projector × 1 and Item 2 is Wireless Microphone × 2, each saying how many are free for the period. After step 2 the rows again say how many are free. |
 
 **Automated by:** `tests/unit/equipment-request-queries.test.ts` › "SCRUM-155 [AC2] TC-155-02: …"; `e2e/request-reservation.spec.ts` › "SCRUM-155 [AC1, AC2] TC-155-02: …"
 
@@ -107,7 +110,7 @@ Approved and asks for 1 Projector and 2 Wireless Microphones.
 | Test Data       | —                                                                                                                                                               |
 | Expected Result | 1. It is not listed. 2. "This request is not waiting to be reserved: it is already reserved, or no longer approved." Nothing is written. 3. It is listed again. |
 
-**Automated by:** `tests/unit/request-reservation.test.ts` › "SCRUM-155 [AC1, AC6] TC-155-06, TC-155-10: …"; `tests/integration/request-reservation.test.ts` › "SCRUM-155 [AC1, AC6] TC-155-01, TC-155-06: …"; `e2e/request-reservation.spec.ts` › "SCRUM-155 [AC3, AC6] TC-155-04, TC-155-06: …"
+**Automated by:** `tests/unit/request-reservation.test.ts` › "SCRUM-155 [AC1, AC6] TC-155-06, TC-155-10, TC-155-12: …"; `tests/integration/request-reservation.test.ts` › "SCRUM-155 [AC1, AC6] TC-155-01, TC-155-06: …"; `e2e/request-reservation.spec.ts` › "SCRUM-155 [AC3, AC6] TC-155-04, TC-155-06: …"
 
 ### TC-155-07
 
@@ -124,14 +127,14 @@ Approved and asks for 1 Projector and 2 Wireless Microphones.
 
 ### TC-155-08
 
-| Item            | Content                                                                                                                                                                       |
-| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Test Case ID    | TC-155-08                                                                                                                                                                     |
-| Test Scenario   | [Concurrency] AC 5: two requests needing the last unit of a type are reserved at the same moment, with their rows in opposite order                                           |
-| Pre-conditions  | A pool with one unit; two Approved requests for different events that each need it, plus another type with room for both.                                                     |
-| Test Steps      | 1. Reserve both requests at once.                                                                                                                                             |
-| Test Data       | Request A lists the roomy type first; request B lists the scarce type first.                                                                                                  |
-| Expected Result | One succeeds and the other reserves nothing at all. The scarce pool is never over-allocated, and neither attempt deadlocks: the equipment rows are always locked in id order. |
+| Item            | Content                                                                                                                                                                                                                       |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Test Case ID    | TC-155-08                                                                                                                                                                                                                     |
+| Test Scenario   | [Concurrency] AC 5: two requests needing the last unit of a type are reserved at the same moment, with their rows in opposite order                                                                                           |
+| Pre-conditions  | A pool with one unit; two Approved requests for different events that each need it, plus another type with room for both.                                                                                                     |
+| Test Steps      | 1. Reserve both requests at once.                                                                                                                                                                                             |
+| Test Data       | Request A lists the roomy type first; request B lists the scarce type first.                                                                                                                                                  |
+| Expected Result | One succeeds and the other reserves nothing at all. The scarce pool is never over-allocated, and neither attempt deadlocks: the request, its event and then the equipment rows (in id order) are always locked in that order. |
 
 **Automated by:** `tests/unit/request-reservation.test.ts` › "SCRUM-155 [AC5] TC-155-08: …"; `tests/integration/request-reservation.test.ts` › "SCRUM-155 [AC5] TC-155-08: …"
 
@@ -159,7 +162,7 @@ Approved and asks for 1 Projector and 2 Wireless Microphones.
 | Test Data       | —                                                                                                |
 | Expected Result | Refused; nothing is written.                                                                     |
 
-**Automated by:** `tests/unit/request-reservation.test.ts` › "SCRUM-155 [AC1, AC6] TC-155-06, TC-155-10: …"; `tests/integration/request-reservation.test.ts` › "SCRUM-155 [AC1] TC-155-10: …"
+**Automated by:** `tests/unit/request-reservation.test.ts` › "SCRUM-155 [AC1, AC6] TC-155-06, TC-155-10, TC-155-12: …"; `tests/integration/request-reservation.test.ts` › "SCRUM-155 [AC1] TC-155-10: …"
 
 ### TC-155-11
 
@@ -173,3 +176,42 @@ Approved and asks for 1 Projector and 2 Wireless Microphones.
 | Expected Result | 1. Under the rows: "Couldn't check what is free for this period. You can still reserve; the server checks again." 2. "Couldn't reach the server. Check your connection and try again." The button is usable again, and nothing is reserved. |
 
 **Automated by:** `e2e/request-reservation.spec.ts` › "SCRUM-155 TC-155-11: …"
+
+### TC-155-12
+
+| Item            | Content                                                                                                                                                        |
+| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Test Case ID    | TC-155-12                                                                                                                                                      |
+| Test Scenario   | [Negative] AC 6: stock already reserved for the event with the one-type form (SCRUM-31) is not reserved a second time                                          |
+| Pre-conditions  | The event's request is Approved, and Projector × 2 has already been reserved for the event on the **Reserve equipment** form, which does not link the request. |
+| Test Steps      | 1. Open the **Approved request** list. 2. Reserve the request directly.                                                                                        |
+| Test Data       | —                                                                                                                                                              |
+| Expected Result | 1. The request is not listed. 2. Refused as already reserved; the event still holds only the two projectors.                                                   |
+
+**Automated by:** `tests/unit/request-reservation.test.ts` › "SCRUM-155 [AC1, AC6] TC-155-06, TC-155-10, TC-155-12: …"; `tests/integration/request-reservation.test.ts` › "SCRUM-155 [AC6] TC-155-12: …"
+
+### TC-155-13
+
+| Item            | Content                                                                                                                                                                                                                                                                                           |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Test Case ID    | TC-155-13                                                                                                                                                                                                                                                                                         |
+| Test Scenario   | [Negative] AC 2: the period may be lengthened but must still cover the whole event                                                                                                                                                                                                                |
+| Pre-conditions  | Shared. The request is chosen.                                                                                                                                                                                                                                                                    |
+| Test Steps      | 1. Change the period to 10:00–12:00 and **Reserve all**. 2. Change it to 08:00–18:00 and **Reserve all**.                                                                                                                                                                                         |
+| Test Data       | Event 09:00–17:00 Singapore time.                                                                                                                                                                                                                                                                 |
+| Expected Result | 1. "The reservation must cover the whole event." Each field says what it must be ("Start by …, when the event begins." / "End at … or later, when the event ends."), nothing is reserved, and the request stays listed. 2. Reserved, so the SCRUM-110 checklist counts the equipment as reserved. |
+
+**Automated by:** `tests/unit/request-reservation.test.ts` › "SCRUM-155 [AC2] TC-155-13: …" (start, end, longer period, event without dates); `tests/integration/request-reservation.test.ts` › "SCRUM-155 [AC2] TC-155-13: …"
+
+### TC-155-14
+
+| Item            | Content                                                                                                                                      |
+| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| Test Case ID    | TC-155-14                                                                                                                                    |
+| Test Scenario   | [Negative] AC 7: a row whose equipment type has been retired since the request was made is marked on that row                                |
+| Pre-conditions  | The request asks for a type that is no longer active.                                                                                        |
+| Test Steps      | 1. Choose the request and **Reserve all**.                                                                                                   |
+| Test Data       | —                                                                                                                                            |
+| Expected Result | "Nothing was reserved: an equipment type is no longer available." The row says "This equipment type is no longer available. Choose another." |
+
+**Automated by:** `tests/unit/request-reservation.test.ts` › "marks the row whose equipment type has been retired, and reserves nothing"

@@ -9,16 +9,19 @@ import {
   type Mock,
 } from "vitest";
 import type { Session } from "next-auth";
-import type { EquipmentRequestStatus } from "@prisma/client";
+import type { EquipmentRequestStatus, EventStatus } from "@prisma/client";
 
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
-import { reserveEquipmentRequest } from "@/app/(app)/equipment/actions";
+import {
+  createReservation,
+  reserveEquipmentRequest,
+} from "@/app/(app)/equipment/actions";
 import { getReservableRequests } from "@/lib/equipment/request-queries";
 
 // SCRUM-155 — reserving an approved request in one step, against a real
-// Postgres: all rows or none, the request and pool locks under two staff at
-// once, and which requests are offered. These write throwaway equipment pools,
+// Postgres: all rows or none, the locks under two staff at once, and which
+// requests are offered. These write throwaway events, equipment pools,
 // requests and reservations (removed afterwards), so they run only against a
 // localhost database, never the shared Supabase one.
 vi.mock("@/auth", () => ({ auth: vi.fn() }));
@@ -37,7 +40,8 @@ const TECH_SUPPORT: Session = {
   expires: "2999-01-01T00:00:00.000Z",
 };
 
-// Far in the future, so seeded reservations and maintenance never overlap.
+// Every test event runs over this period, far in the future, so seeded
+// reservations and maintenance never overlap it.
 const PERIOD = {
   startAt: "2032-03-01T01:00:00.000Z",
   endAt: "2032-03-01T09:00:00.000Z",
@@ -46,17 +50,39 @@ const PERIOD = {
 describe.skipIf(!usesLocalDatabase)(
   "reserve an approved request (SCRUM-155)",
   () => {
-    // Three projectors-like units, and a single unit that two requests contend for.
+    // A pool with room for both racing requests, and a single contended unit.
     let roomy: string;
     let scarce: string;
+    const eventIds: string[] = [];
     const requestIds: string[] = [];
 
+    async function event(
+      status: EventStatus,
+      period: { startAt: string; endAt: string } = PERIOD,
+    ) {
+      const created = await prisma.event.create({
+        data: {
+          name: `SCRUM-155 integration ${status} ${Date.now()}`,
+          description:
+            "Owned by tests/integration/request-reservation.test.ts.",
+          status,
+          organiserId: "usr_organiser",
+          coordinatorId: "usr_coordinator",
+          startAt: new Date(period.startAt),
+          endAt: new Date(period.endAt),
+          expectedAttendance: 20,
+          submittedAt: new Date(),
+        },
+        select: { id: true },
+      });
+      eventIds.push(created.id);
+      return created.id;
+    }
+
     async function approvedRequest(
+      eventId: string,
       lines: { equipmentId: string; quantity: number }[],
-      {
-        eventId = "evt_planning",
-        status = "APPROVED",
-      }: { eventId?: string; status?: EquipmentRequestStatus } = {},
+      status: EquipmentRequestStatus = "APPROVED",
     ) {
       const request = await prisma.equipmentRequest.create({
         data: {
@@ -74,7 +100,7 @@ describe.skipIf(!usesLocalDatabase)(
     const reservedFor = (requestId: string) =>
       prisma.reservation.findMany({
         where: { requestId, status: "CONFIRMED" },
-        select: { eventId: true, equipmentId: true, quantity: true },
+        select: { equipmentId: true, quantity: true },
         orderBy: { equipmentId: "asc" },
       });
 
@@ -85,6 +111,9 @@ describe.skipIf(!usesLocalDatabase)(
           _sum: { quantity: true },
         })
       )._sum.quantity ?? 0;
+
+    const offered = async () =>
+      (await getReservableRequests()).map((request) => request.id);
 
     beforeAll(async () => {
       (auth as unknown as Mock).mockResolvedValue(TECH_SUPPORT);
@@ -108,6 +137,9 @@ describe.skipIf(!usesLocalDatabase)(
       await prisma.equipmentRequest.deleteMany({
         where: { id: { in: requestIds.splice(0) } },
       });
+      await prisma.event.deleteMany({
+        where: { id: { in: eventIds.splice(0) } },
+      });
     });
 
     afterAll(async () => {
@@ -117,7 +149,8 @@ describe.skipIf(!usesLocalDatabase)(
     });
 
     it("SCRUM-155 [AC3] TC-155-04: reserves every row together, Confirmed and linked to the event and the request", async () => {
-      const requestId = await approvedRequest([
+      const eventId = await event("PLANNING");
+      const requestId = await approvedRequest(eventId, [
         { equipmentId: roomy, quantity: 2 },
         { equipmentId: scarce, quantity: 1 },
       ]);
@@ -132,16 +165,22 @@ describe.skipIf(!usesLocalDatabase)(
       });
 
       expect(result).toEqual({ ok: true, data: { reserved: 2 } });
-      expect(await reservedFor(requestId)).toEqual(
-        [
-          { eventId: "evt_planning", equipmentId: roomy, quantity: 2 },
-          { eventId: "evt_planning", equipmentId: scarce, quantity: 1 },
-        ].sort((a, b) => a.equipmentId.localeCompare(b.equipmentId)),
+      const reserved = await prisma.reservation.findMany({
+        where: { requestId, status: "CONFIRMED" },
+        select: { eventId: true, equipmentId: true, quantity: true },
+      });
+      expect(reserved).toHaveLength(2);
+      expect(reserved).toEqual(
+        expect.arrayContaining([
+          { eventId, equipmentId: roomy, quantity: 2 },
+          { eventId, equipmentId: scarce, quantity: 1 },
+        ]),
       );
     });
 
     it("SCRUM-155 [AC4] TC-155-05: when one row is short, nothing is reserved — not even the rows that fit", async () => {
-      const requestId = await approvedRequest([
+      const eventId = await event("PLANNING");
+      const requestId = await approvedRequest(eventId, [
         { equipmentId: roomy, quantity: 2 },
         { equipmentId: scarce, quantity: 2 },
       ]);
@@ -165,7 +204,8 @@ describe.skipIf(!usesLocalDatabase)(
     });
 
     it("SCRUM-155 [AC5] TC-155-07: the same request reserved twice at the same moment is reserved once", async () => {
-      const requestId = await approvedRequest([
+      const eventId = await event("PLANNING");
+      const requestId = await approvedRequest(eventId, [
         { equipmentId: roomy, quantity: 1 },
       ]);
       const input = {
@@ -187,17 +227,14 @@ describe.skipIf(!usesLocalDatabase)(
     });
 
     it("SCRUM-155 [AC5] TC-155-08: two requests racing for the last unit never over-allocate, even with their rows in opposite order", async () => {
-      const first = await approvedRequest([
+      const first = await approvedRequest(await event("PLANNING"), [
         { equipmentId: roomy, quantity: 1 },
         { equipmentId: scarce, quantity: 1 },
       ]);
-      const second = await approvedRequest(
-        [
-          { equipmentId: scarce, quantity: 1 },
-          { equipmentId: roomy, quantity: 1 },
-        ],
-        { eventId: "evt_approved" },
-      );
+      const second = await approvedRequest(await event("APPROVED"), [
+        { equipmentId: scarce, quantity: 1 },
+        { equipmentId: roomy, quantity: 1 },
+      ]);
 
       const results = await Promise.all([
         reserveEquipmentRequest({
@@ -224,29 +261,31 @@ describe.skipIf(!usesLocalDatabase)(
       expect(await totalReserved(roomy)).toBe(1);
     });
 
-    it("SCRUM-155 [AC1, AC6] TC-155-01, TC-155-06: offers approved, unreserved requests only, and a cancelled reservation offers it again", async () => {
-      const approved = await approvedRequest([
+    it("SCRUM-155 [AC1, AC6] TC-155-01, TC-155-06: offers approved, unreserved requests for events that haven't started, and a cancelled reservation offers it again", async () => {
+      const approved = await approvedRequest(await event("PLANNING"), [
         { equipmentId: roomy, quantity: 1 },
       ]);
       const inReview = await approvedRequest(
+        await event("APPROVED"),
         [{ equipmentId: roomy, quantity: 1 }],
-        {
-          eventId: "evt_approved",
-          status: "IN_REVIEW",
-        },
+        "IN_REVIEW",
       );
       const forConfirmedEvent = await approvedRequest(
+        await event("CONFIRMED"),
         [{ equipmentId: roomy, quantity: 1 }],
-        {
-          eventId: "evt_confirmed",
-        },
       );
-      const offered = async () =>
-        (await getReservableRequests()).map((r) => r.id);
+      const forStartedEvent = await approvedRequest(
+        await event("PLANNING", {
+          startAt: "2026-01-01T01:00:00.000Z",
+          endAt: "2026-01-01T09:00:00.000Z",
+        }),
+        [{ equipmentId: roomy, quantity: 1 }],
+      );
 
       expect(await offered()).toContain(approved);
       expect(await offered()).not.toContain(inReview);
       expect(await offered()).not.toContain(forConfirmedEvent);
+      expect(await offered()).not.toContain(forStartedEvent);
 
       await reserveEquipmentRequest({
         requestId: approved,
@@ -269,16 +308,77 @@ describe.skipIf(!usesLocalDatabase)(
       expect(await offered()).toContain(approved);
     });
 
-    it("SCRUM-155 [AC1] TC-155-10: a request for a Confirmed event, or one not yet approved, is refused and nothing is written", async () => {
-      const forConfirmedEvent = await approvedRequest(
-        [{ equipmentId: roomy, quantity: 1 }],
-        {
-          eventId: "evt_confirmed",
-        },
-      );
+    it("SCRUM-155 [AC6] TC-155-12: stock already reserved for the event with the one-type form is not reserved twice", async () => {
+      const eventId = await event("PLANNING");
+      const requestId = await approvedRequest(eventId, [
+        { equipmentId: roomy, quantity: 2 },
+      ]);
+      // How Technical Support reserved before this card: one type at a time,
+      // with no link to the request.
+      const manual = await createReservation({
+        eventId,
+        equipmentId: roomy,
+        quantity: 2,
+        ...PERIOD,
+      });
+      expect(manual.ok).toBe(true);
+
+      expect(await offered()).not.toContain(requestId);
+      const result = await reserveEquipmentRequest({
+        requestId,
+        ...PERIOD,
+        lines: [{ equipmentId: roomy, quantity: 2 }],
+      });
+
+      expect(result.ok).toBe(false);
+      if (!result.ok) expect(result.error).toMatch(/already reserved/);
+      expect(await totalReserved(roomy)).toBe(2);
+    });
+
+    it("SCRUM-155 [AC2] TC-155-13: a period that doesn't cover the whole event is refused; a longer one is accepted", async () => {
+      const eventId = await event("PLANNING");
+      const requestId = await approvedRequest(eventId, [
+        { equipmentId: roomy, quantity: 1 },
+      ]);
+      const lines = [{ equipmentId: roomy, quantity: 1 }];
+
+      // 10:00–12:00 for a 09:00–17:00 event: the readiness checklist would
+      // never count it, so the request must not drop off the list.
+      const shortened = await reserveEquipmentRequest({
+        requestId,
+        startAt: "2032-03-01T02:00:00.000Z",
+        endAt: "2032-03-01T04:00:00.000Z",
+        lines,
+      });
+      expect(shortened.ok).toBe(false);
+      if (!shortened.ok)
+        expect(Object.keys(shortened.fieldErrors ?? {})).toEqual([
+          "startAt",
+          "endAt",
+        ]);
+      expect(await totalReserved(roomy)).toBe(0);
+      expect(await offered()).toContain(requestId);
+
+      // An hour either side for set-up and pack-down still covers it.
+      const longer = await reserveEquipmentRequest({
+        requestId,
+        startAt: "2032-03-01T00:00:00.000Z",
+        endAt: "2032-03-01T10:00:00.000Z",
+        lines,
+      });
+      expect(longer).toEqual({ ok: true, data: { reserved: 1 } });
+      expect(await reservedFor(requestId)).toEqual([
+        { equipmentId: roomy, quantity: 1 },
+      ]);
+    });
+
+    it("SCRUM-155 [AC1] TC-155-10: a request for a Confirmed event is refused and nothing is written", async () => {
+      const requestId = await approvedRequest(await event("CONFIRMED"), [
+        { equipmentId: roomy, quantity: 1 },
+      ]);
 
       const result = await reserveEquipmentRequest({
-        requestId: forConfirmedEvent,
+        requestId,
         ...PERIOD,
         lines: [{ equipmentId: roomy, quantity: 1 }],
       });

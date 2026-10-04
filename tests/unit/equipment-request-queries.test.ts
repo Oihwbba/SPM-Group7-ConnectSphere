@@ -137,19 +137,31 @@ describe("getEquipmentCatalogue — SCRUM-27 AC 2", () => {
 });
 
 describe("getReservableRequests — SCRUM-155", () => {
-  it("SCRUM-155 [AC1, AC6] TC-155-01: offers only approved requests for events that can still take a reservation, and not ones already reserved", async () => {
-    await getReservableRequests();
+  it("SCRUM-155 [AC1, AC6] TC-155-01: offers only approved requests for events that can still take a reservation, haven't started and have nothing reserved", async () => {
+    const now = new Date("2030-01-01T00:00:00.000Z");
+
+    await getReservableRequests(now);
 
     expect(db.equipmentRequest.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: {
           status: "APPROVED",
-          event: { status: { in: RESERVABLE_EVENT_STATUSES } },
-          reservations: { none: { status: "CONFIRMED" } },
+          event: {
+            status: { in: RESERVABLE_EVENT_STATUSES },
+            startAt: { gt: now },
+            reservations: { none: { status: "CONFIRMED" } },
+          },
         },
         orderBy: { event: { startAt: "asc" } },
       }),
     );
+  });
+
+  it("SCRUM-155 [AC1]: judges \"not started\" against the current time when none is given", async () => {
+    await getReservableRequests();
+
+    const { where } = db.equipmentRequest.findMany.mock.calls[0][0];
+    expect(where.event.startAt.gt).toBeInstanceOf(Date);
   });
 
   it("SCRUM-155 [AC2] TC-155-02: reads each request's event period and its lines in the order they were entered", async () => {

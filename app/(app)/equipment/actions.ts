@@ -1,7 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import type { z } from "zod";
 import { Prisma } from "@prisma/client";
 
 import { auth } from "@/auth";
@@ -13,7 +12,9 @@ import {
   summariseAvailability,
   type ScheduleEntry,
 } from "@/lib/equipment/availability";
-import { RESERVABLE_REQUEST } from "@/lib/equipment/request-queries";
+import { reservableRequest } from "@/lib/equipment/request-queries";
+import { formatDateTime } from "@/lib/datetime";
+import { fieldErrorsByPath } from "@/lib/schemas/equipment-request";
 import {
   allAvailabilitySchema,
   availabilitySchema,
@@ -351,24 +352,15 @@ export async function createReservation(
   }
 }
 
-/** Each message under its field's path, e.g. "lines.1.quantity", so a row shows its own. */
-function errorsByPath(error: z.ZodError): Record<string, string[]> {
-  const byPath: Record<string, string[]> = {};
-  for (const issue of error.issues) {
-    const key = issue.path.join(".");
-    (byPath[key] ??= []).push(issue.message);
-  }
-  return byPath;
-}
-
 /**
  * SCRUM-155 — reserve every row of an approved request together, or none.
  *
- * The request row is locked first, so two people reserving the same request
- * queue up and the second finds it already reserved (AC 5, 6). The equipment
- * rows are then locked in id order: two requests sharing types always lock
- * them in the same order, so they cannot deadlock, and each pool is counted
- * with nobody else writing to it (AC 5), as in createReservation.
+ * Locks, always in this order: the request row, so two people reserving the
+ * same request queue up and the second finds it already reserved (AC 5, 6);
+ * its event row, so the event cannot be confirmed (SCRUM-81) between the
+ * check below and the insert; then the equipment rows in id order, so two
+ * requests sharing types always lock them the same way and cannot deadlock,
+ * and each pool is counted with nobody else writing to it (AC 5).
  */
 export async function reserveEquipmentRequest(
   input: unknown,
@@ -380,72 +372,148 @@ export async function reserveEquipmentRequest(
     if (!userId) return err("You do not have permission to do that.");
     const parsed = requestReservationSchema.safeParse(input);
     if (!parsed.success)
-      return err("Please fix the reservation details.", errorsByPath(parsed.error));
+      return err(
+        "Please fix the reservation details.",
+        fieldErrorsByPath(parsed.error),
+      );
 
     const { requestId, lines } = parsed.data;
     const startAt = new Date(parsed.data.startAt);
     const endAt = new Date(parsed.data.endAt);
 
-    const result = await prisma.$transaction<RequestReserveOutcome>(async (tx) => {
-      await tx.$queryRaw`
+    const result = await prisma.$transaction<RequestReserveOutcome>(
+      async (tx) => {
+        await tx.$queryRaw`
         SELECT "id" FROM "EquipmentRequest" WHERE "id" = ${requestId} FOR UPDATE
       `;
-      const request = await tx.equipmentRequest.findFirst({
-        where: { id: requestId, ...RESERVABLE_REQUEST },
-        select: { eventId: true },
-      });
-      if (!request)
-        return {
-          error:
-            "This request is not waiting to be reserved: it is already reserved, or no longer approved.",
-        };
+        await tx.$queryRaw`
+        SELECT e."id" FROM "Event" e
+        JOIN "EquipmentRequest" r ON r."eventId" = e."id"
+        WHERE r."id" = ${requestId}
+        FOR UPDATE OF e
+      `;
+        const request = await tx.equipmentRequest.findFirst({
+          where: { id: requestId, ...reservableRequest(new Date()) },
+          select: {
+            eventId: true,
+            event: { select: { startAt: true, endAt: true } },
+          },
+        });
+        if (!request)
+          return {
+            error:
+              "This request is not waiting to be reserved: it is already reserved, or no longer approved.",
+          };
 
-      const equipmentIds = lines.map((line) => line.equipmentId).sort();
-      const locked = await tx.$queryRaw<{ id: string }[]>`
-        SELECT "id" FROM "Equipment"
+        // AC 2 — the period may grow (set-up, pack-down) but must cover the
+        // event: the SCRUM-110 checklist only counts a reservation that does.
+        const { event } = request;
+        const uncovered: Record<string, string[]> = {};
+        if (event.startAt && startAt > event.startAt)
+          uncovered.startAt = [
+            `Start by ${formatDateTime(event.startAt)}, when the event begins.`,
+          ];
+        if (event.endAt && endAt < event.endAt)
+          uncovered.endAt = [
+            `End at ${formatDateTime(event.endAt)} or later, when the event ends.`,
+          ];
+        if (Object.keys(uncovered).length)
+          return {
+            error: "The reservation must cover the whole event.",
+            fieldErrors: uncovered,
+          };
+
+        const equipmentIds = lines.map((line) => line.equipmentId);
+        const pools = await tx.$queryRaw<
+          { id: string; totalQuantity: number }[]
+        >`
+        SELECT "id", "totalQuantity" FROM "Equipment"
         WHERE "id" IN (${Prisma.join(equipmentIds)}) AND "isActive" = true
         ORDER BY "id" FOR UPDATE
       `;
-      if (locked.length !== equipmentIds.length)
-        return { error: "Equipment type is unavailable." };
-
-      // AC 4 — every row is checked before anything is written, so a short
-      // row reports itself and the rows that would fit are not reserved alone.
-      const shortfalls: Record<string, string[]> = {};
-      for (const [index, line] of lines.entries()) {
-        const availability = await availabilityForPeriod(
-          tx,
-          line.equipmentId,
-          startAt,
-          endAt,
+        const totals = new Map(
+          pools.map((pool) => [pool.id, pool.totalQuantity]),
         );
-        if (!availability) return { error: "Equipment type is unavailable." };
-        if (line.quantity > availability.available) {
-          shortfalls[`lines.${index}.quantity`] = [
-            `Only ${availability.available} of ${availability.total} free for this period — ${line.quantity - availability.available} short.`,
-          ];
-        }
-      }
-      if (Object.keys(shortfalls).length)
-        return {
-          error: "Nothing was reserved: not enough is free for the rows marked below.",
-          fieldErrors: shortfalls,
-        };
 
-      await tx.reservation.createMany({
-        data: lines.map((line) => ({
-          eventId: request.eventId,
-          requestId,
-          equipmentId: line.equipmentId,
-          quantity: line.quantity,
-          startAt,
-          endAt,
-          reservedById: userId,
-          status: "CONFIRMED" as const,
-        })),
-      });
-      return { reserved: lines.length };
-    });
+        // A type retired since the request was made is marked on its own row.
+        const retired: Record<string, string[]> = {};
+        lines.forEach((line, index) => {
+          if (!totals.has(line.equipmentId))
+            retired[`lines.${index}.equipmentId`] = [
+              "This equipment type is no longer available. Choose another.",
+            ];
+        });
+        if (Object.keys(retired).length)
+          return {
+            error:
+              "Nothing was reserved: an equipment type is no longer available.",
+            fieldErrors: retired,
+          };
+
+        // Rows, not sums, read once for every type: each pool's answer is its
+        // busiest instant (lib/equipment/availability.ts).
+        const overlapping = { startAt: { lt: endAt }, endAt: { gt: startAt } };
+        const select = {
+          equipmentId: true,
+          startAt: true,
+          endAt: true,
+          quantity: true,
+        } as const;
+        const reservations = await tx.reservation.findMany({
+          where: {
+            equipmentId: { in: equipmentIds },
+            status: "CONFIRMED",
+            ...overlapping,
+          },
+          select,
+        });
+        const unavailability = await tx.equipmentUnavailability.findMany({
+          where: { equipmentId: { in: equipmentIds }, ...overlapping },
+          select,
+        });
+
+        // AC 4 — every row is checked before anything is written, so a short
+        // row reports itself and the rows that would fit are not reserved alone.
+        const shortfalls: Record<string, string[]> = {};
+        lines.forEach((line, index) => {
+          const { available, total } = summariseAvailability({
+            total: totals.get(line.equipmentId)!,
+            reservations: reservations.filter(
+              (r) => r.equipmentId === line.equipmentId,
+            ),
+            unavailability: unavailability.filter(
+              (u) => u.equipmentId === line.equipmentId,
+            ),
+            startAt,
+            endAt,
+          });
+          if (line.quantity > available)
+            shortfalls[`lines.${index}.quantity`] = [
+              `Only ${available} of ${total} free for this period — ${line.quantity - available} short.`,
+            ];
+        });
+        if (Object.keys(shortfalls).length)
+          return {
+            error:
+              "Nothing was reserved: not enough is free for the rows marked below.",
+            fieldErrors: shortfalls,
+          };
+
+        await tx.reservation.createMany({
+          data: lines.map((line) => ({
+            eventId: request.eventId,
+            requestId,
+            equipmentId: line.equipmentId,
+            quantity: line.quantity,
+            startAt,
+            endAt,
+            reservedById: userId,
+            status: "CONFIRMED" as const,
+          })),
+        });
+        return { reserved: lines.length };
+      },
+    );
 
     if ("error" in result) return err(result.error, result.fieldErrors);
     revalidatePath("/equipment");
