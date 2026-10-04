@@ -175,6 +175,19 @@ test.describe("SCRUM-108 — Answer a clarification, or amend and resubmit", () 
         select: { id: true },
       })
     ).id;
+    // The history row the Coordinator's rejection writes.
+    await prisma.auditLog.create({
+      data: {
+        entityType: "Event",
+        entityId: eventId,
+        action: "STATUS_CHANGED",
+        actorId: "usr_coordinator",
+        fieldName: "status",
+        oldValue: "UNDER_REVIEW",
+        newValue: "REJECTED",
+        summary: reason,
+      },
+    });
 
     await signIn(page, "organiser@test.local");
     await page
@@ -246,5 +259,38 @@ test.describe("SCRUM-108 — Answer a clarification, or amend and resubmit", () 
         where: { entityId: eventId, action: "ASSIGNED" },
       }),
     ).toBe(0);
+    // AC9, AC14: the value the amendment replaced is kept, with who and when,
+    // and the rejection and its reason are still in the history.
+    const history = await prisma.auditLog.findMany({
+      where: { entityId: eventId },
+      select: {
+        action: true,
+        actorId: true,
+        fieldName: true,
+        oldValue: true,
+        newValue: true,
+        summary: true,
+        createdAt: true,
+      },
+    });
+    expect(history).toContainEqual({
+      action: "UPDATED",
+      actorId: "usr_organiser",
+      fieldName: "venueRequirements",
+      oldValue: "Any hall",
+      newValue: "Any hall — a different date is fine.",
+      summary: "Amended before resubmitting (SCRUM-108)",
+      createdAt: expect.any(Date),
+    });
+    expect(history).toContainEqual({
+      action: "STATUS_CHANGED",
+      actorId: "usr_coordinator",
+      fieldName: "status",
+      oldValue: "UNDER_REVIEW",
+      newValue: "REJECTED",
+      summary: reason,
+      createdAt: expect.any(Date),
+    });
+    expect(history.every((row) => row.createdAt instanceof Date)).toBe(true);
   });
 });

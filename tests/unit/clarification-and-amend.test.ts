@@ -459,11 +459,27 @@ describe("submitEventRequest — SCRUM-108 AC9–AC12, AC14 resubmission", () =>
     equipmentRequirements: "Projector",
     registrationNotes: "Online",
   };
+  // As rejected: the amendment above changes the description and attendance.
   const rejectedRow = (coordinatorId: string | null) => ({
     id: "evt1",
     organiserId: "usr_org",
     status: "REJECTED",
     coordinatorId,
+    name: "Amended Summit",
+    purpose: "Networking",
+    description: "Too big for the hall",
+    startAt: FUTURE_START,
+    endAt: FUTURE_END,
+    expectedAttendance: 300,
+    venueRequirements: "Hall",
+    requiredFacilities: [],
+    preferredLayout: "Theatre",
+    accessibilityNeeds: "Ramp",
+    equipmentRequirements: "Projector",
+    registrationNotes: "Online",
+    programme: null,
+    specialRequests: null,
+    timezone: "Asia/Singapore",
   });
 
   beforeEach(() => mockAuth.mockResolvedValue(organiser()));
@@ -515,6 +531,32 @@ describe("submitEventRequest — SCRUM-108 AC9–AC12, AC14 resubmission", () =>
         newValue: "UNDER_REVIEW",
       }),
     ]);
+    // AC9, AC14: the values the amendment replaced are kept, field by field,
+    // and fields left as they were are not recorded.
+    expect(tx.auditLog.createMany).toHaveBeenCalledWith({
+      data: [
+        {
+          entityType: "Event",
+          entityId: "evt1",
+          action: "UPDATED",
+          actorId: "usr_org",
+          fieldName: "description",
+          oldValue: "Too big for the hall",
+          newValue: "Reduced to fit the hall",
+          summary: "Amended before resubmitting (SCRUM-108)",
+        },
+        {
+          entityType: "Event",
+          entityId: "evt1",
+          action: "UPDATED",
+          actorId: "usr_org",
+          fieldName: "expectedAttendance",
+          oldValue: "300",
+          newValue: "120",
+          summary: "Amended before resubmitting (SCRUM-108)",
+        },
+      ],
+    });
   });
 
   it.each([

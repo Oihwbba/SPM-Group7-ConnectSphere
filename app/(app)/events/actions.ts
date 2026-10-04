@@ -234,32 +234,60 @@ export async function submitEventRequest(
         previousCoordinatorId = existing.coordinatorId;
         resubmitted = existing.status === "REJECTED";
 
+        const request = {
+          name,
+          purpose,
+          description,
+          startAt: new Date(startAt),
+          endAt: new Date(endAt),
+          expectedAttendance,
+          venueRequirements,
+          requiredFacilities,
+          accessibilityNeeds,
+          preferredLayout,
+          equipmentRequirements,
+          registrationNotes,
+          programme: programme ?? null,
+          specialRequests: specialRequests ?? null,
+          timezone: TIME_ZONE,
+        };
+
         await tx.event.update({
           where: { id },
           data: {
-            name,
-            purpose,
-            description,
+            ...request,
             status: "SUBMITTED",
             submittedAt: new Date(),
             decidedAt: null,
             decidedById: null,
             decisionReason: null,
             rejectionOutcome: null,
-            startAt: new Date(startAt),
-            endAt: new Date(endAt),
-            expectedAttendance,
-            venueRequirements,
-            requiredFacilities,
-            accessibilityNeeds,
-            preferredLayout,
-            equipmentRequirements,
-            registrationNotes,
-            programme: programme ?? null,
-            specialRequests: specialRequests ?? null,
-            timezone: TIME_ZONE,
           },
         });
+
+        // SCRUM-108 AC9, AC14: keep the values the amendment replaced, one
+        // row per changed field, as a clarification answer does.
+        if (resubmitted) {
+          const changed = (
+            Object.keys(request) as (keyof typeof request)[]
+          ).flatMap((fieldName) => {
+            const oldValue = asText(existing[fieldName]);
+            const newValue = asText(request[fieldName]);
+            return oldValue === newValue
+              ? []
+              : [{ fieldName, oldValue, newValue }];
+          });
+          await tx.auditLog.createMany({
+            data: changed.map((change) => ({
+              entityType: "Event",
+              entityId: id,
+              action: "UPDATED",
+              actorId: user!.id,
+              ...change,
+              summary: "Amended before resubmitting (SCRUM-108)",
+            })),
+          });
+        }
       } else {
         // Create and directly submit a new event request
         const created = await tx.event.create({
@@ -402,6 +430,16 @@ export async function submitEventRequest(
     }
     throw error;
   }
+}
+
+/** An event field as stored in an audit row's oldValue/newValue. An empty
+ * optional field is the same as a missing one, so it isn't a change. */
+function asText(
+  value: string | number | Date | string[] | null | undefined,
+): string | null {
+  if (value === null || value === undefined || value === "") return null;
+  if (value instanceof Date) return value.toISOString();
+  return Array.isArray(value) ? value.join(", ") : String(value);
 }
 
 /**

@@ -41,7 +41,17 @@ stayed in every Coordinator's list).
    keeps the previous Coordinator if they still hold the role, moves the event
    to Under Review, notifies them and records both steps; automatic assignment
    runs only if there was none or they no longer hold the role.
-7. **Whoever decides an unassigned request becomes its coordinator**, on
+7. **An amendment keeps the values it replaced.** Resubmitting overwrites the
+   request's fields in place (AC 9: the same event), so `submitEventRequest`
+   first compares the stored request with the amended one and writes one
+   `UPDATED` entry per changed field, with old and new values, by the
+   Organiser, as an answer does in decision 5. An empty optional field counts
+   as unset, so clearing nothing records nothing. The rejection's own entries,
+   with its reason, are never touched, although the event row's
+   `decisionReason` and `rejectionOutcome` are cleared on resubmission. Raised
+   by the PO in review of PR #129: AC 9's "history is kept" and AC 14's
+   "amendments are recorded" were only met for the status change.
+8. **Whoever decides an unassigned request becomes its coordinator**, on
    rejection as on approval (SCRUM-81 AC 2), so the rejected request leaves
    other Coordinators' lists and comes back to them on resubmission.
 
@@ -51,6 +61,9 @@ stayed in every Coordinator's list).
   per request doesn't need its own table.
 - **Let the answer change any field.** It would bypass the change-request
   process the customer asked for (SCRUM-41).
+- **Keep a snapshot of the whole rejected request.** A copy of every field
+  per resubmission repeats what didn't change; per-field entries match how
+  answers and change requests are already recorded.
 - **Always reassign on resubmission (Sprint 1).** The Coordinator who knows
   why it was rejected is best placed to review the amendment.
 

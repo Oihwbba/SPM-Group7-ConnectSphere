@@ -86,7 +86,7 @@ beforeEach(() => {
       $queryRaw: mockTxQueryRaw,
       user: { findMany: mockTxUserFindMany, findFirst: vi.fn() },
       notification: { createMany: mockTxNotificationCreateMany },
-      auditLog: { create: mockTxAuditLogCreate },
+      auditLog: { create: mockTxAuditLogCreate, createMany: vi.fn() },
     }),
   );
 });
