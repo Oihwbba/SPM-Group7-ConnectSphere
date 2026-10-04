@@ -27,6 +27,11 @@ type Equipment = { id: string; type: string; totalQuantity: number };
 type Row = { key: number; equipmentId: string; quantity: string };
 type AvailabilityMap = Record<string, { available: number; total: number }>;
 
+const OFFLINE =
+  "Couldn't reach the server. Check your connection and try again.";
+const PREVIEW_FAILED =
+  "Couldn't check what is free for this period. You can still reserve; the server checks again.";
+
 const SELECT_CLASS =
   "flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring";
 
@@ -56,6 +61,7 @@ export function ReserveRequestCard({
   const [availability, setAvailability] = useState<AvailabilityMap | null>(
     null,
   );
+  const [previewFailed, setPreviewFailed] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -70,11 +76,19 @@ export function ReserveRequestCard({
     if (!startIso || !endIso || endIso <= startIso) return;
     let current = true;
     const timer = setTimeout(async () => {
-      const result = await getAllEquipmentAvailability({
-        startAt: startIso,
-        endAt: endIso,
-      });
-      if (current) setAvailability(result.ok ? result.data : null);
+      try {
+        const result = await getAllEquipmentAvailability({
+          startAt: startIso,
+          endAt: endIso,
+        });
+        if (!current) return;
+        setAvailability(result.ok ? result.data : null);
+        setPreviewFailed(!result.ok);
+      } catch {
+        if (!current) return;
+        setAvailability(null);
+        setPreviewFailed(true);
+      }
     }, 300);
     return () => {
       current = false;
@@ -90,6 +104,7 @@ export function ReserveRequestCard({
   const choose = (id: string) => {
     clearMessages();
     setAvailability(null);
+    setPreviewFailed(false);
     setRequestId(id);
     const request = requests.find((candidate) => candidate.id === id);
     setStartAt(utcToSgWallTime(request?.event.startAt));
@@ -104,6 +119,7 @@ export function ReserveRequestCard({
   const changePeriod = (set: (value: string) => void, value: string) => {
     clearMessages();
     setAvailability(null);
+    setPreviewFailed(false);
     set(value);
   };
 
@@ -127,26 +143,32 @@ export function ReserveRequestCard({
   const reserve = () =>
     startTransition(async () => {
       clearMessages();
-      const result = await reserveEquipmentRequest({
-        requestId,
-        startAt: startIso ?? startAt,
-        endAt: endIso ?? endAt,
-        lines: rows.map((row) => ({
-          equipmentId: row.equipmentId,
-          quantity: row.quantity,
-        })),
-      });
-      if (!result.ok) {
-        setError(result.error);
-        setFieldErrors(result.fieldErrors ?? {});
-        return;
+      try {
+        const result = await reserveEquipmentRequest({
+          requestId,
+          startAt: startIso ?? startAt,
+          endAt: endIso ?? endAt,
+          lines: rows.map((row) => ({
+            equipmentId: row.equipmentId,
+            quantity: row.quantity,
+          })),
+        });
+        if (!result.ok) {
+          setError(result.error);
+          setFieldErrors(result.fieldErrors ?? {});
+          return;
+        }
+        toast.success(
+          `Reserved ${result.data.reserved} item(s) for ${chosen?.event.name}.`,
+        );
+        setRequestId("");
+        setRows([]);
+        setAvailability(null);
+      } catch {
+        // An unexpected failure rejects instead of returning an error, so the
+        // card says so rather than only stopping its spinner.
+        setError(OFFLINE);
       }
-      toast.success(
-        `Reserved ${result.data.reserved} item(s) for ${chosen?.event.name}.`,
-      );
-      setRequestId("");
-      setRows([]);
-      setAvailability(null);
     });
 
   return (
@@ -321,6 +343,14 @@ export function ReserveRequestCard({
               })}
             </ul>
             <FieldError messages={fieldErrors.lines} />
+            {previewFailed && (
+              <p
+                className="text-xs text-muted-foreground"
+                data-testid="preview-failed"
+              >
+                {PREVIEW_FAILED}
+              </p>
+            )}
 
             <div className="flex flex-wrap items-center justify-between gap-3">
               <Button type="button" variant="outline" onClick={addRow}>

@@ -194,4 +194,29 @@ test.describe("SCRUM-155 — Reserve an approved request in one step", () => {
     ).toHaveCount(2);
     expect(await prisma.reservation.count({ where: { requestId } })).toBe(0);
   });
+
+  test("SCRUM-155 TC-155-11: when the server can't be reached, the card says so instead of failing silently", async ({
+    page,
+  }) => {
+    const name = `SCRUM-155 offline ${Date.now()}`;
+    const requestId = await approvedRequest(name);
+    await signInAsTechSupport(page);
+    // Server actions POST to the page; failing them is what a dropped
+    // connection or a server error looks like to the card.
+    await page.route("**/equipment", (route) =>
+      route.request().method() === "POST" ? route.abort() : route.continue(),
+    );
+    await chooseRequest(page, name);
+
+    await expect(page.getByTestId("preview-failed")).toBeVisible();
+    await page.getByRole("button", { name: "Reserve all 2 item(s)" }).click();
+
+    await expect(
+      page.getByRole("alert").filter({ hasText: "Couldn't reach the server" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Reserve all 2 item(s)" }),
+    ).toBeEnabled();
+    expect(await prisma.reservation.count({ where: { requestId } })).toBe(0);
+  });
 });

@@ -95,4 +95,4 @@ defect, e.g. `regression: a blank rejection reason was accepted`.
 | [SCRUM-81](SCRUM-81.md) | Jun Bin | 13 | Every case automated (unit, integration for the simultaneous confirm, e2e for the journey) |
 | [SCRUM-110](SCRUM-110.md) | Jun Bin | 15 | Every case automated (unit, and e2e for the page) |
 | [SCRUM-126](SCRUM-126.md) | Jun Bin | 10 | Every case automated (unit, integration for the constraint, migration and simultaneous clicks, e2e for the journey) |
-| [SCRUM-155](SCRUM-155.md) | Jin Hong | 10 | Every case automated (unit, integration for all-or-nothing and the two races, e2e for the journey) |
+| [SCRUM-155](SCRUM-155.md) | Jin Hong | 11 | Every case automated (unit, integration for all-or-nothing and the two races, e2e for the journey) |

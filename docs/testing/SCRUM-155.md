@@ -27,6 +27,7 @@ Approved and asks for 1 Projector and 2 Wireless Microphones.
 | [TC-155-08](#tc-155-08) | Concurrency | AC 5      | Unit, integration      |
 | [TC-155-09](#tc-155-09) | Negative    | AC 7      | Unit                   |
 | [TC-155-10](#tc-155-10) | Negative    | AC 1      | Unit, integration      |
+| [TC-155-11](#tc-155-11) | Negative    | Errors    | e2e                    |
 
 ---
 
@@ -159,3 +160,16 @@ Approved and asks for 1 Projector and 2 Wireless Microphones.
 | Expected Result | Refused; nothing is written.                                                                     |
 
 **Automated by:** `tests/unit/request-reservation.test.ts` › "SCRUM-155 [AC1, AC6] TC-155-06, TC-155-10: …"; `tests/integration/request-reservation.test.ts` › "SCRUM-155 [AC1] TC-155-10: …"
+
+### TC-155-11
+
+| Item            | Content                                                                                                                                                                                                                                     |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Test Case ID    | TC-155-11                                                                                                                                                                                                                                   |
+| Test Scenario   | [Negative] Errors (GLM review of #130): when the server can't be reached, the card says so instead of failing silently                                                                                                                      |
+| Pre-conditions  | Shared. The connection to the server drops, or the server fails, after the page has loaded.                                                                                                                                                 |
+| Test Steps      | 1. Choose the request. 2. **Reserve all 2 item(s)**.                                                                                                                                                                                        |
+| Test Data       | —                                                                                                                                                                                                                                           |
+| Expected Result | 1. Under the rows: "Couldn't check what is free for this period. You can still reserve; the server checks again." 2. "Couldn't reach the server. Check your connection and try again." The button is usable again, and nothing is reserved. |
+
+**Automated by:** `e2e/request-reservation.spec.ts` › "SCRUM-155 TC-155-11: …"
