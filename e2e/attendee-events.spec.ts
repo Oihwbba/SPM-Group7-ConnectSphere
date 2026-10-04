@@ -166,6 +166,68 @@ test.describe("SCRUM-72 — Attendee browses confirmed events", () => {
     expect(response?.status()).toBe(404);
   });
 
+  for (const id of ["evt_draft", "evt_planning", "evt_completed"]) {
+    test(`AC7, AC8: going straight to /events/${id} (not Confirmed) 404s`, async ({
+      page,
+    }) => {
+      const response = await page.goto(`/events/${id}`);
+      expect(response?.status()).toBe(404);
+    });
+  }
+
+  for (const { id, label } of [
+    { id: "evt_reg_closed", label: "Registration closed" },
+    { id: "evt_reg_not_open", label: "Registration not yet open" },
+  ]) {
+    test(`AC4, AC8: going straight to /events/${id} shows "${label}" with Register disabled`, async ({
+      page,
+    }) => {
+      // attendee4 holds no registrations in the seed, so the Register button
+      // is shown rather than "You're registered".
+      await page.context().clearCookies();
+      await page.goto("/login");
+      await page
+        .getByLabel("Email", { exact: true })
+        .fill("attendee4@test.local");
+      await page.getByLabel("Password", { exact: true }).fill("Password123!");
+      await page.getByRole("button", { name: "Sign in" }).click();
+      await page.waitForURL("**/events");
+
+      const response = await page.goto(`/events/${id}`);
+      expect(response?.status()).toBe(200);
+      await expect(page.getByTestId("registration-state-badge")).toHaveText(
+        label,
+      );
+      await expect(page.getByTestId("register-button")).toBeDisabled();
+    });
+  }
+
+  test("SCRUM-72 review: typing a keyword narrows the list to matching events, ignoring case", async ({
+    page,
+  }) => {
+    const search = page.getByLabel("Search events by name or description");
+
+    await search.fill("WINE");
+    await expect(
+      page.getByText("Full — Wine Tasting Evening", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByText("Registration Not Yet Open — Summer Camp", {
+        exact: true,
+      }),
+    ).not.toBeVisible();
+
+    await search.fill("no event is called this");
+    await expect(page.getByText("No events match your search.")).toBeVisible();
+
+    await search.fill("");
+    await expect(
+      page.getByText("Registration Not Yet Open — Summer Camp", {
+        exact: true,
+      }),
+    ).toBeVisible();
+  });
+
   test("a non-existent event id 404s the same way as a real but invisible one", async ({
     page,
   }) => {

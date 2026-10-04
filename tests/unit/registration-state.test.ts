@@ -2,11 +2,14 @@ import { describe, it, expect } from "vitest";
 
 import {
   computeRegistrationState,
+  effectiveClosesAt,
+  registrationPeriodText,
   remainingCapacity,
   totalCapacity,
   canRegisterNow,
   REGISTRATION_STATE_LABEL,
 } from "@/lib/registration-state";
+import { formatDateTime } from "@/lib/datetime";
 
 // SCRUM-72/73/74 — this is the ONE place the registration-state rule is
 // defined, so it gets its own dedicated, pure (no mocking) test file. The
@@ -19,6 +22,7 @@ function baseEvent(
     registrationEnabled: boolean;
     registrationOpensAt: Date | null;
     registrationClosesAt: Date | null;
+    startAt: Date | null;
   }> = {},
 ) {
   return {
@@ -26,6 +30,7 @@ function baseEvent(
     registrationEnabled: true,
     registrationOpensAt: null,
     registrationClosesAt: null,
+    startAt: null,
     ...over,
   };
 }
@@ -91,7 +96,7 @@ describe("computeRegistrationState — precedence and each state", () => {
     ).toBe("EXPIRED");
   });
 
-  it("[Boundary] registrationClosesAt exactly now counts as already closed (<=, not <)", () => {
+  it("[Boundary] SCRUM-75 AC7: registrationClosesAt exactly now counts as already closed (<=, not <)", () => {
     expect(
       computeRegistrationState(
         baseEvent({ registrationClosesAt: now }),
@@ -189,5 +194,129 @@ describe("SCRUM-129 [AC5 - One period convention]: the registration window inclu
 
   it("SCRUM-129 [AC5 - One period convention]: registration is no longer open at the exact closing instant", () => {
     expect(computeRegistrationState(windowEvent, 0, closesAt)).toBe("EXPIRED");
+  });
+});
+
+describe("SCRUM-72 AC5 / SCRUM-75 AC4, AC8: registration closes at the event's start", () => {
+  const startAt = new Date("2031-06-10T01:00:00Z");
+  const before = new Date("2031-06-09T01:00:00Z");
+  const after = new Date("2031-06-10T02:00:00Z");
+
+  it("SCRUM-72 AC5: no period set, before the event starts → OPEN", () => {
+    expect(computeRegistrationState(baseEvent({ startAt }), 0, before)).toBe(
+      "OPEN",
+    );
+  });
+
+  it("SCRUM-72 AC5: no period set, at the exact start instant → closed", () => {
+    expect(computeRegistrationState(baseEvent({ startAt }), 0, startAt)).toBe(
+      "EXPIRED",
+    );
+  });
+
+  it("SCRUM-72 AC5: no period set, after the event starts → closed", () => {
+    expect(computeRegistrationState(baseEvent({ startAt }), 0, after)).toBe(
+      "EXPIRED",
+    );
+  });
+
+  it("SCRUM-75 AC8: a closing time later than the start is ignored once the event has started", () => {
+    const stale = baseEvent({
+      startAt,
+      registrationClosesAt: new Date("2031-06-12T01:00:00Z"),
+    });
+    expect(computeRegistrationState(stale, 0, after)).toBe("EXPIRED");
+  });
+
+  it("SCRUM-75 AC8: an event that has started is closed even when it is also full", () => {
+    expect(
+      computeRegistrationState(
+        baseEvent({ startAt, expectedAttendance: 5 }),
+        5,
+        after,
+      ),
+    ).toBe("EXPIRED");
+  });
+});
+
+describe("effectiveClosesAt — the earlier of the closing time and the event start", () => {
+  const startAt = new Date("2031-06-10T01:00:00Z");
+  const earlier = new Date("2031-06-08T01:00:00Z");
+  const later = new Date("2031-06-12T01:00:00Z");
+
+  it("is the event start when no closing time is set", () => {
+    expect(effectiveClosesAt({ registrationClosesAt: null, startAt })).toBe(
+      startAt,
+    );
+  });
+
+  it("is the closing time when it comes before the start", () => {
+    expect(effectiveClosesAt({ registrationClosesAt: earlier, startAt })).toBe(
+      earlier,
+    );
+  });
+
+  it("is the start when the closing time comes after it", () => {
+    expect(effectiveClosesAt({ registrationClosesAt: later, startAt })).toBe(
+      startAt,
+    );
+  });
+
+  it("is the closing time when no start is set", () => {
+    expect(
+      effectiveClosesAt({ registrationClosesAt: earlier, startAt: null }),
+    ).toBe(earlier);
+  });
+
+  it("is null when neither is set", () => {
+    expect(
+      effectiveClosesAt({ registrationClosesAt: null, startAt: null }),
+    ).toBeNull();
+  });
+});
+
+describe("SCRUM-72 AC3: registrationPeriodText — the period an Attendee sees", () => {
+  const startAt = new Date("2031-06-10T01:00:00Z");
+  const opensAt = new Date("2031-06-01T01:00:00Z");
+  const closesAt = new Date("2031-06-08T01:00:00Z");
+
+  it("SCRUM-72 AC3: a set window shows its opening and closing times", () => {
+    expect(
+      registrationPeriodText({
+        registrationOpensAt: opensAt,
+        registrationClosesAt: closesAt,
+        startAt,
+      }),
+    ).toBe(`Opens ${formatDateTime(opensAt)} · Closes ${formatDateTime(closesAt)}`);
+  });
+
+  it("SCRUM-72 AC5: no window set shows the default — opens on confirmation, closes at the start", () => {
+    expect(
+      registrationPeriodText({
+        registrationOpensAt: null,
+        registrationClosesAt: null,
+        startAt,
+      }),
+    ).toBe(`Opens on confirmation · Closes ${formatDateTime(startAt)}`);
+  });
+
+  it("SCRUM-75 AC8: a closing time after the start shows the start as the close", () => {
+    expect(
+      registrationPeriodText({
+        registrationOpensAt: opensAt,
+        registrationClosesAt: new Date("2031-06-12T01:00:00Z"),
+        startAt,
+      }),
+    ).toBe(`Opens ${formatDateTime(opensAt)} · Closes ${formatDateTime(startAt)}`);
+  });
+
+  it("omits the close when neither a closing time nor a start is set", () => {
+    expect(
+      registrationPeriodText({
+        registrationOpensAt: null,
+        registrationClosesAt: null,
+        startAt: null,
+      }),
+    ).toBe("Opens on confirmation");
   });
 });
