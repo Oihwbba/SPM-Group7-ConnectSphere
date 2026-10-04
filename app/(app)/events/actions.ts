@@ -34,6 +34,12 @@ const statusTransitionSchema = z.object({
 
 const confirmEventSchema = z.object({ eventId: z.string().min(1) });
 
+const rejectPlanningEventSchema = z.object({
+  eventId: z.string().min(1),
+  decisionReason: z.string().trim().max(2000).optional(),
+  rejectionOutcome: rejectionOutcomeSchema.optional(),
+});
+
 const startRequestFromRejectedSchema = z.object({
   eventId: z.string().min(1),
 });
@@ -739,6 +745,172 @@ export async function startRequestFromRejected(
 
     revalidatePath("/events");
     return ok(outcome);
+  } catch (error) {
+    if (error instanceof PermissionError) return err(error.message);
+    throw error;
+  }
+}
+
+/**
+ * SCRUM-117 — the assigned Coordinator rejects a Planning event whose
+ * essential arrangements can't be secured, so it doesn't sit pending. In one
+ * transaction the event becomes Rejected with a reason and an outcome
+ * (SCRUM-126), and everything held for it is released: venue bookings and
+ * requests, equipment reservations (their stock returns to the pool) and open
+ * equipment requests are cancelled, and submitted change requests are
+ * rejected with the same reason. An event that was ever Confirmed may have
+ * Attendees, so it is cancelled instead (SCRUM-82). See ADR 0015.
+ */
+export async function rejectPlanningEvent(
+  input: unknown,
+): Promise<ActionResult<{ status: "REJECTED" }>> {
+  const session = await auth();
+  const user = session?.user;
+
+  try {
+    requirePermission(user, "event:reject");
+
+    const parsed = rejectPlanningEventSchema.safeParse(input);
+    if (!parsed.success) return err("Please provide a valid event to reject.");
+    const { eventId, decisionReason, rejectionOutcome } = parsed.data;
+    // AC2: a reason and an outcome, as for any rejection.
+    if (!decisionReason) {
+      return err("A rejection reason is required.", {
+        decisionReason: ["A rejection reason is required."],
+      });
+    }
+    if (!rejectionOutcome) {
+      return err("Choose what the organiser can do next.", {
+        rejectionOutcome: ["Choose what the organiser can do next."],
+      });
+    }
+
+    const event = await prisma.event.findUnique({
+      where: { id: eventId },
+      select: { organiserId: true, coordinatorId: true, status: true, name: true },
+    });
+    if (!event || !can(user!, "event:reject", { kind: "event", ...event })) {
+      return err("Event not found.");
+    }
+
+    const outcome = await prisma.$transaction(async (tx) => {
+      // Lock first, then re-read: a confirm or another reject at the same
+      // moment takes turns with this one.
+      await tx.$queryRaw`SELECT "id" FROM "Event" WHERE "id" = ${eventId} FOR UPDATE`;
+      const current = await tx.event.findUniqueOrThrow({
+        where: { id: eventId },
+        select: { status: true, coordinatorId: true },
+      });
+      if (current.status !== "PLANNING") return "not-planning" as const;
+      if (current.coordinatorId !== user!.id) return "reassigned" as const;
+      // AC4: confirming writes this history entry (SCRUM-81).
+      const confirmedBefore = await tx.auditLog.count({
+        where: {
+          entityType: "Event",
+          entityId: eventId,
+          fieldName: "status",
+          newValue: "CONFIRMED",
+        },
+      });
+      if (confirmedBefore > 0) return "confirmed-before" as const;
+
+      const now = new Date();
+      await tx.event.update({
+        where: { id: eventId },
+        data: {
+          status: "REJECTED",
+          decidedAt: now,
+          decidedById: user!.id,
+          decisionReason,
+          rejectionOutcome,
+        },
+      });
+      // AC3: release what was held for the event.
+      const bookings = await tx.booking.updateMany({
+        where: { eventId, status: { in: ["PENDING", "APPROVED"] } },
+        data: { status: "CANCELLED" },
+      });
+      const reservations = await tx.reservation.updateMany({
+        where: { eventId, status: "CONFIRMED" },
+        data: { status: "CANCELLED", cancelledAt: now },
+      });
+      const requests = await tx.equipmentRequest.updateMany({
+        where: {
+          eventId,
+          status: { in: ["PENDING_REVIEW", "IN_REVIEW", "APPROVED"] },
+        },
+        data: { status: "CANCELLED" },
+      });
+      const changes = await tx.eventChangeRequest.updateMany({
+        where: { eventId, status: "PENDING_REVIEW" },
+        data: {
+          status: "REJECTED",
+          decidedById: user!.id,
+          decidedAt: now,
+          decisionReason,
+        },
+      });
+
+      // AC6: who rejected it and when (the entries' createdAt).
+      await tx.auditLog.createMany({
+        data: [
+          {
+            entityType: "Event",
+            entityId: eventId,
+            action: "STATUS_CHANGED",
+            actorId: user!.id,
+            fieldName: "status",
+            oldValue: "PLANNING",
+            newValue: "REJECTED",
+            summary: decisionReason,
+          },
+          {
+            entityType: "Event",
+            entityId: eventId,
+            action: "UPDATED",
+            actorId: user!.id,
+            fieldName: "rejectionOutcome",
+            oldValue: null,
+            newValue: rejectionOutcome,
+            summary: "Outcome chosen on rejection (SCRUM-126)",
+          },
+          {
+            entityType: "Event",
+            entityId: eventId,
+            action: "ARRANGEMENTS_RELEASED",
+            actorId: user!.id,
+            summary: `Rejected from Planning (SCRUM-117): ${bookings.count} venue booking(s), ${reservations.count} equipment reservation(s) and ${requests.count} equipment request(s) cancelled; ${changes.count} change request(s) rejected.`,
+          },
+        ],
+      });
+      await tx.notification.create({
+        data: {
+          userId: event.organiserId,
+          type: "EVENT_STATUS_CHANGED",
+          title: "Your event was rejected",
+          message: `"${event.name}" couldn't be arranged and was rejected: ${decisionReason}`,
+          eventId,
+        },
+      });
+      return "rejected" as const;
+    });
+
+    if (outcome === "not-planning") {
+      return err("Only an event in Planning can be rejected here.");
+    }
+    if (outcome === "reassigned") {
+      return err(
+        "This event was updated by another user. Refresh and try again.",
+      );
+    }
+    if (outcome === "confirmed-before") {
+      return err(
+        "This event has been confirmed before, so it can't be rejected. Cancel it instead.",
+      );
+    }
+    revalidatePath("/events");
+    revalidatePath("/equipment");
+    return ok({ status: "REJECTED" });
   } catch (error) {
     if (error instanceof PermissionError) return err(error.message);
     throw error;

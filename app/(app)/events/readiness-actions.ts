@@ -37,11 +37,15 @@ async function relatedEvent(
  * SCRUM-110 AC 6 — the readiness checklist for the event page. The event's
  * Coordinator sees it in full; its Organiser sees the same items and states
  * without internal reasons. `canConfirm` tells the page whether to offer
- * SCRUM-81's Confirm action, which only the assigned Coordinator may take.
+ * SCRUM-81's Confirm action, which only the assigned Coordinator may take;
+ * `canReject` whether to offer SCRUM-117's Reject, which the same Coordinator
+ * may take unless the event was ever Confirmed (AC 4).
  */
 export async function getEventReadiness(
   eventId: string,
-): Promise<ActionResult<ReadinessChecklist & { canConfirm: boolean }>> {
+): Promise<
+  ActionResult<ReadinessChecklist & { canConfirm: boolean; canReject: boolean }>
+> {
   const related = await relatedEvent(eventId);
   if (!related) return err("Event not found.");
   const { user, resource } = related;
@@ -54,7 +58,21 @@ export async function getEventReadiness(
   const visible = can(user, "event:review", resource)
     ? checklist
     : withoutInternalReasons(checklist);
-  return ok({ ...visible, canConfirm: can(user, "event:confirm", resource) });
+  const canReject =
+    can(user, "event:reject", resource) &&
+    (await prisma.auditLog.count({
+      where: {
+        entityType: "Event",
+        entityId: eventId,
+        fieldName: "status",
+        newValue: "CONFIRMED",
+      },
+    })) === 0;
+  return ok({
+    ...visible,
+    canConfirm: can(user, "event:confirm", resource),
+    canReject,
+  });
 }
 
 /**

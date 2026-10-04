@@ -20,7 +20,9 @@ import {
 // event-readiness.test.ts, so here it is a fixed answer with a reason in it.
 
 vi.mock("@/auth", () => ({ auth: vi.fn() }));
-vi.mock("@/lib/db", () => ({ prisma: { event: { findUnique: vi.fn() } } }));
+vi.mock("@/lib/db", () => ({
+  prisma: { event: { findUnique: vi.fn() }, auditLog: { count: vi.fn() } },
+}));
 vi.mock("@/lib/event-readiness", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/event-readiness")>()),
   getReadinessChecklist: vi.fn(),
@@ -29,6 +31,7 @@ vi.mock("@/lib/event-readiness", async (importOriginal) => ({
 
 const mockAuth = auth as unknown as Mock;
 const mockEventFindUnique = prisma.event.findUnique as unknown as Mock;
+const mockAuditCount = prisma.auditLog.count as unknown as Mock;
 const mockChecklist = getReadinessChecklist as unknown as Mock;
 const mockArrangements = getConfirmedArrangements as unknown as Mock;
 
@@ -70,6 +73,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   mockEventFindUnique.mockResolvedValue(eventRow());
   mockChecklist.mockResolvedValue(checklist);
+  mockAuditCount.mockResolvedValue(0);
 });
 
 describe("getEventReadiness — SCRUM-110", () => {
@@ -80,7 +84,7 @@ describe("getEventReadiness — SCRUM-110", () => {
 
     expect(result).toEqual({
       ok: true,
-      data: { ...checklist, canConfirm: true },
+      data: { ...checklist, canConfirm: true, canReject: true },
     });
     expect(mockChecklist).toHaveBeenCalledWith(prisma, "evt_test");
   });
@@ -96,6 +100,7 @@ describe("getEventReadiness — SCRUM-110", () => {
         ready: false,
         items: [{ ...checklist.items[0], reason: null }, checklist.items[1]],
         canConfirm: false,
+        canReject: false,
       },
     });
   });
@@ -186,6 +191,51 @@ describe("getEventReadiness — SCRUM-81 Confirm action", () => {
         coordinatorId: null,
       }),
     ).toBe(false);
+  });
+});
+
+describe("getEventReadiness — SCRUM-117 Reject action", () => {
+  const offered = async (
+    session: Session,
+    event: {
+      organiserId: string;
+      coordinatorId: string | null;
+      status: EventStatus;
+    } = eventRow(),
+  ) => {
+    mockAuth.mockResolvedValue(session);
+    mockEventFindUnique.mockResolvedValue(event);
+    const result = await getEventReadiness("evt_test");
+    return result.ok && result.data.canReject;
+  };
+
+  it("SCRUM-117 [AC5] TC-117-07: only the event's assigned Coordinator is offered Reject", async () => {
+    expect(await offered(sessionFor("COORDINATOR", "usr_coordinator"))).toBe(
+      true,
+    );
+    expect(await offered(sessionFor("ORGANISER", "usr_organiser"))).toBe(false);
+    expect(
+      await offered(sessionFor("COORDINATOR", "usr_coordinator"), {
+        ...eventRow(),
+        coordinatorId: null,
+      }),
+    ).toBe(false);
+  });
+
+  it("SCRUM-117 [AC4] TC-117-05: an event that was ever Confirmed is not offered Reject", async () => {
+    mockAuditCount.mockResolvedValue(1);
+
+    expect(await offered(sessionFor("COORDINATOR", "usr_coordinator"))).toBe(
+      false,
+    );
+    expect(mockAuditCount).toHaveBeenCalledWith({
+      where: {
+        entityType: "Event",
+        entityId: "evt_test",
+        fieldName: "status",
+        newValue: "CONFIRMED",
+      },
+    });
   });
 });
 
