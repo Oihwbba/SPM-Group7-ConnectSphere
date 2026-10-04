@@ -14,7 +14,11 @@ import { Prisma } from "@prisma/client";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { createReservation } from "@/app/(app)/equipment/actions";
-import { transitionEventStatus, submitEventRequest } from "@/app/(app)/events/actions";
+import {
+  confirmEvent,
+  transitionEventStatus,
+  submitEventRequest,
+} from "@/app/(app)/events/actions";
 import {
   requestClarification,
   respondToClarification,
@@ -490,7 +494,75 @@ describe.skipIf(!usesLocalDatabase)("concurrency — status transitions (SCRUM-2
     expect(results.filter((r) => r.ok)).toHaveLength(1);
     expect(results.filter((r) => !r.ok)).toHaveLength(1);
 
-    expect(await prisma.auditLog.count({ where: { entityId: eventId } })).toBe(1);
+    // Exactly one decision is recorded. An approval also records the move to
+    // Planning (SCRUM-81), so the entries leaving SUBMITTED are what count.
+    expect(
+      await prisma.auditLog.count({ where: { entityId: eventId, oldValue: "SUBMITTED" } }),
+    ).toBe(1);
+  });
+});
+
+// SCRUM-81 AC 8 — two confirms of one ready event at the same moment record one
+// confirmation. confirmEvent locks the event row, so the second waits, then
+// finds it already Confirmed.
+describe.skipIf(!usesLocalDatabase)("concurrency — confirming an event (SCRUM-81)", () => {
+  let eventId: string | undefined;
+  const period = {
+    startAt: new Date("2031-08-01T01:00:00Z"),
+    endAt: new Date("2031-08-01T09:00:00Z"),
+  };
+
+  beforeAll(async () => {
+    const event = await prisma.event.create({
+      data: {
+        name: `SCRUM-81 Concurrency Event ${Date.now()}`,
+        status: "PLANNING",
+        organiserId: "usr_organiser",
+        coordinatorId: "usr_coordinator",
+        ...period,
+      },
+      select: { id: true },
+    });
+    eventId = event.id;
+    await prisma.booking.create({
+      data: {
+        eventId,
+        venueId: "ven_auditorium",
+        ...period,
+        status: "APPROVED",
+        requestedById: "usr_coordinator",
+        decidedById: "usr_venuestaff",
+        decidedAt: new Date(),
+      },
+    });
+  });
+
+  afterAll(async () => {
+    if (eventId) {
+      await prisma.booking.deleteMany({ where: { eventId } });
+      await prisma.auditLog.deleteMany({ where: { entityId: eventId } });
+      await prisma.event.delete({ where: { id: eventId } });
+    }
+  });
+
+  it("SCRUM-81 [AC8] TC-81-10: two confirms at the same moment confirm the event once", async () => {
+    (auth as unknown as Mock).mockResolvedValue({
+      user: { id: "usr_coordinator", role: "COORDINATOR", name: "Cody", email: "coordinator@test.local" },
+      expires: "2999-01-01T00:00:00.000Z",
+    });
+
+    const results = await Promise.all([confirmEvent({ eventId }), confirmEvent({ eventId })]);
+
+    expect(results).toEqual([
+      { ok: true, data: { status: "CONFIRMED" } },
+      { ok: true, data: { status: "CONFIRMED" } },
+    ]);
+    expect(await prisma.event.findUniqueOrThrow({ where: { id: eventId } })).toMatchObject({
+      status: "CONFIRMED",
+    });
+    expect(
+      await prisma.auditLog.count({ where: { entityId: eventId, newValue: "CONFIRMED" } }),
+    ).toBe(1);
   });
 });
 
@@ -801,9 +873,10 @@ describe.skipIf(!usesLocalDatabase)("concurrency — clarification (SCRUM-18)", 
       transitionEventStatus({ eventId: event.id, nextStatus: "APPROVED" }),
     ]);
 
+    // SCRUM-81: approval moves the event straight to Planning.
     expect(
       await prisma.event.findUniqueOrThrow({ where: { id: event.id } }),
-    ).toMatchObject({ status: "APPROVED" });
+    ).toMatchObject({ status: "PLANNING" });
     expect(
       await prisma.clarificationRequest.count({
         where: { eventId: event.id, status: "OPEN" },

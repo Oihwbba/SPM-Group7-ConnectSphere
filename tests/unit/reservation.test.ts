@@ -156,10 +156,26 @@ describe("createReservation — SCRUM-31", () => {
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error).toMatch(/approved event/i);
     expect(tx.event.findFirst).toHaveBeenCalledWith({
-      where: { id: "evt_approved", status: "APPROVED" },
+      where: { id: "evt_approved", status: { in: ["APPROVED", "PLANNING"] } },
       select: { id: true },
     });
     expect(tx.reservation.create).not.toHaveBeenCalled();
+  });
+
+  // Approval now moves an event straight to Planning (SCRUM-81), so an
+  // approved event being planned must still take reservations.
+  it("SCRUM-81 TC-81-12: equipment can be reserved for an event in Planning", async () => {
+    poolWithFiveAvailable();
+    tx.event.findFirst.mockResolvedValue({ id: "evt_planning" });
+
+    const result = await createReservation({ ...validInput, eventId: "evt_planning" });
+
+    expect(result.ok).toBe(true);
+    expect(tx.event.findFirst).toHaveBeenCalledWith({
+      where: { id: "evt_planning", status: { in: ["APPROVED", "PLANNING"] } },
+      select: { id: true },
+    });
+    expect(tx.reservation.create).toHaveBeenCalled();
   });
 
   it.each(["ORGANISER", "COORDINATOR", "VENUE_STAFF", "ATTENDEE"] as Role[])(

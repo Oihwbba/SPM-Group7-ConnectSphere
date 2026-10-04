@@ -88,3 +88,16 @@ When two users view an event simultaneously (e.g. an Organiser on "My Events" an
 - Two concurrent browser sessions observing the same event synchronize within 4 seconds of any status mutation without requiring manual user refreshes.
 - Criterion 4 is demonstrably satisfied in multi-browser live evaluation and Playwright concurrent context testing.
 - The implementation is ~15 lines, requires zero dependencies, and pauses automatically when tabs are inactive.
+
+---
+
+## Addendum (2026-09-30) — Approval leads to Planning, and confirming joins the gate (SCRUM-81)
+
+`transitionEventStatus` still accepts only `APPROVED` or `REJECTED`, but an
+approval is now saved as **Planning**, with history entries for the approval
+and the automatic move. A second action, `confirmEvent`, moves a Planning event
+to **Confirmed** when its readiness checklist is complete. It lives beside
+`transitionEventStatus`, is allowed only for the event's assigned Coordinator,
+and records the change and its history entry in one transaction, keeping this
+ADR's rules: one place per transition, authorisation before the read, and no
+duplicate change when two requests race. The details are in ADR 0012.

@@ -16,6 +16,7 @@ import {
   allAvailabilitySchema,
   availabilitySchema,
   equipmentScheduleSchema,
+  RESERVABLE_EVENT_STATUSES,
   reservationSchema,
 } from "@/lib/schemas/reservation";
 
@@ -288,7 +289,7 @@ export async function createReservation(
 
     const result = await prisma.$transaction<ReserveOutcome>(async (tx) => {
       const event = await tx.event.findFirst({
-        where: { id: eventId, status: "APPROVED" },
+        where: { id: eventId, status: { in: RESERVABLE_EVENT_STATUSES } },
         select: { id: true },
       });
       if (!event)
