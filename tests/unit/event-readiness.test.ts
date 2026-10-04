@@ -468,9 +468,15 @@ describe("withoutInternalReasons — SCRUM-110 AC6", () => {
 describe("getConfirmedArrangements — SCRUM-81 AC6", () => {
   const venueRow = (
     status: string,
-    overrides: Partial<{ startAt: Date; endAt: Date }> = {},
+    overrides: Partial<{
+      startAt: Date;
+      endAt: Date;
+      createdAt: Date;
+      venue: { name: string; location: string };
+    }> = {},
   ) => ({
     status,
+    createdAt: day(1),
     startAt: START,
     endAt: END,
     venue: {
@@ -528,6 +534,23 @@ describe("getConfirmedArrangements — SCRUM-81 AC6", () => {
       equipment: ["Projector × 2", "Wireless Microphone × 4"],
     });
     expect(findUnique.mock.calls[0][0].where).toEqual({ id: "evt_test" });
+  });
+
+  it("SCRUM-81 [AC6] TC-81-06: when two approved bookings cover the event, the newer one is the confirmed venue", async () => {
+    const hall = { name: "Exhibition Hall", location: "Level 1" };
+    const auditorium = { name: "Auditorium", location: "Level 2" };
+    const { db } = eventWith(
+      // Listed oldest first, as the query returns them.
+      [
+        venueRow("APPROVED", { venue: hall, createdAt: day(1) }),
+        venueRow("APPROVED", { venue: auditorium, createdAt: day(3) }),
+      ],
+      [],
+    );
+
+    expect((await getConfirmedArrangements(db, "evt_test"))?.venue).toEqual(
+      auditorium,
+    );
   });
 
   it("SCRUM-81 [AC6] TC-81-06: with no approved booking for the event's time and nothing reserved, the venue is empty and the equipment list is empty", async () => {

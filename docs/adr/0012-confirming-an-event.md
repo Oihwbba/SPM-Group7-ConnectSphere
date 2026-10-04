@@ -67,7 +67,7 @@ not access control.
 
 **Confirmed arrangements** are read by `getConfirmedArrangements` in
 `lib/event-readiness.ts`, with the same whole-event rule as the checklist: the
-approved booking that covers the event, the event's date and time, and the
+newest approved booking that covers the event (as the checklist's venue item reads the newest first), the event's date and time, and the
 confirmed reservations covering the whole event, totalled per item. Its
 Organiser and Coordinator see them on the event's details.
 

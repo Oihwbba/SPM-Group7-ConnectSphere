@@ -238,6 +238,7 @@ export async function getConfirmedArrangements(
       bookings: {
         select: {
           status: true,
+          createdAt: true,
           startAt: true,
           endAt: true,
           venue: { select: { name: true, location: true } },
@@ -256,9 +257,11 @@ export async function getConfirmedArrangements(
   });
   if (!event) return null;
 
-  const booking = event.bookings.find(
-    (b) => b.status === "APPROVED" && coversEvent(b, event),
-  );
+  // Newest first, as in the checklist's venue item: if two approved bookings
+  // cover the event, the later one is the Coordinator's current choice.
+  const booking = [...event.bookings]
+    .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+    .find((b) => b.status === "APPROVED" && coversEvent(b, event));
   const reserved = new Map<string, number>();
   for (const r of event.reservations) {
     if (r.status !== "CONFIRMED" || !coversEvent(r, event)) continue;
