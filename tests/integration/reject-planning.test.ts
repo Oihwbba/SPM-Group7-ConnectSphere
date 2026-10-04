@@ -138,6 +138,19 @@ describe.skipIf(!usesLocalDatabase)(
             },
           ],
         });
+        // The request's own history says who cancelled it and why.
+        expect(
+          await prisma.equipmentRequestUpdate.findMany({
+            where: { requestId: request.id, toStatus: "CANCELLED" },
+            select: { actorId: true, fromStatus: true, note: true },
+          }),
+        ).toEqual([
+          {
+            actorId: "usr_coordinator",
+            fromStatus: "APPROVED",
+            note: "Cancelled because the event was rejected: No venue can take it after all.",
+          },
+        ]);
         // The two projectors are back in the pool for that period.
         expect(await projectorsHeld()).toBe(before - 2);
         expect(

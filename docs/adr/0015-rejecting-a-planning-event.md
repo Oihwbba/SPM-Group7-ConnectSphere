@@ -28,7 +28,9 @@ for it, and that an event which was ever Confirmed is cancelled instead
    Confirmed reservations and open equipment requests are cancelled, and its
    submitted change requests are rejected with the same reason. Cancelling a
    reservation is what returns its stock, since availability counts only
-   Confirmed reservations. A confirm or reject at the same moment takes turns
+   Confirmed reservations. Each cancelled equipment request also gets an
+   entry in its own history (SCRUM-28), so Technical Support sees who
+   cancelled it and why. A confirm or reject at the same moment takes turns
    on the lock and sees the other's result.
 4. **"Ever Confirmed" is read from the history**: SCRUM-81 writes a
    Planning → Confirmed entry on every confirmation, so a count of those

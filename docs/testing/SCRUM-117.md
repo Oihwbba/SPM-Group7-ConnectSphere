@@ -53,13 +53,13 @@ and the app is running. Unless the case says otherwise, the event is in
 
 ### TC-117-03
 
-| Item            | Content                                                                                                                                                                                                             |
-| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Test Scenario   | [Positive] AC 3: rejecting releases everything held for the event, in the same operation                                                                                                                            |
-| Pre-conditions  | The event has venue bookings (Pending, Approved), equipment reservations, an open equipment request and a submitted change request.                                                                                 |
-| Test Steps      | 1. Reject it.                                                                                                                                                                                                       |
-| Test Data       | —                                                                                                                                                                                                                   |
-| Expected Result | The bookings, reservations and equipment request are Cancelled (the reserved stock is available again); the change request is Rejected with the same reason. All in one transaction, after the event row is locked. |
+| Item            | Content                                                                                                                                                                                                                                                                                              |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Test Scenario   | [Positive] AC 3: rejecting releases everything held for the event, in the same operation                                                                                                                                                                                                             |
+| Pre-conditions  | The event has venue bookings (Pending, Approved), equipment reservations, an open equipment request and a submitted change request.                                                                                                                                                                  |
+| Test Steps      | 1. Reject it.                                                                                                                                                                                                                                                                                        |
+| Test Data       | —                                                                                                                                                                                                                                                                                                    |
+| Expected Result | The bookings, reservations and equipment request are Cancelled (the reserved stock is available again); the change request is Rejected with the same reason. Each cancelled equipment request's own history records who cancelled it and why. All in one transaction, after the event row is locked. |
 
 **Automated by:** `tests/unit/reject-planning.test.ts` › "SCRUM-117 [AC3] TC-117-03: …"
 
@@ -113,13 +113,13 @@ and the app is running. Unless the case says otherwise, the event is in
 
 ### TC-117-08
 
-| Item            | Content                                                                                                                                                                                               |
-| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Test Scenario   | [Positive] AC 1, AC 3, AC 6: against a real database, everything is released together and the stock returns                                                                                           |
-| Pre-conditions  | A Planning event with an approved booking, an approved equipment request with 2 Projectors reserved, and a submitted change request.                                                                  |
-| Test Steps      | 1. Reject it.                                                                                                                                                                                         |
-| Test Data       | —                                                                                                                                                                                                     |
-| Expected Result | The event is Rejected; the booking, reservation and request are Cancelled; the change request is Rejected with the reason; 2 fewer Projectors are held for that period; the Organiser has one notice. |
+| Item            | Content                                                                                                                                                                                                                                                                                                     |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Test Scenario   | [Positive] AC 1, AC 3, AC 6: against a real database, everything is released together and the stock returns                                                                                                                                                                                                 |
+| Pre-conditions  | A Planning event with an approved booking, an approved equipment request with 2 Projectors reserved, and a submitted change request.                                                                                                                                                                        |
+| Test Steps      | 1. Reject it.                                                                                                                                                                                                                                                                                               |
+| Test Data       | —                                                                                                                                                                                                                                                                                                           |
+| Expected Result | The event is Rejected; the booking, reservation and request are Cancelled; the change request is Rejected with the reason; the equipment request's history has an Approved → Cancelled entry by the Coordinator with the reason; 2 fewer Projectors are held for that period; the Organiser has one notice. |
 
 **Automated by:** `tests/integration/reject-planning.test.ts` › "SCRUM-117 [AC1, AC3, AC6] TC-117-08: …"
 

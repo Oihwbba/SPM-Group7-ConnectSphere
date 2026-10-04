@@ -834,12 +834,26 @@ export async function rejectPlanningEvent(
         where: { eventId, status: "CONFIRMED" },
         data: { status: "CANCELLED", cancelledAt: now },
       });
-      const requests = await tx.equipmentRequest.updateMany({
+      const openRequests = await tx.equipmentRequest.findMany({
         where: {
           eventId,
           status: { in: ["PENDING_REVIEW", "IN_REVIEW", "APPROVED"] },
         },
+        select: { id: true, status: true },
+      });
+      const requests = await tx.equipmentRequest.updateMany({
+        where: { id: { in: openRequests.map((r) => r.id) } },
         data: { status: "CANCELLED" },
+      });
+      // Each request's own history (SCRUM-28 AC 5) says who cancelled it and why.
+      await tx.equipmentRequestUpdate.createMany({
+        data: openRequests.map((r) => ({
+          requestId: r.id,
+          actorId: user!.id,
+          fromStatus: r.status,
+          toStatus: "CANCELLED" as const,
+          note: `Cancelled because the event was rejected: ${decisionReason}`,
+        })),
       });
       const changes = await tx.eventChangeRequest.updateMany({
         where: { eventId, status: "PENDING_REVIEW" },

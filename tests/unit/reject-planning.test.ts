@@ -16,7 +16,8 @@ const tx = vi.hoisted(() => ({
   event: { findUniqueOrThrow: vi.fn(), update: vi.fn() },
   booking: { updateMany: vi.fn() },
   reservation: { updateMany: vi.fn() },
-  equipmentRequest: { updateMany: vi.fn() },
+  equipmentRequest: { findMany: vi.fn(), updateMany: vi.fn() },
+  equipmentRequestUpdate: { createMany: vi.fn() },
   eventChangeRequest: { updateMany: vi.fn() },
   auditLog: { count: vi.fn(), createMany: vi.fn() },
   notification: { create: vi.fn() },
@@ -66,7 +67,11 @@ beforeEach(() => {
   tx.event.update.mockResolvedValue({});
   tx.booking.updateMany.mockResolvedValue({ count: 2 });
   tx.reservation.updateMany.mockResolvedValue({ count: 3 });
+  tx.equipmentRequest.findMany.mockResolvedValue([
+    { id: "eqr1", status: "IN_REVIEW" },
+  ]);
   tx.equipmentRequest.updateMany.mockResolvedValue({ count: 1 });
+  tx.equipmentRequestUpdate.createMany.mockResolvedValue({ count: 1 });
   tx.eventChangeRequest.updateMany.mockResolvedValue({ count: 1 });
   tx.auditLog.count.mockResolvedValue(0);
   tx.auditLog.createMany.mockResolvedValue({ count: 3 });
@@ -112,12 +117,28 @@ describe("rejectPlanningEvent — SCRUM-117", () => {
       where: { eventId: "evt1", status: "CONFIRMED" },
       data: { status: "CANCELLED", cancelledAt: expect.any(Date) },
     });
-    expect(tx.equipmentRequest.updateMany).toHaveBeenCalledWith({
+    expect(tx.equipmentRequest.findMany).toHaveBeenCalledWith({
       where: {
         eventId: "evt1",
         status: { in: ["PENDING_REVIEW", "IN_REVIEW", "APPROVED"] },
       },
+      select: { id: true, status: true },
+    });
+    expect(tx.equipmentRequest.updateMany).toHaveBeenCalledWith({
+      where: { id: { in: ["eqr1"] } },
       data: { status: "CANCELLED" },
+    });
+    // The request's own history (SCRUM-28) records who cancelled it and why.
+    expect(tx.equipmentRequestUpdate.createMany).toHaveBeenCalledWith({
+      data: [
+        {
+          requestId: "eqr1",
+          actorId: "usr_coord",
+          fromStatus: "IN_REVIEW",
+          toStatus: "CANCELLED",
+          note: `Cancelled because the event was rejected: ${REASON}`,
+        },
+      ],
     });
     expect(tx.eventChangeRequest.updateMany).toHaveBeenCalledWith({
       where: { eventId: "evt1", status: "PENDING_REVIEW" },
