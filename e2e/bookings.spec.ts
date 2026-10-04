@@ -35,6 +35,7 @@ const EVENTS = {
   rejected: ["Exhibition Fair", "2035-05-01T09:00", "2035-05-01T12:00", 120],
   overCapacity: ["Big Concert", "2035-06-01T18:00", "2035-06-01T22:00", 250],
   atCapacity: ["Full House", "2035-06-02T18:00", "2035-06-02T22:00", 200],
+  offline: ["Offline Check", "2035-07-01T09:00", "2035-07-01T11:00", 120],
   // Its dates have passed, but no venue was booked while there was time.
   past: ["Missed Seminar", "2020-01-01T09:00", "2020-01-01T11:00", 120],
 } as const;
@@ -253,6 +254,34 @@ test.describe("SCRUM-50 / 52 / 53 — venue booking request, review and decision
     await expect(
       coordinator.getByRole("button", { name: "Submit request" }),
     ).toBeDisabled();
+  });
+
+  test("SCRUM-50 — when the live check cannot answer, the form says so and leaves Submit to the server", async ({
+    browser,
+  }) => {
+    const coordinator = await signedIn(browser, "coordinator@test.local");
+    await openRequestForm(coordinator);
+
+    // Server actions post to the page itself; drop them while the form
+    // asks about the venue, as a lost connection would.
+    const action = (url: URL) => url.pathname === "/bookings/new";
+    await coordinator.route(action, (route) =>
+      route.request().method() === "POST" ? route.abort() : route.continue(),
+    );
+    await fillHall(coordinator, eventName("offline"));
+
+    const live = coordinator.getByTestId("live-availability");
+    await expect(live).toHaveAttribute("data-state", "error");
+    await expect(live).toContainText(
+      "Availability could not be checked right now; it will be checked again when you submit.",
+    );
+    const submit = coordinator.getByRole("button", { name: "Submit request" });
+    await expect(submit).toBeEnabled();
+
+    // Back online, submitting checks again and decides.
+    await coordinator.unroute(action);
+    await submit.click();
+    await expectSubmitted(coordinator);
   });
 
   test("SCRUM-50 AC1 — the room layout is chosen first, and only venues that support it are offered", async ({

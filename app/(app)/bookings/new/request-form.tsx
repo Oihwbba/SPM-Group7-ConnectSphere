@@ -40,6 +40,7 @@ import {
   sgWallTimeToUtcIso,
   utcToSgWallTime,
 } from "@/lib/datetime";
+import type { ActionResult } from "@/lib/action-result";
 import { cn } from "@/lib/utils";
 import { isValidPeriod } from "@/lib/period";
 import {
@@ -87,7 +88,7 @@ export function venuesForLayout<T extends { supportedLayouts: string[] }>(
 }
 
 /** What the live availability check knows about the venue and period chosen. */
-type Live =
+export type Live =
   | { state: "checking" }
   | { state: "free" }
   | { state: "taken"; clashes: string[] }
@@ -95,6 +96,30 @@ type Live =
   | { state: "invalid"; message: string }
   // The check could not answer; submitting will still check.
   | { state: "error"; message: string };
+
+export const LIVE_CHECK_FAILED_MESSAGE =
+  "Availability could not be checked right now; it will be checked again when you submit.";
+
+/**
+ * SCRUM-50 — the live check's answer as the form shows it. Only a problem
+ * with the period itself blocks Submit; a check that failed (`null`) or was
+ * refused for any other reason does not, because submitting checks again.
+ * The server owns the clock, so a start that has already passed is found
+ * there and reported against the period.
+ */
+export function liveAnswer(
+  result: ActionResult<{ available: boolean; clashes: string[] }> | null,
+): Live {
+  if (!result) return { state: "error", message: LIVE_CHECK_FAILED_MESSAGE };
+  if (!result.ok) {
+    const aboutPeriod =
+      result.fieldErrors?.startAt || result.fieldErrors?.endAt;
+    return { state: aboutPeriod ? "invalid" : "error", message: result.error };
+  }
+  return result.data.available
+    ? { state: "free" }
+    : { state: "taken", clashes: result.data.clashes };
+}
 
 /** How long typing pauses before the venue is checked. */
 const LIVE_CHECK_DELAY_MS = 300;
@@ -217,28 +242,7 @@ export function RequestForm({
         endAt,
       }).catch(() => null);
       if (cancelled) return;
-      setLive({
-        key: liveKey,
-        result: !result
-          ? {
-              state: "error",
-              message:
-                "Availability could not be checked right now; it will be checked again when you submit.",
-            }
-          : !result.ok
-            ? {
-                // The server owns the clock, so a start that has already
-                // passed is found there, and reported against the period.
-                state:
-                  result.fieldErrors?.startAt || result.fieldErrors?.endAt
-                    ? "invalid"
-                    : "error",
-                message: result.error,
-              }
-            : result.data.available
-              ? { state: "free" }
-              : { state: "taken", clashes: result.data.clashes },
-      });
+      setLive({ key: liveKey, result: liveAnswer(result) });
     }, LIVE_CHECK_DELAY_MS);
     return () => {
       cancelled = true;

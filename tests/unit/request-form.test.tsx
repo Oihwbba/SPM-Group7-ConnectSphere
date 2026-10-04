@@ -2,6 +2,8 @@ import { describe, it, expect, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 
 import {
+  liveAnswer,
+  LIVE_CHECK_FAILED_MESSAGE,
   RequestForm,
   venuesForLayout,
 } from "@/app/(app)/bookings/new/request-form";
@@ -91,6 +93,52 @@ describe("RequestForm — SCRUM-50", () => {
     expect(html).toMatch(
       /<button[^>]*aria-pressed="false"[^>]*>projector<\/button>/,
     );
+  });
+});
+
+describe("liveAnswer — SCRUM-50 live check", () => {
+  it("SCRUM-50 AC3 — a free venue reads free, and a taken one names its clashes", () => {
+    expect(
+      liveAnswer({ ok: true, data: { available: true, clashes: [] } }),
+    ).toEqual({
+      state: "free",
+    });
+    expect(
+      liveAnswer({
+        ok: true,
+        data: { available: false, clashes: ["already booked"] },
+      }),
+    ).toEqual({ state: "taken", clashes: ["already booked"] });
+  });
+
+  it("SCRUM-50 AC5 — a refusal about the period is invalid, which disables Submit", () => {
+    for (const field of ["startAt", "endAt"]) {
+      expect(
+        liveAnswer({
+          ok: false,
+          error: "Bad period.",
+          fieldErrors: { [field]: ["Bad period."] },
+        }),
+      ).toEqual({ state: "invalid", message: "Bad period." });
+    }
+  });
+
+  it("SCRUM-50 — a check that failed, or was refused for another reason, is an error that leaves Submit to the server", () => {
+    expect(liveAnswer(null)).toEqual({
+      state: "error",
+      message: LIVE_CHECK_FAILED_MESSAGE,
+    });
+    expect(liveAnswer({ ok: false, error: "Venue not found." })).toEqual({
+      state: "error",
+      message: "Venue not found.",
+    });
+    expect(
+      liveAnswer({
+        ok: false,
+        error: "Choose a venue.",
+        fieldErrors: { venueId: ["Choose a venue."] },
+      }),
+    ).toEqual({ state: "error", message: "Choose a venue." });
   });
 });
 
