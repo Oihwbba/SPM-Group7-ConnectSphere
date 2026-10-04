@@ -11,7 +11,7 @@ import type { Prisma, PrismaClient } from "@prisma/client";
 export interface ChecklistItem {
   name: "Venue booking" | "Equipment";
   complete: boolean;
-  /** "Approved", "Pending", "Rejected", "Not requested", "Reserved", "Not fully reserved" */
+  /** "Approved", "Pending", "Rejected", "Not requested", "Reserved", "Not fully reserved: Projector" */
   state: string;
   /** Internal detail, such as why Venue Staff rejected the booking. Hidden from the Organiser. */
   reason: string | null;
@@ -52,7 +52,13 @@ export async function getReadinessChecklist(
         select: {
           status: true,
           createdAt: true,
-          lines: { select: { equipmentId: true, quantity: true } },
+          lines: {
+            select: {
+              equipmentId: true,
+              quantity: true,
+              equipment: { select: { type: true } },
+            },
+          },
         },
       },
       reservations: {
@@ -141,7 +147,11 @@ type EventRow = {
   equipmentRequests: {
     status: string;
     createdAt: Date;
-    lines: { equipmentId: string; quantity: number }[];
+    lines: {
+      equipmentId: string;
+      quantity: number;
+      equipment: { type: string };
+    }[];
   }[];
   reservations: {
     equipmentId: string;
@@ -170,33 +180,37 @@ function equipmentItem(event: EventRow): ChecklistItem | null {
     };
   }
 
-  const requested = new Map<string, number>();
+  const requested = new Map<string, { type: string; quantity: number }>();
   for (const line of live.flatMap((r) => r.lines)) {
-    requested.set(
-      line.equipmentId,
-      (requested.get(line.equipmentId) ?? 0) + line.quantity,
-    );
+    requested.set(line.equipmentId, {
+      type: line.equipment.type,
+      quantity:
+        (requested.get(line.equipmentId)?.quantity ?? 0) + line.quantity,
+    });
   }
 
   // "Reserved in full for the event's period": a reservation counts only if
   // it is confirmed and spans the whole event, so a partial-day hold can't
-  // make the item look complete.
-  const complete = [...requested].every(
-    ([equipmentId, quantity]) =>
-      event.reservations
-        .filter(
-          (r) =>
-            r.equipmentId === equipmentId &&
-            r.status === "CONFIRMED" &&
-            coversEvent(r, event),
-        )
-        .reduce((sum, r) => sum + r.quantity, 0) >= quantity,
-  );
+  // make the item look complete. AC 4 names what is short, without counts.
+  const short = [...requested]
+    .filter(
+      ([equipmentId, { quantity }]) =>
+        event.reservations
+          .filter(
+            (r) =>
+              r.equipmentId === equipmentId &&
+              r.status === "CONFIRMED" &&
+              coversEvent(r, event),
+          )
+          .reduce((sum, r) => sum + r.quantity, 0) < quantity,
+    )
+    .map(([, { type }]) => type);
+  const complete = short.length === 0;
 
   return {
     name: "Equipment",
     complete,
-    state: complete ? "Reserved" : "Not fully reserved",
+    state: complete ? "Reserved" : `Not fully reserved: ${short.join(", ")}`,
     reason: null,
   };
 }
