@@ -146,13 +146,13 @@ Review, owned by `organiser@test.local` and assigned to
 
 ### TC-126-10
 
-| Item            | Content                                                                                                                                                                                  |
-| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Test Case ID    | TC-126-10                                                                                                                                                                                |
-| Test Scenario   | [Concurrency] AC 4: starting a new request again, or twice at the same moment, creates only one Draft                                                                                    |
-| Pre-conditions  | As TC-126-04.                                                                                                                                                                            |
-| Test Steps      | 1. Click **Start New Request**. <br> 2. Go back to **All** and click it again. <br> 3. Separately, send two start requests at the same moment.                                           |
-| Test Data       | —                                                                                                                                                                                        |
-| Expected Result | Step 2 says "A draft was already started from this request. Find it under Drafts." Exactly one Draft exists in every case; the rejected event's history records which Draft was started. |
+| Item            | Content                                                                                                                                                                                                                                                  |
+| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Test Case ID    | TC-126-10                                                                                                                                                                                                                                                |
+| Test Scenario   | [Concurrency] AC 4: starting a new request again, or twice at the same moment, creates only one Draft                                                                                                                                                    |
+| Pre-conditions  | As TC-126-04.                                                                                                                                                                                                                                            |
+| Test Steps      | 1. Click **Start New Request**. <br> 2. Go back to **All** and click it again. <br> 3. Separately, send two start requests at the same moment.                                                                                                           |
+| Test Data       | —                                                                                                                                                                                                                                                        |
+| Expected Result | Step 2 says "A new request was already started from this one. Find it in your events list." (it may have been submitted since, so no tab is named) Exactly one Draft exists in every case; the rejected event's history records which Draft was started. |
 
 **Automated by:** `tests/unit/rejection-outcome.test.ts` › "SCRUM-126 [AC4] TC-126-10: …" (both); `tests/integration/rejection-outcome.test.ts` › "SCRUM-126 [AC4] TC-126-10: …"; `e2e/rejection-outcome.spec.ts` › "… TC-126-08: …" (the repeat click)

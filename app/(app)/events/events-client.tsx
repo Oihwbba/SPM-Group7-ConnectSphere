@@ -228,7 +228,7 @@ export function EventsClient({
       toast.success(
         result.data.created
           ? "A new draft was started from this request."
-          : "A draft was already started from this request. Find it under Drafts.",
+          : "A new request was already started from this one. Find it in your events list.",
       );
       // As the Drafts tab button does, so a leftover status filter can't hide it.
       setActiveTab("DRAFT");

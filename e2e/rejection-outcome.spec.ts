@@ -137,7 +137,7 @@ test.describe("SCRUM-126 — Rejected as needing a new request", () => {
       .click();
     await expect(
       page.getByText(
-        "A draft was already started from this request. Find it under Drafts.",
+        "A new request was already started from this one. Find it in your events list.",
       ),
     ).toBeVisible();
 
