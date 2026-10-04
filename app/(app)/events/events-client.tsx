@@ -38,6 +38,10 @@ import { CreateEventDialog } from "./create-event-dialog";
 import { EventDetailsModal } from "./event-details-modal";
 import { startRequestFromRejected, transitionEventStatus } from "./actions";
 import { REJECTION_OUTCOME_LABEL } from "@/lib/schemas/event";
+import {
+  CLARIFIABLE_FIELDS,
+  type ClarifiableField,
+} from "@/lib/schemas/clarification";
 import { requestClarification } from "./clarification-actions";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -159,6 +163,9 @@ export function EventsClient({
     useState<RejectionOutcome | null>(null);
   const [clarifyingEvent, setClarifyingEvent] = useState<Event | null>(null);
   const [clarificationMessage, setClarificationMessage] = useState("");
+  const [clarificationFields, setClarificationFields] = useState<
+    ClarifiableField[]
+  >([]);
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
 
@@ -245,6 +252,7 @@ export function EventsClient({
       const result = await requestClarification({
         eventId: clarifyingEvent.id,
         message: clarificationMessage,
+        editableFields: clarificationFields,
       });
       if (!result.ok) {
         toast.error(result.error);
@@ -253,6 +261,7 @@ export function EventsClient({
       toast.success("Clarification request sent to the organiser.");
       setClarifyingEvent(null);
       setClarificationMessage("");
+      setClarificationFields([]);
       router.refresh();
     });
   }
@@ -351,6 +360,7 @@ export function EventsClient({
                 onClick={() => {
                   setClarifyingEvent(event);
                   setClarificationMessage("");
+                  setClarificationFields([]);
                 }}
               >
                 <MessageCircleQuestion className="h-3.5 w-3.5" /> Ask
@@ -855,6 +865,34 @@ export function EventsClient({
             placeholder="What do you need clarified?"
             aria-label="Clarification message"
           />
+          {/* SCRUM-108 AC1: the fields the organiser may change in the
+              answer; none ticked means a text answer only. */}
+          <fieldset className="space-y-2 text-sm">
+            <legend className="mb-1 font-medium">
+              Fields the organiser may change (optional)
+            </legend>
+            <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+              {(Object.keys(CLARIFIABLE_FIELDS) as ClarifiableField[]).map(
+                (field) => (
+                  <label key={field} className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={clarificationFields.includes(field)}
+                      onChange={(e) =>
+                        setClarificationFields((current) =>
+                          e.target.checked
+                            ? [...current, field]
+                            : current.filter((f) => f !== field),
+                        )
+                      }
+                      className="accent-primary"
+                    />
+                    {CLARIFIABLE_FIELDS[field]}
+                  </label>
+                ),
+              )}
+            </div>
+          </fieldset>
           <DialogFooter>
             <Button variant="secondary" onClick={() => setClarifyingEvent(null)}>
               Cancel

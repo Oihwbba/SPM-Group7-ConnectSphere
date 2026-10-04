@@ -342,6 +342,9 @@ model ClarificationRequest {
 
   requestedById String
   message       String
+  // SCRUM-108 AC1 — the request-form fields the Organiser may change in the
+  // answer (keys of CLARIFIABLE_FIELDS); empty means a text answer only.
+  editableFields String[] @default([])
 
   status      ClarificationStatus @default(OPEN)
   response    String?
