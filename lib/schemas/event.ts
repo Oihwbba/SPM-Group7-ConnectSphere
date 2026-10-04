@@ -209,5 +209,23 @@ export const submitEventRequestSchema = z
     }
   });
 
+/**
+ * SCRUM-126 — what the Organiser may do after a rejection. The Coordinator's
+ * reject dialog and the transition action share this list, and the Organiser
+ * reads the same labels next to the reason.
+ */
+export const rejectionOutcomeSchema = z.enum([
+  "AMEND_AND_RESUBMIT",
+  "NEW_REQUEST",
+]);
+
+export const REJECTION_OUTCOME_LABEL: Record<
+  z.infer<typeof rejectionOutcomeSchema>,
+  string
+> = {
+  AMEND_AND_RESUBMIT: "Amend and resubmit",
+  NEW_REQUEST: "Submit as a new request",
+};
+
 export type CreateDraftEventInput = z.infer<typeof createDraftEventSchema>;
 export type SubmitEventRequestInput = z.infer<typeof submitEventRequestSchema>;

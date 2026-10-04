@@ -24,6 +24,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import type { Event } from "@prisma/client";
+import { REJECTION_OUTCOME_LABEL } from "@/lib/schemas/event";
 
 interface EventDetailsModalProps {
   event: Event | null;
@@ -127,8 +128,15 @@ export function EventDetailsModal({
                   Rejection reason
                 </CardTitle>
               </CardHeader>
-              <CardContent className="whitespace-pre-wrap p-4 text-xs">
-                {event.decisionReason}
+              <CardContent className="space-y-2 p-4 text-xs">
+                <p className="whitespace-pre-wrap">{event.decisionReason}</p>
+                {/* SCRUM-126 AC5: what the Coordinator said happens next. */}
+                {event.rejectionOutcome && (
+                  <p data-testid="rejection-outcome">
+                    <span className="font-semibold">Next step:</span>{" "}
+                    {REJECTION_OUTCOME_LABEL[event.rejectionOutcome]}
+                  </p>
+                )}
               </CardContent>
             </Card>
           )}

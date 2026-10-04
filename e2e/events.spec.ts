@@ -822,8 +822,11 @@ test.describe("User Story 23 & 24 — Event Status View & Consistency Journey", 
     const submitRejectBtn = rejectModal.getByRole("button", { name: "Reject request" });
     await expect(submitRejectBtn).toBeDisabled();
 
-    // Provide clear rejection reason and submit decision
+    // Provide clear rejection reason and submit decision. SCRUM-126 AC1: the
+    // outcome must be chosen too before the decision can be sent.
     await page.getByPlaceholder("Reason for rejection").fill("Insufficient venue capacity for requested date");
+    await expect(submitRejectBtn).toBeDisabled();
+    await rejectModal.getByLabel("Amend and resubmit").check();
     await expect(submitRejectBtn).toBeEnabled();
     await submitRejectBtn.click();
 
@@ -1075,6 +1078,9 @@ test.describe("SCRUM-19 — Reject with a reason, then amend and resubmit", () =
     await expect(rejectButton).toBeDisabled();
 
     await rejectDialog.getByLabel("Rejection reason").fill(reason);
+    // SCRUM-126 AC1: a reason alone is not enough; the outcome is chosen too.
+    await expect(rejectButton).toBeDisabled();
+    await rejectDialog.getByLabel("Amend and resubmit").check();
     await expect(rejectButton).toBeEnabled();
     await rejectButton.click();
     await expect(coordinatorRow.getByTestId("status-badge")).toHaveAttribute(
@@ -1093,6 +1099,10 @@ test.describe("SCRUM-19 — Reject with a reason, then amend and resubmit", () =
     const details = page.getByRole("dialog");
     await expect(details.getByText("Rejection reason")).toBeVisible();
     await expect(details.getByText(reason)).toBeVisible();
+    // SCRUM-126 AC5: the chosen outcome is shown with the reason.
+    await expect(details.getByTestId("rejection-outcome")).toHaveText(
+      "Next step: Amend and resubmit",
+    );
     await page.keyboard.press("Escape");
 
     // --- Organiser amends and resubmits -----------------------------------

@@ -8,6 +8,7 @@ import { prisma } from "@/lib/db";
 import { can, requirePermission, PermissionError } from "@/lib/auth/can";
 import {
   createDraftEventSchema,
+  rejectionOutcomeSchema,
   submitEventRequestSchema,
 } from "@/lib/schemas/event";
 import { ok, err, type ActionResult } from "@/lib/action-result";
@@ -28,9 +29,14 @@ const statusTransitionSchema = z.object({
   eventId: z.string().min(1),
   nextStatus: z.enum(["APPROVED", "REJECTED"]),
   decisionReason: z.string().trim().max(2000).optional(),
+  rejectionOutcome: rejectionOutcomeSchema.optional(),
 });
 
 const confirmEventSchema = z.object({ eventId: z.string().min(1) });
+
+const startRequestFromRejectedSchema = z.object({
+  eventId: z.string().min(1),
+});
 
 /**
  * Server action to create or save/update a DRAFT event request.
@@ -209,7 +215,12 @@ export async function submitEventRequest(
           where: {
             id,
             organiserId: user!.id,
-            status: { in: ["DRAFT", "REJECTED"] },
+            // SCRUM-126 AC2/AC3: a rejection marked "Submit as a new request"
+            // stays Rejected and read-only.
+            OR: [
+              { status: "DRAFT" },
+              { status: "REJECTED", rejectionOutcome: "AMEND_AND_RESUBMIT" },
+            ],
           },
         });
 
@@ -231,6 +242,7 @@ export async function submitEventRequest(
             decidedAt: null,
             decidedById: null,
             decisionReason: null,
+            rejectionOutcome: null,
             startAt: new Date(startAt),
             endAt: new Date(endAt),
             expectedAttendance,
@@ -395,10 +407,17 @@ export async function transitionEventStatus(
       return err("Please provide a valid event status action.");
     }
 
-    const { eventId, nextStatus, decisionReason } = parsed.data;
+    const { eventId, nextStatus, decisionReason, rejectionOutcome } =
+      parsed.data;
     if (nextStatus === "REJECTED" && !decisionReason) {
       return err("A rejection reason is required.", {
         decisionReason: ["A rejection reason is required."],
+      });
+    }
+    // SCRUM-126 AC1: the Coordinator also decides what the Organiser does next.
+    if (nextStatus === "REJECTED" && !rejectionOutcome) {
+      return err("Choose what the organiser can do next.", {
+        rejectionOutcome: ["Choose what the organiser can do next."],
       });
     }
 
@@ -448,7 +467,8 @@ export async function transitionEventStatus(
           coordinatorId,
           decidedAt: new Date(),
           decidedById: user!.id,
-          decisionReason: nextStatus === "REJECTED" ? decisionReason : null,
+          decisionReason: approved ? null : decisionReason,
+          rejectionOutcome: approved ? null : rejectionOutcome,
         },
       });
       if (result.count !== 1) return false;
@@ -465,6 +485,20 @@ export async function transitionEventStatus(
           summary: decisionReason ?? undefined,
         },
       });
+      if (!approved) {
+        await tx.auditLog.create({
+          data: {
+            entityType: "Event",
+            entityId: event.id,
+            action: "UPDATED",
+            actorId: user!.id,
+            fieldName: "rejectionOutcome",
+            oldValue: null,
+            newValue: rejectionOutcome,
+            summary: "Outcome chosen on rejection (SCRUM-126)",
+          },
+        });
+      }
       if (coordinatorId !== event.coordinatorId) {
         await tx.auditLog.create({
           data: {
@@ -610,6 +644,101 @@ export async function confirmEvent(
     }
     revalidatePath("/events");
     return ok({ status: "CONFIRMED" });
+  } catch (error) {
+    if (error instanceof PermissionError) return err(error.message);
+    throw error;
+  }
+}
+
+/**
+ * SCRUM-126 AC4 — when the Coordinator rejected a request as needing a new
+ * submission, its Organiser can start a new Draft from it. Only the request's
+ * own details are copied: the Draft has no coordinator, decision, bookings,
+ * equipment requests, reservations or history of its own yet. Starting again
+ * returns the Draft already started rather than a second copy. See ADR 0013.
+ */
+export async function startRequestFromRejected(
+  input: unknown,
+): Promise<ActionResult<{ id: string; created: boolean }>> {
+  const session = await auth();
+  const user = session?.user;
+
+  try {
+    requirePermission(user, "event:create");
+
+    const parsed = startRequestFromRejectedSchema.safeParse(input);
+    if (!parsed.success) {
+      return err("Please choose a rejected request to start from.");
+    }
+
+    const { eventId } = parsed.data;
+    const outcome = await prisma.$transaction(async (tx) => {
+      // Lock the rejected event first, so two clicks at the same moment take
+      // turns and the second finds the Draft the first one started.
+      await tx.$queryRaw`SELECT "id" FROM "Event" WHERE "id" = ${eventId} FOR UPDATE`;
+
+      // The Organiser's own rejected request, and only one rejected for a new
+      // submission; anything else is "not found", as in SCRUM-68.
+      const rejected = await tx.event.findFirst({
+        where: {
+          id: eventId,
+          organiserId: user!.id,
+          status: "REJECTED",
+          rejectionOutcome: "NEW_REQUEST",
+        },
+        select: {
+          name: true,
+          purpose: true,
+          description: true,
+          startAt: true,
+          endAt: true,
+          expectedAttendance: true,
+          venueRequirements: true,
+          requiredFacilities: true,
+          accessibilityNeeds: true,
+          preferredLayout: true,
+          equipmentRequirements: true,
+          registrationNotes: true,
+          programme: true,
+          specialRequests: true,
+          equipmentTypes: true,
+          registrationRequired: true,
+        },
+      });
+      if (!rejected) return null;
+
+      // The rejected event's history says which Draft was started from it.
+      const started = await tx.auditLog.findFirst({
+        where: { entityType: "Event", entityId: eventId, action: "NEW_REQUEST_STARTED" },
+        select: { newValue: true },
+      });
+      if (started?.newValue) return { id: started.newValue, created: false };
+
+      const draft = await tx.event.create({
+        data: {
+          ...rejected,
+          status: "DRAFT",
+          timezone: TIME_ZONE,
+          organiserId: user!.id,
+        },
+        select: { id: true },
+      });
+      await tx.auditLog.create({
+        data: {
+          entityType: "Event",
+          entityId: eventId,
+          action: "NEW_REQUEST_STARTED",
+          actorId: user!.id,
+          newValue: draft.id,
+          summary: "New request started from this rejection (SCRUM-126)",
+        },
+      });
+      return { id: draft.id, created: true };
+    });
+    if (!outcome) return err("Event not found.");
+
+    revalidatePath("/events");
+    return ok(outcome);
   } catch (error) {
     if (error instanceof PermissionError) return err(error.message);
     throw error;
