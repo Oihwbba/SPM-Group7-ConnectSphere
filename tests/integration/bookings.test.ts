@@ -14,6 +14,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { can } from "@/lib/auth/can";
 import {
+  checkVenueAvailability,
   decideBookingRequest,
   submitBookingRequest,
 } from "@/app/(app)/bookings/actions";
@@ -414,6 +415,62 @@ describe.skipIf(!usesLocalDatabase)(
         } finally {
           await prisma.venue.delete({ where: { id: retired.id } });
         }
+      });
+    });
+
+    describe("SCRUM-50 — the live availability check in the form", () => {
+      const check = (startAt: string, endAt: string) =>
+        checkVenueAvailability({ venueId, startAt, endAt });
+
+      it("SCRUM-50 AC3 — the form is told an approved booking or recorded unavailability makes the venue unavailable, and the submission agrees", async () => {
+        await approvedBooking(at(10, 7), at(10, 9));
+        await prisma.venueUnavailability.create({
+          data: {
+            venueId,
+            startAt: new Date(at(10, 4)),
+            endAt: new Date(at(10, 6)),
+            reason: "MAINTENANCE",
+            recordedById: "usr_venuestaff",
+          },
+        });
+
+        const live = await check(at(10, 5), at(10, 8));
+        expect(live.ok && live.data.available).toBe(false);
+        expect(live.ok && live.data.clashes).toHaveLength(2);
+
+        const submitted = await submitBookingRequest(
+          request({ startAt: at(10, 5), endAt: at(10, 8) }),
+        );
+        expect(submitted.ok).toBe(false);
+      });
+
+      it("SCRUM-50 AC4 — periods touching a booking at either end are reported available", async () => {
+        await approvedBooking(at(10, 7), at(10, 9));
+
+        for (const [start, end] of [
+          [at(10, 5), at(10, 7)],
+          [at(10, 9), at(10, 11)],
+        ]) {
+          expect(await check(start, end)).toEqual({
+            ok: true,
+            data: { available: true, clashes: [] },
+          });
+        }
+      });
+
+      it("SCRUM-50 AC3 — a pending request blocks nobody, so the venue still reads available", async () => {
+        await pendingFromAnotherCoordinator(at(10, 6), at(10, 8));
+
+        expect(await check(at(10, 6), at(10, 8))).toEqual({
+          ok: true,
+          data: { available: true, clashes: [] },
+        });
+      });
+
+      it("SCRUM-50 — the check writes nothing", async () => {
+        const before = await bookingCount();
+        await check(at(10, 6), at(10, 8));
+        expect(await bookingCount()).toBe(before);
       });
     });
 

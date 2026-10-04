@@ -16,7 +16,7 @@ import {
   PAST_START_MESSAGE,
 } from "@/lib/schemas/booking";
 import { onceMoreOnDeadlock, violatesExclusion } from "@/lib/db-errors";
-import { overlapping } from "@/lib/period";
+import { isValidPeriod, overlapping } from "@/lib/period";
 import { describeBlocker, findVenueBlockers } from "@/lib/venue-availability";
 
 export type BookingSummary = {
@@ -44,6 +44,45 @@ function toSummary(row: {
 }): BookingSummary {
   const { venue, ...rest } = row;
   return { ...rest, venueName: venue.name };
+}
+
+/**
+ * SCRUM-50 AC3 — a live answer, while the Coordinator is still filling in the
+ * form: is this venue free for this period? Read-only. It asks the same
+ * `findVenueBlockers` question `submitBookingRequest` asks, so the form and
+ * the submission cannot disagree; submitting still checks again, because a
+ * booking can be approved between this answer and the click.
+ */
+export async function checkVenueAvailability(
+  input: unknown,
+): Promise<ActionResult<{ available: boolean; clashes: string[] }>> {
+  const session = await auth();
+
+  try {
+    requirePermission(session?.user, "booking:request");
+
+    const { venueId, startAt, endAt } = (input ?? {}) as Record<
+      string,
+      unknown
+    >;
+    const period = {
+      startAt: new Date(String(startAt)),
+      endAt: new Date(String(endAt)),
+    };
+    if (typeof venueId !== "string" || !venueId) {
+      return err("Choose a venue.");
+    }
+    if (!isValidPeriod(period)) return err(INVALID_PERIOD_MESSAGE);
+
+    const blockers = await findVenueBlockers(prisma, venueId, period);
+    return ok({
+      available: blockers.length === 0,
+      clashes: blockers.map(describeBlocker),
+    });
+  } catch (error) {
+    if (error instanceof PermissionError) return err(error.message);
+    throw error;
+  }
 }
 
 /**

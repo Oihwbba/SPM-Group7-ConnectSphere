@@ -14,6 +14,7 @@ import { revalidatePath } from "next/cache";
 
 import { auth } from "@/auth";
 import {
+  checkVenueAvailability,
   decideBookingRequest,
   submitBookingRequest,
 } from "@/app/(app)/bookings/actions";
@@ -395,6 +396,93 @@ describe("submitBookingRequest — SCRUM-50", () => {
 
     db.booking.create.mockRejectedValue(new Error("connection lost"));
     await expect(submitBookingRequest(validRequest)).rejects.toThrow(
+      "connection lost",
+    );
+  });
+});
+
+describe("checkVenueAvailability — SCRUM-50 live check", () => {
+  const period = { venueId: "ven_1", startAt: START, endAt: END };
+
+  it("SCRUM-50 AC3 — a free venue is reported available before submitting", async () => {
+    expect(await checkVenueAvailability(period)).toEqual({
+      ok: true,
+      data: { available: true, clashes: [] },
+    });
+  });
+
+  it("SCRUM-50 AC3 — a venue booked or unavailable for part of the period is reported taken, naming each clash", async () => {
+    db.booking.findMany.mockResolvedValue([
+      {
+        id: "bkg_x",
+        startAt: new Date("2030-06-01T07:00:00.000Z"),
+        endAt: new Date("2030-06-01T09:00:00.000Z"),
+      },
+    ]);
+    db.venueUnavailability.findMany.mockResolvedValue([
+      {
+        id: "unv_x",
+        startAt: new Date("2030-06-01T05:00:00.000Z"),
+        endAt: new Date("2030-06-01T06:30:00.000Z"),
+        reason: "MAINTENANCE",
+      },
+    ]);
+
+    expect(await checkVenueAvailability(period)).toEqual({
+      ok: true,
+      data: {
+        available: false,
+        clashes: [
+          "unavailable (maintenance) from 1 Jun 2030, 1:00 pm SGT to 1 Jun 2030, 2:30 pm SGT",
+          "already booked from 1 Jun 2030, 3:00 pm SGT to 1 Jun 2030, 5:00 pm SGT",
+        ],
+      },
+    });
+  });
+
+  it("SCRUM-50 AC5 — an end before or equal to the start, or a missing time, is an invalid period and nothing is read", async () => {
+    for (const bad of [
+      { ...period, endAt: START },
+      { ...period, startAt: END, endAt: START },
+      { ...period, endAt: undefined },
+    ]) {
+      expect(await checkVenueAvailability(bad)).toEqual({
+        ok: false,
+        error:
+          "The requested period is invalid: the end must be after the start.",
+      });
+    }
+    expect(db.booking.findMany).not.toHaveBeenCalled();
+  });
+
+  it("SCRUM-50 — without a venue there is nothing to check", async () => {
+    expect(await checkVenueAvailability({ ...period, venueId: "" })).toEqual({
+      ok: false,
+      error: "Choose a venue.",
+    });
+    expect(await checkVenueAvailability(undefined)).toMatchObject({
+      ok: false,
+    });
+  });
+
+  it("SCRUM-50 — every role except Event Coordinator is refused before anything is read", async () => {
+    for (const role of [
+      "ORGANISER",
+      "VENUE_STAFF",
+      "TECH_SUPPORT",
+      "ATTENDEE",
+    ] as Role[]) {
+      mockAuth.mockResolvedValue(sessionFor(role));
+      expect(await checkVenueAvailability(period)).toMatchObject({ ok: false });
+    }
+    mockAuth.mockResolvedValue(null);
+    expect(await checkVenueAvailability(period)).toMatchObject({ ok: false });
+    expect(db.booking.findMany).not.toHaveBeenCalled();
+  });
+
+  it("does not swallow an unexpected database error", async () => {
+    db.booking.findMany.mockRejectedValue(new Error("connection lost"));
+    await expect(checkVenueAvailability(period)).rejects.toThrow(
       "connection lost",
     );
   });

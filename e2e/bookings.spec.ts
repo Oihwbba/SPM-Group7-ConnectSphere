@@ -21,22 +21,34 @@ async function openRequestForm(page: Page) {
   await page.locator('[data-hydrated="true"]').waitFor();
 }
 
-/** Fill and submit the form. */
-async function requestHall(
+type HallRequest = {
+  event: string;
+  start: string;
+  end: string;
+  notes?: string;
+};
+
+/** Fill the form, room layout before venue, without submitting. */
+async function fillHall(
   page: Page,
-  {
-    event,
-    start,
-    end,
-    notes = "",
-  }: { event: string; start: string; end: string; notes?: string },
+  { event, start, end, notes = "" }: HallRequest,
 ) {
   await choose(page, "Event", event);
+  await choose(page, "Room layout", /^theatre$/);
   await choose(page, "Venue", /^Exhibition Hall/);
+  await page.getByLabel("Expected attendance").fill("120");
   await setTime(page, "Start", start);
   await setTime(page, "End", end);
-  await page.getByLabel("Expected attendance").fill("120");
   await page.getByLabel("Other details for Venue Staff").fill(notes);
+}
+
+/** Fill the form, wait for the live check to call the hall free, and submit. */
+async function requestHall(page: Page, request: HallRequest) {
+  await fillHall(page, request);
+  await expect(page.getByTestId("live-availability")).toHaveAttribute(
+    "data-state",
+    "free",
+  );
   await page.getByRole("button", { name: "Submit request" }).click();
 }
 
@@ -121,18 +133,22 @@ test.describe("SCRUM-50 / 52 / 53 — venue booking request, review and decision
     ).toBeVisible();
     await expect(card).toHaveCount(0);
 
-    // SCRUM-53 AC3 / SCRUM-50 AC3 — the period is now unavailable.
+    // SCRUM-53 AC3 / SCRUM-50 AC3 — the period is now unavailable, and the
+    // form says so before anything is submitted.
     await openRequestForm(coordinator);
-    await requestHall(coordinator, {
+    await fillHall(coordinator, {
       event: PLANNING_EVENT,
       start: "2035-03-10T11:00",
       end: "2035-03-10T15:00",
     });
-    const refusal = coordinator.getByTestId("booking-outcome");
-    await expect(refusal).toContainText("Request not submitted");
-    await expect(refusal).toContainText(
-      "Exhibition Hall is unavailable for that period: already booked from 10 Mar 2035, 9:00 am SGT to 10 Mar 2035, 1:00 pm SGT.",
+    const live = coordinator.getByTestId("live-availability");
+    await expect(live).toHaveAttribute("data-state", "taken");
+    await expect(live).toContainText(
+      "Exhibition Hall is unavailable for this period: already booked from 10 Mar 2035, 9:00 am SGT to 10 Mar 2035, 1:00 pm SGT.",
     );
+    await expect(
+      coordinator.getByRole("button", { name: "Submit request" }),
+    ).toBeDisabled();
     await testInfo.attach("SCRUM-50 refusal when the venue is already booked", {
       body: await coordinator.screenshot({ fullPage: false }),
       contentType: "image/png",
@@ -147,23 +163,57 @@ test.describe("SCRUM-50 / 52 / 53 — venue booking request, review and decision
     // SCRUM-50 AC4 — a period beginning exactly when the booking ends is accepted.
     await setTime(coordinator, "Start", "2035-03-10T13:00");
     await setTime(coordinator, "End", "2035-03-10T15:00");
+    await expect(live).toHaveAttribute("data-state", "free");
+    await expect(live).toContainText(
+      "Exhibition Hall is available for this period.",
+    );
     await coordinator.getByRole("button", { name: "Submit request" }).click();
     await expectSubmitted(coordinator);
   });
 
-  test("SCRUM-50 AC5 — an end before the start is reported as an invalid period", async ({
+  test("SCRUM-50 AC5 — an end before the start is reported as an invalid period before submitting, and Submit is disabled", async ({
     browser,
   }) => {
     const coordinator = await signedIn(browser, "coordinator@test.local");
     await openRequestForm(coordinator);
-    await requestHall(coordinator, {
+    await fillHall(coordinator, {
       event: APPROVED_EVENT,
       start: "2035-04-01T15:00",
       end: "2035-04-01T09:00",
     });
 
-    await expect(coordinator.getByTestId("booking-outcome")).toContainText(
+    const live = coordinator.getByTestId("live-availability");
+    await expect(live).toHaveAttribute("data-state", "error");
+    await expect(live).toContainText(
       "The requested period is invalid: the end must be after the start.",
+    );
+    await expect(
+      coordinator.getByRole("button", { name: "Submit request" }),
+    ).toBeDisabled();
+  });
+
+  test("SCRUM-50 AC1 — the room layout is chosen first, and only venues that support it are offered", async ({
+    browser,
+  }) => {
+    const coordinator = await signedIn(browser, "coordinator@test.local");
+    await openRequestForm(coordinator);
+
+    await choose(coordinator, "Room layout", /^classroom$/);
+    await expect(
+      coordinator.getByText(
+        "Showing venues that support the classroom layout.",
+      ),
+    ).toBeVisible();
+    await coordinator.getByLabel("Venue", { exact: true }).click();
+    const offered = coordinator.getByRole("option");
+    await expect(offered).toHaveCount(1);
+    await expect(offered).toHaveText(/^Seminar Room 2\.1/);
+    await offered.click();
+
+    // A layout the chosen venue cannot be set up in clears it.
+    await choose(coordinator, "Room layout", /^banquet$/);
+    await expect(coordinator.getByLabel("Venue", { exact: true })).toHaveText(
+      "Select a venue",
     );
   });
 

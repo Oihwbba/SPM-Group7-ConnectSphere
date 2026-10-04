@@ -24,6 +24,8 @@ nothing seeded overlaps them. Times are Singapore time.
 | [TC-50-09](#tc-50-09) | Negative | Coordinators only, own events only | Unit, integration, e2e |
 | [TC-50-10](#tc-50-10) | Negative, Boundary | Attendance within venue capacity | Unit, integration, e2e |
 | [TC-50-11](#tc-50-11) | Negative, Boundary | No period that has already started | Unit, integration |
+| [TC-50-12](#tc-50-12) | Positive | AC 1 (room layout before venue) | Unit, e2e |
+| [TC-50-13](#tc-50-13) | Negative, Boundary | AC 3, AC 4, AC 5 shown live, before submitting | Unit, integration, e2e |
 
 ---
 
@@ -47,9 +49,9 @@ nothing seeded overlaps them. Times are Singapore time.
 | Test Case ID | TC-50-02 |
 | Test Scenario | [Negative] AC 3: a request overlapping an approved booking is refused and nothing is created |
 | Pre-conditions | TC-50-01's request has been approved by Venue Staff (see TC-53-01). |
-| Test Steps | 1. Open **Request Venue**. <br> 2. Request the Exhibition Hall for a period overlapping the approved booking. <br> 3. Click **Submit request**. |
+| Test Steps | 1. Open **Request Venue**. <br> 2. Request the Exhibition Hall for a period overlapping the approved booking. <br> 3. Read the availability line under the period. <br> 4. Send the same request directly to the server. |
 | Test Data | Event: Planning — Freshman Orientation <br> Start: 2035-03-10 11:00 <br> End: 2035-03-10 15:00 |
-| Expected Result | "Request not submitted. Exhibition Hall is unavailable for that period: already booked from 10 Mar 2035, 9:00 am to 10 Mar 2035, 1:00 pm." No new booking row exists. The other booking's event is not named. |
+| Expected Result | Step 3, before anything is submitted: "Exhibition Hall is unavailable for this period: already booked from 10 Mar 2035, 9:00 am SGT to 10 Mar 2035, 1:00 pm SGT." **Submit request** is disabled. Step 4: the server refuses it with "…is unavailable for that period: …". No new booking row exists. The other booking's event is not named. |
 
 **Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-50 AC3 — a request overlapping an approved booking is refused and nothing is written"; `tests/unit/bookings.test.ts` › "SCRUM-50 AC3 — a venue already booked for part of the period refuses the request and names the clash"; `tests/unit/period.test.ts` › every "SCRUM-50 AC3 — …" case (overlapping, contained, identical, shared start, one minute); `e2e/bookings.spec.ts` › journey (screenshot attached to the report)
 
@@ -103,7 +105,7 @@ nothing seeded overlaps them. Times are Singapore time.
 | Test Data | Start 2035-04-01 15:00, End 2035-04-01 09:00; then Start = End = 15:00 |
 | Expected Result | "The requested period is invalid: the end must be after the start." Nothing is created, and no other check runs first. One minute after the start is valid. |
 
-**Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-50 AC5 — an end before the start…" and "…an end equal to the start is refused as an invalid period"; `tests/unit/bookings.test.ts` › "SCRUM-50 AC5 — an end before or equal to the start is reported as an invalid period"; `tests/unit/period.test.ts` › every "SCRUM-50 AC5 — …" case; `e2e/bookings.spec.ts` › "SCRUM-50 AC5 — an end before the start is reported as an invalid period"
+**Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-50 AC5 — an end before the start…" and "…an end equal to the start is refused as an invalid period"; `tests/unit/bookings.test.ts` › "SCRUM-50 AC5 — an end before or equal to the start is reported as an invalid period"; `tests/unit/period.test.ts` › every "SCRUM-50 AC5 — …" case; `e2e/bookings.spec.ts` › "SCRUM-50 AC5 — an end before the start is reported as an invalid period before submitting, and Submit is disabled"
 
 ### TC-50-07
 
@@ -169,3 +171,29 @@ nothing seeded overlaps them. Times are Singapore time.
 | Expected Result | Step 1: times earlier than now are disabled; the half hour starting at this minute and later ones can be picked; earlier days cannot be picked in the calendar. Step 2: "The start time cannot be in the past." against the start field, and nothing is written. A start less than a minute ago still counts as now. |
 
 **Automated by:** `tests/unit/bookings.test.ts` › "SCRUM-50 — a period that has already started is refused against the start field…" and "…a start less than a minute ago still counts as now"; `tests/integration/bookings.test.ts` › "SCRUM-50 — a period that has already started is refused and nothing is written"; `tests/unit/request-form.test.tsx` › the three isPastSlot cases
+
+### TC-50-12
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-50-12 |
+| Test Scenario | [Positive] AC 1: the room layout is chosen before the venue, and only venues that support it are offered. Added on 2026-10-04 at the Product Owner's request. |
+| Pre-conditions | — |
+| Test Steps | 1. Open **Request Venue**. <br> 2. Choose **Room layout** "classroom" and open **Venue**. <br> 3. Choose Seminar Room 2.1, then change the layout to "banquet". <br> 4. Set the layout back to "No preference" and open **Venue**. |
+| Test Data | Seeded venues and their supported layouts |
+| Expected Result | Room layout sits above Venue. Step 2: only Seminar Room 2.1 is offered, with "Showing venues that support the classroom layout." Step 3: the venue is cleared because Seminar Room 2.1 cannot be set up for a banquet. Step 4: every active venue is offered. Choosing an event pre-selects its preferred layout, which narrows the venues the same way. |
+
+**Automated by:** `e2e/bookings.spec.ts` › "SCRUM-50 AC1 — the room layout is chosen first, and only venues that support it are offered"; `tests/unit/request-form.test.tsx` › "SCRUM-50 AC1 — once a layout is chosen, only venues that support it are offered", "…with no layout preference, every venue is offered" and "…the room layout is asked for before the venue"
+
+### TC-50-13
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-50-13 |
+| Test Scenario | [Negative, Boundary] AC 3, AC 4, AC 5: whether the venue is free is shown live as the period is chosen, and a taken venue or an invalid period disables Submit. Added on 2026-10-04 at the Product Owner's request. |
+| Pre-conditions | An approved booking on the Exhibition Hall 2035-03-10 09:00–13:00 (TC-50-02). |
+| Test Steps | 1. Choose the Exhibition Hall and 11:00–15:00 on that day. <br> 2. Change the period to 13:00–15:00. <br> 3. Change the end to before the start. |
+| Test Data | Exhibition Hall, 2035-03-10 |
+| Expected Result | While the answer is fetched, "Checking whether Exhibition Hall is free…". Step 1: "…is unavailable for this period: already booked from … to …", and Submit is disabled. Step 2: "Exhibition Hall is available for this period.", and Submit is enabled (the touching end is not an overlap). Step 3: "The requested period is invalid: the end must be after the start.", and Submit is disabled. A pending request blocks nobody, so it still reads available. The check writes nothing. Submitting checks again on the server, because a booking can be approved in between. |
+
+**Automated by:** `tests/unit/bookings.test.ts` › every "checkVenueAvailability — SCRUM-50 live check" case; `tests/integration/bookings.test.ts` › every "SCRUM-50 — the live availability check in the form" case; `e2e/bookings.spec.ts` › journey and "SCRUM-50 AC5 — …"; `e2e/availability.spec.ts` › "SCRUM-37 AC2-5, …" (maintenance shown live)

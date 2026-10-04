@@ -4,6 +4,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import {
   RequestForm,
   snapToHalfHour,
+  venuesForLayout,
 } from "@/app/(app)/bookings/new/request-form";
 import { HALF_HOUR_TIMES, isPastSlot } from "@/components/app/date-time-field";
 
@@ -11,6 +12,7 @@ import { HALF_HOUR_TIMES, isPastSlot } from "@/components/app/date-time-field";
 // never called here, so its dependencies are stubbed out.
 vi.mock("@/app/(app)/bookings/actions", () => ({
   submitBookingRequest: vi.fn(),
+  checkVenueAvailability: vi.fn(),
 }));
 
 const venue = {
@@ -60,6 +62,15 @@ describe("RequestForm — SCRUM-50", () => {
     expect(html).toContain("Submit request");
   });
 
+  it("SCRUM-50 AC1 — the room layout is asked for before the venue", () => {
+    const html = renderToStaticMarkup(
+      <RequestForm events={[event]} venues={[venue]} />,
+    );
+
+    expect(html.indexOf("Room layout")).toBeGreaterThan(-1);
+    expect(html.indexOf("Room layout")).toBeLessThan(html.indexOf("Venue"));
+  });
+
   it("SCRUM-50 AC1 — required facilities are toggle pills, none chosen until the coordinator picks", () => {
     const html = renderToStaticMarkup(
       <RequestForm events={[event]} venues={[venue]} />,
@@ -68,6 +79,21 @@ describe("RequestForm — SCRUM-50", () => {
     expect(html).toMatch(
       /<button[^>]*aria-pressed="false"[^>]*>projector<\/button>/,
     );
+  });
+});
+
+describe("venuesForLayout — SCRUM-50", () => {
+  const hall = { id: "hall", supportedLayouts: ["theatre", "banquet"] };
+  const room = { id: "room", supportedLayouts: ["classroom", "theatre"] };
+
+  it("SCRUM-50 AC1 — once a layout is chosen, only venues that support it are offered", () => {
+    expect(venuesForLayout([hall, room], "banquet")).toEqual([hall]);
+    expect(venuesForLayout([hall, room], "theatre")).toEqual([hall, room]);
+    expect(venuesForLayout([hall, room], "boardroom")).toEqual([]);
+  });
+
+  it("SCRUM-50 AC1 — with no layout preference, every venue is offered", () => {
+    expect(venuesForLayout([hall, room], "")).toEqual([hall, room]);
   });
 });
 

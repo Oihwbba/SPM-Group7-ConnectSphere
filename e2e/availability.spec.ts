@@ -50,15 +50,16 @@ async function recordMaintenance(page: Page, start: string, end: string) {
     .click();
 }
 
+/** Fill the request form; what the live check says is left to the caller. */
 async function requestAuditorium(page: Page, start: string, end: string) {
   await page.goto("/bookings/new");
   await page.locator('[data-hydrated="true"]').waitFor();
   await choose(page, "Event", APPROVED_EVENT);
+  await choose(page, "Room layout", /^theatre$/);
   await choose(page, "Venue", /^Grand Auditorium/);
   await setTime(page, "Start", start);
   await setTime(page, "End", end);
   await page.getByLabel("Expected attendance").fill("100");
-  await page.getByRole("button", { name: "Submit request" }).click();
 }
 
 test.describe("SCRUM-36 / SCRUM-37 — venue availability calendar and recorded unavailability", () => {
@@ -105,18 +106,29 @@ test.describe("SCRUM-36 / SCRUM-37 — venue availability calendar and recorded 
     await coordinator.goto(calendarFor(AUDITORIUM, DAY));
     expect(await stretches(coordinator, DAY)).toEqual([
       ["free", "Available midnight to 1:00 pm SGT"],
-      ["unavailability", "Unavailable (maintenance) 1:00 pm SGT to 5:00 pm SGT"],
+      [
+        "unavailability",
+        "Unavailable (maintenance) 1:00 pm SGT to 5:00 pm SGT",
+      ],
       ["free", "Available 5:00 pm SGT to midnight"],
     ]);
 
     // SCRUM-37 AC3 — a request over it is refused, like a booking clash.
     await requestAuditorium(coordinator, `${DAY}T14:00`, `${DAY}T16:00`);
-    await expect(coordinator.getByTestId("booking-outcome")).toContainText(
-      "Grand Auditorium is unavailable for that period: unavailable (maintenance) from 10 Jan 2036, 1:00 pm SGT to 10 Jan 2036, 5:00 pm SGT.",
+    await expect(coordinator.getByTestId("live-availability")).toContainText(
+      "Grand Auditorium is unavailable for this period: unavailable (maintenance) from 10 Jan 2036, 1:00 pm SGT to 10 Jan 2036, 5:00 pm SGT.",
     );
+    await expect(
+      coordinator.getByRole("button", { name: "Submit request" }),
+    ).toBeDisabled();
 
     // SCRUM-37 AC5 — a request ending exactly as the maintenance begins is accepted.
     await requestAuditorium(coordinator, `${DAY}T09:00`, `${DAY}T13:00`);
+    await expect(coordinator.getByTestId("live-availability")).toHaveAttribute(
+      "data-state",
+      "free",
+    );
+    await coordinator.getByRole("button", { name: "Submit request" }).click();
     await expect(coordinator.getByTestId("booking-success")).toContainText(
       "Request submitted",
     );
@@ -126,7 +138,9 @@ test.describe("SCRUM-36 / SCRUM-37 — venue availability calendar and recorded 
     await staff.goto("/bookings");
     const card = staff
       .getByTestId(/^booking-/)
-      .filter({ hasText: "10 Jan 2036, 9:00 am SGT to 10 Jan 2036, 1:00 pm SGT" });
+      .filter({
+        hasText: "10 Jan 2036, 9:00 am SGT to 10 Jan 2036, 1:00 pm SGT",
+      });
     await card.getByRole("button", { name: "Approve" }).click();
     await expect(staff.getByText(/^Approved: Grand Auditorium/)).toBeVisible();
 
@@ -136,7 +150,10 @@ test.describe("SCRUM-36 / SCRUM-37 — venue availability calendar and recorded 
     expect(await stretches(coordinator, DAY)).toEqual([
       ["free", "Available midnight to 9:00 am SGT"],
       ["booking", "Booked 9:00 am SGT to 1:00 pm SGT"],
-      ["unavailability", "Unavailable (maintenance) 1:00 pm SGT to 5:00 pm SGT"],
+      [
+        "unavailability",
+        "Unavailable (maintenance) 1:00 pm SGT to 5:00 pm SGT",
+      ],
       ["free", "Available 5:00 pm SGT to midnight"],
     ]);
 
@@ -165,7 +182,9 @@ test.describe("SCRUM-36 / SCRUM-37 — venue availability calendar and recorded 
     await expect(bookingDetails).toContainText("100 expected");
     // A screen reader hears the same details as the block's description.
     await expect(
-      booking.getByRole("button", { name: "Booked 9:00 am SGT to 1:00 pm SGT" }),
+      booking.getByRole("button", {
+        name: "Booked 9:00 am SGT to 1:00 pm SGT",
+      }),
     ).toHaveAccessibleDescription(/Requested by Cody Coordinator/);
     await testInfo.attach("SCRUM-36 details shown on hover", {
       body: await coordinator.screenshot({ fullPage: false }),
