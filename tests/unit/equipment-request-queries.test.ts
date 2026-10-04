@@ -6,6 +6,7 @@ import {
   getRequestableEvents,
 } from "@/lib/equipment/request-queries";
 import { REQUESTABLE_EVENT_STATUSES } from "@/lib/equipment/requests";
+import { RESERVABLE_EVENT_STATUSES } from "@/lib/schemas/reservation";
 
 // SCRUM-27 — the reads behind the coordinator's Equipment Requests page. The
 // database is mocked; these pin the WHERE clauses, because a looser clause
@@ -60,6 +61,12 @@ describe("getRequestableEvents — SCRUM-27 AC 1", () => {
     // A Confirmed event's details are fixed, so equipment must be arranged
     // before it is confirmed (SCRUM-27 AC 1).
     expect([...REQUESTABLE_EVENT_STATUSES]).toEqual(["APPROVED", "PLANNING"]);
+  });
+
+  it("AC 1: stock can be reserved for exactly the events that can take a request", () => {
+    // SCRUM-31 reserves against SCRUM-27's requests, so a request for an event
+    // that cannot be reserved for would be unfulfillable.
+    expect(RESERVABLE_EVENT_STATUSES).toEqual([...REQUESTABLE_EVENT_STATUSES]);
   });
 });
 
