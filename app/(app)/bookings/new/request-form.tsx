@@ -626,7 +626,10 @@ function SuccessDialog({
   );
 }
 
-/** A duplicate or a refusal stays on the page beside the form. */
+/**
+ * The event's existing request (SCRUM-50 AC8), or a refusal, stays on the
+ * page beside the form.
+ */
 function OutcomePanel({
   outcome,
 }: {
@@ -658,7 +661,7 @@ function OutcomePanel({
       <Info className="mt-0.5 h-5 w-5 shrink-0" />
       <div>
         <p className="font-semibold">
-          You already have a pending request for this venue and period
+          This event already has a venue request. Each event has one venue.
         </p>
         <p>
           {booking.venueName}, {formatDateTime(booking.startAt)} to{" "}

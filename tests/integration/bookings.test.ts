@@ -14,6 +14,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { can } from "@/lib/auth/can";
 import { eventBookingPeriod } from "@/lib/schemas/booking";
+import { createPlanningEvents, removeEvents } from "./test-events";
 import {
   checkVenueAvailability,
   decideBookingRequest,
@@ -49,7 +50,8 @@ function sessionFor(id: string, role: "COORDINATOR" | "VENUE_STAFF"): Session {
 const COORDINATOR = sessionFor("usr_coordinator", "COORDINATOR");
 const VENUE_STAFF = sessionFor("usr_venuestaff", "VENUE_STAFF");
 
-// Seeded events assigned to usr_coordinator (prisma/seed.ts).
+// Seeded events assigned to usr_coordinator (prisma/seed.ts). They already
+// hold a venue booking each, so requests are made for this suite's own events.
 const APPROVED_EVENT = "evt_approved";
 const PLANNING_EVENT = "evt_planning";
 
@@ -59,8 +61,14 @@ describe.skipIf(!usesLocalDatabase)(
   "venue booking flow — real database",
   () => {
     let venueId: string;
+    let otherVenueId: string;
+    // The event requests are made for; one whose approved booking is
+    // collided with; and one another coordinator has a pending request for.
+    let eventId: string;
+    let blockingEventId: string;
+    let rivalEventId: string;
     // SCRUM-50 AC1: a request is for the event's own period and attendance,
-    // so every other instant here is placed around the seeded event's.
+    // so every other instant here is placed around the event's.
     let period: { startAt: Date; endAt: Date };
     let attendance: number;
     /** `hours` after the start of the event's period (negative: before). */
@@ -71,7 +79,7 @@ describe.skipIf(!usesLocalDatabase)(
       new Date(period.endAt.getTime() + hours * HOUR_MS).toISOString();
 
     const request = (overrides: Record<string, unknown> = {}) => ({
-      eventId: APPROVED_EVENT,
+      eventId,
       venueId,
       startAt: fromStart(0),
       endAt: fromEnd(0),
@@ -85,7 +93,7 @@ describe.skipIf(!usesLocalDatabase)(
     async function approvedBooking(startAt: string, endAt: string) {
       return prisma.booking.create({
         data: {
-          eventId: PLANNING_EVENT,
+          eventId: blockingEventId,
           venueId,
           startAt: new Date(startAt),
           endAt: new Date(endAt),
@@ -99,16 +107,11 @@ describe.skipIf(!usesLocalDatabase)(
 
     const bookingCount = () => prisma.booking.count({ where: { venueId } });
 
-    /**
-     * A PENDING request from the second seeded coordinator, written directly.
-     * Written rather than submitted so this suite never has to create an
-     * Event of its own: other suites count Event rows while running in
-     * parallel (tests/integration/permission-guard.test.ts).
-     */
+    /** A PENDING request from the second seeded coordinator, written directly. */
     async function pendingFromAnotherCoordinator(start: string, end: string) {
       return prisma.booking.create({
         data: {
-          eventId: PLANNING_EVENT,
+          eventId: rivalEventId,
           venueId,
           startAt: new Date(start),
           endAt: new Date(end),
@@ -118,16 +121,18 @@ describe.skipIf(!usesLocalDatabase)(
     }
 
     beforeAll(async () => {
-      const event = await prisma.event.findUniqueOrThrow({
-        where: { id: APPROVED_EVENT },
-        select: { startAt: true, endAt: true, expectedAttendance: true },
-      });
-      period = eventBookingPeriod(event)!;
-      attendance = event.expectedAttendance!;
-      // The overlap cases below need more than an hour between start and end.
-      expect(period.endAt.getTime() - period.startAt.getTime()).toBeGreaterThan(
-        HOUR_MS,
+      // A far-future day, so nothing seeded is anywhere near.
+      const event = {
+        startAt: new Date("2032-01-10T06:00:00.000Z"),
+        endAt: new Date("2032-01-10T08:00:00.000Z"),
+        expectedAttendance: 40,
+      };
+      [eventId, blockingEventId, rivalEventId] = await createPlanningEvents(
+        "Booking test event",
+        [event, event, event],
       );
+      period = eventBookingPeriod(event)!;
+      attendance = event.expectedAttendance;
 
       const venue = await prisma.venue.create({
         data: {
@@ -139,12 +144,20 @@ describe.skipIf(!usesLocalDatabase)(
         },
       });
       venueId = venue.id;
+      const otherVenue = await prisma.venue.create({
+        data: {
+          name: `Booking test venue (other) ${Date.now()}`,
+          location: "Test block",
+          capacity: 500,
+        },
+      });
+      otherVenueId = otherVenue.id;
     });
 
-    beforeEach(async () => {
-      mockAuth.mockResolvedValue(COORDINATOR);
+    async function clearBookings() {
+      const where = { venueId: { in: [venueId, otherVenueId] } };
       const ids = await prisma.booking.findMany({
-        where: { venueId },
+        where,
         select: { id: true },
       });
       await prisma.auditLog.deleteMany({
@@ -153,23 +166,21 @@ describe.skipIf(!usesLocalDatabase)(
           entityId: { in: ids.map((b) => b.id) },
         },
       });
-      await prisma.booking.deleteMany({ where: { venueId } });
+      await prisma.booking.deleteMany({ where });
+    }
+
+    beforeEach(async () => {
+      mockAuth.mockResolvedValue(COORDINATOR);
+      await clearBookings();
       await prisma.venueUnavailability.deleteMany({ where: { venueId } });
     });
 
     afterAll(async () => {
-      const ids = await prisma.booking.findMany({
-        where: { venueId },
-        select: { id: true },
+      await clearBookings();
+      await removeEvents([eventId, blockingEventId, rivalEventId]);
+      await prisma.venue.deleteMany({
+        where: { id: { in: [venueId, otherVenueId] } },
       });
-      await prisma.auditLog.deleteMany({
-        where: {
-          entityType: "Booking",
-          entityId: { in: ids.map((b) => b.id) },
-        },
-      });
-      await prisma.booking.deleteMany({ where: { venueId } });
-      await prisma.venue.delete({ where: { id: venueId } });
     });
 
     describe("SCRUM-50 — submit a venue booking request", () => {
@@ -187,7 +198,7 @@ describe.skipIf(!usesLocalDatabase)(
           where: { id: result.data.booking.id },
         });
         expect(row).toMatchObject({
-          eventId: APPROVED_EVENT,
+          eventId,
           venueId,
           startAt: new Date(fromStart(0)),
           endAt: new Date(fromEnd(0)),
@@ -282,7 +293,7 @@ describe.skipIf(!usesLocalDatabase)(
         expect(await bookingCount()).toBe(0);
       });
 
-      it("SCRUM-50 AC6 — submitting the same request twice leaves one request and shows the existing one", async () => {
+      it("SCRUM-50 AC8 — submitting the same request twice leaves one request and shows the existing one", async () => {
         const first = await submitBookingRequest(request());
         const second = await submitBookingRequest(request());
 
@@ -293,7 +304,7 @@ describe.skipIf(!usesLocalDatabase)(
         expect(await bookingCount()).toBe(1);
       });
 
-      it("SCRUM-50 AC6 — two identical requests submitted at the same instant still leave one", async () => {
+      it("SCRUM-50 AC8 — two identical requests submitted at the same instant still leave one", async () => {
         const results = await Promise.all([
           submitBookingRequest(request()),
           submitBookingRequest(request()),
@@ -322,43 +333,62 @@ describe.skipIf(!usesLocalDatabase)(
         expect(await bookingCount()).toBe(0);
       });
 
-      it("SCRUM-50 AC6 — the same coordinator's overlapping pending request under another event is shown instead", async () => {
-        const existing = await prisma.booking.create({
-          data: {
-            eventId: PLANNING_EVENT,
-            venueId,
-            startAt: new Date(fromStart(1)),
-            endAt: new Date(fromEnd(1)),
-            requestedById: "usr_coordinator",
-          },
+      for (const status of ["PENDING", "APPROVED"] as const) {
+        it(`SCRUM-50 AC8 — an event with a ${status.toLowerCase()} booking at another venue is shown it, and no request is created`, async () => {
+          const existing = await prisma.booking.create({
+            data: {
+              eventId,
+              venueId: otherVenueId,
+              startAt: period.startAt,
+              endAt: period.endAt,
+              status,
+              requestedById: "usr_coordinator",
+            },
+          });
+
+          const again = await submitBookingRequest(request());
+
+          expect(again.ok && again.data.created).toBe(false);
+          if (!again.ok) return;
+          expect(again.data.booking).toMatchObject({ id: existing.id, status });
+          expect(await bookingCount()).toBe(0);
         });
+      }
 
-        const again = await submitBookingRequest(request());
-
-        expect(again.ok && again.data.created).toBe(false);
-        if (!again.ok) return;
-        expect(again.data.booking.id).toBe(existing.id);
-        expect(await bookingCount()).toBe(1);
-      });
-
-      it("SCRUM-50 AC6 — the database itself refuses a second overlapping pending request from the same coordinator, whatever the event", async () => {
-        const row = (eventId: string, start: string, end: string) => ({
+      it("SCRUM-50 AC8 — the database itself refuses a second pending or approved booking for one event, whatever the venue or period", async () => {
+        const row = (venue: string, status: "PENDING" | "APPROVED") => ({
           data: {
             eventId,
-            venueId,
-            startAt: new Date(start),
-            endAt: new Date(end),
+            venueId: venue,
+            startAt: new Date(fromEnd(24)),
+            endAt: new Date(fromEnd(26)),
+            status,
             requestedById: "usr_coordinator",
           },
         });
-        await prisma.booking.create(
-          row(APPROVED_EVENT, fromStart(0), fromEnd(0)),
-        );
+        await prisma.booking.create(row(venueId, "PENDING"));
 
-        await expect(
-          prisma.booking.create(row(PLANNING_EVENT, fromStart(1), fromEnd(1))),
-        ).rejects.toThrow(/booking_no_duplicate_pending_request/);
-        expect(await bookingCount()).toBe(1);
+        for (const status of ["PENDING", "APPROVED"] as const) {
+          await expect(
+            prisma.booking.create(row(otherVenueId, status)),
+          ).rejects.toThrow(/booking_one_venue_per_event/);
+        }
+      });
+
+      it("SCRUM-50 AC10 — another event's pending request for the same venue and period blocks nobody", async () => {
+        await prisma.booking.create({
+          data: {
+            eventId: rivalEventId,
+            venueId,
+            startAt: period.startAt,
+            endAt: period.endAt,
+            requestedById: "usr_coordinator",
+          },
+        });
+
+        const result = await submitBookingRequest(request());
+
+        expect(result.ok && result.data.created).toBe(true);
       });
 
       it("SCRUM-50 — attendance over the venue's capacity is refused and nothing is written; exactly at capacity is accepted", async () => {
@@ -535,7 +565,7 @@ describe.skipIf(!usesLocalDatabase)(
         it(`SCRUM-50 AC9 — after a ${status.toLowerCase()} request, a new request creates a new booking record and the earlier one is kept`, async () => {
           const earlier = await prisma.booking.create({
             data: {
-              eventId: APPROVED_EVENT,
+              eventId,
               venueId,
               startAt: new Date(fromStart(0)),
               endAt: new Date(fromEnd(0)),
@@ -695,7 +725,9 @@ describe.skipIf(!usesLocalDatabase)(
         expect(result).toEqual({ ok: true, data: { status: "APPROVED" } });
 
         mockAuth.mockResolvedValue(COORDINATOR);
-        const later = await submitBookingRequest(request());
+        const later = await submitBookingRequest(
+          request({ eventId: rivalEventId }),
+        );
         expect(later.ok).toBe(false);
         if (later.ok) return;
         expect(later.error).toMatch(/already booked/);

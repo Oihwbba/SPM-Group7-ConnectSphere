@@ -22,11 +22,11 @@ a manual tester creates the same events, or edits an event's dates.
 | [TC-50-01](#tc-50-01) | Positive | AC 1, AC 2 | Unit, integration, e2e |
 | [TC-50-02](#tc-50-02) | Negative | AC 3 | Unit, integration, e2e |
 | [TC-50-03](#tc-50-03) | Negative | AC 3 (unavailability) | Integration |
-| [TC-50-04](#tc-50-04) | Positive | AC 3 (pending blocks nobody) | Unit, integration |
+| [TC-50-04](#tc-50-04) | Positive | AC 3, AC 10 (pending blocks nobody) | Unit, integration |
 | [TC-50-05](#tc-50-05) | Boundary | AC 4 | Unit, integration, e2e |
 | [TC-50-06](#tc-50-06) | Negative, Boundary | AC 5 | Unit, integration |
-| [TC-50-07](#tc-50-07) | Negative | AC 6 | Unit, integration, e2e |
-| [TC-50-08](#tc-50-08) | Concurrency | AC 6 | Unit, integration |
+| [TC-50-07](#tc-50-07) | Negative | AC 8 (one venue per event) | Unit, integration, e2e |
+| [TC-50-08](#tc-50-08) | Concurrency | AC 8 | Unit, integration |
 | [TC-50-09](#tc-50-09) | Negative | Coordinators only, own events only | Unit, integration, e2e |
 | [TC-50-10](#tc-50-10) | Negative, Boundary | Attendance within venue capacity | Unit, integration, e2e |
 | [TC-50-11](#tc-50-11) | Negative, Boundary | No period that has already started | Unit, integration |
@@ -81,13 +81,13 @@ a manual tester creates the same events, or edits an event's dates.
 | Item | Content |
 |---|---|
 | Test Case ID | TC-50-04 |
-| Test Scenario | [Positive] AC 3: a pending request by another coordinator does not make the venue unavailable |
-| Pre-conditions | Another coordinator has a PENDING (not approved) request for the period. |
+| Test Scenario | [Positive] AC 3, AC 10: another event's pending request does not make the venue unavailable |
+| Pre-conditions | Another event has a PENDING (not approved) request for the venue and period, by another coordinator or by this one. |
 | Test Steps | 1. As the first coordinator, request the same venue and period. |
 | Test Data | `coordinator2@test.local` then `coordinator@test.local`, same venue, same period |
 | Expected Result | The second request is also created Pending. Staff choose between them. |
 
-**Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-50 AC3 — a PENDING request by another coordinator does not block a new request"; `tests/unit/venue-availability.test.ts` › "SCRUM-50 AC3 — asks only for APPROVED bookings that overlap the period — a pending request blocks nobody"
+**Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-50 AC3 — a PENDING request by another coordinator does not block a new request" and "SCRUM-50 AC10 — another event's pending request for the same venue and period blocks nobody"; `tests/unit/venue-availability.test.ts` › "SCRUM-50 AC3 — asks only for APPROVED bookings that overlap the period — a pending request blocks nobody"
 
 ### TC-50-05
 
@@ -120,26 +120,26 @@ a manual tester creates the same events, or edits an event's dates.
 | Item | Content |
 |---|---|
 | Test Case ID | TC-50-07 |
-| Test Scenario | [Negative] AC 6: a coordinator who already has a pending request for the same venue and an overlapping period is shown it, and nothing is created, whichever event they ask under |
-| Pre-conditions | TC-50-01 is still pending. |
-| Test Steps | 1. Click **Submit request** again with the same details. <br> 2. With a pending request of yours under another event overlapping this period at the same venue, submit. |
+| Test Scenario | [Negative] AC 8: each event has one venue. Given the event already has a Pending or Approved booking, for any venue, a second request creates nothing and shows the existing one. Re-keyed on 2026-10-04 after the GLM review of #128; it was keyed on the coordinator, venue and period. |
+| Pre-conditions | TC-50-01 is still pending (or has been approved). |
+| Test Steps | 1. Click **Submit request** again with the same details. <br> 2. Choose the same event with the Grand Auditorium instead, and submit. |
 | Test Data | As TC-50-01 |
-| Expected Result | "You already have a pending request for this venue and period" with the existing request's details, both times. Still one booking row. The database's `booking_no_duplicate_pending_request` constraint enforces the same rule, keyed on the coordinator. |
+| Expected Result | "This event already has a venue request. Each event has one venue." with the existing request's venue, times and status, both times. Still one booking row for the event. The database's `booking_one_venue_per_event` constraint enforces the same rule over Pending and Approved bookings (migration `20261004120000_one_venue_per_event`). A Rejected or Cancelled one does not count (TC-50-14). |
 
-**Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-50 AC6 — submitting the same request twice leaves one request and shows the existing one", "…the same coordinator's overlapping pending request under another event is shown instead" and "…the database itself refuses a second overlapping pending request from the same coordinator, whatever the event"; `tests/unit/bookings.test.ts` › "SCRUM-50 AC6 — this coordinator's overlapping pending request for the same venue is returned instead of a new one, whatever its event"; `e2e/bookings.spec.ts` › journey
+**Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-50 AC8 — submitting the same request twice leaves one request and shows the existing one", "…an event with a pending booking at another venue is shown it, and no request is created", "…an event with a approved booking at another venue…" and "…the database itself refuses a second pending or approved booking for one event, whatever the venue or period"; `tests/unit/bookings.test.ts` › "SCRUM-50 AC8 — an event that already has a pending or approved booking, for any venue, is shown it and nothing is created" and "…the event's existing booking is shown even when the request differs from it"; `e2e/bookings.spec.ts` › journey
 
 ### TC-50-08
 
 | Item | Content |
 |---|---|
 | Test Case ID | TC-50-08 |
-| Test Scenario | [Concurrency] AC 6: two identical requests submitted at the same instant leave one |
+| Test Scenario | [Concurrency] AC 8: two requests for the same event submitted at the same instant leave one |
 | Pre-conditions | Real PostgreSQL. |
 | Test Steps | 1. Fire the same request twice in parallel. |
 | Test Data | As TC-50-01 |
-| Expected Result | Both calls report the same booking id and one row exists. `booking_no_duplicate_pending_request` lets one insert in; a deadlock between the two is retried once (ADR 0010). |
+| Expected Result | Both calls report the same booking id and one row exists. `booking_one_venue_per_event` lets one insert in; a deadlock between the two is retried once (ADR 0010). |
 
-**Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-50 AC6 — two identical requests submitted at the same instant still leave one"; `tests/unit/bookings.test.ts` › "SCRUM-50 AC6 — a duplicate that races past the check…" and "…a deadlock between two identical submissions is retried once and then resolved"
+**Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-50 AC8 — two identical requests submitted at the same instant still leave one"; `tests/unit/bookings.test.ts` › "SCRUM-50 AC8 — a second request for the event that races past the check…" and "…a deadlock between two identical submissions is retried once and then resolved"
 
 ### TC-50-09
 

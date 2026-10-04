@@ -14,6 +14,7 @@ import { Prisma } from "@prisma/client";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { eventBookingPeriod } from "@/lib/schemas/booking";
+import { createPlanningEvents, removeEvents } from "./test-events";
 import { recordUnavailability } from "@/app/(app)/venues/availability/actions";
 import {
   decideBookingRequest,
@@ -49,6 +50,10 @@ describe.skipIf(!usesLocalDatabase)(
   "recorded venue unavailability — real database (SCRUM-37)",
   () => {
     let venueId: string;
+    // The event requests are made for, and one whose approved booking is
+    // collided with: since SCRUM-50 AC8 each holds at most one live booking.
+    let requestEventId: string;
+    let blockingEventId: string;
     // SCRUM-50 AC1: a request is always for its event's period and
     // attendance, so maintenance that should meet it is placed around those.
     let event: { startAt: Date; endAt: Date; attendance: number };
@@ -58,10 +63,10 @@ describe.skipIf(!usesLocalDatabase)(
     const record = (start: string, end: string, reason = "MAINTENANCE") =>
       recordUnavailability({ venueId, startAt: start, endAt: end, reason });
 
-    /** A request for evt_approved, which covers its own period. */
+    /** A request for the suite's event, which covers its own period. */
     const request = () =>
       submitBookingRequest({
-        eventId: "evt_approved",
+        eventId: requestEventId,
         venueId,
         startAt: event.startAt.toISOString(),
         endAt: event.endAt.toISOString(),
@@ -72,7 +77,7 @@ describe.skipIf(!usesLocalDatabase)(
     const approvedBooking = (start: string, end: string) =>
       prisma.booking.create({
         data: {
-          eventId: "evt_planning",
+          eventId: blockingEventId,
           venueId,
           startAt: new Date(start),
           endAt: new Date(end),
@@ -101,13 +106,18 @@ describe.skipIf(!usesLocalDatabase)(
     }
 
     beforeAll(async () => {
-      const row = await prisma.event.findUniqueOrThrow({
-        where: { id: "evt_approved" },
-        select: { startAt: true, endAt: true, expectedAttendance: true },
-      });
+      const row = {
+        startAt: new Date(at(20, 2)),
+        endAt: new Date(at(20, 6)),
+        expectedAttendance: 40,
+      };
+      [requestEventId, blockingEventId] = await createPlanningEvents(
+        "Unavailability test event",
+        [row, row],
+      );
       event = {
         ...eventBookingPeriod(row)!,
-        attendance: row.expectedAttendance!,
+        attendance: row.expectedAttendance,
       };
 
       const venue = await prisma.venue.create({
@@ -127,6 +137,7 @@ describe.skipIf(!usesLocalDatabase)(
 
     afterAll(async () => {
       await clear();
+      await removeEvents([requestEventId, blockingEventId]);
       await prisma.venue.delete({ where: { id: venueId } });
     });
 
@@ -182,7 +193,7 @@ describe.skipIf(!usesLocalDatabase)(
     it("SCRUM-37 AC3 — a pending request over recorded maintenance cannot then be approved", async () => {
       const pending = await prisma.booking.create({
         data: {
-          eventId: "evt_approved",
+          eventId: requestEventId,
           venueId,
           startAt: new Date(at(5, 1)),
           endAt: new Date(at(5, 5)),
@@ -265,7 +276,7 @@ describe.skipIf(!usesLocalDatabase)(
         await record(at(11, 3), at(11, 9));
         const pending = await prisma.booking.create({
           data: {
-            eventId: "evt_approved",
+            eventId: requestEventId,
             venueId,
             startAt: new Date(at(11, 1)),
             endAt: new Date(at(11, 4)),
@@ -294,7 +305,7 @@ describe.skipIf(!usesLocalDatabase)(
         await expect(
           prisma.booking.create({
             data: {
-              eventId: "evt_approved",
+              eventId: requestEventId,
               venueId,
               startAt: new Date(at(13, 2)),
               endAt: new Date(at(13, 4)),

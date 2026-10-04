@@ -21,6 +21,8 @@ const PREFIX = "E2E Auditorium —";
 // Over the maintenance recorded below, and ending exactly as it begins.
 const CLASHING_EVENT = `${PREFIX} Afternoon Rehearsal`;
 const MORNING_EVENT = `${PREFIX} Morning Assembly`;
+// Booked straight into the database, as if approved by someone else.
+const ELSEWHERE_EVENT = `${PREFIX} Approved Elsewhere`;
 
 async function removeTestEvents() {
   const events = await prisma.event.findMany({
@@ -105,6 +107,7 @@ test.describe("SCRUM-36 / SCRUM-37 — venue availability calendar and recorded 
       data: [
         event(CLASHING_EVENT, "14:00", "16:00"),
         event(MORNING_EVENT, "09:00", "13:00"),
+        event(ELSEWHERE_EVENT, "10:00", "12:00"),
       ],
     });
   });
@@ -392,9 +395,14 @@ test.describe("SCRUM-36 / SCRUM-37 — venue availability calendar and recorded 
     const booked = weekDay(coordinator, day).locator('li[data-kind="booking"]');
     await expect(booked).toHaveCount(0);
 
+    // Each event holds one venue (SCRUM-50 AC8), so it is this spec's own.
+    const { id: eventId } = await prisma.event.findFirstOrThrow({
+      where: { name: ELSEWHERE_EVENT },
+      select: { id: true },
+    });
     await prisma.booking.create({
       data: {
-        eventId: "evt_planning",
+        eventId,
         venueId: AUDITORIUM,
         startAt: new Date(`${day}T10:00:00+08:00`),
         endAt: new Date(`${day}T12:00:00+08:00`),

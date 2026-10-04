@@ -59,10 +59,10 @@ function postgresRefusal(code: string, message: string) {
     cause: { originalCode: code, originalMessage: message },
   });
 }
-const duplicatePending = () =>
+const secondVenueForEvent = () =>
   postgresRefusal(
     "23P01",
-    'conflicting key value violates exclusion constraint "booking_no_duplicate_pending_request"',
+    'conflicting key value violates exclusion constraint "booking_one_venue_per_event"',
   );
 const overlapsUnavailability = () =>
   postgresRefusal(
@@ -245,7 +245,7 @@ describe("submitBookingRequest — SCRUM-50", () => {
           fieldErrors: { startAt: [message] },
         });
       }
-      expect(db.booking.findFirst).not.toHaveBeenCalled();
+      expect(db.venue.findFirst).not.toHaveBeenCalled();
       expect(db.booking.create).not.toHaveBeenCalled();
     });
 
@@ -410,7 +410,7 @@ describe("submitBookingRequest — SCRUM-50", () => {
     });
   });
 
-  it("SCRUM-50 AC6 — this coordinator's overlapping pending request for the same venue is returned instead of a new one, whatever its event", async () => {
+  it("SCRUM-50 AC8 — an event that already has a pending or approved booking, for any venue, is shown it and nothing is created", async () => {
     db.booking.findFirst.mockResolvedValue(summaryRow);
 
     const result = await submitBookingRequest(validRequest);
@@ -422,15 +422,25 @@ describe("submitBookingRequest — SCRUM-50", () => {
     expect(db.booking.create).not.toHaveBeenCalled();
     expect(db.booking.findFirst).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: {
-          requestedById: "usr_coord",
-          venueId: "ven_1",
-          status: "PENDING",
-          startAt: { lt: new Date(END) },
-          endAt: { gt: new Date(START) },
-        },
+        where: { eventId: "evt_1", status: { in: ["PENDING", "APPROVED"] } },
       }),
     );
+  });
+
+  it("SCRUM-50 AC8 — the event's existing booking is shown even when the request differs from it", async () => {
+    db.booking.findFirst.mockResolvedValue(summaryRow);
+
+    const result = await submitBookingRequest({
+      ...validRequest,
+      venueId: "ven_2",
+      requestedAttendance: 1,
+    });
+
+    expect(result).toEqual({
+      ok: true,
+      data: { booking: summary, created: false },
+    });
+    expect(db.venue.findFirst).not.toHaveBeenCalled();
   });
 
   it("SCRUM-50 AC3 — a venue already booked for part of the period refuses the request and names the clash", async () => {
@@ -452,8 +462,8 @@ describe("submitBookingRequest — SCRUM-50", () => {
     expect(db.booking.create).not.toHaveBeenCalled();
   });
 
-  it("SCRUM-50 AC6 — a duplicate that races past the check is caught by the database and the winner is returned", async () => {
-    db.booking.create.mockRejectedValue(duplicatePending());
+  it("SCRUM-50 AC8 — a second request for the event that races past the check is caught by the database and the winner is returned", async () => {
+    db.booking.create.mockRejectedValue(secondVenueForEvent());
     db.booking.findFirst
       .mockResolvedValueOnce(null)
       .mockResolvedValueOnce(summaryRow);
@@ -464,7 +474,7 @@ describe("submitBookingRequest — SCRUM-50", () => {
     });
   });
 
-  it("SCRUM-50 AC6 — a deadlock between two identical submissions is retried once and then resolved", async () => {
+  it("SCRUM-50 AC8 — a deadlock between two identical submissions is retried once and then resolved", async () => {
     db.booking.create
       .mockRejectedValueOnce(deadlock())
       .mockResolvedValueOnce(summaryRow);
@@ -481,9 +491,9 @@ describe("submitBookingRequest — SCRUM-50", () => {
       "deadlock detected",
     );
 
-    db.booking.create.mockRejectedValue(duplicatePending());
+    db.booking.create.mockRejectedValue(secondVenueForEvent());
     await expect(submitBookingRequest(validRequest)).rejects.toThrow(
-      "booking_no_duplicate_pending_request",
+      "booking_one_venue_per_event",
     );
 
     db.booking.create.mockRejectedValue(new Error("connection lost"));

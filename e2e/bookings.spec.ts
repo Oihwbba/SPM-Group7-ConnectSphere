@@ -150,11 +150,21 @@ test.describe("SCRUM-50 / 52 / 53 — venue booking request, review and decision
     await requestHall(coordinator, eventName("morning"), tag);
     await expectSubmitted(coordinator);
 
-    // SCRUM-50 AC6 — submitting it again shows the existing request instead.
-    await requestHall(coordinator, eventName("morning"));
-    await expect(coordinator.getByTestId("booking-outcome")).toContainText(
-      "You already have a pending request for this venue and period",
+    // SCRUM-50 AC8 — each event has one venue: asking again, even for another
+    // venue, shows the existing request instead.
+    await fillHall(coordinator, eventName("morning"));
+    await choose(coordinator, "Venue", /^Grand Auditorium/);
+    await expect(coordinator.getByTestId("live-availability")).toHaveAttribute(
+      "data-state",
+      "free",
     );
+    await coordinator.getByRole("button", { name: "Submit request" }).click();
+    const existing = coordinator.getByTestId("booking-outcome");
+    await expect(existing).toContainText(
+      "This event already has a venue request. Each event has one venue.",
+    );
+    await expect(existing).toContainText("Exhibition Hall");
+    await expect(existing).toContainText("status pending");
 
     // SCRUM-52 — staff see it with what they need to decide.
     const staff = await signedIn(browser, "venuestaff@test.local");

@@ -21,7 +21,6 @@ import {
   venueAvailabilityQuerySchema,
 } from "@/lib/schemas/booking";
 import { onceMoreOnDeadlock, violatesExclusion } from "@/lib/db-errors";
-import { overlapping } from "@/lib/period";
 import { describeBlocker, findVenueBlockers } from "@/lib/venue-availability";
 
 export type BookingSummary = {
@@ -31,6 +30,9 @@ export type BookingSummary = {
   endAt: Date;
   status: BookingStatus;
 };
+
+/** The bookings that hold an event's one venue (SCRUM-50 AC8). */
+const EVENT_VENUE_STATUSES: BookingStatus[] = ["PENDING", "APPROVED"];
 
 const summarySelect = {
   id: true,
@@ -103,13 +105,14 @@ export async function checkVenueAvailability(
  *
  * - An invalid period, or one starting in the past, is refused before
  *   anything else (AC5).
+ * - Each event has one venue: if the event already has a Pending or
+ *   Approved booking, for any venue, nothing is created and that booking is
+ *   returned (AC8). A Rejected or Cancelled one does not count, so asking
+ *   again after it creates a new booking and keeps the old one (AC9).
  * - The period must be the event's (rounded out to the half hour) and the
  *   attendance the event's expected attendance; anything else is refused
  *   (AC1). An event without dates or attendance cannot be booked yet.
  * - Expected attendance above the venue's capacity is refused.
- * - If this Coordinator already has a pending request for the same venue
- *   and an overlapping period, whichever event it was for, nothing is
- *   created and the existing one is returned (AC6).
  * - A venue that is approved-booked or unavailable for any part of the period
  *   refuses the request outright — no row is written (AC3). Touching at an
  *   endpoint is not an overlap (AC4).
@@ -167,6 +170,18 @@ export async function submitBookingRequest(
       return err("A venue can only be requested for an approved event.");
     }
 
+    const existingForEvent = () =>
+      prisma.booking.findFirst({
+        where: {
+          eventId: data.eventId,
+          status: { in: EVENT_VENUE_STATUSES },
+        },
+        select: summarySelect,
+      });
+
+    const existing = await existingForEvent();
+    if (existing) return ok({ booking: toSummary(existing), created: false });
+
     // AC1: the booking covers the event's period and its expected attendance,
     // not values the Coordinator chose.
     const eventPeriod = eventBookingPeriod(event);
@@ -199,20 +214,6 @@ export async function submitBookingRequest(
       return err(message, { requestedAttendance: [message] });
     }
 
-    const existingPending = () =>
-      prisma.booking.findFirst({
-        where: {
-          requestedById: user!.id,
-          venueId: data.venueId,
-          status: "PENDING",
-          ...overlapping(period),
-        },
-        select: summarySelect,
-      });
-
-    const existing = await existingPending();
-    if (existing) return ok({ booking: toSummary(existing), created: false });
-
     const blockers = await findVenueBlockers(prisma, data.venueId, period);
     if (blockers.length > 0) {
       return err(
@@ -243,12 +244,12 @@ export async function submitBookingRequest(
       revalidatePath("/bookings");
       return ok({ booking: toSummary(created), created: true });
     } catch (error) {
-      // A double-click can race the duplicate check above; the database's
-      // `booking_no_duplicate_pending_request` constraint lets only one in.
-      if (!violatesExclusion(error, "booking_no_duplicate_pending_request")) {
+      // A double-click can race the check above; the database's
+      // `booking_one_venue_per_event` constraint lets only one in.
+      if (!violatesExclusion(error, "booking_one_venue_per_event")) {
         throw error;
       }
-      const winner = await existingPending();
+      const winner = await existingForEvent();
       if (!winner) throw error;
       return ok({ booking: toSummary(winner), created: false });
     }
