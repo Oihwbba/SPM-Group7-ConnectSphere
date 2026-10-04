@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-03. Jira is the source of truth.
+     Synced from Jira on 2026-10-04. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-108 - Answer a clarification, or amend and resubmit a rejected request
@@ -30,7 +30,7 @@
 8. Given the Coordinator chose Submit as a new request, then Amend and Resubmit is not offered.
 9. Amending edits the same event; its history is kept.
 10. Resubmitting applies the same validation as a first submission (SCRUM-13, SCRUM-14).
-11. Given the amended request passes validation, then the event becomes Submitted and then Under Review with the same Coordinator as before; automatic assignment (SCRUM-20) does not run again. If the request was rejected before any Coordinator was assigned, or that Coordinator no longer holds the role, SCRUM-20 assigns one.
+11. Given the amended request passes validation, then the event becomes Submitted and then Under Review with the same Coordinator as before; automatic assignment (SCRUM-20) does not run again. If the request was rejected before any Coordinator was assigned, or that Coordinator no longer holds the role, SCRUM-20 assigns one. Rejecting a request nobody was assigned to makes the rejecting Coordinator its coordinator.
 12. Resubmitting twice creates no duplicate submission, history entry or notification.
 13. Only the event's Organiser can answer or amend (SCRUM-67).
 14. Responses, amendments and resubmissions are recorded with who and when.
@@ -43,5 +43,6 @@
 
 * 2026-10-01 (backlog refinement, story not started): clarification edits limited to the named fields; the Coordinator's choice of outcome moved to SCRUM-126; added the same-Coordinator rule; re-estimated from 3 to 5 after the SCRUM-109 merge.
 * 2026-10-01 (audit): AC1 adds the Coordinator's side of naming fields, because the clarification built in Sprint 1 is a free-text question with no field list. AC6 states what the code already does when a request is decided. AC11 covers a request rejected before any Coordinator was assigned, which the code allows (SCRUM-135 AC4). Group headings removed. SCRUM-126 moved into Sprint 2 because AC7 and AC8 depend on it.
+* 2026-10-04: AC11 makes the rejecting Coordinator the coordinator of an unassigned request, so the rejected request leaves other Coordinators' lists and comes back to them on resubmission (PO decision, raised by Hann Qian).
 
 Functionality Area: Event Review and Approval
