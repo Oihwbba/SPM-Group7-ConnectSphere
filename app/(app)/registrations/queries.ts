@@ -30,6 +30,9 @@ export async function getMyRegistrations() {
           endAt: true,
           bookings: {
             where: { status: "APPROVED" },
+            // An event can hold approved bookings on two venues at different
+            // times; show the one in use when the event starts.
+            orderBy: { startAt: "asc" },
             take: 1,
             select: { venue: { select: { name: true, location: true } } },
           },

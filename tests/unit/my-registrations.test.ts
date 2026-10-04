@@ -5,7 +5,11 @@ import type { Role } from "@prisma/client";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { getMyRegistrations } from "@/app/(app)/registrations/queries";
-import { shownRegistrationStatus } from "@/app/(app)/registrations/registrations-list";
+import {
+  eventTimeText,
+  shownRegistrationStatus,
+} from "@/app/(app)/registrations/registrations-list";
+import { formatDateTime, formatTime } from "@/lib/datetime";
 
 // SCRUM-76 — the Attendee's own registration list. `can()` runs for real so
 // each role's actual permission table is under test.
@@ -60,6 +64,16 @@ describe("getMyRegistrations — SCRUM-76", () => {
       name: true,
       location: true,
     });
+  });
+
+  it("[Positive] AC1: with two approved bookings, the venue shown is the one in use when the event starts", async () => {
+    mockAuth.mockResolvedValue(sessionFor("ATTENDEE", "usr_attendee"));
+
+    await getMyRegistrations();
+
+    const { bookings } = mockFindMany.mock.calls[0][0].select.event.select;
+    expect(bookings.orderBy).toEqual({ startAt: "asc" });
+    expect(bookings.take).toBe(1);
   });
 
   it("[Positive] AC4: event details are read live from the event, not from a copy on the registration", async () => {
@@ -118,5 +132,31 @@ describe("shownRegistrationStatus — SCRUM-76 AC2, AC3", () => {
     expect(shownRegistrationStatus("REGISTERED", "PLANNING")).toBe(
       "REGISTERED",
     );
+  });
+});
+
+describe("eventTimeText — SCRUM-76 AC1: the event's date and time", () => {
+  const start = new Date("2031-06-01T02:00:00Z"); // 10:00 am SGT
+  const sameDayEnd = new Date("2031-06-01T08:00:00Z"); // 4:00 pm SGT
+  const nextDayEnd = new Date("2031-06-02T02:00:00Z");
+
+  it("[Positive] AC1: a same-day event shows its date, start time and end time", () => {
+    expect(eventTimeText(start, sameDayEnd)).toBe(
+      `${formatDateTime(start)} – ${formatTime(sameDayEnd)}`,
+    );
+  });
+
+  it("[Positive] AC1: an event that ends on a later day shows the full end date", () => {
+    expect(eventTimeText(start, nextDayEnd)).toBe(
+      `${formatDateTime(start)} – ${formatDateTime(nextDayEnd)}`,
+    );
+  });
+
+  it("[Boundary] an event with no end shows only its start", () => {
+    expect(eventTimeText(start, null)).toBe(formatDateTime(start));
+  });
+
+  it("[Boundary] an event with no start shows that the date is to be confirmed", () => {
+    expect(eventTimeText(null, null)).toBe("Date to be confirmed");
   });
 });
