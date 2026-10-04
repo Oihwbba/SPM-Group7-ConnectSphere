@@ -189,9 +189,9 @@ a manual tester creates the same events, or edits an event's dates.
 | Pre-conditions | — |
 | Test Steps | 1. Open **Request Venue**. <br> 2. Choose **Room layout** "classroom" and open **Venue**. <br> 3. Choose Seminar Room 2.1, then change the layout to "banquet". <br> 4. Set the layout back to "No preference" and open **Venue**. |
 | Test Data | Seeded venues and their supported layouts |
-| Expected Result | Room layout sits above Venue. Step 2: only Seminar Room 2.1 is offered, with "Showing venues that support the classroom layout." Step 3: the venue is cleared because Seminar Room 2.1 cannot be set up for a banquet. Step 4: every active venue is offered. Choosing an event pre-selects its preferred layout, which narrows the venues the same way. |
+| Expected Result | Room layout sits above Venue. Step 2: only Seminar Room 2.1 is offered, with "Showing venues that support the classroom layout." Step 3: the venue is cleared because Seminar Room 2.1 cannot be set up for a banquet. Step 4: every active venue is offered. Choosing an event pre-selects its preferred layout, which narrows the venues the same way; it is matched ignoring case, so an event whose layout was typed "Theatre" pre-selects "theatre". |
 
-**Automated by:** `e2e/bookings.spec.ts` › "SCRUM-50 AC1 — the room layout is chosen first, and only venues that support it are offered"; `tests/unit/request-form.test.tsx` › "SCRUM-50 AC1 — once a layout is chosen, only venues that support it are offered", "…with no layout preference, every venue is offered" and "…the room layout is asked for before the venue"
+**Automated by:** `e2e/bookings.spec.ts` › "SCRUM-50 AC1 — the room layout is chosen first, and only venues that support it are offered"; `tests/unit/request-form.test.tsx` › "SCRUM-50 AC1 — once a layout is chosen, only venues that support it are offered", "…with no layout preference, every venue is offered" and "…the room layout is asked for before the venue"; `tests/unit/request-form.test.tsx` › every "layoutOption — SCRUM-50" case; `e2e/bookings.spec.ts` › "SCRUM-50 AC1 — the period and attendance are the event's…" (an event stored as "Theatre")
 
 ### TC-50-13
 

@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 
 import {
+  layoutOption,
   liveAnswer,
   LIVE_CHECK_FAILED_MESSAGE,
   RequestForm,
@@ -139,6 +140,23 @@ describe("liveAnswer — SCRUM-50 live check", () => {
         fieldErrors: { venueId: ["Choose a venue."] },
       }),
     ).toEqual({ state: "error", message: "Choose a venue." });
+  });
+});
+
+describe("layoutOption — SCRUM-50", () => {
+  const options = ["banquet", "classroom", "theatre"];
+
+  it("SCRUM-50 AC1 — the event's preferred layout is pre-selected whatever its case or spacing", () => {
+    expect(layoutOption("classroom", options)).toBe("classroom");
+    expect(layoutOption("Classroom", options)).toBe("classroom");
+    expect(layoutOption("  THEATRE ", options)).toBe("theatre");
+  });
+
+  it("SCRUM-50 AC1 — a layout no venue offers, or none at all, pre-selects nothing", () => {
+    expect(layoutOption("boardroom", options)).toBe("");
+    expect(layoutOption("", options)).toBe("");
+    expect(layoutOption(null, options)).toBe("");
+    expect(layoutOption(undefined, options)).toBe("");
   });
 });
 

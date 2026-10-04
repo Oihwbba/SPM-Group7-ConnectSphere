@@ -115,7 +115,8 @@ test.describe("SCRUM-50 / 52 / 53 — venue booking request, review and decision
           startAt: new Date(`${start}:00+08:00`),
           endAt: new Date(`${end}:00+08:00`),
           expectedAttendance: attendance,
-          preferredLayout: "theatre",
+          // As an Organiser may have typed it; venues list "theatre".
+          preferredLayout: key === "morning" ? "Theatre" : "theatre",
         };
       }),
     });
@@ -236,6 +237,13 @@ test.describe("SCRUM-50 / 52 / 53 — venue booking request, review and decision
     await expect(start).toHaveValue("10 Mar 2035, 9:00 am SGT");
     await expect(end).toHaveValue("10 Mar 2035, 1:00 pm SGT");
     await expect(attendance).toHaveValue("120");
+    // Its preferred layout, stored as "Theatre", is pre-selected all the same.
+    await expect(
+      coordinator.getByLabel("Room layout", { exact: true }),
+    ).toHaveText("theatre");
+    await expect(
+      coordinator.getByText("Showing venues that support the theatre layout."),
+    ).toBeVisible();
     for (const field of [start, end, attendance]) {
       await expect(field).not.toBeEditable();
     }

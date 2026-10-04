@@ -87,6 +87,20 @@ export function venuesForLayout<T extends { supportedLayouts: string[] }>(
     : venues;
 }
 
+/**
+ * SCRUM-50 — the layout option to pre-select for an event's preferred
+ * layout. Venues list layouts in lower case, but an Organiser may have typed
+ * "Classroom", so they are matched ignoring case and surrounding spaces. Only
+ * a layout some venue offers can be pre-selected; otherwise none is.
+ */
+export function layoutOption(
+  preferred: string | null | undefined,
+  options: string[],
+): string {
+  const wanted = preferred?.trim().toLowerCase();
+  return (wanted && options.find((o) => o.toLowerCase() === wanted)) || "";
+}
+
 /** What the live availability check knows about the venue and period chosen. */
 export type Live =
   | { state: "checking" }
@@ -178,11 +192,7 @@ export function RequestForm({
 
   function chooseEvent(eventId: string) {
     const event = events.find((e) => e.id === eventId);
-    // Only a layout some venue offers can be pre-selected.
-    const layout =
-      event?.preferredLayout && layoutOptions.includes(event.preferredLayout)
-        ? event.preferredLayout
-        : "";
+    const layout = layoutOption(event?.preferredLayout, layoutOptions);
     const period = event && eventBookingPeriod(event);
     setForm((prev) => ({
       ...prev,
