@@ -127,7 +127,8 @@ test.describe("SCRUM-110 — See an event's readiness checklist", () => {
     await expect(venue).toHaveAttribute("data-complete", "false");
     await expect(venue).toContainText(`Rejected – ${REASON}`);
     await expect(equipment).toHaveAttribute("data-complete", "false");
-    await expect(equipment).toContainText("Not fully reserved");
+    // AC 4: the short item is named, without counts.
+    await expect(equipment).toContainText("Not fully reserved: Projector");
     await expect(equipment).not.toContainText("3/5");
     await expect(checklist.getByTestId("readiness-summary")).toHaveText(
       /Not ready to confirm yet/,
@@ -142,7 +143,7 @@ test.describe("SCRUM-110 — See an event's readiness checklist", () => {
     await expect(checklist).not.toContainText(REASON);
     await expect(
       checklist.getByTestId("readiness-item-equipment"),
-    ).toContainText("Not fully reserved");
+    ).toContainText("Not fully reserved: Projector");
   });
 
   test("SCRUM-110 [AC3, AC5, AC6] TC-110-01, TC-110-06: with the venue approved and every requested item reserved, the Coordinator sees Ready to confirm", async ({
