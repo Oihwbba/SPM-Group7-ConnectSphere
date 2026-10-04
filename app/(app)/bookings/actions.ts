@@ -71,10 +71,12 @@ export async function checkVenueAvailability(
     const parsed = venueAvailabilityQuerySchema.safeParse(input ?? {});
     if (!parsed.success) {
       const fieldErrors = parsed.error.flatten().fieldErrors;
-      return err(
-        fieldErrors.venueId?.[0] ?? INVALID_PERIOD_MESSAGE,
-        fieldErrors,
-      );
+      const message =
+        fieldErrors.venueId?.[0] ??
+        (fieldErrors.startAt?.includes(PAST_START_MESSAGE)
+          ? PAST_START_MESSAGE
+          : INVALID_PERIOD_MESSAGE);
+      return err(message, fieldErrors);
     }
     const { venueId } = parsed.data;
     const period = {

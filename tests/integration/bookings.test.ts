@@ -535,6 +535,28 @@ describe.skipIf(!usesLocalDatabase)(
         });
       });
 
+      it("SCRUM-50 AC5 — a period that has already started is not called available, and submitting it is refused the same way", async () => {
+        const live = await check(
+          "2020-01-01T01:00:00.000Z",
+          "2020-01-01T03:00:00.000Z",
+        );
+        expect(live).toMatchObject({
+          ok: false,
+          error: "The start time cannot be in the past.",
+        });
+
+        const submitted = await submitBookingRequest(
+          request({
+            startAt: "2020-01-01T01:00:00.000Z",
+            endAt: "2020-01-01T03:00:00.000Z",
+          }),
+        );
+        expect(submitted).toMatchObject({
+          ok: false,
+          error: live.ok ? "" : live.error,
+        });
+      });
+
       it("SCRUM-50 — the check writes nothing", async () => {
         const before = await bookingCount();
         await check(fromStart(0), fromEnd(0));

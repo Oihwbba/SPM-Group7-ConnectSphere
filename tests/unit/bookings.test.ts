@@ -557,6 +557,22 @@ describe("checkVenueAvailability — SCRUM-50 live check", () => {
     expect(db.booking.findMany).not.toHaveBeenCalled();
   });
 
+  it("SCRUM-50 AC5 — a period that has already started is reported against the start, as submitting would, and nothing is read", async () => {
+    expect(
+      await checkVenueAvailability({
+        venueId: "ven_1",
+        startAt: "2020-01-01T01:00:00.000Z",
+        endAt: "2020-01-01T03:00:00.000Z",
+      }),
+    ).toEqual({
+      ok: false,
+      error: "The start time cannot be in the past.",
+      fieldErrors: { startAt: ["The start time cannot be in the past."] },
+    });
+    expect(db.venue.findFirst).not.toHaveBeenCalled();
+    expect(db.booking.findMany).not.toHaveBeenCalled();
+  });
+
   it("SCRUM-50 — without a venue there is nothing to check", async () => {
     expect(
       await checkVenueAvailability({ ...period, venueId: "" }),

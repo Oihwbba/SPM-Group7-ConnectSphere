@@ -89,34 +89,42 @@ export const bookingRequestSchema = z
     requestedLayout: z.string().trim().max(100).optional(),
     requestNotes: z.string().trim().max(2000).optional(),
   })
-  .superRefine((data, ctx) => {
-    const period = {
-      startAt: new Date(data.startAt),
-      endAt: new Date(data.endAt),
-    };
-    // SCRUM-50 AC5: an end at or before the start is refused before anything
-    // else happens.
-    if (!isValidPeriod(period)) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["endAt"],
-        message: INVALID_PERIOD_MESSAGE,
-      });
-    }
-    // A booking for a period that has already started cannot be honoured.
-    if (period.startAt.getTime() < Date.now() - PAST_START_GRACE_MS) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["startAt"],
-        message: PAST_START_MESSAGE,
-      });
-    }
-  });
+  .superRefine(refinePeriod);
+
+/**
+ * SCRUM-50 AC5 — the period checks the request and the live check share, so
+ * the form is never told a period is free that submitting would refuse.
+ */
+function refinePeriod(
+  data: { startAt: string; endAt: string },
+  ctx: z.RefinementCtx,
+) {
+  const period = {
+    startAt: new Date(data.startAt),
+    endAt: new Date(data.endAt),
+  };
+  // An end at or before the start is refused before anything else happens.
+  if (!isValidPeriod(period)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["endAt"],
+      message: INVALID_PERIOD_MESSAGE,
+    });
+  }
+  // A booking for a period that has already started cannot be honoured.
+  if (period.startAt.getTime() < Date.now() - PAST_START_GRACE_MS) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["startAt"],
+      message: PAST_START_MESSAGE,
+    });
+  }
+}
 
 /**
  * SCRUM-50 — the form's live question: is this venue free for this period?
- * Only the venue and a valid period; the rest of the request is checked when
- * it is submitted.
+ * Only the venue and a period that is valid and not already started; the
+ * rest of the request is checked when it is submitted.
  */
 export const venueAvailabilityQuerySchema = z
   .object({
@@ -124,14 +132,7 @@ export const venueAvailabilityQuerySchema = z
     startAt: z.string().min(1, INVALID_PERIOD_MESSAGE),
     endAt: z.string().min(1, INVALID_PERIOD_MESSAGE),
   })
-  .refine(
-    (data) =>
-      isValidPeriod({
-        startAt: new Date(data.startAt),
-        endAt: new Date(data.endAt),
-      }),
-    { path: ["endAt"], message: INVALID_PERIOD_MESSAGE },
-  );
+  .superRefine(refinePeriod);
 
 /**
  * SCRUM-53 — approve, or reject with a free-text reason. A blank or

@@ -91,6 +91,9 @@ type Live =
   | { state: "checking" }
   | { state: "free" }
   | { state: "taken"; clashes: string[] }
+  // The period itself cannot be booked (AC5): Submit is disabled.
+  | { state: "invalid"; message: string }
+  // The check could not answer; submitting will still check.
   | { state: "error"; message: string };
 
 /** How long typing pauses before the venue is checked. */
@@ -223,7 +226,15 @@ export function RequestForm({
                 "Availability could not be checked right now; it will be checked again when you submit.",
             }
           : !result.ok
-            ? { state: "error", message: result.error }
+            ? {
+                // The server owns the clock, so a start that has already
+                // passed is found there, and reported against the period.
+                state:
+                  result.fieldErrors?.startAt || result.fieldErrors?.endAt
+                    ? "invalid"
+                    : "error",
+                message: result.error,
+              }
             : result.data.available
               ? { state: "free" }
               : { state: "taken", clashes: result.data.clashes },
@@ -236,13 +247,14 @@ export function RequestForm({
   }, [liveKey]);
 
   const liveNow: Live | null = periodInvalid
-    ? { state: "error", message: INVALID_PERIOD_MESSAGE }
+    ? { state: "invalid", message: INVALID_PERIOD_MESSAGE }
     : !liveKey
       ? null
       : live?.key === liveKey
         ? live.result
         : { state: "checking" };
-  const blockedLive = periodInvalid || liveNow?.state === "taken";
+  const blockedLive =
+    liveNow?.state === "invalid" || liveNow?.state === "taken";
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -538,6 +550,7 @@ function LiveAvailability({
     checking: "border-border bg-muted/40 text-muted-foreground",
     free: "border-success/30 bg-success/10 text-success",
     taken: "border-destructive/30 bg-destructive/10 text-destructive",
+    invalid: "border-destructive/30 bg-destructive/10 text-destructive",
     error: "border-destructive/30 bg-destructive/10 text-destructive",
   }[live.state];
 
@@ -573,7 +586,7 @@ function LiveAvailability({
           </span>
         </>
       )}
-      {live.state === "error" && (
+      {(live.state === "invalid" || live.state === "error") && (
         <>
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
           {live.message}

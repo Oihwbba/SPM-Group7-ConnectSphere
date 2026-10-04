@@ -29,7 +29,7 @@ a manual tester creates the same events, or edits an event's dates.
 | [TC-50-08](#tc-50-08) | Concurrency | AC 8 | Unit, integration |
 | [TC-50-09](#tc-50-09) | Negative | Coordinators only, own events only | Unit, integration, e2e |
 | [TC-50-10](#tc-50-10) | Negative, Boundary | Attendance within venue capacity | Unit, integration, e2e |
-| [TC-50-11](#tc-50-11) | Negative, Boundary | No period that has already started | Unit, integration |
+| [TC-50-11](#tc-50-11) | Negative, Boundary | AC 5 (no period that has already started) | Unit, integration, e2e |
 | [TC-50-12](#tc-50-12) | Positive | AC 1 (room layout before venue) | Unit, e2e |
 | [TC-50-13](#tc-50-13) | Negative, Boundary | AC 3, AC 4, AC 5 shown live, before submitting | Unit, integration, e2e |
 | [TC-50-14](#tc-50-14) | Positive | AC 9 (a new request after a rejection or cancellation) | Integration |
@@ -172,13 +172,13 @@ a manual tester creates the same events, or edits an event's dates.
 | Item | Content |
 |---|---|
 | Test Case ID | TC-50-11 |
-| Test Scenario | [Negative, Boundary] A period that has already started cannot be requested. This rule is not in the SCRUM-50 criteria; it was added on 2026-09-28 after the GLM review of #96, mirroring the equipment form (SCRUM-31). |
-| Pre-conditions | — |
-| Test Steps | 1. Pick today's date in **Start**, and open the time picker. <br> 2. Send a request whose start is in the past directly to the server. |
-| Test Data | Today; a start of 1 Jan 2020 |
-| Expected Result | Step 1: times earlier than now are disabled; the half hour starting at this minute and later ones can be picked; earlier days cannot be picked in the calendar. Step 2: "The start time cannot be in the past." against the start field, and nothing is written. A start less than a minute ago still counts as now. |
+| Test Scenario | [Negative, Boundary] AC 5: a period that has already started cannot be requested. Added on 2026-09-28 after the GLM review of #96, mirroring the equipment form (SCRUM-31); now part of AC 5. Since 2026-10-05 the live check reports it too, so the form never calls such a period available. |
+| Pre-conditions | A Planning event whose dates have passed, with no venue booked. |
+| Test Steps | 1. Choose that event and a venue, and read the availability line. <br> 2. Send a request whose start is in the past directly to the server. |
+| Test Data | E2E Hall — Missed Seminar (1 Jan 2020, 09:00–11:00); a start of 1 Jan 2020 |
+| Expected Result | Step 1: "The start time cannot be in the past." in the availability line, and **Submit request** is disabled. Step 2: the same message against the start field, and nothing is written. A start less than a minute ago still counts as now. |
 
-**Automated by:** `tests/unit/bookings.test.ts` › "SCRUM-50 — a period that has already started is refused against the start field…" and "…a start less than a minute ago still counts as now"; `tests/integration/bookings.test.ts` › "SCRUM-50 — a period that has already started is refused and nothing is written"; `tests/unit/request-form.test.tsx` › the three isPastSlot cases
+**Automated by:** `e2e/bookings.spec.ts` › "SCRUM-50 AC5 — an event that has already started is reported before submitting, and Submit is disabled"; `tests/unit/bookings.test.ts` › "SCRUM-50 — a period that has already started is refused against the start field…", "…a start less than a minute ago still counts as now" and "SCRUM-50 AC5 — a period that has already started is reported against the start, as submitting would, and nothing is read" (live check); `tests/integration/bookings.test.ts` › "SCRUM-50 — a period that has already started is refused and nothing is written" and "SCRUM-50 AC5 — a period that has already started is not called available, and submitting it is refused the same way"
 
 ### TC-50-12
 

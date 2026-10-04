@@ -35,6 +35,8 @@ const EVENTS = {
   rejected: ["Exhibition Fair", "2035-05-01T09:00", "2035-05-01T12:00", 120],
   overCapacity: ["Big Concert", "2035-06-01T18:00", "2035-06-01T22:00", 250],
   atCapacity: ["Full House", "2035-06-02T18:00", "2035-06-02T22:00", 200],
+  // Its dates have passed, but no venue was booked while there was time.
+  past: ["Missed Seminar", "2020-01-01T09:00", "2020-01-01T11:00", 120],
 } as const;
 const eventName = (key: keyof typeof EVENTS) => `${PREFIX} ${EVENTS[key][0]}`;
 
@@ -236,6 +238,21 @@ test.describe("SCRUM-50 / 52 / 53 — venue booking request, review and decision
     for (const field of [start, end, attendance]) {
       await expect(field).not.toBeEditable();
     }
+  });
+
+  test("SCRUM-50 AC5 — an event that has already started is reported before submitting, and Submit is disabled", async ({
+    browser,
+  }) => {
+    const coordinator = await signedIn(browser, "coordinator@test.local");
+    await openRequestForm(coordinator);
+    await fillHall(coordinator, eventName("past"));
+
+    const live = coordinator.getByTestId("live-availability");
+    await expect(live).toHaveAttribute("data-state", "invalid");
+    await expect(live).toContainText("The start time cannot be in the past.");
+    await expect(
+      coordinator.getByRole("button", { name: "Submit request" }),
+    ).toBeDisabled();
   });
 
   test("SCRUM-50 AC1 — the room layout is chosen first, and only venues that support it are offered", async ({
