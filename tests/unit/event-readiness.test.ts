@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import type { EventStatus, Prisma } from "@prisma/client";
 
 import {
+  getConfirmedArrangements,
   getReadinessChecklist,
   withoutInternalReasons,
   type ReadinessChecklist,
@@ -493,5 +494,116 @@ describe("withoutInternalReasons — SCRUM-110 AC6", () => {
       ready: false,
       items: [{ ...checklist.items[0], reason: null }, checklist.items[1]],
     });
+  });
+});
+
+describe("getConfirmedArrangements — SCRUM-81 AC6", () => {
+  const venueRow = (
+    status: string,
+    overrides: Partial<{
+      startAt: Date;
+      endAt: Date;
+      createdAt: Date;
+      venue: { name: string; location: string };
+    }> = {},
+  ) => ({
+    status,
+    createdAt: day(1),
+    startAt: START,
+    endAt: END,
+    venue: {
+      name: status === "APPROVED" ? "Exhibition Hall" : "Boardroom",
+      location: "Level 1",
+    },
+    ...overrides,
+  });
+  const reservationRow = (
+    type: string,
+    quantity: number,
+    overrides: Partial<{ status: string; startAt: Date; endAt: Date }> = {},
+  ) => ({
+    status: "CONFIRMED",
+    quantity,
+    startAt: START,
+    endAt: END,
+    equipment: { type },
+    ...overrides,
+  });
+
+  function eventWith(bookings: unknown[], reservations: unknown[]) {
+    const findUnique = vi.fn().mockResolvedValue({
+      startAt: START,
+      endAt: END,
+      timezone: "Asia/Singapore",
+      bookings,
+      reservations,
+    });
+    return {
+      db: { event: { findUnique } } as unknown as Prisma.TransactionClient,
+      findUnique,
+    };
+  }
+
+  it("SCRUM-81 [AC6] TC-81-06: lists the approved venue for the event's time, its date/time, and the equipment reserved for the whole event", async () => {
+    const { db, findUnique } = eventWith(
+      [venueRow("REJECTED"), venueRow("APPROVED"), venueRow("PENDING")],
+      [
+        reservationRow("Projector", 1),
+        reservationRow("Wireless Microphone", 4),
+        reservationRow("Projector", 1),
+        reservationRow("Laptop", 2, { status: "CANCELLED" }),
+        reservationRow("Lectern", 1, {
+          endAt: new Date("2031-06-01T04:00:00Z"),
+        }),
+      ],
+    );
+
+    expect(await getConfirmedArrangements(db, "evt_test")).toEqual({
+      venue: { name: "Exhibition Hall", location: "Level 1" },
+      startAt: START,
+      endAt: END,
+      timezone: "Asia/Singapore",
+      equipment: ["Projector × 2", "Wireless Microphone × 4"],
+    });
+    expect(findUnique.mock.calls[0][0].where).toEqual({ id: "evt_test" });
+  });
+
+  it("SCRUM-81 [AC6] TC-81-06: when two approved bookings cover the event, the newer one is the confirmed venue", async () => {
+    const hall = { name: "Exhibition Hall", location: "Level 1" };
+    const auditorium = { name: "Auditorium", location: "Level 2" };
+    const { db } = eventWith(
+      // Listed oldest first, as the query returns them.
+      [
+        venueRow("APPROVED", { venue: hall, createdAt: day(1) }),
+        venueRow("APPROVED", { venue: auditorium, createdAt: day(3) }),
+      ],
+      [],
+    );
+
+    expect((await getConfirmedArrangements(db, "evt_test"))?.venue).toEqual(
+      auditorium,
+    );
+  });
+
+  it("SCRUM-81 [AC6] TC-81-06: with no approved booking for the event's time and nothing reserved, the venue is empty and the equipment list is empty", async () => {
+    const { db } = eventWith(
+      [
+        venueRow("APPROVED", { startAt: day(5), endAt: day(6) }),
+        venueRow("PENDING"),
+      ],
+      [],
+    );
+
+    expect(await getConfirmedArrangements(db, "evt_test")).toMatchObject({
+      venue: null,
+      equipment: [],
+    });
+  });
+
+  it("SCRUM-81 [AC6]: an id that matches no event has no arrangements", async () => {
+    const findUnique = vi.fn().mockResolvedValue(null);
+    const db = { event: { findUnique } } as unknown as Prisma.TransactionClient;
+
+    expect(await getConfirmedArrangements(db, "evt_missing")).toBeNull();
   });
 });

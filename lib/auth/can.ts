@@ -30,6 +30,7 @@ export type Action =
   | "event:list" // list the events scoped to me (own / assigned)
   | "event:read" // read one event (relationship-gated)
   | "event:review"
+  | "event:confirm" // SCRUM-81: the assigned coordinator confirms a ready Planning event
   | "clarification:request" // SCRUM-18: coordinator asks the organiser a question
   | "clarification:respond" // SCRUM-18: organiser answers an open question
   | "venue:read"
@@ -83,6 +84,7 @@ const ROLE_ACTIONS: Record<Role, Action[]> = {
     "event:list",
     "event:read",
     "event:review",
+    "event:confirm",
     "clarification:request",
     "venue:read",
     "equipment-request:list",
@@ -122,7 +124,11 @@ const ROLE_ACTIONS: Record<Role, Action[]> = {
  * The relationship gate. Given a user and a resource, is the user related to
  * it in a way that grants access? Role has already been checked by `can()`.
  */
-function hasRelationship(user: SessionUser, resource: Resource): boolean {
+function hasRelationship(
+  user: SessionUser,
+  action: Action,
+  resource: Resource,
+): boolean {
   switch (resource.kind) {
     case "event":
       // Organisers own events; coordinators are assigned to them or review unassigned submitted requests.
@@ -131,7 +137,13 @@ function hasRelationship(user: SessionUser, resource: Resource): boolean {
       }
       if (user.role === "COORDINATOR") {
         if (resource.coordinatorId === user.id) return true;
-        return resource.coordinatorId === null && resource.status !== "DRAFT";
+        // Any coordinator may review a request nobody has picked up yet, but
+        // only the event's assigned coordinator may confirm it (SCRUM-81 AC 7).
+        return (
+          action !== "event:confirm" &&
+          resource.coordinatorId === null &&
+          resource.status !== "DRAFT"
+        );
       }
       return false;
     case "registration":
@@ -171,7 +183,7 @@ export function can(
 
   // 2. Relationship gate — only when the action targets a specific resource.
   if (resource) {
-    return hasRelationship(user, resource);
+    return hasRelationship(user, action, resource);
   }
 
   return true;

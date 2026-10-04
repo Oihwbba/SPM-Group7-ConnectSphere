@@ -12,6 +12,7 @@ import {
 } from "@/lib/schemas/event";
 import { ok, err, type ActionResult } from "@/lib/action-result";
 import { pickCoordinator } from "@/lib/coordinator-assignment";
+import { getReadinessChecklist } from "@/lib/event-readiness";
 import { TIME_ZONE } from "@/lib/datetime";
 
 /** Thrown inside submitEventRequest's transaction for an expected failure
@@ -28,6 +29,8 @@ const statusTransitionSchema = z.object({
   nextStatus: z.enum(["APPROVED", "REJECTED"]),
   decisionReason: z.string().trim().max(2000).optional(),
 });
+
+const confirmEventSchema = z.object({ eventId: z.string().min(1) });
 
 /**
  * Server action to create or save/update a DRAFT event request.
@@ -425,6 +428,14 @@ export async function transitionEventStatus(
       );
     }
 
+    // SCRUM-81: approval moves the event straight to Planning. Only an event's
+    // assigned coordinator may confirm it, so approving a request nobody was
+    // assigned to makes the approver its coordinator.
+    const approved = nextStatus === "APPROVED";
+    const coordinatorId = approved
+      ? (event.coordinatorId ?? user!.id)
+      : event.coordinatorId;
+
     const updated = await prisma.$transaction(async (tx) => {
       const result = await tx.event.updateMany({
         where: {
@@ -433,7 +444,8 @@ export async function transitionEventStatus(
           coordinatorId: event.coordinatorId,
         },
         data: {
-          status: nextStatus,
+          status: approved ? "PLANNING" : "REJECTED",
+          coordinatorId,
           decidedAt: new Date(),
           decidedById: user!.id,
           decisionReason: nextStatus === "REJECTED" ? decisionReason : null,
@@ -453,6 +465,34 @@ export async function transitionEventStatus(
           summary: decisionReason ?? undefined,
         },
       });
+      if (coordinatorId !== event.coordinatorId) {
+        await tx.auditLog.create({
+          data: {
+            entityType: "Event",
+            entityId: event.id,
+            action: "ASSIGNED",
+            actorId: user!.id,
+            fieldName: "coordinatorId",
+            oldValue: event.coordinatorId,
+            newValue: coordinatorId,
+            summary: "Assigned to the approving coordinator (SCRUM-81)",
+          },
+        });
+      }
+      if (approved) {
+        await tx.auditLog.create({
+          data: {
+            entityType: "Event",
+            entityId: event.id,
+            action: "STATUS_CHANGED",
+            actorId: null, // system-performed, not a specific user's action
+            fieldName: "status",
+            oldValue: "APPROVED",
+            newValue: "PLANNING",
+            summary: "Moved to Planning on approval (SCRUM-81)",
+          },
+        });
+      }
 
       // SCRUM-18: a decision ends any question still waiting on the organiser.
       // Left OPEN, it would survive a reject-and-resubmit and block the
@@ -469,8 +509,107 @@ export async function transitionEventStatus(
       );
     }
     revalidatePath("/events");
-    if (nextStatus === "APPROVED") revalidatePath("/equipment");
-    return ok({ status: nextStatus });
+    if (approved) revalidatePath("/equipment");
+    return ok({ status: approved ? "PLANNING" : "REJECTED" });
+  } catch (error) {
+    if (error instanceof PermissionError) return err(error.message);
+    throw error;
+  }
+}
+
+/**
+ * SCRUM-81 — the assigned Coordinator confirms a Planning event whose
+ * readiness checklist (SCRUM-110) is complete, which opens its registration
+ * (AC 5). Confirming an event that is already Confirmed changes nothing
+ * (AC 8), so a double-click or an older tab records one confirmation. See
+ * ADR 0012.
+ */
+export async function confirmEvent(
+  input: unknown,
+): Promise<ActionResult<{ status: "CONFIRMED" }>> {
+  const session = await auth();
+  const user = session?.user;
+
+  try {
+    requirePermission(user, "event:confirm");
+
+    const parsed = confirmEventSchema.safeParse(input);
+    if (!parsed.success) return err("Please provide a valid event to confirm.");
+    const { eventId } = parsed.data;
+
+    const event = await prisma.event.findUnique({
+      where: { id: eventId },
+      select: { organiserId: true, coordinatorId: true, status: true },
+    });
+    if (!event || !can(user!, "event:confirm", { kind: "event", ...event })) {
+      return err("Event not found.");
+    }
+
+    const outcome = await prisma.$transaction(async (tx) => {
+      // Lock the event row first: two confirms then take turns, and the
+      // second sees the first's result. Readiness is re-checked under the
+      // lock, against the arrangements as they stand now (ADR 0011).
+      await tx.$queryRaw`SELECT "id" FROM "Event" WHERE "id" = ${eventId} FOR UPDATE`;
+      const current = await tx.event.findUniqueOrThrow({
+        where: { id: eventId },
+        select: {
+          status: true,
+          coordinatorId: true,
+          registrationRequired: true,
+        },
+      });
+      if (current.status === "CONFIRMED") return "already-confirmed" as const;
+      if (current.status !== "PLANNING") return "not-planning" as const;
+      if (current.coordinatorId !== user!.id) return "reassigned" as const;
+
+      const checklist = (await getReadinessChecklist(tx, eventId))!;
+      if (!checklist.ready) {
+        return checklist.items
+          .filter((item) => !item.complete)
+          .map((item) => `${item.name} (${item.state})`)
+          .join(", ");
+      }
+
+      // AC 5: registration opens unless the Organiser said it isn't needed
+      // (SCRUM-127). Requests made before that choice existed leave it unset.
+      await tx.event.update({
+        where: { id: eventId },
+        data: {
+          status: "CONFIRMED",
+          registrationEnabled: current.registrationRequired !== false,
+        },
+      });
+      // AC 5: who confirmed it and when (the entry's createdAt).
+      await tx.auditLog.create({
+        data: {
+          entityType: "Event",
+          entityId: eventId,
+          action: "STATUS_CHANGED",
+          actorId: user!.id,
+          fieldName: "status",
+          oldValue: "PLANNING",
+          newValue: "CONFIRMED",
+          summary: "Confirmed by the assigned coordinator (SCRUM-81)",
+        },
+      });
+      return "confirmed" as const;
+    });
+
+    if (outcome === "not-planning") {
+      return err("Only an event in Planning can be confirmed.");
+    }
+    if (outcome === "reassigned") {
+      return err(
+        "This event was updated by another user. Refresh and try again.",
+      );
+    }
+    if (outcome !== "confirmed" && outcome !== "already-confirmed") {
+      return err(
+        `This event isn't ready to confirm yet. Outstanding: ${outcome}.`,
+      );
+    }
+    revalidatePath("/events");
+    return ok({ status: "CONFIRMED" });
   } catch (error) {
     if (error instanceof PermissionError) return err(error.message);
     throw error;
