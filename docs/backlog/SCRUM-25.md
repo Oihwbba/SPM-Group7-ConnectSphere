@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-09-30. Jira is the source of truth.
+     Synced from Jira on 2026-10-04. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-25 - Update routine event information during planning
@@ -8,7 +8,7 @@
 |---|---|
 | **Type** | Story |
 | **Epic** | SCRUM-6 - Event Request Lifecycle |
-| **Priority** | Medium |
+| **Priority** | High |
 | **Story points** | 3 |
 | **Status in Jira** | To Do |
 | **Sprint** | Backlog |
@@ -16,17 +16,23 @@
 
 ---
 
-As an authorised Event Organiser or Event Coordinator, I want to update routine event information during planning, so that the event record remains accurate as ordinary details change.
+**User story:** As an Event Coordinator, I want to update routine event details while the event is being reviewed and planned, so that the event record stays accurate as ordinary details change.
 
-Acceptance Criteria:
+**Acceptance criteria**
 
-* During Planning, an authorised Organiser or Coordinator may edit permitted routine fields.
-* Routine fields are every event field except date, time, expected attendance, venue and equipment.
-* A routine edit does not change event status and does not automatically invalidate existing arrangements.
-* If one of the five impactful fields is changed by a Coordinator, SCRUM-26's warning/confirmation path applies.
-* If the Organiser wants to change one of the five impactful fields after submission, the formal change-request workflow in SCRUM-41–44 applies instead of direct editing.
-* An Organiser may make routine edits directly during Planning; not every post-submission edit requires a formal change request.
-* Operational notes are stored with the event and remain visible to authorised workflow participants.
+1. Given I'm the event's assigned Coordinator and the event is Under Review or Planning, I can edit routine fields directly. Routine fields are every event field except date, time, expected attendance, venue and equipment.
+2. A routine edit does not change the event's status and does not flag any arrangement.
+3. Given I change date, time, expected attendance, venue or equipment, then the warning and flagging in SCRUM-26 apply.
+4. The Organiser cannot edit any field directly after submission. They raise a change request (SCRUM-41). The only exception is the registration window (SCRUM-75).
+5. Given the event is Confirmed, no event detail can be edited directly by anyone; changes go through SCRUM-41 and SCRUM-128. The registration window (SCRUM-75) and operational notes (AC6) stay editable because they are not event details.
+6. The assigned Coordinator can add operational notes at any status except Cancelled. Any Venue Staff member can add them once the event has a venue booking (Pending or Approved), and any Technical Support Staff member once it has an equipment request. Notes cannot be edited or deleted, show author and time, and are visible to internal users who can view the event and to the event's Organiser.
+7. Any other user, including a previous Coordinator, is refused with no change (SCRUM-67).
 
+**Customer basis:** "Organiser cannot directly edit after submission; must request via Coordinator." "Once it is confirmed, information fields should not be changed." "The Event Coordinator can edit event details… Venue Staff and Technical Support Staff can update venue/equipment preparation details for the event requested." "Event Information Management stores operational notes. Authorised users participated in the event workflow can view."
 
-Boundary: routine edit = direct update; impactful Coordinator edit = warn/reconsideration path; impactful Organiser edit = formal change request.
+**Change log**
+
+* 2026-10-01: user story narrowed to the Coordinator; added Under Review editing, the operational notes rule and the Confirmed exceptions. Change-request decision points to SCRUM-128.
+* 2026-10-01 (audit): AC6 now says which staff can add notes, because no Venue Staff or Technical Support member is assigned to an event (SCRUM-124). Preparation progress (SCRUM-123) removed from AC5, because it is beyond Release 1; staff record preparation as operational notes instead.
+
+Functionality Area: Event Information Management

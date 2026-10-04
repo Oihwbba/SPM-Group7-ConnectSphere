@@ -1,63 +1,43 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-09-30. Jira is the source of truth.
+     Synced from Jira on 2026-10-04. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
-# SCRUM-41 - Formal change request: submit, review, and approve or reject
+# SCRUM-41 - Raise and track a change request
 
 | | |
 |---|---|
 | **Type** | Story |
 | **Epic** | SCRUM-8 - Event Change & Notifications |
 | **Priority** | High |
-| **Story points** | 5 |
+| **Story points** | 3 |
 | **Status in Jira** | To Do |
 | **Sprint** | Backlog |
 | **Jira** | https://smu-spm-group7.atlassian.net/browse/SCRUM-41 |
 
 ---
 
-Merged story (29 Sep 2026): absorbs SCRUM-42 (Coordinator reviews a change request) and SCRUM-43 (Coordinator approves or rejects a change request). Any reference to SCRUM-42 or SCRUM-43 elsewhere now means this story. SCRUM-44 is now part of SCRUM-26; SCRUM-47 is now part of SCRUM-45.
+**User story:** As an Event Organiser, I want to request changes to my submitted event and track that request, so that my Coordinator reviews changes before they take effect.
 
-As an Event Organiser, I want to submit a formal change request for an impactful event change, so that material changes are reviewed before they are applied.
+**Acceptance criteria**
 
-Acceptance Criteria:
+1. Given my event is Under Review, Planning or Confirmed, I can raise a change request for any event field, or a request to cancel the event with a reason.
+2. Draft events are edited directly (SCRUM-15). Rejected events use SCRUM-108. Cancelled and Completed events cannot be changed. A Submitted event has no Coordinator to decide a change request until it is assigned (SCRUM-20).
+3. Given my event is Under Review with an open clarification, then the fields that clarification names are changed through the clarification response (SCRUM-108), not a change request.
+4. Requested values are validated with the request-form rules in SCRUM-13 and SCRUM-127: attendance is a positive whole number, the end is after the start, the start is not in the past, and venue and equipment come from the catalogues.
+5. Fields that are date, time, expected attendance, venue or equipment are marked impactful on the request.
+6. Given I submit, then the change request is Submitted, the event's values are unchanged, and I can see the request's status (Submitted, Approved, or Rejected with reason).
+7. An event has at most one Submitted change request. A second one is refused and the open one is shown.
+8. Given the event is cancelled or rejected while a change request is Submitted, then the change request becomes Rejected with that reason.
+9. The assigned Coordinator can raise a change request on the Organiser's behalf after agreeing it offline. It is labelled "Raised by Coordinator for <Organiser name>" and is decided like any other.
+10. Only the event's submitting Organiser and its assigned Coordinator can raise a change request (SCRUM-67).
 
-* A formal change request may be created for an event in Submitted, Under Review, Approved, Planning or Confirmed state, except where an open clarification response path or another pending change request already governs the requested edit.
-* Draft events use SCRUM-15. Rejected events use SCRUM-108. Cancelled and Completed events cannot be changed.
-* Routine non-impactful edits during Planning use SCRUM-25 and do not create a change request.
-* The formal change-request fields are exactly date, time, expected attendance, venue and equipment.
-* The Organiser selects the impactful field(s) and requested values and submits the change request.
-* A submitted change request is recorded with status Pending Review.
-* The requested values are not treated as the event's final values until the change request is approved.
-* The Organiser can see the current status of the change request.
-* Coordinator review and decision are owned by SCRUM-42 and SCRUM-43.
-* After an approved impactful change is applied, SCRUM-44 owns dependent-arrangement reconsideration.
+**Decision and application:** SCRUM-128. **Notifications:** Coordinator when raised (SCRUM-124); Organiser on the outcome (SCRUM-45).
 
----
+**Customer basis:** "Organiser cannot directly edit after submission; must request via Coordinator." "Change requests may cover several field and the Coordinator will review and processes updates." "Significant changes require review offline before changes are made on the system."
 
-Merged from SCRUM-42 — Event Coordinator reviews a submitted change request
+**Change log**
 
-As an Event Coordinator, I want to review a submitted change request, so that I can assess its impact before deciding.
+* 2026-10-01: split at backlog refinement; deciding and applying moved to SCRUM-128 and the estimate dropped from 8 to 3. Added validation and Coordinator-raised requests.
+* 2026-10-01 (audit): Submitted removed from AC1, because a Submitted event has no Coordinator to decide the request. Requested venue and equipment values are catalogue choices (SCRUM-127).
 
-Acceptance Criteria:
-
-* Given a change request with status "Pending Review," when a Coordinator opens it, then both the old value and new requested value are displayed for each changed field.
-* Given a change affects date, time, attendance, venue, or equipment, when the Coordinator views the request, then any related bookings/equipment reservations are listed as "potentially affected."
-
----
-
-Merged from SCRUM-43 — Event Coordinator approves or rejects a change request
-
-As an Event Coordinator, I want to approve or reject a change request, so that the Event Organiser knows the outcome and the event remains internally consistent.
-
-Acceptance Criteria:
-
-* Given a change request is Pending Review, when the Coordinator approves it, then the requested event details become the event's actual details and the change request status becomes Approved as one atomic business operation.
-* If the change request cannot be fully applied, neither the event details nor the change-request decision is committed.
-* Given a change request is Pending Review, when the Coordinator rejects it, then the event's actual details remain unchanged and the change request status becomes Rejected.
-* A rejection reason is required and cannot be blank.
-* When an approved change affects an impactful field, SCRUM-44 handles dependent venue bookings and equipment reservations.
-* For a Confirmed event, approval of an impactful change also moves the event to Planning so that the revised arrangements can be re-established before the event can become Confirmed again.
-* For an Approved or Planning event, approving a change request does not otherwise alter lifecycle status.
-* The Organiser's outcome notification is owned by SCRUM-47.
-* The event's lifecycle transition behaviour follows SCRUM-24; this story owns the specific Confirmed → Planning transition caused by an approved impactful change.
+Functionality Area: Event Change Requests

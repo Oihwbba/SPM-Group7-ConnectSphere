@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-09-30. Jira is the source of truth.
+     Synced from Jira on 2026-10-04. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-115 - Find an event to attend
@@ -8,7 +8,7 @@
 |---|---|
 | **Type** | Story |
 | **Epic** | SCRUM-11 - Attendee Registration |
-| **Priority** | Medium |
+| **Priority** | Low |
 | **Story points** | 3 |
 | **Status in Jira** | To Do |
 | **Sprint** | Backlog |
@@ -16,19 +16,27 @@
 
 ---
 
-As an Attendee, I want to search, filter and sort the confirmed events, so that I can quickly find one I want to attend without scrolling the whole list.
+**Beyond Release 1** (label `beyond-release-1`): kept in the backlog; do not pull into a sprint without customer confirmation.
 
-Acceptance Criteria:
+**User story:** As an Attendee, I want to search, filter and sort the events I can register for, so that I can find one quickly without scrolling the whole list.
 
-* Given the browse list, when the Attendee enters a keyword, then only events whose name or description contains it are shown, ignoring upper/lower case.
-* Given the browse list, when the Attendee chooses a start-date range, then only events starting within that range (inclusive of both dates, in the event's timezone) are shown.
-* Given the browse list, when the Attendee chooses a venue or location, then only events at that venue or location are shown.
-* Given the "Open for registration only" option is on, when the list loads, then events that are Full, not yet open, closed or already started are hidden; turning it off shows them again.
-* The Attendee can sort by start date (soonest first, the default) or by places remaining (most first).
-* Filters combine: an event is shown only if it matches every active filter.
-* Given the active filters match no events, when the list loads, then "No events match your filters" is shown with a "Clear filters" action, distinct from the "No confirmed events yet" message.
-* Given the Attendee has applied filters, when they open an event and go back, then the same filters, sort and results are restored; a copied link reproduces them.
-* Given more than 20 matching events, when the list loads, then it shows the first 20 with a way to load or page to the rest; no event is skipped or shown twice.
-* Search, filters and sorting never reveal an event the Attendee could not otherwise see (only Confirmed, non-Cancelled events, as in SCRUM-72).
+**Acceptance criteria**
 
-Boundary: SCRUM-72 owns the list's content and visibility rules; this story only narrows and orders it. Waiting lists stay out of scope (SCRUM-79).
+1. Given I enter a keyword, then only events whose name or description contains it are shown, ignoring case.
+2. Given I choose a start-date range, then only events starting within it (both dates included, Singapore time) are shown.
+3. Given I choose a venue or location, then only events there are shown.
+4. Given "Open for registration only" is on, then events that are full, not yet open, closed or already started are hidden; turning it off shows them again.
+5. I can sort by start date (soonest first, the default) or by places remaining (most first).
+6. Filters combine: an event shows only if it matches every active filter.
+7. Given the filters match nothing, then "No events match your filters" is shown with a Clear filters action, distinct from "No confirmed events yet".
+8. Given I applied filters, when I open an event and go back, then the same filters, sort and results are restored; a copied link reproduces them.
+9. Given more than 20 events match, then the first 20 are shown with a way to load the rest; no event is skipped or shown twice.
+10. Search, filters and sorting never show an event I couldn't otherwise see (SCRUM-72).
+
+**Boundary:** SCRUM-72 owns which events are listed; this story only narrows and orders the list.
+
+**Change log**
+
+* 2026-10-01: "\[not required\]" prefix replaced by the `beyond-release-1` label; waiting-list reference removed (SCRUM-79 is now in Release 1 and unaffected).
+
+Functionality Area: Attendee Registration (beyond first release)

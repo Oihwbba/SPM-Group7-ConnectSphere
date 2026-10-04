@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-09-30. Jira is the source of truth.
+     Synced from Jira on 2026-10-04. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-21 - Hand an event to another coordinator and show who is currently assigned
@@ -16,42 +16,28 @@
 
 ---
 
-Merged story (29 Sep 2026): absorbs SCRUM-22 (See which coordinator is assigned to my event). Any reference to SCRUM-22 elsewhere now means this story. SCRUM-57 is now part of SCRUM-45.
+**User story:** As an Event Coordinator, I want to hand an event to a colleague who has agreed to take it, so that responsibility can move when workload or availability changes.
 
-As an Event Coordinator, I want to hand an event over to a colleague who has agreed to take it, so that responsibility can shift when availability or workload changes.
+**Acceptance criteria**
 
-Acceptance Criteria:
+1. Given I'm the assigned Coordinator of an event that is Under Review, Planning or Confirmed, when I name another Coordinator, then a Pending handover is created and they are asked to accept it.
+2. Given a Pending handover, when the named Coordinator accepts, then they become the assigned Coordinator and the handover becomes Approved, in one operation.
+3. Given I cancel my Pending handover, then it becomes Cancelled and I stay assigned.
+4. Until a handover is accepted I remain the assigned Coordinator; an event never has more than one assigned Coordinator.
+5. An event has at most one Pending handover. Repeating the same request shows the existing one instead of creating another.
+6. I can't name myself, and I can't name a Coordinator who is the event's Organiser (SCRUM-121).
+7. Given the event is Cancelled, Rejected or Completed while a handover is Pending, then the handover becomes Cancelled.
+8. The Organiser sees the current Coordinator's name on the event; it changes only when a handover is accepted.
+9. The handover records who started it, who accepted it, and when.
+10. After acceptance, the previous Coordinator can still open the event read-only from the all-events list (SCRUM-141) but cannot edit it.
 
-* Given an event has an assigned Coordinator, when that Coordinator initiates a handover and names a colleague, then a pending handover is recorded and the named Coordinator is asked to accept it.
-* Given a pending handover, when the named Coordinator accepts, then they become the assigned Coordinator and the previous assignment ends.
-* Given a pending handover that has not been accepted, then the original Coordinator remains the point of contact and remains responsible — the handover is not effective until accepted.
-* Exactly one Coordinator is assigned at any moment; a pending handover never creates a second assignment.
-* A record exists of who was previously assigned, who initiated the handover and who accepted it, with timestamps.
-* Both the outgoing and incoming Coordinator are notified through SCRUM-57.
-* A pending handover is idempotent: repeating the same initiation does not create multiple pending handovers for the same event and incoming Coordinator.
-* If the incoming Coordinator declines or does not accept, the original assignment remains in force; the event does not become unassigned.
-* The outgoing Coordinator cannot use handover to bypass the automatic single-Coordinator authorization rule.
+**Notifications:** owned by SCRUM-45 (the named Coordinator when a handover is proposed; both Coordinators and the Organiser when it is accepted).
 
-Customer clarification (2026-09-13): Reassignment is discussed offline. Once there is agreement, the original Coordinator initiates the handover and the new Coordinator accepts it. The system records the agreed process and acceptance; it does not host the negotiation.
+**Customer basis:** "Reassignment should be discussed offline. Once there is an agreement, the original co-ordinator can make the change and request the new co-ordinator to accept the change." "Calendar view allows viewing of the event. Previous co-ordinator cannot edit the info." "Co-ordinator cannot decline. See earlier response on changing co-ordinator."
 
-Boundary: this story owns the in-system handover and acceptance mechanism. SCRUM-20 owns automatic initial assignment; SCRUM-57 owns notifications.
+**Change log**
+
+* 2026-10-01: rewritten in one format; added the self and Organiser exclusions, the end of a Pending handover when the event closes, and the previous Coordinator's read-only access.
+* 2026-10-01 (audit): removed the Decline step. The customer says a Coordinator cannot decline, and a handover is agreed offline before it is entered; one entered by mistake is cancelled by the Coordinator who started it (AC3). Handover statuses are now Pending, Approved and Cancelled. The previous Coordinator's read-only access now comes from the all-events list (SCRUM-141), because the event calendar (SCRUM-120) is beyond Release 1.
 
 Functionality Area: Coordinator Assignment
-
----
-
-Merged from SCRUM-22 — See which coordinator is assigned to my event
-
-As an Event Organiser, I want to see which Coordinator is assigned to my event, so that I know who to expect updates from.
-
-Acceptance Criteria:
-
-* Organiser can view the currently assigned Coordinator's name on their event
-* The name shown is always the Coordinator currently responsible — during a pending handover (see SCRUM-21) that is still the original Coordinator, not the proposed one
-* The display updates as soon as a handover is accepted
-
-Note (2026-09-13): the second criterion was added after the customer confirmed that reassignment now runs through a handover that the incoming Coordinator must accept. Before that clarification "updates immediately if the event is reassigned" was unambiguous; now it needs to say which of the two Coordinators the Organiser sees while a handover is open.
-
-INVEST: Independent (a read-only display, separable from the assignment logic itself); Negotiable (how much Coordinator contact info to show is open); Valuable (Organiser otherwise has no way to know who to follow up with); Estimable/Small (one field display); Testable (displayed name matches the actual current assignment, including mid-handover).
-
-Functionality Area: Coordinator Assignment, Event Information Management
