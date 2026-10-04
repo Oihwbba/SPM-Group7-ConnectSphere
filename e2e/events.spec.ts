@@ -834,7 +834,7 @@ test.describe("User Story 23 & 24 — Event Status View & Consistency Journey", 
     await expect(detailModal.getByTestId("status-badge")).toHaveAttribute("data-status", "REJECTED");
   });
 
-  test("coordinator approves an under-review event and status flips to APPROVED (SCRUM-24)", async ({
+  test("coordinator approves an under-review event and status moves to PLANNING (SCRUM-24, SCRUM-81)", async ({
     page,
   }) => {
     // 1. Sign in as Event Coordinator
@@ -854,13 +854,13 @@ test.describe("User Story 23 & 24 — Event Status View & Consistency Journey", 
 
     // 4. Click Approve and verify the badge flips in the row
     await underReviewRow.getByRole("button", { name: /Approve/i }).click();
-    await expect(underReviewRow.getByTestId("status-badge")).toHaveAttribute("data-status", "APPROVED");
+    await expect(underReviewRow.getByTestId("status-badge")).toHaveAttribute("data-status", "PLANNING");
 
-    // 5. Open detail modal and verify the same APPROVED status
+    // 5. Open detail modal and verify the same PLANNING status (SCRUM-81: approval moves it straight to Planning)
     await underReviewRow.getByRole("button", { name: /View Details|Details/i }).click();
     const detailModal = page.getByRole("dialog");
     await expect(detailModal).toBeVisible();
-    await expect(detailModal.getByTestId("status-badge")).toHaveAttribute("data-status", "APPROVED");
+    await expect(detailModal.getByTestId("status-badge")).toHaveAttribute("data-status", "PLANNING");
   });
 
   test("two users viewing the same event simultaneously see consistent live status without manual refresh (SCRUM-24)", async ({
@@ -945,18 +945,18 @@ test.describe("User Story 23 & 24 — Event Status View & Consistency Journey", 
 
     // 4. Coordinator approves the submitted request
     await coordinatorRow.getByRole("button", { name: /Approve/i }).click();
-    await expect(coordinatorRow.getByTestId("status-badge")).toHaveAttribute("data-status", "APPROVED");
+    await expect(coordinatorRow.getByTestId("status-badge")).toHaveAttribute("data-status", "PLANNING");
 
     // 5. Organiser page (WITHOUT any manual reload or interaction) receives auto-refresh:
-    // Both the open detail modal badge AND the underlying table row update to APPROVED in lockstep
-    await expect(organiserModal.getByTestId("status-badge")).toHaveAttribute("data-status", "APPROVED", {
+    // Both the open detail modal badge AND the underlying table row update to PLANNING in lockstep
+    await expect(organiserModal.getByTestId("status-badge")).toHaveAttribute("data-status", "PLANNING", {
       timeout: 12000,
     });
 
-    // Close the modal and confirm underlying table row also reflects APPROVED
+    // Close the modal and confirm underlying table row also reflects PLANNING
     await organiserModal.getByRole("button", { name: "Close" }).first().click();
     await expect(organiserModal).not.toBeVisible();
-    await expect(organiserRow.getByTestId("status-badge")).toHaveAttribute("data-status", "APPROVED");
+    await expect(organiserRow.getByTestId("status-badge")).toHaveAttribute("data-status", "PLANNING");
 
     await organiserContext.close();
     await coordinatorContext.close();

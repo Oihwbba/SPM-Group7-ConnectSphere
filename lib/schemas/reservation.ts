@@ -1,4 +1,15 @@
+import type { EventStatus } from "@prisma/client";
 import { z } from "zod";
+
+/**
+ * SCRUM-31 — equipment is reserved for an event that is approved and being
+ * planned. Approval moves an event straight to Planning (SCRUM-81), so both
+ * count, as they do for venue bookings (BOOKABLE_EVENT_STATUSES).
+ */
+export const RESERVABLE_EVENT_STATUSES: EventStatus[] = [
+  "APPROVED",
+  "PLANNING",
+];
 
 const reservationFields = {
   eventId: z.string().min(1, "Select an approved event."),

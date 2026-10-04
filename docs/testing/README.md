@@ -92,4 +92,5 @@ defect, e.g. `regression: a blank rejection reason was accepted`.
 | [SCRUM-50](SCRUM-50.md) | Caylern Goh | 11 | Every case automated |
 | [SCRUM-52](SCRUM-52.md) | Caylern Goh | 5 | Every case automated |
 | [SCRUM-53](SCRUM-53.md) | Caylern Goh | 8 | Every case automated; AC 3's calendar view follows with SCRUM-36 |
+| [SCRUM-81](SCRUM-81.md) | Jun Bin | 13 | Every case automated (unit, integration for the simultaneous confirm, e2e for the journey) |
 | [SCRUM-110](SCRUM-110.md) | Jun Bin | 15 | Every case automated (unit, and e2e for the page) |

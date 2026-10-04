@@ -2,43 +2,71 @@
 
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
-import { can, type Resource } from "@/lib/auth/can";
+import { can, type Resource, type SessionUser } from "@/lib/auth/can";
 import {
+  getConfirmedArrangements,
   getReadinessChecklist,
   withoutInternalReasons,
+  type ConfirmedArrangements,
   type ReadinessChecklist,
 } from "@/lib/event-readiness";
 import { ok, err, type ActionResult } from "@/lib/action-result";
 
 /**
- * SCRUM-110 AC 6 — the readiness checklist for the event page. The event's
- * Coordinator sees it in full; its Organiser sees the same items and states
- * without internal reasons. Anyone else gets the same "not found" as a missing
- * event, so the answer never reveals which event ids exist (SCRUM-68).
+ * The event, if the signed-in user is its Organiser or its Coordinator.
+ * Anyone else gets the same "not found" as a missing event, so the answer never
+ * reveals which event ids exist (SCRUM-68).
  */
-export async function getEventReadiness(
+async function relatedEvent(
   eventId: string,
-): Promise<ActionResult<ReadinessChecklist>> {
+): Promise<{ user: SessionUser; resource: Resource } | null> {
   const session = await auth();
   const user = session?.user;
-  if (!user) return err("Event not found.");
+  if (!user) return null;
 
   const event = await prisma.event.findUnique({
     where: { id: eventId },
     select: { organiserId: true, coordinatorId: true, status: true },
   });
   const resource: Resource | null = event && { kind: "event", ...event };
-  if (!resource || !can(user, "event:read", resource))
-    return err("Event not found.");
+  if (!resource || !can(user, "event:read", resource)) return null;
+  return { user, resource };
+}
+
+/**
+ * SCRUM-110 AC 6 — the readiness checklist for the event page. The event's
+ * Coordinator sees it in full; its Organiser sees the same items and states
+ * without internal reasons. `canConfirm` tells the page whether to offer
+ * SCRUM-81's Confirm action, which only the assigned Coordinator may take.
+ */
+export async function getEventReadiness(
+  eventId: string,
+): Promise<ActionResult<ReadinessChecklist & { canConfirm: boolean }>> {
+  const related = await relatedEvent(eventId);
+  if (!related) return err("Event not found.");
+  const { user, resource } = related;
 
   const checklist = await getReadinessChecklist(prisma, eventId);
   if (!checklist) return err("Event not found.");
 
   // Reviewing the event is the Coordinator's relationship to it; reading alone
   // is the Organiser's, who is not shown Venue Staff's internal reasons.
-  return ok(
-    can(user, "event:review", resource)
-      ? checklist
-      : withoutInternalReasons(checklist),
-  );
+  const visible = can(user, "event:review", resource)
+    ? checklist
+    : withoutInternalReasons(checklist);
+  return ok({ ...visible, canConfirm: can(user, "event:confirm", resource) });
+}
+
+/**
+ * SCRUM-81 AC 6 — a Confirmed event's secured venue, date/time and equipment,
+ * for its Organiser and Coordinator.
+ */
+export async function getEventArrangements(
+  eventId: string,
+): Promise<ActionResult<ConfirmedArrangements>> {
+  if (!(await relatedEvent(eventId))) return err("Event not found.");
+
+  const arrangements = await getConfirmedArrangements(prisma, eventId);
+  if (!arrangements) return err("Event not found.");
+  return ok(arrangements);
 }
