@@ -202,6 +202,36 @@ test.describe("SCRUM-28 — Review and Update Equipment Request", () => {
     expect(saved.updates[0].note).toBe("Not enough lecterns that day.");
   });
 
+  // SCRUM-27 AC8 (SCRUM-33 merged in): the Coordinator sees each request's
+  // status, "Rejected with the reason". The reason is required on rejection
+  // (SCRUM-28 AC3), so it has to be on the card they read, not only inside the
+  // collapsed history log.
+  test("AC 8: the coordinator sees a rejected request with its reason, without opening the history", async ({
+    page,
+  }) => {
+    const rig = await makeRig("reason-visible");
+    await openRequests(page, "techsupport@test.local");
+    const request = card(page, rig.name);
+    await request.getByRole("button", { name: "Start review" }).click();
+    await expect(request.getByTestId("request-status")).toHaveText("In Review");
+    await request
+      .getByLabel("Note for the coordinator")
+      .fill("Not enough lecterns that day.");
+    await request.getByRole("button", { name: "Reject" }).click();
+    await expect(
+      page.getByText("Request rejected. The coordinator has been notified."),
+    ).toBeVisible();
+
+    await openRequests(page, "coordinator@test.local");
+    const mine = page
+      .getByTestId("equipment-request")
+      .filter({ hasText: rig.name });
+    await expect(mine.getByTestId("request-status")).toHaveText("Rejected");
+    await expect(mine.getByTestId("rejection-reason")).toContainText(
+      "Not enough lecterns that day.",
+    );
+  });
+
   test("AC 3, 4 & 5: an unavailable line gets an alternative, and the coordinator sees it and the history", async ({
     page,
   }) => {

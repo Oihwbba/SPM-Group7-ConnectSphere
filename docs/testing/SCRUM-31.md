@@ -21,7 +21,7 @@ needs them.
 | [TC-31-07](#tc-31-07) | Negative, Boundary | AC 6 | Unit, e2e |
 | [TC-31-08](#tc-31-08) | Positive | AC 7 | Unit |
 | [TC-31-09](#tc-31-09) | Negative, Boundary | Valid period | Unit (end equal to start only) |
-| [TC-31-10](#tc-31-10) | Negative | Approved events only | Unit |
+| [TC-31-10](#tc-31-10) | Positive, Negative | Approved and Planning events only | Unit, integration, e2e |
 | [TC-31-11](#tc-31-11) | Negative | Technical Support only | Unit |
 
 ---
@@ -148,13 +148,13 @@ needs them.
 | Item | Content |
 |---|---|
 | Test Case ID | TC-31-10 |
-| Test Scenario | [Negative] equipment can only be reserved for an APPROVED event |
-| Pre-conditions | Signed in as Technical Support. A seeded event in DRAFT, SUBMITTED or REJECTED status exists. |
-| Test Steps | 1. Submit a reservation for the non-approved event's ID (it isn't offered in the event list, so send it directly). |
-| Test Data | Event: any seeded event not in APPROVED status <br> Equipment type: Lectern <br> Period: 2031-05-10 09:00–17:00 <br> Quantity: 1 |
-| Expected Result | "Reservations can only be made for an approved event." No reservation is created. |
+| Test Scenario | [Positive, Negative] equipment can be reserved for an APPROVED or PLANNING event, and no other |
+| Pre-conditions | Signed in as Technical Support. The seeded events "Planning — Freshman Orientation" (PLANNING) and "Confirmed — Charity Gala" (CONFIRMED) exist. |
+| Test Steps | 1. Open **Equipment** and open the event list. <br> 2. Reserve 1 Lectern for "Planning — Freshman Orientation". <br> 3. Submit the same reservation for the Confirmed event's ID (it isn't offered in the event list, so send it directly). |
+| Test Data | Events: `evt_planning`, `evt_confirmed` <br> Equipment type: Lectern <br> Period: 2031-05-10 09:00–17:00 <br> Quantity: 1 |
+| Expected Result | Step 1: the list offers the Approved and Planning events, not the Confirmed one. Step 2: the reservation is confirmed — a Planning event can raise an equipment request (SCRUM-27 AC 1), so its request must be fulfillable. Step 3: "Reservations can only be made for an approved event." No reservation is created. |
 
-**Automated by:** `tests/unit/reservation.test.ts` › "only reserves for an approved event"
+**Automated by:** `tests/unit/reservation.test.ts` › "only reserves for an event that can take an equipment request (Approved or Planning)"; `tests/integration/equipment-availability.test.ts` › "reserves for a Planning event, and refuses a Confirmed one without writing"; `e2e/equipment.spec.ts` › "offers Approved and Planning events to reserve for, but not a Confirmed one"
 
 ### TC-31-11
 

@@ -262,6 +262,9 @@ describe("createEquipmentRequest — SCRUM-27", () => {
       { ...approvedEvent, status: "UNDER_REVIEW" },
     ],
     ["a cancelled event", { ...approvedEvent, status: "CANCELLED" }],
+    // AC 1 limits requests to a Planning event: once an event is Confirmed its
+    // details are fixed, so equipment must be arranged before then.
+    ["a confirmed event", { ...approvedEvent, status: "CONFIRMED" }],
   ])(
     "AC 1: refuses %s with the same message, and saves nothing",
     async (_label, event) => {
@@ -278,16 +281,16 @@ describe("createEquipmentRequest — SCRUM-27", () => {
     },
   );
 
-  it.each(["PLANNING", "CONFIRMED"])(
-    "AC 1: accepts a %s event",
-    async (status) => {
-      db.event.findUnique.mockResolvedValue({ ...approvedEvent, status });
+  it("AC 1: accepts a Planning event", async () => {
+    db.event.findUnique.mockResolvedValue({
+      ...approvedEvent,
+      status: "PLANNING",
+    });
 
-      const result = await createEquipmentRequest(input());
+    const result = await createEquipmentRequest(input());
 
-      expect(result.ok).toBe(true);
-    },
-  );
+    expect(result.ok).toBe(true);
+  });
 
   it.each(["ORGANISER", "VENUE_STAFF", "TECH_SUPPORT", "ATTENDEE"] as const)(
     "refuses %s before reading anything",
