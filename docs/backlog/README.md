@@ -36,7 +36,7 @@ either covered by a test or visibly not done yet. Reviewers do the same.
 
 | | |
 |---|---|
-| Stories | **77** |
+| Stories | **78** |
 | Tasks | **19** |
 | Subtasks | **18** |
 | Total story points | **205** |
@@ -129,7 +129,7 @@ _10 stories, 32 points_
 
 ## SCRUM-10 - Equipment Management
 
-_10 stories, 24 points_
+_11 stories, 24 points_
 
 | Story | Summary | Pts | Priority | Sprint | Status |
 |---|---|---|---|---|---|
@@ -143,6 +143,7 @@ _10 stories, 24 points_
 | [SCRUM-55](SCRUM-55.md) | [MERGED INTO SCRUM-30] View Equipment Availability Calendar | 0 | Low | Backlog | Done |
 | [SCRUM-119](SCRUM-119.md) | Maintain the equipment catalogue and record unavailability | 5 | Highest | Backlog | To Do |
 | [SCRUM-142](SCRUM-142.md) | Change equipment lines or withdraw a venue request before confirmation | 3 | Medium | Backlog | To Do |
+| [SCRUM-156](SCRUM-156.md) | Only reserve equipment for events with an approved equipment request (follow-up to SCRUM-31 and SCRUM-155) | - | Medium | Backlog | To Do |
 
 ## SCRUM-11 - Attendee Registration
 
@@ -168,7 +169,7 @@ _2 stories, 3 points_
 | Story | Summary | Pts | Priority | Sprint | Status |
 |---|---|---|---|---|---|
 | [SCRUM-132](SCRUM-132.md) | Core pages work on a phone and respond within 2 seconds | 3 | Medium | Backlog | To Do |
-| [SCRUM-155](SCRUM-155.md) | [not confirmed] need autopopulate equip requests for tech support (follow up scrum-31) | - | Medium | Backlog | To Do |
+| [SCRUM-155](SCRUM-155.md) | Reserve an approved equipment request in one step, pre-filled from the Coordinator's request (follow-up to SCRUM-31) | - | Medium | Backlog | In Review |
 
 ## Tasks (technical work, no customer-facing story)
 
@@ -191,5 +192,5 @@ _2 stories, 3 points_
 | [SCRUM-148](SCRUM-148.md) | Close or rework obsolete equipment PR | Backlog | To Do |
 | [SCRUM-149](SCRUM-149.md) | Use event attendance in venue booking | Backlog | To Do |
 | [SCRUM-150](SCRUM-150.md) | Implement field-level clarification response | Backlog | To Do |
-| [SCRUM-151](SCRUM-151.md) | Run CI once per pull request commit, not twice | Backlog | In Review |
-| [SCRUM-152](SCRUM-152.md) | Keep the GLM reviewer memory within the size the reviewer reads, and stop losing lessons to the cap | Backlog | In Review |
+| [SCRUM-151](SCRUM-151.md) | Run CI once per pull request commit, not twice | Backlog | Done |
+| [SCRUM-152](SCRUM-152.md) | Keep the GLM reviewer memory within the size the reviewer reads, and stop losing lessons to the cap | Backlog | Done |
