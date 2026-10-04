@@ -1,14 +1,15 @@
 import type { EventStatus } from "@prisma/client";
 import { z } from "zod";
 
+import { REQUESTABLE_EVENT_STATUSES } from "@/lib/equipment/requests";
+
 /**
- * SCRUM-31 — equipment is reserved for an event that is approved and being
- * planned. Approval moves an event straight to Planning (SCRUM-81), so both
- * count, as they do for venue bookings (BOOKABLE_EVENT_STATUSES).
+ * SCRUM-31 — equipment is reserved for any event that can take an equipment
+ * request (SCRUM-27 AC 1), so the two rules cannot drift apart: a request
+ * Technical Support could never reserve stock for would be unfulfillable.
  */
 export const RESERVABLE_EVENT_STATUSES: EventStatus[] = [
-  "APPROVED",
-  "PLANNING",
+  ...REQUESTABLE_EVENT_STATUSES,
 ];
 
 const reservationFields = {

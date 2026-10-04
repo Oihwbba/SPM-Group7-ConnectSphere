@@ -63,7 +63,6 @@ amend journey) and SCRUM-117 (rejecting a Planning event) read the same choice.
   hidden for a new-request rejection, and the server already refuses it.
 - SCRUM-117 must send an outcome when it rejects a Planning event; the
   database refuses it otherwise.
-- Starting a new request twice returns the first Draft ("A draft was already
-  started from this request"), even for two clicks at the same moment. This
+- Starting a new request twice returns the first Draft ("A new request was already started from this one"), even for two clicks at the same moment. This
   answers the GLM review of #116: drafts can't be discarded yet (SCRUM-130),
   so duplicates would have piled up.

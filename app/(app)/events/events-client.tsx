@@ -161,6 +161,8 @@ export function EventsClient({
   const [rejectionReason, setRejectionReason] = useState("");
   const [rejectionOutcome, setRejectionOutcome] =
     useState<RejectionOutcome | null>(null);
+  // Which row's Start New Request is in flight, so only that button says so.
+  const [startingFrom, setStartingFrom] = useState<string | null>(null);
   const [clarifyingEvent, setClarifyingEvent] = useState<Event | null>(null);
   const [clarificationMessage, setClarificationMessage] = useState("");
   const [clarificationFields, setClarificationFields] = useState<
@@ -226,21 +228,26 @@ export function EventsClient({
   // SCRUM-126 AC4: a request rejected as needing a new submission becomes the
   // starting point of a new Draft, found under the Drafts tab.
   function startNewRequest(event: Event) {
+    setStartingFrom(event.id);
     startTransition(async () => {
-      const result = await startRequestFromRejected({ eventId: event.id });
-      if (!result.ok) {
-        toast.error(result.error);
-        return;
+      try {
+        const result = await startRequestFromRejected({ eventId: event.id });
+        if (!result.ok) {
+          toast.error(result.error);
+          return;
+        }
+        toast.success(
+          result.data.created
+            ? "A new draft was started from this request."
+            : "A new request was already started from this one. Find it in your events list.",
+        );
+        // As the Drafts tab button does, so a leftover status filter can't hide it.
+        setActiveTab("DRAFT");
+        setStatusFilter("ALL");
+        router.refresh();
+      } finally {
+        setStartingFrom(null);
       }
-      toast.success(
-        result.data.created
-          ? "A new draft was started from this request."
-          : "A draft was already started from this request. Find it under Drafts.",
-      );
-      // As the Drafts tab button does, so a leftover status filter can't hide it.
-      setActiveTab("DRAFT");
-      setStatusFilter("ALL");
-      router.refresh();
     });
   }
 
@@ -327,7 +334,7 @@ export function EventsClient({
             data-testid="start-new-request-button"
           >
             <CopyPlus className="h-3.5 w-3.5" />
-            Start New Request
+            {startingFrom === event.id ? "Starting…" : "Start New Request"}
           </Button>
         )}
         <Button
