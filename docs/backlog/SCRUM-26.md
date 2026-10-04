@@ -1,8 +1,8 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-09-30. Jira is the source of truth.
+     Synced from Jira on 2026-10-04. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
-# SCRUM-26 - Flag bookings and reservations affected by an impactful change
+# SCRUM-26 - Flag and resolve arrangements affected by a change
 
 | | |
 |---|---|
@@ -16,36 +16,32 @@
 
 ---
 
-Merged story (29 Sep 2026): absorbs SCRUM-44 (System flags dependent bookings when a major field changes). Any reference to SCRUM-44 elsewhere now means this story. SCRUM-42 and SCRUM-43 are now part of SCRUM-41.
+**User story:** As an Event Coordinator, I want arrangements affected by a change to be flagged until I decide what to do with them, so that nothing stays booked on outdated details and nothing is cancelled behind my back.
 
-As an Event Coordinator, I want the system to warn me before an impactful planning edit affects existing arrangements, so that I can re-check those arrangements before confirming the change.
+**Acceptance criteria**
 
-Acceptance Criteria:
+1. Given an event in Planning that has a venue booking or an equipment reservation, when I change the event's date, time, expected attendance, venue requirement or equipment requirement (SCRUM-127) to a different value, then I see which arrangements will be flagged and must confirm before the edit is saved. There is no warning if the value is unchanged or nothing is booked or reserved.
+2. Needs Reconsideration is a flag on a venue booking (Pending or Approved) or an equipment reservation. Its status doesn't change.
+3. A flag is raised by my confirmed edit in AC1, an approved impactful change request (SCRUM-128), a change to a venue's attributes or its retirement (SCRUM-34), or Technical Support reporting that reserved equipment can't be provided (SCRUM-32).
+4. A flagged Approved booking or reservation keeps blocking its venue period or stock until it is resolved.
+5. A flagged Pending venue request cannot be approved until the flag is resolved.
+6. Given the event's date or time changed, flagged arrangements keep their original period; they are never moved to the new period automatically.
+7. Only the assigned Coordinator can resolve a flag, by choosing Still stands or Cancel arrangement. Either choice records who and when.
+8. Still stands is allowed only while the arrangement still covers the event's whole period, the venue (for a venue booking) is still active with no recorded unavailability over that period, and the reserved quantity still remains sufficient for the equipment reservation. Otherwise it is refused with the reason, and the Coordinator cancels the arrangement and requests again.
+9. Cancel arrangement sets the booking or reservation to Cancelled and releases the venue period or stock exactly once.
+10. Given the event is Confirmed and I cancel a flagged arrangement, then the event returns to Planning (SCRUM-135).
+11. The system never cancels a booking or reservation just because it was flagged.
+12. Given any booking or reservation for the event is flagged, then the readiness checklist (SCRUM-110) shows it as incomplete, so the event cannot be Confirmed until every flag is resolved.
+13. Attendee registrations are never flagged; they stay Registered. Attendees learn about date, time or venue changes through SCRUM-85.
+14. Changing the lines of an equipment request is covered by SCRUM-142; this story covers changes to the event's own fields.
 
-* The impactful fields are exactly date, time, expected attendance, venue and equipment.
-* Given an existing venue booking or equipment reservation, when the Coordinator changes one of those fields to a different value, then a warning is shown before the edit is confirmed.
-* If the field value is unchanged, no warning is raised.
-* If no booking or reservation exists, no arrangement-impact warning is required.
-* The warning does not automatically cancel a booking or reservation.
-* Once the Coordinator confirms the edit, dependent arrangements follow SCRUM-44's reconsideration path.
-* This story covers Coordinator-initiated planning edits. Organiser-initiated post-submission changes use SCRUM-41–43.
+**Notifications:** the assigned Coordinator, and Venue Staff for a booking or Technical Support for a reservation, are notified when a flag is raised or resolved (SCRUM-124).
 
----
+**Customer basis:** "Changes require arrangements to be reviewed again; staff decide offline and coordinator update the system on the decision whether to cancel." "Adjustments must be handled manually by staff rather than through automatic un-booking." "If venue attributes change after booking… System can flag and it is up to the co-ordinator to decide on follow up action."
 
-Merged from SCRUM-44 — System flags dependent bookings when a major field changes
+**Change log**
 
-As a Coordinator, Venue Staff member, or Technical Support Staff member, I want dependent resource arrangements to be flagged when an approved impactful event change affects them, so that nothing falls out of sync silently.
+* 2026-10-01: "Needs Reconsideration" defined as a flag on top of a status; every flag source in one list; period freeze; flagged Pending requests can't be approved; readiness rule; change-request application moved to SCRUM-128; notification owner corrected to SCRUM-124.
+* 2026-10-01 (audit): equipment flags now sit on reservations, matching the built equipment model (requests are reviewed, stock is held by reservations, SCRUM-31). Recorded venue unavailability (SCRUM-37) and equipment stock changes (SCRUM-119) are no longer flag sources: SCRUM-37 refuses an overlap with an approved booking, and SCRUM-119 is beyond Release 1. Still stands now also requires the arrangement to cover the event's period and the venue to be usable. Group headings removed.
 
-Acceptance Criteria:
-
-* Impactful fields are exactly date, time, expected attendance, venue and equipment.
-* When an approved impactful change is applied, linked venue bookings and equipment reservations that may be affected are marked Needs Reconsideration.
-* Active attendee registrations are not changed to Needs Reconsideration. They remain active unless the event itself is cancelled.
-* For an approved change to date, time, or venue, affected active Attendees are notified through SCRUM-85 and their registration view shows the current event details.
-* Non-impactful changes do not create a reconsideration flag.
-* A flagged venue booking or equipment reservation remains flagged until a permitted resolution is recorded.
-* The system never cancels a venue booking or equipment reservation automatically merely because it was flagged.
-* A Coordinator can record that a flagged resource arrangement still stands or that it should be cancelled/released; either decision clears the flag.
-* The resolution is recorded with who resolved it and when.
-* For a Confirmed event, SCRUM-43 returns the event to Planning after an approved impactful change; the event cannot be Confirmed again until SCRUM-110 is true.
-* Notification to affected Attendees is owned by SCRUM-85; resource-arrangement resolution is owned here.
+Functionality Area: Event Information Management, Event Change Requests

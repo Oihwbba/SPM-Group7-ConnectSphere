@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-09-30. Jira is the source of truth.
+     Synced from Jira on 2026-10-04. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # Product backlog - acceptance criteria for every story
@@ -26,7 +26,7 @@ either covered by a test or visibly not done yet. Reviewers do the same.
 
 ## Staleness - read this
 
-**Jira is the source of truth. These files are a snapshot, last synced on 2026-09-30.**
+**Jira is the source of truth. These files are a snapshot, last synced on 2026-10-04.**
 
 - Never edit these files by hand. Edit the story in Jira, then re-sync.
 - Re-sync after every backlog refinement, and before each sprint review.
@@ -36,17 +36,17 @@ either covered by a test or visibly not done yet. Reviewers do the same.
 
 | | |
 |---|---|
-| Stories | **60** |
-| Tasks | **7** |
-| Subtasks | **20** |
-| Total story points | **150** |
+| Stories | **77** |
+| Tasks | **19** |
+| Subtasks | **18** |
+| Total story points | **205** |
 | Points committed to Sprint 1 | **37** |
-| Points committed to Sprint 2 | **49** |
-| Last synced from Jira | **2026-09-30** |
+| Points committed to Sprint 2 | **51** |
+| Last synced from Jira | **2026-10-04** |
 
 ## SCRUM-6 - Event Request Lifecycle
 
-_23 stories, 54 points_
+_28 stories, 72 points_
 
 | Story | Summary | Pts | Priority | Sprint | Status |
 |---|---|---|---|---|---|
@@ -61,49 +61,58 @@ _23 stories, 54 points_
 | [SCRUM-21](SCRUM-21.md) | Hand an event to another coordinator and show who is currently assigned | 3 | Medium | Backlog | To Do |
 | [SCRUM-23](SCRUM-23.md) | View an event's current status | 1 | Highest | SCRUM Sprint 1 | Done |
 | [SCRUM-24](SCRUM-24.md) | Keep event status consistent with actions taken | 5 | Highest | SCRUM Sprint 1 | Done |
-| [SCRUM-25](SCRUM-25.md) | Update routine event information during planning | 3 | Medium | Backlog | To Do |
-| [SCRUM-26](SCRUM-26.md) | Flag bookings and reservations affected by an impactful change | 5 | High | Backlog | To Do |
+| [SCRUM-25](SCRUM-25.md) | Update routine event information during planning | 3 | High | Backlog | To Do |
+| [SCRUM-26](SCRUM-26.md) | Flag and resolve arrangements affected by a change | 5 | High | Backlog | To Do |
+| [SCRUM-71](SCRUM-71.md) | Record who changed what and when | 5 | Low | Backlog | To Do |
 | [SCRUM-81](SCRUM-81.md) | Move an approved event through planning to confirmed | 5 | Highest | SCRUM Sprint 2 | In Review |
-| [SCRUM-82](SCRUM-82.md) | Close an event: cancel it, or mark it completed once it has passed | 3 | High | Backlog | To Do |
+| [SCRUM-82](SCRUM-82.md) | Close an event: cancel it, or mark it completed once it has passed | 5 | Highest | Backlog | To Do |
 | [SCRUM-84](SCRUM-84.md) | Organiser views their own event requests | 2 | Highest | SCRUM Sprint 1 | Done |
-| [SCRUM-108](SCRUM-108.md) | Answer a clarification, or amend and resubmit a rejected request | 5 | High | SCRUM Sprint 2 | To Do |
+| [SCRUM-108](SCRUM-108.md) | Answer a clarification, or amend and resubmit a rejected request | 5 | High | SCRUM Sprint 2 | In Progress |
 | [SCRUM-109](SCRUM-109.md) | [MERGED INTO SCRUM-108] Respond to an event clarification request | 0 | High | SCRUM Sprint 2 | Done |
 | [SCRUM-110](SCRUM-110.md) | See an event's readiness checklist | 3 | Highest | SCRUM Sprint 2 | In Review |
 | [SCRUM-117](SCRUM-117.md) | Reject an event that can't be fulfilled | 2 | Medium | SCRUM Sprint 2 | To Do |
-| [SCRUM-126](SCRUM-126.md) | Coordinator decides whether a rejected request is amended or submitted as new | 2 | Medium | SCRUM Sprint 2 | To Do |
-| [SCRUM-129](SCRUM-129.md) | Show and store all event times in Singapore time | 1 | Medium | Backlog | To Do |
-| [SCRUM-130](SCRUM-130.md) | Discard a draft request | 1 | Medium | Backlog | To Do |
+| [SCRUM-123](SCRUM-123.md) | Record event preparation progress | 3 | Medium | Backlog | To Do |
+| [SCRUM-126](SCRUM-126.md) | Coordinator decides whether a rejected request is amended or submitted as new | 2 | Medium | SCRUM Sprint 2 | In Review |
+| [SCRUM-127](SCRUM-127.md) | Capture the Organiser's venue, equipment and registration needs as choices and carry them into planning | 5 | Medium | Backlog | To Do |
+| [SCRUM-129](SCRUM-129.md) | Show and store all event times in Singapore time | 1 | Medium | SCRUM Sprint 2 | Done |
+| [SCRUM-130](SCRUM-130.md) | Discard a draft request | 1 | Medium | SCRUM Sprint 2 | To Do |
+| [SCRUM-131](SCRUM-131.md) | Use the agreed status names on every screen | 1 | Medium | Backlog | To Do |
+| [SCRUM-135](SCRUM-135.md) | Refuse any event status change the lifecycle does not allow | 2 | Medium | Backlog | To Do |
 
 ## SCRUM-7 - Venue Management
 
-_9 stories, 21 points_
+_10 stories, 25 points_
 
 | Story | Summary | Pts | Priority | Sprint | Status |
 |---|---|---|---|---|---|
-| [SCRUM-34](SCRUM-34.md) | Browse and maintain the venue catalogue | 3 | High | Backlog | To Do |
-| [SCRUM-36](SCRUM-36.md) | View Venue Availability | 2 | Highest | SCRUM Sprint 2 | To Do |
-| [SCRUM-37](SCRUM-37.md) | Reflect Bookings and Unavailability in Real Time | 3 | Highest | SCRUM Sprint 2 | To Do |
-| [SCRUM-38](SCRUM-38.md) | Search and filter venues by criteria and requirements | 3 | High | Backlog | To Do |
-| [SCRUM-40](SCRUM-40.md) | Flag venue suitability, with the reason | 2 | Medium | Backlog | To Do |
-| [SCRUM-50](SCRUM-50.md) | Submit Venue Booking Request | 2 | Highest | SCRUM Sprint 2 | In Review |
-| [SCRUM-51](SCRUM-51.md) | Track a venue booking request and be told its outcome | 2 | High | Backlog | To Do |
-| [SCRUM-52](SCRUM-52.md) | Review Pending Booking Requests | 2 | Highest | SCRUM Sprint 2 | In Review |
-| [SCRUM-53](SCRUM-53.md) | Approve or Reject Booking Request | 2 | Highest | SCRUM Sprint 2 | In Review |
+| [SCRUM-34](SCRUM-34.md) | Browse and maintain the venue catalogue | 5 | Highest | Backlog | To Do |
+| [SCRUM-36](SCRUM-36.md) | View venue availability | 2 | Highest | SCRUM Sprint 2 | Done |
+| [SCRUM-37](SCRUM-37.md) | Record venue unavailability and reflect it everywhere | 3 | Highest | SCRUM Sprint 2 | Done |
+| [SCRUM-38](SCRUM-38.md) | Search and filter venues by criteria and requirements | 3 | Highest | Backlog | To Do |
+| [SCRUM-40](SCRUM-40.md) | Flag venue suitability, with the reason | 3 | Highest | Backlog | To Do |
+| [SCRUM-50](SCRUM-50.md) | Submit a venue booking request | 2 | Highest | SCRUM Sprint 2 | In Review |
+| [SCRUM-51](SCRUM-51.md) | [MERGED INTO SCRUM-53 and SCRUM-124] Track a venue booking request and be told its outcome | 0 | High | Backlog | Done |
+| [SCRUM-52](SCRUM-52.md) | Review pending booking requests | 2 | Highest | SCRUM Sprint 2 | Done |
+| [SCRUM-53](SCRUM-53.md) | Approve or reject a booking request | 2 | Highest | SCRUM Sprint 2 | Done |
+| [SCRUM-134](SCRUM-134.md) | Decide competing venue and equipment requests in the order they were made | 3 | Medium | Backlog | To Do |
 
 ## SCRUM-8 - Event Change & Notifications
 
-_4 stories, 13 points_
+_7 stories, 25 points_
 
 | Story | Summary | Pts | Priority | Sprint | Status |
 |---|---|---|---|---|---|
-| [SCRUM-41](SCRUM-41.md) | Formal change request: submit, review, and approve or reject | 5 | High | Backlog | To Do |
-| [SCRUM-45](SCRUM-45.md) | Workflow notifications for status, assignment, clarification, change-request and reassignment events | 3 | High | Backlog | To Do |
-| [SCRUM-48](SCRUM-48.md) | User views their notification list | 2 | High | Backlog | To Do |
+| [SCRUM-41](SCRUM-41.md) | Raise and track a change request | 3 | High | Backlog | To Do |
+| [SCRUM-45](SCRUM-45.md) | Organiser and Coordinator workflow notifications | 5 | High | Backlog | To Do |
+| [SCRUM-48](SCRUM-48.md) | User views their notification list | 3 | Highest | Backlog | To Do |
 | [SCRUM-85](SCRUM-85.md) | Attendee is notified of registration confirmation, event changes, and cancellation | 3 | High | Backlog | To Do |
+| [SCRUM-122](SCRUM-122.md) | Remind Coordinators about incomplete and overdue arrangements | 3 | Medium | Backlog | To Do |
+| [SCRUM-124](SCRUM-124.md) | Staff and arrangement notifications | 3 | High | Backlog | To Do |
+| [SCRUM-128](SCRUM-128.md) | Decide a change request and apply it in one step | 5 | Medium | Backlog | To Do |
 
 ## SCRUM-9 - Access Control
 
-_7 stories, 21 points_
+_10 stories, 32 points_
 
 | Story | Summary | Pts | Priority | Sprint | Status |
 |---|---|---|---|---|---|
@@ -112,39 +121,54 @@ _7 stories, 21 points_
 | [SCRUM-67](SCRUM-67.md) | Be prevented from performing an action my role does not permit | 5 | Highest | SCRUM Sprint 1 | Done |
 | [SCRUM-68](SCRUM-68.md) | View only the events I own | 3 | Highest | SCRUM Sprint 1 | Done |
 | [SCRUM-69](SCRUM-69.md) | View only the events assigned to me | 2 | High | SCRUM Sprint 2 | In Progress |
-| [SCRUM-70](SCRUM-70.md) | Organisers and coordinators see an event's registrations; attendees' records stay private | 3 | Medium | Backlog | To Do |
-| [SCRUM-71](SCRUM-71.md) | Record who changed what and when | 3 | Low | Backlog | To Do |
+| [SCRUM-70](SCRUM-70.md) | Organisers and coordinators see an event's registrations; attendees' records stay private | 3 | High | Backlog | To Do |
+| [SCRUM-120](SCRUM-120.md) | Event calendar: all events in one view | 8 | High | Backlog | To Do |
+| [SCRUM-121](SCRUM-121.md) | Accounts can hold multiple roles | 3 | High | Backlog | To Do |
+| [SCRUM-141](SCRUM-141.md) | See every event read-only for planning | 3 | Medium | Backlog | To Do |
+| [SCRUM-153](SCRUM-153.md) | [MISSING] Lack of User Story for self-registration | - | Medium | Backlog | To Do |
 
 ## SCRUM-10 - Equipment Management
 
-_8 stories, 19 points_
+_10 stories, 24 points_
 
 | Story | Summary | Pts | Priority | Sprint | Status |
 |---|---|---|---|---|---|
 | [SCRUM-27](SCRUM-27.md) | Create an equipment request | 2 | Highest | SCRUM Sprint 2 | In Review |
 | [SCRUM-28](SCRUM-28.md) | Review and update an equipment request | 3 | Highest | SCRUM Sprint 2 | In Review |
 | [SCRUM-29](SCRUM-29.md) | Check equipment availability | 3 | Highest | SCRUM Sprint 2 | In Review |
-| [SCRUM-30](SCRUM-30.md) | View equipment conflicts | 3 | Medium | SCRUM Sprint 2 | In Progress |
+| [SCRUM-30](SCRUM-30.md) | View equipment conflicts | 3 | Medium | SCRUM Sprint 2 | In Review |
 | [SCRUM-31](SCRUM-31.md) | Reserve Equipment for Event | 3 | Highest | SCRUM Sprint 1 | Done |
-| [SCRUM-32](SCRUM-32.md) | Modify or Cancel Reservation | 3 | Medium | Backlog | To Do |
+| [SCRUM-32](SCRUM-32.md) | Report reserved equipment that can no longer be provided | 2 | High | Backlog | To Do |
 | [SCRUM-33](SCRUM-33.md) | [MERGED INTO SCRUM-27] View Event Reservations | 0 | Medium | SCRUM Sprint 2 | Done |
-| [SCRUM-55](SCRUM-55.md) | View Equipment Availability Calendar | 2 | Low | Backlog | To Do |
+| [SCRUM-55](SCRUM-55.md) | [MERGED INTO SCRUM-30] View Equipment Availability Calendar | 0 | Low | Backlog | Done |
+| [SCRUM-119](SCRUM-119.md) | Maintain the equipment catalogue and record unavailability | 5 | Highest | Backlog | To Do |
+| [SCRUM-142](SCRUM-142.md) | Change equipment lines or withdraw a venue request before confirmation | 3 | Medium | Backlog | To Do |
 
 ## SCRUM-11 - Attendee Registration
 
-_9 stories, 22 points_
+_10 stories, 24 points_
 
 | Story | Summary | Pts | Priority | Sprint | Status |
 |---|---|---|---|---|---|
-| [SCRUM-72](SCRUM-72.md) | View an event I could attend | 2 | Highest | SCRUM Sprint 2 | In Progress |
-| [SCRUM-73](SCRUM-73.md) | Register for an event | 2 | Highest | SCRUM Sprint 2 | In Review |
-| [SCRUM-74](SCRUM-74.md) | Be prevented from registering for a full event | 3 | High | SCRUM Sprint 2 | In Review |
+| [SCRUM-72](SCRUM-72.md) | View an event I could attend | 2 | Highest | SCRUM Sprint 2 | Done |
+| [SCRUM-73](SCRUM-73.md) | Register for an event | 2 | Highest | SCRUM Sprint 2 | Done |
+| [SCRUM-74](SCRUM-74.md) | Be prevented from registering for a full event | 3 | High | SCRUM Sprint 2 | Done |
 | [SCRUM-75](SCRUM-75.md) | Control and enforce the registration period | 3 | High | Backlog | To Do |
-| [SCRUM-76](SCRUM-76.md) | View my registration status | 1 | High | SCRUM Sprint 2 | In Progress |
-| [SCRUM-77](SCRUM-77.md) | Withdraw my registration | 2 | Medium | Backlog | To Do |
-| [SCRUM-79](SCRUM-79.md) | Join a waitlist when an event is full | 3 | Low | Backlog | To Do |
-| [SCRUM-80](SCRUM-80.md) | Record attendance on the day | 3 | Low | Backlog | To Do |
-| [SCRUM-115](SCRUM-115.md) | Find an event to attend | 3 | Medium | Backlog | To Do |
+| [SCRUM-76](SCRUM-76.md) | View my registration status | 1 | High | SCRUM Sprint 2 | Done |
+| [SCRUM-77](SCRUM-77.md) | Withdraw my registration | 2 | High | Backlog | To Do |
+| [SCRUM-79](SCRUM-79.md) | Join a waiting list when an event is full | 3 | Low | Backlog | To Do |
+| [SCRUM-80](SCRUM-80.md) | Record attendance per registration on the day | 3 | Low | Backlog | To Do |
+| [SCRUM-115](SCRUM-115.md) | Find an event to attend | 3 | Low | Backlog | To Do |
+| [SCRUM-133](SCRUM-133.md) | Attendees see a clear status while a registered event is being re-planned | 2 | Medium | Backlog | To Do |
+
+## Stories with no epic
+
+_2 stories, 3 points_
+
+| Story | Summary | Pts | Priority | Sprint | Status |
+|---|---|---|---|---|---|
+| [SCRUM-132](SCRUM-132.md) | Core pages work on a phone and respond within 2 seconds | 3 | Medium | Backlog | To Do |
+| [SCRUM-155](SCRUM-155.md) | [not confirmed] need autopopulate equip requests for tech support (follow up scrum-31) | - | Medium | Backlog | To Do |
 
 ## Tasks (technical work, no customer-facing story)
 
@@ -157,3 +181,15 @@ _9 stories, 22 points_
 | [SCRUM-112](SCRUM-112.md) | The GLM reviewer maintains its own memory instead of being taught by hand | Backlog | Done |
 | [SCRUM-113](SCRUM-113.md) | Re-sync docs/backlog snapshot from Jira before the Sprint 1 review | Backlog | Done |
 | [SCRUM-114](SCRUM-114.md) | Chore: Sprint 1 post-DoD test hardening and code hygiene cleanup | SCRUM Sprint 2 | Done |
+| [SCRUM-116](SCRUM-116.md) | Sync Jira User Stories into Github Repo on User Story Changes | SCRUM Sprint 2 | In Progress |
+| [SCRUM-125](SCRUM-125.md) | Measure coverage on every server-side file and fail CI when it drops | SCRUM Sprint 2 | Done |
+| [SCRUM-143](SCRUM-143.md) | Enforce one venue request per event | Backlog | To Do |
+| [SCRUM-144](SCRUM-144.md) | Enable registration and enforce event cutoff | Backlog | To Do |
+| [SCRUM-145](SCRUM-145.md) | Resync audit test and backlog documentation | Backlog | To Do |
+| [SCRUM-146](SCRUM-146.md) | Remove stale story references | Backlog | To Do |
+| [SCRUM-147](SCRUM-147.md) | Update data-model documentation | Backlog | To Do |
+| [SCRUM-148](SCRUM-148.md) | Close or rework obsolete equipment PR | Backlog | To Do |
+| [SCRUM-149](SCRUM-149.md) | Use event attendance in venue booking | Backlog | To Do |
+| [SCRUM-150](SCRUM-150.md) | Implement field-level clarification response | Backlog | To Do |
+| [SCRUM-151](SCRUM-151.md) | Run CI once per pull request commit, not twice | Backlog | In Review |
+| [SCRUM-152](SCRUM-152.md) | Keep the GLM reviewer memory within the size the reviewer reads, and stop losing lessons to the cap | Backlog | In Review |

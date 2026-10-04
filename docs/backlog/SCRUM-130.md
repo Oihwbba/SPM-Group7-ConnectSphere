@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-02. Jira is the source of truth.
+     Synced from Jira on 2026-10-04. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-130 - Discard a draft request
@@ -11,7 +11,7 @@
 | **Priority** | Medium |
 | **Story points** | 1 |
 | **Status in Jira** | To Do |
-| **Sprint** | Backlog |
+| **Sprint** | SCRUM Sprint 2 |
 | **Jira** | https://smu-spm-group7.atlassian.net/browse/SCRUM-130 |
 
 ---

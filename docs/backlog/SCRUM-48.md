@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-09-30. Jira is the source of truth.
+     Synced from Jira on 2026-10-04. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-48 - User views their notification list
@@ -8,18 +8,34 @@
 |---|---|
 | **Type** | Story |
 | **Epic** | SCRUM-8 - Event Change & Notifications |
-| **Priority** | High |
-| **Story points** | 2 |
+| **Priority** | Highest |
+| **Story points** | 3 |
 | **Status in Jira** | To Do |
 | **Sprint** | Backlog |
 | **Jira** | https://smu-spm-group7.atlassian.net/browse/SCRUM-48 |
 
 ---
 
-As a user, I want to view a list of my past notifications, so that I can catch up on updates I missed.
+**User story:** As any ConnectSphere user, I want to see a list of my notifications, so that I can catch up on updates I missed.
 
-Acceptance Criteria:
+**Acceptance criteria**
 
-* Given a user has 1+ notifications, when they open their notification list, then all notifications are shown ordered by most recent first.
-* Given a user opens an unread notification, when viewed, then it is marked as read.
-* Given a user has zero notifications, when they open the list, then an empty state is shown (not an error).
+1. Given I have notifications, when I open my notification list, then all of them are shown, newest first.
+2. Given I open an unread notification, then it is marked as read.
+3. The header shows my unread count, and it updates when I read a notification.
+4. Given I have no notifications, then an empty-state message is shown rather than an error.
+5. Each notification links to a page I am allowed to open: internal users and Organisers go to the event page; Attendees go to the Attendee view of the event (SCRUM-72, SCRUM-133).
+6. I only ever see my own notifications. A user with several roles (SCRUM-121) sees the notifications for all their roles in one list.
+7. Notifications from every source (SCRUM-45, SCRUM-85, SCRUM-124, and the equipment-request updates SCRUM-28 sends) appear in this one list.
+
+**Related:** the Sprint 1 and 2 code already creates notifications (assignment, clarification, equipment-request updates), so this list is the first place users can read them. The Notifications placeholder page in the code still names SCRUM-51; it should name this story.
+
+**Customer basis:** "The notification delivery channel is up to your implementation (can be in-app or external)."
+
+**Change log**
+
+* 2026-10-01: added the link-target rule, the multi-role rule and the list of notification sources.
+* 2026-10-01 (verification pass): removed SCRUM-79 from the source list.
+* 2026-10-01 (audit): removed SCRUM-122 from the sources (beyond Release 1) and added the equipment-request updates SCRUM-28 already sends.
+
+Functionality Area: Notification System

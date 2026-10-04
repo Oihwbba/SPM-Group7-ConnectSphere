@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-02. Jira is the source of truth.
+     Synced from Jira on 2026-10-04. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-129 - Show and store all event times in Singapore time
@@ -10,8 +10,8 @@
 | **Epic** | SCRUM-6 - Event Request Lifecycle |
 | **Priority** | Medium |
 | **Story points** | 1 |
-| **Status in Jira** | To Do |
-| **Sprint** | Backlog |
+| **Status in Jira** | Done |
+| **Sprint** | SCRUM Sprint 2 |
 | **Jira** | https://smu-spm-group7.atlassian.net/browse/SCRUM-129 |
 
 ---

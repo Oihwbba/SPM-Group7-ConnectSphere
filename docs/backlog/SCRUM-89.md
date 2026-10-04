@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-09-30. Jira is the source of truth.
+     Synced from Jira on 2026-10-04. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-89 - CI and developer infrastructure: Node 24, CI hardening, test folders, security upgrades, migration sync
@@ -18,7 +18,7 @@
 
 Keeps CI, tooling and the database schema healthy, so the merge gate and the CI evidence stay reliable.
 
-Delivered (all merged, CI green):
+**Delivered** (all merged, CI green):
 
 * #17: CI and tooling moved from end-of-life Node 20 to Node 24 LTS
 * #18: CI hardening (least-privilege token, timeout, concurrency, Node version from .nvmrc)
@@ -27,6 +27,5 @@ Delivered (all merged, CI green):
 * #27: tests split into tests/unit and tests/integration
 * #32: all Dependabot security alerts fixed (Vitest 4, Vite 6, PostCSS, tsx, deepmerge-ts); Dependabot PRs turned off
 * #33: recovered an uncommitted Supabase migration so the repo schema matches production, with an integration test
-
 
 Unplanned technical task, added to Sprint 1 on 2026-09-16. No story points, so velocity counts only user stories.

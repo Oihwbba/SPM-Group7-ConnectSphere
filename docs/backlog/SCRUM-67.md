@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-09-30. Jira is the source of truth.
+     Synced from Jira on 2026-10-04. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-67 - Be prevented from performing an action my role does not permit
@@ -16,9 +16,9 @@
 
 ---
 
-Cross-cutting security rule — Authorization Enforcement
+**Cross-cutting security rule — Authorization Enforcement**
 
-Acceptance Criteria:
+**Acceptance Criteria:**
 
 * Every protected state-changing operation checks the caller's role and required relationship to the resource before execution.
 * A disallowed request is rejected and makes no state change.
@@ -26,14 +26,4 @@ Acceptance Criteria:
 * A refusal does not disclose protected resource existence or contents beyond what the caller is permitted to know.
 * Permission rules are defined centrally and consumed by feature operations; individual stories must not invent their own conflicting role rules.
 
-
-Authoritative model: see the Confluence page ConnectSphere Cross-Cutting Requirements Model.
-
-
-## Subtasks
-
-| Subtask | Summary | Status |
-|---|---|---|
-| [SCRUM-100](SCRUM-100.md) | Implement can() — role check plus relationship check, one source of truth | Done |
-| [SCRUM-101](SCRUM-101.md) | Document the guard in CONTRIBUTING.md (no inline role checks) | Done |
-| [SCRUM-102](SCRUM-102.md) | Tests — unit (guard allow/deny), integration (refusal changes nothing), e2e (URL bypass refused) | Done |
+**Authoritative model:** see the Confluence page **ConnectSphere Cross-Cutting Requirements Model**.

@@ -1,8 +1,8 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-09-30. Jira is the source of truth.
+     Synced from Jira on 2026-10-04. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
-# SCRUM-50 - Submit Venue Booking Request
+# SCRUM-50 - Submit a venue booking request
 
 | | |
 |---|---|
@@ -16,16 +16,29 @@
 
 ---
 
-User Story
-As an Event Coordinator, I want to submit a request to book a venue with event timing and requirements, so that Venue Staff have what they need to assess it.
+**User story:** As an Event Coordinator, I want to submit a request to book a venue with the event's timing and requirements, so that Venue Staff have what they need to assess it.
 
-Acceptance Criteria
+**Acceptance criteria**
 
-* Request captures venue, date/time, expected attendance, required facilities/layout, and other relevant event details.
-* Given the venue is free for the whole requested period, when the Coordinator submits, then the request is created with status "Pending" and the Coordinator is shown confirmation that it was submitted.
-* Given the venue is already unavailable for any part of the requested period, when the Coordinator submits, then the request is not created and the Coordinator is told the venue is unavailable for that period.
-* Given an existing booking or unavailability ends at exactly the moment the requested period begins, or begins at exactly the moment it ends, when the Coordinator submits, then the request is accepted - periods that touch at an endpoint do not overlap.
-* Given the requested end is earlier than or the same as the requested start, when the Coordinator submits, then the request is not created and the period is reported as invalid.
-* Given the Coordinator already has a pending request for the same venue and an overlapping period, when they submit again, then no second request is created and they are shown the existing one.
+1. The request captures the venue, the period, expected attendance, required facilities and layout, and notes. Choosing the event pre-fills the period (start rounded down and end rounded up to the half hour) and the expected attendance. These values are not editable; the booking request must cover the event's period and use the event's expected attendance.
+2. Given the venue is free for the whole period, when I submit, then the request is created as Pending and I'm shown that it was submitted.
+3. Given the venue has an Approved booking or recorded unavailability for any part of the period, when I submit, then no request is created and I'm told what makes the venue unavailable.
+4. Given an existing booking or unavailability ends exactly when the period begins, or begins exactly when it ends, then the request is accepted: periods that only touch do not overlap.
+5. Given the end is not after the start, or the start has already passed, then no request is created and the period is reported as invalid.
+6. Given the attendance is above the venue's capacity, then no request is created and the capacity is shown. Attendance equal to capacity fits.
+7. Only the event's assigned Coordinator can request a venue, and only while the event is in Planning. An approved event moves straight to Planning (SCRUM-81).
+8. Each event has one venue. Given the event already has a Pending or Approved booking, for any venue, when I submit another, then no request is created and I'm shown the existing one.
+9. Given the previous request was Rejected or Cancelled, then a new request creates a new booking record, and the earlier one is kept.
+10. A Pending request does not block the venue; only an Approved booking does.
 
-Note (2026-09-07): the original third criterion read "cannot be submitted ... (or is flagged as conflicting)" - block or flag was ambiguous, so it was not testable. It now specifies blocking. This story is one of the three that jointly deliver Booking Conflict Detection (with SCRUM-37 and SCRUM-38), so the rule needs to be unambiguous here. Endpoint semantics and the invalid-period case were added following the Week 2 assignment feedback, which asked for exactly this on a venue-blocking story.
+**Related:** fixing the period and attendance to the event is SCRUM-127; refusing periods outside opening hours is SCRUM-34; withdrawing a Pending request is SCRUM-142; competing Pending requests are decided in submission order (SCRUM-134); Venue Staff are notified of new requests (SCRUM-124).
+
+**Customer basis:** "Co-ordinator can submit booking request based on per event that he is assigned. Each event can only has one venue." "Confirmed bookings block availability. Pending conflicts are only resolved outside of system currently; the team can also propose and implement other mechanism."
+
+**Change log**
+
+* 2026-09-07: the "cannot be submitted … (or is flagged)" criterion now specifies blocking; endpoint semantics and the invalid-period case added after the Week 2 assignment feedback.
+* 2026-10-01 (mid-sprint correction): requested period stated as the event's period; duplicate rule merged into AC8 (both revised below).
+* 2026-10-01 (audit): the booking form now follows the event as its source of truth: period and expected attendance are pre-filled and not editable, while opening-hours validation remains with SCRUM-34 and capacity/past-start validation remains here. AC8 stays because the customer asked for one venue per event. Before acceptance, the duplicate-request constraint (booking_no_duplicate_pending_request) still needs to be keyed on the event rather than the requesting Coordinator; this is tracked as a separate implementation task.
+
+Functionality Area: Venue Booking Request, Booking Conflict Detection
