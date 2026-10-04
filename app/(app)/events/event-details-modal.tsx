@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "@/components/events/status-badge";
 import { ClarificationPanel } from "@/components/events/clarification-panel";
+import { ReadinessChecklist } from "@/components/events/readiness-checklist";
 import { formatDate, formatDateTime } from "@/lib/datetime";
 import {
   Calendar,
@@ -112,6 +113,9 @@ export function EventDetailsModal({
 
           {/* SCRUM-18: shows nothing if there's no clarification thread */}
           <ClarificationPanel eventId={event.id} isCoordinator={isCoordinator} />
+
+          {/* SCRUM-110: what is still outstanding before the event can be confirmed */}
+          {event.status === "PLANNING" && <ReadinessChecklist eventId={event.id} />}
 
           {event.status === "REJECTED" && event.decisionReason && (
             <Card className="overflow-hidden">
