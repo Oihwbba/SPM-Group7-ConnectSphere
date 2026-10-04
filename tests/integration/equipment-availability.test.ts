@@ -213,6 +213,23 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-29 — equipment availability against
       expect(result).toMatchObject({ ok: true, data: { available: 4 } });
     });
 
+    // SCRUM-27 AC 1 raises equipment requests for a Planning event, so a
+    // reservation has to be possible for one; a Confirmed event cannot take a
+    // request, so it cannot take a reservation either.
+    it("reserves for a Planning event, and refuses a Confirmed one without writing", async () => {
+      const period = { equipmentId, quantity: 1, startAt: at(9), endAt: at(12) };
+
+      const planning = await createReservation({ ...period, eventId: "evt_planning" });
+      expect(planning).toMatchObject({ ok: true, data: { available: 3 } });
+
+      const confirmed = await createReservation({ ...period, eventId: "evt_confirmed" });
+      expect(confirmed).toEqual({
+        ok: false,
+        error: "Reservations can only be made for an approved event.",
+      });
+      expect(await reservationCount()).toBe(1);
+    });
+
     it("AC 7: an end before the start is rejected, reads nothing and writes nothing", async () => {
       const result = await createReservation({
         eventId: APPROVED_EVENT_ID,

@@ -147,7 +147,9 @@ describe("createReservation — SCRUM-31", () => {
     expect(mockTransaction).not.toHaveBeenCalled();
   });
 
-  it("only reserves for an approved event", async () => {
+  // An equipment request is raised for an Approved or Planning event
+  // (SCRUM-27 AC 1), so it must be possible to reserve stock for either.
+  it("only reserves for an event that can take an equipment request (Approved or Planning)", async () => {
     poolWithFiveAvailable();
     tx.event.findFirst.mockResolvedValue(null);
 

@@ -12,13 +12,14 @@ export function formatEventPeriod(event: {
 }
 
 /**
- * SCRUM-27 — an equipment request is raised for an event that is going ahead.
- * Earlier statuses may still be rejected, and the later ones are finished.
+ * SCRUM-27 AC 1 — an equipment request is raised for an event that is going
+ * ahead but whose details can still change. Earlier statuses may still be
+ * rejected, the later ones are finished, and a Confirmed event's details are
+ * fixed, so equipment has to be arranged before then.
  */
 export const REQUESTABLE_EVENT_STATUSES = [
   "APPROVED",
   "PLANNING",
-  "CONFIRMED",
 ] as const satisfies readonly EventStatus[];
 
 /**
