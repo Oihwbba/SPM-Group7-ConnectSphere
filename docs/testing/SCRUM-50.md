@@ -26,6 +26,7 @@ nothing seeded overlaps them. Times are Singapore time.
 | [TC-50-11](#tc-50-11) | Negative, Boundary | No period that has already started | Unit, integration |
 | [TC-50-12](#tc-50-12) | Positive | AC 1 (room layout before venue) | Unit, e2e |
 | [TC-50-13](#tc-50-13) | Negative, Boundary | AC 3, AC 4, AC 5 shown live, before submitting | Unit, integration, e2e |
+| [TC-50-14](#tc-50-14) | Positive | AC 9 (a new request after a rejection or cancellation) | Integration |
 
 ---
 
@@ -194,6 +195,19 @@ nothing seeded overlaps them. Times are Singapore time.
 | Pre-conditions | An approved booking on the Exhibition Hall 2035-03-10 09:00–13:00 (TC-50-02). |
 | Test Steps | 1. Choose the Exhibition Hall and 11:00–15:00 on that day. <br> 2. Change the period to 13:00–15:00. <br> 3. Change the end to before the start. |
 | Test Data | Exhibition Hall, 2035-03-10 |
-| Expected Result | While the answer is fetched, "Checking whether Exhibition Hall is free…". Step 1: "…is unavailable for this period: already booked from … to …", and Submit is disabled. Step 2: "Exhibition Hall is available for this period.", and Submit is enabled (the touching end is not an overlap). Step 3: "The requested period is invalid: the end must be after the start.", and Submit is disabled. A pending request blocks nobody, so it still reads available. The check writes nothing. Submitting checks again on the server, because a booking can be approved in between. |
+| Expected Result | While the answer is fetched, "Checking whether Exhibition Hall is free…". Step 1: "…is unavailable for this period: already booked from … to …", and Submit is disabled. Step 2: "Exhibition Hall is available for this period.", and Submit is enabled (the touching end is not an overlap). Step 3: "The requested period is invalid: the end must be after the start.", and Submit is disabled. A pending request blocks nobody, so it still reads available. A retired venue reads "Venue not found.", as it does on submit. The check writes nothing. Submitting checks again on the server, because a booking can be approved in between. |
 
 **Automated by:** `tests/unit/bookings.test.ts` › every "checkVenueAvailability — SCRUM-50 live check" case; `tests/integration/bookings.test.ts` › every "SCRUM-50 — the live availability check in the form" case; `e2e/bookings.spec.ts` › journey and "SCRUM-50 AC5 — …"; `e2e/availability.spec.ts` › "SCRUM-37 AC2-5, …" (maintenance shown live)
+
+### TC-50-14
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-50-14 |
+| Test Scenario | [Positive] AC 9: given the previous request was Rejected or Cancelled, a new request creates a new booking record, and the earlier one is kept |
+| Pre-conditions | The coordinator's earlier request for the venue and period is REJECTED (with a reason), or CANCELLED. |
+| Test Steps | 1. Request the same venue and period again. |
+| Test Data | As TC-50-01 |
+| Expected Result | A new PENDING booking is created with a new id. The earlier booking still exists with its REJECTED or CANCELLED status. Two booking rows exist. |
+
+**Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-50 AC9 — after a rejected request, a new request creates a new booking record and the earlier one is kept" and "…after a cancelled request, …"

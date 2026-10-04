@@ -446,7 +446,7 @@ describe("checkVenueAvailability — SCRUM-50 live check", () => {
       { ...period, startAt: END, endAt: START },
       { ...period, endAt: undefined },
     ]) {
-      expect(await checkVenueAvailability(bad)).toEqual({
+      expect(await checkVenueAvailability(bad)).toMatchObject({
         ok: false,
         error:
           "The requested period is invalid: the end must be after the start.",
@@ -456,13 +456,26 @@ describe("checkVenueAvailability — SCRUM-50 live check", () => {
   });
 
   it("SCRUM-50 — without a venue there is nothing to check", async () => {
-    expect(await checkVenueAvailability({ ...period, venueId: "" })).toEqual({
-      ok: false,
-      error: "Choose a venue.",
-    });
+    expect(
+      await checkVenueAvailability({ ...period, venueId: "" }),
+    ).toMatchObject({ ok: false, error: "Choose a venue." });
     expect(await checkVenueAvailability(undefined)).toMatchObject({
       ok: false,
     });
+    expect(db.venue.findFirst).not.toHaveBeenCalled();
+  });
+
+  it("SCRUM-50 — a retired or unknown venue reads as not found, exactly as submitting it would", async () => {
+    db.venue.findFirst.mockResolvedValue(null);
+
+    expect(await checkVenueAvailability(period)).toEqual({
+      ok: false,
+      error: "Venue not found.",
+    });
+    expect(db.venue.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: "ven_1", isActive: true } }),
+    );
+    expect(db.booking.findMany).not.toHaveBeenCalled();
   });
 
   it("SCRUM-50 — every role except Event Coordinator is refused before anything is read", async () => {

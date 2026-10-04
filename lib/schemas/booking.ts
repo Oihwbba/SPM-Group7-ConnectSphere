@@ -77,6 +77,26 @@ export const bookingRequestSchema = z
   });
 
 /**
+ * SCRUM-50 — the form's live question: is this venue free for this period?
+ * Only the venue and a valid period; the rest of the request is checked when
+ * it is submitted.
+ */
+export const venueAvailabilityQuerySchema = z
+  .object({
+    venueId: z.string().min(1, "Choose a venue."),
+    startAt: z.string().min(1, INVALID_PERIOD_MESSAGE),
+    endAt: z.string().min(1, INVALID_PERIOD_MESSAGE),
+  })
+  .refine(
+    (data) =>
+      isValidPeriod({
+        startAt: new Date(data.startAt),
+        endAt: new Date(data.endAt),
+      }),
+    { path: ["endAt"], message: INVALID_PERIOD_MESSAGE },
+  );
+
+/**
  * SCRUM-53 — approve, or reject with a free-text reason. A blank or
  * whitespace-only reason is not a reason (customer clarification 2026-09-13).
  */

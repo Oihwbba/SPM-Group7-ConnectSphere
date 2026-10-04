@@ -472,6 +472,60 @@ describe.skipIf(!usesLocalDatabase)(
         await check(at(10, 6), at(10, 8));
         expect(await bookingCount()).toBe(before);
       });
+
+      it("SCRUM-50 — a retired venue reads as not found, as it does on submit", async () => {
+        await prisma.venue.update({
+          where: { id: venueId },
+          data: { isActive: false },
+        });
+        try {
+          expect(await check(at(10, 6), at(10, 8))).toEqual({
+            ok: false,
+            error: "Venue not found.",
+          });
+        } finally {
+          await prisma.venue.update({
+            where: { id: venueId },
+            data: { isActive: true },
+          });
+        }
+      });
+    });
+
+    describe("SCRUM-50 AC9 — asking again after a rejection or cancellation", () => {
+      for (const status of ["REJECTED", "CANCELLED"] as const) {
+        it(`SCRUM-50 AC9 — after a ${status.toLowerCase()} request, a new request creates a new booking record and the earlier one is kept`, async () => {
+          const earlier = await prisma.booking.create({
+            data: {
+              eventId: APPROVED_EVENT,
+              venueId,
+              startAt: new Date(at(10, 6)),
+              endAt: new Date(at(10, 8)),
+              status,
+              requestedById: "usr_coordinator",
+              ...(status === "REJECTED" && {
+                decidedById: "usr_venuestaff",
+                decidedAt: new Date(),
+                decisionReason: "The hall is closed that week.",
+              }),
+            },
+          });
+
+          const again = await submitBookingRequest(request());
+
+          expect(again.ok && again.data.created).toBe(true);
+          if (!again.ok) return;
+          expect(again.data.booking.id).not.toBe(earlier.id);
+          expect(again.data.booking.status).toBe("PENDING");
+          expect(
+            await prisma.booking.findUniqueOrThrow({
+              where: { id: earlier.id },
+              select: { status: true },
+            }),
+          ).toEqual({ status });
+          expect(await bookingCount()).toBe(2);
+        });
+      }
     });
 
     describe("SCRUM-52 — review pending booking requests", () => {

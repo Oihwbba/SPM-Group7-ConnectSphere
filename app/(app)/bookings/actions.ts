@@ -14,9 +14,10 @@ import {
   INVALID_PERIOD_MESSAGE,
   overCapacityMessage,
   PAST_START_MESSAGE,
+  venueAvailabilityQuerySchema,
 } from "@/lib/schemas/booking";
 import { onceMoreOnDeadlock, violatesExclusion } from "@/lib/db-errors";
-import { isValidPeriod, overlapping } from "@/lib/period";
+import { overlapping } from "@/lib/period";
 import { describeBlocker, findVenueBlockers } from "@/lib/venue-availability";
 
 export type BookingSummary = {
@@ -61,18 +62,26 @@ export async function checkVenueAvailability(
   try {
     requirePermission(session?.user, "booking:request");
 
-    const { venueId, startAt, endAt } = (input ?? {}) as Record<
-      string,
-      unknown
-    >;
-    const period = {
-      startAt: new Date(String(startAt)),
-      endAt: new Date(String(endAt)),
-    };
-    if (typeof venueId !== "string" || !venueId) {
-      return err("Choose a venue.");
+    const parsed = venueAvailabilityQuerySchema.safeParse(input ?? {});
+    if (!parsed.success) {
+      const fieldErrors = parsed.error.flatten().fieldErrors;
+      return err(
+        fieldErrors.venueId?.[0] ?? INVALID_PERIOD_MESSAGE,
+        fieldErrors,
+      );
     }
-    if (!isValidPeriod(period)) return err(INVALID_PERIOD_MESSAGE);
+    const { venueId } = parsed.data;
+    const period = {
+      startAt: new Date(parsed.data.startAt),
+      endAt: new Date(parsed.data.endAt),
+    };
+
+    // A retired venue reads as not found here exactly as it does on submit.
+    const venue = await prisma.venue.findFirst({
+      where: { id: venueId, isActive: true },
+      select: { id: true },
+    });
+    if (!venue) return err("Venue not found.");
 
     const blockers = await findVenueBlockers(prisma, venueId, period);
     return ok({
