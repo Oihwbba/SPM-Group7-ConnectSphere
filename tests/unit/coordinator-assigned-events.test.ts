@@ -75,6 +75,13 @@ describe("SCRUM-69 — View only the events assigned to me", () => {
     expect(can(cara, "event:read", handedOver)).toBe(true);
   });
 
+  // The approve action that assigns the approver is SCRUM-81, still in review
+  // (Jun Bin's branch). On main, approving leaves the event unassigned, so
+  // this stays a placeholder until SCRUM-81 lands.
+  it.todo(
+    "AC4: a Coordinator who approves an unassigned Submitted event becomes its assigned Coordinator (SCRUM-81)",
+  );
+
   it("[Positive] AC4: a Submitted event with no Coordinator is in every Coordinator's list", async () => {
     const unassigned = eventFor(null, "SUBMITTED");
 
