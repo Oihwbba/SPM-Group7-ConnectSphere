@@ -127,6 +127,20 @@ test.describe("SCRUM-126 — Rejected as needing a new request", () => {
       "DRAFT",
     );
 
+    // Starting again shows the Draft already started instead of a copy (AC4).
+    await page.getByRole("button", { name: /^All \(/ }).click();
+    // Two rows share the name now; the rejected one is the one with the button.
+    await page
+      .getByRole("row", { name: new RegExp(eventName) })
+      .filter({ has: page.getByTestId("start-new-request-button") })
+      .getByTestId("start-new-request-button")
+      .click();
+    await expect(
+      page.getByText(
+        "A draft was already started from this request. Find it under Drafts.",
+      ),
+    ).toBeVisible();
+
     // The Draft carries the details but not the decision, and the rejected
     // event is untouched (AC3, AC4).
     const events = await prisma.event.findMany({

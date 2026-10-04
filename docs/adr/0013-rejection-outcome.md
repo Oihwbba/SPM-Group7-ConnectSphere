@@ -37,7 +37,9 @@ amend journey) and SCRUM-117 (rejecting a Planning event) read the same choice.
    by the same Organiser. It copies no coordinator, submission, decision,
    bookings, equipment requests, reservations or history, so the two events
    share nothing but their text. The Draft then goes through the normal
-   draft-and-submit flow (SCRUM-15, SCRUM-14).
+   draft-and-submit flow (SCRUM-15, SCRUM-14). The rejected event's history
+   records which Draft was started from it (`NEW_REQUEST_STARTED`), under a
+   row lock, so starting again returns that Draft instead of a second copy.
 6. **The outcome has its own history entry** (`fieldName: rejectionOutcome`),
    by the rejecting Coordinator, next to the status change, so it is recorded
    with who and when (AC 6).
@@ -61,6 +63,7 @@ amend journey) and SCRUM-117 (rejecting a Planning event) read the same choice.
   hidden for a new-request rejection, and the server already refuses it.
 - SCRUM-117 must send an outcome when it rejects a Planning event; the
   database refuses it otherwise.
-- Starting a new request twice makes two Drafts. Each is an ordinary Draft
-  the Organiser can discard (SCRUM-130); the button is disabled while the
-  first request is in flight.
+- Starting a new request twice returns the first Draft ("A draft was already
+  started from this request"), even for two clicks at the same moment. This
+  answers the GLM review of #116: drafts can't be discarded yet (SCRUM-130),
+  so duplicates would have piled up.

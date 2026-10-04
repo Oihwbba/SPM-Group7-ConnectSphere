@@ -1,9 +1,25 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { describe, it, expect, afterAll } from "vitest";
+import { describe, it, expect, afterAll, vi, type Mock } from "vitest";
+import type { Session } from "next-auth";
 
+import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
+import { startRequestFromRejected } from "@/app/(app)/events/actions";
+
+vi.mock("@/auth", () => ({ auth: vi.fn() }));
+vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
+
+const ORGANISER: Session = {
+  user: {
+    id: "usr_organiser",
+    role: "ORGANISER",
+    name: "Olivia Organiser",
+    email: "organiser@test.local",
+  },
+  expires: "2999-01-01T00:00:00.000Z",
+};
 
 // SCRUM-126 — every rejected event carries the outcome its Coordinator chose,
 // enforced by the database (20261003120000_event_rejection_outcome), not only
@@ -64,6 +80,40 @@ describe.skipIf(!usesLocalDatabase)(
         expect(event.rejectionOutcome).toBe("NEW_REQUEST");
       } finally {
         await prisma.event.delete({ where: { id: event.id } });
+      }
+    });
+
+    it("SCRUM-126 [AC4] TC-126-10: two Start New Request clicks at the same moment start exactly one Draft", async () => {
+      (auth as unknown as Mock).mockResolvedValue(ORGANISER);
+      const name = `SCRUM-126 race ${Date.now()}`;
+      const rejected = await prisma.event.create({
+        data: { ...rejectedEvent, name, rejectionOutcome: "NEW_REQUEST" },
+        select: { id: true },
+      });
+      try {
+        const [a, b] = await Promise.all([
+          startRequestFromRejected({ eventId: rejected.id }),
+          startRequestFromRejected({ eventId: rejected.id }),
+        ]);
+
+        const drafts = await prisma.event.findMany({
+          where: { name, status: "DRAFT" },
+          select: { id: true },
+        });
+        expect(drafts).toHaveLength(1);
+        // Both clicks are told about the same Draft; only one created it.
+        expect([a, b]).toEqual(
+          expect.arrayContaining([
+            { ok: true, data: { id: drafts[0].id, created: true } },
+            { ok: true, data: { id: drafts[0].id, created: false } },
+          ]),
+        );
+      } finally {
+        const ids = (
+          await prisma.event.findMany({ where: { name }, select: { id: true } })
+        ).map((e) => e.id);
+        await prisma.auditLog.deleteMany({ where: { entityId: { in: ids } } });
+        await prisma.event.deleteMany({ where: { id: { in: ids } } });
       }
     });
 

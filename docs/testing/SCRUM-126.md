@@ -12,17 +12,18 @@ and the app is running. Unless the case says otherwise, the event is Under
 Review, owned by `organiser@test.local` and assigned to
 `coordinator@test.local` (both `Password123!`).
 
-| ID                      | Type     | Criterion                    | Automated              |
-| ----------------------- | -------- | ---------------------------- | ---------------------- |
-| [TC-126-01](#tc-126-01) | Positive | AC 1                         | Unit, integration      |
-| [TC-126-02](#tc-126-02) | Negative | AC 1                         | Unit, integration, e2e |
-| [TC-126-03](#tc-126-03) | Positive | AC 2                         | Unit, e2e              |
-| [TC-126-04](#tc-126-04) | Negative | AC 3                         | Unit, e2e              |
-| [TC-126-05](#tc-126-05) | Positive | AC 4                         | Unit, e2e              |
-| [TC-126-06](#tc-126-06) | Negative | AC 4                         | Unit                   |
-| [TC-126-07](#tc-126-07) | Positive | AC 6                         | Unit, e2e              |
-| [TC-126-08](#tc-126-08) | Positive | AC 1, AC 3, AC 4, AC 5, AC 6 | e2e                    |
-| [TC-126-09](#tc-126-09) | Boundary | AC 7                         | Integration            |
+| ID                      | Type        | Criterion                    | Automated              |
+| ----------------------- | ----------- | ---------------------------- | ---------------------- |
+| [TC-126-01](#tc-126-01) | Positive    | AC 1                         | Unit, integration      |
+| [TC-126-02](#tc-126-02) | Negative    | AC 1                         | Unit, integration, e2e |
+| [TC-126-03](#tc-126-03) | Positive    | AC 2                         | Unit, e2e              |
+| [TC-126-04](#tc-126-04) | Negative    | AC 3                         | Unit, e2e              |
+| [TC-126-05](#tc-126-05) | Positive    | AC 4                         | Unit, e2e              |
+| [TC-126-06](#tc-126-06) | Negative    | AC 4                         | Unit                   |
+| [TC-126-07](#tc-126-07) | Positive    | AC 6                         | Unit, e2e              |
+| [TC-126-08](#tc-126-08) | Positive    | AC 1, AC 3, AC 4, AC 5, AC 6 | e2e                    |
+| [TC-126-09](#tc-126-09) | Boundary    | AC 7                         | Integration            |
+| [TC-126-10](#tc-126-10) | Concurrency | AC 4                         | Unit, integration, e2e |
 
 ---
 
@@ -142,3 +143,16 @@ Review, owned by `organiser@test.local` and assigned to
 | Expected Result | The Rejected event's outcome is Amend and resubmit; the Draft has none. The seeded rejected concert offers Amend & Resubmit. |
 
 **Automated by:** `tests/integration/rejection-outcome.test.ts` › "SCRUM-126 [AC7] TC-126-09: …"
+
+### TC-126-10
+
+| Item            | Content                                                                                                                                                                                  |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Test Case ID    | TC-126-10                                                                                                                                                                                |
+| Test Scenario   | [Concurrency] AC 4: starting a new request again, or twice at the same moment, creates only one Draft                                                                                    |
+| Pre-conditions  | As TC-126-04.                                                                                                                                                                            |
+| Test Steps      | 1. Click **Start New Request**. <br> 2. Go back to **All** and click it again. <br> 3. Separately, send two start requests at the same moment.                                           |
+| Test Data       | —                                                                                                                                                                                        |
+| Expected Result | Step 2 says "A draft was already started from this request. Find it under Drafts." Exactly one Draft exists in every case; the rejected event's history records which Draft was started. |
+
+**Automated by:** `tests/unit/rejection-outcome.test.ts` › "SCRUM-126 [AC4] TC-126-10: …" (both); `tests/integration/rejection-outcome.test.ts` › "SCRUM-126 [AC4] TC-126-10: …"; `e2e/rejection-outcome.spec.ts` › "… TC-126-08: …" (the repeat click)

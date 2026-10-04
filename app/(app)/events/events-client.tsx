@@ -225,7 +225,11 @@ export function EventsClient({
         toast.error(result.error);
         return;
       }
-      toast.success("A new draft was started from this request.");
+      toast.success(
+        result.data.created
+          ? "A new draft was started from this request."
+          : "A draft was already started from this request. Find it under Drafts.",
+      );
       setActiveTab("DRAFT");
       router.refresh();
     });
@@ -828,7 +832,7 @@ export function EventsClient({
                 )
               }
             >
-              Reject request
+              {isPending ? "Rejecting…" : "Reject request"}
             </Button>
           </DialogFooter>
         </DialogContent>

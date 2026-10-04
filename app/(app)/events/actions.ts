@@ -654,11 +654,12 @@ export async function confirmEvent(
  * SCRUM-126 AC4 — when the Coordinator rejected a request as needing a new
  * submission, its Organiser can start a new Draft from it. Only the request's
  * own details are copied: the Draft has no coordinator, decision, bookings,
- * equipment requests, reservations or history of its own yet. See ADR 0013.
+ * equipment requests, reservations or history of its own yet. Starting again
+ * returns the Draft already started rather than a second copy. See ADR 0013.
  */
 export async function startRequestFromRejected(
   input: unknown,
-): Promise<ActionResult<{ id: string }>> {
+): Promise<ActionResult<{ id: string; created: boolean }>> {
   const session = await auth();
   const user = session?.user;
 
@@ -670,48 +671,74 @@ export async function startRequestFromRejected(
       return err("Please choose a rejected request to start from.");
     }
 
-    // The Organiser's own rejected request, and only one rejected for a new
-    // submission; anything else is "not found", as in SCRUM-68.
-    const rejected = await prisma.event.findFirst({
-      where: {
-        id: parsed.data.eventId,
-        organiserId: user!.id,
-        status: "REJECTED",
-        rejectionOutcome: "NEW_REQUEST",
-      },
-      select: {
-        name: true,
-        purpose: true,
-        description: true,
-        startAt: true,
-        endAt: true,
-        expectedAttendance: true,
-        venueRequirements: true,
-        requiredFacilities: true,
-        accessibilityNeeds: true,
-        preferredLayout: true,
-        equipmentRequirements: true,
-        registrationNotes: true,
-        programme: true,
-        specialRequests: true,
-        equipmentTypes: true,
-        registrationRequired: true,
-      },
-    });
-    if (!rejected) return err("Event not found.");
+    const { eventId } = parsed.data;
+    const outcome = await prisma.$transaction(async (tx) => {
+      // Lock the rejected event first, so two clicks at the same moment take
+      // turns and the second finds the Draft the first one started.
+      await tx.$queryRaw`SELECT "id" FROM "Event" WHERE "id" = ${eventId} FOR UPDATE`;
 
-    const draft = await prisma.event.create({
-      data: {
-        ...rejected,
-        status: "DRAFT",
-        timezone: TIME_ZONE,
-        organiserId: user!.id,
-      },
-      select: { id: true },
+      // The Organiser's own rejected request, and only one rejected for a new
+      // submission; anything else is "not found", as in SCRUM-68.
+      const rejected = await tx.event.findFirst({
+        where: {
+          id: eventId,
+          organiserId: user!.id,
+          status: "REJECTED",
+          rejectionOutcome: "NEW_REQUEST",
+        },
+        select: {
+          name: true,
+          purpose: true,
+          description: true,
+          startAt: true,
+          endAt: true,
+          expectedAttendance: true,
+          venueRequirements: true,
+          requiredFacilities: true,
+          accessibilityNeeds: true,
+          preferredLayout: true,
+          equipmentRequirements: true,
+          registrationNotes: true,
+          programme: true,
+          specialRequests: true,
+          equipmentTypes: true,
+          registrationRequired: true,
+        },
+      });
+      if (!rejected) return null;
+
+      // The rejected event's history says which Draft was started from it.
+      const started = await tx.auditLog.findFirst({
+        where: { entityType: "Event", entityId: eventId, action: "NEW_REQUEST_STARTED" },
+        select: { newValue: true },
+      });
+      if (started?.newValue) return { id: started.newValue, created: false };
+
+      const draft = await tx.event.create({
+        data: {
+          ...rejected,
+          status: "DRAFT",
+          timezone: TIME_ZONE,
+          organiserId: user!.id,
+        },
+        select: { id: true },
+      });
+      await tx.auditLog.create({
+        data: {
+          entityType: "Event",
+          entityId: eventId,
+          action: "NEW_REQUEST_STARTED",
+          actorId: user!.id,
+          newValue: draft.id,
+          summary: "New request started from this rejection (SCRUM-126)",
+        },
+      });
+      return { id: draft.id, created: true };
     });
+    if (!outcome) return err("Event not found.");
 
     revalidatePath("/events");
-    return ok({ id: draft.id });
+    return ok(outcome);
   } catch (error) {
     if (error instanceof PermissionError) return err(error.message);
     throw error;

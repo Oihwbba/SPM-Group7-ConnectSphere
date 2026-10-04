@@ -29,7 +29,7 @@ const tx = vi.hoisted(() => ({
   clarificationRequest: { updateMany: vi.fn() },
   user: { findMany: vi.fn() },
   notification: { createMany: vi.fn() },
-  auditLog: { create: vi.fn() },
+  auditLog: { create: vi.fn(), findFirst: vi.fn() },
 }));
 
 vi.mock("@/auth", () => ({ auth: vi.fn() }));
@@ -65,6 +65,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   tx.event.updateMany.mockResolvedValue({ count: 1 });
   tx.auditLog.create.mockResolvedValue({});
+  tx.auditLog.findFirst.mockResolvedValue(null);
   tx.clarificationRequest.updateMany.mockResolvedValue({ count: 0 });
   tx.user.findMany.mockResolvedValue([]);
   mockTransaction.mockImplementation((cb: (t: typeof tx) => unknown) => cb(tx));
@@ -285,7 +286,10 @@ describe("startRequestFromRejected — SCRUM-126 AC4", () => {
 
     const result = await startRequestFromRejected({ eventId: "evt1" });
 
-    expect(result).toEqual({ ok: true, data: { id: "evt_new" } });
+    expect(result).toEqual({
+      ok: true,
+      data: { id: "evt_new", created: true },
+    });
     expect(tx.event.findFirst).toHaveBeenCalledWith(
       expect.objectContaining({
         where: {
@@ -307,6 +311,53 @@ describe("startRequestFromRejected — SCRUM-126 AC4", () => {
       },
       select: { id: true },
     });
+    // The rejected event's history records which Draft was started from it.
+    expect(tx.auditLog.create).toHaveBeenCalledWith({
+      data: {
+        entityType: "Event",
+        entityId: "evt1",
+        action: "NEW_REQUEST_STARTED",
+        actorId: "usr_org",
+        newValue: "evt_new",
+        summary: "New request started from this rejection (SCRUM-126)",
+      },
+    });
+  });
+
+  it("SCRUM-126 [AC4] TC-126-10: starting again returns the Draft already started and creates no second copy", async () => {
+    mockAuth.mockResolvedValue(organiser());
+    tx.event.findFirst.mockResolvedValue(rejected);
+    tx.auditLog.findFirst.mockResolvedValue({ newValue: "evt_first" });
+
+    const result = await startRequestFromRejected({ eventId: "evt1" });
+
+    expect(result).toEqual({
+      ok: true,
+      data: { id: "evt_first", created: false },
+    });
+    expect(tx.auditLog.findFirst).toHaveBeenCalledWith({
+      where: {
+        entityType: "Event",
+        entityId: "evt1",
+        action: "NEW_REQUEST_STARTED",
+      },
+      select: { newValue: true },
+    });
+    expect(tx.event.create).not.toHaveBeenCalled();
+    expect(tx.auditLog.create).not.toHaveBeenCalled();
+  });
+
+  it("SCRUM-126 [AC4] TC-126-10: the rejected event is locked before it is read, so two clicks at once take turns", async () => {
+    mockAuth.mockResolvedValue(organiser());
+    tx.event.findFirst.mockResolvedValue(rejected);
+    tx.event.create.mockResolvedValue({ id: "evt_new" });
+
+    await startRequestFromRejected({ eventId: "evt1" });
+
+    expect(tx.$queryRaw).toHaveBeenCalledTimes(1);
+    expect(tx.$queryRaw.mock.invocationCallOrder[0]).toBeLessThan(
+      tx.event.findFirst.mock.invocationCallOrder[0],
+    );
   });
 
   it.each([
