@@ -4,6 +4,7 @@ import {
   getCoordinatorEquipmentRequests,
   getEquipmentCatalogue,
   getRequestableEvents,
+  getReservableRequests,
 } from "@/lib/equipment/request-queries";
 import { REQUESTABLE_EVENT_STATUSES } from "@/lib/equipment/requests";
 import { RESERVABLE_EVENT_STATUSES } from "@/lib/schemas/reservation";
@@ -131,6 +132,40 @@ describe("getEquipmentCatalogue — SCRUM-27 AC 2", () => {
         technicalSpecs: true,
       },
       orderBy: { type: "asc" },
+    });
+  });
+});
+
+describe("getReservableRequests — SCRUM-155", () => {
+  it("SCRUM-155 [AC1, AC6] TC-155-01: offers only approved requests for events that can still take a reservation, and not ones already reserved", async () => {
+    await getReservableRequests();
+
+    expect(db.equipmentRequest.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          status: "APPROVED",
+          event: { status: { in: RESERVABLE_EVENT_STATUSES } },
+          reservations: { none: { status: "CONFIRMED" } },
+        },
+        orderBy: { event: { startAt: "asc" } },
+      }),
+    );
+  });
+
+  it("SCRUM-155 [AC2] TC-155-02: reads each request's event period and its lines in the order they were entered", async () => {
+    await getReservableRequests();
+
+    const { select } = db.equipmentRequest.findMany.mock.calls[0][0];
+    expect(select.event).toEqual({
+      select: { id: true, name: true, startAt: true, endAt: true },
+    });
+    expect(select.lines).toEqual({
+      select: {
+        id: true,
+        quantity: true,
+        equipment: { select: { id: true, type: true } },
+      },
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }],
     });
   });
 });

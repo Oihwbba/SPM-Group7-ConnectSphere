@@ -71,6 +71,41 @@ export const reservationSchema = z
   .object(reservationFields)
   .superRefine(validatePeriod);
 
+/**
+ * SCRUM-155 — reserving an approved request: one period, one row per type.
+ * A type may appear once, so each row is one reservation and one shortfall.
+ */
+export const requestReservationSchema = z
+  .object({
+    requestId: z.string().min(1, "Choose an approved request."),
+    startAt: reservationFields.startAt,
+    endAt: reservationFields.endAt,
+    lines: z
+      .array(
+        z.object({
+          equipmentId: reservationFields.equipmentId,
+          quantity: reservationFields.quantity,
+        }),
+      )
+      .min(1, "Add at least one equipment type to reserve."),
+  })
+  .superRefine((data, ctx) => {
+    validatePeriod(data, ctx);
+    const seen = new Set<string>();
+    data.lines.forEach((line, index) => {
+      if (line.equipmentId && seen.has(line.equipmentId)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["lines", index, "equipmentId"],
+          message: "This equipment type is already on another row.",
+        });
+      }
+      seen.add(line.equipmentId);
+    });
+  });
+
+export type RequestReservationInput = z.infer<typeof requestReservationSchema>;
+
 export const availabilitySchema = z
   .object({
     equipmentId: reservationFields.equipmentId,

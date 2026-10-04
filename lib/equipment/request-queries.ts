@@ -8,6 +8,7 @@ import {
   reviewLine,
   type PoolAvailability,
 } from "@/lib/equipment/requests";
+import { RESERVABLE_EVENT_STATUSES } from "@/lib/schemas/reservation";
 
 /**
  * The reads behind the Equipment Requests page (SCRUM-27/28). They take the
@@ -228,4 +229,41 @@ export async function getEquipmentRequestQueue() {
 
 export type QueuedEquipmentRequest = Awaited<
   ReturnType<typeof getEquipmentRequestQueue>
+>[number];
+
+/**
+ * SCRUM-155 AC 1 & 6 — a request Technical Support can reserve: approved, for
+ * an event that can still take a reservation, and not reserved yet. The
+ * listing and the reserve action share it, so what is offered is exactly what
+ * the action accepts. A cancelled reservation releases its stock (SCRUM-32),
+ * so only a confirmed one counts as reserved.
+ */
+export const RESERVABLE_REQUEST = {
+  status: "APPROVED",
+  event: { status: { in: RESERVABLE_EVENT_STATUSES } },
+  reservations: { none: { status: "CONFIRMED" } },
+} satisfies Prisma.EquipmentRequestWhereInput;
+
+/** SCRUM-155 AC 1 & 2 — approved requests to reserve, with what they asked for. */
+export async function getReservableRequests() {
+  return prisma.equipmentRequest.findMany({
+    where: RESERVABLE_REQUEST,
+    select: {
+      id: true,
+      event: { select: { id: true, name: true, startAt: true, endAt: true } },
+      lines: {
+        select: {
+          id: true,
+          quantity: true,
+          equipment: { select: { id: true, type: true } },
+        },
+        orderBy: IN_ENTRY_ORDER,
+      },
+    },
+    orderBy: { event: { startAt: "asc" } },
+  });
+}
+
+export type ReservableRequest = Awaited<
+  ReturnType<typeof getReservableRequests>
 >[number];

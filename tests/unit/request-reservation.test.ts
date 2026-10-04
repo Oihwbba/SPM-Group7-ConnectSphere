@@ -1,0 +1,321 @@
+import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
+import type { Session } from "next-auth";
+import type { Role } from "@prisma/client";
+
+import { auth } from "@/auth";
+import { prisma } from "@/lib/db";
+import { reserveEquipmentRequest } from "@/app/(app)/equipment/actions";
+import { RESERVABLE_EVENT_STATUSES } from "@/lib/schemas/reservation";
+
+// SCRUM-155 — reserve an approved request in one step, all rows or none.
+// Database mocked; the simultaneous cases run against real Postgres in
+// tests/integration/request-reservation.test.ts.
+const tx = vi.hoisted(() => ({
+  equipmentRequest: { findFirst: vi.fn() },
+  equipment: { findFirst: vi.fn() },
+  reservation: { findMany: vi.fn(), createMany: vi.fn() },
+  equipmentUnavailability: { findMany: vi.fn() },
+  $queryRaw: vi.fn(),
+}));
+
+vi.mock("@/auth", () => ({ auth: vi.fn() }));
+vi.mock("@/lib/db", () => ({
+  prisma: { ...tx, $transaction: vi.fn() },
+}));
+
+const mockAuth = auth as unknown as Mock;
+const mockTransaction = prisma.$transaction as unknown as Mock;
+
+function sessionFor(role: Role, id: string): Session {
+  return {
+    user: { id, role, name: "Test User", email: `${id}@test.local` },
+    expires: "2999-01-01T00:00:00.000Z",
+  };
+}
+
+const START = "2030-06-01T01:00:00.000Z";
+const END = "2030-06-01T09:00:00.000Z";
+
+const validInput = {
+  requestId: "eqr_1",
+  startAt: START,
+  endAt: END,
+  lines: [
+    { equipmentId: "eq_projector", quantity: 2 },
+    { equipmentId: "eq_mic", quantity: 3 },
+  ],
+};
+
+/**
+ * An approved request for evt_1. Projectors: 10 in the pool, 5 reserved for
+ * the whole period, so 5 are free. Microphones: 4 in the pool, none committed.
+ */
+function approvedRequestWithStock() {
+  tx.$queryRaw
+    .mockResolvedValueOnce([{ id: "eqr_1" }])
+    .mockResolvedValueOnce([{ id: "eq_mic" }, { id: "eq_projector" }]);
+  tx.equipmentRequest.findFirst.mockResolvedValue({ eventId: "evt_1" });
+  tx.equipment.findFirst.mockImplementation(({ where }) =>
+    Promise.resolve({ totalQuantity: where.id === "eq_projector" ? 10 : 4 }),
+  );
+  tx.reservation.findMany.mockImplementation(({ where }) =>
+    Promise.resolve(
+      where.equipmentId === "eq_projector"
+        ? [{ startAt: new Date(START), endAt: new Date(END), quantity: 5 }]
+        : [],
+    ),
+  );
+  tx.equipmentUnavailability.findMany.mockResolvedValue([]);
+  tx.reservation.createMany.mockResolvedValue({ count: 2 });
+}
+
+beforeEach(() => {
+  vi.resetAllMocks();
+  mockTransaction.mockImplementation((cb: (t: typeof tx) => unknown) => cb(tx));
+  mockAuth.mockResolvedValue(sessionFor("TECH_SUPPORT", "usr_tech"));
+});
+
+describe("reserveEquipmentRequest — SCRUM-155", () => {
+  it("SCRUM-155 [AC3] TC-155-04: rows that all fit are reserved together, each Confirmed and linked to the event and the request", async () => {
+    approvedRequestWithStock();
+
+    const result = await reserveEquipmentRequest(validInput);
+
+    expect(result).toEqual({ ok: true, data: { reserved: 2 } });
+    expect(tx.reservation.createMany).toHaveBeenCalledTimes(1);
+    expect(tx.reservation.createMany).toHaveBeenCalledWith({
+      data: [
+        {
+          eventId: "evt_1",
+          requestId: "eqr_1",
+          equipmentId: "eq_projector",
+          quantity: 2,
+          startAt: new Date(START),
+          endAt: new Date(END),
+          reservedById: "usr_tech",
+          status: "CONFIRMED",
+        },
+        {
+          eventId: "evt_1",
+          requestId: "eqr_1",
+          equipmentId: "eq_mic",
+          quantity: 3,
+          startAt: new Date(START),
+          endAt: new Date(END),
+          reservedById: "usr_tech",
+          status: "CONFIRMED",
+        },
+      ],
+    });
+  });
+
+  it("SCRUM-155 [AC4] TC-155-05: one short row reserves nothing, and only that row reports what is free and the shortfall", async () => {
+    approvedRequestWithStock();
+
+    const result = await reserveEquipmentRequest({
+      ...validInput,
+      lines: [
+        { equipmentId: "eq_projector", quantity: 2 },
+        { equipmentId: "eq_mic", quantity: 6 },
+      ],
+    });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error).toMatch(/Nothing was reserved/);
+      expect(result.fieldErrors).toEqual({
+        "lines.1.quantity": ["Only 4 of 4 free for this period — 2 short."],
+      });
+    }
+    expect(tx.reservation.createMany).not.toHaveBeenCalled();
+  });
+
+  it("SCRUM-155 [AC4] TC-155-05: every short row is reported at once, not just the first", async () => {
+    approvedRequestWithStock();
+
+    const result = await reserveEquipmentRequest({
+      ...validInput,
+      lines: [
+        { equipmentId: "eq_projector", quantity: 7 },
+        { equipmentId: "eq_mic", quantity: 5 },
+      ],
+    });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok)
+      expect(Object.keys(result.fieldErrors ?? {})).toEqual([
+        "lines.0.quantity",
+        "lines.1.quantity",
+      ]);
+    expect(tx.reservation.createMany).not.toHaveBeenCalled();
+  });
+
+  it("SCRUM-155 [AC5] TC-155-08: locks the request first, then the equipment rows in id order, before counting anything", async () => {
+    approvedRequestWithStock();
+
+    await reserveEquipmentRequest(validInput);
+
+    const [requestLock, equipmentLock] = tx.$queryRaw.mock.calls;
+    expect(requestLock[0].join("?")).toMatch(
+      /FROM "EquipmentRequest" WHERE "id" = \? FOR UPDATE/,
+    );
+    expect(requestLock[1]).toBe("eqr_1");
+    expect(equipmentLock[0].join("?")).toMatch(/ORDER BY "id" FOR UPDATE/);
+    // Rows arrive projector-then-mic; the lock takes them sorted by id.
+    expect(equipmentLock[1].values).toEqual(["eq_mic", "eq_projector"]);
+
+    const [lockRequestAt, lockEquipmentAt] =
+      tx.$queryRaw.mock.invocationCallOrder;
+    expect(lockRequestAt).toBeLessThan(
+      tx.equipmentRequest.findFirst.mock.invocationCallOrder[0],
+    );
+    expect(lockEquipmentAt).toBeLessThan(
+      tx.reservation.findMany.mock.invocationCallOrder[0],
+    );
+  });
+
+  it("SCRUM-155 [AC1, AC6] TC-155-01: only an approved, unreserved request for an Approved or Planning event is accepted", async () => {
+    approvedRequestWithStock();
+
+    await reserveEquipmentRequest(validInput);
+
+    expect(tx.equipmentRequest.findFirst).toHaveBeenCalledWith({
+      where: {
+        id: "eqr_1",
+        status: "APPROVED",
+        event: { status: { in: RESERVABLE_EVENT_STATUSES } },
+        reservations: { none: { status: "CONFIRMED" } },
+      },
+      select: { eventId: true },
+    });
+  });
+
+  it("SCRUM-155 [AC1, AC6] TC-155-06, TC-155-10: a request already reserved, or no longer approved, is refused and nothing is written", async () => {
+    approvedRequestWithStock();
+    tx.equipmentRequest.findFirst.mockResolvedValue(null);
+
+    const result = await reserveEquipmentRequest(validInput);
+
+    expect(result.ok).toBe(false);
+    if (!result.ok)
+      expect(result.error).toMatch(/already reserved, or no longer approved/);
+    expect(tx.reservation.createMany).not.toHaveBeenCalled();
+  });
+
+  it("refuses a retired or unknown equipment type: the row lock finds fewer rows than asked for", async () => {
+    approvedRequestWithStock();
+    tx.$queryRaw.mockReset();
+    tx.$queryRaw
+      .mockResolvedValueOnce([{ id: "eqr_1" }])
+      .mockResolvedValueOnce([{ id: "eq_projector" }]);
+
+    const result = await reserveEquipmentRequest(validInput);
+
+    expect(result).toEqual({
+      ok: false,
+      error: "Equipment type is unavailable.",
+      fieldErrors: undefined,
+    });
+    expect(tx.reservation.createMany).not.toHaveBeenCalled();
+  });
+
+  it("refuses equipment the availability count cannot find after the row lock", async () => {
+    approvedRequestWithStock();
+    tx.equipment.findFirst.mockResolvedValue(null);
+
+    const result = await reserveEquipmentRequest(validInput);
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toBe("Equipment type is unavailable.");
+    expect(tx.reservation.createMany).not.toHaveBeenCalled();
+  });
+
+  describe("SCRUM-155 [AC7] TC-155-09: invalid rows or periods reserve nothing and say where the problem is", () => {
+    it.each([
+      [{ lines: [] }, "lines", /at least one/],
+      [
+        { lines: [{ equipmentId: "", quantity: 1 }] },
+        "lines.0.equipmentId",
+        /Select an equipment type/,
+      ],
+      [
+        { lines: [{ equipmentId: "eq_mic", quantity: 0 }] },
+        "lines.0.quantity",
+        /greater than zero/,
+      ],
+      [
+        { lines: [{ equipmentId: "eq_mic", quantity: 1.5 }] },
+        "lines.0.quantity",
+        /whole number/,
+      ],
+      [
+        {
+          lines: [
+            { equipmentId: "eq_mic", quantity: 1 },
+            { equipmentId: "eq_mic", quantity: 2 },
+          ],
+        },
+        "lines.1.equipmentId",
+        /already on another row/,
+      ],
+      [{ endAt: START }, "endAt", /after the start/],
+      [{ startAt: "2020-01-01T01:00:00.000Z" }, "startAt", /in the past/],
+      [{ requestId: "" }, "requestId", /approved request/],
+    ])("%j → %s", async (change, path, message) => {
+      const result = await reserveEquipmentRequest({
+        ...validInput,
+        ...change,
+      });
+
+      expect(result.ok).toBe(false);
+      if (!result.ok) expect(result.fieldErrors?.[path]?.[0]).toMatch(message);
+      expect(mockTransaction).not.toHaveBeenCalled();
+    });
+
+    it("keeps every message for a field, e.g. a blank start is both missing and unreadable", async () => {
+      const result = await reserveEquipmentRequest({
+        ...validInput,
+        startAt: "",
+      });
+
+      expect(result.ok).toBe(false);
+      if (!result.ok)
+        expect(result.fieldErrors?.startAt).toEqual([
+          "Choose a reservation start time.",
+          "Invalid start time.",
+        ]);
+    });
+  });
+
+  it("refuses a role without equipment:reserve before reading anything", async () => {
+    mockAuth.mockResolvedValue(sessionFor("COORDINATOR", "usr_coord"));
+
+    const result = await reserveEquipmentRequest(validInput);
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toMatch(/permission/i);
+    expect(mockTransaction).not.toHaveBeenCalled();
+  });
+
+  it("refuses a session with a permitted role but no user id before any write", async () => {
+    mockAuth.mockResolvedValue({
+      user: { role: "TECH_SUPPORT", name: "Test User" },
+      expires: "2999-01-01T00:00:00.000Z",
+    });
+
+    const result = await reserveEquipmentRequest(validInput);
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toMatch(/permission/i);
+    expect(mockTransaction).not.toHaveBeenCalled();
+  });
+
+  it("a database failure while saving propagates instead of being reported as a refusal", async () => {
+    approvedRequestWithStock();
+    tx.reservation.createMany.mockRejectedValue(new Error("connection lost"));
+
+    await expect(reserveEquipmentRequest(validInput)).rejects.toThrow(
+      "connection lost",
+    );
+  });
+});
