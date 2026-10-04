@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-09-30. Jira is the source of truth.
+     Synced from Jira on 2026-10-04. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-114 - Chore: Sprint 1 post-DoD test hardening and code hygiene cleanup
@@ -16,9 +16,9 @@
 
 ---
 
-Description: Three stories closed in Sprint 1 had not met the test coverage requirement in our Definition of Done at sprint close. Complete the remaining unit tests in Sprint 2 and link this chore to each affected story. This chore tracks the follow-up work; it does not replace those stories or earn their story points again.
+**Description:** Three stories closed in Sprint 1 had not met the test coverage requirement in our Definition of Done at sprint close. Complete the remaining unit tests in Sprint 2 and link this chore to each affected story. This chore tracks the follow-up work; it does not replace those stories or earn their story points again.
 
-Acceptance criteria:
+**Acceptance criteria:**
 
 1. The chore is linked to all three affected Sprint 1 stories.
 2. Each new test is mapped to the relevant story’s acceptance criterion or identified as testing a necessary technical or security contract.

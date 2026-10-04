@@ -1,83 +1,48 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-09-30. Jira is the source of truth.
+     Synced from Jira on 2026-10-04. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
-# SCRUM-45 - Workflow notifications for status, assignment, clarification, change-request and reassignment events
+# SCRUM-45 - Organiser and Coordinator workflow notifications
 
 | | |
 |---|---|
 | **Type** | Story |
 | **Epic** | SCRUM-8 - Event Change & Notifications |
 | **Priority** | High |
-| **Story points** | 3 |
+| **Story points** | 5 |
 | **Status in Jira** | To Do |
 | **Sprint** | Backlog |
 | **Jira** | https://smu-spm-group7.atlassian.net/browse/SCRUM-45 |
 
 ---
 
-Merged story (29 Sep 2026): absorbs SCRUM-46 (coordinator assignment), SCRUM-47 (change request outcome), SCRUM-56 (clarification requested) and SCRUM-57 (coordinator reassigned). Any reference to those keys elsewhere now means this story. SCRUM-54 (booking outcome) is now part of SCRUM-51.
+**User story:** As an Event Organiser or Event Coordinator, I want to be notified when something happens to an event I'm involved in, so that I stay informed without checking manually.
 
-As a user, I want to receive a notification when an event status changes, so that I stay informed without checking manually.
+**Acceptance criteria**
 
-Acceptance Criteria:
+1. Given a request is submitted and a Coordinator is assigned (SCRUM-14, SCRUM-20), then the Organiser and the assigned Coordinator each get one notification for the combined action.
+2. Given a request is approved and moves to Planning (SCRUM-19, SCRUM-81), then the Organiser is notified.
+3. Given a request or a Planning event is rejected (SCRUM-19, SCRUM-117), then the Organiser is notified with the reason and the outcome chosen in SCRUM-126.
+4. Given an event is Confirmed (SCRUM-81), then the Organiser is notified.
+5. Given a Confirmed event returns to Planning (SCRUM-128, SCRUM-26), then the Organiser is notified with the reason.
+6. Given an event is cancelled (SCRUM-82), then the Organiser and the assigned Coordinator are notified with the reason.
+7. Given an event is completed (SCRUM-82), then the Organiser and the assigned Coordinator are notified.
+8. Given clarification is requested (SCRUM-18), then the Organiser is notified with what is needed. Given it is answered (SCRUM-108), then the Coordinator is notified.
+9. Given a change request is approved or rejected (SCRUM-128), then the Organiser who raised it is notified, with the reason if rejected.
+10. Given a handover is proposed (SCRUM-21), then the named Coordinator is notified. Given it is accepted, then both Coordinators and the Organiser are notified.
+11. Given registration reaches capacity, closes at its closing time, or an Attendee withdraws from a full event (SCRUM-73–77), then the Organiser and the assigned Coordinator are notified.
+12. Each notification names the event, says what happened, and links to the event.
+13. Each trigger creates exactly one notification per recipient. Retrying the same action creates no duplicate.
+14. The clarification sub-state never creates a generic status notification.
+15. Attendee notifications are owned by SCRUM-85, and Venue Staff, Technical Support and arrangement notifications by SCRUM-124; this story does not duplicate them. Notifications appear in the recipient's notification list (SCRUM-48).
 
-* Notifications are created for the status transitions explicitly assigned to this story: Submitted, Approved, Rejected, Confirmed, Completed and Cancelled.
-* The notification identifies the event and the new status.
-* The Organiser and relevant assigned Coordinator receive the workflow status notification.
-* For Confirmed and Cancelled, Attendee-facing notifications are owned by SCRUM-85 and must not be duplicated here.
-* Completion notification is workflow-facing only; it does not replace any Attendee-specific notification owned by SCRUM-85.
-* Specialised notification stories own their own triggers: SCRUM-46 assignment, SCRUM-47 change-request outcome, SCRUM-54 booking outcome, SCRUM-56 clarification and SCRUM-57 reassignment.
-* Internal clarification sub-state changes do not create a generic status notification.
-* Notification creation is idempotent per event, status transition and recipient.
+**Already built:** the Sprint 1 code sends AC1 and both halves of AC8.
+
+**Customer basis:** "Notifications cover event submission, approval, registration updates, confirmation, cancellation." Briefing §6 trigger list. "No specific requirement, the team can decide what is the best approach" (recipients).
+
+**Change log**
+
+* 2026-10-01: rewritten as one table of triggers and recipients; staff notifications moved to SCRUM-124; re-estimated from 6 to 5.
+* 2026-10-01 (audit): the table is now one numbered criterion per trigger. Removed the "handover declined" trigger (SCRUM-21 no longer has a decline step) and the reminders reference (SCRUM-122 is beyond Release 1). "Registration closes" now means at its closing time, not when the Organiser closes it themselves. Noted which notifications the Sprint 1 code already sends.
 
 Functionality Area: Notification System
-
----
-
-Merged from SCRUM-46 — User is notified on coordinator assignment
-
-As a user, I want to receive a notification when a coordinator is assigned to an event, so that I stay informed.
-
-Acceptance Criteria:
-
-* Given a Coordinator is assigned to an event, when the assignment is saved, then a notification is sent to the Organiser and the assigned Coordinator.
-
-Note: previously also covered venue booking decisions, duplicating "Notify Coordinator of Booking Outcome" (SCRUM-54) entirely — that bullet removed 2026-09-06 during the full backlog synthesis; SCRUM-54 is the sole owner of that notification.
-
----
-
-Merged from SCRUM-47 — Organiser is notified of change request outcome
-
-As an Event Organiser, I want to receive a notification about the outcome of my change request, so that I know whether to proceed or adjust.
-
-Acceptance Criteria:
-
-* Given a change request is approved or rejected, when the decision is saved, then a notification is created for the Organiser who submitted the request.
-* Given the notification is created, when the Organiser opens it, then it states the outcome (approved/rejected) and, if rejected, the reason given.
-
----
-
-Merged from SCRUM-56 — User is notified when clarification is requested
-
-As an Event Organiser, I want to be notified when a Coordinator requests clarification on my event request, so that I know to respond.
-
-Acceptance Criteria:
-
-* Given a Coordinator requests clarification on an Under Review request, when the clarification is saved, then a notification is created for the Organiser.
-* The notification identifies the event and states what clarification or amendment is being requested.
-* The notification is created once for the clarification request; repeated attempts to create the same open clarification do not create duplicates.
-* The clarification-response action is owned by SCRUM-109.
-
----
-
-Merged from SCRUM-57 — User is notified when a coordinator is reassigned
-
-As an Event Coordinator, I want the relevant Coordinators to be notified when a handover is accepted, so that responsibility changes are visible.
-
-Acceptance Criteria:
-
-* Given a pending coordinator handover, when the incoming Coordinator accepts it, then a notification is created for the outgoing and incoming Coordinators.
-* The notification states the event and identifies the new current Coordinator.
-* A notification is not sent merely when a handover is proposed and not yet accepted.
-* The event's current Coordinator remains the outgoing Coordinator until acceptance, consistent with SCRUM-21.

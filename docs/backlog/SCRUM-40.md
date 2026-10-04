@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-09-30. Jira is the source of truth.
+     Synced from Jira on 2026-10-04. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-40 - Flag venue suitability, with the reason
@@ -8,46 +8,34 @@
 |---|---|
 | **Type** | Story |
 | **Epic** | SCRUM-7 - Venue Management |
-| **Priority** | Medium |
-| **Story points** | 2 |
+| **Priority** | Highest |
+| **Story points** | 3 |
 | **Status in Jira** | To Do |
 | **Sprint** | Backlog |
 | **Jira** | https://smu-spm-group7.atlassian.net/browse/SCRUM-40 |
 
 ---
 
-Merged story (29 Sep 2026): absorbs SCRUM-49 (Show Reason for Unsuitability). Any reference to SCRUM-49 elsewhere now means this story. SCRUM-35 is now part of SCRUM-34.
+**User story:** As an Event Coordinator, I want to see whether a venue appears suitable for my event, with the reasons, and record my own judgement, so that I don't pursue unsuitable venues.
 
-As an Event Coordinator, I want to see whether a venue appears suitable for my event based on attendance, capacity, required facilities, accessibility and layout, so that I don't pursue unsuitable venues.
+**Acceptance criteria**
 
-Acceptance Criteria
+1. Given expected attendance is greater than the venue's capacity, then the venue is marked Not suitable. Given attendance equals capacity, it is not marked unsuitable on capacity.
+2. Given the event requires a facility (SCRUM-127) that the venue doesn't have, then the venue is marked Not suitable.
+3. Given the event needs an accessibility feature (SCRUM-127) that the venue doesn't provide, then the venue is marked Not suitable.
+4. Given the event requires a room layout the venue doesn't support, then the venue is marked Not suitable.
+5. Given none of AC1–AC4 applies, then the venue is marked Suitable and no reasons are shown.
+6. Every reason that applies is listed, naming the mismatch and both values where relevant, e.g. "Capacity 100 < expected attendance 150", "Missing facility: projector", "No wheelchair access; event needs wheelchair access", "Banquet layout not supported".
+7. The indicator and reasons appear in search results (SCRUM-38) and on the venue detail view (SCRUM-34).
+8. The assigned Coordinator can record a judgement for this event and venue, Suitable or Not suitable, with a note. It is shown next to the automatic result and is the result that counts for this event.
+9. The judgement is advisory: it never blocks a booking request (SCRUM-50) or confirmation (SCRUM-110). Attendance above the venue's capacity is refused by SCRUM-50 whatever the judgement says.
+10. The judgement and note are shown to Venue Staff on the booking request they review (SCRUM-52).
 
-* Given expected attendance is strictly greater than the venue's capacity, when suitability is evaluated, then the venue is marked "not suitable".
-* Given expected attendance is exactly equal to the venue's capacity, when suitability is evaluated, then the venue is marked suitable — the venue is only unsuitable once attendance exceeds capacity.
-* Given a required facility is unavailable at the venue, when suitability is evaluated, then the venue is marked "not suitable" regardless of capacity.
-* Given the event states an accessibility need the venue does not provide, when suitability is evaluated, then the venue is marked "not suitable".
-* Given the event states a required room layout the venue does not support, when suitability is evaluated, then the venue is marked "not suitable".
-* Given expected attendance is within capacity and every required facility, accessibility need and layout is met, when suitability is evaluated, then the venue is marked suitable.
-* Suitability indicator is visible on search results and venue detail views.
+**Customer basis:** "Currently it is based on human judgement, co-ordinator will update." "Yes, accessibility/layout mismatches count and should be reflected by the co-ordinator on suitability."
 
-Decision record (2026-09-13): Accessibility and layout mismatches count as suitability failures. Suitability therefore covers four dimensions: capacity, facilities, accessibility and supported layout.
+**Change log**
 
-Planning note: This story should be estimated based on all four dimensions. Event-side fields are defined in SCRUM-13 and venue-side attributes in SCRUM-34/35.
+* 2026-10-01: rewritten in one format; the judgement is advisory and shown to Venue Staff.
+* 2026-10-01 (audit): AC2 and AC3 read the facilities and accessibility features the Organiser ticks in the request form (SCRUM-127); the form stored them as free text, which can't be compared. AC9 states that the built capacity refusal in SCRUM-50 still applies. Group headings removed.
 
-Functionality Area: Venue Management
-
----
-
-Merged from SCRUM-49 — Show Reason for Unsuitability
-
-User Story
-As an Event Coordinator, I want to see the specific reason a venue is flagged unsuitable, so that I understand why before deciding whether to proceed.
-
-Acceptance Criteria
-
-* Reason(s) displayed, naming the mismatch and both values where relevant — e.g. "Capacity 100 < expected attendance 150", "Missing facility: AV equipment".
-* Reasons cover all four suitability dimensions in SCRUM-40: capacity, required facilities, accessibility and supported layout — e.g. "No wheelchair access; event requires step-free entry", "Venue does not support banquet layout".
-* Multiple reasons are all listed if more than one applies.
-* Given a venue is suitable, when the Coordinator views it, then no unsuitability reasons are shown.
-
-Note (2026-09-13): the accessibility and layout reasons follow from the customer's answer on SCRUM-40 — "Yes, accessibility/layout mismatches count and should be reflected by the co-ordinator on suitability." A venue can now be marked unsuitable for reasons this story previously had no vocabulary to explain. The suitable-side criterion was added so the story states behaviour on both sides of the flag.
+Functionality Area: Venue Suitability Checking

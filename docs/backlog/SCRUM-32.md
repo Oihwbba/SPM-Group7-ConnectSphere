@@ -1,36 +1,36 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-09-30. Jira is the source of truth.
+     Synced from Jira on 2026-10-04. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
-# SCRUM-32 - Modify or Cancel Reservation
+# SCRUM-32 - Report reserved equipment that can no longer be provided
 
 | | |
 |---|---|
 | **Type** | Story |
 | **Epic** | SCRUM-10 - Equipment Management |
-| **Priority** | Medium |
-| **Story points** | 3 |
+| **Priority** | High |
+| **Story points** | 2 |
 | **Status in Jira** | To Do |
 | **Sprint** | Backlog |
 | **Jira** | https://smu-spm-group7.atlassian.net/browse/SCRUM-32 |
 
 ---
 
-* User Story: As a Technical Support Staff member, I want to modify or cancel equipment reservations, so that I can adapt to changing event requirements and free up equipment when needed.
-* Acceptance Criteria:
-    * Given a reservation exists, when I modify the quantity, then the system updates availability for the affected time periods.
-    * Given I increase a reservation's quantity beyond what is available for any part of the period, when I save, then the change is rejected and the shortfall is shown.
-    * Given I set a reservation's quantity to zero or a negative number, when I save, then the change is rejected and the quantity is reported as invalid - cancelling is a separate action.
-    * Given a reservation exists, when I cancel it, then the equipment quantity is fully restored to the available pool.
-    * Given a reservation has already been cancelled, when it is cancelled again, then nothing changes and no additional quantity is returned to the pool.
-    * Given I modify dates/times, when the new period overlaps other reservations, then the system warns me and prevents the save.
-    * Given the new period only touches another reservation at an endpoint, when I save, then the change is accepted - periods that touch do not overlap.
-    * Given I cancel a reservation, when I confirm, then the associated Event Coordinator is notified.
-    * Given I make changes, when I save, then an audit trail is created showing what changed, who made the change, and the timestamp.
+**User story:** As a Technical Support Staff member, I want to report that reserved equipment can no longer be provided, with the reason, so that the Coordinator can decide how to re-plan.
 
+**Acceptance criteria**
 
-‌
+1. Given equipment is reserved for an event (SCRUM-31), when I report that it can't be provided and give a reason, then the reservation is flagged Needs Reconsideration (SCRUM-26) and stays reserved until the Coordinator resolves it.
+2. The reason is required and shown to the Coordinator.
+3. Given the reservation is already flagged, when I report it again, then nothing changes and no second notification is sent.
+4. Technical Support cannot cancel a reservation or change its quantity or period. The Coordinator resolves the flag (SCRUM-26), which may cancel the reservation and return its stock.
+5. The report and its resolution are recorded with who and when. The Coordinator is notified (SCRUM-124).
 
-Note (2026-09-07): double-cancellation, quantity validity and endpoint semantics were added following the Week 2 assignment feedback. Double-cancellation matters here specifically because each cancellation returns quantity to the pool - repeating it would inflate availability.
+**Customer basis:** "Reserved equipment may become unavailable because of damage or maintenance" (briefing). "Changes require arrangements to be reviewed again; staff decide offline and coordinator update the system on the decision whether to cancel." "Adjustments must be handled manually by staff rather than through automatic un-booking."
+
+**Change log**
+
+* 2026-10-01: rewritten so Technical Support reports and the Coordinator decides (the earlier version let Technical Support change dates and cancel directly).
+* 2026-10-01 (audit): reworded to reservations, matching the built equipment model. Removed two criteria that repeated SCRUM-26 (cancelling returns stock once) and SCRUM-82 (event cancellation). The unmerged PR #37 builds the earlier version of this story, where Technical Support changes or cancels reservations; close or rework it.
 
 Functionality Area: Equipment Reservation

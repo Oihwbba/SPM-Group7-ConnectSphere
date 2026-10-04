@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-03. Jira is the source of truth.
+     Synced from Jira on 2026-10-04. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-126 - Coordinator decides whether a rejected request is amended or submitted as new
@@ -10,7 +10,7 @@
 | **Epic** | SCRUM-6 - Event Request Lifecycle |
 | **Priority** | Medium |
 | **Story points** | 2 |
-| **Status in Jira** | To Do |
+| **Status in Jira** | In Review |
 | **Sprint** | SCRUM Sprint 2 |
 | **Jira** | https://smu-spm-group7.atlassian.net/browse/SCRUM-126 |
 

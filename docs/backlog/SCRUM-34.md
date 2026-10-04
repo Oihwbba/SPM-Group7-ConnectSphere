@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-09-30. Jira is the source of truth.
+     Synced from Jira on 2026-10-04. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-34 - Browse and maintain the venue catalogue
@@ -8,45 +8,35 @@
 |---|---|
 | **Type** | Story |
 | **Epic** | SCRUM-7 - Venue Management |
-| **Priority** | High |
-| **Story points** | 3 |
+| **Priority** | Highest |
+| **Story points** | 5 |
 | **Status in Jira** | To Do |
 | **Sprint** | Backlog |
 | **Jira** | https://smu-spm-group7.atlassian.net/browse/SCRUM-34 |
 
 ---
 
-Merged story (29 Sep 2026): absorbs SCRUM-35 (Maintain Venue Records). Any reference to SCRUM-35 elsewhere now means this story.
+**User story:** As Venue Staff, I want to add, edit and retire venues in the catalogue, and as an Event Coordinator I want to view each venue's details, so that planning uses accurate venue information.
 
-User Story
-As an Event Coordinator, I want to view a venue's location, capacity, facilities, accessibility features, and supported layouts, so that I can assess it for an event.
+**Acceptance criteria**
 
-Acceptance Criteria
+1. A venue's detail view shows location, capacity, facilities, accessibility features, supported layouts and opening hours.
+2. Any internal user can view venue details; the view always reflects the latest saved record.
+3. Venue Staff can add a venue. Name, location, capacity and opening hours are required. Opening hours are an opening and a closing time for each day of the week in SGT, or Closed for that day.
+4. Given a capacity of zero or less, or a non-whole number, then the venue is not saved and capacity is reported as invalid.
+5. Given a closing time that isn't after the opening time on the same day, then the venue is not saved and that day's hours are reported as invalid.
+6. Venue Staff can edit a venue's details; changes show immediately in search, filtering, suitability (SCRUM-38, SCRUM-40) and the request form (SCRUM-127).
+7. Given a booking request's period falls outside the venue's opening hours, then it is refused and the hours are shown (SCRUM-50).
+8. Venue Staff can retire a venue. A retired venue no longer appears in search, filtering, the request form or new booking requests; bookings that reference it stay readable.
+9. Other roles are refused when they try to change the catalogue (SCRUM-67).
+10. Given a venue has future Pending or Approved bookings, when Venue Staff change its capacity, facilities, accessibility features, supported layouts or opening hours so that a booking no longer fits, then they are warned and shown the affected bookings before saving; once saved, those bookings are flagged Needs Reconsideration (SCRUM-26) and their Coordinators decide.
+11. Given a venue has future Pending or Approved bookings, when Venue Staff retire it, then they are warned and shown those bookings first; once retired, those bookings are flagged (SCRUM-26). Nothing is cancelled automatically.
 
-* Venue detail view displays location, capacity, facilities, accessibility info, supported layouts, and operating information.
-* Information reflects the latest saved record.
-* Accessible to any authorised internal user.
+**Customer basis:** "Venue Staff can create/edit/delete venue records." "If venue attributes change after booking… System can flag and it is up to the co-ordinator to decide on follow up action." Venue information includes "operating information" (Venue Catalogue).
 
----
+**Change log**
 
-Merged from SCRUM-35 — Maintain Venue Records
+* 2026-10-01: retiring a venue flags future bookings; operating hours added to the attributes that flag bookings; flag notifications owned by SCRUM-124.
+* 2026-10-01 (audit): opening hours are now an opening and closing time per weekday in SGT (they are free text in the code and seed data), so search (SCRUM-38) and booking (SCRUM-50) can test against them; refusing a booking outside opening hours moved here from SCRUM-50. Existing venues' hours are re-entered in the new format in the seed data. Built-in equipment removed from the detail view, because equipment catalogue maintenance (SCRUM-119) is beyond Release 1. Group headings removed.
 
-User Story
-As Venue Staff, I want to create, edit and remove venue records, so that the catalogue stays accurate and current.
-
-Acceptance Criteria
-
-* Venue Staff can add a new venue with all required fields.
-* Venue Staff can edit an existing venue's details.
-* Venue Staff can remove a venue from the catalogue. A removed venue no longer appears in search, filtering or booking, but any venue referenced by an existing booking is withdrawn rather than erased, so historic bookings stay readable.
-* Given a venue with a future approved booking, when Venue Staff try to remove it, then they are warned and the affected bookings are surfaced before the removal is confirmed.
-* Changes are reflected immediately in search, filtering, and suitability checks.
-* Mandatory fields (location, capacity) cannot be left blank.
-* Given a capacity of zero or a negative number, when Venue Staff save, then the venue is not saved and the capacity is reported as invalid — capacity must be a positive whole number.
-* Given a venue's capacity is reduced below the expected attendance of an event already booked into it, when Venue Staff save, then the change is accepted but the affected booking is surfaced to staff rather than being silently left inconsistent.
-
-Customer clarification (2026-09-13): "Venue Staff can create/edit/delete venue records." Delete was not previously in the story — it only covered create and edit. The two removal criteria above are new.
-
-The wording delete is taken to mean removal from the working catalogue, not destruction of history: erasing a venue that past events were held in would break those events' records and the auditability requirement. If the customer means a hard delete, raise it — it changes the data model.
-
-Note (2026-09-07): the capacity-validity rule was added following the Week 2 assignment feedback, which asked explicitly whether zero or negative values are allowed wherever a capacity is set. The reduced-capacity criterion was added because capacity feeds the suitability check (SCRUM-40) and the booking flow — editing it after a booking exists is a real path that had no stated behaviour.
+Functionality Area: Venue Catalogue
