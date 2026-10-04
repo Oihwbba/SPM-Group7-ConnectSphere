@@ -1,8 +1,8 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-09-30. Jira is the source of truth.
+     Synced from Jira on 2026-10-04. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
-# SCRUM-80 - Record attendance on the day
+# SCRUM-80 - Record attendance per registration on the day
 
 | | |
 |---|---|
@@ -16,20 +16,23 @@
 
 ---
 
-BEYOND FIRST RELEASE — backlog only, do not pull into a sprint without customer confirmation.
+**Beyond Release 1** (label `beyond-release-1`): kept in the backlog to show the epic's full shape; do not pull into a sprint without customer confirmation.
 
-As an Event Coordinator, I want to record which registered Attendees actually attended, so that ConnectSphere has accurate figures for reporting and for planning similar future events.
+**User story:** As an Event Coordinator, I want to record which registered Attendees actually attended, so that ConnectSphere has accurate figures for reporting and for planning similar events.
 
-Acceptance Criteria:
+**Acceptance criteria**
 
-* A Coordinator can mark a registration as attended or not attended on or after the event date
-* Attendance cannot be recorded before the event's start time
-* Attendance figures are visible alongside registration figures for the event
-* Attendance for a withdrawn registration cannot be recorded
+1. Given an event has started, the Coordinator can mark each Registered registration as Attended or Did not attend.
+2. Attendance can't be recorded before the event's start time.
+3. Withdrawn and Cancelled registrations can't be marked.
+4. Attendance figures appear next to registration figures for the event (SCRUM-70).
 
+**Boundary:** Release 1 records an attendance headcount and closure notes when the event is Completed (SCRUM-82). This story adds per-Attendee marking.
 
-Note: appears in the Week 1 briefing's feature areas but not among the twenty core Release-1 features. Backlog only, same reasoning as the waitlist story. It feeds the reporting features, which are themselves out of first-release scope.
+**Customer basis:** Step 14: "Relevant attendance information, operational notes, or issues may then be recorded." Not among the core features for the first release.
 
-INVEST: Independent (needs "Register for an event"); Negotiable (self check-in versus coordinator marking is entirely undecided); Valuable (to reporting, which is not in Release 1); Estimable and Small (one flag per registration); Testable (assert the date constraint and the withdrawn-registration constraint).
+**Change log**
+
+* 2026-10-01: "\[not required\]" prefix replaced by the `beyond-release-1` label used for every out-of-scope story; boundary with SCRUM-82's headcount stated.
 
 Functionality Area: Attendee Registration (beyond first release)

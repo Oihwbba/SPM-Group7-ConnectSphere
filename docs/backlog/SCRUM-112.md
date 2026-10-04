@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-09-30. Jira is the source of truth.
+     Synced from Jira on 2026-10-04. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-112 - The GLM reviewer maintains its own memory instead of being taught by hand
@@ -26,7 +26,6 @@ Scope
 * It returns the complete revised memory, not an append, so stale lessons are deleted rather than accumulating.
 * If it changed, the job opens a pull request against .github/ai-review/memory.md. It never writes to main, so a human still reads every lesson before it can influence a review, and CODEOWNERS already requires Jin Hong's approval under .github/.
 * The 8,000-character budget is enforced in code, not asked for in the prompt, along with guards against the model wiping or gutting the file.
-
 
 Acceptance criteria
 

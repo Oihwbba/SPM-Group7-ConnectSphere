@@ -56,12 +56,10 @@ describe("getRequestableEvents — SCRUM-27 AC 1", () => {
     });
   });
 
-  it("treats approved, planning and confirmed events as ones equipment can be requested for", () => {
-    expect([...REQUESTABLE_EVENT_STATUSES]).toEqual([
-      "APPROVED",
-      "PLANNING",
-      "CONFIRMED",
-    ]);
+  it("AC 1: treats only approved and planning events as ones equipment can be requested for", () => {
+    // A Confirmed event's details are fixed, so equipment must be arranged
+    // before it is confirmed (SCRUM-27 AC 1).
+    expect([...REQUESTABLE_EVENT_STATUSES]).toEqual(["APPROVED", "PLANNING"]);
   });
 });
 

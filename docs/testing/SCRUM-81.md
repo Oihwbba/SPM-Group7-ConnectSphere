@@ -74,14 +74,14 @@ and, if equipment was requested, every line reserved in full.
 
 ### TC-81-04
 
-| Item            | Content                                                                                                                                                                           |
-| --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Test Case ID    | TC-81-04                                                                                                                                                                          |
-| Test Scenario   | [Negative] AC 4: a confirm request for an event that is not ready is refused, names what is outstanding, and changes nothing                                                      |
-| Pre-conditions  | As TC-81-03.                                                                                                                                                                      |
-| Test Steps      | 1. Send a confirm request for the event directly (e.g. from a page opened before a booking was cancelled).                                                                        |
-| Test Data       | Booking PENDING; 5 Projectors requested, 3 reserved                                                                                                                               |
-| Expected Result | Refused: "This event isn't ready to confirm yet. Outstanding: Venue booking (Pending), Equipment (Not fully reserved)." The event stays Planning and no history entry is written. |
+| Item            | Content                                                                                                                                                                                      |
+| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Test Case ID    | TC-81-04                                                                                                                                                                                     |
+| Test Scenario   | [Negative] AC 4: a confirm request for an event that is not ready is refused, names what is outstanding, and changes nothing                                                                 |
+| Pre-conditions  | As TC-81-03.                                                                                                                                                                                 |
+| Test Steps      | 1. Send a confirm request for the event directly (e.g. from a page opened before a booking was cancelled).                                                                                   |
+| Test Data       | Booking PENDING; 5 Projectors requested, 3 reserved                                                                                                                                          |
+| Expected Result | Refused: "This event isn't ready to confirm yet. Outstanding: Venue booking (Pending), Equipment (Not fully reserved: Projector)." The event stays Planning and no history entry is written. |
 
 **Automated by:** `tests/unit/event-confirm.test.ts` › "SCRUM-81 [AC4] TC-81-04: …"
 

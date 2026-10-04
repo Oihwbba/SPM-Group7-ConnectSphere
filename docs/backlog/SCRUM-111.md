@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-09-30. Jira is the source of truth.
+     Synced from Jira on 2026-10-04. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-111 - GLM reviewer context: never drop a file the PR changed, and measure the budget
@@ -24,7 +24,6 @@ Observed on real PRs:
 
 * #54: tests/unit/events.test.ts (40,816 chars), a file the PR itself changed, was dropped after missing the budget by 1,656 characters. The reviewer then judged test coverage without one of the PR's own test files. prisma/seed.ts was dropped too.
 * #52: 10 files omitted. #57: 7 omitted. #53: 3 omitted.
-
 
 There is room: reviews use 95k-168k tokens and GLM-5.3 accepts 1M.
 

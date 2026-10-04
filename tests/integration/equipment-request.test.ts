@@ -226,7 +226,9 @@ describe.skipIf(!usesLocalDatabase)(
 
       expect(offered).toContain(eventId);
       expect(offered).toContain("evt_planning");
-      expect(offered).toContain("evt_confirmed");
+      // AC 1: a Confirmed event's details are fixed, so equipment has to be
+      // arranged before then.
+      expect(offered).not.toContain("evt_confirmed");
       expect(offered).not.toContain(UNDER_REVIEW_EVENT);
       expect(offeredToOther).not.toContain(eventId);
     });

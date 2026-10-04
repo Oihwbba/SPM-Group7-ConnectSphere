@@ -58,7 +58,7 @@ const notReady: ReadinessChecklist = {
     {
       name: "Equipment",
       complete: false,
-      state: "Not fully reserved",
+      state: "Not fully reserved: Projector",
       reason: null,
     },
   ],
@@ -169,7 +169,7 @@ describe("confirmEvent — SCRUM-81", () => {
     expect(result).toEqual({
       ok: false,
       error:
-        "This event isn't ready to confirm yet. Outstanding: Venue booking (Pending), Equipment (Not fully reserved).",
+        "This event isn't ready to confirm yet. Outstanding: Venue booking (Pending), Equipment (Not fully reserved: Projector).",
     });
     expectNothingWritten();
   });

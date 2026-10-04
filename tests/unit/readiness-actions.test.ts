@@ -45,7 +45,7 @@ const checklist: ReadinessChecklist = {
     {
       name: "Equipment",
       complete: false,
-      state: "Not fully reserved",
+      state: "Not fully reserved: Projector",
       reason: null,
     },
   ],

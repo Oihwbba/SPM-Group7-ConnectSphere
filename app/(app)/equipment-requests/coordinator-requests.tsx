@@ -140,6 +140,18 @@ function RequestCard({
   request: CoordinatorEquipmentRequest;
   highlighted: boolean;
 }) {
+  // SCRUM-27 AC8 — the status, "Rejected with the reason". A rejection needs a
+  // reason (SCRUM-28 AC3), and it is the last history entry's note, so it is
+  // read from the history already fetched rather than asked for again. Shown
+  // on the card rather than only in the collapsed log, because it is what the
+  // coordinator acts on.
+  const rejectionReason =
+    request.status === "REJECTED"
+      ? [...request.updates]
+          .reverse()
+          .find((update) => update.toStatus === "REJECTED")?.note
+      : undefined;
+
   return (
     <Card
       id={`request-${request.id}`}
@@ -160,6 +172,15 @@ function RequestCard({
       </CardHeader>
       <CardContent className="space-y-3">
         <RequestLines lines={request.lines} />
+        {rejectionReason && (
+          <p
+            className="whitespace-pre-line rounded-md border border-destructive/40 bg-destructive/5 p-2 text-sm"
+            data-testid="rejection-reason"
+          >
+            <span className="font-medium">Reason: </span>
+            {rejectionReason}
+          </p>
+        )}
         {request.notes && (
           <p className="whitespace-pre-line text-sm">
             <span className="font-medium">Notes: </span>

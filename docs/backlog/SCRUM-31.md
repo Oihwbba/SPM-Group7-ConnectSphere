@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-09-30. Jira is the source of truth.
+     Synced from Jira on 2026-10-04. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-31 - Reserve Equipment for Event
@@ -16,8 +16,9 @@
 
 ---
 
-* User Story: As a Technical Support Staff member, I want to reserve available equipment for an approved event, so that the equipment is secured and not available for other overlapping events.
-* Acceptance Criteria:
+* **User Story:** As a Technical Support Staff member, I want to reserve available equipment for an approved event, so that the equipment is secured and not available for other overlapping events.
+* **Acceptance Criteria:**
+
     * Given the requested quantity is at or below the quantity available for the whole period, when I save the reservation, then it is created with status "Confirmed" and availability reduces by exactly that quantity.
     * Given I create a reservation, when I specify the event, then the reservation is permanently linked to that specific event ID.
     * Given the requested quantity exceeds what is available for any part of the period, when I save, then the system prevents over-allocation and shows the shortfall.

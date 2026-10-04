@@ -10,7 +10,7 @@
 | **Epic** | SCRUM-11 - Attendee Registration |
 | **Priority** | Highest |
 | **Story points** | 2 |
-| **Status in Jira** | In Review |
+| **Status in Jira** | Done |
 | **Sprint** | SCRUM Sprint 2 |
 | **Jira** | https://smu-spm-group7.atlassian.net/browse/SCRUM-73 |
 
