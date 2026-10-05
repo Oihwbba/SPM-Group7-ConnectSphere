@@ -1,8 +1,15 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
+import Link from "next/link";
 import { toast } from "sonner";
-import { ClipboardCheck, Loader2, Plus, Trash2 } from "lucide-react";
+import {
+  ClipboardCheck,
+  ExternalLink,
+  Loader2,
+  Plus,
+  Trash2,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -24,7 +31,13 @@ import {
 } from "./actions";
 
 type Equipment = { id: string; type: string; totalQuantity: number };
-type Row = { key: number; equipmentId: string; quantity: string };
+// `requirements` are the Coordinator's notes for the line the row came from.
+type Row = {
+  key: number;
+  equipmentId: string;
+  quantity: string;
+  requirements: string | null;
+};
 type AvailabilityMap = Record<string, Availability>;
 
 const OFFLINE =
@@ -36,10 +49,15 @@ const SELECT_CLASS =
   "flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring";
 
 let nextRowKey = 0;
-const newRow = (equipmentId = "", quantity = "1"): Row => ({
+const newRow = (
+  equipmentId = "",
+  quantity = "1",
+  requirements: string | null = null,
+): Row => ({
   key: nextRowKey++,
   equipmentId,
   quantity,
+  requirements,
 });
 
 /**
@@ -117,7 +135,11 @@ export function ReserveRequestCard({
     setEndAt(utcToSgWallTime(request?.event.endAt));
     setRows(
       request?.lines.map((line) =>
-        newRow(line.equipment.id, String(line.quantity)),
+        newRow(
+          line.equipment.id,
+          String(line.quantity),
+          line.technicalRequirements,
+        ),
       ) ?? [],
     );
   };
@@ -232,6 +254,33 @@ export function ReserveRequestCard({
 
         {chosen && (
           <>
+            <div
+              className="rounded-lg border border-border bg-muted/30 p-3 text-sm"
+              data-testid="request-summary"
+            >
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <div>
+                  <p className="font-semibold">{chosen.event.name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {formatEventPeriod(chosen.event)} · Requested by{" "}
+                    {chosen.requestedBy.name}
+                  </p>
+                </div>
+                <Link
+                  href={`/equipment-requests#request-${chosen.id}`}
+                  className="inline-flex items-center gap-1 text-xs font-medium text-primary underline-offset-4 hover:underline"
+                >
+                  View request
+                  <ExternalLink className="h-3 w-3" />
+                </Link>
+              </div>
+              {chosen.notes && (
+                <p className="mt-2 text-xs" data-testid="request-notes">
+                  <span className="font-medium">Notes:</span> {chosen.notes}
+                </p>
+              )}
+            </div>
+
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label
@@ -334,6 +383,15 @@ export function ReserveRequestCard({
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
+                    {row.requirements && (
+                      <p
+                        className="mt-2 text-xs text-muted-foreground"
+                        data-testid="row-requirements"
+                      >
+                        <span className="font-medium">Requirements:</span>{" "}
+                        {row.requirements}
+                      </p>
+                    )}
                     {verdict && (
                       <p
                         className={

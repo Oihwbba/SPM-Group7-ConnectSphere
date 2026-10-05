@@ -149,6 +149,7 @@ describe("getReservableRequests — SCRUM-155", () => {
     id,
     equipmentId,
     quantity,
+    technicalRequirements: id === "l1" ? "HDMI from the lectern." : null,
     equipment: { id: equipmentId, type: equipmentId },
   });
   const approved = (
@@ -157,6 +158,8 @@ describe("getReservableRequests — SCRUM-155", () => {
     lines = [line("l1", "eq_projector", 2), line("l2", "eq_mic", 3)],
   ) => ({
     id,
+    notes: "Keynote at 10:00.",
+    requestedBy: { name: "Cody Coordinator" },
     event: {
       id: `evt_${id}`,
       name: `Event ${id}`,
@@ -193,7 +196,7 @@ describe("getReservableRequests — SCRUM-155", () => {
     expect(where.event.startAt.gt).toBeInstanceOf(Date);
   });
 
-  it("SCRUM-155 [AC2, AC6] TC-155-02: reads each event's period and confirmed reservations, and the lines in the order they were entered", async () => {
+  it("SCRUM-155 [AC2, AC6] TC-155-02: reads each event's period and confirmed reservations, who raised the request, its notes, and its lines with their requirements in the order they were entered", async () => {
     await getReservableRequests();
 
     const { select } = db.equipmentRequest.findMany.mock.calls[0][0];
@@ -215,11 +218,14 @@ describe("getReservableRequests — SCRUM-155", () => {
         },
       },
     });
+    expect(select.notes).toBe(true);
+    expect(select.requestedBy).toEqual({ select: { name: true } });
     expect(select.lines).toEqual({
       select: {
         id: true,
         equipmentId: true,
         quantity: true,
+        technicalRequirements: true,
         equipment: { select: { id: true, type: true } },
       },
       orderBy: [{ createdAt: "asc" }, { id: "asc" }],
@@ -232,11 +238,23 @@ describe("getReservableRequests — SCRUM-155", () => {
     expect(await getReservableRequests()).toEqual([
       {
         id: "r1",
+        notes: "Keynote at 10:00.",
+        requestedBy: { name: "Cody Coordinator" },
         event: { id: "evt_r1", name: "Event r1", startAt: START, endAt: END },
         partlyReserved: false,
         lines: [
-          { id: "l1", quantity: 2, equipment: { id: "eq_projector", type: "eq_projector" } },
-          { id: "l2", quantity: 3, equipment: { id: "eq_mic", type: "eq_mic" } },
+          {
+            id: "l1",
+            quantity: 2,
+            technicalRequirements: "HDMI from the lectern.",
+            equipment: { id: "eq_projector", type: "eq_projector" },
+          },
+          {
+            id: "l2",
+            quantity: 3,
+            technicalRequirements: null,
+            equipment: { id: "eq_mic", type: "eq_mic" },
+          },
         ],
       },
     ]);
@@ -251,7 +269,12 @@ describe("getReservableRequests — SCRUM-155", () => {
 
     expect(offered.partlyReserved).toBe(true);
     expect(offered.lines).toEqual([
-      { id: "l2", quantity: 2, equipment: { id: "eq_mic", type: "eq_mic" } },
+      {
+        id: "l2",
+        quantity: 2,
+        technicalRequirements: null,
+        equipment: { id: "eq_mic", type: "eq_mic" },
+      },
     ]);
   });
 

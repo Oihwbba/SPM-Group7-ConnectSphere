@@ -265,12 +265,16 @@ export const CONFIRMED_HOLDS = {
  * SCRUM-155 AC 1, 2 & 6 — approved requests with something still to reserve,
  * each with only what is missing, so choosing one fills in the rest and never
  * reserves a covered line twice. `partlyReserved` marks one already started.
+ * Each also carries what Technical Support needs to reserve it without going
+ * back to the request: who raised it, its notes and each line's requirements.
  */
 export async function getReservableRequests(now = new Date()) {
   const requests = await prisma.equipmentRequest.findMany({
     where: reservableRequest(now),
     select: {
       id: true,
+      notes: true,
+      requestedBy: { select: { name: true } },
       event: {
         select: {
           id: true,
@@ -285,6 +289,7 @@ export async function getReservableRequests(now = new Date()) {
           id: true,
           equipmentId: true,
           quantity: true,
+          technicalRequirements: true,
           equipment: { select: { id: true, type: true } },
         },
         orderBy: IN_ENTRY_ORDER,
@@ -293,12 +298,14 @@ export async function getReservableRequests(now = new Date()) {
     orderBy: { event: { startAt: "asc" } },
   });
 
-  return requests.flatMap(({ id, event, lines }) => {
+  return requests.flatMap(({ id, notes, requestedBy, event, lines }) => {
     const missing = outstandingLines(id, lines, event, event.reservations);
     if (missing.length === 0) return [];
     return [
       {
         id,
+        notes,
+        requestedBy,
         event: {
           id: event.id,
           name: event.name,
@@ -311,6 +318,7 @@ export async function getReservableRequests(now = new Date()) {
         lines: missing.map((line) => ({
           id: line.id,
           quantity: line.outstanding,
+          technicalRequirements: line.technicalRequirements,
           equipment: line.equipment,
         })),
       },
