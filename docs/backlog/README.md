@@ -169,7 +169,7 @@ _2 stories, 3 points_
 | Story | Summary | Pts | Priority | Sprint | Status |
 |---|---|---|---|---|---|
 | [SCRUM-132](SCRUM-132.md) | Core pages work on a phone and respond within 2 seconds | 3 | Medium | Backlog | To Do |
-| [SCRUM-155](SCRUM-155.md) | Reserve an approved equipment request in one step, pre-filled from the Coordinator's request (follow-up to SCRUM-31) | - | Medium | Backlog | In Review |
+| [SCRUM-155](SCRUM-155.md) | Reserve an approved equipment request in one step, pre-filled from the Coordinator's request (follow-up to SCRUM-31) | - | Medium | SCRUM Sprint 2 | In Review |
 
 ## Tasks (technical work, no customer-facing story)
 
