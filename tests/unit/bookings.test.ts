@@ -14,6 +14,7 @@ import { revalidatePath } from "next/cache";
 
 import { auth } from "@/auth";
 import {
+  checkVenueAvailability,
   decideBookingRequest,
   submitBookingRequest,
 } from "@/app/(app)/bookings/actions";
@@ -58,10 +59,10 @@ function postgresRefusal(code: string, message: string) {
     cause: { originalCode: code, originalMessage: message },
   });
 }
-const duplicatePending = () =>
+const secondVenueForEvent = () =>
   postgresRefusal(
     "23P01",
-    'conflicting key value violates exclusion constraint "booking_no_duplicate_pending_request"',
+    'conflicting key value violates exclusion constraint "booking_one_venue_per_event"',
   );
 const overlapsUnavailability = () =>
   postgresRefusal(
@@ -113,6 +114,9 @@ beforeEach(() => {
     organiserId: "usr_org",
     coordinatorId: "usr_coord",
     status: "APPROVED",
+    startAt: new Date(START),
+    endAt: new Date(END),
+    expectedAttendance: 40,
   });
   db.venue.findFirst.mockResolvedValue({ name: "Seminar Room", capacity: 60 });
   db.booking.findFirst.mockResolvedValue(null);
@@ -174,13 +178,15 @@ describe("submitBookingRequest — SCRUM-50", () => {
   });
 
   it("SCRUM-50 — expected attendance above the venue's capacity is refused against the attendance field, and nothing is written", async () => {
-    const result = await submitBookingRequest({
-      ...validRequest,
-      requestedAttendance: 61,
+    db.venue.findFirst.mockResolvedValue({
+      name: "Seminar Room",
+      capacity: 39,
     });
 
+    const result = await submitBookingRequest(validRequest);
+
     const message =
-      "Seminar Room holds up to 60 people; 61 expected is over its capacity.";
+      "Seminar Room holds up to 39 people; 40 expected is over its capacity.";
     expect(result).toEqual({
       ok: false,
       error: message,
@@ -190,13 +196,100 @@ describe("submitBookingRequest — SCRUM-50", () => {
   });
 
   it("SCRUM-50 — expected attendance exactly equal to the venue's capacity fits", async () => {
-    const result = await submitBookingRequest({
-      ...validRequest,
-      requestedAttendance: 60,
+    db.venue.findFirst.mockResolvedValue({
+      name: "Seminar Room",
+      capacity: 40,
     });
+
+    const result = await submitBookingRequest(validRequest);
 
     expect(result.ok).toBe(true);
     expect(db.booking.create).toHaveBeenCalled();
+  });
+
+  describe("SCRUM-50 AC1 — the period and attendance are the event's", () => {
+    it("SCRUM-50 AC1 — the event's period, rounded out to the half hour, is accepted", async () => {
+      db.event.findUnique.mockResolvedValue({
+        organiserId: "usr_org",
+        coordinatorId: "usr_coord",
+        status: "APPROVED",
+        startAt: new Date("2030-06-01T06:10:00.000Z"),
+        endAt: new Date("2030-06-01T07:45:00.000Z"),
+        expectedAttendance: 40,
+      });
+
+      const result = await submitBookingRequest(validRequest);
+
+      expect(result.ok).toBe(true);
+    });
+
+    it("SCRUM-50 AC1 — a period that is not the event's is refused against the start field, and nothing is written", async () => {
+      for (const changed of [
+        { startAt: "2030-06-01T06:30:00.000Z" },
+        { endAt: "2030-06-01T09:00:00.000Z" },
+        {
+          startAt: "2030-06-02T06:00:00.000Z",
+          endAt: "2030-06-02T08:00:00.000Z",
+        },
+      ]) {
+        const result = await submitBookingRequest({
+          ...validRequest,
+          ...changed,
+        });
+
+        const message =
+          "The requested period must be the event's: 1 Jun 2030, 2:00 pm SGT to 1 Jun 2030, 4:00 pm SGT.";
+        expect(result).toEqual({
+          ok: false,
+          error: message,
+          fieldErrors: { startAt: [message] },
+        });
+      }
+      expect(db.venue.findFirst).not.toHaveBeenCalled();
+      expect(db.booking.create).not.toHaveBeenCalled();
+    });
+
+    it("SCRUM-50 AC1 — an attendance that is not the event's is refused against the attendance field, and nothing is written", async () => {
+      for (const requestedAttendance of [39, 41]) {
+        const result = await submitBookingRequest({
+          ...validRequest,
+          requestedAttendance,
+        });
+
+        const message = "The expected attendance must be the event's: 40.";
+        expect(result).toEqual({
+          ok: false,
+          error: message,
+          fieldErrors: { requestedAttendance: [message] },
+        });
+      }
+      expect(db.booking.create).not.toHaveBeenCalled();
+    });
+
+    it("SCRUM-50 AC1 — an event without dates or expected attendance cannot be booked yet", async () => {
+      for (const missing of [
+        { startAt: null },
+        { endAt: null },
+        { expectedAttendance: null },
+      ]) {
+        db.event.findUnique.mockResolvedValue({
+          organiserId: "usr_org",
+          coordinatorId: "usr_coord",
+          status: "APPROVED",
+          startAt: new Date(START),
+          endAt: new Date(END),
+          expectedAttendance: 40,
+          ...missing,
+        });
+
+        expect(await submitBookingRequest(validRequest)).toEqual({
+          ok: false,
+          error:
+            "This event has no dates or expected attendance yet. Set them on the event before requesting a venue.",
+        });
+      }
+      expect(db.booking.create).not.toHaveBeenCalled();
+    });
   });
 
   describe("a start in the past", () => {
@@ -317,7 +410,7 @@ describe("submitBookingRequest — SCRUM-50", () => {
     });
   });
 
-  it("SCRUM-50 AC6 — this coordinator's overlapping pending request for the same venue is returned instead of a new one, whatever its event", async () => {
+  it("SCRUM-50 AC8 — an event that already has a pending or approved booking, for any venue, is shown it and nothing is created", async () => {
     db.booking.findFirst.mockResolvedValue(summaryRow);
 
     const result = await submitBookingRequest(validRequest);
@@ -329,15 +422,25 @@ describe("submitBookingRequest — SCRUM-50", () => {
     expect(db.booking.create).not.toHaveBeenCalled();
     expect(db.booking.findFirst).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: {
-          requestedById: "usr_coord",
-          venueId: "ven_1",
-          status: "PENDING",
-          startAt: { lt: new Date(END) },
-          endAt: { gt: new Date(START) },
-        },
+        where: { eventId: "evt_1", status: { in: ["PENDING", "APPROVED"] } },
       }),
     );
+  });
+
+  it("SCRUM-50 AC8 — the event's existing booking is shown even when the request differs from it", async () => {
+    db.booking.findFirst.mockResolvedValue(summaryRow);
+
+    const result = await submitBookingRequest({
+      ...validRequest,
+      venueId: "ven_2",
+      requestedAttendance: 1,
+    });
+
+    expect(result).toEqual({
+      ok: true,
+      data: { booking: summary, created: false },
+    });
+    expect(db.venue.findFirst).not.toHaveBeenCalled();
   });
 
   it("SCRUM-50 AC3 — a venue already booked for part of the period refuses the request and names the clash", async () => {
@@ -359,8 +462,8 @@ describe("submitBookingRequest — SCRUM-50", () => {
     expect(db.booking.create).not.toHaveBeenCalled();
   });
 
-  it("SCRUM-50 AC6 — a duplicate that races past the check is caught by the database and the winner is returned", async () => {
-    db.booking.create.mockRejectedValue(duplicatePending());
+  it("SCRUM-50 AC8 — a second request for the event that races past the check is caught by the database and the winner is returned", async () => {
+    db.booking.create.mockRejectedValue(secondVenueForEvent());
     db.booking.findFirst
       .mockResolvedValueOnce(null)
       .mockResolvedValueOnce(summaryRow);
@@ -371,7 +474,7 @@ describe("submitBookingRequest — SCRUM-50", () => {
     });
   });
 
-  it("SCRUM-50 AC6 — a deadlock between two identical submissions is retried once and then resolved", async () => {
+  it("SCRUM-50 AC8 — a deadlock between two identical submissions is retried once and then resolved", async () => {
     db.booking.create
       .mockRejectedValueOnce(deadlock())
       .mockResolvedValueOnce(summaryRow);
@@ -388,13 +491,129 @@ describe("submitBookingRequest — SCRUM-50", () => {
       "deadlock detected",
     );
 
-    db.booking.create.mockRejectedValue(duplicatePending());
+    db.booking.create.mockRejectedValue(secondVenueForEvent());
     await expect(submitBookingRequest(validRequest)).rejects.toThrow(
-      "booking_no_duplicate_pending_request",
+      "booking_one_venue_per_event",
     );
 
     db.booking.create.mockRejectedValue(new Error("connection lost"));
     await expect(submitBookingRequest(validRequest)).rejects.toThrow(
+      "connection lost",
+    );
+  });
+});
+
+describe("checkVenueAvailability — SCRUM-50 live check", () => {
+  const period = { venueId: "ven_1", startAt: START, endAt: END };
+
+  it("SCRUM-50 AC3 — a free venue is reported available before submitting", async () => {
+    expect(await checkVenueAvailability(period)).toEqual({
+      ok: true,
+      data: { available: true, clashes: [] },
+    });
+  });
+
+  it("SCRUM-50 AC3 — a venue booked or unavailable for part of the period is reported taken, naming each clash", async () => {
+    db.booking.findMany.mockResolvedValue([
+      {
+        id: "bkg_x",
+        startAt: new Date("2030-06-01T07:00:00.000Z"),
+        endAt: new Date("2030-06-01T09:00:00.000Z"),
+      },
+    ]);
+    db.venueUnavailability.findMany.mockResolvedValue([
+      {
+        id: "unv_x",
+        startAt: new Date("2030-06-01T05:00:00.000Z"),
+        endAt: new Date("2030-06-01T06:30:00.000Z"),
+        reason: "MAINTENANCE",
+      },
+    ]);
+
+    expect(await checkVenueAvailability(period)).toEqual({
+      ok: true,
+      data: {
+        available: false,
+        clashes: [
+          "unavailable (maintenance) from 1 Jun 2030, 1:00 pm SGT to 1 Jun 2030, 2:30 pm SGT",
+          "already booked from 1 Jun 2030, 3:00 pm SGT to 1 Jun 2030, 5:00 pm SGT",
+        ],
+      },
+    });
+  });
+
+  it("SCRUM-50 AC5 — an end before or equal to the start, or a missing time, is an invalid period and nothing is read", async () => {
+    for (const bad of [
+      { ...period, endAt: START },
+      { ...period, startAt: END, endAt: START },
+      { ...period, endAt: undefined },
+    ]) {
+      expect(await checkVenueAvailability(bad)).toMatchObject({
+        ok: false,
+        error:
+          "The requested period is invalid: the end must be after the start.",
+      });
+    }
+    expect(db.booking.findMany).not.toHaveBeenCalled();
+  });
+
+  it("SCRUM-50 AC5 — a period that has already started is reported against the start, as submitting would, and nothing is read", async () => {
+    expect(
+      await checkVenueAvailability({
+        venueId: "ven_1",
+        startAt: "2020-01-01T01:00:00.000Z",
+        endAt: "2020-01-01T03:00:00.000Z",
+      }),
+    ).toEqual({
+      ok: false,
+      error: "The start time cannot be in the past.",
+      fieldErrors: { startAt: ["The start time cannot be in the past."] },
+    });
+    expect(db.venue.findFirst).not.toHaveBeenCalled();
+    expect(db.booking.findMany).not.toHaveBeenCalled();
+  });
+
+  it("SCRUM-50 — without a venue there is nothing to check", async () => {
+    expect(
+      await checkVenueAvailability({ ...period, venueId: "" }),
+    ).toMatchObject({ ok: false, error: "Choose a venue." });
+    expect(await checkVenueAvailability(undefined)).toMatchObject({
+      ok: false,
+    });
+    expect(db.venue.findFirst).not.toHaveBeenCalled();
+  });
+
+  it("SCRUM-50 — a retired or unknown venue reads as not found, exactly as submitting it would", async () => {
+    db.venue.findFirst.mockResolvedValue(null);
+
+    expect(await checkVenueAvailability(period)).toEqual({
+      ok: false,
+      error: "Venue not found.",
+    });
+    expect(db.venue.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: "ven_1", isActive: true } }),
+    );
+    expect(db.booking.findMany).not.toHaveBeenCalled();
+  });
+
+  it("SCRUM-50 — every role except Event Coordinator is refused before anything is read", async () => {
+    for (const role of [
+      "ORGANISER",
+      "VENUE_STAFF",
+      "TECH_SUPPORT",
+      "ATTENDEE",
+    ] as Role[]) {
+      mockAuth.mockResolvedValue(sessionFor(role));
+      expect(await checkVenueAvailability(period)).toMatchObject({ ok: false });
+    }
+    mockAuth.mockResolvedValue(null);
+    expect(await checkVenueAvailability(period)).toMatchObject({ ok: false });
+    expect(db.booking.findMany).not.toHaveBeenCalled();
+  });
+
+  it("does not swallow an unexpected database error", async () => {
+    db.booking.findMany.mockRejectedValue(new Error("connection lost"));
+    await expect(checkVenueAvailability(period)).rejects.toThrow(
       "connection lost",
     );
   });
