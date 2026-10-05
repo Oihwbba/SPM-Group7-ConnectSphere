@@ -54,7 +54,7 @@ const POOLS = [
 /**
  * An approved request for evt_1. Projectors: 10 in the pool, 5 reserved for
  * the whole period, so 5 are free. Microphones: 4 in the pool, none committed.
- * The three raw queries are the locks, in order: request, event, equipment.
+ * The three raw queries are the locks, in order: event, request, equipment.
  */
 function approvedRequestWithStock({
   pools = POOLS,
@@ -64,8 +64,8 @@ function approvedRequestWithStock({
   },
 } = {}) {
   tx.$queryRaw
-    .mockResolvedValueOnce([{ id: "eqr_1" }])
     .mockResolvedValueOnce([{ id: "evt_1" }])
+    .mockResolvedValueOnce([{ id: "eqr_1" }])
     .mockResolvedValueOnce(pools);
   tx.equipmentRequest.findFirst.mockResolvedValue({ eventId: "evt_1", event });
   tx.reservation.findMany.mockResolvedValue([
@@ -197,28 +197,28 @@ describe("reserveEquipmentRequest — SCRUM-155", () => {
     });
   });
 
-  it("SCRUM-155 [AC5] TC-155-08: locks the request, then its event, then the equipment rows in id order, before reading or counting anything", async () => {
+  it("SCRUM-155 [AC5] TC-155-08, TC-155-15: locks the event, then the request, then the equipment rows in id order, before reading or counting anything", async () => {
     approvedRequestWithStock();
 
     await reserveEquipmentRequest(validInput);
 
-    const [requestLock, eventLock, equipmentLock] = tx.$queryRaw.mock.calls;
-    expect(requestLock[0].join("?")).toMatch(
-      /FROM "EquipmentRequest" WHERE "id" = \? FOR UPDATE/,
-    );
-    expect(requestLock[1]).toBe("eqr_1");
+    const [eventLock, requestLock, equipmentLock] = tx.$queryRaw.mock.calls;
     expect(eventLock[0].join("?")).toMatch(
       /FROM "Event" e[\s\S]*FOR UPDATE OF e/,
     );
     expect(eventLock[1]).toBe("eqr_1");
+    expect(requestLock[0].join("?")).toMatch(
+      /FROM "EquipmentRequest" WHERE "id" = \? FOR UPDATE/,
+    );
+    expect(requestLock[1]).toBe("eqr_1");
     expect(equipmentLock[0].join("?")).toMatch(/ORDER BY "id" FOR UPDATE/);
     expect(equipmentLock[1].values).toEqual(["eq_projector", "eq_mic"]);
 
-    const [requestAt, eventAt, equipmentAt] =
+    const [eventAt, requestAt, equipmentAt] =
       tx.$queryRaw.mock.invocationCallOrder;
     const readAt = tx.equipmentRequest.findFirst.mock.invocationCallOrder[0];
-    expect(requestAt).toBeLessThan(eventAt);
-    expect(eventAt).toBeLessThan(readAt);
+    expect(eventAt).toBeLessThan(requestAt);
+    expect(requestAt).toBeLessThan(readAt);
     expect(readAt).toBeLessThan(equipmentAt);
     expect(equipmentAt).toBeLessThan(
       tx.reservation.findMany.mock.invocationCallOrder[0],

@@ -115,6 +115,45 @@ describe.skipIf(!usesLocalDatabase)(
     const offered = async () =>
       (await getReservableRequests()).map((request) => request.id);
 
+    // Resolves once some other connection is queued behind a row lock.
+    async function someoneIsWaitingForALock() {
+      for (let attempt = 0; attempt < 250; attempt++) {
+        const [{ waiting }] = await prisma.$queryRaw<{ waiting: number }[]>`
+          SELECT count(*)::int AS "waiting" FROM pg_stat_activity
+          WHERE datname = current_database() AND wait_event_type = 'Lock'
+        `;
+        if (waiting > 0) return;
+        await new Promise((resolve) => setTimeout(resolve, 20));
+      }
+      throw new Error("Nothing ever waited for a lock.");
+    }
+
+    // Holds the event row as another action would, starts `action`, and once
+    // the action is queued tries to take `nextLock` without waiting. Taking it
+    // means the action was queued on the event, holding nothing; a lock error
+    // means it already held that row while waiting for the event, which is the
+    // half of a deadlock.
+    async function takeEventThen(
+      eventId: string,
+      nextLock: (tx: typeof prisma) => Promise<unknown>,
+      action: () => Promise<unknown>,
+    ) {
+      let pending: Promise<unknown> | undefined;
+      const taken = await prisma.$transaction(
+        async (tx) => {
+          await tx.$queryRaw`SELECT "id" FROM "Event" WHERE "id" = ${eventId} FOR UPDATE`;
+          pending = action();
+          await someoneIsWaitingForALock();
+          return nextLock(tx as typeof prisma).then(
+            () => true,
+            () => false,
+          );
+        },
+        { timeout: 15000 },
+      );
+      return { taken, result: await pending };
+    }
+
     beforeAll(async () => {
       (auth as unknown as Mock).mockResolvedValue(TECH_SUPPORT);
       const stamp = Date.now();
@@ -259,6 +298,52 @@ describe.skipIf(!usesLocalDatabase)(
       expect(await totalReserved(scarce)).toBe(1);
       // The loser reserved nothing at all, so only one unit of the roomy pool went.
       expect(await totalReserved(roomy)).toBe(1);
+    });
+
+    it("SCRUM-155 [AC5] TC-155-15: reserving waits for the event before taking the request, so it can't deadlock with rejecting the event", async () => {
+      const eventId = await event("PLANNING");
+      const requestId = await approvedRequest(eventId, [
+        { equipmentId: roomy, quantity: 1 },
+      ]);
+
+      // Rejecting a Planning event (SCRUM-117) locks the event, then cancels
+      // its requests.
+      const { taken, result } = await takeEventThen(
+        eventId,
+        (tx) =>
+          tx.$queryRaw`SELECT "id" FROM "EquipmentRequest" WHERE "id" = ${requestId} FOR UPDATE NOWAIT`,
+        () =>
+          reserveEquipmentRequest({
+            requestId,
+            ...PERIOD,
+            lines: [{ equipmentId: roomy, quantity: 1 }],
+          }),
+      );
+
+      expect(taken).toBe(true);
+      expect(result).toEqual({ ok: true, data: { reserved: 1 } });
+    });
+
+    it("SCRUM-155 [AC5, AC6] TC-155-16: the one-type form waits for the event before the equipment, so it takes turns with this card", async () => {
+      const eventId = await event("PLANNING");
+
+      // The card holds the event while it checks nothing is reserved yet, then
+      // locks the equipment.
+      const { taken, result } = await takeEventThen(
+        eventId,
+        (tx) =>
+          tx.$queryRaw`SELECT "id" FROM "Equipment" WHERE "id" = ${roomy} FOR UPDATE NOWAIT`,
+        () =>
+          createReservation({
+            eventId,
+            equipmentId: roomy,
+            quantity: 1,
+            ...PERIOD,
+          }),
+      );
+
+      expect(taken).toBe(true);
+      expect(result).toMatchObject({ ok: true });
     });
 
     it("SCRUM-155 [AC1, AC6] TC-155-01, TC-155-06: offers approved, unreserved requests for events that haven't started, and a cancelled reservation offers it again", async () => {

@@ -295,6 +295,10 @@ export async function createReservation(
     const endAt = new Date(parsed.data.endAt);
 
     const result = await prisma.$transaction<ReserveOutcome>(async (tx) => {
+      // The event row first, as reserving a whole request does (SCRUM-155):
+      // the two take turns on an event instead of deadlocking over its
+      // equipment rows.
+      await tx.$queryRaw`SELECT "id" FROM "Event" WHERE "id" = ${eventId} FOR UPDATE`;
       const event = await tx.event.findFirst({
         where: { id: eventId, status: { in: RESERVABLE_EVENT_STATUSES } },
         select: { id: true },
@@ -355,12 +359,14 @@ export async function createReservation(
 /**
  * SCRUM-155 — reserve every row of an approved request together, or none.
  *
- * Locks, always in this order: the request row, so two people reserving the
- * same request queue up and the second finds it already reserved (AC 5, 6);
- * its event row, so the event cannot be confirmed (SCRUM-81) between the
- * check below and the insert; then the equipment rows in id order, so two
- * requests sharing types always lock them the same way and cannot deadlock,
- * and each pool is counted with nobody else writing to it (AC 5).
+ * Locks, always in this order: the event row, so nothing else reserves for
+ * the event (the one-type form included) and it cannot be confirmed
+ * (SCRUM-81) or rejected (SCRUM-117) between the check below and the insert;
+ * the request row, so two people reserving the same request queue up and the
+ * second finds it already reserved (AC 5, 6); then the equipment rows in id
+ * order, so two requests sharing types always lock them the same way and
+ * cannot deadlock, and each pool is counted with nobody else writing to it
+ * (AC 5). Event before request is the order rejecting an event takes them.
  */
 export async function reserveEquipmentRequest(
   input: unknown,
@@ -384,13 +390,13 @@ export async function reserveEquipmentRequest(
     const result = await prisma.$transaction<RequestReserveOutcome>(
       async (tx) => {
         await tx.$queryRaw`
-        SELECT "id" FROM "EquipmentRequest" WHERE "id" = ${requestId} FOR UPDATE
-      `;
-        await tx.$queryRaw`
         SELECT e."id" FROM "Event" e
         JOIN "EquipmentRequest" r ON r."eventId" = e."id"
         WHERE r."id" = ${requestId}
         FOR UPDATE OF e
+      `;
+        await tx.$queryRaw`
+        SELECT "id" FROM "EquipmentRequest" WHERE "id" = ${requestId} FOR UPDATE
       `;
         const request = await tx.equipmentRequest.findFirst({
           where: { id: requestId, ...reservableRequest(new Date()) },

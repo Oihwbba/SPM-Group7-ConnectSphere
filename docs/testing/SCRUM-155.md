@@ -1,13 +1,13 @@
 # SCRUM-155 — Reserve an approved equipment request in one step: test cases
 
 Story and acceptance criteria: [SCRUM-155 in Jira](https://smu-spm-group7.atlassian.net/browse/SCRUM-155)
-(written on 4 Oct 2026 from the SCRUM-31 review feedback; `docs/backlog/SCRUM-155.md`
-still holds the empty placeholder until the next sync). Format and conventions: [README.md](README.md).
+(written on 4 Oct 2026 from the SCRUM-31 review feedback; mirrored in
+[docs/backlog/SCRUM-155.md](../backlog/SCRUM-155.md)). Format and conventions: [README.md](README.md).
 The reservation is made by `reserveEquipmentRequest` in
 [app/(app)/equipment/actions.ts](<../../app/(app)/equipment/actions.ts>); the
 requests offered come from `getReservableRequests` in
 [lib/equipment/request-queries.ts](../../lib/equipment/request-queries.ts), and
-both use the same `RESERVABLE_REQUEST` rule.
+both use the same `reservableRequest` rule.
 
 **Shared pre-conditions for every case:** the database is migrated and seeded
 and the app is running. Signed in as `techsupport@test.local` (`Password123!`)
@@ -31,6 +31,8 @@ Approved and asks for 1 Projector and 2 Wireless Microphones.
 | [TC-155-12](#tc-155-12) | Negative    | AC 6      | Unit, integration      |
 | [TC-155-13](#tc-155-13) | Negative    | AC 2      | Unit, integration      |
 | [TC-155-14](#tc-155-14) | Negative    | AC 7      | Unit                   |
+| [TC-155-15](#tc-155-15) | Concurrency | AC 5      | Unit, integration      |
+| [TC-155-16](#tc-155-16) | Concurrency | AC 5, 6   | Unit, integration      |
 
 ---
 
@@ -127,16 +129,16 @@ Approved and asks for 1 Projector and 2 Wireless Microphones.
 
 ### TC-155-08
 
-| Item            | Content                                                                                                                                                                                                                       |
-| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Test Case ID    | TC-155-08                                                                                                                                                                                                                     |
-| Test Scenario   | [Concurrency] AC 5: two requests needing the last unit of a type are reserved at the same moment, with their rows in opposite order                                                                                           |
-| Pre-conditions  | A pool with one unit; two Approved requests for different events that each need it, plus another type with room for both.                                                                                                     |
-| Test Steps      | 1. Reserve both requests at once.                                                                                                                                                                                             |
-| Test Data       | Request A lists the roomy type first; request B lists the scarce type first.                                                                                                                                                  |
-| Expected Result | One succeeds and the other reserves nothing at all. The scarce pool is never over-allocated, and neither attempt deadlocks: the request, its event and then the equipment rows (in id order) are always locked in that order. |
+| Item            | Content                                                                                                                                                                                                                            |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Test Case ID    | TC-155-08                                                                                                                                                                                                                          |
+| Test Scenario   | [Concurrency] AC 5: two requests needing the last unit of a type are reserved at the same moment, with their rows in opposite order                                                                                                |
+| Pre-conditions  | A pool with one unit; two Approved requests for different events that each need it, plus another type with room for both.                                                                                                          |
+| Test Steps      | 1. Reserve both requests at once.                                                                                                                                                                                                  |
+| Test Data       | Request A lists the roomy type first; request B lists the scarce type first.                                                                                                                                                       |
+| Expected Result | One succeeds and the other reserves nothing at all. The scarce pool is never over-allocated, and neither attempt deadlocks: the event, then the request and then the equipment rows (in id order) are always locked in that order. |
 
-**Automated by:** `tests/unit/request-reservation.test.ts` › "SCRUM-155 [AC5] TC-155-08: …"; `tests/integration/request-reservation.test.ts` › "SCRUM-155 [AC5] TC-155-08: …"
+**Automated by:** `tests/unit/request-reservation.test.ts` › "SCRUM-155 [AC5] TC-155-08, TC-155-15: …"; `tests/integration/request-reservation.test.ts` › "SCRUM-155 [AC5] TC-155-08: …"
 
 ### TC-155-09
 
@@ -215,3 +217,29 @@ Approved and asks for 1 Projector and 2 Wireless Microphones.
 | Expected Result | "Nothing was reserved: an equipment type is no longer available." The row says "This equipment type is no longer available. Choose another." |
 
 **Automated by:** `tests/unit/request-reservation.test.ts` › "marks the row whose equipment type has been retired, and reserves nothing"
+
+### TC-155-15
+
+| Item            | Content                                                                                                                                                    |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Test Case ID    | TC-155-15                                                                                                                                                  |
+| Test Scenario   | [Concurrency] AC 5: the Coordinator rejects the Planning event (SCRUM-117) at the moment its request is being reserved                                     |
+| Pre-conditions  | An Approved request for a Planning event. Rejecting locks the event, then cancels its requests.                                                            |
+| Test Steps      | 1. While the event row is held, as rejecting holds it, reserve the request. 2. Take the request row, as rejecting does next.                               |
+| Test Data       | —                                                                                                                                                          |
+| Expected Result | Reserving waits for the event before taking the request, so step 2 is not blocked and neither side deadlocks. Reserving goes ahead once the event is free. |
+
+**Automated by:** `tests/unit/request-reservation.test.ts` › "SCRUM-155 [AC5] TC-155-08, TC-155-15: …"; `tests/integration/request-reservation.test.ts` › "SCRUM-155 [AC5] TC-155-15: …" (it fails against the previous lock order)
+
+### TC-155-16
+
+| Item            | Content                                                                                                                                                               |
+| --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Test Case ID    | TC-155-16                                                                                                                                                             |
+| Test Scenario   | [Concurrency] AC 5, 6: equipment is reserved for the event on the one-type **Reserve equipment** form (SCRUM-31) while this card is reserving for the same event      |
+| Pre-conditions  | A Planning event. The card holds the event while it checks that nothing is reserved yet, then locks the equipment.                                                    |
+| Test Steps      | 1. While the event row is held, as the card holds it, reserve on the one-type form. 2. Take that equipment row, as the card does next.                                |
+| Test Data       | —                                                                                                                                                                     |
+| Expected Result | The one-type form waits for the event before the equipment, so step 2 is not blocked: the two take turns on the event instead of deadlocking over the equipment rows. |
+
+**Automated by:** `tests/unit/reservation.test.ts` › "SCRUM-155 TC-155-16: …"; `tests/integration/request-reservation.test.ts` › "SCRUM-155 [AC5, AC6] TC-155-16: …" (it fails against the previous one-type form)

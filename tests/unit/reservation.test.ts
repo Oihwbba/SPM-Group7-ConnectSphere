@@ -109,9 +109,26 @@ describe("createReservation — SCRUM-31", () => {
 
     await createReservation(validInput);
 
-    const lockedAt = tx.$queryRaw.mock.invocationCallOrder[0];
+    const lockedAt = tx.$queryRaw.mock.invocationCallOrder[1];
     const countedAt = tx.reservation.findMany.mock.invocationCallOrder[0];
     expect(lockedAt).toBeLessThan(countedAt);
+  });
+
+  // SCRUM-155 AC 5: reserving a whole request locks the event, then the
+  // equipment. Taking them in the same order means the two forms take turns
+  // on an event instead of deadlocking.
+  it("SCRUM-155 TC-155-16: the event row is locked before its status is read and before the equipment row", async () => {
+    poolWithFiveAvailable();
+
+    await createReservation(validInput);
+
+    const [eventLock, equipmentLock] = tx.$queryRaw.mock.calls;
+    expect(eventLock[0].join("?")).toMatch(/FROM "Event" WHERE "id" = \? FOR UPDATE/);
+    expect(eventLock[1]).toBe("evt_approved");
+    expect(equipmentLock[0].join("?")).toMatch(/FROM "Equipment"/);
+    const [eventLockedAt, equipmentLockedAt] = tx.$queryRaw.mock.invocationCallOrder;
+    expect(eventLockedAt).toBeLessThan(tx.event.findFirst.mock.invocationCallOrder[0]);
+    expect(tx.event.findFirst.mock.invocationCallOrder[0]).toBeLessThan(equipmentLockedAt);
   });
 
   it.each([0, -1, 1.5, ""])(
