@@ -422,7 +422,7 @@ describe.skipIf(!usesLocalDatabase)(
       const rest = (await getReservableRequests()).find(
         (r) => r.id === requestId,
       );
-      expect(rest?.partlyReserved).toBe(true);
+      expect(rest?.alreadyReserved).toBe("request");
       expect(rest?.lines.map((l) => [l.equipment.id, l.quantity])).toEqual([
         [scarce, 1],
       ]);
@@ -454,6 +454,10 @@ describe.skipIf(!usesLocalDatabase)(
 
       expect(await offered()).not.toContain(first);
       expect(await offered()).toContain(second);
+      expect(
+        (await getReservableRequests()).find((r) => r.id === second)
+          ?.alreadyReserved,
+      ).toBe("event");
       const result = await reserveEquipmentRequest({
         requestId: second,
         ...PERIOD,

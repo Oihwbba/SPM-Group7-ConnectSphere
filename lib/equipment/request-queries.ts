@@ -264,7 +264,8 @@ export const CONFIRMED_HOLDS = {
 /**
  * SCRUM-155 AC 1, 2 & 6 — approved requests with something still to reserve,
  * each with only what is missing, so choosing one fills in the rest and never
- * reserves a covered line twice. `partlyReserved` marks one already started.
+ * reserves a covered line twice. `alreadyReserved` says what is reserved
+ * already: some of this request, or only other bookings for its event.
  * Each also carries what Technical Support needs to reserve it without going
  * back to the request: who raised it, its notes and each line's requirements.
  */
@@ -301,6 +302,13 @@ export async function getReservableRequests(now = new Date()) {
   return requests.flatMap(({ id, notes, requestedBy, event, lines }) => {
     const missing = outstandingLines(id, lines, event, event.reservations);
     if (missing.length === 0) return [];
+    const alreadyReserved: "request" | "event" | null =
+      missing.length < lines.length ||
+      missing.some((line) => line.outstanding < line.quantity)
+        ? "request"
+        : event.reservations.some((hold) => hold.requestId !== id)
+          ? "event"
+          : null;
     return [
       {
         id,
@@ -312,9 +320,7 @@ export async function getReservableRequests(now = new Date()) {
           startAt: event.startAt,
           endAt: event.endAt,
         },
-        partlyReserved:
-          missing.length < lines.length ||
-          missing.some((line) => line.outstanding < line.quantity),
+        alreadyReserved,
         lines: missing.map((line) => ({
           id: line.id,
           quantity: line.outstanding,

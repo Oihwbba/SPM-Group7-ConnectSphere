@@ -241,7 +241,7 @@ describe("getReservableRequests — SCRUM-155", () => {
         notes: "Keynote at 10:00.",
         requestedBy: { name: "Cody Coordinator" },
         event: { id: "evt_r1", name: "Event r1", startAt: START, endAt: END },
-        partlyReserved: false,
+        alreadyReserved: null,
         lines: [
           {
             id: "l1",
@@ -267,7 +267,7 @@ describe("getReservableRequests — SCRUM-155", () => {
 
     const [offered] = await getReservableRequests();
 
-    expect(offered.partlyReserved).toBe(true);
+    expect(offered.alreadyReserved).toBe("request");
     expect(offered.lines).toEqual([
       {
         id: "l2",
@@ -287,7 +287,7 @@ describe("getReservableRequests — SCRUM-155", () => {
     expect(await getReservableRequests()).toEqual([]);
   });
 
-  it("SCRUM-156 [AC5] TC-156-08: another request's reservations, or ones that don't span the event, don't cover a line", async () => {
+  it("SCRUM-156 [AC5] TC-156-08: another request's reservations, or ones that don't span the event, don't cover a line; the event is marked partly reserved", async () => {
     db.equipmentRequest.findMany.mockResolvedValue([
       approved(
         "second",
@@ -303,7 +303,7 @@ describe("getReservableRequests — SCRUM-155", () => {
 
     const [offered] = await getReservableRequests();
 
-    expect(offered.partlyReserved).toBe(false);
+    expect(offered.alreadyReserved).toBe("event");
     expect(offered.lines.map((l) => [l.id, l.quantity])).toEqual([
       ["l1", 2],
       ["l2", 3],

@@ -20,7 +20,7 @@ maintenance don't overlap it.
 | [TC-156-05](#tc-156-05) | Positive | AC 4      | Integration            |
 | [TC-156-06](#tc-156-06) | Positive | AC 6      | e2e                    |
 | [TC-156-07](#tc-156-07) | Positive | AC 5      | Unit, integration, e2e |
-| [TC-156-08](#tc-156-08) | Positive | AC 5      | Unit, integration      |
+| [TC-156-08](#tc-156-08) | Positive | AC 5      | Unit, integration, e2e |
 
 ---
 
@@ -117,13 +117,13 @@ maintenance don't overlap it.
 
 ### TC-156-08
 
-| Item            | Content                                                                                                                                                      |
-| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Test Case ID    | TC-156-08                                                                                                                                                    |
-| Test Scenario   | [Positive] AC 5: a second approved request for an event that already has reservations is reserved in its own right                                           |
-| Pre-conditions  | An event whose first approved request is reserved in full, and a second approved request for the same event (SCRUM-27 allows one once the first is decided). |
-| Test Steps      | 1. Open the **Approved request** list. 2. Reserve the second request.                                                                                        |
-| Test Data       | Both requests ask for Projector × 1.                                                                                                                         |
-| Expected Result | 1. Only the second request is listed: the first request's reservations don't cover it. 2. Reserved; the event now holds two projectors.                      |
+| Item            | Content                                                                                                                                                                       |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Test Case ID    | TC-156-08                                                                                                                                                                     |
+| Test Scenario   | [Positive] AC 5: a second approved request for an event that already has reservations is reserved in its own right                                                            |
+| Pre-conditions  | An event whose first approved request is reserved in full, and a second approved request for the same event (SCRUM-27 allows one once the first is decided).                  |
+| Test Steps      | 1. Open the **Approved request** list. 2. Reserve the second request.                                                                                                         |
+| Test Data       | Both requests ask for Projector × 1.                                                                                                                                          |
+| Expected Result | 1. Only the second request is listed, as "(event already partly reserved)": the first request's reservations don't cover it. 2. Reserved; the event now holds two projectors. |
 
-**Automated by:** `tests/unit/equipment-request-queries.test.ts` › "SCRUM-156 [AC5] TC-156-08: …"; `tests/integration/request-reservation.test.ts` › "SCRUM-156 [AC5] TC-156-08: …" (it fails if other requests' reservations count)
+**Automated by:** `tests/unit/equipment-request-queries.test.ts` › "SCRUM-156 [AC5] TC-156-08: …"; `tests/integration/request-reservation.test.ts` › "SCRUM-156 [AC5] TC-156-08: …" (it fails if other requests' reservations count); `e2e/request-reservation.spec.ts` › "SCRUM-156 [AC5] TC-156-08: …"

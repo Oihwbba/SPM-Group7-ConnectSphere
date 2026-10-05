@@ -251,9 +251,10 @@ export function ReserveRequestCard({
               {requests.map((request) => (
                 <option key={request.id} value={request.id}>
                   {request.event.name} — {formatEventPeriod(request.event)}
-                  {request.partlyReserved
-                    ? " (rest of a partly reserved request)"
-                    : ""}
+                  {request.alreadyReserved === "request" &&
+                    " (rest of a partly reserved request)"}
+                  {request.alreadyReserved === "event" &&
+                    " (event already partly reserved)"}
                 </option>
               ))}
             </select>
