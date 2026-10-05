@@ -4,6 +4,7 @@ import {
   getCoordinatorEquipmentRequests,
   getEquipmentCatalogue,
   getRequestableEvents,
+  getReservableRequests,
 } from "@/lib/equipment/request-queries";
 import { REQUESTABLE_EVENT_STATUSES } from "@/lib/equipment/requests";
 import { RESERVABLE_EVENT_STATUSES } from "@/lib/schemas/reservation";
@@ -131,6 +132,55 @@ describe("getEquipmentCatalogue — SCRUM-27 AC 2", () => {
         technicalSpecs: true,
       },
       orderBy: { type: "asc" },
+    });
+  });
+});
+
+describe("getReservableRequests — SCRUM-155", () => {
+  it("SCRUM-155 [AC1, AC6] TC-155-01: offers only approved requests for events that can still take a reservation, haven't started and have nothing reserved", async () => {
+    const now = new Date("2030-01-01T00:00:00.000Z");
+
+    await getReservableRequests(now);
+
+    expect(db.equipmentRequest.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          status: "APPROVED",
+          event: {
+            status: { in: RESERVABLE_EVENT_STATUSES },
+            startAt: { gt: now },
+            reservations: { none: { status: "CONFIRMED" } },
+          },
+        },
+        orderBy: { event: { startAt: "asc" } },
+      }),
+    );
+  });
+
+  it("SCRUM-155 [AC1]: judges \"not started\" against the current time when none is given", async () => {
+    await getReservableRequests();
+
+    const { where } = db.equipmentRequest.findMany.mock.calls[0][0];
+    expect(where.event.startAt.gt).toBeInstanceOf(Date);
+  });
+
+  it("SCRUM-155 [AC2] TC-155-02: reads each request's event period, who raised it, its notes, and its lines with their requirements in the order they were entered", async () => {
+    await getReservableRequests();
+
+    const { select } = db.equipmentRequest.findMany.mock.calls[0][0];
+    expect(select.event).toEqual({
+      select: { id: true, name: true, startAt: true, endAt: true },
+    });
+    expect(select.notes).toBe(true);
+    expect(select.requestedBy).toEqual({ select: { name: true } });
+    expect(select.lines).toEqual({
+      select: {
+        id: true,
+        quantity: true,
+        technicalRequirements: true,
+        equipment: { select: { id: true, type: true } },
+      },
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }],
     });
   });
 });

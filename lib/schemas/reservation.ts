@@ -15,10 +15,13 @@ export const RESERVABLE_EVENT_STATUSES: EventStatus[] = [
 const reservationFields = {
   eventId: z.string().min(1, "Select an approved event."),
   equipmentId: z.string().min(1, "Select an equipment type."),
+  // The same ceiling as a request line (equipmentRequestLineSchema), so a
+  // mistyped quantity is a field error, not a failure in the Int column.
   quantity: z.coerce
     .number()
     .int("Quantity must be a whole number.")
-    .positive("Quantity must be greater than zero."),
+    .positive("Quantity must be greater than zero.")
+    .max(1000, "Quantity can be at most 1,000."),
   startAt: z.string().min(1, "Choose a reservation start time."),
   endAt: z.string().min(1, "Choose a reservation end time."),
 };
@@ -70,6 +73,42 @@ function validatePeriod(
 export const reservationSchema = z
   .object(reservationFields)
   .superRefine(validatePeriod);
+
+/**
+ * SCRUM-155 — reserving an approved request: one period, one row per type.
+ * A type may appear once, so each row is one reservation and one shortfall.
+ */
+export const requestReservationSchema = z
+  .object({
+    requestId: z.string().min(1, "Choose an approved request."),
+    startAt: reservationFields.startAt,
+    endAt: reservationFields.endAt,
+    lines: z
+      .array(
+        z.object({
+          equipmentId: reservationFields.equipmentId,
+          quantity: reservationFields.quantity,
+        }),
+      )
+      .min(1, "Add at least one equipment type to reserve.")
+      .max(20, "Reserve at most 20 equipment types at once."),
+  })
+  .superRefine((data, ctx) => {
+    validatePeriod(data, ctx);
+    const seen = new Set<string>();
+    data.lines.forEach((line, index) => {
+      if (line.equipmentId && seen.has(line.equipmentId)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["lines", index, "equipmentId"],
+          message: "This equipment type is already on another row.",
+        });
+      }
+      seen.add(line.equipmentId);
+    });
+  });
+
+export type RequestReservationInput = z.infer<typeof requestReservationSchema>;
 
 export const availabilitySchema = z
   .object({
