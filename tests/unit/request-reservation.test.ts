@@ -55,19 +55,35 @@ const POOLS = [
  * An approved request for evt_1. Projectors: 10 in the pool, 5 reserved for
  * the whole period, so 5 are free. Microphones: 4 in the pool, none committed.
  * The three raw queries are the locks, in order: event, request, equipment.
+ * `reservations` are the event's confirmed ones, which decide what is left.
  */
+type Held = {
+  requestId: string | null;
+  equipmentId: string;
+  quantity: number;
+  startAt: Date;
+  endAt: Date;
+};
 function approvedRequestWithStock({
   pools = POOLS,
   event = { startAt: new Date(START), endAt: new Date(END) } as {
     startAt: Date | null;
     endAt: Date | null;
   },
+  reservations = [] as Held[],
 } = {}) {
   tx.$queryRaw
     .mockResolvedValueOnce([{ id: "evt_1" }])
     .mockResolvedValueOnce([{ id: "eqr_1" }])
     .mockResolvedValueOnce(pools);
-  tx.equipmentRequest.findFirst.mockResolvedValue({ eventId: "evt_1", event });
+  tx.equipmentRequest.findFirst.mockResolvedValue({
+    eventId: "evt_1",
+    event: { ...event, reservations },
+    lines: [
+      { equipmentId: "eq_projector", quantity: 2 },
+      { equipmentId: "eq_mic", quantity: 3 },
+    ],
+  });
   tx.reservation.findMany.mockResolvedValue([
     {
       equipmentId: "eq_projector",
@@ -225,7 +241,7 @@ describe("reserveEquipmentRequest — SCRUM-155", () => {
     );
   });
 
-  it("SCRUM-155 [AC1, AC6] TC-155-01: accepts only an approved request for an Approved or Planning event that hasn't started and has nothing reserved yet", async () => {
+  it("SCRUM-155 [AC1, AC6] TC-155-01: accepts only an approved request for an Approved or Planning event that hasn't started, read with its lines and the event's confirmed reservations", async () => {
     approvedRequestWithStock();
 
     await reserveEquipmentRequest(validInput);
@@ -237,14 +253,71 @@ describe("reserveEquipmentRequest — SCRUM-155", () => {
         event: {
           status: { in: RESERVABLE_EVENT_STATUSES },
           startAt: { gt: expect.any(Date) },
-          reservations: { none: { status: "CONFIRMED" } },
         },
       },
       select: {
         eventId: true,
-        event: { select: { startAt: true, endAt: true } },
+        event: {
+          select: {
+            startAt: true,
+            endAt: true,
+            reservations: {
+              where: { status: "CONFIRMED" },
+              select: {
+                requestId: true,
+                equipmentId: true,
+                quantity: true,
+                startAt: true,
+                endAt: true,
+              },
+            },
+          },
+        },
+        lines: { select: { equipmentId: true, quantity: true } },
       },
     });
+  });
+
+  it("SCRUM-155 [AC6] TC-155-07, TC-155-12: a request whose every line is already covered is refused and nothing is written", async () => {
+    const whole = { startAt: new Date(START), endAt: new Date(END) };
+    approvedRequestWithStock({
+      reservations: [
+        {
+          requestId: "eqr_1",
+          equipmentId: "eq_projector",
+          quantity: 2,
+          ...whole,
+        },
+        { requestId: null, equipmentId: "eq_mic", quantity: 3, ...whole },
+      ],
+    });
+
+    const result = await reserveEquipmentRequest(validInput);
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toMatch(/already reserved/);
+    expect(tx.reservation.createMany).not.toHaveBeenCalled();
+  });
+
+  it("SCRUM-156 TC-156-07: a request with a line still missing can be reserved", async () => {
+    const whole = { startAt: new Date(START), endAt: new Date(END) };
+    approvedRequestWithStock({
+      reservations: [
+        {
+          requestId: "eqr_1",
+          equipmentId: "eq_projector",
+          quantity: 2,
+          ...whole,
+        },
+      ],
+    });
+
+    const result = await reserveEquipmentRequest({
+      ...validInput,
+      lines: [{ equipmentId: "eq_mic", quantity: 3 }],
+    });
+
+    expect(result.ok).toBe(true);
   });
 
   it("SCRUM-155 [AC1, AC6] TC-155-06, TC-155-10, TC-155-12: a request already reserved, or no longer approved, is refused and nothing is written", async () => {

@@ -194,8 +194,8 @@ export function ReserveRequestCard({
               Reserve an approved request
             </CardTitle>
             <CardDescription className="mt-0.5 text-xs text-muted-foreground">
-              Fills in what the Coordinator asked for. Every item is reserved
-              together, or none is.
+              Fills in what the Coordinator asked for that isn&apos;t reserved
+              yet. Every item is reserved together, or none is.
             </CardDescription>
           </div>
         </div>
@@ -221,6 +221,9 @@ export function ReserveRequestCard({
               {requests.map((request) => (
                 <option key={request.id} value={request.id}>
                   {request.event.name} — {formatEventPeriod(request.event)}
+                  {request.partlyReserved
+                    ? " (rest of a partly reserved request)"
+                    : ""}
                 </option>
               ))}
             </select>

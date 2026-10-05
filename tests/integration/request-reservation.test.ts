@@ -399,6 +399,73 @@ describe.skipIf(!usesLocalDatabase)(
       expect(await totalReserved(roomy)).toBe(2);
     });
 
+    it("SCRUM-156 TC-156-07: after one line's reservation is cancelled, only that line is offered and it can be reserved", async () => {
+      const requestId = await approvedRequest(await event("PLANNING"), [
+        { equipmentId: roomy, quantity: 1 },
+        { equipmentId: scarce, quantity: 1 },
+      ]);
+      await reserveEquipmentRequest({
+        requestId,
+        ...PERIOD,
+        lines: [
+          { equipmentId: roomy, quantity: 1 },
+          { equipmentId: scarce, quantity: 1 },
+        ],
+      });
+      expect(await offered()).not.toContain(requestId);
+
+      // As changing a line does (SCRUM-142): that line's stock goes back.
+      await prisma.reservation.updateMany({
+        where: { requestId, equipmentId: scarce },
+        data: { status: "CANCELLED", cancelledAt: new Date() },
+      });
+      const rest = (await getReservableRequests()).find(
+        (r) => r.id === requestId,
+      );
+      expect(rest?.partlyReserved).toBe(true);
+      expect(rest?.lines.map((l) => [l.equipment.id, l.quantity])).toEqual([
+        [scarce, 1],
+      ]);
+
+      const result = await reserveEquipmentRequest({
+        requestId,
+        ...PERIOD,
+        lines: [{ equipmentId: scarce, quantity: 1 }],
+      });
+      expect(result).toEqual({ ok: true, data: { reserved: 1 } });
+      expect(await offered()).not.toContain(requestId);
+      expect(await totalReserved(roomy)).toBe(1);
+      expect(await totalReserved(scarce)).toBe(1);
+    });
+
+    it("SCRUM-156 TC-156-08: a second approved request for an event already reserved for is offered and reserved in its own right", async () => {
+      const eventId = await event("PLANNING");
+      const first = await approvedRequest(eventId, [
+        { equipmentId: roomy, quantity: 1 },
+      ]);
+      await reserveEquipmentRequest({
+        requestId: first,
+        ...PERIOD,
+        lines: [{ equipmentId: roomy, quantity: 1 }],
+      });
+      const second = await approvedRequest(eventId, [
+        { equipmentId: roomy, quantity: 1 },
+      ]);
+
+      expect(await offered()).not.toContain(first);
+      expect(await offered()).toContain(second);
+      const result = await reserveEquipmentRequest({
+        requestId: second,
+        ...PERIOD,
+        lines: [{ equipmentId: roomy, quantity: 1 }],
+      });
+      expect(result).toEqual({ ok: true, data: { reserved: 1 } });
+      expect(await reservedFor(second)).toEqual([
+        { equipmentId: roomy, quantity: 1 },
+      ]);
+      expect(await totalReserved(roomy)).toBe(2);
+    });
+
     it("SCRUM-155 [AC2] TC-155-13: a period that doesn't cover the whole event is refused; a longer one is accepted", async () => {
       const eventId = await event("PLANNING");
       const requestId = await approvedRequest(eventId, [

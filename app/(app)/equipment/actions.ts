@@ -12,7 +12,11 @@ import {
   summariseAvailability,
   type ScheduleEntry,
 } from "@/lib/equipment/availability";
-import { reservableRequest } from "@/lib/equipment/request-queries";
+import {
+  CONFIRMED_HOLDS,
+  reservableRequest,
+} from "@/lib/equipment/request-queries";
+import { outstandingLines } from "@/lib/equipment/requests";
 import { formatDateTime } from "@/lib/datetime";
 import { fieldErrorsByPath } from "@/lib/schemas/equipment-request";
 import {
@@ -321,10 +325,27 @@ export async function reserveEquipmentRequest(
           where: { id: requestId, ...reservableRequest(new Date()) },
           select: {
             eventId: true,
-            event: { select: { startAt: true, endAt: true } },
+            event: {
+              select: {
+                startAt: true,
+                endAt: true,
+                reservations: CONFIRMED_HOLDS,
+              },
+            },
+            lines: { select: { equipmentId: true, quantity: true } },
           },
         });
-        if (!request)
+        // AC 6 — read under the event lock, which every reservation for the
+        // event takes, so what is outstanding can't change before the insert.
+        if (
+          !request ||
+          outstandingLines(
+            requestId,
+            request.lines,
+            request.event,
+            request.event.reservations,
+          ).length === 0
+        )
           return {
             error:
               "This request is not waiting to be reserved: it is already reserved, or no longer approved.",

@@ -5,6 +5,7 @@ import { summariseAvailability } from "@/lib/equipment/availability";
 import {
   OPEN_REQUEST_STATUSES,
   REQUESTABLE_EVENT_STATUSES,
+  outstandingLines,
   reviewLine,
   type PoolAvailability,
 } from "@/lib/equipment/requests";
@@ -232,14 +233,11 @@ export type QueuedEquipmentRequest = Awaited<
 >[number];
 
 /**
- * SCRUM-155 AC 1 & 6 — a request Technical Support can reserve: approved, for
- * an event that can still take a reservation and has not started, with
- * nothing reserved for that event yet. "Reserved" is judged by the event, not
- * the request: the one-type form (SCRUM-31) reserves without linking a
- * request, and the SCRUM-110 checklist counts by event too, so judging by the
- * request would offer stock that is already held. A cancelled reservation
- * releases its stock (SCRUM-32), so only a confirmed one counts. The listing
- * and the reserve action share this, so what is offered is what is accepted.
+ * SCRUM-155 AC 1 — a request Technical Support may reserve from: approved,
+ * for an event that can still take a reservation and has not started. Whether
+ * anything is left to reserve (AC 6) depends on its lines and the event's
+ * reservations, so `outstandingLines` decides that. The listing and the
+ * reserve action share both, so what is offered is what is accepted.
  */
 export function reservableRequest(now: Date) {
   return {
@@ -247,21 +245,45 @@ export function reservableRequest(now: Date) {
     event: {
       status: { in: RESERVABLE_EVENT_STATUSES },
       startAt: { gt: now },
-      reservations: { none: { status: "CONFIRMED" } },
     },
   } satisfies Prisma.EquipmentRequestWhereInput;
 }
 
-/** SCRUM-155 AC 1 & 2 — approved requests to reserve, with what they asked for. */
+/** What `outstandingLines` weighs a request's lines against. */
+export const CONFIRMED_HOLDS = {
+  where: { status: "CONFIRMED" },
+  select: {
+    requestId: true,
+    equipmentId: true,
+    quantity: true,
+    startAt: true,
+    endAt: true,
+  },
+} satisfies Prisma.Event$reservationsArgs;
+
+/**
+ * SCRUM-155 AC 1, 2 & 6 — approved requests with something still to reserve,
+ * each with only what is missing, so choosing one fills in the rest and never
+ * reserves a covered line twice. `partlyReserved` marks one already started.
+ */
 export async function getReservableRequests(now = new Date()) {
-  return prisma.equipmentRequest.findMany({
+  const requests = await prisma.equipmentRequest.findMany({
     where: reservableRequest(now),
     select: {
       id: true,
-      event: { select: { id: true, name: true, startAt: true, endAt: true } },
+      event: {
+        select: {
+          id: true,
+          name: true,
+          startAt: true,
+          endAt: true,
+          reservations: CONFIRMED_HOLDS,
+        },
+      },
       lines: {
         select: {
           id: true,
+          equipmentId: true,
           quantity: true,
           equipment: { select: { id: true, type: true } },
         },
@@ -269,6 +291,30 @@ export async function getReservableRequests(now = new Date()) {
       },
     },
     orderBy: { event: { startAt: "asc" } },
+  });
+
+  return requests.flatMap(({ id, event, lines }) => {
+    const missing = outstandingLines(id, lines, event, event.reservations);
+    if (missing.length === 0) return [];
+    return [
+      {
+        id,
+        event: {
+          id: event.id,
+          name: event.name,
+          startAt: event.startAt,
+          endAt: event.endAt,
+        },
+        partlyReserved:
+          missing.length < lines.length ||
+          missing.some((line) => line.outstanding < line.quantity),
+        lines: missing.map((line) => ({
+          id: line.id,
+          quantity: line.outstanding,
+          equipment: line.equipment,
+        })),
+      },
+    ];
   });
 }
 

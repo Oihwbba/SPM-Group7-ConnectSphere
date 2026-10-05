@@ -11,14 +11,16 @@ and the app is running. Signed in as `techsupport@test.local` (`Password123!`)
 on **Equipment**. Cases use a far-future period so seeded reservations and
 maintenance don't overlap it.
 
-| ID                      | Type       | Criterion     | Automated   |
-| ----------------------- | ---------- | ------------- | ----------- |
-| [TC-156-01](#tc-156-01) | Positive   | AC 1          | e2e         |
-| [TC-156-02](#tc-156-02) | Positive   | AC 1          | e2e         |
-| [TC-156-03](#tc-156-03) | Negative   | AC 2          | Unit        |
-| [TC-156-04](#tc-156-04) | Positive   | AC 3          | e2e         |
-| [TC-156-05](#tc-156-05) | Positive   | AC 4          | Integration |
-| [TC-156-06](#tc-156-06) | Regression | SCRUM-30 AC 1 | e2e         |
+| ID                      | Type       | Criterion                 | Automated              |
+| ----------------------- | ---------- | ------------------------- | ---------------------- |
+| [TC-156-01](#tc-156-01) | Positive   | AC 1                      | e2e                    |
+| [TC-156-02](#tc-156-02) | Positive   | AC 1                      | e2e                    |
+| [TC-156-03](#tc-156-03) | Negative   | AC 2                      | Unit                   |
+| [TC-156-04](#tc-156-04) | Positive   | AC 3                      | e2e                    |
+| [TC-156-05](#tc-156-05) | Positive   | AC 4                      | Integration            |
+| [TC-156-06](#tc-156-06) | Regression | SCRUM-30 AC 1             | e2e                    |
+| [TC-156-07](#tc-156-07) | Positive   | SCRUM-155 AC 6 (proposed) | Unit, integration, e2e |
+| [TC-156-08](#tc-156-08) | Positive   | SCRUM-155 AC 6 (proposed) | Unit, integration      |
 
 ---
 
@@ -99,3 +101,29 @@ maintenance don't overlap it.
 | Expected Result | 1. "4 of 4 available", nothing during the period. 2. Without reloading: "3 of 4 available", and the new reservation is listed under the period, naming the event. |
 
 **Automated by:** `e2e/equipment.spec.ts` › "AC 1: a reservation made in the request card appears in the commitments without a reload"
+
+### TC-156-07
+
+| Item            | Content                                                                                                                                                                                                                  |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Test Case ID    | TC-156-07                                                                                                                                                                                                                |
+| Test Scenario   | [Positive] SCRUM-155 AC 6 as proposed to the PO: a partly reserved request is offered again with only what is missing                                                                                                    |
+| Pre-conditions  | An Approved request for Projector × 1 and Microphone × 2. Projector × 1 is already reserved for it over the whole event; the microphones aren't (never reserved, or cancelled, as changing a line does under SCRUM-142). |
+| Test Steps      | 1. Open the **Approved request** list. 2. Choose the request. 3. **Reserve all**.                                                                                                                                        |
+| Test Data       | —                                                                                                                                                                                                                        |
+| Expected Result | 1. The request is listed as "(rest of a partly reserved request)". 2. One row: Microphone × 2. 3. Reserved; the request is no longer listed.                                                                             |
+
+**Automated by:** `tests/unit/equipment-request-queries.test.ts` › "SCRUM-156 TC-156-07: …"; `tests/unit/request-reservation.test.ts` › "SCRUM-156 TC-156-07: …"; `tests/integration/request-reservation.test.ts` › "SCRUM-156 TC-156-07: …"; `e2e/request-reservation.spec.ts` › "SCRUM-156 TC-156-07: …"
+
+### TC-156-08
+
+| Item            | Content                                                                                                                                                      |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Test Case ID    | TC-156-08                                                                                                                                                    |
+| Test Scenario   | [Positive] SCRUM-155 AC 6 as proposed to the PO: a second approved request for an event that already has reservations is reserved in its own right           |
+| Pre-conditions  | An event whose first approved request is reserved in full, and a second approved request for the same event (SCRUM-27 allows one once the first is decided). |
+| Test Steps      | 1. Open the **Approved request** list. 2. Reserve the second request.                                                                                        |
+| Test Data       | Both requests ask for Projector × 1.                                                                                                                         |
+| Expected Result | 1. Only the second request is listed: the first request's reservations don't cover it. 2. Reserved; the event now holds two projectors.                      |
+
+**Automated by:** `tests/unit/equipment-request-queries.test.ts` › "SCRUM-156 TC-156-08: …"; `tests/integration/request-reservation.test.ts` › "SCRUM-156 TC-156-08: …" (it fails if other requests' reservations count)
