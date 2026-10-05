@@ -15,24 +15,24 @@ on **Equipment**. Unless the case says otherwise, the event is in Planning and
 runs 09:00–17:00 Singapore time on one day, and its equipment request is
 Approved and asks for 1 Projector and 2 Wireless Microphones.
 
-| ID                      | Type        | Criterion | Automated              |
-| ----------------------- | ----------- | --------- | ---------------------- |
-| [TC-155-01](#tc-155-01) | Positive    | AC 1      | Unit, integration      |
-| [TC-155-02](#tc-155-02) | Positive    | AC 2      | Unit, e2e              |
-| [TC-155-03](#tc-155-03) | Positive    | AC 2      | e2e                    |
-| [TC-155-04](#tc-155-04) | Positive    | AC 3      | Unit, integration, e2e |
-| [TC-155-05](#tc-155-05) | Negative    | AC 4      | Unit, integration, e2e |
-| [TC-155-06](#tc-155-06) | Negative    | AC 6      | Unit, integration, e2e |
-| [TC-155-07](#tc-155-07) | Concurrency | AC 5      | Integration            |
-| [TC-155-08](#tc-155-08) | Concurrency | AC 5      | Unit, integration      |
-| [TC-155-09](#tc-155-09) | Negative    | AC 7      | Unit                   |
-| [TC-155-10](#tc-155-10) | Negative    | AC 1      | Unit, integration      |
-| [TC-155-11](#tc-155-11) | Negative    | Errors    | e2e                    |
-| [TC-155-12](#tc-155-12) | Negative    | AC 6      | Unit, integration      |
-| [TC-155-13](#tc-155-13) | Negative    | AC 2      | Unit, integration      |
-| [TC-155-14](#tc-155-14) | Negative    | AC 7      | Unit                   |
-| [TC-155-15](#tc-155-15) | Concurrency | AC 5      | Unit, integration      |
-| [TC-155-16](#tc-155-16) | Concurrency | AC 5, 6   | Unit, integration      |
+| ID                      | Type        | Criterion  | Automated              |
+| ----------------------- | ----------- | ---------- | ---------------------- |
+| [TC-155-01](#tc-155-01) | Positive    | AC 1       | Unit, integration      |
+| [TC-155-02](#tc-155-02) | Positive    | AC 2       | Unit, e2e              |
+| [TC-155-03](#tc-155-03) | Positive    | AC 2       | e2e                    |
+| [TC-155-04](#tc-155-04) | Positive    | AC 3       | Unit, integration, e2e |
+| [TC-155-05](#tc-155-05) | Negative    | AC 4       | Unit, integration, e2e |
+| [TC-155-06](#tc-155-06) | Negative    | AC 6       | Unit, integration, e2e |
+| [TC-155-07](#tc-155-07) | Concurrency | AC 5       | Integration            |
+| [TC-155-08](#tc-155-08) | Concurrency | AC 5       | Unit, integration      |
+| [TC-155-09](#tc-155-09) | Negative    | AC 7       | Unit                   |
+| [TC-155-10](#tc-155-10) | Negative    | AC 1       | Unit, integration      |
+| [TC-155-11](#tc-155-11) | Negative    | Errors     | e2e                    |
+| [TC-155-12](#tc-155-12) | Negative    | AC 6       | Unit, integration      |
+| [TC-155-13](#tc-155-13) | Negative    | AC 2       | Unit, integration      |
+| [TC-155-14](#tc-155-14) | Negative    | AC 2, AC 7 | Unit, e2e              |
+| [TC-155-15](#tc-155-15) | Concurrency | AC 5       | Unit, integration      |
+| [TC-155-16](#tc-155-16) | Concurrency | AC 5, 6    | Unit, integration      |
 
 ---
 
@@ -207,16 +207,16 @@ Approved and asks for 1 Projector and 2 Wireless Microphones.
 
 ### TC-155-14
 
-| Item            | Content                                                                                                                                      |
-| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| Test Case ID    | TC-155-14                                                                                                                                    |
-| Test Scenario   | [Negative] AC 7: a row whose equipment type has been retired since the request was made is marked on that row                                |
-| Pre-conditions  | The request asks for a type that is no longer active.                                                                                        |
-| Test Steps      | 1. Choose the request and **Reserve all**.                                                                                                   |
-| Test Data       | —                                                                                                                                            |
-| Expected Result | "Nothing was reserved: an equipment type is no longer available." The row says "This equipment type is no longer available. Choose another." |
+| Item            | Content                                                                                                                                                                                                                                                        |
+| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Test Case ID    | TC-155-14                                                                                                                                                                                                                                                      |
+| Test Scenario   | [Negative] AC 2, AC 7: a row whose equipment type has been retired since the request was made shows the type that was asked for, and is marked on that row                                                                                                     |
+| Pre-conditions  | The request asks for a type that is no longer active.                                                                                                                                                                                                          |
+| Test Steps      | 1. Choose the request. 2. **Reserve all**.                                                                                                                                                                                                                     |
+| Test Data       | —                                                                                                                                                                                                                                                              |
+| Expected Result | 1. The row shows the type that was asked for, as "<type> (no longer available)", and it can't be chosen again. 2. "Nothing was reserved: an equipment type is no longer available." The row says "This equipment type is no longer available. Choose another." |
 
-**Automated by:** `tests/unit/request-reservation.test.ts` › "marks the row whose equipment type has been retired, and reserves nothing"
+**Automated by:** `tests/unit/request-reservation.test.ts` › "marks the row whose equipment type has been retired, and reserves nothing"; `e2e/request-reservation.spec.ts` › "SCRUM-155 [AC2, AC7] TC-155-14: …"
 
 ### TC-155-15
 
