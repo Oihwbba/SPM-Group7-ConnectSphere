@@ -96,3 +96,4 @@ defect, e.g. `regression: a blank rejection reason was accepted`.
 | [SCRUM-110](SCRUM-110.md) | Jun Bin | 15 | Every case automated (unit, and e2e for the page) |
 | [SCRUM-108](SCRUM-108.md) | Jun Bin | 12 | Every case automated (unit, e2e for both journeys); AC 6, 8 and 10 point to existing tests |
 | [SCRUM-126](SCRUM-126.md) | Jun Bin | 10 | Every case automated (unit, integration for the constraint, migration and simultaneous clicks, e2e for the journey) |
+| [SCRUM-117](SCRUM-117.md) | Jun Bin | 10 | Every case automated (unit, integration for the release in one transaction, e2e for the journey) |

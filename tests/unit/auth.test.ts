@@ -168,6 +168,25 @@ describe("can — confirming an event (SCRUM-81)", () => {
   });
 });
 
+// SCRUM-117 AC 5 — rejecting a Planning event follows the same rule as
+// confirming it: only the event's assigned Coordinator.
+describe("can — rejecting a Planning event (SCRUM-117)", () => {
+  const planning = {
+    kind: "event" as const,
+    organiserId: "orgA",
+    coordinatorId: "coord",
+    status: "PLANNING" as const,
+  };
+
+  it("SCRUM-117 [AC5] TC-117-07: only the event's assigned Coordinator may reject it, and never an unassigned one", () => {
+    expect(can(coordinator, "event:reject", planning)).toBe(true);
+    expect(can({ id: "other", role: "COORDINATOR" }, "event:reject", planning)).toBe(false);
+    expect(can(organiserA, "event:reject", planning)).toBe(false);
+    expect(can({ id: "ts", role: "TECH_SUPPORT" }, "event:reject", planning)).toBe(false);
+    expect(can(coordinator, "event:reject", { ...planning, coordinatorId: null })).toBe(false);
+  });
+});
+
 // SCRUM-50/52/53 — who may take part in a venue booking. The booking actions
 // are new capabilities, so they are pinned here alongside the rest.
 describe("can — venue booking capabilities (SCRUM-50/52/53)", () => {
