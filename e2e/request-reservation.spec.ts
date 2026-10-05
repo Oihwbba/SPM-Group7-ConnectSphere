@@ -197,6 +197,12 @@ test.describe("SCRUM-155 — Reserve an approved request in one step", () => {
     const card = page.locator(`#request-${requestId}`);
     await expect(card).toContainText(name);
     await expect(card).toBeInViewport();
+    // The sticky header must not cover the request's title.
+    await expect
+      .poll(async () => (await card.boundingBox())!.y)
+      .toBeGreaterThanOrEqual(
+        (await page.locator("header").boundingBox())!.height,
+      );
   });
 
   test("SCRUM-155 [AC7] TC-155-09: a cleared start or end reserves nothing and says so at the field", async ({

@@ -184,7 +184,7 @@ function ReviewCard({ request }: { request: QueuedEquipmentRequest }) {
   return (
     <Card
       id={`request-${request.id}`}
-      className="scroll-mt-6"
+      className="scroll-mt-24"
       data-testid="review-request"
       data-status={request.status}
     >
