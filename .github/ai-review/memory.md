@@ -32,9 +32,9 @@ need not record it. Other teammates may merge too.
   pull request branch.
 
 - (2026-10-04, #101) Story files under `docs/backlog` lag Jira: PO decisions
-  land as separate sync pull requests (#103, #115); an earlier review of #101
-  flagged code that met the new AC 4 against the stale copy. Check a story
-  file's change log before reporting a code/story mismatch.
+land as separate sync pull requests (#103, #115); an earlier review of #101
+flagged code that met the new AC 4 against the stale copy. Check a story
+file's change log before reporting a code/story mismatch.
 
 ## Dependencies
 
@@ -56,9 +56,10 @@ need not record it. Other teammates may merge too.
 - (2026-09-16, #33) Supabase's stored checksums differ from the repo for three
   older migration files. `prisma migrate deploy` ignores checksums, so this is
   known and harmless. Nobody may run `prisma migrate dev` against Supabase.
-- (2026-09-16, #33; 2026-09-28, #90; 2026-10-04, #114) `Event.equipmentTypes`
-  and `Event.registrationRequired` exist to keep production data; no feature
-  reads or writes them yet. `Event.registrationCapacity` joined them in #90,
+- (2026-09-16, #33; 2026-09-28, #90; 2026-10-04, #114, #120) `Event.equipmentTypes`
+  and `Event.registrationRequired` exist to keep production data; nothing
+  writes either, and #120's `confirmEvent` is the only reader of
+  `registrationRequired`. `Event.registrationCapacity` joined them in #90,
   which made `expectedAttendance` the registration capacity (SCRUM-73/74):
   nothing reads the column and dropping it needs a migration decision, so #114
   left it again.
@@ -66,56 +67,54 @@ need not record it. Other teammates may merge too.
 ## Events and status
 
 - (2026-09-20, #51) `submitEventRequest` assigns a coordinator in the same
-  transaction (SCRUM-20), so a just-submitted request is `UNDER_REVIEW`, not
-  `SUBMITTED`, whenever a coordinator exists. The least-loaded of the two seeded
-  coordinators wins, so a test reads the assignment rather than hard-coding
-  `coordinator@test.local`.
+transaction (SCRUM-20), so a just-submitted request is `UNDER_REVIEW`, not
+`SUBMITTED`, whenever a coordinator exists. The least-loaded of the two seeded
+coordinators wins, so a test reads the assignment rather than hard-coding
+`coordinator@test.local`.
 - (2026-09-20, #54) The events list's Submitted tab counts and shows both
-  `SUBMITTED` and `UNDER_REVIEW` for that reason. Narrowing it to `SUBMITTED`
-  hides a request the organiser has just sent.
+`SUBMITTED` and `UNDER_REVIEW` for that reason. Narrowing it to `SUBMITTED`
+hides a request the organiser has just sent.
 - (2026-09-20, #54; 2026-10-02, #112) Every event is stored `Asia/Singapore`
-  only since #112 (SCRUM-129 retired SCRUM-13's per-event timezones):
-  `Event.timezone` is `NOT NULL` with `CHECK event_timezone_singapore`, and
-  that migration relabelled existing production rows deliberately — the stored
-  UTC instants were kept, the old zone labels were not. The create form no
-  longer captures `requiredFacilities`: new events store `[]`, existing values
-  still display, and whether capture returns is open for SCRUM-39/40.
+only since #112 (SCRUM-129 retired SCRUM-13's per-event timezones):
+`Event.timezone` is `NOT NULL` with `CHECK event_timezone_singapore`, and
+that migration relabelled existing production rows deliberately — the stored
+UTC instants were kept, the old zone labels were not. The create form no
+longer captures `requiredFacilities`: new events store `[]`, existing values
+still display, and whether capture returns is open for SCRUM-39/40.
 - (2026-09-25, #87) The `?? null` fallbacks on optional draft fields in
-  `app/(app)/events/actions.ts` are deliberate: on update, `null` clears a
-  field the organiser emptied, while `undefined` would keep the old value.
+`app/(app)/events/actions.ts` are deliberate: on update, `null` clears a
+field the organiser emptied, while `undefined` would keep the old value.
 - (2026-09-28, #90) `app/(app)/events/[id]/` has no `loading.tsx` on purpose:
-  a loading boundary would stream a 200 shell and `notFound()` would stop
-  returning a real 404, which the e2e pins.
+a loading boundary would stream a 200 shell and `notFound()` would stop
+returning a real 404, which the e2e pins.
 
 ## Equipment
 
 - (2026-09-25, #87) The post-lock `if (!availability)` guard in
-  `createReservation` is deliberate: the row lock and the availability count
+`createReservation` is deliberate: the row lock and the availability count
   are separate queries, and the guard refuses rather than crashes if their
   filters ever drift apart.
 - (2026-09-28, #94) Reads that take the signed-in user's id live in plain
-  modules (`lib/equipment/request-queries.ts`), never in a `"use server"`
-  file: a server action is callable by anyone with any arguments, so exporting
-  one there would let any caller pass another user's id.
+modules (`lib/equipment/request-queries.ts`), never in a `"use server"`
+file: a server action is callable by anyone with any arguments, so exporting
+one there would let any caller pass another user's id.
 
 ## Tests
 
 - (2026-09-15, #27; 2026-09-30, SCRUM-125) Integration tests in
-  `tests/integration/` use `describe.skipIf(!usesLocalDatabase)` on purpose:
-  they write data, so they run only against CI's Postgres or local Docker,
-  never Supabase. Skipping locally isn't missing coverage, except that
-  `npm run test:coverage` then fails its 100% threshold, as expected.
-- (2026-09-15, #26) Test case specifications live in `docs/testing/<KEY>.md`,
-  and each case names the automated test that covers it.
+`tests/integration/` use `describe.skipIf(!usesLocalDatabase)` on purpose:
+they write data, so they run only against CI's Postgres or local Docker,
+never Supabase. Skipping locally isn't missing coverage, except that
+`npm run test:coverage` then fails its 100% threshold, as expected.
 - (2026-09-25, #88; 2026-09-30, SCRUM-125) Coverage measures every `.ts` file
-  under `lib/` and `app/` (not the Auth.js route re-export), in a `node`
-  environment with no jsdom, so `.tsx` components never appear in it;
-  Playwright journeys exercise them. Measuring components needs new tooling
-  (SCRUM-87), a team decision. CI fails when a measured file drops below 100%,
-  so a "100% coverage" claim refers to the measured files only.
+under `lib/` and `app/` (not the Auth.js route re-export), in a `node`
+environment with no jsdom, so `.tsx` components never appear in it;
+Playwright journeys exercise them. Measuring components needs new tooling
+(SCRUM-87), a team decision. CI fails when a measured file drops below 100%,
+so a "100% coverage" claim refers to the measured files only.
 - (2026-09-25, #87) CI runs Node 24 and a developer may run Node 22, whose ICU
-  labels a zero-offset zone differently, so a branch can run locally but never
-  on CI. Tests asserting `Intl` output stub `Intl` rather than trust the ICU.
+labels a zero-offset zone differently, so a branch can run locally but never
+on CI. Tests asserting `Intl` output stub `Intl` rather than trust the ICU.
 
 ## Known open gaps
 
@@ -131,7 +130,9 @@ claims SCRUM-84.
 period can never be removed or shortened from the app, so a wrong record
 blocks its venue until someone edits the database by hand; and the record form
 blocks past start times that the server schema accepts.
-- (2026-10-04, #114) `registrationEnabled` defaults to false and nothing sets
-it, so a freshly Confirmed event shows "Registration closed" until SCRUM-81's
-confirm action turns the flag on (SCRUM-73 AC6). Treat it as known when a pull
-request touches confirmation or the attendee registration state.
+- (2026-10-04, #120) Events approved before #120 sit in APPROVED with no way
+out: approval now writes PLANNING directly, `transitionEventStatus` only
+decides Submitted/Under Review, and `confirmEvent` refuses anything not
+Planning, so legacy rows (the seed's `evt_approved` among them, and the reason
+APPROVED stays reservable) can never be confirmed or resubmitted. Treat it as
+known when a pull request touches the status lifecycle or the seed.
