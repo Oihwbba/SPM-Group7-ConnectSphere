@@ -608,6 +608,30 @@ describe("submitEventRequest — SCRUM-108 AC9–AC12, AC14 resubmission", () =>
     },
   );
 
+  it("SCRUM-108 [AC11, AC14] TC-108-14: when its Coordinator lost the role and nobody can be assigned, the resubmitted request is left unassigned", async () => {
+    tx.event.findFirst.mockResolvedValue(rejectedRow("usr_old"));
+    tx.user.findFirst.mockResolvedValue(null);
+    tx.user.findMany.mockResolvedValue([]);
+
+    const result = await submitEventRequest(amended);
+
+    expect(result).toEqual({ ok: true, data: { id: "evt1" } });
+    expect(tx.event.update).toHaveBeenLastCalledWith({
+      where: { id: "evt1" },
+      data: { coordinatorId: null },
+    });
+    expect(tx.auditLog.create).toHaveBeenLastCalledWith({
+      data: expect.objectContaining({
+        action: "ASSIGNED",
+        actorId: null,
+        oldValue: "usr_old",
+        newValue: null,
+      }),
+    });
+    expect(tx.notification.create).not.toHaveBeenCalled();
+    expect(tx.notification.createMany).not.toHaveBeenCalled();
+  });
+
   it("SCRUM-108 [AC12] TC-108-08: resubmitting an event that is no longer Rejected is refused, with no second history entry or notification", async () => {
     // Already resubmitted: the locked lookup no longer matches it.
     tx.event.findFirst.mockResolvedValue(null);

@@ -424,6 +424,27 @@ export async function submitEventRequest(
             summary: "Auto-assigned on submission (SCRUM-20)",
           },
         });
+      } else if (previousCoordinatorId) {
+        // SCRUM-108 AC11: a resubmission whose Coordinator lost the role,
+        // with nobody to assign, is left unassigned like a first submission,
+        // so it shows in every Coordinator's queue rather than in no one's.
+        await tx.event.update({
+          where: { id: eventId! },
+          data: { coordinatorId: null },
+        });
+        await tx.auditLog.create({
+          data: {
+            entityType: "Event",
+            entityId: eventId!,
+            action: "ASSIGNED",
+            actorId: null, // system-performed, not a specific user's action
+            fieldName: "coordinatorId",
+            oldValue: previousCoordinatorId,
+            newValue: null,
+            summary:
+              "Unassigned on resubmission: the coordinator no longer holds the role (SCRUM-108)",
+          },
+        });
       }
       // No coordinator available: the event still reaches SUBMITTED (set
       // above) and stays visible to coordinators — it must not fail

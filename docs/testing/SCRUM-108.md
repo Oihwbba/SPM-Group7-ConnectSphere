@@ -29,6 +29,7 @@ and the app is running. Unless the case says otherwise, the event is owned by
 | [TC-108-11](#tc-108-11) | Positive | AC 7, AC 9, AC 10, AC 11, AC 14 | e2e                  |
 | [TC-108-12](#tc-108-12) | Positive | AC 6, AC 8, AC 10               | Unit, e2e (existing) |
 | [TC-108-13](#tc-108-13) | Boundary | AC 9, AC 11, AC 14              | Unit                 |
+| [TC-108-14](#tc-108-14) | Boundary | AC 11, AC 14                    | Unit                 |
 
 ---
 
@@ -188,3 +189,15 @@ and the app is running. Unless the case says otherwise, the event is owned by
 | Expected Result | The resubmission succeeds: the event ends Under Review with the same Coordinator, who is notified, and history records Rejected → Submitted and Submitted → Under Review, with no change entries. Raised by the GLM review of PR #129. |
 
 **Automated by:** `tests/unit/clarification-and-amend.test.ts` › "SCRUM-108 [AC9, AC11, AC14] TC-108-13: …"
+
+### TC-108-14
+
+| Item            | Content                                                                                                                                                                                                                                                              |
+| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Test Scenario   | [Boundary] AC 11, AC 14: the previous Coordinator no longer holds the role and no Coordinator can be assigned                                                                                                                                                        |
+| Pre-conditions  | The event was rejected with Amend and resubmit; its Coordinator has since lost the role, and no user holds it.                                                                                                                                                       |
+| Test Steps      | 1. Amend and resubmit it.                                                                                                                                                                                                                                            |
+| Test Data       | —                                                                                                                                                                                                                                                                    |
+| Expected Result | The resubmission succeeds and the event stays Submitted with no Coordinator, like a first submission, so it shows in every Coordinator's queue once one exists. History records the unassignment from the previous Coordinator. Raised by the GLM review of PR #129. |
+
+**Automated by:** `tests/unit/clarification-and-amend.test.ts` › "SCRUM-108 [AC11, AC14] TC-108-14: …"

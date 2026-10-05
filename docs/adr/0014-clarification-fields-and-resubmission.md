@@ -40,7 +40,7 @@ stayed in every Coordinator's list).
 6. **A resubmission returns to the same Coordinator.** `submitEventRequest`
    keeps the previous Coordinator if they still hold the role, moves the event
    to Under Review, notifies them and records both steps; automatic assignment
-   runs only if there was none or they no longer hold the role.
+   runs only if there was none or they no longer hold the role. If it then finds no Coordinator, the request is left unassigned, like a first submission, so it is in every Coordinator's queue rather than tied to someone who can no longer review it (GLM review of PR #129).
 7. **An amendment keeps the values it replaced.** Resubmitting overwrites the
    request's fields in place (AC 9: the same event), so `submitEventRequest`
    first compares the stored request with the amended one and writes one
