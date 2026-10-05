@@ -46,7 +46,7 @@ stayed in every Coordinator's list).
    first compares the stored request with the amended one and writes one
    `UPDATED` entry per changed field, with old and new values, by the
    Organiser, as an answer does in decision 5. An empty optional field counts
-   as unset, so clearing nothing records nothing. The rejection's own entries,
+   as unset. A resubmission with nothing changed writes no change entries (found by the GLM review of PR #129: an empty write would have failed it). The rejection's own entries,
    with its reason, are never touched, although the event row's
    `decisionReason` and `rejectionOutcome` are cleared on resubmission. Raised
    by the PO in review of PR #129: AC 9's "history is kept" and AC 14's

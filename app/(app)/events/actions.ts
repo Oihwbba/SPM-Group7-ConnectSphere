@@ -277,16 +277,20 @@ export async function submitEventRequest(
               ? []
               : [{ fieldName, oldValue, newValue }];
           });
-          await tx.auditLog.createMany({
-            data: changed.map((change) => ({
-              entityType: "Event",
-              entityId: id,
-              action: "UPDATED",
-              actorId: user!.id,
-              ...change,
-              summary: "Amended before resubmitting (SCRUM-108)",
-            })),
-          });
+          // Resubmitting unchanged is allowed, and createMany refuses an
+          // empty list.
+          if (changed.length > 0) {
+            await tx.auditLog.createMany({
+              data: changed.map((change) => ({
+                entityType: "Event",
+                entityId: id,
+                action: "UPDATED",
+                actorId: user!.id,
+                ...change,
+                summary: "Amended before resubmitting (SCRUM-108)",
+              })),
+            });
+          }
         }
       } else {
         // Create and directly submit a new event request

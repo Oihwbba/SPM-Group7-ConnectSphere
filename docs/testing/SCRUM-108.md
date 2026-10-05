@@ -28,6 +28,7 @@ and the app is running. Unless the case says otherwise, the event is owned by
 | [TC-108-10](#tc-108-10) | Positive | AC 1, AC 2, AC 3, AC 14         | e2e                  |
 | [TC-108-11](#tc-108-11) | Positive | AC 7, AC 9, AC 10, AC 11, AC 14 | e2e                  |
 | [TC-108-12](#tc-108-12) | Positive | AC 6, AC 8, AC 10               | Unit, e2e (existing) |
+| [TC-108-13](#tc-108-13) | Boundary | AC 9, AC 11, AC 14              | Unit                 |
 
 ---
 
@@ -175,3 +176,15 @@ and the app is running. Unless the case says otherwise, the event is owned by
 | Expected Result | AC 6: a decision closes any open clarification. AC 8: after Submit as a new request, Amend & Resubmit isn't offered. AC 10: resubmitting applies the first submission's validation. |
 
 **Automated by:** AC 6: `tests/unit/event-status.test.ts` › "SCRUM-18: deciding an event closes its still-OPEN clarification …". AC 8: `tests/unit/rejection-outcome.test.ts` › "SCRUM-126 [AC3] TC-126-04: …" and `e2e/rejection-outcome.spec.ts` › TC-126-08. AC 10: `tests/unit/events.test.ts` (the SCRUM-14 submission validation cases).
+
+### TC-108-13
+
+| Item            | Content                                                                                                                                                                                                                                |
+| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Test Scenario   | [Boundary] AC 9, AC 11, AC 14: a rejected request resubmitted without changing any field                                                                                                                                               |
+| Pre-conditions  | The event was rejected with Amend and resubmit; its Coordinator still holds the role.                                                                                                                                                  |
+| Test Steps      | 1. Amend and resubmit it, leaving every field as it was.                                                                                                                                                                               |
+| Test Data       | —                                                                                                                                                                                                                                      |
+| Expected Result | The resubmission succeeds: the event ends Under Review with the same Coordinator, who is notified, and history records Rejected → Submitted and Submitted → Under Review, with no change entries. Raised by the GLM review of PR #129. |
+
+**Automated by:** `tests/unit/clarification-and-amend.test.ts` › "SCRUM-108 [AC9, AC11, AC14] TC-108-13: …"

@@ -559,6 +559,30 @@ describe("submitEventRequest — SCRUM-108 AC9–AC12, AC14 resubmission", () =>
     });
   });
 
+  it("SCRUM-108 [AC9, AC11, AC14] TC-108-13: a request resubmitted without changes still goes back Under Review, with no change entries", async () => {
+    tx.event.findFirst.mockResolvedValue({
+      ...rejectedRow("usr_coord"),
+      description: amended.description,
+      expectedAttendance: amended.expectedAttendance,
+    });
+    tx.user.findFirst.mockResolvedValue({ id: "usr_coord" });
+
+    const result = await submitEventRequest(amended);
+
+    expect(result).toEqual({ ok: true, data: { id: "evt1" } });
+    expect(tx.auditLog.createMany).not.toHaveBeenCalled();
+    expect(tx.auditLog.create.mock.calls.map((c) => c[0].data)).toEqual([
+      expect.objectContaining({ oldValue: "REJECTED", newValue: "SUBMITTED" }),
+      expect.objectContaining({
+        oldValue: "SUBMITTED",
+        newValue: "UNDER_REVIEW",
+      }),
+    ]);
+    expect(tx.notification.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ userId: "usr_coord" }),
+    });
+  });
+
   it.each([
     {
       when: "that Coordinator no longer holds the role",
