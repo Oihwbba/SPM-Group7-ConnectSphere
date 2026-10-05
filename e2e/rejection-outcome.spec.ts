@@ -121,6 +121,13 @@ test.describe("SCRUM-126 — Rejected as needing a new request", () => {
     await expect(
       page.getByText("A new draft was started from this request."),
     ).toBeVisible();
+    // The new draft opens straight away for editing; close it unchanged.
+    const editor = page.getByRole("heading", {
+      name: /Resume Draft Event Request/,
+    });
+    await expect(editor).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(editor).toHaveCount(0);
     const draftRow = page.getByRole("row", { name: new RegExp(eventName) });
     await expect(draftRow.getByTestId("status-badge")).toHaveAttribute(
       "data-status",
@@ -140,6 +147,9 @@ test.describe("SCRUM-126 — Rejected as needing a new request", () => {
         "A new request was already started from this one. Find it in your events list.",
       ),
     ).toBeVisible();
+    // It is still a draft, so the same draft opens again: no copy was made.
+    await expect(editor).toBeVisible();
+    await page.keyboard.press("Escape");
 
     // The Draft carries the details but not the decision, and the rejected
     // event is untouched (AC3, AC4).

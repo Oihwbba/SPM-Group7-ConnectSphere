@@ -114,7 +114,7 @@ export function EventDetailsModal({
           </Card>
 
           {/* SCRUM-18: shows nothing if there's no clarification thread */}
-          <ClarificationPanel eventId={event.id} isCoordinator={isCoordinator} />
+          <ClarificationPanel event={event} isCoordinator={isCoordinator} />
 
           {/* SCRUM-110: what is still outstanding before the event can be confirmed */}
           {event.status === "PLANNING" && <ReadinessChecklist eventId={event.id} />}
