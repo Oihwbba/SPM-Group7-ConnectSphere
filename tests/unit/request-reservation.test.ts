@@ -380,6 +380,21 @@ describe("reserveEquipmentRequest — SCRUM-155", () => {
         "lines.1.equipmentId",
         /already on another row/,
       ],
+      [
+        { lines: [{ equipmentId: "eq_mic", quantity: 1001 }] },
+        "lines.0.quantity",
+        /at most 1,000/,
+      ],
+      [
+        {
+          lines: Array.from({ length: 21 }, (_, i) => ({
+            equipmentId: `eq_${i}`,
+            quantity: 1,
+          })),
+        },
+        "lines",
+        /at most 20/,
+      ],
       [{ endAt: START }, "endAt", /after the start/],
       [{ startAt: "2020-01-01T01:00:00.000Z" }, "startAt", /in the past/],
       [{ requestId: "" }, "requestId", /approved request/],
