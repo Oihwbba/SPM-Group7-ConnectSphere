@@ -13,7 +13,7 @@ import { Prisma } from "@prisma/client";
 
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
-import { createReservation } from "@/app/(app)/equipment/actions";
+import { reserveEquipmentRequest } from "@/app/(app)/equipment/actions";
 import {
   confirmEvent,
   transitionEventStatus,
@@ -97,11 +97,9 @@ const TECH_SUPPORT: Session = {
   expires: "2999-01-01T00:00:00.000Z",
 };
 
-// Seeded APPROVED event (prisma/seed.ts).
-const APPROVED_EVENT_ID = "evt_approved";
-
 describe.skipIf(!usesLocalDatabase)("concurrency — equipment pool (SCRUM-31)", () => {
   let equipmentId: string;
+  const eventIds: string[] = [];
 
   beforeAll(async () => {
     (auth as unknown as Mock).mockResolvedValue(TECH_SUPPORT);
@@ -115,21 +113,49 @@ describe.skipIf(!usesLocalDatabase)("concurrency — equipment pool (SCRUM-31)",
 
   afterAll(async () => {
     await prisma.reservation.deleteMany({ where: { equipmentId } });
+    await prisma.equipmentRequest.deleteMany({ where: { eventId: { in: eventIds } } });
+    await removeEvents(eventIds);
     await prisma.equipment.delete({ where: { id: equipmentId } });
   });
 
+  // Since SCRUM-156 equipment is reserved only from an approved request, so
+  // each period gets an event with a request for the one unit.
+  async function approvedRequestsFor(periods: { startAt: string; endAt: string }[]) {
+    const ids = await createPlanningEvents(
+      "Concurrency pool",
+      periods.map((p) => ({ startAt: new Date(p.startAt), endAt: new Date(p.endAt) })),
+    );
+    eventIds.push(...ids);
+    return Promise.all(
+      ids.map(async (eventId, index) => {
+        const request = await prisma.equipmentRequest.create({
+          data: {
+            eventId,
+            requestedById: "usr_coordinator",
+            status: "APPROVED",
+            lines: { create: [{ equipmentId, quantity: 1 }] },
+          },
+          select: { id: true },
+        });
+        return {
+          requestId: request.id,
+          ...periods[index],
+          lines: [{ equipmentId, quantity: 1 }],
+        };
+      }),
+    );
+  }
+
   it("does not over-allocate equipment when two staff reserve the last unit (SCRUM-31)", async () => {
     const period = {
-      eventId: APPROVED_EVENT_ID,
-      equipmentId,
-      quantity: 1,
       startAt: "2031-03-01T01:00:00.000Z",
       endAt: "2031-03-01T05:00:00.000Z",
     };
+    const [first, second] = await approvedRequestsFor([period, period]);
 
     const results = await Promise.all([
-      createReservation(period),
-      createReservation(period),
+      reserveEquipmentRequest(first),
+      reserveEquipmentRequest(second),
     ]);
 
     expect(results.filter((r) => r.ok)).toHaveLength(1);
@@ -148,28 +174,16 @@ describe.skipIf(!usesLocalDatabase)("concurrency — equipment pool (SCRUM-31)",
   });
 
   it("accepts reservations that touch at an endpoint — periods sharing an endpoint do not overlap (SCRUM-31)", async () => {
-    const base = { eventId: APPROVED_EVENT_ID, equipmentId, quantity: 1 };
-
     // One unit, three back-to-back periods: each ends exactly when the next begins.
-    const morning = await createReservation({
-      ...base,
-      startAt: "2031-04-01T01:00:00.000Z",
-      endAt: "2031-04-01T03:00:00.000Z",
-    });
-    const midday = await createReservation({
-      ...base,
-      startAt: "2031-04-01T03:00:00.000Z",
-      endAt: "2031-04-01T05:00:00.000Z",
-    });
-    const dawn = await createReservation({
-      ...base,
-      startAt: "2031-03-31T23:00:00.000Z",
-      endAt: "2031-04-01T01:00:00.000Z",
-    });
+    const [morning, midday, dawn] = await approvedRequestsFor([
+      { startAt: "2031-04-01T01:00:00.000Z", endAt: "2031-04-01T03:00:00.000Z" },
+      { startAt: "2031-04-01T03:00:00.000Z", endAt: "2031-04-01T05:00:00.000Z" },
+      { startAt: "2031-03-31T23:00:00.000Z", endAt: "2031-04-01T01:00:00.000Z" },
+    ]);
 
-    expect(morning.ok).toBe(true);
-    expect(midday.ok).toBe(true);
-    expect(dawn.ok).toBe(true);
+    expect((await reserveEquipmentRequest(morning)).ok).toBe(true);
+    expect((await reserveEquipmentRequest(midday)).ok).toBe(true);
+    expect((await reserveEquipmentRequest(dawn)).ok).toBe(true);
   });
 });
 

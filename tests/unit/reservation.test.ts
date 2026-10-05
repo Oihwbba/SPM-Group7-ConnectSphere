@@ -4,20 +4,19 @@ import type { Role } from "@prisma/client";
 
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
+import * as equipmentActions from "@/app/(app)/equipment/actions";
 import {
-  createReservation,
   getAllEquipmentAvailability,
   getEquipmentAvailability,
 } from "@/app/(app)/equipment/actions";
 
-// SCRUM-31 — reserve equipment for an approved event. Database mocked; the
-// simultaneous last-unit case runs against real Postgres in concurrency.test.ts.
+// SCRUM-29/31 — what is free for a period. Database mocked. Reserving moved
+// to SCRUM-155's approved-request card (SCRUM-156); its tests live in
+// request-reservation.test.ts.
 const tx = vi.hoisted(() => ({
-  event: { findFirst: vi.fn() },
   equipment: { findFirst: vi.fn(), findMany: vi.fn() },
-  reservation: { findMany: vi.fn(), create: vi.fn() },
+  reservation: { findMany: vi.fn() },
   equipmentUnavailability: { findMany: vi.fn() },
-  $queryRaw: vi.fn(),
 }));
 
 vi.mock("@/auth", () => ({ auth: vi.fn() }));
@@ -53,8 +52,6 @@ const validInput = {
  * a counted pool's answer is its peak — see lib/equipment/availability.ts.
  */
 function poolWithFiveAvailable() {
-  tx.event.findFirst.mockResolvedValue({ id: "evt_approved" });
-  tx.$queryRaw.mockResolvedValue([{ id: "eq1" }]);
   tx.equipment.findFirst.mockResolvedValue({ totalQuantity: 10 });
   tx.reservation.findMany.mockResolvedValue([
     { startAt: new Date(START), endAt: new Date(END), quantity: 3 },
@@ -62,7 +59,6 @@ function poolWithFiveAvailable() {
   tx.equipmentUnavailability.findMany.mockResolvedValue([
     { startAt: new Date(START), endAt: new Date(END), quantity: 2 },
   ]);
-  tx.reservation.create.mockResolvedValue({ id: "res1" });
 }
 
 beforeEach(() => {
@@ -71,189 +67,16 @@ beforeEach(() => {
   mockAuth.mockResolvedValue(sessionFor("TECH_SUPPORT", "usr_tech"));
 });
 
-describe("createReservation — SCRUM-31", () => {
-  it("AC 1 & 2: a quantity that fits is CONFIRMED, linked to the event, and availability drops by exactly that amount", async () => {
-    poolWithFiveAvailable();
-
-    const result = await createReservation(validInput);
-
-    expect(result).toEqual({ ok: true, data: { id: "res1", available: 0 } });
-    expect(tx.reservation.create).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: expect.objectContaining({
-          eventId: "evt_approved",
-          equipmentId: "eq1",
-          quantity: 5,
-          status: "CONFIRMED",
-          reservedById: "usr_tech",
-        }),
-      }),
+// SCRUM-156 AC 2: the one-type form only checks availability. With no
+// action to call, a reservation that bypasses an approved request has nowhere
+// to go; the only way to reserve is SCRUM-155's reserveEquipmentRequest.
+describe("reserving outside an approved request — SCRUM-156", () => {
+  it("SCRUM-156 [AC2] TC-156-03: the server offers no way to reserve except from an approved request", () => {
+    const reserving = Object.keys(equipmentActions).filter((name) =>
+      /reserv/i.test(name),
     );
-  });
 
-  it("AC 3: over-allocation is refused and the shortfall is shown", async () => {
-    poolWithFiveAvailable();
-
-    const result = await createReservation({ ...validInput, quantity: 7 });
-
-    expect(result.ok).toBe(false);
-    if (!result.ok) {
-      expect(result.error).toMatch(/Only 5 of 10 unit\(s\)/);
-      expect(result.error).toMatch(/2 short/);
-    }
-    expect(tx.reservation.create).not.toHaveBeenCalled();
-  });
-
-  it("AC 5: the equipment row is locked before availability is counted", async () => {
-    poolWithFiveAvailable();
-
-    await createReservation(validInput);
-
-    const lockedAt = tx.$queryRaw.mock.invocationCallOrder[1];
-    const countedAt = tx.reservation.findMany.mock.invocationCallOrder[0];
-    expect(lockedAt).toBeLessThan(countedAt);
-  });
-
-  // SCRUM-155 AC 5: reserving a whole request locks the event, then the
-  // equipment. Taking them in the same order means the two forms take turns
-  // on an event instead of deadlocking.
-  it("SCRUM-155 TC-155-16: the event row is locked before its status is read and before the equipment row", async () => {
-    poolWithFiveAvailable();
-
-    await createReservation(validInput);
-
-    const [eventLock, equipmentLock] = tx.$queryRaw.mock.calls;
-    expect(eventLock[0].join("?")).toMatch(/FROM "Event" WHERE "id" = \? FOR UPDATE/);
-    expect(eventLock[1]).toBe("evt_approved");
-    expect(equipmentLock[0].join("?")).toMatch(/FROM "Equipment"/);
-    const [eventLockedAt, equipmentLockedAt] = tx.$queryRaw.mock.invocationCallOrder;
-    expect(eventLockedAt).toBeLessThan(tx.event.findFirst.mock.invocationCallOrder[0]);
-    expect(tx.event.findFirst.mock.invocationCallOrder[0]).toBeLessThan(equipmentLockedAt);
-  });
-
-  it.each([0, -1, 1.5, ""])(
-    "AC 6: quantity %s is reported invalid and nothing is created",
-    async (quantity) => {
-      const result = await createReservation({ ...validInput, quantity });
-
-      expect(result.ok).toBe(false);
-      if (!result.ok) expect(result.fieldErrors?.quantity).toBeTruthy();
-      expect(mockTransaction).not.toHaveBeenCalled();
-    },
-  );
-
-  it("refuses a period whose end is not after its start", async () => {
-    const result = await createReservation({ ...validInput, endAt: START });
-
-    expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.fieldErrors?.endAt).toBeTruthy();
-    expect(mockTransaction).not.toHaveBeenCalled();
-  });
-
-  it("refuses a period whose start time is in the past", async () => {
-    const result = await createReservation({
-      ...validInput,
-      startAt: "2020-01-01T01:00:00.000Z",
-      endAt: "2020-01-01T05:00:00.000Z",
-    });
-
-    expect(result.ok).toBe(false);
-    if (!result.ok) {
-      expect(result.fieldErrors?.startAt).toContain("Start time cannot be in the past.");
-    }
-    expect(mockTransaction).not.toHaveBeenCalled();
-  });
-
-  // An equipment request is raised for an Approved or Planning event
-  // (SCRUM-27 AC 1), so it must be possible to reserve stock for either.
-  it("only reserves for an event that can take an equipment request (Approved or Planning)", async () => {
-    poolWithFiveAvailable();
-    tx.event.findFirst.mockResolvedValue(null);
-
-    const result = await createReservation(validInput);
-
-    expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.error).toMatch(/approved event/i);
-    expect(tx.event.findFirst).toHaveBeenCalledWith({
-      where: { id: "evt_approved", status: { in: ["APPROVED", "PLANNING"] } },
-      select: { id: true },
-    });
-    expect(tx.reservation.create).not.toHaveBeenCalled();
-  });
-
-  // Approval now moves an event straight to Planning (SCRUM-81), so an
-  // approved event being planned must still take reservations.
-  it("SCRUM-81 TC-81-12: equipment can be reserved for an event in Planning", async () => {
-    poolWithFiveAvailable();
-    tx.event.findFirst.mockResolvedValue({ id: "evt_planning" });
-
-    const result = await createReservation({ ...validInput, eventId: "evt_planning" });
-
-    expect(result.ok).toBe(true);
-    expect(tx.event.findFirst).toHaveBeenCalledWith({
-      where: { id: "evt_planning", status: { in: ["APPROVED", "PLANNING"] } },
-      select: { id: true },
-    });
-    expect(tx.reservation.create).toHaveBeenCalled();
-  });
-
-  it.each(["ORGANISER", "COORDINATOR", "VENUE_STAFF", "ATTENDEE"] as Role[])(
-    "refuses %s and never opens a transaction",
-    async (role) => {
-      mockAuth.mockResolvedValue(sessionFor(role, `usr_${role.toLowerCase()}`));
-
-      const result = await createReservation(validInput);
-
-      expect(result.ok).toBe(false);
-      if (!result.ok) expect(result.error).toMatch(/permission/i);
-      expect(mockTransaction).not.toHaveBeenCalled();
-    },
-  );
-
-  it("SCRUM-31: a retired or unknown equipment type cannot be reserved — the row lock finds nothing and nothing is created", async () => {
-    poolWithFiveAvailable();
-    tx.$queryRaw.mockResolvedValue([]);
-
-    const result = await createReservation(validInput);
-
-    expect(result).toEqual({ ok: false, error: "Equipment type is unavailable." });
-    expect(tx.reservation.findMany).not.toHaveBeenCalled();
-    expect(tx.reservation.create).not.toHaveBeenCalled();
-  });
-
-  // The row lock and the availability count are two separately written queries.
-  // If their filters ever drift apart, the count can miss a row the lock found;
-  // the reservation must then be refused, not made against an unknown pool.
-  it("SCRUM-31: equipment the availability count cannot find after the row lock is refused and nothing is created", async () => {
-    poolWithFiveAvailable();
-    tx.equipment.findFirst.mockResolvedValue(null);
-
-    const result = await createReservation(validInput);
-
-    expect(result).toEqual({ ok: false, error: "Equipment type is unavailable." });
-    expect(tx.reservation.create).not.toHaveBeenCalled();
-  });
-
-  // reservedById is required: a token that passed the role check but carries
-  // no id must not produce a reservation nobody can be held to.
-  it("SCRUM-31 [Security gate]: a session with a permitted role but no user id is refused before any write", async () => {
-    mockAuth.mockResolvedValue({
-      user: { role: "TECH_SUPPORT", name: "Test User" },
-      expires: "2999-01-01T00:00:00.000Z",
-    });
-
-    const result = await createReservation(validInput);
-
-    expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.error).toMatch(/permission/i);
-    expect(mockTransaction).not.toHaveBeenCalled();
-  });
-
-  it("SCRUM-31 [Exit path]: a database failure while saving propagates instead of being reported as a refusal", async () => {
-    poolWithFiveAvailable();
-    tx.reservation.create.mockRejectedValue(new Error("connection lost"));
-
-    await expect(createReservation(validInput)).rejects.toThrow("connection lost");
+    expect(reserving).toEqual(["reserveEquipmentRequest"]);
   });
 });
 

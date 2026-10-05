@@ -50,9 +50,11 @@ const newRow = (equipmentId = "", quantity = "1"): Row => ({
 export function ReserveRequestCard({
   requests,
   equipment,
+  onReserved,
 }: {
   requests: ReservableRequest[];
   equipment: Equipment[];
+  onReserved?: () => void;
 }) {
   const [requestId, setRequestId] = useState("");
   const [startAt, setStartAt] = useState("");
@@ -169,6 +171,7 @@ export function ReserveRequestCard({
         setRows([]);
         setAvailability(null);
         setPreviewVersion((version) => version + 1);
+        onReserved?.();
       } catch {
         // An unexpected failure rejects instead of returning an error, so the
         // card says so rather than only stopping its spinner.
@@ -177,7 +180,10 @@ export function ReserveRequestCard({
     });
 
   return (
-    <Card className="shadow-xs border border-border bg-card text-card-foreground">
+    <Card
+      id="reserve-request"
+      className="shadow-xs scroll-mt-6 border border-border bg-card text-card-foreground"
+    >
       <CardHeader className="pb-4">
         <div className="flex items-center gap-3">
           <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">

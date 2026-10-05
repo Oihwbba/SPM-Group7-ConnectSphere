@@ -13,7 +13,6 @@ export const RESERVABLE_EVENT_STATUSES: EventStatus[] = [
 ];
 
 const reservationFields = {
-  eventId: z.string().min(1, "Select an approved event."),
   equipmentId: z.string().min(1, "Select an equipment type."),
   quantity: z.coerce
     .number()
@@ -66,10 +65,6 @@ function validatePeriod(
     });
   }
 }
-
-export const reservationSchema = z
-  .object(reservationFields)
-  .superRefine(validatePeriod);
 
 /**
  * SCRUM-155 — reserving an approved request: one period, one row per type.
@@ -131,7 +126,6 @@ export const equipmentScheduleSchema = z.object({
   from: z.string().min(1, "Choose a date to view from."),
 });
 
-export type ReservationInput = z.infer<typeof reservationSchema>;
 
 
 

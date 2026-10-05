@@ -13,16 +13,17 @@ import type { Session } from "next-auth";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import {
-  createReservation,
   getAllEquipmentAvailability,
   getEquipmentAvailability,
+  reserveEquipmentRequest,
 } from "@/app/(app)/equipment/actions";
 
 // SCRUM-29 — Check Equipment Availability, against a real Postgres. The unit
 // tests mock Prisma; these prove the half-open SQL filters, the CONFIRMED-only
 // status filter and the peak arithmetic agree with the database, and that the
-// fix reaches the locked reservation path, where the old sum refused
-// reservations that were genuinely free.
+// fix reaches the locked reservation path (since SCRUM-156, reserving an
+// approved request), where the old sum refused reservations that were
+// genuinely free.
 //
 // They WRITE a throwaway Equipment row and its commitments, removed after each
 // test, so they only run against a localhost database (CI's service container
@@ -88,6 +89,47 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-29 — equipment availability against
 
   const reservationCount = () => prisma.reservation.count({ where: { equipmentId } });
 
+  // Reserving goes through an approved request (SCRUM-155/156): an event over
+  // the period, with a request for this pool, both removed after the suite.
+  const eventIds: string[] = [];
+  async function approvedRequestFor(
+    from: number,
+    to: number,
+    quantity: number,
+    status: "PLANNING" | "CONFIRMED" = "PLANNING",
+  ) {
+    const event = await prisma.event.create({
+      data: {
+        name: `SCRUM-29 integration ${Date.now()}`,
+        description: "Owned by tests/integration/equipment-availability.test.ts.",
+        status,
+        organiserId: "usr_organiser",
+        coordinatorId: "usr_coordinator",
+        startAt: at(from),
+        endAt: at(to),
+        expectedAttendance: 20,
+        submittedAt: new Date(),
+      },
+      select: { id: true },
+    });
+    eventIds.push(event.id);
+    const request = await prisma.equipmentRequest.create({
+      data: {
+        eventId: event.id,
+        requestedById: "usr_coordinator",
+        status: "APPROVED",
+        lines: { create: [{ equipmentId, quantity }] },
+      },
+      select: { id: true },
+    });
+    return {
+      requestId: request.id,
+      startAt: at(from),
+      endAt: at(to),
+      lines: [{ equipmentId, quantity }],
+    };
+  }
+
   beforeAll(async () => {
     (auth as unknown as Mock).mockResolvedValue(TECH_SUPPORT);
     const pool = await prisma.equipment.create({
@@ -105,6 +147,8 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-29 — equipment availability against
   afterAll(async () => {
     await prisma.reservation.deleteMany({ where: { equipmentId } });
     await prisma.equipmentUnavailability.deleteMany({ where: { equipmentId } });
+    await prisma.equipmentRequest.deleteMany({ where: { eventId: { in: eventIds } } });
+    await prisma.event.deleteMany({ where: { id: { in: eventIds } } });
     await prisma.equipment.delete({ where: { id: equipmentId } });
   });
 
@@ -132,32 +176,27 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-29 — equipment availability against
       await reserve(9, 12, 3);
       await reserve(13, 16, 3);
 
-      const result = await createReservation({
-        eventId: APPROVED_EVENT_ID,
-        equipmentId,
-        quantity: 1,
-        startAt: at(9),
-        endAt: at(16),
-      });
+      const result = await reserveEquipmentRequest(
+        await approvedRequestFor(9, 16, 1),
+      );
 
-      expect(result).toMatchObject({ ok: true, data: { available: 0 } });
+      expect(result).toEqual({ ok: true, data: { reserved: 1 } });
       expect(await reservationCount()).toBe(3);
     });
 
     it("AC 3: a quantity over the free units is refused with the shortfall, and nothing is written", async () => {
       await reserve(9, 12, 3);
 
-      const result = await createReservation({
-        eventId: APPROVED_EVENT_ID,
-        equipmentId,
-        quantity: 3,
-        startAt: at(10),
-        endAt: at(11),
-      });
+      const result = await reserveEquipmentRequest(
+        await approvedRequestFor(10, 11, 3),
+      );
 
       expect(result).toEqual({
         ok: false,
-        error: "Only 1 of 4 unit(s) are available for this period — 2 short.",
+        error: "Nothing was reserved: not enough is free for the rows marked below.",
+        fieldErrors: {
+          "lines.0.quantity": ["Only 1 of 4 free for this period — 2 short."],
+        },
       });
       expect(await reservationCount()).toBe(1);
     });
@@ -173,13 +212,9 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-29 — equipment availability against
       });
       expect(result).toMatchObject({ ok: true, data: { available: 4 } });
 
-      const reserved = await createReservation({
-        eventId: APPROVED_EVENT_ID,
-        equipmentId,
-        quantity: 4,
-        startAt: at(12),
-        endAt: at(15),
-      });
+      const reserved = await reserveEquipmentRequest(
+        await approvedRequestFor(12, 15, 4),
+      );
       expect(reserved.ok).toBe(true);
     });
 
@@ -217,24 +252,21 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-29 — equipment availability against
     // reservation has to be possible for one; a Confirmed event cannot take a
     // request, so it cannot take a reservation either.
     it("reserves for a Planning event, and refuses a Confirmed one without writing", async () => {
-      const period = { equipmentId, quantity: 1, startAt: at(9), endAt: at(12) };
+      const planning = await reserveEquipmentRequest(
+        await approvedRequestFor(9, 12, 1),
+      );
+      expect(planning).toEqual({ ok: true, data: { reserved: 1 } });
 
-      const planning = await createReservation({ ...period, eventId: "evt_planning" });
-      expect(planning).toMatchObject({ ok: true, data: { available: 3 } });
-
-      const confirmed = await createReservation({ ...period, eventId: "evt_confirmed" });
-      expect(confirmed).toEqual({
-        ok: false,
-        error: "Reservations can only be made for an approved event.",
-      });
+      const confirmed = await reserveEquipmentRequest(
+        await approvedRequestFor(9, 12, 1, "CONFIRMED"),
+      );
+      expect(confirmed.ok).toBe(false);
       expect(await reservationCount()).toBe(1);
     });
 
     it("AC 7: an end before the start is rejected, reads nothing and writes nothing", async () => {
-      const result = await createReservation({
-        eventId: APPROVED_EVENT_ID,
-        equipmentId,
-        quantity: 1,
+      const result = await reserveEquipmentRequest({
+        ...(await approvedRequestFor(9, 12, 1)),
         startAt: at(12),
         endAt: at(9),
       });

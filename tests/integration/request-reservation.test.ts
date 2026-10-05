@@ -13,10 +13,7 @@ import type { EquipmentRequestStatus, EventStatus } from "@prisma/client";
 
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
-import {
-  createReservation,
-  reserveEquipmentRequest,
-} from "@/app/(app)/equipment/actions";
+import { reserveEquipmentRequest } from "@/app/(app)/equipment/actions";
 import { getReservableRequests } from "@/lib/equipment/request-queries";
 
 // SCRUM-155 — reserving an approved request in one step, against a real
@@ -324,28 +321,6 @@ describe.skipIf(!usesLocalDatabase)(
       expect(result).toEqual({ ok: true, data: { reserved: 1 } });
     });
 
-    it("SCRUM-155 [AC5, AC6] TC-155-16: the one-type form waits for the event before the equipment, so it takes turns with this card", async () => {
-      const eventId = await event("PLANNING");
-
-      // The card holds the event while it checks nothing is reserved yet, then
-      // locks the equipment.
-      const { taken, result } = await takeEventThen(
-        eventId,
-        (tx) =>
-          tx.$queryRaw`SELECT "id" FROM "Equipment" WHERE "id" = ${roomy} FOR UPDATE NOWAIT`,
-        () =>
-          createReservation({
-            eventId,
-            equipmentId: roomy,
-            quantity: 1,
-            ...PERIOD,
-          }),
-      );
-
-      expect(taken).toBe(true);
-      expect(result).toMatchObject({ ok: true });
-    });
-
     it("SCRUM-155 [AC1, AC6] TC-155-01, TC-155-06: offers approved, unreserved requests for events that haven't started, and a cancelled reservation offers it again", async () => {
       const approved = await approvedRequest(await event("PLANNING"), [
         { equipmentId: roomy, quantity: 1 },
@@ -393,20 +368,24 @@ describe.skipIf(!usesLocalDatabase)(
       expect(await offered()).toContain(approved);
     });
 
-    it("SCRUM-155 [AC6] TC-155-12: stock already reserved for the event with the one-type form is not reserved twice", async () => {
+    it("SCRUM-155 [AC6] TC-155-12, SCRUM-156 [AC4] TC-156-05: stock reserved for the event with the old one-type form is not reserved twice", async () => {
       const eventId = await event("PLANNING");
       const requestId = await approvedRequest(eventId, [
         { equipmentId: roomy, quantity: 2 },
       ]);
-      // How Technical Support reserved before this card: one type at a time,
-      // with no link to the request.
-      const manual = await createReservation({
-        eventId,
-        equipmentId: roomy,
-        quantity: 2,
-        ...PERIOD,
+      // How Technical Support reserved before SCRUM-156: one type at a time,
+      // with no link to the request. Those rows stay and still count.
+      await prisma.reservation.create({
+        data: {
+          eventId,
+          equipmentId: roomy,
+          quantity: 2,
+          startAt: new Date(PERIOD.startAt),
+          endAt: new Date(PERIOD.endAt),
+          reservedById: TECH_SUPPORT.user!.id!,
+          status: "CONFIRMED",
+        },
       });
-      expect(manual.ok).toBe(true);
 
       expect(await offered()).not.toContain(requestId);
       const result = await reserveEquipmentRequest({

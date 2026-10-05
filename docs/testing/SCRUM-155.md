@@ -32,7 +32,7 @@ Approved and asks for 1 Projector and 2 Wireless Microphones.
 | [TC-155-13](#tc-155-13) | Negative    | AC 2      | Unit, integration      |
 | [TC-155-14](#tc-155-14) | Negative    | AC 7      | Unit                   |
 | [TC-155-15](#tc-155-15) | Concurrency | AC 5      | Unit, integration      |
-| [TC-155-16](#tc-155-16) | Concurrency | AC 5, 6   | Unit, integration      |
+| [TC-155-16](#tc-155-16) | Concurrency | AC 5, 6   | Retired (SCRUM-156)    |
 
 ---
 
@@ -190,7 +190,7 @@ Approved and asks for 1 Projector and 2 Wireless Microphones.
 | Test Data       | —                                                                                                                                                              |
 | Expected Result | 1. The request is not listed. 2. Refused as already reserved; the event still holds only the two projectors.                                                   |
 
-**Automated by:** `tests/unit/request-reservation.test.ts` › "SCRUM-155 [AC1, AC6] TC-155-06, TC-155-10, TC-155-12: …"; `tests/integration/request-reservation.test.ts` › "SCRUM-155 [AC6] TC-155-12: …"
+**Automated by:** `tests/unit/request-reservation.test.ts` › "SCRUM-155 [AC1, AC6] TC-155-06, TC-155-10, TC-155-12: …"; `tests/integration/request-reservation.test.ts` › "SCRUM-155 [AC6] TC-155-12, SCRUM-156 [AC4] TC-156-05: …"
 
 ### TC-155-13
 
@@ -242,4 +242,4 @@ Approved and asks for 1 Projector and 2 Wireless Microphones.
 | Test Data       | —                                                                                                                                                                     |
 | Expected Result | The one-type form waits for the event before the equipment, so step 2 is not blocked: the two take turns on the event instead of deadlocking over the equipment rows. |
 
-**Automated by:** `tests/unit/reservation.test.ts` › "SCRUM-155 TC-155-16: …"; `tests/integration/request-reservation.test.ts` › "SCRUM-155 [AC5, AC6] TC-155-16: …" (it fails against the previous one-type form)
+**Retired by SCRUM-156:** the one-type form no longer reserves, so it can no longer race this card. The rejecting race (TC-155-15) still holds the lock order.
