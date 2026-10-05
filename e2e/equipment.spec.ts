@@ -57,9 +57,14 @@ test.describe("SCRUM-156 — the one-type form only checks availability", () => 
 
     const pointer = page.getByRole("link", { name: "Reserve an approved request" });
     await expect(pointer).toHaveAttribute("href", "#reserve-request");
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
     await pointer.click();
     await expect(page).toHaveURL(/#reserve-request$/);
     await expect(card).toBeInViewport();
+    // The sticky header must not cover the card's title.
+    await expect
+      .poll(async () => (await card.boundingBox())!.y)
+      .toBeGreaterThanOrEqual((await page.locator("header").boundingBox())!.height);
   });
 
   test("SCRUM-29 AC 3: more than the pool shows the shortfall live", async ({ page }) => {

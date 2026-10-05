@@ -207,7 +207,7 @@ export function ReserveRequestCard({
   return (
     <Card
       id="reserve-request"
-      className="shadow-xs scroll-mt-6 border border-border bg-card text-card-foreground"
+      className="shadow-xs scroll-mt-24 border border-border bg-card text-card-foreground"
     >
       <CardHeader className="pb-4">
         <div className="flex items-center gap-3">

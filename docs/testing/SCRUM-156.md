@@ -65,14 +65,14 @@ maintenance don't overlap it.
 
 ### TC-156-04
 
-| Item            | Content                                                                                                                                       |
-| --------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| Test Case ID    | TC-156-04                                                                                                                                     |
-| Test Scenario   | [Positive] AC 3: the page points to the approved-request card                                                                                 |
-| Pre-conditions  | Shared.                                                                                                                                       |
-| Test Steps      | 1. Open **Equipment**. 2. Click **Reserve an approved request** in the availability section's description.                                    |
-| Test Data       | —                                                                                                                                             |
-| Expected Result | 1. **Reserve an approved request** is at the top and **Equipment availability** below it. 2. The page moves to the card (`#reserve-request`). |
+| Item            | Content                                                                                                                                                                            |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Test Case ID    | TC-156-04                                                                                                                                                                          |
+| Test Scenario   | [Positive] AC 3: the page points to the approved-request card                                                                                                                      |
+| Pre-conditions  | Shared.                                                                                                                                                                            |
+| Test Steps      | 1. Open **Equipment**. 2. Scroll down and click **Reserve an approved request** in the availability section's description.                                                         |
+| Test Data       | —                                                                                                                                                                                  |
+| Expected Result | 1. **Reserve an approved request** is at the top and **Equipment availability** below it. 2. The page moves to the card (`#reserve-request`), with its title clear of the top bar. |
 
 **Automated by:** `e2e/equipment.spec.ts` › "SCRUM-156 [AC3] TC-156-04: …"
 
