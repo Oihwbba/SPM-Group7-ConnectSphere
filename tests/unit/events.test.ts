@@ -437,7 +437,7 @@ describe("User Story 13 — Event Request Creation", () => {
           id: "evt_already_submitted",
           organiserId: "usr_organiser",
           OR: [
-            { status: "DRAFT" },
+            { status: "DRAFT", discardedAt: null },
             { status: "REJECTED", rejectionOutcome: "AMEND_AND_RESUBMIT" },
           ],
         },
@@ -887,7 +887,7 @@ describe("User Story 15 — Save an event request as draft", () => {
       expect(result.error).toMatch(/not found or cannot be modified/i);
     }
     expect(mockFindFirst).toHaveBeenCalledWith({
-      where: { id: "evt_already_submitted", organiserId: "usr_organiser", status: "DRAFT" },
+      where: { id: "evt_already_submitted", organiserId: "usr_organiser", status: "DRAFT", discardedAt: null },
     });
     expect(mockUpdate).not.toHaveBeenCalled();
   });
@@ -911,7 +911,7 @@ describe("User Story 15 — Save an event request as draft", () => {
 
     expect(result).toEqual({ ok: true, data: { id: "evt_draft_existing" } });
     expect(mockFindFirst).toHaveBeenCalledWith({
-      where: { id: "evt_draft_existing", organiserId: "usr_organiser", status: "DRAFT" },
+      where: { id: "evt_draft_existing", organiserId: "usr_organiser", status: "DRAFT", discardedAt: null },
     });
     expect(mockUpdate).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -1278,7 +1278,7 @@ describe("User Story 84 — Organiser views their own event requests", () => {
     const events = await getOrganiserEvents("usr_organiser_us84");
 
     expect(mockFindMany).toHaveBeenCalledWith({
-      where: { organiserId: "usr_organiser_us84" },
+      where: { organiserId: "usr_organiser_us84", discardedAt: null },
       orderBy: { updatedAt: "desc" },
     });
     expect(events).toHaveLength(9);
@@ -1330,7 +1330,11 @@ describe("User Story 84 — Organiser views their own event requests", () => {
     const result = await getEventForUser("evt_draft_detail", "usr_organiser_us84");
 
     expect(mockFindFirst).toHaveBeenCalledWith({
-      where: { id: "evt_draft_detail", organiserId: "usr_organiser_us84" },
+      where: {
+        id: "evt_draft_detail",
+        organiserId: "usr_organiser_us84",
+        discardedAt: null,
+      },
     });
     expect(result).toBeDefined();
     expect(result?.id).toBe("evt_draft_detail");

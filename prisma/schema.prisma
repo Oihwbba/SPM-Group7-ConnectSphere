@@ -304,6 +304,12 @@ model Event {
   /// what makes a repeat completion check a no-op.
   completedAt DateTime?
 
+  /// SCRUM-130 — set when the Organiser discards a Draft. The row stays (no
+  /// hard deletes) but leaves My Event Requests and can't be opened, saved or
+  /// submitted again. Not a tenth status: SCRUM-23 fixes the list at nine.
+  /// The CHECK event_discarded_only_draft keeps a discarded event a Draft.
+  discardedAt DateTime?
+
   // SCRUM-72/73/74/75 — registration is per-event and explicitly NOT assumed
   // to equal the venue's capacity (SCRUM-74's last criterion).
   registrationEnabled  Boolean   @default(false)

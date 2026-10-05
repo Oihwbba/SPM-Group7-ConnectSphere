@@ -227,5 +227,23 @@ export const REJECTION_OUTCOME_LABEL: Record<
   NEW_REQUEST: "Submit as a new request",
 };
 
+/**
+ * SCRUM-130 AC6 — drafts never expire (AC5), so one can be opened after its
+ * proposed start has passed. The draft editor warns about it; submitting is
+ * already refused by the submit schema above (SCRUM-13 AC9), with the same
+ * "before now" rule.
+ */
+export const PAST_DRAFT_DATES_MESSAGE =
+  "Dates are in the past – update them before submitting";
+
+export function draftStartIsInPast(
+  startAt: Date | string | null | undefined,
+  now: Date = new Date(),
+): boolean {
+  if (!startAt) return false;
+  const start = new Date(startAt);
+  return !Number.isNaN(start.getTime()) && start < now;
+}
+
 export type CreateDraftEventInput = z.infer<typeof createDraftEventSchema>;
 export type SubmitEventRequestInput = z.infer<typeof submitEventRequestSchema>;

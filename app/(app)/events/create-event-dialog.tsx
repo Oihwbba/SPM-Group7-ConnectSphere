@@ -41,6 +41,10 @@ import {
   submitEventRequest,
   getFormCatalogues,
 } from "./actions";
+import {
+  PAST_DRAFT_DATES_MESSAGE,
+  draftStartIsInPast,
+} from "@/lib/schemas/event";
 
 interface FormState {
   name: string;
@@ -453,6 +457,20 @@ export function CreateEventDialog({
             <span className="whitespace-pre-wrap">{draftEvent.decisionReason}</span>
           </div>
         )}
+
+        {/* SCRUM-130 AC6: follows the field, so it clears once the start is
+            moved to the future. */}
+        {draftEvent?.status === "DRAFT" &&
+          draftStartIsInPast(sgWallTimeToUtcIso(formData.startAt)) && (
+            <div
+              role="alert"
+              data-testid="draft-dates-in-past"
+              className="flex items-center gap-2 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs font-medium text-destructive"
+            >
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              {PAST_DRAFT_DATES_MESSAGE}
+            </div>
+          )}
 
         {/* Step Indicator Bar — Allows direct navigation between steps */}
         <div className="mb-4 flex items-center justify-between gap-2 overflow-x-auto border-b pb-3 text-xs font-medium text-muted-foreground">

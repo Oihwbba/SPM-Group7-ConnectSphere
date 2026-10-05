@@ -181,6 +181,9 @@ acceptance criteria hold even when someone forgets a check in a server action.
 - **Every event is in Singapore time.** `Event.timezone` is `NOT NULL` and a
   CHECK refuses anything but `Asia/Singapore` (SCRUM-129, migration
   `20261002120000_event_timezone_singapore`).
+- **A discarded draft stays a Draft.** `Event.discardedAt` may only be set
+  on a Draft, so a discarded one can never be submitted (SCRUM-130, migration
+  `20261005120000_discard_draft`).
 - **Positive quantities and valid periods.** Attendance, capacities and
   quantities must be `> 0`; every `endAt` must be strictly after its `startAt`
   (SCRUM-13/29/31/32/35/74/75).

@@ -228,7 +228,7 @@ describe("submitEventRequest — SCRUM-126 only an amendable rejection is resubm
         id: "evt1",
         organiserId: "usr_org",
         OR: [
-          { status: "DRAFT" },
+          { status: "DRAFT", discardedAt: null },
           { status: "REJECTED", rejectionOutcome: "AMEND_AND_RESUBMIT" },
         ],
       },
@@ -326,7 +326,9 @@ describe("startRequestFromRejected — SCRUM-126 AC4", () => {
 
   it("SCRUM-126 [AC4] TC-126-10: starting again returns the Draft already started and creates no second copy", async () => {
     mockAuth.mockResolvedValue(organiser());
-    tx.event.findFirst.mockResolvedValue(rejected);
+    tx.event.findFirst
+      .mockResolvedValueOnce(rejected)
+      .mockResolvedValueOnce({ id: "evt_first" });
     tx.auditLog.findFirst.mockResolvedValue({ newValue: "evt_first" });
 
     const result = await startRequestFromRejected({ eventId: "evt1" });
@@ -335,13 +337,20 @@ describe("startRequestFromRejected — SCRUM-126 AC4", () => {
       ok: true,
       data: { id: "evt_first", created: false },
     });
+    // The latest Draft started from it, and only while it isn't discarded
+    // (SCRUM-130).
     expect(tx.auditLog.findFirst).toHaveBeenCalledWith({
       where: {
         entityType: "Event",
         entityId: "evt1",
         action: "NEW_REQUEST_STARTED",
       },
+      orderBy: { createdAt: "desc" },
       select: { newValue: true },
+    });
+    expect(tx.event.findFirst).toHaveBeenLastCalledWith({
+      where: { id: "evt_first", discardedAt: null },
+      select: { id: true },
     });
     expect(tx.event.create).not.toHaveBeenCalled();
     expect(tx.auditLog.create).not.toHaveBeenCalled();

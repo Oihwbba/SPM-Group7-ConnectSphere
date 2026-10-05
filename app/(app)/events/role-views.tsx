@@ -3,10 +3,12 @@ import { EventsClient } from "./events-client";
 import { AttendeeEventsClient } from "./attendee-events-client";
 
 /** Events owned by one organiser, newest first. Exported so the scoping rule
- * is testable on its own (tests/unit/events.test.ts, SCRUM-16/84). */
+ * is testable on its own (tests/unit/events.test.ts, SCRUM-16/84). A discarded
+ * draft is left out (SCRUM-130 AC1); nothing else is, however old, because
+ * drafts never expire (AC5). */
 export async function getOrganiserEvents(organiserId: string) {
   return prisma.event.findMany({
-    where: { organiserId },
+    where: { organiserId, discardedAt: null },
     orderBy: { updatedAt: "desc" },
   });
 }
@@ -26,10 +28,11 @@ export async function getCoordinatorEvents(coordinatorId: string) {
 }
 
 /** One event, scoped to its organiser: another organiser's id returns null,
- * the same result a missing id gives (SCRUM-68 not-found parity). */
+ * the same result a missing id gives (SCRUM-68 not-found parity), and so does
+ * a discarded draft (SCRUM-130 AC1). */
 export async function getEventForUser(eventId: string, organiserId: string) {
   return prisma.event.findFirst({
-    where: { id: eventId, organiserId },
+    where: { id: eventId, organiserId, discardedAt: null },
   });
 }
 
