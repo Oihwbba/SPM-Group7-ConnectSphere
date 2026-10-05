@@ -299,7 +299,7 @@ describe("reserveEquipmentRequest — SCRUM-155", () => {
     expect(tx.reservation.createMany).not.toHaveBeenCalled();
   });
 
-  it("SCRUM-156 TC-156-07: a request with a line still missing can be reserved", async () => {
+  it("SCRUM-156 [AC5] TC-156-07: a request with a line still missing can be reserved", async () => {
     const whole = { startAt: new Date(START), endAt: new Date(END) };
     approvedRequestWithStock({
       reservations: [

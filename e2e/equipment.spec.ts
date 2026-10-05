@@ -374,7 +374,7 @@ test.describe("SCRUM-30 — View Equipment Conflicts", () => {
   // omits the reservation just made answers it wrongly at exactly the moment
   // someone looks. Since SCRUM-156 that reservation is made in the approved-
   // request card above the check.
-  test("AC 1: a reservation made in the request card appears in the commitments without a reload", async ({
+  test("SCRUM-156 [AC6] TC-156-06, SCRUM-30 AC 1: a reservation made in the request card appears in the commitments without a reload", async ({
     page,
   }) => {
     test.skip(!usesLocalDatabase, "writes its own equipment; local database only");

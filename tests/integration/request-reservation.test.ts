@@ -399,7 +399,7 @@ describe.skipIf(!usesLocalDatabase)(
       expect(await totalReserved(roomy)).toBe(2);
     });
 
-    it("SCRUM-156 TC-156-07: after one line's reservation is cancelled, only that line is offered and it can be reserved", async () => {
+    it("SCRUM-156 [AC5] TC-156-07: after one line's reservation is cancelled, only that line is offered and it can be reserved", async () => {
       const requestId = await approvedRequest(await event("PLANNING"), [
         { equipmentId: roomy, quantity: 1 },
         { equipmentId: scarce, quantity: 1 },
@@ -438,7 +438,7 @@ describe.skipIf(!usesLocalDatabase)(
       expect(await totalReserved(scarce)).toBe(1);
     });
 
-    it("SCRUM-156 TC-156-08: a second approved request for an event already reserved for is offered and reserved in its own right", async () => {
+    it("SCRUM-156 [AC5] TC-156-08: a second approved request for an event already reserved for is offered and reserved in its own right", async () => {
       const eventId = await event("PLANNING");
       const first = await approvedRequest(eventId, [
         { equipmentId: roomy, quantity: 1 },

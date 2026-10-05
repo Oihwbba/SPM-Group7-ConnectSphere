@@ -89,7 +89,7 @@ test.describe("SCRUM-155 — Reserve an approved request in one step", () => {
     eventIds.length = 0;
   });
 
-  test("SCRUM-156 TC-156-07: a partly reserved request is offered again with only what is missing", async ({
+  test("SCRUM-156 [AC5] TC-156-07: a partly reserved request is offered again with only what is missing", async ({
     page,
   }) => {
     const name = `SCRUM-156 rest ${Date.now()}`;

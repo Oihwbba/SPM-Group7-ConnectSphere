@@ -260,7 +260,7 @@ describe("getReservableRequests — SCRUM-155", () => {
     ]);
   });
 
-  it("SCRUM-156 TC-156-07: a partly reserved request offers only what is still missing", async () => {
+  it("SCRUM-156 [AC5] TC-156-07: a partly reserved request offers only what is still missing", async () => {
     db.equipmentRequest.findMany.mockResolvedValue([
       approved("r1", [held("eq_projector", 2, "r1"), held("eq_mic", 1, "r1")]),
     ]);
@@ -287,7 +287,7 @@ describe("getReservableRequests — SCRUM-155", () => {
     expect(await getReservableRequests()).toEqual([]);
   });
 
-  it("SCRUM-156 TC-156-08: another request's reservations, or ones that don't span the event, don't cover a line", async () => {
+  it("SCRUM-156 [AC5] TC-156-08: another request's reservations, or ones that don't span the event, don't cover a line", async () => {
     db.equipmentRequest.findMany.mockResolvedValue([
       approved(
         "second",

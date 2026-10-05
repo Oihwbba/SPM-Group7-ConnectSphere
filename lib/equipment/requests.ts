@@ -108,7 +108,7 @@ type HeldForEvent = {
 };
 
 /**
- * SCRUM-155 AC 6, as revised for SCRUM-156 — how much of each line of an
+ * SCRUM-156 AC 5, refining SCRUM-155 AC 6 — how much of each line of an
  * approved request is still to reserve. A line is covered by confirmed
  * reservations made for this request, or made with the old one-type form
  * (no request linked), that span the whole event: the same "whole event" rule
