@@ -64,9 +64,14 @@ test.describe("SCRUM-155 — Reserve an approved request in one step", () => {
         requestedById: "usr_coordinator",
         status: "APPROVED",
         decidedAt: new Date(),
+        notes: "Keynote at 10:00; mics needed from 09:30.",
         lines: {
           create: [
-            { equipmentId: "eqp_projector", quantity: 1 },
+            {
+              equipmentId: "eqp_projector",
+              quantity: 1,
+              technicalRequirements: "HDMI from the stage lectern.",
+            },
             { equipmentId: "eqp_mic", quantity: 2 },
           ],
         },
@@ -122,6 +127,33 @@ test.describe("SCRUM-155 — Reserve an approved request in one step", () => {
     await expect(rows.nth(0).getByTestId("row-availability")).toHaveText(
       /\d+ of 10 free for this period\./,
     );
+  });
+
+  test("SCRUM-155 [AC2] TC-155-02: the chosen request shows who raised it, its notes and each item's requirements, and links back to it", async ({
+    page,
+  }) => {
+    const name = `SCRUM-155 details ${Date.now()}`;
+    const requestId = await approvedRequest(name);
+    await signInAsTechSupport(page);
+    await chooseRequest(page, name);
+
+    const summary = page.getByTestId("request-summary");
+    await expect(summary).toContainText(name);
+    await expect(summary).toContainText("Requested by Cody Coordinator");
+    await expect(page.getByTestId("request-notes")).toHaveText(
+      "Notes: Keynote at 10:00; mics needed from 09:30.",
+    );
+    const rows = page.getByTestId("request-row");
+    await expect(rows.nth(0).getByTestId("row-requirements")).toHaveText(
+      "Requirements: HDMI from the stage lectern.",
+    );
+    await expect(rows.nth(1).getByTestId("row-requirements")).toHaveCount(0);
+
+    await summary.getByRole("link", { name: "View request" }).click();
+    await expect(page).toHaveURL(`/equipment-requests#request-${requestId}`);
+    const card = page.locator(`#request-${requestId}`);
+    await expect(card).toContainText(name);
+    await expect(card).toBeInViewport();
   });
 
   test("SCRUM-155 [AC2] TC-155-03: rows can be removed, added and changed, and what is reserved is the edited list", async ({

@@ -164,17 +164,20 @@ describe("getReservableRequests — SCRUM-155", () => {
     expect(where.event.startAt.gt).toBeInstanceOf(Date);
   });
 
-  it("SCRUM-155 [AC2] TC-155-02: reads each request's event period and its lines in the order they were entered", async () => {
+  it("SCRUM-155 [AC2] TC-155-02: reads each request's event period, who raised it, its notes, and its lines with their requirements in the order they were entered", async () => {
     await getReservableRequests();
 
     const { select } = db.equipmentRequest.findMany.mock.calls[0][0];
     expect(select.event).toEqual({
       select: { id: true, name: true, startAt: true, endAt: true },
     });
+    expect(select.notes).toBe(true);
+    expect(select.requestedBy).toEqual({ select: { name: true } });
     expect(select.lines).toEqual({
       select: {
         id: true,
         quantity: true,
+        technicalRequirements: true,
         equipment: { select: { id: true, type: true } },
       },
       orderBy: [{ createdAt: "asc" }, { id: "asc" }],

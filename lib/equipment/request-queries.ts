@@ -252,17 +252,24 @@ export function reservableRequest(now: Date) {
   } satisfies Prisma.EquipmentRequestWhereInput;
 }
 
-/** SCRUM-155 AC 1 & 2 — approved requests to reserve, with what they asked for. */
+/**
+ * SCRUM-155 AC 1 & 2 — approved requests to reserve, with what they asked
+ * for and what Technical Support needs to reserve it without going back to
+ * the request: who raised it, its notes and each line's requirements.
+ */
 export async function getReservableRequests(now = new Date()) {
   return prisma.equipmentRequest.findMany({
     where: reservableRequest(now),
     select: {
       id: true,
+      notes: true,
+      requestedBy: { select: { name: true } },
       event: { select: { id: true, name: true, startAt: true, endAt: true } },
       lines: {
         select: {
           id: true,
           quantity: true,
+          technicalRequirements: true,
           equipment: { select: { id: true, type: true } },
         },
         orderBy: IN_ENTRY_ORDER,

@@ -1,6 +1,11 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import {
+  useEffect,
+  useState,
+  useSyncExternalStore,
+  useTransition,
+} from "react";
 import { Check, ClipboardCheck, Loader2, PlayCircle, X } from "lucide-react";
 import { toast } from "sonner";
 
@@ -47,12 +52,33 @@ const isOpen = (request: QueuedEquipmentRequest) =>
  * first, oldest first, so nothing is left behind; decided ones are one tab
  * away, newest decision first, for their history.
  */
+function subscribeToHash(onChange: () => void) {
+  window.addEventListener("hashchange", onChange);
+  return () => window.removeEventListener("hashchange", onChange);
+}
+
+const readHash = () => window.location.hash;
+
 export function ReviewQueue({
   requests,
 }: {
   requests: QueuedEquipmentRequest[];
 }) {
-  const [tab, setTab] = useState<"open" | "decided">("open");
+  // A link to one request (the reserve card's "View request", SCRUM-155)
+  // opens the tab it is on, until the user picks a tab, and brings it into
+  // view.
+  const hash = useSyncExternalStore(subscribeToHash, readHash, () => "");
+  const linkedId = hash.match(/^#request-(.+)$/)?.[1];
+  const linked = requests.find((request) => request.id === linkedId);
+  const [picked, setTab] = useState<"open" | "decided" | null>(null);
+  const tab = picked ?? (linked && !isOpen(linked) ? "decided" : "open");
+
+  useEffect(() => {
+    if (!linked) return;
+    document
+      .getElementById(`request-${linked.id}`)
+      ?.scrollIntoView({ block: "start" });
+  }, [linked, tab]);
   const open = requests.filter(isOpen);
   const decided = requests
     .filter((request) => !isOpen(request))
@@ -156,7 +182,12 @@ function ReviewCard({ request }: { request: QueuedEquipmentRequest }) {
     });
 
   return (
-    <Card data-testid="review-request" data-status={request.status}>
+    <Card
+      id={`request-${request.id}`}
+      className="scroll-mt-6"
+      data-testid="review-request"
+      data-status={request.status}
+    >
       <CardHeader className="flex-row flex-wrap items-start justify-between gap-3 space-y-0">
         <div className="min-w-0 space-y-1">
           <CardTitle className="text-base">{request.event.name}</CardTitle>
