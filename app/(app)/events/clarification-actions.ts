@@ -1,13 +1,17 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import type { Prisma } from "@prisma/client";
+import type { z } from "zod";
 
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { can, requirePermission, PermissionError } from "@/lib/auth/can";
 import {
+  fieldOfChange,
   requestClarificationSchema,
   respondClarificationSchema,
+  type ClarificationChanges,
 } from "@/lib/schemas/clarification";
 import { ok, err, type ActionResult } from "@/lib/action-result";
 
@@ -34,7 +38,7 @@ export async function requestClarification(
         parsed.error.flatten().fieldErrors,
       );
     }
-    const { eventId, message } = parsed.data;
+    const { eventId, message, editableFields } = parsed.data;
 
     const event = await prisma.event.findUnique({
       where: { id: eventId },
@@ -90,7 +94,7 @@ export async function requestClarification(
       if (openExisting) return { kind: "duplicate" } as const;
 
       const clarification = await tx.clarificationRequest.create({
-        data: { eventId, requestedById: user!.id, message },
+        data: { eventId, requestedById: user!.id, message, editableFields },
         select: { id: true },
       });
 
@@ -134,6 +138,7 @@ export async function getClarificationForEvent(eventId: string): Promise<
     clarification: {
       id: string;
       message: string;
+      editableFields: string[];
       status: string;
       response: string | null;
       createdAt: Date;
@@ -171,6 +176,7 @@ export async function getClarificationForEvent(eventId: string): Promise<
     select: {
       id: true,
       message: true,
+      editableFields: true,
       status: true,
       response: true,
       createdAt: true,
@@ -184,7 +190,10 @@ export async function getClarificationForEvent(eventId: string): Promise<
 /**
  * SCRUM-18 — Organiser answers an open clarification request. Marks it
  * ANSWERED so the Coordinator can see the reply and re-review; does not
- * change the event's own status.
+ * change the event's own status. SCRUM-108: the answer may also change the
+ * fields the Coordinator named (AC2), and no others (AC5); saving the same
+ * answer again changes nothing (AC4); the answer and each change are recorded
+ * with who and when (AC14).
  */
 export async function respondToClarification(
   input: unknown,
@@ -197,26 +206,35 @@ export async function respondToClarification(
 
     const parsed = respondClarificationSchema.safeParse(input);
     if (!parsed.success) {
-      return err(
-        "Please fix the highlighted fields.",
-        parsed.error.flatten().fieldErrors,
-      );
+      return err("Please fix the highlighted fields.", errorsByField(parsed.error));
     }
-    const { clarificationId, response } = parsed.data;
+    const { clarificationId, response, changes } = parsed.data;
 
     const clarification = await prisma.clarificationRequest.findUnique({
       where: { id: clarificationId },
       select: {
         id: true,
         status: true,
+        response: true,
+        editableFields: true,
         requestedById: true,
         event: {
           select: {
             id: true,
-            name: true,
             organiserId: true,
             coordinatorId: true,
             status: true,
+            name: true,
+            purpose: true,
+            description: true,
+            startAt: true,
+            endAt: true,
+            expectedAttendance: true,
+            venueRequirements: true,
+            accessibilityNeeds: true,
+            preferredLayout: true,
+            equipmentRequirements: true,
+            registrationNotes: true,
           },
         },
       },
@@ -232,8 +250,50 @@ export async function respondToClarification(
       });
     if (!clarification || !related) return err("Clarification request not found.");
 
+    // AC4: the same answer saved again (a double-click, a retry) is a no-op.
+    if (
+      clarification.status === "ANSWERED" &&
+      clarification.response === response
+    ) {
+      return ok({ id: clarificationId });
+    }
     if (clarification.status !== "OPEN") {
       return err("This clarification request has already been answered.");
+    }
+
+    // AC5: anything the Coordinator didn't name goes through a change request.
+    const keys = Object.keys(changes) as (keyof ClarificationChanges)[];
+    if (
+      keys.some(
+        (key) => !clarification.editableFields.includes(fieldOfChange(key)),
+      )
+    ) {
+      return err(
+        "Only the fields your coordinator named can be changed here. Use a change request for anything else.",
+      );
+    }
+
+    // Only values that actually differ are written and recorded.
+    const event = clarification.event;
+    const update: Prisma.EventUpdateInput = {};
+    const changed: { fieldName: string; oldValue: string | null; newValue: string }[] = [];
+    for (const key of keys) {
+      const next =
+        key === "startAt" || key === "endAt"
+          ? new Date(changes[key]!)
+          : changes[key]!;
+      const current = event[key];
+      const same =
+        next instanceof Date
+          ? current instanceof Date && current.getTime() === next.getTime()
+          : current === next;
+      if (same) continue;
+      Object.assign(update, { [key]: next });
+      changed.push({
+        fieldName: key,
+        oldValue: asText(current),
+        newValue: asText(next)!,
+      });
     }
 
     const answered = await prisma.$transaction(async (tx) => {
@@ -246,6 +306,29 @@ export async function respondToClarification(
         data: { status: "ANSWERED", response, respondedAt: new Date() },
       });
       if (claimed.count === 0) return false;
+
+      if (changed.length > 0) {
+        await tx.event.update({ where: { id: event.id }, data: update });
+      }
+      await tx.auditLog.createMany({
+        data: [
+          {
+            entityType: "Event",
+            entityId: event.id,
+            action: "CLARIFICATION_ANSWERED",
+            actorId: user!.id,
+            summary: response,
+          },
+          ...changed.map((change) => ({
+            entityType: "Event",
+            entityId: event.id,
+            action: "UPDATED",
+            actorId: user!.id,
+            ...change,
+            summary: "Changed in a clarification answer (SCRUM-108)",
+          })),
+        ],
+      });
 
       // Tell whoever asked: on an unclaimed event there is no coordinatorId
       // yet, and after a reassignment the current coordinator is interested
@@ -278,4 +361,25 @@ export async function respondToClarification(
     if (error instanceof PermissionError) return err(error.message);
     throw error;
   }
+}
+
+/**
+ * Validation errors keyed by the field they belong to, so the panel can show
+ * each next to its input: a changed value under its own name (e.g.
+ * "expectedAttendance", "endAt"), anything else under its top-level name.
+ */
+function errorsByField(error: z.ZodError): Record<string, string[]> {
+  const byField: Record<string, string[]> = {};
+  for (const issue of error.issues) {
+    const [top, nested] = issue.path;
+    const key = String(top === "changes" && nested !== undefined ? nested : top);
+    (byField[key] ??= []).push(issue.message);
+  }
+  return byField;
+}
+
+/** A field's value as the history records it. */
+function asText(value: string | number | Date | null): string | null {
+  if (value === null) return null;
+  return value instanceof Date ? value.toISOString() : String(value);
 }

@@ -102,6 +102,7 @@ export interface DraftEventData {
   registrationNotes?: string | null;
   programme?: string | null;
   specialRequests?: string | null;
+  decisionReason?: string | null;
 }
 
 interface CreateEventDialogProps {
@@ -439,6 +440,19 @@ export function CreateEventDialog({
                 : "Provide your event requirements so ConnectSphere can plan your venue, equipment, and arrangements. You can save as a draft at any step."}
           </DialogDescription>
         </DialogHeader>
+
+        {/* SCRUM-108 AC7: the reason stays in view on every step of the amendment. */}
+        {draftEvent?.status === "REJECTED" && draftEvent.decisionReason && (
+          <div
+            data-testid="amend-rejection-reason"
+            className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs"
+          >
+            <span className="font-semibold text-destructive">
+              Rejection reason:
+            </span>{" "}
+            <span className="whitespace-pre-wrap">{draftEvent.decisionReason}</span>
+          </div>
+        )}
 
         {/* Step Indicator Bar — Allows direct navigation between steps */}
         <div className="mb-4 flex items-center justify-between gap-2 overflow-x-auto border-b pb-3 text-xs font-medium text-muted-foreground">

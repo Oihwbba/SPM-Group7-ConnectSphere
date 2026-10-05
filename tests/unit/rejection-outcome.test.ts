@@ -27,9 +27,9 @@ const tx = vi.hoisted(() => ({
   $queryRaw: vi.fn(),
   $executeRaw: vi.fn(),
   clarificationRequest: { updateMany: vi.fn() },
-  user: { findMany: vi.fn() },
+  user: { findMany: vi.fn(), findFirst: vi.fn() },
   notification: { createMany: vi.fn() },
-  auditLog: { create: vi.fn(), findFirst: vi.fn() },
+  auditLog: { create: vi.fn(), createMany: vi.fn(), findFirst: vi.fn() },
 }));
 
 vi.mock("@/auth", () => ({ auth: vi.fn() }));
