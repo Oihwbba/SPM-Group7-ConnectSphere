@@ -39,9 +39,9 @@ either covered by a test or visibly not done yet. Reviewers do the same.
 | Stories | **78** |
 | Tasks | **19** |
 | Subtasks | **18** |
-| Total story points | **205** |
+| Total story points | **210** |
 | Points committed to Sprint 1 | **37** |
-| Points committed to Sprint 2 | **51** |
+| Points committed to Sprint 2 | **56** |
 | Last synced from Jira | **2026-10-04** |
 
 ## SCRUM-6 - Event Request Lifecycle
@@ -129,7 +129,7 @@ _10 stories, 32 points_
 
 ## SCRUM-10 - Equipment Management
 
-_11 stories, 24 points_
+_11 stories, 26 points_
 
 | Story | Summary | Pts | Priority | Sprint | Status |
 |---|---|---|---|---|---|
@@ -143,7 +143,7 @@ _11 stories, 24 points_
 | [SCRUM-55](SCRUM-55.md) | [MERGED INTO SCRUM-30] View Equipment Availability Calendar | 0 | Low | Backlog | Done |
 | [SCRUM-119](SCRUM-119.md) | Maintain the equipment catalogue and record unavailability | 5 | Highest | Backlog | To Do |
 | [SCRUM-142](SCRUM-142.md) | Change equipment lines or withdraw a venue request before confirmation | 3 | Medium | Backlog | To Do |
-| [SCRUM-156](SCRUM-156.md) | Only reserve equipment for events with an approved equipment request (follow-up to SCRUM-31 and SCRUM-155) | - | Medium | Backlog | To Do |
+| [SCRUM-156](SCRUM-156.md) | Make the one-type equipment form availability-only (follow-up to SCRUM-31 and SCRUM-155) | 2 | Medium | SCRUM Sprint 2 | To Do |
 
 ## SCRUM-11 - Attendee Registration
 
@@ -164,12 +164,12 @@ _10 stories, 24 points_
 
 ## Stories with no epic
 
-_2 stories, 3 points_
+_2 stories, 6 points_
 
 | Story | Summary | Pts | Priority | Sprint | Status |
 |---|---|---|---|---|---|
 | [SCRUM-132](SCRUM-132.md) | Core pages work on a phone and respond within 2 seconds | 3 | Medium | Backlog | To Do |
-| [SCRUM-155](SCRUM-155.md) | Reserve an approved equipment request in one step, pre-filled from the Coordinator's request (follow-up to SCRUM-31) | - | Medium | SCRUM Sprint 2 | In Review |
+| [SCRUM-155](SCRUM-155.md) | Reserve an approved equipment request in one step, pre-filled from the Coordinator's request (follow-up to SCRUM-31) | 3 | Medium | SCRUM Sprint 2 | In Review |
 
 ## Tasks (technical work, no customer-facing story)
 

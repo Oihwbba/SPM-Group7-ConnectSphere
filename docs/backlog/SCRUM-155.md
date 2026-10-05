@@ -9,7 +9,7 @@
 | **Type** | Story |
 | **Epic** | - |
 | **Priority** | Medium |
-| **Story points** | - |
+| **Story points** | 3 |
 | **Status in Jira** | In Review |
 | **Sprint** | SCRUM Sprint 2 |
 | **Jira** | https://smu-spm-group7.atlassian.net/browse/SCRUM-155 |
@@ -33,15 +33,15 @@
 ## Decisions
 
 * **All or nothing (AC 4).** A Coordinator never gets a half-reserved request without being told; Technical Support adjusts the rows and tries again.
-* **"Reserved" is judged by the event (AC 6),** as the SCRUM-110 readiness checklist does, because the one-type form reserves without linking a request.
+* **"Reserved" is judged by the event (AC 6), as the SCRUM-110 readiness checklist does, because reservations made with the one-type form (before SCRUM-156) are not linked to a request.**
 * **The period must cover the whole event (AC 2),** so the reservation counts towards the SCRUM-110 checklist.
-* **This card is the only way to reserve (SCRUM-156, option b).** The one-type form stays for checking availability and commitments (SCRUM-29/30) but no longer reserves.
+* **This card will be the only way to reserve (SCRUM-156, option b).This story adds the card; making the one-type form availability-only is SCRUM-156.**
 * Periods touching at an endpoint do not overlap, as in SCRUM-29/31.
 
 **Change log**
 
 * 2026-10-04: written from Felicia's placeholder and the SCRUM-31 review feedback.
 * 2026-10-04 (review of PR #130): AC 1 excludes events that have already started; AC 2 requires the period to cover the whole event; AC 6 counts reservations made with the one-type form; AC 7 adds a retired type and an uncovered period.
-* 2026-10-05 (PO decision on SCRUM-156): reserving is only through this card; the one-type form is availability-only. AC 6 no longer mentions the one-type form.
+* 2026-10-05 (PO decision on SCRUM-156): this card will be the only way to reserve, and SCRUM-156 makes the one-type form availability-only. AC 6 no longer mentions the one-type form
 
-**Related:** SCRUM-31 (reserve equipment), SCRUM-28 (review and approve a request), SCRUM-110 (the readiness checklist counts these reservations), SCRUM-142 (changing lines before confirmation), SCRUM-156 (only offer events with an approved request on the one-type form).
+**Related:** SCRUM-31 (reserve equipment), SCRUM-28 (review and approve a request), SCRUM-110 (the readiness checklist counts these reservations), SCRUM-142 (changing lines before confirmation),SCRUM-156 (make the one-type form availability-only).
