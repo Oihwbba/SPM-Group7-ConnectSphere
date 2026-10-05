@@ -172,8 +172,11 @@ export function ReserveRequestCard({
       try {
         const result = await reserveEquipmentRequest({
           requestId,
-          startAt: startIso ?? startAt,
-          endAt: endIso ?? endAt,
+          // A time that isn't a full Singapore date and time is sent empty,
+          // so the server reports it at the field rather than reading the
+          // raw text as UTC (GLM review of #130).
+          startAt: startIso ?? "",
+          endAt: endIso ?? "",
           lines: rows.map((row) => ({
             equipmentId: row.equipmentId,
             quantity: row.quantity,

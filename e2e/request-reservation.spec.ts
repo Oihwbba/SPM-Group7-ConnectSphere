@@ -156,6 +156,23 @@ test.describe("SCRUM-155 — Reserve an approved request in one step", () => {
     await expect(card).toBeInViewport();
   });
 
+  test("SCRUM-155 [AC7] TC-155-09: a cleared start or end reserves nothing and says so at the field", async ({
+    page,
+  }) => {
+    const name = `SCRUM-155 cleared period ${Date.now()}`;
+    const requestId = await approvedRequest(name);
+    await signInAsTechSupport(page);
+    await chooseRequest(page, name);
+
+    await page.getByLabel("Reservation starts").fill("");
+    await page.getByRole("button", { name: "Reserve all 2 item(s)" }).click();
+
+    await expect(
+      page.getByText("Choose a reservation start time."),
+    ).toBeVisible();
+    expect(await prisma.reservation.count({ where: { requestId } })).toBe(0);
+  });
+
   test("SCRUM-155 [AC2] TC-155-03: rows can be removed, added and changed, and what is reserved is the edited list", async ({
     page,
   }) => {
