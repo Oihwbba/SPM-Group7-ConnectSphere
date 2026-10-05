@@ -89,23 +89,17 @@ export async function createDraftEvent(
     let eventId = id;
 
     if (id) {
-      // User Story 15 AC 2/3: Resume and update an existing saved draft
-      const existing = await prisma.event.findFirst({
+      // User Story 15 AC 2/3: Resume and update an existing saved draft.
+      // One conditional write, not a read then an update: a discard
+      // (SCRUM-130 AC1) or a submit committing in between must not be
+      // overwritten by this save.
+      const res = await prisma.event.updateMany({
         where: {
           id,
           organiserId: user!.id,
           status: "DRAFT",
-          // SCRUM-130 AC1: a discarded draft cannot be reopened.
           discardedAt: null,
         },
-      });
-
-      if (!existing) {
-        return err("Draft event not found or cannot be modified.");
-      }
-
-      await prisma.event.update({
-        where: { id },
         data: {
           name,
           purpose: purpose ?? null,
@@ -126,6 +120,9 @@ export async function createDraftEvent(
           timezone: TIME_ZONE,
         },
       });
+      if (res.count !== 1) {
+        return err("Draft event not found or cannot be modified.");
+      }
     } else {
       // User Story 15 AC 1: Save a new incomplete request as draft at any point
       const created = await prisma.event.create({

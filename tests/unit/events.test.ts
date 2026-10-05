@@ -38,6 +38,7 @@ vi.mock("@/lib/db", () => ({
       create: vi.fn(),
       findFirst: vi.fn(),
       update: vi.fn(),
+      updateMany: vi.fn(),
     },
     venue: { findMany: vi.fn() },
     equipment: { findMany: vi.fn() },
@@ -49,6 +50,13 @@ const mockAuth = auth as unknown as Mock;
 const mockCreate = prisma.event.create as unknown as Mock;
 const mockFindFirst = prisma.event.findFirst as unknown as Mock;
 const mockUpdate = prisma.event.update as unknown as Mock;
+const mockUpdateMany = prisma.event.updateMany as unknown as Mock;
+
+/** The conditional write that saves an existing draft: only the caller's own
+ * undiscarded Draft matches (SCRUM-15, SCRUM-130). */
+function draftSaveWhere(id: string, organiserId = "usr_organiser") {
+  return { id, organiserId, status: "DRAFT", discardedAt: null };
+}
 const mockTransaction = prisma.$transaction as unknown as Mock;
 
 // SCRUM-20: submitEventRequest now runs inside a transaction. These tests
@@ -79,6 +87,7 @@ beforeEach(() => {
   // Clear mock history before each test to guarantee test isolation
   vi.clearAllMocks();
   mockTxUserFindMany.mockResolvedValue([]);
+  mockUpdateMany.mockResolvedValue({ count: 1 });
   mockTransaction.mockImplementation((cb: (tx: unknown) => unknown) =>
     cb({
       event: { create: mockCreate, findFirst: mockFindFirst, update: mockUpdate },
@@ -681,13 +690,6 @@ describe("User Story 15 — Save an event request as draft", () => {
       }),
     );
 
-    mockFindFirst.mockResolvedValue({
-      id: "evt_draft_sg",
-      organiserId: "usr_organiser",
-      status: "DRAFT",
-    });
-    mockUpdate.mockResolvedValue({ id: "evt_draft_sg" });
-
     const updated = await createDraftEvent({
       id: "evt_draft_sg",
       name: "Singapore Summit",
@@ -695,9 +697,9 @@ describe("User Story 15 — Save an event request as draft", () => {
     });
 
     expect(updated.ok).toBe(true);
-    expect(mockUpdate).toHaveBeenCalledWith(
+    expect(mockUpdateMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { id: "evt_draft_sg" },
+        where: draftSaveWhere("evt_draft_sg"),
         data: expect.objectContaining({
           startAt: new Date(futureStart),
           timezone: "Asia/Singapore",
@@ -873,9 +875,9 @@ describe("User Story 15 — Save an event request as draft", () => {
 
   it("SCRUM-14 [AC4 - Business-Rule Negative]: refuses to edit a caller's own event as a draft once it has been submitted", async () => {
     mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
-    // Own event, but no longer DRAFT — the findFirst's status filter excludes
+    // Own event, but no longer DRAFT — the write's status condition excludes
     // it, same as if it belonged to someone else or didn't exist.
-    mockFindFirst.mockResolvedValue(null);
+    mockUpdateMany.mockResolvedValue({ count: 0 });
 
     const result = await createDraftEvent({
       id: "evt_already_submitted",
@@ -886,21 +888,15 @@ describe("User Story 15 — Save an event request as draft", () => {
     if (!result.ok) {
       expect(result.error).toMatch(/not found or cannot be modified/i);
     }
-    expect(mockFindFirst).toHaveBeenCalledWith({
-      where: { id: "evt_already_submitted", organiserId: "usr_organiser", status: "DRAFT", discardedAt: null },
-    });
+    expect(mockUpdateMany).toHaveBeenCalledTimes(1);
+    expect(mockUpdateMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: draftSaveWhere("evt_already_submitted") }),
+    );
     expect(mockUpdate).not.toHaveBeenCalled();
   });
 
   it("SCRUM-15 [AC2 - Happy Path]: retains existing field values when updating an existing draft request", async () => {
     mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
-    mockFindFirst.mockResolvedValue({
-      id: "evt_draft_existing",
-      organiserId: "usr_organiser",
-      status: "DRAFT",
-    });
-    mockUpdate.mockResolvedValue({ id: "evt_draft_existing" });
-
     // Update existing draft with additional fields
     const result = await createDraftEvent({
       id: "evt_draft_existing",
@@ -910,12 +906,12 @@ describe("User Story 15 — Save an event request as draft", () => {
     });
 
     expect(result).toEqual({ ok: true, data: { id: "evt_draft_existing" } });
-    expect(mockFindFirst).toHaveBeenCalledWith({
-      where: { id: "evt_draft_existing", organiserId: "usr_organiser", status: "DRAFT", discardedAt: null },
-    });
-    expect(mockUpdate).toHaveBeenCalledWith(
+    // One conditional write, with no separate read that could go stale.
+    expect(mockFindFirst).not.toHaveBeenCalled();
+    expect(mockUpdate).not.toHaveBeenCalled();
+    expect(mockUpdateMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { id: "evt_draft_existing" },
+        where: draftSaveWhere("evt_draft_existing"),
         data: expect.objectContaining({
           name: "Incomplete Tech Gathering — Updated",
           purpose: "New Purpose Added",
@@ -928,14 +924,6 @@ describe("User Story 15 — Save an event request as draft", () => {
   it("SCRUM-15 [AC2 - Cross-Cutting / Timezone]: preserves exact UTC datetime without offset drift across multiple draft updates", async () => {
     const fixedUtcIso = "2026-11-20T10:00:00.000Z";
     mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
-    mockFindFirst.mockResolvedValue({
-      id: "evt_draft_tz",
-      organiserId: "usr_organiser",
-      status: "DRAFT",
-      startAt: new Date(fixedUtcIso),
-    });
-    mockUpdate.mockResolvedValue({ id: "evt_draft_tz" });
-
     // Re-save draft with startAt to ensure UTC timestamp stability
     const result = await createDraftEvent({
       id: "evt_draft_tz",
@@ -944,9 +932,9 @@ describe("User Story 15 — Save an event request as draft", () => {
     });
 
     expect(result.ok).toBe(true);
-    expect(mockUpdate).toHaveBeenCalledWith(
+    expect(mockUpdateMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { id: "evt_draft_tz" },
+        where: draftSaveWhere("evt_draft_tz"),
         data: expect.objectContaining({
           startAt: new Date(fixedUtcIso),
         }),
@@ -978,13 +966,6 @@ describe("User Story 15 — Save an event request as draft", () => {
 
   it("SCRUM-15 [AC2, AC7 - Data retention on re-save]: updating a draft with only an end date persists that end and leaves the start empty", async () => {
     mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
-    mockFindFirst.mockResolvedValue({
-      id: "evt_draft_end_only",
-      organiserId: "usr_organiser",
-      status: "DRAFT",
-    });
-    mockUpdate.mockResolvedValue({ id: "evt_draft_end_only" });
-
     const result = await createDraftEvent({
       id: "evt_draft_end_only",
       name: "End Only Draft",
@@ -993,9 +974,9 @@ describe("User Story 15 — Save an event request as draft", () => {
 
     expect(result).toEqual({ ok: true, data: { id: "evt_draft_end_only" } });
     expect(mockCreate).not.toHaveBeenCalled();
-    expect(mockUpdate).toHaveBeenCalledWith(
+    expect(mockUpdateMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { id: "evt_draft_end_only" },
+        where: draftSaveWhere("evt_draft_end_only"),
         data: expect.objectContaining({
           startAt: null,
           endAt: new Date(futureEnd),
@@ -1045,8 +1026,9 @@ describe("User Story 15 — Save an event request as draft", () => {
 
   it("SCRUM-15 [Security Gate / Ownership Isolation]: refuses to update or submit a draft owned by another organiser", async () => {
     mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_other_organiser"));
-    // Mock draft belonging to a different user, so findFirst returns null
-    mockFindFirst.mockResolvedValue(null);
+    // The draft belongs to a different organiser, so the conditional write,
+    // scoped to the caller, matches nothing.
+    mockUpdateMany.mockResolvedValue({ count: 0 });
 
     const result = await createDraftEvent({
       id: "evt_draft_someone_else",
@@ -1057,18 +1039,18 @@ describe("User Story 15 — Save an event request as draft", () => {
     if (!result.ok) {
       expect(result.error).toMatch(/not found or cannot be modified/i);
     }
+    expect(mockUpdateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: draftSaveWhere("evt_draft_someone_else", "usr_other_organiser"),
+      }),
+    );
     expect(mockUpdate).not.toHaveBeenCalled();
   });
 
   it("SCRUM-15 [Throw Path / Update]: rethrows unexpected persistence errors when updating an existing draft — covers update-path exit point of createDraftEvent", async () => {
     const dbFailure = new Error("update draft write failed");
     mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
-    mockFindFirst.mockResolvedValue({
-      id: "evt_draft_update_fail",
-      organiserId: "usr_organiser",
-      status: "DRAFT",
-    });
-    mockUpdate.mockRejectedValueOnce(dbFailure);
+    mockUpdateMany.mockRejectedValueOnce(dbFailure);
 
     await expect(
       createDraftEvent({
@@ -1111,13 +1093,6 @@ describe("User Story 15 — Save an event request as draft", () => {
 
   it("SCRUM-15 [AC2, AC9 - Inactive Catalogue Reference Retention]: draft saves and reopens successfully when venue or equipment fields contain references to inactive catalogue items (stored as free text, no FK constraint)", async () => {
     mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
-    mockFindFirst.mockResolvedValue({
-      id: "evt_draft_inactive_ref",
-      organiserId: "usr_organiser",
-      status: "DRAFT",
-    });
-    mockUpdate.mockResolvedValue({ id: "evt_draft_inactive_ref" });
-
     const result = await createDraftEvent({
       id: "evt_draft_inactive_ref",
       name: "Draft With Inactive Catalogue Reference",
@@ -1128,9 +1103,9 @@ describe("User Story 15 — Save an event request as draft", () => {
     });
 
     expect(result.ok).toBe(true);
-    expect(mockUpdate).toHaveBeenCalledWith(
+    expect(mockUpdateMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { id: "evt_draft_inactive_ref" },
+        where: draftSaveWhere("evt_draft_inactive_ref"),
         data: expect.objectContaining({
           venueRequirements:
             "Grand Auditorium (Decommissioned — please update before submitting)",

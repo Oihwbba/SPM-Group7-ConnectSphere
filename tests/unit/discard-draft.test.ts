@@ -357,9 +357,9 @@ describe("A discarded draft cannot be reopened — SCRUM-130 AC1", () => {
     });
   });
 
-  it("SCRUM-130 [AC1] TC-130-02: saving a discarded draft is refused — the lookup only matches an undiscarded Draft", async () => {
+  it("SCRUM-130 [AC1] TC-130-02: saving a discarded draft is refused — the write only matches an undiscarded Draft, so nothing is changed", async () => {
     mockAuth.mockResolvedValue(owner());
-    tx.event.findFirst.mockResolvedValue(null);
+    tx.event.updateMany.mockResolvedValue({ count: 0 });
 
     const result = await createDraftEvent({ id: "evt_draft", name: "Edited" });
 
@@ -367,15 +367,15 @@ describe("A discarded draft cannot be reopened — SCRUM-130 AC1", () => {
       ok: false,
       error: "Draft event not found or cannot be modified.",
     });
-    expect(tx.event.findFirst).toHaveBeenCalledWith({
-      where: {
-        id: "evt_draft",
-        organiserId: "usr_org",
-        status: "DRAFT",
-        discardedAt: null,
-      },
+    expect(tx.event.updateMany).toHaveBeenCalledTimes(1);
+    expect(tx.event.updateMany.mock.calls[0][0].where).toEqual({
+      id: "evt_draft",
+      organiserId: "usr_org",
+      status: "DRAFT",
+      discardedAt: null,
     });
     expect(tx.event.update).not.toHaveBeenCalled();
+    expect(mockRevalidate).not.toHaveBeenCalled();
   });
 
   it("SCRUM-130 [AC1] TC-130-02: submitting a discarded draft is refused — the lookup only matches an undiscarded Draft", async () => {

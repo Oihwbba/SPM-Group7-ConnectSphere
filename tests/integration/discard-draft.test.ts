@@ -372,6 +372,51 @@ describe.skipIf(!usesLocalDatabase)(
       ).toBe(0);
     });
 
+    it("SCRUM-130 [AC1] TC-130-08: a discard that commits while a Save as Draft is waiting wins, and the save changes nothing", async () => {
+      const draft = await makeDraft();
+      signIn("ORGANISER", "usr_organiser");
+
+      const save = await whileRowLocked(
+        draft.id,
+        () => createDraftEvent({ id: draft.id, name: `${PREFIX} late edit` }),
+        { discardedAt: new Date() },
+      );
+
+      expect(save).toEqual({
+        ok: false,
+        error: "Draft event not found or cannot be modified.",
+      });
+      // The discarded draft keeps the name it was discarded with.
+      expect(
+        await prisma.event.findUniqueOrThrow({
+          where: { id: draft.id },
+          select: { name: true, discardedAt: true },
+        }),
+      ).toEqual({ name: draft.name, discardedAt: expect.any(Date) });
+    });
+
+    it("SCRUM-130 [AC1] TC-130-08: a submit that commits while a Save as Draft is waiting wins, and the save doesn't overwrite the submitted request", async () => {
+      const draft = await makeDraft();
+      signIn("ORGANISER", "usr_organiser");
+
+      const save = await whileRowLocked(
+        draft.id,
+        () => createDraftEvent({ id: draft.id, name: `${PREFIX} late edit` }),
+        { status: "SUBMITTED", submittedAt: new Date() },
+      );
+
+      expect(save).toEqual({
+        ok: false,
+        error: "Draft event not found or cannot be modified.",
+      });
+      expect(
+        await prisma.event.findUniqueOrThrow({
+          where: { id: draft.id },
+          select: { name: true, status: true },
+        }),
+      ).toEqual({ name: draft.name, status: "SUBMITTED" });
+    });
+
     it("SCRUM-130 [AC1] TC-130-09: after the Draft started from a rejection is discarded, Start New Request makes a fresh Draft", async () => {
       signIn("ORGANISER", "usr_organiser");
       const rejected = await prisma.event.create({
