@@ -222,6 +222,48 @@ test.describe("SCRUM-155 — Reserve an approved request in one step", () => {
     expect(await prisma.reservation.count({ where: { requestId } })).toBe(0);
   });
 
+  test("SCRUM-155 [AC2, AC7] TC-155-14: a row whose type was retired shows the type that was asked for, and reserves nothing", async ({
+    page,
+  }) => {
+    const name = `SCRUM-155 retired type ${Date.now()}`;
+    const requestId = await approvedRequest(name);
+    const retired = await prisma.equipment.create({
+      data: { type: `Retired rig ${Date.now()}`, totalQuantity: 3 },
+      select: { id: true, type: true },
+    });
+    try {
+      await prisma.equipmentRequestLine.updateMany({
+        where: { requestId, equipmentId: "eqp_projector" },
+        data: { equipmentId: retired.id },
+      });
+      await prisma.equipment.update({
+        where: { id: retired.id },
+        data: { isActive: false },
+      });
+      await signInAsTechSupport(page);
+      await chooseRequest(page, name);
+
+      const item = page.getByLabel("Item 1", { exact: true });
+      await expect(item).toHaveValue(retired.id);
+      await expect(item.locator("option:checked")).toHaveText(
+        `${retired.type} (no longer available)`,
+      );
+      await page.getByRole("button", { name: "Reserve all 2 item(s)" }).click();
+
+      await expect(
+        page.getByText(
+          "This equipment type is no longer available. Choose another.",
+        ),
+      ).toBeVisible();
+      expect(await prisma.reservation.count({ where: { requestId } })).toBe(0);
+    } finally {
+      await prisma.equipmentRequestLine.deleteMany({
+        where: { equipmentId: retired.id },
+      });
+      await prisma.equipment.delete({ where: { id: retired.id } });
+    }
+  });
+
   test("SCRUM-155 [AC2] TC-155-03: rows can be removed, added and changed, and what is reserved is the edited list", async ({
     page,
   }) => {

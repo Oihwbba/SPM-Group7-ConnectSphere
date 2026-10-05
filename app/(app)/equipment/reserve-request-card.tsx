@@ -31,12 +31,14 @@ import {
 } from "./actions";
 
 type Equipment = { id: string; type: string; totalQuantity: number };
-// `requirements` are the Coordinator's notes for the line the row came from.
+// `requirements` are the Coordinator's notes for the line the row came from,
+// and `requestedType` the type it asked for, still shown if since retired.
 type Row = {
   key: number;
   equipmentId: string;
   quantity: string;
   requirements: string | null;
+  requestedType: string | null;
 };
 type AvailabilityMap = Record<string, Availability>;
 
@@ -53,11 +55,13 @@ const newRow = (
   equipmentId = "",
   quantity = "1",
   requirements: string | null = null,
+  requestedType: string | null = null,
 ): Row => ({
   key: nextRowKey++,
   equipmentId,
   quantity,
   requirements,
+  requestedType,
 });
 
 /**
@@ -139,6 +143,7 @@ export function ReserveRequestCard({
           line.equipment.id,
           String(line.quantity),
           line.technicalRequirements,
+          line.equipment.type,
         ),
       ) ?? [],
     );
@@ -354,6 +359,14 @@ export function ReserveRequestCard({
                           }
                         >
                           <option value="">Select a type</option>
+                          {row.equipmentId &&
+                            !equipment.some(
+                              (item) => item.id === row.equipmentId,
+                            ) && (
+                              <option value={row.equipmentId} disabled>
+                                {row.requestedType} (no longer available)
+                              </option>
+                            )}
                           {equipment.map((item) => (
                             <option key={item.id} value={item.id}>
                               {item.type}
