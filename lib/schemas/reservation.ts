@@ -14,10 +14,13 @@ export const RESERVABLE_EVENT_STATUSES: EventStatus[] = [
 
 const reservationFields = {
   equipmentId: z.string().min(1, "Select an equipment type."),
+  // The same ceiling as a request line (equipmentRequestLineSchema), so a
+  // mistyped quantity is a field error, not a failure in the Int column.
   quantity: z.coerce
     .number()
     .int("Quantity must be a whole number.")
-    .positive("Quantity must be greater than zero."),
+    .positive("Quantity must be greater than zero.")
+    .max(1000, "Quantity can be at most 1,000."),
   startAt: z.string().min(1, "Choose a reservation start time."),
   endAt: z.string().min(1, "Choose a reservation end time."),
 };
@@ -82,7 +85,8 @@ export const requestReservationSchema = z
           quantity: reservationFields.quantity,
         }),
       )
-      .min(1, "Add at least one equipment type to reserve."),
+      .min(1, "Add at least one equipment type to reserve.")
+      .max(20, "Reserve at most 20 equipment types at once."),
   })
   .superRefine((data, ctx) => {
     validatePeriod(data, ctx);

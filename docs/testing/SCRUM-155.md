@@ -147,7 +147,7 @@ Approved and asks for 1 Projector and 2 Wireless Microphones.
 | Test Case ID    | TC-155-09                                                                                                                                                                        |
 | Test Scenario   | [Negative] AC 7: invalid rows or periods reserve nothing and say where the problem is                                                                                            |
 | Pre-conditions  | Shared. The request is chosen.                                                                                                                                                   |
-| Test Steps      | Try each in turn: remove every row; a row with no type; 0 or 1.5 units; the same type on two rows; an end at or before the start; a start in the past.                           |
+| Test Steps      | Try each in turn: remove every row; a row with no type; 0, 1.5 or 1,001 units; the same type on two rows; 21 rows; an end at or before the start; a start in the past.           |
 | Test Data       | —                                                                                                                                                                                |
 | Expected Result | Nothing is reserved. The message is shown at the row or period field it belongs to, e.g. "This equipment type is already on another row." or "Start time cannot be in the past." |
 
