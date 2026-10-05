@@ -31,6 +31,7 @@ export type Action =
   | "event:read" // read one event (relationship-gated)
   | "event:review"
   | "event:confirm" // SCRUM-81: the assigned coordinator confirms a ready Planning event
+  | "event:reject" // SCRUM-117: the assigned coordinator rejects a Planning event that can't be fulfilled
   | "clarification:request" // SCRUM-18: coordinator asks the organiser a question
   | "clarification:respond" // SCRUM-18: organiser answers an open question
   | "venue:read"
@@ -85,6 +86,7 @@ const ROLE_ACTIONS: Record<Role, Action[]> = {
     "event:read",
     "event:review",
     "event:confirm",
+    "event:reject",
     "clarification:request",
     "venue:read",
     "equipment-request:list",
@@ -138,9 +140,11 @@ function hasRelationship(
       if (user.role === "COORDINATOR") {
         if (resource.coordinatorId === user.id) return true;
         // Any coordinator may review a request nobody has picked up yet, but
-        // only the event's assigned coordinator may confirm it (SCRUM-81 AC 7).
+        // only the event's assigned coordinator may confirm it (SCRUM-81 AC 7)
+        // or reject it from Planning (SCRUM-117 AC 5).
         return (
           action !== "event:confirm" &&
+          action !== "event:reject" &&
           resource.coordinatorId === null &&
           resource.status !== "DRAFT"
         );
