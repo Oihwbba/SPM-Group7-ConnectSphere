@@ -27,7 +27,7 @@
 3. Given every row fits what is free for the whole period, when I reserve, then every row is reserved together: one Confirmed reservation per row, each linked to the event and to the request, and availability drops by exactly those quantities.
 4. Given any row needs more than is free for any part of the period, when I reserve, then nothing is reserved, and each short row shows how many are free and how many it is short.
 5. Given two Technical Support staff reserve at the same moment (the same request, or different requests needing the last units of a type), then the total reserved never exceeds the pool, and the same request is never reserved twice.
-6. Given equipment is already reserved for the request's event (with this card, or with the one-type reserve form), then the request is no longer offered, and reserving it again is refused.
+6. Given equipment is already reserved for the request's event, then the request is no longer offered, and reserving it again is refused.
 7. Given a row has no type, a retired type, a quantity of zero or less, or the same type as another row, or the period ends before it starts, starts in the past, or doesn't cover the whole event, when I reserve, then nothing is reserved and the problem is reported where it is.
 
 ## Decisions
@@ -35,12 +35,13 @@
 * **All or nothing (AC 4).** A Coordinator never gets a half-reserved request without being told; Technical Support adjusts the rows and tries again.
 * **"Reserved" is judged by the event (AC 6),** as the SCRUM-110 readiness checklist does, because the one-type form reserves without linking a request.
 * **The period must cover the whole event (AC 2),** so the reservation counts towards the SCRUM-110 checklist.
-* **The existing one-type reserve form stays** for ad-hoc reservations and availability checks (SCRUM-29/30). Limiting that form's events to ones with a decided request is SCRUM-156.
+* **This card is the only way to reserve (SCRUM-156, option b).** The one-type form stays for checking availability and commitments (SCRUM-29/30) but no longer reserves.
 * Periods touching at an endpoint do not overlap, as in SCRUM-29/31.
 
 **Change log**
 
 * 2026-10-04: written from Felicia's placeholder and the SCRUM-31 review feedback.
 * 2026-10-04 (review of PR #130): AC 1 excludes events that have already started; AC 2 requires the period to cover the whole event; AC 6 counts reservations made with the one-type form; AC 7 adds a retired type and an uncovered period.
+* 2026-10-05 (PO decision on SCRUM-156): reserving is only through this card; the one-type form is availability-only. AC 6 no longer mentions the one-type form.
 
 **Related:** SCRUM-31 (reserve equipment), SCRUM-28 (review and approve a request), SCRUM-110 (the readiness checklist counts these reservations), SCRUM-142 (changing lines before confirmation), SCRUM-156 (only offer events with an approved request on the one-type form).
