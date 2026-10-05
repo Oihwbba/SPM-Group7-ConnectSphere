@@ -11,11 +11,38 @@ import { choose, setTime, signedIn, usesLocalDatabase } from "./helpers";
  * refused with the clash shown.
  *
  * Uses the Grand Auditorium on 10 Jan 2036, clear of anything seeded, and
- * clears those rows first so a local re-run or a CI retry starts clean.
+ * clears those rows first so a local re-run or a CI retry starts clean. A
+ * request is always for its event's period (SCRUM-50 AC1), so the spec
+ * creates the two events it requests for, and removes them afterwards.
  */
 const AUDITORIUM = "ven_auditorium";
 const DAY = "2036-01-10";
-const APPROVED_EVENT = "Approved — Research Symposium";
+const PREFIX = "E2E Auditorium —";
+// Over the maintenance recorded below, and ending exactly as it begins.
+const CLASHING_EVENT = `${PREFIX} Afternoon Rehearsal`;
+const MORNING_EVENT = `${PREFIX} Morning Assembly`;
+// Booked straight into the database, as if approved by someone else.
+const ELSEWHERE_EVENT = `${PREFIX} Approved Elsewhere`;
+
+async function removeTestEvents() {
+  const events = await prisma.event.findMany({
+    where: { name: { startsWith: PREFIX } },
+    select: { id: true },
+  });
+  const eventIds = events.map((e) => e.id);
+  const bookings = await prisma.booking.findMany({
+    where: { eventId: { in: eventIds } },
+    select: { id: true },
+  });
+  await prisma.auditLog.deleteMany({
+    where: {
+      entityType: "Booking",
+      entityId: { in: bookings.map((b) => b.id) },
+    },
+  });
+  await prisma.booking.deleteMany({ where: { eventId: { in: eventIds } } });
+  await prisma.event.deleteMany({ where: { id: { in: eventIds } } });
+}
 
 /** The calendar for the week containing `day`. */
 const calendarFor = (venue: string, day: string) =>
@@ -50,20 +77,44 @@ async function recordMaintenance(page: Page, start: string, end: string) {
     .click();
 }
 
-async function requestAuditorium(page: Page, start: string, end: string) {
+/** Fill the request form; what the live check says is left to the caller. */
+async function requestAuditorium(page: Page, event: string) {
   await page.goto("/bookings/new");
   await page.locator('[data-hydrated="true"]').waitFor();
-  await choose(page, "Event", APPROVED_EVENT);
+  await choose(page, "Event", event);
+  await choose(page, "Room layout", /^theatre$/);
   await choose(page, "Venue", /^Grand Auditorium/);
-  await setTime(page, "Start", start);
-  await setTime(page, "End", end);
-  await page.getByLabel("Expected attendance").fill("100");
-  await page.getByRole("button", { name: "Submit request" }).click();
 }
 
 test.describe("SCRUM-36 / SCRUM-37 — venue availability calendar and recorded unavailability", () => {
   // Two users, the calendar paged out to 2036, and several round trips.
   test.describe.configure({ timeout: 180_000 });
+
+  test.beforeAll(async () => {
+    if (!usesLocalDatabase) return;
+    await removeTestEvents();
+    const event = (name: string, start: string, end: string) => ({
+      name,
+      status: "PLANNING" as const,
+      organiserId: "usr_organiser",
+      coordinatorId: "usr_coordinator",
+      startAt: new Date(`${DAY}T${start}:00+08:00`),
+      endAt: new Date(`${DAY}T${end}:00+08:00`),
+      expectedAttendance: 100,
+      preferredLayout: "theatre",
+    });
+    await prisma.event.createMany({
+      data: [
+        event(CLASHING_EVENT, "14:00", "16:00"),
+        event(MORNING_EVENT, "09:00", "13:00"),
+        event(ELSEWHERE_EVENT, "10:00", "12:00"),
+      ],
+    });
+  });
+
+  test.afterAll(async () => {
+    if (usesLocalDatabase) await removeTestEvents();
+  });
 
   test.beforeEach(async () => {
     if (!usesLocalDatabase) return;
@@ -89,6 +140,7 @@ test.describe("SCRUM-36 / SCRUM-37 — venue availability calendar and recorded 
   test("SCRUM-37 AC2-5, SCRUM-36 AC3-5 — maintenance is recorded, seen, refused over, sat flush against a booking, and never overwrites one", async ({
     browser,
   }, testInfo) => {
+    test.skip(!usesLocalDatabase, "creates its own events");
     const staff = await signedIn(browser, "venuestaff@test.local");
     const coordinator = await signedIn(browser, "coordinator@test.local");
 
@@ -105,18 +157,29 @@ test.describe("SCRUM-36 / SCRUM-37 — venue availability calendar and recorded 
     await coordinator.goto(calendarFor(AUDITORIUM, DAY));
     expect(await stretches(coordinator, DAY)).toEqual([
       ["free", "Available midnight to 1:00 pm SGT"],
-      ["unavailability", "Unavailable (maintenance) 1:00 pm SGT to 5:00 pm SGT"],
+      [
+        "unavailability",
+        "Unavailable (maintenance) 1:00 pm SGT to 5:00 pm SGT",
+      ],
       ["free", "Available 5:00 pm SGT to midnight"],
     ]);
 
     // SCRUM-37 AC3 — a request over it is refused, like a booking clash.
-    await requestAuditorium(coordinator, `${DAY}T14:00`, `${DAY}T16:00`);
-    await expect(coordinator.getByTestId("booking-outcome")).toContainText(
-      "Grand Auditorium is unavailable for that period: unavailable (maintenance) from 10 Jan 2036, 1:00 pm SGT to 10 Jan 2036, 5:00 pm SGT.",
+    await requestAuditorium(coordinator, CLASHING_EVENT);
+    await expect(coordinator.getByTestId("live-availability")).toContainText(
+      "Grand Auditorium is unavailable for this period: unavailable (maintenance) from 10 Jan 2036, 1:00 pm SGT to 10 Jan 2036, 5:00 pm SGT.",
     );
+    await expect(
+      coordinator.getByRole("button", { name: "Submit request" }),
+    ).toBeDisabled();
 
     // SCRUM-37 AC5 — a request ending exactly as the maintenance begins is accepted.
-    await requestAuditorium(coordinator, `${DAY}T09:00`, `${DAY}T13:00`);
+    await requestAuditorium(coordinator, MORNING_EVENT);
+    await expect(coordinator.getByTestId("live-availability")).toHaveAttribute(
+      "data-state",
+      "free",
+    );
+    await coordinator.getByRole("button", { name: "Submit request" }).click();
     await expect(coordinator.getByTestId("booking-success")).toContainText(
       "Request submitted",
     );
@@ -124,9 +187,9 @@ test.describe("SCRUM-36 / SCRUM-37 — venue availability calendar and recorded 
 
     // Staff approve it.
     await staff.goto("/bookings");
-    const card = staff
-      .getByTestId(/^booking-/)
-      .filter({ hasText: "10 Jan 2036, 9:00 am SGT to 10 Jan 2036, 1:00 pm SGT" });
+    const card = staff.getByTestId(/^booking-/).filter({
+      hasText: "10 Jan 2036, 9:00 am SGT to 10 Jan 2036, 1:00 pm SGT",
+    });
     await card.getByRole("button", { name: "Approve" }).click();
     await expect(staff.getByText(/^Approved: Grand Auditorium/)).toBeVisible();
 
@@ -136,7 +199,10 @@ test.describe("SCRUM-36 / SCRUM-37 — venue availability calendar and recorded 
     expect(await stretches(coordinator, DAY)).toEqual([
       ["free", "Available midnight to 9:00 am SGT"],
       ["booking", "Booked 9:00 am SGT to 1:00 pm SGT"],
-      ["unavailability", "Unavailable (maintenance) 1:00 pm SGT to 5:00 pm SGT"],
+      [
+        "unavailability",
+        "Unavailable (maintenance) 1:00 pm SGT to 5:00 pm SGT",
+      ],
       ["free", "Available 5:00 pm SGT to midnight"],
     ]);
 
@@ -160,12 +226,14 @@ test.describe("SCRUM-36 / SCRUM-37 — venue availability calendar and recorded 
     await booking.hover();
     const bookingDetails = booking.getByRole("tooltip");
     await expect(bookingDetails).toBeVisible();
-    await expect(bookingDetails).toContainText(APPROVED_EVENT);
+    await expect(bookingDetails).toContainText(MORNING_EVENT);
     await expect(bookingDetails).toContainText("Requested by Cody Coordinator");
     await expect(bookingDetails).toContainText("100 expected");
     // A screen reader hears the same details as the block's description.
     await expect(
-      booking.getByRole("button", { name: "Booked 9:00 am SGT to 1:00 pm SGT" }),
+      booking.getByRole("button", {
+        name: "Booked 9:00 am SGT to 1:00 pm SGT",
+      }),
     ).toHaveAccessibleDescription(/Requested by Cody Coordinator/);
     await testInfo.attach("SCRUM-36 details shown on hover", {
       body: await coordinator.screenshot({ fullPage: false }),
@@ -327,9 +395,14 @@ test.describe("SCRUM-36 / SCRUM-37 — venue availability calendar and recorded 
     const booked = weekDay(coordinator, day).locator('li[data-kind="booking"]');
     await expect(booked).toHaveCount(0);
 
+    // Each event holds one venue (SCRUM-50 AC8), so it is this spec's own.
+    const { id: eventId } = await prisma.event.findFirstOrThrow({
+      where: { name: ELSEWHERE_EVENT },
+      select: { id: true },
+    });
     await prisma.booking.create({
       data: {
-        eventId: "evt_planning",
+        eventId,
         venueId: AUDITORIUM,
         startAt: new Date(`${day}T10:00:00+08:00`),
         endAt: new Date(`${day}T12:00:00+08:00`),

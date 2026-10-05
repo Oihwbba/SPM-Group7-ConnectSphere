@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { EventStatus } from "@prisma/client";
 
+import { formatDateTime } from "@/lib/datetime";
 import { isValidPeriod } from "@/lib/period";
 
 /** A venue is requested only for an event that has already been approved. */
@@ -31,6 +32,42 @@ const PAST_START_GRACE_MS = 60_000;
 export const INVALID_PERIOD_MESSAGE =
   "The requested period is invalid: the end must be after the start.";
 
+const HALF_HOUR_MS = 30 * 60 * 1000;
+
+/**
+ * SCRUM-50 AC1 — the period a venue is requested for: the event's own, with
+ * the start rounded down and the end rounded up to the half hour, so it is
+ * never shorter than the event. Singapore is a whole number of hours from
+ * UTC, so rounding the UTC instant rounds the Singapore time the same way.
+ * An event without both dates has no period yet.
+ */
+export function eventBookingPeriod(event: {
+  startAt: Date | string | null;
+  endAt: Date | string | null;
+}): { startAt: Date; endAt: Date } | null {
+  if (!event.startAt || !event.endAt) return null;
+  const start = new Date(event.startAt).getTime();
+  const end = new Date(event.endAt).getTime();
+  return {
+    startAt: new Date(Math.floor(start / HALF_HOUR_MS) * HALF_HOUR_MS),
+    endAt: new Date(Math.ceil(end / HALF_HOUR_MS) * HALF_HOUR_MS),
+  };
+}
+
+export const EVENT_NOT_SCHEDULED_MESSAGE =
+  "This event has no dates or expected attendance yet. Set them on the event before requesting a venue.";
+
+export function notEventPeriodMessage(period: {
+  startAt: Date;
+  endAt: Date;
+}): string {
+  return `The requested period must be the event's: ${formatDateTime(period.startAt)} to ${formatDateTime(period.endAt)}.`;
+}
+
+export function notEventAttendanceMessage(attendance: number): string {
+  return `The expected attendance must be the event's: ${attendance}.`;
+}
+
 /**
  * SCRUM-50 — "Request captures venue, date/time, expected attendance,
  * required facilities/layout, and other relevant event details."
@@ -52,29 +89,50 @@ export const bookingRequestSchema = z
     requestedLayout: z.string().trim().max(100).optional(),
     requestNotes: z.string().trim().max(2000).optional(),
   })
-  .superRefine((data, ctx) => {
-    const period = {
-      startAt: new Date(data.startAt),
-      endAt: new Date(data.endAt),
-    };
-    // SCRUM-50 AC5: an end at or before the start is refused before anything
-    // else happens.
-    if (!isValidPeriod(period)) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["endAt"],
-        message: INVALID_PERIOD_MESSAGE,
-      });
-    }
-    // A booking for a period that has already started cannot be honoured.
-    if (period.startAt.getTime() < Date.now() - PAST_START_GRACE_MS) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["startAt"],
-        message: PAST_START_MESSAGE,
-      });
-    }
-  });
+  .superRefine(refinePeriod);
+
+/**
+ * SCRUM-50 AC5 — the period checks the request and the live check share, so
+ * the form is never told a period is free that submitting would refuse.
+ */
+function refinePeriod(
+  data: { startAt: string; endAt: string },
+  ctx: z.RefinementCtx,
+) {
+  const period = {
+    startAt: new Date(data.startAt),
+    endAt: new Date(data.endAt),
+  };
+  // An end at or before the start is refused before anything else happens.
+  if (!isValidPeriod(period)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["endAt"],
+      message: INVALID_PERIOD_MESSAGE,
+    });
+  }
+  // A booking for a period that has already started cannot be honoured.
+  if (period.startAt.getTime() < Date.now() - PAST_START_GRACE_MS) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["startAt"],
+      message: PAST_START_MESSAGE,
+    });
+  }
+}
+
+/**
+ * SCRUM-50 — the form's live question: is this venue free for this period?
+ * Only the venue and a period that is valid and not already started; the
+ * rest of the request is checked when it is submitted.
+ */
+export const venueAvailabilityQuerySchema = z
+  .object({
+    venueId: z.string().min(1, "Choose a venue."),
+    startAt: z.string().min(1, INVALID_PERIOD_MESSAGE),
+    endAt: z.string().min(1, INVALID_PERIOD_MESSAGE),
+  })
+  .superRefine(refinePeriod);
 
 /**
  * SCRUM-53 — approve, or reject with a free-text reason. A blank or

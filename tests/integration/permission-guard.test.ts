@@ -74,12 +74,15 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-67 — createDraftEvent is guarded fo
     async (role) => {
       mockAuth.mockResolvedValue(sessionFor(role));
 
-      const before = await prisma.event.count();
+      // Counted by the attempt's own name: other suites running in parallel
+      // create and remove events of their own.
+      const name = `Bypass attempt by ${role}`;
+      const before = await prisma.event.count({ where: { name } });
       const result = await createDraftEvent({
-        name: `Bypass attempt by ${role}`,
+        name,
         description: "Should never be written.",
       });
-      const after = await prisma.event.count();
+      const after = await prisma.event.count({ where: { name } });
 
       // Refused, with a message that does not leak what the resource is.
       expect(result.ok).toBe(false);
@@ -95,11 +98,10 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-67 — createDraftEvent is guarded fo
   it("still lets an ORGANISER create a draft (the permitted path works)", async () => {
     mockAuth.mockResolvedValue(sessionFor("ORGANISER"));
 
-    const before = await prisma.event.count();
-    const result = await createDraftEvent({
-      name: `SCRUM-67 guard check ${Date.now()}`,
-    });
-    const after = await prisma.event.count();
+    const name = `SCRUM-67 guard check ${Date.now()}`;
+    const before = await prisma.event.count({ where: { name } });
+    const result = await createDraftEvent({ name });
+    const after = await prisma.event.count({ where: { name } });
 
     expect(result.ok).toBe(true);
     expect(after).toBe(before + 1);

@@ -204,6 +204,8 @@ export async function submitEventRequest(
     // A resubmitted (previously rejected) event already has a coordinator;
     // the ASSIGNED audit row below records who held it before.
     let previousCoordinatorId: string | null = null;
+    // SCRUM-108: set when this submission is an amended rejected request.
+    let resubmitted = false;
 
     // SCRUM-14's write plus SCRUM-20's auto-assignment happen in ONE
     // transaction: pickCoordinator takes an advisory lock that is held until
@@ -236,33 +238,66 @@ export async function submitEventRequest(
           );
         }
         previousCoordinatorId = existing.coordinatorId;
+        resubmitted = existing.status === "REJECTED";
+
+        const request = {
+          name,
+          purpose,
+          description,
+          startAt: new Date(startAt),
+          endAt: new Date(endAt),
+          expectedAttendance,
+          venueRequirements,
+          requiredFacilities,
+          accessibilityNeeds,
+          preferredLayout,
+          equipmentRequirements,
+          registrationNotes,
+          programme: programme ?? null,
+          specialRequests: specialRequests ?? null,
+          timezone: TIME_ZONE,
+        };
 
         await tx.event.update({
           where: { id },
           data: {
-            name,
-            purpose,
-            description,
+            ...request,
             status: "SUBMITTED",
             submittedAt: new Date(),
             decidedAt: null,
             decidedById: null,
             decisionReason: null,
             rejectionOutcome: null,
-            startAt: new Date(startAt),
-            endAt: new Date(endAt),
-            expectedAttendance,
-            venueRequirements,
-            requiredFacilities,
-            accessibilityNeeds,
-            preferredLayout,
-            equipmentRequirements,
-            registrationNotes,
-            programme: programme ?? null,
-            specialRequests: specialRequests ?? null,
-            timezone: TIME_ZONE,
           },
         });
+
+        // SCRUM-108 AC9, AC14: keep the values the amendment replaced, one
+        // row per changed field, as a clarification answer does.
+        if (resubmitted) {
+          const changed = (
+            Object.keys(request) as (keyof typeof request)[]
+          ).flatMap((fieldName) => {
+            const oldValue = asText(existing[fieldName]);
+            const newValue = asText(request[fieldName]);
+            return oldValue === newValue
+              ? []
+              : [{ fieldName, oldValue, newValue }];
+          });
+          // Resubmitting unchanged is allowed, and createMany refuses an
+          // empty list.
+          if (changed.length > 0) {
+            await tx.auditLog.createMany({
+              data: changed.map((change) => ({
+                entityType: "Event",
+                entityId: id,
+                action: "UPDATED",
+                actorId: user!.id,
+                ...change,
+                summary: "Amended before resubmitting (SCRUM-108)",
+              })),
+            });
+          }
+        }
       } else {
         // Create and directly submit a new event request
         const created = await tx.event.create({
@@ -292,6 +327,64 @@ export async function submitEventRequest(
       }
 
       // SCRUM-20: assign exactly one coordinator, fairly, no accept/decline.
+      if (resubmitted) {
+        // SCRUM-108 AC9, AC14: the same event, amended and resubmitted by
+        // its Organiser, kept in its history.
+        await tx.auditLog.create({
+          data: {
+            entityType: "Event",
+            entityId: eventId!,
+            action: "STATUS_CHANGED",
+            actorId: user!.id,
+            fieldName: "status",
+            oldValue: "REJECTED",
+            newValue: "SUBMITTED",
+            summary: "Amended and resubmitted (SCRUM-108)",
+          },
+        });
+      }
+
+      // SCRUM-108 AC11: a resubmitted request goes back to the Coordinator
+      // who reviewed it, without running automatic assignment again, as long
+      // as they still hold the role.
+      const keepsCoordinator =
+        resubmitted &&
+        previousCoordinatorId !== null &&
+        Boolean(
+          await tx.user.findFirst({
+            where: { id: previousCoordinatorId, role: "COORDINATOR" },
+            select: { id: true },
+          }),
+        );
+      if (keepsCoordinator) {
+        await tx.event.update({
+          where: { id: eventId! },
+          data: { status: "UNDER_REVIEW" },
+        });
+        await tx.notification.create({
+          data: {
+            userId: previousCoordinatorId!,
+            type: "EVENT_STATUS_CHANGED",
+            title: "A request was resubmitted",
+            message: `"${name}" was amended and is back for your review.`,
+            eventId: eventId!,
+          },
+        });
+        await tx.auditLog.create({
+          data: {
+            entityType: "Event",
+            entityId: eventId!,
+            action: "STATUS_CHANGED",
+            actorId: null, // system-performed, not a specific user's action
+            fieldName: "status",
+            oldValue: "SUBMITTED",
+            newValue: "UNDER_REVIEW",
+            summary: "Back under review with the same coordinator (SCRUM-108)",
+          },
+        });
+        return;
+      }
+
       const coordinatorId = await pickCoordinator(tx);
 
       if (coordinatorId) {
@@ -331,6 +424,27 @@ export async function submitEventRequest(
             summary: "Auto-assigned on submission (SCRUM-20)",
           },
         });
+      } else if (previousCoordinatorId) {
+        // SCRUM-108 AC11: a resubmission whose Coordinator lost the role,
+        // with nobody to assign, is left unassigned like a first submission,
+        // so it shows in every Coordinator's queue rather than in no one's.
+        await tx.event.update({
+          where: { id: eventId! },
+          data: { coordinatorId: null },
+        });
+        await tx.auditLog.create({
+          data: {
+            entityType: "Event",
+            entityId: eventId!,
+            action: "ASSIGNED",
+            actorId: null, // system-performed, not a specific user's action
+            fieldName: "coordinatorId",
+            oldValue: previousCoordinatorId,
+            newValue: null,
+            summary:
+              "Unassigned on resubmission: the coordinator no longer holds the role (SCRUM-108)",
+          },
+        });
       }
       // No coordinator available: the event still reaches SUBMITTED (set
       // above) and stays visible to coordinators — it must not fail
@@ -347,6 +461,16 @@ export async function submitEventRequest(
     }
     throw error;
   }
+}
+
+/** An event field as stored in an audit row's oldValue/newValue. An empty
+ * optional field is the same as a missing one, so it isn't a change. */
+function asText(
+  value: string | number | Date | string[] | null | undefined,
+): string | null {
+  if (value === null || value === undefined || value === "") return null;
+  if (value instanceof Date) return value.toISOString();
+  return Array.isArray(value) ? value.join(", ") : String(value);
 }
 
 /**
@@ -453,13 +577,13 @@ export async function transitionEventStatus(
       );
     }
 
-    // SCRUM-81: approval moves the event straight to Planning. Only an event's
-    // assigned coordinator may confirm it, so approving a request nobody was
-    // assigned to makes the approver its coordinator.
+    // SCRUM-81: approval moves the event straight to Planning. Whoever
+    // decides a request nobody was assigned to becomes its coordinator: on
+    // approval because only the assigned coordinator may confirm it (SCRUM-81
+    // AC2), on rejection so it leaves other coordinators' lists and comes back
+    // to them if it is resubmitted (SCRUM-108 AC11).
     const approved = nextStatus === "APPROVED";
-    const coordinatorId = approved
-      ? (event.coordinatorId ?? user!.id)
-      : event.coordinatorId;
+    const coordinatorId = event.coordinatorId ?? user!.id;
 
     const updated = await prisma.$transaction(async (tx) => {
       const result = await tx.event.updateMany({
@@ -515,7 +639,9 @@ export async function transitionEventStatus(
             fieldName: "coordinatorId",
             oldValue: event.coordinatorId,
             newValue: coordinatorId,
-            summary: "Assigned to the approving coordinator (SCRUM-81)",
+            summary: approved
+              ? "Assigned to the approving coordinator (SCRUM-81)"
+              : "Assigned to the rejecting coordinator (SCRUM-108)",
           },
         });
       }

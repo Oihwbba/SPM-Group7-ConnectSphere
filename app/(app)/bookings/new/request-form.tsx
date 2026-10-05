@@ -1,10 +1,16 @@
 "use client";
 
-import { useState, useSyncExternalStore, useTransition } from "react";
+import {
+  useEffect,
+  useState,
+  useSyncExternalStore,
+  useTransition,
+} from "react";
 import {
   AlertCircle,
   CalendarX,
   Check,
+  CircleCheck,
   Info,
   Loader2,
   User,
@@ -31,14 +37,22 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import {
   formatDateTime,
-  parseSingaporeDateTime,
   sgWallTimeToUtcIso,
   utcToSgWallTime,
 } from "@/lib/datetime";
+import type { ActionResult } from "@/lib/action-result";
 import { cn } from "@/lib/utils";
-import { overCapacityMessage } from "@/lib/schemas/booking";
-import { submitBookingRequest, type BookingSummary } from "../actions";
-import { DateTimeField } from "@/components/app/date-time-field";
+import { isValidPeriod } from "@/lib/period";
+import {
+  eventBookingPeriod,
+  INVALID_PERIOD_MESSAGE,
+  overCapacityMessage,
+} from "@/lib/schemas/booking";
+import {
+  checkVenueAvailability,
+  submitBookingRequest,
+  type BookingSummary,
+} from "../actions";
 import type { BookableEvent, RequestableVenue } from "../queries";
 
 type Outcome =
@@ -60,30 +74,80 @@ const emptyForm = {
 const NO_LAYOUT = "none";
 
 /**
- * Snap a "YYYY-MM-DDTHH:mm" wall time onto the half-hour grid: a start rounds
- * down and an end rounds up, so a pre-filled event period is never shortened.
+ * SCRUM-50 — the venues that support `layout`: the layout is chosen first,
+ * then only rooms that can be set up that way are offered. With no layout
+ * chosen, every venue is offered.
  */
-export function snapToHalfHour(
-  wallTime: string,
-  direction: "down" | "up",
-): string {
-  if (!wallTime.includes("T")) return wallTime;
-  const date = parseSingaporeDateTime(wallTime);
-  if (!date) return wallTime;
-  const step = 30 * 60 * 1000;
-  const snapped =
-    direction === "down"
-      ? Math.floor(date.getTime() / step) * step
-      : Math.ceil(date.getTime() / step) * step;
-  return utcToSgWallTime(snapped);
+export function venuesForLayout<T extends { supportedLayouts: string[] }>(
+  venues: T[],
+  layout: string,
+): T[] {
+  return layout
+    ? venues.filter((venue) => venue.supportedLayouts.includes(layout))
+    : venues;
 }
+
+/**
+ * SCRUM-50 — the layout option to pre-select for an event's preferred
+ * layout. Venues list layouts in lower case, but an Organiser may have typed
+ * "Classroom", so they are matched ignoring case and surrounding spaces. Only
+ * a layout some venue offers can be pre-selected; otherwise none is.
+ */
+export function layoutOption(
+  preferred: string | null | undefined,
+  options: string[],
+): string {
+  const wanted = preferred?.trim().toLowerCase();
+  return (wanted && options.find((o) => o.toLowerCase() === wanted)) || "";
+}
+
+/** What the live availability check knows about the venue and period chosen. */
+export type Live =
+  | { state: "checking" }
+  | { state: "free" }
+  | { state: "taken"; clashes: string[] }
+  // The period itself cannot be booked (AC5): Submit is disabled.
+  | { state: "invalid"; message: string }
+  // The check could not answer; submitting will still check.
+  | { state: "error"; message: string };
+
+export const LIVE_CHECK_FAILED_MESSAGE =
+  "Availability could not be checked right now; it will be checked again when you submit.";
+
+/**
+ * SCRUM-50 — the live check's answer as the form shows it. Only a problem
+ * with the period itself blocks Submit; a check that failed (`null`) or was
+ * refused for any other reason does not, because submitting checks again.
+ * The server owns the clock, so a start that has already passed is found
+ * there and reported against the period.
+ */
+export function liveAnswer(
+  result: ActionResult<{ available: boolean; clashes: string[] }> | null,
+): Live {
+  if (!result) return { state: "error", message: LIVE_CHECK_FAILED_MESSAGE };
+  if (!result.ok) {
+    const aboutPeriod =
+      result.fieldErrors?.startAt || result.fieldErrors?.endAt;
+    return { state: aboutPeriod ? "invalid" : "error", message: result.error };
+  }
+  return result.data.available
+    ? { state: "free" }
+    : { state: "taken", clashes: result.data.clashes };
+}
+
+/** How long typing pauses before the venue is checked. */
+const LIVE_CHECK_DELAY_MS = 300;
 
 const emptySubscribe = () => () => {};
 
 /**
- * SCRUM-50 — the Coordinator's request form. Choosing an event pre-fills its
- * times, attendance and needs, which the Coordinator can then adjust. Whether
- * the venue is free is decided by the server action, never here.
+ * SCRUM-50 — the Coordinator's request form. Choosing an event fills in its
+ * period and expected attendance, which cannot be changed here (AC1), and
+ * pre-selects its facilities and layout, which can. The room
+ * layout comes before the venue and narrows the venues offered. Once a venue
+ * and period are chosen, the server is asked whether the venue is free and the
+ * answer is shown before submitting; a taken venue disables Submit. The
+ * submission still checks again, so the server stays the one that decides.
  */
 export function RequestForm({
   events,
@@ -120,18 +184,35 @@ export function RequestForm({
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
+  /** A venue chosen earlier is dropped if it cannot take the new layout. */
+  const venueFor = (venueId: string, layout: string) =>
+    venuesForLayout(venues, layout).some((v) => v.id === venueId)
+      ? venueId
+      : "";
+
   function chooseEvent(eventId: string) {
     const event = events.find((e) => e.id === eventId);
+    const layout = layoutOption(event?.preferredLayout, layoutOptions);
+    const period = event && eventBookingPeriod(event);
     setForm((prev) => ({
       ...prev,
       eventId,
       ...(event && {
-        start: snapToHalfHour(utcToSgWallTime(event.startAt), "down"),
-        end: snapToHalfHour(utcToSgWallTime(event.endAt), "up"),
+        start: utcToSgWallTime(period?.startAt),
+        end: utcToSgWallTime(period?.endAt),
         attendance: event.expectedAttendance?.toString() ?? "",
         facilities: event.requiredFacilities,
-        layout: event.preferredLayout ?? "",
+        layout,
+        venueId: venueFor(prev.venueId, layout),
       }),
+    }));
+  }
+
+  function chooseLayout(layout: string) {
+    setForm((prev) => ({
+      ...prev,
+      layout,
+      venueId: venueFor(prev.venueId, layout),
     }));
   }
 
@@ -143,6 +224,51 @@ export function RequestForm({
         : [...form.facilities, facility],
     );
   }
+
+  // SCRUM-50 AC3 — tell the Coordinator whether the venue is free before
+  // they submit. An end at or before the start is caught here without asking
+  // the server; otherwise the server is asked once typing pauses, and an
+  // answer is shown only for the venue and period it was asked about.
+  const startIso = sgWallTimeToUtcIso(form.start);
+  const endIso = sgWallTimeToUtcIso(form.end);
+  const periodInvalid =
+    !!startIso &&
+    !!endIso &&
+    !isValidPeriod({ startAt: new Date(startIso), endAt: new Date(endIso) });
+  const liveKey =
+    form.venueId && startIso && endIso && !periodInvalid
+      ? `${form.venueId}|${startIso}|${endIso}`
+      : "";
+  const [live, setLive] = useState<{ key: string; result: Live } | null>(null);
+
+  useEffect(() => {
+    if (!liveKey) return;
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      const [venueId, startAt, endAt] = liveKey.split("|");
+      const result = await checkVenueAvailability({
+        venueId,
+        startAt,
+        endAt,
+      }).catch(() => null);
+      if (cancelled) return;
+      setLive({ key: liveKey, result: liveAnswer(result) });
+    }, LIVE_CHECK_DELAY_MS);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [liveKey]);
+
+  const liveNow: Live | null = periodInvalid
+    ? { state: "invalid", message: INVALID_PERIOD_MESSAGE }
+    : !liveKey
+      ? null
+      : live?.key === liveKey
+        ? live.result
+        : { state: "checking" };
+  const blockedLive =
+    liveNow?.state === "invalid" || liveNow?.state === "taken";
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -190,6 +316,8 @@ export function RequestForm({
       </Card>
     );
   }
+
+  const layoutVenues = venuesForLayout(venues, form.layout);
 
   // Caught as it is typed; the server refuses the same thing (actions.ts).
   const selectedVenue = venues.find((v) => v.id === form.venueId);
@@ -240,84 +368,11 @@ export function RequestForm({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="venueId">Venue</Label>
-                <Select
-                  value={form.venueId}
-                  onValueChange={(value) => update("venueId", value)}
-                >
-                  <SelectTrigger id="venueId">
-                    <SelectValue placeholder="Select a venue" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {venues.map((venue) => (
-                      <SelectItem key={venue.id} value={venue.id}>
-                        <span className="flex items-center gap-2">
-                          {venue.name}
-                          <span
-                            className="inline-flex items-center gap-1 text-muted-foreground"
-                            title={`Holds up to ${venue.capacity} people`}
-                          >
-                            <User className="h-3.5 w-3.5" aria-hidden />
-                            <span className="sr-only">max capacity</span>
-                            {venue.capacity}
-                          </span>
-                        </span>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {fieldError("venueId")}
-              </div>
-
-              <DateTimeField
-                name="Start"
-                value={form.start}
-                onChange={(value) => update("start", value)}
-                error={fieldError("startAt")}
-              />
-              <DateTimeField
-                name="End"
-                value={form.end}
-                openOn={form.start.split("T")[0]}
-                onChange={(value) => update("end", value)}
-                error={fieldError("endAt")}
-              />
-
-              <div className="space-y-2">
-                <Label htmlFor="attendance">Expected attendance</Label>
-                <Input
-                  id="attendance"
-                  type="number"
-                  min={1}
-                  value={form.attendance}
-                  onChange={(e) => update("attendance", e.target.value)}
-                  aria-invalid={overCapacity ? true : undefined}
-                  aria-describedby={
-                    overCapacity ? "attendance-capacity" : undefined
-                  }
-                  className={cn(
-                    overCapacity &&
-                      "border-destructive focus-visible:ring-destructive",
-                  )}
-                />
-                {overCapacity ? (
-                  <p
-                    id="attendance-capacity"
-                    className="text-xs text-destructive"
-                  >
-                    {overCapacity}
-                  </p>
-                ) : (
-                  fieldError("requestedAttendance")
-                )}
-              </div>
-
-              <div className="space-y-2">
                 <Label htmlFor="layout">Room layout</Label>
                 <Select
                   value={form.layout || NO_LAYOUT}
                   onValueChange={(value) =>
-                    update("layout", value === NO_LAYOUT ? "" : value)
+                    chooseLayout(value === NO_LAYOUT ? "" : value)
                   }
                 >
                   <SelectTrigger id="layout">
@@ -334,6 +389,108 @@ export function RequestForm({
                 </Select>
                 {fieldError("requestedLayout")}
               </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="venueId">Venue</Label>
+                <Select
+                  value={form.venueId}
+                  onValueChange={(value) => update("venueId", value)}
+                >
+                  <SelectTrigger id="venueId">
+                    <SelectValue
+                      placeholder={
+                        layoutVenues.length === 0
+                          ? "No venue supports this layout"
+                          : "Select a venue"
+                      }
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {layoutVenues.map((venue) => (
+                      <SelectItem key={venue.id} value={venue.id}>
+                        <span className="flex items-center gap-2">
+                          {venue.name}
+                          <span
+                            className="inline-flex items-center gap-1 text-muted-foreground"
+                            title={`Holds up to ${venue.capacity} people`}
+                          >
+                            <User className="h-3.5 w-3.5" aria-hidden />
+                            <span className="sr-only">max capacity</span>
+                            {venue.capacity}
+                          </span>
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {form.layout && layoutVenues.length > 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    Showing venues that support the {form.layout} layout.
+                  </p>
+                )}
+                {fieldError("venueId")}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="attendance">Expected attendance</Label>
+                <Input
+                  id="attendance"
+                  readOnly
+                  value={form.attendance}
+                  placeholder="Taken from the event"
+                  aria-invalid={overCapacity ? true : undefined}
+                  aria-describedby={
+                    overCapacity ? "attendance-capacity" : undefined
+                  }
+                  className={cn(
+                    "bg-muted/40",
+                    overCapacity &&
+                      "border-destructive focus-visible:ring-destructive",
+                  )}
+                />
+                {overCapacity ? (
+                  <p
+                    id="attendance-capacity"
+                    className="text-xs text-destructive"
+                  >
+                    {overCapacity}
+                  </p>
+                ) : (
+                  fieldError("requestedAttendance")
+                )}
+              </div>
+
+              {(["start", "end"] as const).map((which) => {
+                const iso = sgWallTimeToUtcIso(form[which]);
+                const label = which === "start" ? "Start" : "End";
+                return (
+                  <div key={which} className="space-y-2">
+                    <Label htmlFor={which}>{label}</Label>
+                    <Input
+                      id={which}
+                      readOnly
+                      value={iso ? formatDateTime(iso) : ""}
+                      placeholder="Taken from the event"
+                      className="bg-muted/40"
+                    />
+                    {fieldError(which === "start" ? "startAt" : "endAt")}
+                  </div>
+                );
+              })}
+              {form.eventId && (
+                <p className="text-xs text-muted-foreground sm:col-span-2">
+                  The period and attendance are the event&apos;s, with the
+                  period rounded out to the half hour. Change them on the event
+                  if they are wrong.
+                </p>
+              )}
+
+              {liveNow && (
+                <LiveAvailability
+                  live={liveNow}
+                  venueName={selectedVenue?.name ?? "The venue"}
+                />
+              )}
             </div>
 
             <fieldset className="space-y-2">
@@ -378,7 +535,7 @@ export function RequestForm({
             <div className="flex justify-end border-t pt-4">
               <Button
                 type="submit"
-                disabled={isPending || overCapacity !== null}
+                disabled={isPending || overCapacity !== null || blockedLive}
               >
                 {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
                 Submit request
@@ -387,6 +544,68 @@ export function RequestForm({
           </form>
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+/**
+ * SCRUM-50 AC3/AC5 — the live answer under the period: checking, free, taken
+ * (with what it clashes with), or an invalid period. Announced to screen
+ * readers as it changes.
+ */
+function LiveAvailability({
+  live,
+  venueName,
+}: {
+  live: Live;
+  venueName: string;
+}) {
+  const tone = {
+    checking: "border-border bg-muted/40 text-muted-foreground",
+    free: "border-success/30 bg-success/10 text-success",
+    taken: "border-destructive/30 bg-destructive/10 text-destructive",
+    invalid: "border-destructive/30 bg-destructive/10 text-destructive",
+    error: "border-destructive/30 bg-destructive/10 text-destructive",
+  }[live.state];
+
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      data-testid="live-availability"
+      data-state={live.state}
+      className={cn(
+        "flex items-start gap-2 rounded-lg border px-3 py-2 text-sm sm:col-span-2",
+        tone,
+      )}
+    >
+      {live.state === "checking" && (
+        <>
+          <Loader2 className="mt-0.5 h-4 w-4 shrink-0 animate-spin" />
+          Checking whether {venueName} is free…
+        </>
+      )}
+      {live.state === "free" && (
+        <>
+          <CircleCheck className="mt-0.5 h-4 w-4 shrink-0" />
+          {venueName} is available for this period.
+        </>
+      )}
+      {live.state === "taken" && (
+        <>
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>
+            {venueName} is unavailable for this period:{" "}
+            {live.clashes.join("; ")}. Choose another time or venue.
+          </span>
+        </>
+      )}
+      {(live.state === "invalid" || live.state === "error") && (
+        <>
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+          {live.message}
+        </>
+      )}
     </div>
   );
 }
@@ -434,7 +653,10 @@ function SuccessDialog({
   );
 }
 
-/** A duplicate or a refusal stays on the page beside the form. */
+/**
+ * The event's existing request (SCRUM-50 AC8), or a refusal, stays on the
+ * page beside the form.
+ */
 function OutcomePanel({
   outcome,
 }: {
@@ -466,7 +688,7 @@ function OutcomePanel({
       <Info className="mt-0.5 h-5 w-5 shrink-0" />
       <div>
         <p className="font-semibold">
-          You already have a pending request for this venue and period
+          This event already has a venue request. Each event has one venue.
         </p>
         <p>
           {booking.venueName}, {formatDateTime(booking.startAt)} to{" "}
