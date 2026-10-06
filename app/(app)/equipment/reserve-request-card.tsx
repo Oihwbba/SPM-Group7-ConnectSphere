@@ -72,9 +72,11 @@ const newRow = (
 export function ReserveRequestCard({
   requests,
   equipment,
+  onReserved,
 }: {
   requests: ReservableRequest[];
   equipment: Equipment[];
+  onReserved?: () => void;
 }) {
   const [requestId, setRequestId] = useState("");
   const [startAt, setStartAt] = useState("");
@@ -199,6 +201,7 @@ export function ReserveRequestCard({
         setRows([]);
         setAvailability(null);
         setPreviewVersion((version) => version + 1);
+        onReserved?.();
       } catch {
         // An unexpected failure rejects instead of returning an error, so the
         // card says so rather than only stopping its spinner.
@@ -207,7 +210,10 @@ export function ReserveRequestCard({
     });
 
   return (
-    <Card className="shadow-xs border border-border bg-card text-card-foreground">
+    <Card
+      id="reserve-request"
+      className="shadow-xs scroll-mt-24 border border-border bg-card text-card-foreground"
+    >
       <CardHeader className="pb-4">
         <div className="flex items-center gap-3">
           <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
@@ -218,8 +224,8 @@ export function ReserveRequestCard({
               Reserve an approved request
             </CardTitle>
             <CardDescription className="mt-0.5 text-xs text-muted-foreground">
-              Fills in what the Coordinator asked for. Every item is reserved
-              together, or none is.
+              Fills in what the Coordinator asked for that isn&apos;t reserved
+              yet. Every item is reserved together, or none is.
             </CardDescription>
           </div>
         </div>
@@ -245,6 +251,10 @@ export function ReserveRequestCard({
               {requests.map((request) => (
                 <option key={request.id} value={request.id}>
                   {request.event.name} — {formatEventPeriod(request.event)}
+                  {request.alreadyReserved === "request" &&
+                    " (rest of a partly reserved request)"}
+                  {request.alreadyReserved === "event" &&
+                    " (event already partly reserved)"}
                 </option>
               ))}
             </select>

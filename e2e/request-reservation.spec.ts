@@ -89,6 +89,89 @@ test.describe("SCRUM-155 — Reserve an approved request in one step", () => {
     eventIds.length = 0;
   });
 
+  test("SCRUM-156 [AC5] TC-156-08: a second request for an event already reserved for is marked as its event partly reserved", async ({
+    page,
+  }) => {
+    const name = `SCRUM-156 second ${Date.now()}`;
+    const first = await approvedRequest(name);
+    const { eventId } = await prisma.equipmentRequest.findUniqueOrThrow({
+      where: { id: first },
+      select: { eventId: true },
+    });
+    await prisma.reservation.createMany({
+      data: [
+        { equipmentId: "eqp_projector", quantity: 1 },
+        { equipmentId: "eqp_mic", quantity: 2 },
+      ].map((line) => ({
+        ...line,
+        eventId,
+        requestId: first,
+        ...PERIOD,
+        reservedById: "usr_techsupport",
+        status: "CONFIRMED" as const,
+      })),
+    });
+    await prisma.equipmentRequest.create({
+      data: {
+        eventId,
+        requestedById: "usr_coordinator",
+        status: "APPROVED",
+        decidedAt: new Date(),
+        lines: { create: [{ equipmentId: "eqp_projector", quantity: 1 }] },
+      },
+    });
+    await signInAsTechSupport(page);
+
+    const options = page
+      .getByLabel("Approved request")
+      .locator("option", { hasText: name });
+    await expect(options).toHaveCount(1);
+    await expect(options).toContainText("(event already partly reserved)");
+  });
+
+  test("SCRUM-156 [AC5] TC-156-07: a partly reserved request is offered again with only what is missing", async ({
+    page,
+  }) => {
+    const name = `SCRUM-156 rest ${Date.now()}`;
+    const requestId = await approvedRequest(name);
+    const { eventId } = await prisma.equipmentRequest.findUniqueOrThrow({
+      where: { id: requestId },
+      select: { eventId: true },
+    });
+    await prisma.reservation.create({
+      data: {
+        eventId,
+        requestId,
+        equipmentId: "eqp_projector",
+        quantity: 1,
+        ...PERIOD,
+        reservedById: "usr_techsupport",
+        status: "CONFIRMED",
+      },
+    });
+    await signInAsTechSupport(page);
+
+    const option = page
+      .getByLabel("Approved request")
+      .locator("option", { hasText: name });
+    await expect(option).toContainText("(rest of a partly reserved request)");
+    await chooseRequest(page, name);
+
+    await expect(page.getByTestId("request-row")).toHaveCount(1);
+    await expect(page.getByLabel("Item 1", { exact: true })).toHaveValue(
+      "eqp_mic",
+    );
+    await expect(page.getByLabel("Units for item 1")).toHaveValue("2");
+
+    await page.getByRole("button", { name: "Reserve all 1 item(s)" }).click();
+    await expect(
+      page.getByText(`Reserved 1 item(s) for ${name}.`),
+    ).toBeVisible();
+    await expect(
+      page.getByLabel("Approved request").locator("option", { hasText: name }),
+    ).toHaveCount(0);
+  });
+
   test("SCRUM-155 [AC1, AC2] TC-155-02: choosing an approved request fills in its period and one row per requested item", async ({
     page,
   }) => {

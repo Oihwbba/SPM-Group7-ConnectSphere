@@ -12,20 +12,21 @@ import {
   summariseAvailability,
   type ScheduleEntry,
 } from "@/lib/equipment/availability";
-import { reservableRequest } from "@/lib/equipment/request-queries";
+import {
+  CONFIRMED_HOLDS,
+  reservableRequest,
+} from "@/lib/equipment/request-queries";
+import { outstandingLines } from "@/lib/equipment/requests";
 import { formatDateTime } from "@/lib/datetime";
 import { fieldErrorsByPath } from "@/lib/schemas/equipment-request";
 import {
   allAvailabilitySchema,
   availabilitySchema,
   equipmentScheduleSchema,
-  RESERVABLE_EVENT_STATUSES,
   requestReservationSchema,
-  reservationSchema,
 } from "@/lib/schemas/reservation";
 
 type Availability = { available: number; total: number; committed: number };
-type ReserveOutcome = { error: string } | { id: string; available: number };
 type RequestReserveOutcome =
   | { error: string; fieldErrors?: Record<string, string[]> }
   | { reserved: number };
@@ -275,93 +276,15 @@ export async function getEquipmentSchedule(
   }
 }
 
-export async function createReservation(
-  input: unknown,
-): Promise<ActionResult<{ id: string; available: number }>> {
-  const session = await auth();
-  try {
-    requirePermission(session?.user, "equipment:reserve");
-    const userId = session?.user?.id;
-    if (!userId) return err("You do not have permission to do that.");
-    const parsed = reservationSchema.safeParse(input);
-    if (!parsed.success)
-      return err(
-        "Please fix the reservation details.",
-        parsed.error.flatten().fieldErrors,
-      );
-
-    const { eventId, equipmentId, quantity } = parsed.data;
-    const startAt = new Date(parsed.data.startAt);
-    const endAt = new Date(parsed.data.endAt);
-
-    const result = await prisma.$transaction<ReserveOutcome>(async (tx) => {
-      // The event row first, as reserving a whole request does (SCRUM-155):
-      // the two take turns on an event instead of deadlocking over its
-      // equipment rows.
-      await tx.$queryRaw`SELECT "id" FROM "Event" WHERE "id" = ${eventId} FOR UPDATE`;
-      const event = await tx.event.findFirst({
-        where: { id: eventId, status: { in: RESERVABLE_EVENT_STATUSES } },
-        select: { id: true },
-      });
-      if (!event)
-        return {
-          error: "Reservations can only be made for an approved event.",
-        };
-
-      // A counted pool needs a row lock: without it, two requests could both
-      // see the final unit before either creates its reservation.
-      const locked = await tx.$queryRaw<{ id: string }[]>`
-        SELECT "id" FROM "Equipment" WHERE "id" = ${equipmentId} AND "isActive" = true FOR UPDATE
-      `;
-      if (!locked.length) return { error: "Equipment type is unavailable." };
-
-      const availability = await availabilityForPeriod(
-        tx,
-        equipmentId,
-        startAt,
-        endAt,
-      );
-      if (!availability) return { error: "Equipment type is unavailable." };
-      if (quantity > availability.available) {
-        return {
-          // SCRUM-31 AC 3: show the shortfall, not just a refusal.
-          error: `Only ${availability.available} of ${availability.total} unit(s) are available for this period — ${quantity - availability.available} short.`,
-        };
-      }
-
-      const reservation = await tx.reservation.create({
-        data: {
-          eventId,
-          equipmentId,
-          quantity,
-          startAt,
-          endAt,
-          reservedById: userId,
-          status: "CONFIRMED",
-        },
-        select: { id: true },
-      });
-      return {
-        id: reservation.id,
-        available: availability.available - quantity,
-      };
-    });
-
-    if ("error" in result) return err(result.error);
-    revalidatePath("/equipment");
-    return ok(result);
-  } catch (error) {
-    if (error instanceof PermissionError) return err(error.message);
-    throw error;
-  }
-}
-
 /**
  * SCRUM-155 — reserve every row of an approved request together, or none.
  *
+ * This is the only way to reserve equipment (SCRUM-156): stock is reserved
+ * against a request Technical Support has approved, never for an event alone.
+ *
  * Locks, always in this order: the event row, so nothing else reserves for
- * the event (the one-type form included) and it cannot be confirmed
- * (SCRUM-81) or rejected (SCRUM-117) between the check below and the insert;
+ * the event and it cannot be confirmed (SCRUM-81) or rejected (SCRUM-117)
+ * between the check below and the insert;
  * the request row, so two people reserving the same request queue up and the
  * second finds it already reserved (AC 5, 6); then the equipment rows in id
  * order, so two requests sharing types always lock them the same way and
@@ -402,10 +325,27 @@ export async function reserveEquipmentRequest(
           where: { id: requestId, ...reservableRequest(new Date()) },
           select: {
             eventId: true,
-            event: { select: { startAt: true, endAt: true } },
+            event: {
+              select: {
+                startAt: true,
+                endAt: true,
+                reservations: CONFIRMED_HOLDS,
+              },
+            },
+            lines: { select: { equipmentId: true, quantity: true } },
           },
         });
-        if (!request)
+        // AC 6 — read under the event lock, which every reservation for the
+        // event takes, so what is outstanding can't change before the insert.
+        if (
+          !request ||
+          outstandingLines(
+            requestId,
+            request.lines,
+            request.event,
+            request.event.reservations,
+          ).length === 0
+        )
           return {
             error:
               "This request is not waiting to be reserved: it is already reserved, or no longer approved.",

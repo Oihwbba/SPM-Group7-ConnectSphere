@@ -137,7 +137,40 @@ describe("getEquipmentCatalogue — SCRUM-27 AC 2", () => {
 });
 
 describe("getReservableRequests — SCRUM-155", () => {
-  it("SCRUM-155 [AC1, AC6] TC-155-01: offers only approved requests for events that can still take a reservation, haven't started and have nothing reserved", async () => {
+  const START = new Date("2030-06-01T01:00:00.000Z");
+  const END = new Date("2030-06-01T09:00:00.000Z");
+  const held = (
+    equipmentId: string,
+    quantity: number,
+    requestId: string | null,
+    period = { startAt: START, endAt: END },
+  ) => ({ requestId, equipmentId, quantity, ...period });
+  const line = (id: string, equipmentId: string, quantity: number) => ({
+    id,
+    equipmentId,
+    quantity,
+    technicalRequirements: id === "l1" ? "HDMI from the lectern." : null,
+    equipment: { id: equipmentId, type: equipmentId },
+  });
+  const approved = (
+    id: string,
+    reservations: ReturnType<typeof held>[],
+    lines = [line("l1", "eq_projector", 2), line("l2", "eq_mic", 3)],
+  ) => ({
+    id,
+    notes: "Keynote at 10:00.",
+    requestedBy: { name: "Cody Coordinator" },
+    event: {
+      id: `evt_${id}`,
+      name: `Event ${id}`,
+      startAt: START,
+      endAt: END,
+      reservations,
+    },
+    lines,
+  });
+
+  it("SCRUM-155 [AC1] TC-155-01: reads approved requests for events that can still take a reservation and haven't started", async () => {
     const now = new Date("2030-01-01T00:00:00.000Z");
 
     await getReservableRequests(now);
@@ -149,7 +182,6 @@ describe("getReservableRequests — SCRUM-155", () => {
           event: {
             status: { in: RESERVABLE_EVENT_STATUSES },
             startAt: { gt: now },
-            reservations: { none: { status: "CONFIRMED" } },
           },
         },
         orderBy: { event: { startAt: "asc" } },
@@ -164,23 +196,128 @@ describe("getReservableRequests — SCRUM-155", () => {
     expect(where.event.startAt.gt).toBeInstanceOf(Date);
   });
 
-  it("SCRUM-155 [AC2] TC-155-02: reads each request's event period, who raised it, its notes, and its lines with their requirements in the order they were entered", async () => {
+  it("SCRUM-155 [AC2, AC6] TC-155-02: reads each event's period and confirmed reservations, who raised the request, its notes, and its lines with their requirements in the order they were entered", async () => {
     await getReservableRequests();
 
     const { select } = db.equipmentRequest.findMany.mock.calls[0][0];
     expect(select.event).toEqual({
-      select: { id: true, name: true, startAt: true, endAt: true },
+      select: {
+        id: true,
+        name: true,
+        startAt: true,
+        endAt: true,
+        reservations: {
+          where: { status: "CONFIRMED" },
+          select: {
+            requestId: true,
+            equipmentId: true,
+            quantity: true,
+            startAt: true,
+            endAt: true,
+          },
+        },
+      },
     });
     expect(select.notes).toBe(true);
     expect(select.requestedBy).toEqual({ select: { name: true } });
     expect(select.lines).toEqual({
       select: {
         id: true,
+        equipmentId: true,
         quantity: true,
         technicalRequirements: true,
         equipment: { select: { id: true, type: true } },
       },
       orderBy: [{ createdAt: "asc" }, { id: "asc" }],
     });
+  });
+
+  it("SCRUM-155 [AC2] TC-155-02: offers a request with nothing reserved in full, not marked as partly reserved", async () => {
+    db.equipmentRequest.findMany.mockResolvedValue([approved("r1", [])]);
+
+    expect(await getReservableRequests()).toEqual([
+      {
+        id: "r1",
+        notes: "Keynote at 10:00.",
+        requestedBy: { name: "Cody Coordinator" },
+        event: { id: "evt_r1", name: "Event r1", startAt: START, endAt: END },
+        alreadyReserved: null,
+        lines: [
+          {
+            id: "l1",
+            quantity: 2,
+            technicalRequirements: "HDMI from the lectern.",
+            equipment: { id: "eq_projector", type: "eq_projector" },
+          },
+          {
+            id: "l2",
+            quantity: 3,
+            technicalRequirements: null,
+            equipment: { id: "eq_mic", type: "eq_mic" },
+          },
+        ],
+      },
+    ]);
+  });
+
+  it("SCRUM-156 [AC5] TC-156-07: a partly reserved request offers only what is still missing", async () => {
+    db.equipmentRequest.findMany.mockResolvedValue([
+      approved("r1", [held("eq_projector", 2, "r1"), held("eq_mic", 1, "r1")]),
+    ]);
+
+    const [offered] = await getReservableRequests();
+
+    expect(offered.alreadyReserved).toBe("request");
+    expect(offered.lines).toEqual([
+      {
+        id: "l2",
+        quantity: 2,
+        technicalRequirements: null,
+        equipment: { id: "eq_mic", type: "eq_mic" },
+      },
+    ]);
+  });
+
+  it("SCRUM-155 [AC6] TC-155-06, TC-155-12: a request covered in full, by its own or old unlinked reservations, isn't offered", async () => {
+    db.equipmentRequest.findMany.mockResolvedValue([
+      approved("own", [held("eq_projector", 2, "own"), held("eq_mic", 3, "own")]),
+      approved("legacy", [held("eq_projector", 2, null), held("eq_mic", 3, null)]),
+    ]);
+
+    expect(await getReservableRequests()).toEqual([]);
+  });
+
+  it("SCRUM-156 [AC5] TC-156-08: another request's reservations, or ones that don't span the event, don't cover a line; the event is marked partly reserved", async () => {
+    db.equipmentRequest.findMany.mockResolvedValue([
+      approved(
+        "second",
+        [
+          held("eq_projector", 2, "first"),
+          held("eq_mic", 3, "second", {
+            startAt: new Date("2030-06-01T02:00:00.000Z"),
+            endAt: END,
+          }),
+        ],
+      ),
+    ]);
+
+    const [offered] = await getReservableRequests();
+
+    expect(offered.alreadyReserved).toBe("event");
+    expect(offered.lines.map((l) => [l.id, l.quantity])).toEqual([
+      ["l1", 2],
+      ["l2", 3],
+    ]);
+  });
+
+  it("SCRUM-155 [AC2]: an event without dates has nothing covering it, so every line is offered", async () => {
+    const request = approved("r1", [held("eq_projector", 2, "r1")]);
+    db.equipmentRequest.findMany.mockResolvedValue([
+      { ...request, event: { ...request.event, endAt: null } },
+    ]);
+
+    const [offered] = await getReservableRequests();
+
+    expect(offered.lines).toHaveLength(2);
   });
 });

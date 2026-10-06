@@ -6,7 +6,9 @@ import { prisma } from "@/lib/db";
  * period and a quantity, and the page states what is free for the whole of
  * that period: the busiest instant of the pool, with reservations and
  * maintenance weighed together, touching periods treated as adjacent, and the
- * shortfall stated when the quantity does not fit.
+ * shortfall stated when the quantity does not fit. Since SCRUM-156 the form
+ * only checks: reserving is through an approved request, tested in
+ * request-reservation.spec.ts.
  */
 async function signInAsTechSupport(page: Page) {
   await page.goto("/login");
@@ -15,7 +17,7 @@ async function signInAsTechSupport(page: Page) {
   await page.getByRole("button", { name: "Sign in" }).click();
   await page.waitForURL((url) => !url.pathname.startsWith("/login"));
   await page.goto("/equipment");
-  await expect(page.getByText("Reserve equipment")).toBeVisible();
+  await expect(page.getByText("Equipment availability", { exact: true })).toBeVisible();
   await page.locator('[data-hydrated="true"]').waitFor();
 }
 
@@ -88,11 +90,8 @@ async function buildRig({
   }
 }
 
-/** Fill the reservation form for the rig over [from, to) on RIG_DAY. */
+/** Fill the availability check for the rig over [from, to) on RIG_DAY. */
 async function fillRigPeriod(page: Page, from: number, to: number, quantity: string) {
-  await page
-    .getByLabel("Approved event")
-    .selectOption({ label: "Approved — Research Symposium" });
   await page.getByLabel("Start date").fill(RIG_DAY);
   await page.getByLabel("Start time").fill(sgTime(from));
   await page.getByLabel("End date").fill(RIG_DAY);
@@ -128,7 +127,7 @@ test.describe("SCRUM-29 — Check Equipment Availability", () => {
     await expect(page.getByTestId("selected-availability")).toHaveText("1 of 4 available");
   });
 
-  test("AC 2: a quantity that fits is reported available and can be reserved", async ({
+  test("AC 2: a quantity that fits is reported available", async ({
     page,
   }) => {
     test.skip(!usesLocalDatabase, "writes its own equipment; local database only");
@@ -145,13 +144,9 @@ test.describe("SCRUM-29 — Check Equipment Availability", () => {
     await expect(liveStatus(page)).toHaveText(
       "Your requested quantity is available (1 unit(s) available for this period).",
     );
-    await page.getByRole("button", { name: /Reserve.*equipment/ }).click();
-    await expect(
-      page.getByText("Reservation confirmed. 0 unit(s) remain available."),
-    ).toBeVisible();
   });
 
-  test("AC 3: a quantity over the free units reports the shortfall and is refused", async ({
+  test("AC 3: a quantity over the free units reports the shortfall", async ({
     page,
   }) => {
     test.skip(!usesLocalDatabase, "writes its own equipment; local database only");
@@ -163,11 +158,6 @@ test.describe("SCRUM-29 — Check Equipment Availability", () => {
     await expect(liveStatus(page)).toHaveText(
       "Requested quantity (3) exceeds availability (1 unit(s) available for this period) — 2 short.",
     );
-    await page.getByRole("button", { name: /Reserve.*equipment/ }).click();
-    await expect(
-      page.getByText("Only 1 of 4 unit(s) are available for this period — 2 short."),
-    ).toBeVisible();
-    expect(await prisma.reservation.count({ where: { equipmentId: rigId() } })).toBe(1);
   });
 
   test("AC 4: equipment reserved for an overlapping period is excluded", async ({
