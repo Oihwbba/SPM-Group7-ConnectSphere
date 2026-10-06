@@ -2,7 +2,7 @@ import { requireSession } from "@/lib/auth/guard";
 import { can } from "@/lib/auth/can";
 import { Forbidden } from "@/components/app/forbidden";
 import { prisma } from "@/lib/db";
-import { RESERVABLE_EVENT_STATUSES } from "@/lib/schemas/reservation";
+import { getReservableRequests } from "@/lib/equipment/request-queries";
 import { EquipmentClient } from "./equipment-client";
 
 // Access is decided by lib/auth/can.ts (the single gate), not a role list here
@@ -12,19 +12,22 @@ export default async function EquipmentPage() {
   if (!can(session.user, "equipment:read")) {
     return <Forbidden />;
   }
+  const canReserve = can(session.user, "equipment:reserve");
 
-  const [equipment, events] = await Promise.all([
+  const [equipment, requests] = await Promise.all([
     prisma.equipment.findMany({
       where: { isActive: true },
       select: { id: true, type: true, totalQuantity: true },
       orderBy: { type: "asc" },
     }),
-    prisma.event.findMany({
-      where: { status: { in: RESERVABLE_EVENT_STATUSES } },
-      select: { id: true, name: true },
-      orderBy: { startAt: "asc" },
-    }),
+    canReserve ? getReservableRequests() : [],
   ]);
 
-  return <EquipmentClient equipment={equipment} events={events} />;
+  return (
+    <EquipmentClient
+      equipment={equipment}
+      requests={requests}
+      canReserve={canReserve}
+    />
+  );
 }

@@ -3,6 +3,21 @@
 Story and acceptance criteria: [docs/backlog/SCRUM-31.md](../backlog/SCRUM-31.md).
 Format and conventions: [README.md](README.md).
 
+> **Reserving moved to SCRUM-155's card (SCRUM-156, 5 Oct 2026).** The
+> one-type form now only checks availability, and `createReservation` is gone,
+> so the reserve steps below no longer apply to that form. The same guarantees
+> are tested through reserving an approved request:
+>
+> | SCRUM-31 case | Now covered by |
+> |---|---|
+> | TC-31-01, -02, -04 | [TC-155-04](SCRUM-155.md#tc-155-04) |
+> | TC-31-03 | [TC-155-05](SCRUM-155.md#tc-155-05); the live shortfall in `e2e/equipment.spec.ts` › "SCRUM-29 AC 3: …" |
+> | TC-31-05, -06 | `tests/integration/concurrency.test.ts` › "concurrency — equipment pool (SCRUM-31)", now reserving approved requests |
+> | TC-31-07, -09 | [TC-155-09](SCRUM-155.md#tc-155-09) |
+> | TC-31-08 | unchanged: `tests/unit/reservation.test.ts` › "AC 7: deducts confirmed reservations and maintenance from the pool" |
+> | TC-31-10 | [TC-155-10](SCRUM-155.md#tc-155-10); `tests/integration/equipment-availability.test.ts` › "reserves for a Planning event, and refuses a Confirmed one without writing" |
+> | TC-31-11 | `tests/unit/request-reservation.test.ts` (roles without `equipment:reserve` are refused) |
+
 **Shared pre-conditions for every case:** the database is migrated and seeded
 (`npm run db:deploy && npm run db:seed`), the app is running, and the tester
 signs in as Technical Support (`techsupport@test.local` / `Password123!`)

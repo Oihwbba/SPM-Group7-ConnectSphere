@@ -98,3 +98,53 @@ export function reviewLine(
     : [];
   return { available, total, shortfall, alternatives };
 }
+
+type HeldForEvent = {
+  requestId: string | null;
+  equipmentId: string;
+  quantity: number;
+  startAt: Date;
+  endAt: Date;
+};
+
+/**
+ * SCRUM-156 AC 5, refining SCRUM-155 AC 6 — how much of each line of an
+ * approved request is still to reserve. A line is covered by confirmed
+ * reservations made for this request, or made with the old one-type form
+ * (no request linked), that span the whole event: the same "whole event" rule
+ * as the SCRUM-110 checklist. Reservations for another request on the same
+ * event don't count, so a second request is reserved in its own right, and a
+ * line whose reservation was cancelled (SCRUM-32, SCRUM-142) is offered again.
+ * Callers pass confirmed reservations only. Returns the lines with something
+ * outstanding.
+ */
+export function outstandingLines<
+  L extends { equipmentId: string; quantity: number },
+>(
+  requestId: string,
+  lines: L[],
+  event: { startAt: Date | null; endAt: Date | null },
+  reservations: HeldForEvent[],
+): (L & { outstanding: number })[] {
+  const { startAt, endAt } = event;
+  const covered = new Map<string, number>();
+  if (startAt && endAt) {
+    for (const held of reservations) {
+      if (held.requestId !== null && held.requestId !== requestId) continue;
+      if (held.startAt > startAt || held.endAt < endAt) continue;
+      covered.set(
+        held.equipmentId,
+        (covered.get(held.equipmentId) ?? 0) + held.quantity,
+      );
+    }
+  }
+  return lines
+    .map((line) => ({
+      ...line,
+      outstanding: Math.max(
+        0,
+        line.quantity - (covered.get(line.equipmentId) ?? 0),
+      ),
+    }))
+    .filter((line) => line.outstanding > 0);
+}

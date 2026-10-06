@@ -5,9 +5,11 @@ import { summariseAvailability } from "@/lib/equipment/availability";
 import {
   OPEN_REQUEST_STATUSES,
   REQUESTABLE_EVENT_STATUSES,
+  outstandingLines,
   reviewLine,
   type PoolAvailability,
 } from "@/lib/equipment/requests";
+import { RESERVABLE_EVENT_STATUSES } from "@/lib/schemas/reservation";
 
 /**
  * The reads behind the Equipment Requests page (SCRUM-27/28). They take the
@@ -228,4 +230,108 @@ export async function getEquipmentRequestQueue() {
 
 export type QueuedEquipmentRequest = Awaited<
   ReturnType<typeof getEquipmentRequestQueue>
+>[number];
+
+/**
+ * SCRUM-155 AC 1 — a request Technical Support may reserve from: approved,
+ * for an event that can still take a reservation and has not started. Whether
+ * anything is left to reserve (AC 6) depends on its lines and the event's
+ * reservations, so `outstandingLines` decides that. The listing and the
+ * reserve action share both, so what is offered is what is accepted.
+ */
+export function reservableRequest(now: Date) {
+  return {
+    status: "APPROVED",
+    event: {
+      status: { in: RESERVABLE_EVENT_STATUSES },
+      startAt: { gt: now },
+    },
+  } satisfies Prisma.EquipmentRequestWhereInput;
+}
+
+/** What `outstandingLines` weighs a request's lines against. */
+export const CONFIRMED_HOLDS = {
+  where: { status: "CONFIRMED" },
+  select: {
+    requestId: true,
+    equipmentId: true,
+    quantity: true,
+    startAt: true,
+    endAt: true,
+  },
+} satisfies Prisma.Event$reservationsArgs;
+
+/**
+ * SCRUM-155 AC 1, 2 & 6 — approved requests with something still to reserve,
+ * each with only what is missing, so choosing one fills in the rest and never
+ * reserves a covered line twice. `alreadyReserved` says what is reserved
+ * already: some of this request, or only other bookings for its event.
+ * Each also carries what Technical Support needs to reserve it without going
+ * back to the request: who raised it, its notes and each line's requirements.
+ */
+export async function getReservableRequests(now = new Date()) {
+  const requests = await prisma.equipmentRequest.findMany({
+    where: reservableRequest(now),
+    select: {
+      id: true,
+      notes: true,
+      requestedBy: { select: { name: true } },
+      event: {
+        select: {
+          id: true,
+          name: true,
+          startAt: true,
+          endAt: true,
+          reservations: CONFIRMED_HOLDS,
+        },
+      },
+      lines: {
+        select: {
+          id: true,
+          equipmentId: true,
+          quantity: true,
+          technicalRequirements: true,
+          equipment: { select: { id: true, type: true } },
+        },
+        orderBy: IN_ENTRY_ORDER,
+      },
+    },
+    orderBy: { event: { startAt: "asc" } },
+  });
+
+  return requests.flatMap(({ id, notes, requestedBy, event, lines }) => {
+    const missing = outstandingLines(id, lines, event, event.reservations);
+    if (missing.length === 0) return [];
+    const alreadyReserved: "request" | "event" | null =
+      missing.length < lines.length ||
+      missing.some((line) => line.outstanding < line.quantity)
+        ? "request"
+        : event.reservations.some((hold) => hold.requestId !== id)
+          ? "event"
+          : null;
+    return [
+      {
+        id,
+        notes,
+        requestedBy,
+        event: {
+          id: event.id,
+          name: event.name,
+          startAt: event.startAt,
+          endAt: event.endAt,
+        },
+        alreadyReserved,
+        lines: missing.map((line) => ({
+          id: line.id,
+          quantity: line.outstanding,
+          technicalRequirements: line.technicalRequirements,
+          equipment: line.equipment,
+        })),
+      },
+    ];
+  });
+}
+
+export type ReservableRequest = Awaited<
+  ReturnType<typeof getReservableRequests>
 >[number];

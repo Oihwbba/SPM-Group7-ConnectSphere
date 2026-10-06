@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition, useSyncExternalStore } from "react";
-import { toast } from "sonner";
 import {
   Calendar,
   Clock,
@@ -16,10 +15,8 @@ import {
   Projector,
   Presentation,
   Layers,
-  Loader2,
 } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -29,16 +26,15 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  createReservation,
-  getAllEquipmentAvailability,
-} from "./actions";
+import { getAllEquipmentAvailability } from "./actions";
+import { ReserveRequestCard } from "./reserve-request-card";
 import {
   OtherCommitments,
   RequestedPeriodCommitments,
   useEquipmentSchedule,
 } from "./equipment-schedule-panel";
 import { allAvailabilitySchema } from "@/lib/schemas/reservation";
+import type { ReservableRequest } from "@/lib/equipment/request-queries";
 import { checkQuantity } from "@/lib/equipment/availability";
 import {
   formatDate,
@@ -50,7 +46,6 @@ import {
 } from "@/lib/datetime";
 
 type Equipment = { id: string; type: string; totalQuantity: number };
-type Event = { id: string; name: string };
 type AvailabilityMap = Record<string, { available: number; total: number }>;
 
 const emptySubscribe = () => () => {};
@@ -128,17 +123,25 @@ function getEquipmentIcon(type: string) {
   return Layers;
 }
 
+/**
+ * The Equipment page. Reserving happens only from an approved request
+ * (SCRUM-155's card, on top); below it the form checks what is free for a
+ * period and what each item is committed to (SCRUM-29/30), and never
+ * reserves (SCRUM-156). A reservation made in the card refreshes both, so
+ * the check never shows stock that has just been taken.
+ */
 export function EquipmentClient({
   equipment,
-  events,
+  requests,
+  canReserve,
 }: {
   equipment: Equipment[];
-  events: Event[];
+  requests: ReservableRequest[];
+  canReserve: boolean;
 }) {
   const isHydrated = useSyncExternalStore(emptySubscribe, () => true, () => false);
 
   const [form, setForm] = useState({
-    eventId: "",
     equipmentId: "",
     quantity: "1",
     startAt: "",
@@ -153,9 +156,9 @@ export function EquipmentClient({
     form.equipmentId && allAvailability?.[form.equipmentId]
       ? allAvailability[form.equipmentId].available
       : null;
-  const [scheduleRefresh, setScheduleRefresh] = useState(0);
+  const [refresh, setRefresh] = useState(0);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[] | undefined>>({});
-  const [pending, startTransition] = useTransition();
+  const [, startTransition] = useTransition();
   const requestIdRef = useRef(0);
 
   const update = (field: keyof typeof form, value: string) => {
@@ -264,99 +267,13 @@ export function EquipmentClient({
       isMounted = false;
       clearTimeout(timer);
     };
-  }, [form.startAt, form.endAt]);
-
-  const reserve = () =>
-    startTransition(async () => {
-      setFieldErrors({});
-
-      const isStartComplete =
-        Boolean(form.startAt) &&
-        form.startAt.includes("T") &&
-        !form.startAt.startsWith("T") &&
-        Boolean(form.startAt.split("T")[1]);
-      const isEndComplete =
-        Boolean(form.endAt) &&
-        form.endAt.includes("T") &&
-        !form.endAt.startsWith("T") &&
-        Boolean(form.endAt.split("T")[1]);
-
-      if (!isStartComplete || !isEndComplete) {
-        setFieldErrors((current) => ({
-          ...current,
-          ...(!isStartComplete ? { startAt: ["Choose both a start date and time."] } : {}),
-          ...(!isEndComplete ? { endAt: ["Choose both an end date and time."] } : {}),
-        }));
-        toast.error("Please specify complete start and end dates and times.");
-        return;
-      }
-
-      const startDateObj = parseSingaporeDateTime(form.startAt);
-      const startMs = startDateObj ? startDateObj.getTime() : NaN;
-      if (!Number.isNaN(startMs) && startMs < Date.now() - 60000) {
-        setFieldErrors((current) => ({
-          ...current,
-          startAt: ["Start time cannot be in the past."],
-        }));
-        toast.error("Start time cannot be in the past.");
-        return;
-      }
-
-      try {
-        const result = await createReservation({
-          ...form,
-          startAt: toUtcIso(form.startAt),
-          endAt: toUtcIso(form.endAt),
-        });
-        if (!result.ok) {
-          if (result.fieldErrors) {
-            setFieldErrors(result.fieldErrors);
-          }
-          toast.error(result.error);
-          return;
-        }
-        setFieldErrors({});
-        toast.success(
-          `Reservation confirmed. ${result.data.available} unit(s) remain available.`,
-        );
-        // SCRUM-30: the reservation just made is a new commitment, so the
-        // schedule beside this form is now out of date. Bumping this remounts
-        // the panel, which refetches — otherwise the whole point of the panel
-        // fails at exactly the moment someone looks at it.
-        setScheduleRefresh((n) => n + 1);
-
-        // Refresh live availability map (shared error handling with the effect)
-        try {
-          const refreshReqId = ++requestIdRef.current;
-          const allRes = await getAllEquipmentAvailability({
-            startAt: toUtcIso(form.startAt),
-            endAt: toUtcIso(form.endAt),
-          });
-          if (refreshReqId !== requestIdRef.current) return;
-          if (allRes.ok) {
-            setAllAvailability(allRes.data);
-          } else {
-            setAllAvailability(null);
-            setAvailabilityError(
-              allRes.error || "Couldn't refresh availability — try changing the period.",
-            );
-          }
-        } catch {
-          setAllAvailability(null);
-          setAvailabilityError(
-            "Couldn't refresh availability — try changing the period.",
-          );
-        }
-      } catch {
-        toast.error("An unexpected error occurred while creating the reservation.");
-      }
-    });
+  }, [form.startAt, form.endAt, refresh]);
 
   const durationText = getDurationDisplay(form.startAt, form.endAt);
   const periodText = formatPeriodDisplay(form.startAt, form.endAt);
   const selectedEquipment = equipment.find((e) => e.id === form.equipmentId);
   const otherEquipment = equipment.filter((e) => e.id !== form.equipmentId);
-  const scheduleState = useEquipmentSchedule(selectedEquipment?.id ?? null, scheduleRefresh);
+  const scheduleState = useEquipmentSchedule(selectedEquipment?.id ?? null, refresh);
 
   // SCRUM-30: the period the commitments are split against. Only a complete
   // period whose end is after its start counts; until then nothing is "during".
@@ -431,84 +348,74 @@ export function EquipmentClient({
 
   return (
     <div className="space-y-6" data-hydrated={isHydrated}>
-      {/* 1. Reserve Equipment Card */}
+      {canReserve && (
+        <ReserveRequestCard
+          requests={requests}
+          equipment={equipment}
+          onReserved={() => setRefresh((n) => n + 1)}
+        />
+      )}
+
       <Card className="border border-border bg-card text-card-foreground shadow-xs backdrop-blur-none backdrop-saturate-100">
         <CardHeader className="pb-4">
           <div className="flex items-center gap-3">
             <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-              <Calendar className="h-6 w-6" />
+              <BarChart2 className="h-6 w-6" />
             </div>
             <div>
               <CardTitle className="text-xl font-bold tracking-tight">
-                Reserve equipment
+                Equipment availability
               </CardTitle>
               <CardDescription className="text-xs text-muted-foreground mt-0.5">
-                Confirmed reservations secure equipment for the selected period.
+                Check what is free for a period and what each item is committed to.{" "}
+                {canReserve ? (
+                  <>
+                    To reserve, use{" "}
+                    <a href="#reserve-request" className="font-medium text-primary underline-offset-4 hover:underline">
+                      Reserve an approved request
+                    </a>{" "}
+                    above.
+                  </>
+                ) : (
+                  "Technical Support reserves equipment from approved requests."
+                )}
               </CardDescription>
             </div>
           </div>
         </CardHeader>
 
         <CardContent className="space-y-6 pt-2">
-          {/* Row 1: Approved Event & Equipment Type Selection */}
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="event" className="text-sm font-semibold">Approved event</Label>
-              <select
-                id="event"
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                value={form.eventId}
-                onChange={(e) => update("eventId", e.target.value)}
-              >
-                <option value="">Select an event</option>
-                {events.map((event) => (
-                  <option key={event.id} value={event.id}>
-                    {event.name}
+          <div className="space-y-2 sm:max-w-md">
+            <Label htmlFor="equipment" className="text-sm font-semibold">Equipment type</Label>
+            <select
+              id="equipment"
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              value={form.equipmentId}
+              onChange={(e) => update("equipmentId", e.target.value)}
+            >
+              <option value="">Select equipment</option>
+              {equipment.map((item) => {
+                const liveCount = allAvailability?.[item.id]?.available;
+                const statusSuffix =
+                  liveCount !== undefined
+                    ? ` — ${liveCount} of ${item.totalQuantity} available`
+                    : ` (${item.totalQuantity} total)`;
+                return (
+                  <option key={item.id} value={item.id}>
+                    {item.type}
+                    {statusSuffix}
                   </option>
-                ))}
-              </select>
-              {fieldErrors.eventId?.[0] && (
-                <p className="text-xs text-destructive">{fieldErrors.eventId[0]}</p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="equipment" className="text-sm font-semibold">Equipment type</Label>
-              <select
-                id="equipment"
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                value={form.equipmentId}
-                onChange={(e) => update("equipmentId", e.target.value)}
-              >
-                <option value="">Select equipment</option>
-                {equipment.map((item) => {
-                  const liveCount = allAvailability?.[item.id]?.available;
-                  const statusSuffix =
-                    liveCount !== undefined
-                      ? ` — ${liveCount} of ${item.totalQuantity} available`
-                      : ` (${item.totalQuantity} total)`;
-                  return (
-                    <option key={item.id} value={item.id}>
-                      {item.type}
-                      {statusSuffix}
-                    </option>
-                  );
-                })}
-              </select>
-              {fieldErrors.equipmentId?.[0] && (
-                <p className="text-xs text-destructive">
-                  {fieldErrors.equipmentId[0]}
-                </p>
-              )}
-            </div>
+                );
+              })}
+            </select>
           </div>
 
-          {/* Row 2: Reservation Period with separate Date & Time visual bars */}
+          {/* The period, with separate Date & Time visual bars */}
           <div className="space-y-2">
             <div>
-              <h3 className="text-sm font-semibold text-foreground">Reservation period</h3>
+              <h3 className="text-sm font-semibold text-foreground">Period</h3>
               <p className="text-xs text-muted-foreground">
-                Select the start and end date & time for your reservation.
+                The start and end date & time to check, in Singapore time.
               </p>
             </div>
 
@@ -646,112 +553,58 @@ export function EquipmentClient({
             </div>
           </div>
 
-          {/* Row 3: Quantity & Reserve Button */}
-          <div className="flex flex-wrap items-end justify-between gap-4 pt-2 border-t">
-            <div className="space-y-1.5">
-              <Label htmlFor="quantity" className="text-xs font-medium text-muted-foreground">
-                Quantity
-              </Label>
-              <div className="flex items-center">
-                <button
-                  type="button"
-                  onClick={() => {
-                    const current = parseInt(form.quantity || "1", 10);
-                    if (current > 1) update("quantity", String(current - 1));
-                  }}
-                  disabled={pending || parseInt(form.quantity || "1", 10) <= 1}
-                  className="flex h-10 w-10 items-center justify-center rounded-l-md border border-r-0 border-input bg-muted hover:bg-accent disabled:opacity-50 transition-colors"
-                  aria-label="Decrease quantity"
-                >
-                  <Minus className="h-3.5 w-3.5" />
-                </button>
-                <Input
-                  id="quantity"
-                  type="number"
-                  min="1"
-                  step="1"
-                  value={form.quantity}
-                  onChange={(e) => update("quantity", e.target.value)}
-                  className="h-10 w-16 rounded-none text-center border-input focus-visible:ring-0"
-                />
-                <button
-                  type="button"
-                  onClick={() => {
-                    const current = parseInt(form.quantity || "1", 10);
-                    update("quantity", String(Number.isNaN(current) ? 1 : current + 1));
-                  }}
-                  disabled={pending}
-                  className="flex h-10 w-10 items-center justify-center rounded-r-md border border-l-0 border-input bg-muted hover:bg-accent disabled:opacity-50 transition-colors"
-                  aria-label="Increase quantity"
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                </button>
-              </div>
-              {fieldErrors.quantity?.[0] && (
-                <p className="text-xs text-destructive">
-                  {fieldErrors.quantity[0]}
-                </p>
-              )}
-            </div>
-
-            <Button
-              type="button"
-              onClick={reserve}
-              disabled={pending}
-              className="h-11 px-6 rounded-lg bg-primary text-primary-foreground font-medium hover:bg-primary/90 flex items-center gap-2 shadow-xs"
-            >
-              {pending ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <span>Reserving equipment...</span>
-                </>
-              ) : (
-                <>
-                  <Calendar className="h-4 w-4" />
-                  <span>
-                    {isQuantityValid
-                      ? `Reserve ${form.quantity} equipment`
-                      : "Reserve equipment"}
-                  </span>
-                  <ArrowRight className="h-4 w-4 ml-1" />
-                </>
-              )}
-            </Button>
-          </div>
-
-          {!events.length && (
-            <p className="text-sm text-muted-foreground pt-1">
-              There are no approved events ready for an equipment reservation.
-            </p>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* 2. Live Equipment Availability Card */}
-      <Card className="border border-border bg-card text-card-foreground shadow-xs backdrop-blur-none backdrop-saturate-100">
-        <CardHeader className="pb-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-              <BarChart2 className="h-6 w-6" />
-            </div>
-            <div>
-              <CardTitle className="text-xl font-bold tracking-tight">Live equipment availability</CardTitle>
-              <CardDescription className="text-xs text-muted-foreground min-h-[1.25rem] mt-0.5 leading-normal">
-                {availabilityError ? (
-                  <span className="font-medium text-destructive">{availabilityError}</span>
-                ) : periodText && allAvailability ? (
-                  periodText
-                ) : form.startAt && form.endAt && form.startAt.includes("T") && form.endAt.includes("T") && !form.startAt.startsWith("T") && !form.endAt.startsWith("T") ? (
-                  "Calculating live equipment availability..."
-                ) : (
-                  "Select start and end dates and times above to view live equipment availability for that period."
-                )}
-              </CardDescription>
+          <div className="space-y-1.5 pt-2 border-t">
+            <Label htmlFor="quantity" className="text-xs font-medium text-muted-foreground">
+              Quantity
+            </Label>
+            <div className="flex items-center">
+              <button
+                type="button"
+                onClick={() => {
+                  const current = parseInt(form.quantity || "1", 10);
+                  if (current > 1) update("quantity", String(current - 1));
+                }}
+                disabled={parseInt(form.quantity || "1", 10) <= 1}
+                className="flex h-10 w-10 items-center justify-center rounded-l-md border border-r-0 border-input bg-muted hover:bg-accent disabled:opacity-50 transition-colors"
+                aria-label="Decrease quantity"
+              >
+                <Minus className="h-3.5 w-3.5" />
+              </button>
+              <Input
+                id="quantity"
+                type="number"
+                min="1"
+                step="1"
+                value={form.quantity}
+                onChange={(e) => update("quantity", e.target.value)}
+                className="h-10 w-16 rounded-none text-center border-input focus-visible:ring-0"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  const current = parseInt(form.quantity || "1", 10);
+                  update("quantity", String(Number.isNaN(current) ? 1 : current + 1));
+                }}
+                className="flex h-10 w-10 items-center justify-center rounded-r-md border border-l-0 border-input bg-muted hover:bg-accent disabled:opacity-50 transition-colors"
+                aria-label="Increase quantity"
+              >
+                <Plus className="h-3.5 w-3.5" />
+              </button>
             </div>
           </div>
-        </CardHeader>
 
-        <CardContent className="space-y-6">
+          <p className="text-xs text-muted-foreground min-h-[1.25rem] leading-normal" data-testid="availability-period">
+            {availabilityError ? (
+              <span className="font-medium text-destructive">{availabilityError}</span>
+            ) : periodText && allAvailability ? (
+              periodText
+            ) : form.startAt && form.endAt && form.startAt.includes("T") && form.endAt.includes("T") && !form.startAt.startsWith("T") && !form.endAt.startsWith("T") ? (
+              "Calculating live equipment availability..."
+            ) : (
+              "Select start and end dates and times above to view live equipment availability for that period."
+            )}
+          </p>
+
           {/* Hero Card for Selected Equipment */}
           {selectedEquipment ? (
             (() => {
