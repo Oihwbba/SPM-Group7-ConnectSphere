@@ -34,7 +34,7 @@ import { recordUnavailability } from "@/app/(app)/venues/availability/actions";
 // The "at the same moment" cases (SCRUM-31/53/74). These are the acceptance
 // criteria the database constraints and row locks exist to satisfy, so each one
 // needs a real concurrent test against a live Postgres — see
-// docs/data-model.md §4.4. Replace each `it.todo` as the feature lands.
+// docs/data-model.md, decision 4.4. Replace each `it.todo` as the feature lands.
 describe("concurrency", () => {
   // Enforced by the `booking_no_double_booking` EXCLUDE constraint.
   it.todo("rejects the second of two simultaneous overlapping approvals (SCRUM-53)");

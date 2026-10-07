@@ -20,8 +20,8 @@ type RegisterOutcome = { error: string } | { id: string };
 /**
  * SCRUM-73/74 — an Attendee registers for a Confirmed, open event.
  *
- * "Registration capacity (SCRUM-74) — lock the Event row" (README §Two rules
- * the database cannot enforce): the capacity check and the write must happen
+ * "Registration capacity (SCRUM-74): lock the Event row" (README, "Two rules
+ * the database cannot enforce"): the capacity check and the write must happen
  * under the SAME lock, or two Attendees registering for the last place could
  * both read "one remaining" before either commits (SCRUM-74's concurrency
  * rule). Mirrors the exact pattern app/(app)/equipment/actions.ts uses for
