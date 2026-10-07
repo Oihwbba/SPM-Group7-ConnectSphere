@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-07. Jira is the source of truth.
+     Synced from Jira on 2026-10-08. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-76 - View my registration status
@@ -26,11 +26,12 @@
 4. Given an event's date, time or venue changed after I registered, then I see the current details, not the ones from when I registered.
 5. The list contains only my registrations.
 
-**Related:** registrations stay active when an event's details change (SCRUM-26); SCRUM-85 tells the Attendee; an event that returns to Planning is shown as "Details being updated" (SCRUM-133). The My Registrations placeholder page in the code still names SCRUM-42; it should name this story.
+**Related:** registrations stay active when an event's details change (SCRUM-26); SCRUM-85 tells the Attendee; an event that returns to Planning is shown as "Details being updated" (SCRUM-85). The My Registrations placeholder page in the code still names SCRUM-42; it should name this story.
 
 **Change log**
 
 * 2026-10-01 (mid-sprint correction, no new scope): status names aligned with SCRUM-131.
 * 2026-10-01 (audit): Waitlisted removed, because the waiting list (SCRUM-79) is beyond Release 1.
+* 2026-10-07: the Related note points to SCRUM-85, which SCRUM-133 was merged into.
 
 Functionality Area: Attendee Registration

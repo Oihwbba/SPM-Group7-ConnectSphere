@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-07. Jira is the source of truth.
+     Synced from Jira on 2026-10-08. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-38 - Search and filter venues by criteria and requirements
@@ -31,7 +31,7 @@
 9. Given I opened search from an event, then each result offers Request this venue, which opens the booking form (SCRUM-50, SCRUM-162) for that venue and event. A venue where the event already has a Pending, Held or Approved booking is marked as already requested and offers no second request.
 10. Given nothing matches, then a "No venues match" message is shown rather than an empty list.
 11. Expected attendance, accessibility features, supported layout and required facilities can be applied as filters, alone or together with the search criteria.
-12. With the attendance filter on, venues whose capacity is below expected attendance are excluded.
+12. With the attendance filter on, venues whose capacity is below the attendance in the search are excluded. That figure is pre-filled (AC1) and can be lowered when a room only needs to hold part of the audience (SCRUM-162).
 13. Facility and accessibility filters allow several values.
 14. Filters stay applied when the search criteria change.
 
@@ -44,5 +44,6 @@
 * 2026-10-01: rewritten in one format; added the operating-hours exclusion, retired venues and the suitability indicator.
 * 2026-10-01 (audit): search now opens pre-filled from the event and each result can start a booking request, so finding a venue leads straight into requesting it. Opening hours come from SCRUM-34. Group headings removed; the filter criteria are part of the one list. Re-estimate at planning: the pre-fill and the request link add work.
 * 2026-10-07 (Week 7 changes 1 to 4): AC3 to AC5 use occupied periods and treat Held bookings as taken (SCRUM-159, SCRUM-163). AC1 opens from a flagged booking to find a replacement venue (SCRUM-161). AC9 marks venues the event has already requested (SCRUM-162).
+* 2026-10-07 (backlog refinement): AC12 filters on the attendance entered in the search, which can be lowered for a room that holds part of the audience (SCRUM-162), instead of always on the event's expected attendance.
 
 Functionality Area: Venue Search and Filtering

@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-07. Jira is the source of truth.
+     Synced from Jira on 2026-10-08. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-163 - Hold a venue tentatively until a deadline
@@ -26,7 +26,7 @@
 4. Given the expiry time is reached without a confirmation, then from that moment the hold no longer reserves the venue, the booking shows Expired and can't be confirmed, and the Coordinator makes a new request if the venue is still needed. This doesn't depend on anyone using the app at the expiry time.
 5. The Coordinator is notified when the hold is placed (with the deadline), 24 hours before it expires (or straight away if less than 24 hours remain), and when it expires (SCRUM-124, SCRUM-48).
 6. A Held or Expired booking never counts as an Approved booking. The readiness checklist shows "Held until \[expiry\] – confirm to secure" or "Hold expired"; a Held booking keeps the Venue item incomplete, and an Expired one counts like a Rejected one (SCRUM-162).
-7. Before the expiry, Venue Staff can reject a Held booking with a reason. Confirming, releasing or rejecting a hold a second time changes nothing.
+7. Held bookings stay in the Venue Staff queue (SCRUM-52) with their expiry until they are confirmed, released, rejected or expire. Before the expiry, Venue Staff can reject a Held booking with a reason. Confirming, releasing or rejecting a hold a second time changes nothing.
 8. Given the Coordinator confirms at the same moment the hold expires, then the booking ends up either Approved (if the confirmation was saved before the expiry time) or Expired, never both.
 9. Cancelling or rejecting the event releases its holds (SCRUM-82, SCRUM-117). Unavailability recorded over a hold flags it (SCRUM-161).
 
@@ -39,5 +39,6 @@
 **Change log**
 
 * 2026-10-07 (Week 7 change 4): created.
+* 2026-10-07 (backlog refinement): AC7 keeps Held bookings in the Venue Staff queue with their expiry; the Supersedes line replaced the Pending-only queue but no criterion said what the queue shows.
 
 Functionality Area: Tentative Venue Holding, Venue Booking Approval

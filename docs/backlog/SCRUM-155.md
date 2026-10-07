@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-07. Jira is the source of truth.
+     Synced from Jira on 2026-10-08. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-155 - Reserve an approved equipment request in one step, pre-filled from the Coordinator's request (follow-up to SCRUM-31)

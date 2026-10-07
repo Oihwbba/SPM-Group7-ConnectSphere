@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-07. Jira is the source of truth.
+     Synced from Jira on 2026-10-08. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-122 - Remind Coordinators about incomplete and overdue arrangements
@@ -8,15 +8,15 @@
 |---|---|
 | **Type** | Story |
 | **Epic** | SCRUM-8 - Event Change & Notifications |
-| **Priority** | Medium |
+| **Priority** | Low |
 | **Story points** | 3 |
 | **Status in Jira** | To Do |
-| **Sprint** | SCRUM Sprint 3 |
+| **Sprint** | Backlog |
 | **Jira** | https://smu-spm-group7.atlassian.net/browse/SCRUM-122 |
 
 ---
 
-**Beyond Release 1** (label `beyond-release-1`): Reminder System is on the Week 4 list of features not required for Release 1. The customer asked for reminders, and the team's 13 Sep customer Q&A register records "Keep it out" for that reason. In Release 1 nothing is hidden: overdue events are shown in the Coordinator's list (SCRUM-82, SCRUM-69) and outstanding arrangements on the readiness checklist (SCRUM-110); only the reminders are missing. If built, it can reuse the scheduled job SCRUM-82 adds for completion.
+**Beyond Release 1** (label `beyond-release-1`): Reminder System is on the Week 4 list of features not required for Release 1. The customer asked for reminders, and the team's 13 Sep customer Q&A register records "Keep it out" for that reason. In Release 1 nothing is hidden: overdue events are shown in the Coordinator's list (SCRUM-82, SCRUM-69) and outstanding arrangements on the readiness checklist (SCRUM-110); only the reminders are missing. If built, it needs no scheduled job: reminders can be written ahead with a show-from time (SCRUM-48), as hold reminders are (SCRUM-124).
 
 **User story:** As an Event Coordinator, I want reminders about upcoming events whose arrangements are still incomplete, so that nothing is missed before the event.
 
@@ -36,5 +36,6 @@
 
 * 2026-10-01: rewritten in one format with defaults so it can be tested; Under Review events, Confirmed events with unresolved flags and overdue events added (previously only Planning events were covered, so an event could pass its date unconfirmed with no prompt).
 * 2026-10-01 (audit): beyond Release 1 (label `beyond-release-1`), following the Week 4 not-required list and the team's 13 Sep decision. Showing an event as Overdue moved to SCRUM-82 so it stays in Release 1; AC5 keeps only the reminder.
+* 2026-10-07: the note no longer relies on a scheduled job, because SCRUM-82 now completes events without one.
 
 Functionality Area: Notification System

@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-07. Jira is the source of truth.
+     Synced from Jira on 2026-10-08. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-75 - Control and enforce the registration period
@@ -8,7 +8,7 @@
 |---|---|
 | **Type** | Story |
 | **Epic** | SCRUM-11 - Attendee Registration |
-| **Priority** | High |
+| **Priority** | Medium |
 | **Story points** | 3 |
 | **Status in Jira** | To Do |
 | **Sprint** | SCRUM Sprint 3 |
@@ -20,7 +20,7 @@
 
 **Acceptance criteria**
 
-1. Given my event needs registration (SCRUM-127) and is in Planning or Confirmed, I can set a registration opening and closing time. The assigned Coordinator can set it on my behalf.
+1. Given my event needs registration (SCRUM-171) and is in Planning or Confirmed, I can set a registration opening and closing time. The assigned Coordinator can set it on my behalf.
 2. Registration is open from the later of the opening time and the moment the event becomes Confirmed, up to but not including the closing time. It never opens before the event is Confirmed.
 3. The closing time must be after the opening time and no later than the event's start.
 4. Given no window is set, then registration opens when the event is Confirmed (SCRUM-81) and closes at the event's start.
@@ -38,5 +38,6 @@
 * 2026-10-01: window can be set during Planning; start included, end excluded; behaviour after a return to Planning added.
 * 2026-10-01 (audit): AC1 now depends on the Registration needed choice (SCRUM-127) instead of a flag nothing set. Closing manually is its own state, separate from an event that doesn't need registration, so a closed event stays listed (SCRUM-72). AC8 now carries the start-time cut-off for SCRUM-73, which the merged code doesn't check yet.
 * 2026-10-07: the customer basis notes that the waiting list in the second answer is beyond Release 1 (SCRUM-79). No Week 7 change.
+* 2026-10-07: AC1 points the Registration needed choice to SCRUM-171, which took it over when SCRUM-127 was split.
 
 Functionality Area: Attendee Registration

@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-07. Jira is the source of truth.
+     Synced from Jira on 2026-10-08. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-168 - Remove the placeholder search bar from the top bar
@@ -10,7 +10,7 @@
 | **Epic** | - |
 | **Priority** | Medium |
 | **Story points** | 0 |
-| **Status in Jira** | To Do |
+| **Status in Jira** | In Progress |
 | **Sprint** | SCRUM Sprint 3 |
 | **Jira** | https://smu-spm-group7.atlassian.net/browse/SCRUM-168 |
 

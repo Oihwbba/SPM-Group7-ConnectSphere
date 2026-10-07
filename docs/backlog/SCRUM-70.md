@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-07. Jira is the source of truth.
+     Synced from Jira on 2026-10-08. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-70 - Organisers and coordinators see an event's registrations; attendees' records stay private
@@ -8,7 +8,7 @@
 |---|---|
 | **Type** | Story |
 | **Epic** | SCRUM-9 - Access Control |
-| **Priority** | High |
+| **Priority** | Highest |
 | **Story points** | 3 |
 | **Status in Jira** | To Do |
 | **Sprint** | SCRUM Sprint 3 |

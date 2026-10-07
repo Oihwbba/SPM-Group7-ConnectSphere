@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-07. Jira is the source of truth.
+     Synced from Jira on 2026-10-08. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-48 - User views their notification list
@@ -24,7 +24,7 @@
 2. Given I open an unread notification, then it is marked as read.
 3. The header shows my unread count, and it updates when I read a notification.
 4. Given I have no notifications, then an empty-state message is shown rather than an error.
-5. Each notification links to a page I am allowed to open: internal users and Organisers go to the event page, and a Safety Officer goes to the safety check (SCRUM-166); Attendees go to the Attendee view of the event (SCRUM-72, SCRUM-133).
+5. Each notification links to a page I am allowed to open: internal users and Organisers go to the event page, and a Safety Officer goes to the safety check (SCRUM-166); Attendees go to the Attendee view of the event (SCRUM-72, or SCRUM-85 while it is being re-planned).
 6. I only ever see my own notifications. A user with several roles (SCRUM-121) sees the notifications for all their roles in one list.
 7. Notifications from every source (SCRUM-45, SCRUM-85, SCRUM-124, and the equipment-request updates SCRUM-28 sends) appear in this one list.
 8. Given a notification has a show-from time, such as a hold's 24-hour reminder (SCRUM-163), then it neither appears nor counts as unread before that time, and appears from that time on without any other action. Given it is withdrawn before that time, then it never appears.
@@ -39,5 +39,6 @@
 * 2026-10-01 (verification pass): removed SCRUM-79 from the source list.
 * 2026-10-01 (audit): removed SCRUM-122 from the sources (beyond Release 1) and added the equipment-request updates SCRUM-28 already sends.
 * 2026-10-07 (Week 7 changes 4 and 6): AC8 adds notifications with a show-from time, so hold reminders work without a scheduler (SCRUM-163). AC5 sends a Safety Officer to the safety check (SCRUM-166).
+* 2026-10-07 (backlog refinement): AC5 points to SCRUM-85, which SCRUM-133 was merged into.
 
 Functionality Area: Notification System
