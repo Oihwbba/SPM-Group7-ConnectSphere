@@ -82,7 +82,7 @@ export function AttendeeEventDetail({ event }: { event: BrowsableEvent }) {
                 <p className="text-xs font-semibold text-muted-foreground">
                   Date &amp; time
                 </p>
-                <p className="text-foreground">
+                <p className="text-foreground" data-testid="event-date">
                   {formatEventTime(event.startAt, event.endAt)}
                 </p>
               </div>

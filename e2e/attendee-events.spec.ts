@@ -15,6 +15,11 @@ import { test, expect } from "@playwright/test";
  *   evt_reg_closed  — Confirmed, registrationClosesAt in the past
  *   evt_cancelled   — Cancelled → must NOT appear in the browse list at all
  */
+// e.g. "16 Oct 2026, 9:00 am SGT – 1:00 pm SGT": a date, then the start and
+// end times (SCRUM-72 AC2).
+const SAME_DAY_TIME =
+  /^\d{1,2}\s\w+\s\d{4},\s\d{1,2}:\d{2}\s[ap]m\sSGT\s–\s\d{1,2}:\d{2}\s[ap]m\sSGT$/;
+
 test.describe("SCRUM-72 — Attendee browses confirmed events", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/login");
@@ -34,6 +39,9 @@ test.describe("SCRUM-72 — Attendee browses confirmed events", () => {
     await expect(galaCard.getByTestId("venue")).toContainText(
       "Exhibition Hall",
     );
+    // AC2: date with start and end time. The gala starts and ends the same
+    // day in the seed, so the end shows as a time only.
+    await expect(galaCard.getByTestId("event-date")).toHaveText(SAME_DAY_TIME);
     // 120 capacity, 2 REGISTERED (1 WITHDRAWN does not count) = 118 remaining.
     await expect(galaCard.getByTestId("remaining-capacity")).toHaveText(
       "118 of 120 places remaining",
@@ -154,6 +162,7 @@ test.describe("SCRUM-72 — Attendee browses confirmed events", () => {
     await expect(page.getByTestId("registration-period")).toContainText(
       "Opens",
     );
+    await expect(page.getByTestId("event-date")).toHaveText(SAME_DAY_TIME);
     // SCRUM-73 owns the actual register action — the button exists so the
     // control isn't invisible, but it must never look clickable-but-dead.
     await expect(page.getByTestId("register-button")).toBeDisabled();
