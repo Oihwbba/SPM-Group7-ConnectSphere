@@ -29,7 +29,7 @@ Copy this block for each case:
 | Test Data | … |
 | Expected Result | … |
 
-**Automated by:** `tests/unit/reservation.test.ts` › "AC 1 & 2: …"
+**Automated by:** `tests/unit/<domain>.test.ts` › "SCRUM-31 [AC1] TC-31-01: …"
 ```
 
 - **Test Case ID:** `TC-<story number>-<two digits>`, e.g. `TC-31-03`. Never
@@ -56,6 +56,9 @@ Copy this block for each case:
 - **Automated by** (below the table): the test file and test title that
   automate the case, or **Manual** if none does yet. A case marked Manual is a
   test still to be written.
+- **The test's title** starts with the story, the criteria and the case:
+  `SCRUM-31 [AC1, AC2] TC-31-01: what must happen`. The reviewer finds tests
+  by the key, and the graders trace story → criterion → case → test by it.
 
 ## Execution records
 
@@ -96,5 +99,6 @@ defect, e.g. `regression: a blank rejection reason was accepted`.
 | [SCRUM-110](SCRUM-110.md) | Jun Bin | 15 | Every case automated (unit, and e2e for the page) |
 | [SCRUM-108](SCRUM-108.md) | Jun Bin | 12 | Every case automated (unit, e2e for both journeys); AC 6, 8 and 10 point to existing tests |
 | [SCRUM-126](SCRUM-126.md) | Jun Bin | 10 | Every case automated (unit, integration for the constraint, migration and simultaneous clicks, e2e for the journey) |
+| [SCRUM-117](SCRUM-117.md) | Jun Bin | 10 | Every case automated (unit, integration for releasing arrangements in one transaction, e2e for both journeys) |
 | [SCRUM-155](SCRUM-155.md) | Jin Hong | 16 | Every case automated (unit, integration for all-or-nothing and the races, e2e for the journey) |
 | [SCRUM-156](SCRUM-156.md) | Jin Hong | 8 | Every case automated; TC-155-16 retired and the SCRUM-31 reserve cases mapped to SCRUM-155 |

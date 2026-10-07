@@ -18,10 +18,10 @@ Rules for a lesson:
 
 ## Process and merging
 
-- (2026-09-15, #27) Jin Hong owns the repository. Changes to `.github/`,
-`package.json`, the test configs or `vercel.json` need his approval
-(CODEOWNERS); when he merges as admin that satisfies it, so the description
-need not record it. Other teammates may merge too.
+- (2026-10-07, #138) Changes to `.github/`, `package.json`, the test configs
+or `vercel.json` need a code owner's approval, and CODEOWNERS lists the whole
+team, so any teammate other than the author can give it. An admin merge also
+satisfies it, so the description need not record it.
 
 - (2026-09-22, #71/#72; retires the #52–#54 re-landing workaround) Production
   deploys only through `.github/workflows/deploy.yml`: a push to `main` deploys
@@ -90,10 +90,6 @@ returning a real 404, which the e2e pins.
 
 ## Equipment
 
-- (2026-09-25, #87) The post-lock `if (!availability)` guard in
-`createReservation` is deliberate: the row lock and the availability count
-  are separate queries, and the guard refuses rather than crashes if their
-  filters ever drift apart.
 - (2026-09-28, #94) Reads that take the signed-in user's id live in plain
 modules (`lib/equipment/request-queries.ts`), never in a `"use server"`
 file: a server action is callable by anyone with any arguments, so exporting

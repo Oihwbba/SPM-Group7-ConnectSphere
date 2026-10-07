@@ -1,5 +1,11 @@
 # ADR 0008 — An advisory AI code review on every pull request
 
+> **Status: amended by the addenda below.** The review began as advisory. It
+> is now a **required check that blocks merging on a critical finding**
+> (addendum "a required merge gate on critical findings"), reads the project's
+> stories and conventions, and keeps its own memory. `CONTRIBUTING.md`
+> describes how it works today.
+
 ## Context
 
 Five developers open pull requests and one person (Jin Hong) reviews and merges
@@ -520,3 +526,15 @@ rewritten file.
   the prompt forbids "do not report X" lessons outright: a lesson explains what
   is deliberate, and must never teach the reviewer to stay quiet about a real
   defect.
+
+---
+
+## Addendum (2026-10-07) — CODEOWNERS is the whole team (SCRUM-157)
+
+The files that control the checks (`.github/`, `package.json`, the Playwright
+and Vitest configs, `vercel.json`) still need a code owner's approval, for the
+reason above: a pull request runs its own copy of the workflows. Until now the
+only code owner was Jin Hong, so every such change waited on one person.
+CODEOWNERS now lists all five team members. A change still needs a second
+person, since an author can't approve their own pull request, but any
+teammate can be that person.

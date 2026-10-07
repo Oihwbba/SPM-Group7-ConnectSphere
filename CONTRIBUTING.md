@@ -1,64 +1,72 @@
 # Contributing to ConnectSphere
 
-This is the **foundation**. Your job in the sprints is to build features on top
-of it without fighting each other's code. This document is the contract that
-makes that possible. Read it once before your first feature.
+This is how five of us build features on one codebase without fighting each
+other's code. Read it once before your first feature, and again when a
+review surprises you.
 
 The golden rule: **favour boring, obvious code.** You have to explain every
-line in the oral exam. No clever abstraction that isn't already earning its
-keep.
+line in the oral exam, so no clever abstraction that isn't already earning
+its keep.
+
+For the product itself (roles, features, scope, the event lifecycle), see
+[`docs/product-context.md`](docs/product-context.md). For running the app,
+see the [README](README.md).
 
 ---
 
 ## The one pattern to copy
 
-`app/(app)/events` is the **reference implementation**. Every feature is a
-variation of it. When you build your feature, copy that folder's shape:
+Every feature is a variation of the same shape. `app/(app)/events` is the
+reference, and `app/(app)/equipment-requests` is a smaller, newer example.
 
 | File | Role |
 |---|---|
-| `page.tsx` | Server component. Dispatches on role, guards it, fetches data scoped to the user via Prisma, renders it. |
-| `loading.tsx` | Skeleton shown while the server component fetches. |
-| `actions.ts` | Server Actions — the only place data changes. |
-| `create-event-dialog.tsx` | Client component; a form that calls an action and shows the result. |
+| `page.tsx` | Server component. Guards the role, fetches the data this user may see, renders it. |
+| `loading.tsx` | Skeleton shown while the page fetches (see `equipment-requests/loading.tsx`). |
+| `actions.ts` | Server actions: the only place data changes. |
+| `queries.ts` | Read functions shared by the page and the tests, when the page's reads are more than one query. Rules several routes share go in `lib/<domain>/`. |
+| `*-dialog.tsx`, `*-client.tsx` | Client components: a form that calls an action and shows the result. |
 | `lib/schemas/<entity>.ts` | The Zod schema, shared by the form and the action. |
-| `components/events/status-badge.tsx` | Shared presentational bits for the entity. |
-| `tests/unit/<domain>.test.ts` | Vitest unit test of the action with the database mocked: happy path, validation failure, permission denied. Runs with `npm run test:unit`. |
-| `tests/integration/<domain>.test.ts` | Vitest test against a real Postgres, only where correctness depends on the database: row locks, transactions, constraints. Runs with `npm run test:integration` and needs a local database. |
-| `e2e/*.spec.ts` | One Playwright test of the main user journey. |
+| `components/<domain>/` | Presentational pieces shared across pages, such as `components/events/status-badge.tsx`. |
+| `tests/unit/<domain>.test.ts` | Vitest with the database mocked: happy path, invalid input, permission denied. |
+| `tests/integration/<domain>.test.ts` | Vitest against a real Postgres, only where correctness depends on the database: row locks, transactions, constraints. |
+| `e2e/<journey>.spec.ts` | Playwright: the main journey's success path and at least one failure path. |
+| `docs/testing/SCRUM-n.md` | The story's test cases, each pointing at the test that automates it. |
 
 **Coverage.** Every server-side `.ts` file under `lib/` and `app/` must stay at
-100% statements, branches, functions and lines, whatever the file is named.
-`npm run test:coverage` fails otherwise, naming the file, and so does CI. It
-counts the unit and integration tests together, so it **needs the local
-database** (`docker compose up -d`), like `npm run test:integration`. Without
-it the integration tests skip, and a file only they cover (such as
-`app/(app)/bookings/queries.ts`) fails the run even if you never touched it.
-`npm run verify` doesn't measure coverage, so it is unaffected. Components
-(`.tsx`) are not measured; Playwright covers them (SCRUM-87).
+100% statements, branches, functions and lines. `npm run test:coverage` fails
+otherwise, naming the file, and so does CI. It counts unit and integration
+tests together, so it **needs the local database** (`docker compose up -d`).
+Without it the integration tests are skipped, and a file only they cover fails
+the run even if you never touched it. Components (`.tsx`) are not measured;
+Playwright covers them (SCRUM-87).
 
-Route folders are named for the **domain**, not the role. A route that several
-roles use is one folder whose `page.tsx` switches on `session.user.role` — see
-`app/(app)/events/page.tsx` and the addendum to ADR 0001.
+Route folders are named for the **domain**, not the role. A route several
+roles use is one folder whose `page.tsx` switches on the user's role (see
+`app/(app)/events/page.tsx` and ADR 0001's addendum).
 
-## How to add a feature (walkthrough)
+## How to add a feature
 
-Say you're building **Venue Booking Approval** in `bookings`.
+Say you're building **Approve or reject a booking request** (SCRUM-53) in
+`bookings`.
 
-1. **Branch.** `git checkout -b feat/SCRUM-22-booking-approval`. If someone
-   else is in the same domain folder this sprint, agree who owns `page.tsx`
-   before you both edit it.
-2. **Schema first.** Add `approveBookingSchema` to `lib/schemas/booking.ts`.
-   The form and the action both import it; validation is written once.
-3. **Action.** In `bookings/actions.ts`, copy the shape of
-   `createDraftEvent`:
+1. **Read the story.** Open `docs/backlog/SCRUM-53.md`. Write the test cases
+   in `docs/testing/SCRUM-53.md` (the format is in `docs/testing/README.md`):
+   at least one positive case per acceptance criterion, and a negative or
+   boundary case for every rule in it.
+2. **Branch.** `git checkout -b SCRUM-53-approve-reject-booking`. If someone
+   else is working in the same domain folder this sprint, agree who owns
+   `page.tsx` before you both edit it.
+3. **Schema.** Add `bookingDecisionSchema` to `lib/schemas/booking.ts`. The
+   form and the action both import it, so validation is written once.
+4. **Action.** In `bookings/actions.ts`, follow this shape:
    ```ts
    "use server";
-   export async function approveBooking(input: unknown): Promise<ActionResult<...>> {
+   export async function decideBookingRequest(input: unknown): Promise<ActionResult<...>> {
      const session = await auth();
      try {
-       requirePermission(session?.user, "booking:review", /* resource */);
-       const parsed = approveBookingSchema.safeParse(input);
+       requirePermission(session?.user, "booking:decide");
+       const parsed = bookingDecisionSchema.safeParse(input);
        if (!parsed.success) return err("…", parsed.error.flatten().fieldErrors);
        // …do the work…
        revalidatePath("/bookings");
@@ -69,135 +77,223 @@ Say you're building **Venue Booking Approval** in `bookings`.
      }
    }
    ```
-4. **Permission.** If `"booking:review"` isn't in the `Action` union yet, add it
-   to `lib/auth/can.ts` and grant it to `VENUE_STAFF` in the `ROLE_ACTIONS`
-   table. **Do not** write a role check anywhere else (see below).
-5. **Page.** Replace the placeholder `page.tsx` with a server component that
-   guards the role, fetches bookings scoped to what this user may see, and
-   renders a table. Keep a real empty state and a `loading.tsx`.
-6. **Tests.** Add a unit test for the action in `tests/unit/` (happy / invalid /
-   denied); an integration test in `tests/integration/` if it relies on locks,
-   transactions or constraints; and, if the feature has a key journey, a
-   Playwright spec in `e2e/`. Trace them back to your
-   user story in the test description — the graders check traceability.
-7. **Ship it** — `npm run verify`, push, open a PR, merge once CI is green.
-   The next section is that flow in full.
+5. **Permission.** If the action isn't in the `Action` union yet, add it to
+   `lib/auth/can.ts` and grant it to the right role in `ROLE_ACTIONS`. **Never**
+   write a role check anywhere else (see the rules below).
+6. **Page.** A server component that guards the role, fetches only what this
+   user may see, and renders it, with a real empty state, an error state and a
+   `loading.tsx`.
+7. **Tests.** Unit tests for the action (happy, invalid, denied); an
+   integration test if it relies on locks, transactions or constraints; a
+   Playwright spec for the journey. Name each after the criterion it proves
+   (see [Tests](#tests)).
+8. **Check, then ship.** Go through [Before you open a pull request](#before-you-open-a-pull-request),
+   run `npm run verify`, push, and open a pull request.
 
 ---
 
-## The branch → PR → merge flow
+## Before you open a pull request
 
-**One branch per SCRUM ticket.** `main` is protected: you cannot push to it
-directly, and a pull request cannot merge until both required checks pass:
-`build-and-test` (including the e2e tests) and the GLM `review`, which fails
-on a critical finding. Once both are green, you can merge your own PR. That is deliberate — `main` is what deploys to production and what the
-graders see, so it stays green by construction rather than by discipline.
+These are the checks the GLM reviewer applies. Catching them yourself saves a
+CI and review round.
+
+**The story**
+
+- [ ] Every acceptance criterion in `docs/backlog/SCRUM-n.md` is covered by a
+      test, or the PR says plainly that it is still to do.
+- [ ] `docs/testing/SCRUM-n.md` lists the cases and which test automates each.
+
+**Security and data**
+
+- [ ] Every exported `"use server"` function is a public endpoint: its first
+      work is `requirePermission()` / `can()`.
+- [ ] Loading something the user isn't related to returns the same "not
+      found" as something that doesn't exist, so ids can't be probed.
+- [ ] A status change is conditional on the status you read (ADR 0006), so
+      two people acting at once can't both succeed.
+- [ ] Counted pools (registration capacity, equipment quantity) are checked
+      under `SELECT … FOR UPDATE` in the writing transaction (ADR 0007). Lock
+      in the same order as everywhere else: event, then request, then
+      equipment rows by id.
+- [ ] No hard deletes, no edited migrations, and an index on any foreign key
+      you filter by.
+
+**UI**
+
+- [ ] Loading, empty and error states; never a blank screen.
+- [ ] Every form control has a label, icon-only buttons have an accessible
+      name, and an error appears next to the field it belongs to.
+- [ ] Submit buttons are disabled while pending, and the page works at phone
+      width.
+- [ ] A `datetime-local` value is converted to a UTC ISO instant in the
+      browser before it reaches the server.
+
+**Tests**
+
+- [ ] See [Tests](#tests). If you weaken or remove a test on purpose, say why
+      in the PR description.
+
+## Tests
+
+The graders check that tests are **evidence**, not just that they exist.
+
+- **Take expected values from the acceptance criteria**, never from running
+  the code. A value copied from the output only confirms what the code
+  already does.
+- **Ask what wrong implementation would make each test fail.** If nothing
+  would, strengthen or delete the test. The surest check: break the code (drop
+  a lock, flip a `>`), and the test must go red.
+- **Test both sides of every boundary** (equal to the limit and one over;
+  periods that touch and periods that overlap).
+- **When an action is refused, assert that nothing was written**, not just
+  that an error came back.
+- **Name every test after what it proves**, using the story key, the
+  criterion and the test case:
+
+  ```
+  SCRUM-53 [AC2] TC-53-03: a rejection cannot be saved without a reason
+  ```
+
+  The reviewer finds your tests by the key, and the graders trace story →
+  criterion → test case → test by these titles. Leave out the `TC-` part only
+  if the story has no specification yet.
+
+---
+
+## Branch → pull request → merge
+
+`main` is protected. You can't push to it, and a pull request can merge only
+when both required checks are green: **`build-and-test`** (including e2e) and
+the **GLM review**, which fails on a critical finding. Once both pass, merge
+your own PR. `main` is what deploys to production and what the graders see,
+so it stays green by construction, not by discipline.
+
+### Every change carries a SCRUM key
+
+Jira links work to a story by finding its key. A change without one is
+invisible to Jira, and that linkage is graded.
+
+| | Format | Example |
+|---|---|---|
+| Branch | key first, then a few words | `SCRUM-53-approve-reject-booking` |
+| Commit | key, then an imperative summary | `SCRUM-53 refuse a rejection without a reason` |
+| Pull request title | key, then the story's name | `SCRUM-53 Approve or reject a booking request` |
+| PR description | a `Closes SCRUM-n` line | `Closes SCRUM-53` |
+
+Never commit `wip` or `fix stuff`, or a bare key with no summary. A commit
+that spans two stories is two commits. Work that is not a story (docs,
+tooling) gets a Jira task first, titled `Chore: …`.
+
+### The flow
 
 ```bash
 # 1. Branch off an up-to-date main
 git checkout main && git pull
-git checkout -b feat/SCRUM-22-booking-approval
+git checkout -b SCRUM-53-approve-reject-booking
 
-# 2. Work, then run the same checks CI will run
+# 2. Work, then run the checks CI fails on most
 npm run verify
 
-# 3. Push
-git add -A && git commit -m "SCRUM-22: approve or reject a booking"
-git push -u origin feat/SCRUM-22-booking-approval
+# 3. Commit and push
+git add -A && git commit -m "SCRUM-53 refuse a rejection without a reason"
+git push -u origin SCRUM-53-approve-reject-booking
 
-# 4. Open the pull request
-gh pr create --fill        # or use the link git prints
+# 4. Open the pull request (the template asks for the sections reviewers need)
+gh pr create
 
-# 5. Merge once the check is green
-gh pr checks               # watch it
-gh pr merge --squash --delete-branch
+# 5. Merge once both checks are green
+gh pr checks
+gh pr merge --delete-branch
 ```
 
-Opening the pull request, and every push to it afterwards, starts two things
-automatically:
+Squash or merge commit are both fine. If you squash, keep the key at the
+start of the squashed title.
+
+Opening a PR moves its story to **In Review** in Jira, not Done. A story is
+**Done** when it is merged, CI is green on `main`, and the Product Owner has
+accepted it.
+
+### Things that will otherwise surprise you
+
+1. **No pull request, no CI.** CI runs on pull requests and on `main`, not on
+   other pushes (SCRUM-151). Run `npm run verify` locally until you open one.
+   It runs typecheck, lint and unit tests in a couple of minutes, but not the
+   integration or e2e tests, so CI can still catch something it didn't.
+2. **Your branch must be up to date with `main` to merge.** If someone merges
+   first, run `git pull origin main` in your branch and let CI run again. What
+   was tested is then exactly what lands.
+3. **Stacked pull requests merge into their base, not into `main`.** If your
+   PR builds on another unmerged PR, its base is that PR's branch. When the
+   first PR merges, change the second PR's base to `main` **before** merging
+   it, or it lands in the old branch and never reaches `main` (this happened
+   to SCRUM-156: #135 merged into SCRUM-155's branch and needed #137).
+   Deleting the first branch on merge makes GitHub retarget it for you.
+4. **There are no preview deployments.** Check UI changes with `npm run dev`;
+   CI's e2e tests check the key journeys. Only `main` deploys.
+5. **Some files need a teammate's approval.** Changes to `.github/`,
+   `package.json`, the test configs or `vercel.json` control the checks
+   themselves, so CODEOWNERS requires a review from someone other than the
+   author. Every team member is a code owner, so any teammate can approve.
+
+### What runs on every pull request
 
 | | What happens | Takes |
 |---|---|---|
-| **GitHub Actions** | migrate → seed → typecheck → lint → unit tests → e2e | ~7–10 minutes |
-| **GLM code review** | one AI reviewer reads the whole diff and posts one long review comment; red on a critical finding (skipped for drafts) | ~3–10 minutes |
+| **GitHub Actions** (`build-and-test`) | migrate → seed → typecheck → lint → unit and integration tests with the coverage check → e2e | about 10 minutes |
+| **GLM review** | one AI reviewer reads the whole change and posts one review comment; skipped for drafts | 3–10 minutes, after CI |
 
-A pushed branch with no pull request gets no CI, so run `npm run verify`
-locally until you open one (SCRUM-151).
+Every push re-runs both.
 
-There are no Vercel preview deployments. Only `main` deploys.
+---
 
-Merging to `main` runs CI again and deploys production.
+## The GLM review
 
-### Four things that will otherwise surprise you
+**What you get.** One comment from `github-actions` in the PR's
+**Conversation** tab, updated on every push: a verdict, an overview, an
+**acceptance criteria** table showing which test covers each criterion, and a
+section per finding with a **Where:** link to the line and a suggested fix.
+There are no inline comments.
 
-1. **`npm run verify` before you push.** It runs typecheck, lint and the unit
-   tests — the three things CI fails on most. Budget a couple of minutes on a
-   cold run; most of that is the first `tsc`, and repeat runs are quicker
-   because typechecking is incremental. The win is not raw speed, it is that a
-   failure lands in your terminal with the error in front of you, instead of
-   as a red cross you have to open CI logs to understand — and it keeps the
-   branch history clean of "fix lint" commits.
-   It does not run the e2e suite (that needs a build and a database), so CI can
-   still catch something `verify` did not.
-2. **Your branch must be up to date with `main` before it can merge.** If
-   someone merges while your PR is open, run `git pull origin main` inside your
-   branch and let CI re-run. This guarantees the combination that was tested is
-   the combination that lands.
-3. **There are no preview deployments.** Check UI changes locally with
-   `npm run dev`; CI's e2e tests check the key journeys. Production uses the
-   shared Supabase database, so never run `db:reset` against it.
-4. **Read the GLM review before you merge; a critical finding blocks it.** Every non-draft
-   PR gets one long AI review from GLM-5.3, which reads the whole diff in a
-   single pass (ADR 0008). It appears in the **Conversation** tab as one
-   comment from `github-actions`, updated on every push: a verdict, an
-   overview, an **acceptance criteria** table, and a section per finding with a
-   **Where:** link to the exact line and a suggested fix. There are no inline
-   comments. The reviewer reads your PR title, description and branch name,
-   this file and CLAUDE.md, and the `docs/backlog` story for every SCRUM key you
-   name. **Put the key in your branch name or title** (e.g.
-   `SCRUM-31-reserve-equipment`), or it can't check the acceptance criteria.
-   It reads all of that from `main`, so edits to those documents in your own PR
-   don't change how your PR is reviewed. The **GLM Code Review**
-   check turns **red** when it finds a critical issue, and it is a required
-   check, so the merge button stays disabled until you fix it and push. High
-   findings don't block, but fix them or reply on the PR with why they don't
-   apply. If GLM stops before answering, the reviewer retries once with less
-   thinking. If that also fails, the check turns red and says why: re-run the
-   failed **GLM Code Review** job from the PR's Checks tab.
-   It checks coverage against every existing test in `tests/` and `e2e/`:
-   unit tests for new logic, integration tests against a real database for
-   locks and transactions, and a Playwright spec with a success path and a
-   failure path for each new page or journey. In UI code it checks for loading,
-   empty and error states, labelled form controls and pending feedback. The
-   acceptance table shows which tests cover each criterion. Only a
-   `Closes SCRUM-n` or `Part of SCRUM-n` line in the description adds a story;
-   other mentions of a key are ignored.
-   The reviewer also reads `.github/ai-review/memory.md`, lessons from past
-   reviews. If it keeps misreading something deliberate, add a dated lesson
-   there through a PR. When it re-runs on your PR, it sees its previous review
-   and the comments on the PR, so if a finding doesn't apply, reply on the PR
-   and say why. It checks your reason against the code before dropping the
-   finding. A PR whose reviewable diff is over 400,000 characters isn't
-   reviewed at all, and the check fails: split it into smaller PRs.
-   Besides your diff, the reviewer reads:
-   - **Your changed files in full**, plus the files they import, the files that
-     import them, and files that mention your SCRUM keys. **Write the key in
-     your code comments and test titles** so it finds them.
-   - **A scan of the whole branch** for role checks outside `can()`, hard
-     deletes and inline date formatting.
-   - **CI's results for your commit,** including which lines you added that
-     no test ran, and when CI fails, the failing tests and their errors. It waits for `build-and-test` first, so its comment arrives a
-     few minutes after CI finishes.
-   - **Every test or assertion you removed, changed or skipped,** next to what
-     replaced it. It must explain each one, and a check you made weaker (a
-     narrower locator, a looser matcher, a deleted test, a `.skip`) is a
-     finding. If you weaken a test on purpose, say why in the PR description.
-   Changes to `.github/`, `package.json`, the test configs or `vercel.json`
-   need Jin Hong's approval (CODEOWNERS), because they control the checks. If Copilot
-   still reviews your PRs, turn off automatic Copilot code review in your
-   personal GitHub Copilot settings. Your diff is sent to BigModel (Zhipu), a
-   third-party provider, so never put secrets in a diff. The reviewer's rules
-   live in `.github/ai-review/instructions.md`.
+**What blocks.** A **critical** finding turns the check red, and the merge
+button stays disabled until you fix it and push. High findings don't block,
+but fix them or reply on the PR saying why they don't apply.
+
+**What it reads.**
+
+- Your PR title, description and branch name.
+- `CONTRIBUTING.md` and `CLAUDE.md`, and the `docs/backlog` file for each
+  story your description names in a `Closes SCRUM-n` or `Part of SCRUM-n`
+  line. It reads these from `main`, so editing them in your own PR doesn't
+  change your review.
+- Your changed files in full, the files they import and the files that import
+  them, and any file that mentions your SCRUM keys. **Put the key in code
+  comments and test titles** so it finds them.
+- A scan of the whole branch for role checks outside `can()`, hard deletes and
+  inline date formatting.
+- CI's results for your commit: lines you added that no test ran, and the
+  failing tests and their errors when CI fails.
+- Every test you removed, changed or skipped, next to what replaced it. A
+  check made weaker (a narrower locator, a looser matcher, a deleted test, a
+  `.skip`) is a finding.
+- Its previous review, the comments on your PR, and
+  `.github/ai-review/memory.md` (lessons from past reviews).
+
+**When it's wrong.** Reply on the PR and say why; on the next run it checks
+your reason against the code before dropping the finding. If it keeps
+misreading something deliberate across PRs, add a dated lesson to
+`.github/ai-review/memory.md` through a PR.
+
+**When it fails to run.** It retries once. If that also fails, the check
+turns red and says why: re-run the **GLM Code Review** job from the PR's
+Checks tab. A PR whose reviewable diff is over 400,000 characters is not
+reviewed and fails the check, so split it.
+
+**Two cautions.** Your diff is sent to BigModel (Zhipu), a third-party
+provider, so never put secrets in a diff. If Copilot still reviews your PRs,
+turn off automatic Copilot code review in your personal GitHub settings.
+
+The reviewer's own rules are in `.github/ai-review/instructions.md`, and
+ADR 0008 records how it came to work this way.
 
 ---
 
@@ -205,46 +301,41 @@ Merging to `main` runs CI again and deploys production.
 
 - **No inline permission checks.** `if (session.user.role === "COORDINATOR")`
   in a feature is rejected. All authorisation goes through `can()` /
-  `requirePermission()` in `lib/auth/can.ts` (ADR 0004). Add an `Action` and a
-  table row instead.
-- **No hard-coded colours.** No hex, `rgb()`, or literal colour in a component.
-  Every colour is a token in `app/globals.css`, surfaced through the Tailwind
-  theme. A rebrand must only touch tokens (brief §11).
-- **Actions return `ActionResult`, they don't throw** across the boundary for
-  expected failures (validation, permission). Throw only for real bugs.
+  `requirePermission()` in `lib/auth/can.ts` (ADR 0004): add an `Action` and a
+  row in the table instead.
+- **No hard-coded colours.** No hex, `rgb()`, or Tailwind palette class such
+  as `bg-slate-100` in a component. Every colour is a token in
+  `app/globals.css`, used through the Tailwind theme, so a rebrand only
+  changes the tokens.
+- **Actions return `ActionResult`; they don't throw** for expected failures
+  such as invalid input or a refused permission. Throw only for real bugs.
 - **Schemas are shared.** The form and the action import the same Zod schema.
   Don't validate twice with two different rules.
-- **No new dependencies** outside the approved stack (brief §2) without a team
-  decision and an ADR. No state-management library, no tRPC, no shared
-  `<DataTable>` (one table is not yet a pattern), no service/repository layer.
+- **No new dependencies** outside the agreed stack (listed in the README)
+  without a team decision and an ADR. No state-management library, no tRPC,
+  no generic service or repository layer, and no shared `<DataTable>` (one
+  table is not yet a pattern).
 - **No comments that restate the code.** Comment the *why*, not the *what*.
-
----
 
 ## Conventions cheat-sheet
 
-- **Datetimes:** store UTC, display via `formatDate` / `formatDateTime` in
-  `lib/datetime.ts` (Asia/Singapore). Never format a date inline.
-- **No hard deletes:** state changes are status changes (see the enums).
+- **Datetimes:** store UTC; display only through `formatDate` /
+  `formatDateTime` in `lib/datetime.ts` (Singapore time). Never format a date
+  inline.
+- **Periods:** use `lib/period.ts`. Periods that touch at an endpoint don't
+  overlap.
+- **No hard deletes:** a lifecycle change is a status change.
 - **Indexes:** if you add a foreign key you filter on, add an `@@index`.
-- **Server-side auth is the real gate.** Hiding a nav link is not access
-  control — guard the page and the action too.
+- **Server-side checks are the real gate.** Hiding a link or a button is not
+  access control; guard the page and the action too.
 
-## The three environment traps (already handled — don't undo them)
+## Three environment traps (already handled, don't undo them)
 
-1. **JWT sessions** are required by the Credentials provider (ADR 0002). Don't
-   switch to database sessions.
-2. **Both database URLs go through the Supabase session pooler** (port 5432,
-   user `postgres.<project-ref>@aws-0-<region>.pooler.supabase.com`). The
-   "direct" host `db.<ref>.supabase.co` is IPv6-only (unusable on IPv4
-   networks) and the 6543 transaction pooler breaks the pg adapter's
-   prepared statements. Both URLs are documented in `.env.example`.
-3. **`passwordHash`** is our addition to the Auth.js `User`; it's hashed with
-   bcrypt in the seed.
-
-## Running things
-
-See `README.md`. In short: `npm run db:deploy && npm run db:seed` to bring
-the shared Supabase database up to date (`db:reset` is the local Docker
-fallback only — it would wipe the shared database), `npm run dev` to develop,
-and `npm run typecheck && npm run lint && npm test` before you push.
+1. **Sessions are JWT**, because the Credentials provider can't use database
+   sessions (ADR 0002). Don't switch to database sessions.
+2. **Both database URLs go through the Supabase session pooler** on port
+   5432. The direct host `db.<ref>.supabase.co` is IPv6-only, and the 6543
+   transaction pooler breaks the pg adapter's prepared statements. Both URLs
+   are documented in `.env.example`.
+3. **`passwordHash`** is our addition to the Auth.js `User`; the seed hashes
+   it with bcrypt.

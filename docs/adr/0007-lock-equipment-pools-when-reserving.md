@@ -1,5 +1,11 @@
 # ADR 0007 — Lock an equipment pool while calculating and creating a reservation
 
+> **Status: amended on 2026-10-05 by the last addendum.** The lock still
+> stands, but `createReservation` no longer exists: equipment is reserved only
+> from an approved request (`reserveEquipmentRequest`, SCRUM-155 and 156),
+> which locks the event, then the request, then the equipment rows in id
+> order.
+
 ## Context
 
 SCRUM-31 reserves a quantity from a shared equipment pool for a time period.
@@ -72,3 +78,43 @@ Following the initial backend pool-locking implementation in SCRUM-31, PR #46 ad
 - Equipment reservation form provides immediate, foolproof feedback before requests hit the server action.
 - Dates and times remain strictly aligned to Singapore time regardless of client location.
 - 100% unit and Playwright E2E coverage validates all interaction paths and error bounds.
+
+---
+
+## Addendum (2026-10-05) — Reserving from an approved request, and one lock order everywhere (SCRUM-155, SCRUM-156)
+
+### Context
+
+SCRUM-155 reserves every line of an approved equipment request in one step,
+and SCRUM-156 makes that the only way to reserve: the one-type form now only
+checks availability, and `createReservation` was removed. A request has
+several lines, so one reservation now locks several `Equipment` rows. It also
+runs beside two other actions that lock the same rows in a different order:
+rejecting a Planning event (SCRUM-117) locks the event and then its requests,
+and confirming an event (SCRUM-81) locks the event. Two transactions that take
+the same rows in opposite orders can deadlock, and Postgres then cancels one.
+
+### Decision
+
+1. **One lock order for every action that touches an event's arrangements:**
+   the `Event` row first, then the `EquipmentRequest` row, then the
+   `Equipment` rows in id order (`ORDER BY "id" FOR UPDATE`). Taking the event
+   first also stops the event being confirmed or rejected while it is being
+   reserved for.
+2. **All or nothing.** Every line is checked against the pool, reservations
+   and maintenance under those locks before anything is written; if any line
+   is short, nothing is reserved.
+3. **What is still to reserve is judged per line** (`outstandingLines` in
+   `lib/equipment/requests.ts`). A line counts as reserved only through
+   confirmed reservations made for that request, or made with the old
+   one-type form, that span the whole event. The listing and the action share
+   this rule, and the action reads it under the locks.
+
+### Consequences
+
+- The same request can't be reserved twice, and two requests racing for the
+  last unit can't over-allocate it, whatever order their lines are in
+  (TC-155-07, TC-155-08).
+- Reserving can't deadlock with rejecting the same event (TC-155-15), and
+  confirming takes the event first too.
+- A new action that locks any of these rows must take them in the same order.
