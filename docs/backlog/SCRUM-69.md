@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-04. Jira is the source of truth.
+     Synced from Jira on 2026-10-07. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-69 - View only the events assigned to me
@@ -10,7 +10,7 @@
 | **Epic** | SCRUM-9 - Access Control |
 | **Priority** | High |
 | **Story points** | 2 |
-| **Status in Jira** | In Progress |
+| **Status in Jira** | Done |
 | **Sprint** | SCRUM Sprint 2 |
 | **Jira** | https://smu-spm-group7.atlassian.net/browse/SCRUM-69 |
 

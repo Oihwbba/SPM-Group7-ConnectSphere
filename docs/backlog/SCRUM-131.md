@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-04. Jira is the source of truth.
+     Synced from Jira on 2026-10-07. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-131 - Use the agreed status names on every screen
@@ -9,7 +9,7 @@
 | **Type** | Story |
 | **Epic** | SCRUM-6 - Event Request Lifecycle |
 | **Priority** | Medium |
-| **Story points** | 1 |
+| **Story points** | 2 |
 | **Status in Jira** | To Do |
 | **Sprint** | Backlog |
 | **Jira** | https://smu-spm-group7.atlassian.net/browse/SCRUM-131 |
@@ -21,11 +21,12 @@
 **Acceptance criteria**
 
 1. Event statuses are shown exactly as Draft, Submitted, Under Review, Approved, Planning, Confirmed, Completed, Cancelled, Rejected. The Organiser's "Submitted" tab in My Event Requests (SCRUM-84), which lists every request that isn't a draft, is renamed "Sent" so it isn't mistaken for the Submitted status.
-2. Venue bookings are shown as Pending, Approved, Rejected or Cancelled. Equipment requests are shown as Pending Review, In Review, Approved, Rejected or Cancelled. Equipment reservations are shown as Reserved or Cancelled, never "Confirmed".
+2. Venue bookings are shown as Pending, Held, Approved, Rejected, Expired or Cancelled. Equipment requests are shown as Pending Review, In Review, Approved, Rejected or Cancelled. Equipment reservations are shown as Reserved or Cancelled, never "Confirmed".
 3. Needs Reconsideration is shown as a separate warning badge next to a booking's or reservation's status, never in place of it (SCRUM-26).
 4. Registrations are shown as Registered, Withdrawn or Cancelled, never "Confirmed".
-5. Change requests are shown as Submitted, Approved or Rejected. Coordinator handovers are shown as Pending, Approved or Cancelled.
+5. Change requests are shown as Submitted, Approved or Rejected.
 6. Attendees never see an internal event status other than Confirmed, Completed or Cancelled; see SCRUM-133.
+7. Safety checks are shown as Not requested, Awaiting review, Approved, Changes requested, Rejected or Outdated (SCRUM-167). The safety check is a step within Planning, not an event status, so the event still shows Planning.
 
 **Related:** these are display names. Stored values can differ; for example a reservation stored as CONFIRMED is shown as Reserved, and a change request stored as PENDING_REVIEW is shown as Submitted.
 
@@ -34,5 +35,6 @@
 **Change log**
 
 * 2026-10-01 (audit): AC1 corrected; the code has no "In Review" tab, and the Organiser's "Submitted" tab lists every request that isn't a draft. AC2 uses the built equipment statuses: request statuses, and Reserved for reservations (SCRUM-31). Waitlisted removed (SCRUM-79 is beyond Release 1). Handovers have no Rejected status, because SCRUM-21 has no decline step.
+* 2026-10-07 (Week 7 changes 4 to 6): AC2 adds the Held and Expired booking statuses (SCRUM-163). AC5 drops the handover statuses, because the Lead now reassigns at once (SCRUM-21). AC7 names the safety check states and keeps the event in Planning (SCRUM-167). Re-estimated from 1 to 2 points.
 
 Functionality Area: Event Status Management
