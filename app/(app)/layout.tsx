@@ -1,17 +1,15 @@
 import { redirect } from "next/navigation";
-import { Search } from "lucide-react";
 
 import { auth } from "@/auth";
 import { ROLE_LABEL } from "@/lib/nav";
 import { Sidebar } from "@/components/app/sidebar";
 import { SphereLogo } from "@/components/app/sphere-logo";
 import { UserMenu } from "@/components/app/user-menu";
-import { Input } from "@/components/ui/input";
 
 /**
  * The shell wrapping every authenticated page.
  *
- * Layout is a "T": a full-width top bar (brand + search + profile) across the
+ * Layout is a "T": a full-width top bar (brand + profile) across the
  * top, and below it the collapsible left nav rail beside the page content. The
  * rail starts under the top bar, so it never overlaps it.
  *
@@ -40,18 +38,6 @@ export default async function AppLayout({
             <span className="font-bold">Connect</span>
             <span className="font-light">Sphere</span>
           </span>
-        </div>
-
-        {/* Global search is a visual placeholder for now — a feature team
-            wires it up later. */}
-        <div className="relative ml-2 hidden w-full max-w-xs md:block">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            type="search"
-            placeholder="Search…"
-            aria-label="Search"
-            className="rounded-full pl-9"
-          />
         </div>
 
         <div className="ml-auto flex items-center gap-1">
