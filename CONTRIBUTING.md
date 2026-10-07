@@ -230,9 +230,10 @@ accepted it.
    Deleting the first branch on merge makes GitHub retarget it for you.
 4. **There are no preview deployments.** Check UI changes with `npm run dev`;
    CI's e2e tests check the key journeys. Only `main` deploys.
-5. **Some files need Jin Hong's approval.** Changes to `.github/`,
+5. **Some files need a teammate's approval.** Changes to `.github/`,
    `package.json`, the test configs or `vercel.json` control the checks
-   themselves, so CODEOWNERS requires the owner's review.
+   themselves, so CODEOWNERS requires a review from someone other than the
+   author. Every team member is a code owner, so any teammate can approve.
 
 ### What runs on every pull request
 

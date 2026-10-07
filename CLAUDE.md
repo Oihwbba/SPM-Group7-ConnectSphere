@@ -95,7 +95,8 @@ disagrees with Jira, Jira wins and the sync is overdue. The index at
   checks are green: `build-and-test` (including e2e) and the GLM `review`,
   which fails on a critical finding or when no review completes. Read the GLM
   review before you merge. Changes to `.github/`, `package.json`, the test
-  configs or `vercel.json` need Jin Hong's approval (CODEOWNERS).
+  configs or `vercel.json` need a teammate's approval (CODEOWNERS lists the
+  whole team), because they control the checks.
 - **A stacked PR merges into its base, not `main`.** Retarget it to `main`
   before merging, as soon as the PR it builds on is merged.
 - A story is not finished until its tests pass in CI.
