@@ -18,7 +18,7 @@ import {
   registrationPeriodText,
   REGISTRATION_STATE_LABEL,
 } from "@/lib/registration-state";
-import { formatDateTime } from "@/lib/datetime";
+import { formatEventTime } from "@/lib/datetime";
 import { RegisterButton } from "./register-button";
 import { WithdrawButton } from "./withdraw-button";
 import type { BrowsableEvent } from "./attendee-events-client";
@@ -82,10 +82,8 @@ export function AttendeeEventDetail({ event }: { event: BrowsableEvent }) {
                 <p className="text-xs font-semibold text-muted-foreground">
                   Date &amp; time
                 </p>
-                <p className="text-foreground">
-                  {event.startAt
-                    ? formatDateTime(event.startAt)
-                    : "To be confirmed"}
+                <p className="text-foreground" data-testid="event-date">
+                  {formatEventTime(event.startAt, event.endAt)}
                 </p>
               </div>
             </div>
