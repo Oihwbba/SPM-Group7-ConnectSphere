@@ -27,7 +27,7 @@ const UPDATED_ELSEWHERE =
   "Someone else updated this request first. Refresh to see its current status.";
 
 /**
- * SCRUM-28 AC 4 — every saved update tells the coordinator who raised the
+ * SCRUM-28 AC 5 — every saved update tells the coordinator who raised the
  * request, inside the same transaction as the update itself.
  */
 function notifyCoordinator(
@@ -145,7 +145,7 @@ export async function createEquipmentRequest(
           },
           select: { id: true },
         });
-        // The history log (SCRUM-28 AC 5) starts with the submission itself.
+        // The history log (SCRUM-28 AC 6) starts with the submission itself.
         await tx.equipmentRequestUpdate.create({
           data: {
             requestId: request.id,
@@ -177,7 +177,7 @@ export async function createEquipmentRequest(
 }
 
 /**
- * SCRUM-28 AC 2 — Technical Support moves a request on: Pending Review → In
+ * SCRUM-28 AC 2, AC 3 — Technical Support moves a request on: Pending Review → In
  * Review, then In Review → Approved or Rejected (`canMoveRequest`).
  *
  * The write is conditional on the status this reviewer saw, so of two
@@ -258,7 +258,7 @@ export async function updateEquipmentRequestStatus(
 }
 
 /**
- * SCRUM-28 AC 3 — when a requested type is unavailable for the event, Technical
+ * SCRUM-28 AC 4 — when a requested type is unavailable for the event, Technical
  * Support picks another type from the inventory to suggest to the coordinator.
  *
  * Both halves are checked against what is free for the event's period: the

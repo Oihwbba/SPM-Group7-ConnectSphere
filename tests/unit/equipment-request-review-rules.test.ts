@@ -14,7 +14,7 @@ import {
 // SCRUM-28 — the pure rules behind reviewing a request: which status moves are
 // allowed, and what a line looks like against what is free for its event.
 
-describe("canMoveRequest — SCRUM-28 AC 2", () => {
+describe("canMoveRequest — SCRUM-28 [AC2, AC3]", () => {
   it.each<[EquipmentRequestStatus, EquipmentRequestStatus]>([
     ["PENDING_REVIEW", "IN_REVIEW"],
     ["IN_REVIEW", "APPROVED"],
@@ -37,7 +37,7 @@ describe("canMoveRequest — SCRUM-28 AC 2", () => {
   });
 });
 
-describe("reviewLine — SCRUM-28 AC 1 & 3", () => {
+describe("reviewLine — SCRUM-28 [AC1, AC4]", () => {
   const catalogue = [
     { id: "eqp_laptop", type: "Laptop" },
     { id: "eqp_lectern", type: "Lectern" },
@@ -51,7 +51,7 @@ describe("reviewLine — SCRUM-28 AC 1 & 3", () => {
     eqp_speaker: { available: 3, total: 8 },
   };
 
-  it("AC 1: a line that fits reports what is free and needs no alternative", () => {
+  it("SCRUM-28 [AC1] TC-28-01: a line that fits reports what is free and needs no alternative", () => {
     expect(
       reviewLine(
         { equipmentId: "eqp_projector", quantity: 2 },
@@ -66,7 +66,7 @@ describe("reviewLine — SCRUM-28 AC 1 & 3", () => {
     });
   });
 
-  it("AC 3: a line that is short offers every other type that could cover the whole quantity", () => {
+  it("SCRUM-28 [AC4] TC-28-07: a line that is short offers every other type that could cover the whole quantity", () => {
     expect(
       reviewLine(
         { equipmentId: "eqp_projector", quantity: 3 },
@@ -84,7 +84,7 @@ describe("reviewLine — SCRUM-28 AC 1 & 3", () => {
     });
   });
 
-  it("AC 3 boundary: an alternative with exactly the quantity free is offered, one fewer is not", () => {
+  it("SCRUM-28 [AC4] TC-28-08: an alternative with exactly the quantity free is offered, one fewer is not", () => {
     const line = reviewLine(
       { equipmentId: "eqp_lectern", quantity: 3 },
       free,
@@ -133,7 +133,7 @@ describe("formatEventPeriod — SCRUM-27 AC 1", () => {
   });
 });
 
-describe("reviewEquipmentRequestSchema — SCRUM-28 AC 2", () => {
+describe("reviewEquipmentRequestSchema — SCRUM-28 [AC2, AC3]", () => {
   it("accepts starting a review with no note", () => {
     const parsed = reviewEquipmentRequestSchema.safeParse({
       requestId: "eqr_1",
@@ -155,7 +155,7 @@ describe("reviewEquipmentRequestSchema — SCRUM-28 AC 2", () => {
     expect(parsed.success && parsed.data.note).toBe("All set.");
   });
 
-  it("requires a reason to reject, so the coordinator knows why", () => {
+  it("SCRUM-28 [AC3] TC-28-04: requires a reason to reject, so the coordinator knows why", () => {
     const parsed = reviewEquipmentRequestSchema.safeParse({
       requestId: "eqr_1",
       toStatus: "REJECTED",
@@ -179,7 +179,7 @@ describe("reviewEquipmentRequestSchema — SCRUM-28 AC 2", () => {
   });
 });
 
-describe("suggestAlternativeSchema — SCRUM-28 AC 3", () => {
+describe("suggestAlternativeSchema — SCRUM-28 [AC4]", () => {
   it("needs the request, the line and the alternative", () => {
     const parsed = suggestAlternativeSchema.safeParse({
       requestId: "eqr_1",

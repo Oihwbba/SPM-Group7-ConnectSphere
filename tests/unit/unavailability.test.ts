@@ -55,7 +55,7 @@ beforeEach(() => {
 });
 
 describe("recordUnavailability — SCRUM-37", () => {
-  it("SCRUM-37 AC2 — venue staff record a period and a reason; the calendar is refreshed", async () => {
+  it("SCRUM-37 [AC1, AC2] TC-37-02: venue staff record a period and a reason; the calendar is refreshed", async () => {
     const result = await recordUnavailability({
       ...valid,
       note: "  Aircon.  ",
@@ -76,7 +76,7 @@ describe("recordUnavailability — SCRUM-37", () => {
     expect(revalidatePath).toHaveBeenCalledWith("/venues/availability");
   });
 
-  it("SCRUM-37 AC2 — a blank note is stored as none", async () => {
+  it("SCRUM-37 [AC1] TC-37-02: a blank note is stored as none", async () => {
     await recordUnavailability({ ...valid, note: "   " });
 
     expect(db.venueUnavailability.create).toHaveBeenCalledWith(
@@ -86,7 +86,7 @@ describe("recordUnavailability — SCRUM-37", () => {
     );
   });
 
-  it("SCRUM-37 AC2 — only venue staff may record unavailability", async () => {
+  it("SCRUM-37 [AC6] TC-37-03: only venue staff may record unavailability", async () => {
     for (const role of [
       "ORGANISER",
       "COORDINATOR",
@@ -102,7 +102,7 @@ describe("recordUnavailability — SCRUM-37", () => {
     expect(db.venueUnavailability.create).not.toHaveBeenCalled();
   });
 
-  it("SCRUM-37 AC2 — an end at or before the start is refused as an invalid period", async () => {
+  it("SCRUM-37 [AC1] TC-37-03: an end at or before the start is refused as an invalid period", async () => {
     const result = await recordUnavailability({ ...valid, endAt: START });
 
     expect(result).toMatchObject({
@@ -113,7 +113,7 @@ describe("recordUnavailability — SCRUM-37", () => {
     expect(db.venue.findFirst).not.toHaveBeenCalled();
   });
 
-  it("SCRUM-37 AC2 — a period with no reason is refused with field errors", async () => {
+  it("SCRUM-37 [AC1] TC-37-03: a period with no reason is refused with field errors", async () => {
     const result = await recordUnavailability({ ...valid, reason: "" });
 
     expect(result).toMatchObject({
@@ -123,7 +123,7 @@ describe("recordUnavailability — SCRUM-37", () => {
     });
   });
 
-  it("SCRUM-37 — an unknown or retired venue is refused", async () => {
+  it("SCRUM-37 [AC2] TC-37-03: SCRUM-37 — an unknown or retired venue is refused", async () => {
     db.venue.findFirst.mockResolvedValue(null);
 
     expect(await recordUnavailability(valid)).toEqual({
@@ -132,7 +132,7 @@ describe("recordUnavailability — SCRUM-37", () => {
     });
   });
 
-  it("SCRUM-37 AC4 — an overlapping approved booking is surfaced and nothing is saved", async () => {
+  it("SCRUM-37 [AC3] TC-37-05: an overlapping approved booking is surfaced and nothing is saved", async () => {
     db.booking.findMany.mockResolvedValue([
       {
         id: "bkg_1",
@@ -149,7 +149,7 @@ describe("recordUnavailability — SCRUM-37", () => {
     expect(db.venueUnavailability.create).not.toHaveBeenCalled();
   });
 
-  it("SCRUM-37 AC4 — an approval that lands between the check and the write is caught by the database, and the clash is shown", async () => {
+  it("SCRUM-37 [AC4] TC-37-06: an approval that lands between the check and the write is caught by the database, and the clash is shown", async () => {
     db.venueUnavailability.create.mockRejectedValue(
       clashRefusal("unavailability_overlaps_booking"),
     );
@@ -171,7 +171,7 @@ describe("recordUnavailability — SCRUM-37", () => {
     });
   });
 
-  it("SCRUM-37 AC4 — if the colliding row is not yet visible, a plain refusal is given", async () => {
+  it("SCRUM-37 [AC4] TC-37-06: if the colliding row is not yet visible, a plain refusal is given", async () => {
     db.venueUnavailability.create.mockRejectedValue(
       clashRefusal("unavailability_overlaps_unavailability"),
     );

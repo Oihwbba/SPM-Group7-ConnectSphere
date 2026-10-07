@@ -81,7 +81,7 @@ describe("reserving outside an approved request — SCRUM-156", () => {
 });
 
 describe("getEquipmentAvailability — SCRUM-31", () => {
-  it("AC 7: deducts confirmed reservations and maintenance from the pool", async () => {
+  it("SCRUM-31 [AC7] TC-31-08: deducts confirmed reservations and maintenance from the pool", async () => {
     poolWithFiveAvailable();
 
     const result = await getEquipmentAvailability(validInput);
@@ -94,7 +94,7 @@ describe("getEquipmentAvailability — SCRUM-31", () => {
     });
   });
 
-  it("AC 4: overlap is half-open — a period that only touches another does not count against it", async () => {
+  it("SCRUM-31 [AC4] TC-31-05: overlap is half-open — a period that only touches another does not count against it", async () => {
     poolWithFiveAvailable();
 
     await getEquipmentAvailability(validInput);
@@ -112,7 +112,7 @@ describe("getEquipmentAvailability — SCRUM-31", () => {
     });
   });
 
-  it("refuses a role without equipment:read", async () => {
+  it("SCRUM-31 TC-31-11: refuses a role without equipment:read", async () => {
     mockAuth.mockResolvedValue(sessionFor("ATTENDEE", "usr_attendee"));
 
     const result = await getEquipmentAvailability(validInput);
@@ -196,7 +196,7 @@ describe("getAllEquipmentAvailability — SCRUM-31", () => {
     }
   });
 
-  it("refuses a period whose end is not after its start", async () => {
+  it("SCRUM-31 TC-31-09: refuses a period whose end is not after its start", async () => {
     mockAuth.mockResolvedValue(sessionFor("TECH_SUPPORT", "usr_tech"));
 
     const result = await getAllEquipmentAvailability({

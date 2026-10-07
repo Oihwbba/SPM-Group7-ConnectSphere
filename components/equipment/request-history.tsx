@@ -21,7 +21,7 @@ function describe(entry: Entry): string | null {
 }
 
 /**
- * SCRUM-28 AC 5 — "a chronological history log of all updates made", oldest
+ * SCRUM-28 AC 6 — "a chronological history log of all updates made", oldest
  * first. Collapsed by default so a long log doesn't push the next request
  * off-screen; the summary says how many entries it holds.
  */

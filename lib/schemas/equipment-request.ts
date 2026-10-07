@@ -61,7 +61,7 @@ export const createEquipmentRequestSchema = z
   });
 
 /**
- * SCRUM-28 AC 2 — Technical Support moves a request on. A rejection must say
+ * SCRUM-28 AC 2, AC 3 — Technical Support moves a request on. A rejection must say
  * why: the coordinator is the one who has to act on it.
  */
 export const reviewEquipmentRequestSchema = z
@@ -80,7 +80,7 @@ export const reviewEquipmentRequestSchema = z
     }
   });
 
-/** SCRUM-28 AC 3 — suggest another type for one line of a request. */
+/** SCRUM-28 AC 4 — suggest another type for one line of a request. */
 export const suggestAlternativeSchema = z.object({
   requestId: z.string().min(1),
   lineId: z.string().min(1),

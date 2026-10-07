@@ -739,7 +739,7 @@ export async function confirmEvent(
       }
 
       // AC 5: registration opens unless the Organiser said it isn't needed
-      // (SCRUM-127). Requests made before that choice existed leave it unset.
+      // (SCRUM-171). Requests made before that choice existed leave it unset.
       await tx.event.update({
         where: { id: eventId },
         data: {
@@ -1060,7 +1060,7 @@ export async function rejectPlanningEvent(
         where: { id: { in: openRequests.map((r) => r.id) } },
         data: { status: "CANCELLED" },
       });
-      // Each request's own history (SCRUM-28 AC 5) says who cancelled it and why.
+      // Each request's own history (SCRUM-28 AC 6) says who cancelled it and why.
       await tx.equipmentRequestUpdate.createMany({
         data: openRequests.map((r) => ({
           requestId: r.id,

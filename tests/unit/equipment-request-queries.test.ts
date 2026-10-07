@@ -34,7 +34,7 @@ beforeEach(() => {
 });
 
 describe("getRequestableEvents — SCRUM-27 AC 1", () => {
-  it("offers only this coordinator's events that are going ahead, soonest first", async () => {
+  it("SCRUM-27 [AC1] TC-27-01: offers only this coordinator's events that are going ahead, soonest first", async () => {
     const events = [
       {
         id: "evt_approved",
@@ -58,13 +58,13 @@ describe("getRequestableEvents — SCRUM-27 AC 1", () => {
     });
   });
 
-  it("AC 1: treats only approved and planning events as ones equipment can be requested for", () => {
+  it("SCRUM-27 [AC1] TC-27-01: treats only approved and planning events as ones equipment can be requested for", () => {
     // A Confirmed event's details are fixed, so equipment must be arranged
     // before it is confirmed (SCRUM-27 AC 1).
     expect([...REQUESTABLE_EVENT_STATUSES]).toEqual(["APPROVED", "PLANNING"]);
   });
 
-  it("AC 1: stock can be reserved for exactly the events that can take a request", () => {
+  it("SCRUM-27 [AC1] TC-27-01: stock can be reserved for exactly the events that can take a request", () => {
     // SCRUM-31 reserves against SCRUM-27's requests, so a request for an event
     // that cannot be reserved for would be unfulfillable.
     expect(RESERVABLE_EVENT_STATUSES).toEqual([...REQUESTABLE_EVENT_STATUSES]);
@@ -98,7 +98,7 @@ describe("getCoordinatorEquipmentRequests — SCRUM-27", () => {
 
   // SCRUM-28 — "so that Event Coordinators know the exact status": the
   // coordinator sees what Technical Support suggested and every update made.
-  it("SCRUM-28 AC 3 & 5: includes suggested alternatives and the history, oldest first", async () => {
+  it("SCRUM-28 [AC4, AC6] TC-28-07, TC-28-10: includes suggested alternatives and the history, oldest first", async () => {
     await getCoordinatorEquipmentRequests("usr_coord");
 
     const query = db.equipmentRequest.findMany.mock.calls[0][0];
@@ -120,7 +120,7 @@ describe("getCoordinatorEquipmentRequests — SCRUM-27", () => {
 });
 
 describe("getEquipmentCatalogue — SCRUM-27 AC 2", () => {
-  it("is the predefined list: every active equipment type, alphabetically", async () => {
+  it("SCRUM-27 [AC2] TC-27-03: is the predefined list: every active equipment type, alphabetically", async () => {
     await getEquipmentCatalogue();
 
     expect(db.equipment.findMany).toHaveBeenCalledWith({

@@ -5,7 +5,9 @@ Format and conventions: [README.md](README.md). Why the database, not the
 application, stops a venue being booked and unavailable at once:
 [ADR 0010, 2026-09-28 addendum](../adr/0010-database-prevents-venue-double-booking.md).
 
-**Shared pre-conditions for every case:** the database is migrated and seeded,
+**Shared pre-conditions for every case:**
+
+> **Week 7 (SCRUM-158).** AC 1 lists the reasons as it did before the 7 Oct change, and AC 3 refuses an overlap with an Approved booking. SCRUM-161 replaces these: the reason list gains Equipment failure, Renovation and Safety concern, and unavailability may now be recorded over future bookings, which are flagged Needs Reconsideration instead of the record being refused. The cases below test the earlier behaviour, which stands until SCRUM-161 lands. the database is migrated and seeded,
 the app is running, and the tester signs in as Venue Staff
 (`venuestaff@test.local` / `Password123!`) unless the case says otherwise.
 Cases use the Grand Auditorium on 10 Jan 2036, clear of anything seeded. Times
@@ -13,11 +15,11 @@ are Singapore time.
 
 | ID | Type | Criterion | Automated |
 |---|---|---|---|
-| [TC-37-01](#tc-37-01) | Positive | AC 1 | Unit, e2e |
-| [TC-37-02](#tc-37-02) | Positive | AC 2 | Unit, integration, e2e |
-| [TC-37-03](#tc-37-03) | Negative | AC 2 (valid period, reason, Venue Staff only) | Unit, integration, e2e |
-| [TC-37-04](#tc-37-04) | Negative | AC 3 | Integration, e2e |
-| [TC-37-05](#tc-37-05) | Negative | AC 4 | Unit, integration, e2e |
+| [TC-37-01](#tc-37-01) | Positive | AC 2 (reflects on the calendar) | Unit, e2e |
+| [TC-37-02](#tc-37-02) | Positive | AC 1 | Unit, integration, e2e |
+| [TC-37-03](#tc-37-03) | Negative | AC 1, AC 6 (valid period, reason, Venue Staff only) | Unit, integration, e2e |
+| [TC-37-04](#tc-37-04) | Negative | AC 2 | Integration, e2e |
+| [TC-37-05](#tc-37-05) | Negative | AC 3 | Unit, integration, e2e |
 | [TC-37-06](#tc-37-06) | Concurrency | AC 4 | Unit, integration |
 | [TC-37-07](#tc-37-07) | Boundary | AC 5 | Integration, e2e |
 
@@ -28,7 +30,7 @@ are Singapore time.
 | Item | Content |
 |---|---|
 | Test Case ID | TC-37-01 |
-| Test Scenario | [Positive] AC 1: a newly approved booking appears on the calendar without inconsistency |
+| Test Scenario | [Positive] AC 2: a newly approved booking makes the venue read as unavailable on the calendar, and an open calendar picks it up |
 | Pre-conditions | A Coordinator has a pending request for the Grand Auditorium, 10 Jan 2036, 9:00 am to 1:00 pm. |
 | Test Steps | 1. Approve the request in **Bookings**. <br> 2. As the Coordinator, open **Availability** for the Grand Auditorium on 10 Jan 2036. <br> 3. Leave a calendar open while someone else approves a request; wait 15 seconds. |
 | Test Data | As above |
@@ -41,7 +43,7 @@ are Singapore time.
 | Item | Content |
 |---|---|
 | Test Case ID | TC-37-02 |
-| Test Scenario | [Positive] AC 2: Venue Staff record non-booking unavailability with a period and a reason |
+| Test Scenario | [Positive] AC 1: Venue Staff record non-booking unavailability with a period and a reason |
 | Pre-conditions | Nothing recorded or booked on the Grand Auditorium on 10 Jan 2036. |
 | Test Steps | 1. Open **Availability**, choose the Grand Auditorium and 10 Jan 2036. <br> 2. Click **Record unavailability**. <br> 3. Enter the period and reason, and save. |
 | Test Data | Start 10 Jan 2036 1:00 pm, End 5:00 pm, Reason Maintenance |
@@ -54,7 +56,7 @@ are Singapore time.
 | Item | Content |
 |---|---|
 | Test Case ID | TC-37-03 |
-| Test Scenario | [Negative] AC 2: an invalid period or a missing reason is refused, and only Venue Staff can record |
+| Test Scenario | [Negative] AC 1, AC 6: an invalid period or a missing reason is refused, and only Venue Staff can record |
 | Pre-conditions | — |
 | Test Steps | 1. Record with the end equal to the start. <br> 2. Record with no reason. <br> 3. As a Coordinator, open **Availability**. <br> 4. As an Organiser or Technical Support, open `/venues/availability`. |
 | Test Data | — |
@@ -67,7 +69,7 @@ are Singapore time.
 | Item | Content |
 |---|---|
 | Test Case ID | TC-37-04 |
-| Test Scenario | [Negative] AC 3: recorded unavailability blocks a request, and an approval, on the same terms as a booking |
+| Test Scenario | [Negative] AC 2: recorded unavailability blocks a request, and an approval, on the same terms as a booking |
 | Pre-conditions | Maintenance recorded 10 Jan 2036, 1:00 pm to 5:00 pm (TC-37-02). |
 | Test Steps | 1. As the Coordinator, request the Grand Auditorium 2:00 pm to 4:00 pm. <br> 2. Separately, approve a pending request made before the maintenance was recorded. |
 | Test Data | As above |
@@ -80,7 +82,7 @@ are Singapore time.
 | Item | Content |
 |---|---|
 | Test Case ID | TC-37-05 |
-| Test Scenario | [Negative] AC 4: recording unavailability over an approved booking surfaces the clash instead of overwriting it |
+| Test Scenario | [Negative] AC 3: recording unavailability over an approved booking surfaces the clash instead of overwriting it |
 | Pre-conditions | An approved booking 10 Jan 2036, 9:00 am to 1:00 pm (TC-37-01). |
 | Test Steps | 1. Record maintenance 10:00 am to 12:00 pm. <br> 2. Record a period overlapping maintenance that is already recorded. |
 | Test Data | As above |

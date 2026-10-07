@@ -45,7 +45,7 @@ export const EQUIPMENT_REQUEST_STATUS_LABEL: Record<
 };
 
 /**
- * SCRUM-28 AC 2 — the moves Technical Support can make. A request is taken
+ * SCRUM-28 AC 2, AC 3 — the moves Technical Support can make. A request is taken
  * into review first, so the coordinator can see someone is working on it, and
  * only a request in review is approved or rejected. Decided is final.
  */
@@ -69,7 +69,7 @@ export type PoolAvailability = Record<
 >;
 
 /**
- * SCRUM-28 AC 1 & 3 — one requested line against what is free for its event.
+ * SCRUM-28 AC 1 & 4 — one requested line against what is free for its event.
  * A short line lists the other types that could cover the whole quantity,
  * which is what Technical Support may suggest instead.
  */

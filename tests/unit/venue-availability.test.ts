@@ -7,7 +7,7 @@ import {
   findVenueCalendar,
 } from "@/lib/venue-availability";
 
-// SCRUM-50 AC3 / SCRUM-53 AC3 — what makes a venue unavailable. The query is
+// SCRUM-50 AC3 / SCRUM-53 AC4, AC8 — what makes a venue unavailable. The query is
 // checked against a stub; the same rule is exercised against real rows in
 // tests/integration/bookings.test.ts.
 const period = {
@@ -25,7 +25,7 @@ function stubDb(bookings: unknown[], unavailability: unknown[]) {
 }
 
 describe("findVenueBlockers", () => {
-  it("SCRUM-50 AC3 — asks only for APPROVED bookings that overlap the period — a pending request blocks nobody", async () => {
+  it("SCRUM-50 [AC3, AC10] TC-50-04: SCRUM-50 AC3 — asks only for APPROVED bookings that overlap the period — a pending request blocks nobody", async () => {
     const db = stubDb([], []);
 
     await findVenueBlockers(db as never, "ven_1", period);
@@ -51,7 +51,7 @@ describe("findVenueBlockers", () => {
     );
   });
 
-  it("SCRUM-50 AC3 — merges bookings and unavailability, earliest first", async () => {
+  it("SCRUM-50 [AC3] TC-50-03: SCRUM-50 AC3 — merges bookings and unavailability, earliest first", async () => {
     const late = {
       id: "bkg_late",
       startAt: new Date("2030-06-01T07:30:00.000Z"),
@@ -121,7 +121,7 @@ describe("availabilityByDay — SCRUM-36", () => {
       s.endAt.toISOString(),
     ]);
 
-  it("SCRUM-36 AC6 — a venue with nothing in the range is free across every day of it, not empty", () => {
+  it("SCRUM-36 [AC6] TC-36-04: a venue with nothing in the range is free across every day of it, not empty", () => {
     const days = availabilityByDay([], "2035-03-10", "2035-03-12");
 
     expect(days.map((d) => d.day)).toEqual([
@@ -140,7 +140,7 @@ describe("availabilityByDay — SCRUM-36", () => {
     }
   });
 
-  it("SCRUM-36 AC3 — an approved booking reads as unavailable, with free time either side", () => {
+  it("SCRUM-36 [AC2] TC-36-01: an approved booking reads as unavailable, with free time either side", () => {
     const [day] = availabilityByDay(
       [booking(sg("2035-03-10", "09:00"), sg("2035-03-10", "13:00"))],
       "2035-03-10",
@@ -156,7 +156,7 @@ describe("availabilityByDay — SCRUM-36", () => {
     expect(day.segments[1].endAt).toEqual(sg("2035-03-10", "13:00"));
   });
 
-  it("SCRUM-36 AC4 — recorded maintenance reads as unavailable and stays distinguishable from a booking", () => {
+  it("SCRUM-36 [AC3] TC-36-02: recorded maintenance reads as unavailable and stays distinguishable from a booking", () => {
     const [day] = availabilityByDay(
       [maintenance(sg("2035-03-10", "09:00"), sg("2035-03-10", "12:00"))],
       "2035-03-10",
@@ -169,7 +169,7 @@ describe("availabilityByDay — SCRUM-36", () => {
     });
   });
 
-  it("SCRUM-36 AC5 — two periods meeting at an endpoint show no gap, and no moment is counted twice", () => {
+  it("SCRUM-36 [AC5] TC-36-03: two periods meeting at an endpoint show no gap, and no moment is counted twice", () => {
     const [day] = availabilityByDay(
       [
         // Given out of order on purpose.
@@ -253,7 +253,7 @@ describe("findVenueCalendar — SCRUM-36 hover details", () => {
     recordedBy: { name: "Vera Venue" },
   };
 
-  it("SCRUM-36 AC3 — like the blocker lookup, asks only for APPROVED bookings overlapping the period", async () => {
+  it("SCRUM-36 [AC2, AC4] TC-36-01: like the blocker lookup, asks only for APPROVED bookings overlapping the period", async () => {
     const db = stubDb([], []);
 
     await findVenueCalendar(db as never, "ven_1", period);

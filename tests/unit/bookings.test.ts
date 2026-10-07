@@ -126,7 +126,7 @@ beforeEach(() => {
 });
 
 describe("submitBookingRequest — SCRUM-50", () => {
-  it("SCRUM-50 AC2 — a request for a free period is created PENDING", async () => {
+  it("SCRUM-50 [AC1, AC2] TC-50-01: SCRUM-50 AC2 — a request for a free period is created PENDING", async () => {
     const result = await submitBookingRequest(validRequest);
 
     expect(result).toEqual({
@@ -207,7 +207,7 @@ describe("submitBookingRequest — SCRUM-50", () => {
     expect(db.booking.create).toHaveBeenCalled();
   });
 
-  describe("SCRUM-50 AC1 — the period and attendance are the event's", () => {
+  describe("SCRUM-50 [AC1] TC-50-15: SCRUM-50 AC1 — the period and attendance are the event's", () => {
     it("SCRUM-50 AC1 — the event's period, rounded out to the half hour, is accepted", async () => {
       db.event.findUnique.mockResolvedValue({
         organiserId: "usr_org",
@@ -340,7 +340,7 @@ describe("submitBookingRequest — SCRUM-50", () => {
     expect(db.booking.create).not.toHaveBeenCalled();
   });
 
-  it("SCRUM-50 AC5 — an end before or equal to the start is reported as an invalid period", async () => {
+  it("SCRUM-50 [AC5] TC-50-06: SCRUM-50 AC5 — an end before or equal to the start is reported as an invalid period", async () => {
     for (const endAt of ["2030-06-01T05:00:00.000Z", START]) {
       const result = await submitBookingRequest({ ...validRequest, endAt });
       expect(result).toMatchObject({
@@ -410,7 +410,7 @@ describe("submitBookingRequest — SCRUM-50", () => {
     });
   });
 
-  it("SCRUM-50 AC8 — an event that already has a pending or approved booking, for any venue, is shown it and nothing is created", async () => {
+  it("SCRUM-50 [AC8] TC-50-07: SCRUM-50 AC8 — an event that already has a pending or approved booking, for any venue, is shown it and nothing is created", async () => {
     db.booking.findFirst.mockResolvedValue(summaryRow);
 
     const result = await submitBookingRequest(validRequest);
@@ -443,7 +443,7 @@ describe("submitBookingRequest — SCRUM-50", () => {
     expect(db.venue.findFirst).not.toHaveBeenCalled();
   });
 
-  it("SCRUM-50 AC3 — a venue already booked for part of the period refuses the request and names the clash", async () => {
+  it("SCRUM-50 [AC3] TC-50-02: SCRUM-50 AC3 — a venue already booked for part of the period refuses the request and names the clash", async () => {
     db.booking.findMany.mockResolvedValue([
       {
         id: "bkg_x",
@@ -503,7 +503,7 @@ describe("submitBookingRequest — SCRUM-50", () => {
   });
 });
 
-describe("checkVenueAvailability — SCRUM-50 live check", () => {
+describe("SCRUM-50 [AC3, AC4, AC5] TC-50-13: checkVenueAvailability — SCRUM-50 live check", () => {
   const period = { venueId: "ven_1", startAt: START, endAt: END };
 
   it("SCRUM-50 AC3 — a free venue is reported available before submitting", async () => {
@@ -542,7 +542,7 @@ describe("checkVenueAvailability — SCRUM-50 live check", () => {
     });
   });
 
-  it("SCRUM-50 AC5 — an end before or equal to the start, or a missing time, is an invalid period and nothing is read", async () => {
+  it("SCRUM-50 [AC5] TC-50-06: SCRUM-50 AC5 — an end before or equal to the start, or a missing time, is an invalid period and nothing is read", async () => {
     for (const bad of [
       { ...period, endAt: START },
       { ...period, startAt: END, endAt: START },
@@ -557,7 +557,7 @@ describe("checkVenueAvailability — SCRUM-50 live check", () => {
     expect(db.booking.findMany).not.toHaveBeenCalled();
   });
 
-  it("SCRUM-50 AC5 — a period that has already started is reported against the start, as submitting would, and nothing is read", async () => {
+  it("SCRUM-50 [AC5] TC-50-11: SCRUM-50 AC5 — a period that has already started is reported against the start, as submitting would, and nothing is read", async () => {
     expect(
       await checkVenueAvailability({
         venueId: "ven_1",
@@ -635,7 +635,7 @@ describe("decideBookingRequest — SCRUM-53", () => {
     db.booking.updateMany.mockResolvedValue({ count: 1 });
   });
 
-  it("SCRUM-53 AC1 & AC3 — approving sets the request APPROVED and records who decided, when, and an audit entry", async () => {
+  it("SCRUM-53 [AC1, AC4] TC-53-01: approving sets the request APPROVED and records who decided, when, and an audit entry", async () => {
     const result = await decideBookingRequest({
       bookingId: "bkg_1",
       decision: "APPROVED",
@@ -663,7 +663,7 @@ describe("decideBookingRequest — SCRUM-53", () => {
     });
   });
 
-  it("SCRUM-53 AC2 — rejecting saves the trimmed free-text reason", async () => {
+  it("SCRUM-53 [AC2] TC-53-02: rejecting saves the trimmed free-text reason", async () => {
     const result = await decideBookingRequest({
       bookingId: "bkg_1",
       decision: "REJECTED",
@@ -683,7 +683,7 @@ describe("decideBookingRequest — SCRUM-53", () => {
     expect(db.booking.findMany).not.toHaveBeenCalled();
   });
 
-  it("SCRUM-53 AC2 — rejecting with a blank reason is refused and nothing is read or written", async () => {
+  it("SCRUM-53 [AC2] TC-53-03: rejecting with a blank reason is refused and nothing is read or written", async () => {
     for (const reason of [undefined, "", "   "]) {
       const result = await decideBookingRequest({
         bookingId: "bkg_1",
@@ -714,7 +714,7 @@ describe("decideBookingRequest — SCRUM-53", () => {
     });
   });
 
-  it("SCRUM-53 — every role except Venue Staff is refused", async () => {
+  it("SCRUM-53 TC-53-08: every role except Venue Staff is refused", async () => {
     for (const role of [
       "ORGANISER",
       "COORDINATOR",
@@ -742,7 +742,7 @@ describe("decideBookingRequest — SCRUM-53", () => {
     ).toEqual({ ok: false, error: "Booking request not found." });
   });
 
-  it("SCRUM-53 AC6 — a request that has already been decided keeps its first decision", async () => {
+  it("SCRUM-53 [AC7] TC-53-07: a request that has already been decided keeps its first decision", async () => {
     db.booking.findUnique.mockResolvedValue({
       ...pendingBooking,
       status: "REJECTED",
@@ -758,7 +758,7 @@ describe("decideBookingRequest — SCRUM-53", () => {
     expect(db.booking.updateMany).not.toHaveBeenCalled();
   });
 
-  it("SCRUM-53 AC6 — a decision that lands after another one wins writes nothing and says what stands", async () => {
+  it("SCRUM-53 [AC7] TC-53-07: a decision that lands after another one wins writes nothing and says what stands", async () => {
     db.booking.updateMany.mockResolvedValue({ count: 0 });
     db.booking.findUniqueOrThrow.mockResolvedValue({ status: "APPROVED" });
 
@@ -776,7 +776,7 @@ describe("decideBookingRequest — SCRUM-53", () => {
     expect(db.auditLog.create).not.toHaveBeenCalled();
   });
 
-  it("SCRUM-53 AC4 — approving over an approved booking or recorded unavailability is returned as conflicting", async () => {
+  it("SCRUM-53 [AC8] TC-53-04: approving over an approved booking or recorded unavailability is returned as conflicting", async () => {
     db.venueUnavailability.findMany.mockResolvedValue([
       {
         id: "vun_1",
@@ -796,7 +796,7 @@ describe("decideBookingRequest — SCRUM-53", () => {
     expect(db.booking.updateMany).not.toHaveBeenCalled();
   });
 
-  it("SCRUM-53 AC4 — when the database refuses a simultaneous overlapping approval, it is returned as conflicting", async () => {
+  it("SCRUM-53 [AC5] TC-53-05: when the database refuses a simultaneous overlapping approval, it is returned as conflicting", async () => {
     db.$transaction.mockRejectedValue(doubleBooking());
 
     const result = await decideBookingRequest({
@@ -812,7 +812,7 @@ describe("decideBookingRequest — SCRUM-53", () => {
     });
   });
 
-  it("SCRUM-53 AC4 — a deadlock between simultaneous approvals is retried once", async () => {
+  it("SCRUM-53 [AC5] TC-53-05: a deadlock between simultaneous approvals is retried once", async () => {
     db.$transaction
       .mockRejectedValueOnce(deadlock())
       .mockImplementationOnce((cb: (tx: typeof db) => unknown) => cb(db));
@@ -826,7 +826,7 @@ describe("decideBookingRequest — SCRUM-53", () => {
     expect(db.$transaction).toHaveBeenCalledTimes(2);
   });
 
-  it("SCRUM-37 AC4 — maintenance recorded at the same instant as an approval: the database refuses the approval, and it is returned as conflicting", async () => {
+  it("SCRUM-37 [AC4] TC-37-06: maintenance recorded at the same instant as an approval: the database refuses the approval, and it is returned as conflicting", async () => {
     db.$transaction.mockRejectedValue(overlapsUnavailability());
 
     const result = await decideBookingRequest({
@@ -842,7 +842,7 @@ describe("decideBookingRequest — SCRUM-53", () => {
     });
   });
 
-  it("SCRUM-37 AC1 — approving refreshes the availability calendar; rejecting does not need to", async () => {
+  it("SCRUM-36 [AC2] TC-37-01: approving refreshes the availability calendar; rejecting does not need to", async () => {
     await decideBookingRequest({ bookingId: "bkg_1", decision: "APPROVED" });
     expect(revalidatePath).toHaveBeenCalledWith("/venues/availability");
 

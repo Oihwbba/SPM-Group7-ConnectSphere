@@ -5,7 +5,9 @@ Format and conventions: [README.md](README.md). How a day is split into
 stretches: `availabilityByDay` in [lib/venue-availability.ts](../../lib/venue-availability.ts),
 which decides overlap with the one rule in [lib/period.ts](../../lib/period.ts).
 
-**Shared pre-conditions for every case:** the database is migrated and seeded,
+**Shared pre-conditions for every case:**
+
+> **Week 7 (SCRUM-158).** AC 2 and AC 4 are written for bare booking and maintenance periods. SCRUM-159 replaces AC 2 with booked periods padded by the venue's setup and turnaround time, and SCRUM-163 changes AC 4 so a Held booking also reads as (tentatively) held, not available. The cases below test the behaviour as built before those stories land. the database is migrated and seeded,
 the app is running, and the tester signs in as an Event Coordinator
 (`coordinator@test.local` / `Password123!`) unless the case says otherwise.
 Times are Singapore time.
@@ -18,13 +20,13 @@ phone and to a screen reader, where a grid of every venue would not.
 
 | ID | Type | Criterion | Automated |
 |---|---|---|---|
-| [TC-36-01](#tc-36-01) | Positive | AC 1, AC 3 | Unit, e2e |
-| [TC-36-02](#tc-36-02) | Positive | AC 4 | Unit, e2e |
+| [TC-36-01](#tc-36-01) | Positive | AC 1, AC 2 | Unit, e2e |
+| [TC-36-02](#tc-36-02) | Positive | AC 3 | Unit, e2e |
 | [TC-36-03](#tc-36-03) | Boundary | AC 5 | Unit, e2e |
 | [TC-36-04](#tc-36-04) | Positive | AC 6 | Unit, e2e |
-| [TC-36-05](#tc-36-05) | Positive, Boundary | AC 7 | Unit, e2e |
+| [TC-36-05](#tc-36-05) | Positive, Boundary | AC 1 | Unit, e2e |
 | [TC-36-06](#tc-36-06) | Positive | Screen readers and phones | e2e |
-| [TC-36-07](#tc-36-07) | Negative | Coordinators and Venue Staff only | Unit, e2e |
+| [TC-36-07](#tc-36-07) | Negative | AC 7 (Coordinators and Venue Staff only) | Unit, e2e |
 | [TC-36-08](#tc-36-08) | Positive | Details on hover | Unit, e2e |
 
 ---
@@ -34,7 +36,7 @@ phone and to a screen reader, where a grid of every venue would not.
 | Item | Content |
 |---|---|
 | Test Case ID | TC-36-01 |
-| Test Scenario | [Positive] AC 1, AC 3: a venue's calendar shows available and unavailable periods; an approved booking reads as unavailable |
+| Test Scenario | [Positive] AC 1, AC 2: a venue's calendar shows available and unavailable periods; an approved booking reads as unavailable |
 | Pre-conditions | An approved booking on the Grand Auditorium, 10 Jan 2036, 9:00 am to 1:00 pm. |
 | Test Steps | 1. Open **Availability**. <br> 2. Choose the Grand Auditorium, From and To 10 Jan 2036. |
 | Test Data | — |
@@ -47,7 +49,7 @@ phone and to a screen reader, where a grid of every venue would not.
 | Item | Content |
 |---|---|
 | Test Case ID | TC-36-02 |
-| Test Scenario | [Positive] AC 4: recorded unavailability reads as unavailable and is visibly different from a booking, not by colour alone |
+| Test Scenario | [Positive] AC 3: recorded unavailability reads as unavailable and is visibly different from a booking, not by colour alone |
 | Pre-conditions | Maintenance recorded on the Grand Auditorium, 10 Jan 2036, 1:00 pm to 5:00 pm. |
 | Test Steps | 1. Open the calendar for that day. <br> 2. Compare it with a booked stretch and the legend. |
 | Test Data | — |
@@ -86,7 +88,7 @@ phone and to a screen reader, where a grid of every venue would not.
 | Item | Content |
 |---|---|
 | Test Case ID | TC-36-05 |
-| Test Scenario | [Positive, Boundary] AC 7: the view can be filtered by date range: a week at a time, and any week can be shown |
+| Test Scenario | [Positive, Boundary] AC 1: the view shows one calendar for a chosen venue and date range; a week at a time, and any week can be shown |
 | Pre-conditions | — |
 | Test Steps | 1. Open **Availability**. <br> 2. With **Go to date**, pick 1 Feb 2036 (a Friday). <br> 3. Click the next-week arrow, then the previous-week arrow twice. <br> 4. With **Go to date**, pick 20 Feb 2036 (a Wednesday). |
 | Test Data | — |
@@ -112,7 +114,7 @@ phone and to a screen reader, where a grid of every venue would not.
 | Item | Content |
 |---|---|
 | Test Case ID | TC-36-07 |
-| Test Scenario | [Negative] Only Coordinators and Venue Staff can view the calendar |
+| Test Scenario | [Negative] AC 7: only Coordinators and Venue Staff can view the calendar |
 | Pre-conditions | — |
 | Test Steps | 1. As an Organiser, then as Technical Support, open `/venues/availability`. |
 | Test Data | `organiser@test.local`, `techsupport@test.local` |

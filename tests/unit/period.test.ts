@@ -12,7 +12,7 @@ const period = (start: string, end: string) => ({
   endAt: at(end),
 });
 
-describe("overlaps — SCRUM-50 AC3 / SCRUM-53 AC4: overlapping periods conflict", () => {
+describe("overlaps — SCRUM-50 AC3 / SCRUM-53 AC5, AC8: overlapping periods conflict", () => {
   it("SCRUM-50 AC3 — periods that clearly overlap conflict, whichever is asked about first", () => {
     expect(overlaps(period("14:00", "16:00"), period("15:00", "17:00"))).toBe(
       true,
@@ -50,7 +50,7 @@ describe("overlaps — SCRUM-50 AC3 / SCRUM-53 AC4: overlapping periods conflict
   });
 });
 
-describe("overlaps — SCRUM-50 AC4 / SCRUM-53 AC5: touching periods do not conflict", () => {
+describe("overlaps — SCRUM-50 AC4 / SCRUM-53 AC6: touching periods do not conflict", () => {
   it("SCRUM-50 AC4 — a period beginning exactly as another ends does not conflict", () => {
     expect(overlaps(period("14:00", "16:00"), period("16:00", "18:00"))).toBe(
       false,

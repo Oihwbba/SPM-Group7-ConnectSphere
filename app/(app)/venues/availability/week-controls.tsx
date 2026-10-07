@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/select";
 import { addDays } from "@/lib/venue-availability";
 
-/** How often an open calendar re-reads the server (SCRUM-37 AC1). */
+/** How often an open calendar re-reads the server (SCRUM-36 AC2). */
 const REFRESH_MS = 15_000;
 
 const emptySubscribe = () => () => {};
@@ -31,8 +31,8 @@ function useShow(venueId: string, week: string) {
 }
 
 /**
- * SCRUM-36 AC7 — which week the calendar shows: arrows either side of the
- * week's dates. Also keeps an open calendar fresh (SCRUM-37 AC1).
+ * SCRUM-36 AC1 — which week the calendar shows: arrows either side of the
+ * week's dates. Also keeps an open calendar fresh (SCRUM-36 AC2).
  */
 export function WeekNav({
   venueId,
@@ -53,7 +53,7 @@ export function WeekNav({
     () => false,
   );
 
-  // SCRUM-37 AC1 — never stale: a booking approved or unavailability recorded
+  // SCRUM-36 AC2 — never stale: a booking approved or unavailability recorded
   // elsewhere appears without the viewer reloading.
   useEffect(() => {
     const interval = setInterval(() => {
@@ -91,7 +91,7 @@ export function WeekNav({
   );
 }
 
-/** SCRUM-36 AC7 — jump straight to the week containing any date. */
+/** SCRUM-36 AC1 — jump straight to the week containing any date. */
 export function GoToDate({ venueId, week }: { venueId: string; week: string }) {
   const show = useShow(venueId, week);
   return (

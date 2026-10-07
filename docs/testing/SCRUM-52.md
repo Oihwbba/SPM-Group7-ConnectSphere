@@ -3,7 +3,9 @@
 Story and acceptance criteria: [docs/backlog/SCRUM-52.md](../backlog/SCRUM-52.md).
 Format and conventions: [README.md](README.md).
 
-**Shared pre-conditions for every case:** the database is migrated and seeded,
+**Shared pre-conditions for every case:**
+
+> **Week 7 (SCRUM-158).** AC 1 shows Pending requests only, and AC 3 shows overlaps against bare periods. SCRUM-163 adds Held requests to the queue and their expiry; SCRUM-159 compares AC 3's overlaps against occupied periods. The cases below test the behaviour as built before those stories land. the database is migrated and seeded,
 the app is running, and the tester signs in as Venue Staff
 (`venuestaff@test.local` / `Password123!`) unless the case says otherwise. The
 seed holds one pending request (`bkg_pending`, Seminar Room 2.1).

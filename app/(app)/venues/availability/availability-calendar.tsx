@@ -36,7 +36,7 @@ const DAY_STARTS = 7;
 
 /**
  * How each kind of stretch looks and reads. "Visibly different" is never
- * colour alone (SCRUM-36 AC4): each kind also has its own icon and label, and
+ * colour alone (SCRUM-36 AC3): each kind also has its own icon and label, and
  * unavailability is striped where a booking is plain.
  */
 const KIND: Record<

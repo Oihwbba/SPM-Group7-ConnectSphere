@@ -5,7 +5,9 @@ Format and conventions: [README.md](README.md). The overlap rule itself is
 [lib/period.ts](../../lib/period.ts); why the database enforces it is
 [ADR 0010](../adr/0010-database-prevents-venue-double-booking.md).
 
-**Shared pre-conditions for every case:** the database is migrated and seeded
+**Shared pre-conditions for every case:**
+
+> **Week 7 (SCRUM-158).** AC 1 fixes the booking's attendance to the event's, AC 2–AC 4 compare bare periods, AC 8 enforces one venue per event, and AC 10 lets only an Approved booking block a venue. SCRUM-162 replaces AC 1 and AC 8 (several venues per event, attendance per booking), SCRUM-159 replaces AC 2–AC 4 (occupied periods), and SCRUM-163 changes AC 10 (a Held booking blocks too). The cases below test the behaviour as built before those stories land. the database is migrated and seeded
 (`npm run db:deploy && npm run db:seed`), the app is running, and the tester
 signs in as an Event Coordinator (`coordinator@test.local` / `Password123!`)
 unless the case says otherwise. Cases use the Exhibition Hall in 2035, so

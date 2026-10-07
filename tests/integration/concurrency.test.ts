@@ -146,7 +146,7 @@ describe.skipIf(!usesLocalDatabase)("concurrency — equipment pool (SCRUM-31)",
     );
   }
 
-  it("does not over-allocate equipment when two staff reserve the last unit (SCRUM-31)", async () => {
+  it("SCRUM-31 [AC5] TC-31-06: does not over-allocate equipment when two staff reserve the last unit (SCRUM-31)", async () => {
     const period = {
       startAt: "2031-03-01T01:00:00.000Z",
       endAt: "2031-03-01T05:00:00.000Z",
@@ -173,7 +173,7 @@ describe.skipIf(!usesLocalDatabase)("concurrency — equipment pool (SCRUM-31)",
     expect(reserved._sum.quantity).toBe(1);
   });
 
-  it("accepts reservations that touch at an endpoint — periods sharing an endpoint do not overlap (SCRUM-31)", async () => {
+  it("SCRUM-31 [AC4] TC-31-05: accepts reservations that touch at an endpoint — periods sharing an endpoint do not overlap (SCRUM-31)", async () => {
     // One unit, three back-to-back periods: each ends exactly when the next begins.
     const [morning, midday, dawn] = await approvedRequestsFor([
       { startAt: "2031-04-01T01:00:00.000Z", endAt: "2031-04-01T03:00:00.000Z" },
@@ -187,7 +187,7 @@ describe.skipIf(!usesLocalDatabase)("concurrency — equipment pool (SCRUM-31)",
   });
 });
 
-// SCRUM-53 AC4 — "two pending requests for the same venue cover overlapping
+// SCRUM-53 AC5 — "two pending requests for the same venue cover overlapping
 // periods, Venue Staff approve both at the same moment, only one approval
 // succeeds and the other is returned as conflicting — the venue is never
 // double-booked." Enforced by the `booking_no_double_booking` EXCLUDE
@@ -281,7 +281,7 @@ describe.skipIf(!usesLocalDatabase)(
       await prisma.user.delete({ where: { id: SECOND_STAFF_ID } });
     });
 
-    it("SCRUM-53 AC4 — two staff approve overlapping requests at the same moment: one succeeds, one is returned as conflicting", async () => {
+    it("SCRUM-53 [AC5] TC-53-05: two staff approve overlapping requests at the same moment: one succeeds, one is returned as conflicting", async () => {
       const first = await pendingRequest(
         firstEventId,
         "2033-02-01T02:00:00.000Z",
@@ -330,7 +330,7 @@ describe.skipIf(!usesLocalDatabase)(
       ).toBe(1);
     });
 
-    it("SCRUM-53 AC4 — the database alone refuses the second of two simultaneous overlapping approvals, however the rows are written", async () => {
+    it("SCRUM-53 [AC5] TC-53-05: the database alone refuses the second of two simultaneous overlapping approvals, however the rows are written", async () => {
       const first = await pendingRequest(
         firstEventId,
         "2033-03-01T02:00:00.000Z",
@@ -370,7 +370,7 @@ describe.skipIf(!usesLocalDatabase)(
       expect(await approvedCount()).toBe(1);
     });
 
-    it("SCRUM-53 AC5 — two staff approve requests that touch at an endpoint at the same moment: both succeed", async () => {
+    it("SCRUM-53 [AC6] TC-53-06: two staff approve requests that touch at an endpoint at the same moment: both succeed", async () => {
       const morning = await pendingRequest(
         firstEventId,
         "2033-04-01T02:00:00.000Z",
@@ -443,7 +443,7 @@ describe.skipIf(!usesLocalDatabase)(
       await prisma.venue.delete({ where: { id: venueId } });
     });
 
-    it("SCRUM-37 AC4 — an approval and a maintenance record for overlapping periods at the same moment: exactly one is saved", async () => {
+    it("SCRUM-37 [AC4] TC-37-06: an approval and a maintenance record for overlapping periods at the same moment: exactly one is saved", async () => {
       [eventId] = await createPlanningEvents("Occupancy race event", [
         {
           startAt: new Date("2033-05-01T02:00:00.000Z"),

@@ -370,7 +370,7 @@ export async function decideBookingRequest(
     await onceMoreOnDeadlock(decide);
 
     revalidatePath("/bookings");
-    // SCRUM-37 AC1: the availability calendar is never stale.
+    // SCRUM-36 AC2: the availability calendar is never stale.
     if (decision === "APPROVED") revalidatePath("/venues/availability");
     return ok({ status: decision });
   } catch (error) {

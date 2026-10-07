@@ -156,7 +156,7 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-29 — equipment availability against
     // The bug this story's fix closes: two reservations of three that never
     // share an instant commit three units, not six. The old SQL sum reported
     // 0 of 4 free across 09:00–16:00 and refused a reservation that fits.
-    it("AC 1 & 4: reports the busiest instant, not the sum of everything touching the period", async () => {
+    it("SCRUM-29 [AC1, AC4]: reports the busiest instant, not the sum of everything touching the period", async () => {
       await reserve(9, 12, 3);
       await reserve(13, 16, 3);
 
@@ -172,7 +172,7 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-29 — equipment availability against
       });
     });
 
-    it("AC 2: a quantity that fits the whole period is accepted by the locked reservation path", async () => {
+    it("SCRUM-29 [AC2]: a quantity that fits the whole period is accepted by the locked reservation path", async () => {
       await reserve(9, 12, 3);
       await reserve(13, 16, 3);
 
@@ -184,7 +184,7 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-29 — equipment availability against
       expect(await reservationCount()).toBe(3);
     });
 
-    it("AC 3: a quantity over the free units is refused with the shortfall, and nothing is written", async () => {
+    it("SCRUM-29 [AC3]: a quantity over the free units is refused with the shortfall, and nothing is written", async () => {
       await reserve(9, 12, 3);
 
       const result = await reserveEquipmentRequest(
@@ -201,7 +201,7 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-29 — equipment availability against
       expect(await reservationCount()).toBe(1);
     });
 
-    it("AC 5: a reservation ending exactly when the period starts leaves the whole pool free", async () => {
+    it("SCRUM-29 [AC5]: a reservation ending exactly when the period starts leaves the whole pool free", async () => {
       await reserve(9, 12, 4);
       await reserve(15, 18, 4);
 
@@ -218,7 +218,7 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-29 — equipment availability against
       expect(reserved.ok).toBe(true);
     });
 
-    it("AC 6: units under maintenance or damaged are not available", async () => {
+    it("SCRUM-29 [AC6]: units under maintenance or damaged are not available", async () => {
       await outOfService(8, 18, 1, "MAINTENANCE");
       await outOfService(10, 11, 1, "DAMAGED");
 
@@ -251,7 +251,7 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-29 — equipment availability against
     // SCRUM-27 AC 1 raises equipment requests for a Planning event, so a
     // reservation has to be possible for one; a Confirmed event cannot take a
     // request, so it cannot take a reservation either.
-    it("reserves for a Planning event, and refuses a Confirmed one without writing", async () => {
+    it("SCRUM-31 TC-31-10: reserves for a Planning event, and refuses a Confirmed one without writing", async () => {
       const planning = await reserveEquipmentRequest(
         await approvedRequestFor(9, 12, 1),
       );
@@ -264,7 +264,7 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-29 — equipment availability against
       expect(await reservationCount()).toBe(1);
     });
 
-    it("AC 7: an end before the start is rejected, reads nothing and writes nothing", async () => {
+    it("SCRUM-29 [AC7]: an end before the start is rejected, reads nothing and writes nothing", async () => {
       const result = await reserveEquipmentRequest({
         ...(await approvedRequestFor(9, 12, 1)),
         startAt: at(12),

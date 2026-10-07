@@ -41,7 +41,7 @@ the seed.
 | Test Data | Event: Approved — Research Symposium |
 | Expected Result | The list shows each of the coordinator's approved and planning events as "name — date", and nothing confirmed, still under review, or assigned to another coordinator. After step 3, "Runs …" shows the event's full start and end. The saved request's `eventId` is that event. |
 
-**Automated by:** `e2e/equipment-requests.spec.ts` › "AC 1, 2, 5 & 6: a coordinator requests equipment for their event and it is saved as Pending Review"; `tests/unit/equipment-request-queries.test.ts` › "offers only this coordinator's events that are going ahead, soonest first"; `tests/integration/equipment-request.test.ts` › "AC 1: offers the coordinator their going-ahead events, and not one still under review or someone else's"
+**Automated by:** `e2e/equipment-requests.spec.ts` › "SCRUM-27 [AC1] TC-27-01: a coordinator requests equipment for their event and it is saved as Pending Review"; `tests/unit/equipment-request-queries.test.ts` › "offers only this coordinator's events that are going ahead, soonest first"; `tests/integration/equipment-request.test.ts` › "SCRUM-27 [AC1] TC-27-01: offers the coordinator their going-ahead events, and not one still under review or someone else's"
 
 ### TC-27-02
 
@@ -54,7 +54,7 @@ the seed.
 | Test Data | Another coordinator's event; a made-up event id; an UNDER_REVIEW event; a CONFIRMED event; a CANCELLED event |
 | Expected Result | Each is refused with "Choose one of your approved events." next to **Event**. No request is created. The same message for every case means the refusal can't be used to find out which event ids exist. |
 
-**Automated by:** `tests/unit/equipment-request.test.ts` › "AC 1: refuses %s with the same message, and saves nothing" (all five); `tests/integration/equipment-request.test.ts` › "AC 1: another coordinator cannot raise a request for this event, and nothing is written"
+**Automated by:** `tests/unit/equipment-request.test.ts` › "SCRUM-27 [AC1] TC-27-02: refuses %s with the same message, and saves nothing" (all five); `tests/integration/equipment-request.test.ts` › "SCRUM-27 [AC1] TC-27-02: another coordinator cannot raise a request for this event, and nothing is written"
 
 ### TC-27-03
 
@@ -67,7 +67,7 @@ the seed.
 | Test Data | Seeded equipment: Laptop, Lectern, PA Speaker, Projector, Wireless Microphone |
 | Expected Result | The list holds exactly the active equipment types, alphabetically, each with the size of its pool. There is no free-text type field. |
 
-**Automated by:** `e2e/equipment-requests.spec.ts` › "AC 2: equipment is chosen from the predefined list of active types"; `tests/unit/equipment-request-queries.test.ts` › "is the predefined list: every active equipment type, alphabetically"
+**Automated by:** `e2e/equipment-requests.spec.ts` › "SCRUM-27 [AC2] TC-27-03: equipment is chosen from the predefined list of active types"; `tests/unit/equipment-request-queries.test.ts` › "is the predefined list: every active equipment type, alphabetically"
 
 ### TC-27-04
 
@@ -80,7 +80,7 @@ the seed.
 | Test Data | Line 2: `equipmentId` = `eqp_retired` |
 | Expected Result | "Please fix the highlighted fields.", with "Select an equipment type from the list." on that line. Nothing is saved. |
 
-**Automated by:** `tests/unit/equipment-request.test.ts` › "AC 2: refuses a type that is not on the predefined list, naming the line"
+**Automated by:** `tests/unit/equipment-request.test.ts` › "SCRUM-27 [AC2] TC-27-04: refuses a type that is not on the predefined list, naming the line"
 
 ### TC-27-05
 
@@ -93,7 +93,7 @@ the seed.
 | Test Data | Refused: 0, -1, 1.5, blank, "two", 1001 <br> Accepted: 1 |
 | Expected Result | Each refused value shows "Quantity must be a positive whole number." under **Quantity** (1001 shows "Quantity can be at most 1,000.") and adds no line. 1 is added. The server refuses the same values if they are sent directly. |
 
-**Automated by:** `e2e/equipment-requests.spec.ts` › "AC 3: a quantity that is not a positive whole number is refused next to the field" (0, -1, 1.5, then 1); `tests/unit/equipment-request-schema.test.ts` › "AC 3: refuses %s as the quantity", "AC 3: accepts exactly 1, the smallest quantity", "refuses a quantity above 1,000, so the database column can never overflow"; `tests/unit/equipment-request.test.ts` › "AC 3: quantity %j is refused next to its line, and nothing is saved"
+**Automated by:** `e2e/equipment-requests.spec.ts` › "SCRUM-27 [AC3] TC-27-05: a quantity that is not a positive whole number is refused next to the field" (0, -1, 1.5, then 1); `tests/unit/equipment-request-schema.test.ts` › "SCRUM-27 [AC3] TC-27-05: refuses %s as the quantity", "SCRUM-27 [AC3] TC-27-05: accepts exactly 1, the smallest quantity", "refuses a quantity above 1,000, so the database column can never overflow"; `tests/unit/equipment-request.test.ts` › "SCRUM-27 [AC3] TC-27-05: quantity %j is refused next to its line, and nothing is saved"
 
 ### TC-27-06
 
@@ -106,7 +106,7 @@ the seed.
 | Test Data | Equipment type: Projector |
 | Expected Result | Step 2 shows "Projector is already on this request." and the request still has one Projector line, × 2. Sent directly, the server refuses the repeat with "This equipment type is already on the request.", and the database's unique line index refuses it too. |
 
-**Automated by:** `e2e/equipment-requests.spec.ts` › "AC 4: adding a type already on the request says so and adds no second line"; `tests/unit/equipment-request.test.ts` › "AC 4: the same type twice creates no duplicate line and says the type is already on the request"; `tests/integration/equipment-request.test.ts` › "AC 4: the database itself refuses a second line of the same type on one request"
+**Automated by:** `e2e/equipment-requests.spec.ts` › "SCRUM-27 [AC4] TC-27-06: adding a type already on the request says so and adds no second line"; `tests/unit/equipment-request.test.ts` › "SCRUM-27 [AC4] TC-27-06: the same type twice creates no duplicate line and says the type is already on the request"; `tests/integration/equipment-request.test.ts` › "SCRUM-27 [AC4] TC-27-06: the database itself refuses a second line of the same type on one request"
 
 ### TC-27-07
 
@@ -119,7 +119,7 @@ the seed.
 | Test Data | Requirements: "HDMI to the lectern" |
 | Expected Result | The saved request lists Projector with "HDMI to the lectern" and the microphone with "None given". Blank requirements are stored as none, not as empty text. |
 
-**Automated by:** `e2e/equipment-requests.spec.ts` › "AC 1, 2, 5 & 6: …"; `tests/unit/equipment-request-schema.test.ts` › "AC 5: keeps free-text technical requirements, trimmed", "AC 5: technical requirements are optional, and a blank one is stored as none"; `tests/integration/equipment-request.test.ts` › "AC 1, 2, 5 & 6: saves the request, its lines and its first history entry as Pending Review"
+**Automated by:** `e2e/equipment-requests.spec.ts` › "AC 1, 2, 5 & 6: …"; `tests/unit/equipment-request-schema.test.ts` › "SCRUM-27 [AC5] TC-27-07: keeps free-text technical requirements, trimmed", "SCRUM-27 [AC5] TC-27-07: technical requirements are optional, and a blank one is stored as none"; `tests/integration/equipment-request.test.ts` › "SCRUM-27 [AC5] TC-27-07: saves the request, its lines and its first history entry as Pending Review"
 
 ### TC-27-08
 
@@ -132,7 +132,7 @@ the seed.
 | Test Data | As TC-27-07 |
 | Expected Result | "Request submitted. It's now Pending Review." The new request is highlighted in the list with the status **Pending Review**. The database holds it as `PENDING_REVIEW`, with one history entry: no previous status → `PENDING_REVIEW`, "Request submitted.", by the coordinator. |
 
-**Automated by:** `e2e/equipment-requests.spec.ts` › "AC 1, 2, 5 & 6: …"; `tests/unit/equipment-request.test.ts` › "AC 1, 2, 5 & 6: saves the request for the event, …", "AC 6: records the submission as the first entry in the request's history"; `tests/integration/equipment-request.test.ts` › "AC 1, 2, 5 & 6: …"
+**Automated by:** `e2e/equipment-requests.spec.ts` › "AC 1, 2, 5 & 6: …"; `tests/unit/equipment-request.test.ts` › "AC 1, 2, 5 & 6: saves the request for the event, …", "SCRUM-27 [AC6] TC-27-08: records the submission as the first entry in the request's history"; `tests/integration/equipment-request.test.ts` › "AC 1, 2, 5 & 6: …"
 
 ### TC-27-09
 
@@ -145,7 +145,7 @@ the seed.
 | Test Data | Seeded: "Planning — Freshman Orientation" already has `eqr_planning` in Pending Review |
 | Expected Result | "This event already has a request waiting for review, so no new one was made. It's highlighted below." The existing request is scrolled into view and highlighted. The event still has exactly one request. |
 
-**Automated by:** `e2e/equipment-requests.spec.ts` › "AC 7: submitting for an event with a request pending review shows that request instead"; `tests/unit/equipment-request.test.ts` › "AC 7: an event with a request pending review shows that request instead of creating a second"; `tests/integration/equipment-request.test.ts` › "AC 7: a second submission for the same event returns the request pending review"
+**Automated by:** `e2e/equipment-requests.spec.ts` › "SCRUM-27 [AC7] TC-27-09: submitting for an event with a request pending review shows that request instead"; `tests/unit/equipment-request.test.ts` › "SCRUM-27 [AC7] TC-27-09: an event with a request pending review shows that request instead of creating a second"; `tests/integration/equipment-request.test.ts` › "SCRUM-27 [AC7] TC-27-09: a second submission for the same event returns the request pending review"
 
 ### TC-27-10
 
@@ -158,7 +158,7 @@ the seed.
 | Test Data | Any requestable event |
 | Expected Result | The event has exactly one request. One session is told its request was submitted; the other is shown that same request. The partial unique index `EquipmentRequest_one_open_per_event` is what guarantees this, so it also holds for a write that bypasses the action. |
 
-**Automated by:** `tests/integration/equipment-request.test.ts` › "AC 7: two submissions at the same moment leave one request, and both are shown it", "AC 7: the index is what enforces one open request, not just the action"; `tests/unit/equipment-request.test.ts` › "AC 7: when a simultaneous submission wins the race, the loser is shown the winner's request"
+**Automated by:** `tests/integration/equipment-request.test.ts` › "SCRUM-27 [AC7] TC-27-10: two submissions at the same moment leave one request, and both are shown it", "SCRUM-27 [AC7] TC-27-10: the index is what enforces one open request, not just the action"; `tests/unit/equipment-request.test.ts` › "SCRUM-27 [AC7] TC-27-10: when a simultaneous submission wins the race, the loser is shown the winner's request"
 
 ### TC-27-11
 
@@ -197,7 +197,7 @@ the seed.
 | Test Data | None |
 | Expected Result | "Select an event." under **Event** and "Add at least one equipment item." under **Equipment**. The dialog stays open and nothing is sent. |
 
-**Automated by:** `e2e/equipment-requests.spec.ts` › "a request needs an event and at least one item before it is sent"; `tests/unit/equipment-request-schema.test.ts` › "AC 1: requires the event the request is for", "requires at least one equipment item"
+**Automated by:** `e2e/equipment-requests.spec.ts` › "a request needs an event and at least one item before it is sent"; `tests/unit/equipment-request-schema.test.ts` › "SCRUM-27 TC-27-13: requires the event the request is for", "requires at least one equipment item"
 
 ### TC-27-14
 
@@ -210,7 +210,7 @@ the seed.
 | Test Data | The rig from `e2e/equipment-request-review.spec.ts`, rejected with "Not enough lecterns that day." |
 | Expected Result | The card shows each line's type, quantity and technical requirements; the status badge; the suggested alternative; and the history. When the status is Rejected, the reason is on the card itself, not only inside the collapsed history log. |
 
-**Automated by:** `e2e/equipment-request-review.spec.ts` › "AC 8: the coordinator sees a rejected request with its reason, without opening the history"; `e2e/equipment-requests.spec.ts` › "AC 1, 2, 5 & 6" (lines and status); `tests/unit/equipment-request-queries.test.ts` › "SCRUM-28 AC 3 & 5: includes suggested alternatives and the history, oldest first"
+**Automated by:** `e2e/equipment-request-review.spec.ts` › "SCRUM-27 [AC8] TC-27-14: the coordinator sees a rejected request with its reason, without opening the history"; `e2e/equipment-requests.spec.ts` › "AC 1, 2, 5 & 6" (lines and status); `tests/unit/equipment-request-queries.test.ts` › "SCRUM-28 AC 3 & 5: includes suggested alternatives and the history, oldest first"
 
 ### TC-27-15
 

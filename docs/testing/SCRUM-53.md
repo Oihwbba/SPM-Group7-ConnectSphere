@@ -5,19 +5,21 @@ Format and conventions: [README.md](README.md). Why the database, not the
 application, settles simultaneous approvals:
 [ADR 0010](../adr/0010-database-prevents-venue-double-booking.md).
 
-**Shared pre-conditions for every case:** the database is migrated and seeded,
+**Shared pre-conditions for every case:**
+
+> **Week 7 (SCRUM-158).** AC 1 and AC 7 know only Approve and Reject, and AC 4–AC 6 and AC 8 compare bare periods. SCRUM-163 adds the Held and Expired outcomes (replacing AC 1 and AC 7), and SCRUM-159 compares AC 4–AC 6 and AC 8 against occupied periods. The cases below test the behaviour as built before those stories land. the database is migrated and seeded,
 the app is running, and the tester signs in as Venue Staff
 (`venuestaff@test.local` / `Password123!`) unless the case says otherwise.
 
 | ID | Type | Criterion | Automated |
 |---|---|---|---|
-| [TC-53-01](#tc-53-01) | Positive | AC 1, AC 3 | Unit, integration, e2e |
+| [TC-53-01](#tc-53-01) | Positive | AC 1, AC 4 | Unit, integration, e2e |
 | [TC-53-02](#tc-53-02) | Positive | AC 1, AC 2 | Unit, integration, e2e |
 | [TC-53-03](#tc-53-03) | Negative | AC 2 | Unit, integration, e2e |
-| [TC-53-04](#tc-53-04) | Negative | AC 4 (sequential) | Unit, integration |
-| [TC-53-05](#tc-53-05) | Concurrency | AC 4 | Unit, integration |
-| [TC-53-06](#tc-53-06) | Boundary, Concurrency | AC 5 | Integration |
-| [TC-53-07](#tc-53-07) | Negative | AC 6 | Unit, integration |
+| [TC-53-04](#tc-53-04) | Negative | AC 8 (sequential) | Unit, integration |
+| [TC-53-05](#tc-53-05) | Concurrency | AC 5 | Unit, integration |
+| [TC-53-06](#tc-53-06) | Boundary, Concurrency | AC 6 | Integration |
+| [TC-53-07](#tc-53-07) | Negative | AC 7 | Unit, integration |
 | [TC-53-08](#tc-53-08) | Negative | Venue Staff only | Unit |
 
 ---
@@ -27,7 +29,7 @@ the app is running, and the tester signs in as Venue Staff
 | Item | Content |
 |---|---|
 | Test Case ID | TC-53-01 |
-| Test Scenario | [Positive] AC 1, AC 3: approving makes the venue unavailable for that period |
+| Test Scenario | [Positive] AC 1, AC 4: approving makes the venue unavailable for that period |
 | Pre-conditions | TC-50-01 is pending. |
 | Test Steps | 1. Open **Bookings**. <br> 2. Click **Approve** on the request. <br> 3. As the Coordinator, request an overlapping period (TC-50-02). |
 | Test Data | As TC-50-01 |
@@ -66,7 +68,7 @@ the app is running, and the tester signs in as Venue Staff
 | Item | Content |
 |---|---|
 | Test Case ID | TC-53-04 |
-| Test Scenario | [Negative] AC 4: approving over an approved booking or recorded unavailability is returned as conflicting |
+| Test Scenario | [Negative] AC 8: approving over an approved booking or recorded unavailability is returned as conflicting |
 | Pre-conditions | Two pending requests overlapping on one venue; one is approved. Or: maintenance recorded over the pending request. |
 | Test Steps | 1. Approve the second request. |
 | Test Data | — |
@@ -79,7 +81,7 @@ the app is running, and the tester signs in as Venue Staff
 | Item | Content |
 |---|---|
 | Test Case ID | TC-53-05 |
-| Test Scenario | [Concurrency] AC 4: two staff approve overlapping requests at the same moment; exactly one succeeds and the venue is never double-booked |
+| Test Scenario | [Concurrency] AC 5: two staff approve overlapping requests at the same moment; exactly one succeeds and the venue is never double-booked |
 | Pre-conditions | Real PostgreSQL. Two pending requests on one venue, 10:00–14:00 and 12:00–16:00. Two Venue Staff users. |
 | Test Steps | 1. Both approve at once. The test holds each approval after the application's own conflict check until both have passed it, so only the database can separate them. <br> 2. Separately, approve both with raw SQL in two open transactions, bypassing the application. |
 | Test Data | — |
@@ -92,7 +94,7 @@ the app is running, and the tester signs in as Venue Staff
 | Item | Content |
 |---|---|
 | Test Case ID | TC-53-06 |
-| Test Scenario | [Boundary, Concurrency] AC 5: requests that touch at an endpoint can both be approved, one after the other or at once |
+| Test Scenario | [Boundary, Concurrency] AC 6: requests that touch at an endpoint can both be approved, one after the other or at once |
 | Pre-conditions | Two pending requests, 10:00–14:00 and 14:00–18:00, same venue. |
 | Test Steps | 1. Approve both. |
 | Test Data | — |
@@ -105,7 +107,7 @@ the app is running, and the tester signs in as Venue Staff
 | Item | Content |
 |---|---|
 | Test Case ID | TC-53-07 |
-| Test Scenario | [Negative] AC 6: a request already approved or rejected keeps its first decision |
+| Test Scenario | [Negative] AC 7: a request already approved or rejected keeps its first decision |
 | Pre-conditions | A request that has been decided. |
 | Test Steps | 1. Submit the opposite decision for it. <br> 2. Separately, approve and reject one pending request at the same instant. |
 | Test Data | — |

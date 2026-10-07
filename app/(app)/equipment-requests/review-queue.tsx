@@ -289,7 +289,7 @@ function ReviewCard({ request }: { request: QueuedEquipmentRequest }) {
 }
 
 /**
- * SCRUM-28 AC 1 & 3 — how a line stands against what is free for the event,
+ * SCRUM-28 AC 1 & 4 — how a line stands against what is free for the event,
  * and, when it is short and the request is in review, the alternatives that
  * could cover the whole quantity.
  */

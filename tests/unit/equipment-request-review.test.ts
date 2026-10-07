@@ -81,7 +81,7 @@ beforeEach(() => {
 });
 
 describe("updateEquipmentRequestStatus — SCRUM-28", () => {
-  it("AC 2: takes a pending request into review, records it and tells the coordinator", async () => {
+  it("SCRUM-28 [AC2, AC5, AC6] TC-28-02: takes a pending request into review, records it and tells the coordinator", async () => {
     db.equipmentRequest.findUnique.mockResolvedValue(stored("PENDING_REVIEW"));
 
     const result = await updateEquipmentRequestStatus({
@@ -94,7 +94,7 @@ describe("updateEquipmentRequestStatus — SCRUM-28", () => {
       where: { id: "eqr_1", status: "PENDING_REVIEW" },
       data: { status: "IN_REVIEW", decidedAt: null },
     });
-    // AC 5: the update joins the request's history.
+    // AC 6: the update joins the request's history.
     expect(tx.equipmentRequestUpdate.create).toHaveBeenCalledWith({
       data: {
         requestId: "eqr_1",
@@ -104,7 +104,7 @@ describe("updateEquipmentRequestStatus — SCRUM-28", () => {
         note: null,
       },
     });
-    // AC 4: the coordinator who raised it is notified automatically.
+    // AC 5: the coordinator who raised it is notified automatically.
     expect(tx.notification.create).toHaveBeenCalledWith({
       data: {
         userId: "usr_coord",
@@ -119,7 +119,7 @@ describe("updateEquipmentRequestStatus — SCRUM-28", () => {
     expect(revalidatePath).toHaveBeenCalledWith("/equipment-requests");
   });
 
-  it("AC 2 & 4: approves a request in review, stamping the decision and passing on the note", async () => {
+  it("SCRUM-28 [AC3, AC5] TC-28-03: approves a request in review, stamping the decision and passing on the note", async () => {
     db.equipmentRequest.findUnique.mockResolvedValue(stored("IN_REVIEW"));
 
     const result = await updateEquipmentRequestStatus({
@@ -138,7 +138,7 @@ describe("updateEquipmentRequestStatus — SCRUM-28", () => {
     );
   });
 
-  it("AC 2 & 4: rejects a request in review with the reason", async () => {
+  it("SCRUM-28 [AC3, AC5] TC-28-04: rejects a request in review with the reason", async () => {
     db.equipmentRequest.findUnique.mockResolvedValue(stored("IN_REVIEW"));
 
     const result = await updateEquipmentRequestStatus({
@@ -157,7 +157,7 @@ describe("updateEquipmentRequestStatus — SCRUM-28", () => {
     });
   });
 
-  it("AC 2: a rejection without a reason is refused next to the note, and nothing is written", async () => {
+  it("SCRUM-28 [AC3] TC-28-04: a rejection without a reason is refused next to the note, and nothing is written", async () => {
     const result = await updateEquipmentRequestStatus({
       requestId: "eqr_1",
       toStatus: "REJECTED",
@@ -178,7 +178,7 @@ describe("updateEquipmentRequestStatus — SCRUM-28", () => {
     ["APPROVED", "REJECTED", "Approved", "Rejected"],
     ["REJECTED", "IN_REVIEW", "Rejected", "In Review"],
   ])(
-    "AC 2: refuses %s → %s, and writes nothing",
+    "SCRUM-28 [AC2, AC3] TC-28-05: refuses %s → %s, and writes nothing",
     async (from, to, fromLabel, toLabel) => {
       db.equipmentRequest.findUnique.mockResolvedValue(stored(from));
 
@@ -197,7 +197,7 @@ describe("updateEquipmentRequestStatus — SCRUM-28", () => {
     },
   );
 
-  it("when another reviewer changes the request first, says so and records nothing", async () => {
+  it("SCRUM-28 [AC7] TC-28-06: when another reviewer changes the request first, says so and records nothing", async () => {
     db.equipmentRequest.findUnique.mockResolvedValue(stored("PENDING_REVIEW"));
     tx.equipmentRequest.updateMany.mockResolvedValue({ count: 0 });
 
@@ -270,7 +270,7 @@ describe("updateEquipmentRequestStatus — SCRUM-28", () => {
   });
 });
 
-describe("suggestAlternativeEquipment — SCRUM-28 AC 3", () => {
+describe("suggestAlternativeEquipment — SCRUM-28 [AC4]", () => {
   const input = {
     requestId: "eqr_1",
     lineId: "eql_1",
@@ -291,7 +291,7 @@ describe("suggestAlternativeEquipment — SCRUM-28 AC 3", () => {
     });
   });
 
-  it("AC 3 & 4: records the alternative on the short line, logs it and tells the coordinator", async () => {
+  it("SCRUM-28 [AC4, AC5] TC-28-07: records the alternative on the short line, logs it and tells the coordinator", async () => {
     const result = await suggestAlternativeEquipment(input);
 
     expect(result).toEqual({ ok: true, data: { alternativeId: "eqp_laptop" } });
@@ -344,7 +344,7 @@ describe("suggestAlternativeEquipment — SCRUM-28 AC 3", () => {
     expect(revalidatePath).toHaveBeenCalledWith("/equipment-requests");
   });
 
-  it("AC 3: a requested type withdrawn from the pool counts as unavailable, so it can be replaced", async () => {
+  it("SCRUM-28 [AC4] TC-28-07: a requested type withdrawn from the pool counts as unavailable, so it can be replaced", async () => {
     mockPool.mockResolvedValue({ eqp_laptop: { available: 6, total: 15 } });
 
     const result = await suggestAlternativeEquipment(input);
@@ -355,7 +355,7 @@ describe("suggestAlternativeEquipment — SCRUM-28 AC 3", () => {
     );
   });
 
-  it("AC 3: only while the request is in review", async () => {
+  it("SCRUM-28 [AC4] TC-28-08: only while the request is in review", async () => {
     db.equipmentRequest.findUnique.mockResolvedValue(
       stored("PENDING_REVIEW", [shortLine]),
     );
@@ -369,7 +369,7 @@ describe("suggestAlternativeEquipment — SCRUM-28 AC 3", () => {
     expect(db.$transaction).not.toHaveBeenCalled();
   });
 
-  it("AC 3: only for equipment that is unavailable", async () => {
+  it("SCRUM-28 [AC4] TC-28-08: only for equipment that is unavailable", async () => {
     mockPool.mockResolvedValue({
       eqp_lectern: { available: 3, total: 4 },
       eqp_laptop: { available: 6, total: 15 },
@@ -385,7 +385,7 @@ describe("suggestAlternativeEquipment — SCRUM-28 AC 3", () => {
     expect(db.$transaction).not.toHaveBeenCalled();
   });
 
-  it("AC 3: the alternative must itself be available for the whole quantity", async () => {
+  it("SCRUM-28 [AC4] TC-28-08: the alternative must itself be available for the whole quantity", async () => {
     mockPool.mockResolvedValue({
       eqp_lectern: { available: 1, total: 4 },
       eqp_laptop: { available: 2, total: 15 },
@@ -422,7 +422,7 @@ describe("suggestAlternativeEquipment — SCRUM-28 AC 3", () => {
     expect(db.$transaction).not.toHaveBeenCalled();
   });
 
-  it("AC 3: the alternative must be a different type from the inventory", async () => {
+  it("SCRUM-28 [AC4] TC-28-08: the alternative must be a different type from the inventory", async () => {
     const same = await suggestAlternativeEquipment({
       ...input,
       alternativeId: "eqp_lectern",

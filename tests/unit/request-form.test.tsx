@@ -97,7 +97,7 @@ describe("RequestForm — SCRUM-50", () => {
   });
 });
 
-describe("liveAnswer — SCRUM-50 live check", () => {
+describe("SCRUM-50 [AC3, AC4, AC5] TC-50-13: liveAnswer — SCRUM-50 live check", () => {
   it("SCRUM-50 AC3 — a free venue reads free, and a taken one names its clashes", () => {
     expect(
       liveAnswer({ ok: true, data: { available: true, clashes: [] } }),
@@ -143,7 +143,7 @@ describe("liveAnswer — SCRUM-50 live check", () => {
   });
 });
 
-describe("layoutOption — SCRUM-50", () => {
+describe("SCRUM-50 [AC1] TC-50-12: layoutOption — SCRUM-50", () => {
   const options = ["banquet", "classroom", "theatre"];
 
   it("SCRUM-50 AC1 — the event's preferred layout is pre-selected whatever its case or spacing", () => {
@@ -164,7 +164,7 @@ describe("venuesForLayout — SCRUM-50", () => {
   const hall = { id: "hall", supportedLayouts: ["theatre", "banquet"] };
   const room = { id: "room", supportedLayouts: ["classroom", "theatre"] };
 
-  it("SCRUM-50 AC1 — once a layout is chosen, only venues that support it are offered", () => {
+  it("SCRUM-50 [AC1] TC-50-12: SCRUM-50 AC1 — once a layout is chosen, only venues that support it are offered", () => {
     expect(venuesForLayout([hall, room], "banquet")).toEqual([hall]);
     expect(venuesForLayout([hall, room], "theatre")).toEqual([hall, room]);
     expect(venuesForLayout([hall, room], "boardroom")).toEqual([]);
@@ -183,7 +183,7 @@ describe("the half-hour time grid — SCRUM-50", () => {
   });
 });
 
-describe("eventBookingPeriod — SCRUM-50 AC1", () => {
+describe("SCRUM-50 [AC1] TC-50-15: eventBookingPeriod — SCRUM-50 AC1", () => {
   // Singapore times: 09:10 to 16:45, and 23:50 crossing midnight.
   const sg = (wall: string) => new Date(`${wall}:00+08:00`);
 

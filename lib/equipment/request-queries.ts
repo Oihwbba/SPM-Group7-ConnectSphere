@@ -35,7 +35,7 @@ const IN_ENTRY_ORDER: Prisma.EquipmentRequestLineOrderByWithRelationInput[] = [
   { id: "asc" },
 ];
 
-/** SCRUM-28 AC 5 — the chronological history log of a request. */
+/** SCRUM-28 AC 6 — the chronological history log of a request. */
 const HISTORY = {
   select: {
     id: true,
@@ -73,7 +73,7 @@ export async function getEquipmentCatalogue() {
 
 /**
  * The requests raised for this coordinator's events, newest first, with what
- * Technical Support suggested and every update made (SCRUM-28 AC 3 and 5).
+ * Technical Support suggested and every update made (SCRUM-28 AC 4 and 6).
  */
 export async function getCoordinatorEquipmentRequests(coordinatorId: string) {
   return prisma.equipmentRequest.findMany({
@@ -105,7 +105,7 @@ export type CoordinatorEquipmentRequest = Awaited<
 >[number];
 
 /**
- * SCRUM-28 AC 3 — what each active equipment type has free for a period.
+ * SCRUM-28 AC 1 & 4 — what each active equipment type has free for a period.
  * Rows, not sums: the pool is counted, so each type's answer is its busiest
  * instant, the same rule SCRUM-29's availability check uses.
  */

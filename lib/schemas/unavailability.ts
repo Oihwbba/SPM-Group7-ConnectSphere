@@ -12,7 +12,7 @@ export const UNAVAILABILITY_REASONS = [
 ] as const;
 
 /**
- * SCRUM-37 AC2 — "Venue Staff can record non-booking unavailability
+ * SCRUM-37 AC1 — "Venue Staff can record non-booking unavailability
  * directly, with a period and a reason (e.g. maintenance, closure)."
  *
  * `startAt`/`endAt` are UTC ISO strings, converted from Singapore wall time
