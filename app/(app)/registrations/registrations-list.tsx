@@ -4,7 +4,7 @@ import type { EventStatus, RegistrationStatus } from "@prisma/client";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { formatDate, formatDateTime, formatTime } from "@/lib/datetime";
+import { formatEventTime } from "@/lib/datetime";
 import type { MyRegistration } from "./queries";
 
 const STATUS_LABEL: Record<RegistrationStatus, string> = {
@@ -28,21 +28,6 @@ export function shownRegistrationStatus(
   eventStatus: EventStatus,
 ): RegistrationStatus {
   return eventStatus === "CANCELLED" ? "CANCELLED" : registrationStatus;
-}
-
-/**
- * SCRUM-76 AC1: the event's date and time, e.g.
- * "15 Jan 2026, 10:00 am SGT – 4:00 pm SGT", or the full end date when the
- * event runs past midnight (Singapore time).
- */
-export function eventTimeText(startAt: Date | null, endAt: Date | null) {
-  if (!startAt) return "Date to be confirmed";
-  if (!endAt) return formatDateTime(startAt);
-  const end =
-    formatDate(startAt) === formatDate(endAt)
-      ? formatTime(endAt)
-      : formatDateTime(endAt);
-  return `${formatDateTime(startAt)} – ${end}`;
 }
 
 export function RegistrationsList({
@@ -108,7 +93,7 @@ export function RegistrationsList({
               <div className="flex items-center gap-1.5">
                 <CalendarDays className="h-3.5 w-3.5 shrink-0" />
                 <span data-testid="event-date">
-                  {eventTimeText(event.startAt, event.endAt)}
+                  {formatEventTime(event.startAt, event.endAt)}
                 </span>
               </div>
               <div className="flex items-center gap-1.5">
