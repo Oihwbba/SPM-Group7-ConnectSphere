@@ -123,7 +123,7 @@ describe("recordUnavailability — SCRUM-37", () => {
     });
   });
 
-  it("SCRUM-37 [AC2] TC-37-03: an unknown or retired venue is refused", async () => {
+  it("SCRUM-37 [AC1] TC-37-03: an unknown or retired venue is refused", async () => {
     db.venue.findFirst.mockResolvedValue(null);
 
     expect(await recordUnavailability(valid)).toEqual({

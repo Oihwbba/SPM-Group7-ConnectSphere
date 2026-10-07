@@ -62,7 +62,7 @@ are Singapore time.
 | Test Data | — |
 | Expected Result | Step 1: "The requested period is invalid: the end must be after the start." Step 2: "Choose a reason." Nothing is saved. Step 3: no **Record unavailability** button. Step 4: "Access denied". Called directly as any other role, the action refuses. |
 
-**Automated by:** `tests/unit/unavailability.test.ts` › "SCRUM-37 [AC1] TC-37-03: an end at or before the start is refused as an invalid period", "SCRUM-37 [AC1] TC-37-03: a period with no reason is refused with field errors", "SCRUM-37 [AC6] TC-37-03: only venue staff may record unavailability" and "SCRUM-37 [AC2] TC-37-03: an unknown or retired venue is refused"; `tests/integration/unavailability.test.ts` › "SCRUM-37 [AC1] TC-37-03: an end at or before the start is refused as an invalid period"; `tests/unit/auth.test.ts` › both "SCRUM-37 [AC6] TC-37-03: …" cases; `e2e/availability.spec.ts` › "SCRUM-36, SCRUM-37 TC-36-07: who can see the calendar and record unavailability"
+**Automated by:** `tests/unit/unavailability.test.ts` › "SCRUM-37 [AC1] TC-37-03: an end at or before the start is refused as an invalid period", "SCRUM-37 [AC1] TC-37-03: a period with no reason is refused with field errors", "SCRUM-37 [AC6] TC-37-03: only venue staff may record unavailability" and "SCRUM-37 [AC1] TC-37-03: an unknown or retired venue is refused"; `tests/integration/unavailability.test.ts` › "SCRUM-37 [AC1] TC-37-03: an end at or before the start is refused as an invalid period"; `tests/unit/auth.test.ts` › both "SCRUM-37 [AC6] TC-37-03: …" cases; `e2e/availability.spec.ts` › "SCRUM-36, SCRUM-37 TC-36-07: who can see the calendar and record unavailability"
 
 ### TC-37-04
 
