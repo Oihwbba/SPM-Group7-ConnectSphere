@@ -1,5 +1,11 @@
 # ADR 0008 — An advisory AI code review on every pull request
 
+> **Status: amended by the addenda below.** The review began as advisory. It
+> is now a **required check that blocks merging on a critical finding**
+> (addendum "a required merge gate on critical findings"), reads the project's
+> stories and conventions, and keeps its own memory. `CONTRIBUTING.md`
+> describes how it works today.
+
 ## Context
 
 Five developers open pull requests and one person (Jin Hong) reviews and merges
