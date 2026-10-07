@@ -1,8 +1,8 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-04. Jira is the source of truth.
+     Synced from Jira on 2026-10-07. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
-# SCRUM-150 - Implement field-level clarification response
+# SCRUM-150 - [DUPLICATE OF SCRUM-108] Implement field-level clarification response
 
 | | |
 |---|---|
@@ -10,7 +10,7 @@
 | **Epic** | - |
 | **Priority** | Medium |
 | **Story points** | - |
-| **Status in Jira** | To Do |
+| **Status in Jira** | Done |
 | **Sprint** | Backlog |
 | **Jira** | https://smu-spm-group7.atlassian.net/browse/SCRUM-150 |
 

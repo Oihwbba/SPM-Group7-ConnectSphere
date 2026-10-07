@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-04. Jira is the source of truth.
+     Synced from Jira on 2026-10-07. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-51 - [MERGED INTO SCRUM-53 and SCRUM-124] Track a venue booking request and be told its outcome

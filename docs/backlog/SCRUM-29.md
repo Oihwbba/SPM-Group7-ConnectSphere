@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-04. Jira is the source of truth.
+     Synced from Jira on 2026-10-07. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-29 - Check equipment availability
@@ -10,7 +10,7 @@
 | **Epic** | SCRUM-10 - Equipment Management |
 | **Priority** | Highest |
 | **Story points** | 3 |
-| **Status in Jira** | In Review |
+| **Status in Jira** | Done |
 | **Sprint** | SCRUM Sprint 2 |
 | **Jira** | https://smu-spm-group7.atlassian.net/browse/SCRUM-29 |
 

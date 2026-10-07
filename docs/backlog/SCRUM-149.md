@@ -1,8 +1,8 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-04. Jira is the source of truth.
+     Synced from Jira on 2026-10-07. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
-# SCRUM-149 - Use event attendance in venue booking
+# SCRUM-149 - [SUPERSEDED BY SCRUM-162] Use event attendance in venue booking
 
 | | |
 |---|---|
@@ -10,7 +10,7 @@
 | **Epic** | - |
 | **Priority** | High |
 | **Story points** | - |
-| **Status in Jira** | To Do |
+| **Status in Jira** | Done |
 | **Sprint** | Backlog |
 | **Jira** | https://smu-spm-group7.atlassian.net/browse/SCRUM-149 |
 
