@@ -28,7 +28,8 @@ export async function getEventForUser(id: string) {
   }
 
   const event = await prisma.event.findUnique({ where: { id } });
-  if (!event) {
+  // SCRUM-130 AC1: a discarded draft cannot be reopened, even by its owner.
+  if (!event || event.discardedAt) {
     return null;
   }
 

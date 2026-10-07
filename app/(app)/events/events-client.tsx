@@ -16,6 +16,7 @@ import {
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
+  Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { Event, RejectionOutcome } from "@prisma/client";
@@ -36,7 +37,11 @@ import {
 import styles from "./events-list.module.css";
 import { CreateEventDialog } from "./create-event-dialog";
 import { EventDetailsModal } from "./event-details-modal";
-import { startRequestFromRejected, transitionEventStatus } from "./actions";
+import {
+  discardDraftEvent,
+  startRequestFromRejected,
+  transitionEventStatus,
+} from "./actions";
 import { REJECTION_OUTCOME_LABEL } from "@/lib/schemas/event";
 import {
   CLARIFIABLE_FIELDS,
@@ -171,6 +176,8 @@ export function EventsClient({
       null)
     : null;
   const draftInEditor = editingDraft ?? startedDraft;
+  // SCRUM-130: the draft awaiting confirmation before it is discarded.
+  const [discardingEvent, setDiscardingEvent] = useState<Event | null>(null);
   const [clarifyingEvent, setClarifyingEvent] = useState<Event | null>(null);
   const [clarificationMessage, setClarificationMessage] = useState("");
   const [clarificationFields, setClarificationFields] = useState<
@@ -257,6 +264,20 @@ export function EventsClient({
       } finally {
         setStartingFrom(null);
       }
+    });
+  }
+
+  // SCRUM-130 AC1: runs only after the confirmation dialog's Discard Draft.
+  function discardDraft(event: Event) {
+    startTransition(async () => {
+      const result = await discardDraftEvent({ eventId: event.id });
+      setDiscardingEvent(null);
+      if (result.ok) {
+        toast.success(`"${event.name}" was discarded.`);
+      } else {
+        toast.error(result.error);
+      }
+      router.refresh();
     });
   }
 
@@ -356,6 +377,20 @@ export function EventsClient({
           <Eye className="h-3.5 w-3.5" />
           View Details
         </Button>
+        {/* SCRUM-130 AC3: offered only on the Organiser's own Drafts. */}
+        {!isCoordinator && isDraft && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className={cn(actionButton, "text-destructive hover:text-destructive")}
+            disabled={isPending}
+            onClick={() => setDiscardingEvent(event)}
+            data-testid="discard-draft-button"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+            Discard
+          </Button>
+        )}
         {/* SCRUM-19: decide a submitted or under-review request. There is no
             manual "claim" — SCRUM-20 assigns automatically. */}
         {isCoordinator &&
@@ -868,7 +903,37 @@ export function EventsClient({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-            <Dialog
+      {/* SCRUM-130 AC1/AC2: nothing is discarded until this is confirmed. */}
+      <Dialog
+        open={!!discardingEvent}
+        onOpenChange={(open) => !open && setDiscardingEvent(null)}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Discard this draft?</DialogTitle>
+            <DialogDescription>
+              &ldquo;{discardingEvent?.name}&rdquo; will be removed from your
+              events. A discarded draft can&rsquo;t be reopened.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="secondary"
+              onClick={() => setDiscardingEvent(null)}
+            >
+              Keep Draft
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={isPending}
+              onClick={() => discardingEvent && discardDraft(discardingEvent)}
+            >
+              {isPending ? "Discarding…" : "Discard Draft"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog
         open={!!clarifyingEvent}
         onOpenChange={(open) => !open && setClarifyingEvent(null)}
       >

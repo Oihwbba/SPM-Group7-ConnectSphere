@@ -48,7 +48,7 @@ ConnectSphere happens *to an event*.
 
 | Table | Purpose | Stories |
 |---|---|---|
-| `Event` | The request and everything it becomes. Carries the nine-value `status`, the SCRUM-13 form fields, and the decision/cancellation/completion timestamps and reasons. A rejection also carries its `rejectionOutcome` (Amend and resubmit, or Submit as a new request), which the database requires (ADR 0013). | SCRUM-13–26, 81–84, 126 |
+| `Event` | The request and everything it becomes. Carries the nine-value `status`, the SCRUM-13 form fields, and the decision/cancellation/completion timestamps and reasons. A rejection also carries its `rejectionOutcome` (Amend and resubmit, or Submit as a new request), which the database requires (ADR 0013). A discarded Draft keeps its row with `discardedAt` set and leaves the Organiser's list; the database keeps it a Draft. | SCRUM-13–26, 81–84, 126, 130 |
 | `ClarificationRequest` | A coordinator's question and the organiser's answer, and (`editableFields`) the request-form fields the answer may change (ADR 0014). | SCRUM-18, 56, 108 |
 | `EventChangeRequest` | An organiser's post-submission change request, with its decision. | SCRUM-41, 42, 43, 47 |
 | `ChangeRequestField` | One row per changed field, holding `oldValue`, `newValue` and `isMajor`. | SCRUM-42, 44 |
@@ -87,7 +87,7 @@ ConnectSphere happens *to an event*.
 |---|---|---|
 | 1 | User authorisation and authentication | `User` (+ `lib/auth/can.ts`) |
 | 2 | Event request creation | `Event` |
-| 3 | Draft event requests | `Event.status = DRAFT` |
+| 3 | Draft event requests | `Event.status = DRAFT`; discarded: `Event.discardedAt` (SCRUM-130) |
 | 4 | Event review and approval | `Event`, `ClarificationRequest` |
 | 5 | Coordinator assignment | `Event.coordinatorId`, `AuditLog` |
 | 6 | Event status management | `Event.status` + the lifecycle timestamps |

@@ -27,6 +27,7 @@ export type SessionUser = {
  */
 export type Action =
   | "event:create"
+  | "event:discard" // SCRUM-130: the organiser discards their own Draft
   | "event:list" // list the events scoped to me (own / assigned)
   | "event:read" // read one event (relationship-gated)
   | "event:review"
@@ -76,6 +77,7 @@ export type Resource =
 const ROLE_ACTIONS: Record<Role, Action[]> = {
   ORGANISER: [
     "event:create",
+    "event:discard",
     "event:list",
     "event:read",
     "clarification:respond",

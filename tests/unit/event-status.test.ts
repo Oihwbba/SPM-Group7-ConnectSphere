@@ -372,7 +372,7 @@ describe("submitEventRequest — SCRUM-19/24 rejected → submitted", () => {
         id: "evt1",
         organiserId: "usr_org",
         OR: [
-          { status: "DRAFT" },
+          { status: "DRAFT", discardedAt: null },
           { status: "REJECTED", rejectionOutcome: "AMEND_AND_RESUBMIT" },
         ],
       },

@@ -26,7 +26,7 @@ describe("OrganiserEvents — the reference feature's own-events scope", () => {
     await OrganiserEvents({ organiserId: "usr_organiser" });
 
     expect(mockFindMany).toHaveBeenCalledWith({
-      where: { organiserId: "usr_organiser" },
+      where: { organiserId: "usr_organiser", discardedAt: null },
       orderBy: { updatedAt: "desc" },
     });
   });

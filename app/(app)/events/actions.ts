@@ -44,6 +44,8 @@ const startRequestFromRejectedSchema = z.object({
   eventId: z.string().min(1),
 });
 
+const discardDraftSchema = z.object({ eventId: z.string().min(1) });
+
 /**
  * Server action to create or save/update a DRAFT event request.
  * Allows partial fields, but validates range constraints if provided.
@@ -87,21 +89,17 @@ export async function createDraftEvent(
     let eventId = id;
 
     if (id) {
-      // User Story 15 AC 2/3: Resume and update an existing saved draft
-      const existing = await prisma.event.findFirst({
+      // User Story 15 AC 2/3: Resume and update an existing saved draft.
+      // One conditional write, not a read then an update: a discard
+      // (SCRUM-130 AC1) or a submit committing in between must not be
+      // overwritten by this save.
+      const res = await prisma.event.updateMany({
         where: {
           id,
           organiserId: user!.id,
           status: "DRAFT",
+          discardedAt: null,
         },
-      });
-
-      if (!existing) {
-        return err("Draft event not found or cannot be modified.");
-      }
-
-      await prisma.event.update({
-        where: { id },
         data: {
           name,
           purpose: purpose ?? null,
@@ -122,6 +120,9 @@ export async function createDraftEvent(
           timezone: TIME_ZONE,
         },
       });
+      if (res.count !== 1) {
+        return err("Draft event not found or cannot be modified.");
+      }
     } else {
       // User Story 15 AC 1: Save a new incomplete request as draft at any point
       const created = await prisma.event.create({
@@ -226,7 +227,8 @@ export async function submitEventRequest(
             // SCRUM-126 AC2/AC3: a rejection marked "Submit as a new request"
             // stays Rejected and read-only.
             OR: [
-              { status: "DRAFT" },
+              // SCRUM-130 AC1: a discarded draft cannot be submitted.
+              { status: "DRAFT", discardedAt: null },
               { status: "REJECTED", rejectionOutcome: "AMEND_AND_RESUBMIT" },
             ],
           },
@@ -840,11 +842,21 @@ export async function startRequestFromRejected(
       if (!rejected) return null;
 
       // The rejected event's history says which Draft was started from it.
+      // One the Organiser has since discarded (SCRUM-130) no longer counts,
+      // so starting again makes a fresh Draft rather than pointing at a
+      // request that is no longer in their list.
       const started = await tx.auditLog.findFirst({
         where: { entityType: "Event", entityId: eventId, action: "NEW_REQUEST_STARTED" },
+        orderBy: { createdAt: "desc" },
         select: { newValue: true },
       });
-      if (started?.newValue) return { id: started.newValue, created: false };
+      const startedDraft =
+        started?.newValue &&
+        (await tx.event.findFirst({
+          where: { id: started.newValue, discardedAt: null },
+          select: { id: true },
+        }));
+      if (startedDraft) return { id: startedDraft.id, created: false };
 
       const draft = await tx.event.create({
         data: {
@@ -871,6 +883,83 @@ export async function startRequestFromRejected(
 
     revalidatePath("/events");
     return ok(outcome);
+  } catch (error) {
+    if (error instanceof PermissionError) return err(error.message);
+    throw error;
+  }
+}
+
+/**
+ * SCRUM-130 — the Organiser discards a Draft they no longer need. The row is
+ * kept with `discardedAt` set, which takes it out of My Event Requests and
+ * stops it being saved or submitted again (AC1). Only a Draft can be
+ * discarded (AC3), and anyone else's draft is "not found", exactly like a
+ * missing id (AC4, SCRUM-68). Discarding a draft already discarded changes
+ * nothing, so a second tab or a repeated request records one discard.
+ */
+export async function discardDraftEvent(
+  input: unknown,
+): Promise<ActionResult<{ id: string }>> {
+  const session = await auth();
+  const user = session?.user;
+
+  try {
+    requirePermission(user, "event:discard");
+
+    const parsed = discardDraftSchema.safeParse(input);
+    if (!parsed.success) return err("Please choose a draft to discard.");
+    const { eventId } = parsed.data;
+
+    const event = await prisma.event.findUnique({
+      where: { id: eventId },
+      select: {
+        organiserId: true,
+        coordinatorId: true,
+        status: true,
+        discardedAt: true,
+      },
+    });
+    if (!event || !can(user!, "event:discard", { kind: "event", ...event })) {
+      return err("Event not found.");
+    }
+    if (event.discardedAt) return ok({ id: eventId });
+    if (event.status !== "DRAFT") {
+      return err(
+        "Only a draft can be discarded. A submitted request is cancelled through a change request.",
+      );
+    }
+
+    const discarded = await prisma.$transaction(async (tx) => {
+      // Conditional on the draft still being an undiscarded Draft: a submit
+      // at the same moment locks the row, and whichever commits first wins.
+      const now = new Date();
+      const result = await tx.event.updateMany({
+        where: { id: eventId, status: "DRAFT", discardedAt: null },
+        data: { discardedAt: now },
+      });
+      if (result.count !== 1) return false;
+
+      await tx.auditLog.create({
+        data: {
+          entityType: "Event",
+          entityId: eventId,
+          action: "DISCARDED",
+          actorId: user!.id,
+          fieldName: "discardedAt",
+          newValue: now.toISOString(),
+          summary: "Draft discarded by its organiser (SCRUM-130)",
+        },
+      });
+      return true;
+    });
+    if (!discarded) {
+      return err(
+        "This draft changed while you were discarding it. Refresh and try again.",
+      );
+    }
+
+    revalidatePath("/events");
+    return ok({ id: eventId });
   } catch (error) {
     if (error instanceof PermissionError) return err(error.message);
     throw error;
