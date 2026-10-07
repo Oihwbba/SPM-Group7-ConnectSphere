@@ -184,7 +184,7 @@ describe.skipIf(!usesLocalDatabase)(
     });
 
     describe("SCRUM-50 — submit a venue booking request", () => {
-      it("SCRUM-50 [AC1, AC2] TC-50-01: SCRUM-50 AC1 & AC2 — a request for a free period is created PENDING with everything the staff need", async () => {
+      it("SCRUM-50 [AC1, AC2] TC-50-01: a request for a free period is created PENDING with everything the staff need", async () => {
         const result = await submitBookingRequest(
           request({ requestNotes: "Needs a lectern." }),
         );
@@ -211,7 +211,7 @@ describe.skipIf(!usesLocalDatabase)(
         });
       });
 
-      it("SCRUM-50 [AC3] TC-50-02: SCRUM-50 AC3 — a request overlapping an approved booking is refused and nothing is written", async () => {
+      it("SCRUM-50 [AC3] TC-50-02: a request overlapping an approved booking is refused and nothing is written", async () => {
         await approvedBooking(fromStart(1), fromEnd(1));
         const before = await bookingCount();
 
@@ -223,7 +223,7 @@ describe.skipIf(!usesLocalDatabase)(
         expect(await bookingCount()).toBe(before);
       });
 
-      it("SCRUM-50 [AC3] TC-50-03: SCRUM-50 AC3 — a request overlapping recorded unavailability (maintenance) is refused", async () => {
+      it("SCRUM-50 [AC3] TC-50-03: a request overlapping recorded unavailability (maintenance) is refused", async () => {
         await prisma.venueUnavailability.create({
           data: {
             venueId,
@@ -242,7 +242,7 @@ describe.skipIf(!usesLocalDatabase)(
         expect(await bookingCount()).toBe(0);
       });
 
-      it("SCRUM-50 [AC3, AC10] TC-50-04: SCRUM-50 AC3 — a PENDING request by another coordinator does not block a new request", async () => {
+      it("SCRUM-50 [AC3, AC10] TC-50-04: a PENDING request by another coordinator does not block a new request", async () => {
         await pendingFromAnotherCoordinator(fromStart(0), fromEnd(0));
 
         const result = await submitBookingRequest(request());
@@ -251,7 +251,7 @@ describe.skipIf(!usesLocalDatabase)(
         expect(await bookingCount()).toBe(2);
       });
 
-      it("SCRUM-50 [AC4] TC-50-05: SCRUM-50 AC4 — a period beginning exactly as an approved booking ends is accepted", async () => {
+      it("SCRUM-50 [AC4] TC-50-05: a period beginning exactly as an approved booking ends is accepted", async () => {
         await approvedBooking(fromStart(-2), fromStart(0));
 
         const result = await submitBookingRequest(request());
@@ -293,7 +293,7 @@ describe.skipIf(!usesLocalDatabase)(
         expect(await bookingCount()).toBe(0);
       });
 
-      it("SCRUM-50 [AC8] TC-50-07: SCRUM-50 AC8 — submitting the same request twice leaves one request and shows the existing one", async () => {
+      it("SCRUM-50 [AC8] TC-50-07: submitting the same request twice leaves one request and shows the existing one", async () => {
         const first = await submitBookingRequest(request());
         const second = await submitBookingRequest(request());
 
@@ -304,7 +304,7 @@ describe.skipIf(!usesLocalDatabase)(
         expect(await bookingCount()).toBe(1);
       });
 
-      it("SCRUM-50 [AC8] TC-50-08: SCRUM-50 AC8 — two identical requests submitted at the same instant still leave one", async () => {
+      it("SCRUM-50 [AC8] TC-50-08: two identical requests submitted at the same instant still leave one", async () => {
         const results = await Promise.all([
           submitBookingRequest(request()),
           submitBookingRequest(request()),
@@ -316,7 +316,7 @@ describe.skipIf(!usesLocalDatabase)(
         expect(await bookingCount()).toBe(1);
       });
 
-      it("SCRUM-50 [AC1] TC-50-15: SCRUM-50 AC1 — a period or attendance that is not the event's is refused and nothing is written", async () => {
+      it("SCRUM-50 [AC1] TC-50-15: a period or attendance that is not the event's is refused and nothing is written", async () => {
         for (const changed of [
           { startAt: fromStart(1) },
           { endAt: fromEnd(2) },
@@ -375,7 +375,7 @@ describe.skipIf(!usesLocalDatabase)(
         }
       });
 
-      it("SCRUM-50 [AC3, AC10] TC-50-04: SCRUM-50 AC10 — another event's pending request for the same venue and period blocks nobody", async () => {
+      it("SCRUM-50 [AC3, AC10] TC-50-04: another event's pending request for the same venue and period blocks nobody", async () => {
         await prisma.booking.create({
           data: {
             eventId: rivalEventId,
@@ -417,7 +417,7 @@ describe.skipIf(!usesLocalDatabase)(
         }
       });
 
-      it("SCRUM-50 [AC5] TC-50-11: SCRUM-50 — a period that has already started is refused and nothing is written", async () => {
+      it("SCRUM-50 [AC5] TC-50-11: a period that has already started is refused and nothing is written", async () => {
         const result = await submitBookingRequest(
           request({
             startAt: "2020-01-01T01:00:00.000Z",
@@ -486,7 +486,7 @@ describe.skipIf(!usesLocalDatabase)(
       });
     });
 
-    describe("SCRUM-50 [AC3, AC4, AC5] TC-50-13: SCRUM-50 — the live availability check in the form", () => {
+    describe("SCRUM-50 [AC3, AC4, AC5] TC-50-13: the live availability check in the form", () => {
       const check = (startAt: string, endAt: string) =>
         checkVenueAvailability({ venueId, startAt, endAt });
 
@@ -535,7 +535,7 @@ describe.skipIf(!usesLocalDatabase)(
         });
       });
 
-      it("SCRUM-50 [AC5] TC-50-11: SCRUM-50 AC5 — a period that has already started is not called available, and submitting it is refused the same way", async () => {
+      it("SCRUM-50 [AC5] TC-50-11: a period that has already started is not called available, and submitting it is refused the same way", async () => {
         const live = await check(
           "2020-01-01T01:00:00.000Z",
           "2020-01-01T03:00:00.000Z",
@@ -619,7 +619,7 @@ describe.skipIf(!usesLocalDatabase)(
     });
 
     describe("SCRUM-52 — review pending booking requests", () => {
-      it("SCRUM-52 [AC1, AC2] TC-52-01: SCRUM-52 AC1 & AC2 — the queue lists pending requests with venue, timing, attendance, needs and the requesting coordinator", async () => {
+      it("SCRUM-52 [AC1, AC2] TC-52-01: the queue lists pending requests with venue, timing, attendance, needs and the requesting coordinator", async () => {
         const submitted = await submitBookingRequest(
           request({ requestNotes: "Stage access from 8am." }),
         );
@@ -650,7 +650,7 @@ describe.skipIf(!usesLocalDatabase)(
         });
       });
 
-      it("SCRUM-52 [AC1] TC-52-03: SCRUM-52 AC1 — decided requests leave the queue", async () => {
+      it("SCRUM-52 [AC1] TC-52-03: decided requests leave the queue", async () => {
         const approved = await approvedBooking(fromEnd(46), fromEnd(48));
 
         const queue = await getPendingBookingQueue();
@@ -658,7 +658,7 @@ describe.skipIf(!usesLocalDatabase)(
         expect(queue.map((b) => b.id)).not.toContain(approved.id);
       });
 
-      it("SCRUM-52 [AC3] TC-52-02: SCRUM-52 AC3 — each request carries the venue's current availability for its period", async () => {
+      it("SCRUM-52 [AC3] TC-52-02: each request carries the venue's current availability for its period", async () => {
         const submitted = await submitBookingRequest(request());
         if (!submitted.ok) throw new Error(submitted.error);
         // Another request for the slot is approved after this one was made.

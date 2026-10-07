@@ -93,7 +93,7 @@ describe.skipIf(!usesLocalDatabase)(
       await prisma.$disconnect();
     });
 
-    it("SCRUM-27 [AC5] TC-27-07: saves the request, its lines and its first history entry as Pending Review", async () => {
+    it("SCRUM-27 [AC5, AC6] TC-27-07, TC-27-08: saves the request, its lines and its first history entry as Pending Review", async () => {
       const result = await createEquipmentRequest(request(eventId));
 
       expect(result.ok).toBe(true);

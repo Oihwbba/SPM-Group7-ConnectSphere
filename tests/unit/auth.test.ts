@@ -153,7 +153,7 @@ describe("can — confirming an event (SCRUM-81)", () => {
     status: "PLANNING" as const,
   };
 
-  it("SCRUM-81 [AC7] TC-81-07: SCRUM-81: only the event's assigned Coordinator may confirm it", () => {
+  it("SCRUM-81 [AC7] TC-81-07: only the event's assigned Coordinator may confirm it", () => {
     expect(can(coordinator, "event:confirm", planning)).toBe(true);
     expect(can({ id: "other", role: "COORDINATOR" }, "event:confirm", planning)).toBe(false);
     expect(can(organiserA, "event:confirm", planning)).toBe(false);

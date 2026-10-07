@@ -104,7 +104,7 @@ needs them.
 | Test Data | Pool: 1 unit <br> Middle: 2031-03-02 09:00–12:00 <br> Before: 2031-03-02 06:00–09:00 <br> After: 2031-03-02 12:00–15:00 <br> Quantity: 1 each |
 | Expected Result | All three reservations are confirmed, and the unit is never counted twice. A fourth reservation from 11:59 to 12:30, which does overlap, is refused as 1 short. |
 
-**Automated by:** `tests/integration/concurrency.test.ts` › "accepts reservations that touch at an endpoint — periods sharing an endpoint do not overlap (SCRUM-31)" (real Postgres); `tests/unit/reservation.test.ts` › "SCRUM-31 [AC4] TC-31-05: overlap is half-open — a period that only touches another does not count against it". The overlapping fourth reservation is **Manual**.
+**Automated by:** `tests/integration/concurrency.test.ts` › "SCRUM-31 [AC4] TC-31-05: accepts reservations that touch at an endpoint — periods sharing an endpoint do not overlap (SCRUM-31)" (real Postgres); `tests/unit/reservation.test.ts` › "SCRUM-31 [AC4] TC-31-05: overlap is half-open — a period that only touches another does not count against it". The overlapping fourth reservation is **Manual**.
 
 ### TC-31-06
 

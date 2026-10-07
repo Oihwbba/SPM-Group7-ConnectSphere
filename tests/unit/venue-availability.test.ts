@@ -25,7 +25,7 @@ function stubDb(bookings: unknown[], unavailability: unknown[]) {
 }
 
 describe("findVenueBlockers", () => {
-  it("SCRUM-50 [AC3, AC10] TC-50-04: SCRUM-50 AC3 — asks only for APPROVED bookings that overlap the period — a pending request blocks nobody", async () => {
+  it("SCRUM-50 [AC3, AC10] TC-50-04: asks only for APPROVED bookings that overlap the period — a pending request blocks nobody", async () => {
     const db = stubDb([], []);
 
     await findVenueBlockers(db as never, "ven_1", period);
@@ -51,7 +51,7 @@ describe("findVenueBlockers", () => {
     );
   });
 
-  it("SCRUM-50 [AC3] TC-50-03: SCRUM-50 AC3 — merges bookings and unavailability, earliest first", async () => {
+  it("SCRUM-50 [AC3] TC-50-03: merges bookings and unavailability, earliest first", async () => {
     const late = {
       id: "bkg_late",
       startAt: new Date("2030-06-01T07:30:00.000Z"),

@@ -224,7 +224,7 @@ test.describe("SCRUM-50 / 52 / 53 — venue booking request, review and decision
     await expectSubmitted(coordinator);
   });
 
-  test("SCRUM-50 [AC1] TC-50-15: SCRUM-50 AC1 — the period and attendance are the event's, rounded out to the half hour, and cannot be edited", async ({
+  test("SCRUM-50 [AC1] TC-50-15: the period and attendance are the event's, rounded out to the half hour, and cannot be edited", async ({
     browser,
   }) => {
     const coordinator = await signedIn(browser, "coordinator@test.local");
@@ -249,7 +249,7 @@ test.describe("SCRUM-50 / 52 / 53 — venue booking request, review and decision
     }
   });
 
-  test("SCRUM-50 [AC5] TC-50-11: SCRUM-50 AC5 — an event that has already started is reported before submitting, and Submit is disabled", async ({
+  test("SCRUM-50 [AC5] TC-50-11: an event that has already started is reported before submitting, and Submit is disabled", async ({
     browser,
   }) => {
     const coordinator = await signedIn(browser, "coordinator@test.local");
@@ -264,7 +264,7 @@ test.describe("SCRUM-50 / 52 / 53 — venue booking request, review and decision
     ).toBeDisabled();
   });
 
-  test("SCRUM-50 [AC3, AC4, AC5] TC-50-13: SCRUM-50 — when the live check cannot answer, the form says so and leaves Submit to the server", async ({
+  test("SCRUM-50 [AC3, AC4, AC5] TC-50-13: when the live check cannot answer, the form says so and leaves Submit to the server", async ({
     browser,
   }) => {
     const coordinator = await signedIn(browser, "coordinator@test.local");
@@ -292,7 +292,7 @@ test.describe("SCRUM-50 / 52 / 53 — venue booking request, review and decision
     await expectSubmitted(coordinator);
   });
 
-  test("SCRUM-50 [AC1] TC-50-12: SCRUM-50 AC1 — the room layout is chosen first, and only venues that support it are offered", async ({
+  test("SCRUM-50 [AC1] TC-50-12: the room layout is chosen first, and only venues that support it are offered", async ({
     browser,
   }) => {
     const coordinator = await signedIn(browser, "coordinator@test.local");

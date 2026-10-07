@@ -70,7 +70,7 @@ test.describe("SCRUM-27 — Create Equipment Request", () => {
     await prisma.event.deleteMany({ where: { name: { startsWith: RIG } } });
   });
 
-  test("SCRUM-27 [AC1] TC-27-01: a coordinator requests equipment for their event and it is saved as Pending Review", async ({
+  test("SCRUM-27 [AC1, AC2, AC5, AC6] TC-27-01, TC-27-03, TC-27-07, TC-27-08: a coordinator requests equipment for their event and it is saved as Pending Review", async ({
     page,
   }) => {
     const rig = await makeRig("happy");

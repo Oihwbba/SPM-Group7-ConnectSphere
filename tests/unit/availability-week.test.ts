@@ -30,11 +30,11 @@ describe("the calendar's week", () => {
     expect(startOfWeek("2036-02-03")).toBe("2036-01-28");
   });
 
-  it("SCRUM-36 [AC7] TC-36-05: walks back across a month and year end", () => {
+  it("SCRUM-36 [AC1] TC-36-05: walks back across a month and year end", () => {
     expect(startOfWeek("2036-01-01")).toBe("2035-12-31");
   });
 
-  it("SCRUM-36 [AC7] TC-36-05: ignores a malformed or impossible date", () => {
+  it("SCRUM-36 [AC1] TC-36-05: ignores a malformed or impossible date", () => {
     expect(parseWeek("nonsense", today).from).toBe("2035-03-12");
     expect(parseWeek("2035-13-45", today).from).toBe("2035-03-12");
   });

@@ -200,7 +200,7 @@ async function fillRigPeriod(page: Page, from: number, to: number, quantity: str
  * neutral. The seed puts one speaker out of service as DAMAGED and three
  * projectors in for MAINTENANCE.
  */
-test.describe("SCRUM-156 [AC1] TC-156-02: SCRUM-30 — View Equipment Conflicts", () => {
+test.describe("SCRUM-156 [AC1] TC-156-02: View Equipment Conflicts", () => {
   test.afterEach(async () => {
     if (usesLocalDatabase) await removeRig();
   });

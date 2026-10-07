@@ -5,9 +5,9 @@ Format and conventions: [README.md](README.md). How a day is split into
 stretches: `availabilityByDay` in [lib/venue-availability.ts](../../lib/venue-availability.ts),
 which decides overlap with the one rule in [lib/period.ts](../../lib/period.ts).
 
-**Shared pre-conditions for every case:**
+> **Week 7 (SCRUM-158).** AC 2 and AC 4 are written for bare booking and maintenance periods. SCRUM-159 replaces AC 2 with booked periods padded by the venue's setup and turnaround time, and SCRUM-163 changes AC 4 so a Held booking also reads as (tentatively) held, not available. The cases below test the behaviour as built before those stories land.
 
-> **Week 7 (SCRUM-158).** AC 2 and AC 4 are written for bare booking and maintenance periods. SCRUM-159 replaces AC 2 with booked periods padded by the venue's setup and turnaround time, and SCRUM-163 changes AC 4 so a Held booking also reads as (tentatively) held, not available. The cases below test the behaviour as built before those stories land. the database is migrated and seeded,
+**Shared pre-conditions for every case:** the database is migrated and seeded,
 the app is running, and the tester signs in as an Event Coordinator
 (`coordinator@test.local` / `Password123!`) unless the case says otherwise.
 Times are Singapore time.
@@ -42,7 +42,7 @@ phone and to a screen reader, where a grid of every venue would not.
 | Test Data | — |
 | Expected Result | The day reads "Available midnight to 9:00 am", "Booked 9:00 am to 1:00 pm", "Available 1:00 pm to midnight", with a solid bar for the booking. A pending request does not appear. |
 
-**Automated by:** `tests/unit/venue-availability.test.ts` › "SCRUM-36 AC3 — an approved booking reads as unavailable, with free time either side"; `e2e/availability.spec.ts` › "SCRUM-37 AC2-5, SCRUM-36 AC3-5 — …"
+**Automated by:** `tests/unit/venue-availability.test.ts` › "SCRUM-36 [AC2] TC-36-01: an approved booking reads as unavailable, with free time either side"; `e2e/availability.spec.ts` › "SCRUM-37 [AC1-AC5], SCRUM-36 [AC2, AC3, AC5]: maintenance is recorded, seen, refused over, sat flush against a booking, and never overwrites one"
 
 ### TC-36-02
 
@@ -55,7 +55,7 @@ phone and to a screen reader, where a grid of every venue would not.
 | Test Data | — |
 | Expected Result | "Unavailable (maintenance) 1:00 pm to 5:00 pm", with a wrench icon and a striped bar. A booking has a calendar icon, the word "Booked" and a solid bar. They differ in label, icon and pattern, as well as colour. |
 
-**Automated by:** `tests/unit/venue-availability.test.ts` › "SCRUM-36 AC4 — recorded maintenance reads as unavailable and stays distinguishable from a booking"; `e2e/availability.spec.ts` › journey
+**Automated by:** `tests/unit/venue-availability.test.ts` › "SCRUM-36 [AC3] TC-36-02: recorded maintenance reads as unavailable and stays distinguishable from a booking"; `e2e/availability.spec.ts` › journey
 
 ### TC-36-03
 
@@ -68,7 +68,7 @@ phone and to a screen reader, where a grid of every venue would not.
 | Test Data | — |
 | Expected Result | The day lists, in order: Available midnight to 9:00 am, Booked 9:00 am to 1:00 pm, Unavailable (maintenance) 1:00 pm to 5:00 pm, Available 5:00 pm to midnight. There is no "Available" between the two, and each stretch starts where the last ended. A period crossing midnight splits between the two days; one ending at midnight does not spill into the next. |
 
-**Automated by:** `tests/unit/venue-availability.test.ts` › "SCRUM-36 AC5 — two periods meeting at an endpoint show no gap, and no moment is counted twice" and "SCRUM-36 — a period across midnight is split between the two days…"; `e2e/availability.spec.ts` › journey
+**Automated by:** `tests/unit/venue-availability.test.ts` › "SCRUM-36 [AC5] TC-36-03: two periods meeting at an endpoint show no gap, and no moment is counted twice" and "SCRUM-36 — a period across midnight is split between the two days; one ending at midnight does not spill over"; `e2e/availability.spec.ts` › journey
 
 ### TC-36-04
 
@@ -81,7 +81,7 @@ phone and to a screen reader, where a grid of every venue would not.
 | Test Data | — |
 | Expected Result | Seven days, Monday 2 Jun to Sunday 8 Jun, each with "Available all day" at the top of its column (pinned there while the grid scrolls), and each read to a screen reader as "Available all day". |
 
-**Automated by:** `tests/unit/venue-availability.test.ts` › "SCRUM-36 AC6 — a venue with nothing in the range is free across every day of it, not empty"; `e2e/availability.spec.ts` › "SCRUM-36 AC6 — a venue with nothing in the week reads as available throughout, not blank"
+**Automated by:** `tests/unit/venue-availability.test.ts` › "SCRUM-36 [AC6] TC-36-04: a venue with nothing in the range is free across every day of it, not empty"; `e2e/availability.spec.ts` › "SCRUM-36 [AC6] TC-36-04: a venue with nothing in the week reads as available throughout, not blank"
 
 ### TC-36-05
 
@@ -94,7 +94,7 @@ phone and to a screen reader, where a grid of every venue would not.
 | Test Data | — |
 | Expected Result | Step 1: this week, Monday to Sunday, today's column shaded. Step 2: "28 Jan – 3 Feb 2036" between the arrows, and seven days. Step 3: "4 – 10 Feb 2036", then "21 – 27 Jan 2036". Step 4: "18 – 24 Feb 2036". The venue, week and Go to date sit on one row. The week is in the address, so the view can be shared. |
 
-**Automated by:** `tests/unit/availability-week.test.ts` › the three "SCRUM-36 AC7 — …" cases, "walks back across a month and year end" and "ignores a malformed or impossible date"; `e2e/availability.spec.ts` › "SCRUM-36 AC7 — the calendar shows a week, Monday to Sunday, and moves between weeks"
+**Automated by:** `tests/unit/availability-week.test.ts` › the three "SCRUM-36 [AC1] TC-36-05: …" cases, "SCRUM-36 [AC1] TC-36-05: walks back across a month and year end" and "SCRUM-36 [AC1] TC-36-05: ignores a malformed or impossible date"; `e2e/availability.spec.ts` › "SCRUM-36 [AC1] TC-36-05: the calendar shows a week, Monday to Sunday, and moves between weeks"
 
 ### TC-36-06
 
@@ -107,7 +107,7 @@ phone and to a screen reader, where a grid of every venue would not.
 | Test Data | — |
 | Expected Result | Step 1: each day is announced with the venue and date (e.g. "Exhibition Hall, Fri, 1 Feb 2036"), then each stretch as words ("Available midnight to 9:00 am"); a booking or unavailability also reads its details as its description. The coloured blocks and hour marks are hidden from screen readers. Step 2: the week becomes a list of seven days instead of seven columns, and nothing is wider than the screen. |
 
-**Automated by:** `e2e/availability.spec.ts` › "SCRUM-36 — a screen reader hears the venue and date for each day" and "SCRUM-36 — the calendar works at phone width". Listening with a real screen reader is **Manual**.
+**Automated by:** `e2e/availability.spec.ts` › "SCRUM-36 TC-36-06: a screen reader hears the venue and date for each day" and "SCRUM-36 TC-36-06: the calendar works at phone width". Listening with a real screen reader is **Manual**.
 
 ### TC-36-07
 
@@ -120,7 +120,7 @@ phone and to a screen reader, where a grid of every venue would not.
 | Test Data | `organiser@test.local`, `techsupport@test.local` |
 | Expected Result | "Access denied", and no Availability link in their navigation. |
 
-**Automated by:** `tests/unit/auth.test.ts` › both "SCRUM-36 AC1 — …" cases; `e2e/availability.spec.ts` › "SCRUM-36 / SCRUM-37 — who can see the calendar and record unavailability"; `e2e/access-control.spec.ts` › each role's navigation
+**Automated by:** `tests/unit/auth.test.ts` › both "SCRUM-36 [AC7] TC-36-07: …" cases; `e2e/availability.spec.ts` › "SCRUM-36, SCRUM-37 TC-36-07: who can see the calendar and record unavailability"; `e2e/access-control.spec.ts` › each role's navigation
 
 ### TC-36-08
 
@@ -133,4 +133,4 @@ phone and to a screen reader, where a grid of every venue would not.
 | Test Data | — |
 | Expected Result | On the calendar, the booking is a card showing "9:00 am – 1:00 pm", the event, the requester's initials and the attendance; the maintenance is a striped card showing "1:00 pm – 5:00 pm", "Maintenance" and its note. Step 1: a card with the event ("Approved — Research Symposium"), "Booked", the whole period, "Requested by Cody Coordinator", the expected attendance and the layout. Step 2: a card with the reason ("Maintenance"), "Unavailable", the whole period, the note and "Recorded by Vera Venue"; the booking's card closes. Step 3: the same card as step 1, and a screen reader reads it as the block's description. A period that crosses midnight shows its whole span, not just that day's part. The calendar is for internal staff only, so the event is named. |
 
-**Automated by:** `e2e/availability.spec.ts` › "SCRUM-37 AC2-5, SCRUM-36 AC3-5 — …" (hover steps); `tests/unit/venue-availability.test.ts` › "SCRUM-36 — carries what a hover shows…" and "…a stretch clipped to one day keeps the whole period in its details"
+**Automated by:** `e2e/availability.spec.ts` › "SCRUM-37 [AC1-AC5], SCRUM-36 [AC2, AC3, AC5]: maintenance is recorded, seen, refused over, sat flush against a booking, and never overwrites one" (hover steps); `tests/unit/venue-availability.test.ts` › "SCRUM-36 — carries what a hover shows: the booking's event, requester and needs; the unavailability's note and recorder" and "SCRUM-36 — a stretch clipped to one day keeps the whole period in its details"

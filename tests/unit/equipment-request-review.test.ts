@@ -81,7 +81,7 @@ beforeEach(() => {
 });
 
 describe("updateEquipmentRequestStatus — SCRUM-28", () => {
-  it("SCRUM-28 [AC2, AC5, AC6] TC-28-02: takes a pending request into review, records it and tells the coordinator", async () => {
+  it("SCRUM-28 [AC2, AC5, AC6] TC-28-02, TC-28-09, TC-28-10: takes a pending request into review, records it and tells the coordinator", async () => {
     db.equipmentRequest.findUnique.mockResolvedValue(stored("PENDING_REVIEW"));
 
     const result = await updateEquipmentRequestStatus({
@@ -291,7 +291,7 @@ describe("suggestAlternativeEquipment — SCRUM-28 [AC4]", () => {
     });
   });
 
-  it("SCRUM-28 [AC4, AC5] TC-28-07: records the alternative on the short line, logs it and tells the coordinator", async () => {
+  it("SCRUM-28 [AC4, AC5] TC-28-07, TC-28-09: records the alternative on the short line, logs it and tells the coordinator", async () => {
     const result = await suggestAlternativeEquipment(input);
 
     expect(result).toEqual({ ok: true, data: { alternativeId: "eqp_laptop" } });

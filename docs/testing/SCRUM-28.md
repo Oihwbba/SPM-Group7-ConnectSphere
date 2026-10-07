@@ -58,7 +58,7 @@ reservations and maintenance holds at the busiest moment.
 | Test Data | Seeded `eqr_planning` |
 | Expected Result | "Review started. The coordinator has been notified." The status becomes **In Review**, and the note, **Approve** and **Reject** appear. |
 
-**Automated by:** `e2e/equipment-request-review.spec.ts` › "SCRUM-28 [AC2, AC3, AC5, AC6] TC-28-02, TC-28-03: reviewing then approving updates the status, notifies the coordinator and logs each change"; `tests/unit/equipment-request-review.test.ts` › "SCRUM-28 [AC2, AC5, AC6] TC-28-02: takes a pending request into review, records it and tells the coordinator"; `tests/unit/equipment-request-review-rules.test.ts` › "allows PENDING_REVIEW → IN_REVIEW"
+**Automated by:** `e2e/equipment-request-review.spec.ts` › "SCRUM-28 [AC2, AC3, AC5, AC6] TC-28-02, TC-28-03, TC-28-09, TC-28-10: reviewing then approving updates the status, notifies the coordinator and logs each change"; `tests/unit/equipment-request-review.test.ts` › "SCRUM-28 [AC2, AC5, AC6] TC-28-02, TC-28-09, TC-28-10: takes a pending request into review, records it and tells the coordinator"; `tests/unit/equipment-request-review-rules.test.ts` › "allows PENDING_REVIEW → IN_REVIEW"
 
 ### TC-28-03
 
@@ -71,7 +71,7 @@ reservations and maintenance holds at the busiest moment.
 | Test Data | Note: "Lecterns swapped for laptops." |
 | Expected Result | "Request approved. The coordinator has been notified." The request moves to **Decided** as **Approved**, with the time it was decided. |
 
-**Automated by:** `e2e/equipment-request-review.spec.ts` › "AC 2, 4 & 5: …"; `tests/unit/equipment-request-review.test.ts` › "SCRUM-28 [AC3, AC5] TC-28-03: approves a request in review, stamping the decision and passing on the note"; `tests/integration/equipment-request-review.test.ts` › "SCRUM-28 [AC2, AC3, AC5, AC6] TC-28-03, TC-28-09: review then approval each move the request, log one entry and notify the coordinator once"
+**Automated by:** `e2e/equipment-request-review.spec.ts` › "SCRUM-28 [AC2, AC3, AC5, AC6] TC-28-02, TC-28-03, TC-28-09, TC-28-10: …"; `tests/unit/equipment-request-review.test.ts` › "SCRUM-28 [AC3, AC5] TC-28-03: approves a request in review, stamping the decision and passing on the note"; `tests/integration/equipment-request-review.test.ts` › "SCRUM-28 [AC2, AC3, AC5, AC6] TC-28-02, TC-28-03, TC-28-09, TC-28-10: review then approval each move the request, log one entry and notify the coordinator once"
 
 ### TC-28-04
 
@@ -84,7 +84,7 @@ reservations and maintenance holds at the busiest moment.
 | Test Data | Reason: "Not enough lecterns that day." |
 | Expected Result | Step 1 shows "Give the coordinator a reason for rejecting the request." under the note, and the request stays In Review. Step 2 shows "Request rejected. The coordinator has been notified." and the request is **Rejected**, with the reason in its history. |
 
-**Automated by:** `e2e/equipment-request-review.spec.ts` › "SCRUM-28 [AC3] TC-28-04: rejecting needs a reason, and the reason is recorded"; `tests/unit/equipment-request-review.test.ts` › "SCRUM-28 [AC3] TC-28-04: a rejection without a reason is refused next to the note, and nothing is written", "SCRUM-28 [AC3, AC5] TC-28-04: rejects a request in review with the reason"; `tests/unit/equipment-request-review-rules.test.ts` › "requires a reason to reject, so the coordinator knows why"
+**Automated by:** `e2e/equipment-request-review.spec.ts` › "SCRUM-28 [AC3] TC-28-04: rejecting needs a reason, and the reason is recorded"; `tests/unit/equipment-request-review.test.ts` › "SCRUM-28 [AC3] TC-28-04: a rejection without a reason is refused next to the note, and nothing is written", "SCRUM-28 [AC3, AC5] TC-28-04: rejects a request in review with the reason"; `tests/unit/equipment-request-review-rules.test.ts` › "SCRUM-28 [AC3] TC-28-04: requires a reason to reject, so the coordinator knows why"
 
 ### TC-28-05
 
@@ -110,7 +110,7 @@ reservations and maintenance holds at the busiest moment.
 | Test Data | Any pending request |
 | Expected Result | One session is told the review started. The other gets "Someone else updated this request first. Refresh to see its current status." The request has one history entry and the coordinator one notification, not two. |
 
-**Automated by:** `tests/integration/equipment-request-review.test.ts` › "SCRUM-28 [AC7] TC-28-06: two reviewers taking the same request at once — one succeeds, one is told, nothing is doubled"; `tests/unit/equipment-request-review.test.ts` › "when another reviewer changes the request first, says so and records nothing"
+**Automated by:** `tests/integration/equipment-request-review.test.ts` › "SCRUM-28 [AC7] TC-28-06: two reviewers taking the same request at once — one succeeds, one is told, nothing is doubled"; `tests/unit/equipment-request-review.test.ts` › "SCRUM-28 [AC7] TC-28-06: when another reviewer changes the request first, says so and records nothing"
 
 ### TC-28-07
 
@@ -123,7 +123,7 @@ reservations and maintenance holds at the busiest moment.
 | Test Data | Lectern × 5 (4 free); Laptop (15 free) |
 | Expected Result | The list offers only other types with at least 5 free for the event, never Lectern itself. "Laptop suggested to the coordinator." The line shows "Suggested instead: Laptop", and so does the coordinator's view of the request. |
 
-**Automated by:** `e2e/equipment-request-review.spec.ts` › "SCRUM-28 [AC4, AC5, AC6] TC-28-07, TC-28-10: an unavailable line gets an alternative, and the coordinator sees it and the history"; `tests/unit/equipment-request-review.test.ts` › "SCRUM-28 [AC4, AC5] TC-28-07: records the alternative on the short line, logs it and tells the coordinator"; `tests/unit/equipment-request-review-rules.test.ts` › "SCRUM-28 [AC4] TC-28-07: a line that is short offers every other type that could cover the whole quantity"; `tests/integration/equipment-request-review.test.ts` › "SCRUM-28 [AC4, AC5] TC-28-07: suggesting an alternative for the short line saves it, logs it and tells the coordinator"
+**Automated by:** `e2e/equipment-request-review.spec.ts` › "SCRUM-28 [AC4, AC5, AC6] TC-28-07, TC-28-09, TC-28-10: an unavailable line gets an alternative, and the coordinator sees it and the history"; `tests/unit/equipment-request-review.test.ts` › "SCRUM-28 [AC4, AC5] TC-28-07, TC-28-09: records the alternative on the short line, logs it and tells the coordinator"; `tests/unit/equipment-request-review-rules.test.ts` › "SCRUM-28 [AC4] TC-28-07: a line that is short offers every other type that could cover the whole quantity"; `tests/integration/equipment-request-review.test.ts` › "SCRUM-28 [AC4, AC5] TC-28-07, TC-28-09: suggesting an alternative for the short line saves it, logs it and tells the coordinator"
 
 ### TC-28-08
 
@@ -136,7 +136,7 @@ reservations and maintenance holds at the busiest moment.
 | Test Data | (a) the Projector line, which fits <br> (b) Lectern as its own alternative <br> (c) an alternative with fewer free than the quantity <br> (d) an alternative with exactly the quantity free |
 | Expected Result | Step 1: no suggestion list. Step 2: "Start the review to suggest an alternative." (a) "Projector has enough free for this event, so there is nothing to replace." (b) "Choose a different equipment type." (c) "Only N of M &lt;type&gt; are free for this event: K short." (d) is offered in the list. Nothing is written for (a) to (c). |
 
-**Automated by:** `e2e/equipment-request-review.spec.ts` › "AC 3, 4 & 5: …" (steps 1 and 2); `tests/unit/equipment-request-review.test.ts` › "SCRUM-28 [AC4] TC-28-08: only for equipment that is unavailable", "SCRUM-28 [AC4] TC-28-08: the alternative must itself be available for the whole quantity", "SCRUM-28 [AC4] TC-28-08: the alternative must be a different type from the inventory", "SCRUM-28 [AC4] TC-28-08: only while the request is in review"; `tests/unit/equipment-request-review-rules.test.ts` › "AC 3 boundary: an alternative with exactly the quantity free is offered, one fewer is not"; `tests/integration/equipment-request-review.test.ts` › "SCRUM-28 [AC4] TC-28-08: no alternative is taken for a line that is available"
+**Automated by:** `e2e/equipment-request-review.spec.ts` › "SCRUM-28 [AC4, AC5, AC6] TC-28-07, TC-28-09, TC-28-10: …" (steps 1 and 2); `tests/unit/equipment-request-review.test.ts` › "SCRUM-28 [AC4] TC-28-08: only for equipment that is unavailable", "SCRUM-28 [AC4] TC-28-08: the alternative must itself be available for the whole quantity", "SCRUM-28 [AC4] TC-28-08: the alternative must be a different type from the inventory", "SCRUM-28 [AC4] TC-28-08: only while the request is in review"; `tests/unit/equipment-request-review-rules.test.ts` › "SCRUM-28 [AC4] TC-28-08: an alternative with exactly the quantity free is offered, one fewer is not"; `tests/integration/equipment-request-review.test.ts` › "SCRUM-28 [AC4] TC-28-08: no alternative is taken for a line that is available"
 
 ### TC-28-09
 
@@ -149,7 +149,7 @@ reservations and maintenance holds at the busiest moment.
 | Test Data | As TC-28-02, TC-28-07, TC-28-03 |
 | Expected Result | The coordinator who raised the request has one `EQUIPMENT_REQUEST_UPDATED` notification per update, linking to `/equipment-requests`: "Your equipment request for "…" is now In Review.", "Technical Support suggested Laptop instead of Lectern for "…": only 4 of 4 Lectern are free.", "… is now Approved. Note: …". The list that shows them is SCRUM-48. |
 
-**Automated by:** `e2e/equipment-request-review.spec.ts` › "AC 2, 4 & 5: …", "AC 3, 4 & 5: …"; `tests/unit/equipment-request-review.test.ts` › "SCRUM-28 [AC2, AC5, AC6] TC-28-02: takes a pending request into review, records it and tells the coordinator", "AC 3 & 4: …"; `tests/integration/equipment-request-review.test.ts` › "AC 2, 4 & 5: …"
+**Automated by:** `e2e/equipment-request-review.spec.ts` › "SCRUM-28 [AC2, AC3, AC5, AC6] TC-28-02, TC-28-03, TC-28-09, TC-28-10: …", "SCRUM-28 [AC4, AC5, AC6] TC-28-07, TC-28-09, TC-28-10: …"; `tests/unit/equipment-request-review.test.ts` › "SCRUM-28 [AC2, AC5, AC6] TC-28-02, TC-28-09, TC-28-10: takes a pending request into review, records it and tells the coordinator", "SCRUM-28 [AC4, AC5] TC-28-07, TC-28-09: …"; `tests/integration/equipment-request-review.test.ts` › "SCRUM-28 [AC2, AC3, AC5, AC6] TC-28-02, TC-28-03, TC-28-09, TC-28-10: …"
 
 ### TC-28-10
 
@@ -162,7 +162,7 @@ reservations and maintenance holds at the busiest moment.
 | Test Data | As TC-28-09 |
 | Expected Result | Both show the same entries, oldest first, each with its time and who made it: "Submitted as Pending Review", "Pending Review → In Review", "Suggested Laptop instead of Lectern (only 4 of 4 free).", "In Review → Approved" with its note. |
 
-**Automated by:** `e2e/equipment-request-review.spec.ts` › "AC 2, 4 & 5: …", "AC 3, 4 & 5: …"; `tests/unit/equipment-request-queries.test.ts` › "SCRUM-28 AC 3 & 5: includes suggested alternatives and the history, oldest first"; `tests/integration/equipment-request-review.test.ts` › "AC 2, 4 & 5: …"
+**Automated by:** `e2e/equipment-request-review.spec.ts` › "SCRUM-28 [AC2, AC3, AC5, AC6] TC-28-02, TC-28-03, TC-28-09, TC-28-10: …", "SCRUM-28 [AC4, AC5, AC6] TC-28-07, TC-28-09, TC-28-10: …"; `tests/unit/equipment-request-queries.test.ts` › "SCRUM-28 [AC4, AC6] TC-28-07, TC-28-10: includes suggested alternatives and the history, oldest first"; `tests/integration/equipment-request-review.test.ts` › "SCRUM-28 [AC2, AC3, AC5, AC6] TC-28-02, TC-28-03, TC-28-09, TC-28-10: …"
 
 ### TC-28-11
 
@@ -175,4 +175,4 @@ reservations and maintenance holds at the busiest moment.
 | Test Data | Roles: ORGANISER, COORDINATOR, VENUE_STAFF, ATTENDEE |
 | Expected Result | Each call is refused with "You do not have permission to do that." before anything is read. The coordinator's page shows the request with no **Start review**, **Approve** or **Reject**. |
 
-**Automated by:** `tests/unit/equipment-request-review.test.ts` › "refuses %s before reading anything" (both actions, all four roles); `tests/unit/auth.test.ts` › "does not let %s review an equipment request"; `e2e/equipment-request-review.spec.ts` › "AC 3, 4 & 5: …" (coordinator view)
+**Automated by:** `tests/unit/equipment-request-review.test.ts` › "refuses %s before reading anything" (both actions, all four roles); `tests/unit/auth.test.ts` › "does not let %s review an equipment request"; `e2e/equipment-request-review.spec.ts` › "SCRUM-28 [AC4, AC5, AC6] TC-28-07, TC-28-09, TC-28-10: …" (coordinator view)

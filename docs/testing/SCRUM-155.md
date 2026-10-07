@@ -216,7 +216,7 @@ Approved and asks for 1 Projector and 2 Wireless Microphones.
 | Test Data       | —                                                                                                                                                                                                                                                              |
 | Expected Result | 1. The row shows the type that was asked for, as "<type> (no longer available)", and it can't be chosen again. 2. "Nothing was reserved: an equipment type is no longer available." The row says "This equipment type is no longer available. Choose another." |
 
-**Automated by:** `tests/unit/request-reservation.test.ts` › "marks the row whose equipment type has been retired, and reserves nothing"; `e2e/request-reservation.spec.ts` › "SCRUM-155 [AC2, AC7] TC-155-14: …"
+**Automated by:** `tests/unit/request-reservation.test.ts` › "SCRUM-155 [AC2, AC7] TC-155-14: marks the row whose equipment type has been retired, and reserves nothing"; `e2e/request-reservation.spec.ts` › "SCRUM-155 [AC2, AC7] TC-155-14: …"
 
 ### TC-155-15
 

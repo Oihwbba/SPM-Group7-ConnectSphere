@@ -135,7 +135,7 @@ describe.skipIf(!usesLocalDatabase)(
         },
       });
 
-    it("SCRUM-28 [AC2, AC3, AC5, AC6] TC-28-03, TC-28-09: review then approval each move the request, log one entry and notify the coordinator once", async () => {
+    it("SCRUM-28 [AC2, AC3, AC5, AC6] TC-28-02, TC-28-03, TC-28-09, TC-28-10: review then approval each move the request, log one entry and notify the coordinator once", async () => {
       await expect(
         updateEquipmentRequestStatus({ requestId, toStatus: "IN_REVIEW" }),
       ).resolves.toEqual({ ok: true, data: { status: "IN_REVIEW" } });
@@ -250,7 +250,7 @@ describe.skipIf(!usesLocalDatabase)(
       expect(laptop.review).toMatchObject({ shortfall: 0, alternatives: [] });
     });
 
-    it("SCRUM-28 [AC4, AC5] TC-28-07: suggesting an alternative for the short line saves it, logs it and tells the coordinator", async () => {
+    it("SCRUM-28 [AC4, AC5] TC-28-07, TC-28-09: suggesting an alternative for the short line saves it, logs it and tells the coordinator", async () => {
       await updateEquipmentRequestStatus({ requestId, toStatus: "IN_REVIEW" });
       await reserveLecterns(2);
 

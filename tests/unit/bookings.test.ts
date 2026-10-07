@@ -126,7 +126,7 @@ beforeEach(() => {
 });
 
 describe("submitBookingRequest — SCRUM-50", () => {
-  it("SCRUM-50 [AC1, AC2] TC-50-01: SCRUM-50 AC2 — a request for a free period is created PENDING", async () => {
+  it("SCRUM-50 [AC1, AC2] TC-50-01: a request for a free period is created PENDING", async () => {
     const result = await submitBookingRequest(validRequest);
 
     expect(result).toEqual({
@@ -207,7 +207,7 @@ describe("submitBookingRequest — SCRUM-50", () => {
     expect(db.booking.create).toHaveBeenCalled();
   });
 
-  describe("SCRUM-50 [AC1] TC-50-15: SCRUM-50 AC1 — the period and attendance are the event's", () => {
+  describe("SCRUM-50 [AC1] TC-50-15: the period and attendance are the event's", () => {
     it("SCRUM-50 AC1 — the event's period, rounded out to the half hour, is accepted", async () => {
       db.event.findUnique.mockResolvedValue({
         organiserId: "usr_org",
@@ -340,7 +340,7 @@ describe("submitBookingRequest — SCRUM-50", () => {
     expect(db.booking.create).not.toHaveBeenCalled();
   });
 
-  it("SCRUM-50 [AC5] TC-50-06: SCRUM-50 AC5 — an end before or equal to the start is reported as an invalid period", async () => {
+  it("SCRUM-50 [AC5] TC-50-06: an end before or equal to the start is reported as an invalid period", async () => {
     for (const endAt of ["2030-06-01T05:00:00.000Z", START]) {
       const result = await submitBookingRequest({ ...validRequest, endAt });
       expect(result).toMatchObject({
@@ -410,7 +410,7 @@ describe("submitBookingRequest — SCRUM-50", () => {
     });
   });
 
-  it("SCRUM-50 [AC8] TC-50-07: SCRUM-50 AC8 — an event that already has a pending or approved booking, for any venue, is shown it and nothing is created", async () => {
+  it("SCRUM-50 [AC8] TC-50-07: an event that already has a pending or approved booking, for any venue, is shown it and nothing is created", async () => {
     db.booking.findFirst.mockResolvedValue(summaryRow);
 
     const result = await submitBookingRequest(validRequest);
@@ -443,7 +443,7 @@ describe("submitBookingRequest — SCRUM-50", () => {
     expect(db.venue.findFirst).not.toHaveBeenCalled();
   });
 
-  it("SCRUM-50 [AC3] TC-50-02: SCRUM-50 AC3 — a venue already booked for part of the period refuses the request and names the clash", async () => {
+  it("SCRUM-50 [AC3] TC-50-02: a venue already booked for part of the period refuses the request and names the clash", async () => {
     db.booking.findMany.mockResolvedValue([
       {
         id: "bkg_x",
@@ -503,7 +503,7 @@ describe("submitBookingRequest — SCRUM-50", () => {
   });
 });
 
-describe("SCRUM-50 [AC3, AC4, AC5] TC-50-13: checkVenueAvailability — SCRUM-50 live check", () => {
+describe("SCRUM-50 [AC3, AC4, AC5] TC-50-13: checkVenueAvailability, the live check", () => {
   const period = { venueId: "ven_1", startAt: START, endAt: END };
 
   it("SCRUM-50 AC3 — a free venue is reported available before submitting", async () => {
@@ -542,7 +542,7 @@ describe("SCRUM-50 [AC3, AC4, AC5] TC-50-13: checkVenueAvailability — SCRUM-50
     });
   });
 
-  it("SCRUM-50 [AC5] TC-50-06: SCRUM-50 AC5 — an end before or equal to the start, or a missing time, is an invalid period and nothing is read", async () => {
+  it("SCRUM-50 [AC5] TC-50-06: an end before or equal to the start, or a missing time, is an invalid period and nothing is read", async () => {
     for (const bad of [
       { ...period, endAt: START },
       { ...period, startAt: END, endAt: START },
@@ -557,7 +557,7 @@ describe("SCRUM-50 [AC3, AC4, AC5] TC-50-13: checkVenueAvailability — SCRUM-50
     expect(db.booking.findMany).not.toHaveBeenCalled();
   });
 
-  it("SCRUM-50 [AC5] TC-50-11: SCRUM-50 AC5 — a period that has already started is reported against the start, as submitting would, and nothing is read", async () => {
+  it("SCRUM-50 [AC5] TC-50-11: a period that has already started is reported against the start, as submitting would, and nothing is read", async () => {
     expect(
       await checkVenueAvailability({
         venueId: "ven_1",
@@ -842,7 +842,7 @@ describe("decideBookingRequest — SCRUM-53", () => {
     });
   });
 
-  it("SCRUM-36 [AC2] TC-37-01: approving refreshes the availability calendar; rejecting does not need to", async () => {
+  it("SCRUM-37 [AC2] TC-37-01: approving refreshes the availability calendar; rejecting does not need to", async () => {
     await decideBookingRequest({ bookingId: "bkg_1", decision: "APPROVED" });
     expect(revalidatePath).toHaveBeenCalledWith("/venues/availability");
 

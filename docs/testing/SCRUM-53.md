@@ -5,9 +5,9 @@ Format and conventions: [README.md](README.md). Why the database, not the
 application, settles simultaneous approvals:
 [ADR 0010](../adr/0010-database-prevents-venue-double-booking.md).
 
-**Shared pre-conditions for every case:**
+> **Week 7 (SCRUM-158).** AC 1 and AC 7 know only Approve and Reject, and AC 4–AC 6 and AC 8 compare bare periods. SCRUM-163 adds the Held and Expired outcomes (replacing AC 1 and AC 7), and SCRUM-159 compares AC 4–AC 6 and AC 8 against occupied periods. The cases below test the behaviour as built before those stories land.
 
-> **Week 7 (SCRUM-158).** AC 1 and AC 7 know only Approve and Reject, and AC 4–AC 6 and AC 8 compare bare periods. SCRUM-163 adds the Held and Expired outcomes (replacing AC 1 and AC 7), and SCRUM-159 compares AC 4–AC 6 and AC 8 against occupied periods. The cases below test the behaviour as built before those stories land. the database is migrated and seeded,
+**Shared pre-conditions for every case:** the database is migrated and seeded,
 the app is running, and the tester signs in as Venue Staff
 (`venuestaff@test.local` / `Password123!`) unless the case says otherwise.
 
@@ -35,7 +35,7 @@ the app is running, and the tester signs in as Venue Staff
 | Test Data | As TC-50-01 |
 | Expected Result | "Approved: Exhibition Hall is now booked for …" and the card leaves the queue. The booking is APPROVED with the deciding user and time, and one audit entry is written. Step 3 is refused. The availability calendar (SCRUM-36) arrives in the next pull request; until then, the refusal is the evidence. |
 
-**Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-53 AC1 & AC3 — approving makes the venue unavailable: a later overlapping request is refused"; `tests/unit/bookings.test.ts` › "SCRUM-53 AC1 & AC3 — approving sets the request APPROVED and records who decided, when, and an audit entry"; `e2e/bookings.spec.ts` › "SCRUM-50 AC2, SCRUM-52 AC1-3, SCRUM-53 AC1 & AC3 — …"
+**Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-53 [AC1, AC4] TC-53-01: approving makes the venue unavailable: a later overlapping request is refused"; `tests/unit/bookings.test.ts` › "SCRUM-53 [AC1, AC4] TC-53-01: approving sets the request APPROVED and records who decided, when, and an audit entry"; `e2e/bookings.spec.ts` › "SCRUM-50 [AC2], SCRUM-52 [AC1-AC3], SCRUM-53 [AC1, AC4]: a coordinator requests, staff approve, and the venue becomes unavailable"
 
 ### TC-53-02
 
@@ -48,7 +48,7 @@ the app is running, and the tester signs in as Venue Staff
 | Test Data | Reason: "The hall is set for an exhibition that week." |
 | Expected Result | "Rejected the request for …". The booking is REJECTED with the trimmed reason, the deciding user and time, and one audit entry. |
 
-**Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-53 AC1 & AC2 — rejecting with a reason saves the rejection, the reason, and an audit entry"; `tests/unit/bookings.test.ts` › "SCRUM-53 AC2 — rejecting saves the trimmed free-text reason"; `e2e/bookings.spec.ts` › "SCRUM-53 AC2 — rejecting needs a written reason, and the reason is saved"
+**Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-53 [AC1, AC2] TC-53-02: rejecting with a reason saves the rejection, the reason, and an audit entry"; `tests/unit/bookings.test.ts` › "SCRUM-53 [AC2] TC-53-02: rejecting saves the trimmed free-text reason"; `e2e/bookings.spec.ts` › "SCRUM-53 [AC2] TC-53-02, TC-53-03: rejecting needs a written reason, and the reason is saved"
 
 ### TC-53-03
 
@@ -61,7 +61,7 @@ the app is running, and the tester signs in as Venue Staff
 | Test Data | "", "   " |
 | Expected Result | **Reject request** stays disabled. Called directly, the action refuses with "A reason is required to reject a booking request." and the database's `booking_rejection_has_reason` check refuses too. The request stays pending. |
 
-**Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-53 AC2 — rejecting with a blank reason is refused and the request stays pending" and "…the database itself refuses a rejection without a reason"; `tests/unit/bookings.test.ts` › "SCRUM-53 AC2 — rejecting with a blank reason is refused and nothing is read or written"; `e2e/bookings.spec.ts` › "SCRUM-53 AC2 — …"
+**Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-53 [AC2] TC-53-03: rejecting with a blank reason is refused and the request stays pending" and "SCRUM-53 [AC2] TC-53-03: the database itself refuses a rejection without a reason"; `tests/unit/bookings.test.ts` › "SCRUM-53 [AC2] TC-53-03: rejecting with a blank reason is refused and nothing is read or written"; `e2e/bookings.spec.ts` › "SCRUM-53 [AC2] TC-53-02, TC-53-03: …"
 
 ### TC-53-04
 
@@ -74,7 +74,7 @@ the app is running, and the tester signs in as Venue Staff
 | Test Data | — |
 | Expected Result | "Conflicting: … is already booked from … to …. This request is still pending." (or "unavailable (closure) …"). The request stays pending so it can be rejected with a reason. |
 
-**Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-53 AC4 — approving a request that overlaps an already-approved booking is returned as conflicting" and "…approving over recorded unavailability is returned as conflicting"; `tests/unit/bookings.test.ts` › "SCRUM-53 AC4 — approving over an approved booking or recorded unavailability is returned as conflicting"
+**Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-53 [AC8] TC-53-04: approving a request that overlaps an already-approved booking is returned as conflicting" and "SCRUM-53 [AC8] TC-53-04: approving over recorded unavailability is returned as conflicting"; `tests/unit/bookings.test.ts` › "SCRUM-53 [AC8] TC-53-04: approving over an approved booking or recorded unavailability is returned as conflicting"
 
 ### TC-53-05
 
@@ -87,7 +87,7 @@ the app is running, and the tester signs in as Venue Staff
 | Test Data | — |
 | Expected Result | One approval succeeds. The other returns "Conflicting: …" and stays pending. Exactly one APPROVED row and one audit entry exist. In step 2 the second transaction fails on `booking_no_double_booking`. Dropping the constraint makes both tests fail (verified 2026-09-27). |
 
-**Automated by:** `tests/integration/concurrency.test.ts` › "SCRUM-53 AC4 — two staff approve overlapping requests at the same moment: one succeeds, one is returned as conflicting" and "…the database alone refuses the second of two simultaneous overlapping approvals, however the rows are written"; `tests/unit/bookings.test.ts` › "SCRUM-53 AC4 — when the database refuses a simultaneous overlapping approval, it is returned as conflicting" and "…a deadlock between simultaneous approvals is retried once"
+**Automated by:** `tests/integration/concurrency.test.ts` › "SCRUM-53 [AC5] TC-53-05: two staff approve overlapping requests at the same moment: one succeeds, one is returned as conflicting" and "SCRUM-53 [AC5] TC-53-05: the database alone refuses the second of two simultaneous overlapping approvals, however the rows are written"; `tests/unit/bookings.test.ts` › "SCRUM-53 [AC5] TC-53-05: when the database refuses a simultaneous overlapping approval, it is returned as conflicting" and "SCRUM-53 [AC5] TC-53-05: a deadlock between simultaneous approvals is retried once"
 
 ### TC-53-06
 
@@ -100,7 +100,7 @@ the app is running, and the tester signs in as Venue Staff
 | Test Data | — |
 | Expected Result | Both are APPROVED. |
 
-**Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-53 AC5 — two requests that touch at an endpoint can both be approved"; `tests/integration/concurrency.test.ts` › "SCRUM-53 AC5 — two staff approve requests that touch at an endpoint at the same moment: both succeed"
+**Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-53 [AC6] TC-53-06: two requests that touch at an endpoint can both be approved"; `tests/integration/concurrency.test.ts` › "SCRUM-53 [AC6] TC-53-06: two staff approve requests that touch at an endpoint at the same moment: both succeed"
 
 ### TC-53-07
 
@@ -113,7 +113,7 @@ the app is running, and the tester signs in as Venue Staff
 | Test Data | — |
 | Expected Result | "This request has already been approved; the original decision stands." (or "rejected"). Status, reason and the single audit entry are unchanged. In step 2 exactly one decision and one audit entry are recorded. |
 
-**Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-53 AC6 — deciding an already-approved request…", "…deciding an already-rejected request leaves the rejection standing" and "…an approve and a reject of the same request at the same instant: exactly one outcome is recorded"; `tests/unit/bookings.test.ts` › both "SCRUM-53 AC6 — …" cases
+**Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-53 [AC7] TC-53-07: deciding an already-approved request leaves the approval standing and records no second outcome", "SCRUM-53 [AC7] TC-53-07: deciding an already-rejected request leaves the rejection standing" and "SCRUM-53 [AC7] TC-53-07: an approve and a reject of the same request at the same instant: exactly one outcome is recorded"; `tests/unit/bookings.test.ts` › both "SCRUM-53 [AC7] TC-53-07: …" cases
 
 ### TC-53-08
 
@@ -126,4 +126,4 @@ the app is running, and the tester signs in as Venue Staff
 | Test Data | — |
 | Expected Result | "You do not have permission to do that." Nothing is written. |
 
-**Automated by:** `tests/unit/bookings.test.ts` › "SCRUM-53 — every role except Venue Staff is refused"; `tests/unit/auth.test.ts` › "SCRUM-53 — only venue staff may approve or reject a request"
+**Automated by:** `tests/unit/bookings.test.ts` › "SCRUM-53 TC-53-08: every role except Venue Staff is refused"; `tests/unit/auth.test.ts` › "SCRUM-53 TC-53-08: only venue staff may approve or reject a request"

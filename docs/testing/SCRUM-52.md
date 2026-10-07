@@ -3,9 +3,9 @@
 Story and acceptance criteria: [docs/backlog/SCRUM-52.md](../backlog/SCRUM-52.md).
 Format and conventions: [README.md](README.md).
 
-**Shared pre-conditions for every case:**
+> **Week 7 (SCRUM-158).** AC 1 shows Pending requests only, and AC 3 shows overlaps against bare periods. SCRUM-163 adds Held requests to the queue and their expiry; SCRUM-159 compares AC 3's overlaps against occupied periods. The cases below test the behaviour as built before those stories land.
 
-> **Week 7 (SCRUM-158).** AC 1 shows Pending requests only, and AC 3 shows overlaps against bare periods. SCRUM-163 adds Held requests to the queue and their expiry; SCRUM-159 compares AC 3's overlaps against occupied periods. The cases below test the behaviour as built before those stories land. the database is migrated and seeded,
+**Shared pre-conditions for every case:** the database is migrated and seeded,
 the app is running, and the tester signs in as Venue Staff
 (`venuestaff@test.local` / `Password123!`) unless the case says otherwise. The
 seed holds one pending request (`bkg_pending`, Seminar Room 2.1).
@@ -31,7 +31,7 @@ seed holds one pending request (`bkg_pending`, Seminar Room 2.1).
 | Test Data | As TC-50-01 |
 | Expected Result | The card shows the event, "10 Mar 2035, 9:00 am to 10 Mar 2035, 1:00 pm", "Requested by Cody Coordinator" with "coordinator@test.local", Exhibition Hall and its location, "120 expected · venue holds 200", the facilities (as green or red pills) and layout asked for, and the notes, each fact led by its own icon. Soonest request first. |
 
-**Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-52 AC1 & AC2 — the queue lists pending requests with venue, timing, attendance, needs and the requesting coordinator"; `e2e/bookings.spec.ts` › "SCRUM-50 AC2, SCRUM-52 AC1-3, SCRUM-53 AC1 & AC3 — …"
+**Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-52 [AC1, AC2] TC-52-01: the queue lists pending requests with venue, timing, attendance, needs and the requesting coordinator"; `e2e/bookings.spec.ts` › "SCRUM-50 [AC2], SCRUM-52 [AC1-AC3], SCRUM-53 [AC1, AC4]: a coordinator requests, staff approve, and the venue becomes unavailable"
 
 ### TC-52-02
 
@@ -44,7 +44,7 @@ seed holds one pending request (`bkg_pending`, Seminar Room 2.1).
 | Test Data | — |
 | Expected Result | The free request shows "Free for this period". The other lists the clash ("already booked from … to …"). Attendance, each facility and the layout carry a tick when the venue meets them and a cross when it does not. There is no overall suitability verdict; that is SCRUM-40. |
 
-**Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-52 AC3 — each request carries the venue's current availability for its period"; `e2e/bookings.spec.ts` › journey ("Free for this period", capacity line)
+**Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-52 [AC3] TC-52-02: each request carries the venue's current availability for its period"; `e2e/bookings.spec.ts` › journey ("Free for this period", capacity line)
 
 ### TC-52-03
 
@@ -57,7 +57,7 @@ seed holds one pending request (`bkg_pending`, Seminar Room 2.1).
 | Test Data | — |
 | Expected Result | The decided request is no longer listed. |
 
-**Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-52 AC1 — decided requests leave the queue"; `e2e/bookings.spec.ts` › journey and "SCRUM-53 AC2 — …" (card count drops to 0)
+**Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-52 [AC1] TC-52-03: decided requests leave the queue"; `e2e/bookings.spec.ts` › journey and "SCRUM-53 [AC2] TC-53-02, TC-53-03: …" (card count drops to 0)
 
 ### TC-52-04
 
@@ -70,7 +70,7 @@ seed holds one pending request (`bkg_pending`, Seminar Room 2.1).
 | Test Data | `coordinator@test.local` |
 | Expected Result | No Bookings link. The server renders "Access denied" rather than the queue. |
 
-**Automated by:** `e2e/bookings.spec.ts` › "SCRUM-52 — a coordinator typing the queue's address is refused by the server"; `tests/unit/auth.test.ts` › "SCRUM-52 — only venue staff may read the pending-request queue"; `e2e/access-control.spec.ts` › "Coordinator sees only …"
+**Automated by:** `e2e/bookings.spec.ts` › "SCRUM-52 TC-52-04: a coordinator typing the queue's address is refused by the server"; `tests/unit/auth.test.ts` › "SCRUM-52 TC-52-04: only venue staff may read the pending-request queue"; `e2e/access-control.spec.ts` › "Coordinator sees only …"
 
 ### TC-52-05
 
@@ -83,4 +83,4 @@ seed holds one pending request (`bkg_pending`, Seminar Room 2.1).
 | Test Data | "seminar"; "seminar boardroom" |
 | Expected Result | Step 1: only matching requests are listed, with "Showing N of M requests". Step 2: "No requests match …" with a **Clear search** button, because every word must match. Step 3: the full queue returns. Case does not matter. |
 
-**Automated by:** `tests/unit/booking-queue.test.tsx` › the three "SCRUM-52 — …" matchesSearch cases; `e2e/bookings.spec.ts` › "SCRUM-53 AC2 — rejecting needs a written reason, and the reason is saved" (search step)
+**Automated by:** `tests/unit/booking-queue.test.tsx` › the three "SCRUM-52 — …" matchesSearch cases; `e2e/bookings.spec.ts` › "SCRUM-53 [AC2] TC-53-02, TC-53-03: rejecting needs a written reason, and the reason is saved" (search step)

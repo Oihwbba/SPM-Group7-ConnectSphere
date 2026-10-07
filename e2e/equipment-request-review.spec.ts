@@ -124,7 +124,7 @@ test.describe("SCRUM-28 — Review and Update Equipment Request", () => {
     );
   });
 
-  test("SCRUM-28 [AC2, AC3, AC5, AC6] TC-28-02, TC-28-03: reviewing then approving updates the status, notifies the coordinator and logs each change", async ({
+  test("SCRUM-28 [AC2, AC3, AC5, AC6] TC-28-02, TC-28-03, TC-28-09, TC-28-10: reviewing then approving updates the status, notifies the coordinator and logs each change", async ({
     page,
   }) => {
     const rig = await makeRig("approve");
@@ -232,7 +232,7 @@ test.describe("SCRUM-28 — Review and Update Equipment Request", () => {
     );
   });
 
-  test("SCRUM-28 [AC4, AC5, AC6] TC-28-07, TC-28-10: an unavailable line gets an alternative, and the coordinator sees it and the history", async ({
+  test("SCRUM-28 [AC4, AC5, AC6] TC-28-07, TC-28-09, TC-28-10: an unavailable line gets an alternative, and the coordinator sees it and the history", async ({
     page,
   }) => {
     const rig = await makeRig("suggest");

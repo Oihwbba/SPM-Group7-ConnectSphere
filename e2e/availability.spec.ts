@@ -382,7 +382,7 @@ test.describe("SCRUM-36 / SCRUM-37 — venue availability calendar and recorded 
     }
   });
 
-  test("SCRUM-36 [AC2] TC-37-01: an open calendar picks up a booking approved elsewhere, without a reload", async ({
+  test("SCRUM-37 [AC2] TC-37-01: an open calendar picks up a booking approved elsewhere, without a reload", async ({
     browser,
   }) => {
     // The booking is written straight to the database, as if approved by
