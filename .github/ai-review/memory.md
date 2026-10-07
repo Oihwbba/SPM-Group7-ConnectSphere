@@ -123,10 +123,6 @@ Gaps found by reviews (the #11 replay, 2026-09-14, and later merges), still
 true until a pull request fixes them. Raise one only when a pull request
 touches that code or claims that story, and say it was already known.
 
-- (2026-09-23, #76) The organiser events table shows Name, Status, Starts and
-Updated, but SCRUM-84 AC3 also asks for an Expected Attendance column, which
-is still missing. Treat it as known when a pull request touches the table or
-claims SCRUM-84.
 - (2026-09-29, #99) Two gaps its review left open: a recorded unavailability
 period can never be removed or shortened from the app, so a wrong record
 blocks its venue until someone edits the database by hand; and the record form
@@ -137,3 +133,8 @@ decides Submitted/Under Review, and `confirmEvent` refuses anything not
 Planning, so legacy rows (the seed's `evt_approved` among them, and the reason
 APPROVED stays reservable) can never be confirmed or resubmitted. Treat it as
 known when a pull request touches the status lifecycle or the seed.
+- (2026-10-08, #143) A gap its review left open, asked for twice and merged
+unfixed: nothing pins the top bar. No test asserts the header has no search
+box (SCRUM-168 AC1) or that at phone width the brand stays left and the
+profile menu right (AC3). Treat it as known when a pull request touches
+`app/(app)/layout.tsx`.
