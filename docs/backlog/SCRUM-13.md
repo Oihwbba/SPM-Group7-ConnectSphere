@@ -2,7 +2,7 @@
      Synced from Jira on 2026-10-07. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
-# SCRUM-13 - [Add to Sprint 3] Create an event request
+# SCRUM-13 - Create an event request
 
 | | |
 |---|---|
@@ -11,7 +11,7 @@
 | **Priority** | Highest |
 | **Story points** | 2 |
 | **Status in Jira** | To Do |
-| **Sprint** | SCRUM Sprint 1 |
+| **Sprint** | SCRUM Sprint 1, SCRUM Sprint 3 |
 | **Jira** | https://smu-spm-group7.atlassian.net/browse/SCRUM-13 |
 
 ---

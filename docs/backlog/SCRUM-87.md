@@ -11,7 +11,7 @@
 | **Priority** | Medium |
 | **Story points** | - |
 | **Status in Jira** | To Do |
-| **Sprint** | Backlog |
+| **Sprint** | SCRUM Sprint 3 |
 | **Jira** | https://smu-spm-group7.atlassian.net/browse/SCRUM-87 |
 
 ---
