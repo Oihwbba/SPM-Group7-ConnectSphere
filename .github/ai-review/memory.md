@@ -90,10 +90,6 @@ returning a real 404, which the e2e pins.
 
 ## Equipment
 
-- (2026-09-25, #87) The post-lock `if (!availability)` guard in
-`createReservation` is deliberate: the row lock and the availability count
-  are separate queries, and the guard refuses rather than crashes if their
-  filters ever drift apart.
 - (2026-09-28, #94) Reads that take the signed-in user's id live in plain
 modules (`lib/equipment/request-queries.ts`), never in a `"use server"`
 file: a server action is callable by anyone with any arguments, so exporting

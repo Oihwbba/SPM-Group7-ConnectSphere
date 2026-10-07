@@ -59,18 +59,18 @@ ConnectSphere happens *to an event*.
 |---|---|---|
 | `Venue` | The catalogue: capacity, facilities, accessibility features, supported layouts, operating hours. Retired with `isActive`, never deleted, so historic bookings stay readable. | SCRUM-34, 35, 38, 39, 40, 49 |
 | `VenueUnavailability` | Non-booking unavailability — maintenance, closures. Kept separate from `Booking` because SCRUM-36 requires the two to be *visually distinguishable*. | SCRUM-36, 37 |
-| `Booking` | A venue booking request and its outcome. Carries its own `startAt`/`endAt` (see §4.1). | SCRUM-50, 51, 52, 53, 54 |
+| `Booking` | A venue booking request and its outcome. Carries its own `startAt`/`endAt` (see decision 4.1). An event has at most one pending or approved booking. | SCRUM-50, 51, 52, 53, 54 |
 
 ### Equipment
 
 | Table | Purpose | Stories |
 |---|---|---|
-| `Equipment` | A pooled *type* with a `totalQuantity`, not an individual asset (see §4.3). | SCRUM-27, 28 |
+| `Equipment` | A pooled *type* with a `totalQuantity`, not an individual asset (see decision 4.3). | SCRUM-27, 28 |
 | `EquipmentUnavailability` | A quantity of a type out of service for a period. Quantity-scoped, so three of ten projectors can be in for repair. | SCRUM-29, 30 |
 | `EquipmentRequest` | The coordinator's request header, with its review status. | SCRUM-27, 28 |
 | `EquipmentRequestLine` | One line per equipment type, with quantity and free-text technical requirements, plus an optional suggested alternative. | SCRUM-27, 28 |
 | `EquipmentRequestUpdate` | Append-only status history for a request. | SCRUM-28 |
-| `Reservation` | Committed equipment for an event and period. | SCRUM-31, 32, 33 |
+| `Reservation` | Committed equipment for an event and period. When it is reserved from an approved equipment request, `requestId` links it to that request, so the system knows which of the request's lines are covered. | SCRUM-31, 32, 33, 155, 156 |
 
 ### Attendees and notifications
 
@@ -129,9 +129,11 @@ So an open clarification is a `ClarificationRequest` row with
 `status = OPEN` while the event stays `UNDER_REVIEW`. The screen shows
 "awaiting clarification"; the status field does not.
 
-*This is an open customer question* — see `SPM-IS212-CustomerQA-Questions.md`,
-Q3. If the customer says it should be a real status, it becomes a tenth enum
-value and this table keeps only the message and response.
+*This is an open customer question* (question 3 in the customer Q&A document
+in the team's
+[shared Google Drive folder](https://drive.google.com/drive/folders/1G4cNyWOcldw0iawiJfmJ1WbCiy_YZbv0)).
+If the customer says it should be a real status, it becomes a tenth enum value
+and this table keeps only the message and response.
 
 ### 4.3 Equipment is a counted pool, not individual assets
 
@@ -146,7 +148,7 @@ tags and an assignment table, all for a requirement nobody stated.
 
 The cost of this choice is real and worth stating: because a pool has no
 identity, overlap alone is not a conflict, so equipment cannot use the same
-EXCLUDE constraint that protects venues. That is why §4.4 exists.
+EXCLUDE constraint that protects venues. That is why decision 4.4 exists.
 
 ### 4.4 Why two rules are locks rather than constraints
 
@@ -154,22 +156,24 @@ EXCLUDE constraint that protects venues. That is why §4.4 exists.
 |---|---|---|
 | A venue is never double-booked (SCRUM-53, ADR 0010) | `EXCLUDE USING gist` on approved bookings | A venue is a single resource: any overlap is a conflict, which is exactly what an exclusion constraint expresses. |
 | A venue is never both booked and unavailable (SCRUM-37, ADR 0010) | Triggers that lock the `Venue` row, then check the other table | An exclusion constraint sees one table; bookings and recorded unavailability are two. |
-| Equipment is never over-allocated (SCRUM-31) | `SELECT … FOR UPDATE` on the `Equipment` row | Overlapping reservations are *legal* until the sum exceeds the pool. A constraint cannot express "the sum of overlapping rows must not exceed a column on another table". |
+| Equipment is never over-allocated (SCRUM-31, 155) | `SELECT … FOR UPDATE` on the `Equipment` rows, in id order, after the `Event` row | Overlapping reservations are *legal* until the sum exceeds the pool. A constraint cannot express "the sum of overlapping rows must not exceed a column on another table". |
 | An event is never oversubscribed (SCRUM-74) | `SELECT … FOR UPDATE` on the `Event` row | Same shape: capacity is a count, not a slot. |
 
 Both locks must be taken inside the transaction that writes the row. Reading
 the count first and inserting afterwards is the bug those two stories'
 "at the same moment" criteria are written to catch.
 
-### 4.5 Registration capacity is its own number
+### 4.5 Registration capacity is the event's expected attendance
 
-`Event.registrationCapacity` is stored per event and is **not** derived from
-the venue's capacity. SCRUM-74's final criterion says so explicitly. The two
-differ in practice — a 500-seat auditorium can host an event that only wants
-120 registrations.
+SCRUM-74, as re-written in Jira: "For Release 1, registration capacity equals
+the event's expected attendance; no separate registration-capacity field is
+maintained." Registration therefore counts against `Event.expectedAttendance`,
+under a lock on the `Event` row (decision 4.4).
 
-*Also an open customer question* (Q&A doc). If the customer says capacity is
-always the venue's, this column becomes derived and the constraint moves.
+`Event.registrationCapacity` comes from the earlier wording, where capacity was
+a separate number set per event. Nothing reads it now. Removing it, and
+bringing the rest of this document in line with the latest stories, is
+SCRUM-147.
 
 ---
 
@@ -186,7 +190,7 @@ excluded from Release 1.
 | Event categories, agendas, recurring events, attachments, comments, tentative holds, room layouts as entities, reporting | All on the Week 4 "not required for Release 1" list. |
 
 If a customer answer brings one of these into scope, add it as a new migration
-and a new row in the §3 table — do not smuggle it into an existing table.
+and a new row in the table in section 3. Don't smuggle it into an existing table.
 
 ---
 
@@ -202,4 +206,4 @@ and a new row in the §3 table — do not smuggle it into an existing table.
    story in a comment.
 5. Add seed data that makes the new rule demonstrable, and say in a comment
    which story it demonstrates.
-6. Update §2 and §3 of this document in the same pull request.
+6. Update sections 2 and 3 of this document in the same pull request.
