@@ -146,7 +146,7 @@ describe.skipIf(!usesLocalDatabase)("concurrency — equipment pool (SCRUM-31)",
     );
   }
 
-  it("SCRUM-31 [AC5] TC-31-06: does not over-allocate equipment when two staff reserve the last unit (SCRUM-31)", async () => {
+  it("SCRUM-31 [AC5] TC-31-06: does not over-allocate equipment when two staff reserve the last unit", async () => {
     const period = {
       startAt: "2031-03-01T01:00:00.000Z",
       endAt: "2031-03-01T05:00:00.000Z",
@@ -173,7 +173,7 @@ describe.skipIf(!usesLocalDatabase)("concurrency — equipment pool (SCRUM-31)",
     expect(reserved._sum.quantity).toBe(1);
   });
 
-  it("SCRUM-31 [AC4] TC-31-05: accepts reservations that touch at an endpoint — periods sharing an endpoint do not overlap (SCRUM-31)", async () => {
+  it("SCRUM-31 [AC4] TC-31-05: accepts reservations that touch at an endpoint — periods sharing an endpoint do not overlap", async () => {
     // One unit, three back-to-back periods: each ends exactly when the next begins.
     const [morning, midday, dawn] = await approvedRequestsFor([
       { startAt: "2031-04-01T01:00:00.000Z", endAt: "2031-04-01T03:00:00.000Z" },

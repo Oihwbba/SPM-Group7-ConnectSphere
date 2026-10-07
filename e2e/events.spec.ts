@@ -837,7 +837,7 @@ test.describe("User Story 23 & 24 — Event Status View & Consistency Journey", 
     await expect(detailModal.getByTestId("status-badge")).toHaveAttribute("data-status", "REJECTED");
   });
 
-  test("SCRUM-81 [AC1, AC2] TC-81-01: coordinator approves an under-review event and status moves to PLANNING (SCRUM-24, SCRUM-81)", async ({
+  test("SCRUM-81 [AC1, AC2] TC-81-01: coordinator approves an under-review event and status moves to PLANNING (SCRUM-24)", async ({
     page,
   }) => {
     // 1. Sign in as Event Coordinator

@@ -104,7 +104,7 @@ needs them.
 | Test Data | Pool: 1 unit <br> Middle: 2031-03-02 09:00–12:00 <br> Before: 2031-03-02 06:00–09:00 <br> After: 2031-03-02 12:00–15:00 <br> Quantity: 1 each |
 | Expected Result | All three reservations are confirmed, and the unit is never counted twice. A fourth reservation from 11:59 to 12:30, which does overlap, is refused as 1 short. |
 
-**Automated by:** `tests/integration/concurrency.test.ts` › "SCRUM-31 [AC4] TC-31-05: accepts reservations that touch at an endpoint — periods sharing an endpoint do not overlap (SCRUM-31)" (real Postgres); `tests/unit/reservation.test.ts` › "SCRUM-31 [AC4] TC-31-05: overlap is half-open — a period that only touches another does not count against it". The overlapping fourth reservation is **Manual**.
+**Automated by:** `tests/integration/concurrency.test.ts` › "SCRUM-31 [AC4] TC-31-05: accepts reservations that touch at an endpoint — periods sharing an endpoint do not overlap" (real Postgres); `tests/unit/reservation.test.ts` › "SCRUM-31 [AC4] TC-31-05: overlap is half-open — a period that only touches another does not count against it". The overlapping fourth reservation is **Manual**.
 
 ### TC-31-06
 
@@ -169,7 +169,7 @@ needs them.
 | Test Data | Events: `evt_planning`, `evt_confirmed` <br> Equipment type: Lectern <br> Period: 2031-05-10 09:00–17:00 <br> Quantity: 1 |
 | Expected Result | Step 1: the list offers the Approved and Planning events, not the Confirmed one. Step 2: the reservation is confirmed — a Planning event can raise an equipment request (SCRUM-27 AC 1), so its request must be fulfillable. Step 3: "Reservations can only be made for an approved event." No reservation is created. |
 
-**Automated by:** `tests/unit/equipment-request-queries.test.ts` › "SCRUM-27 [AC1] TC-27-01: stock can be reserved for exactly the events that can take a request"; `tests/integration/equipment-availability.test.ts` › "SCRUM-31 TC-31-10: reserves for a Planning event, and refuses a Confirmed one without writing"; `e2e/request-reservation.spec.ts` › "SCRUM-155 [AC1] TC-155-10: …"
+**Automated by:** `tests/unit/equipment-request-queries.test.ts` › "SCRUM-27 [AC1] TC-27-01: stock can be reserved for exactly the events that can take a request"; `tests/integration/equipment-availability.test.ts` › "SCRUM-31 TC-31-10: reserves for a Planning event, and refuses a Confirmed one without writing"; `tests/integration/request-reservation.test.ts` › "SCRUM-155 [AC1] TC-155-10: …"
 
 ### TC-31-11
 

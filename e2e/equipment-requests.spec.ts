@@ -275,7 +275,7 @@ test.describe("SCRUM-27 — who can raise equipment requests", () => {
     ).toBeVisible();
   });
 
-  test("SCRUM-27 TC-27-15: a coordinator with no requests is told how to raise one, not shown an empty list", async ({
+  test("SCRUM-27 [AC8] TC-27-15: a coordinator with no requests is told how to raise one, not shown an empty list", async ({
     page,
   }) => {
     await signIn(page, "coordinator2@test.local");

@@ -223,4 +223,4 @@ the seed.
 | Test Data | `coordinator2@test.local`, who has no requests. |
 | Expected Result | "No equipment requests yet" is shown and no request cards appear. |
 
-**Automated by:** `e2e/equipment-requests.spec.ts` › "SCRUM-27 TC-27-15: a coordinator with no requests is told how to raise one, not shown an empty list"
+**Automated by:** `e2e/equipment-requests.spec.ts` › "SCRUM-27 [AC8] TC-27-15: a coordinator with no requests is told how to raise one, not shown an empty list"

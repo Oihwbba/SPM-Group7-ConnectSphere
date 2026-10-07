@@ -44,7 +44,7 @@ and, if equipment was requested, every line reserved in full.
 | Test Data       | —                                                                                                                                                                                                                                                                          |
 | Expected Result | "Event status updated to planning." The row and the details show **Planning**. The event records the approving Coordinator and time, and its history holds two entries: the Coordinator's approval (Under Review → Approved) and the automatic move (Approved → Planning). |
 
-**Automated by:** `tests/unit/event-status.test.ts` › "SCRUM-81 [AC1] TC-81-01: …" and "SCRUM-19, SCRUM-81 [AC1, AC2] TC-81-01: …"; `tests/integration/concurrency.test.ts` › the decision race now ends in Planning; `e2e/events.spec.ts` › "SCRUM-81 [AC1, AC2] TC-81-01: coordinator approves an under-review event and status moves to PLANNING (SCRUM-24, SCRUM-81)"
+**Automated by:** `tests/unit/event-status.test.ts` › "SCRUM-81 [AC1] TC-81-01: …" and "SCRUM-19, SCRUM-81 [AC1, AC2] TC-81-01: …"; `tests/integration/concurrency.test.ts` › the decision race now ends in Planning; `e2e/events.spec.ts` › "SCRUM-81 [AC1, AC2] TC-81-01: coordinator approves an under-review event and status moves to PLANNING (SCRUM-24)"
 
 ### TC-81-02
 
