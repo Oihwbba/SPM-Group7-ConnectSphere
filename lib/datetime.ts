@@ -88,6 +88,24 @@ export function formatTime(value: Date | string): string {
 }
 
 /**
+ * An event's date with its start and end time (SCRUM-72 AC2, SCRUM-76 AC1),
+ * e.g. "15 Jan 2026, 10:00 am SGT – 4:00 pm SGT", or the full end date when
+ * the event ends on a later day.
+ */
+export function formatEventTime(
+  startAt: Date | null,
+  endAt: Date | null,
+): string {
+  if (!startAt) return "Date to be confirmed";
+  if (!endAt) return formatDateTime(startAt);
+  const end =
+    formatDate(startAt) === formatDate(endAt)
+      ? formatTime(endAt)
+      : formatDateTime(endAt);
+  return `${formatDateTime(startAt)} – ${end}`;
+}
+
+/**
  * Parse a naive "YYYY-MM-DDTHH:mm" wall-time string as an Asia/Singapore (+08:00) instant.
  * ConnectSphere treats all user-entered wall-clock dates and times as Singapore time.
  */
