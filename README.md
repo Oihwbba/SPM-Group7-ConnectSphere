@@ -3,6 +3,28 @@
 Event planning and venue booking system for **ConnectSphere Event Services**,
 built by Group 7 for IS212 Software Project Management.
 
+**Live app:** <https://spm-group7-connect-sphere.vercel.app> (deployed from
+`main`; sign in with a seeded account below).
+
+## What it does
+
+ConnectSphere replaces event planning by email and spreadsheets with one
+system, where every event has one status, one assigned Coordinator, and
+arrangements that can't clash:
+
+1. An **Event Organiser** drafts an event request and submits it.
+2. An **Event Coordinator** is assigned automatically, reviews it, asks
+   questions if needed, and approves or rejects it.
+3. In planning, the Coordinator books a venue and requests equipment.
+   **Venue Staff** and **Technical Support** decide those requests, and the
+   system refuses a double-booked venue or over-reserved equipment.
+4. When the arrangements are complete, the Coordinator **confirms** the event.
+5. **Attendees** register for confirmed events, up to each event's capacity.
+
+Release 1 covers the twenty features in the Week 4 project instructions. The
+full picture (roles, the event lifecycle, scope) is in
+[`docs/product-context.md`](docs/product-context.md).
+
 **Course material:** the customer briefing, the Week 4 project instructions
 (the twenty Release 1 features and the grading rubric) and the customer's Q&A
 answers are in the team's
