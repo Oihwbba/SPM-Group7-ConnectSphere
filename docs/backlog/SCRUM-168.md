@@ -9,16 +9,14 @@
 | **Type** | Task |
 | **Epic** | - |
 | **Priority** | Medium |
-| **Story points** | 1 |
+| **Story points** | 0 |
 | **Status in Jira** | To Do |
-| **Sprint** | Backlog |
+| **Sprint** | SCRUM Sprint 3 |
 | **Jira** | https://smu-spm-group7.atlassian.net/browse/SCRUM-168 |
 
 ---
 
 **Task:** Remove the search box from the top bar shown on every page. It was added as a visual placeholder when the app layout was set up and has never searched anything, so users can type into it and nothing happens.
-
-**Acceptance criteria**
 
 1. The top bar shows no search box, on every page and for every role.
 2. The searches inside pages (My Event Requests in SCRUM-84, the pending booking queue, the Attendee events list) keep working as before.
