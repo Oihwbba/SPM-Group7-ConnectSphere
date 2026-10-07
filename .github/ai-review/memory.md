@@ -31,10 +31,15 @@ satisfies it, so the description need not record it.
   not re-landed. *Deployed to Production* shows on merge commits, never on a
   pull request branch.
 
-- (2026-10-04, #101) Story files under `docs/backlog` lag Jira: PO decisions
-land as separate sync pull requests (#103, #115); an earlier review of #101
-flagged code that met the new AC 4 against the stale copy. Check a story
-file's change log before reporting a code/story mismatch.
+- (2026-10-04, #101; 2026-10-07, #141) Story files under `docs/backlog` lag
+Jira: PO decisions and sprint planning land as separate sync pull requests
+(#103, #115, #141); an earlier review of #101 flagged code that met the new
+AC 4 against the stale copy. Check a story file's change log before
+reporting a code/story mismatch. Syncs regenerate from Jira untouched
+(#141), so its quirks show verbatim: a story in two sprints counts towards
+both (SCRUM-13), and Sprint 3's committed 164 includes 33 points of
+`beyond-release-1` stories — the fix belongs in Jira, and the next sync
+carries it over.
 
 ## Dependencies
 
