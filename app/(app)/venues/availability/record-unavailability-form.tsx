@@ -94,8 +94,9 @@ export function RecordUnavailabilityForm({
             Record unavailability for {venueName}
           </h2>
           <p className="text-sm text-muted-foreground">
-            Maintenance, a closure, or anything else that isn&apos;t a booking.
-            A period that clashes with an approved booking is not saved.
+            Maintenance, equipment failure, renovation, a safety concern, or
+            anything else that isn&apos;t a booking. A period that clashes with
+            an approved booking is not saved.
           </p>
         </div>
 
