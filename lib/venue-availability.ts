@@ -1,11 +1,12 @@
 import type {
   Prisma,
   PrismaClient,
-  UnavailabilityReason,
+  VenueUnavailabilityReason,
 } from "@prisma/client";
 
 import { formatDateTime, parseSingaporeDateTime } from "@/lib/datetime";
 import { overlapping, overlaps, type Period } from "@/lib/period";
+import { UNAVAILABILITY_REASON_LABEL } from "@/lib/schemas/unavailability";
 
 type Db = PrismaClient | Prisma.TransactionClient;
 
@@ -39,7 +40,7 @@ export type VenueBlocker =
       id: string;
       startAt: Date;
       endAt: Date;
-      reason: UnavailabilityReason;
+      reason: VenueUnavailabilityReason;
       details?: BlockerDetails;
     };
 
@@ -163,7 +164,7 @@ export function describeBlocker(blocker: VenueBlocker): string {
   const what =
     blocker.kind === "booking"
       ? "already booked"
-      : `unavailable (${blocker.reason.toLowerCase()})`;
+      : `unavailable (${UNAVAILABILITY_REASON_LABEL[blocker.reason].toLowerCase()})`;
   return `${what} from ${formatDateTime(blocker.startAt)} to ${formatDateTime(blocker.endAt)}`;
 }
 

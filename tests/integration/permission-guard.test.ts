@@ -42,6 +42,10 @@ const SEED_USER: Record<Role, string> = {
   VENUE_STAFF: "usr_venuestaff",
   TECH_SUPPORT: "usr_techsupport",
   ATTENDEE: "usr_attendee",
+  // SCRUM-164 seeds these accounts. A refused call writes nothing, so the
+  // refusals below need no real row behind the id.
+  COORDINATOR_LEAD: "usr_coordinatorlead",
+  SAFETY_OFFICER: "usr_safetyofficer",
 };
 
 function sessionFor(role: Role): Session {
@@ -58,6 +62,8 @@ const FORBIDDEN_ROLES: Role[] = [
   "VENUE_STAFF",
   "TECH_SUPPORT",
   "ATTENDEE",
+  "COORDINATOR_LEAD",
+  "SAFETY_OFFICER",
 ];
 
 beforeEach(() => {

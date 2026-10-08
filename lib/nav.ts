@@ -74,6 +74,8 @@ const ROLES: Role[] = [
   "VENUE_STAFF",
   "TECH_SUPPORT",
   "ATTENDEE",
+  "COORDINATOR_LEAD",
+  "SAFETY_OFFICER",
 ];
 
 /** The links a role sees: every nav route whose action that role holds. */
@@ -108,4 +110,6 @@ export const ROLE_LABEL: Record<Role, string> = {
   VENUE_STAFF: "Venue Staff",
   TECH_SUPPORT: "Technical Support",
   ATTENDEE: "Attendee",
+  COORDINATOR_LEAD: "Event Coordinator Lead",
+  SAFETY_OFFICER: "Safety Officer",
 };

@@ -146,8 +146,8 @@ describe.skipIf(!usesLocalDatabase)(
         venueId,
         startAt: at(3, 1),
         endAt: at(3, 9),
-        reason: "CLOSURE",
-        note: "  Public holiday.  ",
+        reason: "SAFETY_CONCERN",
+        note: "  Fire exit blocked.  ",
       });
 
       expect(result.ok).toBe(true);
@@ -159,8 +159,8 @@ describe.skipIf(!usesLocalDatabase)(
         venueId,
         startAt: new Date(at(3, 1)),
         endAt: new Date(at(3, 9)),
-        reason: "CLOSURE",
-        note: "Public holiday.",
+        reason: "SAFETY_CONCERN",
+        note: "Fire exit blocked.",
         recordedById: "usr_venuestaff",
       });
     });
@@ -231,7 +231,7 @@ describe.skipIf(!usesLocalDatabase)(
     it("SCRUM-37 AC4 — recording over a period already recorded is refused too", async () => {
       await record(at(7, 1), at(7, 5));
 
-      const result = await record(at(7, 4), at(7, 8), "DAMAGED");
+      const result = await record(at(7, 4), at(7, 8), "EQUIPMENT_FAILURE");
 
       expect(result).toMatchObject({
         ok: false,
@@ -260,16 +260,23 @@ describe.skipIf(!usesLocalDatabase)(
     });
 
     describe("the database's own guarantee (ADR 0010)", () => {
-      it("SCRUM-37 AC4 — the database alone refuses maintenance written over an approved booking", async () => {
+      // Until SCRUM-172 the database refused this too. It now accepts it, so
+      // SCRUM-161 can save unavailability over bookings and flag them; the
+      // refusal above is the action's alone, made under the venue lock.
+      it("SCRUM-172 [AC9] TC-172-11: the database accepts unavailability written over an approved booking", async () => {
         await approvedBooking(at(10, 1), at(10, 5));
 
-        await expect(
-          prisma.$executeRaw(Prisma.sql`
-            INSERT INTO "VenueUnavailability" ("id", "venueId", "startAt", "endAt", "recordedById", "updatedAt")
-            VALUES (${`vun_raw_${Date.now()}`}, ${venueId}, ${new Date(at(10, 4))}, ${new Date(at(10, 8))}, 'usr_venuestaff', now())
-          `),
-        ).rejects.toThrow(/unavailability_overlaps_booking/);
-        expect(await unavailabilityCount()).toBe(0);
+        await prisma.$executeRaw(Prisma.sql`
+          INSERT INTO "VenueUnavailability" ("id", "venueId", "startAt", "endAt", "recordedById", "updatedAt")
+          VALUES (${`vun_raw_${Date.now()}`}, ${venueId}, ${new Date(at(10, 4))}, ${new Date(at(10, 8))}, 'usr_venuestaff', now())
+        `);
+
+        expect(await unavailabilityCount()).toBe(1);
+        expect(
+          await prisma.booking.count({
+            where: { venueId, status: "APPROVED" },
+          }),
+        ).toBe(1);
       });
 
       it("SCRUM-37 AC3 — the database alone refuses approving a booking over recorded maintenance", async () => {
