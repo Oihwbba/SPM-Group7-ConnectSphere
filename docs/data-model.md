@@ -19,18 +19,23 @@ User ──┬─ organises ──────────► Event ──┬─
        ├─ registers ───────────►        ├──► Registration
        └─ is notified ─────────►        │
                                         ├──► EquipmentRequest ──► EquipmentRequestLine ──► Equipment
-                                        │         └──────────────► EquipmentRequestUpdate      └──► EquipmentUnavailability
+                                        │         └──────────────► EquipmentRequestUpdate       └──► EquipmentUnavailability
                                         ├──► Reservation ─────────────────────────────────► Equipment
                                         ├──► ClarificationRequest
                                         ├──► EventChangeRequest ──► ChangeRequestField
+                                        ├──► SafetyCheck                (Week 7, SCRUM-166)
                                         └──► Notification
 
 AuditLog ──► (entityType, entityId) — any of the above, by reference not by FK
 ```
 
-`Event` is the hub: nine of the twelve domain tables hang off it. That is a
+`Event` is the hub: most of the domain tables hang off it. That is a
 deliberate consequence of the customer's own framing — everything in
 ConnectSphere happens *to an event*.
+
+The tables that carry the six Week 7 customer changes (SCRUM-159 to 167) are
+introduced by one migration, SCRUM-172; until it merges they exist only as
+stories. Each is marked below.
 
 ---
 
@@ -40,26 +45,35 @@ ConnectSphere happens *to an event*.
 
 | Table | Purpose | Stories |
 |---|---|---|
-| `User` | One row per person, with exactly one `role`. Passwords are bcrypt hashes; account creation is out of Release-1 scope (open customer question), so users arrive via the seed. | SCRUM-65, 66, 67 |
+| `User` | One row per person, with a `role`. Passwords are bcrypt hashes; account creation is out of Release-1 scope (open customer question), so users arrive via the seed. One role per account today; SCRUM-121 will let an account hold several, and its permissions become the union of those roles. | SCRUM-65, 66, 67, 121 |
 | `Account`, `Session`, `VerificationToken` | Auth.js adapter tables. Unused today (we use JWT sessions — see `adr/0002`) but kept so an OAuth provider can be added without a migration. | — |
 | `AuditLog` | Append-only: who did what, when, and the before/after value. No `updatedAt` on purpose — entries "cannot be edited or deleted through the application". | SCRUM-71, and SCRUM-21's "a record exists of who was previously assigned" |
+
+**Roles.** Release 1 has five: Organiser, Coordinator, Venue Staff, Technical
+Support, Attendee. Week 7 (SCRUM-164, with SCRUM-172's migration) adds two
+internal roles — the **Event Coordinator Lead**, who assigns and reassigns
+requests from an unassigned queue (SCRUM-165), and the **Safety Officer**, who
+reviews an event's arrangements before it can be confirmed (SCRUM-166).
+Neither can approve, reject, plan or edit an event.
 
 ### Event lifecycle
 
 | Table | Purpose | Stories |
 |---|---|---|
-| `Event` | The request and everything it becomes. Carries the nine-value `status`, the SCRUM-13 form fields, and the decision/cancellation/completion timestamps and reasons. A rejection also carries its `rejectionOutcome` (Amend and resubmit, or Submit as a new request), which the database requires (ADR 0013). A discarded Draft keeps its row with `discardedAt` set and leaves the Organiser's list; the database keeps it a Draft. | SCRUM-13–26, 81–84, 126, 130 |
-| `ClarificationRequest` | A coordinator's question and the organiser's answer, and (`editableFields`) the request-form fields the answer may change (ADR 0014). | SCRUM-18, 56, 108 |
-| `EventChangeRequest` | An organiser's post-submission change request, with its decision. | SCRUM-41, 42, 43, 47 |
+| `Event` | The request and everything it becomes. Carries the nine-value `status`, the SCRUM-13 form fields, and the decision/cancellation/completion timestamps and reasons. A rejection also carries its `rejectionOutcome` (Amend and resubmit, or Submit as a new request), which the database requires (ADR 0013). A discarded Draft keeps its row with `discardedAt` set and leaves the Organiser's list; the database keeps it a Draft. The Organiser's venue, accessibility and equipment answers stay free text, shown to the people planning (SCRUM-170). **Registration needed** (SCRUM-171) is `registrationRequired`: Yes or No, left empty on a Draft and required to submit; a request created before it keeps its free-text `registrationNotes` next to it, and an event that doesn't need registration is neither opened for registration nor listed to Attendees. Week 7 adds the Coordinator's **No equipment needed** decision, `noEquipmentNeededAt` with who recorded it (SCRUM-170 AC4): both set or neither, and cleared when the equipment requirements change, so the checklist's Equipment item goes back to Not decided. | SCRUM-13–26, 81–84, 126, 130, 170, 171 |
+| `ClarificationRequest` | A coordinator's question and the organiser's answer, and (`editableFields`) the request-form fields the answer may change (ADR 0014). | SCRUM-18, 108 |
+| `EventChangeRequest` | An organiser's post-submission change request, with its decision. | SCRUM-41, 42, 43, 47, 128 |
 | `ChangeRequestField` | One row per changed field, holding `oldValue`, `newValue` and `isMajor`. | SCRUM-42, 44 |
+| `SafetyCheck` | (Week 7, SCRUM-166; SCRUM-172 adds the table.) One row per check, all kept, holding its state — Awaiting review, Approved, Changes requested, Rejected or Outdated — the Safety Officer's note, who recorded the outcome and when, and when it went out of date. An event has at most one check awaiting review. It is a step within Planning, not an extra event status. | SCRUM-166 |
+| `SafetyCheckArrangement` | (Week 7.) The arrangements a Safety Officer picked for Changes requested: each row is exactly one venue booking or one equipment reservation, at most once per check. | SCRUM-166 |
 
 ### Venues
 
 | Table | Purpose | Stories |
 |---|---|---|
-| `Venue` | The catalogue: capacity, facilities, accessibility features, supported layouts, operating hours. Retired with `isActive`, never deleted, so historic bookings stay readable. | SCRUM-34, 35, 38, 39, 40, 49 |
-| `VenueUnavailability` | Non-booking unavailability — maintenance, closures. Kept separate from `Booking` because SCRUM-36 requires the two to be *visually distinguishable*. | SCRUM-36, 37 |
-| `Booking` | A venue booking request and its outcome. Carries its own `startAt`/`endAt` (see decision 4.1). An event has at most one pending or approved booking. | SCRUM-50, 51, 52, 53, 54 |
+| `Venue` | The catalogue: capacity, facilities, accessibility features, supported layouts, opening hours. Retired with `isActive`, never deleted, so historic bookings stay readable. Week 7 (SCRUM-159, SCRUM-34) adds `setupMinutes`, `turnaroundMinutes` (whole minutes, default 0) and `knownRestrictions` (optional text for the Safety Officer). | SCRUM-34, 35, 38, 39, 40, 49, 159 |
+| `VenueUnavailability` | Non-booking unavailability — maintenance, closures. Kept separate from `Booking` because SCRUM-36 requires the two to be *visually distinguishable*. Week 7 (SCRUM-161) gives venues their own reason list — Maintenance, Equipment failure, Renovation, Safety concern and Other (`VenueUnavailabilityReason`; equipment keeps Damaged, SCRUM-29/30) — and lets it be recorded over future bookings, which are then flagged rather than refused. | SCRUM-36, 37, 161 |
+| `Booking` | A venue booking request and its outcome. Carries its own `startAt`/`endAt` (see decision 4.1) plus the setup and turnaround minutes it was approved with (SCRUM-159 AC8). The database holds an event to one pending, held or approved booking per venue (SCRUM-162 AC2); until SCRUM-162 lands, the request action still allows one venue per event (SCRUM-50 AC8). Week 7 lets an event book several venues, each with its own attendance (SCRUM-162), and adds the Held and Expired statuses with `heldAt`, `holdExpiresAt` and `holdNote` (SCRUM-163). A hold blocks its venue only until its expiry, and can't be confirmed after it (ADR 0010, 2026-10-08 addendum). The Needs Reconsideration flag carries its reason, when it was raised, and who resolved it and when (SCRUM-26). | SCRUM-26, 50, 52, 53, 159, 162, 163 |
 
 ### Equipment
 
@@ -67,17 +81,17 @@ ConnectSphere happens *to an event*.
 |---|---|---|
 | `Equipment` | A pooled *type* with a `totalQuantity`, not an individual asset (see decision 4.3). | SCRUM-27, 28 |
 | `EquipmentUnavailability` | A quantity of a type out of service for a period. Quantity-scoped, so three of ten projectors can be in for repair. | SCRUM-29, 30 |
-| `EquipmentRequest` | The coordinator's request header, with its review status. | SCRUM-27, 28 |
+| `EquipmentRequest` | The coordinator's request header, with its review status (Pending Review, In Review, Approved, Rejected or Cancelled). Approving a request holds **no** stock: its status is separate from Reserved equipment, and only a reservation holds stock (decision 4.3b). | SCRUM-27, 28 |
 | `EquipmentRequestLine` | One line per equipment type, with quantity and free-text technical requirements, plus an optional suggested alternative. | SCRUM-27, 28 |
 | `EquipmentRequestUpdate` | Append-only status history for a request. | SCRUM-28 |
-| `Reservation` | Committed equipment for an event and period. When it is reserved from an approved equipment request, `requestId` links it to that request, so the system knows which of the request's lines are covered. | SCRUM-31, 32, 33, 155, 156 |
+| `Reservation` | Committed equipment for an event and period — the only thing that holds stock. It is reserved from an approved equipment request (SCRUM-155), and `requestId` links it back so the system knows which of the request's lines are covered; the one-type form was made availability-only by SCRUM-156. Stored as `CONFIRMED`, shown everywhere as **Reserved** (SCRUM-131). | SCRUM-31, 155, 156 |
 
 ### Attendees and notifications
 
 | Table | Purpose | Stories |
 |---|---|---|
-| `Registration` | One row per attendee per event. Withdrawal is a status change plus `withdrawnAt`, never a delete, so the event's registration history stays complete. | SCRUM-70, 72–78 |
-| `Notification` | One row per notification, with a closed `NotificationType` enum so every notification in the system has a named, traceable trigger. | SCRUM-45, 46, 47, 48, 54, 56, 57, 85 |
+| `Registration` | One row per attendee per event. Withdrawal is a status change plus `withdrawnAt`, never a delete, so the event's registration history stays complete. Shown as Registered, Withdrawn or Cancelled. | SCRUM-70, 72–78 |
+| `Notification` | One row per notification, with a closed `NotificationType` enum so every notification in the system has a named, traceable trigger. SCRUM-48 adds a `showFromAt` time so a hold reminder can be written ahead and appear on schedule without a job, and `withdrawnAt` so one that hasn't shown yet can be withdrawn without deleting it; `bookingId` names the hold it is about (SCRUM-124 AC5). | SCRUM-45, 46, 47, 48, 54, 56, 57, 85, 124 |
 
 ---
 
@@ -89,22 +103,31 @@ ConnectSphere happens *to an event*.
 | 2 | Event request creation | `Event` |
 | 3 | Draft event requests | `Event.status = DRAFT`; discarded: `Event.discardedAt` (SCRUM-130) |
 | 4 | Event review and approval | `Event`, `ClarificationRequest` |
-| 5 | Coordinator assignment | `Event.coordinatorId`, `AuditLog` |
+| 5 | Coordinator assignment | `Event.coordinatorId`, `AuditLog`; unassigned queue and the Lead are SCRUM-165 |
 | 6 | Event status management | `Event.status` + the lifecycle timestamps |
-| 7 | Event information management | `Event`, `AuditLog` |
-| 8 | Venue catalogue | `Venue` |
-| 9 | Venue availability calendar | `Booking`, `VenueUnavailability` |
+| 7 | Event information management | `Event`, `AuditLog` (operational notes: SCRUM-25) |
+| 8 | Venue catalogue | `Venue` (setup and turnaround: SCRUM-159) |
+| 9 | Venue availability calendar | `Booking`, `VenueUnavailability` (occupied periods: SCRUM-159) |
 | 10 | Venue search and filtering | `Venue` (`facilities`, `accessibilityFeatures`, `supportedLayouts`) |
-| 11 | Venue suitability checking | `Venue.capacity`, `Event.requiredFacilities` |
-| 12 | Venue booking request | `Booking` (`PENDING`) |
-| 13 | Venue booking approval | `Booking` (`APPROVED`/`REJECTED` + `decisionReason`) |
-| 14 | Booking conflict detection | the `booking_no_double_booking` EXCLUDE constraint |
+| 11 | Venue suitability checking | `Venue.capacity`, the event's attendance and needs |
+| 12 | Venue booking request | `Booking` (`PENDING`); several venues per event (SCRUM-162) |
+| 13 | Venue booking approval | `Booking` (`APPROVED`/`REJECTED`/`HELD` + `decisionReason`/hold expiry, SCRUM-163) |
+| 14 | Booking conflict detection | the `booking_no_double_booking` EXCLUDE constraint (occupied periods: SCRUM-159) |
 | 15 | Equipment request management | `EquipmentRequest`, `EquipmentRequestLine`, `EquipmentRequestUpdate` |
 | 16 | Equipment availability checking | `Equipment`, `Reservation`, `EquipmentUnavailability` |
-| 17 | Equipment reservation | `Reservation` |
+| 17 | Equipment reservation | `Reservation` (linked to the request, SCRUM-155/156) |
 | 18 | Attendee registration | `Registration`, `Event.registration*` |
 | 19 | Event change requests | `EventChangeRequest`, `ChangeRequestField`, the `needsReconsideration` flags |
 | 20 | Notification system | `Notification` |
+
+**Week 7 (beyond the twenty, SCRUM-159–167):** venue setup and turnaround
+times — `Venue.setupMinutes`/`turnaroundMinutes` and a booking's occupied
+period (SCRUM-159, SCRUM-160); unavailability over existing bookings
+(SCRUM-161); several venues per event, each booking checked independently
+(SCRUM-162); tentative Held bookings that expire (SCRUM-163); the Lead and
+Safety Officer roles and the Safety Officer's check (SCRUM-164, 165, 166).
+The `needsReconsideration` flag that SCRUM-26 raises lives on `Booking` and
+`Reservation`.
 
 ---
 
@@ -127,7 +150,9 @@ list the single source of truth. Adding a tenth would contradict both.
 
 So an open clarification is a `ClarificationRequest` row with
 `status = OPEN` while the event stays `UNDER_REVIEW`. The screen shows
-"awaiting clarification"; the status field does not.
+"awaiting clarification"; the status field does not. The Week 7 safety check
+(SCRUM-166) follows the same rule: it is a step within Planning, not an event
+status.
 
 *This is an open customer question* (question 3 in the customer Q&A document
 in the team's
@@ -146,7 +171,14 @@ the equipment type from a predefined system list", and SCRUM-29 asks for "the
 total available quantity". Per-asset tracking would mean serial numbers, asset
 tags and an assignment table, all for a requirement nobody stated.
 
-The cost of this choice is real and worth stating: because a pool has no
+**4.3b The request's status is separate from reserved stock.** Approving an
+equipment request changes only its review status (SCRUM-28); it reserves
+nothing. Stock is held only by a `Reservation`, created from an approved
+request (SCRUM-155, which made the one-type form availability-only by
+SCRUM-156). The readiness checklist (SCRUM-110) therefore counts reservations,
+not approvals.
+
+The cost of the pool choice is real and worth stating: because a pool has no
 identity, overlap alone is not a conflict, so equipment cannot use the same
 EXCLUDE constraint that protects venues. That is why decision 4.4 exists.
 
@@ -154,8 +186,8 @@ EXCLUDE constraint that protects venues. That is why decision 4.4 exists.
 
 | Rule | How it is enforced | Why |
 |---|---|---|
-| A venue is never double-booked (SCRUM-53, ADR 0010) | `EXCLUDE USING gist` on approved bookings | A venue is a single resource: any overlap is a conflict, which is exactly what an exclusion constraint expresses. |
-| A venue is never both booked and unavailable (SCRUM-37, ADR 0010) | Triggers that lock the `Venue` row, then check the other table | An exclusion constraint sees one table; bookings and recorded unavailability are two. |
+| A venue is never double-booked (SCRUM-53, ADR 0010) | `EXCLUDE USING gist` on approved bookings (occupied periods under SCRUM-159) | A venue is a single resource: any overlap is a conflict, which is exactly what an exclusion constraint expresses. |
+| A venue is never both booked and unavailable (SCRUM-37, ADR 0010) | Triggers that lock the `Venue` row, then check the other table | An exclusion constraint sees one table; bookings and recorded unavailability are two. (SCRUM-161 now lets unavailability be recorded over bookings, flagging them instead.) |
 | Equipment is never over-allocated (SCRUM-31, 155) | `SELECT … FOR UPDATE` on the `Equipment` rows, in id order, after the `Event` row | Overlapping reservations are *legal* until the sum exceeds the pool. A constraint cannot express "the sum of overlapping rows must not exceed a column on another table". |
 | An event is never oversubscribed (SCRUM-74) | `SELECT … FOR UPDATE` on the `Event` row | Same shape: capacity is a count, not a slot. |
 
@@ -168,12 +200,23 @@ the count first and inserting afterwards is the bug those two stories'
 SCRUM-74, as re-written in Jira: "For Release 1, registration capacity equals
 the event's expected attendance; no separate registration-capacity field is
 maintained." Registration therefore counts against `Event.expectedAttendance`,
-under a lock on the `Event` row (decision 4.4).
+under a lock on the `Event` row (decision 4.4). The leftover
+`Event.registrationCapacity` column — from the earlier wording where capacity
+was a separate number — is unused.
 
-`Event.registrationCapacity` comes from the earlier wording, where capacity was
-a separate number set per event. Nothing reads it now. Removing it, and
-bringing the rest of this document in line with the latest stories, is
-SCRUM-147.
+### 4.6 Display names follow one convention (SCRUM-131)
+
+Stored values need not read as the user sees them. The agreed display names:
+
+| Domain | Shown as |
+|---|---|
+| Event | Draft, Submitted, Under Review, Approved, Planning, Confirmed, Completed, Cancelled, Rejected |
+| Booking | Pending, Held, Approved, Rejected, Expired, Cancelled |
+| Equipment request | Pending Review, In Review, Approved, Rejected, Cancelled |
+| Reservation | **Reserved** or Cancelled — never "Confirmed" (a reservation's stored `CONFIRMED` status collides with the event's Confirmed) |
+| Registration | Registered, Withdrawn, Cancelled |
+| Change request | Submitted, Approved, Rejected |
+| Safety check | Not requested, Awaiting review, Approved, Changes requested, Rejected, Outdated |
 
 ---
 
@@ -184,10 +227,11 @@ excluded from Release 1.
 
 | Not modelled | Why |
 |---|---|
-| Waitlists (SCRUM-79) | Marked "beyond first release" in the story itself. |
-| Attendance on the day (SCRUM-80) | Same. |
-| Equipment catalogue maintenance as a feature | On the Week 4 "not required" list. `Equipment` rows exist; managing them is a seed/admin concern. |
-| Event categories, agendas, recurring events, attachments, comments, tentative holds, room layouts as entities, reporting | All on the Week 4 "not required for Release 1" list. |
+| Waiting lists (SCRUM-79) | Kept out by the team's 13 Sep customer Q&A answer, and on the Week 4 not-required list. A place that opens offers nothing automatically; the waitlist is a later addition. |
+| Attendance on the day (SCRUM-80) | Marked beyond Release 1; Release 1 records a headcount at completion (SCRUM-82). |
+| Equipment catalogue maintenance as a feature | On the Week 4 "not required" list (SCRUM-119 is beyond Release 1). `Equipment` rows exist; managing them is a seed/admin concern. |
+| Client organisations as data (SCRUM-120, SCRUM-153) | Accounts arrive from an outside integration; organisation-wide viewing is beyond Release 1. |
+| Event categories, agendas, recurring events, attachments, comments, room layouts as entities, reporting | All on the Week 4 "not required for Release 1" list. |
 
 If a customer answer brings one of these into scope, add it as a new migration
 and a new row in the table in section 3. Don't smuggle it into an existing table.
