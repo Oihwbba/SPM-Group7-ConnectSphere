@@ -104,3 +104,79 @@ rule, so the application reports it exactly as it reports a double booking.
 - Unlike the constraint, the triggers do not check rows that already existed;
   they guard every write from now on. Existing data was checked for clashes
   before the migration and none were found.
+
+## Addendum (2026-10-08) — Occupied periods, holds, and unavailability over bookings (SCRUM-172)
+
+Week 7 changes what the database must guarantee. Four stories each change a
+rule: a booking now occupies its venue for its setup and turnaround time too
+(SCRUM-159), a tentative Held booking blocks the venue until its expiry
+(SCRUM-163), unavailability can be recorded over bookings, which are flagged
+rather than refused (SCRUM-161), and an event can book several venues
+(SCRUM-162). The rules were rewritten once, in the SCRUM-172 migration
+`20261008120000_week7_schema_and_booking_rules`, so the four stories build on
+one set of rules instead of each editing the same constraints.
+
+### Decision
+
+- **Occupied periods.** A booking stores the setup and turnaround minutes it
+  was held or approved with, and occupies
+  `[startAt − setupMinutes, endAt + turnaroundMinutes)`, computed by the
+  immutable function `booking_occupied_period`. Storing the minutes on the
+  booking, not reading the venue's, is SCRUM-159 AC8: a later change to the
+  venue's times doesn't move a booking; SCRUM-160 finds the clashes it
+  creates. Existing bookings have 0 and 0, so nothing they satisfied changes.
+- **`booking_no_double_booking`** keeps its name and is now over occupied
+  periods of Approved **and Held** bookings. Keeping the name means the
+  application recognises the refusal unchanged.
+- **`booking_overlaps_unavailability`** (the trigger) compares the booking's
+  occupied period with recorded unavailability, for Approved and Held.
+- **Unavailability may overlap bookings** (SCRUM-161 AC1). The trigger on
+  `VenueUnavailability` now refuses only overlapping unavailability. It still
+  takes the venue lock, so an approval and an unavailability record for one
+  venue still take turns, and each sees the other (SCRUM-161 AC7).
+- **`booking_one_per_venue_per_event`** replaces `booking_one_venue_per_event`:
+  an event has at most one Pending, Held or Approved booking per venue, not
+  per event (SCRUM-162 AC2).
+- **An expired hold stops blocking without anyone acting** (SCRUM-163 AC4).
+  A row stays `HELD` until something writes it, and a constraint can't read
+  the clock. So before checking any Pending, Held or Approved write at a venue,
+  the booking trigger marks that venue's holds whose `holdExpiresAt` has passed
+  as `EXPIRED`. A lapsed hold therefore never blocks a request, a hold or an
+  approval, while a hold that hasn't expired still does. Showing a lapsed hold
+  as Expired before anything is written there is the application's job
+  (SCRUM-163).
+- **A lapsed hold can't be confirmed.** The same trigger refuses setting a
+  Held booking to Approved once its expiry has passed, as
+  `booking_hold_expired`, whether or not anything has marked it Expired yet
+  (SCRUM-163 AC4 and AC8: Approved or Expired, never both).
+
+### Alternatives rejected
+
+- **Read the venue's minutes in the constraint.** An EXCLUDE constraint can
+  only index the row's own columns, and reading the venue's current minutes
+  would move existing bookings whenever the venue changed, which SCRUM-159 AC8
+  forbids.
+- **Leave expired holds in the constraint and expire them with a scheduled
+  job.** The app has no scheduler (SCRUM-48 AC8 and SCRUM-124 AC5 avoid one on
+  purpose), and until the job ran a lapsed hold would refuse requests the
+  customer says should succeed.
+- **Keep refusing unavailability over a booking in the database.** SCRUM-161
+  replaces that behaviour; leaving it would force the story to rewrite these
+  rules again.
+
+### Consequences
+
+- Recording unavailability over an approved booking is no longer refused by
+  the database. Until SCRUM-161 saves it and flags the booking, SCRUM-37's
+  action keeps the refusal itself: it takes the venue lock, then checks, then
+  writes, in one transaction, so an approval can't land between the check and
+  the write. The SCRUM-37 race test still saves exactly one.
+- One venue per event (SCRUM-50 AC8) is now held by the action's check alone;
+  the database holds one per venue. Two simultaneous requests for the same
+  event at two different venues could both be saved. SCRUM-162 makes that the
+  intended behaviour.
+- Any Pending, Held or Approved write at a venue may also mark that venue's
+  lapsed holds Expired, in the same transaction. Those booking rows are locked
+  before the venue row. Today nothing takes the venue lock and then writes
+  booking rows, so the two orders can't deadlock; SCRUM-161, which will flag
+  bookings while holding the venue lock, has to keep that in mind.

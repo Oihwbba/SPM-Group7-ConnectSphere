@@ -90,10 +90,10 @@ describe("describeBlocker", () => {
         kind: "unavailability",
         id: "u",
         ...period,
-        reason: "CLOSURE",
+        reason: "EQUIPMENT_FAILURE",
       }),
     ).toBe(
-      "unavailable (closure) from 1 Jun 2030, 2:00 pm SGT to 1 Jun 2030, 4:00 pm SGT",
+      "unavailable (equipment failure) from 1 Jun 2030, 2:00 pm SGT to 1 Jun 2030, 4:00 pm SGT",
     );
   });
 });

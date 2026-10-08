@@ -62,7 +62,7 @@ function postgresRefusal(code: string, message: string) {
 const secondVenueForEvent = () =>
   postgresRefusal(
     "23P01",
-    'conflicting key value violates exclusion constraint "booking_one_venue_per_event"',
+    'conflicting key value violates exclusion constraint "booking_one_per_venue_per_event"',
   );
 const overlapsUnavailability = () =>
   postgresRefusal(
@@ -422,7 +422,10 @@ describe("submitBookingRequest — SCRUM-50", () => {
     expect(db.booking.create).not.toHaveBeenCalled();
     expect(db.booking.findFirst).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { eventId: "evt_1", status: { in: ["PENDING", "APPROVED"] } },
+        where: {
+          eventId: "evt_1",
+          status: { in: ["PENDING", "HELD", "APPROVED"] },
+        },
       }),
     );
   });
@@ -493,7 +496,7 @@ describe("submitBookingRequest — SCRUM-50", () => {
 
     db.booking.create.mockRejectedValue(secondVenueForEvent());
     await expect(submitBookingRequest(validRequest)).rejects.toThrow(
-      "booking_one_venue_per_event",
+      "booking_one_per_venue_per_event",
     );
 
     db.booking.create.mockRejectedValue(new Error("connection lost"));

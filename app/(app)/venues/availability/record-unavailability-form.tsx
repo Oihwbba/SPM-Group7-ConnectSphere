@@ -18,15 +18,11 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { sgWallTimeToUtcIso } from "@/lib/datetime";
-import { UNAVAILABILITY_REASONS } from "@/lib/schemas/unavailability";
+import {
+  UNAVAILABILITY_REASONS,
+  UNAVAILABILITY_REASON_LABEL as REASON_LABEL,
+} from "@/lib/schemas/unavailability";
 import { recordUnavailability } from "./actions";
-
-const REASON_LABEL: Record<(typeof UNAVAILABILITY_REASONS)[number], string> = {
-  MAINTENANCE: "Maintenance",
-  DAMAGED: "Damaged",
-  CLOSURE: "Closure",
-  OTHER: "Other",
-};
 
 const emptyForm = { start: "", end: "", reason: "", note: "" };
 
@@ -98,8 +94,9 @@ export function RecordUnavailabilityForm({
             Record unavailability for {venueName}
           </h2>
           <p className="text-sm text-muted-foreground">
-            Maintenance, a closure, or anything else that isn&apos;t a booking.
-            A period that clashes with an approved booking is not saved.
+            Maintenance, equipment failure, renovation, a safety concern, or
+            anything else that isn&apos;t a booking. A period that clashes with
+            an approved booking is not saved.
           </p>
         </div>
 

@@ -124,9 +124,9 @@ a manual tester creates the same events, or edits an event's dates.
 | Pre-conditions | TC-50-01 is still pending (or has been approved). |
 | Test Steps | 1. Click **Submit request** again with the same details. <br> 2. Choose the same event with the Grand Auditorium instead, and submit. |
 | Test Data | As TC-50-01 |
-| Expected Result | "This event already has a venue request. Each event has one venue." with the existing request's venue, times and status, both times. Still one booking row for the event. The database's `booking_one_venue_per_event` constraint enforces the same rule over Pending and Approved bookings (migration `20261004120000_one_venue_per_event`). A Rejected or Cancelled one does not count (TC-50-14). |
+| Expected Result | "This event already has a venue request. Each event has one venue." with the existing request's venue, times and status, both times. Still one booking row for the event. Since SCRUM-172 the database's `booking_one_per_venue_per_event` constraint holds an event to one Pending, Held or Approved booking per venue, so the refusal in step 2 is the action's until SCRUM-162 lets an event book several venues. A Rejected or Cancelled one does not count (TC-50-14). |
 
-**Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-50 AC8 — submitting the same request twice leaves one request and shows the existing one", "…an event with a pending booking at another venue is shown it, and no request is created", "…an event with a approved booking at another venue…" and "…the database itself refuses a second pending or approved booking for one event, whatever the venue or period"; `tests/unit/bookings.test.ts` › "SCRUM-50 AC8 — an event that already has a pending or approved booking, for any venue, is shown it and nothing is created" and "…the event's existing booking is shown even when the request differs from it"; `e2e/bookings.spec.ts` › journey
+**Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-50 AC8 — submitting the same request twice leaves one request and shows the existing one", "…an event with a pending booking at another venue is shown it, and no request is created", "…an event with a approved booking at another venue…" and "SCRUM-172 [AC9] TC-172-12: the database refuses a second pending, held or approved booking for one event at the same venue, but not at another"; `tests/unit/bookings.test.ts` › "SCRUM-50 AC8 — an event that already has a pending or approved booking, for any venue, is shown it and nothing is created" and "…the event's existing booking is shown even when the request differs from it"; `e2e/bookings.spec.ts` › journey
 
 ### TC-50-08
 
@@ -137,7 +137,7 @@ a manual tester creates the same events, or edits an event's dates.
 | Pre-conditions | Real PostgreSQL. |
 | Test Steps | 1. Fire the same request twice in parallel. |
 | Test Data | As TC-50-01 |
-| Expected Result | Both calls report the same booking id and one row exists. `booking_one_venue_per_event` lets one insert in; a deadlock between the two is retried once (ADR 0010). |
+| Expected Result | Both calls report the same booking id and one row exists. `booking_one_per_venue_per_event` lets one insert in; a deadlock between the two is retried once (ADR 0010). |
 
 **Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-50 AC8 — two identical requests submitted at the same instant still leave one"; `tests/unit/bookings.test.ts` › "SCRUM-50 AC8 — a second request for the event that races past the check…" and "…a deadlock between two identical submissions is retried once and then resolved"
 

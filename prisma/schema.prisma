@@ -20,7 +20,7 @@
 //     prisma/migrations/*_domain_constraints/migration.sql.
 
 generator client {
-  provider = "prisma-client-js"
+  provider   = "prisma-client-js"
   // Engine-free Prisma: `engineType = "client"` generates a client that
   // compiles queries in JS/WASM and runs them through a driver adapter (the
   // pure-JS `pg` driver — see lib/db.ts), so there is NO native Rust query
@@ -31,9 +31,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider  = "postgresql"
   // Pooled connection used by the running app.
-  url = env("DATABASE_URL")
+  url       = env("DATABASE_URL")
   // Direct connection used by `prisma migrate` (see docs/adr/0003 + Supabase
   // trap). Locally both point at the same database.
   directUrl = env("DIRECT_URL")
@@ -43,13 +43,17 @@ datasource db {
 // Enums
 // ---------------------------------------------------------------------------
 
-/// SCRUM-65/66/67 — the five roles named in the customer briefing.
+/// SCRUM-65/66/67 — the five roles named in the customer briefing, and the
+/// two internal roles Week 7 adds (SCRUM-164): the Event Coordinator Lead, who
+/// assigns requests (SCRUM-165), and the Safety Officer (SCRUM-166).
 enum Role {
   ORGANISER
   COORDINATOR
   VENUE_STAFF
   TECH_SUPPORT
   ATTENDEE
+  COORDINATOR_LEAD
+  SAFETY_OFFICER
 }
 
 /// SCRUM-23/24 — the nine agreed status values, and only these nine.
@@ -68,12 +72,16 @@ enum EventStatus {
   REJECTED
 }
 
-/// SCRUM-50/53 — venue booking request lifecycle.
+/// SCRUM-50/53 — venue booking request lifecycle. SCRUM-163 adds HELD, a
+/// tentative booking that reserves the venue until its expiry, and EXPIRED,
+/// what a hold becomes when the expiry passes unconfirmed.
 enum BookingStatus {
   PENDING
+  HELD
   APPROVED
   REJECTED
   CANCELLED
+  EXPIRED
 }
 
 /// SCRUM-76 — "Status values cover at least registered, withdrawn and
@@ -110,13 +118,33 @@ enum ReservationStatus {
   CANCELLED
 }
 
-/// SCRUM-29/30 ("Under Maintenance" or "Damaged") and SCRUM-36/37
-/// (non-booking venue unavailability, e.g. maintenance).
+/// SCRUM-29/30 — why equipment is out of service ("Under Maintenance" or
+/// "Damaged"). Venues have their own list, VenueUnavailabilityReason.
 enum UnavailabilityReason {
   MAINTENANCE
   DAMAGED
   CLOSURE
   OTHER
+}
+
+/// SCRUM-161 AC1 — why a venue is unavailable. Separate from the equipment
+/// reasons above, which SCRUM-29/30 still name "Damaged".
+enum VenueUnavailabilityReason {
+  MAINTENANCE
+  EQUIPMENT_FAILURE
+  RENOVATION
+  SAFETY_CONCERN
+  OTHER
+}
+
+/// SCRUM-166 — the state of an operational safety check. A step within
+/// Planning, not an event status (AC15).
+enum SafetyCheckStatus {
+  AWAITING_REVIEW
+  APPROVED
+  CHANGES_REQUESTED
+  REJECTED
+  OUTDATED
 }
 
 /// SCRUM-126 — what the Organiser may do after a rejection, chosen by the
@@ -147,6 +175,22 @@ enum NotificationType {
   REGISTRATION_CONFIRMED // SCRUM-85
   REGISTERED_EVENT_CHANGED // SCRUM-85
   REGISTERED_EVENT_CANCELLED // SCRUM-85
+  BOOKING_REQUESTED // SCRUM-124 AC1
+  EQUIPMENT_REQUEST_SUBMITTED // SCRUM-124 AC2
+  EQUIPMENT_REQUEST_CHANGED // SCRUM-124 AC2
+  BOOKING_REQUEST_WITHDRAWN // SCRUM-124 AC3
+  EQUIPMENT_REQUEST_WITHDRAWN // SCRUM-124 AC3
+  BOOKING_HELD // SCRUM-124 AC4, SCRUM-163 AC5 — with the deadline and note
+  HOLD_EXPIRY_REMINDER // SCRUM-124 AC5 — shown from 24 hours before the expiry
+  HOLD_EXPIRED // SCRUM-124 AC5 — shown from the expiry
+  HOLD_CONFIRMED // SCRUM-124 AC6
+  HOLD_RELEASED // SCRUM-124 AC6
+  CHANGE_REQUEST_SUBMITTED // SCRUM-124 AC7
+  ARRANGEMENT_FLAGGED // SCRUM-124 AC8, SCRUM-26
+  ARRANGEMENT_FLAG_RESOLVED // SCRUM-124 AC9, SCRUM-26
+  REQUEST_AWAITING_ASSIGNMENT // SCRUM-124 AC10, SCRUM-165
+  SAFETY_CHECK_REQUESTED // SCRUM-124 AC11, SCRUM-166
+  SAFETY_CHECK_OUTCOME // SCRUM-124 AC11, SCRUM-166
 }
 
 // ---------------------------------------------------------------------------
@@ -181,21 +225,27 @@ model User {
   coordinatedEvents Event[] @relation("EventCoordinator")
   decidedEvents     Event[] @relation("EventDecidedBy")
   cancelledEvents   Event[] @relation("EventCancelledBy")
+  noEquipmentEvents Event[] @relation("EventNoEquipmentNeededBy")
 
   registrations Registration[]
   notifications Notification[]
 
-  clarificationRequests   ClarificationRequest[] @relation("ClarificationRequestedBy")
-  requestedBookings       Booking[]              @relation("BookingRequestedBy")
-  decidedBookings         Booking[]              @relation("BookingDecidedBy")
-  equipmentRequests       EquipmentRequest[]     @relation("EquipmentRequestedBy")
+  clarificationRequests   ClarificationRequest[]    @relation("ClarificationRequestedBy")
+  requestedBookings       Booking[]                 @relation("BookingRequestedBy")
+  decidedBookings         Booking[]                 @relation("BookingDecidedBy")
+  equipmentRequests       EquipmentRequest[]        @relation("EquipmentRequestedBy")
   equipmentRequestUpdates EquipmentRequestUpdate[]
-  reservations            Reservation[]          @relation("ReservationReservedBy")
-  requestedChanges        EventChangeRequest[]   @relation("ChangeRequestedBy")
-  decidedChanges          EventChangeRequest[]   @relation("ChangeDecidedBy")
+  reservations            Reservation[]             @relation("ReservationReservedBy")
+  requestedChanges        EventChangeRequest[]      @relation("ChangeRequestedBy")
+  decidedChanges          EventChangeRequest[]      @relation("ChangeDecidedBy")
   venueUnavailability     VenueUnavailability[]
   equipmentUnavailability EquipmentUnavailability[]
   auditLogs               AuditLog[]
+
+  resolvedBookingFlags     Booking[]     @relation("BookingReconsiderationResolvedBy")
+  resolvedReservationFlags Reservation[] @relation("ReservationReconsiderationResolvedBy")
+  requestedSafetyChecks    SafetyCheck[] @relation("SafetyCheckRequestedBy")
+  decidedSafetyChecks      SafetyCheck[] @relation("SafetyCheckDecidedBy")
 }
 
 model Account {
@@ -274,7 +324,7 @@ model Event {
   specialRequests       String?
   // SCRUM-129: every event is entered and shown in Singapore time. The
   // CHECK event_timezone_singapore refuses any other value.
-  timezone              String      @default("Asia/Singapore")
+  timezone              String   @default("Asia/Singapore")
   equipmentTypes        String[] @default([])
   registrationRequired  Boolean?
 
@@ -287,9 +337,9 @@ model Event {
 
   // SCRUM-19 — "a reason is recorded, and the Organiser can see both the
   // rejection and the reason".
-  decidedAt      DateTime?
-  decidedById    String?
-  decisionReason String?
+  decidedAt        DateTime?
+  decidedById      String?
+  decisionReason   String?
   // SCRUM-126 — set with the reason on a rejection; the CHECK
   // event_rejection_has_outcome refuses a REJECTED event without one.
   rejectionOutcome RejectionOutcome?
@@ -310,6 +360,13 @@ model Event {
   /// The CHECK event_discarded_only_draft keeps a discarded event a Draft.
   discardedAt DateTime?
 
+  /// SCRUM-170 AC4 — the Coordinator's "No equipment needed" decision, with
+  /// who recorded it. Both set, or neither (CHECK
+  /// event_no_equipment_decision_complete); cleared when the equipment
+  /// requirements change, so Equipment goes back to Not decided.
+  noEquipmentNeededAt   DateTime?
+  noEquipmentNeededById String?
+
   // SCRUM-72/73/74/75 — registration is per-event and explicitly NOT assumed
   // to equal the venue's capacity (SCRUM-74's last criterion).
   registrationEnabled  Boolean   @default(false)
@@ -320,10 +377,11 @@ model Event {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  organiser   User  @relation("EventOrganiser", fields: [organiserId], references: [id])
-  coordinator User? @relation("EventCoordinator", fields: [coordinatorId], references: [id])
-  decidedBy   User? @relation("EventDecidedBy", fields: [decidedById], references: [id])
-  cancelledBy User? @relation("EventCancelledBy", fields: [cancelledById], references: [id])
+  organiser           User  @relation("EventOrganiser", fields: [organiserId], references: [id])
+  coordinator         User? @relation("EventCoordinator", fields: [coordinatorId], references: [id])
+  decidedBy           User? @relation("EventDecidedBy", fields: [decidedById], references: [id])
+  cancelledBy         User? @relation("EventCancelledBy", fields: [cancelledById], references: [id])
+  noEquipmentNeededBy User? @relation("EventNoEquipmentNeededBy", fields: [noEquipmentNeededById], references: [id])
 
   bookings              Booking[]
   reservations          Reservation[]
@@ -332,6 +390,7 @@ model Event {
   clarificationRequests ClarificationRequest[]
   changeRequests        EventChangeRequest[]
   notifications         Notification[]
+  safetyChecks          SafetyCheck[]
 
   @@index([organiserId])
   @@index([coordinatorId])
@@ -346,8 +405,8 @@ model ClarificationRequest {
   id      String @id @default(cuid())
   eventId String
 
-  requestedById String
-  message       String
+  requestedById  String
+  message        String
   // SCRUM-108 AC1 — the request-form fields the Organiser may change in the
   // answer (keys of CLARIFIABLE_FIELDS); empty means a text answer only.
   editableFields String[] @default([])
@@ -374,15 +433,24 @@ model ClarificationRequest {
 /// supported layouts, and operating information."
 /// SCRUM-35 — Venue Staff maintain these records.
 model Venue {
-  id                   String   @id @default(cuid())
-  name                 String
-  location             String
-  capacity             Int
-  facilities           String[] @default([]) // e.g. ["projector", "sound-system"]
+  id                    String   @id @default(cuid())
+  name                  String
+  location              String
+  capacity              Int
+  facilities            String[] @default([]) // e.g. ["projector", "sound-system"]
   accessibilityFeatures String[] @default([]) // e.g. ["wheelchair-access", "hearing-loop"]
-  supportedLayouts     String[] @default([]) // e.g. ["theatre", "banquet", "classroom"]
-  operatingHours       String?
-  notes                String?
+  supportedLayouts      String[] @default([]) // e.g. ["theatre", "banquet", "classroom"]
+  operatingHours        String?
+  notes                 String?
+
+  /// SCRUM-159 AC1 — minutes the venue needs before a booking to set up and
+  /// after it to reset, 0 to 1,440 (CHECK venue_setup_turnaround_range). A
+  /// booking copies them when it is held or approved (AC8).
+  setupMinutes      Int     @default(0)
+  turnaroundMinutes Int     @default(0)
+  /// SCRUM-34 AC3 — e.g. limited emergency access; shown to the Safety
+  /// Officer (SCRUM-166 AC2).
+  knownRestrictions String?
 
   /// Venues are retired, never deleted — a withdrawn venue must still be
   /// readable from the historic bookings that reference it.
@@ -405,7 +473,7 @@ model VenueUnavailability {
 
   startAt DateTime
   endAt   DateTime
-  reason  UnavailabilityReason @default(MAINTENANCE)
+  reason  VenueUnavailabilityReason @default(MAINTENANCE)
   note    String?
 
   recordedById String
@@ -423,9 +491,11 @@ model VenueUnavailability {
 /// SCRUM-53 (approve/reject with a required reason), SCRUM-54 (notify).
 ///
 /// The database — not the application — guarantees a venue is never
-/// double-booked: an EXCLUDE constraint over `tsrange(startAt, endAt, '[)')`
-/// rejects a second APPROVED booking overlapping the first, including when
+/// double-booked: an EXCLUDE constraint over each booking's occupied period
+/// (its times widened by its setup and turnaround minutes, SCRUM-159) rejects
+/// a second APPROVED or HELD booking overlapping the first, including when
 /// two approvals commit at the same instant (SCRUM-53's simultaneous case).
+/// See docs/adr/0010 and the 2026-10-08 addendum.
 model Booking {
   id      String @id @default(cuid())
   eventId String
@@ -454,17 +524,41 @@ model Booking {
   decidedAt      DateTime?
   decisionReason String?
 
-  // SCRUM-44: marked when an approved change touches a major field.
-  needsReconsideration     Boolean   @default(false)
-  reconsiderationFlaggedAt DateTime?
+  // SCRUM-163 AC1 — a hold's deadline and what the Coordinator must finalise.
+  // Required on a HELD or EXPIRED booking (CHECK booking_hold_complete), and
+  // the expiry is before the booking starts (booking_hold_period_valid).
+  heldAt        DateTime?
+  holdExpiresAt DateTime?
+  holdNote      String?
+
+  // SCRUM-159 AC8 — the venue's setup and turnaround minutes when this
+  // booking was held or approved. Its occupied period is
+  // [startAt − setupMinutes, endAt + turnaroundMinutes), and a later change to
+  // the venue's minutes does not move it.
+  setupMinutes      Int @default(0)
+  turnaroundMinutes Int @default(0)
+
+  // SCRUM-26 — Needs Reconsideration. The flag never changes the status, and
+  // a flagged booking keeps blocking its venue until it is resolved (AC4).
+  // A raised flag carries its reason (CHECK booking_flag_has_reason), and a
+  // resolution records who and when (AC7).
+  needsReconsideration        Boolean   @default(false)
+  reconsiderationFlaggedAt    DateTime?
+  reconsiderationReason       String?
+  reconsiderationResolvedAt   DateTime?
+  reconsiderationResolvedById String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  event       Event @relation(fields: [eventId], references: [id])
-  venue       Venue @relation(fields: [venueId], references: [id])
-  requestedBy User  @relation("BookingRequestedBy", fields: [requestedById], references: [id])
-  decidedBy   User? @relation("BookingDecidedBy", fields: [decidedById], references: [id])
+  event                     Event @relation(fields: [eventId], references: [id])
+  venue                     Venue @relation(fields: [venueId], references: [id])
+  requestedBy               User  @relation("BookingRequestedBy", fields: [requestedById], references: [id])
+  decidedBy                 User? @relation("BookingDecidedBy", fields: [decidedById], references: [id])
+  reconsiderationResolvedBy User? @relation("BookingReconsiderationResolvedBy", fields: [reconsiderationResolvedById], references: [id])
+
+  notifications           Notification[]
+  safetyCheckArrangements SafetyCheckArrangement[]
 
   @@index([venueId])
   @@index([eventId])
@@ -481,11 +575,11 @@ model Booking {
 /// availability is `totalQuantity − reserved − unavailable` for a period
 /// (SCRUM-29). Individually-tracked assets were not asked for.
 model Equipment {
-  id            String  @id @default(cuid())
-  type          String  @unique
-  description   String?
+  id             String  @id @default(cuid())
+  type           String  @unique
+  description    String?
   technicalSpecs String?
-  totalQuantity Int
+  totalQuantity  Int
 
   isActive Boolean @default(true)
 
@@ -493,8 +587,8 @@ model Equipment {
   updatedAt DateTime @updatedAt
 
   reservations   Reservation[]
-  requestLines   EquipmentRequestLine[]      @relation("RequestLineEquipment")
-  suggestedFor   EquipmentRequestLine[]      @relation("RequestLineSuggestedAlternative")
+  requestLines   EquipmentRequestLine[]    @relation("RequestLineEquipment")
+  suggestedFor   EquipmentRequestLine[]    @relation("RequestLineSuggestedAlternative")
   unavailability EquipmentUnavailability[]
 }
 
@@ -569,9 +663,9 @@ model EquipmentRequestLine {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  request             EquipmentRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
-  equipment           Equipment        @relation("RequestLineEquipment", fields: [equipmentId], references: [id])
-  suggestedAlternative Equipment?      @relation("RequestLineSuggestedAlternative", fields: [suggestedAlternativeId], references: [id])
+  request              EquipmentRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  equipment            Equipment        @relation("RequestLineEquipment", fields: [equipmentId], references: [id])
+  suggestedAlternative Equipment?       @relation("RequestLineSuggestedAlternative", fields: [suggestedAlternativeId], references: [id])
 
   @@unique([requestId, equipmentId])
   @@index([equipmentId])
@@ -621,17 +715,24 @@ model Reservation {
 
   reservedById String
 
-  // SCRUM-44
-  needsReconsideration     Boolean   @default(false)
-  reconsiderationFlaggedAt DateTime?
+  // SCRUM-26 — Needs Reconsideration, as on Booking. A flagged reservation
+  // keeps holding its stock until it is resolved (AC4).
+  needsReconsideration        Boolean   @default(false)
+  reconsiderationFlaggedAt    DateTime?
+  reconsiderationReason       String?
+  reconsiderationResolvedAt   DateTime?
+  reconsiderationResolvedById String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  event      Event             @relation(fields: [eventId], references: [id])
-  equipment  Equipment         @relation(fields: [equipmentId], references: [id])
-  request    EquipmentRequest? @relation(fields: [requestId], references: [id])
-  reservedBy User              @relation("ReservationReservedBy", fields: [reservedById], references: [id])
+  event                     Event             @relation(fields: [eventId], references: [id])
+  equipment                 Equipment         @relation(fields: [equipmentId], references: [id])
+  request                   EquipmentRequest? @relation(fields: [requestId], references: [id])
+  reservedBy                User              @relation("ReservationReservedBy", fields: [reservedById], references: [id])
+  reconsiderationResolvedBy User?             @relation("ReservationReconsiderationResolvedBy", fields: [reconsiderationResolvedById], references: [id])
+
+  safetyCheckArrangements SafetyCheckArrangement[]
 
   @@index([eventId])
   @@index([equipmentId])
@@ -748,18 +849,90 @@ model Notification {
 
   /// Optional back-reference so a notification can show the event's CURRENT
   /// name and status rather than a copy made at send time (SCRUM-45).
-  eventId String?
+  eventId   String?
+  /// SCRUM-124 AC5 — the booking a hold reminder or expiry notice is about,
+  /// so they can be withdrawn when that hold is confirmed, released or
+  /// rejected, even when the event has several bookings (SCRUM-162).
+  bookingId String?
 
   readAt DateTime? // null = unread
+
+  /// SCRUM-48 AC8 — not shown, and not counted as unread, before this time.
+  /// Written ahead for a hold's reminder and expiry notice, so they appear on
+  /// time without a scheduled job. Every other notification shows at once.
+  showFromAt  DateTime  @default(now())
+  /// SCRUM-48 AC8, SCRUM-124 AC5 — set when a notification that hasn't shown
+  /// yet is withdrawn; it then never appears. No hard deletes.
+  withdrawnAt DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  user  User   @relation(fields: [userId], references: [id])
-  event Event? @relation(fields: [eventId], references: [id])
+  user    User     @relation(fields: [userId], references: [id])
+  event   Event?   @relation(fields: [eventId], references: [id])
+  booking Booking? @relation(fields: [bookingId], references: [id])
 
   @@index([userId, createdAt])
+  @@index([userId, showFromAt])
   @@index([eventId])
+  @@index([bookingId])
+}
+
+// ---------------------------------------------------------------------------
+// Operational safety check (Week 7, SCRUM-166)
+// ---------------------------------------------------------------------------
+
+/// SCRUM-166 — a Safety Officer's review of an event's arrangements before it
+/// can be confirmed. Every check is kept (AC5): a new request is a new row,
+/// and an event has at most one check awaiting review (AC7, partial unique
+/// index safety_check_one_awaiting_per_event). Changes requested and Rejected
+/// need a note (AC3, CHECK safety_check_note_required), and every outcome
+/// records who and when (CHECK safety_check_outcome_recorded).
+model SafetyCheck {
+  id      String            @id @default(cuid())
+  eventId String
+  status  SafetyCheckStatus @default(AWAITING_REVIEW)
+
+  requestedById String
+
+  note        String?
+  decidedById String?
+  decidedAt   DateTime?
+  /// AC13 — when the arrangements it reviewed changed under it.
+  outdatedAt  DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  event       Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  requestedBy User  @relation("SafetyCheckRequestedBy", fields: [requestedById], references: [id])
+  decidedBy   User? @relation("SafetyCheckDecidedBy", fields: [decidedById], references: [id])
+
+  arrangements SafetyCheckArrangement[]
+
+  @@index([eventId])
+  @@index([status])
+}
+
+/// SCRUM-166 AC3 — an arrangement the Safety Officer picked for Changes
+/// requested: exactly one venue booking or one equipment reservation (CHECK
+/// safety_check_arrangement_one_target), each at most once per check.
+model SafetyCheckArrangement {
+  id            String  @id @default(cuid())
+  checkId       String
+  bookingId     String?
+  reservationId String?
+
+  createdAt DateTime @default(now())
+
+  check       SafetyCheck  @relation(fields: [checkId], references: [id], onDelete: Cascade)
+  booking     Booking?     @relation(fields: [bookingId], references: [id])
+  reservation Reservation? @relation(fields: [reservationId], references: [id])
+
+  @@unique([checkId, bookingId])
+  @@unique([checkId, reservationId])
+  @@index([bookingId])
+  @@index([reservationId])
 }
 
 // ---------------------------------------------------------------------------
