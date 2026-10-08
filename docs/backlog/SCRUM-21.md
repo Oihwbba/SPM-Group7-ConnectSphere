@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-08. Jira is the source of truth.
+     Synced from Jira on 2026-10-09. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-21 - Reassign an event to another Coordinator and show who is currently assigned

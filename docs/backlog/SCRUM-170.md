@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-08. Jira is the source of truth.
+     Synced from Jira on 2026-10-09. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-170 - Show the Organiser's requirements to the people planning the event
@@ -25,6 +25,7 @@
 3. Given I create an equipment request (SCRUM-27), then the form shows the Organiser's Equipment & Technical Support answer read-only, and I enter the equipment lines myself. Technical Support Staff see the same answer when they review the request (SCRUM-28).
 4. The readiness checklist (SCRUM-110) always includes Equipment for an event in Planning. Until I create an equipment request or record No equipment needed, it shows Not decided and is incomplete. Recording No equipment needed keeps who and when. Given the event's equipment requirements change afterwards (SCRUM-128, SCRUM-26), then Equipment goes back to Not decided.
 5. The event's details view shows the Organiser's form answers exactly as entered, the same for every event: under Venue & Accessibility Requirements, the venue requirements, preferred room layout and accessibility needs; under Equipment & Technical Support, the equipment requirements. It doesn't show Required Facilities. Facilities are entered by the Coordinator on each venue request (SCRUM-50, SCRUM-162) and shown there, not taken from the event.
+6. Given I open venue search from my event or from one of its bookings (SCRUM-38, SCRUM-161), then the Organiser's Venue & Accessibility answers (venue requirements, preferred room layout, accessibility needs) are shown read-only beside the filters.
 
 **Supersedes:** SCRUM-110 AC3 ("If there is no equipment request, the item isn't shown and doesn't block confirmation").
 
@@ -40,5 +41,6 @@
 
 * 2026-10-07 (backlog refinement): split from SCRUM-127, which was too big for one sprint. AC1–AC4 are SCRUM-127's former AC7–AC10, unchanged. SCRUM-127's former AC12 is now the Related note, because only SCRUM-38, SCRUM-40, SCRUM-26 and SCRUM-128 can test it.
 * 2026-10-08 (backlog refinement, PO approved): SCRUM-127 dropped, so the Organiser's answers stay free text. They are shown, not pre-filled. AC1 removed (SCRUM-162 AC7 shows booked venues). AC2 and AC3 show the answers to the Coordinator, Venue Staff and Technical Support. AC4's second sentence removed (it repeated SCRUM-110 AC3); the first replaced with the Coordinator's No equipment needed decision, which resets if the equipment requirements change. AC5 added so every event's details view shows the same fields. Estimate stays at 3: removing the pre-fill is offset by the new decision and its reset.
+* 2026-10-09: Added in AC6 so Coordinator knows what Organiser asked for.
 
 Functionality Area: Venue Booking Request, Equipment Request Management

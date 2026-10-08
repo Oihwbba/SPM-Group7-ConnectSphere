@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-08. Jira is the source of truth.
+     Synced from Jira on 2026-10-09. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-157 - Chore: Refresh the project docs so people and AI tools read one consistent, current guide

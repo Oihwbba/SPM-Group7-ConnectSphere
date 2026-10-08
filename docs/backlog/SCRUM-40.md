@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-08. Jira is the source of truth.
+     Synced from Jira on 2026-10-09. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-40 - Flag venue suitability, with the reason
@@ -26,7 +26,7 @@
 4. Given the booking request, or the search before a request exists, requires a room layout the venue doesn't support, then the venue is marked Not suitable.
 5. Given none of AC1–AC4 applies, then the venue is marked Suitable and no reasons are shown.
 6. Every reason that applies is listed, naming the mismatch and both values where relevant, e.g. "Capacity 100 < attendance 150", "Missing facility: projector", "No wheelchair access; event needs wheelchair access", "Banquet layout not supported".
-7. The indicator and reasons appear in search results (SCRUM-38) and on the venue detail view (SCRUM-34).
+7. The indicator and reasons appear in search results (SCRUM-38). They are not shown on the venue detail view (SCRUM-34), which is opened without an event to compare against.
 8. The assigned Coordinator can record a judgement for this event and venue, Suitable or Not suitable, with a note. It is shown next to the automatic result and is the result that counts for this event.
 9. The judgement is advisory: it never blocks a booking request (SCRUM-50) or confirmation (SCRUM-110). A booking's attendance above the venue's capacity is refused by SCRUM-50 whatever the judgement says. Whether the venues together suit the whole audience is judged in the safety check (SCRUM-166).
 10. The judgement and note are shown to Venue Staff on the booking request they review (SCRUM-52).
@@ -40,5 +40,6 @@
 * 2026-10-07 (Week 7 change 3): AC1 compares capacity with the attendance for that venue, because an event can now book several venues (SCRUM-162). AC9 leaves the combined fit to the safety check (SCRUM-166).
 * 2026-10-07 (backlog refinement): AC1 uses each booking's own attendance, which every booking has under SCRUM-162 AC4, not only when the event uses several venues, and the attendance in the search before a booking exists.
 * 2026-10-08: AC2–AC4 compare against what the Coordinator entered on the booking request or in the search, because SCRUM-127 was dropped and the Organiser's answers are free text.
+* 2026-10-09: Remove "and on the venue detail view (SCRUM-34)", and add a sentence saying why it isn't shown there.
 
 Functionality Area: Venue Suitability Checking
