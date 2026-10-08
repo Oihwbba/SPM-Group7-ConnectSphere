@@ -15,8 +15,8 @@ are Singapore time.
 
 | ID | Type | Criterion | Automated |
 |---|---|---|---|
-| [TC-37-01](#tc-37-01) | Positive | AC 2 (reflects on the calendar) | Unit, e2e |
-| [TC-37-02](#tc-37-02) | Positive | AC 1 | Unit, integration, e2e |
+| [TC-37-01](#tc-37-01) | — | Moved to [TC-36-09](SCRUM-36.md#tc-36-09) | — |
+| [TC-37-02](#tc-37-02) | Positive | AC 1, AC 2 (the calendar shows it) | Unit, integration, e2e |
 | [TC-37-03](#tc-37-03) | Negative | AC 1, AC 6 (valid period, reason, Venue Staff only) | Unit, integration, e2e |
 | [TC-37-04](#tc-37-04) | Negative | AC 2 | Integration, e2e |
 | [TC-37-05](#tc-37-05) | Negative | AC 3 | Unit, integration, e2e |
@@ -27,16 +27,7 @@ are Singapore time.
 
 ### TC-37-01
 
-| Item | Content |
-|---|---|
-| Test Case ID | TC-37-01 |
-| Test Scenario | [Positive] AC 2: a newly approved booking makes the venue read as unavailable on the calendar, and an open calendar picks it up |
-| Pre-conditions | A Coordinator has a pending request for the Grand Auditorium, 10 Jan 2036, 9:00 am to 1:00 pm. |
-| Test Steps | 1. Approve the request in **Bookings**. <br> 2. As the Coordinator, open **Availability** for the Grand Auditorium on 10 Jan 2036. <br> 3. Leave a calendar open while someone else approves a request; wait 15 seconds. |
-| Test Data | As above |
-| Expected Result | Step 2 shows "Booked 9:00 am to 1:00 pm" straight away. Approving refreshes the calendar page on the server. Step 3: the open calendar picks the change up within 15 seconds without a reload. |
-
-**Automated by:** `e2e/availability.spec.ts` › "SCRUM-37 [AC1-AC5], SCRUM-36 [AC2, AC3, AC5]: maintenance is recorded, seen, refused over, sat flush against a booking, and never overwrites one" (approval step); `tests/unit/bookings.test.ts` › "SCRUM-37 [AC2] TC-37-01: approving refreshes the availability calendar; rejecting does not need to"; `e2e/availability.spec.ts` › "SCRUM-37 [AC2] TC-37-01: an open calendar picks up a booking approved elsewhere, without a reload" (step 3).
+Moved to [TC-36-09](SCRUM-36.md#tc-36-09) on 2026-10-09. A newly approved booking showing on the calendar is SCRUM-36 AC2, not a SCRUM-37 criterion. The ID is kept so earlier references still resolve.
 
 ### TC-37-02
 
@@ -83,7 +74,7 @@ are Singapore time.
 |---|---|
 | Test Case ID | TC-37-05 |
 | Test Scenario | [Negative] AC 3: recording unavailability over an approved booking surfaces the clash instead of overwriting it |
-| Pre-conditions | An approved booking 10 Jan 2036, 9:00 am to 1:00 pm (TC-37-01). |
+| Pre-conditions | An approved booking 10 Jan 2036, 9:00 am to 1:00 pm (TC-36-09). |
 | Test Steps | 1. Record maintenance 10:00 am to 12:00 pm. <br> 2. Record a period overlapping maintenance that is already recorded. |
 | Test Data | As above |
 | Expected Result | Step 1: "Not recorded: Grand Auditorium is already booked from 10 Jan 2036, 9:00 am to 10 Jan 2036, 1:00 pm." Nothing is saved and the booking is untouched. Step 2 is refused the same way ("unavailable (maintenance) …"). Written directly with SQL, the database refuses step 2. Since SCRUM-172 it accepts step 1, so that SCRUM-161 can save unavailability over a booking and flag the booking; until SCRUM-161 the refusal in step 1 is the action's. |

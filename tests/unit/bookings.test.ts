@@ -845,7 +845,7 @@ describe("decideBookingRequest — SCRUM-53", () => {
     });
   });
 
-  it("SCRUM-37 [AC2] TC-37-01: approving refreshes the availability calendar; rejecting does not need to", async () => {
+  it("SCRUM-36 [AC2] TC-36-09: approving refreshes the availability calendar; rejecting does not need to", async () => {
     await decideBookingRequest({ bookingId: "bkg_1", decision: "APPROVED" });
     expect(revalidatePath).toHaveBeenCalledWith("/venues/availability");
 

@@ -52,7 +52,7 @@ beforeEach(() => {
 });
 
 describe("recordUnavailability — SCRUM-37", () => {
-  it("SCRUM-37 [AC1, AC2] TC-37-01, TC-37-02: venue staff record a period and a reason; the calendar is refreshed", async () => {
+  it("SCRUM-37 [AC1, AC2] TC-37-02: venue staff record a period and a reason; the calendar is refreshed", async () => {
     const result = await recordUnavailability({
       ...valid,
       note: "  Aircon.  ",

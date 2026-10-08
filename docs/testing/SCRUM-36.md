@@ -28,6 +28,7 @@ phone and to a screen reader, where a grid of every venue would not.
 | [TC-36-06](#tc-36-06) | Positive | Screen readers and phones | e2e |
 | [TC-36-07](#tc-36-07) | Negative | AC 7 (Coordinators and Venue Staff only) | Unit, e2e |
 | [TC-36-08](#tc-36-08) | Positive | Details on hover | Unit, e2e |
+| [TC-36-09](#tc-36-09) | Positive | AC 2 (a newly approved booking, also on an open calendar) | Unit, e2e |
 
 ---
 
@@ -134,3 +135,18 @@ phone and to a screen reader, where a grid of every venue would not.
 | Expected Result | On the calendar, the booking is a card showing "9:00 am – 1:00 pm", the event, the requester's initials and the attendance; the maintenance is a striped card showing "1:00 pm – 5:00 pm", "Maintenance" and its note. Step 1: a card with the event ("Approved — Research Symposium"), "Booked", the whole period, "Requested by Cody Coordinator", the expected attendance and the layout. Step 2: a card with the reason ("Maintenance"), "Unavailable", the whole period, the note and "Recorded by Vera Venue"; the booking's card closes. Step 3: the same card as step 1, and a screen reader reads it as the block's description. A period that crosses midnight shows its whole span, not just that day's part. The calendar is for internal staff only, so the event is named. |
 
 **Automated by:** `e2e/availability.spec.ts` › "SCRUM-37 [AC1-AC5], SCRUM-36 [AC2, AC3, AC5]: maintenance is recorded, seen, refused over, sat flush against a booking, and never overwrites one" (hover steps); `tests/unit/venue-availability.test.ts` › "SCRUM-36 — carries what a hover shows: the booking's event, requester and needs; the unavailability's note and recorder" and "SCRUM-36 — a stretch clipped to one day keeps the whole period in its details"
+
+### TC-36-09
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-36-09 |
+| Test Scenario | [Positive] AC 2: a newly approved booking makes the venue read as unavailable on the calendar, and an open calendar picks it up |
+| Pre-conditions | A Coordinator has a pending request for the Grand Auditorium, 10 Jan 2036, 9:00 am to 1:00 pm. |
+| Test Steps | 1. Approve the request in **Bookings**. <br> 2. As the Coordinator, open **Availability** for the Grand Auditorium on 10 Jan 2036. <br> 3. Leave a calendar open while someone else approves a request; wait 15 seconds. |
+| Test Data | As above |
+| Expected Result | Step 2 shows "Booked 9:00 am to 1:00 pm" straight away. Approving refreshes the calendar page on the server. Step 3: the open calendar picks the change up within 15 seconds without a reload. |
+
+**Automated by:** `e2e/availability.spec.ts` › "SCRUM-37 [AC1-AC5], SCRUM-36 [AC2, AC3, AC5]: maintenance is recorded, seen, refused over, sat flush against a booking, and never overwrites one" (approval step); `tests/unit/bookings.test.ts` › "SCRUM-36 [AC2] TC-36-09: approving refreshes the availability calendar; rejecting does not need to"; `e2e/availability.spec.ts` › "SCRUM-36 [AC2] TC-36-09: an open calendar picks up a booking approved elsewhere, without a reload" (step 3).
+
+Moved here from TC-37-01 on 2026-10-09.
