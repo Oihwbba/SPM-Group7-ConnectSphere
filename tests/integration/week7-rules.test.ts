@@ -103,8 +103,9 @@ describe.skipIf(!usesLocalDatabase)(
       await prisma.reservation.deleteMany({
         where: { eventId: reservationEventId },
       });
-      await prisma.eventEquipmentNeed.deleteMany({
-        where: { eventId: { in: eventIds } },
+      await prisma.event.updateMany({
+        where: { id: { in: eventIds } },
+        data: { noEquipmentNeededAt: null, noEquipmentNeededById: null },
       });
     }
 
@@ -603,31 +604,62 @@ describe.skipIf(!usesLocalDatabase)(
       });
     });
 
-    describe("AC8 — the event's equipment quantities", () => {
-      const need = (quantity: number, equipmentId = "eqp_lectern") =>
-        prisma.eventEquipmentNeed.create({
-          data: { eventId: eventIds[0], equipmentId, quantity },
+    describe("AC8 — the No equipment needed decision", () => {
+      const decide = (data: {
+        noEquipmentNeededAt?: Date | null;
+        noEquipmentNeededById?: string | null;
+      }) => prisma.event.update({ where: { id: eventIds[0] }, data });
+
+      it("SCRUM-172 [AC8] TC-172-08: an event starts with no decision, and keeps who recorded No equipment needed and when", async () => {
+        const before = await prisma.event.findUniqueOrThrow({
+          where: { id: eventIds[0] },
+        });
+        expect(before).toMatchObject({
+          noEquipmentNeededAt: null,
+          noEquipmentNeededById: null,
         });
 
-      it("SCRUM-172 [AC8] TC-172-08: each chosen type is stored once with a quantity of at least 1", async () => {
-        await expect(need(1)).resolves.toMatchObject({ quantity: 1 });
-        await expect(need(4, "eqp_projector")).resolves.toMatchObject({
-          quantity: 4,
-        });
-        await expect(need(2)).rejects.toThrow(/Unique constraint/);
-        expect(
-          await prisma.eventEquipmentNeed.count({
-            where: { eventId: eventIds[0] },
+        const decidedAt = at(1, 3);
+        await expect(
+          decide({
+            noEquipmentNeededAt: decidedAt,
+            noEquipmentNeededById: "usr_coordinator",
           }),
-        ).toBe(2);
+        ).resolves.toMatchObject({
+          noEquipmentNeededAt: decidedAt,
+          noEquipmentNeededById: "usr_coordinator",
+        });
       });
 
-      it("SCRUM-172 [AC8] TC-172-08: a quantity of 0 or less is refused", async () => {
-        for (const quantity of [0, -1]) {
-          await expect(need(quantity)).rejects.toThrow(
-            /event_equipment_need_quantity_positive/,
+      it("SCRUM-172 [AC8] TC-172-08: clearing the decision goes back to Not decided", async () => {
+        await decide({
+          noEquipmentNeededAt: at(1, 3),
+          noEquipmentNeededById: "usr_coordinator",
+        });
+
+        await expect(
+          decide({ noEquipmentNeededAt: null, noEquipmentNeededById: null }),
+        ).resolves.toMatchObject({
+          noEquipmentNeededAt: null,
+          noEquipmentNeededById: null,
+        });
+      });
+
+      it("SCRUM-172 [AC8] TC-172-08: a decision without who recorded it, or when, is refused", async () => {
+        for (const half of [
+          { noEquipmentNeededAt: at(1, 3) },
+          { noEquipmentNeededById: "usr_coordinator" },
+        ]) {
+          await expect(decide(half)).rejects.toThrow(
+            /event_no_equipment_decision_complete/,
           );
         }
+        expect(
+          await prisma.event.findUniqueOrThrow({ where: { id: eventIds[0] } }),
+        ).toMatchObject({
+          noEquipmentNeededAt: null,
+          noEquipmentNeededById: null,
+        });
       });
     });
 

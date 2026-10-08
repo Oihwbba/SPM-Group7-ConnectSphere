@@ -14,6 +14,9 @@ const usesLocalDatabase = /@(localhost|127\.0\.0\.1)[:/]/.test(
 );
 
 const MIGRATION = "20261008120000_week7_schema_and_booking_rules";
+// AC8 as reworded on 2026-10-08: a follow-up, because MIGRATION was already
+// applied to the shared database.
+const FOLLOW_UP = "20261008180000_no_equipment_decision";
 const migrationsDir = path.join(process.cwd(), "prisma", "migrations");
 const migrations = readdirSync(migrationsDir)
   .filter((name) => /^\d{14}_/.test(name))
@@ -91,6 +94,7 @@ describe.skipIf(!usesLocalDatabase)(
       `);
 
       await db.query(sqlOf(MIGRATION));
+      await db.query(sqlOf(FOLLOW_UP));
     });
 
     afterAll(async () => {
@@ -195,6 +199,19 @@ describe.skipIf(!usesLocalDatabase)(
           hasTime: true,
         },
       ]);
+    });
+
+    it("SCRUM-172 [AC8] TC-172-08: existing events have no equipment decision, and the per-type quantities table is gone", async () => {
+      const { rows } = await db.query(
+        `SELECT count(*)::int AS undecided FROM "Event"
+          WHERE "noEquipmentNeededAt" IS NULL AND "noEquipmentNeededById" IS NULL`,
+      );
+      const { rows: tables } = await db.query(
+        `SELECT to_regclass('"EventEquipmentNeed"') IS NULL AS gone`,
+      );
+
+      expect(rows).toEqual([{ undecided: 4 }]);
+      expect(tables).toEqual([{ gone: true }]);
     });
 
     it("SCRUM-172 [AC2] TC-172-02: existing venues start at 0 setup and 0 turnaround minutes, with no restrictions", async () => {

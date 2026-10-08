@@ -225,6 +225,7 @@ model User {
   coordinatedEvents Event[] @relation("EventCoordinator")
   decidedEvents     Event[] @relation("EventDecidedBy")
   cancelledEvents   Event[] @relation("EventCancelledBy")
+  noEquipmentEvents Event[] @relation("EventNoEquipmentNeededBy")
 
   registrations Registration[]
   notifications Notification[]
@@ -359,6 +360,13 @@ model Event {
   /// The CHECK event_discarded_only_draft keeps a discarded event a Draft.
   discardedAt DateTime?
 
+  /// SCRUM-170 AC4 — the Coordinator's "No equipment needed" decision, with
+  /// who recorded it. Both set, or neither (CHECK
+  /// event_no_equipment_decision_complete); cleared when the equipment
+  /// requirements change, so Equipment goes back to Not decided.
+  noEquipmentNeededAt   DateTime?
+  noEquipmentNeededById String?
+
   // SCRUM-72/73/74/75 — registration is per-event and explicitly NOT assumed
   // to equal the venue's capacity (SCRUM-74's last criterion).
   registrationEnabled  Boolean   @default(false)
@@ -369,10 +377,11 @@ model Event {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  organiser   User  @relation("EventOrganiser", fields: [organiserId], references: [id])
-  coordinator User? @relation("EventCoordinator", fields: [coordinatorId], references: [id])
-  decidedBy   User? @relation("EventDecidedBy", fields: [decidedById], references: [id])
-  cancelledBy User? @relation("EventCancelledBy", fields: [cancelledById], references: [id])
+  organiser           User  @relation("EventOrganiser", fields: [organiserId], references: [id])
+  coordinator         User? @relation("EventCoordinator", fields: [coordinatorId], references: [id])
+  decidedBy           User? @relation("EventDecidedBy", fields: [decidedById], references: [id])
+  cancelledBy         User? @relation("EventCancelledBy", fields: [cancelledById], references: [id])
+  noEquipmentNeededBy User? @relation("EventNoEquipmentNeededBy", fields: [noEquipmentNeededById], references: [id])
 
   bookings              Booking[]
   reservations          Reservation[]
@@ -381,7 +390,6 @@ model Event {
   clarificationRequests ClarificationRequest[]
   changeRequests        EventChangeRequest[]
   notifications         Notification[]
-  equipmentNeeds        EventEquipmentNeed[]
   safetyChecks          SafetyCheck[]
 
   @@index([organiserId])
@@ -582,28 +590,6 @@ model Equipment {
   requestLines   EquipmentRequestLine[]    @relation("RequestLineEquipment")
   suggestedFor   EquipmentRequestLine[]    @relation("RequestLineSuggestedAlternative")
   unavailability EquipmentUnavailability[]
-  eventNeeds     EventEquipmentNeed[]
-}
-
-/// SCRUM-127 AC2 — the equipment the Organiser asks for on the request form:
-/// a type from the catalogue and a quantity of at least 1, once per type.
-/// A requirement, not a reservation: it holds no stock. No rows means
-/// nothing chosen yet (a Draft) or None required.
-model EventEquipmentNeed {
-  id          String @id @default(cuid())
-  eventId     String
-  equipmentId String
-
-  quantity Int
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  event     Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  equipment Equipment @relation(fields: [equipmentId], references: [id])
-
-  @@unique([eventId, equipmentId])
-  @@index([equipmentId])
 }
 
 /// SCRUM-29 — "when equipment is marked 'Under Maintenance' or 'Damaged' for

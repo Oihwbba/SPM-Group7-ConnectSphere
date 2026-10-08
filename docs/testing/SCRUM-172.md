@@ -19,7 +19,7 @@ the database keeps or refuses. Times are UTC.
 | [TC-172-05](#tc-172-05) | Positive, Negative | AC 5 | Unit, integration |
 | [TC-172-06](#tc-172-06) | Positive, Negative | AC 6 | Integration |
 | [TC-172-07](#tc-172-07) | Positive | AC 7 | Integration |
-| [TC-172-08](#tc-172-08) | Positive, Negative, Boundary | AC 8 | Integration |
+| [TC-172-08](#tc-172-08) | Positive, Negative | AC 8 | Integration |
 | [TC-172-09](#tc-172-09) | Negative, Boundary | AC 9 (booking against booking) | Integration |
 | [TC-172-10](#tc-172-10) | Negative, Boundary | AC 9 (booking against unavailability) | Integration |
 | [TC-172-11](#tc-172-11) | Positive, Negative | AC 9 (unavailability) | Integration |
@@ -127,13 +127,13 @@ the database keeps or refuses. Times are UTC.
 | Item | Content |
 |---|---|
 | Test Case ID | TC-172-08 |
-| Test Scenario | [Positive, Negative, Boundary] AC 8: the event stores a quantity for each equipment type chosen |
-| Pre-conditions | A test event; seeded `eqp_lectern` and `eqp_projector`. |
-| Test Steps | 1. Save 1 lectern and 4 projectors. <br> 2. Save lecterns again. <br> 3. Save a quantity of 0 or −1. |
-| Test Data | — |
-| Expected Result | Step 1: both saved. Step 2: refused (one row per type); still two rows. Step 3: refused by `event_equipment_need_quantity_positive`. |
+| Test Scenario | [Positive, Negative] AC 8 (reworded 2026-10-08): the event records the Coordinator's No equipment needed decision, with who recorded it and when (SCRUM-170 AC4) |
+| Pre-conditions | A test event; a database migrated to just before this change, with existing events. |
+| Test Steps | 1. Read a new event. <br> 2. Record No equipment needed as the Coordinator. <br> 3. Clear the decision. <br> 4. Record a decision with only the time, or only who. <br> 5. Migrate the database with existing events. |
+| Test Data | `usr_coordinator` |
+| Expected Result | Step 1: no decision. Step 2: kept with who and when. Step 3: back to no decision (Not decided). Step 4: refused by `event_no_equipment_decision_complete`; nothing changes. Step 5: every existing event has no decision, and the per-type quantities table SCRUM-127 needed (dropped from the backlog on 2026-10-08) is gone. |
 
-**Automated by:** `tests/integration/week7-rules.test.ts` › "SCRUM-172 [AC8] TC-172-08: each chosen type is stored once with a quantity of at least 1" and "SCRUM-172 [AC8] TC-172-08: a quantity of 0 or less is refused"
+**Automated by:** `tests/integration/week7-rules.test.ts` › "SCRUM-172 [AC8] TC-172-08: an event starts with no decision, and keeps who recorded No equipment needed and when", "SCRUM-172 [AC8] TC-172-08: clearing the decision goes back to Not decided" and "SCRUM-172 [AC8] TC-172-08: a decision without who recorded it, or when, is refused"; `tests/integration/week7-migration.test.ts` › "SCRUM-172 [AC8] TC-172-08: existing events have no equipment decision, and the per-type quantities table is gone"
 
 ### TC-172-09
 
