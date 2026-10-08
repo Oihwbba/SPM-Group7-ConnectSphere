@@ -275,12 +275,12 @@ class DecisionError extends Error {}
  *   REJECTED row without one (`booking_rejection_has_reason`).
  * - The update is conditional on the row still being PENDING, so a request
  *   that has already been decided keeps its first decision and no second
- *   outcome or audit entry is recorded (AC6).
- * - Approving makes the venue unavailable for that period (AC3). If an
+ *   outcome or audit entry is recorded (AC7).
+ * - Approving makes the venue unavailable for that period (AC4). If an
  *   overlapping booking is already approved, or the venue is recorded as
  *   unavailable, the approval is refused as conflicting and the request stays
- *   pending for staff to reject.
- * - Two simultaneous approvals of overlapping requests (AC4): both can pass
+ *   pending for staff to reject (AC8).
+ * - Two simultaneous approvals of overlapping requests (AC5): both can pass
  *   the check above before either commits, so the check alone is not enough.
  *   The `booking_no_double_booking` EXCLUDE constraint makes the database
  *   refuse the second; that refusal is reported as the same conflict (or, if

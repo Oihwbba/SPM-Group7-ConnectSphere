@@ -29,7 +29,7 @@ const emptyForm = { start: "", end: "", reason: "", note: "" };
 /**
  * SCRUM-37 AC1 — Venue Staff record that the venue shown is unavailable for a
  * reason other than a booking. A clash with an approved booking is shown
- * here and nothing is saved (AC4); the calendar redraws on success.
+ * here and nothing is saved (AC3); the calendar redraws on success.
  */
 export function RecordUnavailabilityForm({
   venueId,

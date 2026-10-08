@@ -15,10 +15,10 @@ import { describeBlocker, findVenueBlockers } from "@/lib/venue-availability";
  * than a booking (maintenance, closure, ...).
  *
  * - Once recorded, the period blocks requests and approvals on the same terms
- *   as an approved booking (AC3), through the same lib/venue-availability.ts
+ *   as an approved booking (AC2), through the same lib/venue-availability.ts
  *   lookup — there is no second rule.
  * - A period that overlaps an approved booking (or a period already recorded)
- *   is not saved; the clash is put in front of staff instead (AC4). Touching at
+ *   is not saved; the clash is put in front of staff instead (AC3). Touching at
  *   an endpoint is not a clash (AC5).
  * - Since SCRUM-172 the database lets unavailability overlap a booking, for
  *   SCRUM-161, which will save it and flag the booking instead. Until then

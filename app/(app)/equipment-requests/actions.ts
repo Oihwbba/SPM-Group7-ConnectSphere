@@ -182,7 +182,7 @@ export async function createEquipmentRequest(
  *
  * The write is conditional on the status this reviewer saw, so of two
  * reviewers acting at once only one moves the request; the other is told, and
- * neither the history (AC 5) nor the notification (AC 4) is written twice.
+ * neither the history (AC 6) nor the notification (AC 5) is written twice.
  */
 export async function updateEquipmentRequestStatus(
   input: unknown,
