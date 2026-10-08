@@ -120,7 +120,7 @@ describe("getEquipmentRequestQueue — SCRUM-28", () => {
     ]);
   });
 
-  it("SCRUM-28 [AC1, AC4] TC-28-01: an open request's lines carry what is free for the event, and a short line its alternatives", async () => {
+  it("SCRUM-28 [AC1, AC4] TC-28-01, TC-28-07: an open request's lines carry what is free for the event, and a short line its alternatives", async () => {
     db.equipmentRequest.findMany.mockResolvedValue([request()]);
     db.reservation.findMany.mockResolvedValue([
       { equipmentId: "eqp_lectern", startAt: START, endAt: END, quantity: 2 },

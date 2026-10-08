@@ -83,4 +83,4 @@ seed holds one pending request (`bkg_pending`, Seminar Room 2.1).
 | Test Data | "seminar"; "seminar boardroom" |
 | Expected Result | Step 1: only matching requests are listed, with "Showing N of M requests". Step 2: "No requests match …" with a **Clear search** button, because every word must match. Step 3: the full queue returns. Case does not matter. |
 
-**Automated by:** `tests/unit/booking-queue.test.tsx` › the three "SCRUM-52 — …" matchesSearch cases; `e2e/bookings.spec.ts` › "SCRUM-53 [AC2] TC-53-02, TC-53-03: rejecting needs a written reason, and the reason is saved" (search step)
+**Automated by:** `tests/unit/booking-queue.test.tsx` › the three "SCRUM-52 [AC1] TC-52-05: …" matchesSearch cases; `e2e/bookings.spec.ts` › "SCRUM-53 [AC2] TC-53-02, TC-53-03: rejecting needs a written reason, and the reason is saved" (search step)

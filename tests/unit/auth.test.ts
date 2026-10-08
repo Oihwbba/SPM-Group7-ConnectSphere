@@ -199,11 +199,11 @@ describe("can — venue booking capabilities (SCRUM-50/52/53)", () => {
     status: "APPROVED" as const,
   };
 
-  it("SCRUM-50 — a coordinator may request a venue for an event assigned to them", () => {
+  it("SCRUM-50 TC-50-09: a coordinator may request a venue for an event assigned to them", () => {
     expect(can(coordinator, "booking:request", assignedEvent)).toBe(true);
   });
 
-  it("SCRUM-50 — a coordinator may not request a venue for another coordinator's event", () => {
+  it("SCRUM-50 TC-50-09: a coordinator may not request a venue for another coordinator's event", () => {
     expect(
       can(coordinator, "booking:request", {
         ...assignedEvent,
@@ -212,7 +212,7 @@ describe("can — venue booking capabilities (SCRUM-50/52/53)", () => {
     ).toBe(false);
   });
 
-  it("SCRUM-50 — no other role may request a venue", () => {
+  it("SCRUM-50 TC-50-09: no other role may request a venue", () => {
     for (const user of [organiserA, venueStaff, techSupport, attendee]) {
       expect(can(user, "booking:request")).toBe(false);
     }

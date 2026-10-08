@@ -27,6 +27,8 @@ the seed.
 | [TC-27-11](#tc-27-11) | Boundary | AC 7 | Integration |
 | [TC-27-12](#tc-27-12) | Negative | Coordinators only | Unit, e2e |
 | [TC-27-13](#tc-27-13) | Negative | A complete request | Unit, e2e |
+| [TC-27-14](#tc-27-14) | Positive | AC 8 | Unit, e2e |
+| [TC-27-15](#tc-27-15) | Negative | AC 8 | e2e |
 
 ---
 

@@ -14,8 +14,8 @@ Format and conventions: [README.md](README.md).
 > | TC-31-03 | [TC-155-05](SCRUM-155.md#tc-155-05); the live shortfall in `e2e/equipment.spec.ts` › "SCRUM-29 AC 3: …" |
 > | TC-31-05, -06 | `tests/integration/concurrency.test.ts` › "concurrency — equipment pool (SCRUM-31)", now reserving approved requests |
 > | TC-31-07, -09 | [TC-155-09](SCRUM-155.md#tc-155-09) |
-> | TC-31-08 | unchanged: `tests/unit/reservation.test.ts` › "AC 7: deducts confirmed reservations and maintenance from the pool" |
-> | TC-31-10 | [TC-155-10](SCRUM-155.md#tc-155-10); `tests/integration/equipment-availability.test.ts` › "reserves for a Planning event, and refuses a Confirmed one without writing" |
+> | TC-31-08 | unchanged: `tests/unit/reservation.test.ts` › "SCRUM-31 [AC7] TC-31-08: deducts confirmed reservations and maintenance from the pool" |
+> | TC-31-10 | [TC-155-10](SCRUM-155.md#tc-155-10); `tests/integration/equipment-availability.test.ts` › "SCRUM-31, SCRUM-81 TC-31-10, TC-81-12: reserves for a Planning event, and refuses a Confirmed one without writing" |
 > | TC-31-11 | `tests/unit/request-reservation.test.ts` (roles without `equipment:reserve` are refused) |
 
 **Shared pre-conditions for every case:** the database is migrated and seeded
@@ -169,7 +169,7 @@ needs them.
 | Test Data | Events: `evt_planning`, `evt_confirmed` <br> Equipment type: Lectern <br> Period: 2031-05-10 09:00–17:00 <br> Quantity: 1 |
 | Expected Result | Step 1: the list offers the Approved and Planning events, not the Confirmed one. Step 2: the reservation is confirmed — a Planning event can raise an equipment request (SCRUM-27 AC 1), so its request must be fulfillable. Step 3: "Reservations can only be made for an approved event." No reservation is created. |
 
-**Automated by:** `tests/unit/equipment-request-queries.test.ts` › "SCRUM-27 [AC1] TC-27-01: stock can be reserved for exactly the events that can take a request"; `tests/integration/equipment-availability.test.ts` › "SCRUM-31 TC-31-10: reserves for a Planning event, and refuses a Confirmed one without writing"; `tests/integration/request-reservation.test.ts` › "SCRUM-155 [AC1] TC-155-10: …"
+**Automated by:** `tests/unit/equipment-request-queries.test.ts` › "SCRUM-27 [AC1] TC-27-01: stock can be reserved for exactly the events that can take a request"; `tests/integration/equipment-availability.test.ts` › "SCRUM-31, SCRUM-81 TC-31-10, TC-81-12: reserves for a Planning event, and refuses a Confirmed one without writing"; `tests/integration/request-reservation.test.ts` › "SCRUM-155 [AC1] TC-155-10: …"
 
 ### TC-31-11
 

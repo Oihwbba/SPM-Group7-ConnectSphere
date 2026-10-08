@@ -187,7 +187,7 @@ and, if equipment was requested, every line reserved in full.
 | Test Data       | —                                                                                                                                                                                           |
 | Expected Result | The reservation is created.                                                                                                                                                                 |
 
-**Automated by:** `tests/unit/reservation.test.ts` › "SCRUM-81 TC-81-12: …"
+**Automated by:** `tests/integration/equipment-availability.test.ts` › "SCRUM-31, SCRUM-81 TC-31-10, TC-81-12: reserves for a Planning event, and refuses a Confirmed one without writing"
 
 ### TC-81-13
 

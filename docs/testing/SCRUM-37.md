@@ -49,7 +49,7 @@ are Singapore time.
 | Test Data | Start 10 Jan 2036 1:00 pm, End 5:00 pm, Reason Maintenance |
 | Expected Result | "Recorded: Grand Auditorium is unavailable for that period." The calendar shows "Unavailable (maintenance) 1:00 pm to 5:00 pm", striped. The row stores the period, reason, note and who recorded it. |
 
-**Automated by:** `tests/integration/unavailability.test.ts` › "SCRUM-37 [AC1] TC-37-02: venue staff record a period and a reason, and it is saved"; `tests/unit/unavailability.test.ts` › "SCRUM-37 [AC1, AC2] TC-37-02: venue staff record a period and a reason; the calendar is refreshed" and "SCRUM-37 [AC1] TC-37-02: a blank note is stored as none"; `e2e/availability.spec.ts` › "SCRUM-37 [AC1-AC5], SCRUM-36 [AC2, AC3, AC5]: maintenance is recorded, seen, refused over, sat flush against a booking, and never overwrites one"
+**Automated by:** `tests/integration/unavailability.test.ts` › "SCRUM-37 [AC1] TC-37-02: venue staff record a period and a reason, and it is saved"; `tests/unit/unavailability.test.ts` › "SCRUM-37 [AC1, AC2] TC-37-01, TC-37-02: venue staff record a period and a reason; the calendar is refreshed" and "SCRUM-37 [AC1] TC-37-02: a blank note is stored as none"; `e2e/availability.spec.ts` › "SCRUM-37 [AC1-AC5], SCRUM-36 [AC2, AC3, AC5]: maintenance is recorded, seen, refused over, sat flush against a booking, and never overwrites one"
 
 ### TC-37-03
 

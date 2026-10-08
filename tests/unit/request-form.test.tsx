@@ -36,7 +36,7 @@ const event = {
 };
 
 describe("RequestForm — SCRUM-50", () => {
-  it("SCRUM-50 — a coordinator with no approved events is told why, instead of shown a form that cannot succeed", () => {
+  it("SCRUM-50: a coordinator with no approved events is told why, instead of shown a form that cannot succeed", () => {
     const html = renderToStaticMarkup(
       <RequestForm events={[]} venues={[venue]} />,
     );
@@ -45,7 +45,7 @@ describe("RequestForm — SCRUM-50", () => {
     expect(html).not.toContain("Submit request");
   });
 
-  it("SCRUM-50 AC1 — with an approved event, the form asks for venue, times, attendance, facilities, layout and other details", () => {
+  it("SCRUM-50 [AC1]: with an approved event, the form asks for venue, times, attendance, facilities, layout and other details", () => {
     const html = renderToStaticMarkup(
       <RequestForm events={[event]} venues={[venue]} />,
     );
@@ -65,7 +65,7 @@ describe("RequestForm — SCRUM-50", () => {
     expect(html).toContain("Submit request");
   });
 
-  it("SCRUM-50 AC1 — the room layout is asked for before the venue", () => {
+  it("SCRUM-50 [AC1] TC-50-12: the room layout is asked for before the venue", () => {
     const html = renderToStaticMarkup(
       <RequestForm events={[event]} venues={[venue]} />,
     );
@@ -74,7 +74,7 @@ describe("RequestForm — SCRUM-50", () => {
     expect(html.indexOf("Room layout")).toBeLessThan(html.indexOf("Venue"));
   });
 
-  it("SCRUM-50 AC1 — the period and attendance are shown read-only, taken from the event", () => {
+  it("SCRUM-50 [AC1] TC-50-15: the period and attendance are shown read-only, taken from the event", () => {
     const html = renderToStaticMarkup(
       <RequestForm events={[event]} venues={[venue]} />,
     );
@@ -86,7 +86,7 @@ describe("RequestForm — SCRUM-50", () => {
     }
   });
 
-  it("SCRUM-50 AC1 — required facilities are toggle pills, none chosen until the coordinator picks", () => {
+  it("SCRUM-50 [AC1]: required facilities are toggle pills, none chosen until the coordinator picks", () => {
     const html = renderToStaticMarkup(
       <RequestForm events={[event]} venues={[venue]} />,
     );
@@ -98,7 +98,7 @@ describe("RequestForm — SCRUM-50", () => {
 });
 
 describe("SCRUM-50 [AC3, AC4, AC5] TC-50-13: liveAnswer, the live check", () => {
-  it("SCRUM-50 AC3 — a free venue reads free, and a taken one names its clashes", () => {
+  it("SCRUM-50 [AC3] TC-50-13: a free venue reads free, and a taken one names its clashes", () => {
     expect(
       liveAnswer({ ok: true, data: { available: true, clashes: [] } }),
     ).toEqual({
@@ -112,7 +112,7 @@ describe("SCRUM-50 [AC3, AC4, AC5] TC-50-13: liveAnswer, the live check", () => 
     ).toEqual({ state: "taken", clashes: ["already booked"] });
   });
 
-  it("SCRUM-50 AC5 — a refusal about the period is invalid, which disables Submit", () => {
+  it("SCRUM-50 [AC5] TC-50-13: a refusal about the period is invalid, which disables Submit", () => {
     for (const field of ["startAt", "endAt"]) {
       expect(
         liveAnswer({
@@ -124,7 +124,7 @@ describe("SCRUM-50 [AC3, AC4, AC5] TC-50-13: liveAnswer, the live check", () => 
     }
   });
 
-  it("SCRUM-50 — a check that failed, or was refused for another reason, is an error that leaves Submit to the server", () => {
+  it("SCRUM-50 TC-50-13: a check that failed, or was refused for another reason, is an error that leaves Submit to the server", () => {
     expect(liveAnswer(null)).toEqual({
       state: "error",
       message: LIVE_CHECK_FAILED_MESSAGE,
@@ -146,13 +146,13 @@ describe("SCRUM-50 [AC3, AC4, AC5] TC-50-13: liveAnswer, the live check", () => 
 describe("SCRUM-50 [AC1] TC-50-12: layoutOption", () => {
   const options = ["banquet", "classroom", "theatre"];
 
-  it("SCRUM-50 AC1 — the event's preferred layout is pre-selected whatever its case or spacing", () => {
+  it("SCRUM-50 [AC1] TC-50-12: the event's preferred layout is pre-selected whatever its case or spacing", () => {
     expect(layoutOption("classroom", options)).toBe("classroom");
     expect(layoutOption("Classroom", options)).toBe("classroom");
     expect(layoutOption("  THEATRE ", options)).toBe("theatre");
   });
 
-  it("SCRUM-50 AC1 — a layout no venue offers, or none at all, pre-selects nothing", () => {
+  it("SCRUM-50 [AC1] TC-50-12: a layout no venue offers, or none at all, pre-selects nothing", () => {
     expect(layoutOption("boardroom", options)).toBe("");
     expect(layoutOption("", options)).toBe("");
     expect(layoutOption(null, options)).toBe("");
@@ -170,7 +170,7 @@ describe("venuesForLayout — SCRUM-50", () => {
     expect(venuesForLayout([hall, room], "boardroom")).toEqual([]);
   });
 
-  it("SCRUM-50 AC1 — with no layout preference, every venue is offered", () => {
+  it("SCRUM-50 [AC1] TC-50-12: with no layout preference, every venue is offered", () => {
     expect(venuesForLayout([hall, room], "")).toEqual([hall, room]);
   });
 });
@@ -187,7 +187,7 @@ describe("SCRUM-50 [AC1] TC-50-15: eventBookingPeriod", () => {
   // Singapore times: 09:10 to 16:45, and 23:50 crossing midnight.
   const sg = (wall: string) => new Date(`${wall}:00+08:00`);
 
-  it("SCRUM-50 AC1 — the event's start rounds down and its end rounds up, so the period is never shortened", () => {
+  it("SCRUM-50 [AC1] TC-50-15: the event's start rounds down and its end rounds up, so the period is never shortened", () => {
     expect(
       eventBookingPeriod({
         startAt: sg("2035-03-10T09:10"),
@@ -205,7 +205,7 @@ describe("SCRUM-50 [AC1] TC-50-15: eventBookingPeriod", () => {
     ).toEqual(sg("2035-03-11T00:00"));
   });
 
-  it("SCRUM-50 AC1 — times already on the half hour are left alone", () => {
+  it("SCRUM-50 [AC1] TC-50-15: times already on the half hour are left alone", () => {
     expect(
       eventBookingPeriod({
         startAt: sg("2035-03-10T09:30"),
@@ -217,7 +217,7 @@ describe("SCRUM-50 [AC1] TC-50-15: eventBookingPeriod", () => {
     });
   });
 
-  it("SCRUM-50 AC1 — an event without both dates has no period yet", () => {
+  it("SCRUM-50 [AC1] TC-50-15: an event without both dates has no period yet", () => {
     expect(
       eventBookingPeriod({ startAt: null, endAt: sg("2035-03-10T09:00") }),
     ).toBeNull();

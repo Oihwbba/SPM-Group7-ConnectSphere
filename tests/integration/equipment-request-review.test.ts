@@ -214,7 +214,7 @@ describe.skipIf(!usesLocalDatabase)(
       expect(saved.status).toBe("PENDING_REVIEW");
     });
 
-    it("SCRUM-28 [AC1, AC4] TC-28-01: the queue shows each line against real reservations, and offers alternatives for a short one", async () => {
+    it("SCRUM-28 [AC1, AC4] TC-28-01, TC-28-07: the queue shows each line against real reservations, and offers alternatives for a short one", async () => {
       await updateEquipmentRequestStatus({ requestId, toStatus: "IN_REVIEW" });
       await reserveLecterns(2);
 

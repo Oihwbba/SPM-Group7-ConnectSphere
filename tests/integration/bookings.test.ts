@@ -259,7 +259,7 @@ describe.skipIf(!usesLocalDatabase)(
         expect(result.ok && result.data.created).toBe(true);
       });
 
-      it("SCRUM-50 AC4 — a period ending exactly as an approved booking begins is accepted", async () => {
+      it("SCRUM-50 [AC4] TC-50-05: a period ending exactly as an approved booking begins is accepted", async () => {
         await approvedBooking(fromEnd(0), fromEnd(2));
 
         const result = await submitBookingRequest(request());
@@ -267,7 +267,7 @@ describe.skipIf(!usesLocalDatabase)(
         expect(result.ok && result.data.created).toBe(true);
       });
 
-      it("SCRUM-50 AC5 — an end before the start is refused as an invalid period", async () => {
+      it("SCRUM-50 [AC5] TC-50-06: an end before the start is refused as an invalid period", async () => {
         const result = await submitBookingRequest(
           request({ startAt: fromEnd(0), endAt: fromStart(0) }),
         );
@@ -280,7 +280,7 @@ describe.skipIf(!usesLocalDatabase)(
         expect(await bookingCount()).toBe(0);
       });
 
-      it("SCRUM-50 AC5 — an end equal to the start is refused as an invalid period", async () => {
+      it("SCRUM-50 [AC5] TC-50-06: an end equal to the start is refused as an invalid period", async () => {
         const result = await submitBookingRequest(
           request({ startAt: fromStart(0), endAt: fromStart(0) }),
         );
@@ -334,7 +334,7 @@ describe.skipIf(!usesLocalDatabase)(
       });
 
       for (const status of ["PENDING", "APPROVED"] as const) {
-        it(`SCRUM-50 AC8 — an event with a ${status.toLowerCase()} booking at another venue is shown it, and no request is created`, async () => {
+        it(`SCRUM-50 [AC8] TC-50-07: an event with a ${status.toLowerCase()} booking at another venue is shown it, and no request is created`, async () => {
           const existing = await prisma.booking.create({
             data: {
               eventId,
@@ -355,7 +355,7 @@ describe.skipIf(!usesLocalDatabase)(
         });
       }
 
-      it("SCRUM-50 AC8 — the database itself refuses a second pending or approved booking for one event, whatever the venue or period", async () => {
+      it("SCRUM-50 [AC8] TC-50-07: the database itself refuses a second pending or approved booking for one event, whatever the venue or period", async () => {
         const row = (venue: string, status: "PENDING" | "APPROVED") => ({
           data: {
             eventId,
@@ -462,7 +462,7 @@ describe.skipIf(!usesLocalDatabase)(
     });
 
     describe("SCRUM-50 — venues offered on the request form", () => {
-      it("SCRUM-50 — a retired venue is never offered, and is refused if requested directly", async () => {
+      it("SCRUM-50: a retired venue is never offered, and is refused if requested directly", async () => {
         const retired = await prisma.venue.create({
           data: {
             name: `Retired test venue ${Date.now()}`,
@@ -490,7 +490,7 @@ describe.skipIf(!usesLocalDatabase)(
       const check = (startAt: string, endAt: string) =>
         checkVenueAvailability({ venueId, startAt, endAt });
 
-      it("SCRUM-50 AC3 — the form is told an approved booking or recorded unavailability makes the venue unavailable, and the submission agrees", async () => {
+      it("SCRUM-50 [AC3] TC-50-13: the form is told an approved booking or recorded unavailability makes the venue unavailable, and the submission agrees", async () => {
         await approvedBooking(fromStart(1), fromEnd(1));
         await prisma.venueUnavailability.create({
           data: {
@@ -512,7 +512,7 @@ describe.skipIf(!usesLocalDatabase)(
         expect(submitted.ok).toBe(false);
       });
 
-      it("SCRUM-50 AC4 — periods touching a booking at either end are reported available", async () => {
+      it("SCRUM-50 [AC4] TC-50-13: periods touching a booking at either end are reported available", async () => {
         await approvedBooking(fromStart(1), fromEnd(1));
 
         for (const [start, end] of [
@@ -526,7 +526,7 @@ describe.skipIf(!usesLocalDatabase)(
         }
       });
 
-      it("SCRUM-50 AC3 — a pending request blocks nobody, so the venue still reads available", async () => {
+      it("SCRUM-50 [AC3] TC-50-13: a pending request blocks nobody, so the venue still reads available", async () => {
         await pendingFromAnotherCoordinator(fromStart(0), fromEnd(0));
 
         expect(await check(fromStart(0), fromEnd(0))).toEqual({
@@ -557,13 +557,13 @@ describe.skipIf(!usesLocalDatabase)(
         });
       });
 
-      it("SCRUM-50 — the check writes nothing", async () => {
+      it("SCRUM-50 TC-50-13: the check writes nothing", async () => {
         const before = await bookingCount();
         await check(fromStart(0), fromEnd(0));
         expect(await bookingCount()).toBe(before);
       });
 
-      it("SCRUM-50 — a retired venue reads as not found, as it does on submit", async () => {
+      it("SCRUM-50 TC-50-13: a retired venue reads as not found, as it does on submit", async () => {
         await prisma.venue.update({
           where: { id: venueId },
           data: { isActive: false },
@@ -584,7 +584,7 @@ describe.skipIf(!usesLocalDatabase)(
 
     describe("SCRUM-50 AC9 — asking again after a rejection or cancellation", () => {
       for (const status of ["REJECTED", "CANCELLED"] as const) {
-        it(`SCRUM-50 AC9 — after a ${status.toLowerCase()} request, a new request creates a new booking record and the earlier one is kept`, async () => {
+        it(`SCRUM-50 [AC9] TC-50-14: after a ${status.toLowerCase()} request, a new request creates a new booking record and the earlier one is kept`, async () => {
           const earlier = await prisma.booking.create({
             data: {
               eventId,

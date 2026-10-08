@@ -45,7 +45,7 @@ reservations and maintenance holds at the busiest moment.
 | Test Data | Request lines: Lectern × 5 "Gooseneck mic" (pool of 4); Projector × 1 |
 | Expected Result | The request shows its event and dates, who asked and when, and its notes. Each line shows the type, its specs, the quantity and the technical requirements ("None given" when blank), and how it stands for the event: "Available: 10 of 10 free for this event." for the Projector, "Unavailable: only 4 of 4 free for this event, 1 short." for the Lectern. |
 
-**Automated by:** `e2e/equipment-request-review.spec.ts` › "SCRUM-28 [AC1] TC-28-01: a pending request shows every line's equipment details, requirements and availability"; `tests/unit/equipment-request-review-queries.test.ts` › "SCRUM-28 [AC1, AC6] TC-28-01, TC-28-10: reads every request, oldest first, with each line's equipment details and the history", "SCRUM-28 [AC1, AC4] TC-28-01: an open request's lines carry what is free for the event, and a short line its alternatives"; `tests/integration/equipment-request-review.test.ts` › "SCRUM-28 [AC1, AC4] TC-28-01: the queue shows each line against real reservations, and offers alternatives for a short one"
+**Automated by:** `e2e/equipment-request-review.spec.ts` › "SCRUM-28 [AC1] TC-28-01: a pending request shows every line's equipment details, requirements and availability"; `tests/unit/equipment-request-review-queries.test.ts` › "SCRUM-28 [AC1, AC6] TC-28-01, TC-28-10: reads every request, oldest first, with each line's equipment details and the history", "SCRUM-28 [AC1, AC4] TC-28-01, TC-28-07: an open request's lines carry what is free for the event, and a short line its alternatives"; `tests/integration/equipment-request-review.test.ts` › "SCRUM-28 [AC1, AC4] TC-28-01, TC-28-07: the queue shows each line against real reservations, and offers alternatives for a short one"
 
 ### TC-28-02
 
@@ -71,7 +71,7 @@ reservations and maintenance holds at the busiest moment.
 | Test Data | Note: "Lecterns swapped for laptops." |
 | Expected Result | "Request approved. The coordinator has been notified." The request moves to **Decided** as **Approved**, with the time it was decided. |
 
-**Automated by:** `e2e/equipment-request-review.spec.ts` › "SCRUM-28 [AC2, AC3, AC5, AC6] TC-28-02, TC-28-03, TC-28-09, TC-28-10: …"; `tests/unit/equipment-request-review.test.ts` › "SCRUM-28 [AC3, AC5] TC-28-03: approves a request in review, stamping the decision and passing on the note"; `tests/integration/equipment-request-review.test.ts` › "SCRUM-28 [AC2, AC3, AC5, AC6] TC-28-02, TC-28-03, TC-28-09, TC-28-10: review then approval each move the request, log one entry and notify the coordinator once"
+**Automated by:** `e2e/equipment-request-review.spec.ts` › "SCRUM-28 [AC2, AC3, AC5, AC6] TC-28-02, TC-28-03, TC-28-09, TC-28-10: …"; `tests/unit/equipment-request-review.test.ts` › "SCRUM-28 [AC3, AC5] TC-28-03, TC-28-09: approves a request in review, stamping the decision and passing on the note"; `tests/integration/equipment-request-review.test.ts` › "SCRUM-28 [AC2, AC3, AC5, AC6] TC-28-02, TC-28-03, TC-28-09, TC-28-10: review then approval each move the request, log one entry and notify the coordinator once"
 
 ### TC-28-04
 
@@ -84,7 +84,7 @@ reservations and maintenance holds at the busiest moment.
 | Test Data | Reason: "Not enough lecterns that day." |
 | Expected Result | Step 1 shows "Give the coordinator a reason for rejecting the request." under the note, and the request stays In Review. Step 2 shows "Request rejected. The coordinator has been notified." and the request is **Rejected**, with the reason in its history. |
 
-**Automated by:** `e2e/equipment-request-review.spec.ts` › "SCRUM-28 [AC3] TC-28-04: rejecting needs a reason, and the reason is recorded"; `tests/unit/equipment-request-review.test.ts` › "SCRUM-28 [AC3] TC-28-04: a rejection without a reason is refused next to the note, and nothing is written", "SCRUM-28 [AC3, AC5] TC-28-04: rejects a request in review with the reason"; `tests/unit/equipment-request-review-rules.test.ts` › "SCRUM-28 [AC3] TC-28-04: requires a reason to reject, so the coordinator knows why"
+**Automated by:** `e2e/equipment-request-review.spec.ts` › "SCRUM-28 [AC3] TC-28-04: rejecting needs a reason, and the reason is recorded"; `tests/unit/equipment-request-review.test.ts` › "SCRUM-28 [AC3] TC-28-04: a rejection without a reason is refused next to the note, and nothing is written", "SCRUM-28 [AC3, AC6] TC-28-04, TC-28-10: rejects a request in review with the reason"; `tests/unit/equipment-request-review-rules.test.ts` › "SCRUM-28 [AC3] TC-28-04: requires a reason to reject, so the coordinator knows why"
 
 ### TC-28-05
 

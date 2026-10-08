@@ -63,7 +63,7 @@ a manual tester creates the same events, or edits an event's dates.
 | Test Data | Event: E2E Hall — Overlapping Talk (10 Mar 2035, 11:00–15:00) |
 | Expected Result | Step 3, before anything is submitted: "Exhibition Hall is unavailable for this period: already booked from 10 Mar 2035, 9:00 am SGT to 10 Mar 2035, 1:00 pm SGT." **Submit request** is disabled. Step 4: the server refuses it with "…is unavailable for that period: …". No new booking row exists. The other booking's event is not named. |
 
-**Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-50 [AC3] TC-50-02: a request overlapping an approved booking is refused and nothing is written"; `tests/unit/bookings.test.ts` › "SCRUM-50 [AC3] TC-50-02: a venue already booked for part of the period refuses the request and names the clash"; `tests/unit/period.test.ts` › every "SCRUM-50 AC3 — …" case (overlapping, contained, identical, shared start, one minute); `e2e/bookings.spec.ts` › journey (screenshot attached to the report)
+**Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-50 [AC3] TC-50-02: a request overlapping an approved booking is refused and nothing is written"; `tests/unit/bookings.test.ts` › "SCRUM-50 [AC3] TC-50-02: a venue already booked for part of the period refuses the request and names the clash"; `tests/unit/period.test.ts` › every "SCRUM-50 [AC3] TC-50-02: …" case (overlapping, contained, identical, shared start, one minute); `e2e/bookings.spec.ts` › journey (screenshot attached to the report)
 
 ### TC-50-03
 
@@ -102,7 +102,7 @@ a manual tester creates the same events, or edits an event's dates.
 | Test Data | Event: E2E Hall — Afternoon Workshop (10 Mar 2035, 13:00–15:00) |
 | Expected Result | Both requests are created Pending. |
 
-**Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-50 [AC4] TC-50-05: a period beginning exactly as an approved booking ends is accepted" and "SCRUM-50 AC4 — a period ending exactly as an approved booking begins is accepted"; `tests/unit/period.test.ts` › every "SCRUM-50 AC4 — …" case; `e2e/bookings.spec.ts` › journey (last step)
+**Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-50 [AC4] TC-50-05: a period beginning exactly as an approved booking ends is accepted" and "SCRUM-50 [AC4] TC-50-05: a period ending exactly as an approved booking begins is accepted"; `tests/unit/period.test.ts` › every "SCRUM-50 [AC4] TC-50-05: …" case; `e2e/bookings.spec.ts` › journey (last step)
 
 ### TC-50-06
 
@@ -115,7 +115,7 @@ a manual tester creates the same events, or edits an event's dates.
 | Test Data | Start 2035-04-01 15:00, End 2035-04-01 09:00; then Start = End = 15:00 |
 | Expected Result | "The requested period is invalid: the end must be after the start." Nothing is created, and no other check runs first. One minute after the start is valid. The form cannot produce such a period, because it uses the event's (TC-50-15); the live check reports the same message if asked. |
 
-**Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-50 AC5 — an end before the start…" and "SCRUM-50 AC5 — an end equal to the start is refused as an invalid period"; `tests/unit/bookings.test.ts` › "SCRUM-50 [AC5] TC-50-06: an end before or equal to the start is reported as an invalid period"; `tests/unit/period.test.ts` › every "SCRUM-50 AC5 — …" case; `tests/unit/bookings.test.ts` › "SCRUM-50 [AC5] TC-50-06: an end before or equal to the start, or a missing time, is an invalid period and nothing is read" (live check)
+**Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-50 [AC5] TC-50-06: an end before the start is refused as an invalid period" and "SCRUM-50 [AC5] TC-50-06: an end equal to the start is refused as an invalid period"; `tests/unit/bookings.test.ts` › "SCRUM-50 [AC5] TC-50-06: an end before or equal to the start is reported as an invalid period"; `tests/unit/period.test.ts` › every "SCRUM-50 [AC5] TC-50-06: …" case; `tests/unit/bookings.test.ts` › "SCRUM-50 [AC5] TC-50-06: an end before or equal to the start, or a missing time, is an invalid period and nothing is read" (live check)
 
 ### TC-50-07
 
@@ -128,7 +128,7 @@ a manual tester creates the same events, or edits an event's dates.
 | Test Data | As TC-50-01 |
 | Expected Result | "This event already has a venue request. Each event has one venue." with the existing request's venue, times and status, both times. Still one booking row for the event. The database's `booking_one_venue_per_event` constraint enforces the same rule over Pending and Approved bookings (migration `20261004120000_one_venue_per_event`). A Rejected or Cancelled one does not count (TC-50-14). |
 
-**Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-50 [AC8] TC-50-07: submitting the same request twice leaves one request and shows the existing one", "…an event with a pending booking at another venue is shown it, and no request is created", "…an event with a approved booking at another venue…" and "SCRUM-50 AC8 — the database itself refuses a second pending or approved booking for one event, whatever the venue or period"; `tests/unit/bookings.test.ts` › "SCRUM-50 [AC8] TC-50-07: an event that already has a pending or approved booking, for any venue, is shown it and nothing is created" and "SCRUM-50 AC8 — the event's existing booking is shown even when the request differs from it"; `e2e/bookings.spec.ts` › journey
+**Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-50 [AC8] TC-50-07: submitting the same request twice leaves one request and shows the existing one", "…an event with a pending booking at another venue is shown it, and no request is created", "…an event with a approved booking at another venue…" and "SCRUM-50 [AC8] TC-50-07: the database itself refuses a second pending or approved booking for one event, whatever the venue or period"; `tests/unit/bookings.test.ts` › "SCRUM-50 [AC8] TC-50-07: an event that already has a pending or approved booking, for any venue, is shown it and nothing is created" and "SCRUM-50 [AC8] TC-50-07: the event's existing booking is shown even when the request differs from it"; `e2e/bookings.spec.ts` › journey
 
 ### TC-50-08
 
@@ -141,7 +141,7 @@ a manual tester creates the same events, or edits an event's dates.
 | Test Data | As TC-50-01 |
 | Expected Result | Both calls report the same booking id and one row exists. `booking_one_venue_per_event` lets one insert in; a deadlock between the two is retried once (ADR 0010). |
 
-**Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-50 [AC8] TC-50-08: two identical requests submitted at the same instant still leave one"; `tests/unit/bookings.test.ts` › "SCRUM-50 AC8 — a second request for the event that races past the check is caught by the database and the winner is returned" and "SCRUM-50 AC8 — a deadlock between two identical submissions is retried once and then resolved"
+**Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-50 [AC8] TC-50-08: two identical requests submitted at the same instant still leave one"; `tests/unit/bookings.test.ts` › "SCRUM-50 [AC8] TC-50-08: a second request for the event that races past the check is caught by the database and the winner is returned" and "SCRUM-50 [AC8] TC-50-08: a deadlock between two identical submissions is retried once and then resolved"
 
 ### TC-50-09
 
@@ -154,7 +154,7 @@ a manual tester creates the same events, or edits an event's dates.
 | Test Data | `venuestaff@test.local`; `coordinator2@test.local` |
 | Expected Result | Venue Staff see "Access denied". The event list holds only APPROVED or PLANNING events the coordinator may act on. Another coordinator's event is refused as "Event not found." |
 
-**Automated by:** `e2e/bookings.spec.ts` › "SCRUM-50 TC-50-09: venue staff typing the request form's address are refused by the server"; `tests/unit/auth.test.ts` › the three "SCRUM-50 — …" cases; `tests/unit/bookings.test.ts` › "SCRUM-50 — every role except Event Coordinator is refused before anything is read", "SCRUM-50 — an event that does not exist, or is another coordinator's, reads as not found", "SCRUM-50 — a venue cannot be requested for an event that has not been approved"; `tests/integration/bookings.test.ts` › "SCRUM-50 TC-50-09: the form offers only approved events the coordinator may act on, exactly as can() allows"
+**Automated by:** `e2e/bookings.spec.ts` › "SCRUM-50 TC-50-09: venue staff typing the request form's address are refused by the server"; `tests/unit/auth.test.ts` › the three "SCRUM-50 TC-50-09: …" cases; `tests/unit/bookings.test.ts` › "SCRUM-50 TC-50-09: every role except Event Coordinator is refused before anything is read", "SCRUM-50 TC-50-09: an event that does not exist, or is another coordinator's, reads as not found", "SCRUM-50 TC-50-09: a venue cannot be requested for an event that has not been approved"; `tests/integration/bookings.test.ts` › "SCRUM-50 TC-50-09: the form offers only approved events the coordinator may act on, exactly as can() allows"
 
 ### TC-50-10
 
@@ -167,7 +167,7 @@ a manual tester creates the same events, or edits an event's dates.
 | Test Data | E2E Hall — Big Concert (250); E2E Hall — Full House (200) |
 | Expected Result | Step 1: "Exhibition Hall holds up to 200 people; 250 expected is over its capacity." appears under the attendance, and **Submit request** is disabled. The server refuses the same request if sent directly, and nothing is written. Step 2: the error clears and Submit is enabled. |
 
-**Automated by:** `e2e/bookings.spec.ts` › "SCRUM-50 TC-50-10: an event's attendance over the chosen venue's capacity is flagged, and Submit is disabled"; `tests/unit/bookings.test.ts` › "SCRUM-50 — expected attendance above the venue's capacity is refused against the attendance field, and nothing is written" and "SCRUM-50 — expected attendance exactly equal to the venue's capacity fits"; `tests/integration/bookings.test.ts` › "SCRUM-50 TC-50-10: attendance over the venue's capacity is refused and nothing is written; exactly at capacity is accepted"
+**Automated by:** `e2e/bookings.spec.ts` › "SCRUM-50 TC-50-10: an event's attendance over the chosen venue's capacity is flagged, and Submit is disabled"; `tests/unit/bookings.test.ts` › "SCRUM-50 TC-50-10: expected attendance above the venue's capacity is refused against the attendance field, and nothing is written" and "SCRUM-50 TC-50-10: expected attendance exactly equal to the venue's capacity fits"; `tests/integration/bookings.test.ts` › "SCRUM-50 TC-50-10: attendance over the venue's capacity is refused and nothing is written; exactly at capacity is accepted"
 
 ### TC-50-11
 
@@ -180,7 +180,7 @@ a manual tester creates the same events, or edits an event's dates.
 | Test Data | E2E Hall — Missed Seminar (1 Jan 2020, 09:00–11:00); a start of 1 Jan 2020 |
 | Expected Result | Step 1: "The start time cannot be in the past." in the availability line, and **Submit request** is disabled. Step 2: the same message against the start field, and nothing is written. A start less than a minute ago still counts as now. |
 
-**Automated by:** `e2e/bookings.spec.ts` › "SCRUM-50 [AC5] TC-50-11: an event that has already started is reported before submitting, and Submit is disabled"; `tests/unit/bookings.test.ts` › "SCRUM-50 — a period that has already started is refused against the start field, and nothing is read or written", "SCRUM-50 — a start less than a minute ago still counts as now" and "SCRUM-50 [AC5] TC-50-11: a period that has already started is reported against the start, as submitting would, and nothing is read" (live check); `tests/integration/bookings.test.ts` › "SCRUM-50 [AC5] TC-50-11: a period that has already started is refused and nothing is written" and "SCRUM-50 [AC5] TC-50-11: a period that has already started is not called available, and submitting it is refused the same way"
+**Automated by:** `e2e/bookings.spec.ts` › "SCRUM-50 [AC5] TC-50-11: an event that has already started is reported before submitting, and Submit is disabled"; `tests/unit/bookings.test.ts` › "SCRUM-50 [AC5] TC-50-11: a period that has already started is refused against the start field, and nothing is read or written", "SCRUM-50 [AC5] TC-50-11: a start less than a minute ago still counts as now" and "SCRUM-50 [AC5] TC-50-11: a period that has already started is reported against the start, as submitting would, and nothing is read" (live check); `tests/integration/bookings.test.ts` › "SCRUM-50 [AC5] TC-50-11: a period that has already started is refused and nothing is written" and "SCRUM-50 [AC5] TC-50-11: a period that has already started is not called available, and submitting it is refused the same way"
 
 ### TC-50-12
 
@@ -193,7 +193,7 @@ a manual tester creates the same events, or edits an event's dates.
 | Test Data | Seeded venues and their supported layouts |
 | Expected Result | Room layout sits above Venue. Step 2: only Seminar Room 2.1 is offered, with "Showing venues that support the classroom layout." Step 3: the venue is cleared because Seminar Room 2.1 cannot be set up for a banquet. Step 4: every active venue is offered. Choosing an event pre-selects its preferred layout, which narrows the venues the same way; it is matched ignoring case, so an event whose layout was typed "Theatre" pre-selects "theatre". |
 
-**Automated by:** `e2e/bookings.spec.ts` › "SCRUM-50 [AC1] TC-50-12: the room layout is chosen first, and only venues that support it are offered"; `tests/unit/request-form.test.tsx` › "SCRUM-50 [AC1] TC-50-12: once a layout is chosen, only venues that support it are offered", "SCRUM-50 AC1 — with no layout preference, every venue is offered" and "SCRUM-50 AC1 — the room layout is asked for before the venue"; `tests/unit/request-form.test.tsx` › every "SCRUM-50 [AC1] TC-50-12: layoutOption" case; `e2e/bookings.spec.ts` › "SCRUM-50 [AC1] TC-50-15: the period and attendance are the event's, rounded out to the half hour, and cannot be edited" (an event stored as "Theatre")
+**Automated by:** `e2e/bookings.spec.ts` › "SCRUM-50 [AC1] TC-50-12: the room layout is chosen first, and only venues that support it are offered"; `tests/unit/request-form.test.tsx` › "SCRUM-50 [AC1] TC-50-12: once a layout is chosen, only venues that support it are offered", "SCRUM-50 [AC1] TC-50-12: with no layout preference, every venue is offered" and "SCRUM-50 [AC1] TC-50-12: the room layout is asked for before the venue"; `tests/unit/request-form.test.tsx` › every "SCRUM-50 [AC1] TC-50-12: layoutOption" case; `e2e/bookings.spec.ts` › "SCRUM-50 [AC1] TC-50-15: the period and attendance are the event's, rounded out to the half hour, and cannot be edited" (an event stored as "Theatre")
 
 ### TC-50-13
 
@@ -219,7 +219,7 @@ a manual tester creates the same events, or edits an event's dates.
 | Test Data | As TC-50-01 |
 | Expected Result | A new PENDING booking is created with a new id. The earlier booking still exists with its REJECTED or CANCELLED status. Two booking rows exist. |
 
-**Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-50 AC9 — after a rejected request, a new request creates a new booking record and the earlier one is kept" and "…after a cancelled request, …"
+**Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-50 [AC9] TC-50-14: after a rejected request, a new request creates a new booking record and the earlier one is kept" and "…after a cancelled request, …"
 
 ### TC-50-15
 
@@ -232,4 +232,4 @@ a manual tester creates the same events, or edits an event's dates.
 | Test Data | E2E Hall — Morning Lecture (10 Mar 2035, 09:10–12:45, 120) |
 | Expected Result | Step 1: Start reads "10 Mar 2035, 9:00 am SGT", End "10 Mar 2035, 1:00 pm SGT", attendance "120"; none can be edited. Step 2: "The requested period must be the event's: … to …." or "The expected attendance must be the event's: 120.", against that field, and nothing is written. Step 3: "This event has no dates or expected attendance yet. Set them on the event before requesting a venue." |
 
-**Automated by:** `e2e/bookings.spec.ts` › "SCRUM-50 [AC1] TC-50-15: the period and attendance are the event's, rounded out to the half hour, and cannot be edited"; `tests/unit/bookings.test.ts` › every "SCRUM-50 [AC1] TC-50-15: the period and attendance are the event's" case; `tests/unit/request-form.test.tsx` › every "SCRUM-50 [AC1] TC-50-15: eventBookingPeriod" case and "SCRUM-50 AC1 — the period and attendance are shown read-only, taken from the event"; `tests/integration/bookings.test.ts` › "SCRUM-50 [AC1] TC-50-15: a period or attendance that is not the event's is refused and nothing is written"
+**Automated by:** `e2e/bookings.spec.ts` › "SCRUM-50 [AC1] TC-50-15: the period and attendance are the event's, rounded out to the half hour, and cannot be edited"; `tests/unit/bookings.test.ts` › every "SCRUM-50 [AC1] TC-50-15: the period and attendance are the event's" case; `tests/unit/request-form.test.tsx` › every "SCRUM-50 [AC1] TC-50-15: eventBookingPeriod" case and "SCRUM-50 [AC1] TC-50-15: the period and attendance are shown read-only, taken from the event"; `tests/integration/bookings.test.ts` › "SCRUM-50 [AC1] TC-50-15: a period or attendance that is not the event's is refused and nothing is written"

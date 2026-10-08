@@ -251,7 +251,7 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-29 — equipment availability against
     // SCRUM-27 AC 1 raises equipment requests for a Planning event, so a
     // reservation has to be possible for one; a Confirmed event cannot take a
     // request, so it cannot take a reservation either.
-    it("SCRUM-31 TC-31-10: reserves for a Planning event, and refuses a Confirmed one without writing", async () => {
+    it("SCRUM-31, SCRUM-81 TC-31-10, TC-81-12: reserves for a Planning event, and refuses a Confirmed one without writing", async () => {
       const planning = await reserveEquipmentRequest(
         await approvedRequestFor(9, 12, 1),
       );

@@ -20,7 +20,7 @@ phone and to a screen reader, where a grid of every venue would not.
 
 | ID | Type | Criterion | Automated |
 |---|---|---|---|
-| [TC-36-01](#tc-36-01) | Positive | AC 1, AC 2 | Unit, e2e |
+| [TC-36-01](#tc-36-01) | Positive | AC 1, AC 2, AC 4 | Unit, e2e |
 | [TC-36-02](#tc-36-02) | Positive | AC 3 | Unit, e2e |
 | [TC-36-03](#tc-36-03) | Boundary | AC 5 | Unit, e2e |
 | [TC-36-04](#tc-36-04) | Positive | AC 6 | Unit, e2e |
@@ -36,7 +36,7 @@ phone and to a screen reader, where a grid of every venue would not.
 | Item | Content |
 |---|---|
 | Test Case ID | TC-36-01 |
-| Test Scenario | [Positive] AC 1, AC 2: a venue's calendar shows available and unavailable periods; an approved booking reads as unavailable |
+| Test Scenario | [Positive] AC 1, AC 2, AC 4: a venue's calendar shows available and unavailable periods; an approved booking reads as unavailable, and a pending request does not |
 | Pre-conditions | An approved booking on the Grand Auditorium, 10 Jan 2036, 9:00 am to 1:00 pm. |
 | Test Steps | 1. Open **Availability**. <br> 2. Choose the Grand Auditorium, From and To 10 Jan 2036. |
 | Test Data | — |

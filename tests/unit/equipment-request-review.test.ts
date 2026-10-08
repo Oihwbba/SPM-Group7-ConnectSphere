@@ -119,7 +119,7 @@ describe("updateEquipmentRequestStatus — SCRUM-28", () => {
     expect(revalidatePath).toHaveBeenCalledWith("/equipment-requests");
   });
 
-  it("SCRUM-28 [AC3, AC5] TC-28-03: approves a request in review, stamping the decision and passing on the note", async () => {
+  it("SCRUM-28 [AC3, AC5] TC-28-03, TC-28-09: approves a request in review, stamping the decision and passing on the note", async () => {
     db.equipmentRequest.findUnique.mockResolvedValue(stored("IN_REVIEW"));
 
     const result = await updateEquipmentRequestStatus({
@@ -138,7 +138,7 @@ describe("updateEquipmentRequestStatus — SCRUM-28", () => {
     );
   });
 
-  it("SCRUM-28 [AC3, AC5] TC-28-04: rejects a request in review with the reason", async () => {
+  it("SCRUM-28 [AC3, AC6] TC-28-04, TC-28-10: rejects a request in review with the reason", async () => {
     db.equipmentRequest.findUnique.mockResolvedValue(stored("IN_REVIEW"));
 
     const result = await updateEquipmentRequestStatus({
