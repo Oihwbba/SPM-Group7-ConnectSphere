@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-07. Jira is the source of truth.
+     Synced from Jira on 2026-10-09. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-72 - View an event I could attend
@@ -29,11 +29,13 @@
 7. Cancelled events, and events that are not Confirmed, are not listed.
 8. Opening an event directly by its URL follows the same rules as the list.
 
-**Boundary:** this story owns the list and the Attendee event view. Hiding events that don't need registration is SCRUM-127; when registration opens is SCRUM-73, SCRUM-75 and SCRUM-81; registration privacy is SCRUM-70; an Attendee whose event returns to Planning is covered by SCRUM-133.
+**Boundary:** this story owns the list and the Attendee event view. Hiding events that don't need registration is SCRUM-171; when registration opens is SCRUM-73, SCRUM-75 and SCRUM-81; registration privacy is SCRUM-70; an Attendee whose event returns to Planning is covered by SCRUM-85.
 
 **Change log**
 
 * 2026-10-01 (mid-sprint correction): AC1 hid events with registration turned off (withdrawn below).
 * 2026-10-01 (audit): AC1 restored to the built behaviour: every Confirmed event is listed. The code has one registration flag, so hiding "registration turned off" events contradicted AC4 (manually closed events stay listed). Hiding events that don't need registration moved to SCRUM-127, which adds the Registration needed choice.
+* 2026-10-07: the Boundary note points hiding events that don't need registration to SCRUM-171, which took the Registration needed choice over when SCRUM-127 was split.
+* 2026-10-07: the Boundary note points to SCRUM-85, which SCRUM-133 was merged into.
 
 Functionality Area: Attendee Registration

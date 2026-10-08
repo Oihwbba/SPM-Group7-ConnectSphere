@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-07. Jira is the source of truth.
+     Synced from Jira on 2026-10-09. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-71 - Record who changed what and when
@@ -11,7 +11,7 @@
 | **Priority** | Low |
 | **Story points** | 5 |
 | **Status in Jira** | To Do |
-| **Sprint** | SCRUM Sprint 3 |
+| **Sprint** | Backlog |
 | **Jira** | https://smu-spm-group7.atlassian.net/browse/SCRUM-71 |
 
 ---
@@ -22,7 +22,7 @@
 
 **Acceptance criteria**
 
-1. These actions each record the actor (a user or the system), the action and a timestamp: every status change; approval and rejection with the outcome from SCRUM-126; Coordinator assignment and handover; clarification request and response; amendment and resubmission; change request raised and decided; venue booking requested and decided; equipment request created and reviewed, and equipment reserved; flag raised and resolved; event cancellation; registration and withdrawal.
+1. These actions each record the actor (a user or the system), the action and a timestamp: every status change; approval and rejection with the outcome from SCRUM-126; Coordinator assignment and reassignment by the Lead (SCRUM-165, SCRUM-21); clarification request and response; amendment and resubmission; change request raised and decided; venue booking requested, held and decided; equipment request created and reviewed, and equipment reserved; flag raised and resolved; safety check requested and decided (SCRUM-166); event cancellation; registration and withdrawal.
 2. For date, time, expected attendance, venue and equipment, the entry also records the previous and the new value.
 3. The entry is written in the same operation as the action, so an action cannot succeed without its entry.
 4. Entries cannot be edited or deleted through the application.
@@ -36,5 +36,6 @@
 
 * 2026-10-01: back in scope (the "descoped" label was removed). The customer requires it, and SCRUM-21, SCRUM-26, SCRUM-81, SCRUM-108 and SCRUM-126 depend on it. Moved from the Access Control epic to Event Request Lifecycle. Visibility narrowed to the Organiser and Coordinators, as the customer said. Re-estimated from 4 (not on the scale) to 5.
 * 2026-10-01 (audit): beyond Release 1 again (label `beyond-release-1`), following the Week 4 not-required list and the team's 29 Sep decision. The stories that depended on it only need their actions recorded, which the Definition of Done already requires. Waiting-list actions removed from AC1 (SCRUM-79 is beyond Release 1); the equipment entries match the built request-and-reservation model; AC7 names what the code already records.
+* 2026-10-07 (Week 7 changes 4 to 6): AC1 records assignment and reassignment by the Lead instead of a handover, holds, and safety checks.
 
 Functionality Area: Event Information Management (Auditability)

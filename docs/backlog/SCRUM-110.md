@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-07. Jira is the source of truth.
+     Synced from Jira on 2026-10-09. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-110 - See an event's readiness checklist
@@ -27,7 +27,7 @@
 5. Given every item is complete, then the checklist shows Ready to confirm, which enables the Confirm action in SCRUM-81.
 6. The assigned Coordinator sees the checklist on the event page. The Organiser sees the item names and states but not internal reasons.
 
-**Extended by later stories (not part of this one):** Equipment shown as "Not requested yet" when the Organiser listed equipment but no request exists (SCRUM-127); flagged bookings or reservations counted as incomplete (SCRUM-26).
+**Extended by later stories (not part of this one):** Equipment shown as "Not requested yet" when the Organiser listed equipment but no request exists (SCRUM-170); flagged bookings or reservations counted as incomplete (SCRUM-26).
 
 **Change log**
 
@@ -35,5 +35,6 @@
 * 2026-10-01 (audit): restored the 30 Sep criteria the branch was built against: Equipment is complete when reservations cover every requested line, so a partial reservation is shown. This withdraws the earlier 1 Oct edit, which contradicted the code under review. AC1, AC2 and AC4 add states the branch already shows: Not requested, Approved for a different time, and an equipment request that was only ever rejected.
 * 2026-10-03: AC4 no longer shows the reserved/requested shortfall per line (PO decision). A partial reservation still leaves Equipment incomplete under AC3.
 * 2026-10-04: AC4 names the items not yet reserved in full, without counts, so the Coordinator can see what is missing (PO decision).
+* 2026-10-07: the "Not requested yet" extension points to SCRUM-170, which took it over when SCRUM-127 was split.
 
 Functionality Area: Event Status Management

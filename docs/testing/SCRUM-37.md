@@ -86,9 +86,9 @@ are Singapore time.
 | Pre-conditions | An approved booking 10 Jan 2036, 9:00 am to 1:00 pm (TC-37-01). |
 | Test Steps | 1. Record maintenance 10:00 am to 12:00 pm. <br> 2. Record a period overlapping maintenance that is already recorded. |
 | Test Data | As above |
-| Expected Result | Step 1: "Not recorded: Grand Auditorium is already booked from 10 Jan 2036, 9:00 am to 10 Jan 2036, 1:00 pm." Nothing is saved and the booking is untouched. Step 2 is refused the same way ("unavailable (maintenance) …"). Written directly with SQL, the database refuses both. |
+| Expected Result | Step 1: "Not recorded: Grand Auditorium is already booked from 10 Jan 2036, 9:00 am to 10 Jan 2036, 1:00 pm." Nothing is saved and the booking is untouched. Step 2 is refused the same way ("unavailable (maintenance) …"). Written directly with SQL, the database refuses step 2. Since SCRUM-172 it accepts step 1, so that SCRUM-161 can save unavailability over a booking and flag the booking; until SCRUM-161 the refusal in step 1 is the action's. |
 
-**Automated by:** `tests/integration/unavailability.test.ts` › "SCRUM-37 [AC3] TC-37-05: recording over an approved booking surfaces the clash and saves nothing", "SCRUM-37 [AC3] TC-37-05: recording over a period already recorded is refused too" and "SCRUM-37 [AC3] TC-37-05: the database alone refuses maintenance written over an approved booking"; `tests/unit/unavailability.test.ts` › "SCRUM-37 [AC3] TC-37-05: an overlapping approved booking is surfaced and nothing is saved"; `e2e/availability.spec.ts` › journey (last step)
+**Automated by:** `tests/integration/unavailability.test.ts` › "SCRUM-37 [AC3] TC-37-05: recording over an approved booking surfaces the clash and saves nothing", "SCRUM-37 [AC3] TC-37-05: recording over a period already recorded is refused too" and "SCRUM-172 [AC9] TC-172-11: the database accepts unavailability written over an approved booking"; `tests/unit/unavailability.test.ts` › "SCRUM-37 [AC3] TC-37-05: an overlapping approved booking is surfaced and nothing is saved"; `e2e/availability.spec.ts` › journey (last step)
 
 ### TC-37-06
 
@@ -97,11 +97,11 @@ are Singapore time.
 | Test Case ID | TC-37-06 |
 | Test Scenario | [Concurrency] AC 4: an approval and a maintenance record for overlapping periods at the same moment; exactly one is saved |
 | Pre-conditions | Real PostgreSQL. A pending request 10:00 am to 2:00 pm on a test venue. |
-| Test Steps | 1. Approve the request and record maintenance 12:00 pm to 4:00 pm at once. The test holds both after the application's own check until both have passed it, so only the database can separate them. |
+| Test Steps | 1. Approve the request and record maintenance 12:00 pm to 4:00 pm at once. The test holds both after the application's own check until both have passed it, so only the database's locks can separate them. |
 | Test Data | — |
-| Expected Result | One succeeds and the other is refused. Approved bookings plus recorded unavailability for that period total exactly one. With the occupancy triggers disabled, both succeed and the test fails (verified 2026-09-28). |
+| Expected Result | One succeeds and the other is refused. Approved bookings plus recorded unavailability for that period total exactly one. With the occupancy triggers disabled, both succeed and the test fails (verified 2026-09-28). Since SCRUM-172 the database accepts unavailability over a booking, so recording runs its check and its write under the venue lock that an approval's trigger also takes: the approval waits for it, then is refused. |
 
-**Automated by:** `tests/integration/concurrency.test.ts` › "SCRUM-37 [AC4] TC-37-06: an approval and a maintenance record for overlapping periods at the same moment: exactly one is saved"; `tests/unit/bookings.test.ts` › "SCRUM-37 [AC4] TC-37-06: maintenance recorded at the same instant as an approval: the database refuses the approval, and it is returned as conflicting"; `tests/unit/unavailability.test.ts` › "SCRUM-37 [AC4] TC-37-06: an approval that lands between the check and the write is caught by the database, and the clash is shown" and "SCRUM-37 [AC4] TC-37-06: if the colliding row is not yet visible, a plain refusal is given"
+**Automated by:** `tests/integration/concurrency.test.ts` › "SCRUM-37 [AC4] TC-37-06: an approval and a maintenance record for overlapping periods at the same moment: exactly one is saved"; `tests/unit/bookings.test.ts` › "SCRUM-37 [AC4] TC-37-06: maintenance recorded at the same instant as an approval: the database refuses the approval, and it is returned as conflicting"; `tests/unit/unavailability.test.ts` › "SCRUM-37 [AC4] TC-37-06: the venue is locked before the check and the write, so an approval can't land between them"
 
 ### TC-37-07
 

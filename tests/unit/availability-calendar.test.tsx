@@ -32,17 +32,17 @@ describe("AvailabilityCalendar — SCRUM-36", () => {
     expect(html.match(/data-free-all-day/g)).toHaveLength(7);
   });
 
-  it("SCRUM-36 [AC3] TC-36-02: a day filled by a closure is not called available", () => {
+  it("SCRUM-36 [AC3] TC-36-02: a day filled by recorded unavailability is not called available", () => {
     const html = render(
       availabilityByDay(
         [
           {
             kind: "unavailability",
             id: "vun_1",
-            // Mon 12 to Wed 14 Mar: Tuesday is closed from midnight to midnight.
+            // Mon 12 to Wed 14 Mar: Tuesday is unavailable from midnight to midnight.
             startAt: sg("2035-03-12", "18:00"),
             endAt: sg("2035-03-14", "09:00"),
-            reason: "CLOSURE",
+            reason: "SAFETY_CONCERN",
           },
         ],
         "2035-03-12",
@@ -52,7 +52,7 @@ describe("AvailabilityCalendar — SCRUM-36", () => {
 
     expect(column(html, "2035-03-13")).not.toContain("data-free-all-day");
     expect(column(html, "2035-03-13")).toContain(
-      "Unavailable (closure) all day",
+      "Unavailable (safety concern) all day",
     );
     // The untouched days still say so.
     expect(column(html, "2035-03-15")).toContain("data-free-all-day");

@@ -266,3 +266,29 @@ describe("can — viewing venue availability (SCRUM-36)", () => {
     }
   });
 });
+
+// SCRUM-172 AC1 — the two Week 7 roles exist before the stories that give
+// them work. Until SCRUM-165 and SCRUM-166 grant more, each may only read its
+// own notifications, and neither can decide, plan or edit an event (SCRUM-164
+// AC2).
+describe("can — the Week 7 roles before their stories", () => {
+  it.each(["COORDINATOR_LEAD", "SAFETY_OFFICER"] as const)(
+    "SCRUM-172 [AC1] TC-172-01: %s may read only its own notifications",
+    (role) => {
+      const user: SessionUser = { id: "usr_new", role };
+      expect(can(user, "notification:read", { kind: "notification", userId: "usr_new" })).toBe(true);
+      expect(can(user, "notification:read", { kind: "notification", userId: "someone" })).toBe(false);
+      for (const action of [
+        "event:create",
+        "event:review",
+        "event:confirm",
+        "event:reject",
+        "booking:decide",
+        "unavailability:record",
+        "equipment:reserve",
+      ] as const) {
+        expect(can(user, action)).toBe(false);
+      }
+    },
+  );
+});

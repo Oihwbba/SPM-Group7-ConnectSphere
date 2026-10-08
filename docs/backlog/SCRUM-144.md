@@ -1,8 +1,8 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-07. Jira is the source of truth.
+     Synced from Jira on 2026-10-09. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
-# SCRUM-144 - Enable registration and enforce event cutoff
+# SCRUM-144 - [COVERED BY SCRUM-75 AND SCRUM-171] Enable registration and enforce event cutoff
 
 | | |
 |---|---|
@@ -10,9 +10,13 @@
 | **Epic** | - |
 | **Priority** | High |
 | **Story points** | - |
-| **Status in Jira** | To Do |
-| **Sprint** | SCRUM Sprint 3 |
+| **Status in Jira** | Done |
+| **Sprint** | Backlog |
 | **Jira** | https://smu-spm-group7.atlassian.net/browse/SCRUM-144 |
+
+---
+
+**Closed as covered on 2026-10-07 (backlog refinement).** AC1 is SCRUM-171 AC4, AC2 is SCRUM-75 AC6, AC3 is SCRUM-75 AC8, and AC4 is SCRUM-75 itself. The regression tests in AC5 are part of those stories' Definition of Done. The original text is kept below for history.
 
 ---
 
@@ -31,3 +35,4 @@ Related: SCRUM-72, SCRUM-73, SCRUM-75, SCRUM-81, SCRUM-127.
 Change log
 
 * 2026-10-03: opening registration on confirmation moved to SCRUM-81 AC5 (PO decision).
+* 2026-10-07 (backlog refinement): closed as covered by SCRUM-75 and SCRUM-171.

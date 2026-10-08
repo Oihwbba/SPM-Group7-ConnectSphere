@@ -31,8 +31,11 @@ export type BookingSummary = {
   status: BookingStatus;
 };
 
-/** The bookings that hold an event's one venue (SCRUM-50 AC8). */
-const EVENT_VENUE_STATUSES: BookingStatus[] = ["PENDING", "APPROVED"];
+/**
+ * The bookings that hold an event's one venue (SCRUM-50 AC8). A Held one
+ * counts too, as it does in booking_one_per_venue_per_event (SCRUM-172).
+ */
+const EVENT_VENUE_STATUSES: BookingStatus[] = ["PENDING", "HELD", "APPROVED"];
 
 const summarySelect = {
   id: true,
@@ -247,8 +250,9 @@ export async function submitBookingRequest(
       return ok({ booking: toSummary(created), created: true });
     } catch (error) {
       // A double-click can race the check above; the database's
-      // `booking_one_venue_per_event` constraint lets only one in.
-      if (!violatesExclusion(error, "booking_one_venue_per_event")) {
+      // `booking_one_per_venue_per_event` constraint (one live booking per
+      // event and venue, SCRUM-172) lets only one in.
+      if (!violatesExclusion(error, "booking_one_per_venue_per_event")) {
         throw error;
       }
       const winner = await existingForEvent();

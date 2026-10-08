@@ -355,24 +355,42 @@ describe.skipIf(!usesLocalDatabase)(
         });
       }
 
-      it("SCRUM-50 [AC8] TC-50-07: the database itself refuses a second pending or approved booking for one event, whatever the venue or period", async () => {
-        const row = (venue: string, status: "PENDING" | "APPROVED") => ({
+      // Until SCRUM-172 the database held an event to one live booking at any
+      // venue. It now holds it to one per venue (SCRUM-162 AC2), so an event
+      // can book several venues; one venue per event (AC8) is the action's
+      // check above until SCRUM-162 replaces it.
+      it("SCRUM-172 [AC9] TC-172-12: the database refuses a second pending, held or approved booking for one event at the same venue, but not at another", async () => {
+        const row = (
+          venue: string,
+          status: "PENDING" | "HELD" | "APPROVED",
+          startHours = 24,
+        ) => ({
           data: {
             eventId,
             venueId: venue,
-            startAt: new Date(fromEnd(24)),
-            endAt: new Date(fromEnd(26)),
+            startAt: new Date(fromEnd(startHours)),
+            endAt: new Date(fromEnd(startHours + 2)),
             status,
             requestedById: "usr_coordinator",
+            ...(status === "HELD" && {
+              heldAt: new Date(),
+              holdExpiresAt: new Date(fromEnd(startHours - 1)),
+              holdNote: "Confirm the catering numbers.",
+            }),
           },
         });
         await prisma.booking.create(row(venueId, "PENDING"));
 
-        for (const status of ["PENDING", "APPROVED"] as const) {
+        for (const status of ["PENDING", "HELD", "APPROVED"] as const) {
           await expect(
-            prisma.booking.create(row(otherVenueId, status)),
-          ).rejects.toThrow(/booking_one_venue_per_event/);
+            prisma.booking.create(row(venueId, status, 30)),
+          ).rejects.toThrow(/booking_one_per_venue_per_event/);
         }
+        expect(await bookingCount()).toBe(1);
+
+        await expect(
+          prisma.booking.create(row(otherVenueId, "PENDING")),
+        ).resolves.toBeDefined();
       });
 
       it("SCRUM-50 [AC3, AC10] TC-50-04: another event's pending request for the same venue and period blocks nobody", async () => {
@@ -785,7 +803,7 @@ describe.skipIf(!usesLocalDatabase)(
             venueId,
             startAt: new Date(fromStart(1)),
             endAt: new Date(fromEnd(0)),
-            reason: "CLOSURE",
+            reason: "RENOVATION",
             recordedById: "usr_venuestaff",
           },
         });
@@ -798,7 +816,7 @@ describe.skipIf(!usesLocalDatabase)(
         expect(result.ok).toBe(false);
         if (result.ok) return;
         expect(result.error).toMatch(
-          /^Conflicting: .* unavailable \(closure\)/,
+          /^Conflicting: .* unavailable \(renovation\)/,
         );
       });
 
