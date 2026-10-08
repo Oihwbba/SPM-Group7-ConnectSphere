@@ -13,6 +13,8 @@ const db = vi.hoisted(() => ({
   venue: { findFirst: vi.fn() },
   booking: { findMany: vi.fn() },
   venueUnavailability: { findMany: vi.fn(), create: vi.fn() },
+  $queryRaw: vi.fn(),
+  $transaction: vi.fn(),
 }));
 
 vi.mock("@/auth", () => ({ auth: vi.fn() }));
@@ -37,16 +39,11 @@ const valid = {
   reason: "MAINTENANCE",
 };
 
-const clashRefusal = (rule: string) =>
-  Object.assign(new Error(rule), {
-    cause: {
-      originalCode: "23P01",
-      originalMessage: `conflicting key value violates exclusion constraint "${rule}"`,
-    },
-  });
-
 beforeEach(() => {
   vi.resetAllMocks();
+  db.$transaction.mockImplementation((work: (tx: typeof db) => unknown) =>
+    work(db),
+  );
   mockAuth.mockResolvedValue(sessionFor("VENUE_STAFF", "usr_staff"));
   db.venue.findFirst.mockResolvedValue({ name: "Seminar Room" });
   db.booking.findMany.mockResolvedValue([]);
@@ -92,6 +89,8 @@ describe("recordUnavailability — SCRUM-37", () => {
       "COORDINATOR",
       "TECH_SUPPORT",
       "ATTENDEE",
+      "COORDINATOR_LEAD",
+      "SAFETY_OFFICER",
     ] as Role[]) {
       mockAuth.mockResolvedValue(sessionFor(role));
       expect(await recordUnavailability(valid)).toEqual({
@@ -149,38 +148,45 @@ describe("recordUnavailability — SCRUM-37", () => {
     expect(db.venueUnavailability.create).not.toHaveBeenCalled();
   });
 
-  it("SCRUM-37 AC4 — an approval that lands between the check and the write is caught by the database, and the clash is shown", async () => {
-    db.venueUnavailability.create.mockRejectedValue(
-      clashRefusal("unavailability_overlaps_booking"),
+  // Since SCRUM-172 the database accepts unavailability over a booking, so an
+  // approval landing between the check and the write is no longer refused
+  // there. The venue lock, which every approval also takes, keeps it out.
+  it("SCRUM-37 AC4 — the venue is locked before the check and the write, so an approval can't land between them", async () => {
+    await recordUnavailability(valid);
+
+    const [lock] = db.$queryRaw.mock.calls[0];
+    expect(lock.join("?")).toBe(
+      'SELECT "id" FROM "Venue" WHERE "id" = ? FOR NO KEY UPDATE',
     );
-    db.booking.findMany.mockResolvedValueOnce([]).mockResolvedValueOnce([
-      {
-        id: "bkg_1",
-        startAt: new Date(START),
-        endAt: new Date(END),
-      },
-    ]);
-
-    const result = await recordUnavailability(valid);
-
-    expect(result).toMatchObject({
-      ok: false,
-      error: expect.stringMatching(
-        /^Not recorded: Seminar Room is already booked/,
-      ),
-    });
+    expect(db.$queryRaw.mock.calls[0].slice(1)).toEqual(["ven_1"]);
+    const locked = db.$queryRaw.mock.invocationCallOrder[0];
+    expect(locked).toBeLessThan(
+      db.booking.findMany.mock.invocationCallOrder[0],
+    );
+    expect(locked).toBeLessThan(
+      db.venueUnavailability.create.mock.invocationCallOrder[0],
+    );
   });
 
-  it("SCRUM-37 AC4 — if the colliding row is not yet visible, a plain refusal is given", async () => {
-    db.venueUnavailability.create.mockRejectedValue(
-      clashRefusal("unavailability_overlaps_unavailability"),
-    );
-
-    expect(await recordUnavailability(valid)).toEqual({
-      ok: false,
-      error:
-        "Not recorded: the venue was booked for this period at the same moment.",
-    });
+  it("SCRUM-172 [AC5] TC-172-05: the five venue reasons are accepted, and Damaged and Closure no longer are", async () => {
+    for (const reason of [
+      "MAINTENANCE",
+      "EQUIPMENT_FAILURE",
+      "RENOVATION",
+      "SAFETY_CONCERN",
+      "OTHER",
+    ]) {
+      expect(await recordUnavailability({ ...valid, reason })).toMatchObject({
+        ok: true,
+      });
+    }
+    for (const reason of ["DAMAGED", "CLOSURE"]) {
+      expect(await recordUnavailability({ ...valid, reason })).toMatchObject({
+        ok: false,
+        fieldErrors: { reason: ["Choose a reason."] },
+      });
+    }
+    expect(db.venueUnavailability.create).toHaveBeenCalledTimes(5);
   });
 
   it("does not swallow an unexpected database error", async () => {

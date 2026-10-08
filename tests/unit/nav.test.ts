@@ -166,3 +166,16 @@ describe("navigation follows a permission change — SCRUM-66", () => {
     expect(nav.LANDING_ROUTE_BY_ROLE.ATTENDEE).toBe("/notifications");
   });
 });
+
+// SCRUM-172 AC1 — the Week 7 roles sign in to their notifications, the only
+// page they have until SCRUM-164 gives them their own.
+describe("navigation for the Week 7 roles — SCRUM-172", () => {
+  it.each([
+    ["COORDINATOR_LEAD", "Event Coordinator Lead"],
+    ["SAFETY_OFFICER", "Safety Officer"],
+  ] as const)("SCRUM-172 [AC1] TC-172-01: %s is labelled and lands on its notifications", (role, label) => {
+    expect(ROLE_LABEL[role]).toBe(label);
+    expect(hrefsFor(role)).toEqual(["/notifications"]);
+    expect(LANDING_ROUTE_BY_ROLE[role]).toBe("/notifications");
+  });
+});

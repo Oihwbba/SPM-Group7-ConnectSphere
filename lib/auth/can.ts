@@ -122,6 +122,10 @@ const ROLE_ACTIONS: Record<Role, Action[]> = {
     "registration:read",
     "notification:read",
   ],
+  // SCRUM-164 — the Week 7 roles. Like every user they read their own
+  // notifications (SCRUM-48); SCRUM-165 and SCRUM-166 grant the rest.
+  COORDINATOR_LEAD: ["notification:read"],
+  SAFETY_OFFICER: ["notification:read"],
 };
 
 /**

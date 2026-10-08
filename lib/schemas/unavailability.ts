@@ -3,13 +3,31 @@ import { z } from "zod";
 import { isValidPeriod } from "@/lib/period";
 import { INVALID_PERIOD_MESSAGE } from "@/lib/schemas/booking";
 
-/** SCRUM-37 — the reasons a venue can be unavailable other than a booking. */
+/**
+ * SCRUM-161 AC1 — the reasons a venue can be unavailable other than a
+ * booking: the database's VenueUnavailabilityReason (SCRUM-172).
+ */
 export const UNAVAILABILITY_REASONS = [
   "MAINTENANCE",
-  "DAMAGED",
-  "CLOSURE",
+  "EQUIPMENT_FAILURE",
+  "RENOVATION",
+  "SAFETY_CONCERN",
   "OTHER",
 ] as const;
+
+export type UnavailabilityReasonValue = (typeof UNAVAILABILITY_REASONS)[number];
+
+/** How each reason reads on the form, the calendar and in a clash message. */
+export const UNAVAILABILITY_REASON_LABEL: Record<
+  UnavailabilityReasonValue,
+  string
+> = {
+  MAINTENANCE: "Maintenance",
+  EQUIPMENT_FAILURE: "Equipment failure",
+  RENOVATION: "Renovation",
+  SAFETY_CONCERN: "Safety concern",
+  OTHER: "Other",
+};
 
 /**
  * SCRUM-37 AC2 — "Venue Staff can record non-booking unavailability

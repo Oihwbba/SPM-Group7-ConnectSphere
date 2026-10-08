@@ -14,6 +14,7 @@ import {
   formatWeekdayDate,
   parseSingaporeDateTime,
 } from "@/lib/datetime";
+import { UNAVAILABILITY_REASON_LABEL } from "@/lib/schemas/unavailability";
 import { cn } from "@/lib/utils";
 import {
   addDays,
@@ -79,16 +80,11 @@ const KIND: Record<
   },
 };
 
-const REASON: Record<string, string> = {
-  MAINTENANCE: "Maintenance",
-  DAMAGED: "Damaged",
-  CLOSURE: "Closure",
-  OTHER: "Other",
-};
+const REASON: Record<string, string> = UNAVAILABILITY_REASON_LABEL;
 
 function labelFor(segment: DaySegment): string {
   return segment.kind === "unavailability"
-    ? `${KIND.unavailability.label} (${segment.reason.toLowerCase()})`
+    ? `${KIND.unavailability.label} (${REASON[segment.reason].toLowerCase()})`
     : KIND[segment.kind].label;
 }
 
