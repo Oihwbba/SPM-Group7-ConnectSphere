@@ -34,7 +34,7 @@
 
 **Related:** there is no scheduler. Graders run the app on their own machines and deployments go through GitHub Actions, so AC7 works without a job, the same way hold expiry does (SCRUM-163).
 
-**Customer basis:** "An authorised user can cancel an event. Related venue and equipment reservations should no longer remain committed to a cancelled event." Step 14: "Once the event has taken place, it can be marked as completed. Relevant attendance information, operational notes, or issues may then be recorded and the event can be closed."
+**Customer basis:** Problem with the current process that the customer wants fixed: "Cancelled events may continue to occupy venue or equipment reservations." Step 14: "Once the event has taken place, it can be marked as completed. Relevant attendance information, operational notes, or issues may then be recorded and the event can be closed."
 
 **Change log**
 
@@ -42,5 +42,6 @@
 * 2026-10-01 (audit): Submitted removed from AC1, because a Submitted event has no Coordinator yet. AC3 names reservations and open equipment requests (the built equipment model) and no longer mentions Waitlisted registrations (SCRUM-79 is beyond Release 1). Overdue events are shown in the Coordinator's list without reminders (SCRUM-122 is beyond Release 1). Group headings removed.
 * 2026-10-07 (Week 7 changes 3 to 6): AC3 releases every venue booking, hold and pending request (SCRUM-162, SCRUM-163), closes a safety check awaiting review (SCRUM-166), and no longer mentions a Pending handover, because the Lead now reassigns at once (SCRUM-21). AC7 and the Related note complete an event without a scheduled job, replacing the 15-minute job. AC10 also shows overdue unassigned requests in the Lead's queue (SCRUM-165).
 * 2026-10-07 (backlog refinement): AC10 says an overdue unassigned request is assigned by the Lead before its Coordinator cancels or rejects it, because nobody can do either while it has no Coordinator (SCRUM-135 AC4 and AC9).
+* 2026-10-08 (PO review): Customer basis now quotes the current-process problem from the briefing's Background section instead of the archived Week 1 table.
 
 Functionality Area: Event Status Management

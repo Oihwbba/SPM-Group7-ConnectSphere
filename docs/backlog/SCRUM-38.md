@@ -20,7 +20,7 @@
 
 **Acceptance criteria**
 
-1. Given I open venue search from one of my events, then the date, time, expected attendance, required facilities, accessibility features and layout are pre-filled from the event (SCRUM-127), and I can change any of them. Given I open it from a flagged booking with Find a replacement venue (SCRUM-161), then it is pre-filled from that booking instead and leaves out the booking's venue.
+1. Given I open venue search from one of my events, then the date, time and expected attendance are pre-filled from the event and I can change them; I set the required facilities, accessibility features and layout, with the Organiser's Venue & Accessibility answers shown beside them (SCRUM-170).
 2. Date, time range and location can be used alone or together.
 3. Given a venue has an Approved or Held booking or recorded unavailability (SCRUM-37) that overlaps the occupied period a booking for the searched period would have at that venue (its setup and turnaround times included, SCRUM-159), then it is excluded.
 4. Given that occupied period falls partly or wholly outside a venue's opening hours (SCRUM-34), then it is excluded, because the booking request would be refused.
@@ -45,5 +45,6 @@
 * 2026-10-01 (audit): search now opens pre-filled from the event and each result can start a booking request, so finding a venue leads straight into requesting it. Opening hours come from SCRUM-34. Group headings removed; the filter criteria are part of the one list. Re-estimate at planning: the pre-fill and the request link add work.
 * 2026-10-07 (Week 7 changes 1 to 4): AC3 to AC5 use occupied periods and treat Held bookings as taken (SCRUM-159, SCRUM-163). AC1 opens from a flagged booking to find a replacement venue (SCRUM-161). AC9 marks venues the event has already requested (SCRUM-162).
 * 2026-10-07 (backlog refinement): AC12 filters on the attendance entered in the search, which can be lowered for a room that holds part of the audience (SCRUM-162), instead of always on the event's expected attendance.
+* 2026-10-08: AC1 no longer pre-fills facilities, accessibility features and layout, because SCRUM-127 was dropped; the Coordinator sets them, with the Organiser's answers shown (SCRUM-170).
 
 Functionality Area: Venue Search and Filtering

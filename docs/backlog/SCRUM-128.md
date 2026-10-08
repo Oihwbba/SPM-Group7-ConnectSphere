@@ -31,7 +31,7 @@
 9. Only the event's assigned Coordinator can decide a change request.
 10. The decision is recorded with who and when. The Organiser is notified of the outcome (SCRUM-45). Attendees are told of approved date, time or venue changes when the event is Confirmed again (SCRUM-85).
 
-**Customer basis:** "Change requests may cover several field and the Coordinator will review and processes updates." "Significant changes (e.g., pax size) require re-requesting/reviewing arrangements. Adjustments must be handled manually by staff rather than through automatic un-booking." "Confirmed can revert if major change occurs and reviewed by the co-ordinator."
+**Customer basis:** "Change requests may cover several field and the Coordinator will review and processes updates." "Significant changes (e.g., pax size) require re-requesting/reviewing arrangements. Adjustments must be handled manually by staff rather than through automatic un-booking." G4: "Approval = sufficient info for planning. Confirmation = essential arrangements completed."
 
 **Why this is a new story:** split from SCRUM-41 at the 2026-10-01 backlog refinement. SCRUM-41 had grown to 8 points (raise, review, atomic apply, status revert and cancellation requests), too big to finish in one sprint. SCRUM-41 now covers raising and tracking; this story covers deciding and applying. AC7 is new: lowering attendance below active registrations would otherwise overbook the event, because registration capacity equals expected attendance (SCRUM-74).
 
@@ -40,5 +40,6 @@
 * 2026-10-01 (audit): AC1 lists equipment requests and reservations, matching the built equipment model. AC5 points to SCRUM-75, which owns the pause. AC10 no longer depends on SCRUM-71 (beyond Release 1; recording who and when is a Definition of Done rule) and says Attendees are told once the event is Confirmed again, as SCRUM-85 does.
 * 2026-10-07 (Week 7 changes 3, 4 and 6): AC1 lists holds and every venue booking (SCRUM-162, SCRUM-163). AC4 puts an approved or awaiting safety check out of date (SCRUM-167). AC6 covers Under Review, where change requests can also be raised (SCRUM-41); this audit edit didn't save on 1 Oct.
 * 2026-10-07 (backlog refinement): AC4 points to SCRUM-166, which SCRUM-167 was merged into.
+* 2026-10-08 (PO review): replaced a G3 clarification in the Customer basis with the G4 definition of confirmation.
 
 Functionality Area: Event Change Requests

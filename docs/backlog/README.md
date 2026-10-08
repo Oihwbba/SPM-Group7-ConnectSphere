@@ -36,18 +36,18 @@ either covered by a test or visibly not done yet. Reviewers do the same.
 
 | | |
 |---|---|
-| Stories | **89** |
+| Stories | **88** |
 | Tasks | **24** |
 | Subtasks | **18** |
-| Total story points | **260** |
+| Total story points | **254** |
 | Points committed to Sprint 1 | **37** |
 | Points committed to Sprint 2 | **56** |
-| Points committed to Sprint 3 | **134** |
+| Points committed to Sprint 3 | **128** |
 | Last synced from Jira | **2026-10-08** |
 
 ## SCRUM-6 - Event Request Lifecycle
 
-_33 stories, 92 points_
+_32 stories, 88 points_
 
 | Story | Summary | Pts | Priority | Sprint | Status |
 |---|---|---|---|---|---|
@@ -74,7 +74,6 @@ _33 stories, 92 points_
 | [SCRUM-117](SCRUM-117.md) | Reject an event that can't be fulfilled | 2 | Medium | SCRUM Sprint 2 | Done |
 | [SCRUM-123](SCRUM-123.md) | Record event preparation progress | 3 | Low | Backlog | To Do |
 | [SCRUM-126](SCRUM-126.md) | Coordinator decides whether a rejected request is amended or submitted as new | 2 | Medium | SCRUM Sprint 2 | Done |
-| [SCRUM-127](SCRUM-127.md) | Choose the event's venue, equipment, layout and facility needs from ConnectSphere's catalogues | 5 | High | SCRUM Sprint 3 | To Do |
 | [SCRUM-129](SCRUM-129.md) | Show and store all event times in Singapore time | 1 | Medium | SCRUM Sprint 2 | Done |
 | [SCRUM-130](SCRUM-130.md) | Discard a draft request | 1 | Medium | SCRUM Sprint 2 | Done |
 | [SCRUM-131](SCRUM-131.md) | Use the agreed status names on every screen | 2 | Medium | SCRUM Sprint 3 | To Do |
@@ -82,8 +81,8 @@ _33 stories, 92 points_
 | [SCRUM-165](SCRUM-165.md) | Lead assigns new requests from an unassigned queue | 5 | Highest | SCRUM Sprint 3 | To Do |
 | [SCRUM-166](SCRUM-166.md) | Operational safety check: Safety Officer reviews arrangements before the event can be confirmed | 8 | Highest | SCRUM Sprint 3 | To Do |
 | [SCRUM-167](SCRUM-167.md) | [MERGED INTO SCRUM-166] An event can't be confirmed until its safety check is approved | 0 | Highest | Backlog | Done |
-| [SCRUM-170](SCRUM-170.md) | Carry the Organiser's catalogue choices into planning | 3 | High | SCRUM Sprint 3 | To Do |
-| [SCRUM-171](SCRUM-171.md) | Record whether an event needs registration | 2 | High | SCRUM Sprint 3 | To Do |
+| [SCRUM-170](SCRUM-170.md) | Show the Organiser's requirements to the people planning the event | 3 | High | SCRUM Sprint 3 | To Do |
+| [SCRUM-171](SCRUM-171.md) | Record whether an event needs registration | 3 | High | SCRUM Sprint 3 | To Do |
 
 ## SCRUM-7 - Venue Management
 
@@ -159,14 +158,14 @@ _11 stories, 26 points_
 
 ## SCRUM-11 - Attendee Registration
 
-_10 stories, 22 points_
+_10 stories, 21 points_
 
 | Story | Summary | Pts | Priority | Sprint | Status |
 |---|---|---|---|---|---|
 | [SCRUM-72](SCRUM-72.md) | View an event I could attend | 2 | Highest | SCRUM Sprint 2 | Done |
 | [SCRUM-73](SCRUM-73.md) | Register for an event | 2 | Highest | SCRUM Sprint 2 | Done |
 | [SCRUM-74](SCRUM-74.md) | Be prevented from registering for a full event | 3 | High | SCRUM Sprint 2 | Done |
-| [SCRUM-75](SCRUM-75.md) | Control and enforce the registration period | 3 | Medium | SCRUM Sprint 3 | To Do |
+| [SCRUM-75](SCRUM-75.md) | Control and enforce the registration period | 2 | Medium | SCRUM Sprint 3 | To Do |
 | [SCRUM-76](SCRUM-76.md) | View my registration status | 1 | High | SCRUM Sprint 2 | Done |
 | [SCRUM-77](SCRUM-77.md) | Withdraw my registration | 2 | Highest | SCRUM Sprint 3 | To Do |
 | [SCRUM-79](SCRUM-79.md) | Join a waiting list when an event is full | 3 | Low | Backlog | To Do |
@@ -176,11 +175,11 @@ _10 stories, 22 points_
 
 ## Stories with no epic
 
-_2 stories, 6 points_
+_2 stories, 5 points_
 
 | Story | Summary | Pts | Priority | Sprint | Status |
 |---|---|---|---|---|---|
-| [SCRUM-132](SCRUM-132.md) | Core pages work on a phone and respond within 2 seconds | 3 | Medium | SCRUM Sprint 3 | To Do |
+| [SCRUM-132](SCRUM-132.md) | Core pages work on a phone and respond within 2 seconds | 2 | Medium | SCRUM Sprint 3 | To Do |
 | [SCRUM-155](SCRUM-155.md) | Reserve an approved equipment request in one step, pre-filled from the Coordinator's request (follow-up to SCRUM-31) | 3 | Medium | SCRUM Sprint 2 | Done |
 
 ## Tasks (technical work, no customer-facing story)
@@ -198,9 +197,9 @@ _2 stories, 6 points_
 | [SCRUM-125](SCRUM-125.md) | Measure coverage on every server-side file and fail CI when it drops | SCRUM Sprint 2 | Done |
 | [SCRUM-143](SCRUM-143.md) | [SUPERSEDED BY SCRUM-162] Enforce one venue request per event | Backlog | Done |
 | [SCRUM-144](SCRUM-144.md) | [COVERED BY SCRUM-75 AND SCRUM-171] Enable registration and enforce event cutoff | Backlog | Done |
-| [SCRUM-145](SCRUM-145.md) | Resync test documentation with the current acceptance criteria | SCRUM Sprint 3 | In Progress |
+| [SCRUM-145](SCRUM-145.md) | Resync test documentation with the current acceptance criteria | SCRUM Sprint 3 | In Review |
 | [SCRUM-146](SCRUM-146.md) | Remove stale story references | Backlog | To Do |
-| [SCRUM-147](SCRUM-147.md) | Update data-model documentation | SCRUM Sprint 3 | In Progress |
+| [SCRUM-147](SCRUM-147.md) | Update data-model documentation | SCRUM Sprint 3 | In Review |
 | [SCRUM-148](SCRUM-148.md) | Close or rework obsolete equipment PR | SCRUM Sprint 3 | To Do |
 | [SCRUM-149](SCRUM-149.md) | [SUPERSEDED BY SCRUM-162] Use event attendance in venue booking | Backlog | Done |
 | [SCRUM-150](SCRUM-150.md) | [DUPLICATE OF SCRUM-108] Implement field-level clarification response | Backlog | Done |
@@ -208,6 +207,6 @@ _2 stories, 6 points_
 | [SCRUM-152](SCRUM-152.md) | Keep the GLM reviewer memory within the size the reviewer reads, and stop losing lessons to the cap | Backlog | Done |
 | [SCRUM-157](SCRUM-157.md) | Chore: Refresh the project docs so people and AI tools read one consistent, current guide | SCRUM Sprint 2 | Done |
 | [SCRUM-158](SCRUM-158.md) | Week 7 customer changes (received 2 Oct) – apply to Product Backlog | Backlog | Done |
-| [SCRUM-168](SCRUM-168.md) | Remove the placeholder search bar from the top bar | SCRUM Sprint 3 | In Progress |
-| [SCRUM-169](SCRUM-169.md) | Backlog Sync: update docs/backlog from Jira after the 7 Oct changes | SCRUM Sprint 3 | In Progress |
-| [SCRUM-172](SCRUM-172.md) | Week 7 database migration: schema and booking rules in one migration | SCRUM Sprint 3 | To Do |
+| [SCRUM-168](SCRUM-168.md) | Remove the placeholder search bar from the top bar | SCRUM Sprint 3 | Done |
+| [SCRUM-169](SCRUM-169.md) | Backlog Sync: update docs/backlog from Jira after the 7 Oct changes | SCRUM Sprint 3 | In Review |
+| [SCRUM-172](SCRUM-172.md) | Week 7 database migration: schema and booking rules in one migration | SCRUM Sprint 3 | In Review |
