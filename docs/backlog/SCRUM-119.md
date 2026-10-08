@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-07. Jira is the source of truth.
+     Synced from Jira on 2026-10-09. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-119 - Maintain the equipment catalogue and record unavailability
@@ -8,10 +8,10 @@
 |---|---|
 | **Type** | Story |
 | **Epic** | SCRUM-10 - Equipment Management |
-| **Priority** | Highest |
+| **Priority** | Low |
 | **Story points** | 5 |
 | **Status in Jira** | To Do |
-| **Sprint** | SCRUM Sprint 3 |
+| **Sprint** | Backlog |
 | **Jira** | https://smu-spm-group7.atlassian.net/browse/SCRUM-119 |
 
 ---

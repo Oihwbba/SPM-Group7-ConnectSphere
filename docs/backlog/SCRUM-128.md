@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-07. Jira is the source of truth.
+     Synced from Jira on 2026-10-09. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-128 - Decide a change request and apply it in one step
@@ -8,7 +8,7 @@
 |---|---|
 | **Type** | Story |
 | **Epic** | SCRUM-8 - Event Change & Notifications |
-| **Priority** | Medium |
+| **Priority** | Highest |
 | **Story points** | 5 |
 | **Status in Jira** | To Do |
 | **Sprint** | SCRUM Sprint 3 |
@@ -23,7 +23,7 @@
 1. Given a Submitted change request (SCRUM-41), when I open it, then each changed field shows the current and the requested value, and every venue booking, hold, pending venue request, equipment request and equipment reservation the change could affect is listed as potentially affected.
 2. Given I approve it, then the requested values become the event's values and the change request becomes Approved in one atomic operation. If any part fails, neither is saved.
 3. Given I reject it, then a non-blank reason is required, the event is unchanged and the change request becomes Rejected.
-4. Given the approved change touches date, time, expected attendance, venue or equipment, then the affected arrangements are flagged as described in SCRUM-26, and a safety check that was approved or awaiting review becomes Outdated (SCRUM-167).
+4. Given the approved change touches date, time, expected attendance, venue or equipment, then the affected arrangements are flagged as described in SCRUM-26, and a safety check that was approved or awaiting review becomes Outdated (SCRUM-166).
 5. Given the event is Confirmed and the approved change is impactful, then the event returns to Planning in the same operation. New registrations pause until it is Confirmed again (SCRUM-75); existing registrations stay Registered.
 6. Given the event is Under Review or in Planning, or the change is not impactful, then the event status does not change.
 7. Given the requested expected attendance is lower than the number of active registrations, when I approve, then approval is refused and the number of active registrations is shown.
@@ -31,7 +31,7 @@
 9. Only the event's assigned Coordinator can decide a change request.
 10. The decision is recorded with who and when. The Organiser is notified of the outcome (SCRUM-45). Attendees are told of approved date, time or venue changes when the event is Confirmed again (SCRUM-85).
 
-**Customer basis:** "Change requests may cover several field and the Coordinator will review and processes updates." "Significant changes (e.g., pax size) require re-requesting/reviewing arrangements. Adjustments must be handled manually by staff rather than through automatic un-booking." "Confirmed can revert if major change occurs and reviewed by the co-ordinator."
+**Customer basis:** "Change requests may cover several field and the Coordinator will review and processes updates." "Significant changes (e.g., pax size) require re-requesting/reviewing arrangements. Adjustments must be handled manually by staff rather than through automatic un-booking." G4: "Approval = sufficient info for planning. Confirmation = essential arrangements completed."
 
 **Why this is a new story:** split from SCRUM-41 at the 2026-10-01 backlog refinement. SCRUM-41 had grown to 8 points (raise, review, atomic apply, status revert and cancellation requests), too big to finish in one sprint. SCRUM-41 now covers raising and tracking; this story covers deciding and applying. AC7 is new: lowering attendance below active registrations would otherwise overbook the event, because registration capacity equals expected attendance (SCRUM-74).
 
@@ -39,5 +39,7 @@
 
 * 2026-10-01 (audit): AC1 lists equipment requests and reservations, matching the built equipment model. AC5 points to SCRUM-75, which owns the pause. AC10 no longer depends on SCRUM-71 (beyond Release 1; recording who and when is a Definition of Done rule) and says Attendees are told once the event is Confirmed again, as SCRUM-85 does.
 * 2026-10-07 (Week 7 changes 3, 4 and 6): AC1 lists holds and every venue booking (SCRUM-162, SCRUM-163). AC4 puts an approved or awaiting safety check out of date (SCRUM-167). AC6 covers Under Review, where change requests can also be raised (SCRUM-41); this audit edit didn't save on 1 Oct.
+* 2026-10-07 (backlog refinement): AC4 points to SCRUM-166, which SCRUM-167 was merged into.
+* 2026-10-08 (PO review): replaced a G3 clarification in the Customer basis with the G4 definition of confirmation.
 
 Functionality Area: Event Change Requests

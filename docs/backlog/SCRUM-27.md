@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-07. Jira is the source of truth.
+     Synced from Jira on 2026-10-09. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-27 - Create an equipment request
@@ -29,12 +29,13 @@
 7. Given the event already has a request that is Pending Review or In Review, when I submit another, then no second request is created and I am shown the existing one.
 8. Given I open my equipment requests, then I see each request's lines (type, quantity, technical requirements), its status (Pending Review, In Review, Approved, or Rejected with the reason), any alternative Technical Support suggested, and its history, or "No equipment requests yet".
 
-**Related:** Technical Support reviews requests in SCRUM-28 and reserves stock in SCRUM-31. Changing lines before confirmation is SCRUM-142. Pre-filling from the Organiser's equipment choices is SCRUM-127. Technical Support is notified of new requests by SCRUM-124.
+**Related:** Technical Support reviews requests in SCRUM-28 and reserves stock in SCRUM-31. Changing lines before confirmation is SCRUM-142. Pre-filling from the Organiser's equipment choices is SCRUM-170. Technical Support is notified of new requests by SCRUM-124.
 
 **Change log**
 
 * 2026-09-07: the two duplicate criteria were added after the Week 2 assignment feedback.
 * 2026-10-01 (mid-sprint correction, no new scope): removed a duplicated "Confirmed → refused" criterion and restated the re-pending rule (withdrawn below).
 * 2026-10-01 (audit): restored to the criteria the merged code was built against: the request has one status (Pending Review, In Review, Approved, Rejected) and stock is held by separate reservations (SCRUM-31). The per-item wording is withdrawn. Changing lines before confirmation, which the customer asked for, moved to SCRUM-142. SCRUM-33 (view requests) was merged here, so AC8 states what the Coordinator sees, as built. One code change is needed before acceptance: the merged code also accepts Confirmed events (REQUESTABLE_EVENT_STATUSES in lib/equipment/requests.ts), and AC1 limits requests to Planning because a Confirmed event's details can't change.
+* 2026-10-07: the Related note points pre-filling to SCRUM-170, which took it over when SCRUM-127 was split.
 
 Functionality Area: Equipment Request Management

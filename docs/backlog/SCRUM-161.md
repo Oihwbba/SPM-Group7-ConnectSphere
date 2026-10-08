@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-07. Jira is the source of truth.
+     Synced from Jira on 2026-10-09. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-161 - Mark a venue unavailable over existing bookings and find a replacement venue
@@ -24,7 +24,7 @@
 2. Given the period overlaps bookings, when I save, then I'm first shown each affected booking (event, Coordinator, status), and when I confirm, the unavailability is recorded.
 3. Every Pending, Held or Approved booking whose occupied period overlaps the unavailability is flagged Needs Reconsideration (SCRUM-26) with the reason and period. Its status doesn't change, the event isn't cancelled, and the event's details don't change. A booking whose occupied period only touches the unavailability isn't flagged.
 4. Each affected event's assigned Coordinator is notified that alternative arrangements are required, with the venue, reason and period (SCRUM-124).
-5. Given a flagged booking, when its Coordinator chooses Find a replacement venue, then venue search (SCRUM-38) opens pre-filled from that booking and leaves out the unavailable venue, and the Coordinator can request a replacement (SCRUM-50, SCRUM-162) while the original booking stays visible and flagged.
+5. Given a flagged booking, when its Coordinator chooses Find a replacement venue, then venue search (SCRUM-38) opens pre-filled from that booking as in SCRUM-38 AC1, and the unavailable venue is excluded (SCRUM-38 AC3). The Coordinator can request a replacement (SCRUM-50, SCRUM-162) while the original booking stays visible and flagged.
 6. While the unavailability overlaps it, the original booking can't be approved, held, confirmed or kept as Still stands. The Coordinator cancels it (SCRUM-26), which leaves the event's other bookings unchanged.
 7. Given an approval and an unavailability for overlapping periods are saved at the same moment, then the unavailability is saved, and the booking ends up either refused or Approved and flagged, never Approved without a flag.
 8. Recording the same unavailability twice saves it once and flags nothing new.
@@ -38,5 +38,6 @@
 **Change log**
 
 * 2026-10-07 (Week 7 change 2): created.
+* 2026-10-09: AC5 points to SCRUM-38 AC1 for what is pre-filled, so the two stories agree.
 
 Functionality Area: Venue Unavailability Management, Booking Conflict Detection

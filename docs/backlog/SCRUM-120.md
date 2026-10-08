@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-07. Jira is the source of truth.
+     Synced from Jira on 2026-10-09. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-120 - Event calendar: all events in one view
@@ -8,10 +8,10 @@
 |---|---|
 | **Type** | Story |
 | **Epic** | SCRUM-9 - Access Control |
-| **Priority** | High |
+| **Priority** | Low |
 | **Story points** | 8 |
 | **Status in Jira** | To Do |
-| **Sprint** | SCRUM Sprint 3 |
+| **Sprint** | Backlog |
 | **Jira** | https://smu-spm-group7.atlassian.net/browse/SCRUM-120 |
 
 ---
@@ -23,9 +23,9 @@
 **Acceptance criteria**
 
 1. Month and week views show events by start date, in Singapore time, filterable by status and venue. The default is the current month.
-2. Each entry shows the event name, time, venue (the booked venue, or the preferred venue if none is booked yet, SCRUM-127), status and assigned Coordinator.
+2. Each entry shows the event name, time, venues (every booked venue, or the preferred venues if none is booked yet; SCRUM-127, SCRUM-162), status and assigned Coordinator.
 3. Opening an entry shows the event's details read-only, unless the user is allowed to edit that event.
-4. Coordinators, Venue Staff and Technical Support see all events except Drafts, including Submitted events with no Coordinator.
+4. Coordinators, the Lead, Venue Staff and Technical Support see all events except Drafts, including Submitted events with no Coordinator.
 5. Only the assigned Coordinator can edit an event. Previous Coordinators and other internal users see it read-only.
 6. Organisers see events from their own client organisation. Events submitted by other Organisers in the same organisation are read-only, appear only in the calendar, and never in My Event Requests (SCRUM-84).
 7. Events from other organisations are refused, and the refusal looks the same as if the event didn't exist. Drafts are visible only to their creator. Attendees have no access to the calendar.
@@ -39,5 +39,6 @@
 
 * 2026-10-01: added calendar behaviour (views, entries, filters), which the story lacked; stated what it supersedes in Sprint 1 stories (Done stories are not reopened); added the organisation data source. Re-estimated from 6 (not on the scale) to 8.
 * 2026-10-01 (audit): beyond Release 1 (label `beyond-release-1`), following the Week 4 not-required list; SCRUM-141 covers the planning view in Release 1. The supersedes note now applies only if this story is built. Group headings removed.
+* 2026-10-07 (Week 7 changes 3 and 5): AC2 shows every booked venue (SCRUM-162); AC4 adds the Lead (SCRUM-164).
 
 Functionality Area: User Authorisation and Authentication, Event Status Management

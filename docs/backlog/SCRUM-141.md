@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-07. Jira is the source of truth.
+     Synced from Jira on 2026-10-09. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-141 - See every event read-only for planning
@@ -8,7 +8,7 @@
 |---|---|
 | **Type** | Story |
 | **Epic** | SCRUM-9 - Access Control |
-| **Priority** | Medium |
+| **Priority** | Highest |
 | **Story points** | 5 |
 | **Status in Jira** | To Do |
 | **Sprint** | SCRUM Sprint 3 |
