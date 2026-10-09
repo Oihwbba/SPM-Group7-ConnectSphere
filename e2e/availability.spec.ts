@@ -137,14 +137,14 @@ test.describe("SCRUM-36 / SCRUM-37 — venue availability calendar and recorded 
     });
   });
 
-  test("SCRUM-37 AC2-5, SCRUM-36 AC3-5 — maintenance is recorded, seen, refused over, sat flush against a booking, and never overwrites one", async ({
+  test("SCRUM-37 [AC1-AC5], SCRUM-36 [AC2, AC3, AC5]: maintenance is recorded, seen, refused over, sat flush against a booking, and never overwrites one", async ({
     browser,
   }, testInfo) => {
     test.skip(!usesLocalDatabase, "creates its own events");
     const staff = await signedIn(browser, "venuestaff@test.local");
     const coordinator = await signedIn(browser, "coordinator@test.local");
 
-    // SCRUM-37 AC2 — Venue Staff record maintenance with a period and a reason.
+    // SCRUM-37 AC1 — Venue Staff record maintenance with a period and a reason.
     await recordMaintenance(staff, `${DAY}T13:00`, `${DAY}T17:00`);
     await expect(
       staff.getByText(
@@ -152,7 +152,7 @@ test.describe("SCRUM-36 / SCRUM-37 — venue availability calendar and recorded 
       ),
     ).toBeVisible();
 
-    // SCRUM-36 AC4 — the Coordinator sees it as unavailable, labelled as
+    // SCRUM-36 AC3 — the Coordinator sees it as unavailable, labelled as
     // maintenance rather than a booking.
     await coordinator.goto(calendarFor(AUDITORIUM, DAY));
     expect(await stretches(coordinator, DAY)).toEqual([
@@ -164,7 +164,7 @@ test.describe("SCRUM-36 / SCRUM-37 — venue availability calendar and recorded 
       ["free", "Available 5:00 pm SGT to midnight"],
     ]);
 
-    // SCRUM-37 AC3 — a request over it is refused, like a booking clash.
+    // SCRUM-37 AC2 — a request over it is refused, like a booking clash.
     await requestAuditorium(coordinator, CLASHING_EVENT);
     await expect(coordinator.getByTestId("live-availability")).toContainText(
       "Grand Auditorium is unavailable for this period: unavailable (maintenance) from 10 Jan 2036, 1:00 pm SGT to 10 Jan 2036, 5:00 pm SGT.",
@@ -193,7 +193,7 @@ test.describe("SCRUM-36 / SCRUM-37 — venue availability calendar and recorded 
     await card.getByRole("button", { name: "Approve" }).click();
     await expect(staff.getByText(/^Approved: Grand Auditorium/)).toBeVisible();
 
-    // SCRUM-37 AC1 / SCRUM-36 AC3 / AC5 — the approved booking is on the
+    // SCRUM-36 AC2 / AC5 — the approved booking is on the
     // calendar at once, flush against the maintenance: no gap between them.
     await coordinator.goto(calendarFor(AUDITORIUM, DAY));
     expect(await stretches(coordinator, DAY)).toEqual([
@@ -254,7 +254,7 @@ test.describe("SCRUM-36 / SCRUM-37 — venue availability calendar and recorded 
     );
     await expect(bookingDetails).toBeHidden();
 
-    // SCRUM-37 AC4 — maintenance over the approved booking is not saved; the
+    // SCRUM-37 AC3 — maintenance over the approved booking is not saved; the
     // clash is shown instead.
     await recordMaintenance(staff, `${DAY}T10:00`, `${DAY}T12:00`);
     await expect(staff.getByTestId("unavailability-outcome")).toContainText(
@@ -272,7 +272,7 @@ test.describe("SCRUM-36 / SCRUM-37 — venue availability calendar and recorded 
     }
   });
 
-  test("SCRUM-36 AC6 — a venue with nothing in the week reads as available throughout, not blank", async ({
+  test("SCRUM-36 [AC6] TC-36-04: a venue with nothing in the week reads as available throughout, not blank", async ({
     browser,
   }) => {
     const coordinator = await signedIn(browser, "coordinator@test.local");
@@ -294,7 +294,7 @@ test.describe("SCRUM-36 / SCRUM-37 — venue availability calendar and recorded 
     }
   });
 
-  test("SCRUM-36 AC7 — the calendar shows a week, Monday to Sunday, and moves between weeks", async ({
+  test("SCRUM-36 [AC1] TC-36-05: the calendar shows a week, Monday to Sunday, and moves between weeks", async ({
     browser,
   }) => {
     const coordinator = await signedIn(browser, "coordinator@test.local");
@@ -330,7 +330,7 @@ test.describe("SCRUM-36 / SCRUM-37 — venue availability calendar and recorded 
     await expect(week).toHaveText("18 – 24 Feb 2036");
   });
 
-  test("SCRUM-36 — a screen reader hears the venue and date for each day", async ({
+  test("SCRUM-36 TC-36-06: a screen reader hears the venue and date for each day", async ({
     browser,
   }) => {
     const coordinator = await signedIn(browser, "coordinator@test.local");
@@ -343,7 +343,7 @@ test.describe("SCRUM-36 / SCRUM-37 — venue availability calendar and recorded 
     ).toBeVisible();
   });
 
-  test("SCRUM-36 — the calendar works at phone width", async ({
+  test("SCRUM-36 TC-36-06: the calendar works at phone width", async ({
     browser,
   }, testInfo) => {
     const context = await browser.newContext({
@@ -382,7 +382,7 @@ test.describe("SCRUM-36 / SCRUM-37 — venue availability calendar and recorded 
     }
   });
 
-  test("SCRUM-37 AC1 — an open calendar picks up a booking approved elsewhere, without a reload", async ({
+  test("SCRUM-36 [AC2] TC-36-09: an open calendar picks up a booking approved elsewhere, without a reload", async ({
     browser,
   }) => {
     // The booking is written straight to the database, as if approved by
@@ -420,7 +420,7 @@ test.describe("SCRUM-36 / SCRUM-37 — venue availability calendar and recorded 
     );
   });
 
-  test("SCRUM-36 / SCRUM-37 — who can see the calendar and record unavailability", async ({
+  test("SCRUM-36, SCRUM-37 TC-36-07: who can see the calendar and record unavailability", async ({
     browser,
   }) => {
     for (const email of ["organiser@test.local", "techsupport@test.local"]) {

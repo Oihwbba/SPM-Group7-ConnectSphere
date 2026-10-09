@@ -126,7 +126,7 @@ beforeEach(() => {
 });
 
 describe("submitBookingRequest — SCRUM-50", () => {
-  it("SCRUM-50 AC2 — a request for a free period is created PENDING", async () => {
+  it("SCRUM-50 [AC1, AC2] TC-50-01: a request for a free period is created PENDING", async () => {
     const result = await submitBookingRequest(validRequest);
 
     expect(result).toEqual({
@@ -164,7 +164,7 @@ describe("submitBookingRequest — SCRUM-50", () => {
     );
   });
 
-  it("SCRUM-50 AC1 — over-long notes are refused against the notes field, so the form can show it there", async () => {
+  it("SCRUM-50 [AC1]: over-long notes are refused against the notes field, so the form can show it there", async () => {
     const result = await submitBookingRequest({
       ...validRequest,
       requestNotes: "x".repeat(2001),
@@ -177,7 +177,7 @@ describe("submitBookingRequest — SCRUM-50", () => {
     expect(db.booking.create).not.toHaveBeenCalled();
   });
 
-  it("SCRUM-50 — expected attendance above the venue's capacity is refused against the attendance field, and nothing is written", async () => {
+  it("SCRUM-50 TC-50-10: expected attendance above the venue's capacity is refused against the attendance field, and nothing is written", async () => {
     db.venue.findFirst.mockResolvedValue({
       name: "Seminar Room",
       capacity: 39,
@@ -195,7 +195,7 @@ describe("submitBookingRequest — SCRUM-50", () => {
     expect(db.booking.create).not.toHaveBeenCalled();
   });
 
-  it("SCRUM-50 — expected attendance exactly equal to the venue's capacity fits", async () => {
+  it("SCRUM-50 TC-50-10: expected attendance exactly equal to the venue's capacity fits", async () => {
     db.venue.findFirst.mockResolvedValue({
       name: "Seminar Room",
       capacity: 40,
@@ -207,8 +207,8 @@ describe("submitBookingRequest — SCRUM-50", () => {
     expect(db.booking.create).toHaveBeenCalled();
   });
 
-  describe("SCRUM-50 AC1 — the period and attendance are the event's", () => {
-    it("SCRUM-50 AC1 — the event's period, rounded out to the half hour, is accepted", async () => {
+  describe("SCRUM-50 [AC1] TC-50-15: the period and attendance are the event's", () => {
+    it("SCRUM-50 [AC1] TC-50-15: the event's period, rounded out to the half hour, is accepted", async () => {
       db.event.findUnique.mockResolvedValue({
         organiserId: "usr_org",
         coordinatorId: "usr_coord",
@@ -223,7 +223,7 @@ describe("submitBookingRequest — SCRUM-50", () => {
       expect(result.ok).toBe(true);
     });
 
-    it("SCRUM-50 AC1 — a period that is not the event's is refused against the start field, and nothing is written", async () => {
+    it("SCRUM-50 [AC1] TC-50-15: a period that is not the event's is refused against the start field, and nothing is written", async () => {
       for (const changed of [
         { startAt: "2030-06-01T06:30:00.000Z" },
         { endAt: "2030-06-01T09:00:00.000Z" },
@@ -249,7 +249,7 @@ describe("submitBookingRequest — SCRUM-50", () => {
       expect(db.booking.create).not.toHaveBeenCalled();
     });
 
-    it("SCRUM-50 AC1 — an attendance that is not the event's is refused against the attendance field, and nothing is written", async () => {
+    it("SCRUM-50 [AC1] TC-50-15: an attendance that is not the event's is refused against the attendance field, and nothing is written", async () => {
       for (const requestedAttendance of [39, 41]) {
         const result = await submitBookingRequest({
           ...validRequest,
@@ -266,7 +266,7 @@ describe("submitBookingRequest — SCRUM-50", () => {
       expect(db.booking.create).not.toHaveBeenCalled();
     });
 
-    it("SCRUM-50 AC1 — an event without dates or expected attendance cannot be booked yet", async () => {
+    it("SCRUM-50 [AC1] TC-50-15: an event without dates or expected attendance cannot be booked yet", async () => {
       for (const missing of [
         { startAt: null },
         { endAt: null },
@@ -295,7 +295,7 @@ describe("submitBookingRequest — SCRUM-50", () => {
   describe("a start in the past", () => {
     afterEach(() => vi.useRealTimers());
 
-    it("SCRUM-50 — a period that has already started is refused against the start field, and nothing is read or written", async () => {
+    it("SCRUM-50 [AC5] TC-50-11: a period that has already started is refused against the start field, and nothing is read or written", async () => {
       vi.useFakeTimers();
       vi.setSystemTime(new Date(new Date(START).getTime() + 2 * 60_000));
 
@@ -310,7 +310,7 @@ describe("submitBookingRequest — SCRUM-50", () => {
       expect(db.booking.create).not.toHaveBeenCalled();
     });
 
-    it("SCRUM-50 — a start less than a minute ago still counts as now", async () => {
+    it("SCRUM-50 [AC5] TC-50-11: a start less than a minute ago still counts as now", async () => {
       vi.useFakeTimers();
       vi.setSystemTime(new Date(new Date(START).getTime() + 30_000));
 
@@ -320,7 +320,7 @@ describe("submitBookingRequest — SCRUM-50", () => {
     });
   });
 
-  it("SCRUM-50 — every role except Event Coordinator is refused before anything is read", async () => {
+  it("SCRUM-50 TC-50-09: every role except Event Coordinator is refused before anything is read", async () => {
     for (const role of [
       "ORGANISER",
       "VENUE_STAFF",
@@ -340,7 +340,7 @@ describe("submitBookingRequest — SCRUM-50", () => {
     expect(db.booking.create).not.toHaveBeenCalled();
   });
 
-  it("SCRUM-50 AC5 — an end before or equal to the start is reported as an invalid period", async () => {
+  it("SCRUM-50 [AC5] TC-50-06: an end before or equal to the start is reported as an invalid period", async () => {
     for (const endAt of ["2030-06-01T05:00:00.000Z", START]) {
       const result = await submitBookingRequest({ ...validRequest, endAt });
       expect(result).toMatchObject({
@@ -352,7 +352,7 @@ describe("submitBookingRequest — SCRUM-50", () => {
     expect(db.event.findUnique).not.toHaveBeenCalled();
   });
 
-  it("SCRUM-50 AC1 — a request missing what the staff need is refused with field errors", async () => {
+  it("SCRUM-50 [AC1]: a request missing what the staff need is refused with field errors", async () => {
     const result = await submitBookingRequest({
       ...validRequest,
       venueId: "",
@@ -369,7 +369,7 @@ describe("submitBookingRequest — SCRUM-50", () => {
     });
   });
 
-  it("SCRUM-50 — an event that does not exist, or is another coordinator's, reads as not found", async () => {
+  it("SCRUM-50 TC-50-09: an event that does not exist, or is another coordinator's, reads as not found", async () => {
     db.event.findUnique.mockResolvedValueOnce(null);
     expect(await submitBookingRequest(validRequest)).toEqual({
       ok: false,
@@ -388,7 +388,7 @@ describe("submitBookingRequest — SCRUM-50", () => {
     expect(db.booking.create).not.toHaveBeenCalled();
   });
 
-  it("SCRUM-50 — a venue cannot be requested for an event that has not been approved", async () => {
+  it("SCRUM-50 TC-50-09: a venue cannot be requested for an event that has not been approved", async () => {
     db.event.findUnique.mockResolvedValue({
       organiserId: "usr_org",
       coordinatorId: "usr_coord",
@@ -401,7 +401,7 @@ describe("submitBookingRequest — SCRUM-50", () => {
     });
   });
 
-  it("SCRUM-50 — a retired or unknown venue is refused", async () => {
+  it("SCRUM-50: a retired or unknown venue is refused", async () => {
     db.venue.findFirst.mockResolvedValue(null);
 
     expect(await submitBookingRequest(validRequest)).toEqual({
@@ -410,7 +410,7 @@ describe("submitBookingRequest — SCRUM-50", () => {
     });
   });
 
-  it("SCRUM-50 AC8 — an event that already has a pending or approved booking, for any venue, is shown it and nothing is created", async () => {
+  it("SCRUM-50 [AC8] TC-50-07: an event that already has a pending or approved booking, for any venue, is shown it and nothing is created", async () => {
     db.booking.findFirst.mockResolvedValue(summaryRow);
 
     const result = await submitBookingRequest(validRequest);
@@ -430,7 +430,7 @@ describe("submitBookingRequest — SCRUM-50", () => {
     );
   });
 
-  it("SCRUM-50 AC8 — the event's existing booking is shown even when the request differs from it", async () => {
+  it("SCRUM-50 [AC8] TC-50-07: the event's existing booking is shown even when the request differs from it", async () => {
     db.booking.findFirst.mockResolvedValue(summaryRow);
 
     const result = await submitBookingRequest({
@@ -446,7 +446,7 @@ describe("submitBookingRequest — SCRUM-50", () => {
     expect(db.venue.findFirst).not.toHaveBeenCalled();
   });
 
-  it("SCRUM-50 AC3 — a venue already booked for part of the period refuses the request and names the clash", async () => {
+  it("SCRUM-50 [AC3] TC-50-02: a venue already booked for part of the period refuses the request and names the clash", async () => {
     db.booking.findMany.mockResolvedValue([
       {
         id: "bkg_x",
@@ -465,7 +465,7 @@ describe("submitBookingRequest — SCRUM-50", () => {
     expect(db.booking.create).not.toHaveBeenCalled();
   });
 
-  it("SCRUM-50 AC8 — a second request for the event that races past the check is caught by the database and the winner is returned", async () => {
+  it("SCRUM-50 [AC8] TC-50-08: a second request for the event that races past the check is caught by the database and the winner is returned", async () => {
     db.booking.create.mockRejectedValue(secondVenueForEvent());
     db.booking.findFirst
       .mockResolvedValueOnce(null)
@@ -477,7 +477,7 @@ describe("submitBookingRequest — SCRUM-50", () => {
     });
   });
 
-  it("SCRUM-50 AC8 — a deadlock between two identical submissions is retried once and then resolved", async () => {
+  it("SCRUM-50 [AC8] TC-50-08: a deadlock between two identical submissions is retried once and then resolved", async () => {
     db.booking.create
       .mockRejectedValueOnce(deadlock())
       .mockResolvedValueOnce(summaryRow);
@@ -506,17 +506,17 @@ describe("submitBookingRequest — SCRUM-50", () => {
   });
 });
 
-describe("checkVenueAvailability — SCRUM-50 live check", () => {
+describe("SCRUM-50 [AC3, AC4, AC5] TC-50-13: checkVenueAvailability, the live check", () => {
   const period = { venueId: "ven_1", startAt: START, endAt: END };
 
-  it("SCRUM-50 AC3 — a free venue is reported available before submitting", async () => {
+  it("SCRUM-50 [AC3] TC-50-13: a free venue is reported available before submitting", async () => {
     expect(await checkVenueAvailability(period)).toEqual({
       ok: true,
       data: { available: true, clashes: [] },
     });
   });
 
-  it("SCRUM-50 AC3 — a venue booked or unavailable for part of the period is reported taken, naming each clash", async () => {
+  it("SCRUM-50 [AC3] TC-50-13: a venue booked or unavailable for part of the period is reported taken, naming each clash", async () => {
     db.booking.findMany.mockResolvedValue([
       {
         id: "bkg_x",
@@ -545,7 +545,7 @@ describe("checkVenueAvailability — SCRUM-50 live check", () => {
     });
   });
 
-  it("SCRUM-50 AC5 — an end before or equal to the start, or a missing time, is an invalid period and nothing is read", async () => {
+  it("SCRUM-50 [AC5] TC-50-06: an end before or equal to the start, or a missing time, is an invalid period and nothing is read", async () => {
     for (const bad of [
       { ...period, endAt: START },
       { ...period, startAt: END, endAt: START },
@@ -560,7 +560,7 @@ describe("checkVenueAvailability — SCRUM-50 live check", () => {
     expect(db.booking.findMany).not.toHaveBeenCalled();
   });
 
-  it("SCRUM-50 AC5 — a period that has already started is reported against the start, as submitting would, and nothing is read", async () => {
+  it("SCRUM-50 [AC5] TC-50-11: a period that has already started is reported against the start, as submitting would, and nothing is read", async () => {
     expect(
       await checkVenueAvailability({
         venueId: "ven_1",
@@ -576,7 +576,7 @@ describe("checkVenueAvailability — SCRUM-50 live check", () => {
     expect(db.booking.findMany).not.toHaveBeenCalled();
   });
 
-  it("SCRUM-50 — without a venue there is nothing to check", async () => {
+  it("SCRUM-50 TC-50-13: without a venue there is nothing to check", async () => {
     expect(
       await checkVenueAvailability({ ...period, venueId: "" }),
     ).toMatchObject({ ok: false, error: "Choose a venue." });
@@ -586,7 +586,7 @@ describe("checkVenueAvailability — SCRUM-50 live check", () => {
     expect(db.venue.findFirst).not.toHaveBeenCalled();
   });
 
-  it("SCRUM-50 — a retired or unknown venue reads as not found, exactly as submitting it would", async () => {
+  it("SCRUM-50 TC-50-13: a retired or unknown venue reads as not found, exactly as submitting it would", async () => {
     db.venue.findFirst.mockResolvedValue(null);
 
     expect(await checkVenueAvailability(period)).toEqual({
@@ -599,7 +599,7 @@ describe("checkVenueAvailability — SCRUM-50 live check", () => {
     expect(db.booking.findMany).not.toHaveBeenCalled();
   });
 
-  it("SCRUM-50 — every role except Event Coordinator is refused before anything is read", async () => {
+  it("SCRUM-50 TC-50-09: every role except Event Coordinator is refused before anything is read", async () => {
     for (const role of [
       "ORGANISER",
       "VENUE_STAFF",
@@ -638,7 +638,7 @@ describe("decideBookingRequest — SCRUM-53", () => {
     db.booking.updateMany.mockResolvedValue({ count: 1 });
   });
 
-  it("SCRUM-53 AC1 & AC3 — approving sets the request APPROVED and records who decided, when, and an audit entry", async () => {
+  it("SCRUM-53 [AC1, AC4] TC-53-01: approving sets the request APPROVED and records who decided, when, and an audit entry", async () => {
     const result = await decideBookingRequest({
       bookingId: "bkg_1",
       decision: "APPROVED",
@@ -666,7 +666,7 @@ describe("decideBookingRequest — SCRUM-53", () => {
     });
   });
 
-  it("SCRUM-53 AC2 — rejecting saves the trimmed free-text reason", async () => {
+  it("SCRUM-53 [AC2] TC-53-02: rejecting saves the trimmed free-text reason", async () => {
     const result = await decideBookingRequest({
       bookingId: "bkg_1",
       decision: "REJECTED",
@@ -686,7 +686,7 @@ describe("decideBookingRequest — SCRUM-53", () => {
     expect(db.booking.findMany).not.toHaveBeenCalled();
   });
 
-  it("SCRUM-53 AC2 — rejecting with a blank reason is refused and nothing is read or written", async () => {
+  it("SCRUM-53 [AC2] TC-53-03: rejecting with a blank reason is refused and nothing is read or written", async () => {
     for (const reason of [undefined, "", "   "]) {
       const result = await decideBookingRequest({
         bookingId: "bkg_1",
@@ -717,7 +717,7 @@ describe("decideBookingRequest — SCRUM-53", () => {
     });
   });
 
-  it("SCRUM-53 — every role except Venue Staff is refused", async () => {
+  it("SCRUM-53 TC-53-08: every role except Venue Staff is refused", async () => {
     for (const role of [
       "ORGANISER",
       "COORDINATOR",
@@ -745,7 +745,7 @@ describe("decideBookingRequest — SCRUM-53", () => {
     ).toEqual({ ok: false, error: "Booking request not found." });
   });
 
-  it("SCRUM-53 AC6 — a request that has already been decided keeps its first decision", async () => {
+  it("SCRUM-53 [AC7] TC-53-07: a request that has already been decided keeps its first decision", async () => {
     db.booking.findUnique.mockResolvedValue({
       ...pendingBooking,
       status: "REJECTED",
@@ -761,7 +761,7 @@ describe("decideBookingRequest — SCRUM-53", () => {
     expect(db.booking.updateMany).not.toHaveBeenCalled();
   });
 
-  it("SCRUM-53 AC6 — a decision that lands after another one wins writes nothing and says what stands", async () => {
+  it("SCRUM-53 [AC7] TC-53-07: a decision that lands after another one wins writes nothing and says what stands", async () => {
     db.booking.updateMany.mockResolvedValue({ count: 0 });
     db.booking.findUniqueOrThrow.mockResolvedValue({ status: "APPROVED" });
 
@@ -779,7 +779,7 @@ describe("decideBookingRequest — SCRUM-53", () => {
     expect(db.auditLog.create).not.toHaveBeenCalled();
   });
 
-  it("SCRUM-53 AC4 — approving over an approved booking or recorded unavailability is returned as conflicting", async () => {
+  it("SCRUM-53 [AC8] TC-53-04: approving over an approved booking or recorded unavailability is returned as conflicting", async () => {
     db.venueUnavailability.findMany.mockResolvedValue([
       {
         id: "vun_1",
@@ -799,7 +799,7 @@ describe("decideBookingRequest — SCRUM-53", () => {
     expect(db.booking.updateMany).not.toHaveBeenCalled();
   });
 
-  it("SCRUM-53 AC4 — when the database refuses a simultaneous overlapping approval, it is returned as conflicting", async () => {
+  it("SCRUM-53 [AC5] TC-53-05: when the database refuses a simultaneous overlapping approval, it is returned as conflicting", async () => {
     db.$transaction.mockRejectedValue(doubleBooking());
 
     const result = await decideBookingRequest({
@@ -815,7 +815,7 @@ describe("decideBookingRequest — SCRUM-53", () => {
     });
   });
 
-  it("SCRUM-53 AC4 — a deadlock between simultaneous approvals is retried once", async () => {
+  it("SCRUM-53 [AC5] TC-53-05: a deadlock between simultaneous approvals is retried once", async () => {
     db.$transaction
       .mockRejectedValueOnce(deadlock())
       .mockImplementationOnce((cb: (tx: typeof db) => unknown) => cb(db));
@@ -829,7 +829,7 @@ describe("decideBookingRequest — SCRUM-53", () => {
     expect(db.$transaction).toHaveBeenCalledTimes(2);
   });
 
-  it("SCRUM-37 AC4 — maintenance recorded at the same instant as an approval: the database refuses the approval, and it is returned as conflicting", async () => {
+  it("SCRUM-37 [AC4] TC-37-06: maintenance recorded at the same instant as an approval: the database refuses the approval, and it is returned as conflicting", async () => {
     db.$transaction.mockRejectedValue(overlapsUnavailability());
 
     const result = await decideBookingRequest({
@@ -845,7 +845,7 @@ describe("decideBookingRequest — SCRUM-53", () => {
     });
   });
 
-  it("SCRUM-37 AC1 — approving refreshes the availability calendar; rejecting does not need to", async () => {
+  it("SCRUM-36 [AC2] TC-36-09: approving refreshes the availability calendar; rejecting does not need to", async () => {
     await decideBookingRequest({ bookingId: "bkg_1", decision: "APPROVED" });
     expect(revalidatePath).toHaveBeenCalledWith("/venues/availability");
 

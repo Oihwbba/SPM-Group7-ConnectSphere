@@ -64,7 +64,7 @@ Review, owned by `organiser@test.local` and assigned to
 | Test Data       | —                                                                                                              |
 | Expected Result | The same event goes back into review; its reason and outcome are cleared.                                      |
 
-**Automated by:** `tests/unit/rejection-outcome.test.ts` › "SCRUM-126 [AC2] TC-126-03: …"; `e2e/events.spec.ts` › "coordinator rejects with a reason, organiser sees it, amends and resubmits it back into review"
+**Automated by:** `tests/unit/rejection-outcome.test.ts` › "SCRUM-126 [AC2] TC-126-03: …"; `e2e/events.spec.ts` › "SCRUM-126 [AC2] TC-126-03: coordinator rejects with a reason, organiser sees it, amends and resubmits it back into review"
 
 ### TC-126-04
 

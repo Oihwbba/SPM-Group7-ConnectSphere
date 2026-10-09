@@ -16,14 +16,14 @@ const line = (overrides: Record<string, unknown> = {}) => ({
 });
 
 describe("equipmentRequestLineSchema — SCRUM-27", () => {
-  it("AC 3: accepts a positive whole number and reads it as a number", () => {
+  it("SCRUM-27 [AC3] TC-27-05: accepts a positive whole number and reads it as a number", () => {
     const parsed = equipmentRequestLineSchema.safeParse(
       line({ quantity: "3" }),
     );
     expect(parsed.success && parsed.data.quantity).toBe(3);
   });
 
-  it("AC 3: accepts exactly 1, the smallest quantity", () => {
+  it("SCRUM-27 [AC3] TC-27-05: accepts exactly 1, the smallest quantity", () => {
     expect(
       equipmentRequestLineSchema.safeParse(line({ quantity: "1" })).success,
     ).toBe(true);
@@ -35,7 +35,7 @@ describe("equipmentRequestLineSchema — SCRUM-27", () => {
     ["a fraction", "1.5"],
     ["text", "two"],
     ["a blank", ""],
-  ])("AC 3: refuses %s as the quantity", (_label, quantity) => {
+  ])("SCRUM-27 [AC3] TC-27-05: refuses %s as the quantity", (_label, quantity) => {
     const parsed = equipmentRequestLineSchema.safeParse(line({ quantity }));
     expect(parsed.success).toBe(false);
     if (!parsed.success) {
@@ -45,7 +45,7 @@ describe("equipmentRequestLineSchema — SCRUM-27", () => {
     }
   });
 
-  it("refuses a quantity above 1,000, so the database column can never overflow", () => {
+  it("SCRUM-27 [AC3] TC-27-05: refuses a quantity above 1,000, so the database column can never overflow", () => {
     const parsed = equipmentRequestLineSchema.safeParse(
       line({ quantity: "1001" }),
     );
@@ -57,7 +57,7 @@ describe("equipmentRequestLineSchema — SCRUM-27", () => {
     }
   });
 
-  it("AC 2: requires an equipment type from the list", () => {
+  it("SCRUM-27 [AC2] TC-27-04: requires an equipment type from the list", () => {
     const parsed = equipmentRequestLineSchema.safeParse(
       line({ equipmentId: "" }),
     );
@@ -69,7 +69,7 @@ describe("equipmentRequestLineSchema — SCRUM-27", () => {
     }
   });
 
-  it("AC 5: keeps free-text technical requirements, trimmed", () => {
+  it("SCRUM-27 [AC5] TC-27-07: keeps free-text technical requirements, trimmed", () => {
     const parsed = equipmentRequestLineSchema.safeParse(
       line({ technicalRequirements: "  HDMI to the stage, 4K if possible  " }),
     );
@@ -78,7 +78,7 @@ describe("equipmentRequestLineSchema — SCRUM-27", () => {
     );
   });
 
-  it("AC 5: technical requirements are optional, and a blank one is stored as none", () => {
+  it("SCRUM-27 [AC5] TC-27-07: technical requirements are optional, and a blank one is stored as none", () => {
     const parsed = equipmentRequestLineSchema.safeParse(
       line({ technicalRequirements: "   " }),
     );
@@ -121,7 +121,7 @@ describe("createEquipmentRequestSchema — SCRUM-27", () => {
     ...overrides,
   });
 
-  it("AC 1: requires the event the request is for", () => {
+  it("SCRUM-27 TC-27-13: requires the event the request is for", () => {
     const parsed = createEquipmentRequestSchema.safeParse(
       request({ eventId: "" }),
     );
@@ -133,7 +133,7 @@ describe("createEquipmentRequestSchema — SCRUM-27", () => {
     }
   });
 
-  it("requires at least one equipment item", () => {
+  it("SCRUM-27 TC-27-13: requires at least one equipment item", () => {
     const parsed = createEquipmentRequestSchema.safeParse(
       request({ lines: [] }),
     );
@@ -145,7 +145,7 @@ describe("createEquipmentRequestSchema — SCRUM-27", () => {
     }
   });
 
-  it("AC 4: refuses the same equipment type twice on one request", () => {
+  it("SCRUM-27 [AC4] TC-27-06: refuses the same equipment type twice on one request", () => {
     const parsed = createEquipmentRequestSchema.safeParse(
       request({ lines: [line(), line({ quantity: "1" })] }),
     );
@@ -159,7 +159,7 @@ describe("createEquipmentRequestSchema — SCRUM-27", () => {
     }
   });
 
-  it("AC 2 & 4: accepts different equipment types on one request", () => {
+  it("SCRUM-27 [AC2, AC4] TC-27-03, TC-27-06: accepts different equipment types on one request", () => {
     const parsed = createEquipmentRequestSchema.safeParse(
       request({ lines: [line(), line({ equipmentId: "eqp_mic" })] }),
     );

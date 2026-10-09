@@ -44,7 +44,7 @@ and, if equipment was requested, every line reserved in full.
 | Test Data       | —                                                                                                                                                                                                                                                                          |
 | Expected Result | "Event status updated to planning." The row and the details show **Planning**. The event records the approving Coordinator and time, and its history holds two entries: the Coordinator's approval (Under Review → Approved) and the automatic move (Approved → Planning). |
 
-**Automated by:** `tests/unit/event-status.test.ts` › "SCRUM-81 [AC1] TC-81-01: …" and "SCRUM-19, SCRUM-81 [AC1, AC2] TC-81-01: …"; `tests/integration/concurrency.test.ts` › the decision race now ends in Planning; `e2e/events.spec.ts` › "coordinator approves an under-review event and status moves to PLANNING (SCRUM-24, SCRUM-81)"
+**Automated by:** `tests/unit/event-status.test.ts` › "SCRUM-81 [AC1] TC-81-01: …" and "SCRUM-19, SCRUM-81 [AC1, AC2] TC-81-01: …"; `tests/integration/concurrency.test.ts` › the decision race now ends in Planning; `e2e/events.spec.ts` › "SCRUM-81 [AC1, AC2] TC-81-01: coordinator approves an under-review event and status moves to PLANNING (SCRUM-24)"
 
 ### TC-81-02
 
@@ -122,7 +122,7 @@ and, if equipment was requested, every line reserved in full.
 | Test Data       | The Organiser; another Coordinator; any Coordinator when the event has no assigned Coordinator; Venue Staff; Technical Support; an Attendee; signed out |
 | Expected Result | Refused every time. The event stays Planning and no history entry is written.                                                                           |
 
-**Automated by:** `tests/unit/event-confirm.test.ts` › "SCRUM-81 [AC7] TC-81-07: …"; `tests/unit/auth.test.ts` › "SCRUM-81: only the event's assigned Coordinator may confirm it"
+**Automated by:** `tests/unit/event-confirm.test.ts` › "SCRUM-81 [AC7] TC-81-07: …"; `tests/unit/auth.test.ts` › "SCRUM-81 [AC7] TC-81-07: only the event's assigned Coordinator may confirm it"
 
 ### TC-81-08
 
@@ -187,7 +187,7 @@ and, if equipment was requested, every line reserved in full.
 | Test Data       | —                                                                                                                                                                                           |
 | Expected Result | The reservation is created.                                                                                                                                                                 |
 
-**Automated by:** `tests/unit/reservation.test.ts` › "SCRUM-81 TC-81-12: …"
+**Automated by:** `tests/integration/equipment-availability.test.ts` › "SCRUM-31, SCRUM-81 TC-31-10, TC-81-12: reserves for a Planning event, and refuses a Confirmed one without writing"
 
 ### TC-81-13
 

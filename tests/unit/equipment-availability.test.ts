@@ -144,7 +144,7 @@ const entry = (
 describe("splitByPeriod — SCRUM-30", () => {
   const period = { startAt: at(9), endAt: at(12) };
 
-  it("AC 8: puts commitments that share time with the requested period under it", () => {
+  it("SCRUM-30 [AC2]: puts commitments that share time with the requested period under it", () => {
     const inside = entry("inside", 10, 11);
     const straddlingStart = entry("start", 8, 10);
     const straddlingEnd = entry("end", 11, 14);
@@ -159,7 +159,7 @@ describe("splitByPeriod — SCRUM-30", () => {
     expect(other).toEqual([]);
   });
 
-  it("AC 3 & 9: a commitment that only touches the period at an endpoint is an other commitment", () => {
+  it("SCRUM-30 [AC2, AC5]: a commitment that only touches the period at an endpoint is an other commitment", () => {
     const endsAtStart = entry("before", 6, 9);
     const startsAtEnd = entry("after", 12, 15);
 
@@ -169,7 +169,7 @@ describe("splitByPeriod — SCRUM-30", () => {
     expect(other.map((e) => e.id)).toEqual(["before", "after"]);
   });
 
-  it("AC 9: commitments wholly outside the period are other commitments, even if they overlap each other", () => {
+  it("SCRUM-30 [AC2]: commitments wholly outside the period are other commitments, even if they overlap each other", () => {
     const early = entry("early", 13, 16);
     const clashing = entry("clash", 14, 17);
     const inside = entry("inside", 10, 11);
@@ -214,11 +214,11 @@ describe("splitByPeriod — SCRUM-30", () => {
 });
 
 describe("requestedPeriodTone — SCRUM-30", () => {
-  it("AC 2: amber while the requested quantity can still be fulfilled", () => {
+  it("SCRUM-30 [AC3]: amber while the requested quantity can still be fulfilled", () => {
     expect(requestedPeriodTone({ sufficient: true })).toBe("amber");
   });
 
-  it("AC 4 & 7: red only when the requested quantity exceeds what is free", () => {
+  it("SCRUM-30 [AC4]: red only when the requested quantity exceeds what is free", () => {
     expect(requestedPeriodTone({ sufficient: false })).toBe("red");
   });
 

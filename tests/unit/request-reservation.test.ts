@@ -405,7 +405,7 @@ describe("reserveEquipmentRequest — SCRUM-155", () => {
     });
   });
 
-  it("marks the row whose equipment type has been retired, and reserves nothing", async () => {
+  it("SCRUM-155 [AC2, AC7] TC-155-14: marks the row whose equipment type has been retired, and reserves nothing", async () => {
     approvedRequestWithStock({
       pools: [{ id: "eq_projector", totalQuantity: 10 }],
     });

@@ -143,7 +143,7 @@ test.describe("SCRUM-50 / 52 / 53 — venue booking request, review and decision
     });
   });
 
-  test("SCRUM-50 AC2, SCRUM-52 AC1-3, SCRUM-53 AC1 & AC3 — a coordinator requests, staff approve, and the venue becomes unavailable", async ({
+  test("SCRUM-50 [AC2], SCRUM-52 [AC1-AC3], SCRUM-53 [AC1, AC4]: a coordinator requests, staff approve, and the venue becomes unavailable", async ({
     browser,
   }, testInfo) => {
     const tag = `e2e-journey-${testInfo.retry}`;
@@ -191,7 +191,7 @@ test.describe("SCRUM-50 / 52 / 53 — venue booking request, review and decision
     ).toBeVisible();
     await expect(card).toHaveCount(0);
 
-    // SCRUM-53 AC3 / SCRUM-50 AC3 — an event overlapping that period now
+    // SCRUM-53 AC4 / SCRUM-50 AC3 — an event overlapping that period now
     // finds the hall unavailable, and the form says so before submitting.
     await openRequestForm(coordinator);
     await fillHall(coordinator, eventName("overlapping"));
@@ -224,7 +224,7 @@ test.describe("SCRUM-50 / 52 / 53 — venue booking request, review and decision
     await expectSubmitted(coordinator);
   });
 
-  test("SCRUM-50 AC1 — the period and attendance are the event's, rounded out to the half hour, and cannot be edited", async ({
+  test("SCRUM-50 [AC1] TC-50-15: the period and attendance are the event's, rounded out to the half hour, and cannot be edited", async ({
     browser,
   }) => {
     const coordinator = await signedIn(browser, "coordinator@test.local");
@@ -249,7 +249,7 @@ test.describe("SCRUM-50 / 52 / 53 — venue booking request, review and decision
     }
   });
 
-  test("SCRUM-50 AC5 — an event that has already started is reported before submitting, and Submit is disabled", async ({
+  test("SCRUM-50 [AC5] TC-50-11: an event that has already started is reported before submitting, and Submit is disabled", async ({
     browser,
   }) => {
     const coordinator = await signedIn(browser, "coordinator@test.local");
@@ -264,7 +264,7 @@ test.describe("SCRUM-50 / 52 / 53 — venue booking request, review and decision
     ).toBeDisabled();
   });
 
-  test("SCRUM-50 — when the live check cannot answer, the form says so and leaves Submit to the server", async ({
+  test("SCRUM-50 [AC3, AC4, AC5] TC-50-13: when the live check cannot answer, the form says so and leaves Submit to the server", async ({
     browser,
   }) => {
     const coordinator = await signedIn(browser, "coordinator@test.local");
@@ -292,7 +292,7 @@ test.describe("SCRUM-50 / 52 / 53 — venue booking request, review and decision
     await expectSubmitted(coordinator);
   });
 
-  test("SCRUM-50 AC1 — the room layout is chosen first, and only venues that support it are offered", async ({
+  test("SCRUM-50 [AC1] TC-50-12: the room layout is chosen first, and only venues that support it are offered", async ({
     browser,
   }) => {
     const coordinator = await signedIn(browser, "coordinator@test.local");
@@ -317,7 +317,7 @@ test.describe("SCRUM-50 / 52 / 53 — venue booking request, review and decision
     );
   });
 
-  test("SCRUM-50 — an event's attendance over the chosen venue's capacity is flagged, and Submit is disabled", async ({
+  test("SCRUM-50 TC-50-10: an event's attendance over the chosen venue's capacity is flagged, and Submit is disabled", async ({
     browser,
   }) => {
     const coordinator = await signedIn(browser, "coordinator@test.local");
@@ -342,7 +342,7 @@ test.describe("SCRUM-50 / 52 / 53 — venue booking request, review and decision
     await expect(submit).toBeEnabled();
   });
 
-  test("SCRUM-53 AC2 — rejecting needs a written reason, and the reason is saved", async ({
+  test("SCRUM-53 [AC2] TC-53-02, TC-53-03: rejecting needs a written reason, and the reason is saved", async ({
     browser,
   }, testInfo) => {
     const tag = `e2e-reject-${testInfo.retry}`;
@@ -387,7 +387,7 @@ test.describe("SCRUM-50 / 52 / 53 — venue booking request, review and decision
     });
   });
 
-  test("SCRUM-52 — a coordinator typing the queue's address is refused by the server", async ({
+  test("SCRUM-52 TC-52-04: a coordinator typing the queue's address is refused by the server", async ({
     browser,
   }) => {
     const coordinator = await signedIn(browser, "coordinator@test.local");
@@ -397,7 +397,7 @@ test.describe("SCRUM-50 / 52 / 53 — venue booking request, review and decision
     ).toBeVisible();
   });
 
-  test("SCRUM-50 — venue staff typing the request form's address are refused by the server", async ({
+  test("SCRUM-50 TC-50-09: venue staff typing the request form's address are refused by the server", async ({
     browser,
   }) => {
     const staff = await signedIn(browser, "venuestaff@test.local");

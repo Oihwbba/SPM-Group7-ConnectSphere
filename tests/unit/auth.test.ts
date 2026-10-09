@@ -48,14 +48,14 @@ describe("can — role gate", () => {
   });
 
   it.each(["ORGANISER", "COORDINATOR", "VENUE_STAFF", "ATTENDEE"] as const)(
-    "does not let %s review an equipment request",
+    "SCRUM-28 TC-28-11: does not let %s review an equipment request",
     (role) => {
       expect(can({ id: "x", role }, "equipment-request:review")).toBe(false);
     },
   );
 
   it.each(["ORGANISER", "VENUE_STAFF", "TECH_SUPPORT", "ATTENDEE"] as const)(
-    "does not let %s create an equipment request",
+    "SCRUM-27 TC-27-12: does not let %s create an equipment request",
     (role) => {
       expect(can({ id: "x", role }, "equipment-request:create")).toBe(false);
     },
@@ -153,7 +153,7 @@ describe("can — confirming an event (SCRUM-81)", () => {
     status: "PLANNING" as const,
   };
 
-  it("SCRUM-81: only the event's assigned Coordinator may confirm it", () => {
+  it("SCRUM-81 [AC7] TC-81-07: only the event's assigned Coordinator may confirm it", () => {
     expect(can(coordinator, "event:confirm", planning)).toBe(true);
     expect(can({ id: "other", role: "COORDINATOR" }, "event:confirm", planning)).toBe(false);
     expect(can(organiserA, "event:confirm", planning)).toBe(false);
@@ -199,11 +199,11 @@ describe("can — venue booking capabilities (SCRUM-50/52/53)", () => {
     status: "APPROVED" as const,
   };
 
-  it("SCRUM-50 — a coordinator may request a venue for an event assigned to them", () => {
+  it("SCRUM-50 TC-50-09: a coordinator may request a venue for an event assigned to them", () => {
     expect(can(coordinator, "booking:request", assignedEvent)).toBe(true);
   });
 
-  it("SCRUM-50 — a coordinator may not request a venue for another coordinator's event", () => {
+  it("SCRUM-50 TC-50-09: a coordinator may not request a venue for another coordinator's event", () => {
     expect(
       can(coordinator, "booking:request", {
         ...assignedEvent,
@@ -212,20 +212,20 @@ describe("can — venue booking capabilities (SCRUM-50/52/53)", () => {
     ).toBe(false);
   });
 
-  it("SCRUM-50 — no other role may request a venue", () => {
+  it("SCRUM-50 TC-50-09: no other role may request a venue", () => {
     for (const user of [organiserA, venueStaff, techSupport, attendee]) {
       expect(can(user, "booking:request")).toBe(false);
     }
   });
 
-  it("SCRUM-52 — only venue staff may read the pending-request queue", () => {
+  it("SCRUM-52 TC-52-04: only venue staff may read the pending-request queue", () => {
     expect(can(venueStaff, "booking:review")).toBe(true);
     for (const user of [organiserA, coordinator, techSupport, attendee]) {
       expect(can(user, "booking:review")).toBe(false);
     }
   });
 
-  it("SCRUM-53 — only venue staff may approve or reject a request", () => {
+  it("SCRUM-53 TC-53-08: only venue staff may approve or reject a request", () => {
     expect(can(venueStaff, "booking:decide")).toBe(true);
     for (const user of [organiserA, coordinator, techSupport, attendee]) {
       expect(can(user, "booking:decide")).toBe(false);
@@ -238,11 +238,11 @@ describe("can — recording venue unavailability (SCRUM-37)", () => {
   const venueStaff: SessionUser = { id: "vs", role: "VENUE_STAFF" };
   const techSupport: SessionUser = { id: "ts", role: "TECH_SUPPORT" };
 
-  it("SCRUM-37 AC2 — venue staff may record unavailability", () => {
+  it("SCRUM-37 [AC6] TC-37-03: venue staff may record unavailability", () => {
     expect(can(venueStaff, "unavailability:record")).toBe(true);
   });
 
-  it("SCRUM-37 AC2 — no other role may record unavailability", () => {
+  it("SCRUM-37 [AC6] TC-37-03: no other role may record unavailability", () => {
     for (const user of [organiserA, coordinator, techSupport, attendee]) {
       expect(can(user, "unavailability:record")).toBe(false);
     }
@@ -255,12 +255,12 @@ describe("can — viewing venue availability (SCRUM-36)", () => {
   const venueStaff: SessionUser = { id: "vs", role: "VENUE_STAFF" };
   const techSupport: SessionUser = { id: "ts", role: "TECH_SUPPORT" };
 
-  it("SCRUM-36 AC1 — coordinators and venue staff may view venue availability", () => {
+  it("SCRUM-36 [AC7] TC-36-07: coordinators and venue staff may view venue availability", () => {
     expect(can(coordinator, "venue:availability")).toBe(true);
     expect(can(venueStaff, "venue:availability")).toBe(true);
   });
 
-  it("SCRUM-36 AC1 — organisers, tech support and attendees may not", () => {
+  it("SCRUM-36 [AC7] TC-36-07: organisers, tech support and attendees may not", () => {
     for (const user of [organiserA, techSupport, attendee]) {
       expect(can(user, "venue:availability")).toBe(false);
     }

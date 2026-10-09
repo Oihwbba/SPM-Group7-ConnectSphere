@@ -77,7 +77,7 @@ beforeEach(() => {
 });
 
 describe("createEquipmentRequest — SCRUM-27", () => {
-  it("AC 1, 2, 5 & 6: saves the request for the event, with each line's type, quantity and requirements, as Pending Review", async () => {
+  it("SCRUM-27 [AC1, AC2, AC5, AC6] TC-27-01, TC-27-03, TC-27-07, TC-27-08: saves the request for the event, with each line's type, quantity and requirements, as Pending Review", async () => {
     const result = await createEquipmentRequest(input());
 
     expect(result).toEqual({
@@ -110,7 +110,7 @@ describe("createEquipmentRequest — SCRUM-27", () => {
     expect(revalidatePath).toHaveBeenCalledWith("/equipment-requests");
   });
 
-  it("AC 6: records the submission as the first entry in the request's history", async () => {
+  it("SCRUM-27 [AC6] TC-27-08: records the submission as the first entry in the request's history", async () => {
     await createEquipmentRequest(input());
 
     expect(tx.equipmentRequestUpdate.create).toHaveBeenCalledWith({
@@ -124,14 +124,14 @@ describe("createEquipmentRequest — SCRUM-27", () => {
     });
   });
 
-  it("AC 6: calls the saved status Pending Review, the story's own words", () => {
+  it("SCRUM-27 [AC6] TC-27-08: calls the saved status Pending Review, the story's own words", () => {
     expect(EQUIPMENT_REQUEST_STATUS_LABEL.PENDING_REVIEW).toBe(
       "Pending Review",
     );
     expect(EQUIPMENT_REQUEST_STATUS_LABEL.IN_REVIEW).toBe("In Review");
   });
 
-  it("AC 2: refuses a type that is not on the predefined list, naming the line", async () => {
+  it("SCRUM-27 [AC2] TC-27-04: refuses a type that is not on the predefined list, naming the line", async () => {
     db.equipment.findMany.mockResolvedValue([{ id: "eqp_projector" }]);
 
     const result = await createEquipmentRequest(
@@ -158,7 +158,7 @@ describe("createEquipmentRequest — SCRUM-27", () => {
   });
 
   it.each(["0", "-1", "1.5", ""])(
-    "AC 3: quantity %j is refused next to its line, and nothing is saved",
+    "SCRUM-27 [AC3] TC-27-05: quantity %j is refused next to its line, and nothing is saved",
     async (quantity) => {
       const result = await createEquipmentRequest(
         input({ lines: [{ equipmentId: "eqp_projector", quantity }] }),
@@ -176,7 +176,7 @@ describe("createEquipmentRequest — SCRUM-27", () => {
     },
   );
 
-  it("AC 4: the same type twice creates no duplicate line and says the type is already on the request", async () => {
+  it("SCRUM-27 [AC4] TC-27-06: the same type twice creates no duplicate line and says the type is already on the request", async () => {
     const result = await createEquipmentRequest(
       input({
         lines: [
@@ -198,7 +198,7 @@ describe("createEquipmentRequest — SCRUM-27", () => {
     expect(db.$transaction).not.toHaveBeenCalled();
   });
 
-  it("AC 7: an event with a request pending review shows that request instead of creating a second", async () => {
+  it("SCRUM-27 [AC7] TC-27-09: an event with a request pending review shows that request instead of creating a second", async () => {
     db.equipmentRequest.findFirst.mockResolvedValue({ id: "eqr_existing" });
 
     const result = await createEquipmentRequest(input());
@@ -220,7 +220,7 @@ describe("createEquipmentRequest — SCRUM-27", () => {
     expect(revalidatePath).toHaveBeenCalledWith("/equipment-requests");
   });
 
-  it("AC 7: when a simultaneous submission wins the race, the loser is shown the winner's request", async () => {
+  it("SCRUM-27 [AC7] TC-27-10: when a simultaneous submission wins the race, the loser is shown the winner's request", async () => {
     db.equipmentRequest.findFirst
       .mockResolvedValueOnce(null)
       .mockResolvedValueOnce({ id: "eqr_winner" });
@@ -266,7 +266,7 @@ describe("createEquipmentRequest — SCRUM-27", () => {
     // details are fixed, so equipment must be arranged before then.
     ["a confirmed event", { ...approvedEvent, status: "CONFIRMED" }],
   ])(
-    "AC 1: refuses %s with the same message, and saves nothing",
+    "SCRUM-27 [AC1] TC-27-02: refuses %s with the same message, and saves nothing",
     async (_label, event) => {
       db.event.findUnique.mockResolvedValue(event);
 
@@ -281,7 +281,7 @@ describe("createEquipmentRequest — SCRUM-27", () => {
     },
   );
 
-  it("AC 1: accepts a Planning event", async () => {
+  it("SCRUM-27 [AC1] TC-27-01: accepts a Planning event", async () => {
     db.event.findUnique.mockResolvedValue({
       ...approvedEvent,
       status: "PLANNING",
@@ -293,7 +293,7 @@ describe("createEquipmentRequest — SCRUM-27", () => {
   });
 
   it.each(["ORGANISER", "VENUE_STAFF", "TECH_SUPPORT", "ATTENDEE"] as const)(
-    "refuses %s before reading anything",
+    "SCRUM-27 TC-27-12: refuses %s before reading anything",
     async (role) => {
       mockAuth.mockResolvedValue(sessionFor(role));
 
@@ -309,7 +309,7 @@ describe("createEquipmentRequest — SCRUM-27", () => {
     },
   );
 
-  it("refuses a signed-out caller", async () => {
+  it("SCRUM-27 TC-27-12: refuses a signed-out caller", async () => {
     mockAuth.mockResolvedValue(null);
 
     const result = await createEquipmentRequest(input());

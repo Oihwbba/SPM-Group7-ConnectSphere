@@ -200,7 +200,7 @@ async function fillRigPeriod(page: Page, from: number, to: number, quantity: str
  * neutral. The seed puts one speaker out of service as DAMAGED and three
  * projectors in for MAINTENANCE.
  */
-test.describe("SCRUM-30 — View Equipment Conflicts", () => {
+test.describe("SCRUM-156 [AC1] TC-156-02: View Equipment Conflicts", () => {
   test.afterEach(async () => {
     if (usesLocalDatabase) await removeRig();
   });
@@ -208,7 +208,7 @@ test.describe("SCRUM-30 — View Equipment Conflicts", () => {
   const during = (page: Page) => page.getByTestId("commitments-during");
   const other = (page: Page) => page.getByTestId("commitments-other");
 
-  test("AC 5: selecting a seeded item shows its commitments with the reason", async ({
+  test("SCRUM-30 [AC6]: selecting a seeded item shows its commitments with the reason", async ({
     page,
   }) => {
     await signInAsTechSupport(page);
@@ -221,7 +221,7 @@ test.describe("SCRUM-30 — View Equipment Conflicts", () => {
     await expect(other(page).getByTestId("schedule-entry").first()).toContainText("1 unit(s)");
   });
 
-  test("AC 1: the seeded maintenance on the projector pool is listed", async ({ page }) => {
+  test("SCRUM-30 [AC1]: the seeded maintenance on the projector pool is listed", async ({ page }) => {
     test.skip(!usesLocalDatabase, "reads seeded commitments; local database only");
     await signInAsTechSupport(page);
     await page.getByLabel("Equipment type").selectOption({ value: "eqp_projector" });
@@ -231,7 +231,7 @@ test.describe("SCRUM-30 — View Equipment Conflicts", () => {
     await expect(other(page).getByTestId("schedule-entry").first()).toBeVisible();
   });
 
-  test("AC 1 & 8: commitments overlapping the requested period are listed under it, the rest under other commitments", async ({
+  test("SCRUM-30 [AC1, AC2]: commitments overlapping the requested period are listed under it, the rest under other commitments", async ({
     page,
   }) => {
     test.skip(!usesLocalDatabase, "writes its own equipment; local database only");
@@ -278,7 +278,7 @@ test.describe("SCRUM-30 — View Equipment Conflicts", () => {
     expect(otherEquipmentTop).toBeLessThan(otherTop);
   });
 
-  test("AC 2: commitments during the period are amber while the requested quantity can still be fulfilled", async ({
+  test("SCRUM-30 [AC3]: commitments during the period are amber while the requested quantity can still be fulfilled", async ({
     page,
   }) => {
     test.skip(!usesLocalDatabase, "writes its own equipment; local database only");
@@ -296,7 +296,7 @@ test.describe("SCRUM-30 — View Equipment Conflicts", () => {
     );
   });
 
-  test("AC 4 & 7: they turn red with the shortfall only when the requested quantity exceeds what is free", async ({
+  test("SCRUM-30 [AC4]: they turn red with the shortfall only when the requested quantity exceeds what is free", async ({
     page,
   }) => {
     test.skip(!usesLocalDatabase, "writes its own equipment; local database only");
@@ -316,7 +316,7 @@ test.describe("SCRUM-30 — View Equipment Conflicts", () => {
     await expect(during(page).getByTestId("schedule-entry")).toHaveAttribute("data-tone", "amber");
   });
 
-  test("AC 3 & 9: commitments that only touch the period are other commitments and leave it fully available", async ({
+  test("SCRUM-30 [AC2, AC5]: commitments that only touch the period are other commitments and leave it fully available", async ({
     page,
   }) => {
     test.skip(!usesLocalDatabase, "writes its own equipment; local database only");
@@ -357,7 +357,7 @@ test.describe("SCRUM-30 — View Equipment Conflicts", () => {
     await expect(page.locator('[data-tone="red"], [data-tone="amber"]')).toHaveCount(0);
   });
 
-  test("AC 5: an outage shows its reason, note and period", async ({ page }) => {
+  test("SCRUM-30 [AC6]: an outage shows its reason, note and period", async ({ page }) => {
     test.skip(!usesLocalDatabase, "writes its own equipment; local database only");
     await buildRig({
       outages: [{ from: 9, to: 17, quantity: 2, reason: "MAINTENANCE", note: "Annual service" }],
@@ -424,7 +424,7 @@ test.describe("SCRUM-30 — View Equipment Conflicts", () => {
     await expect(page.getByTestId("selected-availability")).toHaveText("3 of 4 available");
   });
 
-  test("AC 6: an item with nothing committed says so instead of showing an empty list", async ({
+  test("SCRUM-30 [AC7]: an item with nothing committed says so instead of showing an empty list", async ({
     page,
   }) => {
     test.skip(!usesLocalDatabase, "writes its own equipment; local database only");

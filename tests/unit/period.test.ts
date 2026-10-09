@@ -12,8 +12,8 @@ const period = (start: string, end: string) => ({
   endAt: at(end),
 });
 
-describe("overlaps — SCRUM-50 AC3 / SCRUM-53 AC4: overlapping periods conflict", () => {
-  it("SCRUM-50 AC3 — periods that clearly overlap conflict, whichever is asked about first", () => {
+describe("overlaps — SCRUM-50 AC3 / SCRUM-53 AC5, AC8: overlapping periods conflict", () => {
+  it("SCRUM-50 [AC3] TC-50-02: periods that clearly overlap conflict, whichever is asked about first", () => {
     expect(overlaps(period("14:00", "16:00"), period("15:00", "17:00"))).toBe(
       true,
     );
@@ -22,7 +22,7 @@ describe("overlaps — SCRUM-50 AC3 / SCRUM-53 AC4: overlapping periods conflict
     );
   });
 
-  it("SCRUM-50 AC3 — a period entirely inside another conflicts, both ways round", () => {
+  it("SCRUM-50 [AC3] TC-50-02: a period entirely inside another conflicts, both ways round", () => {
     expect(overlaps(period("09:00", "18:00"), period("12:00", "13:00"))).toBe(
       true,
     );
@@ -31,39 +31,39 @@ describe("overlaps — SCRUM-50 AC3 / SCRUM-53 AC4: overlapping periods conflict
     );
   });
 
-  it("SCRUM-50 AC3 — identical periods conflict", () => {
+  it("SCRUM-50 [AC3] TC-50-02: identical periods conflict", () => {
     expect(overlaps(period("14:00", "16:00"), period("14:00", "16:00"))).toBe(
       true,
     );
   });
 
-  it("SCRUM-50 AC3 — periods sharing a start but ending differently conflict", () => {
+  it("SCRUM-50 [AC3] TC-50-02: periods sharing a start but ending differently conflict", () => {
     expect(overlaps(period("14:00", "15:00"), period("14:00", "18:00"))).toBe(
       true,
     );
   });
 
-  it("SCRUM-50 AC3 — a one-minute overlap is still an overlap", () => {
+  it("SCRUM-50 [AC3] TC-50-02: a one-minute overlap is still an overlap", () => {
     expect(overlaps(period("14:00", "16:01"), period("16:00", "18:00"))).toBe(
       true,
     );
   });
 });
 
-describe("overlaps — SCRUM-50 AC4 / SCRUM-53 AC5: touching periods do not conflict", () => {
-  it("SCRUM-50 AC4 — a period beginning exactly as another ends does not conflict", () => {
+describe("overlaps — SCRUM-50 AC4 / SCRUM-53 AC6: touching periods do not conflict", () => {
+  it("SCRUM-50 [AC4] TC-50-05: a period beginning exactly as another ends does not conflict", () => {
     expect(overlaps(period("14:00", "16:00"), period("16:00", "18:00"))).toBe(
       false,
     );
   });
 
-  it("SCRUM-50 AC4 — a period ending exactly as another begins does not conflict", () => {
+  it("SCRUM-50 [AC4] TC-50-05: a period ending exactly as another begins does not conflict", () => {
     expect(overlaps(period("16:00", "18:00"), period("14:00", "16:00"))).toBe(
       false,
     );
   });
 
-  it("SCRUM-50 AC4 — separate periods with a gap between them do not conflict", () => {
+  it("SCRUM-50 [AC4] TC-50-05: separate periods with a gap between them do not conflict", () => {
     expect(overlaps(period("09:00", "10:00"), period("11:00", "12:00"))).toBe(
       false,
     );
@@ -71,19 +71,19 @@ describe("overlaps — SCRUM-50 AC4 / SCRUM-53 AC5: touching periods do not conf
 });
 
 describe("isValidPeriod — SCRUM-50 AC5: an end at or before the start is invalid", () => {
-  it("SCRUM-50 AC5 — an end before the start is invalid", () => {
+  it("SCRUM-50 [AC5] TC-50-06: an end before the start is invalid", () => {
     expect(isValidPeriod(period("16:00", "14:00"))).toBe(false);
   });
 
-  it("SCRUM-50 AC5 — an end equal to the start is invalid", () => {
+  it("SCRUM-50 [AC5] TC-50-06: an end equal to the start is invalid", () => {
     expect(isValidPeriod(period("14:00", "14:00"))).toBe(false);
   });
 
-  it("SCRUM-50 AC5 — an end one minute after the start is valid", () => {
+  it("SCRUM-50 [AC5] TC-50-06: an end one minute after the start is valid", () => {
     expect(isValidPeriod(period("14:00", "14:01"))).toBe(true);
   });
 
-  it("SCRUM-50 AC5 — an unparseable date is invalid", () => {
+  it("SCRUM-50 [AC5] TC-50-06: an unparseable date is invalid", () => {
     expect(
       isValidPeriod({ startAt: new Date("nonsense"), endAt: at("14:00") }),
     ).toBe(false);

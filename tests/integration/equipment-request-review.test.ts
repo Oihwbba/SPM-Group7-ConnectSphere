@@ -135,7 +135,7 @@ describe.skipIf(!usesLocalDatabase)(
         },
       });
 
-    it("AC 2, 4 & 5: review then approval each move the request, log one entry and notify the coordinator once", async () => {
+    it("SCRUM-28 [AC2, AC3, AC5, AC6] TC-28-02, TC-28-03, TC-28-09, TC-28-10: review then approval each move the request, log one entry and notify the coordinator once", async () => {
       await expect(
         updateEquipmentRequestStatus({ requestId, toStatus: "IN_REVIEW" }),
       ).resolves.toEqual({ ok: true, data: { status: "IN_REVIEW" } });
@@ -180,7 +180,7 @@ describe.skipIf(!usesLocalDatabase)(
       );
     });
 
-    it("AC 2: two reviewers taking the same request at once — one succeeds, one is told, nothing is doubled", async () => {
+    it("SCRUM-28 [AC7] TC-28-06: two reviewers taking the same request at once — one succeeds, one is told, nothing is doubled", async () => {
       const results = await Promise.all([
         updateEquipmentRequestStatus({ requestId, toStatus: "IN_REVIEW" }),
         updateEquipmentRequestStatus({ requestId, toStatus: "IN_REVIEW" }),
@@ -201,7 +201,7 @@ describe.skipIf(!usesLocalDatabase)(
       ).toBe(1);
     });
 
-    it("AC 2: a request cannot be approved before it is reviewed, and stays Pending Review", async () => {
+    it("SCRUM-28 [AC2, AC3] TC-28-05: a request cannot be approved before it is reviewed, and stays Pending Review", async () => {
       const result = await updateEquipmentRequestStatus({
         requestId,
         toStatus: "APPROVED",
@@ -214,7 +214,7 @@ describe.skipIf(!usesLocalDatabase)(
       expect(saved.status).toBe("PENDING_REVIEW");
     });
 
-    it("AC 1 & 3: the queue shows each line against real reservations, and offers alternatives for a short one", async () => {
+    it("SCRUM-28 [AC1, AC4] TC-28-01, TC-28-07: the queue shows each line against real reservations, and offers alternatives for a short one", async () => {
       await updateEquipmentRequestStatus({ requestId, toStatus: "IN_REVIEW" });
       await reserveLecterns(2);
 
@@ -250,7 +250,7 @@ describe.skipIf(!usesLocalDatabase)(
       expect(laptop.review).toMatchObject({ shortfall: 0, alternatives: [] });
     });
 
-    it("AC 3 & 4: suggesting an alternative for the short line saves it, logs it and tells the coordinator", async () => {
+    it("SCRUM-28 [AC4, AC5] TC-28-07, TC-28-09: suggesting an alternative for the short line saves it, logs it and tells the coordinator", async () => {
       await updateEquipmentRequestStatus({ requestId, toStatus: "IN_REVIEW" });
       await reserveLecterns(2);
 
@@ -286,7 +286,7 @@ describe.skipIf(!usesLocalDatabase)(
       ).toBe(1);
     });
 
-    it("AC 3: no alternative is taken for a line that is available", async () => {
+    it("SCRUM-28 [AC4] TC-28-08: no alternative is taken for a line that is available", async () => {
       await updateEquipmentRequestStatus({ requestId, toStatus: "IN_REVIEW" });
 
       const result = await suggestAlternativeEquipment({

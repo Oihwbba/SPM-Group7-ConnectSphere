@@ -26,13 +26,13 @@ function render(days: ReturnType<typeof availabilityByDay>) {
 }
 
 describe("AvailabilityCalendar — SCRUM-36", () => {
-  it("SCRUM-36 AC6 — a day with nothing on it says Available all day at the top of its column", () => {
+  it("SCRUM-36 [AC6] TC-36-04: a day with nothing on it says Available all day at the top of its column", () => {
     const html = render(availabilityByDay([], "2035-03-12", "2035-03-18"));
 
     expect(html.match(/data-free-all-day/g)).toHaveLength(7);
   });
 
-  it("SCRUM-36 AC4 — a day filled by recorded unavailability is not called available", () => {
+  it("SCRUM-36 [AC3] TC-36-02: a day filled by recorded unavailability is not called available", () => {
     const html = render(
       availabilityByDay(
         [

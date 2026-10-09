@@ -141,7 +141,7 @@ describe.skipIf(!usesLocalDatabase)(
       await prisma.venue.delete({ where: { id: venueId } });
     });
 
-    it("SCRUM-37 AC2 — venue staff record a period and a reason, and it is saved", async () => {
+    it("SCRUM-37 [AC1] TC-37-02: venue staff record a period and a reason, and it is saved", async () => {
       const result = await recordUnavailability({
         venueId,
         startAt: at(3, 1),
@@ -165,7 +165,7 @@ describe.skipIf(!usesLocalDatabase)(
       });
     });
 
-    it("SCRUM-37 AC2 — an end at or before the start is refused as an invalid period", async () => {
+    it("SCRUM-37 [AC1] TC-37-03: an end at or before the start is refused as an invalid period", async () => {
       const result = await record(at(3, 9), at(3, 9));
 
       expect(result).toMatchObject({
@@ -176,7 +176,7 @@ describe.skipIf(!usesLocalDatabase)(
       expect(await unavailabilityCount()).toBe(0);
     });
 
-    it("SCRUM-37 AC3 — a request over recorded maintenance is refused, with the same message shape as a booking clash", async () => {
+    it("SCRUM-37 [AC2] TC-37-04: a request over recorded maintenance is refused, with the same message shape as a booking clash", async () => {
       await record(hoursFrom(event.startAt, -1), hoursFrom(event.startAt, 1));
       mockAuth.mockResolvedValue(COORDINATOR);
 
@@ -190,7 +190,7 @@ describe.skipIf(!usesLocalDatabase)(
       expect(await prisma.booking.count({ where: { venueId } })).toBe(0);
     });
 
-    it("SCRUM-37 AC3 — a pending request over recorded maintenance cannot then be approved", async () => {
+    it("SCRUM-37 [AC2] TC-37-04: a pending request over recorded maintenance cannot then be approved", async () => {
       const pending = await prisma.booking.create({
         data: {
           eventId: requestEventId,
@@ -215,7 +215,7 @@ describe.skipIf(!usesLocalDatabase)(
       });
     });
 
-    it("SCRUM-37 AC4 — recording over an approved booking surfaces the clash and saves nothing", async () => {
+    it("SCRUM-37 [AC3] TC-37-05: recording over an approved booking surfaces the clash and saves nothing", async () => {
       await approvedBooking(at(6, 1), at(6, 5));
 
       const result = await record(at(6, 3), at(6, 9));
@@ -228,7 +228,7 @@ describe.skipIf(!usesLocalDatabase)(
       expect(await unavailabilityCount()).toBe(0);
     });
 
-    it("SCRUM-37 AC4 — recording over a period already recorded is refused too", async () => {
+    it("SCRUM-37 [AC3] TC-37-05: recording over a period already recorded is refused too", async () => {
       await record(at(7, 1), at(7, 5));
 
       const result = await record(at(7, 4), at(7, 8), "EQUIPMENT_FAILURE");
@@ -242,7 +242,7 @@ describe.skipIf(!usesLocalDatabase)(
       expect(await unavailabilityCount()).toBe(1);
     });
 
-    it("SCRUM-37 AC5 — maintenance ending exactly as a request begins does not clash", async () => {
+    it("SCRUM-37 [AC5] TC-37-07: maintenance ending exactly as a request begins does not clash", async () => {
       await record(hoursFrom(event.startAt, -4), event.startAt.toISOString());
       mockAuth.mockResolvedValue(COORDINATOR);
 
@@ -251,7 +251,7 @@ describe.skipIf(!usesLocalDatabase)(
       expect(result.ok && result.data.created).toBe(true);
     });
 
-    it("SCRUM-37 AC5 — maintenance starting exactly as a booking ends is recorded", async () => {
+    it("SCRUM-37 [AC5] TC-37-07: maintenance starting exactly as a booking ends is recorded", async () => {
       await approvedBooking(at(9, 1), at(9, 5));
 
       const result = await record(at(9, 5), at(9, 9));
@@ -279,7 +279,7 @@ describe.skipIf(!usesLocalDatabase)(
         ).toBe(1);
       });
 
-      it("SCRUM-37 AC3 — the database alone refuses approving a booking over recorded maintenance", async () => {
+      it("SCRUM-37 [AC2] TC-37-04: the database alone refuses approving a booking over recorded maintenance", async () => {
         await record(at(11, 3), at(11, 9));
         const pending = await prisma.booking.create({
           data: {
@@ -298,7 +298,7 @@ describe.skipIf(!usesLocalDatabase)(
         ).rejects.toThrow(/booking_overlaps_unavailability/);
       });
 
-      it("SCRUM-37 AC5 — the database accepts periods that only touch at an endpoint", async () => {
+      it("SCRUM-37 [AC5] TC-37-07: the database accepts periods that only touch at an endpoint", async () => {
         await record(at(12, 1), at(12, 5));
 
         await expect(

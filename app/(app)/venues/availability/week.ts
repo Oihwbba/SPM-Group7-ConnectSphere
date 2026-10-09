@@ -14,7 +14,7 @@ const isDay = (value: string | undefined): value is string =>
 const noon = (day: string) => parseSingaporeDateTime(`${day}T12:00`)!;
 
 /**
- * SCRUM-36 AC7 — the week the calendar shows, read from the page's address:
+ * SCRUM-36 AC1 — the week the calendar shows, read from the page's address:
  * Monday to Sunday of the week containing `week`, or this week when it is
  * missing or malformed.
  */

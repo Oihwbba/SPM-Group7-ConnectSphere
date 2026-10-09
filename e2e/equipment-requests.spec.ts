@@ -70,7 +70,7 @@ test.describe("SCRUM-27 — Create Equipment Request", () => {
     await prisma.event.deleteMany({ where: { name: { startsWith: RIG } } });
   });
 
-  test("AC 1, 2, 5 & 6: a coordinator requests equipment for their event and it is saved as Pending Review", async ({
+  test("SCRUM-27 [AC1, AC2, AC5, AC6] TC-27-01, TC-27-03, TC-27-07, TC-27-08: a coordinator requests equipment for their event and it is saved as Pending Review", async ({
     page,
   }) => {
     const rig = await makeRig("happy");
@@ -124,7 +124,7 @@ test.describe("SCRUM-27 — Create Equipment Request", () => {
     expect(saved.lines).toHaveLength(2);
   });
 
-  test("AC 2: equipment is chosen from the predefined list of active types", async ({
+  test("SCRUM-27 [AC2] TC-27-03: equipment is chosen from the predefined list of active types", async ({
     page,
   }) => {
     await makeRig("list");
@@ -146,7 +146,7 @@ test.describe("SCRUM-27 — Create Equipment Request", () => {
     expect(offered).toEqual(active.map((item) => item.id));
   });
 
-  test("AC 3: a quantity that is not a positive whole number is refused next to the field", async ({
+  test("SCRUM-27 [AC3] TC-27-05: a quantity that is not a positive whole number is refused next to the field", async ({
     page,
   }) => {
     await makeRig("quantity");
@@ -170,7 +170,7 @@ test.describe("SCRUM-27 — Create Equipment Request", () => {
     await expect(dialog.getByTestId("draft-line")).toHaveCount(1);
   });
 
-  test("AC 4: adding a type already on the request says so and adds no second line", async ({
+  test("SCRUM-27 [AC4] TC-27-06: adding a type already on the request says so and adds no second line", async ({
     page,
   }) => {
     await makeRig("duplicate");
@@ -188,7 +188,7 @@ test.describe("SCRUM-27 — Create Equipment Request", () => {
     await expect(dialog.getByTestId("draft-line")).toContainText("× 2");
   });
 
-  test("AC 7: submitting for an event with a request pending review shows that request instead", async ({
+  test("SCRUM-27 [AC7] TC-27-09: submitting for an event with a request pending review shows that request instead", async ({
     page,
   }) => {
     const rig = await makeRig("existing");
@@ -223,7 +223,7 @@ test.describe("SCRUM-27 — Create Equipment Request", () => {
     ).toBe(1);
   });
 
-  test("a request needs an event and at least one item before it is sent", async ({
+  test("SCRUM-27 TC-27-13: a request needs an event and at least one item before it is sent", async ({
     page,
   }) => {
     await makeRig("incomplete");
@@ -275,7 +275,7 @@ test.describe("SCRUM-27 — who can raise equipment requests", () => {
     ).toBeVisible();
   });
 
-  test("a coordinator with no requests is told how to raise one, not shown an empty list", async ({
+  test("SCRUM-27 [AC8] TC-27-15: a coordinator with no requests is told how to raise one, not shown an empty list", async ({
     page,
   }) => {
     await signIn(page, "coordinator2@test.local");
@@ -285,7 +285,7 @@ test.describe("SCRUM-27 — who can raise equipment requests", () => {
     await expect(page.getByTestId("equipment-request")).toHaveCount(0);
   });
 
-  test("an organiser typing the URL is refused server-side", async ({
+  test("SCRUM-27 TC-27-12: an organiser typing the URL is refused server-side", async ({
     page,
   }) => {
     await signIn(page, "organiser@test.local");

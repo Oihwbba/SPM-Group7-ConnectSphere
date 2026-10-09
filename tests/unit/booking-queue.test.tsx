@@ -37,14 +37,14 @@ const row: PendingBookingRow = {
 };
 
 describe("BookingQueue", () => {
-  it("SCRUM-52 AC1 — an empty queue says there is nothing pending rather than rendering nothing", () => {
+  it("SCRUM-52 [AC1]: an empty queue says there is nothing pending rather than rendering nothing", () => {
     const html = renderToStaticMarkup(<BookingQueue queue={[]} canDecide />);
 
     expect(html).toContain("No pending requests");
     expect(html).not.toContain("Approve");
   });
 
-  it("SCRUM-52 AC3 — a request is cross-checked against the venue: what it meets and what it does not", () => {
+  it("SCRUM-52 [AC3] TC-52-02: a request is cross-checked against the venue: what it meets and what it does not", () => {
     const html = renderToStaticMarkup(
       <BookingQueue queue={[row]} canDecide={false} />,
     );
@@ -74,7 +74,7 @@ describe("BookingQueue", () => {
 });
 
 describe("matchesSearch — SCRUM-52 search", () => {
-  it("SCRUM-52 — matches on event, venue, location, coordinator, email, facility, layout and date, ignoring case", () => {
+  it("SCRUM-52 [AC1] TC-52-05: matches on event, venue, location, coordinator, email, facility, layout and date, ignoring case", () => {
     for (const query of [
       "research symposium",
       "EXHIBITION",
@@ -89,12 +89,12 @@ describe("matchesSearch — SCRUM-52 search", () => {
     }
   });
 
-  it("SCRUM-52 — every word must match somewhere, so extra words narrow the results", () => {
+  it("SCRUM-52 [AC1] TC-52-05: every word must match somewhere, so extra words narrow the results", () => {
     expect(matchesSearch(row, "hall projector")).toBe(true);
     expect(matchesSearch(row, "hall boardroom")).toBe(false);
   });
 
-  it("SCRUM-52 — an empty or blank search shows everything", () => {
+  it("SCRUM-52 [AC1] TC-52-05: an empty or blank search shows everything", () => {
     expect(matchesSearch(row, "")).toBe(true);
     expect(matchesSearch(row, "   ")).toBe(true);
   });

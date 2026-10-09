@@ -87,7 +87,7 @@ defect, e.g. `regression: a blank rejection reason was accepted`.
 
 | Story | Owner | Test cases | Status |
 |---|---|---|---|
-| [SCRUM-27](SCRUM-27.md) | Jin Hong | 13 | Written with the story; every case automated |
+| [SCRUM-27](SCRUM-27.md) | Jin Hong | 15 | Written with the story; every case automated |
 | [SCRUM-28](SCRUM-28.md) | Jin Hong | 11 | Written with the story; every case automated |
 | [SCRUM-31](SCRUM-31.md) | Jun Bin | 11 | Written from the acceptance criteria and existing tests; TC-31-04, -05 and -09 are partly manual |
 | [SCRUM-36](SCRUM-36.md) | Caylern Goh | 8 | Automated; a real screen-reader pass is manual |

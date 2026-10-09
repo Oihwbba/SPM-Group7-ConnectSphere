@@ -60,7 +60,7 @@ beforeEach(() => {
   db.equipmentRequest.findMany.mockResolvedValue([]);
 });
 
-describe("getPoolAvailability — SCRUM-28 AC 3", () => {
+describe("getPoolAvailability — SCRUM-28 [AC1, AC4]", () => {
   it("reports each active type's busiest instant in the period, counting confirmed reservations and outages", async () => {
     db.reservation.findMany.mockResolvedValue([
       { equipmentId: "eqp_lectern", startAt: START, endAt: END, quantity: 2 },
@@ -94,7 +94,7 @@ describe("getPoolAvailability — SCRUM-28 AC 3", () => {
 });
 
 describe("getEquipmentRequestQueue — SCRUM-28", () => {
-  it("AC 1 & 5: reads every request, oldest first, with each line's equipment details and the history", async () => {
+  it("SCRUM-28 [AC1, AC6] TC-28-01, TC-28-10: reads every request, oldest first, with each line's equipment details and the history", async () => {
     await getEquipmentRequestQueue();
 
     const query = db.equipmentRequest.findMany.mock.calls[0][0];
@@ -120,7 +120,7 @@ describe("getEquipmentRequestQueue — SCRUM-28", () => {
     ]);
   });
 
-  it("AC 3: an open request's lines carry what is free for the event, and a short line its alternatives", async () => {
+  it("SCRUM-28 [AC1, AC4] TC-28-01, TC-28-07: an open request's lines carry what is free for the event, and a short line its alternatives", async () => {
     db.equipmentRequest.findMany.mockResolvedValue([request()]);
     db.reservation.findMany.mockResolvedValue([
       { equipmentId: "eqp_lectern", startAt: START, endAt: END, quantity: 2 },

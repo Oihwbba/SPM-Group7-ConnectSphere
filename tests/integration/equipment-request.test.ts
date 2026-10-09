@@ -93,7 +93,7 @@ describe.skipIf(!usesLocalDatabase)(
       await prisma.$disconnect();
     });
 
-    it("AC 1, 2, 5 & 6: saves the request, its lines and its first history entry as Pending Review", async () => {
+    it("SCRUM-27 [AC5, AC6] TC-27-07, TC-27-08: saves the request, its lines and its first history entry as Pending Review", async () => {
       const result = await createEquipmentRequest(request(eventId));
 
       expect(result.ok).toBe(true);
@@ -128,7 +128,7 @@ describe.skipIf(!usesLocalDatabase)(
       ]);
     });
 
-    it("AC 4: the database itself refuses a second line of the same type on one request", async () => {
+    it("SCRUM-27 [AC4] TC-27-06: the database itself refuses a second line of the same type on one request", async () => {
       const result = await createEquipmentRequest(request(eventId));
       if (!result.ok) throw new Error(result.error);
 
@@ -143,7 +143,7 @@ describe.skipIf(!usesLocalDatabase)(
       ).rejects.toMatchObject({ code: "P2002" });
     });
 
-    it("AC 7: a second submission for the same event returns the request pending review", async () => {
+    it("SCRUM-27 [AC7] TC-27-09: a second submission for the same event returns the request pending review", async () => {
       const first = await createEquipmentRequest(request(eventId));
       const second = await createEquipmentRequest(request(eventId));
 
@@ -155,7 +155,7 @@ describe.skipIf(!usesLocalDatabase)(
       );
     });
 
-    it("AC 7: two submissions at the same moment leave one request, and both are shown it", async () => {
+    it("SCRUM-27 [AC7] TC-27-10: two submissions at the same moment leave one request, and both are shown it", async () => {
       const results = await Promise.all([
         createEquipmentRequest(request(eventId)),
         createEquipmentRequest(request(eventId)),
@@ -173,7 +173,7 @@ describe.skipIf(!usesLocalDatabase)(
       );
     });
 
-    it("AC 7: the index is what enforces one open request, not just the action", async () => {
+    it("SCRUM-27 [AC7] TC-27-10: the index is what enforces one open request, not just the action", async () => {
       const first = await createEquipmentRequest(request(eventId));
       if (!first.ok) throw new Error(first.error);
 
@@ -184,7 +184,7 @@ describe.skipIf(!usesLocalDatabase)(
       ).rejects.toBeInstanceOf(Prisma.PrismaClientKnownRequestError);
     });
 
-    it("AC 7 boundary: once the open request is decided, a new one can be raised", async () => {
+    it("SCRUM-27 [AC7] TC-27-11: once the open request is decided, a new one can be raised", async () => {
       const first = await createEquipmentRequest(request(eventId));
       if (!first.ok) throw new Error(first.error);
       await prisma.equipmentRequest.update({
@@ -200,7 +200,7 @@ describe.skipIf(!usesLocalDatabase)(
       );
     });
 
-    it("AC 1: another coordinator cannot raise a request for this event, and nothing is written", async () => {
+    it("SCRUM-27 [AC1] TC-27-02: another coordinator cannot raise a request for this event, and nothing is written", async () => {
       (auth as unknown as Mock).mockResolvedValue(
         coordinatorSession(OTHER_COORDINATOR),
       );
@@ -216,7 +216,7 @@ describe.skipIf(!usesLocalDatabase)(
       );
     });
 
-    it("AC 1: offers the coordinator their going-ahead events, and not one still under review or someone else's", async () => {
+    it("SCRUM-27 [AC1] TC-27-01: offers the coordinator their going-ahead events, and not one still under review or someone else's", async () => {
       const offered = (await getRequestableEvents(COORDINATOR)).map(
         (event) => event.id,
       );

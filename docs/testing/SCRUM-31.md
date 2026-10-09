@@ -14,8 +14,8 @@ Format and conventions: [README.md](README.md).
 > | TC-31-03 | [TC-155-05](SCRUM-155.md#tc-155-05); the live shortfall in `e2e/equipment.spec.ts` › "SCRUM-29 AC 3: …" |
 > | TC-31-05, -06 | `tests/integration/concurrency.test.ts` › "concurrency — equipment pool (SCRUM-31)", now reserving approved requests |
 > | TC-31-07, -09 | [TC-155-09](SCRUM-155.md#tc-155-09) |
-> | TC-31-08 | unchanged: `tests/unit/reservation.test.ts` › "AC 7: deducts confirmed reservations and maintenance from the pool" |
-> | TC-31-10 | [TC-155-10](SCRUM-155.md#tc-155-10); `tests/integration/equipment-availability.test.ts` › "reserves for a Planning event, and refuses a Confirmed one without writing" |
+> | TC-31-08 | unchanged: `tests/unit/reservation.test.ts` › "SCRUM-31 [AC7] TC-31-08: deducts confirmed reservations and maintenance from the pool" |
+> | TC-31-10 | [TC-155-10](SCRUM-155.md#tc-155-10); `tests/integration/equipment-availability.test.ts` › "SCRUM-31, SCRUM-81 TC-31-10, TC-81-12: reserves for a Planning event, and refuses a Confirmed one without writing" |
 > | TC-31-11 | `tests/unit/request-reservation.test.ts` (roles without `equipment:reserve` are refused) |
 
 **Shared pre-conditions for every case:** the database is migrated and seeded
@@ -52,7 +52,7 @@ needs them.
 | Test Data | Event: Approved — Research Symposium <br> Equipment type: Lectern (4 total) <br> Start: 2031-05-10 09:00 <br> End: 2031-05-10 17:00 <br> Quantity: 1 |
 | Expected Result | Step 3 shows "N unit(s) available for this period" (and N of total in live table). Step 4 shows "Reservation confirmed. N−1 unit(s) remain available." and a reservation with status CONFIRMED and quantity 1 exists. Step 5 shows N−1 available. |
 
-**Automated by:** `e2e/equipment.spec.ts` › "AC 1 & 7: a reservation that fits is confirmed and reduces availability"; `tests/unit/reservation.test.ts` › "AC 1 & 2: a quantity that fits is CONFIRMED, linked to the event, and availability drops by exactly that amount"
+**Automated by:** `tests/unit/request-reservation.test.ts` › "SCRUM-155 [AC3] TC-155-04: rows that all fit are reserved together, each Confirmed and linked to the event and the request"; `tests/integration/request-reservation.test.ts` › "SCRUM-155 [AC3] TC-155-04: reserves every row together, Confirmed and linked to the event and the request"; `e2e/request-reservation.spec.ts` › "SCRUM-155 [AC3, AC6] TC-155-04, TC-155-06: …"
 
 ### TC-31-02
 
@@ -65,7 +65,7 @@ needs them.
 | Test Data | Event ID: `evt_approved` (Approved — Research Symposium) <br> Equipment type: Lectern <br> Start: 2031-05-11 09:00 <br> End: 2031-05-11 17:00 <br> Quantity: 1 |
 | Expected Result | The reservation's `eventId` is `evt_approved`, `reservedById` is the Technical Support user, and the reservation offers no way to move it to another event. |
 
-**Automated by:** `tests/unit/reservation.test.ts` › "AC 1 & 2: a quantity that fits is CONFIRMED, linked to the event, and availability drops by exactly that amount"
+**Automated by:** `tests/unit/request-reservation.test.ts` › "SCRUM-155 [AC3] TC-155-04: rows that all fit are reserved together, each Confirmed and linked to the event and the request"; `tests/integration/request-reservation.test.ts` › "SCRUM-155 [AC3] TC-155-04: reserves every row together, Confirmed and linked to the event and the request"
 
 ### TC-31-03
 
@@ -78,7 +78,7 @@ needs them.
 | Test Data | Event: Approved — Research Symposium <br> Equipment type: Lectern (4 total) <br> Start: 2031-05-10 09:00 <br> End: 2031-05-10 17:00 <br> Quantity: 99 |
 | Expected Result | "Only N of 4 unit(s) are available for this period — (99−N) short." is shown. No reservation is created and availability is unchanged. |
 
-**Automated by:** `e2e/equipment.spec.ts` › "AC 3: requesting more than the pool is refused and the shortfall is shown"; `tests/unit/reservation.test.ts` › "AC 3: over-allocation is refused and the shortfall is shown"
+**Automated by:** `tests/unit/request-reservation.test.ts` › "SCRUM-155 [AC4] TC-155-05: one short row reserves nothing, and only that row reports what is free and the shortfall"; `tests/integration/request-reservation.test.ts` › "SCRUM-155 [AC4] TC-155-05: when one row is short, nothing is reserved — not even the rows that fit"
 
 ### TC-31-04
 
@@ -91,7 +91,7 @@ needs them.
 | Test Data | Equipment type: Lectern (4 total) <br> Start: 2031-05-12 09:00 <br> End: 2031-05-12 17:00 <br> Step 1 quantity: 4 <br> Step 3 quantity: 1 |
 | Expected Result | Step 1 is confirmed with "0 unit(s) remain available." Step 2 shows 0 available. Step 3 is refused with "Only 0 of 4 unit(s) are available for this period — 1 short." |
 
-**Automated by:** `tests/unit/reservation.test.ts` › "AC 1 & 2: a quantity that fits is CONFIRMED, linked to the event, and availability drops by exactly that amount" (5 of 5 available, leaving 0). Step 3 is **Manual**.
+**Automated by:** `tests/unit/request-reservation.test.ts` › "SCRUM-155 [AC3] TC-155-04: rows that all fit are reserved together, each Confirmed and linked to the event and the request"; `tests/integration/request-reservation.test.ts` › "SCRUM-155 [AC3] TC-155-04: …". Step 3 is **Manual**.
 
 ### TC-31-05
 
@@ -104,7 +104,7 @@ needs them.
 | Test Data | Pool: 1 unit <br> Middle: 2031-03-02 09:00–12:00 <br> Before: 2031-03-02 06:00–09:00 <br> After: 2031-03-02 12:00–15:00 <br> Quantity: 1 each |
 | Expected Result | All three reservations are confirmed, and the unit is never counted twice. A fourth reservation from 11:59 to 12:30, which does overlap, is refused as 1 short. |
 
-**Automated by:** `tests/integration/concurrency.test.ts` › "accepts reservations that touch at an endpoint — periods sharing an endpoint do not overlap (SCRUM-31)" (real Postgres); `tests/unit/reservation.test.ts` › "AC 4: overlap is half-open — a period that only touches another does not count against it". The overlapping fourth reservation is **Manual**.
+**Automated by:** `tests/integration/concurrency.test.ts` › "SCRUM-31 [AC4] TC-31-05: accepts reservations that touch at an endpoint — periods sharing an endpoint do not overlap" (real Postgres); `tests/unit/reservation.test.ts` › "SCRUM-31 [AC4] TC-31-05: overlap is half-open — a period that only touches another does not count against it". The overlapping fourth reservation is **Manual**.
 
 ### TC-31-06
 
@@ -117,7 +117,7 @@ needs them.
 | Test Data | Pool: 1 unit <br> Period: 2031-03-01 09:00–13:00 <br> Quantity: 1 in each session |
 | Expected Result | Exactly one session shows "Reservation confirmed"; the other is refused as 1 short. The total reserved for the period is 1, never 2. |
 
-**Automated by:** `tests/integration/concurrency.test.ts` › "does not over-allocate equipment when two staff reserve the last unit (SCRUM-31)" (real Postgres, simultaneous calls); `tests/unit/reservation.test.ts` › "AC 5: the equipment row is locked before availability is counted"
+**Automated by:** `tests/integration/concurrency.test.ts` › the SCRUM-31 pool-race test, now reserving approved requests; `tests/unit/request-reservation.test.ts` › "SCRUM-155 [AC5] TC-155-08, TC-155-15: locks the event, then the request, then the equipment rows in id order, before reading or counting anything"
 
 ### TC-31-07
 
@@ -130,7 +130,7 @@ needs them.
 | Test Data | Equipment type: Lectern <br> Period: 2031-05-10 09:00–17:00 <br> Quantities: 0, -1, 1.5, blank |
 | Expected Result | Each attempt shows "Please fix the reservation details." and an inline error message appears below the Quantity input. No reservation is created and availability is unchanged. |
 
-**Automated by:** `tests/unit/reservation.test.ts` › "AC 6: quantity %s is reported invalid and nothing is created" (0, -1, 1.5, blank); `e2e/equipment.spec.ts` › "AC 6: a quantity of zero is refused"
+**Automated by:** `tests/unit/request-reservation.test.ts` › "SCRUM-155 [AC7] TC-155-09: invalid rows or periods reserve nothing and say where the problem is"; `e2e/equipment.spec.ts` › "SCRUM-29 AC 7: a quantity of zero asks for at least one"
 
 ### TC-31-08
 
@@ -143,7 +143,7 @@ needs them.
 | Test Data | Equipment type: Projector (10 total) <br> Period: inside `eun_projector_repair` (see `prisma/seed.ts`) <br> Step 3 quantity: 2 |
 | Expected Result | Step 2 shows 10 − 3 (maintenance) − any overlapping confirmed reservations. Step 4 shows exactly 2 fewer. Cancelled reservations are not deducted. |
 
-**Automated by:** `tests/unit/reservation.test.ts` › "AC 7: deducts confirmed reservations and maintenance from the pool" (pool 10, 3 reserved, 2 in maintenance, 5 available)
+**Automated by:** `tests/unit/reservation.test.ts` › "SCRUM-31 [AC7] TC-31-08: deducts confirmed reservations and maintenance from the pool" (pool 10, 3 reserved, 2 in maintenance, 5 available)
 
 ### TC-31-09
 
@@ -156,7 +156,7 @@ needs them.
 | Test Data | Equipment type: Lectern <br> Quantity: 1 <br> Case A (zero length): Start 2031-05-10 09:00, End 2031-05-10 09:00 <br> Case B (reversed): Start 2031-05-10 17:00, End 2031-05-10 09:00 |
 | Expected Result | Both cases are refused with End reported as invalid via an inline error message below the End field. No reservation is created. |
 
-**Automated by:** `tests/unit/reservation.test.ts` › "refuses a period whose end is not after its start" (reserve, case A). Case B, and both cases on **Check availability**, are **Manual**.
+**Automated by:** `tests/unit/reservation.test.ts` › "SCRUM-31 TC-31-09: refuses a period whose end is not after its start" (case A). Case B, and both cases on **Check availability**, are **Manual**.
 
 ### TC-31-10
 
@@ -169,7 +169,7 @@ needs them.
 | Test Data | Events: `evt_planning`, `evt_confirmed` <br> Equipment type: Lectern <br> Period: 2031-05-10 09:00–17:00 <br> Quantity: 1 |
 | Expected Result | Step 1: the list offers the Approved and Planning events, not the Confirmed one. Step 2: the reservation is confirmed — a Planning event can raise an equipment request (SCRUM-27 AC 1), so its request must be fulfillable. Step 3: "Reservations can only be made for an approved event." No reservation is created. |
 
-**Automated by:** `tests/unit/reservation.test.ts` › "only reserves for an event that can take an equipment request (Approved or Planning)"; `tests/integration/equipment-availability.test.ts` › "reserves for a Planning event, and refuses a Confirmed one without writing"; `e2e/equipment.spec.ts` › "offers Approved and Planning events to reserve for, but not a Confirmed one"
+**Automated by:** `tests/unit/equipment-request-queries.test.ts` › "SCRUM-27 [AC1] TC-27-01: stock can be reserved for exactly the events that can take a request"; `tests/integration/equipment-availability.test.ts` › "SCRUM-31, SCRUM-81 TC-31-10, TC-81-12: reserves for a Planning event, and refuses a Confirmed one without writing"; `tests/integration/request-reservation.test.ts` › "SCRUM-155 [AC1] TC-155-10: …"
 
 ### TC-31-11
 
@@ -182,4 +182,4 @@ needs them.
 | Test Data | Roles: ORGANISER, COORDINATOR, VENUE_STAFF, ATTENDEE (seeded `@test.local` accounts, password `Password123!`) <br> Equipment type: Lectern <br> Quantity: 1 |
 | Expected Result | Each reservation attempt is refused with a permission message, and nothing is written. Attendee's availability check is refused without reading the equipment. |
 
-**Automated by:** `tests/unit/reservation.test.ts` › "refuses %s and never opens a transaction" (all four roles), "refuses a role without equipment:read"
+**Automated by:** `tests/unit/request-reservation.test.ts` › "refuses a role without equipment:reserve before reading anything"; `tests/unit/reservation.test.ts` › "refuses a role without equipment:read"

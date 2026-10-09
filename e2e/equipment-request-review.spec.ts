@@ -92,7 +92,7 @@ test.describe("SCRUM-28 — Review and Update Equipment Request", () => {
     await prisma.event.deleteMany({ where: { name: { startsWith: RIG } } });
   });
 
-  test("AC 1: a pending request shows every line's equipment details, requirements and availability", async ({
+  test("SCRUM-28 [AC1] TC-28-01: a pending request shows every line's equipment details, requirements and availability", async ({
     page,
   }) => {
     const rig = await makeRig("details");
@@ -124,7 +124,7 @@ test.describe("SCRUM-28 — Review and Update Equipment Request", () => {
     );
   });
 
-  test("AC 2, 4 & 5: reviewing then approving updates the status, notifies the coordinator and logs each change", async ({
+  test("SCRUM-28 [AC2, AC3, AC5, AC6] TC-28-02, TC-28-03, TC-28-09, TC-28-10: reviewing then approving updates the status, notifies the coordinator and logs each change", async ({
     page,
   }) => {
     const rig = await makeRig("approve");
@@ -166,7 +166,7 @@ test.describe("SCRUM-28 — Review and Update Equipment Request", () => {
     expect(notifications[1].message).toContain("is now Approved");
   });
 
-  test("AC 2: rejecting needs a reason, and the reason is recorded", async ({
+  test("SCRUM-28 [AC3] TC-28-04: rejecting needs a reason, and the reason is recorded", async ({
     page,
   }) => {
     const rig = await makeRig("reject");
@@ -206,7 +206,7 @@ test.describe("SCRUM-28 — Review and Update Equipment Request", () => {
   // status, "Rejected with the reason". The reason is required on rejection
   // (SCRUM-28 AC3), so it has to be on the card they read, not only inside the
   // collapsed history log.
-  test("AC 8: the coordinator sees a rejected request with its reason, without opening the history", async ({
+  test("SCRUM-27 [AC8] TC-27-14: the coordinator sees a rejected request with its reason, without opening the history", async ({
     page,
   }) => {
     const rig = await makeRig("reason-visible");
@@ -232,7 +232,7 @@ test.describe("SCRUM-28 — Review and Update Equipment Request", () => {
     );
   });
 
-  test("AC 3, 4 & 5: an unavailable line gets an alternative, and the coordinator sees it and the history", async ({
+  test("SCRUM-28 [AC4, AC5, AC6] TC-28-07, TC-28-09, TC-28-10: an unavailable line gets an alternative, and the coordinator sees it and the history", async ({
     page,
   }) => {
     const rig = await makeRig("suggest");
