@@ -28,10 +28,12 @@ import { rejectPlanningEvent } from "@/app/(app)/events/actions";
 // SCRUM-163 against a real, seeded Postgres: what holding, confirming,
 // releasing and rejecting write, what a live or lapsed hold blocks, and two
 // holds placed at the same moment. Only the session is mocked. These write
-// (a throwaway Coordinator, their events, a venue and its bookings), so they
-// only run on a localhost database. The events belong to their own
-// Coordinator so that rejecting one here never shows in another suite's list
-// of usr_coordinator's events.
+// (their own events, a venue and its bookings), so they only run on a
+// localhost database. The events belong to the second seeded Coordinator:
+// bookings.test.ts reads usr_coordinator's bookable events in two steps, and
+// rejecting one of these between them would fail it. A throwaway Coordinator
+// won't do either, since automatic assignment (SCRUM-20) in a suite running
+// alongside could hand it an event and stop it being deleted.
 vi.mock("@/auth", () => ({ auth: vi.fn() }));
 const mockAuth = auth as unknown as Mock;
 
@@ -46,7 +48,8 @@ const session = (
   user: { id, role, name: id, email: `${id}@test.local` },
   expires: "2999-01-01T00:00:00.000Z",
 });
-const COORDINATOR_ID = `usr_hold_coordinator_${Date.now()}`;
+const COORDINATOR_ID = "usr_coordinator_2";
+const STAMP = Date.now();
 const COORDINATOR = session(COORDINATOR_ID, "COORDINATOR");
 const VENUE_STAFF = session("usr_venuestaff", "VENUE_STAFF");
 
@@ -147,20 +150,11 @@ describe.skipIf(!usesLocalDatabase)(
         endAt: new Date(start.getTime() + 4 * HOUR),
         expectedAttendance: 40,
       };
-      await prisma.user.create({
-        data: {
-          id: COORDINATOR_ID,
-          email: `${COORDINATOR_ID}@test.local`,
-          name: "Hold Test Coordinator",
-          passwordHash: "x",
-          role: "COORDINATOR",
-        },
-      });
       eventIds = [];
       for (const n of [1, 2, 3]) {
         const event = await prisma.event.create({
           data: {
-            name: `Hold test event ${n} ${COORDINATOR_ID}`,
+            name: `Hold test event ${n} ${STAMP}`,
             status: "PLANNING",
             organiserId: "usr_organiser",
             coordinatorId: COORDINATOR_ID,
@@ -191,7 +185,6 @@ describe.skipIf(!usesLocalDatabase)(
       await clear();
       await prisma.venue.delete({ where: { id: venueId } });
       await prisma.event.deleteMany({ where: { id: { in: eventIds } } });
-      await prisma.user.delete({ where: { id: COORDINATOR_ID } });
     });
 
     it("SCRUM-163 [AC1, AC5] TC-163-01, TC-163-09: holding a pending request saves its expiry and note, and writes the Coordinator's three notices", async () => {
