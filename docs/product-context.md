@@ -38,8 +38,8 @@ status, one assigned Coordinator, and arrangements that can't clash.
 | **Venue Staff** | ConnectSphere staff | Reviews venue booking requests and approves or rejects them, and records when a venue is unavailable (maintenance, closure). | Bookings |
 | **Technical Support Staff** | ConnectSphere staff | Reviews equipment requests, checks equipment availability, and reserves what was approved. | Equipment |
 | **Attendee** | External | Browses events open for registration, registers, and sees their own registrations. Never sees internal planning information. | Browse Events |
-| **Event Coordinator Lead** | ConnectSphere staff | Will assign and reassign submitted requests to Coordinators from an unassigned queue (SCRUM-165). Can't approve, reject, plan or edit an event. The role exists since SCRUM-172; until SCRUM-164 and SCRUM-165 land it only reads its own notifications. | Notifications |
-| **Safety Officer** | ConnectSphere staff | Will review an event's venue and equipment arrangements before it can be confirmed (SCRUM-166). Can't approve, reject, plan or edit an event. The role exists since SCRUM-172; until SCRUM-164 and SCRUM-166 land it only reads its own notifications. | Notifications |
+| **Event Coordinator Lead** | ConnectSphere staff | Will assign and reassign submitted requests to Coordinators from an unassigned queue (SCRUM-165). Can't approve or reject a request, or confirm, plan or edit an event. The role exists since SCRUM-172; until SCRUM-164 and SCRUM-165 land it only reads its own notifications. | Notifications |
+| **Safety Officer** | ConnectSphere staff | Will review an event's venue and equipment arrangements before it can be confirmed, and approve, reject or request changes on that safety check (SCRUM-166). Can't confirm, plan or edit the event: its approval doesn't confirm it; the Coordinator still does (SCRUM-166 AC14). The role exists since SCRUM-172; until SCRUM-164 and SCRUM-166 land it only reads its own notifications. | Notifications |
 
 Each account has one role today. The customer has said an account may hold
 several, which is in the backlog (SCRUM-121).

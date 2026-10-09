@@ -57,7 +57,10 @@ internal roles, `COORDINATOR_LEAD` and `SAFETY_OFFICER` (SCRUM-164; SCRUM-172
 added them to the database): the **Event Coordinator Lead**, who assigns and
 reassigns requests from an unassigned queue (SCRUM-165), and the **Safety
 Officer**, who reviews an event's arrangements before it can be confirmed
-(SCRUM-166). Neither can approve, reject, plan or edit an event. Until those
+(SCRUM-166) and records the safety check's outcome: Approved, Changes
+requested or Rejected. Neither can confirm, plan or edit an event, nor approve or reject an
+event request, which is the Coordinator's decision (SCRUM-19); the Safety
+Officer's approval doesn't confirm the event (SCRUM-166 AC14). Until those
 stories land, each may only read its own notifications (`ROLE_ACTIONS` in
 `lib/auth/can.ts`), and no seeded account holds either role.
 
