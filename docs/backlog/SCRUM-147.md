@@ -10,7 +10,7 @@
 | **Epic** | - |
 | **Priority** | High |
 | **Story points** | 2 |
-| **Status in Jira** | In Review |
+| **Status in Jira** | Done |
 | **Sprint** | SCRUM Sprint 3 |
 | **Jira** | https://smu-spm-group7.atlassian.net/browse/SCRUM-147 |
 

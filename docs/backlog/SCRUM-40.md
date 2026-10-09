@@ -31,7 +31,7 @@
 9. The judgement is advisory: it never blocks a booking request (SCRUM-50) or confirmation (SCRUM-110). A booking's attendance above the venue's capacity is refused by SCRUM-50 whatever the judgement says. Whether the venues together suit the whole audience is judged in the safety check (SCRUM-166).
 10. The judgement and note are shown to Venue Staff on the booking request they review (SCRUM-52).
 
-**Customer basis:** "Currently it is based on human judgement, co-ordinator will update." "Yes, accessibility/layout mismatches count and should be reflected by the co-ordinator on suitability." Week 7 change 3: "Each venue should be checked independently for suitability, availability, and conflicts."
+**Customer basis:** "Yes, accessibility/layout mismatches count and should be reflected by the co-ordinator on suitability." Week 7 change 3: "Each venue should be checked independently for suitability, availability, and conflicts."
 
 **Change log**
 
