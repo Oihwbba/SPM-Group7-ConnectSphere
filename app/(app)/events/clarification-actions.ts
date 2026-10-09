@@ -103,7 +103,8 @@ export async function requestClarification(
           userId: event.organiserId,
           type: "CLARIFICATION_REQUESTED",
           title: "Clarification requested",
-          message: `Your coordinator has asked a question about "${event.name}".`,
+          // SCRUM-45 AC8: with what is needed.
+          message: `Your coordinator has asked a question about "${event.name}": ${message}`,
           eventId,
         },
       });

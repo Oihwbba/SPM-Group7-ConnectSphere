@@ -164,7 +164,8 @@ describe("rejectPlanningEvent — SCRUM-117", () => {
         userId: "usr_org",
         type: "EVENT_STATUS_CHANGED",
         title: "Your event was rejected",
-        message: `"Concert" couldn't be arranged and was rejected: ${REASON}`,
+        // SCRUM-45 AC3: with what the Organiser can do next.
+        message: `"Concert" couldn't be arranged and was rejected: ${REASON} What you can do next: Submit as a new request.`,
         eventId: "evt1",
       },
     });
