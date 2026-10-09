@@ -199,7 +199,7 @@ _2 stories, 5 points_
 | [SCRUM-144](SCRUM-144.md) | [COVERED BY SCRUM-75 AND SCRUM-171] Enable registration and enforce event cutoff | Backlog | Done |
 | [SCRUM-145](SCRUM-145.md) | Resync test documentation with the current acceptance criteria | SCRUM Sprint 3 | In Review |
 | [SCRUM-146](SCRUM-146.md) | Remove stale story references | Backlog | To Do |
-| [SCRUM-147](SCRUM-147.md) | Update data-model documentation | SCRUM Sprint 3 | In Review |
+| [SCRUM-147](SCRUM-147.md) | Update data-model documentation | SCRUM Sprint 3 | Done |
 | [SCRUM-148](SCRUM-148.md) | Close or rework obsolete equipment PR | SCRUM Sprint 3 | To Do |
 | [SCRUM-149](SCRUM-149.md) | [SUPERSEDED BY SCRUM-162] Use event attendance in venue booking | Backlog | Done |
 | [SCRUM-150](SCRUM-150.md) | [DUPLICATE OF SCRUM-108] Implement field-level clarification response | Backlog | Done |
@@ -208,5 +208,5 @@ _2 stories, 5 points_
 | [SCRUM-157](SCRUM-157.md) | Chore: Refresh the project docs so people and AI tools read one consistent, current guide | SCRUM Sprint 2 | Done |
 | [SCRUM-158](SCRUM-158.md) | Week 7 customer changes (received 2 Oct) – apply to Product Backlog | Backlog | Done |
 | [SCRUM-168](SCRUM-168.md) | Remove the placeholder search bar from the top bar | SCRUM Sprint 3 | Done |
-| [SCRUM-169](SCRUM-169.md) | Backlog Sync: update docs/backlog from Jira after the 7 Oct changes | SCRUM Sprint 3 | In Review |
-| [SCRUM-172](SCRUM-172.md) | Week 7 database migration: schema and booking rules in one migration | SCRUM Sprint 3 | In Review |
+| [SCRUM-169](SCRUM-169.md) | Backlog Sync: update docs/backlog from Jira after the 7 Oct changes | SCRUM Sprint 3 | Done |
+| [SCRUM-172](SCRUM-172.md) | Week 7 database migration: schema and booking rules in one migration | SCRUM Sprint 3 | Done |

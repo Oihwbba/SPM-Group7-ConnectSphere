@@ -28,7 +28,7 @@
 6. The assigned Coordinator can add operational notes at any status except Cancelled. Any Venue Staff member can add them once the event has a venue booking (Pending, Held or Approved), and any Technical Support Staff member once it has an equipment request. Notes cannot be edited or deleted, show author and time, and are visible to internal users who can view the event and to the event's Organiser.
 7. Any other user, including a previous Coordinator, is refused with no change (SCRUM-67).
 
-**Customer basis:** "Organiser cannot directly edit after submission; must request via Coordinator." "Once it is confirmed, information fields should not be changed." "The Event Coordinator can edit event details… Venue Staff and Technical Support Staff can update venue/equipment preparation details for the event requested." "Event Information Management stores operational notes. Authorised users participated in the event workflow can view."
+**Customer basis:** "Organiser cannot directly edit after submission; must request via Coordinator."
 
 **Change log**
 

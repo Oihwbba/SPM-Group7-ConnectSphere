@@ -31,7 +31,7 @@
 9. Given the event returns to Planning (SCRUM-128, SCRUM-26), then registration pauses. When the event is Confirmed again, the same window applies; if its closing time has passed, registration stays closed until I reopen it, and it is then open until the event's start (AC6).
 10. Registration times are shown in Singapore time (SCRUM-129).
 
-**Customer basis:** "Registration may opens once event is confirmed; organiser control timing." "Registration period can be extended; waiting list supported. At the moment closure is based on Organiser discretion and manually close the registration." The waiting list in the second answer is beyond Release 1 (SCRUM-79).
+**Customer basis:** The waiting list is beyond Release 1 (SCRUM-79).Step 11: Attendees register for the confirmed event during the permitted registration period.The G4 Attendee Registration answer: registration is first come, first served and also at the Organiser’s discretion.
 
 **Change log**
 
