@@ -18,7 +18,11 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { confirmEvent, rejectPlanningEvent } from "@/app/(app)/events/actions";
-import { confirmHold, releaseHold } from "@/app/(app)/bookings/actions";
+import {
+  confirmHold,
+  releaseHold,
+  withdrawBookingRequest,
+} from "@/app/(app)/bookings/actions";
 import { getEventReadiness } from "@/app/(app)/events/readiness-actions";
 import type { ReadinessChecklist as Checklist } from "@/lib/event-readiness";
 import { REJECTION_OUTCOME_LABEL } from "@/lib/schemas/event";
@@ -37,6 +41,7 @@ export function ReadinessChecklist({ eventId }: { eventId: string }) {
         canConfirm: boolean;
         canReject: boolean;
         canSettleHold: boolean;
+        canWithdrawBooking: boolean;
       })
     | null
   >(null);
@@ -67,20 +72,19 @@ export function ReadinessChecklist({ eventId }: { eventId: string }) {
     };
   }, [eventId, loads]);
 
-  // SCRUM-163 AC3: the assigned Coordinator confirms or releases a hold.
-  function settleHold(bookingId: string, how: "confirm" | "release") {
+  // SCRUM-163 AC3: the assigned Coordinator confirms or releases a hold, and
+  // SCRUM-142 AC4: withdraws a pending venue request.
+  const SETTLE = {
+    confirm: [confirmHold, "Hold confirmed: the venue is booked."],
+    release: [releaseHold, "Hold released: the venue is free again."],
+    withdraw: [withdrawBookingRequest, "Venue request withdrawn."],
+  } as const;
+  function settleHold(bookingId: string, how: keyof typeof SETTLE) {
+    const [action, done] = SETTLE[how];
     startSettle(async () => {
-      const result =
-        how === "confirm"
-          ? await confirmHold({ bookingId })
-          : await releaseHold({ bookingId });
+      const result = await action({ bookingId });
       if (!result.ok) toast.error(result.error);
-      else
-        toast.success(
-          how === "confirm"
-            ? "Hold confirmed: the venue is booked."
-            : "Hold released: the venue is free again.",
-        );
+      else toast.success(done);
       setLoads((n) => n + 1);
       router.refresh();
     });
@@ -188,6 +192,18 @@ export function ReadinessChecklist({ eventId }: { eventId: string }) {
                           Release hold
                         </Button>
                       </div>
+                    )}
+                    {item.pendingBookingId && checklist.canWithdrawBooking && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() =>
+                          settleHold(item.pendingBookingId!, "withdraw")
+                        }
+                        disabled={settling}
+                      >
+                        Withdraw request
+                      </Button>
                     )}
                   </div>
                 </li>

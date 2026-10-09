@@ -3,6 +3,7 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { summariseAvailability } from "@/lib/equipment/availability";
 import {
+  LIVE_LINE,
   OPEN_REQUEST_STATUSES,
   REQUESTABLE_EVENT_STATUSES,
   outstandingLines,
@@ -83,8 +84,18 @@ export async function getCoordinatorEquipmentRequests(coordinatorId: string) {
       status: true,
       notes: true,
       createdAt: true,
-      event: { select: { id: true, name: true, startAt: true, endAt: true } },
+      event: {
+        select: {
+          id: true,
+          name: true,
+          startAt: true,
+          endAt: true,
+          // SCRUM-142 AC5: whether its requests can still be changed.
+          status: true,
+        },
+      },
       lines: {
+        where: LIVE_LINE,
         select: {
           id: true,
           quantity: true,
@@ -174,6 +185,7 @@ export async function getEquipmentRequestQueue() {
         event: { select: { id: true, name: true, startAt: true, endAt: true } },
         requestedBy: { select: { name: true } },
         lines: {
+          where: LIVE_LINE,
           select: {
             id: true,
             quantity: true,
@@ -286,6 +298,7 @@ export async function getReservableRequests(now = new Date()) {
         },
       },
       lines: {
+        where: LIVE_LINE,
         select: {
           id: true,
           equipmentId: true,

@@ -1,6 +1,7 @@
 import type { BookingStatus, Prisma, PrismaClient } from "@prisma/client";
 
 import { bookingStatusAt } from "@/lib/booking-holds";
+import { LIVE_LINE } from "@/lib/equipment/requests";
 import { formatDateTime } from "@/lib/datetime";
 
 /**
@@ -20,6 +21,8 @@ export interface ChecklistItem {
   reason: string | null;
   /** SCRUM-163 AC3: the live hold the Coordinator can confirm or release. */
   heldBookingId?: string;
+  /** SCRUM-142 AC4: the pending venue request the Coordinator can withdraw. */
+  pendingBookingId?: string;
 }
 
 export interface ReadinessChecklist {
@@ -61,6 +64,7 @@ export async function getReadinessChecklist(
           status: true,
           createdAt: true,
           lines: {
+            where: LIVE_LINE,
             select: {
               equipmentId: true,
               quantity: true,
@@ -148,8 +152,14 @@ function venueItem(
       heldBookingId: held.id,
     };
   }
-  if (newestFirst.some((b) => b.status === "PENDING")) {
-    return { ...item, complete: false, state: "Pending" };
+  const pending = newestFirst.find((b) => b.status === "PENDING");
+  if (pending) {
+    return {
+      ...item,
+      complete: false,
+      state: "Pending",
+      pendingBookingId: pending.id,
+    };
   }
   if (approved.length > 0) {
     return { ...item, complete: false, state: "Approved for a different time" };

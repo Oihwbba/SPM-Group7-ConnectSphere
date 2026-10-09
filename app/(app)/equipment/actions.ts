@@ -16,7 +16,7 @@ import {
   CONFIRMED_HOLDS,
   reservableRequest,
 } from "@/lib/equipment/request-queries";
-import { outstandingLines } from "@/lib/equipment/requests";
+import { LIVE_LINE, outstandingLines } from "@/lib/equipment/requests";
 import { formatDateTime } from "@/lib/datetime";
 import { fieldErrorsByPath } from "@/lib/schemas/equipment-request";
 import {
@@ -332,7 +332,10 @@ export async function reserveEquipmentRequest(
                 reservations: CONFIRMED_HOLDS,
               },
             },
-            lines: { select: { equipmentId: true, quantity: true } },
+            lines: {
+              where: LIVE_LINE,
+              select: { equipmentId: true, quantity: true },
+            },
           },
         });
         // AC 6 — read under the event lock, which every reservation for the

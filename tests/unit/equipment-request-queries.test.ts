@@ -220,7 +220,9 @@ describe("getReservableRequests — SCRUM-155", () => {
     });
     expect(select.notes).toBe(true);
     expect(select.requestedBy).toEqual({ select: { name: true } });
+    // SCRUM-142 AC1: a line the Coordinator removed is left out.
     expect(select.lines).toEqual({
+      where: { removedAt: null },
       select: {
         id: true,
         equipmentId: true,

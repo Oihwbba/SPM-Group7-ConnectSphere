@@ -273,7 +273,11 @@ describe("reserveEquipmentRequest — SCRUM-155", () => {
             },
           },
         },
-        lines: { select: { equipmentId: true, quantity: true } },
+        // SCRUM-142 AC1: a line the Coordinator removed is left out.
+        lines: {
+          where: { removedAt: null },
+          select: { equipmentId: true, quantity: true },
+        },
       },
     });
   });

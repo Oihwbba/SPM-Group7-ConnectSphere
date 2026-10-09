@@ -90,7 +90,7 @@ stories land, each may only read its own notifications (`ROLE_ACTIONS` in
 | `Equipment` | A pooled *type* with a `totalQuantity`, not an individual asset (see decision 4.3). | SCRUM-27, 28 |
 | `EquipmentUnavailability` | A quantity of a type out of service for a period. Quantity-scoped, so three of ten projectors can be in for repair. | SCRUM-29, 30 |
 | `EquipmentRequest` | The coordinator's request header, with its review status (Pending Review, In Review, Approved, Rejected or Cancelled). Approving a request holds **no** stock: its status is separate from Reserved equipment, and only a reservation holds stock (decision 4.3b). | SCRUM-27, 28 |
-| `EquipmentRequestLine` | One line per equipment type, with quantity and free-text technical requirements, plus an optional suggested alternative. | SCRUM-27, 28 |
+| `EquipmentRequestLine` | One line per equipment type, with quantity and free-text technical requirements, plus an optional suggested alternative. A line the Coordinator removes is kept with `removedAt` set and left out by every reader (SCRUM-142); adding the type again brings the same row back. | SCRUM-27, 28, 142 |
 | `EquipmentRequestUpdate` | Append-only status history for a request. | SCRUM-28 |
 | `Reservation` | Committed equipment for an event and period — the only thing that holds stock. It is reserved from an approved equipment request (SCRUM-155), and `requestId` links it back so the system knows which of the request's lines are covered; the one-type form was made availability-only by SCRUM-156. Stored as `CONFIRMED`, shown everywhere as **Reserved** (SCRUM-131). | SCRUM-31, 155, 156 |
 

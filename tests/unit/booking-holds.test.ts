@@ -33,6 +33,7 @@ const db = vi.hoisted(() => ({
   venueUnavailability: { findMany: vi.fn() },
   notification: { createMany: vi.fn(), updateMany: vi.fn() },
   auditLog: { create: vi.fn() },
+  safetyCheck: { updateMany: vi.fn() },
   $transaction: vi.fn(),
 }));
 

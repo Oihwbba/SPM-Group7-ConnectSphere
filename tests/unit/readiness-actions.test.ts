@@ -89,6 +89,7 @@ describe("getEventReadiness — SCRUM-110", () => {
         canConfirm: true,
         canReject: true,
         canSettleHold: true,
+        canWithdrawBooking: true,
       },
     });
     expect(mockChecklist).toHaveBeenCalledWith(prisma, "evt_test");
@@ -107,6 +108,7 @@ describe("getEventReadiness — SCRUM-110", () => {
         canConfirm: false,
         canReject: false,
         canSettleHold: false,
+        canWithdrawBooking: false,
       },
     });
   });
