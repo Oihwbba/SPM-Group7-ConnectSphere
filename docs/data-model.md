@@ -33,9 +33,11 @@ AuditLog ──► (entityType, entityId) — any of the above, by reference not
 deliberate consequence of the customer's own framing — everything in
 ConnectSphere happens *to an event*.
 
-The tables that carry the six Week 7 customer changes (SCRUM-159 to 167) are
-introduced by one migration, SCRUM-172; until it merges they exist only as
-stories. Each is marked below.
+The tables, columns and roles that carry the six Week 7 customer changes
+(SCRUM-159 to 167) were added by SCRUM-172 on 2026-10-08, in one migration and
+a follow-up for the No equipment needed decision. They exist in the database
+now; the behaviour that uses them arrives with each story. Each is marked
+below.
 
 ---
 
@@ -49,12 +51,18 @@ stories. Each is marked below.
 | `Account`, `Session`, `VerificationToken` | Auth.js adapter tables. Unused today (we use JWT sessions — see `adr/0002`) but kept so an OAuth provider can be added without a migration. | — |
 | `AuditLog` | Append-only: who did what, when, and the before/after value. No `updatedAt` on purpose — entries "cannot be edited or deleted through the application". | SCRUM-71, and SCRUM-21's "a record exists of who was previously assigned" |
 
-**Roles.** Release 1 has five: Organiser, Coordinator, Venue Staff, Technical
-Support, Attendee. Week 7 (SCRUM-164, with SCRUM-172's migration) adds two
-internal roles — the **Event Coordinator Lead**, who assigns and reassigns
-requests from an unassigned queue (SCRUM-165), and the **Safety Officer**, who
-reviews an event's arrangements before it can be confirmed (SCRUM-166).
-Neither can approve, reject, plan or edit an event.
+**Roles.** The `Role` enum has seven values. Release 1's five are Organiser,
+Coordinator, Venue Staff, Technical Support and Attendee. Week 7 adds two
+internal roles, `COORDINATOR_LEAD` and `SAFETY_OFFICER` (SCRUM-164; SCRUM-172
+added them to the database): the **Event Coordinator Lead**, who assigns and
+reassigns requests from an unassigned queue (SCRUM-165), and the **Safety
+Officer**, who reviews an event's arrangements before it can be confirmed
+(SCRUM-166) and records the safety check's outcome: Approved, Changes
+requested or Rejected. Neither can confirm, plan or edit an event, nor approve or reject an
+event request, which is the Coordinator's decision (SCRUM-19); the Safety
+Officer's approval doesn't confirm the event (SCRUM-166 AC14). Until those
+stories land, each may only read its own notifications (`ROLE_ACTIONS` in
+`lib/auth/can.ts`), and no seeded account holds either role.
 
 ### Event lifecycle
 
@@ -64,7 +72,7 @@ Neither can approve, reject, plan or edit an event.
 | `ClarificationRequest` | A coordinator's question and the organiser's answer, and (`editableFields`) the request-form fields the answer may change (ADR 0014). | SCRUM-18, 108 |
 | `EventChangeRequest` | An organiser's post-submission change request, with its decision. | SCRUM-41, 42, 43, 47, 128 |
 | `ChangeRequestField` | One row per changed field, holding `oldValue`, `newValue` and `isMajor`. | SCRUM-42, 44 |
-| `SafetyCheck` | (Week 7, SCRUM-166; SCRUM-172 adds the table.) One row per check, all kept, holding its state — Awaiting review, Approved, Changes requested, Rejected or Outdated — the Safety Officer's note, who recorded the outcome and when, and when it went out of date. An event has at most one check awaiting review. It is a step within Planning, not an extra event status. | SCRUM-166 |
+| `SafetyCheck` | (Week 7, SCRUM-166; added by SCRUM-172.) One row per check, all kept, holding its state — Awaiting review, Approved, Changes requested, Rejected or Outdated — the Safety Officer's note, who recorded the outcome and when, and when it went out of date. An event has at most one check awaiting review. It is a step within Planning, not an extra event status. | SCRUM-166 |
 | `SafetyCheckArrangement` | (Week 7.) The arrangements a Safety Officer picked for Changes requested: each row is exactly one venue booking or one equipment reservation, at most once per check. | SCRUM-166 |
 
 ### Venues
