@@ -40,6 +40,8 @@ export type Action =
   | "booking:request" // SCRUM-50: coordinator asks for a venue for their event
   | "booking:review" // SCRUM-52: read the pending-request queue
   | "booking:decide" // SCRUM-53: approve or reject a pending request
+  | "booking:hold" // SCRUM-163: hold a pending request until a deadline
+  | "booking:settle-hold" // SCRUM-163: the assigned coordinator confirms or releases a hold
   | "unavailability:record" // SCRUM-37: record maintenance, closure, etc.
   | "equipment:read"
   | "equipment:reserve"
@@ -95,6 +97,7 @@ const ROLE_ACTIONS: Record<Role, Action[]> = {
     "equipment-request:create",
     "venue:availability",
     "booking:request",
+    "booking:settle-hold",
     "notification:read",
   ],
   // `venue:read` gates the Venue Catalogue page, which is Coordinator-only, so
@@ -104,6 +107,7 @@ const ROLE_ACTIONS: Record<Role, Action[]> = {
   VENUE_STAFF: [
     "booking:review",
     "booking:decide",
+    "booking:hold",
     "venue:availability",
     "unavailability:record",
     "notification:read",
@@ -146,11 +150,13 @@ function hasRelationship(
       if (user.role === "COORDINATOR") {
         if (resource.coordinatorId === user.id) return true;
         // Any coordinator may review a request nobody has picked up yet, but
-        // only the event's assigned coordinator may confirm it (SCRUM-81 AC 7)
-        // or reject it from Planning (SCRUM-117 AC 5).
+        // only the event's assigned coordinator may confirm it (SCRUM-81 AC 7),
+        // reject it from Planning (SCRUM-117 AC 5), or confirm or release its
+        // venue holds (SCRUM-163 AC3).
         return (
           action !== "event:confirm" &&
           action !== "event:reject" &&
+          action !== "booking:settle-hold" &&
           resource.coordinatorId === null &&
           resource.status !== "DRAFT"
         );

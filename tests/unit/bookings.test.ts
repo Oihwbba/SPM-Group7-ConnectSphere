@@ -410,7 +410,7 @@ describe("submitBookingRequest — SCRUM-50", () => {
     });
   });
 
-  it("SCRUM-50 [AC8] TC-50-07: an event that already has a pending or approved booking, for any venue, is shown it and nothing is created", async () => {
+  it("SCRUM-50 [AC8] TC-50-07, SCRUM-163 [AC4] TC-163-08: an event that already has a pending, approved or unexpired held booking, for any venue, is shown it and nothing is created", async () => {
     db.booking.findFirst.mockResolvedValue(summaryRow);
 
     const result = await submitBookingRequest(validRequest);
@@ -424,7 +424,10 @@ describe("submitBookingRequest — SCRUM-50", () => {
       expect.objectContaining({
         where: {
           eventId: "evt_1",
-          status: { in: ["PENDING", "HELD", "APPROVED"] },
+          OR: [
+            { status: { in: ["PENDING", "APPROVED"] } },
+            { status: "HELD", holdExpiresAt: { gt: expect.any(Date) } },
+          ],
         },
       }),
     );
@@ -810,7 +813,7 @@ describe("decideBookingRequest — SCRUM-53", () => {
     expect(result).toMatchObject({
       ok: false,
       error: expect.stringMatching(
-        /^Conflicting: .*approved at the same moment/,
+        /^Conflicting: .*approved or held at the same moment/,
       ),
     });
   });

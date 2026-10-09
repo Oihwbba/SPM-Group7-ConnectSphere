@@ -4,6 +4,7 @@ import type {
   VenueUnavailabilityReason,
 } from "@prisma/client";
 
+import { reservingWhere } from "@/lib/booking-holds";
 import { formatDateTime, parseSingaporeDateTime } from "@/lib/datetime";
 import { overlapping, overlaps, type Period } from "@/lib/period";
 import { UNAVAILABILITY_REASON_LABEL } from "@/lib/schemas/unavailability";
@@ -18,6 +19,8 @@ type Db = PrismaClient | Prisma.TransactionClient;
 export type BlockerDetails = { startAt: Date; endAt: Date } & (
   | {
       kind: "booking";
+      /** SCRUM-163 AC2: a live hold's expiry; null for an Approved booking. */
+      heldUntil: Date | null;
       eventName: string;
       requestedBy: string;
       attendance: number | null;
@@ -33,6 +36,8 @@ export type VenueBlocker =
       id: string;
       startAt: Date;
       endAt: Date;
+      /** SCRUM-163 AC2: a live hold's expiry; null for an Approved booking. */
+      heldUntil?: Date | null;
       details?: BlockerDetails;
     }
   | {
@@ -48,21 +53,30 @@ export type VenueBlocker =
  * Everything that makes `venueId` unavailable for any part of `period`,
  * earliest first.
  *
- * Only APPROVED bookings and recorded unavailability (e.g. maintenance) count.
- * A PENDING request blocks nobody: several Coordinators may ask for the same
- * slot and Venue Staff choose between them (SCRUM-50/53). CANCELLED and
- * REJECTED bookings have released the venue.
+ * Approved bookings, holds that haven't expired at `now` (SCRUM-163 AC2) and
+ * recorded unavailability (e.g. maintenance) count. A PENDING request blocks
+ * nobody: several Coordinators may ask for the same slot and Venue Staff
+ * choose between them (SCRUM-50/53). CANCELLED, REJECTED and EXPIRED bookings
+ * have released the venue, and so has a hold whose expiry has passed, even
+ * before anything has marked it Expired (SCRUM-163 AC4).
  */
 export async function findVenueBlockers(
   db: Db,
   venueId: string,
   period: Period,
+  now = new Date(),
 ): Promise<VenueBlocker[]> {
   const where = { venueId, ...overlapping(period) };
   const [bookings, unavailability] = await Promise.all([
     db.booking.findMany({
-      where: { ...where, status: "APPROVED" },
-      select: { id: true, startAt: true, endAt: true },
+      where: { ...where, ...reservingWhere(now) },
+      select: {
+        id: true,
+        startAt: true,
+        endAt: true,
+        status: true,
+        holdExpiresAt: true,
+      },
     }),
     db.venueUnavailability.findMany({
       where,
@@ -71,9 +85,22 @@ export async function findVenueBlockers(
   ]);
 
   return [
-    ...bookings.map((b) => ({ kind: "booking" as const, ...b })),
+    ...bookings.map((b) => ({
+      kind: "booking" as const,
+      id: b.id,
+      startAt: b.startAt,
+      endAt: b.endAt,
+      heldUntil: heldUntil(b),
+    })),
     ...unavailability.map((u) => ({ kind: "unavailability" as const, ...u })),
   ].sort((a, b) => a.startAt.getTime() - b.startAt.getTime());
+}
+
+function heldUntil(booking: {
+  status: string;
+  holdExpiresAt: Date | null;
+}): Date | null {
+  return booking.status === "HELD" ? booking.holdExpiresAt : null;
 }
 
 /**
@@ -87,15 +114,18 @@ export async function findVenueCalendar(
   db: Db,
   venueId: string,
   period: Period,
+  now = new Date(),
 ): Promise<VenueBlocker[]> {
   const where = { venueId, ...overlapping(period) };
   const [bookings, unavailability] = await Promise.all([
     db.booking.findMany({
-      where: { ...where, status: "APPROVED" },
+      where: { ...where, ...reservingWhere(now) },
       select: {
         id: true,
         startAt: true,
         endAt: true,
+        status: true,
+        holdExpiresAt: true,
         requestedAttendance: true,
         requestedLayout: true,
         event: { select: { name: true } },
@@ -121,10 +151,12 @@ export async function findVenueCalendar(
       id: b.id,
       startAt: b.startAt,
       endAt: b.endAt,
+      heldUntil: heldUntil(b),
       details: {
         kind: "booking" as const,
         startAt: b.startAt,
         endAt: b.endAt,
+        heldUntil: heldUntil(b),
         eventName: b.event.name,
         requestedBy: b.requestedBy.name,
         attendance: b.requestedAttendance,
@@ -163,7 +195,9 @@ export function startOfWeek(day: string): string {
 export function describeBlocker(blocker: VenueBlocker): string {
   const what =
     blocker.kind === "booking"
-      ? "already booked"
+      ? blocker.heldUntil
+        ? `held until ${formatDateTime(blocker.heldUntil)}`
+        : "already booked"
       : `unavailable (${UNAVAILABILITY_REASON_LABEL[blocker.reason].toLowerCase()})`;
   return `${what} from ${formatDateTime(blocker.startAt)} to ${formatDateTime(blocker.endAt)}`;
 }

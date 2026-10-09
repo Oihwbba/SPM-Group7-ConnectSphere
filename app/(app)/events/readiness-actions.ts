@@ -39,12 +39,20 @@ async function relatedEvent(
  * without internal reasons. `canConfirm` tells the page whether to offer
  * SCRUM-81's Confirm action, which only the assigned Coordinator may take;
  * `canReject` whether to offer SCRUM-117's Reject, which the same Coordinator
- * may take unless the event was ever Confirmed (AC 4).
+ * may take unless the event was ever Confirmed (AC 4). `canSettleHold` whether
+ * to offer confirming or releasing a venue hold (SCRUM-163 AC3), which only the
+ * assigned Coordinator may do.
  */
 export async function getEventReadiness(
   eventId: string,
 ): Promise<
-  ActionResult<ReadinessChecklist & { canConfirm: boolean; canReject: boolean }>
+  ActionResult<
+    ReadinessChecklist & {
+      canConfirm: boolean;
+      canReject: boolean;
+      canSettleHold: boolean;
+    }
+  >
 > {
   const related = await relatedEvent(eventId);
   if (!related) return err("Event not found.");
@@ -72,6 +80,7 @@ export async function getEventReadiness(
     ...visible,
     canConfirm: can(user, "event:confirm", resource),
     canReject,
+    canSettleHold: can(user, "booking:settle-hold", resource),
   });
 }
 
