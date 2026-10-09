@@ -1,18 +1,29 @@
 import { requireSession } from "@/lib/auth/guard";
-import { PagePlaceholder } from "@/components/app/page-placeholder";
+import { can } from "@/lib/auth/can";
+import { Forbidden } from "@/components/app/forbidden";
+import { getMyNotifications } from "./queries";
+import { NotificationsList } from "./notifications-list";
 
-// Every role has a notifications inbox, so no role allow-list here — being
-// signed in is enough. Which notifications a user sees is scoped by ownership
-// (Notification.userId) once this feature is built.
+// SCRUM-48 — every role has a notification list, so `notification:read` is
+// granted to all of them; the query scopes it to the signed-in user.
 export default async function NotificationsPage() {
-  await requireSession();
+  const session = await requireSession();
+  if (!can(session.user, "notification:read")) {
+    return <Forbidden />;
+  }
+
+  const notifications = await getMyNotifications();
 
   return (
-    <PagePlaceholder
-      title="Notifications"
-      description="Your notifications about events, bookings, registrations and changes."
-      scrumId="SCRUM-51"
-      owner="Hann Qian"
-    />
+    <div className="space-y-6">
+      <div className="space-y-1">
+        <h1 className="text-2xl font-semibold tracking-tight">Notifications</h1>
+        <p className="text-sm text-muted-foreground">
+          Updates about your events, bookings, registrations and changes,
+          newest first.
+        </p>
+      </div>
+      <NotificationsList notifications={notifications} />
+    </div>
   );
 }
