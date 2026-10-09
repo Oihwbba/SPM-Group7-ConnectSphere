@@ -1,6 +1,11 @@
 import { test, expect, type Page } from "@playwright/test";
 
 import { prisma } from "@/lib/db";
+import {
+  formatDateTime,
+  parseSingaporeDateTime,
+  utcToSgWallTime,
+} from "@/lib/datetime";
 import { setTime, signedIn, usesLocalDatabase } from "./helpers";
 
 /**
@@ -8,14 +13,22 @@ import { setTime, signedIn, usesLocalDatabase } from "./helpers";
  * event's Coordinator confirms the hold from the readiness checklist. Each
  * test owns its event, venue and request (written straight to the database)
  * so it can't collide with the seeded bookings, and removes them afterwards.
- * Test cases: docs/testing/SCRUM-163.md.
+ * The event is about six weeks away, so the date picker only steps a month
+ * or two. Test cases: docs/testing/SCRUM-163.md.
  */
 const STAMP = Date.now();
-// 1 July 2031, 9 am to 5 pm Singapore time.
+const DAY = 24 * 60 * 60 * 1000;
+/** "YYYY-MM-DD" in Singapore, `days` from today. */
+const sgDay = (days: number) =>
+  utcToSgWallTime(new Date(Date.now() + days * DAY)).slice(0, 10);
+// 9 am to 5 pm Singapore time, 40 days from now.
 const PERIOD = {
-  startAt: new Date("2031-07-01T01:00:00Z"),
-  endAt: new Date("2031-07-01T09:00:00Z"),
+  startAt: parseSingaporeDateTime(`${sgDay(40)}T09:00`)!,
+  endAt: parseSingaporeDateTime(`${sgDay(40)}T17:00`)!,
 };
+const EXPIRY = `${sgDay(20)}T10:00`;
+const AFTER_START = `${sgDay(41)}T10:00`;
+const heldUntil = `Held until ${formatDateTime(parseSingaporeDateTime(EXPIRY)!)}`;
 
 async function pendingRequest(label: string) {
   const name = `SCRUM-163 ${label} ${STAMP}`;
@@ -92,9 +105,9 @@ test.describe("SCRUM-163 — Hold a venue tentatively until a deadline", () => {
     made.push(request);
 
     const staff = await signedIn(browser, "venuestaff@test.local");
-    const card = await placeHold(staff, request.bookingId, "2031-06-30T10:00");
+    const card = await placeHold(staff, request.bookingId, EXPIRY);
 
-    await expect(card).toContainText("Held until 30 Jun 2031, 10:00 am SGT");
+    await expect(card).toContainText(heldUntil);
     await expect(card).toContainText("Confirm the final headcount.");
     await expect(card.getByRole("button", { name: "Approve" })).toHaveCount(0);
     await expect(card.getByRole("button", { name: "Reject" })).toBeVisible();
@@ -108,7 +121,7 @@ test.describe("SCRUM-163 — Hold a venue tentatively until a deadline", () => {
       .getByRole("dialog")
       .getByTestId("readiness-item-venue");
     await expect(venueItem).toContainText(
-      "Held until 30 Jun 2031, 10:00 am SGT – confirm to secure",
+      `${heldUntil} – confirm to secure`,
     );
     await expect(venueItem).toHaveAttribute("data-complete", "false");
 
@@ -133,13 +146,13 @@ test.describe("SCRUM-163 — Hold a venue tentatively until a deadline", () => {
     made.push(request);
 
     const staff = await signedIn(browser, "venuestaff@test.local");
-    const card = await placeHold(staff, request.bookingId, "2031-07-02T10:00");
+    const card = await placeHold(staff, request.bookingId, AFTER_START);
 
     await expect(
       staff
         .getByRole("dialog")
         .getByText(
-          "The hold must expire after now and before the booking starts (1 Jul 2031, 9:00 am SGT).",
+          `The hold must expire after now and before the booking starts (${formatDateTime(PERIOD.startAt)}).`,
         ),
     ).toBeVisible();
     await staff.keyboard.press("Escape");
