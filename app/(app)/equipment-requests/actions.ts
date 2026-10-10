@@ -505,6 +505,28 @@ function releaseReservations(
   });
 }
 
+type LiveLine = {
+  id: string;
+  quantity: number;
+  technicalRequirements: string | null;
+};
+
+/** The same live lines, by id, with the same quantities and requirements. */
+function sameLines(now: LiveLine[], read: LiveLine[]): boolean {
+  const before = new Map(read.map((line) => [line.id, line]));
+  return (
+    now.length === read.length &&
+    now.every((line) => {
+      const was = before.get(line.id);
+      return (
+        was !== undefined &&
+        was.quantity === line.quantity &&
+        was.technicalRequirements === line.technicalRequirements
+      );
+    })
+  );
+}
+
 /**
  * Lock the event, then the request: the order reserving takes (ADR 0007).
  * Then re-read the event under its lock: a Confirm that committed while this
@@ -600,6 +622,15 @@ export async function changeEquipmentRequest(
     const refused = await prisma.$transaction(async (tx) => {
       const refusal = await lockRequest(tx, requestId);
       if (refusal) return refusal;
+      // The diff above holds only against the lines it was worked out from.
+      // A change that committed while this one waited for the lock (the same
+      // change twice, say) leaves the status as it was, so check the lines
+      // too, and write nothing over them (AC8).
+      const live = await tx.equipmentRequestLine.findMany({
+        where: { requestId, ...LIVE_LINE },
+        select: { id: true, quantity: true, technicalRequirements: true },
+      });
+      if (!sameLines(live, request.lines)) return UPDATED_ELSEWHERE;
       const result = await tx.equipmentRequest.updateMany({
         where: { id: requestId, status: request.status },
         data: { status: "PENDING_REVIEW", decidedAt: null },

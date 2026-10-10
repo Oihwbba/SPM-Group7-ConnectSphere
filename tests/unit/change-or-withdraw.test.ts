@@ -100,7 +100,11 @@ beforeEach(() => {
     event: { status: "PLANNING" },
   });
   db.event.findUniqueOrThrow.mockResolvedValue({ status: "PLANNING" });
-  db.equipmentRequestLine.findMany.mockResolvedValue([]);
+  // Under the lock: the live lines are as first read; no removed line returns.
+  db.equipmentRequestLine.findMany.mockImplementation(
+    ({ where }: { where: { removedAt: unknown } }) =>
+      Promise.resolve(where.removedAt === null ? request().lines : []),
+  );
   db.reservation.updateMany.mockResolvedValue({ count: 0 });
   db.user.findMany.mockResolvedValue([{ id: "usr_tech" }]);
   db.booking.updateMany.mockResolvedValue({ count: 1 });

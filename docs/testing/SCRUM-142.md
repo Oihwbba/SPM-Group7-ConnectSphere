@@ -185,7 +185,7 @@ venue requests; the suite removes them.
 | Test Data | — |
 | Expected Result | The awaiting and approved checks become Outdated, with the time; the rejected one is unchanged. Withdrawing a venue request, and confirming or releasing a hold, do the same. |
 
-**Automated by:** `tests/integration/change-or-withdraw.test.ts` › "SCRUM-142 [AC9] TC-142-12: …"
+**Automated by:** `tests/integration/change-or-withdraw.test.ts` › "SCRUM-142 [AC9] TC-142-12: a change or withdrawal puts …" and "SCRUM-142 [AC9] TC-142-12: withdrawing a venue request, or releasing a hold, puts the event's safety check out of date"
 
 ### TC-142-13
 
@@ -194,11 +194,11 @@ venue requests; the suite removes them.
 | Test Case ID | TC-142-13 |
 | Test Scenario | [Concurrency] AC 3, AC 8: two withdrawals at the same moment, or a change that loses a race |
 | Pre-conditions | As TC-142-01. |
-| Test Steps | 1. Withdraw the request twice at the same instant. <br> 2. Change or withdraw it while another update moves it first. |
+| Test Steps | 1. Withdraw the request twice at the same instant. <br> 2. Send the same change twice at the same instant, to a request already in Pending Review. <br> 3. Change or withdraw it while another update moves it first. |
 | Test Data | — |
-| Expected Result | Step 1: one succeeds; one history entry; each reservation is released once. Step 2: "Someone else updated this request first. …", and no history, reservation or notice is written. |
+| Expected Result | Step 1: one succeeds; one history entry; each reservation is released once. Step 2: one succeeds and the other gets "Someone else updated this request first. …" (the lines it worked from changed under it); one history entry, and the added line exists once. Step 3: "Someone else updated this request first. …", and no history, reservation or notice is written. |
 
-**Automated by:** `tests/integration/change-or-withdraw.test.ts` › "SCRUM-142 [AC3] TC-142-13: …"; `tests/unit/change-or-withdraw.test.ts` › the "TC-142-13" tests
+**Automated by:** `tests/integration/change-or-withdraw.test.ts` › "SCRUM-142 [AC3] TC-142-13: …" and "SCRUM-142 [AC8] TC-142-13: the same change sent twice at once, on a request already in Pending Review, is written once"; `tests/unit/change-or-withdraw.test.ts` › the "TC-142-13" tests
 
 ### TC-142-14
 

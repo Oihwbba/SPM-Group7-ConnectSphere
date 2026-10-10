@@ -664,5 +664,80 @@ describe.skipIf(!usesLocalDatabase)(
         outdatedAt: null,
       });
     });
+
+    it("SCRUM-142 [AC8] TC-142-13: the same change sent twice at once, on a request already in Pending Review, is written once", async () => {
+      const { requestId } = await reservedRequest();
+      await prisma.equipmentRequest.update({
+        where: { id: requestId },
+        data: { status: "PENDING_REVIEW" },
+      });
+      const change = () =>
+        changeEquipmentRequest({
+          requestId,
+          lines: [
+            { equipmentId: PROJECTOR, quantity: 2 },
+            { equipmentId: MIC, quantity: 3 },
+            { equipmentId: LECTERN, quantity: 1 },
+            { equipmentId: "eqp_laptop", quantity: 1 },
+          ],
+        });
+
+      const results = await Promise.all([change(), change()]);
+
+      expect(results.filter((r) => r.ok)).toHaveLength(1);
+      expect(results.find((r) => !r.ok)).toMatchObject({
+        error: expect.stringMatching(
+          /^Someone else updated this request first/,
+        ),
+      });
+      expect(await history(requestId)).toHaveLength(1);
+      expect(
+        (await lines(requestId)).filter((l) => l.equipmentId === "eqp_laptop"),
+      ).toHaveLength(1);
+    });
+
+    it("SCRUM-142 [AC9] TC-142-12: withdrawing a venue request, or releasing a hold, puts the event's safety check out of date", async () => {
+      const ev = await event();
+      const period = eventBookingPeriod({
+        startAt: ev.startAt!,
+        endAt: ev.endAt!,
+      })!;
+      const pending = await prisma.booking.create({
+        data: {
+          eventId: ev.id,
+          venueId,
+          ...period,
+          status: "PENDING",
+          requestedById: COORDINATOR,
+        },
+        select: { id: true },
+      });
+      const first = await safetyCheck(ev.id, "AWAITING_REVIEW");
+
+      await withdrawBookingRequest({ bookingId: pending.id });
+      expect(await safetyStatus(first.id)).toMatchObject({
+        status: "OUTDATED",
+      });
+
+      const held = await prisma.booking.create({
+        data: {
+          eventId: ev.id,
+          venueId,
+          ...period,
+          status: "HELD",
+          requestedById: COORDINATOR,
+          heldAt: new Date(Date.now() - 60 * 1000),
+          holdExpiresAt: new Date(Date.now() + DAY),
+          holdNote: "Confirm numbers.",
+        },
+        select: { id: true },
+      });
+      const second = await safetyCheck(ev.id, "APPROVED");
+
+      await withdrawBookingRequest({ bookingId: held.id });
+      expect(await safetyStatus(second.id)).toMatchObject({
+        status: "OUTDATED",
+      });
+    });
   },
 );
