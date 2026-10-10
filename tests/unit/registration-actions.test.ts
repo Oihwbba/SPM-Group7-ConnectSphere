@@ -426,3 +426,94 @@ describe("withdrawRegistration — SCRUM-74/77 (minimal slice)", () => {
     ).rejects.toThrow("DB unavailable");
   });
 });
+
+describe("registration notices — SCRUM-45 AC11, AC13", () => {
+  const people = {
+    name: "Gala",
+    organiserId: "usr_org",
+    coordinatorId: "usr_coord",
+  };
+  const recipients = () =>
+    tx.notification.createMany.mock.calls.map((call) =>
+      call[0].data.map((n: { userId: string; title: string }) => [
+        n.userId,
+        n.title,
+      ]),
+    );
+
+  it("SCRUM-45 [AC11] TC-45-06: the registration that takes the last place tells the Organiser and the Coordinator", async () => {
+    mockAuth.mockResolvedValue(sessionFor("ATTENDEE", "usr_attendee"));
+    tx.event.findUniqueOrThrow.mockResolvedValue({ ...eventRow(), ...people });
+    tx.registration.count.mockResolvedValue(99);
+
+    await registerForEvent({ eventId: "evt1" });
+
+    expect(recipients()).toEqual([
+      [
+        ["usr_org", "Registration is full"],
+        ["usr_coord", "Registration is full"],
+      ],
+    ]);
+  });
+
+  it("SCRUM-45 [AC11] TC-45-06: a registration that leaves a place open writes no notice", async () => {
+    mockAuth.mockResolvedValue(sessionFor("ATTENDEE", "usr_attendee"));
+    tx.event.findUniqueOrThrow.mockResolvedValue({ ...eventRow(), ...people });
+    tx.registration.count.mockResolvedValue(98);
+
+    await registerForEvent({ eventId: "evt1" });
+
+    expect(tx.notification.createMany).not.toHaveBeenCalled();
+  });
+
+  describe("withdrawing", () => {
+    beforeEach(() => {
+      mockAuth.mockResolvedValue(sessionFor("ATTENDEE", "usr_attendee"));
+      tx.registration.findUnique.mockResolvedValue({
+        id: "reg1",
+        eventId: "evt1",
+        userId: "usr_attendee",
+        status: "REGISTERED",
+      });
+    });
+
+    it("SCRUM-45 [AC11] TC-45-06: withdrawing from a full event tells the Organiser and the Coordinator a place opened", async () => {
+      tx.event.findUniqueOrThrow.mockResolvedValue({
+        id: "evt1",
+        expectedAttendance: 100,
+        ...people,
+      });
+      tx.registration.count.mockResolvedValue(100);
+
+      await withdrawRegistration({ registrationId: "reg1" });
+
+      expect(recipients()).toEqual([
+        [
+          ["usr_org", "A place opened at a full event"],
+          ["usr_coord", "A place opened at a full event"],
+        ],
+      ]);
+    });
+
+    it.each([
+      ["the event wasn't full", 100, 99, 1],
+      ["the registration was withdrawn a moment earlier", 100, 100, 0],
+      ["the event has no capacity set", null, 0, 1],
+    ])(
+      "SCRUM-45 [AC11, AC13] TC-45-06: no notice when %s",
+      async (_, expectedAttendance, active, claimed) => {
+        tx.event.findUniqueOrThrow.mockResolvedValue({
+          id: "evt1",
+          expectedAttendance,
+          ...people,
+        });
+        tx.registration.count.mockResolvedValue(active);
+        tx.registration.updateMany.mockResolvedValue({ count: claimed });
+
+        await withdrawRegistration({ registrationId: "reg1" });
+
+        expect(tx.notification.createMany).not.toHaveBeenCalled();
+      },
+    );
+  });
+});

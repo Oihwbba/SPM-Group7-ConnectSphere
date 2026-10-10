@@ -24,7 +24,7 @@ notice written ahead in TC-45-07.
 | [TC-45-03](#tc-45-03) | Positive | AC 3 | Unit, integration, e2e |
 | [TC-45-04](#tc-45-04) | Positive, Negative | AC 4, AC 13 | Unit, integration |
 | [TC-45-05](#tc-45-05) | Positive, Negative | AC 8, AC 14 | Unit, integration |
-| [TC-45-06](#tc-45-06) | Positive, Boundary | AC 11, AC 13 | Integration |
+| [TC-45-06](#tc-45-06) | Positive, Boundary | AC 11, AC 13 | Unit, integration |
 | [TC-45-07](#tc-45-07) | Positive | AC 11 | Unit, integration |
 | [TC-45-08](#tc-45-08) | Positive, Negative | AC 12, AC 13 | Unit |
 
@@ -107,9 +107,9 @@ construction: every notice here goes to the event's Organiser or Coordinator.
 | Pre-conditions | A Confirmed event with capacity 2 and registration open. |
 | Test Steps | 1. `attendee@test.local` registers. <br> 2. `attendee2@test.local` registers. <br> 3. `attendee@test.local` withdraws, then withdraws again. <br> 4. `attendee2@test.local` withdraws. |
 | Test Data | — |
-| Expected Result | Step 1: no notice (one place left). Step 2: "Registration is full": "\"…\" has reached its capacity of 2.", once each to the Organiser and the Coordinator. Step 3: "A place opened at a full event", once each; withdrawing again writes nothing. Step 4: no notice, since the event wasn't full. |
+| Expected Result | Step 1: no notice (one place left). Step 2: "Registration is full": "\"…\" has reached its capacity of 2.", once each to the Organiser and the Coordinator. Step 3: "A place opened at a full event", once each; withdrawing again writes nothing. Step 4: no notice, since the event wasn't full. An event with no capacity set never sends one, and neither does a withdrawal someone else made a moment earlier. |
 
-**Automated by:** `tests/integration/workflow-notifications.test.ts` › "SCRUM-45 [AC11, AC13] TC-45-06: the registration that fills the last place, and a withdrawal from the full event, each tell the Organiser and Coordinator once"
+**Automated by:** `tests/integration/workflow-notifications.test.ts` › "SCRUM-45 [AC11, AC13] TC-45-06: the registration that fills the last place, and a withdrawal from the full event, each tell the Organiser and Coordinator once"; `tests/unit/registration-actions.test.ts` › the "SCRUM-45 … TC-45-06" tests
 
 ### TC-45-07
 

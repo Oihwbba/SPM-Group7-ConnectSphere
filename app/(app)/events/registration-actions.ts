@@ -219,9 +219,10 @@ export async function withdrawRegistration(
       });
 
       // SCRUM-45 AC11: an Attendee withdrew from a full event, so a place
-      // is open again.
+      // is open again. An event with no capacity set was never full.
       if (
         withdrawn.count === 1 &&
+        totalCapacity(event) > 0 &&
         remainingCapacity(event, activeBefore) === 0
       ) {
         await notifyAboutEvent(
