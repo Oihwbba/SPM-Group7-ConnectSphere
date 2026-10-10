@@ -932,6 +932,35 @@ describe("context beyond the diff", () => {
     expect(excerptFile("lib/thing.ts", "const x = 1;", ["SCRUM-48"])).toBeNull();
   });
 
+  // The reserve: a related file is sent whole only if what's left still holds
+  // the excerpts of the files behind it. Without it, the source file below is
+  // sent whole and the test behind it is dropped.
+  it("sends a related file as its excerpt when sending it whole would leave a later file no room for its own", () => {
+    const source = file("lib/a.ts", ['import { x } from "./changed";', ...Array(80).fill("// body"), "export const a = x;"].join("\n"));
+    const test = file(
+      "tests/unit/b.test.ts",
+      ['import { x } from "@/lib/changed";', ...Array(200).fill("// body"), 'it("b", () => {});'].join("\n"),
+    );
+    const sourceExcerpt = excerptFile(source.path, source.content, [])!;
+    const testExcerpt = excerptFile(test.path, test.content, [])!;
+    const files = [file("lib/changed.ts", "export const x = 1;"), source, test];
+
+    const { included, omitted } = selectContextFiles({
+      files,
+      changed: ["lib/changed.ts"],
+      storyKeys: [],
+      // Room for the source whole, or for both excerpts, but not the source
+      // whole and the test's excerpt.
+      maxRelated: source.content.length + testExcerpt.length - 1,
+    });
+
+    expect(omitted).toEqual([]);
+    expect(included.slice(1).map((f) => [f.path, f.reason, f.content])).toEqual([
+      ["lib/a.ts", "imports a changed file, excerpt", sourceExcerpt],
+      ["tests/unit/b.test.ts", "imports a changed file, excerpt", testExcerpt],
+    ]);
+  });
+
   it("sends the head of a related file with nothing to excerpt, capped so the files behind it still fit", () => {
     const files = [
       file("e2e/x.spec.ts", 'test("x", async () => {});'),
