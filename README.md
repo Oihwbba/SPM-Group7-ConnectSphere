@@ -355,7 +355,11 @@ re-sync rather than editing those files (see `docs/backlog/README.md`).
   `auth.config.ts`, so it can't be forgotten or mis-quoted.
 - After changing an environment variable, **redeploy**. A running deployment
   keeps the values it was built with.
-- Apply migrations with `npm run db:deploy`, never `db:reset`.
+- **Migrations apply themselves.** Every production deploy runs `prisma migrate
+  deploy` against the shared database before it builds (`deploy.yml`), so the
+  database is always on the schema of the code on `main`; if a migration
+  fails, nothing is deployed. To apply one by hand, use `npm run db:deploy`,
+  never `db:reset`.
 - Supabase permits `CREATE EXTENSION btree_gist`, so the double-booking
   constraint deploys unchanged.
 
