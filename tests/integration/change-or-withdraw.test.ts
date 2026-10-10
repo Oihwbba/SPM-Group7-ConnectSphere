@@ -460,6 +460,47 @@ describe.skipIf(!usesLocalDatabase)(
       ).toHaveLength(3);
     });
 
+    it("SCRUM-142 [AC5] TC-142-16: a withdrawal waiting behind a Confirm for the event lock is refused once the event is Confirmed", async () => {
+      const { eventId, requestId } = await reservedRequest();
+      let commitConfirm!: () => void;
+      const confirmHeld = new Promise<void>(
+        (resolve) => (commitConfirm = resolve),
+      );
+      let locked!: () => void;
+      const eventLocked = new Promise<void>((resolve) => (locked = resolve));
+
+      // What confirmEvent does: lock the event, confirm it, commit.
+      const confirming = prisma.$transaction(
+        async (tx) => {
+          await tx.$queryRaw`SELECT "id" FROM "Event" WHERE "id" = ${eventId} FOR UPDATE`;
+          await tx.event.update({
+            where: { id: eventId },
+            data: { status: "CONFIRMED" },
+          });
+          locked();
+          await confirmHeld;
+        },
+        { timeout: 15_000 },
+      );
+      await eventLocked;
+      // Read before the Confirm commits, so its first check passes; it then
+      // waits for the event lock.
+      const withdrawing = withdrawEquipmentRequest({ requestId });
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      commitConfirm();
+      await confirming;
+
+      expect(await withdrawing).toEqual({
+        ok: false,
+        error:
+          "This event is confirmed, so its arrangements change through a change request.",
+      });
+      expect(await statusOf(requestId)).toBe("APPROVED");
+      expect(
+        (await reservations(eventId)).every((r) => r.status === "CONFIRMED"),
+      ).toBe(true);
+    });
+
     it("SCRUM-142 [AC1] TC-142-14: an Approved request can't go back to review while the event already has another request waiting", async () => {
       const { eventId, requestId } = await reservedRequest();
       await prisma.equipmentRequest.create({

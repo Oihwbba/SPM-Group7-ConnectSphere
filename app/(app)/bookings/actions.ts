@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import type { BookingStatus, Prisma } from "@prisma/client";
+import type { BookingStatus, EventStatus, Prisma } from "@prisma/client";
 
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
@@ -773,16 +773,8 @@ export async function withdrawBookingRequest(
     ) {
       return err(REQUEST_NOT_FOUND);
     }
-    if (booking.event.status === "CONFIRMED") {
-      return err(
-        "This event is confirmed, so its arrangements change through a change request.",
-      );
-    }
-    if (!BOOKABLE_EVENT_STATUSES.includes(booking.event.status)) {
-      return err(
-        "This event isn't being planned, so its venue requests can't be withdrawn.",
-      );
-    }
+    const notPlanning = withdrawalRefusal(booking.event.status);
+    if (notPlanning) return err(notPlanning);
     const now = new Date();
     const current = bookingStatusAt(booking, now);
     if (current === "HELD") return releaseHold({ bookingId });
@@ -796,6 +788,16 @@ export async function withdrawBookingRequest(
     }
 
     const withdrawn = await prisma.$transaction(async (tx) => {
+      // Re-read the event under its lock: a Confirm that committed while
+      // this waited (confirmEvent takes the same lock) stops it (AC5).
+      await tx.$queryRaw`SELECT "id" FROM "Event" WHERE "id" = ${booking.event.id} FOR UPDATE`;
+      const { status } = await tx.event.findUniqueOrThrow({
+        where: { id: booking.event.id },
+        select: { status: true },
+      });
+      const refusal = withdrawalRefusal(status);
+      if (refusal) return refusal;
+
       const updated = await tx.booking.updateMany({
         where: { id: bookingId, status: "PENDING" },
         data: { status: "CANCELLED" },
@@ -843,6 +845,16 @@ export async function withdrawBookingRequest(
 }
 
 const REQUEST_NOT_FOUND = "Venue request not found.";
+
+/** SCRUM-142 AC5 — why an event in this status can't withdraw a venue request. */
+function withdrawalRefusal(status: EventStatus): string | null {
+  if (status === "CONFIRMED") {
+    return "This event is confirmed, so its arrangements change through a change request.";
+  }
+  return BOOKABLE_EVENT_STATUSES.includes(status)
+    ? null
+    : "This event isn't being planned, so its venue requests can't be withdrawn.";
+}
 
 function notWithdrawable(
   status: BookingStatus,

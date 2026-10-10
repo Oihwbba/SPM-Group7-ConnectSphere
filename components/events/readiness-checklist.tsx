@@ -52,6 +52,8 @@ export function ReadinessChecklist({ eventId }: { eventId: string }) {
   const [confirming, startConfirm] = useTransition();
   const [rejecting, startReject] = useTransition();
   const [rejectOpen, setRejectOpen] = useState(false);
+  // SCRUM-142 AC4: the pending venue request waiting to be confirmed withdrawn.
+  const [withdrawing, setWithdrawing] = useState<string | null>(null);
   const [reason, setReason] = useState("");
   const [outcome, setOutcome] = useState<RejectionOutcome | null>(null);
   const router = useRouter();
@@ -197,9 +199,7 @@ export function ReadinessChecklist({ eventId }: { eventId: string }) {
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() =>
-                          settleHold(item.pendingBookingId!, "withdraw")
-                        }
+                        onClick={() => setWithdrawing(item.pendingBookingId!)}
                         disabled={settling}
                       >
                         Withdraw request
@@ -255,6 +255,36 @@ export function ReadinessChecklist({ eventId }: { eventId: string }) {
           </>
         )}
       </CardContent>
+
+      <Dialog
+        open={withdrawing !== null}
+        onOpenChange={(open) => !open && setWithdrawing(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Withdraw this venue request?</DialogTitle>
+            <DialogDescription>
+              It leaves the Venue Staff queue and Venue Staff are told. You can
+              request a venue again afterwards.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="secondary" onClick={() => setWithdrawing(null)}>
+              Keep it
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={settling}
+              onClick={() => {
+                if (withdrawing) settleHold(withdrawing, "withdraw");
+                setWithdrawing(null);
+              }}
+            >
+              Withdraw request
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={rejectOpen} onOpenChange={setRejectOpen}>
         <DialogContent>

@@ -171,6 +171,10 @@ test.describe("SCRUM-142 — Change equipment lines or withdraw a venue request"
     await expect(venueItem).toContainText("Pending");
 
     await venueItem.getByRole("button", { name: "Withdraw request" }).click();
+    await page
+      .getByRole("dialog", { name: "Withdraw this venue request?" })
+      .getByRole("button", { name: "Withdraw request" })
+      .click();
 
     await expect(venueItem).toContainText("Not requested");
     expect(
@@ -181,5 +185,105 @@ test.describe("SCRUM-142 — Change equipment lines or withdraw a venue request"
         })
       ).status,
     ).toBe("CANCELLED");
+  });
+
+  /** An Approved request for Projector × 2, with the projectors reserved. */
+  async function reservedRequest(label: string) {
+    const event = await planningEvent(label);
+    eventIds.push(event.id);
+    const { id: requestId } = await prisma.equipmentRequest.create({
+      data: {
+        eventId: event.id,
+        requestedById: "usr_coordinator",
+        status: "APPROVED",
+        lines: { create: [{ equipmentId: "eqp_projector", quantity: 2 }] },
+      },
+      select: { id: true },
+    });
+    await prisma.reservation.create({
+      data: {
+        eventId: event.id,
+        equipmentId: "eqp_projector",
+        requestId,
+        quantity: 2,
+        ...PERIOD,
+        reservedById: "usr_techsupport",
+      },
+    });
+    return { ...event, requestId };
+  }
+
+  test("SCRUM-142 [AC3] TC-142-05: the Coordinator withdraws a whole equipment request after confirming, and its reservation is released", async ({
+    browser,
+  }) => {
+    const request = await reservedRequest("Withdraw");
+
+    const page = await signedIn(browser, "coordinator@test.local");
+    await page.goto("/equipment-requests");
+    const card = page
+      .getByTestId("equipment-request")
+      .filter({ hasText: request.name });
+    await card.getByRole("button", { name: "Withdraw request" }).click();
+    const confirm = page.getByRole("dialog", {
+      name: "Withdraw this equipment request?",
+    });
+    // Keeping it changes nothing.
+    await confirm.getByRole("button", { name: "Keep it" }).click();
+    await expect(confirm).toHaveCount(0);
+    await card.getByRole("button", { name: "Withdraw request" }).click();
+    await confirm.getByRole("button", { name: "Withdraw request" }).click();
+
+    await expect(card.getByTestId("request-status")).toHaveAttribute(
+      "data-status",
+      "CANCELLED",
+    );
+    // A Cancelled request offers no more changes.
+    await expect(
+      card.getByRole("button", { name: "Withdraw request" }),
+    ).toHaveCount(0);
+    expect(
+      await prisma.reservation.findMany({
+        where: { eventId: request.id },
+        select: { status: true },
+      }),
+    ).toEqual([{ status: "CANCELLED" }]);
+  });
+
+  test("SCRUM-142 [AC1] TC-142-15: a line with an invalid quantity is refused next to the field, and nothing is changed", async ({
+    browser,
+  }) => {
+    const request = await reservedRequest("Invalid");
+
+    const page = await signedIn(browser, "coordinator@test.local");
+    await page.goto("/equipment-requests");
+    await page
+      .getByTestId("equipment-request")
+      .filter({ hasText: request.name })
+      .getByRole("button", { name: "Change lines" })
+      .click();
+    const dialog = page.getByRole("dialog");
+    await dialog.getByLabel("Equipment type").selectOption("eqp_mic");
+    await dialog.getByLabel("Quantity").fill("0");
+    await dialog.getByRole("button", { name: "Save changes" }).click();
+
+    await expect(
+      dialog.getByText("Quantity must be a positive whole number."),
+    ).toBeVisible();
+    await expect(dialog.getByLabel("Quantity")).toHaveAttribute(
+      "aria-invalid",
+      "true",
+    );
+    expect(
+      await prisma.equipmentRequest.findUniqueOrThrow({
+        where: { id: request.requestId },
+        select: { status: true },
+      }),
+    ).toEqual({ status: "APPROVED" });
+    expect(
+      await prisma.reservation.findMany({
+        where: { eventId: request.id },
+        select: { status: true },
+      }),
+    ).toEqual([{ status: "CONFIRMED" }]);
   });
 });

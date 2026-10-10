@@ -16,7 +16,12 @@ import { withdrawBookingRequest } from "@/app/(app)/bookings/actions";
 const db = vi.hoisted(() => ({
   $queryRaw: vi.fn(),
   equipment: { findMany: vi.fn() },
-  equipmentRequest: { findUnique: vi.fn(), updateMany: vi.fn() },
+  equipmentRequest: {
+    findUnique: vi.fn(),
+    findUniqueOrThrow: vi.fn(),
+    updateMany: vi.fn(),
+  },
+  event: { findUniqueOrThrow: vi.fn() },
   equipmentRequestLine: {
     findMany: vi.fn(),
     update: vi.fn(),
@@ -90,6 +95,11 @@ beforeEach(() => {
     { id: "eqp_projector", type: "Projector" },
   ]);
   db.equipmentRequest.updateMany.mockResolvedValue({ count: 1 });
+  // Re-read under the event lock: still being planned.
+  db.equipmentRequest.findUniqueOrThrow.mockResolvedValue({
+    event: { status: "PLANNING" },
+  });
+  db.event.findUniqueOrThrow.mockResolvedValue({ status: "PLANNING" });
   db.equipmentRequestLine.findMany.mockResolvedValue([]);
   db.reservation.updateMany.mockResolvedValue({ count: 0 });
   db.user.findMany.mockResolvedValue([{ id: "usr_tech" }]);
@@ -254,6 +264,52 @@ describe("changeEquipmentRequest and withdrawEquipmentRequest — SCRUM-142", ()
       await expect(attempt()).rejects.toThrow("connection lost");
     },
   );
+});
+
+describe("a Confirm that lands while a change waits for the event lock — SCRUM-142 AC5", () => {
+  it.each([
+    [
+      "change",
+      () =>
+        changeEquipmentRequest({
+          requestId: "eqr_1",
+          lines: [{ equipmentId: "eqp_projector", quantity: 1 }],
+        }),
+    ],
+    ["withdrawal", () => withdrawEquipmentRequest({ requestId: "eqr_1" })],
+  ])(
+    "SCRUM-142 [AC5] TC-142-16: an equipment-request %s is refused once the event is Confirmed under the lock, and nothing is written",
+    async (_, attempt) => {
+      db.equipmentRequest.findUniqueOrThrow.mockResolvedValue({
+        event: { status: "CONFIRMED" },
+      });
+
+      expect(await attempt()).toEqual({
+        ok: false,
+        error:
+          "This event is confirmed, so its arrangements change through a change request.",
+      });
+      expect(db.equipmentRequest.updateMany).not.toHaveBeenCalled();
+      expect(db.reservation.updateMany).not.toHaveBeenCalled();
+    },
+  );
+
+  it("SCRUM-142 [AC5] TC-142-16: a venue-request withdrawal is refused once the event is Confirmed under the lock, and nothing is written", async () => {
+    db.booking.findUnique.mockResolvedValue({
+      status: "PENDING",
+      holdExpiresAt: null,
+      venue: { name: "Hall" },
+      event: event(),
+    });
+    db.event.findUniqueOrThrow.mockResolvedValue({ status: "CONFIRMED" });
+
+    expect(await withdrawBookingRequest({ bookingId: "bkg_1" })).toEqual({
+      ok: false,
+      error:
+        "This event is confirmed, so its arrangements change through a change request.",
+    });
+    expect(db.booking.updateMany).not.toHaveBeenCalled();
+  });
 });
 
 describe("withdrawBookingRequest — SCRUM-142 AC4", () => {

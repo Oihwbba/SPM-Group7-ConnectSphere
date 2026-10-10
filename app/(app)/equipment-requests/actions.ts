@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { Prisma } from "@prisma/client";
+import { Prisma, type EventStatus } from "@prisma/client";
 
 import { auth } from "@/auth";
 import { err, ok, type ActionResult } from "@/lib/action-result";
@@ -469,14 +469,8 @@ async function changeableRequest(
   ) {
     return { error: NOT_FOUND };
   }
-  if (request.event.status === "CONFIRMED") return { error: CONFIRMED_EVENT };
-  if (
-    !(REQUESTABLE_EVENT_STATUSES as readonly string[]).includes(
-      request.event.status,
-    )
-  ) {
-    return { error: NOT_PLANNING };
-  }
+  const refusal = eventRefusal(request.event.status);
+  if (refusal) return { error: refusal };
   if (request.status === "REJECTED") {
     return {
       error: "This request was rejected. Raise a new request instead.",
@@ -511,8 +505,16 @@ function releaseReservations(
   });
 }
 
-/** Lock the event, then the request: the order reserving takes (ADR 0007). */
-async function lockRequest(tx: Prisma.TransactionClient, requestId: string) {
+/**
+ * Lock the event, then the request: the order reserving takes (ADR 0007).
+ * Then re-read the event under its lock: a Confirm that committed while this
+ * waited (confirmEvent takes the same lock) must stop the change (AC5).
+ * Returns why the change can't go ahead, or null.
+ */
+async function lockRequest(
+  tx: Prisma.TransactionClient,
+  requestId: string,
+): Promise<string | null> {
   await tx.$queryRaw`
     SELECT e."id" FROM "Event" e
     JOIN "EquipmentRequest" r ON r."eventId" = e."id"
@@ -522,6 +524,19 @@ async function lockRequest(tx: Prisma.TransactionClient, requestId: string) {
   await tx.$queryRaw`
     SELECT "id" FROM "EquipmentRequest" WHERE "id" = ${requestId} FOR UPDATE
   `;
+  const { event } = await tx.equipmentRequest.findUniqueOrThrow({
+    where: { id: requestId },
+    select: { event: { select: { status: true } } },
+  });
+  return eventRefusal(event.status);
+}
+
+/** SCRUM-142 AC5 — why requests for an event in this status can't change. */
+function eventRefusal(status: EventStatus): string | null {
+  if (status === "CONFIRMED") return CONFIRMED_EVENT;
+  return (REQUESTABLE_EVENT_STATUSES as readonly string[]).includes(status)
+    ? null
+    : NOT_PLANNING;
 }
 
 /**
@@ -582,13 +597,14 @@ export async function changeEquipmentRequest(
       ...removed.map((l) => `removed ${l.equipment.type}`),
     ].join("; ");
 
-    const moved = await prisma.$transaction(async (tx) => {
-      await lockRequest(tx, requestId);
+    const refused = await prisma.$transaction(async (tx) => {
+      const refusal = await lockRequest(tx, requestId);
+      if (refusal) return refusal;
       const result = await tx.equipmentRequest.updateMany({
         where: { id: requestId, status: request.status },
         data: { status: "PENDING_REVIEW", decidedAt: null },
       });
-      if (result.count !== 1) return false;
+      if (result.count !== 1) return UPDATED_ELSEWHERE;
 
       const returning = await tx.equipmentRequestLine.findMany({
         where: {
@@ -658,9 +674,9 @@ export async function changeEquipmentRequest(
         link: "/equipment-requests",
       });
       await outdateSafetyChecks(tx, request.event.id, now);
-      return true;
+      return null;
     });
-    if (!moved) return err(UPDATED_ELSEWHERE);
+    if (refused) return err(refused);
 
     revalidatePath("/equipment-requests");
     revalidatePath("/equipment");
@@ -704,13 +720,14 @@ export async function withdrawEquipmentRequest(
     if ("error" in request) return err(request.error);
 
     const now = new Date();
-    const withdrawn = await prisma.$transaction(async (tx) => {
-      await lockRequest(tx, requestId);
+    const refused = await prisma.$transaction(async (tx) => {
+      const refusal = await lockRequest(tx, requestId);
+      if (refusal) return refusal;
       const result = await tx.equipmentRequest.updateMany({
         where: { id: requestId, status: request.status },
         data: { status: "CANCELLED", decidedAt: now },
       });
-      if (result.count !== 1) return false;
+      if (result.count !== 1) return UPDATED_ELSEWHERE;
 
       const released = await releaseReservations(
         tx,
@@ -738,9 +755,9 @@ export async function withdrawEquipmentRequest(
         link: "/equipment-requests",
       });
       await outdateSafetyChecks(tx, request.event.id, now);
-      return true;
+      return null;
     });
-    if (!withdrawn) return err(UPDATED_ELSEWHERE);
+    if (refused) return err(refused);
 
     revalidatePath("/equipment-requests");
     revalidatePath("/equipment");

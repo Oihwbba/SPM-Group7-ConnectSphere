@@ -16,7 +16,7 @@ venue requests; the suite removes them.
 | [TC-142-02](#tc-142-02) | Positive | AC 2 | Integration, e2e |
 | [TC-142-03](#tc-142-03) | Boundary | AC 1 | Integration |
 | [TC-142-04](#tc-142-04) | Boundary | AC 8 | Integration |
-| [TC-142-05](#tc-142-05) | Positive, Negative | AC 3, AC 7, AC 8 | Unit, integration |
+| [TC-142-05](#tc-142-05) | Positive, Negative | AC 3, AC 7, AC 8 | Unit, integration, e2e |
 | [TC-142-06](#tc-142-06) | Negative | AC 3 | Integration |
 | [TC-142-07](#tc-142-07) | Positive, Negative | AC 4, AC 7, AC 8 | Unit, integration, e2e |
 | [TC-142-08](#tc-142-08) | Positive | AC 4 | Integration |
@@ -26,7 +26,8 @@ venue requests; the suite removes them.
 | [TC-142-12](#tc-142-12) | Positive, Negative | AC 9 | Integration |
 | [TC-142-13](#tc-142-13) | Concurrency | AC 3, AC 8 | Unit, integration |
 | [TC-142-14](#tc-142-14) | Negative | AC 1 | Integration |
-| [TC-142-15](#tc-142-15) | Negative | AC 1, AC 3, AC 4 | Unit |
+| [TC-142-15](#tc-142-15) | Negative | AC 1, AC 3, AC 4 | Unit, e2e |
+| [TC-142-16](#tc-142-16) | Concurrency | AC 5 | Unit, integration |
 
 ---
 
@@ -89,11 +90,11 @@ venue requests; the suite removes them.
 | Test Case ID | TC-142-05 |
 | Test Scenario | [Positive, Negative] AC 3, AC 7, AC 8: withdrawing the whole equipment request cancels it and returns everything reserved for it, once |
 | Pre-conditions | As TC-142-01. |
-| Test Steps | 1. Choose Withdraw request, then confirm. <br> 2. Withdraw it again. |
+| Test Steps | 1. Choose Withdraw request, then Keep it. <br> 2. Choose Withdraw request, then confirm. <br> 3. Withdraw it again. |
 | Test Data | — |
-| Expected Result | Step 1: Cancelled; all three reservations Cancelled; history "Withdrawn by the Coordinator. 3 reservation(s) cancelled."; Technical Support get "An equipment request was withdrawn". With nothing reserved the history says just "Withdrawn by the Coordinator." Step 2: "This request has already been withdrawn." and nothing more is written. |
+| Expected Result | Step 1: nothing changes. Step 2: Cancelled, and it offers no more changes; all three reservations Cancelled; history "Withdrawn by the Coordinator. 3 reservation(s) cancelled."; Technical Support get "An equipment request was withdrawn". With nothing reserved the history says just "Withdrawn by the Coordinator." Step 3: "This request has already been withdrawn." and nothing more is written. |
 
-**Automated by:** `tests/integration/change-or-withdraw.test.ts` › "SCRUM-142 [AC3, AC7, AC8] TC-142-05: …"; `tests/unit/change-or-withdraw.test.ts` › "SCRUM-142 [AC3] TC-142-05: …"
+**Automated by:** `e2e/change-or-withdraw.spec.ts` › "SCRUM-142 [AC3] TC-142-05: the Coordinator withdraws a whole equipment request after confirming, and its reservation is released"; `tests/integration/change-or-withdraw.test.ts` › "SCRUM-142 [AC3, AC7, AC8] TC-142-05: …"; `tests/unit/change-or-withdraw.test.ts` › "SCRUM-142 [AC3] TC-142-05: …"
 
 ### TC-142-06
 
@@ -115,7 +116,7 @@ venue requests; the suite removes them.
 | Test Case ID | TC-142-07 |
 | Test Scenario | [Positive, Negative] AC 4, AC 7, AC 8: withdrawing a pending venue request cancels only it |
 | Pre-conditions | The event has a pending venue request and an approved booking at another venue. |
-| Test Steps | 1. In the event's readiness checklist, choose Withdraw request. <br> 2. Withdraw it again. <br> 3. Request the same venue again. |
+| Test Steps | 1. In the event's readiness checklist, choose Withdraw request, and confirm. <br> 2. Withdraw it again. <br> 3. Request the same venue again. |
 | Test Data | — |
 | Expected Result | Step 1: it is Cancelled and leaves the Venue Staff queue; the other booking stays Approved; every Venue Staff member gets "A venue request was withdrawn"; the checklist reads "Not requested" when it was the only one. Step 2: "This request has already been withdrawn." Step 3: a new request is made. A request that was rejected, or a hold that expired, isn't withdrawn; one decided at the same moment keeps that decision. |
 
@@ -219,8 +220,21 @@ venue requests; the suite removes them.
 | Test Case ID | TC-142-15 |
 | Test Scenario | [Negative] AC 1, AC 3, AC 4: invalid input is refused before anything is written |
 | Pre-conditions | — |
-| Test Steps | 1. Change with no lines, no request, or an equipment type that isn't on the list. <br> 2. Withdraw with no request or booking id. |
+| Test Steps | 1. Change with no lines, no request, or an equipment type that isn't on the list. <br> 2. In Change lines, add Microphone with quantity 0 and save. <br> 3. Withdraw with no request or booking id. |
 | Test Data | — |
-| Expected Result | Step 1: "Please fix the highlighted fields." Step 2: not found, before anything is read. A database failure is reported, not swallowed. |
+| Expected Result | Step 1: "Please fix the highlighted fields." Step 2: "Quantity must be a positive whole number." next to the quantity; the request stays Approved and its reservation Reserved. Step 3: not found, before anything is read. A database failure is reported, not swallowed. |
 
-**Automated by:** `tests/unit/change-or-withdraw.test.ts` › the "TC-142-15" tests
+**Automated by:** `tests/unit/change-or-withdraw.test.ts` › the "TC-142-15" tests; `e2e/change-or-withdraw.spec.ts` › "SCRUM-142 [AC1] TC-142-15: a line with an invalid quantity is refused next to the field, and nothing is changed"
+
+### TC-142-16
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-142-16 |
+| Test Scenario | [Concurrency] AC 5: a change waiting behind a Confirm is refused once the event is Confirmed |
+| Pre-conditions | As TC-142-01. |
+| Test Steps | 1. While the event is being confirmed (its lock held), withdraw the equipment request. <br> 2. Let the confirmation commit. |
+| Test Data | — |
+| Expected Result | The withdrawal, which read the event before the confirmation committed, re-reads it under the lock and is refused: "This event is confirmed, so its arrangements change through a change request." The request stays Approved and its reservations Reserved. Changing lines and withdrawing a venue request re-check the same way. |
+
+**Automated by:** `tests/integration/change-or-withdraw.test.ts` › "SCRUM-142 [AC5] TC-142-16: a withdrawal waiting behind a Confirm for the event lock is refused once the event is Confirmed"; `tests/unit/change-or-withdraw.test.ts` › the "TC-142-16" tests
