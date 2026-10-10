@@ -58,7 +58,12 @@ describe("migrate-production — SCRUM-89", () => {
     const exec = vi.fn();
 
     expect(
-      run({ readFile, exec, log: vi.fn(), baseEnv: { PATH: "/bin" } }),
+      run({
+        readFile,
+        exec,
+        log: vi.fn(),
+        baseEnv: { PATH: "/bin" } as NodeJS.ProcessEnv,
+      }),
     ).toBe(0);
 
     expect(readFile).toHaveBeenCalledWith(".vercel/.env.production.local");
@@ -76,7 +81,12 @@ describe("migrate-production — SCRUM-89", () => {
     const log = vi.fn();
 
     expect(
-      run({ readFile: () => 'DATABASE_URL="db"', exec, log, baseEnv: {} }),
+      run({
+        readFile: () => 'DATABASE_URL="db"',
+        exec,
+        log,
+        baseEnv: {} as NodeJS.ProcessEnv,
+      }),
     ).toBe(1);
 
     expect(exec).not.toHaveBeenCalled();
@@ -97,7 +107,7 @@ describe("migrate-production — SCRUM-89", () => {
         readFile: () => 'DATABASE_URL="db"\nDIRECT_URL="direct"',
         exec,
         log: vi.fn(),
-        baseEnv: {},
+        baseEnv: {} as NodeJS.ProcessEnv,
       }),
     ).toThrow("P3009");
   });
