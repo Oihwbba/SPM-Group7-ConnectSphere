@@ -36,20 +36,31 @@ export function databaseEnv(env) {
   return { env: Object.fromEntries(REQUIRED.map((key) => [key, env[key]])) };
 }
 
-function main() {
-  const { env, missing } = databaseEnv(parseEnvFile(readFileSync(ENV_FILE, "utf8")));
+/**
+ * The deploy step: read the production environment and apply its pending
+ * migrations. Returns the exit code. A failed `migrate deploy` throws, which
+ * fails the step and stops the deploy. The file reader and the command runner
+ * are passed in so the step can be tested without a database.
+ */
+export function run({
+  readFile = (path) => readFileSync(path, "utf8"),
+  exec = (command, args, options) => execFileSync(command, args, options),
+  log = console.log,
+  baseEnv = process.env,
+} = {}) {
+  const { env, missing } = databaseEnv(parseEnvFile(readFile(ENV_FILE)));
   if (missing) {
-    console.log(`::error::The production environment has no ${missing.join(" or ")}, so its migrations can't be applied. Nothing was deployed.`);
-    process.exitCode = 1;
-    return;
+    log(`::error::The production environment has no ${missing.join(" or ")}, so its migrations can't be applied. Nothing was deployed.`);
+    return 1;
   }
-  execFileSync("npx", ["prisma", "migrate", "deploy"], {
+  exec("npx", ["prisma", "migrate", "deploy"], {
     stdio: "inherit",
-    env: { ...process.env, ...env },
+    env: { ...baseEnv, ...env },
     shell: process.platform === "win32",
   });
+  return 0;
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  main();
+  process.exitCode = run();
 }
