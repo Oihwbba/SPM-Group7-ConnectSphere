@@ -166,4 +166,42 @@ test.describe("SCRUM-163 — Hold a venue tentatively until a deadline", () => {
       ).status,
     ).toBe("PENDING");
   });
+
+  test("SCRUM-163 [AC3] TC-163-07: the Coordinator releases a hold, and the venue is free again", async ({
+    browser,
+  }) => {
+    const request = await pendingRequest("Release");
+    made.push(request);
+    await prisma.booking.update({
+      where: { id: request.bookingId },
+      data: {
+        status: "HELD",
+        heldAt: new Date(),
+        holdExpiresAt: parseSingaporeDateTime(EXPIRY)!,
+        holdNote: "Confirm the final headcount.",
+      },
+    });
+
+    const coordinator = await signedIn(browser, "coordinator@test.local");
+    await coordinator
+      .getByRole("row", { name: new RegExp(request.name) })
+      .getByTestId("view-details-button")
+      .click();
+    const venueItem = coordinator
+      .getByRole("dialog")
+      .getByTestId("readiness-item-venue");
+    await expect(venueItem).toContainText(`${heldUntil} – confirm to secure`);
+
+    await venueItem.getByRole("button", { name: "Release hold" }).click();
+
+    await expect(venueItem).toContainText("Not requested");
+    expect(
+      (
+        await prisma.booking.findUniqueOrThrow({
+          where: { id: request.bookingId },
+          select: { status: true },
+        })
+      ).status,
+    ).toBe("CANCELLED");
+  });
 });
