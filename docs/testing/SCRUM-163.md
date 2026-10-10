@@ -83,7 +83,7 @@ shown in Singapore time and stored in UTC.
 | Test Data | — |
 | Expected Result | Steps 1 and 2: "Conflicting: … is held until … This request is still pending."; it stays Pending. Step 3: the held request shows its expiry and is free of clashes; the second lists the hold as its clash. Step 4: the period reads "Held until …", not "Booked". |
 
-**Automated by:** `tests/integration/holds.test.ts` › "SCRUM-163 [AC2, AC7] TC-163-04, TC-163-12: a live hold blocks overlapping approvals and holds, stays in the queue with its expiry, and shows on the calendar as held"; `tests/unit/venue-availability.test.ts` › the "TC-163-04" tests; `tests/unit/booking-holds.test.ts` › "SCRUM-163 [AC2, AC4] TC-163-04: a hold reserves its venue until, but not at, its expiry" and "SCRUM-163 [AC2] TC-163-04: a venue already approved or held for the period refuses the hold and names the clash"
+**Automated by:** `tests/integration/holds.test.ts` › "SCRUM-163 [AC2, AC7] TC-163-04, TC-163-12: a live hold blocks overlapping approvals and holds, stays in the queue with its expiry, and shows on the calendar as held"; `tests/unit/availability-calendar.test.tsx` › "SCRUM-163 [AC2] TC-163-04: a held booking reads as held until its expiry, in its words and its details, and an approved one as booked"; `tests/unit/venue-availability.test.ts` › the "TC-163-04" tests; `tests/unit/booking-holds.test.ts` › "SCRUM-163 [AC2, AC4] TC-163-04: a hold reserves its venue until, but not at, its expiry" and "SCRUM-163 [AC2] TC-163-04: a venue already approved or held for the period refuses the hold and names the clash"
 
 ### TC-163-05
 
