@@ -961,6 +961,28 @@ describe("context beyond the diff", () => {
     ]);
   });
 
+  // The yield: a reserve that can't be met anyway is no reason to cut an
+  // earlier file down. The files are in priority order, so it goes first.
+  it("sends an earlier related file whole when the file behind it can't fit even its excerpt", () => {
+    const source = file("lib/a.ts", ['import { x } from "./changed";', "const local = x;", "export const a = local;"].join("\n"));
+    const test = file(
+      "tests/unit/b.test.ts",
+      ['import { x } from "@/lib/changed";', ...Array.from({ length: 40 }, (_, i) => `it("case ${i}", () => {});`)].join("\n"),
+    );
+    const files = [file("lib/changed.ts", "export const x = 1;"), source, test];
+    expect(excerptFile(test.path, test.content, [])!.length).toBeGreaterThan(source.content.length + 50);
+
+    const { included, omitted } = selectContextFiles({
+      files,
+      changed: ["lib/changed.ts"],
+      storyKeys: [],
+      maxRelated: source.content.length + 50,
+    });
+
+    expect(included.slice(1)).toEqual([{ path: "lib/a.ts", reason: "imports a changed file", content: source.content }]);
+    expect(omitted.map((f) => f.path)).toEqual(["tests/unit/b.test.ts"]);
+  });
+
   it("sends the head of a related file with nothing to excerpt, capped so the files behind it still fit", () => {
     const files = [
       file("e2e/x.spec.ts", 'test("x", async () => {});'),
