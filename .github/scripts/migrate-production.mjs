@@ -24,9 +24,18 @@ export function parseEnvFile(text) {
     const match = line.match(/^([A-Za-z_][A-Za-z0-9_]*)=(.*)$/);
     if (!match) continue;
     const [, key, raw] = match;
-    env[key] = raw.startsWith('"') && raw.endsWith('"') && raw.length >= 2 ? JSON.parse(raw) : raw;
+    env[key] = raw.startsWith('"') && raw.endsWith('"') && raw.length >= 2 ? unquote(key, raw) : raw;
   }
   return env;
+}
+
+/** A quoted value. A malformed one is refused by its name only: the value may be a database URL. */
+function unquote(key, raw) {
+  try {
+    return JSON.parse(raw);
+  } catch {
+    throw new Error(`${ENV_FILE} has a malformed value for ${key}.`);
+  }
 }
 
 /** The database URLs Prisma needs, or the names of those missing. */
@@ -61,6 +70,9 @@ export function run({
     log(`::error::The production environment has no ${missing.join(" or ")}, so its migrations can't be applied. Nothing was deployed.`);
     return 1;
   }
+  // The URLs aren't repository secrets, so Actions wouldn't hide them if
+  // Prisma or an error printed one.
+  for (const value of Object.values(env)) log(`::add-mask::${value}`);
   exec("npx", ["prisma", "migrate", "deploy"], {
     stdio: "inherit",
     env: { ...baseEnv, ...env },
