@@ -495,6 +495,11 @@ export async function holdBookingRequest(
 
     const hold = () =>
       prisma.$transaction(async (tx) => {
+        // The notices below reference the event, which takes a key-share
+        // lock on its row. Take it first, before the booking row: the order
+        // withdrawing a request and rejecting the event use (event, then
+        // booking), so the two can't deadlock (ADR 0007).
+        await tx.$queryRaw`SELECT "id" FROM "Event" WHERE "id" = ${booking.event.id} FOR KEY SHARE`;
         const blockers = await findVenueBlockers(
           tx,
           booking.venueId,
