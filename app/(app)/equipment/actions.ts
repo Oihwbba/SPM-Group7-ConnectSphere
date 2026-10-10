@@ -306,7 +306,7 @@ export async function reserveEquipmentRequest(
         fieldErrorsByPath(parsed.error),
       );
 
-    const { requestId, lines } = parsed.data;
+    const { requestId, requestVersion, lines } = parsed.data;
     const startAt = new Date(parsed.data.startAt);
     const endAt = new Date(parsed.data.endAt);
 
@@ -325,6 +325,7 @@ export async function reserveEquipmentRequest(
           where: { id: requestId, ...reservableRequest(new Date()) },
           select: {
             eventId: true,
+            updatedAt: true,
             event: {
               select: {
                 startAt: true,
@@ -352,6 +353,17 @@ export async function reserveEquipmentRequest(
           return {
             error:
               "This request is not waiting to be reserved: it is already reserved, or no longer approved.",
+          };
+        // SCRUM-142: the Coordinator can change an approved request's lines
+        // (it goes back for review and may be approved again), so a form
+        // opened before that would reserve lines the request no longer has.
+        if (
+          requestVersion &&
+          request.updatedAt.toISOString() !== requestVersion
+        )
+          return {
+            error:
+              "This request has changed since you opened it. Choose it again to see it as it is now.",
           };
 
         // AC 2 — the period may grow (set-up, pack-down) but must cover the

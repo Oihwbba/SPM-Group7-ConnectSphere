@@ -28,6 +28,7 @@ venue requests; the suite removes them.
 | [TC-142-14](#tc-142-14) | Negative | AC 1 | Integration |
 | [TC-142-15](#tc-142-15) | Negative | AC 1, AC 3, AC 4 | Unit, e2e |
 | [TC-142-16](#tc-142-16) | Concurrency | AC 5 | Unit, integration |
+| [TC-142-17](#tc-142-17) | Negative | AC 1, AC 2 | Integration |
 
 ---
 
@@ -183,7 +184,7 @@ venue requests; the suite removes them.
 | Pre-conditions | One event has a check awaiting review and a rejected one; another an approved check. |
 | Test Steps | 1. Change the first event's equipment lines. <br> 2. Withdraw the second event's equipment request. |
 | Test Data | — |
-| Expected Result | The awaiting and approved checks become Outdated, with the time; the rejected one is unchanged. Withdrawing a venue request, and confirming or releasing a hold, do the same. |
+| Expected Result | The awaiting and approved checks become Outdated, with the time; the rejected one is unchanged. Withdrawing a venue request, or releasing a hold, does the same; confirming a hold does too, though only releasing is tested. |
 
 **Automated by:** `tests/integration/change-or-withdraw.test.ts` › "SCRUM-142 [AC9] TC-142-12: a change or withdrawal puts …" and "SCRUM-142 [AC9] TC-142-12: withdrawing a venue request, or releasing a hold, puts the event's safety check out of date"
 
@@ -238,3 +239,16 @@ venue requests; the suite removes them.
 | Expected Result | The withdrawal, which read the event before the confirmation committed, re-reads it under the lock and is refused: "This event is confirmed, so its arrangements change through a change request." The request stays Approved and its reservations Reserved. Changing lines and withdrawing a venue request re-check the same way. |
 
 **Automated by:** `tests/integration/change-or-withdraw.test.ts` › "SCRUM-142 [AC5] TC-142-16: a withdrawal waiting behind a Confirm for the event lock is refused once the event is Confirmed"; `tests/unit/change-or-withdraw.test.ts` › the "TC-142-16" tests
+
+### TC-142-17
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-142-17 |
+| Test Scenario | [Negative] AC 1, AC 2: a reserve form opened before the request's lines changed doesn't reserve the old lines |
+| Pre-conditions | An Approved request for Speaker × 3 with nothing reserved; Technical Support has opened it on the reserve form. |
+| Test Steps | 1. As the Coordinator, change it to Speaker × 1. <br> 2. As Technical Support, approve it again. <br> 3. Submit the form opened before step 1. <br> 4. Choose the request again and reserve it. |
+| Test Data | `techsupport@test.local` |
+| Expected Result | Step 3: "This request has changed since you opened it. Choose it again to see it as it is now.", and nothing is reserved. Step 4: the form shows Speaker × 1, and it is reserved. (Technical Support may still edit rows before reserving, SCRUM-155 AC2; only a stale form is refused.) |
+
+**Automated by:** `tests/integration/change-or-withdraw.test.ts` › "SCRUM-142 [AC1, AC2] TC-142-17: a reserve form opened before the lines changed is refused, even once the request is approved again"

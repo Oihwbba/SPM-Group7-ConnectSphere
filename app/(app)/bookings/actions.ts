@@ -867,6 +867,10 @@ function notWithdrawable(
 ): string {
   if (status === "CANCELLED") return "This request has already been withdrawn.";
   if (status === "EXPIRED") return holdExpired(holdExpiresAt);
+  // Held while this was being withdrawn: AC4 releases a hold instead.
+  if (status === "HELD") {
+    return "Venue Staff have just held this request. Release the hold instead.";
+  }
   return `This request has already been ${status.toLowerCase()}, so it can't be withdrawn.`;
 }
 

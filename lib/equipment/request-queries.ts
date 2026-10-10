@@ -287,6 +287,7 @@ export async function getReservableRequests(now = new Date()) {
     select: {
       id: true,
       notes: true,
+      updatedAt: true,
       requestedBy: { select: { name: true } },
       event: {
         select: {
@@ -312,7 +313,7 @@ export async function getReservableRequests(now = new Date()) {
     orderBy: { event: { startAt: "asc" } },
   });
 
-  return requests.flatMap(({ id, notes, requestedBy, event, lines }) => {
+  return requests.flatMap(({ id, notes, updatedAt, requestedBy, event, lines }) => {
     const missing = outstandingLines(id, lines, event, event.reservations);
     if (missing.length === 0) return [];
     const alreadyReserved: "request" | "event" | null =
@@ -325,6 +326,9 @@ export async function getReservableRequests(now = new Date()) {
     return [
       {
         id,
+        // SCRUM-142: the request as the form saw it, so a reservation made
+        // after its lines changed is refused rather than reserving old lines.
+        version: updatedAt.toISOString(),
         notes,
         requestedBy,
         event: {

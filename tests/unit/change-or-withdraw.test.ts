@@ -419,6 +419,22 @@ describe("withdrawBookingRequest — SCRUM-142 AC4", () => {
     expect(db.notification.createMany).not.toHaveBeenCalled();
   });
 
+  it("SCRUM-142 [AC4] TC-142-13: a request held while being withdrawn says to release the hold, with nothing written", async () => {
+    db.booking.updateMany.mockResolvedValue({ count: 0 });
+    db.booking.findUniqueOrThrow.mockResolvedValue({
+      status: "HELD",
+      holdExpiresAt: new Date(Date.now() + 60 * 60 * 1000),
+    });
+
+    expect(await withdrawBookingRequest({ bookingId: "bkg_1" })).toEqual({
+      ok: false,
+      error:
+        "Venue Staff have just held this request. Release the hold instead.",
+    });
+    expect(db.auditLog.create).not.toHaveBeenCalled();
+    expect(db.notification.createMany).not.toHaveBeenCalled();
+  });
+
   it("SCRUM-142 TC-142-15: an unexpected database failure is not swallowed", async () => {
     db.$transaction.mockRejectedValue(new Error("connection lost"));
 

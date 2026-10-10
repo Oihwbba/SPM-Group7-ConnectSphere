@@ -21,6 +21,8 @@ import {
   withdrawBookingRequest,
 } from "@/app/(app)/bookings/actions";
 import { eventBookingPeriod } from "@/lib/schemas/booking";
+import { reserveEquipmentRequest } from "@/app/(app)/equipment/actions";
+import { getReservableRequests } from "@/lib/equipment/request-queries";
 
 // SCRUM-142 against a real, seeded Postgres: what changing or withdrawing an
 // equipment request, and withdrawing a venue request, write — the lines, the
@@ -47,6 +49,8 @@ const DAY = 24 * 60 * 60 * 1000;
 const PROJECTOR = "eqp_projector";
 const MIC = "eqp_mic";
 const LECTERN = "eqp_lectern";
+// Reserved only by TC-142-17, so the pool for the shared period has room.
+const SPEAKER = "eqp_speaker";
 
 describe.skipIf(!usesLocalDatabase)(
   "changing or withdrawing requests — real database (SCRUM-142)",
@@ -145,6 +149,20 @@ describe.skipIf(!usesLocalDatabase)(
         where: { eventId },
         select: { type: true, user: { select: { role: true } } },
       });
+    /** AC7: one notice of this type for every member of the role, and no other. */
+    const expectRoleNotified = async (
+      eventId: string,
+      type: string,
+      role: "TECH_SUPPORT" | "VENUE_STAFF",
+    ) => {
+      const members = await prisma.user.count({ where: { role } });
+      expect(members).toBeGreaterThan(0);
+      const notices = await staffNotices(eventId);
+      expect(notices).toHaveLength(members);
+      expect(
+        notices.every((n) => n.type === type && n.user.role === role),
+      ).toBe(true);
+    };
     const safetyCheck = (
       eventId: string,
       status: "AWAITING_REVIEW" | "APPROVED" | "REJECTED",
@@ -265,15 +283,11 @@ describe.skipIf(!usesLocalDatabase)(
           ),
         },
       ]);
-      const notices = await staffNotices(eventId);
-      expect(notices.length).toBeGreaterThan(0);
-      expect(
-        notices.every(
-          (n) =>
-            n.type === "EQUIPMENT_REQUEST_CHANGED" &&
-            n.user.role === "TECH_SUPPORT",
-        ),
-      ).toBe(true);
+      await expectRoleNotified(
+        eventId,
+        "EQUIPMENT_REQUEST_CHANGED",
+        "TECH_SUPPORT",
+      );
     });
 
     it("SCRUM-142 [AC1] TC-142-03: adding a removed type again brings its line back rather than adding a second", async () => {
@@ -355,13 +369,11 @@ describe.skipIf(!usesLocalDatabase)(
           note: "Withdrawn by the Coordinator. 3 reservation(s) cancelled.",
         },
       ]);
-      expect(
-        (await staffNotices(eventId)).every(
-          (n) =>
-            n.type === "EQUIPMENT_REQUEST_WITHDRAWN" &&
-            n.user.role === "TECH_SUPPORT",
-        ),
-      ).toBe(true);
+      await expectRoleNotified(
+        eventId,
+        "EQUIPMENT_REQUEST_WITHDRAWN",
+        "TECH_SUPPORT",
+      );
     });
 
     it("SCRUM-142 [AC3] TC-142-06: a Rejected request can't be changed or withdrawn; a new one is raised instead", async () => {
@@ -486,9 +498,24 @@ describe.skipIf(!usesLocalDatabase)(
       // Read before the Confirm commits, so its first check passes; it then
       // waits for the event lock.
       const withdrawing = withdrawEquipmentRequest({ requestId });
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      commitConfirm();
-      await confirming;
+      // Commit only once the withdrawal is waiting on that lock, so the test
+      // proves the re-check under the lock and not the first check.
+      const waitingOnLock = async () =>
+        (
+          await prisma.$queryRaw<{ waiting: number }[]>`
+            SELECT count(*)::int AS waiting FROM pg_locks WHERE NOT granted`
+        )[0].waiting > 0;
+      try {
+        for (let tries = 0; !(await waitingOnLock()); tries++) {
+          if (tries > 60)
+            throw new Error("the withdrawal never waited for the event lock");
+          await new Promise((resolve) => setTimeout(resolve, 50));
+        }
+      } finally {
+        // Never leave the Confirm's transaction open for the next test.
+        commitConfirm();
+        await confirming;
+      }
 
       expect(await withdrawing).toEqual({
         ok: false,
@@ -569,13 +596,11 @@ describe.skipIf(!usesLocalDatabase)(
           [other.id]: "APPROVED",
         },
       );
-      expect(
-        (await staffNotices(ev.id)).every(
-          (n) =>
-            n.type === "BOOKING_REQUEST_WITHDRAWN" &&
-            n.user.role === "VENUE_STAFF",
-        ),
-      ).toBe(true);
+      await expectRoleNotified(
+        ev.id,
+        "BOOKING_REQUEST_WITHDRAWN",
+        "VENUE_STAFF",
+      );
 
       // The event's approved booking is still its one venue (SCRUM-50 AC8), so
       // it is returned rather than a new request made; the withdrawn one isn't.
@@ -738,6 +763,59 @@ describe.skipIf(!usesLocalDatabase)(
       expect(await safetyStatus(second.id)).toMatchObject({
         status: "OUTDATED",
       });
+    });
+
+    it("SCRUM-142 [AC1, AC2] TC-142-17: a reserve form opened before the lines changed is refused, even once the request is approved again", async () => {
+      const ev = await event();
+      const { id: requestId } = await prisma.equipmentRequest.create({
+        data: {
+          eventId: ev.id,
+          requestedById: COORDINATOR,
+          status: "APPROVED",
+          lines: { create: [{ equipmentId: SPEAKER, quantity: 3 }] },
+        },
+        select: { id: true },
+      });
+      // What Technical Support's reserve form loaded.
+      const opened = (await getReservableRequests()).find(
+        (r) => r.id === requestId,
+      )!;
+      const reserve = (requestVersion: string) =>
+        reserveEquipmentRequest({
+          requestId,
+          requestVersion,
+          startAt: ev.startAt!.toISOString(),
+          endAt: ev.endAt!.toISOString(),
+          lines: [{ equipmentId: SPEAKER, quantity: 3 }],
+        });
+
+      // The Coordinator cuts the speakers to 1; Technical Support approve it again.
+      expect(
+        (
+          await changeEquipmentRequest({
+            requestId,
+            lines: [{ equipmentId: SPEAKER, quantity: 1 }],
+          })
+        ).ok,
+      ).toBe(true);
+      await prisma.equipmentRequest.update({
+        where: { id: requestId },
+        data: { status: "APPROVED" },
+      });
+
+      signIn("usr_techsupport", "TECH_SUPPORT");
+      expect(await reserve(opened.version)).toEqual({
+        ok: false,
+        error:
+          "This request has changed since you opened it. Choose it again to see it as it is now.",
+      });
+      expect(await reservations(ev.id)).toEqual([]);
+
+      const reopened = (await getReservableRequests()).find(
+        (r) => r.id === requestId,
+      )!;
+      expect(reopened.lines.map((l) => l.quantity)).toEqual([1]);
+      expect((await reserve(reopened.version)).ok).toBe(true);
     });
   },
 );

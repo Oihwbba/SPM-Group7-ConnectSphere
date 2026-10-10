@@ -257,6 +257,7 @@ describe("reserveEquipmentRequest — SCRUM-155", () => {
       },
       select: {
         eventId: true,
+        updatedAt: true,
         event: {
           select: {
             startAt: true,
