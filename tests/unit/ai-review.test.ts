@@ -15,6 +15,7 @@ import {
   numberLines,
   parseLcov,
   renderCiResults,
+  excerptFile,
   renderContextFiles,
   renderProjectRuleScan,
   resolveImports,
@@ -831,6 +832,124 @@ describe("context beyond the diff", () => {
       storyKeys: [],
     });
     expect(withoutE2e.included.map((f) => f.path)).not.toContain("prisma/seed.ts");
+  });
+
+  // SCRUM-111 — #153 to #156 each lost prisma/schema.prisma and the seed, and
+  // #154 lost 30 files, because unchanged tests that merely import a changed
+  // file were sent first and a related file that didn't fit was dropped whole.
+  it("sends the seed and story-relevant source before tests that merely import a changed file", () => {
+    const files = [
+      file("lib/changed.ts", "export const x = 1;"),
+      file("tests/unit/aaa.test.ts", 'import { x } from "@/lib/changed";\n' + "t".repeat(500)),
+      file("prisma/schema.prisma", "// SCRUM-48 notifications\n" + "s".repeat(300)),
+      file("prisma/seed.ts", "const users = [];"),
+      file("e2e/x.spec.ts", 'test("x", async () => {});'),
+    ];
+
+    const { included } = selectContextFiles({
+      files,
+      changed: ["lib/changed.ts", "e2e/x.spec.ts"],
+      storyKeys: ["SCRUM-48"],
+      maxRelated: 400,
+    });
+
+    expect(included.map((f) => [f.path, f.reason])).toEqual([
+      ["lib/changed.ts", "changed in this PR"],
+      ["e2e/x.spec.ts", "changed in this PR"],
+      ["prisma/seed.ts", "seeded data the e2e tests assert against"],
+      ["prisma/schema.prisma", "mentions SCRUM-48"],
+      ["tests/unit/aaa.test.ts", "imports a changed file, excerpt"],
+    ]);
+  });
+
+  it("sends a story file that doesn't fit whole as the lines around its mentions, numbered as in the file", () => {
+    const lines = Array.from({ length: 200 }, (_, i) => `line ${i + 1}`);
+    lines[99] = "/// SCRUM-48 AC8 — not shown before this time.";
+    const files = [
+      file("lib/changed.ts", "export const x = 1;"),
+      file("prisma/schema.prisma", lines.join("\n")),
+    ];
+
+    const { included, omitted } = selectContextFiles({
+      files,
+      changed: ["lib/changed.ts"],
+      storyKeys: ["SCRUM-48"],
+      maxRelated: 1_000,
+    });
+
+    expect(omitted).toEqual([]);
+    const schema = included.find((f) => f.path === "prisma/schema.prisma")!;
+    expect(schema.reason).toBe("mentions SCRUM-48, excerpt");
+    const shown = schema.content.split("\n");
+    expect(shown[0]).toBe("…");
+    expect(shown[1]).toBe("88\tline 88");
+    expect(shown).toContain("100\t/// SCRUM-48 AC8 — not shown before this time.");
+    expect(shown.at(-2)).toBe("112\tline 112");
+    expect(shown.at(-1)).toBe("…");
+    // Already numbered: the rendering doesn't number it again.
+    expect(renderContextFiles({ included, omitted })).toContain(
+      "### prisma/schema.prisma (mentions SCRUM-48, excerpt)\n\n…\n88\tline 88",
+    );
+  });
+
+  it("outlines a test file that doesn't fit whole: its imports and what each test is called", () => {
+    const content = [
+      'import { describe, it } from "vitest";',
+      'import { x } from "@/lib/changed";',
+      "",
+      'describe("thing", () => {',
+      "  const setup = 1;",
+      '  it("does one thing", () => {',
+      "    expect(x).toBe(1);",
+      "  });",
+      '  it.each([1, 2])("does %s", () => {});',
+      "});",
+    ].join("\n");
+
+    expect(excerptFile("tests/unit/thing.test.ts", content, [])).toBe(
+      [
+        '1\timport { describe, it } from "vitest";',
+        '2\timport { x } from "@/lib/changed";',
+        "…",
+        '4\tdescribe("thing", () => {',
+        "…",
+        '6\t  it("does one thing", () => {',
+        "…",
+        '9\t  it.each([1, 2])("does %s", () => {});',
+        "…",
+      ].join("\n"),
+    );
+  });
+
+  it("outlines a source file that names none of the PR's stories by its imports and exports, and has nothing to excerpt from one with neither", () => {
+    const content = ['import { prisma } from "@/lib/db";', "", "const internal = 1;", "export function visible() {", "  return internal;", "}"].join(
+      "\n",
+    );
+
+    expect(excerptFile("lib/thing.ts", content, ["SCRUM-48"])).toBe(
+      ['1\timport { prisma } from "@/lib/db";', "…", "4\texport function visible() {", "…"].join("\n"),
+    );
+    expect(excerptFile("lib/thing.ts", "const x = 1;", ["SCRUM-48"])).toBeNull();
+  });
+
+  it("sends the head of a related file with nothing to excerpt, capped so the files behind it still fit", () => {
+    const files = [
+      file("e2e/x.spec.ts", 'test("x", async () => {});'),
+      file("prisma/seed.ts", "u".repeat(50_000)),
+      file("tests/unit/later.test.ts", 'import { a } from "../../e2e/x.spec";\nit("later", () => {});'),
+    ];
+
+    const { included, omitted } = selectContextFiles({
+      files,
+      changed: ["e2e/x.spec.ts"],
+      storyKeys: [],
+      maxRelated: 30_000,
+    });
+
+    expect(omitted).toEqual([]);
+    const seed = included.find((f) => f.path === "prisma/seed.ts")!;
+    expect(seed.reason).toBe("seeded data the e2e tests assert against, shortened to fit");
+    expect(seed.content.length).toBeLessThanOrEqual(12_000);
   });
 
   it("scans the branch for role checks outside can(), hard deletes and inline dates", () => {
