@@ -9,6 +9,7 @@ import {
   type ReadinessChecklist,
 } from "@/lib/event-readiness";
 import { confirmEvent } from "@/app/(app)/events/actions";
+import { formatDateTime } from "@/lib/datetime";
 
 // SCRUM-81 — the assigned Coordinator confirms a Planning event whose
 // SCRUM-110 checklist is complete. Test cases: docs/testing/SCRUM-81.md.
@@ -196,7 +197,9 @@ describe("confirmEvent — SCRUM-81", () => {
       ["usr_coordinator", closesAt],
     ]);
     expect(closed[0].message).toBe(
-      'Registration for "Gala" closed at 30 May 2031, 6:00 pm SGT.',
+      // How the time reads is lib/datetime's (SCRUM-129); this checks the notice
+      // says it, without pinning the ICU's output (reviewer memory, #87).
+      `Registration for "Gala" closed at ${formatDateTime(closesAt)}.`,
     );
   });
 
