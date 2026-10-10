@@ -21,14 +21,14 @@ shown in Singapore time and stored in UTC.
 | [TC-163-04](#tc-163-04) | Positive, Negative | AC 2 | Unit, integration |
 | [TC-163-05](#tc-163-05) | Concurrency | AC 2 | Unit, integration |
 | [TC-163-06](#tc-163-06) | Positive | AC 3 | Unit, integration, e2e |
-| [TC-163-07](#tc-163-07) | Positive | AC 3 | Unit, integration |
+| [TC-163-07](#tc-163-07) | Positive | AC 3 | Unit, integration, e2e |
 | [TC-163-08](#tc-163-08) | Boundary, Negative | AC 4 | Unit, integration |
 | [TC-163-09](#tc-163-09) | Positive, Boundary | AC 5 | Unit, integration |
 | [TC-163-10](#tc-163-10) | Positive | AC 5 | Unit, integration |
 | [TC-163-11](#tc-163-11) | Positive | AC 6 | Unit, integration, e2e |
 | [TC-163-12](#tc-163-12) | Positive, Negative | AC 7 | Unit, integration, e2e |
 | [TC-163-13](#tc-163-13) | Positive | AC 9 | Unit, integration; partly blocked |
-| [TC-163-14](#tc-163-14) | Concurrency | AC 8 | Unit |
+| [TC-163-14](#tc-163-14) | Concurrency | AC 8 | Unit, integration |
 | [TC-163-15](#tc-163-15) | Negative | AC 3 | Unit |
 
 ---
@@ -122,7 +122,7 @@ shown in Singapore time and stored in UTC.
 | Test Data | — |
 | Expected Result | Step 1: the booking is `CANCELLED`. Step 2: "This hold has already been released." Step 3: approved. |
 
-**Automated by:** `tests/integration/holds.test.ts` › "SCRUM-163 [AC3] TC-163-07: releasing a hold cancels it and frees the period for another request"; `tests/unit/booking-holds.test.ts` › "SCRUM-163 [AC3, AC5] TC-163-07, TC-163-10: …"
+**Automated by:** `e2e/holds.spec.ts` › "SCRUM-163 [AC3] TC-163-07: the Coordinator releases a hold, and the venue is free again"; `tests/integration/holds.test.ts` › "SCRUM-163 [AC3] TC-163-07: releasing a hold cancels it and frees the period for another request"; `tests/unit/booking-holds.test.ts` › "SCRUM-163 [AC3, AC5] TC-163-07, TC-163-10: …"
 
 ### TC-163-08
 
@@ -213,7 +213,7 @@ shown in Singapore time and stored in UTC.
 | Test Data | — |
 | Expected Result | The database refuses it (`booking_hold_expired`), and the Coordinator gets "This hold expired at …"; the booking is not Approved. A different database refusal is not reported as an expiry. |
 
-**Automated by:** `tests/unit/booking-holds.test.ts` › "SCRUM-163 [AC8] TC-163-14: a confirmation the database judges to be at or after the expiry is refused as expired" and "… a different database failure is not mistaken for an expiry". The database rule itself: `tests/integration/week7-rules.test.ts` › TC-172-13.
+**Automated by:** `tests/integration/holds.test.ts` › "SCRUM-163 [AC8] TC-163-14: a confirmation the database receives after the expiry is refused there, so the booking is never Approved" (the application's clock is set an hour behind, so only the database's guard refuses it); `tests/unit/booking-holds.test.ts` › "SCRUM-163 [AC8] TC-163-14: a confirmation the database judges to be at or after the expiry is refused as expired" and "… a different database failure is not mistaken for an expiry". The database rule itself: `tests/integration/week7-rules.test.ts` › TC-172-13.
 
 ### TC-163-15
 

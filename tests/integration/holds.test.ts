@@ -365,6 +365,31 @@ describe.skipIf(!usesLocalDatabase)(
       expect(await statusOf(lapsed.id)).toBe("EXPIRED");
     });
 
+    it("SCRUM-163 [AC8] TC-163-14: a confirmation the database receives after the expiry is refused there, so the booking is never Approved", async () => {
+      // A hold that expired a minute ago, by the database's clock.
+      const { id } = await heldUntil(eventIds[0], fromNow(-60 * 1000));
+      mockAuth.mockResolvedValue(COORDINATOR);
+      // The application's clock runs an hour behind, so its own check still
+      // sees a live hold: only the database's expiry guard stands between the
+      // confirmation and an Approved booking (the race at the expiry instant).
+      vi.useFakeTimers({ toFake: ["Date"], now: Date.now() - HOUR });
+      try {
+        expect(await confirmHold({ bookingId: id })).toMatchObject({
+          ok: false,
+          error: expect.stringMatching(/^This hold expired at /),
+        });
+      } finally {
+        vi.useRealTimers();
+      }
+
+      expect(await statusOf(id)).toBe("HELD");
+      expect(
+        await prisma.auditLog.count({
+          where: { entityId: id, action: "HOLD_CONFIRMED" },
+        }),
+      ).toBe(0);
+    });
+
     it("SCRUM-163 [AC4] TC-163-08: a live hold is still the event's booking when it asks again", async () => {
       const { id } = await heldUntil(eventIds[0], fromNow(HOUR));
       mockAuth.mockResolvedValue(COORDINATOR);
