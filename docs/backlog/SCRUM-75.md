@@ -31,7 +31,7 @@
 9. Given the event returns to Planning (SCRUM-128, SCRUM-26), then registration pauses. When the event is Confirmed again, the same window applies; if its closing time has passed, registration stays closed until I reopen it, and it is then open until the event's start (AC6).
 10. Registration times are shown in Singapore time (SCRUM-129).
 
-**Customer basis: S**tep 11: "Where registration is required, Attendees can register for the confirmed event during the permitted registration period and subject to the applicable capacity." G4 (Attendee Registration): "Registration is based on first come first serve and also based on Organiser discretion." AC6 (the Organiser closes and reopens registration) is a team decision based on "Organiser discretion".
+**Customer basis:** Step 11: "Where registration is required, Attendees can register for the confirmed event during the permitted registration period and subject to the applicable capacity." G4 (Attendee Registration): "Registration is based on first come first serve and also based on Organiser discretion." AC6 (the Organiser closes and reopens registration) is a team decision based on "Organiser discretion".
 
 **Change log**
 
