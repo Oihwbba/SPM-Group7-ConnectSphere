@@ -99,6 +99,7 @@ defect, e.g. `regression: a blank rejection reason was accepted`.
 | [SCRUM-81](SCRUM-81.md) | Jun Bin | 13 | Every case automated (unit, integration for the simultaneous confirm, e2e for the journey) |
 | [SCRUM-110](SCRUM-110.md) | Jun Bin | 15 | Every case automated (unit, and e2e for the page) |
 | [SCRUM-108](SCRUM-108.md) | Jun Bin | 12 | Every case automated (unit, e2e for both journeys); AC 6, 8 and 10 point to existing tests |
+| [SCRUM-124](SCRUM-124.md) | Jin Hong | 1 | Grows with the story: AC 7 so far (with SCRUM-41); the hold and withdrawal cases follow SCRUM-163 and SCRUM-142 |
 | [SCRUM-126](SCRUM-126.md) | Jun Bin | 10 | Every case automated (unit, integration for the constraint, migration and simultaneous clicks, e2e for the journey) |
 | [SCRUM-117](SCRUM-117.md) | Jun Bin | 10 | Every case automated (unit, integration for releasing arrangements in one transaction, e2e for both journeys) |
 | [SCRUM-155](SCRUM-155.md) | Jin Hong | 16 | Every case automated (unit, integration for all-or-nothing and the races, e2e for the journey) |

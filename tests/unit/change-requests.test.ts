@@ -762,3 +762,61 @@ describe("getChangeRequestsForEvent — SCRUM-41 AC6, AC7, AC9", () => {
     expect(mockEventFindUnique).not.toHaveBeenCalled();
   });
 });
+
+describe("raiseChangeRequest notices — SCRUM-124 AC7, AC12", () => {
+  it("SCRUM-124 [AC7, AC12] TC-124-07: the assigned Coordinator is told which event and which fields the Organiser asked to change", async () => {
+    signIn("ORGANISER", ORGANISER);
+
+    await raiseChangeRequest({
+      eventId: "evt1",
+      changes: { expectedAttendance: 60, venueRequirements: "Two halls" },
+    });
+
+    expect(tx.notification.create).toHaveBeenCalledTimes(1);
+    expect(tx.notification.create).toHaveBeenCalledWith({
+      data: {
+        userId: COORDINATOR,
+        type: "CHANGE_REQUEST_SUBMITTED",
+        title: "Change request raised",
+        message:
+          'The organiser asked to change "Career Fair": Expected attendance, Venue requirements.',
+        link: "/events",
+        eventId: "evt1",
+      },
+    });
+  });
+
+  it("SCRUM-124 [AC7, AC12] TC-124-07: a cancellation request tells the Coordinator the Organiser's reason", async () => {
+    signIn("ORGANISER", ORGANISER);
+
+    await raiseChangeRequest({
+      eventId: "evt1",
+      requestsCancellation: true,
+      reason: "The sponsor withdrew.",
+    });
+
+    expect(tx.notification.create.mock.calls[0][0].data).toMatchObject({
+      userId: COORDINATOR,
+      title: "Cancellation requested",
+      message: 'The organiser asked to cancel "Career Fair". Their reason: The sponsor withdrew.',
+    });
+  });
+
+  it("SCRUM-124 [AC7] TC-124-07: a request the Coordinator raised themselves sends them no notice", async () => {
+    signIn("COORDINATOR", COORDINATOR);
+
+    await raiseChangeRequest({ eventId: "evt1", changes: { expectedAttendance: 60 } });
+
+    expect(tx.eventChangeRequest.create).toHaveBeenCalled();
+    expect(tx.notification.create).not.toHaveBeenCalled();
+  });
+
+  it("SCRUM-124 [AC14] TC-124-07: a refused request sends no notice", async () => {
+    signIn("ORGANISER", ORGANISER);
+    tx.eventChangeRequest.findFirst.mockResolvedValue({ id: "chg_open" });
+
+    await raiseChangeRequest({ eventId: "evt1", changes: { expectedAttendance: 60 } });
+
+    expect(tx.notification.create).not.toHaveBeenCalled();
+  });
+});

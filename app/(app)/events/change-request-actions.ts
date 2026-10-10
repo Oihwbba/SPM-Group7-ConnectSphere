@@ -228,6 +228,24 @@ export async function raiseChangeRequest(
             : `Change requested: ${labelsOf(fields.map((f) => f.fieldName)).join(", ")}`,
         },
       });
+      // SCRUM-124 AC7: the assigned Coordinator hears of the Organiser's
+      // request. One they raised themselves needs no notice.
+      if (current.coordinatorId !== user!.id) {
+        await tx.notification.create({
+          data: {
+            userId: current.coordinatorId!,
+            type: "CHANGE_REQUEST_SUBMITTED",
+            title: requestsCancellation
+              ? "Cancellation requested"
+              : "Change request raised",
+            message: requestsCancellation
+              ? `The organiser asked to cancel "${current.name}". Their reason: ${reason}`
+              : `The organiser asked to change "${current.name}": ${labelsOf(fields.map((f) => f.fieldName)).join(", ")}.`,
+            link: "/events",
+            eventId,
+          },
+        });
+      }
       return { kind: "created", id: created.id } as const;
     });
 

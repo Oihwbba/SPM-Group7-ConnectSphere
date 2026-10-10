@@ -113,6 +113,21 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-41 — raise and track a change reque
     ).toEqual({ expectedAttendance: 40, description: "Booths and talks.", status: "PLANNING" });
   });
 
+  it("SCRUM-124 [AC7, AC14] TC-124-07: the assigned Coordinator gets exactly one notice of the Organiser's request", async () => {
+    signInAs(ORGANISER, "ORGANISER");
+    const eventId = await eventIn("PLANNING");
+
+    await raiseChangeRequest({ eventId, changes: { expectedAttendance: 60 } });
+    await raiseChangeRequest({ eventId, changes: { expectedAttendance: 60 } });
+
+    expect(
+      await prisma.notification.findMany({
+        where: { eventId },
+        select: { userId: true, type: true },
+      }),
+    ).toEqual([{ userId: COORDINATOR, type: "CHANGE_REQUEST_SUBMITTED" }]);
+  });
+
   it("SCRUM-41 [AC7] TC-41-10: a second request is refused while one is Submitted, and allowed once that one is decided", async () => {
     signInAs(ORGANISER, "ORGANISER");
     const eventId = await eventIn("CONFIRMED");
