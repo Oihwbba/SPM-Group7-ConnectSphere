@@ -44,6 +44,8 @@ export function ReadinessChecklist({ eventId }: { eventId: string }) {
   // Bumped after a hold is settled, so the checklist is read again.
   const [loads, setLoads] = useState(0);
   const [settling, startSettle] = useTransition();
+  // Which hold action is in flight, so its button says so.
+  const [settlingHow, setSettlingHow] = useState<string | null>(null);
   const [confirming, startConfirm] = useTransition();
   const [rejecting, startReject] = useTransition();
   const [rejectOpen, setRejectOpen] = useState(false);
@@ -69,6 +71,7 @@ export function ReadinessChecklist({ eventId }: { eventId: string }) {
 
   // SCRUM-163 AC3: the assigned Coordinator confirms or releases a hold.
   function settleHold(bookingId: string, how: "confirm" | "release") {
+    setSettlingHow(how);
     startSettle(async () => {
       const result =
         how === "confirm"
@@ -175,7 +178,9 @@ export function ReadinessChecklist({ eventId }: { eventId: string }) {
                           }
                           disabled={settling}
                         >
-                          Confirm hold
+                          {settling && settlingHow === "confirm"
+                            ? "Confirming…"
+                            : "Confirm hold"}
                         </Button>
                         <Button
                           size="sm"
@@ -185,7 +190,9 @@ export function ReadinessChecklist({ eventId }: { eventId: string }) {
                           }
                           disabled={settling}
                         >
-                          Release hold
+                          {settling && settlingHow === "release"
+                            ? "Releasing…"
+                            : "Release hold"}
                         </Button>
                       </div>
                     )}
