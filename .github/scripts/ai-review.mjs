@@ -1386,7 +1386,7 @@ async function main() {
   // On a re-run: the previous review and what people replied to it.
   const conversation = renderConversation(await listPrComments(github, repo, env.PR_NUMBER));
 
-  // Beyond the diff: related files in full and a project rule scan, both from
+  // Beyond the diff: related files (whole or in part) and a project rule scan, both from
   // the PR's head, then CI's results for this commit.
   const sourceFiles = listSourceFiles(env.HEAD_SHA);
   const context = selectContextFiles({ files: sourceFiles, changed: [...commentable.keys()], storyKeys: stories });
@@ -1415,8 +1415,10 @@ async function main() {
     console.log(`::warning::Couldn't load CI results: ${error.message}`);
   }
   if (!ci) notes.push("CI's results weren't available for this review.");
+  const inPart = context.included.filter((file) => /, (?:excerpt|shortened to fit)$/.test(file.reason)).length;
   console.log(
-    `Context: ${context.included.length} file(s) in full, ${context.omitted.length} omitted; ` +
+    `Context: ${context.included.length - inPart} file(s) in full, ${inPart} in part, ` +
+      `${context.omitted.length} omitted; ` +
       `CI ${ci ? ci.conclusion : "unavailable"}.`,
   );
 
@@ -1457,10 +1459,12 @@ async function main() {
       "is existing code: use it as evidence for acceptance criteria and mention it in the overview, but " +
       "don't raise it as a finding unless this PR makes it worse.",
     ruleScan,
-    "## Files in full (at this PR's head)",
-    "Each file is line-numbered. Files changed by this PR are here in full; the diff below shows exactly " +
-      "which lines changed. The related files are the ones changed files import, the ones that import a " +
-      "changed file, and ones that name this PR's stories.",
+    "## Files (at this PR's head)",
+    "Each file is line-numbered. Files changed by this PR are here in full, or their head if marked " +
+      "\"shortened to fit\"; the diff below shows exactly which lines changed. The related files are the ones " +
+      "changed files import, the ones that import a changed file, and ones that name this PR's stories. A " +
+      "related file marked \"excerpt\" shows only some of its lines, each with its own line number, and \"…\" " +
+      "marks lines left out: don't report something as missing from an excerpt or a shortened file.",
     renderContextFiles(context) || "(none)",
     "## Diff",
     "Every added (+) or unchanged context line is prefixed with its line number in the new " +
