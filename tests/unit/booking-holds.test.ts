@@ -34,6 +34,7 @@ const db = vi.hoisted(() => ({
   notification: { createMany: vi.fn(), updateMany: vi.fn() },
   auditLog: { create: vi.fn() },
   safetyCheck: { updateMany: vi.fn() },
+  $queryRaw: vi.fn(),
   $transaction: vi.fn(),
 }));
 
@@ -217,6 +218,17 @@ describe("holdBookingRequest — SCRUM-163 AC1, AC2, AC5", () => {
       }),
     });
     expect(revalidatePath).toHaveBeenCalledWith("/venues/availability");
+  });
+
+  it("SCRUM-163 [AC2] TC-163-05: the hold locks the event before the booking, the order withdrawing a request and rejecting the event use, so they can't deadlock", async () => {
+    await holdBookingRequest(valid(fromNow(48 * HOUR)));
+
+    const [sql, eventId] = db.$queryRaw.mock.calls[0];
+    expect(sql.join("?")).toContain('FROM "Event" WHERE "id" = ? FOR KEY SHARE');
+    expect(eventId).toBe("evt_1");
+    expect(db.$queryRaw.mock.invocationCallOrder[0]).toBeLessThan(
+      db.booking.updateMany.mock.invocationCallOrder[0],
+    );
   });
 
   it("SCRUM-163 [AC5] TC-163-09: with less than 24 hours left, the reminder shows straight away", async () => {
