@@ -34,6 +34,7 @@ const tx = vi.hoisted(() => ({
     updateMany: vi.fn(),
   },
   user: { findMany: vi.fn(), findFirst: vi.fn() },
+  eventChangeRequest: { updateMany: vi.fn() },
   notification: { create: vi.fn(), createMany: vi.fn() },
   auditLog: { create: vi.fn(), createMany: vi.fn() },
   $queryRaw: vi.fn(),

@@ -50,64 +50,73 @@ const requiredText = (label: string, max: number) =>
     .max(max, `Keep ${label.toLowerCase()} under ${max} characters.`);
 
 /**
- * SCRUM-108 AC2 — new values for the fields the clarification named. The
- * rules match the request form's (submitEventRequestSchema), so an answer
- * can't leave the request in a state it couldn't have been submitted in.
+ * SCRUM-108 AC2 and SCRUM-41 AC4 — the rules for a new value of each
+ * request-form field. They match the request form's (submitEventRequestSchema),
+ * so neither a clarification answer nor a change request can leave the event
+ * in a state it couldn't have been submitted in.
  */
-export const clarificationChangesSchema = z
-  .object({
-    name: requiredText("The event name", 200),
-    purpose: requiredText("The purpose", 1000),
-    description: requiredText("The description", 5000),
-    startAt: z.string().min(1),
-    endAt: z.string().min(1),
-    expectedAttendance: z
-      .number({
-        invalid_type_error: "Attendance must be a positive whole number.",
-      })
-      .int("Attendance must be a positive whole number.")
-      .positive("Attendance must be a positive whole number."),
-    venueRequirements: requiredText("Venue requirements", 5000),
-    accessibilityNeeds: requiredText("Accessibility needs", 5000),
-    preferredLayout: requiredText("Room layout", 200),
-    equipmentRequirements: requiredText("Equipment requirements", 5000),
-    registrationNotes: requiredText("Registration needs", 5000),
-  })
+export const requestFieldValues = z.object({
+  name: requiredText("The event name", 200),
+  purpose: requiredText("The purpose", 1000),
+  description: requiredText("The description", 5000),
+  startAt: z.string().min(1),
+  endAt: z.string().min(1),
+  expectedAttendance: z
+    .number({
+      invalid_type_error: "Attendance must be a positive whole number.",
+    })
+    .int("Attendance must be a positive whole number.")
+    .positive("Attendance must be a positive whole number."),
+  venueRequirements: requiredText("Venue requirements", 5000),
+  accessibilityNeeds: requiredText("Accessibility needs", 5000),
+  preferredLayout: requiredText("Room layout", 200),
+  equipmentRequirements: requiredText("Equipment requirements", 5000),
+  registrationNotes: requiredText("Registration needs", 5000),
+});
+
+/** A new schedule gives both ends, doesn't start in the past, and ends after it starts. */
+export function checkSchedule(
+  changes: { startAt?: string; endAt?: string },
+  ctx: z.RefinementCtx,
+) {
+  if (changes.startAt === undefined && changes.endAt === undefined) return;
+  if (changes.startAt === undefined || changes.endAt === undefined) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Give both the start and the end.",
+      path: ["endAt"],
+    });
+    return;
+  }
+  const start = new Date(changes.startAt);
+  const end = new Date(changes.endAt);
+  if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Invalid date format.",
+      path: ["startAt"],
+    });
+  } else if (start < new Date()) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Proposed date cannot be in the past.",
+      path: ["startAt"],
+    });
+  } else if (end <= start) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message:
+        "Proposed end date and time must be strictly after the start date and time.",
+      path: ["endAt"],
+    });
+  }
+}
+
+/** SCRUM-108 AC2 — new values for the fields the clarification named. */
+export const clarificationChangesSchema = requestFieldValues
   .partial()
   .strict()
-  .superRefine((changes, ctx) => {
-    if (changes.startAt === undefined && changes.endAt === undefined) return;
-    if (changes.startAt === undefined || changes.endAt === undefined) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Give both the start and the end.",
-        path: ["endAt"],
-      });
-      return;
-    }
-    const start = new Date(changes.startAt);
-    const end = new Date(changes.endAt);
-    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Invalid date format.",
-        path: ["startAt"],
-      });
-    } else if (start < new Date()) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Proposed date cannot be in the past.",
-        path: ["startAt"],
-      });
-    } else if (end <= start) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message:
-          "Proposed end date and time must be strictly after the start date and time.",
-        path: ["endAt"],
-      });
-    }
-  });
+  .superRefine(checkSchedule);
 
 export type ClarificationChanges = z.infer<typeof clarificationChangesSchema>;
 

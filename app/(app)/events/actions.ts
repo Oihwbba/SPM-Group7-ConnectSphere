@@ -630,6 +630,17 @@ export async function transitionEventStatus(
             summary: "Outcome chosen on rejection (SCRUM-126)",
           },
         });
+        // SCRUM-41 AC8: a change request waiting on a rejected event is
+        // rejected with the event's reason.
+        await tx.eventChangeRequest.updateMany({
+          where: { eventId: event.id, status: "PENDING_REVIEW" },
+          data: {
+            status: "REJECTED",
+            decidedById: user!.id,
+            decidedAt: new Date(),
+            decisionReason,
+          },
+        });
       }
       if (coordinatorId !== event.coordinatorId) {
         await tx.auditLog.create({
