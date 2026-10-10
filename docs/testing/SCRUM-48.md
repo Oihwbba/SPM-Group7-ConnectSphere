@@ -19,7 +19,7 @@ AC8 cases write those rows directly. Times are UTC.
 | [TC-48-06](#tc-48-06) | Positive, Negative | AC 5 | Unit, integration |
 | [TC-48-07](#tc-48-07) | Positive | AC 5 | e2e |
 | [TC-48-08](#tc-48-08) | Positive | AC 5 (Safety Officer) | Blocked by SCRUM-166 |
-| [TC-48-09](#tc-48-09) | Negative | AC 6 | Unit, integration |
+| [TC-48-09](#tc-48-09) | Negative | AC 5, AC 6 | Unit, integration, e2e |
 | [TC-48-10](#tc-48-10) | Positive | AC 6 (several roles) | Blocked by SCRUM-121 |
 | [TC-48-11](#tc-48-11) | Positive | AC 7 | Integration |
 | [TC-48-12](#tc-48-12) | Boundary | AC 8 | Unit, integration |
@@ -48,7 +48,7 @@ AC8 cases write those rows directly. Times are UTC.
 |---|---|
 | Test Case ID | TC-48-02 |
 | Test Scenario | [Positive] AC 2, AC 3: opening an unread notification marks it read, and the header's count drops by one |
-| Pre-conditions | Signed in as `organiser@test.local`, with a new unread notification about "Under Review — Career Fair". |
+| Pre-conditions | Signed in as a fresh Organiser account with one Under Review event and one new unread notification about it (the automated case makes its own account, so other specs' notices can't change its count). |
 | Test Steps | 1. Note the count on the header's bell. <br> 2. Open Notifications from the bell. <br> 3. Open the newest notification. <br> 4. Close the event details. <br> 5. Open Notifications again. |
 | Test Data | `organiser@test.local` |
 | Expected Result | Step 2: the new notification is first and shown as unread. Step 4: the bell's count is one lower. Step 5: the notification is shown as read. The row's `readAt` is set; the other notifications are still unread. |
@@ -77,9 +77,9 @@ AC8 cases write those rows directly. Times are UTC.
 | Pre-conditions | Signed in as `organiser@test.local`, with some unread notifications and one written to show in an hour. |
 | Test Steps | 1. Look at the bell in the header. |
 | Test Data | `organiser@test.local` |
-| Expected Result | Its accessible name is "Notifications, *n* unread", where *n* counts my unread notifications that are showing now; the one due in an hour isn't counted. With none unread it reads "Notifications, none unread" and shows no badge. |
+| Expected Result | Its accessible name is "Notifications, *n* unread", where *n* counts my unread notifications that are showing now; the one due in an hour isn't counted. With none unread it reads "Notifications, none unread" and shows no badge. If the count can't be read, the header shows none rather than the page failing. |
 
-**Automated by:** `e2e/notifications.spec.ts` › "SCRUM-48 [AC1, AC2, AC3, AC5] TC-48-02, TC-48-04, TC-48-07: …"; `tests/unit/notifications.test.ts` › "SCRUM-48 [AC3, AC8] TC-48-04: counts only my unread notifications that are showing" and "SCRUM-48 [AC3] TC-48-04: a signed-out caller has no unread count, before the query runs"
+**Automated by:** `e2e/notifications.spec.ts` › "SCRUM-48 [AC1, AC2, AC3, AC5] TC-48-02, TC-48-04, TC-48-07: …"; `tests/unit/notifications.test.ts` › "SCRUM-48 [AC3, AC8] TC-48-04: counts only my unread notifications that are showing" and "SCRUM-48 [AC3] TC-48-04: a signed-out caller has no unread count, before the query runs" and "SCRUM-48 [AC3] TC-48-04: a failed count shows none in the header instead of failing every page"
 
 ### TC-48-05
 
@@ -142,9 +142,9 @@ AC8 cases write those rows directly. Times are UTC.
 | Pre-conditions | I have one notification and another user has one. |
 | Test Steps | 1. Open Notifications. <br> 2. Try to mark the other user's notification read by its id. |
 | Test Data | — |
-| Expected Result | Step 1: only mine is listed and counted. Step 2: "Notification not found." (the same as an id that doesn't exist), and the other user's notification is still unread. Signed out, the list is empty and nothing is queried. |
+| Expected Result | Step 1: only mine is listed and counted. Step 2: "Notification not found." (the same as an id that doesn't exist), and the other user's notification is still unread. Signed out, the list is empty and nothing is queried. A link to another Organiser's event, or to one that doesn't exist (`/events?event=…`), opens nothing and shows nothing of it. |
 
-**Automated by:** `tests/integration/notifications.test.ts` › "SCRUM-48 [AC6] TC-48-09: another user's notifications are never listed or counted, and can't be marked read"; `tests/unit/notifications.test.ts` › "SCRUM-48 [AC6, AC8] TC-48-09: only my own, not withdrawn, and shown from their time on", "SCRUM-48 [AC6] TC-48-09: a signed-out caller gets an empty list, before the query runs" and "SCRUM-48 [AC6] TC-48-09: a notification that isn't mine or isn't showing is not found, and nothing is written"
+**Automated by:** `e2e/notifications.spec.ts` › "SCRUM-48 [AC5, AC6] TC-48-09: a link to another Organiser's event, or to one that doesn't exist, opens nothing"; `tests/integration/notifications.test.ts` › "SCRUM-48 [AC6] TC-48-09: another user's notifications are never listed or counted, and can't be marked read"; `tests/unit/notifications.test.ts` › "SCRUM-48 [AC6, AC8] TC-48-09: only my own, not withdrawn, and shown from their time on", "SCRUM-48 [AC6] TC-48-09: a signed-out caller gets an empty list, before the query runs" and "SCRUM-48 [AC6] TC-48-09: a notification that isn't mine or isn't showing is not found, and nothing is written"
 
 ### TC-48-10
 

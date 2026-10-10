@@ -86,7 +86,10 @@ describe("notificationHref — SCRUM-48 AC5", () => {
     "SCRUM-48 [AC5] TC-48-06: an Attendee gets no link for a %s event, which has no Attendee page",
     (status) => {
       expect(
-        notificationHref(user("ATTENDEE"), { link: null, event: event(status) }),
+        notificationHref(user("ATTENDEE"), {
+          link: null,
+          event: event(status),
+        }),
       ).toBeNull();
     },
   );
@@ -211,6 +214,19 @@ describe("getMyUnreadCount — SCRUM-48 AC3", () => {
     expect(await getMyUnreadCount()).toBe(0);
     expect(db.count).not.toHaveBeenCalled();
   });
+
+  it("SCRUM-48 [AC3] TC-48-04: a failed count shows none in the header instead of failing every page", async () => {
+    mockAuth.mockResolvedValue(sessionFor("ORGANISER"));
+    db.count.mockRejectedValue(new Error("connection lost"));
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    expect(await getMyUnreadCount()).toBe(0);
+    expect(logged).toHaveBeenCalledWith(
+      "Couldn't count unread notifications",
+      expect.any(Error),
+    );
+    logged.mockRestore();
+  });
 });
 
 describe("markNotificationRead — SCRUM-48 AC2", () => {
@@ -224,7 +240,11 @@ describe("markNotificationRead — SCRUM-48 AC2", () => {
     });
 
     expect(db.findFirst.mock.calls[0][0].where).toEqual(
-      expect.objectContaining({ id: "ntf_1", userId: "usr_me", withdrawnAt: null }),
+      expect.objectContaining({
+        id: "ntf_1",
+        userId: "usr_me",
+        withdrawnAt: null,
+      }),
     );
     const update = db.updateMany.mock.calls[0][0];
     expect(update.where).toEqual(

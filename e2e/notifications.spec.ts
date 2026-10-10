@@ -5,109 +5,145 @@ import { prisma } from "@/lib/db";
 import { signedIn, usesLocalDatabase } from "./helpers";
 
 /**
- * SCRUM-48 — a user reads their notification list. The Organiser journey adds
- * its own notifications on the seeded "Under Review — Career Fair" and
- * removes them afterwards; the empty state uses a throwaway account, so it
- * doesn't depend on which seeded users other specs notify.
+ * SCRUM-48 — a user reads their notification list. Each journey uses its own
+ * throwaway account, with its own event and notifications, so its unread
+ * count can't move when another spec notifies a seeded user, and a retry
+ * starts from the same state. Everything is removed afterwards.
  */
-const TITLE = `SCRUM-48 e2e ${Date.now()}`;
-const EMPTY_USER = `usr_ntf_empty_${Date.now()}`;
+const STAMP = Date.now();
+const ORGANISER = `usr_ntf_org_${STAMP}`;
+const EMPTY_USER = `usr_ntf_empty_${STAMP}`;
+const EVENT_NAME = `SCRUM-48 Gala ${STAMP}`;
+
+async function account(
+  id: string,
+  role: "ORGANISER" | "ATTENDEE",
+  name: string,
+) {
+  await prisma.user.upsert({
+    where: { id },
+    update: {},
+    create: {
+      id,
+      email: `${id}@test.local`,
+      name,
+      role,
+      passwordHash: await bcrypt.hash("Password123!", 10),
+    },
+  });
+}
 
 test.describe("SCRUM-48 — User views their notification list", () => {
   test.skip(!usesLocalDatabase, "writes notifications; local database only");
 
   test.afterAll(async () => {
-    await prisma.notification.deleteMany({
-      where: { title: { startsWith: TITLE } },
-    });
-    await prisma.user.deleteMany({ where: { id: EMPTY_USER } });
+    const users = [ORGANISER, EMPTY_USER];
+    await prisma.notification.deleteMany({ where: { userId: { in: users } } });
+    await prisma.event.deleteMany({ where: { organiserId: ORGANISER } });
+    await prisma.user.deleteMany({ where: { id: { in: users } } });
   });
 
   test("SCRUM-48 [AC1, AC2, AC3, AC5] TC-48-02, TC-48-04, TC-48-07: opening the newest notification marks it read, lowers the count and opens the event", async ({
     browser,
   }) => {
-    await prisma.notification.create({
+    await account(ORGANISER, "ORGANISER", "Nell Notified");
+    // A retry starts again from one unread notice on one event.
+    await prisma.notification.deleteMany({ where: { userId: ORGANISER } });
+    await prisma.event.deleteMany({ where: { organiserId: ORGANISER } });
+    const { id: eventId } = await prisma.event.create({
       data: {
-        userId: "usr_organiser",
-        type: "EVENT_STATUS_CHANGED",
-        title: TITLE,
-        message: "Your event was updated.",
-        eventId: "evt_under_review",
+        name: EVENT_NAME,
+        status: "UNDER_REVIEW",
+        organiserId: ORGANISER,
+        submittedAt: new Date(),
       },
+      select: { id: true },
+    });
+    const { id: noticeId } = await prisma.notification.create({
+      data: {
+        userId: ORGANISER,
+        type: "EVENT_STATUS_CHANGED",
+        title: "Your event was updated",
+        message: `"${EVENT_NAME}" was updated.`,
+        eventId,
+      },
+      select: { id: true },
     });
     // AC8: written for later, so not shown or counted yet.
     await prisma.notification.create({
       data: {
-        userId: "usr_organiser",
+        userId: ORGANISER,
         type: "HOLD_EXPIRY_REMINDER",
-        title: `${TITLE} later`,
-        message: "Not yet.",
+        title: "Not yet",
+        message: "Shown in an hour.",
         showFromAt: new Date(Date.now() + 60 * 60 * 1000),
       },
     });
-    const unread = await prisma.notification.count({
-      where: {
-        userId: "usr_organiser",
-        readAt: null,
-        withdrawnAt: null,
-        showFromAt: { lte: new Date() },
-      },
-    });
 
-    const page = await signedIn(browser, "organiser@test.local");
+    const page = await signedIn(browser, `${ORGANISER}@test.local`);
     const bell = page.getByRole("link", { name: /^Notifications, / });
-    await expect(bell).toHaveAccessibleName(`Notifications, ${unread} unread`);
+    await expect(bell).toHaveAccessibleName("Notifications, 1 unread");
 
     await bell.click();
     await expect(
       page.getByRole("heading", { name: "Notifications" }),
     ).toBeVisible();
     const items = page.getByTestId("notification");
-    await expect(items.first()).toContainText(TITLE);
+    await expect(items).toHaveCount(1);
+    await expect(items.first()).toContainText("Your event was updated");
     await expect(items.first()).toHaveAttribute("data-read", "false");
-    await expect(page.getByText(`${TITLE} later`)).toHaveCount(0);
+    await expect(page.getByText("Not yet")).toHaveCount(0);
 
     await items.first().click();
 
-    await page.waitForURL(/\/events\?event=evt_under_review$/);
+    await page.waitForURL(new RegExp(`/events\\?event=${eventId}$`));
     await expect(
-      page.getByRole("dialog").getByRole("heading", {
-        name: "Under Review — Career Fair",
-      }),
+      page.getByRole("dialog").getByRole("heading", { name: EVENT_NAME }),
     ).toBeVisible();
     // An open dialog hides the header from assistive technology; closing it
     // also drops ?event=, so a refresh doesn't open it again.
     await page.keyboard.press("Escape");
     await page.waitForURL(/\/events$/);
-    await expect(bell).toHaveAccessibleName(
-      unread - 1 === 0
-        ? "Notifications, none unread"
-        : `Notifications, ${unread - 1} unread`,
-    );
-    const opened = await prisma.notification.findFirstOrThrow({
-      where: { title: TITLE },
-      select: { readAt: true },
-    });
-    expect(opened.readAt).not.toBeNull();
+    await expect(bell).toHaveAccessibleName("Notifications, none unread");
+    expect(
+      (
+        await prisma.notification.findUniqueOrThrow({
+          where: { id: noticeId },
+          select: { readAt: true },
+        })
+      ).readAt,
+    ).not.toBeNull();
 
     await page.goto("/notifications");
-    await expect(
-      page.getByTestId("notification").filter({ hasText: TITLE }).first(),
-    ).toHaveAttribute("data-read", "true");
+    await expect(page.getByTestId("notification").first()).toHaveAttribute(
+      "data-read",
+      "true",
+    );
+  });
+
+  test("SCRUM-48 [AC5, AC6] TC-48-09: a link to another Organiser's event, or to one that doesn't exist, opens nothing", async ({
+    browser,
+  }) => {
+    await account(ORGANISER, "ORGANISER", "Nell Notified");
+    const page = await signedIn(browser, `${ORGANISER}@test.local`);
+
+    // The seeded "Under Review — Career Fair" belongs to organiser@test.local.
+    for (const id of ["evt_under_review", "evt_does_not_exist"]) {
+      await page.goto(`/events?event=${id}`);
+      // The Organiser's list has loaded…
+      await expect(
+        page.getByRole("button", { name: /Create Event Request/i }).first(),
+      ).toBeVisible();
+      // …and no event's details opened.
+      await expect(page.getByRole("dialog")).toHaveCount(0);
+      await expect(page.getByText("Under Review — Career Fair")).toHaveCount(0);
+    }
   });
 
   test("SCRUM-48 [AC4] TC-48-05: a user with no notifications sees an empty state, not an error", async ({
     browser,
   }) => {
-    await prisma.user.create({
-      data: {
-        id: EMPTY_USER,
-        email: `${EMPTY_USER}@test.local`,
-        name: "Nora Nothing",
-        role: "ATTENDEE",
-        passwordHash: await bcrypt.hash("Password123!", 10),
-      },
-    });
+    await account(EMPTY_USER, "ATTENDEE", "Nora Nothing");
 
     const page = await signedIn(browser, `${EMPTY_USER}@test.local`);
     await page.goto("/notifications");

@@ -46,14 +46,26 @@ export type MyNotification = Awaited<
   ReturnType<typeof getMyNotifications>
 >[number];
 
-/** SCRUM-48 AC3 — the header's unread count, under the same visibility rule. */
+/**
+ * SCRUM-48 AC3 — the header's unread count, under the same visibility rule.
+ * The layout reads it on every page, so a failed count shows none rather
+ * than taking every page down; the list itself still reports its own error.
+ */
 export async function getMyUnreadCount(now = new Date()) {
   const session = await auth();
   if (!session?.user || !can(session.user, "notification:read")) {
     return 0;
   }
 
-  return prisma.notification.count({
-    where: { ...visibleNotificationsWhere(session.user.id, now), readAt: null },
-  });
+  try {
+    return await prisma.notification.count({
+      where: {
+        ...visibleNotificationsWhere(session.user.id, now),
+        readAt: null,
+      },
+    });
+  } catch (error) {
+    console.error("Couldn't count unread notifications", error);
+    return 0;
+  }
 }
