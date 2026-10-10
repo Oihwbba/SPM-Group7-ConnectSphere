@@ -238,7 +238,7 @@ excluded from Release 1.
 | Waiting lists (SCRUM-79) | Kept out by the team's 13 Sep customer Q&A answer, and on the Week 4 not-required list. A place that opens offers nothing automatically; the waitlist is a later addition. |
 | Attendance on the day (SCRUM-80) | Marked beyond Release 1; Release 1 records a headcount at completion (SCRUM-82). |
 | Equipment catalogue maintenance as a feature | On the Week 4 "not required" list (SCRUM-119 is beyond Release 1). `Equipment` rows exist; managing them is a seed/admin concern. |
-| Client organisations as data (SCRUM-120, SCRUM-153) | Accounts arrive from an outside integration; organisation-wide viewing is beyond Release 1. |
+| Client organisations as data | Accounts arrive from an outside integration, so there is no sign-up (SCRUM-153, closed as not needed); organisation-wide viewing is beyond Release 1. |
 | Event categories, agendas, recurring events, attachments, comments, room layouts as entities, reporting | All on the Week 4 "not required for Release 1" list. |
 
 If a customer answer brings one of these into scope, add it as a new migration
