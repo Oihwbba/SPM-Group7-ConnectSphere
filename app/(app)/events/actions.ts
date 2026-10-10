@@ -16,7 +16,7 @@ import { ok, err, type ActionResult } from "@/lib/action-result";
 import { pickCoordinator } from "@/lib/coordinator-assignment";
 import { getReadinessChecklist } from "@/lib/event-readiness";
 import { formatDateTime, TIME_ZONE } from "@/lib/datetime";
-import { notifyAboutEvent } from "@/lib/event-notifications";
+import { asSentence, notifyAboutEvent } from "@/lib/event-notifications";
 import { effectiveClosesAt } from "@/lib/registration-state";
 
 /** Thrown inside submitEventRequest's transaction for an expected failure
@@ -692,7 +692,7 @@ export async function transitionEventStatus(
             }
           : {
               title: "Your request was rejected",
-              message: `"${event.name}" was rejected: ${decisionReason} What you can do next: ${REJECTION_OUTCOME_LABEL[rejectionOutcome!]}.`,
+              message: `"${event.name}" was rejected: ${asSentence(decisionReason!)} What you can do next: ${REJECTION_OUTCOME_LABEL[rejectionOutcome!]}.`,
             },
       );
 
@@ -760,6 +760,7 @@ export async function confirmEvent(
           organiserId: true,
           coordinatorId: true,
           registrationRequired: true,
+          registrationOpensAt: true,
           registrationClosesAt: true,
           startAt: true,
         },
@@ -798,18 +799,28 @@ export async function confirmEvent(
       });
 
       const about = { id: eventId, name: current.name };
-      // SCRUM-45 AC4: the Organiser hears it is confirmed. Only a real
-      // confirmation gets here, so confirming twice tells them once (AC13).
+      const now = new Date();
+      const closesAt = registrationEnabled ? effectiveClosesAt(current) : null;
+      const opensAt = current.registrationOpensAt;
+      // SCRUM-45 AC4: the Organiser hears it is confirmed, and where
+      // registration stands. Only a real confirmation gets here, so
+      // confirming twice tells them once (AC13).
       await notifyAboutEvent(tx, [current.organiserId], about, {
         title: "Your event is confirmed",
-        message: registrationEnabled
-          ? `"${current.name}" is confirmed, and registration is open.`
-          : `"${current.name}" is confirmed.`,
+        message: !registrationEnabled
+          ? `"${current.name}" is confirmed.`
+          : closesAt && closesAt <= now
+            ? `"${current.name}" is confirmed, but its registration has already closed.`
+            : opensAt && opensAt > now
+              ? `"${current.name}" is confirmed. Registration opens at ${formatDateTime(opensAt)}.`
+              : `"${current.name}" is confirmed, and registration is open.`,
       });
       // SCRUM-45 AC11: registration closes at a time known now, so its notice
-      // is written now and shows then (SCRUM-48 AC8).
-      const closesAt = registrationEnabled ? effectiveClosesAt(current) : null;
-      if (closesAt) {
+      // is written now and shows then (SCRUM-48 AC8). One already past would
+      // show at once beside the confirmation, so it isn't written. Cancelling
+      // the event (SCRUM-82) or moving its times (SCRUM-128) must withdraw it:
+      // it is the event's "Registration closed" notice not yet shown.
+      if (closesAt && closesAt > now) {
         await notifyAboutEvent(tx, [current.organiserId, user!.id], about, {
           title: "Registration closed",
           message: `Registration for "${current.name}" closed at ${formatDateTime(closesAt)}.`,
@@ -1174,7 +1185,7 @@ export async function rejectPlanningEvent(
           type: "EVENT_STATUS_CHANGED",
           title: "Your event was rejected",
           // SCRUM-45 AC3: with the reason and what the Organiser can do next.
-          message: `"${event.name}" couldn't be arranged and was rejected: ${decisionReason} What you can do next: ${REJECTION_OUTCOME_LABEL[rejectionOutcome]}.`,
+          message: `"${event.name}" couldn't be arranged and was rejected: ${asSentence(decisionReason)} What you can do next: ${REJECTION_OUTCOME_LABEL[rejectionOutcome]}.`,
           eventId,
         },
       });

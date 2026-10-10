@@ -33,3 +33,12 @@ export function notifyAboutEvent(
     })),
   });
 }
+
+/**
+ * A reason typed by a user, ending as a sentence, so the words after it in a
+ * notice don't run on: "No venue available" becomes "No venue available.".
+ */
+export function asSentence(text: string): string {
+  const trimmed = text.trim();
+  return /[.!?]$/.test(trimmed) ? trimmed : `${trimmed}.`;
+}

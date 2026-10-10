@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import type { Prisma } from "@prisma/client";
 
-import { notifyAboutEvent } from "@/lib/event-notifications";
+import { asSentence, notifyAboutEvent } from "@/lib/event-notifications";
 
 // SCRUM-45 AC12, AC13 — the one helper every workflow notice goes through.
 function client() {
@@ -58,4 +58,18 @@ describe("notifyAboutEvent — SCRUM-45", () => {
 
     expect(createMany.mock.calls[0][0].data[0].showFromAt).toEqual(closesAt);
   });
+});
+
+describe("asSentence — SCRUM-45 AC3", () => {
+  it.each([
+    ["No venue available", "No venue available."],
+    ["No venue available.", "No venue available."],
+    ["Is the date fixed?", "Is the date fixed?"],
+    ["  Too small!  ", "Too small!"],
+  ])(
+    "SCRUM-45 [AC3] TC-45-03: a reason %j ends as a sentence before the next step is named",
+    (reason, expected) => {
+      expect(asSentence(reason)).toBe(expected);
+    },
+  );
 });

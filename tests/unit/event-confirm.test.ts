@@ -175,6 +175,40 @@ describe("confirmEvent — SCRUM-81", () => {
     ]);
   });
 
+  it("SCRUM-45 [AC4, AC11] TC-45-07: with registration already closed, the confirmation says so and no closed notice is written to show at once", async () => {
+    tx.event.findUniqueOrThrow.mockResolvedValue({
+      ...eventRow(),
+      name: "Gala",
+      startAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      registrationOpensAt: null,
+      registrationClosesAt: new Date(Date.now() - 60 * 1000),
+    });
+
+    await confirmEvent({ eventId: "evt1" });
+
+    expect(tx.notification.createMany).toHaveBeenCalledTimes(1);
+    expect(tx.notification.createMany.mock.calls[0][0].data[0].message).toBe(
+      '"Gala" is confirmed, but its registration has already closed.',
+    );
+  });
+
+  it("SCRUM-45 [AC4] TC-45-04: with registration opening later, the confirmation says when rather than that it is open", async () => {
+    const opensAt = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000);
+    tx.event.findUniqueOrThrow.mockResolvedValue({
+      ...eventRow(),
+      name: "Gala",
+      startAt: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000),
+      registrationOpensAt: opensAt,
+      registrationClosesAt: null,
+    });
+
+    await confirmEvent({ eventId: "evt1" });
+
+    expect(tx.notification.createMany.mock.calls[0][0].data[0].message).toBe(
+      `"Gala" is confirmed. Registration opens at ${formatDateTime(opensAt)}.`,
+    );
+  });
+
   it("SCRUM-45 [AC11] TC-45-07: a registration window closing before the event starts shows its notice at the closing time", async () => {
     const closesAt = new Date("2031-05-30T10:00:00.000Z");
     tx.event.findUniqueOrThrow.mockResolvedValue({

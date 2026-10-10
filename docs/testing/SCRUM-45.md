@@ -68,7 +68,7 @@ construction: every notice here goes to the event's Organiser or Coordinator.
 | Pre-conditions | An Under Review request, and a Planning event, each with its Coordinator signed in. |
 | Test Steps | 1. Reject the request with "The date clashes with exam week." and Amend and resubmit. <br> 2. Reject the Planning event with "No venue can take it." and Submit as a new request. |
 | Test Data | — |
-| Expected Result | Step 1: "Your request was rejected": "\"…\" was rejected: The date clashes with exam week. What you can do next: Amend and resubmit." Step 2: "Your event was rejected": "\"…\" couldn't be arranged and was rejected: No venue can take it. What you can do next: Submit as a new request." |
+| Expected Result | Step 1: "Your request was rejected": "\"…\" was rejected: The date clashes with exam week. What you can do next: Amend and resubmit." Step 2: "Your event was rejected": "\"…\" couldn't be arranged and was rejected: No venue can take it. What you can do next: Submit as a new request." A reason typed without a full stop gets one, so it doesn't run into the next step. |
 
 **Automated by:** `e2e/workflow-notifications.spec.ts` › "SCRUM-45 [AC3] TC-45-03: rejecting a request in the app tells its Organiser the reason and what they can do next"; `tests/integration/workflow-notifications.test.ts` › both "SCRUM-45 [AC3] TC-45-03: …" tests; `tests/unit/reject-planning.test.ts` › "SCRUM-117 [AC6] TC-117-06: …"
 
@@ -81,7 +81,7 @@ construction: every notice here goes to the event's Organiser or Coordinator.
 | Pre-conditions | A ready Planning event (an approved booking covering it, no equipment), its Coordinator signed in. |
 | Test Steps | 1. Confirm it. <br> 2. Confirm it again. <br> 3. On another event whose Registration needed is No, confirm it. |
 | Test Data | — |
-| Expected Result | Step 1: "Your event is confirmed": "\"…\" is confirmed, and registration is open." Step 2: no second notice. Step 3: "\"Gala\" is confirmed.", with no registration-closed notice. |
+| Expected Result | Step 1: "Your event is confirmed": "\"…\" is confirmed, and registration is open." Step 2: no second notice. Step 3: "\"Gala\" is confirmed.", with no registration-closed notice. With registration opening later it says when ("Registration opens at …"), and with its window already closed it says so instead of "registration is open". |
 
 **Automated by:** `tests/integration/workflow-notifications.test.ts` › "SCRUM-45 [AC4, AC11, AC13] TC-45-04, TC-45-07: …"; `tests/unit/event-confirm.test.ts` › "SCRUM-45 [AC4, AC11] TC-45-04: with registration not needed, the Organiser is told it is confirmed, and no registration-closed notice is written"
 
@@ -120,7 +120,7 @@ construction: every notice here goes to the event's Organiser or Coordinator.
 | Pre-conditions | A ready Planning event whose registration will open. |
 | Test Steps | 1. Confirm it, with no registration window. <br> 2. Confirm another whose window closes on 30 May 2031, 6:00 pm, before it starts. |
 | Test Data | — |
-| Expected Result | A "Registration closed" notice for each of them, written at confirmation and shown from the closing time: the event's start in step 1, 30 May 2031, 6:00 pm SGT in step 2 ("Registration for \"Gala\" closed at 30 May 2031, 6:00 pm SGT."). It doesn't appear before then (SCRUM-48 AC8). |
+| Expected Result | A "Registration closed" notice for each of them, written at confirmation and shown from the closing time: the event's start in step 1, 30 May 2031, 6:00 pm SGT in step 2 ("Registration for \"Gala\" closed at 30 May 2031, 6:00 pm SGT."). It doesn't appear before then (SCRUM-48 AC8). A closing time already past writes no notice, which would otherwise show at once beside the confirmation. When SCRUM-82 cancels the event or SCRUM-128 moves its times, they find this notice as the event's "Registration closed" one not yet shown, and withdraw it. |
 
 **Automated by:** `tests/integration/workflow-notifications.test.ts` › "SCRUM-45 [AC4, AC11, AC13] TC-45-04, TC-45-07: …"; `tests/unit/event-confirm.test.ts` › "SCRUM-45 [AC11] TC-45-07: a registration window closing before the event starts shows its notice at the closing time"; `tests/unit/event-notifications.test.ts` › "SCRUM-45 [AC11] TC-45-07: …"
 
