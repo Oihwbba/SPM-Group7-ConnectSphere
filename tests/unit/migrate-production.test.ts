@@ -62,7 +62,7 @@ describe("migrate-production — SCRUM-89", () => {
         readFile,
         exec,
         log: vi.fn(),
-        baseEnv: { PATH: "/bin" } as NodeJS.ProcessEnv,
+        baseEnv: { PATH: "/bin" },
       }),
     ).toBe(0);
 
@@ -85,7 +85,7 @@ describe("migrate-production — SCRUM-89", () => {
         readFile: () => 'DATABASE_URL="db"',
         exec,
         log,
-        baseEnv: {} as NodeJS.ProcessEnv,
+        baseEnv: {},
       }),
     ).toBe(1);
 
@@ -107,7 +107,7 @@ describe("migrate-production — SCRUM-89", () => {
         readFile: () => 'DATABASE_URL="db"\nDIRECT_URL="direct"',
         exec,
         log: vi.fn(),
-        baseEnv: {} as NodeJS.ProcessEnv,
+        baseEnv: {},
       }),
     ).toThrow("P3009");
   });

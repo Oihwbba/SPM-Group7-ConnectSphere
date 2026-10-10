@@ -41,6 +41,14 @@ export function databaseEnv(env) {
  * migrations. Returns the exit code. A failed `migrate deploy` throws, which
  * fails the step and stops the deploy. The file reader and the command runner
  * are passed in so the step can be tested without a database.
+ *
+ * @param {{
+ *   readFile?: (path: string) => string,
+ *   exec?: (command: string, args: string[], options: object) => unknown,
+ *   log?: (message: string) => void,
+ *   baseEnv?: Record<string, string | undefined>,
+ * }} [deps]
+ * @returns {number}
  */
 export function run({
   readFile = (path) => readFileSync(path, "utf8"),
