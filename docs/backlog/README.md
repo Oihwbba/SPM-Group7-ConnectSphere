@@ -197,7 +197,7 @@ _2 stories, 5 points_
 | [SCRUM-125](SCRUM-125.md) | Measure coverage on every server-side file and fail CI when it drops | SCRUM Sprint 2 | Done |
 | [SCRUM-143](SCRUM-143.md) | [SUPERSEDED BY SCRUM-162] Enforce one venue request per event | Backlog | Done |
 | [SCRUM-144](SCRUM-144.md) | [COVERED BY SCRUM-75 AND SCRUM-171] Enable registration and enforce event cutoff | Backlog | Done |
-| [SCRUM-145](SCRUM-145.md) | Resync test documentation with the current acceptance criteria | SCRUM Sprint 3 | In Review |
+| [SCRUM-145](SCRUM-145.md) | Resync test documentation with the current acceptance criteria | SCRUM Sprint 3 | Done |
 | [SCRUM-146](SCRUM-146.md) | Remove stale story references | Backlog | To Do |
 | [SCRUM-147](SCRUM-147.md) | Update data-model documentation | SCRUM Sprint 3 | Done |
 | [SCRUM-148](SCRUM-148.md) | Close or rework obsolete equipment PR | SCRUM Sprint 3 | To Do |
