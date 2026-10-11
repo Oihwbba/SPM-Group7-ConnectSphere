@@ -241,7 +241,7 @@ describe.skipIf(!usesLocalDatabase)(
       ]) {
         expect(await attempt()).toMatchObject({
           ok: false,
-          error: expect.stringMatching(/^Conflicting: .* is held until /),
+          error: expect.stringMatching(/^Conflicting: .* is held from /),
         });
       }
       expect(await statusOf(other.id)).toBe("PENDING");
