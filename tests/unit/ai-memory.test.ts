@@ -286,7 +286,9 @@ describe("refusalLog — SCRUM-152", () => {
 // reviewer read it cut off mid-lesson, with nothing to say so.
 describe("the memory on this branch — SCRUM-152", () => {
   it("SCRUM-152: CI fails when memory.md is longer than the reviewer reads", () => {
-    const length = readFileSync(MEMORY_PATH, "utf8").length;
+    // The reviewer reads the file through git (readFromBase), which stores LF;
+    // a Windows checkout adds a CR to every line that the reviewer never sees.
+    const length = readFileSync(MEMORY_PATH, "utf8").replace(/\r\n/g, "\n").length;
 
     expect(length, `${MEMORY_PATH} is ${length} characters`).toBeLessThanOrEqual(MAX_MEMORY_CHARS);
   });
