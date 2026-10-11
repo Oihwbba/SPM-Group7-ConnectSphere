@@ -88,7 +88,7 @@ A diagram marked Built must change when the code it shows changes.
 
 Four labels were changed to match the code:
 
-- **DV-1** no longer names the Product Owner. Nothing in the repo does.
+- **DV-1** no longer names the Product Owner, because the role changes each sprint (Caylern for Sprint 3).
 - **C4-3** and **DM-3** said every Server Action calls `requirePermission()` first and then a Zod schema. Three read actions check `can()` directly and take only an event id, so the labels now say so.
 - **SQ-6** now quotes the message `confirmEvent` actually returns: "This event isn't ready to confirm yet. Outstanding: …".
 
