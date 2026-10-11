@@ -42,6 +42,7 @@ the customer where it matters, so you rarely need to open the folder.
 | See the planned test cases for a story | `docs/testing/SCRUM-n.md` |
 | Build a feature and open a pull request | [`CONTRIBUTING.md`](CONTRIBUTING.md) |
 | Know why something is built the way it is | [`docs/adr/`](docs/adr/README.md) |
+| See diagrams of the system, or every Server Action | [`docs/design/`](docs/design/README.md) |
 | Add a column or table | [`docs/data-model.md`](docs/data-model.md) |
 | Work with an AI coding assistant | [`CLAUDE.md`](CLAUDE.md) |
 
