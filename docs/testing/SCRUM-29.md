@@ -1,0 +1,127 @@
+# SCRUM-29 — Check equipment availability: test cases
+
+Story and acceptance criteria: [docs/backlog/SCRUM-29.md](../backlog/SCRUM-29.md).
+Format and conventions: [README.md](README.md). Availability is
+`getEquipmentAvailability` and `getAllEquipmentAvailability` in
+[app/(app)/equipment/actions.ts](<../../app/(app)/equipment/actions.ts>),
+weighed by `summariseAvailability` in
+[lib/equipment/availability.ts](../../lib/equipment/availability.ts): the
+answer is the busiest instant in the period, not the total of everything that
+touches it.
+
+Written on 2026-10-12 from the acceptance criteria, then mapped to the tests
+that already existed (SCRUM-176). The tests predate the `SCRUM-n [ACx] TC-n-xx`
+title format, so each case names them by their current titles.
+
+**AC 2 was overtaken.** Since SCRUM-156 the one-type form only checks
+availability. Equipment is reserved from an approved request in one step
+(SCRUM-155), and that path refuses a quantity that doesn't fit (TC-29-02,
+TC-29-03).
+
+**Shared pre-conditions for every case:** the database is migrated and seeded
+and the app is running. Signed in as `techsupport@test.local`
+(`Password123!`), on **Equipment**. The seed has a projector pool of 4 with
+recorded maintenance.
+
+| ID | Type | Criterion | Automated |
+|---|---|---|---|
+| [TC-29-01](#tc-29-01) | Positive | AC 1, AC 4 | Unit, integration, e2e |
+| [TC-29-02](#tc-29-02) | Boundary | AC 2 | Unit, integration |
+| [TC-29-03](#tc-29-03) | Negative | AC 3 | Unit, integration, e2e |
+| [TC-29-04](#tc-29-04) | Boundary | AC 5 | Unit, integration |
+| [TC-29-05](#tc-29-05) | Positive | AC 6 | Unit, integration |
+| [TC-29-06](#tc-29-06) | Negative | AC 7 | Unit, integration, e2e |
+| [TC-29-07](#tc-29-07) | Negative | AC 1 | Unit |
+
+---
+
+### TC-29-01
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-29-01 |
+| Test Scenario | [Positive] AC 1, AC 4: the check shows how many are free for the whole period, counting only reservations |
+| Pre-conditions | 2 projectors are reserved for part of the period, and an approved request for 1 more isn't reserved yet. |
+| Test Steps | 1. Choose **Equipment type** "Projector", a start and end date and time, and **Quantity** 1. |
+| Test Data | 10 May 2031, 09:00 to 17:00 SGT |
+| Expected Result | "2 of 4 available": the busiest moment in the period has 2 reserved. The unreserved request takes nothing, and neither does a cancelled reservation. |
+
+**Automated by:** `tests/integration/equipment-availability.test.ts` › "SCRUM-29 [AC1, AC4]: reports the busiest instant, not the sum of everything touching the period", "does not count a cancelled reservation against the pool", "gives the same answer for the pool in the all-equipment view"; `tests/unit/equipment-availability.test.ts` › "finds a peak that starts partway through the window", "adds commitments that genuinely share an instant"; `tests/unit/reservation.test.ts` › "SCRUM-31 [AC7] TC-31-08: deducts confirmed reservations and maintenance from the pool"; `e2e/equipment.spec.ts` › "SCRUM-156 [AC1] TC-156-01: checks a type and period without choosing an event, and offers no way to reserve"
+
+### TC-29-02
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-29-02 |
+| Test Scenario | [Boundary] AC 2: exactly the free quantity is available |
+| Pre-conditions | 2 projectors are free for the period. |
+| Test Steps | 1. Check a quantity of 2. <br> 2. Reserve 2 from an approved request for that period. |
+| Test Data | Quantity 2 |
+| Expected Result | Step 1 reports them available with no shortfall. Step 2 is accepted. |
+
+**Automated by:** `tests/unit/equipment-availability.test.ts` › "accepts a quantity at the limit and reports no shortfall"; `tests/integration/equipment-availability.test.ts` › "SCRUM-29 [AC2]: a quantity that fits the whole period is accepted by the locked reservation path"
+
+### TC-29-03
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-29-03 |
+| Test Scenario | [Negative] AC 3: more than are free shows the shortfall, and can't be reserved |
+| Pre-conditions | 2 projectors are free for the period. |
+| Test Steps | 1. Check a quantity of 3. <br> 2. Reserve 3 for that period. |
+| Test Data | Quantity 3 |
+| Expected Result | Step 1 shows the shortfall at once ("1 short"). Step 2 is refused with the shortfall, and nothing is written. |
+
+**Automated by:** `tests/unit/equipment-availability.test.ts` › "refuses a quantity over the limit and states how many short"; `tests/integration/equipment-availability.test.ts` › "SCRUM-29 [AC3]: a quantity over the free units is refused with the shortfall, and nothing is written"; `e2e/equipment.spec.ts` › "SCRUM-29 AC 3: more than the pool shows the shortfall live"
+
+### TC-29-04
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-29-04 |
+| Test Scenario | [Boundary] AC 5: a reservation that only touches the period doesn't count |
+| Pre-conditions | A reservation of all 4 projectors ending at 09:00. |
+| Test Steps | 1. Check a period starting at 09:00. <br> 2. Check one starting at 08:59. |
+| Test Data | The reservation above |
+| Expected Result | Step 1: all 4 are free. Step 2: none are free, since one minute is shared. |
+
+**Automated by:** `tests/unit/equipment-availability.test.ts` › "does not treat periods that touch at an endpoint as overlapping", "treats any shared instant as an overlap, in either order", "frees a reservation that ends exactly when the requested period starts", "counts back-to-back commitments once, not twice"; `tests/integration/equipment-availability.test.ts` › "SCRUM-29 [AC5]: a reservation ending exactly when the period starts leaves the whole pool free"
+
+### TC-29-05
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-29-05 |
+| Test Scenario | [Positive] AC 6: units under maintenance or damaged aren't available |
+| Pre-conditions | The seed's maintenance and damage records overlap the period. |
+| Test Steps | 1. Check the affected type for that period. |
+| Test Data | The seeded records |
+| Expected Result | Those units are left out of the free quantity, together with any reservations at the same moment. The pool never shows below zero. |
+
+**Automated by:** `tests/integration/equipment-availability.test.ts` › "SCRUM-29 [AC6]: units under maintenance or damaged are not available"; `tests/unit/equipment-availability.test.ts` › "weighs reservations and unavailability together at the same instant", "never reports a negative pool when more is committed than exists"
+
+### TC-29-06
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-29-06 |
+| Test Scenario | [Negative] AC 7: a quantity of zero or an end not after the start is rejected, with no result |
+| Pre-conditions | On **Equipment**. |
+| Test Steps | 1. Enter **Quantity** 0. <br> 2. Enter an end earlier than the start. |
+| Test Data | Quantity 0; start 17:00, end 09:00 on the same day |
+| Expected Result | Step 1: "Enter a quantity of at least 1." Step 2: "End time must be after the start time." at once. No availability is shown, and nothing is read or written. |
+
+**Automated by:** `tests/unit/reservation.test.ts` › "SCRUM-29 AC 7: rejects an end before the start with field errors and reads nothing"; `tests/integration/equipment-availability.test.ts` › "SCRUM-29 [AC7]: an end before the start is rejected, reads nothing and writes nothing"; `e2e/equipment.spec.ts` › "SCRUM-29 AC 7: a quantity of zero asks for at least one", "SCRUM-29 AC 7: an invalid period (end earlier than start) triggers a live inline error"
+
+### TC-29-07
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-29-07 |
+| Test Scenario | [Negative] AC 1: a retired type, or a role without access, gets no count |
+| Pre-conditions | A retired equipment type; signed in as an Organiser. |
+| Test Steps | 1. Check the retired type. <br> 2. As the Organiser, ask for availability directly. |
+| Test Data | The retired type's id |
+| Expected Result | Step 1 reports the type as unknown, not a count. Step 2 is refused. |
+
+**Automated by:** `tests/unit/reservation.test.ts` › "SCRUM-29 AC 1: reports an unknown or retired equipment type rather than a count", "SCRUM-31 TC-31-11: refuses a role without equipment:read"
