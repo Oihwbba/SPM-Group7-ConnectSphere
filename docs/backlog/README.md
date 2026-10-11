@@ -37,7 +37,7 @@ either covered by a test or visibly not done yet. Reviewers do the same.
 | | |
 |---|---|
 | Stories | **88** |
-| Tasks | **24** |
+| Tasks | **25** |
 | Subtasks | **18** |
 | Total story points | **254** |
 | Points committed to Sprint 1 | **37** |
@@ -104,7 +104,7 @@ _15 stories, 48 points_
 | [SCRUM-160](SCRUM-160.md) | Identify bookings that clash once setup and turnaround apply | 3 | Highest | SCRUM Sprint 3 | To Do |
 | [SCRUM-161](SCRUM-161.md) | Mark a venue unavailable over existing bookings and find a replacement venue | 5 | Highest | SCRUM Sprint 3 | To Do |
 | [SCRUM-162](SCRUM-162.md) | Book several venues for one event | 5 | Highest | SCRUM Sprint 3 | To Do |
-| [SCRUM-163](SCRUM-163.md) | Hold a venue tentatively until a deadline | 5 | Highest | SCRUM Sprint 3 | To Do |
+| [SCRUM-163](SCRUM-163.md) | Hold a venue tentatively until a deadline | 5 | Highest | SCRUM Sprint 3 | In Review |
 
 ## SCRUM-8 - Event Change & Notifications
 
@@ -112,12 +112,12 @@ _7 stories, 29 points_
 
 | Story | Summary | Pts | Priority | Sprint | Status |
 |---|---|---|---|---|---|
-| [SCRUM-41](SCRUM-41.md) | Raise and track a change request | 3 | Highest | SCRUM Sprint 3 | To Do |
-| [SCRUM-45](SCRUM-45.md) | Organiser and Coordinator workflow notifications | 5 | Highest | SCRUM Sprint 3 | To Do |
-| [SCRUM-48](SCRUM-48.md) | User views their notification list | 3 | Highest | SCRUM Sprint 3 | To Do |
+| [SCRUM-41](SCRUM-41.md) | Raise and track a change request | 3 | Highest | SCRUM Sprint 3 | In Review |
+| [SCRUM-45](SCRUM-45.md) | Organiser and Coordinator workflow notifications | 5 | Highest | SCRUM Sprint 3 | In Review |
+| [SCRUM-48](SCRUM-48.md) | User views their notification list | 3 | Highest | SCRUM Sprint 3 | In Review |
 | [SCRUM-85](SCRUM-85.md) | Attendees are kept informed when an event they registered for changes or is cancelled | 5 | High | SCRUM Sprint 3 | To Do |
 | [SCRUM-122](SCRUM-122.md) | Remind Coordinators about incomplete and overdue arrangements | 3 | Low | Backlog | To Do |
-| [SCRUM-124](SCRUM-124.md) | Staff and arrangement notifications | 5 | Highest | SCRUM Sprint 3 | To Do |
+| [SCRUM-124](SCRUM-124.md) | Staff and arrangement notifications | 5 | Highest | SCRUM Sprint 3 | In Progress |
 | [SCRUM-128](SCRUM-128.md) | Decide a change request and apply it in one step | 5 | Highest | SCRUM Sprint 3 | To Do |
 
 ## SCRUM-9 - Access Control
@@ -153,7 +153,7 @@ _11 stories, 26 points_
 | [SCRUM-33](SCRUM-33.md) | [MERGED INTO SCRUM-27] View Event Reservations | 0 | Medium | SCRUM Sprint 2 | Done |
 | [SCRUM-55](SCRUM-55.md) | [MERGED INTO SCRUM-30] View Equipment Availability Calendar | 0 | Low | Backlog | Done |
 | [SCRUM-119](SCRUM-119.md) | Maintain the equipment catalogue and record unavailability | 5 | Low | Backlog | To Do |
-| [SCRUM-142](SCRUM-142.md) | Change equipment lines or withdraw a venue request before confirmation | 3 | High | SCRUM Sprint 3 | To Do |
+| [SCRUM-142](SCRUM-142.md) | Change equipment lines or withdraw a venue request before confirmation | 3 | High | SCRUM Sprint 3 | In Review |
 | [SCRUM-156](SCRUM-156.md) | Make the one-type equipment form availability-only (follow-up to SCRUM-31 and SCRUM-155) | 2 | Medium | SCRUM Sprint 2 | Done |
 
 ## SCRUM-11 - Attendee Registration
@@ -197,9 +197,9 @@ _2 stories, 5 points_
 | [SCRUM-125](SCRUM-125.md) | Measure coverage on every server-side file and fail CI when it drops | SCRUM Sprint 2 | Done |
 | [SCRUM-143](SCRUM-143.md) | [SUPERSEDED BY SCRUM-162] Enforce one venue request per event | Backlog | Done |
 | [SCRUM-144](SCRUM-144.md) | [COVERED BY SCRUM-75 AND SCRUM-171] Enable registration and enforce event cutoff | Backlog | Done |
-| [SCRUM-145](SCRUM-145.md) | Resync test documentation with the current acceptance criteria | SCRUM Sprint 3 | In Review |
+| [SCRUM-145](SCRUM-145.md) | Resync test documentation with the current acceptance criteria | SCRUM Sprint 3 | Done |
 | [SCRUM-146](SCRUM-146.md) | Remove stale story references | Backlog | To Do |
-| [SCRUM-147](SCRUM-147.md) | Update data-model documentation | SCRUM Sprint 3 | Done |
+| [SCRUM-147](SCRUM-147.md) | Update data-model documentation | SCRUM Sprint 3 | In Review |
 | [SCRUM-148](SCRUM-148.md) | Close or rework obsolete equipment PR | SCRUM Sprint 3 | To Do |
 | [SCRUM-149](SCRUM-149.md) | [SUPERSEDED BY SCRUM-162] Use event attendance in venue booking | Backlog | Done |
 | [SCRUM-150](SCRUM-150.md) | [DUPLICATE OF SCRUM-108] Implement field-level clarification response | Backlog | Done |
@@ -209,4 +209,5 @@ _2 stories, 5 points_
 | [SCRUM-158](SCRUM-158.md) | Week 7 customer changes (received 2 Oct) – apply to Product Backlog | Backlog | Done |
 | [SCRUM-168](SCRUM-168.md) | Remove the placeholder search bar from the top bar | SCRUM Sprint 3 | Done |
 | [SCRUM-169](SCRUM-169.md) | Backlog Sync: update docs/backlog from Jira after the 7 Oct changes | SCRUM Sprint 3 | Done |
-| [SCRUM-172](SCRUM-172.md) | Week 7 database migration: schema and booking rules in one migration | SCRUM Sprint 3 | Done |
+| [SCRUM-172](SCRUM-172.md) | Week 7 database migration: schema and booking rules in one migration | SCRUM Sprint 3 | In Review |
+| [SCRUM-173](SCRUM-173.md) | Chore: Bring the docs up to date with the code and the Week 7 changes | SCRUM Sprint 3 | In Review |
