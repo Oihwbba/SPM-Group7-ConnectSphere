@@ -1,7 +1,7 @@
 # GLM reviewer memory
 
 Lessons from past reviews, approved by the team. The reviewer reads this file
-from `main` on every pull request, after `CONTRIBUTING.md` and `CLAUDE.md`.
+from the PR's base branch on every pull request, after `CONTRIBUTING.md` and `CLAUDE.md`.
 
 After each merge, `.github/scripts/ai-memory.mjs` asks GLM what the pull
 request taught and opens a pull request here if anything (SCRUM-112); a human
@@ -57,9 +57,9 @@ never in a hand edit of the files.
   older migration files. `prisma migrate deploy` ignores checksums, so this is
   known and harmless. Nobody may run `prisma migrate dev` against Supabase.
 - (2026-09-16, #33; 2026-09-28, #90; 2026-10-04, #114, #120) `Event.equipmentTypes`
-  and `Event.registrationRequired` exist to keep production data; nothing
-  writes either, and #120's `confirmEvent` is the only reader of
-  `registrationRequired`. `Event.registrationCapacity` joined them in #90,
+  and `Event.registrationRequired` exist to keep production data; the form
+  sets neither; #120's `confirmEvent` reads `registrationRequired`, and
+  `startRequestFromRejected` copies both onto the new Draft. `Event.registrationCapacity` joined them in #90,
   which made `expectedAttendance` the registration capacity (SCRUM-73/74):
   nothing reads the column and dropping it needs a migration decision, so #114
   left it again.
@@ -80,7 +80,7 @@ only since #112 (SCRUM-129 retired SCRUM-13's per-event timezones):
 that migration relabelled existing production rows deliberately — the stored
 UTC instants were kept, the old zone labels were not. The create form no
 longer captures `requiredFacilities`: new events store `[]`, existing values
-still display, and whether capture returns is open for SCRUM-39/40.
+still display, and whether capture returns is open for SCRUM-38/40.
 - (2026-09-25, #87) The `?? null` fallbacks on optional draft fields in
 `app/(app)/events/actions.ts` are deliberate: on update, `null` clears a
 field the organiser emptied, while `undefined` would keep the old value.

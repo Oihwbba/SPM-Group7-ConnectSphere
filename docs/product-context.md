@@ -39,7 +39,7 @@ status, one assigned Coordinator, and arrangements that can't clash.
 |---|---|---|---|
 | **Event Organiser** | External client | Creates event requests (as drafts first), submits them, answers the Coordinator's clarification questions, and follows their own events. Sees only their own events. | My Events |
 | **Event Coordinator** | ConnectSphere staff | Is assigned to a submitted request automatically (until SCRUM-165, when new requests go to the Lead's unassigned queue instead, per Week 7 change 5), reviews it, asks for clarification, approves or rejects it, requests a venue and equipment, and confirms the event once the arrangements are complete. Sees the events assigned to them, and submitted ones nobody is assigned to yet. | Events |
-| **Venue Staff** | ConnectSphere staff | Reviews venue booking requests and approves or rejects them, and records when a venue is unavailable (maintenance, closure). | Bookings |
+| **Venue Staff** | ConnectSphere staff | Reviews venue booking requests and approves or rejects them, and records when a venue is unavailable (maintenance, equipment failure, renovation, a safety concern, or another reason). | Bookings |
 | **Technical Support Staff** | ConnectSphere staff | Reviews equipment requests, checks equipment availability, and reserves what was approved. | Equipment |
 | **Attendee** | External | Browses events open for registration, registers, and sees their own registrations. Never sees internal planning information. | Browse Events |
 | **Event Coordinator Lead** | ConnectSphere staff | Will review new requests' basic details in an unassigned queue, assign each to a Coordinator and reassign where needed (SCRUM-165, SCRUM-21), and see every Coordinator's assignments and active events (SCRUM-141). Can't approve or reject a request, or confirm, plan or edit an event. The role exists since SCRUM-172; until SCRUM-164 and SCRUM-165 land it only reads its own notifications. | Notifications |
@@ -72,8 +72,9 @@ stateDiagram-v2
     CONFIRMED --> CANCELLED: not built yet (SCRUM-82)
 ```
 
-There are exactly nine statuses (SCRUM-23), and every change goes through one
-guarded gate that refuses a change based on a stale status (ADR 0006).
+There are exactly nine statuses (SCRUM-23). Each change is its own action, and
+each one refuses a change based on a stale status, by a conditional write or a
+row lock (ADR 0006 for the Coordinator's decision).
 
 | Step | What happens | Stories, ADRs |
 |---|---|---|

@@ -17,7 +17,8 @@
 //   - Index the foreign keys we actually filter on.
 //   - Rules that protect data integrity live in the DATABASE, not only in
 //     application code. Constraints Prisma cannot express are hand-written in
-//     prisma/migrations/*_domain_constraints/migration.sql.
+//     the migration that needs them, after Prisma's generated statements
+//     (the first set is in 20260909120000_full_domain_model).
 
 generator client {
   provider   = "prisma-client-js"
