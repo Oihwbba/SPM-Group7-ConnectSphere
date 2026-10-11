@@ -131,3 +131,11 @@ reserved where a projector was requested). The Equipment item now names the
 items not reserved in full, without counts, e.g. "Not fully reserved:
 Projector, Laptop", in the order they were requested. Counts stay out, as on
 3 Oct; the completeness rule is unchanged.
+
+## Addendum (2026-10-11) — Corrections from the docs audit (SCRUM-173)
+
+Context says the reconsideration-flag criteria belong with "the
+impactful-change stories, SCRUM-43/44". Neither is in the backlog any more:
+SCRUM-43 was merged into SCRUM-41 and SCRUM-128, and SCRUM-26 and SCRUM-128
+carry SCRUM-44's work (ADR 0003). The flags belong to SCRUM-26 now. The
+checklist itself is unchanged.

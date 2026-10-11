@@ -128,3 +128,8 @@ The 2026-10-03 addendum says the Organiser's Registration needed choice
 "belongs to SCRUM-127". SCRUM-127 was dropped on 2026-10-08; the choice is now
 SCRUM-171, and SCRUM-81 AC 5 names it. The behaviour is unchanged: registration
 opens unless `registrationRequired` is explicitly false.
+
+Consequences says "SCRUM-43 will move a Confirmed event back to Planning after
+an approved impactful change". SCRUM-43 was merged into SCRUM-41 and SCRUM-128,
+and SCRUM-128 AC 5 now returns a Confirmed event to Planning when an approved
+change is impactful. The same checklist and Confirm action then apply again.
