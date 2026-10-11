@@ -37,7 +37,7 @@ either covered by a test or visibly not done yet. Reviewers do the same.
 | | |
 |---|---|
 | Stories | **88** |
-| Tasks | **24** |
+| Tasks | **25** |
 | Subtasks | **18** |
 | Total story points | **254** |
 | Points committed to Sprint 1 | **37** |
@@ -210,3 +210,4 @@ _2 stories, 5 points_
 | [SCRUM-168](SCRUM-168.md) | Remove the placeholder search bar from the top bar | SCRUM Sprint 3 | Done |
 | [SCRUM-169](SCRUM-169.md) | Backlog Sync: update docs/backlog from Jira after the 7 Oct changes | SCRUM Sprint 3 | Done |
 | [SCRUM-172](SCRUM-172.md) | Week 7 database migration: schema and booking rules in one migration | SCRUM Sprint 3 | In Review |
+| [SCRUM-173](SCRUM-173.md) | Chore: Bring the docs up to date with the code and the Week 7 changes | SCRUM Sprint 3 | In Review |
