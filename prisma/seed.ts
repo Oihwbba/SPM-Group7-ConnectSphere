@@ -141,7 +141,7 @@ async function seedUsers(passwordHash: string) {
 }
 
 // ---------------------------------------------------------------------------
-// Venues — SCRUM-34 (details incl. accessibility and layouts), SCRUM-39/40
+// Venues — SCRUM-34 (details incl. accessibility and layouts), SCRUM-38/40
 // (capacities and facilities that make filters and the suitability check
 // produce both a suitable and an unsuitable answer).
 // ---------------------------------------------------------------------------
@@ -806,9 +806,10 @@ async function seedChangeRequests() {
     },
   });
 
-  // SCRUM-42: one row per changed field, so the review screen is a read.
-  // SCRUM-44: `isMajor` is what decides whether the booking, reservation and
-  // registrations attached to this event get flagged on approval.
+  // SCRUM-128 AC1: one row per changed field, so the review screen is a read.
+  // SCRUM-41 AC5: `isMajor` marks an impactful field; approving one flags the
+  // event's bookings and reservations (SCRUM-128 AC4), never its registrations
+  // (SCRUM-26 AC13).
   const fields = [
     { id: "chgf_start", changeRequestId: "chg_planning_date", fieldName: "startAt", oldValue: at(20, 1).toISOString(), newValue: at(21, 1).toISOString(), isMajor: true },
     { id: "chgf_end", changeRequestId: "chg_planning_date", fieldName: "endAt", oldValue: at(20, 9).toISOString(), newValue: at(21, 9).toISOString(), isMajor: true },
