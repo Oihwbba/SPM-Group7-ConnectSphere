@@ -12,9 +12,9 @@ Written on 2026-10-12 from the acceptance criteria, then mapped to the tests
 that already existed (SCRUM-176). The tests predate the `SCRUM-n [ACx] TC-n-xx`
 title format, so each case names them by their current titles.
 
-Two references in the story have moved: the field-limited answer in AC 3
-(SCRUM-109) is now SCRUM-108, which SCRUM-109 was merged into, and the
-notifications in AC 6 (SCRUM-56) are SCRUM-45 AC 8.
+Two references in the story have moved. The field-limited answer in AC 3 is
+SCRUM-108, which SCRUM-109 was merged into. The notifications in AC 6 are
+SCRUM-45 AC 8; SCRUM-56 was dropped.
 
 **Shared pre-conditions for every case:** the database is migrated and seeded
 and the app is running. A request by `organiser@test.local` is Under Review
