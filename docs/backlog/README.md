@@ -209,4 +209,4 @@ _2 stories, 5 points_
 | [SCRUM-158](SCRUM-158.md) | Week 7 customer changes (received 2 Oct) – apply to Product Backlog | Backlog | Done |
 | [SCRUM-168](SCRUM-168.md) | Remove the placeholder search bar from the top bar | SCRUM Sprint 3 | Done |
 | [SCRUM-169](SCRUM-169.md) | Backlog Sync: update docs/backlog from Jira after the 7 Oct changes | SCRUM Sprint 3 | Done |
-| [SCRUM-172](SCRUM-172.md) | Week 7 database migration: schema and booking rules in one migration | SCRUM Sprint 3 | Done |
+| [SCRUM-172](SCRUM-172.md) | Week 7 database migration: schema and booking rules in one migration | SCRUM Sprint 3 | In Review |
