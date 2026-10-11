@@ -95,6 +95,14 @@ test.describe("SCRUM-41 — Raise and track a change request", () => {
     await expect(attendance).toHaveAttribute("aria-invalid", "true");
     expect(await prisma.eventChangeRequest.count({ where: { eventId } })).toBe(0);
 
+    // AC4: the request form's catalogue suggestions, filling the same field.
+    const venue = form.getByLabel("Venue requirements", { exact: true });
+    await form
+      .getByRole("button", { name: /^Add .+ to venue requirements$/ })
+      .first()
+      .click();
+    await expect(venue).toHaveValue(/^Preferred venue: \S/);
+
     await attendance.fill("60");
     await form.getByLabel("Reason (optional)").fill("More companies signed up.");
     await form.getByRole("button", { name: "Submit change request" }).click();
@@ -105,6 +113,7 @@ test.describe("SCRUM-41 — Raise and track a change request", () => {
     await expect(request).toContainText("Expected attendance");
     await expect(request).toContainText("Impactful");
     await expect(request).toContainText("40 → 60");
+    await expect(request).toContainText("Venue requirements");
     await expect(request).toContainText("More companies signed up.");
     // AC7: one Submitted request at a time.
     await expect(dialog.getByRole("button", { name: "Request a change" })).toHaveCount(0);

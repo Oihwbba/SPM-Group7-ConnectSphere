@@ -15,6 +15,7 @@ import {
   raiseChangeRequest,
   type ChangeRequestView,
 } from "@/app/(app)/events/change-request-actions";
+import { getFormCatalogues } from "@/app/(app)/events/actions";
 import {
   CHANGEABLE_FIELDS,
   CHANGE_REQUEST_STATUS_LABEL,
@@ -61,6 +62,14 @@ const FIELD_ORDER = [
 ];
 
 type Draft = Record<string, string>;
+
+/** The catalogue names the request form suggests (SCRUM-13), by the field they fill. */
+type Suggestions = { venueRequirements: string[]; equipmentRequirements: string[] };
+
+const SUGGESTION_LEAD: Record<keyof Suggestions, string> = {
+  venueRequirements: "Preferred venue",
+  equipmentRequirements: "Requested equipment",
+};
 
 function draftFrom(event: Event): Draft {
   return {
@@ -185,7 +194,34 @@ export function ChangeRequestPanel({ event }: { event: Event }) {
   const [errors, setErrors] = useState<Record<string, string[]>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  // SCRUM-41 AC4: the same catalogue suggestions as the request form. Only
+  // the Organiser may read the catalogue (SCRUM-13), so a Coordinator raising
+  // a request on their behalf types the values instead.
+  const [suggestions, setSuggestions] = useState<Suggestions | null>(null);
   const router = useRouter();
+
+  function openForm() {
+    setFormOpen(true);
+    if (suggestions) return;
+    getFormCatalogues()
+      .then((result) => {
+        if (!result.ok) return;
+        setSuggestions({
+          venueRequirements: result.data.venues.map((v) => v.name),
+          equipmentRequirements: result.data.equipment.map((e) => e.type),
+        });
+      })
+      .catch(() => {});
+  }
+
+  function suggest(field: keyof Suggestions, name: string) {
+    setDraft((current) => ({
+      ...current,
+      [field]: current[field]
+        ? `${current[field]}, ${name}`
+        : `${SUGGESTION_LEAD[field]}: ${name}`,
+    }));
+  }
 
   // Bumped after a submission, so the list is read again.
   const [version, setVersion] = useState(0);
@@ -273,7 +309,7 @@ export function ChangeRequestPanel({ event }: { event: Event }) {
         )}
 
         {canRaise && !formOpen && (
-          <Button size="sm" variant="outline" onClick={() => setFormOpen(true)}>
+          <Button size="sm" variant="outline" onClick={openForm}>
             Request a change
           </Button>
         )}
@@ -335,13 +371,37 @@ export function ChangeRequestPanel({ event }: { event: Event }) {
                         ))}
                       </div>
                     ) : (
-                      <label key={field} className="block space-y-1">
-                        <span className="font-medium">
+                      // A div, not a label: the suggestion buttons must not
+                      // become the field's labelled control.
+                      <div key={field} className="space-y-1">
+                        <label
+                          htmlFor={`change-${field}`}
+                          className="block font-medium"
+                        >
                           {CHANGEABLE_FIELDS[field]}
-                        </span>
+                        </label>
+                        {suggestions &&
+                          (field === "venueRequirements" ||
+                            field === "equipmentRequirements") &&
+                          suggestions[field].length > 0 && (
+                            <span className="flex flex-wrap gap-1.5">
+                              {suggestions[field].map((name) => (
+                                <button
+                                  key={name}
+                                  type="button"
+                                  aria-label={`Add ${name} to ${CHANGEABLE_FIELDS[field].toLowerCase()}`}
+                                  className="rounded border bg-background px-2 py-0.5 text-[11px] hover:bg-accent focus:outline-none focus:ring-1 focus:ring-ring"
+                                  onClick={() => suggest(field, name)}
+                                >
+                                  {name}
+                                </button>
+                              ))}
+                            </span>
+                          )}
                         {field === "expectedAttendance" ||
                         SHORT_FIELDS.includes(field) ? (
                           <Input
+                            id={`change-${field}`}
                             type={
                               field === "expectedAttendance" ? "number" : "text"
                             }
@@ -353,6 +413,7 @@ export function ChangeRequestPanel({ event }: { event: Event }) {
                           />
                         ) : (
                           <Textarea
+                            id={`change-${field}`}
                             value={draft[field]}
                             onChange={(e) => set(field)(e.target.value)}
                             aria-invalid={Boolean(errors[field])}
@@ -363,7 +424,7 @@ export function ChangeRequestPanel({ event }: { event: Event }) {
                           id={`change-${field}-error`}
                           messages={errors[field]}
                         />
-                      </label>
+                      </div>
                     ),
                 )}
                 <FieldError id="change-changes-error" messages={errors.changes} />
