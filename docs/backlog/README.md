@@ -153,7 +153,7 @@ _11 stories, 26 points_
 | [SCRUM-33](SCRUM-33.md) | [MERGED INTO SCRUM-27] View Event Reservations | 0 | Medium | SCRUM Sprint 2 | Done |
 | [SCRUM-55](SCRUM-55.md) | [MERGED INTO SCRUM-30] View Equipment Availability Calendar | 0 | Low | Backlog | Done |
 | [SCRUM-119](SCRUM-119.md) | Maintain the equipment catalogue and record unavailability | 5 | Low | Backlog | To Do |
-| [SCRUM-142](SCRUM-142.md) | Change equipment lines or withdraw a venue request before confirmation | 3 | High | SCRUM Sprint 3 | To Do |
+| [SCRUM-142](SCRUM-142.md) | Change equipment lines or withdraw a venue request before confirmation | 3 | High | SCRUM Sprint 3 | In Review |
 | [SCRUM-156](SCRUM-156.md) | Make the one-type equipment form availability-only (follow-up to SCRUM-31 and SCRUM-155) | 2 | Medium | SCRUM Sprint 2 | Done |
 
 ## SCRUM-11 - Attendee Registration
