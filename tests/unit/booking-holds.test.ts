@@ -360,7 +360,7 @@ describe("holdBookingRequest — SCRUM-163 AC1, AC2, AC5", () => {
     expect(result).toMatchObject({
       ok: false,
       error: expect.stringMatching(
-        /^Conflicting: Hall is held until .*This request is still pending\.$/,
+        /^Conflicting: Hall is held from .*This request is still pending\.$/,
       ),
     });
     expectNothingWritten();

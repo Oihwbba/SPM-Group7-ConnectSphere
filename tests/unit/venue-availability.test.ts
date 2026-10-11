@@ -119,7 +119,7 @@ describe("describeBlocker", () => {
     );
   });
 
-  it("SCRUM-163 [AC2] TC-163-04: names a hold by its times and its expiry", () => {
+  it("SCRUM-163 [AC2] TC-163-04: names a hold by its times, without its expiry, which only the calendar shows", () => {
     expect(
       describeBlocker({
         kind: "booking",
@@ -128,7 +128,7 @@ describe("describeBlocker", () => {
         heldUntil: new Date("2030-05-30T10:00:00.000Z"),
       }),
     ).toBe(
-      "held until 30 May 2030, 6:00 pm SGT from 1 Jun 2030, 2:00 pm SGT to 1 Jun 2030, 4:00 pm SGT",
+      "held from 1 Jun 2030, 2:00 pm SGT to 1 Jun 2030, 4:00 pm SGT",
     );
   });
 

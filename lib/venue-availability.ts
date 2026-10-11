@@ -190,13 +190,15 @@ export function startOfWeek(day: string): string {
 /**
  * One line per blocker, for telling a person why a venue is unavailable. Only
  * times are shown, never the other booking's event: ConnectSphere's clients
- * are competing organisations (the same reasoning as SCRUM-68).
+ * are competing organisations (the same reasoning as SCRUM-68). A hold's
+ * expiry isn't given: only the availability calendar shows "Held until"
+ * (SCRUM-163 AC2).
  */
 export function describeBlocker(blocker: VenueBlocker): string {
   const what =
     blocker.kind === "booking"
       ? blocker.heldUntil
-        ? `held until ${formatDateTime(blocker.heldUntil)}`
+        ? "held"
         : "already booked"
       : `unavailable (${UNAVAILABILITY_REASON_LABEL[blocker.reason].toLowerCase()})`;
   return `${what} from ${formatDateTime(blocker.startAt)} to ${formatDateTime(blocker.endAt)}`;
