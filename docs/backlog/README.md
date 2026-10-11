@@ -112,7 +112,7 @@ _7 stories, 29 points_
 
 | Story | Summary | Pts | Priority | Sprint | Status |
 |---|---|---|---|---|---|
-| [SCRUM-41](SCRUM-41.md) | Raise and track a change request | 3 | Highest | SCRUM Sprint 3 | To Do |
+| [SCRUM-41](SCRUM-41.md) | Raise and track a change request | 3 | Highest | SCRUM Sprint 3 | In Review |
 | [SCRUM-45](SCRUM-45.md) | Organiser and Coordinator workflow notifications | 5 | Highest | SCRUM Sprint 3 | To Do |
 | [SCRUM-48](SCRUM-48.md) | User views their notification list | 3 | Highest | SCRUM Sprint 3 | To Do |
 | [SCRUM-85](SCRUM-85.md) | Attendees are kept informed when an event they registered for changes or is cancelled | 5 | High | SCRUM Sprint 3 | To Do |
