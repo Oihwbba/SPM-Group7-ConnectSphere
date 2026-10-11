@@ -70,13 +70,12 @@ The main reasons:
 
 ## Alternatives rejected
 
-- **Flask, SQLAlchemy, Jinja and htmx.** A draft ADR proposed this on
-  2026-09-08, kept outside the repo, and the team didn't adopt it. It means
-  Python on the server and JavaScript in the browser wherever htmx isn't
-  enough (dialogs, forms that show errors next to each field), so two
-  languages and two sets of tools. It also loses the shared types between the
-  database model and the pages. The foundation commit the same day was
-  Next.js.
+- **Flask, SQLAlchemy, Jinja and htmx**: a Python server rendering HTML
+  templates, with htmx for the interactive parts. It means Python on the
+  server and JavaScript in the browser wherever htmx isn't enough (dialogs,
+  forms that show errors next to each field), so two languages and two sets
+  of tools. It also loses the shared types between the database model and the
+  pages.
 - **A React single-page app with a separate API** (for example Express or
   FastAPI). That is two things to deploy, an API contract to keep in step,
   sign-in checked on both sides, and twice the hosting to keep free.
