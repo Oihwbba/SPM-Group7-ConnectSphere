@@ -15,12 +15,11 @@ and the app is running. Unless the case says otherwise, the event is owned by
 
 **Two notes on the criteria:**
 
-- **AC 4, "venue and equipment come from the catalogues":** SCRUM-127, which
-  made them catalogue choices, was dropped on 2026-10-08. The request form
-  keeps both as free text, with catalogue venues offered as suggestions, so a
-  change request validates them as the form does: required, and no longer than
-  5000 characters. Felicia's rewording of AC 4 is due; the cases below follow
-  the code until it lands.
+- **AC 4** was reworded on 2026-10-11 (conflict review with SCRUM-170): the
+  request form's rules from SCRUM-13, with venue and equipment requirements as
+  free text. It no longer asks for catalogue choices, since SCRUM-127, which
+  would have made them so, was dropped on 2026-10-08. The change form offers
+  the request form's catalogue suggestions to the Organiser.
 - **AC 8, cancellation:** cancelling an event is SCRUM-82, not built yet. Its
   AC 3 rejects any Submitted change request with the cancellation reason, and
   its tests will cover that half. Rejecting from Under Review (this story) and
@@ -134,7 +133,7 @@ and the app is running. Unless the case says otherwise, the event is owned by
 | Pre-conditions | Signed in as the Organiser. |
 | Test Steps | 1. Ask for each invalid value. <br> 2. Ask for the allowed boundaries. |
 | Test Data | Invalid: attendance 0, -5, 1.5; a blank name; a start with no end; an end before, or equal to, the start; a start a minute in the past; a date that isn't one; a programme of 5001 characters; a field the form doesn't have. Allowed: attendance 1; an end one minute after the start; an empty programme. |
-| Expected Result | Each invalid value is refused, with the form's own message next to its field ("Attendance must be a positive whole number.", "Proposed date cannot be in the past.", "Proposed end date and time must be strictly after the start date and time.", …), and nothing is read or written. The boundaries are accepted. For the Organiser, Venue requirements and Equipment requirements offer the request form's catalogue suggestions; choosing a venue fills "Preferred venue: [name]". **Not covered:** AC 4's "venue and equipment come from the catalogues". Like the request form, the values stay free text, because SCRUM-127, which would have made them catalogue choices, was dropped (see the note at the top). A Coordinator gets no suggestions: only the Organiser may read the catalogue (SCRUM-13). |
+| Expected Result | Each invalid value is refused, with the form's own message next to its field ("Attendance must be a positive whole number.", "Proposed date cannot be in the past.", "Proposed end date and time must be strictly after the start date and time.", …), and nothing is read or written. The boundaries are accepted. For the Organiser, Venue requirements and Equipment requirements offer the request form's catalogue suggestions; choosing a venue fills "Preferred venue: [name]". Venue and equipment requirements are free text, as AC 4 says, under the request form's own rules (not blank). A Coordinator gets no suggestions: only the Organiser may read the catalogue (SCRUM-13). |
 
 **Automated by:** `tests/unit/change-requests.test.ts` › "SCRUM-41 [AC4] TC-41-07: %j is refused: %s", "SCRUM-41 [AC4] TC-41-07: the boundaries that are allowed: attendance 1, an end one minute after the start, an empty programme", "SCRUM-41 [AC4] TC-41-07: invalid values are refused next to their field, before anything is read"; `e2e/change-requests.spec.ts` › "SCRUM-41 [AC1, AC4, AC5, AC6, AC7] TC-41-07, TC-41-09: …"
 
