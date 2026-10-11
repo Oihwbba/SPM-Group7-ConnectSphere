@@ -1,5 +1,7 @@
 # ADR 0005 — CI runs every job against a throwaway database
 
+Stories: none; a team decision about the build.
+
 ## Context
 
 Continuous integration is graded evidence for this module, and it gates the
@@ -82,3 +84,10 @@ request open gets no CI until one is.
 - The container image (`postgres:16-alpine`, matching `docker-compose.yml`)
   is pinned independently of Supabase's Postgres version. Keep the two aligned
   when Supabase upgrades, or a query valid in CI may still fail in production.
+
+## Addendum (2026-10-11) — Corrections from the docs audit (SCRUM-173)
+
+The step list above uploads every artifact at the end. `.github/workflows/ci.yml`
+now uploads the coverage report straight after step 7, before the Playwright
+browser is installed, and the Playwright report last. The order of migrate,
+seed, then tests is unchanged.

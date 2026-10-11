@@ -538,3 +538,15 @@ only code owner was Jin Hong, so every such change waited on one person.
 CODEOWNERS now lists all five team members. A change still needs a second
 person, since an author can't approve their own pull request, but any
 teammate can be that person.
+
+## Addendum (2026-10-11) — Corrections from the docs audit (SCRUM-173)
+
+- **Vercel previews (2026-09-17 addendum).** `vercel.json` no longer sets
+  `{"**": false, "main": true}`. Since ADR 0009 it sets `deploymentEnabled`
+  to `false`, and production deploys only from
+  `.github/workflows/deploy.yml`.
+- **Merge commits for memory pull requests (SCRUM-112 addendum).** The reason
+  given, that Vercel refuses to deploy a commit whose author isn't a project
+  member, went away with ADR 0009, which deploys with the owner's token. The
+  rule is still in `.github/scripts/ai-memory.mjs` and does no harm; whether
+  to drop it is a separate decision.

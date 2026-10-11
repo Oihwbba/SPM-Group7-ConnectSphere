@@ -1,5 +1,7 @@
 # ADR 0009 — Deploy production from GitHub Actions, not Vercel's Git integration
 
+Stories: none; a team decision about deploying.
+
 ## Context
 
 The project runs on Vercel's Hobby plan from a private repository. On Hobby,
@@ -47,3 +49,10 @@ is the only path to production and a blocked duplicate deploy cannot appear.
 - Production no longer shows a Vercel check on the commit. The deploy is the
   workflow run on `main`.
 - Preview deployments stay off, as before (PR #22).
+
+## Addendum (2026-10-11) — Corrections from the docs audit (SCRUM-173)
+
+"Production no longer shows a Vercel check on the commit" is out of date.
+`deploy.yml` now opens a GitHub deployment and records its result on the
+commit, so each deploy shows as a "Production" deployment linking to the
+workflow run.

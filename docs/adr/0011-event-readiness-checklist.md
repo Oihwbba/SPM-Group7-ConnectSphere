@@ -114,7 +114,7 @@ If the alternative should count, that is a small change to decision 3.
   a later story links them, the rule should match reservations to lines
   directly.
 
-## Amendment, 3 Oct 2026
+## Addendum (2026-10-03)
 
 SCRUM-110 AC 4 was simplified with the PO: the Equipment item no longer lists
 one line per requested item ("Projector 3/5 reserved"). It shows only Reserved,
@@ -123,7 +123,7 @@ the request rather than reserving part of it, so the per-item count added
 little. The completeness rule is unchanged: a partial reservation still leaves
 Equipment incomplete (AC 3), because nothing yet stops one being made.
 
-## Amendment, 4 Oct 2026
+## Addendum (2026-10-04)
 
 The PO changed SCRUM-110 AC 4 again after testing: with only "Not fully
 reserved", a Coordinator could not tell what was missing (a laptop had been
