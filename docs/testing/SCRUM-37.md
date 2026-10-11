@@ -5,7 +5,7 @@ Format and conventions: [README.md](README.md). Why the database, not the
 application, stops a venue being booked and unavailable at once:
 [ADR 0010, 2026-09-28 addendum](../adr/0010-database-prevents-venue-double-booking.md).
 
-> **Week 7 (SCRUM-158).** AC 1 lists the reasons as it did before the 7 Oct change, and AC 3 refuses an overlap with an Approved booking. SCRUM-161 replaces these: the reason list gains Equipment failure, Renovation and Safety concern, and unavailability may now be recorded over future bookings, which are flagged Needs Reconsideration instead of the record being refused. The cases below test the earlier behaviour, which stands until SCRUM-161 lands.
+> **Week 7 (SCRUM-158).** AC 1 lists the reasons as it did before the 7 Oct change, and AC 3 refuses an overlap with an Approved booking. The reason list has already changed: since SCRUM-172 (AC 5) the reasons are Maintenance, Equipment failure, Renovation, Safety concern and Other, and Damaged and Closure are refused (`lib/schemas/unavailability.ts`). SCRUM-161 replaces AC 3: unavailability may be recorded over future bookings, which are flagged Needs Reconsideration instead of the record being refused. Until SCRUM-161 lands, the action still refuses it, and the cases below test that behaviour.
 
 **Shared pre-conditions for every case:** the database is migrated and seeded,
 the app is running, and the tester signs in as Venue Staff
@@ -34,13 +34,13 @@ Moved to [TC-36-09](SCRUM-36.md#tc-36-09) on 2026-10-09. A newly approved bookin
 | Item | Content |
 |---|---|
 | Test Case ID | TC-37-02 |
-| Test Scenario | [Positive] AC 1: Venue Staff record non-booking unavailability with a period and a reason |
+| Test Scenario | [Positive] AC 1, AC 2: Venue Staff record non-booking unavailability with a period and a reason, and the calendar shows it |
 | Pre-conditions | Nothing recorded or booked on the Grand Auditorium on 10 Jan 2036. |
 | Test Steps | 1. Open **Availability**, choose the Grand Auditorium and 10 Jan 2036. <br> 2. Click **Record unavailability**. <br> 3. Enter the period and reason, and save. |
 | Test Data | Start 10 Jan 2036 1:00 pm, End 5:00 pm, Reason Maintenance |
 | Expected Result | "Recorded: Grand Auditorium is unavailable for that period." The calendar shows "Unavailable (maintenance) 1:00 pm to 5:00 pm", striped. The row stores the period, reason, note and who recorded it. |
 
-**Automated by:** `tests/integration/unavailability.test.ts` › "SCRUM-37 [AC1] TC-37-02: venue staff record a period and a reason, and it is saved"; `tests/unit/unavailability.test.ts` › "SCRUM-37 [AC1, AC2] TC-37-01, TC-37-02: venue staff record a period and a reason; the calendar is refreshed" and "SCRUM-37 [AC1] TC-37-02: a blank note is stored as none"; `e2e/availability.spec.ts` › "SCRUM-37 [AC1-AC5], SCRUM-36 [AC2, AC3, AC5]: maintenance is recorded, seen, refused over, sat flush against a booking, and never overwrites one"
+**Automated by:** `tests/integration/unavailability.test.ts` › "SCRUM-37 [AC1] TC-37-02: venue staff record a period and a reason, and it is saved"; `tests/unit/unavailability.test.ts` › "SCRUM-37 [AC1, AC2] TC-37-02: venue staff record a period and a reason; the calendar is refreshed" and "SCRUM-37 [AC1] TC-37-02: a blank note is stored as none"; `e2e/availability.spec.ts` › "SCRUM-37 [AC1-AC5], SCRUM-36 [AC2, AC3, AC5]: maintenance is recorded, seen, refused over, sat flush against a booking, and never overwrites one"
 
 ### TC-37-03
 

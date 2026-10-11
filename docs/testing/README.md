@@ -90,15 +90,17 @@ defect, e.g. `regression: a blank rejection reason was accepted`.
 | [SCRUM-27](SCRUM-27.md) | Jin Hong | 15 | Written with the story; every case automated |
 | [SCRUM-28](SCRUM-28.md) | Jin Hong | 11 | Written with the story; every case automated |
 | [SCRUM-31](SCRUM-31.md) | Jun Bin | 11 | Written from the acceptance criteria and existing tests; TC-31-04, -05 and -09 are partly manual |
-| [SCRUM-36](SCRUM-36.md) | Caylern Goh | 8 | Automated; a real screen-reader pass is manual |
+| [SCRUM-36](SCRUM-36.md) | Caylern Goh | 9 | Automated; a real screen-reader pass is manual |
 | [SCRUM-37](SCRUM-37.md) | Caylern Goh | 7 | Every case automated |
-| [SCRUM-50](SCRUM-50.md) | Caylern Goh | 11 | Every case automated |
-| [SCRUM-52](SCRUM-52.md) | Caylern Goh | 5 | Every case automated |
-| [SCRUM-53](SCRUM-53.md) | Caylern Goh | 8 | Every case automated; AC 3's calendar view follows with SCRUM-36 |
+| [SCRUM-50](SCRUM-50.md) | Caylern Goh | 15 | Every case automated |
+| [SCRUM-52](SCRUM-52.md) | Caylern Goh | 6 | Every case automated |
+| [SCRUM-53](SCRUM-53.md) | Caylern Goh | 9 | Automated except TC-53-09 (AC 9), which is manual; AC 3 and AC 10 point to other cases |
 | [SCRUM-81](SCRUM-81.md) | Jun Bin | 13 | Every case automated (unit, integration for the simultaneous confirm, e2e for the journey) |
 | [SCRUM-110](SCRUM-110.md) | Jun Bin | 15 | Every case automated (unit, and e2e for the page) |
-| [SCRUM-108](SCRUM-108.md) | Jun Bin | 12 | Every case automated (unit, e2e for both journeys); AC 6, 8 and 10 point to existing tests |
+| [SCRUM-108](SCRUM-108.md) | Jun Bin | 14 | Every case automated (unit, e2e for both journeys); AC 6, 8 and 10 point to existing tests |
 | [SCRUM-126](SCRUM-126.md) | Jun Bin | 10 | Every case automated (unit, integration for the constraint, migration and simultaneous clicks, e2e for the journey) |
+| [SCRUM-130](SCRUM-130.md) | Felicia Or | 12 | Every case automated (unit, integration, e2e) |
 | [SCRUM-117](SCRUM-117.md) | Jun Bin | 10 | Every case automated (unit, integration for releasing arrangements in one transaction, e2e for both journeys) |
 | [SCRUM-155](SCRUM-155.md) | Jin Hong | 16 | Every case automated (unit, integration for all-or-nothing and the races, e2e for the journey) |
 | [SCRUM-156](SCRUM-156.md) | Jin Hong | 8 | Every case automated; TC-155-16 retired and the SCRUM-31 reserve cases mapped to SCRUM-155 |
+| [SCRUM-172](SCRUM-172.md) | Jin Hong | 16 | Integration and unit; TC-172-15 step 3 is manual, and TC-172-16 is the whole suite |

@@ -186,7 +186,7 @@ the reason after "Rejected".
 | Test Data       | —                                                                                                     |
 | Expected Result | The Readiness checklist is shown, including the rejection reason.                                     |
 
-**Automated by:** `tests/unit/readiness-actions.test.ts` › "SCRUM-110 [AC6] TC-110-11: …"; `e2e/readiness.spec.ts` › "SCRUM-110 [AC3, AC4, AC6] …"
+**Automated by:** `tests/unit/readiness-actions.test.ts` › "SCRUM-110 [AC6] TC-110-11: …"; `e2e/readiness.spec.ts` › "SCRUM-110 [AC2, AC3, AC6] TC-110-04, TC-110-07, TC-110-11, TC-110-12: …"
 
 ### TC-110-12
 
@@ -199,7 +199,7 @@ the reason after "Rejected".
 | Test Data       | —                                                                                                                  |
 | Expected Result | "Venue booking — Rejected" and "Equipment — Not fully reserved: Projector" are shown; the rejection reason is not. |
 
-**Automated by:** `tests/unit/readiness-actions.test.ts` › "SCRUM-110 [AC6] TC-110-12: …"; `e2e/readiness.spec.ts` › "SCRUM-110 [AC3, AC4, AC6] …"
+**Automated by:** `tests/unit/readiness-actions.test.ts` › "SCRUM-110 [AC6] TC-110-12: …"; `e2e/readiness.spec.ts` › "SCRUM-110 [AC2, AC3, AC6] TC-110-04, TC-110-07, TC-110-11, TC-110-12: …"
 
 ### TC-110-13
 

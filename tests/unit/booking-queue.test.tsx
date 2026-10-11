@@ -37,7 +37,7 @@ const row: PendingBookingRow = {
 };
 
 describe("BookingQueue", () => {
-  it("SCRUM-52 [AC1]: an empty queue says there is nothing pending rather than rendering nothing", () => {
+  it("SCRUM-52 [AC4] TC-52-06: an empty queue says there is nothing pending rather than rendering nothing", () => {
     const html = renderToStaticMarkup(<BookingQueue queue={[]} canDecide />);
 
     expect(html).toContain("No pending requests");
