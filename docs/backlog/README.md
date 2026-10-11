@@ -39,15 +39,15 @@ either covered by a test or visibly not done yet. Reviewers do the same.
 | Stories | **88** |
 | Tasks | **24** |
 | Subtasks | **18** |
-| Total story points | **254** |
+| Total story points | **252** |
 | Points committed to Sprint 1 | **37** |
 | Points committed to Sprint 2 | **56** |
-| Points committed to Sprint 3 | **128** |
+| Points committed to Sprint 3 | **126** |
 | Last synced from Jira | **2026-10-09** |
 
 ## SCRUM-6 - Event Request Lifecycle
 
-_32 stories, 88 points_
+_32 stories, 86 points_
 
 | Story | Summary | Pts | Priority | Sprint | Status |
 |---|---|---|---|---|---|
@@ -66,7 +66,7 @@ _32 stories, 88 points_
 | [SCRUM-26](SCRUM-26.md) | Flag and resolve arrangements affected by a change | 5 | Highest | SCRUM Sprint 3 | To Do |
 | [SCRUM-71](SCRUM-71.md) | Record who changed what and when | 5 | Low | Backlog | To Do |
 | [SCRUM-81](SCRUM-81.md) | Move an approved event through planning to confirmed | 5 | Highest | SCRUM Sprint 2 | Done |
-| [SCRUM-82](SCRUM-82.md) | Close an event: cancel it, or mark it completed once it has passed | 5 | Highest | SCRUM Sprint 3 | To Do |
+| [SCRUM-82](SCRUM-82.md) | Close an event: cancel it, or mark it completed once it has passed | 3 | Highest | SCRUM Sprint 3 | To Do |
 | [SCRUM-84](SCRUM-84.md) | Organiser views their own event requests | 2 | Highest | SCRUM Sprint 1 | Done |
 | [SCRUM-108](SCRUM-108.md) | Answer a clarification, or amend and resubmit a rejected request | 5 | High | SCRUM Sprint 2 | Done |
 | [SCRUM-109](SCRUM-109.md) | [MERGED INTO SCRUM-108] Respond to an event clarification request | 0 | High | SCRUM Sprint 2 | Done |
