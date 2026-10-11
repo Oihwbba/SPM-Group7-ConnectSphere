@@ -24,8 +24,10 @@ const SAYS_SO =
   /merged|superseded|replaced|duplicate|covered by|not needed|dropped/i;
 
 /**
- * Keys that may be cited although they are stale, each with why. Remove an
- * entry as soon as its reason stops being true.
+ * Keys that may be cited although they are stale, each with why. An entry
+ * expires: the test below fails once its file no longer cites the key, so the
+ * change that fixes a reference also removes its exception, and the key can't
+ * come back unnoticed.
  */
 const ALLOWED: Record<string, { keys: string[]; why: string }> = {
   "tests/unit/ai-review.test.ts": {
@@ -121,6 +123,22 @@ describe("SCRUM-146 story keys in the code", () => {
       staleReferences(readFileSync(join(ROOT, file), "utf8"), file, keys),
     );
     expect(stale).toEqual([]);
+  });
+
+  it("SCRUM-146 [AC5]: every allowed stale key is still cited, so a fixed one's exception is removed", () => {
+    const expired = Object.entries(ALLOWED).flatMap(
+      ([file, { keys: allowed }]) => {
+        const text = existsSync(join(ROOT, file))
+          ? readFileSync(join(ROOT, file), "utf8")
+          : "";
+        return allowed
+          .filter((key) => !new RegExp(`\\b${key}\\b`).test(text))
+          .map(
+            (key) => `${file} no longer cites ${key}: delete it from ALLOWED`,
+          );
+      },
+    );
+    expect(expired).toEqual([]);
   });
 
   it("SCRUM-146 [AC5]: the check catches a deleted key and an unexplained merged one", () => {
