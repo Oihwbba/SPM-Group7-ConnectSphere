@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { FilePenLine } from "lucide-react";
 import type { Event } from "@prisma/client";
@@ -10,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { FieldError } from "@/components/ui/field-error";
 import {
   getChangeRequestsForEvent,
   raiseChangeRequest,
@@ -18,9 +18,11 @@ import {
 import { getFormCatalogues } from "@/app/(app)/events/actions";
 import {
   CHANGEABLE_FIELDS,
+  CHANGE_KEYS,
   CHANGE_REQUEST_STATUS_LABEL,
   changeFieldLabel,
   type ChangeableField,
+  type ChangeKey,
   type ChangeRequestChanges,
 } from "@/lib/schemas/change-request";
 import {
@@ -29,37 +31,17 @@ import {
   utcToSgWallTime,
 } from "@/lib/datetime";
 
-const TEXT_FIELDS = [
-  "name",
-  "purpose",
-  "description",
-  "venueRequirements",
-  "accessibilityNeeds",
-  "preferredLayout",
-  "equipmentRequirements",
-  "registrationNotes",
-  "programme",
-  "specialRequests",
-] as const;
+type TextField = Exclude<ChangeKey, "startAt" | "endAt" | "expectedAttendance">;
+
+const TEXT_FIELDS = CHANGE_KEYS.filter(
+  (key): key is TextField =>
+    key !== "startAt" && key !== "endAt" && key !== "expectedAttendance",
+);
 
 const SHORT_FIELDS: readonly string[] = ["name", "purpose", "preferredLayout"];
 
 /** The order fields are listed in, matching the request form. */
-const FIELD_ORDER = [
-  "name",
-  "purpose",
-  "description",
-  "startAt",
-  "endAt",
-  "expectedAttendance",
-  "venueRequirements",
-  "accessibilityNeeds",
-  "preferredLayout",
-  "equipmentRequirements",
-  "registrationNotes",
-  "programme",
-  "specialRequests",
-];
+const FIELD_ORDER: readonly string[] = CHANGE_KEYS;
 
 type Draft = Record<string, string>;
 
@@ -103,13 +85,37 @@ function shown(fieldName: string, value: string | null): string {
     : value;
 }
 
-function FieldError({ id, messages }: { id: string; messages?: string[] }) {
-  if (!messages?.[0]) return null;
-  return (
-    <p id={id} role="alert" className="text-xs text-destructive">
-      {messages[0]}
-    </p>
-  );
+/** A number for attendance, a line for short text, a box for the rest. */
+function FieldControl({
+  field,
+  value,
+  onChange,
+  invalid,
+  describedBy,
+}: {
+  field: Exclude<ChangeableField, "schedule">;
+  value: string;
+  onChange: (value: string) => void;
+  invalid: boolean;
+  describedBy?: string;
+}) {
+  const props = {
+    id: `change-${field}`,
+    value,
+    "aria-invalid": invalid,
+    "aria-describedby": describedBy,
+  };
+  if (field === "expectedAttendance" || SHORT_FIELDS.includes(field)) {
+    return (
+      <Input
+        {...props}
+        type={field === "expectedAttendance" ? "number" : "text"}
+        min={field === "expectedAttendance" ? 1 : undefined}
+        onChange={(e) => onChange(e.target.value)}
+      />
+    );
+  }
+  return <Textarea {...props} onChange={(e) => onChange(e.target.value)} />;
 }
 
 function ChangeRequestItem({ request }: { request: ChangeRequestView }) {
@@ -183,10 +189,10 @@ function ChangeRequestItem({ request }: { request: ChangeRequestView }) {
  * that has none and can't take one.
  */
 export function ChangeRequestPanel({ event }: { event: Event }) {
-  const [requests, setRequests] = useState<ChangeRequestView[]>([]);
-  const [canRaise, setCanRaise] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [loadFailed, setLoadFailed] = useState(false);
+  // null while loading; "failed" if the read failed.
+  const [loaded, setLoaded] = useState<
+    { requests: ChangeRequestView[]; canRaise: boolean } | "failed" | null
+  >(null);
   const [formOpen, setFormOpen] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [reason, setReason] = useState("");
@@ -198,20 +204,30 @@ export function ChangeRequestPanel({ event }: { event: Event }) {
   // the Organiser may read the catalogue (SCRUM-13), so a Coordinator raising
   // a request on their behalf types the values instead.
   const [suggestions, setSuggestions] = useState<Suggestions | null>(null);
-  const router = useRouter();
 
   function openForm() {
     setFormOpen(true);
     if (suggestions) return;
+    // A refusal is remembered as no suggestions, so it isn't asked again.
+    const none = { venueRequirements: [], equipmentRequirements: [] };
     getFormCatalogues()
-      .then((result) => {
-        if (!result.ok) return;
-        setSuggestions({
-          venueRequirements: result.data.venues.map((v) => v.name),
-          equipmentRequirements: result.data.equipment.map((e) => e.type),
-        });
-      })
-      .catch(() => {});
+      .then((result) =>
+        setSuggestions(
+          result.ok
+            ? {
+                venueRequirements: result.data.venues.map((v) => v.name),
+                equipmentRequirements: result.data.equipment.map((e) => e.type),
+              }
+            : none,
+        ),
+      )
+      .catch(() => setSuggestions(none));
+  }
+
+  function closeForm() {
+    setFormOpen(false);
+    setErrors({});
+    setFormError(null);
   }
 
   function suggest(field: keyof Suggestions, name: string) {
@@ -231,18 +247,10 @@ export function ChangeRequestPanel({ event }: { event: Event }) {
     let cancelled = false;
     getChangeRequestsForEvent(event.id)
       .then((result) => {
-        if (cancelled) return;
-        setLoadFailed(!result.ok);
-        if (result.ok) {
-          setRequests(result.data.requests);
-          setCanRaise(result.data.canRaise);
-        }
+        if (!cancelled) setLoaded(result.ok ? result.data : "failed");
       })
       .catch(() => {
-        if (!cancelled) setLoadFailed(true);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) setLoaded("failed");
       });
     return () => {
       cancelled = true;
@@ -261,28 +269,29 @@ export function ChangeRequestPanel({ event }: { event: Event }) {
     if (!result.ok) {
       setErrors(result.fieldErrors ?? {});
       setFormError(result.error);
-      reload();
+      // A validation error changed nothing on the server; anything else
+      // (a request raised elsewhere, a decision) may have.
+      if (!result.fieldErrors) reload();
       return;
     }
-    setErrors({});
-    setFormError(null);
-    setFormOpen(false);
+    closeForm();
     setReason("");
     setCancelling(false);
     setDraft(draftFrom(event));
     toast.success("Change request submitted.");
+    // The action's revalidatePath already refreshed the page around the dialog.
     reload();
-    router.refresh();
   }
 
-  if (loading) return null;
-  if (loadFailed) {
+  if (loaded === null) return null;
+  if (loaded === "failed") {
     return (
       <p role="alert" className="text-xs text-muted-foreground">
         Couldn&apos;t load the change requests — try reopening this event.
       </p>
     );
   }
+  const { requests, canRaise } = loaded;
   if (requests.length === 0 && !canRaise) return null;
 
   const set = (key: string) => (value: string) =>
@@ -398,28 +407,13 @@ export function ChangeRequestPanel({ event }: { event: Event }) {
                               ))}
                             </span>
                           )}
-                        {field === "expectedAttendance" ||
-                        SHORT_FIELDS.includes(field) ? (
-                          <Input
-                            id={`change-${field}`}
-                            type={
-                              field === "expectedAttendance" ? "number" : "text"
-                            }
-                            min={field === "expectedAttendance" ? 1 : undefined}
-                            value={draft[field]}
-                            onChange={(e) => set(field)(e.target.value)}
-                            aria-invalid={Boolean(errors[field])}
-                            aria-describedby={describedBy(field)}
-                          />
-                        ) : (
-                          <Textarea
-                            id={`change-${field}`}
-                            value={draft[field]}
-                            onChange={(e) => set(field)(e.target.value)}
-                            aria-invalid={Boolean(errors[field])}
-                            aria-describedby={describedBy(field)}
-                          />
-                        )}
+                        <FieldControl
+                          field={field}
+                          value={draft[field]}
+                          onChange={set(field)}
+                          invalid={Boolean(errors[field])}
+                          describedBy={describedBy(field)}
+                        />
                         <FieldError
                           id={`change-${field}-error`}
                           messages={errors[field]}
@@ -453,11 +447,7 @@ export function ChangeRequestPanel({ event }: { event: Event }) {
                 size="sm"
                 variant="ghost"
                 disabled={submitting}
-                onClick={() => {
-                  setFormOpen(false);
-                  setErrors({});
-                  setFormError(null);
-                }}
+                onClick={closeForm}
               >
                 Discard changes
               </Button>

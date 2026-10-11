@@ -32,14 +32,12 @@ vi.mock("@/auth", () => ({ auth: vi.fn() }));
 vi.mock("@/lib/db", () => ({
   prisma: {
     event: { findUnique: vi.fn() },
-    eventChangeRequest: { findMany: vi.fn() },
     $transaction: vi.fn(),
   },
 }));
 
 const mockAuth = auth as unknown as Mock;
 const mockEventFindUnique = prisma.event.findUnique as unknown as Mock;
-const mockFindMany = prisma.eventChangeRequest.findMany as unknown as Mock;
 const mockTransaction = prisma.$transaction as unknown as Mock;
 
 const ORGANISER = "usr_org";
@@ -69,6 +67,7 @@ const visible = (over: Over = {}) => ({
   status: "PLANNING" as EventStatus,
   discardedAt: null,
   organiser: { name: "Olive Organiser" },
+  changeRequests: [] as object[],
   ...over,
 });
 
@@ -112,7 +111,6 @@ beforeEach(() => {
   tx.clarificationRequest.findFirst.mockResolvedValue(null);
   tx.auditLog.create.mockResolvedValue({});
   tx.notification.create.mockResolvedValue({});
-  mockFindMany.mockResolvedValue([]);
   mockTransaction.mockImplementation((cb: (t: typeof tx) => unknown) => cb(tx));
 });
 
@@ -683,18 +681,19 @@ describe("getChangeRequestsForEvent — SCRUM-41 AC6, AC7, AC9", () => {
 
   it("SCRUM-41 [AC6, AC9] TC-41-09: lists the event's requests newest first, labelling one the Coordinator raised", async () => {
     mockAuth.mockResolvedValue(sessionFor("ORGANISER", ORGANISER));
-    mockEventFindUnique.mockResolvedValue(visible());
-    mockFindMany.mockResolvedValue([
-      row({ id: "chg2", status: "REJECTED", decisionReason: "No hall that size.", requestedById: COORDINATOR }),
-      row({ id: "chg1", status: "APPROVED" }),
-    ]);
+    mockEventFindUnique.mockResolvedValue({
+      ...visible(),
+      changeRequests: [
+        row({ id: "chg2", status: "REJECTED", decisionReason: "No hall that size.", requestedById: COORDINATOR }),
+        row({ id: "chg1", status: "APPROVED" }),
+      ],
+    });
 
     const result = await getChangeRequestsForEvent("evt1");
 
-    expect(mockFindMany.mock.calls[0][0]).toMatchObject({
-      where: { eventId: "evt1" },
-      orderBy: { createdAt: "desc" },
-    });
+    const query = mockEventFindUnique.mock.calls[0][0];
+    expect(query.where).toEqual({ id: "evt1" });
+    expect(query.select.changeRequests.orderBy).toEqual({ createdAt: "desc" });
     expect(result.ok && result.data).toEqual({
       canRaise: true,
       requests: [
@@ -712,8 +711,7 @@ describe("getChangeRequestsForEvent — SCRUM-41 AC6, AC7, AC9", () => {
 
   it("SCRUM-41 [AC7] TC-41-10: no new request can be raised while one is Submitted", async () => {
     mockAuth.mockResolvedValue(sessionFor("ORGANISER", ORGANISER));
-    mockEventFindUnique.mockResolvedValue(visible());
-    mockFindMany.mockResolvedValue([row()]);
+    mockEventFindUnique.mockResolvedValue({ ...visible(), changeRequests: [row()] });
 
     const result = await getChangeRequestsForEvent("evt1");
 
@@ -740,7 +738,8 @@ describe("getChangeRequestsForEvent — SCRUM-41 AC6, AC7, AC9", () => {
 
   it("SCRUM-41 [AC10] TC-41-14: another Organiser's, a missing and a discarded event all look not found", async () => {
     mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_someone_else"));
-    mockEventFindUnique.mockResolvedValue(visible());
+    // The event has a request, and none of it may reach the caller.
+    mockEventFindUnique.mockResolvedValue({ ...visible(), changeRequests: [row()] });
     const results = [await getChangeRequestsForEvent("evt1")];
     mockEventFindUnique.mockResolvedValue(null);
     results.push(await getChangeRequestsForEvent("evt_missing"));
@@ -751,7 +750,6 @@ describe("getChangeRequestsForEvent — SCRUM-41 AC6, AC7, AC9", () => {
     for (const result of results) {
       expect(result).toEqual({ ok: false, error: "Event not found." });
     }
-    expect(mockFindMany).not.toHaveBeenCalled();
   });
 
   it("SCRUM-41 [AC10] TC-41-14: a role that can't read events, or a signed-out caller, is refused before anything is read", async () => {

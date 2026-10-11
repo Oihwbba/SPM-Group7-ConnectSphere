@@ -40,16 +40,33 @@ const optionalText = (label: string, max: number) =>
  * programme and special requests are optional on the form, so they may be
  * cleared.
  */
-export const changeRequestChangesSchema = requestFieldValues
-  .extend({
-    programme: optionalText("the programme", 5000),
-    specialRequests: optionalText("special requests", 5000),
-  })
+const changeRequestValues = requestFieldValues.extend({
+  programme: optionalText("the programme", 5000),
+  specialRequests: optionalText("special requests", 5000),
+});
+
+export const changeRequestChangesSchema = changeRequestValues
   .partial()
   .strict()
   .superRefine(checkSchedule);
 
 export type ChangeRequestChanges = z.infer<typeof changeRequestChangesSchema>;
+
+/**
+ * Every value a change request can carry, in the request form's order: the
+ * one list the action reads the event's current values by and the panel
+ * edits and orders them by.
+ */
+export const CHANGE_KEYS = changeRequestValues.keyof().options;
+export type ChangeKey = (typeof CHANGE_KEYS)[number];
+
+/** One requested value, with the event's value at the time (AC5, AC6). */
+export type FieldChange = {
+  fieldName: string;
+  oldValue: string | null;
+  newValue: string | null;
+  isMajor: boolean;
+};
 
 export const NO_CHANGE_MESSAGE =
   "Change at least one field, or ask to cancel the event.";
@@ -96,13 +113,6 @@ export const raiseChangeRequestSchema = z
   });
 
 export type RaiseChangeRequestInput = z.infer<typeof raiseChangeRequestSchema>;
-
-/** Which changeable field a requested value belongs to. */
-export function changeableFieldOf(
-  key: keyof ChangeRequestChanges,
-): ChangeableField {
-  return key === "startAt" || key === "endAt" ? "schedule" : key;
-}
 
 /** How a stored ChangeRequestField's name reads on screen. */
 export function changeFieldLabel(fieldName: string): string {

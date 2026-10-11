@@ -120,11 +120,17 @@ export const clarificationChangesSchema = requestFieldValues
 
 export type ClarificationChanges = z.infer<typeof clarificationChangesSchema>;
 
-/** Which named field each changed value belongs to. */
-export function fieldOfChange(
-  key: keyof ClarificationChanges,
-): ClarifiableField {
-  return key === "startAt" || key === "endAt" ? "schedule" : key;
+/**
+ * Which named field each changed value belongs to: the start and end are the
+ * schedule, every other value is its own field. Shared by clarification
+ * answers and change requests (SCRUM-41).
+ */
+export function fieldOfChange<K extends string>(
+  key: K,
+): Exclude<K, "startAt" | "endAt"> | "schedule" {
+  return (key === "startAt" || key === "endAt" ? "schedule" : key) as
+    | Exclude<K, "startAt" | "endAt">
+    | "schedule";
 }
 
 /**
