@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-09. Jira is the source of truth.
+     Synced from Jira on 2026-10-11. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-124 - Staff and arrangement notifications
@@ -10,7 +10,7 @@
 | **Epic** | SCRUM-8 - Event Change & Notifications |
 | **Priority** | Highest |
 | **Story points** | 5 |
-| **Status in Jira** | To Do |
+| **Status in Jira** | In Progress |
 | **Sprint** | SCRUM Sprint 3 |
 | **Jira** | https://smu-spm-group7.atlassian.net/browse/SCRUM-124 |
 
