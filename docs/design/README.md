@@ -99,4 +99,4 @@ Four labels were changed to match the code:
 - **Built and In-review diagrams:** every file, constraint, trigger, enum value, notification type and quoted message they name exists on `main`, or in the pull request named.
 - **Story keys:** all 56 story keys the diagrams cite exist in the backlog.
 - **Target diagrams:** the state machines and sequences were compared with the current criteria of the stories they cite. About 35 of the criterion numbers the business processes cite were checked against the same stories.
-- **Safety:** the SVG files contain no scripts and no links to outside resources.
+- **Safety, enforced in CI:** `.gitattributes` keeps the SVGs out of the GLM review's diff. Instead, `tests/unit/design-diagrams.test.ts` fails if a diagram gains a script, an event handler, a link or stylesheet URL outside its own file, or anything but plain label markup inside a `foreignObject`. It also fails if this index stops linking every diagram exactly once.
