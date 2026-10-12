@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-09. Jira is the source of truth.
+     Synced from Jira on 2026-10-12. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-159 - Include setup and turnaround time when checking venue availability
@@ -25,7 +25,7 @@
 3. Given a venue has an Approved or Held booking or recorded unavailability, when anyone searches for it (SCRUM-38), requests it (SCRUM-50), approves a request for it (SCRUM-53) or holds it (SCRUM-163), then the venue counts as unavailable wherever the new occupied period overlaps that booking's occupied period or the unavailability.
 4. Occupied periods that only touch don't conflict. At a venue with 30 and 45 minutes, a booking from 10:00 to 12:00 (occupied 09:30–12:45) leaves 13:15–15:00 free (occupied from 12:45), but 13:00–15:00 is refused because its occupied period starts at 12:30.
 5. Given two requests whose occupied periods overlap are approved or held at the same moment, then only one succeeds, the other is reported as conflicting, and the venue is never double-booked.
-6. Given an occupied period starts before the venue opens or ends after it closes (SCRUM-34), then the request, hold or approval is refused and the opening hours are shown. An occupied period that starts exactly at opening or ends exactly at closing is accepted.
+6. Removed (2026-10-09): refusing a request, hold or approval outside opening hours moved to SCRUM-34 AC7, which owns opening hours.
 7. The venue availability calendar (SCRUM-36) shows each booking's setup and turnaround time around it, marked differently from the event itself.
 8. A booking keeps the setup and turnaround times it was held or approved with. A later change to the venue's times doesn't move it; clashes that change creates are found by SCRUM-160.
 
@@ -38,5 +38,6 @@
 **Change log**
 
 * 2026-10-07 (Week 7 change 1): created.
+* 2026-10-09 (PO review): AC6 moved to SCRUM-34 AC7, so the opening-hours rule sits in one story. Number kept because other stories cite AC7 and AC8.
 
 Functionality Area: Setup and Turnaround Time, Booking Conflict Detection

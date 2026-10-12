@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-09. Jira is the source of truth.
+     Synced from Jira on 2026-10-11. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-163 - Hold a venue tentatively until a deadline
@@ -10,7 +10,7 @@
 | **Epic** | SCRUM-7 - Venue Management |
 | **Priority** | Highest |
 | **Story points** | 5 |
-| **Status in Jira** | To Do |
+| **Status in Jira** | In Review |
 | **Sprint** | SCRUM Sprint 3 |
 | **Jira** | https://smu-spm-group7.atlassian.net/browse/SCRUM-163 |
 
@@ -21,7 +21,7 @@
 **Acceptance criteria**
 
 1. Given I'm reviewing a Pending request (SCRUM-52), when I choose Hold with an expiry date and time and a note of what the Coordinator must finalise, then the booking becomes Held. The expiry must be later than now and earlier than the booking's start; otherwise the hold is refused.
-2. A Held booking reserves its occupied period like an Approved one (SCRUM-159): overlapping requests can't be approved or held, and search and the calendar show the venue as held until the expiry.
+2. A Held booking reserves its occupied period like an Approved one (SCRUM-159): overlapping requests can't be approved or held, venue search excludes the venue for that period (SCRUM-38 AC3), and the venue availability calendar (SCRUM-36) shows it as "Held until \[expiry\]".
 3. Given the hold hasn't expired, when the Coordinator confirms it, then the booking becomes Approved; when they release it, then it becomes Cancelled and the period is free again.
 4. Given the expiry time is reached without a confirmation, then from that moment the hold no longer reserves the venue, the booking shows Expired and can't be confirmed, and the Coordinator makes a new request if the venue is still needed. This doesn't depend on anyone using the app at the expiry time.
 5. The Coordinator is notified when the hold is placed (with the deadline), 24 hours before it expires (or straight away if less than 24 hours remain), and when it expires (SCRUM-124, SCRUM-48).
@@ -40,5 +40,6 @@
 
 * 2026-10-07 (Week 7 change 4): created.
 * 2026-10-07 (backlog refinement): AC7 keeps Held bookings in the Venue Staff queue with their expiry; the Supersedes line replaced the Pending-only queue but no criterion said what the queue shows.
+* 2026-10-11 (conflict review, SCRUM-38 vs SCRUM-163): AC2 no longer says search shows a held venue. Venue search excludes it for the held period (SCRUM-38 AC3), and only the venue availability calendar (SCRUM-36) shows "Held until \[expiry\]". Basis: Week 7 change 4 makes the venue available to others only once the hold expires, and the calendar is where a venue's requestable periods are shown.
 
 Functionality Area: Tentative Venue Holding, Venue Booking Approval
