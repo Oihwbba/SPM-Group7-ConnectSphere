@@ -14,8 +14,11 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import {
   changeEquipmentRequest,
+  updateEquipmentRequestStatus,
   withdrawEquipmentRequest,
 } from "@/app/(app)/equipment-requests/actions";
+import { confirmEvent } from "@/app/(app)/events/actions";
+import { getReadinessChecklist } from "@/lib/event-readiness";
 import {
   submitBookingRequest,
   withdrawBookingRequest,
@@ -816,6 +819,88 @@ describe.skipIf(!usesLocalDatabase)(
       )!;
       expect(reopened.lines.map((l) => l.quantity)).toEqual([1]);
       expect((await reserve(reopened.version)).ok).toBe(true);
+    });
+
+    it("SCRUM-142 [AC10] TC-142-18: after a line is only removed, Confirm waits for Technical Support to approve the request again", async () => {
+      const { eventId, requestId } = await reservedRequest();
+      const ev = await prisma.event.findUniqueOrThrow({
+        where: { id: eventId },
+        select: { startAt: true, endAt: true },
+      });
+      // Its own venue, so this approved booking can't overlap another test's.
+      const venue = await prisma.venue.create({
+        data: {
+          name: `SCRUM-142 AC10 venue ${STAMP}`,
+          location: "Test block",
+          capacity: 100,
+        },
+        select: { id: true },
+      });
+      const booking = await prisma.booking.create({
+        data: {
+          eventId,
+          venueId: venue.id,
+          ...eventBookingPeriod({ startAt: ev.startAt!, endAt: ev.endAt! })!,
+          status: "APPROVED",
+          requestedById: COORDINATOR,
+        },
+        select: { id: true },
+      });
+      const equipmentItem = async () =>
+        (await getReadinessChecklist(prisma, eventId))!.items.find(
+          (i) => i.name === "Equipment",
+        );
+
+      try {
+        expect(await equipmentItem()).toMatchObject({
+          complete: true,
+          state: "Reserved",
+        });
+
+        // Removing the lectern leaves the projectors and mics reserved.
+        await changeEquipmentRequest({
+          requestId,
+          lines: [
+            { equipmentId: PROJECTOR, quantity: 2 },
+            { equipmentId: MIC, quantity: 3 },
+          ],
+        });
+        expect(await statusOf(requestId)).toBe("PENDING_REVIEW");
+        expect(await equipmentItem()).toMatchObject({
+          complete: false,
+          state: "Awaiting Technical Support review",
+        });
+        expect(await confirmEvent({ eventId })).toEqual({
+          ok: false,
+          error:
+            "This event isn't ready to confirm yet. Outstanding: Equipment (Awaiting Technical Support review).",
+        });
+        expect(
+          (
+            await prisma.event.findUniqueOrThrow({
+              where: { id: eventId },
+              select: { status: true },
+            })
+          ).status,
+        ).toBe("PLANNING");
+
+        signIn("usr_techsupport", "TECH_SUPPORT");
+        for (const toStatus of ["IN_REVIEW", "APPROVED"] as const) {
+          expect(
+            await updateEquipmentRequestStatus({ requestId, toStatus }),
+          ).toEqual({ ok: true, data: { status: toStatus } });
+        }
+        expect(await equipmentItem()).toMatchObject({
+          complete: true,
+          state: "Reserved",
+        });
+        expect((await getReadinessChecklist(prisma, eventId))!.ready).toBe(
+          true,
+        );
+      } finally {
+        await prisma.booking.delete({ where: { id: booking.id } });
+        await prisma.venue.delete({ where: { id: venue.id } });
+      }
     });
   },
 );

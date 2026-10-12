@@ -29,6 +29,7 @@ venue requests; the suite removes them.
 | [TC-142-15](#tc-142-15) | Negative | AC 1, AC 3, AC 4 | Unit, e2e |
 | [TC-142-16](#tc-142-16) | Concurrency | AC 5 | Unit, integration |
 | [TC-142-17](#tc-142-17) | Negative | AC 1, AC 2 | Integration |
+| [TC-142-18](#tc-142-18) | Positive, Negative | AC 10 | Unit, integration, e2e |
 
 ---
 
@@ -252,3 +253,16 @@ venue requests; the suite removes them.
 | Expected Result | Step 3: "This request has changed since you opened it. Choose it again to see it as it is now.", and nothing is reserved. Step 4: the form shows Speaker × 1, and it is reserved. (Technical Support may still edit rows before reserving, SCRUM-155 AC2; only a stale form is refused.) |
 
 **Automated by:** `tests/integration/change-or-withdraw.test.ts` › "SCRUM-142 [AC1, AC2] TC-142-17: a reserve form opened before the lines changed is refused, even once the request is approved again"
+
+### TC-142-18
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-142-18 |
+| Test Scenario | [Positive, Negative] AC 10: a request awaiting Technical Support's re-check keeps Equipment incomplete, so Confirm waits for it |
+| Pre-conditions | The venue is approved, and an Approved request with two or more lines has every line reserved, so the event is Ready to confirm. Signed in as the assigned Coordinator. |
+| Test Steps | 1. Remove one line and save. <br> 2. Open the event's readiness checklist, and try to confirm. <br> 3. As Technical Support, start the review and approve the request. <br> 4. Open the checklist again. |
+| Test Data | `techsupport@test.local` |
+| Expected Result | Step 1: the request is Pending Review and the other lines stay reserved. Step 2: Equipment shows "Awaiting Technical Support review" and is incomplete, and Confirm is disabled. The server refuses a confirmation with "This event isn't ready to confirm yet. Outstanding: Equipment (Awaiting Technical Support review).", and the event stays in Planning. Step 4: Equipment is Reserved and the event is Ready to confirm. While an item isn't reserved in full, Equipment names it instead ("Not fully reserved: …"), as before. |
+
+**Automated by:** `tests/unit/event-readiness.test.ts` › "SCRUM-142 [AC10] TC-142-18: a %s request keeps Equipment incomplete even with every line reserved, so the event isn't ready", "SCRUM-142 [AC10] TC-142-18: a request awaiting review holds back an approved one, and an item not reserved in full is named first"; `tests/integration/change-or-withdraw.test.ts` › "SCRUM-142 [AC10] TC-142-18: after a line is only removed, Confirm waits for Technical Support to approve the request again"; `e2e/change-or-withdraw.spec.ts` › "SCRUM-142 [AC10] TC-142-18: after only removing a line, the checklist waits for Technical Support's re-check before Confirm"

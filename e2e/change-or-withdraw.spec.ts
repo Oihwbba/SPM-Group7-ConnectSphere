@@ -187,6 +187,91 @@ test.describe("SCRUM-142 — Change equipment lines or withdraw a venue request"
     ).toBe("CANCELLED");
   });
 
+  test("SCRUM-142 [AC10] TC-142-18: after only removing a line, the checklist waits for Technical Support's re-check before Confirm", async ({
+    browser,
+  }) => {
+    const event = await planningEvent("Recheck");
+    eventIds.push(event.id);
+    const venue = await prisma.venue.create({
+      data: {
+        name: `SCRUM-142 recheck venue ${STAMP}`,
+        location: "Test block",
+        capacity: 100,
+      },
+      select: { id: true },
+    });
+    venueIds.push(venue.id);
+    await prisma.booking.create({
+      data: {
+        eventId: event.id,
+        venueId: venue.id,
+        ...PERIOD,
+        status: "APPROVED",
+        requestedAttendance: 40,
+        requestedById: "usr_coordinator",
+      },
+    });
+    const { id: requestId } = await prisma.equipmentRequest.create({
+      data: {
+        eventId: event.id,
+        requestedById: "usr_coordinator",
+        status: "APPROVED",
+        lines: {
+          create: [
+            { equipmentId: "eqp_projector", quantity: 2 },
+            { equipmentId: "eqp_mic", quantity: 1 },
+          ],
+        },
+      },
+      select: { id: true },
+    });
+    for (const [equipmentId, quantity] of [
+      ["eqp_projector", 2],
+      ["eqp_mic", 1],
+    ] as const) {
+      await prisma.reservation.create({
+        data: {
+          eventId: event.id,
+          equipmentId,
+          requestId,
+          quantity,
+          ...PERIOD,
+          reservedById: "usr_techsupport",
+        },
+      });
+    }
+
+    const page = await signedIn(browser, "coordinator@test.local");
+    await page.goto("/equipment-requests");
+    const card = page
+      .getByTestId("equipment-request")
+      .filter({ hasText: event.name });
+    await card.getByRole("button", { name: "Change lines" }).click();
+    const dialog = page.getByRole("dialog");
+    await dialog
+      .getByRole("button", { name: /^Remove Wireless Microphone/ })
+      .click();
+    await dialog.getByRole("button", { name: "Save changes" }).click();
+    await expect(card.getByTestId("request-status")).toHaveAttribute(
+      "data-status",
+      "PENDING_REVIEW",
+    );
+
+    // The projectors are still reserved, but Confirm waits for the re-check.
+    await page.goto("/events");
+    await page
+      .getByRole("row", { name: new RegExp(event.name) })
+      .getByTestId("view-details-button")
+      .click();
+    const details = page.getByRole("dialog");
+    await expect(details.getByTestId("readiness-item-equipment")).toContainText(
+      "Awaiting Technical Support review",
+    );
+    await expect(
+      details.getByRole("button", { name: "Confirm event" }),
+    ).toBeDisabled();
+  });
+
   /** An Approved request for Projector × 2, with the projectors reserved. */
   async function reservedRequest(label: string) {
     const event = await planningEvent(label);

@@ -15,7 +15,7 @@ import { formatDateTime } from "@/lib/datetime";
 export interface ChecklistItem {
   name: "Venue booking" | "Equipment";
   complete: boolean;
-  /** "Approved", "Held until … – confirm to secure", "Pending", "Rejected", "Hold expired", "Not requested", "Reserved", "Not fully reserved: Projector" */
+  /** "Approved", "Held until … – confirm to secure", "Pending", "Rejected", "Hold expired", "Not requested", "Reserved", "Not fully reserved: Projector", "Awaiting Technical Support review" */
   state: string;
   /** Internal detail, such as why Venue Staff rejected the booking. Hidden from the Organiser. */
   reason: string | null;
@@ -247,12 +247,22 @@ function equipmentItem(event: EventRow): ChecklistItem | null {
           .reduce((sum, r) => sum + r.quantity, 0) < quantity,
     )
     .map(([, { type }]) => type);
-  const complete = short.length === 0;
+  if (short.length > 0) {
+    return {
+      name: "Equipment",
+      complete: false,
+      state: `Not fully reserved: ${short.join(", ")}`,
+      reason: null,
+    };
+  }
 
+  // SCRUM-142 AC10: a request back with Technical Support after a change
+  // keeps its other lines reserved, but Confirm waits for the re-check.
+  const awaitingReview = live.some((r) => r.status !== "APPROVED");
   return {
     name: "Equipment",
-    complete,
-    state: complete ? "Reserved" : `Not fully reserved: ${short.join(", ")}`,
+    complete: !awaitingReview,
+    state: awaitingReview ? "Awaiting Technical Support review" : "Reserved",
     reason: null,
   };
 }
