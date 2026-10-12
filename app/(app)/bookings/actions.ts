@@ -311,6 +311,10 @@ class DecisionError extends Error {}
  *   copies the venue's setup and turnaround onto the booking, the same
  *   minutes the check used, so a later change to the venue's times doesn't
  *   move it (AC8).
+ * - SCRUM-26 AC5: a request flagged Needs Reconsideration can't be approved
+ *   until its Coordinator resolves the flag, though it can still be rejected.
+ *   The approval is conditional on the row still being unflagged, so a flag
+ *   raised after it was read still stops it.
  */
 export async function decideBookingRequest(
   input: unknown,
@@ -339,12 +343,16 @@ export async function decideBookingRequest(
         startAt: true,
         endAt: true,
         status: true,
+        needsReconsideration: true,
         venue: { select: { name: true, ...venueTimesSelect } },
       },
     });
     if (!booking) return err("Booking request not found.");
     if (booking.status !== "PENDING") {
       return err(alreadyDecided(booking.status));
+    }
+    if (decision === "APPROVED" && booking.needsReconsideration) {
+      return err(FLAGGED);
     }
 
     const conflict = (detail: string) =>
@@ -366,7 +374,11 @@ export async function decideBookingRequest(
         }
 
         const updated = await tx.booking.updateMany({
-          where: { id: booking.id, status: "PENDING" },
+          where: {
+            id: booking.id,
+            status: "PENDING",
+            ...(decision === "APPROVED" && { needsReconsideration: false }),
+          },
           data: {
             status: decision,
             decidedById: user!.id,
@@ -383,7 +395,10 @@ export async function decideBookingRequest(
             where: { id: booking.id },
             select: { status: true },
           });
-          throw new DecisionError(alreadyDecided(current.status));
+          // Still Pending means it was flagged since it was read (SCRUM-26 AC5).
+          throw new DecisionError(
+            current.status === "PENDING" ? FLAGGED : alreadyDecided(current.status),
+          );
         }
 
         // SCRUM-71: a booking decision records who, what and when.
@@ -425,6 +440,9 @@ export async function decideBookingRequest(
     throw error;
   }
 }
+
+const FLAGGED =
+  "This request needs reconsideration, so it can't be approved until its event's coordinator resolves it. It can still be rejected.";
 
 function alreadyDecided(status: BookingStatus): string {
   return `This request has already been ${status.toLowerCase()}; the original decision stands.`;
