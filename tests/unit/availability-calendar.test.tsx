@@ -100,4 +100,47 @@ describe("AvailabilityCalendar — SCRUM-36", () => {
     // The legend explains the new kinds.
     expect(html).toMatch(/Legend[\s\S]*Setup[\s\S]*Turnaround/);
   });
+
+  it("SCRUM-159 [AC7] TC-159-10: a booking's hover card says when its setup and turnaround hold the venue, and a booking without them says nothing extra", () => {
+    const booking = (
+      id: string,
+      from: string,
+      to: string,
+      setupMinutes: number,
+      turnaroundMinutes: number,
+    ) => ({
+      kind: "booking" as const,
+      id,
+      startAt: sg("2035-03-13", from),
+      endAt: sg("2035-03-13", to),
+      details: {
+        kind: "booking" as const,
+        startAt: sg("2035-03-13", from),
+        endAt: sg("2035-03-13", to),
+        eventName: `Event ${id}`,
+        requestedBy: "Cody Coordinator",
+        attendance: 50,
+        layout: null,
+        setupMinutes,
+        turnaroundMinutes,
+      },
+    });
+    const html = render(
+      availabilityByDay(
+        [booking("bkg_1", "10:00", "12:00", 30, 45), booking("bkg_2", "15:00", "16:00", 0, 0)],
+        "2035-03-12",
+        "2035-03-18",
+      ),
+    );
+    const cards = [...html.matchAll(/data-testid="stretch-details"[^>]*>([\s\S]*?)<\/div>/g)].map(
+      (m) => m[1].replace(/<!-- -->/g, ""),
+    );
+    const withTimes = cards.find((c) => c.includes("Event bkg_1"))!;
+    const without = cards.find((c) => c.includes("Event bkg_2"))!;
+
+    expect(withTimes).toContain("Setup: 9:30 am SGT to 10:00 am SGT (30 min)");
+    expect(withTimes).toContain("Turnaround: 12:00 pm SGT to 12:45 pm SGT (45 min)");
+    expect(without).not.toContain("Setup:");
+    expect(without).not.toContain("Turnaround:");
+  });
 });

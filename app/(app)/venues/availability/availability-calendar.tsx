@@ -20,6 +20,7 @@ import { UNAVAILABILITY_REASON_LABEL } from "@/lib/schemas/unavailability";
 import { cn } from "@/lib/utils";
 import {
   addDays,
+  occupiedPeriod,
   startOfSgDay,
   type AvailabilityDay,
   type BlockerDetails,
@@ -556,6 +557,34 @@ function DayList({
 }
 
 /**
+ * SCRUM-159 AC7 — when the venue is busy around a booking, so its card says
+ * how long the venue is held, not only when the event runs.
+ */
+function SetupAndTurnaround({
+  details,
+}: {
+  details: Extract<BlockerDetails, { kind: "booking" }>;
+}) {
+  const occupied = occupiedPeriod(details, details);
+  return (
+    <>
+      {details.setupMinutes > 0 && (
+        <p>
+          Setup: {formatTime(occupied.startAt)} to {formatTime(details.startAt)}{" "}
+          ({details.setupMinutes} min)
+        </p>
+      )}
+      {details.turnaroundMinutes > 0 && (
+        <p>
+          Turnaround: {formatTime(details.endAt)} to {formatTime(occupied.endAt)}{" "}
+          ({details.turnaroundMinutes} min)
+        </p>
+      )}
+    </>
+  );
+}
+
+/**
  * The details card for a booking or unavailability. Shown while its stretch
  * is hovered or focused (or tapped, on a phone); screen readers hear it as
  * the stretch's description.
@@ -588,6 +617,7 @@ function Details({
           <p className="text-sm font-semibold">{details.eventName}</p>
           <p className="font-medium text-primary">Booked</p>
           <p>{period}</p>
+          <SetupAndTurnaround details={details} />
           <p>Requested by {details.requestedBy}</p>
           {details.attendance !== null && <p>{details.attendance} expected</p>}
           {details.layout && <p>Layout: {details.layout}</p>}
