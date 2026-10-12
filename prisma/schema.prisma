@@ -245,14 +245,7 @@ model User {
   venueUnavailability     VenueUnavailability[]
   equipmentUnavailability EquipmentUnavailability[]
   auditLogs               AuditLog[]
-
-  resolvedBookingFlags     Booking[]     @relation("BookingReconsiderationResolvedBy")
-  resolvedReservationFlags Reservation[] @relation("ReservationReconsiderationResolvedBy")
-  requestedSafetyChecks    SafetyCheck[] @relation("SafetyCheckRequestedBy")
-  decidedSafetyChecks      SafetyCheck[] @relation("SafetyCheckDecidedBy")
-
-  approvedHolds     Booking[]          @relation("BookingHoldApprovedBy")
-  holdExpiryChanges HoldExpiryChange[] @relation("HoldExpiryChangedBy")
+  suitabilityJudgements    VenueSuitabilityJudgement[] @relation("VenueSuitabilityJudgedBy")
 }
 
 model Account {
@@ -403,6 +396,7 @@ model Event {
   changeRequests        EventChangeRequest[]
   notifications         Notification[]
   safetyChecks          SafetyCheck[]
+  suitabilityJudgements VenueSuitabilityJudgement[]
 
   @@index([organiserId])
   @@index([coordinatorId])
@@ -474,6 +468,7 @@ model Venue {
 
   bookings       Booking[]
   unavailability VenueUnavailability[]
+  judgements     VenueSuitabilityJudgement[]
 }
 
 /// SCRUM-36 — "Given other unavailability has been recorded (e.g.
@@ -524,10 +519,13 @@ model Booking {
 
   // SCRUM-50: "Request captures venue, date/time, expected attendance,
   // required facilities/layout, and other relevant event details."
-  requestedAttendance Int?
-  requiredFacilities  String[] @default([])
-  requestedLayout     String?
-  requestNotes        String?
+  requestedAttendance           Int?
+  requiredFacilities            String[] @default([])
+  requestedLayout               String?
+  requestNotes                  String?
+  // SCRUM-40 AC3 — the accessibility features this request needs, compared
+  // with the venue's for suitability.
+  requiredAccessibilityFeatures String[] @default([])
 
   requestedById String
 
@@ -605,6 +603,26 @@ model HoldExpiryChange {
   changedBy User    @relation("HoldExpiryChangedBy", fields: [changedById], references: [id])
 
   @@index([bookingId])
+/// SCRUM-40 AC8 — the assigned Coordinator's own judgement of a venue for an
+/// event: Suitable or Not suitable, with a note (CHECK
+/// venue_suitability_note_required). One per event and venue; recording it
+/// again replaces it. It counts for the event, but never blocks a request or
+/// confirmation (AC9). Venue Staff see it on the request (AC10).
+model VenueSuitabilityJudgement {
+  id           String   @id @default(cuid())
+  eventId      String
+  venueId      String
+  suitable     Boolean
+  note         String
+  recordedById String
+  recordedAt   DateTime @default(now())
+
+  event      Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  venue      Venue @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  recordedBy User  @relation("VenueSuitabilityJudgedBy", fields: [recordedById], references: [id])
+
+  @@unique([eventId, venueId])
+  @@index([venueId])
 }
 
 // ---------------------------------------------------------------------------
