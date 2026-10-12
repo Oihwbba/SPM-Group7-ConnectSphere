@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/db";
 import { BOOKABLE_EVENT_STATUSES } from "@/lib/schemas/booking";
-import { findVenueBlockers } from "@/lib/venue-availability";
+import { findVenueBlockers, occupiedPeriod } from "@/lib/venue-availability";
 
 /**
  * SCRUM-50 — the events a coordinator may request a venue for: approved ones
@@ -46,7 +46,8 @@ export async function getRequestableVenues() {
  * SCRUM-52 — every pending request, soonest first, with what Venue Staff need
  * to decide without going hunting: the venue's own capacity, facilities and
  * layouts beside what was asked for, who asked, and whether the venue is
- * actually free for that period right now.
+ * actually free for that period right now — with the venue's setup and
+ * turnaround counted, as approving would count them (SCRUM-159 AC3).
  */
 export async function getPendingBookingQueue() {
   const pending = await prisma.booking.findMany({
@@ -71,6 +72,8 @@ export async function getPendingBookingQueue() {
           capacity: true,
           facilities: true,
           supportedLayouts: true,
+          setupMinutes: true,
+          turnaroundMinutes: true,
         },
       },
     },
@@ -79,7 +82,11 @@ export async function getPendingBookingQueue() {
   return Promise.all(
     pending.map(async (booking) => ({
       ...booking,
-      blockers: await findVenueBlockers(prisma, booking.venue.id, booking),
+      blockers: await findVenueBlockers(
+        prisma,
+        booking.venue.id,
+        occupiedPeriod(booking, booking.venue),
+      ),
     })),
   );
 }

@@ -21,7 +21,14 @@ import {
   venueAvailabilityQuerySchema,
 } from "@/lib/schemas/booking";
 import { onceMoreOnDeadlock, violatesExclusion } from "@/lib/db-errors";
-import { describeBlocker, findVenueBlockers } from "@/lib/venue-availability";
+import {
+  describeBlocker,
+  findVenueBlockers,
+  occupiedPeriod,
+} from "@/lib/venue-availability";
+
+/** A venue's setup and turnaround time (SCRUM-159). */
+const venueTimesSelect = { setupMinutes: true, turnaroundMinutes: true } as const;
 
 export type BookingSummary = {
   id: string;
@@ -62,6 +69,9 @@ function toSummary(row: {
  * `findVenueBlockers` question `submitBookingRequest` asks, so the form and
  * the submission cannot disagree; submitting still checks again, because a
  * booking can be approved between this answer and the click.
+ *
+ * SCRUM-159 AC3 — "free" means free for the period's occupied period: the
+ * venue's setup time before it and turnaround time after it count too.
  */
 export async function checkVenueAvailability(
   input: unknown,
@@ -90,11 +100,15 @@ export async function checkVenueAvailability(
     // A retired venue reads as not found here exactly as it does on submit.
     const venue = await prisma.venue.findFirst({
       where: { id: venueId, isActive: true },
-      select: { id: true },
+      select: { id: true, ...venueTimesSelect },
     });
     if (!venue) return err("Venue not found.");
 
-    const blockers = await findVenueBlockers(prisma, venueId, period);
+    const blockers = await findVenueBlockers(
+      prisma,
+      venueId,
+      occupiedPeriod(period, venue),
+    );
     return ok({
       available: blockers.length === 0,
       clashes: blockers.map(describeBlocker),
@@ -120,7 +134,9 @@ export async function checkVenueAvailability(
  * - Expected attendance above the venue's capacity is refused.
  * - A venue that is approved-booked or unavailable for any part of the period
  *   refuses the request outright — no row is written (AC3). Touching at an
- *   endpoint is not an overlap (AC4).
+ *   endpoint is not an overlap (AC4). Since SCRUM-159 (AC3, AC4) both sides
+ *   are compared as occupied periods: the request with the venue's current
+ *   setup and turnaround, each approved booking with its own.
  * - Otherwise the request is created PENDING (AC2).
  *
  * The availability check here is for the Coordinator's benefit, not the
@@ -207,7 +223,7 @@ export async function submitBookingRequest(
 
     const venue = await prisma.venue.findFirst({
       where: { id: data.venueId, isActive: true },
-      select: { name: true, capacity: true },
+      select: { name: true, capacity: true, ...venueTimesSelect },
     });
     if (!venue) return err("Venue not found.");
     if (data.requestedAttendance > venue.capacity) {
@@ -219,7 +235,11 @@ export async function submitBookingRequest(
       return err(message, { requestedAttendance: [message] });
     }
 
-    const blockers = await findVenueBlockers(prisma, data.venueId, period);
+    const blockers = await findVenueBlockers(
+      prisma,
+      data.venueId,
+      occupiedPeriod(period, venue),
+    );
     if (blockers.length > 0) {
       return err(
         `${venue.name} is unavailable for that period: ${blockers
@@ -286,6 +306,11 @@ class DecisionError extends Error {}
  *   refuse the second; that refusal is reported as the same conflict (or, if
  *   Postgres aborted it as a deadlock, the retry reports it). See
  *   docs/adr/0010-database-prevents-venue-double-booking.md.
+ * - SCRUM-159: the conflict check compares occupied periods (AC3, AC4), and
+ *   the database compares them too when two approvals race (AC5). Approving
+ *   copies the venue's setup and turnaround onto the booking, the same
+ *   minutes the check used, so a later change to the venue's times doesn't
+ *   move it (AC8).
  */
 export async function decideBookingRequest(
   input: unknown,
@@ -314,7 +339,7 @@ export async function decideBookingRequest(
         startAt: true,
         endAt: true,
         status: true,
-        venue: { select: { name: true } },
+        venue: { select: { name: true, ...venueTimesSelect } },
       },
     });
     if (!booking) return err("Booking request not found.");
@@ -331,7 +356,7 @@ export async function decideBookingRequest(
           const blockers = await findVenueBlockers(
             tx,
             booking.venueId,
-            booking,
+            occupiedPeriod(booking, booking.venue),
           );
           if (blockers.length > 0) {
             throw new DecisionError(
@@ -347,6 +372,10 @@ export async function decideBookingRequest(
             decidedById: user!.id,
             decidedAt: new Date(),
             decisionReason: decision === "REJECTED" ? reason : null,
+            ...(decision === "APPROVED" && {
+              setupMinutes: booking.venue.setupMinutes,
+              turnaroundMinutes: booking.venue.turnaroundMinutes,
+            }),
           },
         });
         if (updated.count !== 1) {

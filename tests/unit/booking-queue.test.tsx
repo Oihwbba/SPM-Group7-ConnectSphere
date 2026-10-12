@@ -32,6 +32,8 @@ const row: PendingBookingRow = {
     capacity: 200,
     facilities: ["sound-system", "projector"],
     supportedLayouts: ["banquet"],
+    setupMinutes: 0,
+    turnaroundMinutes: 0,
   },
   blockers: [],
 };

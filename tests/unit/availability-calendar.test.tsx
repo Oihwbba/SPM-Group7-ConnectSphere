@@ -57,4 +57,47 @@ describe("AvailabilityCalendar — SCRUM-36", () => {
     // The untouched days still say so.
     expect(column(html, "2035-03-15")).toContain("data-free-all-day");
   });
+
+  it("SCRUM-159 [AC7] TC-159-10: a booking's setup and turnaround show around it, in words and marked as their own kinds", () => {
+    const html = render(
+      availabilityByDay(
+        [
+          {
+            kind: "setup",
+            id: "bkg_1-setup",
+            startAt: sg("2035-03-13", "09:30"),
+            endAt: sg("2035-03-13", "10:00"),
+            eventName: "Research Symposium",
+          },
+          {
+            kind: "booking",
+            id: "bkg_1",
+            startAt: sg("2035-03-13", "10:00"),
+            endAt: sg("2035-03-13", "12:00"),
+          },
+          {
+            kind: "turnaround",
+            id: "bkg_1-turnaround",
+            startAt: sg("2035-03-13", "12:00"),
+            endAt: sg("2035-03-13", "12:45"),
+            eventName: "Research Symposium",
+          },
+        ],
+        "2035-03-12",
+        "2035-03-18",
+      ),
+    );
+    const tuesday = column(html, "2035-03-13");
+
+    expect(tuesday).toContain('data-kind="setup"');
+    expect(tuesday).toContain('data-kind="turnaround"');
+    expect(tuesday).toContain(
+      "Setup for Research Symposium 9:30 am SGT to 10:00 am SGT",
+    );
+    expect(tuesday).toContain(
+      "Turnaround for Research Symposium 12:00 pm SGT to 12:45 pm SGT",
+    );
+    // The legend explains the new kinds.
+    expect(html).toMatch(/Legend[\s\S]*Setup[\s\S]*Turnaround/);
+  });
 });
