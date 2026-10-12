@@ -34,8 +34,9 @@ Scope:
 3. Raise the related-files budget moderately (150,000 to 300,000), not to the maximum: a much larger prompt can make a model less precise about specific details, which is where the reviewer's value is.
 4. Correct the wording: say a file did not fit the budget, and name it.
 5. Measure rather than assume — re-run the replay against PR #37 (7 planted bugs, 1 critical) and confirm the reviewer still finds all of them with the larger context. If the count drops, dial the budgets back.
-6. **Send related files in part instead of dropping them (added 2026-10-11, PR #157).** Reviews were still dropping related files: #153 to #156 each lost prisma/schema.prisma and prisma/seed.ts, and #154 lost 30 files, because unchanged tests that merely import a changed file were sent first and a related file that didn't fit was dropped whole. Related files now go in priority order (imports, the seed, source importers, source naming the stories, then tests). One that doesn't fit whole is sent as an excerpt with its own line numbers: a test as its imports and test titles, a source file as its imports, exports and the lines around each story mention. Each reserves room for its excerpt so a file sent whole can't starve the ones behind it. The prompt tells GLM which files are excerpts, and that "…" marks lines left out. Budgets are unchanged.
+6. Moved to its own task, SCRUM-178, on 2026-10-12: sending related files to the reviewer in part instead of dropping them (PR #157).
 
 **Change log**
 
 * 2026-10-11: reopened from Done for item 6 (PR #157). Replayed on #153 to #156's files, nothing is left out (was 2, 30, 3 and 23). Item 5's planted-bug replay is not re-run for item 6: it needs a GLM call with the repository's API key.
+* 2026-10-12 (PO decision 3): item 6 moved to the Chore task SCRUM-178, because this story was already Done. Items 1 to 5 are unchanged.

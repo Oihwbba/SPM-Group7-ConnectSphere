@@ -550,3 +550,13 @@ teammate can be that person.
   member, went away with ADR 0009, which deploys with the owner's token. The
   rule is still in `.github/scripts/ai-memory.mjs` and does no harm; whether
   to drop it is a separate decision.
+
+## Addendum (2026-10-13, SCRUM-180) — the memory limit is 12,000 characters
+
+The memory file reached 7,917 of the 8,000 characters set on 2026-09-16, so
+a new lesson fitted only if an older one was cut. `MAX_MEMORY_CHARS` is now
+12,000. The reviewer's cap, the memory bot's guard and CI's length check
+(SCRUM-152) all read that one constant, so they move together. The extra
+4,000 characters are about 1,000 tokens, against reviews that already use
+95,000 to 168,000; the other budgets are unchanged. The decisions above that
+say 8,000 describe the limit as it was then.
