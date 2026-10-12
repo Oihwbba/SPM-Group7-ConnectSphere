@@ -494,6 +494,8 @@ describe("findVenueCalendar — SCRUM-36 hover details", () => {
       requestedBy: "Cody Coordinator",
       attendance: 120,
       layout: "theatre",
+      setupMinutes: 0,
+      turnaroundMinutes: 0,
     });
     expect(entries[0]).toMatchObject({
       kind: "unavailability",

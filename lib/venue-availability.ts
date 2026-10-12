@@ -60,6 +60,9 @@ export type BlockerDetails = { startAt: Date; endAt: Date } & (
       requestedBy: string;
       attendance: number | null;
       layout: string | null;
+      /** SCRUM-159 AC7: the booking's own setup and turnaround, in minutes. */
+      setupMinutes: number;
+      turnaroundMinutes: number;
     }
   | { kind: "unavailability"; note: string | null; recordedBy: string }
 );
@@ -227,6 +230,8 @@ export async function findVenueCalendar(
           requestedBy: b.requestedBy.name,
           attendance: b.requestedAttendance,
           layout: b.requestedLayout,
+          setupMinutes: b.setupMinutes,
+          turnaroundMinutes: b.turnaroundMinutes,
         },
       };
       const setup: CalendarEntry[] =
