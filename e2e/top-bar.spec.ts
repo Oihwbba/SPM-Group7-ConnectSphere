@@ -14,7 +14,12 @@ async function signIn(page: Page, email: string) {
   await page.getByLabel("Email", { exact: true }).fill(email);
   await page.getByLabel("Password", { exact: true }).fill("Password123!");
   await page.getByRole("button", { name: "Sign in" }).click();
-  await page.waitForURL((url) => !url.pathname.startsWith("/login"));
+  // Sign-in lands on "/", which sends each role on to its own page; measure
+  // that page once it has rendered, not the hop in between.
+  await page.waitForURL(
+    (url) => url.pathname !== "/" && !url.pathname.startsWith("/login"),
+  );
+  await expect(page.getByRole("main")).not.toBeEmpty();
 }
 
 test.describe("Top bar — SCRUM-168", () => {
