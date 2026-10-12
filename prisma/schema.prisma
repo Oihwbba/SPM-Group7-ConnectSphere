@@ -253,6 +253,7 @@ model User {
 
   approvedHolds     Booking[]          @relation("BookingHoldApprovedBy")
   holdExpiryChanges HoldExpiryChange[] @relation("HoldExpiryChangedBy")
+  operationalNotes         EventOperationalNote[]
 }
 
 model Account {
@@ -403,6 +404,7 @@ model Event {
   changeRequests        EventChangeRequest[]
   notifications         Notification[]
   safetyChecks          SafetyCheck[]
+  operationalNotes      EventOperationalNote[]
 
   @@index([organiserId])
   @@index([coordinatorId])
@@ -445,6 +447,23 @@ model ClarificationRequest {
 /// SCRUM-34 — "displays location, capacity, facilities, accessibility info,
 /// supported layouts, and operating information."
 /// SCRUM-34 — Venue Staff maintain these records.
+/// SCRUM-25 AC6 — an operational note on an event, shown with its author and
+/// time. Permanent: the trigger event_operational_note_permanent refuses any
+/// edit or delete, and the CHECK event_operational_note_not_blank a blank one.
+model EventOperationalNote {
+  id        String   @id @default(cuid())
+  eventId   String
+  authorId  String
+  body      String
+  createdAt DateTime @default(now())
+
+  event  Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  author User  @relation(fields: [authorId], references: [id])
+
+  @@index([eventId])
+  @@index([authorId])
+}
+
 model Venue {
   id                    String   @id @default(cuid())
   name                  String
