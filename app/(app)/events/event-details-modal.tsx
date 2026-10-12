@@ -15,6 +15,8 @@ import { ClarificationPanel } from "@/components/events/clarification-panel";
 import { ChangeRequestPanel } from "@/components/events/change-request-panel";
 import { ReadinessChecklist } from "@/components/events/readiness-checklist";
 import { ConfirmedArrangements } from "@/components/events/confirmed-arrangements";
+import { EditDetailsDialog } from "@/components/events/edit-details-dialog";
+import { OperationalNotes } from "@/components/events/operational-notes";
 import { formatDate, formatDateTime } from "@/lib/datetime";
 import {
   Calendar,
@@ -69,7 +71,11 @@ export function EventDetailsModal({
                   ` • Submitted ${formatDate(event.submittedAt)}`}
               </DialogDescription>
             </div>
-            <StatusBadge status={event.status} />
+            <div className="flex items-center gap-2">
+              {/* SCRUM-25: offered only to the assigned Coordinator. */}
+              {isCoordinator && <EditDetailsDialog event={event} />}
+              <StatusBadge status={event.status} />
+            </div>
           </div>
         </DialogHeader>
 
@@ -113,6 +119,9 @@ export function EventDetailsModal({
               </div>
                         </CardContent>
           </Card>
+
+          {/* SCRUM-25 AC6: shows nothing to a user who may not read them */}
+          <OperationalNotes eventId={event.id} />
 
           {/* SCRUM-18: shows nothing if there's no clarification thread */}
           <ClarificationPanel event={event} isCoordinator={isCoordinator} />
