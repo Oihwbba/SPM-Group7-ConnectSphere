@@ -6,10 +6,10 @@ import {
   run,
 } from "../../.github/scripts/migrate-production.mjs";
 
-// SCRUM-89 — the production deploy applies pending migrations first, with the
+// SCRUM-179 — the production deploy applies pending migrations first, with the
 // database URLs from the environment `vercel pull` writes.
-describe("migrate-production — SCRUM-89", () => {
-  it('SCRUM-89: reads KEY="value" lines with JSON escapes, and leaves a $ in a password as it is', () => {
+describe("migrate-production — SCRUM-179", () => {
+  it('SCRUM-179 [AC2]: reads KEY="value" lines with JSON escapes, and leaves a $ in a password as it is', () => {
     const text = [
       "# Created by Vercel CLI",
       'DATABASE_URL="postgresql://app:pa$$w0rd@pooler:5432/postgres?pgbouncer=true"',
@@ -28,7 +28,7 @@ describe("migrate-production — SCRUM-89", () => {
     });
   });
 
-  it("SCRUM-89: refuses a malformed value by its name, without printing the value", () => {
+  it("SCRUM-179 [AC3]: refuses a malformed value by its name, without printing the value", () => {
     expect(() =>
       parseEnvFile('DIRECT_URL="postgresql://app:secret@host"x"'),
     ).toThrow(
@@ -38,7 +38,7 @@ describe("migrate-production — SCRUM-89", () => {
     );
   });
 
-  it("SCRUM-89: passes on only the two database URLs", () => {
+  it("SCRUM-179 [AC2]: passes on only the two database URLs", () => {
     expect(
       databaseEnv({
         DATABASE_URL: "db",
@@ -48,7 +48,7 @@ describe("migrate-production — SCRUM-89", () => {
     ).toEqual({ env: { DATABASE_URL: "db", DIRECT_URL: "direct" } });
   });
 
-  it("SCRUM-89: names the database URL that's missing, so the deploy stops instead of building against an old schema", () => {
+  it("SCRUM-179 [AC3]: names the database URL that's missing, so the deploy stops instead of building against an old schema", () => {
     expect(databaseEnv({ DATABASE_URL: "db" })).toEqual({
       missing: ["DIRECT_URL"],
     });
@@ -57,7 +57,7 @@ describe("migrate-production — SCRUM-89", () => {
     });
   });
 
-  it("SCRUM-89: runs prisma migrate deploy with the production database URLs, read from the file vercel pull writes", () => {
+  it("SCRUM-179 [AC1, AC2]: runs prisma migrate deploy with the production database URLs, read from the file vercel pull writes", () => {
     const readFile = vi
       .fn()
       .mockReturnValue(
@@ -95,7 +95,7 @@ describe("migrate-production — SCRUM-89", () => {
     );
   });
 
-  it("SCRUM-89: stops the deploy without running Prisma when a database URL is missing", () => {
+  it("SCRUM-179 [AC3]: stops the deploy without running Prisma when a database URL is missing", () => {
     const exec = vi.fn();
     const log = vi.fn();
 
@@ -116,7 +116,7 @@ describe("migrate-production — SCRUM-89", () => {
     );
   });
 
-  it("SCRUM-89: fails the step when a migration fails, so nothing is deployed", () => {
+  it("SCRUM-179 [AC3]: fails the step when a migration fails, so nothing is deployed", () => {
     const exec = vi.fn(() => {
       throw new Error("P3009: migrate found failed migrations");
     });
