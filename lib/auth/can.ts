@@ -33,6 +33,9 @@ export type Action =
   | "event:review"
   | "event:confirm" // SCRUM-81: the assigned coordinator confirms a ready Planning event
   | "event:reject" // SCRUM-117: the assigned coordinator rejects a Planning event that can't be fulfilled
+  | "event:edit" // SCRUM-25: the assigned coordinator edits an event's details directly
+  | "event-note:add" // SCRUM-25 AC6: add an operational note to an event
+  | "event-note:read" // SCRUM-25 AC6: read an event's operational notes
   | "clarification:request" // SCRUM-18: coordinator asks the organiser a question
   | "clarification:respond" // SCRUM-18: organiser answers an open question
   | "change-request:raise" // SCRUM-41: the organiser, or the assigned coordinator on their behalf
@@ -71,6 +74,17 @@ export type Resource =
       coordinatorId: string | null;
       status: EventStatus;
     }
+  // SCRUM-25 AC6 — who may add or read an event's operational notes depends
+  // on what the event has, as no Venue Staff or Technical Support member is
+  // assigned to an event: a venue booking (Pending, Held or Approved) for
+  // Venue Staff, an equipment request for Technical Support.
+  | {
+      kind: "event-notes";
+      organiserId: string;
+      coordinatorId: string | null;
+      hasVenueBooking: boolean;
+      hasEquipmentRequest: boolean;
+    }
   | { kind: "registration"; userId: string }
   | { kind: "notification"; userId: string };
 
@@ -87,6 +101,7 @@ const ROLE_ACTIONS: Record<Role, Action[]> = {
     "event:read",
     "clarification:respond",
     "change-request:raise",
+    "event-note:read",
     "notification:read",
   ],
   COORDINATOR: [
@@ -95,6 +110,9 @@ const ROLE_ACTIONS: Record<Role, Action[]> = {
     "event:review",
     "event:confirm",
     "event:reject",
+    "event:edit",
+    "event-note:add",
+    "event-note:read",
     "clarification:request",
     "change-request:raise",
     "venue:read",
@@ -117,6 +135,8 @@ const ROLE_ACTIONS: Record<Role, Action[]> = {
     "booking:hold",
     "venue:availability",
     "unavailability:record",
+    "event-note:add",
+    "event-note:read",
     "notification:read",
   ],
   TECH_SUPPORT: [
@@ -124,6 +144,8 @@ const ROLE_ACTIONS: Record<Role, Action[]> = {
     "equipment:reserve",
     "equipment-request:list",
     "equipment-request:review",
+    "event-note:add",
+    "event-note:read",
     "notification:read",
   ],
   ATTENDEE: [
@@ -160,8 +182,8 @@ function hasRelationship(
         // only the event's assigned coordinator may confirm it (SCRUM-81 AC 7),
         // reject it from Planning (SCRUM-117 AC 5), confirm or release its
         // venue holds (SCRUM-163 AC3), change or withdraw its requests
-        // (SCRUM-142 AC7), or raise a change request on the organiser's
-        // behalf (SCRUM-41 AC10).
+        // (SCRUM-142 AC7), raise a change request on the organiser's behalf
+        // (SCRUM-41 AC10), or edit its details (SCRUM-25 AC1, AC7).
         return (
           action !== "event:confirm" &&
           action !== "event:reject" &&
@@ -169,11 +191,22 @@ function hasRelationship(
           action !== "booking:withdraw" &&
           action !== "equipment-request:change" &&
           action !== "change-request:raise" &&
+          action !== "event:edit" &&
           resource.coordinatorId === null &&
           resource.status !== "DRAFT"
         );
       }
       return false;
+    case "event-notes":
+      // SCRUM-25 AC6, AC7: only the event's own Coordinator, not a previous
+      // one; Venue Staff and Technical Support through the event's
+      // arrangements; the Organiser reads their own event's notes.
+      return (
+        (user.role === "COORDINATOR" && resource.coordinatorId === user.id) ||
+        (user.role === "VENUE_STAFF" && resource.hasVenueBooking) ||
+        (user.role === "TECH_SUPPORT" && resource.hasEquipmentRequest) ||
+        (user.role === "ORGANISER" && resource.organiserId === user.id)
+      );
     case "registration":
       return resource.userId === user.id;
     case "notification":
