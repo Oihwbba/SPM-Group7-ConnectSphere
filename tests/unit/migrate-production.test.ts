@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+
 import { describe, it, expect, vi } from "vitest";
 
 import {
@@ -9,6 +11,23 @@ import {
 // SCRUM-179 — the production deploy applies pending migrations first, with the
 // database URLs from the environment `vercel pull` writes.
 describe("migrate-production — SCRUM-179", () => {
+  it("SCRUM-179 [AC1, AC3]: the deploy job applies migrations after vercel pull and before the build, and a failure stops it", () => {
+    const workflow = readFileSync(".github/workflows/deploy.yml", "utf8");
+    const stepAt = (command: string) => {
+      const at = workflow.indexOf(command);
+      expect(at, `deploy.yml runs ${command}`).toBeGreaterThan(-1);
+      return at;
+    };
+    const pull = stepAt("pull --yes --environment=production");
+    const migrate = stepAt("run: node .github/scripts/migrate-production.mjs");
+    const build = stepAt("build --prod");
+
+    expect(pull).toBeLessThan(migrate);
+    expect(migrate).toBeLessThan(build);
+    // A failed step must fail the job, so nothing after it runs.
+    expect(workflow).not.toContain("continue-on-error");
+  });
+
   it('SCRUM-179 [AC2]: reads KEY="value" lines with JSON escapes, and leaves a $ in a password as it is', () => {
     const text = [
       "# Created by Vercel CLI",
