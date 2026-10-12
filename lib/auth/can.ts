@@ -38,6 +38,7 @@ export type Action =
   | "change-request:raise" // SCRUM-41: the organiser, or the assigned coordinator on their behalf
   | "venue:read"
   | "venue:availability" // SCRUM-36: view a venue's availability calendar
+  | "venue:judge" // SCRUM-40 AC8: the assigned coordinator records a venue's suitability for their event
   | "booking:request" // SCRUM-50: coordinator asks for a venue for their event
   | "booking:review" // SCRUM-52: read the pending-request queue
   | "booking:decide" // SCRUM-53: approve or reject a pending request
@@ -102,6 +103,7 @@ const ROLE_ACTIONS: Record<Role, Action[]> = {
     "equipment-request:create",
     "equipment-request:change",
     "venue:availability",
+    "venue:judge",
     "booking:request",
     "booking:settle-hold",
     "booking:withdraw",
@@ -160,8 +162,8 @@ function hasRelationship(
         // only the event's assigned coordinator may confirm it (SCRUM-81 AC 7),
         // reject it from Planning (SCRUM-117 AC 5), confirm or release its
         // venue holds (SCRUM-163 AC3), change or withdraw its requests
-        // (SCRUM-142 AC7), or raise a change request on the organiser's
-        // behalf (SCRUM-41 AC10).
+        // (SCRUM-142 AC7), raise a change request on the organiser's behalf
+        // (SCRUM-41 AC10), or judge a venue's suitability for it (SCRUM-40 AC8).
         return (
           action !== "event:confirm" &&
           action !== "event:reject" &&
@@ -169,6 +171,7 @@ function hasRelationship(
           action !== "booking:withdraw" &&
           action !== "equipment-request:change" &&
           action !== "change-request:raise" &&
+          action !== "venue:judge" &&
           resource.coordinatorId === null &&
           resource.status !== "DRAFT"
         );

@@ -23,6 +23,10 @@ export async function getBookableEvents(coordinatorId: string) {
       expectedAttendance: true,
       requiredFacilities: true,
       preferredLayout: true,
+      // SCRUM-40 AC8: who may judge a venue for it is decided by can().
+      organiserId: true,
+      coordinatorId: true,
+      status: true,
     },
     orderBy: { startAt: "asc" },
   });
@@ -37,10 +41,34 @@ export async function getRequestableVenues() {
       name: true,
       capacity: true,
       facilities: true,
+      accessibilityFeatures: true,
       supportedLayouts: true,
     },
     orderBy: { name: "asc" },
   });
+}
+
+/**
+ * SCRUM-40 AC8 — the Coordinator's suitability judgements for these events,
+ * one per event and venue, so the request form can show the one for the
+ * venue chosen beside the automatic result.
+ */
+export async function getSuitabilityJudgements(eventIds: string[]) {
+  const rows = await prisma.venueSuitabilityJudgement.findMany({
+    where: { eventId: { in: eventIds } },
+    select: {
+      eventId: true,
+      venueId: true,
+      suitable: true,
+      note: true,
+      recordedAt: true,
+      recordedBy: { select: { name: true } },
+    },
+  });
+  return rows.map(({ recordedBy, ...row }) => ({
+    ...row,
+    recordedByName: recordedBy.name,
+  }));
 }
 
 /**
@@ -72,9 +100,11 @@ export async function getPendingBookingQueue(now = new Date()) {
       turnaroundMinutes: true,
       requestedAttendance: true,
       requiredFacilities: true,
+      requiredAccessibilityFeatures: true,
       requestedLayout: true,
       requestNotes: true,
       createdAt: true,
+      eventId: true,
       event: { select: { name: true } },
       requestedBy: { select: { name: true, email: true } },
       venue: {
@@ -84,6 +114,7 @@ export async function getPendingBookingQueue(now = new Date()) {
           location: true,
           capacity: true,
           facilities: true,
+          accessibilityFeatures: true,
           supportedLayouts: true,
           setupMinutes: true,
           turnaroundMinutes: true,
@@ -92,6 +123,11 @@ export async function getPendingBookingQueue(now = new Date()) {
     },
   });
 
+  // SCRUM-40 AC10 — the Coordinator's judgement for each request's event and
+  // venue, if they recorded one.
+  const judgements = await getSuitabilityJudgements(
+    pending.map((booking) => booking.eventId),
+  );
   // A held request reserves its own period, so it isn't its own blocker.
   return Promise.all(
     pending.map(async (booking) => ({
@@ -104,6 +140,10 @@ export async function getPendingBookingQueue(now = new Date()) {
           now,
         )
       ).filter((blocker) => blocker.id !== booking.id),
+      judgement:
+        judgements.find(
+          (j) => j.eventId === booking.eventId && j.venueId === booking.venue.id,
+        ) ?? null,
     })),
   );
 }
@@ -113,6 +153,9 @@ export type PendingBookingRow = Awaited<
 >[number];
 export type BookableEvent = Awaited<
   ReturnType<typeof getBookableEvents>
+>[number];
+export type JudgementRow = Awaited<
+  ReturnType<typeof getSuitabilityJudgements>
 >[number];
 export type RequestableVenue = Awaited<
   ReturnType<typeof getRequestableVenues>

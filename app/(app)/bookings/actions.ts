@@ -279,6 +279,7 @@ export async function submitBookingRequest(
             status: "PENDING",
             requestedAttendance: data.requestedAttendance,
             requiredFacilities: data.requiredFacilities,
+            requiredAccessibilityFeatures: data.requiredAccessibilityFeatures,
             requestedLayout: data.requestedLayout || null,
             requestNotes: data.requestNotes || null,
             requestedById: user!.id,
