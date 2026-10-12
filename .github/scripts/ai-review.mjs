@@ -52,7 +52,7 @@ const MAX_DOC_CHARS = 20_000;
 const MAX_STORY_CHARS = 6_000;
 const MAX_BODY_CHARS = 4_000;
 const MAX_TEST_INVENTORY_CHARS = 15_000;
-export const MAX_MEMORY_CHARS = 8_000;
+export const MAX_MEMORY_CHARS = 12_000;
 const MAX_CONVERSATION_CHARS = 8_000;
 // Beyond the diff (ADR 0008): the changed files in full get their own budget;
 // the related files (imports, importers, story files) share a second one.

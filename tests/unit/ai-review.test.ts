@@ -449,11 +449,11 @@ describe("buildSystemPrompt", () => {
     expect(prompt.endsWith("- (2026-09-15, #27) a lesson")).toBe(true);
   });
 
-  it("cuts the memory at 8,000 characters and says so", () => {
-    const prompt = buildSystemPrompt({ ...base, memory: "x".repeat(9_000) });
+  it("cuts the memory at 12,000 characters and says so", () => {
+    const prompt = buildSystemPrompt({ ...base, memory: "x".repeat(13_000) });
 
-    expect(prompt).toContain("[truncated at 8,000 characters]");
-    expect(prompt).not.toContain("x".repeat(8_001));
+    expect(prompt).toContain("[truncated at 12,000 characters]");
+    expect(prompt).not.toContain("x".repeat(12_001));
   });
 
   it("leaves the memory section out when the base branch has no memory file", () => {
