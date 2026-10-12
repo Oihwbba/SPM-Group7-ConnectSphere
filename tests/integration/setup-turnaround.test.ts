@@ -262,6 +262,65 @@ describe.skipIf(!usesLocalDatabase)(
       ).toEqual({ setupMinutes: 15, turnaroundMinutes: 45 });
     });
 
+    /** A HELD booking for the 10:00–12:00 event, written directly (SCRUM-163 places holds). */
+    const heldBooking = (holdExpiresAt: Date, heldAt: Date) =>
+      prisma.booking.create({
+        data: {
+          eventId: events.tenToNoon.id,
+          venueId,
+          startAt: sg("10:00"),
+          endAt: sg("12:00"),
+          status: "HELD",
+          requestedById: "usr_coordinator",
+          heldAt,
+          holdExpiresAt,
+          holdNote: "Confirm the AV needs.",
+          setupMinutes: 15,
+          turnaroundMinutes: 45,
+        },
+        select: { id: true },
+      });
+    const HOUR_MS = 60 * 60 * 1000;
+
+    it("SCRUM-159 [AC3] TC-159-15: a hold that hasn't expired blocks a request and the live check wherever its occupied period reaches", async () => {
+      await heldBooking(
+        new Date(Date.now() + 24 * HOUR_MS),
+        new Date(Date.now() - HOUR_MS),
+      );
+      const before = await prisma.booking.count({ where: { venueId } });
+
+      const refused = await submitBookingRequest(request("halfPastTwelve"));
+      expect(refused).toMatchObject({
+        ok: false,
+        error: expect.stringMatching(/on hold from .*including setup and turnaround/),
+      });
+      expect(await prisma.booking.count({ where: { venueId } })).toBe(before);
+
+      const live = await checkVenueAvailability({
+        venueId,
+        startAt: sg("12:30").toISOString(),
+        endAt: sg("14:30").toISOString(),
+      });
+      expect(live).toMatchObject({ ok: true, data: { available: false } });
+    });
+
+    it("SCRUM-159 [AC3] TC-159-16: a hold whose expiry has passed blocks nothing, even before anything marks it Expired", async () => {
+      await heldBooking(
+        new Date(Date.now() - HOUR_MS),
+        new Date(Date.now() - 48 * HOUR_MS),
+      );
+
+      const live = await checkVenueAvailability({
+        venueId,
+        startAt: sg("12:30").toISOString(),
+        endAt: sg("14:30").toISOString(),
+      });
+      expect(live).toMatchObject({ ok: true, data: { available: true } });
+
+      const accepted = await submitBookingRequest(request("halfPastTwelve"));
+      expect(accepted).toMatchObject({ ok: true });
+    });
+
     it("SCRUM-159 [AC3] TC-159-07: unavailability over only an approved booking's turnaround is not recorded", async () => {
       await approve("tenToNoon");
       mockAuth.mockResolvedValue(VENUE_STAFF);

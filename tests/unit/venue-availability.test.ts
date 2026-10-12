@@ -34,19 +34,24 @@ const detailsOf = (entry: CalendarEntry | undefined) =>
   entry && "details" in entry ? entry.details : undefined;
 
 describe("findVenueBlockers", () => {
-  it("SCRUM-50 [AC3, AC10] TC-50-04, SCRUM-159 [AC3]: asks only for APPROVED bookings — a pending request blocks nobody — near enough for their setup or turnaround to reach the period", async () => {
+  it("SCRUM-50 [AC3, AC10] TC-50-04, SCRUM-159 [AC3] TC-159-15: asks only for APPROVED bookings and holds not yet expired — a pending request blocks nobody — near enough for their setup or turnaround to reach the period", async () => {
     const db = stubDb([], []);
+    const now = new Date("2030-05-01T00:00:00.000Z");
 
-    await findVenueBlockers(db as never, "ven_1", period);
+    await findVenueBlockers(db as never, "ven_1", period, now);
 
     // A booking's setup and turnaround are at most 1,440 minutes (SCRUM-159
     // AC1), so only bookings within a day either side can reach the period;
-    // each one loaded is then checked against its own occupied period.
+    // each one loaded is then checked against its own occupied period. A hold
+    // whose expiry has passed no longer reserves the venue (SCRUM-163 AC4).
     expect(db.booking.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: {
           venueId: "ven_1",
-          status: "APPROVED",
+          OR: [
+            { status: "APPROVED" },
+            { status: "HELD", holdExpiresAt: { gt: now } },
+          ],
           startAt: { lt: new Date(period.endAt.getTime() + DAY_MS) },
           endAt: { gt: new Date(period.startAt.getTime() - DAY_MS) },
         },
@@ -239,6 +244,31 @@ describe("describeBlocker", () => {
     ).toBe(
       "already booked from 1 Jun 2030, 2:00 pm SGT to 1 Jun 2030, 4:15 pm SGT, including setup and turnaround",
     );
+  });
+
+  it("SCRUM-159 [AC3] TC-159-15: names a held booking as on hold, with its whole occupied time", () => {
+    expect(
+      describeBlocker({
+        kind: "booking",
+        id: "b",
+        ...period,
+        status: "HELD",
+        setupMinutes: 30,
+        turnaroundMinutes: 45,
+      }),
+    ).toBe(
+      "on hold from 1 Jun 2030, 1:30 pm SGT to 1 Jun 2030, 4:45 pm SGT, including setup and turnaround",
+    );
+    expect(
+      describeBlocker({
+        kind: "booking",
+        id: "b",
+        ...period,
+        status: "HELD",
+        setupMinutes: 0,
+        turnaroundMinutes: 0,
+      }),
+    ).toBe("on hold from 1 Jun 2030, 2:00 pm SGT to 1 Jun 2030, 4:00 pm SGT");
   });
 
   it("SCRUM-159: a booking with no setup or turnaround reads exactly as before", () => {

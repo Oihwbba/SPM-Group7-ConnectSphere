@@ -1,4 +1,5 @@
 import type {
+  BookingStatus,
   Prisma,
   PrismaClient,
   VenueUnavailabilityReason,
@@ -66,8 +67,8 @@ export type BlockerDetails = { startAt: Date; endAt: Date } & (
 /**
  * Something that makes a venue unavailable for part of a period. A booking's
  * `startAt`/`endAt` are its booked period; its setup and turnaround minutes
- * (the ones it was approved with, SCRUM-159 AC8) say how far it reaches
- * either side.
+ * (the ones it was approved or held with, SCRUM-159 AC8) say how far it
+ * reaches either side, and its status whether it is Approved or Held.
  */
 export type VenueBlocker =
   | {
@@ -75,6 +76,7 @@ export type VenueBlocker =
       id: string;
       startAt: Date;
       endAt: Date;
+      status?: BookingStatus;
       setupMinutes?: number;
       turnaroundMinutes?: number;
       details?: BlockerDetails;
@@ -113,27 +115,39 @@ export type CalendarEntry = VenueBlocker | SetupTurnaroundStretch;
  * `occupied` is the period being asked about as it would occupy the venue:
  * for a booking, its occupied period with the venue's setup and turnaround
  * (SCRUM-159 AC2, see `occupiedPeriod`); for recorded unavailability, the
- * period itself. Each approved booking counts for its own occupied period, so
- * a request is refused wherever the two occupied periods overlap (SCRUM-159
- * AC3). Periods that only touch don't overlap (AC4).
+ * period itself. Each approved or held booking counts for its own occupied
+ * period, so a request is refused wherever the two occupied periods overlap
+ * (SCRUM-159 AC3). Periods that only touch don't overlap (AC4).
  *
- * Only APPROVED bookings and recorded unavailability (e.g. maintenance) count.
- * A PENDING request blocks nobody: several Coordinators may ask for the same
- * slot and Venue Staff choose between them (SCRUM-50/53). CANCELLED and
- * REJECTED bookings have released the venue.
+ * APPROVED bookings, HELD bookings whose hold hasn't expired at `now`, and
+ * recorded unavailability (e.g. maintenance) count, as in the database's
+ * `booking_no_double_booking` (SCRUM-159 AC3, SCRUM-163 AC2 and AC4). A
+ * PENDING request blocks nobody: several Coordinators may ask for the same
+ * slot and Venue Staff choose between them (SCRUM-50/53). CANCELLED,
+ * REJECTED and EXPIRED bookings have released the venue, as has a hold past
+ * its expiry that nothing has marked Expired yet.
  */
 export async function findVenueBlockers(
   db: Db,
   venueId: string,
   occupied: Period,
+  now: Date = new Date(),
 ): Promise<VenueBlocker[]> {
   const [bookings, unavailability] = await Promise.all([
     db.booking.findMany({
-      where: { venueId, status: "APPROVED", ...reachingInto(occupied) },
+      where: {
+        venueId,
+        OR: [
+          { status: "APPROVED" },
+          { status: "HELD", holdExpiresAt: { gt: now } },
+        ],
+        ...reachingInto(occupied),
+      },
       select: {
         id: true,
         startAt: true,
         endAt: true,
+        status: true,
         setupMinutes: true,
         turnaroundMinutes: true,
       },
@@ -274,20 +288,22 @@ export function startOfWeek(day: string): string {
  * are competing organisations (the same reasoning as SCRUM-68).
  *
  * SCRUM-159 — a booking with setup or turnaround time is described by the
- * whole time it occupies the venue, so the times given explain the refusal.
+ * whole time it occupies the venue, so the times given explain the refusal,
+ * and a held one says it is on hold (SCRUM-163).
  */
 export function describeBlocker(blocker: VenueBlocker): string {
   if (blocker.kind === "unavailability") {
     const reason = UNAVAILABILITY_REASON_LABEL[blocker.reason].toLowerCase();
     return `unavailable (${reason}) from ${formatDateTime(blocker.startAt)} to ${formatDateTime(blocker.endAt)}`;
   }
+  const what = blocker.status === "HELD" ? "on hold" : "already booked";
   const setupMinutes = blocker.setupMinutes ?? 0;
   const turnaroundMinutes = blocker.turnaroundMinutes ?? 0;
   if (setupMinutes === 0 && turnaroundMinutes === 0) {
-    return `already booked from ${formatDateTime(blocker.startAt)} to ${formatDateTime(blocker.endAt)}`;
+    return `${what} from ${formatDateTime(blocker.startAt)} to ${formatDateTime(blocker.endAt)}`;
   }
   const occupied = occupiedPeriod(blocker, { setupMinutes, turnaroundMinutes });
-  return `already booked from ${formatDateTime(occupied.startAt)} to ${formatDateTime(occupied.endAt)}, including setup and turnaround`;
+  return `${what} from ${formatDateTime(occupied.startAt)} to ${formatDateTime(occupied.endAt)}, including setup and turnaround`;
 }
 
 /** One stretch of a day on the availability calendar (SCRUM-36). */

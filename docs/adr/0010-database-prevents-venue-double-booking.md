@@ -198,11 +198,13 @@ kept 0 and 0, and the database's occupied periods were the booked periods.
   does. Callers ask `findVenueBlockers` about the period as it would occupy
   the venue: a request or approval with the venue's current minutes, recorded
   unavailability as it is.
-- **Each approved booking counts for its own stored minutes.** Its occupied
-  period can't be filtered in a Prisma `where`, so the lookup loads approved
-  bookings within `MAX_SETUP_TURNAROUND_MINUTES` (1,440, the database's bound)
-  either side, then keeps those whose occupied period overlaps. Nothing
-  further away can reach the period.
+- **Each approved or held booking counts for its own stored minutes.** Its
+  occupied period can't be filtered in a Prisma `where`, so the lookup loads
+  Approved bookings and Held ones whose hold hasn't expired within
+  `MAX_SETUP_TURNAROUND_MINUTES` (1,440, the database's bound) either side,
+  then keeps those whose occupied period overlaps. Nothing further away can
+  reach the period. A hold past its expiry is left out even while its row
+  still says Held, as the database expires it before checking.
 - **Approving copies the venue's minutes onto the booking**, the same minutes
   the conflict check used, in the conditional update (AC8). A hold (SCRUM-163)
   must copy them the same way.
