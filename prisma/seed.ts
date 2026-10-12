@@ -772,7 +772,7 @@ async function seedRegistrations() {
 }
 
 // ---------------------------------------------------------------------------
-// Clarification and change requests — SCRUM-18, SCRUM-41/42/43.
+// Clarification and change requests — SCRUM-18, SCRUM-41/128.
 // ---------------------------------------------------------------------------
 
 async function seedClarifications() {
@@ -823,7 +823,7 @@ async function seedChangeRequests() {
 }
 
 // ---------------------------------------------------------------------------
-// Notifications — SCRUM-45/46/48/54/85. Enough rows that the list has both
+// Notifications — SCRUM-45/48/85/124. Enough rows that the list has both
 // read and unread entries and an obvious ordering.
 // ---------------------------------------------------------------------------
 

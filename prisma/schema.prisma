@@ -111,7 +111,7 @@ enum EquipmentRequestStatus {
   CANCELLED
 }
 
-/// SCRUM-31/32/33 — a reservation is CONFIRMED on creation and can be
+/// SCRUM-31 — a reservation is CONFIRMED on creation and can be
 /// cancelled, which returns its quantity to the pool.
 enum ReservationStatus {
   CONFIRMED
@@ -154,15 +154,16 @@ enum RejectionOutcome {
   NEW_REQUEST
 }
 
-/// SCRUM-41/43 — change request lifecycle.
+/// SCRUM-41 (raised) and SCRUM-128 (approved or rejected) — change request
+/// lifecycle.
 enum ChangeRequestStatus {
   PENDING_REVIEW
   APPROVED
   REJECTED
 }
 
-/// SCRUM-45/46/47/54/56/57/85 — one enum value per notification-producing
-/// story, so every notification in the system has a named, traceable trigger.
+/// One enum value per kind of notification, each citing the story that sends
+/// it, so every notification in the system has a named, traceable trigger.
 enum NotificationType {
   EVENT_STATUS_CHANGED // SCRUM-45
   COORDINATOR_ASSIGNED // SCRUM-45 AC1
@@ -503,7 +504,7 @@ model Booking {
 
   // Times are deliberately denormalised onto the booking rather than always
   // joined from the event (see docs/adr/0003). If the event date later moves,
-  // this booking is visibly out of sync and can be flagged (SCRUM-26/44).
+  // this booking is visibly out of sync and can be flagged (SCRUM-26).
   startAt DateTime
   endAt   DateTime
 

@@ -24,25 +24,40 @@ const SAYS_SO =
   /merged|superseded|replaced|duplicate|covered by|not needed|dropped/i;
 
 /**
- * Keys that may be cited although they are stale, each with why. An entry
- * expires: the test below fails once its file no longer cites the key, so the
- * change that fixes a reference also removes its exception, and the key can't
- * come back unnoticed.
+ * Lines that may cite a stale key, each with why, matched on their trimmed
+ * text. An exception covers only the lines it names, and it expires: the test
+ * below fails once a named line is gone, so the change that fixes a reference
+ * also removes its exception, and the key can't come back unnoticed.
  */
-const ALLOWED: Record<string, { keys: string[]; why: string }> = {
+const ALLOWED: Record<string, { lines: string[]; why: string }> = {
   "tests/unit/ai-review.test.ts": {
-    keys: ["SCRUM-1", "SCRUM-310", "SCRUM-999"],
+    lines: [
+      'expect(extractStoryKeys("SCRUM-1-2-3-4-5-6-7-8", "", "")).toHaveLength(6);',
+      'file("app/(app)/x.ts", "// SCRUM-310 is a different story"),',
+      'stories: ["SCRUM-31", "SCRUM-999"],',
+      'expect(body).toContain("No `docs/backlog` file on `main` for SCRUM-999");',
+    ],
     why: "made-up keys in tests of the reviewer's key parsing",
   },
   "app/(app)/notifications/page.tsx": {
-    keys: ["SCRUM-51"],
+    lines: ['scrumId="SCRUM-51"'],
     why: "the placeholder page #153 (SCRUM-48) replaces",
   },
   "prisma/schema.prisma": {
-    keys: ["SCRUM-42", "SCRUM-43", "SCRUM-47"],
+    lines: [
+      "/// SCRUM-41 (submit), SCRUM-42 (review, showing old vs new),",
+      "/// SCRUM-43 (approve/reject, reason required on rejection), SCRUM-47 (notify).",
+    ],
     why: "the EventChangeRequest header #162 (SCRUM-41) rewrites",
   },
 };
+
+/** "SCRUM-41/42/43" cites SCRUM-41, SCRUM-42 and SCRUM-43. */
+function citedKeys(line: string): string[] {
+  return [...line.matchAll(/\bSCRUM-(\d+(?:\/\d+)*)\b/g)].flatMap((match) =>
+    match[1].split("/").map((n) => `SCRUM-${n}`),
+  );
+}
 
 type KeyStatus = { kind: "live" } | { kind: "retired"; tag: string };
 
@@ -78,12 +93,11 @@ function staleReferences(
   file: string,
   keys: Map<string, KeyStatus>,
 ): string[] {
-  const allowed = new Set(ALLOWED[file]?.keys ?? []);
+  const allowed = new Set(ALLOWED[file]?.lines ?? []);
   const found: string[] = [];
   text.split(/\r?\n/).forEach((line, i) => {
-    for (const match of line.matchAll(/\bSCRUM-\d+\b/g)) {
-      const key = match[0];
-      if (allowed.has(key)) continue;
+    if (allowed.has(line.trim())) return;
+    for (const key of citedKeys(line)) {
       const status = keys.get(key);
       if (!status)
         found.push(
@@ -125,19 +139,22 @@ describe("SCRUM-146 story keys in the code", () => {
     expect(stale).toEqual([]);
   });
 
-  it("SCRUM-146 [AC5]: every allowed stale key is still cited, so a fixed one's exception is removed", () => {
-    const expired = Object.entries(ALLOWED).flatMap(
-      ([file, { keys: allowed }]) => {
-        const text = existsSync(join(ROOT, file))
+  it("SCRUM-146 [AC5]: every allowed line is still in its file, so a fixed one's exception is removed", () => {
+    const expired = Object.entries(ALLOWED).flatMap(([file, { lines }]) => {
+      const present = new Set(
+        existsSync(join(ROOT, file))
           ? readFileSync(join(ROOT, file), "utf8")
-          : "";
-        return allowed
-          .filter((key) => !new RegExp(`\\b${key}\\b`).test(text))
-          .map(
-            (key) => `${file} no longer cites ${key}: delete it from ALLOWED`,
-          );
-      },
-    );
+              .split(/\r?\n/)
+              .map((line) => line.trim())
+          : [],
+      );
+      return lines
+        .filter((line) => !present.has(line))
+        .map(
+          (line) =>
+            `${file} no longer has the line ${line}: delete it from ALLOWED`,
+        );
+    });
     expect(expired).toEqual([]);
   });
 
@@ -158,6 +175,34 @@ describe("SCRUM-146 story keys in the code", () => {
     expect(
       staleReferences("// SCRUM-27 (SCRUM-33 merged in)", "x.ts", planted),
     ).toEqual([]);
+  });
+
+  it("SCRUM-146 [AC5]: the check reads every key of a slash list, and an exception covers only its own line", () => {
+    const planted = new Map<string, KeyStatus>([
+      ["SCRUM-27", { kind: "live" }],
+      ["SCRUM-31", { kind: "live" }],
+      ["SCRUM-33", { kind: "retired", tag: "[MERGED INTO SCRUM-27]" }],
+    ]);
+    expect(
+      staleReferences("// SCRUM-27/31 reserve equipment", "x.ts", planted),
+    ).toEqual([]);
+    expect(
+      staleReferences("// SCRUM-27/31/33 reserve equipment", "x.ts", planted),
+    ).toHaveLength(1);
+    expect(
+      staleReferences("// SCRUM-27/12345/54321", "x.ts", planted),
+    ).toHaveLength(2);
+    const header = ALLOWED["prisma/schema.prisma"].lines[1];
+    expect(staleReferences(header, "prisma/schema.prisma", planted)).toEqual(
+      [],
+    );
+    expect(
+      staleReferences(
+        `${header}\n/// SCRUM-43 elsewhere`,
+        "prisma/schema.prisma",
+        planted,
+      ),
+    ).toHaveLength(1);
   });
 
   it("SCRUM-146 [AC2]: My Registrations cites SCRUM-76", () => {
