@@ -1,16 +1,30 @@
 import type { NextAuthConfig } from "next-auth";
 import type { Role } from "@prisma/client";
 
+/**
+ * Every role a user can hold. Written out, not read from Prisma's enum, so
+ * this file stays free of the Prisma client (see below). It listed only the
+ * five Release 1 roles after SCRUM-172 added two, so a Coordinator Lead or
+ * Safety Officer signed in with no role. `MissingRole` now fails the type
+ * check if a role is added to the schema and not here.
+ */
+const ROLES = [
+  "ORGANISER",
+  "COORDINATOR",
+  "VENUE_STAFF",
+  "TECH_SUPPORT",
+  "ATTENDEE",
+  "COORDINATOR_LEAD",
+  "SAFETY_OFFICER",
+] as const satisfies readonly Role[];
+type MissingRole = Exclude<Role, (typeof ROLES)[number]>;
+const everyRoleListed: [MissingRole] extends [never] ? true : MissingRole =
+  true;
+void everyRoleListed;
+
 function isRole(value: unknown): value is Role {
   return (
-    typeof value === "string" &&
-    [
-      "ORGANISER",
-      "COORDINATOR",
-      "VENUE_STAFF",
-      "TECH_SUPPORT",
-      "ATTENDEE",
-    ].includes(value)
+    typeof value === "string" && (ROLES as readonly string[]).includes(value)
   );
 }
 

@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-09. Jira is the source of truth.
+     Synced from Jira on 2026-10-12. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-166 - Operational safety check: Safety Officer reviews arrangements before the event can be confirmed
@@ -20,7 +20,7 @@
 
 **Acceptance criteria**
 
-1. Given an event in Planning whose Venue checklist item is complete (SCRUM-110, SCRUM-162), and whose Equipment item is complete if the checklist shows one, where an event the Coordinator marked "No equipment needed" counts as complete (SCRUM-110, SCRUM-170), when its assigned Coordinator requests a safety check, then the check joins the Safety Officers' queue, oldest first, and every Safety Officer is notified (SCRUM-124). Until then, the request isn't offered and a direct request is refused.
+1. Given an event in Planning whose Venue checklist item is complete (SCRUM-110, SCRUM-162) and whose Equipment item is complete, with an equipment request or No equipment needed (SCRUM-110, SCRUM-170 AC4), when its assigned Coordinator requests a safety check, then the check joins the Safety Officers' queue, oldest first, and every Safety Officer is notified (SCRUM-124). Until then, the request isn't offered and a direct request is refused.
 2. Given I open a check, then I see, read-only: the expected attendance; for each venue its capacity, the attendance booked for it, the requested and supported layouts, the accessibility needs and features, its setup and turnaround times, and its known restrictions such as emergency access (SCRUM-34); the reserved equipment with each line's technical requirements, where its placement is noted; and the operational notes.
 3. When I record Approved, Changes requested or Rejected, then Changes requested and Rejected need a note, and for Changes requested I pick at least one venue booking or equipment reservation it affects.
 4. The Coordinator is notified of the outcome and the note (SCRUM-124). The Organiser sees the checklist state, not the note.
@@ -48,5 +48,6 @@
 * 2026-10-07 (backlog refinement): merged SCRUM-167; its AC1–AC7 are AC9–AC15 here. Neither story could be demonstrated or tested alone: a recorded outcome had no effect without SCRUM-167, and SCRUM-167's outcomes only exist once this story records them. Re-estimated from 5 to 8.
 * 2026-10-07 (backlog refinement): group headings removed. AC1 needs the Equipment item only when the checklist shows one, so an event with no equipment can be checked. AC13 adds date and time, matching SCRUM-128 AC4.
 * 2026-10-08 (PO review): AC1 counts "No equipment needed" as a complete Equipment item, so those events can get a safety check. Added a note on why Confirm, not preparation, is the gate in Release 1.
+* 2026-10-09 (PO review): AC1 reworded, because SCRUM-170 AC4 always shows the Equipment item.
 
 Functionality Area: Operational Feasibility Check, Event Status Management
