@@ -1003,6 +1003,47 @@ describe("context beyond the diff", () => {
     expect(seed.content.length).toBeLessThanOrEqual(12_000);
   });
 
+  it("SCRUM-178 [AC6]: a related set the size of #154's, far over the budget, leaves no file out", () => {
+    const pad = "pad".repeat(10);
+    const uses = 'import { x } from "@/lib/notifications";';
+    const lines = (n: number, line: (i: number) => string) =>
+      Array.from({ length: n }, (_, i) => line(i)).join("\n");
+    const files = [
+      file("lib/notifications.ts", "export const x = 1;"),
+      file("e2e/notifications.spec.ts", 'test("list", async () => {});'),
+      file(
+        "prisma/schema.prisma",
+        lines(1500, (i) =>
+          i === 700 ? "/// SCRUM-48 the notification list" : i % 50 === 0 ? `model M${i} {` : i % 50 === 49 ? "}" : `  f${i} String // ${pad}`,
+        ),
+      ),
+      file("prisma/seed.ts", 'import { PrismaClient } from "@prisma/client";\n' + lines(1400, (i) => `const row${i} = { id: "r${i}" }; // ${pad}`)),
+      ...Array.from({ length: 12 }, (_, n) =>
+        file(`app/(app)/p${n}/page.tsx`, `${uses}\nexport default function Page${n}() {\n${lines(400, (i) => `  const v${i} = x + ${i}; // ${pad}`)}\n}`),
+      ),
+      ...Array.from({ length: 30 }, (_, n) =>
+        file(
+          `tests/unit/t${n}.test.ts`,
+          `${uses}\ndescribe("t${n}", () => {\n${lines(300, (i) => (i % 10 === 0 ? `  it("case ${i}", () => {` : `    expect(x).toBe(${i}); // ${pad}`))}\n});`,
+        ),
+      ),
+    ];
+    const relatedChars = files.slice(2).reduce((sum, f) => sum + f.content.length, 0);
+    expect(relatedChars).toBeGreaterThan(2 * 300_000);
+
+    const { included, omitted } = selectContextFiles({
+      files,
+      changed: ["lib/notifications.ts", "e2e/notifications.spec.ts"],
+      storyKeys: ["SCRUM-48"],
+    });
+
+    expect(omitted).toEqual([]);
+    const related = included.filter((f) => f.reason !== "changed in this PR");
+    expect(related).toHaveLength(files.length - 2);
+    expect(related.some((f) => f.reason.endsWith(", excerpt"))).toBe(true);
+    expect(related.reduce((sum, f) => sum + f.content.length, 0)).toBeLessThanOrEqual(300_000);
+  });
+
   it("scans the branch for role checks outside can(), hard deletes and inline dates", () => {
     const results = scanProjectRules([
       file("app/(app)/equipment/page.tsx", 'const ALLOWED_ROLES: Role[] = ["TECH_SUPPORT"];\nif (!ALLOWED_ROLES.includes(session.user.role)) {}'),
