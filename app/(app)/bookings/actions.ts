@@ -634,10 +634,13 @@ export async function releaseHold(
  *   refuses it (`booking_hold_expired`), so the booking ends up Approved or
  *   Expired, never both (AC8).
  * - The hold's notices still to come are withdrawn (AC5).
+ * - With `refusal` (a withdrawal, SCRUM-142 AC5), the event's status is read
+ *   again under its lock first, so a Confirm that committed meanwhile stops it.
  */
 async function settleHold(
   input: unknown,
   to: "APPROVED" | "CANCELLED",
+  refusal?: (status: EventStatus) => string | null,
 ): Promise<ActionResult<{ status: BookingStatus }>> {
   const session = await auth();
   const user = session?.user;
@@ -678,6 +681,10 @@ async function settleHold(
 
     const settle = () =>
       prisma.$transaction(async (tx) => {
+        const refused =
+          refusal?.(await lockedEventStatus(tx, booking.event.id)) ?? null;
+        if (refused) throw new DecisionError(refused);
+
         const updated = await tx.booking.updateMany({
           where: { id: bookingId, ...liveHoldWhere(now) },
           data:
@@ -782,7 +789,9 @@ export async function withdrawBookingRequest(
     if (notPlanning) return err(notPlanning);
     const now = new Date();
     const current = bookingStatusAt(booking, now);
-    if (current === "HELD") return releaseHold({ bookingId });
+    if (current === "HELD") {
+      return settleHold({ bookingId }, "CANCELLED", withdrawalRefusal);
+    }
     if (current === "APPROVED") {
       return err(
         "An approved booking isn't withdrawn here. It is cancelled by resolving its flag, or by cancelling or rejecting the event.",
@@ -793,14 +802,9 @@ export async function withdrawBookingRequest(
     }
 
     const withdrawn = await prisma.$transaction(async (tx) => {
-      // Re-read the event under its lock: a Confirm that committed while
-      // this waited (confirmEvent takes the same lock) stops it (AC5).
-      await tx.$queryRaw`SELECT "id" FROM "Event" WHERE "id" = ${booking.event.id} FOR UPDATE`;
-      const { status } = await tx.event.findUniqueOrThrow({
-        where: { id: booking.event.id },
-        select: { status: true },
-      });
-      const refusal = withdrawalRefusal(status);
+      const refusal = withdrawalRefusal(
+        await lockedEventStatus(tx, booking.event.id),
+      );
       if (refusal) return refusal;
 
       const updated = await tx.booking.updateMany({
@@ -850,6 +854,22 @@ export async function withdrawBookingRequest(
 }
 
 const REQUEST_NOT_FOUND = "Venue request not found.";
+
+/**
+ * The event's status, read under its row lock. confirmEvent takes the same
+ * lock, so a Confirm that committed while this waited is seen (SCRUM-142 AC5).
+ */
+async function lockedEventStatus(
+  tx: Prisma.TransactionClient,
+  eventId: string,
+): Promise<EventStatus> {
+  await tx.$queryRaw`SELECT "id" FROM "Event" WHERE "id" = ${eventId} FOR UPDATE`;
+  const { status } = await tx.event.findUniqueOrThrow({
+    where: { id: eventId },
+    select: { status: true },
+  });
+  return status;
+}
 
 /** SCRUM-142 AC5 — why an event in this status can't withdraw a venue request. */
 function withdrawalRefusal(status: EventStatus): string | null {

@@ -314,6 +314,27 @@ describe("a Confirm that lands while a change waits for the event lock — SCRUM
     });
     expect(db.booking.updateMany).not.toHaveBeenCalled();
   });
+
+  it("SCRUM-142 [AC4, AC5] TC-142-16: withdrawing a held request is refused once the event is Confirmed under the lock, and the hold stays", async () => {
+    db.booking.findUnique.mockResolvedValue({
+      status: "HELD",
+      holdExpiresAt: new Date(Date.now() + 60 * 60 * 1000),
+      venue: { name: "Hall" },
+      event: event(),
+    });
+    db.event.findUniqueOrThrow.mockResolvedValue({ status: "CONFIRMED" });
+
+    expect(await withdrawBookingRequest({ bookingId: "bkg_1" })).toEqual({
+      ok: false,
+      error:
+        "This event is confirmed, so its arrangements change through a change request.",
+    });
+    expect(db.$queryRaw).toHaveBeenCalledTimes(1);
+    expect(db.booking.updateMany).not.toHaveBeenCalled();
+    expect(db.auditLog.create).not.toHaveBeenCalled();
+    expect(db.safetyCheck.updateMany).not.toHaveBeenCalled();
+    expect(db.notification.createMany).not.toHaveBeenCalled();
+  });
 });
 
 describe("withdrawBookingRequest — SCRUM-142 AC4", () => {

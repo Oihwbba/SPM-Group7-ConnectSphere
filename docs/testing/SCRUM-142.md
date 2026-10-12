@@ -236,7 +236,7 @@ venue requests; the suite removes them.
 | Pre-conditions | As TC-142-01. |
 | Test Steps | 1. While the event is being confirmed (its lock held), withdraw the equipment request. <br> 2. Let the confirmation commit. |
 | Test Data | — |
-| Expected Result | The withdrawal, which read the event before the confirmation committed, re-reads it under the lock and is refused: "This event is confirmed, so its arrangements change through a change request." The request stays Approved and its reservations Reserved. Changing lines and withdrawing a venue request re-check the same way. |
+| Expected Result | The withdrawal, which read the event before the confirmation committed, re-reads it under the lock and is refused: "This event is confirmed, so its arrangements change through a change request." The request stays Approved and its reservations Reserved. Changing lines and withdrawing a venue request re-check the same way, whether the venue request is Pending or Held; a Held one stays Held. |
 
 **Automated by:** `tests/integration/change-or-withdraw.test.ts` › "SCRUM-142 [AC5] TC-142-16: a withdrawal waiting behind a Confirm for the event lock is refused once the event is Confirmed"; `tests/unit/change-or-withdraw.test.ts` › the "TC-142-16" tests
 
