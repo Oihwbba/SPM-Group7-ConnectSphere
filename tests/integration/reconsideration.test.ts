@@ -253,10 +253,11 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-26 — Needs Reconsideration", () => 
     await prisma.$transaction((tx) =>
       flagArrangements(tx, { bookingIds: [bookingId], reservationIds: [] }, "Moved."),
     );
+    // An event holds at most one booking per venue (SCRUM-162 AC2).
     const other = await prisma.booking.create({
       data: {
         eventId,
-        venueId: "ven_hall",
+        venueId: "ven_seminar",
         startAt: new Date("2032-08-08T06:00:00Z"),
         endAt: new Date("2032-08-08T07:00:00Z"),
         status: "APPROVED",
