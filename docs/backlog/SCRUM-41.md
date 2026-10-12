@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-09. Jira is the source of truth.
+     Synced from Jira on 2026-10-11. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-41 - Raise and track a change request
@@ -10,7 +10,7 @@
 | **Epic** | SCRUM-8 - Event Change & Notifications |
 | **Priority** | Highest |
 | **Story points** | 3 |
-| **Status in Jira** | To Do |
+| **Status in Jira** | In Review |
 | **Sprint** | SCRUM Sprint 3 |
 | **Jira** | https://smu-spm-group7.atlassian.net/browse/SCRUM-41 |
 
@@ -23,7 +23,7 @@
 1. Given my event is Under Review, Planning or Confirmed, I can raise a change request for any event field, or a request to cancel the event with a reason.
 2. Draft events are edited directly (SCRUM-15). Rejected events use SCRUM-108. Cancelled and Completed events cannot be changed. A Submitted event has no Coordinator to decide a change request until the Lead assigns one (SCRUM-165); until then the Organiser can't change or withdraw it.
 3. Given my event is Under Review with an open clarification, then the fields that clarification names are changed through the clarification response (SCRUM-108), not a change request.
-4. Requested values are validated with the request-form rules in SCRUM-13 and SCRUM-127: attendance is a positive whole number, the end is after the start, the start is not in the past, and venue and equipment come from the catalogues.
+4. Requested values are validated with the request-form rules in SCRUM-13: attendance is a positive whole number, the end is after the start, and the start is not in the past. Venue and equipment requirements are free text, as on the request form (SCRUM-170).
 5. Fields that are date, time, expected attendance, venue or equipment are marked impactful on the request. The venue requirement may name several venues (SCRUM-162).
 6. Given I submit, then the change request is Submitted, the event's values are unchanged, and I can see the request's status (Submitted, Approved, or Rejected with reason).
 7. An event has at most one Submitted change request. A second one is refused and the open one is shown.
@@ -41,5 +41,6 @@
 * 2026-10-01 (audit): Submitted removed from AC1, because a Submitted event has no Coordinator to decide the request. Requested venue and equipment values are catalogue choices (SCRUM-127).
 * 2026-10-07 (Week 7 changes 3 and 5): AC2 waits for the Lead to assign a Coordinator (SCRUM-165) instead of automatic assignment. AC5 lets the venue requirement name several venues (SCRUM-162).
 * 2026-10-07 (backlog refinement): AC2 states that a Submitted request can't be changed or withdrawn while it waits for the Lead; once it is Under Review the Organiser raises a change or cancellation request (AC1).
+* 2026-10-11 (conflict review, SCRUM-170 vs SCRUM-41): AC4 uses the request form's own rules (SCRUM-13) and drops "venue and equipment come from the catalogues". SCRUM-127 was dropped, so venue and equipment requirements stay free text, and the Coordinator turns them into venue bookings and equipment lines (SCRUM-170). Basis: the G4 answer for Event Change Requests has the Coordinator review and process the updates; nothing in the briefing requires the Organiser to pick from a catalogue.
 
 Functionality Area: Event Change Requests
