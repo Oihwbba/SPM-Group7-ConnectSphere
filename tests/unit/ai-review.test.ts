@@ -834,10 +834,10 @@ describe("context beyond the diff", () => {
     expect(withoutE2e.included.map((f) => f.path)).not.toContain("prisma/seed.ts");
   });
 
-  // SCRUM-111 — #153 to #156 each lost prisma/schema.prisma and the seed, and
+  // SCRUM-178 — #153 to #156 each lost prisma/schema.prisma and the seed, and
   // #154 lost 30 files, because unchanged tests that merely import a changed
   // file were sent first and a related file that didn't fit was dropped whole.
-  it("SCRUM-111: sends the seed and story-relevant source before tests that merely import a changed file", () => {
+  it("SCRUM-178 [AC1]: sends the seed and story-relevant source before tests that merely import a changed file", () => {
     const files = [
       file("lib/changed.ts", "export const x = 1;"),
       file("tests/unit/aaa.test.ts", 'import { x } from "@/lib/changed";\n' + "t".repeat(500)),
@@ -862,7 +862,7 @@ describe("context beyond the diff", () => {
     ]);
   });
 
-  it("SCRUM-111: sends a story file that doesn't fit whole as the lines around its mentions, numbered as in the file", () => {
+  it("SCRUM-178 [AC2]: sends a story file that doesn't fit whole as the lines around its mentions, numbered as in the file", () => {
     const lines = Array.from({ length: 200 }, (_, i) => `line ${i + 1}`);
     lines[99] = "/// SCRUM-48 AC8 — not shown before this time.";
     const files = [
@@ -892,7 +892,7 @@ describe("context beyond the diff", () => {
     );
   });
 
-  it("SCRUM-111: outlines a test file that doesn't fit whole: its imports and what each test is called", () => {
+  it("SCRUM-178 [AC2]: outlines a test file that doesn't fit whole: its imports and what each test is called", () => {
     const content = [
       'import { describe, it } from "vitest";',
       'import { x } from "@/lib/changed";',
@@ -921,7 +921,7 @@ describe("context beyond the diff", () => {
     );
   });
 
-  it("SCRUM-111: outlines a source file that names none of the PR's stories by its imports and exports, and has nothing to excerpt from one with neither", () => {
+  it("SCRUM-178 [AC2, AC4]: outlines a source file that names none of the PR's stories by its imports and exports, and has nothing to excerpt from one with neither", () => {
     const content = ['import { prisma } from "@/lib/db";', "", "const internal = 1;", "export function visible() {", "  return internal;", "}"].join(
       "\n",
     );
@@ -935,7 +935,7 @@ describe("context beyond the diff", () => {
   // The reserve: a related file is sent whole only if what's left still holds
   // the excerpts of the files behind it. Without it, the source file below is
   // sent whole and the test behind it is dropped.
-  it("SCRUM-111: sends a related file as its excerpt when sending it whole would leave a later file no room for its own", () => {
+  it("SCRUM-178 [AC3]: sends a related file as its excerpt when sending it whole would leave a later file no room for its own", () => {
     const source = file("lib/a.ts", ['import { x } from "./changed";', ...Array(80).fill("// body"), "export const a = x;"].join("\n"));
     const test = file(
       "tests/unit/b.test.ts",
@@ -963,7 +963,7 @@ describe("context beyond the diff", () => {
 
   // The yield: a reserve that can't be met anyway is no reason to cut an
   // earlier file down. The files are in priority order, so it goes first.
-  it("SCRUM-111: sends an earlier related file whole when the file behind it can't fit even its excerpt", () => {
+  it("SCRUM-178 [AC3]: sends an earlier related file whole when the file behind it can't fit even its excerpt", () => {
     const source = file("lib/a.ts", ['import { x } from "./changed";', "const local = x;", "export const a = local;"].join("\n"));
     const test = file(
       "tests/unit/b.test.ts",
@@ -983,7 +983,7 @@ describe("context beyond the diff", () => {
     expect(omitted.map((f) => f.path)).toEqual(["tests/unit/b.test.ts"]);
   });
 
-  it("SCRUM-111: sends the head of a related file with nothing to excerpt, capped so the files behind it still fit", () => {
+  it("SCRUM-178 [AC4]: sends the head of a related file with nothing to excerpt, capped so the files behind it still fit", () => {
     const files = [
       file("e2e/x.spec.ts", 'test("x", async () => {});'),
       file("prisma/seed.ts", "u".repeat(50_000)),

@@ -539,7 +539,7 @@ CODEOWNERS now lists all five team members. A change still needs a second
 person, since an author can't approve their own pull request, but any
 teammate can be that person.
 
-## Addendum (2026-10-11, SCRUM-111) — related files in part, not dropped
+## Addendum (2026-10-11, SCRUM-178) — related files in part, not dropped
 
 The related-file budget (300,000 characters, after the 2026-09-21 addendum
 raised both budgets) was still dropping files: #153 to #156 lost
