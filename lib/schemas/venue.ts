@@ -33,3 +33,11 @@ export const venueTimesSchema = z.object({
 });
 
 export type VenueTimes = z.infer<typeof venueTimesSchema>;
+/**
+ * Facilities, accessibility features and layouts are compared as tags by
+ * search and suitability (SCRUM-38, SCRUM-40), so "Sound System" and
+ * "sound-system" must be the same tag.
+ */
+export function toTag(value: string): string {
+  return value.trim().toLowerCase().replace(/\s+/g, "-");
+}
