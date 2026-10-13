@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-09. Jira is the source of truth.
+     Synced from Jira on 2026-10-12. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-38 - Search and filter venues by criteria and requirements
@@ -20,8 +20,8 @@
 
 **Acceptance criteria**
 
-1. Given I open venue search from one of my events, then the date, time and expected attendance are pre-filled from the event and I can change them; I set the required facilities, accessibility features and layout, with the Organiser's Venue & Accessibility answers shown beside them (SCRUM-170). Given I open it from one of the event's bookings with Find a replacement venue (SCRUM-161), then the date and time come from the event, and the attendance, facilities and layout come from that booking request; I can change any of them.
-2. Date, time range and location can be used alone or together.
+1. Given I open venue search from one of my events, then the date and time are fixed to the event's period, and the expected attendance is pre-filled from the event and can be changed; I set the required facilities, accessibility features and layout, with the Organiser's Venue & Accessibility answers shown beside them (SCRUM-170). Given I open it from one of the event's bookings with Find a replacement venue (SCRUM-161), then the date and time are fixed to the event's period, and the attendance, facilities and layout come from that booking request; I can change the attendance, facilities and layout.
+2. Given I open venue search on its own, then date, time range and location can be used alone or together. Given I open it from an event, then the date and time are the event's (AC1) and only location can be added.
 3. Given a venue has an Approved or Held booking or recorded unavailability (SCRUM-37) that overlaps the occupied period a booking for the searched period would have at that venue (its setup and turnaround times included, SCRUM-159), then it is excluded.
 4. Given that occupied period falls partly or wholly outside a venue's opening hours (SCRUM-34), then it is excluded, because the booking request would be refused.
 5. Given that occupied period only touches a booking's occupied period or recorded unavailability, then the venue is included: periods that only touch do not overlap.
@@ -47,5 +47,6 @@
 * 2026-10-07 (backlog refinement): AC12 filters on the attendance entered in the search, which can be lowered for a room that holds part of the audience (SCRUM-162), instead of always on the event's expected attendance.
 * 2026-10-08: AC1 no longer pre-fills facilities, accessibility features and layout, because SCRUM-127 was dropped; the Coordinator sets them, with the Organiser's answers shown (SCRUM-170).
 * 2026-10-08: AC1 restores opening search from a flagged booking (SCRUM-161), which the earlier rewrite dropped, and says what it pre-fills.
+* 2026-10-10: Reword SCRUM-38 AC1 and AC2 such that search period does not differ from event period
 
 Functionality Area: Venue Search and Filtering

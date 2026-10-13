@@ -9,6 +9,7 @@ import {
   CalendarClock,
   Check,
   CheckCircle2,
+  Hourglass,
   Inbox,
   LayoutGrid,
   Mail,
@@ -36,9 +37,16 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { formatDate, formatDateTime } from "@/lib/datetime";
+import { DateTimeField } from "@/components/app/date-time-field";
+import { Label } from "@/components/ui/label";
+import {
+  formatDate,
+  formatDateTime,
+  sgWallTimeToUtcIso,
+  utcToSgWallTime,
+} from "@/lib/datetime";
 import { describeBlocker } from "@/lib/venue-availability";
-import { decideBookingRequest } from "./actions";
+import { decideBookingRequest, holdBookingRequest } from "./actions";
 import type { PendingBookingRow } from "./queries";
 
 /**
@@ -79,15 +87,42 @@ export function matchesSearch(booking: PendingBookingRow, query: string) {
 export function BookingQueue({
   queue,
   canDecide,
+  canHold = false,
 }: {
   queue: PendingBookingRow[];
   canDecide: boolean;
+  canHold?: boolean;
 }) {
   const [rejecting, setRejecting] = useState<PendingBookingRow | null>(null);
   const [query, setQuery] = useState("");
   const [reason, setReason] = useState("");
+  // SCRUM-163 AC1: the request being held, and the hold's expiry and note.
+  const [holding, setHolding] = useState<PendingBookingRow | null>(null);
+  const [holdExpiry, setHoldExpiry] = useState("");
+  const [holdNote, setHoldNote] = useState("");
+  const [holdErrors, setHoldErrors] = useState<Record<string, string[]>>({});
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
+
+  function hold(booking: PendingBookingRow) {
+    startTransition(async () => {
+      const result = await holdBookingRequest({
+        bookingId: booking.id,
+        holdExpiresAt: sgWallTimeToUtcIso(holdExpiry) ?? "",
+        holdNote,
+      });
+      if (result.ok) {
+        toast.success(
+          `Held ${booking.venue.name} for ${booking.event.name} until ${formatDateTime(result.data.holdExpiresAt)}.`,
+        );
+        setHolding(null);
+      } else {
+        setHoldErrors(result.fieldErrors ?? {});
+        toast.error(result.error);
+      }
+      router.refresh();
+    });
+  }
 
   // SCRUM-53 — the server action decides; a conflict or an already-decided
   // request comes back as an error and the queue is refreshed either way.
@@ -155,7 +190,7 @@ export function BookingQueue({
         <p className="text-sm text-muted-foreground" aria-live="polite">
           {query
             ? `Showing ${shown.length} of ${queue.length} requests`
-            : `${queue.length} pending ${queue.length === 1 ? "request" : "requests"}`}
+            : `${queue.length} ${queue.length === 1 ? "request" : "requests"} pending or held`}
         </p>
       </div>
 
@@ -175,7 +210,7 @@ export function BookingQueue({
           <li key={booking.id}>
             <RequestCard booking={booking}>
               {canDecide && (
-                <div className="flex justify-end gap-2 border-t pt-4">
+                <div className="flex flex-wrap justify-end gap-2 border-t pt-4">
                   <Button
                     variant="outline"
                     disabled={isPending}
@@ -187,14 +222,32 @@ export function BookingQueue({
                   >
                     <XCircle className="h-4 w-4" /> Reject
                   </Button>
-                  <Button
-                    disabled={isPending}
-                    onClick={() => decide(booking, "APPROVED")}
-                    variant="outline"
-                    className="border-success/60 bg-transparent text-success hover:bg-success/10 hover:text-success"
-                  >
-                    <CheckCircle2 className="h-4 w-4" /> Approve
-                  </Button>
+                  {/* SCRUM-163: a held request is confirmed by its
+                      Coordinator, not approved or held again here. */}
+                  {booking.status === "PENDING" && canHold && (
+                    <Button
+                      variant="outline"
+                      disabled={isPending}
+                      onClick={() => {
+                        setHolding(booking);
+                        setHoldExpiry("");
+                        setHoldNote("");
+                        setHoldErrors({});
+                      }}
+                    >
+                      <Hourglass className="h-4 w-4" /> Hold
+                    </Button>
+                  )}
+                  {booking.status === "PENDING" && (
+                    <Button
+                      disabled={isPending}
+                      onClick={() => decide(booking, "APPROVED")}
+                      variant="outline"
+                      className="border-success/60 bg-transparent text-success hover:bg-success/10 hover:text-success"
+                    >
+                      <CheckCircle2 className="h-4 w-4" /> Approve
+                    </Button>
+                  )}
                 </div>
               )}
             </RequestCard>
@@ -232,6 +285,73 @@ export function BookingQueue({
               Reject request
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={!!holding}
+        onOpenChange={(open) => !open && setHolding(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Hold this venue</DialogTitle>
+            <DialogDescription>
+              The venue is reserved for the Coordinator until the expiry, then
+              released if they haven&apos;t confirmed it. The expiry must be
+              before the booking starts
+              {holding ? ` (${formatDateTime(holding.startAt)})` : ""}.
+            </DialogDescription>
+          </DialogHeader>
+          <form
+            className="space-y-4"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (holding) hold(holding);
+            }}
+          >
+            <DateTimeField
+              name="Expiry"
+              value={holdExpiry}
+              onChange={setHoldExpiry}
+              openOn={utcToSgWallTime(new Date()).slice(0, 10)}
+              error={
+                holdErrors.holdExpiresAt?.[0] && (
+                  <p className="text-xs text-destructive">
+                    {holdErrors.holdExpiresAt[0]}
+                  </p>
+                )
+              }
+            />
+            <div className="space-y-2">
+              <Label htmlFor="holdNote">What the Coordinator must finalise</Label>
+              <Textarea
+                id="holdNote"
+                value={holdNote}
+                onChange={(e) => setHoldNote(e.target.value)}
+                placeholder="e.g. Confirm the final headcount and catering"
+              />
+              {holdErrors.holdNote?.[0] && (
+                <p className="text-xs text-destructive">
+                  {holdErrors.holdNote[0]}
+                </p>
+              )}
+            </div>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setHolding(null)}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={isPending || !holdExpiry || !holdNote.trim()}
+              >
+                Hold venue
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
     </>
@@ -272,7 +392,13 @@ function RequestCard({
               on {formatDateTime(booking.createdAt)}
             </p>
           </div>
-          <Badge variant="warning">Pending</Badge>
+          {booking.status === "HELD" ? (
+            <Badge variant="info">
+              Held until {formatDateTime(booking.holdExpiresAt!)}
+            </Badge>
+          ) : (
+            <Badge variant="warning">Pending</Badge>
+          )}
         </div>
 
         <dl className="grid gap-x-6 gap-y-4 text-sm sm:grid-cols-2">
@@ -330,6 +456,11 @@ function RequestCard({
           {booking.requestNotes && (
             <Fact icon={MessageSquareText} label="Other details">
               {booking.requestNotes}
+            </Fact>
+          )}
+          {booking.holdNote && (
+            <Fact icon={Hourglass} label="Held for the Coordinator to finalise">
+              {booking.holdNote}
             </Fact>
           )}
         </dl>

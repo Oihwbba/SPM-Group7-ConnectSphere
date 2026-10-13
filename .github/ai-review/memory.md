@@ -18,11 +18,6 @@ Rules for a lesson:
 
 ## Process and merging
 
-- (2026-10-07, #138) Changes to `.github/`, `package.json`, the test configs
-or `vercel.json` need a code owner's approval, and CODEOWNERS lists the whole
-team, so any teammate other than the author can give it. An admin merge also
-satisfies it, so the description need not record it.
-
 - (2026-09-22, #71/#72; retires the #52–#54 re-landing workaround) Production
   deploys only through `.github/workflows/deploy.yml`: a push to `main` deploys
   a prebuilt bundle with the owner's `VERCEL_TOKEN`, with `.git` removed so no
@@ -31,15 +26,17 @@ satisfies it, so the description need not record it.
   not re-landed. *Deployed to Production* shows on merge commits, never on a
   pull request branch.
 
-- (2026-10-04, #101; 2026-10-07, #141) Story files under `docs/backlog` lag
-Jira: PO decisions and sprint planning land as separate sync pull requests
-(#103, #115, #141); an earlier review of #101 flagged code that met the new
-AC 4 against the stale copy. Check a story file's change log before
-reporting a code/story mismatch. Syncs regenerate from Jira untouched
-(#141), so its quirks show verbatim: a story in two sprints counts towards
-both (SCRUM-13), and Sprint 3's committed 164 includes 33 points of
-`beyond-release-1` stories — the fix belongs in Jira, and the next sync
-carries it over.
+- (2026-10-04, #101; 2026-10-07, #141; 2026-10-09, #145; 2026-10-11, #164)
+Story files under `docs/backlog` lag Jira: PO decisions, sprint planning
+and reworded ACs land as separate sync pull requests (#103, #115, #141,
+#145, #164); reviews of #101 and #162 flagged code against stale wording
+a sync later settled, so check a story file's change log before reporting
+a code/story mismatch. Syncs regenerate from Jira untouched (#141): a
+story in two sprints counts towards both, and a dropped issue loses its
+file (SCRUM-127). A partial re-sync (#164, like #159/#163) updates only
+the items Jira changed and leaves the README's "last synced" date at the
+last full sync — an older date over newer files is deliberate. The fix
+belongs in Jira, never in a hand edit of the files.
 
 ## Dependencies
 
@@ -113,9 +110,9 @@ environment with no jsdom, so `.tsx` components never appear in it;
 Playwright journeys exercise them. Measuring components needs new tooling
 (SCRUM-87), a team decision. CI fails when a measured file drops below 100%,
 so a "100% coverage" claim refers to the measured files only.
-- (2026-09-25, #87) CI runs Node 24 and a developer may run Node 22, whose ICU
-labels a zero-offset zone differently, so a branch can run locally but never
-on CI. Tests asserting `Intl` output stub `Intl` rather than trust the ICU.
+- (2026-10-09, #146) `docs/testing/*.md` cite test titles verbatim in
+'Automated by' lines (not shown to this review), so a rename must update
+the citing spec too; titles still in the old inline form match their specs.
 
 ## Known open gaps
 
@@ -127,14 +124,16 @@ touches that code or claims that story, and say it was already known.
 period can never be removed or shortened from the app, so a wrong record
 blocks its venue until someone edits the database by hand; and the record form
 blocks past start times that the server schema accepts.
+
 - (2026-10-04, #120) Events approved before #120 sit in APPROVED with no way
 out: approval now writes PLANNING directly, `transitionEventStatus` only
 decides Submitted/Under Review, and `confirmEvent` refuses anything not
 Planning, so legacy rows (the seed's `evt_approved` among them, and the reason
 APPROVED stays reservable) can never be confirmed or resubmitted. Treat it as
 known when a pull request touches the status lifecycle or the seed.
-- (2026-10-08, #143) A gap its review left open, asked for twice and merged
-unfixed: nothing pins the top bar. No test asserts the header has no search
-box (SCRUM-168 AC1) or that at phone width the brand stays left and the
-profile menu right (AC3). Treat it as known when a pull request touches
-`app/(app)/layout.tsx`.
+
+- (2026-10-08, #149) A gap its review left open, merged unfixed:
+`Event.noEquipmentNeededById`'s `ON DELETE SET NULL` can never fire — CHECK
+`event_no_equipment_decision_complete` (both set or neither) aborts the
+delete instead, unlike `decidedById`. Latent, as nothing deletes users yet.
+Known when a pull request touches the decision columns or user deletion.

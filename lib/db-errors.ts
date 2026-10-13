@@ -23,6 +23,15 @@ export function violatesExclusion(error: unknown, constraint: string): boolean {
 }
 
 /**
+ * The write was refused by the check constraint, or the trigger raising as
+ * one, named `constraint` (e.g. booking_hold_expired, SCRUM-163).
+ */
+export function violatesCheck(error: unknown, constraint: string): boolean {
+  const pg = postgresError(error);
+  return pg.code === "23514" && pg.message.includes(`"${constraint}"`);
+}
+
+/**
  * Runs `attempt`, and runs it once more if PostgreSQL aborted it as a
  * deadlock (SQLSTATE 40P01).
  *

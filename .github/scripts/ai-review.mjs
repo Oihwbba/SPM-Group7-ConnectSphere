@@ -52,7 +52,7 @@ const MAX_DOC_CHARS = 20_000;
 const MAX_STORY_CHARS = 6_000;
 const MAX_BODY_CHARS = 4_000;
 const MAX_TEST_INVENTORY_CHARS = 15_000;
-export const MAX_MEMORY_CHARS = 8_000;
+export const MAX_MEMORY_CHARS = 12_000;
 const MAX_CONVERSATION_CHARS = 8_000;
 // Beyond the diff (ADR 0008): the changed files in full get their own budget;
 // the related files (imports, importers, story files) share a second one.
@@ -66,6 +66,18 @@ const MAX_FILE_CHARS = 60_000;
 // A changed file is shortened rather than dropped, as long as this much of it
 // still fits; below that the head would be too little to review.
 const MIN_PARTIAL_FILE_CHARS = 8_000;
+// A related file that doesn't fit whole is sent in part rather than dropped.
+// #153 to #156 each lost prisma/schema.prisma and prisma/seed.ts, and up to 30
+// unchanged tests, because the tests that merely import a changed file were
+// sent first and took the budget. A test file is sent as its imports and test
+// titles; any other file as the lines around its mentions of the PR's stories,
+// or else its head.
+const EXCERPT_CONTEXT_LINES = 12;
+const MAX_RELATED_HEAD_CHARS = 12_000;
+// A source file's outline: what it imports and what it declares for others.
+const SOURCE_OUTLINE_LINE = /^(?:import\b|export\b|model\s|enum\s)/;
+const OUTLINE_LINE =
+  /^\s*(?:import\b|(?:test\.)?describe(?:\.\w+)*\s*\(|(?:it|test)(?:\.\w+)*\s*[(.])/;
 const SEED_PATH = "prisma/seed.ts";
 const TRUNCATION_NOTE_CHARS = 100;
 const MAX_TEST_CHANGE_CHARS = 20_000;
@@ -876,10 +888,49 @@ export function filesMentioningStories(files, keys) {
 }
 
 /**
- * The files sent to GLM in full, in priority order. Changed files use their own
- * budget. Then, sharing a second budget: files the changed files import, files
- * that import a changed file, and files naming the PR's stories. A file over
- * budget is listed as omitted, never silently dropped.
+ * The part of a file worth sending when all of it won't fit, with each line's
+ * own number so GLM still cites the right line. A test file: its imports and
+ * its describe/it/test lines, which say what it covers. Any other file: the
+ * lines around each mention of the PR's stories, plus its outline: imports and
+ * export declarations (models and enums in the schema). Null when there is
+ * nothing to pick out. Gaps are marked "…".
+ */
+export function excerptFile(path, content, storyKeys, context = EXCERPT_CONTEXT_LINES) {
+  const lines = content.split("\n");
+  const keep = new Set();
+  if (TEST_FILE.test(path)) {
+    lines.forEach((line, i) => {
+      if (OUTLINE_LINE.test(line)) keep.add(i);
+    });
+  } else {
+    const patterns = storyKeys.map((key) => new RegExp(`\\b${key}(?!\\d)`, "i"));
+    lines.forEach((line, i) => {
+      if (SOURCE_OUTLINE_LINE.test(line)) keep.add(i);
+      if (!patterns.some((pattern) => pattern.test(line))) return;
+      for (let j = Math.max(0, i - context); j <= Math.min(lines.length - 1, i + context); j++) keep.add(j);
+    });
+  }
+  if (keep.size === 0) return null;
+  const out = [];
+  let last = -1;
+  for (const i of [...keep].sort((a, b) => a - b)) {
+    if (i !== last + 1) out.push("…");
+    out.push(`${i + 1}\t${lines[i]}`);
+    last = i;
+  }
+  if (last < lines.length - 1) out.push("…");
+  return out.join("\n");
+}
+
+/**
+ * The files sent to GLM, in priority order. Changed files use their own
+ * budget and are sent whole, or shortened. Then, sharing a second budget:
+ * files the changed files import; the seed when an e2e spec changed; source
+ * files that import a changed file; source files naming the PR's stories; and
+ * last the tests that import a changed file or name a story. A related file
+ * that doesn't fit whole is sent as an excerpt (`excerptFile`) or its head,
+ * and one with no room even for that is listed as omitted, never silently
+ * dropped.
  */
 export function selectContextFiles({
   files,
@@ -934,28 +985,45 @@ export function selectContextFiles({
     const sized = entries.map((entry) => ({
       entry,
       full: capped(byPath.get(entry.path).content, MAX_FILE_CHARS),
+      // A related file's fallback: the parts that matter to this PR, already
+      // numbered (excerptFile).
+      excerpt: mustFit ? null : excerptFile(entry.path, byPath.get(entry.path).content, storyKeys),
     }));
     // Entries arrive in diff order and every one of them is judged, so no file
     // may spend what the files behind it need — whether it is shortened or
     // fits whole. A small file needs only its own length: reserving a full
-    // slot for it would shorten an earlier file for nothing.
-    const need = sized.map(({ full }) => (mustFit ? Math.min(full.length, slot) : 0));
+    // slot for it would shorten an earlier file for nothing. A related file
+    // reserves its excerpt, so one sent whole never leaves the files behind
+    // it without even their outline.
+    const need = sized.map(({ full, excerpt }) =>
+      Math.min(full.length, mustFit ? slot : (excerpt?.length ?? 0)),
+    );
     let behind = need.reduce((sum, chars) => sum + chars, 0);
 
     let used = 0;
-    sized.forEach(({ entry, full }, index) => {
+    sized.forEach(({ entry, full, excerpt }, index) => {
       behind -= need[index];
       const room = budget - used;
-      const allowance = Math.min(room, Math.max(room - behind, need[index]));
+      // A related file's reserve that can't all be met is no reserve: the
+      // files are in priority order, so the earlier one goes first.
+      const reserve = !mustFit && behind > room ? 0 : behind;
+      const allowance = Math.min(room, Math.max(room - reserve, need[index]));
       if (full.length <= allowance) {
         used += full.length;
         included.push({ ...entry, content: full });
         return;
       }
-      // Too big for its share: keep the head, because most of a file the pull
-      // request changed beats none of it.
-      if (mustFit && allowance >= slot) {
-        const partial = capped(full, allowance - TRUNCATION_NOTE_CHARS);
+      if (excerpt && excerpt.length <= allowance) {
+        used += excerpt.length;
+        included.push({ ...entry, content: excerpt, numbered: true, reason: `${entry.reason}, excerpt` });
+        return;
+      }
+      // Too big for its share: keep the head, because most of a file beats
+      // none of it. A related file's head is capped, so the first big one
+      // can't take what every file behind it would have had.
+      const headRoom = mustFit ? allowance : Math.min(allowance, MAX_RELATED_HEAD_CHARS);
+      if (headRoom >= slot) {
+        const partial = capped(full, headRoom - TRUNCATION_NOTE_CHARS);
         used += partial.length;
         included.push({ ...entry, content: partial, reason: `${entry.reason}, shortened to fit` });
         return;
@@ -966,12 +1034,19 @@ export function selectContextFiles({
   take(changedPaths.map((path) => ({ path, reason: "changed in this PR" })), maxChanged, {
     mustFit: true,
   });
+  // Source before tests: an unchanged test that imports a changed file says
+  // less about this PR than the schema naming its story, so it goes last.
+  const isTest = (path) => TEST_FILE.test(path);
+  const importerEntry = (path) => ({ path, reason: "imports a changed file" });
+  const storyEntry = (path) => ({ path, reason: `mentions ${storyKeys.join(", ")}` });
   take(
     [
       ...[...imported].sort().map((path) => ({ path, reason: "imported by a changed file" })),
-      ...importers.sort().map((path) => ({ path, reason: "imports a changed file" })),
-      ...storyFiles.sort().map((path) => ({ path, reason: `mentions ${storyKeys.join(", ")}` })),
       ...seedFile.map((path) => ({ path, reason: "seeded data the e2e tests assert against" })),
+      ...importers.filter((path) => !isTest(path)).sort().map(importerEntry),
+      ...storyFiles.filter((path) => !isTest(path)).sort().map(storyEntry),
+      ...importers.filter(isTest).sort().map(importerEntry),
+      ...storyFiles.filter(isTest).sort().map(storyEntry),
     ],
     maxRelated,
   );
@@ -979,7 +1054,9 @@ export function selectContextFiles({
 }
 
 export function renderContextFiles({ included, omitted }) {
-  const parts = included.map((file) => `### ${file.path} (${file.reason})\n\n${numberLines(file.content)}`);
+  const parts = included.map(
+    (file) => `### ${file.path} (${file.reason})\n\n${file.numbered ? file.content : numberLines(file.content)}`,
+  );
   if (omitted.length) {
     parts.push(
       `### Not included (did not fit the context budget)\n\n${omitted.map((file) => `- ${file.path} (${file.reason})`).join("\n")}`,
@@ -1309,7 +1386,7 @@ async function main() {
   // On a re-run: the previous review and what people replied to it.
   const conversation = renderConversation(await listPrComments(github, repo, env.PR_NUMBER));
 
-  // Beyond the diff: related files in full and a project rule scan, both from
+  // Beyond the diff: related files (whole or in part) and a project rule scan, both from
   // the PR's head, then CI's results for this commit.
   const sourceFiles = listSourceFiles(env.HEAD_SHA);
   const context = selectContextFiles({ files: sourceFiles, changed: [...commentable.keys()], storyKeys: stories });
@@ -1338,8 +1415,10 @@ async function main() {
     console.log(`::warning::Couldn't load CI results: ${error.message}`);
   }
   if (!ci) notes.push("CI's results weren't available for this review.");
+  const inPart = context.included.filter((file) => /, (?:excerpt|shortened to fit)$/.test(file.reason)).length;
   console.log(
-    `Context: ${context.included.length} file(s) in full, ${context.omitted.length} omitted; ` +
+    `Context: ${context.included.length - inPart} file(s) in full, ${inPart} in part, ` +
+      `${context.omitted.length} omitted; ` +
       `CI ${ci ? ci.conclusion : "unavailable"}.`,
   );
 
@@ -1380,10 +1459,12 @@ async function main() {
       "is existing code: use it as evidence for acceptance criteria and mention it in the overview, but " +
       "don't raise it as a finding unless this PR makes it worse.",
     ruleScan,
-    "## Files in full (at this PR's head)",
-    "Each file is line-numbered. Files changed by this PR are here in full; the diff below shows exactly " +
-      "which lines changed. The related files are the ones changed files import, the ones that import a " +
-      "changed file, and ones that name this PR's stories.",
+    "## Files (at this PR's head)",
+    "Each file is line-numbered. Files changed by this PR are here in full, or their head if marked " +
+      "\"shortened to fit\"; the diff below shows exactly which lines changed. The related files are the ones " +
+      "changed files import, the ones that import a changed file, and ones that name this PR's stories. A " +
+      "related file marked \"excerpt\" shows only some of its lines, each with its own line number, and \"…\" " +
+      "marks lines left out: don't report something as missing from an excerpt or a shortened file.",
     renderContextFiles(context) || "(none)",
     "## Diff",
     "Every added (+) or unchanged context line is prefixed with its line number in the new " +
