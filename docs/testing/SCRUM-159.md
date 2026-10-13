@@ -245,7 +245,7 @@ are signed in as `coordinator@test.local`, approvals as
 | Test Data | — |
 | Expected Result | 1. Refused: "… is unavailable for that period: held from … to 12:45 pm …, including setup and turnaround." Nothing is written. 2. Reported unavailable. |
 
-**Automated by:** `tests/unit/venue-availability.test.ts` › "SCRUM-50 [AC3, AC10] TC-50-04, SCRUM-159 [AC3] TC-159-15: asks only for APPROVED bookings and holds not yet expired …" and "SCRUM-159 [AC3] TC-159-15: names a held booking as on hold, with its whole occupied time"; `tests/integration/setup-turnaround.test.ts` › "SCRUM-159 [AC3] TC-159-15: a hold that hasn't expired blocks a request and the live check wherever its occupied period reaches"
+**Automated by:** `tests/unit/venue-availability.test.ts` › "SCRUM-50 [AC3, AC10] TC-50-04, SCRUM-159 [AC3] TC-159-15, SCRUM-163 [AC2, AC4] TC-163-04: asks only for APPROVED bookings and unexpired holds …" and "SCRUM-159 [AC3] TC-159-15: names a held booking as held, with its whole occupied time"; `tests/integration/setup-turnaround.test.ts` › "SCRUM-159 [AC3] TC-159-15: a hold that hasn't expired blocks a request and the live check wherever its occupied period reaches"
 
 ### TC-159-16
 
