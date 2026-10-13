@@ -21,6 +21,7 @@ import {
   venueAvailabilityQuerySchema,
 } from "@/lib/schemas/booking";
 import { onceMoreOnDeadlock, violatesExclusion } from "@/lib/db-errors";
+import { outdateSafetyChecks } from "@/lib/safety-check";
 import {
   describeBlocker,
   findVenueBlockers,
@@ -339,6 +340,7 @@ export async function decideBookingRequest(
       where: { id: bookingId },
       select: {
         id: true,
+        eventId: true,
         venueId: true,
         startAt: true,
         endAt: true,
@@ -399,6 +401,11 @@ export async function decideBookingRequest(
           throw new DecisionError(
             current.status === "PENDING" ? FLAGGED : alreadyDecided(current.status),
           );
+        }
+        // SCRUM-166 AC13: a newly approved booking changes what a safety
+        // check reviewed. A rejected request was never part of it.
+        if (decision === "APPROVED") {
+          await outdateSafetyChecks(tx, booking.eventId);
         }
 
         // SCRUM-71: a booking decision records who, what and when.

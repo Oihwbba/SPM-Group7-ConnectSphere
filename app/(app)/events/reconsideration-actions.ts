@@ -7,6 +7,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { can, requirePermission, PermissionError } from "@/lib/auth/can";
 import { ok, err, type ActionResult } from "@/lib/action-result";
+import { outdateSafetyChecks } from "@/lib/safety-check";
 import {
   FLAGGABLE_BOOKING,
   bookingArrangement,
@@ -240,10 +241,7 @@ export async function resolveReconsiderationFlag(
         return { done: decision, returnedToPlanning: false };
       }
 
-      await tx.safetyCheck.updateMany({
-        where: { eventId, status: { in: ["AWAITING_REVIEW", "APPROVED"] } },
-        data: { status: "OUTDATED", outdatedAt: now },
-      });
+      await outdateSafetyChecks(tx, eventId, now);
       if (event.status !== "CONFIRMED") {
         return { done: decision, returnedToPlanning: false };
       }
