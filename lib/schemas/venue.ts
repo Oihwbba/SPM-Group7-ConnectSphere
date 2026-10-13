@@ -33,3 +33,12 @@ export const venueTimesSchema = z.object({
 });
 
 export type VenueTimes = z.infer<typeof venueTimesSchema>;
+
+/**
+ * SCRUM-160 AC1 — saving a venue's times. `confirmed` is false until Venue
+ * Staff have seen the bookings the change would make clash and confirmed it.
+ */
+export const venueTimesChangeSchema = venueTimesSchema.extend({
+  venueId: z.string().min(1),
+  confirmed: z.boolean().default(false),
+});

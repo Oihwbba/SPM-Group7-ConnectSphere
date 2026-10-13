@@ -24,6 +24,7 @@ import { onceMoreOnDeadlock, violatesExclusion } from "@/lib/db-errors";
 import {
   describeBlocker,
   findVenueBlockers,
+  lockVenueTimes,
   occupiedPeriod,
 } from "@/lib/venue-availability";
 
@@ -360,11 +361,17 @@ export async function decideBookingRequest(
 
     const decide = () =>
       prisma.$transaction(async (tx) => {
+        // SCRUM-160: the minutes as they are now, not as first read, so a
+        // change to them can't slip in before this approval copies them.
+        const times =
+          decision === "APPROVED"
+            ? ((await lockVenueTimes(tx, booking.venueId)) ?? booking.venue)
+            : booking.venue;
         if (decision === "APPROVED") {
           const blockers = await findVenueBlockers(
             tx,
             booking.venueId,
-            occupiedPeriod(booking, booking.venue),
+            occupiedPeriod(booking, times),
           );
           if (blockers.length > 0) {
             throw new DecisionError(
@@ -385,8 +392,8 @@ export async function decideBookingRequest(
             decidedAt: new Date(),
             decisionReason: decision === "REJECTED" ? reason : null,
             ...(decision === "APPROVED" && {
-              setupMinutes: booking.venue.setupMinutes,
-              turnaroundMinutes: booking.venue.turnaroundMinutes,
+              setupMinutes: times.setupMinutes,
+              turnaroundMinutes: times.turnaroundMinutes,
             }),
           },
         });
