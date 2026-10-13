@@ -6,8 +6,10 @@ Test cases for [docs/backlog/SCRUM-40.md](../backlog/SCRUM-40.md). Format:
 The automatic result compares a venue with what the booking request asks
 for: its attendance, facilities, accessibility features and layout, as the
 Coordinator enters them on the request form. Search (SCRUM-38) compares it
-with what is entered in the search before a request exists; those cases are
-in [SCRUM-38.md](SCRUM-38.md).
+with what is entered in the search before a request exists. Venue search
+isn't built yet, so those cases (AC1–AC4 and AC7 in search results) are
+written with SCRUM-38; `assessSuitability` in `lib/venue-suitability.ts`
+takes the search's values the same way.
 
 ### TC-40-01
 
@@ -60,6 +62,12 @@ in [SCRUM-38.md](SCRUM-38.md).
 | Expected Result | Banquet is Not suitable with "Banquet layout not supported"; "Classroom" is Suitable (compared as a tag). |
 
 **Automated by:** `tests/unit/venue-suitability.test.ts` › "SCRUM-40 [AC4] TC-40-04: …"
+
+Not reachable in the browser yet. The request form asks for the layout first
+and then offers only venues that support it (SCRUM-50), so a request can't
+pair a venue with a layout it doesn't support. The browser case comes with
+venue search (SCRUM-38), where the layout entered in the search is compared
+with every venue.
 
 ### TC-40-05
 
