@@ -151,6 +151,8 @@ module requires us to be transparent about AI assistance.
 - **Setup, seed accounts, run commands:** `README.md`
 - **What the AI reviewer checks:** `.github/ai-review/instructions.md`, and
   lessons from past reviews in `.github/ai-review/memory.md`
+- **Key diagrams and every Server Action (permission, input, writes, locks):**
+  `docs/design/` (the full design pack is a separate team document)
 
 ## Do not
 
