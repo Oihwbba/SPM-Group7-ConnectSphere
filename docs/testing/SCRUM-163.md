@@ -30,6 +30,8 @@ shown in Singapore time and stored in UTC.
 | [TC-163-13](#tc-163-13) | Positive | AC 9 | Unit, integration; partly blocked |
 | [TC-163-14](#tc-163-14) | Concurrency | AC 8 | Unit, integration |
 | [TC-163-15](#tc-163-15) | Negative | AC 3 | Unit |
+| [TC-163-16](#tc-163-16) | Negative | AC 3 | Unit, integration, e2e |
+| [TC-163-17](#tc-163-17) | Positive, Negative, Concurrency | AC 7 | Unit, integration, e2e |
 
 ---
 
@@ -42,9 +44,9 @@ shown in Singapore time and stored in UTC.
 | Pre-conditions | Signed in as `venuestaff@test.local`. A pending request for a Planning event on 1 Jul 2031, 9:00 am to 5:00 pm. |
 | Test Steps | 1. Open Bookings. <br> 2. On the request, choose Hold. <br> 3. Set the expiry to 30 Jun 2031, 10:00 am and the note to "Confirm the final headcount." <br> 4. Choose Hold venue. |
 | Test Data | `venuestaff@test.local` |
-| Expected Result | The request reads "Held until 30 Jun 2031, 10:00 am SGT" with the note, and offers Reject but not Approve or Hold. The booking is `HELD` with that expiry, the note and `heldAt`; the history records a `HELD` entry by the Venue Staff member. |
+| Expected Result | The request reads "Held until 30 Jun 2031, 10:00 am SGT" with the note, and offers Approve and Reject but not Hold. The booking is `HELD` with that expiry, the note and `heldAt`; the history records a `HELD` entry by the Venue Staff member. |
 
-**Automated by:** `e2e/holds.spec.ts` › "SCRUM-163 [AC1, AC3, AC6, AC7] TC-163-01, TC-163-06, TC-163-11, TC-163-12: Venue Staff hold a request, and its Coordinator confirms the hold"; `tests/integration/holds.test.ts` › "SCRUM-163 [AC1, AC5] TC-163-01, TC-163-09: holding a pending request saves its expiry and note, and writes the Coordinator's three notices"; `tests/unit/booking-holds.test.ts` › "SCRUM-163 [AC1, AC5] TC-163-01, TC-163-09: holds a pending request and writes the Coordinator's three notices with their show-from times"
+**Automated by:** `e2e/holds.spec.ts` › "SCRUM-163 [AC1, AC3, AC6, AC7] TC-163-01, TC-163-06, TC-163-11, TC-163-12, TC-163-16, TC-163-17: Venue Staff hold a request and approve the hold, and only then its Coordinator confirms it"; `tests/integration/holds.test.ts` › "SCRUM-163 [AC1, AC5] TC-163-01, TC-163-09: holding a pending request saves its expiry and note, and writes the Coordinator's three notices"; `tests/unit/booking-holds.test.ts` › "SCRUM-163 [AC1, AC5] TC-163-01, TC-163-09: holds a pending request and writes the Coordinator's three notices with their show-from times"
 
 ### TC-163-02
 
@@ -68,7 +70,7 @@ shown in Singapore time and stored in UTC.
 | Pre-conditions | — |
 | Test Steps | 1. Hold with no expiry, an unreadable expiry, a blank note, or no booking. <br> 2. Hold as a Coordinator, Technical Support or Organiser. <br> 3. Hold a request that doesn't exist, is already held, has an expired hold, or was approved or rejected. <br> 4. Hold a request that someone else decides in the same moment. |
 | Test Data | — |
-| Expected Result | Step 1: "Choose when the hold expires.", "Say what the Coordinator must finalise." or "Please provide a valid hold.", before anything is read. Step 2: "You do not have permission to do that." Step 3: "Booking request not found.", "This request is held for its Coordinator to confirm…", "This hold expired at …" or "This request has already been approved; the original decision stands." Step 4: the first decision stands. Nothing is written in any case. |
+| Expected Result | Step 1: "Choose when the hold expires.", "Say what the Coordinator must finalise." or "Please provide a valid hold.", before anything is read. Step 2: "You do not have permission to do that." Step 3: "Booking request not found.", "This request is already held for its Coordinator. You can approve or reject the hold until it expires.", "This hold expired at …" or "This request has already been approved; the original decision stands." Step 4: the first decision stands. Nothing is written in any case. |
 
 **Automated by:** `tests/unit/booking-holds.test.ts` › every "SCRUM-163 [AC1] TC-163-03: …" and "SCRUM-163 [AC1, AC7] TC-163-03: …" test
 
@@ -103,13 +105,13 @@ shown in Singapore time and stored in UTC.
 | Item | Content |
 |---|---|
 | Test Case ID | TC-163-06 |
-| Test Scenario | [Positive] AC 3: the Coordinator confirms a hold before it expires |
-| Pre-conditions | As TC-163-01, after the hold. Signed in as `coordinator@test.local`, the event's Coordinator. |
+| Test Scenario | [Positive] AC 3: the Coordinator confirms a hold Venue Staff have approved, before it expires |
+| Pre-conditions | As TC-163-01, after the hold, and Venue Staff have approved it (TC-163-17). Signed in as `coordinator@test.local`, the event's Coordinator. |
 | Test Steps | 1. Open Events and view the event's details. <br> 2. In the readiness checklist, choose Confirm hold. |
 | Test Data | `coordinator@test.local` |
-| Expected Result | The venue item changes from "Held until 30 Jun 2031, 10:00 am SGT – confirm to secure" to "Approved", and is complete. The booking is `APPROVED`, decided by the Coordinator, with a `HOLD_CONFIRMED` history entry. |
+| Expected Result | Before step 2 the venue item reads "Held until 30 Jun 2031, 10:00 am SGT – confirm to secure" and "Approved by Venue Staff – awaiting confirmation.", and Confirm hold is enabled. After it, the item reads "Approved", and is complete. The booking is `APPROVED`, decided by the Coordinator, with a `HOLD_CONFIRMED` history entry. |
 
-**Automated by:** `e2e/holds.spec.ts` › "SCRUM-163 [AC1, AC3, AC6, AC7] TC-163-01, TC-163-06, TC-163-11, TC-163-12: …"; `tests/integration/holds.test.ts` › "SCRUM-163 [AC3, AC5, AC7] TC-163-06, TC-163-10, TC-163-12: confirming approves the hold once, and withdraws only its notices not yet shown"; `tests/unit/booking-holds.test.ts` › "SCRUM-163 [AC3, AC5] TC-163-06, TC-163-10: …"
+**Automated by:** `e2e/holds.spec.ts` › "SCRUM-163 [AC1, AC3, AC6, AC7] TC-163-01, TC-163-06, TC-163-11, TC-163-12, TC-163-16, TC-163-17: Venue Staff hold a request and approve the hold, and only then its Coordinator confirms it"; `tests/integration/holds.test.ts` › "SCRUM-163 [AC3, AC5, AC7] TC-163-06, TC-163-10, TC-163-12, TC-163-16: a hold is confirmed only once Venue Staff approve it, and only once, and confirming withdraws only its notices not yet shown"; `tests/unit/booking-holds.test.ts` › "SCRUM-163 [AC3, AC5] TC-163-06, TC-163-10: …"
 
 ### TC-163-07
 
@@ -133,7 +135,7 @@ shown in Singapore time and stored in UTC.
 | Pre-conditions | A hold whose expiry was an hour ago; nothing has written to it since, so the row still says `HELD`. Another pending request for the same period. |
 | Test Steps | 1. As the Coordinator, confirm it. <br> 2. Read the event's checklist and the Venue Staff queue. <br> 3. As Venue Staff, approve the other request. <br> 4. On another run, as the Coordinator, request the same venue for the same event again. <br> 5. Check the status one millisecond before and at the expiry. |
 | Test Data | — |
-| Expected Result | Step 1: "This hold expired at … so the venue is free for other requests. Make a new request if you still need it." Release and Venue Staff's reject get the same answer. Step 2: "Hold expired"; the hold isn't in the queue. Step 3: approved, and the hold is now stored `EXPIRED`. Step 4: a new request is created (a lapsed hold isn't the event's booking any more), and the hold is stored `EXPIRED`; a hold that hasn't expired is returned as the event's booking instead. Step 5: Held, then Expired. |
+| Expected Result | Step 1: "This hold expired at … so the venue is free for other requests. Make a new request if you still need it." Release, and Venue Staff's approve or reject, get the same answer. Step 2: "Hold expired"; the hold isn't in the queue. Step 3: approved, and the hold is now stored `EXPIRED`. Step 4: a new request is created (a lapsed hold isn't the event's booking any more), and the hold is stored `EXPIRED`; a hold that hasn't expired is returned as the event's booking instead. Step 5: Held, then Expired. |
 
 **Automated by:** `tests/integration/holds.test.ts` › "SCRUM-163 [AC4] TC-163-08: from its expiry, a hold no longer reserves the venue, leaves the queue, reads Expired and can't be confirmed", "… after its hold lapses, the event can request the same venue again, even before anything marks it Expired" and "… a live hold is still the event's booking when it asks again"; `tests/unit/booking-holds.test.ts` › the "TC-163-08" tests; `tests/unit/bookings.test.ts` › "SCRUM-50 [AC8] TC-50-07, SCRUM-163 [AC4] TC-163-08: …"
 
@@ -161,7 +163,7 @@ shown in Singapore time and stored in UTC.
 | Test Data | — |
 | Expected Result | The reminder and expiry notice are withdrawn and never appear; the "held" notice, already shown, stays. |
 
-**Automated by:** `tests/integration/holds.test.ts` › "SCRUM-163 [AC3, AC5, AC7] TC-163-06, TC-163-10, TC-163-12: …", "SCRUM-163 [AC7, AC5] TC-163-12, TC-163-10: …" and "SCRUM-163 [AC9] TC-163-13: …"; `tests/unit/booking-holds.test.ts` › the "TC-163-10" tests
+**Automated by:** `tests/integration/holds.test.ts` › "SCRUM-163 [AC3, AC5, AC7] TC-163-06, TC-163-10, TC-163-12, TC-163-16: …", "SCRUM-163 [AC7, AC5] TC-163-12, TC-163-10: …" and "SCRUM-163 [AC9] TC-163-13: …"; `tests/unit/booking-holds.test.ts` › the "TC-163-10" tests
 
 ### TC-163-11
 
@@ -183,11 +185,11 @@ shown in Singapore time and stored in UTC.
 | Test Case ID | TC-163-12 |
 | Test Scenario | [Positive, Negative] AC 7: held bookings stay in the queue; Venue Staff can reject one; settling twice changes nothing |
 | Pre-conditions | A held request. |
-| Test Steps | 1. As Venue Staff, open Bookings. <br> 2. Approve it. <br> 3. Reject it with the reason "Roof repairs." <br> 4. As the Coordinator, confirm it. <br> 5. On another hold, confirm twice, or at the same moment as a second click. |
+| Test Steps | 1. As Venue Staff, open Bookings. <br> 2. Reject it with the reason "Roof repairs." <br> 3. As the Coordinator, confirm it. <br> 4. On another hold Venue Staff have approved, confirm twice, or at the same moment as a second click. |
 | Test Data | — |
-| Expected Result | Step 1: it is listed with its expiry and note, offering Reject only. Step 2: "This request is held for its Coordinator to confirm. You can still reject it until the hold expires." Step 3: `REJECTED` with the reason; its notices still to come are withdrawn. Step 4: "Venue Staff rejected this hold." Step 5: "This hold has already been confirmed."; one history entry. |
+| Expected Result | Step 1: it is listed with its expiry and note, offering Approve and Reject (approving is TC-163-17). Step 2: `REJECTED` with the reason; its notices still to come are withdrawn. Step 3: "Venue Staff rejected this hold." Step 4: "This hold has already been confirmed."; one history entry. |
 
-**Automated by:** `tests/integration/holds.test.ts` › "SCRUM-163 [AC7, AC5] TC-163-12, TC-163-10: Venue Staff reject a live hold with a reason, which withdraws its notices still to come" and "SCRUM-163 [AC2, AC7] TC-163-04, TC-163-12: …"; `tests/unit/booking-holds.test.ts` › the "TC-163-12" tests; `e2e/holds.spec.ts` › "SCRUM-163 [AC1, AC3, AC6, AC7] …"
+**Automated by:** `tests/integration/holds.test.ts` › "SCRUM-163 [AC7, AC5] TC-163-12, TC-163-10: Venue Staff reject a live hold with a reason, which withdraws its notices still to come" and "SCRUM-163 [AC2, AC7] TC-163-04, TC-163-12: …"; `tests/unit/booking-holds.test.ts` › the "TC-163-12" tests; `e2e/holds.spec.ts` › "SCRUM-163 [AC1, AC3, AC6, AC7] …" (step 1)
 
 ### TC-163-13
 
@@ -227,3 +229,29 @@ shown in Singapore time and stored in UTC.
 | Expected Result | Steps 1, 2 and 4: "Venue hold not found." Step 3: "You do not have permission to do that." Nothing is written. |
 
 **Automated by:** `tests/unit/booking-holds.test.ts` › the "TC-163-15" tests
+
+### TC-163-16
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-163-16 |
+| Test Scenario | [Negative] AC 3: a hold Venue Staff haven't approved can't be confirmed; it can still be released |
+| Pre-conditions | As TC-163-01, after the hold, before Venue Staff approve it. Signed in as `coordinator@test.local`, the event's Coordinator. |
+| Test Steps | 1. Open Events and view the event's details. <br> 2. Send a confirmation for the hold directly. <br> 3. On another run, choose Release hold. |
+| Test Data | `coordinator@test.local` |
+| Expected Result | Step 1: the venue item reads "Held until 30 Jun 2031, 10:00 am SGT – confirm to secure" and "Waiting for Venue Staff to approve the hold before it can be confirmed.", and Confirm hold is disabled. Step 2: "Venue Staff haven't approved this hold yet. You can confirm it once they have."; the booking stays `HELD`, and no history or notice is written. Step 3: the booking is `CANCELLED`. Once Venue Staff approve the hold, the item reads "Approved by Venue Staff – awaiting confirmation." and stays incomplete until it is confirmed (TC-163-06). |
+
+**Automated by:** `tests/unit/booking-holds.test.ts` › "SCRUM-163 [AC3] TC-163-16: a hold Venue Staff haven't approved can't be confirmed, and nothing is written", "SCRUM-163 [AC3] TC-163-16: a confirmation that finds the hold still unapproved under the lock changes nothing", "SCRUM-163 [AC3, AC6, AC7] TC-163-16: a hold Venue Staff approved still keeps the venue incomplete until confirmed, and says it may now be confirmed" and "SCRUM-163 [AC3, AC5] TC-163-07, TC-163-10: releasing a live hold cancels it, approved by Venue Staff or not, and withdraws its notices still to come"; `tests/integration/holds.test.ts` › "SCRUM-163 [AC3, AC5, AC7] TC-163-06, TC-163-10, TC-163-12, TC-163-16: …"; `e2e/holds.spec.ts` › "SCRUM-163 [AC1, AC3, AC6, AC7] TC-163-01, TC-163-06, TC-163-11, TC-163-12, TC-163-16, TC-163-17: Venue Staff hold a request and approve the hold, and only then its Coordinator confirms it"
+
+### TC-163-17
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-163-17 |
+| Test Scenario | [Positive, Negative, Concurrency] AC 7: Venue Staff approve a Held booking, which stays Held and shows "Approved by Venue Staff – awaiting confirmation"; approving it a second time changes nothing |
+| Pre-conditions | As TC-163-01, after the hold, with its expiry 48 hours away. Signed in as `venuestaff@test.local`. |
+| Test Steps | 1. On Bookings, choose Approve on the held request. <br> 2. Approve it again from another tab, or twice at the same moment. <br> 3. On other runs, approve a hold whose expiry has passed, or one its Coordinator confirmed or released a moment earlier. |
+| Test Data | `venuestaff@test.local` |
+| Expected Result | Step 1: the request stays `HELD` and in the queue, reads "Held until …" and "Approved by Venue Staff – awaiting confirmation", and offers Reject but no longer Approve. The booking records who approved it and when, the history has a `HOLD_APPROVED` entry, and the Coordinator is told "Venue Staff approved your hold" with the deadline (SCRUM-124 AC4, TC-124-04). Its reminder and expiry notice still stand. Step 2: "Venue Staff have already approved this hold. It is waiting for its Coordinator to confirm it."; one history entry and one notice in all. Step 3: "This hold expired at …", "This request has already been approved; the original decision stands." or "… cancelled …"; nothing is written. |
+
+**Automated by:** `tests/unit/booking-holds.test.ts` › "SCRUM-163 [AC7] TC-163-17, SCRUM-124 [AC4] TC-124-04: Venue Staff approve a live hold: it stays Held, records who and when, and tells its Coordinator", "SCRUM-163 [AC7] TC-163-17: approving locks the event before the booking, the order holding a request uses", "SCRUM-163 [AC7] TC-163-17: approving a hold a second time changes nothing" and "SCRUM-163 [AC7] TC-163-17: a hold %s at the same moment is approved once, with no second notice or history entry"; `tests/unit/booking-queue.test.tsx` › "SCRUM-163 [AC7] TC-163-17: a hold Venue Staff haven't approved offers Approve and Reject; once approved it reads 'Approved by Venue Staff – awaiting confirmation' and offers Reject only"; `tests/integration/holds.test.ts` › "SCRUM-163 [AC7] TC-163-17, SCRUM-124 [AC4, AC14] TC-124-04: Venue Staff approve a hold: it stays Held and in the queue as approved, its Coordinator is told once, and approving again changes nothing" and "SCRUM-163 [AC7] TC-163-17, SCRUM-124 [AC14] TC-124-04: one hold approved twice at the same moment is approved once, with one notice and one history entry"; `e2e/holds.spec.ts` › "SCRUM-163 [AC1, AC3, AC6, AC7] TC-163-01, TC-163-06, TC-163-11, TC-163-12, TC-163-16, TC-163-17: Venue Staff hold a request and approve the hold, and only then its Coordinator confirms it"
