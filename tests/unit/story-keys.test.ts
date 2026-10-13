@@ -189,6 +189,12 @@ describe("SCRUM-146 story keys in the code", () => {
     ).toHaveLength(1);
   });
 
+  it("SCRUM-146 [AC1]: the Notifications page cites SCRUM-48", () => {
+    expect(
+      readFileSync(join(ROOT, "app/(app)/notifications/page.tsx"), "utf8"),
+    ).toContain("SCRUM-48");
+  });
+
   it("SCRUM-146 [AC2]: My Registrations cites SCRUM-76", () => {
     expect(
       readFileSync(join(ROOT, "app/(app)/registrations/page.tsx"), "utf8"),
