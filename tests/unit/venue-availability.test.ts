@@ -34,7 +34,9 @@ const detailsOf = (entry: CalendarEntry | undefined) =>
   entry && "details" in entry ? entry.details : undefined;
 
 describe("findVenueBlockers", () => {
-  it("SCRUM-50 [AC3, AC10] TC-50-04, SCRUM-159 [AC3] TC-159-15: asks only for APPROVED bookings and holds not yet expired — a pending request blocks nobody — near enough for their setup or turnaround to reach the period", async () => {
+  // SCRUM-163 AC2 replaced "only Approved blocks" (SCRUM-50 AC10): a hold
+  // that hasn't expired blocks too.
+  it("SCRUM-50 [AC3, AC10] TC-50-04, SCRUM-159 [AC3] TC-159-15, SCRUM-163 [AC2, AC4] TC-163-04: asks only for APPROVED bookings and unexpired holds — a pending request blocks nobody — near enough for their setup or turnaround to reach the period", async () => {
     const db = stubDb([], []);
     const now = new Date("2030-05-01T00:00:00.000Z");
 
@@ -95,7 +97,40 @@ describe("findVenueBlockers", () => {
 
     expect(blockers).toEqual([
       { kind: "unavailability", ...early },
-      { kind: "booking", ...late },
+      { kind: "booking", ...late, heldUntil: null },
+    ]);
+  });
+
+  it("SCRUM-163 [AC2] TC-163-04: a held booking carries its expiry, an approved one none", async () => {
+    const expiry = new Date("2030-05-30T10:00:00.000Z");
+    const held = {
+      id: "bkg_held",
+      startAt: new Date("2030-06-01T06:00:00.000Z"),
+      endAt: new Date("2030-06-01T07:00:00.000Z"),
+      status: "HELD",
+      holdExpiresAt: expiry,
+      setupMinutes: 0,
+      turnaroundMinutes: 0,
+    };
+    const approved = {
+      id: "bkg_approved",
+      startAt: new Date("2030-06-01T07:00:00.000Z"),
+      endAt: new Date("2030-06-01T08:00:00.000Z"),
+      status: "APPROVED",
+      holdExpiresAt: null,
+      setupMinutes: 0,
+      turnaroundMinutes: 0,
+    };
+
+    const blockers = await findVenueBlockers(
+      stubDb([approved, held], []) as never,
+      "ven_1",
+      period,
+    );
+
+    expect(blockers.map((b) => [b.id, b.kind === "booking" && b.heldUntil])).toEqual([
+      ["bkg_held", expiry],
+      ["bkg_approved", null],
     ]);
   });
 
@@ -142,7 +177,7 @@ describe("findVenueBlockers", () => {
         asked("12:30", "14:00"),
       );
 
-      expect(blockers).toEqual([{ kind: "booking", ...tenToNoon }]);
+      expect(blockers).toEqual([{ kind: "booking", ...tenToNoon, heldUntil: null }]);
     });
 
     it("SCRUM-159 [AC3] TC-159-05: an approved booking blocks where its setup overlaps the asked-for occupied period", async () => {
@@ -220,6 +255,19 @@ describe("describeBlocker", () => {
     );
   });
 
+  it("SCRUM-163 [AC2] TC-163-04: names a hold by its times, without its expiry, which only the calendar shows", () => {
+    expect(
+      describeBlocker({
+        kind: "booking",
+        id: "b",
+        ...period,
+        heldUntil: new Date("2030-05-30T10:00:00.000Z"),
+      }),
+    ).toBe(
+      "held from 1 Jun 2030, 2:00 pm SGT to 1 Jun 2030, 4:00 pm SGT",
+    );
+  });
+
   it("SCRUM-159 [AC3] TC-159-14: names a booking with setup or turnaround by the whole time it occupies the venue, so the refusal explains itself", () => {
     expect(
       describeBlocker({
@@ -246,29 +294,19 @@ describe("describeBlocker", () => {
     );
   });
 
-  it("SCRUM-159 [AC3] TC-159-15: names a held booking as on hold, with its whole occupied time", () => {
+  it("SCRUM-159 [AC3] TC-159-15: names a held booking as held, with its whole occupied time", () => {
     expect(
       describeBlocker({
         kind: "booking",
         id: "b",
         ...period,
-        status: "HELD",
+        heldUntil: new Date("2030-05-30T10:00:00.000Z"),
         setupMinutes: 30,
         turnaroundMinutes: 45,
       }),
     ).toBe(
-      "on hold from 1 Jun 2030, 1:30 pm SGT to 1 Jun 2030, 4:45 pm SGT, including setup and turnaround",
+      "held from 1 Jun 2030, 1:30 pm SGT to 1 Jun 2030, 4:45 pm SGT, including setup and turnaround",
     );
-    expect(
-      describeBlocker({
-        kind: "booking",
-        id: "b",
-        ...period,
-        status: "HELD",
-        setupMinutes: 0,
-        turnaroundMinutes: 0,
-      }),
-    ).toBe("on hold from 1 Jun 2030, 2:00 pm SGT to 1 Jun 2030, 4:00 pm SGT");
   });
 
   it("SCRUM-159: a booking with no setup or turnaround reads exactly as before", () => {
@@ -456,16 +494,20 @@ describe("findVenueCalendar — SCRUM-36 hover details", () => {
     recordedBy: { name: "Vera Venue" },
   };
 
-  it("SCRUM-36 [AC2, AC4] TC-36-01, SCRUM-159 [AC7]: like the blocker lookup, asks only for APPROVED bookings near enough for their setup or turnaround to reach the period", async () => {
+  it("SCRUM-36 [AC2, AC4] TC-36-01, SCRUM-159 [AC7], SCRUM-163 [AC2] TC-163-04: like the blocker lookup, asks only for APPROVED bookings and unexpired holds near enough for their setup or turnaround to reach the period", async () => {
     const db = stubDb([], []);
+    const now = new Date("2030-05-01T00:00:00.000Z");
 
-    await findVenueCalendar(db as never, "ven_1", period);
+    await findVenueCalendar(db as never, "ven_1", period, now);
 
     expect(db.booking.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: {
           venueId: "ven_1",
-          status: "APPROVED",
+          OR: [
+            { status: "APPROVED" },
+            { status: "HELD", holdExpiresAt: { gt: now } },
+          ],
           startAt: { lt: new Date(period.endAt.getTime() + DAY_MS) },
           endAt: { gt: new Date(period.startAt.getTime() - DAY_MS) },
         },
@@ -490,6 +532,7 @@ describe("findVenueCalendar — SCRUM-36 hover details", () => {
       kind: "booking",
       startAt: booked.startAt,
       endAt: booked.endAt,
+      heldUntil: null,
       eventName: "Research Symposium",
       requestedBy: "Cody Coordinator",
       attendance: 120,

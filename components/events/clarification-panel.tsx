@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { FieldError } from "@/components/ui/field-error";
 import {
   getClarificationForEvent,
   respondToClarification,
@@ -85,15 +86,6 @@ function changesBetween(
     }
   }
   return changes;
-}
-
-function FieldError({ id, messages }: { id: string; messages?: string[] }) {
-  if (!messages?.[0]) return null;
-  return (
-    <p id={id} role="alert" className="text-xs text-destructive">
-      {messages[0]}
-    </p>
-  );
 }
 
 /**

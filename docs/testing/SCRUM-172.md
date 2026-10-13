@@ -27,7 +27,7 @@ the database keeps or refuses. Times are UTC.
 | [TC-172-13](#tc-172-13) | Boundary | AC 9 (an expired hold) | Integration |
 | [TC-172-14](#tc-172-14) | Concurrency | AC 9 | Integration |
 | [TC-172-15](#tc-172-15) | Positive | AC 10 | Integration |
-| [TC-172-16](#tc-172-16) | Positive | AC 11 | Unit, integration, e2e |
+| [TC-172-16](#tc-172-16) | Positive | AC 11 | Whole suite (CI) |
 
 ---
 
@@ -159,7 +159,7 @@ the database keeps or refuses. Times are UTC.
 | Test Data | — |
 | Expected Result | Step 1: both refused by `booking_overlaps_unavailability`. Step 2: approved; touching. Step 3: the request is saved; the approval is refused. |
 
-**Automated by:** `tests/integration/week7-rules.test.ts` › "SCRUM-172 [AC9] TC-172-10: an Approved or Held booking whose occupied period overlaps recorded unavailability is refused" and "SCRUM-172 [AC9] TC-172-10: a Pending request over unavailability is saved, and can't then be approved"; `tests/integration/unavailability.test.ts` › "SCRUM-37 AC3 — the database alone refuses approving a booking over recorded maintenance"
+**Automated by:** `tests/integration/week7-rules.test.ts` › "SCRUM-172 [AC9] TC-172-10: an Approved or Held booking whose occupied period overlaps recorded unavailability is refused" and "SCRUM-172 [AC9] TC-172-10: a Pending request over unavailability is saved, and can't then be approved"; `tests/integration/unavailability.test.ts` › "SCRUM-37 [AC2] TC-37-04: the database alone refuses approving a booking over recorded maintenance"
 
 ### TC-172-11
 
@@ -211,7 +211,7 @@ the database keeps or refuses. Times are UTC.
 | Test Data | — |
 | Expected Result | One is saved; the other is refused by `booking_no_double_booking` (or as a deadlock, which the actions retry once). One Approved booking. The SCRUM-53 and SCRUM-37 races still hold under the new rules. |
 
-**Automated by:** `tests/integration/week7-rules.test.ts` › "SCRUM-172 [AC9] TC-172-14: two approvals whose booked periods only touch but whose occupied periods overlap, at the same moment: exactly one is saved"; `tests/integration/concurrency.test.ts` › "SCRUM-37 AC4 — an approval and a maintenance record for overlapping periods at the same moment: exactly one is saved"
+**Automated by:** `tests/integration/week7-rules.test.ts` › "SCRUM-172 [AC9] TC-172-14: two approvals whose booked periods only touch but whose occupied periods overlap, at the same moment: exactly one is saved"; `tests/integration/concurrency.test.ts` › "SCRUM-37 [AC4] TC-37-06: an approval and a maintenance record for overlapping periods at the same moment: exactly one is saved"
 
 ### TC-172-15
 

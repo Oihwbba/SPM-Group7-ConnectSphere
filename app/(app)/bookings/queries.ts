@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { BOOKABLE_EVENT_STATUSES } from "@/lib/schemas/booking";
 import { findVenueBlockers, occupiedPeriod } from "@/lib/venue-availability";
+import { liveHoldWhere } from "@/lib/booking-holds";
 
 /**
  * SCRUM-50 — the events a coordinator may request a venue for: approved ones
@@ -46,17 +47,27 @@ export async function getRequestableVenues() {
  * SCRUM-52 — every pending request, soonest first, with what Venue Staff need
  * to decide without going hunting: the venue's own capacity, facilities and
  * layouts beside what was asked for, who asked, and whether the venue is
- * actually free for that period right now — with the venue's setup and
- * turnaround counted, as approving would count them (SCRUM-159 AC3).
+ * actually free for that period right now — with setup and turnaround
+ * counted (SCRUM-159 AC3): a pending request's with the venue's minutes, as
+ * approving or holding would copy them; a held one's with its own (AC8).
+ *
+ * SCRUM-163 AC7: Held bookings stay in the queue, with their expiry and note,
+ * until they are confirmed, released, rejected or expire. One whose expiry has
+ * passed leaves at that moment, even before anything marks it Expired.
  */
-export async function getPendingBookingQueue() {
+export async function getPendingBookingQueue(now = new Date()) {
   const pending = await prisma.booking.findMany({
-    where: { status: "PENDING" },
+    where: { OR: [{ status: "PENDING" }, liveHoldWhere(now)] },
     orderBy: { startAt: "asc" },
     select: {
       id: true,
+      status: true,
+      holdExpiresAt: true,
+      holdNote: true,
       startAt: true,
       endAt: true,
+      setupMinutes: true,
+      turnaroundMinutes: true,
       requestedAttendance: true,
       requiredFacilities: true,
       requestedLayout: true,
@@ -79,14 +90,18 @@ export async function getPendingBookingQueue() {
     },
   });
 
+  // A held request reserves its own period, so it isn't its own blocker.
   return Promise.all(
     pending.map(async (booking) => ({
       ...booking,
-      blockers: await findVenueBlockers(
-        prisma,
-        booking.venue.id,
-        occupiedPeriod(booking, booking.venue),
-      ),
+      blockers: (
+        await findVenueBlockers(
+          prisma,
+          booking.venue.id,
+          occupiedPeriod(booking, booking.status === "HELD" ? booking : booking.venue),
+          now,
+        )
+      ).filter((blocker) => blocker.id !== booking.id),
     })),
   );
 }

@@ -86,7 +86,8 @@ cp .env.example .env
 # 3. Apply any pending migrations to the shared database
 npm run db:deploy
 
-# 4. Load the seed data (idempotent: safe to re-run, deletes nothing)
+# 4. Load the seed data (idempotent: deletes nothing, but resets every
+#    seeded row to its seed values)
 npm run db:seed
 
 # 5. Run the app
@@ -100,14 +101,28 @@ Open <http://localhost:3000>. You'll be redirected to `/login`.
 > for the local Docker database only. On the shared database, `db:deploy` and
 > `db:seed` are all you ever need.
 
-### Offline fallback (Docker)
+### Local database (Docker)
 
-No internet? Swap both URLs in `.env` to the commented Docker ones, then:
+`.env` points at the shared database, so anything that writes test data or
+drops tables runs against a local Postgres instead: the integration tests,
+`test:coverage`, the e2e specs, `db:migrate` and `db:reset`. Point the
+terminal at Docker first, so a forgotten `.env` can't send them to Supabase:
 
 ```bash
 docker compose up -d
-npm run db:reset   # LOCAL ONLY: drop, migrate, seed
+export DATABASE_URL="postgresql://connectsphere:connectsphere@localhost:5432/connectsphere?schema=public"
+export DIRECT_URL="$DATABASE_URL"
+npm run db:reset           # LOCAL ONLY: drop, migrate, seed
+npm run test:coverage      # likewise test:integration, test:e2e, db:migrate
 ```
+
+In PowerShell, set `$env:DATABASE_URL` and `$env:DIRECT_URL` instead. The
+integration tests skip unless `DATABASE_URL` is localhost, and so do the e2e
+specs that guard with `usesLocalDatabase`. Some older e2e specs (for example
+`e2e/events.spec.ts`) write without that guard, so never run `test:e2e`
+with `.env` pointing at Supabase.
+
+Offline, the same exports let you run the app against Docker too.
 
 > **Postgres 13 or newer is required.** The schema uses the `btree_gist`
 > extension (the migration creates it) for the constraints that make venue
@@ -161,7 +176,8 @@ maintenance and one PA speaker is written off, so the available quantity is
 never simply `totalQuantity` (SCRUM-29/30).
 
 **Also seeded:** an open clarification request; a pending change request with
-three changed fields (two major, one not); venue bookings in every status; an
+three changed fields (two major, one not); venue bookings that are approved,
+pending, rejected and cancelled (none held or expired yet); an
 approved and a pending equipment request with a status history; read and
 unread notifications; and audit entries.
 
@@ -204,18 +220,24 @@ They make the acceptance criteria hold even when a server action forgets a
 check, so don't work around them.
 
 - **A venue is never double-booked.** An `EXCLUDE USING gist` constraint
-  refuses a second approved booking that overlaps an existing one, even when
-  two approvals commit at the same instant (SCRUM-53).
-- **A venue is never both booked and unavailable.** Triggers refuse approving
-  a booking over recorded maintenance or closure, and recording unavailability
-  over an approved booking (SCRUM-37, ADR 0010).
-- **An event has one venue.** An event can hold at most one pending or
-  approved booking; a rejected or cancelled one doesn't count (SCRUM-50).
+  refuses a second approved or held booking whose occupied period (its times
+  widened by setup and turnaround, SCRUM-159) overlaps an existing one, even
+  when two approvals commit at the same instant (SCRUM-53, ADR 0010).
+- **A booking never lands on recorded unavailability.** A trigger refuses a
+  held or approved booking whose occupied period overlaps recorded
+  unavailability, and refuses two overlapping unavailability periods at one
+  venue (SCRUM-37, ADR 0010). Since SCRUM-172 the database allows
+  unavailability over a booking, for SCRUM-161 to flag it; until then the
+  record action still refuses it, under the same venue lock.
+- **One live booking per venue per event.** An event can hold at most one
+  pending, held or approved booking at each venue; rejected, cancelled and
+  expired ones don't count (SCRUM-162 AC2). One venue per event (SCRUM-50 AC8)
+  is now enforced by the request action only, until SCRUM-162 lifts it.
 - **One open equipment request per event**, and no equipment type twice on a
   request (SCRUM-27).
 - **One registration per attendee per event** (SCRUM-73).
 - **A rejection carries its reason**, for events, bookings and change requests
-  (SCRUM-19/43/53), and a rejected event also carries its outcome: amend and
+  (SCRUM-19/53/128), and a rejected event also carries its outcome: amend and
   resubmit, or start a new request (SCRUM-126).
 - **Every event is in Singapore time.** `Event.timezone` must be
   `Asia/Singapore` (SCRUM-129).
@@ -247,22 +269,23 @@ transaction. **Don't remove these locks.**
 | `npm run format` / `npm run format:check` | Prettier: write / check only |
 | `npm test` | All Vitest tests, unit and integration |
 | `npm run test:unit` | Unit tests only (database mocked) |
-| `npm run test:integration` | Integration tests against a real local Postgres |
-| `npm run test:coverage` | All Vitest tests with the 100% coverage check that CI runs |
-| `npm run test:e2e` | Playwright: builds and serves the app, then runs the specs |
+| `npm run test:integration` | Integration tests against a real Postgres: **local database only** |
+| `npm run test:coverage` | All Vitest tests with the 100% coverage check that CI runs: **local database only** |
+| `npm run test:e2e` | Playwright: builds and serves the app, then runs the specs: **local database only** |
 | `npm run db:deploy` | Apply pending migrations; the only migration command for the shared database |
-| `npm run db:seed` | Re-run the idempotent seed; safe on the shared database |
-| `npm run db:migrate` | Create a new migration in development |
+| `npm run db:seed` | Re-run the idempotent seed on the shared database: deletes nothing, but resets seeded rows to their seed values |
+| `npm run db:migrate` | Create and apply a new migration: **local database only** |
 | `npm run db:reset` | Drop, migrate and seed: **local Docker only** |
 | `npm run db:generate` | Regenerate the Prisma client |
 
-> **Integration tests and coverage need a local database.** Start one with
-> `docker compose up -d`. Without it the integration tests are skipped, and
-> `test:coverage` fails on files only they cover.
+> **"Local database only"** means the terminal points at Docker first: see
+> [Local database (Docker)](#local-database-docker). Never run these bare:
+> `.env` points at the shared database. Without a local database the
+> integration tests are skipped, and `test:coverage` fails on files only they
+> cover.
 >
-> **Playwright** needs a browser the first time
-> (`npx playwright install chromium`) and a seeded database
-> (`npm run db:reset` locally).
+> **Playwright** also needs a browser the first time
+> (`npx playwright install chromium`).
 
 ### Migration rules
 
@@ -271,6 +294,18 @@ transaction. **Don't remove these locks.**
   rewritten history is how a team ends up with one nobody can rebuild.
 - **Never use `prisma db push`.** It changes the schema without a migration
   file, so your change reaches nobody else's database and production drifts.
+- **Keep migrations additive.** Merging to `main` applies a migration to the
+  shared database before the new code is live (`deploy.yml`), while the
+  previous deployment is still serving, and it stays applied if the build
+  then fails. So add tables, nullable columns or columns with a default, and
+  constraints existing rows already meet. Dropping or renaming a column the
+  running code reads, or changing its type, takes two pull requests: first
+  stop the code using it, then remove it.
+- **If a migration fails part way,** later deploys stop with Prisma's P3009
+  ("migrate found failed migrations") until it is resolved. Fix the database
+  by hand or in a new migration, then mark it with
+  `npx prisma migrate resolve --applied <name>` (or `--rolled-back <name>`)
+  against the shared database, and re-run the deploy from the Actions tab.
 - **Announce a `schema.prisma` change at standup before you make it.** Five
   people edit that one file, and it is this repo's most common merge conflict.
 - If `prisma migrate dev` reports drift mentioning the partial or GiST
@@ -305,7 +340,7 @@ app/
     equipment-requests/       SCRUM-10  Coordinator requests, Technical Support review
     equipment/                SCRUM-10  availability check and reserving approved requests
     registrations/            SCRUM-11  an attendee's registrations
-    notifications/            SCRUM-8   notification list
+    notifications/            SCRUM-8   placeholder until SCRUM-48 (notification list)
 lib/
   auth/can.ts                 Authorisation: roles and relationships, in one place (ADR 0004)
   auth/guard.ts               requireSession(), used by every page
@@ -355,7 +390,11 @@ re-sync rather than editing those files (see `docs/backlog/README.md`).
   `auth.config.ts`, so it can't be forgotten or mis-quoted.
 - After changing an environment variable, **redeploy**. A running deployment
   keeps the values it was built with.
-- Apply migrations with `npm run db:deploy`, never `db:reset`.
+- **Migrations apply themselves.** Every production deploy runs `prisma migrate
+  deploy` against the shared database before it builds (`deploy.yml`), so the
+  database is always on the schema of the code on `main`; if a migration
+  fails, nothing is deployed. To apply one by hand, use `npm run db:deploy`,
+  never `db:reset`.
 - Supabase permits `CREATE EXTENSION btree_gist`, so the double-booking
   constraint deploys unchanged.
 

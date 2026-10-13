@@ -1,0 +1,4 @@
+# The design diagrams are images exported from the design pack
+# (docs/design/README.md). Diff them as images, not text: GitHub collapses
+# them, and the GLM review skips them as it skips the docs around them.
+docs/design/diagrams/*.svg -diff linguist-generated=true

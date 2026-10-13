@@ -101,12 +101,12 @@ describe("checkProposal — SCRUM-112", () => {
   });
 
   it("refuses a memory the reviewer would not read in full", () => {
-    const tooLong = proposal(`- ${"x".repeat(9_000)}`);
+    const tooLong = proposal(`- ${"x".repeat(13_000)}`);
 
     const verdict = checkProposal({ proposal: tooLong, current, prNumber: 61 });
 
     expect(verdict.accept).toBe(false);
-    expect(verdict.reason).toContain("8000");
+    expect(verdict.reason).toContain("12000");
   });
 
   // A rewrite may prune a stale lesson, but handing back a near-empty file
@@ -215,7 +215,7 @@ describe("checkProposal — SCRUM-112", () => {
   });
 
   it("SCRUM-152: marks a proposal refused only for length, so it gets one retry", () => {
-    const tooLong = checkProposal({ proposal: proposal(`- ${"x".repeat(9_000)}`), current, prNumber: 61 });
+    const tooLong = checkProposal({ proposal: proposal(`- ${"x".repeat(13_000)}`), current, prNumber: 61 });
     const gutted = checkProposal({
       proposal: { learned: true, note: "Tidied up.", memory: `${HEADING}\n\nRules for a lesson:\n` },
       current,
@@ -241,14 +241,14 @@ describe("buildPruneRequest — SCRUM-152", () => {
 });
 
 describe("refusalLog — SCRUM-152", () => {
-  const tooLong = { accept: false, reason: "The proposed memory is 8150 characters, over the 8000 the reviewer reads." };
+  const tooLong = { accept: false, reason: "The proposed memory is 12150 characters, over the 12000 the reviewer reads." };
   const found = { learned: true, note: "Equipment lines are reviewed one by one.", memory: "" };
 
   it("SCRUM-152: a rejected lesson shows as a warning on the workflow run", () => {
     const log = refusalLog({ attempts: [found], verdict: tooLong, prNumber: 95 });
 
     expect(log).toMatch(/^::warning::A lesson was lost \(Equipment lines are reviewed one by one\.\)/);
-    expect(log).toContain("No memory change for #95: The proposed memory is 8150 characters");
+    expect(log).toContain("No memory change for #95: The proposed memory is 12150 characters");
   });
 
   // The GLM review of #109: the retry replaced the proposal, so an
@@ -286,7 +286,9 @@ describe("refusalLog — SCRUM-152", () => {
 // reviewer read it cut off mid-lesson, with nothing to say so.
 describe("the memory on this branch — SCRUM-152", () => {
   it("SCRUM-152: CI fails when memory.md is longer than the reviewer reads", () => {
-    const length = readFileSync(MEMORY_PATH, "utf8").length;
+    // The reviewer reads the file through git (readFromBase), which stores LF;
+    // a Windows checkout adds a CR to every line that the reviewer never sees.
+    const length = readFileSync(MEMORY_PATH, "utf8").replace(/\r\n/g, "\n").length;
 
     expect(length, `${MEMORY_PATH} is ${length} characters`).toBeLessThanOrEqual(MAX_MEMORY_CHARS);
   });

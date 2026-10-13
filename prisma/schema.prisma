@@ -17,7 +17,8 @@
 //   - Index the foreign keys we actually filter on.
 //   - Rules that protect data integrity live in the DATABASE, not only in
 //     application code. Constraints Prisma cannot express are hand-written in
-//     prisma/migrations/*_domain_constraints/migration.sql.
+//     the migration that needs them, after Prisma's generated statements
+//     (the first set is in 20260909120000_full_domain_model).
 
 generator client {
   provider   = "prisma-client-js"
@@ -660,6 +661,11 @@ model EquipmentRequestLine {
 
   suggestedAlternativeId String?
 
+  /// SCRUM-142 AC1 — set when the Coordinator removes the line. The row is
+  /// kept (no hard deletes) and every reader skips it; adding the type again
+  /// brings the same row back, so the unique index below still holds.
+  removedAt DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -783,15 +789,23 @@ model Registration {
 // Event change & notifications (epic SCRUM-8)
 // ---------------------------------------------------------------------------
 
-/// SCRUM-41 (submit), SCRUM-42 (review, showing old vs new),
-/// SCRUM-43 (approve/reject, reason required on rejection), SCRUM-47 (notify).
+/// SCRUM-41 (raise and track), SCRUM-128 (decide and apply).
+/// At most one PENDING_REVIEW ("Submitted") row per event: the partial unique
+/// index event_change_request_one_submitted, in the change_request_raise
+/// migration (SCRUM-41 AC7).
 model EventChangeRequest {
   id      String @id @default(cuid())
   eventId String
 
+  /// The Organiser, or the assigned Coordinator raising it on their behalf
+  /// (SCRUM-41 AC9).
   requestedById String
   status        ChangeRequestStatus @default(PENDING_REVIEW)
   reason        String?
+  /// SCRUM-41 AC1 — asks for the event to be cancelled instead of changing
+  /// fields; then it has no fields, and the CHECK
+  /// event_change_request_cancellation_has_reason requires the reason.
+  requestsCancellation Boolean @default(false)
 
   decidedById    String?
   decidedAt      DateTime?
