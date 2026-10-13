@@ -15,6 +15,7 @@ import {
   numberLines,
   parseLcov,
   renderCiResults,
+  excerptFile,
   renderContextFiles,
   renderProjectRuleScan,
   resolveImports,
@@ -448,11 +449,11 @@ describe("buildSystemPrompt", () => {
     expect(prompt.endsWith("- (2026-09-15, #27) a lesson")).toBe(true);
   });
 
-  it("cuts the memory at 8,000 characters and says so", () => {
-    const prompt = buildSystemPrompt({ ...base, memory: "x".repeat(9_000) });
+  it("cuts the memory at 12,000 characters and says so", () => {
+    const prompt = buildSystemPrompt({ ...base, memory: "x".repeat(13_000) });
 
-    expect(prompt).toContain("[truncated at 8,000 characters]");
-    expect(prompt).not.toContain("x".repeat(8_001));
+    expect(prompt).toContain("[truncated at 12,000 characters]");
+    expect(prompt).not.toContain("x".repeat(12_001));
   });
 
   it("leaves the memory section out when the base branch has no memory file", () => {
@@ -831,6 +832,216 @@ describe("context beyond the diff", () => {
       storyKeys: [],
     });
     expect(withoutE2e.included.map((f) => f.path)).not.toContain("prisma/seed.ts");
+  });
+
+  // SCRUM-178 — #153 to #156 each lost prisma/schema.prisma and the seed, and
+  // #154 lost 30 files, because unchanged tests that merely import a changed
+  // file were sent first and a related file that didn't fit was dropped whole.
+  it("SCRUM-178 [AC1]: sends the seed and story-relevant source before tests that merely import a changed file", () => {
+    const files = [
+      file("lib/changed.ts", "export const x = 1;"),
+      file("tests/unit/aaa.test.ts", 'import { x } from "@/lib/changed";\n' + "t".repeat(500)),
+      file("prisma/schema.prisma", "// SCRUM-48 notifications\n" + "s".repeat(300)),
+      file("prisma/seed.ts", "const users = [];"),
+      file("e2e/x.spec.ts", 'test("x", async () => {});'),
+    ];
+
+    const { included } = selectContextFiles({
+      files,
+      changed: ["lib/changed.ts", "e2e/x.spec.ts"],
+      storyKeys: ["SCRUM-48"],
+      maxRelated: 400,
+    });
+
+    expect(included.map((f) => [f.path, f.reason])).toEqual([
+      ["lib/changed.ts", "changed in this PR"],
+      ["e2e/x.spec.ts", "changed in this PR"],
+      ["prisma/seed.ts", "seeded data the e2e tests assert against"],
+      ["prisma/schema.prisma", "mentions SCRUM-48"],
+      ["tests/unit/aaa.test.ts", "imports a changed file, excerpt"],
+    ]);
+  });
+
+  it("SCRUM-178 [AC2]: sends a story file that doesn't fit whole as the lines around its mentions, numbered as in the file", () => {
+    const lines = Array.from({ length: 200 }, (_, i) => `line ${i + 1}`);
+    lines[99] = "/// SCRUM-48 AC8 — not shown before this time.";
+    const files = [
+      file("lib/changed.ts", "export const x = 1;"),
+      file("prisma/schema.prisma", lines.join("\n")),
+    ];
+
+    const { included, omitted } = selectContextFiles({
+      files,
+      changed: ["lib/changed.ts"],
+      storyKeys: ["SCRUM-48"],
+      maxRelated: 1_000,
+    });
+
+    expect(omitted).toEqual([]);
+    const schema = included.find((f) => f.path === "prisma/schema.prisma")!;
+    expect(schema.reason).toBe("mentions SCRUM-48, excerpt");
+    const shown = schema.content.split("\n");
+    expect(shown[0]).toBe("…");
+    expect(shown[1]).toBe("88\tline 88");
+    expect(shown).toContain("100\t/// SCRUM-48 AC8 — not shown before this time.");
+    expect(shown.at(-2)).toBe("112\tline 112");
+    expect(shown.at(-1)).toBe("…");
+    // Already numbered: the rendering doesn't number it again.
+    expect(renderContextFiles({ included, omitted })).toContain(
+      "### prisma/schema.prisma (mentions SCRUM-48, excerpt)\n\n…\n88\tline 88",
+    );
+  });
+
+  it("SCRUM-178 [AC2]: outlines a test file that doesn't fit whole: its imports and what each test is called", () => {
+    const content = [
+      'import { describe, it } from "vitest";',
+      'import { x } from "@/lib/changed";',
+      "",
+      'describe("thing", () => {',
+      "  const setup = 1;",
+      '  it("does one thing", () => {',
+      "    expect(x).toBe(1);",
+      "  });",
+      '  it.each([1, 2])("does %s", () => {});',
+      "});",
+    ].join("\n");
+
+    expect(excerptFile("tests/unit/thing.test.ts", content, [])).toBe(
+      [
+        '1\timport { describe, it } from "vitest";',
+        '2\timport { x } from "@/lib/changed";',
+        "…",
+        '4\tdescribe("thing", () => {',
+        "…",
+        '6\t  it("does one thing", () => {',
+        "…",
+        '9\t  it.each([1, 2])("does %s", () => {});',
+        "…",
+      ].join("\n"),
+    );
+  });
+
+  it("SCRUM-178 [AC2, AC4]: outlines a source file that names none of the PR's stories by its imports and exports, and has nothing to excerpt from one with neither", () => {
+    const content = ['import { prisma } from "@/lib/db";', "", "const internal = 1;", "export function visible() {", "  return internal;", "}"].join(
+      "\n",
+    );
+
+    expect(excerptFile("lib/thing.ts", content, ["SCRUM-48"])).toBe(
+      ['1\timport { prisma } from "@/lib/db";', "…", "4\texport function visible() {", "…"].join("\n"),
+    );
+    expect(excerptFile("lib/thing.ts", "const x = 1;", ["SCRUM-48"])).toBeNull();
+  });
+
+  // The reserve: a related file is sent whole only if what's left still holds
+  // the excerpts of the files behind it. Without it, the source file below is
+  // sent whole and the test behind it is dropped.
+  it("SCRUM-178 [AC3]: sends a related file as its excerpt when sending it whole would leave a later file no room for its own", () => {
+    const source = file("lib/a.ts", ['import { x } from "./changed";', ...Array(80).fill("// body"), "export const a = x;"].join("\n"));
+    const test = file(
+      "tests/unit/b.test.ts",
+      ['import { x } from "@/lib/changed";', ...Array(200).fill("// body"), 'it("b", () => {});'].join("\n"),
+    );
+    const sourceExcerpt = excerptFile(source.path, source.content, [])!;
+    const testExcerpt = excerptFile(test.path, test.content, [])!;
+    const files = [file("lib/changed.ts", "export const x = 1;"), source, test];
+
+    const { included, omitted } = selectContextFiles({
+      files,
+      changed: ["lib/changed.ts"],
+      storyKeys: [],
+      // Room for the source whole, or for both excerpts, but not the source
+      // whole and the test's excerpt.
+      maxRelated: source.content.length + testExcerpt.length - 1,
+    });
+
+    expect(omitted).toEqual([]);
+    expect(included.slice(1).map((f) => [f.path, f.reason, f.content])).toEqual([
+      ["lib/a.ts", "imports a changed file, excerpt", sourceExcerpt],
+      ["tests/unit/b.test.ts", "imports a changed file, excerpt", testExcerpt],
+    ]);
+  });
+
+  // The yield: a reserve that can't be met anyway is no reason to cut an
+  // earlier file down. The files are in priority order, so it goes first.
+  it("SCRUM-178 [AC3]: sends an earlier related file whole when the file behind it can't fit even its excerpt", () => {
+    const source = file("lib/a.ts", ['import { x } from "./changed";', "const local = x;", "export const a = local;"].join("\n"));
+    const test = file(
+      "tests/unit/b.test.ts",
+      ['import { x } from "@/lib/changed";', ...Array.from({ length: 40 }, (_, i) => `it("case ${i}", () => {});`)].join("\n"),
+    );
+    const files = [file("lib/changed.ts", "export const x = 1;"), source, test];
+    expect(excerptFile(test.path, test.content, [])!.length).toBeGreaterThan(source.content.length + 50);
+
+    const { included, omitted } = selectContextFiles({
+      files,
+      changed: ["lib/changed.ts"],
+      storyKeys: [],
+      maxRelated: source.content.length + 50,
+    });
+
+    expect(included.slice(1)).toEqual([{ path: "lib/a.ts", reason: "imports a changed file", content: source.content }]);
+    expect(omitted.map((f) => f.path)).toEqual(["tests/unit/b.test.ts"]);
+  });
+
+  it("SCRUM-178 [AC4]: sends the head of a related file with nothing to excerpt, capped so the files behind it still fit", () => {
+    const files = [
+      file("e2e/x.spec.ts", 'test("x", async () => {});'),
+      file("prisma/seed.ts", "u".repeat(50_000)),
+      file("tests/unit/later.test.ts", 'import { a } from "../../e2e/x.spec";\nit("later", () => {});'),
+    ];
+
+    const { included, omitted } = selectContextFiles({
+      files,
+      changed: ["e2e/x.spec.ts"],
+      storyKeys: [],
+      maxRelated: 30_000,
+    });
+
+    expect(omitted).toEqual([]);
+    const seed = included.find((f) => f.path === "prisma/seed.ts")!;
+    expect(seed.reason).toBe("seeded data the e2e tests assert against, shortened to fit");
+    expect(seed.content.length).toBeLessThanOrEqual(12_000);
+  });
+
+  it("SCRUM-178 [AC6]: a related set the size of #154's, far over the budget, leaves no file out", () => {
+    const pad = "pad".repeat(10);
+    const uses = 'import { x } from "@/lib/notifications";';
+    const lines = (n: number, line: (i: number) => string) =>
+      Array.from({ length: n }, (_, i) => line(i)).join("\n");
+    const files = [
+      file("lib/notifications.ts", "export const x = 1;"),
+      file("e2e/notifications.spec.ts", 'test("list", async () => {});'),
+      file(
+        "prisma/schema.prisma",
+        lines(1500, (i) =>
+          i === 700 ? "/// SCRUM-48 the notification list" : i % 50 === 0 ? `model M${i} {` : i % 50 === 49 ? "}" : `  f${i} String // ${pad}`,
+        ),
+      ),
+      file("prisma/seed.ts", 'import { PrismaClient } from "@prisma/client";\n' + lines(1400, (i) => `const row${i} = { id: "r${i}" }; // ${pad}`)),
+      ...Array.from({ length: 12 }, (_, n) =>
+        file(`app/(app)/p${n}/page.tsx`, `${uses}\nexport default function Page${n}() {\n${lines(400, (i) => `  const v${i} = x + ${i}; // ${pad}`)}\n}`),
+      ),
+      ...Array.from({ length: 30 }, (_, n) =>
+        file(
+          `tests/unit/t${n}.test.ts`,
+          `${uses}\ndescribe("t${n}", () => {\n${lines(300, (i) => (i % 10 === 0 ? `  it("case ${i}", () => {` : `    expect(x).toBe(${i}); // ${pad}`))}\n});`,
+        ),
+      ),
+    ];
+    const relatedChars = files.slice(2).reduce((sum, f) => sum + f.content.length, 0);
+    expect(relatedChars).toBeGreaterThan(2 * 300_000);
+
+    const { included, omitted } = selectContextFiles({
+      files,
+      changed: ["lib/notifications.ts", "e2e/notifications.spec.ts"],
+      storyKeys: ["SCRUM-48"],
+    });
+
+    expect(omitted).toEqual([]);
+    const related = included.filter((f) => f.reason !== "changed in this PR");
+    expect(related).toHaveLength(files.length - 2);
+    expect(related.some((f) => f.reason.endsWith(", excerpt"))).toBe(true);
+    expect(related.reduce((sum, f) => sum + f.content.length, 0)).toBeLessThanOrEqual(300_000);
   });
 
   it("scans the branch for role checks outside can(), hard deletes and inline dates", () => {

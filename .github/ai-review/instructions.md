@@ -38,10 +38,13 @@ real problem explained clearly, with where it is and how to fix it.
 - **Project rule scan:** every line on the branch a text search finds breaking
   a project rule (role checks outside `lib/auth/can.ts`, hard deletes, inline
   date formatting), including files this PR doesn't touch.
-- **Files in full:** each changed file in full, the files they import, the
-  files that import a changed file, and files that name this PR's stories, all
-  line-numbered. Use them to understand the change and its effects, and don't
-  report something as missing when it's in unchanged code.
+- **Files:** each changed file in full (or its head, if marked "shortened to
+  fit"), the files they import, the files that import a changed file, and
+  files that name this PR's stories, all line-numbered. Use them to understand
+  the change and its effects, and don't report something as missing when it's
+  in unchanged code. A related file marked "excerpt" shows only some of its
+  lines, each with its own number, and "…" marks lines left out: never report
+  something as missing from an excerpt or a shortened file.
 - **The diff:** the code changes, with Markdown files, lockfiles and backlog
   snapshots left out.
 
