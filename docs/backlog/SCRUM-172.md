@@ -10,7 +10,7 @@
 | **Epic** | - |
 | **Priority** | Highest |
 | **Story points** | 3 |
-| **Status in Jira** | In Progress |
+| **Status in Jira** | In Review |
 | **Sprint** | SCRUM Sprint 3 |
 | **Jira** | https://smu-spm-group7.atlassian.net/browse/SCRUM-172 |
 
