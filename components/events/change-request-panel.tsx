@@ -16,6 +16,7 @@ import {
   type ChangeRequestView,
 } from "@/app/(app)/events/change-request-actions";
 import { getFormCatalogues } from "@/app/(app)/events/actions";
+import { ChangeRequestDecision } from "@/components/events/change-request-decision";
 import {
   CHANGEABLE_FIELDS,
   CHANGE_KEYS,
@@ -118,7 +119,13 @@ function FieldControl({
   return <Textarea {...props} onChange={(e) => onChange(e.target.value)} />;
 }
 
-function ChangeRequestItem({ request }: { request: ChangeRequestView }) {
+function ChangeRequestItem({
+  request,
+  children,
+}: {
+  request: ChangeRequestView;
+  children?: React.ReactNode;
+}) {
   const fields = [...request.fields].sort(
     (a, b) => FIELD_ORDER.indexOf(a.fieldName) - FIELD_ORDER.indexOf(b.fieldName),
   );
@@ -177,6 +184,7 @@ function ChangeRequestItem({ request }: { request: ChangeRequestView }) {
           {request.decisionReason}
         </p>
       )}
+      {children}
     </li>
   );
 }
@@ -312,7 +320,12 @@ export function ChangeRequestPanel({ event }: { event: Event }) {
         ) : (
           <ul className="space-y-2">
             {requests.map((request) => (
-              <ChangeRequestItem key={request.id} request={request} />
+              <ChangeRequestItem key={request.id} request={request}>
+                {/* SCRUM-128: the assigned Coordinator decides it here. */}
+                {request.status === "PENDING_REVIEW" && (
+                  <ChangeRequestDecision eventId={event.id} onDecided={reload} />
+                )}
+              </ChangeRequestItem>
             ))}
           </ul>
         )}
