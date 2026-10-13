@@ -51,12 +51,6 @@ describe("concurrency", () => {
 // and never against the shared Supabase database that `.env` points at.
 vi.mock("@/auth", () => ({ auth: vi.fn() }));
 
-      }
-      return blockers;
-    },
-  };
-});
-
 const usesLocalDatabase = /@(localhost|127\.0\.0\.1)[:/]/.test(
   process.env.DATABASE_URL ?? "",
 );
