@@ -5,7 +5,7 @@ import { AvailabilityCalendar } from "@/app/(app)/venues/availability/availabili
 import { availabilityByDay } from "@/lib/venue-availability";
 import { formatDateTime } from "@/lib/datetime";
 
-// SCRUM-36 â€” what the week grid says about a day. Rendering only.
+// SCRUM-36 — what the week grid says about a day. Rendering only.
 const sg = (day: string, hhmm: string) => new Date(`${day}T${hhmm}:00+08:00`);
 
 /** The part of the week grid's markup for one day's column. */
@@ -26,7 +26,7 @@ function render(days: ReturnType<typeof availabilityByDay>) {
   );
 }
 
-describe("AvailabilityCalendar â€” SCRUM-36", () => {
+describe("AvailabilityCalendar — SCRUM-36", () => {
   it("SCRUM-36 [AC6] TC-36-04: a day with nothing on it says Available all day at the top of its column", () => {
     const html = render(availabilityByDay([], "2035-03-12", "2035-03-18"));
 
