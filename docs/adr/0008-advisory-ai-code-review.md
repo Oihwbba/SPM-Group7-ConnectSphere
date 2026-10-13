@@ -4,7 +4,8 @@
 > is now a **required check that blocks merging on a critical finding**
 > (addendum "a required merge gate on critical findings"), reads the project's
 > stories and conventions, and keeps its own memory. `CONTRIBUTING.md`
-> describes how it works today.
+> describes how it works today. Why the team runs its own GLM reviewer instead
+> of Copilot code review is in the 2026-10-13 addendum.
 
 ## Context
 
@@ -586,3 +587,114 @@ a new lesson fitted only if an older one was cut. `MAX_MEMORY_CHARS` is now
 4,000 characters are about 1,000 tokens, against reviews that already use
 95,000 to 168,000; the other budgets are unchanged. The decisions above that
 say 8,000 describe the limit as it was then.
+
+## Addendum (2026-10-13, SCRUM-181) — why GLM and not Copilot; a week's reviews audited
+
+### Why the team runs its own GLM reviewer instead of Copilot code review
+
+The 2026-09-14 addendum replaced the Copilot review but recorded the reason
+only in passing. The reason is the decision: **Copilot code review spends
+Copilot credits, which are limited, and the team doesn't have them.** In
+September, Copilot reviews arrived through one person's GitHub setting and
+failed on quota. A required check can't rest on a quota that runs out
+mid-sprint. So the team runs its own reviewer on GLM, through one key the
+repository owner holds
+(`ZHIPU_API_KEY`), and every teammate's pull request uses it.
+
+The consequence is that the reviewer is the team's to maintain, and to
+measure: no vendor checks its accuracy. This addendum is the first such check.
+
+### What a week of reviews showed
+
+Every GLM review from 6 to 13 October was read: 101 runs on 24 pull requests,
+each finding checked against the code at its commit, the author's reply, or
+what the next push changed. A review comment is rewritten on each push, so the
+earlier versions were read from the comment's edit history.
+
+- **No critical finding**, so the gate never blocked a merge on a finding. The
+  only failed review was #167's 2.68-million-character diff, refused as too
+  large, as designed.
+- **96 findings** (4 high, 29 medium, 63 low), about 56 distinct problems once
+  repeats across pushes are merged. The authors' replies and later pushes
+  confirm nearly all of them. A sample that was checked directly: the held
+  booking AC3 omitted on #171, its "on hold"/"held" mismatch (CI failed on
+  that commit) and the mojibake; #156's withdrawal of a held booking without
+  re-reading the event under its lock, fixed in `e5174ef` after three reviews
+  said so; #169's regex that missed `SCRUM-41/42/43`.
+- **Two false positives**, both from missing input, not from reasoning. On
+  #148 it reported `Notification_eventId_idx` as never created: an older
+  migration creates it, and migrations were never sent to the review. On #154
+  it judged a message against a SCRUM-163 AC2 that Jira had reworded the day
+  before the story file caught up; the PO waived it.
+- **One true finding dropped.** On #162 a re-run of the same commit, with no
+  reply in between, silently lost a low finding (a thrown error leaves the
+  change-request form on "Submitting…"); it is still in `main`.
+- **Blind spots:**
+  - **Its own earlier findings.** A re-run was shown the previous review cut
+    at 4,000 characters, but the acceptance table comes before the findings,
+    so in 46 of the 65 reviews with findings the next run never saw them. It
+    was told to keep findings that were still true without being shown them,
+    which is where the flip-flopping between pushes came from.
+  - **CI's results.** The review waited 15 minutes for CI, which took 10.6
+    minutes at the median but 18.5 at the 90th percentile; 12 of 101 runs
+    judged test coverage without CI's results.
+  - **Test-case documents.** Markdown is left out of the diff, so the
+    "Automated by" citations in `docs/testing` were never checked. #171's
+    final "no issues" review left `docs/testing/SCRUM-159.md` citing two test
+    titles that its own commits had reworded.
+  - **A pull request's own `.gitattributes`.** The diff was read with the
+    pull request's attributes, so marking a file `-diff` turned it into
+    "Binary files differ" for the review. #167 did this, legitimately, for
+    generated diagrams; the same line could hide code.
+
+### Decision
+
+- **The previous review is sent findings first,** with its own 8,000
+  characters (findings sections ran to 5,853), and without the acceptance
+  table, which is worked out afresh on every run. When it was of the same
+  commit, the prompt says the code hasn't changed, so a finding stands unless
+  a comment gives a reason the diff or the project documents confirm.
+- **The review waits up to 25 minutes for CI**, and the job's timeout rises
+  from 50 to 60 minutes so GLM's 27 minutes are untouched.
+- **Each story's test-case document is sent** as an outline: every case's
+  heading, scenario and "Automated by" line, from the pull request's head,
+  since it is the pull request's own work. The instructions say which
+  citation shorthands are deliberate (`…`, a bare `TC-n-xx`, `%s` and `${…}`),
+  and a cited title no test has is a finding. A finding on one links to the
+  line. A deterministic check in CI was considered and not built: 14 of the
+  538 citations on `main` don't match a title exactly, nearly all through one
+  of those shorthands, and a text match would report them all.
+- **A pull request that changes the schema or a migration gets every
+  migration's `CREATE`, `ALTER` and `DROP` line** (about 40,000 characters
+  today), so an index an older migration made is not reported missing.
+- **The diff is read with the base branch's `.gitattributes`**
+  (`git --attr-source=<base>`), like the reviewer, its rules and the stories,
+  and `.gitattributes` joins the files CODEOWNERS guards.
+- **The memory was rewritten by hand.** Its own rules still said the reviewer
+  reads 8,000 characters (SCRUM-180 made it 12,000), and the memory bot is told
+  to keep those rules unchanged, so only a hand edit could fix them. Every
+  lesson was checked against the code: the deploy history it carried was cut
+  to the facts a review needs, the coverage lesson now says components are
+  tested with `renderToStaticMarkup`, and the gaps the week left open (#155,
+  #162) were added. It went from 11,090 to about 9,400 characters.
+- **The memory bot's stale text is corrected:** its pull request no longer
+  says Vercel refuses a squash merge's author (ADR 0009 removed that, as the
+  2026-10-11 addendum noted), and its comments no longer name one approver.
+
+### Trade-offs
+
+- A review that waits the full 25 minutes for CI, then uses all of GLM's 27,
+  takes nearly an hour. That is the worst case; the median review took 12
+  minutes in total.
+- A pull request that adds a `-diff` rule is now reviewed as if it hadn't:
+  #167's diagrams would again be too large for one review, and need the rule
+  merged first, or an admin merge after a human review. That is the trust
+  boundary working: a pull request can't change what its own review sees.
+- More of the prompt is spent on context: up to 8,000 more characters for the
+  previous review, about 6,000 per test-case document, and 40,000 for the
+  migrations when the schema changes, against reviews of 95,000 to 230,000
+  tokens.
+- The model is still not deterministic. Re-runs of the same commit can still
+  word or rank findings differently; what changed is that the previous
+  findings are now in front of it, and it is told not to drop one without a
+  reason.
