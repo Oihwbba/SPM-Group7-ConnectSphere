@@ -6,8 +6,8 @@ import { describe, it, expect } from "vitest";
 // SCRUM-146 — every story key the code cites must still mean something. A key
 // with no file in docs/backlog was deleted from Jira; a file titled
 // "[MERGED INTO …]", "[SUPERSEDED BY …]" and so on is retired, and may only be
-// cited on a line that says so. This keeps stale keys from coming back once
-// they are cleaned up (AC5, AC6).
+// cited where the citation says so, as in "SCRUM-33 merged in". This keeps
+// stale keys from coming back once they are cleaned up (AC5, AC6).
 
 const ROOT = process.cwd();
 const BACKLOG = join(ROOT, "docs", "backlog");
@@ -20,8 +20,13 @@ const SCANNED_FILES = [
   "proxy.ts",
 ];
 const CODE = /\.(?:[cm]?[jt]sx?|prisma)$/;
+/**
+ * What excuses a retired key: words about the key itself, straight after it,
+ * as in "SCRUM-33 merged in" or "SCRUM-33 (superseded by SCRUM-27)". A word
+ * elsewhere on the line, such as "duplicate rows are refused", doesn't.
+ */
 const SAYS_SO =
-  /merged|superseded|replaced|duplicate|covered by|not needed|dropped/i;
+  /^[\s,(]*(?:is |was |has been )?(?:merged in|superseded by|replaced by|duplicate of|covered by|not needed|dropped)/i;
 
 /**
  * Lines that may cite a stale key, each with why, matched on their trimmed
@@ -41,10 +46,16 @@ const ALLOWED: Record<string, { lines: string[]; why: string }> = {
   },
 };
 
-/** "SCRUM-41/42/43" cites SCRUM-41, SCRUM-42 and SCRUM-43. */
-function citedKeys(line: string): string[] {
+/**
+ * "SCRUM-41/42/43" cites SCRUM-41, SCRUM-42 and SCRUM-43, each with the text
+ * that follows the citation.
+ */
+function citedKeys(line: string): { key: string; after: string }[] {
   return [...line.matchAll(/\bSCRUM-(\d+(?:\/\d+)*)\b/g)].flatMap((match) =>
-    match[1].split("/").map((n) => `SCRUM-${n}`),
+    match[1].split("/").map((n) => ({
+      key: `SCRUM-${n}`,
+      after: line.slice(match.index + match[0].length),
+    })),
   );
 }
 
@@ -86,15 +97,15 @@ function staleReferences(
   const found: string[] = [];
   text.split(/\r?\n/).forEach((line, i) => {
     if (allowed.has(line.trim())) return;
-    for (const key of citedKeys(line)) {
+    for (const { key, after } of citedKeys(line)) {
       const status = keys.get(key);
       if (!status)
         found.push(
           `${file}:${i + 1}: ${key} isn't in docs/backlog (deleted from Jira, or the sync is overdue)`,
         );
-      else if (status.kind === "retired" && !SAYS_SO.test(line))
+      else if (status.kind === "retired" && !SAYS_SO.test(after))
         found.push(
-          `${file}:${i + 1}: ${key} is ${status.tag}; cite the story that replaced it, or say it was merged`,
+          `${file}:${i + 1}: ${key} is ${status.tag}; cite the story that replaced it, or say so right after the key ("${key} merged in")`,
         );
     }
   });
@@ -164,6 +175,19 @@ describe("SCRUM-146 story keys in the code", () => {
     expect(
       staleReferences("// SCRUM-27 (SCRUM-33 merged in)", "x.ts", planted),
     ).toEqual([]);
+    expect(
+      staleReferences("// SCRUM-33 (superseded by SCRUM-27)", "x.ts", planted),
+    ).toEqual([]);
+    expect(
+      staleReferences(
+        "// SCRUM-33: duplicate rows are refused",
+        "x.ts",
+        planted,
+      ),
+    ).toHaveLength(1);
+    expect(
+      staleReferences("// SCRUM-33 lists; SCRUM-27 merged in", "x.ts", planted),
+    ).toHaveLength(1);
   });
 
   it("SCRUM-146 [AC5]: the check reads every key of a slash list, and an exception covers only its own line", () => {
