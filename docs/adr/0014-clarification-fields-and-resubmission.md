@@ -55,7 +55,7 @@ stayed in every Coordinator's list).
    rejection as on approval (SCRUM-81 AC 2), so the rejected request leaves
    other Coordinators' lists and comes back to them on resubmission.
 
-## Alternatives considered
+## Alternatives rejected
 
 - **A separate table of editable fields per clarification.** One short list
   per request doesn't need its own table.

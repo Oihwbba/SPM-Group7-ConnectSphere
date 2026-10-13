@@ -114,7 +114,7 @@ If the alternative should count, that is a small change to decision 3.
   a later story links them, the rule should match reservations to lines
   directly.
 
-## Amendment, 3 Oct 2026
+## Addendum (2026-10-03)
 
 SCRUM-110 AC 4 was simplified with the PO: the Equipment item no longer lists
 one line per requested item ("Projector 3/5 reserved"). It shows only Reserved,
@@ -123,7 +123,7 @@ the request rather than reserving part of it, so the per-item count added
 little. The completeness rule is unchanged: a partial reservation still leaves
 Equipment incomplete (AC 3), because nothing yet stops one being made.
 
-## Amendment, 4 Oct 2026
+## Addendum (2026-10-04)
 
 The PO changed SCRUM-110 AC 4 again after testing: with only "Not fully
 reserved", a Coordinator could not tell what was missing (a laptop had been
@@ -132,7 +132,15 @@ items not reserved in full, without counts, e.g. "Not fully reserved:
 Projector, Laptop", in the order they were requested. Counts stay out, as on
 3 Oct; the completeness rule is unchanged.
 
-## Amendment, 12 Oct 2026
+## Addendum (2026-10-11) — Corrections from the docs audit (SCRUM-173)
+
+Context says the reconsideration-flag criteria belong with "the
+impactful-change stories, SCRUM-43/44". Neither is in the backlog any more:
+SCRUM-43 was merged into SCRUM-41 and SCRUM-128, and SCRUM-26 and SCRUM-128
+carry SCRUM-44's work (ADR 0003). The flags belong to SCRUM-26 now. The
+checklist itself is unchanged.
+
+## Addendum (2026-10-12) — a request awaiting re-check blocks Confirm (SCRUM-142 AC10)
 
 SCRUM-142 lets the Coordinator change an equipment request's lines before
 the event is confirmed. Removing a line sends the request back to Pending

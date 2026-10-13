@@ -60,15 +60,15 @@ describe("migrate-production — SCRUM-179", () => {
   it("SCRUM-179 [AC2]: passes on only the two database URLs", () => {
     expect(
       databaseEnv({
-        DATABASE_URL: "db",
-        DIRECT_URL: "direct",
+        DATABASE_URL: "postgresql://db",
+        DIRECT_URL: "postgresql://direct",
         AUTH_SECRET: "s",
       }),
-    ).toEqual({ env: { DATABASE_URL: "db", DIRECT_URL: "direct" } });
+    ).toEqual({ env: { DATABASE_URL: "postgresql://db", DIRECT_URL: "postgresql://direct" } });
   });
 
   it("SCRUM-179 [AC3]: names the database URL that's missing, so the deploy stops instead of building against an old schema", () => {
-    expect(databaseEnv({ DATABASE_URL: "db" })).toEqual({
+    expect(databaseEnv({ DATABASE_URL: "postgresql://db" })).toEqual({
       missing: ["DIRECT_URL"],
     });
     expect(databaseEnv({ DATABASE_URL: "", DIRECT_URL: "" })).toEqual({
@@ -80,7 +80,7 @@ describe("migrate-production — SCRUM-179", () => {
     const readFile = vi
       .fn()
       .mockReturnValue(
-        ['DATABASE_URL="db"', 'DIRECT_URL="direct"', 'AUTH_SECRET="s"'].join(
+        ['DATABASE_URL="postgresql://db"', 'DIRECT_URL="postgresql://direct"', 'AUTH_SECRET="s"'].join(
           "\n",
         ),
       );
@@ -98,8 +98,8 @@ describe("migrate-production — SCRUM-179", () => {
 
     // Both URLs are masked in the job's log before Prisma can print either.
     expect(log.mock.calls).toEqual([
-      ["::add-mask::db"],
-      ["::add-mask::direct"],
+      ["::add-mask::postgresql://db"],
+      ["::add-mask::postgresql://direct"],
     ]);
     expect(log.mock.invocationCallOrder[1]).toBeLessThan(
       exec.mock.invocationCallOrder[0],
@@ -109,7 +109,7 @@ describe("migrate-production — SCRUM-179", () => {
       "npx",
       ["prisma", "migrate", "deploy"],
       expect.objectContaining({
-        env: { PATH: "/bin", DATABASE_URL: "db", DIRECT_URL: "direct" },
+        env: { PATH: "/bin", DATABASE_URL: "postgresql://db", DIRECT_URL: "postgresql://direct" },
       }),
     );
   });
@@ -120,7 +120,7 @@ describe("migrate-production — SCRUM-179", () => {
 
     expect(
       run({
-        readFile: () => 'DATABASE_URL="db"',
+        readFile: () => 'DATABASE_URL="postgresql://db"',
         exec,
         log,
         baseEnv: {},
@@ -135,6 +135,55 @@ describe("migrate-production — SCRUM-179", () => {
     );
   });
 
+  it("SCRUM-179 [AC3]: names a database URL marked Sensitive in Vercel, says how to fix it, and runs no migration", () => {
+    const exec = vi.fn();
+    const log = vi.fn();
+
+    // What vercel pull writes for a Sensitive variable (the 13 Oct deploys).
+    expect(
+      run({
+        readFile: () =>
+          'DATABASE_URL="[SENSITIVE]"\nDIRECT_URL="[SENSITIVE]"\nAUTH_SECRET="[SENSITIVE]"',
+        exec,
+        log,
+        baseEnv: {},
+      }),
+    ).toBe(1);
+    expect(exec).not.toHaveBeenCalled();
+    expect(log).toHaveBeenCalledWith(
+      expect.stringMatching(
+        /^::error::DATABASE_URL and DIRECT_URL are marked Sensitive in Vercel, so vercel pull can't read them\. .*without Sensitive, then re-run this workflow\. Nothing was deployed\.$/,
+      ),
+    );
+    expect(
+      databaseEnv({ DATABASE_URL: "postgresql://db", DIRECT_URL: "[SENSITIVE]" }),
+    ).toEqual({ sensitive: ["DIRECT_URL"] });
+  });
+
+  it("SCRUM-179 [AC3]: refuses a value that isn't a postgres:// URL by its name, without printing it", () => {
+    const exec = vi.fn();
+    const log = vi.fn();
+    const quoted = '"postgresql://app:secret@pooler/postgres"';
+
+    expect(
+      databaseEnv({ DATABASE_URL: quoted, DIRECT_URL: "postgres://direct" }),
+    ).toEqual({ invalid: ["DATABASE_URL"] });
+    expect(
+      run({
+        readFile: () =>
+          `DATABASE_URL=${JSON.stringify(quoted)}\nDIRECT_URL="postgresql://direct"`,
+        exec,
+        log,
+        baseEnv: {},
+      }),
+    ).toBe(1);
+    expect(exec).not.toHaveBeenCalled();
+    expect(log).toHaveBeenCalledWith(
+      expect.stringMatching(/^::error::DATABASE_URL in the production environment isn't a postgres:\/\/ URL\./),
+    );
+    expect(JSON.stringify(log.mock.calls)).not.toContain("secret");
+  });
+
   it("SCRUM-179 [AC3]: fails the step when a migration fails, so nothing is deployed", () => {
     const exec = vi.fn(() => {
       throw new Error("P3009: migrate found failed migrations");
@@ -142,7 +191,7 @@ describe("migrate-production — SCRUM-179", () => {
 
     expect(() =>
       run({
-        readFile: () => 'DATABASE_URL="db"\nDIRECT_URL="direct"',
+        readFile: () => 'DATABASE_URL="postgresql://db"\nDIRECT_URL="postgresql://direct"',
         exec,
         log: vi.fn(),
         baseEnv: {},

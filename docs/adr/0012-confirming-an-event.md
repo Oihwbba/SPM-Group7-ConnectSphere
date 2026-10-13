@@ -110,7 +110,7 @@ and Planning (`RESERVABLE_EVENT_STATUSES`).
   stories, which the customer's notification ruling covers; SCRUM-81's
   criteria do not ask for it.
 
-## Amendment, 3 Oct 2026
+## Addendum (2026-10-03)
 
 SCRUM-81's criteria were renumbered on 1 Oct (a new AC 2 moved the later
 criteria up by one; the numbers above are current), and AC 5 now also opens registration
@@ -121,3 +121,15 @@ without any seed data. It is set to true unless the event's
 needed choice belongs to SCRUM-127 and is not on the form yet, so every
 request made so far leaves it unset, and those events should open. When
 SCRUM-127 lands, a No keeps registration closed with no change here.
+
+## Addendum (2026-10-11) — Corrections from the docs audit (SCRUM-173)
+
+The 2026-10-03 addendum says the Organiser's Registration needed choice
+"belongs to SCRUM-127". SCRUM-127 was dropped on 2026-10-08; the choice is now
+SCRUM-171, and SCRUM-81 AC 5 names it. The behaviour is unchanged: registration
+opens unless `registrationRequired` is explicitly false.
+
+Consequences says "SCRUM-43 will move a Confirmed event back to Planning after
+an approved impactful change". SCRUM-43 was merged into SCRUM-41 and SCRUM-128,
+and SCRUM-128 AC 5 now returns a Confirmed event to Planning when an approved
+change is impactful. The same checklist and Confirm action then apply again.
