@@ -613,6 +613,16 @@ describe.skipIf(!usesLocalDatabase)("concurrency — confirming an event (SCRUM-
         decidedAt: new Date(),
       },
     });
+    // SCRUM-166 AC9: confirming also needs an approved safety check.
+    await prisma.safetyCheck.create({
+      data: {
+        eventId,
+        status: "APPROVED",
+        requestedById: "usr_coordinator",
+        decidedById: "usr_safety",
+        decidedAt: new Date(),
+      },
+    });
   });
 
   afterAll(async () => {

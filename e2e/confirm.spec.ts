@@ -112,6 +112,16 @@ test.describe("SCRUM-81 — Move an approved event through planning to confirmed
         reservedById: "usr_techsupport",
       },
     });
+    // SCRUM-166 AC9: confirming also needs an approved safety check.
+    await prisma.safetyCheck.create({
+      data: {
+        eventId,
+        status: "APPROVED",
+        requestedById: "usr_coordinator",
+        decidedById: "usr_safety",
+        decidedAt: new Date(),
+      },
+    });
 
     // The Organiser sees the event is ready, but is not offered Confirm (AC 7).
     await signIn(page, "organiser@test.local");
