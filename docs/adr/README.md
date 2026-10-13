@@ -22,6 +22,7 @@ it can be read aloud in the oral exam.
 | [0014](0014-clarification-fields-and-resubmission.md) | A clarification names the fields its answer may change; a resubmission returns to the same Coordinator | SCRUM-108 | Current |
 | [0015](0015-rejecting-a-planning-event.md) | Rejecting a Planning event releases its arrangements in one transaction | SCRUM-117 | Current |
 | [0017](0017-needs-reconsideration-flags.md) | Needs Reconsideration is a flag the Coordinator resolves, never a status | SCRUM-26 | Current |
+| [0018](0018-operational-safety-check.md) | The safety check is a checklist item with its own rows, not an event status | SCRUM-166 | Current |
 
 ## Writing one
 
