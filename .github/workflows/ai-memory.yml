@@ -6,7 +6,7 @@ name: GLM Reviewer Memory
 # typed there by hand after a human noticed a lesson.
 #
 # It never writes to `main`. A lesson shapes every later review, so a human
-# reads it first, and CODEOWNERS already requires Jin Hong's approval under
+# reads it first, and CODEOWNERS already requires a teammate's approval under
 # `.github/`. GitHub holds the checks on a pull request opened with the
 # workflow token until someone with write access clicks "Approve and run".
 # See ADR 0008.

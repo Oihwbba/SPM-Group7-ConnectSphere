@@ -81,8 +81,9 @@ disagrees with Jira, Jira wins and the sync is overdue. The index at
    test both sides of every boundary. Break the code once (drop a lock, flip
    a `>`) and check a test goes red.
 5. **Run the checks** before claiming anything works: `npm run verify`, plus
-   `npm run test:coverage` and the e2e specs you touched. Report what actually
-   ran and its result.
+   `npm run test:coverage` and the e2e specs you touched, both against the
+   local database (README, "Local database (Docker)"), never `.env`'s shared
+   one. Report what actually ran and its result.
 6. **Go through "Before you open a pull request"** in `CONTRIBUTING.md`; it is
    the reviewer's own checklist.
 
@@ -93,7 +94,9 @@ disagrees with Jira, Jira wins and the sync is overdue. The index at
 - **Done** = merged **and** CI green **and** the Product Owner has accepted it.
 - **Never commit to `main`: open a PR.** Merge your own PR once both required
   checks are green: `build-and-test` (including e2e) and the GLM `review`,
-  which fails on a critical finding or when no review completes. Read the GLM
+  which fails on a critical finding or when no review completes (a PR that
+  changes only Markdown, lockfiles or `docs/backlog` isn't reviewed and
+  passes). Read the GLM
   review before you merge. Changes to `.github/`, `package.json`, the test
   configs or `vercel.json` need a teammate's approval (CODEOWNERS lists the
   whole team), because they control the checks.
@@ -120,14 +123,19 @@ module requires us to be transparent about AI assistance.
 4. **The password lives in `User.passwordHash`** (our addition to the Auth.js
    model), hashed with bcrypt in the seed.
 5. **`.env` points at the shared Supabase database.** `npm run db:reset` wipes
-   it for the whole team; there, use only `db:deploy` and `db:seed`. Reset
-   only a local Docker database.
-6. **Integration tests and the coverage check need a local Postgres**
-   (`docker compose up -d`). Without one the integration tests skip, and
-   `npm run test:coverage` fails on files only they cover.
+   it for the whole team, and `npm run db:migrate` (`prisma migrate dev`)
+   must never run against it; there, use only `db:deploy` and `db:seed`.
+   Reset and migrate only a local Docker database.
+6. **Integration tests, the coverage check and e2e need a local Postgres.**
+   Start Docker and point the terminal at it first (README, "Local database
+   (Docker)"): starting Docker alone leaves `.env` pointing at Supabase.
+   Without one the integration tests skip, and `npm run test:coverage` fails
+   on files only they cover. Some e2e specs write data without a local-only
+   guard.
 7. **`next dev` rewrites `next-env.d.ts`.** Don't commit that change.
-8. **The GLM reviewer reads `CONTRIBUTING.md` and this file from `main`**, so
-   editing them in your PR doesn't change how that PR is reviewed.
+8. **The GLM reviewer reads `CONTRIBUTING.md` and this file from the PR's
+   base branch** (`main` unless the PR is stacked), so editing them in your PR
+   doesn't change how that PR is reviewed.
 
 ## Where the shared conventions live
 

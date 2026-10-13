@@ -1,12 +1,12 @@
 # GLM reviewer memory
 
 Lessons from past reviews, approved by the team. The reviewer reads this file
-from `main` on every pull request, after `CONTRIBUTING.md` and `CLAUDE.md`.
+from the PR's base branch on every pull request, after `CONTRIBUTING.md` and `CLAUDE.md`.
 
 After each merge, `.github/scripts/ai-memory.mjs` asks GLM what the pull
 request taught and opens a pull request here if anything (SCRUM-112); a human
-reads it first. Hand edits are fine, and CI fails if the file outgrows what the
-reviewer reads (SCRUM-152).
+reads it first. Hand edits are fine, and CI fails if the file outgrows what
+the reviewer reads (SCRUM-152).
 
 Rules for a lesson:
 
@@ -34,8 +34,8 @@ a sync later settled, so check a story file's change log before reporting
 a code/story mismatch. Syncs regenerate from Jira untouched (#141): a
 story in two sprints counts towards both, and a dropped issue loses its
 file (SCRUM-127). A partial re-sync (#164, like #159/#163) updates only
-the items Jira changed and leaves the README's "last synced" date at the
-last full sync — an older date over newer files is deliberate. The fix
+the items Jira changed and leaves the README's "last synced" date at
+the last full sync — an older date over newer files is deliberate. The fix
 belongs in Jira, never in a hand edit of the files.
 
 ## Dependencies
@@ -58,10 +58,17 @@ belongs in Jira, never in a hand edit of the files.
 - (2026-09-16, #33) Supabase's stored checksums differ from the repo for three
   older migration files. `prisma migrate deploy` ignores checksums, so this is
   known and harmless. Nobody may run `prisma migrate dev` against Supabase.
+- (2026-10-13, #175) Deploys apply migrations themselves: `deploy.yml` runs
+  `prisma migrate deploy` after `vercel pull` and before the build, so a
+  migration merged to `main` reaches production with no hand-run
+  `npm run db:deploy` (production broke after #148 when nobody ran it). The
+  old version keeps serving until the new build replaces it, so a migration
+  must stay additive to the code still deployed; a failed one stops the
+  deploy and production keeps the previous bundle.
 - (2026-09-16, #33; 2026-09-28, #90; 2026-10-04, #114, #120) `Event.equipmentTypes`
-  and `Event.registrationRequired` exist to keep production data; nothing
-  writes either, and #120's `confirmEvent` is the only reader of
-  `registrationRequired`. `Event.registrationCapacity` joined them in #90,
+  and `Event.registrationRequired` exist to keep production data; the form
+  sets neither; #120's `confirmEvent` reads `registrationRequired`, and
+  `startRequestFromRejected` copies both onto the new Draft. `Event.registrationCapacity` joined them in #90,
   which made `expectedAttendance` the registration capacity (SCRUM-73/74):
   nothing reads the column and dropping it needs a migration decision, so #114
   left it again.
@@ -82,7 +89,7 @@ only since #112 (SCRUM-129 retired SCRUM-13's per-event timezones):
 that migration relabelled existing production rows deliberately — the stored
 UTC instants were kept, the old zone labels were not. The create form no
 longer captures `requiredFacilities`: new events store `[]`, existing values
-still display, and whether capture returns is open for SCRUM-39/40.
+still display, and whether capture returns is open for SCRUM-38/40.
 - (2026-09-25, #87) The `?? null` fallbacks on optional draft fields in
 `app/(app)/events/actions.ts` are deliberate: on update, `null` clears a
 field the organiser emptied, while `undefined` would keep the old value.
@@ -96,23 +103,27 @@ returning a real 404, which the e2e pins.
 modules (`lib/equipment/request-queries.ts`), never in a `"use server"`
 file: a server action is callable by anyone with any arguments, so exporting
 one there would let any caller pass another user's id.
+- (2026-10-13, #156) Equipment request lines are never hard-deleted: removal
+sets `removedAt` (the team's choice — no hard deletes), every reader filters
+`LIVE_LINE`, and re-adding a removed type revives the same row because the
+one-line-per-type unique index covers removed rows too.
 
 ## Tests
 
 - (2026-09-15, #27; 2026-09-30, SCRUM-125) Integration tests in
-`tests/integration/` use `describe.skipIf(!usesLocalDatabase)` on purpose:
-they write data, so they run only against CI's Postgres or local Docker,
-never Supabase. Skipping locally isn't missing coverage, except that
-`npm run test:coverage` then fails its 100% threshold, as expected.
+  `tests/integration/` use `describe.skipIf(!usesLocalDatabase)` on purpose:
+  they write data, so they run only against CI's Postgres or local Docker,
+  never Supabase. Skipping locally isn't missing coverage, except that
+  `npm run test:coverage` then fails its 100% threshold, as expected.
 - (2026-09-25, #88; 2026-09-30, SCRUM-125) Coverage measures every `.ts` file
-under `lib/` and `app/` (not the Auth.js route re-export), in a `node`
-environment with no jsdom, so `.tsx` components never appear in it;
-Playwright journeys exercise them. Measuring components needs new tooling
-(SCRUM-87), a team decision. CI fails when a measured file drops below 100%,
-so a "100% coverage" claim refers to the measured files only.
+  under `lib/` and `app/` (not the Auth.js route re-export), in a `node`
+  environment with no jsdom, so `.tsx` components never appear in it;
+  Playwright journeys exercise them. Measuring components needs new tooling
+  (SCRUM-87), a team decision. CI fails when a measured file drops below 100%,
+  so a "100% coverage" claim refers to the measured files only.
 - (2026-10-09, #146) `docs/testing/*.md` cite test titles verbatim in
-'Automated by' lines (not shown to this review), so a rename must update
-the citing spec too; titles still in the old inline form match their specs.
+  'Automated by' lines (not shown to this review), so a rename must update
+  the citing spec too; titles still in the old inline form match their specs.
 
 ## Known open gaps
 
@@ -137,3 +148,22 @@ known when a pull request touches the status lifecycle or the seed.
 `event_no_equipment_decision_complete` (both set or neither) aborts the
 delete instead, unlike `decidedById`. Latent, as nothing deletes users yet.
 Known when a pull request touches the decision columns or user deletion.
+
+- (2026-10-13, #153) SCRUM-48 merged with two ACs deliberately partial:
+`notificationHref` gives the Safety Officer (and the Lead) no link until
+SCRUM-166 lands, and the several-roles case waits for SCRUM-121. The list,
+the count and marking read filter by the session's user id, not role, on
+purpose, so a multi-role account should need no change there. Known when a
+pull request touches notifications or claims SCRUM-166/SCRUM-121.
+
+- (2026-10-13, #154) SCRUM-163 merged with AC9 partial and both review lows
+open. Cancelling an event does not release its holds (SCRUM-82 adds that),
+and recording unavailability over a live hold is refused rather than
+flagging it (SCRUM-161), the same refusal as over an approved booking. A
+hold on an APPROVED-status event has no Confirm/Release surface anywhere:
+the readiness checklist renders for Planning events only, legacy APPROVED
+rows cannot reach Planning (#120), and `BOOKABLE_EVENT_STATUSES` still
+includes APPROVED — so such a hold can only lapse. The calendar's "Held
+until" label and the post-expiry surfaces have no e2e (PO follow-up).
+Known when a pull request touches holds, booking statuses or
+unavailability, or claims SCRUM-82/SCRUM-161.

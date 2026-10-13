@@ -44,7 +44,7 @@ amend journey) and SCRUM-117 (rejecting a Planning event) read the same choice.
    by the rejecting Coordinator, next to the status change, so it is recorded
    with who and when (AC 6).
 
-## Alternatives considered
+## Alternatives rejected
 
 - **Derive the outcome from the audit log.** Every screen and the resubmit
   action would have to find the latest rejection entry; a column is one read.
@@ -66,3 +66,9 @@ amend journey) and SCRUM-117 (rejecting a Planning event) read the same choice.
 - Starting a new request twice returns the first Draft ("A new request was already started from this one"), even for two clicks at the same moment. This
   answers the GLM review of #116: drafts can't be discarded yet (SCRUM-130),
   so duplicates would have piled up.
+
+## Addendum (2026-10-11) — Corrections from the docs audit (SCRUM-173)
+
+"Drafts can't be discarded yet (SCRUM-130)" was true when this was written.
+SCRUM-130 has since added discarding a Draft (`discardDraftEvent`). Returning
+the first Draft on a repeat click still stands.

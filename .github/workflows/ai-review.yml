@@ -15,7 +15,8 @@ name: GLM Code Review
 # script retries once with less thinking. See docs/adr/0008.
 #
 # One-time setup (repo owner): Settings -> Secrets and variables -> Actions ->
-# New repository secret `ZHIPU_API_KEY`. Until it exists the review is skipped.
+# New repository secret `ZHIPU_API_KEY`. Until it exists the check fails, since
+# a required check must not pass without a review.
 # The reviewer's instructions live in .github/ai-review/instructions.md.
 
 on:

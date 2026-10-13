@@ -21,6 +21,18 @@ the app is running, and the tester signs in as Venue Staff
 | [TC-53-06](#tc-53-06) | Boundary, Concurrency | AC 6 | Integration |
 | [TC-53-07](#tc-53-07) | Negative | AC 7 | Unit, integration |
 | [TC-53-08](#tc-53-08) | Negative | Venue Staff only | Unit |
+| [TC-53-09](#tc-53-09) | Positive | AC 9 | Manual |
+
+**Criteria with no case of their own:**
+
+- **AC 3** (suggest an alternative in the reason): the suggestion is written in
+  the free-text reason that TC-53-02 saves; there is no separate field to test.
+- **AC 10** (the Coordinator sees the decision and reason on the readiness
+  checklist) is shown by SCRUM-110's checklist:
+  [TC-110-04](SCRUM-110.md#tc-110-04) shows the Coordinator a rejected booking
+  as "Rejected – _reason_", and [TC-110-01](SCRUM-110.md#tc-110-01) an approved
+  one as complete. Those tests write the decided booking directly, not through
+  the decision action.
 
 ---
 
@@ -72,7 +84,7 @@ the app is running, and the tester signs in as Venue Staff
 | Pre-conditions | Two pending requests overlapping on one venue; one is approved. Or: maintenance recorded over the pending request. |
 | Test Steps | 1. Approve the second request. |
 | Test Data | — |
-| Expected Result | "Conflicting: … is already booked from … to …. This request is still pending." (or "unavailable (closure) …"). The request stays pending so it can be rejected with a reason. |
+| Expected Result | "Conflicting: … is already booked from … to …. This request is still pending." (or "unavailable (maintenance) …"). The request stays pending so it can be rejected with a reason. |
 
 **Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-53 [AC8] TC-53-04: approving a request that overlaps an already-approved booking is returned as conflicting" and "SCRUM-53 [AC8] TC-53-04: approving over recorded unavailability is returned as conflicting"; `tests/unit/bookings.test.ts` › "SCRUM-53 [AC8] TC-53-04: approving over an approved booking or recorded unavailability is returned as conflicting"
 
@@ -127,3 +139,16 @@ the app is running, and the tester signs in as Venue Staff
 | Expected Result | "You do not have permission to do that." Nothing is written. |
 
 **Automated by:** `tests/unit/bookings.test.ts` › "SCRUM-53 TC-53-08: every role except Venue Staff is refused"; `tests/unit/auth.test.ts` › "SCRUM-53 TC-53-08: only venue staff may approve or reject a request"
+
+### TC-53-09
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-53-09 |
+| Test Scenario | [Positive] AC 9: after a booking is rejected, the event stays in Planning and the Coordinator can request a venue again, which creates a new booking record |
+| Pre-conditions | A pending request for a Planning event (TC-50-01). |
+| Test Steps | 1. As Venue Staff, reject the request with a reason. <br> 2. As the Coordinator, open the event. <br> 3. Request a venue for the event again. |
+| Test Data | Reason: "The hall is set for an exhibition that week." |
+| Expected Result | Step 2: the event is still Planning. Step 3: a new PENDING booking is created with a new id, and the rejected booking is kept with its reason. |
+
+**Automated by:** **Manual** — no automated test yet. `tests/integration/bookings.test.ts` › "SCRUM-50 [AC9] TC-50-14: after a rejected request, a new request creates a new booking record and the earlier one is kept" covers step 3 only: it writes the rejected booking directly rather than through the decision action, and doesn't check the event's status.
