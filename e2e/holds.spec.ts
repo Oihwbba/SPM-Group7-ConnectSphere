@@ -141,8 +141,24 @@ test.describe("SCRUM-163 — Hold a venue tentatively until a deadline", () => {
     await expect(card).toContainText(heldUntil);
     await expect(card.getByRole("button", { name: "Approve" })).toHaveCount(0);
 
-    await coordinator.reload();
-    venueItem = await openVenueItem();
+    // SCRUM-124 AC4, AC12: the Coordinator is told, with the deadline, and
+    // the notice opens the event.
+    await coordinator.goto("/notifications");
+    const notice = coordinator
+      .getByTestId("notification")
+      .filter({ hasText: "Venue Staff approved your hold" })
+      .filter({ hasText: request.name });
+    await expect(notice).toHaveCount(1);
+    await expect(notice).toContainText(
+      `Venue Staff approved the hold on ${request.name} venue for "${request.name}". Confirm it before ${formatDateTime(parseSingaporeDateTime(EXPIRY)!)} to secure the venue.`,
+    );
+    await notice.click();
+    await coordinator.waitForURL(
+      new RegExp(`/events\\?event=${request.eventId}$`),
+    );
+    venueItem = coordinator
+      .getByRole("dialog")
+      .getByTestId("readiness-item-venue");
     await expect(venueItem).toContainText(
       "Approved by Venue Staff – awaiting confirmation.",
     );
