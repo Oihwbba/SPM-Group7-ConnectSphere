@@ -39,13 +39,6 @@ const ALLOWED: Record<string, { lines: string[]; why: string }> = {
     ],
     why: "made-up keys in tests of the reviewer's key parsing",
   },
-  "prisma/schema.prisma": {
-    lines: [
-      "/// SCRUM-41 (submit), SCRUM-42 (review, showing old vs new),",
-      "/// SCRUM-43 (approve/reject, reason required on rejection), SCRUM-47 (notify).",
-    ],
-    why: "the EventChangeRequest header #162 (SCRUM-41) rewrites",
-  },
 };
 
 /** "SCRUM-41/42/43" cites SCRUM-41, SCRUM-42 and SCRUM-43. */
@@ -188,16 +181,11 @@ describe("SCRUM-146 story keys in the code", () => {
     expect(
       staleReferences("// SCRUM-27/12345/54321", "x.ts", planted),
     ).toHaveLength(2);
-    const header = ALLOWED["prisma/schema.prisma"].lines[1];
-    expect(staleReferences(header, "prisma/schema.prisma", planted)).toEqual(
-      [],
-    );
+    const file = "tests/unit/ai-review.test.ts";
+    const exempt = ALLOWED[file].lines[2];
+    expect(staleReferences(exempt, file, planted)).toEqual([]);
     expect(
-      staleReferences(
-        `${header}\n/// SCRUM-43 elsewhere`,
-        "prisma/schema.prisma",
-        planted,
-      ),
+      staleReferences(`${exempt}\n// SCRUM-999 elsewhere`, file, planted),
     ).toHaveLength(1);
   });
 
