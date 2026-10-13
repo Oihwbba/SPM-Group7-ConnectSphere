@@ -33,7 +33,7 @@ status, one assigned Coordinator, and arrangements that can't clash.
 
 | Role | Internal? | What they do in the system | Lands on |
 |---|---|---|---|
-| **Event Organiser** | External client | Creates event requests (as drafts first), submits them, answers the Coordinator's clarification questions, and follows their own events. Sees only their own events. | My Events |
+| **Event Organiser** | External client | Creates event requests (as drafts first), submits them, answers the Coordinator's clarification questions, asks for changes or for cancellation once a Coordinator has the request (SCRUM-41), and follows their own events. Sees only their own events. | My Events |
 | **Event Coordinator** | ConnectSphere staff | Is assigned to a submitted request automatically (until SCRUM-165, when new requests go to the Lead's unassigned queue instead, per Week 7 change 5), reviews it, asks for clarification, approves or rejects it, requests a venue and equipment, and confirms the event once the arrangements are complete. Sees the events assigned to them, and submitted ones nobody is assigned to yet. | Events |
 | **Venue Staff** | ConnectSphere staff | Reviews venue booking requests and approves or rejects them, and records when a venue is unavailable (maintenance, closure). | Bookings |
 | **Technical Support Staff** | ConnectSphere staff | Reviews equipment requests, checks equipment availability, and reserves what was approved. | Equipment |
