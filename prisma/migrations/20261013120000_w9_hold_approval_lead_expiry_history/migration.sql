@@ -12,6 +12,9 @@
 ALTER TABLE "Event" ADD COLUMN "supervisingLeadId" TEXT;
 
 CREATE INDEX "Event_supervisingLeadId_idx" ON "Event"("supervisingLeadId");
+-- SET NULL, like Event_coordinatorId_fkey: the Lead is who supervises the
+-- event now, not a record of who did, so deleting that user leaves the event
+-- unsupervised until a Lead is assigned again.
 ALTER TABLE "Event" ADD CONSTRAINT "Event_supervisingLeadId_fkey"
   FOREIGN KEY ("supervisingLeadId") REFERENCES "User"("id")
   ON DELETE SET NULL ON UPDATE CASCADE;
