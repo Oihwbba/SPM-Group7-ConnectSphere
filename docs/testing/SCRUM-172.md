@@ -28,6 +28,10 @@ the database keeps or refuses. Times are UTC.
 | [TC-172-14](#tc-172-14) | Concurrency | AC 9 | Integration |
 | [TC-172-15](#tc-172-15) | Positive | AC 10 | Integration |
 | [TC-172-16](#tc-172-16) | Positive | AC 11 | Whole suite (CI) |
+| [TC-172-17](#tc-172-17) | Positive, Negative | AC 12 | Integration |
+| [TC-172-18](#tc-172-18) | Positive, Negative, Boundary | AC 13 | Integration |
+| [TC-172-19](#tc-172-19) | Positive, Negative | AC 14 | Integration |
+| [TC-172-20](#tc-172-20) | Positive | AC 12, AC 13, AC 14 (existing data) | Integration |
 
 ---
 
@@ -118,7 +122,7 @@ the database keeps or refuses. Times are UTC.
 | Pre-conditions | A held booking; a notification written before the migration. |
 | Test Steps | 1. Write a notification without a show-from time. <br> 2. Write a hold reminder shown from a later time, naming the booking. <br> 3. List the notification types. <br> 4. Read the notification written before the migration. |
 | Test Data | `BOOKING_HELD`, `HOLD_EXPIRY_REMINDER` |
-| Expected Result | Step 1: shown from the time it was written. Step 2: kept with its show-from time and booking, not withdrawn. Step 3: includes the sixteen SCRUM-124 types (booking requested; equipment request submitted, changed and withdrawn; booking request withdrawn; booking held; hold reminder, expired, confirmed and released; change request submitted; arrangement flagged and resolved; request awaiting assignment; safety check requested and outcome). Step 4: shown from when it was written. |
+| Expected Result | Step 1: shown from the time it was written. Step 2: kept with its show-from time and booking, not withdrawn. Step 3: includes the sixteen SCRUM-124 types (booking requested; equipment request submitted, changed and withdrawn; booking request withdrawn; booking held; hold reminder, expired, confirmed and released; change request submitted; arrangement flagged and resolved; request awaiting assignment; safety check requested and outcome), and the Week 9 one for Venue Staff approving a hold (`HOLD_APPROVED`, SCRUM-124 AC4). Step 4: shown from when it was written. |
 
 **Automated by:** `tests/integration/week7-rules.test.ts` › "SCRUM-172 [AC7] TC-172-07: a notification shows at once unless given a later show-from time, and can name its booking" and "SCRUM-172 [AC7] TC-172-07: every Week 7 notification type exists"; `tests/integration/week7-migration.test.ts` › "SCRUM-172 [AC7] TC-172-07: an existing notification shows from when it was written"
 
@@ -238,3 +242,55 @@ the database keeps or refuses. Times are UTC.
 | Expected Result | All pass. Updated for the new rules: SCRUM-37's database refusal of unavailability over an approved booking (now TC-172-11), its "caught by the database after the check" unit tests (now one test that the venue is locked first), SCRUM-50 AC8's database refusal at another venue (now TC-172-12), and fixtures that used the Damaged and Closure venue reasons. |
 
 **Automated by:** the whole suite (`npm run test:coverage`, `npm run test:e2e`); the changed tests are listed in the pull request.
+
+### TC-172-17
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-172-17 |
+| Test Scenario | [Positive, Negative] AC 12: an event records its supervising Lead (SCRUM-165 AC11); existing events start with none |
+| Pre-conditions | A test event; a Coordinator Lead account. |
+| Test Steps | 1. Read the event. <br> 2. Set the Lead as its supervising Lead. <br> 3. On another event, set a supervising Lead who isn't a user. |
+| Test Data | A user with the role `COORDINATOR_LEAD`; `usr_nobody` |
+| Expected Result | Step 1: no supervising Lead. Step 2: kept, and it is the Lead. Step 3: refused by `Event_supervisingLeadId_fkey`, and that event still has none. |
+
+**Automated by:** `tests/integration/w9-rules.test.ts` › "SCRUM-172 [AC12] TC-172-17: an event starts with no supervising Lead, and keeps the Lead it is given" and "SCRUM-172 [AC12] TC-172-17: a supervising Lead who isn't a user is refused, and the event is unchanged"
+
+### TC-172-18
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-172-18 |
+| Test Scenario | [Positive, Negative, Boundary] AC 13: a venue booking records when, and by whom, Venue Staff approved its hold (SCRUM-163 AC7); new and existing bookings start with none |
+| Pre-conditions | A test venue and events. Each hold is placed at 08:00 on 1 May 2037 and expires at 08:00 on 5 May. |
+| Test Steps | 1. Read a new hold. <br> 2. Record an approval by `usr_venuestaff` at 09:00 on 2 May, then confirm the hold (Approved). <br> 3. On another hold, record only the time, then only who. <br> 4. Record an approval on a Pending booking that was never held. <br> 5. On a hold, record an approval a minute before it was placed, then at the moment it was placed. |
+| Test Data | `usr_venuestaff` |
+| Expected Result | Step 1: no approval. Step 2: the approval is kept, and still kept once the booking is Approved. Steps 3 and 4: refused by `booking_hold_approval_complete`, nothing saved. Step 5: a minute before is refused the same way; at the moment it was placed is saved. |
+
+**Automated by:** `tests/integration/w9-rules.test.ts` › "SCRUM-172 [AC13] TC-172-18: a hold starts unapproved, records when and by whom Venue Staff approved it, and keeps that once confirmed", "SCRUM-172 [AC13] TC-172-18: an approval without who or when is refused" and "SCRUM-172 [AC13] TC-172-18: only a booking that was held records an approval, at or after the hold was placed"
+
+### TC-172-19
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-172-19 |
+| Test Scenario | [Positive, Negative] AC 14: each change to a hold's expiry is recorded with the old expiry, the new expiry, who changed it and when |
+| Pre-conditions | A hold expiring at 08:00 on 5 May 2037. |
+| Test Steps | 1. Record a change from 5 May 08:00 to 6 May 08:00, then from 6 May 08:00 to 4 May 17:00. <br> 2. On another hold, record a change from 5 May 08:00 to 5 May 08:00. |
+| Test Data | `usr_venuestaff` |
+| Expected Result | Step 1: both changes are kept, in order, each with its old and new expiry, who changed it and when (now). Step 2: refused by `hold_expiry_change_differs`, and that hold has no changes. |
+
+**Automated by:** `tests/integration/w9-rules.test.ts` › "SCRUM-172 [AC14] TC-172-19: each change to a hold's expiry is kept with the old and new expiry, who changed it and when" and "SCRUM-172 [AC14] TC-172-19: recording the same expiry as a change is refused, and nothing is kept"
+
+### TC-172-20
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-172-20 |
+| Test Scenario | [Positive] AC 12, AC 13, AC 14: the Week 9 migration runs on existing data, and existing events and bookings start with none of the new data |
+| Pre-conditions | A database migrated to just before the Week 9 migration, with five events and their bookings: Pending, Approved, Held, Expired, and a hold its Coordinator confirmed before Venue Staff approval existed (Approved). |
+| Test Steps | 1. Apply the Week 9 migration. <br> 2. Read the events, the bookings and the expiry history. |
+| Test Data | — |
+| Expected Result | Step 1: it applies. Step 2: no event has a supervising Lead; every booking keeps its status, the confirmed hold included, with no approval; there are no expiry changes. |
+
+**Automated by:** `tests/integration/w9-migration.test.ts` › "SCRUM-172 [AC12] TC-172-20: existing events start with no supervising Lead", "SCRUM-172 [AC13] TC-172-20: existing bookings start with no hold approval and keep their status, including a hold confirmed before approval existed" and "SCRUM-172 [AC14] TC-172-20: existing holds start with no recorded expiry changes"
