@@ -105,6 +105,7 @@ defect, e.g. `regression: a blank rejection reason was accepted`.
 | [SCRUM-155](SCRUM-155.md) | Jin Hong | 16 | Every case automated (unit, integration for all-or-nothing and the races, e2e for the journey) |
 | [SCRUM-156](SCRUM-156.md) | Jin Hong | 8 | Every case automated; TC-155-16 retired and the SCRUM-31 reserve cases mapped to SCRUM-155 |
 | [SCRUM-26](SCRUM-26.md) | Jun Bin | 15 | Every case automated (unit, integration for blocking, Still stands against real unavailability and simultaneous cancels, e2e for the journey); AC 1's warning screen is SCRUM-25's |
-| [SCRUM-82](SCRUM-82.md) | Jun Bin | 13 | Every case automated (unit, integration for releasing everything at once, simultaneous cancels and completion, e2e for cancelling, Overdue and Completed); AC 2 waits on SCRUM-41 and SCRUM-128 |
+| [SCRUM-82](SCRUM-82.md) | Jun Bin | 13 | Every case automated (unit, integration for releasing everything at once, simultaneous cancels and completion, e2e for cancelling, Overdue and Completed); AC 2 is proven by TC-128-07 |
+| [SCRUM-128](SCRUM-128.md) | Jun Bin | 14 | Every case automated (unit, integration for all-or-nothing, flags, cancellation and simultaneous decisions, e2e for approving and rejecting) |
 | [SCRUM-166](SCRUM-166.md) | Jun Bin | 16 | Every case automated (unit, integration for one check per event, simultaneous officers, flags and Outdated, e2e for both journeys); "No equipment needed" and operational notes wait on SCRUM-170 and SCRUM-25 |
 | [SCRUM-159](SCRUM-159.md) | Jun Bin | 16 | Every case automated (unit, integration for the database's range and the simultaneous approvals, e2e for the calendar and the request form); AC 1's form is SCRUM-34's |
