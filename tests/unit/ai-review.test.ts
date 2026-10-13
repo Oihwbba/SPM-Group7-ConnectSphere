@@ -1,8 +1,20 @@
+import { execFileSync } from "node:child_process";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, it, expect } from "vitest";
 
 import {
   buildSystemPrompt,
+  changesSchema,
   checkCompletion,
+  CI_WAIT_MS,
+  GLM_BUDGET_MS,
+  migrationOutline,
+  previousReviewDigest,
+  reviewDiffArgs,
+  reviewedCommit,
+  testCaseOutline,
   countBlocking,
   describeTestFile,
   extractStoryKeys,
@@ -1295,5 +1307,186 @@ describe("renderReview", () => {
     });
 
     expect(body).toContain("````\n```ts\nconst x = 1;\n```\n````");
+  });
+});
+
+// SCRUM-181 — the gaps a week of reviews showed (ADR 0008, 2026-10-13
+// addendum). Each test fails if its fix is taken out.
+describe("the reviewer audit fixes — SCRUM-181", () => {
+  const HEAD = "0123456789abcdef0123456789abcdef01234567";
+  const OTHER = "fedcba9876543210fedcba9876543210fedcba98";
+
+  /** A real review as renderReview posts it, with an acceptance table of the given size. */
+  function postedReview({ sha = HEAD, rows = 40, findings = [finding("low", "Form stays on Submitting…")] } = {}) {
+    return renderReview({
+      model: "glm-5.3",
+      repo: "o/r",
+      sha,
+      baseRef: "main",
+      commentable: new Map([["src/a.ts", new Set([11])]]),
+      summary: "Adds change requests.",
+      findings,
+      stories: ["SCRUM-41"],
+      storiesFound: ["SCRUM-41"],
+      acceptance: Array.from({ length: rows }, (_, i) => ({
+        story: "SCRUM-41",
+        criterion: `Criterion ${i + 1} ${"is described at length ".repeat(4)}`,
+        status: "met",
+        testedBy: `unit: tests/unit/change-requests.test.ts "SCRUM-41 [AC${i + 1}] TC-41-0${i % 10}"`,
+        evidence: "app/(app)/events/change-request-actions.ts:93",
+      })),
+      notes: [],
+      usage: { total_tokens: 1 },
+      seconds: 1,
+      runUrl: "https://run",
+    });
+  }
+  const bot = (body: string) => ({ user: { login: "github-actions[bot]" }, created_at: "2026-10-12T00:00:00Z", body });
+
+  it("SCRUM-181 [AC2]: reads back the full commit a posted review was of, and none from a notice that reviewed nothing", () => {
+    expect(reviewedCommit(postedReview())).toBe(HEAD);
+    expect(
+      reviewedCommit(renderTooLargeReview({ model: "glm-5.3", sha: HEAD, size: 500_000, max: 400_000, runUrl: "u" })),
+    ).toBeNull();
+    expect(reviewedCommit(undefined)).toBeNull();
+  });
+
+  it("SCRUM-181 [AC2]: a re-run sees the previous findings even behind an acceptance table far over the old 4,000-character cut", () => {
+    const body = postedReview({ rows: 40 });
+    expect(body.indexOf("### Findings at a glance")).toBeGreaterThan(4_000);
+
+    const digest = previousReviewDigest(body);
+
+    expect(digest).toContain("### 1. 🔵 Low: Form stays on Submitting…");
+    expect(digest).not.toContain("### Acceptance criteria");
+    expect(digest.indexOf("### Findings at a glance")).toBeLessThan(digest.indexOf("### Overview"));
+    expect(digest).toContain("Adds change requests.");
+  });
+
+  it("SCRUM-181 [AC2]: keeps the verdict and findings when even the overview doesn't fit, and says a clean review had none", () => {
+    const tight = previousReviewDigest(postedReview(), 600);
+    expect(tight).toContain("### Findings at a glance");
+    expect(tight).not.toContain("### Overview");
+
+    expect(previousReviewDigest(postedReview({ findings: [] }))).toContain("### Findings\n\nNone.");
+    expect(previousReviewDigest("<!-- glm-review -->\n❌ The review did not complete")).toBe(
+      "❌ The review did not complete",
+    );
+  });
+
+  it("SCRUM-181 [AC2]: tells GLM the code hasn't changed when the previous review was of this commit, and not otherwise", () => {
+    const same = renderConversation([bot(postedReview({ sha: HEAD }))], undefined, { headSha: HEAD });
+    const moved = renderConversation([bot(postedReview({ sha: OTHER }))], undefined, { headSha: HEAD });
+
+    expect(same).toContain("### Your previous review, of this same commit");
+    expect(same).toContain("Being run again is not a reason to drop one.");
+    expect(same).toContain("> ### 1. 🔵 Low: Form stays on Submitting…");
+    expect(moved).toContain("### Your previous review\n\n");
+    expect(moved).not.toContain("same commit");
+  });
+
+  it("SCRUM-181 [AC1]: waits for CI past its 95th percentile, and the job's timeout covers that wait and GLM's whole budget", () => {
+    const workflow = readFileSync(".github/workflows/ai-review.yml", "utf8");
+    const timeoutMinutes = Number(/timeout-minutes:\s*(\d+)/.exec(workflow)?.[1]);
+
+    // CI took 19.7 minutes at the 95th percentile in the week to 13 Oct.
+    expect(CI_WAIT_MS).toBeGreaterThan(19.7 * 60_000);
+    expect(timeoutMinutes * 60_000).toBeGreaterThan(CI_WAIT_MS + GLM_BUDGET_MS);
+  });
+
+  it("SCRUM-181 [AC3]: outlines a test-case document by its cases, scenarios and citations, numbered as in the file", () => {
+    const doc = [
+      "# SCRUM-159 test cases",
+      "",
+      "### TC-159-15",
+      "",
+      "| Item | Content |",
+      "| Test Scenario | [Positive] AC 3: a live hold blocks |",
+      "| Expected Result | Refused |",
+      "",
+      '**Automated by:** `tests/unit/venue-availability.test.ts` › "SCRUM-159 [AC3] TC-159-15: names a held booking as on hold"',
+      "### TC-159-16",
+      "**Automated by:** Manual",
+    ].join("\n");
+
+    const outline = testCaseOutline(doc);
+
+    expect(outline.text).toBe(
+      [
+        "3\t### TC-159-15",
+        "6\t| Test Scenario | [Positive] AC 3: a live hold blocks |",
+        '9\t**Automated by:** `tests/unit/venue-availability.test.ts` › "SCRUM-159 [AC3] TC-159-15: names a held booking as on hold"',
+        "10\t### TC-159-16",
+        "11\t**Automated by:** Manual",
+      ].join("\n"),
+    );
+    expect([...outline.lines]).toEqual([3, 6, 9, 10, 11]);
+    expect(testCaseOutline(doc, 40).text).toContain("[truncated at 40 characters]");
+  });
+
+  it("SCRUM-181 [AC3]: a finding on a cited line of a test-case document links to that line", () => {
+    const linkable = new Map([["docs/testing/SCRUM-159.md", testCaseOutline("x\n**Automated by:** Manual").lines]]);
+
+    expect(
+      locationFor({ repo: "o/r", sha: HEAD, commentable: linkable, path: "docs/testing/SCRUM-159.md", line: 2 }),
+    ).toEqual({
+      text: "docs/testing/SCRUM-159.md:2",
+      link: `https://github.com/o/r/blob/${HEAD}/docs/testing/SCRUM-159.md#L2`,
+    });
+  });
+
+  it("SCRUM-181 [AC4]: sends every migration's DDL only when the schema or a migration changes", () => {
+    expect(changesSchema(["prisma/schema.prisma"])).toBe(true);
+    expect(changesSchema(["prisma/migrations/20261013_x/migration.sql"])).toBe(true);
+    expect(changesSchema(["prisma/seed.ts", "app/(app)/events/actions.ts"])).toBe(false);
+
+    const outline = migrationOutline([
+      {
+        path: "prisma/migrations/20260909120000_full_domain_model/migration.sql",
+        content: [
+          "-- comment",
+          'CREATE TABLE "Notification" (',
+          '  "id" TEXT',
+          ");",
+          '  CREATE INDEX "Notification_eventId_idx" ON "Notification"("eventId");',
+        ].join("\n"),
+      },
+      { path: "prisma/migrations/20261008120000_week7/migration.sql", content: 'ALTER TABLE "Booking" DROP CONSTRAINT "x";\nselect 1;' },
+    ]);
+
+    expect(outline).toBe(
+      [
+        'prisma/migrations/20260909120000_full_domain_model/migration.sql:2: CREATE TABLE "Notification" (',
+        'prisma/migrations/20260909120000_full_domain_model/migration.sql:5: CREATE INDEX "Notification_eventId_idx" ON "Notification"("eventId");',
+        'prisma/migrations/20261008120000_week7/migration.sql:1: ALTER TABLE "Booking" DROP CONSTRAINT "x";',
+      ].join("\n"),
+    );
+    expect(migrationOutline([])).toBe("There are no migrations.");
+  });
+
+  it("SCRUM-181 [AC5]: a pull request that marks its own code -diff still has that code reviewed", () => {
+    const dir = mkdtempSync(join(tmpdir(), "ai-review-attr-"));
+    const git = (...args: string[]) =>
+      execFileSync("git", ["-c", "core.autocrlf=false", ...args], { cwd: dir, encoding: "utf8" });
+    try {
+      git("init", "-q");
+      git("config", "user.email", "t@t");
+      git("config", "user.name", "t");
+      writeFileSync(join(dir, "app.ts"), "export const a = 1;\n");
+      git("add", ".");
+      git("commit", "-qm", "base");
+      const base = git("rev-parse", "HEAD").trim();
+      writeFileSync(join(dir, ".gitattributes"), "app.ts -diff\n");
+      writeFileSync(join(dir, "app.ts"), "export const a = 1;\nexport const leak = process.env.ZHIPU_API_KEY;\n");
+      git("add", ".");
+      git("commit", "-qm", "head");
+      const head = git("rev-parse", "HEAD").trim();
+
+      // What the pull request's own attributes would show: no code at all.
+      expect(git("diff", `${base}...${head}`, "--", "app.ts")).toContain("Binary files");
+      expect(git(...reviewDiffArgs(base, head))).toContain("+export const leak = process.env.ZHIPU_API_KEY;");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });
