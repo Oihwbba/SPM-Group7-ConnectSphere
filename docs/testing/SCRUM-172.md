@@ -263,11 +263,11 @@ the database keeps or refuses. Times are UTC.
 | Test Case ID | TC-172-18 |
 | Test Scenario | [Positive, Negative, Boundary] AC 13: a venue booking records when, and by whom, Venue Staff approved its hold (SCRUM-163 AC7); new and existing bookings start with none |
 | Pre-conditions | A test venue and events. Each hold is placed at 08:00 on 1 May 2037 and expires at 08:00 on 5 May. |
-| Test Steps | 1. Read a new hold. <br> 2. Record an approval by `usr_venuestaff` at 09:00 on 2 May, then confirm the hold (Approved). <br> 3. On another hold, record only the time, then only who. <br> 4. Record an approval on a Pending booking that was never held. <br> 5. On a hold, record an approval a minute before it was placed, then at the moment it was placed. |
+| Test Steps | 1. Read a new hold. <br> 2. Record an approval by `usr_venuestaff` at 09:00 on 2 May, then confirm the hold (Approved). <br> 3. On another hold, record only the time, then only who. <br> 4. Record an approval on a Pending booking that was never held. <br> 5. On a hold, record an approval a minute before it was placed, then at the moment it was placed. <br> 6. Delete a user who approved a hold. |
 | Test Data | `usr_venuestaff` |
-| Expected Result | Step 1: no approval. Step 2: the approval is kept, and still kept once the booking is Approved. Steps 3 and 4: refused by `booking_hold_approval_complete`, nothing saved. Step 5: a minute before is refused the same way; at the moment it was placed is saved. |
+| Expected Result | Step 1: no approval. Step 2: the approval is kept, and still kept once the booking is Approved. Steps 3 and 4: refused by `booking_hold_approval_complete`, nothing saved. Step 5: a minute before is refused the same way; at the moment it was placed is saved. Step 6: refused by `Booking_holdApprovedById_fkey`, and the approval keeps who made it and when. |
 
-**Automated by:** `tests/integration/w9-rules.test.ts` › "SCRUM-172 [AC13] TC-172-18: a hold starts unapproved, records when and by whom Venue Staff approved it, and keeps that once confirmed", "SCRUM-172 [AC13] TC-172-18: an approval without who or when is refused" and "SCRUM-172 [AC13] TC-172-18: only a booking that was held records an approval, at or after the hold was placed"
+**Automated by:** `tests/integration/w9-rules.test.ts` › "SCRUM-172 [AC13] TC-172-18: a hold starts unapproved, records when and by whom Venue Staff approved it, and keeps that once confirmed", "SCRUM-172 [AC13] TC-172-18: an approval without who or when is refused", "SCRUM-172 [AC13] TC-172-18: only a booking that was held records an approval, at or after the hold was placed" and "SCRUM-172 [AC13] TC-172-18: a user who approved a hold can't be deleted, so the approval never loses who made it"
 
 ### TC-172-19
 

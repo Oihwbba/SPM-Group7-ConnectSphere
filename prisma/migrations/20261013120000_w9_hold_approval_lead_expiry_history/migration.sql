@@ -25,9 +25,11 @@ ALTER TABLE "Event" ADD CONSTRAINT "Event_supervisingLeadId_fkey"
 ALTER TABLE "Booking" ADD COLUMN "holdApprovedAt" TIMESTAMP(3),
 ADD COLUMN "holdApprovedById" TEXT;
 
+-- RESTRICT, not SET NULL: nulling only who approved would break
+-- booking_hold_approval_complete below, so the delete would fail anyway.
 ALTER TABLE "Booking" ADD CONSTRAINT "Booking_holdApprovedById_fkey"
   FOREIGN KEY ("holdApprovedById") REFERENCES "User"("id")
-  ON DELETE SET NULL ON UPDATE CASCADE;
+  ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- An approval records both who and when, and only a booking that was held
 -- can have one, approved no earlier than the hold was placed. It stays once
