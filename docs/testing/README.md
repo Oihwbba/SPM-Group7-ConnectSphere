@@ -85,6 +85,42 @@ defect, e.g. `regression: a blank rejection reason was accepted`.
 
 ## Stories with a specification
 
+### Written from the criteria and existing tests (SCRUM-176)
+
+These Sprint 1 and 2 stories were Done before they had a specification. Each
+was written on 2026-10-12 from its acceptance criteria, and maps every
+criterion to the tests that already existed, by their current titles. Those
+titles predate the `SCRUM-n [ACx] TC-n-xx` format; renaming them waits until
+the open pull requests that change the same test files have merged.
+
+| Story | Owner | Test cases | Status |
+|---|---|---|---|
+| [SCRUM-13](SCRUM-13.md) | Felicia Or | 13 | Automated except the accepted attendance of 1 in TC-13-08; notes what SCRUM-129 and SCRUM-170 changed in AC 1, 2, 4 and 6 |
+| [SCRUM-14](SCRUM-14.md) | Hann Qian | 6 | Automated except TC-14-02's whole submission with no Coordinator; its assignment step is unit-tested |
+| [SCRUM-15](SCRUM-15.md) | Felicia Or | 12 | Every case automated; AC 9's marking for correction isn't built, since the requirements are free text |
+| [SCRUM-16](SCRUM-16.md) | Felicia Or | 5 | Automated except TC-16-05 (AC 8), which is manual |
+| [SCRUM-17](SCRUM-17.md) | Hann Qian | 3 | Every case automated |
+| [SCRUM-18](SCRUM-18.md) | Hann Qian | 10 | Every case automated |
+| [SCRUM-19](SCRUM-19.md) | Hann Qian | 6 | Every case automated; approval now ends in Planning (SCRUM-81) |
+| [SCRUM-20](SCRUM-20.md) | Hann Qian | 5 | Every case automated; describes automatic assignment until SCRUM-165 |
+| [SCRUM-23](SCRUM-23.md) | Jun Bin | 2 | Every case automated |
+| [SCRUM-24](SCRUM-24.md) | Jun Bin | 6 | Automated except TC-24-06 (AC 5, waiting on SCRUM-128) and TC-24-03's message |
+| [SCRUM-29](SCRUM-29.md) | Jin Hong | 7 | Every case automated; reserving is SCRUM-155's |
+| [SCRUM-30](SCRUM-30.md) | Jin Hong | 7 | Every case automated |
+| [SCRUM-65](SCRUM-65.md) | Caylern Goh | 4 | Every case automated |
+| [SCRUM-66](SCRUM-66.md) | Caylern Goh | 4 | Every case automated |
+| [SCRUM-67](SCRUM-67.md) | Caylern Goh | 6 | Every case automated |
+| [SCRUM-68](SCRUM-68.md) | Caylern Goh | 3 | Every case automated |
+| [SCRUM-69](SCRUM-69.md) | Hann Qian | 5 | Every case automated; describes the lists until SCRUM-165 and SCRUM-21 |
+| [SCRUM-72](SCRUM-72.md) | Hann Qian | 8 | Every case automated |
+| [SCRUM-73](SCRUM-73.md) | Hann Qian | 8 | Every case automated |
+| [SCRUM-74](SCRUM-74.md) | Hann Qian | 6 | Every case automated |
+| [SCRUM-76](SCRUM-76.md) | Hann Qian | 5 | Every case automated |
+| [SCRUM-84](SCRUM-84.md) | Felicia Or | 8 | Automated except TC-84-04's message and button |
+| [SCRUM-129](SCRUM-129.md) | Felicia Or | 6 | Every case automated |
+
+### Written with the story
+
 | Story | Owner | Test cases | Status |
 |---|---|---|---|
 | [SCRUM-27](SCRUM-27.md) | Jin Hong | 15 | Written with the story; every case automated |
