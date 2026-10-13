@@ -92,6 +92,7 @@ defect, e.g. `regression: a blank rejection reason was accepted`.
 | [SCRUM-31](SCRUM-31.md) | Jun Bin | 11 | Written from the acceptance criteria and existing tests; TC-31-04, -05 and -09 are partly manual |
 | [SCRUM-36](SCRUM-36.md) | Caylern Goh | 8 | Automated; a real screen-reader pass is manual |
 | [SCRUM-37](SCRUM-37.md) | Caylern Goh | 7 | Every case automated |
+| [SCRUM-45](SCRUM-45.md) | Jin Hong | 8 | Every case automated; the triggers of unbuilt stories (AC 5–7, 9, 10 and the Lead's assignment) are listed as still to do |
 | [SCRUM-48](SCRUM-48.md) | Jin Hong | 15 | Every case automated except TC-48-08 and TC-48-10, blocked by SCRUM-166 and SCRUM-121 |
 | [SCRUM-50](SCRUM-50.md) | Caylern Goh | 11 | Every case automated |
 | [SCRUM-52](SCRUM-52.md) | Caylern Goh | 5 | Every case automated |

@@ -173,6 +173,17 @@ describe("rejectPlanningEvent — SCRUM-117", () => {
     );
   });
 
+  it("SCRUM-45 [AC3] TC-45-03: a reason typed without a full stop still reads as a sentence before the next step", async () => {
+    await rejectPlanningEvent({
+      ...valid,
+      decisionReason: "No venue large enough",
+    });
+
+    expect(tx.notification.create.mock.calls[0][0].data.message).toBe(
+      '"Concert" couldn\'t be arranged and was rejected: No venue large enough. What you can do next: Submit as a new request.',
+    );
+  });
+
   it("SCRUM-117 [AC6] TC-117-06: the Organiser is notified and the rejection is recorded with who and when", async () => {
     await rejectPlanningEvent(valid);
 
@@ -181,7 +192,8 @@ describe("rejectPlanningEvent — SCRUM-117", () => {
         userId: "usr_org",
         type: "EVENT_STATUS_CHANGED",
         title: "Your event was rejected",
-        message: `"Concert" couldn't be arranged and was rejected: ${REASON}`,
+        // SCRUM-45 AC3: with what the Organiser can do next.
+        message: `"Concert" couldn't be arranged and was rejected: ${REASON} What you can do next: Submit as a new request.`,
         eventId: "evt1",
       },
     });

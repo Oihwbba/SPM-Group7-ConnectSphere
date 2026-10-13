@@ -675,9 +675,10 @@ describe.skipIf(!usesLocalDatabase)("event submission — repeat submission (SCR
 
     expect(results.filter((r) => r.ok)).toHaveLength(1);
     expect(results.filter((r) => !r.ok)).toHaveLength(1);
-    // One assignment: one notification each for the organiser and the
-    // coordinator, and a single ASSIGNED audit row.
-    expect(await prisma.notification.count({ where: { eventId: draft.id } })).toBe(2);
+    // One submission: the organiser's submission notice (SCRUM-45 AC1), one
+    // assignment notice each for the organiser and the coordinator, and a
+    // single ASSIGNED audit row.
+    expect(await prisma.notification.count({ where: { eventId: draft.id } })).toBe(3);
     expect(
       await prisma.auditLog.count({
         where: { entityId: draft.id, action: "ASSIGNED" },
