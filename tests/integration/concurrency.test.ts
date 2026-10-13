@@ -51,32 +51,6 @@ describe("concurrency", () => {
 // and never against the shared Supabase database that `.env` points at.
 vi.mock("@/auth", () => ({ auth: vi.fn() }));
 
-// SCRUM-53 — a one-shot barrier around the approval's conflict check. When
-// armed with `parties = 2`, each approval waits after its check until the other
-// has checked too, so BOTH have seen "no conflict" before EITHER writes. That
-// is the exact interleaving a check-then-write design gets wrong, forced every
-// run instead of left to timing. Disarmed (the default), it changes nothing.
-const approvalBarrier = vi.hoisted(() => ({
-  parties: 0,
-  waiting: [] as Array<() => void>,
-}));
-vi.mock("@/lib/venue-availability", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("@/lib/venue-availability")>();
-  return {
-    ...actual,
-    findVenueBlockers: async (
-      ...args: Parameters<typeof actual.findVenueBlockers>
-    ) => {
-      const blockers = await actual.findVenueBlockers(...args);
-      if (approvalBarrier.parties > 0) {
-        await new Promise<void>((release) => {
-          approvalBarrier.waiting.push(release);
-          if (approvalBarrier.waiting.length === approvalBarrier.parties) {
-            approvalBarrier.parties = 0;
-            approvalBarrier.waiting.splice(0).forEach((go) => go());
-          }
-        });
       }
       return blockers;
     },
@@ -261,7 +235,6 @@ describe.skipIf(!usesLocalDatabase)(
     });
 
     afterEach(async () => {
-      approvalBarrier.parties = 0;
       const ids = await prisma.booking.findMany({
         where: { venueId },
         select: { id: true },
@@ -297,9 +270,9 @@ describe.skipIf(!usesLocalDatabase)(
         .mockResolvedValueOnce(staff("usr_venuestaff"))
         .mockResolvedValueOnce(staff(SECOND_STAFF_ID));
 
-      // Both approvals pass the application's own conflict check before either
-      // writes — only the database can now tell them apart.
-      approvalBarrier.parties = 2;
+      // Each approval locks the venue before checking it (SCRUM-160), so the
+      // second waits, then sees the first. The database's own refusal, with no
+      // application check at all, is the next test.
       const results = await Promise.all([
         decideBookingRequest({ bookingId: first, decision: "APPROVED" }),
         decideBookingRequest({ bookingId: second, decision: "APPROVED" }),
@@ -386,7 +359,6 @@ describe.skipIf(!usesLocalDatabase)(
         .mockResolvedValueOnce(staff("usr_venuestaff"))
         .mockResolvedValueOnce(staff(SECOND_STAFF_ID));
 
-      approvalBarrier.parties = 2;
       const results = await Promise.all([
         decideBookingRequest({ bookingId: morning, decision: "APPROVED" }),
         decideBookingRequest({ bookingId: afternoon, decision: "APPROVED" }),
@@ -397,9 +369,9 @@ describe.skipIf(!usesLocalDatabase)(
     });
 
     // SCRUM-159 AC5 — the same race, where the two requests' booked periods
-    // don't overlap but their occupied periods do. The application's check is
-    // passed by both (the barrier); the database compares occupied periods
-    // with the minutes each approval copies onto its booking (AC8).
+    // don't overlap but their occupied periods do. The second approval waits
+    // at the venue lock, then counts the first's occupied period, with the
+    // minutes it copied onto its booking (AC8).
     it("SCRUM-159 [AC5] TC-159-09: two staff approve requests whose setup and turnaround overlap at the same moment: only one succeeds, the other is returned as conflicting", async () => {
       await prisma.venue.update({
         where: { id: venueId },
@@ -423,7 +395,6 @@ describe.skipIf(!usesLocalDatabase)(
           .mockResolvedValueOnce(staff("usr_venuestaff"))
           .mockResolvedValueOnce(staff(SECOND_STAFF_ID));
 
-        approvalBarrier.parties = 2;
         const results = await Promise.all([
           decideBookingRequest({ bookingId: morning, decision: "APPROVED" }),
           decideBookingRequest({ bookingId: afternoon, decision: "APPROVED" }),
@@ -476,7 +447,6 @@ describe.skipIf(!usesLocalDatabase)(
     });
 
     afterAll(async () => {
-      approvalBarrier.parties = 0;
       const ids = (
         await prisma.booking.findMany({ where: { venueId }, select: { id: true } })
       ).map((b) => b.id);
@@ -508,8 +478,8 @@ describe.skipIf(!usesLocalDatabase)(
       });
       (auth as unknown as Mock).mockResolvedValue(staff);
 
-      // Both pass the application's own check before either writes.
-      approvalBarrier.parties = 2;
+      // Both lock the venue before checking it, so whichever is second sees
+      // the first.
       const results = await Promise.all([
         decideBookingRequest({ bookingId: pending.id, decision: "APPROVED" }),
         recordUnavailability({

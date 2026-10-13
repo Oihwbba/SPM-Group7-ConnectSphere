@@ -32,7 +32,7 @@ with maintenance recorded from 15:30 to 16:30.
 | [TC-160-07](#tc-160-07) | Positive | AC 2, AC 3 | Unit, integration |
 | [TC-160-08](#tc-160-08) | Negative | AC 7 | Unit, integration |
 | [TC-160-09](#tc-160-09) | Negative | AC 6, AC 7 | Unit |
-| [TC-160-10](#tc-160-10) | Concurrency | AC 1 | Unit |
+| [TC-160-10](#tc-160-10) | Concurrency | AC 1 | Unit, integration |
 | [TC-160-11](#tc-160-11) | Positive | AC 5 | Unit, integration, e2e |
 | [TC-160-12](#tc-160-12) | Negative | AC 1 | Unit |
 | [TC-160-13](#tc-160-13) | Positive | AC 4 | Integration |
@@ -165,7 +165,7 @@ with maintenance recorded from 15:30 to 16:30.
 | Test Data | — |
 | Expected Result | Both take the venue's row lock before reading its times, so they take turns. The approval copies the new minutes, or it is already Approved when clashes are looked for. |
 
-**Automated by:** `tests/unit/bookings.test.ts` › "SCRUM-160 [AC1] TC-160-10: …" (2 tests); `tests/unit/venue-times-actions.test.ts` › "SCRUM-160 [AC1] TC-160-01: the venue is locked before its times are read"
+**Automated by:** `tests/unit/bookings.test.ts` › "SCRUM-160 [AC1] TC-160-10: …" (2 tests); `tests/unit/venue-times-actions.test.ts` › "SCRUM-160 [AC1] TC-160-01: the venue is locked before its times are read"; `tests/integration/concurrency.test.ts` › "SCRUM-53 [AC5] TC-53-05: two staff approve …", "SCRUM-159 [AC5] TC-159-09: …" and "SCRUM-37 [AC4] TC-37-06: …", where simultaneous approvals and maintenance now take turns at the same lock
 
 ### TC-160-11
 
