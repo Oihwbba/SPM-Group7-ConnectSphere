@@ -1,5 +1,7 @@
 # ADR 0002 — Use the JWT session strategy
 
+Stories: SCRUM-65.
+
 ## Context
 
 We authenticate users with Auth.js (NextAuth v5) using the Credentials

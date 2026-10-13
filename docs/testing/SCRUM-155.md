@@ -47,7 +47,7 @@ Approved and asks for 1 Projector and 2 Wireless Microphones.
 | Test Data       | —                                                                                                                                                                                     |
 | Expected Result | Only the Approved request for the upcoming Planning event is listed, by event name and period. The In Review one, the Confirmed event's and the started event's are not.              |
 
-**Automated by:** `tests/unit/equipment-request-queries.test.ts` › "SCRUM-155 [AC1, AC6] TC-155-01: …"; `tests/unit/request-reservation.test.ts` › "SCRUM-155 [AC1, AC6] TC-155-01: …"; `tests/integration/request-reservation.test.ts` › "SCRUM-155 [AC1, AC6] TC-155-01, TC-155-06: …"
+**Automated by:** `tests/unit/equipment-request-queries.test.ts` › "SCRUM-155 [AC1] TC-155-01: …"; `tests/unit/request-reservation.test.ts` › "SCRUM-155 [AC1, AC6] TC-155-01: …"; `tests/integration/request-reservation.test.ts` › "SCRUM-155 [AC1, AC6] TC-155-01, TC-155-06: …"
 
 ### TC-155-02
 
