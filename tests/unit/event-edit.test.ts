@@ -224,7 +224,13 @@ describe("updateEventDetails — SCRUM-25", () => {
     });
     expect(db.$queryRaw).toHaveBeenCalledTimes(1);
     expect(db.booking.count).toHaveBeenCalledWith({
-      where: { eventId: "evt_1", status: { in: ["PENDING", "HELD", "APPROVED"] } },
+      where: {
+        eventId: "evt_1",
+        OR: [
+          { status: { in: ["PENDING", "APPROVED"] } },
+          { status: "HELD", holdExpiresAt: { gt: expect.any(Date) } },
+        ],
+      },
     });
     expect(db.reservation.count).toHaveBeenCalledWith({
       where: { eventId: "evt_1", status: "CONFIRMED" },
@@ -232,6 +238,20 @@ describe("updateEventDetails — SCRUM-25", () => {
     expect(db.event.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({ startAt: later, expectedAttendance: 150 }),
+      }),
+    );
+  });
+
+  it("SCRUM-25 [AC3] TC-25-15: changing the equipment requirements puts a No equipment needed decision back to Not decided, clearing who and when together", async () => {
+    await updateEventDetails({ ...unchanged, equipmentRequirements: "Two lapel mics" });
+
+    expect(db.event.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: {
+          equipmentRequirements: "Two lapel mics",
+          noEquipmentNeededAt: null,
+          noEquipmentNeededById: null,
+        },
       }),
     );
   });
@@ -526,7 +546,7 @@ describe("operational notes — SCRUM-25 AC6", () => {
     },
   );
 
-  it("SCRUM-25 [AC6] TC-25-10: Venue Staff's booking count is of Pending, Held and Approved bookings only", async () => {
+  it("SCRUM-25 [AC6] TC-25-10: Venue Staff's booking count is of Pending, Approved and still-live Held bookings only", async () => {
     await addOperationalNote({ eventId: "evt_1", body: "x" });
 
     expect(db.event.findUnique).toHaveBeenCalledWith(
@@ -534,7 +554,14 @@ describe("operational notes — SCRUM-25 AC6", () => {
         select: expect.objectContaining({
           _count: {
             select: {
-              bookings: { where: { status: { in: ["PENDING", "HELD", "APPROVED"] } } },
+              bookings: {
+                where: {
+                  OR: [
+                    { status: { in: ["PENDING", "APPROVED"] } },
+                    { status: "HELD", holdExpiresAt: { gt: expect.any(Date) } },
+                  ],
+                },
+              },
               equipmentRequests: true,
             },
           },

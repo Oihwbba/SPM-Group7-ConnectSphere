@@ -237,6 +237,112 @@ describe.skipIf(!usesLocalDatabase)("editing an event's details — real databas
     ).toBe(80);
   });
 
+  /**
+   * A Planning event with one hold at `venueId`, expiring at `expiresAt`. Any
+   * booking written at a venue marks its lapsed holds Expired (the
+   * booking_overlaps_unavailability trigger), so a lapsed hold that must stay
+   * Held needs a venue of its own.
+   */
+  async function eventWithHold(
+    venueId: string,
+    day: string,
+    expiresAt: Date,
+  ): Promise<string> {
+    const startAt = new Date(`${day}T02:00:00.000Z`);
+    const endAt = new Date(`${day}T06:00:00.000Z`);
+    const [eventId] = await createPlanningEvents("SCRUM-25 hold", [
+      { startAt, endAt, expectedAttendance: 80 },
+    ]);
+    eventIds.push(eventId);
+    await prisma.booking.create({
+      data: {
+        eventId,
+        venueId,
+        startAt,
+        endAt,
+        status: "HELD",
+        heldAt: new Date(expiresAt.getTime() - 60 * 60_000),
+        holdExpiresAt: expiresAt,
+        holdNote: "Confirm the headcount.",
+        requestedById: "usr_coordinator",
+      },
+    });
+    return eventId;
+  }
+
+  it("SCRUM-25 [AC3, AC6] TC-25-06, TC-25-10: a hold past its expiry no longer counts as a booking; one still live does", async () => {
+    const lapsed = await eventWithHold(
+      "ven_boardroom",
+      "2036-06-09",
+      new Date(Date.now() - 60_000),
+    );
+    const live = await eventWithHold(
+      "ven_auditorium",
+      "2036-06-16",
+      new Date("2036-06-01T00:00:00.000Z"),
+    );
+    // Lapsed but not yet marked Expired: the case the booking flow's count is for.
+    expect(
+      await prisma.booking.findFirstOrThrow({
+        where: { eventId: lapsed },
+        select: { status: true },
+      }),
+    ).toEqual({ status: "HELD" });
+
+    // AC3: the lapsed hold doesn't stop the attendance changing; the live one does.
+    expect(
+      await updateEventDetails({ ...(await formFor(lapsed)), expectedAttendance: 90 }),
+    ).toMatchObject({ ok: true, data: { changed: ["expectedAttendance"] } });
+    expect(
+      await updateEventDetails({ ...(await formFor(live)), expectedAttendance: 90 }),
+    ).toMatchObject({ ok: false });
+    expect(
+      (await prisma.event.findUniqueOrThrow({ where: { id: live } })).expectedAttendance,
+    ).toBe(80);
+
+    // AC6: Venue Staff may add a note only through the live hold.
+    mockAuth.mockResolvedValue(VENUE_STAFF);
+    expect(await addOperationalNote({ eventId: lapsed, body: "Room ready." })).toEqual({
+      ok: false,
+      error: "Event not found.",
+    });
+    expect(await prisma.eventOperationalNote.count({ where: { eventId: lapsed } })).toBe(0);
+    expect(await addOperationalNote({ eventId: live, body: "Room ready." })).toMatchObject({
+      ok: true,
+    });
+  });
+
+  it("SCRUM-25 [AC3] TC-25-15: changing the equipment requirements clears a No equipment needed decision; a routine change keeps it", async () => {
+    const eventId = await planningEvent();
+    const decidedAt = new Date("2026-10-01T02:00:00.000Z");
+    await prisma.event.update({
+      where: { id: eventId },
+      data: { noEquipmentNeededAt: decidedAt, noEquipmentNeededById: "usr_coordinator" },
+    });
+    const decision = () =>
+      prisma.event.findUniqueOrThrow({
+        where: { id: eventId },
+        select: { noEquipmentNeededAt: true, noEquipmentNeededById: true },
+      });
+
+    await updateEventDetails({ ...(await formFor(eventId)), programme: "Doors 9am" });
+    expect(await decision()).toEqual({
+      noEquipmentNeededAt: decidedAt,
+      noEquipmentNeededById: "usr_coordinator",
+    });
+
+    expect(
+      await updateEventDetails({
+        ...(await formFor(eventId)),
+        equipmentRequirements: "Two lapel mics",
+      }),
+    ).toMatchObject({ ok: true });
+    expect(await decision()).toEqual({
+      noEquipmentNeededAt: null,
+      noEquipmentNeededById: null,
+    });
+  });
+
   it("SCRUM-25 [AC7] TC-25-08, TC-25-12: once the event is reassigned, its previous Coordinator can't edit it or add a note, and nothing is written", async () => {
     const eventId = await planningEvent();
     await prisma.event.update({

@@ -82,7 +82,7 @@ requirements are the fields SCRUM-26 warns about and flags on (AC3).
 | Pre-conditions | One Planning event with nothing booked or reserved; another with a Pending venue booking. |
 | Test Steps | 1. Move the first event a week later and change its attendance. <br> 2. Change the second event's attendance. <br> 3. Move a start into the past, or the end before the start. |
 | Test Data | — |
-| Expected Result | 1 saves: with nothing booked or reserved there is nothing for SCRUM-26 to warn about or flag. 2 is refused: "Expected attendance can't be changed while the event has a venue booking or an equipment reservation: it would leave them out of date. Nothing was saved." shown above the form, and the attendance field is marked "Can't change while the event has a venue booking or an equipment reservation." with the dialog scrolled to it. 3 is refused against the field. |
+| Expected Result | 1 saves: with nothing booked or reserved there is nothing for SCRUM-26 to warn about or flag. 2 is refused: "Expected attendance can't be changed while the event has a venue booking or an equipment reservation: it would leave them out of date. Nothing was saved." shown above the form, and the attendance field is marked "Can't change while the event has a venue booking or an equipment reservation." with the dialog scrolled to it. 3 is refused against the field. A hold past its expiry no longer counts as a booking (SCRUM-163 AC4), so it doesn't stop the change; a hold still live does. |
 
 **Automated by:** `tests/unit/event-edit.test.ts` › "SCRUM-25 [AC3] TC-25-06: …"; `tests/integration/event-edit.test.ts` › "SCRUM-25 [AC3] TC-25-06: …"; `e2e/event-edit.spec.ts`
 
@@ -136,9 +136,9 @@ Once SCRUM-26 lands, step 2 shows its warning and flags the booking instead of r
 | Pre-conditions | A Planning event first with no booking, then with a Pending booking; one with an equipment request. |
 | Test Steps | 1. As Venue Staff, add a note before and after the booking exists, from the booking in Bookings. <br> 2. As Technical Support, add a note from the equipment request. |
 | Test Data | `venuestaff@test.local`, `techsupport@test.local` |
-| Expected Result | Before the booking: "Event not found." After: the note is added. Only Pending, Held and Approved bookings count. Technical Support can add once there is a request, not before. |
+| Expected Result | Before the booking: "Event not found." After: the note is added. Only Pending, Approved and still-live Held bookings count; a hold past its expiry reads as "Event not found." Technical Support can add once there is a request, not before. |
 
-**Automated by:** `tests/unit/event-edit.test.ts` › "SCRUM-25 [AC6, AC7] TC-25-10, TC-25-12: …"; `tests/integration/event-edit.test.ts`; `e2e/event-edit.spec.ts`
+**Automated by:** `tests/unit/event-edit.test.ts` › "SCRUM-25 [AC6, AC7] TC-25-10, TC-25-12: …"; `tests/integration/event-edit.test.ts` (including "SCRUM-25 [AC3, AC6] TC-25-06, TC-25-10: …" for the lapsed hold); `e2e/event-edit.spec.ts`
 
 ### TC-25-11
 
@@ -191,3 +191,16 @@ Once SCRUM-26 lands, step 2 shows its warning and flags the booking instead of r
 | Expected Result | "Nothing changed."; nothing is written or audited. |
 
 **Automated by:** `tests/unit/event-edit.test.ts` › "SCRUM-25 [AC1] TC-25-14: …"
+
+### TC-25-15
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-25-15 |
+| Test Scenario | [Positive] [Negative] AC 3, with SCRUM-170 AC 4: changing the equipment requirements puts a No equipment needed decision back to Not decided |
+| Pre-conditions | A Planning event with nothing booked or reserved, whose Coordinator recorded No equipment needed. |
+| Test Steps | 1. Change only the programme. Save. <br> 2. Change the equipment requirements. Save. |
+| Test Data | Equipment requirements "Two lapel mics" |
+| Expected Result | 1: the decision and who made it are kept. 2: both are cleared together (`event_no_equipment_decision_complete`), so the readiness checklist shows Equipment as Not decided again. |
+
+**Automated by:** `tests/unit/event-edit.test.ts` › "SCRUM-25 [AC3] TC-25-15: …"; `tests/integration/event-edit.test.ts` › "SCRUM-25 [AC3] TC-25-15: …"

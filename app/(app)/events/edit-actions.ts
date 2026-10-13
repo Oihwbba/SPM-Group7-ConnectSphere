@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import type { BookingStatus, SafetyCheckStatus } from "@prisma/client";
+import type { Prisma, SafetyCheckStatus } from "@prisma/client";
 
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
@@ -12,6 +12,7 @@ import {
   type Resource,
 } from "@/lib/auth/can";
 import { err, ok, type ActionResult } from "@/lib/action-result";
+import { liveHoldWhere } from "@/lib/booking-holds";
 import {
   ARRANGEMENT_FIELDS,
   ARRANGEMENT_LOCKED_MESSAGE,
@@ -28,8 +29,14 @@ import {
   type EditableField,
 } from "@/lib/schemas/event-edit";
 
-/** SCRUM-26 AC2 — the bookings that hold, or may still get, their venue. */
-const LIVE_BOOKING_STATUSES: BookingStatus[] = ["PENDING", "HELD", "APPROVED"];
+/**
+ * SCRUM-26 AC2 — the bookings that hold, or may still get, their venue,
+ * counted as the booking flow counts them: a hold only until it expires
+ * (SCRUM-163 AC4), even before anything has marked it Expired.
+ */
+function liveBookingWhere(now: Date): Prisma.BookingWhereInput {
+  return { OR: [{ status: { in: ["PENDING", "APPROVED"] } }, liveHoldWhere(now)] };
+}
 
 /** SCRUM-166 — a check not yet out of date; a routine change makes it Outdated. */
 const CURRENT_SAFETY_CHECK_STATUSES: SafetyCheckStatus[] = [
@@ -155,9 +162,7 @@ export async function updateEventDetails(
 
       if (arrangementChanges.length > 0) {
         const [bookings, reservations] = await Promise.all([
-          tx.booking.count({
-            where: { eventId, status: { in: LIVE_BOOKING_STATUSES } },
-          }),
+          tx.booking.count({ where: { eventId, ...liveBookingWhere(now) } }),
           tx.reservation.count({ where: { eventId, status: "CONFIRMED" } }),
         ]);
         if (bookings + reservations > 0) {
@@ -172,9 +177,20 @@ export async function updateEventDetails(
 
       // AC2: the status is not part of the edit; the update applies only if
       // it is still the one read, and the event is still this Coordinator's.
+      // SCRUM-170 AC4: changed equipment requirements put Equipment back to
+      // Not decided. Both columns clear together (event_no_equipment_decision_complete).
+      const equipmentChanged = changes.some(
+        ({ field }) => field === "equipmentRequirements",
+      );
       const updated = await tx.event.updateMany({
         where: { id: eventId, status: event.status, coordinatorId: user!.id },
-        data: Object.fromEntries(changes.map(({ field }) => [field, next[field]])),
+        data: {
+          ...Object.fromEntries(changes.map(({ field }) => [field, next[field]])),
+          ...(equipmentChanged && {
+            noEquipmentNeededAt: null,
+            noEquipmentNeededById: null,
+          }),
+        },
       });
       if (updated.count !== 1) throw new EditError(CHANGED_WHILE_EDITING_MESSAGE);
 
@@ -216,6 +232,7 @@ export async function updateEventDetails(
  * arrangements it has (SCRUM-25 AC6). Null when the event doesn't exist.
  */
 async function notesResource(eventId: string) {
+  const now = new Date();
   const event = await prisma.event.findUnique({
     where: { id: eventId },
     select: {
@@ -224,7 +241,7 @@ async function notesResource(eventId: string) {
       status: true,
       _count: {
         select: {
-          bookings: { where: { status: { in: LIVE_BOOKING_STATUSES } } },
+          bookings: { where: liveBookingWhere(now) },
           equipmentRequests: true,
         },
       },
