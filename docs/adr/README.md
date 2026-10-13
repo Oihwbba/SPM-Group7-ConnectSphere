@@ -23,6 +23,7 @@ it can be read aloud in the oral exam.
 | [0015](0015-rejecting-a-planning-event.md) | Rejecting a Planning event releases its arrangements in one transaction | SCRUM-117 | Current |
 | [0017](0017-needs-reconsideration-flags.md) | Needs Reconsideration is a flag the Coordinator resolves, never a status | SCRUM-26 | Current |
 | [0018](0018-operational-safety-check.md) | The safety check is a checklist item with its own rows, not an event status | SCRUM-166 | Current |
+| [0019](0019-closing-an-event.md) | Events complete on the next read after they end, not by a scheduled job | SCRUM-82 | Current |
 
 ## Writing one
 
