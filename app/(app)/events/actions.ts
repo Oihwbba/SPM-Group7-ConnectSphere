@@ -16,6 +16,7 @@ import { auditValue } from "@/lib/audit-value";
 import { pickCoordinator } from "@/lib/coordinator-assignment";
 import { getReadinessChecklist } from "@/lib/event-readiness";
 import { TIME_ZONE } from "@/lib/datetime";
+import { canTransition, transitionRefusal } from "@/lib/event-lifecycle";
 
 /** Thrown inside submitEventRequest's transaction for an expected failure
  * (not found / wrong state), caught below and converted to an ActionResult —
@@ -222,23 +223,24 @@ export async function submitEventRequest(
         // second waits here, then finds the event already submitted.
         await tx.$queryRaw`SELECT "id" FROM "Event" WHERE "id" = ${id} FOR UPDATE`;
         const existing = await tx.event.findFirst({
-          where: {
-            id,
-            organiserId: user!.id,
-            // SCRUM-126 AC2/AC3: a rejection marked "Submit as a new request"
-            // stays Rejected and read-only.
-            OR: [
-              // SCRUM-130 AC1: a discarded draft cannot be submitted.
-              { status: "DRAFT", discardedAt: null },
-              { status: "REJECTED", rejectionOutcome: "AMEND_AND_RESUBMIT" },
-            ],
-          },
+          // SCRUM-130 AC1: a discarded draft cannot be submitted.
+          where: { id, organiserId: user!.id, discardedAt: null },
         });
 
         if (!existing) {
           throw new SubmitEventError(
             "Draft or rejected event not found or cannot be submitted.",
           );
+        }
+        // SCRUM-135 AC1, AC6, AC11: a Draft, or a Rejected request marked
+        // Amend and resubmit; one marked "Submit as a new request" stays
+        // Rejected and read-only (SCRUM-126 AC2, AC3).
+        if (
+          !canTransition(existing.status, "SUBMITTED", {
+            rejectionOutcome: existing.rejectionOutcome,
+          })
+        ) {
+          throw new SubmitEventError(transitionRefusal(existing.status, "submitted"));
         }
         previousCoordinatorId = existing.coordinatorId;
         resubmitted = existing.status === "REJECTED";
@@ -515,6 +517,10 @@ export async function getFormCatalogues(): Promise<
  *   one — so the action cannot be used to probe which event ids exist (SCRUM-68).
  * - The update is conditional on the status and coordinator this caller
  *   observed, so of two simultaneous decisions only one can win (SCRUM-24).
+ * - SCRUM-135 AC3, AC4: only a request Under Review is decided, by its
+ *   assigned Coordinator. A Submitted request has no Coordinator yet, so the
+ *   older rule that whoever decided one became its Coordinator (SCRUM-81 AC2)
+ *   no longer applies.
  */
 export async function transitionEventStatus(
   input: unknown,
@@ -563,20 +569,13 @@ export async function transitionEventStatus(
       });
     if (!event || !related) return err("Event not found.");
 
-    // SCRUM-19: a submitted (or under-review) request can be decided.
-    if (event.status !== "SUBMITTED" && event.status !== "UNDER_REVIEW") {
-      return err(
-        "That status change is not allowed from the event's current status.",
-      );
-    }
-
-    // SCRUM-81: approval moves the event straight to Planning. Whoever
-    // decides a request nobody was assigned to becomes its coordinator: on
-    // approval because only the assigned coordinator may confirm it (SCRUM-81
-    // AC2), on rejection so it leaves other coordinators' lists and comes back
-    // to them if it is resubmitted (SCRUM-108 AC11).
+    // SCRUM-81: approval moves the event straight to Planning.
     const approved = nextStatus === "APPROVED";
-    const coordinatorId = event.coordinatorId ?? user!.id;
+    // SCRUM-135 AC3, AC4, AC11: only a request Under Review, which therefore
+    // has its Coordinator, is decided here. A Submitted request waits for one.
+    if (event.status !== "UNDER_REVIEW") {
+      return err(transitionRefusal(event.status, approved ? "approved" : "rejected"));
+    }
 
     const updated = await prisma.$transaction(async (tx) => {
       const now = new Date();
@@ -588,7 +587,6 @@ export async function transitionEventStatus(
         },
         data: {
           status: approved ? "PLANNING" : "REJECTED",
-          coordinatorId,
           decidedAt: now,
           decidedById: user!.id,
           decisionReason: approved ? null : decisionReason,
@@ -631,22 +629,6 @@ export async function transitionEventStatus(
             decidedById: user!.id,
             decidedAt: now,
             decisionReason,
-          },
-        });
-      }
-      if (coordinatorId !== event.coordinatorId) {
-        await tx.auditLog.create({
-          data: {
-            entityType: "Event",
-            entityId: event.id,
-            action: "ASSIGNED",
-            actorId: user!.id,
-            fieldName: "coordinatorId",
-            oldValue: event.coordinatorId,
-            newValue: coordinatorId,
-            summary: approved
-              ? "Assigned to the approving coordinator (SCRUM-81)"
-              : "Assigned to the rejecting coordinator (SCRUM-108)",
           },
         });
       }
@@ -730,7 +712,10 @@ export async function confirmEvent(
         },
       });
       if (current.status === "CONFIRMED") return "already-confirmed" as const;
-      if (current.status !== "PLANNING") return "not-planning" as const;
+      // SCRUM-135 AC7, AC11: only Planning moves to Confirmed.
+      if (!canTransition(current.status, "CONFIRMED")) {
+        return { refused: transitionRefusal(current.status, "confirmed") };
+      }
       if (current.coordinatorId !== user!.id) return "reassigned" as const;
 
       const checklist = (await getReadinessChecklist(tx, eventId))!;
@@ -766,9 +751,7 @@ export async function confirmEvent(
       return "confirmed" as const;
     });
 
-    if (outcome === "not-planning") {
-      return err("Only an event in Planning can be confirmed.");
-    }
+    if (typeof outcome === "object") return err(outcome.refused);
     if (outcome === "reassigned") {
       return err(
         "This event was updated by another user. Refresh and try again.",
@@ -1019,7 +1002,11 @@ export async function rejectPlanningEvent(
         where: { id: eventId },
         select: { status: true, coordinatorId: true },
       });
-      if (current.status !== "PLANNING") return "not-planning" as const;
+      // SCRUM-135 AC5, AC11: this rejection is from Planning only; one Under
+      // Review is rejected through the review (transitionEventStatus).
+      if (current.status !== "PLANNING") {
+        return { refused: transitionRefusal(current.status, "rejected here") };
+      }
       if (current.coordinatorId !== user!.id) return "reassigned" as const;
       // AC4: confirming writes this history entry (SCRUM-81).
       const confirmedBefore = await tx.auditLog.count({
@@ -1132,9 +1119,7 @@ export async function rejectPlanningEvent(
       return "rejected" as const;
     });
 
-    if (outcome === "not-planning") {
-      return err("Only an event in Planning can be rejected here.");
-    }
+    if (typeof outcome === "object") return err(outcome.refused);
     if (outcome === "reassigned") {
       return err(
         "This event was updated by another user. Refresh and try again.",

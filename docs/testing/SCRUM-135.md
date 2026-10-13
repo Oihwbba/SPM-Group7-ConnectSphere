@@ -1,0 +1,166 @@
+# SCRUM-135 — Refuse any event status change the lifecycle does not allow: test cases
+
+Story and acceptance criteria: [docs/backlog/SCRUM-135.md](../backlog/SCRUM-135.md).
+Format and conventions: [README.md](README.md). Why it works this way:
+[ADR 0006, 2026-10-14 addendum](../adr/0006-single-event-status-transition-gate.md).
+
+**Shared pre-conditions for every case:** the database is migrated and seeded
+and the app is running. Events are organised by `organiser@test.local`; an
+assigned event's Coordinator is `coordinator@test.local`. Every account's
+password is `Password123!`.
+
+The lifecycle is one table, `lib/event-lifecycle.ts`. Each transition's own
+story proves the action that makes it; this story proves the table and that
+every action asks it.
+
+**What this story doesn't cover yet:**
+
+- **AC2:** the Lead assigning a Coordinator is SCRUM-165 (not built). Until
+  then SCRUM-20's automatic assignment makes the same move, Submitted → Under
+  Review, and a resubmitted request whose Coordinator left the role is
+  assigned the same way rather than waiting in the Lead's queue (AC6).
+- **AC16, reassignment:** SCRUM-21 isn't built. Nothing that changes an
+  event's Coordinator writes its status.
+
+| ID | Type | Criterion | Automated |
+|---|---|---|---|
+| [TC-135-01](#tc-135-01) | Positive | AC 1, AC 2, AC 3, AC 4, AC 5, AC 7, AC 8, AC 9, AC 10 | Unit |
+| [TC-135-03](#tc-135-03) | Negative | AC 3, AC 4, AC 11 | Unit, e2e |
+| [TC-135-04](#tc-135-04) | Negative | AC 4 | Unit, e2e |
+| [TC-135-06](#tc-135-06) | Positive, Negative | AC 6, AC 13 | Unit |
+| [TC-135-09](#tc-135-09) | Positive | AC 9 | Unit |
+| [TC-135-11](#tc-135-11) | Negative | AC 11 | Unit |
+| [TC-135-12](#tc-135-12) | Negative | AC 12 | Unit |
+| [TC-135-13](#tc-135-13) | Negative | AC 13 | Unit |
+| [TC-135-14](#tc-135-14) | Concurrency | AC 14 | Unit, integration |
+| [TC-135-15](#tc-135-15) | Positive | AC 15, AC 16 | Unit |
+
+### TC-135-01
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-135-01 |
+| Test Scenario | [Positive] AC 1–AC 10: every transition in the story is allowed |
+| Pre-conditions | — |
+| Test Steps | Ask the lifecycle about each pair. |
+| Test Data | Draft → Submitted; Submitted → Under Review; Under Review → Planning, Rejected or Cancelled; Planning → Confirmed, Rejected or Cancelled; Confirmed → Planning, Cancelled or Completed. |
+| Expected Result | Each is allowed. |
+
+**Automated by:** `tests/unit/event-lifecycle.test.ts` › "SCRUM-135 TC-135-01: …" (11 tests). The actions themselves: SCRUM-14, SCRUM-20, SCRUM-81 (TC-81-01, TC-81-05), SCRUM-117, SCRUM-128, SCRUM-26 and SCRUM-82 (TC-82-01, TC-82-09).
+
+### TC-135-03
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-135-03 |
+| Test Scenario | [Negative] AC 3, AC 4, AC 11: a Submitted request with no Coordinator can't be approved or rejected |
+| Pre-conditions | "Submitted — Alumni Homecoming" (seeded) has no Coordinator. |
+| Test Steps | 1. As the Coordinator, open **Events**. <br> 2. Approve or reject it directly. |
+| Test Data | — |
+| Expected Result | 1. Its row has **Ask** but no **Approve** or **Reject**. 2. "This event is Submitted, so it can't be approved." (or "rejected."). Nothing changes and no Coordinator is assigned. |
+
+**Automated by:** `tests/unit/event-lifecycle.test.ts` › "SCRUM-135 [AC3, AC4] TC-135-03: …"; `tests/unit/event-status.test.ts` › "SCRUM-135 [AC3, AC4, AC11] TC-135-03: …" (2 tests); `e2e/coordinator-assigned-events.spec.ts` › "SCRUM-135 AC3, AC4: …"; `e2e/events.spec.ts` (SCRUM-23 & SCRUM-24 journey)
+
+### TC-135-04
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-135-04 |
+| Test Scenario | [Negative] AC 4: rejecting doesn't make a Coordinator assign themselves |
+| Pre-conditions | A Submitted request with no Coordinator. |
+| Test Steps | Reject it directly, with a reason and an outcome. |
+| Test Data | Reason "Too large for any venue."; Amend and resubmit. |
+| Expected Result | "This event is Submitted, so it can't be rejected." No status change, no assignment, no history entry. |
+
+**Automated by:** `tests/unit/clarification-and-amend.test.ts` › "SCRUM-135 [AC4] TC-135-04: …"
+
+### TC-135-06
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-135-06 |
+| Test Scenario | [Positive, Negative] AC 6, AC 13: only a request rejected for amendment is resubmitted |
+| Pre-conditions | Two Rejected requests: one Amend and resubmit, one Submit as a new request. |
+| Test Steps | Resubmit each. |
+| Test Data | — |
+| Expected Result | The first goes back to Submitted, then Under Review with the same Coordinator (TC-108-05). The second: "This event is Rejected, so it can't be submitted." |
+
+**Automated by:** `tests/unit/event-lifecycle.test.ts` › "SCRUM-135 [AC6, AC13] TC-135-06: …"; `tests/unit/events.test.ts` › "SCRUM-135 [AC11, AC13] TC-135-11: …"; `tests/unit/clarification-and-amend.test.ts` › "… TC-108-05: …"
+
+### TC-135-09
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-135-09 |
+| Test Scenario | [Positive] AC 9: what can be cancelled |
+| Pre-conditions | — |
+| Test Steps | Read the statuses an event can be cancelled from. |
+| Test Data | — |
+| Expected Result | Under Review, Planning and Confirmed (and a row left Approved from before approval moved straight to Planning, so it isn't stranded). The **Cancel event** button uses the same list. |
+
+**Automated by:** `tests/unit/event-lifecycle.test.ts` › "SCRUM-135 [AC9] TC-135-09: …"; `tests/unit/cancel-event.test.ts` › "SCRUM-82 [AC1] TC-82-01: …"
+
+### TC-135-11
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-135-11 |
+| Test Scenario | [Negative] AC 11: any other transition is refused, naming the current status |
+| Pre-conditions | One event in each status. |
+| Test Steps | Through each action (submit, approve, reject, reject from Planning, confirm, cancel), ask for a transition the table doesn't have. |
+| Test Data | E.g. confirm an Under Review event; cancel a Draft; submit a Planning event. |
+| Expected Result | "This event is Under Review, so it can't be confirmed." and so on. The status doesn't change and nothing is written. |
+
+**Automated by:** `tests/unit/event-lifecycle.test.ts` › "SCRUM-135 [AC11] TC-135-11: …" (10 tests); `tests/unit/event-status.test.ts`, `tests/unit/event-confirm.test.ts` (TC-81-11), `tests/unit/reject-planning.test.ts` (TC-117-04), `tests/unit/cancel-event.test.ts` (TC-82-02) and `tests/unit/events.test.ts` › "… SCRUM-135 [AC11] …"
+
+### TC-135-12
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-135-12 |
+| Test Scenario | [Negative] AC 12: Approved is never a resting status |
+| Pre-conditions | An event Under Review. |
+| Test Steps | Approve it. |
+| Test Data | — |
+| Expected Result | It is Planning, with history entries for the approval and the move. No transition leads into Approved. |
+
+**Automated by:** `tests/unit/event-lifecycle.test.ts` › "SCRUM-135 [AC12] TC-135-12: …"; `tests/unit/event-status.test.ts` › "SCRUM-81 [AC1, AC2] TC-81-01: …"
+
+### TC-135-13
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-135-13 |
+| Test Scenario | [Negative] AC 13: Completed and Cancelled are final |
+| Pre-conditions | A Completed and a Cancelled event. |
+| Test Steps | Try every transition from each. |
+| Test Data | — |
+| Expected Result | All refused. |
+
+**Automated by:** `tests/unit/event-lifecycle.test.ts` › "SCRUM-135 [AC13] TC-135-13: …"; `tests/unit/cancel-event.test.ts` (TC-82-02, TC-82-05)
+
+### TC-135-14
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-135-14 |
+| Test Scenario | [Concurrency] AC 14: a repeated transition is recorded once |
+| Pre-conditions | An event Under Review; a ready Planning event; a Planning event. |
+| Test Steps | Send each decision twice at the same moment: approve and reject; confirm twice; cancel twice. |
+| Test Data | — |
+| Expected Result | One wins; the other changes nothing. One history entry and one set of notifications. |
+
+**Automated by:** `tests/integration/concurrency.test.ts` › "SCRUM-24: the loser of two simultaneous decisions …" and the SCRUM-81 confirm race; `tests/unit/event-confirm.test.ts` (TC-81-09); `tests/unit/cancel-event.test.ts` (TC-82-05); `tests/integration/close-event.test.ts` (TC-82-07, TC-82-10)
+
+### TC-135-15
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-135-15 |
+| Test Scenario | [Positive] AC 15, AC 16: clarification and the safety check are steps, not statuses |
+| Pre-conditions | — |
+| Test Steps | Read the statuses. Ask a clarifying question on an event Under Review; request a safety check on a Planning event. |
+| Test Data | — |
+| Expected Result | Exactly Draft, Submitted, Under Review, Approved, Planning, Confirmed, Completed, Cancelled and Rejected. The event stays Under Review, and in Planning. |
+
+**Automated by:** `tests/unit/event-lifecycle.test.ts` › "SCRUM-135 [AC15, AC16] TC-135-15: …"; SCRUM-18's clarification tests and SCRUM-166's safety-check tests leave the status unchanged.

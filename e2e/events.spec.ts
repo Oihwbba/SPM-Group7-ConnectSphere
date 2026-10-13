@@ -776,6 +776,7 @@ test.describe("User Story 23 & 24 — Event Status View & Consistency Journey", 
       where: { id: "evt_under_review" },
       data: {
         status: "UNDER_REVIEW",
+        rejectionOutcome: null,
         decisionReason: null,
         decidedAt: null,
         decidedById: null,
@@ -808,13 +809,15 @@ test.describe("User Story 23 & 24 — Event Status View & Consistency Journey", 
     await expect(detailModal.getByTestId("status-badge")).toHaveAttribute("data-status", "UNDER_REVIEW");
     await page.keyboard.press("Escape");
 
-    // 4. Test status transition & decision validation: Reject a submitted event request
+    // 4. SCRUM-135 AC3, AC4: an unassigned Submitted request offers no
+    // decision; the Under Review one assigned to this Coordinator is rejected.
     const submittedRow = page.getByRole("row", { name: /Submitted — Alumni Homecoming/i });
     await expect(submittedRow).toBeVisible();
     await expect(submittedRow.getByTestId("status-badge")).toHaveAttribute("data-status", "SUBMITTED");
+    await expect(submittedRow.getByRole("button", { name: "Reject", exact: true })).toHaveCount(0);
 
     // Click Reject button
-    await submittedRow.getByRole("button", { name: /Reject/i }).click();
+    await underReviewRow.getByRole("button", { name: "Reject", exact: true }).click();
     const rejectModal = page.getByRole("dialog", { name: /Reject event request/i });
     await expect(rejectModal).toBeVisible();
 
@@ -831,8 +834,8 @@ test.describe("User Story 23 & 24 — Event Status View & Consistency Journey", 
     await submitRejectBtn.click();
 
     // 5. Verify updated status is consistent across list and detail views
-    await expect(submittedRow.getByTestId("status-badge")).toHaveAttribute("data-status", "REJECTED");
-    await submittedRow.getByRole("button", { name: /View Details|Details/i }).click();
+    await expect(underReviewRow.getByTestId("status-badge")).toHaveAttribute("data-status", "REJECTED");
+    await underReviewRow.getByRole("button", { name: /View Details|Details/i }).click();
     await expect(detailModal).toBeVisible();
     await expect(detailModal.getByTestId("status-badge")).toHaveAttribute("data-status", "REJECTED");
   });

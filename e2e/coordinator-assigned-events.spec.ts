@@ -121,20 +121,21 @@ test.describe("SCRUM-69 — View only the events assigned to me", () => {
     await expect(row(page, mine)).toHaveCount(0);
   });
 
-  test("AC4: a Coordinator who approves an unassigned Submitted event becomes its Coordinator, so it leaves the others' lists", async ({
+  test("SCRUM-135 AC3, AC4: an unassigned Submitted event can't be approved or rejected; my Under Review one can", async ({
     page,
   }) => {
     await signInAs(page, "coordinator@test.local");
     const unassignedRow = row(page, unassigned);
-    await unassignedRow.getByRole("button", { name: "Approve" }).click();
+    await expect(unassignedRow).toBeVisible();
+    await expect(unassignedRow.getByRole("button", { name: "Approve" })).toHaveCount(0);
+    await expect(unassignedRow.getByRole("button", { name: "Reject" })).toHaveCount(0);
+
+    const myRow = row(page, mine);
+    await myRow.getByRole("button", { name: "Approve" }).click();
     // SCRUM-81: approval moves the event straight to Planning.
-    await expect(unassignedRow.getByTestId("status-badge")).toHaveAttribute(
+    await expect(myRow.getByTestId("status-badge")).toHaveAttribute(
       "data-status",
       "PLANNING",
     );
-
-    await signInAs(page, "coordinator2@test.local");
-    await expect(row(page, theirs)).toBeVisible();
-    await expect(row(page, unassigned)).toHaveCount(0);
   });
 });

@@ -12,9 +12,6 @@ import type { EventStatus, Prisma, PrismaClient } from "@prisma/client";
 
 type Db = PrismaClient | Prisma.TransactionClient;
 
-/** AC1: the statuses the assigned Coordinator can cancel from. */
-export const CANCELLABLE: EventStatus[] = ["UNDER_REVIEW", "PLANNING", "CONFIRMED"];
-
 /** AC10: still being decided or planned, so it can become overdue. */
 const UNDECIDED: EventStatus[] = ["SUBMITTED", "UNDER_REVIEW", "PLANNING"];
 

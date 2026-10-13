@@ -5,6 +5,7 @@ import type { EventStatus, Role } from "@prisma/client";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { cancelEvent } from "@/app/(app)/events/cancel-actions";
+import { EVENT_STATUS_LABEL } from "@/lib/event-lifecycle";
 
 // SCRUM-82 — the assigned Coordinator cancels an event, releasing everything
 // held for it. Test cases: docs/testing/SCRUM-82.md. Session and database are
@@ -121,14 +122,14 @@ describe("cancelEvent — SCRUM-82 AC1", () => {
     expect(mockTransaction).not.toHaveBeenCalled();
   });
 
-  it.each(["DRAFT", "SUBMITTED", "APPROVED", "COMPLETED", "REJECTED"] as EventStatus[])(
-    "SCRUM-82 [AC1] TC-82-02: a %s event can't be cancelled and nothing is written",
+  it.each(["DRAFT", "SUBMITTED", "COMPLETED", "REJECTED"] as EventStatus[])(
+    "SCRUM-82 [AC1] TC-82-02, SCRUM-135 [AC11]: a %s event can't be cancelled, the refusal names its status, and nothing is written",
     async (status) => {
       tx.event.findUniqueOrThrow.mockResolvedValue({ status, coordinatorId: "usr_coord" });
 
       expect(await cancelEvent(valid)).toEqual({
         ok: false,
-        error: "Only an event Under Review, in Planning or Confirmed can be cancelled.",
+        error: `This event is ${EVENT_STATUS_LABEL[status]}, so it can't be cancelled.`,
       });
       expectNothingWritten();
     },
