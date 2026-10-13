@@ -6,8 +6,9 @@ import { describe, it, expect } from "vitest";
 // SCRUM-146 — every story key the code cites must still mean something. A key
 // with no file in docs/backlog was deleted from Jira; a file titled
 // "[MERGED INTO …]", "[SUPERSEDED BY …]" and so on is retired, and may only be
-// cited where the citation says so, as in "SCRUM-33 merged in". This keeps
-// stale keys from coming back once they are cleaned up (AC5, AC6).
+// cited where the line names the story that replaced it and says so, as in
+// "SCRUM-27 (SCRUM-33 merged in)". This keeps stale keys from coming back once
+// they are cleaned up (AC5, AC6).
 
 const ROOT = process.cwd();
 const BACKLOG = join(ROOT, "docs", "backlog");
@@ -21,12 +22,16 @@ const SCANNED_FILES = [
 ];
 const CODE = /\.(?:[cm]?[jt]sx?|prisma)$/;
 /**
- * What excuses a retired key: words about the key itself, straight after it,
- * as in "SCRUM-33 merged in" or "SCRUM-33 (superseded by SCRUM-27)". A word
- * elsewhere on the line, such as "duplicate rows are refused", doesn't.
+ * What excuses a retired key: words about its retirement straight after it,
+ * on a line that also names a story its tag says replaced it, as in
+ * "SCRUM-27 (SCRUM-33 merged in)" or "SCRUM-33 (superseded by SCRUM-27)". A
+ * key nothing replaced ("[NOT NEEDED]") needs "not needed" instead. Words that
+ * only happen to follow the key ("SCRUM-33, covered by the unique index") or
+ * sit elsewhere on the line ("duplicate rows are refused") don't excuse it.
  */
 const SAYS_SO =
-  /^[\s,(]*(?:is |was |has been )?(?:merged in|superseded by|replaced by|duplicate of|covered by|not needed|dropped)/i;
+  /^[\s,(]*(?:is |was |has been )?(?:merged in|superseded by|replaced by|duplicate of|covered by)/i;
+const NOT_NEEDED = /^[\s,(]*(?:is |was |has been )?not needed/i;
 
 /**
  * Lines that may cite a stale key, each with why, matched on their trimmed
@@ -87,6 +92,16 @@ function backlogKeys(): Map<string, KeyStatus> {
   return keys;
 }
 
+/** Whether a line's citation of a retired key says why (see SAYS_SO). */
+function excused(line: string, after: string, tag: string): boolean {
+  const successors: string[] = tag.match(/SCRUM-\d+/g) ?? [];
+  if (successors.length === 0) return NOT_NEEDED.test(after);
+  return (
+    SAYS_SO.test(after) &&
+    citedKeys(line).some(({ key }) => successors.includes(key))
+  );
+}
+
 /** The stale references in one file's text, as "line: reason". */
 function staleReferences(
   text: string,
@@ -103,9 +118,9 @@ function staleReferences(
         found.push(
           `${file}:${i + 1}: ${key} isn't in docs/backlog (deleted from Jira, or the sync is overdue)`,
         );
-      else if (status.kind === "retired" && !SAYS_SO.test(after))
+      else if (status.kind === "retired" && !excused(line, after, status.tag))
         found.push(
-          `${file}:${i + 1}: ${key} is ${status.tag}; cite the story that replaced it, or say so right after the key ("${key} merged in")`,
+          `${file}:${i + 1}: ${key} is ${status.tag}; cite the story that replaced it, or name that story on the line and say so right after the key ("${key} merged in")`,
         );
     }
   });
@@ -187,6 +202,38 @@ describe("SCRUM-146 story keys in the code", () => {
     ).toHaveLength(1);
     expect(
       staleReferences("// SCRUM-33 lists; SCRUM-27 merged in", "x.ts", planted),
+    ).toHaveLength(1);
+  });
+
+  // #169's review: words that merely follow the key passed for a retirement.
+  it("SCRUM-146 [AC5]: a retired key is excused only on a line that names the story that replaced it, or as not needed", () => {
+    const planted = new Map<string, KeyStatus>([
+      ["SCRUM-27", { kind: "live" }],
+      ["SCRUM-33", { kind: "retired", tag: "[MERGED INTO SCRUM-27]" }],
+      ["SCRUM-153", { kind: "retired", tag: "[NOT NEEDED]" }],
+    ]);
+    expect(
+      staleReferences(
+        "// SCRUM-33, covered by the unique index",
+        "x.ts",
+        planted,
+      ),
+    ).toHaveLength(1);
+    expect(
+      staleReferences("// SCRUM-33 merged in", "x.ts", planted),
+    ).toHaveLength(1);
+    expect(
+      staleReferences("// SCRUM-27 AC8 (SCRUM-33 merged in)", "x.ts", planted),
+    ).toEqual([]);
+    expect(
+      staleReferences(
+        "// SCRUM-153 not needed: accounts are seeded",
+        "x.ts",
+        planted,
+      ),
+    ).toEqual([]);
+    expect(
+      staleReferences("// SCRUM-153 merged in", "x.ts", planted),
     ).toHaveLength(1);
   });
 
