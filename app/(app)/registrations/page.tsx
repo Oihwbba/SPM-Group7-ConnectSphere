@@ -1,4 +1,6 @@
 import { requireSession } from "@/lib/auth/guard";
+import { prisma } from "@/lib/db";
+import { completeFinishedEvents } from "@/lib/event-closing";
 import { can } from "@/lib/auth/can";
 import { Forbidden } from "@/components/app/forbidden";
 import { getMyRegistrations } from "./queries";
@@ -12,6 +14,8 @@ export default async function RegistrationsPage() {
     return <Forbidden />;
   }
 
+  // SCRUM-82 AC7: finished Confirmed events read as Completed, with no job.
+  await completeFinishedEvents(prisma);
   const registrations = await getMyRegistrations();
 
   return (

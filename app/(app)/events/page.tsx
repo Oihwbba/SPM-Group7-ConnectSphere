@@ -1,6 +1,8 @@
 import { Suspense } from "react";
 
 import { requireSession } from "@/lib/auth/guard";
+import { prisma } from "@/lib/db";
+import { completeFinishedEvents } from "@/lib/event-closing";
 import { Forbidden } from "@/components/app/forbidden";
 import {
   OrganiserEvents,
@@ -25,6 +27,8 @@ import { EventsListLoading } from "./events-list-skeleton";
 // event would 200 with a not-found body instead of a real 404.
 export default async function EventsPage() {
   const session = await requireSession();
+  // SCRUM-82 AC7: finished Confirmed events read as Completed, with no job.
+  await completeFinishedEvents(prisma);
 
   return (
     <Suspense fallback={<EventsListLoading />}>

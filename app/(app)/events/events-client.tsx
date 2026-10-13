@@ -22,6 +22,7 @@ import { toast } from "sonner";
 import type { Event, RejectionOutcome } from "@prisma/client";
 
 import { formatDate, formatDateTime } from "@/lib/datetime";
+import { isOverdue } from "@/lib/event-closing";
 import { StatusBadge } from "@/components/events/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -761,7 +762,18 @@ export function EventsClient({
                         </div>
                       </TableCell>
                       <TableCell role="cell" data-col="status">
-                        <StatusBadge status={event.status} />
+                        <div className="flex flex-wrap items-center gap-1">
+                          <StatusBadge status={event.status} />
+                          {/* SCRUM-82 AC10: started but still undecided. */}
+                          {isCoordinator && isOverdue(event) && (
+                            <span
+                              data-testid="overdue-badge"
+                              className="inline-flex items-center rounded-full border border-destructive/40 bg-destructive/10 px-2 py-0.5 text-[11px] font-semibold text-destructive"
+                            >
+                              Overdue
+                            </span>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell
                         role="cell"
