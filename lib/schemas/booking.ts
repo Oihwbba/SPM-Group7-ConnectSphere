@@ -154,5 +154,38 @@ export const bookingDecisionSchema = z
     }
   });
 
+/**
+ * SCRUM-163 AC1 — Venue Staff hold a pending request until `holdExpiresAt`
+ * (a UTC ISO instant, converted from Singapore wall time by the form), with a
+ * note of what the Coordinator must finalise. That the expiry is after now and
+ * before the booking starts is checked by the action, which knows the booking.
+ */
+export const bookingHoldSchema = z.object({
+  bookingId: z.string().min(1),
+  holdExpiresAt: z
+    .string({ required_error: "Choose when the hold expires." })
+    .min(1, "Choose when the hold expires.")
+    .refine((value) => !Number.isNaN(new Date(value).getTime()), {
+      message: "Choose when the hold expires.",
+    }),
+  holdNote: z
+    .string({ required_error: "Say what the Coordinator must finalise." })
+    .trim()
+    .min(1, "Say what the Coordinator must finalise.")
+    .max(500),
+});
+
+/** SCRUM-163 AC3 — the Coordinator confirms or releases one hold. */
+export const holdSettlementSchema = z.object({
+  bookingId: z.string().min(1),
+});
+
+/** SCRUM-142 AC4 — the Coordinator withdraws one pending venue request. */
+export const bookingWithdrawalSchema = holdSettlementSchema;
+
+export function holdExpiryMessage(startAt: Date): string {
+  return `The hold must expire after now and before the booking starts (${formatDateTime(startAt)}).`;
+}
+
 export type BookingRequestInput = z.input<typeof bookingRequestSchema>;
 export type BookingDecisionInput = z.input<typeof bookingDecisionSchema>;

@@ -3,6 +3,7 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { summariseAvailability } from "@/lib/equipment/availability";
 import {
+  LIVE_LINE,
   OPEN_REQUEST_STATUSES,
   REQUESTABLE_EVENT_STATUSES,
   outstandingLines,
@@ -83,8 +84,18 @@ export async function getCoordinatorEquipmentRequests(coordinatorId: string) {
       status: true,
       notes: true,
       createdAt: true,
-      event: { select: { id: true, name: true, startAt: true, endAt: true } },
+      event: {
+        select: {
+          id: true,
+          name: true,
+          startAt: true,
+          endAt: true,
+          // SCRUM-142 AC5: whether its requests can still be changed.
+          status: true,
+        },
+      },
       lines: {
+        where: LIVE_LINE,
         select: {
           id: true,
           quantity: true,
@@ -174,6 +185,7 @@ export async function getEquipmentRequestQueue() {
         event: { select: { id: true, name: true, startAt: true, endAt: true } },
         requestedBy: { select: { name: true } },
         lines: {
+          where: LIVE_LINE,
           select: {
             id: true,
             quantity: true,
@@ -275,6 +287,7 @@ export async function getReservableRequests(now = new Date()) {
     select: {
       id: true,
       notes: true,
+      updatedAt: true,
       requestedBy: { select: { name: true } },
       event: {
         select: {
@@ -286,6 +299,7 @@ export async function getReservableRequests(now = new Date()) {
         },
       },
       lines: {
+        where: LIVE_LINE,
         select: {
           id: true,
           equipmentId: true,
@@ -299,7 +313,7 @@ export async function getReservableRequests(now = new Date()) {
     orderBy: { event: { startAt: "asc" } },
   });
 
-  return requests.flatMap(({ id, notes, requestedBy, event, lines }) => {
+  return requests.flatMap(({ id, notes, updatedAt, requestedBy, event, lines }) => {
     const missing = outstandingLines(id, lines, event, event.reservations);
     if (missing.length === 0) return [];
     const alreadyReserved: "request" | "event" | null =
@@ -312,6 +326,9 @@ export async function getReservableRequests(now = new Date()) {
     return [
       {
         id,
+        // SCRUM-142: the request as the form saw it, so a reservation made
+        // after its lines changed is refused rather than reserving old lines.
+        version: updatedAt.toISOString(),
         notes,
         requestedBy,
         event: {

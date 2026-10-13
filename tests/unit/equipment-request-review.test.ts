@@ -303,7 +303,7 @@ describe("suggestAlternativeEquipment — SCRUM-28 [AC4]", () => {
         requestedById: true,
         event: { select: { id: true, name: true, startAt: true, endAt: true } },
         lines: {
-          where: { id: "eql_1" },
+          where: { id: "eql_1", removedAt: null },
           select: {
             id: true,
             quantity: true,

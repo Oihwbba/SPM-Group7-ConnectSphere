@@ -15,6 +15,10 @@ import { ok, err, type ActionResult } from "@/lib/action-result";
 import { auditValue } from "@/lib/audit-value";
 import { pickCoordinator } from "@/lib/coordinator-assignment";
 import { getReadinessChecklist } from "@/lib/event-readiness";
+import {
+  liveHoldWhere,
+  withdrawPendingHoldNotices,
+} from "@/lib/booking-holds";
 import { TIME_ZONE } from "@/lib/datetime";
 
 /** Thrown inside submitEventRequest's transaction for an expected failure
@@ -1043,11 +1047,20 @@ export async function rejectPlanningEvent(
           rejectionOutcome,
         },
       });
-      // AC3: release what was held for the event.
+      // AC3: release what was held for the event, its venue holds included,
+      // whose notices still to come are withdrawn (SCRUM-163 AC9). A lapsed
+      // hold has already released its venue, so it stays Expired.
       const bookings = await tx.booking.updateMany({
-        where: { eventId, status: { in: ["PENDING", "APPROVED"] } },
+        where: {
+          eventId,
+          OR: [
+            { status: { in: ["PENDING", "APPROVED"] } },
+            liveHoldWhere(now),
+          ],
+        },
         data: { status: "CANCELLED" },
       });
+      await withdrawPendingHoldNotices(tx, { eventId }, now);
       const reservations = await tx.reservation.updateMany({
         where: { eventId, status: "CONFIRMED" },
         data: { status: "CANCELLED", cancelledAt: now },

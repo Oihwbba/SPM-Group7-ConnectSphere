@@ -93,6 +93,7 @@ defect, e.g. `regression: a blank rejection reason was accepted`.
 | [SCRUM-36](SCRUM-36.md) | Caylern Goh | 8 | Automated; a real screen-reader pass is manual |
 | [SCRUM-37](SCRUM-37.md) | Caylern Goh | 7 | Every case automated |
 | [SCRUM-41](SCRUM-41.md) | Jin Hong | 16 | Every case automated (unit, integration for the lock, index and rejection, e2e for both journeys); AC 8's cancellation half waits for SCRUM-82 |
+| [SCRUM-48](SCRUM-48.md) | Jin Hong | 15 | Every case automated except TC-48-08 and TC-48-10, blocked by SCRUM-166 and SCRUM-121 |
 | [SCRUM-50](SCRUM-50.md) | Caylern Goh | 11 | Every case automated |
 | [SCRUM-52](SCRUM-52.md) | Caylern Goh | 5 | Every case automated |
 | [SCRUM-53](SCRUM-53.md) | Caylern Goh | 8 | Every case automated; AC 3's calendar view follows with SCRUM-36 |
@@ -102,5 +103,7 @@ defect, e.g. `regression: a blank rejection reason was accepted`.
 | [SCRUM-124](SCRUM-124.md) | Jin Hong | 1 | Grows with the story: AC 7 so far (with SCRUM-41); the hold and withdrawal cases follow SCRUM-163 and SCRUM-142 |
 | [SCRUM-126](SCRUM-126.md) | Jun Bin | 10 | Every case automated (unit, integration for the constraint, migration and simultaneous clicks, e2e for the journey) |
 | [SCRUM-117](SCRUM-117.md) | Jun Bin | 10 | Every case automated (unit, integration for releasing arrangements in one transaction, e2e for both journeys) |
+| [SCRUM-163](SCRUM-163.md) | Jin Hong | 15 | Every case automated; TC-163-13's cancel and flag halves wait for SCRUM-82 and SCRUM-161 |
+| [SCRUM-142](SCRUM-142.md) | Jin Hong | 18 | Every case automated (unit, integration for what each change writes and two withdrawals at once, e2e for the Coordinator's journeys) |
 | [SCRUM-155](SCRUM-155.md) | Jin Hong | 16 | Every case automated (unit, integration for all-or-nothing and the races, e2e for the journey) |
 | [SCRUM-156](SCRUM-156.md) | Jin Hong | 8 | Every case automated; TC-155-16 retired and the SCRUM-31 reserve cases mapped to SCRUM-155 |

@@ -41,11 +41,15 @@ export type Action =
   | "booking:request" // SCRUM-50: coordinator asks for a venue for their event
   | "booking:review" // SCRUM-52: read the pending-request queue
   | "booking:decide" // SCRUM-53: approve or reject a pending request
+  | "booking:hold" // SCRUM-163: hold a pending request until a deadline
+  | "booking:settle-hold" // SCRUM-163: the assigned coordinator confirms or releases a hold
+  | "booking:withdraw" // SCRUM-142: the assigned coordinator withdraws a pending venue request
   | "unavailability:record" // SCRUM-37: record maintenance, closure, etc.
   | "equipment:read"
   | "equipment:reserve"
   | "equipment-request:list" // SCRUM-27: see the equipment requests scoped to me
   | "equipment-request:create" // SCRUM-27: coordinator raises one for their event
+  | "equipment-request:change" // SCRUM-142: the assigned coordinator changes or withdraws it
   | "equipment-request:review" // SCRUM-28: Technical Support updates a request
   | "event:browse" // attendees browsing events open for registration
   | "registration:create" // SCRUM-73: an attendee registers for an event
@@ -96,8 +100,11 @@ const ROLE_ACTIONS: Record<Role, Action[]> = {
     "venue:read",
     "equipment-request:list",
     "equipment-request:create",
+    "equipment-request:change",
     "venue:availability",
     "booking:request",
+    "booking:settle-hold",
+    "booking:withdraw",
     "notification:read",
   ],
   // `venue:read` gates the Venue Catalogue page, which is Coordinator-only, so
@@ -107,6 +114,7 @@ const ROLE_ACTIONS: Record<Role, Action[]> = {
   VENUE_STAFF: [
     "booking:review",
     "booking:decide",
+    "booking:hold",
     "venue:availability",
     "unavailability:record",
     "notification:read",
@@ -150,11 +158,16 @@ function hasRelationship(
         if (resource.coordinatorId === user.id) return true;
         // Any coordinator may review a request nobody has picked up yet, but
         // only the event's assigned coordinator may confirm it (SCRUM-81 AC 7),
-        // reject it from Planning (SCRUM-117 AC 5) or raise a change request
-        // on the organiser's behalf (SCRUM-41 AC10).
+        // reject it from Planning (SCRUM-117 AC 5), confirm or release its
+        // venue holds (SCRUM-163 AC3), change or withdraw its requests
+        // (SCRUM-142 AC7), or raise a change request on the organiser's
+        // behalf (SCRUM-41 AC10).
         return (
           action !== "event:confirm" &&
           action !== "event:reject" &&
+          action !== "booking:settle-hold" &&
+          action !== "booking:withdraw" &&
+          action !== "equipment-request:change" &&
           action !== "change-request:raise" &&
           resource.coordinatorId === null &&
           resource.status !== "DRAFT"
