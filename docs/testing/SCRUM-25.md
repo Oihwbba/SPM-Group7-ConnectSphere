@@ -82,7 +82,7 @@ requirements are the fields SCRUM-26 warns about and flags on (AC3).
 | Pre-conditions | One Planning event with nothing booked or reserved; another with a Pending venue booking. |
 | Test Steps | 1. Move the first event a week later and change its attendance. <br> 2. Change the second event's attendance. <br> 3. Move a start into the past, or the end before the start. |
 | Test Data | — |
-| Expected Result | 1 saves: with nothing booked or reserved there is nothing for SCRUM-26 to warn about or flag. 2 is refused: "Expected attendance can't be changed while the event has a venue booking or an equipment reservation: it would leave them out of date. Nothing was saved." 3 is refused against the field. |
+| Expected Result | 1 saves: with nothing booked or reserved there is nothing for SCRUM-26 to warn about or flag. 2 is refused: "Expected attendance can't be changed while the event has a venue booking or an equipment reservation: it would leave them out of date. Nothing was saved." shown above the form, and the attendance field is marked "Can't change while the event has a venue booking or an equipment reservation." with the dialog scrolled to it. 3 is refused against the field. |
 
 **Automated by:** `tests/unit/event-edit.test.ts` › "SCRUM-25 [AC3] TC-25-06: …"; `tests/integration/event-edit.test.ts` › "SCRUM-25 [AC3] TC-25-06: …"; `e2e/event-edit.spec.ts`
 
@@ -112,7 +112,7 @@ Once SCRUM-26 lands, step 2 shows its warning and flags the booking instead of r
 | Test Data | — |
 | Expected Result | 1 and 2: "Event not found.", the same as for an event that doesn't exist. 3: "You do not have permission to do that." Nothing changes in any case. |
 
-**Automated by:** `tests/unit/event-edit.test.ts` › "SCRUM-25 [AC7] TC-25-08: …"
+**Automated by:** `tests/unit/event-edit.test.ts` › "SCRUM-25 [AC7] TC-25-08: …"; `tests/integration/event-edit.test.ts` › "SCRUM-25 [AC7] TC-25-08, TC-25-12: …" (step 1)
 
 ### TC-25-09
 
@@ -164,7 +164,7 @@ Once SCRUM-26 lands, step 2 shows its warning and flags the booking instead of r
 | Test Data | — |
 | Expected Result | 1: "Event not found." 2: "You do not have permission to do that." Nothing is read or written. |
 
-**Automated by:** `tests/unit/event-edit.test.ts` › "SCRUM-25 [AC6, AC7] TC-25-12: …"
+**Automated by:** `tests/unit/event-edit.test.ts` › "SCRUM-25 [AC6, AC7] TC-25-12: …"; `tests/integration/event-edit.test.ts` › "SCRUM-25 [AC7] TC-25-08, TC-25-12: …" (a previous Coordinator adding)
 
 ### TC-25-13
 

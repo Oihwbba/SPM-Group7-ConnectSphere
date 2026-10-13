@@ -251,6 +251,11 @@ describe("updateEventDetails — SCRUM-25", () => {
         ok: false,
         error:
           "Expected attendance can't be changed while the event has a venue booking or an equipment reservation: it would leave them out of date. Nothing was saved.",
+        fieldErrors: {
+          expectedAttendance: [
+            "Can't change while the event has a venue booking or an equipment reservation.",
+          ],
+        },
       });
       expect(db.event.updateMany).not.toHaveBeenCalled();
       expect(db.auditLog.createMany).not.toHaveBeenCalled();

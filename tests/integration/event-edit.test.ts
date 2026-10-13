@@ -237,6 +237,31 @@ describe.skipIf(!usesLocalDatabase)("editing an event's details — real databas
     ).toBe(80);
   });
 
+  it("SCRUM-25 [AC7] TC-25-08, TC-25-12: once the event is reassigned, its previous Coordinator can't edit it or add a note, and nothing is written", async () => {
+    const eventId = await planningEvent();
+    await prisma.event.update({
+      where: { id: eventId },
+      data: { coordinatorId: "usr_coordinator_2" },
+    });
+    const before = await prisma.event.findUniqueOrThrow({ where: { id: eventId } });
+
+    expect(
+      await updateEventDetails({ ...(await formFor(eventId)), name: "Renamed" }),
+    ).toEqual({ ok: false, error: "Event not found." });
+    expect(await addOperationalNote({ eventId, body: "Still mine?" })).toEqual({
+      ok: false,
+      error: "Event not found.",
+    });
+
+    expect(await prisma.event.findUniqueOrThrow({ where: { id: eventId } })).toEqual(
+      before,
+    );
+    expect(
+      await prisma.auditLog.count({ where: { entityType: "Event", entityId: eventId } }),
+    ).toBe(0);
+    expect(await prisma.eventOperationalNote.count({ where: { eventId } })).toBe(0);
+  });
+
   describe("operational notes — AC6", () => {
     it("SCRUM-25 [AC6] TC-25-09, TC-25-10: the Coordinator and Venue Staff (once there is a booking) add notes; the Organiser reads them with author and time", async () => {
       const eventId = await planningEvent();

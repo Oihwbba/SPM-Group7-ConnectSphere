@@ -74,6 +74,10 @@ export function arrangementsAffectedMessage(fields: EditableField[]): string {
   return `${names} can't be changed while the event has a venue booking or an equipment reservation: it would leave them out of date. Nothing was saved.`;
 }
 
+/** AC3 — shown against each field the refusal above names. */
+export const ARRANGEMENT_LOCKED_MESSAGE =
+  "Can't change while the event has a venue booking or an equipment reservation.";
+
 export const INVALID_PERIOD_MESSAGE = "The end must be after the start.";
 export const PAST_START_MESSAGE = "The start can't be in the past.";
 

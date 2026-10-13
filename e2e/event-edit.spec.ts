@@ -42,7 +42,8 @@ async function openDetails(page: Page, eventName: string) {
 }
 
 test.describe("SCRUM-25 — update routine event information during planning", () => {
-  test.describe.configure({ timeout: 90_000 });
+  // Serial: the tests share one event, and the second reads the first's note.
+  test.describe.configure({ mode: "serial", timeout: 90_000 });
   let eventId: string;
 
   test.beforeAll(async () => {
@@ -106,6 +107,15 @@ test.describe("SCRUM-25 — update routine event information during planning", (
     await expect(edit.getByTestId("edit-details-error")).toHaveText(
       "Expected attendance can't be changed while the event has a venue booking or an equipment reservation: it would leave them out of date. Nothing was saved.",
     );
+    await expect(edit.getByLabel("Expected attendance")).toHaveAttribute(
+      "aria-invalid",
+      "true",
+    );
+    await expect(
+      edit.getByText(
+        "Can't change while the event has a venue booking or an equipment reservation.",
+      ),
+    ).toBeVisible();
 
     // AC1, AC2: a routine change saves and the status stays Planning.
     await edit.getByLabel("Expected attendance").fill("120");

@@ -14,6 +14,7 @@ import {
 import { err, ok, type ActionResult } from "@/lib/action-result";
 import {
   ARRANGEMENT_FIELDS,
+  ARRANGEMENT_LOCKED_MESSAGE,
   arrangementsAffectedMessage,
   CHANGED_WHILE_EDITING_MESSAGE,
   CONFIRMED_NOT_EDITABLE_MESSAGE,
@@ -38,7 +39,14 @@ const CURRENT_SAFETY_CHECK_STATUSES: SafetyCheckStatus[] = [
 ];
 
 /** Thrown inside the edit transaction for an expected refusal. */
-class EditError extends Error {}
+class EditError extends Error {
+  constructor(
+    message: string,
+    readonly fieldErrors?: Record<string, string[]>,
+  ) {
+    super(message);
+  }
+}
 
 /** A field's value as compared and audited: text, an ISO instant or a number. */
 function stored(value: string | number | Date | null | undefined): string | null {
@@ -153,7 +161,12 @@ export async function updateEventDetails(
           tx.reservation.count({ where: { eventId, status: "CONFIRMED" } }),
         ]);
         if (bookings + reservations > 0) {
-          throw new EditError(arrangementsAffectedMessage(arrangementChanges));
+          throw new EditError(
+            arrangementsAffectedMessage(arrangementChanges),
+            Object.fromEntries(
+              arrangementChanges.map((field) => [field, [ARRANGEMENT_LOCKED_MESSAGE]]),
+            ),
+          );
         }
       }
 
@@ -192,9 +205,8 @@ export async function updateEventDetails(
     revalidatePath("/events");
     return ok({ changed: changes.map((c) => c.field), ...outcome });
   } catch (error) {
-    if (error instanceof PermissionError || error instanceof EditError) {
-      return err(error.message);
-    }
+    if (error instanceof EditError) return err(error.message, error.fieldErrors);
+    if (error instanceof PermissionError) return err(error.message);
     throw error;
   }
 }
