@@ -11,7 +11,9 @@ touches it.
 
 Written on 2026-10-12 from the acceptance criteria, then mapped to the tests
 that already existed (SCRUM-176). The tests predate the `SCRUM-n [ACx] TC-n-xx`
-title format, so each case names them by their current titles.
+title format, so each case names them by their current titles. TC-29-08 and
+the `e2e/equipment-availability.spec.ts` tests were added on 2026-10-13, so
+that every e2e test is named by a case.
 
 **AC 2 was overtaken.** Since SCRUM-156 the one-type form only checks
 availability. Equipment is reserved from an approved request in one step
@@ -20,18 +22,20 @@ TC-29-03).
 
 **Shared pre-conditions for every case:** the database is migrated and seeded
 and the app is running. Signed in as `techsupport@test.local`
-(`Password123!`), on **Equipment**. The seed has a projector pool of 4 with
-recorded maintenance.
+(`Password123!`), on **Equipment**. The pools of 4 below are test equipment
+types the tests build, so seeded commitments can't change the answer; the
+seed's own projector pool has 10, with 3 in for maintenance.
 
 | ID | Type | Criterion | Automated |
 |---|---|---|---|
 | [TC-29-01](#tc-29-01) | Positive | AC 1, AC 4 | Unit, integration, e2e |
-| [TC-29-02](#tc-29-02) | Boundary | AC 2 | Unit, integration |
+| [TC-29-02](#tc-29-02) | Boundary | AC 2 | Unit, integration, e2e |
 | [TC-29-03](#tc-29-03) | Negative | AC 3 | Unit, integration, e2e |
-| [TC-29-04](#tc-29-04) | Boundary | AC 5 | Unit, integration |
-| [TC-29-05](#tc-29-05) | Positive | AC 6 | Unit, integration |
+| [TC-29-04](#tc-29-04) | Boundary | AC 5 | Unit, integration, e2e |
+| [TC-29-05](#tc-29-05) | Positive | AC 6 | Unit, integration, e2e |
 | [TC-29-06](#tc-29-06) | Negative | AC 7 | Unit, integration, e2e |
 | [TC-29-07](#tc-29-07) | Negative | AC 1 | Unit |
+| [TC-29-08](#tc-29-08) | Negative | AC 7 | e2e |
 
 ---
 
@@ -46,7 +50,7 @@ recorded maintenance.
 | Test Data | 10 May 2031, 09:00 to 17:00 SGT |
 | Expected Result | "2 of 4 available": the busiest moment in the period has 2 reserved. The unreserved request takes nothing, and neither does a cancelled reservation. |
 
-**Automated by:** `tests/integration/equipment-availability.test.ts` › "SCRUM-29 [AC1, AC4]: reports the busiest instant, not the sum of everything touching the period", "does not count a cancelled reservation against the pool", "gives the same answer for the pool in the all-equipment view"; `tests/unit/equipment-availability.test.ts` › "finds a peak that starts partway through the window", "adds commitments that genuinely share an instant"; `tests/unit/reservation.test.ts` › "SCRUM-31 [AC7] TC-31-08: deducts confirmed reservations and maintenance from the pool"; `e2e/equipment.spec.ts` › "SCRUM-156 [AC1] TC-156-01: checks a type and period without choosing an event, and offers no way to reserve"
+**Automated by:** `tests/integration/equipment-availability.test.ts` › "SCRUM-29 [AC1, AC4]: reports the busiest instant, not the sum of everything touching the period", "does not count a cancelled reservation against the pool", "gives the same answer for the pool in the all-equipment view"; `tests/unit/equipment-availability.test.ts` › "finds a peak that starts partway through the window", "adds commitments that genuinely share an instant"; `tests/unit/reservation.test.ts` › "SCRUM-31 [AC7] TC-31-08: deducts confirmed reservations and maintenance from the pool"; `e2e/equipment.spec.ts` › "SCRUM-156 [AC1] TC-156-01: checks a type and period without choosing an event, and offers no way to reserve"; `e2e/equipment-availability.spec.ts` › "SCRUM-29 [AC1]: shows the free quantity for the period, from the busiest instant", "SCRUM-29 [AC4]: equipment reserved for an overlapping period is excluded"
 
 ### TC-29-02
 
@@ -59,7 +63,7 @@ recorded maintenance.
 | Test Data | Quantity 2 |
 | Expected Result | Step 1 reports them available with no shortfall. Step 2 is accepted. |
 
-**Automated by:** `tests/unit/equipment-availability.test.ts` › "accepts a quantity at the limit and reports no shortfall"; `tests/integration/equipment-availability.test.ts` › "SCRUM-29 [AC2]: a quantity that fits the whole period is accepted by the locked reservation path"
+**Automated by:** `tests/unit/equipment-availability.test.ts` › "accepts a quantity at the limit and reports no shortfall"; `tests/integration/equipment-availability.test.ts` › "SCRUM-29 [AC2]: a quantity that fits the whole period is accepted by the locked reservation path"; `e2e/equipment-availability.spec.ts` › "SCRUM-29 [AC2]: a quantity that fits is reported available" (step 1, with 1 unit free and 1 asked for)
 
 ### TC-29-03
 
@@ -72,7 +76,7 @@ recorded maintenance.
 | Test Data | Quantity 3 |
 | Expected Result | Step 1 shows the shortfall at once ("1 short"). Step 2 is refused with the shortfall, and nothing is written. |
 
-**Automated by:** `tests/unit/equipment-availability.test.ts` › "refuses a quantity over the limit and states how many short"; `tests/integration/equipment-availability.test.ts` › "SCRUM-29 [AC3]: a quantity over the free units is refused with the shortfall, and nothing is written"; `e2e/equipment.spec.ts` › "SCRUM-29 AC 3: more than the pool shows the shortfall live"
+**Automated by:** `tests/unit/equipment-availability.test.ts` › "refuses a quantity over the limit and states how many short"; `tests/integration/equipment-availability.test.ts` › "SCRUM-29 [AC3]: a quantity over the free units is refused with the shortfall, and nothing is written"; `e2e/equipment.spec.ts` › "SCRUM-29 AC 3: more than the pool shows the shortfall live"; `e2e/equipment-availability.spec.ts` › "SCRUM-29 [AC3]: a quantity over the free units reports the shortfall"
 
 ### TC-29-04
 
@@ -85,7 +89,7 @@ recorded maintenance.
 | Test Data | The reservation above |
 | Expected Result | Step 1: all 4 are free. Step 2: none are free, since one minute is shared. |
 
-**Automated by:** `tests/unit/equipment-availability.test.ts` › "does not treat periods that touch at an endpoint as overlapping", "treats any shared instant as an overlap, in either order", "frees a reservation that ends exactly when the requested period starts", "counts back-to-back commitments once, not twice"; `tests/integration/equipment-availability.test.ts` › "SCRUM-29 [AC5]: a reservation ending exactly when the period starts leaves the whole pool free"
+**Automated by:** `tests/unit/equipment-availability.test.ts` › "does not treat periods that touch at an endpoint as overlapping", "treats any shared instant as an overlap, in either order", "frees a reservation that ends exactly when the requested period starts", "counts back-to-back commitments once, not twice"; `tests/integration/equipment-availability.test.ts` › "SCRUM-29 [AC5]: a reservation ending exactly when the period starts leaves the whole pool free"; `e2e/equipment-availability.spec.ts` › "SCRUM-29 [AC5]: a reservation that ends exactly when the period begins leaves the pool free" (step 1, with one reservation ending as the period starts and another starting as it ends)
 
 ### TC-29-05
 
@@ -98,7 +102,7 @@ recorded maintenance.
 | Test Data | The seeded records |
 | Expected Result | Those units are left out of the free quantity, together with any reservations at the same moment. The pool never shows below zero. |
 
-**Automated by:** `tests/integration/equipment-availability.test.ts` › "SCRUM-29 [AC6]: units under maintenance or damaged are not available"; `tests/unit/equipment-availability.test.ts` › "weighs reservations and unavailability together at the same instant", "never reports a negative pool when more is committed than exists"
+**Automated by:** `tests/integration/equipment-availability.test.ts` › "SCRUM-29 [AC6]: units under maintenance or damaged are not available"; `tests/unit/equipment-availability.test.ts` › "weighs reservations and unavailability together at the same instant", "never reports a negative pool when more is committed than exists"; `e2e/equipment-availability.spec.ts` › "SCRUM-29 [AC6]: units under maintenance or damaged are not shown as available"
 
 ### TC-29-06
 
@@ -111,7 +115,7 @@ recorded maintenance.
 | Test Data | Quantity 0; start 17:00, end 09:00 on the same day |
 | Expected Result | Step 1: "Enter a quantity of at least 1." Step 2: "End time must be after the start time." at once. No availability is shown, and nothing is read or written. |
 
-**Automated by:** `tests/unit/reservation.test.ts` › "SCRUM-29 AC 7: rejects an end before the start with field errors and reads nothing"; `tests/integration/equipment-availability.test.ts` › "SCRUM-29 [AC7]: an end before the start is rejected, reads nothing and writes nothing"; `e2e/equipment.spec.ts` › "SCRUM-29 AC 7: a quantity of zero asks for at least one", "SCRUM-29 AC 7: an invalid period (end earlier than start) triggers a live inline error"
+**Automated by:** `tests/unit/reservation.test.ts` › "SCRUM-29 AC 7: rejects an end before the start with field errors and reads nothing"; `tests/integration/equipment-availability.test.ts` › "SCRUM-29 [AC7]: an end before the start is rejected, reads nothing and writes nothing"; `e2e/equipment.spec.ts` › "SCRUM-29 AC 7: a quantity of zero asks for at least one", "SCRUM-29 AC 7: an invalid period (end earlier than start) triggers a live inline error"; `e2e/equipment-availability.spec.ts` › "SCRUM-29 [AC7]: a zero quantity or an end before the start is rejected with no result"
 
 ### TC-29-07
 
@@ -125,3 +129,16 @@ recorded maintenance.
 | Expected Result | Step 1 reports the type as unknown, not a count. Step 2 is refused. |
 
 **Automated by:** `tests/unit/reservation.test.ts` › "SCRUM-29 AC 1: reports an unknown or retired equipment type rather than a count", "SCRUM-31 TC-31-11: refuses a role without equipment:read"
+
+### TC-29-08
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-29-08 |
+| Test Scenario | [Negative] AC 7: a period that starts in the past is rejected, with no result |
+| Pre-conditions | On **Equipment**. AC 7 names a zero quantity and an end not after the start; the check refuses a start in the past the same way. |
+| Test Steps | 1. Choose **Equipment type** "Lectern". <br> 2. Enter a start and end on a day that has passed. |
+| Test Data | 1 Jan 2020, 09:00 to 17:00 SGT |
+| Expected Result | "Start time cannot be in the past." at once, and the count reads "— of 4 available": no availability is shown. |
+
+**Automated by:** `e2e/equipment.spec.ts` › "a start time in the past triggers a live inline error and no availability"
