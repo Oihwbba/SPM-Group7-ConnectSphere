@@ -1,6 +1,7 @@
 import type { BookingStatus, Prisma, PrismaClient } from "@prisma/client";
 
 import { FLAGGABLE_BOOKING } from "@/lib/reconsideration";
+import { safetyCheckItem } from "@/lib/safety-check";
 
 /**
  * SCRUM-110 — an event's readiness checklist: the essential arrangements that
@@ -11,7 +12,7 @@ import { FLAGGABLE_BOOKING } from "@/lib/reconsideration";
  * docs/adr/0011-event-readiness-checklist.md.
  */
 export interface ChecklistItem {
-  name: "Venue booking" | "Equipment";
+  name: "Venue booking" | "Equipment" | "Safety check";
   complete: boolean;
   /** "Approved", "Pending", "Rejected", "Not requested", "Reserved", "Not fully reserved: Projector" */
   state: string;
@@ -77,6 +78,12 @@ export async function getReadinessChecklist(
           equipment: { select: { type: true } },
         },
       },
+      // SCRUM-166 AC9: the latest check decides the Safety check item.
+      safetyChecks: {
+        select: { status: true, note: true },
+        orderBy: { createdAt: "desc" },
+        take: 1,
+      },
     },
   });
   if (!event) return null;
@@ -84,6 +91,7 @@ export async function getReadinessChecklist(
   const items = [venueItem(event)];
   const equipment = equipmentItem(event);
   if (equipment) items.push(equipment);
+  items.push(safetyCheckItem(event.safetyChecks[0]));
 
   return {
     ready: event.status === "PLANNING" && items.every((item) => item.complete),

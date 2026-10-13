@@ -130,6 +130,7 @@ Every seeded account uses the password **`Password123!`**:
 | `attendee2@test.local` | Attendee | Needed to fill an event (SCRUM-74) |
 | `attendee3@test.local` | Attendee | Has one withdrawn registration (SCRUM-77) |
 | `attendee4@test.local` | Attendee | Deliberately unregistered, so free to take the last place |
+| `safety@test.local` | Safety Officer | Reviews operational safety checks (SCRUM-166) |
 
 ---
 

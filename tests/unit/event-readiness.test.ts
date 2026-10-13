@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import type { EventStatus, Prisma } from "@prisma/client";
+import type { EventStatus, Prisma, SafetyCheckStatus } from "@prisma/client";
 
 import {
   getConfirmedArrangements,
@@ -43,7 +43,19 @@ interface Arrangements {
   bookings: Booking[];
   equipmentRequests: Request[];
   reservations: Reservation[];
+  safetyChecks: { status: SafetyCheckStatus; note: string | null }[];
 }
+
+// SCRUM-166 AC9: the checklist now ends with a Safety check item. The SCRUM-110
+// cases below are about the venue and equipment, so their event's latest check
+// is Approved unless a case says otherwise.
+const APPROVED_CHECK = { status: "APPROVED" as const, note: null };
+const SAFETY_APPROVED = {
+  name: "Safety check",
+  complete: true,
+  state: "Approved",
+  reason: null,
+};
 
 const day = (n: number) => new Date(Date.UTC(2031, 0, n));
 const booking = (
@@ -91,6 +103,7 @@ function planningEvent(overrides: Partial<Arrangements> = {}): Arrangements {
     bookings: [booking("APPROVED")],
     equipmentRequests: [],
     reservations: [],
+    safetyChecks: [APPROVED_CHECK],
     ...overrides,
   };
 }
@@ -112,7 +125,7 @@ const equipment = (c: ReadinessChecklist | null) =>
   c?.items.find((i) => i.name === "Equipment");
 
 describe("getReadinessChecklist — SCRUM-110", () => {
-  it("SCRUM-110 [AC1, AC3, AC5] TC-110-01: an approved venue booking and no equipment request is a complete checklist with only the venue, ready to confirm", async () => {
+  it("SCRUM-110 [AC1, AC3, AC5] TC-110-01, SCRUM-166 [AC9]: an approved venue booking, no equipment request and an approved safety check is a complete checklist without Equipment, ready to confirm", async () => {
     const result = await checklistOf(planningEvent());
 
     expect(result).toEqual({
@@ -124,6 +137,7 @@ describe("getReadinessChecklist — SCRUM-110", () => {
           state: "Approved",
           reason: null,
         },
+        SAFETY_APPROVED,
       ],
     });
   });

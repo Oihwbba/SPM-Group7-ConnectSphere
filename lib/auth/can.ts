@@ -34,6 +34,8 @@ export type Action =
   | "event:confirm" // SCRUM-81: the assigned coordinator confirms a ready Planning event
   | "event:reject" // SCRUM-117: the assigned coordinator rejects a Planning event that can't be fulfilled
   | "arrangement:reconsider" // SCRUM-26: the assigned coordinator resolves a Needs Reconsideration flag
+  | "safety-check:request" // SCRUM-166: the assigned coordinator asks for an operational safety check
+  | "safety-check:review" // SCRUM-166: a Safety Officer reviews a check and records its outcome
   | "clarification:request" // SCRUM-18: coordinator asks the organiser a question
   | "clarification:respond" // SCRUM-18: organiser answers an open question
   | "venue:read"
@@ -91,6 +93,7 @@ const ROLE_ACTIONS: Record<Role, Action[]> = {
     "event:confirm",
     "event:reject",
     "arrangement:reconsider",
+    "safety-check:request",
     "clarification:request",
     "venue:read",
     "equipment-request:list",
@@ -127,7 +130,7 @@ const ROLE_ACTIONS: Record<Role, Action[]> = {
   // SCRUM-164 — the Week 7 roles. Like every user they read their own
   // notifications (SCRUM-48); SCRUM-165 and SCRUM-166 grant the rest.
   COORDINATOR_LEAD: ["notification:read"],
-  SAFETY_OFFICER: ["notification:read"],
+  SAFETY_OFFICER: ["safety-check:review", "notification:read"],
 };
 
 /**
@@ -149,14 +152,22 @@ function hasRelationship(
         if (resource.coordinatorId === user.id) return true;
         // Any coordinator may review a request nobody has picked up yet, but
         // only the event's assigned coordinator may confirm it (SCRUM-81 AC 7),
-        // reject it from Planning (SCRUM-117 AC 5) or resolve a flag on its
-        // arrangements (SCRUM-26 AC7).
+        // reject it from Planning (SCRUM-117 AC 5), resolve a flag on its
+        // arrangements (SCRUM-26 AC7) or request its safety check (SCRUM-166).
         return (
           action !== "event:confirm" &&
           action !== "event:reject" &&
           action !== "arrangement:reconsider" &&
+          action !== "safety-check:request" &&
           resource.coordinatorId === null &&
           resource.status !== "DRAFT"
+        );
+      }
+      // SCRUM-166 AC6, SCRUM-121 AC5: a Safety Officer reviews any event's
+      // check, but never one for an event they organise or coordinate.
+      if (user.role === "SAFETY_OFFICER") {
+        return (
+          resource.organiserId !== user.id && resource.coordinatorId !== user.id
         );
       }
       return false;
