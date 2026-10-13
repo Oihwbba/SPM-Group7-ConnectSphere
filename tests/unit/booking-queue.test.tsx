@@ -11,11 +11,15 @@ import type { PendingBookingRow } from "@/app/(app)/bookings/queries";
 // action and the router are never reached.
 vi.mock("@/app/(app)/bookings/actions", () => ({
   decideBookingRequest: vi.fn(),
+  holdBookingRequest: vi.fn(),
 }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 
 const row: PendingBookingRow = {
   id: "bkg_1",
+  status: "PENDING",
+  holdExpiresAt: null,
+  holdNote: null,
   startAt: new Date("2035-03-10T01:00:00.000Z"),
   endAt: new Date("2035-03-10T05:00:00.000Z"),
   requestedAttendance: 250,

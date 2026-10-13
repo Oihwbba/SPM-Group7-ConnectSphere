@@ -76,6 +76,9 @@ function validatePeriod(
 export const requestReservationSchema = z
   .object({
     requestId: z.string().min(1, "Choose an approved request."),
+    // SCRUM-142: the request's updatedAt when the form loaded it. The form
+    // always sends it; a reservation for a request changed since is refused.
+    requestVersion: z.string().optional(),
     startAt: reservationFields.startAt,
     endAt: reservationFields.endAt,
     lines: z

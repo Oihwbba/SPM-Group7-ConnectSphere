@@ -32,6 +32,29 @@ export const equipmentRequestLineSchema = z.object({
   ),
 });
 
+const requestLines = z
+  .array(equipmentRequestLineSchema)
+  .min(1, "Add at least one equipment item.")
+  .max(20, "A request can list at most 20 equipment types.");
+
+/** SCRUM-27 AC 4: one line per equipment type. */
+function noRepeatedTypes(
+  data: { lines: { equipmentId: string }[] },
+  ctx: z.RefinementCtx,
+) {
+  const seen = new Set<string>();
+  data.lines.forEach((line, index) => {
+    if (seen.has(line.equipmentId)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["lines", index, "equipmentId"],
+        message: "This equipment type is already on the request.",
+      });
+    }
+    seen.add(line.equipmentId);
+  });
+}
+
 /**
  * SCRUM-27 — the request as submitted. AC 4 is checked here as well as by the
  * database's unique (requestId, equipmentId) index, so the form can say which
@@ -41,24 +64,25 @@ export const createEquipmentRequestSchema = z
   .object({
     eventId: z.string().min(1, "Select an event."),
     notes: optionalText(2000, "Keep notes under 2,000 characters."),
-    lines: z
-      .array(equipmentRequestLineSchema)
-      .min(1, "Add at least one equipment item.")
-      .max(20, "A request can list at most 20 equipment types."),
+    lines: requestLines,
   })
-  .superRefine((data, ctx) => {
-    const seen = new Set<string>();
-    data.lines.forEach((line, index) => {
-      if (seen.has(line.equipmentId)) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ["lines", index, "equipmentId"],
-          message: "This equipment type is already on the request.",
-        });
-      }
-      seen.add(line.equipmentId);
-    });
-  });
+  .superRefine(noRepeatedTypes);
+
+/**
+ * SCRUM-142 AC1 — the request's lines as the Coordinator wants them now:
+ * types left out are removed, new ones added, and the rest changed in place.
+ */
+export const changeEquipmentRequestSchema = z
+  .object({
+    requestId: z.string().min(1),
+    lines: requestLines,
+  })
+  .superRefine(noRepeatedTypes);
+
+/** SCRUM-142 AC3 — the Coordinator withdraws the whole request. */
+export const withdrawEquipmentRequestSchema = z.object({
+  requestId: z.string().min(1),
+});
 
 /**
  * SCRUM-28 AC 2, AC 3 — Technical Support moves a request on. A rejection must say

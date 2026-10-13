@@ -1,7 +1,7 @@
 # Server Actions reference
 
 Every command and every server read the pages call, from `app/` on `main`
-at commit `885c837` (2026-10-11). There is no REST API: the browser calls
+at commit `d54ed6e` (2026-10-13). There is no REST API: the browser calls
 these as Server Actions.
 
 How to read it:
@@ -25,7 +25,11 @@ request.
 |---|---|---|---|---|---|
 | `checkVenueAvailability` | Checks whether a venue is free for a period, and names any clashes (SCRUM-50). | `booking:request` | `venueAvailabilityQuerySchema` (lib/schemas/booking.ts) | nothing (read only) | — |
 | `submitBookingRequest` | The Coordinator requests a venue for their event (SCRUM-50). | `booking:request` | `bookingRequestSchema` (lib/schemas/booking.ts) | Booking | — |
-| `decideBookingRequest` | Venue Staff approve or reject a pending request (SCRUM-53). | `booking:decide` | `bookingDecisionSchema` (lib/schemas/booking.ts) | AuditLog, Booking | — |
+| `decideBookingRequest` | Venue Staff approve or reject a pending request, or reject a held one before it expires (SCRUM-53, 163). | `booking:decide` | `bookingDecisionSchema` (lib/schemas/booking.ts) | AuditLog, Booking, Notification | — |
+| `holdBookingRequest` | Venue Staff hold a pending request until a deadline, with a note for the Coordinator (SCRUM-163). | `booking:hold` | `bookingHoldSchema` (lib/schemas/booking.ts) | AuditLog, Booking, Notification | — |
+| `confirmHold` | The assigned Coordinator confirms a live hold, which makes the booking Approved (SCRUM-163 AC3). | `booking:settle-hold` | `holdSettlementSchema` (lib/schemas/booking.ts) | AuditLog, Booking, Notification, SafetyCheck | — |
+| `releaseHold` | The assigned Coordinator releases a live hold, which frees the venue (SCRUM-163 AC3). | `booking:settle-hold` | `holdSettlementSchema` (lib/schemas/booking.ts) | AuditLog, Booking, Notification, SafetyCheck | — |
+| `withdrawBookingRequest` | The assigned Coordinator withdraws a pending venue request; a held one is released instead (SCRUM-142 AC4). | `booking:withdraw`; a held request also needs `booking:settle-hold` | `bookingWithdrawalSchema` (lib/schemas/booking.ts) | AuditLog, Booking, Notification, SafetyCheck | Event row |
 
 ## `app/(app)/equipment-requests/actions.ts`
 
@@ -34,6 +38,8 @@ request.
 | `createEquipmentRequest` | The Coordinator raises the event's equipment request (SCRUM-27). | `equipment-request:create` | `createEquipmentRequestSchema` (lib/schemas/equipment-request.ts) | EquipmentRequest, EquipmentRequestLine, EquipmentRequestUpdate | — |
 | `updateEquipmentRequestStatus` | Technical Support moves a request from Pending Review to In Review, then to Approved or Rejected (SCRUM-28). | `equipment-request:review` | `reviewEquipmentRequestSchema` (lib/schemas/equipment-request.ts) | EquipmentRequest, EquipmentRequestUpdate, Notification | — |
 | `suggestAlternativeEquipment` | Technical Support suggests another equipment type on a line (SCRUM-28 AC4). | `equipment-request:review` | `suggestAlternativeSchema` (lib/schemas/equipment-request.ts) | EquipmentRequest, EquipmentRequestLine, EquipmentRequestUpdate, Notification | — |
+| `changeEquipmentRequest` | The assigned Coordinator changes an equipment request's lines; it goes back to Technical Support, and changed lines' reservations are released (SCRUM-142 AC1, AC2). | `equipment-request:change` | `changeEquipmentRequestSchema` (lib/schemas/equipment-request.ts) | EquipmentRequest, EquipmentRequestLine, EquipmentRequestUpdate, Notification, Reservation, SafetyCheck | EquipmentRequest row, Event row |
+| `withdrawEquipmentRequest` | The assigned Coordinator withdraws a whole equipment request, releasing what it reserved (SCRUM-142 AC3). | `equipment-request:change` | `withdrawEquipmentRequestSchema` (lib/schemas/equipment-request.ts) | EquipmentRequest, EquipmentRequestUpdate, Notification, Reservation, SafetyCheck | EquipmentRequest row, Event row |
 
 ## `app/(app)/equipment/actions.ts`
 
@@ -69,7 +75,7 @@ request.
 
 | Action | What it does | Permission | Input | Writes | Locks |
 |---|---|---|---|---|---|
-| `getEventReadiness` | The event's readiness checklist (SCRUM-110). | `event:read`; the result also says whether the viewer may review, reject or confirm | an event id | nothing (read only) | — |
+| `getEventReadiness` | The event's readiness checklist (SCRUM-110). | `event:read`; the result also says whether the viewer may review, reject or confirm, and settle or withdraw a venue request | an event id | nothing (read only) | — |
 | `getEventArrangements` | A Confirmed event's secured venue, time and equipment (SCRUM-81 AC6). | `event:read` | an event id | nothing (read only) | — |
 
 ## `app/(app)/events/registration-actions.ts`
@@ -78,6 +84,12 @@ request.
 |---|---|---|---|---|---|
 | `registerForEvent` | An Attendee registers for a Confirmed event with places left (SCRUM-73, 74). | `registration:create` | `registerForEventSchema` (lib/schemas/registration.ts) | Registration | Event row |
 | `withdrawRegistration` | An Attendee withdraws their registration (SCRUM-74, 77). | `registration:withdraw` | `withdrawRegistrationSchema` (lib/schemas/registration.ts) | Registration | Event row |
+
+## `app/(app)/notifications/actions.ts`
+
+| Action | What it does | Permission | Input | Writes | Locks |
+|---|---|---|---|---|---|
+| `markNotificationRead` | A user marks one of their own notifications read (SCRUM-48). | `notification:read` | `markNotificationReadSchema` (lib/schemas/notification.ts) | Notification | — |
 
 ## `app/(app)/venues/availability/actions.ts`
 
