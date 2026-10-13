@@ -81,6 +81,17 @@ jobs:
       - name: Pull production settings
         run: npx --yes "$VERCEL_CLI" pull --yes --environment=production
 
+      # The shared database moves with the code: every merge applies its
+      # pending migrations before the build, so production never runs code
+      # that expects a column the database doesn't have yet. `migrate deploy`
+      # only applies what isn't applied and never resets. If it fails, the job
+      # stops here and production keeps the previous version.
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Apply pending migrations to the production database
+        run: node .github/scripts/migrate-production.mjs
+
       - name: Build
         run: npx --yes "$VERCEL_CLI" build --prod
 
