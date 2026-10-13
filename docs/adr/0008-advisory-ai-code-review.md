@@ -539,6 +539,32 @@ CODEOWNERS now lists all five team members. A change still needs a second
 person, since an author can't approve their own pull request, but any
 teammate can be that person.
 
+## Addendum (2026-10-11, SCRUM-178) — related files in part, not dropped
+
+The related-file budget (300,000 characters, after the 2026-09-21 addendum
+raised both budgets) was still dropping files: #153 to #156 lost
+`prisma/schema.prisma` and `prisma/seed.ts`, and #154 lost 30 files. Unchanged
+tests that merely import a changed file were sent first and took the budget,
+and a related file that didn't fit was dropped whole.
+
+- **Priority:** files the changed files import; the seed when an e2e spec
+  changed; source files that import a changed file; source files naming the
+  PR's stories; then tests.
+- **Excerpts:** a related file that doesn't fit whole is sent in part, each
+  line keeping its own number: a test as its imports and `describe`/`it`/`test`
+  lines, a source file as its imports, exports and the lines around each
+  story mention. A file with nothing to excerpt gets its head, capped at
+  12,000 characters. Each related file reserves room for its excerpt, so a file
+  sent whole can't leave the ones behind it with nothing; a reserve that can't
+  be met anyway yields to the earlier file.
+- **The prompt says so:** "excerpt" and "shortened to fit" mark files shown in
+  part, "…" marks lines left out, and GLM is told not to report something as
+  missing from them.
+
+The budgets are unchanged. Replayed on #153 to #156's files, nothing is left
+out (was 2, 30, 3 and 23). The planted-bug benchmark from #37 was not re-run:
+it needs a GLM call with the repository's API key.
+
 ## Addendum (2026-10-13, SCRUM-180) — the memory limit is 12,000 characters
 
 The memory file reached 7,917 of the 8,000 characters set on 2026-09-16, so
