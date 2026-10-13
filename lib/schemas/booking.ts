@@ -180,6 +180,9 @@ export const holdSettlementSchema = z.object({
   bookingId: z.string().min(1),
 });
 
+/** SCRUM-142 AC4 — the Coordinator withdraws one pending venue request. */
+export const bookingWithdrawalSchema = holdSettlementSchema;
+
 export function holdExpiryMessage(startAt: Date): string {
   return `The hold must expire after now and before the booking starts (${formatDateTime(startAt)}).`;
 }

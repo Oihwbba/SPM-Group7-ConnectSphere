@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import type { BookingStatus, Prisma } from "@prisma/client";
+import type { BookingStatus, EventStatus, Prisma } from "@prisma/client";
 
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
@@ -12,6 +12,7 @@ import {
   bookingDecisionSchema,
   bookingHoldSchema,
   bookingRequestSchema,
+  bookingWithdrawalSchema,
   EVENT_NOT_SCHEDULED_MESSAGE,
   eventBookingPeriod,
   holdExpiryMessage,
@@ -36,6 +37,8 @@ import {
 } from "@/lib/booking-holds";
 import { formatDateTime } from "@/lib/datetime";
 import { describeBlocker, findVenueBlockers } from "@/lib/venue-availability";
+import { outdateSafetyChecks } from "@/lib/safety-checks";
+import { notifyRole } from "@/lib/staff-notifications";
 
 export type BookingSummary = {
   id: string;
@@ -631,10 +634,13 @@ export async function releaseHold(
  *   refuses it (`booking_hold_expired`), so the booking ends up Approved or
  *   Expired, never both (AC8).
  * - The hold's notices still to come are withdrawn (AC5).
+ * - With `refusal` (a withdrawal, SCRUM-142 AC5), the event's status is read
+ *   again under its lock first, so a Confirm that committed meanwhile stops it.
  */
 async function settleHold(
   input: unknown,
   to: "APPROVED" | "CANCELLED",
+  refusal?: (status: EventStatus) => string | null,
 ): Promise<ActionResult<{ status: BookingStatus }>> {
   const session = await auth();
   const user = session?.user;
@@ -652,7 +658,12 @@ async function settleHold(
         status: true,
         holdExpiresAt: true,
         event: {
-          select: { organiserId: true, coordinatorId: true, status: true },
+          select: {
+            id: true,
+            organiserId: true,
+            coordinatorId: true,
+            status: true,
+          },
         },
       },
     });
@@ -670,6 +681,10 @@ async function settleHold(
 
     const settle = () =>
       prisma.$transaction(async (tx) => {
+        const refused =
+          refusal?.(await lockedEventStatus(tx, booking.event.id)) ?? null;
+        if (refused) throw new DecisionError(refused);
+
         const updated = await tx.booking.updateMany({
           where: { id: bookingId, ...liveHoldWhere(now) },
           data:
@@ -687,6 +702,8 @@ async function settleHold(
           );
         }
         await withdrawPendingHoldNotices(tx, { bookingId }, now);
+        // SCRUM-142 AC9, SCRUM-166 AC13: the event's venue arrangements changed.
+        await outdateSafetyChecks(tx, booking.event.id, now);
         await tx.auditLog.create({
           data: {
             entityType: "Booking",
@@ -716,6 +733,165 @@ async function settleHold(
     }
     throw error;
   }
+}
+
+/**
+ * SCRUM-142 AC4 — the event's assigned Coordinator withdraws one of its
+ * pending venue requests while the event is being planned.
+ *
+ * - It becomes Cancelled, conditional on still being Pending (ADR 0006), so
+ *   it leaves the Venue Staff queue and the event can request another venue;
+ *   the event's other bookings are untouched (SCRUM-162). Withdrawing it again
+ *   changes nothing (AC8).
+ * - A live hold is released instead (SCRUM-163). An Approved booking isn't
+ *   withdrawn here (AC6), and once the event is Confirmed changes go through a
+ *   change request (AC5).
+ * - Venue Staff are told (AC7), and a safety check that approved or is
+ *   reviewing the arrangements goes out of date (AC9).
+ */
+export async function withdrawBookingRequest(
+  input: unknown,
+): Promise<ActionResult<{ status: BookingStatus }>> {
+  const session = await auth();
+  const user = session?.user;
+
+  try {
+    requirePermission(user, "booking:withdraw");
+
+    const parsed = bookingWithdrawalSchema.safeParse(input);
+    if (!parsed.success) return err(REQUEST_NOT_FOUND);
+    const { bookingId } = parsed.data;
+
+    const booking = await prisma.booking.findUnique({
+      where: { id: bookingId },
+      select: {
+        status: true,
+        holdExpiresAt: true,
+        venue: { select: { name: true } },
+        event: {
+          select: {
+            id: true,
+            name: true,
+            organiserId: true,
+            coordinatorId: true,
+            status: true,
+          },
+        },
+      },
+    });
+    if (
+      !booking ||
+      !can(user!, "booking:withdraw", { kind: "event", ...booking.event })
+    ) {
+      return err(REQUEST_NOT_FOUND);
+    }
+    const notPlanning = withdrawalRefusal(booking.event.status);
+    if (notPlanning) return err(notPlanning);
+    const now = new Date();
+    const current = bookingStatusAt(booking, now);
+    if (current === "HELD") {
+      return settleHold({ bookingId }, "CANCELLED", withdrawalRefusal);
+    }
+    if (current === "APPROVED") {
+      return err(
+        "An approved booking isn't withdrawn here. It is cancelled by resolving its flag, or by cancelling or rejecting the event.",
+      );
+    }
+    if (current !== "PENDING") {
+      return err(notWithdrawable(current, booking.holdExpiresAt));
+    }
+
+    const withdrawn = await prisma.$transaction(async (tx) => {
+      const refusal = withdrawalRefusal(
+        await lockedEventStatus(tx, booking.event.id),
+      );
+      if (refusal) return refusal;
+
+      const updated = await tx.booking.updateMany({
+        where: { id: bookingId, status: "PENDING" },
+        data: { status: "CANCELLED" },
+      });
+      if (updated.count !== 1) {
+        const latest = await tx.booking.findUniqueOrThrow({
+          where: { id: bookingId },
+          select: { status: true, holdExpiresAt: true },
+        });
+        return notWithdrawable(
+          bookingStatusAt(latest, now),
+          latest.holdExpiresAt,
+        );
+      }
+      await tx.auditLog.create({
+        data: {
+          entityType: "Booking",
+          entityId: bookingId,
+          action: "WITHDRAWN",
+          actorId: user!.id,
+          fieldName: "status",
+          oldValue: "PENDING",
+          newValue: "CANCELLED",
+          summary: "Withdrawn by the Coordinator (SCRUM-142)",
+        },
+      });
+      await notifyRole(tx, "VENUE_STAFF", booking.event, {
+        type: "BOOKING_REQUEST_WITHDRAWN",
+        title: "A venue request was withdrawn",
+        message: `The Coordinator withdrew the request for ${booking.venue.name} for "${booking.event.name}".`,
+        link: "/bookings",
+      });
+      await outdateSafetyChecks(tx, booking.event.id, now);
+      return null;
+    });
+    if (withdrawn) return err(withdrawn);
+
+    revalidatePath("/bookings");
+    revalidatePath("/events");
+    return ok({ status: "CANCELLED" });
+  } catch (error) {
+    if (error instanceof PermissionError) return err(error.message);
+    throw error;
+  }
+}
+
+const REQUEST_NOT_FOUND = "Venue request not found.";
+
+/**
+ * The event's status, read under its row lock. confirmEvent takes the same
+ * lock, so a Confirm that committed while this waited is seen (SCRUM-142 AC5).
+ */
+async function lockedEventStatus(
+  tx: Prisma.TransactionClient,
+  eventId: string,
+): Promise<EventStatus> {
+  await tx.$queryRaw`SELECT "id" FROM "Event" WHERE "id" = ${eventId} FOR UPDATE`;
+  const { status } = await tx.event.findUniqueOrThrow({
+    where: { id: eventId },
+    select: { status: true },
+  });
+  return status;
+}
+
+/** SCRUM-142 AC5 — why an event in this status can't withdraw a venue request. */
+function withdrawalRefusal(status: EventStatus): string | null {
+  if (status === "CONFIRMED") {
+    return "This event is confirmed, so its arrangements change through a change request.";
+  }
+  return BOOKABLE_EVENT_STATUSES.includes(status)
+    ? null
+    : "This event isn't being planned, so its venue requests can't be withdrawn.";
+}
+
+function notWithdrawable(
+  status: BookingStatus,
+  holdExpiresAt: Date | null,
+): string {
+  if (status === "CANCELLED") return "This request has already been withdrawn.";
+  if (status === "EXPIRED") return holdExpired(holdExpiresAt);
+  // Held while this was being withdrawn: AC4 releases a hold instead.
+  if (status === "HELD") {
+    return "Venue Staff have just held this request. Release the hold instead.";
+  }
+  return `This request has already been ${status.toLowerCase()}, so it can't be withdrawn.`;
 }
 
 const HOLD_NOT_FOUND = "Venue hold not found.";

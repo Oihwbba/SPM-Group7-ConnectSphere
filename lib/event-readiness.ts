@@ -1,6 +1,7 @@
 import type { BookingStatus, Prisma, PrismaClient } from "@prisma/client";
 
 import { bookingStatusAt } from "@/lib/booking-holds";
+import { LIVE_LINE } from "@/lib/equipment/requests";
 import { formatDateTime } from "@/lib/datetime";
 
 /**
@@ -14,12 +15,14 @@ import { formatDateTime } from "@/lib/datetime";
 export interface ChecklistItem {
   name: "Venue booking" | "Equipment";
   complete: boolean;
-  /** "Approved", "Held until … – confirm to secure", "Pending", "Rejected", "Hold expired", "Not requested", "Reserved", "Not fully reserved: Projector" */
+  /** "Approved", "Held until … – confirm to secure", "Pending", "Rejected", "Hold expired", "Not requested", "Reserved", "Not fully reserved: Projector", "Awaiting Technical Support review" */
   state: string;
   /** Internal detail, such as why Venue Staff rejected the booking. Hidden from the Organiser. */
   reason: string | null;
   /** SCRUM-163 AC3: the live hold the Coordinator can confirm or release. */
   heldBookingId?: string;
+  /** SCRUM-142 AC4: the pending venue request the Coordinator can withdraw. */
+  pendingBookingId?: string;
 }
 
 export interface ReadinessChecklist {
@@ -61,6 +64,7 @@ export async function getReadinessChecklist(
           status: true,
           createdAt: true,
           lines: {
+            where: LIVE_LINE,
             select: {
               equipmentId: true,
               quantity: true,
@@ -148,8 +152,14 @@ function venueItem(
       heldBookingId: held.id,
     };
   }
-  if (newestFirst.some((b) => b.status === "PENDING")) {
-    return { ...item, complete: false, state: "Pending" };
+  const pending = newestFirst.find((b) => b.status === "PENDING");
+  if (pending) {
+    return {
+      ...item,
+      complete: false,
+      state: "Pending",
+      pendingBookingId: pending.id,
+    };
   }
   if (approved.length > 0) {
     return { ...item, complete: false, state: "Approved for a different time" };
@@ -237,12 +247,22 @@ function equipmentItem(event: EventRow): ChecklistItem | null {
           .reduce((sum, r) => sum + r.quantity, 0) < quantity,
     )
     .map(([, { type }]) => type);
-  const complete = short.length === 0;
+  if (short.length > 0) {
+    return {
+      name: "Equipment",
+      complete: false,
+      state: `Not fully reserved: ${short.join(", ")}`,
+      reason: null,
+    };
+  }
 
+  // SCRUM-142 AC10: a request back with Technical Support after a change
+  // keeps its other lines reserved, but Confirm waits for the re-check.
+  const awaitingReview = live.some((r) => r.status !== "APPROVED");
   return {
     name: "Equipment",
-    complete,
-    state: complete ? "Reserved" : `Not fully reserved: ${short.join(", ")}`,
+    complete: !awaitingReview,
+    state: awaitingReview ? "Awaiting Technical Support review" : "Reserved",
     reason: null,
   };
 }

@@ -41,7 +41,8 @@ async function relatedEvent(
  * `canReject` whether to offer SCRUM-117's Reject, which the same Coordinator
  * may take unless the event was ever Confirmed (AC 4). `canSettleHold` whether
  * to offer confirming or releasing a venue hold (SCRUM-163 AC3), which only the
- * assigned Coordinator may do.
+ * assigned Coordinator may do, and `canWithdrawBooking` whether to offer
+ * withdrawing a pending venue request (SCRUM-142 AC4).
  */
 export async function getEventReadiness(
   eventId: string,
@@ -51,6 +52,7 @@ export async function getEventReadiness(
       canConfirm: boolean;
       canReject: boolean;
       canSettleHold: boolean;
+      canWithdrawBooking: boolean;
     }
   >
 > {
@@ -81,6 +83,7 @@ export async function getEventReadiness(
     canConfirm: can(user, "event:confirm", resource),
     canReject,
     canSettleHold: can(user, "booking:settle-hold", resource),
+    canWithdrawBooking: can(user, "booking:withdraw", resource),
   });
 }
 
