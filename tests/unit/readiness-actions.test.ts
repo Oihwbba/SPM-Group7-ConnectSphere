@@ -84,7 +84,12 @@ describe("getEventReadiness — SCRUM-110", () => {
 
     expect(result).toEqual({
       ok: true,
-      data: { ...checklist, canConfirm: true, canReject: true },
+      data: {
+        ...checklist,
+        canConfirm: true,
+        canReject: true,
+        canSettleHold: true,
+      },
     });
     expect(mockChecklist).toHaveBeenCalledWith(prisma, "evt_test");
   });
@@ -101,6 +106,7 @@ describe("getEventReadiness — SCRUM-110", () => {
         items: [{ ...checklist.items[0], reason: null }, checklist.items[1]],
         canConfirm: false,
         canReject: false,
+        canSettleHold: false,
       },
     });
   });

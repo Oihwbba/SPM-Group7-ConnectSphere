@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { confirmEvent, rejectPlanningEvent } from "@/app/(app)/events/actions";
+import { confirmHold, releaseHold } from "@/app/(app)/bookings/actions";
 import { getEventReadiness } from "@/app/(app)/events/readiness-actions";
 import type { ReadinessChecklist as Checklist } from "@/lib/event-readiness";
 import { REJECTION_OUTCOME_LABEL } from "@/lib/schemas/event";
@@ -32,9 +33,19 @@ import { REJECTION_OUTCOME_LABEL } from "@/lib/schemas/event";
  */
 export function ReadinessChecklist({ eventId }: { eventId: string }) {
   const [checklist, setChecklist] = useState<
-    (Checklist & { canConfirm: boolean; canReject: boolean }) | null
+    | (Checklist & {
+        canConfirm: boolean;
+        canReject: boolean;
+        canSettleHold: boolean;
+      })
+    | null
   >(null);
   const [loadFailed, setLoadFailed] = useState(false);
+  // Bumped after a hold is settled, so the checklist is read again.
+  const [loads, setLoads] = useState(0);
+  const [settling, startSettle] = useTransition();
+  // Which hold action is in flight, so its button says so.
+  const [settlingHow, setSettlingHow] = useState<string | null>(null);
   const [confirming, startConfirm] = useTransition();
   const [rejecting, startReject] = useTransition();
   const [rejectOpen, setRejectOpen] = useState(false);
@@ -56,7 +67,27 @@ export function ReadinessChecklist({ eventId }: { eventId: string }) {
     return () => {
       cancelled = true;
     };
-  }, [eventId]);
+  }, [eventId, loads]);
+
+  // SCRUM-163 AC3: the assigned Coordinator confirms or releases a hold.
+  function settleHold(bookingId: string, how: "confirm" | "release") {
+    setSettlingHow(how);
+    startSettle(async () => {
+      const result =
+        how === "confirm"
+          ? await confirmHold({ bookingId })
+          : await releaseHold({ bookingId });
+      if (!result.ok) toast.error(result.error);
+      else
+        toast.success(
+          how === "confirm"
+            ? "Hold confirmed: the venue is booked."
+            : "Hold released: the venue is free again.",
+        );
+      setLoads((n) => n + 1);
+      router.refresh();
+    });
+  }
 
   function confirm() {
     startConfirm(async () => {
@@ -127,16 +158,45 @@ export function ReadinessChecklist({ eventId }: { eventId: string }) {
                       className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground"
                     />
                   )}
-                  <p>
-                    <span className="font-semibold">{item.name}</span>
-                    <span className="sr-only">
-                      {item.complete ? ", complete" : ", incomplete"}
-                    </span>
-                    {" — "}
-                    {item.reason
-                      ? `${item.state} – ${item.reason}`
-                      : item.state}
-                  </p>
+                  <div className="space-y-2">
+                    <p>
+                      <span className="font-semibold">{item.name}</span>
+                      <span className="sr-only">
+                        {item.complete ? ", complete" : ", incomplete"}
+                      </span>
+                      {" — "}
+                      {item.reason
+                        ? `${item.state} – ${item.reason}`
+                        : item.state}
+                    </p>
+                    {item.heldBookingId && checklist.canSettleHold && (
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          size="sm"
+                          onClick={() =>
+                            settleHold(item.heldBookingId!, "confirm")
+                          }
+                          disabled={settling}
+                        >
+                          {settling && settlingHow === "confirm"
+                            ? "Confirming…"
+                            : "Confirm hold"}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() =>
+                            settleHold(item.heldBookingId!, "release")
+                          }
+                          disabled={settling}
+                        >
+                          {settling && settlingHow === "release"
+                            ? "Releasing…"
+                            : "Release hold"}
+                        </Button>
+                      </div>
+                    )}
+                  </div>
                 </li>
               ))}
             </ul>
