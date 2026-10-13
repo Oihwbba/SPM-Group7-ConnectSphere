@@ -135,12 +135,13 @@ the open pull requests that change the same test files have merged.
 | [SCRUM-52](SCRUM-52.md) | Caylern Goh | 6 | Every case automated |
 | [SCRUM-53](SCRUM-53.md) | Caylern Goh | 9 | Automated except TC-53-09 (AC 9), which is manual; AC 3 and AC 10 point to other cases |
 | [SCRUM-81](SCRUM-81.md) | Jun Bin | 13 | Every case automated (unit, integration for the simultaneous confirm, e2e for the journey) |
-| [SCRUM-110](SCRUM-110.md) | Jun Bin | 15 | Every case automated (unit, and e2e for the page) |
+| [SCRUM-110](SCRUM-110.md) | Jun Bin | 15 | Every case automated (unit, and e2e for the page); AC 3 is superseded by SCRUM-170 AC 4 (TC-110-01 and TC-110-09 note it) |
 | [SCRUM-108](SCRUM-108.md) | Jun Bin | 14 | Every case automated (unit, e2e for both journeys); AC 6, 8 and 10 point to existing tests |
 | [SCRUM-124](SCRUM-124.md) | Jin Hong | 1 | Grows with the story: AC 7 so far (with SCRUM-41); the hold and withdrawal cases follow SCRUM-163 and SCRUM-142 |
 | [SCRUM-126](SCRUM-126.md) | Jun Bin | 10 | Every case automated (unit, integration for the constraint, migration and simultaneous clicks, e2e for the journey) |
 | [SCRUM-130](SCRUM-130.md) | Felicia Or | 12 | Every case automated (unit, integration, e2e) |
 | [SCRUM-117](SCRUM-117.md) | Jun Bin | 10 | Every case automated (unit, integration for releasing arrangements in one transaction, e2e for both journeys) |
+| [SCRUM-170](SCRUM-170.md) | Felicia Or | 13 | Automated (unit, integration for the decision and its race with a new request, e2e for the four journeys) except TC-170-12's change-request half (SCRUM-128) and TC-170-13 (AC 6), which waits for SCRUM-38 |
 | [SCRUM-163](SCRUM-163.md) | Jin Hong | 15 | Every case automated; TC-163-13's cancel and flag halves wait for SCRUM-82 and SCRUM-161 |
 | [SCRUM-142](SCRUM-142.md) | Jin Hong | 18 | Every case automated (unit, integration for what each change writes and two withdrawals at once, e2e for the Coordinator's journeys) |
 | [SCRUM-155](SCRUM-155.md) | Jin Hong | 16 | Every case automated (unit, integration for all-or-nothing and the races, e2e for the journey) |
