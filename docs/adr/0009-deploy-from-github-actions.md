@@ -50,6 +50,28 @@ is the only path to production and a blocked duplicate deploy cannot appear.
   workflow run on `main`.
 - Preview deployments stay off, as before (PR #22).
 
+## Addendum (2026-10-10) — the deploy applies migrations first
+
+Production deploys did not touch the database, so a migration merged to
+`main` reached the shared Supabase database only when someone ran
+`npm run db:deploy` by hand. After #148 nobody did, and production failed
+until it was run. The workflow now runs `prisma migrate deploy` after pulling
+the production environment and before building
+(`.github/scripts/migrate-production.mjs`).
+
+- `migrate deploy` only applies migrations that aren't applied yet and never
+  resets, which is why it is the one migration command allowed on the shared
+  database.
+- If a migration fails, the job stops before the build, so production keeps
+  the previous version.
+- The production URLs are parsed from the file `vercel pull` writes rather
+  than sourced by the shell, so a `$` in a password isn't expanded, and they
+  are masked in the job's log.
+- A migration runs while the previous deployment is still serving, and stays
+  applied if the build then fails. So migrations must be additive: see the
+  README's Migration rules, which also say what to do when one fails part way
+  (P3009).
+
 ## Addendum (2026-10-11) — Corrections from the docs audit (SCRUM-173)
 
 "Production no longer shows a Vercel check on the commit" is out of date.

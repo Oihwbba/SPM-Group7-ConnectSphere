@@ -661,6 +661,11 @@ model EquipmentRequestLine {
 
   suggestedAlternativeId String?
 
+  /// SCRUM-142 AC1 — set when the Coordinator removes the line. The row is
+  /// kept (no hard deletes) and every reader skips it; adding the type again
+  /// brings the same row back, so the unique index below still holds.
+  removedAt DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

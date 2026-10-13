@@ -5,6 +5,8 @@ import { ROLE_LABEL } from "@/lib/nav";
 import { Sidebar } from "@/components/app/sidebar";
 import { SphereLogo } from "@/components/app/sphere-logo";
 import { UserMenu } from "@/components/app/user-menu";
+import { NotificationBell } from "@/components/app/notification-bell";
+import { getMyUnreadCount } from "./notifications/queries";
 
 /**
  * The shell wrapping every authenticated page.
@@ -27,6 +29,7 @@ export default async function AppLayout({
   }
 
   const { role, name, email } = session.user;
+  const unread = await getMyUnreadCount();
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -41,6 +44,7 @@ export default async function AppLayout({
         </div>
 
         <div className="ml-auto flex items-center gap-1">
+          <NotificationBell unread={unread} />
           <UserMenu
             name={name ?? "User"}
             email={email ?? ""}

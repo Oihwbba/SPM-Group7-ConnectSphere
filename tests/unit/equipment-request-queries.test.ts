@@ -158,6 +158,7 @@ describe("getReservableRequests — SCRUM-155", () => {
     lines = [line("l1", "eq_projector", 2), line("l2", "eq_mic", 3)],
   ) => ({
     id,
+    updatedAt: new Date("2031-01-01T00:00:00.000Z"),
     notes: "Keynote at 10:00.",
     requestedBy: { name: "Cody Coordinator" },
     event: {
@@ -220,7 +221,9 @@ describe("getReservableRequests — SCRUM-155", () => {
     });
     expect(select.notes).toBe(true);
     expect(select.requestedBy).toEqual({ select: { name: true } });
+    // SCRUM-142 AC1: a line the Coordinator removed is left out.
     expect(select.lines).toEqual({
+      where: { removedAt: null },
       select: {
         id: true,
         equipmentId: true,
@@ -238,6 +241,8 @@ describe("getReservableRequests — SCRUM-155", () => {
     expect(await getReservableRequests()).toEqual([
       {
         id: "r1",
+        // SCRUM-142: what the form sends back, so a changed request is refused.
+        version: "2031-01-01T00:00:00.000Z",
         notes: "Keynote at 10:00.",
         requestedBy: { name: "Cody Coordinator" },
         event: { id: "evt_r1", name: "Event r1", startAt: START, endAt: END },

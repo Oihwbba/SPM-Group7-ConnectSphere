@@ -294,6 +294,18 @@ transaction. **Don't remove these locks.**
   rewritten history is how a team ends up with one nobody can rebuild.
 - **Never use `prisma db push`.** It changes the schema without a migration
   file, so your change reaches nobody else's database and production drifts.
+- **Keep migrations additive.** Merging to `main` applies a migration to the
+  shared database before the new code is live (`deploy.yml`), while the
+  previous deployment is still serving, and it stays applied if the build
+  then fails. So add tables, nullable columns or columns with a default, and
+  constraints existing rows already meet. Dropping or renaming a column the
+  running code reads, or changing its type, takes two pull requests: first
+  stop the code using it, then remove it.
+- **If a migration fails part way,** later deploys stop with Prisma's P3009
+  ("migrate found failed migrations") until it is resolved. Fix the database
+  by hand or in a new migration, then mark it with
+  `npx prisma migrate resolve --applied <name>` (or `--rolled-back <name>`)
+  against the shared database, and re-run the deploy from the Actions tab.
 - **Announce a `schema.prisma` change at standup before you make it.** Five
   people edit that one file, and it is this repo's most common merge conflict.
 - If `prisma migrate dev` reports drift mentioning the partial or GiST
@@ -378,7 +390,11 @@ re-sync rather than editing those files (see `docs/backlog/README.md`).
   `auth.config.ts`, so it can't be forgotten or mis-quoted.
 - After changing an environment variable, **redeploy**. A running deployment
   keeps the values it was built with.
-- Apply migrations with `npm run db:deploy`, never `db:reset`.
+- **Migrations apply themselves.** Every production deploy runs `prisma migrate
+  deploy` against the shared database before it builds (`deploy.yml`), so the
+  database is always on the schema of the code on `main`; if a migration
+  fails, nothing is deployed. To apply one by hand, use `npm run db:deploy`,
+  never `db:reset`.
 - Supabase permits `CREATE EXTENSION btree_gist`, so the double-booking
   constraint deploys unchanged.
 

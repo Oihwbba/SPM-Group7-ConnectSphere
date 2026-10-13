@@ -179,6 +179,7 @@ export function ReserveRequestCard({
       try {
         const result = await reserveEquipmentRequest({
           requestId,
+          requestVersion: requests.find((r) => r.id === requestId)?.version,
           // A time that isn't a full Singapore date and time is sent empty,
           // so the server reports it at the field rather than reading the
           // raw text as UTC (GLM review of #130).

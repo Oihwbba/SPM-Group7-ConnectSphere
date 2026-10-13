@@ -139,3 +139,19 @@ impactful-change stories, SCRUM-43/44". Neither is in the backlog any more:
 SCRUM-43 was merged into SCRUM-41 and SCRUM-128, and SCRUM-26 and SCRUM-128
 carry SCRUM-44's work (ADR 0003). The flags belong to SCRUM-26 now. The
 checklist itself is unchanged.
+
+## Addendum (2026-10-12) — a request awaiting re-check blocks Confirm (SCRUM-142 AC10)
+
+SCRUM-142 lets the Coordinator change an equipment request's lines before
+the event is confirmed. Removing a line sends the request back to Pending
+Review for Technical Support to re-check, but leaves the other lines
+reserved, so under decisions 2 and 3 the event read as ready, and could be
+confirmed before the re-check. Technical Support could then reject a request
+whose stock a Confirmed event still held. SCRUM-142 AC 10 (decision 1 of the
+PO's 12 Oct review, for the PO to confirm) closes that gap: Equipment is
+complete only when every requested line is reserved in full and every live
+request is Approved. A Pending or in-review request whose lines are all
+reserved shows "Awaiting Technical Support review"; one with a line not
+reserved in full still names it ("Not fully reserved: …"), as before.
+Decision 2 still decides which requests count, and decision 3 how
+reservations are matched.

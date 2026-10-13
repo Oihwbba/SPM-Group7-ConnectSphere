@@ -38,6 +38,7 @@ export default async function EquipmentRequestsPage() {
     <CoordinatorRequests
       requests={requests}
       canCreate={canCreate}
+      canChange={can(user, "equipment-request:change")}
       events={events}
       equipment={equipment}
     />
