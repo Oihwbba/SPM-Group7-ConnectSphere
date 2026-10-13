@@ -13,6 +13,7 @@ import {
   submitEventRequestSchema,
 } from "@/lib/schemas/event";
 import { ok, err, type ActionResult } from "@/lib/action-result";
+import { auditValue } from "@/lib/audit-value";
 import { pickCoordinator } from "@/lib/coordinator-assignment";
 import { getReadinessChecklist } from "@/lib/event-readiness";
 import {
@@ -286,8 +287,8 @@ export async function submitEventRequest(
           const changed = (
             Object.keys(request) as (keyof typeof request)[]
           ).flatMap((fieldName) => {
-            const oldValue = asText(existing[fieldName]);
-            const newValue = asText(request[fieldName]);
+            const oldValue = auditValue(existing[fieldName]);
+            const newValue = auditValue(request[fieldName]);
             return oldValue === newValue
               ? []
               : [{ fieldName, oldValue, newValue }];
@@ -485,16 +486,6 @@ export async function submitEventRequest(
   }
 }
 
-/** An event field as stored in an audit row's oldValue/newValue. An empty
- * optional field is the same as a missing one, so it isn't a change. */
-function asText(
-  value: string | number | Date | string[] | null | undefined,
-): string | null {
-  if (value === null || value === undefined || value === "") return null;
-  if (value instanceof Date) return value.toISOString();
-  return Array.isArray(value) ? value.join(", ") : String(value);
-}
-
 /**
  * Fetch available venue list and equipment catalogue for form recommendations.
  * Gated like the create actions: a "use server" export is a public endpoint,
@@ -609,6 +600,7 @@ export async function transitionEventStatus(
     const coordinatorId = event.coordinatorId ?? user!.id;
 
     const updated = await prisma.$transaction(async (tx) => {
+      const now = new Date();
       const result = await tx.event.updateMany({
         where: {
           id: event.id,
@@ -618,7 +610,7 @@ export async function transitionEventStatus(
         data: {
           status: approved ? "PLANNING" : "REJECTED",
           coordinatorId,
-          decidedAt: new Date(),
+          decidedAt: now,
           decidedById: user!.id,
           decisionReason: approved ? null : decisionReason,
           rejectionOutcome: approved ? null : rejectionOutcome,
@@ -649,6 +641,17 @@ export async function transitionEventStatus(
             oldValue: null,
             newValue: rejectionOutcome,
             summary: "Outcome chosen on rejection (SCRUM-126)",
+          },
+        });
+        // SCRUM-41 AC8: a change request waiting on a rejected event is
+        // rejected with the event's reason.
+        await tx.eventChangeRequest.updateMany({
+          where: { eventId: event.id, status: "PENDING_REVIEW" },
+          data: {
+            status: "REJECTED",
+            decidedById: user!.id,
+            decidedAt: now,
+            decisionReason,
           },
         });
       }
