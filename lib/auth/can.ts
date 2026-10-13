@@ -40,6 +40,7 @@ export type Action =
   | "clarification:request" // SCRUM-18: coordinator asks the organiser a question
   | "clarification:respond" // SCRUM-18: organiser answers an open question
   | "change-request:raise" // SCRUM-41: the organiser, or the assigned coordinator on their behalf
+  | "change-request:decide" // SCRUM-128: the assigned coordinator approves or rejects a change request
   | "venue:read"
   | "venue:availability" // SCRUM-36: view a venue's availability calendar
   | "booking:request" // SCRUM-50: coordinator asks for a venue for their event
@@ -100,6 +101,7 @@ const ROLE_ACTIONS: Record<Role, Action[]> = {
     "safety-check:request",
     "clarification:request",
     "change-request:raise",
+    "change-request:decide",
     "venue:read",
     "equipment-request:list",
     "equipment-request:create",
@@ -159,8 +161,8 @@ function hasRelationship(
         // only the event's assigned coordinator may confirm it (SCRUM-81 AC 7),
         // reject it from Planning (SCRUM-117 AC 5), cancel it (SCRUM-82 AC1),
         // resolve a flag on its arrangements (SCRUM-26 AC7), request its
-        // safety check (SCRUM-166) or raise a change request on the
-        // organiser's behalf (SCRUM-41 AC10).
+        // safety check (SCRUM-166), raise a change request on the
+        // organiser's behalf (SCRUM-41 AC10) or decide one (SCRUM-128 AC9).
         return (
           action !== "event:confirm" &&
           action !== "event:reject" &&
@@ -168,6 +170,7 @@ function hasRelationship(
           action !== "arrangement:reconsider" &&
           action !== "safety-check:request" &&
           action !== "change-request:raise" &&
+          action !== "change-request:decide" &&
           resource.coordinatorId === null &&
           resource.status !== "DRAFT"
         );
