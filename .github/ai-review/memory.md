@@ -4,9 +4,9 @@ Lessons from past reviews, approved by the team. The reviewer reads this file
 from `main` on every pull request, after `CONTRIBUTING.md` and `CLAUDE.md`.
 
 After each merge, `.github/scripts/ai-memory.mjs` asks GLM what the pull
-request taught and opens a pull request here if anything (SCRUM-112); a human
-reads it first. Hand edits are fine, and CI fails if the file outgrows what
-the reviewer reads (SCRUM-152).
+request taught and opens a pull request here if anything (SCRUM-112); a
+human reads it first. Hand edits are fine, and CI fails if the file outgrows
+what the reviewer reads (SCRUM-152).
 
 Rules for a lesson:
 
@@ -167,3 +167,23 @@ includes APPROVED — so such a hold can only lapse. The calendar's "Held
 until" label and the post-expiry surfaces have no e2e (PO follow-up).
 Known when a pull request touches holds, booking statuses or
 unavailability, or claims SCRUM-82/SCRUM-161.
+
+- (2026-10-13, #155) SCRUM-45 merged with both findings open. Four delivered
+triggers — the submission notice, the confirmation and its scheduled
+registration-closed notice, the clarification question, and registration
+full / place-opened — have unit and integration legs but no e2e; the
+journeys already run in the events, confirm, clarification and
+my-registrations specs, so only the notice assertion is missing. And
+`concurrency.test.ts`'s SCRUM-24, SCRUM-81 and both SCRUM-74 blocks don't
+delete the notifications their actions now write: deleting the event nulls
+`Notification.eventId` (an optional FK), so unread rows survive on the
+seeded organiser and coordinator accounts those e2e specs read (the capacity
+block leaves "Registration is full" on the never-deleted `evt_last_seat`),
+and every CI run drifts more strays. Known when a pull request touches
+notification e2e or those suites' cleanup.
+
+- (2026-10-13, #162) SCRUM-41 merged with AC8 deliberately partial: rejecting
+an event rejects its Submitted change request with the same reason, but
+cancelling the event leaves it Submitted — that half is SCRUM-82's AC3, and
+SCRUM-41 stays open on it. Known when a pull request touches event
+cancellation or the change-request lifecycle, or claims SCRUM-41/SCRUM-82.
