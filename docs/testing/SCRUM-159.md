@@ -243,7 +243,7 @@ are signed in as `coordinator@test.local`, approvals as
 | Pre-conditions | A Held 10:00–12:00 booking at a venue with 15 and 45 minutes, its hold expiring tomorrow (written directly; placing holds is SCRUM-163). An event 12:30–14:30. |
 | Test Steps | 1. Request the venue for the 12:30–14:30 event. <br> 2. Check the venue for that period on the request form. |
 | Test Data | — |
-| Expected Result | 1. Refused: "… is unavailable for that period: on hold from … to 12:45 pm …, including setup and turnaround." Nothing is written. 2. Reported unavailable. |
+| Expected Result | 1. Refused: "… is unavailable for that period: held from … to 12:45 pm …, including setup and turnaround." Nothing is written. 2. Reported unavailable. |
 
 **Automated by:** `tests/unit/venue-availability.test.ts` › "SCRUM-50 [AC3, AC10] TC-50-04, SCRUM-159 [AC3] TC-159-15: asks only for APPROVED bookings and holds not yet expired …" and "SCRUM-159 [AC3] TC-159-15: names a held booking as on hold, with its whole occupied time"; `tests/integration/setup-turnaround.test.ts` › "SCRUM-159 [AC3] TC-159-15: a hold that hasn't expired blocks a request and the live check wherever its occupied period reaches"
 
