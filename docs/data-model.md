@@ -34,7 +34,7 @@ deliberate consequence of the customer's own framing — everything in
 ConnectSphere happens *to an event*.
 
 The tables, columns and roles that carry the six Week 7 customer changes
-(SCRUM-159 to 167) were added by SCRUM-172 on 2026-10-08, in one migration and
+(SCRUM-159 to 166, 170 and 171) were added by SCRUM-172 on 2026-10-08, in one migration and
 a follow-up for the No equipment needed decision. They exist in the database
 now; the behaviour that uses them arrives with each story. Each is marked
 below.
@@ -47,7 +47,7 @@ below.
 
 | Table | Purpose | Stories |
 |---|---|---|
-| `User` | One row per person, with a `role`. Passwords are bcrypt hashes; account creation is out of Release-1 scope (open customer question), so users arrive via the seed. One role per account today; SCRUM-121 will let an account hold several, and its permissions become the union of those roles. | SCRUM-65, 66, 67, 121 |
+| `User` | One row per person, with a `role`. Passwords are bcrypt hashes; there is no account creation: accounts arrive from outside (SCRUM-153, closed as not needed), so users come from the seed. One role per account today; SCRUM-121 will let an account hold several, and its permissions become the union of those roles. | SCRUM-65, 66, 67, 121 |
 | `Account`, `Session`, `VerificationToken` | Auth.js adapter tables. Unused today (we use JWT sessions — see `adr/0002`) but kept so an OAuth provider can be added without a migration. | — |
 | `AuditLog` | Append-only: who did what, when, and the before/after value. No `updatedAt` on purpose — entries "cannot be edited or deleted through the application". | SCRUM-71, and SCRUM-21's "a record exists of who was previously assigned" |
 
@@ -68,10 +68,10 @@ stories land, each may only read its own notifications (`ROLE_ACTIONS` in
 
 | Table | Purpose | Stories |
 |---|---|---|
-| `Event` | The request and everything it becomes. Carries the nine-value `status`, the SCRUM-13 form fields, and the decision/cancellation/completion timestamps and reasons. A rejection also carries its `rejectionOutcome` (Amend and resubmit, or Submit as a new request), which the database requires (ADR 0013). A discarded Draft keeps its row with `discardedAt` set and leaves the Organiser's list; the database keeps it a Draft. The Organiser's venue, accessibility and equipment answers stay free text, shown to the people planning (SCRUM-170). **Registration needed** is `registrationRequired`, a nullable Yes/No. SCRUM-171 (not built yet) will have the request form set it, require it to submit, keep a request's earlier free-text answer (`registrationNotes`) next to it, and keep an event that doesn't need registration closed to registration and unlisted to Attendees. Today the form never sets it, so it is empty on every event, and confirming an event treats empty as needing registration (`registrationRequired !== false`). The Coordinator's **No equipment needed** decision is `noEquipmentNeededAt` with who recorded it (`noEquipmentNeededById`), both set or neither (added by SCRUM-172). SCRUM-170 AC4 will record it and clear it when the equipment requirements change; nothing sets it yet. | SCRUM-13–26, 81–84, 126, 130, 170, 171 |
+| `Event` | The request and everything it becomes. Carries the nine-value `status`, the SCRUM-13 form fields, and the decision/cancellation/completion timestamps and reasons. A rejection also carries its `rejectionOutcome` (Amend and resubmit, or Submit as a new request), which the database requires (ADR 0013). A discarded Draft keeps its row with `discardedAt` set and leaves the Organiser's list; the database keeps it a Draft. The Organiser's venue, accessibility and equipment answers stay free text, shown to the people planning (SCRUM-170). **Registration needed** is `registrationRequired`, a nullable Yes/No. SCRUM-171 (not built yet) will have the request form set it, require it to submit, keep a request's earlier free-text answer (`registrationNotes`) next to it, and keep an event that doesn't need registration closed to registration and unlisted to Attendees. Today the form never sets it, so it is empty on every event, and confirming an event treats empty as needing registration (`registrationRequired !== false`). The Coordinator's **No equipment needed** decision is `noEquipmentNeededAt` with who recorded it (`noEquipmentNeededById`), both set or neither (added by SCRUM-172). SCRUM-170 AC4 will record it and clear it when the equipment requirements change; nothing sets it yet. | SCRUM-13–26, 81, 82, 84, 126, 130, 170, 171 |
 | `ClarificationRequest` | A coordinator's question and the organiser's answer, and (`editableFields`) the request-form fields the answer may change (ADR 0014). | SCRUM-18, 108 |
-| `EventChangeRequest` | An organiser's post-submission change request, with its decision. | SCRUM-41, 42, 43, 47, 128 |
-| `ChangeRequestField` | One row per changed field, holding `oldValue`, `newValue` and `isMajor`. | SCRUM-42, 44 |
+| `EventChangeRequest` | An organiser's post-submission change request, with its decision. It changes fields, or asks for the event to be cancelled (`requestsCancellation`, with a required reason). At most one is Submitted per event: the partial unique index `event_change_request_one_submitted`. | SCRUM-41, 128, 45, 124 |
+| `ChangeRequestField` | One row per changed field, holding `oldValue`, `newValue` and `isMajor`. | SCRUM-128, 26 |
 | `SafetyCheck` | (Week 7, SCRUM-166; added by SCRUM-172.) One row per check, all kept, holding its state — Awaiting review, Approved, Changes requested, Rejected or Outdated — the Safety Officer's note, who recorded the outcome and when, and when it went out of date. An event has at most one check awaiting review. It is a step within Planning, not an extra event status. | SCRUM-166 |
 | `SafetyCheckArrangement` | (Week 7.) The arrangements a Safety Officer picked for Changes requested: each row is exactly one venue booking or one equipment reservation, at most once per check. | SCRUM-166 |
 
@@ -79,8 +79,8 @@ stories land, each may only read its own notifications (`ROLE_ACTIONS` in
 
 | Table | Purpose | Stories |
 |---|---|---|
-| `Venue` | The catalogue: capacity, facilities, accessibility features, supported layouts, opening hours. Retired with `isActive`, never deleted, so historic bookings stay readable. Week 7 (SCRUM-159, SCRUM-34) adds `setupMinutes`, `turnaroundMinutes` (whole minutes, default 0) and `knownRestrictions` (optional text for the Safety Officer). | SCRUM-34, 35, 38, 39, 40, 49, 159 |
-| `VenueUnavailability` | Non-booking unavailability — maintenance, closures. Kept separate from `Booking` because SCRUM-36 requires the two to be *visually distinguishable*. Week 7 (SCRUM-161) gives venues their own reason list — Maintenance, Equipment failure, Renovation, Safety concern and Other (`VenueUnavailabilityReason`; equipment keeps Damaged, SCRUM-29/30) — and lets it be recorded over future bookings, which are then flagged rather than refused. | SCRUM-36, 37, 161 |
+| `Venue` | The catalogue: capacity, facilities, accessibility features, supported layouts, opening hours. Retired with `isActive`, never deleted, so historic bookings stay readable. Week 7 (SCRUM-159, SCRUM-34) adds `setupMinutes`, `turnaroundMinutes` (whole minutes, default 0) and `knownRestrictions` (optional text for the Safety Officer). | SCRUM-34, 38, 40, 159 |
+| `VenueUnavailability` | Non-booking unavailability, such as maintenance or a renovation. Kept separate from `Booking` because SCRUM-36 requires the two to be *visually distinguishable*. Week 7 (the SCRUM-172 migration, for SCRUM-161) gave venues their own reason list — Maintenance, Equipment failure, Renovation, Safety concern and Other (`VenueUnavailabilityReason`; equipment keeps Damaged, SCRUM-29/30). SCRUM-161 will let it be recorded over future bookings, which are then flagged rather than refused; the database already allows it (SCRUM-172), but today the record action still refuses it. | SCRUM-36, 37, 161 |
 | `Booking` | A venue booking request and its outcome. Carries its own `startAt`/`endAt` (see decision 4.1) plus the setup and turnaround minutes it was approved with (SCRUM-159 AC8). The database holds an event to one pending, held or approved booking per venue (SCRUM-162 AC2); until SCRUM-162 lands, the request action still allows one venue per event (SCRUM-50 AC8). Week 7 lets an event book several venues, each with its own attendance (SCRUM-162), and adds the Held and Expired statuses with `heldAt`, `holdExpiresAt` and `holdNote` (SCRUM-163). A hold blocks its venue only until its expiry, and can't be confirmed after it (ADR 0010, 2026-10-08 addendum). The row says Held until something writes it, so the application reads a hold past its expiry as Expired from the expiry itself (`lib/booking-holds.ts`). The Needs Reconsideration flag carries its reason, when it was raised, and who resolved it and when (SCRUM-26). | SCRUM-26, 50, 52, 53, 159, 162, 163 |
 
 ### Equipment
@@ -98,8 +98,8 @@ stories land, each may only read its own notifications (`ROLE_ACTIONS` in
 
 | Table | Purpose | Stories |
 |---|---|---|
-| `Registration` | One row per attendee per event. Withdrawal is a status change plus `withdrawnAt`, never a delete, so the event's registration history stays complete. Shown as Registered, Withdrawn or Cancelled. | SCRUM-70, 72–78 |
-| `Notification` | One row per notification, with a closed `NotificationType` enum so every notification in the system has a named, traceable trigger. SCRUM-48 adds a `showFromAt` time so a hold reminder can be written ahead and appear on schedule without a job, and `withdrawnAt` so one that hasn't shown yet can be withdrawn without deleting it; `bookingId` names the hold it is about (SCRUM-124 AC5). | SCRUM-45, 46, 47, 48, 54, 56, 57, 85, 124 |
+| `Registration` | One row per attendee per event. Withdrawal is a status change plus `withdrawnAt`, never a delete, so the event's registration history stays complete. Shown as Registered, Withdrawn or Cancelled. | SCRUM-70, 72–77 |
+| `Notification` | One row per notification, with a closed `NotificationType` enum so every notification in the system has a named, traceable trigger. SCRUM-48 adds a `showFromAt` time so a hold reminder can be written ahead and appear on schedule without a job, and `withdrawnAt` so one that hasn't shown yet can be withdrawn without deleting it; `bookingId` names the hold it is about (SCRUM-124 AC5). | SCRUM-45, 48, 85, 124 |
 
 ---
 
@@ -128,7 +128,7 @@ stories land, each may only read its own notifications (`ROLE_ACTIONS` in
 | 19 | Event change requests | `EventChangeRequest`, `ChangeRequestField`, the `needsReconsideration` flags |
 | 20 | Notification system | `Notification` |
 
-**Week 7 (beyond the twenty, SCRUM-159–167):** venue setup and turnaround
+**Week 7 (beyond the twenty, SCRUM-159–166, 170, 171):** venue setup and turnaround
 times — `Venue.setupMinutes`/`turnaroundMinutes` and a booking's occupied
 period (SCRUM-159, SCRUM-160); unavailability over existing bookings
 (SCRUM-161); several venues per event, each booking checked independently
@@ -147,7 +147,7 @@ The `needsReconsideration` flag that SCRUM-26 raises lives on `Booking` and
 than joining to it. That is deliberate denormalisation, and `adr/0003` is the
 full argument: if a booking always read the event's current time, it would
 silently follow the event when the date moved, and the "this arrangement was
-made against an earlier version" signal that SCRUM-26 and SCRUM-44 need would
+made against an earlier version" signal that SCRUM-26 needs would
 be gone.
 
 ### 4.2 "Awaiting clarification" is not a tenth status
@@ -194,10 +194,11 @@ EXCLUDE constraint that protects venues. That is why decision 4.4 exists.
 
 | Rule | How it is enforced | Why |
 |---|---|---|
-| A venue is never double-booked (SCRUM-53, ADR 0010) | `EXCLUDE USING gist` on approved bookings (occupied periods under SCRUM-159) | A venue is a single resource: any overlap is a conflict, which is exactly what an exclusion constraint expresses. |
-| A venue is never both booked and unavailable (SCRUM-37, ADR 0010) | Triggers that lock the `Venue` row, then check the other table | An exclusion constraint sees one table; bookings and recorded unavailability are two. (SCRUM-161 now lets unavailability be recorded over bookings, flagging them instead.) |
+| A venue is never double-booked (SCRUM-53, ADR 0010) | `EXCLUDE USING gist` on approved and held bookings, over their occupied periods (times widened by setup and turnaround, SCRUM-159) | A venue is a single resource: any overlap is a conflict, which is exactly what an exclusion constraint expresses. |
+| A venue is never both booked and unavailable (SCRUM-37, ADR 0010) | Triggers that lock the `Venue` row, then check the other table | An exclusion constraint sees one table; bookings and recorded unavailability are two. Since SCRUM-172 the trigger on unavailability refuses only overlapping unavailability; until SCRUM-161 flags bookings instead, the record action keeps refusing unavailability over a booking, under the same venue lock. |
 | Equipment is never over-allocated (SCRUM-31, 155) | `SELECT … FOR UPDATE` on the `Equipment` rows, in id order, after the `Event` row | Overlapping reservations are *legal* until the sum exceeds the pool. A constraint cannot express "the sum of overlapping rows must not exceed a column on another table". |
 | An event is never oversubscribed (SCRUM-74) | `SELECT … FOR UPDATE` on the `Event` row | Same shape: capacity is a count, not a slot. |
+| An event has at most one Submitted change request (SCRUM-41) | `SELECT … FOR UPDATE` on the `Event` row, backed by a partial unique index | The index alone would turn the loser of two simultaneous requests into a database error; the lock lets it see the winner and get the ordinary "already has a change request" answer. |
 
 Both locks must be taken inside the transaction that writes the row. Reading
 the count first and inserting afterwards is the bug those two stories'
@@ -236,9 +237,9 @@ excluded from Release 1.
 | Not modelled | Why |
 |---|---|
 | Waiting lists (SCRUM-79) | Kept out by the team's 13 Sep customer Q&A answer, and on the Week 4 not-required list. A place that opens offers nothing automatically; the waitlist is a later addition. |
-| Attendance on the day (SCRUM-80) | Marked beyond Release 1; Release 1 records a headcount at completion (SCRUM-82). |
+| Attendance on the day (SCRUM-80) | Marked beyond Release 1; Release 1 will record a headcount at completion (SCRUM-82, not built; no column yet). |
 | Equipment catalogue maintenance as a feature | On the Week 4 "not required" list (SCRUM-119 is beyond Release 1). `Equipment` rows exist; managing them is a seed/admin concern. |
-| Client organisations as data (SCRUM-120, SCRUM-153) | Accounts arrive from an outside integration; organisation-wide viewing is beyond Release 1. |
+| Client organisations as data | Accounts arrive from an outside integration, so there is no sign-up (SCRUM-153, closed as not needed); organisation-wide viewing is beyond Release 1. |
 | Event categories, agendas, recurring events, attachments, comments, room layouts as entities, reporting | All on the Week 4 "not required for Release 1" list. |
 
 If a customer answer brings one of these into scope, add it as a new migration
@@ -250,12 +251,15 @@ and a new row in the table in section 3. Don't smuggle it into an existing table
 
 1. Find the story. If there isn't one, stop and write it first.
 2. Announce the change at standup — `schema.prisma` is a shared merge surface.
-3. Edit `prisma/schema.prisma`, then `npm run db:migrate` to generate the
-   migration. Never `prisma db push`.
+3. Edit `prisma/schema.prisma`, then generate the migration with
+   `npm run db:migrate` (`prisma migrate dev`) against the **local Docker
+   database only** (README, "Local database (Docker)"). Never run it while
+   `.env` points at Supabase, and never `prisma db push`.
 4. If the rule is a data-integrity rule, write it as a CHECK, unique index or
-   EXCLUDE constraint in the migration, not only in a server action. Put it
-   below the `Domain constraints Prisma cannot express` banner and name its
-   story in a comment.
+   EXCLUDE constraint in your new migration, not only in a server action. Put
+   it after Prisma's generated statements and name its story in a comment.
+   (The `Domain constraints Prisma cannot express` banner is in the first
+   migration, which must never be edited.)
 5. Add seed data that makes the new rule demonstrable, and say in a comment
    which story it demonstrates.
 6. Update sections 2 and 3 of this document in the same pull request.

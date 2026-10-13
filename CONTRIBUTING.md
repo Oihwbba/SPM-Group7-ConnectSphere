@@ -36,9 +36,10 @@ reference, and `app/(app)/equipment-requests` is a smaller, newer example.
 **Coverage.** Every server-side `.ts` file under `lib/` and `app/` must stay at
 100% statements, branches, functions and lines. `npm run test:coverage` fails
 otherwise, naming the file, and so does CI. It counts unit and integration
-tests together, so it **needs the local database** (`docker compose up -d`).
-Without it the integration tests are skipped, and a file only they cover fails
-the run even if you never touched it. Components (`.tsx`) are not measured;
+tests together, so it **needs the local database**: start Docker and point the
+terminal at it first ([README, Local database](README.md#local-database-docker)),
+never at `.env`'s shared one. Without it the integration tests are skipped,
+and a file only they cover fails the run even if you never touched it. Components (`.tsx`) are not measured;
 Playwright covers them (SCRUM-87).
 
 Route folders are named for the **domain**, not the role. A route several
@@ -240,7 +241,7 @@ accepted it.
 | | What happens | Takes |
 |---|---|---|
 | **GitHub Actions** (`build-and-test`) | migrate → seed → typecheck → lint → unit and integration tests with the coverage check → e2e | about 10 minutes |
-| **GLM review** | one AI reviewer reads the whole change and posts one review comment; skipped for drafts | 3–10 minutes, after CI |
+| **GLM review** | one AI reviewer reads the change (except Markdown, lockfiles and `docs/backlog`) and posts one review comment; skipped for drafts, and passes without a review when only those files changed | 3–10 minutes, after CI |
 
 Every push re-runs both.
 
@@ -262,11 +263,13 @@ but fix them or reply on the PR saying why they don't apply.
 
 - Your PR title, description and branch name.
 - `CONTRIBUTING.md` and `CLAUDE.md`, and the `docs/backlog` file for each
-  story your description names in a `Closes SCRUM-n` or `Part of SCRUM-n`
-  line. It reads these from `main`, so editing them in your own PR doesn't
-  change your review.
-- Your changed files in full, the files they import and the files that import
-  them, and any file that mentions your SCRUM keys. **Put the key in code
+  SCRUM key in your branch name, your title, or a `Closes`, `Part of`,
+  `Fixes` or `Refs` line of your description (at most six stories). It reads
+  these from the PR's base branch (`main`, unless the PR is stacked), so
+  editing them in your own PR doesn't change your review.
+- Your changed files (Markdown, lockfiles and `docs/backlog` excepted), the
+  files they import and the files that import them, and any file that
+  mentions your SCRUM keys. **Put the key in code
   comments and test titles** so it finds them.
 - A scan of the whole branch for role checks outside `can()`, hard deletes and
   inline date formatting.

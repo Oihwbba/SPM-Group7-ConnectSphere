@@ -5,7 +5,9 @@ import { defineConfig, devices } from "@playwright/test";
  *   - a Postgres database that has been migrated and seeded, and
  *   - the Next.js app running on http://localhost:3000.
  *
- * Locally, run `npm run db:reset` first, then `npm run test:e2e`. The
+ * Locally, point the terminal at the Docker database first, never at `.env`'s
+ * shared one, because some specs write data (README, "Local database
+ * (Docker)"). Then run `npm run db:reset` and `npm run test:e2e`. The
  * `webServer` block below starts the app automatically. In CI the same
  * sequence runs against a Postgres service container (see .github/workflows).
  */
