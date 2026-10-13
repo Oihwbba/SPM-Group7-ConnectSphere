@@ -16,7 +16,7 @@ it can be read aloud in the oral exam.
 | [0008](0008-advisory-ai-code-review.md) | An AI review on every pull request, now a required check on critical findings | SCRUM-88, 111, 112, 152, 157 | Amended: no longer advisory |
 | [0009](0009-deploy-from-github-actions.md) | Deploy production from GitHub Actions, not Vercel's Git integration | — | Current |
 | [0010](0010-database-prevents-venue-double-booking.md) | The database, not the application, prevents venue double-booking, over occupied periods and holds since Week 7 | SCRUM-53, 37, 159, 161, 162, 163, 172 | Amended 2026-10-08 |
-| [0011](0011-event-readiness-checklist.md) | The readiness checklist is computed on demand, per viewer | SCRUM-110 | Amended 2026-10-04 |
+| [0011](0011-event-readiness-checklist.md) | The readiness checklist is computed on demand, per viewer | SCRUM-110, 170 | Amended 2026-10-14 |
 | [0012](0012-confirming-an-event.md) | Approval moves an event to Planning; the assigned Coordinator confirms it | SCRUM-81 | Amended 2026-10-03 |
 | [0013](0013-rejection-outcome.md) | The Coordinator chooses a rejection's outcome; a new request starts as a copied Draft | SCRUM-126 | Current |
 | [0014](0014-clarification-fields-and-resubmission.md) | A clarification names the fields its answer may change; a resubmission returns to the same Coordinator | SCRUM-108 | Current |
