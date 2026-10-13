@@ -84,7 +84,12 @@ describe("getEventReadiness — SCRUM-110", () => {
 
     expect(result).toEqual({
       ok: true,
-      data: { ...checklist, canConfirm: true, canReject: true },
+      data: {
+        ...checklist,
+        canConfirm: true,
+        canReject: true,
+        canRequestSafetyCheck: false,
+      },
     });
     expect(mockChecklist).toHaveBeenCalledWith(prisma, "evt_test");
   });
@@ -101,6 +106,7 @@ describe("getEventReadiness — SCRUM-110", () => {
         items: [{ ...checklist.items[0], reason: null }, checklist.items[1]],
         canConfirm: false,
         canReject: false,
+        canRequestSafetyCheck: false,
       },
     });
   });
@@ -297,5 +303,44 @@ describe("getEventArrangements — SCRUM-81 AC6", () => {
       ok: false,
       error: "Event not found.",
     });
+  });
+});
+
+describe("getEventReadiness — SCRUM-166 Request safety check", () => {
+  const arranged = (safetyState: string): ReadinessChecklist => ({
+    ready: false,
+    items: [
+      { name: "Venue booking", complete: true, state: "Approved", reason: null },
+      { name: "Equipment", complete: true, state: "Reserved", reason: null },
+      { name: "Safety check", complete: false, state: safetyState, reason: null },
+    ],
+  });
+  const offered = async (session: Session, status: EventStatus = "PLANNING") => {
+    mockAuth.mockResolvedValue(session);
+    mockEventFindUnique.mockResolvedValue(eventRow(status));
+    const result = await getEventReadiness("evt_test");
+    return result.ok && result.data.canRequestSafetyCheck;
+  };
+  const coordinator = sessionFor("COORDINATOR", "usr_coordinator");
+
+  it("SCRUM-166 [AC1, AC12] TC-166-01: offered to the assigned Coordinator once the venue and equipment are complete, with no check, or after Changes requested, Rejected or Outdated", async () => {
+    for (const state of ["Not requested", "Changes requested", "Rejected", "Outdated"]) {
+      mockChecklist.mockResolvedValue(arranged(state));
+      expect(await offered(coordinator)).toBe(true);
+    }
+  });
+
+  it("SCRUM-166 [AC1, AC7] TC-166-02: not offered while a check awaits review or is approved, before the venue and equipment are complete, outside Planning, or to anyone but the assigned Coordinator", async () => {
+    mockChecklist.mockResolvedValue(arranged("Awaiting review"));
+    expect(await offered(coordinator)).toBe(false);
+    mockChecklist.mockResolvedValue(arranged("Approved"));
+    expect(await offered(coordinator)).toBe(false);
+
+    mockChecklist.mockResolvedValue(checklist);
+    expect(await offered(coordinator)).toBe(false);
+
+    mockChecklist.mockResolvedValue(arranged("Not requested"));
+    expect(await offered(coordinator, "CONFIRMED")).toBe(false);
+    expect(await offered(sessionFor("ORGANISER", "usr_organiser"))).toBe(false);
   });
 });

@@ -11,15 +11,18 @@ import {
   type ReadinessChecklist,
 } from "@/lib/event-readiness";
 import { ok, err, type ActionResult } from "@/lib/action-result";
+import { safetyCheckRequestable } from "@/lib/safety-check";
 
 /**
  * The event, if the signed-in user is its Organiser or its Coordinator.
  * Anyone else gets the same "not found" as a missing event, so the answer never
  * reveals which event ids exist (SCRUM-68).
  */
+type EventResource = Extract<Resource, { kind: "event" }>;
+
 async function relatedEvent(
   eventId: string,
-): Promise<{ user: SessionUser; resource: Resource } | null> {
+): Promise<{ user: SessionUser; resource: EventResource } | null> {
   const session = await auth();
   const user = session?.user;
   if (!user) return null;
@@ -28,7 +31,7 @@ async function relatedEvent(
     where: { id: eventId },
     select: { organiserId: true, coordinatorId: true, status: true },
   });
-  const resource: Resource | null = event && { kind: "event", ...event };
+  const resource: EventResource | null = event && { kind: "event", ...event };
   if (!resource || !can(user, "event:read", resource)) return null;
   return { user, resource };
 }
@@ -39,12 +42,19 @@ async function relatedEvent(
  * without internal reasons. `canConfirm` tells the page whether to offer
  * SCRUM-81's Confirm action, which only the assigned Coordinator may take;
  * `canReject` whether to offer SCRUM-117's Reject, which the same Coordinator
- * may take unless the event was ever Confirmed (AC 4).
+ * may take unless the event was ever Confirmed (AC 4); `canRequestSafetyCheck`
+ * whether to offer SCRUM-166's Request safety check (AC1).
  */
 export async function getEventReadiness(
   eventId: string,
 ): Promise<
-  ActionResult<ReadinessChecklist & { canConfirm: boolean; canReject: boolean }>
+  ActionResult<
+    ReadinessChecklist & {
+      canConfirm: boolean;
+      canReject: boolean;
+      canRequestSafetyCheck: boolean;
+    }
+  >
 > {
   const related = await relatedEvent(eventId);
   if (!related) return err("Event not found.");
@@ -72,6 +82,10 @@ export async function getEventReadiness(
     ...visible,
     canConfirm: can(user, "event:confirm", resource),
     canReject,
+    canRequestSafetyCheck:
+      resource.status === "PLANNING" &&
+      can(user, "safety-check:request", resource) &&
+      safetyCheckRequestable(checklist),
   });
 }
 

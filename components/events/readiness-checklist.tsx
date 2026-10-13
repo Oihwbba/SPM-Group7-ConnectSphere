@@ -19,6 +19,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { confirmEvent, rejectPlanningEvent } from "@/app/(app)/events/actions";
 import { getEventReadiness } from "@/app/(app)/events/readiness-actions";
+import { requestSafetyCheck } from "@/app/(app)/events/safety-check-actions";
 import type { ReadinessChecklist as Checklist } from "@/lib/event-readiness";
 import { REJECTION_OUTCOME_LABEL } from "@/lib/schemas/event";
 
@@ -30,11 +31,24 @@ import { REJECTION_OUTCOME_LABEL } from "@/lib/schemas/event";
  * reasons) and who may confirm, so this component only renders what it is
  * given.
  */
+const ITEM_ID: Record<Checklist["items"][number]["name"], string> = {
+  "Venue booking": "venue",
+  Equipment: "equipment",
+  "Safety check": "safety",
+};
+
 export function ReadinessChecklist({ eventId }: { eventId: string }) {
   const [checklist, setChecklist] = useState<
-    (Checklist & { canConfirm: boolean; canReject: boolean }) | null
+    | (Checklist & {
+        canConfirm: boolean;
+        canReject: boolean;
+        canRequestSafetyCheck: boolean;
+      })
+    | null
   >(null);
   const [loadFailed, setLoadFailed] = useState(false);
+  const [reload, setReload] = useState(0);
+  const [requesting, startRequest] = useTransition();
   const [confirming, startConfirm] = useTransition();
   const [rejecting, startReject] = useTransition();
   const [rejectOpen, setRejectOpen] = useState(false);
@@ -56,7 +70,24 @@ export function ReadinessChecklist({ eventId }: { eventId: string }) {
     return () => {
       cancelled = true;
     };
-  }, [eventId]);
+  }, [eventId, reload]);
+
+  // SCRUM-166 AC1: offered only once the venue and equipment are complete.
+  function requestCheck() {
+    startRequest(async () => {
+      const result = await requestSafetyCheck({ eventId });
+      if (!result.ok) {
+        toast.error(result.error);
+        return;
+      }
+      toast.success(
+        result.data.existing
+          ? "A safety check is already awaiting review."
+          : "Safety check requested. The Safety Officers have been notified.",
+      );
+      setReload((n) => n + 1);
+    });
+  }
 
   function confirm() {
     startConfirm(async () => {
@@ -113,7 +144,7 @@ export function ReadinessChecklist({ eventId }: { eventId: string }) {
                 <li
                   key={item.name}
                   className="flex items-start gap-2"
-                  data-testid={`readiness-item-${item.name === "Equipment" ? "equipment" : "venue"}`}
+                  data-testid={`readiness-item-${ITEM_ID[item.name]}`}
                   data-complete={item.complete}
                 >
                   {item.complete ? (
@@ -156,6 +187,16 @@ export function ReadinessChecklist({ eventId }: { eventId: string }) {
               {/* SCRUM-81: offered only to the assigned Coordinator, and only
                   usable once every item is complete. */}
               <div className="flex flex-wrap gap-2">
+                {checklist.canRequestSafetyCheck && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={requestCheck}
+                    disabled={requesting}
+                  >
+                    {requesting ? "Requesting…" : "Request safety check"}
+                  </Button>
+                )}
                 {/* SCRUM-117: for the assigned Coordinator, unless the event
                     was ever Confirmed (then it is cancelled instead). */}
                 {checklist.canReject && (
