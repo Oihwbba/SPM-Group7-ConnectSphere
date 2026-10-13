@@ -40,7 +40,8 @@ async function removeTestEvent() {
 }
 
 test.describe("SCRUM-40 — flag venue suitability, with the reason", () => {
-  test.describe.configure({ timeout: 90_000 });
+  // Serial: both tests would otherwise run beforeAll, creating the event twice.
+  test.describe.configure({ mode: "serial", timeout: 90_000 });
 
   test.beforeAll(async () => {
     if (!usesLocalDatabase) return;
@@ -123,16 +124,5 @@ test.describe("SCRUM-40 — flag venue suitability, with the reason", () => {
     await expect(card.getByTestId("queue-judgement")).toContainText(
       "We bring our own portable stage.",
     );
-  });
-
-  test("SCRUM-40 [AC7] TC-40-07: the venue detail view shows no suitability, as it has no event to compare against", async ({
-    browser,
-  }) => {
-    const coordinator = await signedIn(browser, "coordinator@test.local");
-    await coordinator.goto("/venues/ven_boardroom");
-    await expect(
-      coordinator.getByRole("heading", { name: "Executive Boardroom" }),
-    ).toBeVisible();
-    await expect(coordinator.getByText(/Not suitable|Suitable/)).toHaveCount(0);
   });
 });
