@@ -104,7 +104,7 @@ _15 stories, 48 points_
 | [SCRUM-160](SCRUM-160.md) | Identify bookings that clash once setup and turnaround apply | 3 | Highest | SCRUM Sprint 3 | To Do |
 | [SCRUM-161](SCRUM-161.md) | Mark a venue unavailable over existing bookings and find a replacement venue | 5 | Highest | SCRUM Sprint 3 | To Do |
 | [SCRUM-162](SCRUM-162.md) | Book several venues for one event | 5 | Highest | SCRUM Sprint 3 | To Do |
-| [SCRUM-163](SCRUM-163.md) | Hold a venue tentatively until a deadline | 5 | Highest | SCRUM Sprint 3 | In Review |
+| [SCRUM-163](SCRUM-163.md) | Hold a venue tentatively until a deadline | 5 | Highest | SCRUM Sprint 3 | In Progress |
 
 ## SCRUM-8 - Event Change & Notifications
 
