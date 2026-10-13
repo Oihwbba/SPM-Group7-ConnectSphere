@@ -144,12 +144,14 @@ const BLOCKING = new Set(["critical"]);
 /**
  * Prefixes each added or context line with its line number in the new file, so
  * GLM can cite exact lines, and records which lines exist on the new side of
- * each file's hunks.
+ * each file's hunks. `touched` is every path the diff names, deleted files
+ * included, which have no new side and so no `commentable` entry.
  */
 export function parseDiff(diff) {
   const commentable = new Map();
   // Only the lines this PR added, for coverage of its changes.
   const added = new Map();
+  const touched = new Set();
   const annotated = [];
   let path = null;
   let inHunk = false;
@@ -164,9 +166,16 @@ export function parseDiff(diff) {
     }
     // Inside a hunk a removed line can itself start with "--", so file headers
     // are only recognised before the first hunk.
+    if (!inHunk && raw.startsWith("--- ")) {
+      const source = raw.slice(4).trim();
+      if (source !== "/dev/null") touched.add(source.replace(/^a\//, ""));
+      annotated.push(raw);
+      continue;
+    }
     if (!inHunk && raw.startsWith("+++ ")) {
       const target = raw.slice(4).trim();
       path = target === "/dev/null" ? null : target.replace(/^b\//, "");
+      if (path) touched.add(path);
       if (path && !commentable.has(path)) {
         commentable.set(path, new Set());
         added.set(path, new Set());
@@ -197,7 +206,7 @@ export function parseDiff(diff) {
     }
   }
 
-  return { annotated: annotated.join("\n"), commentable, added };
+  return { annotated: annotated.join("\n"), commentable, added, touched };
 }
 
 // A description line that says which story the PR is for ("Closes SCRUM-31",
@@ -1441,7 +1450,7 @@ async function main() {
     return;
   }
 
-  const { annotated, commentable, added } = parseDiff(diff);
+  const { annotated, commentable, added, touched } = parseDiff(diff);
   if (annotated.length > MAX_DIFF_CHARS) {
     await upsertReviewComment(
       github,
@@ -1540,7 +1549,7 @@ async function main() {
     );
   }
   const ruleScan = renderProjectRuleScan(scanProjectRules(sourceFiles.filter((file) => !NOT_APP_TESTS.has(file.path))));
-  const migrations = changesSchema([...commentable.keys()])
+  const migrations = changesSchema([...touched])
     ? migrationOutline(
         listMigrationFiles(env.HEAD_SHA).map((path) => ({ path, content: readFromBase(env.HEAD_SHA, path) ?? "" })),
       )

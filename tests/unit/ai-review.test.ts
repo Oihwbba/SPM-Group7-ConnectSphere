@@ -1464,6 +1464,24 @@ describe("the reviewer audit fixes — SCRUM-181", () => {
     expect(migrationOutline([])).toBe("There are no migrations.");
   });
 
+  // #187's own review: a deleted file has no new side, so no commentable entry.
+  it("SCRUM-181 [AC4]: a pull request that only deletes a migration still gets every migration's DDL", () => {
+    const diff = [
+      "diff --git a/prisma/migrations/20261013_x/migration.sql b/prisma/migrations/20261013_x/migration.sql",
+      "deleted file mode 100644",
+      "--- a/prisma/migrations/20261013_x/migration.sql",
+      "+++ /dev/null",
+      "@@ -1 +0,0 @@",
+      '-CREATE INDEX "x_idx" ON "X"("y");',
+    ].join("\n");
+
+    const { commentable, touched } = parseDiff(diff);
+
+    expect(commentable.size).toBe(0);
+    expect([...touched]).toEqual(["prisma/migrations/20261013_x/migration.sql"]);
+    expect(changesSchema([...touched])).toBe(true);
+  });
+
   it("SCRUM-181 [AC5]: a pull request that marks its own code -diff still has that code reviewed", () => {
     const dir = mkdtempSync(join(tmpdir(), "ai-review-attr-"));
     const git = (...args: string[]) =>
