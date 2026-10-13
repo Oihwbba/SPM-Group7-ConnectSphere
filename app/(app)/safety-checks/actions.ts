@@ -179,11 +179,15 @@ export async function recordSafetyCheckOutcome(
           return err("Pick only this event's current venue bookings or equipment reservations.");
         case "decided": {
           const { current } = result;
-          const by = current.decidedBy
-            ? ` by ${current.decidedBy.name} on ${formatDateTime(current.decidedAt!)}`
-            : "";
+          // AC13: Outdated says why, not who recorded the outcome it replaced.
+          if (current.status === "OUTDATED") {
+            return err(
+              "This check is Outdated because the event's arrangements changed; nothing was changed. The Coordinator needs to request a new one.",
+            );
+          }
+          // Any other outcome records who and when (safety_check_outcome_recorded).
           return err(
-            `This check is already ${SAFETY_CHECK_LABEL[current.status]}${by}; nothing was changed.`,
+            `This check is already ${SAFETY_CHECK_LABEL[current.status]} by ${current.decidedBy!.name} on ${formatDateTime(current.decidedAt!)}; nothing was changed.`,
           );
         }
       }

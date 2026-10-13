@@ -198,7 +198,7 @@ and the app is running. The event is in Planning, assigned to
 | Pre-conditions | The check is Approved. |
 | Test Steps | 1. Venue Staff approve a second venue for the event (or Technical Support reserve equipment, or the Coordinator cancels a flagged arrangement). <br> 2. Try to approve the check. <br> 3. Try to confirm. |
 | Test Data | — |
-| Expected Result | 1. The check is Outdated with the time. 2. "This check is already Outdated; nothing was changed." 3. Refused: "… Safety check (Outdated)." |
+| Expected Result | 1. The check is Outdated with the time. 2. "This check is Outdated because the event's arrangements changed; nothing was changed. The Coordinator needs to request a new one." 3. Refused: "… Safety check (Outdated)." |
 
 **Automated by:** `tests/unit/safety-check.test.ts`, `tests/unit/bookings.test.ts`, `tests/unit/request-reservation.test.ts`, `tests/unit/safety-check-outcome.test.ts` › "SCRUM-166 [AC13] TC-166-12: …"; `tests/unit/reconsideration-actions.test.ts` › "SCRUM-26 [AC10] TC-26-11: …"; `tests/integration/safety-check.test.ts` › "SCRUM-166 [AC9, AC13, AC14] TC-166-12: …"
 

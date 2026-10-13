@@ -267,19 +267,21 @@ describe("recordSafetyCheckOutcome — refusals (SCRUM-166 AC3, AC6–AC8, AC13)
     expect(tx.auditLog.create).not.toHaveBeenCalled();
   });
 
-  it("SCRUM-166 [AC13] TC-166-12: an Outdated check can't be approved", async () => {
+  it("SCRUM-166 [AC13] TC-166-12: an Outdated check can't be approved, and the refusal says why rather than who approved it before", async () => {
     tx.safetyCheck.updateMany.mockResolvedValue({ count: 0 });
+    // Approved earlier, then outdated by a change: it still carries who approved it.
     tx.safetyCheck.findUniqueOrThrow.mockResolvedValue({
       status: "OUTDATED",
-      decidedAt: null,
-      decidedBy: null,
+      decidedAt: new Date("2032-01-05T02:00:00Z"),
+      decidedBy: { name: "Sara Safety" },
     });
 
     expect(
       await recordSafetyCheckOutcome({ checkId: "chk_1", outcome: "APPROVED" }),
     ).toEqual({
       ok: false,
-      error: "This check is already Outdated; nothing was changed.",
+      error:
+        "This check is Outdated because the event's arrangements changed; nothing was changed. The Coordinator needs to request a new one.",
     });
   });
 

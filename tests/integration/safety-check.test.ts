@@ -299,7 +299,8 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-166 — operational safety check", ()
     asOfficer();
     expect(await recordSafetyCheckOutcome({ checkId, outcome: "APPROVED" })).toMatchObject({
       ok: false,
-      error: "This check is already Outdated; nothing was changed.",
+      error:
+        "This check is Outdated because the event's arrangements changed; nothing was changed. The Coordinator needs to request a new one.",
     });
     asCoordinator();
     expect(await confirmEvent({ eventId })).toMatchObject({
