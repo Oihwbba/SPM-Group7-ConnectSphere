@@ -249,12 +249,12 @@ the database keeps or refuses. Times are UTC.
 |---|---|
 | Test Case ID | TC-172-17 |
 | Test Scenario | [Positive, Negative] AC 12: an event records its supervising Lead (SCRUM-165 AC11); existing events start with none |
-| Pre-conditions | A test event; a Coordinator Lead account. |
-| Test Steps | 1. Read the event. <br> 2. Set the Lead as its supervising Lead. <br> 3. On another event, set a supervising Lead who isn't a user. |
-| Test Data | A user with the role `COORDINATOR_LEAD`; `usr_nobody` |
-| Expected Result | Step 1: no supervising Lead. Step 2: kept, and it is the Lead. Step 3: refused by `Event_supervisingLeadId_fkey`, and that event still has none. |
+| Pre-conditions | Test events; two Coordinator Lead accounts. |
+| Test Steps | 1. Read the event. <br> 2. Set the Lead as its supervising Lead. <br> 3. On another event, set a supervising Lead who isn't a user. <br> 4. On a third event, set the second Lead, then delete that user. |
+| Test Data | Two users with the role `COORDINATOR_LEAD`; `usr_nobody` |
+| Expected Result | Step 1: no supervising Lead. Step 2: kept, and it is the Lead. Step 3: refused by `Event_supervisingLeadId_fkey`, and that event still has none. Step 4: the user is deleted, and the event remains with no supervising Lead (like its Coordinator, `Event_coordinatorId_fkey`). |
 
-**Automated by:** `tests/integration/w9-rules.test.ts` › "SCRUM-172 [AC12] TC-172-17: an event starts with no supervising Lead, and keeps the Lead it is given" and "SCRUM-172 [AC12] TC-172-17: a supervising Lead who isn't a user is refused, and the event is unchanged"
+**Automated by:** `tests/integration/w9-rules.test.ts` › "SCRUM-172 [AC12] TC-172-17: an event starts with no supervising Lead, and keeps the Lead it is given", "SCRUM-172 [AC12] TC-172-17: a supervising Lead who isn't a user is refused, and the event is unchanged" and "SCRUM-172 [AC12] TC-172-17: deleting the supervising Lead's user leaves the event unsupervised, and keeps the event"
 
 ### TC-172-18
 

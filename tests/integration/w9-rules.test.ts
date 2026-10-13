@@ -116,6 +116,33 @@ describe.skipIf(!usesLocalDatabase)(
         });
         expect(event.supervisingLeadId).toBeNull();
       });
+
+      it("SCRUM-172 [AC12] TC-172-17: deleting the supervising Lead's user leaves the event unsupervised, and keeps the event", async () => {
+        const goneId = `usr_w9_gone_lead_${stamp}`;
+        await prisma.user.create({
+          data: {
+            id: goneId,
+            email: `w9-gone-lead-${stamp}@test.local`,
+            name: "Week 9 departing Lead",
+            passwordHash: "x",
+            role: "COORDINATOR_LEAD",
+          },
+        });
+        await prisma.event.update({
+          where: { id: eventIds[2] },
+          data: { supervisingLeadId: goneId },
+        });
+
+        await prisma.user.delete({ where: { id: goneId } });
+
+        const event = await prisma.event.findUniqueOrThrow({
+          where: { id: eventIds[2] },
+        });
+        expect(event).toMatchObject({
+          supervisingLeadId: null,
+          status: "PLANNING",
+        });
+      });
     });
 
     describe("AC13 — Venue Staff's approval of a hold", () => {
