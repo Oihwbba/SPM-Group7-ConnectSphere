@@ -96,6 +96,9 @@ describe("SuitabilityPanel — SCRUM-40", () => {
 describe("BookingQueue — SCRUM-40 AC10", () => {
   const row: PendingBookingRow = {
     id: "bkg_1",
+    status: "PENDING",
+    holdExpiresAt: null,
+    holdNote: null,
     eventId: "evt_1",
     startAt: new Date("2035-03-10T01:00:00.000Z"),
     endAt: new Date("2035-03-10T05:00:00.000Z"),
