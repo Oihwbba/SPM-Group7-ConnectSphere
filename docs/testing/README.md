@@ -92,6 +92,8 @@ defect, e.g. `regression: a blank rejection reason was accepted`.
 | [SCRUM-31](SCRUM-31.md) | Jun Bin | 11 | Written from the acceptance criteria and existing tests; TC-31-04, -05 and -09 are partly manual |
 | [SCRUM-36](SCRUM-36.md) | Caylern Goh | 9 | Automated; a real screen-reader pass is manual |
 | [SCRUM-37](SCRUM-37.md) | Caylern Goh | 7 | Every case automated |
+| [SCRUM-41](SCRUM-41.md) | Jin Hong | 16 | Every case automated (unit, integration for the lock, index and rejection, e2e for both journeys); AC 8's cancellation half waits for SCRUM-82 |
+| [SCRUM-45](SCRUM-45.md) | Jin Hong | 8 | Every case automated; the triggers of unbuilt stories (AC 5–7, 9, 10 and the Lead's assignment) are listed as still to do |
 | [SCRUM-48](SCRUM-48.md) | Jin Hong | 15 | Every case automated except TC-48-08 and TC-48-10, blocked by SCRUM-166 and SCRUM-121 |
 | [SCRUM-50](SCRUM-50.md) | Caylern Goh | 15 | Every case automated |
 | [SCRUM-52](SCRUM-52.md) | Caylern Goh | 6 | Every case automated |
@@ -99,6 +101,7 @@ defect, e.g. `regression: a blank rejection reason was accepted`.
 | [SCRUM-81](SCRUM-81.md) | Jun Bin | 13 | Every case automated (unit, integration for the simultaneous confirm, e2e for the journey) |
 | [SCRUM-110](SCRUM-110.md) | Jun Bin | 15 | Every case automated (unit, and e2e for the page) |
 | [SCRUM-108](SCRUM-108.md) | Jun Bin | 14 | Every case automated (unit, e2e for both journeys); AC 6, 8 and 10 point to existing tests |
+| [SCRUM-124](SCRUM-124.md) | Jin Hong | 1 | Grows with the story: AC 7 so far (with SCRUM-41); the hold and withdrawal cases follow SCRUM-163 and SCRUM-142 |
 | [SCRUM-126](SCRUM-126.md) | Jun Bin | 10 | Every case automated (unit, integration for the constraint, migration and simultaneous clicks, e2e for the journey) |
 | [SCRUM-130](SCRUM-130.md) | Felicia Or | 12 | Every case automated (unit, integration, e2e) |
 | [SCRUM-117](SCRUM-117.md) | Jun Bin | 10 | Every case automated (unit, integration for releasing arrangements in one transaction, e2e for both journeys) |
