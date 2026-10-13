@@ -1028,6 +1028,11 @@ export async function rejectPlanningEvent(
         },
       });
       if (confirmedBefore > 0) return "confirmed-before" as const;
+      // SCRUM-82 AC5: an event with registrations is cancelled, not rejected.
+      const registrations = await tx.registration.count({
+        where: { eventId, status: "REGISTERED" },
+      });
+      if (registrations > 0) return "has-registrations" as const;
 
       const now = new Date();
       await tx.event.update({
@@ -1135,6 +1140,11 @@ export async function rejectPlanningEvent(
     if (outcome === "confirmed-before") {
       return err(
         "This event has been confirmed before, so it can't be rejected. Cancel it instead.",
+      );
+    }
+    if (outcome === "has-registrations") {
+      return err(
+        "This event has registrations, so it can't be rejected. Cancel it instead.",
       );
     }
     revalidatePath("/events");

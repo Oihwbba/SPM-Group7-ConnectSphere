@@ -33,6 +33,7 @@ export type Action =
   | "event:review"
   | "event:confirm" // SCRUM-81: the assigned coordinator confirms a ready Planning event
   | "event:reject" // SCRUM-117: the assigned coordinator rejects a Planning event that can't be fulfilled
+  | "event:cancel" // SCRUM-82: the assigned coordinator cancels an event that won't go ahead
   | "arrangement:reconsider" // SCRUM-26: the assigned coordinator resolves a Needs Reconsideration flag
   | "safety-check:request" // SCRUM-166: the assigned coordinator asks for an operational safety check
   | "safety-check:review" // SCRUM-166: a Safety Officer reviews a check and records its outcome
@@ -92,6 +93,7 @@ const ROLE_ACTIONS: Record<Role, Action[]> = {
     "event:review",
     "event:confirm",
     "event:reject",
+    "event:cancel",
     "arrangement:reconsider",
     "safety-check:request",
     "clarification:request",
@@ -152,11 +154,13 @@ function hasRelationship(
         if (resource.coordinatorId === user.id) return true;
         // Any coordinator may review a request nobody has picked up yet, but
         // only the event's assigned coordinator may confirm it (SCRUM-81 AC 7),
-        // reject it from Planning (SCRUM-117 AC 5), resolve a flag on its
-        // arrangements (SCRUM-26 AC7) or request its safety check (SCRUM-166).
+        // reject it from Planning (SCRUM-117 AC 5), cancel it (SCRUM-82 AC1),
+        // resolve a flag on its arrangements (SCRUM-26 AC7) or request its
+        // safety check (SCRUM-166).
         return (
           action !== "event:confirm" &&
           action !== "event:reject" &&
+          action !== "event:cancel" &&
           action !== "arrangement:reconsider" &&
           action !== "safety-check:request" &&
           resource.coordinatorId === null &&

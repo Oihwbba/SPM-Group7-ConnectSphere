@@ -321,6 +321,25 @@ describe("can — the Week 7 roles before their stories", () => {
   );
 });
 
+// SCRUM-82 AC1 — cancelling follows the same rule as confirming and rejecting.
+describe("can — cancelling an event (SCRUM-82)", () => {
+  const confirmed = {
+    kind: "event" as const,
+    organiserId: "orgA",
+    coordinatorId: "coord",
+    status: "CONFIRMED" as const,
+  };
+
+  it("SCRUM-82 [AC1] TC-82-03: only the event's assigned Coordinator may cancel it, never an unassigned one", () => {
+    expect(can(coordinator, "event:cancel", confirmed)).toBe(true);
+    expect(can({ id: "other", role: "COORDINATOR" }, "event:cancel", confirmed)).toBe(false);
+    expect(can(coordinator, "event:cancel", { ...confirmed, coordinatorId: null })).toBe(false);
+    for (const user of [organiserA, attendee, { id: "so", role: "SAFETY_OFFICER" }] as SessionUser[]) {
+      expect(can(user, "event:cancel")).toBe(false);
+    }
+  });
+});
+
 // SCRUM-166 — the Coordinator requests a check for their own event; a Safety
 // Officer reviews any event's check except one they organise or coordinate.
 describe("can — the operational safety check (SCRUM-166)", () => {
