@@ -192,4 +192,12 @@ describe("recordNoEquipmentNeeded — SCRUM-170 AC4", () => {
     });
     expect(mockTransaction).not.toHaveBeenCalled();
   });
+
+  it("SCRUM-170 [AC4]: an unexpected database failure propagates instead of being reported as a refusal", async () => {
+    mockTransaction.mockRejectedValue(new Error("connection lost"));
+
+    await expect(recordNoEquipmentNeeded({ eventId: "evt1" })).rejects.toThrow(
+      "connection lost",
+    );
+  });
 });

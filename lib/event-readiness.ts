@@ -221,12 +221,13 @@ function equipmentItem(event: EventRow): ChecklistItem {
     // SCRUM-170 AC4: with no live request the Coordinator decides. Recording
     // No equipment needed completes the item; it keeps who and when. Creating
     // a request clears the decision, so it never sits beside a live request.
+    // Who recorded it is always set with it (event_no_equipment_decision_complete).
     if (event.noEquipmentNeededAt) {
       return {
         name: "Equipment",
         complete: true,
         state: "No equipment needed",
-        reason: `Recorded by ${event.noEquipmentNeededBy?.name ?? "the Coordinator"}, ${formatDateTime(event.noEquipmentNeededAt)}`,
+        reason: `Recorded by ${event.noEquipmentNeededBy!.name}, ${formatDateTime(event.noEquipmentNeededAt)}`,
       };
     }
     // With only a rejected request, the equipment is still wanted but not
