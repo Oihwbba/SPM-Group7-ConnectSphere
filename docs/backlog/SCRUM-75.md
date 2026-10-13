@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-09. Jira is the source of truth.
+     Synced from Jira on 2026-10-12. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-75 - Control and enforce the registration period
@@ -31,7 +31,7 @@
 9. Given the event returns to Planning (SCRUM-128, SCRUM-26), then registration pauses. When the event is Confirmed again, the same window applies; if its closing time has passed, registration stays closed until I reopen it, and it is then open until the event's start (AC6).
 10. Registration times are shown in Singapore time (SCRUM-129).
 
-**Customer basis:** The waiting list is beyond Release 1 (SCRUM-79).Step 11: Attendees register for the confirmed event during the permitted registration period.The G4 Attendee Registration answer: registration is first come, first served and also at the Organiser’s discretion.
+**Customer basis:** Step 11: "Where registration is required, Attendees can register for the confirmed event during the permitted registration period and subject to the applicable capacity." G4 (Attendee Registration): "Registration is based on first come first serve and also based on Organiser discretion." AC6 (the Organiser closes and reopens registration) is a team decision based on "Organiser discretion".
 
 **Change log**
 
@@ -39,6 +39,6 @@
 * 2026-10-01 (audit): AC1 now depends on the Registration needed choice (SCRUM-127) instead of a flag nothing set. Closing manually is its own state, separate from an event that doesn't need registration, so a closed event stays listed (SCRUM-72). AC8 now carries the start-time cut-off for SCRUM-73, which the merged code doesn't check yet.
 * 2026-10-07: the customer basis notes that the waiting list in the second answer is beyond Release 1 (SCRUM-79). No Week 7 change.
 * 2026-10-07: AC1 points the Registration needed choice to SCRUM-171, which took it over when SCRUM-127 was split.
-* 2026-10-08 (backlog refinement, PO approved): re-estimated from 3 to 2 points. Our G4 answers ask for a "permitted registration period" and "Organiser discretion", but not for the Organiser to set the opening and closing times, so setting and extending the window are removed (AC1, AC3, AC5; numbers kept because code and tests cite AC2, AC4, AC7 and AC8). AC4's default now applies to every new event. AC6 and AC9 reopen registration until the event's start. AC6 applies only to events that need registration (SCRUM-171). Customer basis replaced with our G4 answers; the earlier quotes were not from our section.
+* 2026-10-08 (backlog refinement, PO approved): re-estimated from 3 to 2 points. Step 11 asks for a "permitted registration period" and our G4 answer for "Organiser discretion", but neither asks for the Organiser to set the opening and closing times, so setting and extending the window are removed (AC1, AC3, AC5; numbers kept because code and tests cite AC2, AC4, AC7 and AC8). AC4's default now applies to every new event. AC6 and AC9 reopen registration until the event's start. AC6 applies only to events that need registration (SCRUM-171). Customer basis replaced with our G4 answers; the earlier quotes were not from our section.
 
 Functionality Area: Attendee Registration

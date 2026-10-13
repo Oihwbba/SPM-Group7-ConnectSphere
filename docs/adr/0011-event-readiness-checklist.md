@@ -131,3 +131,19 @@ reserved where a projector was requested). The Equipment item now names the
 items not reserved in full, without counts, e.g. "Not fully reserved:
 Projector, Laptop", in the order they were requested. Counts stay out, as on
 3 Oct; the completeness rule is unchanged.
+
+## Amendment, 12 Oct 2026
+
+SCRUM-142 lets the Coordinator change an equipment request's lines before
+the event is confirmed. Removing a line sends the request back to Pending
+Review for Technical Support to re-check, but leaves the other lines
+reserved, so under decisions 2 and 3 the event read as ready, and could be
+confirmed before the re-check. Technical Support could then reject a request
+whose stock a Confirmed event still held. SCRUM-142 AC 10 (decision 1 of the
+PO's 12 Oct review, for the PO to confirm) closes that gap: Equipment is
+complete only when every requested line is reserved in full and every live
+request is Approved. A Pending or in-review request whose lines are all
+reserved shows "Awaiting Technical Support review"; one with a line not
+reserved in full still names it ("Not fully reserved: …"), as before.
+Decision 2 still decides which requests count, and decision 3 how
+reservations are matched.

@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 
 import { AvailabilityCalendar } from "@/app/(app)/venues/availability/availability-calendar";
 import { availabilityByDay } from "@/lib/venue-availability";
+import { formatDateTime } from "@/lib/datetime";
 
 // SCRUM-36 — what the week grid says about a day. Rendering only.
 const sg = (day: string, hhmm: string) => new Date(`${day}T${hhmm}:00+08:00`);
@@ -56,5 +57,51 @@ describe("AvailabilityCalendar — SCRUM-36", () => {
     );
     // The untouched days still say so.
     expect(column(html, "2035-03-15")).toContain("data-free-all-day");
+  });
+
+  it("SCRUM-163 [AC2] TC-163-04: a held booking reads as held until its expiry, in its words and its details, and an approved one as booked", () => {
+    const heldUntil = sg("2035-03-10", "18:00");
+    const details = (id: string, until: Date | null) => ({
+      kind: "booking" as const,
+      id,
+      heldUntil: until,
+      details: {
+        kind: "booking" as const,
+        startAt: sg("2035-03-13", "09:00"),
+        endAt: sg("2035-03-13", "12:00"),
+        heldUntil: until,
+        eventName: "Symposium",
+        requestedBy: "Cody Coordinator",
+        attendance: 40,
+        layout: null,
+      },
+    });
+    const html = render(
+      availabilityByDay(
+        [
+          {
+            ...details("bkg_held", heldUntil),
+            startAt: sg("2035-03-13", "09:00"),
+            endAt: sg("2035-03-13", "12:00"),
+          },
+          {
+            ...details("bkg_ok", null),
+            startAt: sg("2035-03-14", "09:00"),
+            endAt: sg("2035-03-14", "12:00"),
+          },
+        ],
+        "2035-03-12",
+        "2035-03-18",
+      ),
+    );
+
+    const held = column(html, "2035-03-13");
+    // Its summary for screen readers, and the hover details' status line.
+    expect(
+      held.split(`Held until ${formatDateTime(heldUntil)}`).length - 1,
+    ).toBeGreaterThanOrEqual(2);
+    expect(held).not.toContain(">Booked<");
+    expect(column(html, "2035-03-14")).toContain(">Booked<");
+    expect(column(html, "2035-03-14")).not.toContain("Held until");
   });
 });

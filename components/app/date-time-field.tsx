@@ -43,7 +43,8 @@ export function DateTimeField({
   openOn,
   error,
 }: {
-  name: "Start" | "End";
+  /** Also the label; "Expiry" is a hold's deadline (SCRUM-163). */
+  name: "Start" | "End" | "Expiry";
   value: string;
   onChange: (value: string) => void;
   /** Where the calendar opens when no date is chosen yet. */

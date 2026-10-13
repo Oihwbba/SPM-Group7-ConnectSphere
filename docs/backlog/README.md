@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-09. Jira is the source of truth.
+     Synced from Jira on 2026-10-13. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # Product backlog - acceptance criteria for every story
@@ -26,7 +26,7 @@ either covered by a test or visibly not done yet. Reviewers do the same.
 
 ## Staleness - read this
 
-**Jira is the source of truth. These files are a snapshot, last synced on 2026-10-09.**
+**Jira is the source of truth. These files are a snapshot, last synced on 2026-10-13.**
 
 - Never edit these files by hand. Edit the story in Jira, then re-sync.
 - Re-sync after every backlog refinement, and before each sprint review.
@@ -37,17 +37,17 @@ either covered by a test or visibly not done yet. Reviewers do the same.
 | | |
 |---|---|
 | Stories | **88** |
-| Tasks | **25** |
+| Tasks | **30** |
 | Subtasks | **18** |
-| Total story points | **254** |
+| Total story points | **252** |
 | Points committed to Sprint 1 | **37** |
 | Points committed to Sprint 2 | **56** |
-| Points committed to Sprint 3 | **128** |
-| Last synced from Jira | **2026-10-09** |
+| Points committed to Sprint 3 | **126** |
+| Last synced from Jira | **2026-10-13** |
 
 ## SCRUM-6 - Event Request Lifecycle
 
-_32 stories, 88 points_
+_32 stories, 86 points_
 
 | Story | Summary | Pts | Priority | Sprint | Status |
 |---|---|---|---|---|---|
@@ -63,10 +63,10 @@ _32 stories, 88 points_
 | [SCRUM-23](SCRUM-23.md) | View an event's current status | 1 | Highest | SCRUM Sprint 1 | Done |
 | [SCRUM-24](SCRUM-24.md) | Keep event status consistent with actions taken | 5 | Highest | SCRUM Sprint 1 | Done |
 | [SCRUM-25](SCRUM-25.md) | Update routine event information during planning | 3 | Highest | SCRUM Sprint 3 | To Do |
-| [SCRUM-26](SCRUM-26.md) | Flag and resolve arrangements affected by a change | 5 | Highest | SCRUM Sprint 3 | To Do |
+| [SCRUM-26](SCRUM-26.md) | Flag and resolve arrangements affected by a change | 5 | Highest | SCRUM Sprint 3 | In Review |
 | [SCRUM-71](SCRUM-71.md) | Record who changed what and when | 5 | Low | Backlog | To Do |
 | [SCRUM-81](SCRUM-81.md) | Move an approved event through planning to confirmed | 5 | Highest | SCRUM Sprint 2 | Done |
-| [SCRUM-82](SCRUM-82.md) | Close an event: cancel it, or mark it completed once it has passed | 5 | Highest | SCRUM Sprint 3 | To Do |
+| [SCRUM-82](SCRUM-82.md) | Close an event: cancel it, or mark it completed once it has passed | 3 | Highest | SCRUM Sprint 3 | To Do |
 | [SCRUM-84](SCRUM-84.md) | Organiser views their own event requests | 2 | Highest | SCRUM Sprint 1 | Done |
 | [SCRUM-108](SCRUM-108.md) | Answer a clarification, or amend and resubmit a rejected request | 5 | High | SCRUM Sprint 2 | Done |
 | [SCRUM-109](SCRUM-109.md) | [MERGED INTO SCRUM-108] Respond to an event clarification request | 0 | High | SCRUM Sprint 2 | Done |
@@ -100,7 +100,7 @@ _15 stories, 48 points_
 | [SCRUM-52](SCRUM-52.md) | Review pending booking requests | 2 | Highest | SCRUM Sprint 2 | Done |
 | [SCRUM-53](SCRUM-53.md) | Approve or reject a booking request | 2 | Highest | SCRUM Sprint 2 | Done |
 | [SCRUM-134](SCRUM-134.md) | Decide competing venue and equipment requests in the order they were made | 3 | Medium | SCRUM Sprint 3 | To Do |
-| [SCRUM-159](SCRUM-159.md) | Include setup and turnaround time when checking venue availability | 5 | Highest | SCRUM Sprint 3 | To Do |
+| [SCRUM-159](SCRUM-159.md) | Include setup and turnaround time when checking venue availability | 5 | Highest | SCRUM Sprint 3 | In Review |
 | [SCRUM-160](SCRUM-160.md) | Identify bookings that clash once setup and turnaround apply | 3 | Highest | SCRUM Sprint 3 | To Do |
 | [SCRUM-161](SCRUM-161.md) | Mark a venue unavailable over existing bookings and find a replacement venue | 5 | Highest | SCRUM Sprint 3 | To Do |
 | [SCRUM-162](SCRUM-162.md) | Book several venues for one event | 5 | Highest | SCRUM Sprint 3 | To Do |
@@ -186,10 +186,9 @@ _2 stories, 5 points_
 
 | Task | Summary | Sprint | Status |
 |---|---|---|---|
-| [SCRUM-87](SCRUM-87.md) | Spike: decide component testing (jsdom + React Testing Library) | SCRUM Sprint 3 | To Do |
 | [SCRUM-88](SCRUM-88.md) | Add GLM-5.3 automated code review to pull requests (GitHub Actions) | SCRUM Sprint 1 | Done |
 | [SCRUM-89](SCRUM-89.md) | CI and developer infrastructure: Node 24, CI hardening, test folders, security upgrades, migration sync | SCRUM Sprint 1 | Done |
-| [SCRUM-111](SCRUM-111.md) | GLM reviewer context: never drop a file the PR changed, and measure the budget | Backlog | Done |
+| [SCRUM-111](SCRUM-111.md) | GLM reviewer context: never drop a file the PR changed, and measure the budget | Backlog | In Review |
 | [SCRUM-112](SCRUM-112.md) | The GLM reviewer maintains its own memory instead of being taught by hand | Backlog | Done |
 | [SCRUM-113](SCRUM-113.md) | Re-sync docs/backlog snapshot from Jira before the Sprint 1 review | Backlog | Done |
 | [SCRUM-114](SCRUM-114.md) | Chore: Sprint 1 post-DoD test hardening and code hygiene cleanup | SCRUM Sprint 2 | Done |
@@ -198,9 +197,8 @@ _2 stories, 5 points_
 | [SCRUM-143](SCRUM-143.md) | [SUPERSEDED BY SCRUM-162] Enforce one venue request per event | Backlog | Done |
 | [SCRUM-144](SCRUM-144.md) | [COVERED BY SCRUM-75 AND SCRUM-171] Enable registration and enforce event cutoff | Backlog | Done |
 | [SCRUM-145](SCRUM-145.md) | Resync test documentation with the current acceptance criteria | SCRUM Sprint 3 | Done |
-| [SCRUM-146](SCRUM-146.md) | Remove stale story references | Backlog | To Do |
+| [SCRUM-146](SCRUM-146.md) | Remove stale story references | SCRUM Sprint 3 | In Review |
 | [SCRUM-147](SCRUM-147.md) | Update data-model documentation | SCRUM Sprint 3 | In Review |
-| [SCRUM-148](SCRUM-148.md) | Close or rework obsolete equipment PR | SCRUM Sprint 3 | To Do |
 | [SCRUM-149](SCRUM-149.md) | [SUPERSEDED BY SCRUM-162] Use event attendance in venue booking | Backlog | Done |
 | [SCRUM-150](SCRUM-150.md) | [DUPLICATE OF SCRUM-108] Implement field-level clarification response | Backlog | Done |
 | [SCRUM-151](SCRUM-151.md) | Run CI once per pull request commit, not twice | Backlog | Done |
@@ -211,3 +209,10 @@ _2 stories, 5 points_
 | [SCRUM-169](SCRUM-169.md) | Backlog Sync: update docs/backlog from Jira after the 7 Oct changes | SCRUM Sprint 3 | Done |
 | [SCRUM-172](SCRUM-172.md) | Week 7 database migration: schema and booking rules in one migration | SCRUM Sprint 3 | In Review |
 | [SCRUM-173](SCRUM-173.md) | Chore: Bring the docs up to date with the code and the Week 7 changes | SCRUM Sprint 3 | In Review |
+| [SCRUM-174](SCRUM-174.md) | Chore: Record the tech stack decision as ADR 0016 | SCRUM Sprint 3 | In Review |
+| [SCRUM-175](SCRUM-175.md) | Chore: Keep the key design diagrams and a Server Actions reference in docs/design | SCRUM Sprint 3 | In Review |
+| [SCRUM-176](SCRUM-176.md) | Chore: Write test-case documents for the 23 Done stories that have none | SCRUM Sprint 3 | In Review |
+| [SCRUM-177](SCRUM-177.md) | Backlog Sync: full re-sync of docs/backlog from Jira on 12 Oct | SCRUM Sprint 3 | In Review |
+| [SCRUM-178](SCRUM-178.md) | Chore: Send related files to the GLM reviewer in part instead of dropping them | SCRUM Sprint 3 | In Review |
+| [SCRUM-179](SCRUM-179.md) | Chore: Apply pending migrations to the shared database before each production deploy | SCRUM Sprint 3 | In Review |
+| [SCRUM-180](SCRUM-180.md) | Chore: Raise the GLM reviewer's memory limit from 8,000 to 12,000 characters | SCRUM Sprint 3 | In Review |

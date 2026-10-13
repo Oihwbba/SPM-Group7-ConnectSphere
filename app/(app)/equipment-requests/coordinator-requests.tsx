@@ -1,10 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { PackagePlus, Plus } from "lucide-react";
+import { toast } from "sonner";
 
 import { RequestStatusBadge } from "@/components/equipment/request-status-badge";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Card,
   CardContent,
@@ -15,7 +25,12 @@ import {
 import { RequestHistory } from "@/components/equipment/request-history";
 import { RequestLines } from "@/components/equipment/request-lines";
 import type { CoordinatorEquipmentRequest } from "@/lib/equipment/request-queries";
-import { formatEventPeriod } from "@/lib/equipment/requests";
+import {
+  CHANGEABLE_REQUEST_STATUSES,
+  REQUESTABLE_EVENT_STATUSES,
+  formatEventPeriod,
+} from "@/lib/equipment/requests";
+import { withdrawEquipmentRequest } from "./actions";
 import { formatDateTime } from "@/lib/datetime";
 import { cn } from "@/lib/utils";
 import {
@@ -32,17 +47,41 @@ import {
 export function CoordinatorRequests({
   requests,
   canCreate,
+  canChange = false,
   events,
   equipment,
 }: {
   requests: CoordinatorEquipmentRequest[];
   /** Whether this user may raise requests (equipment-request:create). */
   canCreate: boolean;
+  /** SCRUM-142: whether this user may change or withdraw requests. */
+  canChange?: boolean;
   events: EventOption[];
   equipment: EquipmentOption[];
 }) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
+  // SCRUM-142: the request whose lines are being changed, or withdrawn.
+  const [changing, setChanging] = useState<CoordinatorEquipmentRequest | null>(
+    null,
+  );
+  const [withdrawing, setWithdrawing] =
+    useState<CoordinatorEquipmentRequest | null>(null);
+  const [isWithdrawing, startWithdraw] = useTransition();
+  const router = useRouter();
+
+  function withdraw(request: CoordinatorEquipmentRequest) {
+    startWithdraw(async () => {
+      const result = await withdrawEquipmentRequest({ requestId: request.id });
+      if (result.ok) {
+        toast.success("Request withdrawn. Its reserved equipment is released.");
+        setWithdrawing(null);
+      } else {
+        toast.error(result.error);
+      }
+      router.refresh();
+    });
+  }
 
   useEffect(() => {
     if (!highlightedId) return;
@@ -111,11 +150,77 @@ export function CoordinatorRequests({
               <RequestCard
                 request={request}
                 highlighted={request.id === highlightedId}
-              />
+              >
+                {canChange && isChangeable(request) && (
+                  <div className="flex flex-wrap justify-end gap-2 border-t pt-3">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setWithdrawing(request)}
+                    >
+                      Withdraw request
+                    </Button>
+                    <Button size="sm" onClick={() => setChanging(request)}>
+                      Change lines
+                    </Button>
+                  </div>
+                )}
+              </RequestCard>
             </li>
           ))}
         </ul>
       )}
+
+      {changing && (
+        <NewRequestDialog
+          key={changing.id}
+          open
+          onOpenChange={(open) => !open && setChanging(null)}
+          events={events}
+          equipment={equipment}
+          editing={{
+            requestId: changing.id,
+            eventName: changing.event.name,
+            lines: changing.lines.map((line) => ({
+              equipmentId: line.equipment.id,
+              quantity: line.quantity,
+              technicalRequirements: line.technicalRequirements,
+            })),
+          }}
+          onDone={(id) => {
+            setChanging(null);
+            setHighlightedId(id);
+            router.refresh();
+          }}
+        />
+      )}
+
+      <Dialog
+        open={!!withdrawing}
+        onOpenChange={(open) => !open && setWithdrawing(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Withdraw this equipment request?</DialogTitle>
+            <DialogDescription>
+              It becomes Cancelled and any equipment reserved for it is
+              released. You can raise a new request later.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="secondary" onClick={() => setWithdrawing(null)}>
+              Keep it
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={isWithdrawing}
+              onClick={() => withdrawing && withdraw(withdrawing)}
+            >
+              Withdraw request
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {canCreate && (
         <NewRequestDialog
@@ -133,12 +238,30 @@ export function CoordinatorRequests({
   );
 }
 
+/**
+ * SCRUM-142 AC1, AC3, AC5 — still being planned, and not Rejected or
+ * Cancelled. The server checks the same, and that this is the event's
+ * assigned Coordinator.
+ */
+function isChangeable(request: CoordinatorEquipmentRequest): boolean {
+  return (
+    (CHANGEABLE_REQUEST_STATUSES as readonly string[]).includes(
+      request.status,
+    ) &&
+    (REQUESTABLE_EVENT_STATUSES as readonly string[]).includes(
+      request.event.status,
+    )
+  );
+}
+
 function RequestCard({
   request,
   highlighted,
+  children,
 }: {
   request: CoordinatorEquipmentRequest;
   highlighted: boolean;
+  children?: React.ReactNode;
 }) {
   // SCRUM-27 AC8 — the status, "Rejected with the reason". A rejection needs a
   // reason (SCRUM-28 AC3), and it is the last history entry's note, so it is
@@ -191,6 +314,7 @@ function RequestCard({
           Submitted {formatDateTime(request.createdAt)}
         </p>
         <RequestHistory entries={request.updates} />
+        {children}
       </CardContent>
     </Card>
   );

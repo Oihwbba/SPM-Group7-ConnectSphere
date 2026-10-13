@@ -152,7 +152,7 @@ describe("createEquipmentRequest — SCRUM-27", () => {
     });
     expect(db.equipment.findMany).toHaveBeenCalledWith({
       where: { id: { in: ["eqp_projector", "eqp_retired"] }, isActive: true },
-      select: { id: true },
+      select: { id: true, type: true },
     });
     expect(db.$transaction).not.toHaveBeenCalled();
   });
