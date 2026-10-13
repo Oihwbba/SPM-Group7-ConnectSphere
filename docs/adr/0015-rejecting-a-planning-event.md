@@ -43,7 +43,7 @@ for it, and that an event which was ever Confirmed is cancelled instead
    what was released are recorded by the Coordinator; the Organiser is
    notified with the reason.
 
-## Alternatives considered
+## Alternatives rejected
 
 - **Extend `transitionEventStatus` to Planning.** It would mix two different
   sets of side effects into the one gate.

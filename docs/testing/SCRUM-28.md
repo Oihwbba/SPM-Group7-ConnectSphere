@@ -58,7 +58,7 @@ reservations and maintenance holds at the busiest moment.
 | Test Data | Seeded `eqr_planning` |
 | Expected Result | "Review started. The coordinator has been notified." The status becomes **In Review**, and the note, **Approve** and **Reject** appear. |
 
-**Automated by:** `e2e/equipment-request-review.spec.ts` › "SCRUM-28 [AC2, AC3, AC5, AC6] TC-28-02, TC-28-03, TC-28-09, TC-28-10: reviewing then approving updates the status, notifies the coordinator and logs each change"; `tests/unit/equipment-request-review.test.ts` › "SCRUM-28 [AC2, AC5, AC6] TC-28-02, TC-28-09, TC-28-10: takes a pending request into review, records it and tells the coordinator"; `tests/unit/equipment-request-review-rules.test.ts` › "allows PENDING_REVIEW → IN_REVIEW"
+**Automated by:** `e2e/equipment-request-review.spec.ts` › "SCRUM-28 [AC2, AC3, AC5, AC6] TC-28-02, TC-28-03, TC-28-09, TC-28-10: reviewing then approving updates the status, notifies the coordinator and logs each change"; `tests/integration/equipment-request-review.test.ts` › "SCRUM-28 [AC2, AC3, AC5, AC6] TC-28-02, TC-28-03, TC-28-09, TC-28-10: review then approval each move the request, log one entry and notify the coordinator once"; `tests/unit/equipment-request-review.test.ts` › "SCRUM-28 [AC2, AC5, AC6] TC-28-02, TC-28-09, TC-28-10: takes a pending request into review, records it and tells the coordinator"; `tests/unit/equipment-request-review-rules.test.ts` › "allows PENDING_REVIEW → IN_REVIEW"
 
 ### TC-28-03
 
@@ -91,7 +91,7 @@ reservations and maintenance holds at the busiest moment.
 | Item | Content |
 |---|---|
 | Test Case ID | TC-28-05 |
-| Test Scenario | [Negative] AC 3: a decision is final, and a request can't skip being reviewed first |
+| Test Scenario | [Negative] AC 2, AC 3: a decision is final, and a request can't skip being reviewed first |
 | Pre-conditions | Requests in the statuses below. |
 | Test Steps | 1. Send each status change directly to the action (the page never offers them). |
 | Test Data | Pending Review → Approved; Pending Review → Rejected; Approved → Rejected; Rejected → In Review |
