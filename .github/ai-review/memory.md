@@ -26,15 +26,17 @@ Rules for a lesson:
   not re-landed. *Deployed to Production* shows on merge commits, never on a
   pull request branch.
 
-- (2026-10-04, #101; 2026-10-07, #141; 2026-10-09, #145) Story files under
-`docs/backlog` lag Jira: PO decisions and sprint planning land as separate
-sync pull requests (#103, #115, #141, #145); an earlier review of #101
-flagged code that met the new AC 4 against the stale copy. Check a story
-file's change log before reporting a code/story mismatch. Syncs regenerate
-from Jira untouched (#141): a story in two sprints counts towards both
-(SCRUM-13 did until the split moved it back and #145 carried that over),
-and a dropped issue loses its file (SCRUM-127). The fix belongs in Jira,
-never in a hand edit of the files.
+- (2026-10-04, #101; 2026-10-07, #141; 2026-10-09, #145; 2026-10-11, #164)
+Story files under `docs/backlog` lag Jira: PO decisions, sprint planning
+and reworded ACs land as separate sync pull requests (#103, #115, #141,
+#145, #164); reviews of #101 and #162 flagged code against stale wording
+a sync later settled, so check a story file's change log before reporting
+a code/story mismatch. Syncs regenerate from Jira untouched (#141): a
+story in two sprints counts towards both, and a dropped issue loses its
+file (SCRUM-127). A partial re-sync (#164, like #159/#163) updates only
+the items Jira changed and leaves the README's "last synced" date at the
+last full sync — an older date over newer files is deliberate. The fix
+belongs in Jira, never in a hand edit of the files.
 
 ## Dependencies
 
@@ -129,12 +131,6 @@ decides Submitted/Under Review, and `confirmEvent` refuses anything not
 Planning, so legacy rows (the seed's `evt_approved` among them, and the reason
 APPROVED stays reservable) can never be confirmed or resubmitted. Treat it as
 known when a pull request touches the status lifecycle or the seed.
-
-- (2026-10-08, #143) A gap its review left open, asked for twice and merged
-unfixed: nothing pins the top bar. No test asserts the header has no search
-box (SCRUM-168 AC1) or that at phone width the brand stays left and the
-profile menu right (AC3). Treat it as known when a pull request touches
-`app/(app)/layout.tsx`.
 
 - (2026-10-08, #149) A gap its review left open, merged unfixed:
 `Event.noEquipmentNeededById`'s `ON DELETE SET NULL` can never fire — CHECK

@@ -39,10 +39,6 @@ const ALLOWED: Record<string, { lines: string[]; why: string }> = {
     ],
     why: "made-up keys in tests of the reviewer's key parsing",
   },
-  "app/(app)/notifications/page.tsx": {
-    lines: ['scrumId="SCRUM-51"'],
-    why: "the placeholder page #153 (SCRUM-48) replaces",
-  },
   "prisma/schema.prisma": {
     lines: [
       "/// SCRUM-41 (submit), SCRUM-42 (review, showing old vs new),",
