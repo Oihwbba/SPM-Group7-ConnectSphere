@@ -55,6 +55,7 @@ describe.skipIf(!usesLocalDatabase)(
         period,
         period,
         period,
+        period,
       ]);
       venueId = (
         await prisma.venue.create({
@@ -199,6 +200,37 @@ describe.skipIf(!usesLocalDatabase)(
           }),
         ).resolves.toMatchObject({ holdApprovedAt: at(1, 8) });
       });
+    });
+
+    it("SCRUM-172 [AC13] TC-172-18: a user who approved a hold can't be deleted, so the approval never loses who made it", async () => {
+      const approverId = `usr_w9_approver_${stamp}`;
+      await prisma.user.create({
+        data: {
+          id: approverId,
+          email: `w9-approver-${stamp}@test.local`,
+          name: "Week 9 approver",
+          passwordHash: "x",
+          role: "VENUE_STAFF",
+        },
+      });
+      const row = await hold(6, 16);
+      await prisma.booking.update({
+        where: { id: row.id },
+        data: { holdApprovedAt: at(2, 9), holdApprovedById: approverId },
+      });
+
+      await expect(
+        prisma.user.delete({ where: { id: approverId } }),
+      ).rejects.toThrow(/Booking_holdApprovedById_fkey/);
+      expect(
+        await prisma.booking.findUniqueOrThrow({
+          where: { id: row.id },
+          select: { holdApprovedAt: true, holdApprovedById: true },
+        }),
+      ).toEqual({ holdApprovedAt: at(2, 9), holdApprovedById: approverId });
+
+      await prisma.booking.delete({ where: { id: row.id } });
+      await prisma.user.delete({ where: { id: approverId } });
     });
 
     describe("AC14 — the history of a hold's expiry", () => {

@@ -576,7 +576,7 @@ model Booking {
   requestedBy               User  @relation("BookingRequestedBy", fields: [requestedById], references: [id])
   decidedBy                 User? @relation("BookingDecidedBy", fields: [decidedById], references: [id])
   reconsiderationResolvedBy User? @relation("BookingReconsiderationResolvedBy", fields: [reconsiderationResolvedById], references: [id])
-  holdApprovedBy            User? @relation("BookingHoldApprovedBy", fields: [holdApprovedById], references: [id])
+  holdApprovedBy            User? @relation("BookingHoldApprovedBy", fields: [holdApprovedById], references: [id], onDelete: Restrict)
 
   notifications           Notification[]
   safetyCheckArrangements SafetyCheckArrangement[]
