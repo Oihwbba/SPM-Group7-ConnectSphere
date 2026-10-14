@@ -196,6 +196,31 @@ async function seedVenues() {
   for (const v of venues) {
     await prisma.venue.upsert({ where: { id: v.id }, update: v, create: v });
   }
+
+  // SCRUM-34 AC3: the hours above as an opening and a closing time per day
+  // (minutes after midnight SGT), or Closed. Booking periods are refused
+  // outside them (AC7).
+  const open = (opens: string, closes: string) => ({
+    opensMinute: Number(opens.slice(0, 2)) * 60 + Number(opens.slice(3)),
+    closesMinute: Number(closes.slice(0, 2)) * 60 + Number(closes.slice(3)),
+  });
+  const closed = { opensMinute: null, closesMinute: null };
+  const weekHours: Record<string, (weekday: number) => typeof closed | ReturnType<typeof open>> = {
+    [V.auditorium]: () => open("07:00", "23:00"),
+    [V.seminar]: (d) => (d <= 5 ? open("08:00", "20:00") : closed),
+    [V.hall]: () => open("06:00", "22:00"),
+    [V.boardroom]: (d) => (d <= 5 ? open("09:00", "18:00") : closed),
+  };
+  for (const [venueId, hoursOn] of Object.entries(weekHours)) {
+    for (let weekday = 1; weekday <= 7; weekday++) {
+      const hours = hoursOn(weekday);
+      await prisma.venueOpeningHours.upsert({
+        where: { venueId_weekday: { venueId, weekday } },
+        update: hours,
+        create: { venueId, weekday, ...hours },
+      });
+    }
+  }
   return venues.length;
 }
 
