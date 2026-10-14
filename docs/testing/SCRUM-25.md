@@ -79,14 +79,12 @@ requirements are the fields SCRUM-26 warns about and flags on (AC3).
 |---|---|
 | Test Case ID | TC-25-06 |
 | Test Scenario | [Positive] [Negative] AC 3: date, time, attendance, venue and equipment |
-| Pre-conditions | One Planning event with nothing booked or reserved; another with a Pending venue booking. |
-| Test Steps | 1. Move the first event a week later and change its attendance. <br> 2. Change the second event's attendance. <br> 3. Move a start into the past, or the end before the start. |
+| Pre-conditions | One Planning event with nothing booked or reserved; another with a Pending booking of Exhibition Hall. |
+| Test Steps | 1. Move the first event a week later and change its attendance. <br> 2. Move the second event a week later and change its attendance. Save. <br> 3. Choose Back to editing, then Save details again and Save and flag. <br> 4. Move a start into the past, or the end before the start. |
 | Test Data | — |
-| Expected Result | 1 saves: with nothing booked or reserved there is nothing for SCRUM-26 to warn about or flag. 2 is refused: "Expected attendance can't be changed while the event has a venue booking or an equipment reservation: it would leave them out of date. Nothing was saved." shown above the form, and the attendance field is marked "Can't change while the event has a venue booking or an equipment reservation." with the dialog scrolled to it. 3 is refused against the field. A hold past its expiry no longer counts as a booking (SCRUM-163 AC4), so it doesn't stop the change; a hold still live does. |
+| Expected Result | 1 saves with no warning: with nothing booked or reserved there is nothing for SCRUM-26 to flag. 2 saves nothing and shows "Saving will flag these arrangements Needs Reconsideration" listing "Exhibition Hall (Pending)" (SCRUM-26 AC1). 3: Back to editing keeps the form as typed; Save and flag saves the edit and flags the booking with "The event's start, end and expected attendance changed." in one transaction, and says "Details saved. 1 arrangement flagged Needs Reconsideration." The booking stays Pending on its original period (SCRUM-26 AC2, AC6). A routine change on the same event saves straight away and flags nothing (AC2). 4 is refused against the field. A hold past its expiry no longer counts (SCRUM-163 AC4), so it is neither listed nor flagged; a hold still live is. |
 
 **Automated by:** `tests/unit/event-edit.test.ts` › "SCRUM-25 [AC3] TC-25-06: …"; `tests/integration/event-edit.test.ts` › "SCRUM-25 [AC3] TC-25-06: …"; `e2e/event-edit.spec.ts`
-
-Once SCRUM-26 lands, step 2 shows its warning and flags the booking instead of refusing.
 
 ### TC-25-07
 
@@ -172,12 +170,12 @@ Once SCRUM-26 lands, step 2 shows its warning and flags the booking instead of r
 |---|---|
 | Test Case ID | TC-25-13 |
 | Test Scenario | [Concurrency] AC 3: a date or attendance change and a venue booking at the same moment |
-| Pre-conditions | A Planning event with nothing booked. |
-| Test Steps | 1. Start a booking request for the event and hold it before it commits. <br> 2. Meanwhile save an attendance change. <br> 3. Let the booking commit. |
+| Pre-conditions | A Planning event with nothing booked; then one with a booking the Coordinator has already been warned about. |
+| Test Steps | 1. Start a booking request for the event and hold it before it commits. <br> 2. Meanwhile save an attendance change. <br> 3. Let the booking commit. <br> 4. On the second event, confirm the warning after a reservation was added since it was shown. |
 | Test Data | — |
-| Expected Result | The edit waits on the event row, then sees the booking and is refused; the attendance is unchanged. It never saves against arrangements it didn't see. |
+| Expected Result | 2–3: the edit waits on the event row, then sees the booking and lists it for confirmation instead of saving; the attendance is unchanged and the booking unflagged. 4: nothing is saved; the warning is shown again with the reservation added and "Something was booked or reserved for this event since you were warned. Check the list again before saving." An arrangement is never flagged without being shown. |
 
-**Automated by:** `tests/integration/event-edit.test.ts` › "SCRUM-25 [AC3] TC-25-13: …"
+**Automated by:** `tests/integration/event-edit.test.ts` › "SCRUM-25 [AC3] TC-25-13: …" (steps 1–3); `tests/unit/event-edit.test.ts` › "SCRUM-25 [AC3] TC-25-13: …" (step 4)
 
 ### TC-25-14
 
@@ -230,3 +228,16 @@ Once SCRUM-26 lands, step 2 shows its warning and flags the booking instead of r
 | Expected Result | 1 saves: the request form caps none of these fields, so a value it accepted never blocks an edit. 2 is refused against the programme, as the request form also caps it at 5,000, and nothing is written. |
 
 **Automated by:** `tests/unit/event-edit.test.ts` › "SCRUM-25 [AC1] TC-25-17: …"
+
+### TC-25-18
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-25-18 |
+| Test Scenario | [Positive] AC 3: Under Review, a date or attendance change saves directly |
+| Pre-conditions | As TC-25-01, the event Under Review. |
+| Test Steps | 1. Change the expected attendance. Save. |
+| Test Data | — |
+| Expected Result | Saved with no warning, and nothing is flagged: no venue or equipment can be requested before Planning (SCRUM-50 AC7, SCRUM-27 AC1). |
+
+**Automated by:** `tests/unit/event-edit.test.ts` › "SCRUM-25 [AC3] TC-25-18: …"
