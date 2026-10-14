@@ -16,7 +16,7 @@
 
 ---
 
-**User story:** User story: As an Event Coordinator, I want to see the Organiser's venue, accessibility and equipment answers while I request venues and equipment, and record when no equipment is needed, so that I book what was asked for and nothing requested is forgotten.
+**User story:** As an Event Coordinator, I want to see the Organiser's venue, accessibility and equipment answers while I request venues and equipment, and record when no equipment is needed, so that I book what was asked for and nothing requested is forgotten.
 
 **Acceptance criteria**
 
