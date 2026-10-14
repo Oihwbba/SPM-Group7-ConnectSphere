@@ -42,10 +42,37 @@ import {
   occupiedPeriod,
 } from "@/lib/venue-availability";
 import { outdateSafetyChecks } from "@/lib/safety-checks";
+import {
+  dayOutsideOpeningHours,
+  outsideOpeningHoursMessage,
+  type OpeningDay,
+} from "@/lib/venue-hours";
 import { notifyRole } from "@/lib/staff-notifications";
 
 /** A venue's setup and turnaround time (SCRUM-159). */
 const venueTimesSelect = { setupMinutes: true, turnaroundMinutes: true } as const;
+
+/** A venue's opening hours (SCRUM-34 AC3). */
+const openingHoursSelect = {
+  openingHours: {
+    select: { weekday: true, opensMinute: true, closesMinute: true },
+  },
+} as const;
+
+/**
+ * SCRUM-34 AC7 — why a booking period is refused at this venue, or null: it
+ * must start and end within that day's opening hours. Setup and turnaround
+ * aren't part of it (SCRUM-159 AC9). Submitting, holding and approving all
+ * ask, so a request that slipped in while Venue Staff narrowed the hours can
+ * still never be held or approved outside them.
+ */
+function openingHoursRefusal(
+  period: { startAt: Date; endAt: Date },
+  venue: { name: string; openingHours?: OpeningDay[] },
+): string | null {
+  const day = dayOutsideOpeningHours(period, venue.openingHours ?? []);
+  return day && outsideOpeningHoursMessage(venue.name, day);
+}
 
 export type BookingSummary = {
   id: string;
@@ -123,7 +150,7 @@ export async function checkVenueAvailability(
     // A retired venue reads as not found here exactly as it does on submit.
     const venue = await prisma.venue.findFirst({
       where: { id: venueId, isActive: true },
-      select: { id: true, ...venueTimesSelect },
+      select: { id: true, name: true, ...venueTimesSelect, ...openingHoursSelect },
     });
     if (!venue) return err("Venue not found.");
 
@@ -132,10 +159,13 @@ export async function checkVenueAvailability(
       venueId,
       occupiedPeriod(period, venue),
     );
-    return ok({
-      available: blockers.length === 0,
-      clashes: blockers.map(describeBlocker),
-    });
+    // SCRUM-34 AC7: outside opening hours is refused on submit, so say so now.
+    const outsideHours = openingHoursRefusal(period, venue);
+    const clashes = [
+      ...(outsideHours ? [outsideHours] : []),
+      ...blockers.map(describeBlocker),
+    ];
+    return ok({ available: clashes.length === 0, clashes });
   } catch (error) {
     if (error instanceof PermissionError) return err(error.message);
     throw error;
@@ -243,9 +273,16 @@ export async function submitBookingRequest(
 
     const venue = await prisma.venue.findFirst({
       where: { id: data.venueId, isActive: true },
-      select: { name: true, capacity: true, ...venueTimesSelect },
+      select: {
+        name: true,
+        capacity: true,
+        ...venueTimesSelect,
+        ...openingHoursSelect,
+      },
     });
     if (!venue) return err("Venue not found.");
+    const outsideHours = openingHoursRefusal(period, venue);
+    if (outsideHours) return err(outsideHours, { startAt: [outsideHours] });
     if (data.requestedAttendance > venue.capacity) {
       const message = overCapacityMessage(
         venue.name,
@@ -315,7 +352,7 @@ const venueSelect = {
   endAt: true,
   status: true,
   holdExpiresAt: true,
-  venue: { select: { name: true, ...venueTimesSelect } },
+  venue: { select: { name: true, ...venueTimesSelect, ...openingHoursSelect } },
 } as const;
 
 /**
@@ -386,6 +423,10 @@ export async function decideBookingRequest(
 
     const conflict = (detail: string) =>
       `Conflicting: ${booking.venue.name} is ${detail}. This request is still pending.`;
+    // SCRUM-34 AC7: an approval outside the venue's opening hours is refused.
+    const outsideHours =
+      decision === "APPROVED" && openingHoursRefusal(booking, booking.venue);
+    if (outsideHours) return err(`${outsideHours} This request is still pending.`);
 
     const decide = () =>
       prisma.$transaction(async (tx) => {
@@ -610,6 +651,9 @@ export async function holdBookingRequest(
       const message = holdExpiryMessage(booking.startAt);
       return err(message, { holdExpiresAt: [message] });
     }
+    // SCRUM-34 AC7: a hold outside the venue's opening hours is refused.
+    const outsideHours = openingHoursRefusal(booking, booking.venue);
+    if (outsideHours) return err(`${outsideHours} This request is still pending.`);
 
     const hold = () =>
       prisma.$transaction(async (tx) => {
