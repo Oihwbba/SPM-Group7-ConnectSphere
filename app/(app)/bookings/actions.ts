@@ -1118,9 +1118,8 @@ function alreadySettled(
       return "This hold has already been released.";
     case "REJECTED":
       return "Venue Staff rejected this hold.";
-    // Still held after a confirmation found nothing to change: not approved.
-    case "HELD":
-      return HOLD_NOT_APPROVED;
+    // Still held is decided where it happens: flagged or not yet approved
+    // (settleHold).
     default:
       return "This request isn't held.";
   }
