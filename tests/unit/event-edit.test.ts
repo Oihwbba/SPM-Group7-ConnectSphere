@@ -164,6 +164,30 @@ describe("updateEventDetails — SCRUM-25", () => {
     expect(db.$transaction).not.toHaveBeenCalled();
   });
 
+  it("SCRUM-25 [AC1] TC-25-17: a long answer the request form accepted still saves, and a capped field over its limit is refused", async () => {
+    const long = "x".repeat(3000);
+    const saved = await updateEventDetails({
+      ...unchanged,
+      accessibilityNeeds: long,
+      preferredLayout: long,
+      registrationNotes: long,
+      venueRequirements: long,
+      equipmentRequirements: long,
+    });
+    expect(saved).toMatchObject({ ok: true });
+
+    vi.clearAllMocks();
+    const refused = await updateEventDetails({
+      ...unchanged,
+      programme: "x".repeat(5001),
+    });
+    expect(refused).toMatchObject({
+      ok: false,
+      fieldErrors: { programme: ["String must contain at most 5000 character(s)"] },
+    });
+    expect(db.$transaction).not.toHaveBeenCalled();
+  });
+
   it("SCRUM-25 [AC1] TC-25-01: clearing an optional field stores it as empty", async () => {
     await updateEventDetails({ ...unchanged, description: "   " });
 

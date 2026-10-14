@@ -86,6 +86,8 @@ export const INVALID_PERIOD_MESSAGE = "The end must be after the start.";
 export const PAST_START_MESSAGE = "The start can't be in the past.";
 
 const text = (max: number) => z.string().trim().max(max).optional();
+// The request form caps none of these, so an event it accepted always saves here.
+const uncapped = z.string().trim().optional();
 
 export const eventDetailsEditSchema = z
   .object({
@@ -97,9 +99,9 @@ export const eventDetailsEditSchema = z
       .max(200, "Keep the name under 200 characters."),
     purpose: text(1000),
     description: text(5000),
-    accessibilityNeeds: text(2000),
-    preferredLayout: text(100),
-    registrationNotes: text(2000),
+    accessibilityNeeds: uncapped,
+    preferredLayout: uncapped,
+    registrationNotes: uncapped,
     programme: text(5000),
     specialRequests: text(5000),
     // UTC ISO strings, converted from Singapore wall time in the browser.
@@ -109,8 +111,8 @@ export const eventDetailsEditSchema = z
       .number({ invalid_type_error: "Attendance must be a positive whole number." })
       .int("Attendance must be a positive whole number.")
       .positive("Attendance must be a positive whole number."),
-    venueRequirements: text(2000),
-    equipmentRequirements: text(2000),
+    venueRequirements: uncapped,
+    equipmentRequirements: uncapped,
   })
   .superRefine((data, ctx) => {
     const start = new Date(data.startAt).getTime();
