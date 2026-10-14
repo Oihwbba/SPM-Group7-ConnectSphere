@@ -42,11 +42,11 @@ the database keeps or refuses. Times are UTC.
 | Test Case ID | TC-172-01 |
 | Test Scenario | [Positive] AC 1: users can hold the Event Coordinator Lead and Safety Officer roles; until SCRUM-164 gives them work, each may only read its own notifications |
 | Pre-conditions | — |
-| Test Steps | 1. List the database's `Role` values. <br> 2. Ask `can()` what each new role may do. <br> 3. Read each new role's navigation and label. <br> 4. Call `createDraftEvent` as each new role. |
-| Test Data | `COORDINATOR_LEAD`, `SAFETY_OFFICER` |
-| Expected Result | Step 1: the five Release 1 roles, then `COORDINATOR_LEAD` and `SAFETY_OFFICER`. Step 2: each reads its own notifications but not someone else's, and can't create, review, confirm or reject an event, decide a booking, record unavailability or reserve equipment. Step 3: "Event Coordinator Lead" and "Safety Officer", each with only Notifications, landing there. Step 4: "You do not have permission to do that." and nothing is written. |
+| Test Steps | 1. List the database's `Role` values. <br> 2. Ask `can()` what each new role may do. <br> 3. Read each new role's navigation and label. <br> 4. Call `createDraftEvent` as each new role. <br> 5. Sign in as each new role, then as a user whose stored role isn't a role. |
+| Test Data | `COORDINATOR_LEAD`, `SAFETY_OFFICER`; `ADMIN`, which isn't a role |
+| Expected Result | Step 1: the five Release 1 roles, then `COORDINATOR_LEAD` and `SAFETY_OFFICER`. Step 2: each reads its own notifications but not someone else's, and can't create, review, confirm or reject an event, decide a booking, record unavailability or reserve equipment. Step 3: "Event Coordinator Lead" and "Safety Officer", each with only Notifications, landing there. Step 4: "You do not have permission to do that." and nothing is written. Step 5: each new role is kept on the sign-in token and the session; a value that isn't a role is put on neither. |
 
-**Automated by:** `tests/integration/week7-rules.test.ts` › "SCRUM-172 [AC1] TC-172-01: users can hold the Event Coordinator Lead and Safety Officer roles"; `tests/unit/auth.test.ts` › "SCRUM-172 [AC1] TC-172-01: %s may read only its own notifications"; `tests/unit/nav.test.ts` › "SCRUM-172 [AC1] TC-172-01: %s is labelled and lands on its notifications"; `tests/integration/permission-guard.test.ts` › "refuses %s directly and leaves the database unchanged"
+**Automated by:** `tests/integration/week7-rules.test.ts` › "SCRUM-172 [AC1] TC-172-01: users can hold the Event Coordinator Lead and Safety Officer roles"; `tests/unit/auth.test.ts` › "SCRUM-172 [AC1] TC-172-01: %s may read only its own notifications"; `tests/unit/nav.test.ts` › "SCRUM-172 [AC1] TC-172-01: %s is labelled and lands on its notifications"; `tests/integration/permission-guard.test.ts` › "refuses %s directly and leaves the database unchanged"; `tests/unit/auth-config.test.ts` › "SCRUM-172 [AC1] TC-172-01: a %s keeps its role on the token and the session" and "SCRUM-172 [AC1] TC-172-01: a value that isn't a role is never put on the token or the session"
 
 ### TC-172-02
 
