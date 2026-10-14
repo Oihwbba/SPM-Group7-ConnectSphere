@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useId, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { Loader2, NotebookPen } from "lucide-react";
 
@@ -30,6 +30,7 @@ export function OperationalNotes({ eventId }: { eventId: string }) {
   const [body, setBody] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const inputId = useId();
   // Bumped after a note is added, to read the list again.
   const [version, setVersion] = useState(0);
 
@@ -64,7 +65,6 @@ export function OperationalNotes({ eventId }: { eventId: string }) {
     });
   }
 
-  const inputId = `note-${eventId}`;
   return (
     <Card className="overflow-hidden" data-testid="operational-notes">
       <CardHeader className="bg-muted/30 px-4 py-3">
