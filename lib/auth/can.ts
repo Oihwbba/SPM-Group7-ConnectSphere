@@ -36,6 +36,7 @@ export type Action =
   | "event:edit" // SCRUM-25: the assigned coordinator edits an event's details directly
   | "event-note:add" // SCRUM-25 AC6: add an operational note to an event
   | "event-note:read" // SCRUM-25 AC6: read an event's operational notes
+  | "arrangement:reconsider" // SCRUM-26: the assigned coordinator resolves a Needs Reconsideration flag
   | "clarification:request" // SCRUM-18: coordinator asks the organiser a question
   | "clarification:respond" // SCRUM-18: organiser answers an open question
   | "change-request:raise" // SCRUM-41: the organiser, or the assigned coordinator on their behalf
@@ -113,6 +114,7 @@ const ROLE_ACTIONS: Record<Role, Action[]> = {
     "event:edit",
     "event-note:add",
     "event-note:read",
+    "arrangement:reconsider",
     "clarification:request",
     "change-request:raise",
     "venue:read",
@@ -183,7 +185,8 @@ function hasRelationship(
         // reject it from Planning (SCRUM-117 AC 5), confirm or release its
         // venue holds (SCRUM-163 AC3), change or withdraw its requests
         // (SCRUM-142 AC7), raise a change request on the organiser's behalf
-        // (SCRUM-41 AC10), or edit its details (SCRUM-25 AC1, AC7).
+        // (SCRUM-41 AC10), or edit its details (SCRUM-25 AC1, AC7), 
+        // or resolve a flag on its arrangements (SCRUM-26 AC7).
         return (
           action !== "event:confirm" &&
           action !== "event:reject" &&
@@ -192,6 +195,7 @@ function hasRelationship(
           action !== "equipment-request:change" &&
           action !== "change-request:raise" &&
           action !== "event:edit" &&
+          action !== "arrangement:reconsider" &&
           resource.coordinatorId === null &&
           resource.status !== "DRAFT"
         );
