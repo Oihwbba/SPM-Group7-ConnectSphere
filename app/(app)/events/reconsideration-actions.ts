@@ -7,10 +7,12 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { can, requirePermission, PermissionError } from "@/lib/auth/can";
 import { ok, err, type ActionResult } from "@/lib/action-result";
-import { withdrawPendingHoldNotices } from "@/lib/booking-holds";
+import { bookingStatusAt, withdrawPendingHoldNotices } from "@/lib/booking-holds";
+import { outdateSafetyChecks } from "@/lib/safety-checks";
 import {
   FLAGGABLE_BOOKING,
   bookingArrangement,
+  flaggedLiveBookingWhere,
   bookingStillStandsRefusal,
   reservationArrangement,
   reservationStillStandsRefusal,
@@ -45,7 +47,7 @@ export async function getFlaggedArrangements(
       coordinatorId: true,
       status: true,
       bookings: {
-        where: { needsReconsideration: true, status: { in: FLAGGABLE_BOOKING } },
+        where: flaggedLiveBookingWhere(new Date()),
         select: {
           id: true,
           status: true,
@@ -169,6 +171,7 @@ export async function resolveReconsiderationFlag(
           select: {
             id: true,
             status: true,
+            holdExpiresAt: true,
             needsReconsideration: true,
             startAt: true,
             endAt: true,
@@ -187,7 +190,11 @@ export async function resolveReconsiderationFlag(
             },
           },
         });
-        if (!booking.needsReconsideration || !FLAGGABLE_BOOKING.includes(booking.status)) {
+        // A lapsed hold has already released the venue (SCRUM-163 AC4).
+        if (
+          !booking.needsReconsideration ||
+          !FLAGGABLE_BOOKING.includes(bookingStatusAt(booking, now))
+        ) {
           return "not-flagged";
         }
         if (decision === "STILL_STANDS") {
@@ -195,7 +202,7 @@ export async function resolveReconsiderationFlag(
           if (refusal) return { refused: refusal };
         }
         const updated = await tx.booking.updateMany({
-          where: { id, needsReconsideration: true, status: { in: FLAGGABLE_BOOKING } },
+          where: { id, ...flaggedLiveBookingWhere(now) },
           data: decision === "CANCEL" ? { ...resolved, status: "CANCELLED" } : resolved,
         });
         if (updated.count !== 1) return "not-flagged";
@@ -246,10 +253,7 @@ export async function resolveReconsiderationFlag(
         return { done: decision, returnedToPlanning: false };
       }
 
-      await tx.safetyCheck.updateMany({
-        where: { eventId, status: { in: ["AWAITING_REVIEW", "APPROVED"] } },
-        data: { status: "OUTDATED", outdatedAt: now },
-      });
+      await outdateSafetyChecks(tx, eventId, now);
       if (event.status !== "CONFIRMED") {
         return { done: decision, returnedToPlanning: false };
       }

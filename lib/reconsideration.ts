@@ -1,5 +1,6 @@
 import type { BookingStatus, Prisma, PrismaClient } from "@prisma/client";
 
+import { liveHoldWhere } from "@/lib/booking-holds";
 import { formatDateTime } from "@/lib/datetime";
 import { LIVE_LINE } from "@/lib/equipment/requests";
 import {
@@ -23,6 +24,19 @@ type Db = PrismaClient | Prisma.TransactionClient;
 
 /** AC2: the bookings a flag can sit on. Reservations: only Confirmed ones. */
 export const FLAGGABLE_BOOKING: BookingStatus[] = ["PENDING", "HELD", "APPROVED"];
+
+/**
+ * AC7 — a flagged booking still waiting for its Coordinator. A hold past its
+ * expiry has released the venue (SCRUM-163 AC4), even before anything marks
+ * it Expired, so its flag no longer needs resolving, as the readiness
+ * checklist already treats it.
+ */
+export function flaggedLiveBookingWhere(now: Date): Prisma.BookingWhereInput {
+  return {
+    needsReconsideration: true,
+    OR: [{ status: { in: ["PENDING", "APPROVED"] } }, liveHoldWhere(now)],
+  };
+}
 
 const BOOKING_STATUS_LABEL: Record<BookingStatus, string> = {
   PENDING: "Pending",

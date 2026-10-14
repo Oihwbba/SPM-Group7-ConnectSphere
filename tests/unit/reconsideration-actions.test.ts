@@ -149,7 +149,10 @@ describe("resolveReconsiderationFlag — Still stands (SCRUM-26 AC7, AC8)", () =
       where: {
         id: "bkg1",
         needsReconsideration: true,
-        status: { in: ["PENDING", "HELD", "APPROVED"] },
+        OR: [
+          { status: { in: ["PENDING", "APPROVED"] } },
+          { status: "HELD", holdExpiresAt: { gt: expect.any(Date) } },
+        ],
       },
       data: resolvedBy,
     });
@@ -233,7 +236,10 @@ describe("resolveReconsiderationFlag — Cancel arrangement (SCRUM-26 AC9, AC10)
       where: {
         id: "bkg1",
         needsReconsideration: true,
-        status: { in: ["PENDING", "HELD", "APPROVED"] },
+        OR: [
+          { status: { in: ["PENDING", "APPROVED"] } },
+          { status: "HELD", holdExpiresAt: { gt: expect.any(Date) } },
+        ],
       },
       data: { ...resolvedBy, status: "CANCELLED" },
     });
@@ -346,6 +352,25 @@ describe("resolveReconsiderationFlag — Cancel arrangement (SCRUM-26 AC9, AC10)
     await resolveReconsiderationFlag({ kind: "booking", id: "bkg1", decision: "CANCEL" });
     expect(withdrawPendingHoldNotices).not.toHaveBeenCalled();
   });
+
+  it.each(["STILL_STANDS", "CANCEL"] as const)(
+    "SCRUM-26 [AC7] TC-26-10: a flagged hold past its expiry has released the venue, so %s is turned away and nothing is written",
+    async (decision) => {
+      mockBooking.mockResolvedValue(owner());
+      tx.booking.findUniqueOrThrow.mockResolvedValue({
+        ...flaggedBooking,
+        status: "HELD",
+        holdExpiresAt: new Date("2000-01-01T00:00:00Z"),
+      });
+
+      expect(await resolveReconsiderationFlag({ kind: "booking", id: "bkg1", decision })).toEqual({
+        ok: false,
+        error: "This arrangement no longer needs reconsideration. Refresh to see where it stands.",
+      });
+      expect(tx.booking.updateMany).not.toHaveBeenCalled();
+      expect(mockBookingRefusal).not.toHaveBeenCalled();
+    },
+  );
 
   it("SCRUM-26 [AC9] TC-26-10: cancelling a booking refreshes the Venue Staff queue; cancelling a reservation doesn't", async () => {
     await resolveReconsiderationFlag({ kind: "booking", id: "bkg1", decision: "CANCEL" });
@@ -526,7 +551,10 @@ describe("getFlaggedArrangements — SCRUM-26 AC7", () => {
     const { select } = mockEvent.mock.calls[0][0];
     expect(select.bookings.where).toEqual({
       needsReconsideration: true,
-      status: { in: ["PENDING", "HELD", "APPROVED"] },
+      OR: [
+        { status: { in: ["PENDING", "APPROVED"] } },
+        { status: "HELD", holdExpiresAt: { gt: expect.any(Date) } },
+      ],
     });
     expect(select.reservations.where).toEqual({
       needsReconsideration: true,
