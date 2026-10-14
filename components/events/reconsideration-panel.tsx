@@ -36,6 +36,7 @@ export function ReconsiderationPanel({
   onResolved: () => void;
 }) {
   const [flagged, setFlagged] = useState<FlaggedArrangement[]>([]);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [reload, setReload] = useState(0);
   const [cancelling, setCancelling] = useState<FlaggedArrangement | null>(null);
   const [pending, startTransition] = useTransition();
@@ -45,10 +46,12 @@ export function ReconsiderationPanel({
     let stale = false;
     getFlaggedArrangements(eventId)
       .then((result) => {
-        if (!stale) setFlagged(result.ok ? result.data : []);
+        if (stale) return;
+        setFlagged(result.ok ? result.data : []);
+        setLoadFailed(false);
       })
       .catch(() => {
-        if (!stale) setFlagged([]);
+        if (!stale) setLoadFailed(true);
       });
     return () => {
       stale = true;
@@ -83,6 +86,15 @@ export function ReconsiderationPanel({
     });
   }
 
+  // A refusal (not this event's Coordinator) shows nothing; a failed request
+  // says so, since the checklist may still read "Needs reconsideration".
+  if (loadFailed) {
+    return (
+      <p role="alert" className="text-xs text-muted-foreground">
+        Couldn&apos;t load the flagged arrangements — try reopening this event.
+      </p>
+    );
+  }
   if (flagged.length === 0) return null;
 
   return (

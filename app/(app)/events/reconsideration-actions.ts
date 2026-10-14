@@ -7,6 +7,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { can, requirePermission, PermissionError } from "@/lib/auth/can";
 import { ok, err, type ActionResult } from "@/lib/action-result";
+import { withdrawPendingHoldNotices } from "@/lib/booking-holds";
 import {
   FLAGGABLE_BOOKING,
   bookingArrangement,
@@ -198,6 +199,11 @@ export async function resolveReconsiderationFlag(
           data: decision === "CANCEL" ? { ...resolved, status: "CANCELLED" } : resolved,
         });
         if (updated.count !== 1) return "not-flagged";
+        // A cancelled hold's reminder and expiry notices would tell the
+        // Coordinator about a hold that no longer exists (SCRUM-163 AC5).
+        if (decision === "CANCEL" && booking.status === "HELD") {
+          await withdrawPendingHoldNotices(tx, { bookingId: id }, now);
+        }
         await tx.auditLog.create({
           data: resolutionEntry("Booking", id, user!.id, decision, booking.status),
         });

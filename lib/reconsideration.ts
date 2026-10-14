@@ -1,6 +1,7 @@
 import type { BookingStatus, Prisma, PrismaClient } from "@prisma/client";
 
 import { formatDateTime } from "@/lib/datetime";
+import { LIVE_LINE } from "@/lib/equipment/requests";
 import {
   describeBlocker,
   findVenueBlockers,
@@ -291,6 +292,8 @@ export async function reservationStillStandsRefusal(
     db.equipmentRequestLine.findMany({
       where: {
         equipmentId: reservation.equipmentId,
+        // A line removed from a live request (SCRUM-142) is no longer needed.
+        ...LIVE_LINE,
         request: {
           eventId: reservation.eventId,
           status: { in: ["PENDING_REVIEW", "IN_REVIEW", "APPROVED"] },

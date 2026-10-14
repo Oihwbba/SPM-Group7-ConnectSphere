@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
+import { withdrawPendingHoldNotices } from "@/lib/booking-holds";
 import {
   bookingStillStandsRefusal,
   reservationStillStandsRefusal,
@@ -28,6 +29,10 @@ const tx = vi.hoisted(() => ({
   auditLog: { create: vi.fn() },
   safetyCheck: { updateMany: vi.fn() },
   notification: { updateMany: vi.fn() },
+}));
+vi.mock("@/lib/booking-holds", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/booking-holds")>()),
+  withdrawPendingHoldNotices: vi.fn(),
 }));
 
 vi.mock("@/auth", () => ({ auth: vi.fn() }));
@@ -327,6 +332,19 @@ describe("resolveReconsiderationFlag — Cancel arrangement (SCRUM-26 AC9, AC10)
     expect(tx.event.update).not.toHaveBeenCalled();
     expect(tx.safetyCheck.updateMany).not.toHaveBeenCalled();
     expect(tx.notification.updateMany).not.toHaveBeenCalled();
+  });
+
+  it("SCRUM-26 [AC9] TC-26-10: cancelling a flagged hold withdraws its reminder and expiry notices still to come; an Approved booking has none", async () => {
+    mockBooking.mockResolvedValue(owner());
+    tx.booking.findUniqueOrThrow.mockResolvedValue({ ...flaggedBooking, status: "HELD" });
+
+    await resolveReconsiderationFlag({ kind: "booking", id: "bkg1", decision: "CANCEL" });
+    expect(withdrawPendingHoldNotices).toHaveBeenCalledWith(tx, { bookingId: "bkg1" }, expect.any(Date));
+
+    vi.mocked(withdrawPendingHoldNotices).mockClear();
+    tx.booking.findUniqueOrThrow.mockResolvedValue(flaggedBooking);
+    await resolveReconsiderationFlag({ kind: "booking", id: "bkg1", decision: "CANCEL" });
+    expect(withdrawPendingHoldNotices).not.toHaveBeenCalled();
   });
 
   it("SCRUM-26 [AC9] TC-26-10: cancelling a booking refreshes the Venue Staff queue; cancelling a reservation doesn't", async () => {
