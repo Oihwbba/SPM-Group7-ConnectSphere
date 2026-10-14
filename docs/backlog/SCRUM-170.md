@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-09. Jira is the source of truth.
+     Synced from Jira on 2026-10-15. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-170 - Show the Organiser's requirements to the people planning the event
@@ -10,13 +10,13 @@
 | **Epic** | SCRUM-6 - Event Request Lifecycle |
 | **Priority** | High |
 | **Story points** | 3 |
-| **Status in Jira** | To Do |
+| **Status in Jira** | In Progress |
 | **Sprint** | SCRUM Sprint 3 |
 | **Jira** | https://smu-spm-group7.atlassian.net/browse/SCRUM-170 |
 
 ---
 
-**User story:** As an Event Coordinator, I want to see the Organiser's venue, accessibility and equipment answers while I request venues and equipment, so that I book what was asked for and nothing requested is forgotten.
+**User story:** User story: As an Event Coordinator, I want to see the Organiser's venue, accessibility and equipment answers while I request venues and equipment, and record when no equipment is needed, so that I book what was asked for and nothing requested is forgotten.
 
 **Acceptance criteria**
 
@@ -42,5 +42,6 @@
 * 2026-10-07 (backlog refinement): split from SCRUM-127, which was too big for one sprint. AC1–AC4 are SCRUM-127's former AC7–AC10, unchanged. SCRUM-127's former AC12 is now the Related note, because only SCRUM-38, SCRUM-40, SCRUM-26 and SCRUM-128 can test it.
 * 2026-10-08 (backlog refinement, PO approved): SCRUM-127 dropped, so the Organiser's answers stay free text. They are shown, not pre-filled. AC1 removed (SCRUM-162 AC7 shows booked venues). AC2 and AC3 show the answers to the Coordinator, Venue Staff and Technical Support. AC4's second sentence removed (it repeated SCRUM-110 AC3); the first replaced with the Coordinator's No equipment needed decision, which resets if the equipment requirements change. AC5 added so every event's details view shows the same fields. Estimate stays at 3: removing the pre-fill is offset by the new decision and its reset.
 * 2026-10-09: Added in AC6 so Coordinator knows what Organiser asked for.
+* 2026-10-14 (PO approved): user story covers recording No equipment needed (AC4), which it didn't mention. No AC change.
 
 Functionality Area: Venue Booking Request, Equipment Request Management
