@@ -245,7 +245,16 @@ model User {
   venueUnavailability     VenueUnavailability[]
   equipmentUnavailability EquipmentUnavailability[]
   auditLogs               AuditLog[]
-  suitabilityJudgements    VenueSuitabilityJudgement[] @relation("VenueSuitabilityJudgedBy")
+
+  resolvedBookingFlags     Booking[]     @relation("BookingReconsiderationResolvedBy")
+  resolvedReservationFlags Reservation[] @relation("ReservationReconsiderationResolvedBy")
+  requestedSafetyChecks    SafetyCheck[] @relation("SafetyCheckRequestedBy")
+  decidedSafetyChecks      SafetyCheck[] @relation("SafetyCheckDecidedBy")
+
+  approvedHolds     Booking[]          @relation("BookingHoldApprovedBy")
+  holdExpiryChanges HoldExpiryChange[] @relation("HoldExpiryChangedBy")
+
+  suitabilityJudgements VenueSuitabilityJudgement[] @relation("VenueSuitabilityJudgedBy")
 }
 
 model Account {
@@ -603,6 +612,8 @@ model HoldExpiryChange {
   changedBy User    @relation("HoldExpiryChangedBy", fields: [changedById], references: [id])
 
   @@index([bookingId])
+}
+
 /// SCRUM-40 AC8 — the assigned Coordinator's own judgement of a venue for an
 /// event: Suitable or Not suitable, with a note (CHECK
 /// venue_suitability_note_required). One per event and venue; recording it
