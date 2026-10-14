@@ -23,15 +23,6 @@ export function reservingWhere(now: Date): Prisma.BookingWhereInput {
   return { OR: [{ status: "APPROVED" }, liveHoldWhere(now)] };
 }
 
-/**
- * The bookings that hold, or may still get, their venue at `now`: Pending,
- * Approved and live holds (SCRUM-26 AC2). A lapsed hold no longer counts,
- * even before anything has marked it Expired (AC4).
- */
-export function liveBookingWhere(now: Date): Prisma.BookingWhereInput {
-  return { OR: [{ status: { in: ["PENDING", "APPROVED"] } }, liveHoldWhere(now)] };
-}
-
 /** A booking's status as it stands at `now`: a lapsed hold is Expired (AC4). */
 export function bookingStatusAt(
   booking: { status: BookingStatus; holdExpiresAt: Date | null },

@@ -12,7 +12,7 @@ import {
   type Resource,
 } from "@/lib/auth/can";
 import { err, ok, type ActionResult } from "@/lib/action-result";
-import { liveBookingWhere } from "@/lib/booking-holds";
+import { liveBookingWhere } from "@/lib/reconsideration";
 import {
   ARRANGEMENT_FIELDS,
   ARRANGEMENT_LOCKED_MESSAGE,
