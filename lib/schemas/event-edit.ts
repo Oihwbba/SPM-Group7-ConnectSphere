@@ -54,12 +54,16 @@ export const FIELD_LABEL: Record<EditableField, string> = {
 export const EDITABLE_STATUSES: EventStatus[] = ["UNDER_REVIEW", "PLANNING"];
 
 /**
- * AC2, SCRUM-166 — a routine change to these puts a requested safety check
- * out of date.
+ * AC2, SCRUM-166 AC13 — a change to these puts a requested safety check out
+ * of date: the layout and accessibility needs, and the date, time and
+ * expected attendance the Safety Officer reviewed.
  */
 export const SAFETY_RELEVANT_FIELDS: EditableField[] = [
   "preferredLayout",
   "accessibilityNeeds",
+  "startAt",
+  "endAt",
+  "expectedAttendance",
 ];
 
 export const CONFIRMED_NOT_EDITABLE_MESSAGE =

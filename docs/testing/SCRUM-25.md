@@ -204,3 +204,16 @@ Once SCRUM-26 lands, step 2 shows its warning and flags the booking instead of r
 | Expected Result | 1: the decision and who made it are kept. 2: both are cleared together (`event_no_equipment_decision_complete`), so the readiness checklist shows Equipment as Not decided again. |
 
 **Automated by:** `tests/unit/event-edit.test.ts` › "SCRUM-25 [AC3] TC-25-15: …"; `tests/integration/event-edit.test.ts` › "SCRUM-25 [AC3] TC-25-15: …"
+
+### TC-25-16
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-25-16 |
+| Test Scenario | [Positive] [Negative] AC 3, with SCRUM-166 AC 13: changing the date, time or attendance puts a requested safety check out of date |
+| Pre-conditions | Two Planning events with nothing booked or reserved, each with a safety check Awaiting review. |
+| Test Steps | 1. Change only the first event's venue requirements. Save. <br> 2. Move the second event to another day. Save. |
+| Test Data | — |
+| Expected Result | 1: the check stays Awaiting review; venue or equipment requirements, the programme and other fields leave it alone. 2: the check becomes Outdated with the time it went out of date, and the message says the safety check needs requesting again. A start, end or attendance change does the same. |
+
+**Automated by:** `tests/unit/event-edit.test.ts` › "SCRUM-25 [AC3] TC-25-16: …"; `tests/integration/event-edit.test.ts` › "SCRUM-25 [AC3] TC-25-16: …"

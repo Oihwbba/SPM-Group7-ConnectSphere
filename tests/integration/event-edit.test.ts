@@ -172,6 +172,43 @@ describe.skipIf(!usesLocalDatabase)("editing an event's details — real databas
     });
   });
 
+  it("SCRUM-25 [AC3] TC-25-16: moving the date makes a requested safety check Outdated; a venue requirements change doesn't (SCRUM-166 AC13)", async () => {
+    const untouched = await planningEvent();
+    const keptCheck = await prisma.safetyCheck.create({
+      data: { eventId: untouched, requestedById: "usr_coordinator" },
+    });
+    expect(
+      await updateEventDetails({
+        ...(await formFor(untouched)),
+        venueRequirements: "Any hall with a stage",
+      }),
+    ).toMatchObject({ ok: true, data: { safetyCheckOutdated: false } });
+    expect(
+      await prisma.safetyCheck.findUniqueOrThrow({
+        where: { id: keptCheck.id },
+        select: { status: true, outdatedAt: true },
+      }),
+    ).toEqual({ status: "AWAITING_REVIEW", outdatedAt: null });
+
+    const moved = await planningEvent();
+    const check = await prisma.safetyCheck.create({
+      data: { eventId: moved, requestedById: "usr_coordinator" },
+    });
+    expect(
+      await updateEventDetails({
+        ...(await formFor(moved)),
+        startAt: new Date("2036-06-09T02:00:00.000Z").toISOString(),
+        endAt: new Date("2036-06-09T06:00:00.000Z").toISOString(),
+      }),
+    ).toMatchObject({ ok: true, data: { safetyCheckOutdated: true } });
+    expect(
+      await prisma.safetyCheck.findUniqueOrThrow({
+        where: { id: check.id },
+        select: { status: true, outdatedAt: true },
+      }),
+    ).toEqual({ status: "OUTDATED", outdatedAt: expect.any(Date) });
+  });
+
   it("SCRUM-25 [AC3] TC-25-06: with nothing booked the date moves; with an approved booking the attendance is refused and stays", async () => {
     const free = await planningEvent();
     const moved = new Date("2036-06-09T02:00:00.000Z");

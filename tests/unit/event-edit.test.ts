@@ -242,6 +242,39 @@ describe("updateEventDetails — SCRUM-25", () => {
     );
   });
 
+  it.each([
+    ["the start", { startAt: "2036-03-03T01:00:00.000Z" }],
+    ["the end", { endAt: "2036-03-03T07:00:00.000Z" }],
+    ["the expected attendance", { expectedAttendance: 150 }],
+  ])(
+    "SCRUM-25 [AC3] TC-25-16: changing %s makes a requested safety check Outdated (SCRUM-166 AC13)",
+    async (_label, edit) => {
+      db.safetyCheck.updateMany.mockResolvedValue({ count: 1 });
+
+      const result = await updateEventDetails({ ...unchanged, ...edit });
+
+      expect(result).toMatchObject({ ok: true, data: { safetyCheckOutdated: true } });
+      expect(db.safetyCheck.updateMany).toHaveBeenCalledWith({
+        where: { eventId: "evt_1", status: { in: ["AWAITING_REVIEW", "APPROVED"] } },
+        data: { status: "OUTDATED", outdatedAt: expect.any(Date) },
+      });
+    },
+  );
+
+  it.each([
+    ["the venue requirements", { venueRequirements: "Hall" }],
+    ["the equipment requirements", { equipmentRequirements: "Projector" }],
+    ["the programme", { programme: "Talks, then dinner" }],
+  ])(
+    "SCRUM-25 [AC3] TC-25-16: changing only %s leaves safety checks alone",
+    async (_label, edit) => {
+      const result = await updateEventDetails({ ...unchanged, ...edit });
+
+      expect(result).toMatchObject({ ok: true, data: { safetyCheckOutdated: false } });
+      expect(db.safetyCheck.updateMany).not.toHaveBeenCalled();
+    },
+  );
+
   it("SCRUM-25 [AC3] TC-25-15: changing the equipment requirements puts a No equipment needed decision back to Not decided, clearing who and when together", async () => {
     await updateEventDetails({ ...unchanged, equipmentRequirements: "Two lapel mics" });
 

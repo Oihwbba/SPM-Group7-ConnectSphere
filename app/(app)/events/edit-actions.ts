@@ -66,7 +66,9 @@ function stored(value: string | number | Date | null | undefined): string | null
  *   (AC3): with nothing booked or reserved there is nothing to warn about or
  *   flag, so they save like any other field (SCRUM-26 AC1); once the event
  *   has a venue booking or an equipment reservation they are refused, as the
- *   warning and flagging they need aren't built yet.
+ *   warning and flagging they need aren't built yet. A change to the date,
+ *   time or expected attendance also makes a requested safety check
+ *   Outdated (SCRUM-166 AC13).
  * - The Organiser, a previous Coordinator and every other user are refused
  *   with nothing changed (AC4, AC7); a Confirmed event can't be edited
  *   directly by anyone (AC5).
