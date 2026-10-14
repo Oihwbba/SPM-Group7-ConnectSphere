@@ -217,3 +217,16 @@ Once SCRUM-26 lands, step 2 shows its warning and flags the booking instead of r
 | Expected Result | 1: the check stays Awaiting review; venue or equipment requirements, the programme and other fields leave it alone. 2: the check becomes Outdated with the time it went out of date, and the message says the safety check needs requesting again. A start, end or attendance change does the same. |
 
 **Automated by:** `tests/unit/event-edit.test.ts` › "SCRUM-25 [AC3] TC-25-16: …"; `tests/integration/event-edit.test.ts` › "SCRUM-25 [AC3] TC-25-16: …"
+
+### TC-25-17
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-25-17 |
+| Test Scenario | [Boundary] AC 1: long answers the request form accepted still save |
+| Pre-conditions | As TC-25-01. |
+| Test Steps | 1. Save the event with 3,000-character accessibility needs, layout, registration needs, venue requirements and equipment requirements. <br> 2. Save a programme of 5,001 characters. |
+| Test Data | — |
+| Expected Result | 1 saves: the request form caps none of these fields, so a value it accepted never blocks an edit. 2 is refused against the programme, as the request form also caps it at 5,000, and nothing is written. |
+
+**Automated by:** `tests/unit/event-edit.test.ts` › "SCRUM-25 [AC1] TC-25-17: …"

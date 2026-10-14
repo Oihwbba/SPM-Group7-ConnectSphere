@@ -8,10 +8,11 @@ import { signedIn, usesLocalDatabase } from "./helpers";
  * real browser. The assigned Coordinator edits routine details (an empty name
  * is refused first), is refused a change of attendance once the event has a
  * venue booking, and adds a note; Venue Staff add one from the booking they
- * review; the Organiser reads both and can neither edit nor add.
+ * review, and Technical Support from the equipment request they review; the
+ * Organiser reads them and can neither edit nor add.
  *
  * The event is this spec's own, on a 2036 date, removed afterwards with its
- * booking and notes.
+ * booking, equipment request and notes.
  */
 const NAME = "E2E Edit — Charity Gala";
 
@@ -29,6 +30,10 @@ async function removeTestEvents() {
     where: { entityId: { in: [...ids, ...bookings.map((b) => b.id)] } },
   });
   await prisma.booking.deleteMany({ where: { eventId: { in: ids } } });
+  await prisma.equipmentRequestUpdate.deleteMany({
+    where: { request: { eventId: { in: ids } } },
+  });
+  await prisma.equipmentRequest.deleteMany({ where: { eventId: { in: ids } } });
   // The event's notes go with it.
   await prisma.event.deleteMany({ where: { id: { in: ids } } });
 }
@@ -173,5 +178,38 @@ test.describe("SCRUM-25 — update routine event information during planning", (
     await expect(notes.getByText("Banquet tables confirmed for 120.")).toBeVisible();
     await expect(notes.getByLabel("Add a note")).toHaveCount(0);
     await expect(dialog.getByRole("button", { name: "Edit details" })).toHaveCount(0);
+  });
+
+  test("SCRUM-25 [AC6] TC-25-10: technical support add a note from the equipment request they review", async ({
+    browser,
+  }) => {
+    test.skip(!usesLocalDatabase, "creates its own event");
+    const { id: requestId } = await prisma.equipmentRequest.create({
+      data: {
+        eventId,
+        requestedById: "usr_coordinator",
+        lines: { create: [{ equipmentId: "eqp_projector", quantity: 1 }] },
+      },
+      select: { id: true },
+    });
+
+    const tech = await signedIn(browser, "techsupport@test.local");
+    await tech.goto("/equipment-requests");
+    const notes = tech
+      .locator(`#request-${requestId}`)
+      .getByTestId("operational-notes");
+    // The notes the Coordinator and Venue Staff added show here too.
+    await expect(notes.getByText("Auction items arrive at 17:00.")).toBeVisible();
+    await notes.getByLabel("Add a note").fill("Projector tested with the venue HDMI.");
+    await notes.getByRole("button", { name: "Add note" }).click();
+    await expect(notes.getByTestId("operational-note").last()).toContainText(
+      "Projector tested with the venue HDMI.",
+    );
+    expect(
+      await prisma.eventOperationalNote.findFirstOrThrow({
+        where: { eventId, body: "Projector tested with the venue HDMI." },
+        select: { authorId: true },
+      }),
+    ).toEqual({ authorId: "usr_techsupport" });
   });
 });
