@@ -137,6 +137,8 @@ describe("recordUnavailability — SCRUM-37", () => {
         id: "bkg_1",
         startAt: new Date("2034-05-03T00:00:00.000Z"),
         endAt: new Date("2034-05-03T02:00:00.000Z"),
+        setupMinutes: 0,
+        turnaroundMinutes: 0,
       },
     ]);
 
@@ -144,6 +146,27 @@ describe("recordUnavailability — SCRUM-37", () => {
       ok: false,
       error:
         "Not recorded: Seminar Room is already booked from 3 May 2034, 8:00 am SGT to 3 May 2034, 10:00 am SGT.",
+    });
+    expect(db.venueUnavailability.create).not.toHaveBeenCalled();
+  });
+
+  it("SCRUM-159 [AC3] TC-159-07: unavailability over only a booking's turnaround is refused too, naming the whole occupied time", async () => {
+    // valid runs from 9:00 am SGT on 3 May 2034; this booking ends at 8:30 am
+    // with 45 minutes' turnaround, so it occupies the venue until 9:15 am.
+    db.booking.findMany.mockResolvedValue([
+      {
+        id: "bkg_1",
+        startAt: new Date("2034-05-02T22:30:00.000Z"),
+        endAt: new Date("2034-05-03T00:30:00.000Z"),
+        setupMinutes: 30,
+        turnaroundMinutes: 45,
+      },
+    ]);
+
+    expect(await recordUnavailability(valid)).toEqual({
+      ok: false,
+      error:
+        "Not recorded: Seminar Room is already booked from 3 May 2034, 6:00 am SGT to 3 May 2034, 9:15 am SGT, including setup and turnaround.",
     });
     expect(db.venueUnavailability.create).not.toHaveBeenCalled();
   });
