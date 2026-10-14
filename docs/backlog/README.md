@@ -37,7 +37,7 @@ either covered by a test or visibly not done yet. Reviewers do the same.
 | | |
 |---|---|
 | Stories | **88** |
-| Tasks | **30** |
+| Tasks | **31** |
 | Subtasks | **18** |
 | Total story points | **252** |
 | Points committed to Sprint 1 | **37** |
@@ -216,3 +216,4 @@ _2 stories, 5 points_
 | [SCRUM-178](SCRUM-178.md) | Chore: Send related files to the GLM reviewer in part instead of dropping them | SCRUM Sprint 3 | In Review |
 | [SCRUM-179](SCRUM-179.md) | Chore: Apply pending migrations to the shared database before each production deploy | SCRUM Sprint 3 | In Review |
 | [SCRUM-180](SCRUM-180.md) | Chore: Raise the GLM reviewer's memory limit from 8,000 to 12,000 characters | SCRUM Sprint 3 | In Review |
+| [SCRUM-181](SCRUM-181.md) | Chore: Fix the GLM reviewer gaps found by auditing a week of reviews | SCRUM Sprint 3 | In Review |
