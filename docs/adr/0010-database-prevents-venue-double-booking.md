@@ -184,3 +184,51 @@ one set of rules instead of each editing the same constraints.
   before the venue row. Today nothing takes the venue lock and then writes
   booking rows, so the two orders can't deadlock; SCRUM-161, which will flag
   bookings while holding the venue lock, has to keep that in mind.
+
+## Addendum (2026-10-12) — The application compares occupied periods too (SCRUM-159)
+
+### Context
+
+The SCRUM-172 rules compare occupied periods, but the application's own
+check (`findVenueBlockers`, used by the request form, a request, an approval,
+the Venue Staff queue and recording unavailability) still compared booked
+periods, and nothing copied a venue's minutes onto a booking. So every booking
+kept 0 and 0, and the database's occupied periods were the booked periods.
+
+### Decision
+
+- **One helper, `occupiedPeriod`, in lib/venue-availability.ts**, computes
+  `[startAt − setup, endAt + turnaround)` exactly as `booking_occupied_period`
+  does. Callers ask `findVenueBlockers` about the period as it would occupy
+  the venue: a request or approval with the venue's current minutes, recorded
+  unavailability as it is.
+- **Each approved or held booking counts for its own stored minutes.** Its
+  occupied period can't be filtered in a Prisma `where`, so the lookup loads
+  Approved bookings and Held ones whose hold hasn't expired within
+  `MAX_SETUP_TURNAROUND_MINUTES` (1,440, the database's bound) either side,
+  then keeps those whose occupied period overlaps. Nothing further away can
+  reach the period. A hold past its expiry is left out even while its row
+  still says Held, as the database expires it before checking.
+- **Approving copies the venue's minutes onto the booking**, the same minutes
+  the conflict check used, in the conditional update (AC8). A hold (SCRUM-163)
+  must copy them the same way.
+- **A refusal names the whole occupied time**, "…, including setup and
+  turnaround", so the times shown explain it.
+
+### Alternatives rejected
+
+- **Compute occupied periods in SQL with `$queryRaw`.** It would reuse
+  `booking_occupied_period` exactly, but the lookup is shared by five callers
+  and their unit tests, which mock Prisma's typed client; a raw query would
+  replace typed reads for a filter that a one-day window plus `overlaps`
+  already gets right.
+- **Read the venue's current minutes for existing bookings.** That would move
+  approved bookings when a venue's times change, which AC8 forbids.
+
+### Consequences
+
+- The database stays the guarantee for simultaneous approvals (AC5); the
+  application's check now agrees with it, so a request the database would
+  refuse is refused earlier, with a readable message.
+- The availability calendar loads bookings a day either side of the week, so
+  setup or turnaround reaching into the week is drawn.
