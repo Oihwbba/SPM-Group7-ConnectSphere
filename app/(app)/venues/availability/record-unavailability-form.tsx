@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { AlertCircle, Loader2, Wrench } from "lucide-react";
+import { AlertCircle, AlertTriangle, Loader2, Wrench } from "lucide-react";
 
 import { DateTimeField } from "@/components/app/date-time-field";
 import { Button } from "@/components/ui/button";
@@ -17,19 +17,24 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { sgWallTimeToUtcIso } from "@/lib/datetime";
+import { formatDateTime, sgWallTimeToUtcIso } from "@/lib/datetime";
 import {
   UNAVAILABILITY_REASONS,
   UNAVAILABILITY_REASON_LABEL as REASON_LABEL,
 } from "@/lib/schemas/unavailability";
-import { recordUnavailability } from "./actions";
+import { recordUnavailability, type AffectedBookingView } from "./actions";
 
 const emptyForm = { start: "", end: "", reason: "", note: "" };
 
+const plural = (n: number, one: string) => `${n} ${one}${n === 1 ? "" : "s"}`;
+
 /**
- * SCRUM-37 AC1 — Venue Staff record that the venue shown is unavailable for a
- * reason other than a booking. A clash with an approved booking is shown
- * here and nothing is saved (AC3); the calendar redraws on success.
+ * SCRUM-37 AC1, SCRUM-161 — Venue Staff record that the venue shown is
+ * unavailable for a reason other than a booking. If the period overlaps
+ * bookings, each one is listed for Venue Staff to confirm before anything is
+ * saved (SCRUM-161 AC2); confirming saves the period and flags them. A clash
+ * with unavailability already recorded is shown and nothing is saved. The
+ * calendar redraws on success.
  */
 export function RecordUnavailabilityForm({
   venueId,
@@ -42,19 +47,22 @@ export function RecordUnavailabilityForm({
   const [form, setForm] = useState(emptyForm);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
   const [refusal, setRefusal] = useState<string | null>(null);
+  const [affected, setAffected] = useState<AffectedBookingView[] | null>(null);
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
 
-  const update = (key: keyof typeof emptyForm, value: string) =>
+  const update = (key: keyof typeof emptyForm, value: string) => {
     setForm((prev) => ({ ...prev, [key]: value }));
+    // A changed period or reason affects other bookings; ask again.
+    setAffected(null);
+  };
 
   const fieldError = (key: string) =>
     fieldErrors[key]?.[0] && (
       <p className="text-xs text-destructive">{fieldErrors[key][0]}</p>
     );
 
-  function submit(e: React.FormEvent) {
-    e.preventDefault();
+  function save(confirmedBookingIds: string[]) {
     startTransition(async () => {
       const result = await recordUnavailability({
         venueId,
@@ -62,19 +70,44 @@ export function RecordUnavailabilityForm({
         endAt: sgWallTimeToUtcIso(form.end) ?? "",
         reason: form.reason,
         note: form.note,
+        confirmedBookingIds,
       });
-      if (result.ok) {
-        toast.success(`Recorded: ${venueName} is unavailable for that period.`);
-        setForm(emptyForm);
-        setFieldErrors({});
-        setRefusal(null);
-        setOpen(false);
-        router.refresh();
-      } else {
+      if (!result.ok) {
         setFieldErrors(result.fieldErrors ?? {});
         setRefusal(result.error);
+        setAffected(null);
+        return;
       }
+      setFieldErrors({});
+      setRefusal(null);
+      const outcome = result.data;
+      if (!outcome.recorded) {
+        setAffected(outcome.affected);
+        return;
+      }
+      toast.success(
+        !outcome.created
+          ? `Already recorded: ${venueName} is unavailable for that period.`
+          : outcome.flagged > 0
+            ? `Recorded: ${venueName} is unavailable for that period. ${plural(outcome.flagged, "booking")} flagged for their Coordinators.`
+            : `Recorded: ${venueName} is unavailable for that period.`,
+      );
+      setForm(emptyForm);
+      setAffected(null);
+      setOpen(false);
+      router.refresh();
     });
+  }
+
+  function submit(e: React.FormEvent) {
+    e.preventDefault();
+    save([]);
+  }
+
+  function close() {
+    setOpen(false);
+    setRefusal(null);
+    setAffected(null);
   }
 
   if (!open) {
@@ -95,8 +128,9 @@ export function RecordUnavailabilityForm({
           </h2>
           <p className="text-sm text-muted-foreground">
             Maintenance, equipment failure, renovation, a safety concern, or
-            anything else that isn&apos;t a booking. A period that clashes with
-            an approved booking is not saved.
+            anything else that isn&apos;t a booking. Bookings it overlaps are
+            shown before it is saved, and are then flagged for their
+            Coordinators to arrange another venue; they are not cancelled.
           </p>
         </div>
 
@@ -108,6 +142,56 @@ export function RecordUnavailabilityForm({
           >
             <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
             <p>{refusal}</p>
+          </div>
+        )}
+
+        {affected && (
+          <div
+            role="alert"
+            data-testid="affected-bookings"
+            className="space-y-3 rounded-lg border border-warning/40 bg-warning/10 p-4 text-sm text-warning-foreground"
+          >
+            <div className="flex gap-3">
+              <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" />
+              <p>
+                This period overlaps {plural(affected.length, "booking")}.
+                Recording it flags each one Needs Reconsideration and tells its
+                Coordinator to arrange another venue. Nothing is cancelled.
+              </p>
+            </div>
+            <ul className="space-y-2">
+              {affected.map((b) => (
+                <li
+                  key={b.bookingId}
+                  data-testid="affected-booking"
+                  className="rounded-md border border-warning/30 bg-card p-3 text-foreground"
+                >
+                  <p className="font-medium">{b.eventName}</p>
+                  <p className="text-muted-foreground">
+                    Coordinator: {b.coordinatorName ?? "Not assigned"} ·{" "}
+                    {b.status} · {formatDateTime(b.startAt)} to{" "}
+                    {formatDateTime(b.endAt)}
+                  </p>
+                </li>
+              ))}
+            </ul>
+            <div className="flex flex-wrap justify-end gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setAffected(null)}
+              >
+                Back
+              </Button>
+              <Button
+                type="button"
+                disabled={isPending}
+                onClick={() => save(affected.map((b) => b.bookingId))}
+              >
+                {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+                Record and flag {plural(affected.length, "booking")}
+              </Button>
+            </div>
           </div>
         )}
 
@@ -157,22 +241,17 @@ export function RecordUnavailabilityForm({
               {fieldError("note")}
             </div>
           </div>
-          <div className="flex justify-end gap-2 border-t pt-4">
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => {
-                setOpen(false);
-                setRefusal(null);
-              }}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isPending}>
-              {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-              Record unavailability
-            </Button>
-          </div>
+          {!affected && (
+            <div className="flex justify-end gap-2 border-t pt-4">
+              <Button type="button" variant="ghost" onClick={close}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isPending}>
+                {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+                Record unavailability
+              </Button>
+            </div>
+          )}
         </form>
       </CardContent>
     </Card>

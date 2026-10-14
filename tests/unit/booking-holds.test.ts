@@ -552,6 +552,22 @@ describe("confirmHold and releaseHold — SCRUM-163 AC3, AC4, AC7, AC8", () => {
     });
   });
 
+  it("SCRUM-161 [AC6] TC-161-10: confirming a hold the database refuses over unavailability says so", async () => {
+    db.$transaction.mockRejectedValue(
+      postgresRefusal(
+        "23P01",
+        'conflicting key value violates exclusion constraint "booking_overlaps_unavailability"',
+      ),
+    );
+
+    expect(await confirmHold({ bookingId: "bkg_1" })).toEqual({
+      ok: false,
+      error:
+        "This hold can't be confirmed: the venue is now unavailable for part of its period. Release it and arrange another venue.",
+    });
+    expect(revalidatePath).not.toHaveBeenCalled();
+  });
+
   it("SCRUM-163 [AC8] TC-163-14: a different database failure is not mistaken for an expiry", async () => {
     db.$transaction.mockRejectedValue(
       postgresRefusal("23514", 'violates check constraint "booking_hold_complete"'),

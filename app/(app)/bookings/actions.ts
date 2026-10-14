@@ -719,6 +719,11 @@ async function settleHold(
     try {
       await onceMoreOnDeadlock(settle);
     } catch (error) {
+      // SCRUM-161 AC6: the database refuses to confirm a hold over recorded
+      // unavailability (the occupancy trigger, ADR 0010).
+      if (violatesExclusion(error, "booking_overlaps_unavailability")) {
+        return err(HOLD_OVER_UNAVAILABILITY);
+      }
       if (!violatesCheck(error, "booking_hold_expired")) throw error;
       return err(alreadySettled("EXPIRED", booking.holdExpiresAt));
     }
@@ -895,6 +900,9 @@ function notWithdrawable(
 }
 
 const HOLD_NOT_FOUND = "Venue hold not found.";
+
+const HOLD_OVER_UNAVAILABILITY =
+  "This hold can't be confirmed: the venue is now unavailable for part of its period. Release it and arrange another venue.";
 
 function holdExpired(holdExpiresAt: Date | null): string {
   return `This hold expired at ${formatDateTime(holdExpiresAt!)}, so the venue is free for other requests. Make a new request if you still need it.`;

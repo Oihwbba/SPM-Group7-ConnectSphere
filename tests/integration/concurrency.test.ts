@@ -56,9 +56,21 @@ vi.mock("@/auth", () => ({ auth: vi.fn() }));
 // has checked too, so BOTH have seen "no conflict" before EITHER writes. That
 // is the exact interleaving a check-then-write design gets wrong, forced every
 // run instead of left to timing. Disarmed (the default), it changes nothing.
+// SCRUM-161: recording unavailability first reads the bookings it affects, and
+// that read waits at the same barrier.
 const approvalBarrier = vi.hoisted(() => ({
   parties: 0,
   waiting: [] as Array<() => void>,
+  async wait() {
+    if (this.parties === 0) return;
+    await new Promise<void>((release) => {
+      this.waiting.push(release);
+      if (this.waiting.length === this.parties) {
+        this.parties = 0;
+        this.waiting.splice(0).forEach((go) => go());
+      }
+    });
+  },
 }));
 vi.mock("@/lib/venue-availability", async (importOriginal) => {
   const actual =
@@ -69,16 +81,22 @@ vi.mock("@/lib/venue-availability", async (importOriginal) => {
       ...args: Parameters<typeof actual.findVenueBlockers>
     ) => {
       const blockers = await actual.findVenueBlockers(...args);
-      if (approvalBarrier.parties > 0) {
-        await new Promise<void>((release) => {
-          approvalBarrier.waiting.push(release);
-          if (approvalBarrier.waiting.length === approvalBarrier.parties) {
-            approvalBarrier.parties = 0;
-            approvalBarrier.waiting.splice(0).forEach((go) => go());
-          }
-        });
-      }
+      await approvalBarrier.wait();
       return blockers;
+    },
+  };
+});
+vi.mock("@/lib/venue-unavailability", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("@/lib/venue-unavailability")>();
+  return {
+    ...actual,
+    findAffectedBookings: async (
+      ...args: Parameters<typeof actual.findAffectedBookings>
+    ) => {
+      const affected = await actual.findAffectedBookings(...args);
+      await approvalBarrier.wait();
+      return affected;
     },
   };
 });
@@ -398,15 +416,17 @@ describe.skipIf(!usesLocalDatabase)(
   },
 );
 
-// SCRUM-37 — "a venue cannot end up simultaneously booked and closed for
-// maintenance". An approval and a maintenance record for the same venue and
-// an overlapping period, at the same moment. No EXCLUDE constraint spans the
-// two tables, so the occupancy triggers do it (ADR 0010, 2026-09-28 addendum).
+// SCRUM-161 AC7 (replacing SCRUM-37 AC4) — an approval and an unavailability
+// record for the same venue and overlapping periods, at the same moment. The
+// unavailability is always saved; the booking ends up either refused (still
+// Pending) or Approved and flagged, never Approved without a flag. No EXCLUDE
+// constraint spans the two tables, so the venue lock both take in the
+// occupancy triggers decides the order (ADR 0010).
 describe.skipIf(!usesLocalDatabase)(
-  "concurrency — approval vs recorded maintenance (SCRUM-37)",
+  "concurrency — approval vs recorded unavailability (SCRUM-161)",
   () => {
     let venueId: string;
-    let eventId: string;
+    const eventIds: string[] = [];
     const staff: Session = {
       user: {
         id: "usr_venuestaff",
@@ -429,6 +449,10 @@ describe.skipIf(!usesLocalDatabase)(
       venueId = venue.id;
     });
 
+    afterEach(() => {
+      approvalBarrier.parties = 0;
+    });
+
     afterAll(async () => {
       approvalBarrier.parties = 0;
       const ids = (
@@ -437,54 +461,82 @@ describe.skipIf(!usesLocalDatabase)(
       await prisma.auditLog.deleteMany({
         where: { entityType: "Booking", entityId: { in: ids } },
       });
+      await prisma.notification.deleteMany({
+        where: { eventId: { in: eventIds } },
+      });
       await prisma.booking.deleteMany({ where: { venueId } });
       await prisma.venueUnavailability.deleteMany({ where: { venueId } });
-      await removeEvents([eventId]);
+      await removeEvents(eventIds);
       await prisma.venue.delete({ where: { id: venueId } });
     });
 
-    it("SCRUM-37 [AC4] TC-37-06: an approval and a maintenance record for overlapping periods at the same moment: exactly one is saved", async () => {
-      [eventId] = await createPlanningEvents("Occupancy race event", [
-        {
-          startAt: new Date("2033-05-01T02:00:00.000Z"),
-          endAt: new Date("2033-05-01T06:00:00.000Z"),
-        },
+    /** A pending request on `day`, 10:00 am to 2:00 pm SGT, for its own event. */
+    async function pendingOn(day: number) {
+      const period = {
+        startAt: new Date(Date.UTC(2033, 4, day, 2)),
+        endAt: new Date(Date.UTC(2033, 4, day, 6)),
+      };
+      const [eventId] = await createPlanningEvents("Occupancy race event", [
+        period,
       ]);
-      const pending = await prisma.booking.create({
-        data: {
-          eventId,
-          venueId,
-          startAt: new Date("2033-05-01T02:00:00.000Z"),
-          endAt: new Date("2033-05-01T06:00:00.000Z"),
-          requestedById: "usr_coordinator",
-        },
+      eventIds.push(eventId);
+      return prisma.booking.create({
+        data: { eventId, venueId, ...period, requestedById: "usr_coordinator" },
         select: { id: true },
       });
-      (auth as unknown as Mock).mockResolvedValue(staff);
+    }
 
-      // Both pass the application's own check before either writes.
-      approvalBarrier.parties = 2;
-      const results = await Promise.all([
+    /** Approve it while unavailability over it is recorded and confirmed. */
+    async function race(day: number, forced: boolean) {
+      const pending = await pendingOn(day);
+      (auth as unknown as Mock).mockResolvedValue(staff);
+      if (forced) approvalBarrier.parties = 2;
+      const [approval, unavailability] = await Promise.all([
         decideBookingRequest({ bookingId: pending.id, decision: "APPROVED" }),
         recordUnavailability({
           venueId,
-          startAt: "2033-05-01T04:00:00.000Z",
-          endAt: "2033-05-01T08:00:00.000Z",
+          startAt: new Date(Date.UTC(2033, 4, day, 4)).toISOString(),
+          endAt: new Date(Date.UTC(2033, 4, day, 8)).toISOString(),
           reason: "MAINTENANCE",
+          confirmedBookingIds: [pending.id],
         }),
       ]);
-
-      expect(results.filter((r) => r.ok)).toHaveLength(1);
-      expect(results.filter((r) => !r.ok)).toHaveLength(1);
-
-      // Never both booked and unavailable for that period.
-      const approved = await prisma.booking.count({
-        where: { venueId, status: "APPROVED" },
+      const booking = await prisma.booking.findUniqueOrThrow({
+        where: { id: pending.id },
+        select: { status: true, needsReconsideration: true },
       });
-      const unavailable = await prisma.venueUnavailability.count({
-        where: { venueId },
+      return { approval, unavailability, booking };
+    }
+
+    it("SCRUM-161 [AC7] TC-161-12: both past their own checks before either writes: the unavailability is saved, and the booking is refused or flagged", async () => {
+      const { approval, unavailability, booking } = await race(1, true);
+
+      expect(unavailability).toMatchObject({
+        ok: true,
+        data: { recorded: true, created: true },
       });
-      expect(approved + unavailable).toBe(1);
+      // One of the two outcomes AC7 allows, and nothing else.
+      expect([
+        { approved: false, status: "PENDING", flagged: true },
+        { approved: true, status: "APPROVED", flagged: true },
+      ]).toContainEqual({
+        approved: approval.ok,
+        status: booking.status,
+        flagged: booking.needsReconsideration,
+      });
+      expect(
+        await prisma.venueUnavailability.count({ where: { venueId } }),
+      ).toBe(1);
+    });
+
+    it("SCRUM-161 [AC7] TC-161-12: never Approved without a flag, over repeated unforced races", async () => {
+      for (const day of [2, 3, 4, 5, 6]) {
+        const { approval, unavailability, booking } = await race(day, false);
+
+        expect(unavailability.ok).toBe(true);
+        expect(booking.needsReconsideration).toBe(true);
+        expect(booking.status).toBe(approval.ok ? "APPROVED" : "PENDING");
+      }
     });
   },
 );
