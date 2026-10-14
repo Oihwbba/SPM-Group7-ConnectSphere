@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import type { Prisma, SafetyCheckStatus } from "@prisma/client";
+import type { SafetyCheckStatus } from "@prisma/client";
 
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
@@ -12,7 +12,7 @@ import {
   type Resource,
 } from "@/lib/auth/can";
 import { err, ok, type ActionResult } from "@/lib/action-result";
-import { liveHoldWhere } from "@/lib/booking-holds";
+import { liveBookingWhere } from "@/lib/booking-holds";
 import {
   ARRANGEMENT_FIELDS,
   ARRANGEMENT_LOCKED_MESSAGE,
@@ -28,15 +28,6 @@ import {
   SAFETY_RELEVANT_FIELDS,
   type EditableField,
 } from "@/lib/schemas/event-edit";
-
-/**
- * SCRUM-26 AC2 — the bookings that hold, or may still get, their venue,
- * counted as the booking flow counts them: a hold only until it expires
- * (SCRUM-163 AC4), even before anything has marked it Expired.
- */
-function liveBookingWhere(now: Date): Prisma.BookingWhereInput {
-  return { OR: [{ status: { in: ["PENDING", "APPROVED"] } }, liveHoldWhere(now)] };
-}
 
 /** SCRUM-166 — a check not yet out of date; a routine change makes it Outdated. */
 const CURRENT_SAFETY_CHECK_STATUSES: SafetyCheckStatus[] = [
