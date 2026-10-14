@@ -1,0 +1,203 @@
+import { test, expect, type Page } from "@playwright/test";
+import { prisma } from "@/lib/db";
+
+import { signedIn, usesLocalDatabase } from "./helpers";
+
+/**
+ * SCRUM-34 — the venue catalogue in a real browser. Venue Staff add a venue
+ * (an invalid capacity and a day closing before it opens are refused first)
+ * and edit it; a Coordinator reads it and can't change it. Then a venue with a
+ * future booking can't have its capacity lowered below it or be retired,
+ * and once the booking is gone it is retired and leaves the catalogue.
+ *
+ * The venues and events are this spec's own, removed afterwards.
+ */
+const PREFIX = "E2E Venue —";
+
+async function removeTestVenues() {
+  const venues = await prisma.venue.findMany({
+    where: { name: { startsWith: PREFIX } },
+    select: { id: true },
+  });
+  const venueIds = venues.map((v) => v.id);
+  const events = await prisma.event.findMany({
+    where: { name: { startsWith: PREFIX } },
+    select: { id: true },
+  });
+  const eventIds = events.map((e) => e.id);
+  await prisma.booking.deleteMany({ where: { venueId: { in: venueIds } } });
+  await prisma.auditLog.deleteMany({ where: { entityId: { in: [...venueIds, ...eventIds] } } });
+  await prisma.event.deleteMany({ where: { id: { in: eventIds } } });
+  await prisma.venue.deleteMany({ where: { id: { in: venueIds } } });
+}
+
+async function openVenue(page: Page, name: string) {
+  await page.goto("/venues");
+  await page.getByRole("link", { name, exact: true }).click();
+  await expect(page.getByRole("heading", { level: 1 })).toContainText(name);
+}
+
+test.describe("SCRUM-34 — browse and maintain the venue catalogue", () => {
+  test.describe.configure({ mode: "serial", timeout: 90_000 });
+
+  test.beforeAll(async () => {
+    if (usesLocalDatabase) await removeTestVenues();
+  });
+  test.afterAll(async () => {
+    if (usesLocalDatabase) await removeTestVenues();
+  });
+
+  test("SCRUM-34 [AC1, AC2, AC3, AC4, AC6, AC9] TC-34-01, TC-34-03, TC-34-05, TC-34-07, TC-34-11: venue staff add and edit a venue; a coordinator reads it and can't change it", async ({
+    browser,
+  }) => {
+    test.skip(!usesLocalDatabase, "adds its own venue");
+    const name = `${PREFIX} Rooftop Garden`;
+    const staff = await signedIn(browser, "venuestaff@test.local");
+    await staff.goto("/venues");
+    await staff.getByRole("button", { name: "Add venue" }).click();
+    const add = staff.getByRole("dialog", { name: "Add a venue" });
+
+    await add.getByLabel("Name *").fill(name);
+    await add.getByLabel("Location *").fill("Level 20, Block A");
+    await add.getByLabel("Facilities").fill("Projector, Sound System");
+    await add.getByLabel("Accessibility features").fill("wheelchair access");
+    await add.getByLabel("Supported layouts").fill("theatre");
+    await add.getByLabel("Known restrictions").fill("Limited emergency access");
+
+    // AC4: capacity 0 is refused against capacity.
+    await add.getByLabel("Capacity *").fill("0");
+    // AC5: Tuesday closing before it opens is refused against Tuesday.
+    await add.getByLabel("Tuesday opens").fill("18:00");
+    await add.getByLabel("Tuesday closes").fill("09:00");
+    await add.getByRole("button", { name: "Add venue" }).click();
+    await expect(add.getByText("Capacity must be a whole number greater than 0.")).toBeVisible();
+    await expect(add.getByLabel("Capacity *")).toHaveAttribute("aria-invalid", "true");
+    await expect(add.getByText("The closing time must be after the opening time.")).toBeVisible();
+    await expect(add.getByLabel("Tuesday opens")).toHaveAttribute("aria-invalid", "true");
+    await expect(add.getByLabel("Monday opens")).not.toHaveAttribute("aria-invalid", "true");
+    expect(await prisma.venue.count({ where: { name } })).toBe(0);
+
+    // AC3: valid now; Sunday Closed.
+    await add.getByLabel("Capacity *").fill("80");
+    await add.getByLabel("Tuesday closes").fill("22:00");
+    await add.getByLabel("Tuesday opens").fill("10:00");
+    await add.getByLabel("Sunday closed").check();
+    await add.getByRole("button", { name: "Add venue" }).click();
+    await expect(staff.getByText("Venue added.")).toBeVisible();
+    await expect(staff.getByRole("heading", { level: 1 })).toContainText(name);
+    await expect(staff.getByTestId("opening-hours")).toContainText("Sunday");
+    await expect(staff.getByTestId("opening-hours")).toContainText("Closed");
+
+    // AC6: an edit shows at once.
+    await staff.getByRole("button", { name: "Edit venue" }).click();
+    const edit = staff.getByRole("dialog", { name: `Edit ${name}` });
+    await edit.getByLabel("Capacity *").fill("120");
+    await edit.getByRole("button", { name: "Save venue" }).click();
+    await expect(staff.getByText("Venue saved.")).toBeVisible();
+    await expect(staff.getByTestId("venue-details")).toContainText("120");
+
+    // AC1, AC2, AC9: a coordinator reads every detail and can change nothing.
+    const coordinator = await signedIn(browser, "coordinator@test.local");
+    await openVenue(coordinator, name);
+    const details = coordinator.getByTestId("venue-details");
+    await expect(details).toContainText("Level 20, Block A");
+    await expect(details).toContainText("120");
+    await expect(details).toContainText("0 minutes");
+    await expect(details).toContainText("Limited emergency access");
+    await expect(coordinator.getByTestId("opening-hours")).toContainText("10:00–22:00");
+    for (const offered of ["projector", "sound system", "wheelchair access", "theatre"]) {
+      await expect(coordinator.getByText(offered, { exact: true })).toBeVisible();
+    }
+    for (const control of ["Add venue", "Edit venue", "Retire venue"]) {
+      await expect(coordinator.getByRole("button", { name: control })).toHaveCount(0);
+    }
+  });
+
+  test("SCRUM-34 [AC8, AC10, AC11] TC-34-10, TC-34-12, TC-34-14: a venue with a future booking can't be shrunk below it or retired; without one it is retired", async ({
+    browser,
+  }) => {
+    test.skip(!usesLocalDatabase, "adds its own venue");
+    const name = `${PREFIX} Garden Hall`;
+    const venue = await prisma.venue.create({
+      data: {
+        name,
+        location: "Level 2, Block D",
+        capacity: 100,
+        openingHours: {
+          create: [1, 2, 3, 4, 5, 6, 7].map((weekday) => ({
+            weekday,
+            opensMinute: 8 * 60,
+            closesMinute: 22 * 60,
+          })),
+        },
+      },
+      select: { id: true },
+    });
+    const event = await prisma.event.create({
+      data: {
+        name: `${PREFIX} Spring Gala`,
+        status: "PLANNING",
+        organiserId: "usr_organiser",
+        coordinatorId: "usr_coordinator",
+        startAt: new Date("2036-03-04T10:00:00+08:00"),
+        endAt: new Date("2036-03-04T14:00:00+08:00"),
+        expectedAttendance: 90,
+      },
+      select: { id: true },
+    });
+    const booking = await prisma.booking.create({
+      data: {
+        eventId: event.id,
+        venueId: venue.id,
+        startAt: new Date("2036-03-04T10:00:00+08:00"),
+        endAt: new Date("2036-03-04T14:00:00+08:00"),
+        status: "APPROVED",
+        requestedAttendance: 90,
+        requestedById: "usr_coordinator",
+      },
+      select: { id: true },
+    });
+
+    const staff = await signedIn(browser, "venuestaff@test.local");
+    await openVenue(staff, name);
+
+    // AC10: lowering capacity below the booking's attendance is refused.
+    await staff.getByRole("button", { name: "Edit venue" }).click();
+    const edit = staff.getByRole("dialog", { name: `Edit ${name}` });
+    await edit.getByLabel("Capacity *").fill("60");
+    await edit.getByRole("button", { name: "Save venue" }).click();
+    await expect(edit.getByTestId("affected-bookings")).toContainText(
+      `${PREFIX} Spring Gala`,
+    );
+    await expect(edit.getByTestId("affected-bookings")).toContainText("Capacity 60 < attendance 90");
+    await edit.getByRole("button", { name: "Cancel" }).click();
+    expect((await prisma.venue.findUniqueOrThrow({ where: { id: venue.id } })).capacity).toBe(100);
+
+    // AC11: retiring it is refused while the booking is ahead.
+    await staff.getByRole("button", { name: "Retire venue" }).click();
+    const retire = staff.getByRole("dialog", { name: `Retire ${name}?` });
+    await retire.getByRole("button", { name: "Retire venue" }).click();
+    await expect(retire.getByTestId("retire-error")).toContainText("can't be retired yet");
+    await expect(retire.getByTestId("affected-bookings")).toContainText("(Approved)");
+    await retire.getByRole("button", { name: "Cancel" }).click();
+    expect((await prisma.venue.findUniqueOrThrow({ where: { id: venue.id } })).isActive).toBe(true);
+
+    // AC8: with the booking gone, it is retired.
+    await prisma.booking.update({ where: { id: booking.id }, data: { status: "CANCELLED" } });
+    await staff.reload();
+    await staff.getByRole("button", { name: "Retire venue" }).click();
+    await staff
+      .getByRole("dialog", { name: `Retire ${name}?` })
+      .getByRole("button", { name: "Retire venue" })
+      .click();
+    await expect(staff.getByText(`${name} is retired.`)).toBeVisible();
+    await staff.goto("/venues");
+    await expect(
+      staff.getByRole("table", { name: "Retired venues" }).getByRole("link", { name }),
+    ).toBeVisible();
+
+    const coordinator = await signedIn(browser, "coordinator@test.local");
+    await coordinator.goto("/venues");
+    await expect(coordinator.getByRole("link", { name, exact: true })).toHaveCount(0);
+  });
+});
