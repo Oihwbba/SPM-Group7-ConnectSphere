@@ -2,6 +2,8 @@ import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
 import type { Session } from "next-auth";
 import type { EventStatus, Role } from "@prisma/client";
 
+import { revalidatePath } from "next/cache";
+
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import {
@@ -25,6 +27,7 @@ const tx = vi.hoisted(() => ({
   reservation: { findUniqueOrThrow: vi.fn(), updateMany: vi.fn() },
   auditLog: { create: vi.fn() },
   safetyCheck: { updateMany: vi.fn() },
+  notification: { updateMany: vi.fn() },
 }));
 
 vi.mock("@/auth", () => ({ auth: vi.fn() }));
@@ -302,6 +305,17 @@ describe("resolveReconsiderationFlag — Cancel arrangement (SCRUM-26 AC9, AC10)
         summary: "A flagged arrangement was cancelled (SCRUM-26)",
       },
     });
+    // Confirming scheduled a "Registration closed" notice; back in Planning
+    // it is withdrawn if it hasn't been shown yet.
+    expect(tx.notification.updateMany).toHaveBeenCalledWith({
+      where: {
+        eventId: "evt1",
+        title: "Registration closed",
+        withdrawnAt: null,
+        showFromAt: { gt: expect.any(Date) },
+      },
+      data: { withdrawnAt: expect.any(Date) },
+    });
   });
 
   it("SCRUM-26 [AC10] TC-26-11: Still stands on a Confirmed event leaves it Confirmed", async () => {
@@ -312,6 +326,16 @@ describe("resolveReconsiderationFlag — Cancel arrangement (SCRUM-26 AC9, AC10)
 
     expect(tx.event.update).not.toHaveBeenCalled();
     expect(tx.safetyCheck.updateMany).not.toHaveBeenCalled();
+    expect(tx.notification.updateMany).not.toHaveBeenCalled();
+  });
+
+  it("SCRUM-26 [AC9] TC-26-10: cancelling a booking refreshes the Venue Staff queue; cancelling a reservation doesn't", async () => {
+    await resolveReconsiderationFlag({ kind: "booking", id: "bkg1", decision: "CANCEL" });
+    expect(revalidatePath).toHaveBeenCalledWith("/bookings");
+
+    vi.mocked(revalidatePath).mockClear();
+    await resolveReconsiderationFlag({ kind: "reservation", id: "res1", decision: "CANCEL" });
+    expect(revalidatePath).not.toHaveBeenCalledWith("/bookings");
   });
 });
 

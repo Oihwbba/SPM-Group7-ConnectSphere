@@ -251,6 +251,19 @@ export async function resolveReconsiderationFlag(
         where: { id: eventId },
         data: { status: "PLANNING" },
       });
+      // Confirming wrote a "Registration closed" notice to show at the close
+      // (SCRUM-45 AC11); back in Planning, it would be wrong. Confirming again
+      // writes a new one. Registering needs the event Confirmed, so
+      // registrationEnabled can stay as it is.
+      await tx.notification.updateMany({
+        where: {
+          eventId,
+          title: "Registration closed",
+          withdrawnAt: null,
+          showFromAt: { gt: now },
+        },
+        data: { withdrawnAt: now },
+      });
       await tx.auditLog.create({
         data: {
           entityType: "Event",
@@ -281,6 +294,8 @@ export async function resolveReconsiderationFlag(
     revalidatePath("/events");
     if (decision === "CANCEL") {
       revalidatePath(kind === "booking" ? "/venues/availability" : "/equipment");
+      // A cancelled Pending or Held booking leaves the Venue Staff queue.
+      if (kind === "booking") revalidatePath("/bookings");
     }
     return ok({ decision: outcome.done, returnedToPlanning: outcome.returnedToPlanning });
   } catch (error) {
