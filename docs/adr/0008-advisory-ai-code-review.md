@@ -676,7 +676,7 @@ earlier versions were read from the comment's edit history.
   lesson was checked against the code: the deploy history it carried was cut
   to the facts a review needs, the coverage lesson now says components are
   tested with `renderToStaticMarkup`, and the gaps the week left open (#155,
-  #162) were added. It went from 11,090 to about 9,400 characters.
+  #162) were added. It went from 11,090 to about 9,200 characters.
 - **The memory bot's stale text is corrected:** its pull request no longer
   says Vercel refuses a squash merge's author (ADR 0009 removed that, as the
   2026-10-11 addendum noted), and its comments no longer name one approver.
