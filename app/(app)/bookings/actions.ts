@@ -36,9 +36,16 @@ import {
   withdrawPendingHoldNotices,
 } from "@/lib/booking-holds";
 import { formatDateTime } from "@/lib/datetime";
-import { describeBlocker, findVenueBlockers } from "@/lib/venue-availability";
+import {
+  describeBlocker,
+  findVenueBlockers,
+  occupiedPeriod,
+} from "@/lib/venue-availability";
 import { outdateSafetyChecks } from "@/lib/safety-checks";
 import { notifyRole } from "@/lib/staff-notifications";
+
+/** A venue's setup and turnaround time (SCRUM-159). */
+const venueTimesSelect = { setupMinutes: true, turnaroundMinutes: true } as const;
 
 export type BookingSummary = {
   id: string;
@@ -85,6 +92,9 @@ function toSummary(row: {
  * `findVenueBlockers` question `submitBookingRequest` asks, so the form and
  * the submission cannot disagree; submitting still checks again, because a
  * booking can be approved between this answer and the click.
+ *
+ * SCRUM-159 AC3 — "free" means free for the period's occupied period: the
+ * venue's setup time before it and turnaround time after it count too.
  */
 export async function checkVenueAvailability(
   input: unknown,
@@ -113,11 +123,15 @@ export async function checkVenueAvailability(
     // A retired venue reads as not found here exactly as it does on submit.
     const venue = await prisma.venue.findFirst({
       where: { id: venueId, isActive: true },
-      select: { id: true },
+      select: { id: true, ...venueTimesSelect },
     });
     if (!venue) return err("Venue not found.");
 
-    const blockers = await findVenueBlockers(prisma, venueId, period);
+    const blockers = await findVenueBlockers(
+      prisma,
+      venueId,
+      occupiedPeriod(period, venue),
+    );
     return ok({
       available: blockers.length === 0,
       clashes: blockers.map(describeBlocker),
@@ -143,7 +157,9 @@ export async function checkVenueAvailability(
  * - Expected attendance above the venue's capacity is refused.
  * - A venue that is approved-booked or unavailable for any part of the period
  *   refuses the request outright — no row is written (AC3). Touching at an
- *   endpoint is not an overlap (AC4).
+ *   endpoint is not an overlap (AC4). Since SCRUM-159 (AC3, AC4) both sides
+ *   are compared as occupied periods: the request with the venue's current
+ *   setup and turnaround, each approved booking with its own.
  * - Otherwise the request is created PENDING (AC2).
  *
  * The availability check here is for the Coordinator's benefit, not the
@@ -227,7 +243,7 @@ export async function submitBookingRequest(
 
     const venue = await prisma.venue.findFirst({
       where: { id: data.venueId, isActive: true },
-      select: { name: true, capacity: true },
+      select: { name: true, capacity: true, ...venueTimesSelect },
     });
     if (!venue) return err("Venue not found.");
     if (data.requestedAttendance > venue.capacity) {
@@ -239,7 +255,11 @@ export async function submitBookingRequest(
       return err(message, { requestedAttendance: [message] });
     }
 
-    const blockers = await findVenueBlockers(prisma, data.venueId, period);
+    const blockers = await findVenueBlockers(
+      prisma,
+      data.venueId,
+      occupiedPeriod(period, venue),
+    );
     if (blockers.length > 0) {
       return err(
         `${venue.name} is unavailable for that period: ${blockers
@@ -295,7 +315,7 @@ const venueSelect = {
   endAt: true,
   status: true,
   holdExpiresAt: true,
-  venue: { select: { name: true } },
+  venue: { select: { name: true, ...venueTimesSelect } },
 } as const;
 
 /**
@@ -319,6 +339,11 @@ const venueSelect = {
  * - SCRUM-163 AC7: a Held booking can be rejected, with a reason, until its
  *   expiry; its notices still to come are withdrawn. Approving it keeps it
  *   Held, for its Coordinator to confirm (`approveHold`).
+ * - SCRUM-159: the conflict check compares occupied periods (AC3, AC4), and
+ *   the database compares them too when two approvals race (AC5). Approving
+ *   copies the venue's setup and turnaround onto the booking, the same
+ *   minutes the check used, so a later change to the venue's times doesn't
+ *   move it (AC8).
  */
 export async function decideBookingRequest(
   input: unknown,
@@ -368,7 +393,7 @@ export async function decideBookingRequest(
           const blockers = await findVenueBlockers(
             tx,
             booking.venueId,
-            booking,
+            occupiedPeriod(booking, booking.venue),
             now,
           );
           if (blockers.length > 0) {
@@ -387,6 +412,10 @@ export async function decideBookingRequest(
             decidedById: user!.id,
             decidedAt: now,
             decisionReason: decision === "REJECTED" ? reason : null,
+            ...(decision === "APPROVED" && {
+              setupMinutes: booking.venue.setupMinutes,
+              turnaroundMinutes: booking.venue.turnaroundMinutes,
+            }),
           },
         });
         if (updated.count !== 1) {
@@ -589,10 +618,12 @@ export async function holdBookingRequest(
         // withdrawing a request and rejecting the event use (event, then
         // booking), so the two can't deadlock (ADR 0007).
         await tx.$queryRaw`SELECT "id" FROM "Event" WHERE "id" = ${booking.event.id} FOR KEY SHARE`;
+        // SCRUM-159 AC3: a hold occupies the venue for its setup and
+        // turnaround too, with the venue's minutes, which it keeps (AC8).
         const blockers = await findVenueBlockers(
           tx,
           booking.venueId,
-          booking,
+          occupiedPeriod(booking, booking.venue),
           now,
         );
         if (blockers.length > 0) {
@@ -605,7 +636,14 @@ export async function holdBookingRequest(
 
         const updated = await tx.booking.updateMany({
           where: { id: booking.id, status: "PENDING" },
-          data: { status: "HELD", heldAt: now, holdExpiresAt, holdNote },
+          data: {
+            status: "HELD",
+            heldAt: now,
+            holdExpiresAt,
+            holdNote,
+            setupMinutes: booking.venue.setupMinutes,
+            turnaroundMinutes: booking.venue.turnaroundMinutes,
+          },
         });
         if (updated.count !== 1) {
           const latest = await tx.booking.findUniqueOrThrow({

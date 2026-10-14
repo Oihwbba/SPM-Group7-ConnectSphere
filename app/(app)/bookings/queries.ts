@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/db";
 import { BOOKABLE_EVENT_STATUSES } from "@/lib/schemas/booking";
-import { findVenueBlockers } from "@/lib/venue-availability";
+import { findVenueBlockers, occupiedPeriod } from "@/lib/venue-availability";
 import { liveHoldWhere } from "@/lib/booking-holds";
 
 /**
@@ -47,7 +47,9 @@ export async function getRequestableVenues() {
  * SCRUM-52 — every pending request, soonest first, with what Venue Staff need
  * to decide without going hunting: the venue's own capacity, facilities and
  * layouts beside what was asked for, who asked, and whether the venue is
- * actually free for that period right now.
+ * actually free for that period right now — with setup and turnaround
+ * counted (SCRUM-159 AC3): a pending request's with the venue's minutes, as
+ * approving or holding would copy them; a held one's with its own (AC8).
  *
  * SCRUM-163 AC7: Held bookings stay in the queue, with their expiry and note,
  * until they are confirmed, released, rejected or expire, and say whether
@@ -66,6 +68,8 @@ export async function getPendingBookingQueue(now = new Date()) {
       holdApprovedAt: true,
       startAt: true,
       endAt: true,
+      setupMinutes: true,
+      turnaroundMinutes: true,
       requestedAttendance: true,
       requiredFacilities: true,
       requestedLayout: true,
@@ -81,6 +85,8 @@ export async function getPendingBookingQueue(now = new Date()) {
           capacity: true,
           facilities: true,
           supportedLayouts: true,
+          setupMinutes: true,
+          turnaroundMinutes: true,
         },
       },
     },
@@ -91,7 +97,12 @@ export async function getPendingBookingQueue(now = new Date()) {
     pending.map(async (booking) => ({
       ...booking,
       blockers: (
-        await findVenueBlockers(prisma, booking.venue.id, booking, now)
+        await findVenueBlockers(
+          prisma,
+          booking.venue.id,
+          occupiedPeriod(booking, booking.status === "HELD" ? booking : booking.venue),
+          now,
+        )
       ).filter((blocker) => blocker.id !== booking.id),
     })),
   );
