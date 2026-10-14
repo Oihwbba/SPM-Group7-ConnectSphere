@@ -96,7 +96,10 @@ describe("flaggableArrangements — SCRUM-26 AC1", () => {
     ]);
     expect(bookings.mock.calls[0][0].where).toEqual({
       eventId: "evt_1",
-      status: { in: ["PENDING", "HELD", "APPROVED"] },
+      OR: [
+        { status: { in: ["PENDING", "APPROVED"] } },
+        { status: "HELD", holdExpiresAt: { gt: expect.any(Date) } },
+      ],
     });
     expect(reservations.mock.calls[0][0].where).toEqual({
       eventId: "evt_1",
@@ -143,7 +146,10 @@ describe("flagArrangements — SCRUM-26 AC2, AC3, AC6", () => {
     expect(booking.updateMany).toHaveBeenCalledWith({
       where: {
         eventId: "evt_1",
-        status: { in: ["PENDING", "HELD", "APPROVED"] },
+        OR: [
+          { status: { in: ["PENDING", "APPROVED"] } },
+          { status: "HELD", holdExpiresAt: { gt: expect.any(Date) } },
+        ],
         needsReconsideration: false,
       },
       data: flag,
@@ -173,7 +179,10 @@ describe("flagArrangements — SCRUM-26 AC2, AC3, AC6", () => {
 
     expect(booking.updateMany.mock.calls[0][0].where).toEqual({
       id: { in: ["bkg_1"] },
-      status: { in: ["PENDING", "HELD", "APPROVED"] },
+      OR: [
+        { status: { in: ["PENDING", "APPROVED"] } },
+        { status: "HELD", holdExpiresAt: { gt: expect.any(Date) } },
+      ],
       needsReconsideration: false,
     });
     expect(reservation.updateMany.mock.calls[0][0].where).toEqual({
