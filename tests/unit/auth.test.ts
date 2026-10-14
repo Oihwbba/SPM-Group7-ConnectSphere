@@ -22,11 +22,21 @@ describe("can — role gate", () => {
     expect(can({ id: "vs", role: "VENUE_STAFF" }, "event:review")).toBe(false);
   });
 
-  // The Venue Catalogue (venue:read) is Coordinator-only. Pin both sides so a
-  // one-line re-grant of venue:read to VENUE_STAFF can't silently re-open it.
-  it("does not let venue staff read the venue catalogue", () => {
-    expect(can({ id: "vs", role: "VENUE_STAFF" }, "venue:read")).toBe(false);
-  });
+  // SCRUM-34 AC2: any internal user views the venue catalogue; the external
+  // roles don't. Pin both sides.
+  it.each(["VENUE_STAFF", "TECH_SUPPORT", "COORDINATOR_LEAD", "SAFETY_OFFICER"] as const)(
+    "SCRUM-34 [AC2] TC-34-02: %s, an internal user, reads the venue catalogue",
+    (role) => {
+      expect(can({ id: "u", role }, "venue:read")).toBe(true);
+    },
+  );
+
+  it.each(["ORGANISER", "ATTENDEE"] as const)(
+    "SCRUM-34 [AC2] TC-34-02: %s, an external user, doesn't read the venue catalogue",
+    (role) => {
+      expect(can({ id: "u", role }, "venue:read")).toBe(false);
+    },
+  );
 
   it("lets a coordinator read the venue catalogue", () => {
     expect(can(coordinator, "venue:read")).toBe(true);
