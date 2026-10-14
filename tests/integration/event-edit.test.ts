@@ -19,8 +19,9 @@ import {
 import { createPlanningEvents, removeEvents } from "./test-events";
 
 // SCRUM-25 against a real, seeded Postgres: the edit and its audit, the
-// safety check going out of date, the row lock that keeps an edit and a
-// booking made at the same moment apart, and notes the database keeps
+// safety check going out of date, the warning and the flags a date or
+// attendance change raises (AC3, SCRUM-26), the row lock that keeps an edit
+// and a booking made at the same moment apart, and notes the database keeps
 // permanently. Only the session is mocked. These WRITE (throwaway events,
 // removed afterwards), so they only run against a localhost database.
 vi.mock("@/auth", () => ({ auth: vi.fn() }));
@@ -209,7 +210,7 @@ describe.skipIf(!usesLocalDatabase)("editing an event's details — real databas
     ).toEqual({ status: "OUTDATED", outdatedAt: expect.any(Date) });
   });
 
-  it("SCRUM-25 [AC3] TC-25-06: with nothing booked the date moves; with an approved booking the attendance is refused and stays", async () => {
+  it("SCRUM-25 [AC3] TC-25-06: with nothing booked the date moves; with a booking it is listed first, then flagged on confirm with its status and times kept", async () => {
     const free = await planningEvent();
     const moved = new Date("2036-06-09T02:00:00.000Z");
     expect(
@@ -224,7 +225,7 @@ describe.skipIf(!usesLocalDatabase)("editing an event's details — real databas
     ).toEqual(moved);
 
     const booked = await planningEvent();
-    await prisma.booking.create({
+    const booking = await prisma.booking.create({
       data: {
         eventId: booked,
         venueId: "ven_hall",
@@ -234,18 +235,68 @@ describe.skipIf(!usesLocalDatabase)("editing an event's details — real databas
         requestedById: "usr_coordinator",
       },
     });
-    const refused = await updateEventDetails({
+    const edit = {
       ...(await formFor(booked)),
+      startAt: new Date("2036-06-09T02:00:00.000Z").toISOString(),
+      endAt: new Date("2036-06-09T06:00:00.000Z").toISOString(),
       expectedAttendance: 120,
+    };
+    const bookingNow = () =>
+      prisma.booking.findUniqueOrThrow({
+        where: { id: booking.id },
+        select: {
+          status: true,
+          startAt: true,
+          endAt: true,
+          needsReconsideration: true,
+          reconsiderationReason: true,
+        },
+      });
+
+    // SCRUM-26 AC1: first the list, and nothing saved.
+    expect(await updateEventDetails(edit)).toEqual({
+      ok: true,
+      data: {
+        confirm: [
+          { kind: "booking", id: booking.id, label: "Exhibition Hall (Pending)" },
+        ],
+        message: null,
+      },
     });
-    expect(refused.ok).toBe(false);
+    expect(
+      await prisma.event.findUniqueOrThrow({
+        where: { id: booked },
+        select: { startAt: true, expectedAttendance: true },
+      }),
+    ).toEqual({ startAt: START, expectedAttendance: 80 });
+    expect(await bookingNow()).toMatchObject({ needsReconsideration: false });
+
+    // Confirmed: the edit and the flag are saved together.
+    expect(
+      await updateEventDetails({ ...edit, confirmedArrangements: [booking.id] }),
+    ).toEqual({
+      ok: true,
+      data: {
+        changed: ["startAt", "endAt", "expectedAttendance"],
+        safetyCheckOutdated: false,
+        flagged: 1,
+      },
+    });
     expect(
       (await prisma.event.findUniqueOrThrow({ where: { id: booked } }))
         .expectedAttendance,
-    ).toBe(80);
+    ).toBe(120);
+    // SCRUM-26 AC2, AC6: still Pending, still on its original period.
+    expect(await bookingNow()).toEqual({
+      status: "PENDING",
+      startAt: START,
+      endAt: END,
+      needsReconsideration: true,
+      reconsiderationReason: "The event's start, end and expected attendance changed.",
+    });
   });
 
-  it("SCRUM-25 [AC3] TC-25-13: a booking made at the same moment as a date change is waited for, then the change is refused", async () => {
+  it("SCRUM-25 [AC3] TC-25-13: a booking made at the same moment as an attendance change is waited for, then listed for confirmation instead of saved", async () => {
     const eventId = await planningEvent();
     const form = await formFor(eventId);
 
@@ -257,7 +308,7 @@ describe.skipIf(!usesLocalDatabase)("editing an event's details — real databas
     const insertDone = new Promise<void>((resolve) => (inserted = resolve));
     const booking = prisma.$transaction(
       async (tx) => {
-        await tx.booking.create({
+        const created = await tx.booking.create({
           data: {
             eventId,
             venueId: "ven_auditorium",
@@ -269,6 +320,7 @@ describe.skipIf(!usesLocalDatabase)("editing an event's details — real databas
         });
         inserted();
         await committed;
+        return created;
       },
       { timeout: 20_000 },
     );
@@ -280,13 +332,22 @@ describe.skipIf(!usesLocalDatabase)("editing an event's details — real databas
     });
     await new Promise((resolve) => setTimeout(resolve, 300));
     commit();
-    await booking;
+    const { id: bookingId } = await booking;
 
-    expect((await edit).ok).toBe(false);
+    expect(await edit).toMatchObject({
+      ok: true,
+      data: { confirm: [{ kind: "booking", id: bookingId }] },
+    });
     expect(
       (await prisma.event.findUniqueOrThrow({ where: { id: eventId } }))
         .expectedAttendance,
     ).toBe(80);
+    expect(
+      await prisma.booking.findUniqueOrThrow({
+        where: { id: bookingId },
+        select: { needsReconsideration: true },
+      }),
+    ).toEqual({ needsReconsideration: false });
   });
 
   /**
@@ -341,13 +402,16 @@ describe.skipIf(!usesLocalDatabase)("editing an event's details — real databas
       }),
     ).toEqual({ status: "HELD" });
 
-    // AC3: the lapsed hold doesn't stop the attendance changing; the live one does.
+    // AC3: the lapsed hold isn't warned about or flagged; the live one is.
     expect(
       await updateEventDetails({ ...(await formFor(lapsed)), expectedAttendance: 90 }),
-    ).toMatchObject({ ok: true, data: { changed: ["expectedAttendance"] } });
+    ).toMatchObject({ ok: true, data: { changed: ["expectedAttendance"], flagged: 0 } });
     expect(
       await updateEventDetails({ ...(await formFor(live)), expectedAttendance: 90 }),
-    ).toMatchObject({ ok: false });
+    ).toMatchObject({
+      ok: true,
+      data: { confirm: [{ kind: "booking", label: "Grand Auditorium (Held)" }] },
+    });
     expect(
       (await prisma.event.findUniqueOrThrow({ where: { id: live } })).expectedAttendance,
     ).toBe(80);

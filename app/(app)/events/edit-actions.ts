@@ -12,12 +12,17 @@ import {
   type Resource,
 } from "@/lib/auth/can";
 import { err, ok, type ActionResult } from "@/lib/action-result";
-import { liveBookingWhere } from "@/lib/reconsideration";
+import {
+  flagArrangements,
+  flaggableArrangements,
+  liveBookingWhere,
+  type Arrangement,
+} from "@/lib/reconsideration";
 import {
   ARRANGEMENT_FIELDS,
-  ARRANGEMENT_LOCKED_MESSAGE,
-  arrangementsAffectedMessage,
+  arrangementsFlaggedReason,
   CHANGED_WHILE_EDITING_MESSAGE,
+  CONFIRMATION_OUT_OF_DATE_MESSAGE,
   CONFIRMED_NOT_EDITABLE_MESSAGE,
   EDITABLE_STATUSES,
   eventDetailsEditSchema,
@@ -28,6 +33,23 @@ import {
   SAFETY_RELEVANT_FIELDS,
   type EditableField,
 } from "@/lib/schemas/event-edit";
+
+/** The edit was saved, flagging `flagged` arrangements (AC3). */
+export type EventDetailsSaved = {
+  changed: EditableField[];
+  safetyCheckOutdated: boolean;
+  flagged: number;
+};
+
+/**
+ * AC3, SCRUM-26 AC1 — nothing was saved: these arrangements would be flagged,
+ * and the Coordinator must confirm them first. `message` says why, when the
+ * list changed since they last saw it.
+ */
+export type EventDetailsNeedConfirmation = {
+  confirm: Arrangement[];
+  message: string | null;
+};
 
 /**
  * SCRUM-166 AC13 — only a check that is Approved or awaiting review goes out
@@ -40,14 +62,7 @@ const CURRENT_SAFETY_CHECK_STATUSES: SafetyCheckStatus[] = [
 ];
 
 /** Thrown inside the edit transaction for an expected refusal. */
-class EditError extends Error {
-  constructor(
-    message: string,
-    readonly fieldErrors?: Record<string, string[]>,
-  ) {
-    super(message);
-  }
-}
+class EditError extends Error {}
 
 /** A field's value as compared and audited: text, an ISO instant or a number. */
 function stored(value: string | number | Date | null | undefined): string | null {
@@ -62,24 +77,25 @@ function stored(value: string | number | Date | null | undefined): string | null
  * - A routine edit keeps the status and flags nothing (AC2). A routine change
  *   to the layout or accessibility needs makes a requested safety check
  *   Outdated (AC2, SCRUM-166).
- * - Date, time, expected attendance, venue and equipment are SCRUM-26's
- *   (AC3): with nothing booked or reserved there is nothing to warn about or
- *   flag, so they save like any other field (SCRUM-26 AC1); once the event
- *   has a venue booking or an equipment reservation they are refused, as the
- *   warning and flagging they need aren't built yet. A change to the date,
- *   time or expected attendance also makes a requested safety check
- *   Outdated (SCRUM-166 AC13).
+ * - Date, time, expected attendance, venue and equipment (AC3): in Planning,
+ *   when the event has a live venue booking or equipment reservation, nothing
+ *   is saved until the Coordinator confirms the arrangements SCRUM-26 will
+ *   flag; then the edit and the flags are saved together (SCRUM-26 AC1).
+ *   With nothing booked or reserved, or Under Review, they save directly. A
+ *   change to the date, time or expected attendance also makes a requested
+ *   safety check Outdated (SCRUM-166 AC13).
  * - The Organiser, a previous Coordinator and every other user are refused
  *   with nothing changed (AC4, AC7); a Confirmed event can't be edited
  *   directly by anyone (AC5).
  *
  * The event row is locked first, so a venue booking or equipment
  * reservation being made at the same moment (both reference the row) either
- * lands before the check sees it, or waits until the edit is saved.
+ * lands before the warning is checked, and is asked about, or waits until
+ * the edit is saved. An arrangement is never flagged without being shown.
  */
 export async function updateEventDetails(
   input: unknown,
-): Promise<ActionResult<{ changed: EditableField[]; safetyCheckOutdated: boolean }>> {
+): Promise<ActionResult<EventDetailsSaved | EventDetailsNeedConfirmation>> {
   const session = await auth();
   const user = session?.user;
 
@@ -96,7 +112,7 @@ export async function updateEventDetails(
         fieldErrors,
       );
     }
-    const { eventId, ...data } = parsed.data;
+    const { eventId, confirmedArrangements, ...data } = parsed.data;
 
     const event = await prisma.event.findUnique({ where: { id: eventId } });
     const resource: Resource | null = event && {
@@ -136,7 +152,7 @@ export async function updateEventDetails(
       }))
       .filter((change) => change.from !== change.to);
     if (changes.length === 0) {
-      return ok({ changed: [], safetyCheckOutdated: false });
+      return ok({ changed: [], safetyCheckOutdated: false, flagged: 0 });
     }
 
     const arrangementChanges = changes
@@ -153,22 +169,22 @@ export async function updateEventDetails(
     }
 
     const now = new Date();
-    const outcome = await prisma.$transaction(async (tx) => {
+    type Outcome = EventDetailsSaved | EventDetailsNeedConfirmation;
+    const outcome = await prisma.$transaction(async (tx): Promise<Outcome> => {
       await tx.$queryRaw`SELECT "id" FROM "Event" WHERE "id" = ${eventId} FOR UPDATE`;
 
-      if (arrangementChanges.length > 0) {
-        const [bookings, reservations] = await Promise.all([
-          tx.booking.count({ where: { eventId, ...liveBookingWhere(now) } }),
-          tx.reservation.count({ where: { eventId, status: "CONFIRMED" } }),
-        ]);
-        if (bookings + reservations > 0) {
-          throw new EditError(
-            arrangementsAffectedMessage(arrangementChanges),
-            Object.fromEntries(
-              arrangementChanges.map((field) => [field, [ARRANGEMENT_LOCKED_MESSAGE]]),
-            ),
-          );
-        }
+      // AC3: Under Review nothing can be booked or reserved yet, so the
+      // change saves with no warning (SCRUM-50 AC7, SCRUM-27 AC1).
+      const toFlag =
+        arrangementChanges.length > 0 && event.status === "PLANNING"
+          ? await flaggableArrangements(tx, eventId, now)
+          : [];
+      const confirmed = new Set(confirmedArrangements);
+      if (toFlag.some((arrangement) => !confirmed.has(arrangement.id))) {
+        return {
+          confirm: toFlag,
+          message: confirmed.size > 0 ? CONFIRMATION_OUT_OF_DATE_MESSAGE : null,
+        };
       }
 
       // AC2: the status is not part of the edit; the update applies only if
@@ -203,21 +219,44 @@ export async function updateEventDetails(
         })),
       });
 
+      // SCRUM-26 AC2, AC6: flags only; each arrangement keeps its status and
+      // its original period.
+      const flagged =
+        toFlag.length > 0
+          ? await flagArrangements(
+              tx,
+              { eventId },
+              arrangementsFlaggedReason(arrangementChanges),
+              now,
+            )
+          : { bookings: 0, reservations: 0 };
+
       const touchesSafety = changes.some(({ field }) =>
         SAFETY_RELEVANT_FIELDS.includes(field),
       );
-      if (!touchesSafety) return { safetyCheckOutdated: false };
-      const outdated = await tx.safetyCheck.updateMany({
-        where: { eventId, status: { in: CURRENT_SAFETY_CHECK_STATUSES } },
-        data: { status: "OUTDATED", outdatedAt: now },
-      });
-      return { safetyCheckOutdated: outdated.count > 0 };
+      const outdated = touchesSafety
+        ? await tx.safetyCheck.updateMany({
+            where: { eventId, status: { in: CURRENT_SAFETY_CHECK_STATUSES } },
+            data: { status: "OUTDATED", outdatedAt: now },
+          })
+        : { count: 0 };
+      return {
+        changed: changes.map((c) => c.field),
+        safetyCheckOutdated: outdated.count > 0,
+        flagged: flagged.bookings + flagged.reservations,
+      };
     });
 
-    revalidatePath("/events");
-    return ok({ changed: changes.map((c) => c.field), ...outcome });
+    if ("changed" in outcome) {
+      revalidatePath("/events");
+      if (outcome.flagged > 0) {
+        revalidatePath("/bookings");
+        revalidatePath("/equipment-requests");
+      }
+    }
+    return ok(outcome);
   } catch (error) {
-    if (error instanceof EditError) return err(error.message, error.fieldErrors);
+    if (error instanceof EditError) return err(error.message);
     if (error instanceof PermissionError) return err(error.message);
     throw error;
   }

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Loader2, Pencil } from "lucide-react";
+import { AlertTriangle, Loader2, Pencil } from "lucide-react";
 import type { Event } from "@prisma/client";
 
 import { Button } from "@/components/ui/button";
@@ -19,9 +19,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { sgWallTimeToUtcIso, utcToSgWallTime } from "@/lib/datetime";
 import { LAYOUT_OPTIONS } from "@/lib/schemas/event";
+import type { Arrangement } from "@/lib/reconsideration";
 import {
   canEditEventDetails,
   updateEventDetails,
+  type EventDetailsSaved,
 } from "@/app/(app)/events/edit-actions";
 
 type Form = {
@@ -95,12 +97,25 @@ const MORE_FIELDS: TextField[] = [
   },
 ];
 
+function savedMessage({ changed, flagged, safetyCheckOutdated }: EventDetailsSaved) {
+  if (changed.length === 0) return "Nothing changed.";
+  return [
+    "Details saved.",
+    flagged > 0 &&
+      `${flagged} ${flagged === 1 ? "arrangement" : "arrangements"} flagged Needs Reconsideration.`,
+    safetyCheckOutdated &&
+      "The safety check is now out of date and needs requesting again.",
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
 /**
  * SCRUM-25 — the event's assigned Coordinator edits its details while it is
  * Under Review or in Planning. Offered only to that Coordinator; the server
- * decides again on save. Date, time, attendance, venue and equipment can be
- * changed while nothing is booked or reserved (AC3); the server says so when
- * they can't.
+ * decides again on save. In Planning, a change to date, time, attendance,
+ * venue or equipment that would flag the event's arrangements is saved only
+ * once the Coordinator has seen which ones and confirmed (AC3, SCRUM-26 AC1).
  */
 export function EditDetailsDialog({ event }: { event: Event }) {
   const [allowed, setAllowed] = useState(false);
@@ -108,6 +123,11 @@ export function EditDetailsDialog({ event }: { event: Event }) {
   const [form, setForm] = useState<Form>(() => formFrom(event));
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
   const [error, setError] = useState<string | null>(null);
+  // SCRUM-26 AC1: what saving will flag, once the server has said so.
+  const [toFlag, setToFlag] = useState<{
+    arrangements: Arrangement[];
+    message: string | null;
+  } | null>(null);
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
@@ -136,8 +156,11 @@ export function EditDetailsDialog({ event }: { event: Event }) {
 
   if (!allowed) return null;
 
-  const update = (key: keyof Form, value: string) =>
+  // A changed form is a different edit, so any warning no longer applies.
+  const update = (key: keyof Form, value: string) => {
     setForm((prev) => ({ ...prev, [key]: value }));
+    setToFlag(null);
+  };
   const invalid = (key: string) => Boolean(fieldErrors[key]?.length);
   const fieldError = (key: string) =>
     fieldErrors[key]?.[0] && (
@@ -160,6 +183,10 @@ export function EditDetailsDialog({ event }: { event: Event }) {
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
+    save([]);
+  }
+
+  function save(confirmedArrangements: string[]) {
     startTransition(async () => {
       const result = await updateEventDetails({
         eventId: event.id,
@@ -176,22 +203,26 @@ export function EditDetailsDialog({ event }: { event: Event }) {
         expectedAttendance: form.expectedAttendance,
         venueRequirements: form.venueRequirements,
         equipmentRequirements: form.equipmentRequirements,
+        confirmedArrangements,
       });
       if (!result.ok) {
         setFieldErrors(result.fieldErrors ?? {});
         setError(result.error);
+        setToFlag(null);
         return;
       }
       setFieldErrors({});
       setError(null);
+      if ("confirm" in result.data) {
+        setToFlag({
+          arrangements: result.data.confirm,
+          message: result.data.message,
+        });
+        return;
+      }
+      setToFlag(null);
       setOpen(false);
-      toast.success(
-        result.data.changed.length === 0
-          ? "Nothing changed."
-          : result.data.safetyCheckOutdated
-            ? "Details saved. The safety check is now out of date and needs requesting again."
-            : "Details saved.",
-      );
+      toast.success(savedMessage(result.data));
       router.refresh();
     });
   }
@@ -205,6 +236,7 @@ export function EditDetailsDialog({ event }: { event: Event }) {
           setForm(formFrom(event));
           setFieldErrors({});
           setError(null);
+          setToFlag(null);
           setOpen(true);
         }}
       >
@@ -281,8 +313,10 @@ export function EditDetailsDialog({ event }: { event: Event }) {
                 Date, attendance, venue and equipment
               </legend>
               <p className="text-xs text-muted-foreground">
-                These can change only while nothing is booked or reserved for
-                the event. Times are Singapore time (SGT, UTC+8).
+                In Planning, changing these flags the event&apos;s venue
+                bookings and equipment reservations for you to reconsider;
+                you&apos;ll see which before anything is saved. Times are
+                Singapore time (SGT, UTC+8).
               </p>
               <div className="grid gap-3 sm:grid-cols-3">
                 <div className="space-y-1">
@@ -339,15 +373,58 @@ export function EditDetailsDialog({ event }: { event: Event }) {
               })}
             </fieldset>
 
-            <div className="flex justify-end gap-2 border-t pt-4">
-              <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isPending}>
-                {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-                Save details
-              </Button>
-            </div>
+            {toFlag ? (
+              <div
+                role="alert"
+                data-testid="edit-details-flag-warning"
+                className="space-y-3 rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm"
+              >
+                <p className="flex items-center gap-2 font-medium">
+                  <AlertTriangle className="h-4 w-4 text-amber-600" />
+                  Saving will flag these arrangements Needs Reconsideration
+                </p>
+                {toFlag.message && <p>{toFlag.message}</p>}
+                <ul className="list-disc space-y-1 pl-5">
+                  {toFlag.arrangements.map((arrangement) => (
+                    <li key={arrangement.id}>{arrangement.label}</li>
+                  ))}
+                </ul>
+                <p className="text-xs text-muted-foreground">
+                  Each keeps its status and its original times until you decide
+                  Still stands or Cancel arrangement. Nothing is cancelled for
+                  you.
+                </p>
+                <div className="flex justify-end gap-2">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => setToFlag(null)}
+                  >
+                    Back to editing
+                  </Button>
+                  <Button
+                    type="button"
+                    disabled={isPending}
+                    onClick={() =>
+                      save(toFlag.arrangements.map((arrangement) => arrangement.id))
+                    }
+                  >
+                    {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+                    Save and flag
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex justify-end gap-2 border-t pt-4">
+                <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={isPending}>
+                  {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+                  Save details
+                </Button>
+              </div>
+            )}
           </form>
         </DialogContent>
       </Dialog>

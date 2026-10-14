@@ -72,15 +72,22 @@ export const CONFIRMED_NOT_EDITABLE_MESSAGE =
 export const CHANGED_WHILE_EDITING_MESSAGE =
   "This event changed while you were editing it. Reload it and try again.";
 
-/** AC3 — why a change to an arrangement field was refused. */
-export function arrangementsAffectedMessage(fields: EditableField[]): string {
-  const names = fields.map((field) => FIELD_LABEL[field]).join(", ");
-  return `${names} can't be changed while the event has a venue booking or an equipment reservation: it would leave them out of date. Nothing was saved.`;
+/**
+ * AC3, SCRUM-26 AC1 — the reason a confirmed edit flags the event's
+ * arrangements with, naming what changed: "The event's start, end and
+ * expected attendance changed."
+ */
+export function arrangementsFlaggedReason(fields: EditableField[]): string {
+  const names = fields.map((field) => FIELD_LABEL[field].toLowerCase());
+  const list =
+    names.length === 1
+      ? names[0]
+      : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
+  return `The event's ${list} changed.`;
 }
 
-/** AC3 — shown against each field the refusal above names. */
-export const ARRANGEMENT_LOCKED_MESSAGE =
-  "Can't change while the event has a venue booking or an equipment reservation.";
+export const CONFIRMATION_OUT_OF_DATE_MESSAGE =
+  "Something was booked or reserved for this event since you were warned. Check the list again before saving.";
 
 export const INVALID_PERIOD_MESSAGE = "The end must be after the start.";
 export const PAST_START_MESSAGE = "The start can't be in the past.";
@@ -113,6 +120,9 @@ export const eventDetailsEditSchema = z
       .positive("Attendance must be a positive whole number."),
     venueRequirements: uncapped,
     equipmentRequirements: uncapped,
+    // SCRUM-26 AC1: the arrangements the Coordinator was warned about and
+    // agreed to flag. Empty until they have seen the warning.
+    confirmedArrangements: z.array(z.string()).default([]),
   })
   .superRefine((data, ctx) => {
     const start = new Date(data.startAt).getTime();

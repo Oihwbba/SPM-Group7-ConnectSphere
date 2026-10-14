@@ -6,8 +6,9 @@ import { signedIn, usesLocalDatabase } from "./helpers";
 /**
  * SCRUM-25 — editing an event's details and adding operational notes in a
  * real browser. The assigned Coordinator edits routine details (an empty name
- * is refused first), is refused a change of attendance once the event has a
- * venue booking, and adds a note; Venue Staff add one from the booking they
+ * is refused first), changes the attendance of an event with a venue booking,
+ * which lists the booking and flags it once confirmed (SCRUM-26), and adds a
+ * note; Venue Staff add one from the booking they
  * review, and Technical Support from the equipment request they review; the
  * Organiser reads them and can neither edit nor add.
  *
@@ -87,7 +88,7 @@ test.describe("SCRUM-25 — update routine event information during planning", (
     if (usesLocalDatabase) await removeTestEvents();
   });
 
-  test("SCRUM-25 [AC1, AC2, AC3, AC6] TC-25-01, TC-25-04, TC-25-06, TC-25-09: the coordinator edits routine details, is refused an attendance change while the venue is requested, and adds a note", async ({
+  test("SCRUM-25 [AC1, AC2, AC3, AC6] TC-25-01, TC-25-04, TC-25-06, TC-25-09: the coordinator edits routine details, confirms the booking an attendance change flags, and adds a note", async ({
     browser,
   }) => {
     test.skip(!usesLocalDatabase, "creates its own event");
@@ -105,25 +106,8 @@ test.describe("SCRUM-25 — update routine event information during planning", (
       "Please fix the highlighted fields.",
     );
 
-    // AC3: the venue is requested, so the attendance can't change.
-    await edit.getByLabel("Event name").fill(NAME);
-    await edit.getByLabel("Expected attendance").fill("150");
-    await edit.getByRole("button", { name: "Save details" }).click();
-    await expect(edit.getByTestId("edit-details-error")).toHaveText(
-      "Expected attendance can't be changed while the event has a venue booking or an equipment reservation: it would leave them out of date. Nothing was saved.",
-    );
-    await expect(edit.getByLabel("Expected attendance")).toHaveAttribute(
-      "aria-invalid",
-      "true",
-    );
-    await expect(
-      edit.getByText(
-        "Can't change while the event has a venue booking or an equipment reservation.",
-      ),
-    ).toBeVisible();
-
     // AC1, AC2: a routine change saves and the status stays Planning.
-    await edit.getByLabel("Expected attendance").fill("120");
+    await edit.getByLabel("Event name").fill(NAME);
     await edit.getByLabel("Programme").fill("19:00 dinner, 20:30 auction");
     await edit.getByRole("button", { name: "Save details" }).click();
     await expect(coordinator.getByText("Details saved.")).toBeVisible();
@@ -141,6 +125,52 @@ test.describe("SCRUM-25 — update routine event information during planning", (
       (await prisma.booking.findFirstOrThrow({ where: { eventId } }))
         .needsReconsideration,
     ).toBe(false);
+
+    // AC3, SCRUM-26 AC1: the venue is requested, so an attendance change
+    // first lists the booking it will flag, and saves nothing until confirmed.
+    await coordinator.goto("/events");
+    dialog = await openDetails(coordinator, NAME);
+    await dialog.getByRole("button", { name: "Edit details" }).click();
+    await edit.getByLabel("Expected attendance").fill("150");
+    await edit.getByRole("button", { name: "Save details" }).click();
+    const warning = edit.getByTestId("edit-details-flag-warning");
+    await expect(warning).toContainText(
+      "Saving will flag these arrangements Needs Reconsideration",
+    );
+    await expect(warning.getByRole("listitem")).toHaveText(["Exhibition Hall (Pending)"]);
+    expect(
+      (await prisma.event.findUniqueOrThrow({ where: { id: eventId } }))
+        .expectedAttendance,
+    ).toBe(120);
+
+    // Back to editing leaves the form as it was, with nothing saved.
+    await warning.getByRole("button", { name: "Back to editing" }).click();
+    await expect(warning).toHaveCount(0);
+    await expect(edit.getByLabel("Expected attendance")).toHaveValue("150");
+
+    await edit.getByRole("button", { name: "Save details" }).click();
+    await warning.getByRole("button", { name: "Save and flag" }).click();
+    await expect(
+      coordinator.getByText(
+        "Details saved. 1 arrangement flagged Needs Reconsideration.",
+      ),
+    ).toBeVisible();
+    expect(
+      await prisma.booking.findFirstOrThrow({
+        where: { eventId },
+        select: {
+          status: true,
+          needsReconsideration: true,
+          reconsiderationReason: true,
+          event: { select: { expectedAttendance: true } },
+        },
+      }),
+    ).toEqual({
+      status: "PENDING",
+      needsReconsideration: true,
+      reconsiderationReason: "The event's expected attendance changed.",
+      event: { expectedAttendance: 150 },
+    });
 
     // AC6: an operational note, shown with its author.
     await coordinator.goto("/events");

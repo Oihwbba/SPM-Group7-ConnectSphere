@@ -18,8 +18,8 @@ import {
 // Postgres in tests/integration/event-edit.test.ts.
 const db = vi.hoisted(() => ({
   event: { findUnique: vi.fn(), updateMany: vi.fn() },
-  booking: { count: vi.fn() },
-  reservation: { count: vi.fn() },
+  booking: { findMany: vi.fn(), updateMany: vi.fn() },
+  reservation: { findMany: vi.fn(), updateMany: vi.fn() },
   auditLog: { createMany: vi.fn() },
   safetyCheck: { updateMany: vi.fn() },
   eventOperationalNote: { findMany: vi.fn(), create: vi.fn() },
@@ -92,8 +92,10 @@ beforeEach(() => {
   mockAuth.mockResolvedValue(sessionFor("COORDINATOR", "usr_coord"));
   db.event.findUnique.mockResolvedValue(stored());
   db.event.updateMany.mockResolvedValue({ count: 1 });
-  db.booking.count.mockResolvedValue(0);
-  db.reservation.count.mockResolvedValue(0);
+  db.booking.findMany.mockResolvedValue([]);
+  db.reservation.findMany.mockResolvedValue([]);
+  db.booking.updateMany.mockResolvedValue({ count: 0 });
+  db.reservation.updateMany.mockResolvedValue({ count: 0 });
   db.safetyCheck.updateMany.mockResolvedValue({ count: 0 });
 });
 
@@ -107,7 +109,7 @@ describe("updateEventDetails — SCRUM-25", () => {
 
     expect(result).toEqual({
       ok: true,
-      data: { changed: ["name", "programme"], safetyCheckOutdated: false },
+      data: { changed: ["name", "programme"], safetyCheckOutdated: false, flagged: 0 },
     });
     expect(db.event.updateMany).toHaveBeenCalledWith({
       where: { id: "evt_1", status: "PLANNING", coordinatorId: "usr_coord" },
@@ -138,7 +140,8 @@ describe("updateEventDetails — SCRUM-25", () => {
       ],
     });
     // AC2: a routine edit never looks at, or flags, the arrangements.
-    expect(db.booking.count).not.toHaveBeenCalled();
+    expect(db.booking.findMany).not.toHaveBeenCalled();
+    expect(db.booking.updateMany).not.toHaveBeenCalled();
     expect(db.safetyCheck.updateMany).not.toHaveBeenCalled();
     expect(revalidatePath).toHaveBeenCalledWith("/events");
   });
@@ -159,7 +162,7 @@ describe("updateEventDetails — SCRUM-25", () => {
   it("SCRUM-25 [AC1] TC-25-14: saving with nothing changed writes nothing", async () => {
     expect(await updateEventDetails(unchanged)).toEqual({
       ok: true,
-      data: { changed: [], safetyCheckOutdated: false },
+      data: { changed: [], safetyCheckOutdated: false, flagged: 0 },
     });
     expect(db.$transaction).not.toHaveBeenCalled();
   });
@@ -205,7 +208,7 @@ describe("updateEventDetails — SCRUM-25", () => {
 
       expect(result).toEqual({
         ok: true,
-        data: { changed: [field], safetyCheckOutdated: true },
+        data: { changed: [field], safetyCheckOutdated: true, flagged: 0 },
       });
       expect(db.safetyCheck.updateMany).toHaveBeenCalledWith({
         where: {
@@ -247,18 +250,22 @@ describe("updateEventDetails — SCRUM-25", () => {
       },
     });
     expect(db.$queryRaw).toHaveBeenCalledTimes(1);
-    expect(db.booking.count).toHaveBeenCalledWith({
-      where: {
-        eventId: "evt_1",
-        OR: [
-          { status: { in: ["PENDING", "APPROVED"] } },
-          { status: "HELD", holdExpiresAt: { gt: expect.any(Date) } },
-        ],
-      },
-    });
-    expect(db.reservation.count).toHaveBeenCalledWith({
-      where: { eventId: "evt_1", status: "CONFIRMED" },
-    });
+    expect(db.booking.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          eventId: "evt_1",
+          OR: [
+            { status: { in: ["PENDING", "APPROVED"] } },
+            { status: "HELD", holdExpiresAt: { gt: expect.any(Date) } },
+          ],
+        },
+      }),
+    );
+    expect(db.reservation.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { eventId: "evt_1", status: "CONFIRMED" } }),
+    );
+    // SCRUM-26 AC1: nothing booked or reserved, so nothing to flag.
+    expect(db.booking.updateMany).not.toHaveBeenCalled();
     expect(db.event.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({ startAt: later, expectedAttendance: 150 }),
@@ -313,31 +320,132 @@ describe("updateEventDetails — SCRUM-25", () => {
     );
   });
 
-  it.each([
-    ["a venue booking", 1, 0],
-    ["an equipment reservation", 0, 1],
-  ])(
-    "SCRUM-25 [AC3] TC-25-06: with %s, changing the attendance is refused and nothing is written",
-    async (_, bookings, reservations) => {
-      db.booking.count.mockResolvedValue(bookings);
-      db.reservation.count.mockResolvedValue(reservations);
+  describe("with arrangements in Planning — SCRUM-25 AC3, SCRUM-26 AC1", () => {
+    const BOOKING = { id: "bkg_1", status: "PENDING", venue: { name: "Exhibition Hall" } };
+    const RESERVATION = { id: "res_1", quantity: 2, equipment: { type: "Projector" } };
+    const WARNED = [
+      { kind: "booking", id: "bkg_1", label: "Exhibition Hall (Pending)" },
+      { kind: "reservation", id: "res_1", label: "Projector × 2" },
+    ];
 
-      expect(
-        await updateEventDetails({ ...unchanged, expectedAttendance: 200, name: "New" }),
-      ).toEqual({
-        ok: false,
-        error:
-          "Expected attendance can't be changed while the event has a venue booking or an equipment reservation: it would leave them out of date. Nothing was saved.",
-        fieldErrors: {
-          expectedAttendance: [
-            "Can't change while the event has a venue booking or an equipment reservation.",
-          ],
-        },
-      });
+    beforeEach(() => {
+      db.booking.findMany.mockResolvedValue([BOOKING]);
+      db.reservation.findMany.mockResolvedValue([RESERVATION]);
+    });
+
+    function expectNothingWritten() {
       expect(db.event.updateMany).not.toHaveBeenCalled();
       expect(db.auditLog.createMany).not.toHaveBeenCalled();
-    },
-  );
+      expect(db.booking.updateMany).not.toHaveBeenCalled();
+      expect(db.reservation.updateMany).not.toHaveBeenCalled();
+      expect(db.safetyCheck.updateMany).not.toHaveBeenCalled();
+    }
+
+    it("SCRUM-25 [AC3] TC-25-06: changing the attendance first lists what will be flagged and saves nothing", async () => {
+      expect(
+        await updateEventDetails({ ...unchanged, expectedAttendance: 200, name: "New" }),
+      ).toEqual({ ok: true, data: { confirm: WARNED, message: null } });
+      expectNothingWritten();
+      expect(revalidatePath).not.toHaveBeenCalled();
+    });
+
+    it("SCRUM-25 [AC3] TC-25-06: once confirmed, the edit is saved and every arrangement flagged with the reason, its status and times untouched", async () => {
+      db.booking.updateMany.mockResolvedValue({ count: 1 });
+      db.reservation.updateMany.mockResolvedValue({ count: 1 });
+
+      const result = await updateEventDetails({
+        ...unchanged,
+        expectedAttendance: 200,
+        confirmedArrangements: ["bkg_1", "res_1"],
+      });
+
+      expect(result).toEqual({
+        ok: true,
+        data: { changed: ["expectedAttendance"], safetyCheckOutdated: false, flagged: 2 },
+      });
+      expect(db.event.updateMany).toHaveBeenCalledWith(
+        expect.objectContaining({ data: { expectedAttendance: 200 } }),
+      );
+      const flag = {
+        needsReconsideration: true,
+        reconsiderationFlaggedAt: expect.any(Date),
+        reconsiderationReason: "The event's expected attendance changed.",
+        reconsiderationResolvedAt: null,
+        reconsiderationResolvedById: null,
+      };
+      // SCRUM-26 AC2, AC6: only the flag columns; no status, no times.
+      expect(db.booking.updateMany).toHaveBeenCalledWith({
+        where: expect.objectContaining({ eventId: "evt_1", needsReconsideration: false }),
+        data: flag,
+      });
+      expect(db.reservation.updateMany).toHaveBeenCalledWith({
+        where: { eventId: "evt_1", status: "CONFIRMED", needsReconsideration: false },
+        data: flag,
+      });
+      expect(revalidatePath).toHaveBeenCalledWith("/bookings");
+      expect(revalidatePath).toHaveBeenCalledWith("/equipment-requests");
+    });
+
+    it("SCRUM-25 [AC3] TC-25-06: the reason names every date, time, attendance, venue or equipment field changed", async () => {
+      await updateEventDetails({
+        ...unchanged,
+        startAt: "2036-03-03T01:00:00.000Z",
+        endAt: "2036-03-03T07:00:00.000Z",
+        venueRequirements: "Hall with a stage",
+        programme: "Talks",
+        confirmedArrangements: ["bkg_1", "res_1"],
+      });
+
+      expect(db.booking.updateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            reconsiderationReason:
+              "The event's start, end and venue requirements changed.",
+          }),
+        }),
+      );
+    });
+
+    it("SCRUM-25 [AC3] TC-25-13: an arrangement made after the warning is asked about before anything is saved", async () => {
+      expect(
+        await updateEventDetails({
+          ...unchanged,
+          expectedAttendance: 200,
+          confirmedArrangements: ["bkg_1"],
+        }),
+      ).toEqual({
+        ok: true,
+        data: {
+          confirm: WARNED,
+          message:
+            "Something was booked or reserved for this event since you were warned. Check the list again before saving.",
+        },
+      });
+      expectNothingWritten();
+    });
+
+    it("SCRUM-25 [AC2] TC-25-04: a routine change saves straight away and flags nothing", async () => {
+      const result = await updateEventDetails({ ...unchanged, programme: "Talks" });
+
+      expect(result).toMatchObject({ ok: true, data: { flagged: 0 } });
+      expect(db.booking.findMany).not.toHaveBeenCalled();
+      expect(db.booking.updateMany).not.toHaveBeenCalled();
+    });
+
+    it("SCRUM-25 [AC3] TC-25-18: Under Review, the attendance saves directly with no warning and nothing flagged", async () => {
+      db.event.findUnique.mockResolvedValue(stored({ status: "UNDER_REVIEW" }));
+
+      const result = await updateEventDetails({ ...unchanged, expectedAttendance: 200 });
+
+      expect(result).toEqual({
+        ok: true,
+        data: { changed: ["expectedAttendance"], safetyCheckOutdated: false, flagged: 0 },
+      });
+      expect(db.booking.findMany).not.toHaveBeenCalled();
+      expect(db.booking.updateMany).not.toHaveBeenCalled();
+      expect(db.reservation.updateMany).not.toHaveBeenCalled();
+    });
+  });
 
   it("SCRUM-25 [AC3] TC-25-06: a start moved into the past is refused against the start", async () => {
     const result = await updateEventDetails({
