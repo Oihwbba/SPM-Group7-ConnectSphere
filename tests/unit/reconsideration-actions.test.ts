@@ -39,8 +39,8 @@ vi.mock("@/auth", () => ({ auth: vi.fn() }));
 vi.mock("@/lib/db", () => ({
   prisma: {
     event: { findUnique: vi.fn() },
-    booking: { findUnique: vi.fn() },
-    reservation: { findUnique: vi.fn() },
+    booking: { findUnique: vi.fn(), findMany: vi.fn() },
+    reservation: { findUnique: vi.fn(), findMany: vi.fn() },
     $transaction: vi.fn(),
   },
 }));
@@ -55,6 +55,8 @@ const mockAuth = auth as unknown as Mock;
 const mockEvent = prisma.event.findUnique as unknown as Mock;
 const mockBooking = prisma.booking.findUnique as unknown as Mock;
 const mockReservation = prisma.reservation.findUnique as unknown as Mock;
+const mockBookings = prisma.booking.findMany as unknown as Mock;
+const mockReservations = prisma.reservation.findMany as unknown as Mock;
 const mockTransaction = prisma.$transaction as unknown as Mock;
 const mockBookingRefusal = bookingStillStandsRefusal as unknown as Mock;
 const mockReservationRefusal = reservationStillStandsRefusal as unknown as Mock;
@@ -502,33 +504,37 @@ describe("resolveReconsiderationFlag — exactly once (SCRUM-26 AC9)", () => {
 
 describe("getFlaggedArrangements — SCRUM-26 AC7", () => {
   const flaggedAt = new Date("2032-04-01T00:00:00Z");
-  const eventRow = (coordinatorId = "usr_coord") => ({
+  const owner = (coordinatorId = "usr_coord") => ({
     organiserId: "usr_org",
     coordinatorId,
     status: "PLANNING",
-    bookings: [
-      {
-        id: "bkg1",
-        status: "APPROVED",
-        reconsiderationReason: "The event moved to 2 May.",
-        reconsiderationFlaggedAt: flaggedAt,
-        venue: { name: "Exhibition Hall" },
-      },
-    ],
-    reservations: [
-      {
-        id: "res1",
-        quantity: 2,
-        reconsiderationReason: "Technical Support: one projector is broken.",
-        reconsiderationFlaggedAt: flaggedAt,
-        equipment: { type: "Projector" },
-      },
-    ],
+  });
+  const bookingRows = [
+    {
+      id: "bkg1",
+      status: "APPROVED",
+      reconsiderationReason: "The event moved to 2 May.",
+      reconsiderationFlaggedAt: flaggedAt,
+      venue: { name: "Exhibition Hall" },
+    },
+  ];
+  const reservationRows = [
+    {
+      id: "res1",
+      quantity: 2,
+      reconsiderationReason: "Technical Support: one projector is broken.",
+      reconsiderationFlaggedAt: flaggedAt,
+      equipment: { type: "Projector" },
+    },
+  ];
+
+  beforeEach(() => {
+    mockEvent.mockResolvedValue(owner());
+    mockBookings.mockResolvedValue(bookingRows);
+    mockReservations.mockResolvedValue(reservationRows);
   });
 
   it("SCRUM-26 [AC7, AC12] TC-26-14: the assigned Coordinator sees each flagged arrangement with its reason and when it was flagged", async () => {
-    mockEvent.mockResolvedValue(eventRow());
-
     expect(await getFlaggedArrangements("evt1")).toEqual({
       ok: true,
       data: [
@@ -548,38 +554,49 @@ describe("getFlaggedArrangements — SCRUM-26 AC7", () => {
         },
       ],
     });
-    const { select } = mockEvent.mock.calls[0][0];
-    expect(select.bookings.where).toEqual({
+    expect(mockEvent.mock.calls[0][0]).toEqual({
+      where: { id: "evt1" },
+      select: { organiserId: true, coordinatorId: true, status: true },
+    });
+    expect(mockBookings.mock.calls[0][0].where).toEqual({
+      eventId: "evt1",
       needsReconsideration: true,
       OR: [
         { status: { in: ["PENDING", "APPROVED"] } },
         { status: "HELD", holdExpiresAt: { gt: expect.any(Date) } },
       ],
     });
-    expect(select.reservations.where).toEqual({
+    expect(mockReservations.mock.calls[0][0].where).toEqual({
+      eventId: "evt1",
       needsReconsideration: true,
       status: "CONFIRMED",
     });
   });
 
-  it("SCRUM-26 [AC7] TC-26-05: anyone else, a missing event, or no session gets not found", async () => {
-    mockEvent.mockResolvedValue(eventRow("usr_other"));
+  it("SCRUM-26 [AC7] TC-26-05: another Coordinator, or a missing event, gets not found, and no flags are read", async () => {
+    mockEvent.mockResolvedValue(owner("usr_other"));
     expect(await getFlaggedArrangements("evt1")).toEqual({
       ok: false,
       error: "Event not found.",
     });
 
-    mockEvent.mockResolvedValue(eventRow());
-    for (const role of ["ORGANISER", "VENUE_STAFF"] as Role[]) {
-      mockAuth.mockResolvedValue(sessionFor(role, "usr_org"));
-      expect(await getFlaggedArrangements("evt1")).toMatchObject({ ok: false });
-    }
-
-    mockAuth.mockResolvedValue(null);
-    expect(await getFlaggedArrangements("evt1")).toMatchObject({ ok: false });
-
-    mockAuth.mockResolvedValue(sessionFor("COORDINATOR", "usr_coord"));
     mockEvent.mockResolvedValue(null);
     expect(await getFlaggedArrangements("evt_missing")).toMatchObject({ ok: false });
+    expect(mockBookings).not.toHaveBeenCalled();
+    expect(mockReservations).not.toHaveBeenCalled();
+  });
+
+  it("SCRUM-26 [AC7] TC-26-05: any other role, or no session, gets not found before anything is read", async () => {
+    for (const role of ["ORGANISER", "VENUE_STAFF"] as Role[]) {
+      mockAuth.mockResolvedValue(sessionFor(role, "usr_org"));
+      expect(await getFlaggedArrangements("evt1")).toEqual({
+        ok: false,
+        error: "Event not found.",
+      });
+    }
+    mockAuth.mockResolvedValue(null);
+    expect(await getFlaggedArrangements("evt1")).toMatchObject({ ok: false });
+    expect(mockEvent).not.toHaveBeenCalled();
+    expect(mockBookings).not.toHaveBeenCalled();
   });
 });

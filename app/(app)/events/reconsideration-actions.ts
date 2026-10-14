@@ -33,59 +33,58 @@ export type FlaggedArrangement = Arrangement & {
 /**
  * SCRUM-26 AC7 — the event's flagged arrangements, for its assigned
  * Coordinator, who alone may resolve them. Anyone else gets "not found", so
- * the answer never reveals which event ids exist (SCRUM-68).
+ * the answer never reveals which event ids exist (SCRUM-68). The role is
+ * checked before anything is read, and the flags are read only once the
+ * relationship is (CONTRIBUTING.md, ADR 0004).
  */
 export async function getFlaggedArrangements(
   eventId: string,
 ): Promise<ActionResult<FlaggedArrangement[]>> {
   const session = await auth();
   const user = session?.user;
+  if (!user || !can(user, "arrangement:reconsider")) return err("Event not found.");
+
   const event = await prisma.event.findUnique({
     where: { id: eventId },
-    select: {
-      organiserId: true,
-      coordinatorId: true,
-      status: true,
-      bookings: {
-        where: flaggedLiveBookingWhere(new Date()),
-        select: {
-          id: true,
-          status: true,
-          reconsiderationReason: true,
-          reconsiderationFlaggedAt: true,
-          venue: { select: { name: true } },
-        },
-        orderBy: { reconsiderationFlaggedAt: "asc" },
-      },
-      reservations: {
-        where: { needsReconsideration: true, status: "CONFIRMED" },
-        select: {
-          id: true,
-          quantity: true,
-          reconsiderationReason: true,
-          reconsiderationFlaggedAt: true,
-          equipment: { select: { type: true } },
-        },
-        orderBy: { reconsiderationFlaggedAt: "asc" },
-      },
-    },
+    select: { organiserId: true, coordinatorId: true, status: true },
   });
-  if (
-    !user ||
-    !event ||
-    !can(user, "arrangement:reconsider", { kind: "event", ...event })
-  ) {
+  if (!event || !can(user, "arrangement:reconsider", { kind: "event", ...event })) {
     return err("Event not found.");
   }
 
+  const [bookings, reservations] = await Promise.all([
+    prisma.booking.findMany({
+      where: { eventId, ...flaggedLiveBookingWhere(new Date()) },
+      select: {
+        id: true,
+        status: true,
+        reconsiderationReason: true,
+        reconsiderationFlaggedAt: true,
+        venue: { select: { name: true } },
+      },
+      orderBy: { reconsiderationFlaggedAt: "asc" },
+    }),
+    prisma.reservation.findMany({
+      where: { eventId, needsReconsideration: true, status: "CONFIRMED" },
+      select: {
+        id: true,
+        quantity: true,
+        reconsiderationReason: true,
+        reconsiderationFlaggedAt: true,
+        equipment: { select: { type: true } },
+      },
+      orderBy: { reconsiderationFlaggedAt: "asc" },
+    }),
+  ]);
+
   // A raised flag always has its reason and time (CHECK booking_flag_has_reason).
   return ok([
-    ...event.bookings.map((b) => ({
+    ...bookings.map((b) => ({
       ...bookingArrangement(b),
       reason: b.reconsiderationReason!,
       flaggedAt: b.reconsiderationFlaggedAt!,
     })),
-    ...event.reservations.map((r) => ({
+    ...reservations.map((r) => ({
       ...reservationArrangement(r),
       reason: r.reconsiderationReason!,
       flaggedAt: r.reconsiderationFlaggedAt!,
