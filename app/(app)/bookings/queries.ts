@@ -52,8 +52,9 @@ export async function getRequestableVenues() {
  * approving or holding would copy them; a held one's with its own (AC8).
  *
  * SCRUM-163 AC7: Held bookings stay in the queue, with their expiry and note,
- * until they are confirmed, released, rejected or expire. One whose expiry has
- * passed leaves at that moment, even before anything marks it Expired.
+ * until they are confirmed, released, rejected or expire, and say whether
+ * Venue Staff have approved them. One whose expiry has passed leaves at that
+ * moment, even before anything marks it Expired.
  */
 export async function getPendingBookingQueue(now = new Date()) {
   const pending = await prisma.booking.findMany({
@@ -64,6 +65,7 @@ export async function getPendingBookingQueue(now = new Date()) {
       status: true,
       holdExpiresAt: true,
       holdNote: true,
+      holdApprovedAt: true,
       startAt: true,
       endAt: true,
       setupMinutes: true,
