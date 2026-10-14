@@ -14,7 +14,8 @@ in.
 
 ```
 User ──┬─ organises ──────────► Event ──┬──► Booking ────────► Venue
-       ├─ coordinates ─────────►        │                       └──► VenueUnavailability
+       ├─ coordinates ─────────►        │    │                  └──► VenueUnavailability
+       ├─ supervises (Lead) ───►        │    └──► HoldExpiryChange    (Week 9, SCRUM-172)
        ├─ decides / cancels ───►        │
        ├─ registers ───────────►        ├──► Registration
        └─ is notified ─────────►        │
@@ -37,7 +38,8 @@ The tables, columns and roles that carry the six Week 7 customer changes
 (SCRUM-159 to 166, 170 and 171) were added by SCRUM-172 on 2026-10-08, in one migration and
 a follow-up for the No equipment needed decision. They exist in the database
 now; the behaviour that uses them arrives with each story. Each is marked
-below.
+below. The Week 9 clarifications added three more on 2026-10-13 (SCRUM-172
+AC12 to AC14), marked Week 9.
 
 ---
 
@@ -68,7 +70,7 @@ stories land, each may only read its own notifications (`ROLE_ACTIONS` in
 
 | Table | Purpose | Stories |
 |---|---|---|
-| `Event` | The request and everything it becomes. Carries the nine-value `status`, the SCRUM-13 form fields, and the decision/cancellation/completion timestamps and reasons. A rejection also carries its `rejectionOutcome` (Amend and resubmit, or Submit as a new request), which the database requires (ADR 0013). A discarded Draft keeps its row with `discardedAt` set and leaves the Organiser's list; the database keeps it a Draft. The Organiser's venue, accessibility and equipment answers stay free text, shown to the people planning (SCRUM-170). **Registration needed** is `registrationRequired`, a nullable Yes/No. SCRUM-171 (not built yet) will have the request form set it, require it to submit, keep a request's earlier free-text answer (`registrationNotes`) next to it, and keep an event that doesn't need registration closed to registration and unlisted to Attendees. Today the form never sets it, so it is empty on every event, and confirming an event treats empty as needing registration (`registrationRequired !== false`). The Coordinator's **No equipment needed** decision is `noEquipmentNeededAt` with who recorded it (`noEquipmentNeededById`), both set or neither (added by SCRUM-172). SCRUM-170 AC4 will record it and clear it when the equipment requirements change; nothing sets it yet. | SCRUM-13–26, 81, 82, 84, 126, 130, 170, 171 |
+| `Event` | The request and everything it becomes. Carries the nine-value `status`, the SCRUM-13 form fields, and the decision/cancellation/completion timestamps and reasons. A rejection also carries its `rejectionOutcome` (Amend and resubmit, or Submit as a new request), which the database requires (ADR 0013). A discarded Draft keeps its row with `discardedAt` set and leaves the Organiser's list; the database keeps it a Draft. The Organiser's venue, accessibility and equipment answers stay free text, shown to the people planning (SCRUM-170). **Registration needed** is `registrationRequired`, a nullable Yes/No. SCRUM-171 (not built yet) will have the request form set it, require it to submit, keep a request's earlier free-text answer (`registrationNotes`) next to it, and keep an event that doesn't need registration closed to registration and unlisted to Attendees. Today the form never sets it, so it is empty on every event, and confirming an event treats empty as needing registration (`registrationRequired !== false`). The Coordinator's **No equipment needed** decision is `noEquipmentNeededAt` with who recorded it (`noEquipmentNeededById`), both set or neither (added by SCRUM-172). SCRUM-170 AC4 will record it and clear it when the equipment requirements change; nothing sets it yet. (Week 9; added by SCRUM-172 AC12.) The Event Coordinator Lead supervising the event is `supervisingLeadId`, empty on every existing event. SCRUM-165 AC11 will record it; nothing sets it yet. | SCRUM-13–26, 81, 82, 84, 126, 130, 165, 170, 171 |
 | `ClarificationRequest` | A coordinator's question and the organiser's answer, and (`editableFields`) the request-form fields the answer may change (ADR 0014). | SCRUM-18, 108 |
 | `EventChangeRequest` | An organiser's post-submission change request, with its decision. It changes fields, or asks for the event to be cancelled (`requestsCancellation`, with a required reason). At most one is Submitted per event: the partial unique index `event_change_request_one_submitted`. | SCRUM-41, 128, 45, 124 |
 | `ChangeRequestField` | One row per changed field, holding `oldValue`, `newValue` and `isMajor`. | SCRUM-128, 26 |
@@ -81,7 +83,8 @@ stories land, each may only read its own notifications (`ROLE_ACTIONS` in
 |---|---|---|
 | `Venue` | The catalogue: capacity, facilities, accessibility features, supported layouts, opening hours. Retired with `isActive`, never deleted, so historic bookings stay readable. Week 7 (SCRUM-159, SCRUM-34) adds `setupMinutes`, `turnaroundMinutes` (whole minutes, default 0) and `knownRestrictions` (optional text for the Safety Officer). | SCRUM-34, 38, 40, 159 |
 | `VenueUnavailability` | Non-booking unavailability, such as maintenance or a renovation. Kept separate from `Booking` because SCRUM-36 requires the two to be *visually distinguishable*. Week 7 (the SCRUM-172 migration, for SCRUM-161) gave venues their own reason list — Maintenance, Equipment failure, Renovation, Safety concern and Other (`VenueUnavailabilityReason`; equipment keeps Damaged, SCRUM-29/30). SCRUM-161 will let it be recorded over future bookings, which are then flagged rather than refused; the database already allows it (SCRUM-172), but today the record action still refuses it. | SCRUM-36, 37, 161 |
-| `Booking` | A venue booking request and its outcome. Carries its own `startAt`/`endAt` (see decision 4.1) plus the setup and turnaround minutes it was approved with (SCRUM-159 AC8). The database holds an event to one pending, held or approved booking per venue (SCRUM-162 AC2); until SCRUM-162 lands, the request action still allows one venue per event (SCRUM-50 AC8). Week 7 lets an event book several venues, each with its own attendance (SCRUM-162), and adds the Held and Expired statuses with `heldAt`, `holdExpiresAt` and `holdNote` (SCRUM-163). A hold blocks its venue only until its expiry, and can't be confirmed after it (ADR 0010, 2026-10-08 addendum). The row says Held until something writes it, so the application reads a hold past its expiry as Expired from the expiry itself (`lib/booking-holds.ts`). The Needs Reconsideration flag carries its reason, when it was raised, and who resolved it and when (SCRUM-26). | SCRUM-26, 50, 52, 53, 159, 162, 163 |
+| `Booking` | A venue booking request and its outcome. Carries its own `startAt`/`endAt` (see decision 4.1) plus the setup and turnaround minutes it was approved with (SCRUM-159 AC8). The database holds an event to one pending, held or approved booking per venue (SCRUM-162 AC2); until SCRUM-162 lands, the request action still allows one venue per event (SCRUM-50 AC8). Week 7 lets an event book several venues, each with its own attendance (SCRUM-162), and adds the Held and Expired statuses with `heldAt`, `holdExpiresAt` and `holdNote` (SCRUM-163). A hold blocks its venue only until its expiry, and can't be confirmed after it (ADR 0010, 2026-10-08 addendum). The row says Held until something writes it, so the application reads a hold past its expiry as Expired from the expiry itself (`lib/booking-holds.ts`). (Week 9; added by SCRUM-172 AC13.) Venue Staff approve a hold before its Coordinator confirms it (SCRUM-163 AC3, AC7), recorded as `holdApprovedAt` and `holdApprovedById`: both set or neither, only on a booking that was held and no earlier than it was (`booking_hold_approval_complete`), and kept once the hold is confirmed, released, rejected or expires. SCRUM-163 will record it; nothing sets it yet. The Needs Reconsideration flag carries its reason, when it was raised, and who resolved it and when (SCRUM-26). | SCRUM-26, 50, 52, 53, 159, 162, 163 |
+| `HoldExpiryChange` | (Week 9; added by SCRUM-172 AC14.) One row per change to a hold's expiry: the old expiry, the new one, who changed it and when, so a hold's earlier deadlines aren't lost when `Booking.holdExpiresAt` changes. A change to the same expiry is refused (`hold_expiry_change_differs`). Nothing writes it yet; the Week 9 story that lets a hold's expiry be changed will. | SCRUM-163, 172 |
 
 ### Equipment
 
@@ -99,7 +102,7 @@ stories land, each may only read its own notifications (`ROLE_ACTIONS` in
 | Table | Purpose | Stories |
 |---|---|---|
 | `Registration` | One row per attendee per event. Withdrawal is a status change plus `withdrawnAt`, never a delete, so the event's registration history stays complete. Shown as Registered, Withdrawn or Cancelled. | SCRUM-70, 72–77 |
-| `Notification` | One row per notification, with a closed `NotificationType` enum so every notification in the system has a named, traceable trigger. SCRUM-48 adds a `showFromAt` time so a hold reminder can be written ahead and appear on schedule without a job, and `withdrawnAt` so one that hasn't shown yet can be withdrawn without deleting it; `bookingId` names the hold it is about (SCRUM-124 AC5). | SCRUM-45, 48, 85, 124 |
+| `Notification` | One row per notification, with a closed `NotificationType` enum so every notification in the system has a named, traceable trigger. SCRUM-48 adds a `showFromAt` time so a hold reminder can be written ahead and appear on schedule without a job, and `withdrawnAt` so one that hasn't shown yet can be withdrawn without deleting it; `bookingId` names the hold it is about (SCRUM-124 AC5). Week 9 adds `HOLD_APPROVED`, which tells the Coordinator Venue Staff approved a hold for them to confirm (SCRUM-124 AC4). | SCRUM-45, 48, 85, 124 |
 
 ---
 
@@ -119,7 +122,7 @@ stories land, each may only read its own notifications (`ROLE_ACTIONS` in
 | 10 | Venue search and filtering | `Venue` (`facilities`, `accessibilityFeatures`, `supportedLayouts`) |
 | 11 | Venue suitability checking | `Venue.capacity`, the event's attendance and needs |
 | 12 | Venue booking request | `Booking` (`PENDING`); several venues per event (SCRUM-162) |
-| 13 | Venue booking approval | `Booking` (`APPROVED`/`REJECTED`/`HELD` + `decisionReason`/hold expiry, SCRUM-163) |
+| 13 | Venue booking approval | `Booking` (`APPROVED`/`REJECTED`/`HELD` + `decisionReason`/hold expiry, SCRUM-163; Venue Staff's approval of a hold, `holdApprovedAt`, and its expiry history, `HoldExpiryChange`: Week 9) |
 | 14 | Booking conflict detection | the `booking_no_double_booking` EXCLUDE constraint (occupied periods: SCRUM-159) |
 | 15 | Equipment request management | `EquipmentRequest`, `EquipmentRequestLine`, `EquipmentRequestUpdate` |
 | 16 | Equipment availability checking | `Equipment`, `Reservation`, `EquipmentUnavailability` |
@@ -136,6 +139,12 @@ period (SCRUM-159, SCRUM-160); unavailability over existing bookings
 Safety Officer roles and the Safety Officer's check (SCRUM-164, 165, 166).
 The `needsReconsideration` flag that SCRUM-26 raises lives on `Booking` and
 `Reservation`.
+
+**Week 9 clarifications (SCRUM-172 AC12 to AC14):** the Lead supervising an
+event (`Event.supervisingLeadId`, SCRUM-165 AC11); Venue Staff's approval of
+a hold, which its Coordinator then confirms (`Booking.holdApprovedAt` and
+`holdApprovedById`, SCRUM-163 AC3 and AC7); and the history of a hold's
+expiry changes (`HoldExpiryChange`).
 
 ---
 
