@@ -137,7 +137,7 @@ the open pull requests that change the same test files have merged.
 | [SCRUM-81](SCRUM-81.md) | Jun Bin | 13 | Every case automated (unit, integration for the simultaneous confirm, e2e for the journey) |
 | [SCRUM-110](SCRUM-110.md) | Jun Bin | 15 | Every case automated (unit, and e2e for the page) |
 | [SCRUM-108](SCRUM-108.md) | Jun Bin | 14 | Every case automated (unit, e2e for both journeys); AC 6, 8 and 10 point to existing tests |
-| [SCRUM-124](SCRUM-124.md) | Jin Hong | 1 | Grows with the story: AC 7 so far (with SCRUM-41); the hold and withdrawal cases follow SCRUM-163 and SCRUM-142 |
+| [SCRUM-124](SCRUM-124.md) | Jin Hong | 2 | Grows with the story: AC 4's hold notices (with SCRUM-163) and AC 7 (with SCRUM-41) so far; AC 4's approve and reject notices wait for SCRUM-53, and the withdrawal, line-change and reminder cases are still to add |
 | [SCRUM-126](SCRUM-126.md) | Jun Bin | 10 | Every case automated (unit, integration for the constraint, migration and simultaneous clicks, e2e for the journey) |
 | [SCRUM-130](SCRUM-130.md) | Felicia Or | 12 | Every case automated (unit, integration, e2e) |
 | [SCRUM-117](SCRUM-117.md) | Jun Bin | 10 | Every case automated (unit, integration for releasing arrangements in one transaction, e2e for both journeys) |
