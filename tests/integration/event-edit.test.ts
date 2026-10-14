@@ -121,7 +121,7 @@ describe.skipIf(!usesLocalDatabase)("editing an event's details — real databas
     ).toEqual({ status: "APPROVED", needsReconsideration: false });
   });
 
-  it("SCRUM-25 [AC2] TC-25-05: a layout change makes a requested safety check Outdated, and leaves a decided-out one alone", async () => {
+  it("SCRUM-25 [AC2] TC-25-05: a layout change makes a requested safety check Outdated, and leaves a Rejected or Changes requested one alone", async () => {
     const eventId = await planningEvent();
     const awaiting = await prisma.safetyCheck.create({
       data: { eventId, requestedById: "usr_coordinator" },
@@ -136,6 +136,17 @@ describe.skipIf(!usesLocalDatabase)("editing an event's details — real databas
         decidedAt: new Date(),
       },
     });
+    // SCRUM-166 AC13: only Approved or awaiting review goes out of date.
+    const changesRequested = await prisma.safetyCheck.create({
+      data: {
+        eventId,
+        requestedById: "usr_coordinator",
+        status: "CHANGES_REQUESTED",
+        note: "Move the stage away from the exit.",
+        decidedById: "usr_coordinator",
+        decidedAt: new Date(),
+      },
+    });
 
     const result = await updateEventDetails({
       ...(await formFor(eventId)),
@@ -144,7 +155,7 @@ describe.skipIf(!usesLocalDatabase)("editing an event's details — real databas
 
     expect(result).toMatchObject({ ok: true, data: { safetyCheckOutdated: true } });
     const checks = await prisma.safetyCheck.findMany({
-      where: { id: { in: [awaiting.id, rejected.id] } },
+      where: { id: { in: [awaiting.id, rejected.id, changesRequested.id] } },
       select: { id: true, status: true, outdatedAt: true },
     });
     expect(checks.find((c) => c.id === awaiting.id)).toMatchObject({
@@ -153,6 +164,10 @@ describe.skipIf(!usesLocalDatabase)("editing an event's details — real databas
     });
     expect(checks.find((c) => c.id === rejected.id)).toMatchObject({
       status: "REJECTED",
+      outdatedAt: null,
+    });
+    expect(checks.find((c) => c.id === changesRequested.id)).toMatchObject({
+      status: "CHANGES_REQUESTED",
       outdatedAt: null,
     });
   });

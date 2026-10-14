@@ -66,10 +66,10 @@ requirements are the fields SCRUM-26 warns about and flags on (AC3).
 |---|---|
 | Test Case ID | TC-25-05 |
 | Test Scenario | [Positive] AC 2: changing the layout or accessibility needs puts a requested safety check out of date |
-| Pre-conditions | A Planning event with a safety check Awaiting review, and an older Rejected one. |
+| Pre-conditions | A Planning event with a safety check Awaiting review, and older Rejected and Changes requested ones. |
 | Test Steps | 1. Change the preferred layout. Save. <br> 2. Separately, change only the programme. |
 | Test Data | — |
-| Expected Result | Step 1: the awaiting check becomes Outdated with the time it went out of date; the Rejected one is unchanged; the message says the safety check needs requesting again. Step 2 leaves safety checks alone. |
+| Expected Result | Step 1: the awaiting check becomes Outdated with the time it went out of date; the Rejected and Changes requested ones are unchanged (SCRUM-166 AC13: only Approved or awaiting review goes out of date); the message says the safety check needs requesting again. Step 2 leaves safety checks alone. |
 
 **Automated by:** `tests/unit/event-edit.test.ts` › "SCRUM-25 [AC2] TC-25-05: …"; `tests/integration/event-edit.test.ts` › "SCRUM-25 [AC2] TC-25-05: …"
 

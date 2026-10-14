@@ -186,7 +186,7 @@ describe("updateEventDetails — SCRUM-25", () => {
       expect(db.safetyCheck.updateMany).toHaveBeenCalledWith({
         where: {
           eventId: "evt_1",
-          status: { in: ["AWAITING_REVIEW", "APPROVED", "CHANGES_REQUESTED"] },
+          status: { in: ["AWAITING_REVIEW", "APPROVED"] },
         },
         data: { status: "OUTDATED", outdatedAt: expect.any(Date) },
       });

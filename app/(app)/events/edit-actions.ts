@@ -29,11 +29,14 @@ import {
   type EditableField,
 } from "@/lib/schemas/event-edit";
 
-/** SCRUM-166 — a check not yet out of date; a routine change makes it Outdated. */
+/**
+ * SCRUM-166 AC13 — only a check that is Approved or awaiting review goes out
+ * of date. After Changes requested or Rejected the Coordinator already
+ * requests a new one, and that outcome stays as the Safety Officer gave it.
+ */
 const CURRENT_SAFETY_CHECK_STATUSES: SafetyCheckStatus[] = [
   "AWAITING_REVIEW",
   "APPROVED",
-  "CHANGES_REQUESTED",
 ];
 
 /** Thrown inside the edit transaction for an expected refusal. */
