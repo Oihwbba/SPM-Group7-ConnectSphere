@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-11. Jira is the source of truth.
+     Synced from Jira on 2026-10-14. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-172 - Week 7 database migration: schema and booking rules in one migration
@@ -31,9 +31,13 @@ Acceptance criteria:
 9. The booking rules in the database use occupied periods (SCRUM-159, SCRUM-161, SCRUM-162, SCRUM-163): no two Approved or Held bookings at a venue have overlapping occupied periods; no Approved or Held booking overlaps recorded unavailability; unavailability may overlap bookings but not other unavailability; and an event has at most one Pending, Held or Approved booking per venue.
 10. The migration runs cleanly on an empty database and on the current seed data, and existing bookings keep their status.
 11. Tests that relied on the old rules are updated in the same pull request, for example SCRUM-37's refusal of unavailability over an Approved booking, which SCRUM-161 replaces. All other tests still pass.
+12. An event records its supervising Lead (SCRUM-165 AC11); existing events start with none.
+13. A venue booking records when, and by whom, Venue Staff approved its hold (SCRUM-163 AC7); existing bookings start with none.
+14. Each change to a hold's expiry is recorded with the old expiry, the new expiry, who changed it and when.
 
-Related: SCRUM-147 updates docs/data-model.md for this schema. The full list of code changes is in §7 of the Week 7 analysis.  
+Related: SCRUM-147 updates docs/data-model.md for this schema. The full list of code changes is in §7 of the Week 7 analysis.
 
 Change log
 
 * 2026-10-08: Removed references to SCRUM-127
+* 2026-10-13 (W9 clarifications): AC12 to AC14 add the supervising Lead, Venue Staff approval of a hold, and the history of hold expiry changes.

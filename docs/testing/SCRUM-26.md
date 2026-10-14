@@ -154,13 +154,13 @@ same period. Flagged rows are created straight in the database or with
 | Item | Content |
 |---|---|
 | Test Case ID | TC-26-09 |
-| Test Scenario | [Negative] AC 5: a flagged Pending request can't be approved or held, and a flagged hold can't be confirmed |
+| Test Scenario | [Negative] AC 5: a flagged Pending request can't be approved or held, and a flagged hold can't be approved by Venue Staff or confirmed |
 | Pre-conditions | A Pending booking request is flagged, and a Held booking is flagged. Signed in as `venuestaff@test.local`, then as `coordinator@test.local` for the hold. |
-| Test Steps | 1. Approve or hold the request. <br> 2. Approve or hold one that was flagged after the page loaded. <br> 3. Reject it. <br> 4. As the Coordinator, confirm the flagged hold, including one flagged after the page loaded. <br> 5. Release it. |
+| Test Steps | 1. Approve or hold the request. <br> 2. Approve or hold one that was flagged after the page loaded. <br> 3. Reject it. <br> 4. Approve the flagged hold, including one flagged after the page loaded; then reject it. <br> 5. As the Coordinator, confirm a flagged hold, including one flagged after the page loaded. <br> 6. Release it. |
 | Test Data | Reason "The event moved." |
-| Expected Result | 1, 2. "This request needs reconsideration, so it can't be approved or held until its event's coordinator resolves it. It can still be rejected." It stays Pending. 3. It is rejected. 4. "This hold needs reconsideration, so it can't be confirmed until you resolve the flag. You can still release it." It stays Held. 5. It is released. |
+| Expected Result | 1, 2. "This request needs reconsideration, so it can't be approved or held until its event's coordinator resolves it. It can still be rejected." It stays Pending. 3. It is rejected. 4. "This hold needs reconsideration, so it can't be approved until its event's coordinator resolves it. It can still be rejected." It stays Held and unapproved; rejecting it works. 5. "This hold needs reconsideration, so it can't be confirmed until you resolve the flag. You can still release it." It stays Held. 6. It is released. |
 
-**Automated by:** `tests/unit/bookings.test.ts` › "SCRUM-26 [AC5] TC-26-09: …" (3 tests); `tests/unit/booking-holds.test.ts` › "SCRUM-26 [AC5] TC-26-09: …" (5 tests); `tests/integration/reconsideration.test.ts` › "SCRUM-26 [AC5] TC-26-09: …"
+**Automated by:** `tests/unit/bookings.test.ts` › "SCRUM-26 [AC5] TC-26-09: …" (3 tests); `tests/unit/booking-holds.test.ts` › "SCRUM-26 [AC5] TC-26-09: …" (8 tests); `tests/integration/reconsideration.test.ts` › "SCRUM-26 [AC5] TC-26-09: …"
 
 ### TC-26-10
 

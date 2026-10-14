@@ -76,8 +76,11 @@ describe.skipIf(!usesLocalDatabase)(
         },
         select: { id: true },
       });
-    /** A hold written directly, placed two hours ago with this expiry. */
-    const heldUntil = (eventId: string, holdExpiresAt: Date) =>
+    /**
+     * A hold written directly, placed two hours ago with this expiry; with
+     * `approved`, Venue Staff approved it an hour ago (AC7).
+     */
+    const heldUntil = (eventId: string, holdExpiresAt: Date, approved = false) =>
       prisma.booking.create({
         data: {
           eventId,
@@ -89,9 +92,15 @@ describe.skipIf(!usesLocalDatabase)(
           heldAt: fromNow(-2 * HOUR),
           holdExpiresAt,
           holdNote: "Confirm numbers.",
+          ...(approved && {
+            holdApprovedAt: fromNow(-HOUR),
+            holdApprovedById: "usr_venuestaff",
+          }),
         },
         select: { id: true },
       });
+    const approve = (bookingId: string) =>
+      decideBookingRequest({ bookingId, decision: "APPROVED" });
     const hold = (bookingId: string, holdExpiresAt = fromNow(48 * HOUR)) =>
       holdBookingRequest({
         bookingId,
@@ -278,11 +287,21 @@ describe.skipIf(!usesLocalDatabase)(
       ).toEqual(["HELD", "PENDING"]);
     });
 
-    it("SCRUM-163 [AC3, AC5, AC7] TC-163-06, TC-163-10, TC-163-12: confirming approves the hold once, and withdraws only its notices not yet shown", async () => {
+    it("SCRUM-163 [AC3, AC5, AC7] TC-163-06, TC-163-10, TC-163-12, TC-163-16: a hold is confirmed only once Venue Staff approve it, and only once, and confirming withdraws only its notices not yet shown", async () => {
       const { id } = await pending(eventIds[0]);
       await hold(id);
       mockAuth.mockResolvedValue(COORDINATOR);
 
+      expect(await confirmHold({ bookingId: id })).toEqual({
+        ok: false,
+        error:
+          "Venue Staff haven't approved this hold yet. You can confirm it once they have.",
+      });
+      expect(await statusOf(id)).toBe("HELD");
+
+      mockAuth.mockResolvedValue(VENUE_STAFF);
+      expect((await approve(id)).ok).toBe(true);
+      mockAuth.mockResolvedValue(COORDINATOR);
       expect(await confirmHold({ bookingId: id })).toEqual({
         ok: true,
         data: { status: "APPROVED" },
@@ -296,6 +315,7 @@ describe.skipIf(!usesLocalDatabase)(
       const notices = await noticesOf(id);
       expect(notices.map((n) => [n.type, n.withdrawnAt !== null])).toEqual([
         ["BOOKING_HELD", false],
+        ["HOLD_APPROVED", false],
         ["HOLD_EXPIRY_REMINDER", true],
         ["HOLD_EXPIRED", true],
       ]);
@@ -366,8 +386,9 @@ describe.skipIf(!usesLocalDatabase)(
     });
 
     it("SCRUM-163 [AC8] TC-163-14: a confirmation the database receives after the expiry is refused there, so the booking is never Approved", async () => {
-      // A hold that expired a minute ago, by the database's clock.
-      const { id } = await heldUntil(eventIds[0], fromNow(-60 * 1000));
+      // A hold Venue Staff approved, which expired a minute ago by the
+      // database's clock.
+      const { id } = await heldUntil(eventIds[0], fromNow(-60 * 1000), true);
       mockAuth.mockResolvedValue(COORDINATOR);
       // The application's clock runs an hour behind, so its own check still
       // sees a live hold: only the database's expiry guard stands between the
@@ -413,9 +434,6 @@ describe.skipIf(!usesLocalDatabase)(
       await hold(id);
 
       expect(
-        await decideBookingRequest({ bookingId: id, decision: "APPROVED" }),
-      ).toMatchObject({ ok: false });
-      expect(
         await decideBookingRequest({
           bookingId: id,
           decision: "REJECTED",
@@ -432,6 +450,75 @@ describe.skipIf(!usesLocalDatabase)(
         ok: false,
         error: "Venue Staff rejected this hold.",
       });
+    });
+
+    it("SCRUM-163 [AC7] TC-163-17, SCRUM-124 [AC4, AC14] TC-124-04: Venue Staff approve a hold: it stays Held and in the queue as approved, its Coordinator is told once, and approving again changes nothing", async () => {
+      const { id } = await pending(eventIds[0]);
+      const expiry = fromNow(48 * HOUR);
+      await hold(id, expiry);
+      const before = new Date();
+
+      expect(await approve(id)).toEqual({ ok: true, data: { status: "HELD" } });
+      expect(await approve(id)).toEqual({
+        ok: false,
+        error:
+          "Venue Staff have already approved this hold. It is waiting for its Coordinator to confirm it.",
+      });
+
+      const row = await prisma.booking.findUniqueOrThrow({
+        where: { id },
+        select: { status: true, holdApprovedAt: true, holdApprovedById: true },
+      });
+      expect(row).toMatchObject({
+        status: "HELD",
+        holdApprovedById: "usr_venuestaff",
+      });
+      expect(row.holdApprovedAt!.getTime()).toBeGreaterThanOrEqual(
+        before.getTime() - 1000,
+      );
+      expect(
+        (await getPendingBookingQueue()).find((b) => b.id === id),
+      ).toMatchObject({ status: "HELD", holdExpiresAt: expiry });
+      const checklist = await getReadinessChecklist(prisma, eventIds[0]);
+      expect(checklist!.items[0]).toMatchObject({
+        heldBookingId: id,
+        holdApproved: true,
+      });
+
+      const approvals = await prisma.notification.findMany({
+        where: { bookingId: id, type: "HOLD_APPROVED" },
+        select: { userId: true, eventId: true, withdrawnAt: true },
+      });
+      expect(approvals).toEqual([
+        { userId: COORDINATOR_ID, eventId: eventIds[0], withdrawnAt: null },
+      ]);
+      expect(
+        await prisma.auditLog.count({
+          where: { entityId: id, action: "HOLD_APPROVED" },
+        }),
+      ).toBe(1);
+    });
+
+    it("SCRUM-163 [AC7] TC-163-17, SCRUM-124 [AC14] TC-124-04: one hold approved twice at the same moment is approved once, with one notice and one history entry", async () => {
+      const { id } = await pending(eventIds[0]);
+      await hold(id);
+
+      const results = await Promise.all([approve(id), approve(id)]);
+
+      expect(results.filter((r) => r.ok)).toHaveLength(1);
+      expect(results.find((r) => !r.ok)).toMatchObject({
+        error: expect.stringMatching(/^Venue Staff have already approved/),
+      });
+      expect(
+        await prisma.notification.count({
+          where: { bookingId: id, type: "HOLD_APPROVED" },
+        }),
+      ).toBe(1);
+      expect(
+        await prisma.auditLog.count({
+          where: { entityId: id, action: "HOLD_APPROVED" },
+        }),
+      ).toBe(1);
     });
 
     it("SCRUM-163 [AC9] TC-163-13: rejecting the event releases its live hold and withdraws its notices still to come", async () => {

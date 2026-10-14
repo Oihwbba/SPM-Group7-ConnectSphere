@@ -11,8 +11,8 @@
 // the reviewer, and opens a pull request when the answer is anything.
 //
 // It never writes to `main`. A lesson influences every future review, so a
-// human reads it first; CODEOWNERS already requires Jin Hong's approval under
-// `.github/`. See ADR 0008.
+// human reads it first; CODEOWNERS already requires a teammate's approval
+// under `.github/`. See ADR 0008.
 
 import { execFileSync } from "node:child_process";
 import { writeFileSync } from "node:fs";
@@ -276,7 +276,8 @@ async function main() {
   const repo = env.GITHUB_REPOSITORY;
 
   if (!env.ZHIPU_API_KEY) {
-    // Not an error: the reviewer itself is optional until the secret exists.
+    // Not an error: failing to learn never fails a merge. The review itself
+    // fails without the secret, so a missing key is seen there.
     console.log("ZHIPU_API_KEY is not set, so the reviewer cannot be taught. Skipping.");
     return;
   }
@@ -393,7 +394,7 @@ async function main() {
     "",
     "This pull request was opened by a workflow, so GitHub holds its checks until someone with write access clicks **Approve and run**. One click and they run as usual.",
     "",
-    "**Merge it with _Create a merge commit_, not squash.** A squash commit is credited to this pull request's author, `github-actions[bot]`, and Vercel refuses to deploy a commit whose author is not a project member — production would stop. A merge commit is authored by whoever merges.",
+    "Merge it with **Create a merge commit**, like every pull request into `main`.",
   ].join("\n");
 
   if (open.length) {
