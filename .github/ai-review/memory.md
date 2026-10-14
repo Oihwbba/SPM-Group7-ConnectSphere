@@ -152,10 +152,8 @@ that story, and say it was already known.
   organiser and coordinator accounts that e2e specs read.
 - (2026-10-13, #162) SCRUM-41 merged with AC8 partial: rejecting an event
   rejects its Submitted change request with the same reason, but cancelling
-  the event leaves it Submitted (SCRUM-82 AC3). And
-  `components/events/change-request-panel.tsx` sets `submitting` around
-  `await raiseChangeRequest(...)` with no `try/finally`, while the action
-  rethrows unexpected errors, so a network or server failure leaves the form
-  on "Submitting…" with both buttons disabled. `ClarificationPanel` has the
-  same shape. The review found that, then dropped it on a re-run of the same
-  commit.
+  the event leaves it Submitted (SCRUM-82 AC3). Its review found that the
+  change-request form stayed on "Submitting…" when the action threw, then
+  dropped the finding on a re-run; #191 adds the missing `finally`.
+  `ClarificationPanel`'s `submitResponse()` (SCRUM-108) has the same shape
+  and is still unfixed.

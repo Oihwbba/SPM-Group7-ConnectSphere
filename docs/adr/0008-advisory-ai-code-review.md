@@ -691,8 +691,8 @@ earlier versions were read from the comment's edit history.
   merged first, or an admin merge after a human review. That is the trust
   boundary working: a pull request can't change what its own review sees.
 - More of the prompt is spent on context: up to 8,000 more characters for the
-  previous review, about 6,000 per test-case document, and 40,000 for the
-  migrations when the schema changes, against reviews of 95,000 to 230,000
+  previous review, up to 12,000 per test-case document (about 3,000 at the
+  median), and 40,000 for the migrations when the schema changes, against reviews of 95,000 to 230,000
   tokens.
 - The model is still not deterministic. Re-runs of the same commit can still
   word or rank findings differently; what changed is that the previous
