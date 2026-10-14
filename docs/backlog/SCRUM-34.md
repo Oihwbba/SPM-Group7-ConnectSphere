@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-12. Jira is the source of truth.
+     Synced from Jira on 2026-10-15. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-34 - Browse and maintain the venue catalogue
@@ -26,13 +26,14 @@
 4. Given a capacity of zero or less, or a non-whole number, then the venue is not saved and capacity is reported as invalid.
 5. Given a closing time that isn't after the opening time on the same day, then the venue is not saved and that day's hours are reported as invalid.
 6. Venue Staff can edit a venue's details; changes show immediately in search, filtering, suitability (SCRUM-38, SCRUM-40) and the venue list on the request form (SCRUM-13).
-7. Given a booking request's occupied period (SCRUM-159) starts before the venue opens or ends after it closes, then the request is refused and the opening hours are shown (SCRUM-50). Holds and approvals are refused the same way. An occupied period that starts exactly at opening or ends exactly at closing is accepted.
+7. Given a booking request's booking period (its start to its end as pre-filled in SCRUM-50 AC1, without setup or turnaround) starts before the venue opens or ends after it closes that day, when the request is submitted, held or approved, then the action is refused and that day's opening hours are shown (SCRUM-50). A booking period that starts exactly at opening or ends exactly at closing is within opening hours.
 8. Venue Staff can retire a venue. A retired venue no longer appears in search, filtering, the request form or new booking requests; bookings that reference it stay readable.
 9. Other roles are refused when they try to change the catalogue (SCRUM-67).
 10. Given a venue has future Pending, Held or Approved bookings, when Venue Staff change its capacity, facilities, accessibility features, supported layouts or opening hours so that a booking no longer fits, then they are warned and shown the affected bookings before saving; once saved, those bookings are flagged Needs Reconsideration (SCRUM-26) and their Coordinators decide. A longer setup or turnaround time is handled by SCRUM-160.
 11. Given a venue has future Pending, Held or Approved bookings, when Venue Staff retire it, then they are warned and shown those bookings first; once retired, those bookings are flagged (SCRUM-26). Nothing is cancelled automatically.
+12. Given Venue Staff change a venue's opening hours (AC10), then a future booking counts as no longer fitting only if its booking period falls outside the new hours. A booking whose setup or turnaround alone falls outside the new hours isn't flagged and shows the SCRUM-159 AC9 warning instead.
 
-**Customer basis:** "Venue Staff can create/edit/delete venue records." Venue information includes "operating information" (Venue Catalogue). Week 7 change 1: "Each venue must therefore have a configurable setup time and turnaround time." Week 7 change 6: the safety check considers "any known venue restrictions".
+**Customer basis:** "Venue Staff can create/edit/delete venue records." Venue information includes "operating information" (Venue Catalogue). Week 7 change 1: "Each venue must therefore have a configurable setup time and turnaround time." Week 7 change 6: the safety check considers "any known venue restrictions". W9 G4 (Week 7 change 1): "The venue staff will decide whether to approve considering the setup and turnaround time."
 
 **Change log**
 
@@ -41,5 +42,6 @@
 * 2026-10-07 (Week 7 changes 1, 4 and 6): setup time, turnaround time and known restrictions added to the venue (AC1, AC3). AC7 tests opening hours against the occupied period. Held bookings count in AC10 and AC11. A longer setup or turnaround time is handled by SCRUM-160.
 * 2026-10-08: AC6 points to SCRUM-13, because SCRUM-127 was dropped.
 * 2026-10-09 (PO review): AC7 now owns the opening-hours rule, moved from SCRUM-159 AC6 with its boundary rule, and also refuses holds and approvals outside opening hours.
+* 2026-10-13 (W9 clarification, Week 7 change 1): AC7 refuses only a booking period (without setup or turnaround) outside opening hours; requiring the booking period itself to be within opening hours is a team decision. Setup or turnaround outside opening hours is allowed with a warning, owned by SCRUM-159 AC9. AC12 applies the same rule when opening hours change.
 
 Functionality Area: Venue Catalogue
