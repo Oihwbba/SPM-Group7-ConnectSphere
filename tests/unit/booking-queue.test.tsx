@@ -22,6 +22,8 @@ const row: PendingBookingRow = {
   holdNote: null,
   startAt: new Date("2035-03-10T01:00:00.000Z"),
   endAt: new Date("2035-03-10T05:00:00.000Z"),
+  setupMinutes: 0,
+  turnaroundMinutes: 0,
   requestedAttendance: 250,
   requiredFacilities: ["projector", "stage"],
   requestedLayout: "banquet",
@@ -36,6 +38,8 @@ const row: PendingBookingRow = {
     capacity: 200,
     facilities: ["sound-system", "projector"],
     supportedLayouts: ["banquet"],
+    setupMinutes: 0,
+    turnaroundMinutes: 0,
   },
   blockers: [],
 };
