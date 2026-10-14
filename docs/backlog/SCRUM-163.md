@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-14. Jira is the source of truth.
+     Synced from Jira on 2026-10-15. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-163 - Hold a venue tentatively until a deadline
@@ -10,7 +10,7 @@
 | **Epic** | SCRUM-7 - Venue Management |
 | **Priority** | Highest |
 | **Story points** | 5 |
-| **Status in Jira** | In Review |
+| **Status in Jira** | In Progress |
 | **Sprint** | SCRUM Sprint 3 |
 | **Jira** | https://smu-spm-group7.atlassian.net/browse/SCRUM-163 |
 
