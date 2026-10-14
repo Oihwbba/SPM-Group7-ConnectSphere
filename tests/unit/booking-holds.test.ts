@@ -155,7 +155,8 @@ describe("holdBookingRequest — SCRUM-163 AC1, AC2, AC5", () => {
     endAt: new Date(START.getTime() + 2 * HOUR),
     status: "PENDING",
     holdExpiresAt: null,
-    venue: { name: "Hall" },
+    // SCRUM-159: the venue's setup and turnaround, which a hold copies (AC8).
+    venue: { name: "Hall", setupMinutes: 0, turnaroundMinutes: 0 },
     requestedById: "usr_requester",
     event: { id: "evt_1", name: "Symposium", coordinatorId: "usr_cody" },
     ...overrides,
@@ -188,6 +189,9 @@ describe("holdBookingRequest — SCRUM-163 AC1, AC2, AC5", () => {
       heldAt: expect.any(Date),
       holdExpiresAt: expiry,
       holdNote: "Confirm catering numbers.",
+      // SCRUM-159 AC8: a hold keeps the venue's minutes it was held with.
+      setupMinutes: 0,
+      turnaroundMinutes: 0,
     });
     const heldAt = update.data.heldAt as Date;
     expect(heldAt.getTime()).toBeGreaterThanOrEqual(before);
@@ -353,6 +357,8 @@ describe("holdBookingRequest — SCRUM-163 AC1, AC2, AC5", () => {
         endAt: new Date(START.getTime() + HOUR),
         status: "HELD",
         holdExpiresAt: fromNow(HOUR),
+        setupMinutes: 0,
+        turnaroundMinutes: 0,
       },
     ]);
 
@@ -365,6 +371,37 @@ describe("holdBookingRequest — SCRUM-163 AC1, AC2, AC5", () => {
       ),
     });
     expectNothingWritten();
+  });
+
+  it("SCRUM-159 [AC3, AC8] TC-159-17: a hold is refused where only setup or turnaround clash, and otherwise keeps the venue's minutes", async () => {
+    const withTimes = { name: "Hall", setupMinutes: 30, turnaroundMinutes: 45 };
+    db.booking.findUnique.mockResolvedValue(pending({ venue: withTimes }));
+    // Ends 20 minutes before the request starts: inside its 30 minutes' setup.
+    db.booking.findMany.mockResolvedValue([
+      {
+        id: "bkg_before",
+        startAt: new Date(START.getTime() - HOUR),
+        endAt: new Date(START.getTime() - 20 * 60 * 1000),
+        status: "APPROVED",
+        holdExpiresAt: null,
+        setupMinutes: 0,
+        turnaroundMinutes: 0,
+      },
+    ]);
+
+    expect(await holdBookingRequest(valid(fromNow(2 * HOUR)))).toMatchObject({
+      ok: false,
+      error: expect.stringMatching(/^Conflicting: Hall is already booked from /),
+    });
+    expectNothingWritten();
+
+    db.booking.findMany.mockResolvedValue([]);
+    await holdBookingRequest(valid(fromNow(2 * HOUR)));
+    expect(db.booking.updateMany.mock.calls[0][0].data).toMatchObject({
+      status: "HELD",
+      setupMinutes: 30,
+      turnaroundMinutes: 45,
+    });
   });
 
   it("SCRUM-163 [AC1] TC-163-03: a request decided by someone else first keeps that decision, with no notice or history written", async () => {
@@ -631,7 +668,7 @@ describe("decideBookingRequest on a hold — SCRUM-163 AC7", () => {
     endAt: fromNow(74 * HOUR),
     status,
     holdExpiresAt,
-    venue: { name: "Hall" },
+    venue: { name: "Hall", setupMinutes: 0, turnaroundMinutes: 0 },
   });
 
   beforeEach(() => mockAuth.mockResolvedValue(STAFF));

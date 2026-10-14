@@ -63,6 +63,13 @@ request.
 | `discardDraftEvent` | The Organiser discards a Draft (SCRUM-130). | `event:discard` | `discardDraftSchema` (same file) | AuditLog, Event | — |
 | `rejectPlanningEvent` | The assigned Coordinator rejects a Planning event that can't be fulfilled, releasing its arrangements (SCRUM-117). | `event:reject` | `rejectPlanningEventSchema` (same file) | AuditLog, Booking, EquipmentRequest, EquipmentRequestUpdate, Event, EventChangeRequest, Notification, Reservation | Event row |
 
+## `app/(app)/events/change-request-actions.ts`
+
+| Action | What it does | Permission | Input | Writes | Locks |
+|---|---|---|---|---|---|
+| `raiseChangeRequest` | The Organiser, or the assigned Coordinator on their behalf, asks to change a submitted event's fields or to cancel it; the event itself doesn't change until the request is decided (SCRUM-41). The assigned Coordinator is told (SCRUM-124 AC7). | `change-request:raise` | `raiseChangeRequestSchema` (lib/schemas/change-request.ts) | AuditLog, ChangeRequestField, EventChangeRequest, Notification | Event row |
+| `getChangeRequestsForEvent` | An event's change requests, newest first (SCRUM-41 AC6). | `event:read`; the result also says whether the viewer may raise another | an event id | nothing (read only) | — |
+
 ## `app/(app)/events/clarification-actions.ts`
 
 | Action | What it does | Permission | Input | Writes | Locks |
