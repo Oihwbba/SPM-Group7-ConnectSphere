@@ -100,7 +100,7 @@ _15 stories, 48 points_
 | [SCRUM-52](SCRUM-52.md) | Review pending booking requests | 2 | Highest | SCRUM Sprint 2 | Done |
 | [SCRUM-53](SCRUM-53.md) | Approve or reject a booking request | 2 | Highest | SCRUM Sprint 2 | Done |
 | [SCRUM-134](SCRUM-134.md) | Decide competing venue and equipment requests in the order they were made | 3 | Medium | SCRUM Sprint 3 | To Do |
-| [SCRUM-159](SCRUM-159.md) | Include setup and turnaround time when checking venue availability | 5 | Highest | SCRUM Sprint 3 | In Review |
+| [SCRUM-159](SCRUM-159.md) | Include setup and turnaround time when checking venue availability | 5 | Highest | SCRUM Sprint 3 | In Progress |
 | [SCRUM-160](SCRUM-160.md) | Identify bookings that clash once setup and turnaround apply | 3 | Highest | SCRUM Sprint 3 | To Do |
 | [SCRUM-161](SCRUM-161.md) | Mark a venue unavailable over existing bookings and find a replacement venue | 5 | Highest | SCRUM Sprint 3 | To Do |
 | [SCRUM-162](SCRUM-162.md) | Book several venues for one event | 5 | Highest | SCRUM Sprint 3 | To Do |
