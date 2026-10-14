@@ -9,8 +9,9 @@ import {
 import { setTime, signedIn, usesLocalDatabase } from "./helpers";
 
 /**
- * SCRUM-163 — Venue Staff hold a pending request until a deadline, and the
- * event's Coordinator confirms the hold from the readiness checklist. Each
+ * SCRUM-163 — Venue Staff hold a pending request until a deadline and approve
+ * the hold, and the event's Coordinator then confirms it from the readiness
+ * checklist (Week 9 clarification of AC3 and AC7). Each
  * test owns its event, venue and request (written straight to the database)
  * so it can't collide with the seeded bookings, and removes them afterwards.
  * The event is about six weeks away, so the date picker only steps a month
@@ -98,7 +99,7 @@ test.describe("SCRUM-163 — Hold a venue tentatively until a deadline", () => {
     });
   });
 
-  test("SCRUM-163 [AC1, AC3, AC6, AC7] TC-163-01, TC-163-06, TC-163-11, TC-163-12: Venue Staff hold a request, and its Coordinator confirms the hold", async ({
+  test("SCRUM-163 [AC1, AC3, AC6, AC7] TC-163-01, TC-163-06, TC-163-11, TC-163-12, TC-163-16, TC-163-17: Venue Staff hold a request and approve the hold, and only then its Coordinator confirms it", async ({
     browser,
   }) => {
     const request = await pendingRequest("Confirm");
@@ -109,19 +110,57 @@ test.describe("SCRUM-163 — Hold a venue tentatively until a deadline", () => {
 
     await expect(card).toContainText(heldUntil);
     await expect(card).toContainText("Confirm the final headcount.");
-    await expect(card.getByRole("button", { name: "Approve" })).toHaveCount(0);
+    await expect(card.getByRole("button", { name: "Hold" })).toHaveCount(0);
     await expect(card.getByRole("button", { name: "Reject" })).toBeVisible();
 
+    // AC3: before Venue Staff approve the hold, Confirm hold is unavailable.
     const coordinator = await signedIn(browser, "coordinator@test.local");
-    await coordinator
-      .getByRole("row", { name: new RegExp(request.name) })
-      .getByTestId("view-details-button")
-      .click();
-    const venueItem = coordinator
+    const openVenueItem = async () => {
+      await coordinator
+        .getByRole("row", { name: new RegExp(request.name) })
+        .getByTestId("view-details-button")
+        .click();
+      return coordinator.getByRole("dialog").getByTestId("readiness-item-venue");
+    };
+    let venueItem = await openVenueItem();
+    await expect(venueItem).toContainText(
+      `${heldUntil} – confirm to secure`,
+    );
+    await expect(venueItem).toContainText(
+      "Waiting for Venue Staff to approve the hold before it can be confirmed.",
+    );
+    await expect(
+      venueItem.getByRole("button", { name: "Confirm hold" }),
+    ).toBeDisabled();
+
+    // AC7: Venue Staff approve the hold once; it stays Held.
+    await card.getByRole("button", { name: "Approve" }).click();
+    await expect(card).toContainText(
+      "Approved by Venue Staff – awaiting confirmation",
+    );
+    await expect(card).toContainText(heldUntil);
+    await expect(card.getByRole("button", { name: "Approve" })).toHaveCount(0);
+
+    // SCRUM-124 AC4, AC12: the Coordinator is told, with the deadline, and
+    // the notice opens the event.
+    await coordinator.goto("/notifications");
+    const notice = coordinator
+      .getByTestId("notification")
+      .filter({ hasText: "Venue Staff approved your hold" })
+      .filter({ hasText: request.name });
+    await expect(notice).toHaveCount(1);
+    await expect(notice).toContainText(
+      `Venue Staff approved the hold on ${request.name} venue for "${request.name}". Confirm it before ${formatDateTime(parseSingaporeDateTime(EXPIRY)!)} to secure the venue.`,
+    );
+    await notice.click();
+    await coordinator.waitForURL(
+      new RegExp(`/events\\?event=${request.eventId}$`),
+    );
+    venueItem = coordinator
       .getByRole("dialog")
       .getByTestId("readiness-item-venue");
     await expect(venueItem).toContainText(
-      `${heldUntil} – confirm to secure`,
+      "Approved by Venue Staff – awaiting confirmation.",
     );
     await expect(venueItem).toHaveAttribute("data-complete", "false");
 

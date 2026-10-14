@@ -189,6 +189,18 @@ export function ReadinessChecklist({ eventId }: { eventId: string }) {
                         ? `${item.state} – ${item.reason}`
                         : item.state}
                     </p>
+                    {/* SCRUM-163 AC3, AC7: Venue Staff approve the hold
+                        first; only then can the Coordinator confirm it. */}
+                    {item.heldBookingId && (
+                      <p
+                        className="text-muted-foreground"
+                        data-testid="hold-approval"
+                      >
+                        {item.holdApproved
+                          ? "Approved by Venue Staff – awaiting confirmation."
+                          : "Waiting for Venue Staff to approve the hold before it can be confirmed."}
+                      </p>
+                    )}
                     {item.heldBookingId && checklist.canSettleHold && (
                       <div className="flex flex-wrap gap-2">
                         <Button
@@ -196,7 +208,7 @@ export function ReadinessChecklist({ eventId }: { eventId: string }) {
                           onClick={() =>
                             settleHold(item.heldBookingId!, "confirm")
                           }
-                          disabled={settling}
+                          disabled={settling || !item.holdApproved}
                         >
                           {settling && settlingHow === "confirm"
                             ? "Confirming…"

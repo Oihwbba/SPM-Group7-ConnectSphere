@@ -36,9 +36,16 @@ import {
   withdrawPendingHoldNotices,
 } from "@/lib/booking-holds";
 import { formatDateTime } from "@/lib/datetime";
-import { describeBlocker, findVenueBlockers } from "@/lib/venue-availability";
+import {
+  describeBlocker,
+  findVenueBlockers,
+  occupiedPeriod,
+} from "@/lib/venue-availability";
 import { outdateSafetyChecks } from "@/lib/safety-checks";
 import { notifyRole } from "@/lib/staff-notifications";
+
+/** A venue's setup and turnaround time (SCRUM-159). */
+const venueTimesSelect = { setupMinutes: true, turnaroundMinutes: true } as const;
 
 export type BookingSummary = {
   id: string;
@@ -85,6 +92,9 @@ function toSummary(row: {
  * `findVenueBlockers` question `submitBookingRequest` asks, so the form and
  * the submission cannot disagree; submitting still checks again, because a
  * booking can be approved between this answer and the click.
+ *
+ * SCRUM-159 AC3 — "free" means free for the period's occupied period: the
+ * venue's setup time before it and turnaround time after it count too.
  */
 export async function checkVenueAvailability(
   input: unknown,
@@ -113,11 +123,15 @@ export async function checkVenueAvailability(
     // A retired venue reads as not found here exactly as it does on submit.
     const venue = await prisma.venue.findFirst({
       where: { id: venueId, isActive: true },
-      select: { id: true },
+      select: { id: true, ...venueTimesSelect },
     });
     if (!venue) return err("Venue not found.");
 
-    const blockers = await findVenueBlockers(prisma, venueId, period);
+    const blockers = await findVenueBlockers(
+      prisma,
+      venueId,
+      occupiedPeriod(period, venue),
+    );
     return ok({
       available: blockers.length === 0,
       clashes: blockers.map(describeBlocker),
@@ -143,7 +157,9 @@ export async function checkVenueAvailability(
  * - Expected attendance above the venue's capacity is refused.
  * - A venue that is approved-booked or unavailable for any part of the period
  *   refuses the request outright — no row is written (AC3). Touching at an
- *   endpoint is not an overlap (AC4).
+ *   endpoint is not an overlap (AC4). Since SCRUM-159 (AC3, AC4) both sides
+ *   are compared as occupied periods: the request with the venue's current
+ *   setup and turnaround, each approved booking with its own.
  * - Otherwise the request is created PENDING (AC2).
  *
  * The availability check here is for the Coordinator's benefit, not the
@@ -227,7 +243,7 @@ export async function submitBookingRequest(
 
     const venue = await prisma.venue.findFirst({
       where: { id: data.venueId, isActive: true },
-      select: { name: true, capacity: true },
+      select: { name: true, capacity: true, ...venueTimesSelect },
     });
     if (!venue) return err("Venue not found.");
     if (data.requestedAttendance > venue.capacity) {
@@ -239,7 +255,11 @@ export async function submitBookingRequest(
       return err(message, { requestedAttendance: [message] });
     }
 
-    const blockers = await findVenueBlockers(prisma, data.venueId, period);
+    const blockers = await findVenueBlockers(
+      prisma,
+      data.venueId,
+      occupiedPeriod(period, venue),
+    );
     if (blockers.length > 0) {
       return err(
         `${venue.name} is unavailable for that period: ${blockers
@@ -295,7 +315,7 @@ const venueSelect = {
   endAt: true,
   status: true,
   holdExpiresAt: true,
-  venue: { select: { name: true } },
+  venue: { select: { name: true, ...venueTimesSelect } },
 } as const;
 
 /**
@@ -317,8 +337,13 @@ const venueSelect = {
  *   Postgres aborted it as a deadlock, the retry reports it). See
  *   docs/adr/0010-database-prevents-venue-double-booking.md.
  * - SCRUM-163 AC7: a Held booking can be rejected, with a reason, until its
- *   expiry; its notices still to come are withdrawn. Only its Coordinator
- *   confirms it, so it can't be approved here.
+ *   expiry; its notices still to come are withdrawn. Approving it keeps it
+ *   Held, for its Coordinator to confirm (`approveHold`).
+ * - SCRUM-159: the conflict check compares occupied periods (AC3, AC4), and
+ *   the database compares them too when two approvals race (AC5). Approving
+ *   copies the venue's setup and turnaround onto the booking, the same
+ *   minutes the check used, so a later change to the venue's times doesn't
+ *   move it (AC8).
  */
 export async function decideBookingRequest(
   input: unknown,
@@ -341,11 +366,19 @@ export async function decideBookingRequest(
 
     const booking = await prisma.booking.findUnique({
       where: { id: bookingId },
-      select: venueSelect,
+      select: {
+        ...venueSelect,
+        holdApprovedAt: true,
+        requestedById: true,
+        event: { select: { id: true, name: true, coordinatorId: true } },
+      },
     });
     if (!booking) return err("Booking request not found.");
     const now = new Date();
     const current = bookingStatusAt(booking, now);
+    if (current === "HELD" && decision === "APPROVED") {
+      return await approveHold(booking, user!.id, now);
+    }
     const rejectingHold = current === "HELD" && decision === "REJECTED";
     if (current !== "PENDING" && !rejectingHold) {
       return err(alreadyDecided(current, booking.holdExpiresAt));
@@ -360,7 +393,7 @@ export async function decideBookingRequest(
           const blockers = await findVenueBlockers(
             tx,
             booking.venueId,
-            booking,
+            occupiedPeriod(booking, booking.venue),
             now,
           );
           if (blockers.length > 0) {
@@ -379,6 +412,10 @@ export async function decideBookingRequest(
             decidedById: user!.id,
             decidedAt: now,
             decisionReason: decision === "REJECTED" ? reason : null,
+            ...(decision === "APPROVED" && {
+              setupMinutes: booking.venue.setupMinutes,
+              turnaroundMinutes: booking.venue.turnaroundMinutes,
+            }),
           },
         });
         if (updated.count !== 1) {
@@ -434,6 +471,84 @@ export async function decideBookingRequest(
     }
     throw error;
   }
+}
+
+/**
+ * SCRUM-163 AC7 — Venue Staff approve a live hold. It stays Held, shown as
+ * "Approved by Venue Staff – awaiting confirmation", and only now may its
+ * Coordinator confirm it (AC3). Called by `decideBookingRequest` once the
+ * permission is checked; the hold already reserves its venue (AC2), so there
+ * is no conflict to look for.
+ *
+ * - Conditional on the hold still being live and unapproved (ADR 0006), so
+ *   approving it a second time, or after it was settled, changes nothing.
+ * - SCRUM-124 AC4: the event's Coordinator is told, with the deadline. An
+ *   event with no Coordinator yet tells whoever requested the venue, as
+ *   holding does.
+ */
+async function approveHold(
+  booking: {
+    id: string;
+    holdExpiresAt: Date | null;
+    holdApprovedAt: Date | null;
+    requestedById: string;
+    venue: { name: string };
+    event: { id: string; name: string; coordinatorId: string | null };
+  },
+  approverId: string,
+  now: Date,
+): Promise<ActionResult<{ status: BookingStatus }>> {
+  if (booking.holdApprovedAt) return err(HOLD_ALREADY_APPROVED);
+
+  await onceMoreOnDeadlock(() =>
+    prisma.$transaction(async (tx) => {
+      // The notice references the event, so lock it before the booking, in
+      // the order holding a request uses (ADR 0007).
+      await tx.$queryRaw`SELECT "id" FROM "Event" WHERE "id" = ${booking.event.id} FOR KEY SHARE`;
+      const updated = await tx.booking.updateMany({
+        where: { id: booking.id, ...liveHoldWhere(now), holdApprovedAt: null },
+        data: { holdApprovedAt: now, holdApprovedById: approverId },
+      });
+      if (updated.count !== 1) {
+        const latest = await tx.booking.findUniqueOrThrow({
+          where: { id: booking.id },
+          select: { status: true, holdExpiresAt: true },
+        });
+        const status = bookingStatusAt(latest, now);
+        throw new DecisionError(
+          status === "HELD"
+            ? HOLD_ALREADY_APPROVED
+            : alreadyDecided(status, latest.holdExpiresAt),
+        );
+      }
+
+      await tx.auditLog.create({
+        data: {
+          entityType: "Booking",
+          entityId: booking.id,
+          action: "HOLD_APPROVED",
+          actorId: approverId,
+          fieldName: "holdApprovedAt",
+          newValue: now.toISOString(),
+          summary: "Approved by Venue Staff – awaiting confirmation",
+        },
+      });
+      await tx.notification.create({
+        data: {
+          userId: booking.event.coordinatorId ?? booking.requestedById,
+          eventId: booking.event.id,
+          bookingId: booking.id,
+          type: "HOLD_APPROVED",
+          title: "Venue Staff approved your hold",
+          message: `Venue Staff approved the hold on ${booking.venue.name} for "${booking.event.name}". Confirm it before ${formatDateTime(booking.holdExpiresAt!)} to secure the venue.`,
+        },
+      });
+    }),
+  );
+
+  revalidatePath("/bookings");
+  revalidatePath("/events");
+  return ok({ status: "HELD" });
 }
 
 /**
@@ -503,10 +618,12 @@ export async function holdBookingRequest(
         // withdrawing a request and rejecting the event use (event, then
         // booking), so the two can't deadlock (ADR 0007).
         await tx.$queryRaw`SELECT "id" FROM "Event" WHERE "id" = ${booking.event.id} FOR KEY SHARE`;
+        // SCRUM-159 AC3: a hold occupies the venue for its setup and
+        // turnaround too, with the venue's minutes, which it keeps (AC8).
         const blockers = await findVenueBlockers(
           tx,
           booking.venueId,
-          booking,
+          occupiedPeriod(booking, booking.venue),
           now,
         );
         if (blockers.length > 0) {
@@ -519,7 +636,14 @@ export async function holdBookingRequest(
 
         const updated = await tx.booking.updateMany({
           where: { id: booking.id, status: "PENDING" },
-          data: { status: "HELD", heldAt: now, holdExpiresAt, holdNote },
+          data: {
+            status: "HELD",
+            heldAt: now,
+            holdExpiresAt,
+            holdNote,
+            setupMinutes: booking.venue.setupMinutes,
+            turnaroundMinutes: booking.venue.turnaroundMinutes,
+          },
         });
         if (updated.count !== 1) {
           const latest = await tx.booking.findUniqueOrThrow({
@@ -558,14 +682,14 @@ export async function holdBookingRequest(
               ...about,
               type: "BOOKING_HELD",
               title: "A venue is held for your event",
-              message: `${venue} is held for "${event}" until ${until}. To finalise: ${holdNote} Confirm the hold before then to secure the venue.`,
+              message: `${venue} is held for "${event}" until ${until}. To finalise: ${holdNote} Once Venue Staff approve the hold, confirm it before then to secure the venue.`,
               showFromAt: now,
             },
             {
               ...about,
               type: "HOLD_EXPIRY_REMINDER",
               title: "A venue hold expires soon",
-              message: `The hold on ${venue} for "${event}" expires at ${until}. Confirm it before then to secure the venue.`,
+              message: `The hold on ${venue} for "${event}" expires at ${until}. Once Venue Staff approve it, confirm it before then to secure the venue.`,
               showFromAt: holdReminderAt(holdExpiresAt, now),
             },
             {
@@ -602,8 +726,8 @@ export async function holdBookingRequest(
 }
 
 /**
- * SCRUM-163 AC3 — the event's assigned Coordinator confirms a hold, which
- * makes the booking Approved.
+ * SCRUM-163 AC3 — the event's assigned Coordinator confirms a hold that Venue
+ * Staff have approved (AC7), which makes the booking Approved.
  */
 export async function confirmHold(
   input: unknown,
@@ -628,7 +752,8 @@ export async function releaseHold(
  *   that doesn't exist, get the same "not found" (SCRUM-68).
  * - Conditional on the booking still being a live hold (ADR 0006), so doing
  *   either a second time, or after Venue Staff rejected it, changes nothing
- *   (AC7).
+ *   (AC7). Confirming is also conditional on Venue Staff having approved the
+ *   hold (AC3); releasing isn't.
  * - A hold whose expiry has passed can't be confirmed (AC4). If the
  *   confirmation reaches the database at or after the expiry, the database
  *   refuses it (`booking_hold_expired`), so the booking ends up Approved or
@@ -657,6 +782,7 @@ async function settleHold(
       select: {
         status: true,
         holdExpiresAt: true,
+        holdApprovedAt: true,
         event: {
           select: {
             id: true,
@@ -678,6 +804,8 @@ async function settleHold(
     if (current !== "HELD") {
       return err(alreadySettled(current, booking.holdExpiresAt));
     }
+    const confirming = to === "APPROVED";
+    if (confirming && !booking.holdApprovedAt) return err(HOLD_NOT_APPROVED);
 
     const settle = () =>
       prisma.$transaction(async (tx) => {
@@ -686,7 +814,11 @@ async function settleHold(
         if (refused) throw new DecisionError(refused);
 
         const updated = await tx.booking.updateMany({
-          where: { id: bookingId, ...liveHoldWhere(now) },
+          where: {
+            id: bookingId,
+            ...liveHoldWhere(now),
+            ...(confirming && { holdApprovedAt: { not: null } }),
+          },
           data:
             to === "APPROVED"
               ? { status: "APPROVED", decidedById: user!.id, decidedAt: now }
@@ -895,6 +1027,10 @@ function notWithdrawable(
 }
 
 const HOLD_NOT_FOUND = "Venue hold not found.";
+const HOLD_ALREADY_APPROVED =
+  "Venue Staff have already approved this hold. It is waiting for its Coordinator to confirm it.";
+const HOLD_NOT_APPROVED =
+  "Venue Staff haven't approved this hold yet. You can confirm it once they have.";
 
 function holdExpired(holdExpiresAt: Date | null): string {
   return `This hold expired at ${formatDateTime(holdExpiresAt!)}, so the venue is free for other requests. Make a new request if you still need it.`;
@@ -905,7 +1041,7 @@ function alreadyDecided(
   holdExpiresAt: Date | null,
 ): string {
   if (status === "HELD") {
-    return "This request is held for its Coordinator to confirm. You can still reject it until the hold expires.";
+    return "This request is already held for its Coordinator. You can approve or reject the hold until it expires.";
   }
   if (status === "EXPIRED") return holdExpired(holdExpiresAt);
   return `This request has already been ${status.toLowerCase()}; the original decision stands.`;
@@ -924,6 +1060,9 @@ function alreadySettled(
       return "This hold has already been released.";
     case "REJECTED":
       return "Venue Staff rejected this hold.";
+    // Still held after a confirmation found nothing to change: not approved.
+    case "HELD":
+      return HOLD_NOT_APPROVED;
     default:
       return "This request isn't held.";
   }

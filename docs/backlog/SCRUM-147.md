@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-11. Jira is the source of truth.
+     Synced from Jira on 2026-10-15. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-147 - Update data-model documentation
@@ -10,7 +10,7 @@
 | **Epic** | - |
 | **Priority** | High |
 | **Story points** | 2 |
-| **Status in Jira** | In Review |
+| **Status in Jira** | Done |
 | **Sprint** | SCRUM Sprint 3 |
 | **Jira** | https://smu-spm-group7.atlassian.net/browse/SCRUM-147 |
 
@@ -27,6 +27,7 @@ Acceptance criteria:
 5. Ensure the document does not describe removed Release 1 features as implemented.
 6. Document the Week 7 model: venue setup and turnaround times and occupied periods (SCRUM-159, SCRUM-160), venue unavailability over bookings (SCRUM-161), several bookings per event with attendance per booking (SCRUM-162), Held and Expired bookings (SCRUM-163), the Event Coordinator Lead and Safety Officer roles (SCRUM-164, SCRUM-165), and safety checks (SCRUM-166).
 7. Document Registration needed (SCRUM-171).
+8. docs/data-model.md documents the W9 additions: the event's supervising Lead, Venue Staff approval of a hold, and the history of hold expiry changes (SCRUM-172 AC12 to AC14).
 
 Related: SCRUM-70, 73, 74, 79, 121, 127, 131, 159 to 166, 171.
 
@@ -35,3 +36,4 @@ Change log
 * 2026-10-07: AC7 adds the Week 7 model.
 * 2026-10-07 (backlog refinement): former AC1 (registration capacity) removed, because SCRUM-157 corrected it in Sprint 2; the rest are renumbered. Safety checks point to SCRUM-166, which SCRUM-167 was merged into. AC7 adds the request-form choices from SCRUM-127 and SCRUM-171. Added to Sprint 3 and estimated, because the Week 7 guide expects the data model to be updated with the change.
 * 2026-10-08: Removed references to SCRUM-127
+* 2026-10-13 (W9 clarifications): AC8 documents the supervising Lead, Venue Staff approval of a hold, and the history of hold expiry changes (SCRUM-172 AC12 to AC14).

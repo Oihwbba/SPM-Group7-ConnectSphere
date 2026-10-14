@@ -21,6 +21,8 @@ export interface ChecklistItem {
   reason: string | null;
   /** SCRUM-163 AC3: the live hold the Coordinator can confirm or release. */
   heldBookingId?: string;
+  /** SCRUM-163 AC3, AC7: whether Venue Staff have approved that hold, which the Coordinator may confirm only then. */
+  holdApproved?: boolean;
   /** SCRUM-142 AC4: the pending venue request the Coordinator can withdraw. */
   pendingBookingId?: string;
   /** SCRUM-170 AC4: no live equipment request, so No equipment needed can be recorded. */
@@ -57,6 +59,7 @@ export async function getReadinessChecklist(
           id: true,
           status: true,
           holdExpiresAt: true,
+          holdApprovedAt: true,
           decisionReason: true,
           createdAt: true,
           startAt: true,
@@ -122,6 +125,7 @@ type BookingRow = {
   id: string;
   status: BookingStatus;
   holdExpiresAt: Date | null;
+  holdApprovedAt: Date | null;
   decisionReason: string | null;
   createdAt: Date;
   startAt: Date;
@@ -153,6 +157,7 @@ function venueItem(
       complete: false,
       state: `Held until ${formatDateTime(held.holdExpiresAt!)} – confirm to secure`,
       heldBookingId: held.id,
+      holdApproved: held.holdApprovedAt !== null,
     };
   }
   const pending = newestFirst.find((b) => b.status === "PENDING");

@@ -99,8 +99,6 @@ row lock (ADR 0006 for the Coordinator's decision).
   enforce these; each story adds the screens:
   - a booking also blocks the venue for its setup and turnaround time
     (SCRUM-159, 160);
-  - a hold blocks the venue like an approved booking until it expires
-    (SCRUM-163);
   - unavailability can be recorded over existing bookings, which are then
     flagged for a replacement venue (SCRUM-161).
 - **Equipment** is requested as lines (type, quantity, technical
@@ -172,7 +170,7 @@ these unless the backlog brings them back:
 | Word | Means |
 |---|---|
 | **Event request** | An `Event` row before approval. There is no separate request table. |
-| **Booking** | A **venue** for an event's period. Pending, then Approved or Rejected by Venue Staff; Cancelled when its event is rejected from Planning (SCRUM-117). The schema also has Held and Expired, for holds (SCRUM-163). |
+| **Booking** | A **venue** for an event's period. Pending, then Approved or Rejected by Venue Staff; Cancelled when its event is rejected from Planning (SCRUM-117). Venue Staff can instead hold it until a deadline: it blocks the venue like an approved booking until then, and Expired after. Venue Staff approve the hold, and only then does its Coordinator confirm it (Approved); the Coordinator can release it (Cancelled) before it expires (SCRUM-163). |
 | **Equipment request** | What the Coordinator asks for: lines of equipment type and quantity. Approving it holds no stock. |
 | **Reservation** | **Equipment** actually held for an event's period. Stored as `CONFIRMED`; SCRUM-131 will show it as **Reserved** everywhere, so it isn't confused with an event's Confirmed status. The readiness checklist already says Reserved. |
 | **Planning** | The status after approval, while the venue and equipment are arranged. |
