@@ -39,7 +39,7 @@ export async function choose(
 /** Set one end of the period. Times are Singapore wall time, "YYYY-MM-DDTHH:mm". */
 export async function setTime(
   page: Page,
-  which: "Start" | "End",
+  which: "Start" | "End" | "Expiry",
   wallTime: string,
 ) {
   const [date, time] = wallTime.split("T");
@@ -50,7 +50,7 @@ export async function setTime(
 /** Open the in-app calendar, page to the target month, and pick the day. */
 export async function pickDate(
   page: Page,
-  which: "Start" | "End",
+  which: "Start" | "End" | "Expiry",
   day: string,
 ) {
   await page.getByLabel(`${which} date`).click();

@@ -413,7 +413,7 @@ describe("getReadinessChecklist — SCRUM-110", () => {
       planningEvent({
         equipmentRequests: [
           request("REJECTED", [projectors(2)], 1),
-          request("PENDING_REVIEW", [line("eqp_laptop", "Laptop", 1)], 2),
+          request("APPROVED", [line("eqp_laptop", "Laptop", 1)], 2),
         ],
         reservations: [reserved("eqp_laptop", 1)],
       }),
@@ -423,7 +423,7 @@ describe("getReadinessChecklist — SCRUM-110", () => {
         planningEvent({
           equipmentRequests: [
             request("APPROVED", [projectors(2)], 1),
-            request("IN_REVIEW", [projectors(3)], 2),
+            request("APPROVED", [projectors(3)], 2),
           ],
           reservations: [reserved("eqp_projector", n)],
         }),
@@ -435,6 +435,49 @@ describe("getReadinessChecklist — SCRUM-110", () => {
       "Not fully reserved: Projector",
     );
     expect(equipment(await combined(5))?.complete).toBe(true);
+  });
+
+  it.each(["PENDING_REVIEW", "IN_REVIEW"])(
+    "SCRUM-142 [AC10] TC-142-18: a %s request keeps Equipment incomplete even with every line reserved, so the event isn't ready",
+    async (status) => {
+      const result = await checklistOf(
+        planningEvent({
+          equipmentRequests: [request(status, [projectors(2)])],
+          reservations: [reserved("eqp_projector", 2)],
+        }),
+      );
+
+      expect(equipment(result)).toEqual({
+        name: "Equipment",
+        complete: false,
+        state: "Awaiting Technical Support review",
+        reason: null,
+      });
+      expect(result?.ready).toBe(false);
+    },
+  );
+
+  it("SCRUM-142 [AC10] TC-142-18: a request awaiting review holds back an approved one, and an item not reserved in full is named first", async () => {
+    const withMics = (n: number) =>
+      checklistOf(
+        planningEvent({
+          equipmentRequests: [
+            request("APPROVED", [projectors(2)], 1),
+            request("PENDING_REVIEW", [mics(1)], 2),
+          ],
+          reservations: [
+            reserved("eqp_projector", 2),
+            ...(n ? [reserved("eqp_mic", n)] : []),
+          ],
+        }),
+      );
+
+    expect(equipment(await withMics(1))?.state).toBe(
+      "Awaiting Technical Support review",
+    );
+    expect(equipment(await withMics(0))?.state).toBe(
+      "Not fully reserved: Wireless Microphone",
+    );
   });
 
   it.each([

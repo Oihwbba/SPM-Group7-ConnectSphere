@@ -20,7 +20,7 @@ const tx = vi.hoisted(() => ({
   equipmentRequestUpdate: { createMany: vi.fn() },
   eventChangeRequest: { updateMany: vi.fn() },
   auditLog: { count: vi.fn(), createMany: vi.fn() },
-  notification: { create: vi.fn() },
+  notification: { create: vi.fn(), updateMany: vi.fn() },
 }));
 
 vi.mock("@/auth", () => ({ auth: vi.fn() }));
@@ -107,9 +107,26 @@ describe("rejectPlanningEvent — SCRUM-117", () => {
   it("SCRUM-117 [AC3] TC-117-03: in the same operation, venue bookings and requests, reservations and open equipment requests are cancelled, and submitted change requests rejected with the reason", async () => {
     await rejectPlanningEvent(valid);
 
+    // SCRUM-163 AC9: an unexpired hold is released too, and its notices
+    // still to come are withdrawn; a lapsed one stays Expired.
     expect(tx.booking.updateMany).toHaveBeenCalledWith({
-      where: { eventId: "evt1", status: { in: ["PENDING", "APPROVED"] } },
+      where: {
+        eventId: "evt1",
+        OR: [
+          { status: { in: ["PENDING", "APPROVED"] } },
+          { status: "HELD", holdExpiresAt: { gt: expect.any(Date) } },
+        ],
+      },
       data: { status: "CANCELLED" },
+    });
+    expect(tx.notification.updateMany).toHaveBeenCalledWith({
+      where: {
+        eventId: "evt1",
+        bookingId: { not: null },
+        withdrawnAt: null,
+        showFromAt: { gt: expect.any(Date) },
+      },
+      data: { withdrawnAt: expect.any(Date) },
     });
     // Cancelling a reservation is what returns its stock: availability counts
     // only CONFIRMED reservations (SCRUM-29).
@@ -156,6 +173,17 @@ describe("rejectPlanningEvent — SCRUM-117", () => {
     );
   });
 
+  it("SCRUM-45 [AC3] TC-45-03: a reason typed without a full stop still reads as a sentence before the next step", async () => {
+    await rejectPlanningEvent({
+      ...valid,
+      decisionReason: "No venue large enough",
+    });
+
+    expect(tx.notification.create.mock.calls[0][0].data.message).toBe(
+      '"Concert" couldn\'t be arranged and was rejected: No venue large enough. What you can do next: Submit as a new request.',
+    );
+  });
+
   it("SCRUM-117 [AC6] TC-117-06: the Organiser is notified and the rejection is recorded with who and when", async () => {
     await rejectPlanningEvent(valid);
 
@@ -164,7 +192,8 @@ describe("rejectPlanningEvent — SCRUM-117", () => {
         userId: "usr_org",
         type: "EVENT_STATUS_CHANGED",
         title: "Your event was rejected",
-        message: `"Concert" couldn't be arranged and was rejected: ${REASON}`,
+        // SCRUM-45 AC3: with what the Organiser can do next.
+        message: `"Concert" couldn't be arranged and was rejected: ${REASON} What you can do next: Submit as a new request.`,
         eventId: "evt1",
       },
     });

@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "@/components/events/status-badge";
 import { ClarificationPanel } from "@/components/events/clarification-panel";
+import { ChangeRequestPanel } from "@/components/events/change-request-panel";
 import { ReadinessChecklist } from "@/components/events/readiness-checklist";
 import { ReconsiderationPanel } from "@/components/events/reconsideration-panel";
 import { ConfirmedArrangements } from "@/components/events/confirmed-arrangements";
@@ -119,6 +120,11 @@ export function EventDetailsModal({
 
           {/* SCRUM-18: shows nothing if there's no clarification thread */}
           <ClarificationPanel event={event} isCoordinator={isCoordinator} />
+
+          {/* SCRUM-41: shows nothing for an event with none that can't take one */}
+          {event.status !== "DRAFT" && (
+            <ChangeRequestPanel key={event.id} event={event} />
+          )}
 
           {/* SCRUM-110: what is still outstanding before the event can be confirmed */}
           {/* SCRUM-26: flagged arrangements, for the assigned Coordinator to resolve */}

@@ -538,3 +538,51 @@ only code owner was Jin Hong, so every such change waited on one person.
 CODEOWNERS now lists all five team members. A change still needs a second
 person, since an author can't approve their own pull request, but any
 teammate can be that person.
+
+## Addendum (2026-10-11) — Corrections from the docs audit (SCRUM-173)
+
+- **Vercel previews (2026-09-17 addendum).** `vercel.json` no longer sets
+  `{"**": false, "main": true}`. Since ADR 0009 it sets `deploymentEnabled`
+  to `false`, and production deploys only from
+  `.github/workflows/deploy.yml`.
+- **Merge commits for memory pull requests (SCRUM-112 addendum).** The reason
+  given, that Vercel refuses to deploy a commit whose author isn't a project
+  member, went away with ADR 0009, which deploys with the owner's token. The
+  rule is still in `.github/scripts/ai-memory.mjs` and does no harm; whether
+  to drop it is a separate decision.
+
+## Addendum (2026-10-11, SCRUM-178) — related files in part, not dropped
+
+The related-file budget (300,000 characters, after the 2026-09-21 addendum
+raised both budgets) was still dropping files: #153 to #156 lost
+`prisma/schema.prisma` and `prisma/seed.ts`, and #154 lost 30 files. Unchanged
+tests that merely import a changed file were sent first and took the budget,
+and a related file that didn't fit was dropped whole.
+
+- **Priority:** files the changed files import; the seed when an e2e spec
+  changed; source files that import a changed file; source files naming the
+  PR's stories; then tests.
+- **Excerpts:** a related file that doesn't fit whole is sent in part, each
+  line keeping its own number: a test as its imports and `describe`/`it`/`test`
+  lines, a source file as its imports, exports and the lines around each
+  story mention. A file with nothing to excerpt gets its head, capped at
+  12,000 characters. Each related file reserves room for its excerpt, so a file
+  sent whole can't leave the ones behind it with nothing; a reserve that can't
+  be met anyway yields to the earlier file.
+- **The prompt says so:** "excerpt" and "shortened to fit" mark files shown in
+  part, "…" marks lines left out, and GLM is told not to report something as
+  missing from them.
+
+The budgets are unchanged. Replayed on #153 to #156's files, nothing is left
+out (was 2, 30, 3 and 23). The planted-bug benchmark from #37 was not re-run:
+it needs a GLM call with the repository's API key.
+
+## Addendum (2026-10-13, SCRUM-180) — the memory limit is 12,000 characters
+
+The memory file reached 7,917 of the 8,000 characters set on 2026-09-16, so
+a new lesson fitted only if an older one was cut. `MAX_MEMORY_CHARS` is now
+12,000. The reviewer's cap, the memory bot's guard and CI's length check
+(SCRUM-152) all read that one constant, so they move together. The extra
+4,000 characters are about 1,000 tokens, against reviews that already use
+95,000 to 168,000; the other budgets are unchanged. The decisions above that
+say 8,000 describe the limit as it was then.

@@ -11,13 +11,19 @@ import type { PendingBookingRow } from "@/app/(app)/bookings/queries";
 // action and the router are never reached.
 vi.mock("@/app/(app)/bookings/actions", () => ({
   decideBookingRequest: vi.fn(),
+  holdBookingRequest: vi.fn(),
 }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 
 const row: PendingBookingRow = {
   id: "bkg_1",
+  status: "PENDING",
+  holdExpiresAt: null,
+  holdNote: null,
   startAt: new Date("2035-03-10T01:00:00.000Z"),
   endAt: new Date("2035-03-10T05:00:00.000Z"),
+  setupMinutes: 0,
+  turnaroundMinutes: 0,
   requestedAttendance: 250,
   requiredFacilities: ["projector", "stage"],
   requestedLayout: "banquet",
@@ -39,7 +45,7 @@ const row: PendingBookingRow = {
 };
 
 describe("BookingQueue", () => {
-  it("SCRUM-52 [AC1]: an empty queue says there is nothing pending rather than rendering nothing", () => {
+  it("SCRUM-52 [AC4] TC-52-06: an empty queue says there is nothing pending rather than rendering nothing", () => {
     const html = renderToStaticMarkup(<BookingQueue queue={[]} canDecide />);
 
     expect(html).toContain("No pending requests");

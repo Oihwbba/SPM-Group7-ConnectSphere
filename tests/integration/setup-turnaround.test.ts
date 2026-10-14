@@ -292,7 +292,7 @@ describe.skipIf(!usesLocalDatabase)(
       const refused = await submitBookingRequest(request("halfPastTwelve"));
       expect(refused).toMatchObject({
         ok: false,
-        error: expect.stringMatching(/on hold from .*including setup and turnaround/),
+        error: expect.stringMatching(/: held from .*including setup and turnaround/),
       });
       expect(await prisma.booking.count({ where: { venueId } })).toBe(before);
 

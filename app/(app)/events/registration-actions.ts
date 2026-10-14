@@ -13,7 +13,10 @@ import { ok, err, type ActionResult } from "@/lib/action-result";
 import {
   computeRegistrationState,
   canRegisterNow,
+  remainingCapacity,
+  totalCapacity,
 } from "@/lib/registration-state";
+import { notifyAboutEvent } from "@/lib/event-notifications";
 
 type RegisterOutcome = { error: string } | { id: string };
 
@@ -64,6 +67,9 @@ export async function registerForEvent(
       const event = await tx.event.findUniqueOrThrow({
         where: { id: eventId },
         select: {
+          name: true,
+          organiserId: true,
+          coordinatorId: true,
           expectedAttendance: true,
           registrationEnabled: true,
           registrationOpensAt: true,
@@ -109,6 +115,19 @@ export async function registerForEvent(
         },
         select: { id: true },
       });
+
+      // SCRUM-45 AC11: this registration took the last place.
+      if (remainingCapacity(event, activeCount + 1) === 0) {
+        await notifyAboutEvent(
+          tx,
+          [event.organiserId, event.coordinatorId],
+          { id: eventId, name: event.name },
+          {
+            title: "Registration is full",
+            message: `"${event.name}" has reached its capacity of ${totalCapacity(event)}.`,
+          },
+        );
+      }
 
       return { id: registration.id };
     });
@@ -175,16 +194,47 @@ export async function withdrawRegistration(
       // withdrawal and a concurrent registration for the place it just freed
       // can never interleave unsafely.
       await tx.$queryRaw`SELECT "id" FROM "Event" WHERE "id" = ${registration.eventId} FOR UPDATE`;
+      const event = await tx.event.findUniqueOrThrow({
+        where: { id: registration.eventId },
+        select: {
+          id: true,
+          name: true,
+          organiserId: true,
+          coordinatorId: true,
+          expectedAttendance: true,
+        },
+      });
+      const activeBefore = await tx.registration.count({
+        where: { eventId: event.id, status: "REGISTERED" },
+      });
 
       // Self-guarding write (ADR 0006's discipline, mirrored from
       // respondToClarification): the update only claims a row still
       // REGISTERED, so a stale read from before the lock can never overwrite
       // a status some other transition already moved this row to in the
       // meantime. Zero rows claimed is just another already-withdrawn no-op.
-      await tx.registration.updateMany({
+      const withdrawn = await tx.registration.updateMany({
         where: { id: registrationId, status: "REGISTERED" },
         data: { status: "WITHDRAWN", withdrawnAt: new Date() },
       });
+
+      // SCRUM-45 AC11: an Attendee withdrew from a full event, so a place
+      // is open again. An event with no capacity set was never full.
+      if (
+        withdrawn.count === 1 &&
+        totalCapacity(event) > 0 &&
+        remainingCapacity(event, activeBefore) === 0
+      ) {
+        await notifyAboutEvent(
+          tx,
+          [event.organiserId, event.coordinatorId],
+          event,
+          {
+            title: "A place opened at a full event",
+            message: `An attendee withdrew from "${event.name}", which was full, so one place is open again.`,
+          },
+        );
+      }
 
       return { id: registration.id, eventId: registration.eventId };
     });
