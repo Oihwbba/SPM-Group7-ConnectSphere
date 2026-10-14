@@ -958,7 +958,7 @@ describe("decideBookingRequest — SCRUM-53", () => {
 
   describe("SCRUM-26 — a request flagged Needs Reconsideration", () => {
     const FLAGGED =
-      "This request needs reconsideration, so it can't be approved until its event's coordinator resolves it. It can still be rejected.";
+      "This request needs reconsideration, so it can't be approved or held until its event's coordinator resolves it. It can still be rejected.";
 
     it("SCRUM-26 [AC5] TC-26-09: approving a flagged Pending request is refused and nothing is written", async () => {
       db.booking.findUnique.mockResolvedValue({

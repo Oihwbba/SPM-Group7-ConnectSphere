@@ -23,9 +23,6 @@ same period. Flagged rows are created straight in the database or with
 - **AC3's flag sources** are each another story's action: SCRUM-25, SCRUM-128,
   SCRUM-34, SCRUM-160, SCRUM-161, SCRUM-32 and SCRUM-166. Each calls
   `flagArrangements` with its own reason; TC-26-03 proves what that does.
-- **AC5's holds:** placing and confirming a hold is SCRUM-163 (#154, not
-  merged). Its Hold and Confirm actions must refuse a flagged booking the same
-  way approval does here (TC-26-09).
 - **AC14** says changing equipment lines is SCRUM-142; there is nothing to
   test here.
 - **Notifications** when a flag is raised or resolved are SCRUM-124.
@@ -157,13 +154,13 @@ same period. Flagged rows are created straight in the database or with
 | Item | Content |
 |---|---|
 | Test Case ID | TC-26-09 |
-| Test Scenario | [Negative] AC 5: a flagged Pending request can't be approved |
-| Pre-conditions | A Pending booking request is flagged. Signed in as `venuestaff@test.local`. |
-| Test Steps | 1. Approve it. <br> 2. Approve one that was flagged after the page loaded. <br> 3. Reject it. |
+| Test Scenario | [Negative] AC 5: a flagged Pending request can't be approved or held, and a flagged hold can't be confirmed |
+| Pre-conditions | A Pending booking request is flagged, and a Held booking is flagged. Signed in as `venuestaff@test.local`, then as `coordinator@test.local` for the hold. |
+| Test Steps | 1. Approve or hold the request. <br> 2. Approve or hold one that was flagged after the page loaded. <br> 3. Reject it. <br> 4. As the Coordinator, confirm the flagged hold, including one flagged after the page loaded. <br> 5. Release it. |
 | Test Data | Reason "The event moved." |
-| Expected Result | 1, 2. "This request needs reconsideration, so it can't be approved until its event's coordinator resolves it. It can still be rejected." It stays Pending. 3. It is rejected. |
+| Expected Result | 1, 2. "This request needs reconsideration, so it can't be approved or held until its event's coordinator resolves it. It can still be rejected." It stays Pending. 3. It is rejected. 4. "This hold needs reconsideration, so it can't be confirmed until you resolve the flag. You can still release it." It stays Held. 5. It is released. |
 
-**Automated by:** `tests/unit/bookings.test.ts` › "SCRUM-26 [AC5] TC-26-09: …" (3 tests); `tests/integration/reconsideration.test.ts` › "SCRUM-26 [AC5] TC-26-09: …"
+**Automated by:** `tests/unit/bookings.test.ts` › "SCRUM-26 [AC5] TC-26-09: …" (3 tests); `tests/unit/booking-holds.test.ts` › "SCRUM-26 [AC5] TC-26-09: …" (5 tests); `tests/integration/reconsideration.test.ts` › "SCRUM-26 [AC5] TC-26-09: …"
 
 ### TC-26-10
 

@@ -183,7 +183,11 @@ describe("holdBookingRequest — SCRUM-163 AC1, AC2, AC5", () => {
       data: { status: "HELD", holdExpiresAt: expiry },
     });
     const update = db.booking.updateMany.mock.calls[0][0];
-    expect(update.where).toEqual({ id: "bkg_1", status: "PENDING" });
+    expect(update.where).toEqual({
+      id: "bkg_1",
+      status: "PENDING",
+      needsReconsideration: false,
+    });
     expect(update.data).toEqual({
       status: "HELD",
       heldAt: expect.any(Date),
@@ -453,6 +457,30 @@ describe("holdBookingRequest — SCRUM-163 AC1, AC2, AC5", () => {
       "connection lost",
     );
   });
+
+  const FLAGGED =
+    "This request needs reconsideration, so it can't be approved or held until its event's coordinator resolves it. It can still be rejected.";
+
+  it("SCRUM-26 [AC5] TC-26-09: holding a flagged Pending request is refused and nothing is written", async () => {
+    db.booking.findUnique.mockResolvedValue(pending({ needsReconsideration: true }));
+
+    expect(await holdBookingRequest(valid(fromNow(HOUR)))).toEqual({
+      ok: false,
+      error: FLAGGED,
+    });
+    expect(db.$transaction).not.toHaveBeenCalled();
+  });
+
+  it("SCRUM-26 [AC5] TC-26-09: a flag raised after the request was read still stops the hold", async () => {
+    db.booking.updateMany.mockResolvedValue({ count: 0 });
+    db.booking.findUniqueOrThrow.mockResolvedValue({ status: "PENDING", holdExpiresAt: null });
+
+    expect(await holdBookingRequest(valid(fromNow(HOUR)))).toEqual({
+      ok: false,
+      error: FLAGGED,
+    });
+    expect(db.notification.createMany).not.toHaveBeenCalled();
+  });
 });
 
 describe("confirmHold and releaseHold — SCRUM-163 AC3, AC4, AC7, AC8", () => {
@@ -483,6 +511,7 @@ describe("confirmHold and releaseHold — SCRUM-163 AC3, AC4, AC7, AC8", () => {
       id: "bkg_1",
       status: "HELD",
       holdExpiresAt: { gt: expect.any(Date) },
+      needsReconsideration: false,
     });
     expect(update.data).toEqual({
       status: "APPROVED",
@@ -656,6 +685,45 @@ describe("confirmHold and releaseHold — SCRUM-163 AC3, AC4, AC7, AC8", () => {
 
     await expect(releaseHold({ bookingId: "bkg_1" })).rejects.toThrow(
       "connection lost",
+    );
+  });
+
+  const FLAGGED_HOLD =
+    "This hold needs reconsideration, so it can't be confirmed until you resolve the flag. You can still release it.";
+
+  it("SCRUM-26 [AC5] TC-26-09: confirming a flagged hold is refused and nothing is written", async () => {
+    db.booking.findUnique.mockResolvedValue(held({ needsReconsideration: true }));
+
+    expect(await confirmHold({ bookingId: "bkg_1" })).toEqual({
+      ok: false,
+      error: FLAGGED_HOLD,
+    });
+    expect(db.$transaction).not.toHaveBeenCalled();
+  });
+
+  it("SCRUM-26 [AC5] TC-26-09: a flag raised after the hold was read still stops the confirmation", async () => {
+    db.booking.updateMany.mockResolvedValue({ count: 0 });
+    db.booking.findUniqueOrThrow.mockResolvedValue({
+      status: "HELD",
+      holdExpiresAt: fromNow(HOUR),
+    });
+
+    expect(await confirmHold({ bookingId: "bkg_1" })).toEqual({
+      ok: false,
+      error: FLAGGED_HOLD,
+    });
+    expect(db.auditLog.create).not.toHaveBeenCalled();
+  });
+
+  it("SCRUM-26 [AC5] TC-26-09: a flagged hold can still be released", async () => {
+    db.booking.findUnique.mockResolvedValue(held({ needsReconsideration: true }));
+
+    expect(await releaseHold({ bookingId: "bkg_1" })).toEqual({
+      ok: true,
+      data: { status: "CANCELLED" },
+    });
+    expect(db.booking.updateMany.mock.calls[0][0].where).not.toHaveProperty(
+      "needsReconsideration",
     );
   });
 });
