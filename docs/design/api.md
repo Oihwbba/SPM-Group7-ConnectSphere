@@ -24,10 +24,10 @@ request.
 
 | Action | What it does | Permission | Input | Writes | Locks |
 |---|---|---|---|---|---|
-| `checkVenueAvailability` | Checks whether a venue is free for a period, and names any clashes (SCRUM-50). | `booking:request` | `venueAvailabilityQuerySchema` (lib/schemas/booking.ts) | nothing (read only) | — |
-| `submitBookingRequest` | The Coordinator requests a venue for their event (SCRUM-50). | `booking:request` | `bookingRequestSchema` (lib/schemas/booking.ts) | Booking | — |
+| `checkVenueAvailability` | Checks whether a venue is free for a period, and names any clashes, including being outside its opening hours (SCRUM-50, SCRUM-34 AC7). | `booking:request` | `venueAvailabilityQuerySchema` (lib/schemas/booking.ts) | nothing (read only) | — |
+| `submitBookingRequest` | The Coordinator requests a venue for their event (SCRUM-50); refused outside the venue's opening hours (SCRUM-34 AC7). | `booking:request` | `bookingRequestSchema` (lib/schemas/booking.ts) | Booking | — |
 | `decideBookingRequest` | Venue Staff approve or reject a pending request, or approve or reject a held one before it expires (SCRUM-53, 163). Approving a hold keeps it Held, records who approved it and when, and tells its Coordinator (SCRUM-163 AC7, SCRUM-124 AC4). | `booking:decide` | `bookingDecisionSchema` (lib/schemas/booking.ts) | AuditLog, Booking, Notification | Event row (`FOR KEY SHARE`), when approving a hold |
-| `holdBookingRequest` | Venue Staff hold a pending request until a deadline, with a note for the Coordinator (SCRUM-163). | `booking:hold` | `bookingHoldSchema` (lib/schemas/booking.ts) | AuditLog, Booking, Notification | Event row (`FOR KEY SHARE`) |
+| `holdBookingRequest` | Venue Staff hold a pending request until a deadline, with a note for the Coordinator (SCRUM-163); refused outside the venue's opening hours, as approving is (SCRUM-34 AC7). | `booking:hold` | `bookingHoldSchema` (lib/schemas/booking.ts) | AuditLog, Booking, Notification | Event row (`FOR KEY SHARE`) |
 | `confirmHold` | The assigned Coordinator confirms a live hold Venue Staff have approved, which makes the booking Approved (SCRUM-163 AC3). | `booking:settle-hold` | `holdSettlementSchema` (lib/schemas/booking.ts) | AuditLog, Booking, Notification, SafetyCheck | — |
 | `releaseHold` | The assigned Coordinator releases a live hold, which frees the venue (SCRUM-163 AC3). | `booking:settle-hold` | `holdSettlementSchema` (lib/schemas/booking.ts) | AuditLog, Booking, Notification, SafetyCheck | — |
 | `withdrawBookingRequest` | The assigned Coordinator withdraws a pending venue request; a held one is released instead (SCRUM-142 AC4). | `booking:withdraw`; a held request also needs `booking:settle-hold` | `bookingWithdrawalSchema` (lib/schemas/booking.ts) | AuditLog, Booking, Notification, SafetyCheck | Event row |
@@ -98,6 +98,14 @@ request.
 | Action | What it does | Permission | Input | Writes | Locks |
 |---|---|---|---|---|---|
 | `markNotificationRead` | A user marks one of their own notifications read (SCRUM-48). | `notification:read` | `markNotificationReadSchema` (lib/schemas/notification.ts) | Notification | — |
+
+## `app/(app)/venues/actions.ts`
+
+| Action | What it does | Permission | Input | Writes | Locks |
+|---|---|---|---|---|---|
+| `createVenue` | Venue Staff add a venue with its opening hours for each day (SCRUM-34 AC3–AC5). | `venue:manage` | `venueSchema` (lib/schemas/venue.ts) | AuditLog, Venue, VenueOpeningHours | — |
+| `updateVenue` | Venue Staff edit a venue; refused, listing the bookings, if it would stop a future Pending, Held or Approved booking fitting (SCRUM-34 AC6, AC10–AC12; flagging them waits for SCRUM-26). | `venue:manage` | `venueUpdateSchema` (lib/schemas/venue.ts) | AuditLog, Venue, VenueOpeningHours | Venue row (`FOR UPDATE`) |
+| `retireVenue` | Venue Staff retire a venue with no future bookings; refused, listing them, if it has any (SCRUM-34 AC8, AC11). | `venue:manage` | `venueRetireSchema` (lib/schemas/venue.ts) | AuditLog, Venue | Venue row (`FOR UPDATE`) |
 
 ## `app/(app)/venues/availability/actions.ts`
 
