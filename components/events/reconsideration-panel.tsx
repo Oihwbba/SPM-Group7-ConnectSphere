@@ -63,11 +63,21 @@ export function ReconsiderationPanel({
     decision: "STILL_STANDS" | "CANCEL",
   ) {
     startTransition(async () => {
-      const result = await resolveReconsiderationFlag({
-        kind: arrangement.kind,
-        id: arrangement.id,
-        decision,
-      });
+      let result: Awaited<ReturnType<typeof resolveReconsiderationFlag>>;
+      try {
+        result = await resolveReconsiderationFlag({
+          kind: arrangement.kind,
+          id: arrangement.id,
+          decision,
+        });
+      } catch {
+        // An unexpected error or a lost connection: the decision may or may
+        // not have been saved, so the flags are read again.
+        toast.error("Couldn't save your decision. Check the list and try again.");
+        setCancelling(null);
+        setReload((n) => n + 1);
+        return;
+      }
       if (!result.ok) {
         toast.error(result.error);
         return;
