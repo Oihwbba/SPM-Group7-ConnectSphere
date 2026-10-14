@@ -80,6 +80,10 @@ export function ReconsiderationPanel({
       }
       if (!result.ok) {
         toast.error(result.error);
+        // A refusal can mean the flag was resolved elsewhere meanwhile, so
+        // the list is read again rather than left stale.
+        setCancelling(null);
+        setReload((n) => n + 1);
         return;
       }
       toast.success(
