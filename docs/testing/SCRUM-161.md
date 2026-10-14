@@ -35,6 +35,7 @@ case names one.
 | [TC-161-13](#tc-161-13) | Negative | AC 8 | Unit, integration |
 | [TC-161-14](#tc-161-14) | Negative | AC 1 (Venue Staff only, SCRUM-37 AC6) | Unit |
 | [TC-161-15](#tc-161-15) | Positive | AC 3, AC 4 | Unit, integration |
+| [TC-161-16](#tc-161-16) | Boundary | AC 1 (start and end on quarter hours) | Unit, e2e |
 
 ---
 
@@ -49,7 +50,7 @@ case names one.
 | Test Data | Start 12 Jan 2036 10:00 am, End 12:00 pm, Reason Equipment failure, Note "Projector rig down" |
 | Expected Result | Step 3: nothing is saved yet; "This period overlaps 1 booking" lists the event's name, "Coordinator: Cody Coordinator", "Approved" and its period. Step 4: "Recorded: Grand Auditorium is unavailable for that period. 1 booking flagged for their Coordinators." The calendar shows the unavailability. One unavailability row is stored, with the reason, the note and who recorded it. |
 
-**Automated by:** `tests/unit/unavailability.test.ts` › "SCRUM-161 [AC1, AC2] TC-161-01: a period over a booking saves nothing until each affected booking is confirmed" and "SCRUM-161 [AC1, AC2] TC-161-01: once every affected booking is confirmed, the period is saved over it"; `tests/integration/unavailability.test.ts` › "SCRUM-161 [AC1, AC2] TC-161-01: over an approved booking, the booking is shown first and the period saved once confirmed"; `e2e/availability.spec.ts` › "SCRUM-161 [AC1-AC4] TC-161-01, TC-161-04, TC-161-06: unavailability over an approved booking is confirmed, saved, flags the booking and tells its Coordinator"
+**Automated by:** `tests/unit/unavailability.test.ts` › "SCRUM-161 [AC1, AC2] TC-161-01: a period over a booking saves nothing until each affected booking is confirmed" and "SCRUM-161 [AC1, AC2] TC-161-01: once every affected booking is confirmed, the period is saved over it"; `tests/integration/unavailability.test.ts` › "SCRUM-161 [AC1, AC2] TC-161-01: over an approved booking, the booking is shown first and the period saved once confirmed"; `e2e/availability.spec.ts` › "SCRUM-161 [AC1-AC4] TC-161-01, TC-161-04, TC-161-06, TC-161-16: unavailability over an approved booking, on quarter hours, is confirmed, saved, flags the booking and tells its Coordinator"
 
 ### TC-161-02
 
@@ -232,3 +233,16 @@ case names one.
 | Expected Result | The flag keeps its first reason and time (SCRUM-26: one flag, its first reason). The Coordinator gets "Alternative venue arrangements required". No second audit entry and no Venue Staff notice. |
 
 **Automated by:** `tests/unit/unavailability.test.ts` › "SCRUM-161 [AC3, AC4] TC-161-15: a booking already flagged keeps its first reason, and its Coordinator is still told"; `tests/integration/unavailability.test.ts` › "SCRUM-161 [AC3, AC4] TC-161-15: a booking already flagged keeps its first reason, and its Coordinator is still told"
+
+### TC-161-16
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-161-16 |
+| Test Scenario | [Boundary] AC 1: the start and end can be any quarter hour, not only the half hour that booking requests use |
+| Pre-conditions | As TC-161-01. |
+| Test Steps | 1. Open **Record unavailability** and open the Start time list. <br> 2. Record 10:15 am to 11:45 am over the approved booking, and confirm. |
+| Test Data | Start 12 Jan 2036 10:15 am, End 11:45 am, Equipment failure |
+| Expected Result | Step 1: the list offers every 15 minutes (… 9:45 am, 10:00 am, 10:15 am …) and nothing in between. Step 2: saved for exactly 10:15 to 11:45, and the booking's flag reason names those times. A booking request's and a hold expiry's time lists still offer half hours only (SCRUM-50 AC1, SCRUM-163). |
+
+**Automated by:** `tests/unit/request-form.test.tsx` › "SCRUM-161 [AC1] TC-161-16: unavailability can start and end on any quarter hour, and nothing in between"; `e2e/availability.spec.ts` › "SCRUM-161 [AC1-AC4] TC-161-01, TC-161-04, TC-161-06, TC-161-16: …"

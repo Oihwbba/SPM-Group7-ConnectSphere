@@ -9,7 +9,11 @@ import {
   venuesForLayout,
 } from "@/app/(app)/bookings/new/request-form";
 import { eventBookingPeriod } from "@/lib/schemas/booking";
-import { HALF_HOUR_TIMES, isPastSlot } from "@/components/app/date-time-field";
+import {
+  HALF_HOUR_TIMES,
+  isPastSlot,
+  timesEvery,
+} from "@/components/app/date-time-field";
 
 // SCRUM-50 — what a coordinator sees before submitting. The server action is
 // never called here, so its dependencies are stubbed out.
@@ -180,6 +184,23 @@ describe("the half-hour time grid — SCRUM-50", () => {
     expect(HALF_HOUR_TIMES).toHaveLength(48);
     expect(HALF_HOUR_TIMES.slice(0, 3)).toEqual(["00:00", "00:30", "01:00"]);
     expect(HALF_HOUR_TIMES.at(-1)).toBe("23:30");
+  });
+});
+
+describe("the quarter-hour time grid — SCRUM-161", () => {
+  it("SCRUM-161 [AC1] TC-161-16: unavailability can start and end on any quarter hour, and nothing in between", () => {
+    const quarters = timesEvery(15);
+    expect(quarters).toHaveLength(96);
+    expect(quarters.slice(0, 5)).toEqual([
+      "00:00",
+      "00:15",
+      "00:30",
+      "00:45",
+      "01:00",
+    ]);
+    expect(quarters).toContain("09:45");
+    expect(quarters).not.toContain("09:50");
+    expect(quarters.at(-1)).toBe("23:45");
   });
 });
 

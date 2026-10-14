@@ -268,7 +268,7 @@ test.describe("SCRUM-36 / SCRUM-37 — venue availability calendar and recorded 
     await expect(bookingDetails).toBeHidden();
   });
 
-  test("SCRUM-161 [AC1-AC4] TC-161-01, TC-161-04, TC-161-06: unavailability over an approved booking is confirmed, saved, flags the booking and tells its Coordinator", async ({
+  test("SCRUM-161 [AC1-AC4] TC-161-01, TC-161-04, TC-161-06, TC-161-16: unavailability over an approved booking, on quarter hours, is confirmed, saved, flags the booking and tells its Coordinator", async ({
     browser,
   }) => {
     test.skip(!usesLocalDatabase, "creates its own events");
@@ -298,10 +298,11 @@ test.describe("SCRUM-36 / SCRUM-37 — venue availability calendar and recorded 
     const staff = await signedIn(browser, "venuestaff@test.local");
 
     // AC1, AC2 — the overlap doesn't refuse it; the booking is shown first.
+    // TC-161-16: times needn't fall on a half hour.
     await recordMaintenance(
       staff,
-      `${FLAGGED_DAY}T10:00`,
-      `${FLAGGED_DAY}T12:00`,
+      `${FLAGGED_DAY}T10:15`,
+      `${FLAGGED_DAY}T11:45`,
       "Equipment failure",
     );
     const affected = staff.getByTestId("affected-booking");
@@ -330,7 +331,7 @@ test.describe("SCRUM-36 / SCRUM-37 — venue availability calendar and recorded 
       endAt: booked.endAt,
       needsReconsideration: true,
       reconsiderationReason:
-        "Grand Auditorium is unavailable: Equipment failure from 12 Jan 2036, 10:00 am SGT to 12 Jan 2036, 12:00 pm SGT.",
+        "Grand Auditorium is unavailable: Equipment failure from 12 Jan 2036, 10:15 am SGT to 12 Jan 2036, 11:45 am SGT.",
     });
 
     // AC4 — the Coordinator is told alternative arrangements are required.
@@ -343,7 +344,7 @@ test.describe("SCRUM-36 / SCRUM-37 — venue availability calendar and recorded 
       "Alternative venue arrangements required",
     );
     await expect(notice).toContainText(
-      "Grand Auditorium is unavailable (Equipment failure from 12 Jan 2036, 10:00 am SGT to 12 Jan 2036, 12:00 pm SGT)",
+      "Grand Auditorium is unavailable (Equipment failure from 12 Jan 2036, 10:15 am SGT to 12 Jan 2036, 11:45 am SGT)",
     );
   });
 

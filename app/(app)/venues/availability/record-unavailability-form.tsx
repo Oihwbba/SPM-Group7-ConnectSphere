@@ -201,6 +201,7 @@ export function RecordUnavailabilityForm({
               name="Start"
               value={form.start}
               onChange={(value) => update("start", value)}
+              stepMinutes={15}
               error={fieldError("startAt")}
             />
             <DateTimeField
@@ -208,6 +209,7 @@ export function RecordUnavailabilityForm({
               value={form.end}
               openOn={form.start.split("T")[0]}
               onChange={(value) => update("end", value)}
+              stepMinutes={15}
               error={fieldError("endAt")}
             />
             <div className="space-y-2">
