@@ -12,6 +12,7 @@ import {
   withdrawPendingHoldNotices,
 } from "@/lib/booking-holds";
 import { getReadinessChecklist } from "@/lib/event-readiness";
+import { formatDateTime } from "@/lib/datetime";
 import {
   confirmHold,
   decideBookingRequest,
@@ -31,7 +32,7 @@ const db = vi.hoisted(() => ({
     updateMany: vi.fn(),
   },
   venueUnavailability: { findMany: vi.fn() },
-  notification: { createMany: vi.fn(), updateMany: vi.fn() },
+  notification: { create: vi.fn(), createMany: vi.fn(), updateMany: vi.fn() },
   auditLog: { create: vi.fn() },
   safetyCheck: { updateMany: vi.fn() },
   $queryRaw: vi.fn(),
@@ -73,6 +74,7 @@ beforeEach(() => {
 
 const expectNothingWritten = () => {
   expect(db.booking.updateMany).not.toHaveBeenCalled();
+  expect(db.notification.create).not.toHaveBeenCalled();
   expect(db.notification.createMany).not.toHaveBeenCalled();
   expect(db.notification.updateMany).not.toHaveBeenCalled();
   expect(db.auditLog.create).not.toHaveBeenCalled();
@@ -155,7 +157,8 @@ describe("holdBookingRequest — SCRUM-163 AC1, AC2, AC5", () => {
     endAt: new Date(START.getTime() + 2 * HOUR),
     status: "PENDING",
     holdExpiresAt: null,
-    venue: { name: "Hall" },
+    // SCRUM-159: the venue's setup and turnaround, which a hold copies (AC8).
+    venue: { name: "Hall", setupMinutes: 0, turnaroundMinutes: 0 },
     requestedById: "usr_requester",
     event: { id: "evt_1", name: "Symposium", coordinatorId: "usr_cody" },
     ...overrides,
@@ -182,12 +185,19 @@ describe("holdBookingRequest — SCRUM-163 AC1, AC2, AC5", () => {
       data: { status: "HELD", holdExpiresAt: expiry },
     });
     const update = db.booking.updateMany.mock.calls[0][0];
-    expect(update.where).toEqual({ id: "bkg_1", status: "PENDING" });
+    expect(update.where).toEqual({
+      id: "bkg_1",
+      status: "PENDING",
+      needsReconsideration: false,
+    });
     expect(update.data).toEqual({
       status: "HELD",
       heldAt: expect.any(Date),
       holdExpiresAt: expiry,
       holdNote: "Confirm catering numbers.",
+      // SCRUM-159 AC8: a hold keeps the venue's minutes it was held with.
+      setupMinutes: 0,
+      turnaroundMinutes: 0,
     });
     const heldAt = update.data.heldAt as Date;
     expect(heldAt.getTime()).toBeGreaterThanOrEqual(before);
@@ -208,6 +218,10 @@ describe("holdBookingRequest — SCRUM-163 AC1, AC2, AC5", () => {
       });
     }
     expect(notices[0].message).toContain("Confirm catering numbers.");
+    // AC3 (Week 9): the Coordinator confirms only once Venue Staff approve.
+    for (const notice of notices.slice(0, 2)) {
+      expect(notice.message).toContain("Once Venue Staff approve");
+    }
     expect(db.auditLog.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
         entityId: "bkg_1",
@@ -328,7 +342,7 @@ describe("holdBookingRequest — SCRUM-163 AC1, AC2, AC5", () => {
   });
 
   it.each([
-    ["HELD", fromNow(HOUR), /^This request is held for its Coordinator to confirm/],
+    ["HELD", fromNow(HOUR), /^This request is already held for its Coordinator\. You can approve or reject the hold/],
     ["HELD", fromNow(-HOUR), /^This hold expired at .*Make a new request/],
     ["APPROVED", null, /^This request has already been approved/],
     ["REJECTED", null, /^This request has already been rejected/],
@@ -353,6 +367,8 @@ describe("holdBookingRequest — SCRUM-163 AC1, AC2, AC5", () => {
         endAt: new Date(START.getTime() + HOUR),
         status: "HELD",
         holdExpiresAt: fromNow(HOUR),
+        setupMinutes: 0,
+        turnaroundMinutes: 0,
       },
     ]);
 
@@ -365,6 +381,37 @@ describe("holdBookingRequest — SCRUM-163 AC1, AC2, AC5", () => {
       ),
     });
     expectNothingWritten();
+  });
+
+  it("SCRUM-159 [AC3, AC8] TC-159-17: a hold is refused where only setup or turnaround clash, and otherwise keeps the venue's minutes", async () => {
+    const withTimes = { name: "Hall", setupMinutes: 30, turnaroundMinutes: 45 };
+    db.booking.findUnique.mockResolvedValue(pending({ venue: withTimes }));
+    // Ends 20 minutes before the request starts: inside its 30 minutes' setup.
+    db.booking.findMany.mockResolvedValue([
+      {
+        id: "bkg_before",
+        startAt: new Date(START.getTime() - HOUR),
+        endAt: new Date(START.getTime() - 20 * 60 * 1000),
+        status: "APPROVED",
+        holdExpiresAt: null,
+        setupMinutes: 0,
+        turnaroundMinutes: 0,
+      },
+    ]);
+
+    expect(await holdBookingRequest(valid(fromNow(2 * HOUR)))).toMatchObject({
+      ok: false,
+      error: expect.stringMatching(/^Conflicting: Hall is already booked from /),
+    });
+    expectNothingWritten();
+
+    db.booking.findMany.mockResolvedValue([]);
+    await holdBookingRequest(valid(fromNow(2 * HOUR)));
+    expect(db.booking.updateMany.mock.calls[0][0].data).toMatchObject({
+      status: "HELD",
+      setupMinutes: 30,
+      turnaroundMinutes: 45,
+    });
   });
 
   it("SCRUM-163 [AC1] TC-163-03: a request decided by someone else first keeps that decision, with no notice or history written", async () => {
@@ -416,12 +463,37 @@ describe("holdBookingRequest — SCRUM-163 AC1, AC2, AC5", () => {
       "connection lost",
     );
   });
+
+  const FLAGGED =
+    "This request needs reconsideration, so it can't be approved or held until its event's coordinator resolves it. It can still be rejected.";
+
+  it("SCRUM-26 [AC5] TC-26-09: holding a flagged Pending request is refused and nothing is written", async () => {
+    db.booking.findUnique.mockResolvedValue(pending({ needsReconsideration: true }));
+
+    expect(await holdBookingRequest(valid(fromNow(HOUR)))).toEqual({
+      ok: false,
+      error: FLAGGED,
+    });
+    expect(db.$transaction).not.toHaveBeenCalled();
+  });
+
+  it("SCRUM-26 [AC5] TC-26-09: a flag raised after the request was read still stops the hold", async () => {
+    db.booking.updateMany.mockResolvedValue({ count: 0 });
+    db.booking.findUniqueOrThrow.mockResolvedValue({ status: "PENDING", holdExpiresAt: null });
+
+    expect(await holdBookingRequest(valid(fromNow(HOUR)))).toEqual({
+      ok: false,
+      error: FLAGGED,
+    });
+    expect(db.notification.createMany).not.toHaveBeenCalled();
+  });
 });
 
 describe("confirmHold and releaseHold — SCRUM-163 AC3, AC4, AC7, AC8", () => {
   const held = (overrides: Record<string, unknown> = {}) => ({
     status: "HELD",
     holdExpiresAt: fromNow(HOUR),
+    holdApprovedAt: fromNow(-HOUR),
     event: {
       organiserId: "usr_org",
       coordinatorId: "usr_cody",
@@ -435,7 +507,7 @@ describe("confirmHold and releaseHold — SCRUM-163 AC3, AC4, AC7, AC8", () => {
     db.booking.findUnique.mockResolvedValue(held());
   });
 
-  it("SCRUM-163 [AC3, AC5] TC-163-06, TC-163-10: confirming a live hold approves it, withdraws its notices still to come, and records who", async () => {
+  it("SCRUM-163 [AC3, AC5] TC-163-06, TC-163-10: confirming a live hold Venue Staff approved makes it Approved, withdraws its notices still to come, and records who", async () => {
     expect(await confirmHold({ bookingId: "bkg_1" })).toEqual({
       ok: true,
       data: { status: "APPROVED" },
@@ -446,6 +518,8 @@ describe("confirmHold and releaseHold — SCRUM-163 AC3, AC4, AC7, AC8", () => {
       id: "bkg_1",
       status: "HELD",
       holdExpiresAt: { gt: expect.any(Date) },
+      holdApprovedAt: { not: null },
+      needsReconsideration: false,
     });
     expect(update.data).toEqual({
       status: "APPROVED",
@@ -467,14 +541,48 @@ describe("confirmHold and releaseHold — SCRUM-163 AC3, AC4, AC7, AC8", () => {
     expect(revalidatePath).toHaveBeenCalledWith("/venues/availability");
   });
 
-  it("SCRUM-163 [AC3, AC5] TC-163-07, TC-163-10: releasing a live hold cancels it and withdraws its notices still to come", async () => {
+  it("SCRUM-163 [AC3] TC-163-16: a hold Venue Staff haven't approved can't be confirmed, and nothing is written", async () => {
+    db.booking.findUnique.mockResolvedValue(held({ holdApprovedAt: null }));
+
+    expect(await confirmHold({ bookingId: "bkg_1" })).toEqual({
+      ok: false,
+      error:
+        "Venue Staff haven't approved this hold yet. You can confirm it once they have.",
+    });
+    expectNothingWritten();
+  });
+
+  it("SCRUM-163 [AC3] TC-163-16: a confirmation that finds the hold still unapproved under the lock changes nothing", async () => {
+    db.booking.updateMany.mockResolvedValue({ count: 0 });
+    db.booking.findUniqueOrThrow.mockResolvedValue({
+      status: "HELD",
+      holdExpiresAt: fromNow(HOUR),
+    });
+
+    expect(await confirmHold({ bookingId: "bkg_1" })).toEqual({
+      ok: false,
+      error:
+        "Venue Staff haven't approved this hold yet. You can confirm it once they have.",
+    });
+    expect(db.notification.updateMany).not.toHaveBeenCalled();
+    expect(db.auditLog.create).not.toHaveBeenCalled();
+  });
+
+  it("SCRUM-163 [AC3, AC5] TC-163-07, TC-163-10: releasing a live hold cancels it, approved by Venue Staff or not, and withdraws its notices still to come", async () => {
+    db.booking.findUnique.mockResolvedValue(held({ holdApprovedAt: null }));
+
     expect(await releaseHold({ bookingId: "bkg_1" })).toEqual({
       ok: true,
       data: { status: "CANCELLED" },
     });
 
-    expect(db.booking.updateMany.mock.calls[0][0].data).toEqual({
-      status: "CANCELLED",
+    expect(db.booking.updateMany.mock.calls[0][0]).toEqual({
+      where: {
+        id: "bkg_1",
+        status: "HELD",
+        holdExpiresAt: { gt: expect.any(Date) },
+      },
+      data: { status: "CANCELLED" },
     });
     expect(db.notification.updateMany).toHaveBeenCalledTimes(1);
     expect(db.auditLog.create).toHaveBeenCalledWith({
@@ -637,17 +745,65 @@ describe("confirmHold and releaseHold — SCRUM-163 AC3, AC4, AC7, AC8", () => {
       "connection lost",
     );
   });
+
+  const FLAGGED_HOLD =
+    "This hold needs reconsideration, so it can't be confirmed until you resolve the flag. You can still release it.";
+
+  it("SCRUM-26 [AC5] TC-26-09: confirming a flagged hold is refused and nothing is written", async () => {
+    db.booking.findUnique.mockResolvedValue(held({ needsReconsideration: true }));
+
+    expect(await confirmHold({ bookingId: "bkg_1" })).toEqual({
+      ok: false,
+      error: FLAGGED_HOLD,
+    });
+    expect(db.$transaction).not.toHaveBeenCalled();
+  });
+
+  it("SCRUM-26 [AC5] TC-26-09: a flag raised after the hold was read still stops the confirmation", async () => {
+    db.booking.updateMany.mockResolvedValue({ count: 0 });
+    db.booking.findUniqueOrThrow.mockResolvedValue({
+      status: "HELD",
+      holdExpiresAt: fromNow(HOUR),
+      needsReconsideration: true,
+    });
+
+    expect(await confirmHold({ bookingId: "bkg_1" })).toEqual({
+      ok: false,
+      error: FLAGGED_HOLD,
+    });
+    expect(db.auditLog.create).not.toHaveBeenCalled();
+  });
+
+  it("SCRUM-26 [AC5] TC-26-09: a flagged hold can still be released", async () => {
+    db.booking.findUnique.mockResolvedValue(held({ needsReconsideration: true }));
+
+    expect(await releaseHold({ bookingId: "bkg_1" })).toEqual({
+      ok: true,
+      data: { status: "CANCELLED" },
+    });
+    expect(db.booking.updateMany.mock.calls[0][0].where).not.toHaveProperty(
+      "needsReconsideration",
+    );
+  });
 });
 
 describe("decideBookingRequest on a hold — SCRUM-163 AC7", () => {
-  const booking = (status: string, holdExpiresAt: Date | null) => ({
+  const booking = (
+    status: string,
+    holdExpiresAt: Date | null,
+    overrides: Record<string, unknown> = {},
+  ) => ({
     id: "bkg_1",
     venueId: "ven_1",
     startAt: fromNow(72 * HOUR),
     endAt: fromNow(74 * HOUR),
     status,
     holdExpiresAt,
-    venue: { name: "Hall" },
+    holdApprovedAt: null,
+    requestedById: "usr_requester",
+    venue: { name: "Hall", setupMinutes: 0, turnaroundMinutes: 0 },
+    event: { id: "evt_1", name: "Symposium", coordinatorId: "usr_cody" },
+    ...overrides,
   });
 
   beforeEach(() => mockAuth.mockResolvedValue(STAFF));
@@ -680,34 +836,193 @@ describe("decideBookingRequest on a hold — SCRUM-163 AC7", () => {
     expect(revalidatePath).toHaveBeenCalledWith("/venues/availability");
   });
 
-  it("SCRUM-163 [AC7] TC-163-12: Venue Staff can't approve a hold; its Coordinator confirms it", async () => {
+  it("SCRUM-163 [AC7] TC-163-17, SCRUM-124 [AC4] TC-124-04: Venue Staff approve a live hold: it stays Held, records who and when, and tells its Coordinator", async () => {
+    const expiry = fromNow(HOUR);
+    db.booking.findUnique.mockResolvedValue(booking("HELD", expiry));
+    const before = Date.now();
+
+    expect(
+      await decideBookingRequest({ bookingId: "bkg_1", decision: "APPROVED" }),
+    ).toEqual({ ok: true, data: { status: "HELD" } });
+
+    const update = db.booking.updateMany.mock.calls[0][0];
+    expect(update.where).toEqual({
+      id: "bkg_1",
+      status: "HELD",
+      holdExpiresAt: { gt: expect.any(Date) },
+      holdApprovedAt: null,
+      needsReconsideration: false,
+    });
+    expect(update.data).toEqual({
+      holdApprovedAt: expect.any(Date),
+      holdApprovedById: "usr_staff",
+    });
+    expect(update.data.holdApprovedAt.getTime()).toBeGreaterThanOrEqual(before);
+    expect(db.auditLog.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        entityId: "bkg_1",
+        action: "HOLD_APPROVED",
+        actorId: "usr_staff",
+      }),
+    });
+    expect(db.notification.create).toHaveBeenCalledTimes(1);
+    const notice = db.notification.create.mock.calls[0][0].data;
+    expect(notice).toMatchObject({
+      userId: "usr_cody",
+      eventId: "evt_1",
+      bookingId: "bkg_1",
+      type: "HOLD_APPROVED",
+      title: "Venue Staff approved your hold",
+    });
+    expect(notice.message).toBe(
+      `Venue Staff approved the hold on Hall for "Symposium". Confirm it before ${formatDateTime(expiry)} to secure the venue.`,
+    );
+    // Nothing is withdrawn: the reminder and expiry notice still apply.
+    expect(db.notification.updateMany).not.toHaveBeenCalled();
+    expect(revalidatePath).toHaveBeenCalledWith("/bookings");
+    expect(revalidatePath).toHaveBeenCalledWith("/events");
+  });
+
+  it("SCRUM-163 [AC7] TC-163-17: approving locks the event before the booking, the order holding a request uses", async () => {
     db.booking.findUnique.mockResolvedValue(booking("HELD", fromNow(HOUR)));
+
+    await decideBookingRequest({ bookingId: "bkg_1", decision: "APPROVED" });
+
+    const [sql, eventId] = db.$queryRaw.mock.calls[0];
+    expect(sql.join("?")).toContain('FROM "Event" WHERE "id" = ? FOR KEY SHARE');
+    expect(eventId).toBe("evt_1");
+    expect(db.$queryRaw.mock.invocationCallOrder[0]).toBeLessThan(
+      db.booking.updateMany.mock.invocationCallOrder[0],
+    );
+  });
+
+  it("SCRUM-124 [AC4] TC-124-04: an event with no Coordinator yet tells whoever requested the venue", async () => {
+    db.booking.findUnique.mockResolvedValue(
+      booking("HELD", fromNow(HOUR), {
+        event: { id: "evt_1", name: "Symposium", coordinatorId: null },
+      }),
+    );
+
+    await decideBookingRequest({ bookingId: "bkg_1", decision: "APPROVED" });
+
+    expect(db.notification.create.mock.calls[0][0].data.userId).toBe(
+      "usr_requester",
+    );
+  });
+
+  const FLAGGED_HOLD_APPROVAL =
+    "This hold needs reconsideration, so it can't be approved until its event's coordinator resolves it. It can still be rejected.";
+
+  it("SCRUM-26 [AC5] TC-26-09: Venue Staff can't approve a flagged hold, and nothing is written", async () => {
+    db.booking.findUnique.mockResolvedValue(
+      booking("HELD", fromNow(HOUR), { needsReconsideration: true }),
+    );
+
+    expect(
+      await decideBookingRequest({ bookingId: "bkg_1", decision: "APPROVED" }),
+    ).toEqual({ ok: false, error: FLAGGED_HOLD_APPROVAL });
+    expectNothingWritten();
+  });
+
+  it("SCRUM-26 [AC5] TC-26-09: a flag raised after the hold was read still stops Venue Staff approving it", async () => {
+    db.booking.findUnique.mockResolvedValue(booking("HELD", fromNow(HOUR)));
+    db.booking.updateMany.mockResolvedValue({ count: 0 });
+    db.booking.findUniqueOrThrow.mockResolvedValue({
+      status: "HELD",
+      holdExpiresAt: fromNow(HOUR),
+      needsReconsideration: true,
+    });
+
+    expect(
+      await decideBookingRequest({ bookingId: "bkg_1", decision: "APPROVED" }),
+    ).toEqual({ ok: false, error: FLAGGED_HOLD_APPROVAL });
+    expect(db.auditLog.create).not.toHaveBeenCalled();
+    expect(db.notification.create).not.toHaveBeenCalled();
+  });
+
+  it("SCRUM-26 [AC5] TC-26-09: a flagged hold can still be rejected by Venue Staff", async () => {
+    db.booking.findUnique.mockResolvedValue(
+      booking("HELD", fromNow(HOUR), { needsReconsideration: true }),
+    );
+
+    expect(
+      await decideBookingRequest({
+        bookingId: "bkg_1",
+        decision: "REJECTED",
+        reason: "The event moved.",
+      }),
+    ).toEqual({ ok: true, data: { status: "REJECTED" } });
+  });
+
+  it("SCRUM-163 [AC7] TC-163-17: approving a hold a second time changes nothing", async () => {
+    db.booking.findUnique.mockResolvedValue(
+      booking("HELD", fromNow(HOUR), { holdApprovedAt: fromNow(-HOUR) }),
+    );
 
     expect(
       await decideBookingRequest({ bookingId: "bkg_1", decision: "APPROVED" }),
     ).toEqual({
       ok: false,
       error:
-        "This request is held for its Coordinator to confirm. You can still reject it until the hold expires.",
+        "Venue Staff have already approved this hold. It is waiting for its Coordinator to confirm it.",
     });
     expectNothingWritten();
   });
 
-  it("SCRUM-163 [AC4, AC7] TC-163-08: a hold whose expiry has passed can't be rejected; it has already released the venue", async () => {
-    db.booking.findUnique.mockResolvedValue(booking("HELD", fromNow(-1000)));
+  it.each([
+    [
+      "approved by someone else",
+      { status: "HELD", holdExpiresAt: fromNow(HOUR) },
+      /^Venue Staff have already approved this hold\./,
+    ],
+    [
+      "confirmed",
+      { status: "APPROVED", holdExpiresAt: fromNow(HOUR) },
+      /^This request has already been approved; the original decision stands\.$/,
+    ],
+    [
+      "released",
+      { status: "CANCELLED", holdExpiresAt: fromNow(HOUR) },
+      /^This request has already been cancelled/,
+    ],
+    [
+      "lapsed",
+      { status: "HELD", holdExpiresAt: fromNow(-1) },
+      /^This hold expired at /,
+    ],
+  ])(
+    "SCRUM-163 [AC7] TC-163-17: a hold %s at the same moment is approved once, with no second notice or history entry",
+    async (_, latest, error) => {
+      db.booking.findUnique.mockResolvedValue(booking("HELD", fromNow(HOUR)));
+      db.booking.updateMany.mockResolvedValue({ count: 0 });
+      db.booking.findUniqueOrThrow.mockResolvedValue(latest);
 
-    expect(
-      await decideBookingRequest({
-        bookingId: "bkg_1",
-        decision: "REJECTED",
-        reason: "Too late.",
-      }),
-    ).toMatchObject({
-      ok: false,
-      error: expect.stringMatching(/^This hold expired at /),
-    });
-    expectNothingWritten();
-  });
+      expect(
+        await decideBookingRequest({ bookingId: "bkg_1", decision: "APPROVED" }),
+      ).toMatchObject({ ok: false, error: expect.stringMatching(error) });
+      expect(db.auditLog.create).not.toHaveBeenCalled();
+      expect(db.notification.create).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(["REJECTED", "APPROVED"] as const)(
+    "SCRUM-163 [AC4, AC7] TC-163-08: a hold whose expiry has passed can't be decided (%s); it has already released the venue",
+    async (decision) => {
+      db.booking.findUnique.mockResolvedValue(booking("HELD", fromNow(-1000)));
+
+      expect(
+        await decideBookingRequest({
+          bookingId: "bkg_1",
+          decision,
+          reason: "Too late.",
+        }),
+      ).toMatchObject({
+        ok: false,
+        error: expect.stringMatching(/^This hold expired at /),
+      });
+      expectNothingWritten();
+    },
+  );
 
   it("SCRUM-163 [AC7] TC-163-12: a hold that expires while being rejected is reported as expired, and nothing more is written", async () => {
     db.booking.findUnique.mockResolvedValue(booking("HELD", fromNow(HOUR)));
@@ -744,6 +1059,7 @@ describe("the readiness checklist's venue item — SCRUM-163 AC6", () => {
     id: `bkg_${n}`,
     status,
     holdExpiresAt,
+    holdApprovedAt: null as Date | null,
     decisionReason: status === "REJECTED" ? "Too small." : null,
     createdAt: new Date(Date.UTC(2031, 0, n)),
     startAt: START,
@@ -777,6 +1093,26 @@ describe("the readiness checklist's venue item — SCRUM-163 AC6", () => {
         state: "Held until 25 May 2031, 6:00 pm SGT – confirm to secure",
         reason: null,
         heldBookingId: "bkg_1",
+        holdApproved: false,
+      },
+    });
+  });
+
+  it("SCRUM-163 [AC3, AC6, AC7] TC-163-16: a hold Venue Staff approved still keeps the venue incomplete until confirmed, and says it may now be confirmed", async () => {
+    const hold = {
+      ...row("HELD", 1, new Date("2031-05-25T10:00:00Z")),
+      holdApprovedAt: new Date("2031-05-19T03:00:00Z"),
+    };
+
+    expect(await venueOf([hold])).toEqual({
+      ready: false,
+      venue: {
+        name: "Venue booking",
+        complete: false,
+        state: "Held until 25 May 2031, 6:00 pm SGT – confirm to secure",
+        reason: null,
+        heldBookingId: "bkg_1",
+        holdApproved: true,
       },
     });
   });

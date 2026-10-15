@@ -150,6 +150,11 @@ export async function recordUnavailability(
           user!.id,
           now,
         );
+      // Unavailability has no setup or turnaround of its own, so it is asked
+      // about as it is; each approved booking still counts for its occupied
+      // period (SCRUM-159 AC3).
+      const blockers = await findVenueBlockers(tx, data.venueId, period);
+      if (blockers.length > 0) {
         return {
           recorded: true as const,
           id: created.id,

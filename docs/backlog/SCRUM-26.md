@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-13. Jira is the source of truth.
+     Synced from Jira on 2026-10-15. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-26 - Flag and resolve arrangements affected by a change
@@ -24,7 +24,7 @@
 2. Needs Reconsideration is a flag on a venue booking (Pending, Held or Approved) or an equipment reservation. Its status doesn't change.
 3. A flag is raised by my confirmed edit in AC1, an approved impactful change request (SCRUM-128), a change to a venue's attributes or its retirement (SCRUM-34; a team decision, following the same rule as Week 7 changes 1 and 2: affected bookings are identified, never silently removed), a longer setup or turnaround time (SCRUM-160), venue unavailability recorded over a booking (SCRUM-161), Technical Support reporting that reserved equipment can't be provided (SCRUM-32), or a safety check outcome of Changes requested or Rejected (SCRUM-166).
 4. A flagged Approved or Held booking, or a flagged reservation, keeps blocking its venue period or stock until it is resolved; a Held booking only until its hold expires (SCRUM-163).
-5. A flagged Pending venue request can't be approved or held, and a flagged Held booking can't be confirmed, until the flag is resolved.
+5. A flagged Pending venue request can't be approved or held, a flagged Held booking can't be approved by Venue Staff or confirmed by its Coordinator, until the flag is resolved. A flagged request or hold can still be rejected, and a flagged hold released.
 6. Given the event's date or time changed, flagged arrangements keep their original period; they are never moved to the new period automatically.
 7. Only the assigned Coordinator can resolve a flag, by choosing Still stands or Cancel arrangement. Either choice records who and when.
 8. Still stands is allowed only while the arrangement still covers the event's whole period; for a venue booking, while the venue is still active, the booking's attendance is no more than the event's expected attendance (SCRUM-162) and no more than the venue's capacity, and its occupied period (SCRUM-159) overlaps no other Approved or Held booking and no recorded unavailability; and for an equipment reservation, while the reserved quantity is still sufficient. Otherwise it is refused with the reason, and the Coordinator cancels the arrangement and requests again.
@@ -48,5 +48,6 @@
 * 2026-10-08 (PO review): removed a G3 clarification from the Customer basis. AC3's venue-change flag is now marked as a team decision.
 * 2026-10-09 (PO review): AC1 points to SCRUM-25 AC3, because SCRUM-127 was dropped. Removed a quote from the Customer basis that isn't in any customer document.
 * 2026-10-11 (PO review): AC8 requires the booking's attendance to be within both the event's expected attendance and the venue's capacity; "or" let a booking through if it met only one.
+* 2026-10-15 (PO request, after SCRUM-163's Venue Staff hold approval): AC5 also refuses Venue Staff approving a flagged hold, and says a flagged request or hold can still be rejected or released.
 
 Functionality Area: Event Information Management, Event Change Requests

@@ -137,13 +137,15 @@ the open pull requests that change the same test files have merged.
 | [SCRUM-81](SCRUM-81.md) | Jun Bin | 13 | Every case automated (unit, integration for the simultaneous confirm, e2e for the journey) |
 | [SCRUM-110](SCRUM-110.md) | Jun Bin | 15 | Every case automated (unit, and e2e for the page) |
 | [SCRUM-108](SCRUM-108.md) | Jun Bin | 14 | Every case automated (unit, e2e for both journeys); AC 6, 8 and 10 point to existing tests |
-| [SCRUM-124](SCRUM-124.md) | Jin Hong | 1 | Grows with the story: AC 7 so far (with SCRUM-41); the hold and withdrawal cases follow SCRUM-163 and SCRUM-142 |
+| [SCRUM-124](SCRUM-124.md) | Jin Hong | 2 | Grows with the story: AC 4's hold notices (with SCRUM-163) and AC 7 (with SCRUM-41) so far; AC 4's approve and reject notices wait for SCRUM-53, and the withdrawal, line-change and reminder cases are still to add |
 | [SCRUM-126](SCRUM-126.md) | Jun Bin | 10 | Every case automated (unit, integration for the constraint, migration and simultaneous clicks, e2e for the journey) |
 | [SCRUM-130](SCRUM-130.md) | Felicia Or | 12 | Every case automated (unit, integration, e2e) |
 | [SCRUM-117](SCRUM-117.md) | Jun Bin | 10 | Every case automated (unit, integration for releasing arrangements in one transaction, e2e for both journeys) |
-| [SCRUM-163](SCRUM-163.md) | Jin Hong | 15 | Every case automated; TC-163-13's cancel and flag halves wait for SCRUM-82 and SCRUM-161 |
+| [SCRUM-163](SCRUM-163.md) | Jin Hong | 17 | Every case automated; TC-163-13's cancel and flag halves wait for SCRUM-82 and SCRUM-161 |
 | [SCRUM-142](SCRUM-142.md) | Jin Hong | 18 | Every case automated (unit, integration for what each change writes and two withdrawals at once, e2e for the Coordinator's journeys) |
 | [SCRUM-155](SCRUM-155.md) | Jin Hong | 16 | Every case automated (unit, integration for all-or-nothing and the races, e2e for the journey) |
 | [SCRUM-156](SCRUM-156.md) | Jin Hong | 8 | Every case automated; TC-155-16 retired and the SCRUM-31 reserve cases mapped to SCRUM-155 |
 | [SCRUM-161](SCRUM-161.md) | Felicia Or | 16 | Automated except TC-161-08 (AC 5, waits for SCRUM-38) and TC-161-11 (AC 6, waits for SCRUM-26); supersedes TC-37-05 step 1 and TC-37-06 |
-| [SCRUM-172](SCRUM-172.md) | Jin Hong | 16 | Integration and unit; TC-172-15 step 3 is manual, and TC-172-16 is the whole suite |
+| [SCRUM-159](SCRUM-159.md) | Jun Bin | 17 | Every case automated (unit, integration for the database's range and the simultaneous approvals, e2e for the calendar and the request form); AC 1's form is SCRUM-34's and AC 3's search SCRUM-38's |
+| [SCRUM-172](SCRUM-172.md) | Jin Hong | 20 | Integration and unit; TC-172-15 step 3 is manual, and TC-172-16 is the whole suite |
+| [SCRUM-26](SCRUM-26.md) | Jun Bin | 15 | Every case automated (unit, integration for blocking, Still stands against real unavailability and simultaneous cancels, e2e for the journey); AC 1's warning screen is SCRUM-25's |

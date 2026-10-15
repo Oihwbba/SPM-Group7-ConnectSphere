@@ -62,8 +62,9 @@ export default async function AvailabilityPage({
         </h1>
         <p className="text-sm text-muted-foreground">
           When a venue is free, booked, or unavailable for another reason, a
-          week at a time. Hover or tap a booking for more. Times are Singapore
-          time.
+          week at a time. Hover or tap a booking for more. A booking&apos;s
+          setup and turnaround time are shown hatched on either side of it.
+          Times are Singapore time.
         </p>
       </div>
 
