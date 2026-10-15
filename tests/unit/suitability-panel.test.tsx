@@ -14,6 +14,11 @@ vi.mock("@/app/(app)/venues/suitability-actions", () => ({
 vi.mock("@/app/(app)/bookings/actions", () => ({
   decideBookingRequest: vi.fn(),
 }));
+// SCRUM-25 AC6: the queue's cards render the event's operational notes.
+vi.mock("@/app/(app)/events/edit-actions", () => ({
+  getOperationalNotes: vi.fn(() => new Promise(() => {})),
+  addOperationalNote: vi.fn(),
+}));
 
 const boardroom = {
   capacity: 14,

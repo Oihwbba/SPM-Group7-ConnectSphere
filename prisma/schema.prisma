@@ -251,8 +251,9 @@ model User {
   requestedSafetyChecks    SafetyCheck[] @relation("SafetyCheckRequestedBy")
   decidedSafetyChecks      SafetyCheck[] @relation("SafetyCheckDecidedBy")
 
-  approvedHolds     Booking[]          @relation("BookingHoldApprovedBy")
-  holdExpiryChanges HoldExpiryChange[] @relation("HoldExpiryChangedBy")
+  approvedHolds     Booking[]              @relation("BookingHoldApprovedBy")
+  holdExpiryChanges HoldExpiryChange[]     @relation("HoldExpiryChangedBy")
+  operationalNotes  EventOperationalNote[]
 
   suitabilityJudgements VenueSuitabilityJudgement[] @relation("VenueSuitabilityJudgedBy")
 }
@@ -405,6 +406,7 @@ model Event {
   changeRequests        EventChangeRequest[]
   notifications         Notification[]
   safetyChecks          SafetyCheck[]
+  operationalNotes      EventOperationalNote[]
   suitabilityJudgements VenueSuitabilityJudgement[]
 
   @@index([organiserId])
@@ -439,6 +441,23 @@ model ClarificationRequest {
 
   @@index([eventId])
   @@index([status])
+}
+
+/// SCRUM-25 AC6 — an operational note on an event, shown with its author and
+/// time. Permanent: the trigger event_operational_note_permanent refuses any
+/// edit or delete, and the CHECK event_operational_note_not_blank a blank one.
+model EventOperationalNote {
+  id        String   @id @default(cuid())
+  eventId   String
+  authorId  String
+  body      String
+  createdAt DateTime @default(now())
+
+  event  Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  author User  @relation(fields: [authorId], references: [id])
+
+  @@index([eventId])
+  @@index([authorId])
 }
 
 // ---------------------------------------------------------------------------
@@ -871,13 +890,13 @@ model EventChangeRequest {
 
   /// The Organiser, or the assigned Coordinator raising it on their behalf
   /// (SCRUM-41 AC9).
-  requestedById String
-  status        ChangeRequestStatus @default(PENDING_REVIEW)
-  reason        String?
+  requestedById        String
+  status               ChangeRequestStatus @default(PENDING_REVIEW)
+  reason               String?
   /// SCRUM-41 AC1 — asks for the event to be cancelled instead of changing
   /// fields; then it has no fields, and the CHECK
   /// event_change_request_cancellation_has_reason requires the reason.
-  requestsCancellation Boolean @default(false)
+  requestsCancellation Boolean             @default(false)
 
   decidedById    String?
   decidedAt      DateTime?
