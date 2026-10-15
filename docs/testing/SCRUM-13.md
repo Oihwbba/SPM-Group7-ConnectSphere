@@ -211,3 +211,16 @@ unless the case says otherwise. "A start a month from now" is any future time.
 | Expected Result | Each is refused with "You do not have permission to do that." and nothing is written. |
 
 **Automated by:** `tests/unit/events.test.ts` › "SCRUM-13 [Security Gate]: denies non-organiser user role (e.g. ATTENDEE) from submitting event requests", "SCRUM-13 [Security Gate]: refuses signed-out callers for createDraftEvent and submitEventRequest"
+
+### TC-13-14
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-13-14 |
+| Test Scenario | [Positive] AC 1, with SCRUM-34 AC 6: the layout presets and accessibility quick-picks include what Venue Staff added |
+| Pre-conditions | An active venue with the layout "garden-party" and the accessibility feature "tactile-paving", added by Venue Staff (SCRUM-34 TC-34-18). Signed in as `organiser@test.local`. |
+| Test Steps | 1. Start an event request and reach Venue, Layout & Accessibility. <br> 2. Choose the Garden party layout. <br> 3. Type "Seats near the exit" as accessibility needs, then choose Tactile paving, then Tactile paving again. |
+| Test Data | — |
+| Expected Result | 1: Garden party follows the six presets; a venue layout a preset already names ("cocktail", covered by Cocktail / Standing) isn't offered twice. 2: the layout reads "Garden party". 3: accessibility needs reads "Seats near the exit, Tactile paving"; choosing it again adds nothing. Both fields stay free text. |
+
+**Automated by:** `tests/unit/venue-options.test.ts` › "SCRUM-13 [AC1] TC-13-14: …"; `tests/unit/events.test.ts` › "SCRUM-13 [AC1] TC-13-14: …"; `e2e/venue-catalogue.spec.ts` › "SCRUM-34 [AC6] TC-34-18: …"

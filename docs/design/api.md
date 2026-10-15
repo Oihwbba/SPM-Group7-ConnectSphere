@@ -57,7 +57,7 @@ request.
 |---|---|---|---|---|---|
 | `createDraftEvent` | The Organiser saves a request as a draft (SCRUM-15). | `event:create` | `createDraftEventSchema` (lib/schemas/event.ts) | Event | — |
 | `submitEventRequest` | The Organiser submits a request; a Coordinator is assigned automatically (SCRUM-13, 14, 20). | `event:create` | `submitEventRequestSchema` (lib/schemas/event.ts) | AuditLog, Event, Notification | Event row, advisory lock while a Coordinator is picked |
-| `getFormCatalogues` | The venue and equipment suggestions the request form offers (SCRUM-13). | `event:create` | none | nothing (read only) | — |
+| `getFormCatalogues` | The venue and equipment suggestions the request form offers, and the accessibility features and layouts venues have, Venue Staff's own included (SCRUM-13, SCRUM-34 AC6). | `event:create` | none | nothing (read only) | — |
 | `transitionEventStatus` | A Coordinator approves or rejects a request (SCRUM-19, 24). | `event:review` | `statusTransitionSchema` (same file) | AuditLog, ClarificationRequest, Event | — |
 | `confirmEvent` | The assigned Coordinator confirms a Planning event whose checklist is complete (SCRUM-81). | `event:confirm` | `confirmEventSchema` (same file) | AuditLog, Event | Event row |
 | `startRequestFromRejected` | The Organiser starts a new Draft from a request rejected as needing a new submission (SCRUM-126). | `event:create` | `startRequestFromRejectedSchema` (same file) | AuditLog, Event | Event row |
