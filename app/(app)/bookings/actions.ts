@@ -55,10 +55,23 @@ const openingHoursSelect = {
   },
 } as const;
 
-// SCRUM-34 AC7: submitting, holding, approving a request or a hold, and
-// confirming a hold all ask `openingHoursRefusal`, so a request that slipped
-// in while Venue Staff narrowed the hours can still never be held or approved
-// outside them.
+/**
+ * SCRUM-34 AC7, AC8 — why a booking can't be held, approved or confirmed at
+ * its venue, or null. Submitting refuses a retired venue and asks
+ * `openingHoursRefusal` too, but a request can slip in while Venue Staff
+ * narrow the hours or retire the venue, so holding, approving a request or a
+ * hold, and confirming a hold ask again here. Rejecting and releasing don't.
+ */
+function venueRefusal(booking: {
+  startAt: Date;
+  endAt: Date;
+  venue: { name: string; isActive?: boolean; openingHours?: OpeningDay[] };
+}): string | null {
+  if (booking.venue.isActive === false) {
+    return `${booking.venue.name} has been retired, so it can't be booked.`;
+  }
+  return openingHoursRefusal(booking, booking.venue);
+}
 
 export type BookingSummary = {
   id: string;
@@ -338,7 +351,9 @@ const venueSelect = {
   endAt: true,
   status: true,
   holdExpiresAt: true,
-  venue: { select: { name: true, ...venueTimesSelect, ...openingHoursSelect } },
+  venue: {
+    select: { name: true, isActive: true, ...venueTimesSelect, ...openingHoursSelect },
+  },
   needsReconsideration: true,
 } as const;
 
@@ -417,10 +432,10 @@ export async function decideBookingRequest(
 
     const conflict = (detail: string) =>
       `Conflicting: ${booking.venue.name} is ${detail}. This request is still pending.`;
-    // SCRUM-34 AC7: an approval outside the venue's opening hours is refused.
-    const outsideHours =
-      decision === "APPROVED" && openingHoursRefusal(booking, booking.venue);
-    if (outsideHours) return err(`${outsideHours} This request is still pending.`);
+    // SCRUM-34 AC7, AC8: not outside the venue's opening hours, nor once it
+    // is retired.
+    const venueRefused = decision === "APPROVED" && venueRefusal(booking);
+    if (venueRefused) return err(`${venueRefused} This request is still pending.`);
 
     const decide = () =>
       prisma.$transaction(async (tx) => {
@@ -547,7 +562,7 @@ async function approveHold(
     requestedById: string;
     startAt: Date;
     endAt: Date;
-    venue: { name: string; openingHours: OpeningDay[] };
+    venue: { name: string; isActive: boolean; openingHours: OpeningDay[] };
     event: { id: string; name: string; coordinatorId: string | null };
   },
   approverId: string,
@@ -555,9 +570,10 @@ async function approveHold(
 ): Promise<ActionResult<{ status: BookingStatus }>> {
   if (booking.holdApprovedAt) return err(HOLD_ALREADY_APPROVED);
   if (booking.needsReconsideration) return err(FLAGGED_HOLD_APPROVAL);
-  // SCRUM-34 AC7: a hold outside the venue's opening hours isn't approved.
-  const outsideHours = openingHoursRefusal(booking, booking.venue);
-  if (outsideHours) return err(`${outsideHours} ${HOLD_STILL_AWAITING_APPROVAL}`);
+  // SCRUM-34 AC7, AC8: not outside the venue's opening hours, nor once it is
+  // retired.
+  const venueRefused = venueRefusal(booking);
+  if (venueRefused) return err(`${venueRefused} ${HOLD_STILL_AWAITING_APPROVAL}`);
 
   await onceMoreOnDeadlock(() =>
     prisma.$transaction(async (tx) => {
@@ -679,9 +695,10 @@ export async function holdBookingRequest(
       const message = holdExpiryMessage(booking.startAt);
       return err(message, { holdExpiresAt: [message] });
     }
-    // SCRUM-34 AC7: a hold outside the venue's opening hours is refused.
-    const outsideHours = openingHoursRefusal(booking, booking.venue);
-    if (outsideHours) return err(`${outsideHours} This request is still pending.`);
+    // SCRUM-34 AC7, AC8: not outside the venue's opening hours, nor once it
+    // is retired.
+    const venueRefused = venueRefusal(booking);
+    if (venueRefused) return err(`${venueRefused} This request is still pending.`);
 
     const hold = () =>
       prisma.$transaction(async (tx) => {
@@ -864,7 +881,7 @@ async function settleHold(
         holdExpiresAt: true,
         holdApprovedAt: true,
         needsReconsideration: true,
-        venue: { select: { name: true, ...openingHoursSelect } },
+        venue: { select: { name: true, isActive: true, ...openingHoursSelect } },
         event: {
           select: {
             id: true,
@@ -891,10 +908,10 @@ async function settleHold(
     // still be released.
     if (confirming && booking.needsReconsideration) return err(FLAGGED_HOLD);
     if (confirming && !booking.holdApprovedAt) return err(HOLD_NOT_APPROVED);
-    // SCRUM-34 AC7: confirming makes the booking Approved, so its period must
-    // still be within the venue's opening hours.
-    const outsideHours = confirming && openingHoursRefusal(booking, booking.venue);
-    if (outsideHours) return err(`${outsideHours} ${HOLD_STILL_HELD}`);
+    // SCRUM-34 AC7, AC8: confirming makes the booking Approved, so its period
+    // must still be within the venue's opening hours, at a venue not retired.
+    const venueRefused = confirming && venueRefusal(booking);
+    if (venueRefused) return err(`${venueRefused} ${HOLD_STILL_HELD}`);
 
     const settle = () =>
       prisma.$transaction(async (tx) => {

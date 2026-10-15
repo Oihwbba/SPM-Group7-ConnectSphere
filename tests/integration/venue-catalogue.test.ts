@@ -363,6 +363,73 @@ describe.skipIf(!usesLocalDatabase)("venue catalogue — real database (SCRUM-34
     });
   });
 
+  it("SCRUM-34 [AC8] TC-34-21: at a venue retired after its requests were made, nothing can be held, approved or confirmed; a request can still be rejected", async () => {
+    const id = await addVenue("AC8 decide");
+    const pending = await booking(id, `${TUESDAY}T12:00`, `${TUESDAY}T14:00`);
+    const toReject = await booking(id, `${TUESDAY}T15:00`, `${TUESDAY}T17:00`);
+    const unapproved = await heldBooking(id, `${TUESDAY}T18:00`, `${TUESDAY}T19:00`);
+    const approved = await heldBooking(id, `${TUESDAY}T20:00`, `${TUESDAY}T21:00`, true);
+    // A request that slipped in as the venue was retired is not flagged, so
+    // only the venue itself can stop it.
+    await prisma.venue.update({ where: { id }, data: { isActive: false } });
+    const retired = "has been retired, so it can't be booked\\.";
+
+    asVenueStaff();
+    for (const result of [
+      await holdBookingRequest({
+        bookingId: pending.id,
+        holdExpiresAt: sg(`${TUESDAY}T09:00`).toISOString(),
+        holdNote: "Confirm the guest list.",
+      }),
+      await decideBookingRequest({ bookingId: pending.id, decision: "APPROVED" }),
+    ]) {
+      expect(result).toEqual({
+        ok: false,
+        error: expect.stringMatching(new RegExp(`${retired} This request is still pending\\.$`)),
+      });
+    }
+    expect(
+      await decideBookingRequest({ bookingId: unapproved.id, decision: "APPROVED" }),
+    ).toEqual({
+      ok: false,
+      error: expect.stringMatching(new RegExp(`${retired} This hold is still awaiting approval\\.$`)),
+    });
+    asCoordinator();
+    expect(await confirmHold({ bookingId: approved.id })).toEqual({
+      ok: false,
+      error: expect.stringMatching(
+        new RegExp(`${retired} This hold is unchanged; you can still release it\\.$`),
+      ),
+    });
+
+    const state = { status: true, holdApprovedAt: true } as const;
+    expect(
+      await Promise.all(
+        [pending, unapproved, approved].map((b) =>
+          prisma.booking.findUniqueOrThrow({ where: { id: b.id }, select: state }),
+        ),
+      ),
+    ).toEqual([
+      { status: "PENDING", holdApprovedAt: null },
+      { status: "HELD", holdApprovedAt: null },
+      { status: "HELD", holdApprovedAt: expect.any(Date) },
+    ]);
+    expect(
+      await prisma.auditLog.count({
+        where: { entityId: { in: [pending.id, unapproved.id, approved.id] } },
+      }),
+    ).toBe(0);
+
+    asVenueStaff();
+    expect(
+      await decideBookingRequest({
+        bookingId: toReject.id,
+        decision: "REJECTED",
+        reason: "The venue has been retired.",
+      }),
+    ).toMatchObject({ ok: true });
+  });
+
   it("SCRUM-34 [AC10] TC-34-12: an edit that would stop a future booking fitting warns first, listing it, and nothing changes", async () => {
     const id = await addVenue("AC10");
     await booking(id, `${TUESDAY}T10:00`, `${TUESDAY}T14:00`, {
