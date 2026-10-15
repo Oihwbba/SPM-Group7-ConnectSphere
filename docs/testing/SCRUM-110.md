@@ -151,14 +151,14 @@ the reason after "Rejected".
 
 ### TC-110-09
 
-| Item            | Content                                                                                                                                                                                                                                                                                                                  |
-| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Test Case ID    | TC-110-09                                                                                                                                                                                                                                                                                                                |
-| Test Scenario   | [Boundary] AC 3, AC 4: which equipment requests count                                                                                                                                                                                                                                                                    |
-| Pre-conditions  | Venue booking approved. No reservations unless stated.                                                                                                                                                                                                                                                                   |
-| Test Steps      | 1. Read the checklist for each set of requests below.                                                                                                                                                                                                                                                                    |
-| Test Data       | (a) one CANCELLED request <br> (b) one REJECTED request <br> (c) a REJECTED request for 2 Projectors, then a new PENDING_REVIEW request for 1 Laptop, with 1 Laptop reserved <br> (d) two live requests that both ask for Projectors (2 and 3), with 3 and then 5 reserved                                               |
-| Expected Result | (a) No Equipment item; ready. (b) "Equipment — Rejected", incomplete, until the Coordinator requests again. (c) The rejected request is ignored: 1 Laptop reserved completes Equipment. (d) The two requests add up to 5 Projectors: 3 reserved is "Not fully reserved: Projector" (named once), 5 reserved is complete. |
+| Item            | Content                                                                                                                                                                                                                                                                                                                                                                                                      |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Test Case ID    | TC-110-09                                                                                                                                                                                                                                                                                                                                                                                                    |
+| Test Scenario   | [Boundary] AC 3, AC 4: which equipment requests count                                                                                                                                                                                                                                                                                                                                                        |
+| Pre-conditions  | Venue booking approved. No reservations unless stated.                                                                                                                                                                                                                                                                                                                                                       |
+| Test Steps      | 1. Read the checklist for each set of requests below.                                                                                                                                                                                                                                                                                                                                                        |
+| Test Data       | (a) one CANCELLED request <br> (b) one REJECTED request <br> (c) a REJECTED request for 2 Projectors, then a new APPROVED request for 1 Laptop, with 1 Laptop reserved <br> (d) two APPROVED requests that both ask for Projectors (2 and 3), with 3 and then 5 reserved                                                                                                                                     |
+| Expected Result | (a) No Equipment item; ready. (b) "Equipment — Rejected", incomplete, until the Coordinator requests again. (c) The rejected request is ignored: 1 Laptop reserved completes Equipment. (d) The two requests add up to 5 Projectors: 3 reserved is "Not fully reserved: Projector" (named once), 5 reserved is complete. A request still awaiting Technical Support's review is SCRUM-142 AC 10 (TC-142-18). |
 
 **Automated by:** `tests/unit/event-readiness.test.ts` › "SCRUM-110 [AC3] TC-110-09: …" and "SCRUM-110 [AC4] TC-110-09: …"
 
@@ -186,7 +186,7 @@ the reason after "Rejected".
 | Test Data       | —                                                                                                     |
 | Expected Result | The Readiness checklist is shown, including the rejection reason.                                     |
 
-**Automated by:** `tests/unit/readiness-actions.test.ts` › "SCRUM-110 [AC6] TC-110-11: …"; `e2e/readiness.spec.ts` › "SCRUM-110 [AC3, AC4, AC6] …"
+**Automated by:** `tests/unit/readiness-actions.test.ts` › "SCRUM-110 [AC6] TC-110-11: …"; `e2e/readiness.spec.ts` › "SCRUM-110 [AC2, AC3, AC6] TC-110-04, TC-110-07, TC-110-11, TC-110-12: …"
 
 ### TC-110-12
 
@@ -199,7 +199,7 @@ the reason after "Rejected".
 | Test Data       | —                                                                                                                  |
 | Expected Result | "Venue booking — Rejected" and "Equipment — Not fully reserved: Projector" are shown; the rejection reason is not. |
 
-**Automated by:** `tests/unit/readiness-actions.test.ts` › "SCRUM-110 [AC6] TC-110-12: …"; `e2e/readiness.spec.ts` › "SCRUM-110 [AC3, AC4, AC6] …"
+**Automated by:** `tests/unit/readiness-actions.test.ts` › "SCRUM-110 [AC6] TC-110-12: …"; `e2e/readiness.spec.ts` › "SCRUM-110 [AC2, AC3, AC6] TC-110-04, TC-110-07, TC-110-11, TC-110-12: …"
 
 ### TC-110-13
 

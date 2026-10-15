@@ -7,7 +7,7 @@ import { can } from "@/lib/auth/can";
 import { Forbidden } from "@/components/app/forbidden";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatDateTime, formatEventTime } from "@/lib/datetime";
-import { SAFETY_CHECK_LABEL } from "@/lib/safety-check";
+import { SAFETY_CHECK_LABEL } from "@/lib/safety-checks";
 import { getSafetyCheckReview } from "../queries";
 import { OutcomeForm } from "./outcome-form";
 

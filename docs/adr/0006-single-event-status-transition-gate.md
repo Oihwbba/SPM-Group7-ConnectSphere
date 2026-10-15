@@ -101,3 +101,9 @@ to **Confirmed** when its readiness checklist is complete. It lives beside
 and records the change and its history entry in one transaction, keeping this
 ADR's rules: one place per transition, authorisation before the read, and no
 duplicate change when two requests race. The details are in ADR 0012.
+
+## Addendum (2026-10-11) — Corrections from the docs audit (SCRUM-173)
+
+The 2026-09-19 addendum says the two-browser e2e test checks that the badge
+flips to `APPROVED`. Since the 2026-09-30 addendum, approval moves the event
+straight to Planning, and `e2e/events.spec.ts` checks for `PLANNING`.

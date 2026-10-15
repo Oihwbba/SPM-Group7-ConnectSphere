@@ -36,9 +36,10 @@ reference, and `app/(app)/equipment-requests` is a smaller, newer example.
 **Coverage.** Every server-side `.ts` file under `lib/` and `app/` must stay at
 100% statements, branches, functions and lines. `npm run test:coverage` fails
 otherwise, naming the file, and so does CI. It counts unit and integration
-tests together, so it **needs the local database** (`docker compose up -d`).
-Without it the integration tests are skipped, and a file only they cover fails
-the run even if you never touched it. Components (`.tsx`) are not measured;
+tests together, so it **needs the local database**: start Docker and point the
+terminal at it first ([README, Local database](README.md#local-database-docker)),
+never at `.env`'s shared one. Without it the integration tests are skipped,
+and a file only they cover fails the run even if you never touched it. Components (`.tsx`) are not measured;
 Playwright covers them (SCRUM-87).
 
 Route folders are named for the **domain**, not the role. A route several
@@ -231,16 +232,17 @@ accepted it.
 4. **There are no preview deployments.** Check UI changes with `npm run dev`;
    CI's e2e tests check the key journeys. Only `main` deploys.
 5. **Some files need a teammate's approval.** Changes to `.github/`,
-   `package.json`, the test configs or `vercel.json` control the checks
-   themselves, so CODEOWNERS requires a review from someone other than the
-   author. Every team member is a code owner, so any teammate can approve.
+   `package.json`, the test configs, `vercel.json` or `.gitattributes` control
+   the checks themselves, so CODEOWNERS requires a review from someone other
+   than the author. Every team member is a code owner, so any teammate can
+   approve.
 
 ### What runs on every pull request
 
 | | What happens | Takes |
 |---|---|---|
-| **GitHub Actions** (`build-and-test`) | migrate → seed → typecheck → lint → unit and integration tests with the coverage check → e2e | about 10 minutes |
-| **GLM review** | one AI reviewer reads the whole change and posts one review comment; skipped for drafts | 3–10 minutes, after CI |
+| **GitHub Actions** (`build-and-test`) | migrate → seed → typecheck → lint → unit and integration tests with the coverage check → e2e | 10–20 minutes |
+| **GLM review** | one AI reviewer reads the change (except Markdown, lockfiles and `docs/backlog`) and posts one review comment; skipped for drafts, and passes without a review when only those files changed | 5–15 minutes after CI finishes |
 
 Every push re-runs both.
 
@@ -262,12 +264,19 @@ but fix them or reply on the PR saying why they don't apply.
 
 - Your PR title, description and branch name.
 - `CONTRIBUTING.md` and `CLAUDE.md`, and the `docs/backlog` file for each
-  story your description names in a `Closes SCRUM-n` or `Part of SCRUM-n`
-  line. It reads these from `main`, so editing them in your own PR doesn't
-  change your review.
-- Your changed files in full, the files they import and the files that import
-  them, and any file that mentions your SCRUM keys. **Put the key in code
+  SCRUM key in your branch name, your title, or a `Closes`, `Part of`,
+  `Fixes` or `Refs` line of your description (at most six stories). It reads
+  these from the PR's base branch (`main`, unless the PR is stacked), so
+  editing them in your own PR doesn't change your review.
+- Your changed files (Markdown, lockfiles and `docs/backlog` excepted), the
+  files they import and the files that import them, and any file that
+  mentions your SCRUM keys. **Put the key in code
   comments and test titles** so it finds them.
+- The `docs/testing` test-case document for each of your stories: each case's
+  scenario and its "Automated by" line. A citation of a test title that no
+  longer exists (you renamed the test) is a finding.
+- When you change the schema or a migration, every `CREATE`, `ALTER` and
+  `DROP` line of every migration, so it knows what older migrations created.
 - A scan of the whole branch for role checks outside `can()`, hard deletes and
   inline date formatting.
 - CI's results for your commit: lines you added that no test ran, and the
@@ -275,22 +284,29 @@ but fix them or reply on the PR saying why they don't apply.
 - Every test you removed, changed or skipped, next to what replaced it. A
   check made weaker (a narrower locator, a looser matcher, a deleted test, a
   `.skip`) is a finding.
-- Its previous review, the comments on your PR, and
+- Its previous review's findings, the comments on your PR, and
   `.github/ai-review/memory.md` (lessons from past reviews).
 
 **When it's wrong.** Reply on the PR and say why; on the next run it checks
-your reason against the code before dropping the finding. If it keeps
-misreading something deliberate across PRs, add a dated lesson to
-`.github/ai-review/memory.md` through a PR.
+your reason against the code before dropping the finding. Re-running it on
+the same commit doesn't clear a finding: it is told the code hasn't changed.
+After each merge it proposes lessons for its memory in a pull request from
+`ai-review/memory`; read the lesson before approving it. If it keeps
+misreading something deliberate, you can also add a dated lesson by hand.
 
 **When it fails to run.** It retries once. If that also fails, the check
 turns red and says why: re-run the **GLM Code Review** job from the PR's
 Checks tab. A PR whose reviewable diff is over 400,000 characters is not
 reviewed and fails the check, so split it.
 
-**Two cautions.** Your diff is sent to BigModel (Zhipu), a third-party
-provider, so never put secrets in a diff. If Copilot still reviews your PRs,
-turn off automatic Copilot code review in your personal GitHub settings.
+**Why GLM and not Copilot.** Copilot code review spends Copilot credits,
+which are limited, and the team doesn't have them; a required check can't
+depend on a quota that runs out. So the team runs its own reviewer on GLM
+(ADR 0008). If Copilot still reviews your PRs, turn off automatic Copilot
+code review in your personal GitHub settings.
+
+**A caution.** Your diff is sent to BigModel (Zhipu), a third-party
+provider, so never put secrets in a diff.
 
 The reviewer's own rules are in `.github/ai-review/instructions.md`, and
 ADR 0008 records how it came to work this way.

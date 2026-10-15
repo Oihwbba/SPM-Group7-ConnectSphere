@@ -22,7 +22,8 @@ export default async function BookingsPage() {
           Pending booking requests
         </h1>
         <p className="text-sm text-muted-foreground">
-          Soonest first. Each request is shown beside the venue it asks for, so
+          Soonest first, with held requests until they are confirmed, released
+          or expire. Each request is shown beside the venue it asks for, so
           you can check capacity, facilities, layout and availability before you
           decide. Times are Singapore time.
         </p>
@@ -30,6 +31,7 @@ export default async function BookingsPage() {
       <BookingQueue
         queue={queue}
         canDecide={can(session.user, "booking:decide")}
+        canHold={can(session.user, "booking:hold")}
       />
     </div>
   );

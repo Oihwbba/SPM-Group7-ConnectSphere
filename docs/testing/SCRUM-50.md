@@ -23,14 +23,14 @@ a manual tester creates the same events, or edits an event's dates.
 |---|---|---|---|
 | [TC-50-01](#tc-50-01) | Positive | AC 1, AC 2 | Unit, integration, e2e |
 | [TC-50-02](#tc-50-02) | Negative | AC 3 | Unit, integration, e2e |
-| [TC-50-03](#tc-50-03) | Negative | AC 3 (unavailability) | Integration |
+| [TC-50-03](#tc-50-03) | Negative | AC 3 (unavailability) | Unit, integration |
 | [TC-50-04](#tc-50-04) | Positive | AC 3, AC 10 (pending blocks nobody) | Unit, integration |
 | [TC-50-05](#tc-50-05) | Boundary | AC 4 | Unit, integration, e2e |
 | [TC-50-06](#tc-50-06) | Negative, Boundary | AC 5 | Unit, integration |
 | [TC-50-07](#tc-50-07) | Negative | AC 8 (one venue per event) | Unit, integration, e2e |
 | [TC-50-08](#tc-50-08) | Concurrency | AC 8 | Unit, integration |
-| [TC-50-09](#tc-50-09) | Negative | Coordinators only, own events only | Unit, integration, e2e |
-| [TC-50-10](#tc-50-10) | Negative, Boundary | Attendance within venue capacity | Unit, integration, e2e |
+| [TC-50-09](#tc-50-09) | Negative | AC 7 | Unit, integration, e2e |
+| [TC-50-10](#tc-50-10) | Negative, Boundary | AC 6 | Unit, integration, e2e |
 | [TC-50-11](#tc-50-11) | Negative, Boundary | AC 5 (no period that has already started) | Unit, integration, e2e |
 | [TC-50-12](#tc-50-12) | Positive | AC 1 (room layout before venue) | Unit, e2e |
 | [TC-50-13](#tc-50-13) | Negative, Boundary | AC 3, AC 4, AC 5 shown live, before submitting | Unit, integration, e2e |
@@ -89,7 +89,7 @@ a manual tester creates the same events, or edits an event's dates.
 | Test Data | `coordinator2@test.local` then `coordinator@test.local`, same venue, same period |
 | Expected Result | The second request is also created Pending. Staff choose between them. |
 
-**Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-50 [AC3, AC10] TC-50-04: a PENDING request by another coordinator does not block a new request" and "SCRUM-50 [AC3, AC10] TC-50-04: another event's pending request for the same venue and period blocks nobody"; `tests/unit/venue-availability.test.ts` › "SCRUM-50 [AC3, AC10] TC-50-04: asks only for APPROVED bookings that overlap the period — a pending request blocks nobody"
+**Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-50 [AC3, AC10] TC-50-04: a PENDING request by another coordinator does not block a new request" and "SCRUM-50 [AC3, AC10] TC-50-04: another event's pending request for the same venue and period blocks nobody"; `tests/unit/venue-availability.test.ts` › "SCRUM-50 [AC3, AC10] TC-50-04, SCRUM-163 [AC2, AC4] TC-163-04: asks only for APPROVED bookings and unexpired holds that overlap the period — a pending request blocks nobody"
 
 ### TC-50-05
 
@@ -128,7 +128,7 @@ a manual tester creates the same events, or edits an event's dates.
 | Test Data | As TC-50-01 |
 | Expected Result | "This event already has a venue request. Each event has one venue." with the existing request's venue, times and status, both times. Still one booking row for the event. Since SCRUM-172 the database's `booking_one_per_venue_per_event` constraint holds an event to one Pending, Held or Approved booking per venue, so the refusal in step 2 is the action's until SCRUM-162 lets an event book several venues. A Rejected or Cancelled one does not count (TC-50-14). |
 
-**Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-50 [AC8] TC-50-07: submitting the same request twice leaves one request and shows the existing one", "…an event with a pending booking at another venue is shown it, and no request is created", "…an event with a approved booking at another venue…" and "SCRUM-172 [AC9] TC-172-12: the database refuses a second pending, held or approved booking for one event at the same venue, but not at another"; `tests/unit/bookings.test.ts` › "SCRUM-50 [AC8] TC-50-07: an event that already has a pending or approved booking, for any venue, is shown it and nothing is created" and "SCRUM-50 [AC8] TC-50-07: the event's existing booking is shown even when the request differs from it"; `e2e/bookings.spec.ts` › journey
+**Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-50 [AC8] TC-50-07: submitting the same request twice leaves one request and shows the existing one", "…an event with a pending booking at another venue is shown it, and no request is created", "…an event with a approved booking at another venue…" and "SCRUM-172 [AC9] TC-172-12: the database refuses a second pending, held or approved booking for one event at the same venue, but not at another"; `tests/unit/bookings.test.ts` › "SCRUM-50 [AC8] TC-50-07, SCRUM-163 [AC4] TC-163-08: an event that already has a pending, approved or unexpired held booking, for any venue, is shown it and nothing is created" and "SCRUM-50 [AC8] TC-50-07: the event's existing booking is shown even when the request differs from it"; `e2e/bookings.spec.ts` › journey
 
 ### TC-50-08
 
@@ -148,7 +148,7 @@ a manual tester creates the same events, or edits an event's dates.
 | Item | Content |
 |---|---|
 | Test Case ID | TC-50-09 |
-| Test Scenario | [Negative] Only Event Coordinators may request, and only for approved events they can act on |
+| Test Scenario | [Negative] AC 7: only Event Coordinators may request, and only for events they can act on. The code accepts Approved and Planning events (`BOOKABLE_EVENT_STATUSES`); AC 7 says Planning only. Since approval moves an event straight to Planning (SCRUM-81) the difference can't arise, but it is flagged to the PO. |
 | Pre-conditions | — |
 | Test Steps | 1. Sign in as Venue Staff and open `/bookings/new` by typing it. <br> 2. As a Coordinator, check the event list. |
 | Test Data | `venuestaff@test.local`; `coordinator2@test.local` |
@@ -161,7 +161,7 @@ a manual tester creates the same events, or edits an event's dates.
 | Item | Content |
 |---|---|
 | Test Case ID | TC-50-10 |
-| Test Scenario | [Negative, Boundary] Expected attendance above the chosen venue's capacity is refused; exactly at capacity fits. This rule is not in the SCRUM-50 criteria; the team added it on 2026-09-27. |
+| Test Scenario | [Negative, Boundary] AC 6: expected attendance above the chosen venue's capacity is refused; exactly at capacity fits. |
 | Pre-conditions | — |
 | Test Steps | 1. Choose an event expecting 250, and the Exhibition Hall (holds 200). <br> 2. Change to an event expecting 200. |
 | Test Data | E2E Hall — Big Concert (250); E2E Hall — Full House (200) |

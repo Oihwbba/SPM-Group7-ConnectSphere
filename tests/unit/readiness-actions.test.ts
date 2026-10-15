@@ -88,6 +88,8 @@ describe("getEventReadiness — SCRUM-110", () => {
         ...checklist,
         canConfirm: true,
         canReject: true,
+        canSettleHold: true,
+        canWithdrawBooking: true,
         canRequestSafetyCheck: false,
       },
     });
@@ -106,6 +108,8 @@ describe("getEventReadiness — SCRUM-110", () => {
         items: [{ ...checklist.items[0], reason: null }, checklist.items[1]],
         canConfirm: false,
         canReject: false,
+        canSettleHold: false,
+        canWithdrawBooking: false,
         canRequestSafetyCheck: false,
       },
     });

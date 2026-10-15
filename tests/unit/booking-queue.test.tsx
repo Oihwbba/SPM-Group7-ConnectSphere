@@ -11,18 +11,31 @@ import type { PendingBookingRow } from "@/app/(app)/bookings/queries";
 // action and the router are never reached.
 vi.mock("@/app/(app)/bookings/actions", () => ({
   decideBookingRequest: vi.fn(),
+  holdBookingRequest: vi.fn(),
 }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
+// SCRUM-25 AC6: each card carries the event's operational notes.
+vi.mock("@/app/(app)/events/edit-actions", () => ({
+  getOperationalNotes: vi.fn(() => new Promise(() => {})),
+  addOperationalNote: vi.fn(),
+}));
 
 const row: PendingBookingRow = {
   id: "bkg_1",
+  status: "PENDING",
+  holdExpiresAt: null,
+  holdNote: null,
+  holdApprovedAt: null,
   startAt: new Date("2035-03-10T01:00:00.000Z"),
   endAt: new Date("2035-03-10T05:00:00.000Z"),
+  setupMinutes: 0,
+  turnaroundMinutes: 0,
   requestedAttendance: 250,
   requiredFacilities: ["projector", "stage"],
   requestedLayout: "banquet",
   requestNotes: null,
   createdAt: new Date("2035-01-01T01:00:00.000Z"),
+  eventId: "evt_1",
   event: { name: "Approved — Research Symposium" },
   requestedBy: { name: "Cody Coordinator", email: "coordinator@test.local" },
   venue: {
@@ -39,7 +52,7 @@ const row: PendingBookingRow = {
 };
 
 describe("BookingQueue", () => {
-  it("SCRUM-52 [AC1]: an empty queue says there is nothing pending rather than rendering nothing", () => {
+  it("SCRUM-52 [AC4] TC-52-06: an empty queue says there is nothing pending rather than rendering nothing", () => {
     const html = renderToStaticMarkup(<BookingQueue queue={[]} canDecide />);
 
     expect(html).toContain("No pending requests");
@@ -72,6 +85,39 @@ describe("BookingQueue", () => {
       );
     expect(buttons(withControls)).toEqual(["Reject", "Approve"]);
     expect(buttons(withoutControls)).toEqual([]);
+  });
+
+  it("SCRUM-163 [AC7] TC-163-17: a hold Venue Staff haven't approved offers Approve and Reject; once approved it reads 'Approved by Venue Staff – awaiting confirmation' and offers Reject only", () => {
+    const hold = {
+      ...row,
+      status: "HELD" as const,
+      holdExpiresAt: new Date("2035-03-05T02:00:00.000Z"),
+      holdNote: "Confirm the final headcount.",
+    };
+    const buttons = (html: string) =>
+      [...html.matchAll(/<button[^>]*>.*?<\/button>/g)].map((m) =>
+        m[0].replace(/<[^>]+>/g, "").trim(),
+      );
+
+    const unapproved = renderToStaticMarkup(
+      <BookingQueue queue={[hold]} canDecide canHold />,
+    );
+    expect(unapproved).toContain("Held until 5 Mar 2035, 10:00 am SGT");
+    expect(unapproved).not.toContain("Approved by Venue Staff");
+    expect(buttons(unapproved)).toEqual(["Reject", "Approve"]);
+
+    const approved = renderToStaticMarkup(
+      <BookingQueue
+        queue={[{ ...hold, holdApprovedAt: new Date("2035-03-01T02:00:00.000Z") }]}
+        canDecide
+        canHold
+      />,
+    );
+    expect(approved).toContain("Held until 5 Mar 2035, 10:00 am SGT");
+    expect(approved).toContain(
+      "Approved by Venue Staff – awaiting confirmation",
+    );
+    expect(buttons(approved)).toEqual(["Reject"]);
   });
 });
 

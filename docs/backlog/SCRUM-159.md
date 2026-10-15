@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-13. Jira is the source of truth.
+     Synced from Jira on 2026-10-15. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-159 - Include setup and turnaround time when checking venue availability
@@ -10,7 +10,7 @@
 | **Epic** | SCRUM-7 - Venue Management |
 | **Priority** | Highest |
 | **Story points** | 5 |
-| **Status in Jira** | In Review |
+| **Status in Jira** | In Progress |
 | **Sprint** | SCRUM Sprint 3 |
 | **Jira** | https://smu-spm-group7.atlassian.net/browse/SCRUM-159 |
 
@@ -28,6 +28,7 @@
 6. Removed (2026-10-09): refusing a request, hold or approval outside opening hours moved to SCRUM-34 AC7, which owns opening hours.
 7. The venue availability calendar (SCRUM-36) shows each booking's setup and turnaround time around it, marked differently from the event itself.
 8. A booking keeps the setup and turnaround times it was held or approved with. A later change to the venue's times doesn't move it; clashes that change creates are found by SCRUM-160.
+9. Given a venue has opening hours (SCRUM-34), when a request's event time is within them but its setup or turnaround time falls outside them, then Venue Staff see a warning naming the setup or turnaround time outside opening hours when they review, hold or approve it. The request isn't refused; Venue Staff decide (W9).
 
 **Supersedes:** SCRUM-36 AC2, SCRUM-50 AC2–AC4, SCRUM-52 AC3, SCRUM-53 AC4–AC6 and AC8. Each compared bare booking periods; they now compare occupied periods.
 
@@ -39,5 +40,6 @@
 
 * 2026-10-07 (Week 7 change 1): created.
 * 2026-10-09 (PO review): AC6 moved to SCRUM-34 AC7, so the opening-hours rule sits in one story. Number kept because other stories cite AC7 and AC8.
+* 2026-10-14 (W9 customer answer, PO request): added AC9: when only a request's setup or turnaround time falls outside the venue's opening hours, Venue Staff see a warning rather than a refusal, and decide. Opening hours are SCRUM-34's, which SCRUM-34 and SCRUM-38 point to.
 
 Functionality Area: Setup and Turnaround Time, Booking Conflict Detection

@@ -1,5 +1,9 @@
 # ADR 0010 — The database, not the application, prevents a venue being double-booked
 
+> **Status: amended on 2026-10-08 by the last addendum.** Held bookings block
+> a venue too, over occupied periods widened by setup and turnaround, and the
+> constraints were renamed.
+
 ## Context
 
 Double-booked venues are the customer's top complaint, and SCRUM-53 makes the
@@ -31,9 +35,9 @@ instead of a constraint error, because each approval is left waiting on the
 other's uncommitted row. So the action retries once, and the retry sees the
 winner.
 
-## Alternative rejected: an advisory lock per venue
+## Alternatives rejected
 
-We already lock the equipment row for reservations (ADR 0007), and an advisory
+**An advisory lock per venue.** We already lock the equipment row for reservations (ADR 0007), and an advisory
 lock on the venue id would work in the same way. We rejected it because a lock
 only protects code that remembers to take it. A future feature, a script or a
 manual SQL fix that writes an approved booking without the lock could still

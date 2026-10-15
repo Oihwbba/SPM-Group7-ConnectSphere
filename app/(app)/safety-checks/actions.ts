@@ -9,7 +9,7 @@ import { can, requirePermission, PermissionError } from "@/lib/auth/can";
 import { ok, err, type ActionResult } from "@/lib/action-result";
 import { formatDateTime } from "@/lib/datetime";
 import { FLAGGABLE_BOOKING, flagArrangements } from "@/lib/reconsideration";
-import { SAFETY_CHECK_LABEL } from "@/lib/safety-check";
+import { SAFETY_CHECK_LABEL } from "@/lib/safety-checks";
 
 const NOTE_REQUIRED = "A note is required for Changes requested or Rejected.";
 const PICK_REQUIRED = "Pick at least one venue booking or equipment reservation the changes affect.";

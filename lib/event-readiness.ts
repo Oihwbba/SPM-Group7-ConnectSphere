@@ -1,7 +1,10 @@
 import type { BookingStatus, Prisma, PrismaClient } from "@prisma/client";
 
+import { bookingStatusAt } from "@/lib/booking-holds";
+import { LIVE_LINE } from "@/lib/equipment/requests";
+import { formatDateTime } from "@/lib/datetime";
 import { FLAGGABLE_BOOKING } from "@/lib/reconsideration";
-import { safetyCheckItem } from "@/lib/safety-check";
+import { safetyCheckItem } from "@/lib/safety-checks";
 
 /**
  * SCRUM-110 — an event's readiness checklist: the essential arrangements that
@@ -14,10 +17,16 @@ import { safetyCheckItem } from "@/lib/safety-check";
 export interface ChecklistItem {
   name: "Venue booking" | "Equipment" | "Safety check";
   complete: boolean;
-  /** "Approved", "Pending", "Rejected", "Not requested", "Reserved", "Not fully reserved: Projector" */
+  /** "Approved", "Held until … – confirm to secure", "Pending", "Rejected", "Hold expired", "Not requested", "Reserved", "Not fully reserved: Projector", "Awaiting Technical Support review" */
   state: string;
   /** Internal detail, such as why Venue Staff rejected the booking. Hidden from the Organiser. */
   reason: string | null;
+  /** SCRUM-163 AC3: the live hold the Coordinator can confirm or release. */
+  heldBookingId?: string;
+  /** SCRUM-163 AC3, AC7: whether Venue Staff have approved that hold, which the Coordinator may confirm only then. */
+  holdApproved?: boolean;
+  /** SCRUM-142 AC4: the pending venue request the Coordinator can withdraw. */
+  pendingBookingId?: string;
 }
 
 export interface ReadinessChecklist {
@@ -33,6 +42,7 @@ const LIVE_REQUEST = ["PENDING_REVIEW", "IN_REVIEW", "APPROVED"];
 export async function getReadinessChecklist(
   db: Prisma.TransactionClient | PrismaClient,
   eventId: string,
+  now = new Date(),
 ): Promise<ReadinessChecklist | null> {
   // Statuses are filtered below rather than in the query, so every rule is
   // exercised by the unit tests; an event holds only a handful of these rows.
@@ -44,7 +54,10 @@ export async function getReadinessChecklist(
       endAt: true,
       bookings: {
         select: {
+          id: true,
           status: true,
+          holdExpiresAt: true,
+          holdApprovedAt: true,
           decisionReason: true,
           createdAt: true,
           startAt: true,
@@ -58,6 +71,7 @@ export async function getReadinessChecklist(
           status: true,
           createdAt: true,
           lines: {
+            where: LIVE_LINE,
             select: {
               equipmentId: true,
               quantity: true,
@@ -88,7 +102,7 @@ export async function getReadinessChecklist(
   });
   if (!event) return null;
 
-  const items = [venueItem(event)];
+  const items = [venueItem(event, now)];
   const equipment = equipmentItem(event);
   if (equipment) items.push(equipment);
   items.push(safetyCheckItem(event.safetyChecks[0]));
@@ -119,7 +133,10 @@ function coversEvent(
 }
 
 type BookingRow = {
-  status: string;
+  id: string;
+  status: BookingStatus;
+  holdExpiresAt: Date | null;
+  holdApprovedAt: Date | null;
   decisionReason: string | null;
   createdAt: Date;
   startAt: Date;
@@ -131,17 +148,24 @@ type BookingRow = {
 /** SCRUM-26 AC12: the flag's own state, with its reason for the Coordinator. */
 const NEEDS_RECONSIDERATION = "Needs reconsideration";
 
-function venueItem(event: Period & { bookings: BookingRow[] }): ChecklistItem {
-  const newestFirst = [...event.bookings].sort(
-    (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
-  );
+function venueItem(
+  event: Period & { bookings: BookingRow[] },
+  now: Date,
+): ChecklistItem {
+  // SCRUM-163 AC4: a hold past its expiry is Expired, even before anything
+  // has marked it so.
+  const newestFirst = [...event.bookings]
+    .map((b) => ({ ...b, status: bookingStatusAt(b, now) }))
+    .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
   const item = { name: "Venue booking" as const, reason: null };
   const approved = newestFirst.filter((b) => b.status === "APPROVED");
 
   // SCRUM-26 AC12: a flagged booking keeps the event from being confirmed
-  // until its Coordinator resolves the flag, however it otherwise stands.
+  // until its Coordinator resolves the flag, however it otherwise stands. A
+  // flagged hold that has expired has released the venue, so it no longer
+  // counts.
   const flagged = newestFirst.find(
-    (b) => b.needsReconsideration && FLAGGABLE_BOOKING.includes(b.status as BookingStatus),
+    (b) => b.needsReconsideration && FLAGGABLE_BOOKING.includes(b.status),
   );
   if (flagged) {
     return {
@@ -157,19 +181,43 @@ function venueItem(event: Period & { bookings: BookingRow[] }): ChecklistItem {
   if (approved.some((b) => coversEvent(b, event))) {
     return { ...item, complete: true, state: "Approved" };
   }
-  if (newestFirst.some((b) => b.status === "PENDING")) {
-    return { ...item, complete: false, state: "Pending" };
+  // SCRUM-163 AC6: a hold isn't an approval; the Coordinator confirms it.
+  const held = newestFirst.find((b) => b.status === "HELD");
+  if (held) {
+    return {
+      ...item,
+      complete: false,
+      state: `Held until ${formatDateTime(held.holdExpiresAt!)} – confirm to secure`,
+      heldBookingId: held.id,
+      holdApproved: held.holdApprovedAt !== null,
+    };
+  }
+  const pending = newestFirst.find((b) => b.status === "PENDING");
+  if (pending) {
+    return {
+      ...item,
+      complete: false,
+      state: "Pending",
+      pendingBookingId: pending.id,
+    };
   }
   if (approved.length > 0) {
     return { ...item, complete: false, state: "Approved for a different time" };
   }
-  const rejected = newestFirst.find((b) => b.status === "REJECTED");
-  if (rejected) {
+  // SCRUM-163 AC6: an expired hold counts like a rejection; the newer of the
+  // two describes the venue.
+  const ended = newestFirst.find(
+    (b) => b.status === "REJECTED" || b.status === "EXPIRED",
+  );
+  if (ended?.status === "EXPIRED") {
+    return { ...item, complete: false, state: "Hold expired" };
+  }
+  if (ended) {
     return {
       ...item,
       complete: false,
       state: "Rejected",
-      reason: rejected.decisionReason,
+      reason: ended.decisionReason,
     };
   }
   return { ...item, complete: false, state: "Not requested" };
@@ -257,12 +305,22 @@ function equipmentItem(event: EventRow): ChecklistItem | null {
           .reduce((sum, r) => sum + r.quantity, 0) < quantity,
     )
     .map(([, { type }]) => type);
-  const complete = short.length === 0;
+  if (short.length > 0) {
+    return {
+      name: "Equipment",
+      complete: false,
+      state: `Not fully reserved: ${short.join(", ")}`,
+      reason: null,
+    };
+  }
 
+  // SCRUM-142 AC10: a request back with Technical Support after a change
+  // keeps its other lines reserved, but Confirm waits for the re-check.
+  const awaitingReview = live.some((r) => r.status !== "APPROVED");
   return {
     name: "Equipment",
-    complete,
-    state: complete ? "Reserved" : `Not fully reserved: ${short.join(", ")}`,
+    complete: !awaitingReview,
+    state: awaitingReview ? "Awaiting Technical Support review" : "Reserved",
     reason: null,
   };
 }
