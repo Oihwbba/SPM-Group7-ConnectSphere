@@ -169,7 +169,10 @@ which story needs it.
 the suitability check something to mark *not suitable* (SCRUM-40). The Grand
 Auditorium and Exhibition Hall already have approved bookings, so availability
 and search have a real clash to exclude (SCRUM-36/38). Seminar Room 2.1 has a
-maintenance period that is **not** a booking (SCRUM-36/37).
+maintenance period that is **not** a booking (SCRUM-36/37). Each venue has
+opening hours per weekday in Singapore time (SCRUM-34): the Auditorium
+07:00–23:00 and the Hall 06:00–22:00 every day; Seminar Room 2.1 08:00–20:00
+and the Boardroom 09:00–18:00 on weekdays, both closed at weekends.
 
 **Equipment:** five pooled types. Three of the ten projectors are in for
 maintenance and one PA speaker is written off, so the available quantity is
