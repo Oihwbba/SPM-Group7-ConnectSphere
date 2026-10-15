@@ -42,6 +42,7 @@ import {
   getFormCatalogues,
 } from "./actions";
 import {
+  LAYOUT_OPTIONS,
   PAST_DRAFT_DATES_MESSAGE,
   draftStartIsInPast,
 } from "@/lib/schemas/event";
@@ -79,15 +80,6 @@ const initialFormState: FormState = {
   programme: "",
   specialRequests: "",
 };
-
-const LAYOUT_OPTIONS = [
-  "Theatre",
-  "Classroom",
-  "Banquet",
-  "Boardroom",
-  "U-Shape",
-  "Cocktail / Standing",
-];
 
 export interface DraftEventData {
   id: string;

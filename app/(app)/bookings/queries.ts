@@ -75,6 +75,7 @@ export async function getPendingBookingQueue(now = new Date()) {
       requestedLayout: true,
       requestNotes: true,
       createdAt: true,
+      eventId: true,
       event: { select: { name: true } },
       requestedBy: { select: { name: true, email: true } },
       venue: {
