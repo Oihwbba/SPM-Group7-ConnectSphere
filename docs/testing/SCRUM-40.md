@@ -48,7 +48,7 @@ takes the search's values the same way.
 | Test Data | — |
 | Expected Result | Not suitable, with "No wheelchair access; event needs wheelchair access". The request stores the accessibility features asked for. |
 
-**Automated by:** `tests/unit/venue-suitability.test.ts` › "SCRUM-40 [AC3] TC-40-03: …"; `tests/integration/venue-suitability.test.ts` › "SCRUM-40 [AC9, AC10] TC-40-10, TC-40-11: …"
+**Automated by:** `tests/unit/venue-suitability.test.ts` › "SCRUM-40 [AC3] TC-40-03: …"; `tests/integration/venue-suitability.test.ts` › "SCRUM-40 [AC9, AC10] TC-40-10, TC-40-11: …"; `e2e/venue-suitability.spec.ts` › "SCRUM-40 [AC2, AC3, AC6, AC8, AC9, AC10] …"
 
 ### TC-40-04
 

@@ -72,19 +72,29 @@ test.describe("SCRUM-40 — flag venue suitability, with the reason", () => {
 
     await choose(coordinator, "Event", NAME);
     await choose(coordinator, "Venue", /Seminar Room 2\.1/);
-    await coordinator.getByRole("button", { name: "stage", exact: true }).click();
+    const stage = coordinator.getByRole("button", { name: "stage", exact: true });
+    // AC3: Seminar Room 2.1 has wheelchair access but no hearing loop.
+    const hearingLoop = coordinator.getByRole("button", {
+      name: "hearing-loop",
+      exact: true,
+    });
+    await stage.click();
+    await hearingLoop.click();
 
     const panel = coordinator.getByTestId("suitability");
     await expect(panel.getByTestId("suitability-result")).toHaveText("Not suitable");
     await expect(panel.getByTestId("suitability-reason")).toHaveText([
       "Missing facility: stage",
+      "No hearing loop; event needs hearing loop",
     ]);
 
-    // AC5: with the facility it has instead, it is Suitable.
-    await coordinator.getByRole("button", { name: "stage", exact: true }).click();
+    // AC5: with the facility it has instead, and no unmet need, it is Suitable.
+    await stage.click();
+    await hearingLoop.click();
     await coordinator.getByRole("button", { name: "projector", exact: true }).click();
     await expect(panel.getByTestId("suitability-result")).toHaveText("Suitable");
-    await coordinator.getByRole("button", { name: "stage", exact: true }).click();
+    await stage.click();
+    await hearingLoop.click();
 
     // AC8: a judgement needs a note.
     await panel.getByRole("button", { name: "Record your judgement" }).click();
@@ -117,8 +127,10 @@ test.describe("SCRUM-40 — flag venue suitability, with the reason", () => {
     await staff.goto("/bookings");
     const booking = await prisma.booking.findFirstOrThrow({
       where: { event: { name: NAME } },
-      select: { id: true },
+      select: { id: true, requiredAccessibilityFeatures: true },
     });
+    // AC3: the request stores the accessibility need asked for.
+    expect(booking.requiredAccessibilityFeatures).toEqual(["hearing-loop"]);
     const card = staff.getByTestId(`booking-${booking.id}`);
     await expect(card.getByTestId("queue-judgement")).toContainText("Suitable");
     await expect(card.getByTestId("queue-judgement")).toContainText(
