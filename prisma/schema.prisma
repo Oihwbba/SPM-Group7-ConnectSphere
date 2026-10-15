@@ -440,13 +440,6 @@ model ClarificationRequest {
   @@index([status])
 }
 
-// ---------------------------------------------------------------------------
-// Venue management (epic SCRUM-7)
-// ---------------------------------------------------------------------------
-
-/// SCRUM-34 — "displays location, capacity, facilities, accessibility info,
-/// supported layouts, and operating information."
-/// SCRUM-34 — Venue Staff maintain these records.
 /// SCRUM-25 AC6 — an operational note on an event, shown with its author and
 /// time. Permanent: the trigger event_operational_note_permanent refuses any
 /// edit or delete, and the CHECK event_operational_note_not_blank a blank one.
@@ -464,6 +457,13 @@ model EventOperationalNote {
   @@index([authorId])
 }
 
+// ---------------------------------------------------------------------------
+// Venue management (epic SCRUM-7)
+// ---------------------------------------------------------------------------
+
+/// SCRUM-34 — "displays location, capacity, facilities, accessibility info,
+/// supported layouts, and operating information."
+/// SCRUM-34 — Venue Staff maintain these records.
 model Venue {
   id                    String   @id @default(cuid())
   name                  String
