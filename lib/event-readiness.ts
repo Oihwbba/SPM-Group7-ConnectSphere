@@ -3,6 +3,7 @@ import type { BookingStatus, Prisma, PrismaClient } from "@prisma/client";
 import { bookingStatusAt } from "@/lib/booking-holds";
 import { LIVE_LINE } from "@/lib/equipment/requests";
 import { formatDateTime } from "@/lib/datetime";
+import { FLAGGABLE_BOOKING } from "@/lib/reconsideration";
 
 /**
  * SCRUM-110 — an event's readiness checklist: the essential arrangements that
@@ -64,6 +65,8 @@ export async function getReadinessChecklist(
           createdAt: true,
           startAt: true,
           endAt: true,
+          needsReconsideration: true,
+          reconsiderationReason: true,
         },
       },
       equipmentRequests: {
@@ -87,6 +90,9 @@ export async function getReadinessChecklist(
           status: true,
           startAt: true,
           endAt: true,
+          needsReconsideration: true,
+          reconsiderationReason: true,
+          equipment: { select: { type: true } },
         },
       },
     },
@@ -130,7 +136,12 @@ type BookingRow = {
   createdAt: Date;
   startAt: Date;
   endAt: Date;
+  needsReconsideration: boolean;
+  reconsiderationReason: string | null;
 };
+
+/** SCRUM-26 AC12: the flag's own state, with its reason for the Coordinator. */
+const NEEDS_RECONSIDERATION = "Needs reconsideration";
 
 function venueItem(
   event: Period & { bookings: BookingRow[] },
@@ -143,6 +154,22 @@ function venueItem(
     .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
   const item = { name: "Venue booking" as const, reason: null };
   const approved = newestFirst.filter((b) => b.status === "APPROVED");
+
+  // SCRUM-26 AC12: a flagged booking keeps the event from being confirmed
+  // until its Coordinator resolves the flag, however it otherwise stands. A
+  // flagged hold that has expired has released the venue, so it no longer
+  // counts.
+  const flagged = newestFirst.find(
+    (b) => b.needsReconsideration && FLAGGABLE_BOOKING.includes(b.status),
+  );
+  if (flagged) {
+    return {
+      ...item,
+      complete: false,
+      state: NEEDS_RECONSIDERATION,
+      reason: flagged.reconsiderationReason,
+    };
+  }
 
   // After a rejection, or after the event moves, the Coordinator books again,
   // so the most advanced booking describes where the venue stands.
@@ -211,10 +238,28 @@ type EventRow = {
     status: string;
     startAt: Date;
     endAt: Date;
+    needsReconsideration: boolean;
+    reconsiderationReason: string | null;
+    equipment: { type: string };
   }[];
 };
 
-function equipmentItem(event: EventRow): ChecklistItem {
+function equipmentItem(event: EventRow): ChecklistItem | null {
+  // SCRUM-26 AC12: as for the venue, a flagged reservation leaves the item
+  // incomplete until its Coordinator resolves the flag.
+  const flagged = event.reservations.filter(
+    (r) => r.needsReconsideration && r.status === "CONFIRMED",
+  );
+  if (flagged.length > 0) {
+    const types = [...new Set(flagged.map((r) => r.equipment.type))];
+    return {
+      name: "Equipment",
+      complete: false,
+      state: `${NEEDS_RECONSIDERATION}: ${types.join(", ")}`,
+      reason: flagged[0].reconsiderationReason,
+    };
+  }
+
   const oldestFirst = [...event.equipmentRequests].sort(
     (a, b) => a.createdAt.getTime() - b.createdAt.getTime(),
   );
