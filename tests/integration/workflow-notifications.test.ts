@@ -198,6 +198,16 @@ describe.skipIf(!usesLocalDatabase)(
           requestedById: COORDINATOR,
         },
       });
+      // SCRUM-166 AC9: confirming needs an approved safety check.
+      await prisma.safetyCheck.create({
+        data: {
+          eventId: ready.id,
+          status: "APPROVED",
+          requestedById: COORDINATOR,
+          decidedById: "usr_safety",
+          decidedAt: new Date(),
+        },
+      });
       signIn(COORDINATOR, "COORDINATOR");
 
       expect((await confirmEvent({ eventId: ready.id })).ok).toBe(true);
