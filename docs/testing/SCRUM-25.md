@@ -65,7 +65,7 @@ requirements are the fields SCRUM-26 warns about and flags on (AC3).
 | Item | Content |
 |---|---|
 | Test Case ID | TC-25-05 |
-| Test Scenario | [Positive] AC 2: changing the layout or accessibility needs puts a requested safety check out of date |
+| Test Scenario | [Positive] AC 2: changing the layout or accessibility needs puts an Approved or awaiting safety check out of date |
 | Pre-conditions | A Planning event with a safety check Awaiting review, and older Rejected and Changes requested ones. |
 | Test Steps | 1. Change the preferred layout. Save. <br> 2. Separately, change only the programme. |
 | Test Data | — |
@@ -208,7 +208,7 @@ requirements are the fields SCRUM-26 warns about and flags on (AC3).
 | Item | Content |
 |---|---|
 | Test Case ID | TC-25-16 |
-| Test Scenario | [Positive] [Negative] AC 3, with SCRUM-166 AC 13: changing the date, time or attendance puts a requested safety check out of date |
+| Test Scenario | [Positive] [Negative] AC 3: changing the date, time or attendance puts an Approved or awaiting safety check out of date (SCRUM-166 AC 13) |
 | Pre-conditions | Two Planning events with nothing booked or reserved, each with a safety check Awaiting review; a third with an Approved booking and an Approved safety check, as a check is only requested once the venue is secured (SCRUM-166 AC1). |
 | Test Steps | 1. Change only the first event's venue requirements. Save. <br> 2. Move the second event to another day. Save. <br> 3. Move the third event to another day. Save, then Save and flag. |
 | Test Data | — |

@@ -66,8 +66,8 @@ function stored(value: string | number | Date | null | undefined): string | null
  * while it is Under Review or in Planning (AC1).
  *
  * - A routine edit keeps the status and flags nothing (AC2). A routine change
- *   to the layout or accessibility needs makes a requested safety check
- *   Outdated (AC2, SCRUM-166).
+ *   to the layout or accessibility needs makes an Approved or awaiting
+ *   safety check Outdated (AC2, SCRUM-166 AC13).
  * - Date, time, expected attendance, venue and equipment (AC3): in Planning,
  *   when the event has a live venue booking or equipment reservation, nothing
  *   is saved until the Coordinator confirms the arrangements SCRUM-26 will

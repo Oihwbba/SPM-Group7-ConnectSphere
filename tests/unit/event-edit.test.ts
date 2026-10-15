@@ -200,7 +200,7 @@ describe("updateEventDetails — SCRUM-25", () => {
   });
 
   it.each(["preferredLayout", "accessibilityNeeds"] as const)(
-    "SCRUM-25 [AC2] TC-25-05: changing %s makes a requested safety check Outdated",
+    "SCRUM-25 [AC2] TC-25-05: changing %s makes an Approved or awaiting safety check Outdated",
     async (field) => {
       db.safetyCheck.updateMany.mockResolvedValue({ count: 1 });
 
@@ -278,7 +278,7 @@ describe("updateEventDetails — SCRUM-25", () => {
     ["the end", { endAt: "2036-03-03T07:00:00.000Z" }],
     ["the expected attendance", { expectedAttendance: 150 }],
   ])(
-    "SCRUM-25 [AC3] TC-25-16: changing %s makes a requested safety check Outdated (SCRUM-166 AC13)",
+    "SCRUM-25 [AC3] TC-25-16: changing %s makes an Approved or awaiting safety check Outdated (SCRUM-166 AC13)",
     async (_label, edit) => {
       db.safetyCheck.updateMany.mockResolvedValue({ count: 1 });
 

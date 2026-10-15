@@ -122,7 +122,7 @@ describe.skipIf(!usesLocalDatabase)("editing an event's details — real databas
     ).toEqual({ status: "APPROVED", needsReconsideration: false });
   });
 
-  it("SCRUM-25 [AC2] TC-25-05: a layout change makes a requested safety check Outdated, and leaves a Rejected or Changes requested one alone", async () => {
+  it("SCRUM-25 [AC2] TC-25-05: a layout change makes an awaiting safety check Outdated, and leaves a Rejected or Changes requested one alone", async () => {
     const eventId = await planningEvent();
     const awaiting = await prisma.safetyCheck.create({
       data: { eventId, requestedById: "usr_coordinator" },
@@ -173,7 +173,7 @@ describe.skipIf(!usesLocalDatabase)("editing an event's details — real databas
     });
   });
 
-  it("SCRUM-25 [AC3] TC-25-16: moving the date makes a requested safety check Outdated; a venue requirements change doesn't (SCRUM-166 AC13)", async () => {
+  it("SCRUM-25 [AC3] TC-25-16: moving the date makes an awaiting safety check Outdated; a venue requirements change doesn't (SCRUM-166 AC13)", async () => {
     const untouched = await planningEvent();
     const keptCheck = await prisma.safetyCheck.create({
       data: { eventId: untouched, requestedById: "usr_coordinator" },
