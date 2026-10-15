@@ -1,7 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import type { SafetyCheckStatus } from "@prisma/client";
 
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
@@ -18,6 +17,7 @@ import {
   liveBookingWhere,
   type Arrangement,
 } from "@/lib/reconsideration";
+import { outdateSafetyChecks } from "@/lib/safety-checks";
 import {
   ARRANGEMENT_FIELDS,
   arrangementsFlaggedReason,
@@ -50,16 +50,6 @@ export type EventDetailsNeedConfirmation = {
   confirm: Arrangement[];
   message: string | null;
 };
-
-/**
- * SCRUM-166 AC13 — only a check that is Approved or awaiting review goes out
- * of date. After Changes requested or Rejected the Coordinator already
- * requests a new one, and that outcome stays as the Safety Officer gave it.
- */
-const CURRENT_SAFETY_CHECK_STATUSES: SafetyCheckStatus[] = [
-  "AWAITING_REVIEW",
-  "APPROVED",
-];
 
 /** Thrown inside the edit transaction for an expected refusal. */
 class EditError extends Error {}
@@ -234,11 +224,9 @@ export async function updateEventDetails(
       const touchesSafety = changes.some(({ field }) =>
         SAFETY_RELEVANT_FIELDS.includes(field),
       );
+      // SCRUM-166 AC13: only an Approved or awaiting check goes out of date.
       const outdated = touchesSafety
-        ? await tx.safetyCheck.updateMany({
-            where: { eventId, status: { in: CURRENT_SAFETY_CHECK_STATUSES } },
-            data: { status: "OUTDATED", outdatedAt: now },
-          })
+        ? await outdateSafetyChecks(tx, eventId, now)
         : { count: 0 };
       return {
         changed: changes.map((c) => c.field),
