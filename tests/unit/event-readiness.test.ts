@@ -652,7 +652,14 @@ describe("getReadinessChecklist — flagged arrangements (SCRUM-26 AC12)", () =>
         reservations: [flagged(reserved("eqp_projector", 1, { status: "CANCELLED" }))],
       }),
     );
-    expect(equipment(cancelled)).toBeUndefined();
+    // SCRUM-170 AC4: Equipment is always listed, so a cancelled flag leaves
+    // the No equipment needed decision as it was recorded.
+    expect(equipment(cancelled)).toEqual({
+      name: "Equipment",
+      complete: true,
+      state: "No equipment needed",
+      reason: `Recorded by Cody Coordinator, ${formatDateTime(DECIDED_AT)}`,
+    });
     expect(cancelled?.ready).toBe(true);
   });
 
