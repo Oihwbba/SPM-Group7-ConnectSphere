@@ -133,7 +133,7 @@ export async function findAffectedBookings(
 }
 
 /**
- * AC7 — lock the affected bookings' events, then the bookings, before the
+ * AC5 — lock the affected bookings' events, then the bookings, before the
  * caller locks the venue. That is the order a hold, a withdrawal and an
  * approval already take them in (event, then booking, then the venue in the
  * occupancy trigger, ADR 0010), so recording unavailability can't deadlock

@@ -11,6 +11,11 @@ those ([TC-37-05](SCRUM-37.md#tc-37-05), [TC-37-06](SCRUM-37.md#tc-37-06)) now
 test only what is left of them: unavailability over unavailability is still
 refused.
 
+On 14 Oct 2026 (PO approved) the story dropped its former AC 5 (replacement
+search and request gating) and AC 6 (a flagged booking can't proceed), which
+SCRUM-38, SCRUM-162 and SCRUM-26 cover, and renumbered AC 7–8 to AC 5–6.
+TC-161-08 to TC-161-11 are retired and keep their IDs so none is reused.
+
 **Shared pre-conditions for every case:** the database is migrated and seeded,
 the app is running, and the tester signs in as Venue Staff
 (`venuestaff@test.local` / `Password123!`) unless the case says otherwise.
@@ -27,12 +32,12 @@ case names one.
 | [TC-161-05](#tc-161-05) | Boundary | AC 3 | Unit, integration |
 | [TC-161-06](#tc-161-06) | Positive | AC 4 | Unit, integration, e2e |
 | [TC-161-07](#tc-161-07) | Negative | AC 2 | Unit, integration |
-| [TC-161-08](#tc-161-08) | Positive | AC 5 | Manual (blocked: SCRUM-38) |
-| [TC-161-09](#tc-161-09) | Negative | AC 5 | Integration |
-| [TC-161-10](#tc-161-10) | Negative | AC 6 | Unit, integration |
-| [TC-161-11](#tc-161-11) | Positive | AC 6 | Manual (blocked: SCRUM-26) |
-| [TC-161-12](#tc-161-12) | Concurrency | AC 7 | Unit, integration |
-| [TC-161-13](#tc-161-13) | Negative | AC 8 | Unit, integration |
+| [TC-161-08](#tc-161-08) | Retired | — (former AC 5) | — |
+| [TC-161-09](#tc-161-09) | Retired | — (former AC 5) | — |
+| [TC-161-10](#tc-161-10) | Retired | — (former AC 6) | — |
+| [TC-161-11](#tc-161-11) | Retired | — (former AC 6) | — |
+| [TC-161-12](#tc-161-12) | Concurrency | AC 5 | Unit, integration |
+| [TC-161-13](#tc-161-13) | Negative | AC 6 | Unit, integration |
 | [TC-161-14](#tc-161-14) | Negative | AC 1 (Venue Staff only, SCRUM-37 AC6) | Unit |
 | [TC-161-15](#tc-161-15) | Positive | AC 3, AC 4 | Unit, integration |
 | [TC-161-16](#tc-161-16) | Boundary | AC 1 (start and end on quarter hours) | Unit, e2e |
@@ -89,7 +94,7 @@ case names one.
 | Test Data | As above |
 | Expected Result | All three are flagged Needs Reconsideration with the reason "Grand Auditorium is unavailable: Safety concern from 12 Jan 2036, 10:00 am SGT to 12 Jan 2036, 2:00 pm SGT. Note: Fire exit blocked" and when it was raised. Each keeps its status (Pending, Held, Approved), its times and its hold expiry; each event keeps its status and details. Each flag is in the audit log. |
 
-**Automated by:** `tests/unit/unavailability.test.ts` › "SCRUM-161 [AC3] TC-161-04: only the flag is written, with the reason and period"; `tests/integration/unavailability.test.ts` › "SCRUM-161 [AC3] TC-161-04: pending, held and approved bookings are all flagged, and their status, times and events don't change"; `e2e/availability.spec.ts` › journey
+**Automated by:** `tests/unit/unavailability.test.ts` › "SCRUM-161 [AC3] TC-161-04: only the flag is written, with the reason and period"; `tests/integration/unavailability.test.ts` › "SCRUM-161 [AC3] TC-161-04: pending, held and approved bookings are all flagged, and their status, times and events don't change"; `e2e/availability.spec.ts` › "SCRUM-161 [AC1-AC4] TC-161-01, TC-161-04, TC-161-06, TC-161-16: unavailability over an approved booking, on quarter hours, is confirmed, saved, flags the booking and tells its Coordinator"
 
 ### TC-161-05
 
@@ -115,7 +120,7 @@ case names one.
 | Test Data | — |
 | Expected Result | Step 1: "Alternative venue arrangements required": `"<event>": Grand Auditorium is unavailable (Equipment failure from 12 Jan 2036, 10:00 am SGT to 12 Jan 2036, 12:00 pm SGT), which overlaps your approved booking there. Alternative arrangements are required: find a replacement venue, then cancel this booking.` It links to the event. Step 2: every Venue Staff member has "Booking needs reconsideration" for that booking (SCRUM-124 AC8). One notice per booking for each recipient. |
 
-**Automated by:** `tests/unit/unavailability.test.ts` › "SCRUM-161 [AC4] TC-161-06: the assigned Coordinator is told alternative arrangements are required, with venue, reason and period"; `tests/integration/unavailability.test.ts` › "SCRUM-161 [AC4] TC-161-06: each affected event's Coordinator, and every Venue Staff member, is notified once"; `e2e/availability.spec.ts` › journey
+**Automated by:** `tests/unit/unavailability.test.ts` › "SCRUM-161 [AC4] TC-161-06: the assigned Coordinator is told alternative arrangements are required, with venue, reason and period"; `tests/integration/unavailability.test.ts` › "SCRUM-161 [AC4] TC-161-06: each affected event's Coordinator, and every Venue Staff member, is notified once"; `e2e/availability.spec.ts` › "SCRUM-161 [AC1-AC4] TC-161-01, TC-161-04, TC-161-06, TC-161-16: unavailability over an approved booking, on quarter hours, is confirmed, saved, flags the booking and tells its Coordinator"
 
 ### TC-161-07
 
@@ -132,81 +137,45 @@ case names one.
 
 ### TC-161-08
 
-| Item | Content |
-|---|---|
-| Test Case ID | TC-161-08 |
-| Test Scenario | [Positive] AC 5: from a flagged booking, Find a replacement venue opens venue search pre-filled from it, without the unavailable venue |
-| Pre-conditions | A booking flagged by TC-161-01. Venue search (SCRUM-38) and the Coordinator's view of flagged bookings (SCRUM-26) exist. |
-| Test Steps | 1. As the Coordinator, open the event. <br> 2. On the flagged booking, click **Find a replacement venue**. |
-| Test Data | — |
-| Expected Result | Venue search opens with the event's date and time fixed, and the attendance, facilities and layout from the booking (SCRUM-38 AC1). The Grand Auditorium is not among the results (SCRUM-38 AC3). The flagged booking stays on the event, still flagged. |
-
-**Automated by:** Manual. Blocked: venue search is SCRUM-38 (To Do), and the Coordinator's panel of flagged bookings is SCRUM-26 (in review, #172).
+**Retired** on 14 Oct 2026 with the story's former AC 5. Searching for a replacement venue is SCRUM-38 AC1 and AC3.
 
 ### TC-161-09
 
-| Item | Content |
-|---|---|
-| Test Case ID | TC-161-09 |
-| Test Scenario | [Negative] AC 5: a replacement can't be requested while the flagged booking is live |
-| Pre-conditions | A booking flagged by TC-161-01, still Approved. |
-| Test Steps | 1. As the Coordinator, request a different venue for the same event. |
-| Test Data | The Exhibition Hall |
-| Expected Result | No request is created; the existing, flagged booking is shown. (Today this is SCRUM-50 AC8's one-venue rule; with several venues per event, SCRUM-162 must keep refusing it while the flagged booking is live.) |
-
-**Automated by:** `tests/integration/unavailability.test.ts` › "SCRUM-161 [AC5] TC-161-09: no replacement can be requested while the flagged booking is live"
+**Retired** on 14 Oct 2026 with the story's former AC 5. Whether a replacement may be requested while the flagged booking is live is SCRUM-162's.
 
 ### TC-161-10
 
-| Item | Content |
-|---|---|
-| Test Case ID | TC-161-10 |
-| Test Scenario | [Negative] AC 6: while the unavailability overlaps it, a flagged booking can't be approved, held or confirmed |
-| Pre-conditions | Maintenance recorded over three flagged bookings: one Pending, one Pending, one Held. |
-| Test Steps | 1. As Venue Staff, approve the first. <br> 2. Hold the second. <br> 3. As the Coordinator, confirm the hold. |
-| Test Data | — |
-| Expected Result | Step 1 and 2: "Conflicting: Grand Auditorium is unavailable (maintenance) from … This request is still pending." Step 3: "This hold can't be confirmed: the venue is now unavailable for part of its period. Release it and arrange another venue." No status changes. |
-
-**Automated by:** `tests/unit/booking-holds.test.ts` › "SCRUM-161 [AC6] TC-161-10: confirming a hold the database refuses over unavailability says so"; `tests/integration/unavailability.test.ts` › "SCRUM-161 [AC6] TC-161-10: a flagged booking can't be approved, held or confirmed over the unavailability"
+**Retired** on 14 Oct 2026 with the story's former AC 6. A flagged request or hold can't be approved, held or confirmed under SCRUM-26 AC5; the database's refusal to confirm a hold over unavailability is tested under SCRUM-37 AC2 ([TC-37-04](SCRUM-37.md#tc-37-04)).
 
 ### TC-161-11
 
-| Item | Content |
-|---|---|
-| Test Case ID | TC-161-11 |
-| Test Scenario | [Positive] AC 6: the Coordinator can't keep the flagged booking as Still stands, and cancels it, leaving the event's other bookings unchanged |
-| Pre-conditions | A flagged Approved booking (TC-161-01) and the Coordinator's Still stands and Cancel arrangement choices (SCRUM-26). |
-| Test Steps | 1. As the Coordinator, choose **Still stands**. <br> 2. Choose **Cancel arrangement**. |
-| Test Data | — |
-| Expected Result | Step 1 is refused with the unavailability as the reason (SCRUM-26 AC8). Step 2 cancels it and releases the venue; the event's other bookings don't change. |
-
-**Automated by:** Manual. Blocked: Still stands and Cancel arrangement are SCRUM-26 (in review, #172). A flagged Pending request can already be withdrawn (SCRUM-142) and a flagged hold released (SCRUM-163).
+**Retired** on 14 Oct 2026 with the story's former AC 6. Still stands and Cancel arrangement are SCRUM-26 AC8 and AC9.
 
 ### TC-161-12
 
 | Item | Content |
 |---|---|
 | Test Case ID | TC-161-12 |
-| Test Scenario | [Concurrency] AC 7: an approval and an unavailability for overlapping periods saved at the same moment |
+| Test Scenario | [Concurrency] AC 5: an approval and an unavailability for overlapping periods saved at the same moment |
 | Pre-conditions | A Pending request overlapping the period. |
 | Test Steps | 1. Venue Staff approve the request while another member of Venue Staff records (and confirms) unavailability over it, both past their own checks before either writes. |
 | Test Data | — |
 | Expected Result | The unavailability is saved. The booking is either still Pending and its approval refused, or Approved and flagged; never Approved without a flag. |
 
-**Automated by:** `tests/unit/unavailability.test.ts` › "SCRUM-161 [AC7] TC-161-12: the affected events, then the bookings, then the venue are locked before anything is decided"; `tests/integration/concurrency.test.ts` › "SCRUM-161 [AC7] TC-161-12: …" cases
+**Automated by:** `tests/unit/unavailability.test.ts` › "SCRUM-161 [AC5] TC-161-12: the affected events, then the bookings, then the venue are locked before anything is decided"; `tests/integration/concurrency.test.ts` › "SCRUM-161 [AC5] TC-161-12: …" cases
 
 ### TC-161-13
 
 | Item | Content |
 |---|---|
 | Test Case ID | TC-161-13 |
-| Test Scenario | [Negative] AC 8: recording the same unavailability twice saves it once and flags nothing new |
+| Test Scenario | [Negative] AC 6: recording the same unavailability twice saves it once and flags nothing new |
 | Pre-conditions | TC-161-01 done. |
 | Test Steps | 1. Record the same venue, period and reason again, and confirm. |
 | Test Data | As TC-161-01 |
 | Expected Result | "Already recorded: Grand Auditorium is unavailable for that period." Still one unavailability row; no new flag, audit entry or notification. |
 
-**Automated by:** `tests/unit/unavailability.test.ts` › "SCRUM-161 [AC8] TC-161-13: the same unavailability again saves nothing and flags nothing"; `tests/integration/unavailability.test.ts` › "SCRUM-161 [AC8] TC-161-13: recording the same unavailability twice saves it once and flags nothing new"
+**Automated by:** `tests/unit/unavailability.test.ts` › "SCRUM-161 [AC6] TC-161-13: the same unavailability again saves nothing and flags nothing"; `tests/integration/unavailability.test.ts` › "SCRUM-161 [AC6] TC-161-13: recording the same unavailability twice saves it once and flags nothing new"
 
 ### TC-161-14
 

@@ -66,7 +66,7 @@ Moved to [TC-36-09](SCRUM-36.md#tc-36-09) on 2026-10-09. A newly approved bookin
 | Test Data | As above |
 | Expected Result | Step 1: "Grand Auditorium is unavailable for that period: unavailable (maintenance) from 10 Jan 2036, 1:00 pm to 10 Jan 2036, 5:00 pm." The same message shape as a booking clash, from the same lookup. Nothing is created. Step 2: "Conflicting: …", and the request stays pending. The database itself refuses the approval too. |
 
-**Automated by:** `tests/integration/unavailability.test.ts` › "SCRUM-37 [AC2] TC-37-04: a request over recorded maintenance is refused, with the same message shape as a booking clash", "SCRUM-161 [AC6] TC-161-10: a flagged booking can't be approved, held or confirmed over the unavailability" and "SCRUM-37 [AC2] TC-37-04: the database alone refuses approving a booking over recorded maintenance"; `e2e/availability.spec.ts` › journey
+**Automated by:** `tests/integration/unavailability.test.ts` › "SCRUM-37 [AC2] TC-37-04: a request over recorded maintenance is refused, with the same message shape as a booking clash" and "SCRUM-37 [AC2] TC-37-04: the database alone refuses approving a booking over recorded maintenance"; `tests/unit/booking-holds.test.ts` › "SCRUM-37 [AC2] TC-37-04: confirming a hold the database refuses over unavailability says so"; `e2e/availability.spec.ts` › journey
 
 ### TC-37-05
 
@@ -86,13 +86,13 @@ Moved to [TC-36-09](SCRUM-36.md#tc-36-09) on 2026-10-09. A newly approved bookin
 | Item | Content |
 |---|---|
 | Test Case ID | TC-37-06 |
-| Test Scenario | [Concurrency] AC 4: an approval and a maintenance record for overlapping periods at the same moment. Superseded by SCRUM-161 AC 7 ([TC-161-12](SCRUM-161.md#tc-161-12)): the unavailability is always saved, and the booking is refused or flagged |
+| Test Scenario | [Concurrency] AC 4: an approval and a maintenance record for overlapping periods at the same moment. Superseded by SCRUM-161 AC 5 ([TC-161-12](SCRUM-161.md#tc-161-12)): the unavailability is always saved, and the booking is refused or flagged |
 | Pre-conditions | Real PostgreSQL. A pending request 10:00 am to 2:00 pm on a test venue. |
 | Test Steps | 1. Approve the request and record maintenance 12:00 pm to 4:00 pm at once. The test holds both after the application's own check until both have passed it, so only the database's locks can separate them. |
 | Test Data | — |
 | Expected Result | One succeeds and the other is refused. Approved bookings plus recorded unavailability for that period total exactly one. With the occupancy triggers disabled, both succeed and the test fails (verified 2026-09-28). Since SCRUM-172 the database accepts unavailability over a booking, so recording runs its check and its write under the venue lock that an approval's trigger also takes: the approval waits for it, then is refused. |
 
-**Automated by:** `tests/integration/concurrency.test.ts` › the "SCRUM-161 [AC7] TC-161-12: …" cases; `tests/unit/bookings.test.ts` › "SCRUM-37 [AC4] TC-37-06: maintenance recorded at the same instant as an approval: the database refuses the approval, and it is returned as conflicting"; `tests/unit/unavailability.test.ts` › "SCRUM-37 [AC4] TC-37-06: with no booking affected, only the venue is locked, before the check and the write"
+**Automated by:** `tests/integration/concurrency.test.ts` › the "SCRUM-161 [AC5] TC-161-12: …" cases; `tests/unit/bookings.test.ts` › "SCRUM-37 [AC4] TC-37-06: maintenance recorded at the same instant as an approval: the database refuses the approval, and it is returned as conflicting"; `tests/unit/unavailability.test.ts` › "SCRUM-37 [AC4] TC-37-06: with no booking affected, only the venue is locked, before the check and the write"
 
 ### TC-37-07
 

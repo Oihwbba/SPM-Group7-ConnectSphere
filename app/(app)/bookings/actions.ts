@@ -906,7 +906,7 @@ async function settleHold(
     try {
       await onceMoreOnDeadlock(settle);
     } catch (error) {
-      // SCRUM-161 AC6: the database refuses to confirm a hold over recorded
+      // SCRUM-37 AC2: the database refuses to confirm a hold over recorded
       // unavailability (the occupancy trigger, ADR 0010).
       if (violatesExclusion(error, "booking_overlaps_unavailability")) {
         return err(HOLD_OVER_UNAVAILABILITY);

@@ -660,7 +660,7 @@ describe("confirmHold and releaseHold — SCRUM-163 AC3, AC4, AC7, AC8", () => {
     });
   });
 
-  it("SCRUM-161 [AC6] TC-161-10: confirming a hold the database refuses over unavailability says so", async () => {
+  it("SCRUM-37 [AC2] TC-37-04: confirming a hold the database refuses over unavailability says so", async () => {
     db.$transaction.mockRejectedValue(
       postgresRefusal(
         "23P01",

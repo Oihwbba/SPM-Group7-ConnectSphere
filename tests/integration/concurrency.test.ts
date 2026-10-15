@@ -462,7 +462,7 @@ describe.skipIf(!usesLocalDatabase)(
   },
 );
 
-// SCRUM-161 AC7 (replacing SCRUM-37 AC4) — an approval and an unavailability
+// SCRUM-161 AC5 (replacing SCRUM-37 AC4) — an approval and an unavailability
 // record for the same venue and overlapping periods, at the same moment. The
 // unavailability is always saved; the booking ends up either refused (still
 // Pending) or Approved and flagged, never Approved without a flag. No EXCLUDE
@@ -554,7 +554,7 @@ describe.skipIf(!usesLocalDatabase)(
       return { approval, unavailability, booking };
     }
 
-    it("SCRUM-161 [AC7] TC-161-12: both past their own checks before either writes: the unavailability is saved, and the booking is refused or flagged", async () => {
+    it("SCRUM-161 [AC5] TC-161-12: both past their own checks before either writes: the unavailability is saved, and the booking is refused or flagged", async () => {
       const { approval, unavailability, booking } = await race(1, true);
 
       expect(unavailability).toMatchObject({
@@ -575,7 +575,7 @@ describe.skipIf(!usesLocalDatabase)(
       ).toBe(1);
     });
 
-    it("SCRUM-161 [AC7] TC-161-12: never Approved without a flag, over repeated unforced races", async () => {
+    it("SCRUM-161 [AC5] TC-161-12: never Approved without a flag, over repeated unforced races", async () => {
       for (const day of [2, 3, 4, 5, 6]) {
         const { approval, unavailability, booking } = await race(day, false);
 

@@ -137,7 +137,7 @@ one set of rules instead of each editing the same constraints.
 - **Unavailability may overlap bookings** (SCRUM-161 AC1). The trigger on
   `VenueUnavailability` now refuses only overlapping unavailability. It still
   takes the venue lock, so an approval and an unavailability record for one
-  venue still take turns, and each sees the other (SCRUM-161 AC7).
+  venue still take turns, and each sees the other (SCRUM-161 AC5).
 - **`booking_one_per_venue_per_event`** replaces `booking_one_venue_per_event`:
   an event has at most one Pending, Held or Approved booking per venue, not
   per event (SCRUM-162 AC2).
@@ -194,7 +194,7 @@ Approved bookings, which are then flagged Needs Reconsideration and their
 Coordinators told, instead of the record being refused. An approval and an
 unavailability record for the same moment must end with the unavailability
 saved and the booking either refused or Approved and flagged, never Approved
-without a flag (AC7). Recording now writes booking rows (the flag) and
+without a flag (AC5). Recording now writes booking rows (the flag) and
 notifications (which reference the event), so it takes more locks than the
 venue's.
 

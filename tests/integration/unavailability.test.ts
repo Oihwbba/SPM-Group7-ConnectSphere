@@ -16,12 +16,7 @@ import { prisma } from "@/lib/db";
 import { eventBookingPeriod } from "@/lib/schemas/booking";
 import { createPlanningEvents, removeEvents } from "./test-events";
 import { recordUnavailability } from "@/app/(app)/venues/availability/actions";
-import {
-  confirmHold,
-  decideBookingRequest,
-  holdBookingRequest,
-  submitBookingRequest,
-} from "@/app/(app)/bookings/actions";
+import { submitBookingRequest } from "@/app/(app)/bookings/actions";
 
 // SCRUM-37 and SCRUM-161 against a real, seeded Postgres: recording
 // unavailability, what it does to requests and approvals, how it flags the
@@ -576,87 +571,7 @@ describe.skipIf(!usesLocalDatabase)(
         expect((await flagOf(newer.id)).needsReconsideration).toBe(false);
       });
 
-      it("SCRUM-161 [AC5] TC-161-09: no replacement can be requested while the flagged booking is live", async () => {
-        const original = await booking(
-          requestEventId,
-          event.startAt.toISOString(),
-          event.endAt.toISOString(),
-        );
-        await recordConfirmed(
-          hoursFrom(event.startAt, 1),
-          hoursFrom(event.startAt, 2),
-        );
-        expect((await flagOf(original.id)).needsReconsideration).toBe(true);
-        mockAuth.mockResolvedValue(COORDINATOR);
-
-        const result = await submitBookingRequest({
-          eventId: requestEventId,
-          venueId: "ven_hall",
-          startAt: event.startAt.toISOString(),
-          endAt: event.endAt.toISOString(),
-          requestedAttendance: event.attendance,
-        });
-
-        expect(result).toMatchObject({
-          ok: true,
-          data: { created: false, booking: { id: original.id } },
-        });
-        expect(
-          await prisma.booking.count({ where: { eventId: requestEventId } }),
-        ).toBe(1);
-      });
-
-      it("SCRUM-161 [AC6] TC-161-10: a flagged booking can't be approved, held or confirmed over the unavailability", async () => {
-        const [e3, e4, e5] = otherEventIds;
-        const pendingRow = {
-          status: "PENDING" as const,
-          decidedById: null,
-          decidedAt: null,
-        };
-        const toApprove = await booking(e3, at(13, 1), at(13, 3), pendingRow);
-        const toHold = await booking(e4, at(13, 3), at(13, 5), pendingRow);
-        const hold = await held(e5, at(13, 5), at(13, 7));
-        await recordConfirmed(at(13, 2), at(13, 6));
-
-        const approval = await decideBookingRequest({
-          bookingId: toApprove.id,
-          decision: "APPROVED",
-        });
-        const holding = await holdBookingRequest({
-          bookingId: toHold.id,
-          holdExpiresAt: new Date(Date.now() + DAY_MS).toISOString(),
-          holdNote: "Confirm the catering numbers.",
-        });
-        mockAuth.mockResolvedValue(COORDINATOR);
-        const confirming = await confirmHold({ bookingId: hold.id });
-
-        for (const refused of [approval, holding]) {
-          expect(refused).toMatchObject({
-            ok: false,
-            error: expect.stringMatching(
-              /^Conflicting: .* is unavailable \(maintenance\) from .+\. This request is still pending\.$/,
-            ),
-          });
-        }
-        expect(confirming).toEqual({
-          ok: false,
-          error:
-            "This hold can't be confirmed: the venue is now unavailable for part of its period. Release it and arrange another venue.",
-        });
-        expect(
-          (
-            await Promise.all(
-              [toApprove, toHold, hold].map((b) => flagOf(b.id)),
-            )
-          ).map((b) => [b.status, b.needsReconsideration]),
-        ).toEqual([
-          ["PENDING", true],
-          ["PENDING", true],
-          ["HELD", true],
-        ]);
-      });
-
-      it("SCRUM-161 [AC8] TC-161-13: recording the same unavailability twice saves it once and flags nothing new", async () => {
+      it("SCRUM-161 [AC6] TC-161-13: recording the same unavailability twice saves it once and flags nothing new", async () => {
         const approved = await approvedBooking(at(14, 1), at(14, 3));
         const first = await recordConfirmed(at(14, 2), at(14, 6));
         const flaggedAt = (await flagOf(approved.id)).reconsiderationFlaggedAt;
