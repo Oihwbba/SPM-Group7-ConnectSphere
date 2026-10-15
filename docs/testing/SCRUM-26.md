@@ -15,8 +15,8 @@ same period. Flagged rows are created straight in the database or with
 
 **What this story doesn't cover yet:**
 
-- **AC1's warning screen** belongs to the Coordinator's edit form, which is
-  SCRUM-25 (not built). This story provides what that form calls:
+- **AC1's warning screen** belongs to the Coordinator's edit form, SCRUM-25
+  (TC-25-06, TC-25-13). This story provides what that form calls:
   `impactfulChanges` (which edited fields count, TC-26-01),
   `flaggableArrangements` (what the warning lists, TC-26-02) and
   `flagArrangements` (raising the flag on confirm, TC-26-03).
