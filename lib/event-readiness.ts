@@ -244,7 +244,7 @@ type EventRow = {
   }[];
 };
 
-function equipmentItem(event: EventRow): ChecklistItem | null {
+function equipmentItem(event: EventRow): ChecklistItem {
   // SCRUM-26 AC12: as for the venue, a flagged reservation leaves the item
   // incomplete until its Coordinator resolves the flag.
   const flagged = event.reservations.filter(
