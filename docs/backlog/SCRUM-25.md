@@ -10,7 +10,7 @@
 | **Epic** | SCRUM-6 - Event Request Lifecycle |
 | **Priority** | Highest |
 | **Story points** | 3 |
-| **Status in Jira** | In Progress |
+| **Status in Jira** | In Review |
 | **Sprint** | SCRUM Sprint 3 |
 | **Jira** | https://smu-spm-group7.atlassian.net/browse/SCRUM-25 |
 
@@ -21,8 +21,8 @@
 **Acceptance criteria**
 
 1. Given I'm the event's assigned Coordinator and the event is Under Review or Planning, I can edit routine fields directly. Routine fields are every event field except date, time, expected attendance, venue and equipment.
-2. A routine edit does not change the event's status and does not flag any arrangement. Given I change the layout or accessibility needs after a safety check was requested, then that check becomes Outdated (SCRUM-166).
-3. Given the event is in Planning and I change date, time, expected attendance, venue or equipment, then the warning and flagging in SCRUM-26 apply. Given the event is Under Review, the change is saved directly with no warning, because no venue or equipment can be requested before Planning (SCRUM-50 AC7, SCRUM-27 AC1).
+2. A routine edit does not change the event's status and does not flag any arrangement. Given a safety check is Approved or awaiting review and I change the layout or accessibility needs, then that check becomes Outdated (SCRUM-166 AC13).
+3. Given the event is in Planning and has a venue booking or equipment reservation, when I change date, time, expected attendance, venue or equipment, then the warning and flagging in SCRUM-26 apply. Given the event is Under Review, the change is saved directly with no warning, because no venue or equipment can be requested before Planning (SCRUM-50 AC7, SCRUM-27 AC1). A change to the date, time or expected attendance also makes an Approved or awaiting safety check Outdated (SCRUM-166 AC13).
 4. The Organiser cannot edit any field directly after submission. They raise a change request (SCRUM-41). The only exception is closing or reopening registration (SCRUM-75).
 5. Given the event is Confirmed, no event detail can be edited directly by anyone; changes go through SCRUM-41 and SCRUM-128. Closing or reopening registration (SCRUM-75) and operational notes (AC6) stay available because they are not event details.
 6. The assigned Coordinator can add operational notes at any status except Cancelled. Any Venue Staff member can add them once the event has a venue booking (Pending, Held or Approved), and any Technical Support Staff member once it has an equipment request. Notes cannot be edited or deleted, show author and time, and are visible to internal users who can view the event and to the event's Organiser.
@@ -39,5 +39,7 @@
 * 2026-10-08: AC4 and AC5 refer to closing or reopening registration, because setting the window was removed from SCRUM-75.
 * 2026-10-13: AC3 states the Under Review case, which SCRUM-26 AC1 doesn't cover (SCRUM-26 AC1 only defines that warning for a change to date, time, expected attendance, venue or equipment for an event in Planning, not Under Review).
 * 2026-10-14 (PO approved): user story covers operational notes (AC6), which it didn't mention. No AC change.
+* 2026-10-15: AC3 reflects SCRUM-26 more accurately with “and has a venue booking or equipment reservation” clause.
+* 2026-10-15: AC2 and AC3 reflects SCRUM-166 (a check already marked Changes requested or Rejected would also become Outdated, and previous AC3 didn’t mention safety check) more accurately
 
 Functionality Area: Event Information Management
