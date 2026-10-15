@@ -19,7 +19,8 @@ import {
 const db = vi.hoisted(() => ({
   venue: { create: vi.fn(), update: vi.fn(), findUnique: vi.fn() },
   venueOpeningHours: { upsert: vi.fn() },
-  booking: { findMany: vi.fn() },
+  booking: { findMany: vi.fn(), updateMany: vi.fn() },
+  reservation: { updateMany: vi.fn() },
   auditLog: { create: vi.fn() },
   $queryRaw: vi.fn(),
   $transaction: vi.fn(),
@@ -80,6 +81,7 @@ const stored = {
 
 /** A future Approved booking for 70 that asked for a projector, Tuesday 10:00–14:00. */
 const futureBooking = {
+  id: "bkg_1",
   startAt: at("2036-03-04T10:00"),
   endAt: at("2036-03-04T14:00"),
   status: "APPROVED",
@@ -94,6 +96,23 @@ function expectNothingWritten() {
   expect(db.venue.update).not.toHaveBeenCalled();
   expect(db.venueOpeningHours.upsert).not.toHaveBeenCalled();
   expect(db.auditLog.create).not.toHaveBeenCalled();
+  expect(db.booking.updateMany).not.toHaveBeenCalled();
+}
+
+/** AC10, AC11 — the one booking flagged, with its reason, and nothing else about it changed. */
+function expectFlagged(id: string, reason: string) {
+  expect(db.booking.updateMany).toHaveBeenCalledTimes(1);
+  expect(db.booking.updateMany).toHaveBeenCalledWith({
+    where: expect.objectContaining({ id: { in: [id] }, needsReconsideration: false }),
+    data: {
+      needsReconsideration: true,
+      reconsiderationFlaggedAt: expect.any(Date),
+      reconsiderationReason: reason,
+      reconsiderationResolvedAt: null,
+      reconsiderationResolvedById: null,
+    },
+  });
+  expect(revalidatePath).toHaveBeenCalledWith("/events");
 }
 
 beforeEach(() => {
@@ -103,6 +122,8 @@ beforeEach(() => {
   db.venue.create.mockResolvedValue({ id: "ven_new" });
   db.venue.findUnique.mockResolvedValue(stored);
   db.booking.findMany.mockResolvedValue([]);
+  db.booking.updateMany.mockResolvedValue({ count: 1 });
+  db.reservation.updateMany.mockResolvedValue({ count: 0 });
 });
 
 describe("createVenue — SCRUM-34 AC3–AC5", () => {
@@ -310,7 +331,7 @@ describe("updateVenue — SCRUM-34 AC6, AC10", () => {
   it("SCRUM-34 [AC6] TC-34-07: an edit is saved under the venue lock, each day's hours kept as one row, and audited", async () => {
     const result = await updateVenue({ ...input, capacity: "120", venueId: "ven_1" });
 
-    expect(result).toEqual({ ok: true, data: { id: "ven_1" } });
+    expect(result).toEqual({ ok: true, data: { id: "ven_1", flagged: 0 } });
     expect(db.$queryRaw).toHaveBeenCalledTimes(1);
     expect(db.venue.update).toHaveBeenCalledWith({
       where: { id: "ven_1" },
@@ -328,7 +349,7 @@ describe("updateVenue — SCRUM-34 AC6, AC10", () => {
     expect(revalidatePath).toHaveBeenCalledWith("/venues/ven_1");
   });
 
-  it("SCRUM-34 [AC10] TC-34-12: an edit that would stop a future booking fitting is refused, the booking listed with why, and nothing is written", async () => {
+  it("SCRUM-34 [AC10] TC-34-12: an edit that would stop a future booking fitting warns first, listing the booking with why, and writes nothing", async () => {
     db.booking.findMany.mockResolvedValue([futureBooking]);
 
     const result = await updateVenue({ ...input, capacity: "60", venueId: "ven_1" });
@@ -340,7 +361,44 @@ describe("updateVenue — SCRUM-34 AC6, AC10", () => {
         affectedBookings: [
           "Spring Gala, 4 Mar 2036, 10:00 am SGT (Approved): Capacity 60 < attendance 70",
         ],
+        affectedBookingIds: ["bkg_1"],
       },
+    });
+    expectNothingWritten();
+  });
+
+  it("SCRUM-34 [AC10] TC-34-12: once Venue Staff confirm, the edit is saved and the booking flagged Needs Reconsideration with why", async () => {
+    db.booking.findMany.mockResolvedValue([futureBooking]);
+
+    const result = await updateVenue({
+      ...input,
+      capacity: "60",
+      venueId: "ven_1",
+      confirmedBookingIds: ["bkg_1"],
+    });
+
+    expect(result).toEqual({ ok: true, data: { id: "ven_1", flagged: 1 } });
+    expect(db.venue.update).toHaveBeenCalledWith({
+      where: { id: "ven_1" },
+      data: expect.objectContaining({ capacity: 60 }),
+    });
+    expectFlagged("bkg_1", "Rooftop Garden changed: Capacity 60 < attendance 70");
+  });
+
+  it("SCRUM-34 [AC10] TC-34-12: a booking affected since Venue Staff were warned warns again, and nothing is written", async () => {
+    db.booking.findMany.mockResolvedValue([futureBooking, { ...futureBooking, id: "bkg_2" }]);
+
+    const result = await updateVenue({
+      ...input,
+      capacity: "60",
+      venueId: "ven_1",
+      confirmedBookingIds: ["bkg_1"],
+    });
+
+    expect(result).toMatchObject({
+      ok: false,
+      error: VENUE_CHANGE_AFFECTS_BOOKINGS_MESSAGE,
+      fieldErrors: { affectedBookingIds: ["bkg_1", "bkg_2"] },
     });
     expectNothingWritten();
   });
@@ -362,11 +420,15 @@ describe("updateVenue — SCRUM-34 AC6, AC10", () => {
     );
   });
 
-  it("SCRUM-34 [AC10] TC-34-13: an edit the future booking still fits is saved", async () => {
+  it("SCRUM-34 [AC10] TC-34-13: an edit the future booking still fits is saved, and nothing is flagged", async () => {
     db.booking.findMany.mockResolvedValue([futureBooking]);
 
-    expect(await updateVenue({ ...input, capacity: "70", venueId: "ven_1" })).toMatchObject({ ok: true });
+    expect(await updateVenue({ ...input, capacity: "70", venueId: "ven_1" })).toEqual({
+      ok: true,
+      data: { id: "ven_1", flagged: 0 },
+    });
     expect(db.venue.update).toHaveBeenCalled();
+    expect(db.booking.updateMany).not.toHaveBeenCalled();
   });
 
   it.each([
@@ -392,7 +454,10 @@ describe("retireVenue — SCRUM-34 AC8, AC11", () => {
   it("SCRUM-34 [AC8] TC-34-10: a venue with no future bookings is retired under the venue lock, and audited", async () => {
     db.venue.findUnique.mockResolvedValue({ name: "Rooftop Garden", isActive: true });
 
-    expect(await retireVenue({ venueId: "ven_1" })).toEqual({ ok: true, data: { id: "ven_1" } });
+    expect(await retireVenue({ venueId: "ven_1" })).toEqual({
+      ok: true,
+      data: { id: "ven_1", flagged: 0 },
+    });
     expect(db.$queryRaw).toHaveBeenCalledTimes(1);
     expect(db.venue.update).toHaveBeenCalledWith({
       where: { id: "ven_1" },
@@ -404,15 +469,43 @@ describe("retireVenue — SCRUM-34 AC8, AC11", () => {
     expect(revalidatePath).toHaveBeenCalledWith("/bookings/new");
   });
 
-  it("SCRUM-34 [AC11] TC-34-14: a venue with future bookings isn't retired; they are listed, and nothing is written", async () => {
+  it("SCRUM-34 [AC11] TC-34-14: retiring a venue with future bookings warns first, listing them, and writes nothing", async () => {
     db.venue.findUnique.mockResolvedValue({ name: "Rooftop Garden", isActive: true });
     db.booking.findMany.mockResolvedValue([futureBooking]);
 
     expect(await retireVenue({ venueId: "ven_1" })).toEqual({
       ok: false,
       error: VENUE_RETIRE_HAS_BOOKINGS_MESSAGE,
-      fieldErrors: { affectedBookings: ["Spring Gala, 4 Mar 2036, 10:00 am SGT (Approved)"] },
+      fieldErrors: {
+        affectedBookings: ["Spring Gala, 4 Mar 2036, 10:00 am SGT (Approved)"],
+        affectedBookingIds: ["bkg_1"],
+      },
     });
+    expectNothingWritten();
+  });
+
+  it("SCRUM-34 [AC11] TC-34-14: once Venue Staff confirm, the venue is retired and its future bookings flagged, none cancelled", async () => {
+    db.venue.findUnique.mockResolvedValue({ name: "Rooftop Garden", isActive: true });
+    db.booking.findMany.mockResolvedValue([futureBooking]);
+
+    expect(await retireVenue({ venueId: "ven_1", confirmedBookingIds: ["bkg_1"] })).toEqual({
+      ok: true,
+      data: { id: "ven_1", flagged: 1 },
+    });
+    expect(db.venue.update).toHaveBeenCalledWith({
+      where: { id: "ven_1" },
+      data: { isActive: false },
+    });
+    expectFlagged("bkg_1", "Rooftop Garden has been retired.");
+  });
+
+  it("SCRUM-34 [AC11] TC-34-14: a booking made since Venue Staff were warned warns again, and nothing is written", async () => {
+    db.venue.findUnique.mockResolvedValue({ name: "Rooftop Garden", isActive: true });
+    db.booking.findMany.mockResolvedValue([futureBooking, { ...futureBooking, id: "bkg_2" }]);
+
+    expect(
+      await retireVenue({ venueId: "ven_1", confirmedBookingIds: ["bkg_1"] }),
+    ).toMatchObject({ ok: false, fieldErrors: { affectedBookingIds: ["bkg_1", "bkg_2"] } });
     expectNothingWritten();
   });
 

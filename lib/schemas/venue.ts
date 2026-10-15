@@ -151,17 +151,25 @@ export function openingHoursRows(venue: VenueData) {
   });
 }
 
+/**
+ * AC10, AC11 — the future bookings Venue Staff were shown and confirmed
+ * flagging. Empty on a first save, so a change that affects bookings warns
+ * before anything is written.
+ */
+const confirmedBookingIds = z.array(z.string()).default([]);
+
 export const venueUpdateSchema = venueSchema.and(
-  z.object({ venueId: z.string().min(1, "Choose a venue.") }),
+  z.object({ venueId: z.string().min(1, "Choose a venue."), confirmedBookingIds }),
 );
 
 /** AC10 — an edit that would leave future bookings no longer fitting. */
 export const VENUE_CHANGE_AFFECTS_BOOKINGS_MESSAGE =
-  "This change would leave the future bookings below no longer fitting the venue, so nothing was saved. Ask their Coordinators to change or cancel them first.";
-/** AC11 — a venue with future bookings isn't retired. */
+  "This change would leave the future bookings below no longer fitting the venue. Nothing is saved yet: save again to confirm, and they will be flagged Needs Reconsideration for their Coordinators to decide.";
+/** AC11 — retiring a venue with future bookings. */
 export const VENUE_RETIRE_HAS_BOOKINGS_MESSAGE =
-  "This venue has the future bookings below, so it can't be retired yet. Nothing was changed. Ask their Coordinators to move or cancel them first.";
+  "This venue has the future bookings below. Nothing is retired yet: retire it again to confirm, and they will be flagged Needs Reconsideration for their Coordinators to decide. None is cancelled.";
 
 export const venueRetireSchema = z.object({
   venueId: z.string().min(1, "Choose a venue."),
+  confirmedBookingIds,
 });

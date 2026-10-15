@@ -189,7 +189,7 @@ test.describe("SCRUM-34 — browse and maintain the venue catalogue", () => {
     );
   });
 
-  test("SCRUM-34 [AC8, AC10, AC11] TC-34-10, TC-34-12, TC-34-14: a venue with a future booking can't be shrunk below it or retired; without one it is retired", async ({
+  test("SCRUM-34 [AC8, AC10, AC11] TC-34-10, TC-34-12, TC-34-14: shrinking or retiring a venue with a future booking warns first, then flags the booking; the retired venue leaves the catalogue", async ({
     browser,
   }) => {
     test.skip(!usesLocalDatabase, "adds its own venue");
@@ -237,7 +237,8 @@ test.describe("SCRUM-34 — browse and maintain the venue catalogue", () => {
     const staff = await signedIn(browser, "venuestaff@test.local");
     await openVenue(staff, name);
 
-    // AC10: lowering capacity below the booking's attendance is refused.
+    // AC10: lowering capacity below the booking's attendance warns first and
+    // saves nothing; confirming saves it and flags the booking.
     await staff.getByRole("button", { name: "Edit venue" }).click();
     const edit = staff.getByRole("dialog", { name: `Edit ${name}` });
     await edit.getByLabel("Capacity *").fill("60");
@@ -246,27 +247,35 @@ test.describe("SCRUM-34 — browse and maintain the venue catalogue", () => {
       `${PREFIX} Spring Gala`,
     );
     await expect(edit.getByTestId("affected-bookings")).toContainText("Capacity 60 < attendance 90");
-    await edit.getByRole("button", { name: "Cancel" }).click();
     expect((await prisma.venue.findUniqueOrThrow({ where: { id: venue.id } })).capacity).toBe(100);
 
-    // AC11: retiring it is refused while the booking is ahead.
+    await edit.getByRole("button", { name: "Save and flag 1 booking" }).click();
+    await expect(
+      staff.getByText("Venue saved. 1 booking flagged Needs Reconsideration."),
+    ).toBeVisible();
+    expect((await prisma.venue.findUniqueOrThrow({ where: { id: venue.id } })).capacity).toBe(60);
+    expect(
+      await prisma.booking.findUniqueOrThrow({
+        where: { id: booking.id },
+        select: { status: true, needsReconsideration: true },
+      }),
+    ).toEqual({ status: "APPROVED", needsReconsideration: true });
+
+    // AC11: retiring it warns first, listing the booking; confirming retires
+    // it and cancels nothing.
     await staff.getByRole("button", { name: "Retire venue" }).click();
     const retire = staff.getByRole("dialog", { name: `Retire ${name}?` });
     await retire.getByRole("button", { name: "Retire venue" }).click();
-    await expect(retire.getByTestId("retire-error")).toContainText("can't be retired yet");
+    await expect(retire.getByTestId("retire-error")).toContainText("Nothing is retired yet");
     await expect(retire.getByTestId("affected-bookings")).toContainText("(Approved)");
-    await retire.getByRole("button", { name: "Cancel" }).click();
     expect((await prisma.venue.findUniqueOrThrow({ where: { id: venue.id } })).isActive).toBe(true);
 
-    // AC8: with the booking gone, it is retired.
-    await prisma.booking.update({ where: { id: booking.id }, data: { status: "CANCELLED" } });
-    await staff.reload();
-    await staff.getByRole("button", { name: "Retire venue" }).click();
-    await staff
-      .getByRole("dialog", { name: `Retire ${name}?` })
-      .getByRole("button", { name: "Retire venue" })
-      .click();
+    await retire.getByRole("button", { name: "Retire and flag 1 booking" }).click();
     await expect(staff.getByText(`${name} is retired.`)).toBeVisible();
+    expect((await prisma.venue.findUniqueOrThrow({ where: { id: venue.id } })).isActive).toBe(false);
+    expect(
+      (await prisma.booking.findUniqueOrThrow({ where: { id: booking.id } })).status,
+    ).toBe("APPROVED");
     await staff.goto("/venues");
     await expect(
       staff.getByRole("table", { name: "Retired venues" }).getByRole("link", { name }),

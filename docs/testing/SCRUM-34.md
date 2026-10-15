@@ -8,11 +8,7 @@ Opening hours are an opening and a closing time per day in SGT, or Closed
 Exhibition Hall 06:00–22:00 every day, Seminar Room 2.1 08:00–20:00 and
 Executive Boardroom 09:00–18:00 on weekdays, both Closed at weekends.
 
-**Not yet delivered, on purpose:** AC10 and AC11 flag the affected bookings
-Needs Reconsideration (SCRUM-26), which isn't merged. Until it is, an edit or
-retirement that affects a future booking is refused and the bookings are
-listed (TC-34-12, TC-34-14); the "once saved, flagged" half follows with
-SCRUM-26. AC10 judges a booking's attendance, facilities, layout and period;
+**Not yet delivered, on purpose:** AC10 judges a booking's attendance, facilities, layout and period;
 a booking doesn't record the accessibility features it needs until SCRUM-40,
 which adds them to this check. AC6's search, filtering and suitability are
 SCRUM-38 and SCRUM-40, not built; the request form half is covered. AC12's
@@ -166,11 +162,11 @@ warning is SCRUM-159 AC9.
 | Item | Content |
 |---|---|
 | Test Case ID | TC-34-12 |
-| Test Scenario | [Negative] AC 10: an edit that would stop a future booking fitting |
+| Test Scenario | [Negative] [Positive] AC 10: an edit that would stop a future booking fitting warns, then flags it |
 | Pre-conditions | Signed in as Venue Staff; a venue with a future Approved booking for 100 people that asked for a projector and a theatre layout, Tuesday 10:00–14:00. |
-| Test Steps | 1. Lower capacity to 80. <br> 2. Remove the projector or theatre. <br> 3. Change Tuesday's hours to 11:00–18:00. |
+| Test Steps | 1. Lower capacity to 80, and save. <br> 2. Remove the projector or theatre, and save. <br> 3. Change Tuesday's hours to 11:00–18:00, and save. <br> 4. After any of them, choose Save and flag 1 booking. <br> 5. Repeat 1 and 4 while a second booking is made at the venue in between. |
 | Test Data | — |
-| Expected Result | Each is refused: "This change would leave the future bookings below no longer fitting the venue, so nothing was saved. …", listing the booking with why, e.g. "Capacity 80 < attendance 100" or "Outside opening hours (Tuesday 11:00–18:00)". The venue and its hours are unchanged. Pending and live Held bookings count the same way. |
+| Expected Result | 1–3: a warning, "This change would leave the future bookings below no longer fitting the venue. Nothing is saved yet: …", listing the booking with why, e.g. "Capacity 80 < attendance 100" or "Outside opening hours (Tuesday 11:00–18:00)". The venue and its hours are unchanged. 4: "Venue saved. 1 booking flagged Needs Reconsideration." The change is saved, and the booking is flagged with the reason, e.g. "… changed: Capacity 80 < attendance 100", still Approved, for its Coordinator to decide (SCRUM-26). 5: the warning again, listing both, and nothing is saved. Pending and live Held bookings count the same way. |
 
 **Automated by:** `tests/unit/venue-changes.test.ts` › "SCRUM-34 [AC10] TC-34-12: …"; `tests/unit/venue-catalogue.test.ts` › "SCRUM-34 [AC10] TC-34-12: …"; `tests/integration/venue-catalogue.test.ts` › "SCRUM-34 [AC10] TC-34-12: …"; `e2e/venue-catalogue.spec.ts`
 
@@ -192,11 +188,11 @@ warning is SCRUM-159 AC9.
 | Item | Content |
 |---|---|
 | Test Case ID | TC-34-14 |
-| Test Scenario | [Negative] AC 11: retiring a venue with future bookings |
+| Test Scenario | [Negative] [Positive] AC 11: retiring a venue with future bookings warns, then flags them |
 | Pre-conditions | Signed in as Venue Staff; a venue with a future Pending booking. |
-| Test Steps | 1. Retire it. |
+| Test Steps | 1. Retire it. <br> 2. Choose Retire and flag 1 booking. |
 | Test Data | — |
-| Expected Result | "This venue has the future bookings below, so it can't be retired yet. …", listing the booking. The venue stays active and the booking is unchanged; nothing is cancelled. |
+| Expected Result | 1: "This venue has the future bookings below. Nothing is retired yet: …", listing the booking. The venue stays active and the booking is unflagged. 2: the venue is retired, and the booking is flagged "… has been retired.", still Pending; nothing is cancelled. A booking made between the warning and the confirmation warns again. |
 
 **Automated by:** `tests/unit/venue-catalogue.test.ts` › "SCRUM-34 [AC11] TC-34-14: …"; `tests/integration/venue-catalogue.test.ts` › "SCRUM-34 [AC11] TC-34-14: …"; `e2e/venue-catalogue.spec.ts`
 

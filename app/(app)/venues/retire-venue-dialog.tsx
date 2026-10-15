@@ -14,36 +14,48 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { AffectedBookings } from "./affected-bookings";
+import {
+  AffectedBookings,
+  bookingsCount,
+  flaggedNote,
+  NONE_AFFECTED,
+  type Affected,
+} from "./affected-bookings";
 import { retireVenue } from "./actions";
 
 /**
  * SCRUM-34 AC8, AC11 — Venue Staff retire a venue, after confirming. A venue
- * with future bookings isn't retired, and those bookings are listed.
+ * with future bookings lists them first; retiring it then flags them.
  */
 export function RetireVenueDialog({ venue }: { venue: { id: string; name: string } }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [affected, setAffected] = useState<string[]>([]);
+  const [affected, setAffected] = useState<Affected>(NONE_AFFECTED);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
   function changeOpen(next: boolean) {
     setOpen(next);
-    setAffected([]);
+    setAffected(NONE_AFFECTED);
     setError(null);
   }
 
   function retire() {
     startTransition(async () => {
       try {
-        const result = await retireVenue({ venueId: venue.id });
+        const result = await retireVenue({
+          venueId: venue.id,
+          confirmedBookingIds: affected.ids,
+        });
         if (!result.ok) {
           setError(result.error);
-          setAffected(result.fieldErrors?.affectedBookings ?? []);
+          setAffected({
+            lines: result.fieldErrors?.affectedBookings ?? [],
+            ids: result.fieldErrors?.affectedBookingIds ?? [],
+          });
           return;
         }
-        toast.success(`${venue.name} is retired.`);
+        toast.success(`${venue.name} is retired.${flaggedNote(result.data.flagged)}`);
         setOpen(false);
         router.refresh();
       } catch {
@@ -71,7 +83,7 @@ export function RetireVenueDialog({ venue }: { venue: { id: string; name: string
             {error}
           </p>
         )}
-        <AffectedBookings bookings={affected} />
+        <AffectedBookings bookings={affected.lines} />
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => changeOpen(false)} disabled={pending}>
             Cancel
@@ -84,7 +96,11 @@ export function RetireVenueDialog({ venue }: { venue: { id: string; name: string
             className="gap-2"
           >
             {pending && <Loader2 className="h-4 w-4 animate-spin" />}
-            {pending ? "Retiring…" : "Retire venue"}
+            {pending
+              ? "Retiring…"
+              : affected.ids.length > 0
+                ? `Retire and flag ${bookingsCount(affected.ids.length)}`
+                : "Retire venue"}
           </Button>
         </DialogFooter>
       </DialogContent>

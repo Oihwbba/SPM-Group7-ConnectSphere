@@ -104,8 +104,8 @@ request.
 | Action | What it does | Permission | Input | Writes | Locks |
 |---|---|---|---|---|---|
 | `createVenue` | Venue Staff add a venue with its opening hours for each day (SCRUM-34 AC3–AC5). | `venue:manage` | `venueSchema` (lib/schemas/venue.ts) | AuditLog, Venue, VenueOpeningHours | — |
-| `updateVenue` | Venue Staff edit a venue; refused, listing the bookings, if it would stop a future Pending, Held or Approved booking fitting (SCRUM-34 AC6, AC10–AC12; flagging them waits for SCRUM-26). | `venue:manage` | `venueUpdateSchema` (lib/schemas/venue.ts) | AuditLog, Venue, VenueOpeningHours | Venue row (`FOR UPDATE`) |
-| `retireVenue` | Venue Staff retire a venue with no future bookings; refused, listing them, if it has any (SCRUM-34 AC8, AC11). | `venue:manage` | `venueRetireSchema` (lib/schemas/venue.ts) | AuditLog, Venue | Venue row (`FOR UPDATE`) |
+| `updateVenue` | Venue Staff edit a venue. If it would stop a future Pending, Held or Approved booking fitting, the first save warns, listing the bookings, and writes nothing; saving again with those bookings confirmed saves it and flags them Needs Reconsideration (SCRUM-34 AC6, AC10–AC12; SCRUM-26). | `venue:manage` | `venueUpdateSchema` (lib/schemas/venue.ts) | AuditLog, Booking, Venue, VenueOpeningHours | Venue row (`FOR UPDATE`) |
+| `retireVenue` | Venue Staff retire a venue. If it has future Pending, Held or Approved bookings, the first attempt warns, listing them, and writes nothing; retiring again with them confirmed retires it and flags them Needs Reconsideration, cancelling none (SCRUM-34 AC8, AC11; SCRUM-26). | `venue:manage` | `venueRetireSchema` (lib/schemas/venue.ts) | AuditLog, Booking, Venue | Venue row (`FOR UPDATE`) |
 
 ## `app/(app)/venues/availability/actions.ts`
 

@@ -173,7 +173,7 @@ describe.skipIf(!usesLocalDatabase)("venue catalogue — real database (SCRUM-34
       capacity: 120,
       facilities: "projector, sound system",
     });
-    expect(result).toEqual({ ok: true, data: { id } });
+    expect(result).toEqual({ ok: true, data: { id, flagged: 0 } });
 
     expect((await getVenueDetail(id))?.capacity).toBe(120);
     const offered = (await getRequestableVenues()).find((v) => v.id === id);
@@ -266,7 +266,7 @@ describe.skipIf(!usesLocalDatabase)("venue catalogue — real database (SCRUM-34
     ).toBe("PENDING");
   });
 
-  it("SCRUM-34 [AC10] TC-34-12: an edit that would stop a future booking fitting is refused, listing it, and nothing changes", async () => {
+  it("SCRUM-34 [AC10] TC-34-12: an edit that would stop a future booking fitting warns first, listing it, and nothing changes", async () => {
     const id = await addVenue("AC10");
     await booking(id, `${TUESDAY}T10:00`, `${TUESDAY}T14:00`, {
       status: "APPROVED",
@@ -291,6 +291,38 @@ describe.skipIf(!usesLocalDatabase)("venue catalogue — real database (SCRUM-34
     expect(venue).toMatchObject({ capacity: 80, facilities: ["projector"] });
     expect(venue!.openingHours[1]).toEqual({ weekday: 2, opensMinute: 600, closesMinute: 1320 });
     expect(await prisma.auditLog.count({ where: { entityId: id, action: "UPDATED" } })).toBe(0);
+  });
+
+  it("SCRUM-34 [AC10] TC-34-12: once Venue Staff confirm, the edit is saved and the booking flagged for its Coordinator, still Approved", async () => {
+    const id = await addVenue("AC10 confirm");
+    const affected = await booking(id, `${TUESDAY}T10:00`, `${TUESDAY}T14:00`, {
+      status: "APPROVED",
+      requestedAttendance: 70,
+    });
+    asVenueStaff();
+    const edit = { ...venueInput("AC10 confirm"), venueId: id, capacity: 60 };
+
+    const warned = await updateVenue(edit);
+    expect(warned).toMatchObject({
+      ok: false,
+      fieldErrors: { affectedBookingIds: [affected.id] },
+    });
+
+    expect(await updateVenue({ ...edit, confirmedBookingIds: [affected.id] })).toEqual({
+      ok: true,
+      data: { id, flagged: 1 },
+    });
+    expect((await getVenueDetail(id))?.capacity).toBe(60);
+    expect(
+      await prisma.booking.findUniqueOrThrow({
+        where: { id: affected.id },
+        select: { status: true, needsReconsideration: true, reconsiderationReason: true },
+      }),
+    ).toEqual({
+      status: "APPROVED",
+      needsReconsideration: true,
+      reconsiderationReason: expect.stringMatching(/changed: Capacity 60 < attendance 70$/),
+    });
   });
 
   it("SCRUM-34 [AC10] TC-34-13: past and Cancelled bookings don't stop an edit, and attendance equal to capacity fits", async () => {
@@ -346,7 +378,7 @@ describe.skipIf(!usesLocalDatabase)("venue catalogue — real database (SCRUM-34
     const past = await booking(id, "2026-01-06T10:00", "2026-01-06T14:00", { status: "APPROVED" });
     asVenueStaff();
 
-    expect(await retireVenue({ venueId: id })).toEqual({ ok: true, data: { id } });
+    expect(await retireVenue({ venueId: id })).toEqual({ ok: true, data: { id, flagged: 0 } });
     expect(await retireVenue({ venueId: id })).toEqual({
       ok: false,
       error: "This venue is already retired.",
@@ -382,19 +414,38 @@ describe.skipIf(!usesLocalDatabase)("venue catalogue — real database (SCRUM-34
     expect(await prisma.booking.count({ where: { eventId } })).toBe(0);
   });
 
-  it("SCRUM-34 [AC11] TC-34-14: a venue with a future booking isn't retired, and the booking is unchanged", async () => {
+  it("SCRUM-34 [AC11] TC-34-14: a venue with a future booking is retired only once Venue Staff confirm; the booking is flagged, not cancelled", async () => {
     const id = await addVenue("AC11");
     const future = await booking(id, `${TUESDAY}T10:00`, `${TUESDAY}T14:00`);
     asVenueStaff();
 
     expect(await retireVenue({ venueId: id })).toMatchObject({
       ok: false,
-      fieldErrors: { affectedBookings: [expect.stringContaining("(Pending)")] },
+      fieldErrors: {
+        affectedBookings: [expect.stringContaining("(Pending)")],
+        affectedBookingIds: [future.id],
+      },
     });
     expect((await getVenueDetail(id))?.isActive).toBe(true);
-    expect((await prisma.booking.findUniqueOrThrow({ where: { id: future.id } })).status).toBe(
-      "PENDING",
-    );
+    expect(
+      (await prisma.booking.findUniqueOrThrow({ where: { id: future.id } })).needsReconsideration,
+    ).toBe(false);
+
+    expect(await retireVenue({ venueId: id, confirmedBookingIds: [future.id] })).toEqual({
+      ok: true,
+      data: { id, flagged: 1 },
+    });
+    expect((await getVenueDetail(id))?.isActive).toBe(false);
+    expect(
+      await prisma.booking.findUniqueOrThrow({
+        where: { id: future.id },
+        select: { status: true, needsReconsideration: true, reconsiderationReason: true },
+      }),
+    ).toEqual({
+      status: "PENDING",
+      needsReconsideration: true,
+      reconsiderationReason: expect.stringMatching(/has been retired\.$/),
+    });
   });
 
   it("SCRUM-34 [AC8, AC11] TC-34-16: two retirements at the same moment: one succeeds, the other finds it retired", async () => {

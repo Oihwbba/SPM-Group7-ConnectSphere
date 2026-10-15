@@ -18,10 +18,17 @@ import { FieldError } from "@/components/ui/field-error";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import type { ActionResult } from "@/lib/action-result";
 import { venueSchema, venueUpdateSchema } from "@/lib/schemas/venue";
 import { minutesToTime, WEEKDAYS } from "@/lib/venue-hours";
 import type { VenueOptions } from "@/lib/venue-options";
-import { AffectedBookings } from "./affected-bookings";
+import {
+  AffectedBookings,
+  bookingsCount,
+  flaggedNote,
+  NONE_AFFECTED,
+  type Affected,
+} from "./affected-bookings";
 import { createVenue, updateVenue } from "./actions";
 import { OptionPicker } from "./option-picker";
 import type { VenueDetail } from "./queries";
@@ -77,7 +84,7 @@ export function VenueFormDialog({
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(() => formFrom(venue));
   const [errors, setErrors] = useState<Errors>({});
-  const [affected, setAffected] = useState<string[]>([]);
+  const [affected, setAffected] = useState<Affected>(NONE_AFFECTED);
   const [pending, startTransition] = useTransition();
   const editing = Boolean(venue);
   const idPrefix = editing ? "edit-venue" : "new-venue";
@@ -87,7 +94,7 @@ export function VenueFormDialog({
     if (next) {
       setForm(formFrom(venue));
       setErrors({});
-      setAffected([]);
+      setAffected(NONE_AFFECTED);
     }
   }
 
@@ -114,7 +121,7 @@ export function VenueFormDialog({
       openingHours: hours.map(({ weekday, closed, opensAt, closesAt }) =>
         closed ? { weekday, closed } : { weekday, closed, opensAt, closesAt },
       ),
-      ...(venue && { venueId: venue.id }),
+      ...(venue && { venueId: venue.id, confirmedBookingIds: affected.ids }),
     };
     const checked = (venue ? venueUpdateSchema : venueSchema).safeParse(payload);
     if (!checked.success) {
@@ -125,15 +132,20 @@ export function VenueFormDialog({
 
     startTransition(async () => {
       try {
-        const result = venue ? await updateVenue(payload) : await createVenue(payload);
+        const result: ActionResult<{ id: string; flagged?: number }> = venue
+          ? await updateVenue(payload)
+          : await createVenue(payload);
         if (!result.ok) {
-          const { affectedBookings, ...fieldErrors } = result.fieldErrors ?? {};
+          const { affectedBookings, affectedBookingIds, ...fieldErrors } =
+            result.fieldErrors ?? {};
           setErrors(fieldErrors);
-          setAffected(affectedBookings ?? []);
+          setAffected({ lines: affectedBookings ?? [], ids: affectedBookingIds ?? [] });
           toast.error(result.error);
           return;
         }
-        toast.success(venue ? "Venue saved." : "Venue added.");
+        toast.success(
+          venue ? `Venue saved.${flaggedNote(result.data.flagged ?? 0)}` : "Venue added.",
+        );
         setOpen(false);
         if (venue) router.refresh();
         else router.push(`/venues/${result.data.id}`);
@@ -289,7 +301,7 @@ export function VenueFormDialog({
             />
           </div>
 
-          <AffectedBookings bookings={affected} />
+          <AffectedBookings bookings={affected.lines} />
         </div>
 
         <DialogFooter>
@@ -298,7 +310,13 @@ export function VenueFormDialog({
           </Button>
           <Button type="button" onClick={submit} disabled={pending} className="gap-2">
             {pending && <Loader2 className="h-4 w-4 animate-spin" />}
-            {pending ? "Saving…" : venue ? "Save venue" : "Add venue"}
+            {pending
+              ? "Saving…"
+              : !venue
+                ? "Add venue"
+                : affected.ids.length > 0
+                  ? `Save and flag ${bookingsCount(affected.ids.length)}`
+                  : "Save venue"}
           </Button>
         </DialogFooter>
       </DialogContent>
