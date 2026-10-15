@@ -189,66 +189,6 @@ describe("recordUnavailability — SCRUM-37 behaviour that still stands", () => 
     });
   });
 
-  it("SCRUM-37 [AC3] TC-37-05: an overlapping approved booking is surfaced and nothing is saved", async () => {
-    db.booking.findMany.mockResolvedValue([
-      {
-        id: "bkg_1",
-        startAt: new Date("2034-05-03T00:00:00.000Z"),
-        endAt: new Date("2034-05-03T02:00:00.000Z"),
-        setupMinutes: 0,
-        turnaroundMinutes: 0,
-      },
-    ]);
-
-    expect(await recordUnavailability(valid)).toEqual({
-      ok: false,
-      error:
-        "Not recorded: Seminar Room is already booked from 3 May 2034, 8:00 am SGT to 3 May 2034, 10:00 am SGT.",
-    });
-    expect(db.venueUnavailability.create).not.toHaveBeenCalled();
-  });
-
-  it("SCRUM-159 [AC3] TC-159-07: unavailability over only a booking's turnaround is refused too, naming the whole occupied time", async () => {
-    // valid runs from 9:00 am SGT on 3 May 2034; this booking ends at 8:30 am
-    // with 45 minutes' turnaround, so it occupies the venue until 9:15 am.
-    db.booking.findMany.mockResolvedValue([
-      {
-        id: "bkg_1",
-        startAt: new Date("2034-05-02T22:30:00.000Z"),
-        endAt: new Date("2034-05-03T00:30:00.000Z"),
-        setupMinutes: 30,
-        turnaroundMinutes: 45,
-      },
-    ]);
-
-    expect(await recordUnavailability(valid)).toEqual({
-      ok: false,
-      error:
-        "Not recorded: Seminar Room is already booked from 3 May 2034, 6:00 am SGT to 3 May 2034, 9:15 am SGT, including setup and turnaround.",
-    });
-    expect(db.venueUnavailability.create).not.toHaveBeenCalled();
-  });
-
-  // Since SCRUM-172 the database accepts unavailability over a booking, so an
-  // approval landing between the check and the write is no longer refused
-  // there. The venue lock, which every approval also takes, keeps it out.
-  it("SCRUM-37 [AC4] TC-37-06: the venue is locked before the check and the write, so an approval can't land between them", async () => {
-    await recordUnavailability(valid);
-
-    const [lock] = db.$queryRaw.mock.calls[0];
-    expect(lock.join("?")).toBe(
-      'SELECT "id" FROM "Venue" WHERE "id" = ? FOR NO KEY UPDATE',
-    );
-    expect(db.$queryRaw.mock.calls[0].slice(1)).toEqual(["ven_1"]);
-    const locked = db.$queryRaw.mock.invocationCallOrder[0];
-    expect(locked).toBeLessThan(
-      db.booking.findMany.mock.invocationCallOrder[0],
-    );
-    expect(locked).toBeLessThan(
-      db.venueUnavailability.create.mock.invocationCallOrder[0],
-    );
-  });
-
   it("SCRUM-172 [AC5] TC-172-05: the five venue reasons are accepted, and Damaged and Closure no longer are", async () => {
     for (const reason of [
       "MAINTENANCE",
@@ -611,7 +551,7 @@ describe("recordUnavailability — over existing bookings (SCRUM-161)", () => {
     expect(db.notification.createMany).not.toHaveBeenCalled();
   });
 
-  it("SCRUM-161 [AC8] TC-161-13: the same unavailability again saves nothing and flags nothing", async () => {
+  it("SCRUM-161 [AC6] TC-161-13: the same unavailability again saves nothing and flags nothing", async () => {
     db.booking.findMany.mockResolvedValue([inside("bkg_1")]);
     db.venueUnavailability.findMany.mockResolvedValue([
       {
@@ -634,7 +574,7 @@ describe("recordUnavailability — over existing bookings (SCRUM-161)", () => {
     expect(revalidatePath).not.toHaveBeenCalled();
   });
 
-  it("SCRUM-161 [AC8] TC-161-13: the same period with a different reason is not the same unavailability, so it is refused as an overlap", async () => {
+  it("SCRUM-161 [AC6] TC-161-13: the same period with a different reason is not the same unavailability, so it is refused as an overlap", async () => {
     db.venueUnavailability.findMany.mockResolvedValue([
       {
         id: "vun_0",
@@ -652,7 +592,7 @@ describe("recordUnavailability — over existing bookings (SCRUM-161)", () => {
     });
   });
 
-  it("SCRUM-161 [AC7] TC-161-12: the affected events, then the bookings, then the venue are locked before anything is decided", async () => {
+  it("SCRUM-161 [AC5] TC-161-12: the affected events, then the bookings, then the venue are locked before anything is decided", async () => {
     db.booking.findMany.mockResolvedValue([
       inside("bkg_b", {
         event: {
@@ -727,7 +667,7 @@ describe("recordUnavailability — over existing bookings (SCRUM-161)", () => {
     );
   });
 
-  it("SCRUM-161 [AC7] TC-161-12: a save Postgres aborts as a deadlock is retried once", async () => {
+  it("SCRUM-161 [AC5] TC-161-12: a save Postgres aborts as a deadlock is retried once", async () => {
     const deadlock = Object.assign(new Error("deadlock detected"), {
       cause: { originalCode: "40P01", originalMessage: "deadlock detected" },
     });

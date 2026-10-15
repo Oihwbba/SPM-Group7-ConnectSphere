@@ -24,7 +24,7 @@ export type AffectedBookingView = ReturnType<typeof affectedBookingView>;
 export type UnavailabilityOutcome =
   /** AC2: nothing saved yet; confirm these bookings to save and flag them. */
   | { recorded: false; affected: AffectedBookingView[] }
-  /** `created` is false when the same unavailability was already recorded (AC8). */
+  /** `created` is false when the same unavailability was already recorded (AC6). */
   | { recorded: true; id: string; created: boolean; flagged: number };
 
 /**
@@ -41,13 +41,13 @@ export type UnavailabilityOutcome =
  *   whose occupied period only touches the period aren't affected.
  * - Unavailability overlapping unavailability already recorded is refused
  *   (SCRUM-37 AC3), and recording the very same period and reason again
- *   saves nothing new and flags nothing (SCRUM-161 AC8).
+ *   saves nothing new and flags nothing (SCRUM-161 AC6).
  * - Once recorded, the period blocks requests, holds and approvals like an
- *   approved booking (SCRUM-37 AC2, SCRUM-161 AC6), through
+ *   approved booking (SCRUM-37 AC2), through
  *   lib/venue-availability.ts and the database's occupancy trigger.
  * - The venue is locked before anything is decided, as every approval and
  *   hold locks it, so an approval landing at the same moment is either
- *   refused or seen and flagged (AC7, ADR 0010).
+ *   refused or seen and flagged (AC5, ADR 0010).
  */
 export async function recordUnavailability(
   input: unknown,
@@ -150,11 +150,6 @@ export async function recordUnavailability(
           user!.id,
           now,
         );
-      // Unavailability has no setup or turnaround of its own, so it is asked
-      // about as it is; each approved booking still counts for its occupied
-      // period (SCRUM-159 AC3).
-      const blockers = await findVenueBlockers(tx, data.venueId, period);
-      if (blockers.length > 0) {
         return {
           recorded: true as const,
           id: created.id,
