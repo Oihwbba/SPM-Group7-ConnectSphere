@@ -353,6 +353,7 @@ const venueSelect = {
   status: true,
   holdExpiresAt: true,
   venue: { select: { name: true, ...venueTimesSelect, ...openingHoursSelect } },
+  needsReconsideration: true,
 } as const;
 
 /**
@@ -381,6 +382,10 @@ const venueSelect = {
  *   copies the venue's setup and turnaround onto the booking, the same
  *   minutes the check used, so a later change to the venue's times doesn't
  *   move it (AC8).
+ * - SCRUM-26 AC5: a request flagged Needs Reconsideration can't be approved
+ *   until its Coordinator resolves the flag, though it can still be rejected.
+ *   The approval is conditional on the row still being unflagged, so a flag
+ *   raised after it was read still stops it.
  */
 export async function decideBookingRequest(
   input: unknown,
@@ -420,6 +425,9 @@ export async function decideBookingRequest(
     if (current !== "PENDING" && !rejectingHold) {
       return err(alreadyDecided(current, booking.holdExpiresAt));
     }
+    if (decision === "APPROVED" && booking.needsReconsideration) {
+      return err(FLAGGED);
+    }
 
     const conflict = (detail: string) =>
       `Conflicting: ${booking.venue.name} is ${detail}. This request is still pending.`;
@@ -447,7 +455,11 @@ export async function decideBookingRequest(
         const updated = await tx.booking.updateMany({
           where: rejectingHold
             ? { id: booking.id, ...liveHoldWhere(now) }
-            : { id: booking.id, status: "PENDING" },
+            : {
+                id: booking.id,
+                status: "PENDING",
+                ...(decision === "APPROVED" && { needsReconsideration: false }),
+              },
           data: {
             status: decision,
             decidedById: user!.id,
@@ -464,8 +476,10 @@ export async function decideBookingRequest(
             where: { id: booking.id },
             select: { status: true, holdExpiresAt: true },
           });
+          const status = bookingStatusAt(latest, now);
+          // Still Pending means it was flagged since it was read (SCRUM-26 AC5).
           throw new DecisionError(
-            alreadyDecided(bookingStatusAt(latest, now), latest.holdExpiresAt),
+            status === "PENDING" ? FLAGGED : alreadyDecided(status, latest.holdExpiresAt),
           );
         }
         if (rejectingHold) {
@@ -514,6 +528,14 @@ export async function decideBookingRequest(
   }
 }
 
+/** SCRUM-26 AC5 — a flagged request waits for its Coordinator. */
+const FLAGGED =
+  "This request needs reconsideration, so it can't be approved or held until its event's coordinator resolves it. It can still be rejected.";
+
+/** SCRUM-26 AC5 — a flagged hold waits for its Coordinator too. */
+const FLAGGED_HOLD_APPROVAL =
+  "This hold needs reconsideration, so it can't be approved until its event's coordinator resolves it. It can still be rejected.";
+
 /**
  * SCRUM-163 AC7 — Venue Staff approve a live hold. It stays Held, shown as
  * "Approved by Venue Staff – awaiting confirmation", and only now may its
@@ -523,6 +545,9 @@ export async function decideBookingRequest(
  *
  * - Conditional on the hold still being live and unapproved (ADR 0006), so
  *   approving it a second time, or after it was settled, changes nothing.
+ * - SCRUM-26 AC5: a hold flagged Needs Reconsideration can't be approved
+ *   until its Coordinator resolves the flag, including one flagged after it
+ *   was read. It can still be rejected.
  * - SCRUM-124 AC4: the event's Coordinator is told, with the deadline. An
  *   event with no Coordinator yet tells whoever requested the venue, as
  *   holding does.
@@ -532,6 +557,7 @@ async function approveHold(
     id: string;
     holdExpiresAt: Date | null;
     holdApprovedAt: Date | null;
+    needsReconsideration: boolean;
     requestedById: string;
     venue: { name: string };
     event: { id: string; name: string; coordinatorId: string | null };
@@ -540,6 +566,7 @@ async function approveHold(
   now: Date,
 ): Promise<ActionResult<{ status: BookingStatus }>> {
   if (booking.holdApprovedAt) return err(HOLD_ALREADY_APPROVED);
+  if (booking.needsReconsideration) return err(FLAGGED_HOLD_APPROVAL);
 
   await onceMoreOnDeadlock(() =>
     prisma.$transaction(async (tx) => {
@@ -547,19 +574,26 @@ async function approveHold(
       // the order holding a request uses (ADR 0007).
       await tx.$queryRaw`SELECT "id" FROM "Event" WHERE "id" = ${booking.event.id} FOR KEY SHARE`;
       const updated = await tx.booking.updateMany({
-        where: { id: booking.id, ...liveHoldWhere(now), holdApprovedAt: null },
+        where: {
+          id: booking.id,
+          ...liveHoldWhere(now),
+          holdApprovedAt: null,
+          needsReconsideration: false,
+        },
         data: { holdApprovedAt: now, holdApprovedById: approverId },
       });
       if (updated.count !== 1) {
         const latest = await tx.booking.findUniqueOrThrow({
           where: { id: booking.id },
-          select: { status: true, holdExpiresAt: true },
+          select: { status: true, holdExpiresAt: true, needsReconsideration: true },
         });
         const status = bookingStatusAt(latest, now);
         throw new DecisionError(
-          status === "HELD"
-            ? HOLD_ALREADY_APPROVED
-            : alreadyDecided(status, latest.holdExpiresAt),
+          status !== "HELD"
+            ? alreadyDecided(status, latest.holdExpiresAt)
+            : latest.needsReconsideration
+              ? FLAGGED_HOLD_APPROVAL
+              : HOLD_ALREADY_APPROVED,
         );
       }
 
@@ -604,6 +638,8 @@ async function approveHold(
  *   instant are refused by `booking_no_double_booking` as for SCRUM-53 AC5.
  * - Conditional on the request still being Pending (ADR 0006): a request
  *   someone else decided or held first keeps that outcome.
+ * - SCRUM-26 AC5: a request flagged Needs Reconsideration can't be held until
+ *   the flag is resolved, as it can't be approved.
  * - AC5: the Coordinator's three notices are written now, in the same
  *   transaction: the hold with its deadline, shown at once; the reminder,
  *   shown 24 hours before the expiry (or at once if less remains); and the
@@ -647,6 +683,7 @@ export async function holdBookingRequest(
     if (current !== "PENDING") {
       return err(alreadyDecided(current, booking.holdExpiresAt));
     }
+    if (booking.needsReconsideration) return err(FLAGGED);
     if (holdExpiresAt <= now || holdExpiresAt >= booking.startAt) {
       const message = holdExpiryMessage(booking.startAt);
       return err(message, { holdExpiresAt: [message] });
@@ -679,7 +716,9 @@ export async function holdBookingRequest(
         }
 
         const updated = await tx.booking.updateMany({
-          where: { id: booking.id, status: "PENDING" },
+          // SCRUM-26 AC5: as for an approval, a flag raised since it was
+          // read still stops it.
+          where: { id: booking.id, status: "PENDING", needsReconsideration: false },
           data: {
             status: "HELD",
             heldAt: now,
@@ -694,8 +733,9 @@ export async function holdBookingRequest(
             where: { id: booking.id },
             select: { status: true, holdExpiresAt: true },
           });
+          const status = bookingStatusAt(latest, now);
           throw new DecisionError(
-            alreadyDecided(bookingStatusAt(latest, now), latest.holdExpiresAt),
+            status === "PENDING" ? FLAGGED : alreadyDecided(status, latest.holdExpiresAt),
           );
         }
 
@@ -803,6 +843,9 @@ export async function releaseHold(
  *   refuses it (`booking_hold_expired`), so the booking ends up Approved or
  *   Expired, never both (AC8).
  * - The hold's notices still to come are withdrawn (AC5).
+ * - SCRUM-26 AC5: a hold flagged Needs Reconsideration can't be confirmed
+ *   until the flag is resolved, including one flagged after it was read. It
+ *   can still be released.
  * - With `refusal` (a withdrawal, SCRUM-142 AC5), the event's status is read
  *   again under its lock first, so a Confirm that committed meanwhile stops it.
  */
@@ -827,6 +870,7 @@ async function settleHold(
         status: true,
         holdExpiresAt: true,
         holdApprovedAt: true,
+        needsReconsideration: true,
         event: {
           select: {
             id: true,
@@ -849,6 +893,9 @@ async function settleHold(
       return err(alreadySettled(current, booking.holdExpiresAt));
     }
     const confirming = to === "APPROVED";
+    // SCRUM-26 AC5: a flagged hold is resolved before it is confirmed. It can
+    // still be released.
+    if (confirming && booking.needsReconsideration) return err(FLAGGED_HOLD);
     if (confirming && !booking.holdApprovedAt) return err(HOLD_NOT_APPROVED);
 
     const settle = () =>
@@ -861,20 +908,28 @@ async function settleHold(
           where: {
             id: bookingId,
             ...liveHoldWhere(now),
-            ...(confirming && { holdApprovedAt: { not: null } }),
+            ...(confirming && {
+              holdApprovedAt: { not: null },
+              needsReconsideration: false,
+            }),
           },
-          data:
-            to === "APPROVED"
-              ? { status: "APPROVED", decidedById: user!.id, decidedAt: now }
-              : { status: "CANCELLED" },
+          data: confirming
+            ? { status: "APPROVED", decidedById: user!.id, decidedAt: now }
+            : { status: "CANCELLED" },
         });
         if (updated.count !== 1) {
           const latest = await tx.booking.findUniqueOrThrow({
             where: { id: bookingId },
-            select: { status: true, holdExpiresAt: true },
+            select: { status: true, holdExpiresAt: true, needsReconsideration: true },
           });
+          const status = bookingStatusAt(latest, now);
+          // Still held means it was flagged, or isn't approved, under the lock.
           throw new DecisionError(
-            alreadySettled(bookingStatusAt(latest, now), latest.holdExpiresAt),
+            status !== "HELD"
+              ? alreadySettled(status, latest.holdExpiresAt)
+              : latest.needsReconsideration
+                ? FLAGGED_HOLD
+                : HOLD_NOT_APPROVED,
           );
         }
         await withdrawPendingHoldNotices(tx, { bookingId }, now);
@@ -1076,6 +1131,9 @@ const HOLD_ALREADY_APPROVED =
 const HOLD_NOT_APPROVED =
   "Venue Staff haven't approved this hold yet. You can confirm it once they have.";
 
+const FLAGGED_HOLD =
+  "This hold needs reconsideration, so it can't be confirmed until you resolve the flag. You can still release it.";
+
 function holdExpired(holdExpiresAt: Date | null): string {
   return `This hold expired at ${formatDateTime(holdExpiresAt!)}, so the venue is free for other requests. Make a new request if you still need it.`;
 }
@@ -1104,9 +1162,8 @@ function alreadySettled(
       return "This hold has already been released.";
     case "REJECTED":
       return "Venue Staff rejected this hold.";
-    // Still held after a confirmation found nothing to change: not approved.
-    case "HELD":
-      return HOLD_NOT_APPROVED;
+    // Still held is decided where it happens: flagged or not yet approved
+    // (settleHold).
     default:
       return "This request isn't held.";
   }
