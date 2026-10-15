@@ -55,22 +55,24 @@ export function OptionPicker({
       <div className="flex flex-wrap gap-2">
         {shown.map((tag) => {
           const on = selected.includes(tag);
+          // Styled as the request form's facility picker (SCRUM-50), so
+          // choosing options looks the same everywhere.
           return (
-            <Button
+            <button
               key={tag}
               type="button"
-              size="sm"
-              variant="outline"
-              className={cn(
-                "h-8 gap-1 text-xs",
-                on && "border-primary bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground",
-              )}
               aria-pressed={on}
               onClick={() => toggle(tag)}
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                on
+                  ? "border-foreground bg-foreground text-background"
+                  : "border-border bg-background text-muted-foreground hover:border-primary/50 hover:text-foreground",
+              )}
             >
-              {on && <Check aria-hidden />}
+              {on && <Check className="h-3.5 w-3.5" />}
               {tagLabel(tag)}
-            </Button>
+            </button>
           );
         })}
       </div>
