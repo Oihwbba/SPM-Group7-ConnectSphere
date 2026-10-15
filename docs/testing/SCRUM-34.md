@@ -273,3 +273,29 @@ warning is SCRUM-159 AC9.
 | Expected Result | 1: the dialog says "This venue's opening hours aren't recorded yet. Enter them for each day, or mark the day Closed.", and every day is blank, not 09:00–18:00. 2: refused against each day with "Enter an opening and a closing time, or mark the day Closed."; the capacity and the hours are unchanged, so no hours anyone didn't choose start refusing bookings (AC7). |
 
 **Automated by:** `e2e/venue-catalogue.spec.ts` › "SCRUM-34 [AC3] TC-34-20: editing a venue whose hours were never recorded asks for them instead of saving 09:00–18:00"
+
+### TC-34-21
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-34-21 |
+| Test Scenario | [Negative] AC 8: a request that slipped in while its venue was being retired can't be held, approved or confirmed |
+| Pre-conditions | A venue with a Pending request, an unapproved hold and a hold Venue Staff approved, none flagged, all within opening hours; the venue is then retired. |
+| Test Steps | 1. As Venue Staff, hold the request, then approve it. <br> 2. Approve the unapproved hold. <br> 3. As the Coordinator, confirm the approved hold. <br> 4. As Venue Staff, reject another request at the venue. |
+| Test Data | — |
+| Expected Result | 1–3: each refused with "… has been retired, so it can't be booked." and the step's usual ending ("This request is still pending.", "This hold is still awaiting approval.", "This hold is unchanged; you can still release it."); no status, approval or audit entry changes. 4: rejected as usual. |
+
+**Automated by:** `tests/integration/venue-catalogue.test.ts` › "SCRUM-34 [AC8] TC-34-21: at a venue retired after its requests were made, nothing can be held, approved or confirmed; a request can still be rejected"
+
+### TC-34-22
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-34-22 |
+| Test Scenario | [Negative] AC 2: a venue that doesn't exist |
+| Pre-conditions | Signed in as a Coordinator. |
+| Test Steps | 1. Open `/venues/ven_does_not_exist`. <br> 2. Open `/venues/ven_hall`. |
+| Test Data | `coordinator@test.local` |
+| Expected Result | 1: Not found, with HTTP status 404 (not a streamed 200). 2: the Exhibition Hall's details, with status 200. |
+
+**Automated by:** `e2e/venue-catalogue.spec.ts` › "SCRUM-34 [AC2] TC-34-22: a venue that doesn't exist answers 404; a real one opens"

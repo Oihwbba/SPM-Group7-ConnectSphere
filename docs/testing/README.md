@@ -126,7 +126,7 @@ the open pull requests that change the same test files have merged.
 | [SCRUM-27](SCRUM-27.md) | Jin Hong | 15 | Written with the story; every case automated |
 | [SCRUM-28](SCRUM-28.md) | Jin Hong | 11 | Written with the story; every case automated |
 | [SCRUM-31](SCRUM-31.md) | Jun Bin | 11 | Written from the acceptance criteria and existing tests; TC-31-04, -05 and -09 are partly manual |
-| [SCRUM-34](SCRUM-34.md) | Felicia Or | 19 | Every case automated (unit, integration for the database's hours check, the migration converting existing hours, opening hours refusing requests, holds and approvals, and two retirements at once, e2e for both journeys); AC 10 and AC 11's flagging waits for SCRUM-26, so those edits and retirements are refused for now |
+| [SCRUM-34](SCRUM-34.md) | Felicia Or | 22 | Every case automated (unit, integration for the database's hours check, the migration converting existing hours, opening hours and retirement refusing requests, holds and approvals, and two retirements at once, e2e for both journeys and the detail page's 404) |
 | [SCRUM-36](SCRUM-36.md) | Caylern Goh | 9 | Automated; a real screen-reader pass is manual |
 | [SCRUM-37](SCRUM-37.md) | Caylern Goh | 7 | Every case automated |
 | [SCRUM-41](SCRUM-41.md) | Jin Hong | 16 | Every case automated (unit, integration for the lock, index and rejection, e2e for both journeys); AC 8's cancellation half waits for SCRUM-82 |
