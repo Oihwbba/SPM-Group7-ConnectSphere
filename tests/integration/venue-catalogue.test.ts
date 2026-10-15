@@ -6,15 +6,17 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { parseSingaporeDateTime } from "@/lib/datetime";
 import { violatesCheck } from "@/lib/db-errors";
+import { openingHoursRefusal } from "@/lib/venue-hours";
 import { createVenue, retireVenue, updateVenue } from "@/app/(app)/venues/actions";
 import { getVenueCatalogue, getVenueDetail } from "@/app/(app)/venues/queries";
 import {
   checkVenueAvailability,
+  confirmHold,
   decideBookingRequest,
   holdBookingRequest,
   submitBookingRequest,
 } from "@/app/(app)/bookings/actions";
-import { getRequestableVenues } from "@/app/(app)/bookings/queries";
+import { getPendingBookingQueue, getRequestableVenues } from "@/app/(app)/bookings/queries";
 import { createPlanningEvents, removeEvents } from "./test-events";
 
 // SCRUM-34 against a real, seeded Postgres: venues added, edited and retired
@@ -110,6 +112,31 @@ describe.skipIf(!usesLocalDatabase)("venue catalogue — real database (SCRUM-34
         ...data,
       },
       select: { id: true, eventId: true },
+    });
+  }
+
+  /**
+   * A live hold written straight to the table, expiring in two days; with
+   * `approved`, Venue Staff have approved it (SCRUM-163 AC7).
+   */
+  async function heldBooking(venueId: string, start: string, end: string, approved = false) {
+    const eventId = await event(start, end);
+    const now = Date.now();
+    return prisma.booking.create({
+      data: {
+        eventId,
+        venueId,
+        startAt: sg(start),
+        endAt: sg(end),
+        status: "HELD",
+        requestedAttendance: 40,
+        requestedById: "usr_coordinator",
+        heldAt: new Date(now - 60 * 60 * 1000),
+        holdExpiresAt: new Date(now + 48 * 60 * 60 * 1000),
+        holdNote: "Confirm numbers.",
+        ...(approved && { holdApprovedAt: new Date(now), holdApprovedById: "usr_venuestaff" }),
+      },
+      select: { id: true },
     });
   }
 
@@ -223,6 +250,25 @@ describe.skipIf(!usesLocalDatabase)("venue catalogue — real database (SCRUM-34
     }
   });
 
+  it("SCRUM-34 [AC7] TC-34-08: every seeded Pending, Held or Approved booking is within its venue's opening hours", async () => {
+    const seeded = await prisma.booking.findMany({
+      where: {
+        id: { in: ["bkg_confirmed", "bkg_auditorium_existing", "bkg_pending", "bkg_full_event", "bkg_last_seat_event"] },
+      },
+      select: {
+        id: true,
+        startAt: true,
+        endAt: true,
+        venue: { select: { name: true, openingHours: true } },
+      },
+    });
+
+    expect(seeded).toHaveLength(5);
+    for (const booking of seeded) {
+      expect(openingHoursRefusal(booking, booking.venue), booking.id).toBeNull();
+    }
+  });
+
   it("SCRUM-34 [AC7] TC-34-08: a venue with no hours recorded is requested at any time", async () => {
     const legacy = await prisma.venue.create({
       data: { name: `SCRUM-34 Legacy ${Date.now()}`, location: "Annex", capacity: 50 },
@@ -264,6 +310,57 @@ describe.skipIf(!usesLocalDatabase)("venue catalogue — real database (SCRUM-34
     expect(
       (await prisma.booking.findUniqueOrThrow({ where: { id: pending.id } })).status,
     ).toBe("PENDING");
+
+    // The queue Venue Staff decide from says the same as Approve.
+    const queued = (await getPendingBookingQueue()).find((b) => b.id === pending.id);
+    expect(queued?.outsideHours).toMatch(/is closed on Sundays, so it can't be booked then\.$/);
+  });
+
+  it("SCRUM-34 [AC7] TC-34-09: a hold outside opening hours can't be approved or confirmed, and stays as it was; within them it can", async () => {
+    const id = await addVenue("AC7 hold");
+    const unapproved = await heldBooking(id, `${SUNDAY}T12:00`, `${SUNDAY}T14:00`);
+    const approved = await heldBooking(id, `${SUNDAY}T15:00`, `${SUNDAY}T17:00`, true);
+    const closedOnSundays = /is closed on Sundays, so it can't be booked then\./;
+
+    asVenueStaff();
+    expect(
+      await decideBookingRequest({ bookingId: unapproved.id, decision: "APPROVED" }),
+    ).toEqual({
+      ok: false,
+      error: expect.stringMatching(
+        new RegExp(`${closedOnSundays.source} This hold is still awaiting approval\\.$`),
+      ),
+    });
+    asCoordinator();
+    expect(await confirmHold({ bookingId: approved.id })).toEqual({
+      ok: false,
+      error: expect.stringMatching(
+        new RegExp(`${closedOnSundays.source} This hold is unchanged; you can still release it\\.$`),
+      ),
+    });
+    const held = { status: true, holdApprovedAt: true } as const;
+    expect(
+      await prisma.booking.findUniqueOrThrow({ where: { id: unapproved.id }, select: held }),
+    ).toEqual({ status: "HELD", holdApprovedAt: null });
+    expect(
+      (await prisma.booking.findUniqueOrThrow({ where: { id: approved.id }, select: held }))
+        .status,
+    ).toBe("HELD");
+    expect(
+      await prisma.auditLog.count({ where: { entityId: { in: [unapproved.id, approved.id] } } }),
+    ).toBe(0);
+
+    // Exactly opening to exactly closing is within the hours.
+    const within = await heldBooking(id, `${TUESDAY}T10:00`, `${TUESDAY}T22:00`);
+    asVenueStaff();
+    expect(
+      await decideBookingRequest({ bookingId: within.id, decision: "APPROVED" }),
+    ).toMatchObject({ ok: true });
+    asCoordinator();
+    expect(await confirmHold({ bookingId: within.id })).toEqual({
+      ok: true,
+      data: { status: "APPROVED" },
+    });
   });
 
   it("SCRUM-34 [AC10] TC-34-12: an edit that would stop a future booking fitting warns first, listing it, and nothing changes", async () => {

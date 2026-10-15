@@ -41,7 +41,9 @@ const row: PendingBookingRow = {
     supportedLayouts: ["banquet"],
     setupMinutes: 0,
     turnaroundMinutes: 0,
+    openingHours: [],
   },
+  outsideHours: null,
   blockers: [],
 };
 
@@ -62,6 +64,19 @@ describe("BookingQueue", () => {
     expect(html).toContain("250 expected · venue holds 200");
     // Over capacity and a missing facility are both marked as not met.
     expect(html.match(/aria-label="does not meet"/g)).toHaveLength(2);
+  });
+
+  it("SCRUM-34 [AC7] TC-34-09: a request outside the venue's opening hours isn't shown as free, and says why", () => {
+    const outside = "Exhibition Hall is closed on Saturdays, so it can't be booked then.";
+
+    const html = renderToStaticMarkup(
+      <BookingQueue queue={[{ ...row, outsideHours: outside }]} canDecide={false} />,
+    );
+
+    expect(html).not.toContain("Free for this period");
+    expect(html).toContain("Exhibition Hall is closed on Saturdays, so it can&#x27;t be booked then.");
+    // Over capacity, a missing facility and the opening hours are each not met.
+    expect(html.match(/aria-label="does not meet"/g)).toHaveLength(3);
   });
 
   it("SCRUM-53 — the Approve and Reject controls render only for a user who may decide", () => {

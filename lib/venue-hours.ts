@@ -102,3 +102,16 @@ export function outsideOpeningHoursMessage(
   }
   return `${venueName} is open ${minutesToTime(day.opensMinute)}–${minutesToTime(day.closesMinute)} on ${name}s. The booking must start and end within those hours on the same day.`;
 }
+
+/**
+ * AC7 — why a booking period is refused at this venue, or null. The booking
+ * actions refuse with it, and the Venue Staff queue shows it, so the card
+ * staff decide from agrees with what Approve will do.
+ */
+export function openingHoursRefusal(
+  period: Period,
+  venue: { name: string; openingHours?: OpeningDay[] },
+): string | null {
+  const day = dayOutsideOpeningHours(period, venue.openingHours ?? []);
+  return day && outsideOpeningHoursMessage(venue.name, day);
+}

@@ -4,6 +4,7 @@ import {
   dayOutsideOpeningHours,
   describeDay,
   minutesToTime,
+  openingHoursRefusal,
   outsideOpeningHoursMessage,
   timeToMinutes,
   type OpeningDay,
@@ -57,6 +58,18 @@ describe("opening hours — SCRUM-34 AC7", () => {
 
   it("SCRUM-34 [AC7] TC-34-08: a venue with no hours recorded refuses nothing", () => {
     expect(dayOutsideOpeningHours(period("2036-03-08T03:00", "2036-03-08T05:00"), [])).toBeNull();
+  });
+
+  it("SCRUM-34 [AC7] TC-34-08: the refusal names the venue and that day's hours, or is null within them or with no hours recorded", () => {
+    const venue = { name: "Executive Boardroom", openingHours: boardroom };
+
+    expect(openingHoursRefusal(period("2036-03-08T10:00", "2036-03-08T12:00"), venue)).toBe(
+      "Executive Boardroom is closed on Saturdays, so it can't be booked then.",
+    );
+    expect(openingHoursRefusal(period("2036-03-04T09:00", "2036-03-04T18:00"), venue)).toBeNull();
+    expect(
+      openingHoursRefusal(period("2036-03-08T10:00", "2036-03-08T12:00"), { name: "Annex" }),
+    ).toBeNull();
   });
 
   it("SCRUM-34 [AC7] TC-34-08: the SGT day decides, not the UTC one", () => {

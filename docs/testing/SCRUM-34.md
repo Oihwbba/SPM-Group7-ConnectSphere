@@ -114,22 +114,22 @@ warning is SCRUM-159 AC9.
 | Pre-conditions | Signed in as a Coordinator; Executive Boardroom (09:00–18:00 weekdays, Closed weekends). |
 | Test Steps | 1. Request it for a weekday 09:00–18:00. <br> 2. For 08:30–12:00, 15:00–18:30, a Saturday, or 17:00 to 01:00 the next day. <br> 3. Request a venue with no hours recorded at 03:00. |
 | Test Data | — |
-| Expected Result | 1 is accepted: exactly at opening and closing is within. 2 is refused with that day's hours, e.g. "Executive Boardroom is open 09:00–18:00 on Tuesdays. The booking must start and end within those hours on the same day." or "Executive Boardroom is closed on Saturdays, so it can't be booked then."; no booking is written, and the form's availability check says the same. 3 is accepted. |
+| Expected Result | 1 is accepted: exactly at opening and closing is within. 2 is refused with that day's hours, e.g. "Executive Boardroom is open 09:00–18:00 on Tuesdays. The booking must start and end within those hours on the same day." or "Executive Boardroom is closed on Saturdays, so it can't be booked then."; no booking is written, and the form's availability check says the same, with Submit disabled. 3 is accepted. Every seeded Pending, Held or Approved booking is within its venue's hours, whatever day the seed runs. |
 
-**Automated by:** `tests/unit/venue-hours.test.ts` › "SCRUM-34 [AC7] TC-34-08: …"; `tests/integration/venue-catalogue.test.ts` › "SCRUM-34 [AC7] TC-34-08: …"
+**Automated by:** `tests/unit/venue-hours.test.ts` › "SCRUM-34 [AC7] TC-34-08: …"; `tests/integration/venue-catalogue.test.ts` › "SCRUM-34 [AC7] TC-34-08: …"; `e2e/venue-catalogue.spec.ts` › "SCRUM-34 [AC7] TC-34-08: the request form refuses a period outside the venue's opening hours, naming them, and accepts one exactly within them"
 
 ### TC-34-09
 
 | Item | Content |
 |---|---|
 | Test Case ID | TC-34-09 |
-| Test Scenario | [Negative] AC 7: holding or approving a request outside opening hours |
-| Pre-conditions | Signed in as Venue Staff; a Pending request at the Executive Boardroom on a Saturday (made before its hours were recorded). |
-| Test Steps | 1. Hold it. <br> 2. Approve it. |
-| Test Data | `venuestaff@test.local` |
-| Expected Result | Both refused: "Executive Boardroom is closed on Saturdays, so it can't be booked then. This request is still pending." The request stays Pending. |
+| Test Scenario | [Negative] [Boundary] AC 7: holding or approving a request, or approving or confirming a hold, outside opening hours |
+| Pre-conditions | A Pending request, a hold and a hold Venue Staff have approved at the Executive Boardroom on a Saturday (made before its hours were recorded). |
+| Test Steps | 1. As Venue Staff, open Bookings. <br> 2. Hold the request, then approve it. <br> 3. Approve the hold. <br> 4. As its Coordinator, confirm the approved hold. <br> 5. Repeat 3 and 4 for a hold exactly within the hours. |
+| Test Data | `venuestaff@test.local`, `coordinator@test.local` |
+| Expected Result | 1: the request's card doesn't say "Free for this period"; it shows "Executive Boardroom is closed on Saturdays, so it can't be booked then." 2: both refused with that, then "This request is still pending."; it stays Pending. 3: refused, "… This hold is still awaiting approval."; it stays Held and unapproved. 4: refused, "… This hold is unchanged; you can still release it."; it stays Held. Nothing is audited. 5: approved, then confirmed, so it is Approved. |
 
-**Automated by:** `tests/integration/venue-catalogue.test.ts` › "SCRUM-34 [AC7] TC-34-09: …"
+**Automated by:** `tests/integration/venue-catalogue.test.ts` › "SCRUM-34 [AC7] TC-34-09: …"; `tests/unit/booking-queue.test.tsx` › "SCRUM-34 [AC7] TC-34-09: a request outside the venue's opening hours isn't shown as free, and says why"
 
 ### TC-34-10
 
@@ -260,3 +260,16 @@ warning is SCRUM-159 AC9.
 | Expected Result | 1 saves. 2 is refused against Accessibility features with "Keep each one under 60 characters.", and nothing is written. |
 
 **Automated by:** `tests/unit/venue-catalogue.test.ts` › "SCRUM-34 [AC3] TC-34-19: …"
+
+### TC-34-20
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-34-20 |
+| Test Scenario | [Negative] AC 3: editing a venue whose opening hours were never recorded |
+| Pre-conditions | Signed in as Venue Staff; a venue added before SCRUM-34, with no opening hours. |
+| Test Steps | 1. Open it and choose Edit venue. <br> 2. Change only its capacity. Save. |
+| Test Data | `venuestaff@test.local` |
+| Expected Result | 1: the dialog says "This venue's opening hours aren't recorded yet. Enter them for each day, or mark the day Closed.", and every day is blank, not 09:00–18:00. 2: refused against each day with "Enter an opening and a closing time, or mark the day Closed."; the capacity and the hours are unchanged, so no hours anyone didn't choose start refusing bookings (AC7). |
+
+**Automated by:** `e2e/venue-catalogue.spec.ts` › "SCRUM-34 [AC3] TC-34-20: editing a venue whose hours were never recorded asks for them instead of saving 09:00–18:00"

@@ -1,7 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import { prisma } from "@/lib/db";
 
-import { signedIn, usesLocalDatabase } from "./helpers";
+import { choose, signedIn, usesLocalDatabase } from "./helpers";
 
 /**
  * SCRUM-34 — the venue catalogue in a real browser. Venue Staff add a venue
@@ -284,5 +284,87 @@ test.describe("SCRUM-34 — browse and maintain the venue catalogue", () => {
     const coordinator = await signedIn(browser, "coordinator@test.local");
     await coordinator.goto("/venues");
     await expect(coordinator.getByRole("link", { name, exact: true })).toHaveCount(0);
+  });
+
+  test("SCRUM-34 [AC7] TC-34-08: the request form refuses a period outside the venue's opening hours, naming them, and accepts one exactly within them", async ({
+    browser,
+  }) => {
+    test.skip(!usesLocalDatabase, "adds its own venue and events");
+    const name = `${PREFIX} Rooftop Studio`;
+    // Tuesdays 10:00–22:00, Closed every other day.
+    await prisma.venue.create({
+      data: {
+        name,
+        location: "Level 30, Block A",
+        capacity: 100,
+        openingHours: {
+          create: [1, 2, 3, 4, 5, 6, 7].map((weekday) =>
+            weekday === 2
+              ? { weekday, opensMinute: 10 * 60, closesMinute: 22 * 60 }
+              : { weekday, opensMinute: null, closesMinute: null },
+          ),
+        },
+      },
+    });
+    // 4 March 2036 is a Tuesday.
+    const planningEvent = (label: string, start: string, end: string) =>
+      prisma.event.create({
+        data: {
+          name: `${PREFIX} ${label}`,
+          status: "PLANNING",
+          organiserId: "usr_organiser",
+          coordinatorId: "usr_coordinator",
+          startAt: new Date(`${start}+08:00`),
+          endAt: new Date(`${end}+08:00`),
+          expectedAttendance: 40,
+        },
+      });
+    await planningEvent("Early Breakfast", "2036-03-04T09:30", "2036-03-04T12:00");
+    await planningEvent("Full Day", "2036-03-04T10:00", "2036-03-04T22:00");
+
+    const coordinator = await signedIn(browser, "coordinator@test.local");
+    await coordinator.goto("/bookings/new");
+    await coordinator.locator('[data-hydrated="true"]').waitFor();
+    const live = coordinator.getByTestId("live-availability");
+    const submit = coordinator.getByRole("button", { name: "Submit request" });
+
+    await choose(coordinator, "Event", `${PREFIX} Early Breakfast`);
+    await choose(coordinator, "Venue", new RegExp(`^${name}`));
+    await expect(live).toHaveAttribute("data-state", "taken");
+    await expect(live).toContainText(
+      `${name} is open 10:00–22:00 on Tuesdays. The booking must start and end within those hours on the same day.`,
+    );
+    await expect(submit).toBeDisabled();
+
+    // Exactly opening to exactly closing is within the hours.
+    await choose(coordinator, "Event", `${PREFIX} Full Day`);
+    await expect(live).toHaveAttribute("data-state", "free");
+    await expect(submit).toBeEnabled();
+  });
+
+  test("SCRUM-34 [AC3] TC-34-20: editing a venue whose hours were never recorded asks for them instead of saving 09:00–18:00", async ({
+    browser,
+  }) => {
+    test.skip(!usesLocalDatabase, "adds its own venue");
+    const name = `${PREFIX} Old Annex`;
+    const venue = await prisma.venue.create({
+      data: { name, location: "Annex", capacity: 50 },
+      select: { id: true },
+    });
+
+    const staff = await signedIn(browser, "venuestaff@test.local");
+    await openVenue(staff, name);
+    await staff.getByRole("button", { name: "Edit venue" }).click();
+    const edit = staff.getByRole("dialog", { name: `Edit ${name}` });
+    await expect(edit).toContainText("This venue's opening hours aren't recorded yet.");
+    await expect(edit.getByLabel("Monday opens")).toHaveValue("");
+
+    await edit.getByLabel("Capacity *").fill("60");
+    await edit.getByRole("button", { name: "Save venue" }).click();
+    await expect(edit.getByText("Enter an opening and a closing time, or mark the day Closed.").first()).toBeVisible();
+    expect(await prisma.venue.findUniqueOrThrow({ where: { id: venue.id } })).toMatchObject({
+      capacity: 50,
+    });
+    expect(await prisma.venueOpeningHours.count({ where: { venueId: venue.id } })).toBe(0);
   });
 });
