@@ -588,6 +588,16 @@ describe("canEditEventDetails — SCRUM-25 AC1", () => {
     mockAuth.mockResolvedValue(null);
     expect(await canEditEventDetails("evt_1")).toBe(false);
   });
+
+  it.each(["ORGANISER", "VENUE_STAFF", "TECH_SUPPORT", "ATTENDEE"] as const)(
+    "SCRUM-25 [AC4, AC7] TC-25-07, TC-25-08: a %s is told no before the event is read",
+    async (role) => {
+      mockAuth.mockResolvedValue(sessionFor(role));
+
+      expect(await canEditEventDetails("evt_1")).toBe(false);
+      expect(db.event.findUnique).not.toHaveBeenCalled();
+    },
+  );
 });
 
 describe("operational notes — SCRUM-25 AC6", () => {
