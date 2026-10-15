@@ -1,4 +1,4 @@
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect, type Page, type Route } from "@playwright/test";
 import { prisma } from "@/lib/db";
 
 import { signedIn, usesLocalDatabase } from "./helpers";
@@ -10,7 +10,8 @@ import { signedIn, usesLocalDatabase } from "./helpers";
  * which lists the booking and flags it once confirmed (SCRUM-26), and adds a
  * note; Venue Staff add one from the booking they
  * review, and Technical Support from the equipment request they review; the
- * Organiser reads them and can neither edit nor add.
+ * Organiser reads them and can neither edit nor add. A note or an edit whose
+ * request fails keeps what was typed and reads the event again.
  *
  * The event is this spec's own, on a 2036 date, removed afterwards with its
  * booking, equipment request and notes.
@@ -37,6 +38,12 @@ async function removeTestEvents() {
   await prisma.equipmentRequest.deleteMany({ where: { eventId: { in: ids } } });
   // The event's notes go with it.
   await prisma.event.deleteMany({ where: { id: { in: ids } } });
+}
+
+/** A Server Action call: a POST the page makes with a `Next-Action` header. */
+function isServerAction(route: Route): boolean {
+  const request = route.request();
+  return request.method() === "POST" && Boolean(request.headers()["next-action"]);
 }
 
 async function openDetails(page: Page, eventName: string) {
@@ -241,5 +248,79 @@ test.describe("SCRUM-25 — update routine event information during planning", (
         select: { authorId: true },
       }),
     ).toEqual({ authorId: "usr_techsupport" });
+  });
+
+  test("SCRUM-25 [AC6] TC-25-19: with the connection down, a note isn't added, the text is kept, and it can be added once the connection is back", async ({
+    browser,
+  }) => {
+    test.skip(!usesLocalDatabase, "creates its own event");
+    const NOTE = "Stage riser delivered and checked.";
+    const coordinator = await signedIn(browser, "coordinator@test.local");
+    await coordinator.goto("/events");
+    const dialog = await openDetails(coordinator, NAME);
+    const notes = dialog.getByTestId("operational-notes");
+    await expect(notes.getByLabel("Add a note")).toBeVisible();
+
+    // Every Server Action fails, the note and the re-read after it alike.
+    await coordinator.route("**/*", (route) =>
+      isServerAction(route) ? route.abort("internetdisconnected") : route.continue(),
+    );
+    await notes.getByLabel("Add a note").fill(NOTE);
+    await notes.getByRole("button", { name: "Add note" }).click();
+    await expect(notes.getByRole("alert")).toHaveText(
+      "The note couldn't be added — check your connection and try again.",
+    );
+    await expect(notes.getByLabel("Add a note")).toHaveValue(NOTE);
+    expect(
+      await prisma.eventOperationalNote.count({ where: { eventId, body: NOTE } }),
+    ).toBe(0);
+
+    await coordinator.unrouteAll({ behavior: "wait" });
+    await notes.getByRole("button", { name: "Add note" }).click();
+    await expect(notes.getByTestId("operational-note").last()).toContainText(NOTE);
+    await expect(notes.getByLabel("Add a note")).toHaveValue("");
+    expect(
+      await prisma.eventOperationalNote.count({ where: { eventId, body: NOTE } }),
+    ).toBe(1);
+  });
+
+  test("SCRUM-25 [AC1] TC-25-20: when the reply to a save is lost after it landed, the form keeps what was typed, and saving again finds nothing to change", async ({
+    browser,
+  }) => {
+    test.skip(!usesLocalDatabase, "creates its own event");
+    const PROGRAMME = "18:30 doors, 19:00 dinner, 20:30 auction";
+    const coordinator = await signedIn(browser, "coordinator@test.local");
+    await coordinator.goto("/events");
+    const dialog = await openDetails(coordinator, NAME);
+    await dialog.getByRole("button", { name: "Edit details" }).click();
+    const edit = coordinator.getByRole("dialog", { name: `Edit ${NAME}` });
+
+    // The save reaches the server and is written; only the reply is lost.
+    await coordinator.route("**/*", async (route) => {
+      if (isServerAction(route) && route.request().postData()?.includes(PROGRAMME)) {
+        await route.fetch();
+        return route.abort("connectionreset");
+      }
+      return route.continue();
+    });
+    await edit.getByLabel("Programme").fill(PROGRAMME);
+    await edit.getByRole("button", { name: "Save details" }).click();
+    await expect(edit.getByTestId("edit-details-error")).toHaveText(
+      "The details couldn't be saved — check your connection and try again.",
+    );
+    await expect(edit.getByLabel("Programme")).toHaveValue(PROGRAMME);
+    expect(
+      (await prisma.event.findUniqueOrThrow({ where: { id: eventId } })).programme,
+    ).toBe(PROGRAMME);
+
+    // Saving again is safe: the server compares with what it holds.
+    await coordinator.unrouteAll({ behavior: "wait" });
+    await edit.getByRole("button", { name: "Save details" }).click();
+    await expect(coordinator.getByText("Nothing changed.")).toBeVisible();
+    expect(
+      await prisma.auditLog.count({
+        where: { entityId: eventId, fieldName: "programme", newValue: PROGRAMME },
+      }),
+    ).toBe(1);
   });
 });

@@ -110,7 +110,7 @@ requirements are the fields SCRUM-26 warns about and flags on (AC3).
 | Test Data | — |
 | Expected Result | 1 and 2: "Event not found.", the same as for an event that doesn't exist. 3: "You do not have permission to do that." Nothing changes in any case. |
 
-**Automated by:** `tests/unit/event-edit.test.ts` › "SCRUM-25 [AC7] TC-25-08: …"; `tests/integration/event-edit.test.ts` › "SCRUM-25 [AC7] TC-25-08, TC-25-12: …" (step 1)
+**Automated by:** `tests/unit/event-edit.test.ts` › "SCRUM-25 [AC7] TC-25-08: …", "SCRUM-25 [AC4, AC7] TC-25-07, TC-25-08: a %s is told no before the event is read"; `tests/integration/event-edit.test.ts` › "SCRUM-25 [AC7] TC-25-08, TC-25-12: …" (step 1)
 
 ### TC-25-09
 
@@ -241,3 +241,29 @@ requirements are the fields SCRUM-26 warns about and flags on (AC3).
 | Expected Result | Saved with no warning, and nothing is flagged: no venue or equipment can be requested before Planning (SCRUM-50 AC7, SCRUM-27 AC1). |
 
 **Automated by:** `tests/unit/event-edit.test.ts` › "SCRUM-25 [AC3] TC-25-18: …"
+
+### TC-25-19
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-25-19 |
+| Test Scenario | [Negative] AC 6: adding a note with the connection down |
+| Pre-conditions | As TC-25-09, with the event's notes open. |
+| Test Steps | 1. Lose the connection. <br> 2. Type a note and choose Add note. <br> 3. Restore the connection and choose Add note again. |
+| Test Data | — |
+| Expected Result | 2: "The note couldn't be added — check your connection and try again." The note is still in the box, the list and form stay on screen although reading them again also fails, and no note is stored. 3: the note is added and shown, and the box is emptied. |
+
+**Automated by:** `e2e/event-edit.spec.ts` › "SCRUM-25 [AC6] TC-25-19: …"
+
+### TC-25-20
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-25-20 |
+| Test Scenario | [Negative] AC 1: the reply to a save is lost after the save landed |
+| Pre-conditions | As TC-25-01, with Edit details open. |
+| Test Steps | 1. Change the programme and save; the save reaches the server but its reply is lost. <br> 2. Save again once the connection is back. |
+| Test Data | — |
+| Expected Result | 1: "The details couldn't be saved — check your connection and try again." The dialog stays open with the programme as typed; the change is stored. 2: "Nothing changed.", and the change is audited once. Either way nothing is lost or saved twice. |
+
+**Automated by:** `e2e/event-edit.spec.ts` › "SCRUM-25 [AC1] TC-25-20: …"

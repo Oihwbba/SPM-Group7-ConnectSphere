@@ -43,7 +43,13 @@ export function OperationalNotes({ eventId }: { eventId: string }) {
           result.ok ? { kind: "ready", ...result.data } : { kind: "hidden" },
         );
       })
-      .catch(() => !cancelled && setState({ kind: "error" }));
+      // A failed re-read keeps the list and form already shown, so a note
+      // still being typed isn't hidden behind the error.
+      .catch(
+        () =>
+          !cancelled &&
+          setState((prev) => (prev.kind === "ready" ? prev : { kind: "error" })),
+      );
     return () => {
       cancelled = true;
     };
