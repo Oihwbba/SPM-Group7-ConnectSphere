@@ -62,7 +62,7 @@ _32 stories, 86 points_
 | [SCRUM-21](SCRUM-21.md) | Reassign an event to another Coordinator and show who is currently assigned | 3 | Highest | SCRUM Sprint 3 | To Do |
 | [SCRUM-23](SCRUM-23.md) | View an event's current status | 1 | Highest | SCRUM Sprint 1 | Done |
 | [SCRUM-24](SCRUM-24.md) | Keep event status consistent with actions taken | 5 | Highest | SCRUM Sprint 1 | Done |
-| [SCRUM-25](SCRUM-25.md) | Update routine event information during planning | 3 | Highest | SCRUM Sprint 3 | In Progress |
+| [SCRUM-25](SCRUM-25.md) | Update routine event information during planning | 3 | Highest | SCRUM Sprint 3 | In Review |
 | [SCRUM-26](SCRUM-26.md) | Flag and resolve arrangements affected by a change | 5 | Highest | SCRUM Sprint 3 | In Review |
 | [SCRUM-71](SCRUM-71.md) | Record who changed what and when | 5 | Low | Backlog | To Do |
 | [SCRUM-81](SCRUM-81.md) | Move an approved event through planning to confirmed | 5 | Highest | SCRUM Sprint 2 | Done |

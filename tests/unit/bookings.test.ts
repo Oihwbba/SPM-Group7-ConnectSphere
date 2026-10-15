@@ -760,7 +760,7 @@ describe("decideBookingRequest — SCRUM-53", () => {
 
     expect(result).toEqual({ ok: true, data: { status: "APPROVED" } });
     expect(db.booking.updateMany).toHaveBeenCalledWith({
-      where: { id: "bkg_1", status: "PENDING" },
+      where: { id: "bkg_1", status: "PENDING", needsReconsideration: false },
       data: expect.objectContaining({
         status: "APPROVED",
         decidedById: "usr_staff",
@@ -796,7 +796,7 @@ describe("decideBookingRequest — SCRUM-53", () => {
 
       expect(result).toEqual({ ok: true, data: { status: "APPROVED" } });
       expect(db.booking.updateMany).toHaveBeenCalledWith({
-        where: { id: "bkg_1", status: "PENDING" },
+        where: { id: "bkg_1", status: "PENDING", needsReconsideration: false },
         data: expect.objectContaining({
           status: "APPROVED",
           setupMinutes: 30,
@@ -954,6 +954,53 @@ describe("decideBookingRequest — SCRUM-53", () => {
         "This request has already been approved; the original decision stands.",
     });
     expect(db.auditLog.create).not.toHaveBeenCalled();
+  });
+
+  describe("SCRUM-26 — a request flagged Needs Reconsideration", () => {
+    const FLAGGED =
+      "This request needs reconsideration, so it can't be approved or held until its event's coordinator resolves it. It can still be rejected.";
+
+    it("SCRUM-26 [AC5] TC-26-09: approving a flagged Pending request is refused and nothing is written", async () => {
+      db.booking.findUnique.mockResolvedValue({
+        ...pendingBooking,
+        needsReconsideration: true,
+      });
+
+      expect(
+        await decideBookingRequest({ bookingId: "bkg_1", decision: "APPROVED" }),
+      ).toEqual({ ok: false, error: FLAGGED });
+      expect(db.booking.updateMany).not.toHaveBeenCalled();
+      expect(db.auditLog.create).not.toHaveBeenCalled();
+    });
+
+    it("SCRUM-26 [AC5] TC-26-09: a flag raised after the request was read still stops the approval", async () => {
+      db.booking.updateMany.mockResolvedValue({ count: 0 });
+      db.booking.findUniqueOrThrow.mockResolvedValue({ status: "PENDING" });
+
+      expect(
+        await decideBookingRequest({ bookingId: "bkg_1", decision: "APPROVED" }),
+      ).toEqual({ ok: false, error: FLAGGED });
+      expect(db.auditLog.create).not.toHaveBeenCalled();
+    });
+
+    it("SCRUM-26 [AC5] TC-26-09: a flagged Pending request can still be rejected", async () => {
+      db.booking.findUnique.mockResolvedValue({
+        ...pendingBooking,
+        needsReconsideration: true,
+      });
+
+      expect(
+        await decideBookingRequest({
+          bookingId: "bkg_1",
+          decision: "REJECTED",
+          reason: "The event moved.",
+        }),
+      ).toEqual({ ok: true, data: { status: "REJECTED" } });
+      expect(db.booking.updateMany.mock.calls[0][0].where).toEqual({
+        id: "bkg_1",
+        status: "PENDING",
+      });
+    });
   });
 
   it("SCRUM-53 [AC8] TC-53-04: approving over an approved booking or recorded unavailability is returned as conflicting", async () => {
