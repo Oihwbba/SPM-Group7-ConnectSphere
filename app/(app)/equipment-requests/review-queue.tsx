@@ -10,6 +10,7 @@ import { Check, ClipboardCheck, Loader2, PlayCircle, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { RequestHistory } from "@/components/equipment/request-history";
+import { OperationalNotes } from "@/components/events/operational-notes";
 import { RequestLines } from "@/components/equipment/request-lines";
 import { RequestStatusBadge } from "@/components/equipment/request-status-badge";
 import { OrganiserEquipmentAnswer } from "@/components/events/organiser-answers";
@@ -291,6 +292,8 @@ function ReviewCard({ request }: { request: QueuedEquipmentRequest }) {
         )}
 
         <RequestHistory entries={request.updates} />
+        {/* SCRUM-25 AC6: Technical Support add notes once there is a request. */}
+        <OperationalNotes eventId={request.event.id} />
       </CardContent>
     </Card>
   );

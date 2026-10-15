@@ -14,6 +14,11 @@ vi.mock("@/app/(app)/bookings/actions", () => ({
   holdBookingRequest: vi.fn(),
 }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
+// SCRUM-25 AC6: each card carries the event's operational notes.
+vi.mock("@/app/(app)/events/edit-actions", () => ({
+  getOperationalNotes: vi.fn(() => new Promise(() => {})),
+  addOperationalNote: vi.fn(),
+}));
 
 const row: PendingBookingRow = {
   id: "bkg_1",
@@ -36,6 +41,7 @@ const row: PendingBookingRow = {
     preferredLayout: "Banquet",
     accessibilityNeeds: "Wheelchair access",
   },
+  eventId: "evt_1",
   requestedBy: { name: "Cody Coordinator", email: "coordinator@test.local" },
   venue: {
     id: "ven_hall",

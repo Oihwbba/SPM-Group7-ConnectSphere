@@ -1,5 +1,15 @@
 import { z } from "zod";
 
+/** Room layouts offered as presets on the request and edit forms. */
+export const LAYOUT_OPTIONS = [
+  "Theatre",
+  "Classroom",
+  "Banquet",
+  "Boardroom",
+  "U-Shape",
+  "Cocktail / Standing",
+];
+
 /**
  * Helper to validate attendance: must be a positive whole number (> 0).
  */
