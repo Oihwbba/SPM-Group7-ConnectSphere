@@ -561,7 +561,7 @@ describe.skipIf(!usesLocalDatabase)(
         ok: true,
         data: { recorded: true, created: true },
       });
-      // One of the two outcomes AC7 allows, and nothing else.
+      // One of the two outcomes AC5 allows, and nothing else.
       expect([
         { approved: false, status: "PENDING", flagged: true },
         { approved: true, status: "APPROVED", flagged: true },

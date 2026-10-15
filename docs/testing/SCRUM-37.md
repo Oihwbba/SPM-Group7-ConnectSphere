@@ -90,7 +90,7 @@ Moved to [TC-36-09](SCRUM-36.md#tc-36-09) on 2026-10-09. A newly approved bookin
 | Pre-conditions | Real PostgreSQL. A pending request 10:00 am to 2:00 pm on a test venue. |
 | Test Steps | 1. Approve the request and record maintenance 12:00 pm to 4:00 pm at once. The test holds both after the application's own check until both have passed it, so only the database's locks can separate them. |
 | Test Data | — |
-| Expected Result | One succeeds and the other is refused. Approved bookings plus recorded unavailability for that period total exactly one. With the occupancy triggers disabled, both succeed and the test fails (verified 2026-09-28). Since SCRUM-172 the database accepts unavailability over a booking, so recording runs its check and its write under the venue lock that an approval's trigger also takes: the approval waits for it, then is refused. |
+| Expected Result | The maintenance is saved, once. The booking is either still Pending with its approval refused as conflicting, or Approved and flagged Needs Reconsideration; never Approved without a flag. Recording runs its check and its write under the venue lock that an approval's trigger also takes, so whichever goes second sees the other: an approval after the maintenance is refused, and maintenance after the approval flags the booking. |
 
 **Automated by:** `tests/integration/concurrency.test.ts` › the "SCRUM-161 [AC5] TC-161-12: …" cases; `tests/unit/bookings.test.ts` › "SCRUM-37 [AC4] TC-37-06: maintenance recorded at the same instant as an approval: the database refuses the approval, and it is returned as conflicting"; `tests/unit/unavailability.test.ts` › "SCRUM-37 [AC4] TC-37-06: with no booking affected, only the venue is locked, before the check and the write"
 
