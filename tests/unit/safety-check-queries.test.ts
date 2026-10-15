@@ -119,6 +119,13 @@ describe("getSafetyCheckReview — SCRUM-166 AC2, AC5, AC6", () => {
           request: null,
         },
       ],
+      operationalNotes: [
+        {
+          body: "Stage crew arrives at 8 am.",
+          createdAt: START,
+          author: { name: "Cody" },
+        },
+      ],
       safetyChecks: [
         {
           id: "chk_1",
@@ -141,7 +148,7 @@ describe("getSafetyCheckReview — SCRUM-166 AC2, AC5, AC6", () => {
     ...over,
   });
 
-  it("SCRUM-166 [AC2] TC-166-13: shows the expected attendance, each venue's capacity, booked attendance, layouts, accessibility, setup and turnaround and restrictions, and the reserved equipment with its placement", async () => {
+  it("SCRUM-166 [AC2] TC-166-13: shows the expected attendance, each venue's capacity, booked attendance, layouts, accessibility, setup and turnaround and restrictions, the reserved equipment with its placement, and the operational notes", async () => {
     mockFindUnique.mockResolvedValue(row());
 
     const review = await getSafetyCheckReview(officer, "chk_2");
@@ -181,9 +188,19 @@ describe("getSafetyCheckReview — SCRUM-166 AC2, AC5, AC6", () => {
         },
         { reservationId: "res_2", type: "Wireless Microphone", technicalRequirements: null },
       ],
+      operationalNotes: [
+        { body: "Stage crew arrives at 8 am.", author: "Cody", createdAt: START },
+      ],
     });
     const { select } = mockFindUnique.mock.calls[0][0];
-    expect(select.event.select.bookings.where).toEqual({ status: { in: ["APPROVED", "HELD"] } });
+    // Approved bookings and holds not yet expired (SCRUM-163 AC4).
+    expect(select.event.select.bookings.where).toEqual({
+      OR: [
+        { status: "APPROVED" },
+        { status: "HELD", holdExpiresAt: { gt: expect.any(Date) } },
+      ],
+    });
+    expect(select.event.select.operationalNotes.orderBy).toEqual({ createdAt: "asc" });
     expect(select.event.select.reservations.where).toEqual({ status: "CONFIRMED" });
   });
 

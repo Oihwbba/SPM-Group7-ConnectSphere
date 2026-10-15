@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Building2, History, Wrench } from "lucide-react";
+import { ArrowLeft, Building2, History, NotebookPen, Wrench } from "lucide-react";
 
 import { requireSession } from "@/lib/auth/guard";
 import { can } from "@/lib/auth/can";
@@ -15,7 +15,8 @@ const list = (values: string[]) => (values.length ? values.join(", ") : "None re
 const or = (value: string | null) => value || "None recorded";
 
 /**
- * SCRUM-166 AC2 — everything a Safety Officer reviews, read-only, and the
+ * SCRUM-166 AC2 — everything a Safety Officer reviews, read-only, including
+ * the event's operational notes (SCRUM-25 AC6), and the
  * outcome form while the check awaits review (AC3). Earlier checks for the
  * same event are listed beneath it (AC5).
  */
@@ -114,6 +115,26 @@ export default async function SafetyCheckReviewPage({
                 Specs: {or(item.technicalSpecs)}
               </p>
               <p>Technical requirements and placement: {or(item.technicalRequirements)}</p>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="bg-muted/30 px-4 py-3">
+          <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+            <NotebookPen aria-hidden="true" className="h-4 w-4 text-primary" /> Operational
+            notes
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3 p-4 text-sm">
+          {check.operationalNotes.length === 0 && <p>No operational notes.</p>}
+          {check.operationalNotes.map((note, i) => (
+            <div key={i} data-testid="safety-check-operational-note">
+              <p className="whitespace-pre-wrap">{note.body}</p>
+              <p className="text-muted-foreground">
+                {note.author}, {formatDateTime(note.createdAt)}
+              </p>
             </div>
           ))}
         </CardContent>

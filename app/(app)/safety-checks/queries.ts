@@ -2,6 +2,7 @@ import type { SafetyCheckStatus } from "@prisma/client";
 
 import { prisma } from "@/lib/db";
 import { can, type SessionUser } from "@/lib/auth/can";
+import { reservingWhere } from "@/lib/booking-holds";
 
 /** SCRUM-166 AC1 — one waiting check in the Safety Officers' queue. */
 export interface QueuedSafetyCheck {
@@ -96,6 +97,8 @@ export interface SafetyCheckReview {
     technicalSpecs: string | null;
     technicalRequirements: string | null;
   }[];
+  /** AC2 — the event's operational notes (SCRUM-25 AC6), oldest first. */
+  operationalNotes: { body: string; author: string; createdAt: Date }[];
   /** AC5 — the event's earlier checks, newest first. */
   history: {
     id: string;
@@ -111,10 +114,12 @@ export interface SafetyCheckReview {
  * SCRUM-166 AC2, AC5 — everything a Safety Officer reviews, read-only: the
  * expected attendance; for each booked venue its capacity, the attendance
  * booked for it, the requested and supported layouts, the accessibility needs
- * and features, its setup and turnaround times and known restrictions; and the
+ * and features, its setup and turnaround times and known restrictions; the
  * reserved equipment with each line's technical requirements, where placement
- * is noted. Null when the check doesn't exist or the officer may not review
- * this event (AC6), so neither case reveals which checks exist.
+ * is noted; and the operational notes. Only bookings that reserve the venue
+ * now count: Approved ones and holds not yet expired (SCRUM-163 AC4). Null
+ * when the check doesn't exist or the officer may not review this event (AC6),
+ * so neither case reveals which checks exist.
  */
 export async function getSafetyCheckReview(
   user: SessionUser,
@@ -143,7 +148,7 @@ export async function getSafetyCheckReview(
           preferredLayout: true,
           accessibilityNeeds: true,
           bookings: {
-            where: { status: { in: ["APPROVED", "HELD"] } },
+            where: reservingWhere(new Date()),
             orderBy: { createdAt: "asc" },
             select: {
               id: true,
@@ -177,6 +182,10 @@ export async function getSafetyCheckReview(
                 },
               },
             },
+          },
+          operationalNotes: {
+            orderBy: { createdAt: "asc" },
+            select: { body: true, createdAt: true, author: { select: { name: true } } },
           },
           safetyChecks: {
             where: { id: { not: checkId } },
@@ -237,6 +246,11 @@ export async function getSafetyCheckReview(
       technicalRequirements:
         r.request?.lines.find((l) => l.equipmentId === r.equipmentId)
           ?.technicalRequirements ?? null,
+    })),
+    operationalNotes: event.operationalNotes.map((n) => ({
+      body: n.body,
+      author: n.author.name,
+      createdAt: n.createdAt,
     })),
     history: event.safetyChecks.map((c) => ({
       id: c.id,

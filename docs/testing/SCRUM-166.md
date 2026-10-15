@@ -19,13 +19,10 @@ and the app is running. The event is in Planning, assigned to
 - **AC1, AC4, notifications:** a notification row is written for every Safety
   Officer on a request and for the Coordinator on an outcome. Listing them is
   SCRUM-48, and SCRUM-124 owns how notifications behave.
-- **AC2, operational notes:** adding them is SCRUM-25 AC6 (not built), so the
-  review page has none to show yet.
-- **AC13, edits to the event's details:** changing the date, time, expected
-  attendance, layout or accessibility needs is SCRUM-25 and SCRUM-128 (not
-  built); both must call `outdateSafetyChecks`. Approving a booking, reserving
-  equipment and cancelling a flagged arrangement already do. A hold is
-  SCRUM-163 (#154), which must too.
+- **AC13, an approved change request:** applying one is SCRUM-128 (#181),
+  which calls `outdateSafetyChecks`. SCRUM-25's edits, approving a booking,
+  placing, rejecting, confirming or releasing a hold, withdrawing a request,
+  reserving equipment and cancelling a flagged arrangement already do.
 
 | ID | Type | Criterion | Automated |
 |---|---|---|---|
@@ -196,11 +193,11 @@ and the app is running. The event is in Planning, assigned to
 | Test Case ID | TC-166-12 |
 | Test Scenario | [Positive, Negative] AC 13: a change makes the check Outdated |
 | Pre-conditions | The check is Approved. |
-| Test Steps | 1. Venue Staff approve a second venue for the event (or Technical Support reserve equipment, or the Coordinator cancels a flagged arrangement). <br> 2. Try to approve the check. <br> 3. Try to confirm. |
+| Test Steps | 1. Venue Staff approve a second venue for the event, or place or reject a hold on one (or Technical Support reserve equipment, or the Coordinator cancels a flagged arrangement). <br> 2. Try to approve the check. <br> 3. Try to confirm. |
 | Test Data | — |
 | Expected Result | 1. The check is Outdated with the time. 2. "This check is Outdated because the event's arrangements changed; nothing was changed. The Coordinator needs to request a new one." 3. Refused: "… Safety check (Outdated)." |
 
-**Automated by:** `tests/unit/safety-check.test.ts`, `tests/unit/bookings.test.ts`, `tests/unit/request-reservation.test.ts`, `tests/unit/safety-check-outcome.test.ts` › "SCRUM-166 [AC13] TC-166-12: …"; `tests/unit/reconsideration-actions.test.ts` › "SCRUM-26 [AC10] TC-26-11: …"; `tests/integration/safety-check.test.ts` › "SCRUM-166 [AC9, AC13, AC14] TC-166-12: …"
+**Automated by:** `tests/unit/safety-check.test.ts`, `tests/unit/bookings.test.ts`, `tests/unit/request-reservation.test.ts`, `tests/unit/safety-check-outcome.test.ts` › "SCRUM-166 [AC13] TC-166-12: …"; `tests/unit/booking-holds.test.ts` › "SCRUM-163 [AC1, AC5] TC-163-01, TC-163-09: …" (placing a hold); `tests/unit/reconsideration-actions.test.ts` › "SCRUM-26 [AC10] TC-26-11: …"; `tests/integration/safety-check.test.ts` › "SCRUM-166 [AC9, AC13, AC14] TC-166-12: …"
 
 ### TC-166-13
 
@@ -208,10 +205,10 @@ and the app is running. The event is in Planning, assigned to
 |---|---|
 | Test Case ID | TC-166-13 |
 | Test Scenario | [Positive] AC 2: the Safety Officer sees the arrangements, read-only |
-| Pre-conditions | A check awaits review; the booking is for 150 in a theatre layout; a projector is reserved with "Ceiling mount above the stage." |
+| Pre-conditions | A check awaits review; the booking is for 150 in a theatre layout; a projector is reserved with "Ceiling mount above the stage."; the Coordinator added an operational note (SCRUM-25 AC6). |
 | Test Steps | Open the check from **Safety Checks**. |
 | Test Data | — |
-| Expected Result | The expected attendance; for Exhibition Hall its capacity (200), the attendance booked, requested and supported layouts, accessibility needs and features, setup and turnaround, and known restrictions; the projector with its specs and placement. |
+| Expected Result | The expected attendance; for Exhibition Hall its capacity (200), the attendance booked, requested and supported layouts, accessibility needs and features, setup and turnaround, and known restrictions; the projector with its specs and placement; the operational note with who wrote it and when. A hold past its expiry isn't listed. |
 
 **Automated by:** `tests/unit/safety-check-queries.test.ts` › "SCRUM-166 [AC2] TC-166-13: …"; `e2e/safety-check.spec.ts` (TC-166-15)
 
