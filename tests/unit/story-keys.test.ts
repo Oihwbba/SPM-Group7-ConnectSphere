@@ -276,7 +276,7 @@ describe("SCRUM-146 story keys in the code", () => {
   // its story.
   it("SCRUM-146 [AC3]: the Venue Catalogue page cites SCRUM-34", () => {
     expect(
-      readFileSync(join(ROOT, "app/(app)/venues/page.tsx"), "utf8"),
+      readFileSync(join(ROOT, "app/(app)/venues/(catalogue)/page.tsx"), "utf8"),
     ).toContain("SCRUM-34 —");
   });
 });

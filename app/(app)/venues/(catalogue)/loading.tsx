@@ -1,4 +1,8 @@
-/** Streamed while the server component loads the venue catalogue. */
+/**
+ * Streamed while the server component loads the venue catalogue. It sits in
+ * a route group so it doesn't wrap `/venues/[id]`, whose `notFound()` must
+ * still return a real 404 (as `events/[id]`, which has no loading boundary).
+ */
 export default function Loading() {
   return (
     <div className="space-y-6" aria-busy="true" aria-label="Loading venues">

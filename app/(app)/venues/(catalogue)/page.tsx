@@ -13,8 +13,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { getVenueCatalogue, getVenueOptions } from "./queries";
-import { VenueFormDialog } from "./venue-form-dialog";
+import { getVenueCatalogue, getVenueOptions } from "../queries";
+import { VenueFormDialog } from "../venue-form-dialog";
 
 type Venue = Awaited<ReturnType<typeof getVenueCatalogue>>[number];
 

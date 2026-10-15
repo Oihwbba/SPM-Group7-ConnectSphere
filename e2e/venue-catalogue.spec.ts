@@ -367,4 +367,19 @@ test.describe("SCRUM-34 — browse and maintain the venue catalogue", () => {
     });
     expect(await prisma.venueOpeningHours.count({ where: { venueId: venue.id } })).toBe(0);
   });
+
+  // The catalogue's loading skeleton must not wrap the detail route, or the
+  // response would already be a streamed 200 when notFound() runs.
+  test("SCRUM-34 [AC2] TC-34-22: a venue that doesn't exist answers 404; a real one opens", async ({
+    browser,
+  }) => {
+    const coordinator = await signedIn(browser, "coordinator@test.local");
+
+    const missing = await coordinator.goto("/venues/ven_does_not_exist");
+    const real = await coordinator.goto("/venues/ven_hall");
+
+    expect(missing?.status()).toBe(404);
+    expect(real?.status()).toBe(200);
+    await expect(coordinator.getByTestId("venue-details")).toBeVisible();
+  });
 });
