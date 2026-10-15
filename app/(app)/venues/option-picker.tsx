@@ -1,13 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { Plus } from "lucide-react";
+import { Check, Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { FieldError } from "@/components/ui/field-error";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toTag } from "@/lib/schemas/venue";
+import { cn } from "@/lib/utils";
 import { tagLabel } from "@/lib/venue-options";
 
 /**
@@ -52,19 +53,26 @@ export function OptionPicker({
     <fieldset className="space-y-2" aria-describedby={errors?.[0] ? `${id}-error` : undefined}>
       <legend className="text-sm font-medium">{legend}</legend>
       <div className="flex flex-wrap gap-2">
-        {shown.map((tag) => (
-          <Button
-            key={tag}
-            type="button"
-            size="sm"
-            variant={selected.includes(tag) ? "default" : "outline"}
-            className="h-8 text-xs"
-            aria-pressed={selected.includes(tag)}
-            onClick={() => toggle(tag)}
-          >
-            {tagLabel(tag)}
-          </Button>
-        ))}
+        {shown.map((tag) => {
+          const on = selected.includes(tag);
+          return (
+            <Button
+              key={tag}
+              type="button"
+              size="sm"
+              variant="outline"
+              className={cn(
+                "h-8 gap-1 text-xs",
+                on && "border-primary bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground",
+              )}
+              aria-pressed={on}
+              onClick={() => toggle(tag)}
+            >
+              {on && <Check aria-hidden />}
+              {tagLabel(tag)}
+            </Button>
+          );
+        })}
       </div>
       <div className="flex gap-2">
         <Label htmlFor={`${id}-new`} className="sr-only">
