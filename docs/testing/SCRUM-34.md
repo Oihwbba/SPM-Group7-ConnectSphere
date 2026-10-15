@@ -238,3 +238,29 @@ warning is SCRUM-159 AC9.
 | Expected Result | The Mon–Sun venue opens 07:00–23:00 every day. The Mon–Fri venue opens 09:00–18:00 on weekdays and is Closed at weekends. The other two have no hours recorded, so no booking is refused for them. The free-text column is kept, with its text. |
 
 **Automated by:** `tests/integration/venue-opening-hours-migration.test.ts` › "SCRUM-34 [AC3] TC-34-17: …"
+
+### TC-34-18
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-34-18 |
+| Test Scenario | [Positive] AC 3, AC 6: facilities, accessibility features and layouts are picked from lists, and ones Venue Staff add are offered from then on |
+| Pre-conditions | Signed in as `venuestaff@test.local`. |
+| Test Steps | 1. Add a venue: pick Projector and Sound system, Wheelchair access, and Theatre; add "Rooftop bar", "Tactile paving" and "Garden party". Save. <br> 2. Open Add venue again. <br> 3. As `organiser@test.local`, start an event request and reach Venue, Layout & Accessibility. |
+| Test Data | — |
+| Expected Result | 1: the venue is saved with the tags `projector`, `sound-system`, `rooftop-bar`; `wheelchair-access`, `tactile-paving`; `theatre`, `garden-party`, each once however it was typed, and its details show them. 2: Rooftop bar, Tactile paving and Garden party are offered, not selected, after the predefined options. 3: Garden party is a layout preset, and Tactile paving an accessibility quick-pick (SCRUM-13). The options come from active venues only, so a retired venue's own values drop out. |
+
+**Automated by:** `tests/unit/venue-options.test.ts` › "SCRUM-34 [AC3, AC6] TC-34-18: …", "SCRUM-34 [AC3] TC-34-18: …", "SCRUM-34 [AC6, AC8] TC-34-18: …", "SCRUM-34 [AC1] TC-34-18: …"; `tests/unit/venue-catalogue.test.ts` › "SCRUM-34 [AC3, AC6] TC-34-18: …"; `e2e/venue-catalogue.spec.ts` › "SCRUM-34 [AC1, AC2, AC3, AC4, AC6, AC9] …", "SCRUM-34 [AC6] TC-34-18: …"
+
+### TC-34-19
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-34-19 |
+| Test Scenario | [Boundary] AC 3: how long an added option may be |
+| Pre-conditions | As TC-34-18. |
+| Test Steps | 1. Add a facility of 60 characters. Save. <br> 2. Add an accessibility feature of 61 characters. Save. |
+| Test Data | — |
+| Expected Result | 1 saves. 2 is refused against Accessibility features with "Keep each one under 60 characters.", and nothing is written. |
+
+**Automated by:** `tests/unit/venue-catalogue.test.ts` › "SCRUM-34 [AC3] TC-34-19: …"

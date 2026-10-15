@@ -20,8 +20,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { venueSchema, venueUpdateSchema } from "@/lib/schemas/venue";
 import { minutesToTime, WEEKDAYS } from "@/lib/venue-hours";
+import type { VenueOptions } from "@/lib/venue-options";
 import { AffectedBookings } from "./affected-bookings";
 import { createVenue, updateVenue } from "./actions";
+import { OptionPicker } from "./option-picker";
 import type { VenueDetail } from "./queries";
 
 type Day = { weekday: number; closed: boolean; opensAt: string; closesAt: string };
@@ -47,9 +49,9 @@ function formFrom(venue?: VenueDetail) {
     name: venue?.name ?? "",
     location: venue?.location ?? "",
     capacity: venue ? String(venue.capacity) : "",
-    facilities: venue?.facilities.join(", ") ?? "",
-    accessibilityFeatures: venue?.accessibilityFeatures.join(", ") ?? "",
-    supportedLayouts: venue?.supportedLayouts.join(", ") ?? "",
+    facilities: venue?.facilities ?? [],
+    accessibilityFeatures: venue?.accessibilityFeatures ?? [],
+    supportedLayouts: venue?.supportedLayouts ?? [],
     setupMinutes: venue ? String(venue.setupMinutes) : "0",
     turnaroundMinutes: venue ? String(venue.turnaroundMinutes) : "0",
     knownRestrictions: venue?.knownRestrictions ?? "",
@@ -61,8 +63,16 @@ function formFrom(venue?: VenueDetail) {
  * SCRUM-34 AC3–AC6, AC10 — Venue Staff add a venue, or edit one. Each error
  * shows next to its field, a day's hours next to that day (AC5); an edit
  * refused because it would stop future bookings fitting lists them (AC10).
+ * Facilities, accessibility features and layouts are chosen from `options`,
+ * or added when none fits.
  */
-export function VenueFormDialog({ venue }: { venue?: VenueDetail }) {
+export function VenueFormDialog({
+  venue,
+  options,
+}: {
+  venue?: VenueDetail;
+  options: VenueOptions;
+}) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(() => formFrom(venue));
@@ -134,7 +144,7 @@ export function VenueFormDialog({ venue }: { venue?: VenueDetail }) {
   }
 
   const text = (
-    key: "name" | "location" | "capacity" | "facilities" | "accessibilityFeatures" | "supportedLayouts" | "setupMinutes" | "turnaroundMinutes",
+    key: "name" | "location" | "capacity" | "setupMinutes" | "turnaroundMinutes",
     label: string,
     props: React.ComponentProps<typeof Input> = {},
     hint?: string,
@@ -186,9 +196,24 @@ export function VenueFormDialog({ venue }: { venue?: VenueDetail }) {
             {text("location", "Location *")}
           </div>
           {text("capacity", "Capacity *", { inputMode: "numeric" })}
-          {text("facilities", "Facilities", {}, "Separate with commas, e.g. projector, sound system.")}
-          {text("accessibilityFeatures", "Accessibility features", {}, "e.g. wheelchair access, hearing loop.")}
-          {text("supportedLayouts", "Supported layouts", {}, "e.g. theatre, banquet, classroom.")}
+          {(
+            [
+              ["facilities", "Facilities", "facility"],
+              ["accessibilityFeatures", "Accessibility features", "accessibility feature"],
+              ["supportedLayouts", "Supported layouts", "layout"],
+            ] as const
+          ).map(([field, legend, noun]) => (
+            <OptionPicker
+              key={field}
+              id={`${idPrefix}-${field}`}
+              legend={legend}
+              noun={noun}
+              options={options[field]}
+              selected={form[field]}
+              onChange={(next) => set(field, next)}
+              errors={errors[field]}
+            />
+          ))}
 
           <fieldset className="space-y-2">
             <legend className="text-sm font-medium">Opening hours (SGT) *</legend>

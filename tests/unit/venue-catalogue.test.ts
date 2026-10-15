@@ -194,6 +194,41 @@ describe("createVenue — SCRUM-34 AC3–AC5", () => {
     );
   });
 
+  it("SCRUM-34 [AC3, AC6] TC-34-18: options picked from the lists and ones Venue Staff add are saved as tags, each once", async () => {
+    expect(
+      await createVenue({
+        ...input,
+        facilities: ["projector", "sound-system", "Rooftop Bar", "rooftop-bar"],
+        accessibilityFeatures: ["wheelchair-access", "Tactile paving"],
+        supportedLayouts: ["theatre", "Garden Party"],
+      }),
+    ).toMatchObject({ ok: true });
+    expect(db.venue.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          facilities: ["projector", "sound-system", "rooftop-bar"],
+          accessibilityFeatures: ["wheelchair-access", "tactile-paving"],
+          supportedLayouts: ["theatre", "garden-party"],
+        }),
+      }),
+    );
+  });
+
+  it("SCRUM-34 [AC3] TC-34-19: an added option of 60 characters is saved; one of 61 is refused against its field and nothing is written", async () => {
+    expect(await createVenue({ ...input, facilities: ["a".repeat(60)] })).toMatchObject({
+      ok: true,
+    });
+
+    vi.clearAllMocks();
+    expect(
+      await createVenue({ ...input, accessibilityFeatures: ["projector", "a".repeat(61)] }),
+    ).toMatchObject({
+      ok: false,
+      fieldErrors: { accessibilityFeatures: ["Keep each one under 60 characters."] },
+    });
+    expectNothingWritten();
+  });
+
   it("SCRUM-34 [AC3] TC-34-04: hours that leave a day out are refused against that day", async () => {
     const result = await createVenue({
       ...input,

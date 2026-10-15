@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { readVenueOptions } from "@/lib/venue-options";
 
 /**
  * SCRUM-34 — the venue catalogue's reads. Every page reads the saved record
@@ -49,3 +50,8 @@ export async function getVenueDetail(id: string) {
 }
 
 export type VenueDetail = NonNullable<Awaited<ReturnType<typeof getVenueDetail>>>;
+
+/** AC3, AC6 — what the venue form offers for facilities, accessibility and layouts. */
+export function getVenueOptions() {
+  return readVenueOptions(prisma);
+}

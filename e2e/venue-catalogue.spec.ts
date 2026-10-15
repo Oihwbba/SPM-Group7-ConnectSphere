@@ -6,7 +6,10 @@ import { signedIn, usesLocalDatabase } from "./helpers";
 /**
  * SCRUM-34 — the venue catalogue in a real browser. Venue Staff add a venue
  * (an invalid capacity and a day closing before it opens are refused first)
- * and edit it; a Coordinator reads it and can't change it. Then a venue with a
+ * and edit it, choosing facilities, accessibility features and layouts from
+ * the lists and adding ones of their own, which are then offered on the next
+ * venue and on the Organiser's request form (SCRUM-13); a Coordinator reads
+ * it and can't change it. Then a venue with a
  * future booking can't have its capacity lowered below it or be retired,
  * and once the booking is gone it is retired and leaves the catalogue.
  *
@@ -59,9 +62,23 @@ test.describe("SCRUM-34 — browse and maintain the venue catalogue", () => {
 
     await add.getByLabel("Name *").fill(name);
     await add.getByLabel("Location *").fill("Level 20, Block A");
-    await add.getByLabel("Facilities").fill("Projector, Sound System");
-    await add.getByLabel("Accessibility features").fill("wheelchair access");
-    await add.getByLabel("Supported layouts").fill("theatre");
+    // AC3, AC6: chosen from the lists, plus one of each Venue Staff add.
+    const facilities = add.getByRole("group", { name: "Facilities" });
+    await facilities.getByRole("button", { name: "Projector", exact: true }).click();
+    await facilities.getByRole("button", { name: "Sound system", exact: true }).click();
+    await facilities.getByLabel("Add a facility").fill("Rooftop bar");
+    await facilities.getByRole("button", { name: "Add facility" }).click();
+    await expect(
+      facilities.getByRole("button", { name: "Rooftop bar", exact: true }),
+    ).toHaveAttribute("aria-pressed", "true");
+    const access = add.getByRole("group", { name: "Accessibility features" });
+    await access.getByRole("button", { name: "Wheelchair access", exact: true }).click();
+    await access.getByLabel("Add an accessibility feature").fill("Tactile paving");
+    await access.getByLabel("Add an accessibility feature").press("Enter");
+    const layouts = add.getByRole("group", { name: "Supported layouts" });
+    await layouts.getByRole("button", { name: "Theatre", exact: true }).click();
+    await layouts.getByLabel("Add a layout").fill("Garden party");
+    await layouts.getByRole("button", { name: "Add layout" }).click();
     await add.getByLabel("Known restrictions").fill("Limited emergency access");
 
     // AC4: capacity 0 is refused against capacity.
@@ -105,12 +122,71 @@ test.describe("SCRUM-34 — browse and maintain the venue catalogue", () => {
     await expect(details).toContainText("0 minutes");
     await expect(details).toContainText("Limited emergency access");
     await expect(coordinator.getByTestId("opening-hours")).toContainText("10:00–22:00");
-    for (const offered of ["projector", "sound system", "wheelchair access", "theatre"]) {
+    for (const offered of [
+      "projector",
+      "sound system",
+      "rooftop bar",
+      "wheelchair access",
+      "tactile paving",
+      "theatre",
+      "garden party",
+    ]) {
       await expect(coordinator.getByText(offered, { exact: true })).toBeVisible();
     }
     for (const control of ["Add venue", "Edit venue", "Retire venue"]) {
       await expect(coordinator.getByRole("button", { name: control })).toHaveCount(0);
     }
+  });
+
+  test("SCRUM-34 [AC6] TC-34-18: what Venue Staff added is offered on the next venue and on the Organiser's request form (SCRUM-13)", async ({
+    browser,
+  }) => {
+    test.skip(!usesLocalDatabase, "reads the venue the test above added");
+    expect(
+      await prisma.venue.findFirstOrThrow({
+        where: { name: `${PREFIX} Rooftop Garden` },
+        select: { facilities: true, accessibilityFeatures: true, supportedLayouts: true },
+      }),
+    ).toEqual({
+      facilities: ["projector", "sound-system", "rooftop-bar"],
+      accessibilityFeatures: ["wheelchair-access", "tactile-paving"],
+      supportedLayouts: ["theatre", "garden-party"],
+    });
+
+    const staff = await signedIn(browser, "venuestaff@test.local");
+    await staff.goto("/venues");
+    await staff.getByRole("button", { name: "Add venue" }).click();
+    const add = staff.getByRole("dialog", { name: "Add a venue" });
+    for (const [group, option] of [
+      ["Facilities", "Rooftop bar"],
+      ["Accessibility features", "Tactile paving"],
+      ["Supported layouts", "Garden party"],
+    ]) {
+      await expect(
+        add.getByRole("group", { name: group }).getByRole("button", { name: option, exact: true }),
+      ).toHaveAttribute("aria-pressed", "false");
+    }
+
+    // SCRUM-13: the Organiser is offered the new layout and accessibility feature.
+    const organiser = await signedIn(browser, "organiser@test.local");
+    await organiser.goto("/events");
+    await organiser.getByRole("button", { name: /Create Event Request/i }).first().click();
+    await organiser.getByLabel("Event Name *").fill(`${PREFIX} Options check`);
+    await organiser.getByLabel("Event Purpose *").fill("Check the venue options.");
+    await organiser.getByLabel("Event Description *").fill("SCRUM-34 AC6.");
+    await organiser.getByRole("button", { name: "Next", exact: true }).click();
+    await organiser.getByLabel("Proposed Start Date & Time *").fill("2036-11-01T09:00");
+    await organiser.getByLabel("Proposed End Date & Time *").fill("2036-11-01T17:00");
+    await organiser.getByLabel("Expected Attendance *").fill("50");
+    await organiser.getByRole("button", { name: "Next", exact: true }).click();
+
+    await organiser.getByRole("button", { name: "Garden party", exact: true }).click();
+    await expect(organiser.getByLabel("Preferred Room Layout *")).toHaveValue("Garden party");
+    await organiser.getByLabel("Accessibility Needs *").fill("Seats near the exit");
+    await organiser.getByRole("button", { name: "Tactile paving", exact: true }).click();
+    await expect(organiser.getByLabel("Accessibility Needs *")).toHaveValue(
+      "Seats near the exit, Tactile paving",
+    );
   });
 
   test("SCRUM-34 [AC8, AC10, AC11] TC-34-10, TC-34-12, TC-34-14: a venue with a future booking can't be shrunk below it or retired; without one it is retired", async ({

@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { MAX_VENUE_OPTION_LENGTH } from "@/lib/venue-options";
 import { timeToMinutes } from "@/lib/venue-hours";
 
 /**
@@ -51,13 +52,15 @@ export const CLOSING_NOT_AFTER_OPENING_MESSAGE =
 export const HOURS_REQUIRED_MESSAGE =
   "Enter an opening and a closing time, or mark the day Closed.";
 
+export const OPTION_TOO_LONG_MESSAGE = `Keep each one under ${MAX_VENUE_OPTION_LENGTH} characters.`;
+
 /** "Projector, Sound System" or ["Projector"] -> ["projector", "sound-system"] */
 const tagList = z.preprocess(
   (val) =>
     (Array.isArray(val) ? val : String(val ?? "").split(","))
       .map((v) => toTag(String(v)))
       .filter((v, i, all) => v !== "" && all.indexOf(v) === i),
-  z.array(z.string()),
+  z.array(z.string().max(MAX_VENUE_OPTION_LENGTH, OPTION_TOO_LONG_MESSAGE)),
 );
 
 const openingDaySchema = z.object({

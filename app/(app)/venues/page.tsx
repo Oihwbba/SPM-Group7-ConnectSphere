@@ -13,7 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { getVenueCatalogue } from "./queries";
+import { getVenueCatalogue, getVenueOptions } from "./queries";
 import { VenueFormDialog } from "./venue-form-dialog";
 
 type Venue = Awaited<ReturnType<typeof getVenueCatalogue>>[number];
@@ -64,6 +64,7 @@ export default async function VenuesPage() {
   }
   const manages = can(session.user, "venue:manage");
   const venues = await getVenueCatalogue({ includeRetired: manages });
+  const options = manages ? await getVenueOptions() : null;
   const active = venues.filter((venue) => venue.isActive);
   const retired = venues.filter((venue) => !venue.isActive);
 
@@ -76,7 +77,7 @@ export default async function VenuesPage() {
             Each venue&apos;s capacity, facilities, opening hours and restrictions.
           </p>
         </div>
-        {manages && <VenueFormDialog />}
+        {options && <VenueFormDialog options={options} />}
       </div>
 
       {active.length === 0 ? (

@@ -8,7 +8,7 @@ import { Forbidden } from "@/components/app/forbidden";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { describeHours, WEEKDAYS } from "@/lib/venue-hours";
-import { getVenueDetail } from "../queries";
+import { getVenueDetail, getVenueOptions } from "../queries";
 import { RetireVenueDialog } from "../retire-venue-dialog";
 import { VenueFormDialog } from "../venue-form-dialog";
 
@@ -60,6 +60,7 @@ export default async function VenueDetailPage({
   const venue = await getVenueDetail(id);
   if (!venue) notFound();
   const manages = can(session.user, "venue:manage");
+  const options = manages && venue.isActive ? await getVenueOptions() : null;
 
   return (
     <div className="space-y-6">
@@ -78,9 +79,9 @@ export default async function VenueDetailPage({
           </h1>
           <p className="text-sm text-muted-foreground">{venue.location}</p>
         </div>
-        {manages && venue.isActive && (
+        {options && (
           <div className="flex flex-wrap gap-2">
-            <VenueFormDialog venue={venue} />
+            <VenueFormDialog venue={venue} options={options} />
             <RetireVenueDialog venue={venue} />
           </div>
         )}
