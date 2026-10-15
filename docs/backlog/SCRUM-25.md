@@ -39,7 +39,7 @@
 * 2026-10-08: AC4 and AC5 refer to closing or reopening registration, because setting the window was removed from SCRUM-75.
 * 2026-10-13: AC3 states the Under Review case, which SCRUM-26 AC1 doesn't cover (SCRUM-26 AC1 only defines that warning for a change to date, time, expected attendance, venue or equipment for an event in Planning, not Under Review).
 * 2026-10-14 (PO approved): user story covers operational notes (AC6), which it didn't mention. No AC change.
-* 2026-10-15: AC3 reflects SCRUM-26 more accurately with “and has a venue booking or equipment reservation” clause.
-* 2026-10-15: AC2 and AC3 reflects SCRUM-166 (a check already marked Changes requested or Rejected would also become Outdated, and previous AC3 didn’t mention safety check) more accurately
+* 2026-10-15 (PO approved): AC3 reflects SCRUM-26 more accurately with “and has a venue booking or equipment reservation” clause.
+* 2026-10-15 (PO approved): AC2 and AC3 reflects SCRUM-166 (a check already marked Changes requested or Rejected would also become Outdated, and previous AC3 didn’t mention safety check) more accurately
 
 Functionality Area: Event Information Management
