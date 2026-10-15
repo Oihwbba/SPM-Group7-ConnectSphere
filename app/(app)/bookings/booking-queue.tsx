@@ -47,6 +47,7 @@ import {
 } from "@/lib/datetime";
 import { describeBlocker } from "@/lib/venue-availability";
 import { decideBookingRequest, holdBookingRequest } from "./actions";
+import { OperationalNotes } from "@/components/events/operational-notes";
 import type { PendingBookingRow } from "./queries";
 
 /**
@@ -477,6 +478,8 @@ function RequestCard({
             </Fact>
           )}
         </dl>
+        {/* SCRUM-25 AC6: Venue Staff add notes once the event has a booking. */}
+        <OperationalNotes eventId={booking.eventId} />
         {children}
       </CardContent>
     </Card>
