@@ -210,6 +210,63 @@ describe.skipIf(!usesLocalDatabase)("editing an event's details — real databas
     ).toEqual({ status: "OUTDATED", outdatedAt: expect.any(Date) });
   });
 
+  it("SCRUM-25 [AC3] TC-25-16: with a booking and an Approved safety check, the warning leaves the check alone; confirming the date change flags the booking and outdates the check together", async () => {
+    // A check is only requested once the venue is secured (SCRUM-166 AC1),
+    // so this is how an Outdated check comes about in practice.
+    const eventId = await planningEvent();
+    // A slot of its own: other tests here hold Exhibition Hall at START.
+    const booking = await prisma.booking.create({
+      data: {
+        eventId,
+        venueId: "ven_seminar",
+        startAt: new Date("2036-06-30T02:00:00.000Z"),
+        endAt: new Date("2036-06-30T06:00:00.000Z"),
+        status: "APPROVED",
+        requestedById: "usr_coordinator",
+      },
+    });
+    const check = await prisma.safetyCheck.create({
+      data: {
+        eventId,
+        requestedById: "usr_coordinator",
+        status: "APPROVED",
+        decidedById: "usr_coordinator",
+        decidedAt: new Date(),
+      },
+    });
+    const checkNow = () =>
+      prisma.safetyCheck.findUniqueOrThrow({
+        where: { id: check.id },
+        select: { status: true, outdatedAt: true },
+      });
+    const edit = {
+      ...(await formFor(eventId)),
+      startAt: new Date("2036-06-09T02:00:00.000Z").toISOString(),
+      endAt: new Date("2036-06-09T06:00:00.000Z").toISOString(),
+    };
+
+    // The warning saves nothing, so the check stays Approved.
+    expect(await updateEventDetails(edit)).toMatchObject({
+      ok: true,
+      data: { confirm: [{ kind: "booking", id: booking.id }] },
+    });
+    expect(await checkNow()).toEqual({ status: "APPROVED", outdatedAt: null });
+
+    expect(
+      await updateEventDetails({ ...edit, confirmedArrangements: [booking.id] }),
+    ).toEqual({
+      ok: true,
+      data: { changed: ["startAt", "endAt"], safetyCheckOutdated: true, flagged: 1 },
+    });
+    expect(await checkNow()).toEqual({ status: "OUTDATED", outdatedAt: expect.any(Date) });
+    expect(
+      await prisma.booking.findUniqueOrThrow({
+        where: { id: booking.id },
+        select: { status: true, needsReconsideration: true },
+      }),
+    ).toEqual({ status: "APPROVED", needsReconsideration: true });
+  });
+
   it("SCRUM-25 [AC3] TC-25-06: with nothing booked the date moves; with a booking it is listed first, then flagged on confirm with its status and times kept", async () => {
     const free = await planningEvent();
     const moved = new Date("2036-06-09T02:00:00.000Z");

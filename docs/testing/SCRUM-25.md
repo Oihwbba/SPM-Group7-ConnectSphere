@@ -209,10 +209,10 @@ requirements are the fields SCRUM-26 warns about and flags on (AC3).
 |---|---|
 | Test Case ID | TC-25-16 |
 | Test Scenario | [Positive] [Negative] AC 3, with SCRUM-166 AC 13: changing the date, time or attendance puts a requested safety check out of date |
-| Pre-conditions | Two Planning events with nothing booked or reserved, each with a safety check Awaiting review. |
-| Test Steps | 1. Change only the first event's venue requirements. Save. <br> 2. Move the second event to another day. Save. |
+| Pre-conditions | Two Planning events with nothing booked or reserved, each with a safety check Awaiting review; a third with an Approved booking and an Approved safety check, as a check is only requested once the venue is secured (SCRUM-166 AC1). |
+| Test Steps | 1. Change only the first event's venue requirements. Save. <br> 2. Move the second event to another day. Save. <br> 3. Move the third event to another day. Save, then Save and flag. |
 | Test Data | — |
-| Expected Result | 1: the check stays Awaiting review; venue or equipment requirements, the programme and other fields leave it alone. 2: the check becomes Outdated with the time it went out of date, and the message says the safety check needs requesting again. A start, end or attendance change does the same. |
+| Expected Result | 1: the check stays Awaiting review; venue or equipment requirements, the programme and other fields leave it alone. 2: the check becomes Outdated with the time it went out of date, and the message says the safety check needs requesting again. A start, end or attendance change does the same. 3: the warning saves nothing, so the check stays Approved; Save and flag flags the booking (still Approved) and makes the check Outdated in the same save. |
 
 **Automated by:** `tests/unit/event-edit.test.ts` › "SCRUM-25 [AC3] TC-25-16: …"; `tests/integration/event-edit.test.ts` › "SCRUM-25 [AC3] TC-25-16: …"
 
