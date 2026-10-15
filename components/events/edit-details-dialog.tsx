@@ -188,23 +188,35 @@ export function EditDetailsDialog({ event }: { event: Event }) {
 
   function save(confirmedArrangements: string[]) {
     startTransition(async () => {
-      const result = await updateEventDetails({
-        eventId: event.id,
-        name: form.name,
-        purpose: form.purpose,
-        description: form.description,
-        accessibilityNeeds: form.accessibilityNeeds,
-        preferredLayout: form.preferredLayout,
-        registrationNotes: form.registrationNotes,
-        programme: form.programme,
-        specialRequests: form.specialRequests,
-        startAt: sgWallTimeToUtcIso(form.start) ?? "",
-        endAt: sgWallTimeToUtcIso(form.end) ?? "",
-        expectedAttendance: form.expectedAttendance,
-        venueRequirements: form.venueRequirements,
-        equipmentRequirements: form.equipmentRequirements,
-        confirmedArrangements,
-      });
+      let result: Awaited<ReturnType<typeof updateEventDetails>>;
+      try {
+        result = await updateEventDetails({
+          eventId: event.id,
+          name: form.name,
+          purpose: form.purpose,
+          description: form.description,
+          accessibilityNeeds: form.accessibilityNeeds,
+          preferredLayout: form.preferredLayout,
+          registrationNotes: form.registrationNotes,
+          programme: form.programme,
+          specialRequests: form.specialRequests,
+          startAt: sgWallTimeToUtcIso(form.start) ?? "",
+          endAt: sgWallTimeToUtcIso(form.end) ?? "",
+          expectedAttendance: form.expectedAttendance,
+          venueRequirements: form.venueRequirements,
+          equipmentRequirements: form.equipmentRequirements,
+          confirmedArrangements,
+        });
+      } catch {
+        // An unexpected error or a lost connection: the edit may or may not
+        // have been saved. The form keeps what was typed, any warning is
+        // dropped so the next save asks again, and the event is read again.
+        setFieldErrors({});
+        setError("The details couldn't be saved — check your connection and try again.");
+        setToFlag(null);
+        router.refresh();
+        return;
+      }
       if (!result.ok) {
         setFieldErrors(result.fieldErrors ?? {});
         setError(result.error);
@@ -377,10 +389,10 @@ export function EditDetailsDialog({ event }: { event: Event }) {
               <div
                 role="alert"
                 data-testid="edit-details-flag-warning"
-                className="space-y-3 rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm"
+                className="space-y-3 rounded-md border border-warning/40 bg-warning/10 p-3 text-sm"
               >
                 <p className="flex items-center gap-2 font-medium">
-                  <AlertTriangle className="h-4 w-4 text-amber-600" />
+                  <AlertTriangle className="h-4 w-4 text-warning" />
                   Saving will flag these arrangements Needs Reconsideration
                 </p>
                 {toFlag.message && <p>{toFlag.message}</p>}

@@ -53,7 +53,16 @@ export function OperationalNotes({ eventId }: { eventId: string }) {
 
   function add() {
     startTransition(async () => {
-      const result = await addOperationalNote({ eventId, body });
+      let result: Awaited<ReturnType<typeof addOperationalNote>>;
+      try {
+        result = await addOperationalNote({ eventId, body });
+      } catch {
+        // An unexpected error or a lost connection: the note may or may not
+        // have been saved, so the list is read again and the text kept.
+        setError("The note couldn't be added — check your connection and try again.");
+        setVersion((v) => v + 1);
+        return;
+      }
       if (!result.ok) {
         setError(result.error);
         return;
