@@ -35,7 +35,7 @@ seed's own projector pool has 10, with 3 in for maintenance.
 | [TC-29-05](#tc-29-05) | Positive | AC 6 | Unit, integration, e2e |
 | [TC-29-06](#tc-29-06) | Negative | AC 7 | Unit, integration, e2e |
 | [TC-29-07](#tc-29-07) | Negative | AC 1 | Unit |
-| [TC-29-08](#tc-29-08) | Negative | AC 7 | e2e |
+| [TC-29-08](#tc-29-08) | Negative | Validation beyond the ACs | e2e |
 
 ---
 
@@ -135,8 +135,8 @@ seed's own projector pool has 10, with 3 in for maintenance.
 | Item | Content |
 |---|---|
 | Test Case ID | TC-29-08 |
-| Test Scenario | [Negative] AC 7: a period that starts in the past is rejected, with no result |
-| Pre-conditions | On **Equipment**. AC 7 names a zero quantity and an end not after the start; the check refuses a start in the past the same way. |
+| Test Scenario | [Negative] Validation beyond the ACs: a period that starts in the past is rejected, with no result |
+| Pre-conditions | On **Equipment**. No criterion asks for this: AC 7 names only a zero quantity and an end not after the start. The check also refuses a start in the past, in the same way. |
 | Test Steps | 1. Choose **Equipment type** "Lectern". <br> 2. Enter a start and end on a day that has passed. |
 | Test Data | 1 Jan 2020, 09:00 to 17:00 SGT |
 | Expected Result | "Start time cannot be in the past." at once, and the count reads "— of 4 available": no availability is shown. |
