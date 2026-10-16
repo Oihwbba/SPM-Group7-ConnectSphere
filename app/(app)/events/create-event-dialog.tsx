@@ -66,6 +66,8 @@ interface FormState {
   preferredLayout: string;
   accessibilityNeeds: string;
   equipmentRequirements: string;
+  /** SCRUM-171 AC1: Registration needed, unanswered until chosen. */
+  registrationRequired: "" | "yes" | "no";
   registrationNotes: string;
   programme: string;
   specialRequests: string;
@@ -83,6 +85,7 @@ const initialFormState: FormState = {
   preferredLayout: "",
   accessibilityNeeds: "",
   equipmentRequirements: "",
+  registrationRequired: "",
   registrationNotes: "",
   programme: "",
   specialRequests: "",
@@ -102,6 +105,7 @@ export interface DraftEventData {
   accessibilityNeeds?: string | null;
   preferredLayout?: string | null;
   equipmentRequirements?: string | null;
+  registrationRequired?: boolean | null;
   registrationNotes?: string | null;
   programme?: string | null;
   specialRequests?: string | null;
@@ -143,6 +147,12 @@ function getInitialFormData(draftEvent?: DraftEventData | null): FormState {
     preferredLayout: draftEvent.preferredLayout || "",
     accessibilityNeeds: draftEvent.accessibilityNeeds || "",
     equipmentRequirements: draftEvent.equipmentRequirements || "",
+    registrationRequired:
+      draftEvent.registrationRequired === true
+        ? "yes"
+        : draftEvent.registrationRequired === false
+          ? "no"
+          : "",
     registrationNotes: draftEvent.registrationNotes || "",
     programme: draftEvent.programme || "",
     specialRequests: draftEvent.specialRequests || "",
@@ -398,7 +408,7 @@ export function CreateEventDialog({
     preferredLayout: !formData.preferredLayout.trim(),
     accessibilityNeeds: !formData.accessibilityNeeds.trim(),
     equipmentRequirements: !formData.equipmentRequirements.trim(),
-    registrationNotes: !formData.registrationNotes.trim(),
+    registrationRequired: !formData.registrationRequired,
   };
 
   const hasMissingSubmissionFields = Object.values(
@@ -881,11 +891,58 @@ export function CreateEventDialog({
               Additional Details
             </h3>
 
+            {/* SCRUM-171 AC1, AC2: required to submit, not to save a draft. */}
+            <fieldset
+              className="space-y-2"
+              aria-describedby={
+                fieldErrors.registrationRequired
+                  ? "registrationRequired-error"
+                  : undefined
+              }
+            >
+              <legend className="text-sm font-medium">
+                Registration Needed *
+              </legend>
+              <div className="flex gap-4">
+                {(["yes", "no"] as const).map((value) => (
+                  <label
+                    key={value}
+                    className="flex items-center gap-2 text-sm"
+                  >
+                    <input
+                      type="radio"
+                      name="registrationRequired"
+                      value={value}
+                      checked={formData.registrationRequired === value}
+                      onChange={() =>
+                        updateField("registrationRequired", value)
+                      }
+                      className="h-4 w-4 accent-primary"
+                    />
+                    {value === "yes" ? "Yes" : "No"}
+                  </label>
+                ))}
+              </div>
+              {fieldErrors.registrationRequired?.map((msg) => (
+                <p
+                  key={msg}
+                  id="registrationRequired-error"
+                  className="text-xs text-destructive"
+                >
+                  {msg}
+                </p>
+              ))}
+            </fieldset>
+
+            {/* SCRUM-171 AC1, AC3: an optional note; a request made before
+                Registration needed existed keeps its answer here. */}
             <div className="space-y-2">
-              <Label htmlFor="registrationNotes">Registration Needs *</Label>
+              <Label htmlFor="registrationNotes">
+                Registration Notes (Optional)
+              </Label>
               <Textarea
                 id="registrationNotes"
-                placeholder="Describe attendee registration needs (e.g., online registration open to public, max capacity limit, check-in desks)..."
+                placeholder="Anything else about registration (e.g., open to the public, check-in desks)..."
                 rows={3}
                 value={formData.registrationNotes}
                 onChange={(e) =>
@@ -1127,13 +1184,21 @@ export function CreateEventDialog({
                 </CardHeader>
                 <CardContent className="grid grid-cols-1 gap-2 space-y-1 px-4 pb-3 text-xs md:grid-cols-3">
                   <div>
-                    <span className="font-semibold">Registration Needs:</span>
+                    <span className="font-semibold">Registration Needed:</span>
                     <p className="text-muted-foreground">
-                      {formData.registrationNotes.trim() || (
+                      {formData.registrationRequired === "yes" ? (
+                        "Yes"
+                      ) : formData.registrationRequired === "no" ? (
+                        "No"
+                      ) : (
                         <span className="rounded bg-destructive/10 px-1.5 py-0.5 text-[11px] font-medium text-destructive">
                           Missing (Required to Submit)
                         </span>
                       )}
+                    </p>
+                    <span className="font-semibold">Registration Notes:</span>
+                    <p className="whitespace-pre-wrap text-muted-foreground">
+                      {formData.registrationNotes.trim() || "None"}
                     </p>
                   </div>
                   <div>
