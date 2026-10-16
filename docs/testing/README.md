@@ -148,6 +148,6 @@ the open pull requests that change the same test files have merged.
 | [SCRUM-155](SCRUM-155.md) | Jin Hong | 16 | Every case automated (unit, integration for all-or-nothing and the races, e2e for the journey) |
 | [SCRUM-156](SCRUM-156.md) | Jin Hong | 8 | Every case automated; TC-155-16 retired and the SCRUM-31 reserve cases mapped to SCRUM-155 |
 | [SCRUM-159](SCRUM-159.md) | Jun Bin | 17 | Every case automated (unit, integration for the database's range and the simultaneous approvals, e2e for the calendar and the request form); AC 1's form is SCRUM-34's and AC 3's search SCRUM-38's |
-| [SCRUM-171](SCRUM-171.md) | Felicia Or | 9 | Automated (unit, integration for registering and editing against real rows, e2e for browsing and an older request) except TC-171-09, AC 5's change-request half, which waits for SCRUM-128 |
+| [SCRUM-171](SCRUM-171.md) | Felicia Or | 10 | Automated (unit, integration for registering and editing against real rows, e2e for browsing and an older request) except TC-171-09, AC 5's change-request half, which waits for SCRUM-128 |
 | [SCRUM-172](SCRUM-172.md) | Jin Hong | 20 | Integration and unit; TC-172-15 step 3 is manual, and TC-172-16 is the whole suite |
 | [SCRUM-26](SCRUM-26.md) | Jun Bin | 15 | Every case automated (unit, integration for blocking, Still stands against real unavailability and simultaneous cancels, e2e for the journey); AC 1's warning screen is SCRUM-25's |

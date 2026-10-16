@@ -401,6 +401,16 @@ describe("respondToClarification — SCRUM-108 AC2–AC5, AC14", () => {
     },
   );
 
+  it("SCRUM-171 [AC1] TC-171-10: a clarification answer can clear the registration note, which the form no longer requires", () => {
+    expect(
+      clarificationChangesSchema.safeParse({ registrationNotes: "" }).success,
+    ).toBe(true);
+    expect(
+      clarificationChangesSchema.safeParse({ registrationNotes: "x".repeat(5001) })
+        .success,
+    ).toBe(false);
+  });
+
   it("SCRUM-108 [AC2]: changes with no dates at all are valid", () => {
     expect(
       clarificationChangesSchema.safeParse({ preferredLayout: "Theatre" })
