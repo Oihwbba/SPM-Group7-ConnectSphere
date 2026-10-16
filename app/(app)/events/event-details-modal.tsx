@@ -17,6 +17,7 @@ import { ChangeRequestPanel } from "@/components/events/change-request-panel";
 import { ReadinessChecklist } from "@/components/events/readiness-checklist";
 import { ReconsiderationPanel } from "@/components/events/reconsideration-panel";
 import { ConfirmedArrangements } from "@/components/events/confirmed-arrangements";
+import { RegistrationListPanel } from "@/components/events/registration-list-panel";
 import { EditDetailsDialog } from "@/components/events/edit-details-dialog";
 import { OperationalNotes } from "@/components/events/operational-notes";
 import { formatDate, formatDateTime } from "@/lib/datetime";
@@ -148,6 +149,14 @@ export function EventDetailsModal({
           )}
           {/* SCRUM-81: what a Confirmed event has secured */}
           {event.status === "CONFIRMED" && <ConfirmedArrangements eventId={event.id} />}
+
+          {/* SCRUM-70: shows nothing to a user who may not see the registrations */}
+          {(event.status === "CONFIRMED" ||
+            event.status === "PLANNING" ||
+            event.status === "CANCELLED" ||
+            event.status === "COMPLETED") && (
+            <RegistrationListPanel eventId={event.id} />
+          )}
 
           {event.status === "REJECTED" && event.decisionReason && (
             <Card className="overflow-hidden">

@@ -59,6 +59,7 @@ export type Action =
   | "registration:create" // SCRUM-73: an attendee registers for an event
   | "registration:withdraw" // SCRUM-74/77: an attendee withdraws their own registration
   | "registration:read"
+  | "registration:list" // SCRUM-70: an event's Organiser or assigned Coordinator sees its registrations
   | "notification:read";
 
 /**
@@ -103,6 +104,7 @@ const ROLE_ACTIONS: Record<Role, Action[]> = {
     "clarification:respond",
     "change-request:raise",
     "event-note:read",
+    "registration:list",
     "notification:read",
   ],
   COORDINATOR: [
@@ -125,6 +127,7 @@ const ROLE_ACTIONS: Record<Role, Action[]> = {
     "booking:request",
     "booking:settle-hold",
     "booking:withdraw",
+    "registration:list",
     "notification:read",
   ],
   // `venue:read` gates the Venue Catalogue page, which is Coordinator-only, so
@@ -186,7 +189,8 @@ function hasRelationship(
         // venue holds (SCRUM-163 AC3), change or withdraw its requests
         // (SCRUM-142 AC7), raise a change request on the organiser's behalf
         // (SCRUM-41 AC10), or edit its details (SCRUM-25 AC1, AC7), 
-        // or resolve a flag on its arrangements (SCRUM-26 AC7).
+        // or resolve a flag on its arrangements (SCRUM-26 AC7), or see its
+        // registrations (SCRUM-70 AC1).
         return (
           action !== "event:confirm" &&
           action !== "event:reject" &&
@@ -196,6 +200,7 @@ function hasRelationship(
           action !== "change-request:raise" &&
           action !== "event:edit" &&
           action !== "arrangement:reconsider" &&
+          action !== "registration:list" &&
           resource.coordinatorId === null &&
           resource.status !== "DRAFT"
         );

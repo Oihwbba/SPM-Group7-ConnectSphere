@@ -363,7 +363,7 @@ describe("withdrawRegistration — SCRUM-74/77 (minimal slice)", () => {
     );
   });
 
-  it("[Negative] not-found parity: an Attendee cannot withdraw another Attendee's registration", async () => {
+  it("[Negative] SCRUM-70 AC6: not-found parity: an Attendee cannot withdraw another Attendee's registration", async () => {
     mockAuth.mockResolvedValue(sessionFor("ATTENDEE", "usr_attendee"));
     tx.registration.findUnique.mockResolvedValue({
       id: "reg1",
