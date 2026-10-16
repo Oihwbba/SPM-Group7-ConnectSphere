@@ -98,8 +98,8 @@ disagrees with Jira, Jira wins and the sync is overdue. The index at
   changes only Markdown, lockfiles or `docs/backlog` isn't reviewed and
   passes). Read the GLM
   review before you merge. Changes to `.github/`, `package.json`, the test
-  configs or `vercel.json` need a teammate's approval (CODEOWNERS lists the
-  whole team), because they control the checks.
+  configs, `vercel.json` or `.gitattributes` need a teammate's approval
+  (CODEOWNERS lists the whole team), because they control the checks.
 - **A stacked PR merges into its base, not `main`.** Retarget it to `main`
   before merging, as soon as the PR it builds on is merged.
 - A story is not finished until its tests pass in CI.

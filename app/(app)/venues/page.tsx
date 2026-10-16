@@ -16,8 +16,8 @@ export default async function VenuesPage() {
     <PagePlaceholder
       title="Venue Catalogue"
       description="Browse, search and check availability of ConnectSphere venues."
-      scrumId="SCRUM-21"
-      owner="Jun Bin"
+      scrumId="SCRUM-34"
+      owner="Felicia"
     />
   );
 }

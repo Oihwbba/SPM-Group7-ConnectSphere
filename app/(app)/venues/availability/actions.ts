@@ -61,6 +61,9 @@ export async function recordUnavailability(
     const outcome = await prisma.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT "id" FROM "Venue" WHERE "id" = ${data.venueId} FOR NO KEY UPDATE`;
 
+      // Unavailability has no setup or turnaround of its own, so it is asked
+      // about as it is; each approved booking still counts for its occupied
+      // period (SCRUM-159 AC3).
       const blockers = await findVenueBlockers(tx, data.venueId, period);
       if (blockers.length > 0) {
         return {

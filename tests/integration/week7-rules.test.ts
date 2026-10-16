@@ -599,6 +599,8 @@ describe.skipIf(!usesLocalDatabase)(
             "REQUEST_AWAITING_ASSIGNMENT",
             "SAFETY_CHECK_REQUESTED",
             "SAFETY_CHECK_OUTCOME",
+            // SCRUM-124 AC4 as clarified in Week 9: Venue Staff approved a hold.
+            "HOLD_APPROVED",
           ]),
         );
       });

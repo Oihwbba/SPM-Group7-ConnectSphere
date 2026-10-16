@@ -395,6 +395,52 @@ describe.skipIf(!usesLocalDatabase)(
       expect(results.every((r) => r.ok)).toBe(true);
       expect(await approvedCount()).toBe(2);
     });
+
+    // SCRUM-159 AC5 — the same race, where the two requests' booked periods
+    // don't overlap but their occupied periods do. The application's check is
+    // passed by both (the barrier); the database compares occupied periods
+    // with the minutes each approval copies onto its booking (AC8).
+    it("SCRUM-159 [AC5] TC-159-09: two staff approve requests whose setup and turnaround overlap at the same moment: only one succeeds, the other is returned as conflicting", async () => {
+      await prisma.venue.update({
+        where: { id: venueId },
+        data: { setupMinutes: 30, turnaroundMinutes: 45 },
+      });
+      try {
+        // 10:00–12:00 and 13:00–15:00 SGT: an hour apart as booked, but the
+        // first's turnaround runs to 12:45 and the second's setup from 12:30.
+        const morning = await pendingRequest(
+          firstEventId,
+          "2033-05-01T02:00:00.000Z",
+          "2033-05-01T04:00:00.000Z",
+        );
+        const afternoon = await pendingRequest(
+          secondEventId,
+          "2033-05-01T05:00:00.000Z",
+          "2033-05-01T07:00:00.000Z",
+          "usr_coordinator_2",
+        );
+        (auth as unknown as Mock)
+          .mockResolvedValueOnce(staff("usr_venuestaff"))
+          .mockResolvedValueOnce(staff(SECOND_STAFF_ID));
+
+        approvalBarrier.parties = 2;
+        const results = await Promise.all([
+          decideBookingRequest({ bookingId: morning, decision: "APPROVED" }),
+          decideBookingRequest({ bookingId: afternoon, decision: "APPROVED" }),
+        ]);
+
+        expect(results.filter((r) => r.ok)).toHaveLength(1);
+        expect(results.find((r) => !r.ok)).toMatchObject({
+          error: expect.stringMatching(/^Conflicting:/),
+        });
+        expect(await approvedCount()).toBe(1);
+      } finally {
+        await prisma.venue.update({
+          where: { id: venueId },
+          data: { setupMinutes: 0, turnaroundMinutes: 0 },
+        });
+      }
+    });
   },
 );
 
@@ -551,6 +597,9 @@ describe.skipIf(!usesLocalDatabase)("concurrency — confirming an event (SCRUM-
         status: "PLANNING",
         organiserId: "usr_organiser",
         coordinatorId: "usr_coordinator",
+        // SCRUM-170 AC4: no equipment, decided, so the venue makes it ready.
+        noEquipmentNeededAt: new Date(),
+        noEquipmentNeededById: "usr_coordinator",
         ...period,
       },
       select: { id: true },

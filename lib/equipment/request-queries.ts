@@ -58,7 +58,14 @@ export async function getRequestableEvents(coordinatorId: string) {
         { status: { in: [...REQUESTABLE_EVENT_STATUSES] } },
       ],
     },
-    select: { id: true, name: true, startAt: true, endAt: true },
+    // SCRUM-170 AC3: the Organiser's equipment answer, shown on the form.
+    select: {
+      id: true,
+      name: true,
+      startAt: true,
+      endAt: true,
+      equipmentRequirements: true,
+    },
     orderBy: { startAt: "asc" },
   });
 }
@@ -182,7 +189,16 @@ export async function getEquipmentRequestQueue() {
         notes: true,
         createdAt: true,
         decidedAt: true,
-        event: { select: { id: true, name: true, startAt: true, endAt: true } },
+        // SCRUM-170 AC3: Technical Support see the Organiser's answer.
+        event: {
+          select: {
+            id: true,
+            name: true,
+            startAt: true,
+            endAt: true,
+            equipmentRequirements: true,
+          },
+        },
         requestedBy: { select: { name: true } },
         lines: {
           where: LIVE_LINE,

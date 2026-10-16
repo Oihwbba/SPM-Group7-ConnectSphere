@@ -3,6 +3,7 @@ import type { BookingStatus, Prisma, PrismaClient } from "@prisma/client";
 import { bookingStatusAt } from "@/lib/booking-holds";
 import { LIVE_LINE } from "@/lib/equipment/requests";
 import { formatDateTime } from "@/lib/datetime";
+import { FLAGGABLE_BOOKING } from "@/lib/reconsideration";
 
 /**
  * SCRUM-110 — an event's readiness checklist: the essential arrangements that
@@ -15,14 +16,18 @@ import { formatDateTime } from "@/lib/datetime";
 export interface ChecklistItem {
   name: "Venue booking" | "Equipment";
   complete: boolean;
-  /** "Approved", "Held until … – confirm to secure", "Pending", "Rejected", "Hold expired", "Not requested", "Reserved", "Not fully reserved: Projector", "Awaiting Technical Support review" */
+  /** "Approved", "Held until … – confirm to secure", "Pending", "Rejected", "Hold expired", "Not requested", "Reserved", "Not fully reserved: Projector", "Awaiting Technical Support review", "Not decided", "No equipment needed" */
   state: string;
   /** Internal detail, such as why Venue Staff rejected the booking. Hidden from the Organiser. */
   reason: string | null;
   /** SCRUM-163 AC3: the live hold the Coordinator can confirm or release. */
   heldBookingId?: string;
+  /** SCRUM-163 AC3, AC7: whether Venue Staff have approved that hold, which the Coordinator may confirm only then. */
+  holdApproved?: boolean;
   /** SCRUM-142 AC4: the pending venue request the Coordinator can withdraw. */
   pendingBookingId?: string;
+  /** SCRUM-170 AC4: no live equipment request, so No equipment needed can be recorded. */
+  noEquipmentOffered?: boolean;
 }
 
 export interface ReadinessChecklist {
@@ -33,7 +38,7 @@ export interface ReadinessChecklist {
 
 // Requests still being worked on or granted. A rejected request is replaced by
 // the Coordinator's next one, and a cancelled one is no longer wanted.
-const LIVE_REQUEST = ["PENDING_REVIEW", "IN_REVIEW", "APPROVED"];
+export const LIVE_REQUEST = ["PENDING_REVIEW", "IN_REVIEW", "APPROVED"] as const;
 
 export async function getReadinessChecklist(
   db: Prisma.TransactionClient | PrismaClient,
@@ -48,15 +53,20 @@ export async function getReadinessChecklist(
       status: true,
       startAt: true,
       endAt: true,
+      noEquipmentNeededAt: true,
+      noEquipmentNeededBy: { select: { name: true } },
       bookings: {
         select: {
           id: true,
           status: true,
           holdExpiresAt: true,
+          holdApprovedAt: true,
           decisionReason: true,
           createdAt: true,
           startAt: true,
           endAt: true,
+          needsReconsideration: true,
+          reconsiderationReason: true,
         },
       },
       equipmentRequests: {
@@ -80,15 +90,17 @@ export async function getReadinessChecklist(
           status: true,
           startAt: true,
           endAt: true,
+          needsReconsideration: true,
+          reconsiderationReason: true,
+          equipment: { select: { type: true } },
         },
       },
     },
   });
   if (!event) return null;
 
-  const items = [venueItem(event, now)];
-  const equipment = equipmentItem(event);
-  if (equipment) items.push(equipment);
+  // SCRUM-170 AC4: Equipment is always listed (superseding SCRUM-110 AC3).
+  const items = [venueItem(event, now), equipmentItem(event)];
 
   return {
     ready: event.status === "PLANNING" && items.every((item) => item.complete),
@@ -119,11 +131,17 @@ type BookingRow = {
   id: string;
   status: BookingStatus;
   holdExpiresAt: Date | null;
+  holdApprovedAt: Date | null;
   decisionReason: string | null;
   createdAt: Date;
   startAt: Date;
   endAt: Date;
+  needsReconsideration: boolean;
+  reconsiderationReason: string | null;
 };
+
+/** SCRUM-26 AC12: the flag's own state, with its reason for the Coordinator. */
+const NEEDS_RECONSIDERATION = "Needs reconsideration";
 
 function venueItem(
   event: Period & { bookings: BookingRow[] },
@@ -136,6 +154,22 @@ function venueItem(
     .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
   const item = { name: "Venue booking" as const, reason: null };
   const approved = newestFirst.filter((b) => b.status === "APPROVED");
+
+  // SCRUM-26 AC12: a flagged booking keeps the event from being confirmed
+  // until its Coordinator resolves the flag, however it otherwise stands. A
+  // flagged hold that has expired has released the venue, so it no longer
+  // counts.
+  const flagged = newestFirst.find(
+    (b) => b.needsReconsideration && FLAGGABLE_BOOKING.includes(b.status),
+  );
+  if (flagged) {
+    return {
+      ...item,
+      complete: false,
+      state: NEEDS_RECONSIDERATION,
+      reason: flagged.reconsiderationReason,
+    };
+  }
 
   // After a rejection, or after the event moves, the Coordinator books again,
   // so the most advanced booking describes where the venue stands.
@@ -150,6 +184,7 @@ function venueItem(
       complete: false,
       state: `Held until ${formatDateTime(held.holdExpiresAt!)} – confirm to secure`,
       heldBookingId: held.id,
+      holdApproved: held.holdApprovedAt !== null,
     };
   }
   const pending = newestFirst.find((b) => b.status === "PENDING");
@@ -186,6 +221,8 @@ function venueItem(
 type EventRow = {
   startAt: Date | null;
   endAt: Date | null;
+  noEquipmentNeededAt: Date | null;
+  noEquipmentNeededBy: { name: string } | null;
   equipmentRequests: {
     status: string;
     createdAt: Date;
@@ -201,24 +238,58 @@ type EventRow = {
     status: string;
     startAt: Date;
     endAt: Date;
+    needsReconsideration: boolean;
+    reconsiderationReason: string | null;
+    equipment: { type: string };
   }[];
 };
 
-function equipmentItem(event: EventRow): ChecklistItem | null {
-  const oldestFirst = [...event.equipmentRequests].sort(
-    (a, b) => a.createdAt.getTime() - b.createdAt.getTime(),
+function equipmentItem(event: EventRow): ChecklistItem {
+  // SCRUM-26 AC12: as for the venue, a flagged reservation leaves the item
+  // incomplete until its Coordinator resolves the flag.
+  const flagged = event.reservations.filter(
+    (r) => r.needsReconsideration && r.status === "CONFIRMED",
   );
-  const live = oldestFirst.filter((r) => LIVE_REQUEST.includes(r.status));
-
-  if (live.length === 0) {
-    // With only a rejected request, the equipment is still wanted but not
-    // arranged; with none, or only cancelled ones, it is not needed at all.
-    if (!oldestFirst.some((r) => r.status === "REJECTED")) return null;
+  if (flagged.length > 0) {
+    const types = [...new Set(flagged.map((r) => r.equipment.type))];
     return {
       name: "Equipment",
       complete: false,
-      state: "Rejected",
+      state: `${NEEDS_RECONSIDERATION}: ${types.join(", ")}`,
+      reason: flagged[0].reconsiderationReason,
+    };
+  }
+
+  const oldestFirst = [...event.equipmentRequests].sort(
+    (a, b) => a.createdAt.getTime() - b.createdAt.getTime(),
+  );
+  const live = oldestFirst.filter((r) =>
+    (LIVE_REQUEST as readonly string[]).includes(r.status),
+  );
+
+  if (live.length === 0) {
+    // SCRUM-170 AC4: with no live request the Coordinator decides. Recording
+    // No equipment needed completes the item; it keeps who and when. Creating
+    // a request clears the decision, so it never sits beside a live request.
+    // Who recorded it is always set with it (event_no_equipment_decision_complete).
+    if (event.noEquipmentNeededAt) {
+      return {
+        name: "Equipment",
+        complete: true,
+        state: "No equipment needed",
+        reason: `Recorded by ${event.noEquipmentNeededBy!.name}, ${formatDateTime(event.noEquipmentNeededAt)}`,
+      };
+    }
+    // With only a rejected request, the equipment is still wanted but not
+    // arranged; with none, or only cancelled ones, nothing is decided yet.
+    return {
+      name: "Equipment",
+      complete: false,
+      state: oldestFirst.some((r) => r.status === "REJECTED")
+        ? "Rejected"
+        : "Not decided",
       reason: null,
+      noEquipmentOffered: true,
     };
   }
 

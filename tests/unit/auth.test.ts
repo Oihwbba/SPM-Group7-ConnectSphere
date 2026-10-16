@@ -187,6 +187,34 @@ describe("can — rejecting a Planning event (SCRUM-117)", () => {
   });
 });
 
+// SCRUM-26 AC7 — resolving a Needs Reconsideration flag follows the same rule
+// as confirming: only the event's assigned Coordinator.
+describe("can — resolving a flagged arrangement (SCRUM-26)", () => {
+  const planning = {
+    kind: "event" as const,
+    organiserId: "orgA",
+    coordinatorId: "coord",
+    status: "PLANNING" as const,
+  };
+
+  it("SCRUM-26 [AC7] TC-26-05: only the event's assigned Coordinator may resolve a flag, and never an unassigned one", () => {
+    expect(can(coordinator, "arrangement:reconsider", planning)).toBe(true);
+    expect(can(coordinator, "arrangement:reconsider", { ...planning, status: "CONFIRMED" })).toBe(true);
+    expect(can({ id: "other", role: "COORDINATOR" }, "arrangement:reconsider", planning)).toBe(false);
+    expect(can(coordinator, "arrangement:reconsider", { ...planning, coordinatorId: null })).toBe(false);
+    for (const user of [
+      organiserA,
+      attendee,
+      { id: "vs", role: "VENUE_STAFF" },
+      { id: "ts", role: "TECH_SUPPORT" },
+      { id: "lead", role: "COORDINATOR_LEAD" },
+      { id: "so", role: "SAFETY_OFFICER" },
+    ] as SessionUser[]) {
+      expect(can(user, "arrangement:reconsider")).toBe(false);
+    }
+  });
+});
+
 // SCRUM-50/52/53 — who may take part in a venue booking. The booking actions
 // are new capabilities, so they are pinned here alongside the rest.
 describe("can — venue booking capabilities (SCRUM-50/52/53)", () => {

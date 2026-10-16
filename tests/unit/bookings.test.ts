@@ -118,7 +118,13 @@ beforeEach(() => {
     endAt: new Date(END),
     expectedAttendance: 40,
   });
-  db.venue.findFirst.mockResolvedValue({ name: "Seminar Room", capacity: 60 });
+  db.venue.findFirst.mockResolvedValue({
+    id: "ven_1",
+    name: "Seminar Room",
+    capacity: 60,
+    setupMinutes: 0,
+    turnaroundMinutes: 0,
+  });
   db.booking.findFirst.mockResolvedValue(null);
   db.booking.findMany.mockResolvedValue([]);
   db.venueUnavailability.findMany.mockResolvedValue([]);
@@ -181,6 +187,8 @@ describe("submitBookingRequest — SCRUM-50", () => {
     db.venue.findFirst.mockResolvedValue({
       name: "Seminar Room",
       capacity: 39,
+      setupMinutes: 0,
+      turnaroundMinutes: 0,
     });
 
     const result = await submitBookingRequest(validRequest);
@@ -199,6 +207,8 @@ describe("submitBookingRequest — SCRUM-50", () => {
     db.venue.findFirst.mockResolvedValue({
       name: "Seminar Room",
       capacity: 40,
+      setupMinutes: 0,
+      turnaroundMinutes: 0,
     });
 
     const result = await submitBookingRequest(validRequest);
@@ -455,6 +465,8 @@ describe("submitBookingRequest — SCRUM-50", () => {
         id: "bkg_x",
         startAt: new Date("2030-06-01T07:00:00.000Z"),
         endAt: new Date("2030-06-01T09:00:00.000Z"),
+        setupMinutes: 0,
+        turnaroundMinutes: 0,
       },
     ]);
 
@@ -466,6 +478,75 @@ describe("submitBookingRequest — SCRUM-50", () => {
         "Seminar Room is unavailable for that period: already booked from 1 Jun 2030, 3:00 pm SGT to 1 Jun 2030, 5:00 pm SGT.",
     });
     expect(db.booking.create).not.toHaveBeenCalled();
+  });
+
+  describe("SCRUM-159 — the request's setup and turnaround count", () => {
+    // validRequest is 2:00–4:00 pm SGT (06:00–08:00Z).
+    /** An approved booking at the venue that ends at 1:45 pm SGT, before the request starts. */
+    const endsBefore = {
+      id: "bkg_before",
+      startAt: new Date("2030-06-01T04:00:00.000Z"),
+      endAt: new Date("2030-06-01T05:45:00.000Z"),
+      setupMinutes: 0,
+      turnaroundMinutes: 0,
+    };
+
+    it("SCRUM-159 [AC3] TC-159-05: a request whose setup time reaches into an approved booking is refused, though its event times are clear, and nothing is written", async () => {
+      db.venue.findFirst.mockResolvedValue({
+        name: "Seminar Room",
+        capacity: 60,
+        setupMinutes: 30,
+        turnaroundMinutes: 45,
+      });
+      db.booking.findMany.mockResolvedValue([endsBefore]);
+
+      const result = await submitBookingRequest(validRequest);
+
+      // Its setup would start at 1:30 pm, 15 minutes before the other booking ends.
+      expect(result).toEqual({
+        ok: false,
+        error:
+          "Seminar Room is unavailable for that period: already booked from 1 Jun 2030, 12:00 pm SGT to 1 Jun 2030, 1:45 pm SGT.",
+      });
+      expect(db.booking.create).not.toHaveBeenCalled();
+    });
+
+    it("SCRUM-159 [AC3] TC-159-07: recorded unavailability is checked against the request's whole occupied period", async () => {
+      db.venue.findFirst.mockResolvedValue({
+        name: "Seminar Room",
+        capacity: 60,
+        setupMinutes: 30,
+        turnaroundMinutes: 45,
+      });
+
+      await submitBookingRequest(validRequest);
+
+      // 2:00–4:00 pm with 30 and 45 minutes occupies 1:30–4:45 pm.
+      expect(db.venueUnavailability.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            venueId: "ven_1",
+            startAt: { lt: new Date("2030-06-01T08:45:00.000Z") },
+            endAt: { gt: new Date("2030-06-01T05:30:00.000Z") },
+          },
+        }),
+      );
+    });
+
+    it("SCRUM-159 [AC4] TC-159-08: the same request is accepted when its setup only touches the other booking's end", async () => {
+      db.venue.findFirst.mockResolvedValue({
+        name: "Seminar Room",
+        capacity: 60,
+        setupMinutes: 15,
+        turnaroundMinutes: 45,
+      });
+      db.booking.findMany.mockResolvedValue([endsBefore]);
+
+      const result = await submitBookingRequest(validRequest);
+
+      expect(result.ok).toBe(true);
+      expect(db.booking.create).toHaveBeenCalled();
+    });
   });
 
   it("SCRUM-50 [AC8] TC-50-08: a second request for the event that races past the check is caught by the database and the winner is returned", async () => {
@@ -525,6 +606,8 @@ describe("SCRUM-50 [AC3, AC4, AC5] TC-50-13: checkVenueAvailability, the live ch
         id: "bkg_x",
         startAt: new Date("2030-06-01T07:00:00.000Z"),
         endAt: new Date("2030-06-01T09:00:00.000Z"),
+        setupMinutes: 0,
+        turnaroundMinutes: 0,
       },
     ]);
     db.venueUnavailability.findMany.mockResolvedValue([
@@ -543,6 +626,34 @@ describe("SCRUM-50 [AC3, AC4, AC5] TC-50-13: checkVenueAvailability, the live ch
         clashes: [
           "unavailable (maintenance) from 1 Jun 2030, 1:00 pm SGT to 1 Jun 2030, 2:30 pm SGT",
           "already booked from 1 Jun 2030, 3:00 pm SGT to 1 Jun 2030, 5:00 pm SGT",
+        ],
+      },
+    });
+  });
+
+  it("SCRUM-159 [AC3] TC-159-06: the live check counts the venue's setup and turnaround, as submitting does", async () => {
+    db.venue.findFirst.mockResolvedValue({
+      id: "ven_1",
+      setupMinutes: 30,
+      turnaroundMinutes: 45,
+    });
+    // Ends at 1:45 pm SGT; the 2:00–4:00 pm period's setup starts at 1:30 pm.
+    db.booking.findMany.mockResolvedValue([
+      {
+        id: "bkg_before",
+        startAt: new Date("2030-06-01T04:00:00.000Z"),
+        endAt: new Date("2030-06-01T05:45:00.000Z"),
+        setupMinutes: 0,
+        turnaroundMinutes: 0,
+      },
+    ]);
+
+    expect(await checkVenueAvailability(period)).toEqual({
+      ok: true,
+      data: {
+        available: false,
+        clashes: [
+          "already booked from 1 Jun 2030, 12:00 pm SGT to 1 Jun 2030, 1:45 pm SGT",
         ],
       },
     });
@@ -632,7 +743,7 @@ describe("decideBookingRequest — SCRUM-53", () => {
     startAt: new Date(START),
     endAt: new Date(END),
     status: "PENDING",
-    venue: { name: "Seminar Room" },
+    venue: { name: "Seminar Room", setupMinutes: 0, turnaroundMinutes: 0 },
   };
 
   beforeEach(() => {
@@ -649,7 +760,7 @@ describe("decideBookingRequest — SCRUM-53", () => {
 
     expect(result).toEqual({ ok: true, data: { status: "APPROVED" } });
     expect(db.booking.updateMany).toHaveBeenCalledWith({
-      where: { id: "bkg_1", status: "PENDING" },
+      where: { id: "bkg_1", status: "PENDING", needsReconsideration: false },
       data: expect.objectContaining({
         status: "APPROVED",
         decidedById: "usr_staff",
@@ -666,6 +777,69 @@ describe("decideBookingRequest — SCRUM-53", () => {
         oldValue: "PENDING",
         newValue: "APPROVED",
       }),
+    });
+  });
+
+  describe("SCRUM-159 — approving with setup and turnaround", () => {
+    const withTimes = {
+      ...pendingBooking,
+      venue: { name: "Seminar Room", setupMinutes: 30, turnaroundMinutes: 45 },
+    };
+
+    it("SCRUM-159 [AC8] TC-159-12: approving copies the venue's current setup and turnaround onto the booking", async () => {
+      db.booking.findUnique.mockResolvedValue(withTimes);
+
+      const result = await decideBookingRequest({
+        bookingId: "bkg_1",
+        decision: "APPROVED",
+      });
+
+      expect(result).toEqual({ ok: true, data: { status: "APPROVED" } });
+      expect(db.booking.updateMany).toHaveBeenCalledWith({
+        where: { id: "bkg_1", status: "PENDING", needsReconsideration: false },
+        data: expect.objectContaining({
+          status: "APPROVED",
+          setupMinutes: 30,
+          turnaroundMinutes: 45,
+        }),
+      });
+    });
+
+    it("SCRUM-159 [AC8] TC-159-12: rejecting leaves the booking's setup and turnaround alone", async () => {
+      db.booking.findUnique.mockResolvedValue(withTimes);
+
+      await decideBookingRequest({
+        bookingId: "bkg_1",
+        decision: "REJECTED",
+        reason: "Too small.",
+      });
+
+      const { data } = db.booking.updateMany.mock.calls[0][0];
+      expect(data).not.toHaveProperty("setupMinutes");
+      expect(data).not.toHaveProperty("turnaroundMinutes");
+    });
+
+    it("SCRUM-159 [AC3] TC-159-06: approving is refused as conflicting where the request's turnaround reaches an approved booking, and nothing is written", async () => {
+      db.booking.findUnique.mockResolvedValue(withTimes);
+      // Starts at 4:30 pm SGT; the 2:00–4:00 pm request's turnaround runs to 4:45 pm.
+      db.booking.findMany.mockResolvedValue([
+        {
+          id: "bkg_after",
+          startAt: new Date("2030-06-01T08:30:00.000Z"),
+          endAt: new Date("2030-06-01T10:00:00.000Z"),
+          setupMinutes: 0,
+          turnaroundMinutes: 0,
+        },
+      ]);
+
+      expect(
+        await decideBookingRequest({ bookingId: "bkg_1", decision: "APPROVED" }),
+      ).toEqual({
+        ok: false,
+        error:
+          "Conflicting: Seminar Room is already booked from 1 Jun 2030, 4:30 pm SGT to 1 Jun 2030, 6:00 pm SGT. This request is still pending.",
+      });
+      expect(db.booking.updateMany).not.toHaveBeenCalled();
     });
   });
 
@@ -780,6 +954,53 @@ describe("decideBookingRequest — SCRUM-53", () => {
         "This request has already been approved; the original decision stands.",
     });
     expect(db.auditLog.create).not.toHaveBeenCalled();
+  });
+
+  describe("SCRUM-26 — a request flagged Needs Reconsideration", () => {
+    const FLAGGED =
+      "This request needs reconsideration, so it can't be approved or held until its event's coordinator resolves it. It can still be rejected.";
+
+    it("SCRUM-26 [AC5] TC-26-09: approving a flagged Pending request is refused and nothing is written", async () => {
+      db.booking.findUnique.mockResolvedValue({
+        ...pendingBooking,
+        needsReconsideration: true,
+      });
+
+      expect(
+        await decideBookingRequest({ bookingId: "bkg_1", decision: "APPROVED" }),
+      ).toEqual({ ok: false, error: FLAGGED });
+      expect(db.booking.updateMany).not.toHaveBeenCalled();
+      expect(db.auditLog.create).not.toHaveBeenCalled();
+    });
+
+    it("SCRUM-26 [AC5] TC-26-09: a flag raised after the request was read still stops the approval", async () => {
+      db.booking.updateMany.mockResolvedValue({ count: 0 });
+      db.booking.findUniqueOrThrow.mockResolvedValue({ status: "PENDING" });
+
+      expect(
+        await decideBookingRequest({ bookingId: "bkg_1", decision: "APPROVED" }),
+      ).toEqual({ ok: false, error: FLAGGED });
+      expect(db.auditLog.create).not.toHaveBeenCalled();
+    });
+
+    it("SCRUM-26 [AC5] TC-26-09: a flagged Pending request can still be rejected", async () => {
+      db.booking.findUnique.mockResolvedValue({
+        ...pendingBooking,
+        needsReconsideration: true,
+      });
+
+      expect(
+        await decideBookingRequest({
+          bookingId: "bkg_1",
+          decision: "REJECTED",
+          reason: "The event moved.",
+        }),
+      ).toEqual({ ok: true, data: { status: "REJECTED" } });
+      expect(db.booking.updateMany.mock.calls[0][0].where).toEqual({
+        id: "bkg_1",
+        status: "PENDING",
+      });
+    });
   });
 
   it("SCRUM-53 [AC8] TC-53-04: approving over an approved booking or recorded unavailability is returned as conflicting", async () => {

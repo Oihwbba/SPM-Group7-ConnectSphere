@@ -14,20 +14,34 @@ vi.mock("@/app/(app)/bookings/actions", () => ({
   holdBookingRequest: vi.fn(),
 }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
+// SCRUM-25 AC6: each card carries the event's operational notes.
+vi.mock("@/app/(app)/events/edit-actions", () => ({
+  getOperationalNotes: vi.fn(() => new Promise(() => {})),
+  addOperationalNote: vi.fn(),
+}));
 
 const row: PendingBookingRow = {
   id: "bkg_1",
   status: "PENDING",
   holdExpiresAt: null,
   holdNote: null,
+  holdApprovedAt: null,
   startAt: new Date("2035-03-10T01:00:00.000Z"),
   endAt: new Date("2035-03-10T05:00:00.000Z"),
+  setupMinutes: 0,
+  turnaroundMinutes: 0,
   requestedAttendance: 250,
   requiredFacilities: ["projector", "stage"],
   requestedLayout: "banquet",
   requestNotes: null,
   createdAt: new Date("2035-01-01T01:00:00.000Z"),
-  event: { name: "Approved — Research Symposium" },
+  event: {
+    name: "Approved — Research Symposium",
+    venueRequirements: "A hall near the lobby,\nwith a stage",
+    preferredLayout: "Banquet",
+    accessibilityNeeds: "Wheelchair access",
+  },
+  eventId: "evt_1",
   requestedBy: { name: "Cody Coordinator", email: "coordinator@test.local" },
   venue: {
     id: "ven_hall",
@@ -36,11 +50,27 @@ const row: PendingBookingRow = {
     capacity: 200,
     facilities: ["sound-system", "projector"],
     supportedLayouts: ["banquet"],
+    setupMinutes: 0,
+    turnaroundMinutes: 0,
   },
   blockers: [],
 };
 
 describe("BookingQueue", () => {
+  it("SCRUM-170 [AC2] TC-170-02: Venue Staff see the Organiser's venue and accessibility answers on the request, as entered", () => {
+    const html = renderToStaticMarkup(
+      <BookingQueue queue={[row]} canDecide={false} />,
+    );
+    const answers = html.slice(
+      html.indexOf('data-testid="organiser-venue-answers"'),
+    );
+
+    expect(html).toContain("What the Organiser asked for");
+    expect(answers).toContain("A hall near the lobby,\nwith a stage");
+    expect(answers).toContain("Banquet");
+    expect(answers).toContain("Wheelchair access");
+  });
+
   it("SCRUM-52 [AC4] TC-52-06: an empty queue says there is nothing pending rather than rendering nothing", () => {
     const html = renderToStaticMarkup(<BookingQueue queue={[]} canDecide />);
 
@@ -74,6 +104,39 @@ describe("BookingQueue", () => {
       );
     expect(buttons(withControls)).toEqual(["Reject", "Approve"]);
     expect(buttons(withoutControls)).toEqual([]);
+  });
+
+  it("SCRUM-163 [AC7] TC-163-17: a hold Venue Staff haven't approved offers Approve and Reject; once approved it reads 'Approved by Venue Staff – awaiting confirmation' and offers Reject only", () => {
+    const hold = {
+      ...row,
+      status: "HELD" as const,
+      holdExpiresAt: new Date("2035-03-05T02:00:00.000Z"),
+      holdNote: "Confirm the final headcount.",
+    };
+    const buttons = (html: string) =>
+      [...html.matchAll(/<button[^>]*>.*?<\/button>/g)].map((m) =>
+        m[0].replace(/<[^>]+>/g, "").trim(),
+      );
+
+    const unapproved = renderToStaticMarkup(
+      <BookingQueue queue={[hold]} canDecide canHold />,
+    );
+    expect(unapproved).toContain("Held until 5 Mar 2035, 10:00 am SGT");
+    expect(unapproved).not.toContain("Approved by Venue Staff");
+    expect(buttons(unapproved)).toEqual(["Reject", "Approve"]);
+
+    const approved = renderToStaticMarkup(
+      <BookingQueue
+        queue={[{ ...hold, holdApprovedAt: new Date("2035-03-01T02:00:00.000Z") }]}
+        canDecide
+        canHold
+      />,
+    );
+    expect(approved).toContain("Held until 5 Mar 2035, 10:00 am SGT");
+    expect(approved).toContain(
+      "Approved by Venue Staff – awaiting confirmation",
+    );
+    expect(buttons(approved)).toEqual(["Reject"]);
   });
 });
 
