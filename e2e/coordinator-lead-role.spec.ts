@@ -26,8 +26,9 @@ test.describe("SCRUM-164 — Event Coordinator Lead role", () => {
 
     const rail = page.locator("aside");
     await expect(rail.locator('a[href="/queue"]')).toHaveCount(1);
+    await expect(rail.locator('a[href="/all-events"]')).toHaveCount(1);
     await expect(rail.locator('a[href="/notifications"]')).toHaveCount(1);
-    await expect(rail.locator("a[href]")).toHaveCount(2);
+    await expect(rail.locator("a[href]")).toHaveCount(3);
   });
 
   for (const url of [

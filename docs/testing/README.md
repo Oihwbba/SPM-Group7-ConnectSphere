@@ -151,3 +151,4 @@ the open pull requests that change the same test files have merged.
 | [SCRUM-26](SCRUM-26.md) | Jun Bin | 15 | Every case automated (unit, integration for blocking, Still stands against real unavailability and simultaneous cancels, e2e for the journey); AC 1's warning screen is SCRUM-25's |
 | [SCRUM-166](SCRUM-166.md) | Jun Bin | 16 | Every case automated (unit, integration for one check per event, simultaneous officers, flags and Outdated, e2e for both journeys); "No equipment needed" waits on SCRUM-170 |
 | [SCRUM-165](SCRUM-165.md) | Hann Qian | 14 | Every case automated (unit, integration for two Leads at once, e2e for the journey); AC 1's Lead notice is SCRUM-124 AC10, AC 7's Organiser case needs SCRUM-121 for real data, and AC 8's all-events list is SCRUM-141
+| [SCRUM-141](SCRUM-141.md) | Hann Qian | 11 | Every case automated (unit, e2e for each role's view, the Lead's filters and refusals); AC 3's reassign and AC 4's reassignment wait for SCRUM-21
