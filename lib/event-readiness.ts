@@ -16,7 +16,7 @@ import { FLAGGABLE_BOOKING } from "@/lib/reconsideration";
 export interface ChecklistItem {
   name: "Venue booking" | "Equipment";
   complete: boolean;
-  /** "Approved", "Held until … – confirm to secure", "Pending", "Rejected", "Hold expired", "Not requested", "Reserved", "Not fully reserved: Projector", "Awaiting Technical Support review" */
+  /** "Approved", "Held until … – confirm to secure", "Pending", "Rejected", "Hold expired", "Not requested", "Reserved", "Not fully reserved: Projector", "Awaiting Technical Support review", "Not decided", "No equipment needed" */
   state: string;
   /** Internal detail, such as why Venue Staff rejected the booking. Hidden from the Organiser. */
   reason: string | null;
@@ -26,6 +26,8 @@ export interface ChecklistItem {
   holdApproved?: boolean;
   /** SCRUM-142 AC4: the pending venue request the Coordinator can withdraw. */
   pendingBookingId?: string;
+  /** SCRUM-170 AC4: no live equipment request, so No equipment needed can be recorded. */
+  noEquipmentOffered?: boolean;
 }
 
 export interface ReadinessChecklist {
@@ -36,7 +38,7 @@ export interface ReadinessChecklist {
 
 // Requests still being worked on or granted. A rejected request is replaced by
 // the Coordinator's next one, and a cancelled one is no longer wanted.
-const LIVE_REQUEST = ["PENDING_REVIEW", "IN_REVIEW", "APPROVED"];
+export const LIVE_REQUEST = ["PENDING_REVIEW", "IN_REVIEW", "APPROVED"] as const;
 
 export async function getReadinessChecklist(
   db: Prisma.TransactionClient | PrismaClient,
@@ -51,6 +53,8 @@ export async function getReadinessChecklist(
       status: true,
       startAt: true,
       endAt: true,
+      noEquipmentNeededAt: true,
+      noEquipmentNeededBy: { select: { name: true } },
       bookings: {
         select: {
           id: true,
@@ -95,9 +99,8 @@ export async function getReadinessChecklist(
   });
   if (!event) return null;
 
-  const items = [venueItem(event, now)];
-  const equipment = equipmentItem(event);
-  if (equipment) items.push(equipment);
+  // SCRUM-170 AC4: Equipment is always listed (superseding SCRUM-110 AC3).
+  const items = [venueItem(event, now), equipmentItem(event)];
 
   return {
     ready: event.status === "PLANNING" && items.every((item) => item.complete),
@@ -223,6 +226,8 @@ function venueItem(
 type EventRow = {
   startAt: Date | null;
   endAt: Date | null;
+  noEquipmentNeededAt: Date | null;
+  noEquipmentNeededBy: { name: string } | null;
   equipmentRequests: {
     status: string;
     createdAt: Date;
@@ -244,7 +249,7 @@ type EventRow = {
   }[];
 };
 
-function equipmentItem(event: EventRow): ChecklistItem | null {
+function equipmentItem(event: EventRow): ChecklistItem {
   // SCRUM-26 AC12: as for the venue, a flagged reservation leaves the item
   // incomplete until its Coordinator resolves the flag.
   const flagged = event.reservations.filter(
@@ -263,17 +268,33 @@ function equipmentItem(event: EventRow): ChecklistItem | null {
   const oldestFirst = [...event.equipmentRequests].sort(
     (a, b) => a.createdAt.getTime() - b.createdAt.getTime(),
   );
-  const live = oldestFirst.filter((r) => LIVE_REQUEST.includes(r.status));
+  const live = oldestFirst.filter((r) =>
+    (LIVE_REQUEST as readonly string[]).includes(r.status),
+  );
 
   if (live.length === 0) {
+    // SCRUM-170 AC4: with no live request the Coordinator decides. Recording
+    // No equipment needed completes the item; it keeps who and when. Creating
+    // a request clears the decision, so it never sits beside a live request.
+    // Who recorded it is always set with it (event_no_equipment_decision_complete).
+    if (event.noEquipmentNeededAt) {
+      return {
+        name: "Equipment",
+        complete: true,
+        state: "No equipment needed",
+        reason: `Recorded by ${event.noEquipmentNeededBy!.name}, ${formatDateTime(event.noEquipmentNeededAt)}`,
+      };
+    }
     // With only a rejected request, the equipment is still wanted but not
-    // arranged; with none, or only cancelled ones, it is not needed at all.
-    if (!oldestFirst.some((r) => r.status === "REJECTED")) return null;
+    // arranged; with none, or only cancelled ones, nothing is decided yet.
     return {
       name: "Equipment",
       complete: false,
-      state: "Rejected",
+      state: oldestFirst.some((r) => r.status === "REJECTED")
+        ? "Rejected"
+        : "Not decided",
       reason: null,
+      noEquipmentOffered: true,
     };
   }
 

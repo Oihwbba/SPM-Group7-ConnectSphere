@@ -25,7 +25,7 @@ Approved and asks for 1 Projector and 2 Wireless Microphones.
 | [TC-155-06](#tc-155-06) | Negative    | AC 6       | Unit, integration, e2e |
 | [TC-155-07](#tc-155-07) | Concurrency | AC 5       | Integration            |
 | [TC-155-08](#tc-155-08) | Concurrency | AC 5       | Unit, integration      |
-| [TC-155-09](#tc-155-09) | Negative    | AC 7       | Unit                   |
+| [TC-155-09](#tc-155-09) | Negative    | AC 7       | Unit, e2e              |
 | [TC-155-10](#tc-155-10) | Negative    | AC 1       | Unit, integration      |
 | [TC-155-11](#tc-155-11) | Negative    | Errors     | e2e                    |
 | [TC-155-12](#tc-155-12) | Negative    | AC 6       | Unit, integration      |
@@ -151,7 +151,7 @@ Approved and asks for 1 Projector and 2 Wireless Microphones.
 | Test Data       | —                                                                                                                                                                                |
 | Expected Result | Nothing is reserved. The message is shown at the row or period field it belongs to, e.g. "This equipment type is already on another row." or "Start time cannot be in the past." |
 
-**Automated by:** `tests/unit/request-reservation.test.ts` › "SCRUM-155 [AC7] TC-155-09: …"
+**Automated by:** `tests/unit/request-reservation.test.ts` › "SCRUM-155 [AC7] TC-155-09: …"; `e2e/request-reservation.spec.ts` › "SCRUM-155 [AC7] TC-155-09: a cleared start or end reserves nothing and says so at the field" (the cleared start: "Choose a reservation start time.", and nothing is reserved)
 
 ### TC-155-10
 

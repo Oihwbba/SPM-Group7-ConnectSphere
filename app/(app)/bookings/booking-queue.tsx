@@ -46,6 +46,7 @@ import {
   utcToSgWallTime,
 } from "@/lib/datetime";
 import { describeBlocker } from "@/lib/venue-availability";
+import { OrganiserVenueAnswers } from "@/components/events/organiser-answers";
 import { decideBookingRequest, holdBookingRequest } from "./actions";
 import { OperationalNotes } from "@/components/events/operational-notes";
 import type { PendingBookingRow } from "./queries";
@@ -370,7 +371,7 @@ function RequestCard({
   children?: React.ReactNode;
 }) {
   const { venue } = booking;
-  const free = booking.blockers.length === 0;
+  const free = booking.blockers.length === 0 && !booking.outsideHours;
   const fits =
     booking.requestedAttendance === null ||
     booking.requestedAttendance <= venue.capacity;
@@ -424,11 +425,14 @@ function RequestCard({
             {free ? (
               <Mark ok>Free for this period</Mark>
             ) : (
-              booking.blockers.map((blocker) => (
-                <Mark key={blocker.id} ok={false}>
-                  {describeBlocker(blocker)}
-                </Mark>
-              ))
+              <>
+                {booking.outsideHours && <Mark ok={false}>{booking.outsideHours}</Mark>}
+                {booking.blockers.map((blocker) => (
+                  <Mark key={blocker.id} ok={false}>
+                    {describeBlocker(blocker)}
+                  </Mark>
+                ))}
+              </>
             )}
           </Fact>
           <Fact icon={Users} label="Attendance">
@@ -475,6 +479,12 @@ function RequestCard({
             </Fact>
           )}
         </dl>
+        {/* SCRUM-170 AC2: what the Organiser asked for, beside what the
+            Coordinator requested. */}
+        <div className="space-y-2 rounded-md border bg-muted/30 p-3">
+          <p className="text-xs font-medium">What the Organiser asked for</p>
+          <OrganiserVenueAnswers answers={booking.event} />
+        </div>
         {/* SCRUM-25 AC6: Venue Staff add notes once the event has a booking. */}
         <OperationalNotes eventId={booking.eventId} />
         {children}

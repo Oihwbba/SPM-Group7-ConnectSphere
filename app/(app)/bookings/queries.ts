@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import { BOOKABLE_EVENT_STATUSES } from "@/lib/schemas/booking";
 import { findVenueBlockers, occupiedPeriod } from "@/lib/venue-availability";
 import { liveHoldWhere } from "@/lib/booking-holds";
+import { openingHoursRefusal } from "@/lib/venue-hours";
 
 /**
  * SCRUM-50 — the events a coordinator may request a venue for: approved ones
@@ -21,8 +22,10 @@ export async function getBookableEvents(coordinatorId: string) {
       startAt: true,
       endAt: true,
       expectedAttendance: true,
-      requiredFacilities: true,
+      // SCRUM-170 AC2: shown read-only on the request form, never pre-filled.
+      venueRequirements: true,
       preferredLayout: true,
+      accessibilityNeeds: true,
     },
     orderBy: { startAt: "asc" },
   });
@@ -75,8 +78,16 @@ export async function getPendingBookingQueue(now = new Date()) {
       requestedLayout: true,
       requestNotes: true,
       createdAt: true,
+      // SCRUM-170 AC2: Venue Staff see the Organiser's answers on the request.
+      event: {
+        select: {
+          name: true,
+          venueRequirements: true,
+          preferredLayout: true,
+          accessibilityNeeds: true,
+        },
+      },
       eventId: true,
-      event: { select: { name: true } },
       requestedBy: { select: { name: true, email: true } },
       venue: {
         select: {
@@ -88,6 +99,9 @@ export async function getPendingBookingQueue(now = new Date()) {
           supportedLayouts: true,
           setupMinutes: true,
           turnaroundMinutes: true,
+          openingHours: {
+            select: { weekday: true, opensMinute: true, closesMinute: true },
+          },
         },
       },
     },
@@ -97,6 +111,8 @@ export async function getPendingBookingQueue(now = new Date()) {
   return Promise.all(
     pending.map(async (booking) => ({
       ...booking,
+      // SCRUM-34 AC7: approving or holding it would be refused for this.
+      outsideHours: openingHoursRefusal(booking, booking.venue),
       blockers: (
         await findVenueBlockers(
           prisma,
