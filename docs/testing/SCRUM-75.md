@@ -112,7 +112,7 @@ needed (TC-75-14).
 | Test Data | `organiser@test.local`, `attendee4@test.local` |
 | Expected Result | 1: the Registration panel reads "Registration closed" and offers Reopen; the closing time is now, recorded in the event's history with the Organiser and the time it replaced, and the pending "Registration closed" notice is withdrawn. 2: the event is still listed, as "Registration closed", and Register is disabled. 3: refused with "Registration for this event is not currently open."; nothing is written. |
 
-**Automated by:** `tests/unit/registration-control.test.ts` › "SCRUM-75 [AC6] TC-75-06: …" (6 tests); `tests/integration/registration-period.test.ts` › "SCRUM-75 [AC6] TC-75-06: once the Organiser closes registration, a registration is refused and nothing is written, but the event is still listed"; `e2e/registration-period.spec.ts` › "SCRUM-75 [AC6] TC-75-06, TC-75-07: the Organiser closes registration, the Attendee sees it closed, and after the Coordinator reopens it the Attendee registers"
+**Automated by:** `tests/unit/registration-control.test.ts` › "SCRUM-75 [AC6] TC-75-06: …" (5 tests); `tests/integration/registration-period.test.ts` › "SCRUM-75 [AC6] TC-75-06: once the Organiser closes registration, a registration is refused and nothing is written, but the event is still listed"; `e2e/registration-period.spec.ts` › "SCRUM-75 [AC6] TC-75-06, TC-75-07: the Organiser closes registration, the Attendee sees it closed, and after the Coordinator reopens it the Attendee registers"
 
 ### TC-75-07
 
@@ -138,7 +138,7 @@ needed (TC-75-14).
 | Test Data | `coordinator@test.local`, `organiser2@test.local`, `coordinator2@test.local`, `attendee@test.local`, `venuestaff@test.local` |
 | Expected Result | 1: closed, recorded under the Coordinator. 2: another Organiser or Coordinator gets "Event not found.", the same as a missing event; an Attendee and Venue Staff are refused before anything is read. Nothing is written. |
 
-**Automated by:** `tests/unit/auth.test.ts` › "SCRUM-75 [AC6] TC-75-08: the Organiser and the assigned Coordinator may, and no one else"; `tests/unit/registration-control.test.ts` › "SCRUM-75 [AC6] TC-75-08: …" (13 tests)
+**Automated by:** `tests/unit/auth.test.ts` › "SCRUM-75 [AC6] TC-75-08: the Organiser and the assigned Coordinator may, and no one else"; `tests/unit/registration-control.test.ts` › "SCRUM-75 [AC6] TC-75-08: …" (16 tests)
 
 ### TC-75-09
 
