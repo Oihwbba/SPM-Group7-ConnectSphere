@@ -7,7 +7,8 @@ name: GLM Code Review
 # in place on each push. It replaces the Copilot review.
 #
 # Context: the PR title, description and branch, CONTRIBUTING.md, CLAUDE.md, and
-# the docs/backlog story file for each SCRUM key the PR names.
+# the docs/backlog story file and docs/testing test-case document for each
+# SCRUM key the PR names.
 #
 # The check turns red when the review finds a critical issue, or when no review
 # could be completed. It is a required status check on `main` alongside
@@ -45,8 +46,8 @@ jobs:
     # result on the same commit.
     if: github.event.pull_request.draft == false
     runs-on: ubuntu-latest
-    # Up to 15 minutes waiting for CI, then up to 27 for GLM, plus posting.
-    timeout-minutes: 50
+    # Up to 25 minutes waiting for CI, then up to 27 for GLM, plus posting.
+    timeout-minutes: 60
     steps:
       # Both actions are pinned to commit SHAs, not tags: this job holds the API
       # key and GitHub token, and a tag can be moved underneath it. v7 runs on

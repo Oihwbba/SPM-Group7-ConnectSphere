@@ -13,7 +13,7 @@ it can be read aloud in the oral exam.
 | [0005](0005-ephemeral-ci-database.md) | CI runs against a throwaway Postgres, migrated and seeded from nothing | — | Current |
 | [0006](0006-single-event-status-transition-gate.md) | Every Coordinator status change goes through one gate that checks the current status | SCRUM-23, 24, 19, 20, 81 | Current, with addenda |
 | [0007](0007-lock-equipment-pools-when-reserving.md) | Lock the equipment rows while reserving; lock the event, then the request, then equipment by id | SCRUM-31, 155, 156 | Amended 2026-10-05 |
-| [0008](0008-advisory-ai-code-review.md) | An AI review on every pull request, now a required check on critical findings | SCRUM-88, 111, 112, 152, 157 | Amended: no longer advisory |
+| [0008](0008-advisory-ai-code-review.md) | An AI review on every pull request, on GLM because the team has no Copilot review credits; a required check on critical findings | SCRUM-88, 111, 112, 152, 157, 178, 180, 181 | Amended 2026-10-13 |
 | [0009](0009-deploy-from-github-actions.md) | Deploy production from GitHub Actions, not Vercel's Git integration | — | Current |
 | [0010](0010-database-prevents-venue-double-booking.md) | The database, not the application, prevents venue double-booking, over occupied periods and holds since Week 7 | SCRUM-53, 37, 159, 161, 162, 163, 172 | Amended 2026-10-08 |
 | [0011](0011-event-readiness-checklist.md) | The readiness checklist is computed on demand, per viewer | SCRUM-110 | Amended 2026-10-04 |
@@ -22,6 +22,7 @@ it can be read aloud in the oral exam.
 | [0014](0014-clarification-fields-and-resubmission.md) | A clarification names the fields its answer may change; a resubmission returns to the same Coordinator | SCRUM-108 | Current |
 | [0015](0015-rejecting-a-planning-event.md) | Rejecting a Planning event releases its arrangements in one transaction | SCRUM-117 | Current |
 | [0016](0016-one-nextjs-app-on-vercel-and-supabase.md) | One Next.js app with Prisma on Supabase, deployed to Vercel: free, and one shared view of everyone's merged work | — | Current (written 2026-10-11, after the fact) |
+| [0017](0017-needs-reconsideration-flags.md) | Needs Reconsideration is a flag the Coordinator resolves, never a status | SCRUM-26 | Current |
 
 ## Writing one
 

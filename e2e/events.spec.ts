@@ -984,7 +984,7 @@ test.describe("User Story 23 & 24 — Event Status View & Consistency Journey", 
     await expect(detailModal).toBeVisible();
     await expect(detailModal.getByTestId("status-badge")).toHaveAttribute("data-status", "SUBMITTED");
 
-    // 3. Reassign this event to coordinator2 in database to simulate mid-view reassignment (SCRUM-20/57)
+    // 3. Reassign this event to coordinator2 in database to simulate mid-view reassignment (SCRUM-20/21)
     if (usesLocalDatabase) {
       try {
         await prisma.event.update({

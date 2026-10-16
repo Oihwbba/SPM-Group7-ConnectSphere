@@ -11,7 +11,8 @@ How to read it:
 - **Input** is the Zod schema the input must pass.
 - **Writes** are the tables it changes.
 - **Locks** are rows locked with `SELECT … FOR UPDATE` in its transaction,
-  which is how two people acting at once are kept apart.
+  which is how two people acting at once are kept apart. A weaker lock is
+  named in brackets.
 
 Sign-in and sign-out (`lib/auth/actions.ts`) are not in the table: they need
 no permission.
@@ -25,9 +26,9 @@ request.
 |---|---|---|---|---|---|
 | `checkVenueAvailability` | Checks whether a venue is free for a period, and names any clashes (SCRUM-50). | `booking:request` | `venueAvailabilityQuerySchema` (lib/schemas/booking.ts) | nothing (read only) | — |
 | `submitBookingRequest` | The Coordinator requests a venue for their event (SCRUM-50). | `booking:request` | `bookingRequestSchema` (lib/schemas/booking.ts) | Booking | — |
-| `decideBookingRequest` | Venue Staff approve or reject a pending request, or reject a held one before it expires (SCRUM-53, 163). | `booking:decide` | `bookingDecisionSchema` (lib/schemas/booking.ts) | AuditLog, Booking, Notification | — |
-| `holdBookingRequest` | Venue Staff hold a pending request until a deadline, with a note for the Coordinator (SCRUM-163). | `booking:hold` | `bookingHoldSchema` (lib/schemas/booking.ts) | AuditLog, Booking, Notification | — |
-| `confirmHold` | The assigned Coordinator confirms a live hold, which makes the booking Approved (SCRUM-163 AC3). | `booking:settle-hold` | `holdSettlementSchema` (lib/schemas/booking.ts) | AuditLog, Booking, Notification, SafetyCheck | — |
+| `decideBookingRequest` | Venue Staff approve or reject a pending request, or approve or reject a held one before it expires (SCRUM-53, 163). Approving a hold keeps it Held, records who approved it and when, and tells its Coordinator (SCRUM-163 AC7, SCRUM-124 AC4). | `booking:decide` | `bookingDecisionSchema` (lib/schemas/booking.ts) | AuditLog, Booking, Notification | Event row (`FOR KEY SHARE`), when approving a hold |
+| `holdBookingRequest` | Venue Staff hold a pending request until a deadline, with a note for the Coordinator (SCRUM-163). | `booking:hold` | `bookingHoldSchema` (lib/schemas/booking.ts) | AuditLog, Booking, Notification | Event row (`FOR KEY SHARE`) |
+| `confirmHold` | The assigned Coordinator confirms a live hold Venue Staff have approved, which makes the booking Approved (SCRUM-163 AC3). | `booking:settle-hold` | `holdSettlementSchema` (lib/schemas/booking.ts) | AuditLog, Booking, Notification, SafetyCheck | — |
 | `releaseHold` | The assigned Coordinator releases a live hold, which frees the venue (SCRUM-163 AC3). | `booking:settle-hold` | `holdSettlementSchema` (lib/schemas/booking.ts) | AuditLog, Booking, Notification, SafetyCheck | — |
 | `withdrawBookingRequest` | The assigned Coordinator withdraws a pending venue request; a held one is released instead (SCRUM-142 AC4). | `booking:withdraw`; a held request also needs `booking:settle-hold` | `bookingWithdrawalSchema` (lib/schemas/booking.ts) | AuditLog, Booking, Notification, SafetyCheck | Event row |
 
@@ -63,6 +64,13 @@ request.
 | `discardDraftEvent` | The Organiser discards a Draft (SCRUM-130). | `event:discard` | `discardDraftSchema` (same file) | AuditLog, Event | — |
 | `rejectPlanningEvent` | The assigned Coordinator rejects a Planning event that can't be fulfilled, releasing its arrangements (SCRUM-117). | `event:reject` | `rejectPlanningEventSchema` (same file) | AuditLog, Booking, EquipmentRequest, EquipmentRequestUpdate, Event, EventChangeRequest, Notification, Reservation | Event row |
 
+## `app/(app)/events/change-request-actions.ts`
+
+| Action | What it does | Permission | Input | Writes | Locks |
+|---|---|---|---|---|---|
+| `raiseChangeRequest` | The Organiser, or the assigned Coordinator on their behalf, asks to change a submitted event's fields or to cancel it; the event itself doesn't change until the request is decided (SCRUM-41). The assigned Coordinator is told (SCRUM-124 AC7). | `change-request:raise` | `raiseChangeRequestSchema` (lib/schemas/change-request.ts) | AuditLog, ChangeRequestField, EventChangeRequest, Notification | Event row |
+| `getChangeRequestsForEvent` | An event's change requests, newest first (SCRUM-41 AC6). | `event:read`; the result also says whether the viewer may raise another | an event id | nothing (read only) | — |
+
 ## `app/(app)/events/clarification-actions.ts`
 
 | Action | What it does | Permission | Input | Writes | Locks |
@@ -70,6 +78,15 @@ request.
 | `requestClarification` | The Coordinator asks the Organiser a question, naming the fields the answer may change (SCRUM-18, 108). | `clarification:request` | `requestClarificationSchema` (lib/schemas/clarification.ts) | ClarificationRequest, Notification | Event row |
 | `getClarificationForEvent` | The event's current clarification thread (SCRUM-18). | `clarification:request` or `clarification:respond` | an event id | nothing (read only) | — |
 | `respondToClarification` | The Organiser answers, with any changes to the named fields (SCRUM-18, 108). | `clarification:respond` | `respondClarificationSchema` (lib/schemas/clarification.ts) | AuditLog, ClarificationRequest, Event, Notification | — |
+
+## `app/(app)/events/edit-actions.ts`
+
+| Action | What it does | Permission | Input | Writes | Locks |
+|---|---|---|---|---|---|
+| `updateEventDetails` | The assigned Coordinator edits an Under Review or Planning event's details (SCRUM-25). In Planning, a change to the date, time, attendance, venue or equipment of an event with live arrangements first returns them for confirmation and saves nothing; once confirmed, the edit and their Needs Reconsideration flags are saved together (SCRUM-25 AC3, SCRUM-26 AC1). A layout, accessibility, date, time or attendance change outdates an Approved or awaiting safety check (SCRUM-166 AC13). | `event:edit` | `eventDetailsEditSchema` (lib/schemas/event-edit.ts) | AuditLog, Booking, Event, Reservation, SafetyCheck | Event row |
+| `getOperationalNotes` | An event's operational notes, oldest first, with author and time, and whether the viewer may add one (SCRUM-25 AC6). | `event-note:read` | an event id | nothing (read only) | — |
+| `addOperationalNote` | The assigned Coordinator, or Venue Staff or Technical Support once the event has a live booking or an equipment request, adds a permanent note (SCRUM-25 AC6). | `event-note:add` | `operationalNoteSchema` (lib/schemas/event-edit.ts) | EventOperationalNote | — |
+| `canEditEventDetails` | Whether the event page offers Edit details (SCRUM-25 AC1). | `event:edit` | an event id | nothing (read only) | — |
 
 ## `app/(app)/events/readiness-actions.ts`
 

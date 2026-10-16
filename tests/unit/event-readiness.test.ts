@@ -513,6 +513,108 @@ describe("getReadinessChecklist — SCRUM-110", () => {
   });
 });
 
+// SCRUM-26 AC12 — a flagged booking or reservation keeps the event from being
+// confirmed until its Coordinator resolves the flag.
+describe("getReadinessChecklist — flagged arrangements (SCRUM-26 AC12)", () => {
+  const REASON = "The event moved to 2 June.";
+  const flagged = <T extends object>(row: T, reason = REASON) =>
+    ({ ...row, needsReconsideration: true, reconsiderationReason: reason }) as T;
+
+  it("SCRUM-26 [AC12] TC-26-13: a flagged Approved booking makes the venue item incomplete with the reason, so the event isn't ready", async () => {
+    const result = await checklistOf(
+      planningEvent({ bookings: [flagged(booking("APPROVED"))] }),
+    );
+
+    expect(result?.ready).toBe(false);
+    expect(venue(result)).toEqual({
+      name: "Venue booking",
+      complete: false,
+      state: "Needs reconsideration",
+      reason: REASON,
+    });
+  });
+
+  it("SCRUM-26 [AC12] TC-26-13: a flagged Pending or Held booking counts too, even beside another approved one", async () => {
+    for (const status of ["PENDING", "HELD"]) {
+      const result = await checklistOf(
+        planningEvent({
+          bookings: [booking("APPROVED", 1), flagged(booking(status, 2))],
+        }),
+      );
+      expect(venue(result)).toMatchObject({
+        complete: false,
+        state: "Needs reconsideration",
+      });
+    }
+  });
+
+  it("SCRUM-26 [AC12] TC-26-13: a flag left on a booking that is no longer live doesn't count", async () => {
+    const result = await checklistOf(
+      planningEvent({
+        bookings: [booking("APPROVED", 2), flagged(booking("CANCELLED", 1))],
+      }),
+    );
+
+    expect(venue(result)).toMatchObject({ complete: true, state: "Approved" });
+  });
+
+  it("SCRUM-26 [AC12] TC-26-13: a flagged Confirmed reservation makes the equipment item incomplete, naming the equipment, with the first reason", async () => {
+    const withType = (equipmentId: string, type: string, quantity: number) =>
+      ({ ...reserved(equipmentId, quantity), equipment: { type } }) as Reservation;
+    const result = await checklistOf(
+      planningEvent({
+        equipmentRequests: [request("APPROVED", [projectors(2), mics(1)])],
+        reservations: [
+          flagged(withType("eqp_projector", "Projector", 1), "One projector broke."),
+          flagged(withType("eqp_projector", "Projector", 1)),
+          flagged(withType("eqp_mic", "Wireless Microphone", 1)),
+        ],
+      }),
+    );
+
+    expect(result?.ready).toBe(false);
+    expect(equipment(result)).toEqual({
+      name: "Equipment",
+      complete: false,
+      state: "Needs reconsideration: Projector, Wireless Microphone",
+      reason: "One projector broke.",
+    });
+  });
+
+  it("SCRUM-26 [AC12] TC-26-13: a flagged reservation shows even without a live equipment request; a cancelled one doesn't", async () => {
+    const result = await checklistOf(
+      planningEvent({
+        reservations: [
+          flagged({ ...reserved("eqp_projector", 1), equipment: { type: "Projector" } } as Reservation),
+        ],
+      }),
+    );
+    expect(equipment(result)).toMatchObject({
+      complete: false,
+      state: "Needs reconsideration: Projector",
+    });
+
+    const cancelled = await checklistOf(
+      planningEvent({
+        reservations: [flagged(reserved("eqp_projector", 1, { status: "CANCELLED" }))],
+      }),
+    );
+    expect(equipment(cancelled)).toBeUndefined();
+    expect(cancelled?.ready).toBe(true);
+  });
+
+  it("SCRUM-26 [AC12] TC-26-13: the Organiser sees that it needs reconsideration, but not the internal reason", async () => {
+    const result = (await checklistOf(
+      planningEvent({ bookings: [flagged(booking("APPROVED"))] }),
+    ))!;
+
+    expect(venue(withoutInternalReasons(result))).toMatchObject({
+      state: "Needs reconsideration",
+      reason: null,
+    });
+  });
+});
+
 describe("withoutInternalReasons — SCRUM-110 AC6", () => {
   it("SCRUM-110 [AC6] TC-110-12: keeps every item name and state but removes internal reasons", () => {
     const checklist: ReadinessChecklist = {

@@ -155,4 +155,44 @@ test.describe("SCRUM-41 — Raise and track a change request", () => {
     await expect(seen).toContainText("Raised by Coordinator for Rhea Requester");
     await expect(seen).toContainText("The organiser called: the sponsor withdrew.");
   });
+
+  // #162's review: the form stayed on "Submitting…", both buttons disabled,
+  // when the submission's request failed instead of answering.
+  test("SCRUM-41 regression: a submission that never reaches the server says so and can be sent again", async ({
+    browser,
+  }) => {
+    const name = `SCRUM-41 Expo ${STAMP}`;
+    const eventId = await planningEvent(name);
+    const page = await signedIn(browser, `${ORGANISER}@test.local`);
+    const dialog = await openEvent(page, name);
+    await dialog.getByRole("button", { name: "Request a change" }).click();
+    const form = dialog.getByRole("form", { name: "Request a change" });
+    await form.getByLabel("Expected attendance").fill("55");
+
+    // A server action is a POST with a Next-Action header. Drop the next one,
+    // the submission, as a lost connection would; the reads after it go through.
+    let dropNext = true;
+    await page.route("**/*", (route) => {
+      const request = route.request();
+      if (dropNext && request.method() === "POST" && request.headers()["next-action"]) {
+        dropNext = false;
+        return route.abort("failed");
+      }
+      return route.continue();
+    });
+    const submit = form.getByRole("button", { name: "Submit change request" });
+    await submit.click();
+
+    await expect(form.getByRole("alert")).toHaveText(
+      "The change request couldn't be sent. If it isn't in the list above, try again.",
+    );
+    await expect(submit).toBeEnabled();
+    await expect(form.getByRole("button", { name: "Discard changes" })).toBeEnabled();
+    expect(await prisma.eventChangeRequest.count({ where: { eventId } })).toBe(0);
+
+    // The same form, sent again, goes through.
+    await submit.click();
+    await expect(dialog.getByTestId("change-request")).toContainText("40 → 55");
+    expect(await prisma.eventChangeRequest.count({ where: { eventId } })).toBe(1);
+  });
 });

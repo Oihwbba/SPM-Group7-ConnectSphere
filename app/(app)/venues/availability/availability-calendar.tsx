@@ -2,6 +2,8 @@ import type { CSSProperties } from "react";
 import {
   CalendarCheck,
   CircleCheck,
+  Hourglass,
+  TimerReset,
   Users,
   Wrench,
   type LucideIcon,
@@ -18,6 +20,7 @@ import { UNAVAILABILITY_REASON_LABEL } from "@/lib/schemas/unavailability";
 import { cn } from "@/lib/utils";
 import {
   addDays,
+  occupiedPeriod,
   startOfSgDay,
   type AvailabilityDay,
   type BlockerDetails,
@@ -38,8 +41,17 @@ const DAY_STARTS = 7;
 /**
  * How each kind of stretch looks and reads. "Visibly different" is never
  * colour alone (SCRUM-36 AC3): each kind also has its own icon and label, and
- * unavailability is striped where a booking is plain.
+ * unavailability is striped where a booking is plain. A booking's setup and
+ * turnaround (SCRUM-159 AC7) are hatched with a dashed edge, so they read as
+ * part of the booking's time at the venue but not as the event itself.
  */
+const SETUP_TURNAROUND_CARD: CSSProperties = {
+  backgroundImage:
+    "repeating-linear-gradient(45deg, hsl(var(--primary) / 0.16) 0 2px, hsl(var(--primary) / 0.04) 2px 8px)",
+  borderLeftColor: "hsl(var(--primary) / 0.6)",
+  borderLeftStyle: "dashed",
+};
+
 const KIND: Record<
   DaySegment["kind"],
   {
@@ -67,6 +79,20 @@ const KIND: Record<
     },
     accent: "text-primary",
   },
+  setup: {
+    label: "Setup",
+    icon: Hourglass,
+    iconClass: "text-primary",
+    card: SETUP_TURNAROUND_CARD,
+    accent: "text-primary",
+  },
+  turnaround: {
+    label: "Turnaround",
+    icon: TimerReset,
+    iconClass: "text-primary",
+    card: SETUP_TURNAROUND_CARD,
+    accent: "text-primary",
+  },
   unavailability: {
     label: "Unavailable",
     icon: Wrench,
@@ -85,6 +111,9 @@ const REASON: Record<string, string> = UNAVAILABILITY_REASON_LABEL;
 function labelFor(segment: DaySegment): string {
   if (segment.kind === "unavailability") {
     return `${KIND.unavailability.label} (${REASON[segment.reason].toLowerCase()})`;
+  }
+  if (segment.kind === "setup" || segment.kind === "turnaround") {
+    return `${KIND[segment.kind].label} for ${segment.eventName}`;
   }
   // SCRUM-163 AC2: a hold shows as held until its expiry.
   if (segment.kind === "booking" && segment.heldUntil) {
@@ -326,6 +355,35 @@ function Stretch({
 }) {
   const words = summary(segment, day, wholeDay);
 
+  // SCRUM-159 AC7: a booking's setup or turnaround, drawn beside the booking.
+  if (segment.kind === "setup" || segment.kind === "turnaround") {
+    const { card, accent, icon: Icon, label } = KIND[segment.kind];
+    return (
+      <li data-kind={segment.kind} style={style}>
+        <div
+          className="flex h-full w-full items-start overflow-hidden rounded-md border-l-[3px] px-2 py-0.5"
+          style={card}
+        >
+          <span className="sr-only" data-summary>
+            {words}
+          </span>
+          {hours >= 0.4 && (
+            <span
+              aria-hidden
+              className={cn(
+                "flex items-center gap-1 text-[11px] font-medium",
+                accent,
+              )}
+            >
+              <Icon className="h-3 w-3 shrink-0" />
+              {label}
+            </span>
+          )}
+        </div>
+      </li>
+    );
+  }
+
   if (segment.kind === "free" || !segment.details) {
     return (
       <li data-kind={segment.kind} style={style}>
@@ -449,7 +507,12 @@ function DayList({
               const { icon: Icon, iconClass, card } = KIND[segment.kind];
               const words = summary(segment, day, segments.length === 1);
               const id = `list-${segmentKey(day, segment)}`;
-              if (segment.kind === "free" || !segment.details) {
+              if (
+                segment.kind === "free" ||
+                segment.kind === "setup" ||
+                segment.kind === "turnaround" ||
+                !segment.details
+              ) {
                 return (
                   <li
                     key={id}
@@ -501,6 +564,34 @@ function DayList({
 }
 
 /**
+ * SCRUM-159 AC7 — when the venue is busy around a booking, so its card says
+ * how long the venue is held, not only when the event runs.
+ */
+function SetupAndTurnaround({
+  details,
+}: {
+  details: Extract<BlockerDetails, { kind: "booking" }>;
+}) {
+  const occupied = occupiedPeriod(details, details);
+  return (
+    <>
+      {details.setupMinutes > 0 && (
+        <p>
+          Setup: {formatTime(occupied.startAt)} to {formatTime(details.startAt)}{" "}
+          ({details.setupMinutes} min)
+        </p>
+      )}
+      {details.turnaroundMinutes > 0 && (
+        <p>
+          Turnaround: {formatTime(details.endAt)} to {formatTime(occupied.endAt)}{" "}
+          ({details.turnaroundMinutes} min)
+        </p>
+      )}
+    </>
+  );
+}
+
+/**
  * The details card for a booking or unavailability. Shown while its stretch
  * is hovered or focused (or tapped, on a phone); screen readers hear it as
  * the stretch's description.
@@ -535,6 +626,7 @@ function Details({
             {details.heldUntil ? heldUntilLabel(details.heldUntil) : "Booked"}
           </p>
           <p>{period}</p>
+          <SetupAndTurnaround details={details} />
           <p>Requested by {details.requestedBy}</p>
           {details.attendance !== null && <p>{details.attendance} expected</p>}
           {details.layout && <p>Layout: {details.layout}</p>}
@@ -557,7 +649,9 @@ function Details({
 function Legend() {
   return (
     <ul aria-label="Legend" className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
-      {(["free", "booking", "unavailability"] as const).map((kind) => {
+      {(
+        ["free", "booking", "setup", "turnaround", "unavailability"] as const
+      ).map((kind) => {
         const { label, icon: Icon, iconClass, card } = KIND[kind];
         return (
           <li key={kind} className="flex items-center gap-1.5">

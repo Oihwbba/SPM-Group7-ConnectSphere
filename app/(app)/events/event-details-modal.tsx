@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -14,7 +15,10 @@ import { StatusBadge } from "@/components/events/status-badge";
 import { ClarificationPanel } from "@/components/events/clarification-panel";
 import { ChangeRequestPanel } from "@/components/events/change-request-panel";
 import { ReadinessChecklist } from "@/components/events/readiness-checklist";
+import { ReconsiderationPanel } from "@/components/events/reconsideration-panel";
 import { ConfirmedArrangements } from "@/components/events/confirmed-arrangements";
+import { EditDetailsDialog } from "@/components/events/edit-details-dialog";
+import { OperationalNotes } from "@/components/events/operational-notes";
 import { formatDate, formatDateTime } from "@/lib/datetime";
 import {
   Calendar,
@@ -49,6 +53,8 @@ export function EventDetailsModal({
   isCoordinator = false,
   isNoLongerAvailable = false,
 }: EventDetailsModalProps) {
+  // Resolving a flag changes the readiness checklist, so it is read again.
+  const [resolutions, setResolutions] = useState(0);
   if (!event) return null;
 
   return (
@@ -69,7 +75,11 @@ export function EventDetailsModal({
                   ` • Submitted ${formatDate(event.submittedAt)}`}
               </DialogDescription>
             </div>
-            <StatusBadge status={event.status} />
+            <div className="flex items-center gap-2">
+              {/* SCRUM-25: offered only to the assigned Coordinator. */}
+              {isCoordinator && <EditDetailsDialog event={event} />}
+              <StatusBadge status={event.status} />
+            </div>
           </div>
         </DialogHeader>
 
@@ -114,6 +124,9 @@ export function EventDetailsModal({
                         </CardContent>
           </Card>
 
+          {/* SCRUM-25 AC6: shows nothing to a user who may not read them */}
+          <OperationalNotes eventId={event.id} />
+
           {/* SCRUM-18: shows nothing if there's no clarification thread */}
           <ClarificationPanel event={event} isCoordinator={isCoordinator} />
 
@@ -123,7 +136,16 @@ export function EventDetailsModal({
           )}
 
           {/* SCRUM-110: what is still outstanding before the event can be confirmed */}
-          {event.status === "PLANNING" && <ReadinessChecklist eventId={event.id} />}
+          {/* SCRUM-26: flagged arrangements, for the assigned Coordinator to resolve */}
+          {(event.status === "PLANNING" || event.status === "CONFIRMED") && (
+            <ReconsiderationPanel
+              eventId={event.id}
+              onResolved={() => setResolutions((n) => n + 1)}
+            />
+          )}
+          {event.status === "PLANNING" && (
+            <ReadinessChecklist key={resolutions} eventId={event.id} />
+          )}
           {/* SCRUM-81: what a Confirmed event has secured */}
           {event.status === "CONFIRMED" && <ConfirmedArrangements eventId={event.id} />}
 
