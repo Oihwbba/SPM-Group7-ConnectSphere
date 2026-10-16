@@ -371,7 +371,7 @@ function RequestCard({
   children?: React.ReactNode;
 }) {
   const { venue } = booking;
-  const free = booking.blockers.length === 0;
+  const free = booking.blockers.length === 0 && !booking.outsideHours;
   const fits =
     booking.requestedAttendance === null ||
     booking.requestedAttendance <= venue.capacity;
@@ -425,11 +425,14 @@ function RequestCard({
             {free ? (
               <Mark ok>Free for this period</Mark>
             ) : (
-              booking.blockers.map((blocker) => (
-                <Mark key={blocker.id} ok={false}>
-                  {describeBlocker(blocker)}
-                </Mark>
-              ))
+              <>
+                {booking.outsideHours && <Mark ok={false}>{booking.outsideHours}</Mark>}
+                {booking.blockers.map((blocker) => (
+                  <Mark key={blocker.id} ok={false}>
+                    {describeBlocker(blocker)}
+                  </Mark>
+                ))}
+              </>
             )}
           </Fact>
           <Fact icon={Users} label="Attendance">

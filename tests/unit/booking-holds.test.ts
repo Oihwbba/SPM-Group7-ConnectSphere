@@ -492,8 +492,12 @@ describe("holdBookingRequest — SCRUM-163 AC1, AC2, AC5", () => {
 describe("confirmHold and releaseHold — SCRUM-163 AC3, AC4, AC7, AC8", () => {
   const held = (overrides: Record<string, unknown> = {}) => ({
     status: "HELD",
+    startAt: fromNow(2 * HOUR),
+    endAt: fromNow(4 * HOUR),
     holdExpiresAt: fromNow(HOUR),
     holdApprovedAt: fromNow(-HOUR),
+    // SCRUM-34 AC7: no hours recorded, so confirming isn't refused for them.
+    venue: { name: "Exhibition Hall", openingHours: [] },
     event: {
       organiserId: "usr_org",
       coordinatorId: "usr_cody",

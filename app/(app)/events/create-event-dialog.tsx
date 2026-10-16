@@ -46,6 +46,13 @@ import {
   PAST_DRAFT_DATES_MESSAGE,
   draftStartIsInPast,
 } from "@/lib/schemas/event";
+import {
+  addAccessibilityNeed,
+  PREDEFINED_VENUE_OPTIONS,
+  tagLabel,
+  withVenueLayouts,
+  type VenueOptions,
+} from "@/lib/venue-options";
 
 interface FormState {
   name: string;
@@ -168,7 +175,8 @@ export function CreateEventDialog({
       facilities: string[];
     }[];
     equipment: { id: string; type: string; totalQuantity: number }[];
-  }>({ venues: [], equipment: [] });
+    options: VenueOptions;
+  }>({ venues: [], equipment: [], options: PREDEFINED_VENUE_OPTIONS });
 
   const isReadOnly = Boolean(
     readOnly ||
@@ -726,7 +734,10 @@ export function CreateEventDialog({
             <div className="space-y-2">
               <Label htmlFor="preferredLayout">Preferred Room Layout *</Label>
               <div className="mb-2 flex flex-wrap gap-2">
-                {LAYOUT_OPTIONS.map((layout) => (
+                {withVenueLayouts(
+                  LAYOUT_OPTIONS,
+                  catalogues.options.supportedLayouts,
+                ).map((layout) => (
                   <Button
                     key={layout}
                     type="button"
@@ -759,6 +770,29 @@ export function CreateEventDialog({
 
             <div className="space-y-2">
               <Label htmlFor="accessibilityNeeds">Accessibility Needs *</Label>
+              {/* SCRUM-34 AC6: the features venues offer, Venue Staff's own included. */}
+              <div className="mb-2 flex flex-wrap gap-2">
+                {catalogues.options.accessibilityFeatures.map((feature) => (
+                  <Button
+                    key={feature}
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-8 text-xs"
+                    onClick={() =>
+                      updateField(
+                        "accessibilityNeeds",
+                        addAccessibilityNeed(
+                          formData.accessibilityNeeds,
+                          tagLabel(feature),
+                        ),
+                      )
+                    }
+                  >
+                    {tagLabel(feature)}
+                  </Button>
+                ))}
+              </div>
               <Textarea
                 id="accessibilityNeeds"
                 placeholder="State any wheelchair access, special physical seating, mobility, or facility arrangements required for attendees..."
