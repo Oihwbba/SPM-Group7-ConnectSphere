@@ -1,6 +1,11 @@
 import { prisma } from "@/lib/db";
 import { BOOKABLE_EVENT_STATUSES } from "@/lib/schemas/booking";
-import { findVenueBlockers, occupiedPeriod } from "@/lib/venue-availability";
+import {
+  findCompetingRequests,
+  findVenueBlockers,
+  occupiedPeriod,
+  submittedBefore,
+} from "@/lib/venue-availability";
 import { liveHoldWhere } from "@/lib/booking-holds";
 
 /**
@@ -115,6 +120,18 @@ export async function getPendingBookingQueue(now = new Date()) {
           now,
         )
       ).filter((blocker) => blocker.id !== booking.id),
+      // SCRUM-134 AC1: the other Pending requests it competes with, each
+      // marked if it came first and so is decided first (AC2).
+      competing:
+        booking.status === "PENDING"
+          ? (
+              await findCompetingRequests(
+                prisma,
+                { ...booking, venueId: booking.venue.id },
+                booking.venue,
+              )
+            ).map((other) => ({ ...other, earlier: submittedBefore(other, booking) }))
+          : [],
     })),
   );
 }

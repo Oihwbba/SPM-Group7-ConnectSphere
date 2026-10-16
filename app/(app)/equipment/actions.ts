@@ -27,6 +27,11 @@ import {
   requestReservationSchema,
 } from "@/lib/schemas/reservation";
 import { flagArrangements } from "@/lib/reconsideration";
+import {
+  competingLines,
+  openRequestLines,
+  submittedFirst,
+} from "@/lib/equipment/competing";
 
 type Availability = { available: number; total: number; committed: number };
 type RequestReserveOutcome =
@@ -331,6 +336,7 @@ export async function reserveEquipmentRequest(
           select: {
             eventId: true,
             updatedAt: true,
+            createdAt: true,
             event: {
               select: {
                 startAt: true,
@@ -441,6 +447,7 @@ export async function reserveEquipmentRequest(
         // AC 4 — every row is checked before anything is written, so a short
         // row reports itself and the rows that would fit are not reserved alone.
         const shortfalls: Record<string, string[]> = {};
+        const free: number[] = [];
         lines.forEach((line, index) => {
           const { available, total } = summariseAvailability({
             total: totals.get(line.equipmentId)!,
@@ -453,6 +460,7 @@ export async function reserveEquipmentRequest(
             startAt,
             endAt,
           });
+          free[index] = available;
           if (line.quantity > available)
             shortfalls[`lines.${index}.quantity`] = [
               `Only ${available} of ${total} free for this period — ${line.quantity - available} short.`,
@@ -463,6 +471,35 @@ export async function reserveEquipmentRequest(
             error:
               "Nothing was reserved: not enough is free for the rows marked below.",
             fieldErrors: shortfalls,
+          };
+
+        // SCRUM-134 AC5 — first come, first served: what is reserved must
+        // leave enough for each earlier open request whose event overlaps,
+        // until it is reserved in full, rejected or cancelled. Read with the
+        // equipment rows locked, so nothing is reserved for it in between.
+        const openLines = await openRequestLines(tx);
+        const me = { requestId, submittedAt: request.createdAt };
+        const waiting: Record<string, string[]> = {};
+        lines.forEach((line, index) => {
+          const earlier = competingLines(openLines, requestId, line.equipmentId, {
+            startAt,
+            endAt,
+          }).filter((other) => submittedFirst(other, me) && other.reserved < other.quantity);
+          const needed = earlier.reduce(
+            (sum, other) => sum + other.quantity - other.reserved,
+            0,
+          );
+          const left = free[index] - line.quantity;
+          if (earlier.length > 0 && left < needed)
+            waiting[`lines.${index}.quantity`] = [
+              `Reserving ${line.quantity} would leave ${left} free, but an earlier request still needs ${needed}: "${earlier[0].eventName}", submitted ${formatDateTime(earlier[0].submittedAt)}. Reserve it first, or wait until it is rejected or cancelled.`,
+            ];
+        });
+        if (Object.keys(waiting).length)
+          return {
+            error:
+              "Nothing was reserved: an earlier request comes first for the rows marked below.",
+            fieldErrors: waiting,
           };
 
         await tx.reservation.createMany({
