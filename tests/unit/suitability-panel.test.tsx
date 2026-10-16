@@ -116,7 +116,12 @@ describe("BookingQueue — SCRUM-40 AC10", () => {
     requestedLayout: null,
     requestNotes: null,
     createdAt: new Date("2035-01-01T01:00:00.000Z"),
-    event: { name: "Board Dinner" },
+    event: {
+      name: "Board Dinner",
+      venueRequirements: null,
+      preferredLayout: null,
+      accessibilityNeeds: null,
+    },
     requestedBy: { name: "Cody Coordinator", email: "coordinator@test.local" },
     venue: {
       id: "ven_boardroom",

@@ -17,6 +17,10 @@ import { ChangeRequestPanel } from "@/components/events/change-request-panel";
 import { ReadinessChecklist } from "@/components/events/readiness-checklist";
 import { ReconsiderationPanel } from "@/components/events/reconsideration-panel";
 import { ConfirmedArrangements } from "@/components/events/confirmed-arrangements";
+import {
+  OrganiserEquipmentAnswer,
+  OrganiserVenueAnswers,
+} from "@/components/events/organiser-answers";
 import { EditDetailsDialog } from "@/components/events/edit-details-dialog";
 import { OperationalNotes } from "@/components/events/operational-notes";
 import { formatDate, formatDateTime } from "@/lib/datetime";
@@ -53,8 +57,9 @@ export function EventDetailsModal({
   isCoordinator = false,
   isNoLongerAvailable = false,
 }: EventDetailsModalProps) {
-  // Resolving a flag changes the readiness checklist, so it is read again.
-  const [resolutions, setResolutions] = useState(0);
+  // Resolving a flag, or an edit that flags one (SCRUM-25 AC3), changes the
+  // flagged arrangements and the readiness checklist, so both are read again.
+  const [reloads, setReloads] = useState(0);
   if (!event) return null;
 
   return (
@@ -77,7 +82,12 @@ export function EventDetailsModal({
             </div>
             <div className="flex items-center gap-2">
               {/* SCRUM-25: offered only to the assigned Coordinator. */}
-              {isCoordinator && <EditDetailsDialog event={event} />}
+              {isCoordinator && (
+                <EditDetailsDialog
+                  event={event}
+                  onSaved={() => setReloads((n) => n + 1)}
+                />
+              )}
               <StatusBadge status={event.status} />
             </div>
           </div>
@@ -139,12 +149,13 @@ export function EventDetailsModal({
           {/* SCRUM-26: flagged arrangements, for the assigned Coordinator to resolve */}
           {(event.status === "PLANNING" || event.status === "CONFIRMED") && (
             <ReconsiderationPanel
+              key={`flags-${reloads}`}
               eventId={event.id}
-              onResolved={() => setResolutions((n) => n + 1)}
+              onResolved={() => setReloads((n) => n + 1)}
             />
           )}
           {event.status === "PLANNING" && (
-            <ReadinessChecklist key={resolutions} eventId={event.id} />
+            <ReadinessChecklist key={`checklist-${reloads}`} eventId={event.id} />
           )}
           {/* SCRUM-81: what a Confirmed event has secured */}
           {event.status === "CONFIRMED" && <ConfirmedArrangements eventId={event.id} />}
@@ -215,56 +226,11 @@ export function EventDetailsModal({
                 Accessibility Requirements
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3 p-4 text-xs">
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <div>
-                  <span className="font-semibold text-muted-foreground">
-                    Venue Requirements:
-                  </span>
-                  <p className="mt-0.5 text-foreground">
-                    {event.venueRequirements || "—"}
-                  </p>
-                </div>
-                <div>
-                  <span className="font-semibold text-muted-foreground">
-                    Preferred Room Layout:
-                  </span>
-                  <p className="mt-0.5 font-medium text-foreground">
-                    {event.preferredLayout || "—"}
-                  </p>
-                </div>
-              </div>
-
-              {/* Existing requests (and the seed) still carry facilities even
-                  though the create form no longer asks for them, so a
-                  coordinator must still be able to see what was requested. */}
-              {event.requiredFacilities &&
-                event.requiredFacilities.length > 0 && (
-                  <div>
-                    <span className="font-semibold text-muted-foreground">
-                      Required Facilities:
-                    </span>
-                    <div className="mt-1 flex flex-wrap gap-1.5">
-                      {event.requiredFacilities.map((facility) => (
-                        <span
-                          key={facility}
-                          className="rounded border bg-primary/10 px-2 py-0.5 text-[11px] font-medium capitalize text-primary"
-                        >
-                          {facility.replace("-", " ")}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-              <div>
-                <span className="font-semibold text-muted-foreground">
-                  Accessibility Needs:
-                </span>
-                <p className="mt-0.5 text-foreground">
-                  {event.accessibilityNeeds || "—"}
-                </p>
-              </div>
+            <CardContent className="p-4">
+              {/* SCRUM-170 AC5: the Organiser's answers exactly as entered, the
+                  same for every event. Required Facilities is not shown: the
+                  Coordinator enters facilities on each venue request. */}
+              <OrganiserVenueAnswers answers={event} />
             </CardContent>
           </Card>
 
@@ -276,13 +242,10 @@ export function EventDetailsModal({
                 Technical Support
               </CardTitle>
             </CardHeader>
-            <CardContent className="p-4 text-xs">
-              <span className="font-semibold text-muted-foreground">
-                Equipment Requirements:
-              </span>
-              <p className="mt-0.5 whitespace-pre-wrap text-foreground">
-                {event.equipmentRequirements || "—"}
-              </p>
+            <CardContent className="p-4">
+              <OrganiserEquipmentAnswer
+                equipmentRequirements={event.equipmentRequirements}
+              />
             </CardContent>
           </Card>
 

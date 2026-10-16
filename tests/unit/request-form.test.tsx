@@ -2,7 +2,6 @@ import { describe, it, expect, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 
 import {
-  layoutOption,
   liveAnswer,
   LIVE_CHECK_FAILED_MESSAGE,
   RequestForm,
@@ -37,8 +36,9 @@ const event = {
   startAt: new Date("2035-03-10T01:00:00.000Z"),
   endAt: new Date("2035-03-10T05:00:00.000Z"),
   expectedAttendance: 120,
-  requiredFacilities: [],
+  venueRequirements: null,
   preferredLayout: null,
+  accessibilityNeeds: null,
   organiserId: "usr_organiser",
   coordinatorId: "usr_coordinator",
   status: "PLANNING" as const,
@@ -149,23 +149,6 @@ describe("SCRUM-50 [AC3, AC4, AC5] TC-50-13: liveAnswer, the live check", () => 
         fieldErrors: { venueId: ["Choose a venue."] },
       }),
     ).toEqual({ state: "error", message: "Choose a venue." });
-  });
-});
-
-describe("SCRUM-50 [AC1] TC-50-12: layoutOption", () => {
-  const options = ["banquet", "classroom", "theatre"];
-
-  it("SCRUM-50 [AC1] TC-50-12: the event's preferred layout is pre-selected whatever its case or spacing", () => {
-    expect(layoutOption("classroom", options)).toBe("classroom");
-    expect(layoutOption("Classroom", options)).toBe("classroom");
-    expect(layoutOption("  THEATRE ", options)).toBe("theatre");
-  });
-
-  it("SCRUM-50 [AC1] TC-50-12: a layout no venue offers, or none at all, pre-selects nothing", () => {
-    expect(layoutOption("boardroom", options)).toBe("");
-    expect(layoutOption("", options)).toBe("");
-    expect(layoutOption(null, options)).toBe("");
-    expect(layoutOption(undefined, options)).toBe("");
   });
 });
 

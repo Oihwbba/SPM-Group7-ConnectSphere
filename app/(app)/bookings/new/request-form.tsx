@@ -59,6 +59,7 @@ import type {
   RequestableVenue,
 } from "../queries";
 import { SuitabilityPanel } from "./suitability-panel";
+import { OrganiserVenueAnswers } from "@/components/events/organiser-answers";
 
 type Outcome =
   | { kind: "created" | "existing"; booking: BookingSummary }
@@ -91,20 +92,6 @@ export function venuesForLayout<T extends { supportedLayouts: string[] }>(
   return layout
     ? venues.filter((venue) => venue.supportedLayouts.includes(layout))
     : venues;
-}
-
-/**
- * SCRUM-50 — the layout option to pre-select for an event's preferred
- * layout. Venues list layouts in lower case, but an Organiser may have typed
- * "Classroom", so they are matched ignoring case and surrounding spaces. Only
- * a layout some venue offers can be pre-selected; otherwise none is.
- */
-export function layoutOption(
-  preferred: string | null | undefined,
-  options: string[],
-): string {
-  const wanted = preferred?.trim().toLowerCase();
-  return (wanted && options.find((o) => o.toLowerCase() === wanted)) || "";
 }
 
 /** What the live availability check knows about the venue and period chosen. */
@@ -149,7 +136,8 @@ const emptySubscribe = () => () => {};
 /**
  * SCRUM-50 — the Coordinator's request form. Choosing an event fills in its
  * period and expected attendance, which cannot be changed here (AC1), and
- * pre-selects its facilities and layout, which can. The room
+ * shows the Organiser's venue and accessibility answers read-only; the
+ * Coordinator enters the layout and facilities (SCRUM-170 AC2). The room
  * layout comes before the venue and narrows the venues offered. Once a venue
  * and period are chosen, the server is asked whether the venue is free and the
  * answer is shown before submitting; a taken venue disables Submit. The
@@ -180,10 +168,7 @@ export function RequestForm({
   );
 
   const facilityOptions = Array.from(
-    new Set([
-      ...venues.flatMap((v) => v.facilities),
-      ...events.flatMap((e) => e.requiredFacilities),
-    ]),
+    new Set(venues.flatMap((v) => v.facilities)),
   ).sort();
   const layoutOptions = Array.from(
     new Set(venues.flatMap((v) => v.supportedLayouts)),
@@ -206,9 +191,10 @@ export function RequestForm({
       ? venueId
       : "";
 
+  // SCRUM-170 AC2: the Organiser's answers are free text, shown beside the
+  // form; the layout and facilities are the Coordinator's to enter.
   function chooseEvent(eventId: string) {
     const event = events.find((e) => e.id === eventId);
-    const layout = layoutOption(event?.preferredLayout, layoutOptions);
     const period = event && eventBookingPeriod(event);
     setForm((prev) => ({
       ...prev,
@@ -217,12 +203,10 @@ export function RequestForm({
         start: utcToSgWallTime(period?.startAt),
         end: utcToSgWallTime(period?.endAt),
         attendance: event.expectedAttendance?.toString() ?? "",
-        facilities: event.requiredFacilities,
-        layout,
-        venueId: venueFor(prev.venueId, layout),
       }),
     }));
   }
+  const chosenEvent = events.find((e) => e.id === form.eventId);
 
   function chooseLayout(layout: string) {
     setForm((prev) => ({
@@ -392,6 +376,19 @@ export function RequestForm({
                 </Select>
                 {fieldError("eventId")}
               </div>
+
+              {chosenEvent && (
+                <div className="space-y-2 rounded-md border bg-muted/30 p-3 sm:col-span-2">
+                  <p className="text-xs font-medium">
+                    What the Organiser asked for
+                  </p>
+                  <OrganiserVenueAnswers answers={chosenEvent} />
+                  <p className="text-xs text-muted-foreground">
+                    Choose the layout and facilities yourself; these answers
+                    aren&apos;t copied into the request.
+                  </p>
+                </div>
+              )}
 
               <div className="space-y-2">
                 <Label htmlFor="layout">Room layout</Label>

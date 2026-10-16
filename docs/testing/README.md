@@ -87,10 +87,10 @@ defect, e.g. `regression: a blank rejection reason was accepted`.
 
 ### Written from the criteria and existing tests (SCRUM-176)
 
-These Sprint 1 and 2 stories were Done before they had a specification. Each
-was written on 2026-10-12 from its acceptance criteria, and maps every
-criterion to the tests that already existed, by their current titles. Those
-titles predate the `SCRUM-n [ACx] TC-n-xx` format; renaming them waits until
+These Sprint 1 and 2 stories, and the Sprint 3 task SCRUM-168, were Done
+before they had a specification. Each was written on 2026-10-12 (SCRUM-168 on
+2026-10-13) from its acceptance criteria, and maps every criterion to the
+tests that already existed, by their current titles. Those titles predate the `SCRUM-n [ACx] TC-n-xx` format; renaming them waits until
 the open pull requests that change the same test files have merged.
 
 | Story | Owner | Test cases | Status |
@@ -100,12 +100,12 @@ the open pull requests that change the same test files have merged.
 | [SCRUM-15](SCRUM-15.md) | Felicia Or | 12 | Every case automated; AC 9's marking for correction isn't built, since the requirements are free text |
 | [SCRUM-16](SCRUM-16.md) | Felicia Or | 5 | Automated except TC-16-05 (AC 8), which is manual |
 | [SCRUM-17](SCRUM-17.md) | Hann Qian | 3 | Every case automated |
-| [SCRUM-18](SCRUM-18.md) | Hann Qian | 10 | Every case automated |
+| [SCRUM-18](SCRUM-18.md) | Hann Qian | 11 | Every case automated |
 | [SCRUM-19](SCRUM-19.md) | Hann Qian | 6 | Every case automated; approval now ends in Planning (SCRUM-81) |
 | [SCRUM-20](SCRUM-20.md) | Hann Qian | 5 | Every case automated; describes automatic assignment until SCRUM-165 |
 | [SCRUM-23](SCRUM-23.md) | Jun Bin | 2 | Every case automated |
 | [SCRUM-24](SCRUM-24.md) | Jun Bin | 6 | Automated except TC-24-06 (AC 5, waiting on SCRUM-128) and TC-24-03's message |
-| [SCRUM-29](SCRUM-29.md) | Jin Hong | 7 | Every case automated; reserving is SCRUM-155's |
+| [SCRUM-29](SCRUM-29.md) | Jin Hong | 8 | Every case automated; reserving is SCRUM-155's |
 | [SCRUM-30](SCRUM-30.md) | Jin Hong | 7 | Every case automated |
 | [SCRUM-65](SCRUM-65.md) | Caylern Goh | 4 | Every case automated |
 | [SCRUM-66](SCRUM-66.md) | Caylern Goh | 4 | Every case automated |
@@ -116,28 +116,29 @@ the open pull requests that change the same test files have merged.
 | [SCRUM-73](SCRUM-73.md) | Hann Qian | 8 | Every case automated |
 | [SCRUM-74](SCRUM-74.md) | Hann Qian | 6 | Every case automated |
 | [SCRUM-76](SCRUM-76.md) | Hann Qian | 5 | Every case automated |
-| [SCRUM-84](SCRUM-84.md) | Felicia Or | 8 | Automated except TC-84-04's message and button |
+| [SCRUM-84](SCRUM-84.md) | Felicia Or | 9 | Automated except TC-84-04's message and button |
 | [SCRUM-129](SCRUM-129.md) | Felicia Or | 6 | Every case automated |
+| [SCRUM-168](SCRUM-168.md) | Felicia Or | 3 | Automated at phone width; TC-168-01 at desktop width is manual |
 
 ### Written with the story
 
 | Story | Owner | Test cases | Status |
 |---|---|---|---|
 | [SCRUM-25](SCRUM-25.md) | Felicia Or | 20 | Every case automated (unit, integration for the row lock, the warning and flags, the safety check and the permanent notes, e2e for both journeys); AC 2's safety check can be tried in the app once SCRUM-166 adds requesting one |
-| [SCRUM-27](SCRUM-27.md) | Jin Hong | 15 | Written with the story; every case automated |
+| [SCRUM-27](SCRUM-27.md) | Jin Hong | 16 | Written with the story; every case automated |
 | [SCRUM-28](SCRUM-28.md) | Jin Hong | 11 | Written with the story; every case automated |
 | [SCRUM-31](SCRUM-31.md) | Jun Bin | 11 | Written from the acceptance criteria and existing tests; TC-31-04, -05 and -09 are partly manual |
 | [SCRUM-36](SCRUM-36.md) | Caylern Goh | 9 | Automated; a real screen-reader pass is manual |
 | [SCRUM-37](SCRUM-37.md) | Caylern Goh | 7 | Every case automated |
 | [SCRUM-40](SCRUM-40.md) | Felicia Or | 11 | Automated except TC-40-07 (AC 7, the venue detail view), manual until SCRUM-34 adds that page (unit, integration for the one-per-event judgement and the advisory rule, e2e for the journey); the search-results half of AC 7 is SCRUM-38's |
-| [SCRUM-41](SCRUM-41.md) | Jin Hong | 16 | Every case automated (unit, integration for the lock, index and rejection, e2e for both journeys); AC 8's cancellation half waits for SCRUM-82 |
+| [SCRUM-41](SCRUM-41.md) | Jin Hong | 17 | Every case automated (unit, integration for the lock, index and rejection, e2e for both journeys); AC 8's cancellation half waits for SCRUM-82 |
 | [SCRUM-45](SCRUM-45.md) | Jin Hong | 8 | Every case automated; the triggers of unbuilt stories (AC 5–7, 9, 10 and the Lead's assignment) are listed as still to do |
 | [SCRUM-48](SCRUM-48.md) | Jin Hong | 15 | Every case automated except TC-48-08 and TC-48-10, blocked by SCRUM-166 and SCRUM-121 |
 | [SCRUM-50](SCRUM-50.md) | Caylern Goh | 15 | Every case automated |
 | [SCRUM-52](SCRUM-52.md) | Caylern Goh | 6 | Every case automated |
 | [SCRUM-53](SCRUM-53.md) | Caylern Goh | 9 | Automated except TC-53-09 (AC 9), which is manual; AC 3 and AC 10 point to other cases |
 | [SCRUM-81](SCRUM-81.md) | Jun Bin | 13 | Every case automated (unit, integration for the simultaneous confirm, e2e for the journey) |
-| [SCRUM-110](SCRUM-110.md) | Jun Bin | 15 | Every case automated (unit, and e2e for the page) |
+| [SCRUM-110](SCRUM-110.md) | Jun Bin | 15 | Every case automated (unit, and e2e for the page); AC 3 is superseded by SCRUM-170 AC 4 (TC-110-01 and TC-110-09 note it) |
 | [SCRUM-108](SCRUM-108.md) | Jun Bin | 14 | Every case automated (unit, e2e for both journeys); AC 6, 8 and 10 point to existing tests |
 | [SCRUM-124](SCRUM-124.md) | Jin Hong | 2 | Grows with the story: AC 4's hold notices (with SCRUM-163) and AC 7 (with SCRUM-41) so far; AC 4's approve and reject notices wait for SCRUM-53, and the withdrawal, line-change and reminder cases are still to add |
 | [SCRUM-126](SCRUM-126.md) | Jun Bin | 10 | Every case automated (unit, integration for the constraint, migration and simultaneous clicks, e2e for the journey) |

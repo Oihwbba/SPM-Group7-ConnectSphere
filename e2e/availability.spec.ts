@@ -380,6 +380,9 @@ test.describe("SCRUM-36 / SCRUM-37 — venue availability calendar and recorded 
         fullPage: false,
       });
     }
+    // The calendar refreshes itself; left open, it would load the server
+    // for every later test (SCRUM-182).
+    await context.close();
   });
 
   test("SCRUM-36 [AC2] TC-36-09: an open calendar picks up a booking approved elsewhere, without a reload", async ({
