@@ -93,7 +93,7 @@ export async function getRegistrationControl(
 ): Promise<ActionResult<RegistrationControl | null>> {
   const session = await auth();
   const user = session?.user;
-  if (!user) return err(NOT_FOUND);
+  if (!user || !can(user, "registration:control")) return err(NOT_FOUND);
 
   const event = await prisma.event.findUnique({
     where: { id: eventId },

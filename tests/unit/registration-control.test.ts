@@ -497,4 +497,14 @@ describe("getRegistrationControl — SCRUM-75 AC6", () => {
     });
     expect(mockCount).not.toHaveBeenCalled();
   });
+
+  it("SCRUM-75 [AC6] TC-75-08: a role that can't control registration is refused before the event is read", async () => {
+    mockAuth.mockResolvedValue(sessionFor("VENUE_STAFF", "usr_venuestaff"));
+
+    expect(await getRegistrationControl("evt1")).toEqual({
+      ok: false,
+      error: "Event not found.",
+    });
+    expect(mockFindUnique).not.toHaveBeenCalled();
+  });
 });
