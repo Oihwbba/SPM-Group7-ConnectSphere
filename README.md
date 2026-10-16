@@ -146,6 +146,7 @@ Every seeded account uses the password **`Password123!`**:
 | `attendee3@test.local` | Attendee | Has one withdrawn registration (SCRUM-77) |
 | `attendee4@test.local` | Attendee | Deliberately unregistered, so free to take the last place |
 | `safety@test.local` | Safety Officer | Reviews operational safety checks (SCRUM-166) |
+| `lead@test.local` | Event Coordinator Lead | Oversees incoming requests and assigns them to Coordinators (SCRUM-164; the queue and reassignment arrive with SCRUM-165 and SCRUM-21) |
 
 ---
 

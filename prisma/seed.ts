@@ -74,6 +74,7 @@ const U = {
   attendee3: "usr_attendee_3",
   attendee4: "usr_attendee_4",
   safetyOfficer: "usr_safetyofficer",
+  coordinatorLead: "usr_coordinatorlead",
 } as const;
 
 const V = {
@@ -131,6 +132,8 @@ async function seedUsers(passwordHash: string) {
     { id: U.attendee4, email: "attendee4@test.local", name: "Ade Attendee", role: Role.ATTENDEE },
     // SCRUM-166: reviews operational safety checks.
     { id: U.safetyOfficer, email: "safety@test.local", name: "Sam Safety", role: Role.SAFETY_OFFICER },
+    // SCRUM-164: the Event Coordinator Lead (Week 7 change 5).
+    { id: U.coordinatorLead, email: "lead@test.local", name: "Lee Lead", role: Role.COORDINATOR_LEAD },
   ];
 
   for (const u of users) {
