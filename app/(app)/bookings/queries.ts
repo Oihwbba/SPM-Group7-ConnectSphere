@@ -21,8 +21,10 @@ export async function getBookableEvents(coordinatorId: string) {
       startAt: true,
       endAt: true,
       expectedAttendance: true,
-      requiredFacilities: true,
+      // SCRUM-170 AC2: shown read-only on the request form, never pre-filled.
+      venueRequirements: true,
       preferredLayout: true,
+      accessibilityNeeds: true,
     },
     orderBy: { startAt: "asc" },
   });
@@ -75,8 +77,16 @@ export async function getPendingBookingQueue(now = new Date()) {
       requestedLayout: true,
       requestNotes: true,
       createdAt: true,
+      // SCRUM-170 AC2: Venue Staff see the Organiser's answers on the request.
+      event: {
+        select: {
+          name: true,
+          venueRequirements: true,
+          preferredLayout: true,
+          accessibilityNeeds: true,
+        },
+      },
       eventId: true,
-      event: { select: { name: true } },
       requestedBy: { select: { name: true, email: true } },
       venue: {
         select: {
