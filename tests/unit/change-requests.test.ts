@@ -487,7 +487,7 @@ describe("raiseChangeRequest — SCRUM-41", () => {
     expect(tx.eventChangeRequest.create.mock.calls[0][0].data.requestedById).toBe(COORDINATOR);
   });
 
-  it("SCRUM-41 [AC10] TC-41-14, SCRUM-165 [AC8]: a Coordinator who isn't assigned is refused as if the event were missing, and nothing is locked", async () => {
+  it("SCRUM-41 [AC10] TC-41-14, SCRUM-165 [AC8] TC-165-11: a Coordinator who isn't assigned is refused as if the event were missing, and nothing is locked", async () => {
     signIn("COORDINATOR", "usr_other_coord", { status: "UNDER_REVIEW", coordinatorId: null });
 
     const result = await raiseChangeRequest({

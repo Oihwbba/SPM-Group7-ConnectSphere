@@ -88,7 +88,7 @@ describe("can — relationship gate", () => {
     ).toBe(false);
   });
 
-  it("SCRUM-165 [AC8]: a Coordinator can't open or decide a submitted request nobody is assigned to", () => {
+  it("SCRUM-165 [AC8] TC-165-11: a Coordinator can't open or decide a submitted request nobody is assigned to", () => {
     const unassigned = { ...eventOwnedByA, coordinatorId: null };
     expect(can(coordinator, "event:read", unassigned)).toBe(false);
     expect(can(coordinator, "event:review", unassigned)).toBe(false);
@@ -162,7 +162,7 @@ describe("can — confirming an event (SCRUM-81)", () => {
     expect(can(attendee, "event:confirm", planning)).toBe(false);
   });
 
-  it("SCRUM-81, SCRUM-165 [AC8]: no Coordinator may confirm or open an event nobody is assigned to", () => {
+  it("SCRUM-81, SCRUM-165 [AC8] TC-165-11: no Coordinator may confirm or open an event nobody is assigned to", () => {
     const unassigned = { ...planning, coordinatorId: null };
     expect(can(coordinator, "event:confirm", unassigned)).toBe(false);
     expect(can(coordinator, "event:read", unassigned)).toBe(false);
@@ -369,7 +369,7 @@ describe("can — the Lead's assignment (SCRUM-165)", () => {
     status: "SUBMITTED" as const,
   };
 
-  it("SCRUM-165 [AC10]: only a Lead may assign, and only a Submitted request with no Coordinator", () => {
+  it("SCRUM-165 [AC10] TC-165-13: only a Lead may assign, and only a Submitted request with no Coordinator", () => {
     expect(can(lead, "event:assign", waiting)).toBe(true);
     for (const user of [
       organiserA,
@@ -383,19 +383,19 @@ describe("can — the Lead's assignment (SCRUM-165)", () => {
     }
   });
 
-  it("SCRUM-165 [AC7]: a request that already has a Coordinator can't be assigned again; that is reassignment (SCRUM-21)", () => {
+  it("SCRUM-165 [AC7] TC-165-10: a request that already has a Coordinator can't be assigned again; that is reassignment (SCRUM-21)", () => {
     expect(
       can(lead, "event:assign", { ...waiting, coordinatorId: "coord" }),
     ).toBe(false);
   });
 
-  it("SCRUM-165 [AC1]: only Submitted requests are in the queue, not drafts or decided events", () => {
+  it("SCRUM-165 [AC1] TC-165-01: only Submitted requests are in the queue, not drafts or decided events", () => {
     for (const status of ["DRAFT", "UNDER_REVIEW", "REJECTED"] as const) {
       expect(can(lead, "event:assign", { ...waiting, status })).toBe(false);
     }
   });
 
-  it("SCRUM-164 [AC2], SCRUM-165: the Lead still can't decide, plan or edit an event", () => {
+  it("SCRUM-164 [AC2], SCRUM-165 [AC10] TC-165-13: the Lead still can't decide, plan or edit an event", () => {
     for (const action of [
       "event:review",
       "event:confirm",

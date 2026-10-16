@@ -1,10 +1,9 @@
 import { test, expect, type Page } from "@playwright/test";
 
 /**
- * SCRUM-164 — the Event Coordinator Lead signs in with its own role. Its queue,
- * reassignment and all-events pages arrive with SCRUM-165, SCRUM-21 and
- * SCRUM-141, so until then it lands on Notifications, the only thing its role
- * allows. The Safety Officer's sign-in is covered by SCRUM-166's spec.
+ * SCRUM-164 — the Event Coordinator Lead signs in with its own role and lands
+ * on its home page, the Unassigned queue (SCRUM-165). The Safety Officer's
+ * sign-in is covered by SCRUM-166's spec.
  */
 async function signInAsLead(page: Page) {
   await page.goto("/login");
@@ -20,14 +19,15 @@ test.describe("SCRUM-164 — Event Coordinator Lead role", () => {
   }) => {
     await signInAsLead(page);
 
-    await expect(page).toHaveURL(/\/notifications$/);
+    await expect(page).toHaveURL(/\/queue$/);
     await expect(
       page.getByRole("button", { name: "Open user menu" }),
     ).toContainText("Event Coordinator Lead");
 
     const rail = page.locator("aside");
+    await expect(rail.locator('a[href="/queue"]')).toHaveCount(1);
     await expect(rail.locator('a[href="/notifications"]')).toHaveCount(1);
-    await expect(rail.locator("a[href]")).toHaveCount(1);
+    await expect(rail.locator("a[href]")).toHaveCount(2);
   });
 
   for (const url of [

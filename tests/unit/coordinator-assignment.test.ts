@@ -20,7 +20,7 @@ function row(id: string, active: number) {
 }
 
 describe("getCoordinatorLoads — SCRUM-165 AC4", () => {
-  it("[Positive] AC4: lists every current Coordinator with their number of active events", async () => {
+  it("SCRUM-165 [AC4] TC-165-05: [Positive] lists every current Coordinator with their number of active events", async () => {
     mockFindMany.mockResolvedValue([row("c1", 3), row("c2", 1)]);
 
     expect(await getCoordinatorLoads(db as never)).toEqual([
@@ -29,7 +29,7 @@ describe("getCoordinatorLoads — SCRUM-165 AC4", () => {
     ]);
   });
 
-  it("[Positive] AC4: only people who hold the Coordinator role now, and only active events count as load", async () => {
+  it("SCRUM-165 [AC4] TC-165-05: [Positive] only people who hold the Coordinator role now, and only active events count as load", async () => {
     mockFindMany.mockResolvedValue([]);
 
     await getCoordinatorLoads(db as never);
@@ -50,17 +50,17 @@ describe("suggestCoordinator — SCRUM-165 AC4", () => {
     activeEvents,
   });
 
-  it("[Positive] AC4: suggests the least-loaded Coordinator", () => {
+  it("SCRUM-165 [AC4] TC-165-05: [Positive] suggests the least-loaded Coordinator", () => {
     expect(
       suggestCoordinator([load("c1", 3), load("c2", 1), load("c3", 2)]),
     ).toBe("c2");
   });
 
-  it("[Boundary] on a tie, suggests the first listed (the earliest created)", () => {
+  it("SCRUM-165 [AC4] TC-165-05: [Boundary] on a tie, suggests the first listed (the earliest created)", () => {
     expect(suggestCoordinator([load("c1", 1), load("c2", 1)])).toBe("c1");
   });
 
-  it("[Boundary] suggests nobody when there are no Coordinators", () => {
+  it("SCRUM-165 [AC4] TC-165-05: [Boundary] suggests nobody when there are no Coordinators", () => {
     expect(suggestCoordinator([])).toBeNull();
   });
 });

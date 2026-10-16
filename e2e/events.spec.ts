@@ -760,13 +760,32 @@ const usesLocalDatabase = /@(localhost|127\.0\.0\.1)[:/]/.test(
 );
 
 test.describe("User Story 23 & 24 — Event Status View & Consistency Journey", () => {
-  test.beforeEach(async () => {
+  test.afterAll(async () => {
     if (!usesLocalDatabase) return;
-    // Reset both events used by tests so CI retries stay green
+    // Back to the seed: unassigned and waiting in the Lead's queue.
     await prisma.event.updateMany({
       where: { id: "evt_submitted" },
       data: {
         status: "SUBMITTED",
+        coordinatorId: null,
+        decisionReason: null,
+        decidedAt: null,
+        decidedById: null,
+      },
+    });
+  });
+
+  test.beforeEach(async () => {
+    if (!usesLocalDatabase) return;
+    // Reset both events used by tests so CI retries stay green. Since
+    // SCRUM-165 an unassigned request waits for the Lead, so these journeys
+    // start from "Alumni Homecoming" as the Lead would leave it: assigned to
+    // coordinator@ and not yet decided.
+    await prisma.event.updateMany({
+      where: { id: "evt_submitted" },
+      data: {
+        status: "SUBMITTED",
+        coordinatorId: "usr_coordinator",
         decisionReason: null,
         decidedAt: null,
         decidedById: null,

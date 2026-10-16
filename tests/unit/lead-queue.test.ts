@@ -66,22 +66,22 @@ beforeEach(() => {
 describe("isOverdue — SCRUM-165 AC2", () => {
   const now = new Date("2031-06-01T00:00:00Z");
 
-  it("[Positive] AC2: a request whose start has passed is overdue", () => {
+  it("SCRUM-165 [AC2] TC-165-02: [Positive] a request whose start has passed is overdue", () => {
     expect(isOverdue(new Date("2031-05-31T00:00:00Z"), now)).toBe(true);
   });
 
-  it("[Boundary] AC2: a request starting exactly now has started, so it is overdue", () => {
+  it("SCRUM-165 [AC2] TC-165-03: [Boundary] a request starting exactly now has started, so it is overdue", () => {
     expect(isOverdue(now, now)).toBe(true);
   });
 
-  it("[Negative] AC2: a request starting later isn't overdue, nor one with no start", () => {
+  it("SCRUM-165 [AC2] TC-165-03: [Boundary] a request starting later isn't overdue, nor one with no start", () => {
     expect(isOverdue(new Date("2031-06-02T00:00:00Z"), now)).toBe(false);
     expect(isOverdue(null, now)).toBe(false);
   });
 });
 
 describe("getUnassignedQueue — SCRUM-165 AC2, AC10", () => {
-  it("[Positive] AC2: lists Submitted requests with no Coordinator, oldest submission first, with the fields the Lead needs", async () => {
+  it("SCRUM-165 [AC2] TC-165-02: [Positive] lists Submitted requests with no Coordinator, oldest submission first, with the fields the Lead needs", async () => {
     mockAuth.mockResolvedValue(lead());
     mockFindMany.mockResolvedValue([
       { id: "e1", startAt: past, organiser: { name: "Olivia" } },
@@ -116,7 +116,7 @@ describe("getUnassignedQueue — SCRUM-165 AC2, AC10", () => {
     "ATTENDEE",
     "SAFETY_OFFICER",
   ] as const)(
-    "[Security gate] AC10: a %s sees no queue, before any query runs",
+    "SCRUM-165 [AC10] TC-165-13: [Negative] a %s sees no queue, before any query runs",
     async (role) => {
       mockAuth.mockResolvedValue(sessionFor(role, "usr_other"));
 
@@ -125,7 +125,7 @@ describe("getUnassignedQueue — SCRUM-165 AC2, AC10", () => {
     },
   );
 
-  it("[Negative] a signed-out caller sees no queue", async () => {
+  it("SCRUM-165 [AC10] TC-165-13: [Negative] a signed-out caller sees no queue", async () => {
     mockAuth.mockResolvedValue(null);
 
     expect(await getUnassignedQueue()).toEqual([]);
@@ -152,7 +152,7 @@ describe("getQueueRequest — SCRUM-165 AC3, AC4", () => {
     ]);
   });
 
-  it("[Positive] AC3, AC4: a Lead sees the request's basic information with each Coordinator's active events and the least-loaded suggested", async () => {
+  it("SCRUM-165 [AC3, AC4] TC-165-04, TC-165-05: [Positive] a Lead sees the request's basic information with each Coordinator's active events and the least-loaded suggested", async () => {
     mockAuth.mockResolvedValue(lead());
 
     const found = await getQueueRequest("evt1");
@@ -165,7 +165,7 @@ describe("getQueueRequest — SCRUM-165 AC3, AC4", () => {
     expect(found?.suggestedId).toBe("usr_cara");
   });
 
-  it("[Negative] AC7: the event's own Organiser is never offered, even if they also coordinate", async () => {
+  it("SCRUM-165 [AC7] TC-165-09: [Negative] the event's own Organiser is never offered, even if they also coordinate", async () => {
     mockAuth.mockResolvedValue(lead());
     mockUserFindMany.mockResolvedValue([
       { id: "usr_org", name: "Olivia", _count: { coordinatedEvents: 0 } },
@@ -178,7 +178,7 @@ describe("getQueueRequest — SCRUM-165 AC3, AC4", () => {
     expect(found?.suggestedId).toBe("usr_cody");
   });
 
-  it("[Negative] AC7: a request that already has a Coordinator isn't in the queue, so it isn't shown", async () => {
+  it("SCRUM-165 [AC7] TC-165-10: [Negative] a request that already has a Coordinator isn't in the queue, so it isn't shown", async () => {
     mockAuth.mockResolvedValue(lead());
     mockFindUnique.mockResolvedValue({
       ...waiting,
@@ -189,21 +189,21 @@ describe("getQueueRequest — SCRUM-165 AC3, AC4", () => {
     expect(await getQueueRequest("evt1")).toBeNull();
   });
 
-  it("[Negative] a missing request returns null, like any other refusal", async () => {
+  it("SCRUM-165 [AC10] TC-165-13: [Negative] a missing request returns null, like any other refusal", async () => {
     mockAuth.mockResolvedValue(lead());
     mockFindUnique.mockResolvedValue(null);
 
     expect(await getQueueRequest("evt_missing")).toBeNull();
   });
 
-  it("[Security gate] AC10: a Coordinator can't open a queued request, before any query runs", async () => {
+  it("SCRUM-165 [AC10] TC-165-13: [Negative] a Coordinator can't open a queued request, before any query runs", async () => {
     mockAuth.mockResolvedValue(sessionFor("COORDINATOR", "usr_cody"));
 
     expect(await getQueueRequest("evt1")).toBeNull();
     expect(mockFindUnique).not.toHaveBeenCalled();
   });
 
-  it("[Negative] a signed-out caller is refused", async () => {
+  it("SCRUM-165 [AC10] TC-165-13: [Negative] a signed-out caller is refused", async () => {
     mockAuth.mockResolvedValue(null);
 
     expect(await getQueueRequest("evt1")).toBeNull();
@@ -214,7 +214,7 @@ describe("assignCoordinator — SCRUM-165", () => {
   const assign = () =>
     assignCoordinator({ eventId: "evt1", coordinatorId: "usr_cody" });
 
-  it("[Positive] AC5, AC11: the event gets the Coordinator, moves to Under Review and records the supervising Lead in one write", async () => {
+  it("SCRUM-165 [AC5, AC11] TC-165-07, TC-165-14: [Positive] the event gets the Coordinator, moves to Under Review and records the supervising Lead in one write", async () => {
     mockAuth.mockResolvedValue(lead());
 
     expect(await assign()).toEqual({
@@ -231,7 +231,7 @@ describe("assignCoordinator — SCRUM-165", () => {
     });
   });
 
-  it("[Positive] AC5: the Coordinator and the Organiser are notified", async () => {
+  it("SCRUM-165 [AC5] TC-165-07: [Positive] the Coordinator and the Organiser are notified", async () => {
     mockAuth.mockResolvedValue(lead());
 
     await assign();
@@ -246,7 +246,7 @@ describe("assignCoordinator — SCRUM-165", () => {
     ]);
   });
 
-  it("[Positive] the assignment is recorded with the Lead who made it", async () => {
+  it("SCRUM-165 [AC5] TC-165-07: [Positive] the assignment is recorded with the Lead who made it", async () => {
     mockAuth.mockResolvedValue(lead());
 
     await assign();
@@ -261,7 +261,7 @@ describe("assignCoordinator — SCRUM-165", () => {
     });
   });
 
-  it("[Positive] AC4: only someone who holds the Coordinator role now can be assigned", async () => {
+  it("SCRUM-165 [AC4] TC-165-06: [Positive] only someone who holds the Coordinator role now can be assigned", async () => {
     mockAuth.mockResolvedValue(lead());
 
     await assign();
@@ -273,7 +273,7 @@ describe("assignCoordinator — SCRUM-165", () => {
     );
   });
 
-  it("[Negative] AC4: choosing someone who isn't a Coordinator is refused and nothing is written", async () => {
+  it("SCRUM-165 [AC4] TC-165-06: [Negative] choosing someone who isn't a Coordinator is refused and nothing is written", async () => {
     mockAuth.mockResolvedValue(lead());
     tx.user.findFirst.mockResolvedValue(null);
 
@@ -284,7 +284,7 @@ describe("assignCoordinator — SCRUM-165", () => {
     expect(tx.event.updateMany).not.toHaveBeenCalled();
   });
 
-  it("[Negative] AC7: the event's own Organiser can't be its Coordinator", async () => {
+  it("SCRUM-165 [AC7] TC-165-09: [Negative] the event's own Organiser can't be its Coordinator", async () => {
     mockAuth.mockResolvedValue(lead());
     tx.user.findFirst.mockResolvedValue({ id: "usr_org", name: "Olivia" });
 
@@ -298,7 +298,7 @@ describe("assignCoordinator — SCRUM-165", () => {
     expect(tx.event.updateMany).not.toHaveBeenCalled();
   });
 
-  it("[Negative] AC6, AC7: a request someone else assigned first is refused, naming who it went to, and nothing else is written", async () => {
+  it("SCRUM-165 [AC6, AC7] TC-165-08, TC-165-10: [Negative] a request someone else assigned first is refused, naming who it went to, and nothing else is written", async () => {
     mockAuth.mockResolvedValue(lead());
     tx.event.updateMany.mockResolvedValue({ count: 0 });
     tx.event.findUnique
@@ -321,7 +321,7 @@ describe("assignCoordinator — SCRUM-165", () => {
     expect(tx.notification.createMany).not.toHaveBeenCalled();
   });
 
-  it("[Negative] a request that left the queue without a Coordinator (e.g. withdrawn) is refused", async () => {
+  it("SCRUM-165 [AC7] TC-165-10: [Negative] a request that left the queue without a Coordinator is refused", async () => {
     mockAuth.mockResolvedValue(lead());
     tx.event.updateMany.mockResolvedValue({ count: 0 });
     tx.event.findUnique
@@ -343,7 +343,7 @@ describe("assignCoordinator — SCRUM-165", () => {
     null,
     { id: "evt1", name: "Draft", organiserId: "usr_org", status: "DRAFT" },
   ])(
-    "[Negative] a missing request or a draft looks not found (%#)",
+    "SCRUM-165 [AC10] TC-165-13: [Negative] a missing request or a draft looks not found (%#)",
     async (row) => {
       mockAuth.mockResolvedValue(lead());
       tx.event.findUnique.mockResolvedValue(row);
@@ -357,7 +357,7 @@ describe("assignCoordinator — SCRUM-165", () => {
     },
   );
 
-  it("[Negative] a missing Coordinator choice is refused before anything is read", async () => {
+  it("SCRUM-165 [AC4] TC-165-06: [Negative] a missing Coordinator choice is refused before anything is read", async () => {
     mockAuth.mockResolvedValue(lead());
 
     const result = await assignCoordinator({
@@ -375,7 +375,7 @@ describe("assignCoordinator — SCRUM-165", () => {
     "VENUE_STAFF",
     "SAFETY_OFFICER",
   ] as const)(
-    "[Security gate] AC10: a %s can't assign, before anything is read",
+    "SCRUM-165 [AC10] TC-165-13: [Negative] a %s can't assign, before anything is read",
     async (role) => {
       mockAuth.mockResolvedValue(sessionFor(role, "usr_other"));
 

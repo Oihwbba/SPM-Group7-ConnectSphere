@@ -171,7 +171,7 @@ describe("navigation follows a permission change — SCRUM-66", () => {
 // page they have until SCRUM-164 gives them their own.
 describe("navigation for the Week 7 roles — SCRUM-172", () => {
   // SCRUM-165 gave the Lead their own page, the Unassigned queue, which comes first.
-  it("SCRUM-172 [AC1] TC-172-01, SCRUM-164 [AC1], SCRUM-165 [AC10]: COORDINATOR_LEAD is labelled and lands on the Unassigned queue", () => {
+  it("SCRUM-172 [AC1] TC-172-01, SCRUM-164 [AC1], SCRUM-165 [AC10] TC-165-13: COORDINATOR_LEAD is labelled and lands on the Unassigned queue", () => {
     expect(ROLE_LABEL.COORDINATOR_LEAD).toBe("Event Coordinator Lead");
     expect(hrefsFor("COORDINATOR_LEAD")).toEqual(["/queue", "/notifications"]);
     expect(LANDING_ROUTE_BY_ROLE.COORDINATOR_LEAD).toBe("/queue");

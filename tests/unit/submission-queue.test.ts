@@ -57,7 +57,7 @@ beforeEach(() => {
 });
 
 describe("submitEventRequest — SCRUM-165 AC1 the request waits in the queue", () => {
-  it("SCRUM-165 [AC1]: a new request stays Submitted with no Coordinator", async () => {
+  it("SCRUM-165 [AC1] TC-165-01: [Positive] a new request stays Submitted with no Coordinator", async () => {
     const result = await submitEventRequest(validInput);
 
     expect(result).toEqual({ ok: true, data: { id: "evt_new" } });
@@ -72,7 +72,7 @@ describe("submitEventRequest — SCRUM-165 AC1 the request waits in the queue", 
     expect(tx.event.update).not.toHaveBeenCalled();
   });
 
-  it("SCRUM-165 [AC1]: nobody is recorded as assigned, so nothing waits for the Lead's choice", async () => {
+  it("SCRUM-165 [AC1] TC-165-01: [Positive] nobody is recorded as assigned until the Lead chooses", async () => {
     await submitEventRequest(validInput);
 
     expect(tx.auditLog.create).not.toHaveBeenCalledWith(

@@ -22,7 +22,7 @@ import {
 // unchanged. tx.user.findMany defaults to [] (no coordinators), so
 // auto-assignment is a no-op in these tests; it's covered separately in
 // tests/unit/coordinator-assignment.test.ts and
-// tests/unit/event-auto-assignment.test.ts.
+// tests/unit/submission-queue.test.ts.
 const tx = vi.hoisted(() => ({
   event: {
     findUnique: vi.fn(),
@@ -83,7 +83,7 @@ beforeEach(() => {
 });
 
 describe("transitionEventStatus — SCRUM-24 single guarded gate", () => {
-  it("SCRUM-165 [AC8]: a Coordinator can't approve a request nobody has been assigned to; it waits for the Lead", async () => {
+  it("SCRUM-165 [AC8] TC-165-11: a Coordinator can't approve a request nobody has been assigned to; it waits for the Lead", async () => {
     mockAuth.mockResolvedValue(sessionFor("COORDINATOR", "usr_coord"));
     mockFindUnique.mockResolvedValue(eventRow());
 

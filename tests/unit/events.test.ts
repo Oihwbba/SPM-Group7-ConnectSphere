@@ -66,7 +66,7 @@ const mockTransaction = prisma.$transaction as unknown as Mock;
 // unchanged. tx.user.findMany resolves to [] (no coordinators), so
 // auto-assignment is a no-op here; that logic has its own coverage in
 // tests/unit/coordinator-assignment.test.ts and
-// tests/unit/event-auto-assignment.test.ts.
+// tests/unit/submission-queue.test.ts.
 const mockTxExecuteRaw = vi.fn();
 const mockTxQueryRaw = vi.fn();
 const mockTxUserFindMany = vi.fn();
@@ -474,7 +474,7 @@ describe("User Story 13 — Event Request Creation", () => {
       );
     });
 
-    it("SCRUM-21, SCRUM-165 [AC9]: resubmitting a rejected event whose coordinator lost the role returns it to the queue, recording who held it", async () => {
+    it("SCRUM-21, SCRUM-165 [AC9] TC-165-12: resubmitting a rejected event whose coordinator lost the role returns it to the queue, recording who held it", async () => {
       mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
       mockFindFirst.mockResolvedValue({
         id: "evt_rejected",
@@ -1196,7 +1196,7 @@ describe("User Story 16 — Distinguish drafts from submitted requests", () => {
     );
   });
 
-  it("SCRUM-16 [AC4 - Coordinator View Exclusion], SCRUM-165 [AC8]: the coordinator query lists only their own events, so no draft or unassigned request", async () => {
+  it("SCRUM-16 [AC4 - Coordinator View Exclusion], SCRUM-165 [AC8] TC-165-11: the coordinator query lists only their own events, so no draft or unassigned request", async () => {
     const mockFindMany = vi.fn().mockResolvedValue([
       { id: "evt_sub", status: "SUBMITTED" },
     ]);

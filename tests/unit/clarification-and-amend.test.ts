@@ -410,7 +410,7 @@ describe("respondToClarification — SCRUM-108 AC2–AC5, AC14", () => {
 });
 
 describe("transitionEventStatus — SCRUM-165 AC8 an unassigned request", () => {
-  it("SCRUM-165 [AC8] (supersedes SCRUM-108 AC11): a Coordinator can't reject a request nobody was assigned to; it waits for the Lead", async () => {
+  it("SCRUM-165 [AC8] TC-165-11 (supersedes SCRUM-108 AC11): a Coordinator can't reject a request nobody was assigned to; it waits for the Lead", async () => {
     mockAuth.mockResolvedValue(coordinator());
     tx.event.findUnique.mockResolvedValue({
       id: "evt1",
@@ -472,7 +472,7 @@ describe("submitEventRequest — SCRUM-108 AC9–AC12, AC14 resubmission", () =>
 
   beforeEach(() => mockAuth.mockResolvedValue(organiser()));
 
-  it("SCRUM-108 [AC9, AC11, AC14] TC-108-05: the amended request goes back to the same Coordinator, without automatic assignment, and the resubmission is recorded", async () => {
+  it("SCRUM-108 [AC9, AC11, AC14] TC-108-05, SCRUM-165 [AC9] TC-165-12: the amended request goes back to the same Coordinator, and the resubmission is recorded", async () => {
     tx.event.findFirst.mockResolvedValue(rejectedRow("usr_coord"));
     tx.user.findFirst.mockResolvedValue({ id: "usr_coord" });
 
@@ -581,7 +581,7 @@ describe("submitEventRequest — SCRUM-108 AC9–AC12, AC14 resubmission", () =>
     },
     { when: "it was rejected before anyone was assigned", coordinatorId: null },
   ])(
-    "SCRUM-165 [AC9] (supersedes SCRUM-108 AC11): when $when, the resubmitted request waits in the Lead's queue, Submitted with no Coordinator",
+    "SCRUM-165 [AC9] TC-165-12 (supersedes SCRUM-108 AC11): when $when, the resubmitted request waits in the Lead's queue, Submitted with no Coordinator",
     async ({ coordinatorId }) => {
       tx.event.findFirst.mockResolvedValue(rejectedRow(coordinatorId));
       tx.user.findFirst.mockResolvedValue(null);
@@ -598,7 +598,7 @@ describe("submitEventRequest — SCRUM-108 AC9–AC12, AC14 resubmission", () =>
     },
   );
 
-  it("SCRUM-108 [AC14] TC-108-14, SCRUM-165 [AC9]: when its Coordinator lost the role, the resubmitted request returns to the queue and the history records who held it", async () => {
+  it("SCRUM-108 [AC14] TC-108-14, SCRUM-165 [AC9] TC-165-12: when its Coordinator lost the role, the resubmitted request returns to the queue and the history records who held it", async () => {
     tx.event.findFirst.mockResolvedValue(rejectedRow("usr_old"));
     tx.user.findFirst.mockResolvedValue(null);
     tx.user.findMany.mockResolvedValue([]);

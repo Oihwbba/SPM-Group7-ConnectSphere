@@ -24,7 +24,7 @@ beforeEach(() => {
 });
 
 describe("CoordinatorEvents — SCRUM-17 access scope", () => {
-  it("[Positive] AC, SCRUM-165 [AC8]: queries only the events assigned to this coordinator", async () => {
+  it("[Positive] AC, SCRUM-165 [AC8] TC-165-11: queries only the events assigned to this coordinator", async () => {
     await CoordinatorEvents({ coordinatorId: "usr_coord" });
 
     expect(mockFindMany).toHaveBeenCalledWith({
@@ -60,7 +60,7 @@ describe("CoordinatorEvents — SCRUM-17 access scope", () => {
     ).toBe(false);
   });
 
-  it("[Negative] SCRUM-165 [AC8]: an unclaimed Submitted event is not viewable by a coordinator; it waits in the Lead's queue", () => {
+  it("[Negative] SCRUM-165 [AC8] TC-165-11: an unclaimed Submitted event is not viewable by a coordinator; it waits in the Lead's queue", () => {
     const unclaimedSubmitted = {
       kind: "event" as const,
       organiserId: "usr_org",

@@ -34,7 +34,7 @@ beforeEach(() => {
 // SCRUM-165 supersedes SCRUM-69 AC1 and AC4: an unassigned request no longer
 // shows in every Coordinator's list; it waits in the Lead's queue.
 describe("SCRUM-69 — View only the events assigned to me", () => {
-  it("[Positive] AC1, SCRUM-165 [AC8]: my list is exactly the events assigned to me", async () => {
+  it("[Positive] AC1, SCRUM-165 [AC8] TC-165-11: my list is exactly the events assigned to me", async () => {
     await getCoordinatorEvents(cody.id);
 
     expect(mockFindMany.mock.calls[0][0].where).toEqual({
@@ -75,7 +75,7 @@ describe("SCRUM-69 — View only the events assigned to me", () => {
     expect(can(cara, "event:read", handedOver)).toBe(true);
   });
 
-  it("[Negative] SCRUM-165 [AC8] (supersedes AC4): a Submitted event with no Coordinator is in no Coordinator's list; it waits for the Lead", () => {
+  it("[Negative] SCRUM-165 [AC8] TC-165-11 (supersedes AC4): a Submitted event with no Coordinator is in no Coordinator's list; it waits for the Lead", () => {
     const unassigned = eventFor(null, "SUBMITTED");
 
     for (const coordinator of [cody, cara]) {
