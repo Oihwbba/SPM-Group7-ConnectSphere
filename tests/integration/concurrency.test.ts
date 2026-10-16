@@ -619,7 +619,7 @@ describe.skipIf(!usesLocalDatabase)("concurrency — confirming an event (SCRUM-
         eventId,
         status: "APPROVED",
         requestedById: "usr_coordinator",
-        decidedById: "usr_safety",
+        decidedById: "usr_safetyofficer",
         decidedAt: new Date(),
       },
     });

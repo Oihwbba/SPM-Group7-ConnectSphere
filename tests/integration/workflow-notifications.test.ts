@@ -204,7 +204,7 @@ describe.skipIf(!usesLocalDatabase)(
           eventId: ready.id,
           status: "APPROVED",
           requestedById: COORDINATOR,
-          decidedById: "usr_safety",
+          decidedById: "usr_safetyofficer",
           decidedAt: new Date(),
         },
       });

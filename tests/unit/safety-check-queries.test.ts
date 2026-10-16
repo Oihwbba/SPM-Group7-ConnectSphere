@@ -17,7 +17,7 @@ vi.mock("@/lib/db", () => ({
 const mockFindMany = prisma.safetyCheck.findMany as unknown as Mock;
 const mockFindUnique = prisma.safetyCheck.findUnique as unknown as Mock;
 
-const officer: SessionUser = { id: "usr_safety", role: "SAFETY_OFFICER" };
+const officer: SessionUser = { id: "usr_safetyofficer", role: "SAFETY_OFFICER" };
 const START = new Date("2032-05-01T02:00:00Z");
 const END = new Date("2032-05-01T04:00:00Z");
 
@@ -58,7 +58,7 @@ describe("getSafetyCheckQueue — SCRUM-166 AC1, AC6", () => {
 
   it("SCRUM-166 [AC6] TC-166-09: a check for an event the officer organises or coordinates is left out", async () => {
     mockFindMany.mockResolvedValue([
-      { id: "chk_own", createdAt: START, requestedBy: { name: "Cody" }, event: event({ coordinatorId: "usr_safety" }) },
+      { id: "chk_own", createdAt: START, requestedBy: { name: "Cody" }, event: event({ coordinatorId: "usr_safetyofficer" }) },
       { id: "chk_ok", createdAt: START, requestedBy: { name: "Cody" }, event: event() },
     ]);
 
@@ -233,7 +233,7 @@ describe("getSafetyCheckReview — SCRUM-166 AC2, AC5, AC6", () => {
     expect(await getSafetyCheckReview(officer, "chk_x")).toBeNull();
 
     const own = row();
-    own.event = { ...own.event, organiserId: "usr_safety" };
+    own.event = { ...own.event, organiserId: "usr_safetyofficer" };
     mockFindUnique.mockResolvedValue(own);
     expect(await getSafetyCheckReview(officer, "chk_2")).toBeNull();
   });

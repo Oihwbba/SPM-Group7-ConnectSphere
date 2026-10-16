@@ -63,7 +63,7 @@ const NOTE = "The fire exit is blocked by the stage.";
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mockAuth.mockResolvedValue(sessionFor("SAFETY_OFFICER", "usr_safety"));
+  mockAuth.mockResolvedValue(sessionFor("SAFETY_OFFICER", "usr_safetyofficer"));
   mockCheck.mockResolvedValue(checkRow());
   tx.event.findUniqueOrThrow.mockResolvedValue({ status: "PLANNING" });
   tx.booking.count.mockResolvedValue(1);
@@ -90,7 +90,7 @@ describe("recordSafetyCheckOutcome — outcomes (SCRUM-166 AC3, AC5, AC10, AC11,
       data: {
         status: "APPROVED",
         note: null,
-        decidedById: "usr_safety",
+        decidedById: "usr_safetyofficer",
         decidedAt: expect.any(Date),
       },
     });
@@ -100,7 +100,7 @@ describe("recordSafetyCheckOutcome — outcomes (SCRUM-166 AC3, AC5, AC10, AC11,
       entityType: "SafetyCheck",
       entityId: "chk_1",
       action: "APPROVED",
-      actorId: "usr_safety",
+      actorId: "usr_safetyofficer",
       oldValue: "AWAITING_REVIEW",
       newValue: "APPROVED",
     });
@@ -249,8 +249,8 @@ describe("recordSafetyCheckOutcome — refusals (SCRUM-166 AC3, AC6–AC8, AC13)
         await recordSafetyCheckOutcome({ checkId: "chk_1", outcome: "APPROVED" }),
       ).toEqual({ ok: false, error: "You do not have permission to do that." });
     }
-    mockAuth.mockResolvedValue(sessionFor("SAFETY_OFFICER", "usr_safety"));
-    for (const own of [{ organiserId: "usr_safety" }, { coordinatorId: "usr_safety" }]) {
+    mockAuth.mockResolvedValue(sessionFor("SAFETY_OFFICER", "usr_safetyofficer"));
+    for (const own of [{ organiserId: "usr_safetyofficer" }, { coordinatorId: "usr_safetyofficer" }]) {
       mockCheck.mockResolvedValue(checkRow(own));
       expect(
         await recordSafetyCheckOutcome({ checkId: "chk_1", outcome: "APPROVED" }),

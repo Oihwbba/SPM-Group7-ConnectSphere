@@ -118,7 +118,7 @@ test.describe("SCRUM-81 — Move an approved event through planning to confirmed
         eventId,
         status: "APPROVED",
         requestedById: "usr_coordinator",
-        decidedById: "usr_safety",
+        decidedById: "usr_safetyofficer",
         decidedAt: new Date(),
       },
     });

@@ -27,7 +27,7 @@ const session = (id: string, role: string): Session =>
 const signInAs = (id: string, role: string) =>
   (auth as unknown as Mock).mockResolvedValue(session(id, role));
 const asCoordinator = () => signInAs("usr_coordinator", "COORDINATOR");
-const asOfficer = (id = "usr_safety") => signInAs(id, "SAFETY_OFFICER");
+const asOfficer = (id = "usr_safetyofficer") => signInAs(id, "SAFETY_OFFICER");
 
 // One day per test, far enough ahead that nothing seeded overlaps it.
 const day = (n: number) => ({
@@ -136,7 +136,7 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-166 — operational safety check", ()
       where: { eventId, type: "SAFETY_CHECK_REQUESTED" },
       select: { userId: true },
     });
-    expect(notified.map((n) => n.userId).sort()).toEqual(["usr_safety", SECOND_OFFICER].sort());
+    expect(notified.map((n) => n.userId).sort()).toEqual(["usr_safetyofficer", SECOND_OFFICER].sort());
     asCoordinator();
     expect(await confirmEvent({ eventId })).toMatchObject({
       ok: false,
@@ -163,7 +163,7 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-166 — operational safety check", ()
     const checkId = await requested(eventId);
 
     (auth as unknown as Mock)
-      .mockResolvedValueOnce(session("usr_safety", "SAFETY_OFFICER"))
+      .mockResolvedValueOnce(session("usr_safetyofficer", "SAFETY_OFFICER"))
       .mockResolvedValueOnce(session(SECOND_OFFICER, "SAFETY_OFFICER"));
     const results = await Promise.all([
       recordSafetyCheckOutcome({ checkId, outcome: "APPROVED" }),
@@ -197,7 +197,7 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-166 — operational safety check", ()
     expect(await prisma.safetyCheck.findUniqueOrThrow({ where: { id: checkId } })).toMatchObject({
       status: "CHANGES_REQUESTED",
       note: "Move the stage away from the east exit.",
-      decidedById: "usr_safety",
+      decidedById: "usr_safetyofficer",
     });
     expect(await prisma.safetyCheckArrangement.count({ where: { checkId, bookingId } })).toBe(1);
     expect(await prisma.booking.findUniqueOrThrow({ where: { id: bookingId } })).toMatchObject({

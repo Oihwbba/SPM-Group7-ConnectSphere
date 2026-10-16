@@ -73,7 +73,7 @@ const U = {
   attendee2: "usr_attendee_2",
   attendee3: "usr_attendee_3",
   attendee4: "usr_attendee_4",
-  safetyOfficer: "usr_safety",
+  safetyOfficer: "usr_safetyofficer",
 } as const;
 
 const V = {
