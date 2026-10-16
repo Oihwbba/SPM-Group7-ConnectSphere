@@ -1054,6 +1054,8 @@ test.describe("SCRUM-19 — Reject with a reason, then amend and resubmit", () =
         accessibilityNeeds: "None",
         preferredLayout: "Classroom",
         equipmentRequirements: "None",
+        // SCRUM-171 AC2: resubmitting needs Registration needed answered.
+        registrationRequired: true,
         registrationNotes: "None",
         submittedAt: new Date(),
       },
