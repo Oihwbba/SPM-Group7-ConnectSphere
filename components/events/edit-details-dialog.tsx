@@ -118,24 +118,69 @@ function savedMessage({ changed, flagged, safetyCheckOutdated }: EventDetailsSav
     .join(" ");
 }
 
+type SaveReply = Awaited<ReturnType<typeof updateEventDetails>>;
+type FlagWarning = { arrangements: Arrangement[]; message: string | null };
+
+/**
+ * What the dialog does with a save's reply. `null` means none arrived (an
+ * unexpected error or a lost connection), so the edit may or may not have
+ * been saved. Exported for its unit test: this suite has no DOM to click in.
+ */
+export function showSaveReply(
+  reply: SaveReply | null,
+  ui: {
+    showError: (error: string, fieldErrors: Record<string, string[]>) => void;
+    showWarning: (warning: FlagWarning) => void;
+    close: (message: string) => void;
+    refresh: () => void;
+    onSaved?: () => void;
+  },
+) {
+  if (reply === null) {
+    ui.showError(
+      "The details couldn't be saved — check your connection and try again.",
+      {},
+    );
+    ui.refresh();
+    ui.onSaved?.();
+    return;
+  }
+  if (!reply.ok) {
+    ui.showError(reply.error, reply.fieldErrors ?? {});
+    return;
+  }
+  if ("confirm" in reply.data) {
+    ui.showWarning({ arrangements: reply.data.confirm, message: reply.data.message });
+    return;
+  }
+  ui.close(savedMessage(reply.data));
+  ui.refresh();
+  ui.onSaved?.();
+}
+
 /**
  * SCRUM-25 — the event's assigned Coordinator edits its details while it is
  * Under Review or in Planning. Offered only to that Coordinator; the server
  * decides again on save. In Planning, a change to date, time, attendance,
  * venue or equipment that would flag the event's arrangements is saved only
  * once the Coordinator has seen which ones and confirmed (AC3, SCRUM-26 AC1).
+ * `onSaved` runs after a save that may have landed, so the view around the
+ * dialog can read again what the edit may have flagged.
  */
-export function EditDetailsDialog({ event }: { event: Event }) {
+export function EditDetailsDialog({
+  event,
+  onSaved,
+}: {
+  event: Event;
+  onSaved?: () => void;
+}) {
   const [allowed, setAllowed] = useState(false);
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<Form>(() => formFrom(event));
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
   const [error, setError] = useState<string | null>(null);
   // SCRUM-26 AC1: what saving will flag, once the server has said so.
-  const [toFlag, setToFlag] = useState<{
-    arrangements: Arrangement[];
-    message: string | null;
-  } | null>(null);
+  const [toFlag, setToFlag] = useState<FlagWarning | null>(null);
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
@@ -196,9 +241,9 @@ export function EditDetailsDialog({ event }: { event: Event }) {
 
   function save(confirmedArrangements: string[]) {
     startTransition(async () => {
-      let result: Awaited<ReturnType<typeof updateEventDetails>>;
+      let reply: SaveReply | null = null;
       try {
-        result = await updateEventDetails({
+        reply = await updateEventDetails({
           eventId: event.id,
           name: form.name,
           purpose: form.purpose,
@@ -217,34 +262,30 @@ export function EditDetailsDialog({ event }: { event: Event }) {
           confirmedArrangements,
         });
       } catch {
-        // An unexpected error or a lost connection: the edit may or may not
-        // have been saved. The form keeps what was typed, any warning is
-        // dropped so the next save asks again, and the event is read again.
-        setFieldErrors({});
-        setError("The details couldn't be saved — check your connection and try again.");
-        setToFlag(null);
-        router.refresh();
-        return;
+        // Left null: the form keeps what was typed, any warning is dropped so
+        // the next save asks again, and the event is read again.
       }
-      if (!result.ok) {
-        setFieldErrors(result.fieldErrors ?? {});
-        setError(result.error);
-        setToFlag(null);
-        return;
-      }
-      setFieldErrors({});
-      setError(null);
-      if ("confirm" in result.data) {
-        setToFlag({
-          arrangements: result.data.confirm,
-          message: result.data.message,
-        });
-        return;
-      }
-      setToFlag(null);
-      setOpen(false);
-      toast.success(savedMessage(result.data));
-      router.refresh();
+      showSaveReply(reply, {
+        showError: (message, errors) => {
+          setFieldErrors(errors);
+          setError(message);
+          setToFlag(null);
+        },
+        showWarning: (warning) => {
+          setFieldErrors({});
+          setError(null);
+          setToFlag(warning);
+        },
+        close: (message) => {
+          setFieldErrors({});
+          setError(null);
+          setToFlag(null);
+          setOpen(false);
+          toast.success(message);
+        },
+        refresh: () => router.refresh(),
+        onSaved,
+      });
     });
   }
 

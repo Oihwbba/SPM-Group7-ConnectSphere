@@ -24,12 +24,15 @@ import {
   fieldErrorsByPath,
 } from "@/lib/schemas/equipment-request";
 import { changeEquipmentRequest, createEquipmentRequest } from "./actions";
+import { OrganiserEquipmentAnswer } from "@/components/events/organiser-answers";
 
 export type EventOption = {
   id: string;
   name: string;
   startAt: Date | null;
   endAt: Date | null;
+  /** SCRUM-170 AC3: the Organiser's answer, shown read-only. */
+  equipmentRequirements: string | null;
 };
 export type EquipmentOption = {
   id: string;
@@ -276,6 +279,19 @@ export function NewRequestDialog({
             )}
             <FieldError id="request-event-error" messages={errors.eventId} />
           </div>
+
+          {/* SCRUM-170 AC3: the Organiser's answer, read-only; the equipment
+              lines below are the Coordinator's to enter. */}
+          {selectedEvent && (
+            <div className="space-y-2 rounded-md border bg-muted/30 p-3">
+              <p className="text-xs font-medium">
+                What the Organiser asked for
+              </p>
+              <OrganiserEquipmentAnswer
+                equipmentRequirements={selectedEvent.equipmentRequirements}
+              />
+            </div>
+          )}
 
           <fieldset className="space-y-3 rounded-lg border p-4">
             <legend className="px-1 text-sm font-medium">Equipment</legend>
