@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import {
   Dialog,
   DialogContent,
@@ -27,9 +28,11 @@ import {
   ClipboardList,
   Info,
   AlertTriangle,
+  Search,
 } from "lucide-react";
 import type { Event } from "@prisma/client";
 import { REJECTION_OUTCOME_LABEL } from "@/lib/schemas/event";
+import { BOOKABLE_EVENT_STATUSES } from "@/lib/schemas/booking";
 
 interface EventDetailsModalProps {
   event: Event | null;
@@ -76,6 +79,20 @@ export function EventDetailsModal({
               </DialogDescription>
             </div>
             <div className="flex items-center gap-2">
+              {/* SCRUM-38 AC1: venue search for this event's period. */}
+              {isCoordinator &&
+                BOOKABLE_EVENT_STATUSES.includes(event.status) && (
+                  <Button asChild size="sm" variant="outline">
+                    <Link
+                      href={{
+                        pathname: "/venues/search",
+                        query: { event: event.id },
+                      }}
+                    >
+                      <Search className="h-4 w-4" aria-hidden /> Find a venue
+                    </Link>
+                  </Button>
+                )}
               {/* SCRUM-25: offered only to the assigned Coordinator. */}
               {isCoordinator && <EditDetailsDialog event={event} />}
               <StatusBadge status={event.status} />

@@ -152,21 +152,15 @@ const emptySubscribe = () => () => {};
 export function RequestForm({
   events,
   venues,
+  initialEventId,
+  initialVenueId,
 }: {
   events: BookableEvent[];
   venues: RequestableVenue[];
+  /** SCRUM-38 AC9: chosen in venue search, so the form opens with them. */
+  initialEventId?: string;
+  initialVenueId?: string;
 }) {
-  const [form, setForm] = useState(emptyForm);
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
-  const [outcome, setOutcome] = useState<Outcome | null>(null);
-  const [isPending, startTransition] = useTransition();
-  // True once React has hydrated, so e2e tests wait before typing.
-  const isHydrated = useSyncExternalStore(
-    emptySubscribe,
-    () => true,
-    () => false,
-  );
-
   const facilityOptions = Array.from(
     new Set([
       ...venues.flatMap((v) => v.facilities),
@@ -177,24 +171,17 @@ export function RequestForm({
     new Set(venues.flatMap((v) => v.supportedLayouts)),
   ).sort();
 
-  function update<K extends keyof typeof emptyForm>(
-    key: K,
-    value: (typeof emptyForm)[K],
-  ) {
-    setForm((prev) => ({ ...prev, [key]: value }));
-  }
-
   /** A venue chosen earlier is dropped if it cannot take the new layout. */
   const venueFor = (venueId: string, layout: string) =>
     venuesForLayout(venues, layout).some((v) => v.id === venueId)
       ? venueId
       : "";
 
-  function chooseEvent(eventId: string) {
+  function withEvent(prev: typeof emptyForm, eventId: string) {
     const event = events.find((e) => e.id === eventId);
     const layout = layoutOption(event?.preferredLayout, layoutOptions);
     const period = event && eventBookingPeriod(event);
-    setForm((prev) => ({
+    return {
       ...prev,
       eventId,
       ...(event && {
@@ -205,7 +192,43 @@ export function RequestForm({
         layout,
         venueId: venueFor(prev.venueId, layout),
       }),
-    }));
+    };
+  }
+
+  // SCRUM-38 AC9: the venue picked in search is kept; a pre-selected layout
+  // it doesn't support gives way to it.
+  const [form, setForm] = useState(() => {
+    const withChosenEvent = initialEventId
+      ? withEvent(emptyForm, initialEventId)
+      : emptyForm;
+    if (!initialVenueId) return withChosenEvent;
+    return {
+      ...withChosenEvent,
+      venueId: initialVenueId,
+      layout: venueFor(initialVenueId, withChosenEvent.layout)
+        ? withChosenEvent.layout
+        : "",
+    };
+  });
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
+  const [outcome, setOutcome] = useState<Outcome | null>(null);
+  const [isPending, startTransition] = useTransition();
+  // True once React has hydrated, so e2e tests wait before typing.
+  const isHydrated = useSyncExternalStore(
+    emptySubscribe,
+    () => true,
+    () => false,
+  );
+
+  function update<K extends keyof typeof emptyForm>(
+    key: K,
+    value: (typeof emptyForm)[K],
+  ) {
+    setForm((prev) => ({ ...prev, [key]: value }));
+  }
+
+  function chooseEvent(eventId: string) {
+    setForm((prev) => withEvent(prev, eventId));
   }
 
   function chooseLayout(layout: string) {
