@@ -21,9 +21,19 @@ arrangements that can't clash:
 4. When the arrangements are complete, the Coordinator **confirms** the event.
 5. **Attendees** register for confirmed events, up to each event's capacity.
 
-Release 1 covers the twenty features in the Week 4 project instructions. The
-full picture (roles, the event lifecycle, scope) is in
-[`docs/product-context.md`](docs/product-context.md).
+Week 7 added two more roles. They can sign in, but until their stories land
+they only read their own notifications:
+
+- The **Event Coordinator Lead** will assign new requests to Coordinators from
+  an unassigned queue, replacing automatic assignment (SCRUM-165), and see
+  every Coordinator's workload (SCRUM-141).
+- The **Safety Officer** will review an event's venue and equipment before it
+  can be confirmed (SCRUM-166). Their approval doesn't confirm the event; the
+  Coordinator still does.
+
+Release 1 covers the twenty features in the Week 4 project instructions, and
+Sprint 3 adds the Week 7 changes. The full picture (all seven roles, the event
+lifecycle, scope) is in [`docs/product-context.md`](docs/product-context.md).
 
 **Course material:** the customer briefing, the Week 4 project instructions
 (the twenty Release 1 features and the grading rubric) and the customer's Q&A
@@ -145,6 +155,10 @@ Every seeded account uses the password **`Password123!`**:
 | `attendee2@test.local` | Attendee | Needed to fill an event (SCRUM-74) |
 | `attendee3@test.local` | Attendee | Has one withdrawn registration (SCRUM-77) |
 | `attendee4@test.local` | Attendee | Deliberately unregistered, so free to take the last place |
+
+No seeded account has the **Event Coordinator Lead** or **Safety Officer**
+role yet: neither role has a page beyond Notifications, so there is nothing to
+demo. Their sign-in is unit-tested instead (SCRUM-172, TC-172-01).
 
 ---
 
@@ -343,7 +357,7 @@ app/
     equipment-requests/       SCRUM-10  Coordinator requests, Technical Support review
     equipment/                SCRUM-10  availability check and reserving approved requests
     registrations/            SCRUM-11  an attendee's registrations
-    notifications/            SCRUM-8   placeholder until SCRUM-48 (notification list)
+    notifications/            SCRUM-8   each user's notification list (SCRUM-48)
 lib/
   auth/can.ts                 Authorisation: roles and relationships, in one place (ADR 0004)
   auth/guard.ts               requireSession(), used by every page

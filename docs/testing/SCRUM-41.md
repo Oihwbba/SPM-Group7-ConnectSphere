@@ -43,6 +43,7 @@ and the app is running. Unless the case says otherwise, the event is owned by
 | [TC-41-14](#tc-41-14) | Negative    | AC 10              | Unit                     |
 | [TC-41-15](#tc-41-15) | Negative    | AC 1               | Unit                     |
 | [TC-41-16](#tc-41-16) | Concurrency | AC 2, AC 10        | Unit                     |
+| [TC-41-17](#tc-41-17) | Negative    | Errors             | e2e                      |
 
 ---
 
@@ -253,3 +254,16 @@ and the app is running. Unless the case says otherwise, the event is owned by
 | Expected Result | 1: refused with the Rejected message from TC-41-05. 2: refused with "This event was updated by another user. Refresh and try again." Nothing is written. |
 
 **Automated by:** `tests/unit/change-requests.test.ts` › "SCRUM-41 [AC2] TC-41-16: an event rejected after it was read is refused under the lock, and nothing is written", "SCRUM-41 [AC10] TC-41-16: a Coordinator unassigned after reading the event is refused, and nothing is written"
+
+### TC-41-17
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-41-17 |
+| Test Scenario | [Negative] Errors (regression, GLM review of #162, fixed by #191): a submission that never reaches the server says so, and the form can be sent again |
+| Pre-conditions | A Planning event with expected attendance 40. Signed in as its Organiser, with **Request a change** open. |
+| Test Steps | 1. Set **Expected attendance** to 55. <br> 2. Choose **Submit change request** while the connection to the server drops. <br> 3. Choose **Submit change request** again once it is back. |
+| Test Data | Expected attendance 55 |
+| Expected Result | Step 2: "The change request couldn't be sent. If it isn't in the list above, try again." above the form; **Submit change request** and **Discard changes** are enabled again, and nothing is written. Step 3: the request is listed, reading "40 → 55", and only one is written. |
+
+**Automated by:** `e2e/change-requests.spec.ts` › "SCRUM-41 regression: a submission that never reaches the server says so and can be sent again"
