@@ -23,6 +23,7 @@ import {
 import { formatDateTime, TIME_ZONE } from "@/lib/datetime";
 import { asSentence, notifyAboutEvent } from "@/lib/event-notifications";
 import { effectiveClosesAt } from "@/lib/registration-state";
+import { venueOptions, type VenueOptions } from "@/lib/venue-options";
 
 /** Thrown inside submitEventRequest's transaction for an expected failure
  * (not found / wrong state), caught below and converted to an ActionResult —
@@ -493,7 +494,9 @@ export async function submitEventRequest(
 }
 
 /**
- * Fetch available venue list and equipment catalogue for form recommendations.
+ * Fetch available venue list and equipment catalogue for form recommendations,
+ * and the accessibility features and layouts venues offer, including any
+ * Venue Staff added (SCRUM-34 AC6).
  * Gated like the create actions: a "use server" export is a public endpoint,
  * so only a user who can create an event request may read the catalogue.
  */
@@ -506,6 +509,7 @@ export async function getFormCatalogues(): Promise<
       facilities: string[];
     }[];
     equipment: { id: string; type: string; totalQuantity: number }[];
+    options: VenueOptions;
   }>
 > {
   const session = await auth();
@@ -521,7 +525,14 @@ export async function getFormCatalogues(): Promise<
 
   const venues = await prisma.venue.findMany({
     where: { isActive: true },
-    select: { id: true, name: true, capacity: true, facilities: true },
+    select: {
+      id: true,
+      name: true,
+      capacity: true,
+      facilities: true,
+      accessibilityFeatures: true,
+      supportedLayouts: true,
+    },
   });
 
   const equipment = await prisma.equipment.findMany({
@@ -529,7 +540,16 @@ export async function getFormCatalogues(): Promise<
     select: { id: true, type: true, totalQuantity: true },
   });
 
-  return ok({ venues, equipment });
+  return ok({
+    venues: venues.map(({ id, name, capacity, facilities }) => ({
+      id,
+      name,
+      capacity,
+      facilities,
+    })),
+    equipment,
+    options: venueOptions(venues),
+  });
 }
 
 /**

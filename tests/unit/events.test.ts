@@ -1607,6 +1607,33 @@ describe("getFormCatalogues — permission gate", () => {
     }
   });
 
+  it("SCRUM-13 [AC1] TC-13-14: the form is offered the accessibility features and layouts active venues have, Venue Staff's own included (SCRUM-34 AC6)", async () => {
+    mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
+    mockVenues.mockResolvedValue([
+      {
+        id: "ven1",
+        name: "Rooftop",
+        capacity: 80,
+        facilities: ["rooftop-bar"],
+        accessibilityFeatures: ["tactile-paving"],
+        supportedLayouts: ["garden-party"],
+      },
+    ]);
+    mockEquipment.mockResolvedValue([]);
+
+    const result = await getFormCatalogues();
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.data.options.accessibilityFeatures).toContain("tactile-paving");
+    expect(result.data.options.supportedLayouts).toContain("garden-party");
+    expect(result.data.options.facilities).toContain("rooftop-bar");
+    // The venue list itself still carries only what it showed before.
+    expect(result.data.venues).toEqual([
+      { id: "ven1", name: "Rooftop", capacity: 80, facilities: ["rooftop-bar"] },
+    ]);
+  });
+
   it("SCRUM-13 [AC2 - Catalogue Dependencies]: queries only active venue and equipment catalogue entries", async () => {
     mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
     mockVenues.mockResolvedValue([]);
@@ -1617,7 +1644,14 @@ describe("getFormCatalogues — permission gate", () => {
     expect(result.ok).toBe(true);
     expect(mockVenues).toHaveBeenCalledWith({
       where: { isActive: true },
-      select: { id: true, name: true, capacity: true, facilities: true },
+      select: {
+        id: true,
+        name: true,
+        capacity: true,
+        facilities: true,
+        accessibilityFeatures: true,
+        supportedLayouts: true,
+      },
     });
     expect(mockEquipment).toHaveBeenCalledWith({
       where: { isActive: true },
