@@ -136,7 +136,7 @@ the open pull requests that change the same test files have merged.
 | [SCRUM-52](SCRUM-52.md) | Caylern Goh | 6 | Every case automated |
 | [SCRUM-53](SCRUM-53.md) | Caylern Goh | 9 | Automated except TC-53-09 (AC 9), which is manual; AC 3 and AC 10 point to other cases |
 | [SCRUM-81](SCRUM-81.md) | Jun Bin | 13 | Every case automated (unit, integration for the simultaneous confirm, e2e for the journey) |
-| [SCRUM-110](SCRUM-110.md) | Jun Bin | 15 | Every case automated (unit, and e2e for the page) |
+| [SCRUM-110](SCRUM-110.md) | Jun Bin | 15 | Every case automated (unit, and e2e for the page); AC 3 is superseded by SCRUM-170 AC 4 (TC-110-01 and TC-110-09 note it) |
 | [SCRUM-108](SCRUM-108.md) | Jun Bin | 14 | Every case automated (unit, e2e for both journeys); AC 6, 8 and 10 point to existing tests |
 | [SCRUM-124](SCRUM-124.md) | Jin Hong | 11 | AC 1 to AC 9 automated; TC-124-10 and TC-124-11 wait for SCRUM-165 and SCRUM-166, and TC-124-08's unavailability wording for SCRUM-161 |
 | [SCRUM-126](SCRUM-126.md) | Jun Bin | 10 | Every case automated (unit, integration for the constraint, migration and simultaneous clicks, e2e for the journey) |

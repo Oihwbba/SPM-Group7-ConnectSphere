@@ -35,8 +35,13 @@ const row: PendingBookingRow = {
   requestedLayout: "banquet",
   requestNotes: null,
   createdAt: new Date("2035-01-01T01:00:00.000Z"),
+  event: {
+    name: "Approved — Research Symposium",
+    venueRequirements: "A hall near the lobby,\nwith a stage",
+    preferredLayout: "Banquet",
+    accessibilityNeeds: "Wheelchair access",
+  },
   eventId: "evt_1",
-  event: { name: "Approved — Research Symposium" },
   requestedBy: { name: "Cody Coordinator", email: "coordinator@test.local" },
   venue: {
     id: "ven_hall",
@@ -52,6 +57,20 @@ const row: PendingBookingRow = {
 };
 
 describe("BookingQueue", () => {
+  it("SCRUM-170 [AC2] TC-170-02: Venue Staff see the Organiser's venue and accessibility answers on the request, as entered", () => {
+    const html = renderToStaticMarkup(
+      <BookingQueue queue={[row]} canDecide={false} />,
+    );
+    const answers = html.slice(
+      html.indexOf('data-testid="organiser-venue-answers"'),
+    );
+
+    expect(html).toContain("What the Organiser asked for");
+    expect(answers).toContain("A hall near the lobby,\nwith a stage");
+    expect(answers).toContain("Banquet");
+    expect(answers).toContain("Wheelchair access");
+  });
+
   it("SCRUM-52 [AC4] TC-52-06: an empty queue says there is nothing pending rather than rendering nothing", () => {
     const html = renderToStaticMarkup(<BookingQueue queue={[]} canDecide />);
 

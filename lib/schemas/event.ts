@@ -257,3 +257,14 @@ export function draftStartIsInPast(
 
 export type CreateDraftEventInput = z.infer<typeof createDraftEventSchema>;
 export type SubmitEventRequestInput = z.infer<typeof submitEventRequestSchema>;
+
+/** SCRUM-170 AC4 — the Coordinator records that the event needs no equipment. */
+export const noEquipmentDecisionSchema = z.object({
+  eventId: z.string().min(1),
+});
+
+export const NO_EQUIPMENT_NOT_PLANNING_MESSAGE =
+  "Equipment can only be decided while the event is in Planning.";
+
+export const NO_EQUIPMENT_HAS_REQUEST_MESSAGE =
+  "This event has an equipment request. Withdraw it before recording that no equipment is needed.";

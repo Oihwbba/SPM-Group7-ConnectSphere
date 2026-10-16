@@ -36,7 +36,7 @@ request.
 
 | Action | What it does | Permission | Input | Writes | Locks |
 |---|---|---|---|---|---|
-| `createEquipmentRequest` | The Coordinator raises the event's equipment request (SCRUM-27), and every Technical Support member is told (SCRUM-124 AC2). | `equipment-request:create` | `createEquipmentRequestSchema` (lib/schemas/equipment-request.ts) | EquipmentRequest, EquipmentRequestLine, EquipmentRequestUpdate, Notification | — |
+| `createEquipmentRequest` | The Coordinator raises the event's equipment request (SCRUM-27), clearing a No equipment needed decision (SCRUM-170 AC4), and every Technical Support member is told (SCRUM-124 AC2). | `equipment-request:create` | `createEquipmentRequestSchema` (lib/schemas/equipment-request.ts) | Event, EquipmentRequest, EquipmentRequestLine, EquipmentRequestUpdate, Notification | Event row |
 | `updateEquipmentRequestStatus` | Technical Support moves a request from Pending Review to In Review, then to Approved or Rejected (SCRUM-28). | `equipment-request:review` | `reviewEquipmentRequestSchema` (lib/schemas/equipment-request.ts) | EquipmentRequest, EquipmentRequestUpdate, Notification | — |
 | `suggestAlternativeEquipment` | Technical Support suggests another equipment type on a line (SCRUM-28 AC4). | `equipment-request:review` | `suggestAlternativeSchema` (lib/schemas/equipment-request.ts) | EquipmentRequest, EquipmentRequestLine, EquipmentRequestUpdate, Notification | — |
 | `changeEquipmentRequest` | The assigned Coordinator changes an equipment request's lines; it goes back to Technical Support, and changed lines' reservations are released (SCRUM-142 AC1, AC2). | `equipment-request:change` | `changeEquipmentRequestSchema` (lib/schemas/equipment-request.ts) | EquipmentRequest, EquipmentRequestLine, EquipmentRequestUpdate, Notification, Reservation, SafetyCheck | EquipmentRequest row, Event row |
@@ -79,6 +79,11 @@ request.
 | `getClarificationForEvent` | The event's current clarification thread (SCRUM-18). | `clarification:request` or `clarification:respond` | an event id | nothing (read only) | — |
 | `respondToClarification` | The Organiser answers, with any changes to the named fields (SCRUM-18, 108). | `clarification:respond` | `respondClarificationSchema` (lib/schemas/clarification.ts) | AuditLog, ClarificationRequest, Event, Notification | — |
 
+## `app/(app)/events/equipment-decision-actions.ts`
+
+| Action | What it does | Permission | Input | Writes | Locks |
+|---|---|---|---|---|---|
+| `recordNoEquipmentNeeded` | The assigned Coordinator records that a Planning event with no live equipment request needs no equipment, completing the checklist's Equipment item (SCRUM-170 AC4). | `event:no-equipment` | `noEquipmentDecisionSchema` (lib/schemas/event.ts) | AuditLog, Event | Event row |
 ## `app/(app)/events/edit-actions.ts`
 
 | Action | What it does | Permission | Input | Writes | Locks |
@@ -99,7 +104,7 @@ request.
 
 | Action | What it does | Permission | Input | Writes | Locks |
 |---|---|---|---|---|---|
-| `getEventReadiness` | The event's readiness checklist (SCRUM-110). | `event:read`; the result also says whether the viewer may review, reject or confirm, and settle or withdraw a venue request | an event id | nothing (read only) | — |
+| `getEventReadiness` | The event's readiness checklist (SCRUM-110, 170). | `event:read`; the result also says whether the viewer may review, reject or confirm, settle or withdraw a venue request, and record No equipment needed | an event id | nothing (read only) | — |
 | `getEventArrangements` | A Confirmed event's secured venue, time and equipment (SCRUM-81 AC6). | `event:read` | an event id | nothing (read only) | — |
 
 ## `app/(app)/events/registration-actions.ts`
