@@ -458,6 +458,7 @@ describe("submitEventRequest — SCRUM-108 AC9–AC12, AC14 resubmission", () =>
     preferredLayout: "Theatre",
     accessibilityNeeds: "Ramp",
     equipmentRequirements: "Projector",
+    registrationRequired: "yes",
     registrationNotes: "Online",
   };
   // As rejected: the amendment above changes the description and attendance.
@@ -477,6 +478,7 @@ describe("submitEventRequest — SCRUM-108 AC9–AC12, AC14 resubmission", () =>
     preferredLayout: "Theatre",
     accessibilityNeeds: "Ramp",
     equipmentRequirements: "Projector",
+    registrationRequired: true,
     registrationNotes: "Online",
     programme: null,
     specialRequests: null,

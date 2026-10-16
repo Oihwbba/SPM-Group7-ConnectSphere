@@ -93,7 +93,9 @@ test.describe("User Story 13 — Event Request Creation Journey", () => {
     await page.getByRole("button", { name: "Next", exact: true }).click();
 
     // --- STEP 5: Registration & Additional Details ---
-    await page.getByLabel("Registration Needs *").fill("Online registration enabled for 250 attendees with badge printing desk.");
+    // SCRUM-171 AC1: Registration needed is required to submit; the note is optional.
+    await page.getByRole("group", { name: "Registration Needed *" }).getByLabel("Yes").check();
+    await page.getByLabel("Registration Notes (Optional)").fill("Online registration enabled for 250 attendees with badge printing desk.");
     await page.getByLabel("Event Programme (Optional)").fill("Day 1: Keynotes & Panel; Day 2: Workshops & Closing Ceremony");
     await page.getByLabel("Special Requests / Arrangements (Optional)").fill("Catering for VIP speakers during lunch breaks.");
     await page.getByRole("button", { name: "Next", exact: true }).click();
@@ -211,7 +213,9 @@ test.describe("User Story 15 — Draft Event Request Lifecycle Journey", () => {
     await page.getByLabel("Equipment & Technical Support Requirements *").fill("Projector & Mic");
     await page.getByRole("button", { name: "Next", exact: true }).click();
 
-    await page.getByLabel("Registration Needs *").fill("Online registration");
+    // SCRUM-171 AC1: Registration needed is required to submit; the note is optional.
+    await page.getByRole("group", { name: "Registration Needed *" }).getByLabel("Yes").check();
+    await page.getByLabel("Registration Notes (Optional)").fill("Online registration");
     await page.getByRole("button", { name: "Next", exact: true }).click();
 
     // 7. Review and Submit
@@ -313,7 +317,9 @@ test.describe("User Story 16 — Distinguish Drafts from Submitted Requests Jour
     await page.getByLabel("Equipment & Technical Support Requirements *").fill("Microphone & Projector");
     await page.getByRole("button", { name: "Next", exact: true }).click();
 
-    await page.getByLabel("Registration Needs *").fill("Standard check-in desk");
+    // SCRUM-171 AC1: Registration needed is required to submit; the note is optional.
+    await page.getByRole("group", { name: "Registration Needed *" }).getByLabel("Yes").check();
+    await page.getByLabel("Registration Notes (Optional)").fill("Standard check-in desk");
     await page.getByRole("button", { name: "Next", exact: true }).click();
 
     await expect(page.getByRole("heading", { name: /Review Entered Details/i })).toBeVisible();
@@ -904,7 +910,9 @@ test.describe("User Story 23 & 24 — Event Status View & Consistency Journey", 
     await organiserPage.getByLabel("Equipment & Technical Support Requirements *").fill("Projector");
     await organiserPage.getByRole("button", { name: "Next", exact: true }).click();
 
-    await organiserPage.getByLabel("Registration Needs *").fill("Online registration");
+    // SCRUM-171 AC1: Registration needed is required to submit; the note is optional.
+    await organiserPage.getByRole("group", { name: "Registration Needed *" }).getByLabel("Yes").check();
+    await organiserPage.getByLabel("Registration Notes (Optional)").fill("Online registration");
     await organiserPage.getByRole("button", { name: "Next", exact: true }).click();
 
     await organiserPage.getByRole("button", { name: /Submit Request for Review/i }).click();
