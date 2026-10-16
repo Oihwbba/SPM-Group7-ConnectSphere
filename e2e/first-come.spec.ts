@@ -68,7 +68,9 @@ test.describe("SCRUM-134 — competing venue requests, first come, first served"
 
     const staff = await signedIn(browser, "venuestaff@test.local");
     await staff.goto("/bookings");
-    const card = (name: string) => staff.getByTestId(/^booking-/).filter({ hasText: name });
+    // By its own event name: a card also names its competitors.
+    const card = (name: string) =>
+      staff.getByTestId(/^booking-/).filter({ has: staff.getByText(name, { exact: true }) });
 
     // AC1: the later request names the earlier one, and when it was submitted.
     const competing = card(names[1]).getByTestId("competing-requests");
