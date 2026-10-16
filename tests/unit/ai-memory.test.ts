@@ -292,6 +292,15 @@ describe("the memory on this branch — SCRUM-152", () => {
 
     expect(length, `${MEMORY_PATH} is ${length} characters`).toBeLessThanOrEqual(MAX_MEMORY_CHARS);
   });
+
+  // The memory's own rules said 8,000 for a day after SCRUM-180 raised the
+  // limit, and the bot is told to keep those rules unchanged.
+  it("SCRUM-181 [AC6]: the memory's rules state the limit the reviewer actually reads", () => {
+    const memory = readFileSync(MEMORY_PATH, "utf8");
+    const limit = String(MAX_MEMORY_CHARS).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+
+    expect(memory).toContain(`reads at most ${limit} characters`);
+  });
 });
 
 describe("summariseCi — SCRUM-112", () => {

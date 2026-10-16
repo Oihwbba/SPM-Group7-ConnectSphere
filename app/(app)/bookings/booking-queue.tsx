@@ -46,7 +46,9 @@ import {
   utcToSgWallTime,
 } from "@/lib/datetime";
 import { describeBlocker } from "@/lib/venue-availability";
+import { OrganiserVenueAnswers } from "@/components/events/organiser-answers";
 import { decideBookingRequest, holdBookingRequest } from "./actions";
+import { OperationalNotes } from "@/components/events/operational-notes";
 import type { PendingBookingRow } from "./queries";
 
 /**
@@ -139,9 +141,11 @@ export function BookingQueue({
       });
       if (result.ok) {
         toast.success(
-          decision === "APPROVED"
-            ? `Approved: ${booking.venue.name} is now booked for ${booking.event.name}.`
-            : `Rejected the request for ${booking.event.name}.`,
+          decision === "REJECTED"
+            ? `Rejected the request for ${booking.event.name}.`
+            : booking.status === "HELD"
+              ? `Approved the hold: ${booking.event.name}'s Coordinator can now confirm it.`
+              : `Approved: ${booking.venue.name} is now booked for ${booking.event.name}.`,
         );
         setRejecting(null);
         setReason("");
@@ -222,8 +226,9 @@ export function BookingQueue({
                   >
                     <XCircle className="h-4 w-4" /> Reject
                   </Button>
-                  {/* SCRUM-163: a held request is confirmed by its
-                      Coordinator, not approved or held again here. */}
+                  {/* SCRUM-163 AC7: a held request is approved here once,
+                      then confirmed by its Coordinator (AC3); it isn't held
+                      again. */}
                   {booking.status === "PENDING" && canHold && (
                     <Button
                       variant="outline"
@@ -238,7 +243,7 @@ export function BookingQueue({
                       <Hourglass className="h-4 w-4" /> Hold
                     </Button>
                   )}
-                  {booking.status === "PENDING" && (
+                  {(booking.status === "PENDING" || !booking.holdApprovedAt) && (
                     <Button
                       disabled={isPending}
                       onClick={() => decide(booking, "APPROVED")}
@@ -393,9 +398,16 @@ function RequestCard({
             </p>
           </div>
           {booking.status === "HELD" ? (
-            <Badge variant="info">
-              Held until {formatDateTime(booking.holdExpiresAt!)}
-            </Badge>
+            <div className="flex flex-col items-end gap-1">
+              <Badge variant="info">
+                Held until {formatDateTime(booking.holdExpiresAt!)}
+              </Badge>
+              {booking.holdApprovedAt && (
+                <Badge variant="success">
+                  Approved by Venue Staff – awaiting confirmation
+                </Badge>
+              )}
+            </div>
           ) : (
             <Badge variant="warning">Pending</Badge>
           )}
@@ -464,6 +476,14 @@ function RequestCard({
             </Fact>
           )}
         </dl>
+        {/* SCRUM-170 AC2: what the Organiser asked for, beside what the
+            Coordinator requested. */}
+        <div className="space-y-2 rounded-md border bg-muted/30 p-3">
+          <p className="text-xs font-medium">What the Organiser asked for</p>
+          <OrganiserVenueAnswers answers={booking.event} />
+        </div>
+        {/* SCRUM-25 AC6: Venue Staff add notes once the event has a booking. */}
+        <OperationalNotes eventId={booking.eventId} />
         {children}
       </CardContent>
     </Card>

@@ -250,6 +250,9 @@ check, so don't work around them.
 - **One open equipment request per event**, and no equipment type twice on a
   request (SCRUM-27).
 - **One registration per attendee per event** (SCRUM-73).
+- **Operational notes are permanent.** A trigger refuses editing or deleting
+  an event's note (a whole event's deletion still cascades), and a CHECK
+  refuses a blank one (SCRUM-25 AC6).
 - **A rejection carries its reason**, for events, bookings and change requests
   (SCRUM-19/53/128), and a rejected event also carries its outcome: amend and
   resubmit, or start a new request (SCRUM-126).

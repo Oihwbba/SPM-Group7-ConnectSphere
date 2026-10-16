@@ -24,6 +24,7 @@ import {
   withdrawBookingRequest,
 } from "@/app/(app)/bookings/actions";
 import { getEventReadiness } from "@/app/(app)/events/readiness-actions";
+import { recordNoEquipmentNeeded } from "@/app/(app)/events/equipment-decision-actions";
 import type { ReadinessChecklist as Checklist } from "@/lib/event-readiness";
 import { REJECTION_OUTCOME_LABEL } from "@/lib/schemas/event";
 
@@ -42,6 +43,7 @@ export function ReadinessChecklist({ eventId }: { eventId: string }) {
         canReject: boolean;
         canSettleHold: boolean;
         canWithdrawBooking: boolean;
+        canRecordNoEquipment: boolean;
       })
     | null
   >(null);
@@ -54,6 +56,7 @@ export function ReadinessChecklist({ eventId }: { eventId: string }) {
   const [confirming, startConfirm] = useTransition();
   const [rejecting, startReject] = useTransition();
   const [rejectOpen, setRejectOpen] = useState(false);
+  const [deciding, startDecide] = useTransition();
   // SCRUM-142 AC4: the pending venue request waiting to be confirmed withdrawn.
   const [withdrawing, setWithdrawing] = useState<string | null>(null);
   const [reason, setReason] = useState("");
@@ -90,6 +93,17 @@ export function ReadinessChecklist({ eventId }: { eventId: string }) {
       const result = await action({ bookingId });
       if (!result.ok) toast.error(result.error);
       else toast.success(done);
+      setLoads((n) => n + 1);
+      router.refresh();
+    });
+  }
+
+  // SCRUM-170 AC4: the assigned Coordinator records that no equipment is needed.
+  function recordNoEquipment() {
+    startDecide(async () => {
+      const result = await recordNoEquipmentNeeded({ eventId });
+      if (!result.ok) toast.error(result.error);
+      else toast.success("Recorded: no equipment needed.");
       setLoads((n) => n + 1);
       router.refresh();
     });
@@ -175,6 +189,18 @@ export function ReadinessChecklist({ eventId }: { eventId: string }) {
                         ? `${item.state} – ${item.reason}`
                         : item.state}
                     </p>
+                    {/* SCRUM-163 AC3, AC7: Venue Staff approve the hold
+                        first; only then can the Coordinator confirm it. */}
+                    {item.heldBookingId && (
+                      <p
+                        className="text-muted-foreground"
+                        data-testid="hold-approval"
+                      >
+                        {item.holdApproved
+                          ? "Approved by Venue Staff – awaiting confirmation."
+                          : "Waiting for Venue Staff to approve the hold before it can be confirmed."}
+                      </p>
+                    )}
                     {item.heldBookingId && checklist.canSettleHold && (
                       <div className="flex flex-wrap gap-2">
                         <Button
@@ -182,7 +208,7 @@ export function ReadinessChecklist({ eventId }: { eventId: string }) {
                           onClick={() =>
                             settleHold(item.heldBookingId!, "confirm")
                           }
-                          disabled={settling}
+                          disabled={settling || !item.holdApproved}
                         >
                           {settling && settlingHow === "confirm"
                             ? "Confirming…"
@@ -202,6 +228,17 @@ export function ReadinessChecklist({ eventId }: { eventId: string }) {
                         </Button>
                       </div>
                     )}
+                    {item.noEquipmentOffered &&
+                      checklist.canRecordNoEquipment && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={recordNoEquipment}
+                          disabled={deciding}
+                        >
+                          {deciding ? "Recording…" : "No equipment needed"}
+                        </Button>
+                      )}
                     {item.pendingBookingId && checklist.canWithdrawBooking && (
                       <Button
                         size="sm"

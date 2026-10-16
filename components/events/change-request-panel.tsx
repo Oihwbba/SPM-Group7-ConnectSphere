@@ -53,6 +53,10 @@ const SUGGESTION_LEAD: Record<keyof Suggestions, string> = {
   equipmentRequirements: "Requested equipment",
 };
 
+/** Shown when the submission never got an answer, e.g. the connection dropped. */
+const SEND_FAILED_MESSAGE =
+  "The change request couldn't be sent. If it isn't in the list above, try again.";
+
 function draftFrom(event: Event): Draft {
   return {
     ...Object.fromEntries(TEXT_FIELDS.map((f) => [f, event[f] ?? ""])),
@@ -259,13 +263,25 @@ export function ChangeRequestPanel({ event }: { event: Event }) {
 
   async function submit() {
     setSubmitting(true);
-    const result = await raiseChangeRequest({
-      eventId: event.id,
-      requestsCancellation: cancelling,
-      reason,
-      changes: cancelling ? {} : changesBetween(draftFrom(event), draft),
-    });
-    setSubmitting(false);
+    let result: Awaited<ReturnType<typeof raiseChangeRequest>>;
+    try {
+      result = await raiseChangeRequest({
+        eventId: event.id,
+        requestsCancellation: cancelling,
+        reason,
+        changes: cancelling ? {} : changesBetween(draftFrom(event), draft),
+      });
+    } catch {
+      // The action rethrows anything unexpected, and a lost connection
+      // rejects too. Either way the request may or may not have been saved,
+      // so the list is read again.
+      setErrors({});
+      setFormError(SEND_FAILED_MESSAGE);
+      reload();
+      return;
+    } finally {
+      setSubmitting(false);
+    }
     if (!result.ok) {
       setErrors(result.fieldErrors ?? {});
       setFormError(result.error);
