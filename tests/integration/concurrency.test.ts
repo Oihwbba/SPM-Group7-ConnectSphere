@@ -649,6 +649,9 @@ describe.skipIf(!usesLocalDatabase)("concurrency — confirming an event (SCRUM-
         status: "PLANNING",
         organiserId: "usr_organiser",
         coordinatorId: "usr_coordinator",
+        // SCRUM-170 AC4: no equipment, decided, so the venue makes it ready.
+        noEquipmentNeededAt: new Date(),
+        noEquipmentNeededById: "usr_coordinator",
         ...period,
       },
       select: { id: true },
