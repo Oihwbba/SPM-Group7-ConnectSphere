@@ -17,9 +17,13 @@ import {
 // database's own rules (the row lock, the permanent notes) run against a real
 // Postgres in tests/integration/event-edit.test.ts.
 const db = vi.hoisted(() => ({
-  event: { findUnique: vi.fn(), updateMany: vi.fn() },
-  booking: { findMany: vi.fn(), updateMany: vi.fn() },
-  reservation: { findMany: vi.fn(), updateMany: vi.fn() },
+  event: { findUnique: vi.fn(), findMany: vi.fn(), updateMany: vi.fn() },
+  booking: { findMany: vi.fn(), updateManyAndReturn: vi.fn() },
+  reservation: { findMany: vi.fn(), updateManyAndReturn: vi.fn() },
+  // SCRUM-124 AC8: flagging tells Venue Staff and Technical Support
+  // (SCRUM-124 tests in tests/unit/reconsideration.test.ts).
+  user: { findMany: vi.fn() },
+  notification: { create: vi.fn(), createMany: vi.fn() },
   auditLog: { createMany: vi.fn() },
   safetyCheck: { updateMany: vi.fn() },
   eventOperationalNote: { findMany: vi.fn(), create: vi.fn() },
@@ -94,9 +98,11 @@ beforeEach(() => {
   db.event.updateMany.mockResolvedValue({ count: 1 });
   db.booking.findMany.mockResolvedValue([]);
   db.reservation.findMany.mockResolvedValue([]);
-  db.booking.updateMany.mockResolvedValue({ count: 0 });
-  db.reservation.updateMany.mockResolvedValue({ count: 0 });
+  db.booking.updateManyAndReturn.mockResolvedValue([]);
+  db.reservation.updateManyAndReturn.mockResolvedValue([]);
   db.safetyCheck.updateMany.mockResolvedValue({ count: 0 });
+  db.event.findMany.mockResolvedValue([]);
+  db.user.findMany.mockResolvedValue([]);
 });
 
 describe("updateEventDetails — SCRUM-25", () => {
@@ -141,7 +147,7 @@ describe("updateEventDetails — SCRUM-25", () => {
     });
     // AC2: a routine edit never looks at, or flags, the arrangements.
     expect(db.booking.findMany).not.toHaveBeenCalled();
-    expect(db.booking.updateMany).not.toHaveBeenCalled();
+    expect(db.booking.updateManyAndReturn).not.toHaveBeenCalled();
     expect(db.safetyCheck.updateMany).not.toHaveBeenCalled();
     expect(revalidatePath).toHaveBeenCalledWith("/events");
   });
@@ -265,7 +271,7 @@ describe("updateEventDetails — SCRUM-25", () => {
       expect.objectContaining({ where: { eventId: "evt_1", status: "CONFIRMED" } }),
     );
     // SCRUM-26 AC1: nothing booked or reserved, so nothing to flag.
-    expect(db.booking.updateMany).not.toHaveBeenCalled();
+    expect(db.booking.updateManyAndReturn).not.toHaveBeenCalled();
     expect(db.event.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({ startAt: later, expectedAttendance: 150 }),
@@ -336,8 +342,8 @@ describe("updateEventDetails — SCRUM-25", () => {
     function expectNothingWritten() {
       expect(db.event.updateMany).not.toHaveBeenCalled();
       expect(db.auditLog.createMany).not.toHaveBeenCalled();
-      expect(db.booking.updateMany).not.toHaveBeenCalled();
-      expect(db.reservation.updateMany).not.toHaveBeenCalled();
+      expect(db.booking.updateManyAndReturn).not.toHaveBeenCalled();
+      expect(db.reservation.updateManyAndReturn).not.toHaveBeenCalled();
       expect(db.safetyCheck.updateMany).not.toHaveBeenCalled();
     }
 
@@ -350,8 +356,12 @@ describe("updateEventDetails — SCRUM-25", () => {
     });
 
     it("SCRUM-25 [AC3] TC-25-06: once confirmed, the edit is saved and every arrangement flagged with the reason, its status and times untouched", async () => {
-      db.booking.updateMany.mockResolvedValue({ count: 1 });
-      db.reservation.updateMany.mockResolvedValue({ count: 1 });
+      db.booking.updateManyAndReturn.mockResolvedValue([
+        { id: "bkg_1", eventId: "evt_1", status: "APPROVED", venue: { name: "Ballroom" } },
+      ]);
+      db.reservation.updateManyAndReturn.mockResolvedValue([
+        { id: "res_1", eventId: "evt_1", quantity: 2, equipment: { type: "Microphone" } },
+      ]);
 
       const result = await updateEventDetails({
         ...unchanged,
@@ -374,13 +384,15 @@ describe("updateEventDetails — SCRUM-25", () => {
         reconsiderationResolvedById: null,
       };
       // SCRUM-26 AC2, AC6: only the flag columns; no status, no times.
-      expect(db.booking.updateMany).toHaveBeenCalledWith({
+      expect(db.booking.updateManyAndReturn).toHaveBeenCalledWith({
         where: expect.objectContaining({ eventId: "evt_1", needsReconsideration: false }),
         data: flag,
+        select: expect.any(Object),
       });
-      expect(db.reservation.updateMany).toHaveBeenCalledWith({
+      expect(db.reservation.updateManyAndReturn).toHaveBeenCalledWith({
         where: { eventId: "evt_1", status: "CONFIRMED", needsReconsideration: false },
         data: flag,
+        select: expect.any(Object),
       });
       expect(revalidatePath).toHaveBeenCalledWith("/bookings");
       expect(revalidatePath).toHaveBeenCalledWith("/equipment-requests");
@@ -396,7 +408,7 @@ describe("updateEventDetails — SCRUM-25", () => {
         confirmedArrangements: ["bkg_1", "res_1"],
       });
 
-      expect(db.booking.updateMany).toHaveBeenCalledWith(
+      expect(db.booking.updateManyAndReturn).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
             reconsiderationReason:
@@ -429,7 +441,7 @@ describe("updateEventDetails — SCRUM-25", () => {
 
       expect(result).toMatchObject({ ok: true, data: { flagged: 0 } });
       expect(db.booking.findMany).not.toHaveBeenCalled();
-      expect(db.booking.updateMany).not.toHaveBeenCalled();
+      expect(db.booking.updateManyAndReturn).not.toHaveBeenCalled();
     });
 
     it("SCRUM-25 [AC3] TC-25-18: Under Review, the attendance saves directly with no warning and nothing flagged", async () => {
@@ -442,8 +454,8 @@ describe("updateEventDetails — SCRUM-25", () => {
         data: { changed: ["expectedAttendance"], safetyCheckOutdated: false, flagged: 0 },
       });
       expect(db.booking.findMany).not.toHaveBeenCalled();
-      expect(db.booking.updateMany).not.toHaveBeenCalled();
-      expect(db.reservation.updateMany).not.toHaveBeenCalled();
+      expect(db.booking.updateManyAndReturn).not.toHaveBeenCalled();
+      expect(db.reservation.updateManyAndReturn).not.toHaveBeenCalled();
     });
   });
 

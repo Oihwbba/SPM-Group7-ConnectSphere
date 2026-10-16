@@ -126,7 +126,7 @@ export async function createEquipmentRequest(
 
     const event = await prisma.event.findUnique({
       where: { id: eventId },
-      select: { organiserId: true, coordinatorId: true, status: true },
+      select: { name: true, organiserId: true, coordinatorId: true, status: true },
     });
     const requestable =
       event &&
@@ -178,6 +178,16 @@ export async function createEquipmentRequest(
             toStatus: "PENDING_REVIEW",
             note: "Request submitted.",
           },
+        });
+        // SCRUM-124 AC2, AC14: every Technical Support member is told, in the
+        // same transaction, so a submission that loses a race tells nobody.
+        await notifyRole(tx, "TECH_SUPPORT", { id: eventId }, {
+          type: "EQUIPMENT_REQUEST_SUBMITTED",
+          title: "An equipment request was submitted",
+          message: `The Coordinator requested equipment for "${event!.name}": ${lines
+            .map((line) => `${known.types.get(line.equipmentId)} × ${line.quantity}`)
+            .join(", ")}.`,
+          link: "/equipment-requests",
         });
         return request;
       });

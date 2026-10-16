@@ -13,6 +13,10 @@ import { EQUIPMENT_REQUEST_STATUS_LABEL } from "@/lib/equipment/requests";
 const tx = vi.hoisted(() => ({
   equipmentRequest: { create: vi.fn() },
   equipmentRequestUpdate: { create: vi.fn() },
+  // SCRUM-124 AC2: Technical Support are told of a submission
+  // (the SCRUM-124 tests at the end of this file).
+  user: { findMany: vi.fn() },
+  notification: { createMany: vi.fn() },
 }));
 const db = vi.hoisted(() => ({
   event: { findUnique: vi.fn() },
@@ -74,6 +78,7 @@ beforeEach(() => {
   );
   tx.equipmentRequest.create.mockResolvedValue({ id: "eqr_new" });
   tx.equipmentRequestUpdate.create.mockResolvedValue({});
+  tx.user.findMany.mockResolvedValue([]);
 });
 
 describe("createEquipmentRequest — SCRUM-27", () => {
@@ -316,5 +321,58 @@ describe("createEquipmentRequest — SCRUM-27", () => {
 
     expect(result.ok).toBe(false);
     expect(db.$transaction).not.toHaveBeenCalled();
+  });
+});
+
+// SCRUM-124 AC2 — Technical Support are told of a submission. Test cases:
+// docs/testing/SCRUM-124.md.
+describe("the submission notice — SCRUM-124 AC2", () => {
+  beforeEach(() => {
+    db.event.findUnique.mockResolvedValue({ ...approvedEvent, name: "Graduation" });
+    db.equipment.findMany.mockResolvedValue([
+      { id: "eqp_projector", type: "Projector" },
+      { id: "eqp_mic", type: "Wireless Microphone" },
+    ]);
+    tx.user.findMany.mockResolvedValue([{ id: "usr_ts1" }, { id: "usr_ts2" }]);
+  });
+
+  it("SCRUM-124 [AC2, AC12, AC13] TC-124-02: a new request tells every Technical Support member the event and each line, linking to their queue", async () => {
+    expect((await createEquipmentRequest(input())).ok).toBe(true);
+
+    expect(tx.user.findMany).toHaveBeenCalledWith({
+      where: { role: "TECH_SUPPORT" },
+      select: { id: true },
+    });
+    const notice = {
+      eventId: "evt_approved",
+      type: "EQUIPMENT_REQUEST_SUBMITTED",
+      title: "An equipment request was submitted",
+      message:
+        'The Coordinator requested equipment for "Graduation": Projector × 2, Wireless Microphone × 4.',
+      link: "/equipment-requests",
+    };
+    expect(tx.notification.createMany).toHaveBeenCalledWith({
+      data: [
+        { userId: "usr_ts1", ...notice },
+        { userId: "usr_ts2", ...notice },
+      ],
+    });
+  });
+
+  it("SCRUM-124 [AC2, AC14] TC-124-02: submitting while the event already has an open request tells nobody", async () => {
+    db.equipmentRequest.findFirst.mockResolvedValue({ id: "eqr_open" });
+
+    expect(await createEquipmentRequest(input())).toEqual({
+      ok: true,
+      data: { id: "eqr_open", existing: true },
+    });
+    expect(tx.notification.createMany).not.toHaveBeenCalled();
+  });
+
+  it("SCRUM-124 [AC2] TC-124-02: a refused request tells nobody", async () => {
+    db.equipment.findMany.mockResolvedValue([{ id: "eqp_projector", type: "Projector" }]);
+
+    expect((await createEquipmentRequest(input())).ok).toBe(false);
+    expect(tx.notification.createMany).not.toHaveBeenCalled();
   });
 });

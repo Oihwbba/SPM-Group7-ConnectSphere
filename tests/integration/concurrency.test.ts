@@ -278,6 +278,10 @@ describe.skipIf(!usesLocalDatabase)(
     afterAll(async () => {
       await removeEvents([firstEventId, secondEventId]);
       await prisma.venue.delete({ where: { id: venueId } });
+      // Every Venue Staff member is told of other suites' venue requests and
+      // decisions while this one exists (SCRUM-124), so its own notices go
+      // first.
+      await prisma.notification.deleteMany({ where: { userId: SECOND_STAFF_ID } });
       await prisma.user.delete({ where: { id: SECOND_STAFF_ID } });
     });
 

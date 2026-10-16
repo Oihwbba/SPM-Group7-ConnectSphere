@@ -35,6 +35,9 @@ const db = vi.hoisted(() => ({
   notification: { create: vi.fn(), createMany: vi.fn(), updateMany: vi.fn() },
   auditLog: { create: vi.fn() },
   safetyCheck: { updateMany: vi.fn() },
+  // SCRUM-124 AC6: Venue Staff are told when a hold is confirmed or released
+  // (the SCRUM-124 tests at the end of this file).
+  user: { findMany: vi.fn() },
   $queryRaw: vi.fn(),
   $transaction: vi.fn(),
 }));
@@ -70,6 +73,7 @@ beforeEach(() => {
   db.notification.createMany.mockResolvedValue({ count: 3 });
   db.notification.updateMany.mockResolvedValue({ count: 2 });
   db.auditLog.create.mockResolvedValue({});
+  db.user.findMany.mockResolvedValue([]);
 });
 
 const expectNothingWritten = () => {
@@ -494,7 +498,10 @@ describe("confirmHold and releaseHold — SCRUM-163 AC3, AC4, AC7, AC8", () => {
     status: "HELD",
     holdExpiresAt: fromNow(HOUR),
     holdApprovedAt: fromNow(-HOUR),
+    venue: { name: "Hall A" },
     event: {
+      id: "evt_1",
+      name: "Expo",
       organiserId: "usr_org",
       coordinatorId: "usr_cody",
       status: "PLANNING",
@@ -1135,5 +1142,128 @@ describe("the readiness checklist's venue item — SCRUM-163 AC6", () => {
         row("APPROVED", 2),
       ]),
     ).toMatchObject({ ready: true, venue: { state: "Approved" } });
+  });
+});
+
+// SCRUM-124 — who is told when a hold is rejected, confirmed or released.
+// Test cases: docs/testing/SCRUM-124.md.
+describe("hold notices — SCRUM-124 AC4, AC6", () => {
+  const VENUE_STAFF = [{ id: "usr_vs1" }, { id: "usr_vs2" }];
+  const live = (overrides: Record<string, unknown> = {}) => ({
+    id: "bkg_1",
+    venueId: "ven_1",
+    startAt: fromNow(72 * HOUR),
+    endAt: fromNow(74 * HOUR),
+    status: "HELD",
+    holdExpiresAt: fromNow(HOUR),
+    holdApprovedAt: fromNow(-HOUR),
+    needsReconsideration: false,
+    requestedById: "usr_requester",
+    venue: { name: "Hall A", setupMinutes: 0, turnaroundMinutes: 0 },
+    event: {
+      id: "evt_1",
+      name: "Expo",
+      organiserId: "usr_org",
+      coordinatorId: "usr_cody",
+      status: "PLANNING",
+    },
+    ...overrides,
+  });
+
+  beforeEach(() => {
+    db.user.findMany.mockResolvedValue(VENUE_STAFF);
+    db.booking.findUnique.mockResolvedValue(live());
+  });
+
+  it("SCRUM-124 [AC4, AC12] TC-124-04: rejecting a live hold tells the event's Coordinator the reason", async () => {
+    mockAuth.mockResolvedValue(STAFF);
+
+    await decideBookingRequest({
+      bookingId: "bkg_1",
+      decision: "REJECTED",
+      reason: "Roof repairs.",
+    });
+
+    expect(db.notification.create).toHaveBeenCalledWith({
+      data: {
+        userId: "usr_cody",
+        eventId: "evt_1",
+        bookingId: "bkg_1",
+        type: "BOOKING_DECISION",
+        title: "Venue Staff rejected your hold",
+        message: 'Venue Staff rejected the hold on Hall A for "Expo". Their reason: Roof repairs.',
+      },
+    });
+  });
+
+  const staffNotice = (type: string, title: string, message: string) => ({
+    data: VENUE_STAFF.map(({ id }) => ({
+      userId: id,
+      eventId: "evt_1",
+      type,
+      title,
+      message,
+      link: "/bookings",
+    })),
+  });
+
+  it("SCRUM-124 [AC6, AC12, AC13] TC-124-06: confirming a hold tells every Venue Staff member, linking to their queue", async () => {
+    mockAuth.mockResolvedValue(CODY);
+
+    expect((await confirmHold({ bookingId: "bkg_1" })).ok).toBe(true);
+
+    expect(db.user.findMany).toHaveBeenCalledWith({
+      where: { role: "VENUE_STAFF" },
+      select: { id: true },
+    });
+    expect(db.notification.createMany).toHaveBeenCalledWith(
+      staffNotice(
+        "HOLD_CONFIRMED",
+        "A hold was confirmed",
+        'The Coordinator confirmed the hold on Hall A for "Expo", so it is now booked.',
+      ),
+    );
+  });
+
+  it("SCRUM-124 [AC6, AC12] TC-124-06: releasing a hold tells every Venue Staff member its period is free again", async () => {
+    mockAuth.mockResolvedValue(CODY);
+
+    expect((await releaseHold({ bookingId: "bkg_1" })).ok).toBe(true);
+
+    expect(db.notification.createMany).toHaveBeenCalledWith(
+      staffNotice(
+        "HOLD_RELEASED",
+        "A hold was released",
+        'The Coordinator released the hold on Hall A for "Expo", so its period is free again.',
+      ),
+    );
+  });
+
+  it("SCRUM-124 [AC6, AC14] TC-124-06: a confirmation that finds the hold already settled tells nobody", async () => {
+    mockAuth.mockResolvedValue(CODY);
+    db.booking.updateMany.mockResolvedValue({ count: 0 });
+    db.booking.findUniqueOrThrow.mockResolvedValue({
+      status: "APPROVED",
+      holdExpiresAt: fromNow(HOUR),
+      needsReconsideration: false,
+    });
+
+    expect(await confirmHold({ bookingId: "bkg_1" })).toEqual({
+      ok: false,
+      error: "This hold has already been confirmed.",
+    });
+    expect(db.notification.createMany).not.toHaveBeenCalled();
+  });
+
+  it("SCRUM-124 [AC6] TC-124-06: the event's row is locked before the hold's, as the other hold actions do", async () => {
+    mockAuth.mockResolvedValue(CODY);
+
+    await releaseHold({ bookingId: "bkg_1" });
+
+    const [lock] = db.$queryRaw.mock.calls[0] as [TemplateStringsArray];
+    expect(lock.join("?")).toContain('FROM "Event" WHERE "id" = ? FOR KEY SHARE');
+    expect(db.$queryRaw.mock.invocationCallOrder[0]).toBeLessThan(
+      db.booking.updateMany.mock.invocationCallOrder[0],
+    );
   });
 });

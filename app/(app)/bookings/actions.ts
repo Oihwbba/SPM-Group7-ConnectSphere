@@ -197,6 +197,7 @@ export async function submitBookingRequest(
     const event = await prisma.event.findUnique({
       where: { id: data.eventId },
       select: {
+        name: true,
         organiserId: true,
         coordinatorId: true,
         status: true,
@@ -269,21 +270,32 @@ export async function submitBookingRequest(
     }
 
     try {
+      // SCRUM-124 AC1, AC14: Venue Staff are told in the same transaction, so
+      // a request the database refuses below tells nobody.
       const created = await onceMoreOnDeadlock(() =>
-        prisma.booking.create({
-          data: {
-            eventId: data.eventId,
-            venueId: data.venueId,
-            startAt: period.startAt,
-            endAt: period.endAt,
-            status: "PENDING",
-            requestedAttendance: data.requestedAttendance,
-            requiredFacilities: data.requiredFacilities,
-            requestedLayout: data.requestedLayout || null,
-            requestNotes: data.requestNotes || null,
-            requestedById: user!.id,
-          },
-          select: summarySelect,
+        prisma.$transaction(async (tx) => {
+          const booking = await tx.booking.create({
+            data: {
+              eventId: data.eventId,
+              venueId: data.venueId,
+              startAt: period.startAt,
+              endAt: period.endAt,
+              status: "PENDING",
+              requestedAttendance: data.requestedAttendance,
+              requiredFacilities: data.requiredFacilities,
+              requestedLayout: data.requestedLayout || null,
+              requestNotes: data.requestNotes || null,
+              requestedById: user!.id,
+            },
+            select: summarySelect,
+          });
+          await notifyRole(tx, "VENUE_STAFF", { id: data.eventId }, {
+            type: "BOOKING_REQUESTED",
+            title: "A venue was requested",
+            message: `The Coordinator requested ${venue.name} for "${event.name}", ${formatDateTime(period.startAt)} to ${formatDateTime(period.endAt)}, for ${data.requestedAttendance} attendees.`,
+            link: "/bookings",
+          });
+          return booking;
         }),
       );
       revalidatePath("/bookings");
@@ -397,6 +409,10 @@ export async function decideBookingRequest(
 
     const decide = () =>
       prisma.$transaction(async (tx) => {
+        // The notice below references the event, which takes a key-share
+        // lock on its row. Take it before the booking row, in the order
+        // holding a request uses, so the two can't deadlock (ADR 0007).
+        await tx.$queryRaw`SELECT "id" FROM "Event" WHERE "id" = ${booking.event.id} FOR KEY SHARE`;
         if (decision === "APPROVED") {
           const blockers = await findVenueBlockers(
             tx,
@@ -458,6 +474,18 @@ export async function decideBookingRequest(
             summary: decision === "REJECTED" ? reason : undefined,
           },
         });
+        // SCRUM-124 AC4: the event's Coordinator is told, with the reason for
+        // a rejection. An event with no Coordinator yet tells whoever
+        // requested the venue, as holding does.
+        await tx.notification.create({
+          data: {
+            userId: booking.event.coordinatorId ?? booking.requestedById,
+            eventId: booking.event.id,
+            bookingId: booking.id,
+            type: "BOOKING_DECISION",
+            ...decisionNotice(booking, decision, rejectingHold, reason),
+          },
+        });
       });
     await onceMoreOnDeadlock(decide);
 
@@ -485,6 +513,40 @@ export async function decideBookingRequest(
     }
     throw error;
   }
+}
+
+/**
+ * SCRUM-124 AC4, AC12 — the Coordinator's notice of a decision: approved,
+ * with the period; or rejected, a request or a hold, with the reason.
+ */
+function decisionNotice(
+  booking: {
+    startAt: Date;
+    endAt: Date;
+    venue: { name: string };
+    event: { name: string };
+  },
+  decision: "APPROVED" | "REJECTED",
+  rejectingHold: boolean,
+  reason: string | undefined,
+): { title: string; message: string } {
+  const { venue, event } = booking;
+  if (rejectingHold) {
+    return {
+      title: "Venue Staff rejected your hold",
+      message: `Venue Staff rejected the hold on ${venue.name} for "${event.name}". Their reason: ${reason}`,
+    };
+  }
+  if (decision === "APPROVED") {
+    return {
+      title: "Your venue request was approved",
+      message: `Venue Staff approved ${venue.name} for "${event.name}", ${formatDateTime(booking.startAt)} to ${formatDateTime(booking.endAt)}.`,
+    };
+  }
+  return {
+    title: "Your venue request was rejected",
+    message: `Venue Staff rejected the request for ${venue.name} for "${event.name}". Their reason: ${reason}`,
+  };
 }
 
 /** SCRUM-26 AC5 — a flagged request waits for its Coordinator. */
@@ -827,9 +889,11 @@ async function settleHold(
         holdExpiresAt: true,
         holdApprovedAt: true,
         needsReconsideration: true,
+        venue: { select: { name: true } },
         event: {
           select: {
             id: true,
+            name: true,
             organiserId: true,
             coordinatorId: true,
             status: true,
@@ -856,9 +920,15 @@ async function settleHold(
 
     const settle = () =>
       prisma.$transaction(async (tx) => {
-        const refused =
-          refusal?.(await lockedEventStatus(tx, booking.event.id)) ?? null;
-        if (refused) throw new DecisionError(refused);
+        // The Venue Staff notice below references the event, so its row is
+        // locked before the booking's (ADR 0007): fully for a withdrawal,
+        // which re-reads its status, and key-share otherwise.
+        if (refusal) {
+          const refused = refusal(await lockedEventStatus(tx, booking.event.id));
+          if (refused) throw new DecisionError(refused);
+        } else {
+          await tx.$queryRaw`SELECT "id" FROM "Event" WHERE "id" = ${booking.event.id} FOR KEY SHARE`;
+        }
 
         const updated = await tx.booking.updateMany({
           where: {
@@ -902,6 +972,26 @@ async function settleHold(
             newValue: to,
           },
         });
+        // SCRUM-124 AC6: every Venue Staff member is told.
+        const where = `${booking.venue.name} for "${booking.event.name}"`;
+        await notifyRole(
+          tx,
+          "VENUE_STAFF",
+          booking.event,
+          confirming
+            ? {
+                type: "HOLD_CONFIRMED",
+                title: "A hold was confirmed",
+                message: `The Coordinator confirmed the hold on ${where}, so it is now booked.`,
+                link: "/bookings",
+              }
+            : {
+                type: "HOLD_RELEASED",
+                title: "A hold was released",
+                message: `The Coordinator released the hold on ${where}, so its period is free again.`,
+                link: "/bookings",
+              },
+        );
       });
     try {
       await onceMoreOnDeadlock(settle);
