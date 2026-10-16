@@ -33,6 +33,8 @@ type Form = {
   accessibilityNeeds: string;
   preferredLayout: string;
   registrationNotes: string;
+  /** SCRUM-171: empty for a request made before the choice existed. */
+  registrationRequired: "" | "yes" | "no";
   programme: string;
   specialRequests: string;
   start: string;
@@ -50,6 +52,12 @@ function formFrom(event: Event): Form {
     accessibilityNeeds: event.accessibilityNeeds ?? "",
     preferredLayout: event.preferredLayout ?? "",
     registrationNotes: event.registrationNotes ?? "",
+    registrationRequired:
+      event.registrationRequired === true
+        ? "yes"
+        : event.registrationRequired === false
+          ? "no"
+          : "",
     programme: event.programme ?? "",
     specialRequests: event.specialRequests ?? "",
     start: utcToSgWallTime(event.startAt),
@@ -79,7 +87,7 @@ const BASIC_FIELDS: TextField[] = [
 const MORE_FIELDS: TextField[] = [
   {
     key: "registrationNotes",
-    label: "Registration needs",
+    label: "Registration notes",
     placeholder:
       "Describe attendee registration needs (e.g., online registration open to public, max capacity limit, check-in desks)...",
   },
@@ -198,6 +206,7 @@ export function EditDetailsDialog({ event }: { event: Event }) {
           accessibilityNeeds: form.accessibilityNeeds,
           preferredLayout: form.preferredLayout,
           registrationNotes: form.registrationNotes,
+          registrationRequired: form.registrationRequired || undefined,
           programme: form.programme,
           specialRequests: form.specialRequests,
           startAt: sgWallTimeToUtcIso(form.start) ?? "",
@@ -318,6 +327,46 @@ export function EditDetailsDialog({ event }: { event: Event }) {
               placeholder:
                 "State any wheelchair access, special physical seating, mobility, or facility arrangements required for attendees...",
             })}
+            {/* SCRUM-171 AC5: refused to No while anyone is registered. */}
+            <fieldset
+              className="space-y-1"
+              aria-describedby={
+                invalid("registrationRequired")
+                  ? "edit-registrationRequired-error"
+                  : undefined
+              }
+            >
+              <legend className="text-sm font-medium">
+                Registration needed
+              </legend>
+              <div className="flex gap-4">
+                {(["yes", "no"] as const).map((value) => (
+                  <label
+                    key={value}
+                    className="flex items-center gap-2 text-sm"
+                  >
+                    <input
+                      type="radio"
+                      name="edit-registrationRequired"
+                      value={value}
+                      checked={form.registrationRequired === value}
+                      onChange={() => update("registrationRequired", value)}
+                      className="h-4 w-4 accent-primary"
+                    />
+                    {value === "yes" ? "Yes" : "No"}
+                  </label>
+                ))}
+              </div>
+              {invalid("registrationRequired") && (
+                <p
+                  id="edit-registrationRequired-error"
+                  role="alert"
+                  className="text-xs text-destructive"
+                >
+                  {fieldErrors.registrationRequired[0]}
+                </p>
+              )}
+            </fieldset>
             {MORE_FIELDS.map(textArea)}
 
             <fieldset className="space-y-3 rounded-md border p-3">
