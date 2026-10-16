@@ -25,18 +25,18 @@ request.
 | Action | What it does | Permission | Input | Writes | Locks |
 |---|---|---|---|---|---|
 | `checkVenueAvailability` | Checks whether a venue is free for a period, and names any clashes (SCRUM-50). | `booking:request` | `venueAvailabilityQuerySchema` (lib/schemas/booking.ts) | nothing (read only) | — |
-| `submitBookingRequest` | The Coordinator requests a venue for their event (SCRUM-50). | `booking:request` | `bookingRequestSchema` (lib/schemas/booking.ts) | Booking | — |
-| `decideBookingRequest` | Venue Staff approve or reject a pending request, or approve or reject a held one before it expires (SCRUM-53, 163). Approving a hold keeps it Held, records who approved it and when, and tells its Coordinator (SCRUM-163 AC7, SCRUM-124 AC4). | `booking:decide` | `bookingDecisionSchema` (lib/schemas/booking.ts) | AuditLog, Booking, Notification | Event row (`FOR KEY SHARE`), when approving a hold |
+| `submitBookingRequest` | The Coordinator requests a venue for their event (SCRUM-50), and every Venue Staff member is told (SCRUM-124 AC1). | `booking:request` | `bookingRequestSchema` (lib/schemas/booking.ts) | Booking, Notification | — |
+| `decideBookingRequest` | Venue Staff approve or reject a pending request, or approve or reject a held one before it expires (SCRUM-53, 163). Approving a hold keeps it Held, records who approved it and when. Every decision tells the event's Coordinator, with the reason for a rejection (SCRUM-163 AC7, SCRUM-124 AC4). | `booking:decide` | `bookingDecisionSchema` (lib/schemas/booking.ts) | AuditLog, Booking, Notification | Event row (`FOR KEY SHARE`) |
 | `holdBookingRequest` | Venue Staff hold a pending request until a deadline, with a note for the Coordinator (SCRUM-163). | `booking:hold` | `bookingHoldSchema` (lib/schemas/booking.ts) | AuditLog, Booking, Notification | Event row (`FOR KEY SHARE`) |
-| `confirmHold` | The assigned Coordinator confirms a live hold Venue Staff have approved, which makes the booking Approved (SCRUM-163 AC3). | `booking:settle-hold` | `holdSettlementSchema` (lib/schemas/booking.ts) | AuditLog, Booking, Notification, SafetyCheck | — |
-| `releaseHold` | The assigned Coordinator releases a live hold, which frees the venue (SCRUM-163 AC3). | `booking:settle-hold` | `holdSettlementSchema` (lib/schemas/booking.ts) | AuditLog, Booking, Notification, SafetyCheck | — |
+| `confirmHold` | The assigned Coordinator confirms a live hold Venue Staff have approved, which makes the booking Approved (SCRUM-163 AC3); every Venue Staff member is told (SCRUM-124 AC6). | `booking:settle-hold` | `holdSettlementSchema` (lib/schemas/booking.ts) | AuditLog, Booking, Notification, SafetyCheck | Event row (`FOR KEY SHARE`) |
+| `releaseHold` | The assigned Coordinator releases a live hold, which frees the venue (SCRUM-163 AC3); every Venue Staff member is told (SCRUM-124 AC6). | `booking:settle-hold` | `holdSettlementSchema` (lib/schemas/booking.ts) | AuditLog, Booking, Notification, SafetyCheck | Event row (`FOR KEY SHARE`) |
 | `withdrawBookingRequest` | The assigned Coordinator withdraws a pending venue request; a held one is released instead (SCRUM-142 AC4). | `booking:withdraw`; a held request also needs `booking:settle-hold` | `bookingWithdrawalSchema` (lib/schemas/booking.ts) | AuditLog, Booking, Notification, SafetyCheck | Event row |
 
 ## `app/(app)/equipment-requests/actions.ts`
 
 | Action | What it does | Permission | Input | Writes | Locks |
 |---|---|---|---|---|---|
-| `createEquipmentRequest` | The Coordinator raises the event's equipment request (SCRUM-27). | `equipment-request:create` | `createEquipmentRequestSchema` (lib/schemas/equipment-request.ts) | EquipmentRequest, EquipmentRequestLine, EquipmentRequestUpdate | — |
+| `createEquipmentRequest` | The Coordinator raises the event's equipment request (SCRUM-27), and every Technical Support member is told (SCRUM-124 AC2). | `equipment-request:create` | `createEquipmentRequestSchema` (lib/schemas/equipment-request.ts) | EquipmentRequest, EquipmentRequestLine, EquipmentRequestUpdate, Notification | — |
 | `updateEquipmentRequestStatus` | Technical Support moves a request from Pending Review to In Review, then to Approved or Rejected (SCRUM-28). | `equipment-request:review` | `reviewEquipmentRequestSchema` (lib/schemas/equipment-request.ts) | EquipmentRequest, EquipmentRequestUpdate, Notification | — |
 | `suggestAlternativeEquipment` | Technical Support suggests another equipment type on a line (SCRUM-28 AC4). | `equipment-request:review` | `suggestAlternativeSchema` (lib/schemas/equipment-request.ts) | EquipmentRequest, EquipmentRequestLine, EquipmentRequestUpdate, Notification | — |
 | `changeEquipmentRequest` | The assigned Coordinator changes an equipment request's lines; it goes back to Technical Support, and changed lines' reservations are released (SCRUM-142 AC1, AC2). | `equipment-request:change` | `changeEquipmentRequestSchema` (lib/schemas/equipment-request.ts) | EquipmentRequest, EquipmentRequestLine, EquipmentRequestUpdate, Notification, Reservation, SafetyCheck | EquipmentRequest row, Event row |
@@ -83,10 +83,17 @@ request.
 
 | Action | What it does | Permission | Input | Writes | Locks |
 |---|---|---|---|---|---|
-| `updateEventDetails` | The assigned Coordinator edits an Under Review or Planning event's details (SCRUM-25). In Planning, a change to the date, time, attendance, venue or equipment of an event with live arrangements first returns them for confirmation and saves nothing; once confirmed, the edit and their Needs Reconsideration flags are saved together (SCRUM-25 AC3, SCRUM-26 AC1). A layout, accessibility, date, time or attendance change outdates an Approved or awaiting safety check (SCRUM-166 AC13). | `event:edit` | `eventDetailsEditSchema` (lib/schemas/event-edit.ts) | AuditLog, Booking, Event, Reservation, SafetyCheck | Event row |
+| `updateEventDetails` | The assigned Coordinator edits an Under Review or Planning event's details (SCRUM-25). In Planning, a change to the date, time, attendance, venue or equipment of an event with live arrangements first returns them for confirmation and saves nothing; once confirmed, the edit and their Needs Reconsideration flags are saved together (SCRUM-25 AC3, SCRUM-26 AC1). A layout, accessibility, date, time or attendance change outdates an Approved or awaiting safety check (SCRUM-166 AC13). Venue Staff and Technical Support are told of the flags (SCRUM-124 AC8). | `event:edit` | `eventDetailsEditSchema` (lib/schemas/event-edit.ts) | AuditLog, Booking, Event, Notification, Reservation, SafetyCheck | Event row |
 | `getOperationalNotes` | An event's operational notes, oldest first, with author and time, and whether the viewer may add one (SCRUM-25 AC6). | `event-note:read` | an event id | nothing (read only) | — |
 | `addOperationalNote` | The assigned Coordinator, or Venue Staff or Technical Support once the event has a live booking or an equipment request, adds a permanent note (SCRUM-25 AC6). | `event-note:add` | `operationalNoteSchema` (lib/schemas/event-edit.ts) | EventOperationalNote | — |
 | `canEditEventDetails` | Whether the event page offers Edit details (SCRUM-25 AC1). | `event:edit` | an event id | nothing (read only) | — |
+
+## `app/(app)/events/reconsideration-actions.ts`
+
+| Action | What it does | Permission | Input | Writes | Locks |
+|---|---|---|---|---|---|
+| `getFlaggedArrangements` | An event's bookings and reservations flagged Needs Reconsideration, with each reason, for its assigned Coordinator (SCRUM-26 AC7). | `arrangement:reconsider` | an event id | nothing (read only) | — |
+| `resolveReconsiderationFlag` | The assigned Coordinator decides a flagged arrangement: Still stands, if it still fits the event, or Cancel arrangement, which releases it and returns a Confirmed event to Planning (SCRUM-26 AC7–AC10). Venue Staff, for a booking, or Technical Support, for a reservation, are told (SCRUM-124 AC9). | `arrangement:reconsider` | `resolveSchema` (same file) | AuditLog, Booking, Event, Notification, Reservation, SafetyCheck | Event row |
 
 ## `app/(app)/events/readiness-actions.ts`
 
