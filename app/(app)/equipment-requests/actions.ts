@@ -153,6 +153,14 @@ export async function createEquipmentRequest(
 
     try {
       const created = await prisma.$transaction(async (tx) => {
+        // SCRUM-170 AC4: a request replaces a No equipment needed decision.
+        // The event row is locked first, so recordNoEquipmentNeeded, which
+        // locks it too, can't record the decision beside this request.
+        await tx.$queryRaw`SELECT "id" FROM "Event" WHERE "id" = ${eventId} FOR UPDATE`;
+        await tx.event.updateMany({
+          where: { id: eventId, noEquipmentNeededAt: { not: null } },
+          data: { noEquipmentNeededAt: null, noEquipmentNeededById: null },
+        });
         const request = await tx.equipmentRequest.create({
           data: {
             eventId,
