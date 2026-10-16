@@ -200,7 +200,10 @@ describe.skipIf(!usesLocalDatabase)(
     // most one live booking, and the seeded events already hold theirs.
     let firstEventId: string;
     let secondEventId: string;
-    const SECOND_STAFF_ID = `usr_venuestaff_concurrency_${Date.now()}`;
+    // A lasting account, never deleted: every Venue Staff member is told of
+    // other suites' venue requests and decisions (SCRUM-124), so deleting one
+    // while they run would fail their notices, or this delete.
+    const SECOND_STAFF_ID = "usr_venuestaff_concurrency";
 
     const staff = (id: string): Session => ({
       user: { id, role: "VENUE_STAFF", name: id, email: `${id}@test.local` },
@@ -232,8 +235,10 @@ describe.skipIf(!usesLocalDatabase)(
 
     beforeAll(async () => {
       // Two different members of Venue Staff, as the criterion describes.
-      await prisma.user.create({
-        data: {
+      await prisma.user.upsert({
+        where: { id: SECOND_STAFF_ID },
+        update: {},
+        create: {
           id: SECOND_STAFF_ID,
           email: `${SECOND_STAFF_ID}@test.local`,
           name: "Second Venue Staff",
@@ -278,11 +283,7 @@ describe.skipIf(!usesLocalDatabase)(
     afterAll(async () => {
       await removeEvents([firstEventId, secondEventId]);
       await prisma.venue.delete({ where: { id: venueId } });
-      // Every Venue Staff member is told of other suites' venue requests and
-      // decisions while this one exists (SCRUM-124), so its own notices go
-      // first.
       await prisma.notification.deleteMany({ where: { userId: SECOND_STAFF_ID } });
-      await prisma.user.delete({ where: { id: SECOND_STAFF_ID } });
     });
 
     it("SCRUM-53 [AC5] TC-53-05: two staff approve overlapping requests at the same moment: one succeeds, one is returned as conflicting", async () => {
