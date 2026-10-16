@@ -53,8 +53,9 @@ export function EventDetailsModal({
   isCoordinator = false,
   isNoLongerAvailable = false,
 }: EventDetailsModalProps) {
-  // Resolving a flag changes the readiness checklist, so it is read again.
-  const [resolutions, setResolutions] = useState(0);
+  // Resolving a flag, or an edit that flags one (SCRUM-25 AC3), changes the
+  // flagged arrangements and the readiness checklist, so both are read again.
+  const [reloads, setReloads] = useState(0);
   if (!event) return null;
 
   return (
@@ -77,7 +78,12 @@ export function EventDetailsModal({
             </div>
             <div className="flex items-center gap-2">
               {/* SCRUM-25: offered only to the assigned Coordinator. */}
-              {isCoordinator && <EditDetailsDialog event={event} />}
+              {isCoordinator && (
+                <EditDetailsDialog
+                  event={event}
+                  onSaved={() => setReloads((n) => n + 1)}
+                />
+              )}
               <StatusBadge status={event.status} />
             </div>
           </div>
@@ -139,12 +145,13 @@ export function EventDetailsModal({
           {/* SCRUM-26: flagged arrangements, for the assigned Coordinator to resolve */}
           {(event.status === "PLANNING" || event.status === "CONFIRMED") && (
             <ReconsiderationPanel
+              key={`flags-${reloads}`}
               eventId={event.id}
-              onResolved={() => setResolutions((n) => n + 1)}
+              onResolved={() => setReloads((n) => n + 1)}
             />
           )}
           {event.status === "PLANNING" && (
-            <ReadinessChecklist key={resolutions} eventId={event.id} />
+            <ReadinessChecklist key={`checklist-${reloads}`} eventId={event.id} />
           )}
           {/* SCRUM-81: what a Confirmed event has secured */}
           {event.status === "CONFIRMED" && <ConfirmedArrangements eventId={event.id} />}
