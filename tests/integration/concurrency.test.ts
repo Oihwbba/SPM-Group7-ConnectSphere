@@ -721,6 +721,7 @@ describe.skipIf(!usesLocalDatabase)("event submission — repeat submission (SCR
     accessibilityNeeds: "None",
     preferredLayout: "Classroom",
     equipmentRequirements: "None",
+    registrationRequired: "yes",
     registrationNotes: "None",
   });
 
@@ -864,6 +865,7 @@ describe.skipIf(!usesLocalDatabase)("concurrency — coordinator auto-assignment
       accessibilityNeeds: "None",
       preferredLayout: "Classroom",
       equipmentRequirements: "None",
+      registrationRequired: "yes",
       registrationNotes: "None",
     };
 
