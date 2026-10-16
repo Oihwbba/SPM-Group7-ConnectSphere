@@ -20,6 +20,7 @@ SCRUM-128, which isn't on `main` yet (TC-171-09).
 | [TC-171-07](#tc-171-07) | Negative | AC 4 | Integration |
 | [TC-171-08](#tc-171-08) | Negative, Boundary | AC 5 | Unit, integration |
 | [TC-171-09](#tc-171-09) | Negative | AC 5 | Manual, waits for SCRUM-128 |
+| [TC-171-10](#tc-171-10) | Positive | AC 1 | Unit |
 
 ### TC-171-01
 
@@ -137,3 +138,16 @@ SCRUM-128, which isn't on `main` yet (TC-171-09).
 | Expected Result | Refused with the number of active registrations; nothing changes. |
 
 **Automated by:** Manual. Waits for SCRUM-128 (#181), whose approval should use `registrationStillNeededMessage` from `lib/schemas/event-edit.ts`.
+
+### TC-171-10
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-171-10 |
+| Test Scenario | [Positive] AC 1: the note about registration is optional in a clarification answer and a change request too, as on the request form |
+| Pre-conditions | An event with the registration note "Open to all students": one with an open clarification naming Registration needs, and one that can take a change request. |
+| Test Steps | 1. As its Organiser, answer the clarification with the note cleared. <br> 2. Raise a change request clearing the note. |
+| Test Data | `organiser@test.local` |
+| Expected Result | 1: accepted. 2: raised, recording Registration needs changing from "Open to all students" to no value. A note over 5000 characters is refused. |
+
+**Automated by:** `tests/unit/clarification-and-amend.test.ts` › "SCRUM-171 [AC1] TC-171-10: a clarification answer can clear the registration note, which the form no longer requires"; `tests/unit/change-requests.test.ts` › "SCRUM-171 [AC1] TC-171-10: a change request can clear the registration note, which the form no longer requires"
