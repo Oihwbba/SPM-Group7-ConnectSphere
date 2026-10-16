@@ -1,6 +1,10 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 
 import { afterCancelling } from "@/components/events/reconsideration-panel";
+
+// The panel imports its server actions, which load Auth.js; only the
+// message helper is tested here.
+vi.mock("@/app/(app)/events/reconsideration-actions", () => ({}));
 
 // SCRUM-26 AC9 — after Cancel arrangement, the Coordinator is told what
 // happens next. Test cases: docs/testing/SCRUM-26.md (TC-26-10).
