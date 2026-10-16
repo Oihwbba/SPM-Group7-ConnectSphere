@@ -95,7 +95,7 @@ the open pull requests that change the same test files have merged.
 
 | Story | Owner | Test cases | Status |
 |---|---|---|---|
-| [SCRUM-13](SCRUM-13.md) | Felicia Or | 13 | Automated except the accepted attendance of 1 in TC-13-08; notes what SCRUM-129 and SCRUM-170 changed in AC 1, 2, 4 and 6 |
+| [SCRUM-13](SCRUM-13.md) | Felicia Or | 14 | Automated except the accepted attendance of 1 in TC-13-08; notes what SCRUM-129 and SCRUM-170 changed in AC 1, 2, 4 and 6 |
 | [SCRUM-14](SCRUM-14.md) | Hann Qian | 6 | Automated except TC-14-02's whole submission with no Coordinator; its assignment step is unit-tested |
 | [SCRUM-15](SCRUM-15.md) | Felicia Or | 12 | Every case automated; AC 9's marking for correction isn't built, since the requirements are free text |
 | [SCRUM-16](SCRUM-16.md) | Felicia Or | 5 | Automated except TC-16-05 (AC 8), which is manual |
@@ -128,6 +128,7 @@ the open pull requests that change the same test files have merged.
 | [SCRUM-27](SCRUM-27.md) | Jin Hong | 16 | Written with the story; every case automated |
 | [SCRUM-28](SCRUM-28.md) | Jin Hong | 11 | Written with the story; every case automated |
 | [SCRUM-31](SCRUM-31.md) | Jun Bin | 11 | Written from the acceptance criteria and existing tests; TC-31-04, -05 and -09 are partly manual |
+| [SCRUM-34](SCRUM-34.md) | Felicia Or | 22 | Every case automated (unit, integration for the database's hours check, the migration converting existing hours, opening hours and retirement refusing requests, holds and approvals, and two retirements at once, e2e for both journeys and the detail page's 404) |
 | [SCRUM-36](SCRUM-36.md) | Caylern Goh | 9 | Automated; a real screen-reader pass is manual |
 | [SCRUM-37](SCRUM-37.md) | Caylern Goh | 7 | Every case automated |
 | [SCRUM-40](SCRUM-40.md) | Felicia Or | 11 | Automated except TC-40-07 (AC 7, the venue detail view), manual until SCRUM-34 adds that page (unit, integration for the one-per-event judgement and the advisory rule, e2e for the journey); the search-results half of AC 7 is SCRUM-38's |
@@ -148,6 +149,7 @@ the open pull requests that change the same test files have merged.
 | [SCRUM-142](SCRUM-142.md) | Jin Hong | 18 | Every case automated (unit, integration for what each change writes and two withdrawals at once, e2e for the Coordinator's journeys) |
 | [SCRUM-155](SCRUM-155.md) | Jin Hong | 16 | Every case automated (unit, integration for all-or-nothing and the races, e2e for the journey) |
 | [SCRUM-156](SCRUM-156.md) | Jin Hong | 8 | Every case automated; TC-155-16 retired and the SCRUM-31 reserve cases mapped to SCRUM-155 |
+| [SCRUM-161](SCRUM-161.md) | Felicia Or | 16 | Every current case automated; TC-161-08 to TC-161-11 retired with former AC 5 and AC 6; supersedes TC-37-05 step 1 and TC-37-06 |
 | [SCRUM-159](SCRUM-159.md) | Jun Bin | 17 | Every case automated (unit, integration for the database's range and the simultaneous approvals, e2e for the calendar and the request form); AC 1's form is SCRUM-34's and AC 3's search SCRUM-38's |
 | [SCRUM-172](SCRUM-172.md) | Jin Hong | 20 | Integration and unit; TC-172-15 step 3 is manual, and TC-172-16 is the whole suite |
 | [SCRUM-26](SCRUM-26.md) | Jun Bin | 15 | Every case automated (unit, integration for blocking, Still stands against real unavailability and simultaneous cancels, e2e for the journey); AC 1's warning screen is SCRUM-25's |

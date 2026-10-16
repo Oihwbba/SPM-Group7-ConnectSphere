@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import { BOOKABLE_EVENT_STATUSES } from "@/lib/schemas/booking";
 import { findVenueBlockers, occupiedPeriod } from "@/lib/venue-availability";
 import { liveHoldWhere } from "@/lib/booking-holds";
+import { openingHoursRefusal } from "@/lib/venue-hours";
 
 /**
  * SCRUM-50 — the events a coordinator may request a venue for: approved ones
@@ -128,6 +129,9 @@ export async function getPendingBookingQueue(now = new Date()) {
           supportedLayouts: true,
           setupMinutes: true,
           turnaroundMinutes: true,
+          openingHours: {
+            select: { weekday: true, opensMinute: true, closesMinute: true },
+          },
         },
       },
     },
@@ -142,6 +146,8 @@ export async function getPendingBookingQueue(now = new Date()) {
   return Promise.all(
     pending.map(async (booking) => ({
       ...booking,
+      // SCRUM-34 AC7: approving or holding it would be refused for this.
+      outsideHours: openingHoursRefusal(booking, booking.venue),
       blockers: (
         await findVenueBlockers(
           prisma,
