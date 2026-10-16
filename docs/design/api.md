@@ -117,4 +117,4 @@ request.
 
 | Action | What it does | Permission | Input | Writes | Locks |
 |---|---|---|---|---|---|
-| `recordUnavailability` | Venue Staff record that a venue is unavailable (SCRUM-37). | `unavailability:record` | `recordUnavailabilitySchema` (lib/schemas/unavailability.ts) | VenueUnavailability | Venue row (`FOR NO KEY UPDATE`) |
+| `recordUnavailability` | Venue Staff record that a venue is unavailable (SCRUM-37). Over bookings, it first returns the affected bookings unsaved; sent again confirming them, it saves the period and flags them Needs Reconsideration (SCRUM-161). The same period and reason again saves nothing (AC6). | `unavailability:record` | `recordUnavailabilitySchema` (lib/schemas/unavailability.ts) | VenueUnavailability, Booking (flag only), AuditLog, Notification | Affected events (`FOR KEY SHARE`), then affected bookings (`FOR UPDATE`), then the Venue row (`FOR NO KEY UPDATE`) |

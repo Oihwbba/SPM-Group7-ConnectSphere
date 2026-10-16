@@ -30,11 +30,15 @@ export const UNAVAILABILITY_REASON_LABEL: Record<
 };
 
 /**
- * SCRUM-37 AC1 — "Venue Staff can record non-booking unavailability
- * directly, with a period and a reason (e.g. maintenance, closure)."
+ * SCRUM-37 AC1, SCRUM-161 AC1 — Venue Staff record that a venue is
+ * unavailable, with a period, a reason and an optional note.
  *
  * `startAt`/`endAt` are UTC ISO strings, converted from Singapore wall time
  * by the form, exactly as for a booking request.
+ *
+ * `confirmedBookingIds` are the affected bookings Venue Staff were shown and
+ * confirmed (SCRUM-161 AC2). Empty on the first save; the action answers with
+ * the bookings the period affects, and saves only once each one is confirmed.
  */
 export const recordUnavailabilitySchema = z
   .object({
@@ -45,6 +49,7 @@ export const recordUnavailabilitySchema = z
       errorMap: () => ({ message: "Choose a reason." }),
     }),
     note: z.string().trim().max(500).optional(),
+    confirmedBookingIds: z.array(z.string()).max(500).default([]),
   })
   .superRefine((data, ctx) => {
     const period = {
