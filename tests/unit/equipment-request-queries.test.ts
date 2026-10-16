@@ -34,7 +34,7 @@ beforeEach(() => {
 });
 
 describe("getRequestableEvents — SCRUM-27 AC 1", () => {
-  it("SCRUM-27 [AC1] TC-27-01: offers only this coordinator's events that are going ahead, soonest first", async () => {
+  it("SCRUM-27 [AC1] TC-27-01, SCRUM-170 [AC3] TC-170-03: offers only this coordinator's events that are going ahead, soonest first, with the Organiser's equipment answer", async () => {
     const events = [
       {
         id: "evt_approved",
@@ -53,7 +53,13 @@ describe("getRequestableEvents — SCRUM-27 AC 1", () => {
           { status: { in: [...REQUESTABLE_EVENT_STATUSES] } },
         ],
       },
-      select: { id: true, name: true, startAt: true, endAt: true },
+      select: {
+        id: true,
+        name: true,
+        startAt: true,
+        endAt: true,
+        equipmentRequirements: true,
+      },
       orderBy: { startAt: "asc" },
     });
   });
