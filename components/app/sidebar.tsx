@@ -15,6 +15,7 @@ import {
   ClipboardList,
   LayoutGrid,
   ShieldCheck,
+  Inbox,
   Ticket,
   Wrench,
   type LucideIcon,
@@ -35,6 +36,7 @@ const ICON_BY_HREF: Record<string, LucideIcon> = {
   "/equipment": Wrench,
   "/equipment-requests": ClipboardList,
   "/safety-checks": ShieldCheck,
+  "/queue": Inbox,
   "/registrations": Ticket,
   "/notifications": Bell,
 };

@@ -24,16 +24,11 @@ beforeEach(() => {
 });
 
 describe("CoordinatorEvents — SCRUM-17 access scope", () => {
-  it("[Positive] AC: queries events assigned to this coordinator, or unclaimed and not a draft", async () => {
+  it("[Positive] AC, SCRUM-165 [AC8]: queries only the events assigned to this coordinator", async () => {
     await CoordinatorEvents({ coordinatorId: "usr_coord" });
 
     expect(mockFindMany).toHaveBeenCalledWith({
-      where: {
-        OR: [
-          { coordinatorId: "usr_coord" },
-          { coordinatorId: null, status: { not: "DRAFT" } },
-        ],
-      },
+      where: { coordinatorId: "usr_coord" },
       orderBy: { createdAt: "desc" },
     });
   });
@@ -65,7 +60,7 @@ describe("CoordinatorEvents — SCRUM-17 access scope", () => {
     ).toBe(false);
   });
 
-  it("[Positive] AC/SCRUM-68 parity: an unclaimed, non-draft event is viewable — matches the query's second OR branch", () => {
+  it("[Negative] SCRUM-165 [AC8]: an unclaimed Submitted event is not viewable by a coordinator; it waits in the Lead's queue", () => {
     const unclaimedSubmitted = {
       kind: "event" as const,
       organiserId: "usr_org",
@@ -75,7 +70,7 @@ describe("CoordinatorEvents — SCRUM-17 access scope", () => {
 
     expect(
       can({ id: "usr_coord", role: "COORDINATOR" }, "event:read", unclaimedSubmitted),
-    ).toBe(true);
+    ).toBe(false);
   });
 
   it("[Boundary] AC/SCRUM-68 parity: an unclaimed DRAFT is NOT viewable — the query explicitly excludes DRAFT from the null-coordinator branch", () => {

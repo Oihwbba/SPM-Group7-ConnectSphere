@@ -31,15 +31,14 @@ beforeEach(() => {
   mockFindMany.mockResolvedValue([]);
 });
 
+// SCRUM-165 supersedes SCRUM-69 AC1 and AC4: an unassigned request no longer
+// shows in every Coordinator's list; it waits in the Lead's queue.
 describe("SCRUM-69 — View only the events assigned to me", () => {
-  it("[Positive] AC1: my list is the events assigned to me, plus unassigned events that are not drafts", async () => {
+  it("[Positive] AC1, SCRUM-165 [AC8]: my list is exactly the events assigned to me", async () => {
     await getCoordinatorEvents(cody.id);
 
     expect(mockFindMany.mock.calls[0][0].where).toEqual({
-      OR: [
-        { coordinatorId: cody.id },
-        { coordinatorId: null, status: { not: "DRAFT" } },
-      ],
+      coordinatorId: cody.id,
     });
   });
 
@@ -50,8 +49,9 @@ describe("SCRUM-69 — View only the events assigned to me", () => {
   it("[Negative] AC1: an event assigned to another Coordinator is neither listed nor openable", async () => {
     await getCoordinatorEvents(cody.id);
 
-    const { OR } = mockFindMany.mock.calls[0][0].where;
-    expect(OR).not.toContainEqual({ coordinatorId: cara.id });
+    expect(mockFindMany.mock.calls[0][0].where).not.toEqual({
+      coordinatorId: cara.id,
+    });
     expect(can(cody, "event:read", eventFor(cara.id))).toBe(false);
   });
 
@@ -65,28 +65,21 @@ describe("SCRUM-69 — View only the events assigned to me", () => {
     await getCoordinatorEvents(cody.id);
     await getCoordinatorEvents(cara.id);
 
-    expect(mockFindMany.mock.calls[0][0].where.OR[0]).toEqual({
+    expect(mockFindMany.mock.calls[0][0].where).toEqual({
       coordinatorId: cody.id,
     });
-    expect(mockFindMany.mock.calls[1][0].where.OR[0]).toEqual({
+    expect(mockFindMany.mock.calls[1][0].where).toEqual({
       coordinatorId: cara.id,
     });
     expect(can(cody, "event:read", handedOver)).toBe(false);
     expect(can(cara, "event:read", handedOver)).toBe(true);
   });
 
-  it("[Positive] AC4: a Submitted event with no Coordinator is in every Coordinator's list", async () => {
+  it("[Negative] SCRUM-165 [AC8] (supersedes AC4): a Submitted event with no Coordinator is in no Coordinator's list; it waits for the Lead", () => {
     const unassigned = eventFor(null, "SUBMITTED");
 
     for (const coordinator of [cody, cara]) {
-      await getCoordinatorEvents(coordinator.id);
-      expect(can(coordinator, "event:read", unassigned)).toBe(true);
-    }
-    for (const call of mockFindMany.mock.calls) {
-      expect(call[0].where.OR).toContainEqual({
-        coordinatorId: null,
-        status: { not: "DRAFT" },
-      });
+      expect(can(coordinator, "event:read", unassigned)).toBe(false);
     }
   });
 });

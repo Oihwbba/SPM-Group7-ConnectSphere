@@ -13,16 +13,12 @@ export async function getOrganiserEvents(organiserId: string) {
   });
 }
 
-/** Requests assigned to one coordinator, plus submitted requests nobody has
- * picked up yet. Must mirror `can()`'s coordinator relationship exactly. */
+/** SCRUM-69 AC1, SCRUM-165 AC8: the events assigned to one coordinator; an
+ * unassigned request waits in the Lead's queue. Must mirror `can()`'s
+ * coordinator relationship exactly. */
 export async function getCoordinatorEvents(coordinatorId: string) {
   return prisma.event.findMany({
-    where: {
-      OR: [
-        { coordinatorId },
-        { coordinatorId: null, status: { not: "DRAFT" } },
-      ],
-    },
+    where: { coordinatorId },
     orderBy: { createdAt: "desc" },
   });
 }
