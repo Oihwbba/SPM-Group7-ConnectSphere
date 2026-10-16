@@ -510,7 +510,7 @@ const ALREADY_REPORTED =
  * - The notices reference the event, so its row is locked first, in the
  *   order resolving a flag uses (ADR 0007).
  */
-export async function reportUnprovidableReservation(
+export async function reportUnprovidableEquipment(
   input: unknown,
 ): Promise<ActionResult<{ reservationId: string }>> {
   const session = await auth();

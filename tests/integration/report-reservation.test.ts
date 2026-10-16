@@ -12,7 +12,7 @@ import type { Session } from "next-auth";
 
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
-import { reportUnprovidableReservation } from "@/app/(app)/equipment/actions";
+import { reportUnprovidableEquipment } from "@/app/(app)/equipment/actions";
 import {
   getFlaggedArrangements,
   resolveReconsiderationFlag,
@@ -124,7 +124,7 @@ describe.skipIf(!usesLocalDatabase)(
     });
 
     it("SCRUM-32 [AC1, AC2, AC4, AC5] TC-32-01: a report flags the reservation with the reason, keeps it reserved as it was, records who, and tells the Coordinator", async () => {
-      expect(await reportUnprovidableReservation({ reservationId, reason: REASON })).toEqual({
+      expect(await reportUnprovidableEquipment({ reservationId, reason: REASON })).toEqual({
         ok: true,
         data: { reservationId },
       });
@@ -164,8 +164,8 @@ describe.skipIf(!usesLocalDatabase)(
 
     it("SCRUM-32 [AC3] TC-32-03: two reports at the same moment flag it once, with one record and one notice", async () => {
       const results = await Promise.all([
-        reportUnprovidableReservation({ reservationId, reason: REASON }),
-        reportUnprovidableReservation({ reservationId, reason: "Lens cracked." }),
+        reportUnprovidableEquipment({ reservationId, reason: REASON }),
+        reportUnprovidableEquipment({ reservationId, reason: "Lens cracked." }),
       ]);
 
       expect(results.filter((r) => r.ok)).toHaveLength(1);
@@ -174,17 +174,17 @@ describe.skipIf(!usesLocalDatabase)(
     });
 
     it("SCRUM-32 [AC3] TC-32-03: reporting it again later changes nothing", async () => {
-      await reportUnprovidableReservation({ reservationId, reason: REASON });
+      await reportUnprovidableEquipment({ reservationId, reason: REASON });
       const before = await read();
 
-      expect((await reportUnprovidableReservation({ reservationId, reason: "Again." })).ok).toBe(false);
+      expect((await reportUnprovidableEquipment({ reservationId, reason: "Again." })).ok).toBe(false);
       expect(await read()).toEqual(before);
       expect(await reports()).toBe(1);
       expect(await flagNotices()).toHaveLength(1);
     });
 
     it("SCRUM-32 [AC4, AC5] TC-32-06: the Coordinator cancels the reported reservation, which returns its stock and records who", async () => {
-      await reportUnprovidableReservation({ reservationId, reason: REASON });
+      await reportUnprovidableEquipment({ reservationId, reason: REASON });
       mockAuth.mockResolvedValue(COORDINATOR);
 
       expect(

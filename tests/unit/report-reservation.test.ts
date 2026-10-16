@@ -9,7 +9,7 @@ import {
   REPORT_REASON_REQUIRED,
   reportReservationSchema,
 } from "@/lib/schemas/reservation";
-import { reportUnprovidableReservation } from "@/app/(app)/equipment/actions";
+import { reportUnprovidableEquipment } from "@/app/(app)/equipment/actions";
 
 // SCRUM-32 — Technical Support report reserved equipment that can no longer
 // be provided, with the database mocked: what a report writes, and every
@@ -44,7 +44,7 @@ const sessionFor = (role: Role, id = `usr_${role.toLowerCase()}`): Session => ({
 const TECH = sessionFor("TECH_SUPPORT", "usr_tech");
 const REASON = "Two of the projectors failed their safety test.";
 const report = (reason = REASON) =>
-  reportUnprovidableReservation({ reservationId: "rsv_1", reason });
+  reportUnprovidableEquipment({ reservationId: "rsv_1", reason });
 
 const flaggedRow = {
   id: "rsv_1",
@@ -77,7 +77,7 @@ function expectNothingWritten() {
   expect(db.notification.createMany).not.toHaveBeenCalled();
 }
 
-describe("reportUnprovidableReservation — SCRUM-32", () => {
+describe("reportUnprovidableEquipment — SCRUM-32", () => {
   it("SCRUM-32 [AC1, AC4] TC-32-01: a report flags the reservation with the reason, and changes nothing else about it", async () => {
     expect(await report()).toEqual({ ok: true, data: { reservationId: "rsv_1" } });
 
@@ -164,7 +164,7 @@ describe("reportUnprovidableReservation — SCRUM-32", () => {
   });
 
   it("SCRUM-32 [AC1] TC-32-02: a request without a reservation id is not found, before anything is read", async () => {
-    expect(await reportUnprovidableReservation({ reason: REASON })).toEqual({
+    expect(await reportUnprovidableEquipment({ reason: REASON })).toEqual({
       ok: false,
       error: "Reservation not found.",
       fieldErrors: { reservationId: ["Required"] },

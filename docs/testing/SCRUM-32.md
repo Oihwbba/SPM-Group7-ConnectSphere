@@ -6,7 +6,7 @@ Format and conventions: [README.md](README.md).
 Technical Support report a reservation from the Equipment page, under the
 selected type's commitments. The report flags it Needs Reconsideration
 (SCRUM-26) with the reason; the event's Coordinator resolves the flag. Built
-by `reportUnprovidableReservation` in
+by `reportUnprovidableEquipment` in
 [app/(app)/equipment/actions.ts](<../../app/(app)/equipment/actions.ts>).
 
 **Shared pre-conditions for every case:** the database is migrated and

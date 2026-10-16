@@ -19,7 +19,7 @@ import {
 
 import {
   getEquipmentSchedule,
-  reportUnprovidableReservation,
+  reportUnprovidableEquipment,
   type EquipmentSchedule,
 } from "./actions";
 
@@ -150,7 +150,7 @@ function ReportReservation({
     setPending(true);
     setError(null);
     try {
-      const result = await reportUnprovidableReservation({ reservationId, reason });
+      const result = await reportUnprovidableEquipment({ reservationId, reason });
       if (!result.ok) {
         setError(result.fieldErrors?.reason?.[0] ?? result.error);
         return;
