@@ -171,9 +171,9 @@ same period. Flagged rows are created straight in the database or with
 | Pre-conditions | A flagged booking and a flagged reservation. |
 | Test Steps | 1. Click **Cancel arrangement**, then confirm. <br> 2. Try again on one already resolved or cancelled. |
 | Test Data | — |
-| Expected Result | 1. The booking (or reservation, with its cancelled time) is Cancelled, its flag off, who and when saved, with a status history entry; the event's other arrangements are untouched. The confirm dialog and the message say what happens next: "Request a venue again when you're ready." for a booking, "Technical Support will reserve it again." for a reservation, whose equipment request stays Approved. 2. "This arrangement no longer needs reconsideration. Refresh to see where it stands." Nothing is written. |
+| Expected Result | 1. The booking (or reservation, with its cancelled time) is Cancelled, its flag off, who and when saved, with a status history entry; the event's other arrangements are untouched. The confirm dialog and the message say what happens next: "Request a venue again when you're ready." for a booking, "Technical Support will reserve it again." for a reservation, whose equipment request stays Approved. The readiness checklist's venue item reads "Not requested", even if an older request was rejected: the newer cancellation replaces the old reason. 2. "This arrangement no longer needs reconsideration. Refresh to see where it stands." Nothing is written. |
 
-**Automated by:** `tests/unit/reconsideration-actions.test.ts` › "SCRUM-26 [AC9] TC-26-10: …" (5 tests); `tests/unit/reconsideration-panel.test.tsx` › "SCRUM-26 [AC9] TC-26-10: …" (2 tests); `e2e/reconsideration.spec.ts` (TC-26-14, the booking's message)
+**Automated by:** `tests/unit/reconsideration-actions.test.ts` › "SCRUM-26 [AC9] TC-26-10: …" (5 tests); `tests/unit/reconsideration-panel.test.tsx` › "SCRUM-26 [AC9] TC-26-10: …" (2 tests); `tests/unit/event-readiness.test.ts` › "SCRUM-110 [AC1, AC2] TC-110-05: with a rejection then a newer cancelled booking, …"; `e2e/reconsideration.spec.ts` (TC-26-14, the booking's message)
 
 ### TC-26-11
 

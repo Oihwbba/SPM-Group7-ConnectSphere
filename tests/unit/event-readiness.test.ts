@@ -194,6 +194,18 @@ describe("getReadinessChecklist — SCRUM-110", () => {
       bookings: [booking("CANCELLED")],
       expected: { complete: false, state: "Not requested", reason: null },
     },
+    {
+      // SCRUM-26 AC9: the Coordinator cancelled the newer booking; the older
+      // rejection's reason no longer describes the venue.
+      when: "a rejection then a newer cancelled booking",
+      bookings: [booking("REJECTED", 1, "old"), booking("CANCELLED", 2)],
+      expected: { complete: false, state: "Not requested", reason: null },
+    },
+    {
+      when: "a cancelled booking then a newer rejection",
+      bookings: [booking("CANCELLED", 1), booking("REJECTED", 2, "new")],
+      expected: { complete: false, state: "Rejected", reason: "new" },
+    },
   ])(
     "SCRUM-110 [AC1, AC2] TC-110-05: with $when, the venue item reads as the most advanced booking",
     async ({ bookings, expected }) => {
