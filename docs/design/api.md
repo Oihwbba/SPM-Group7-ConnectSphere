@@ -50,6 +50,7 @@ request.
 | `getEquipmentAvailability` | What one equipment type has free over a period (SCRUM-29). | `equipment:read` | `availabilitySchema` (lib/schemas/reservation.ts) | nothing (read only) | — |
 | `getEquipmentSchedule` | One type's reserved and free stock, from a chosen date (SCRUM-29, 30). | `equipment:read` | `equipmentScheduleSchema` (lib/schemas/reservation.ts) | nothing (read only) | — |
 | `reserveEquipmentRequest` | Technical Support reserves every line of an approved request, or none (SCRUM-155). | `equipment:reserve` | `requestReservationSchema` (lib/schemas/reservation.ts) | Reservation | Equipment row, EquipmentRequest row, Event row |
+| `reportUnprovidableReservation` | Technical Support report that reserved equipment can no longer be provided, with the reason. It is flagged Needs Reconsideration and stays reserved until the event's Coordinator decides; reporting it again changes nothing (SCRUM-32). The Coordinator and Technical Support are told (SCRUM-124 AC8). | `reservation:report` | `reportReservationSchema` (lib/schemas/reservation.ts) | AuditLog, Notification, Reservation | Event row (`FOR KEY SHARE`) |
 
 ## `app/(app)/events/actions.ts`
 

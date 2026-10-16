@@ -133,6 +133,22 @@ export const equipmentScheduleSchema = z.object({
   from: z.string().min(1, "Choose a date to view from."),
 });
 
+export const REPORT_REASON_REQUIRED = "Say why it can no longer be provided.";
+
+/**
+ * SCRUM-32 AC1, AC2 — Technical Support report that reserved equipment can no
+ * longer be provided. The reason is required, since the Coordinator decides
+ * from it.
+ */
+export const reportReservationSchema = z.object({
+  reservationId: z.string().min(1),
+  reason: z
+    .string()
+    .trim()
+    .min(1, REPORT_REASON_REQUIRED)
+    .max(500, "Keep the reason under 500 characters."),
+});
+
 
 
 

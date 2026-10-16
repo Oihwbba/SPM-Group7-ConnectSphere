@@ -23,8 +23,10 @@ import {
   allAvailabilitySchema,
   availabilitySchema,
   equipmentScheduleSchema,
+  reportReservationSchema,
   requestReservationSchema,
 } from "@/lib/schemas/reservation";
+import { flagArrangements } from "@/lib/reconsideration";
 
 type Availability = { available: number; total: number; committed: number };
 type RequestReserveOutcome =
@@ -224,6 +226,7 @@ export async function getEquipmentSchedule(
           startAt: true,
           endAt: true,
           quantity: true,
+          needsReconsideration: true,
           event: { select: { name: true } },
         },
       }),
@@ -250,6 +253,7 @@ export async function getEquipmentSchedule(
         eventName: row.event.name,
         reason: null,
         note: null,
+        needsReconsideration: row.needsReconsideration,
       })),
       ...unavailability.map((row) => ({
         id: row.id,
@@ -260,6 +264,7 @@ export async function getEquipmentSchedule(
         eventName: null,
         reason: row.reason,
         note: row.note,
+        needsReconsideration: false,
       })),
     ];
 
@@ -479,6 +484,93 @@ export async function reserveEquipmentRequest(
     if ("error" in result) return err(result.error, result.fieldErrors);
     revalidatePath("/equipment");
     return ok(result);
+  } catch (error) {
+    if (error instanceof PermissionError) return err(error.message);
+    throw error;
+  }
+}
+
+const RESERVATION_NOT_FOUND = "Reservation not found.";
+const ALREADY_REPORTED =
+  "This reservation has already been reported and is waiting for its event's Coordinator to decide.";
+
+/**
+ * SCRUM-32 — Technical Support report that reserved equipment can no longer
+ * be provided, with the reason (AC1, AC2).
+ *
+ * - The reservation is flagged Needs Reconsideration (SCRUM-26) and stays
+ *   Confirmed, with its quantity and period, until its event's Coordinator
+ *   resolves the flag (AC1, AC4). Nothing here cancels or changes it.
+ * - The reason becomes the flag's reason, which the Coordinator reads, and
+ *   flagging tells them and Technical Support (SCRUM-124 AC8).
+ * - A reservation already flagged is left as it is: reporting it again
+ *   changes nothing and tells nobody (AC3). The flag is conditional on that,
+ *   so two reports at once flag it once.
+ * - The report is recorded with who and when (AC5).
+ * - The notices reference the event, so its row is locked first, in the
+ *   order resolving a flag uses (ADR 0007).
+ */
+export async function reportUnprovidableReservation(
+  input: unknown,
+): Promise<ActionResult<{ reservationId: string }>> {
+  const session = await auth();
+  const user = session?.user;
+
+  try {
+    requirePermission(user, "reservation:report");
+
+    const parsed = reportReservationSchema.safeParse(input);
+    if (!parsed.success) {
+      const fieldErrors = parsed.error.flatten().fieldErrors;
+      return err(fieldErrors.reason?.[0] ?? RESERVATION_NOT_FOUND, fieldErrors);
+    }
+    const { reservationId, reason } = parsed.data;
+
+    const reservation = await prisma.reservation.findUnique({
+      where: { id: reservationId },
+      select: { eventId: true, status: true, needsReconsideration: true },
+    });
+    if (!reservation || reservation.status !== "CONFIRMED") {
+      return err(RESERVATION_NOT_FOUND);
+    }
+    if (reservation.needsReconsideration) return err(ALREADY_REPORTED);
+
+    const refused = await prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT "id" FROM "Event" WHERE "id" = ${reservation.eventId} FOR KEY SHARE`;
+      const flagged = await flagArrangements(
+        tx,
+        { bookingIds: [], reservationIds: [reservationId] },
+        `Technical Support can no longer provide it: ${reason}`,
+        new Date(),
+        user!.id,
+      );
+      if (flagged.reservations !== 1) {
+        // Cancelled, or reported by someone else, since it was read.
+        const latest = await tx.reservation.findUniqueOrThrow({
+          where: { id: reservationId },
+          select: { status: true },
+        });
+        return latest.status === "CONFIRMED" ? ALREADY_REPORTED : RESERVATION_NOT_FOUND;
+      }
+      await tx.auditLog.create({
+        data: {
+          entityType: "Reservation",
+          entityId: reservationId,
+          action: "REPORTED_UNPROVIDABLE",
+          actorId: user!.id,
+          fieldName: "needsReconsideration",
+          oldValue: "false",
+          newValue: "true",
+          summary: reason,
+        },
+      });
+      return null;
+    });
+    if (refused) return err(refused);
+
+    revalidatePath("/equipment");
+    revalidatePath("/events");
+    return ok({ reservationId });
   } catch (error) {
     if (error instanceof PermissionError) return err(error.message);
     throw error;
