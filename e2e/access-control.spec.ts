@@ -104,8 +104,9 @@ test.describe("SCRUM-66 — on-screen actions are gated by role", () => {
   }) => {
     await signIn(page, "coordinator@test.local");
     await page.waitForURL("**/events");
-    // The seed leaves "Submitted — Alumni Homecoming" unclaimed, so it shows in
-    // the coordinator's queue with the Approve / Reject decision controls.
+    // The seed assigns "Under Review — Career Fair" to this coordinator, so it
+    // shows with the Approve / Reject decision controls. (An unassigned
+    // request waits in the Lead's queue instead, SCRUM-165.)
     await expect(
       page.getByRole("button", { name: "Approve", exact: true }).first(),
     ).toBeVisible();

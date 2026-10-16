@@ -29,7 +29,7 @@ import {
 // mocked. Each test makes its own event, assigned to the second seeded
 // Coordinator, and the suite removes them, so it only runs on a localhost
 // database. The submission notice (AC1) is in
-// tests/unit/event-auto-assignment.test.ts, and its count against a real
+// tests/unit/submission-queue.test.ts, and its count against a real
 // database in tests/integration/concurrency.test.ts.
 vi.mock("@/auth", () => ({ auth: vi.fn() }));
 const mockAuth = auth as unknown as Mock;
