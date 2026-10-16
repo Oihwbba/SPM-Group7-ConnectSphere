@@ -95,7 +95,7 @@ test.describe("SCRUM-25 — update routine event information during planning", (
     if (usesLocalDatabase) await removeTestEvents();
   });
 
-  test("SCRUM-25 [AC1, AC2, AC3, AC6] TC-25-01, TC-25-04, TC-25-06, TC-25-09: the coordinator edits routine details, confirms the booking an attendance change flags, and adds a note", async ({
+  test("SCRUM-25 [AC1, AC2, AC3, AC6] TC-25-01, TC-25-04, TC-25-06, TC-25-21, TC-25-09: the coordinator edits routine details, confirms the booking an attendance change flags and sees it flagged at once, and adds a note", async ({
     browser,
   }) => {
     test.skip(!usesLocalDatabase, "creates its own event");
@@ -136,8 +136,16 @@ test.describe("SCRUM-25 — update routine event information during planning", (
     // AC3, SCRUM-26 AC1: the venue is requested, so an attendance change
     // first lists the booking it will flag, and saves nothing until confirmed.
     await coordinator.goto("/events");
-    dialog = await openDetails(coordinator, NAME);
-    await dialog.getByRole("button", { name: "Edit details" }).click();
+    await openDetails(coordinator, NAME);
+    // The open event's details, named so a locator never lands on the edit
+    // dialog, which hides them from the accessibility tree while it is open.
+    const details = coordinator.getByRole("dialog", { name: NAME, exact: true });
+    // Before the flag: nothing to reconsider, and the venue reads Pending.
+    const flaggedPanel = details.getByTestId("reconsideration-panel");
+    const venueItem = details.getByTestId("readiness-item-venue");
+    await expect(venueItem).toContainText("Pending");
+    await expect(flaggedPanel).toHaveCount(0);
+    await details.getByRole("button", { name: "Edit details" }).click();
     await edit.getByLabel("Expected attendance").fill("150");
     await edit.getByRole("button", { name: "Save details" }).click();
     const warning = edit.getByTestId("edit-details-flag-warning");
@@ -162,6 +170,19 @@ test.describe("SCRUM-25 — update routine event information during planning", (
         "Details saved. 1 arrangement flagged Needs Reconsideration.",
       ),
     ).toBeVisible();
+
+    // TC-25-21: the flag shows in the open event's details straight away, in
+    // the panel and the readiness checklist, without reopening the event.
+    await expect(edit).toHaveCount(0);
+    await expect(flaggedPanel.getByTestId("flagged-booking")).toContainText(
+      "Exhibition Hall (Pending)",
+    );
+    await expect(flaggedPanel.getByTestId("flagged-booking")).toContainText(
+      "The event's expected attendance changed.",
+    );
+    await expect(venueItem).toContainText(
+      "Needs reconsideration – The event's expected attendance changed.",
+    );
     expect(
       await prisma.booking.findFirstOrThrow({
         where: { eventId },

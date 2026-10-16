@@ -1060,6 +1060,9 @@ describe("the readiness checklist's venue item — SCRUM-163 AC6", () => {
           status: "PLANNING",
           startAt: START,
           endAt: END,
+          // SCRUM-170 AC4: equipment decided, so only the venue decides `ready`.
+          noEquipmentNeededAt: NOW,
+          noEquipmentNeededBy: { name: "Cody Coordinator" },
           bookings,
           equipmentRequests: [],
           reservations: [],
