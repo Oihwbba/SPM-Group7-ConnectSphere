@@ -58,6 +58,7 @@ export type Action =
   | "event:browse" // attendees browsing events open for registration
   | "registration:create" // SCRUM-73: an attendee registers for an event
   | "registration:withdraw" // SCRUM-74/77: an attendee withdraws their own registration
+  | "registration:control" // SCRUM-75 AC6: the organiser, or the assigned coordinator on their behalf, closes or reopens registration
   | "registration:read"
   | "notification:read";
 
@@ -102,6 +103,7 @@ const ROLE_ACTIONS: Record<Role, Action[]> = {
     "event:read",
     "clarification:respond",
     "change-request:raise",
+    "registration:control",
     "event-note:read",
     "notification:read",
   ],
@@ -117,6 +119,7 @@ const ROLE_ACTIONS: Record<Role, Action[]> = {
     "arrangement:reconsider",
     "clarification:request",
     "change-request:raise",
+    "registration:control",
     "venue:read",
     "equipment-request:list",
     "equipment-request:create",
@@ -186,7 +189,8 @@ function hasRelationship(
         // venue holds (SCRUM-163 AC3), change or withdraw its requests
         // (SCRUM-142 AC7), raise a change request on the organiser's behalf
         // (SCRUM-41 AC10), or edit its details (SCRUM-25 AC1, AC7), 
-        // or resolve a flag on its arrangements (SCRUM-26 AC7).
+        // or resolve a flag on its arrangements (SCRUM-26 AC7), or close or
+        // reopen its registration (SCRUM-75 AC6).
         return (
           action !== "event:confirm" &&
           action !== "event:reject" &&
@@ -196,6 +200,7 @@ function hasRelationship(
           action !== "change-request:raise" &&
           action !== "event:edit" &&
           action !== "arrangement:reconsider" &&
+          action !== "registration:control" &&
           resource.coordinatorId === null &&
           resource.status !== "DRAFT"
         );

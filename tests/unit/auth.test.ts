@@ -187,6 +187,27 @@ describe("can — rejecting a Planning event (SCRUM-117)", () => {
   });
 });
 
+// SCRUM-75 AC6 — the Organiser closes or reopens registration for their own
+// event; the assigned Coordinator may do it on their behalf, and no one else.
+describe("can — closing and reopening registration (SCRUM-75)", () => {
+  const confirmed = {
+    kind: "event" as const,
+    organiserId: "orgA",
+    coordinatorId: "coord",
+    status: "CONFIRMED" as const,
+  };
+
+  it("SCRUM-75 [AC6] TC-75-08: the Organiser and the assigned Coordinator may, and no one else", () => {
+    expect(can(organiserA, "registration:control", confirmed)).toBe(true);
+    expect(can(coordinator, "registration:control", confirmed)).toBe(true);
+    expect(can(organiserB, "registration:control", confirmed)).toBe(false);
+    expect(can({ id: "other", role: "COORDINATOR" }, "registration:control", confirmed)).toBe(false);
+    expect(can(coordinator, "registration:control", { ...confirmed, coordinatorId: null })).toBe(false);
+    expect(can(attendee, "registration:control", confirmed)).toBe(false);
+    expect(can({ id: "vs", role: "VENUE_STAFF" }, "registration:control", confirmed)).toBe(false);
+  });
+});
+
 // SCRUM-26 AC7 — resolving a Needs Reconsideration flag follows the same rule
 // as confirming: only the event's assigned Coordinator.
 describe("can — resolving a flagged arrangement (SCRUM-26)", () => {
