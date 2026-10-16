@@ -78,7 +78,7 @@ The seed has two active Coordinators.
 | Test Data | Any complete request |
 | Expected Result | The submission succeeds and the request is Submitted, not Under Review. |
 
-**Automated by:** `tests/unit/event-auto-assignment.test.ts` › "AC: no coordinator available — event still reaches SUBMITTED and does not fail silently (no throw)"; `tests/unit/coordinator-assignment.test.ts` › "AC: no coordinators available — returns null rather than throwing, so the caller can still reach SUBMITTED". An e2e run isn't possible: removing every seeded Coordinator would break the shared data other tests use.
+**Automated by:** `tests/unit/event-auto-assignment.test.ts` › "AC: no coordinator available — event still reaches SUBMITTED and does not fail silently (no throw)"; `tests/unit/coordinator-assignment.test.ts` › "AC: no coordinators available — returns null rather than throwing, so the caller can still reach SUBMITTED". An e2e run isn't possible: removing every seeded Coordinator would break the shared data other tests use. `e2e/coordinator-assignment.spec.ts` › "when no coordinators exist, the event still reaches Submitted rather than failing" holds the case but is skipped (`test.skip`) for that reason, so CI reports it as Not Executed.
 
 ### TC-20-05
 
