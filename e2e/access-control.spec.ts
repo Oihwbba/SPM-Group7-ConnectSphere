@@ -32,6 +32,8 @@ async function signIn(page: Page, email: string) {
 test.describe("SCRUM-67 — typing another role's URL directly is refused", () => {
   const restricted = [
     { label: "Coordinator-only venues page", url: "/venues" },
+    // SCRUM-38 TC-38-17
+    { label: "Coordinator-only venue search", url: "/venues/search" },
     { label: "Venue-Staff bookings page", url: "/bookings" },
     { label: "Tech-Support equipment page", url: "/equipment" },
   ];
@@ -123,6 +125,7 @@ test.describe("SCRUM-66 — each role's navigation shows only its own links", ()
   const ALL_ROUTES = [
     "/events",
     "/venues",
+    "/venues/search",
     "/bookings",
     "/bookings/new",
     "/venues/availability",
@@ -143,6 +146,7 @@ test.describe("SCRUM-66 — each role's navigation shows only its own links", ()
       present: [
         "/events",
         "/venues",
+        "/venues/search",
         "/bookings/new",
         "/venues/availability",
         "/notifications",

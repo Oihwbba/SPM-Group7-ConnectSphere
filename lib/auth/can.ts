@@ -42,6 +42,7 @@ export type Action =
   | "change-request:raise" // SCRUM-41: the organiser, or the assigned coordinator on their behalf
   | "venue:read"
   | "venue:availability" // SCRUM-36: view a venue's availability calendar
+  | "venue:search" // SCRUM-38: search and filter venues, alone or for an event
   | "booking:request" // SCRUM-50: coordinator asks for a venue for their event
   | "booking:review" // SCRUM-52: read the pending-request queue
   | "booking:decide" // SCRUM-53: approve or reject a pending request
@@ -122,6 +123,7 @@ const ROLE_ACTIONS: Record<Role, Action[]> = {
     "equipment-request:create",
     "equipment-request:change",
     "venue:availability",
+    "venue:search",
     "booking:request",
     "booking:settle-hold",
     "booking:withdraw",

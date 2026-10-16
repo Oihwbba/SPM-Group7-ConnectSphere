@@ -43,6 +43,7 @@ const NAV_ROUTES: NavRoute[] = [
   },
   { action: "event:browse", href: "/events", label: "Browse Events" },
   { action: "venue:read", href: "/venues", label: "Venues" },
+  { action: "venue:search", href: "/venues/search", label: "Venue Search" },
   { action: "booking:request", href: "/bookings/new", label: "Request Venue" },
   { action: "booking:review", href: "/bookings", label: "Bookings" },
   {
