@@ -150,3 +150,4 @@ the open pull requests that change the same test files have merged.
 | [SCRUM-172](SCRUM-172.md) | Jin Hong | 20 | Integration and unit; TC-172-15 step 3 is manual, and TC-172-16 is the whole suite |
 | [SCRUM-26](SCRUM-26.md) | Jun Bin | 15 | Every case automated (unit, integration for blocking, Still stands against real unavailability and simultaneous cancels, e2e for the journey); AC 1's warning screen is SCRUM-25's |
 | [SCRUM-70](SCRUM-70.md) | Hann Qian | 10 | Every case automated (unit for each role and the counts, e2e for the Organiser's and the Coordinator's view); AC 6 points to the withdraw action's not-found test |
+| [SCRUM-77](SCRUM-77.md) | Hann Qian | 9 | Every case automated (unit for the start cut-off and the history entry, e2e for the Attendee's, Organiser's and Coordinator's view); AC 1, 2, 5 and 7 came with SCRUM-74

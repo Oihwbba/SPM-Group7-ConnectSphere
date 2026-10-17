@@ -332,23 +332,23 @@ describe("SCRUM-72 AC3: registrationPeriodText — the period an Attendee sees",
 describe("canWithdrawNow — SCRUM-77 AC3: up to, but not including, the event's start", () => {
   const startAt = new Date("2031-06-10T01:00:00Z");
 
-  it("[Positive] AC3: before the start, withdrawal is allowed", () => {
+  it("SCRUM-77 [AC3] TC-77-03: [Positive] before the start, withdrawal is allowed", () => {
     expect(canWithdrawNow({ startAt }, new Date("2031-06-10T00:59:59Z"))).toBe(
       true,
     );
   });
 
-  it("[Boundary] AC3: at the exact start instant, withdrawal is refused", () => {
+  it("SCRUM-77 [AC3] TC-77-04: [Boundary] at the exact start instant, withdrawal is refused", () => {
     expect(canWithdrawNow({ startAt }, startAt)).toBe(false);
   });
 
-  it("[Negative] AC3: after the start, withdrawal is refused", () => {
+  it("SCRUM-77 [AC3] TC-77-05: [Negative] after the start, withdrawal is refused", () => {
     expect(canWithdrawNow({ startAt }, new Date("2031-06-10T02:00:00Z"))).toBe(
       false,
     );
   });
 
-  it("[Boundary] an event with no start set can still be withdrawn from", () => {
+  it("SCRUM-77 [AC3] TC-77-03: [Boundary] an event with no start set can still be withdrawn from", () => {
     expect(canWithdrawNow({ startAt: null })).toBe(true);
   });
 });

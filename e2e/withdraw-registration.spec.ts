@@ -55,7 +55,7 @@ test.describe("SCRUM-77 — Withdraw my registration", () => {
     await prisma.event.deleteMany({ where: { id: eventId } });
   });
 
-  test("AC1, AC4: a withdrawal shows at once to me and in the Organiser's and Coordinator's registration views", async ({
+  test("SCRUM-77 [AC1, AC4, AC7] TC-77-01, TC-77-06, TC-77-09: a withdrawal shows at once to me and in the Organiser's and Coordinator's registration views", async ({
     page,
   }) => {
     await createEventWithAmir(new Date("2031-09-02T02:00:00Z"));
@@ -100,7 +100,7 @@ test.describe("SCRUM-77 — Withdraw my registration", () => {
     ).toContainText("Amir Attendee");
   });
 
-  test("AC3: once the event has started, Withdraw isn't offered", async ({
+  test("SCRUM-77 [AC3] TC-77-05: once the event has started, Withdraw isn't offered", async ({
     page,
   }) => {
     await createEventWithAmir(new Date(Date.now() - 60 * 60 * 1000));
