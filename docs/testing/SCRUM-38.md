@@ -56,6 +56,7 @@ SCRUM-40's reasons. Opened from an event, the Coordinator's own judgement
 | [TC-38-17](#tc-38-17) | Negative | AC 1, AC 2 | Unit, e2e |
 | [TC-38-18](#tc-38-18) | Positive | AC 1 | Unit, e2e |
 | [TC-38-20](#tc-38-20) | Negative | AC 4 | Unit, integration, e2e |
+| [TC-38-21](#tc-38-21) | Positive | AC 2 | Unit, e2e |
 
 ### TC-38-01
 
@@ -307,3 +308,16 @@ Retired on 2026-10-16, before it was merged: a date-only search listing venues f
 | Expected Result | 1: included, though the venue isn't open all day. 2, 3: excluded. 4: Exhibition Hall and Grand Auditorium only; Seminar Room 2.1 and the Executive Boardroom are Closed at weekends. 5: all four. |
 
 **Automated by:** `tests/unit/venue-hours.test.ts` › "SCRUM-38 [AC4] TC-38-20: …"; `tests/unit/venue-search.test.ts` › "SCRUM-38 [AC4] TC-38-20: …"; `tests/integration/venue-search.test.ts` › "SCRUM-38 [AC4] TC-38-20: …"; `e2e/venue-search.spec.ts` › "SCRUM-38 [AC4, AC15] TC-38-15, TC-38-20: …"
+
+### TC-38-21
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-38-21 |
+| Test Scenario | [Positive] AC 2: on its own, a time is picked as hour, minute and AM or PM, an hour alone is enough, and Reset clears every field |
+| Pre-conditions | Venue search on its own. |
+| Test Steps | 1. Date a Tuesday; Start time hour 3 and PM; End time hour 5 and PM, minutes left alone; search. <br> 2. Tick projector and type attendance 30, without searching; choose **Reset**. <br> 3. With nothing searched, enter a date and a start hour; choose **Reset**. |
+| Test Data | — |
+| Expected Result | 1: searched as 15:00 to 17:00 (`from=15:00&to=17:00`), not as no end time, and the End time shows 5, 00, PM again. 12 AM is midnight and 12 PM noon. 2, 3: the search is back as it opens: no date, no times, no attendance, nothing ticked. A browser time input sends nothing until every part is filled in, so before this "5 PM" without minutes searched to midnight. |
+
+**Automated by:** `tests/unit/venue-search-time-field.test.tsx` › "SCRUM-38 [AC2] TC-38-21: …"; `e2e/venue-search.spec.ts` › "SCRUM-38 [AC2] TC-38-21: …"

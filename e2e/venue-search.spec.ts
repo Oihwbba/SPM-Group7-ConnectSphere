@@ -42,6 +42,23 @@ async function resultNames(page: Page) {
     .allInnerTexts();
 }
 
+/**
+ * AC2: pick a start or end time ("HH:mm", or "" for none) as hour, minute and
+ * AM or PM, the way the search's time picker asks for it.
+ */
+async function setTime(page: Page, label: string, time: string) {
+  const hour = page.getByLabel(`${label} hour`);
+  if (!time) return hour.selectOption("");
+  const [h, m] = time.split(":").map(Number);
+  await hour.selectOption(String(h % 12 || 12));
+  await page
+    .getByLabel(`${label} minute`)
+    .selectOption(String(m).padStart(2, "0"));
+  await page
+    .getByLabel(`${label} AM or PM`)
+    .selectOption(h >= 12 ? "PM" : "AM");
+}
+
 /** Tick or untick a filter value; the checkbox itself is visually hidden. */
 const toggle = (page: Page, value: string) =>
   page.locator("label", { hasText: new RegExp(`^${value}$`) }).click();
@@ -116,8 +133,9 @@ test.describe("SCRUM-38 — Search and filter venues", () => {
     const eventPeriod = `${formatDateTime(new Date("2034-11-07T10:15:00+08:00"))} to ${formatDateTime(new Date("2034-11-07T11:45:00+08:00"))}`;
     await expect(page.getByTestId("search-event")).toContainText(`For ${name}`);
     await expect(page.getByTestId("search-event")).toContainText(eventPeriod);
-    for (const label of ["Date", "Start time", "End time"]) {
-      await expect(page.getByLabel(label, { exact: true })).toHaveCount(0);
+    await expect(page.getByLabel("Date", { exact: true })).toHaveCount(0);
+    for (const label of ["Start time", "End time"]) {
+      await expect(page.getByRole("group", { name: label })).toHaveCount(0);
     }
     await expect(page.getByLabel("Location")).toBeVisible();
     await expect(page.getByLabel("Attendance")).toHaveValue("40");
@@ -291,8 +309,8 @@ test.describe("SCRUM-38 — Search and filter venues", () => {
     // AC2: a search covers one day, so there is no end date.
     await expect(page.getByLabel("End date")).toHaveCount(0);
     await page.getByLabel("Date", { exact: true }).fill("2034-11-07");
-    await page.getByLabel("Start time").fill("15:00");
-    await page.getByLabel("End time").fill("15:00");
+    await setTime(page, "Start time", "15:00");
+    await setTime(page, "End time", "15:00");
     await page.getByRole("button", { name: "Search" }).click();
     await expect(page).toHaveURL(/to=15%3A00/);
     await expect(
@@ -305,8 +323,8 @@ test.describe("SCRUM-38 — Search and filter venues", () => {
 
     // AC2: a search can't run into the next day, so 18:00 to 09:00 is
     // refused too, even with an end date added to the address.
-    await page.getByLabel("Start time").fill("18:00");
-    await page.getByLabel("End time").fill("09:00");
+    await setTime(page, "Start time", "18:00");
+    await setTime(page, "End time", "09:00");
     await page.getByRole("button", { name: "Search" }).click();
     await expect(page).toHaveURL(/to=09%3A00/);
     await page.goto(`${page.url()}&endDate=2034-11-08`);
@@ -317,8 +335,8 @@ test.describe("SCRUM-38 — Search and filter venues", () => {
     ).toBeVisible();
     await expect(page.getByTestId("venue-result")).toHaveCount(0);
 
-    await page.getByLabel("Start time").fill("15:00");
-    await page.getByLabel("End time").fill("16:00");
+    await setTime(page, "Start time", "15:00");
+    await setTime(page, "End time", "16:00");
     // AC10: the Executive Boardroom, alone on Level 12, holds 14.
     await page.getByLabel("Location").selectOption("Level 12, Block A");
     await page.getByLabel("Attendance").fill("100");
@@ -420,8 +438,8 @@ test.describe("SCRUM-38 — opening hours, suitability and the Organiser's answe
     // Tuesday 07:30–09:00: the Hall opens at 06:00 and the Auditorium at
     // 07:00; Seminar Room 2.1 opens at 08:00 and the Boardroom at 09:00.
     await page.getByLabel("Date", { exact: true }).fill("2034-11-14");
-    await page.getByLabel("Start time").fill("07:30");
-    await page.getByLabel("End time").fill("09:00");
+    await setTime(page, "Start time", "07:30");
+    await setTime(page, "End time", "09:00");
     await page.getByRole("button", { name: "Search" }).click();
     await expect(page).toHaveURL(/from=07%3A30/);
     expect(await resultNames(page)).toEqual([
@@ -431,8 +449,8 @@ test.describe("SCRUM-38 — opening hours, suitability and the Organiser's answe
 
     // Saturday, no times: Seminar Room 2.1 and the Boardroom are Closed.
     await page.getByLabel("Date", { exact: true }).fill("2034-11-11");
-    await page.getByLabel("Start time").fill("");
-    await page.getByLabel("End time").fill("");
+    await setTime(page, "Start time", "");
+    await setTime(page, "End time", "");
     await page.getByRole("button", { name: "Search" }).click();
     await expect(page).toHaveURL(/date=2034-11-11/);
     expect(await resultNames(page)).toEqual([
@@ -450,5 +468,47 @@ test.describe("SCRUM-38 — opening hours, suitability and the Organiser's answe
       "Grand Auditorium",
       "Seminar Room 2.1",
     ]);
+  });
+});
+
+test.describe("SCRUM-38 — picking times and resetting the search", () => {
+  test("SCRUM-38 [AC2] TC-38-21: on its own, an hour and PM is enough for a time, and Reset clears every field, searched or not", async ({
+    page,
+  }) => {
+    await signIn(page, "coordinator@test.local");
+    await page.goto("/venues/search");
+
+    // An hour and PM, the minutes left alone: 3 PM to 5 PM, not midnight.
+    await page.getByLabel("Date", { exact: true }).fill("2034-11-14");
+    await page.getByLabel("Start time hour").selectOption("3");
+    await page.getByLabel("Start time AM or PM").selectOption("PM");
+    await page.getByLabel("End time hour").selectOption("5");
+    await page.getByLabel("End time AM or PM").selectOption("PM");
+    await page.getByRole("button", { name: "Search" }).click();
+    await expect(page).toHaveURL(/from=15%3A00/);
+    await expect(page).toHaveURL(/to=17%3A00/);
+    await expect(page.getByLabel("End time hour")).toHaveValue("5");
+    await expect(page.getByLabel("End time minute")).toHaveValue("00");
+    await expect(page.getByLabel("End time AM or PM")).toHaveValue("PM");
+
+    // Something changed but not searched, then Reset: every field is empty.
+    await toggle(page, "projector");
+    await page.getByLabel("Attendance").fill("30");
+    await page.getByRole("link", { name: "Reset" }).click();
+    await expect(page).toHaveURL(/\/venues\/search$/);
+    await expect(page.getByLabel("Date", { exact: true })).toHaveValue("");
+    await expect(page.getByLabel("Start time hour")).toHaveValue("");
+    await expect(page.getByLabel("End time hour")).toHaveValue("");
+    await expect(page.getByLabel("Attendance")).toHaveValue("");
+    await expect(
+      page.getByRole("checkbox", { name: "projector" }),
+    ).not.toBeChecked();
+
+    // Typed on a search with nothing searched yet, Reset still clears it.
+    await page.getByLabel("Date", { exact: true }).fill("2034-11-15");
+    await page.getByLabel("Start time hour").selectOption("9");
+    await page.getByRole("link", { name: "Reset" }).click();
+    await expect(page.getByLabel("Date", { exact: true })).toHaveValue("");
+    await expect(page.getByLabel("Start time hour")).toHaveValue("");
   });
 });

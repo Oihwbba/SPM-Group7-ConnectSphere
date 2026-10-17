@@ -39,6 +39,8 @@ import {
 } from "@/app/(app)/bookings/queries";
 import { EventPicker } from "./event-picker";
 import { RequestVenueButton } from "./request-venue-button";
+import { ResetLink } from "./reset-link";
+import { TimeField } from "./time-field";
 import {
   getFilterOptions,
   getSearchEvent,
@@ -141,6 +143,9 @@ export default async function VenueSearchPage({
   return (
     <SearchShell>
       <SearchForm
+        // A new address rebuilds the form, so each field shows what the
+        // address says, not what was left typed in it (Reset, Back).
+        key={formKey(params)}
         event={event}
         // Only events with dates can fix the search's period.
         events={bookableEvents.filter((e) => e.startAt && e.endAt)}
@@ -204,28 +209,34 @@ function FieldMessage({ id, messages }: { id: string; messages?: string[] }) {
   ) : null;
 }
 
-/** AC2, AC6 — one date or time of the period searched, with its error beside it. */
-function PeriodField({
-  name,
-  label,
-  type,
+/** The address as one string, so the form is rebuilt when it changes. */
+function formKey(params: Awaited<SearchParams>): string {
+  return new URLSearchParams(
+    Object.entries(params).flatMap(([name, value]) =>
+      (Array.isArray(value) ? value : value === undefined ? [] : [value]).map(
+        (v): [string, string] => [name, v],
+      ),
+    ),
+  ).toString();
+}
+
+/** AC2 — the date searched, with its error beside it. */
+function DateField({
   value,
   messages,
 }: {
-  name: string;
-  label: string;
-  type: "date" | "time";
   value?: string;
   messages?: string[];
 }) {
+  const name = "date";
   const errorId = `${name}-error`;
   return (
     <div className="space-y-2">
-      <Label htmlFor={name}>{label}</Label>
+      <Label htmlFor={name}>Date</Label>
       <Input
         id={name}
         name={name}
-        type={type}
+        type="date"
         defaultValue={value ?? ""}
         aria-invalid={messages ? true : undefined}
         aria-describedby={messages ? errorId : undefined}
@@ -259,6 +270,9 @@ function SearchForm({
         <Form
           id={SEARCH_FORM_ID}
           action="/venues/search"
+          // The address holds the search; a browser restoring what was typed
+          // on reload would show fields that don't match the results.
+          autoComplete="off"
           className="space-y-5"
           noValidate
         >
@@ -305,26 +319,20 @@ function SearchForm({
             </div>
           ) : (
             <div className="grid gap-4 sm:grid-cols-3">
-              <PeriodField
-                name="date"
-                label="Date"
-                type="date"
-                value={query?.date}
-                messages={fieldErrors.date}
-              />
-              <PeriodField
+              <DateField value={query?.date} messages={fieldErrors.date} />
+              <TimeField
                 name="from"
                 label="Start time"
-                type="time"
                 value={query?.from}
                 messages={fieldErrors.from}
+                className={SELECT_CLASS}
               />
-              <PeriodField
+              <TimeField
                 name="to"
                 label="End time"
-                type="time"
                 value={query?.to}
                 messages={fieldErrors.to}
+                className={SELECT_CLASS}
               />
               <p className="text-xs text-muted-foreground sm:col-span-3">
                 Use a date, a time range on it, a location, or any of them
@@ -439,7 +447,8 @@ function SearchForm({
           </div>
 
           <div className="flex flex-wrap items-center justify-end gap-3 border-t pt-4">
-            <Link
+            <ResetLink
+              formId={SEARCH_FORM_ID}
               href={{
                 pathname: "/venues/search",
                 query: event
@@ -452,7 +461,7 @@ function SearchForm({
               className="text-sm text-muted-foreground underline-offset-4 hover:underline"
             >
               Reset
-            </Link>
+            </ResetLink>
             <Button type="submit">Search</Button>
           </div>
         </Form>
