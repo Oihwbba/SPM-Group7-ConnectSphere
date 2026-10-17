@@ -192,6 +192,38 @@ export async function findTimeClashes(
 }
 
 /**
+ * AC1, AC7 — the clashes a change would still act on: not one already
+ * recorded for its booking, even after its flag was resolved, and not one on
+ * a booking waiting for another reason, which keeps that reason (SCRUM-26).
+ * Venue Staff are warned of exactly these, and `flagTimeClashes` flags them.
+ */
+export async function pendingTimeClashes(
+  db: Db,
+  clashes: TimeClash[],
+): Promise<TimeClash[]> {
+  if (clashes.length === 0) return [];
+  const recorded = new Set(
+    (
+      await db.auditLog.findMany({
+        where: {
+          entityType: "Booking",
+          entityId: { in: [...new Set(clashes.map((c) => c.booking.id))] },
+          action: "RECONSIDERATION_FLAGGED",
+          fieldName: "clashesWith",
+        },
+        select: { entityId: true, newValue: true },
+      })
+    ).map((r) => `${r.entityId} ${r.newValue}`),
+  );
+  return clashes.filter(
+    (c) =>
+      !recorded.has(`${c.booking.id} ${clashKey(c.with)}`) &&
+      (!c.booking.needsReconsideration ||
+        c.booking.reconsiderationReason === TIMES_CHANGED_REASON),
+  );
+}
+
+/**
  * AC2, AC3, AC7 — flag the bookings in `clashes`, in the caller's
  * transaction, after the venue's new times are saved.
  *
@@ -211,34 +243,14 @@ export async function flagTimeClashes(
   actorId: string,
   now: Date = new Date(),
 ): Promise<number> {
-  if (clashes.length === 0) return 0;
-  const bookingIds = [...new Set(clashes.map((c) => c.booking.id))];
-  const recorded = new Set(
-    (
-      await tx.auditLog.findMany({
-        where: {
-          entityType: "Booking",
-          entityId: { in: bookingIds },
-          action: "RECONSIDERATION_FLAGGED",
-          fieldName: "clashesWith",
-        },
-        select: { entityId: true, newValue: true },
-      })
-    ).map((r) => `${r.entityId} ${r.newValue}`),
-  );
+  const pending = await pendingTimeClashes(tx, clashes);
+  const bookingIds = [...new Set(pending.map((c) => c.booking.id))];
 
   let flagged = 0;
   for (const bookingId of bookingIds) {
-    const fresh = clashes.filter(
-      (c) =>
-        c.booking.id === bookingId &&
-        !recorded.has(`${bookingId} ${clashKey(c.with)}`),
-    );
-    if (fresh.length === 0) continue;
+    const fresh = pending.filter((c) => c.booking.id === bookingId);
     const { booking } = fresh[0];
-    if (booking.needsReconsideration) {
-      if (booking.reconsiderationReason !== TIMES_CHANGED_REASON) continue;
-    } else {
+    if (!booking.needsReconsideration) {
       const { bookings } = await flagArrangements(
         tx,
         { bookingIds: [bookingId], reservationIds: [] },

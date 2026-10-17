@@ -18,7 +18,13 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { confirmEvent, rejectPlanningEvent } from "@/app/(app)/events/actions";
+import {
+  confirmHold,
+  releaseHold,
+  withdrawBookingRequest,
+} from "@/app/(app)/bookings/actions";
 import { getEventReadiness } from "@/app/(app)/events/readiness-actions";
+import { recordNoEquipmentNeeded } from "@/app/(app)/events/equipment-decision-actions";
 import type { ReadinessChecklist as Checklist } from "@/lib/event-readiness";
 import { REJECTION_OUTCOME_LABEL } from "@/lib/schemas/event";
 
@@ -32,12 +38,27 @@ import { REJECTION_OUTCOME_LABEL } from "@/lib/schemas/event";
  */
 export function ReadinessChecklist({ eventId }: { eventId: string }) {
   const [checklist, setChecklist] = useState<
-    (Checklist & { canConfirm: boolean; canReject: boolean }) | null
+    | (Checklist & {
+        canConfirm: boolean;
+        canReject: boolean;
+        canSettleHold: boolean;
+        canWithdrawBooking: boolean;
+        canRecordNoEquipment: boolean;
+      })
+    | null
   >(null);
   const [loadFailed, setLoadFailed] = useState(false);
+  // Bumped after a hold is settled, so the checklist is read again.
+  const [loads, setLoads] = useState(0);
+  const [settling, startSettle] = useTransition();
+  // Which hold action is in flight, so its button says so.
+  const [settlingHow, setSettlingHow] = useState<string | null>(null);
   const [confirming, startConfirm] = useTransition();
   const [rejecting, startReject] = useTransition();
   const [rejectOpen, setRejectOpen] = useState(false);
+  const [deciding, startDecide] = useTransition();
+  // SCRUM-142 AC4: the pending venue request waiting to be confirmed withdrawn.
+  const [withdrawing, setWithdrawing] = useState<string | null>(null);
   const [reason, setReason] = useState("");
   const [outcome, setOutcome] = useState<RejectionOutcome | null>(null);
   const router = useRouter();
@@ -56,7 +77,37 @@ export function ReadinessChecklist({ eventId }: { eventId: string }) {
     return () => {
       cancelled = true;
     };
-  }, [eventId]);
+  }, [eventId, loads]);
+
+  // SCRUM-163 AC3: the assigned Coordinator confirms or releases a hold, and
+  // SCRUM-142 AC4: withdraws a pending venue request.
+  const SETTLE = {
+    confirm: [confirmHold, "Hold confirmed: the venue is booked."],
+    release: [releaseHold, "Hold released: the venue is free again."],
+    withdraw: [withdrawBookingRequest, "Venue request withdrawn."],
+  } as const;
+  function settleHold(bookingId: string, how: keyof typeof SETTLE) {
+    const [action, done] = SETTLE[how];
+    setSettlingHow(how);
+    startSettle(async () => {
+      const result = await action({ bookingId });
+      if (!result.ok) toast.error(result.error);
+      else toast.success(done);
+      setLoads((n) => n + 1);
+      router.refresh();
+    });
+  }
+
+  // SCRUM-170 AC4: the assigned Coordinator records that no equipment is needed.
+  function recordNoEquipment() {
+    startDecide(async () => {
+      const result = await recordNoEquipmentNeeded({ eventId });
+      if (!result.ok) toast.error(result.error);
+      else toast.success("Recorded: no equipment needed.");
+      setLoads((n) => n + 1);
+      router.refresh();
+    });
+  }
 
   function confirm() {
     startConfirm(async () => {
@@ -127,16 +178,78 @@ export function ReadinessChecklist({ eventId }: { eventId: string }) {
                       className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground"
                     />
                   )}
-                  <p>
-                    <span className="font-semibold">{item.name}</span>
-                    <span className="sr-only">
-                      {item.complete ? ", complete" : ", incomplete"}
-                    </span>
-                    {" — "}
-                    {item.reason
-                      ? `${item.state} – ${item.reason}`
-                      : item.state}
-                  </p>
+                  <div className="space-y-2">
+                    <p>
+                      <span className="font-semibold">{item.name}</span>
+                      <span className="sr-only">
+                        {item.complete ? ", complete" : ", incomplete"}
+                      </span>
+                      {" — "}
+                      {item.reason
+                        ? `${item.state} – ${item.reason}`
+                        : item.state}
+                    </p>
+                    {/* SCRUM-163 AC3, AC7: Venue Staff approve the hold
+                        first; only then can the Coordinator confirm it. */}
+                    {item.heldBookingId && (
+                      <p
+                        className="text-muted-foreground"
+                        data-testid="hold-approval"
+                      >
+                        {item.holdApproved
+                          ? "Approved by Venue Staff – awaiting confirmation."
+                          : "Waiting for Venue Staff to approve the hold before it can be confirmed."}
+                      </p>
+                    )}
+                    {item.heldBookingId && checklist.canSettleHold && (
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          size="sm"
+                          onClick={() =>
+                            settleHold(item.heldBookingId!, "confirm")
+                          }
+                          disabled={settling || !item.holdApproved}
+                        >
+                          {settling && settlingHow === "confirm"
+                            ? "Confirming…"
+                            : "Confirm hold"}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() =>
+                            settleHold(item.heldBookingId!, "release")
+                          }
+                          disabled={settling}
+                        >
+                          {settling && settlingHow === "release"
+                            ? "Releasing…"
+                            : "Release hold"}
+                        </Button>
+                      </div>
+                    )}
+                    {item.noEquipmentOffered &&
+                      checklist.canRecordNoEquipment && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={recordNoEquipment}
+                          disabled={deciding}
+                        >
+                          {deciding ? "Recording…" : "No equipment needed"}
+                        </Button>
+                      )}
+                    {item.pendingBookingId && checklist.canWithdrawBooking && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setWithdrawing(item.pendingBookingId!)}
+                        disabled={settling}
+                      >
+                        Withdraw request
+                      </Button>
+                    )}
+                  </div>
                 </li>
               ))}
             </ul>
@@ -186,6 +299,36 @@ export function ReadinessChecklist({ eventId }: { eventId: string }) {
           </>
         )}
       </CardContent>
+
+      <Dialog
+        open={withdrawing !== null}
+        onOpenChange={(open) => !open && setWithdrawing(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Withdraw this venue request?</DialogTitle>
+            <DialogDescription>
+              It leaves the Venue Staff queue and Venue Staff are told. You can
+              request a venue again afterwards.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="secondary" onClick={() => setWithdrawing(null)}>
+              Keep it
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={settling}
+              onClick={() => {
+                if (withdrawing) settleHold(withdrawing, "withdraw");
+                setWithdrawing(null);
+              }}
+            >
+              Withdraw request
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={rejectOpen} onOpenChange={setRejectOpen}>
         <DialogContent>

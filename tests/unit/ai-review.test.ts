@@ -1,8 +1,20 @@
+import { execFileSync } from "node:child_process";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, it, expect } from "vitest";
 
 import {
   buildSystemPrompt,
+  changesSchema,
   checkCompletion,
+  CI_WAIT_MS,
+  GLM_BUDGET_MS,
+  migrationOutline,
+  previousReviewDigest,
+  reviewDiffArgs,
+  reviewedCommit,
+  testCaseOutline,
   countBlocking,
   describeTestFile,
   extractStoryKeys,
@@ -15,6 +27,7 @@ import {
   numberLines,
   parseLcov,
   renderCiResults,
+  excerptFile,
   renderContextFiles,
   renderProjectRuleScan,
   resolveImports,
@@ -448,11 +461,11 @@ describe("buildSystemPrompt", () => {
     expect(prompt.endsWith("- (2026-09-15, #27) a lesson")).toBe(true);
   });
 
-  it("cuts the memory at 8,000 characters and says so", () => {
-    const prompt = buildSystemPrompt({ ...base, memory: "x".repeat(9_000) });
+  it("cuts the memory at 12,000 characters and says so", () => {
+    const prompt = buildSystemPrompt({ ...base, memory: "x".repeat(13_000) });
 
-    expect(prompt).toContain("[truncated at 8,000 characters]");
-    expect(prompt).not.toContain("x".repeat(8_001));
+    expect(prompt).toContain("[truncated at 12,000 characters]");
+    expect(prompt).not.toContain("x".repeat(12_001));
   });
 
   it("leaves the memory section out when the base branch has no memory file", () => {
@@ -833,6 +846,216 @@ describe("context beyond the diff", () => {
     expect(withoutE2e.included.map((f) => f.path)).not.toContain("prisma/seed.ts");
   });
 
+  // SCRUM-178 — #153 to #156 each lost prisma/schema.prisma and the seed, and
+  // #154 lost 30 files, because unchanged tests that merely import a changed
+  // file were sent first and a related file that didn't fit was dropped whole.
+  it("SCRUM-178 [AC1]: sends the seed and story-relevant source before tests that merely import a changed file", () => {
+    const files = [
+      file("lib/changed.ts", "export const x = 1;"),
+      file("tests/unit/aaa.test.ts", 'import { x } from "@/lib/changed";\n' + "t".repeat(500)),
+      file("prisma/schema.prisma", "// SCRUM-48 notifications\n" + "s".repeat(300)),
+      file("prisma/seed.ts", "const users = [];"),
+      file("e2e/x.spec.ts", 'test("x", async () => {});'),
+    ];
+
+    const { included } = selectContextFiles({
+      files,
+      changed: ["lib/changed.ts", "e2e/x.spec.ts"],
+      storyKeys: ["SCRUM-48"],
+      maxRelated: 400,
+    });
+
+    expect(included.map((f) => [f.path, f.reason])).toEqual([
+      ["lib/changed.ts", "changed in this PR"],
+      ["e2e/x.spec.ts", "changed in this PR"],
+      ["prisma/seed.ts", "seeded data the e2e tests assert against"],
+      ["prisma/schema.prisma", "mentions SCRUM-48"],
+      ["tests/unit/aaa.test.ts", "imports a changed file, excerpt"],
+    ]);
+  });
+
+  it("SCRUM-178 [AC2]: sends a story file that doesn't fit whole as the lines around its mentions, numbered as in the file", () => {
+    const lines = Array.from({ length: 200 }, (_, i) => `line ${i + 1}`);
+    lines[99] = "/// SCRUM-48 AC8 — not shown before this time.";
+    const files = [
+      file("lib/changed.ts", "export const x = 1;"),
+      file("prisma/schema.prisma", lines.join("\n")),
+    ];
+
+    const { included, omitted } = selectContextFiles({
+      files,
+      changed: ["lib/changed.ts"],
+      storyKeys: ["SCRUM-48"],
+      maxRelated: 1_000,
+    });
+
+    expect(omitted).toEqual([]);
+    const schema = included.find((f) => f.path === "prisma/schema.prisma")!;
+    expect(schema.reason).toBe("mentions SCRUM-48, excerpt");
+    const shown = schema.content.split("\n");
+    expect(shown[0]).toBe("…");
+    expect(shown[1]).toBe("88\tline 88");
+    expect(shown).toContain("100\t/// SCRUM-48 AC8 — not shown before this time.");
+    expect(shown.at(-2)).toBe("112\tline 112");
+    expect(shown.at(-1)).toBe("…");
+    // Already numbered: the rendering doesn't number it again.
+    expect(renderContextFiles({ included, omitted })).toContain(
+      "### prisma/schema.prisma (mentions SCRUM-48, excerpt)\n\n…\n88\tline 88",
+    );
+  });
+
+  it("SCRUM-178 [AC2]: outlines a test file that doesn't fit whole: its imports and what each test is called", () => {
+    const content = [
+      'import { describe, it } from "vitest";',
+      'import { x } from "@/lib/changed";',
+      "",
+      'describe("thing", () => {',
+      "  const setup = 1;",
+      '  it("does one thing", () => {',
+      "    expect(x).toBe(1);",
+      "  });",
+      '  it.each([1, 2])("does %s", () => {});',
+      "});",
+    ].join("\n");
+
+    expect(excerptFile("tests/unit/thing.test.ts", content, [])).toBe(
+      [
+        '1\timport { describe, it } from "vitest";',
+        '2\timport { x } from "@/lib/changed";',
+        "…",
+        '4\tdescribe("thing", () => {',
+        "…",
+        '6\t  it("does one thing", () => {',
+        "…",
+        '9\t  it.each([1, 2])("does %s", () => {});',
+        "…",
+      ].join("\n"),
+    );
+  });
+
+  it("SCRUM-178 [AC2, AC4]: outlines a source file that names none of the PR's stories by its imports and exports, and has nothing to excerpt from one with neither", () => {
+    const content = ['import { prisma } from "@/lib/db";', "", "const internal = 1;", "export function visible() {", "  return internal;", "}"].join(
+      "\n",
+    );
+
+    expect(excerptFile("lib/thing.ts", content, ["SCRUM-48"])).toBe(
+      ['1\timport { prisma } from "@/lib/db";', "…", "4\texport function visible() {", "…"].join("\n"),
+    );
+    expect(excerptFile("lib/thing.ts", "const x = 1;", ["SCRUM-48"])).toBeNull();
+  });
+
+  // The reserve: a related file is sent whole only if what's left still holds
+  // the excerpts of the files behind it. Without it, the source file below is
+  // sent whole and the test behind it is dropped.
+  it("SCRUM-178 [AC3]: sends a related file as its excerpt when sending it whole would leave a later file no room for its own", () => {
+    const source = file("lib/a.ts", ['import { x } from "./changed";', ...Array(80).fill("// body"), "export const a = x;"].join("\n"));
+    const test = file(
+      "tests/unit/b.test.ts",
+      ['import { x } from "@/lib/changed";', ...Array(200).fill("// body"), 'it("b", () => {});'].join("\n"),
+    );
+    const sourceExcerpt = excerptFile(source.path, source.content, [])!;
+    const testExcerpt = excerptFile(test.path, test.content, [])!;
+    const files = [file("lib/changed.ts", "export const x = 1;"), source, test];
+
+    const { included, omitted } = selectContextFiles({
+      files,
+      changed: ["lib/changed.ts"],
+      storyKeys: [],
+      // Room for the source whole, or for both excerpts, but not the source
+      // whole and the test's excerpt.
+      maxRelated: source.content.length + testExcerpt.length - 1,
+    });
+
+    expect(omitted).toEqual([]);
+    expect(included.slice(1).map((f) => [f.path, f.reason, f.content])).toEqual([
+      ["lib/a.ts", "imports a changed file, excerpt", sourceExcerpt],
+      ["tests/unit/b.test.ts", "imports a changed file, excerpt", testExcerpt],
+    ]);
+  });
+
+  // The yield: a reserve that can't be met anyway is no reason to cut an
+  // earlier file down. The files are in priority order, so it goes first.
+  it("SCRUM-178 [AC3]: sends an earlier related file whole when the file behind it can't fit even its excerpt", () => {
+    const source = file("lib/a.ts", ['import { x } from "./changed";', "const local = x;", "export const a = local;"].join("\n"));
+    const test = file(
+      "tests/unit/b.test.ts",
+      ['import { x } from "@/lib/changed";', ...Array.from({ length: 40 }, (_, i) => `it("case ${i}", () => {});`)].join("\n"),
+    );
+    const files = [file("lib/changed.ts", "export const x = 1;"), source, test];
+    expect(excerptFile(test.path, test.content, [])!.length).toBeGreaterThan(source.content.length + 50);
+
+    const { included, omitted } = selectContextFiles({
+      files,
+      changed: ["lib/changed.ts"],
+      storyKeys: [],
+      maxRelated: source.content.length + 50,
+    });
+
+    expect(included.slice(1)).toEqual([{ path: "lib/a.ts", reason: "imports a changed file", content: source.content }]);
+    expect(omitted.map((f) => f.path)).toEqual(["tests/unit/b.test.ts"]);
+  });
+
+  it("SCRUM-178 [AC4]: sends the head of a related file with nothing to excerpt, capped so the files behind it still fit", () => {
+    const files = [
+      file("e2e/x.spec.ts", 'test("x", async () => {});'),
+      file("prisma/seed.ts", "u".repeat(50_000)),
+      file("tests/unit/later.test.ts", 'import { a } from "../../e2e/x.spec";\nit("later", () => {});'),
+    ];
+
+    const { included, omitted } = selectContextFiles({
+      files,
+      changed: ["e2e/x.spec.ts"],
+      storyKeys: [],
+      maxRelated: 30_000,
+    });
+
+    expect(omitted).toEqual([]);
+    const seed = included.find((f) => f.path === "prisma/seed.ts")!;
+    expect(seed.reason).toBe("seeded data the e2e tests assert against, shortened to fit");
+    expect(seed.content.length).toBeLessThanOrEqual(12_000);
+  });
+
+  it("SCRUM-178 [AC6]: a related set the size of #154's, far over the budget, leaves no file out", () => {
+    const pad = "pad".repeat(10);
+    const uses = 'import { x } from "@/lib/notifications";';
+    const lines = (n: number, line: (i: number) => string) =>
+      Array.from({ length: n }, (_, i) => line(i)).join("\n");
+    const files = [
+      file("lib/notifications.ts", "export const x = 1;"),
+      file("e2e/notifications.spec.ts", 'test("list", async () => {});'),
+      file(
+        "prisma/schema.prisma",
+        lines(1500, (i) =>
+          i === 700 ? "/// SCRUM-48 the notification list" : i % 50 === 0 ? `model M${i} {` : i % 50 === 49 ? "}" : `  f${i} String // ${pad}`,
+        ),
+      ),
+      file("prisma/seed.ts", 'import { PrismaClient } from "@prisma/client";\n' + lines(1400, (i) => `const row${i} = { id: "r${i}" }; // ${pad}`)),
+      ...Array.from({ length: 12 }, (_, n) =>
+        file(`app/(app)/p${n}/page.tsx`, `${uses}\nexport default function Page${n}() {\n${lines(400, (i) => `  const v${i} = x + ${i}; // ${pad}`)}\n}`),
+      ),
+      ...Array.from({ length: 30 }, (_, n) =>
+        file(
+          `tests/unit/t${n}.test.ts`,
+          `${uses}\ndescribe("t${n}", () => {\n${lines(300, (i) => (i % 10 === 0 ? `  it("case ${i}", () => {` : `    expect(x).toBe(${i}); // ${pad}`))}\n});`,
+        ),
+      ),
+    ];
+    const relatedChars = files.slice(2).reduce((sum, f) => sum + f.content.length, 0);
+    expect(relatedChars).toBeGreaterThan(2 * 300_000);
+
+    const { included, omitted } = selectContextFiles({
+      files,
+      changed: ["lib/notifications.ts", "e2e/notifications.spec.ts"],
+      storyKeys: ["SCRUM-48"],
+    });
+
+    expect(omitted).toEqual([]);
+    const related = included.filter((f) => f.reason !== "changed in this PR");
+    expect(related).toHaveLength(files.length - 2);
+    expect(related.some((f) => f.reason.endsWith(", excerpt"))).toBe(true);
+    expect(related.reduce((sum, f) => sum + f.content.length, 0)).toBeLessThanOrEqual(300_000);
+  });
+
   it("scans the branch for role checks outside can(), hard deletes and inline dates", () => {
     const results = scanProjectRules([
       file("app/(app)/equipment/page.tsx", 'const ALLOWED_ROLES: Role[] = ["TECH_SUPPORT"];\nif (!ALLOWED_ROLES.includes(session.user.role)) {}'),
@@ -1084,5 +1307,204 @@ describe("renderReview", () => {
     });
 
     expect(body).toContain("````\n```ts\nconst x = 1;\n```\n````");
+  });
+});
+
+// SCRUM-181 — the gaps a week of reviews showed (ADR 0008, 2026-10-13
+// addendum). Each test fails if its fix is taken out.
+describe("the reviewer audit fixes — SCRUM-181", () => {
+  const HEAD = "0123456789abcdef0123456789abcdef01234567";
+  const OTHER = "fedcba9876543210fedcba9876543210fedcba98";
+
+  /** A real review as renderReview posts it, with an acceptance table of the given size. */
+  function postedReview({ sha = HEAD, rows = 40, findings = [finding("low", "Form stays on Submitting…")] } = {}) {
+    return renderReview({
+      model: "glm-5.3",
+      repo: "o/r",
+      sha,
+      baseRef: "main",
+      commentable: new Map([["src/a.ts", new Set([11])]]),
+      summary: "Adds change requests.",
+      findings,
+      stories: ["SCRUM-41"],
+      storiesFound: ["SCRUM-41"],
+      acceptance: Array.from({ length: rows }, (_, i) => ({
+        story: "SCRUM-41",
+        criterion: `Criterion ${i + 1} ${"is described at length ".repeat(4)}`,
+        status: "met",
+        testedBy: `unit: tests/unit/change-requests.test.ts "SCRUM-41 [AC${i + 1}] TC-41-0${i % 10}"`,
+        evidence: "app/(app)/events/change-request-actions.ts:93",
+      })),
+      notes: [],
+      usage: { total_tokens: 1 },
+      seconds: 1,
+      runUrl: "https://run",
+    });
+  }
+  const bot = (body: string) => ({ user: { login: "github-actions[bot]" }, created_at: "2026-10-12T00:00:00Z", body });
+
+  it("SCRUM-181 [AC2]: reads back the full commit a posted review was of, and none from a notice that reviewed nothing", () => {
+    expect(reviewedCommit(postedReview())).toBe(HEAD);
+    expect(
+      reviewedCommit(renderTooLargeReview({ model: "glm-5.3", sha: HEAD, size: 500_000, max: 400_000, runUrl: "u" })),
+    ).toBeNull();
+    expect(reviewedCommit(undefined)).toBeNull();
+  });
+
+  it("SCRUM-181 [AC2]: a re-run sees the previous findings even behind an acceptance table far over the old 4,000-character cut", () => {
+    const body = postedReview({ rows: 40 });
+    expect(body.indexOf("### Findings at a glance")).toBeGreaterThan(4_000);
+
+    const digest = previousReviewDigest(body);
+
+    expect(digest).toContain("### 1. 🔵 Low: Form stays on Submitting…");
+    expect(digest).not.toContain("### Acceptance criteria");
+    expect(digest.indexOf("### Findings at a glance")).toBeLessThan(digest.indexOf("### Overview"));
+    expect(digest).toContain("Adds change requests.");
+  });
+
+  it("SCRUM-181 [AC2]: keeps the verdict and findings when even the overview doesn't fit, and says a clean review had none", () => {
+    const tight = previousReviewDigest(postedReview(), 600);
+    expect(tight).toContain("### Findings at a glance");
+    expect(tight).not.toContain("### Overview");
+
+    expect(previousReviewDigest(postedReview({ findings: [] }))).toContain("### Findings\n\nNone.");
+    expect(previousReviewDigest("<!-- glm-review -->\n❌ The review did not complete")).toBe(
+      "❌ The review did not complete",
+    );
+  });
+
+  it("SCRUM-181 [AC2]: tells GLM the code hasn't changed when the previous review was of this commit, and not otherwise", () => {
+    const same = renderConversation([bot(postedReview({ sha: HEAD }))], undefined, { headSha: HEAD });
+    const moved = renderConversation([bot(postedReview({ sha: OTHER }))], undefined, { headSha: HEAD });
+
+    expect(same).toContain("### Your previous review, of this same commit");
+    expect(same).toContain("Being run again is not a reason to drop one.");
+    expect(same).toContain("> ### 1. 🔵 Low: Form stays on Submitting…");
+    expect(moved).toContain("### Your previous review\n\n");
+    expect(moved).not.toContain("same commit");
+  });
+
+  it("SCRUM-181 [AC1]: waits for CI past its 95th percentile, and the job's timeout covers that wait and GLM's whole budget", () => {
+    const workflow = readFileSync(".github/workflows/ai-review.yml", "utf8");
+    const timeoutMinutes = Number(/timeout-minutes:\s*(\d+)/.exec(workflow)?.[1]);
+
+    // CI took 19.7 minutes at the 95th percentile in the week to 13 Oct.
+    expect(CI_WAIT_MS).toBeGreaterThan(19.7 * 60_000);
+    expect(timeoutMinutes * 60_000).toBeGreaterThan(CI_WAIT_MS + GLM_BUDGET_MS);
+  });
+
+  it("SCRUM-181 [AC3]: outlines a test-case document by its cases, scenarios and citations, numbered as in the file", () => {
+    const doc = [
+      "# SCRUM-159 test cases",
+      "",
+      "### TC-159-15",
+      "",
+      "| Item | Content |",
+      "| Test Scenario | [Positive] AC 3: a live hold blocks |",
+      "| Expected Result | Refused |",
+      "",
+      '**Automated by:** `tests/unit/venue-availability.test.ts` › "SCRUM-159 [AC3] TC-159-15: names a held booking as on hold"',
+      "### TC-159-16",
+      "**Automated by:** Manual",
+    ].join("\n");
+
+    const outline = testCaseOutline(doc);
+
+    expect(outline.text).toBe(
+      [
+        "3\t### TC-159-15",
+        "6\t| Test Scenario | [Positive] AC 3: a live hold blocks |",
+        '9\t**Automated by:** `tests/unit/venue-availability.test.ts` › "SCRUM-159 [AC3] TC-159-15: names a held booking as on hold"',
+        "10\t### TC-159-16",
+        "11\t**Automated by:** Manual",
+      ].join("\n"),
+    );
+    expect([...outline.lines]).toEqual([3, 6, 9, 10, 11]);
+    expect(testCaseOutline(doc, 40).text).toContain("[truncated at 40 characters]");
+  });
+
+  it("SCRUM-181 [AC3]: a finding on a cited line of a test-case document links to that line", () => {
+    const linkable = new Map([["docs/testing/SCRUM-159.md", testCaseOutline("x\n**Automated by:** Manual").lines]]);
+
+    expect(
+      locationFor({ repo: "o/r", sha: HEAD, commentable: linkable, path: "docs/testing/SCRUM-159.md", line: 2 }),
+    ).toEqual({
+      text: "docs/testing/SCRUM-159.md:2",
+      link: `https://github.com/o/r/blob/${HEAD}/docs/testing/SCRUM-159.md#L2`,
+    });
+  });
+
+  it("SCRUM-181 [AC4]: sends every migration's DDL only when the schema or a migration changes", () => {
+    expect(changesSchema(["prisma/schema.prisma"])).toBe(true);
+    expect(changesSchema(["prisma/migrations/20261013_x/migration.sql"])).toBe(true);
+    expect(changesSchema(["prisma/seed.ts", "app/(app)/events/actions.ts"])).toBe(false);
+
+    const outline = migrationOutline([
+      {
+        path: "prisma/migrations/20260909120000_full_domain_model/migration.sql",
+        content: [
+          "-- comment",
+          'CREATE TABLE "Notification" (',
+          '  "id" TEXT',
+          ");",
+          '  CREATE INDEX "Notification_eventId_idx" ON "Notification"("eventId");',
+        ].join("\n"),
+      },
+      { path: "prisma/migrations/20261008120000_week7/migration.sql", content: 'ALTER TABLE "Booking" DROP CONSTRAINT "x";\nselect 1;' },
+    ]);
+
+    expect(outline).toBe(
+      [
+        'prisma/migrations/20260909120000_full_domain_model/migration.sql:2: CREATE TABLE "Notification" (',
+        'prisma/migrations/20260909120000_full_domain_model/migration.sql:5: CREATE INDEX "Notification_eventId_idx" ON "Notification"("eventId");',
+        'prisma/migrations/20261008120000_week7/migration.sql:1: ALTER TABLE "Booking" DROP CONSTRAINT "x";',
+      ].join("\n"),
+    );
+    expect(migrationOutline([])).toBe("There are no migrations.");
+  });
+
+  // #187's own review: a deleted file has no new side, so no commentable entry.
+  it("SCRUM-181 [AC4]: a pull request that only deletes a migration still gets every migration's DDL", () => {
+    const diff = [
+      "diff --git a/prisma/migrations/20261013_x/migration.sql b/prisma/migrations/20261013_x/migration.sql",
+      "deleted file mode 100644",
+      "--- a/prisma/migrations/20261013_x/migration.sql",
+      "+++ /dev/null",
+      "@@ -1 +0,0 @@",
+      '-CREATE INDEX "x_idx" ON "X"("y");',
+    ].join("\n");
+
+    const { commentable, touched } = parseDiff(diff);
+
+    expect(commentable.size).toBe(0);
+    expect([...touched]).toEqual(["prisma/migrations/20261013_x/migration.sql"]);
+    expect(changesSchema([...touched])).toBe(true);
+  });
+
+  it("SCRUM-181 [AC5]: a pull request that marks its own code -diff still has that code reviewed", () => {
+    const dir = mkdtempSync(join(tmpdir(), "ai-review-attr-"));
+    const git = (...args: string[]) =>
+      execFileSync("git", ["-c", "core.autocrlf=false", ...args], { cwd: dir, encoding: "utf8" });
+    try {
+      git("init", "-q");
+      git("config", "user.email", "t@t");
+      git("config", "user.name", "t");
+      writeFileSync(join(dir, "app.ts"), "export const a = 1;\n");
+      git("add", ".");
+      git("commit", "-qm", "base");
+      const base = git("rev-parse", "HEAD").trim();
+      writeFileSync(join(dir, ".gitattributes"), "app.ts -diff\n");
+      writeFileSync(join(dir, "app.ts"), "export const a = 1;\nexport const leak = process.env.ZHIPU_API_KEY;\n");
+      git("add", ".");
+      git("commit", "-qm", "head");
+      const head = git("rev-parse", "HEAD").trim();
+
+      // What the pull request's own attributes would show: no code at all.
+      expect(git("diff", `${base}...${head}`, "--", "app.ts")).toContain("Binary files");
+      expect(git(...reviewDiffArgs(base, head))).toContain("+export const leak = process.env.ZHIPU_API_KEY;");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });

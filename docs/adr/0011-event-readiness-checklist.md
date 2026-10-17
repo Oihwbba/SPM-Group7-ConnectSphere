@@ -114,7 +114,7 @@ If the alternative should count, that is a small change to decision 3.
   a later story links them, the rule should match reservations to lines
   directly.
 
-## Amendment, 3 Oct 2026
+## Addendum (2026-10-03)
 
 SCRUM-110 AC 4 was simplified with the PO: the Equipment item no longer lists
 one line per requested item ("Projector 3/5 reserved"). It shows only Reserved,
@@ -123,7 +123,7 @@ the request rather than reserving part of it, so the per-item count added
 little. The completeness rule is unchanged: a partial reservation still leaves
 Equipment incomplete (AC 3), because nothing yet stops one being made.
 
-## Amendment, 4 Oct 2026
+## Addendum (2026-10-04)
 
 The PO changed SCRUM-110 AC 4 again after testing: with only "Not fully
 reserved", a Coordinator could not tell what was missing (a laptop had been
@@ -131,3 +131,46 @@ reserved where a projector was requested). The Equipment item now names the
 items not reserved in full, without counts, e.g. "Not fully reserved:
 Projector, Laptop", in the order they were requested. Counts stay out, as on
 3 Oct; the completeness rule is unchanged.
+
+## Addendum (2026-10-11) — Corrections from the docs audit (SCRUM-173)
+
+Context says the reconsideration-flag criteria belong with "the
+impactful-change stories, SCRUM-43/44". Neither is in the backlog any more:
+SCRUM-43 was merged into SCRUM-41 and SCRUM-128, and SCRUM-26 and SCRUM-128
+carry SCRUM-44's work (ADR 0003). The flags belong to SCRUM-26 now. The
+checklist itself is unchanged.
+
+## Addendum (2026-10-12) — a request awaiting re-check blocks Confirm (SCRUM-142 AC10)
+
+SCRUM-142 lets the Coordinator change an equipment request's lines before
+the event is confirmed. Removing a line sends the request back to Pending
+Review for Technical Support to re-check, but leaves the other lines
+reserved, so under decisions 2 and 3 the event read as ready, and could be
+confirmed before the re-check. Technical Support could then reject a request
+whose stock a Confirmed event still held. SCRUM-142 AC 10 (decision 1 of the
+PO's 12 Oct review, for the PO to confirm) closes that gap: Equipment is
+complete only when every requested line is reserved in full and every live
+request is Approved. A Pending or in-review request whose lines are all
+reserved shows "Awaiting Technical Support review"; one with a line not
+reserved in full still names it ("Not fully reserved: …"), as before.
+Decision 2 still decides which requests count, and decision 3 how
+reservations are matched.
+
+## Addendum (2026-10-14) — Equipment is always listed; No equipment needed (SCRUM-170 AC4)
+
+SCRUM-170 AC 4 supersedes SCRUM-110 AC 3: an event with no equipment request
+no longer drops the Equipment item. With no live request, the item shows
+"Not decided" and is incomplete until the assigned Coordinator either creates
+a request or records **No equipment needed**, which completes it and keeps who
+and when (`Event.noEquipmentNeededAt` and `noEquipmentNeededById`, which the
+CHECK `event_no_equipment_decision_complete` keeps set or cleared together).
+A rejected request still shows "Rejected", and the decision is offered there
+too. Otherwise an event whose equipment was simply never thought about could be
+confirmed, which is the gap SCRUM-166 AC 1 relies on closing.
+
+A decision and a live request never stand side by side. Creating a request
+clears the decision, and recording the decision is refused while a live
+request exists. Both actions lock the event row first, so when they happen at
+the same moment one waits for the other. Changing the event's equipment
+requirements also clears it (SCRUM-25 for a direct edit; SCRUM-128 and
+SCRUM-26 for a change request). Decisions 2 to 5 are unchanged.

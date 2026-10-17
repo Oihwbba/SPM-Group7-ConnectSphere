@@ -48,7 +48,7 @@ maintenance don't overlap it.
 | Test Data       | —                                                                                                                       |
 | Expected Result | 1. Its commitments are listed with their reasons. 2. They split into those during the period and the item's other ones. |
 
-**Automated by:** `e2e/equipment.spec.ts` › "SCRUM-30 — View Equipment Conflicts" (every case selects a type and period only)
+**Automated by:** `e2e/equipment.spec.ts` › "SCRUM-156 [AC1] TC-156-02: View Equipment Conflicts" (every case selects a type and period only)
 
 ### TC-156-03
 

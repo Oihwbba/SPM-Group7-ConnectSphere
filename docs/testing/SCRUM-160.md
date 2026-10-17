@@ -11,15 +11,9 @@ starts with 0 minutes' setup and turnaround and two Approved bookings that
 don't touch: 10:00–12:00 (approved first) and 13:00–15:00 (approved second),
 with maintenance recorded from 15:30 to 16:30.
 
-**What this story doesn't cover yet:**
-
-- **AC1, the form:** editing a venue is SCRUM-34 (not built). The save it
-  calls, `changeVenueTimes`, is built and tested here: it returns the
-  clashes, unsaved, until it is sent again confirmed. The form shows them
-  and asks to confirm.
-- **Holds:** a booking held during a change must take the same venue lock as
-  an approval (TC-160-10). Holds reach this branch with SCRUM-163; the lock
-  is added then.
+Venue Staff change the times in SCRUM-34's venue edit (**Venues** › a venue ›
+**Edit**). A longer time warns there, listing the bookings it would make
+clash with any SCRUM-34 AC10 warning, and saving again confirms.
 
 | ID | Type | Criterion | Automated |
 |---|---|---|---|
@@ -44,11 +38,11 @@ with maintenance recorded from 15:30 to 16:30.
 | Test Case ID | TC-160-01 |
 | Test Scenario | [Positive] AC 1, AC 2: lengthening shows the bookings it makes clash before anything is saved |
 | Pre-conditions | — |
-| Test Steps | Save 30 minutes' setup and 45 minutes' turnaround, not yet confirmed. |
+| Test Steps | Edit the venue: 30 minutes' setup and 45 minutes' turnaround. Save once. |
 | Test Data | 30, 45 |
-| Expected Result | Not saved. The 13:00–15:00 booking is listed twice: with the 10:00–12:00 booking (now 09:30–12:45 against 12:30–15:45) and with the maintenance. Each shows its event, Coordinator and period. No booking is flagged. |
+| Expected Result | Not saved: the edit warns and lists the 13:00–15:00 booking with both clashes, the 10:00–12:00 booking (now 09:30–12:45 against 12:30–15:45) and the maintenance. A booking that also stops fitting the venue (SCRUM-34 AC10) is listed once, for that. No booking is flagged. |
 
-**Automated by:** `tests/unit/venue-time-clashes.test.ts` › "SCRUM-160 [AC1] TC-160-01: …", "SCRUM-160 [AC1, AC2] TC-160-01: …" (3 tests); `tests/unit/venue-times-actions.test.ts` › "SCRUM-160 [AC1] TC-160-01: …" (2 tests); `tests/integration/venue-time-clashes.test.ts` › "SCRUM-160 [AC1] TC-160-01: …"
+**Automated by:** `tests/unit/venue-time-clashes.test.ts` › "SCRUM-160 [AC1] TC-160-01: …", "SCRUM-160 [AC1, AC2] TC-160-01: …" (3 tests); `tests/unit/venue-catalogue.test.ts` › "SCRUM-160 [AC1] TC-160-01: …" (2 tests); `tests/integration/venue-time-clashes.test.ts` › "SCRUM-160 [AC1] TC-160-01: …"
 
 ### TC-160-02
 
@@ -113,7 +107,7 @@ with maintenance recorded from 15:30 to 16:30.
 | Test Data | 20 → 10; 0 → 15 |
 | Expected Result | Saved at once, with the changed time in the venue's history. No booking is flagged. |
 
-**Automated by:** `tests/unit/venue-time-clashes.test.ts` › "SCRUM-160 [AC6] TC-160-06: …" (5 tests); `tests/unit/venue-times-actions.test.ts` › "SCRUM-160 [AC6] TC-160-06: …" (2 tests); `tests/integration/venue-time-clashes.test.ts` › "SCRUM-160 [AC6] TC-160-06: …"
+**Automated by:** `tests/unit/venue-time-clashes.test.ts` › "SCRUM-160 [AC6] TC-160-06: …" (5 tests); `tests/unit/venue-catalogue.test.ts` › "SCRUM-160 [AC6] TC-160-06: …"; `tests/integration/venue-time-clashes.test.ts` › "SCRUM-160 [AC6] TC-160-06: …"
 
 ### TC-160-07
 
@@ -122,11 +116,11 @@ with maintenance recorded from 15:30 to 16:30.
 | Test Case ID | TC-160-07 |
 | Test Scenario | [Positive] AC 2, AC 3: confirmed, the times are saved and the clashing booking is flagged and its people told |
 | Pre-conditions | As TC-160-01. |
-| Test Steps | Save 30 and 45 again, confirmed. |
+| Test Steps | Save the same edit again to confirm. |
 | Test Data | — |
 | Expected Result | The times are saved. The 13:00–15:00 booking is flagged Needs Reconsideration with "Setup or turnaround time changed", once, with both clashes in its history. Its status, times and minutes don't change; the 10:00–12:00 booking isn't flagged. Its Coordinator is notified with the times of what it clashes with (not the other event's name), and every Venue Staff member is notified with the other event named. |
 
-**Automated by:** `tests/unit/venue-time-clashes.test.ts` › "SCRUM-160 [AC2, AC3] TC-160-07: …" (2 tests), "SCRUM-160 [AC3] TC-160-07: …" (2 tests); `tests/unit/venue-times-actions.test.ts` › "SCRUM-160 [AC2, AC3] TC-160-07: …"; `tests/integration/venue-time-clashes.test.ts` › "SCRUM-160 [AC2, AC3, AC5] TC-160-07: …"
+**Automated by:** `tests/unit/venue-time-clashes.test.ts` › "SCRUM-160 [AC2, AC3] TC-160-07: …" (2 tests), "SCRUM-160 [AC3] TC-160-07: …" (2 tests); `tests/unit/venue-catalogue.test.ts` › "SCRUM-160 [AC2, AC3] TC-160-07: …"; `tests/integration/venue-time-clashes.test.ts` › "SCRUM-160 [AC2, AC3, AC5] TC-160-07: …"
 
 ### TC-160-08
 
@@ -137,9 +131,9 @@ with maintenance recorded from 15:30 to 16:30.
 | Pre-conditions | TC-160-07 done. |
 | Test Steps | 1. Save the same times again. 2. The Coordinator resolves the flag; shorten to 0, then lengthen to 30 and 45 again. |
 | Test Data | — |
-| Expected Result | 1. Nothing changes. 2. The booking isn't flagged again, and its history still holds just the two clashes. A booking flagged by someone else in the meantime is left alone. |
+| Expected Result | 1. Nothing changes. 2. No warning and no flag: its clashes are already in its history, which still holds just the two. A booking flagged by someone else in the meantime is left alone. |
 
-**Automated by:** `tests/unit/venue-time-clashes.test.ts` › "SCRUM-160 [AC7] TC-160-08: …" (2 tests); `tests/unit/venue-times-actions.test.ts` › "SCRUM-160 [AC7] TC-160-08: …"; `tests/integration/venue-time-clashes.test.ts` › "SCRUM-160 [AC6, AC7] TC-160-08: …"
+**Automated by:** `tests/unit/venue-time-clashes.test.ts` › "SCRUM-160 [AC7] TC-160-08: …" (2 tests); `tests/unit/venue-catalogue.test.ts` › "SCRUM-160 [AC7] TC-160-08: …"; `tests/integration/venue-time-clashes.test.ts` › "SCRUM-160 [AC6, AC7] TC-160-08: …"
 
 ### TC-160-09
 
@@ -163,9 +157,9 @@ with maintenance recorded from 15:30 to 16:30.
 | Pre-conditions | A pending request at the venue. |
 | Test Steps | Approve it while the times are being changed. |
 | Test Data | — |
-| Expected Result | Both take the venue's row lock before reading its times, so they take turns. The approval copies the new minutes, or it is already Approved when clashes are looked for. |
+| Expected Result | Both read the venue's times under its row lock, so they take turns: the approval (or hold) copies the new minutes and is checked against them, or it is already Approved when clashes are looked for. The lock comes after the availability check, so two simultaneous approvals still both reach the database's own refusal. |
 
-**Automated by:** `tests/unit/bookings.test.ts` › "SCRUM-160 [AC1] TC-160-10: …" (2 tests); `tests/unit/venue-times-actions.test.ts` › "SCRUM-160 [AC1] TC-160-01: the venue is locked before its times are read"; `tests/integration/concurrency.test.ts` › "SCRUM-53 [AC5] TC-53-05: two staff approve …", "SCRUM-159 [AC5] TC-159-09: …" and "SCRUM-37 [AC4] TC-37-06: …", where simultaneous approvals and maintenance now take turns at the same lock
+**Automated by:** `tests/unit/bookings.test.ts` › "SCRUM-160 [AC1] TC-160-10: …" (3 tests); `tests/integration/concurrency.test.ts` › "SCRUM-53 [AC5] TC-53-05: …" and "SCRUM-159 [AC5] TC-159-09: …", where the approvals still race past the check
 
 ### TC-160-11
 
@@ -185,13 +179,13 @@ with maintenance recorded from 15:30 to 16:30.
 | Item | Content |
 |---|---|
 | Test Case ID | TC-160-12 |
-| Test Scenario | [Negative] AC 1: only Venue Staff change a venue's times, within range, for a venue that exists |
+| Test Scenario | [Negative] AC 1: only Venue Staff change a venue's times, and only within range |
 | Pre-conditions | — |
-| Test Steps | Save as each other role; save 1,441 minutes; save for an unknown venue. |
+| Test Steps | Edit as another role; save 1,441 minutes. |
 | Test Data | — |
-| Expected Result | "You do not have permission to do that."; "Turnaround time must be a whole number of minutes from 0 to 1,440." against the field; "Venue not found." Nothing is saved. |
+| Expected Result | "You do not have permission to do that."; "Turnaround time must be a whole number of minutes from 0 to 1,440." against the field. Nothing is saved. These are SCRUM-34's and SCRUM-159's rules for the venue edit. |
 
-**Automated by:** `tests/unit/venue-times-actions.test.ts` › "SCRUM-160 [AC1] TC-160-12: …" (7 tests), "SCRUM-160, SCRUM-159 [AC1] TC-160-12: …"
+**Automated by:** `tests/unit/venue-catalogue.test.ts` › "SCRUM-34 [AC9] TC-34-11: …"; `tests/unit/venue-times.test.ts` › "SCRUM-159 [AC1] TC-159-02: …" (2 tests)
 
 ### TC-160-13
 

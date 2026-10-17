@@ -1,10 +1,10 @@
 import type {
-  BookingStatus,
   Prisma,
   PrismaClient,
   VenueUnavailabilityReason,
 } from "@prisma/client";
 
+import { reservingWhere } from "@/lib/booking-holds";
 import { formatDateTime, parseSingaporeDateTime } from "@/lib/datetime";
 import { overlapping, overlaps, type Period } from "@/lib/period";
 import { UNAVAILABILITY_REASON_LABEL } from "@/lib/schemas/unavailability";
@@ -74,6 +74,8 @@ function reachingInto(period: Period) {
 export type BlockerDetails = { startAt: Date; endAt: Date } & (
   | {
       kind: "booking";
+      /** SCRUM-163 AC2: a live hold's expiry; null for an Approved booking. */
+      heldUntil: Date | null;
       eventName: string;
       requestedBy: string;
       attendance: number | null;
@@ -88,8 +90,8 @@ export type BlockerDetails = { startAt: Date; endAt: Date } & (
 /**
  * Something that makes a venue unavailable for part of a period. A booking's
  * `startAt`/`endAt` are its booked period; its setup and turnaround minutes
- * (the ones it was approved or held with, SCRUM-159 AC8) say how far it
- * reaches either side, and its status whether it is Approved or Held.
+ * (the ones it was held or approved with, SCRUM-159 AC8) say how far it
+ * reaches either side.
  */
 export type VenueBlocker =
   | {
@@ -97,7 +99,8 @@ export type VenueBlocker =
       id: string;
       startAt: Date;
       endAt: Date;
-      status?: BookingStatus;
+      /** SCRUM-163 AC2: a live hold's expiry; null for an Approved booking. */
+      heldUntil?: Date | null;
       setupMinutes?: number;
       turnaroundMinutes?: number;
       details?: BlockerDetails;
@@ -112,9 +115,9 @@ export type VenueBlocker =
     };
 
 /**
- * SCRUM-159 AC7 — the setup before, or the turnaround after, an approved
- * booking on the availability calendar. The venue is busy then, but no event
- * is running, so the calendar draws it differently from the booking itself.
+ * SCRUM-159 AC7 — the setup before, or the turnaround after, an approved or
+ * held booking on the availability calendar. The venue is busy then, but no
+ * event is running, so the calendar draws it differently from the booking.
  */
 type StretchAroundBooking = {
   id: string;
@@ -129,6 +132,13 @@ export type SetupTurnaroundStretch =
 /** One entry on the availability calendar. */
 export type CalendarEntry = VenueBlocker | SetupTurnaroundStretch;
 
+function heldUntil(booking: {
+  status: string;
+  holdExpiresAt: Date | null;
+}): Date | null {
+  return booking.status === "HELD" ? booking.holdExpiresAt : null;
+}
+
 /**
  * Everything that makes `venueId` unavailable for any part of `occupied`,
  * earliest first.
@@ -140,35 +150,28 @@ export type CalendarEntry = VenueBlocker | SetupTurnaroundStretch;
  * period, so a request is refused wherever the two occupied periods overlap
  * (SCRUM-159 AC3). Periods that only touch don't overlap (AC4).
  *
- * APPROVED bookings, HELD bookings whose hold hasn't expired at `now`, and
- * recorded unavailability (e.g. maintenance) count, as in the database's
- * `booking_no_double_booking` (SCRUM-159 AC3, SCRUM-163 AC2 and AC4). A
- * PENDING request blocks nobody: several Coordinators may ask for the same
- * slot and Venue Staff choose between them (SCRUM-50/53). CANCELLED,
- * REJECTED and EXPIRED bookings have released the venue, as has a hold past
- * its expiry that nothing has marked Expired yet.
+ * Approved bookings, holds that haven't expired at `now` (SCRUM-163 AC2) and
+ * recorded unavailability (e.g. maintenance) count. A PENDING request blocks
+ * nobody: several Coordinators may ask for the same slot and Venue Staff
+ * choose between them (SCRUM-50/53). CANCELLED, REJECTED and EXPIRED bookings
+ * have released the venue, and so has a hold whose expiry has passed, even
+ * before anything has marked it Expired (SCRUM-163 AC4).
  */
 export async function findVenueBlockers(
   db: Db,
   venueId: string,
   occupied: Period,
-  now: Date = new Date(),
+  now = new Date(),
 ): Promise<VenueBlocker[]> {
   const [bookings, unavailability] = await Promise.all([
     db.booking.findMany({
-      where: {
-        venueId,
-        OR: [
-          { status: "APPROVED" },
-          { status: "HELD", holdExpiresAt: { gt: now } },
-        ],
-        ...reachingInto(occupied),
-      },
+      where: { venueId, ...reservingWhere(now), ...reachingInto(occupied) },
       select: {
         id: true,
         startAt: true,
         endAt: true,
         status: true,
+        holdExpiresAt: true,
         setupMinutes: true,
         turnaroundMinutes: true,
       },
@@ -182,7 +185,15 @@ export async function findVenueBlockers(
   return [
     ...bookings
       .filter((b) => overlaps(occupiedPeriod(b, b), occupied))
-      .map((b) => ({ kind: "booking" as const, ...b })),
+      .map((b) => ({
+        kind: "booking" as const,
+        id: b.id,
+        startAt: b.startAt,
+        endAt: b.endAt,
+        heldUntil: heldUntil(b),
+        setupMinutes: b.setupMinutes,
+        turnaroundMinutes: b.turnaroundMinutes,
+      })),
     ...unavailability.map((u) => ({ kind: "unavailability" as const, ...u })),
   ].sort((a, b) => a.startAt.getTime() - b.startAt.getTime());
 }
@@ -192,7 +203,8 @@ export async function findVenueBlockers(
  * calendar shows on hover: the booking's event, who requested it and what it
  * needs, or the unavailability's note and who recorded it. The calendar is
  * for internal staff only (Coordinators and Venue Staff), so the event is
- * named here, unlike in `describeBlocker`.
+ * named here, unlike in `describeBlocker`. A live hold carries its expiry, so
+ * the calendar can show it as held (SCRUM-163 AC2).
  *
  * SCRUM-159 AC7 — each booking with setup or turnaround time also brings a
  * stretch before and after it for that time. A booking just outside the week
@@ -202,14 +214,17 @@ export async function findVenueCalendar(
   db: Db,
   venueId: string,
   period: Period,
+  now = new Date(),
 ): Promise<CalendarEntry[]> {
   const [bookings, unavailability] = await Promise.all([
     db.booking.findMany({
-      where: { venueId, status: "APPROVED", ...reachingInto(period) },
+      where: { venueId, ...reservingWhere(now), ...reachingInto(period) },
       select: {
         id: true,
         startAt: true,
         endAt: true,
+        status: true,
+        holdExpiresAt: true,
         setupMinutes: true,
         turnaroundMinutes: true,
         requestedAttendance: true,
@@ -240,10 +255,12 @@ export async function findVenueCalendar(
         id: b.id,
         startAt: b.startAt,
         endAt: b.endAt,
+        heldUntil: heldUntil(b),
         details: {
           kind: "booking",
           startAt: b.startAt,
           endAt: b.endAt,
+          heldUntil: heldUntil(b),
           eventName: b.event.name,
           requestedBy: b.requestedBy.name,
           attendance: b.requestedAttendance,
@@ -308,18 +325,19 @@ export function startOfWeek(day: string): string {
 /**
  * One line per blocker, for telling a person why a venue is unavailable. Only
  * times are shown, never the other booking's event: ConnectSphere's clients
- * are competing organisations (the same reasoning as SCRUM-68).
+ * are competing organisations (the same reasoning as SCRUM-68). A hold's
+ * expiry isn't given: only the availability calendar shows "Held until"
+ * (SCRUM-163 AC2).
  *
  * SCRUM-159 — a booking with setup or turnaround time is described by the
- * whole time it occupies the venue, so the times given explain the refusal,
- * and a held one says it is on hold (SCRUM-163).
+ * whole time it occupies the venue, so the times given explain the refusal.
  */
 export function describeBlocker(blocker: VenueBlocker): string {
   if (blocker.kind === "unavailability") {
     const reason = UNAVAILABILITY_REASON_LABEL[blocker.reason].toLowerCase();
     return `unavailable (${reason}) from ${formatDateTime(blocker.startAt)} to ${formatDateTime(blocker.endAt)}`;
   }
-  const what = blocker.status === "HELD" ? "on hold" : "already booked";
+  const what = blocker.heldUntil ? "held" : "already booked";
   const setupMinutes = blocker.setupMinutes ?? 0;
   const turnaroundMinutes = blocker.turnaroundMinutes ?? 0;
   if (setupMinutes === 0 && turnaroundMinutes === 0) {

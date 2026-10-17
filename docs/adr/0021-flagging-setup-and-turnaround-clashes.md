@@ -18,9 +18,12 @@ those bookings.
    Where two occupied periods overlap, or one overlaps recorded
    unavailability, that is a clash (`lib/venue-time-clashes.ts`). Shortening
    can't create one, so it isn't checked (AC6).
-2. **Shown first, flagged on confirmation.** `changeVenueTimes` returns the
-   clashes unsaved; sent again with `confirmed`, it saves the times and flags
-   the clashing bookings in the same transaction (AC1, AC2). The booking's
+2. **Shown first, flagged on confirmation, in SCRUM-34's venue edit.**
+   `updateVenue` lists the bookings a longer time would make clash alongside
+   its own AC10 warning, unsaved; saved again to confirm, it saves the times
+   and flags them in the same transaction (AC1, AC2). Only clashes that would
+   still be acted on are listed (`pendingTimeClashes`), so lengthening again
+   after a flag was resolved neither warns nor flags (AC7). The booking's
    status, times and copied minutes are left alone, so the database still
    sees no double booking, and the Coordinator resolves the flag (SCRUM-26).
 3. **The booking that took the venue later is flagged.** That is the earlier
@@ -37,7 +40,9 @@ those bookings.
    trigger takes, and so does the change. A booking approved during a change
    either copies the new minutes or is already Approved when clashes are
    looked for. Using the trigger's own lock mode means two approvals never
-   deadlock upgrading it.
+   deadlock upgrading it. The lock is taken after the availability check, and
+   the check re-runs if the minutes changed, so simultaneous approvals still
+   reach the database's own refusal rather than queueing at the lock.
 
 ## Alternatives rejected
 
@@ -54,9 +59,9 @@ those bookings.
 
 ## Consequences
 
-- The edit form is SCRUM-34's. Until it exists, `changeVenueTimes` is
-  reached only through its tests; the form calls it and shows the returned
-  clashes before asking to confirm.
+- SCRUM-34's edit is the one place a venue's times change, so the clash
+  check can't be skipped. A booking that both stops fitting and clashes is
+  listed and flagged once, for not fitting.
 - A Coordinator who decides a flagged booking still stands (SCRUM-26) is
   checked against the booking's own minutes, so it passes; whether to keep
   it is their call, as the customer asked.

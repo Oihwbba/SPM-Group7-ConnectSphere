@@ -9,6 +9,7 @@ import {
   type ReadinessChecklist,
 } from "@/lib/event-readiness";
 import { confirmEvent } from "@/app/(app)/events/actions";
+import { formatDateTime } from "@/lib/datetime";
 
 // SCRUM-81 — the assigned Coordinator confirms a Planning event whose
 // SCRUM-110 checklist is complete. Test cases: docs/testing/SCRUM-81.md.
@@ -19,6 +20,7 @@ const tx = vi.hoisted(() => ({
   $queryRaw: vi.fn(),
   event: { findUniqueOrThrow: vi.fn(), update: vi.fn() },
   auditLog: { create: vi.fn() },
+  notification: { createMany: vi.fn() },
 }));
 
 vi.mock("@/auth", () => ({ auth: vi.fn() }));
@@ -151,6 +153,89 @@ describe("confirmEvent — SCRUM-81", () => {
       });
     },
   );
+
+  it("SCRUM-45 [AC4, AC11] TC-45-04: with registration not needed, the Organiser is told it is confirmed, and no registration-closed notice is written", async () => {
+    tx.event.findUniqueOrThrow.mockResolvedValue({
+      ...eventRow({ registrationRequired: false }),
+      name: "Gala",
+      startAt: new Date("2031-06-01T01:00:00.000Z"),
+      registrationClosesAt: null,
+    });
+
+    await confirmEvent({ eventId: "evt1" });
+
+    expect(tx.notification.createMany).toHaveBeenCalledTimes(1);
+    expect(tx.notification.createMany.mock.calls[0][0].data).toEqual([
+      expect.objectContaining({
+        userId: "usr_organiser",
+        eventId: "evt1",
+        title: "Your event is confirmed",
+        message: '"Gala" is confirmed.',
+      }),
+    ]);
+  });
+
+  it("SCRUM-45 [AC4, AC11] TC-45-07: with registration already closed, the confirmation says so and no closed notice is written to show at once", async () => {
+    tx.event.findUniqueOrThrow.mockResolvedValue({
+      ...eventRow(),
+      name: "Gala",
+      startAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      registrationOpensAt: null,
+      registrationClosesAt: new Date(Date.now() - 60 * 1000),
+    });
+
+    await confirmEvent({ eventId: "evt1" });
+
+    expect(tx.notification.createMany).toHaveBeenCalledTimes(1);
+    expect(tx.notification.createMany.mock.calls[0][0].data[0].message).toBe(
+      '"Gala" is confirmed, but its registration has already closed.',
+    );
+  });
+
+  it("SCRUM-45 [AC4] TC-45-04: with registration opening later, the confirmation says when rather than that it is open", async () => {
+    const opensAt = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000);
+    tx.event.findUniqueOrThrow.mockResolvedValue({
+      ...eventRow(),
+      name: "Gala",
+      startAt: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000),
+      registrationOpensAt: opensAt,
+      registrationClosesAt: null,
+    });
+
+    await confirmEvent({ eventId: "evt1" });
+
+    expect(tx.notification.createMany.mock.calls[0][0].data[0].message).toBe(
+      `"Gala" is confirmed. Registration opens at ${formatDateTime(opensAt)}.`,
+    );
+  });
+
+  it("SCRUM-45 [AC11] TC-45-07: a registration window closing before the event starts shows its notice at the closing time", async () => {
+    const closesAt = new Date("2031-05-30T10:00:00.000Z");
+    tx.event.findUniqueOrThrow.mockResolvedValue({
+      ...eventRow(),
+      name: "Gala",
+      startAt: new Date("2031-06-01T01:00:00.000Z"),
+      registrationClosesAt: closesAt,
+    });
+
+    await confirmEvent({ eventId: "evt1" });
+
+    const closed = tx.notification.createMany.mock.calls[1][0].data;
+    expect(
+      closed.map((n: { userId: string; showFromAt: Date }) => [
+        n.userId,
+        n.showFromAt,
+      ]),
+    ).toEqual([
+      ["usr_organiser", closesAt],
+      ["usr_coordinator", closesAt],
+    ]);
+    expect(closed[0].message).toBe(
+      // How the time reads is lib/datetime's (SCRUM-129); this checks the notice
+      // says it, without pinning the ICU's output (reviewer memory, #87).
+      `Registration for "Gala" closed at ${formatDateTime(closesAt)}.`,
+    );
+  });
 
   it("SCRUM-81 [AC5, AC8]: readiness is checked inside the transaction, after the event is locked", async () => {
     await confirmEvent({ eventId: "evt1" });

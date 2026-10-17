@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-11. Jira is the source of truth.
+     Synced from Jira on 2026-10-14. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-124 - Staff and arrangement notifications
@@ -23,7 +23,7 @@
 1. Given a venue booking is requested (SCRUM-50, SCRUM-162), then all Venue Staff are notified.
 2. Given an equipment request is submitted (SCRUM-27) or its lines are changed (SCRUM-142), then all Technical Support Staff are notified.
 3. Given a pending venue request or a whole equipment request is withdrawn (SCRUM-142), then all Venue Staff, or all Technical Support Staff, are notified.
-4. Given a venue booking is approved, held or rejected (SCRUM-53, SCRUM-163), then the event's assigned Coordinator is notified, with the deadline and note if it was held, or the reason if it was rejected.
+4. Given a venue booking is approved, held or rejected, or Venue Staff approve a hold (SCRUM-53, SCRUM-163), then the event's assigned Coordinator is notified, with the deadline and note if it was held, or the reason if it was rejected.
 5. Given a hold is placed, then a reminder for 24 hours before its expiry (or straight away if less time remains) and an expiry notice are written for the assigned Coordinator with show-from times (SCRUM-48), so they arrive on time without a scheduled job. Both are withdrawn if the hold is confirmed, released or rejected first (SCRUM-163).
 6. Given the Coordinator confirms or releases a hold (SCRUM-163), then all Venue Staff are notified.
 7. Given an Organiser raises a change request (SCRUM-41), then the event's assigned Coordinator is notified.
@@ -46,5 +46,6 @@
 * 2026-10-01 (audit): the table is now one numbered criterion per trigger. The equipment criteria match the built model: a request is reviewed as a whole (SCRUM-28 already notifies the Coordinator) and flags sit on reservations. Added line changes and venue-request withdrawal from SCRUM-142. Flag sources trimmed to Release 1 stories: SCRUM-37 refuses unavailability over an approved booking rather than flagging it, and SCRUM-119 is beyond Release 1. The briefing examples are quoted separately rather than joined.
 * 2026-10-07 (Week 7 changes 1, 2, 4, 5 and 6): new triggers for holds (AC4 to AC6, SCRUM-163); flags from setup or turnaround changes, venue unavailability and safety outcomes (AC8: SCRUM-160, SCRUM-161, SCRUM-167); new requests for Leads (AC10, SCRUM-165); and safety checks (AC11, SCRUM-166). AC3 adds withdrawing a whole equipment request (SCRUM-142), an audit edit that didn't save on 1 Oct. The user story now includes Leads and Safety Officers. Re-estimated from 3 to 5 points.
 * 2026-10-07 (backlog refinement): AC8 points to SCRUM-166, which SCRUM-167 was merged into.
+* 2026-10-13 (W9 clarification, Week 7 change 4): AC4 also notifies the Coordinator when Venue Staff approve a hold, which the Coordinator must then confirm (SCRUM-163 AC3).
 
 Functionality Area: Notification System

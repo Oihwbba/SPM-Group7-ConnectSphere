@@ -1,6 +1,8 @@
 import type { BookingStatus, Prisma, PrismaClient } from "@prisma/client";
 
+import { liveHoldWhere } from "@/lib/booking-holds";
 import { formatDateTime } from "@/lib/datetime";
+import { LIVE_LINE } from "@/lib/equipment/requests";
 import {
   describeBlocker,
   findVenueBlockers,
@@ -22,6 +24,21 @@ type Db = PrismaClient | Prisma.TransactionClient;
 
 /** AC2: the bookings a flag can sit on. Reservations: only Confirmed ones. */
 export const FLAGGABLE_BOOKING: BookingStatus[] = ["PENDING", "HELD", "APPROVED"];
+
+/**
+ * AC2 — the bookings a flag can sit on at `now`: Pending, Approved, and Held
+ * until the hold expires. A hold past its expiry has released the venue
+ * (SCRUM-163 AC4), even before anything marks it Expired, so it is neither
+ * flagged nor waits for a resolution, as the readiness checklist treats it.
+ */
+export function liveBookingWhere(now: Date): Prisma.BookingWhereInput {
+  return { OR: [{ status: { in: ["PENDING", "APPROVED"] } }, liveHoldWhere(now)] };
+}
+
+/** AC7 — a flagged booking still waiting for its Coordinator. */
+export function flaggedLiveBookingWhere(now: Date): Prisma.BookingWhereInput {
+  return { needsReconsideration: true, ...liveBookingWhere(now) };
+}
 
 const BOOKING_STATUS_LABEL: Record<BookingStatus, string> = {
   PENDING: "Pending",
@@ -86,17 +103,18 @@ export interface Arrangement {
 }
 
 /**
- * AC1 — what a confirmed impactful edit will flag: every Pending, Held or
- * Approved booking and every Confirmed reservation of the event. Empty when
- * nothing is booked or reserved, so the edit needs no warning.
+ * AC1 — what a confirmed impactful edit will flag: every Pending, Approved
+ * or live Held booking and every Confirmed reservation of the event. Empty
+ * when nothing is booked or reserved, so the edit needs no warning.
  */
 export async function flaggableArrangements(
   db: Db,
   eventId: string,
+  now: Date = new Date(),
 ): Promise<Arrangement[]> {
   const [bookings, reservations] = await Promise.all([
     db.booking.findMany({
-      where: { eventId, status: { in: FLAGGABLE_BOOKING } },
+      where: { eventId, ...liveBookingWhere(now) },
       select: { id: true, status: true, venue: { select: { name: true } } },
       orderBy: { createdAt: "asc" },
     }),
@@ -171,7 +189,7 @@ export async function flagArrangements(
   const bookings = await tx.booking.updateMany({
     where: {
       ...bookingScope,
-      status: { in: FLAGGABLE_BOOKING },
+      ...liveBookingWhere(now),
       needsReconsideration: false,
     },
     data: flag,
@@ -291,6 +309,8 @@ export async function reservationStillStandsRefusal(
     db.equipmentRequestLine.findMany({
       where: {
         equipmentId: reservation.equipmentId,
+        // A line removed from a live request (SCRUM-142) is no longer needed.
+        ...LIVE_LINE,
         request: {
           eventId: reservation.eventId,
           status: { in: ["PENDING_REVIEW", "IN_REVIEW", "APPROVED"] },

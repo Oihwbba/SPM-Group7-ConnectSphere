@@ -16,7 +16,7 @@ import {
   decideBookingRequest,
   submitBookingRequest,
 } from "@/app/(app)/bookings/actions";
-import { changeVenueTimes } from "@/app/(app)/venues/times-actions";
+import { updateVenue } from "@/app/(app)/venues/actions";
 import {
   TIMES_CHANGED_REASON,
   findTimeClashes,
@@ -25,8 +25,8 @@ import {
 import { createPlanningEvents, removeEvents } from "./test-events";
 
 // SCRUM-160 against a real, seeded Postgres: lengthening a venue's setup or
-// turnaround time shows, then flags, the bookings it makes clash, and never
-// moves or cancels them. Test cases: docs/testing/SCRUM-160.md.
+// turnaround time through SCRUM-34's venue edit shows, then flags, the
+// bookings it makes clash, and never moves or cancels them. Test cases: docs/testing/SCRUM-160.md.
 //
 // These WRITE (a throwaway venue, its events, bookings and unavailability,
 // removed afterwards), so they only run against a localhost database.
@@ -83,9 +83,34 @@ describe.skipIf(!usesLocalDatabase)(
       return submitted.data.booking.id;
     }
 
-    const change = (setupMinutes: number, turnaroundMinutes: number, confirmed = false) => {
+    const venueName = `Setup and turnaround clash test venue ${Date.now()}`;
+    /** Every day 08:00–22:00, so the bookings below are within the hours. */
+    const hours = [1, 2, 3, 4, 5, 6, 7].map((weekday) => ({
+      weekday,
+      closed: false,
+      opensAt: "08:00",
+      closesAt: "22:00",
+    }));
+    /** Venue Staff save the venue as it is, with these setup and turnaround times. */
+    const change = (
+      setupMinutes: number,
+      turnaroundMinutes: number,
+      confirmedBookingIds: string[] = [],
+    ) => {
       mockAuth.mockResolvedValue(VENUE_STAFF);
-      return changeVenueTimes({ venueId, setupMinutes, turnaroundMinutes, confirmed });
+      return updateVenue({
+        venueId,
+        name: venueName,
+        location: "Test block",
+        capacity: 100,
+        facilities: "",
+        accessibilityFeatures: "",
+        supportedLayouts: "",
+        openingHours: hours,
+        setupMinutes,
+        turnaroundMinutes,
+        confirmedBookingIds,
+      });
     };
 
     async function clear() {
@@ -107,9 +132,12 @@ describe.skipIf(!usesLocalDatabase)(
       Object.values(events).forEach((e, i) => (e.id = ids[i]));
       const venue = await prisma.venue.create({
         data: {
-          name: `Setup and turnaround clash test venue ${Date.now()}`,
+          name: venueName,
           location: "Test block",
           capacity: 100,
+          openingHours: {
+            create: hours.map(({ weekday }) => ({ weekday, opensMinute: 480, closesMinute: 1320 })),
+          },
         },
         select: { id: true },
       });
@@ -140,19 +168,21 @@ describe.skipIf(!usesLocalDatabase)(
     afterAll(async () => {
       await clear();
       await removeEvents(Object.values(events).map((e) => e.id));
+      await prisma.venueOpeningHours.deleteMany({ where: { venueId } });
       await prisma.venue.delete({ where: { id: venueId } });
     });
 
-    it("SCRUM-160 [AC1] TC-160-01: lengthening shows the booking approved later and what it clashes with, and saves nothing yet", async () => {
+    it("SCRUM-160 [AC1] TC-160-01: lengthening in the venue edit warns with the booking approved later and what it clashes with, and saves nothing yet", async () => {
       const result = await change(30, 45);
 
-      expect(result.ok && result.data).toMatchObject({
-        saved: false,
-        clashes: [
-          { bookingId: bookings.oneToThree, clashesWith: expect.stringContaining("'s booking from") },
-          { bookingId: bookings.oneToThree, clashesWith: expect.stringContaining("unavailability (maintenance)") },
-        ],
+      expect(result).toMatchObject({
+        ok: false,
+        fieldErrors: { affectedBookingIds: [bookings.oneToThree] },
       });
+      if (result.ok) throw new Error("expected a warning");
+      const [line] = result.fieldErrors!.affectedBookings;
+      expect(line).toContain("'s booking from");
+      expect(line).toContain("unavailability (maintenance)");
       expect(
         await prisma.venue.findUniqueOrThrow({ where: { id: venueId }, select: { setupMinutes: true } }),
       ).toEqual({ setupMinutes: 0 });
@@ -160,8 +190,8 @@ describe.skipIf(!usesLocalDatabase)(
     });
 
     it("SCRUM-160 [AC2, AC3, AC5] TC-160-07: confirmed, the times are saved and the booking is flagged once, unchanged, with its Coordinator and Venue Staff told and the clash listed", async () => {
-      const result = await change(30, 45, true);
-      expect(result).toEqual({ ok: true, data: { saved: true, flagged: 1 } });
+      const result = await change(30, 45, [bookings.oneToThree]);
+      expect(result).toEqual({ ok: true, data: { id: venueId, flagged: 1 } });
 
       const flagged = await prisma.booking.findUniqueOrThrow({ where: { id: bookings.oneToThree } });
       expect(flagged).toMatchObject({
@@ -193,8 +223,8 @@ describe.skipIf(!usesLocalDatabase)(
     });
 
     it("SCRUM-160 [AC6, AC7] TC-160-08: saving the same times again, or lengthening again after the flag is resolved, flags nothing new", async () => {
-      await change(30, 45, true);
-      expect(await change(30, 45, true)).toEqual({ ok: true, data: { saved: true, flagged: 0 } });
+      await change(30, 45, [bookings.oneToThree]);
+      expect(await change(30, 45)).toEqual({ ok: true, data: { id: venueId, flagged: 0 } });
 
       // The Coordinator decides it still stands (SCRUM-26).
       await prisma.booking.update({
@@ -205,8 +235,9 @@ describe.skipIf(!usesLocalDatabase)(
           reconsiderationResolvedById: "usr_coordinator",
         },
       });
-      await change(0, 0, true);
-      expect(await change(30, 45, true)).toEqual({ ok: true, data: { saved: true, flagged: 0 } });
+      await change(0, 0);
+      // Its clashes are already recorded, so lengthening again neither warns nor flags.
+      expect(await change(30, 45)).toEqual({ ok: true, data: { id: venueId, flagged: 0 } });
       expect(
         await prisma.auditLog.count({
           where: { entityId: bookings.oneToThree, action: "RECONSIDERATION_FLAGGED" },
@@ -220,7 +251,7 @@ describe.skipIf(!usesLocalDatabase)(
         data: { setupMinutes: 0, turnaroundMinutes: 20 },
       });
 
-      expect(await change(0, 10)).toEqual({ ok: true, data: { saved: true, flagged: 0 } });
+      expect(await change(0, 10)).toEqual({ ok: true, data: { id: venueId, flagged: 0 } });
       expect(await prisma.booking.count({ where: { venueId, needsReconsideration: true } })).toBe(0);
     });
 

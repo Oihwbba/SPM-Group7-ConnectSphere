@@ -1,4 +1,9 @@
-import { type Browser, type Page } from "@playwright/test";
+import {
+  test,
+  type Browser,
+  type BrowserContext,
+  type Page,
+} from "@playwright/test";
 
 /**
  * Shared steps for the venue journeys (SCRUM-36/37/50/52/53): signing in, and
@@ -9,8 +14,25 @@ export const usesLocalDatabase = /@(localhost|127\.0\.0\.1)[:/]/.test(
   process.env.DATABASE_URL ?? "",
 );
 
+/**
+ * The contexts signedIn opened, with the test that opened each (SCRUM-182).
+ * Tests don't close them, and a page left on the events list or a venue
+ * calendar refreshes itself from the server every few seconds, so a run that
+ * kept them all would slow the one test server for every later test. A
+ * worker runs one test at a time, so a context from an earlier test is done
+ * with.
+ */
+let opened: { testId: string; context: BrowserContext }[] = [];
+
 export async function signedIn(browser: Browser, email: string): Promise<Page> {
-  const page = await (await browser.newContext()).newPage();
+  const { testId } = test.info();
+  for (const { context } of opened.filter((o) => o.testId !== testId)) {
+    await context.close();
+  }
+  opened = opened.filter((o) => o.testId === testId);
+  const context = await browser.newContext();
+  opened.push({ testId, context });
+  const page = await context.newPage();
   await page.goto("/login");
   await page.getByLabel("Email", { exact: true }).fill(email);
   await page.getByLabel("Password", { exact: true }).fill("Password123!");
@@ -39,7 +61,7 @@ export async function choose(
 /** Set one end of the period. Times are Singapore wall time, "YYYY-MM-DDTHH:mm". */
 export async function setTime(
   page: Page,
-  which: "Start" | "End",
+  which: "Start" | "End" | "Expiry",
   wallTime: string,
 ) {
   const [date, time] = wallTime.split("T");
@@ -50,7 +72,7 @@ export async function setTime(
 /** Open the in-app calendar, page to the target month, and pick the day. */
 export async function pickDate(
   page: Page,
-  which: "Start" | "End",
+  which: "Start" | "End" | "Expiry",
   day: string,
 ) {
   await page.getByLabel(`${which} date`).click();

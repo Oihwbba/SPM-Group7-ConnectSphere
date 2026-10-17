@@ -306,7 +306,10 @@ describe("flagTimeClashes — SCRUM-160 AC2, AC3, AC7", () => {
     expect(db.booking.updateMany).toHaveBeenCalledWith({
       where: {
         id: { in: ["bkg_1"] },
-        status: { in: ["PENDING", "HELD", "APPROVED"] },
+        OR: [
+          { status: { in: ["PENDING", "APPROVED"] } },
+          { status: "HELD", holdExpiresAt: { gt: NOW } },
+        ],
         needsReconsideration: false,
       },
       data: expect.objectContaining({

@@ -84,7 +84,14 @@ describe("getEventReadiness — SCRUM-110", () => {
 
     expect(result).toEqual({
       ok: true,
-      data: { ...checklist, canConfirm: true, canReject: true },
+      data: {
+        ...checklist,
+        canConfirm: true,
+        canReject: true,
+        canSettleHold: true,
+        canWithdrawBooking: true,
+        canRecordNoEquipment: true,
+      },
     });
     expect(mockChecklist).toHaveBeenCalledWith(prisma, "evt_test");
   });
@@ -101,6 +108,9 @@ describe("getEventReadiness — SCRUM-110", () => {
         items: [{ ...checklist.items[0], reason: null }, checklist.items[1]],
         canConfirm: false,
         canReject: false,
+        canSettleHold: false,
+        canWithdrawBooking: false,
+        canRecordNoEquipment: false,
       },
     });
   });
@@ -297,5 +307,36 @@ describe("getEventArrangements — SCRUM-81 AC6", () => {
       ok: false,
       error: "Event not found.",
     });
+  });
+});
+
+describe("getEventReadiness — SCRUM-170 No equipment needed", () => {
+  it("SCRUM-170 [AC4] TC-170-10: only the event's assigned Coordinator is offered No equipment needed", async () => {
+    const offered = async (
+      session: Session,
+      event:
+        | ReturnType<typeof eventRow>
+        | {
+            organiserId: string;
+            coordinatorId: null;
+            status: EventStatus;
+          } = eventRow(),
+    ) => {
+      mockAuth.mockResolvedValue(session);
+      mockEventFindUnique.mockResolvedValue(event);
+      const result = await getEventReadiness("evt_test");
+      return result.ok && result.data.canRecordNoEquipment;
+    };
+
+    expect(await offered(sessionFor("COORDINATOR", "usr_coordinator"))).toBe(
+      true,
+    );
+    expect(await offered(sessionFor("ORGANISER", "usr_organiser"))).toBe(false);
+    expect(
+      await offered(sessionFor("COORDINATOR", "usr_coordinator"), {
+        ...eventRow(),
+        coordinatorId: null,
+      }),
+    ).toBe(false);
   });
 });

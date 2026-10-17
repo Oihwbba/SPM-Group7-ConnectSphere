@@ -421,7 +421,7 @@ describe("submitBookingRequest — SCRUM-50", () => {
     });
   });
 
-  it("SCRUM-50 [AC8] TC-50-07: an event that already has a pending or approved booking, for any venue, is shown it and nothing is created", async () => {
+  it("SCRUM-50 [AC8] TC-50-07, SCRUM-163 [AC4] TC-163-08: an event that already has a pending, approved or unexpired held booking, for any venue, is shown it and nothing is created", async () => {
     db.booking.findFirst.mockResolvedValue(summaryRow);
 
     const result = await submitBookingRequest(validRequest);
@@ -435,7 +435,10 @@ describe("submitBookingRequest — SCRUM-50", () => {
       expect.objectContaining({
         where: {
           eventId: "evt_1",
-          status: { in: ["PENDING", "HELD", "APPROVED"] },
+          OR: [
+            { status: { in: ["PENDING", "APPROVED"] } },
+            { status: "HELD", holdExpiresAt: { gt: expect.any(Date) } },
+          ],
         },
       }),
     );
@@ -789,7 +792,7 @@ describe("decideBookingRequest — SCRUM-53", () => {
       db.$queryRaw.mockResolvedValue([{ setupMinutes: 30, turnaroundMinutes: 45 }]);
     });
 
-    it("SCRUM-160 [AC1] TC-160-10: approving copies the minutes read under a lock on the venue, taken before availability is checked", async () => {
+    it("SCRUM-160 [AC1] TC-160-10: approving copies the minutes read under a lock on the venue, and checks availability again if they changed meanwhile", async () => {
       // First read before a change to the venue's times committed.
       db.booking.findUnique.mockResolvedValue(pendingBooking);
 
@@ -797,13 +800,23 @@ describe("decideBookingRequest — SCRUM-53", () => {
 
       const [sql] = db.$queryRaw.mock.calls[0];
       expect(sql.join("?")).toContain("FOR NO KEY UPDATE");
-      expect(db.$queryRaw.mock.invocationCallOrder[0]).toBeLessThan(
+      // Checked once with the first minutes, locked, then again with the new.
+      expect(db.booking.findMany).toHaveBeenCalledTimes(2);
+      expect(db.$queryRaw.mock.invocationCallOrder[0]).toBeGreaterThan(
         db.booking.findMany.mock.invocationCallOrder[0],
       );
       expect(db.booking.updateMany.mock.calls[0][0].data).toMatchObject({
         setupMinutes: 30,
         turnaroundMinutes: 45,
       });
+    });
+
+    it("SCRUM-160 [AC1] TC-160-10: unchanged minutes under the lock aren't checked twice", async () => {
+      db.booking.findUnique.mockResolvedValue(withTimes);
+
+      await decideBookingRequest({ bookingId: "bkg_1", decision: "APPROVED" });
+
+      expect(db.booking.findMany).toHaveBeenCalledTimes(1);
     });
 
     it("SCRUM-160 [AC1] TC-160-10: if the venue can't be read under the lock, the first read's minutes are used", async () => {
@@ -1002,7 +1015,7 @@ describe("decideBookingRequest — SCRUM-53", () => {
 
   describe("SCRUM-26 — a request flagged Needs Reconsideration", () => {
     const FLAGGED =
-      "This request needs reconsideration, so it can't be approved until its event's coordinator resolves it. It can still be rejected.";
+      "This request needs reconsideration, so it can't be approved or held until its event's coordinator resolves it. It can still be rejected.";
 
     it("SCRUM-26 [AC5] TC-26-09: approving a flagged Pending request is refused and nothing is written", async () => {
       db.booking.findUnique.mockResolvedValue({
@@ -1078,7 +1091,7 @@ describe("decideBookingRequest — SCRUM-53", () => {
     expect(result).toMatchObject({
       ok: false,
       error: expect.stringMatching(
-        /^Conflicting: .*approved at the same moment/,
+        /^Conflicting: .*approved or held at the same moment/,
       ),
     });
   });

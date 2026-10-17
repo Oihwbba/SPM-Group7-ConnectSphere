@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import type { BookingStatus } from "@prisma/client";
+import type { BookingStatus, EventStatus, Prisma } from "@prisma/client";
 
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
@@ -10,9 +10,13 @@ import { err, ok, type ActionResult } from "@/lib/action-result";
 import {
   BOOKABLE_EVENT_STATUSES,
   bookingDecisionSchema,
+  bookingHoldSchema,
   bookingRequestSchema,
+  bookingWithdrawalSchema,
   EVENT_NOT_SCHEDULED_MESSAGE,
   eventBookingPeriod,
+  holdExpiryMessage,
+  holdSettlementSchema,
   INVALID_PERIOD_MESSAGE,
   notEventAttendanceMessage,
   notEventPeriodMessage,
@@ -20,16 +24,83 @@ import {
   PAST_START_MESSAGE,
   venueAvailabilityQuerySchema,
 } from "@/lib/schemas/booking";
-import { onceMoreOnDeadlock, violatesExclusion } from "@/lib/db-errors";
+import {
+  onceMoreOnDeadlock,
+  violatesCheck,
+  violatesExclusion,
+} from "@/lib/db-errors";
+import {
+  bookingStatusAt,
+  holdReminderAt,
+  liveHoldWhere,
+  withdrawPendingHoldNotices,
+} from "@/lib/booking-holds";
+import { formatDateTime } from "@/lib/datetime";
 import {
   describeBlocker,
   findVenueBlockers,
   lockVenueTimes,
   occupiedPeriod,
+  type SetupTurnaround,
 } from "@/lib/venue-availability";
+import { outdateSafetyChecks } from "@/lib/safety-checks";
+import { openingHoursRefusal, type OpeningDay } from "@/lib/venue-hours";
+import { notifyRole } from "@/lib/staff-notifications";
 
 /** A venue's setup and turnaround time (SCRUM-159). */
 const venueTimesSelect = { setupMinutes: true, turnaroundMinutes: true } as const;
+
+/**
+ * SCRUM-160 — the venue's setup and turnaround as they stand now, read under
+ * its row lock, which a change to them (SCRUM-34's edit) takes too. A booking
+ * approved or held during a change therefore copies the new minutes, or is
+ * already Approved or Held when the change looks for clashes. The lock comes
+ * after the availability check, so the check of two simultaneous requests
+ * isn't serialised; `check` runs again only if the minutes changed since
+ * `first` was read.
+ */
+async function lockedVenueTimes(
+  tx: Prisma.TransactionClient,
+  venueId: string,
+  first: SetupTurnaround,
+  check: (times: SetupTurnaround) => Promise<void>,
+): Promise<SetupTurnaround> {
+  const locked = await lockVenueTimes(tx, venueId);
+  if (
+    !locked ||
+    (locked.setupMinutes === first.setupMinutes &&
+      locked.turnaroundMinutes === first.turnaroundMinutes)
+  ) {
+    return first;
+  }
+  await check(locked);
+  return locked;
+}
+
+/** A venue's opening hours (SCRUM-34 AC3). */
+const openingHoursSelect = {
+  openingHours: {
+    select: { weekday: true, opensMinute: true, closesMinute: true },
+  },
+} as const;
+
+/**
+ * SCRUM-34 AC7, AC8 — why a booking can't be held, approved or confirmed at
+ * its venue, or null. Submitting refuses a retired venue and asks
+ * `openingHoursRefusal` too, but a request can slip in while Venue Staff
+ * narrow the hours or retire the venue, so holding, approving a request or a
+ * hold, and confirming a hold ask again here. Rejecting and releasing don't.
+ */
+function venueRefusal(booking: {
+  startAt: Date;
+  endAt: Date;
+  venue: { name: string; isActive?: boolean; openingHours?: OpeningDay[] };
+}): string | null {
+  if (booking.venue.isActive === false) {
+    return `${booking.venue.name} has been retired, so it can't be booked.`;
+  }
+  return openingHoursRefusal(booking, booking.venue);
+}
 
 export type BookingSummary = {
   id: string;
@@ -41,9 +112,15 @@ export type BookingSummary = {
 
 /**
  * The bookings that hold an event's one venue (SCRUM-50 AC8). A Held one
- * counts too, as it does in booking_one_per_venue_per_event (SCRUM-172).
+ * counts too, as it does in booking_one_per_venue_per_event (SCRUM-172), but
+ * only until its expiry: after that the Coordinator makes a new request
+ * (SCRUM-163 AC4), even before anything has marked the hold Expired.
  */
-const EVENT_VENUE_STATUSES: BookingStatus[] = ["PENDING", "HELD", "APPROVED"];
+function eventVenueWhere(now: Date): Prisma.BookingWhereInput {
+  return {
+    OR: [{ status: { in: ["PENDING", "APPROVED"] } }, liveHoldWhere(now)],
+  };
+}
 
 const summarySelect = {
   id: true,
@@ -101,7 +178,7 @@ export async function checkVenueAvailability(
     // A retired venue reads as not found here exactly as it does on submit.
     const venue = await prisma.venue.findFirst({
       where: { id: venueId, isActive: true },
-      select: { id: true, ...venueTimesSelect },
+      select: { id: true, name: true, ...venueTimesSelect, ...openingHoursSelect },
     });
     if (!venue) return err("Venue not found.");
 
@@ -110,10 +187,13 @@ export async function checkVenueAvailability(
       venueId,
       occupiedPeriod(period, venue),
     );
-    return ok({
-      available: blockers.length === 0,
-      clashes: blockers.map(describeBlocker),
-    });
+    // SCRUM-34 AC7: outside opening hours is refused on submit, so say so now.
+    const outsideHours = openingHoursRefusal(period, venue);
+    const clashes = [
+      ...(outsideHours ? [outsideHours] : []),
+      ...blockers.map(describeBlocker),
+    ];
+    return ok({ available: clashes.length === 0, clashes });
   } catch (error) {
     if (error instanceof PermissionError) return err(error.message);
     throw error;
@@ -194,10 +274,7 @@ export async function submitBookingRequest(
 
     const existingForEvent = () =>
       prisma.booking.findFirst({
-        where: {
-          eventId: data.eventId,
-          status: { in: EVENT_VENUE_STATUSES },
-        },
+        where: { eventId: data.eventId, ...eventVenueWhere(new Date()) },
         select: summarySelect,
       });
 
@@ -224,9 +301,16 @@ export async function submitBookingRequest(
 
     const venue = await prisma.venue.findFirst({
       where: { id: data.venueId, isActive: true },
-      select: { name: true, capacity: true, ...venueTimesSelect },
+      select: {
+        name: true,
+        capacity: true,
+        ...venueTimesSelect,
+        ...openingHoursSelect,
+      },
     });
     if (!venue) return err("Venue not found.");
+    const outsideHours = openingHoursRefusal(period, venue);
+    if (outsideHours) return err(outsideHours, { startAt: [outsideHours] });
     if (data.requestedAttendance > venue.capacity) {
       const message = overCapacityMessage(
         venue.name,
@@ -289,6 +373,19 @@ export async function submitBookingRequest(
 /** Thrown inside the decision transaction for an expected refusal. */
 class DecisionError extends Error {}
 
+const venueSelect = {
+  id: true,
+  venueId: true,
+  startAt: true,
+  endAt: true,
+  status: true,
+  holdExpiresAt: true,
+  venue: {
+    select: { name: true, isActive: true, ...venueTimesSelect, ...openingHoursSelect },
+  },
+  needsReconsideration: true,
+} as const;
+
 /**
  * SCRUM-53 — Venue Staff approve or reject a pending request.
  *
@@ -298,15 +395,18 @@ class DecisionError extends Error {}
  *   that has already been decided keeps its first decision and no second
  *   outcome or audit entry is recorded (AC7).
  * - Approving makes the venue unavailable for that period (AC4). If an
- *   overlapping booking is already approved, or the venue is recorded as
- *   unavailable, the approval is refused as conflicting and the request stays
- *   pending for staff to reject (AC8).
+ *   overlapping booking is already approved or held, or the venue is recorded
+ *   as unavailable, the approval is refused as conflicting and the request
+ *   stays pending for staff to reject (AC8).
  * - Two simultaneous approvals of overlapping requests (AC5): both can pass
  *   the check above before either commits, so the check alone is not enough.
  *   The `booking_no_double_booking` EXCLUDE constraint makes the database
  *   refuse the second; that refusal is reported as the same conflict (or, if
  *   Postgres aborted it as a deadlock, the retry reports it). See
  *   docs/adr/0010-database-prevents-venue-double-booking.md.
+ * - SCRUM-163 AC7: a Held booking can be rejected, with a reason, until its
+ *   expiry; its notices still to come are withdrawn. Approving it keeps it
+ *   Held, for its Coordinator to confirm (`approveHold`).
  * - SCRUM-159: the conflict check compares occupied periods (AC3, AC4), and
  *   the database compares them too when two approvals race (AC5). Approving
  *   copies the venue's setup and turnaround onto the booking, the same
@@ -339,18 +439,21 @@ export async function decideBookingRequest(
     const booking = await prisma.booking.findUnique({
       where: { id: bookingId },
       select: {
-        id: true,
-        venueId: true,
-        startAt: true,
-        endAt: true,
-        status: true,
-        needsReconsideration: true,
-        venue: { select: { name: true, ...venueTimesSelect } },
+        ...venueSelect,
+        holdApprovedAt: true,
+        requestedById: true,
+        event: { select: { id: true, name: true, coordinatorId: true } },
       },
     });
     if (!booking) return err("Booking request not found.");
-    if (booking.status !== "PENDING") {
-      return err(alreadyDecided(booking.status));
+    const now = new Date();
+    const current = bookingStatusAt(booking, now);
+    if (current === "HELD" && decision === "APPROVED") {
+      return await approveHold(booking, user!.id, now);
+    }
+    const rejectingHold = current === "HELD" && decision === "REJECTED";
+    if (current !== "PENDING" && !rejectingHold) {
+      return err(alreadyDecided(current, booking.holdExpiresAt));
     }
     if (decision === "APPROVED" && booking.needsReconsideration) {
       return err(FLAGGED);
@@ -358,38 +461,47 @@ export async function decideBookingRequest(
 
     const conflict = (detail: string) =>
       `Conflicting: ${booking.venue.name} is ${detail}. This request is still pending.`;
+    // SCRUM-34 AC7, AC8: not outside the venue's opening hours, nor once it
+    // is retired.
+    const venueRefused = decision === "APPROVED" && venueRefusal(booking);
+    if (venueRefused) return err(`${venueRefused} This request is still pending.`);
 
     const decide = () =>
       prisma.$transaction(async (tx) => {
-        // SCRUM-160: the minutes as they are now, not as first read, so a
-        // change to them can't slip in before this approval copies them.
-        const times =
-          decision === "APPROVED"
-            ? ((await lockVenueTimes(tx, booking.venueId)) ?? booking.venue)
-            : booking.venue;
-        if (decision === "APPROVED") {
+        const check = async (times: SetupTurnaround) => {
           const blockers = await findVenueBlockers(
             tx,
             booking.venueId,
             occupiedPeriod(booking, times),
+            now,
           );
           if (blockers.length > 0) {
             throw new DecisionError(
               conflict(blockers.map(describeBlocker).join("; ")),
             );
           }
+        };
+        let times: SetupTurnaround = booking.venue;
+        if (decision === "APPROVED") {
+          await check(times);
+          // SCRUM-160: the minutes the approval copies are read under the
+          // venue's lock, which a change to them takes too, so a change can't
+          // slip in between. Checked again only if they changed meanwhile.
+          times = await lockedVenueTimes(tx, booking.venueId, times, check);
         }
 
         const updated = await tx.booking.updateMany({
-          where: {
-            id: booking.id,
-            status: "PENDING",
-            ...(decision === "APPROVED" && { needsReconsideration: false }),
-          },
+          where: rejectingHold
+            ? { id: booking.id, ...liveHoldWhere(now) }
+            : {
+                id: booking.id,
+                status: "PENDING",
+                ...(decision === "APPROVED" && { needsReconsideration: false }),
+              },
           data: {
             status: decision,
             decidedById: user!.id,
-            decidedAt: new Date(),
+            decidedAt: now,
             decisionReason: decision === "REJECTED" ? reason : null,
             ...(decision === "APPROVED" && {
               setupMinutes: times.setupMinutes,
@@ -398,14 +510,18 @@ export async function decideBookingRequest(
           },
         });
         if (updated.count !== 1) {
-          const current = await tx.booking.findUniqueOrThrow({
+          const latest = await tx.booking.findUniqueOrThrow({
             where: { id: booking.id },
-            select: { status: true },
+            select: { status: true, holdExpiresAt: true },
           });
+          const status = bookingStatusAt(latest, now);
           // Still Pending means it was flagged since it was read (SCRUM-26 AC5).
           throw new DecisionError(
-            current.status === "PENDING" ? FLAGGED : alreadyDecided(current.status),
+            status === "PENDING" ? FLAGGED : alreadyDecided(status, latest.holdExpiresAt),
           );
+        }
+        if (rejectingHold) {
+          await withdrawPendingHoldNotices(tx, { bookingId: booking.id }, now);
         }
 
         // SCRUM-71: a booking decision records who, what and when.
@@ -416,7 +532,7 @@ export async function decideBookingRequest(
             action: decision,
             actorId: user!.id,
             fieldName: "status",
-            oldValue: "PENDING",
+            oldValue: booking.status,
             newValue: decision,
             summary: decision === "REJECTED" ? reason : undefined,
           },
@@ -426,7 +542,9 @@ export async function decideBookingRequest(
 
     revalidatePath("/bookings");
     // SCRUM-36 AC2: the availability calendar is never stale.
-    if (decision === "APPROVED") revalidatePath("/venues/availability");
+    if (decision === "APPROVED" || rejectingHold) {
+      revalidatePath("/venues/availability");
+    }
     return ok({ status: decision });
   } catch (error) {
     if (error instanceof PermissionError || error instanceof DecisionError) {
@@ -434,7 +552,7 @@ export async function decideBookingRequest(
     }
     if (violatesExclusion(error, "booking_no_double_booking")) {
       return err(
-        "Conflicting: another booking overlapping this period was approved at the same moment. This request is still pending.",
+        "Conflicting: another booking overlapping this period was approved or held at the same moment. This request is still pending.",
       );
     }
     // SCRUM-37: maintenance recorded at the same instant, refused by the
@@ -448,9 +566,673 @@ export async function decideBookingRequest(
   }
 }
 
+/** SCRUM-26 AC5 — a flagged request waits for its Coordinator. */
 const FLAGGED =
-  "This request needs reconsideration, so it can't be approved until its event's coordinator resolves it. It can still be rejected.";
+  "This request needs reconsideration, so it can't be approved or held until its event's coordinator resolves it. It can still be rejected.";
 
-function alreadyDecided(status: BookingStatus): string {
+/** SCRUM-26 AC5 — a flagged hold waits for its Coordinator too. */
+const FLAGGED_HOLD_APPROVAL =
+  "This hold needs reconsideration, so it can't be approved until its event's coordinator resolves it. It can still be rejected.";
+
+/**
+ * SCRUM-163 AC7 — Venue Staff approve a live hold. It stays Held, shown as
+ * "Approved by Venue Staff – awaiting confirmation", and only now may its
+ * Coordinator confirm it (AC3). Called by `decideBookingRequest` once the
+ * permission is checked; the hold already reserves its venue (AC2), so there
+ * is no conflict to look for.
+ *
+ * - Conditional on the hold still being live and unapproved (ADR 0006), so
+ *   approving it a second time, or after it was settled, changes nothing.
+ * - SCRUM-26 AC5: a hold flagged Needs Reconsideration can't be approved
+ *   until its Coordinator resolves the flag, including one flagged after it
+ *   was read. It can still be rejected.
+ * - SCRUM-124 AC4: the event's Coordinator is told, with the deadline. An
+ *   event with no Coordinator yet tells whoever requested the venue, as
+ *   holding does.
+ */
+async function approveHold(
+  booking: {
+    id: string;
+    holdExpiresAt: Date | null;
+    holdApprovedAt: Date | null;
+    needsReconsideration: boolean;
+    requestedById: string;
+    startAt: Date;
+    endAt: Date;
+    venue: { name: string; isActive: boolean; openingHours: OpeningDay[] };
+    event: { id: string; name: string; coordinatorId: string | null };
+  },
+  approverId: string,
+  now: Date,
+): Promise<ActionResult<{ status: BookingStatus }>> {
+  if (booking.holdApprovedAt) return err(HOLD_ALREADY_APPROVED);
+  if (booking.needsReconsideration) return err(FLAGGED_HOLD_APPROVAL);
+  // SCRUM-34 AC7, AC8: not outside the venue's opening hours, nor once it is
+  // retired.
+  const venueRefused = venueRefusal(booking);
+  if (venueRefused) return err(`${venueRefused} ${HOLD_STILL_AWAITING_APPROVAL}`);
+
+  await onceMoreOnDeadlock(() =>
+    prisma.$transaction(async (tx) => {
+      // The notice references the event, so lock it before the booking, in
+      // the order holding a request uses (ADR 0007).
+      await tx.$queryRaw`SELECT "id" FROM "Event" WHERE "id" = ${booking.event.id} FOR KEY SHARE`;
+      const updated = await tx.booking.updateMany({
+        where: {
+          id: booking.id,
+          ...liveHoldWhere(now),
+          holdApprovedAt: null,
+          needsReconsideration: false,
+        },
+        data: { holdApprovedAt: now, holdApprovedById: approverId },
+      });
+      if (updated.count !== 1) {
+        const latest = await tx.booking.findUniqueOrThrow({
+          where: { id: booking.id },
+          select: { status: true, holdExpiresAt: true, needsReconsideration: true },
+        });
+        const status = bookingStatusAt(latest, now);
+        throw new DecisionError(
+          status !== "HELD"
+            ? alreadyDecided(status, latest.holdExpiresAt)
+            : latest.needsReconsideration
+              ? FLAGGED_HOLD_APPROVAL
+              : HOLD_ALREADY_APPROVED,
+        );
+      }
+
+      await tx.auditLog.create({
+        data: {
+          entityType: "Booking",
+          entityId: booking.id,
+          action: "HOLD_APPROVED",
+          actorId: approverId,
+          fieldName: "holdApprovedAt",
+          newValue: now.toISOString(),
+          summary: "Approved by Venue Staff – awaiting confirmation",
+        },
+      });
+      await tx.notification.create({
+        data: {
+          userId: booking.event.coordinatorId ?? booking.requestedById,
+          eventId: booking.event.id,
+          bookingId: booking.id,
+          type: "HOLD_APPROVED",
+          title: "Venue Staff approved your hold",
+          message: `Venue Staff approved the hold on ${booking.venue.name} for "${booking.event.name}". Confirm it before ${formatDateTime(booking.holdExpiresAt!)} to secure the venue.`,
+        },
+      });
+    }),
+  );
+
+  revalidatePath("/bookings");
+  revalidatePath("/events");
+  return ok({ status: "HELD" });
+}
+
+/**
+ * SCRUM-163 AC1 — Venue Staff hold a pending request for its Coordinator
+ * until a deadline, with a note of what they must finalise.
+ *
+ * - The expiry must be later than now and earlier than the booking's start;
+ *   otherwise nothing is written. The database refuses one at or after the
+ *   start too (`booking_hold_period_valid`).
+ * - A hold reserves the venue like an approval (AC2), so it is refused for
+ *   the same conflicts, and two overlapping holds or approvals at the same
+ *   instant are refused by `booking_no_double_booking` as for SCRUM-53 AC5.
+ * - Conditional on the request still being Pending (ADR 0006): a request
+ *   someone else decided or held first keeps that outcome.
+ * - SCRUM-26 AC5: a request flagged Needs Reconsideration can't be held until
+ *   the flag is resolved, as it can't be approved.
+ * - AC5: the Coordinator's three notices are written now, in the same
+ *   transaction: the hold with its deadline, shown at once; the reminder,
+ *   shown 24 hours before the expiry (or at once if less remains); and the
+ *   expiry notice, shown at the expiry. They appear on time with no scheduled
+ *   job (SCRUM-48 AC8), and settling the hold first withdraws the ones still
+ *   to come.
+ */
+export async function holdBookingRequest(
+  input: unknown,
+): Promise<ActionResult<{ status: BookingStatus; holdExpiresAt: Date }>> {
+  const session = await auth();
+  const user = session?.user;
+
+  try {
+    requirePermission(user, "booking:hold");
+
+    const parsed = bookingHoldSchema.safeParse(input);
+    if (!parsed.success) {
+      const fieldErrors = parsed.error.flatten().fieldErrors;
+      return err(
+        fieldErrors.holdExpiresAt?.[0] ??
+          fieldErrors.holdNote?.[0] ??
+          "Please provide a valid hold.",
+        fieldErrors,
+      );
+    }
+    const { bookingId, holdNote } = parsed.data;
+    const holdExpiresAt = new Date(parsed.data.holdExpiresAt);
+
+    const booking = await prisma.booking.findUnique({
+      where: { id: bookingId },
+      select: {
+        ...venueSelect,
+        requestedById: true,
+        event: { select: { id: true, name: true, coordinatorId: true } },
+      },
+    });
+    if (!booking) return err("Booking request not found.");
+    const now = new Date();
+    const current = bookingStatusAt(booking, now);
+    if (current !== "PENDING") {
+      return err(alreadyDecided(current, booking.holdExpiresAt));
+    }
+    if (booking.needsReconsideration) return err(FLAGGED);
+    if (holdExpiresAt <= now || holdExpiresAt >= booking.startAt) {
+      const message = holdExpiryMessage(booking.startAt);
+      return err(message, { holdExpiresAt: [message] });
+    }
+    // SCRUM-34 AC7, AC8: not outside the venue's opening hours, nor once it
+    // is retired.
+    const venueRefused = venueRefusal(booking);
+    if (venueRefused) return err(`${venueRefused} This request is still pending.`);
+
+    const hold = () =>
+      prisma.$transaction(async (tx) => {
+        // The notices below reference the event, which takes a key-share
+        // lock on its row. Take it first, before the booking row: the order
+        // withdrawing a request and rejecting the event use (event, then
+        // booking), so the two can't deadlock (ADR 0007).
+        await tx.$queryRaw`SELECT "id" FROM "Event" WHERE "id" = ${booking.event.id} FOR KEY SHARE`;
+        // SCRUM-159 AC3: a hold occupies the venue for its setup and
+        // turnaround too, with the venue's minutes, which it keeps (AC8).
+        const check = async (minutes: SetupTurnaround) => {
+          const blockers = await findVenueBlockers(
+            tx,
+            booking.venueId,
+            occupiedPeriod(booking, minutes),
+            now,
+          );
+          if (blockers.length > 0) {
+            throw new DecisionError(
+              `Conflicting: ${booking.venue.name} is ${blockers
+                .map(describeBlocker)
+                .join("; ")}. This request is still pending.`,
+            );
+          }
+        };
+        await check(booking.venue);
+        // SCRUM-160: as for an approval, the minutes are read under the lock.
+        const times = await lockedVenueTimes(tx, booking.venueId, booking.venue, check);
+
+        const updated = await tx.booking.updateMany({
+          // SCRUM-26 AC5: as for an approval, a flag raised since it was
+          // read still stops it.
+          where: { id: booking.id, status: "PENDING", needsReconsideration: false },
+          data: {
+            status: "HELD",
+            heldAt: now,
+            holdExpiresAt,
+            holdNote,
+            setupMinutes: times.setupMinutes,
+            turnaroundMinutes: times.turnaroundMinutes,
+          },
+        });
+        if (updated.count !== 1) {
+          const latest = await tx.booking.findUniqueOrThrow({
+            where: { id: booking.id },
+            select: { status: true, holdExpiresAt: true },
+          });
+          const status = bookingStatusAt(latest, now);
+          throw new DecisionError(
+            status === "PENDING" ? FLAGGED : alreadyDecided(status, latest.holdExpiresAt),
+          );
+        }
+
+        await tx.auditLog.create({
+          data: {
+            entityType: "Booking",
+            entityId: booking.id,
+            action: "HELD",
+            actorId: user!.id,
+            fieldName: "status",
+            oldValue: "PENDING",
+            newValue: "HELD",
+            summary: `Held until ${formatDateTime(holdExpiresAt)}: ${holdNote}`,
+          },
+        });
+
+        const venue = booking.venue.name;
+        const event = booking.event.name;
+        const until = formatDateTime(holdExpiresAt);
+        const about = {
+          userId: booking.event.coordinatorId ?? booking.requestedById,
+          eventId: booking.event.id,
+          bookingId: booking.id,
+        };
+        await tx.notification.createMany({
+          data: [
+            {
+              ...about,
+              type: "BOOKING_HELD",
+              title: "A venue is held for your event",
+              message: `${venue} is held for "${event}" until ${until}. To finalise: ${holdNote} Once Venue Staff approve the hold, confirm it before then to secure the venue.`,
+              showFromAt: now,
+            },
+            {
+              ...about,
+              type: "HOLD_EXPIRY_REMINDER",
+              title: "A venue hold expires soon",
+              message: `The hold on ${venue} for "${event}" expires at ${until}. Once Venue Staff approve it, confirm it before then to secure the venue.`,
+              showFromAt: holdReminderAt(holdExpiresAt, now),
+            },
+            {
+              ...about,
+              type: "HOLD_EXPIRED",
+              title: "A venue hold expired",
+              message: `The hold on ${venue} for "${event}" expired at ${until}, so the venue is free for other requests. Make a new request if you still need it.`,
+              showFromAt: holdExpiresAt,
+            },
+          ],
+        });
+      });
+    await onceMoreOnDeadlock(hold);
+
+    revalidatePath("/bookings");
+    revalidatePath("/venues/availability");
+    return ok({ status: "HELD", holdExpiresAt });
+  } catch (error) {
+    if (error instanceof PermissionError || error instanceof DecisionError) {
+      return err(error.message);
+    }
+    if (violatesExclusion(error, "booking_no_double_booking")) {
+      return err(
+        "Conflicting: another booking overlapping this period was approved or held at the same moment. This request is still pending.",
+      );
+    }
+    if (violatesExclusion(error, "booking_overlaps_unavailability")) {
+      return err(
+        "Conflicting: the venue was recorded as unavailable for this period at the same moment. This request is still pending.",
+      );
+    }
+    throw error;
+  }
+}
+
+/**
+ * SCRUM-163 AC3 — the event's assigned Coordinator confirms a hold that Venue
+ * Staff have approved (AC7), which makes the booking Approved.
+ */
+export async function confirmHold(
+  input: unknown,
+): Promise<ActionResult<{ status: BookingStatus }>> {
+  return settleHold(input, "APPROVED");
+}
+
+/**
+ * SCRUM-163 AC3 — the event's assigned Coordinator releases a hold, which
+ * cancels the booking and frees the period.
+ */
+export async function releaseHold(
+  input: unknown,
+): Promise<ActionResult<{ status: BookingStatus }>> {
+  return settleHold(input, "CANCELLED");
+}
+
+/**
+ * Confirming or releasing a hold (AC3).
+ *
+ * - Only the event's assigned Coordinator may; anyone else, and a booking
+ *   that doesn't exist, get the same "not found" (SCRUM-68).
+ * - Conditional on the booking still being a live hold (ADR 0006), so doing
+ *   either a second time, or after Venue Staff rejected it, changes nothing
+ *   (AC7). Confirming is also conditional on Venue Staff having approved the
+ *   hold (AC3); releasing isn't.
+ * - A hold whose expiry has passed can't be confirmed (AC4). If the
+ *   confirmation reaches the database at or after the expiry, the database
+ *   refuses it (`booking_hold_expired`), so the booking ends up Approved or
+ *   Expired, never both (AC8).
+ * - The hold's notices still to come are withdrawn (AC5).
+ * - SCRUM-26 AC5: a hold flagged Needs Reconsideration can't be confirmed
+ *   until the flag is resolved, including one flagged after it was read. It
+ *   can still be released.
+ * - With `refusal` (a withdrawal, SCRUM-142 AC5), the event's status is read
+ *   again under its lock first, so a Confirm that committed meanwhile stops it.
+ */
+async function settleHold(
+  input: unknown,
+  to: "APPROVED" | "CANCELLED",
+  refusal?: (status: EventStatus) => string | null,
+): Promise<ActionResult<{ status: BookingStatus }>> {
+  const session = await auth();
+  const user = session?.user;
+
+  try {
+    requirePermission(user, "booking:settle-hold");
+
+    const parsed = holdSettlementSchema.safeParse(input);
+    if (!parsed.success) return err(HOLD_NOT_FOUND);
+    const { bookingId } = parsed.data;
+
+    const booking = await prisma.booking.findUnique({
+      where: { id: bookingId },
+      select: {
+        status: true,
+        startAt: true,
+        endAt: true,
+        holdExpiresAt: true,
+        holdApprovedAt: true,
+        needsReconsideration: true,
+        venue: { select: { name: true, isActive: true, ...openingHoursSelect } },
+        event: {
+          select: {
+            id: true,
+            organiserId: true,
+            coordinatorId: true,
+            status: true,
+          },
+        },
+      },
+    });
+    if (
+      !booking ||
+      !can(user!, "booking:settle-hold", { kind: "event", ...booking.event })
+    ) {
+      return err(HOLD_NOT_FOUND);
+    }
+    const now = new Date();
+    const current = bookingStatusAt(booking, now);
+    if (current !== "HELD") {
+      return err(alreadySettled(current, booking.holdExpiresAt));
+    }
+    const confirming = to === "APPROVED";
+    // SCRUM-26 AC5: a flagged hold is resolved before it is confirmed. It can
+    // still be released.
+    if (confirming && booking.needsReconsideration) return err(FLAGGED_HOLD);
+    if (confirming && !booking.holdApprovedAt) return err(HOLD_NOT_APPROVED);
+    // SCRUM-34 AC7, AC8: confirming makes the booking Approved, so its period
+    // must still be within the venue's opening hours, at a venue not retired.
+    const venueRefused = confirming && venueRefusal(booking);
+    if (venueRefused) return err(`${venueRefused} ${HOLD_STILL_HELD}`);
+
+    const settle = () =>
+      prisma.$transaction(async (tx) => {
+        const refused =
+          refusal?.(await lockedEventStatus(tx, booking.event.id)) ?? null;
+        if (refused) throw new DecisionError(refused);
+
+        const updated = await tx.booking.updateMany({
+          where: {
+            id: bookingId,
+            ...liveHoldWhere(now),
+            ...(confirming && {
+              holdApprovedAt: { not: null },
+              needsReconsideration: false,
+            }),
+          },
+          data: confirming
+            ? { status: "APPROVED", decidedById: user!.id, decidedAt: now }
+            : { status: "CANCELLED" },
+        });
+        if (updated.count !== 1) {
+          const latest = await tx.booking.findUniqueOrThrow({
+            where: { id: bookingId },
+            select: { status: true, holdExpiresAt: true, needsReconsideration: true },
+          });
+          const status = bookingStatusAt(latest, now);
+          // Still held means it was flagged, or isn't approved, under the lock.
+          throw new DecisionError(
+            status !== "HELD"
+              ? alreadySettled(status, latest.holdExpiresAt)
+              : latest.needsReconsideration
+                ? FLAGGED_HOLD
+                : HOLD_NOT_APPROVED,
+          );
+        }
+        await withdrawPendingHoldNotices(tx, { bookingId }, now);
+        // SCRUM-142 AC9, SCRUM-166 AC13: the event's venue arrangements changed.
+        await outdateSafetyChecks(tx, booking.event.id, now);
+        await tx.auditLog.create({
+          data: {
+            entityType: "Booking",
+            entityId: bookingId,
+            action: to === "APPROVED" ? "HOLD_CONFIRMED" : "HOLD_RELEASED",
+            actorId: user!.id,
+            fieldName: "status",
+            oldValue: "HELD",
+            newValue: to,
+          },
+        });
+      });
+    try {
+      await onceMoreOnDeadlock(settle);
+    } catch (error) {
+      // SCRUM-37 AC2: the database refuses to confirm a hold over recorded
+      // unavailability (the occupancy trigger, ADR 0010).
+      if (violatesExclusion(error, "booking_overlaps_unavailability")) {
+        return err(HOLD_OVER_UNAVAILABILITY);
+      }
+      if (!violatesCheck(error, "booking_hold_expired")) throw error;
+      return err(alreadySettled("EXPIRED", booking.holdExpiresAt));
+    }
+
+    revalidatePath("/bookings");
+    revalidatePath("/venues/availability");
+    revalidatePath("/events");
+    return ok({ status: to });
+  } catch (error) {
+    if (error instanceof PermissionError || error instanceof DecisionError) {
+      return err(error.message);
+    }
+    throw error;
+  }
+}
+
+/**
+ * SCRUM-142 AC4 — the event's assigned Coordinator withdraws one of its
+ * pending venue requests while the event is being planned.
+ *
+ * - It becomes Cancelled, conditional on still being Pending (ADR 0006), so
+ *   it leaves the Venue Staff queue and the event can request another venue;
+ *   the event's other bookings are untouched (SCRUM-162). Withdrawing it again
+ *   changes nothing (AC8).
+ * - A live hold is released instead (SCRUM-163). An Approved booking isn't
+ *   withdrawn here (AC6), and once the event is Confirmed changes go through a
+ *   change request (AC5).
+ * - Venue Staff are told (AC7), and a safety check that approved or is
+ *   reviewing the arrangements goes out of date (AC9).
+ */
+export async function withdrawBookingRequest(
+  input: unknown,
+): Promise<ActionResult<{ status: BookingStatus }>> {
+  const session = await auth();
+  const user = session?.user;
+
+  try {
+    requirePermission(user, "booking:withdraw");
+
+    const parsed = bookingWithdrawalSchema.safeParse(input);
+    if (!parsed.success) return err(REQUEST_NOT_FOUND);
+    const { bookingId } = parsed.data;
+
+    const booking = await prisma.booking.findUnique({
+      where: { id: bookingId },
+      select: {
+        status: true,
+        holdExpiresAt: true,
+        venue: { select: { name: true } },
+        event: {
+          select: {
+            id: true,
+            name: true,
+            organiserId: true,
+            coordinatorId: true,
+            status: true,
+          },
+        },
+      },
+    });
+    if (
+      !booking ||
+      !can(user!, "booking:withdraw", { kind: "event", ...booking.event })
+    ) {
+      return err(REQUEST_NOT_FOUND);
+    }
+    const notPlanning = withdrawalRefusal(booking.event.status);
+    if (notPlanning) return err(notPlanning);
+    const now = new Date();
+    const current = bookingStatusAt(booking, now);
+    if (current === "HELD") {
+      return settleHold({ bookingId }, "CANCELLED", withdrawalRefusal);
+    }
+    if (current === "APPROVED") {
+      return err(
+        "An approved booking isn't withdrawn here. It is cancelled by resolving its flag, or by cancelling or rejecting the event.",
+      );
+    }
+    if (current !== "PENDING") {
+      return err(notWithdrawable(current, booking.holdExpiresAt));
+    }
+
+    const withdrawn = await prisma.$transaction(async (tx) => {
+      const refusal = withdrawalRefusal(
+        await lockedEventStatus(tx, booking.event.id),
+      );
+      if (refusal) return refusal;
+
+      const updated = await tx.booking.updateMany({
+        where: { id: bookingId, status: "PENDING" },
+        data: { status: "CANCELLED" },
+      });
+      if (updated.count !== 1) {
+        const latest = await tx.booking.findUniqueOrThrow({
+          where: { id: bookingId },
+          select: { status: true, holdExpiresAt: true },
+        });
+        return notWithdrawable(
+          bookingStatusAt(latest, now),
+          latest.holdExpiresAt,
+        );
+      }
+      await tx.auditLog.create({
+        data: {
+          entityType: "Booking",
+          entityId: bookingId,
+          action: "WITHDRAWN",
+          actorId: user!.id,
+          fieldName: "status",
+          oldValue: "PENDING",
+          newValue: "CANCELLED",
+          summary: "Withdrawn by the Coordinator (SCRUM-142)",
+        },
+      });
+      await notifyRole(tx, "VENUE_STAFF", booking.event, {
+        type: "BOOKING_REQUEST_WITHDRAWN",
+        title: "A venue request was withdrawn",
+        message: `The Coordinator withdrew the request for ${booking.venue.name} for "${booking.event.name}".`,
+        link: "/bookings",
+      });
+      await outdateSafetyChecks(tx, booking.event.id, now);
+      return null;
+    });
+    if (withdrawn) return err(withdrawn);
+
+    revalidatePath("/bookings");
+    revalidatePath("/events");
+    return ok({ status: "CANCELLED" });
+  } catch (error) {
+    if (error instanceof PermissionError) return err(error.message);
+    throw error;
+  }
+}
+
+const REQUEST_NOT_FOUND = "Venue request not found.";
+
+/**
+ * The event's status, read under its row lock. confirmEvent takes the same
+ * lock, so a Confirm that committed while this waited is seen (SCRUM-142 AC5).
+ */
+async function lockedEventStatus(
+  tx: Prisma.TransactionClient,
+  eventId: string,
+): Promise<EventStatus> {
+  await tx.$queryRaw`SELECT "id" FROM "Event" WHERE "id" = ${eventId} FOR UPDATE`;
+  const { status } = await tx.event.findUniqueOrThrow({
+    where: { id: eventId },
+    select: { status: true },
+  });
+  return status;
+}
+
+/** SCRUM-142 AC5 — why an event in this status can't withdraw a venue request. */
+function withdrawalRefusal(status: EventStatus): string | null {
+  if (status === "CONFIRMED") {
+    return "This event is confirmed, so its arrangements change through a change request.";
+  }
+  return BOOKABLE_EVENT_STATUSES.includes(status)
+    ? null
+    : "This event isn't being planned, so its venue requests can't be withdrawn.";
+}
+
+function notWithdrawable(
+  status: BookingStatus,
+  holdExpiresAt: Date | null,
+): string {
+  if (status === "CANCELLED") return "This request has already been withdrawn.";
+  if (status === "EXPIRED") return holdExpired(holdExpiresAt);
+  // Held while this was being withdrawn: AC4 releases a hold instead.
+  if (status === "HELD") {
+    return "Venue Staff have just held this request. Release the hold instead.";
+  }
+  return `This request has already been ${status.toLowerCase()}, so it can't be withdrawn.`;
+}
+
+const HOLD_NOT_FOUND = "Venue hold not found.";
+const HOLD_ALREADY_APPROVED =
+  "Venue Staff have already approved this hold. It is waiting for its Coordinator to confirm it.";
+const HOLD_NOT_APPROVED =
+  "Venue Staff haven't approved this hold yet. You can confirm it once they have.";
+/** SCRUM-34 AC7 — what an opening-hours refusal leaves a hold as. */
+const HOLD_STILL_AWAITING_APPROVAL = "This hold is still awaiting approval.";
+const HOLD_STILL_HELD = "This hold is unchanged; you can still release it.";
+
+const FLAGGED_HOLD =
+  "This hold needs reconsideration, so it can't be confirmed until you resolve the flag. You can still release it.";
+
+const HOLD_OVER_UNAVAILABILITY =
+  "This hold can't be confirmed: the venue is now unavailable for part of its period. Release it and arrange another venue.";
+
+function holdExpired(holdExpiresAt: Date | null): string {
+  return `This hold expired at ${formatDateTime(holdExpiresAt!)}, so the venue is free for other requests. Make a new request if you still need it.`;
+}
+
+function alreadyDecided(
+  status: BookingStatus,
+  holdExpiresAt: Date | null,
+): string {
+  if (status === "HELD") {
+    return "This request is already held for its Coordinator. You can approve or reject the hold until it expires.";
+  }
+  if (status === "EXPIRED") return holdExpired(holdExpiresAt);
   return `This request has already been ${status.toLowerCase()}; the original decision stands.`;
+}
+
+function alreadySettled(
+  status: BookingStatus,
+  holdExpiresAt: Date | null,
+): string {
+  switch (status) {
+    case "EXPIRED":
+      return holdExpired(holdExpiresAt);
+    case "APPROVED":
+      return "This hold has already been confirmed.";
+    case "CANCELLED":
+      return "This hold has already been released.";
+    case "REJECTED":
+      return "Venue Staff rejected this hold.";
+    // Still held is decided where it happens: flagged or not yet approved
+    // (settleHold).
+    default:
+      return "This request isn't held.";
+  }
 }
