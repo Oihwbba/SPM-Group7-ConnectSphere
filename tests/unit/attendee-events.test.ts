@@ -29,7 +29,9 @@ function sessionFor(role: Role, id: string): Session {
   };
 }
 
-function eventRow(over: Partial<{ status: string }> = {}) {
+function eventRow(
+  over: Partial<{ status: string; registrationRequired: boolean | null }> = {},
+) {
   return {
     id: "evt1",
     name: "Career Fair",
@@ -60,6 +62,26 @@ describe("getBrowsableEvent — SCRUM-72 attendee detail read", () => {
     const result = await getBrowsableEvent("evt1");
 
     expect(result?.id).toBe("evt1");
+  });
+
+  it.each([
+    ["Yes", true],
+    ["not answered (requested before the choice existed)", null],
+  ])(
+    "SCRUM-171 [AC4] TC-171-06: an event whose Registration needed is %s can be opened by its URL",
+    async (_, registrationRequired) => {
+      mockAuth.mockResolvedValue(sessionFor("ATTENDEE", "usr_attendee"));
+      mockFindUnique.mockResolvedValue(eventRow({ registrationRequired }));
+
+      expect((await getBrowsableEvent("evt1"))?.id).toBe("evt1");
+    },
+  );
+
+  it("SCRUM-171 [AC4] TC-171-06: an event that doesn't need registration can't be opened by its URL — the same null as a missing one", async () => {
+    mockAuth.mockResolvedValue(sessionFor("ATTENDEE", "usr_attendee"));
+    mockFindUnique.mockResolvedValue(eventRow({ registrationRequired: false }));
+
+    expect(await getBrowsableEvent("evt1")).toBeNull();
   });
 
   it("[Negative] AC: a non-Confirmed event (e.g. Planning) is not browsable — same null as missing", async () => {
@@ -131,7 +153,7 @@ describe("getBrowsableEvent — SCRUM-72 attendee detail read", () => {
 });
 
 describe("getBrowsableEvents — SCRUM-72 browse list", () => {
-  it("[Positive] AC: queries only CONFIRMED events, ordered by start date", async () => {
+  it("SCRUM-171 [AC4] TC-171-06, [Positive] AC: queries only CONFIRMED events that take registrations, ordered by start date", async () => {
     mockFindMany.mockResolvedValue([eventRow()]);
 
     const events = await getBrowsableEvents("usr_attendee");
@@ -139,7 +161,11 @@ describe("getBrowsableEvents — SCRUM-72 browse list", () => {
     expect(events).toHaveLength(1);
     expect(mockFindMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { status: "CONFIRMED" },
+        where: {
+          status: "CONFIRMED",
+          // SCRUM-171 AC4: only events that take registrations.
+          OR: [{ registrationRequired: true }, { registrationRequired: null }],
+        },
         orderBy: { startAt: "asc" },
       }),
     );

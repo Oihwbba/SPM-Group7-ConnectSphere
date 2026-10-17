@@ -58,6 +58,17 @@ describe("role-based navigation — SCRUM-66", () => {
     expect(LANDING_ROUTE_BY_ROLE.TECH_SUPPORT).toBe("/equipment");
   });
 
+  // SCRUM-34 AC2: Venues is every internal role's last link, so granting it
+  // moved nobody's landing page.
+  it("SCRUM-34 [AC2] TC-34-02: every internal role has Venues last, and lands where it did before", () => {
+    for (const role of ["COORDINATOR", "VENUE_STAFF", "TECH_SUPPORT"] as const) {
+      expect(hrefsFor(role).at(-1)).toBe("/venues");
+    }
+    expect(LANDING_ROUTE_BY_ROLE.COORDINATOR).toBe("/events");
+    expect(LANDING_ROUTE_BY_ROLE.VENUE_STAFF).toBe("/bookings");
+    expect(hrefsFor("ORGANISER")).not.toContain("/venues");
+  });
+
   it("gives an attendee only their events and registrations", () => {
     const hrefs = hrefsFor("ATTENDEE");
     expect(hrefs).toContain("/events");
@@ -176,7 +187,8 @@ describe("navigation for the Week 7 roles — SCRUM-172", () => {
     ["SAFETY_OFFICER", "Safety Officer"],
   ] as const)("SCRUM-172 [AC1] TC-172-01: %s is labelled and lands on its notifications", (role, label) => {
     expect(ROLE_LABEL[role]).toBe(label);
-    expect(hrefsFor(role)).toEqual(["/notifications"]);
+    // SCRUM-34 AC2 added the venue catalogue, after their notifications.
+    expect(hrefsFor(role)).toEqual(["/notifications", "/venues"]);
     expect(LANDING_ROUTE_BY_ROLE[role]).toBe("/notifications");
   });
 });

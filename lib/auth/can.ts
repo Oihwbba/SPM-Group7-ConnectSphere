@@ -33,6 +33,7 @@ export type Action =
   | "event:review"
   | "event:confirm" // SCRUM-81: the assigned coordinator confirms a ready Planning event
   | "event:reject" // SCRUM-117: the assigned coordinator rejects a Planning event that can't be fulfilled
+  | "event:no-equipment" // SCRUM-170 AC4: the assigned coordinator records No equipment needed
   | "event:edit" // SCRUM-25: the assigned coordinator edits an event's details directly
   | "event-note:add" // SCRUM-25 AC6: add an operational note to an event
   | "event-note:read" // SCRUM-25 AC6: read an event's operational notes
@@ -40,7 +41,8 @@ export type Action =
   | "clarification:request" // SCRUM-18: coordinator asks the organiser a question
   | "clarification:respond" // SCRUM-18: organiser answers an open question
   | "change-request:raise" // SCRUM-41: the organiser, or the assigned coordinator on their behalf
-  | "venue:read"
+  | "venue:read" // SCRUM-34 AC2: any internal user views the venue catalogue and a venue's details
+  | "venue:manage" // SCRUM-34 AC3, AC6, AC8, AC9: Venue Staff add, edit and retire venues
   | "venue:availability" // SCRUM-36: view a venue's availability calendar
   | "venue:search" // SCRUM-38: search and filter venues, alone or for an event
   | "booking:request" // SCRUM-50: coordinator asks for a venue for their event
@@ -112,6 +114,7 @@ const ROLE_ACTIONS: Record<Role, Action[]> = {
     "event:review",
     "event:confirm",
     "event:reject",
+    "event:no-equipment",
     "event:edit",
     "event-note:add",
     "event-note:read",
@@ -129,11 +132,9 @@ const ROLE_ACTIONS: Record<Role, Action[]> = {
     "booking:withdraw",
     "notification:read",
   ],
-  // `venue:read` gates the Venue Catalogue page, which is Coordinator-only, so
-  // it is deliberately NOT granted here — Venue Staff act on bookings, not the
-  // catalogue. Grant it here the day Venue Staff need the catalogue; that is the
-  // one-line change SCRUM-66 is about, with no page edits.
   VENUE_STAFF: [
+    "venue:read",
+    "venue:manage",
     "booking:review",
     "booking:decide",
     "booking:hold",
@@ -145,6 +146,7 @@ const ROLE_ACTIONS: Record<Role, Action[]> = {
   ],
   TECH_SUPPORT: [
     "equipment:read",
+    "venue:read",
     "equipment:reserve",
     "equipment-request:list",
     "equipment-request:review",
@@ -160,9 +162,10 @@ const ROLE_ACTIONS: Record<Role, Action[]> = {
     "notification:read",
   ],
   // SCRUM-164 — the Week 7 roles. Like every user they read their own
-  // notifications (SCRUM-48); SCRUM-165 and SCRUM-166 grant the rest.
-  COORDINATOR_LEAD: ["notification:read"],
-  SAFETY_OFFICER: ["notification:read"],
+  // notifications (SCRUM-48) and, as internal users, the venue catalogue
+  // (SCRUM-34 AC2); SCRUM-165 and SCRUM-166 grant the rest.
+  COORDINATOR_LEAD: ["venue:read", "notification:read"],
+  SAFETY_OFFICER: ["venue:read", "notification:read"],
 };
 
 /**
@@ -187,11 +190,12 @@ function hasRelationship(
         // reject it from Planning (SCRUM-117 AC 5), confirm or release its
         // venue holds (SCRUM-163 AC3), change or withdraw its requests
         // (SCRUM-142 AC7), raise a change request on the organiser's behalf
-        // (SCRUM-41 AC10), or edit its details (SCRUM-25 AC1, AC7), 
+        // (SCRUM-41 AC10), or record No equipment needed (SCRUM-170 AC4) or resolve a flag on its arrangements (SCRUM-26 AC7), or edit its details (SCRUM-25 AC1, AC7), 
         // or resolve a flag on its arrangements (SCRUM-26 AC7).
         return (
           action !== "event:confirm" &&
           action !== "event:reject" &&
+          action !== "event:no-equipment" &&
           action !== "booking:settle-hold" &&
           action !== "booking:withdraw" &&
           action !== "equipment-request:change" &&

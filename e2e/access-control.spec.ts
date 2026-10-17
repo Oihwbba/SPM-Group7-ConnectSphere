@@ -31,7 +31,8 @@ async function signIn(page: Page, email: string) {
 // URL must still be refused with the server-rendered Forbidden page.
 test.describe("SCRUM-67 — typing another role's URL directly is refused", () => {
   const restricted = [
-    { label: "Coordinator-only venues page", url: "/venues" },
+    // SCRUM-34 AC2: every internal role reads the catalogue; the Organiser doesn't.
+    { label: "staff-only venues page", url: "/venues" },
     // SCRUM-38 TC-38-17
     { label: "Coordinator-only venue search", url: "/venues/search" },
     { label: "Venue-Staff bookings page", url: "/bookings" },
@@ -155,12 +156,12 @@ test.describe("SCRUM-66 — each role's navigation shows only its own links", ()
     {
       email: "venuestaff@test.local",
       role: "Venue Staff",
-      present: ["/bookings", "/venues/availability", "/notifications"],
+      present: ["/bookings", "/venues/availability", "/notifications", "/venues"],
     },
     {
       email: "techsupport@test.local",
       role: "Tech Support",
-      present: ["/equipment", "/notifications"],
+      present: ["/equipment", "/notifications", "/venues"],
     },
     {
       email: "attendee@test.local",

@@ -237,13 +237,14 @@ test.describe("SCRUM-50 / 52 / 53 — venue booking request, review and decision
     await expect(start).toHaveValue("10 Mar 2035, 9:00 am SGT");
     await expect(end).toHaveValue("10 Mar 2035, 1:00 pm SGT");
     await expect(attendance).toHaveValue("120");
-    // Its preferred layout, stored as "Theatre", is pre-selected all the same.
+    // Its preferred layout, stored as "Theatre", is shown but not pre-selected:
+    // the Coordinator chooses the layout (SCRUM-170 AC2).
     await expect(
       coordinator.getByLabel("Room layout", { exact: true }),
-    ).toHaveText("theatre");
+    ).toHaveText("No preference");
     await expect(
-      coordinator.getByText("Showing venues that support the theatre layout."),
-    ).toBeVisible();
+      coordinator.getByTestId("organiser-venue-answers"),
+    ).toContainText("Theatre");
     for (const field of [start, end, attendance]) {
       await expect(field).not.toBeEditable();
     }

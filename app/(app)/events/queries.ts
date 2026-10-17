@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { can } from "@/lib/auth/can";
+import { takesRegistration } from "@/lib/registration-state";
 
 /**
  * Load one event by id, but only if the signed-in user is allowed to see it
@@ -81,7 +82,9 @@ export async function getBrowsableEvent(id: string) {
     },
   });
 
-  if (!event || event.status !== "CONFIRMED") {
+  // SCRUM-171 AC4: an event that doesn't need registration can't be opened
+  // by its URL either, the same as the list (SCRUM-72 AC8).
+  if (!event || event.status !== "CONFIRMED" || !takesRegistration(event)) {
     return null;
   }
 
