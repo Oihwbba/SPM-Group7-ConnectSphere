@@ -31,7 +31,23 @@ export const ARRANGEMENT_FIELDS = [
 
 export type EditableField =
   | (typeof ROUTINE_FIELDS)[number]
-  | (typeof ARRANGEMENT_FIELDS)[number];
+  | (typeof ARRANGEMENT_FIELDS)[number]
+  // SCRUM-171 AC5: a routine field too, but a choice rather than text.
+  | "registrationRequired";
+
+/**
+ * SCRUM-171 AC5 — Registration needed can't be changed to No while people are
+ * registered; the message says how many.
+ */
+export function registrationStillNeededMessage(
+  activeRegistrations: number,
+): string {
+  const people =
+    activeRegistrations === 1
+      ? "1 active registration"
+      : `${activeRegistrations} active registrations`;
+  return `This event has ${people}, so Registration needed can't be changed to No.`;
+}
 
 /** How each field is named in messages and the audit log. */
 export const FIELD_LABEL: Record<EditableField, string> = {
@@ -41,6 +57,7 @@ export const FIELD_LABEL: Record<EditableField, string> = {
   accessibilityNeeds: "Accessibility needs",
   preferredLayout: "Preferred room layout",
   registrationNotes: "Registration needs",
+  registrationRequired: "Registration needed",
   programme: "Programme",
   specialRequests: "Special requests",
   startAt: "Start",
@@ -109,6 +126,11 @@ export const eventDetailsEditSchema = z
     accessibilityNeeds: uncapped,
     preferredLayout: uncapped,
     registrationNotes: uncapped,
+    // SCRUM-171 AC5: "yes" or "no" from the form; left out, it stays as it is.
+    registrationRequired: z.preprocess(
+      (value) => (value === "yes" ? true : value === "no" ? false : value),
+      z.boolean().optional(),
+    ),
     programme: text(5000),
     specialRequests: text(5000),
     // UTC ISO strings, converted from Singapore wall time in the browser.

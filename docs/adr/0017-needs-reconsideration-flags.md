@@ -67,8 +67,9 @@ a reason and a resolution has both who and when.
 
 ## Consequences
 
-- Nothing raises a flag yet. Each source story calls `flagArrangements` when
-  it is built; SCRUM-25's edit form also uses `impactfulChanges` and
+- Each source story calls `flagArrangements` when it is built. SCRUM-34 was
+  the first: a venue edit or retirement that affects future bookings warns
+  Venue Staff, then flags those bookings once they confirm. SCRUM-25's edit form also uses `impactfulChanges` and
   `flaggableArrangements` for AC1's warning.
 - SCRUM-163's Hold and Confirm-hold actions must refuse a flagged booking the
   same way approval does (AC5).

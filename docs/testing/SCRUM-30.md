@@ -10,7 +10,9 @@ rules availability is computed from (SCRUM-29).
 
 Written on 2026-10-12 from the acceptance criteria, then mapped to the tests
 that already existed (SCRUM-176). The tests predate the `SCRUM-n [ACx] TC-n-xx`
-title format, so each case names them by their current titles.
+title format, so each case names them by their current titles. Three more
+e2e tests were named under TC-30-02 and TC-30-07 on 2026-10-13, so that every
+e2e test is named by a case.
 
 **Shared pre-conditions for every case:** the database is migrated and seeded
 and the app is running. Signed in as `techsupport@test.local`
@@ -24,7 +26,7 @@ and the app is running. Signed in as `techsupport@test.local`
 | [TC-30-04](#tc-30-04) | Boundary | AC 2, AC 5 | Unit, integration, e2e |
 | [TC-30-05](#tc-30-05) | Positive | AC 6 | Unit, integration, e2e |
 | [TC-30-06](#tc-30-06) | Boundary | AC 7 | Unit, integration, e2e |
-| [TC-30-07](#tc-30-07) | Negative | AC 1 | Unit |
+| [TC-30-07](#tc-30-07) | Negative | AC 1 | Unit, e2e |
 
 ---
 
@@ -52,7 +54,7 @@ and the app is running. Signed in as `techsupport@test.local`
 | Test Data | 10 May 2031, 09:00 to 17:00 SGT |
 | Expected Result | The overlapping ones are under "Commitments during requested period", below the chosen type. The rest are under "Other commitments", even ones that overlap each other, and don't reduce the period's availability. |
 
-**Automated by:** `tests/unit/equipment-availability.test.ts` › "SCRUM-30 [AC2]: puts commitments that share time with the requested period under it", "SCRUM-30 [AC2]: commitments wholly outside the period are other commitments, even if they overlap each other", "splits on the same rule the requested-period availability is computed from"; `tests/integration/equipment-schedule.test.ts` › "SCRUM-30 [AC2]: other commitments, even ones that overlap each other, do not reduce the requested period's availability"; `e2e/equipment.spec.ts` › "SCRUM-30 [AC1, AC2]: commitments overlapping the requested period are listed under it, the rest under other commitments"
+**Automated by:** `tests/unit/equipment-availability.test.ts` › "SCRUM-30 [AC2]: puts commitments that share time with the requested period under it", "SCRUM-30 [AC2]: commitments wholly outside the period are other commitments, even if they overlap each other", "splits on the same rule the requested-period availability is computed from"; `tests/integration/equipment-schedule.test.ts` › "SCRUM-30 [AC2]: other commitments, even ones that overlap each other, do not reduce the requested period's availability"; `e2e/equipment.spec.ts` › "SCRUM-30 [AC1, AC2]: commitments overlapping the requested period are listed under it, the rest under other commitments", "the requested-period section sits under the selected item, and other commitments below the other equipment", "other commitments stay neutral even when they overlap each other"
 
 ### TC-30-03
 
@@ -117,4 +119,4 @@ and the app is running. Signed in as `techsupport@test.local`
 | Test Data | A made-up type id; "not-a-date" |
 | Expected Result | Each is refused with its reason, and nothing is read. |
 
-**Automated by:** `tests/unit/equipment-schedule.test.ts` › "refuses a role without equipment:read, and an unknown item", "rejects a malformed request with field errors and reads nothing", "rejects a `from` that is not a date"
+**Automated by:** `tests/unit/equipment-schedule.test.ts` › "refuses a role without equipment:read, and an unknown item", "rejects a malformed request with field errors and reads nothing", "rejects a `from` that is not a date"; `e2e/equipment.spec.ts` › "shows the schedule's own error when the item can no longer be read, and keeps the form" (a type retired while the page is open: the panel says "Equipment type is unavailable." and the availability check stays usable)

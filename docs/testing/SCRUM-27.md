@@ -29,6 +29,7 @@ the seed.
 | [TC-27-13](#tc-27-13) | Negative | A complete request | Unit, e2e |
 | [TC-27-14](#tc-27-14) | Positive | AC 8 | Unit, e2e |
 | [TC-27-15](#tc-27-15) | Negative | AC 8 | e2e |
+| [TC-27-16](#tc-27-16) | Positive | AC 6 | e2e |
 
 ---
 
@@ -43,7 +44,7 @@ the seed.
 | Test Data | Event: Approved — Research Symposium |
 | Expected Result | The list shows each of the coordinator's approved and planning events as "name — date", and nothing confirmed, still under review, or assigned to another coordinator. After step 3, "Runs …" shows the event's full start and end. The saved request's `eventId` is that event. |
 
-**Automated by:** `e2e/equipment-requests.spec.ts` › "SCRUM-27 [AC1, AC2, AC5, AC6] TC-27-01, TC-27-03, TC-27-07, TC-27-08: a coordinator requests equipment for their event and it is saved as Pending Review"; `tests/unit/equipment-request-queries.test.ts` › "SCRUM-27 [AC1] TC-27-01: offers only this coordinator's events that are going ahead, soonest first"; `tests/integration/equipment-request.test.ts` › "SCRUM-27 [AC1] TC-27-01: offers the coordinator their going-ahead events, and not one still under review or someone else's"
+**Automated by:** `e2e/equipment-requests.spec.ts` › "SCRUM-27 [AC1, AC2, AC5, AC6] TC-27-01, TC-27-03, TC-27-07, TC-27-08: a coordinator requests equipment for their event and it is saved as Pending Review"; `tests/unit/equipment-request-queries.test.ts` › "SCRUM-27 [AC1] TC-27-01: offers only this coordinator's events that are going ahead, soonest first"; `tests/integration/equipment-request.test.ts` › "SCRUM-27 [AC1] TC-27-01: offers the coordinator their going-ahead events, and not one still under review or someone else's"; `e2e/equipment-requests.spec.ts` › "a coordinator finds Equipment Requests in their navigation" (step 1: the page is reached from the navigation)
 
 ### TC-27-02
 
@@ -226,3 +227,16 @@ the seed.
 | Expected Result | "No equipment requests yet" is shown and no request cards appear. |
 
 **Automated by:** `e2e/equipment-requests.spec.ts` › "SCRUM-27 [AC8] TC-27-15: a coordinator with no requests is told how to raise one, not shown an empty list"
+
+### TC-27-16
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-27-16 |
+| Test Scenario | [Positive] AC 6: an item chosen but not yet added is sent with the request |
+| Pre-conditions | As TC-27-01, with **New request** open. |
+| Test Steps | 1. Choose the event. <br> 2. Choose an **Equipment type** and enter a **Quantity**, without clicking **Add equipment**. <br> 3. Click **Submit request**. |
+| Test Data | Laptop × 2 |
+| Expected Result | The request is submitted with the item on it: its card in the list shows the line "Laptop 2". Nothing the coordinator entered is dropped. |
+
+**Automated by:** `e2e/equipment-requests.spec.ts` › "equipment picked but not yet added is included when the request is submitted"
