@@ -38,6 +38,7 @@ const db = vi.hoisted(() => ({
   auditLog: { create: vi.fn() },
   safetyCheck: { updateMany: vi.fn() },
   $transaction: vi.fn(),
+  $queryRaw: vi.fn(),
 }));
 
 vi.mock("@/auth", () => ({ auth: vi.fn() }));
@@ -752,6 +753,7 @@ describe("decideBookingRequest — SCRUM-53", () => {
     mockAuth.mockResolvedValue(sessionFor("VENUE_STAFF", "usr_staff"));
     db.booking.findUnique.mockResolvedValue(pendingBooking);
     db.booking.updateMany.mockResolvedValue({ count: 1 });
+    db.$queryRaw.mockResolvedValue([{ setupMinutes: 0, turnaroundMinutes: 0 }]);
     db.safetyCheck.updateMany.mockResolvedValue({ count: 0 });
   });
 
@@ -805,6 +807,65 @@ describe("decideBookingRequest — SCRUM-53", () => {
       ...pendingBooking,
       venue: { name: "Seminar Room", setupMinutes: 30, turnaroundMinutes: 45 },
     };
+
+    beforeEach(() => {
+      db.$queryRaw.mockResolvedValue([{ setupMinutes: 30, turnaroundMinutes: 45 }]);
+    });
+
+    it("SCRUM-160 [AC1] TC-160-10: approving copies the minutes read under a lock on the venue, and checks availability again if they changed meanwhile", async () => {
+      // First read before a change to the venue's times committed.
+      db.booking.findUnique.mockResolvedValue(pendingBooking);
+
+      await decideBookingRequest({ bookingId: "bkg_1", decision: "APPROVED" });
+
+      // The booking, then the venue: the order recording unavailability takes.
+      const [bookingSql, bookingId] = db.$queryRaw.mock.calls[0];
+      expect(bookingSql.join("?")).toContain('FROM "Booking" WHERE "id" = ? FOR UPDATE');
+      expect(bookingId).toBe("bkg_1");
+      const [venueSql] = db.$queryRaw.mock.calls[1];
+      expect(venueSql.join("?")).toContain("FOR NO KEY UPDATE");
+      // Checked once with the first minutes, locked, then again with the new.
+      expect(db.booking.findMany).toHaveBeenCalledTimes(2);
+      expect(db.$queryRaw.mock.invocationCallOrder[0]).toBeGreaterThan(
+        db.booking.findMany.mock.invocationCallOrder[0],
+      );
+      expect(db.booking.updateMany.mock.calls[0][0].data).toMatchObject({
+        setupMinutes: 30,
+        turnaroundMinutes: 45,
+      });
+    });
+
+    it("SCRUM-160 [AC1] TC-160-10: unchanged minutes under the lock aren't checked twice", async () => {
+      db.booking.findUnique.mockResolvedValue(withTimes);
+
+      await decideBookingRequest({ bookingId: "bkg_1", decision: "APPROVED" });
+
+      expect(db.booking.findMany).toHaveBeenCalledTimes(1);
+    });
+
+    it("SCRUM-160 [AC1] TC-160-10: if the venue can't be read under the lock, the first read's minutes are used", async () => {
+      db.booking.findUnique.mockResolvedValue(withTimes);
+      db.$queryRaw.mockResolvedValue([]);
+
+      await decideBookingRequest({ bookingId: "bkg_1", decision: "APPROVED" });
+
+      expect(db.booking.updateMany.mock.calls[0][0].data).toMatchObject({
+        setupMinutes: 30,
+        turnaroundMinutes: 45,
+      });
+    });
+
+    it("SCRUM-160: rejecting takes no lock on the venue", async () => {
+      db.booking.findUnique.mockResolvedValue(withTimes);
+
+      await decideBookingRequest({
+        bookingId: "bkg_1",
+        decision: "REJECTED",
+        reason: "Too small.",
+      });
+
+      expect(db.$queryRaw).not.toHaveBeenCalled();
+    });
 
     it("SCRUM-159 [AC8] TC-159-12: approving copies the venue's current setup and turnaround onto the booking", async () => {
       db.booking.findUnique.mockResolvedValue(withTimes);

@@ -24,6 +24,7 @@ it can be read aloud in the oral exam.
 | [0016](0016-one-nextjs-app-on-vercel-and-supabase.md) | One Next.js app with Prisma on Supabase, deployed to Vercel: free, and one shared view of everyone's merged work | — | Current (written 2026-10-11, after the fact) |
 | [0017](0017-needs-reconsideration-flags.md) | Needs Reconsideration is a flag the Coordinator resolves, never a status | SCRUM-26 | Current |
 | [0018](0018-operational-safety-check.md) | The safety check is a checklist item with its own rows, not an event status | SCRUM-166 | Current |
+| [0021](0021-flagging-setup-and-turnaround-clashes.md) | A longer setup or turnaround flags the bookings it makes clash; it moves none | SCRUM-160 | Current |
 
 ## Writing one
 
