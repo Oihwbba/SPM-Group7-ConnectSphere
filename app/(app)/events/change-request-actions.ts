@@ -25,7 +25,7 @@ const CURRENT_VALUES = Object.fromEntries(
   CHANGE_KEYS.map((key) => [key, true]),
 ) as { [K in ChangeKey]: true };
 
-type CurrentValues = Record<ChangeKey, string | number | Date | null>;
+type CurrentValues = Record<ChangeKey, string | number | boolean | Date | null>;
 
 type Relationship = { coordinatorId: string | null; status: EventStatus };
 
@@ -57,7 +57,8 @@ function changedFields(current: CurrentValues, changes: ChangeRequestChanges) {
   const fields: FieldChange[] = [];
   for (const key of Object.keys(changes) as ChangeKey[]) {
     const requested = changes[key]!;
-    const next = key === "startAt" || key === "endAt" ? new Date(requested) : requested;
+    const next =
+      key === "startAt" || key === "endAt" ? new Date(requested as string) : requested;
     const oldValue = auditValue(current[key]);
     const newValue = auditValue(next);
     if (oldValue === newValue) continue;

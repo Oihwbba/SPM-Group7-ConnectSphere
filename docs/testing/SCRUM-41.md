@@ -44,6 +44,7 @@ and the app is running. Unless the case says otherwise, the event is owned by
 | [TC-41-15](#tc-41-15) | Negative    | AC 1               | Unit                     |
 | [TC-41-16](#tc-41-16) | Concurrency | AC 2, AC 10        | Unit                     |
 | [TC-41-17](#tc-41-17) | Negative    | Errors             | e2e                      |
+| [TC-41-18](#tc-41-18) | Positive    | AC 1, AC 6         | Unit, integration, e2e   |
 
 ---
 
@@ -133,7 +134,7 @@ and the app is running. Unless the case says otherwise, the event is owned by
 | Test Scenario | [Boundary] AC 4: requested values follow the request form's rules |
 | Pre-conditions | Signed in as the Organiser. |
 | Test Steps | 1. Ask for each invalid value. <br> 2. Ask for the allowed boundaries. |
-| Test Data | Invalid: attendance 0, -5, 1.5; a blank name; a start with no end; an end before, or equal to, the start; a start a minute in the past; a date that isn't one; a programme of 5001 characters; a field the form doesn't have. Allowed: attendance 1; an end one minute after the start; an empty programme. |
+| Test Data | Invalid: attendance 0, -5, 1.5; a blank name; a start with no end; an end before, or equal to, the start; a start a minute in the past; a date that isn't one; a programme of 5001 characters; a Registration needed that isn't Yes or No; a field the form doesn't have. Allowed: attendance 1; an end one minute after the start; an empty programme. |
 | Expected Result | Each invalid value is refused, with the form's own message next to its field ("Attendance must be a positive whole number.", "Proposed date cannot be in the past.", "Proposed end date and time must be strictly after the start date and time.", …), and nothing is read or written. The boundaries are accepted. For the Organiser, Venue requirements and Equipment requirements offer the request form's catalogue suggestions; choosing a venue fills "Preferred venue: [name]". Venue and equipment requirements are free text, as AC 4 says, under the request form's own rules (not blank). A Coordinator gets no suggestions: only the Organiser may read the catalogue (SCRUM-13). |
 
 **Automated by:** `tests/unit/change-requests.test.ts` › "SCRUM-41 [AC4] TC-41-07: %j is refused: %s", "SCRUM-41 [AC4] TC-41-07: the boundaries that are allowed: attendance 1, an end one minute after the start, an empty programme", "SCRUM-41 [AC4] TC-41-07: invalid values are refused next to their field, before anything is read"; `e2e/change-requests.spec.ts` › "SCRUM-41 [AC1, AC4, AC5, AC6, AC7] TC-41-07, TC-41-09: …"
@@ -147,7 +148,7 @@ and the app is running. Unless the case says otherwise, the event is owned by
 | Pre-conditions | Signed in as the Organiser. |
 | Test Steps | 1. Ask to change every field at once. |
 | Test Data | New start and end a day later, Venue requirements "Two halls", Equipment requirements "Four projectors", and new values for every other field |
-| Expected Result | `startAt`, `endAt`, `expectedAttendance`, `venueRequirements` and `equipmentRequirements` are impactful; name, purpose, accessibility needs, room layout, registration needs, programme and special requests are not. The dialog tags impactful fields "Impactful". |
+| Expected Result | `startAt`, `endAt`, `expectedAttendance`, `venueRequirements` and `equipmentRequirements` are impactful; name, purpose, accessibility needs, room layout, registration needs, registration needed, programme and special requests are not. The dialog tags impactful fields "Impactful". |
 
 **Automated by:** `tests/unit/change-requests.test.ts` › "SCRUM-41 [AC5] TC-41-08: date, time, venue and equipment are impactful; the other fields are not"; the e2e checks the tag
 
@@ -267,3 +268,16 @@ and the app is running. Unless the case says otherwise, the event is owned by
 | Expected Result | Step 2: "The change request couldn't be sent. If it isn't in the list above, try again." above the form; **Submit change request** and **Discard changes** are enabled again, and nothing is written. Step 3: the request is listed, reading "40 → 55", and only one is written. |
 
 **Automated by:** `e2e/change-requests.spec.ts` › "SCRUM-41 regression: a submission that never reaches the server says so and can be sent again"
+
+### TC-41-18
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-41-18 |
+| Test Scenario | [Positive] AC 1, AC 6: a change request can ask to change Registration needed (SCRUM-171), and the event keeps its own answer |
+| Pre-conditions | The event needs registration (Registration needed: Yes). Signed in as its Organiser. |
+| Test Steps | 1. Choose **Request a change**; **Registration needed** shows Yes. <br> 2. Choose No and submit. <br> 3. On an event whose request was made before the question was asked, choose Yes and submit. <br> 4. On an event that needs registration, ask for Yes. |
+| Test Data | — |
+| Expected Result | Step 2: the request is Submitted and reads "Registration needed", "Yes → No", not impactful; it records `registrationRequired` true → false; the event still needs registration. Step 3: recorded with no old value. Step 4: "Change at least one field, or ask to cancel the event." and nothing is written. Whether it may become No while people are registered is decided when the request is approved (SCRUM-171 AC5, TC-171-09, SCRUM-128). |
+
+**Automated by:** `tests/unit/change-requests.test.ts` › "SCRUM-41 [AC1, AC5, AC6] TC-41-18: Registration needed can be asked to change, recorded Yes to No and not impactful, and the event keeps its own", "SCRUM-41 [AC1] TC-41-18: on a request made before the question was asked, the old value is recorded as none" and "SCRUM-41 [AC1] TC-41-18, TC-41-15: asking for the answer the event already has is not a change, and nothing is written"; `tests/integration/change-requests.test.ts` › "SCRUM-41 [AC1, AC6] TC-41-18: a request to change Registration needed to No is Submitted, and the event still needs registration"; `e2e/change-requests.spec.ts` › "SCRUM-41 [AC1, AC6] TC-41-18: the Organiser asks for registration not to be needed, and the request shows Yes to No while the event still needs it"
