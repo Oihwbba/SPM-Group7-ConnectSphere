@@ -201,7 +201,7 @@ function hasRelationship(
         // its details (SCRUM-25 AC1, AC7), resolve a flag on its arrangements
         // (SCRUM-26 AC7), request its safety check (SCRUM-166 AC1), close
         // or reopen its registration (SCRUM-75 AC6) or see its registrations
-        // (SCRUM-70 AC1).main
+        // (SCRUM-70 AC1).
         return (
           action !== "event:confirm" &&
           action !== "event:reject" &&
@@ -214,7 +214,7 @@ function hasRelationship(
           action !== "arrangement:reconsider" &&
           action !== "registration:list" &&
           action !== "registration:control" &&
-          action !== "safety-check:request" &&main
+          action !== "safety-check:request" &&
           resource.coordinatorId === null &&
           resource.status !== "DRAFT"
         );
