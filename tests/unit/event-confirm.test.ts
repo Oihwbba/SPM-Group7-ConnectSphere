@@ -9,6 +9,7 @@ import {
   type ReadinessChecklist,
 } from "@/lib/event-readiness";
 import { confirmEvent } from "@/app/(app)/events/actions";
+import { EVENT_STATUS_LABEL } from "@/lib/event-lifecycle";
 import { formatDateTime } from "@/lib/datetime";
 
 // SCRUM-81 — the assigned Coordinator confirms a Planning event whose
@@ -290,14 +291,14 @@ describe("confirmEvent — SCRUM-81", () => {
     "CANCELLED",
     "COMPLETED",
   ] as EventStatus[])(
-    "SCRUM-81 [AC5] TC-81-11: a %s event cannot be confirmed",
+    "SCRUM-81 [AC5] TC-81-11, SCRUM-135 [AC11]: a %s event cannot be confirmed, and the refusal names its status",
     async (status) => {
       mockFindUnique.mockResolvedValue(eventRow({ status }));
       tx.event.findUniqueOrThrow.mockResolvedValue(eventRow({ status }));
 
       expect(await confirmEvent({ eventId: "evt1" })).toEqual({
         ok: false,
-        error: "Only an event in Planning can be confirmed.",
+        error: `This event is ${EVENT_STATUS_LABEL[status]}, so it can't be confirmed.`,
       });
       expectNothingWritten();
     },

@@ -595,8 +595,9 @@ describe.skipIf(!usesLocalDatabase)("concurrency — status transitions (SCRUM-2
     const event = await prisma.event.create({
       data: {
         name: `SCRUM-24 Concurrency Event ${Date.now()}`,
-        status: "SUBMITTED",
+        status: "UNDER_REVIEW",
         organiserId: "usr_organiser",
+        coordinatorId: "usr_coordinator",
       },
       select: { id: true },
     });
@@ -625,9 +626,9 @@ describe.skipIf(!usesLocalDatabase)("concurrency — status transitions (SCRUM-2
     expect(results.filter((r) => !r.ok)).toHaveLength(1);
 
     // Exactly one decision is recorded. An approval also records the move to
-    // Planning (SCRUM-81), so the entries leaving SUBMITTED are what count.
+    // Planning (SCRUM-81), so the entries leaving UNDER_REVIEW are what count.
     expect(
-      await prisma.auditLog.count({ where: { entityId: eventId, oldValue: "SUBMITTED" } }),
+      await prisma.auditLog.count({ where: { entityId: eventId, oldValue: "UNDER_REVIEW" } }),
     ).toBe(1);
   });
 });

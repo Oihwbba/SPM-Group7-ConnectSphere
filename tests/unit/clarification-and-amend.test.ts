@@ -419,8 +419,8 @@ describe("respondToClarification — SCRUM-108 AC2–AC5, AC14", () => {
   });
 });
 
-describe("transitionEventStatus — SCRUM-108 AC11 rejecting an unassigned request", () => {
-  it("SCRUM-108 [AC11] TC-108-07: the Coordinator who rejects a request nobody was assigned to becomes its coordinator", async () => {
+describe("transitionEventStatus — SCRUM-135 AC4 rejecting an unassigned request", () => {
+  it("SCRUM-135 [AC4] TC-135-04: a Submitted request nobody has assigned can't be rejected, and no Coordinator assigns themselves", async () => {
     mockAuth.mockResolvedValue(coordinator());
     tx.event.findUnique.mockResolvedValue({
       id: "evt1",
@@ -429,29 +429,19 @@ describe("transitionEventStatus — SCRUM-108 AC11 rejecting an unassigned reque
       coordinatorId: null,
     });
 
-    await transitionEventStatus({
+    const result = await transitionEventStatus({
       eventId: "evt1",
       nextStatus: "REJECTED",
       decisionReason: "Too large for any venue.",
       rejectionOutcome: "AMEND_AND_RESUBMIT",
     });
 
-    expect(tx.event.updateMany).toHaveBeenCalledWith({
-      where: { id: "evt1", status: "SUBMITTED", coordinatorId: null },
-      data: expect.objectContaining({
-        status: "REJECTED",
-        coordinatorId: "usr_coord",
-      }),
+    expect(result).toEqual({
+      ok: false,
+      error: "This event is Submitted, so it can't be rejected.",
     });
-    expect(tx.auditLog.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({
-        action: "ASSIGNED",
-        actorId: "usr_coord",
-        oldValue: null,
-        newValue: "usr_coord",
-        summary: "Assigned to the rejecting coordinator (SCRUM-108)",
-      }),
-    });
+    expect(tx.event.updateMany).not.toHaveBeenCalled();
+    expect(tx.auditLog.create).not.toHaveBeenCalled();
   });
 });
 
@@ -476,6 +466,7 @@ describe("submitEventRequest — SCRUM-108 AC9–AC12, AC14 resubmission", () =>
     id: "evt1",
     organiserId: "usr_org",
     status: "REJECTED",
+    rejectionOutcome: "AMEND_AND_RESUBMIT",
     coordinatorId,
     name: "Amended Summit",
     purpose: "Networking",

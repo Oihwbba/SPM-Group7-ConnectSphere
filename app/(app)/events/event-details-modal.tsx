@@ -17,7 +17,7 @@ import { ChangeRequestPanel } from "@/components/events/change-request-panel";
 import { ReadinessChecklist } from "@/components/events/readiness-checklist";
 import { ReconsiderationPanel } from "@/components/events/reconsideration-panel";
 import { CancelEvent } from "@/components/events/cancel-event";
-import { CANCELLABLE } from "@/lib/event-closing";
+import { CANCELLABLE } from "@/lib/event-lifecycle";
 import { ConfirmedArrangements } from "@/components/events/confirmed-arrangements";
 import { RegistrationListPanel } from "@/components/events/registration-list-panel";
 import { RegistrationControl } from "@/components/events/registration-control";

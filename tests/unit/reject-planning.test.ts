@@ -5,6 +5,7 @@ import type { EventStatus, Role } from "@prisma/client";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { rejectPlanningEvent } from "@/app/(app)/events/actions";
+import { EVENT_STATUS_LABEL } from "@/lib/event-lifecycle";
 
 // SCRUM-117 — the assigned Coordinator rejects a Planning event whose
 // arrangements can't be secured, releasing everything held for it. Test
@@ -298,13 +299,13 @@ describe("rejectPlanningEvent — SCRUM-117", () => {
     "REJECTED",
     "CANCELLED",
   ] as EventStatus[])(
-    "SCRUM-117 [AC1] TC-117-04: a %s event can't be rejected here and nothing changes",
+    "SCRUM-117 [AC1] TC-117-04, SCRUM-135 [AC11]: a %s event can't be rejected here, the refusal names its status, and nothing changes",
     async (status) => {
       tx.event.findUniqueOrThrow.mockResolvedValue(eventRow({ status }));
 
       expect(await rejectPlanningEvent(valid)).toEqual({
         ok: false,
-        error: "Only an event in Planning can be rejected here.",
+        error: `This event is ${EVENT_STATUS_LABEL[status]}, so it can't be rejected here.`,
       });
       expectNothingWritten();
     },

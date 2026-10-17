@@ -399,19 +399,21 @@ export function EventsClient({
             Discard
           </Button>
         )}
-        {/* SCRUM-19: decide a submitted or under-review request. There is no
-            manual "claim" — SCRUM-20 assigns automatically. */}
+        {/* SCRUM-19: decide a request. SCRUM-135 AC3, AC4: only one Under
+            Review, which has its Coordinator; a Submitted one waits for one. */}
         {isCoordinator &&
           (event.status === "SUBMITTED" || event.status === "UNDER_REVIEW") && (
             <>
-              <Button
-                size="sm"
-                className={actionButton}
-                disabled={isPending}
-                onClick={() => changeStatus(event, "APPROVED")}
-              >
-                <CheckCircle2 className="h-3.5 w-3.5" /> Approve
-              </Button>
+              {event.status === "UNDER_REVIEW" && (
+                <Button
+                  size="sm"
+                  className={actionButton}
+                  disabled={isPending}
+                  onClick={() => changeStatus(event, "APPROVED")}
+                >
+                  <CheckCircle2 className="h-3.5 w-3.5" /> Approve
+                </Button>
+              )}
               {/* SCRUM-18: ask the organiser a question instead of deciding. */}
               <Button
                 variant="outline"
@@ -426,19 +428,21 @@ export function EventsClient({
               >
                 <MessageCircleQuestion className="h-3.5 w-3.5" /> Ask
               </Button>
-              <Button
-                variant="destructive"
-                size="sm"
-                className={actionButton}
-                disabled={isPending}
-                onClick={() => {
-                  setRejectingEvent(event);
-                  setRejectionReason("");
-                  setRejectionOutcome(null);
-                }}
-              >
-                <XCircle className="h-3.5 w-3.5" /> Reject
-              </Button>
+              {event.status === "UNDER_REVIEW" && (
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  className={actionButton}
+                  disabled={isPending}
+                  onClick={() => {
+                    setRejectingEvent(event);
+                    setRejectionReason("");
+                    setRejectionOutcome(null);
+                  }}
+                >
+                  <XCircle className="h-3.5 w-3.5" /> Reject
+                </Button>
+              )}
             </>
           )}
       </div>
