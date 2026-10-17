@@ -94,6 +94,7 @@ const U = {
   attendee3: "usr_attendee_3",
   attendee4: "usr_attendee_4",
   safetyOfficer: "usr_safetyofficer",
+  safetyOfficer2: "usr_safetyofficer_2",
 } as const;
 
 const V = {
@@ -151,6 +152,10 @@ async function seedUsers(passwordHash: string) {
     { id: U.attendee4, email: "attendee4@test.local", name: "Ade Attendee", role: Role.ATTENDEE },
     // SCRUM-166: reviews operational safety checks.
     { id: U.safetyOfficer, email: "safety@test.local", name: "Sam Safety", role: Role.SAFETY_OFFICER },
+    // SCRUM-166 AC8: two Safety Officers recording at once. Seeded rather than
+    // made by a test: every Safety Officer is told of each requested check, so
+    // one appearing or vanishing mid-run would race other suites.
+    { id: U.safetyOfficer2, email: "safety2@test.local", name: "Sasha Safety", role: Role.SAFETY_OFFICER },
   ];
 
   for (const u of users) {
