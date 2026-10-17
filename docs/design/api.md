@@ -100,6 +100,12 @@ request.
 | `getEventReadiness` | The event's readiness checklist (SCRUM-110, 170). | `event:read`; the result also says whether the viewer may review, reject or confirm, settle or withdraw a venue request, and record No equipment needed | an event id | nothing (read only) | — |
 | `getEventArrangements` | A Confirmed event's secured venue, time and equipment (SCRUM-81 AC6). | `event:read` | an event id | nothing (read only) | — |
 
+## `app/(app)/events/registration-list-actions.ts`
+
+| Action | What it does | Permission | Input | Writes | Locks |
+|---|---|---|---|---|---|
+| `getEventRegistrations` | An event's registrations for its Organiser or assigned Coordinator: the registered count, remaining places and each Attendee's name and status, with Withdrawn and Cancelled apart and not counted (SCRUM-70). Anyone else, and a missing event, gets "Event not found." | `registration:list` | event id | nothing (read only) | — |
+
 ## `app/(app)/events/registration-actions.ts`
 
 | Action | What it does | Permission | Input | Writes | Locks |
