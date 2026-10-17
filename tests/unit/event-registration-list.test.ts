@@ -59,20 +59,20 @@ describe("summariseRegistrations — SCRUM-70 AC3, AC4", () => {
     10,
   );
 
-  it("[Positive] AC3: shows the registered count and remaining places", () => {
+  it("SCRUM-70 [AC3] TC-70-05: [Positive] shows the registered count and remaining places", () => {
     expect(list.registeredCount).toBe(2);
     expect(list.capacity).toBe(10);
     expect(list.remaining).toBe(8);
   });
 
-  it("[Positive] AC3: lists each registration's Attendee name and status", () => {
+  it("SCRUM-70 [AC3] TC-70-05: [Positive] lists each registration's Attendee name and status", () => {
     expect(list.registered).toEqual([
       { id: "reg1", status: "REGISTERED", attendeeName: "Aria Attendee" },
       { id: "reg3", status: "REGISTERED", attendeeName: "Amir Attendee" },
     ]);
   });
 
-  it("[Positive] AC4: Withdrawn and Cancelled are shown separately and don't count", () => {
+  it("SCRUM-70 [AC4] TC-70-06: [Positive] Withdrawn and Cancelled are shown separately and don't count", () => {
     expect(list.inactive.map((row) => row.status)).toEqual([
       "WITHDRAWN",
       "CANCELLED",
@@ -80,7 +80,7 @@ describe("summariseRegistrations — SCRUM-70 AC3, AC4", () => {
     expect(list.registered.map((row) => row.status)).not.toContain("WITHDRAWN");
   });
 
-  it("[Boundary] an event with no expected attendance has no places, never a negative number", () => {
+  it("SCRUM-70 [AC3] TC-70-07: [Boundary] an event with no expected attendance has no places, never a negative number", () => {
     const empty = summariseRegistrations([], null);
     expect(empty).toEqual({
       registeredCount: 0,
@@ -93,7 +93,7 @@ describe("summariseRegistrations — SCRUM-70 AC3, AC4", () => {
 });
 
 describe("getEventRegistrations — SCRUM-70", () => {
-  it("[Positive] AC2: the Organiser sees the list for an event they submitted", async () => {
+  it("SCRUM-70 [AC2] TC-70-03: [Positive] the Organiser sees the list for an event they submitted", async () => {
     mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
 
     const result = await getEventRegistrations("evt1");
@@ -108,13 +108,13 @@ describe("getEventRegistrations — SCRUM-70", () => {
     );
   });
 
-  it("[Positive] AC1: the assigned Coordinator sees the list for their event", async () => {
+  it("SCRUM-70 [AC1] TC-70-01: [Positive] the assigned Coordinator sees the list for their event", async () => {
     mockAuth.mockResolvedValue(sessionFor("COORDINATOR", "usr_coordinator"));
 
     expect((await getEventRegistrations("evt1")).ok).toBe(true);
   });
 
-  it("[Negative] AC2: an Organiser can't see the list for another Organiser's event, and it looks missing", async () => {
+  it("SCRUM-70 [AC2] TC-70-04: [Negative] an Organiser can't see the list for another Organiser's event, and it looks missing", async () => {
     mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser_2"));
 
     expect(await getEventRegistrations("evt1")).toEqual({
@@ -124,14 +124,14 @@ describe("getEventRegistrations — SCRUM-70", () => {
     expect(mockFindRegistrations).not.toHaveBeenCalled();
   });
 
-  it("[Negative] AC1: a Coordinator not assigned to the event can't see its list", async () => {
+  it("SCRUM-70 [AC1] TC-70-02: [Negative] a Coordinator not assigned to the event can't see its list", async () => {
     mockAuth.mockResolvedValue(sessionFor("COORDINATOR", "usr_coordinator_2"));
 
     expect((await getEventRegistrations("evt1")).ok).toBe(false);
     expect(mockFindRegistrations).not.toHaveBeenCalled();
   });
 
-  it("[Negative] AC1: no Coordinator sees the list of an event with no assigned Coordinator", async () => {
+  it("SCRUM-70 [AC1] TC-70-02: [Negative] no Coordinator sees the list of an event with no assigned Coordinator", async () => {
     mockAuth.mockResolvedValue(sessionFor("COORDINATOR", "usr_coordinator"));
     mockFindEvent.mockResolvedValue({ ...event, coordinatorId: null });
 
@@ -146,7 +146,7 @@ describe("getEventRegistrations — SCRUM-70", () => {
     "COORDINATOR_LEAD",
     "SAFETY_OFFICER",
   ] as const)(
-    "[Security gate] AC5, AC7: a %s can't retrieve an event's registration list, before any query runs",
+    "SCRUM-70 [AC5, AC7] TC-70-08: [Negative] a %s can't retrieve an event's registration list, before any query runs",
     async (role) => {
       mockAuth.mockResolvedValue(sessionFor(role, "usr_other"));
 
@@ -159,14 +159,14 @@ describe("getEventRegistrations — SCRUM-70", () => {
     },
   );
 
-  it("[Negative] a signed-out caller is refused, before any query runs", async () => {
+  it("SCRUM-70 [AC5] TC-70-10: [Negative] a signed-out caller is refused, before any query runs", async () => {
     mockAuth.mockResolvedValue(null);
 
     expect((await getEventRegistrations("evt1")).ok).toBe(false);
     expect(mockFindEvent).not.toHaveBeenCalled();
   });
 
-  it("[Negative] a missing event is refused the same way as one that isn't yours", async () => {
+  it("SCRUM-70 [AC2] TC-70-10: [Negative] a missing event is refused the same way as one that isn't yours", async () => {
     mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
     mockFindEvent.mockResolvedValue(null);
 

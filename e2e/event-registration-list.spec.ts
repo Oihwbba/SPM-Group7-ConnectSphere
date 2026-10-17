@@ -22,10 +22,16 @@ async function openGala(page: Page, email: string) {
 
 test.describe("SCRUM-70 — an event's registration list", () => {
   for (const { email, who } of [
-    { email: "organiser@test.local", who: "AC2: the Organiser" },
-    { email: "coordinator@test.local", who: "AC1: the assigned Coordinator" },
+    {
+      email: "organiser@test.local",
+      who: "SCRUM-70 [AC2, AC3, AC4] TC-70-03, TC-70-05, TC-70-06: the Organiser",
+    },
+    {
+      email: "coordinator@test.local",
+      who: "SCRUM-70 [AC1, AC3, AC4] TC-70-01, TC-70-05, TC-70-06: the assigned Coordinator",
+    },
   ]) {
-    test(`${who} sees the registered count, remaining places and each Attendee's status (AC3, AC4)`, async ({
+    test(`${who} sees the registered count, remaining places and each Attendee's status`, async ({
       page,
     }) => {
       const list = await openGala(page, email);
