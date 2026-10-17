@@ -38,6 +38,8 @@ const db = vi.hoisted(() => ({
   auditLog: { create: vi.fn() },
   notification: { create: vi.fn(), createMany: vi.fn() },
   user: { findMany: vi.fn() },
+  // SCRUM-166: approving a booking or reserving outdates the event's safety check.
+  safetyCheck: { updateMany: vi.fn() },
   $queryRaw: vi.fn(),
   $transaction: vi.fn(),
 }));
@@ -81,6 +83,7 @@ beforeEach(() => {
   db.venueUnavailability.findMany.mockResolvedValue([]);
   db.user.findMany.mockResolvedValue([]);
   db.booking.updateMany.mockResolvedValue({ count: 1 });
+  db.safetyCheck.updateMany.mockResolvedValue({ count: 0 });
   pendingOthers([]);
 });
 

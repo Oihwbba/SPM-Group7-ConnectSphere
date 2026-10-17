@@ -15,6 +15,7 @@ const tx = vi.hoisted(() => ({
   equipmentRequest: { findFirst: vi.fn(), findMany: vi.fn() },
   reservation: { findMany: vi.fn(), createMany: vi.fn() },
   equipmentUnavailability: { findMany: vi.fn() },
+  safetyCheck: { updateMany: vi.fn() },
   $queryRaw: vi.fn(),
 }));
 
@@ -96,12 +97,26 @@ function approvedRequestWithStock({
   ]);
   tx.equipmentUnavailability.findMany.mockResolvedValue([]);
   tx.reservation.createMany.mockResolvedValue({ count: 2 });
+  tx.safetyCheck.updateMany.mockResolvedValue({ count: 0 });
 }
 
 beforeEach(() => {
   vi.resetAllMocks();
   mockTransaction.mockImplementation((cb: (t: typeof tx) => unknown) => cb(tx));
   mockAuth.mockResolvedValue(sessionFor("TECH_SUPPORT", "usr_tech"));
+});
+
+describe("reserveEquipmentRequest — SCRUM-166 AC13", () => {
+  it("SCRUM-166 [AC13] TC-166-12: a new reservation makes the event's approved or awaiting safety check Outdated, in the same transaction", async () => {
+    approvedRequestWithStock();
+
+    await reserveEquipmentRequest(validInput);
+
+    expect(tx.safetyCheck.updateMany).toHaveBeenCalledWith({
+      where: { eventId: "evt_1", status: { in: ["AWAITING_REVIEW", "APPROVED"] } },
+      data: { status: "OUTDATED", outdatedAt: expect.any(Date) },
+    });
+  });
 });
 
 describe("reserveEquipmentRequest — SCRUM-155", () => {

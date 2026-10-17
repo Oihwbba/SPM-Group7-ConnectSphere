@@ -14,6 +14,7 @@ import {
   CalendarDays,
   ClipboardList,
   LayoutGrid,
+  ShieldCheck,
   Ticket,
   Wrench,
   type LucideIcon,
@@ -33,6 +34,7 @@ const ICON_BY_HREF: Record<string, LucideIcon> = {
   "/venues/availability": CalendarRange,
   "/equipment": Wrench,
   "/equipment-requests": ClipboardList,
+  "/safety-checks": ShieldCheck,
   "/registrations": Ticket,
   "/notifications": Bell,
 };

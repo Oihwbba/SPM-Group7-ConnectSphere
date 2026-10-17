@@ -94,6 +94,7 @@ const U = {
   attendee2: "usr_attendee_2",
   attendee3: "usr_attendee_3",
   attendee4: "usr_attendee_4",
+  safetyOfficer: "usr_safetyofficer",
   multiRole: "usr_multirole",
 } as const;
 
@@ -155,6 +156,8 @@ async function seedUsers(passwordHash: string) {
     { id: U.attendee2, email: "attendee2@test.local", name: "Amir Attendee", role: Role.ATTENDEE },
     { id: U.attendee3, email: "attendee3@test.local", name: "Ana Attendee", role: Role.ATTENDEE },
     { id: U.attendee4, email: "attendee4@test.local", name: "Ade Attendee", role: Role.ATTENDEE },
+    // SCRUM-166: reviews operational safety checks.
+    { id: U.safetyOfficer, email: "safety@test.local", name: "Sam Safety", role: Role.SAFETY_OFFICER },
     // SCRUM-121: one account holding several roles, two of them with an
     // events view. Venue Staff first, so automatic assignment (primary
     // Coordinators only) never hands it an event.

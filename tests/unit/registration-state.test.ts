@@ -7,6 +7,8 @@ import {
   remainingCapacity,
   totalCapacity,
   canRegisterNow,
+  canCloseRegistration,
+  canReopenRegistration,
   REGISTRATION_STATE_LABEL,
   TAKES_REGISTRATION,
   takesRegistration,
@@ -198,6 +200,48 @@ describe("canRegisterNow", () => {
     expect(canRegisterNow("NOT_YET_OPEN")).toBe(false);
     expect(canRegisterNow("CLOSED")).toBe(false);
     expect(canRegisterNow("EXPIRED")).toBe(false);
+  });
+});
+
+describe("SCRUM-75 AC6, AC8: which registration can be closed or reopened", () => {
+  const startAt = new Date("2031-06-10T01:00:00Z");
+
+  it.each([
+    ["OPEN", true],
+    ["FULL", true],
+    ["NOT_YET_OPEN", false],
+    ["CLOSED", false],
+    ["EXPIRED", false],
+  ] as const)(
+    "SCRUM-75 [AC6] TC-75-09: registration that is %s can be closed: %s",
+    (state, closable) => {
+      expect(canCloseRegistration(state)).toBe(closable);
+    },
+  );
+
+  it.each([
+    ["CLOSED", true],
+    ["EXPIRED", true],
+    ["OPEN", false],
+    ["FULL", false],
+    ["NOT_YET_OPEN", false],
+  ] as const)(
+    "SCRUM-75 [AC6] TC-75-10: before the start, registration that is %s can be reopened: %s",
+    (state, reopenable) => {
+      const now = new Date(startAt.getTime() - 1);
+      expect(canReopenRegistration({ startAt }, state, now)).toBe(reopenable);
+    },
+  );
+
+  it("SCRUM-75 [AC8] TC-75-10: at the exact start instant, nothing can be reopened", () => {
+    expect(canReopenRegistration({ startAt }, "EXPIRED", startAt)).toBe(false);
+    expect(canReopenRegistration({ startAt }, "CLOSED", startAt)).toBe(false);
+  });
+
+  it("SCRUM-75 [AC8] TC-75-10: an event with no start can't be reopened", () => {
+    expect(
+      canReopenRegistration({ startAt: null }, "CLOSED", new Date()),
+    ).toBe(false);
   });
 });
 
