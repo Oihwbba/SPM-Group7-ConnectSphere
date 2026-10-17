@@ -23,6 +23,18 @@ import {
 import { formatDateTime } from "@/lib/datetime";
 
 /**
+ * SCRUM-26 AC9 — what happens after an arrangement is cancelled, so the
+ * Coordinator doesn't make a second request by mistake. A cancelled
+ * reservation leaves its equipment request Approved, and Technical Support
+ * sees it as partly reserved (SCRUM-156) and is told (SCRUM-124 AC9).
+ */
+export function afterCancelling(kind: FlaggedArrangement["kind"]): string {
+  return kind === "booking"
+    ? "Request a venue again when you're ready."
+    : "Technical Support will reserve it again.";
+}
+
+/**
  * SCRUM-26 AC7 — the event's arrangements flagged Needs Reconsideration, for
  * its assigned Coordinator to resolve with Still stands or Cancel
  * arrangement. The server returns nothing to anyone else, so for them this
@@ -89,9 +101,13 @@ export function ReconsiderationPanel({
       toast.success(
         decision === "STILL_STANDS"
           ? `${arrangement.label} still stands.`
-          : result.data.returnedToPlanning
-            ? `${arrangement.label} was cancelled. The event is back in Planning.`
-            : `${arrangement.label} was cancelled.`,
+          : [
+              `${arrangement.label} was cancelled.`,
+              afterCancelling(arrangement.kind),
+              result.data.returnedToPlanning && "The event is back in Planning.",
+            ]
+              .filter(Boolean)
+              .join(" "),
       );
       setCancelling(null);
       setReload((n) => n + 1);
@@ -167,8 +183,9 @@ export function ReconsiderationPanel({
             <DialogTitle>Cancel {cancelling?.label}?</DialogTitle>
             <DialogDescription>
               Its {cancelling?.kind === "booking" ? "venue period" : "equipment"}{" "}
-              is released for others, and you&apos;ll need to request again. A
-              Confirmed event goes back to Planning.
+              is released for others.{" "}
+              {cancelling && afterCancelling(cancelling.kind)} A Confirmed event
+              goes back to Planning.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

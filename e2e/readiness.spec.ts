@@ -181,6 +181,16 @@ test.describe("SCRUM-110 — See an event's readiness checklist", () => {
         reservedById: "usr_techsupport",
       },
     });
+    // SCRUM-166 AC9: Ready to confirm also needs an approved safety check.
+    await prisma.safetyCheck.create({
+      data: {
+        eventId,
+        status: "APPROVED",
+        requestedById: "usr_coordinator",
+        decidedById: "usr_safetyofficer",
+        decidedAt: new Date(),
+      },
+    });
 
     await signIn(page, "coordinator@test.local");
     const checklist = await openChecklist(page, name);
