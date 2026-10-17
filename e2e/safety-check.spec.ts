@@ -48,6 +48,9 @@ async function arrangedEvent(name: string) {
       accessibilityNeeds: "Two wheelchair users",
       preferredLayout: "Theatre",
       submittedAt: new Date(),
+      // SCRUM-170 AC4: Equipment is always on the checklist; this event needs none.
+      noEquipmentNeededAt: new Date(),
+      noEquipmentNeededById: "usr_coordinator",
     },
     select: { id: true },
   });
