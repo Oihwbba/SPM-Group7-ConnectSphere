@@ -220,6 +220,10 @@ test.describe("SCRUM-38 — Search and filter venues", () => {
     await expect(page.getByTestId("search-event")).toContainText(
       "Finding a replacement for Exhibition Hall",
     );
+    // SCRUM-170 AC6 TC-170-13: the Organiser's answers, from a booking too.
+    await expect(
+      page.getByTestId("search-event").getByTestId("organiser-venue-answers"),
+    ).toBeVisible();
     await expect(page.getByLabel("Attendance")).toHaveValue("150");
     await expect(
       page.getByRole("checkbox", { name: "sound-system" }),
