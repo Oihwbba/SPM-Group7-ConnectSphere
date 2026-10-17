@@ -22,7 +22,7 @@ import { RegistrationControl } from "@/components/events/registration-control";
 import {
   OrganiserEquipmentAnswer,
   OrganiserVenueAnswers,
-} from "@/components/events/organiser-answers";main
+} from "@/components/events/organiser-answers";
 import { EditDetailsDialog } from "@/components/events/edit-details-dialog";
 import { OperationalNotes } from "@/components/events/operational-notes";
 import { formatDate, formatDateTime } from "@/lib/datetime";
