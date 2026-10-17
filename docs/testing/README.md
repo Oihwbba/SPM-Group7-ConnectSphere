@@ -132,7 +132,7 @@ the open pull requests that change the same test files have merged.
 | [SCRUM-34](SCRUM-34.md) | Felicia Or | 22 | Every case automated (unit, integration for the database's hours check, the migration converting existing hours, opening hours and retirement refusing requests, holds and approvals, and two retirements at once, e2e for both journeys and the detail page's 404) |
 | [SCRUM-36](SCRUM-36.md) | Caylern Goh | 9 | Automated; a real screen-reader pass is manual |
 | [SCRUM-37](SCRUM-37.md) | Caylern Goh | 7 | Every case automated |
-| [SCRUM-38](SCRUM-38.md) | Felicia Or | 20 | Every case automated (unit, integration for occupied periods and opening hours against real rows, e2e for the journeys); the one-day search (AC 2) and TC-38-20's reading of AC 4 await the PO (SCRUM-190) |
+| [SCRUM-38](SCRUM-38.md) | Felicia Or | 20 | Every case automated (unit, integration for occupied periods and opening hours against real rows, e2e for the journeys) |
 | [SCRUM-40](SCRUM-40.md) | Felicia Or | 11 | Every case automated (unit, integration for the one-per-event judgement and the advisory rule, e2e for the journey and the venue detail view); the search-results half of AC 1–AC 4 and AC 7 is SCRUM-38's TC-38-09 |
 | [SCRUM-41](SCRUM-41.md) | Jin Hong | 17 | Every case automated (unit, integration for the lock, index and rejection, e2e for both journeys); AC 8's cancellation half waits for SCRUM-82 |
 | [SCRUM-45](SCRUM-45.md) | Jin Hong | 8 | Every case automated; the triggers of unbuilt stories (AC 5–7, 9, 10 and the Lead's assignment) are listed as still to do |

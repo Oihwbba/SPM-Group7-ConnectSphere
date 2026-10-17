@@ -9,9 +9,8 @@ hold or recorded unavailability overlaps the occupied period a booking for the
 searched period would have there (SCRUM-159): the same check the request form
 and Venue Staff's approval use (`findVenueBlockers` in
 `lib/venue-availability.ts`). A search on its own covers one day: a date and
-a time range on it (AC2 as proposed with SCRUM-190, 2026-10-17; the end date
-was removed ahead of the PO's decision). A date without times is searched as
-that whole day, so a venue must be free for all of it.
+a time range on it (AC2, PO approved 2026-10-18). A date without times is
+searched as that whole day, so a venue must be free for all of it.
 
 Each result also has **See availability**, which opens that venue's calendar
 (SCRUM-36) on the week searched, so a Coordinator who has found a candidate
@@ -24,8 +23,7 @@ an event, or with a start and an end time, is the booking period a request
 would have, so a venue closed for any of it is excluded; setup and turnaround
 never exclude one. A date searched without both times isn't a booking period:
 as the whole day it would fall outside every venue's hours, so it excludes only
-a venue Closed on the day searched (TC-38-20). That reading of AC4 is proposed
-to the PO (2026-10-17) with SCRUM-190.
+a venue Closed on the day searched (TC-38-20; AC4, PO approved 2026-10-18).
 
 **Filters or suitability (AC8, AC11).** The attendance, facilities,
 accessibility features and layout entered are the needs SCRUM-40 compares
