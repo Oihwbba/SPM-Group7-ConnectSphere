@@ -218,10 +218,11 @@ describe.skipIf(!usesLocalDatabase)(
     // most one live booking, and the seeded events already hold theirs.
     let firstEventId: string;
     let secondEventId: string;
-    // A lasting account, never deleted: every Venue Staff member is told of
-    // other suites' venue requests and decisions (SCRUM-124), so deleting one
-    // while they run would fail their notices, or this delete.
-    const SECOND_STAFF_ID = "usr_venuestaff_concurrency";
+    // The seeded second member of Venue Staff. Seeded, never made or deleted
+    // here: every Venue Staff member is told of other suites' venue requests
+    // and decisions (SCRUM-124), so one appearing or vanishing mid-run would
+    // change what they count, or fail their notices.
+    const SECOND_STAFF_ID = "usr_venuestaff_2";
 
     const staff = (id: string): Session => ({
       user: { id, role: "VENUE_STAFF", name: id, email: `${id}@test.local` },
@@ -252,18 +253,8 @@ describe.skipIf(!usesLocalDatabase)(
       prisma.booking.count({ where: { venueId, status: "APPROVED" } });
 
     beforeAll(async () => {
-      // Two different members of Venue Staff, as the criterion describes.
-      await prisma.user.upsert({
-        where: { id: SECOND_STAFF_ID },
-        update: {},
-        create: {
-          id: SECOND_STAFF_ID,
-          email: `${SECOND_STAFF_ID}@test.local`,
-          name: "Second Venue Staff",
-          passwordHash: "not-a-real-hash-test-user-cannot-sign-in",
-          role: "VENUE_STAFF",
-        },
-      });
+      // Two different members of Venue Staff, as the criterion describes: the
+      // seeded venuestaff@ and venuestaff2@.
       const period = {
         startAt: new Date("2033-01-01T00:00:00.000Z"),
         endAt: new Date("2033-01-01T02:00:00.000Z"),
