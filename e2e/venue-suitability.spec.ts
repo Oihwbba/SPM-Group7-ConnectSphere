@@ -138,3 +138,20 @@ test.describe("SCRUM-40 — flag venue suitability, with the reason", () => {
     );
   });
 });
+
+// Outside the serial block above: it only reads a seeded venue, so it needs
+// neither that block's event nor a local database.
+test.describe("SCRUM-40 — no suitability on the venue detail view", () => {
+  test("SCRUM-40 [AC7] TC-40-07: the venue detail view shows no suitability, as it has no event to compare against", async ({
+    browser,
+  }) => {
+    const coordinator = await signedIn(browser, "coordinator@test.local");
+    await coordinator.goto("/venues/ven_boardroom");
+    await expect(
+      coordinator.getByRole("heading", { name: "Executive Boardroom" }),
+    ).toBeVisible();
+    await expect(coordinator.getByTestId("venue-details")).toBeVisible();
+    await expect(coordinator.getByTestId("suitability")).toHaveCount(0);
+    await expect(coordinator.getByText(/Not suitable|Suitable/)).toHaveCount(0);
+  });
+});

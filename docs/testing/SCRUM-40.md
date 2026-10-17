@@ -106,7 +106,7 @@ with every venue.
 | Test Data | — |
 | Expected Result | No Suitable or Not suitable indicator, because there is no event to compare against. The indicator in search results is TC-38's. |
 
-**Automated by:** Manual until SCRUM-34 adds the venue detail page; its e2e test "SCRUM-40 [AC7] TC-40-07: …" is added with that page (it is on `SCRUM-34-venue-catalogue`'s stacked SCRUM-40 branch). Until then there is no detail view to show an indicator on.
+**Automated by:** `e2e/venue-suitability.spec.ts` › "SCRUM-40 [AC7] TC-40-07: …"
 
 ### TC-40-08
 
