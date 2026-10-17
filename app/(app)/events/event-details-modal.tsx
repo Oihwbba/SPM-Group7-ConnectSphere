@@ -33,7 +33,10 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import type { Event } from "@prisma/client";
-import { REJECTION_OUTCOME_LABEL } from "@/lib/schemas/event";
+import {
+  REJECTION_OUTCOME_LABEL,
+  registrationNeededLabel,
+} from "@/lib/schemas/event";
 
 interface EventDetailsModalProps {
   event: Event | null;
@@ -258,13 +261,28 @@ export function EventDetailsModal({
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 p-4 text-xs">
-              <div>
-                <span className="font-semibold text-muted-foreground">
-                  Registration Needs:
-                </span>
-                <p className="mt-0.5 text-foreground">
-                  {event.registrationNotes || "—"}
-                </p>
+              {/* SCRUM-171 AC3: a request made before Registration needed
+                  existed shows "Not answered", with its own answer beside it. */}
+              <div
+                className="grid grid-cols-1 gap-3 sm:grid-cols-2"
+                data-testid="registration-needed"
+              >
+                <div>
+                  <span className="font-semibold text-muted-foreground">
+                    Registration Needed:
+                  </span>
+                  <p className="mt-0.5 font-medium text-foreground">
+                    {registrationNeededLabel(event.registrationRequired)}
+                  </p>
+                </div>
+                <div>
+                  <span className="font-semibold text-muted-foreground">
+                    Registration Notes:
+                  </span>
+                  <p className="mt-0.5 whitespace-pre-wrap text-foreground">
+                    {event.registrationNotes || "—"}
+                  </p>
+                </div>
               </div>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>

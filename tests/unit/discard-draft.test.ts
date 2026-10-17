@@ -395,6 +395,7 @@ describe("A discarded draft cannot be reopened — SCRUM-130 AC1", () => {
       preferredLayout: "Theatre",
       accessibilityNeeds: "None",
       equipmentRequirements: "None",
+      registrationRequired: "yes",
       registrationNotes: "None",
     });
 

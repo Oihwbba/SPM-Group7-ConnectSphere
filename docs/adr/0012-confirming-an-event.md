@@ -133,3 +133,11 @@ Consequences says "SCRUM-43 will move a Confirmed event back to Planning after
 an approved impactful change". SCRUM-43 was merged into SCRUM-41 and SCRUM-128,
 and SCRUM-128 AC 5 now returns a Confirmed event to Planning when an approved
 change is impactful. The same checklist and Confirm action then apply again.
+
+## Addendum (2026-10-16) — Registration needed is on the form (SCRUM-171)
+
+SCRUM-171 puts the Registration needed choice on the request form, required to
+submit, so the 2026-10-03 addendum's "not on the form yet" no longer holds.
+Requests submitted from now on store Yes or No in `registrationRequired`;
+requests made before it stay unset and keep opening, as before. Confirming is
+unchanged: registration opens unless the answer is No.

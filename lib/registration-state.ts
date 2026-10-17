@@ -28,6 +28,25 @@ export const REGISTRATION_STATE_LABEL: Record<RegistrationState, string> = {
   EXPIRED: "Registration closed",
 };
 
+/**
+ * SCRUM-171 AC4 — does the event take registrations? Its Organiser answered
+ * Yes, or it was requested before Registration needed existed (unanswered),
+ * which keeps working as it always has. Only an explicit No leaves it out.
+ */
+export function takesRegistration(
+  event: Pick<Event, "registrationRequired">,
+): boolean {
+  return event.registrationRequired !== false;
+}
+
+/**
+ * The same rule as a Prisma `where` fragment. In SQL `<> false` is never true
+ * for NULL, so an unanswered event must be asked for explicitly.
+ */
+export const TAKES_REGISTRATION = {
+  OR: [{ registrationRequired: true }, { registrationRequired: null }],
+};
+
 type CapacityInput = Pick<Event, "expectedAttendance">;
 
 /**
