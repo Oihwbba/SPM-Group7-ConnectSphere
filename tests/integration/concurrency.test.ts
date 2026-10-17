@@ -290,9 +290,13 @@ describe.skipIf(!usesLocalDatabase)(
     });
 
     afterAll(async () => {
+      // Only the notices about its own events: every Venue Staff member gets
+      // other suites' notices too while they run, and those suites count them.
+      await prisma.notification.deleteMany({
+        where: { eventId: { in: [firstEventId, secondEventId] } },
+      });
       await removeEvents([firstEventId, secondEventId]);
       await prisma.venue.delete({ where: { id: venueId } });
-      await prisma.notification.deleteMany({ where: { userId: SECOND_STAFF_ID } });
     });
 
     it("SCRUM-53 [AC5] TC-53-05: two staff approve overlapping requests at the same moment: one succeeds, one is returned as conflicting", async () => {
