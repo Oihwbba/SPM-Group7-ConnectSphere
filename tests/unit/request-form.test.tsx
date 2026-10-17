@@ -20,12 +20,18 @@ vi.mock("@/app/(app)/bookings/actions", () => ({
   submitBookingRequest: vi.fn(),
   checkVenueAvailability: vi.fn(),
 }));
+// SCRUM-40: the form's suitability panel records judgements through this.
+vi.mock("@/app/(app)/venues/suitability-actions", () => ({
+  recordSuitabilityJudgement: vi.fn(),
+}));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 
 const venue = {
   id: "ven_1",
   name: "Seminar Room",
   capacity: 60,
   facilities: ["projector"],
+  accessibilityFeatures: ["wheelchair-access"],
   supportedLayouts: ["classroom"],
 };
 const event = {
@@ -37,6 +43,9 @@ const event = {
   venueRequirements: null,
   preferredLayout: null,
   accessibilityNeeds: null,
+  organiserId: "usr_organiser",
+  coordinatorId: "usr_coordinator",
+  status: "PLANNING" as const,
 };
 
 describe("RequestForm — SCRUM-50", () => {
