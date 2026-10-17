@@ -60,6 +60,26 @@ function at(dayOffset: number, hourUTC: number): Date {
   return new Date(BASE.getTime() + dayOffset * DAY_MS + hourUTC * 60 * 60 * 1000);
 }
 
+/**
+ * SCRUM-34 AC7 — the first day from `dayOffset` that is a weekday in
+ * Singapore. Seminar Room 2.1 and the Executive Boardroom are closed at
+ * weekends, so their seeded bookings land on a weekday whatever day the seed
+ * runs, and stay within the hours the seed gives them.
+ */
+function weekdayFrom(dayOffset: number): number {
+  const sgWeekday = (d: number) => new Date(at(d, 4).getTime() + 8 * 60 * 60 * 1000).getUTCDay();
+  let day = dayOffset;
+  while (sgWeekday(day) === 0 || sgWeekday(day) === 6) day++;
+  return day;
+}
+// The planning event's pending Seminar Room request, and the change request
+// proposing to move it a day later.
+const PLANNING_DAY = weekdayFrom(20);
+const PLANNING_MOVED_DAY = weekdayFrom(PLANNING_DAY + 1);
+// The two Boardroom bookings, on different days so they never overlap.
+const FULL_DAY = weekdayFrom(12);
+const LAST_SEAT_DAY = weekdayFrom(Math.max(14, FULL_DAY + 1));
+
 // --- Stable ids ------------------------------------------------------------
 
 const U = {
@@ -198,6 +218,31 @@ async function seedVenues() {
 
   for (const v of venues) {
     await prisma.venue.upsert({ where: { id: v.id }, update: v, create: v });
+  }
+
+  // SCRUM-34 AC3: the hours above as an opening and a closing time per day
+  // (minutes after midnight SGT), or Closed. Booking periods are refused
+  // outside them (AC7).
+  const open = (opens: string, closes: string) => ({
+    opensMinute: Number(opens.slice(0, 2)) * 60 + Number(opens.slice(3)),
+    closesMinute: Number(closes.slice(0, 2)) * 60 + Number(closes.slice(3)),
+  });
+  const closed = { opensMinute: null, closesMinute: null };
+  const weekHours: Record<string, (weekday: number) => typeof closed | ReturnType<typeof open>> = {
+    [V.auditorium]: () => open("07:00", "23:00"),
+    [V.seminar]: (d) => (d <= 5 ? open("08:00", "20:00") : closed),
+    [V.hall]: () => open("06:00", "22:00"),
+    [V.boardroom]: (d) => (d <= 5 ? open("09:00", "18:00") : closed),
+  };
+  for (const [venueId, hoursOn] of Object.entries(weekHours)) {
+    for (let weekday = 1; weekday <= 7; weekday++) {
+      const hours = hoursOn(weekday);
+      await prisma.venueOpeningHours.upsert({
+        where: { venueId_weekday: { venueId, weekday } },
+        update: hours,
+        create: { venueId, weekday, ...hours },
+      });
+    }
   }
   return venues.length;
 }
@@ -346,8 +391,8 @@ async function seedEvents() {
       description: "Venue requested, awaiting Venue Staff decision.",
       status: EventStatus.PLANNING,
       ...common,
-      startAt: at(20, 1),
-      endAt: at(20, 9),
+      startAt: at(PLANNING_DAY, 1),
+      endAt: at(PLANNING_DAY, 9),
       expectedAttendance: 55,
       organiserId: U.organiser,
       coordinatorId: U.coordinator,
@@ -438,8 +483,8 @@ async function seedEvents() {
       description: "Every place taken; use this to demo the full-event path.",
       status: EventStatus.CONFIRMED,
       ...common,
-      startAt: at(12, 10),
-      endAt: at(12, 13),
+      startAt: at(FULL_DAY, 7),
+      endAt: at(FULL_DAY, 10),
       expectedAttendance: 3,
       organiserId: U.organiser,
       coordinatorId: U.coordinator,
@@ -456,8 +501,8 @@ async function seedEvents() {
       description: "Two of three places taken. Seeded for the concurrency test.",
       status: EventStatus.CONFIRMED,
       ...common,
-      startAt: at(14, 6),
-      endAt: at(14, 9),
+      startAt: at(LAST_SEAT_DAY, 6),
+      endAt: at(LAST_SEAT_DAY, 9),
       expectedAttendance: 3,
       organiserId: U.organiser,
       coordinatorId: U.coordinator,
@@ -570,8 +615,8 @@ async function seedBookings() {
       id: "bkg_pending",
       eventId: E.planning,
       venueId: V.seminar,
-      startAt: at(20, 1),
-      endAt: at(20, 9),
+      startAt: at(PLANNING_DAY, 1),
+      endAt: at(PLANNING_DAY, 9),
       status: BookingStatus.PENDING,
       requestedAttendance: 55,
       requiredFacilities: ["projector", "whiteboard"],
@@ -584,8 +629,8 @@ async function seedBookings() {
       id: "bkg_rejected",
       eventId: E.planning,
       venueId: V.boardroom,
-      startAt: at(20, 1),
-      endAt: at(20, 9),
+      startAt: at(PLANNING_DAY, 1),
+      endAt: at(PLANNING_DAY, 9),
       status: BookingStatus.REJECTED,
       requestedAttendance: 55,
       requiredFacilities: [],
@@ -609,8 +654,8 @@ async function seedBookings() {
       id: "bkg_full_event",
       eventId: E.full,
       venueId: V.boardroom,
-      startAt: at(12, 10),
-      endAt: at(12, 13),
+      startAt: at(FULL_DAY, 7),
+      endAt: at(FULL_DAY, 10),
       status: BookingStatus.APPROVED,
       requestedAttendance: 3,
       requiredFacilities: [],
@@ -622,8 +667,8 @@ async function seedBookings() {
       id: "bkg_last_seat_event",
       eventId: E.lastSeat,
       venueId: V.boardroom,
-      startAt: at(14, 6),
-      endAt: at(14, 9),
+      startAt: at(LAST_SEAT_DAY, 6),
+      endAt: at(LAST_SEAT_DAY, 9),
       status: BookingStatus.APPROVED,
       requestedAttendance: 3,
       requiredFacilities: [],
@@ -814,8 +859,8 @@ async function seedChangeRequests() {
   // event's bookings and reservations (SCRUM-128 AC4), never its registrations
   // (SCRUM-26 AC13).
   const fields = [
-    { id: "chgf_start", changeRequestId: "chg_planning_date", fieldName: "startAt", oldValue: at(20, 1).toISOString(), newValue: at(21, 1).toISOString(), isMajor: true },
-    { id: "chgf_end", changeRequestId: "chg_planning_date", fieldName: "endAt", oldValue: at(20, 9).toISOString(), newValue: at(21, 9).toISOString(), isMajor: true },
+    { id: "chgf_start", changeRequestId: "chg_planning_date", fieldName: "startAt", oldValue: at(PLANNING_DAY, 1).toISOString(), newValue: at(PLANNING_MOVED_DAY, 1).toISOString(), isMajor: true },
+    { id: "chgf_end", changeRequestId: "chg_planning_date", fieldName: "endAt", oldValue: at(PLANNING_DAY, 9).toISOString(), newValue: at(PLANNING_MOVED_DAY, 9).toISOString(), isMajor: true },
     { id: "chgf_desc", changeRequestId: "chg_planning_date", fieldName: "description", oldValue: "Venue requested, awaiting Venue Staff decision.", newValue: "Moved by one day at the dean's request.", isMajor: false },
   ];
   for (const f of fields) {

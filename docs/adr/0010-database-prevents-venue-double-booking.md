@@ -137,7 +137,7 @@ one set of rules instead of each editing the same constraints.
 - **Unavailability may overlap bookings** (SCRUM-161 AC1). The trigger on
   `VenueUnavailability` now refuses only overlapping unavailability. It still
   takes the venue lock, so an approval and an unavailability record for one
-  venue still take turns, and each sees the other (SCRUM-161 AC7).
+  venue still take turns, and each sees the other (SCRUM-161 AC5).
 - **`booking_one_per_venue_per_event`** replaces `booking_one_venue_per_event`:
   an event has at most one Pending, Held or Approved booking per venue, not
   per event (SCRUM-162 AC2).
@@ -185,6 +185,41 @@ one set of rules instead of each editing the same constraints.
   booking rows, so the two orders can't deadlock; SCRUM-161, which will flag
   bookings while holding the venue lock, has to keep that in mind.
 
+## Addendum (2026-10-14) — Unavailability over bookings flags them (SCRUM-161)
+
+### Context
+
+SCRUM-161 lets Venue Staff record unavailability over Pending, Held and
+Approved bookings, which are then flagged Needs Reconsideration and their
+Coordinators told, instead of the record being refused. An approval and an
+unavailability record for the same moment must end with the unavailability
+saved and the booking either refused or Approved and flagged, never Approved
+without a flag (AC5). Recording now writes booking rows (the flag) and
+notifications (which reference the event), so it takes more locks than the
+venue's.
+
+### Decision
+
+Recording takes its locks in the order every other venue write already uses:
+the affected bookings' events (`FOR KEY SHARE`), then the bookings
+(`FOR UPDATE`), each sorted by id, then the venue (`FOR NO KEY UPDATE`). It
+decides only on what it reads after the venue lock, so an approval that
+committed while it waited is seen and flagged, and one that comes after it is
+refused by `booking_overlaps_unavailability`. An approval, a hold or a
+confirmation locks its booking row and then, in the trigger, the venue; a
+withdrawal locks the event and then the booking. None of them waits for a lock
+recording holds while holding one recording needs, so they cannot deadlock.
+A booking that becomes affected between the first read and the venue lock is
+locked late; if that ever deadlocks with an approval, Postgres aborts one and
+both actions retry once (`onceMoreOnDeadlock`).
+
+### Consequences
+
+- The SCRUM-37 race test is replaced by SCRUM-161's: both actions are held
+  past their own reads until both have read, and the test accepts only the two
+  outcomes AC7 allows. Making the lookup ignore Approved bookings turns it red.
+- Recording unavailability briefly blocks a withdrawal or a Confirm for the
+  affected events, as an approval already does for its venue.
 ## Addendum (2026-10-12) — The application compares occupied periods too (SCRUM-159)
 
 ### Context

@@ -35,8 +35,13 @@ const row: PendingBookingRow = {
   requestedLayout: "banquet",
   requestNotes: null,
   createdAt: new Date("2035-01-01T01:00:00.000Z"),
+  event: {
+    name: "Approved — Research Symposium",
+    venueRequirements: "A hall near the lobby,\nwith a stage",
+    preferredLayout: "Banquet",
+    accessibilityNeeds: "Wheelchair access",
+  },
   eventId: "evt_1",
-  event: { name: "Approved — Research Symposium" },
   requestedBy: { name: "Cody Coordinator", email: "coordinator@test.local" },
   venue: {
     id: "ven_hall",
@@ -47,11 +52,27 @@ const row: PendingBookingRow = {
     supportedLayouts: ["banquet"],
     setupMinutes: 0,
     turnaroundMinutes: 0,
+    openingHours: [],
   },
+  outsideHours: null,
   blockers: [],
 };
 
 describe("BookingQueue", () => {
+  it("SCRUM-170 [AC2] TC-170-02: Venue Staff see the Organiser's venue and accessibility answers on the request, as entered", () => {
+    const html = renderToStaticMarkup(
+      <BookingQueue queue={[row]} canDecide={false} />,
+    );
+    const answers = html.slice(
+      html.indexOf('data-testid="organiser-venue-answers"'),
+    );
+
+    expect(html).toContain("What the Organiser asked for");
+    expect(answers).toContain("A hall near the lobby,\nwith a stage");
+    expect(answers).toContain("Banquet");
+    expect(answers).toContain("Wheelchair access");
+  });
+
   it("SCRUM-52 [AC4] TC-52-06: an empty queue says there is nothing pending rather than rendering nothing", () => {
     const html = renderToStaticMarkup(<BookingQueue queue={[]} canDecide />);
 
@@ -68,6 +89,19 @@ describe("BookingQueue", () => {
     expect(html).toContain("250 expected · venue holds 200");
     // Over capacity and a missing facility are both marked as not met.
     expect(html.match(/aria-label="does not meet"/g)).toHaveLength(2);
+  });
+
+  it("SCRUM-34 [AC7] TC-34-09: a request outside the venue's opening hours isn't shown as free, and says why", () => {
+    const outside = "Exhibition Hall is closed on Saturdays, so it can't be booked then.";
+
+    const html = renderToStaticMarkup(
+      <BookingQueue queue={[{ ...row, outsideHours: outside }]} canDecide={false} />,
+    );
+
+    expect(html).not.toContain("Free for this period");
+    expect(html).toContain("Exhibition Hall is closed on Saturdays, so it can&#x27;t be booked then.");
+    // Over capacity, a missing facility and the opening hours are each not met.
+    expect(html.match(/aria-label="does not meet"/g)).toHaveLength(3);
   });
 
   it("SCRUM-53 — the Approve and Reject controls render only for a user who may decide", () => {

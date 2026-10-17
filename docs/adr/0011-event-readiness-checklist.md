@@ -155,3 +155,22 @@ reserved shows "Awaiting Technical Support review"; one with a line not
 reserved in full still names it ("Not fully reserved: …"), as before.
 Decision 2 still decides which requests count, and decision 3 how
 reservations are matched.
+
+## Addendum (2026-10-14) — Equipment is always listed; No equipment needed (SCRUM-170 AC4)
+
+SCRUM-170 AC 4 supersedes SCRUM-110 AC 3: an event with no equipment request
+no longer drops the Equipment item. With no live request, the item shows
+"Not decided" and is incomplete until the assigned Coordinator either creates
+a request or records **No equipment needed**, which completes it and keeps who
+and when (`Event.noEquipmentNeededAt` and `noEquipmentNeededById`, which the
+CHECK `event_no_equipment_decision_complete` keeps set or cleared together).
+A rejected request still shows "Rejected", and the decision is offered there
+too. Otherwise an event whose equipment was simply never thought about could be
+confirmed, which is the gap SCRUM-166 AC 1 relies on closing.
+
+A decision and a live request never stand side by side. Creating a request
+clears the decision, and recording the decision is refused while a live
+request exists. Both actions lock the event row first, so when they happen at
+the same moment one waits for the other. Changing the event's equipment
+requirements also clears it (SCRUM-25 for a direct edit; SCRUM-128 and
+SCRUM-26 for a change request). Decisions 2 to 5 are unchanged.

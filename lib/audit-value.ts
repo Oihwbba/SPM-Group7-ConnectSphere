@@ -4,7 +4,7 @@
  * a missing one, so clearing it and leaving it blank compare equal.
  */
 export function auditValue(
-  value: string | number | Date | string[] | null | undefined,
+  value: string | number | boolean | Date | string[] | null | undefined,
 ): string | null {
   if (value === null || value === undefined || value === "") return null;
   if (value instanceof Date) return value.toISOString();

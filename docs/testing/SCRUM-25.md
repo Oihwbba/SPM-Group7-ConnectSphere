@@ -266,4 +266,17 @@ requirements are the fields SCRUM-26 warns about and flags on (AC3).
 | Test Data | — |
 | Expected Result | 1: "The details couldn't be saved — check your connection and try again." The dialog stays open with the programme as typed; the change is stored. 2: "Nothing changed.", and the change is audited once. Either way nothing is lost or saved twice. |
 
-**Automated by:** `e2e/event-edit.spec.ts` › "SCRUM-25 [AC1] TC-25-20: …"
+**Automated by:** `e2e/event-edit.spec.ts` › "SCRUM-25 [AC1] TC-25-20: …"; `tests/unit/edit-details-dialog.test.ts` › "SCRUM-25 [AC1, AC3] TC-25-20, TC-25-21: …"
+
+### TC-25-21
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-25-21 |
+| Test Scenario | [Positive] AC 3: an edit that flags an arrangement shows the flag in the open event's details at once |
+| Pre-conditions | As TC-25-06 step 3: a Planning event with a Pending booking of Exhibition Hall, its details open, with nothing flagged and the readiness checklist showing the venue booking Pending. |
+| Test Steps | 1. Choose Edit details, change the expected attendance, Save details, then Save and flag. <br> 2. Without closing or reopening the event, look at its details. |
+| Test Data | `coordinator@test.local` |
+| Expected Result | The edit dialog closes. The event's details now show "Exhibition Hall (Pending)" under Needs reconsideration with the reason "The event's expected attendance changed.", and the readiness checklist shows the venue booking as "Needs reconsideration" with the same reason (SCRUM-26 AC7, AC12). A warning that saved nothing, or a refused save, leaves both as they were; a save whose reply was lost reads both again, as it may have landed. |
+
+**Automated by:** `tests/unit/edit-details-dialog.test.ts` › "SCRUM-25 [AC3] TC-25-21: …", "SCRUM-25 [AC1] TC-25-21: …", "SCRUM-25 [AC1, AC3] TC-25-20, TC-25-21: …"; `e2e/event-edit.spec.ts` › "SCRUM-25 [AC1, AC2, AC3, AC6] …"
