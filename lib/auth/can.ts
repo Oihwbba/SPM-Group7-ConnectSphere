@@ -38,6 +38,8 @@ export type Action =
   | "event-note:add" // SCRUM-25 AC6: add an operational note to an event
   | "event-note:read" // SCRUM-25 AC6: read an event's operational notes
   | "arrangement:reconsider" // SCRUM-26: the assigned coordinator resolves a Needs Reconsideration flag
+  | "safety-check:request" // SCRUM-166: the assigned coordinator asks for an operational safety check
+  | "safety-check:review" // SCRUM-166: a Safety Officer reviews a check and records its outcome
   | "clarification:request" // SCRUM-18: coordinator asks the organiser a question
   | "clarification:respond" // SCRUM-18: organiser answers an open question
   | "change-request:raise" // SCRUM-41: the organiser, or the assigned coordinator on their behalf
@@ -120,6 +122,7 @@ const ROLE_ACTIONS: Record<Role, Action[]> = {
     "event-note:add",
     "event-note:read",
     "arrangement:reconsider",
+    "safety-check:request",
     "clarification:request",
     "change-request:raise",
     "registration:control",
@@ -166,7 +169,7 @@ const ROLE_ACTIONS: Record<Role, Action[]> = {
   // notifications (SCRUM-48) and, as internal users, the venue catalogue
   // (SCRUM-34 AC2); SCRUM-165 and SCRUM-166 grant the rest.
   COORDINATOR_LEAD: ["venue:read", "notification:read"],
-  SAFETY_OFFICER: ["venue:read", "notification:read"],
+  SAFETY_OFFICER: ["venue:read", "safety-check:review", "notification:read"],
 };
 
 /**
@@ -191,9 +194,10 @@ function hasRelationship(
         // reject it from Planning (SCRUM-117 AC 5), confirm or release its
         // venue holds (SCRUM-163 AC3), change or withdraw its requests
         // (SCRUM-142 AC7), raise a change request on the organiser's behalf
-        // (SCRUM-41 AC10), or edit its details (SCRUM-25 AC1, AC7), 
-        // or resolve a flag on its arrangements (SCRUM-26 AC7), or close or
-        // reopen its registration (SCRUM-75 AC6).
+        // (SCRUM-41 AC10), record No equipment needed (SCRUM-170 AC4), edit
+        // its details (SCRUM-25 AC1, AC7), resolve a flag on its arrangements
+        // (SCRUM-26 AC7), request its safety check (SCRUM-166 AC1) or close
+        // or reopen its registration (SCRUM-75 AC6).
         return (
           action !== "event:confirm" &&
           action !== "event:reject" &&
@@ -205,8 +209,16 @@ function hasRelationship(
           action !== "event:edit" &&
           action !== "arrangement:reconsider" &&
           action !== "registration:control" &&
+          action !== "safety-check:request" &&
           resource.coordinatorId === null &&
           resource.status !== "DRAFT"
+        );
+      }
+      // SCRUM-166 AC6, SCRUM-121 AC5: a Safety Officer reviews any event's
+      // check, but never one for an event they organise or coordinate.
+      if (user.role === "SAFETY_OFFICER") {
+        return (
+          resource.organiserId !== user.id && resource.coordinatorId !== user.id
         );
       }
       return false;

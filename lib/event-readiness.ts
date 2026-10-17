@@ -4,6 +4,7 @@ import { bookingStatusAt } from "@/lib/booking-holds";
 import { LIVE_LINE } from "@/lib/equipment/requests";
 import { formatDateTime } from "@/lib/datetime";
 import { FLAGGABLE_BOOKING } from "@/lib/reconsideration";
+import { safetyCheckItem } from "@/lib/safety-checks";
 
 /**
  * SCRUM-110 — an event's readiness checklist: the essential arrangements that
@@ -14,7 +15,7 @@ import { FLAGGABLE_BOOKING } from "@/lib/reconsideration";
  * docs/adr/0011-event-readiness-checklist.md.
  */
 export interface ChecklistItem {
-  name: "Venue booking" | "Equipment";
+  name: "Venue booking" | "Equipment" | "Safety check";
   complete: boolean;
   /** "Approved", "Held until … – confirm to secure", "Pending", "Rejected", "Hold expired", "Not requested", "Reserved", "Not fully reserved: Projector", "Awaiting Technical Support review", "Not decided", "No equipment needed" */
   state: string;
@@ -95,12 +96,22 @@ export async function getReadinessChecklist(
           equipment: { select: { type: true } },
         },
       },
+      // SCRUM-166 AC9: the latest check decides the Safety check item.
+      safetyChecks: {
+        select: { status: true, note: true },
+        orderBy: { createdAt: "desc" },
+        take: 1,
+      },
     },
   });
   if (!event) return null;
 
   // SCRUM-170 AC4: Equipment is always listed (superseding SCRUM-110 AC3).
-  const items = [venueItem(event, now), equipmentItem(event)];
+  const items = [
+    venueItem(event, now),
+    equipmentItem(event),
+    safetyCheckItem(event.safetyChecks[0]),
+  ];
 
   return {
     ready: event.status === "PLANNING" && items.every((item) => item.complete),
@@ -199,11 +210,16 @@ function venueItem(
   if (approved.length > 0) {
     return { ...item, complete: false, state: "Approved for a different time" };
   }
-  // SCRUM-163 AC6: an expired hold counts like a rejection; the newer of the
-  // two describes the venue.
+  // SCRUM-163 AC6: an expired hold counts like a rejection, and SCRUM-26 AC9:
+  // so does a cancelled booking; the newest of them describes the venue. A
+  // cancellation leaves nothing requested, so an older rejection's reason no
+  // longer applies.
   const ended = newestFirst.find(
-    (b) => b.status === "REJECTED" || b.status === "EXPIRED",
+    (b) => b.status === "REJECTED" || b.status === "EXPIRED" || b.status === "CANCELLED",
   );
+  if (ended?.status === "CANCELLED") {
+    return { ...item, complete: false, state: "Not requested" };
+  }
   if (ended?.status === "EXPIRED") {
     return { ...item, complete: false, state: "Hold expired" };
   }

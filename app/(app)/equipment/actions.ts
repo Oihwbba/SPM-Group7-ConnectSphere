@@ -18,6 +18,7 @@ import {
 } from "@/lib/equipment/request-queries";
 import { LIVE_LINE, outstandingLines } from "@/lib/equipment/requests";
 import { formatDateTime } from "@/lib/datetime";
+import { outdateSafetyChecks } from "@/lib/safety-checks";
 import { fieldErrorsByPath } from "@/lib/schemas/equipment-request";
 import {
   allAvailabilitySchema,
@@ -472,6 +473,8 @@ export async function reserveEquipmentRequest(
             status: "CONFIRMED" as const,
           })),
         });
+        // SCRUM-166 AC13: a new reservation changes what a safety check reviewed.
+        await outdateSafetyChecks(tx, request.eventId, new Date());
         return { reserved: lines.length };
       },
     );
