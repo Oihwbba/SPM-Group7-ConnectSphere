@@ -13,12 +13,10 @@ and the app is running. The event is in Planning, assigned to
 
 **What this story doesn't cover yet:**
 
-- **AC1, "No equipment needed":** recording it is SCRUM-170 AC4 (not built).
-  Until then the checklist shows Equipment only when the event has an
-  equipment request, so an event without one can already be checked.
-- **AC1, AC4, notifications:** a notification row is written for every Safety
-  Officer on a request and for the Coordinator on an outcome. Listing them is
-  SCRUM-48, and SCRUM-124 owns how notifications behave.
+- **AC1, AC4, notifications:** a notification is written for every Safety
+  Officer on a request and for the Coordinator on an outcome, and shows in
+  SCRUM-48's list. Anything further about how they behave is SCRUM-124
+  (#213, not merged).
 - **AC13, an approved change request:** applying one is SCRUM-128 (#181),
   which calls `outdateSafetyChecks`. SCRUM-25's edits, approving a booking,
   placing, rejecting, confirming or releasing a hold, withdrawing a request,
