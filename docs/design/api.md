@@ -100,12 +100,26 @@ request.
 | `getEventReadiness` | The event's readiness checklist (SCRUM-110, 170). | `event:read`; the result also says whether the viewer may review, reject or confirm, settle or withdraw a venue request, and record No equipment needed | an event id | nothing (read only) | — |
 | `getEventArrangements` | A Confirmed event's secured venue, time and equipment (SCRUM-81 AC6). | `event:read` | an event id | nothing (read only) | — |
 
+## `app/(app)/events/registration-list-actions.ts`
+
+| Action | What it does | Permission | Input | Writes | Locks |
+|---|---|---|---|---|---|
+| `getEventRegistrations` | An event's registrations for its Organiser or assigned Coordinator: the registered count, remaining places and each Attendee's name and status, with Withdrawn and Cancelled apart and not counted (SCRUM-70). Anyone else, and a missing event, gets "Event not found." | `registration:list` | event id | nothing (read only) | — |
+
 ## `app/(app)/events/registration-actions.ts`
 
 | Action | What it does | Permission | Input | Writes | Locks |
 |---|---|---|---|---|---|
 | `registerForEvent` | An Attendee registers for a Confirmed event with places left (SCRUM-73, 74). An event whose Registration needed is No is refused as not open (SCRUM-171 AC4). | `registration:create` | `registerForEventSchema` (lib/schemas/registration.ts) | Registration | Event row |
 | `withdrawRegistration` | An Attendee withdraws their registration (SCRUM-74, 77). | `registration:withdraw` | `withdrawRegistrationSchema` (lib/schemas/registration.ts) | Registration | Event row |
+
+## `app/(app)/events/registration-control-actions.ts`
+
+| Action | What it does | Permission | Input | Writes | Locks |
+|---|---|---|---|---|---|
+| `getRegistrationControl` | Where a Confirmed event's registration stands, and whether it can be closed or reopened (SCRUM-75 AC6); nothing for an event that doesn't need registration. | `registration:control` | an event id | nothing (read only) | — |
+| `closeRegistration` | The Organiser, or the assigned Coordinator, closes open registration now, by setting the closing time to now, so a later confirmation doesn't reopen it (SCRUM-75 AC6, AC9). Withdraws the pending "Registration closed" notice. | `registration:control` | `registrationControlSchema` (lib/schemas/registration.ts) | Event, AuditLog, Notification | Event row |
+| `reopenRegistration` | Reopens closed registration until the event's start by clearing the opening and closing times; refused at or after the start (SCRUM-75 AC6, AC8). Schedules a "Registration closed" notice for the start. | `registration:control` | `registrationControlSchema` (lib/schemas/registration.ts) | Event, AuditLog, Notification | Event row |
 
 ## `app/(app)/notifications/actions.ts`
 

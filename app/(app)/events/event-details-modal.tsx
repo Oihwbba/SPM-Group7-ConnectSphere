@@ -19,6 +19,8 @@ import { ReconsiderationPanel } from "@/components/events/reconsideration-panel"
 import { CancelEvent } from "@/components/events/cancel-event";
 import { CANCELLABLE } from "@/lib/event-lifecycle";
 import { ConfirmedArrangements } from "@/components/events/confirmed-arrangements";
+import { RegistrationListPanel } from "@/components/events/registration-list-panel";
+import { RegistrationControl } from "@/components/events/registration-control";
 import {
   OrganiserEquipmentAnswer,
   OrganiserVenueAnswers,
@@ -164,6 +166,16 @@ export function EventDetailsModal({
           )}
           {/* SCRUM-81: what a Confirmed event has secured */}
           {event.status === "CONFIRMED" && <ConfirmedArrangements eventId={event.id} />}
+          {/* SCRUM-75 AC6: close or reopen registration */}
+          {event.status === "CONFIRMED" && <RegistrationControl eventId={event.id} />}
+
+          {/* SCRUM-70: shows nothing to a user who may not see the registrations */}
+          {(event.status === "CONFIRMED" ||
+            event.status === "PLANNING" ||
+            event.status === "CANCELLED" ||
+            event.status === "COMPLETED") && (
+            <RegistrationListPanel eventId={event.id} />
+          )}
 
           {/* SCRUM-82 AC1: offered to the Coordinator; the server checks it's theirs. */}
           {isCoordinator && CANCELLABLE.includes(event.status) && (

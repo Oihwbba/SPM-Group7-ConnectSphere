@@ -161,7 +161,9 @@ test.describe("SCRUM-26 — Flag and resolve arrangements affected by a change",
       .getByRole("button", { name: "Cancel arrangement" })
       .click();
     await expect(
-      page.getByText("Exhibition Hall (Approved) was cancelled. The event is back in Planning."),
+      page.getByText(
+        "Exhibition Hall (Approved) was cancelled. Request a venue again when you're ready. The event is back in Planning.",
+      ),
     ).toBeVisible();
 
     expect(
