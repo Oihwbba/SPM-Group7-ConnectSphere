@@ -11,15 +11,18 @@ import {
   type ReadinessChecklist,
 } from "@/lib/event-readiness";
 import { ok, err, type ActionResult } from "@/lib/action-result";
+import { safetyCheckRequestable } from "@/lib/safety-checks";
 
 /**
  * The event, if the signed-in user is its Organiser or its Coordinator.
  * Anyone else gets the same "not found" as a missing event, so the answer never
  * reveals which event ids exist (SCRUM-68).
  */
+type EventResource = Extract<Resource, { kind: "event" }>;
+
 async function relatedEvent(
   eventId: string,
-): Promise<{ user: SessionUser; resource: Resource } | null> {
+): Promise<{ user: SessionUser; resource: EventResource } | null> {
   const session = await auth();
   const user = session?.user;
   if (!user) return null;
@@ -28,7 +31,7 @@ async function relatedEvent(
     where: { id: eventId },
     select: { organiserId: true, coordinatorId: true, status: true },
   });
-  const resource: Resource | null = event && { kind: "event", ...event };
+  const resource: EventResource | null = event && { kind: "event", ...event };
   if (!resource || !can(user, "event:read", resource)) return null;
   return { user, resource };
 }
@@ -43,7 +46,10 @@ async function relatedEvent(
  * to offer confirming or releasing a venue hold (SCRUM-163 AC3), which only the
  * assigned Coordinator may do, `canWithdrawBooking` whether to offer
  * withdrawing a pending venue request (SCRUM-142 AC4), and
- * `canRecordNoEquipment` whether to offer No equipment needed (SCRUM-170 AC4).
+ * withdrawing a pending venue request (SCRUM-142 AC4),
+ * `canRecordNoEquipment` whether to offer No equipment needed (SCRUM-170 AC4),
+ * and `canRequestSafetyCheck` whether to offer SCRUM-166's Request safety
+ * check (AC1).
  */
 export async function getEventReadiness(
   eventId: string,
@@ -55,6 +61,7 @@ export async function getEventReadiness(
       canSettleHold: boolean;
       canWithdrawBooking: boolean;
       canRecordNoEquipment: boolean;
+      canRequestSafetyCheck: boolean;
     }
   >
 > {
@@ -87,6 +94,10 @@ export async function getEventReadiness(
     canSettleHold: can(user, "booking:settle-hold", resource),
     canWithdrawBooking: can(user, "booking:withdraw", resource),
     canRecordNoEquipment: can(user, "event:no-equipment", resource),
+    canRequestSafetyCheck:
+      resource.status === "PLANNING" &&
+      can(user, "safety-check:request", resource) &&
+      safetyCheckRequestable(checklist),
   });
 }
 

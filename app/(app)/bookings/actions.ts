@@ -532,6 +532,11 @@ export async function decideBookingRequest(
         if (rejectingHold) {
           await withdrawPendingHoldNotices(tx, { bookingId: booking.id }, now);
         }
+        // SCRUM-166 AC13: a newly approved booking, or a rejected hold, changes
+        // what a safety check reviewed. A rejected request was never part of it.
+        if (decision === "APPROVED" || rejectingHold) {
+          await outdateSafetyChecks(tx, booking.event.id, now);
+        }
 
         // SCRUM-71: a booking decision records who, what and when.
         await tx.auditLog.create({
@@ -841,6 +846,9 @@ export async function holdBookingRequest(
             status === "PENDING" ? FLAGGED : alreadyDecided(status, latest.holdExpiresAt),
           );
         }
+        // SCRUM-166 AC13: a new hold changes the venue arrangements a safety
+        // check reviewed.
+        await outdateSafetyChecks(tx, booking.event.id, now);
 
         await tx.auditLog.create({
           data: {
