@@ -205,6 +205,11 @@ describe("holdBookingRequest — SCRUM-163 AC1, AC2, AC5", () => {
     });
     const heldAt = update.data.heldAt as Date;
     expect(heldAt.getTime()).toBeGreaterThanOrEqual(before);
+    // SCRUM-166 AC13: a new hold outdates an Approved or awaiting check.
+    expect(db.safetyCheck.updateMany).toHaveBeenCalledWith({
+      where: { eventId: "evt_1", status: { in: ["AWAITING_REVIEW", "APPROVED"] } },
+      data: { status: "OUTDATED", outdatedAt: heldAt },
+    });
 
     const notices = db.notification.createMany.mock.calls[0][0].data;
     expect(
@@ -1088,6 +1093,8 @@ describe("the readiness checklist's venue item — SCRUM-163 AC6", () => {
           bookings,
           equipmentRequests: [],
           reservations: [],
+          // SCRUM-166: an approved check, so only the venue decides readiness.
+          safetyChecks: [{ status: "APPROVED", note: null }],
         }),
       },
     } as unknown as Prisma.TransactionClient;
