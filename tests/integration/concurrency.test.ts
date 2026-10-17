@@ -800,6 +800,7 @@ describe.skipIf(!usesLocalDatabase)("event submission — repeat submission (SCR
 });
 
 describe.skipIf(!usesLocalDatabase)("concurrency — coordinator auto-assignment (SCRUM-20)", () => {
+  const THROWAWAY_EMAIL = "concurrency-coord-";
   let coordinatorAId: string;
   let coordinatorBId: string;
 
@@ -814,12 +815,21 @@ describe.skipIf(!usesLocalDatabase)("concurrency — coordinator auto-assignment
   };
 
   beforeAll(async () => {
+    // Coordinators an earlier run had to leave behind (see afterAll), once
+    // nothing refers to them any more.
+    await prisma.user.deleteMany({
+      where: {
+        email: { startsWith: THROWAWAY_EMAIL },
+        coordinatedEvents: { none: {} },
+        notifications: { none: {} },
+      },
+    });
     // Two throwaway coordinators, both starting at zero active events, so the
     // fairness rule has an actual tie to resolve under concurrency.
     const [a, b] = await Promise.all([
       prisma.user.create({
         data: {
-          email: `concurrency-coord-a-${Date.now()}@test.local`,
+          email: `${THROWAWAY_EMAIL}a-${Date.now()}@test.local`,
           name: "Concurrency Coord A",
           role: "COORDINATOR",
           passwordHash: "not-used-in-this-test",
@@ -828,7 +838,7 @@ describe.skipIf(!usesLocalDatabase)("concurrency — coordinator auto-assignment
       }),
       prisma.user.create({
         data: {
-          email: `concurrency-coord-b-${Date.now()}@test.local`,
+          email: `${THROWAWAY_EMAIL}b-${Date.now()}@test.local`,
           name: "Concurrency Coord B",
           role: "COORDINATOR",
           passwordHash: "not-used-in-this-test",
@@ -841,6 +851,15 @@ describe.skipIf(!usesLocalDatabase)("concurrency — coordinator auto-assignment
   });
 
   afterAll(async () => {
+    // Other suites run alongside, and automatic assignment (SCRUM-20) hands
+    // their submissions to whichever Coordinator has the fewest events, so
+    // these two (with none) attract them. Out of the pool first, so nothing
+    // new reaches them.
+    const coordinatorIds = [coordinatorAId, coordinatorBId];
+    await prisma.user.updateMany({
+      where: { id: { in: coordinatorIds } },
+      data: { role: "ATTENDEE" },
+    });
     // Dependents first: the assignment notifications reference the throwaway
     // coordinators through the required Notification.user FK, so deleting the
     // users while they exist throws P2003.
@@ -850,16 +869,19 @@ describe.skipIf(!usesLocalDatabase)("concurrency — coordinator auto-assignment
         select: { id: true },
       })
     ).map((e) => e.id);
-    const coordinatorIds = [coordinatorAId, coordinatorBId];
 
-    await prisma.notification.deleteMany({
-      where: {
-        OR: [{ eventId: { in: eventIds } }, { userId: { in: coordinatorIds } }],
-      },
-    });
+    await prisma.notification.deleteMany({ where: { eventId: { in: eventIds } } });
     await prisma.auditLog.deleteMany({ where: { entityId: { in: eventIds } } });
     await prisma.event.deleteMany({ where: { id: { in: eventIds } } });
-    await prisma.user.deleteMany({ where: { id: { in: coordinatorIds } } });
+    // One another suite still holds (its event, or the notice about it) is
+    // left for that suite to clean up, and removed by the next run.
+    await prisma.user.deleteMany({
+      where: {
+        id: { in: coordinatorIds },
+        coordinatedEvents: { none: {} },
+        notifications: { none: {} },
+      },
+    });
   });
 
   it("SCRUM-20: two events submitted at the same instant each end up with exactly one coordinator, and neither is left unassigned", async () => {

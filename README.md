@@ -21,15 +21,16 @@ arrangements that can't clash:
 4. When the arrangements are complete, the Coordinator **confirms** the event.
 5. **Attendees** register for confirmed events, up to each event's capacity.
 
-Week 7 added two more roles. They can sign in, but until their stories land
-they only read their own notifications:
+Week 7 added two more roles:
 
 - The **Event Coordinator Lead** will assign new requests to Coordinators from
   an unassigned queue, replacing automatic assignment (SCRUM-165), and see
-  every Coordinator's workload (SCRUM-141).
-- The **Safety Officer** will review an event's venue and equipment before it
-  can be confirmed (SCRUM-166). Their approval doesn't confirm the event; the
-  Coordinator still does.
+  every Coordinator's workload (SCRUM-141). Until then the role can sign in
+  and read its notifications and the venue catalogue.
+- The **Safety Officer** reviews an event's venue and equipment on the Safety
+  Checks page before it can be confirmed, and records Approved, Changes
+  requested or Rejected (SCRUM-166). Their approval doesn't confirm the
+  event; the Coordinator still does.
 
 Release 1 covers the twenty features in the Week 4 project instructions, and
 Sprint 3 adds the Week 7 changes. The full picture (all seven roles, the event
@@ -156,10 +157,11 @@ Every seeded account uses the password **`Password123!`**:
 | `attendee3@test.local` | Attendee | Has one withdrawn registration (SCRUM-77) |
 | `attendee4@test.local` | Attendee | Deliberately unregistered, so free to take the last place |
 | `safety@test.local` | Safety Officer | Reviews operational safety checks (SCRUM-166) |
+| `safety2@test.local` | Safety Officer | A second Safety Officer, for two people recording at once (SCRUM-166) |
 
-No seeded account has the **Event Coordinator Lead** or **Safety Officer**
-role yet: neither role has a page beyond Notifications, so there is nothing to
-demo. Their sign-in is unit-tested instead (SCRUM-172, TC-172-01).
+No seeded account has the **Event Coordinator Lead** role yet: until SCRUM-164
+and SCRUM-165 it has no page beyond Notifications and Venues, so there is
+nothing to demo. Its sign-in is unit-tested instead (SCRUM-172, TC-172-01).
 
 ---
 
