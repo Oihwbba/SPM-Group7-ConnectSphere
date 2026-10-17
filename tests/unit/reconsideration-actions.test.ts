@@ -632,7 +632,7 @@ describe("resolution notices — SCRUM-124 AC9", () => {
     await resolveReconsiderationFlag({ kind: "booking", id: "bkg1", decision: "STILL_STANDS" });
 
     expect(tx.user.findMany).toHaveBeenCalledWith({
-      where: { role: "VENUE_STAFF" },
+      where: { OR: [{ role: "VENUE_STAFF" }, { additionalRoles: { has: "VENUE_STAFF" } }] },
       select: { id: true },
     });
     expect(tx.notification.createMany).toHaveBeenCalledWith(
@@ -660,7 +660,7 @@ describe("resolution notices — SCRUM-124 AC9", () => {
     await resolveReconsiderationFlag({ kind: "reservation", id: "res1", decision: "STILL_STANDS" });
 
     expect(tx.user.findMany).toHaveBeenCalledWith({
-      where: { role: "TECH_SUPPORT" },
+      where: { OR: [{ role: "TECH_SUPPORT" }, { additionalRoles: { has: "TECH_SUPPORT" } }] },
       select: { id: true },
     });
     expect(tx.notification.createMany).toHaveBeenCalledWith(

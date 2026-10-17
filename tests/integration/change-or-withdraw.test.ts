@@ -150,7 +150,7 @@ describe.skipIf(!usesLocalDatabase)(
     const staffNotices = (eventId: string) =>
       prisma.notification.findMany({
         where: { eventId },
-        select: { type: true, user: { select: { role: true } } },
+        select: { type: true, user: { select: { role: true, additionalRoles: true } } },
       });
     /** AC7: one notice of this type for every member of the role, and no other. */
     const expectRoleNotified = async (
@@ -158,12 +158,19 @@ describe.skipIf(!usesLocalDatabase)(
       type: string,
       role: "TECH_SUPPORT" | "VENUE_STAFF",
     ) => {
-      const members = await prisma.user.count({ where: { role } });
+      // SCRUM-121: everyone who holds the role, as primary or additional.
+      const members = await prisma.user.count({
+        where: { OR: [{ role }, { additionalRoles: { has: role } }] },
+      });
       expect(members).toBeGreaterThan(0);
       const notices = await staffNotices(eventId);
       expect(notices).toHaveLength(members);
       expect(
-        notices.every((n) => n.type === type && n.user.role === role),
+        notices.every(
+          (n) =>
+            n.type === type &&
+            (n.user.role === role || n.user.additionalRoles.includes(role)),
+        ),
       ).toBe(true);
     };
     const safetyCheck = (

@@ -452,10 +452,13 @@ export async function decideBookingRequest(
         ...venueSelect,
         holdApprovedAt: true,
         requestedById: true,
-        event: { select: { id: true, name: true, coordinatorId: true } },
+        event: { select: { id: true, name: true, organiserId: true, coordinatorId: true } },
       },
     });
     if (!booking) return err("Booking request not found.");
+    // SCRUM-121 AC5: nobody decides a booking for an event they organise or
+    // coordinate, whatever roles they hold.
+    requirePermission(user, "booking:decide", { kind: "arrangement", ...booking.event });
     const now = new Date();
     const current = bookingStatusAt(booking, now);
     if (current === "HELD" && decision === "APPROVED") {
@@ -773,10 +776,13 @@ export async function holdBookingRequest(
       select: {
         ...venueSelect,
         requestedById: true,
-        event: { select: { id: true, name: true, coordinatorId: true } },
+        event: { select: { id: true, name: true, organiserId: true, coordinatorId: true } },
       },
     });
     if (!booking) return err("Booking request not found.");
+    // SCRUM-121 AC5: nobody decides a booking for an event they organise or
+    // coordinate, whatever roles they hold.
+    requirePermission(user, "booking:hold", { kind: "arrangement", ...booking.event });
     const now = new Date();
     const current = bookingStatusAt(booking, now);
     if (current !== "PENDING") {

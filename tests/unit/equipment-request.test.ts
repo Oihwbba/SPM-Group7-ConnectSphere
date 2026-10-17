@@ -356,7 +356,7 @@ describe("the submission notice — SCRUM-124 AC2", () => {
     expect((await createEquipmentRequest(input())).ok).toBe(true);
 
     expect(tx.user.findMany).toHaveBeenCalledWith({
-      where: { role: "TECH_SUPPORT" },
+      where: { OR: [{ role: "TECH_SUPPORT" }, { additionalRoles: { has: "TECH_SUPPORT" } }] },
       select: { id: true },
     });
     const notice = {

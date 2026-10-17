@@ -7,7 +7,6 @@ import { prisma } from "@/lib/db";
 import {
   can,
   requirePermission,
-  roleAllows,
   PermissionError,
   type Resource,
 } from "@/lib/auth/can";
@@ -425,7 +424,7 @@ export async function canEditEventDetails(eventId: string): Promise<boolean> {
   const session = await auth();
   const user = session?.user;
   // A public endpoint: a role that can never edit learns nothing about the event.
-  if (!user || !roleAllows(user.role, "event:edit")) return false;
+  if (!user || !can(user, "event:edit")) return false;
 
   const event = await prisma.event.findUnique({
     where: { id: eventId },

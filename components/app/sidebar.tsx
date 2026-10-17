@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import type { Role } from "@prisma/client";
 
-import { NAV_BY_ROLE } from "@/lib/nav";
+import { navForRoles } from "@/lib/nav";
 import { cn } from "@/lib/utils";
 
 // Icons are a presentation detail attached here on the client, keyed by route.
@@ -44,11 +44,12 @@ const ICON_BY_HREF: Record<string, LucideIcon> = {
  * item shows its label beside the icon. The choice is remembered in
  * localStorage.
  *
- * The rail only receives `role` (a plain string) from the server layout; it
- * looks the items up in NAV_BY_ROLE itself, because the icons are React
- * components and can't cross the server/client boundary.
+ * The rail only receives the user's roles (plain strings) from the server
+ * layout; it works out the items itself, because the icons are React
+ * components and can't cross the server/client boundary. Several roles show
+ * the links of all of them (SCRUM-121 AC2).
  */
-export function Sidebar({ role }: { role: Role }) {
+export function Sidebar({ roles }: { roles: Role[] }) {
   const [collapsed, setCollapsed] = useState(true);
   const pathname = usePathname();
 
@@ -73,7 +74,7 @@ export function Sidebar({ role }: { role: Role }) {
     });
   }
 
-  const items = NAV_BY_ROLE[role];
+  const items = navForRoles(roles);
   // The most specific link that matches wins, so /venues/availability does
   // not also light up /venues.
   const activeHref = items

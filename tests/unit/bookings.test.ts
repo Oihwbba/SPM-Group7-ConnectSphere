@@ -1127,7 +1127,7 @@ describe("staff and Coordinator notices — SCRUM-124 AC1, AC4", () => {
       await submitBookingRequest(validRequest);
 
       expect(db.user.findMany).toHaveBeenCalledWith({
-        where: { role: "VENUE_STAFF" },
+        where: { OR: [{ role: "VENUE_STAFF" }, { additionalRoles: { has: "VENUE_STAFF" } }] },
         select: { id: true },
       });
       const notice = {

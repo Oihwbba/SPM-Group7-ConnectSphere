@@ -94,6 +94,7 @@ const U = {
   attendee2: "usr_attendee_2",
   attendee3: "usr_attendee_3",
   attendee4: "usr_attendee_4",
+  multiRole: "usr_multirole",
 } as const;
 
 const V = {
@@ -135,7 +136,7 @@ const E = {
 // ---------------------------------------------------------------------------
 
 async function seedUsers(passwordHash: string) {
-  const users = [
+  const users: { id: string; email: string; name: string; role: Role; additionalRoles?: Role[] }[] = [
     { id: U.organiser, email: "organiser@test.local", name: "Olivia Organiser", role: Role.ORGANISER },
     { id: U.coordinator, email: "coordinator@test.local", name: "Cody Coordinator", role: Role.COORDINATOR },
     { id: U.venueStaff, email: "venuestaff@test.local", name: "Vera Venue", role: Role.VENUE_STAFF },
@@ -154,12 +155,28 @@ async function seedUsers(passwordHash: string) {
     { id: U.attendee2, email: "attendee2@test.local", name: "Amir Attendee", role: Role.ATTENDEE },
     { id: U.attendee3, email: "attendee3@test.local", name: "Ana Attendee", role: Role.ATTENDEE },
     { id: U.attendee4, email: "attendee4@test.local", name: "Ade Attendee", role: Role.ATTENDEE },
+    // SCRUM-121: one account holding several roles, two of them with an
+    // events view. Venue Staff first, so automatic assignment (primary
+    // Coordinators only) never hands it an event.
+    {
+      id: U.multiRole,
+      email: "multirole@test.local",
+      name: "Morgan Multirole",
+      role: Role.VENUE_STAFF,
+      additionalRoles: [Role.TECH_SUPPORT, Role.COORDINATOR, Role.ORGANISER],
+    },
   ];
 
   for (const u of users) {
     await prisma.user.upsert({
       where: { id: u.id },
-      update: { email: u.email, name: u.name, role: u.role, passwordHash },
+      update: {
+        email: u.email,
+        name: u.name,
+        role: u.role,
+        additionalRoles: u.additionalRoles ?? [],
+        passwordHash,
+      },
       create: { ...u, passwordHash },
     });
   }

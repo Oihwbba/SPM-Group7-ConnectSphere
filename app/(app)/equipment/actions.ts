@@ -5,7 +5,7 @@ import { Prisma } from "@prisma/client";
 
 import { auth } from "@/auth";
 import { err, ok, type ActionResult } from "@/lib/action-result";
-import { requirePermission, PermissionError } from "@/lib/auth/can";
+import { can, requirePermission, PermissionError } from "@/lib/auth/can";
 import { prisma } from "@/lib/db";
 import {
   sortSchedule,
@@ -339,6 +339,8 @@ export async function reserveEquipmentRequest(
             createdAt: true,
             event: {
               select: {
+                organiserId: true,
+                coordinatorId: true,
                 startAt: true,
                 endAt: true,
                 reservations: CONFIRMED_HOLDS,
@@ -365,6 +367,10 @@ export async function reserveEquipmentRequest(
             error:
               "This request is not waiting to be reserved: it is already reserved, or no longer approved.",
           };
+        // SCRUM-121 AC5: nobody reserves equipment for an event they organise
+        // or coordinate, whatever roles they hold.
+        if (!can(session!.user!, "equipment:reserve", { kind: "arrangement", ...request.event }))
+          return { error: "You do not have permission to do that." };
         // SCRUM-142: the Coordinator can change an approved request's lines
         // (it goes back for review and may be approved again), so a form
         // opened before that would reserve lines the request no longer has.

@@ -531,7 +531,9 @@ describe.skipIf(!usesLocalDatabase)(
         ]);
 
         const venueStaff = await prisma.user.count({
-          where: { role: "VENUE_STAFF" },
+          where: {
+            OR: [{ role: "VENUE_STAFF" }, { additionalRoles: { has: "VENUE_STAFF" } }],
+          },
         });
         const toStaff = (await notificationsFor([blockingEventId, e3])).filter(
           (n) => n.title === "Booking needs reconsideration",
