@@ -157,7 +157,7 @@ clash with any SCRUM-34 AC10 warning, and saving again confirms.
 | Pre-conditions | A pending request at the venue. |
 | Test Steps | Approve it while the times are being changed. |
 | Test Data | — |
-| Expected Result | Both read the venue's times under its row lock, so they take turns: the approval (or hold) copies the new minutes and is checked against them, or it is already Approved when clashes are looked for. The lock comes after the availability check, so two simultaneous approvals still both reach the database's own refusal. |
+| Expected Result | Both read the venue's times under its row lock, so they take turns: the approval (or hold) copies the new minutes and is checked against them, or it is already Approved when clashes are looked for. The lock comes after the availability check, so two simultaneous approvals still both reach the database's own refusal, and the booking's row is locked before the venue's, the order recording unavailability takes, so the two never deadlock. |
 
 **Automated by:** `tests/unit/bookings.test.ts` › "SCRUM-160 [AC1] TC-160-10: …" (3 tests); `tests/integration/concurrency.test.ts` › "SCRUM-53 [AC5] TC-53-05: …" and "SCRUM-159 [AC5] TC-159-09: …", where the approvals still race past the check
 

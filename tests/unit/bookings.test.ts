@@ -798,8 +798,12 @@ describe("decideBookingRequest — SCRUM-53", () => {
 
       await decideBookingRequest({ bookingId: "bkg_1", decision: "APPROVED" });
 
-      const [sql] = db.$queryRaw.mock.calls[0];
-      expect(sql.join("?")).toContain("FOR NO KEY UPDATE");
+      // The booking, then the venue: the order recording unavailability takes.
+      const [bookingSql, bookingId] = db.$queryRaw.mock.calls[0];
+      expect(bookingSql.join("?")).toContain('FROM "Booking" WHERE "id" = ? FOR UPDATE');
+      expect(bookingId).toBe("bkg_1");
+      const [venueSql] = db.$queryRaw.mock.calls[1];
+      expect(venueSql.join("?")).toContain("FOR NO KEY UPDATE");
       // Checked once with the first minutes, locked, then again with the new.
       expect(db.booking.findMany).toHaveBeenCalledTimes(2);
       expect(db.$queryRaw.mock.invocationCallOrder[0]).toBeGreaterThan(

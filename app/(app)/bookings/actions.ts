@@ -57,15 +57,18 @@ const venueTimesSelect = { setupMinutes: true, turnaroundMinutes: true } as cons
  * already Approved or Held when the change looks for clashes. The lock comes
  * after the availability check, so the check of two simultaneous requests
  * isn't serialised; `check` runs again only if the minutes changed since
- * `first` was read.
+ * `first` was read. The booking's row is locked first: recording
+ * unavailability and the occupancy trigger take the booking before the venue,
+ * so the reverse order here would deadlock with them.
  */
 async function lockedVenueTimes(
   tx: Prisma.TransactionClient,
-  venueId: string,
+  booking: { id: string; venueId: string },
   first: SetupTurnaround,
   check: (times: SetupTurnaround) => Promise<void>,
 ): Promise<SetupTurnaround> {
-  const locked = await lockVenueTimes(tx, venueId);
+  await tx.$queryRaw`SELECT "id" FROM "Booking" WHERE "id" = ${booking.id} FOR UPDATE`;
+  const locked = await lockVenueTimes(tx, booking.venueId);
   if (
     !locked ||
     (locked.setupMinutes === first.setupMinutes &&
@@ -487,7 +490,7 @@ export async function decideBookingRequest(
           // SCRUM-160: the minutes the approval copies are read under the
           // venue's lock, which a change to them takes too, so a change can't
           // slip in between. Checked again only if they changed meanwhile.
-          times = await lockedVenueTimes(tx, booking.venueId, times, check);
+          times = await lockedVenueTimes(tx, booking, times, check);
         }
 
         const updated = await tx.booking.updateMany({
@@ -763,7 +766,7 @@ export async function holdBookingRequest(
         };
         await check(booking.venue);
         // SCRUM-160: as for an approval, the minutes are read under the lock.
-        const times = await lockedVenueTimes(tx, booking.venueId, booking.venue, check);
+        const times = await lockedVenueTimes(tx, booking, booking.venue, check);
 
         const updated = await tx.booking.updateMany({
           // SCRUM-26 AC5: as for an approval, a flag raised since it was
