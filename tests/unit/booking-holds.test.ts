@@ -492,8 +492,12 @@ describe("holdBookingRequest — SCRUM-163 AC1, AC2, AC5", () => {
 describe("confirmHold and releaseHold — SCRUM-163 AC3, AC4, AC7, AC8", () => {
   const held = (overrides: Record<string, unknown> = {}) => ({
     status: "HELD",
+    startAt: fromNow(2 * HOUR),
+    endAt: fromNow(4 * HOUR),
     holdExpiresAt: fromNow(HOUR),
     holdApprovedAt: fromNow(-HOUR),
+    // SCRUM-34 AC7: no hours recorded, so confirming isn't refused for them.
+    venue: { name: "Exhibition Hall", openingHours: [] },
     event: {
       organiserId: "usr_org",
       coordinatorId: "usr_cody",
@@ -658,6 +662,22 @@ describe("confirmHold and releaseHold — SCRUM-163 AC3, AC4, AC7, AC8", () => {
       ok: false,
       error: expect.stringMatching(/^This hold expired at /),
     });
+  });
+
+  it("SCRUM-37 [AC2] TC-37-04: confirming a hold the database refuses over unavailability says so", async () => {
+    db.$transaction.mockRejectedValue(
+      postgresRefusal(
+        "23P01",
+        'conflicting key value violates exclusion constraint "booking_overlaps_unavailability"',
+      ),
+    );
+
+    expect(await confirmHold({ bookingId: "bkg_1" })).toEqual({
+      ok: false,
+      error:
+        "This hold can't be confirmed: the venue is now unavailable for part of its period. Release it and arrange another venue.",
+    });
+    expect(revalidatePath).not.toHaveBeenCalled();
   });
 
   it("SCRUM-163 [AC8] TC-163-14: a different database failure is not mistaken for an expiry", async () => {
@@ -1056,6 +1076,9 @@ describe("the readiness checklist's venue item — SCRUM-163 AC6", () => {
           status: "PLANNING",
           startAt: START,
           endAt: END,
+          // SCRUM-170 AC4: equipment decided, so only the venue decides `ready`.
+          noEquipmentNeededAt: NOW,
+          noEquipmentNeededBy: { name: "Cody Coordinator" },
           bookings,
           equipmentRequests: [],
           reservations: [],

@@ -33,7 +33,7 @@ and the app is running. Every seeded account's password is `Password123!`.
 | Test Data | `organiser@`, `coordinator@`, `venuestaff@`, `techsupport@` and `attendee@test.local` |
 | Expected Result | Organiser: Events and Notifications. Venue Staff: Bookings, Venue availability and Notifications. Tech Support: Equipment and Notifications. Attendee: Events, Registrations and Notifications. Each lands on a page in its own navigation, and the header names its role. |
 
-**Automated by:** `tests/unit/nav.test.ts` › "lands every role on a page that is in its own nav", "shows each internal role its own work", "gives every role a human-readable label for the header", "shows a link only to a role that holds the action behind it"; `e2e/access-control.spec.ts` › "Organiser sees only /events, /notifications", "Venue Staff sees only /bookings, /venues/availability, /notifications", "Tech Support sees only /equipment, /notifications", "Attendee sees only /events, /registrations, /notifications"
+**Automated by:** `tests/unit/nav.test.ts` › "lands every role on a page that is in its own nav", "shows each internal role its own work", "gives every role a human-readable label for the header", "shows a link only to a role that holds the action behind it"; `e2e/access-control.spec.ts` › "Organiser sees only /events, /notifications", "Venue Staff sees only /bookings, /venues/availability, /notifications, /venues", "Tech Support sees only /equipment, /notifications, /venues", "Attendee sees only /events, /registrations, /notifications"
 
 ### TC-66-02
 

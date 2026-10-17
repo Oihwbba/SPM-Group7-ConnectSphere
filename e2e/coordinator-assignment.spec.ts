@@ -64,7 +64,9 @@ test.describe("SCRUM-20 — Auto-assign a coordinator", () => {
     await page.getByLabel("Equipment & Technical Support Requirements *").fill("Projector.");
     await page.getByRole("button", { name: "Next", exact: true }).click();
 
-    await page.getByLabel("Registration Needs *").fill("Standard online registration.");
+    // SCRUM-171 AC1: Registration needed is required to submit; the note is optional.
+    await page.getByRole("group", { name: "Registration Needed *" }).getByLabel("Yes").check();
+    await page.getByLabel("Registration Notes (Optional)").fill("Standard online registration.");
     await page.getByRole("button", { name: "Next", exact: true }).click();
 
     await expect(page.getByRole("heading", { name: /Review Entered Details/i })).toBeVisible();

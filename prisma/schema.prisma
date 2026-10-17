@@ -253,6 +253,7 @@ model User {
 
   approvedHolds     Booking[]          @relation("BookingHoldApprovedBy")
   holdExpiryChanges HoldExpiryChange[] @relation("HoldExpiryChangedBy")
+  operationalNotes         EventOperationalNote[]
 }
 
 model Account {
@@ -403,6 +404,7 @@ model Event {
   changeRequests        EventChangeRequest[]
   notifications         Notification[]
   safetyChecks          SafetyCheck[]
+  operationalNotes      EventOperationalNote[]
 
   @@index([organiserId])
   @@index([coordinatorId])
@@ -436,6 +438,23 @@ model ClarificationRequest {
 
   @@index([eventId])
   @@index([status])
+}
+
+/// SCRUM-25 AC6 — an operational note on an event, shown with its author and
+/// time. Permanent: the trigger event_operational_note_permanent refuses any
+/// edit or delete, and the CHECK event_operational_note_not_blank a blank one.
+model EventOperationalNote {
+  id        String   @id @default(cuid())
+  eventId   String
+  authorId  String
+  body      String
+  createdAt DateTime @default(now())
+
+  event  Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  author User  @relation(fields: [authorId], references: [id])
+
+  @@index([eventId])
+  @@index([authorId])
 }
 
 // ---------------------------------------------------------------------------
@@ -474,6 +493,27 @@ model Venue {
 
   bookings       Booking[]
   unavailability VenueUnavailability[]
+  openingHours   VenueOpeningHours[]
+}
+
+/// SCRUM-34 AC3 — a venue's opening hours for one day of the week, in SGT:
+/// an opening and a closing time in minutes after midnight, or neither when
+/// the venue is Closed that day. Closing is after opening (AC5, CHECK
+/// venue_opening_hours_valid). A venue with no rows has no hours recorded
+/// yet (only venues from before SCRUM-34 whose hours couldn't be read), and
+/// no booking is refused for them (AC7). `operatingHours` on Venue is the
+/// older free text, kept for existing data.
+model VenueOpeningHours {
+  id           String @id @default(cuid())
+  venueId      String
+  /// 1 is Monday … 7 is Sunday (ISO).
+  weekday      Int
+  opensMinute  Int?
+  closesMinute Int?
+
+  venue Venue @relation(fields: [venueId], references: [id], onDelete: Cascade)
+
+  @@unique([venueId, weekday])
 }
 
 /// SCRUM-36 — "Given other unavailability has been recorded (e.g.

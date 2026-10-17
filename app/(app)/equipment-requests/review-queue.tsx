@@ -10,8 +10,10 @@ import { Check, ClipboardCheck, Loader2, PlayCircle, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { RequestHistory } from "@/components/equipment/request-history";
+import { OperationalNotes } from "@/components/events/operational-notes";
 import { RequestLines } from "@/components/equipment/request-lines";
 import { RequestStatusBadge } from "@/components/equipment/request-status-badge";
+import { OrganiserEquipmentAnswer } from "@/components/events/organiser-answers";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -217,6 +219,13 @@ function ReviewCard({ request }: { request: QueuedEquipmentRequest }) {
             {request.notes}
           </p>
         )}
+        {/* SCRUM-170 AC3: what the Organiser asked for, beside the lines. */}
+        <div className="space-y-2 rounded-md border bg-muted/30 p-3">
+          <p className="text-xs font-medium">What the Organiser asked for</p>
+          <OrganiserEquipmentAnswer
+            equipmentRequirements={request.event.equipmentRequirements}
+          />
+        </div>
 
         {request.status === "PENDING_REVIEW" && (
           <div className="flex flex-wrap items-center gap-3">
@@ -283,6 +292,8 @@ function ReviewCard({ request }: { request: QueuedEquipmentRequest }) {
         )}
 
         <RequestHistory entries={request.updates} />
+        {/* SCRUM-25 AC6: Technical Support add notes once there is a request. */}
+        <OperationalNotes eventId={request.event.id} />
       </CardContent>
     </Card>
   );
