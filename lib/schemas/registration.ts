@@ -12,3 +12,9 @@ export const registerForEventSchema = z.object({
 export const withdrawRegistrationSchema = z.object({
   registrationId: z.string().min(1, "Missing registration."),
 });
+
+/** SCRUM-75 AC6 — closing or reopening registration names only the event;
+ * who may do it comes from the session. */
+export const registrationControlSchema = z.object({
+  eventId: z.string().min(1, "Missing event."),
+});
