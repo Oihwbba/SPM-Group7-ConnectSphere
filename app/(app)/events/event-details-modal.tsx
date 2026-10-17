@@ -18,6 +18,7 @@ import { ChangeRequestPanel } from "@/components/events/change-request-panel";
 import { ReadinessChecklist } from "@/components/events/readiness-checklist";
 import { ReconsiderationPanel } from "@/components/events/reconsideration-panel";
 import { ConfirmedArrangements } from "@/components/events/confirmed-arrangements";
+import { RegistrationListPanel } from "@/components/events/registration-list-panel";
 import { RegistrationControl } from "@/components/events/registration-control";
 import {
   OrganiserEquipmentAnswer,
@@ -182,6 +183,14 @@ export function EventDetailsModal({
           {event.status === "CONFIRMED" && <ConfirmedArrangements eventId={event.id} />}
           {/* SCRUM-75 AC6: close or reopen registration */}
           {event.status === "CONFIRMED" && <RegistrationControl eventId={event.id} />}
+
+          {/* SCRUM-70: shows nothing to a user who may not see the registrations */}
+          {(event.status === "CONFIRMED" ||
+            event.status === "PLANNING" ||
+            event.status === "CANCELLED" ||
+            event.status === "COMPLETED") && (
+            <RegistrationListPanel eventId={event.id} />
+          )}
 
           {event.status === "REJECTED" && event.decisionReason && (
             <Card className="overflow-hidden">
