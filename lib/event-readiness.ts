@@ -210,11 +210,16 @@ function venueItem(
   if (approved.length > 0) {
     return { ...item, complete: false, state: "Approved for a different time" };
   }
-  // SCRUM-163 AC6: an expired hold counts like a rejection; the newer of the
-  // two describes the venue.
+  // SCRUM-163 AC6: an expired hold counts like a rejection, and SCRUM-26 AC9:
+  // so does a cancelled booking; the newest of them describes the venue. A
+  // cancellation leaves nothing requested, so an older rejection's reason no
+  // longer applies.
   const ended = newestFirst.find(
-    (b) => b.status === "REJECTED" || b.status === "EXPIRED",
+    (b) => b.status === "REJECTED" || b.status === "EXPIRED" || b.status === "CANCELLED",
   );
+  if (ended?.status === "CANCELLED") {
+    return { ...item, complete: false, state: "Not requested" };
+  }
   if (ended?.status === "EXPIRED") {
     return { ...item, complete: false, state: "Hold expired" };
   }
