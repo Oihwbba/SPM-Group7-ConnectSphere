@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
+  AlertTriangle,
   Building2,
   CalendarCheck,
   CalendarClock,
@@ -307,6 +308,7 @@ export function BookingQueue({
               {holding ? ` (${formatDateTime(holding.startAt)})` : ""}.
             </DialogDescription>
           </DialogHeader>
+          {holding?.hoursWarning && <HoursWarning>{holding.hoursWarning}</HoursWarning>}
           <form
             className="space-y-4"
             onSubmit={(e) => {
@@ -434,6 +436,7 @@ function RequestCard({
                 ))}
               </>
             )}
+            {booking.hoursWarning && <HoursWarning>{booking.hoursWarning}</HoursWarning>}
           </Fact>
           <Fact icon={Users} label="Attendance">
             <Mark ok={fits}>
@@ -519,6 +522,20 @@ function Fact({
 }
 
 /** One compared fact: a green tick when the venue meets it, a red cross when it does not. */
+/** SCRUM-159 AC9: worth knowing before deciding, but nothing stops it. */
+function HoursWarning({ children }: { children: React.ReactNode }) {
+  return (
+    <span
+      role="note"
+      data-testid="hours-warning"
+      className="flex items-start gap-1.5 text-warning-foreground"
+    >
+      <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" aria-label="warning" />
+      {children}
+    </span>
+  );
+}
+
 function Mark({ ok, children }: { ok: boolean; children: React.ReactNode }) {
   const Icon = ok ? Check : X;
   return (

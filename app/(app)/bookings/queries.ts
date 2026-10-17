@@ -2,7 +2,7 @@ import { prisma } from "@/lib/db";
 import { BOOKABLE_EVENT_STATUSES } from "@/lib/schemas/booking";
 import { findVenueBlockers, occupiedPeriod } from "@/lib/venue-availability";
 import { liveHoldWhere } from "@/lib/booking-holds";
-import { openingHoursRefusal } from "@/lib/venue-hours";
+import { openingHoursRefusal, setupTurnaroundWarning } from "@/lib/venue-hours";
 
 /**
  * SCRUM-50 — the events a coordinator may request a venue for: approved ones
@@ -109,19 +109,24 @@ export async function getPendingBookingQueue(now = new Date()) {
 
   // A held request reserves its own period, so it isn't its own blocker.
   return Promise.all(
-    pending.map(async (booking) => ({
-      ...booking,
-      // SCRUM-34 AC7: approving or holding it would be refused for this.
-      outsideHours: openingHoursRefusal(booking, booking.venue),
-      blockers: (
-        await findVenueBlockers(
-          prisma,
-          booking.venue.id,
-          occupiedPeriod(booking, booking.status === "HELD" ? booking : booking.venue),
-          now,
-        )
-      ).filter((blocker) => blocker.id !== booking.id),
-    })),
+    pending.map(async (booking) => {
+      const minutes = booking.status === "HELD" ? booking : booking.venue;
+      return {
+        ...booking,
+        // SCRUM-34 AC7: approving or holding it would be refused for this.
+        outsideHours: openingHoursRefusal(booking, booking.venue),
+        // SCRUM-159 AC9: shown, but Venue Staff can still hold or approve it.
+        hoursWarning: setupTurnaroundWarning(booking, minutes, booking.venue),
+        blockers: (
+          await findVenueBlockers(
+            prisma,
+            booking.venue.id,
+            occupiedPeriod(booking, minutes),
+            now,
+          )
+        ).filter((blocker) => blocker.id !== booking.id),
+      };
+    }),
   );
 }
 

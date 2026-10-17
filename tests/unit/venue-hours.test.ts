@@ -6,6 +6,7 @@ import {
   minutesToTime,
   openingHoursRefusal,
   outsideOpeningHoursMessage,
+  setupTurnaroundWarning,
   timeToMinutes,
   type OpeningDay,
 } from "@/lib/venue-hours";
@@ -70,6 +71,60 @@ describe("opening hours — SCRUM-34 AC7", () => {
     expect(
       openingHoursRefusal(period("2036-03-08T10:00", "2036-03-08T12:00"), { name: "Annex" }),
     ).toBeNull();
+  });
+
+  describe("SCRUM-159 AC9 — setup or turnaround outside opening hours", () => {
+    const venue = { name: "Executive Boardroom", openingHours: boardroom };
+    const thirtyAndFortyFive = { setupMinutes: 30, turnaroundMinutes: 45 };
+
+    it("SCRUM-159 [AC9] TC-159-18: setup starting before opening is named, with when it starts and that day's hours", () => {
+      expect(
+        setupTurnaroundWarning(period("2036-03-04T09:00", "2036-03-04T12:00"), thirtyAndFortyFive, venue),
+      ).toBe(
+        "The setup time (30 minutes, from 08:30) falls outside Executive Boardroom's opening hours, 09:00–18:00 on Tuesdays. You can still hold or approve it.",
+      );
+    });
+
+    it("SCRUM-159 [AC9] TC-159-18: turnaround ending after closing is named, with when it ends", () => {
+      expect(
+        setupTurnaroundWarning(period("2036-03-04T15:00", "2036-03-04T17:30"), thirtyAndFortyFive, venue),
+      ).toMatch(/^The turnaround time \(45 minutes, until 18:15\) falls outside/);
+    });
+
+    it("SCRUM-159 [AC9] TC-159-18: both outside are named together", () => {
+      expect(
+        setupTurnaroundWarning(period("2036-03-04T09:00", "2036-03-04T18:00"), thirtyAndFortyFive, venue),
+      ).toMatch(
+        /^The setup time \(30 minutes, from 08:30\) and turnaround time \(45 minutes, until 18:45\) fall outside/,
+      );
+    });
+
+    it("SCRUM-159 [AC9] TC-159-19: setup ending exactly at opening and turnaround exactly at closing warn of nothing", () => {
+      expect(
+        setupTurnaroundWarning(period("2036-03-04T09:30", "2036-03-04T17:15"), thirtyAndFortyFive, venue),
+      ).toBeNull();
+    });
+
+    it("SCRUM-159 [AC9] TC-159-19: no warning with no hours recorded, or when the booking itself is outside them (SCRUM-34 AC7 refuses it instead)", () => {
+      expect(
+        setupTurnaroundWarning(period("2036-03-04T09:00", "2036-03-04T12:00"), thirtyAndFortyFive, {
+          name: "Annex",
+        }),
+      ).toBeNull();
+      expect(
+        setupTurnaroundWarning(period("2036-03-08T10:00", "2036-03-08T12:00"), thirtyAndFortyFive, venue),
+      ).toBeNull();
+    });
+
+    it("SCRUM-159 [AC9] TC-159-18: a setup starting the evening before reads as that time", () => {
+      const allDay = [{ weekday: 2, opensMinute: 0, closesMinute: 1380 }];
+      expect(
+        setupTurnaroundWarning(period("2036-03-04T00:00", "2036-03-04T02:00"), thirtyAndFortyFive, {
+          name: "Studio",
+          openingHours: allDay,
+        }),
+      ).toMatch(/^The setup time \(30 minutes, from 23:30\) falls outside/);
+    });
   });
 
   it("SCRUM-34 [AC7] TC-34-08: the SGT day decides, not the UTC one", () => {

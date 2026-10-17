@@ -55,6 +55,7 @@ const row: PendingBookingRow = {
     openingHours: [],
   },
   outsideHours: null,
+  hoursWarning: null,
   blockers: [],
 };
 
@@ -102,6 +103,22 @@ describe("BookingQueue", () => {
     expect(html).toContain("Exhibition Hall is closed on Saturdays, so it can&#x27;t be booked then.");
     // Over capacity, a missing facility and the opening hours are each not met.
     expect(html.match(/aria-label="does not meet"/g)).toHaveLength(3);
+  });
+
+  it("SCRUM-159 [AC9] TC-159-18: setup or turnaround outside opening hours is shown as a warning, the venue still free and Approve still offered", () => {
+    const warning =
+      "The setup time (30 minutes, from 08:30) falls outside Exhibition Hall's opening hours, 09:00–18:00 on Saturdays. You can still hold or approve it.";
+
+    const html = renderToStaticMarkup(
+      <BookingQueue queue={[{ ...row, hoursWarning: warning }]} canDecide />,
+    );
+
+    expect(html).toContain('data-testid="hours-warning"');
+    expect(html).toContain("The setup time (30 minutes, from 08:30) falls outside Exhibition Hall&#x27;s opening hours");
+    expect(html).toContain("Free for this period");
+    // Only capacity and the missing facility are not met; the warning isn't.
+    expect(html.match(/aria-label="does not meet"/g)).toHaveLength(2);
+    expect(html).toMatch(/<button[^>]*>.*?Approve<\/button>/);
   });
 
   it("SCRUM-53 — the Approve and Reject controls render only for a user who may decide", () => {
