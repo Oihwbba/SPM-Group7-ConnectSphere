@@ -62,7 +62,12 @@ describe.skipIf(!usesLocalDatabase)(
     const notices = (eventId: string, type: NotificationType) =>
       prisma.notification.findMany({
         where: { eventId, type },
-        select: { userId: true, title: true, link: true, user: { select: { role: true } } },
+        select: {
+          userId: true,
+          title: true,
+          link: true,
+          user: { select: { role: true, additionalRoles: true } },
+        },
       });
 
     /**
@@ -80,7 +85,10 @@ describe.skipIf(!usesLocalDatabase)(
       expect(rows.length).toBeGreaterThan(0);
       expect(new Set(users).size).toBe(users.length);
       expect(users).toContain(seeded);
-      expect(rows.every((r) => r.user.role === role)).toBe(true);
+      // SCRUM-121: held as the primary role or an additional one.
+      expect(
+        rows.every((r) => r.user.role === role || r.user.additionalRoles.includes(role)),
+      ).toBe(true);
       return rows;
     }
 

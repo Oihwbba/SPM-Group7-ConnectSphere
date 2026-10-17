@@ -278,6 +278,9 @@ describe("reserveEquipmentRequest — SCRUM-155", () => {
         createdAt: true,
         event: {
           select: {
+            // SCRUM-121 AC5: whose event it is.
+            organiserId: true,
+            coordinatorId: true,
             startAt: true,
             endAt: true,
             reservations: {

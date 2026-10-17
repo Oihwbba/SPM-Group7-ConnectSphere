@@ -30,6 +30,9 @@ export async function pickCoordinator(
   await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('connectsphere:assign-coordinator'))`;
 
   const coordinators = await tx.user.findMany({
+    // Primary Coordinators only (SCRUM-121): someone who is also an Organiser
+    // must never be handed their own event, and AC4 leaves checking that to
+    // the Lead's assignment (SCRUM-165).
     where: { role: "COORDINATOR" },
     select: {
       id: true,

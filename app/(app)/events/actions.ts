@@ -369,7 +369,10 @@ export async function submitEventRequest(
         previousCoordinatorId !== null &&
         Boolean(
           await tx.user.findFirst({
-            where: { id: previousCoordinatorId, role: "COORDINATOR" },
+            where: {
+              id: previousCoordinatorId,
+              OR: [{ role: "COORDINATOR" }, { additionalRoles: { has: "COORDINATOR" } }],
+            },
             select: { id: true },
           }),
         );

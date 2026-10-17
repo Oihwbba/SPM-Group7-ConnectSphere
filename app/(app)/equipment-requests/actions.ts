@@ -250,10 +250,13 @@ export async function updateEquipmentRequestStatus(
         id: true,
         status: true,
         requestedById: true,
-        event: { select: { id: true, name: true } },
+        event: { select: { id: true, name: true, organiserId: true, coordinatorId: true } },
       },
     });
     if (!request) return err(NOT_FOUND);
+    // SCRUM-121 AC5: nobody reviews equipment for an event they organise or
+    // coordinate, whatever roles they hold.
+    requirePermission(user, "equipment-request:review", { kind: "arrangement", ...request.event });
 
     const from = request.status;
     if (!canMoveRequest(from, toStatus)) {
@@ -332,7 +335,9 @@ export async function suggestAlternativeEquipment(
         id: true,
         status: true,
         requestedById: true,
-        event: { select: { id: true, name: true, startAt: true, endAt: true } },
+        event: {
+          select: { id: true, name: true, startAt: true, endAt: true, organiserId: true, coordinatorId: true },
+        },
         lines: {
           where: { id: lineId, ...LIVE_LINE },
           select: {
@@ -345,6 +350,9 @@ export async function suggestAlternativeEquipment(
     });
     const line = request?.lines[0];
     if (!request || !line) return err(NOT_FOUND);
+    // SCRUM-121 AC5: nobody reviews equipment for an event they organise or
+    // coordinate, whatever roles they hold.
+    requirePermission(user, "equipment-request:review", { kind: "arrangement", ...request.event });
     if (request.status !== "IN_REVIEW") {
       return err("Start the review before suggesting alternatives.");
     }

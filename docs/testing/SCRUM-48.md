@@ -20,7 +20,7 @@ AC8 cases write those rows directly. Times are UTC.
 | [TC-48-07](#tc-48-07) | Positive | AC 5 | e2e |
 | [TC-48-08](#tc-48-08) | Positive | AC 5 (Safety Officer) | Blocked by SCRUM-166 |
 | [TC-48-09](#tc-48-09) | Negative | AC 5, AC 6 | Unit, integration, e2e |
-| [TC-48-10](#tc-48-10) | Positive | AC 6 (several roles) | Blocked by SCRUM-121 |
+| [TC-48-10](#tc-48-10) | Positive | AC 6 (several roles) | Integration |
 | [TC-48-11](#tc-48-11) | Positive | AC 7 | Integration |
 | [TC-48-12](#tc-48-12) | Boundary | AC 8 | Unit, integration |
 | [TC-48-13](#tc-48-13) | Positive, Negative | AC 8 | Integration, e2e |
@@ -152,12 +152,12 @@ AC8 cases write those rows directly. Times are UTC.
 |---|---|
 | Test Case ID | TC-48-10 |
 | Test Scenario | [Positive] AC 6: a user with several roles sees the notifications for all of them in one list |
-| Pre-conditions | SCRUM-121 lets an account hold several roles. |
-| Test Steps | 1. Sign in as an account that is both Venue Staff and Technical Support, with one notification from each role's work. <br> 2. Open Notifications. |
-| Test Data | — |
+| Pre-conditions | The seeded `multirole@test.local` is Venue Staff, with Technical Support and Coordinator as additional roles (SCRUM-121). |
+| Test Steps | 1. A notice goes to every member of Venue Staff, and another to every member of Technical Support. <br> 2. Sign in as `multirole@test.local` and open Notifications. |
+| Test Data | `multirole@test.local` / `Password123!` |
 | Expected Result | Both are listed. |
 
-**Automated by:** none yet. **Blocked by SCRUM-121.** The list is already filtered by the account, not the role, so it needs no change then; the case checks that.
+**Automated by:** `tests/integration/multiple-roles.test.ts` › "SCRUM-48 [AC6] TC-48-10, SCRUM-121 [AC2] TC-121-02: an account that is Venue Staff and Technical Support sees the notices of both in one list". The list is filtered by the account, not the role, so it needed no change; the role-wide notices (SCRUM-124) reach a role held as an additional one.
 
 ### TC-48-11
 

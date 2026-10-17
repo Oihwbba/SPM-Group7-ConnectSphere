@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
 
 import { auth } from "@/auth";
-import { ROLE_LABEL } from "@/lib/nav";
+import { primaryRoleLabel, rolesLabel } from "@/lib/nav";
+import { rolesOf } from "@/lib/auth/can";
 import { Sidebar } from "@/components/app/sidebar";
 import { SphereLogo } from "@/components/app/sphere-logo";
 import { UserMenu } from "@/components/app/user-menu";
@@ -28,7 +29,9 @@ export default async function AppLayout({
     redirect("/login");
   }
 
-  const { role, name, email } = session.user;
+  const { name, email } = session.user;
+  // SCRUM-121: every role the user holds, the primary one first.
+  const roles = rolesOf(session.user);
   const unread = await getMyUnreadCount();
 
   return (
@@ -48,14 +51,15 @@ export default async function AppLayout({
           <UserMenu
             name={name ?? "User"}
             email={email ?? ""}
-            roleLabel={ROLE_LABEL[role]}
+            roleLabel={primaryRoleLabel(roles)}
+            allRolesLabel={rolesLabel(roles)}
           />
         </div>
       </header>
 
       {/* Below the top bar: nav rail + page content. */}
       <div className="flex flex-1">
-        <Sidebar role={role} />
+        <Sidebar roles={roles} />
         {/* Extra bottom padding on mobile so content clears the fixed bottom
             nav bar; the desktop rail is in-flow so needs none. */}
         <main className="min-w-0 flex-1 px-4 pb-24 pt-4 sm:px-6 md:pb-10 md:pt-6">

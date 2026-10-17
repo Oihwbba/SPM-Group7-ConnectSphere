@@ -14,12 +14,15 @@ declare module "next-auth" {
     user: {
       id: string;
       role: Role;
+      /** SCRUM-121: roles held besides `role`. */
+      additionalRoles?: Role[];
     } & DefaultSession["user"];
   }
 
   // The object returned by the Credentials `authorize` callback.
   interface User {
     role: Role;
+    additionalRoles?: Role[];
   }
 }
 
@@ -31,6 +34,7 @@ declare module "@auth/core/jwt" {
   interface JWT {
     id: string;
     role: Role;
+    additionalRoles?: Role[];
   }
 }
 
@@ -39,5 +43,6 @@ declare module "@auth/core/jwt" {
 declare module "@auth/core/adapters" {
   interface AdapterUser {
     role: Role;
+    additionalRoles?: Role[];
   }
 }
