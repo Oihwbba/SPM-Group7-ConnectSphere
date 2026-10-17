@@ -6,10 +6,9 @@ Test cases for [docs/backlog/SCRUM-40.md](../backlog/SCRUM-40.md). Format:
 The automatic result compares a venue with what the booking request asks
 for: its attendance, facilities, accessibility features and layout, as the
 Coordinator enters them on the request form. Search (SCRUM-38) compares it
-with what is entered in the search before a request exists. Venue search
-isn't built yet, so those cases (AC1–AC4 and AC7 in search results) are
-written with SCRUM-38; `assessSuitability` in `lib/venue-suitability.ts`
-takes the search's values the same way.
+with what is entered in the search before a request exists, through the same
+`assessSuitability` in `lib/venue-suitability.ts`. Those cases (AC1–AC4 and
+AC7 in search results) are SCRUM-38's TC-38-09 and TC-38-12, cited below.
 
 ### TC-40-01
 
@@ -63,11 +62,12 @@ takes the search's values the same way.
 
 **Automated by:** `tests/unit/venue-suitability.test.ts` › "SCRUM-40 [AC4] TC-40-04: …"
 
-Not reachable in the browser yet. The request form asks for the layout first
-and then offers only venues that support it (SCRUM-50), so a request can't
-pair a venue with a layout it doesn't support. The browser case comes with
-venue search (SCRUM-38), where the layout entered in the search is compared
-with every venue.
+The request form asks for the layout first and then offers only venues that
+support it (SCRUM-50), so a request can't pair a venue with a layout it
+doesn't support. In search, with **Only show venues that fit** unticked, the
+layout entered is compared with every venue: `tests/unit/venue-search.test.ts`
+› "SCRUM-38 [AC8] TC-38-09: with the filters off, a venue that doesn't fit is
+listed as Not suitable with every reason" covers AC1–AC4 there.
 
 ### TC-40-05
 
@@ -104,7 +104,7 @@ with every venue.
 | Pre-conditions | Signed in as Coordinator. |
 | Test Steps | 1. Open the Executive Boardroom's page in the catalogue. |
 | Test Data | — |
-| Expected Result | No Suitable or Not suitable indicator, because there is no event to compare against. The indicator in search results is TC-38's. |
+| Expected Result | No Suitable or Not suitable indicator, because there is no event to compare against. The indicator in search results is TC-38-09's. |
 
 **Automated by:** `e2e/venue-suitability.spec.ts` › "SCRUM-40 [AC7] TC-40-07: …"
 
