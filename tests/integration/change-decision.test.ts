@@ -112,7 +112,7 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-128 — deciding a change request", (
         eventId,
         status: "APPROVED",
         requestedById: "usr_coordinator",
-        decidedById: "usr_safety",
+        decidedById: "usr_safetyofficer",
         decidedAt: new Date(),
       },
       select: { id: true },
