@@ -55,6 +55,7 @@ export type Action =
   | "unavailability:record" // SCRUM-37: record maintenance, closure, etc.
   | "equipment:read"
   | "equipment:reserve"
+  | "reservation:report" // SCRUM-32: Technical Support report reserved equipment that can no longer be provided
   | "equipment-request:list" // SCRUM-27: see the equipment requests scoped to me
   | "equipment-request:create" // SCRUM-27: coordinator raises one for their event
   | "equipment-request:change" // SCRUM-142: the assigned coordinator changes or withdraws it
@@ -152,6 +153,7 @@ const ROLE_ACTIONS: Record<Role, Action[]> = {
     "equipment:read",
     "venue:read",
     "equipment:reserve",
+    "reservation:report",
     "equipment-request:list",
     "equipment-request:review",
     "event-note:add",
