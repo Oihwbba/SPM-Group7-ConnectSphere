@@ -11,7 +11,8 @@ import { RESERVABLE_EVENT_STATUSES } from "@/lib/schemas/reservation";
 // Database mocked; the simultaneous cases run against real Postgres in
 // tests/integration/request-reservation.test.ts.
 const tx = vi.hoisted(() => ({
-  equipmentRequest: { findFirst: vi.fn() },
+  // SCRUM-134 AC5: the open requests a reservation competes with.
+  equipmentRequest: { findFirst: vi.fn(), findMany: vi.fn() },
   reservation: { findMany: vi.fn(), createMany: vi.fn() },
   equipmentUnavailability: { findMany: vi.fn() },
   safetyCheck: { updateMany: vi.fn() },
@@ -73,6 +74,7 @@ function approvedRequestWithStock({
   },
   reservations = [] as Held[],
 } = {}) {
+  tx.equipmentRequest.findMany.mockResolvedValue([]);
   tx.$queryRaw
     .mockResolvedValueOnce([{ id: "evt_1" }])
     .mockResolvedValueOnce([{ id: "eqr_1" }])
@@ -273,6 +275,7 @@ describe("reserveEquipmentRequest — SCRUM-155", () => {
       select: {
         eventId: true,
         updatedAt: true,
+        createdAt: true,
         event: {
           select: {
             startAt: true,

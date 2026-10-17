@@ -323,11 +323,13 @@ describe.skipIf(!usesLocalDatabase)(
         decideBookingRequest({ bookingId: second, decision: "APPROVED" }),
       ]);
 
-      expect(results.filter((r) => r.ok)).toHaveLength(1);
-      const refused = results.filter((r) => !r.ok);
-      expect(refused).toHaveLength(1);
-      expect(refused[0]).toMatchObject({
-        error: expect.stringMatching(/^Conflicting:/),
+      // SCRUM-134 AC2: the earlier request wins. The later is refused either
+      // as conflicting, or, if it looks before the earlier commits, because an
+      // earlier overlapping request is still pending.
+      expect(results[0].ok).toBe(true);
+      expect(results[1]).toMatchObject({
+        ok: false,
+        error: expect.stringMatching(/^(Conflicting:|An earlier request for )/),
       });
 
       // Never double-booked, and the loser is still pending for staff to reject.
@@ -447,9 +449,11 @@ describe.skipIf(!usesLocalDatabase)(
           decideBookingRequest({ bookingId: afternoon, decision: "APPROVED" }),
         ]);
 
-        expect(results.filter((r) => r.ok)).toHaveLength(1);
-        expect(results.find((r) => !r.ok)).toMatchObject({
-          error: expect.stringMatching(/^Conflicting:/),
+        // SCRUM-134 AC2: the earlier request (the morning's) wins.
+        expect(results[0].ok).toBe(true);
+        expect(results[1]).toMatchObject({
+          ok: false,
+          error: expect.stringMatching(/^(Conflicting:|An earlier request for )/),
         });
         expect(await approvedCount()).toBe(1);
       } finally {

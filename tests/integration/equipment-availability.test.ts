@@ -142,6 +142,12 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-29 — equipment availability against
   beforeEach(async () => {
     await prisma.reservation.deleteMany({ where: { equipmentId } });
     await prisma.equipmentUnavailability.deleteMany({ where: { equipmentId } });
+    // An earlier test's approved request would still be waiting for this
+    // pool, and reserving is first come, first served (SCRUM-134 AC5).
+    await prisma.equipmentRequest.updateMany({
+      where: { eventId: { in: eventIds } },
+      data: { status: "CANCELLED" },
+    });
   });
 
   afterAll(async () => {
