@@ -75,5 +75,6 @@ and the table, not by writing a new conditional in a feature.
 - A new resource kind, `arrangement`, is a venue booking's, equipment
   request's or reservation's event: no one who organises or coordinates it
   may decide it. The table is unchanged; the rule is one more relationship.
-- Pages that switch on the role (ADR 0001's addendum) choose among the roles
-  held: the events page offers a view per role that has one.
+- A page with a view per role offers each one the user holds: the events
+  page a view per role that has one (ADR 0001's addendum), and Equipment
+  Requests the review queue and your own requests when your roles do both.

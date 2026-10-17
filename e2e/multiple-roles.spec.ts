@@ -121,6 +121,25 @@ test.describe("SCRUM-121 — accounts with several roles", () => {
     await expect(page.getByText(coordinated.name)).toBeVisible();
   });
 
+  test("SCRUM-121 [AC2] TC-121-02: equipment requests switch between Technical Support's review queue and the Coordinator's own requests", async ({
+    browser,
+  }) => {
+    const page = await signedIn(browser, "multirole@test.local");
+    await page.goto("/equipment-requests");
+    const views = page.getByRole("navigation", { name: "Equipment requests view" });
+    const queue = views.getByRole("link", { name: "Review queue" });
+    const mine = views.getByRole("link", { name: "My requests" });
+
+    await expect(queue).toHaveAttribute("aria-current", "page");
+    await expect(page.getByText("Review what coordinators need")).toBeVisible();
+
+    await mine.click();
+    await page.waitForURL(/\/equipment-requests\?view=mine$/);
+    await expect(mine).toHaveAttribute("aria-current", "page");
+    await expect(page.getByText("Tell Technical Support what your events need")).toBeVisible();
+    await expect(page.getByText("Review what coordinators need")).toHaveCount(0);
+  });
+
   test("SCRUM-121 [AC5] TC-121-05: approving the venue booking of an event it coordinates is refused, and the request stays pending", async ({
     browser,
   }, testInfo) => {
