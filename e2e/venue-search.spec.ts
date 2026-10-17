@@ -152,7 +152,7 @@ test.describe("SCRUM-38 — Search and filter venues", () => {
     const seminar = page.locator('[data-venue="ven_seminar"]');
     await expect(seminar.getByTestId("already-requested")).toBeVisible();
     await expect(
-      seminar.getByRole("link", { name: "Request this venue" }),
+      seminar.getByRole("button", { name: "Request this venue" }),
     ).toHaveCount(0);
 
     // AC1: a changed attendance stays changed. AC11: a facility filter.
@@ -176,12 +176,14 @@ test.describe("SCRUM-38 — Search and filter venues", () => {
     ).toBeChecked();
 
     // AC9: Request this venue opens the form with the event and venue chosen,
-    // and the facility ticked in the search.
+    // and what is on screen in the search: the facility searched, and a
+    // layout picked without searching again.
+    await page.getByLabel("Room layout").selectOption("theatre");
     await page
       .locator('[data-venue="ven_auditorium"]')
-      .getByRole("link", { name: "Request this venue" })
+      .getByRole("button", { name: "Request this venue" })
       .click();
-    await page.waitForURL(/\/bookings\/new\?event=.*&venue=ven_auditorium/);
+    await page.waitForURL(/\/bookings\/new\?.*venue=ven_auditorium/);
     await expect(
       page.getByRole("combobox", { name: "Event", exact: true }),
     ).toContainText(name);
@@ -192,6 +194,9 @@ test.describe("SCRUM-38 — Search and filter venues", () => {
     await expect(
       page.getByRole("button", { name: "projector", exact: true }),
     ).toHaveAttribute("aria-pressed", "true");
+    await expect(
+      page.getByRole("combobox", { name: "Room layout" }),
+    ).toContainText("theatre");
     // The attendance is the event's 40, not the 20 searched (SCRUM-50 AC1).
     await expect(page.getByLabel("Expected attendance")).toHaveValue("40");
   });
@@ -269,7 +274,7 @@ test.describe("SCRUM-38 — Search and filter venues", () => {
     await expect(
       page
         .locator('[data-venue="ven_auditorium"]')
-        .getByRole("link", { name: "Request this venue" }),
+        .getByRole("button", { name: "Request this venue" }),
     ).toBeVisible();
 
     await page.getByLabel("For event").selectOption("");

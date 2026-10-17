@@ -47,6 +47,9 @@ import {
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
+/** Request this venue (AC9) submits this form to the request form. */
+const SEARCH_FORM_ID = "venue-search-form";
+
 /** A native select, so its value is sent with the GET form like the inputs. */
 const SELECT_CLASS =
   "flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring";
@@ -157,7 +160,6 @@ export default async function VenueSearchPage({
           results={results}
           event={event}
           period={searched?.period ?? null}
-          filters={filters}
           judgements={judgements}
           showAvailability={can(session.user, "venue:availability")}
         />
@@ -255,7 +257,12 @@ function SearchForm({
   return (
     <Card>
       <CardContent className="pt-6">
-        <Form action="/venues/search" className="space-y-5" noValidate>
+        <Form
+          id={SEARCH_FORM_ID}
+          action="/venues/search"
+          className="space-y-5"
+          noValidate
+        >
           <input type="hidden" name="searched" value="1" />
           <input type="hidden" name="searchedFor" value={event?.id ?? ""} />
           {event?.replacing && (
@@ -556,15 +563,12 @@ function Results({
   results,
   event,
   period,
-  filters,
   judgements,
   showAvailability,
 }: {
   results: Result[];
   event: SearchEvent | null;
   period: Period | null;
-  /** AC9: carried to the request form with the event and venue. */
-  filters: VenueFilters;
   judgements: JudgementRow[];
   /** Whether this user may open the availability calendar (SCRUM-36). */
   showAvailability: boolean;
@@ -647,21 +651,17 @@ function Results({
                         Already requested for this event
                       </span>
                     ) : (
-                      <Button asChild size="sm">
-                        <Link
-                          href={{
-                            pathname: "/bookings/new",
-                            query: {
-                              event: event.id,
-                              venue: venue.id,
-                              facility: filters.facilities,
-                              access: filters.accessibilityFeatures,
-                              ...(filters.layout && { layout: filters.layout }),
-                            },
-                          }}
-                        >
-                          Request this venue
-                        </Link>
+                      // AC9: sends the search form to the request form, so
+                      // what is on screen comes across, searched or not.
+                      <Button
+                        type="submit"
+                        size="sm"
+                        form={SEARCH_FORM_ID}
+                        formAction="/bookings/new"
+                        name="venue"
+                        value={venue.id}
+                      >
+                        Request this venue
                       </Button>
                     ))}
                 </div>

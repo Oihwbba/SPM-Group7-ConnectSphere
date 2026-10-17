@@ -18,9 +18,10 @@ const many = (value: string | string[] | undefined) =>
 // decided by lib/auth/can.ts, not a role list here. SCRUM-38 AC9: venue
 // search opens it with the event and venue chosen (`?event=&venue=`); an id
 // this Coordinator can't request for is ignored, as if it weren't given.
-// The facilities, accessibility features and layout entered in the search
-// come too (`&facility=&access=&layout=`); ones the form doesn't offer are
-// dropped (neededInSearch).
+// Request this venue sends the whole search form, so the facilities,
+// accessibility features and layout on screen come too
+// (`&facility=&access=&layout=`), searched or not; ones the form doesn't
+// offer are dropped (neededInSearch), and the search's other fields ignored.
 export default async function RequestVenuePage({
   searchParams,
 }: {
