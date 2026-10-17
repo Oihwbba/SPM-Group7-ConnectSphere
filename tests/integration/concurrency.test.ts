@@ -249,14 +249,17 @@ describe.skipIf(!usesLocalDatabase)(
       prisma.booking.count({ where: { venueId, status: "APPROVED" } });
 
     beforeAll(async () => {
-      // Two different members of Venue Staff, as the criterion describes.
+      // Two different members of Venue Staff, as the criterion describes. The
+      // session says Venue Staff; the row doesn't, because other test files
+      // notify every Venue Staff member (SCRUM-161 AC4, SCRUM-142) and would
+      // race this user's delete. Nothing here reads the row's role.
       await prisma.user.create({
         data: {
           id: SECOND_STAFF_ID,
           email: `${SECOND_STAFF_ID}@test.local`,
           name: "Second Venue Staff",
           passwordHash: "not-a-real-hash-test-user-cannot-sign-in",
-          role: "VENUE_STAFF",
+          role: "ORGANISER",
         },
       });
       const period = {
@@ -583,7 +586,9 @@ describe.skipIf(!usesLocalDatabase)(
         expect(booking.needsReconsideration).toBe(true);
         expect(booking.status).toBe(approval.ok ? "APPROVED" : "PENDING");
       }
-    });
+      // Five real races take about 5 s alone, Vitest's default limit, and
+      // longer while the other test files run beside this one.
+    }, 30_000);
   },
 );
 

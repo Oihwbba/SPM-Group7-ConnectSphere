@@ -237,7 +237,10 @@ describe.skipIf(!usesLocalDatabase)(
           email: `w9-approver-${stamp}@test.local`,
           name: "Week 9 approver",
           passwordHash: "x",
-          role: "VENUE_STAFF",
+          // Not VENUE_STAFF: other test files notify every Venue Staff member
+          // (SCRUM-161 AC4, SCRUM-142), and a notification would block the
+          // delete below for the wrong reason. The foreign key ignores role.
+          role: "ORGANISER",
         },
       });
       const row = await hold(6, 16);
