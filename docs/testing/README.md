@@ -140,7 +140,7 @@ the open pull requests that change the same test files have merged.
 | [SCRUM-81](SCRUM-81.md) | Jun Bin | 13 | Every case automated (unit, integration for the simultaneous confirm, e2e for the journey) |
 | [SCRUM-110](SCRUM-110.md) | Jun Bin | 15 | Every case automated (unit, and e2e for the page); AC 3 is superseded by SCRUM-170 AC 4 (TC-110-01 and TC-110-09 note it) |
 | [SCRUM-108](SCRUM-108.md) | Jun Bin | 14 | Every case automated (unit, e2e for both journeys); AC 6, 8 and 10 point to existing tests |
-| [SCRUM-124](SCRUM-124.md) | Jin Hong | 11 | AC 1 to AC 9 automated; TC-124-10 and TC-124-11 wait for SCRUM-165 and SCRUM-166, and TC-124-08's unavailability wording for SCRUM-161 |
+| [SCRUM-124](SCRUM-124.md) | Jin Hong | 11 | AC 1 to AC 9 automated, with SCRUM-161's tests for the unavailability notices; TC-124-10 and TC-124-11 wait for SCRUM-165 and SCRUM-166 |
 | [SCRUM-126](SCRUM-126.md) | Jun Bin | 10 | Every case automated (unit, integration for the constraint, migration and simultaneous clicks, e2e for the journey) |
 | [SCRUM-130](SCRUM-130.md) | Felicia Or | 12 | Every case automated (unit, integration, e2e) |
 | [SCRUM-117](SCRUM-117.md) | Jun Bin | 10 | Every case automated (unit, integration for releasing arrangements in one transaction, e2e for both journeys) |
