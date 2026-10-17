@@ -7,7 +7,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { can, requirePermission, PermissionError } from "@/lib/auth/can";
 import { ok, err, type ActionResult } from "@/lib/action-result";
-import { CANCELLABLE } from "@/lib/event-closing";
+import { CANCELLABLE, cancelInTransaction } from "@/lib/event-closing";
 
 const REASON_REQUIRED = "A cancellation reason is required.";
 
@@ -65,107 +65,13 @@ export async function cancelEvent(
       if (!CANCELLABLE.includes(current.status)) return "not-cancellable" as const;
       if (current.coordinatorId !== user!.id) return "reassigned" as const;
 
-      const now = new Date();
-      await tx.event.update({
-        where: { id: eventId },
-        data: {
-          status: "CANCELLED",
-          cancelledAt: now,
-          cancelledById: user!.id,
-          cancellationReason: reason,
-        },
-      });
-
-      // AC3: release everything held for the event.
-      const bookings = await tx.booking.updateMany({
-        where: { eventId, status: { in: ["PENDING", "HELD", "APPROVED"] } },
-        data: { status: "CANCELLED" },
-      });
-      const reservations = await tx.reservation.updateMany({
-        where: { eventId, status: "CONFIRMED" },
-        data: { status: "CANCELLED", cancelledAt: now },
-      });
-      const openRequests = await tx.equipmentRequest.findMany({
-        where: { eventId, status: { in: ["PENDING_REVIEW", "IN_REVIEW", "APPROVED"] } },
-        select: { id: true, status: true },
-      });
-      await tx.equipmentRequest.updateMany({
-        where: { id: { in: openRequests.map((r) => r.id) } },
-        data: { status: "CANCELLED" },
-      });
-      await tx.equipmentRequestUpdate.createMany({
-        data: openRequests.map((r) => ({
-          requestId: r.id,
-          actorId: user!.id,
-          fromStatus: r.status,
-          toStatus: "CANCELLED" as const,
-          note: `Cancelled because the event was cancelled: ${reason}`,
-        })),
-      });
-      const checks = await tx.safetyCheck.updateMany({
-        where: { eventId, status: "AWAITING_REVIEW" },
-        data: { status: "OUTDATED", outdatedAt: now },
-      });
-      const registered = await tx.registration.findMany({
-        where: { eventId, status: "REGISTERED" },
-        select: { userId: true },
-      });
-      await tx.registration.updateMany({
-        where: { eventId, status: "REGISTERED" },
-        data: { status: "CANCELLED" },
-      });
-      const changes = await tx.eventChangeRequest.updateMany({
-        where: { eventId, status: "PENDING_REVIEW" },
-        data: {
-          status: "REJECTED",
-          decidedById: user!.id,
-          decidedAt: now,
-          decisionReason: reason,
-        },
-      });
-
-      // AC1: who cancelled it and when (the entries' createdAt).
-      await tx.auditLog.createMany({
-        data: [
-          {
-            entityType: "Event",
-            entityId: eventId,
-            action: "STATUS_CHANGED",
-            actorId: user!.id,
-            fieldName: "status",
-            oldValue: current.status,
-            newValue: "CANCELLED",
-            summary: reason,
-          },
-          {
-            entityType: "Event",
-            entityId: eventId,
-            action: "ARRANGEMENTS_RELEASED",
-            actorId: user!.id,
-            summary: `Cancelled (SCRUM-82): ${bookings.count} venue booking(s), ${reservations.count} equipment reservation(s), ${openRequests.length} equipment request(s) and ${registered.length} registration(s) cancelled; ${checks.count} safety check(s) outdated; ${changes.count} change request(s) rejected.`,
-          },
-        ],
-      });
-
-      // AC6: the Organiser and Coordinator, and each Attendee who was registered.
-      const message = `"${event.name}" was cancelled: ${reason}`;
-      await tx.notification.createMany({
-        data: [
-          ...[event.organiserId, user!.id].map((userId) => ({
-            userId,
-            type: "EVENT_STATUS_CHANGED" as const,
-            title: "Event cancelled",
-            message,
-            eventId,
-          })),
-          ...registered.map(({ userId }) => ({
-            userId,
-            type: "REGISTERED_EVENT_CANCELLED" as const,
-            title: "An event you registered for was cancelled",
-            message,
-            eventId,
-          })),
-        ],
+      await cancelInTransaction(tx, {
+        eventId,
+        name: event.name,
+        organiserId: event.organiserId,
+        fromStatus: current.status,
+        actorId: user!.id,
+        reason,
       });
       return "cancelled" as const;
     });

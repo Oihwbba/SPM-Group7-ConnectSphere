@@ -12,8 +12,9 @@ organised by `organiser@test.local`. Every account's password is
 **What this story doesn't cover yet:**
 
 - **AC2:** the Organiser asks for cancellation through a change request
-  (SCRUM-41), and approving it applies this story (SCRUM-128). Neither is
-  built; SCRUM-128 will call the same cancellation.
+  (SCRUM-41), and approving it applies this story through the same
+  cancellation (`cancelInTransaction`). That is proven by SCRUM-128's
+  TC-128-07.
 - **AC6:** notification rows are written for the Organiser, the Coordinator
   and each Attendee whose registration was cancelled. Listing them is
   SCRUM-48; SCRUM-45 and SCRUM-85 own how they behave.

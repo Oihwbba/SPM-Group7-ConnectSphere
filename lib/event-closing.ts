@@ -19,6 +19,133 @@ export const CANCELLABLE: EventStatus[] = ["UNDER_REVIEW", "PLANNING", "CONFIRME
 const UNDECIDED: EventStatus[] = ["SUBMITTED", "UNDER_REVIEW", "PLANNING"];
 
 /**
+ * AC1, AC3, AC6 — cancel an event inside the caller's transaction, which has
+ * already locked the event row and checked the event may be cancelled. Used
+ * by the Coordinator's Cancel (SCRUM-82) and by approving an Organiser's
+ * cancellation request (SCRUM-128 AC8), so both release the same things.
+ *
+ * Everything held for the event is released: venue bookings, holds and
+ * pending requests; equipment reservations, whose stock returns to the pool;
+ * open equipment requests; a safety check awaiting review becomes Outdated;
+ * registrations are cancelled; submitted change requests are rejected with the
+ * reason. The Organiser, the Coordinator and each Attendee whose registration
+ * was cancelled are notified.
+ */
+export async function cancelInTransaction(
+  tx: Prisma.TransactionClient,
+  cancel: {
+    eventId: string;
+    name: string;
+    organiserId: string;
+    fromStatus: EventStatus;
+    actorId: string;
+    reason: string;
+  },
+): Promise<void> {
+  const { eventId, actorId, reason } = cancel;
+  const now = new Date();
+  await tx.event.update({
+    where: { id: eventId },
+    data: {
+      status: "CANCELLED",
+      cancelledAt: now,
+      cancelledById: actorId,
+      cancellationReason: reason,
+    },
+  });
+
+  const bookings = await tx.booking.updateMany({
+    where: { eventId, status: { in: ["PENDING", "HELD", "APPROVED"] } },
+    data: { status: "CANCELLED" },
+  });
+  const reservations = await tx.reservation.updateMany({
+    where: { eventId, status: "CONFIRMED" },
+    data: { status: "CANCELLED", cancelledAt: now },
+  });
+  const openRequests = await tx.equipmentRequest.findMany({
+    where: { eventId, status: { in: ["PENDING_REVIEW", "IN_REVIEW", "APPROVED"] } },
+    select: { id: true, status: true },
+  });
+  await tx.equipmentRequest.updateMany({
+    where: { id: { in: openRequests.map((r) => r.id) } },
+    data: { status: "CANCELLED" },
+  });
+  await tx.equipmentRequestUpdate.createMany({
+    data: openRequests.map((r) => ({
+      requestId: r.id,
+      actorId,
+      fromStatus: r.status,
+      toStatus: "CANCELLED" as const,
+      note: `Cancelled because the event was cancelled: ${reason}`,
+    })),
+  });
+  const checks = await tx.safetyCheck.updateMany({
+    where: { eventId, status: "AWAITING_REVIEW" },
+    data: { status: "OUTDATED", outdatedAt: now },
+  });
+  const registered = await tx.registration.findMany({
+    where: { eventId, status: "REGISTERED" },
+    select: { userId: true },
+  });
+  await tx.registration.updateMany({
+    where: { eventId, status: "REGISTERED" },
+    data: { status: "CANCELLED" },
+  });
+  const changes = await tx.eventChangeRequest.updateMany({
+    where: { eventId, status: "PENDING_REVIEW" },
+    data: {
+      status: "REJECTED",
+      decidedById: actorId,
+      decidedAt: now,
+      decisionReason: reason,
+    },
+  });
+
+  // Who cancelled it and when (the entries' createdAt).
+  await tx.auditLog.createMany({
+    data: [
+      {
+        entityType: "Event",
+        entityId: eventId,
+        action: "STATUS_CHANGED",
+        actorId,
+        fieldName: "status",
+        oldValue: cancel.fromStatus,
+        newValue: "CANCELLED",
+        summary: reason,
+      },
+      {
+        entityType: "Event",
+        entityId: eventId,
+        action: "ARRANGEMENTS_RELEASED",
+        actorId,
+        summary: `Cancelled (SCRUM-82): ${bookings.count} venue booking(s), ${reservations.count} equipment reservation(s), ${openRequests.length} equipment request(s) and ${registered.length} registration(s) cancelled; ${checks.count} safety check(s) outdated; ${changes.count} change request(s) rejected.`,
+      },
+    ],
+  });
+
+  const message = `"${cancel.name}" was cancelled: ${reason}`;
+  await tx.notification.createMany({
+    data: [
+      ...[cancel.organiserId, actorId].map((userId) => ({
+        userId,
+        type: "EVENT_STATUS_CHANGED" as const,
+        title: "Event cancelled",
+        message,
+        eventId,
+      })),
+      ...registered.map(({ userId }) => ({
+        userId,
+        type: "REGISTERED_EVENT_CANCELLED" as const,
+        title: "An event you registered for was cancelled",
+        message,
+        eventId,
+      })),
+    ],
+  });
+}
+
+/**
  * AC10 — an event whose start has passed while it was still Submitted, Under
  * Review or Planning. It is never completed automatically; the Coordinator
  * cancels or rejects it.

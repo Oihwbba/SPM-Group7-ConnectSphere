@@ -44,6 +44,7 @@ export type Action =
   | "clarification:request" // SCRUM-18: coordinator asks the organiser a question
   | "clarification:respond" // SCRUM-18: organiser answers an open question
   | "change-request:raise" // SCRUM-41: the organiser, or the assigned coordinator on their behalf
+  | "change-request:decide" // SCRUM-128: the assigned coordinator approves or rejects a change request
   | "venue:read" // SCRUM-34 AC2: any internal user views the venue catalogue and a venue's details
   | "venue:manage" // SCRUM-34 AC3, AC6, AC8, AC9: Venue Staff add, edit and retire venues
   | "venue:availability" // SCRUM-36: view a venue's availability calendar
@@ -129,6 +130,7 @@ const ROLE_ACTIONS: Record<Role, Action[]> = {
     "safety-check:request",
     "clarification:request",
     "change-request:raise",
+    "change-request:decide",
     "registration:control",
     "venue:read",
     "equipment-request:list",
@@ -199,11 +201,11 @@ function hasRelationship(
         // reject it from Planning (SCRUM-117 AC 5), cancel it (SCRUM-82 AC1),
         // confirm or release its venue holds (SCRUM-163 AC3), change or
         // withdraw its requests (SCRUM-142 AC7), raise a change request on the
-        // organiser's behalf (SCRUM-41 AC10), record No equipment needed
-        // (SCRUM-170 AC4), edit its details (SCRUM-25 AC1, AC7), resolve a flag
-        // on its arrangements (SCRUM-26 AC7), request its safety check
-        // (SCRUM-166 AC1), close or reopen its registration (SCRUM-75 AC6) or
-        // see its registrations (SCRUM-70 AC1).
+        // organiser's behalf (SCRUM-41 AC10) or decide one (SCRUM-128 AC9),
+        // record No equipment needed (SCRUM-170 AC4), edit its details
+        // (SCRUM-25 AC1, AC7), resolve a flag on its arrangements (SCRUM-26
+        // AC7), request its safety check (SCRUM-166 AC1), close or reopen its
+        // registration (SCRUM-75 AC6) or see its registrations (SCRUM-70 AC1).
         return (
           action !== "event:confirm" &&
           action !== "event:reject" &&
@@ -218,6 +220,7 @@ function hasRelationship(
           action !== "registration:list" &&
           action !== "registration:control" &&
           action !== "safety-check:request" &&
+          action !== "change-request:decide" &&
           resource.coordinatorId === null &&
           resource.status !== "DRAFT"
         );
