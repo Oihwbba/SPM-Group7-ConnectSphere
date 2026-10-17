@@ -69,9 +69,9 @@ describe.skipIf(!usesLocalDatabase)("several roles on one account — real datab
     const bookingIds = (
       await prisma.booking.findMany({ where: { venueId }, select: { id: true } })
     ).map((b) => b.id);
-    await prisma.notification.deleteMany({
-      where: { OR: [{ eventId: { in: eventIds } }, { userId: BOTH_ID }] },
-    });
+    // Only notices about its own events: the account is Venue Staff, so other
+    // suites' notices reach it while they run, and they count them.
+    await prisma.notification.deleteMany({ where: { eventId: { in: eventIds } } });
     await prisma.auditLog.deleteMany({ where: { entityId: { in: bookingIds } } });
     await prisma.booking.deleteMany({ where: { venueId } });
   }
