@@ -18,17 +18,21 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { formatDate, formatDateTime } from "@/lib/datetime";
 import {
+  changeEquipmentRequestSchema,
   createEquipmentRequestSchema,
   equipmentRequestLineSchema,
   fieldErrorsByPath,
 } from "@/lib/schemas/equipment-request";
-import { createEquipmentRequest } from "./actions";
+import { changeEquipmentRequest, createEquipmentRequest } from "./actions";
+import { OrganiserEquipmentAnswer } from "@/components/events/organiser-answers";
 
 export type EventOption = {
   id: string;
   name: string;
   startAt: Date | null;
   endAt: Date | null;
+  /** SCRUM-170 AC3: the Organiser's answer, shown read-only. */
+  equipmentRequirements: string | null;
 };
 export type EquipmentOption = {
   id: string;
@@ -37,7 +41,7 @@ export type EquipmentOption = {
   technicalSpecs: string | null;
 };
 
-type Line = {
+export type Line = {
   equipmentId: string;
   quantity: number;
   technicalRequirements: string | null;
@@ -66,6 +70,10 @@ function FieldError({ id, messages }: { id: string; messages?: string[] }) {
  * time: each line is checked with the same schema the server uses (AC 3), and
  * a type already on the request is refused with a message instead of a second
  * line (AC 4). The whole request is checked again before it is sent.
+ *
+ * SCRUM-142 AC1 — given `editing`, the same form changes an existing
+ * request's lines instead: it starts with them, and saving sends the request
+ * back to Pending Review. Give it a `key` per request so it starts afresh.
  */
 export function NewRequestDialog({
   open,
@@ -73,16 +81,18 @@ export function NewRequestDialog({
   events,
   equipment,
   onDone,
+  editing,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   events: EventOption[];
   equipment: EquipmentOption[];
   onDone: (requestId: string) => void;
+  editing?: { requestId: string; eventName: string; lines: Line[] };
 }) {
   const [eventId, setEventId] = useState("");
   const [notes, setNotes] = useState("");
-  const [lines, setLines] = useState<Line[]>([]);
+  const [lines, setLines] = useState<Line[]>(editing?.lines ?? []);
   const [draft, setDraft] = useState(EMPTY_DRAFT);
   const [draftErrors, setDraftErrors] = useState<Errors>({});
   const [errors, setErrors] = useState<Errors>({});
@@ -96,7 +106,7 @@ export function NewRequestDialog({
   const reset = () => {
     setEventId("");
     setNotes("");
-    setLines([]);
+    setLines(editing?.lines ?? []);
     setDraft(EMPTY_DRAFT);
     setDraftErrors({});
     setErrors({});
@@ -142,6 +152,36 @@ export function NewRequestDialog({
     setErrors({});
   };
 
+  const saveChanges = (requestId: string, toSend: Line[]) => {
+    const payload = { requestId, lines: toSend };
+    const checked = changeEquipmentRequestSchema.safeParse(payload);
+    if (!checked.success) {
+      setErrors(fieldErrorsByPath(checked.error));
+      toast.error("Please fix the highlighted fields.");
+      return;
+    }
+    startTransition(async () => {
+      try {
+        const result = await changeEquipmentRequest(payload);
+        if (!result.ok) {
+          setErrors(result.fieldErrors ?? {});
+          toast.error(result.error);
+          return;
+        }
+        toast.success(
+          result.data.changed
+            ? "Request changed. It's back in Pending Review."
+            : "Nothing changed, so the request is as it was.",
+        );
+        onDone(requestId);
+      } catch {
+        toast.error(
+          "Couldn't save the changes. Check your connection and try again.",
+        );
+      }
+    });
+  };
+
   const submit = () => {
     // Equipment picked but not yet added still counts: nobody expects to lose it.
     let toSend = lines;
@@ -149,6 +189,11 @@ export function NewRequestDialog({
       const added = addDraft();
       if (!added) return;
       toSend = [...lines, added];
+    }
+
+    if (editing) {
+      saveChanges(editing.requestId, toSend);
+      return;
     }
 
     const payload = { eventId, notes, lines: toSend };
@@ -188,14 +233,18 @@ export function NewRequestDialog({
     <Dialog open={open} onOpenChange={changeOpen}>
       <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>New equipment request</DialogTitle>
+          <DialogTitle>
+            {editing ? "Change equipment lines" : "New equipment request"}
+          </DialogTitle>
           <DialogDescription>
-            Technical Support reviews each request and updates its status.
+            {editing
+              ? `For ${editing.eventName}. Saving sends the request back to Pending Review for Technical Support to re-check, and equipment reserved for a changed or removed line is released.`
+              : "Technical Support reviews each request and updates its status."}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6">
-          <div className="space-y-2">
+          <div className={editing ? "hidden" : "space-y-2"}>
             <Label htmlFor="request-event">Event</Label>
             <select
               id="request-event"
@@ -230,6 +279,19 @@ export function NewRequestDialog({
             )}
             <FieldError id="request-event-error" messages={errors.eventId} />
           </div>
+
+          {/* SCRUM-170 AC3: the Organiser's answer, read-only; the equipment
+              lines below are the Coordinator's to enter. */}
+          {selectedEvent && (
+            <div className="space-y-2 rounded-md border bg-muted/30 p-3">
+              <p className="text-xs font-medium">
+                What the Organiser asked for
+              </p>
+              <OrganiserEquipmentAnswer
+                equipmentRequirements={selectedEvent.equipmentRequirements}
+              />
+            </div>
+          )}
 
           <fieldset className="space-y-3 rounded-lg border p-4">
             <legend className="px-1 text-sm font-medium">Equipment</legend>
@@ -379,7 +441,7 @@ export function NewRequestDialog({
             <FieldError id="request-lines-error" messages={errors.lines} />
           </fieldset>
 
-          <div className="space-y-2">
+          <div className={editing ? "hidden" : "space-y-2"}>
             <Label htmlFor="request-notes">
               Notes for Technical Support (optional)
             </Label>
@@ -416,7 +478,11 @@ export function NewRequestDialog({
             className="gap-2"
           >
             {pending && <Loader2 className="h-4 w-4 animate-spin" />}
-            {pending ? "Submitting…" : "Submit request"}
+            {pending
+              ? "Submitting…"
+              : editing
+                ? "Save changes"
+                : "Submit request"}
           </Button>
         </DialogFooter>
       </DialogContent>

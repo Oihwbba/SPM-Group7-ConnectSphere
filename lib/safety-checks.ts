@@ -57,18 +57,18 @@ export function safetyCheckRequestable(checklist: ReadinessChecklist): boolean {
 }
 
 /**
- * AC13 — what a check reviewed has changed, so a check that is Approved or
- * awaiting review becomes Outdated and a new one is needed before the event is
+ * SCRUM-166 AC13, SCRUM-142 AC9 — a safety check that approved the event's
+ * arrangements, or is still reviewing them, is out of date once they change:
+ * it can't be approved, and the event needs a new check before it is
  * confirmed. Called in the same transaction as the change.
  */
-export async function outdateSafetyChecks(
+export function outdateSafetyChecks(
   tx: Prisma.TransactionClient,
   eventId: string,
-  now: Date = new Date(),
-): Promise<number> {
-  const { count } = await tx.safetyCheck.updateMany({
+  now: Date,
+) {
+  return tx.safetyCheck.updateMany({
     where: { eventId, status: { in: ["AWAITING_REVIEW", "APPROVED"] } },
     data: { status: "OUTDATED", outdatedAt: now },
   });
-  return count;
 }

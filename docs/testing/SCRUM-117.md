@@ -109,7 +109,7 @@ and the app is running. Unless the case says otherwise, the event is in
 | Test Data       | The Organiser; Technical Support; signed out; another Coordinator; any Coordinator when nobody is assigned; a missing event; an event reassigned while the request waited |
 | Expected Result | Refused every time (no permission, "Event not found." or "updated by another user"); only the assigned Coordinator is offered the button.                                 |
 
-**Automated by:** `tests/unit/reject-planning.test.ts` › "SCRUM-117 [AC5] TC-117-07: …" and "SCRUM-117 [AC5]: an event reassigned …"; `tests/unit/auth.test.ts` › "SCRUM-117 [AC5] TC-117-07: …"; `tests/unit/readiness-actions.test.ts` › "SCRUM-117 [AC5] TC-117-07: …"
+**Automated by:** `tests/unit/reject-planning.test.ts` › "SCRUM-117 [AC5] TC-117-07: …" and "SCRUM-117 [AC5]: an event reassigned …"; `tests/unit/auth.test.ts` › "SCRUM-117 [AC5] TC-117-07: …"; `tests/unit/readiness-actions.test.ts` › "SCRUM-117 [AC5] TC-117-07: …"; `e2e/reject-planning.spec.ts` › "SCRUM-117 [AC4, AC5] TC-117-10: Reject isn't offered on an event that was Confirmed before, nor to its Organiser"
 
 ### TC-117-08
 

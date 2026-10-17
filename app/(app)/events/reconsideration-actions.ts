@@ -7,10 +7,12 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { can, requirePermission, PermissionError } from "@/lib/auth/can";
 import { ok, err, type ActionResult } from "@/lib/action-result";
-import { outdateSafetyChecks } from "@/lib/safety-check";
+import { bookingStatusAt, withdrawPendingHoldNotices } from "@/lib/booking-holds";
+import { outdateSafetyChecks } from "@/lib/safety-checks";
 import {
   FLAGGABLE_BOOKING,
   bookingArrangement,
+  flaggedLiveBookingWhere,
   bookingStillStandsRefusal,
   reservationArrangement,
   reservationStillStandsRefusal,
@@ -31,59 +33,58 @@ export type FlaggedArrangement = Arrangement & {
 /**
  * SCRUM-26 AC7 — the event's flagged arrangements, for its assigned
  * Coordinator, who alone may resolve them. Anyone else gets "not found", so
- * the answer never reveals which event ids exist (SCRUM-68).
+ * the answer never reveals which event ids exist (SCRUM-68). The role is
+ * checked before anything is read, and the flags are read only once the
+ * relationship is (CONTRIBUTING.md, ADR 0004).
  */
 export async function getFlaggedArrangements(
   eventId: string,
 ): Promise<ActionResult<FlaggedArrangement[]>> {
   const session = await auth();
   const user = session?.user;
+  if (!user || !can(user, "arrangement:reconsider")) return err("Event not found.");
+
   const event = await prisma.event.findUnique({
     where: { id: eventId },
-    select: {
-      organiserId: true,
-      coordinatorId: true,
-      status: true,
-      bookings: {
-        where: { needsReconsideration: true, status: { in: FLAGGABLE_BOOKING } },
-        select: {
-          id: true,
-          status: true,
-          reconsiderationReason: true,
-          reconsiderationFlaggedAt: true,
-          venue: { select: { name: true } },
-        },
-        orderBy: { reconsiderationFlaggedAt: "asc" },
-      },
-      reservations: {
-        where: { needsReconsideration: true, status: "CONFIRMED" },
-        select: {
-          id: true,
-          quantity: true,
-          reconsiderationReason: true,
-          reconsiderationFlaggedAt: true,
-          equipment: { select: { type: true } },
-        },
-        orderBy: { reconsiderationFlaggedAt: "asc" },
-      },
-    },
+    select: { organiserId: true, coordinatorId: true, status: true },
   });
-  if (
-    !user ||
-    !event ||
-    !can(user, "arrangement:reconsider", { kind: "event", ...event })
-  ) {
+  if (!event || !can(user, "arrangement:reconsider", { kind: "event", ...event })) {
     return err("Event not found.");
   }
 
+  const [bookings, reservations] = await Promise.all([
+    prisma.booking.findMany({
+      where: { eventId, ...flaggedLiveBookingWhere(new Date()) },
+      select: {
+        id: true,
+        status: true,
+        reconsiderationReason: true,
+        reconsiderationFlaggedAt: true,
+        venue: { select: { name: true } },
+      },
+      orderBy: { reconsiderationFlaggedAt: "asc" },
+    }),
+    prisma.reservation.findMany({
+      where: { eventId, needsReconsideration: true, status: "CONFIRMED" },
+      select: {
+        id: true,
+        quantity: true,
+        reconsiderationReason: true,
+        reconsiderationFlaggedAt: true,
+        equipment: { select: { type: true } },
+      },
+      orderBy: { reconsiderationFlaggedAt: "asc" },
+    }),
+  ]);
+
   // A raised flag always has its reason and time (CHECK booking_flag_has_reason).
   return ok([
-    ...event.bookings.map((b) => ({
+    ...bookings.map((b) => ({
       ...bookingArrangement(b),
       reason: b.reconsiderationReason!,
       flaggedAt: b.reconsiderationFlaggedAt!,
     })),
-    ...event.reservations.map((r) => ({
+    ...reservations.map((r) => ({
       ...reservationArrangement(r),
       reason: r.reconsiderationReason!,
       flaggedAt: r.reconsiderationFlaggedAt!,
@@ -169,6 +170,7 @@ export async function resolveReconsiderationFlag(
           select: {
             id: true,
             status: true,
+            holdExpiresAt: true,
             needsReconsideration: true,
             startAt: true,
             endAt: true,
@@ -187,7 +189,11 @@ export async function resolveReconsiderationFlag(
             },
           },
         });
-        if (!booking.needsReconsideration || !FLAGGABLE_BOOKING.includes(booking.status)) {
+        // A lapsed hold has already released the venue (SCRUM-163 AC4).
+        if (
+          !booking.needsReconsideration ||
+          !FLAGGABLE_BOOKING.includes(bookingStatusAt(booking, now))
+        ) {
           return "not-flagged";
         }
         if (decision === "STILL_STANDS") {
@@ -195,10 +201,15 @@ export async function resolveReconsiderationFlag(
           if (refusal) return { refused: refusal };
         }
         const updated = await tx.booking.updateMany({
-          where: { id, needsReconsideration: true, status: { in: FLAGGABLE_BOOKING } },
+          where: { id, ...flaggedLiveBookingWhere(now) },
           data: decision === "CANCEL" ? { ...resolved, status: "CANCELLED" } : resolved,
         });
         if (updated.count !== 1) return "not-flagged";
+        // A cancelled hold's reminder and expiry notices would tell the
+        // Coordinator about a hold that no longer exists (SCRUM-163 AC5).
+        if (decision === "CANCEL" && booking.status === "HELD") {
+          await withdrawPendingHoldNotices(tx, { bookingId: id }, now);
+        }
         await tx.auditLog.create({
           data: resolutionEntry("Booking", id, user!.id, decision, booking.status),
         });
@@ -249,6 +260,19 @@ export async function resolveReconsiderationFlag(
         where: { id: eventId },
         data: { status: "PLANNING" },
       });
+      // Confirming wrote a "Registration closed" notice to show at the close
+      // (SCRUM-45 AC11); back in Planning, it would be wrong. Confirming again
+      // writes a new one. Registering needs the event Confirmed, so
+      // registrationEnabled can stay as it is.
+      await tx.notification.updateMany({
+        where: {
+          eventId,
+          title: "Registration closed",
+          withdrawnAt: null,
+          showFromAt: { gt: now },
+        },
+        data: { withdrawnAt: now },
+      });
       await tx.auditLog.create({
         data: {
           entityType: "Event",
@@ -279,6 +303,8 @@ export async function resolveReconsiderationFlag(
     revalidatePath("/events");
     if (decision === "CANCEL") {
       revalidatePath(kind === "booking" ? "/venues/availability" : "/equipment");
+      // A cancelled Pending or Held booking leaves the Venue Staff queue.
+      if (kind === "booking") revalidatePath("/bookings");
     }
     return ok({ decision: outcome.done, returnedToPlanning: outcome.returnedToPlanning });
   } catch (error) {

@@ -58,6 +58,17 @@ describe("role-based navigation — SCRUM-66", () => {
     expect(LANDING_ROUTE_BY_ROLE.TECH_SUPPORT).toBe("/equipment");
   });
 
+  // SCRUM-34 AC2: Venues is every internal role's last link, so granting it
+  // moved nobody's landing page.
+  it("SCRUM-34 [AC2] TC-34-02: every internal role has Venues last, and lands where it did before", () => {
+    for (const role of ["COORDINATOR", "VENUE_STAFF", "TECH_SUPPORT"] as const) {
+      expect(hrefsFor(role).at(-1)).toBe("/venues");
+    }
+    expect(LANDING_ROUTE_BY_ROLE.COORDINATOR).toBe("/events");
+    expect(LANDING_ROUTE_BY_ROLE.VENUE_STAFF).toBe("/bookings");
+    expect(hrefsFor("ORGANISER")).not.toContain("/venues");
+  });
+
   it("gives an attendee only their events and registrations", () => {
     const hrefs = hrefsFor("ATTENDEE");
     expect(hrefs).toContain("/events");
@@ -172,14 +183,15 @@ describe("navigation follows a permission change — SCRUM-66", () => {
 describe("navigation for the Week 7 roles — SCRUM-172", () => {
   it("SCRUM-172 [AC1] TC-172-01: COORDINATOR_LEAD is labelled and lands on its notifications", () => {
     expect(ROLE_LABEL.COORDINATOR_LEAD).toBe("Event Coordinator Lead");
-    expect(hrefsFor("COORDINATOR_LEAD")).toEqual(["/notifications"]);
+    // SCRUM-34 AC2 added the venue catalogue, after their notifications.
+    expect(hrefsFor("COORDINATOR_LEAD")).toEqual(["/notifications", "/venues"]);
     expect(LANDING_ROUTE_BY_ROLE.COORDINATOR_LEAD).toBe("/notifications");
   });
 
   // SCRUM-166 gave the Safety Officer their own page, which comes first.
   it("SCRUM-172 [AC1] TC-172-01, SCRUM-166 [AC1] TC-166-03: SAFETY_OFFICER is labelled and lands on the safety check queue", () => {
     expect(ROLE_LABEL.SAFETY_OFFICER).toBe("Safety Officer");
-    expect(hrefsFor("SAFETY_OFFICER")).toEqual(["/safety-checks", "/notifications"]);
+    expect(hrefsFor("SAFETY_OFFICER")).toEqual(["/safety-checks", "/notifications", "/venues"]);
     expect(LANDING_ROUTE_BY_ROLE.SAFETY_OFFICER).toBe("/safety-checks");
   });
 });

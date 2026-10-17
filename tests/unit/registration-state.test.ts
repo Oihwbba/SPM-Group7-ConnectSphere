@@ -8,8 +8,41 @@ import {
   totalCapacity,
   canRegisterNow,
   REGISTRATION_STATE_LABEL,
+  TAKES_REGISTRATION,
+  takesRegistration,
 } from "@/lib/registration-state";
 import { formatDateTime } from "@/lib/datetime";
+import { registrationNeededLabel } from "@/lib/schemas/event";
+
+describe("SCRUM-171 AC3, AC4: which events take registrations", () => {
+  it.each([
+    [true, true],
+    [null, true],
+    [false, false],
+  ])(
+    "SCRUM-171 [AC4] TC-171-06: Registration needed %s → takes registrations: %s",
+    (registrationRequired, takes) => {
+      expect(takesRegistration({ registrationRequired })).toBe(takes);
+    },
+  );
+
+  it("SCRUM-171 [AC4] TC-171-06: the query asks for Yes or unanswered, since SQL never matches NULL with <> false", () => {
+    expect(TAKES_REGISTRATION).toEqual({
+      OR: [{ registrationRequired: true }, { registrationRequired: null }],
+    });
+  });
+
+  it.each([
+    [true, "Yes"],
+    [false, "No"],
+    [null, "Not answered"],
+  ])(
+    "SCRUM-171 [AC3] TC-171-04: Registration needed %s reads as %s",
+    (registrationRequired, label) => {
+      expect(registrationNeededLabel(registrationRequired)).toBe(label);
+    },
+  );
+});
 
 // SCRUM-72/73/74 — this is the ONE place the registration-state rule is
 // defined, so it gets its own dedicated, pure (no mocking) test file. The

@@ -1,5 +1,7 @@
 # ADR 0004 — Centralise authorisation in `can()`
 
+Stories: SCRUM-66, SCRUM-67, SCRUM-68.
+
 ## Context
 
 The customer requires two-dimensional access control. It is not enough to check
@@ -51,3 +53,14 @@ and the table, not by writing a new conditional in a feature.
 - Server actions have a uniform first line; reviewers can check it at a glance.
 - The read side (Prisma `where` clauses scoped to the user) still has to agree
   with `can()`; the reference page shows the two working together.
+
+## Addendum (2026-10-11) — Corrections from the docs audit (SCRUM-173)
+
+- `ROLE_ACTIONS` is not exported. `lib/auth/can.ts` exports the `Action`
+  vocabulary, `can()`, `requirePermission()` and `roleAllows()`, which reads
+  the `ROLE_ACTIONS` table defined in the same file. The model is still read
+  in one place.
+- "Middleware … runs on the Edge" no longer holds: since Next.js 16 the entry
+  point is `proxy.ts`, on Node.js (ADR 0002). It still gates routes by
+  authentication only; relationship checks need the row, so they still happen
+  where the data is read.

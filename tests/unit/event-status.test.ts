@@ -34,6 +34,7 @@ const tx = vi.hoisted(() => ({
   $executeRaw: vi.fn(),
   $queryRaw: vi.fn(),
   clarificationRequest: { updateMany: vi.fn() },
+  eventChangeRequest: { updateMany: vi.fn() },
   user: { findMany: vi.fn(), findFirst: vi.fn() },
   notification: { createMany: vi.fn() },
   auditLog: { create: vi.fn(), createMany: vi.fn() },
@@ -223,6 +224,37 @@ describe("transitionEventStatus — SCRUM-24 single guarded gate", () => {
     );
   });
 
+  it("SCRUM-41 [AC8] TC-41-12: rejecting the event rejects its Submitted change request with the same reason", async () => {
+    mockAuth.mockResolvedValue(sessionFor("COORDINATOR", "usr_coord"));
+    mockFindUnique.mockResolvedValue(eventRow());
+
+    await transitionEventStatus({
+      eventId: "evt1",
+      nextStatus: "REJECTED",
+      decisionReason: "Expected attendance exceeds every venue.",
+      rejectionOutcome: "AMEND_AND_RESUBMIT",
+    });
+
+    expect(tx.eventChangeRequest.updateMany).toHaveBeenCalledWith({
+      where: { eventId: "evt1", status: "PENDING_REVIEW" },
+      data: {
+        status: "REJECTED",
+        decidedById: "usr_coord",
+        decidedAt: expect.any(Date),
+        decisionReason: "Expected attendance exceeds every venue.",
+      },
+    });
+  });
+
+  it("SCRUM-41 [AC8] TC-41-12: approving the event leaves its change request waiting", async () => {
+    mockAuth.mockResolvedValue(sessionFor("COORDINATOR", "usr_coord"));
+    mockFindUnique.mockResolvedValue(eventRow());
+
+    await transitionEventStatus({ eventId: "evt1", nextStatus: "APPROVED" });
+
+    expect(tx.eventChangeRequest.updateMany).not.toHaveBeenCalled();
+  });
+
   it("SCRUM-19: a rejection with a blank reason is refused and nothing is written", async () => {
     mockAuth.mockResolvedValue(sessionFor("COORDINATOR", "usr_coord"));
 
@@ -363,6 +395,7 @@ describe("submitEventRequest — SCRUM-19/24 rejected → submitted", () => {
       preferredLayout: "Theatre",
       accessibilityNeeds: "Ramp",
       equipmentRequirements: "Projector",
+      registrationRequired: "yes",
       registrationNotes: "Online",
     });
 

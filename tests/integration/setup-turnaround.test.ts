@@ -292,7 +292,7 @@ describe.skipIf(!usesLocalDatabase)(
       const refused = await submitBookingRequest(request("halfPastTwelve"));
       expect(refused).toMatchObject({
         ok: false,
-        error: expect.stringMatching(/on hold from .*including setup and turnaround/),
+        error: expect.stringMatching(/: held from .*including setup and turnaround/),
       });
       expect(await prisma.booking.count({ where: { venueId } })).toBe(before);
 
@@ -321,8 +321,9 @@ describe.skipIf(!usesLocalDatabase)(
       expect(accepted).toMatchObject({ ok: true });
     });
 
-    it("SCRUM-159 [AC3] TC-159-07: unavailability over only an approved booking's turnaround is not recorded", async () => {
-      await approve("tenToNoon");
+    // SCRUM-161 replaced the refusal: the booking is shown as affected first.
+    it("SCRUM-159 [AC3] TC-159-07: unavailability over only an approved booking's turnaround is not recorded until that booking is confirmed", async () => {
+      const bookingId = await approve("tenToNoon");
       mockAuth.mockResolvedValue(VENUE_STAFF);
 
       const result = await recordUnavailability({
@@ -332,9 +333,12 @@ describe.skipIf(!usesLocalDatabase)(
         reason: "MAINTENANCE",
       });
 
-      expect(result).toMatchObject({
-        ok: false,
-        error: expect.stringContaining("including setup and turnaround"),
+      expect(result).toEqual({
+        ok: true,
+        data: {
+          recorded: false,
+          affected: [expect.objectContaining({ bookingId })],
+        },
       });
       expect(
         await prisma.venueUnavailability.count({ where: { venueId } }),

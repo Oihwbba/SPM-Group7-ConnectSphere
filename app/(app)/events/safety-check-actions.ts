@@ -8,7 +8,7 @@ import { prisma } from "@/lib/db";
 import { can, requirePermission, PermissionError } from "@/lib/auth/can";
 import { ok, err, type ActionResult } from "@/lib/action-result";
 import { getReadinessChecklist } from "@/lib/event-readiness";
-import { SAFETY_CHECK_LABEL } from "@/lib/safety-check";
+import { SAFETY_CHECK_LABEL } from "@/lib/safety-checks";
 
 const requestSchema = z.object({ eventId: z.string().min(1) });
 

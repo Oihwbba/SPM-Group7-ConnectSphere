@@ -27,6 +27,7 @@ const tx = vi.hoisted(() => ({
   $queryRaw: vi.fn(),
   $executeRaw: vi.fn(),
   clarificationRequest: { updateMany: vi.fn() },
+  eventChangeRequest: { updateMany: vi.fn() },
   user: { findMany: vi.fn(), findFirst: vi.fn() },
   notification: { createMany: vi.fn() },
   auditLog: { create: vi.fn(), createMany: vi.fn(), findFirst: vi.fn() },
@@ -208,6 +209,7 @@ describe("submitEventRequest — SCRUM-126 only an amendable rejection is resubm
     preferredLayout: "Theatre",
     accessibilityNeeds: "Ramp",
     equipmentRequirements: "Projector",
+    registrationRequired: "yes",
     registrationNotes: "Online",
   };
 

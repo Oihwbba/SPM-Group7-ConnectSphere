@@ -187,7 +187,7 @@ test.describe("SCRUM-110 — See an event's readiness checklist", () => {
         eventId,
         status: "APPROVED",
         requestedById: "usr_coordinator",
-        decidedById: "usr_safety",
+        decidedById: "usr_safetyofficer",
         decidedAt: new Date(),
       },
     });

@@ -68,7 +68,7 @@ beforeEach(() => {
   tx.event.findUniqueOrThrow.mockResolvedValue({ status: "PLANNING", coordinatorId: "usr_coord" });
   tx.safetyCheck.findFirst.mockResolvedValue(null);
   tx.safetyCheck.create.mockResolvedValue({ id: "chk_1" });
-  tx.user.findMany.mockResolvedValue([{ id: "usr_safety" }, { id: "usr_safety_2" }]);
+  tx.user.findMany.mockResolvedValue([{ id: "usr_safetyofficer" }, { id: "usr_safety_2" }]);
   tx.notification.createMany.mockResolvedValue({ count: 2 });
   mockChecklist.mockResolvedValue(checklist({ complete: true, state: "Approved" }));
   mockTransaction.mockImplementation((cb: (t: typeof tx) => unknown) => cb(tx));
@@ -96,7 +96,7 @@ describe("requestSafetyCheck — SCRUM-166", () => {
       select: { id: true },
     });
     expect(tx.notification.createMany).toHaveBeenCalledWith({
-      data: ["usr_safety", "usr_safety_2"].map((userId) => ({
+      data: ["usr_safetyofficer", "usr_safety_2"].map((userId) => ({
         userId,
         type: "SAFETY_CHECK_REQUESTED",
         title: "Safety check requested",

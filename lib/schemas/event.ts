@@ -1,5 +1,15 @@
 import { z } from "zod";
 
+/** Room layouts offered as presets on the request and edit forms. */
+export const LAYOUT_OPTIONS = [
+  "Theatre",
+  "Classroom",
+  "Banquet",
+  "Boardroom",
+  "U-Shape",
+  "Cocktail / Standing",
+];
+
 /**
  * Helper to validate attendance: must be a positive whole number (> 0).
  */
@@ -7,6 +17,36 @@ const positiveAttendance = z
   .number({ invalid_type_error: "Attendance must be a positive whole number." })
   .int("Attendance must be a positive whole number.")
   .positive("Attendance must be a positive whole number.");
+
+export const REGISTRATION_NEEDED_REQUIRED_MESSAGE =
+  "Choose whether the event needs registration.";
+
+/**
+ * SCRUM-171 AC1 — Registration needed, as the form sends it ("yes" or "no"),
+ * as a boolean. Left unanswered it is undefined.
+ */
+const registrationNeeded = (value: unknown) =>
+  value === "yes"
+    ? true
+    : value === "no"
+      ? false
+      : value === ""
+        ? undefined
+        : value;
+
+/**
+ * SCRUM-171 AC3 — how Registration needed reads. A request made before the
+ * choice existed has none.
+ */
+export function registrationNeededLabel(
+  registrationRequired: boolean | null,
+): string {
+  return registrationRequired === true
+    ? "Yes"
+    : registrationRequired === false
+      ? "No"
+      : "Not answered";
+}
 
 /**
  * Zod schema for saving a draft event.
@@ -40,6 +80,11 @@ export const createDraftEventSchema = z
     accessibilityNeeds: z.string().trim().optional(),
     preferredLayout: z.string().trim().optional(),
     equipmentRequirements: z.string().trim().optional(),
+    // SCRUM-171 AC2: a draft can be saved without choosing.
+    registrationRequired: z.preprocess(
+      registrationNeeded,
+      z.boolean().optional(),
+    ),
     registrationNotes: z.string().trim().optional(),
     programme: z
       .string()
@@ -101,7 +146,7 @@ export const createDraftEventSchema = z
  * Enforces mandatory fields per W4-33 & User Story 13 AC:
  * name, description, purpose, proposed dates/times, expected attendance,
  * venue requirements, accessibility needs, equipment requirements, room layout,
- * and registration needs.
+ * and whether the event needs registration (SCRUM-171).
  */
 export const submitEventRequestSchema = z
   .object({
@@ -150,10 +195,16 @@ export const submitEventRequestSchema = z
       .string()
       .trim()
       .min(1, "Equipment requirements are required."),
-    registrationNotes: z
-      .string()
-      .trim()
-      .min(1, "Registration needs are required."),
+    // SCRUM-171 AC1, AC2: whether the event needs registration is required to
+    // submit; a note about registration is optional.
+    registrationRequired: z.preprocess(
+      registrationNeeded,
+      z.boolean({
+        required_error: REGISTRATION_NEEDED_REQUIRED_MESSAGE,
+        invalid_type_error: REGISTRATION_NEEDED_REQUIRED_MESSAGE,
+      }),
+    ),
+    registrationNotes: z.string().trim().max(5000).optional(),
     programme: z
       .string()
       .trim()
@@ -247,3 +298,14 @@ export function draftStartIsInPast(
 
 export type CreateDraftEventInput = z.infer<typeof createDraftEventSchema>;
 export type SubmitEventRequestInput = z.infer<typeof submitEventRequestSchema>;
+
+/** SCRUM-170 AC4 — the Coordinator records that the event needs no equipment. */
+export const noEquipmentDecisionSchema = z.object({
+  eventId: z.string().min(1),
+});
+
+export const NO_EQUIPMENT_NOT_PLANNING_MESSAGE =
+  "Equipment can only be decided while the event is in Planning.";
+
+export const NO_EQUIPMENT_HAS_REQUEST_MESSAGE =
+  "This event has an equipment request. Withdraw it before recording that no equipment is needed.";

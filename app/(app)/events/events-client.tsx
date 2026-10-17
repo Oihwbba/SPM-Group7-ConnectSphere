@@ -62,6 +62,8 @@ import {
 interface EventsClientProps {
   events: Event[];
   isCoordinator?: boolean;
+  /** SCRUM-48 AC5: the event whose details open first, from `?event=`. */
+  openEventId?: string;
 }
 
 export type FilterTab = "ALL" | "DRAFT" | "SUBMITTED";
@@ -155,10 +157,15 @@ export function filterAndSortEvents<
 export function EventsClient({
   events,
   isCoordinator = false,
+  openEventId,
 }: EventsClientProps) {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [editingDraft, setEditingDraft] = useState<Event | null>(null);
-  const [viewingEvent, setViewingEvent] = useState<Event | null>(null);
+  // SCRUM-48 AC5: a notification opens its event's details. Only events in
+  // this user's own list can open, so the link grants nothing new.
+  const [viewingEvent, setViewingEvent] = useState<Event | null>(
+    () => events.find((e) => e.id === openEventId) ?? null,
+  );
   const [activeTab, setActiveTab] = useState<FilterTab>("ALL");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [sortField, setSortField] = useState<SortField>("updatedAt");
@@ -843,7 +850,10 @@ export function EventsClient({
         <EventDetailsModal
           open={!!viewingEvent}
           onOpenChange={(open) => {
-            if (!open) setViewingEvent(null);
+            if (open) return;
+            setViewingEvent(null);
+            // So a refresh doesn't open it again.
+            if (openEventId) router.replace("/events");
           }}
           event={eventToDisplay}
           isCoordinator={isCoordinator}

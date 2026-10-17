@@ -23,6 +23,22 @@ export const REQUESTABLE_EVENT_STATUSES = [
 ] as const satisfies readonly EventStatus[];
 
 /**
+ * SCRUM-142 AC1 — the lines a request still asks for. A line the Coordinator
+ * removed is kept with `removedAt` set, and every reader leaves it out.
+ */
+export const LIVE_LINE = { removedAt: null } as const;
+
+/**
+ * SCRUM-142 AC1, AC3 — a request the Coordinator can still change or
+ * withdraw. A Rejected one is replaced by a new request (SCRUM-27).
+ */
+export const CHANGEABLE_REQUEST_STATUSES = [
+  "PENDING_REVIEW",
+  "IN_REVIEW",
+  "APPROVED",
+] as const satisfies readonly EquipmentRequestStatus[];
+
+/**
  * SCRUM-27 AC 7 — a request still waiting on Technical Support. Must match
  * the partial unique index "EquipmentRequest_one_open_per_event", which
  * allows at most one request in these statuses per event.
@@ -147,4 +163,39 @@ export function outstandingLines<
       ),
     }))
     .filter((line) => line.outstanding > 0);
+}
+
+type RequestedLine = {
+  equipmentId: string;
+  quantity: number;
+  technicalRequirements?: string | null;
+};
+
+/**
+ * SCRUM-142 AC1, AC8 — how the Coordinator's new list of lines differs from
+ * the request's live lines: types added, lines whose quantity or technical
+ * requirements changed, and lines removed. All three empty means the
+ * request is unchanged, so nothing is written.
+ */
+export function lineChanges<L extends RequestedLine & { id: string }>(
+  current: L[],
+  next: RequestedLine[],
+): { added: RequestedLine[]; changed: (RequestedLine & { id: string; from: L })[]; removed: L[] } {
+  const text = (value: string | null | undefined) => value || null;
+  const byType = new Map(current.map((line) => [line.equipmentId, line]));
+  const kept = new Set(next.map((line) => line.equipmentId));
+  const added: RequestedLine[] = [];
+  const changed: (RequestedLine & { id: string; from: L })[] = [];
+  for (const line of next) {
+    const was = byType.get(line.equipmentId);
+    if (!was) added.push(line);
+    else if (
+      was.quantity !== line.quantity ||
+      text(was.technicalRequirements) !== text(line.technicalRequirements)
+    ) {
+      changed.push({ ...line, id: was.id, from: was });
+    }
+  }
+  const removed = current.filter((line) => !kept.has(line.equipmentId));
+  return { added, changed, removed };
 }
