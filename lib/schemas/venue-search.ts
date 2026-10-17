@@ -59,12 +59,8 @@ export const venueSearchSchema = z.object({
   searchedFor: optionalText(100),
   /** AC11: "Only show venues that fit", sent only while it is ticked. */
   fit: optionalText(10),
-  /** The start date. */
+  /** AC2: the one day searched; an `endDate` sent is ignored. */
   date: z.preprocess(
-    single,
-    z.string().refine(isCalendarDay, "Enter a valid date.").optional(),
-  ),
-  endDate: z.preprocess(
     single,
     z.string().refine(isCalendarDay, "Enter a valid date.").optional(),
   ),
@@ -131,33 +127,31 @@ function nextDay(day: string): string {
 }
 
 /**
- * AC2, AC6 — the period a search opened on its own asks about, which may run
- * over several days. Dates and times can be used alone or together: a start
- * date alone is that whole day; with no end date the period ends on the start
- * date; times without a date are on `today`. A missing start time is the
- * start of the first day, and a missing end time the end of the last. Nothing
- * entered means no period, so availability isn't checked. An end that isn't
- * after the start is refused, with the time range reported as invalid.
+ * AC2, AC6 — the period a search opened on its own asks about: one day.
+ * A date and a time range on it can be used alone or together:
+ * a date alone is that whole day, and times without a date are on `today`. A
+ * missing start time is the start of the day, and a missing end time its end.
+ * Nothing entered means no period, so availability isn't checked. An end that
+ * isn't after the start is refused, with the time range reported as invalid.
  *
  * AC4: only a start and an end time make it the booking period a request
  * would have (`bookingPeriod`); otherwise opening hours exclude only venues
- * Closed on a day searched.
+ * Closed on the day searched.
  */
 export function searchPeriod(
-  query: Pick<VenueSearchQuery, "date" | "endDate" | "from" | "to">,
+  query: Pick<VenueSearchQuery, "date" | "from" | "to">,
   today: string,
 ): { period: Period | null; bookingPeriod: boolean } | { error: string } {
-  const { date, endDate, from, to } = query;
-  if (!date && !endDate && !from && !to) {
+  const { date, from, to } = query;
+  if (!date && !from && !to) {
     return { period: null, bookingPeriod: false };
   }
 
-  const firstDay = date ?? endDate ?? today;
-  const lastDay = endDate ?? firstDay;
+  const day = date ?? today;
   const period = {
-    startAt: parseSingaporeDateTime(`${firstDay}T${from ?? "00:00"}`)!,
+    startAt: parseSingaporeDateTime(`${day}T${from ?? "00:00"}`)!,
     endAt: parseSingaporeDateTime(
-      to ? `${lastDay}T${to}` : `${nextDay(lastDay)}T00:00`,
+      to ? `${day}T${to}` : `${nextDay(day)}T00:00`,
     )!,
   };
   return isValidPeriod(period)

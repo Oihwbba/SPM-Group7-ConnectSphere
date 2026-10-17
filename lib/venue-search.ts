@@ -3,7 +3,7 @@ import type { Prisma, PrismaClient } from "@prisma/client";
 import type { Period } from "@/lib/period";
 import { liveBookingWhere } from "@/lib/reconsideration";
 import { findVenueBlockers, occupiedPeriod } from "@/lib/venue-availability";
-import { closedDayWithin, dayOutsideOpeningHours } from "@/lib/venue-hours";
+import { closedOn, dayOutsideOpeningHours } from "@/lib/venue-hours";
 import { assessSuitability, type Suitability } from "@/lib/venue-suitability";
 
 /**
@@ -94,16 +94,16 @@ export type VenueSearchResult = {
  * AC4, AC15 — is the venue open for the search? A booking period must lie
  * within that day's opening hours (SCRUM-34 AC7); setup and turnaround aren't
  * part of it, so they never exclude a venue (AC15). Without a booking period,
- * a venue is out only if it is Closed on a day searched.
+ * a venue is out only if it is Closed on the day searched.
  */
 function isOpenFor(
-  venue: { openingHours: Parameters<typeof closedDayWithin>[1] },
+  venue: { openingHours: Parameters<typeof closedOn>[1] },
   period: Period,
   bookingPeriod: boolean,
 ): boolean {
   return bookingPeriod
     ? dayOutsideOpeningHours(period, venue.openingHours) === null
-    : closedDayWithin(period, venue.openingHours) === null;
+    : closedOn(period.startAt, venue.openingHours) === null;
 }
 
 /**

@@ -77,71 +77,34 @@ describe("filtersOn — SCRUM-38 AC11", () => {
   });
 });
 
-describe("searchPeriod over several days — SCRUM-38 AC2", () => {
-  it("SCRUM-38 [AC2] TC-38-04: a start and end date and time span the days between", () => {
-    expect(
-      searchPeriod(
-        {
-          date: "2031-06-03",
-          from: "18:00",
-          endDate: "2031-06-05",
-          to: "12:00",
-        },
-        TODAY,
-      ),
-    ).toEqual({
-      bookingPeriod: true,
-      period: {
-        startAt: sg("2031-06-03", "18:00"),
-        endAt: sg("2031-06-05", "12:00"),
-      },
+describe("searchPeriod covers one day — SCRUM-38 AC2", () => {
+  it("SCRUM-38 [AC2] TC-38-04: an end date sent in the address is ignored, so the search stays on the one day", () => {
+    const parsed = venueSearchSchema.parse({
+      date: "2031-06-03",
+      endDate: "2031-06-05",
     });
-  });
-
-  it("SCRUM-38 [AC2] TC-38-04: two dates without times run from the start of the first day to the end of the last", () => {
-    expect(
-      searchPeriod({ date: "2031-06-03", endDate: "2031-06-05" }, TODAY),
-    ).toEqual({
+    expect(parsed).not.toHaveProperty("endDate");
+    expect(searchPeriod(parsed, TODAY)).toEqual({
       bookingPeriod: false,
       period: {
         startAt: sg("2031-06-03", "00:00"),
-        endAt: sg("2031-06-06", "00:00"),
+        endAt: sg("2031-06-04", "00:00"),
       },
     });
   });
 
-  it("SCRUM-38 [AC2] TC-38-04: an end date alone is that whole day", () => {
-    expect(searchPeriod({ endDate: "2031-06-05" }, TODAY)).toEqual({
-      bookingPeriod: false,
-      period: {
-        startAt: sg("2031-06-05", "00:00"),
-        endAt: sg("2031-06-06", "00:00"),
-      },
-    });
-  });
-
-  it("SCRUM-38 [AC6] TC-38-07: an end date before the start date is refused", () => {
+  it("SCRUM-38 [AC2, AC6] TC-38-07: an end time earlier in the day than the start can't run into the next day, so it is refused", () => {
     expect(
-      searchPeriod({ date: "2031-06-05", endDate: "2031-06-03" }, TODAY),
+      searchPeriod({ date: "2031-06-03", from: "18:00", to: "09:00" }, TODAY),
     ).toEqual({ error: INVALID_TIME_RANGE_MESSAGE });
   });
 
-  it("SCRUM-38 [AC6] TC-38-07: across days, an end time earlier in the day than the start is fine", () => {
-    expect(
-      searchPeriod(
-        {
-          date: "2031-06-03",
-          from: "18:00",
-          endDate: "2031-06-04",
-          to: "09:00",
-        },
-        TODAY,
-      ),
-    ).toEqual({
-      bookingPeriod: true,
+  it("SCRUM-38 [AC2] TC-38-04: the latest a search can end is midnight at the end of the day", () => {
+    expect(searchPeriod({ date: "2031-06-03", from: "23:59" }, TODAY)).toEqual({
+      bookingPeriod: false,
       period: {
-        startAt: sg("2031-06-03", "18:00"),
-        endAt: sg("2031-06-04", "09:00"),
+        startAt: sg("2031-06-03", "23:59"),
+        endAt: sg("2031-06-04", "00:00"),
       },
     });
   });
@@ -272,7 +235,6 @@ describe("venueSearchSchema — SCRUM-38", () => {
   it.each([
     ["date", "03/06/2031", "Enter a valid date."],
     ["date", "2031-02-31", "Enter a valid date."],
-    ["endDate", "2031-13-01", "Enter a valid date."],
     ["from", "9am", "Enter a valid start time."],
     ["to", "24:00", "Enter a valid end time."],
     ["attendance", "0", "Attendance must be greater than zero."],

@@ -356,21 +356,15 @@ describe("searchVenues and opening hours — SCRUM-38 AC4, AC15", () => {
     ).toEqual(["ven_hours", "ven_no_hours"]);
   });
 
-  it.each([
-    ["a day it is Closed", "2031-06-07T00:00", "2031-06-08T00:00"],
-    ["days that include one it is Closed", "2031-06-06T00:00", "2031-06-08T00:00"],
-  ])(
-    "SCRUM-38 [AC4] TC-38-20: a date search over %s excludes the venue",
-    async (_label, start, end) => {
-      expect(
-        await ids({
-          period: sgPeriod(start, end),
-          bookingPeriod: false,
-          filters: noFilters,
-        }),
-      ).toEqual(["ven_no_hours"]);
-    },
-  );
+  it("SCRUM-38 [AC4] TC-38-20: a date search on a day it is Closed excludes the venue", async () => {
+    expect(
+      await ids({
+        period: sgPeriod("2031-06-07T00:00", "2031-06-08T00:00"),
+        bookingPeriod: false,
+        filters: noFilters,
+      }),
+    ).toEqual(["ven_no_hours"]);
+  });
 
   it("SCRUM-38 [AC4] TC-38-15: a venue closed for the search isn't checked for availability", async () => {
     await ids({

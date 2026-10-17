@@ -8,8 +8,10 @@ GET, so they live in the URL. A venue is free when no Approved booking, live
 hold or recorded unavailability overlaps the occupied period a booking for the
 searched period would have there (SCRUM-159): the same check the request form
 and Venue Staff's approval use (`findVenueBlockers` in
-`lib/venue-availability.ts`). A date without times is searched as that whole
-day, so a venue must be free for all of it.
+`lib/venue-availability.ts`). A search on its own covers one day: a date and
+a time range on it (AC2 as proposed with SCRUM-190, 2026-10-17; the end date
+was removed ahead of the PO's decision). A date without times is searched as
+that whole day, so a venue must be free for all of it.
 
 Each result also has **See availability**, which opens that venue's calendar
 (SCRUM-36) on the week searched, so a Coordinator who has found a candidate
@@ -22,7 +24,7 @@ an event, or with a start and an end time, is the booking period a request
 would have, so a venue closed for any of it is excluded; setup and turnaround
 never exclude one. A date searched without both times isn't a booking period:
 as the whole day it would fall outside every venue's hours, so it excludes only
-a venue Closed on a day searched (TC-38-20). That reading of AC4 is proposed
+a venue Closed on the day searched (TC-38-20). That reading of AC4 is proposed
 to the PO (2026-10-17) with SCRUM-190.
 
 **Filters or suitability (AC8, AC11).** The attendance, facilities,
@@ -99,11 +101,11 @@ SCRUM-40's reasons. Opened from an event, the Coordinator's own judgement
 | Item | Content |
 |---|---|
 | Test Case ID | TC-38-04 |
-| Test Scenario | [Positive] AC 2: on its own, date, time range and location work alone or together |
+| Test Scenario | [Positive] AC 2: on its own, a date, a time range on it and location work alone or together, and a search covers one day |
 | Pre-conditions | Signed in as Coordinator; open **Venue Search** from the menu. |
-| Test Steps | 1. Search with only a start date. <br> 2. Only a start and end time. <br> 3. Only a location, picked from the list: "Level 1, Block A". <br> 4. All three. <br> 5. Start 3 June 18:00, end 5 June 12:00. <br> 6. Start date 3 June and end date 5 June, no times. |
+| Test Steps | 1. Search with only a date. <br> 2. Only a start and end time. <br> 3. Only a location, picked from the list: "Level 1, Block A". <br> 4. All three. <br> 5. Look for an end date. <br> 6. Date 3 June, with `&endDate=` 5 June added to the address. <br> 7. Date 3 June, from 23:59, no end time. |
 | Test Data | — |
-| Expected Result | 1: free for that whole day. 2: free for that time today. 3: every venue at Level 1, Block A, without checking availability. 4: the venues there free for that time on that date. 5: free for the whole of 3 June 18:00 to 5 June 12:00. 6: free from the start of 3 June to the end of 5 June. The location list offers each active venue's location once, so a location can't be mistyped. |
+| Expected Result | 1: free for that whole day. 2: free for that time today. 3: every venue at Level 1, Block A, without checking availability. 4: the venues there free for that time on that date. 5: there is none. 6: the end date is ignored: free for the whole of 3 June only. 7: 23:59 to midnight; a search never runs into the next day. The location list offers each active venue's location once, so a location can't be mistyped. |
 
 **Automated by:** `tests/unit/venue-search-schema.test.ts` › "SCRUM-38 [AC2] TC-38-04: …"; `tests/integration/venue-search.test.ts` › "SCRUM-38 [AC2, AC7] TC-38-04, TC-38-08: …"
 
@@ -138,13 +140,13 @@ SCRUM-40's reasons. Opened from an event, the Coordinator's own judgement
 | Item | Content |
 |---|---|
 | Test Case ID | TC-38-07 |
-| Test Scenario | [Negative] [Boundary] AC 6: an end not after the start is refused |
+| Test Scenario | [Negative] [Boundary] AC 6: an end not after the start is refused, including one that would run into the next day |
 | Pre-conditions | Venue search on its own. |
-| Test Steps | 1. Search 15:00 to 15:00 on one day. <br> 2. 15:00 to 14:00 on one day. <br> 3. 15:00 to 15:01 on one day. <br> 4. End date before the start date. <br> 5. 18:00 one day to 09:00 the next. |
+| Test Steps | 1. Search 15:00 to 15:00. <br> 2. 15:00 to 14:00. <br> 3. 15:00 to 15:01. <br> 4. 18:00 to 09:00, then add `&endDate=` the next day to the address. |
 | Test Data | — |
-| Expected Result | 1, 2, 4: "The time range is invalid: the end must be after the start." beside the end time, or the end date when no end time was entered, and no results. 3, 5: searched, not refused as invalid. 5 lists no venue, because a booking period running past midnight is outside every venue's opening hours (AC4, SCRUM-34 AC7). |
+| Expected Result | 1, 2, 4: "The time range is invalid: the end must be after the start." beside the end time, and no results. 4: a search covers one day (AC2), so 09:00 is before 18:00 on the same day, and the end date in the address is ignored. 3: searched, not refused as invalid. |
 
-**Automated by:** `tests/unit/venue-search-schema.test.ts` › "SCRUM-38 [AC6] TC-38-07: …"; `e2e/venue-search.spec.ts` › "SCRUM-38 [AC6, AC10] TC-38-07, TC-38-11: …"
+**Automated by:** `tests/unit/venue-search-schema.test.ts` › "SCRUM-38 [AC6] TC-38-07: …" and "SCRUM-38 [AC2, AC6] TC-38-07: …"; `e2e/venue-search.spec.ts` › "SCRUM-38 [AC2, AC6, AC10] TC-38-07, TC-38-11: …"
 
 ### TC-38-08
 
@@ -196,7 +198,7 @@ SCRUM-40's reasons. Opened from an event, the Coordinator's own judgement
 | Test Data | — |
 | Expected Result | "No venues match", not an empty list: the only venue there, the Executive Boardroom, holds 14. |
 
-**Automated by:** `e2e/venue-search.spec.ts` › "SCRUM-38 [AC6, AC10] TC-38-07, TC-38-11: …"
+**Automated by:** `e2e/venue-search.spec.ts` › "SCRUM-38 [AC2, AC6, AC10] TC-38-07, TC-38-11: …"
 
 ### TC-38-12
 
@@ -298,9 +300,9 @@ Retired on 2026-10-16, before it was merged: a date-only search listing venues f
 | Item | Content |
 |---|---|
 | Test Case ID | TC-38-20 |
-| Test Scenario | [Negative] AC 4: a date searched without times excludes only a venue Closed on a day searched |
+| Test Scenario | [Negative] AC 4: a date searched without times excludes only a venue Closed on the day searched |
 | Pre-conditions | As TC-38-15; seeded venues. |
-| Test Steps | 1. Search a Tuesday, no times. <br> 2. A Saturday, no times. <br> 3. A Friday to the Saturday, no times. <br> 4. Seeded venues, a Saturday, no times. <br> 5. Seeded venues, a Tuesday, no times. |
+| Test Steps | 1. Search a Tuesday, no times. <br> 2. A Saturday, no times. <br> 3. A Saturday from 00:30, no end time (still Friday in UTC). <br> 4. Seeded venues, a Saturday, no times. <br> 5. Seeded venues, a Tuesday, no times. |
 | Test Data | — |
 | Expected Result | 1: included, though the venue isn't open all day. 2, 3: excluded. 4: Exhibition Hall and Grand Auditorium only; Seminar Room 2.1 and the Executive Boardroom are Closed at weekends. 5: all four. |
 

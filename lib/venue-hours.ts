@@ -55,8 +55,11 @@ export function describeDay(day: OpeningDay): string {
 function sgDay(at: Date): { weekday: number; midnight: number } {
   const shifted = new Date(at.getTime() + SG_OFFSET_MS);
   const midnight =
-    Date.UTC(shifted.getUTCFullYear(), shifted.getUTCMonth(), shifted.getUTCDate()) -
-    SG_OFFSET_MS;
+    Date.UTC(
+      shifted.getUTCFullYear(),
+      shifted.getUTCMonth(),
+      shifted.getUTCDate(),
+    ) - SG_OFFSET_MS;
   const weekday = ((shifted.getUTCDay() + 6) % 7) + 1;
   return { weekday, midnight };
 }
@@ -92,28 +95,17 @@ export function dayOutsideOpeningHours(
 }
 
 /**
- * SCRUM-38 AC4 — for a search with no booking period (a date, or dates,
- * without both times): the first day it covers on which the venue is Closed,
- * or null. Each SGT day from the one the period starts on up to, but not
- * including, the one its end falls at midnight of is checked. A venue with no
- * hours recorded is closed on no day.
+ * SCRUM-38 AC4 — for a search with no booking period (a date without both
+ * times): the SGT day `at` falls on, if the venue is Closed then, or null. A
+ * search covers one day (AC2), so its start names the day. A weekday
+ * with no row is Closed; a venue with no hours recorded is closed on no day.
  */
-export function closedDayWithin(
-  period: Period,
-  hours: OpeningDay[],
-): OpeningDay | null {
+export function closedOn(at: Date, hours: OpeningDay[]): OpeningDay | null {
   if (hours.length === 0) return null;
-  const DAY_MS = DAY_MINUTES * 60_000;
-  let { weekday, midnight } = sgDay(period.startAt);
-  while (midnight < period.endAt.getTime()) {
-    const day = hours.find((h) => h.weekday === weekday);
-    if (!day || day.opensMinute === null || day.closesMinute === null) {
-      return day ?? { weekday, opensMinute: null, closesMinute: null };
-    }
-    midnight += DAY_MS;
-    weekday = (weekday % 7) + 1;
-  }
-  return null;
+  const { weekday } = sgDay(at);
+  const day = hours.find((h) => h.weekday === weekday);
+  if (!day) return { weekday, opensMinute: null, closesMinute: null };
+  return day.opensMinute === null || day.closesMinute === null ? day : null;
 }
 
 /** AC7 — the refusal, with that day's opening hours. */

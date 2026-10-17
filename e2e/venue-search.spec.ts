@@ -116,7 +116,7 @@ test.describe("SCRUM-38 — Search and filter venues", () => {
     const eventPeriod = `${formatDateTime(new Date("2034-11-07T10:15:00+08:00"))} to ${formatDateTime(new Date("2034-11-07T11:45:00+08:00"))}`;
     await expect(page.getByTestId("search-event")).toContainText(`For ${name}`);
     await expect(page.getByTestId("search-event")).toContainText(eventPeriod);
-    for (const label of ["Start date", "Start time", "End date", "End time"]) {
+    for (const label of ["Date", "Start time", "End time"]) {
       await expect(page.getByLabel(label, { exact: true })).toHaveCount(0);
     }
     await expect(page.getByLabel("Location")).toBeVisible();
@@ -264,13 +264,13 @@ test.describe("SCRUM-38 — Search and filter venues", () => {
 
     await signIn(page, "coordinator@test.local");
     await page.goto("/venues/search");
-    await expect(page.getByLabel("Start date")).toBeVisible();
+    await expect(page.getByLabel("Date", { exact: true })).toBeVisible();
 
     // Choosing it sends the form at once.
     await page.getByLabel("For event").selectOption({ label: name });
     await expect(page.getByTestId("search-event")).toContainText(`For ${name}`);
     await expect(page.getByLabel("Attendance")).toHaveValue("40");
-    await expect(page.getByLabel("Start date")).toHaveCount(0);
+    await expect(page.getByLabel("Date", { exact: true })).toHaveCount(0);
     await expect(
       page
         .locator('[data-venue="ven_auditorium"]')
@@ -279,16 +279,18 @@ test.describe("SCRUM-38 — Search and filter venues", () => {
 
     await page.getByLabel("For event").selectOption("");
     await expect(page.getByTestId("search-event")).toHaveCount(0);
-    await expect(page.getByLabel("Start date")).toBeVisible();
+    await expect(page.getByLabel("Date", { exact: true })).toBeVisible();
   });
 
-  test("SCRUM-38 [AC6, AC10] TC-38-07, TC-38-11: on its own, an invalid time range is refused, and an empty search says nothing matches", async ({
+  test("SCRUM-38 [AC2, AC6, AC10] TC-38-07, TC-38-11: on its own, a search covers one day, an invalid time range is refused, and an empty search says nothing matches", async ({
     page,
   }) => {
     await signIn(page, "coordinator@test.local");
     await page.goto("/venues/search");
 
-    await page.getByLabel("Start date").fill("2034-11-07");
+    // AC2: a search covers one day, so there is no end date.
+    await expect(page.getByLabel("End date")).toHaveCount(0);
+    await page.getByLabel("Date", { exact: true }).fill("2034-11-07");
     await page.getByLabel("Start time").fill("15:00");
     await page.getByLabel("End time").fill("15:00");
     await page.getByRole("button", { name: "Search" }).click();
@@ -301,22 +303,21 @@ test.describe("SCRUM-38 — Search and filter venues", () => {
     await expect(page.getByTestId("venue-result")).toHaveCount(0);
     await expect(page.getByTestId("no-venues")).toHaveCount(0);
 
-    // AC2: the same end time on the next day is a period over two days. It
-    // isn't refused as invalid, but as a booking period it runs past every
-    // venue's closing time (AC4, SCRUM-34 AC7), so nothing matches.
-    await page.getByLabel("End date").fill("2034-11-08");
+    // AC2: a search can't run into the next day, so 18:00 to 09:00 is
+    // refused too, even with an end date added to the address.
+    await page.getByLabel("Start time").fill("18:00");
+    await page.getByLabel("End time").fill("09:00");
     await page.getByRole("button", { name: "Search" }).click();
-    await expect(page).toHaveURL(/endDate=2034-11-08/);
+    await expect(page).toHaveURL(/to=09%3A00/);
+    await page.goto(`${page.url()}&endDate=2034-11-08`);
     await expect(
       page.getByText(
         "The time range is invalid: the end must be after the start.",
       ),
-    ).toHaveCount(0);
-    await expect(page.getByTestId("no-venues")).toContainText(
-      "No venues match",
-    );
+    ).toBeVisible();
+    await expect(page.getByTestId("venue-result")).toHaveCount(0);
 
-    await page.getByLabel("End date").fill("");
+    await page.getByLabel("Start time").fill("15:00");
     await page.getByLabel("End time").fill("16:00");
     // AC10: the Executive Boardroom, alone on Level 12, holds 14.
     await page.getByLabel("Location").selectOption("Level 12, Block A");
@@ -418,7 +419,7 @@ test.describe("SCRUM-38 — opening hours, suitability and the Organiser's answe
 
     // Tuesday 07:30–09:00: the Hall opens at 06:00 and the Auditorium at
     // 07:00; Seminar Room 2.1 opens at 08:00 and the Boardroom at 09:00.
-    await page.getByLabel("Start date").fill("2034-11-14");
+    await page.getByLabel("Date", { exact: true }).fill("2034-11-14");
     await page.getByLabel("Start time").fill("07:30");
     await page.getByLabel("End time").fill("09:00");
     await page.getByRole("button", { name: "Search" }).click();
@@ -429,7 +430,7 @@ test.describe("SCRUM-38 — opening hours, suitability and the Organiser's answe
     ]);
 
     // Saturday, no times: Seminar Room 2.1 and the Boardroom are Closed.
-    await page.getByLabel("Start date").fill("2034-11-11");
+    await page.getByLabel("Date", { exact: true }).fill("2034-11-11");
     await page.getByLabel("Start time").fill("");
     await page.getByLabel("End time").fill("");
     await page.getByRole("button", { name: "Search" }).click();
@@ -440,7 +441,7 @@ test.describe("SCRUM-38 — opening hours, suitability and the Organiser's answe
     ]);
 
     // The Tuesday, no times: every venue is open at some point that day.
-    await page.getByLabel("Start date").fill("2034-11-14");
+    await page.getByLabel("Date", { exact: true }).fill("2034-11-14");
     await page.getByRole("button", { name: "Search" }).click();
     await expect(page).toHaveURL(/date=2034-11-14/);
     expect(await resultNames(page)).toEqual([

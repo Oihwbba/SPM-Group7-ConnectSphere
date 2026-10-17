@@ -150,10 +150,8 @@ export default async function VenueSearchPage({
         options={options}
         fieldErrors={{
           ...fieldErrors,
-          // Beside whichever end was entered: the end time, else the end date.
-          ...(periodError && {
-            [query?.to ? "to" : "endDate"]: [periodError],
-          }),
+          // Within one day, only an end time can come before the start.
+          ...(periodError && { to: [periodError] }),
         }}
       />
       {results && (
@@ -306,10 +304,10 @@ function SearchForm({
               </div>
             </div>
           ) : (
-            <div className="grid gap-4 sm:grid-cols-4">
+            <div className="grid gap-4 sm:grid-cols-3">
               <PeriodField
                 name="date"
-                label="Start date"
+                label="Date"
                 type="date"
                 value={query?.date}
                 messages={fieldErrors.date}
@@ -322,25 +320,18 @@ function SearchForm({
                 messages={fieldErrors.from}
               />
               <PeriodField
-                name="endDate"
-                label="End date"
-                type="date"
-                value={query?.endDate}
-                messages={fieldErrors.endDate}
-              />
-              <PeriodField
                 name="to"
                 label="End time"
                 type="time"
                 value={query?.to}
                 messages={fieldErrors.to}
               />
-              <p className="text-xs text-muted-foreground sm:col-span-4">
-                Use dates, times, a location, or any of them together. A start
-                date alone means that whole day; leave the end date empty for a
-                single day. Times without a date are today. With a start and an
-                end time, venues closed at those times are left out; without
-                them, only venues closed on a day searched are.
+              <p className="text-xs text-muted-foreground sm:col-span-3">
+                Use a date, a time range on it, a location, or any of them
+                together. A search covers one day: a date alone means that whole
+                day, and times without a date are today. With a start and an end
+                time, venues closed at those times are left out; without them,
+                only venues closed that day are.
               </p>
             </div>
           )}
