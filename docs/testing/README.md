@@ -143,7 +143,7 @@ the open pull requests that change the same test files have merged.
 | [SCRUM-108](SCRUM-108.md) | Jun Bin | 14 | Every case automated (unit, e2e for both journeys); AC 6, 8 and 10 point to existing tests |
 | [SCRUM-134](SCRUM-134.md) | Jin Hong | 6 | Written with the story; every case automated |
 | [SCRUM-121](SCRUM-121.md) | Jin Hong | 5 | Written with the story; automated except TC-121-04 (AC 4), which waits for SCRUM-165 and SCRUM-21, and AC 5's safety check, which waits for SCRUM-166 |
-| [SCRUM-124](SCRUM-124.md) | Jin Hong | 11 | AC 1 to AC 9 automated; TC-124-10 and TC-124-11 wait for SCRUM-165 and SCRUM-166, and TC-124-08's unavailability wording for SCRUM-161 |
+| [SCRUM-124](SCRUM-124.md) | Jin Hong | 11 | AC 1 to AC 9 automated, with SCRUM-161's tests for the unavailability notices; TC-124-10 and TC-124-11 wait for SCRUM-165 and SCRUM-166 |
 | [SCRUM-126](SCRUM-126.md) | Jun Bin | 10 | Every case automated (unit, integration for the constraint, migration and simultaneous clicks, e2e for the journey) |
 | [SCRUM-130](SCRUM-130.md) | Felicia Or | 12 | Every case automated (unit, integration, e2e) |
 | [SCRUM-117](SCRUM-117.md) | Jun Bin | 10 | Every case automated (unit, integration for releasing arrangements in one transaction, e2e for both journeys) |
