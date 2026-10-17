@@ -19,6 +19,14 @@ change request. Every account's password is `Password123!`.
 - **AC10, notifications:** a notification row tells the Organiser the outcome.
   Listing it is SCRUM-48; telling Attendees of a new date, time or venue once
   the event is Confirmed again is SCRUM-85.
+- **Registration needed (SCRUM-171 AC5, SCRUM-75 AC11):** a change request
+  can't carry Registration needed yet (SCRUM-41 AC1's fields), so approving
+  one never changes it. Once it can, approving a change to No is refused with
+  `registrationStillNeededMessage` while people are registered, and a change
+  to Yes opens registration.
+- **Equipment requirements (SCRUM-170 AC4):** approving a change to them puts
+  Equipment back to Not decided; see TC-170-12 in
+  [SCRUM-170.md](SCRUM-170.md#tc-170-12).
 
 | ID | Type | Criterion | Automated |
 |---|---|---|---|

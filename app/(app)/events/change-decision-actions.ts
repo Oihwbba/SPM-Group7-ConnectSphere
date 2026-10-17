@@ -271,11 +271,20 @@ export async function decideChangeRequest(
 
       const impactful = isImpactful(request.fields);
       const returnedToPlanning = impactful && event.status === "CONFIRMED";
+      // SCRUM-170 AC4: changed equipment requirements put Equipment back to
+      // Not decided, as SCRUM-25's edit does. Both columns clear together.
+      const equipmentChanged = request.fields.some(
+        (f) => f.fieldName === "equipmentRequirements",
+      );
       await tx.event.update({
         where: { id: eventId },
         data: {
           ...eventUpdateFrom(request.fields),
           ...(returnedToPlanning && { status: "PLANNING" as const }),
+          ...(equipmentChanged && {
+            noEquipmentNeededAt: null,
+            noEquipmentNeededBy: { disconnect: true },
+          }),
         },
       });
       // Who changed each value and when (AC10).

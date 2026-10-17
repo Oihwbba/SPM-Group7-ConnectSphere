@@ -183,6 +183,25 @@ describe("decideChangeRequest — approving (SCRUM-128 AC2, AC4–AC6, AC10)", (
     expect(mockOutdate).toHaveBeenCalled();
   });
 
+  it("SCRUM-170 [AC4] TC-170-12: approving a change to the equipment requirements puts Equipment back to Not decided; any other change keeps No equipment needed", async () => {
+    tx.eventChangeRequest.findUniqueOrThrow.mockResolvedValue(
+      pendingRequest([
+        { fieldName: "equipmentRequirements", oldValue: "None", newValue: "Two microphones", isMajor: true },
+      ]),
+    );
+    await decideChangeRequest({ changeRequestId: "cr1", decision: "APPROVED" });
+    expect(tx.event.update.mock.calls[0][0].data).toMatchObject({
+      equipmentRequirements: "Two microphones",
+      noEquipmentNeededAt: null,
+      noEquipmentNeededBy: { disconnect: true },
+    });
+
+    tx.event.update.mockClear();
+    tx.eventChangeRequest.findUniqueOrThrow.mockResolvedValue(pendingRequest([DESCRIPTION]));
+    await decideChangeRequest({ changeRequestId: "cr1", decision: "APPROVED" });
+    expect(tx.event.update.mock.calls[0][0].data).not.toHaveProperty("noEquipmentNeededAt");
+  });
+
   it("SCRUM-128 [AC5] TC-128-05: an impactful change to a Confirmed event returns it to Planning in the same operation, with a history entry", async () => {
     tx.event.findUniqueOrThrow.mockResolvedValue(eventNow("CONFIRMED"));
 

@@ -23,7 +23,7 @@ yet.
 | [TC-170-09](#tc-170-09) | Boundary | AC 4 | Unit |
 | [TC-170-10](#tc-170-10) | Negative | AC 4 | Unit, integration |
 | [TC-170-11](#tc-170-11) | Concurrency | AC 4 | Unit, integration |
-| [TC-170-12](#tc-170-12) | Positive | AC 4 | Follows with SCRUM-25 and SCRUM-128 |
+| [TC-170-12](#tc-170-12) | Positive | AC 4 | Unit, integration |
 | [TC-170-13](#tc-170-13) | Positive | AC 6 | Manual, waits for SCRUM-38 |
 
 ### TC-170-01
@@ -180,7 +180,7 @@ yet.
 | Test Data | — |
 | Expected Result | Both clear who and when together, and Equipment shows "Not decided" again. |
 
-**Automated by:** step 1 by `tests/unit/event-edit.test.ts` and `tests/integration/event-edit.test.ts` › "SCRUM-25 [AC3] TC-25-15: …" on SCRUM-25's branch (PR #186); step 2 follows with SCRUM-128 (Yiam Jun Bin), and is Manual until then.
+**Automated by:** step 1 by `tests/unit/event-edit.test.ts` and `tests/integration/event-edit.test.ts` › "SCRUM-25 [AC3] TC-25-15: …" on SCRUM-25's branch (PR #186); step 2 by `tests/unit/change-decision.test.ts` and `tests/integration/change-decision.test.ts` › "SCRUM-170 [AC4] TC-170-12: …" on SCRUM-128's branch (PR #181).
 
 ### TC-170-13
 
