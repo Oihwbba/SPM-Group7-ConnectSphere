@@ -104,6 +104,11 @@ export function RegistrationsList({
                     : "Venue to be confirmed"}
                 </span>
               </div>
+              {event.status === "CANCELLED" && event.cancellationReason && (
+                <p data-testid="cancellation-reason" className="text-foreground">
+                  Cancelled: {event.cancellationReason}
+                </p>
+              )}
             </CardContent>
           </Card>
         );
