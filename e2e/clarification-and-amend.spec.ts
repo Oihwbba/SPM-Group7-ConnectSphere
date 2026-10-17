@@ -33,6 +33,8 @@ const request = (name: string) => ({
   accessibilityNeeds: "None",
   preferredLayout: "Classroom",
   equipmentRequirements: "None",
+  // SCRUM-171 AC2: resubmitting needs Registration needed answered.
+  registrationRequired: true,
   registrationNotes: "None",
   submittedAt: new Date(),
 });

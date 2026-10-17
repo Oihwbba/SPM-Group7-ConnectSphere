@@ -30,6 +30,7 @@ import {
   INVALID_PERIOD_MESSAGE,
   operationalNoteSchema,
   PAST_START_MESSAGE,
+  registrationStillNeededMessage,
   ROUTINE_FIELDS,
   SAFETY_RELEVANT_FIELDS,
   type EditableField,
@@ -53,10 +54,19 @@ export type EventDetailsNeedConfirmation = {
 };
 
 /** Thrown inside the edit transaction for an expected refusal. */
-class EditError extends Error {}
+class EditError extends Error {
+  constructor(
+    message: string,
+    readonly fieldErrors?: Record<string, string[]>,
+  ) {
+    super(message);
+  }
+}
 
-/** A field's value as compared and audited: text, an ISO instant or a number. */
-function stored(value: string | number | Date | null | undefined): string | null {
+/** A field's value as compared and audited: text, an ISO instant, a number or a choice. */
+function stored(
+  value: string | number | boolean | Date | null | undefined,
+): string | null {
   if (value === null || value === undefined || value === "") return null;
   return value instanceof Date ? value.toISOString() : String(value);
 }
@@ -133,7 +143,9 @@ export async function updateEventDetails(
       expectedAttendance: data.expectedAttendance,
       venueRequirements: data.venueRequirements || null,
       equipmentRequirements: data.equipmentRequirements || null,
-    } as Record<EditableField, string | number | Date | null>;
+      registrationRequired:
+        data.registrationRequired ?? event.registrationRequired,
+    } as Record<EditableField, string | number | boolean | Date | null>;
 
     const changes = (Object.keys(next) as EditableField[])
       .map((field) => ({
@@ -163,6 +175,21 @@ export async function updateEventDetails(
     type Outcome = EventDetailsSaved | EventDetailsNeedConfirmation;
     const outcome = await prisma.$transaction(async (tx): Promise<Outcome> => {
       await tx.$queryRaw`SELECT "id" FROM "Event" WHERE "id" = ${eventId} FOR UPDATE`;
+
+      // SCRUM-171 AC5: not to No while anyone is registered, counted under
+      // the lock, which a registration also takes (SCRUM-73).
+      if (
+        next.registrationRequired === false &&
+        changes.some(({ field }) => field === "registrationRequired")
+      ) {
+        const active = await tx.registration.count({
+          where: { eventId, status: "REGISTERED" },
+        });
+        if (active > 0) {
+          const message = registrationStillNeededMessage(active);
+          throw new EditError(message, { registrationRequired: [message] });
+        }
+      }
 
       // AC3: Under Review nothing can be booked or reserved yet, so the
       // change saves with no warning (SCRUM-50 AC7, SCRUM-27 AC1).
@@ -247,7 +274,8 @@ export async function updateEventDetails(
     }
     return ok(outcome);
   } catch (error) {
-    if (error instanceof EditError) return err(error.message);
+    if (error instanceof EditError)
+      return err(error.message, error.fieldErrors);
     if (error instanceof PermissionError) return err(error.message);
     throw error;
   }
