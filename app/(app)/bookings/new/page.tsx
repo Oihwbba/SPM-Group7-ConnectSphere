@@ -1,7 +1,11 @@
 import { requireSession } from "@/lib/auth/guard";
 import { can } from "@/lib/auth/can";
 import { Forbidden } from "@/components/app/forbidden";
-import { getBookableEvents, getRequestableVenues } from "../queries";
+import {
+  getBookableEvents,
+  getRequestableVenues,
+  getSuitabilityJudgements,
+} from "../queries";
 import { RequestForm } from "./request-form";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
@@ -29,6 +33,13 @@ export default async function RequestVenuePage({
   ]);
   const initialEventId = events.find((e) => e.id === one(params.event))?.id;
   const initialVenueId = venues.find((v) => v.id === one(params.venue))?.id;
+  const judgements = await getSuitabilityJudgements(events.map((e) => e.id));
+  // SCRUM-40 AC8: only the assigned Coordinator records a judgement.
+  const judgeableEventIds = events
+    .filter((event) =>
+      can(session.user, "venue:judge", { kind: "event", ...event }),
+    )
+    .map((event) => event.id);
 
   return (
     <div className="space-y-6">
@@ -46,6 +57,8 @@ export default async function RequestVenuePage({
         venues={venues}
         initialEventId={initialEventId}
         initialVenueId={initialVenueId}
+        judgements={judgements}
+        judgeableEventIds={judgeableEventIds}
       />
     </div>
   );
