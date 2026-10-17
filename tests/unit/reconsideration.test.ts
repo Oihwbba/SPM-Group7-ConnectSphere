@@ -96,7 +96,10 @@ describe("flaggableArrangements — SCRUM-26 AC1", () => {
     ]);
     expect(bookings.mock.calls[0][0].where).toEqual({
       eventId: "evt_1",
-      status: { in: ["PENDING", "HELD", "APPROVED"] },
+      OR: [
+        { status: { in: ["PENDING", "APPROVED"] } },
+        { status: "HELD", holdExpiresAt: { gt: expect.any(Date) } },
+      ],
     });
     expect(reservations.mock.calls[0][0].where).toEqual({
       eventId: "evt_1",
@@ -143,7 +146,10 @@ describe("flagArrangements — SCRUM-26 AC2, AC3, AC6", () => {
     expect(booking.updateMany).toHaveBeenCalledWith({
       where: {
         eventId: "evt_1",
-        status: { in: ["PENDING", "HELD", "APPROVED"] },
+        OR: [
+          { status: { in: ["PENDING", "APPROVED"] } },
+          { status: "HELD", holdExpiresAt: { gt: expect.any(Date) } },
+        ],
         needsReconsideration: false,
       },
       data: flag,
@@ -173,7 +179,10 @@ describe("flagArrangements — SCRUM-26 AC2, AC3, AC6", () => {
 
     expect(booking.updateMany.mock.calls[0][0].where).toEqual({
       id: { in: ["bkg_1"] },
-      status: { in: ["PENDING", "HELD", "APPROVED"] },
+      OR: [
+        { status: { in: ["PENDING", "APPROVED"] } },
+        { status: "HELD", holdExpiresAt: { gt: expect.any(Date) } },
+      ],
       needsReconsideration: false,
     });
     expect(reservation.updateMany.mock.calls[0][0].where).toEqual({
@@ -365,7 +374,7 @@ describe("reservationStillStandsRefusal — SCRUM-26 AC8", () => {
     return { db, findLines, findReservations };
   }
 
-  it("SCRUM-26 [AC8] TC-26-06: a reservation that still covers what the event's live requests need stands", async () => {
+  it("SCRUM-26 [AC8] TC-26-06: a reservation that still covers what the event's live requests need stands; lines removed from a request (SCRUM-142) don't count", async () => {
     const { db, findLines, findReservations } = clientWith(
       [1, 1],
       [{ quantity: 2, startAt: START, endAt: END }],
@@ -374,6 +383,7 @@ describe("reservationStillStandsRefusal — SCRUM-26 AC8", () => {
     expect(await reservationStillStandsRefusal(db, reservation, event)).toBeNull();
     expect(findLines.mock.calls[0][0].where).toEqual({
       equipmentId: "eqp_projector",
+      removedAt: null,
       request: {
         eventId: "evt_1",
         status: { in: ["PENDING_REVIEW", "IN_REVIEW", "APPROVED"] },

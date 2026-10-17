@@ -1,5 +1,9 @@
 # ADR 0003 — Bookings and reservations carry their own times
 
+Stories: SCRUM-26 (flagging arrangements a change affects). SCRUM-44, named
+here when this was written, was never built; SCRUM-26 and SCRUM-128 carry its
+work.
+
 ## Context
 
 A `Booking` links an `Event` to a `Venue`, and a `Reservation` links an

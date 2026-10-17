@@ -51,6 +51,7 @@ const validInput = {
   accessibilityNeeds: "Wheelchair access",
   preferredLayout: "Booths",
   equipmentRequirements: "Tables and chairs",
+  registrationRequired: "yes",
   registrationNotes: "Open registration",
 };
 
@@ -109,7 +110,15 @@ describe("submitEventRequest — SCRUM-20 auto-assignment", () => {
     // status stays SUBMITTED (set on the initial create), never moved to
     // UNDER_REVIEW because there was nobody to assign it to.
     expect(tx.event.update).not.toHaveBeenCalled();
-    expect(tx.notification.createMany).not.toHaveBeenCalled();
+    // Only the Organiser's submission notice (SCRUM-45 AC1): nobody was
+    // assigned, so there is no assignment notice.
+    expect(tx.notification.createMany).toHaveBeenCalledTimes(1);
+    expect(tx.notification.createMany.mock.calls[0][0].data).toEqual([
+      expect.objectContaining({
+        userId: "usr_organiser",
+        title: "Request submitted",
+      }),
+    ]);
   });
 
   it("AC: the assignment is logged for auditability", async () => {
@@ -138,5 +147,33 @@ describe("submitEventRequest — SCRUM-20 auto-assignment", () => {
     expect(tx.event.update).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ status: "UNDER_REVIEW" }) }),
     );
+  });
+});
+describe("submitEventRequest — SCRUM-45 AC1 submission notice", () => {
+  it("SCRUM-45 [AC1, AC12] TC-45-01: the Organiser is told the request was submitted and is waiting to be assigned, then the assignment is a notice of its own", async () => {
+    mockPickCoordinator.mockResolvedValue("usr_coordinator");
+
+    await submitEventRequest(validInput);
+
+    const written = tx.notification.createMany.mock.calls.map(
+      (call) => call[0].data,
+    );
+    expect(written[0]).toEqual([
+      {
+        userId: "usr_organiser",
+        type: "EVENT_STATUS_CHANGED",
+        eventId: "evt_new",
+        title: "Request submitted",
+        message:
+          '"Career Fair" was submitted and is waiting to be assigned to a Coordinator.',
+      },
+    ]);
+    expect(
+      written[1].map((n: { userId: string; type: string }) => [n.userId, n.type]),
+    ).toEqual([
+      ["usr_organiser", "COORDINATOR_ASSIGNED"],
+      ["usr_coordinator", "COORDINATOR_ASSIGNED"],
+    ]);
+    expect(written).toHaveLength(2);
   });
 });

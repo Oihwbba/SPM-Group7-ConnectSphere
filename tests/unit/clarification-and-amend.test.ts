@@ -401,6 +401,16 @@ describe("respondToClarification — SCRUM-108 AC2–AC5, AC14", () => {
     },
   );
 
+  it("SCRUM-171 [AC1] TC-171-10: a clarification answer can clear the registration note, which the form no longer requires", () => {
+    expect(
+      clarificationChangesSchema.safeParse({ registrationNotes: "" }).success,
+    ).toBe(true);
+    expect(
+      clarificationChangesSchema.safeParse({ registrationNotes: "x".repeat(5001) })
+        .success,
+    ).toBe(false);
+  });
+
   it("SCRUM-108 [AC2]: changes with no dates at all are valid", () => {
     expect(
       clarificationChangesSchema.safeParse({ preferredLayout: "Theatre" })
@@ -458,6 +468,7 @@ describe("submitEventRequest — SCRUM-108 AC9–AC12, AC14 resubmission", () =>
     preferredLayout: "Theatre",
     accessibilityNeeds: "Ramp",
     equipmentRequirements: "Projector",
+    registrationRequired: "yes",
     registrationNotes: "Online",
   };
   // As rejected: the amendment above changes the description and attendance.
@@ -477,6 +488,7 @@ describe("submitEventRequest — SCRUM-108 AC9–AC12, AC14 resubmission", () =>
     preferredLayout: "Theatre",
     accessibilityNeeds: "Ramp",
     equipmentRequirements: "Projector",
+    registrationRequired: true,
     registrationNotes: "Online",
     programme: null,
     specialRequests: null,
@@ -516,6 +528,9 @@ describe("submitEventRequest — SCRUM-108 AC9–AC12, AC14 resubmission", () =>
         type: "EVENT_STATUS_CHANGED",
       }),
     });
+    // SCRUM-45 AC1: back with its Coordinator, it isn't waiting to be
+    // assigned, so the Organiser gets no submission notice.
+    expect(tx.notification.createMany).not.toHaveBeenCalled();
     // AC14: who resubmitted and when (the entries' createdAt).
     expect(tx.auditLog.create.mock.calls.map((c) => c[0].data)).toEqual([
       expect.objectContaining({
@@ -629,8 +644,13 @@ describe("submitEventRequest — SCRUM-108 AC9–AC12, AC14 resubmission", () =>
         newValue: null,
       }),
     });
+    // Nobody was assigned, so only the Organiser's submission notice
+    // (SCRUM-45 AC1) is written.
     expect(tx.notification.create).not.toHaveBeenCalled();
-    expect(tx.notification.createMany).not.toHaveBeenCalled();
+    expect(tx.notification.createMany).toHaveBeenCalledTimes(1);
+    expect(tx.notification.createMany.mock.calls[0][0].data).toEqual([
+      expect.objectContaining({ title: "Request submitted", eventId: "evt1" }),
+    ]);
   });
 
   it("SCRUM-108 [AC12] TC-108-08: resubmitting an event that is no longer Rejected is refused, with no second history entry or notification", async () => {

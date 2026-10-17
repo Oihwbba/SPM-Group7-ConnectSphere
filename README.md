@@ -21,9 +21,19 @@ arrangements that can't clash:
 4. When the arrangements are complete, the Coordinator **confirms** the event.
 5. **Attendees** register for confirmed events, up to each event's capacity.
 
-Release 1 covers the twenty features in the Week 4 project instructions. The
-full picture (roles, the event lifecycle, scope) is in
-[`docs/product-context.md`](docs/product-context.md).
+Week 7 added two more roles. They can sign in, but until their stories land
+they only read their own notifications:
+
+- The **Event Coordinator Lead** will assign new requests to Coordinators from
+  an unassigned queue, replacing automatic assignment (SCRUM-165), and see
+  every Coordinator's workload (SCRUM-141).
+- The **Safety Officer** will review an event's venue and equipment before it
+  can be confirmed (SCRUM-166). Their approval doesn't confirm the event; the
+  Coordinator still does.
+
+Release 1 covers the twenty features in the Week 4 project instructions, and
+Sprint 3 adds the Week 7 changes. The full picture (all seven roles, the event
+lifecycle, scope) is in [`docs/product-context.md`](docs/product-context.md).
 
 **Course material:** the customer briefing, the Week 4 project instructions
 (the twenty Release 1 features and the grading rubric) and the customer's Q&A
@@ -86,7 +96,8 @@ cp .env.example .env
 # 3. Apply any pending migrations to the shared database
 npm run db:deploy
 
-# 4. Load the seed data (idempotent: safe to re-run, deletes nothing)
+# 4. Load the seed data (idempotent: deletes nothing, but resets every
+#    seeded row to its seed values)
 npm run db:seed
 
 # 5. Run the app
@@ -100,14 +111,28 @@ Open <http://localhost:3000>. You'll be redirected to `/login`.
 > for the local Docker database only. On the shared database, `db:deploy` and
 > `db:seed` are all you ever need.
 
-### Offline fallback (Docker)
+### Local database (Docker)
 
-No internet? Swap both URLs in `.env` to the commented Docker ones, then:
+`.env` points at the shared database, so anything that writes test data or
+drops tables runs against a local Postgres instead: the integration tests,
+`test:coverage`, the e2e specs, `db:migrate` and `db:reset`. Point the
+terminal at Docker first, so a forgotten `.env` can't send them to Supabase:
 
 ```bash
 docker compose up -d
-npm run db:reset   # LOCAL ONLY: drop, migrate, seed
+export DATABASE_URL="postgresql://connectsphere:connectsphere@localhost:5432/connectsphere?schema=public"
+export DIRECT_URL="$DATABASE_URL"
+npm run db:reset           # LOCAL ONLY: drop, migrate, seed
+npm run test:coverage      # likewise test:integration, test:e2e, db:migrate
 ```
+
+In PowerShell, set `$env:DATABASE_URL` and `$env:DIRECT_URL` instead. The
+integration tests skip unless `DATABASE_URL` is localhost, and so do the e2e
+specs that guard with `usesLocalDatabase`. Some older e2e specs (for example
+`e2e/events.spec.ts`) write without that guard, so never run `test:e2e`
+with `.env` pointing at Supabase.
+
+Offline, the same exports let you run the app against Docker too.
 
 > **Postgres 13 or newer is required.** The schema uses the `btree_gist`
 > extension (the migration creates it) for the constraints that make venue
@@ -132,6 +157,10 @@ Every seeded account uses the password **`Password123!`**:
 | `attendee4@test.local` | Attendee | Deliberately unregistered, so free to take the last place |
 | `safety@test.local` | Safety Officer | Reviews operational safety checks (SCRUM-166) |
 
+No seeded account has the **Event Coordinator Lead** or **Safety Officer**
+role yet: neither role has a page beyond Notifications, so there is nothing to
+demo. Their sign-in is unit-tested instead (SCRUM-172, TC-172-01).
+
 ---
 
 ## What the seed gives you
@@ -155,14 +184,18 @@ which story needs it.
 the suitability check something to mark *not suitable* (SCRUM-40). The Grand
 Auditorium and Exhibition Hall already have approved bookings, so availability
 and search have a real clash to exclude (SCRUM-36/38). Seminar Room 2.1 has a
-maintenance period that is **not** a booking (SCRUM-36/37).
+maintenance period that is **not** a booking (SCRUM-36/37). Each venue has
+opening hours per weekday in Singapore time (SCRUM-34): the Auditorium
+07:00–23:00 and the Hall 06:00–22:00 every day; Seminar Room 2.1 08:00–20:00
+and the Boardroom 09:00–18:00 on weekdays, both closed at weekends.
 
 **Equipment:** five pooled types. Three of the ten projectors are in for
 maintenance and one PA speaker is written off, so the available quantity is
 never simply `totalQuantity` (SCRUM-29/30).
 
 **Also seeded:** an open clarification request; a pending change request with
-three changed fields (two major, one not); venue bookings in every status; an
+three changed fields (two major, one not); venue bookings that are approved,
+pending, rejected and cancelled (none held or expired yet); an
 approved and a pending equipment request with a status history; read and
 unread notifications; and audit entries.
 
@@ -205,18 +238,27 @@ They make the acceptance criteria hold even when a server action forgets a
 check, so don't work around them.
 
 - **A venue is never double-booked.** An `EXCLUDE USING gist` constraint
-  refuses a second approved booking that overlaps an existing one, even when
-  two approvals commit at the same instant (SCRUM-53).
-- **A venue is never both booked and unavailable.** Triggers refuse approving
-  a booking over recorded maintenance or closure, and recording unavailability
-  over an approved booking (SCRUM-37, ADR 0010).
-- **An event has one venue.** An event can hold at most one pending or
-  approved booking; a rejected or cancelled one doesn't count (SCRUM-50).
+  refuses a second approved or held booking whose occupied period (its times
+  widened by setup and turnaround, SCRUM-159) overlaps an existing one, even
+  when two approvals commit at the same instant (SCRUM-53, ADR 0010).
+- **A booking never lands on recorded unavailability.** A trigger refuses a
+  held or approved booking whose occupied period overlaps recorded
+  unavailability, and refuses two overlapping unavailability periods at one
+  venue (SCRUM-37, ADR 0010). Since SCRUM-172 the database allows
+  unavailability over a booking, for SCRUM-161 to flag it; until then the
+  record action still refuses it, under the same venue lock.
+- **One live booking per venue per event.** An event can hold at most one
+  pending, held or approved booking at each venue; rejected, cancelled and
+  expired ones don't count (SCRUM-162 AC2). One venue per event (SCRUM-50 AC8)
+  is now enforced by the request action only, until SCRUM-162 lifts it.
 - **One open equipment request per event**, and no equipment type twice on a
   request (SCRUM-27).
 - **One registration per attendee per event** (SCRUM-73).
+- **Operational notes are permanent.** A trigger refuses editing or deleting
+  an event's note (a whole event's deletion still cascades), and a CHECK
+  refuses a blank one (SCRUM-25 AC6).
 - **A rejection carries its reason**, for events, bookings and change requests
-  (SCRUM-19/43/53), and a rejected event also carries its outcome: amend and
+  (SCRUM-19/53/128), and a rejected event also carries its outcome: amend and
   resubmit, or start a new request (SCRUM-126).
 - **Every event is in Singapore time.** `Event.timezone` must be
   `Asia/Singapore` (SCRUM-129).
@@ -248,22 +290,23 @@ transaction. **Don't remove these locks.**
 | `npm run format` / `npm run format:check` | Prettier: write / check only |
 | `npm test` | All Vitest tests, unit and integration |
 | `npm run test:unit` | Unit tests only (database mocked) |
-| `npm run test:integration` | Integration tests against a real local Postgres |
-| `npm run test:coverage` | All Vitest tests with the 100% coverage check that CI runs |
-| `npm run test:e2e` | Playwright: builds and serves the app, then runs the specs |
+| `npm run test:integration` | Integration tests against a real Postgres: **local database only** |
+| `npm run test:coverage` | All Vitest tests with the 100% coverage check that CI runs: **local database only** |
+| `npm run test:e2e` | Playwright: builds and serves the app, then runs the specs: **local database only** |
 | `npm run db:deploy` | Apply pending migrations; the only migration command for the shared database |
-| `npm run db:seed` | Re-run the idempotent seed; safe on the shared database |
-| `npm run db:migrate` | Create a new migration in development |
+| `npm run db:seed` | Re-run the idempotent seed on the shared database: deletes nothing, but resets seeded rows to their seed values |
+| `npm run db:migrate` | Create and apply a new migration: **local database only** |
 | `npm run db:reset` | Drop, migrate and seed: **local Docker only** |
 | `npm run db:generate` | Regenerate the Prisma client |
 
-> **Integration tests and coverage need a local database.** Start one with
-> `docker compose up -d`. Without it the integration tests are skipped, and
-> `test:coverage` fails on files only they cover.
+> **"Local database only"** means the terminal points at Docker first: see
+> [Local database (Docker)](#local-database-docker). Never run these bare:
+> `.env` points at the shared database. Without a local database the
+> integration tests are skipped, and `test:coverage` fails on files only they
+> cover.
 >
-> **Playwright** needs a browser the first time
-> (`npx playwright install chromium`) and a seeded database
-> (`npm run db:reset` locally).
+> **Playwright** also needs a browser the first time
+> (`npx playwright install chromium`).
 
 ### Migration rules
 
@@ -318,7 +361,7 @@ app/
     equipment-requests/       SCRUM-10  Coordinator requests, Technical Support review
     equipment/                SCRUM-10  availability check and reserving approved requests
     registrations/            SCRUM-11  an attendee's registrations
-    notifications/            SCRUM-8   notification list
+    notifications/            SCRUM-8   each user's notification list (SCRUM-48)
 lib/
   auth/can.ts                 Authorisation: roles and relationships, in one place (ADR 0004)
   auth/guard.ts               requireSession(), used by every page

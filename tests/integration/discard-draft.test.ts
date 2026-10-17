@@ -62,6 +62,7 @@ async function makeDraft(over: { startAt?: Date; endAt?: Date } = {}) {
       accessibilityNeeds: "None",
       preferredLayout: "Theatre",
       equipmentRequirements: "None",
+      registrationRequired: true,
       registrationNotes: "None",
       ...over,
     },
@@ -83,6 +84,7 @@ function submission(draft: Awaited<ReturnType<typeof makeDraft>>) {
     accessibilityNeeds: draft.accessibilityNeeds,
     preferredLayout: draft.preferredLayout,
     equipmentRequirements: draft.equipmentRequirements,
+    registrationRequired: "yes",
     registrationNotes: draft.registrationNotes,
   };
 }

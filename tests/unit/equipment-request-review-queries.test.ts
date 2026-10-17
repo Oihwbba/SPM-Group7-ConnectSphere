@@ -120,6 +120,16 @@ describe("getEquipmentRequestQueue — SCRUM-28", () => {
     ]);
   });
 
+  it("SCRUM-170 [AC3] TC-170-04: each request carries the Organiser's equipment answer for Technical Support", async () => {
+    await getEquipmentRequestQueue();
+
+    const query = db.equipmentRequest.findMany.mock.calls[0][0];
+    expect(query.select.event.select).toMatchObject({
+      name: true,
+      equipmentRequirements: true,
+    });
+  });
+
   it("SCRUM-28 [AC1, AC4] TC-28-01, TC-28-07: an open request's lines carry what is free for the event, and a short line its alternatives", async () => {
     db.equipmentRequest.findMany.mockResolvedValue([request()]);
     db.reservation.findMany.mockResolvedValue([

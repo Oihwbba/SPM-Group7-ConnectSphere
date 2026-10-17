@@ -6,7 +6,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { cancelInTransaction } from "@/lib/event-closing";
 import { flagArrangements, flaggableArrangements } from "@/lib/reconsideration";
-import { outdateSafetyChecks } from "@/lib/safety-check";
+import { outdateSafetyChecks } from "@/lib/safety-checks";
 import {
   decideChangeRequest,
   getChangeDecision,
@@ -41,8 +41,8 @@ vi.mock("@/lib/reconsideration", async (importOriginal) => ({
   flagArrangements: vi.fn(),
   flaggableArrangements: vi.fn(),
 }));
-vi.mock("@/lib/safety-check", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@/lib/safety-check")>()),
+vi.mock("@/lib/safety-checks", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/safety-checks")>()),
   outdateSafetyChecks: vi.fn(),
 }));
 vi.mock("@/lib/event-closing", async (importOriginal) => ({

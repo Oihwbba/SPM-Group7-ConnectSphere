@@ -11,7 +11,7 @@ import {
   type ReadinessChecklist,
 } from "@/lib/event-readiness";
 import { ok, err, type ActionResult } from "@/lib/action-result";
-import { safetyCheckRequestable } from "@/lib/safety-check";
+import { safetyCheckRequestable } from "@/lib/safety-checks";
 
 /**
  * The event, if the signed-in user is its Organiser or its Coordinator.
@@ -42,8 +42,14 @@ async function relatedEvent(
  * without internal reasons. `canConfirm` tells the page whether to offer
  * SCRUM-81's Confirm action, which only the assigned Coordinator may take;
  * `canReject` whether to offer SCRUM-117's Reject, which the same Coordinator
- * may take unless the event was ever Confirmed (AC 4); `canRequestSafetyCheck`
- * whether to offer SCRUM-166's Request safety check (AC1).
+ * may take unless the event was ever Confirmed (AC 4). `canSettleHold` whether
+ * to offer confirming or releasing a venue hold (SCRUM-163 AC3), which only the
+ * assigned Coordinator may do, `canWithdrawBooking` whether to offer
+ * withdrawing a pending venue request (SCRUM-142 AC4), and
+ * withdrawing a pending venue request (SCRUM-142 AC4),
+ * `canRecordNoEquipment` whether to offer No equipment needed (SCRUM-170 AC4),
+ * and `canRequestSafetyCheck` whether to offer SCRUM-166's Request safety
+ * check (AC1).
  */
 export async function getEventReadiness(
   eventId: string,
@@ -52,6 +58,9 @@ export async function getEventReadiness(
     ReadinessChecklist & {
       canConfirm: boolean;
       canReject: boolean;
+      canSettleHold: boolean;
+      canWithdrawBooking: boolean;
+      canRecordNoEquipment: boolean;
       canRequestSafetyCheck: boolean;
     }
   >
@@ -82,6 +91,9 @@ export async function getEventReadiness(
     ...visible,
     canConfirm: can(user, "event:confirm", resource),
     canReject,
+    canSettleHold: can(user, "booking:settle-hold", resource),
+    canWithdrawBooking: can(user, "booking:withdraw", resource),
+    canRecordNoEquipment: can(user, "event:no-equipment", resource),
     canRequestSafetyCheck:
       resource.status === "PLANNING" &&
       can(user, "safety-check:request", resource) &&

@@ -11,6 +11,8 @@ import { EQUIPMENT_REQUEST_STATUS_LABEL } from "@/lib/equipment/requests";
 // index and the concurrent-submission case run against real Postgres in
 // tests/integration/equipment-request.test.ts.
 const tx = vi.hoisted(() => ({
+  $queryRaw: vi.fn(),
+  event: { updateMany: vi.fn() },
   equipmentRequest: { create: vi.fn() },
   equipmentRequestUpdate: { create: vi.fn() },
 }));
@@ -110,6 +112,20 @@ describe("createEquipmentRequest — SCRUM-27", () => {
     expect(revalidatePath).toHaveBeenCalledWith("/equipment-requests");
   });
 
+  it("SCRUM-170 [AC4] TC-170-11: creating a request locks the event, then clears a No equipment needed decision before the request is written", async () => {
+    await createEquipmentRequest(input());
+
+    expect(tx.event.updateMany).toHaveBeenCalledWith({
+      where: { id: "evt_approved", noEquipmentNeededAt: { not: null } },
+      data: { noEquipmentNeededAt: null, noEquipmentNeededById: null },
+    });
+    const order = (mock: Mock) => mock.mock.invocationCallOrder[0];
+    expect(order(tx.$queryRaw)).toBeLessThan(order(tx.event.updateMany));
+    expect(order(tx.event.updateMany)).toBeLessThan(
+      order(tx.equipmentRequest.create),
+    );
+  });
+
   it("SCRUM-27 [AC6] TC-27-08: records the submission as the first entry in the request's history", async () => {
     await createEquipmentRequest(input());
 
@@ -152,7 +168,7 @@ describe("createEquipmentRequest — SCRUM-27", () => {
     });
     expect(db.equipment.findMany).toHaveBeenCalledWith({
       where: { id: { in: ["eqp_projector", "eqp_retired"] }, isActive: true },
-      select: { id: true },
+      select: { id: true, type: true },
     });
     expect(db.$transaction).not.toHaveBeenCalled();
   });

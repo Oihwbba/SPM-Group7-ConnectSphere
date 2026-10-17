@@ -49,7 +49,11 @@ describe("AttendeeEvents — SCRUM-72 browse list", () => {
     await AttendeeEvents({ attendeeId: "usr_attendee" });
 
     const call = mockFindMany.mock.calls[0][0];
-    expect(call.where).toEqual({ status: "CONFIRMED" });
+    expect(call.where).toEqual({
+      status: "CONFIRMED",
+      // SCRUM-171 AC4: only events that take registrations.
+      OR: [{ registrationRequired: true }, { registrationRequired: null }],
+    });
     expect(call.orderBy).toEqual({ startAt: "asc" });
   });
 

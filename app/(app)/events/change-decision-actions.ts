@@ -18,7 +18,7 @@ import {
 import { cancelInTransaction } from "@/lib/event-closing";
 import { EQUIPMENT_REQUEST_STATUS_LABEL } from "@/lib/equipment/requests";
 import { flagArrangements, flaggableArrangements } from "@/lib/reconsideration";
-import { outdateSafetyChecks } from "@/lib/safety-check";
+import { outdateSafetyChecks } from "@/lib/safety-checks";
 import { CHANGE_KEYS, CHANGE_REQUEST_STATUS_LABEL } from "@/lib/schemas/change-request";
 
 const REASON_REQUIRED = "A reason is required to reject a change request.";
