@@ -90,6 +90,7 @@ describe("getEventReadiness — SCRUM-110", () => {
         canReject: true,
         canSettleHold: true,
         canWithdrawBooking: true,
+        canRecordNoEquipment: true,
         canRequestSafetyCheck: false,
       },
     });
@@ -110,6 +111,7 @@ describe("getEventReadiness — SCRUM-110", () => {
         canReject: false,
         canSettleHold: false,
         canWithdrawBooking: false,
+        canRecordNoEquipment: false,
         canRequestSafetyCheck: false,
       },
     });
@@ -346,5 +348,36 @@ describe("getEventReadiness — SCRUM-166 Request safety check", () => {
     mockChecklist.mockResolvedValue(arranged("Not requested"));
     expect(await offered(coordinator, "CONFIRMED")).toBe(false);
     expect(await offered(sessionFor("ORGANISER", "usr_organiser"))).toBe(false);
+  });
+});
+
+describe("getEventReadiness — SCRUM-170 No equipment needed", () => {
+  it("SCRUM-170 [AC4] TC-170-10: only the event's assigned Coordinator is offered No equipment needed", async () => {
+    const offered = async (
+      session: Session,
+      event:
+        | ReturnType<typeof eventRow>
+        | {
+            organiserId: string;
+            coordinatorId: null;
+            status: EventStatus;
+          } = eventRow(),
+    ) => {
+      mockAuth.mockResolvedValue(session);
+      mockEventFindUnique.mockResolvedValue(event);
+      const result = await getEventReadiness("evt_test");
+      return result.ok && result.data.canRecordNoEquipment;
+    };
+
+    expect(await offered(sessionFor("COORDINATOR", "usr_coordinator"))).toBe(
+      true,
+    );
+    expect(await offered(sessionFor("ORGANISER", "usr_organiser"))).toBe(false);
+    expect(
+      await offered(sessionFor("COORDINATOR", "usr_coordinator"), {
+        ...eventRow(),
+        coordinatorId: null,
+      }),
+    ).toBe(false);
   });
 });

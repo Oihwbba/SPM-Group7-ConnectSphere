@@ -45,6 +45,9 @@ async function arrangedEvent(n: number) {
       organiserId: "usr_organiser",
       coordinatorId: "usr_coordinator",
       expectedAttendance: 40,
+      // SCRUM-170 AC4: Equipment is always on the checklist; this event needs none.
+      noEquipmentNeededAt: new Date(),
+      noEquipmentNeededById: "usr_coordinator",
       ...day(n),
     },
     select: { id: true },

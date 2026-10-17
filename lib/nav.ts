@@ -42,7 +42,6 @@ const NAV_ROUTES: NavRoute[] = [
     label: { ORGANISER: "My Events", COORDINATOR: "Events" },
   },
   { action: "event:browse", href: "/events", label: "Browse Events" },
-  { action: "venue:read", href: "/venues", label: "Venues" },
   { action: "booking:request", href: "/bookings/new", label: "Request Venue" },
   { action: "booking:review", href: "/bookings", label: "Bookings" },
   {
@@ -71,6 +70,9 @@ const NAV_ROUTES: NavRoute[] = [
     href: "/notifications",
     label: "Notifications",
   },
+  // SCRUM-34 AC2: every internal role reads the catalogue. Listed last, so it
+  // never becomes a role's first link and so never moves where it lands.
+  { action: "venue:read", href: "/venues", label: "Venues" },
 ];
 
 const ROLES: Role[] = [
