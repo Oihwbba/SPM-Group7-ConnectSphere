@@ -22,6 +22,7 @@ const db = vi.hoisted(() => ({
   reservation: { findMany: vi.fn(), updateMany: vi.fn() },
   auditLog: { createMany: vi.fn() },
   safetyCheck: { updateMany: vi.fn() },
+  registration: { count: vi.fn() },
   eventOperationalNote: { findMany: vi.fn(), create: vi.fn() },
   $queryRaw: vi.fn(),
   $transaction: vi.fn(),
@@ -97,6 +98,114 @@ beforeEach(() => {
   db.booking.updateMany.mockResolvedValue({ count: 0 });
   db.reservation.updateMany.mockResolvedValue({ count: 0 });
   db.safetyCheck.updateMany.mockResolvedValue({ count: 0 });
+});
+
+describe("updateEventDetails — SCRUM-171 AC5, Registration needed", () => {
+  it.each([
+    [
+      1,
+      "This event has 1 active registration, so Registration needed can't be changed to No.",
+    ],
+    [
+      3,
+      "This event has 3 active registrations, so Registration needed can't be changed to No.",
+    ],
+  ])(
+    "SCRUM-171 [AC5] TC-171-08: with %i active registration(s), changing it to No is refused with the number shown, and nothing is written",
+    async (active, message) => {
+      db.event.findUnique.mockResolvedValue(
+        stored({ registrationRequired: true }),
+      );
+      db.registration.count.mockResolvedValue(active);
+
+      const result = await updateEventDetails({
+        ...unchanged,
+        registrationRequired: "no",
+      });
+
+      expect(result).toEqual({
+        ok: false,
+        error: message,
+        fieldErrors: { registrationRequired: [message] },
+      });
+      // Counted under the event lock, which a registration also takes.
+      expect(db.$queryRaw).toHaveBeenCalled();
+      expect(db.registration.count).toHaveBeenCalledWith({
+        where: { eventId: "evt_1", status: "REGISTERED" },
+      });
+      expect(db.event.updateMany).not.toHaveBeenCalled();
+      expect(db.auditLog.createMany).not.toHaveBeenCalled();
+    },
+  );
+
+  it("SCRUM-171 [AC5] TC-171-08: with no active registrations, changing it to No is saved and audited", async () => {
+    db.event.findUnique.mockResolvedValue(
+      stored({ registrationRequired: true }),
+    );
+    db.registration.count.mockResolvedValue(0);
+
+    const result = await updateEventDetails({
+      ...unchanged,
+      registrationRequired: "no",
+    });
+
+    expect(result).toEqual({
+      ok: true,
+      data: {
+        changed: ["registrationRequired"],
+        safetyCheckOutdated: false,
+        flagged: 0,
+      },
+    });
+    expect(db.event.updateMany).toHaveBeenCalledWith({
+      where: { id: "evt_1", status: "PLANNING", coordinatorId: "usr_coord" },
+      data: { registrationRequired: false },
+    });
+    expect(db.auditLog.createMany).toHaveBeenCalledWith({
+      data: [
+        expect.objectContaining({
+          fieldName: "registrationRequired",
+          oldValue: "true",
+          newValue: "false",
+        }),
+      ],
+    });
+  });
+
+  it("SCRUM-171 [AC5] TC-171-08: changing it to Yes, or from unanswered to Yes, never counts registrations", async () => {
+    for (const before of [false, null]) {
+      vi.clearAllMocks();
+      db.event.findUnique.mockResolvedValue(
+        stored({ registrationRequired: before }),
+      );
+      db.event.updateMany.mockResolvedValue({ count: 1 });
+
+      const result = await updateEventDetails({
+        ...unchanged,
+        registrationRequired: "yes",
+      });
+
+      expect(result.ok).toBe(true);
+      expect(db.registration.count).not.toHaveBeenCalled();
+      expect(db.event.updateMany).toHaveBeenCalledWith(
+        expect.objectContaining({ data: { registrationRequired: true } }),
+      );
+    }
+  });
+
+  it("SCRUM-171 [AC5] TC-171-08: left out of the edit, it stays as it is", async () => {
+    db.event.findUnique.mockResolvedValue(
+      stored({ registrationRequired: false }),
+    );
+
+    const result = await updateEventDetails(unchanged);
+
+    expect(result).toEqual({
+      ok: true,
+      data: { changed: [], safetyCheckOutdated: false, flagged: 0 },
+    });
+    expect(db.event.updateMany).not.toHaveBeenCalled();
+  });
 });
 
 describe("updateEventDetails — SCRUM-25", () => {

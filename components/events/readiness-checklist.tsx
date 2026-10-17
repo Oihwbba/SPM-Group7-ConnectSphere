@@ -24,6 +24,8 @@ import {
   withdrawBookingRequest,
 } from "@/app/(app)/bookings/actions";
 import { getEventReadiness } from "@/app/(app)/events/readiness-actions";
+import { recordNoEquipmentNeeded } from "@/app/(app)/events/equipment-decision-actions";
+import { requestSafetyCheck } from "@/app/(app)/events/safety-check-actions";
 import type { ReadinessChecklist as Checklist } from "@/lib/event-readiness";
 import { REJECTION_OUTCOME_LABEL } from "@/lib/schemas/event";
 
@@ -35,6 +37,12 @@ import { REJECTION_OUTCOME_LABEL } from "@/lib/schemas/event";
  * reasons) and who may confirm, so this component only renders what it is
  * given.
  */
+const ITEM_ID: Record<Checklist["items"][number]["name"], string> = {
+  "Venue booking": "venue",
+  Equipment: "equipment",
+  "Safety check": "safety",
+};
+
 export function ReadinessChecklist({ eventId }: { eventId: string }) {
   const [checklist, setChecklist] = useState<
     | (Checklist & {
@@ -42,18 +50,23 @@ export function ReadinessChecklist({ eventId }: { eventId: string }) {
         canReject: boolean;
         canSettleHold: boolean;
         canWithdrawBooking: boolean;
+        canRecordNoEquipment: boolean;
+        canRequestSafetyCheck: boolean;
       })
     | null
   >(null);
   const [loadFailed, setLoadFailed] = useState(false);
-  // Bumped after a hold is settled, so the checklist is read again.
+  // Bumped after a hold is settled or a safety check requested, so the
+  // checklist is read again.
   const [loads, setLoads] = useState(0);
   const [settling, startSettle] = useTransition();
   // Which hold action is in flight, so its button says so.
   const [settlingHow, setSettlingHow] = useState<string | null>(null);
+  const [requesting, startRequest] = useTransition();
   const [confirming, startConfirm] = useTransition();
   const [rejecting, startReject] = useTransition();
   const [rejectOpen, setRejectOpen] = useState(false);
+  const [deciding, startDecide] = useTransition();
   // SCRUM-142 AC4: the pending venue request waiting to be confirmed withdrawn.
   const [withdrawing, setWithdrawing] = useState<string | null>(null);
   const [reason, setReason] = useState("");
@@ -76,6 +89,23 @@ export function ReadinessChecklist({ eventId }: { eventId: string }) {
     };
   }, [eventId, loads]);
 
+  // SCRUM-166 AC1: offered only once the venue and equipment are complete.
+  function requestCheck() {
+    startRequest(async () => {
+      const result = await requestSafetyCheck({ eventId });
+      if (!result.ok) {
+        toast.error(result.error);
+        return;
+      }
+      toast.success(
+        result.data.existing
+          ? "A safety check is already awaiting review."
+          : "Safety check requested. The Safety Officers have been notified.",
+      );
+      setLoads((n) => n + 1);
+    });
+  }
+
   // SCRUM-163 AC3: the assigned Coordinator confirms or releases a hold, and
   // SCRUM-142 AC4: withdraws a pending venue request.
   const SETTLE = {
@@ -90,6 +120,17 @@ export function ReadinessChecklist({ eventId }: { eventId: string }) {
       const result = await action({ bookingId });
       if (!result.ok) toast.error(result.error);
       else toast.success(done);
+      setLoads((n) => n + 1);
+      router.refresh();
+    });
+  }
+
+  // SCRUM-170 AC4: the assigned Coordinator records that no equipment is needed.
+  function recordNoEquipment() {
+    startDecide(async () => {
+      const result = await recordNoEquipmentNeeded({ eventId });
+      if (!result.ok) toast.error(result.error);
+      else toast.success("Recorded: no equipment needed.");
       setLoads((n) => n + 1);
       router.refresh();
     });
@@ -150,7 +191,7 @@ export function ReadinessChecklist({ eventId }: { eventId: string }) {
                 <li
                   key={item.name}
                   className="flex items-start gap-2"
-                  data-testid={`readiness-item-${item.name === "Equipment" ? "equipment" : "venue"}`}
+                  data-testid={`readiness-item-${ITEM_ID[item.name]}`}
                   data-complete={item.complete}
                 >
                   {item.complete ? (
@@ -214,6 +255,17 @@ export function ReadinessChecklist({ eventId }: { eventId: string }) {
                         </Button>
                       </div>
                     )}
+                    {item.noEquipmentOffered &&
+                      checklist.canRecordNoEquipment && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={recordNoEquipment}
+                          disabled={deciding}
+                        >
+                          {deciding ? "Recording…" : "No equipment needed"}
+                        </Button>
+                      )}
                     {item.pendingBookingId && checklist.canWithdrawBooking && (
                       <Button
                         size="sm"
@@ -244,6 +296,16 @@ export function ReadinessChecklist({ eventId }: { eventId: string }) {
               {/* SCRUM-81: offered only to the assigned Coordinator, and only
                   usable once every item is complete. */}
               <div className="flex flex-wrap gap-2">
+                {checklist.canRequestSafetyCheck && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={requestCheck}
+                    disabled={requesting}
+                  >
+                    {requesting ? "Requesting…" : "Request safety check"}
+                  </Button>
+                )}
                 {/* SCRUM-117: for the assigned Coordinator, unless the event
                     was ever Confirmed (then it is cancelled instead). */}
                 {checklist.canReject && (

@@ -395,6 +395,7 @@ describe("submitEventRequest — SCRUM-19/24 rejected → submitted", () => {
       preferredLayout: "Theatre",
       accessibilityNeeds: "Ramp",
       equipmentRequirements: "Projector",
+      registrationRequired: "yes",
       registrationNotes: "Online",
     });
 

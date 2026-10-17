@@ -28,6 +28,25 @@ export const REGISTRATION_STATE_LABEL: Record<RegistrationState, string> = {
   EXPIRED: "Registration closed",
 };
 
+/**
+ * SCRUM-171 AC4 — does the event take registrations? Its Organiser answered
+ * Yes, or it was requested before Registration needed existed (unanswered),
+ * which keeps working as it always has. Only an explicit No leaves it out.
+ */
+export function takesRegistration(
+  event: Pick<Event, "registrationRequired">,
+): boolean {
+  return event.registrationRequired !== false;
+}
+
+/**
+ * The same rule as a Prisma `where` fragment. In SQL `<> false` is never true
+ * for NULL, so an unanswered event must be asked for explicitly.
+ */
+export const TAKES_REGISTRATION = {
+  OR: [{ registrationRequired: true }, { registrationRequired: null }],
+};
+
 type CapacityInput = Pick<Event, "expectedAttendance">;
 
 /**
@@ -110,4 +129,29 @@ export function computeRegistrationState(
 
 export function canRegisterNow(state: RegistrationState): boolean {
   return state === "OPEN";
+}
+
+/**
+ * SCRUM-75 AC6 — registration that is open can be closed. A full event is
+ * still open (a withdrawal frees a place), so it can be closed too.
+ */
+export function canCloseRegistration(state: RegistrationState): boolean {
+  return state === "OPEN" || state === "FULL";
+}
+
+/**
+ * SCRUM-75 AC6, AC8, AC9 — closed registration can be reopened, whether it
+ * was closed by hand or its closing time passed, but never at or after the
+ * event's start.
+ */
+export function canReopenRegistration(
+  event: Pick<Event, "startAt">,
+  state: RegistrationState,
+  now: Date = new Date(),
+): boolean {
+  return (
+    (state === "CLOSED" || state === "EXPIRED") &&
+    event.startAt !== null &&
+    event.startAt > now
+  );
 }

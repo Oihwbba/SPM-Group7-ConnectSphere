@@ -139,9 +139,9 @@ are signed in as `coordinator@test.local`, approvals as
 | Pre-conditions | As TC-159-05. Signed in as Venue Staff for step 2. |
 | Test Steps | 1. Request the venue for a period whose setup or turnaround (not its event times) overlaps recorded unavailability. <br> 2. On **Availability**, record maintenance 12:30–13:00. |
 | Test Data | Reason Maintenance |
-| Expected Result | 1. Refused, naming the unavailability. 2. "Not recorded: … is already booked from … to 12:45 pm …, including setup and turnaround." Nothing is saved. (Recording over bookings is replaced by SCRUM-161, which flags them instead.) |
+| Expected Result | 1. Refused, naming the unavailability. 2. Nothing is saved yet: the approved booking is shown as affected, because its turnaround runs to 12:45 pm, and the period is saved only once Venue Staff confirm it (SCRUM-161 replaced the refusal: [TC-161-01](SCRUM-161.md#tc-161-01)). |
 
-**Automated by:** `tests/unit/venue-availability.test.ts` › "SCRUM-159 [AC3] TC-159-07: recorded unavailability is compared with the asked-for occupied period, setup and turnaround included"; `tests/unit/bookings.test.ts` › "SCRUM-159 [AC3] TC-159-07: recorded unavailability is checked against the request's whole occupied period"; `tests/unit/unavailability.test.ts` › "SCRUM-159 [AC3] TC-159-07: unavailability over only a booking's turnaround is refused too, naming the whole occupied time"; `tests/integration/setup-turnaround.test.ts` › "SCRUM-159 [AC3] TC-159-07: unavailability over only an approved booking's turnaround is not recorded"
+**Automated by:** `tests/unit/venue-availability.test.ts` › "SCRUM-159 [AC3] TC-159-07: recorded unavailability is compared with the asked-for occupied period, setup and turnaround included"; `tests/unit/bookings.test.ts` › "SCRUM-159 [AC3] TC-159-07: recorded unavailability is checked against the request's whole occupied period"; `tests/unit/unavailability.test.ts` › "SCRUM-161 [AC3] TC-161-05: an approved booking's own turnaround reaching into the period makes it affected, and one only touching it doesn't"; `tests/integration/setup-turnaround.test.ts` › "SCRUM-159 [AC3] TC-159-07: unavailability over only an approved booking's turnaround is not recorded until that booking is confirmed"
 
 ### TC-159-08
 
