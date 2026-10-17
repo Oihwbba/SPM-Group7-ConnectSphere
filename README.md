@@ -148,6 +148,7 @@ Every seeded account uses the password **`Password123!`**:
 | `organiser@test.local` | Event Organiser | Owns most seeded events |
 | `coordinator@test.local` | Event Coordinator | Assigned to most seeded events |
 | `venuestaff@test.local` | Venue Staff | Decided the seeded venue bookings |
+| `venuestaff2@test.local` | Venue Staff | A second member of Venue Staff, for two people deciding at once (SCRUM-53) |
 | `techsupport@test.local` | Technical Support | Owns the seeded equipment reservations |
 | `attendee@test.local` | Attendee | Registered for several events |
 | `organiser2@test.local` | Event Organiser | Owns one event, to prove another organiser is refused (SCRUM-68) |
