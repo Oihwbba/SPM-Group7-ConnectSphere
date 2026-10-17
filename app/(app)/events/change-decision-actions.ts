@@ -283,7 +283,7 @@ export async function decideChangeRequest(
           ...(returnedToPlanning && { status: "PLANNING" as const }),
           ...(equipmentChanged && {
             noEquipmentNeededAt: null,
-            noEquipmentNeededBy: { disconnect: true },
+            noEquipmentNeededById: null,
           }),
         },
       });

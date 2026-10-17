@@ -21,7 +21,7 @@ export type RecordedChange = {
  * (`auditValue`), so the start and end are read back as dates and the
  * attendance as a number; a cleared optional field becomes empty again.
  */
-export function eventUpdateFrom(changes: RecordedChange[]): Prisma.EventUpdateInput {
+export function eventUpdateFrom(changes: RecordedChange[]): Prisma.EventUncheckedUpdateInput {
   const data: Record<string, string | number | Date | null> = {};
   for (const { fieldName, newValue } of changes) {
     data[fieldName] =

@@ -193,7 +193,7 @@ describe("decideChangeRequest — approving (SCRUM-128 AC2, AC4–AC6, AC10)", (
     expect(tx.event.update.mock.calls[0][0].data).toMatchObject({
       equipmentRequirements: "Two microphones",
       noEquipmentNeededAt: null,
-      noEquipmentNeededBy: { disconnect: true },
+      noEquipmentNeededById: null,
     });
 
     tx.event.update.mockClear();
