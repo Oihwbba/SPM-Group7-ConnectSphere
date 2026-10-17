@@ -38,6 +38,7 @@ import {
   type JudgementRow,
 } from "@/app/(app)/bookings/queries";
 import { EventPicker } from "./event-picker";
+import { RequestVenueButton } from "./request-venue-button";
 import {
   getFilterOptions,
   getSearchEvent,
@@ -299,8 +300,8 @@ function SearchForm({
                 <OrganiserVenueAnswers answers={event.answers} />
                 <p className="text-xs text-muted-foreground">
                   Set the attendance, layout, facilities and accessibility
-                  features below yourself; these answers aren&apos;t copied
-                  into the search.
+                  features below yourself; these answers aren&apos;t copied into
+                  the search.
                 </p>
               </div>
             </div>
@@ -653,16 +654,10 @@ function Results({
                     ) : (
                       // AC9: sends the search form to the request form, so
                       // what is on screen comes across, searched or not.
-                      <Button
-                        type="submit"
-                        size="sm"
-                        form={SEARCH_FORM_ID}
-                        formAction="/bookings/new"
-                        name="venue"
-                        value={venue.id}
-                      >
-                        Request this venue
-                      </Button>
+                      <RequestVenueButton
+                        formId={SEARCH_FORM_ID}
+                        venueId={venue.id}
+                      />
                     ))}
                 </div>
               </CardContent>
