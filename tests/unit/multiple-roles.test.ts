@@ -106,6 +106,16 @@ describe("no decisions on your own event — SCRUM-121 AC5", () => {
     expect(can(user("TECH_SUPPORT", ["COORDINATOR"]), "equipment:reserve", arrangement("usr_org", "usr_me"))).toBe(false);
   });
 
+  it("SCRUM-121 [AC5] TC-121-05: a Safety Officer can't review the safety check of an event they coordinate or organise, whichever role is primary", () => {
+    const check = (organiserId: string, coordinatorId: string | null) =>
+      event({ organiserId, coordinatorId });
+    expect(can(user("SAFETY_OFFICER", ["COORDINATOR"]), "safety-check:review", check("usr_org", "usr_me"))).toBe(false);
+    expect(can(user("COORDINATOR", ["SAFETY_OFFICER"]), "safety-check:review", check("usr_org", "usr_me"))).toBe(false);
+    expect(can(user("ORGANISER", ["SAFETY_OFFICER"]), "safety-check:review", check("usr_me", "usr_coord"))).toBe(false);
+    // Anyone else's event, they review.
+    expect(can(user("COORDINATOR", ["SAFETY_OFFICER"]), "safety-check:review", check("usr_org", "usr_coord"))).toBe(true);
+  });
+
   it("SCRUM-121 [AC5] TC-121-05: for anyone else's event they still decide, and a single-role member of staff always does", () => {
     expect(can(user("VENUE_STAFF", ["COORDINATOR"]), "booking:decide", arrangement("usr_org", "usr_coord"))).toBe(true);
     expect(can(user("VENUE_STAFF"), "booking:decide", arrangement("usr_org", null))).toBe(true);

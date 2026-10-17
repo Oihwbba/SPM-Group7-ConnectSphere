@@ -9,6 +9,7 @@ import {
   updateEquipmentRequestStatus,
 } from "@/app/(app)/equipment-requests/actions";
 import { reserveEquipmentRequest } from "@/app/(app)/equipment/actions";
+import { recordSafetyCheckOutcome } from "@/app/(app)/safety-checks/actions";
 
 // SCRUM-121 AC5 — a member of staff who also organises or coordinates an
 // event can't decide its venue booking or review or reserve its equipment,
@@ -20,6 +21,7 @@ const db = vi.hoisted(() => ({
   equipment: { findFirst: vi.fn() },
   reservation: { findMany: vi.fn(), createMany: vi.fn() },
   equipmentUnavailability: { findMany: vi.fn() },
+  safetyCheck: { findUnique: vi.fn(), updateMany: vi.fn() },
   venueUnavailability: { findMany: vi.fn() },
   auditLog: { create: vi.fn() },
   notification: { create: vi.fn(), createMany: vi.fn() },
@@ -49,6 +51,7 @@ beforeEach(() => {
 
 function expectNothingWritten() {
   expect(db.booking.updateMany).not.toHaveBeenCalled();
+  expect(db.safetyCheck.updateMany).not.toHaveBeenCalled();
   expect(db.equipmentRequest.updateMany).not.toHaveBeenCalled();
   expect(db.reservation.createMany).not.toHaveBeenCalled();
   expect(db.auditLog.create).not.toHaveBeenCalled();
@@ -149,6 +152,30 @@ describe("equipment for your own event — SCRUM-121 AC5", () => {
       }),
     ).toEqual({ ok: false, error: DENIED });
     expect(db.reservation.findMany).not.toHaveBeenCalled();
+    expectNothingWritten();
+  });
+});
+
+describe("a safety check for your own event — SCRUM-121 AC5", () => {
+  const check = (organiserId: string, coordinatorId: string | null) => ({
+    eventId: "evt_1",
+    event: { organiserId, coordinatorId, status: "PLANNING", name: "Expo" },
+  });
+
+  it("SCRUM-121 [AC5] TC-121-05: a Safety Officer who coordinates or organises the event can't record its outcome, and nothing is written", async () => {
+    for (const [roles, row] of [
+      [["SAFETY_OFFICER", ["COORDINATOR"]], check("usr_org", "usr_me")],
+      [["COORDINATOR", ["SAFETY_OFFICER"]], check("usr_org", "usr_me")],
+      [["ORGANISER", ["SAFETY_OFFICER"]], check("usr_me", "usr_coord")],
+    ] as const) {
+      signedInAs(roles[0], [...roles[1]]);
+      db.safetyCheck.findUnique.mockResolvedValue(row);
+      expect(await recordSafetyCheckOutcome({ checkId: "chk_1", outcome: "APPROVED" })).toEqual({
+        ok: false,
+        error: "Safety check not found.",
+      });
+    }
+    expect(db.$transaction).not.toHaveBeenCalled();
     expectNothingWritten();
   });
 });
