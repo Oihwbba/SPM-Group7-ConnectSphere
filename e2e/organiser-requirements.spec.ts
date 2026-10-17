@@ -196,7 +196,7 @@ test.describe("SCRUM-170 — Show the Organiser's requirements to the people pla
     ).toContainText(ANSWERS.equipmentRequirements);
   });
 
-  test("SCRUM-170 [AC4] TC-170-06, TC-170-07, TC-170-08: Equipment is Not decided until the Coordinator records No equipment needed, which completes the checklist; the Organiser sees the state without who decided", async ({
+  test("SCRUM-170 [AC4] TC-170-06, TC-170-07, TC-170-08, SCRUM-166 [AC1]: Equipment is Not decided until the Coordinator records No equipment needed, which completes it and leaves only the safety check to request; the Organiser sees the state without who decided", async ({
     browser,
   }) => {
     const coordinator = await signedIn(browser, "coordinator@test.local");
@@ -217,9 +217,17 @@ test.describe("SCRUM-170 — Show the Organiser's requirements to the people pla
     await expect(equipment).toHaveAttribute("data-complete", "true");
     await expect(equipment).toContainText("No equipment needed");
     await expect(equipment).toContainText("Recorded by Cody Coordinator");
+    // SCRUM-166 AC1, AC9: with the venue and equipment complete, the safety
+    // check is the one item left, and it can now be requested.
     await expect(details.getByTestId("readiness-summary")).toHaveText(
-      "Ready to confirm",
+      /Not ready to confirm yet/,
     );
+    await expect(details.getByTestId("readiness-item-safety")).toContainText(
+      "Not requested",
+    );
+    await expect(
+      details.getByRole("button", { name: "Request safety check" }),
+    ).toBeVisible();
 
     const organiser = await signedIn(browser, "organiser@test.local");
     details = await openDetails(organiser, CHECKLIST_EVENT);
