@@ -586,7 +586,9 @@ describe.skipIf(!usesLocalDatabase)(
         expect(booking.needsReconsideration).toBe(true);
         expect(booking.status).toBe(approval.ok ? "APPROVED" : "PENDING");
       }
-    });
+      // Five real races take about 5 s alone, Vitest's default limit, and
+      // longer while the other test files run beside this one.
+    }, 30_000);
   },
 );
 
