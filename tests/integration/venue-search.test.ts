@@ -328,3 +328,70 @@ describe.skipIf(!usesLocalDatabase)(
     });
   },
 );
+
+// SCRUM-38 AC4, AC15 with real opening-hours rows (SCRUM-34): its own
+// location, so the venues above never appear in these results.
+describe.skipIf(!usesLocalDatabase)(
+  "venue search and opening hours (SCRUM-38) — real database",
+  () => {
+    const HOURS_LOCATION = "IT-38 Block H";
+    const SATURDAY = "2033-03-19";
+    const on = (day: string, hhmm: string) =>
+      new Date(`${day}T${hhmm}:00+08:00`);
+
+    beforeAll(async () => {
+      // Weekdays 09:00–18:00, Closed at weekends; 60 minutes either side.
+      await prisma.venue.create({
+        data: {
+          name: "IT-38 Hours Room",
+          location: HOURS_LOCATION,
+          capacity: 60,
+          setupMinutes: 60,
+          turnaroundMinutes: 60,
+          openingHours: {
+            create: [1, 2, 3, 4, 5, 6, 7].map((weekday) =>
+              weekday <= 5
+                ? { weekday, opensMinute: 540, closesMinute: 1080 }
+                : { weekday, opensMinute: null, closesMinute: null },
+            ),
+          },
+        },
+      });
+    });
+
+    afterAll(async () => {
+      await prisma.venue.deleteMany({ where: { location: HOURS_LOCATION } });
+    });
+
+    const found = async (
+      start: Date,
+      end: Date,
+      bookingPeriod = true,
+    ) =>
+      (
+        await searchVenues(prisma, {
+          period: { startAt: start, endAt: end },
+          bookingPeriod,
+          location: HOURS_LOCATION,
+          filters: { facilities: [], accessibilityFeatures: [] },
+        })
+      ).map((v) => v.name);
+
+    it("SCRUM-38 [AC4, AC15] TC-38-15, TC-38-16: a booking period from opening to closing is kept though setup and turnaround fall outside; one minute outside is excluded", async () => {
+      expect(await found(on(DAY, "09:00"), on(DAY, "18:00"))).toEqual([
+        "IT-38 Hours Room",
+      ]);
+      expect(await found(on(DAY, "08:59"), on(DAY, "12:00"))).toEqual([]);
+      expect(await found(on(DAY, "15:00"), on(DAY, "18:01"))).toEqual([]);
+    });
+
+    it("SCRUM-38 [AC4] TC-38-20: a date without times excludes the venue only on a day it is Closed", async () => {
+      expect(
+        await found(on(DAY, "00:00"), on("2033-03-16", "00:00"), false),
+      ).toEqual(["IT-38 Hours Room"]);
+      expect(
+        await found(on(SATURDAY, "00:00"), on("2033-03-20", "00:00"), false),
+      ).toEqual([]);
+    });
+  },
+);

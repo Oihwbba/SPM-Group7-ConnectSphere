@@ -285,13 +285,20 @@ test.describe("SCRUM-38 — Search and filter venues", () => {
     await expect(page.getByTestId("venue-result")).toHaveCount(0);
     await expect(page.getByTestId("no-venues")).toHaveCount(0);
 
-    // AC2: the same end time on the next day is a period over two days.
+    // AC2: the same end time on the next day is a period over two days. It
+    // isn't refused as invalid, but as a booking period it runs past every
+    // venue's closing time (AC4, SCRUM-34 AC7), so nothing matches.
     await page.getByLabel("End date").fill("2034-11-08");
     await page.getByRole("button", { name: "Search" }).click();
     await expect(page).toHaveURL(/endDate=2034-11-08/);
     await expect(
-      page.getByRole("heading", { name: /venues? free from/ }),
-    ).toBeVisible();
+      page.getByText(
+        "The time range is invalid: the end must be after the start.",
+      ),
+    ).toHaveCount(0);
+    await expect(page.getByTestId("no-venues")).toContainText(
+      "No venues match",
+    );
 
     await page.getByLabel("End date").fill("");
     await page.getByLabel("End time").fill("16:00");
@@ -303,5 +310,128 @@ test.describe("SCRUM-38 — Search and filter venues", () => {
     await expect(page.getByTestId("no-venues")).toContainText(
       "No venues match",
     );
+  });
+});
+
+test.describe("SCRUM-38 — opening hours, suitability and the Organiser's answers", () => {
+  test.skip(!usesLocalDatabase, "writes its own events; local database only");
+
+  let eventId: string | undefined;
+
+  test.afterEach(async () => {
+    if (!eventId) return;
+    await prisma.event.deleteMany({ where: { id: eventId } });
+    eventId = undefined;
+  });
+
+  test("SCRUM-38 [AC1, AC8, AC11, AC14] TC-38-01, TC-38-09, TC-38-12: from an event, the Organiser's answers show beside the filters, and with the filters off a venue that doesn't fit is listed as Not suitable", async ({
+    page,
+  }) => {
+    const name = `SCRUM-38 Fit ${Date.now()}`;
+    eventId = await planningEvent(name, "2034-11-14");
+    await prisma.event.update({
+      where: { id: eventId },
+      data: {
+        venueRequirements: "Somewhere near the MRT",
+        preferredLayout: "Theatre",
+        accessibilityNeeds: "Step-free access for two guests",
+      },
+    });
+
+    await signIn(page, "coordinator@test.local");
+    await page.goto(`/venues/search?event=${eventId}`);
+
+    // AC1 (SCRUM-170 AC6): read-only, exactly as entered.
+    const answers = page
+      .getByTestId("search-event")
+      .getByTestId("organiser-venue-answers");
+    await expect(answers).toContainText("Somewhere near the MRT");
+    await expect(answers).toContainText("Theatre");
+    await expect(answers).toContainText("Step-free access for two guests");
+
+    // AC11, AC12: the filters start on; the Boardroom, holding 14, is left out.
+    await expect(
+      page.getByRole("checkbox", { name: "Only show venues that fit" }),
+    ).toBeChecked();
+    expect(await resultNames(page)).toEqual([
+      "Exhibition Hall",
+      "Grand Auditorium",
+      "Seminar Room 2.1",
+    ]);
+    // AC8: every venue that passed the filters is Suitable, with no reasons.
+    await expect(page.getByTestId("suitability-result")).toHaveText([
+      "Suitable",
+      "Suitable",
+      "Suitable",
+    ]);
+    await expect(page.getByTestId("suitability-reason")).toHaveCount(0);
+
+    // With the filters off, the Boardroom is listed and says why it doesn't fit.
+    await page
+      .getByRole("checkbox", { name: "Only show venues that fit" })
+      .uncheck();
+    await page.getByRole("button", { name: "Search" }).click();
+    await expect(page).toHaveURL(/searched=1/);
+    await expect(page).not.toHaveURL(/fit=1/);
+    const boardroom = page.locator('[data-venue="ven_boardroom"]');
+    await expect(boardroom.getByTestId("suitability-result")).toHaveText(
+      "Not suitable",
+    );
+    await expect(boardroom.getByTestId("suitability-reason")).toHaveText([
+      "Capacity 14 < attendance 40",
+    ]);
+    expect(await resultNames(page)).toHaveLength(4);
+
+    // AC14: changing the attendance keeps the filters off.
+    await page.getByLabel("Attendance").fill("10");
+    await page.getByRole("button", { name: "Search" }).click();
+    await expect(page).toHaveURL(/attendance=10/);
+    await expect(
+      page.getByRole("checkbox", { name: "Only show venues that fit" }),
+    ).not.toBeChecked();
+    await expect(boardroom.getByTestId("suitability-result")).toHaveText(
+      "Suitable",
+    );
+  });
+
+  test("SCRUM-38 [AC4, AC15] TC-38-15, TC-38-20: on its own, a time range excludes venues not yet open, and a date alone excludes venues closed that day", async ({
+    page,
+  }) => {
+    await signIn(page, "coordinator@test.local");
+    await page.goto("/venues/search");
+
+    // Tuesday 07:30–09:00: the Hall opens at 06:00 and the Auditorium at
+    // 07:00; Seminar Room 2.1 opens at 08:00 and the Boardroom at 09:00.
+    await page.getByLabel("Start date").fill("2034-11-14");
+    await page.getByLabel("Start time").fill("07:30");
+    await page.getByLabel("End time").fill("09:00");
+    await page.getByRole("button", { name: "Search" }).click();
+    await expect(page).toHaveURL(/from=07%3A30/);
+    expect(await resultNames(page)).toEqual([
+      "Exhibition Hall",
+      "Grand Auditorium",
+    ]);
+
+    // Saturday, no times: Seminar Room 2.1 and the Boardroom are Closed.
+    await page.getByLabel("Start date").fill("2034-11-11");
+    await page.getByLabel("Start time").fill("");
+    await page.getByLabel("End time").fill("");
+    await page.getByRole("button", { name: "Search" }).click();
+    await expect(page).toHaveURL(/date=2034-11-11/);
+    expect(await resultNames(page)).toEqual([
+      "Exhibition Hall",
+      "Grand Auditorium",
+    ]);
+
+    // The Tuesday, no times: every venue is open at some point that day.
+    await page.getByLabel("Start date").fill("2034-11-14");
+    await page.getByRole("button", { name: "Search" }).click();
+    await expect(page).toHaveURL(/date=2034-11-14/);
+    expect(await resultNames(page)).toEqual([
+      "Executive Boardroom",
+      "Exhibition Hall",
+      "Grand Auditorium",
+      "Seminar Room 2.1",
+    ]);
   });
 });

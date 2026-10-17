@@ -1,4 +1,5 @@
 import { can, type SessionUser } from "@/lib/auth/can";
+import type { VenueAnswers } from "@/components/events/organiser-answers";
 import { prisma } from "@/lib/db";
 import type { Period } from "@/lib/period";
 import { flaggedLiveBookingWhere } from "@/lib/reconsideration";
@@ -20,6 +21,8 @@ export type SearchEvent = {
   period: Period;
   /** The flagged booking a replacement is being found for, if any. */
   replacing: { id: string; venueName: string } | null;
+  /** AC1 (SCRUM-170 AC6): the Organiser's answers, shown beside the filters. */
+  answers: VenueAnswers;
   /** What the search starts with, before the Coordinator changes anything. */
   prefill: {
     attendance?: number;
@@ -60,6 +63,9 @@ export async function getSearchEvent(
       startAt: true,
       endAt: true,
       expectedAttendance: true,
+      venueRequirements: true,
+      preferredLayout: true,
+      accessibilityNeeds: true,
     },
   });
   if (!event || !can(user, "booking:request", { kind: "event", ...event })) {
@@ -102,7 +108,18 @@ export async function getSearchEvent(
 
   return {
     ok: true,
-    event: { id: event.id, name: event.name, period, replacing, prefill },
+    event: {
+      id: event.id,
+      name: event.name,
+      period,
+      replacing,
+      prefill,
+      answers: {
+        venueRequirements: event.venueRequirements,
+        preferredLayout: event.preferredLayout,
+        accessibilityNeeds: event.accessibilityNeeds,
+      },
+    },
   };
 }
 

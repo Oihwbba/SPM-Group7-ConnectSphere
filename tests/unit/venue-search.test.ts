@@ -24,6 +24,8 @@ const venue = (id: string, overrides: Record<string, unknown> = {}) => ({
   supportedLayouts: ["classroom", "theatre"],
   setupMinutes: 0,
   turnaroundMinutes: 0,
+  // No hours recorded: such a venue is closed at no time (SCRUM-34 AC7).
+  openingHours: [],
   ...overrides,
 });
 
@@ -222,6 +224,7 @@ describe("searchVenues — SCRUM-38", () => {
       accessibilityFeatures: ["wheelchair-access"],
       supportedLayouts: ["classroom", "theatre"],
       alreadyRequested: false,
+      suitability: { suitable: true, reasons: [] },
     });
   });
 
@@ -265,5 +268,182 @@ describe("searchVenues — SCRUM-38", () => {
 
     expect(results[0].alreadyRequested).toBe(false);
     expect(db.booking.findMany).not.toHaveBeenCalled();
+  });
+});
+
+/** Weekdays 09:00–18:00 SGT, Closed at weekends (SCRUM-34 AC3). */
+const weekdayHours = [1, 2, 3, 4, 5, 6, 7].map((weekday) =>
+  weekday <= 5
+    ? { weekday, opensMinute: 540, closesMinute: 1080 }
+    : { weekday, opensMinute: null, closesMinute: null },
+);
+/** A Singapore wall time. 3 June 2031 is a Tuesday, 7 June a Saturday. */
+const sg = (wall: string) => new Date(`${wall}+08:00`);
+const sgPeriod = (start: string, end: string) => ({
+  startAt: sg(start),
+  endAt: sg(end),
+});
+
+describe("searchVenues and opening hours — SCRUM-38 AC4, AC15", () => {
+  const ids = async (search: Parameters<typeof searchVenues>[1]) =>
+    (
+      await searchVenues(
+        stubDb([
+          venue("ven_hours", { openingHours: weekdayHours }),
+          venue("ven_no_hours"),
+        ]) as never,
+        search,
+        NOW,
+      )
+    ).map((r) => r.id);
+
+  it.each([
+    ["starts a minute before opening", "2031-06-03T08:59", "2031-06-03T12:00"],
+    ["ends a minute after closing", "2031-06-03T15:00", "2031-06-03T18:01"],
+    ["falls on a day it is Closed", "2031-06-07T10:00", "2031-06-07T12:00"],
+    ["runs past midnight", "2031-06-03T17:00", "2031-06-04T10:00"],
+  ])(
+    "SCRUM-38 [AC4] TC-38-15: a venue whose booking period %s is excluded; one with no hours recorded is kept",
+    async (_label, start, end) => {
+      expect(
+        await ids({ period: sgPeriod(start, end), filters: noFilters }),
+      ).toEqual(["ven_no_hours"]);
+    },
+  );
+
+  it("SCRUM-38 [AC4] TC-38-15: a booking period exactly from opening to closing is within the hours", async () => {
+    expect(
+      await ids({
+        period: sgPeriod("2031-06-03T09:00", "2031-06-03T18:00"),
+        filters: noFilters,
+      }),
+    ).toEqual(["ven_hours", "ven_no_hours"]);
+  });
+
+  it("SCRUM-38 [AC15] TC-38-16: setup and turnaround outside the hours don't exclude the venue", async () => {
+    const results = await searchVenues(
+      stubDb([
+        venue("ven_hours", {
+          openingHours: weekdayHours,
+          setupMinutes: 60,
+          turnaroundMinutes: 60,
+        }),
+      ]) as never,
+      {
+        period: sgPeriod("2031-06-03T09:00", "2031-06-03T18:00"),
+        filters: noFilters,
+      },
+      NOW,
+    );
+
+    expect(results.map((r) => r.id)).toEqual(["ven_hours"]);
+    // Availability is still checked over the occupied period (AC3).
+    expect(mockBlockers).toHaveBeenCalledWith(
+      expect.anything(),
+      "ven_hours",
+      sgPeriod("2031-06-03T08:00", "2031-06-03T19:00"),
+      NOW,
+    );
+  });
+
+  it("SCRUM-38 [AC4] TC-38-20: a date searched without times keeps a venue open that day, though not open all day", async () => {
+    expect(
+      await ids({
+        period: sgPeriod("2031-06-03T00:00", "2031-06-04T00:00"),
+        bookingPeriod: false,
+        filters: noFilters,
+      }),
+    ).toEqual(["ven_hours", "ven_no_hours"]);
+  });
+
+  it.each([
+    ["a day it is Closed", "2031-06-07T00:00", "2031-06-08T00:00"],
+    ["days that include one it is Closed", "2031-06-06T00:00", "2031-06-08T00:00"],
+  ])(
+    "SCRUM-38 [AC4] TC-38-20: a date search over %s excludes the venue",
+    async (_label, start, end) => {
+      expect(
+        await ids({
+          period: sgPeriod(start, end),
+          bookingPeriod: false,
+          filters: noFilters,
+        }),
+      ).toEqual(["ven_no_hours"]);
+    },
+  );
+
+  it("SCRUM-38 [AC4] TC-38-15: a venue closed for the search isn't checked for availability", async () => {
+    await ids({
+      period: sgPeriod("2031-06-07T10:00", "2031-06-07T12:00"),
+      filters: noFilters,
+    });
+
+    expect(mockBlockers).toHaveBeenCalledTimes(1);
+    expect(mockBlockers).toHaveBeenCalledWith(
+      expect.anything(),
+      "ven_no_hours",
+      expect.anything(),
+      NOW,
+    );
+  });
+});
+
+describe("searchVenues and suitability — SCRUM-38 AC8, AC11", () => {
+  const needs = {
+    attendance: 100,
+    facilities: ["projector", "stage"],
+    accessibilityFeatures: ["hearing-loop"],
+    layout: "banquet",
+  };
+
+  it("SCRUM-38 [AC8] TC-38-09: with the filters off, a venue that doesn't fit is listed as Not suitable with every reason", async () => {
+    const [result] = await searchVenues(
+      stubDb([venue("ven_room")]) as never,
+      { period: null, filters: needs, onlyFitting: false },
+      NOW,
+    );
+
+    expect(result.suitability).toEqual({
+      suitable: false,
+      reasons: [
+        "Capacity 60 < attendance 100",
+        "Missing facility: stage",
+        "No hearing loop; event needs hearing loop",
+        "Banquet layout not supported",
+      ],
+    });
+  });
+
+  it("SCRUM-38 [AC8] TC-38-09: a venue that has everything entered is Suitable, with no reasons", async () => {
+    const [result] = await searchVenues(
+      stubDb([venue("ven_room")]) as never,
+      {
+        period: null,
+        filters: {
+          attendance: 60,
+          facilities: ["projector"],
+          accessibilityFeatures: ["wheelchair-access"],
+          layout: "theatre",
+        },
+      },
+      NOW,
+    );
+
+    expect(result.suitability).toEqual({ suitable: true, reasons: [] });
+  });
+
+  it("SCRUM-38 [AC11] TC-38-12: the same needs as filters leave out the venue that doesn't fit", async () => {
+    const db = stubDb([venue("ven_room")]);
+
+    expect(
+      await searchVenues(db as never, { period: null, filters: needs }, NOW),
+    ).toEqual([]);
+    expect(
+      await searchVenues(
+        db as never,
+        { period: null, filters: needs, onlyFitting: true },
+        NOW,
+      ),
+    ).toEqual([]);
   });
 });

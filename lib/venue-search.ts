@@ -3,6 +3,8 @@ import type { Prisma, PrismaClient } from "@prisma/client";
 import type { Period } from "@/lib/period";
 import { liveBookingWhere } from "@/lib/reconsideration";
 import { findVenueBlockers, occupiedPeriod } from "@/lib/venue-availability";
+import { closedDayWithin, dayOutsideOpeningHours } from "@/lib/venue-hours";
+import { assessSuitability, type Suitability } from "@/lib/venue-suitability";
 
 /**
  * SCRUM-38 — search venues by period and location, and filter them by what
@@ -55,6 +57,19 @@ export function matchesFilters(
 export type VenueSearch = {
   /** The period searched, or null when no date or time was given (AC2). */
   period: Period | null;
+  /**
+   * AC4: whether `period` is the booking period a request would have: the
+   * event's (AC1), or a searched start and end time. A date searched without
+   * both times isn't one, so it excludes only venues Closed on a day it covers.
+   * Defaults to true.
+   */
+  bookingPeriod?: boolean;
+  /**
+   * AC11: whether the needs entered are applied as filters. Off, every free
+   * venue is listed, and its suitability (AC8) shows what it lacks. Defaults
+   * to true.
+   */
+  onlyFitting?: boolean;
   location?: string;
   filters: VenueFilters;
   /** AC9: the event the search was opened from, to mark venues it has asked for. */
@@ -71,17 +86,37 @@ export type VenueSearchResult = {
   supportedLayouts: string[];
   /** AC9: the event already has a Pending, Held or Approved booking here. */
   alreadyRequested: boolean;
+  /** AC8: SCRUM-40's result, against the needs entered in the search. */
+  suitability: Suitability;
 };
+
+/**
+ * AC4, AC15 — is the venue open for the search? A booking period must lie
+ * within that day's opening hours (SCRUM-34 AC7); setup and turnaround aren't
+ * part of it, so they never exclude a venue (AC15). Without a booking period,
+ * a venue is out only if it is Closed on a day searched.
+ */
+function isOpenFor(
+  venue: { openingHours: Parameters<typeof closedDayWithin>[1] },
+  period: Period,
+  bookingPeriod: boolean,
+): boolean {
+  return bookingPeriod
+    ? dayOutsideOpeningHours(period, venue.openingHours) === null
+    : closedDayWithin(period, venue.openingHours) === null;
+}
 
 /**
  * The venues a search finds, by name.
  *
- * AC7: retired venues never appear. AC2: the location is one picked from the
+ * AC7: retired venues never appear. AC4, AC15: with a period, a venue closed
+ * for it is left out (isOpenFor). AC2: the location is one picked from the
  * venues' own (getFilterOptions), so it matches exactly. AC3, AC5: with a
  * period, a venue is left out when an Approved booking, a live hold or
  * recorded unavailability overlaps the occupied period a booking for that
  * period would have there (the venue's setup and turnaround included,
- * SCRUM-159); periods that only touch don't overlap. AC11–AC13: the filters.
+ * SCRUM-159); periods that only touch don't overlap. AC11–AC13: the filters,
+ * when they are on. AC8: each venue's suitability for the needs entered.
  */
 export async function searchVenues(
   db: Db,
@@ -103,14 +138,19 @@ export async function searchVenues(
       supportedLayouts: true,
       setupMinutes: true,
       turnaroundMinutes: true,
+      openingHours: {
+        select: { weekday: true, opensMinute: true, closesMinute: true },
+      },
     },
     orderBy: { name: "asc" },
   });
 
-  const candidates = venues.filter((venue) =>
-    matchesFilters(venue, search.filters),
+  const { period, bookingPeriod = true, onlyFitting = true } = search;
+  const candidates = venues.filter(
+    (venue) =>
+      (!onlyFitting || matchesFilters(venue, search.filters)) &&
+      (!period || isOpenFor(venue, period, bookingPeriod)),
   );
-  const { period } = search;
   const free = period
     ? await Promise.all(
         candidates.map(
@@ -139,6 +179,12 @@ export async function searchVenues(
       })
     : [];
   const requestedVenues = new Set(requested.map((b) => b.venueId));
+  const needs = {
+    attendance: search.filters.attendance ?? null,
+    facilities: search.filters.facilities,
+    accessibilityFeatures: search.filters.accessibilityFeatures,
+    layout: search.filters.layout ?? null,
+  };
 
   return found.map((venue) => ({
     id: venue.id,
@@ -149,5 +195,6 @@ export async function searchVenues(
     accessibilityFeatures: venue.accessibilityFeatures,
     supportedLayouts: venue.supportedLayouts,
     alreadyRequested: requestedVenues.has(venue.id),
+    suitability: assessSuitability(venue, needs),
   }));
 }

@@ -91,6 +91,31 @@ export function dayOutsideOpeningHours(
   return within ? null : day;
 }
 
+/**
+ * SCRUM-38 AC4 — for a search with no booking period (a date, or dates,
+ * without both times): the first day it covers on which the venue is Closed,
+ * or null. Each SGT day from the one the period starts on up to, but not
+ * including, the one its end falls at midnight of is checked. A venue with no
+ * hours recorded is closed on no day.
+ */
+export function closedDayWithin(
+  period: Period,
+  hours: OpeningDay[],
+): OpeningDay | null {
+  if (hours.length === 0) return null;
+  const DAY_MS = DAY_MINUTES * 60_000;
+  let { weekday, midnight } = sgDay(period.startAt);
+  while (midnight < period.endAt.getTime()) {
+    const day = hours.find((h) => h.weekday === weekday);
+    if (!day || day.opensMinute === null || day.closesMinute === null) {
+      return day ?? { weekday, opensMinute: null, closesMinute: null };
+    }
+    midnight += DAY_MS;
+    weekday = (weekday % 7) + 1;
+  }
+  return null;
+}
+
 /** AC7 — the refusal, with that day's opening hours. */
 export function outsideOpeningHoursMessage(
   venueName: string,

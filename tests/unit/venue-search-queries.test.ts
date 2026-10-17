@@ -32,6 +32,9 @@ const event = (overrides: Record<string, unknown> = {}) => ({
   startAt: new Date("2031-06-03T10:15:00+08:00"),
   endAt: new Date("2031-06-03T11:45:00+08:00"),
   expectedAttendance: 40,
+  venueRequirements: "A hall near the MRT",
+  preferredLayout: "Banquet",
+  accessibilityNeeds: "Two wheelchair users",
   ...overrides,
 });
 
@@ -56,6 +59,12 @@ describe("getSearchEvent — SCRUM-38 AC1", () => {
         },
         replacing: null,
         prefill: { attendance: 40, facilities: [] },
+        // SCRUM-170 AC6: shown beside the filters, exactly as entered.
+        answers: {
+          venueRequirements: "A hall near the MRT",
+          preferredLayout: "Banquet",
+          accessibilityNeeds: "Two wheelchair users",
+        },
       },
     });
     expect(db.booking.findFirst).not.toHaveBeenCalled();

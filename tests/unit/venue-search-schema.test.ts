@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 
 import {
+  filtersOn,
   INVALID_TIME_RANGE_MESSAGE,
   isArrivingFor,
   replacementToKeep,
@@ -15,11 +16,15 @@ const TODAY = "2031-05-20";
 
 describe("searchPeriod — SCRUM-38 AC2", () => {
   it("SCRUM-38 [AC2] TC-38-04: with no date or time, there is no period and availability isn't checked", () => {
-    expect(searchPeriod({}, TODAY)).toEqual({ period: null });
+    expect(searchPeriod({}, TODAY)).toEqual({
+      period: null,
+      bookingPeriod: false,
+    });
   });
 
   it("SCRUM-38 [AC2] TC-38-04: a date alone is that whole day", () => {
     expect(searchPeriod({ date: "2031-06-03" }, TODAY)).toEqual({
+      bookingPeriod: false,
       period: {
         startAt: sg("2031-06-03", "00:00"),
         endAt: sg("2031-06-04", "00:00"),
@@ -29,6 +34,7 @@ describe("searchPeriod — SCRUM-38 AC2", () => {
 
   it("SCRUM-38 [AC2] TC-38-04: a time range alone is that time today", () => {
     expect(searchPeriod({ from: "14:00", to: "16:30" }, TODAY)).toEqual({
+      bookingPeriod: true,
       period: { startAt: sg(TODAY, "14:00"), endAt: sg(TODAY, "16:30") },
     });
   });
@@ -37,6 +43,7 @@ describe("searchPeriod — SCRUM-38 AC2", () => {
     expect(
       searchPeriod({ date: "2031-06-03", from: "09:00", to: "11:00" }, TODAY),
     ).toEqual({
+      bookingPeriod: true,
       period: {
         startAt: sg("2031-06-03", "09:00"),
         endAt: sg("2031-06-03", "11:00"),
@@ -46,17 +53,27 @@ describe("searchPeriod — SCRUM-38 AC2", () => {
 
   it("SCRUM-38 [AC2] TC-38-04: a start without an end runs to midnight, and an end without a start runs from it", () => {
     expect(searchPeriod({ date: "2031-12-31", from: "20:00" }, TODAY)).toEqual({
+      bookingPeriod: false,
       period: {
         startAt: sg("2031-12-31", "20:00"),
         endAt: sg("2032-01-01", "00:00"),
       },
     });
     expect(searchPeriod({ date: "2031-06-03", to: "08:00" }, TODAY)).toEqual({
+      bookingPeriod: false,
       period: {
         startAt: sg("2031-06-03", "00:00"),
         endAt: sg("2031-06-03", "08:00"),
       },
     });
+  });
+});
+
+describe("filtersOn — SCRUM-38 AC11", () => {
+  it("SCRUM-38 [AC11] TC-38-12: the needs are filters on arrival, and after a search only while Only show venues that fit is ticked", () => {
+    expect(filtersOn({})).toBe(true);
+    expect(filtersOn({ searched: "1", fit: "1" })).toBe(true);
+    expect(filtersOn({ searched: "1" })).toBe(false);
   });
 });
 
@@ -73,6 +90,7 @@ describe("searchPeriod over several days — SCRUM-38 AC2", () => {
         TODAY,
       ),
     ).toEqual({
+      bookingPeriod: true,
       period: {
         startAt: sg("2031-06-03", "18:00"),
         endAt: sg("2031-06-05", "12:00"),
@@ -84,6 +102,7 @@ describe("searchPeriod over several days — SCRUM-38 AC2", () => {
     expect(
       searchPeriod({ date: "2031-06-03", endDate: "2031-06-05" }, TODAY),
     ).toEqual({
+      bookingPeriod: false,
       period: {
         startAt: sg("2031-06-03", "00:00"),
         endAt: sg("2031-06-06", "00:00"),
@@ -93,6 +112,7 @@ describe("searchPeriod over several days — SCRUM-38 AC2", () => {
 
   it("SCRUM-38 [AC2] TC-38-04: an end date alone is that whole day", () => {
     expect(searchPeriod({ endDate: "2031-06-05" }, TODAY)).toEqual({
+      bookingPeriod: false,
       period: {
         startAt: sg("2031-06-05", "00:00"),
         endAt: sg("2031-06-06", "00:00"),
@@ -118,6 +138,7 @@ describe("searchPeriod over several days — SCRUM-38 AC2", () => {
         TODAY,
       ),
     ).toEqual({
+      bookingPeriod: true,
       period: {
         startAt: sg("2031-06-03", "18:00"),
         endAt: sg("2031-06-04", "09:00"),
@@ -143,6 +164,7 @@ describe("searchPeriod — SCRUM-38 AC6", () => {
     expect(
       searchPeriod({ date: "2031-06-03", from: "15:00", to: "15:01" }, TODAY),
     ).toEqual({
+      bookingPeriod: true,
       period: {
         startAt: sg("2031-06-03", "15:00"),
         endAt: sg("2031-06-03", "15:01"),

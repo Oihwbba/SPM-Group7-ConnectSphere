@@ -4,7 +4,10 @@ import {
   AlertCircle,
   Building2,
   CalendarRange,
+  CircleCheck,
+  CircleX,
   MapPin,
+  Scale,
   SearchX,
   Users,
 } from "lucide-react";
@@ -12,6 +15,7 @@ import {
 import { requireSession } from "@/lib/auth/guard";
 import { can } from "@/lib/auth/can";
 import { Forbidden } from "@/components/app/forbidden";
+import { OrganiserVenueAnswers } from "@/components/events/organiser-answers";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -20,6 +24,7 @@ import { prisma } from "@/lib/db";
 import { formatDateTime, utcToSgWallTime } from "@/lib/datetime";
 import type { Period } from "@/lib/period";
 import {
+  filtersOn,
   isArrivingFor,
   replacementToKeep,
   searchPeriod,
@@ -27,7 +32,11 @@ import {
   type VenueSearchQuery,
 } from "@/lib/schemas/venue-search";
 import { searchVenues, type VenueFilters } from "@/lib/venue-search";
-import { getBookableEvents } from "@/app/(app)/bookings/queries";
+import {
+  getBookableEvents,
+  getSuitabilityJudgements,
+  type JudgementRow,
+} from "@/app/(app)/bookings/queries";
 import { EventPicker } from "./event-picker";
 import {
   getFilterOptions,
@@ -100,22 +109,30 @@ export default async function VenueSearchPage({
     accessibilityFeatures: query?.access ?? [],
     layout: arriving ? event.prefill.layout : query?.layout,
   };
+  const onlyFitting = filtersOn(query ?? {});
 
   const today = utcToSgWallTime(new Date()).slice(0, 10);
   const resolved = event
-    ? { period: event.period }
+    ? { period: event.period, bookingPeriod: true }
     : query && searchPeriod(query, today);
   const periodError = resolved && "error" in resolved ? resolved.error : null;
   const searched = resolved && "period" in resolved ? resolved : null;
 
-  const results = searched
-    ? await searchVenues(prisma, {
-        period: searched.period,
-        location: query?.location,
-        filters,
-        eventId: event?.id,
-      })
-    : null;
+  const [results, judgements] = await Promise.all([
+    searched
+      ? searchVenues(prisma, {
+          period: searched.period,
+          bookingPeriod: searched.bookingPeriod,
+          onlyFitting,
+          location: query?.location,
+          filters,
+          eventId: event?.id,
+        })
+      : null,
+    // SCRUM-40 AC8: for this event, the Coordinator's judgement is the result
+    // that counts, so it shows beside the automatic one.
+    event ? getSuitabilityJudgements([event.id]) : [],
+  ]);
 
   return (
     <SearchShell>
@@ -125,6 +142,7 @@ export default async function VenueSearchPage({
         events={bookableEvents.filter((e) => e.startAt && e.endAt)}
         query={query}
         filters={filters}
+        onlyFitting={onlyFitting}
         options={options}
         fieldErrors={{
           ...fieldErrors,
@@ -139,6 +157,7 @@ export default async function VenueSearchPage({
           results={results}
           event={event}
           period={searched?.period ?? null}
+          judgements={judgements}
           showAvailability={can(session.user, "venue:availability")}
         />
       )}
@@ -220,6 +239,7 @@ function SearchForm({
   events,
   query,
   filters,
+  onlyFitting,
   options,
   fieldErrors,
 }: {
@@ -227,6 +247,7 @@ function SearchForm({
   events: { id: string; name: string }[];
   query: VenueSearchQuery | null;
   filters: VenueFilters;
+  onlyFitting: boolean;
   options: FilterOptions;
   fieldErrors: Partial<Record<string, string[]>>;
 }) {
@@ -262,6 +283,18 @@ function SearchForm({
                 time, which can&apos;t be changed here. Change them on the event
                 if they are wrong.
               </p>
+              {/* AC1 (SCRUM-170 AC6): what the Organiser asked for. */}
+              <div className="mt-3 space-y-2 border-t pt-3">
+                <p className="text-xs font-medium">
+                  What the Organiser asked for
+                </p>
+                <OrganiserVenueAnswers answers={event.answers} />
+                <p className="text-xs text-muted-foreground">
+                  Set the attendance, layout, facilities and accessibility
+                  features below yourself; these answers aren&apos;t copied
+                  into the search.
+                </p>
+              </div>
             </div>
           ) : (
             <div className="grid gap-4 sm:grid-cols-4">
@@ -296,7 +329,9 @@ function SearchForm({
               <p className="text-xs text-muted-foreground sm:col-span-4">
                 Use dates, times, a location, or any of them together. A start
                 date alone means that whole day; leave the end date empty for a
-                single day. Times without a date are today.
+                single day. Times without a date are today. With a start and an
+                end time, venues closed at those times are left out; without
+                them, only venues closed on a day searched are.
               </p>
             </div>
           )}
@@ -383,6 +418,26 @@ function SearchForm({
             checked={filters.accessibilityFeatures}
           />
 
+          {/* AC11: the needs above as filters, or only as suitability (AC8). */}
+          <div className="flex items-start gap-2">
+            <input
+              id="fit"
+              name="fit"
+              type="checkbox"
+              value="1"
+              defaultChecked={onlyFitting}
+              className="mt-0.5 h-4 w-4 rounded border-input accent-primary"
+              aria-describedby="fit-hint"
+            />
+            <div className="space-y-0.5">
+              <Label htmlFor="fit">Only show venues that fit</Label>
+              <p id="fit-hint" className="text-xs text-muted-foreground">
+                Untick to see every free venue, each marked Suitable or Not
+                suitable with the reasons.
+              </p>
+            </div>
+          </div>
+
           <div className="flex flex-wrap items-center justify-end gap-3 border-t pt-4">
             <Link
               href={{
@@ -446,16 +501,67 @@ function CheckboxGroup({
   );
 }
 
+type Result = Awaited<ReturnType<typeof searchVenues>>[number];
+
+/**
+ * AC8 — SCRUM-40's indicator and reasons (its AC5–AC7), and, for an event, the
+ * Coordinator's judgement, which is the result that counts (its AC8).
+ */
+function SuitabilityLine({
+  suitability,
+  judgement,
+}: {
+  suitability: Result["suitability"];
+  judgement?: JudgementRow;
+}) {
+  return (
+    <div className="space-y-1 text-sm" data-testid="result-suitability">
+      <p className="flex items-center gap-1.5">
+        {suitability.suitable ? (
+          <CircleCheck className="h-4 w-4 text-success" aria-hidden />
+        ) : (
+          <CircleX className="h-4 w-4 text-destructive" aria-hidden />
+        )}
+        <span className="font-medium" data-testid="suitability-result">
+          {suitability.suitable ? "Suitable" : "Not suitable"}
+        </span>
+      </p>
+      {suitability.reasons.length > 0 && (
+        <ul className="list-disc space-y-0.5 pl-6 text-destructive">
+          {suitability.reasons.map((reason) => (
+            <li key={reason} data-testid="suitability-reason">
+              {reason}
+            </li>
+          ))}
+        </ul>
+      )}
+      {judgement && (
+        <p
+          className="flex items-center gap-1.5 text-muted-foreground"
+          data-testid="result-judgement"
+        >
+          <Scale className="h-4 w-4 text-primary" aria-hidden />
+          Coordinator&apos;s judgement:{" "}
+          {judgement.suitable ? "Suitable" : "Not suitable"}, the result that
+          counts for this event
+        </p>
+      )}
+    </div>
+  );
+}
+
 /** AC8–AC10 — what was found, or a message saying nothing was. */
 function Results({
   results,
   event,
   period,
+  judgements,
   showAvailability,
 }: {
-  results: Awaited<ReturnType<typeof searchVenues>>;
+  results: Result[];
   event: SearchEvent | null;
   period: Period | null;
+  judgements: JudgementRow[];
   /** Whether this user may open the availability calendar (SCRUM-36). */
   showAvailability: boolean;
 }) {
@@ -505,6 +611,10 @@ function Results({
                       Capacity {venue.capacity}
                     </span>
                   </p>
+                  <SuitabilityLine
+                    suitability={venue.suitability}
+                    judgement={judgements.find((j) => j.venueId === venue.id)}
+                  />
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   {/* The venue's calendar (SCRUM-36), on the week searched. */}

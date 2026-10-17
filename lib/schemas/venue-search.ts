@@ -57,6 +57,8 @@ export const venueSearchSchema = z.object({
   searched: optionalText(10),
   /** The event the form was showing when it was sent, so choosing another one counts as arriving. */
   searchedFor: optionalText(100),
+  /** AC11: "Only show venues that fit", sent only while it is ticked. */
+  fit: optionalText(10),
   /** The start date. */
   date: z.preprocess(
     single,
@@ -102,6 +104,15 @@ export function isArrivingFor(eventId: string, sent: SentWith): boolean {
 }
 
 /**
+ * AC11 — whether the needs entered are applied as filters. They are until
+ * the Coordinator sends the form with "Only show venues that fit" unticked,
+ * so a search opened from an event or a flagged booking starts with them on.
+ */
+export function filtersOn(sent: Pick<VenueSearchQuery, "searched" | "fit">) {
+  return !sent.searched || sent.fit !== undefined;
+}
+
+/**
  * AC1 — the flagged booking to find a replacement for. It belongs to the
  * event it was opened for, so choosing another event leaves it behind.
  */
@@ -127,13 +138,19 @@ function nextDay(day: string): string {
  * start of the first day, and a missing end time the end of the last. Nothing
  * entered means no period, so availability isn't checked. An end that isn't
  * after the start is refused, with the time range reported as invalid.
+ *
+ * AC4: only a start and an end time make it the booking period a request
+ * would have (`bookingPeriod`); otherwise opening hours exclude only venues
+ * Closed on a day searched.
  */
 export function searchPeriod(
   query: Pick<VenueSearchQuery, "date" | "endDate" | "from" | "to">,
   today: string,
-): { period: Period | null } | { error: string } {
+): { period: Period | null; bookingPeriod: boolean } | { error: string } {
   const { date, endDate, from, to } = query;
-  if (!date && !endDate && !from && !to) return { period: null };
+  if (!date && !endDate && !from && !to) {
+    return { period: null, bookingPeriod: false };
+  }
 
   const firstDay = date ?? endDate ?? today;
   const lastDay = endDate ?? firstDay;
@@ -144,6 +161,6 @@ export function searchPeriod(
     )!,
   };
   return isValidPeriod(period)
-    ? { period }
+    ? { period, bookingPeriod: Boolean(from && to) }
     : { error: INVALID_TIME_RANGE_MESSAGE };
 }
