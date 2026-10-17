@@ -130,3 +130,28 @@ export function computeRegistrationState(
 export function canRegisterNow(state: RegistrationState): boolean {
   return state === "OPEN";
 }
+
+/**
+ * SCRUM-75 AC6 — registration that is open can be closed. A full event is
+ * still open (a withdrawal frees a place), so it can be closed too.
+ */
+export function canCloseRegistration(state: RegistrationState): boolean {
+  return state === "OPEN" || state === "FULL";
+}
+
+/**
+ * SCRUM-75 AC6, AC8, AC9 — closed registration can be reopened, whether it
+ * was closed by hand or its closing time passed, but never at or after the
+ * event's start.
+ */
+export function canReopenRegistration(
+  event: Pick<Event, "startAt">,
+  state: RegistrationState,
+  now: Date = new Date(),
+): boolean {
+  return (
+    (state === "CLOSED" || state === "EXPIRED") &&
+    event.startAt !== null &&
+    event.startAt > now
+  );
+}

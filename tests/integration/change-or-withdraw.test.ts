@@ -850,12 +850,15 @@ describe.skipIf(!usesLocalDatabase)(
         (await getReadinessChecklist(prisma, eventId))!.items.find(
           (i) => i.name === "Equipment",
         );
+      // SCRUM-166 AC9: ready also needs an approved safety check.
+      await safetyCheck(eventId, "APPROVED");
 
       try {
         expect(await equipmentItem()).toMatchObject({
           complete: true,
           state: "Reserved",
         });
+        expect((await getReadinessChecklist(prisma, eventId))!.ready).toBe(true);
 
         // Removing the lectern leaves the projectors and mics reserved.
         await changeEquipmentRequest({
@@ -870,10 +873,11 @@ describe.skipIf(!usesLocalDatabase)(
           complete: false,
           state: "Awaiting Technical Support review",
         });
+        // The change also outdated the approved safety check (SCRUM-166 AC13).
         expect(await confirmEvent({ eventId })).toEqual({
           ok: false,
           error:
-            "This event isn't ready to confirm yet. Outstanding: Equipment (Awaiting Technical Support review).",
+            "This event isn't ready to confirm yet. Outstanding: Equipment (Awaiting Technical Support review), Safety check (Outdated).",
         });
         expect(
           (
@@ -894,9 +898,11 @@ describe.skipIf(!usesLocalDatabase)(
           complete: true,
           state: "Reserved",
         });
-        expect((await getReadinessChecklist(prisma, eventId))!.ready).toBe(
-          true,
-        );
+        // Equipment is complete again; only a new safety check is outstanding.
+        const after = (await getReadinessChecklist(prisma, eventId))!;
+        expect(after.items.filter((i) => !i.complete).map((i) => i.state)).toEqual([
+          "Outdated",
+        ]);
       } finally {
         await prisma.booking.delete({ where: { id: booking.id } });
         await prisma.venue.delete({ where: { id: venue.id } });
