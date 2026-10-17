@@ -13,8 +13,8 @@ Rules for a lesson:
 - State a fact about this project and why it's so, not "don't report X". A
   lesson explains what is deliberate; it must never hide a real defect.
 - Date it and cite the pull request it came from.
-- Keep the file short: the reviewer reads at most 8,000 characters. Delete a
-  lesson when it stops being true.
+- Keep the file short: the reviewer reads at most 12,000 characters
+  (SCRUM-180). Delete a lesson when it stops being true.
 
 ## Process and merging
 
