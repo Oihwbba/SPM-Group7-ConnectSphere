@@ -157,6 +157,7 @@ export default async function VenueSearchPage({
           results={results}
           event={event}
           period={searched?.period ?? null}
+          filters={filters}
           judgements={judgements}
           showAvailability={can(session.user, "venue:availability")}
         />
@@ -555,12 +556,15 @@ function Results({
   results,
   event,
   period,
+  filters,
   judgements,
   showAvailability,
 }: {
   results: Result[];
   event: SearchEvent | null;
   period: Period | null;
+  /** AC9: carried to the request form with the event and venue. */
+  filters: VenueFilters;
   judgements: JudgementRow[];
   /** Whether this user may open the availability calendar (SCRUM-36). */
   showAvailability: boolean;
@@ -647,7 +651,13 @@ function Results({
                         <Link
                           href={{
                             pathname: "/bookings/new",
-                            query: { event: event.id, venue: venue.id },
+                            query: {
+                              event: event.id,
+                              venue: venue.id,
+                              facility: filters.facilities,
+                              access: filters.accessibilityFeatures,
+                              ...(filters.layout && { layout: filters.layout }),
+                            },
                           }}
                         >
                           Request this venue

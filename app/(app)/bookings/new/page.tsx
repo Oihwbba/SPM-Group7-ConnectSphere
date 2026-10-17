@@ -11,11 +11,16 @@ import { RequestForm } from "./request-form";
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 const one = (value: string | string[] | undefined) =>
   Array.isArray(value) ? value[0] : value;
+const many = (value: string | string[] | undefined) =>
+  value === undefined ? [] : Array.isArray(value) ? value : [value];
 
 // SCRUM-50 — an Event Coordinator asks for a venue. Who may see this page is
 // decided by lib/auth/can.ts, not a role list here. SCRUM-38 AC9: venue
 // search opens it with the event and venue chosen (`?event=&venue=`); an id
 // this Coordinator can't request for is ignored, as if it weren't given.
+// The facilities, accessibility features and layout entered in the search
+// come too (`&facility=&access=&layout=`); ones the form doesn't offer are
+// dropped (neededInSearch).
 export default async function RequestVenuePage({
   searchParams,
 }: {
@@ -57,6 +62,11 @@ export default async function RequestVenuePage({
         venues={venues}
         initialEventId={initialEventId}
         initialVenueId={initialVenueId}
+        initialNeeds={{
+          facilities: many(params.facility),
+          accessibility: many(params.access),
+          layout: one(params.layout),
+        }}
         judgements={judgements}
         judgeableEventIds={judgeableEventIds}
       />

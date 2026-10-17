@@ -175,7 +175,8 @@ test.describe("SCRUM-38 — Search and filter venues", () => {
       page.getByRole("checkbox", { name: "projector" }),
     ).toBeChecked();
 
-    // AC9: Request this venue opens the form with the event and venue chosen.
+    // AC9: Request this venue opens the form with the event and venue chosen,
+    // and the facility ticked in the search.
     await page
       .locator('[data-venue="ven_auditorium"]')
       .getByRole("link", { name: "Request this venue" })
@@ -187,6 +188,12 @@ test.describe("SCRUM-38 — Search and filter venues", () => {
     await expect(
       page.getByRole("combobox", { name: "Venue", exact: true }),
     ).toContainText("Grand Auditorium");
+    await page.locator('[data-hydrated="true"]').waitFor();
+    await expect(
+      page.getByRole("button", { name: "projector", exact: true }),
+    ).toHaveAttribute("aria-pressed", "true");
+    // The attendance is the event's 40, not the 20 searched (SCRUM-50 AC1).
+    await expect(page.getByLabel("Expected attendance")).toHaveValue("40");
   });
 
   test("SCRUM-38 [AC1] TC-38-02: Find a replacement venue starts from the flagged booking request", async ({

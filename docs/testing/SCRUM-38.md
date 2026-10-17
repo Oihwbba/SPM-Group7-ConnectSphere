@@ -177,13 +177,13 @@ SCRUM-40's reasons. Opened from an event, the Coordinator's own judgement
 | Item | Content |
 |---|---|
 | Test Case ID | TC-38-10 |
-| Test Scenario | [Positive] AC 9: Request this venue opens the booking form; a venue already requested offers no second request |
+| Test Scenario | [Positive] AC 9: Request this venue opens the booking form with what was entered in the search; a venue already requested offers no second request |
 | Pre-conditions | As TC-38-01; the event has a Pending request at Seminar Room 2.1. |
-| Test Steps | 1. Search. <br> 2. Choose **Request this venue** on the Exhibition Hall. |
+| Test Steps | 1. Search. <br> 2. Tick facility projector, change the attendance to 20 and search. <br> 3. Choose **Request this venue** on the Grand Auditorium. |
 | Test Data | — |
-| Expected Result | 1: Seminar Room 2.1 reads "Already requested for this event", with no button; a rejected, cancelled or expired booking doesn't count. 2: the request form opens with the event and the Exhibition Hall chosen. |
+| Expected Result | 1: Seminar Room 2.1 reads "Already requested for this event", with no button; a rejected, cancelled or expired booking doesn't count. 3: the request form opens with the event and the Grand Auditorium chosen, and projector ticked. The facilities, accessibility features and layout entered in the search come across, except values the form doesn't offer and a layout the chosen venue doesn't support. The attendance is the event's 40, not 20: a booking takes the event's attendance (SCRUM-50 AC1) until SCRUM-162. |
 
-**Automated by:** `tests/unit/venue-search.test.ts` › "SCRUM-38 [AC9] TC-38-10: …"; `tests/integration/venue-search.test.ts` › "SCRUM-38 [AC9] TC-38-10: …"; `e2e/venue-search.spec.ts` › "SCRUM-38 [AC1, AC2, AC8, AC9, AC14] …"
+**Automated by:** `tests/unit/venue-search.test.ts` › "SCRUM-38 [AC9] TC-38-10: …"; `tests/integration/venue-search.test.ts` › "SCRUM-38 [AC9] TC-38-10: …"; `e2e/venue-search.spec.ts` › "SCRUM-38 [AC1, AC2, AC8, AC9, AC14] …"; `tests/unit/request-form.test.tsx` › "SCRUM-38 [AC9] TC-38-10: …"
 
 ### TC-38-11
 
