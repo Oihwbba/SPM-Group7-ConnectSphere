@@ -311,7 +311,7 @@ describe("can — viewing venue availability (SCRUM-36)", () => {
 // AC2).
 describe("can — the Week 7 roles before their stories", () => {
   it.each(["COORDINATOR_LEAD", "SAFETY_OFFICER"] as const)(
-    "SCRUM-172 [AC1] TC-172-01: %s may read only its own notifications",
+    "SCRUM-172 [AC1] TC-172-01: %s reads only its own notifications and can't decide, plan or edit an event",
     (role) => {
       const user: SessionUser = { id: "usr_new", role };
       expect(can(user, "notification:read", { kind: "notification", userId: "usr_new" })).toBe(true);
@@ -329,4 +329,41 @@ describe("can — the Week 7 roles before their stories", () => {
       }
     },
   );
+});
+
+// SCRUM-166 — the Coordinator requests a check for their own event; a Safety
+// Officer reviews any event's check except one they organise or coordinate.
+describe("can — the operational safety check (SCRUM-166)", () => {
+  const planning = {
+    kind: "event" as const,
+    organiserId: "orgA",
+    coordinatorId: "coord",
+    status: "PLANNING" as const,
+  };
+  const officer: SessionUser = { id: "safety", role: "SAFETY_OFFICER" };
+
+  it("SCRUM-166 [AC1] TC-166-03: only the event's assigned Coordinator may request its safety check", () => {
+    expect(can(coordinator, "safety-check:request", planning)).toBe(true);
+    expect(can({ id: "other", role: "COORDINATOR" }, "safety-check:request", planning)).toBe(false);
+    expect(can(coordinator, "safety-check:request", { ...planning, coordinatorId: null })).toBe(false);
+    for (const user of [organiserA, attendee, officer, { id: "vs", role: "VENUE_STAFF" }] as SessionUser[]) {
+      expect(can(user, "safety-check:request")).toBe(false);
+    }
+  });
+
+  it("SCRUM-166 [AC6] TC-166-09: only a Safety Officer reviews a check, and never for an event they organise or coordinate", () => {
+    expect(can(officer, "safety-check:review", planning)).toBe(true);
+    expect(can(officer, "safety-check:review", { ...planning, organiserId: "safety" })).toBe(false);
+    expect(can(officer, "safety-check:review", { ...planning, coordinatorId: "safety" })).toBe(false);
+    for (const user of [
+      organiserA,
+      coordinator,
+      attendee,
+      { id: "vs", role: "VENUE_STAFF" },
+      { id: "ts", role: "TECH_SUPPORT" },
+      { id: "lead", role: "COORDINATOR_LEAD" },
+    ] as SessionUser[]) {
+      expect(can(user, "safety-check:review")).toBe(false);
+    }
+  });
 });
