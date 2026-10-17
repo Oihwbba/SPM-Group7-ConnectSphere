@@ -16,15 +16,22 @@ Each result also has **See availability**, which opens that venue's calendar
 can see the rest of its week before requesting it. It isn't an acceptance
 criterion; TC-38-09's e2e test checks the link.
 
-Not built yet, because what they need isn't on `main`:
+**Opening hours (AC4, AC15)** use SCRUM-34's hours, read the way booking
+does (`dayOutsideOpeningHours` in `lib/venue-hours.ts`). A search opened from
+an event, or with a start and an end time, is the booking period a request
+would have, so a venue closed for any of it is excluded; setup and turnaround
+never exclude one. A date searched without both times isn't a booking period:
+as the whole day it would fall outside every venue's hours, so it excludes only
+a venue Closed on a day searched (TC-38-20). That reading of AC4 is proposed
+to the PO (2026-10-17) with SCRUM-190.
 
-- **AC4, AC15 (opening hours):** SCRUM-34 (#203) adds structured opening
-  hours. On `main` they are free text (`Venue.operatingHours`), which can't be
-  compared with a period. TC-38-15 and TC-38-16 are Manual until then.
-- **AC8's suitability indicator:** SCRUM-40 (#194). Name, location and
-  capacity are shown (TC-38-09).
-- **AC1's Organiser's answers beside the filters:** SCRUM-170 AC6 (#192),
-  which adds `OrganiserVenueAnswers`. TC-170-13 covers it.
+**Filters or suitability (AC8, AC11).** The attendance, facilities,
+accessibility features and layout entered are the needs SCRUM-40 compares
+each venue with. **Only show venues that fit** (on until the Coordinator
+unticks it) applies them as filters, so every venue listed is Suitable;
+unticked, every free venue is listed, each marked Suitable or Not suitable with
+SCRUM-40's reasons. Opened from an event, the Coordinator's own judgement
+(SCRUM-40 AC8) shows beside the automatic result.
 
 | ID | Type | Criterion | Automated |
 |---|---|---|---|
@@ -36,16 +43,17 @@ Not built yet, because what they need isn't on `main`:
 | [TC-38-06](#tc-38-06) | Boundary | AC 5 | Integration |
 | [TC-38-07](#tc-38-07) | Negative, Boundary | AC 6 | Unit, e2e |
 | [TC-38-08](#tc-38-08) | Negative | AC 7 | Unit, integration |
-| [TC-38-09](#tc-38-09) | Positive | AC 8 | Unit, e2e; the suitability indicator waits for SCRUM-40 |
+| [TC-38-09](#tc-38-09) | Positive | AC 8 | Unit, e2e |
 | [TC-38-10](#tc-38-10) | Positive | AC 9 | Unit, integration, e2e |
 | [TC-38-11](#tc-38-11) | Positive | AC 10 | e2e |
 | [TC-38-12](#tc-38-12) | Positive | AC 11, AC 13 | Unit, integration |
 | [TC-38-13](#tc-38-13) | Boundary | AC 12 | Unit |
 | [TC-38-14](#tc-38-14) | Positive | AC 14 | e2e |
-| [TC-38-15](#tc-38-15) | Negative | AC 4 | Manual, waits for SCRUM-34 |
-| [TC-38-16](#tc-38-16) | Boundary | AC 15 | Manual, waits for SCRUM-34 |
+| [TC-38-15](#tc-38-15) | Negative, Boundary | AC 4 | Unit, integration, e2e |
+| [TC-38-16](#tc-38-16) | Boundary | AC 15 | Unit, integration |
 | [TC-38-17](#tc-38-17) | Negative | AC 1, AC 2 | Unit, e2e |
 | [TC-38-18](#tc-38-18) | Positive | AC 1 | Unit, e2e |
+| [TC-38-20](#tc-38-20) | Negative | AC 4 | Unit, integration, e2e |
 
 ### TC-38-01
 
@@ -56,9 +64,9 @@ Not built yet, because what they need isn't on `main`:
 | Pre-conditions | Signed in as the assigned Coordinator of a Planning event from 10:15 to 11:45, expecting 40. |
 | Test Steps | 1. Open the event and choose **Find a venue**. <br> 2. Add `&date=…&from=…&endDate=…&to=…` to the address and open it. <br> 3. Change the attendance to 20 and search. |
 | Test Data | `coordinator@test.local` |
-| Expected Result | 1: the search shows exactly the event's period, 10:15 to 11:45, not rounded, with no start or end date or time fields; only Location can be added. Attendance is 40; no facility, accessibility feature or layout is chosen. 2: the period and results are still the event's 10:15 to 11:45: dates in the address are ignored. 3: the attendance stays 20: the event's figure applies only when search is opened. |
+| Expected Result | 1: the search shows exactly the event's period, 10:15 to 11:45, not rounded, with no start or end date or time fields; only Location can be added. Attendance is 40; no facility, accessibility feature or layout is chosen. The Organiser's venue requirements, preferred room layout and accessibility needs are shown read-only, exactly as entered (SCRUM-170 AC6). 2: the period and results are still the event's 10:15 to 11:45: dates in the address are ignored. 3: the attendance stays 20: the event's figure applies only when search is opened. |
 
-**Automated by:** `tests/unit/venue-search-queries.test.ts` › "SCRUM-38 [AC1, AC2] TC-38-01: …"; `e2e/venue-search.spec.ts` › "SCRUM-38 [AC1, AC2, AC8, AC9, AC14] …"
+**Automated by:** `tests/unit/venue-search-queries.test.ts` › "SCRUM-38 [AC1, AC2] TC-38-01: …"; `e2e/venue-search.spec.ts` › "SCRUM-38 [AC1, AC2, AC8, AC9, AC14] …" and "SCRUM-38 [AC1, AC8, AC11, AC14] TC-38-01, TC-38-09, TC-38-12: …"
 
 ### TC-38-02
 
@@ -97,7 +105,7 @@ Not built yet, because what they need isn't on `main`:
 | Test Data | — |
 | Expected Result | 1: free for that whole day. 2: free for that time today. 3: every venue at Level 1, Block A, without checking availability. 4: the venues there free for that time on that date. 5: free for the whole of 3 June 18:00 to 5 June 12:00. 6: free from the start of 3 June to the end of 5 June. The location list offers each active venue's location once, so a location can't be mistyped. |
 
-**Automated by:** `tests/unit/venue-search-schema.test.ts` › "SCRUM-38 [AC2] TC-38-04: …"; `tests/integration/venue-search.test.ts` › "SCRUM-38 [AC2] TC-38-04: …"
+**Automated by:** `tests/unit/venue-search-schema.test.ts` › "SCRUM-38 [AC2] TC-38-04: …"; `tests/integration/venue-search.test.ts` › "SCRUM-38 [AC2, AC7] TC-38-04, TC-38-08: …"
 
 ### TC-38-05
 
@@ -134,7 +142,7 @@ Not built yet, because what they need isn't on `main`:
 | Pre-conditions | Venue search on its own. |
 | Test Steps | 1. Search 15:00 to 15:00 on one day. <br> 2. 15:00 to 14:00 on one day. <br> 3. 15:00 to 15:01 on one day. <br> 4. End date before the start date. <br> 5. 18:00 one day to 09:00 the next. |
 | Test Data | — |
-| Expected Result | 1, 2, 4: "The time range is invalid: the end must be after the start." beside the end time, or the end date when no end time was entered, and no results. 3, 5: searched. |
+| Expected Result | 1, 2, 4: "The time range is invalid: the end must be after the start." beside the end time, or the end date when no end time was entered, and no results. 3, 5: searched, not refused as invalid. 5 lists no venue, because a booking period running past midnight is outside every venue's opening hours (AC4, SCRUM-34 AC7). |
 
 **Automated by:** `tests/unit/venue-search-schema.test.ts` › "SCRUM-38 [AC6] TC-38-07: …"; `e2e/venue-search.spec.ts` › "SCRUM-38 [AC6, AC10] TC-38-07, TC-38-11: …"
 
@@ -149,20 +157,20 @@ Not built yet, because what they need isn't on `main`:
 | Test Data | — |
 | Expected Result | It appears in neither. |
 
-**Automated by:** `tests/unit/venue-search.test.ts` › "SCRUM-38 [AC7] TC-38-08: …"; `tests/integration/venue-search.test.ts` › "SCRUM-38 [AC7] TC-38-08: …"
+**Automated by:** `tests/unit/venue-search.test.ts` › "SCRUM-38 [AC7] TC-38-08: …"; `tests/integration/venue-search.test.ts` › "SCRUM-38 [AC2, AC7] TC-38-04, TC-38-08: …"
 
 ### TC-38-09
 
 | Item | Content |
 |---|---|
 | Test Case ID | TC-38-09 |
-| Test Scenario | [Positive] AC 8: each result shows name, location and capacity |
-| Pre-conditions | Seeded venues. |
-| Test Steps | 1. Search for location "Level 1, Block A". |
-| Test Data | — |
-| Expected Result | Grand Auditorium, Level 1, Block A, Capacity 500. The suitability indicator is added with SCRUM-40. |
+| Test Scenario | [Positive] AC 8: each result shows name, location, capacity and SCRUM-40's suitability indicator |
+| Pre-conditions | Seeded venues; a Planning event expecting 40. |
+| Test Steps | 1. Search for location "Level 1, Block A". <br> 2. Open search from the event. <br> 3. Untick **Only show venues that fit** and search. <br> 4. With the filters off, enter attendance 100, facility stage, accessibility hearing-loop and layout banquet for a 60-seat room with a projector, wheelchair access and classroom and theatre layouts. |
+| Test Data | `coordinator@test.local` |
+| Expected Result | 1: Grand Auditorium, Level 1, Block A, Capacity 500. 2: every venue listed is Suitable, with no reasons. 3: the Executive Boardroom is listed too, Not suitable: "Capacity 14 < attendance 40". 4: Not suitable, with "Capacity 60 < attendance 100", "Missing facility: stage", "No hearing loop; event needs hearing loop" and "Banquet layout not supported" (SCRUM-40 AC6). |
 
-**Automated by:** `tests/unit/venue-search.test.ts` › "SCRUM-38 [AC8] TC-38-09: …"; `e2e/venue-search.spec.ts` › "SCRUM-38 [AC1, AC2, AC8, AC9, AC14] …". The indicator: Manual until SCRUM-40 (#194).
+**Automated by:** `tests/unit/venue-search.test.ts` › "SCRUM-38 [AC8] TC-38-09: …"; `e2e/venue-search.spec.ts` › "SCRUM-38 [AC1, AC2, AC8, AC9, AC14] …" and "SCRUM-38 [AC1, AC8, AC11, AC14] TC-38-01, TC-38-09, TC-38-12: …"
 
 ### TC-38-10
 
@@ -197,11 +205,11 @@ Not built yet, because what they need isn't on `main`:
 | Test Case ID | TC-38-12 |
 | Test Scenario | [Positive] AC 11, AC 13: filters apply alone or together; several facilities or features must all be there |
 | Pre-conditions | Seeded venues. |
-| Test Steps | 1. Filter by facility projector. <br> 2. Projector and stage. <br> 3. Accessibility wheelchair-access and hearing-loop. <br> 4. Layout banquet. <br> 5. Projector with location "Level 2, Block B". |
+| Test Steps | 1. Filter by facility projector. <br> 2. Projector and stage. <br> 3. Accessibility wheelchair-access and hearing-loop. <br> 4. Layout banquet. <br> 5. Projector with location "Level 2, Block B". <br> 6. Untick **Only show venues that fit** and search again. |
 | Test Data | — |
-| Expected Result | 1: Grand Auditorium, Seminar Room 2.1. 2: Grand Auditorium. 3: Grand Auditorium. 4: Exhibition Hall. 5: Seminar Room 2.1. |
+| Expected Result | 1: Grand Auditorium, Seminar Room 2.1. 2: Grand Auditorium. 3: Grand Auditorium. 4: Exhibition Hall. 5: Seminar Room 2.1. 6: the venues the filters left out are listed too, each Not suitable with the reason (TC-38-09); the box stays unticked when the search changes (AC14). |
 
-**Automated by:** `tests/unit/venue-search.test.ts` › "SCRUM-38 [AC11, AC13] TC-38-12: …"; `tests/integration/venue-search.test.ts` › "SCRUM-38 [AC11, AC13] TC-38-12: …"
+**Automated by:** `tests/unit/venue-search.test.ts` › "SCRUM-38 [AC11] TC-38-12: …" and "SCRUM-38 [AC13] TC-38-12: …"; `tests/unit/venue-search-schema.test.ts` › "SCRUM-38 [AC11] TC-38-12: …"; `tests/integration/venue-search.test.ts` › "SCRUM-38 [AC11, AC13] TC-38-12: …"; `e2e/venue-search.spec.ts` › "SCRUM-38 [AC1, AC8, AC11, AC14] TC-38-01, TC-38-09, TC-38-12: …"
 
 ### TC-38-13
 
@@ -234,13 +242,13 @@ Not built yet, because what they need isn't on `main`:
 | Item | Content |
 |---|---|
 | Test Case ID | TC-38-15 |
-| Test Scenario | [Negative] AC 4: a venue closed for part of the booking period is excluded |
-| Pre-conditions | SCRUM-34's opening hours; a venue open 09:00 to 18:00. |
-| Test Steps | 1. Search 17:00 to 19:00. <br> 2. Search 08:00 to 10:00. |
+| Test Scenario | [Negative] [Boundary] AC 4: a venue closed for part of the booking period is excluded; one open for all of it is kept |
+| Pre-conditions | SCRUM-34's opening hours; a venue open 09:00 to 18:00 on weekdays and Closed at weekends; seeded venues. |
+| Test Steps | 1. Search a Tuesday 15:00 to 18:01. <br> 2. 08:59 to 12:00. <br> 3. 09:00 to 18:00. <br> 4. A Saturday 10:00 to 12:00. <br> 5. Seeded venues, a Tuesday 07:30 to 09:00. |
 | Test Data | — |
-| Expected Result | Excluded in both. |
+| Expected Result | 1, 2, 4: excluded. 3: included: exactly at opening and closing is within (SCRUM-34 AC7). A venue with no hours recorded is included in every case. 5: Exhibition Hall (opens 06:00) and Grand Auditorium (07:00); not Seminar Room 2.1 (08:00) or the Executive Boardroom (09:00). |
 
-**Automated by:** Manual. Waits for SCRUM-34 (#203), whose `dayOutsideOpeningHours` in `lib/venue-hours.ts` it will use.
+**Automated by:** `tests/unit/venue-search.test.ts` › "SCRUM-38 [AC4] TC-38-15: …"; `tests/integration/venue-search.test.ts` › "SCRUM-38 [AC4, AC15] TC-38-15, TC-38-16: …"; `e2e/venue-search.spec.ts` › "SCRUM-38 [AC4, AC15] TC-38-15, TC-38-20: …"
 
 ### TC-38-16
 
@@ -248,12 +256,12 @@ Not built yet, because what they need isn't on `main`:
 |---|---|
 | Test Case ID | TC-38-16 |
 | Test Scenario | [Boundary] AC 15: only setup or turnaround outside opening hours keeps the venue |
-| Pre-conditions | As TC-38-15, with 30 minutes' setup and turnaround. |
-| Test Steps | 1. Search 09:00 to 18:00. |
+| Pre-conditions | As TC-38-15, with 60 minutes' setup and turnaround. |
+| Test Steps | 1. Search a Tuesday 09:00 to 18:00. |
 | Test Data | — |
-| Expected Result | Included: the booking period is within the hours; only its setup and turnaround aren't, which Venue Staff decide (SCRUM-159 AC9). |
+| Expected Result | Included: the booking period is within the hours; only its setup and turnaround aren't, which Venue Staff decide (SCRUM-159 AC9). Availability is still checked over 08:00 to 19:00 (AC3). |
 
-**Automated by:** Manual. Waits for SCRUM-34 (#203).
+**Automated by:** `tests/unit/venue-search.test.ts` › "SCRUM-38 [AC15] TC-38-16: …"; `tests/integration/venue-search.test.ts` › "SCRUM-38 [AC4, AC15] TC-38-15, TC-38-16: …"
 
 ### TC-38-17
 
@@ -284,3 +292,16 @@ Not built yet, because what they need isn't on `main`:
 ### TC-38-19
 
 Retired on 2026-10-16, before it was merged: a date-only search listing venues free at some point went beyond AC3, so a date alone is searched as that whole day (TC-38-04).
+
+### TC-38-20
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-38-20 |
+| Test Scenario | [Negative] AC 4: a date searched without times excludes only a venue Closed on a day searched |
+| Pre-conditions | As TC-38-15; seeded venues. |
+| Test Steps | 1. Search a Tuesday, no times. <br> 2. A Saturday, no times. <br> 3. A Friday to the Saturday, no times. <br> 4. Seeded venues, a Saturday, no times. <br> 5. Seeded venues, a Tuesday, no times. |
+| Test Data | — |
+| Expected Result | 1: included, though the venue isn't open all day. 2, 3: excluded. 4: Exhibition Hall and Grand Auditorium only; Seminar Room 2.1 and the Executive Boardroom are Closed at weekends. 5: all four. |
+
+**Automated by:** `tests/unit/venue-hours.test.ts` › "SCRUM-38 [AC4] TC-38-20: …"; `tests/unit/venue-search.test.ts` › "SCRUM-38 [AC4] TC-38-20: …"; `tests/integration/venue-search.test.ts` › "SCRUM-38 [AC4] TC-38-20: …"; `e2e/venue-search.spec.ts` › "SCRUM-38 [AC4, AC15] TC-38-15, TC-38-20: …"
