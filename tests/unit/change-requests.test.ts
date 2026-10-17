@@ -58,6 +58,7 @@ type Over = Partial<{
   coordinatorId: string | null;
   organiserId: string;
   discardedAt: Date | null;
+  registrationRequired: boolean | null;
 }>;
 
 /** The event as the action reads it before the transaction. */
@@ -84,6 +85,7 @@ const current = (over: Over = {}) => ({
   preferredLayout: "Booths",
   equipmentRequirements: "Two projectors",
   registrationNotes: "Open to all students",
+  registrationRequired: true as boolean | null,
   programme: "Talks at 10",
   specialRequests: null,
   organiserId: ORGANISER,
@@ -175,6 +177,7 @@ describe("raiseChangeRequest — SCRUM-41", () => {
         accessibilityNeeds: "Step-free access and a hearing loop",
         preferredLayout: "Theatre",
         registrationNotes: "Students only",
+        registrationRequired: false,
         programme: "Talks at 11",
         specialRequests: "Water for speakers",
       },
@@ -194,6 +197,7 @@ describe("raiseChangeRequest — SCRUM-41", () => {
       accessibilityNeeds: false,
       preferredLayout: false,
       registrationNotes: false,
+      registrationRequired: false,
       programme: false,
       specialRequests: false,
     });
@@ -204,7 +208,7 @@ describe("raiseChangeRequest — SCRUM-41", () => {
       isMajor: true,
     });
     expect(tx.auditLog.create.mock.calls[0][0].data.summary).toBe(
-      "Change requested: Event name, Purpose, Date and time, Venue requirements, Accessibility needs, Room layout, Equipment requirements, Registration needs, Programme, Special requests",
+      "Change requested: Event name, Purpose, Date and time, Venue requirements, Accessibility needs, Room layout, Equipment requirements, Registration needs, Registration needed, Programme, Special requests",
     );
   });
 
@@ -231,6 +235,42 @@ describe("raiseChangeRequest — SCRUM-41", () => {
         isMajor: false,
       },
     ]);
+  });
+
+  it("SCRUM-41 [AC1, AC5, AC6] TC-41-18: Registration needed can be asked to change, recorded Yes to No and not impactful, and the event keeps its own", async () => {
+    signIn("ORGANISER", ORGANISER);
+
+    const result = await raiseChangeRequest({
+      eventId: "evt1",
+      changes: { registrationRequired: false },
+    });
+
+    expect(result).toEqual({ ok: true, data: { id: "chg_new" } });
+    expect(tx.eventChangeRequest.create.mock.calls[0][0].data.fields.create).toEqual([
+      { fieldName: "registrationRequired", oldValue: "true", newValue: "false", isMajor: false },
+    ]);
+    expect(tx.auditLog.create.mock.calls[0][0].data.summary).toBe(
+      "Change requested: Registration needed",
+    );
+  });
+
+  it("SCRUM-41 [AC1] TC-41-18: on a request made before the question was asked, the old value is recorded as none", async () => {
+    signIn("ORGANISER", ORGANISER, { registrationRequired: null });
+
+    await raiseChangeRequest({ eventId: "evt1", changes: { registrationRequired: true } });
+
+    expect(tx.eventChangeRequest.create.mock.calls[0][0].data.fields.create).toEqual([
+      { fieldName: "registrationRequired", oldValue: null, newValue: "true", isMajor: false },
+    ]);
+  });
+
+  it("SCRUM-41 [AC1] TC-41-18, TC-41-15: asking for the answer the event already has is not a change, and nothing is written", async () => {
+    signIn("ORGANISER", ORGANISER);
+
+    expect(
+      await raiseChangeRequest({ eventId: "evt1", changes: { registrationRequired: true } }),
+    ).toMatchObject({ ok: false, error: "Change at least one field, or ask to cancel the event." });
+    nothingWritten();
   });
 
   it("SCRUM-41 [AC1] TC-41-15: values equal to the event's are not a change, and nothing is written", async () => {
@@ -640,7 +680,8 @@ describe("raiseChangeRequestSchema — SCRUM-41 AC1, AC4", () => {
     ],
     [{ startAt: "not a date", endAt: END.toISOString() }, "Invalid date format."],
     [{ programme: "x".repeat(5001) }, "Keep the programme under 5000 characters."],
-    [{ registrationRequired: true }, "Unrecognized key(s) in object: 'registrationRequired'"],
+    [{ registrationRequired: "no" }, "Choose whether the event needs registration."],
+    [{ registrationOpensAt: "2031-01-01" }, "Unrecognized key(s) in object: 'registrationOpensAt'"],
   ])("SCRUM-41 [AC4] TC-41-07: %j is refused: %s", (changes, message) => {
     expect(messages({ changes })).toContain(message);
   });
@@ -675,6 +716,7 @@ describe("change request labels — SCRUM-41 AC6", () => {
     ["endAt", "End"],
     ["expectedAttendance", "Expected attendance"],
     ["specialRequests", "Special requests"],
+    ["registrationRequired", "Registration needed"],
     ["somethingOld", "somethingOld"],
   ])("SCRUM-41 [AC6] TC-41-09: the field %s reads %s", (fieldName, label) => {
     expect(changeFieldLabel(fieldName)).toBe(label);

@@ -113,6 +113,37 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-41 — raise and track a change reque
     ).toEqual({ expectedAttendance: 40, description: "Booths and talks.", status: "PLANNING" });
   });
 
+  it("SCRUM-41 [AC1, AC6] TC-41-18: a request to change Registration needed to No is Submitted, and the event still needs registration", async () => {
+    signInAs(ORGANISER, "ORGANISER");
+    const eventId = await eventIn("CONFIRMED");
+    await prisma.event.update({ where: { id: eventId }, data: { registrationRequired: true } });
+
+    expect(
+      await raiseChangeRequest({ eventId, changes: { registrationRequired: false } }),
+    ).toMatchObject({ ok: true });
+
+    expect(
+      await prisma.eventChangeRequest.findFirstOrThrow({
+        where: { eventId },
+        select: {
+          status: true,
+          fields: { select: { fieldName: true, oldValue: true, newValue: true, isMajor: true } },
+        },
+      }),
+    ).toEqual({
+      status: "PENDING_REVIEW",
+      fields: [
+        { fieldName: "registrationRequired", oldValue: "true", newValue: "false", isMajor: false },
+      ],
+    });
+    expect(
+      await prisma.event.findUniqueOrThrow({
+        where: { id: eventId },
+        select: { registrationRequired: true, status: true },
+      }),
+    ).toEqual({ registrationRequired: true, status: "CONFIRMED" });
+  });
+
   it("SCRUM-124 [AC7, AC14] TC-124-07: the assigned Coordinator gets exactly one notice of the Organiser's request", async () => {
     signInAs(ORGANISER, "ORGANISER");
     const eventId = await eventIn("PLANNING");

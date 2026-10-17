@@ -9,11 +9,12 @@ import {
 
 /**
  * SCRUM-41 AC1 — the event fields a change request can ask to change: every
- * field of the request form. "schedule" is the start and end together, as in
- * a clarification (SCRUM-108).
+ * field of the request form, including Registration needed (SCRUM-171).
+ * "schedule" is the start and end together, as in a clarification (SCRUM-108).
  */
 export const CHANGEABLE_FIELDS = {
   ...CLARIFIABLE_FIELDS,
+  registrationRequired: "Registration needed",
   programme: "Programme",
   specialRequests: "Special requests",
 } as const;
@@ -38,9 +39,14 @@ const optionalText = (label: string, max: number) =>
 /**
  * SCRUM-41 AC4 — the requested values, under the request form's rules. The
  * programme and special requests are optional on the form, so they may be
- * cleared.
+ * cleared. Registration needed is Yes or No (SCRUM-171 AC1); whether it may
+ * become No while people are registered is decided with the request
+ * (SCRUM-171 AC5, SCRUM-128).
  */
 const changeRequestValues = requestFieldValues.extend({
+  registrationRequired: z.boolean({
+    invalid_type_error: "Choose whether the event needs registration.",
+  }),
   programme: optionalText("the programme", 5000),
   specialRequests: optionalText("special requests", 5000),
 });
