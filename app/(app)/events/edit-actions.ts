@@ -238,7 +238,8 @@ export async function updateEventDetails(
       });
 
       // SCRUM-26 AC2, AC6: flags only; each arrangement keeps its status and
-      // its original period.
+      // its original period. SCRUM-124 AC8: Venue Staff and Technical Support
+      // are told; the Coordinator making the edit isn't.
       const flagged =
         toFlag.length > 0
           ? await flagArrangements(
@@ -246,6 +247,7 @@ export async function updateEventDetails(
               { eventId },
               arrangementsFlaggedReason(arrangementChanges),
               now,
+              user!.id,
             )
           : { bookings: 0, reservations: 0 };
 

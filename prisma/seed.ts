@@ -86,6 +86,7 @@ const U = {
   organiser: "usr_organiser",
   coordinator: "usr_coordinator",
   venueStaff: "usr_venuestaff",
+  venueStaff2: "usr_venuestaff_2",
   techSupport: "usr_techsupport",
   attendee: "usr_attendee",
   organiser2: "usr_organiser_2",
@@ -139,6 +140,11 @@ async function seedUsers(passwordHash: string) {
     { id: U.organiser, email: "organiser@test.local", name: "Olivia Organiser", role: Role.ORGANISER },
     { id: U.coordinator, email: "coordinator@test.local", name: "Cody Coordinator", role: Role.COORDINATOR },
     { id: U.venueStaff, email: "venuestaff@test.local", name: "Vera Venue", role: Role.VENUE_STAFF },
+    // SCRUM-53 AC5: two members of Venue Staff approving at the same moment.
+    // Seeded rather than made by a test: every Venue Staff member is told of
+    // venue requests (SCRUM-124), so one appearing mid-run would change what
+    // other suites count.
+    { id: U.venueStaff2, email: "venuestaff2@test.local", name: "Victor Venue", role: Role.VENUE_STAFF },
     { id: U.techSupport, email: "techsupport@test.local", name: "Theo Tech", role: Role.TECH_SUPPORT },
     { id: U.attendee, email: "attendee@test.local", name: "Aria Attendee", role: Role.ATTENDEE },
     // SCRUM-68: Organiser A must not be able to load Organiser B's event.

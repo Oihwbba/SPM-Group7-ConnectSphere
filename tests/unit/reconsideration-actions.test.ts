@@ -28,7 +28,10 @@ const tx = vi.hoisted(() => ({
   reservation: { findUniqueOrThrow: vi.fn(), updateMany: vi.fn() },
   auditLog: { create: vi.fn() },
   safetyCheck: { updateMany: vi.fn() },
-  notification: { updateMany: vi.fn() },
+  notification: { updateMany: vi.fn(), createMany: vi.fn() },
+  // SCRUM-124 AC9: Venue Staff or Technical Support are told of the
+  // resolution (the SCRUM-124 tests at the end of this file).
+  user: { findMany: vi.fn() },
 }));
 vi.mock("@/lib/booking-holds", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/booking-holds")>()),
@@ -116,6 +119,7 @@ beforeEach(() => {
   tx.reservation.findUniqueOrThrow.mockResolvedValue(flaggedReservation);
   tx.reservation.updateMany.mockResolvedValue({ count: 1 });
   tx.safetyCheck.updateMany.mockResolvedValue({ count: 0 });
+  tx.user.findMany.mockResolvedValue([]);
   mockBookingRefusal.mockResolvedValue(null);
   mockReservationRefusal.mockResolvedValue(null);
   mockTransaction.mockImplementation((cb: (t: typeof tx) => unknown) => cb(tx));
@@ -598,5 +602,103 @@ describe("getFlaggedArrangements — SCRUM-26 AC7", () => {
     expect(await getFlaggedArrangements("evt1")).toMatchObject({ ok: false });
     expect(mockEvent).not.toHaveBeenCalled();
     expect(mockBookings).not.toHaveBeenCalled();
+  });
+});
+
+// SCRUM-124 AC9 — who is told when the Coordinator resolves a flag. Test
+// cases: docs/testing/SCRUM-124.md.
+describe("resolution notices — SCRUM-124 AC9", () => {
+  beforeEach(() => {
+    tx.event.findUniqueOrThrow.mockResolvedValue({ ...eventNow(), name: "Expo" });
+    tx.user.findMany.mockResolvedValue([{ id: "usr_staff1" }, { id: "usr_staff2" }]);
+  });
+
+  const toEveryone = (
+    title: string,
+    message: string,
+    link: string,
+  ) => ({
+    data: ["usr_staff1", "usr_staff2"].map((userId) => ({
+      userId,
+      eventId: "evt1",
+      type: "ARRANGEMENT_FLAG_RESOLVED",
+      title,
+      message,
+      link,
+    })),
+  });
+
+  it("SCRUM-124 [AC9, AC12, AC13] TC-124-09: a booking that still stands tells every Venue Staff member, linking to their queue", async () => {
+    await resolveReconsiderationFlag({ kind: "booking", id: "bkg1", decision: "STILL_STANDS" });
+
+    expect(tx.user.findMany).toHaveBeenCalledWith({
+      where: { role: "VENUE_STAFF" },
+      select: { id: true },
+    });
+    expect(tx.notification.createMany).toHaveBeenCalledWith(
+      toEveryone(
+        "A flagged booking still stands",
+        'The Coordinator kept Exhibition Hall (Approved) for "Expo": it no longer needs reconsideration.',
+        "/bookings",
+      ),
+    );
+  });
+
+  it("SCRUM-124 [AC9, AC12] TC-124-09: a cancelled booking tells every Venue Staff member its period is free again", async () => {
+    await resolveReconsiderationFlag({ kind: "booking", id: "bkg1", decision: "CANCEL" });
+
+    expect(tx.notification.createMany).toHaveBeenCalledWith(
+      toEveryone(
+        "A flagged booking was cancelled",
+        'The Coordinator cancelled Exhibition Hall (Approved) for "Expo", so its period is free again.',
+        "/bookings",
+      ),
+    );
+  });
+
+  it("SCRUM-124 [AC9, AC12] TC-124-09: a reservation that still stands tells every Technical Support member, linking to the equipment page", async () => {
+    await resolveReconsiderationFlag({ kind: "reservation", id: "res1", decision: "STILL_STANDS" });
+
+    expect(tx.user.findMany).toHaveBeenCalledWith({
+      where: { role: "TECH_SUPPORT" },
+      select: { id: true },
+    });
+    expect(tx.notification.createMany).toHaveBeenCalledWith(
+      toEveryone(
+        "A flagged reservation still stands",
+        'The Coordinator kept Projector × 2 for "Expo": it no longer needs reconsideration.',
+        "/equipment",
+      ),
+    );
+  });
+
+  it("SCRUM-124 [AC9, AC12] TC-124-09: a cancelled reservation tells every Technical Support member it is back in the pool", async () => {
+    await resolveReconsiderationFlag({ kind: "reservation", id: "res1", decision: "CANCEL" });
+
+    expect(tx.notification.createMany).toHaveBeenCalledWith(
+      toEveryone(
+        "A flagged reservation was cancelled",
+        'The Coordinator cancelled Projector × 2 for "Expo", so it is back in the pool.',
+        "/equipment",
+      ),
+    );
+  });
+
+  it("SCRUM-124 [AC9] TC-124-09: a Still stands that is refused tells nobody", async () => {
+    mockBookingRefusal.mockResolvedValue("It no longer covers the event's whole period.");
+
+    expect(
+      (await resolveReconsiderationFlag({ kind: "booking", id: "bkg1", decision: "STILL_STANDS" })).ok,
+    ).toBe(false);
+    expect(tx.notification.createMany).not.toHaveBeenCalled();
+  });
+
+  it("SCRUM-124 [AC9, AC14] TC-124-09: resolving a flag a second time tells nobody again", async () => {
+    tx.booking.updateMany.mockResolvedValue({ count: 0 });
+
+    expect(
+      (await resolveReconsiderationFlag({ kind: "booking", id: "bkg1", decision: "CANCEL" })).ok,
+    ).toBe(false);
+    expect(tx.notification.createMany).not.toHaveBeenCalled();
   });
 });

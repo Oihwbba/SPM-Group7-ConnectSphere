@@ -218,7 +218,11 @@ describe.skipIf(!usesLocalDatabase)(
     // most one live booking, and the seeded events already hold theirs.
     let firstEventId: string;
     let secondEventId: string;
-    const SECOND_STAFF_ID = `usr_venuestaff_concurrency_${Date.now()}`;
+    // The seeded second member of Venue Staff. Seeded, never made or deleted
+    // here: every Venue Staff member is told of other suites' venue requests
+    // and decisions (SCRUM-124), so one appearing or vanishing mid-run would
+    // change what they count, or fail their notices.
+    const SECOND_STAFF_ID = "usr_venuestaff_2";
 
     const staff = (id: string): Session => ({
       user: { id, role: "VENUE_STAFF", name: id, email: `${id}@test.local` },
@@ -249,16 +253,8 @@ describe.skipIf(!usesLocalDatabase)(
       prisma.booking.count({ where: { venueId, status: "APPROVED" } });
 
     beforeAll(async () => {
-      // Two different members of Venue Staff, as the criterion describes.
-      await prisma.user.create({
-        data: {
-          id: SECOND_STAFF_ID,
-          email: `${SECOND_STAFF_ID}@test.local`,
-          name: "Second Venue Staff",
-          passwordHash: "not-a-real-hash-test-user-cannot-sign-in",
-          role: "VENUE_STAFF",
-        },
-      });
+      // Two different members of Venue Staff, as the criterion describes: the
+      // seeded venuestaff@ and venuestaff2@.
       const period = {
         startAt: new Date("2033-01-01T00:00:00.000Z"),
         endAt: new Date("2033-01-01T02:00:00.000Z"),
@@ -294,9 +290,13 @@ describe.skipIf(!usesLocalDatabase)(
     });
 
     afterAll(async () => {
+      // Only the notices about its own events: every Venue Staff member gets
+      // other suites' notices too while they run, and those suites count them.
+      await prisma.notification.deleteMany({
+        where: { eventId: { in: [firstEventId, secondEventId] } },
+      });
       await removeEvents([firstEventId, secondEventId]);
       await prisma.venue.delete({ where: { id: venueId } });
-      await prisma.user.delete({ where: { id: SECOND_STAFF_ID } });
     });
 
     it("SCRUM-53 [AC5] TC-53-05: two staff approve overlapping requests at the same moment: one succeeds, one is returned as conflicting", async () => {
