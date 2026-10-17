@@ -8,7 +8,9 @@ import { choose, signedIn, usesLocalDatabase } from "./helpers";
  * availability calendar shows them either side of an approved booking, marked
  * differently from it (AC7), and a request whose setup would run into that
  * booking's turnaround is refused by the live check, with the whole occupied
- * time named (AC3), while one clear of it is free.
+ * time named (AC3), while one clear of it is free. Venue Staff are warned
+ * when a request's setup falls outside opening hours, and can still approve
+ * it (AC9).
  *
  * Uses its own venue (30 minutes' setup, 45 minutes' turnaround) and events
  * on 12 Feb 2036, and removes them afterwards. The approved booking is written
@@ -49,6 +51,10 @@ async function removeTestData() {
       entityType: "Booking",
       entityId: { in: bookings.map((b) => b.id) },
     },
+  });
+  // Approving in AC9's test notifies the Coordinator.
+  await prisma.notification.deleteMany({
+    where: { eventId: { in: events.map((e) => e.id) } },
   });
   await prisma.booking.deleteMany({
     where: { id: { in: bookings.map((b) => b.id) } },
@@ -193,5 +199,70 @@ test.describe("SCRUM-159 — setup and turnaround time", () => {
       "data-state",
       "free",
     );
+  });
+
+  test("SCRUM-159 [AC9] TC-159-18: Venue Staff are warned that a request's setup falls outside opening hours when reviewing and holding it, and can still approve it", async ({
+    browser,
+  }) => {
+    test.skip(!usesLocalDatabase, "creates its own venue and events");
+    // Open 09:00–18:00 every day: the 09:00 briefing fits, its setup from
+    // 08:30 doesn't.
+    const studio = await prisma.venue.create({
+      data: {
+        name: `${PREFIX} Studio`,
+        location: "Test block",
+        capacity: 50,
+        setupMinutes: 30,
+        turnaroundMinutes: 45,
+        openingHours: {
+          create: [1, 2, 3, 4, 5, 6, 7].map((weekday) => ({
+            weekday,
+            opensMinute: 9 * 60,
+            closesMinute: 18 * 60,
+          })),
+        },
+      },
+      select: { id: true },
+    });
+    const event = await prisma.event.create({
+      data: {
+        name: `${PREFIX} Breakfast Briefing`,
+        status: "PLANNING",
+        organiserId: "usr_organiser",
+        coordinatorId: "usr_coordinator",
+        startAt: at("09:00"),
+        endAt: at("11:00"),
+        expectedAttendance: 30,
+      },
+      select: { id: true },
+    });
+    const booking = await prisma.booking.create({
+      data: {
+        eventId: event.id,
+        venueId: studio.id,
+        startAt: at("09:00"),
+        endAt: at("11:00"),
+        requestedAttendance: 30,
+        requestedById: "usr_coordinator",
+      },
+      select: { id: true },
+    });
+    const warning = `The setup time (30 minutes, from 08:30) falls outside ${PREFIX} Studio's opening hours`;
+
+    const staff = await signedIn(browser, "venuestaff@test.local");
+    await staff.goto("/bookings");
+    const card = staff.getByTestId(`booking-${booking.id}`);
+    await expect(card.getByTestId("hours-warning")).toContainText(warning);
+    await expect(card).toContainText("Free for this period");
+
+    await card.getByRole("button", { name: "Hold" }).click();
+    const dialog = staff.getByRole("dialog", { name: "Hold this venue" });
+    await expect(dialog.getByTestId("hours-warning")).toContainText(warning);
+    await dialog.getByRole("button", { name: "Cancel" }).click();
+
+    await card.getByRole("button", { name: "Approve" }).click();
+    await expect(
+      staff.getByText(`Approved: ${PREFIX} Studio is now booked for ${PREFIX} Breakfast Briefing.`),
+    ).toBeVisible();
   });
 });
