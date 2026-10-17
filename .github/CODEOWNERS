@@ -8,3 +8,5 @@
 /playwright.config.ts   @Oihwbba @yiamjunbin @hannqian @cay68 @feliciaor2024-arch
 /vitest.config.mts      @Oihwbba @yiamjunbin @hannqian @cay68 @feliciaor2024-arch
 /vercel.json            @Oihwbba @yiamjunbin @hannqian @cay68 @feliciaor2024-arch
+# Decides which files git diffs as text, so what the GLM review can read.
+/.gitattributes         @Oihwbba @yiamjunbin @hannqian @cay68 @feliciaor2024-arch

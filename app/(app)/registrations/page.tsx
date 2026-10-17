@@ -6,7 +6,8 @@ import { Forbidden } from "@/components/app/forbidden";
 import { getMyRegistrations } from "./queries";
 import { RegistrationsList } from "./registrations-list";
 
-// Access is decided by lib/auth/can.ts (the single gate), not a role list here
+// SCRUM-76 — an Attendee's own registrations and the status of each. Access
+// is decided by lib/auth/can.ts (the single gate), not a role list here
 // (SCRUM-66 / SCRUM-67).
 export default async function RegistrationsPage() {
   const session = await requireSession();

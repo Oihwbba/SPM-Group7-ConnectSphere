@@ -14,6 +14,7 @@ import { recordSafetyCheckOutcome } from "@/app/(app)/safety-checks/actions";
 // only its calls are checked.
 
 const tx = vi.hoisted(() => ({
+  $queryRaw: vi.fn(),
   event: { findUniqueOrThrow: vi.fn(), update: vi.fn() },
   booking: { count: vi.fn() },
   reservation: { count: vi.fn() },
@@ -62,7 +63,7 @@ const NOTE = "The fire exit is blocked by the stage.";
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mockAuth.mockResolvedValue(sessionFor("SAFETY_OFFICER", "usr_safety"));
+  mockAuth.mockResolvedValue(sessionFor("SAFETY_OFFICER", "usr_safetyofficer"));
   mockCheck.mockResolvedValue(checkRow());
   tx.event.findUniqueOrThrow.mockResolvedValue({ status: "PLANNING" });
   tx.booking.count.mockResolvedValue(1);
@@ -89,7 +90,7 @@ describe("recordSafetyCheckOutcome — outcomes (SCRUM-166 AC3, AC5, AC10, AC11,
       data: {
         status: "APPROVED",
         note: null,
-        decidedById: "usr_safety",
+        decidedById: "usr_safetyofficer",
         decidedAt: expect.any(Date),
       },
     });
@@ -99,7 +100,7 @@ describe("recordSafetyCheckOutcome — outcomes (SCRUM-166 AC3, AC5, AC10, AC11,
       entityType: "SafetyCheck",
       entityId: "chk_1",
       action: "APPROVED",
-      actorId: "usr_safety",
+      actorId: "usr_safetyofficer",
       oldValue: "AWAITING_REVIEW",
       newValue: "APPROVED",
     });
@@ -115,9 +116,24 @@ describe("recordSafetyCheckOutcome — outcomes (SCRUM-166 AC3, AC5, AC10, AC11,
     });
 
     expect(result).toEqual({ ok: true, data: { status: "CHANGES_REQUESTED" } });
+    // Only live arrangements can be picked: not a hold past its expiry.
     expect(tx.booking.count).toHaveBeenCalledWith({
-      where: { id: { in: ["bkg_1"] }, eventId: "evt_1", status: { in: ["PENDING", "HELD", "APPROVED"] } },
+      where: {
+        id: { in: ["bkg_1"] },
+        eventId: "evt_1",
+        OR: [
+          { status: { in: ["PENDING", "APPROVED"] } },
+          { status: "HELD", holdExpiresAt: { gt: expect.any(Date) } },
+        ],
+      },
     });
+    // The event is read under a shared lock, so its status can't change
+    // until the outcome is recorded.
+    const [sql] = tx.$queryRaw.mock.calls[0];
+    expect(sql.join("?")).toContain('FROM "Event" WHERE "id" = ? FOR SHARE');
+    expect(tx.$queryRaw.mock.invocationCallOrder[0]).toBeLessThan(
+      tx.event.findUniqueOrThrow.mock.invocationCallOrder[0],
+    );
     expect(tx.reservation.count).toHaveBeenCalledWith({
       where: { id: { in: ["res_1"] }, eventId: "evt_1", status: "CONFIRMED" },
     });
@@ -233,8 +249,8 @@ describe("recordSafetyCheckOutcome — refusals (SCRUM-166 AC3, AC6–AC8, AC13)
         await recordSafetyCheckOutcome({ checkId: "chk_1", outcome: "APPROVED" }),
       ).toEqual({ ok: false, error: "You do not have permission to do that." });
     }
-    mockAuth.mockResolvedValue(sessionFor("SAFETY_OFFICER", "usr_safety"));
-    for (const own of [{ organiserId: "usr_safety" }, { coordinatorId: "usr_safety" }]) {
+    mockAuth.mockResolvedValue(sessionFor("SAFETY_OFFICER", "usr_safetyofficer"));
+    for (const own of [{ organiserId: "usr_safetyofficer" }, { coordinatorId: "usr_safetyofficer" }]) {
       mockCheck.mockResolvedValue(checkRow(own));
       expect(
         await recordSafetyCheckOutcome({ checkId: "chk_1", outcome: "APPROVED" }),

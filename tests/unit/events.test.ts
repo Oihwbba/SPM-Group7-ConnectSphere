@@ -123,6 +123,7 @@ describe("User Story 13 — Event Request Creation", () => {
     preferredLayout: "Theatre",
     accessibilityNeeds: "Wheelchair access ramp and front-row physical seating",
     equipmentRequirements: "2 Wireless Microphones, 1 HD Projector",
+    registrationRequired: "yes",
     registrationNotes: "Online registration open to public with check-in counter",
     programme: "09:00 Opening Keynote, 12:00 Lunch, 15:00 Panel",
     specialRequests: "VIP catering for keynote speakers",
@@ -156,6 +157,54 @@ describe("User Story 13 — Event Request Creation", () => {
           }),
         }),
       );
+    });
+
+    it.each([
+      ["yes", true],
+      ["no", false],
+    ])(
+      "SCRUM-171 [AC1, AC2] TC-171-01: submitting with Registration needed %s stores it, and the note is optional",
+      async (answer, stored) => {
+        mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
+        mockCreate.mockResolvedValue({ id: "evt_reg" });
+
+        const result = await submitEventRequest({
+          ...validSubmissionInput,
+          registrationRequired: answer,
+          registrationNotes: "",
+        });
+
+        expect(result.ok).toBe(true);
+        expect(mockCreate).toHaveBeenCalledWith(
+          expect.objectContaining({
+            data: expect.objectContaining({
+              registrationRequired: stored,
+              registrationNotes: null,
+            }),
+          }),
+        );
+      },
+    );
+
+    it("SCRUM-171 [AC2] TC-171-02: submitting without choosing Registration needed is refused, and nothing is created", async () => {
+      mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
+      const withoutChoice: Record<string, unknown> = {
+        ...validSubmissionInput,
+      };
+      delete withoutChoice.registrationRequired;
+
+      const result = await submitEventRequest(withoutChoice);
+
+      expect(result).toEqual({
+        ok: false,
+        error: "Please fix the highlighted fields before submitting.",
+        fieldErrors: {
+          registrationRequired: [
+            "Choose whether the event needs registration.",
+          ],
+        },
+      });
+      expect(mockCreate).not.toHaveBeenCalled();
     });
 
     it("SCRUM-13 [AC3 - Happy Path]: accepts request when optional fields (programme, special requests) are omitted", async () => {
@@ -402,6 +451,7 @@ describe("User Story 13 — Event Request Creation", () => {
         accessibilityNeeds: "",
         preferredLayout: "",
         equipmentRequirements: "",
+        registrationRequired: "",
         registrationNotes: "",
       });
 
@@ -418,7 +468,12 @@ describe("User Story 13 — Event Request Creation", () => {
         expect(result.fieldErrors?.accessibilityNeeds).toBeTruthy();
         expect(result.fieldErrors?.preferredLayout).toBeTruthy();
         expect(result.fieldErrors?.equipmentRequirements).toBeTruthy();
-        expect(result.fieldErrors?.registrationNotes).toBeTruthy();
+        // SCRUM-171 AC1, AC2: Registration needed is required; the note
+        // about registration became optional.
+        expect(result.fieldErrors?.registrationRequired).toEqual([
+          "Choose whether the event needs registration.",
+        ]);
+        expect(result.fieldErrors?.registrationNotes).toBeUndefined();
       }
       expect(mockCreate).not.toHaveBeenCalled();
     });
@@ -702,6 +757,34 @@ describe("User Story 15 — Save an event request as draft", () => {
     );
   });
 
+  it("SCRUM-171 [AC2] TC-171-03: a draft saves without Registration needed, left unanswered, and keeps an answer once chosen", async () => {
+    mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
+    mockCreate.mockResolvedValue({ id: "evt_draft_reg" });
+
+    const created = await createDraftEvent({ name: "Open Day" });
+
+    expect(created.ok).toBe(true);
+    expect(mockCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ registrationRequired: null }),
+      }),
+    );
+
+    const updated = await createDraftEvent({
+      id: "evt_draft_reg",
+      name: "Open Day",
+      registrationRequired: "no",
+    });
+
+    expect(updated.ok).toBe(true);
+    expect(mockUpdateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: draftSaveWhere("evt_draft_reg"),
+        data: expect.objectContaining({ registrationRequired: false }),
+      }),
+    );
+  });
+
   it("SCRUM-129 [AC1 - Singapore timezone]: a new draft and an updated draft are stored as Asia/Singapore events", async () => {
     mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
     mockCreate.mockResolvedValue({ id: "evt_draft_sg" });
@@ -748,6 +831,7 @@ describe("User Story 15 — Save an event request as draft", () => {
       preferredLayout: "Theatre",
       accessibilityNeeds: "Ramp access",
       equipmentRequirements: "Microphones",
+      registrationRequired: "yes",
       registrationNotes: "Online registration",
     };
 
@@ -1031,6 +1115,7 @@ describe("User Story 15 — Save an event request as draft", () => {
       preferredLayout: "Theatre",
       accessibilityNeeds: "Ramp access",
       equipmentRequirements: "Microphones",
+      registrationRequired: "yes",
       registrationNotes: "Online registration",
     };
 
@@ -1044,6 +1129,43 @@ describe("User Story 15 — Save an event request as draft", () => {
           name: "Completed Resumed Event",
           status: "SUBMITTED",
           submittedAt: expect.any(Date),
+        }),
+      }),
+    );
+  });
+
+  it("SCRUM-171 [AC1, AC2] TC-171-01: submitting a saved draft stores Registration needed No, and an empty note as none", async () => {
+    mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
+    mockFindFirst.mockResolvedValue({
+      id: "evt_draft_reg",
+      organiserId: "usr_organiser",
+      status: "DRAFT",
+    });
+    mockUpdate.mockResolvedValue({ id: "evt_draft_reg" });
+
+    const result = await submitEventRequest({
+      id: "evt_draft_reg",
+      name: "Board Dinner",
+      purpose: "Thank the board",
+      description: "Invitation only",
+      startAt: futureStart,
+      endAt: futureEnd,
+      expectedAttendance: 20,
+      venueRequirements: "Private room",
+      preferredLayout: "Banquet",
+      accessibilityNeeds: "Step-free access",
+      equipmentRequirements: "None",
+      registrationRequired: "no",
+      registrationNotes: "",
+    });
+
+    expect(result).toEqual({ ok: true, data: { id: "evt_draft_reg" } });
+    expect(mockUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "evt_draft_reg" },
+        data: expect.objectContaining({
+          registrationRequired: false,
+          registrationNotes: null,
         }),
       }),
     );
@@ -1108,6 +1230,7 @@ describe("User Story 15 — Save an event request as draft", () => {
       preferredLayout: "Theatre",
       accessibilityNeeds: "Ramp access",
       equipmentRequirements: "Microphones",
+      registrationRequired: "yes",
       registrationNotes: "Online registration",
     };
 
@@ -1211,6 +1334,7 @@ describe("User Story 16 — Distinguish drafts from submitted requests", () => {
       preferredLayout: "Classroom",
       accessibilityNeeds: "None",
       equipmentRequirements: "Projector",
+      registrationRequired: "yes",
       registrationNotes: "None",
     });
 
@@ -1508,6 +1632,33 @@ describe("getFormCatalogues — permission gate", () => {
     }
   });
 
+  it("SCRUM-13 [AC1] TC-13-14: the form is offered the accessibility features and layouts active venues have, Venue Staff's own included (SCRUM-34 AC6)", async () => {
+    mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
+    mockVenues.mockResolvedValue([
+      {
+        id: "ven1",
+        name: "Rooftop",
+        capacity: 80,
+        facilities: ["rooftop-bar"],
+        accessibilityFeatures: ["tactile-paving"],
+        supportedLayouts: ["garden-party"],
+      },
+    ]);
+    mockEquipment.mockResolvedValue([]);
+
+    const result = await getFormCatalogues();
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.data.options.accessibilityFeatures).toContain("tactile-paving");
+    expect(result.data.options.supportedLayouts).toContain("garden-party");
+    expect(result.data.options.facilities).toContain("rooftop-bar");
+    // The venue list itself still carries only what it showed before.
+    expect(result.data.venues).toEqual([
+      { id: "ven1", name: "Rooftop", capacity: 80, facilities: ["rooftop-bar"] },
+    ]);
+  });
+
   it("SCRUM-13 [AC2 - Catalogue Dependencies]: queries only active venue and equipment catalogue entries", async () => {
     mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
     mockVenues.mockResolvedValue([]);
@@ -1518,7 +1669,14 @@ describe("getFormCatalogues — permission gate", () => {
     expect(result.ok).toBe(true);
     expect(mockVenues).toHaveBeenCalledWith({
       where: { isActive: true },
-      select: { id: true, name: true, capacity: true, facilities: true },
+      select: {
+        id: true,
+        name: true,
+        capacity: true,
+        facilities: true,
+        accessibilityFeatures: true,
+        supportedLayouts: true,
+      },
     });
     expect(mockEquipment).toHaveBeenCalledWith({
       where: { isActive: true },

@@ -286,9 +286,20 @@ describe("refusalLog — SCRUM-152", () => {
 // reviewer read it cut off mid-lesson, with nothing to say so.
 describe("the memory on this branch — SCRUM-152", () => {
   it("SCRUM-152: CI fails when memory.md is longer than the reviewer reads", () => {
-    const length = readFileSync(MEMORY_PATH, "utf8").length;
+    // The reviewer reads the file through git (readFromBase), which stores LF;
+    // a Windows checkout adds a CR to every line that the reviewer never sees.
+    const length = readFileSync(MEMORY_PATH, "utf8").replace(/\r\n/g, "\n").length;
 
     expect(length, `${MEMORY_PATH} is ${length} characters`).toBeLessThanOrEqual(MAX_MEMORY_CHARS);
+  });
+
+  // The memory's own rules said 8,000 for a day after SCRUM-180 raised the
+  // limit, and the bot is told to keep those rules unchanged.
+  it("SCRUM-181 [AC6]: the memory's rules state the limit the reviewer actually reads", () => {
+    const memory = readFileSync(MEMORY_PATH, "utf8");
+    const limit = String(MAX_MEMORY_CHARS).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+
+    expect(memory).toContain(`reads at most ${limit} characters`);
   });
 });
 

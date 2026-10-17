@@ -8,8 +8,8 @@ import { prisma } from "@/lib/db";
 import { can, requirePermission, PermissionError } from "@/lib/auth/can";
 import { ok, err, type ActionResult } from "@/lib/action-result";
 import { formatDateTime } from "@/lib/datetime";
-import { FLAGGABLE_BOOKING, flagArrangements } from "@/lib/reconsideration";
-import { SAFETY_CHECK_LABEL } from "@/lib/safety-check";
+import { flagArrangements, liveBookingWhere } from "@/lib/reconsideration";
+import { SAFETY_CHECK_LABEL } from "@/lib/safety-checks";
 
 const NOTE_REQUIRED = "A note is required for Changes requested or Rejected.";
 const PICK_REQUIRED = "Pick at least one venue booking or equipment reservation the changes affect.";
@@ -86,16 +86,22 @@ export async function recordSafetyCheckOutcome(
     const { eventId, event } = check;
 
     const result = await prisma.$transaction(async (tx) => {
+      // A shared lock: a status change (confirm, cancel, reject) waits for
+      // this to finish, while two officers recording at once still proceed
+      // and the conditional update below decides between them.
+      await tx.$queryRaw`SELECT "id" FROM "Event" WHERE "id" = ${eventId} FOR SHARE`;
       const status = await tx.event.findUniqueOrThrow({
         where: { id: eventId },
         select: { status: true },
       });
       if (status.status !== "PLANNING") return { refused: "not-planning" as const };
 
+      const now = new Date();
       if (outcome === "CHANGES_REQUESTED") {
+        // Only arrangements a flag can sit on: not a hold past its expiry.
         const [bookings, reservations] = await Promise.all([
           tx.booking.count({
-            where: { id: { in: bookingIds }, eventId, status: { in: FLAGGABLE_BOOKING } },
+            where: { id: { in: bookingIds }, eventId, ...liveBookingWhere(now) },
           }),
           tx.reservation.count({
             where: { id: { in: reservationIds }, eventId, status: "CONFIRMED" },
@@ -106,7 +112,6 @@ export async function recordSafetyCheckOutcome(
         }
       }
 
-      const now = new Date();
       const updated = await tx.safetyCheck.updateMany({
         where: { id: checkId, status: "AWAITING_REVIEW" },
         data: {

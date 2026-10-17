@@ -58,7 +58,7 @@ stayed in every Coordinator's list).
    Under Review, which has its Coordinator, is decided. See ADR 0006's
    2026-10-14 addendum.
 
-## Alternatives considered
+## Alternatives rejected
 
 - **A separate table of editable fields per clarification.** One short list
   per request doesn't need its own table.

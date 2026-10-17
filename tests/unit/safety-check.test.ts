@@ -5,7 +5,7 @@ import {
   outdateSafetyChecks,
   safetyCheckItem,
   safetyCheckRequestable,
-} from "@/lib/safety-check";
+} from "@/lib/safety-checks";
 import { getReadinessChecklist, type ReadinessChecklist } from "@/lib/event-readiness";
 
 // SCRUM-166 — the safety check's checklist item, when one can be requested,
@@ -53,6 +53,9 @@ describe("the readiness checklist with a safety check — SCRUM-166 AC9", () => 
       ],
       equipmentRequests: [],
       reservations: [],
+      // SCRUM-170 AC4: Equipment is always listed; this event needs none.
+      noEquipmentNeededAt: START,
+      noEquipmentNeededBy: { name: "Cody Coordinator" },
       safetyChecks,
     });
     return { db: { event: { findUnique } } as unknown as Prisma.TransactionClient, findUnique };
@@ -122,13 +125,10 @@ describe("outdateSafetyChecks — SCRUM-166 AC13", () => {
     const tx = { safetyCheck: { updateMany } } as unknown as Prisma.TransactionClient;
     const now = new Date("2031-05-01T00:00:00Z");
 
-    expect(await outdateSafetyChecks(tx, "evt_1", now)).toBe(1);
+    expect(await outdateSafetyChecks(tx, "evt_1", now)).toEqual({ count: 1 });
     expect(updateMany).toHaveBeenCalledWith({
       where: { eventId: "evt_1", status: { in: ["AWAITING_REVIEW", "APPROVED"] } },
       data: { status: "OUTDATED", outdatedAt: now },
     });
-
-    await outdateSafetyChecks(tx, "evt_1");
-    expect(updateMany.mock.calls[1][0].data.outdatedAt).toBeInstanceOf(Date);
   });
 });

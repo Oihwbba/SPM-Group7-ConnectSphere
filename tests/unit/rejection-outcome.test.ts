@@ -209,6 +209,7 @@ describe("submitEventRequest — SCRUM-126 only an amendable rejection is resubm
     preferredLayout: "Theatre",
     accessibilityNeeds: "Ramp",
     equipmentRequirements: "Projector",
+    registrationRequired: "yes",
     registrationNotes: "Online",
   };
 

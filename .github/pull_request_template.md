@@ -31,8 +31,8 @@ Closes SCRUM-
 <!-- What you actually ran and its result, e.g. npm run verify, test:coverage, the e2e specs you touched. -->
 
 - [ ] `npm run verify`
-- [ ] `npm run test:coverage` (needs `docker compose up -d`)
-- [ ] The e2e specs for the journeys this changes
+- [ ] `npm run test:coverage`, against the local database (README, "Local database (Docker)")
+- [ ] The e2e specs for the journeys this changes, against the local database too
 - [ ] Went through "Before you open a pull request" in `CONTRIBUTING.md`
 
 ## Notes for review

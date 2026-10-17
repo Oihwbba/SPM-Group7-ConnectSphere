@@ -8,8 +8,10 @@
 //
 // Context GLM gets besides the diff: the PR title, description and branch, the
 // project's CONTRIBUTING.md and CLAUDE.md, and the docs/backlog story file for
-// every SCRUM key the PR names. All of it, and this script itself, is read from
-// the BASE branch, so a pull request can't rewrite the rules it is judged by.
+// every SCRUM key the PR names. All of it, this script itself and the
+// .gitattributes the diff is read with come from the BASE branch, so a pull
+// request can't rewrite the rules it is judged by. The code, the tests and the
+// stories' test-case documents come from the head: they are what is judged.
 //
 // Exit code: 1 (red check, which blocks the merge) when the review finds a
 // critical issue, or when no review could be completed: the check is required,
@@ -31,9 +33,10 @@ const GLM_URL = "https://open.bigmodel.cn/api/coding/paas/v4/chat/completions";
 // before writing a ~1K-token JSON answer. A run cut off while still thinking
 // returns an empty answer, so allow plenty of output and retry once.
 const GLM_MAX_OUTPUT_TOKENS = 100_000;
-// All attempts share one budget that ends before the job's 30-minute timeout,
-// leaving time to post the comment. A retry needs at least MIN_RETRY_MS left.
-const GLM_BUDGET_MS = 27 * 60 * 1000;
+// All attempts share one budget, which starts once CI's results are in and
+// ends well inside the job's timeout, leaving time to post the comment. A
+// retry needs at least MIN_RETRY_MS left.
+export const GLM_BUDGET_MS = 27 * 60 * 1000;
 const MIN_RETRY_MS = 8 * 60 * 1000;
 // Thinking levels (`reasoning_effort`). Without one, GLM-5.3 thinks as much as
 // at "max" — a probe used 145 thinking tokens with no level, 143 at max, 27 at
@@ -53,7 +56,10 @@ const MAX_STORY_CHARS = 6_000;
 const MAX_BODY_CHARS = 4_000;
 const MAX_TEST_INVENTORY_CHARS = 15_000;
 export const MAX_MEMORY_CHARS = 12_000;
+// People's comments on the PR, newest kept. The previous review has its own
+// budget: findings sections ran to 5,853 characters in the week to 13 Oct.
 const MAX_CONVERSATION_CHARS = 8_000;
+const MAX_PREVIOUS_REVIEW_CHARS = 8_000;
 // Beyond the diff (ADR 0008): the changed files in full get their own budget;
 // the related files (imports, importers, story files) share a second one.
 const MAX_CHANGED_FILES_CHARS = 400_000;
@@ -81,9 +87,12 @@ const OUTLINE_LINE =
 const SEED_PATH = "prisma/seed.ts";
 const TRUNCATION_NOTE_CHARS = 100;
 const MAX_TEST_CHANGE_CHARS = 20_000;
-// How long the review waits for CI's build-and-test on the same commit.
+// How long the review waits for CI's build-and-test on the same commit. In the
+// week to 13 Oct CI took 10.6 minutes at the median, 18.5 at the 90th
+// percentile and 19.7 at the 95th; the old 15-minute wait missed it on 12 of
+// 102 reviews, which then judged test coverage without CI's results.
 const CI_WORKFLOW_NAME = "CI";
-const CI_WAIT_MS = 15 * 60 * 1000;
+export const CI_WAIT_MS = 25 * 60 * 1000;
 const CI_POLL_MS = 20 * 1000;
 // Lessons from past reviews, approved by the team through pull requests.
 export const MEMORY_PATH = ".github/ai-review/memory.md";
@@ -96,6 +105,20 @@ const EXCLUDE = [
   ":(glob,exclude)docs/backlog/**",
   ":(glob,exclude)**/migration_lock.toml",
 ];
+
+/** The git arguments for the diff under review, read with the base branch's attributes. */
+export function reviewDiffArgs(baseSha, headSha) {
+  return [
+    `--attr-source=${baseSha}`,
+    "diff",
+    "--no-color",
+    "--unified=3",
+    `${baseSha}...${headSha}`,
+    "--",
+    ".",
+    ...EXCLUDE,
+  ];
+}
 
 // Project documents GLM reviews against, read from the base branch.
 const PROJECT_DOCS = ["CONTRIBUTING.md", "CLAUDE.md"];
@@ -121,12 +144,14 @@ const BLOCKING = new Set(["critical"]);
 /**
  * Prefixes each added or context line with its line number in the new file, so
  * GLM can cite exact lines, and records which lines exist on the new side of
- * each file's hunks.
+ * each file's hunks. `touched` is every path the diff names, deleted files
+ * included, which have no new side and so no `commentable` entry.
  */
 export function parseDiff(diff) {
   const commentable = new Map();
   // Only the lines this PR added, for coverage of its changes.
   const added = new Map();
+  const touched = new Set();
   const annotated = [];
   let path = null;
   let inHunk = false;
@@ -141,9 +166,16 @@ export function parseDiff(diff) {
     }
     // Inside a hunk a removed line can itself start with "--", so file headers
     // are only recognised before the first hunk.
+    if (!inHunk && raw.startsWith("--- ")) {
+      const source = raw.slice(4).trim();
+      if (source !== "/dev/null") touched.add(source.replace(/^a\//, ""));
+      annotated.push(raw);
+      continue;
+    }
     if (!inHunk && raw.startsWith("+++ ")) {
       const target = raw.slice(4).trim();
       path = target === "/dev/null" ? null : target.replace(/^b\//, "");
+      if (path) touched.add(path);
       if (path && !commentable.has(path)) {
         commentable.set(path, new Set());
         added.set(path, new Set());
@@ -174,7 +206,7 @@ export function parseDiff(diff) {
     }
   }
 
-  return { annotated: annotated.join("\n"), commentable, added };
+  return { annotated: annotated.join("\n"), commentable, added, touched };
 }
 
 // A description line that says which story the PR is for ("Closes SCRUM-31",
@@ -556,30 +588,68 @@ function quoted(text) {
     .join("\n");
 }
 
+/** The full SHA of the commit a review comment reviewed, or null for a notice that reviewed none. */
+export function reviewedCommit(body) {
+  return /\*\*Commit:\*\* \[`[0-9a-f]+`\]\(https:\/\/github\.com\/[^/\s]+\/[^/\s]+\/commit\/([0-9a-f]{40})\)/.exec(body ?? "")?.[1] ?? null;
+}
+
 /**
- * The PR's previous review and the people's comments on it, for a re-run. Half
- * the budget goes to the review; the discussion keeps its newest comments.
- * Every line is quoted, so a comment containing "## Diff" can't forge a
- * section of the prompt. Returns "" on a PR's first review. Comments from
- * other bots are left out.
+ * A previous review as the next run needs it: its verdict, then its findings,
+ * then its overview if there is room. The acceptance table is left out: it is
+ * worked out afresh on every run, and it sits before the findings, so cutting
+ * the review in order lost them — 46 of the 64 reviews with findings in the
+ * week to 13 Oct had them past the 4,000 characters the next run was shown.
  */
-export function renderConversation(comments, max = MAX_CONVERSATION_CHARS) {
+export function previousReviewDigest(body, max = MAX_PREVIOUS_REVIEW_CHARS) {
+  const text = body.replace(MARKER, "").trim();
+  const overviewAt = text.indexOf("\n### Overview");
+  if (overviewAt === -1) return capped(text, max);
+  const findingsAt = text.indexOf("\n### Findings at a glance");
+  // The footer follows the last "---"; findings are separated by "---" too.
+  const footerAt = text.lastIndexOf("\n---\n");
+  const overviewEnd = [text.indexOf("\n### Acceptance criteria"), findingsAt, footerAt]
+    .filter((at) => at > overviewAt)
+    .reduce((a, b) => Math.min(a, b), text.length);
+
+  const verdict = text.slice(0, overviewAt).trim();
+  const findings =
+    findingsAt === -1 ? "### Findings\n\nNone." : text.slice(findingsAt, footerAt > findingsAt ? footerAt : text.length).trim();
+  const overview = text.slice(overviewAt, overviewEnd).trim();
+  const whole = [verdict, findings, overview].join("\n\n");
+  return whole.length <= max ? whole : capped(`${verdict}\n\n${findings}`, max);
+}
+
+/**
+ * The PR's previous review and the people's comments on it, for a re-run. The
+ * review gets its own budget (`previousReviewDigest`); the discussion keeps its
+ * newest comments within `max`. When the previous review was of this same
+ * commit, the heading says the code hasn't changed: a re-run of unchanged code
+ * dropped a true finding on #162. Every line is quoted, so a comment
+ * containing "## Diff" can't forge a section of the prompt. Returns "" on a
+ * PR's first review. Comments from other bots are left out.
+ */
+export function renderConversation(comments, max = MAX_CONVERSATION_CHARS, { headSha } = {}) {
   const review = comments.find(isReviewComment);
   const discussion = comments.filter((c) => !String(c.user?.login ?? "").endsWith("[bot]") && c.body?.trim());
   if (!review && discussion.length === 0) return "";
 
   const parts = [];
   if (review) {
-    parts.push(`### Your previous review\n\n${quoted(capped(review.body.replace(MARKER, "").trim(), Math.floor(max / 2)))}`);
+    const sameCommit = Boolean(headSha) && reviewedCommit(review.body) === headSha;
+    const heading = sameCommit
+      ? "### Your previous review, of this same commit\n\n" +
+        "The code hasn't changed since that review, so each of its findings still stands unless a comment " +
+        "below gives a reason the diff or the project documents confirm. Being run again is not a reason to drop one."
+      : "### Your previous review";
+    parts.push(`${heading}\n\n${quoted(previousReviewDigest(review.body))}`);
   }
   if (discussion.length) {
-    const budget = max - parts.join("").length;
     const kept = [];
     let size = 0;
     for (const comment of [...discussion].reverse()) {
       const author = comment.user?.login ?? "unknown";
       const entry = `**@${author}** (${String(comment.created_at ?? "").slice(0, 10)}):\n${quoted(comment.body.trim())}`;
-      if (kept.length > 0 && size + entry.length > budget) break;
+      if (kept.length > 0 && size + entry.length > max) break;
       kept.unshift(entry);
       size += entry.length + 2;
     }
@@ -835,6 +905,15 @@ const SOURCE_FILE = /\.(?:[cm]?[jt]sx?|css|prisma)$/;
 const SOURCE_ROOTS = ["app", "lib", "components", "tests", "e2e", "prisma", "auth.ts", "auth.config.ts", "proxy.ts"];
 const IMPORT_SPECIFIER = /(?:\bfrom\s*|\bimport\s*\(\s*|\bimport\s+)["']([^"']+)["']/g;
 const RESOLVE_SUFFIXES = ["", ".ts", ".tsx", ".js", ".mjs", ".mts", ".jsx", ".css", "/index.ts", "/index.tsx", "/index.js"];
+
+/** Every migration's SQL file at a commit, oldest first. */
+function listMigrationFiles(sha) {
+  return execFileSync("git", ["ls-tree", "-r", "--name-only", sha, "--", "prisma/migrations"], { encoding: "utf8" })
+    .split("\n")
+    .map((path) => path.trim())
+    .filter((path) => path.endsWith("/migration.sql"))
+    .sort();
+}
 
 /** Every source file at a commit, with its content. Migrations are left out. */
 function listSourceFiles(sha) {
@@ -1107,6 +1186,53 @@ export function renderProjectRuleScan(results) {
     .join("\n\n");
 }
 
+// A story's test-case document (docs/testing/SCRUM-n.md): the lines that say
+// what each case proves and which tests automate it. Markdown is left out of
+// the diff, so without this the review never saw the citations: #171 renamed
+// a test and left docs/testing/SCRUM-159.md citing its old title.
+const TEST_CASE_LINE = /^(?:### TC-|\| Test Scenario \||\*\*Automated by:\*\*)/;
+const MAX_TEST_CASE_DOC_CHARS = 12_000;
+
+/**
+ * A test-case document's outline: each case's heading, scenario and
+ * "Automated by" line, numbered as in the file, and the set of those line
+ * numbers, so a finding on one of them can link to it.
+ */
+export function testCaseOutline(content, max = MAX_TEST_CASE_DOC_CHARS) {
+  const kept = content
+    .split("\n")
+    .map((line, i) => ({ number: i + 1, line }))
+    .filter(({ line }) => TEST_CASE_LINE.test(line));
+  return {
+    text: capped(kept.map(({ number, line }) => `${number}\t${line}`).join("\n"), max),
+    lines: new Set(kept.map(({ number }) => number)),
+  };
+}
+
+// Every DDL statement in the migrations, for a pull request that changes the
+// schema or a migration. Migrations are left out of the related files, so on
+// #148 the review reported an index as never created when an older migration
+// creates it.
+const DDL_LINE = /^\s*(?:CREATE|ALTER|DROP)\b/i;
+const MAX_MIGRATION_OUTLINE_CHARS = 60_000;
+
+/** Whether a changed path is the schema or a migration. */
+export function changesSchema(paths) {
+  return paths.some((path) => path === "prisma/schema.prisma" || path.startsWith("prisma/migrations/"));
+}
+
+/** Each CREATE, ALTER or DROP line of the given migration files, as `path:line: statement`. */
+export function migrationOutline(files, max = MAX_MIGRATION_OUTLINE_CHARS) {
+  const lines = files.flatMap((file) =>
+    file.content
+      .split("\n")
+      .map((line, i) => ({ line, number: i + 1 }))
+      .filter(({ line }) => DDL_LINE.test(line))
+      .map(({ line, number }) => `${file.path}:${number}: ${line.trim().slice(0, 200)}`),
+  );
+  return lines.length ? capped(lines.join("\n"), max) : "There are no migrations.";
+}
+
 /** Hit counts per line from an lcov report, keyed by the source path as written. */
 export function parseLcov(text) {
   const files = new Map();
@@ -1311,9 +1437,12 @@ async function main() {
   const elapsed = () => Math.round((Date.now() - started) / 1000);
   const notes = [];
 
+  // With the base branch's .gitattributes, like everything else the review is
+  // judged by: otherwise a pull request could mark its own files `-diff`, and
+  // the review would see only "Binary files differ" for them.
   const diff = execFileSync(
     "git",
-    ["diff", "--no-color", "--unified=3", `${env.BASE_SHA}...${env.HEAD_SHA}`, "--", ".", ...EXCLUDE],
+    reviewDiffArgs(env.BASE_SHA, env.HEAD_SHA),
     { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 },
   );
   if (!diff.trim()) {
@@ -1321,7 +1450,7 @@ async function main() {
     return;
   }
 
-  const { annotated, commentable, added } = parseDiff(diff);
+  const { annotated, commentable, added, touched } = parseDiff(diff);
   if (annotated.length > MAX_DIFF_CHARS) {
     await upsertReviewComment(
       github,
@@ -1383,8 +1512,30 @@ async function main() {
   // coverage instead of being reported missing.
   const testInventory = renderTestInventory(listTestFiles(env.HEAD_SHA));
 
+  // Each story's test-case document at the PR's head, which the PR may add or
+  // change, so its citations can be checked against the tests.
+  const testCaseDocs = stories.map((key) => {
+    const path = `docs/testing/${key}.md`;
+    const content = readFromBase(env.HEAD_SHA, path);
+    return { key, path, outline: content === null ? null : testCaseOutline(content) };
+  });
+  const testCaseSection = testCaseDocs.length
+    ? testCaseDocs
+        .map(({ key, path, outline }) =>
+          outline ? `### ${path}\n\n${outline.text || "(no test cases)"}` : `### ${path}\n\nNo test-case document exists for ${key}.`,
+        )
+        .join("\n\n")
+    : "";
+  // A finding on a cited line links to it, as a line in the diff does.
+  const linkable = new Map([
+    ...commentable,
+    ...testCaseDocs.filter(({ outline }) => outline).map(({ path, outline }) => [path, outline.lines]),
+  ]);
+
   // On a re-run: the previous review and what people replied to it.
-  const conversation = renderConversation(await listPrComments(github, repo, env.PR_NUMBER));
+  const conversation = renderConversation(await listPrComments(github, repo, env.PR_NUMBER), undefined, {
+    headSha: env.HEAD_SHA,
+  });
 
   // Beyond the diff: related files (whole or in part) and a project rule scan, both from
   // the PR's head, then CI's results for this commit.
@@ -1398,6 +1549,11 @@ async function main() {
     );
   }
   const ruleScan = renderProjectRuleScan(scanProjectRules(sourceFiles.filter((file) => !NOT_APP_TESTS.has(file.path))));
+  const migrations = changesSchema([...touched])
+    ? migrationOutline(
+        listMigrationFiles(env.HEAD_SHA).map((path) => ({ path, content: readFromBase(env.HEAD_SHA, path) ?? "" })),
+      )
+    : "";
   const addedSourceLines = new Map(
     [...added].filter(([path]) => /^(app|lib|components)\//.test(path) && /\.[cm]?[jt]sx?$/.test(path) && !TEST_FILE.test(path)),
   );
@@ -1438,6 +1594,14 @@ async function main() {
     "## Existing tests (at this PR's head)",
     "Every test file with its kind and its describe/test titles. Tests this PR adds appear here and in the diff.",
     testInventory,
+    ...(testCaseSection
+      ? [
+          "## Test-case documents (at this PR's head)",
+          "For each story, every test case's heading, scenario and \"Automated by\" line, numbered as in the " +
+            "file. Check each citation against the existing tests (see the Tests section of your instructions).",
+          testCaseSection,
+        ]
+      : []),
     ...(conversation
       ? [
           "## Earlier review and discussion on this pull request",
@@ -1459,6 +1623,15 @@ async function main() {
       "is existing code: use it as evidence for acceptance criteria and mention it in the overview, but " +
       "don't raise it as a finding unless this PR makes it worse.",
     ruleScan,
+    ...(migrations
+      ? [
+          "## Every migration's DDL (at this PR's head)",
+          "Each CREATE, ALTER or DROP line of every migration, with its file and line. This PR changes the " +
+            "schema or a migration: an index, constraint, trigger or function created here exists, even in a " +
+            "migration the diff doesn't show.",
+          migrations,
+        ]
+      : []),
     "## Files (at this PR's head)",
     "Each file is line-numbered. Files changed by this PR are here in full, or their head if marked " +
       "\"shortened to fit\"; the diff below shows exactly which lines changed. The related files are the ones " +
@@ -1539,7 +1712,7 @@ async function main() {
       repo,
       sha: env.HEAD_SHA,
       baseRef,
-      commentable,
+      commentable: linkable,
       summary: review.summary,
       findings: review.findings,
       stories,

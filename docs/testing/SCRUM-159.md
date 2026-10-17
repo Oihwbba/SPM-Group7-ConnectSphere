@@ -20,11 +20,11 @@ are signed in as `coordinator@test.local`, approvals as
 - **AC1's form:** there is no venue edit screen yet. SCRUM-34 builds it and
   uses the shared rule `venueTimesSchema` (lib/schemas/venue.ts) tested here;
   the database refuses the same values.
-- **AC3's search and hold actions:** venue search is SCRUM-38 and placing a
-  hold is SCRUM-163. Both use the same lookup (`findVenueBlockers`) and
-  database constraint, so they inherit the occupied period without a second
-  rule. A Held booking already blocks here (TC-159-15, TC-159-16); showing it
-  on the calendar as held is SCRUM-163 AC2.
+- **AC3's search:** venue search is SCRUM-38 (not built). It uses the same
+  lookup (`findVenueBlockers`) and database constraint, so it inherits the
+  occupied period without a second rule. Placing a hold (SCRUM-163) checks the
+  occupied period and keeps the venue's minutes (TC-159-17), and a live hold
+  blocks like an approval (TC-159-15, TC-159-16).
 - A request's period is its event's, rounded out to the half hour (SCRUM-50
   AC1), so a request for 13:15 can't be made in the app. The criterion's
   exact 13:15 example is proven in unit tests; the integration and e2e tests
@@ -48,6 +48,7 @@ are signed in as `coordinator@test.local`, approvals as
 | [TC-159-14](#tc-159-14) | Positive | AC 3 | Unit |
 | [TC-159-15](#tc-159-15) | Negative | AC 3 | Unit, integration |
 | [TC-159-16](#tc-159-16) | Boundary | AC 3 | Integration |
+| [TC-159-17](#tc-159-17) | Negative, Positive | AC 3, AC 8 | Unit |
 
 ---
 
@@ -138,9 +139,9 @@ are signed in as `coordinator@test.local`, approvals as
 | Pre-conditions | As TC-159-05. Signed in as Venue Staff for step 2. |
 | Test Steps | 1. Request the venue for a period whose setup or turnaround (not its event times) overlaps recorded unavailability. <br> 2. On **Availability**, record maintenance 12:30–13:00. |
 | Test Data | Reason Maintenance |
-| Expected Result | 1. Refused, naming the unavailability. 2. "Not recorded: … is already booked from … to 12:45 pm …, including setup and turnaround." Nothing is saved. (Recording over bookings is replaced by SCRUM-161, which flags them instead.) |
+| Expected Result | 1. Refused, naming the unavailability. 2. Nothing is saved yet: the approved booking is shown as affected, because its turnaround runs to 12:45 pm, and the period is saved only once Venue Staff confirm it (SCRUM-161 replaced the refusal: [TC-161-01](SCRUM-161.md#tc-161-01)). |
 
-**Automated by:** `tests/unit/venue-availability.test.ts` › "SCRUM-159 [AC3] TC-159-07: recorded unavailability is compared with the asked-for occupied period, setup and turnaround included"; `tests/unit/bookings.test.ts` › "SCRUM-159 [AC3] TC-159-07: recorded unavailability is checked against the request's whole occupied period"; `tests/unit/unavailability.test.ts` › "SCRUM-159 [AC3] TC-159-07: unavailability over only a booking's turnaround is refused too, naming the whole occupied time"; `tests/integration/setup-turnaround.test.ts` › "SCRUM-159 [AC3] TC-159-07: unavailability over only an approved booking's turnaround is not recorded"
+**Automated by:** `tests/unit/venue-availability.test.ts` › "SCRUM-159 [AC3] TC-159-07: recorded unavailability is compared with the asked-for occupied period, setup and turnaround included"; `tests/unit/bookings.test.ts` › "SCRUM-159 [AC3] TC-159-07: recorded unavailability is checked against the request's whole occupied period"; `tests/unit/unavailability.test.ts` › "SCRUM-161 [AC3] TC-161-05: an approved booking's own turnaround reaching into the period makes it affected, and one only touching it doesn't"; `tests/integration/setup-turnaround.test.ts` › "SCRUM-159 [AC3] TC-159-07: unavailability over only an approved booking's turnaround is not recorded until that booking is confirmed"
 
 ### TC-159-08
 
@@ -242,9 +243,9 @@ are signed in as `coordinator@test.local`, approvals as
 | Pre-conditions | A Held 10:00–12:00 booking at a venue with 15 and 45 minutes, its hold expiring tomorrow (written directly; placing holds is SCRUM-163). An event 12:30–14:30. |
 | Test Steps | 1. Request the venue for the 12:30–14:30 event. <br> 2. Check the venue for that period on the request form. |
 | Test Data | — |
-| Expected Result | 1. Refused: "… is unavailable for that period: on hold from … to 12:45 pm …, including setup and turnaround." Nothing is written. 2. Reported unavailable. |
+| Expected Result | 1. Refused: "… is unavailable for that period: held from … to 12:45 pm …, including setup and turnaround." Nothing is written. 2. Reported unavailable. |
 
-**Automated by:** `tests/unit/venue-availability.test.ts` › "SCRUM-50 [AC3, AC10] TC-50-04, SCRUM-159 [AC3] TC-159-15: asks only for APPROVED bookings and holds not yet expired …" and "SCRUM-159 [AC3] TC-159-15: names a held booking as on hold, with its whole occupied time"; `tests/integration/setup-turnaround.test.ts` › "SCRUM-159 [AC3] TC-159-15: a hold that hasn't expired blocks a request and the live check wherever its occupied period reaches"
+**Automated by:** `tests/unit/venue-availability.test.ts` › "SCRUM-50 [AC3, AC10] TC-50-04, SCRUM-159 [AC3] TC-159-15, SCRUM-163 [AC2, AC4] TC-163-04: asks only for APPROVED bookings and unexpired holds …" and "SCRUM-159 [AC3] TC-159-15: names a held booking as held, with its whole occupied time"; `tests/integration/setup-turnaround.test.ts` › "SCRUM-159 [AC3] TC-159-15: a hold that hasn't expired blocks a request and the live check wherever its occupied period reaches"
 
 ### TC-159-16
 
@@ -258,3 +259,16 @@ are signed in as `coordinator@test.local`, approvals as
 | Expected Result | Reported available, and the request is created (SCRUM-163 AC4: a lapsed hold no longer reserves the venue). |
 
 **Automated by:** `tests/integration/setup-turnaround.test.ts` › "SCRUM-159 [AC3] TC-159-16: a hold whose expiry has passed blocks nothing, even before anything marks it Expired"
+
+### TC-159-17
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-159-17 |
+| Test Scenario | [Negative, Positive] AC 3, AC 8: placing a hold counts setup and turnaround, and the hold keeps the venue's minutes |
+| Pre-conditions | The venue has 30 minutes' setup and 45 minutes' turnaround. An approved booking ends 20 minutes before a pending request starts. Signed in as `venuestaff@test.local`. |
+| Test Steps | 1. Hold the pending request. <br> 2. Remove the other booking and hold it again. |
+| Test Data | Any expiry before the request starts. |
+| Expected Result | 1. "Conflicting: … is already booked from …": the earlier booking ends inside the request's setup. Nothing is written. 2. The request is Held with 30 and 45 minutes saved on it. |
+
+**Automated by:** `tests/unit/booking-holds.test.ts` › "SCRUM-159 [AC3, AC8] TC-159-17: a hold is refused where only setup or turnaround clash, and otherwise keeps the venue's minutes"

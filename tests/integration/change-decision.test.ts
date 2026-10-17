@@ -190,6 +190,33 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-128 — deciding a change request", (
     expect((await prisma.event.findUniqueOrThrow({ where: { id: eventId } })).expectedAttendance).toBe(40);
   });
 
+  it("SCRUM-170 [AC4] TC-170-12: approving a change to the equipment requirements clears No equipment needed, who and when together", async () => {
+    const eventId = await confirmedEvent(9);
+    await prisma.event.update({
+      where: { id: eventId },
+      data: {
+        status: "PLANNING",
+        equipmentRequirements: "None",
+        noEquipmentNeededAt: new Date(),
+        noEquipmentNeededById: "usr_coordinator",
+      },
+    });
+    const requestId = await changeRequest(eventId, [
+      { fieldName: "equipmentRequirements", oldValue: "None", newValue: "Two microphones", isMajor: true },
+    ]);
+    asCoordinator();
+
+    expect(
+      await decideChangeRequest({ changeRequestId: requestId, decision: "APPROVED" }),
+    ).toMatchObject({ ok: true });
+    expect(
+      await prisma.event.findUniqueOrThrow({
+        where: { id: eventId },
+        select: { equipmentRequirements: true, noEquipmentNeededAt: true, noEquipmentNeededById: true },
+      }),
+    ).toEqual({ equipmentRequirements: "Two microphones", noEquipmentNeededAt: null, noEquipmentNeededById: null });
+  });
+
   it("SCRUM-128 [AC8] TC-128-07: approving a cancellation request cancels the event with the Organiser's reason, and the request stays Approved", async () => {
     const eventId = await confirmedEvent(6);
     await prisma.registration.create({ data: { eventId, userId: "usr_attendee" } });

@@ -172,7 +172,7 @@ can no longer be rejected, so nobody becomes its coordinator that way. See
 | Test Data       | —                                                                                                                                                                                   |
 | Expected Result | AC 6: a decision closes any open clarification. AC 8: after Submit as a new request, Amend & Resubmit isn't offered. AC 10: resubmitting applies the first submission's validation. |
 
-**Automated by:** AC 6: `tests/unit/event-status.test.ts` › "SCRUM-18: deciding an event closes its still-OPEN clarification …". AC 8: `tests/unit/rejection-outcome.test.ts` › "SCRUM-126 [AC3] TC-126-04: …" and `e2e/rejection-outcome.spec.ts` › TC-126-08. AC 10: `tests/unit/events.test.ts` (the SCRUM-14 submission validation cases).
+**Automated by:** AC 6: `tests/unit/event-status.test.ts` › "SCRUM-18: deciding an event closes its still-OPEN clarification …". AC 8: `tests/unit/rejection-outcome.test.ts` › "SCRUM-126 [AC3] TC-126-04: …" and `e2e/rejection-outcome.spec.ts` › TC-126-08. AC 10: `e2e/clarification-and-amend.spec.ts` › "SCRUM-108 [AC7, AC9, AC10, AC11, AC14] TC-108-11: …" (an amended request with a start in the past is stopped with "Proposed date cannot be in the past.", as a first submission is).
 
 ### TC-108-13
 

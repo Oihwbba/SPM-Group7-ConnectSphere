@@ -28,7 +28,7 @@ and, if equipment was requested, every line reserved in full.
 | [TC-81-09](#tc-81-09) | Boundary    | AC 8                                       | Unit                   |
 | [TC-81-10](#tc-81-10) | Concurrency | AC 8                                       | Integration            |
 | [TC-81-11](#tc-81-11) | Negative    | AC 5                                       | Unit                   |
-| [TC-81-12](#tc-81-12) | Positive    | Arrangements can still be made in Planning | Unit                   |
+| [TC-81-12](#tc-81-12) | Positive    | Arrangements can still be made in Planning | Integration            |
 | [TC-81-13](#tc-81-13) | Positive    | AC 5                                       | Unit, e2e              |
 
 ---
@@ -183,7 +183,7 @@ and, if equipment was requested, every line reserved in full.
 | Test Case ID    | TC-81-12                                                                                                                                                                                    |
 | Test Scenario   | [Positive] Because approval now leads straight to Planning, Technical Support can reserve equipment for a Planning event (SCRUM-31), as venue bookings and equipment requests already allow |
 | Pre-conditions  | Signed in as `techsupport@test.local`. The event is Planning.                                                                                                                               |
-| Test Steps      | 1. On **Equipment**, choose the event and reserve an item that is free.                                                                                                                     |
+| Test Steps      | 1. On **Equipment**, in **Reserve an approved request**, choose an approved request for the Planning event and reserve it (SCRUM-155).                                                     |
 | Test Data       | —                                                                                                                                                                                           |
 | Expected Result | The reservation is created.                                                                                                                                                                 |
 
@@ -194,10 +194,10 @@ and, if equipment was requested, every line reserved in full.
 | Item            | Content                                                                                                                      |
 | --------------- | ---------------------------------------------------------------------------------------------------------------------------- |
 | Test Case ID    | TC-81-13                                                                                                                     |
-| Test Scenario   | [Positive] AC 5: confirming opens registration for Attendees, unless the Organiser chose Registration needed: No (SCRUM-127) |
+| Test Scenario   | [Positive] AC 5: confirming opens registration for Attendees, unless the Organiser chose Registration needed: No (SCRUM-171) |
 | Pre-conditions  | As TC-81-02.                                                                                                                 |
 | Test Steps      | 1. Click **Confirm event**. <br> 2. Sign in as `attendee@test.local` and open the event.                                     |
-| Test Data       | Registration needed (a) Yes <br> (b) not chosen, as for every request made before SCRUM-127 <br> (c) No                      |
+| Test Data       | Registration needed (a) Yes <br> (b) not chosen, as for every request made before SCRUM-171 <br> (c) No                      |
 | Expected Result | (a), (b) Registration is open: the Attendee can register (SCRUM-73). (c) Registration stays closed.                          |
 
 **Automated by:** `tests/unit/event-confirm.test.ts` › "SCRUM-81 [AC5] TC-81-13: …"; `e2e/confirm.spec.ts` › "SCRUM-81 [AC3, AC5, AC6, AC7] …" (case b)

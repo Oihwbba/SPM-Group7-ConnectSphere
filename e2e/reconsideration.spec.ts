@@ -76,9 +76,12 @@ async function eventWithFlaggedBooking(
 test.describe("SCRUM-26 — Flag and resolve arrangements affected by a change", () => {
   test.skip(!usesLocalDatabase, "writes its own events; local database only");
 
-  let eventId: string;
+  let eventId: string | undefined;
 
   test.afterEach(async () => {
+    // A test that failed before creating its event has nothing to remove. An
+    // undefined id would empty the filters below and delete every booking.
+    if (!eventId) return;
     const bookings = await prisma.booking.findMany({
       where: { eventId },
       select: { id: true },
@@ -88,6 +91,7 @@ test.describe("SCRUM-26 — Flag and resolve arrangements affected by a change",
     });
     await prisma.booking.deleteMany({ where: { eventId } });
     await prisma.event.deleteMany({ where: { id: eventId } });
+    eventId = undefined;
   });
 
   test("SCRUM-26 [AC7, AC8, AC12] TC-26-14: the Coordinator sees the flag holding back confirmation, and keeps the booking with Still stands", async ({

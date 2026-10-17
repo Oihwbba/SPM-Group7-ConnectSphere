@@ -115,8 +115,15 @@ function labelFor(segment: DaySegment): string {
   if (segment.kind === "setup" || segment.kind === "turnaround") {
     return `${KIND[segment.kind].label} for ${segment.eventName}`;
   }
+  // SCRUM-163 AC2: a hold shows as held until its expiry.
+  if (segment.kind === "booking" && segment.heldUntil) {
+    return heldUntilLabel(segment.heldUntil);
+  }
   return KIND[segment.kind].label;
 }
+
+const heldUntilLabel = (heldUntil: Date) =>
+  `Held until ${formatDateTime(heldUntil)}`;
 
 /** A stretch's edge as a time; the day's own two midnights read as "midnight". */
 function edge(at: Date, day: string): string {
@@ -615,7 +622,9 @@ function Details({
       {details.kind === "booking" ? (
         <>
           <p className="text-sm font-semibold">{details.eventName}</p>
-          <p className="font-medium text-primary">Booked</p>
+          <p className="font-medium text-primary">
+            {details.heldUntil ? heldUntilLabel(details.heldUntil) : "Booked"}
+          </p>
           <p>{period}</p>
           <SetupAndTurnaround details={details} />
           <p>Requested by {details.requestedBy}</p>

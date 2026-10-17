@@ -17,7 +17,7 @@ vi.mock("@/lib/db", () => ({
 const mockFindMany = prisma.safetyCheck.findMany as unknown as Mock;
 const mockFindUnique = prisma.safetyCheck.findUnique as unknown as Mock;
 
-const officer: SessionUser = { id: "usr_safety", role: "SAFETY_OFFICER" };
+const officer: SessionUser = { id: "usr_safetyofficer", role: "SAFETY_OFFICER" };
 const START = new Date("2032-05-01T02:00:00Z");
 const END = new Date("2032-05-01T04:00:00Z");
 
@@ -58,7 +58,7 @@ describe("getSafetyCheckQueue — SCRUM-166 AC1, AC6", () => {
 
   it("SCRUM-166 [AC6] TC-166-09: a check for an event the officer organises or coordinates is left out", async () => {
     mockFindMany.mockResolvedValue([
-      { id: "chk_own", createdAt: START, requestedBy: { name: "Cody" }, event: event({ coordinatorId: "usr_safety" }) },
+      { id: "chk_own", createdAt: START, requestedBy: { name: "Cody" }, event: event({ coordinatorId: "usr_safetyofficer" }) },
       { id: "chk_ok", createdAt: START, requestedBy: { name: "Cody" }, event: event() },
     ]);
 
@@ -119,6 +119,13 @@ describe("getSafetyCheckReview — SCRUM-166 AC2, AC5, AC6", () => {
           request: null,
         },
       ],
+      operationalNotes: [
+        {
+          body: "Stage crew arrives at 8 am.",
+          createdAt: START,
+          author: { name: "Cody" },
+        },
+      ],
       safetyChecks: [
         {
           id: "chk_1",
@@ -141,7 +148,7 @@ describe("getSafetyCheckReview — SCRUM-166 AC2, AC5, AC6", () => {
     ...over,
   });
 
-  it("SCRUM-166 [AC2] TC-166-13: shows the expected attendance, each venue's capacity, booked attendance, layouts, accessibility, setup and turnaround and restrictions, and the reserved equipment with its placement", async () => {
+  it("SCRUM-166 [AC2] TC-166-13: shows the expected attendance, each venue's capacity, booked attendance, layouts, accessibility, setup and turnaround and restrictions, the reserved equipment with its placement, and the operational notes", async () => {
     mockFindUnique.mockResolvedValue(row());
 
     const review = await getSafetyCheckReview(officer, "chk_2");
@@ -181,9 +188,19 @@ describe("getSafetyCheckReview — SCRUM-166 AC2, AC5, AC6", () => {
         },
         { reservationId: "res_2", type: "Wireless Microphone", technicalRequirements: null },
       ],
+      operationalNotes: [
+        { body: "Stage crew arrives at 8 am.", author: "Cody", createdAt: START },
+      ],
     });
     const { select } = mockFindUnique.mock.calls[0][0];
-    expect(select.event.select.bookings.where).toEqual({ status: { in: ["APPROVED", "HELD"] } });
+    // Approved bookings and holds not yet expired (SCRUM-163 AC4).
+    expect(select.event.select.bookings.where).toEqual({
+      OR: [
+        { status: "APPROVED" },
+        { status: "HELD", holdExpiresAt: { gt: expect.any(Date) } },
+      ],
+    });
+    expect(select.event.select.operationalNotes.orderBy).toEqual({ createdAt: "asc" });
     expect(select.event.select.reservations.where).toEqual({ status: "CONFIRMED" });
   });
 
@@ -216,7 +233,7 @@ describe("getSafetyCheckReview — SCRUM-166 AC2, AC5, AC6", () => {
     expect(await getSafetyCheckReview(officer, "chk_x")).toBeNull();
 
     const own = row();
-    own.event = { ...own.event, organiserId: "usr_safety" };
+    own.event = { ...own.event, organiserId: "usr_safetyofficer" };
     mockFindUnique.mockResolvedValue(own);
     expect(await getSafetyCheckReview(officer, "chk_2")).toBeNull();
   });

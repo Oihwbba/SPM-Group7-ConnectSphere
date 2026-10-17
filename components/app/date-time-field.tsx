@@ -17,11 +17,18 @@ import {
   utcToSgWallTime,
 } from "@/lib/datetime";
 
-/** Every half hour of the day as "HH:mm", the steps the time pickers offer. */
-export const HALF_HOUR_TIMES = Array.from({ length: 48 }, (_, i) => {
-  const hours = String(Math.floor(i / 2)).padStart(2, "0");
-  return `${hours}:${i % 2 === 0 ? "00" : "30"}`;
-});
+/** Every `step` minutes of the day as "HH:mm", the times a picker offers. */
+export function timesEvery(step: 15 | 30): string[] {
+  return Array.from({ length: (24 * 60) / step }, (_, i) => {
+    const minutes = i * step;
+    const hh = String(Math.floor(minutes / 60)).padStart(2, "0");
+    const mm = String(minutes % 60).padStart(2, "0");
+    return `${hh}:${mm}`;
+  });
+}
+
+/** The half-hour steps booking requests and holds use (SCRUM-50, SCRUM-163). */
+export const HALF_HOUR_TIMES = timesEvery(30);
 
 /**
  * Has this half-hour slot already begun, in Singapore time? `now` is a
@@ -33,8 +40,10 @@ export function isPastSlot(date: string, time: string, now: string): boolean {
 }
 
 /**
- * A date box and a half-hour time picker for one end of the period, holding
- * a single "YYYY-MM-DDTHH:mm" Singapore wall time between them.
+ * A date box and a time picker for one end of the period, holding a single
+ * "YYYY-MM-DDTHH:mm" Singapore wall time between them. Times are offered every
+ * half hour unless `stepMinutes` says 15, as for recorded unavailability,
+ * which needn't fall on a half hour (SCRUM-161).
  */
 export function DateTimeField({
   name,
@@ -42,13 +51,16 @@ export function DateTimeField({
   onChange,
   openOn,
   error,
+  stepMinutes = 30,
 }: {
-  name: "Start" | "End";
+  /** Also the label; "Expiry" is a hold's deadline (SCRUM-163). */
+  name: "Start" | "End" | "Expiry";
   value: string;
   onChange: (value: string) => void;
   /** Where the calendar opens when no date is chosen yet. */
   openOn?: string;
   error: React.ReactNode;
+  stepMinutes?: 15 | 30;
 }) {
   const [date = "", time = ""] = value.split("T");
   const id = name.toLowerCase();
@@ -75,7 +87,7 @@ export function DateTimeField({
             <SelectValue placeholder="Time" />
           </SelectTrigger>
           <SelectContent className="max-h-64">
-            {HALF_HOUR_TIMES.map((t) => (
+            {timesEvery(stepMinutes).map((t) => (
               <SelectItem
                 key={t}
                 value={t}

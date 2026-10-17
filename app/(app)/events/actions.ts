@@ -8,6 +8,7 @@ import { prisma } from "@/lib/db";
 import { can, requirePermission, PermissionError } from "@/lib/auth/can";
 import {
   createDraftEventSchema,
+  REJECTION_OUTCOME_LABEL,
   rejectionOutcomeSchema,
   submitEventRequestSchema,
 } from "@/lib/schemas/event";
@@ -15,7 +16,14 @@ import { ok, err, type ActionResult } from "@/lib/action-result";
 import { auditValue } from "@/lib/audit-value";
 import { pickCoordinator } from "@/lib/coordinator-assignment";
 import { getReadinessChecklist } from "@/lib/event-readiness";
-import { TIME_ZONE } from "@/lib/datetime";
+import {
+  liveHoldWhere,
+  withdrawPendingHoldNotices,
+} from "@/lib/booking-holds";
+import { formatDateTime, TIME_ZONE } from "@/lib/datetime";
+import { asSentence, notifyAboutEvent } from "@/lib/event-notifications";
+import { effectiveClosesAt } from "@/lib/registration-state";
+import { venueOptions, type VenueOptions } from "@/lib/venue-options";
 import { canTransition, transitionRefusal } from "@/lib/event-lifecycle";
 
 /** Thrown inside submitEventRequest's transaction for an expected failure
@@ -83,6 +91,7 @@ export async function createDraftEvent(
       accessibilityNeeds,
       preferredLayout,
       equipmentRequirements,
+      registrationRequired,
       registrationNotes,
       programme,
       specialRequests,
@@ -114,6 +123,7 @@ export async function createDraftEvent(
           accessibilityNeeds: accessibilityNeeds ?? null,
           preferredLayout: preferredLayout ?? null,
           equipmentRequirements: equipmentRequirements ?? null,
+          registrationRequired: registrationRequired ?? null,
           registrationNotes: registrationNotes ?? null,
           programme: programme ?? null,
           specialRequests: specialRequests ?? null,
@@ -141,6 +151,7 @@ export async function createDraftEvent(
           accessibilityNeeds: accessibilityNeeds ?? null,
           preferredLayout: preferredLayout ?? null,
           equipmentRequirements: equipmentRequirements ?? null,
+          registrationRequired: registrationRequired ?? null,
           registrationNotes: registrationNotes ?? null,
           programme: programme ?? null,
           specialRequests: specialRequests ?? null,
@@ -198,6 +209,7 @@ export async function submitEventRequest(
       accessibilityNeeds,
       preferredLayout,
       equipmentRequirements,
+      registrationRequired,
       registrationNotes,
       programme,
       specialRequests,
@@ -257,7 +269,8 @@ export async function submitEventRequest(
           accessibilityNeeds,
           preferredLayout,
           equipmentRequirements,
-          registrationNotes,
+          registrationRequired,
+          registrationNotes: registrationNotes || null,
           programme: programme ?? null,
           specialRequests: specialRequests ?? null,
           timezone: TIME_ZONE,
@@ -320,7 +333,8 @@ export async function submitEventRequest(
             accessibilityNeeds,
             preferredLayout,
             equipmentRequirements,
-            registrationNotes,
+            registrationRequired,
+            registrationNotes: registrationNotes || null,
             programme: programme ?? null,
             specialRequests: specialRequests ?? null,
             timezone: TIME_ZONE,
@@ -389,6 +403,19 @@ export async function submitEventRequest(
         });
         return;
       }
+
+      // SCRUM-45 AC1: the Organiser is told it was submitted and is waiting
+      // to be assigned. Being assigned is a notice of its own: below while
+      // assignment is automatic, and the Lead's once SCRUM-165 replaces it.
+      await notifyAboutEvent(
+        tx,
+        [user!.id],
+        { id: eventId!, name },
+        {
+          title: "Request submitted",
+          message: `"${name}" was submitted and is waiting to be assigned to a Coordinator.`,
+        },
+      );
 
       const coordinatorId = await pickCoordinator(tx);
 
@@ -469,7 +496,9 @@ export async function submitEventRequest(
 }
 
 /**
- * Fetch available venue list and equipment catalogue for form recommendations.
+ * Fetch available venue list and equipment catalogue for form recommendations,
+ * and the accessibility features and layouts venues offer, including any
+ * Venue Staff added (SCRUM-34 AC6).
  * Gated like the create actions: a "use server" export is a public endpoint,
  * so only a user who can create an event request may read the catalogue.
  */
@@ -482,6 +511,7 @@ export async function getFormCatalogues(): Promise<
       facilities: string[];
     }[];
     equipment: { id: string; type: string; totalQuantity: number }[];
+    options: VenueOptions;
   }>
 > {
   const session = await auth();
@@ -497,7 +527,14 @@ export async function getFormCatalogues(): Promise<
 
   const venues = await prisma.venue.findMany({
     where: { isActive: true },
-    select: { id: true, name: true, capacity: true, facilities: true },
+    select: {
+      id: true,
+      name: true,
+      capacity: true,
+      facilities: true,
+      accessibilityFeatures: true,
+      supportedLayouts: true,
+    },
   });
 
   const equipment = await prisma.equipment.findMany({
@@ -505,7 +542,16 @@ export async function getFormCatalogues(): Promise<
     select: { id: true, type: true, totalQuantity: true },
   });
 
-  return ok({ venues, equipment });
+  return ok({
+    venues: venues.map(({ id, name, capacity, facilities }) => ({
+      id,
+      name,
+      capacity,
+      facilities,
+    })),
+    equipment,
+    options: venueOptions(venues),
+  });
 }
 
 /**
@@ -554,6 +600,7 @@ export async function transitionEventStatus(
       where: { id: eventId },
       select: {
         id: true,
+        name: true,
         status: true,
         organiserId: true,
         coordinatorId: true,
@@ -647,6 +694,23 @@ export async function transitionEventStatus(
         });
       }
 
+      // SCRUM-45 AC2, AC3: the Organiser hears the decision; a rejection
+      // carries its reason and what they can do next (SCRUM-126).
+      await notifyAboutEvent(
+        tx,
+        [event.organiserId],
+        event,
+        approved
+          ? {
+              title: "Your request was approved",
+              message: `"${event.name}" was approved and is now being planned.`,
+            }
+          : {
+              title: "Your request was rejected",
+              message: `"${event.name}" was rejected: ${asSentence(decisionReason!)} What you can do next: ${REJECTION_OUTCOME_LABEL[rejectionOutcome!]}.`,
+            },
+      );
+
       // SCRUM-18: a decision ends any question still waiting on the organiser.
       // Left OPEN, it would survive a reject-and-resubmit and block the
       // coordinator from asking about the amended request.
@@ -706,9 +770,14 @@ export async function confirmEvent(
       const current = await tx.event.findUniqueOrThrow({
         where: { id: eventId },
         select: {
+          name: true,
           status: true,
+          organiserId: true,
           coordinatorId: true,
           registrationRequired: true,
+          registrationOpensAt: true,
+          registrationClosesAt: true,
+          startAt: true,
         },
       });
       if (current.status === "CONFIRMED") return "already-confirmed" as const;
@@ -728,12 +797,10 @@ export async function confirmEvent(
 
       // AC 5: registration opens unless the Organiser said it isn't needed
       // (SCRUM-171). Requests made before that choice existed leave it unset.
+      const registrationEnabled = current.registrationRequired !== false;
       await tx.event.update({
         where: { id: eventId },
-        data: {
-          status: "CONFIRMED",
-          registrationEnabled: current.registrationRequired !== false,
-        },
+        data: { status: "CONFIRMED", registrationEnabled },
       });
       // AC 5: who confirmed it and when (the entry's createdAt).
       await tx.auditLog.create({
@@ -748,6 +815,36 @@ export async function confirmEvent(
           summary: "Confirmed by the assigned coordinator (SCRUM-81)",
         },
       });
+
+      const about = { id: eventId, name: current.name };
+      const now = new Date();
+      const closesAt = registrationEnabled ? effectiveClosesAt(current) : null;
+      const opensAt = current.registrationOpensAt;
+      // SCRUM-45 AC4: the Organiser hears it is confirmed, and where
+      // registration stands. Only a real confirmation gets here, so
+      // confirming twice tells them once (AC13).
+      await notifyAboutEvent(tx, [current.organiserId], about, {
+        title: "Your event is confirmed",
+        message: !registrationEnabled
+          ? `"${current.name}" is confirmed.`
+          : closesAt && closesAt <= now
+            ? `"${current.name}" is confirmed, but its registration has already closed.`
+            : opensAt && opensAt > now
+              ? `"${current.name}" is confirmed. Registration opens at ${formatDateTime(opensAt)}.`
+              : `"${current.name}" is confirmed, and registration is open.`,
+      });
+      // SCRUM-45 AC11: registration closes at a time known now, so its notice
+      // is written now and shows then (SCRUM-48 AC8). One already past would
+      // show at once beside the confirmation, so it isn't written. Cancelling
+      // the event (SCRUM-82) or moving its times (SCRUM-128) must withdraw it:
+      // it is the event's "Registration closed" notice not yet shown.
+      if (closesAt && closesAt > now) {
+        await notifyAboutEvent(tx, [current.organiserId, user!.id], about, {
+          title: "Registration closed",
+          message: `Registration for "${current.name}" closed at ${formatDateTime(closesAt)}.`,
+          showFromAt: closesAt,
+        });
+      }
       return "confirmed" as const;
     });
 
@@ -1035,11 +1132,20 @@ export async function rejectPlanningEvent(
           rejectionOutcome,
         },
       });
-      // AC3: release what was held for the event.
+      // AC3: release what was held for the event, its venue holds included,
+      // whose notices still to come are withdrawn (SCRUM-163 AC9). A lapsed
+      // hold has already released its venue, so it stays Expired.
       const bookings = await tx.booking.updateMany({
-        where: { eventId, status: { in: ["PENDING", "APPROVED"] } },
+        where: {
+          eventId,
+          OR: [
+            { status: { in: ["PENDING", "APPROVED"] } },
+            liveHoldWhere(now),
+          ],
+        },
         data: { status: "CANCELLED" },
       });
+      await withdrawPendingHoldNotices(tx, { eventId }, now);
       const reservations = await tx.reservation.updateMany({
         where: { eventId, status: "CONFIRMED" },
         data: { status: "CANCELLED", cancelledAt: now },
@@ -1112,7 +1218,8 @@ export async function rejectPlanningEvent(
           userId: event.organiserId,
           type: "EVENT_STATUS_CHANGED",
           title: "Your event was rejected",
-          message: `"${event.name}" couldn't be arranged and was rejected: ${decisionReason}`,
+          // SCRUM-45 AC3: with the reason and what the Organiser can do next.
+          message: `"${event.name}" couldn't be arranged and was rejected: ${asSentence(decisionReason)} What you can do next: ${REJECTION_OUTCOME_LABEL[rejectionOutcome]}.`,
           eventId,
         },
       });
