@@ -46,6 +46,7 @@ export type Action =
   | "venue:read" // SCRUM-34 AC2: any internal user views the venue catalogue and a venue's details
   | "venue:manage" // SCRUM-34 AC3, AC6, AC8, AC9: Venue Staff add, edit and retire venues
   | "venue:availability" // SCRUM-36: view a venue's availability calendar
+  | "venue:judge" // SCRUM-40 AC8: the assigned coordinator records a venue's suitability for their event
   | "booking:request" // SCRUM-50: coordinator asks for a venue for their event
   | "booking:review" // SCRUM-52: read the pending-request queue
   | "booking:decide" // SCRUM-53: approve or reject a pending request
@@ -62,7 +63,9 @@ export type Action =
   | "event:browse" // attendees browsing events open for registration
   | "registration:create" // SCRUM-73: an attendee registers for an event
   | "registration:withdraw" // SCRUM-74/77: an attendee withdraws their own registration
+  | "registration:control" // SCRUM-75 AC6: the organiser, or the assigned coordinator on their behalf, closes or reopens registration
   | "registration:read"
+  | "registration:list" // SCRUM-70: an event's Organiser or assigned Coordinator sees its registrations
   | "notification:read";
 
 /**
@@ -106,7 +109,9 @@ const ROLE_ACTIONS: Record<Role, Action[]> = {
     "event:read",
     "clarification:respond",
     "change-request:raise",
+    "registration:control",
     "event-note:read",
+    "registration:list",
     "notification:read",
   ],
   COORDINATOR: [
@@ -123,14 +128,17 @@ const ROLE_ACTIONS: Record<Role, Action[]> = {
     "safety-check:request",
     "clarification:request",
     "change-request:raise",
+    "registration:control",
     "venue:read",
     "equipment-request:list",
     "equipment-request:create",
     "equipment-request:change",
     "venue:availability",
+    "venue:judge",
     "booking:request",
     "booking:settle-hold",
     "booking:withdraw",
+    "registration:list",
     "notification:read",
   ],
   VENUE_STAFF: [
@@ -192,8 +200,10 @@ function hasRelationship(
         // venue holds (SCRUM-163 AC3), change or withdraw its requests
         // (SCRUM-142 AC7), raise a change request on the organiser's behalf
         // (SCRUM-41 AC10), record No equipment needed (SCRUM-170 AC4), edit
-        // its details (SCRUM-25 AC1, AC7), resolve a flag on its arrangements
-        // (SCRUM-26 AC7) or request its safety check (SCRUM-166 AC1).
+        // its details (SCRUM-25 AC1, AC7), judge a venue's suitability for it
+        // (SCRUM-40 AC8), resolve a flag on its arrangements (SCRUM-26 AC7),
+        // request its safety check (SCRUM-166 AC1), close or reopen its
+        // registration (SCRUM-75 AC6) or see its registrations (SCRUM-70 AC1).
         return (
           action !== "event:confirm" &&
           action !== "event:reject" &&
@@ -203,7 +213,10 @@ function hasRelationship(
           action !== "equipment-request:change" &&
           action !== "change-request:raise" &&
           action !== "event:edit" &&
+          action !== "venue:judge" &&
           action !== "arrangement:reconsider" &&
+          action !== "registration:list" &&
+          action !== "registration:control" &&
           action !== "safety-check:request" &&
           resource.coordinatorId === null &&
           resource.status !== "DRAFT"
