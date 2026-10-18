@@ -21,15 +21,16 @@ arrangements that can't clash:
 4. When the arrangements are complete, the Coordinator **confirms** the event.
 5. **Attendees** register for confirmed events, up to each event's capacity.
 
-Week 7 added two more roles. They can sign in, but until their stories land
-they only read their own notifications:
+Week 7 added two more roles:
 
-- The **Event Coordinator Lead** will assign new requests to Coordinators from
-  an unassigned queue, replacing automatic assignment (SCRUM-165), and see
-  every Coordinator's workload (SCRUM-141).
-- The **Safety Officer** will review an event's venue and equipment before it
-  can be confirmed (SCRUM-166). Their approval doesn't confirm the event; the
-  Coordinator still does.
+- The **Event Coordinator Lead** assigns each new request to a Coordinator
+  from the Unassigned Queue, which replaced automatic assignment (SCRUM-165),
+  and sees every event and every Coordinator's assignments (SCRUM-141).
+  Reassigning an event comes with SCRUM-21.
+- The **Safety Officer** reviews an event's venue and equipment on the Safety
+  Checks page before it can be confirmed, and records Approved, Changes
+  requested or Rejected (SCRUM-166). Their approval doesn't confirm the
+  event; the Coordinator still does.
 
 Release 1 covers the twenty features in the Week 4 project instructions, and
 Sprint 3 adds the Week 7 changes. The full picture (all seven roles, the event
@@ -157,11 +158,10 @@ Every seeded account uses the password **`Password123!`**:
 | `attendee3@test.local` | Attendee | Has one withdrawn registration (SCRUM-77) |
 | `attendee4@test.local` | Attendee | Deliberately unregistered, so free to take the last place |
 | `safety@test.local` | Safety Officer | Reviews operational safety checks (SCRUM-166) |
+| `lead@test.local` | Event Coordinator Lead | Assigns new requests from the Unassigned Queue (SCRUM-165); reassignment arrives with SCRUM-21 |
+| `lead2@test.local` | Event Coordinator Lead | A second Lead, for two Leads assigning at once (SCRUM-165) |
+| `safety2@test.local` | Safety Officer | A second Safety Officer, for two people recording at once (SCRUM-166) |
 | `multirole@test.local` | Venue Staff, Technical Support, Event Coordinator and Event Organiser | One account with several roles (SCRUM-121) |
-
-No seeded account has the **Event Coordinator Lead** or **Safety Officer**
-role yet: neither role has a page beyond Notifications, so there is nothing to
-demo. Their sign-in is unit-tested instead (SCRUM-172, TC-172-01).
 
 ---
 

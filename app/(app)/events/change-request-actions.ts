@@ -115,14 +115,14 @@ export async function raiseChangeRequest(
       },
     });
     // SCRUM-68: an event the caller can't see looks exactly like a missing one.
-    if (!event || event.discardedAt || !can(user!, "event:read", { kind: "event", ...event })) {
+    // AC10: only its Organiser and its assigned Coordinator may raise one;
+    // since SCRUM-165 AC8 they are also exactly the people who can see it.
+    if (
+      !event ||
+      event.discardedAt ||
+      !can(user!, "change-request:raise", { kind: "event", ...event })
+    ) {
       return err("Event not found.");
-    }
-    // AC10: of those who can see it, only its Organiser and its assigned Coordinator.
-    if (!can(user!, "change-request:raise", { kind: "event", ...event })) {
-      return err(
-        "Only the event's organiser or its assigned coordinator can raise a change request.",
-      );
     }
     const refusal = refusalFor(event);
     if (refusal) return err(refusal);

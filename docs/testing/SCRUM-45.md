@@ -44,7 +44,7 @@ construction: every notice here goes to the event's Organiser or Coordinator.
 | Test Data | — |
 | Expected Result | Step 1: the Organiser gets "Request submitted": "\"Career Fair\" was submitted and is waiting to be assigned to a Coordinator." While assignment is automatic, the assignment notices for the Organiser and the Coordinator follow as their own notices. Step 2: it goes straight back to its Coordinator, so no submission notice. Step 3: one submission, with one set of notices. |
 
-**Automated by:** `tests/unit/event-auto-assignment.test.ts` › "SCRUM-45 [AC1, AC12] TC-45-01: the Organiser is told the request was submitted and is waiting to be assigned, then the assignment is a notice of its own" and "AC: no coordinator available — …"; `tests/unit/clarification-and-amend.test.ts` › "SCRUM-108 [AC9, AC11, AC14] TC-108-05: …", "SCRUM-108 [AC11, AC14] TC-108-14: …" and "SCRUM-108 [AC12] TC-108-08: …"; `tests/integration/concurrency.test.ts` › "SCRUM-14 AC: two simultaneous submissions of one draft succeed once and notify once"
+**Automated by:** `tests/unit/submission-queue.test.ts` › "SCRUM-45 [AC1, AC12] TC-45-01: the Organiser is told the request was submitted and is waiting to be assigned, then the assignment is a notice of its own" and "AC: no coordinator available — …"; `tests/unit/clarification-and-amend.test.ts` › "SCRUM-108 [AC9, AC11, AC14] TC-108-05: …", "SCRUM-108 [AC11, AC14] TC-108-14: …" and "SCRUM-108 [AC12] TC-108-08: …"; `tests/integration/concurrency.test.ts` › "SCRUM-14 AC: two simultaneous submissions of one draft succeed once and notify once"
 
 ### TC-45-02
 
