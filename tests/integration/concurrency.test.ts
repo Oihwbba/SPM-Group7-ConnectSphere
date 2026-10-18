@@ -790,9 +790,19 @@ describe.skipIf(!usesLocalDatabase)("event submission — repeat submission (SCR
 
     expect(results.filter((r) => r.ok)).toHaveLength(1);
     expect(results.filter((r) => !r.ok)).toHaveLength(1);
-    // One submission: only the organiser's submission notice (SCRUM-45 AC1).
-    // Nobody is assigned until the Lead does it (SCRUM-165 AC1).
-    expect(await prisma.notification.count({ where: { eventId: draft.id } })).toBe(1);
+    // One submission: the organiser's submission notice (SCRUM-45 AC1), and
+    // one to each Lead that it waits in the queue (SCRUM-124 AC10). Nobody is
+    // assigned until the Lead does it (SCRUM-165 AC1).
+    const leads = await prisma.user.count({ where: { role: "COORDINATOR_LEAD" } });
+    expect(
+      await prisma.notification.count({ where: { eventId: draft.id, userId: "usr_organiser" } }),
+    ).toBe(1);
+    expect(
+      await prisma.notification.count({
+        where: { eventId: draft.id, type: "REQUEST_AWAITING_ASSIGNMENT" },
+      }),
+    ).toBe(leads);
+    expect(await prisma.notification.count({ where: { eventId: draft.id } })).toBe(1 + leads);
     expect(
       await prisma.auditLog.count({
         where: { entityId: draft.id, action: "ASSIGNED" },

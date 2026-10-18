@@ -24,6 +24,8 @@ import { createEquipmentRequest } from "@/app/(app)/equipment-requests/actions";
 import { resolveReconsiderationFlag } from "@/app/(app)/events/reconsideration-actions";
 import { getMyNotifications } from "@/app/(app)/notifications/queries";
 import { submitEventRequest } from "@/app/(app)/events/actions";
+import { requestSafetyCheck } from "@/app/(app)/events/safety-check-actions";
+import { recordSafetyCheckOutcome } from "@/app/(app)/safety-checks/actions";
 
 // SCRUM-124 against a real, seeded Postgres: each trigger writes exactly one
 // notice for each person it concerns, even when the same action arrives twice
@@ -350,6 +352,85 @@ describe.skipIf(!usesLocalDatabase)(
       } finally {
         await prisma.notification.deleteMany({ where: { eventId } });
         await prisma.auditLog.deleteMany({ where: { entityId: eventId } });
+        await prisma.event.delete({ where: { id: eventId } });
+      }
+    });
+
+    it("SCRUM-124 [AC8, AC11, AC14] TC-124-08, TC-124-11: a safety check's Changes requested flags the booking, and tells its Coordinator and each Venue Staff member once", async () => {
+      const { id: eventId } = await prisma.event.create({
+        data: {
+          name: `Staff notice safety check ${STAMP}`,
+          status: "PLANNING",
+          organiserId: "usr_organiser",
+          coordinatorId: COORDINATOR_ID,
+          expectedAttendance: 40,
+          noEquipmentNeededAt: new Date(),
+          noEquipmentNeededById: COORDINATOR_ID,
+          startAt: new Date("2036-11-04T01:00:00.000Z"),
+          endAt: new Date("2036-11-04T03:00:00.000Z"),
+        },
+        select: { id: true },
+      });
+      try {
+        const { id: bookingId } = await prisma.booking.create({
+          data: {
+            eventId,
+            venueId,
+            startAt: new Date("2036-11-04T01:00:00.000Z"),
+            endAt: new Date("2036-11-04T03:00:00.000Z"),
+            status: "APPROVED",
+            requestedAttendance: 40,
+            requestedById: COORDINATOR_ID,
+            decidedById: "usr_venuestaff",
+            decidedAt: new Date(),
+          },
+          select: { id: true },
+        });
+        mockAuth.mockResolvedValue(COORDINATOR);
+        const requested = await requestSafetyCheck({ eventId });
+        if (!requested.ok) throw new Error(requested.error);
+        // AC11: every Safety Officer, once.
+        await expectOncePerPerson(eventId, "SAFETY_CHECK_REQUESTED", "SAFETY_OFFICER", "usr_safetyofficer");
+
+        mockAuth.mockResolvedValue(session("usr_safetyofficer", "SAFETY_OFFICER"));
+        expect(
+          await recordSafetyCheckOutcome({
+            checkId: requested.data.checkId,
+            outcome: "CHANGES_REQUESTED",
+            note: "Move the stage away from the east exit.",
+            bookingIds: [bookingId],
+          }),
+        ).toMatchObject({ ok: true });
+
+        // AC8: the flag tells its Coordinator, with the reason, and each
+        // member of Venue Staff. AC11: the Coordinator also has the outcome.
+        const flagged = await notices(eventId, "ARRANGEMENT_FLAGGED");
+        expect(
+          flagged.filter((n) => n.userId === COORDINATOR_ID).map((n) => n.title),
+        ).toEqual(["Arrangements flagged for reconsideration"]);
+        const staff = flagged.filter((n) => n.user.role === "VENUE_STAFF").map((n) => n.userId);
+        expect(staff).toContain("usr_venuestaff");
+        expect(new Set(staff).size).toBe(staff.length);
+        expect(
+          await prisma.notification.findMany({
+            where: { eventId, type: "SAFETY_CHECK_OUTCOME" },
+            select: { userId: true, message: true },
+          }),
+        ).toEqual([
+          {
+            userId: COORDINATOR_ID,
+            message: expect.stringContaining("Move the stage away from the east exit."),
+          },
+        ]);
+      } finally {
+        const checks = await prisma.safetyCheck.findMany({ where: { eventId }, select: { id: true } });
+        const bookings = await prisma.booking.findMany({ where: { eventId }, select: { id: true } });
+        await prisma.notification.deleteMany({ where: { eventId } });
+        await prisma.auditLog.deleteMany({
+          where: { entityId: { in: [eventId, ...checks.map((c) => c.id), ...bookings.map((b) => b.id)] } },
+        });
+        await prisma.safetyCheck.deleteMany({ where: { eventId } });
+        await prisma.booking.deleteMany({ where: { eventId } });
         await prisma.event.delete({ where: { id: eventId } });
       }
     });
