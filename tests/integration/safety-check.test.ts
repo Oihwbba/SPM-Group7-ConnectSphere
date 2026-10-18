@@ -1,4 +1,4 @@
-import { describe, it, expect, afterAll, afterEach, beforeAll, vi, type Mock } from "vitest";
+import { describe, it, expect, afterAll, afterEach, vi, type Mock } from "vitest";
 import type { Session } from "next-auth";
 
 import { auth } from "@/auth";
@@ -34,7 +34,9 @@ const day = (n: number) => ({
   startAt: new Date(`2032-10-${String(n).padStart(2, "0")}T02:00:00Z`),
   endAt: new Date(`2032-10-${String(n).padStart(2, "0")}T04:00:00Z`),
 });
-const SECOND_OFFICER = "usr_safety_it_2";
+// The seeded safety2@test.local: seeded, never made or deleted here, since
+// every Safety Officer is told of each requested check, while other suites run.
+const SECOND_OFFICER = "usr_safetyofficer_2";
 const created: string[] = [];
 
 async function arrangedEvent(n: number) {
@@ -77,20 +79,6 @@ async function requested(eventId: string) {
 }
 
 describe.skipIf(!usesLocalDatabase)("SCRUM-166 — operational safety check", () => {
-  beforeAll(async () => {
-    await prisma.user.upsert({
-      where: { id: SECOND_OFFICER },
-      update: {},
-      create: {
-        id: SECOND_OFFICER,
-        email: "safety-it-2@test.local",
-        name: "Second Officer",
-        passwordHash: "not-a-real-hash",
-        role: "SAFETY_OFFICER",
-      },
-    });
-  });
-
   afterEach(async () => {
     const bookings = await prisma.booking.findMany({
       where: { eventId: { in: created } },
@@ -116,8 +104,6 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-166 — operational safety check", ()
   });
 
   afterAll(async () => {
-    await prisma.notification.deleteMany({ where: { userId: SECOND_OFFICER } });
-    await prisma.user.deleteMany({ where: { id: SECOND_OFFICER } });
     await prisma.$disconnect();
   });
 

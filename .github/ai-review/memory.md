@@ -4,9 +4,9 @@ Lessons from past reviews, approved by the team. The reviewer reads this file
 from the PR's base branch on every pull request, after `CONTRIBUTING.md` and `CLAUDE.md`.
 
 After each merge, `.github/scripts/ai-memory.mjs` asks GLM what the pull
-request taught and opens a pull request here if anything (SCRUM-112); a
-human reads it first. Hand edits are fine, and CI fails if the file outgrows
-what the reviewer reads (SCRUM-152).
+request taught and opens a pull request here if anything (SCRUM-112);
+a human reads it first. Hand edits are fine, and CI fails if the file
+outgrows what the reviewer reads (SCRUM-152).
 
 Rules for a lesson:
 
@@ -88,7 +88,8 @@ only since #112 (SCRUM-129 retired SCRUM-13's per-event timezones):
 that migration relabelled existing production rows deliberately — the stored
 UTC instants were kept, the old zone labels were not. The create form no
 longer captures `requiredFacilities`: new events store `[]`, existing values
-still display, and whether capture returns is open for SCRUM-38/40.
+still display; capture stayed off when SCRUM-38/40 landed (#216,
+2026-10-18) — search reads the Organiser's SCRUM-170 answers instead.
 - (2026-09-25, #87) The `?? null` fallbacks on optional draft fields in
 `app/(app)/events/actions.ts` are deliberate: on update, `null` clears a
 field the organiser emptied, while `undefined` would keep the old value.
@@ -130,10 +131,9 @@ Gaps found by reviews (the #11 replay, 2026-09-14, and later merges), still
 true until a pull request fixes them. Raise one only when a pull request
 touches that code or claims that story, and say it was already known.
 
-- (2026-09-29, #99) Two gaps its review left open: a recorded unavailability
-period can never be removed or shortened from the app, so a wrong record
-blocks its venue until someone edits the database by hand; and the record form
-blocks past start times that the server schema accepts.
+- (2026-09-29, #99) A recorded unavailability period can't be removed or
+shortened from the app (a story is being written). Known when a pull request
+touches unavailability.
 
 - (2026-10-04, #120) Events approved before #120 sit in APPROVED with no way
 out: approval now writes PLANNING directly, `transitionEventStatus` only
@@ -149,35 +149,17 @@ the count and marking read filter by the session's user id, not role, on
 purpose, so a multi-role account should need no change there. Known when a
 pull request touches notifications or claims SCRUM-166/SCRUM-121.
 
-- (2026-10-13, #154) SCRUM-163 merged with AC9 partial and both review lows
-open. Cancelling an event does not release its holds (SCRUM-82 adds that),
-and recording unavailability over a live hold is refused rather than
-flagging it (SCRUM-161), the same refusal as over an approved booking. A
-hold on an APPROVED-status event has no Confirm/Release surface anywhere:
-the readiness checklist renders for Planning events only, legacy APPROVED
-rows cannot reach Planning (#120), and `BOOKABLE_EVENT_STATUSES` still
-includes APPROVED — so such a hold can only lapse. The calendar's "Held
-until" label and the post-expiry surfaces have no e2e (PO follow-up). Known
-when a pull request touches holds, booking statuses or unavailability, or
-claims SCRUM-82/SCRUM-161.
-
-- (2026-10-13, #155; tightened 2026-10-15, #172) SCRUM-45 merged with both
-findings open. Its four delivered notice triggers (submission, confirmation
-and scheduled registration-closed, clarification question, registration
-full/place-opened) have unit and integration legs but no e2e — the journeys
-already run, so only the notice assertion is missing. And
-`concurrency.test.ts`'s SCRUM-24, SCRUM-81 and both SCRUM-74 blocks don't
-delete the notifications their actions now write: deleting the event nulls
-`Notification.eventId` (optional FK), so unread rows survive on the seeded
-accounts those e2e specs read ("Registration is full" stays on the
-never-deleted `evt_last_seat`). Known when a pull request touches
-notification e2e or those suites' cleanup.
-
-- (2026-10-13, #162) SCRUM-41 merged with AC8 deliberately partial: rejecting
-an event rejects its Submitted change request with the same reason, but
-cancelling the event leaves it Submitted — that half is SCRUM-82's AC3, and
-SCRUM-41 stays open on it. Known when a pull request touches event
-cancellation or the change-request lifecycle, or claims SCRUM-41/SCRUM-82.
+- (2026-10-13, #154; the holds-release low closed with #180's Cancel, per
+#181) SCRUM-163 merged with AC9 partial and one review low open. Recording
+unavailability over a live hold is refused rather than flagging it
+(SCRUM-161), the same refusal as over an approved booking. A hold on an
+APPROVED-status event has no Confirm/Release surface anywhere: the readiness
+checklist renders for Planning events only, legacy APPROVED rows cannot
+reach Planning (#120), and `BOOKABLE_EVENT_STATUSES` still includes APPROVED
+— so such a hold can only lapse. The calendar's "Held until" label and the
+post-expiry surfaces have no e2e (PO follow-up). Known when a pull request
+touches holds, booking statuses or unavailability, or claims
+SCRUM-82/SCRUM-161.
 
 - (2026-10-14, #191) #162's stuck-"Submitting…" defect is fixed for the
 change-request panel only: `ClarificationPanel`
@@ -195,8 +177,31 @@ when a pull request touches either panel or claims SCRUM-108.
   Staff nothing (AC6). Known when a pull request touches booking decisions
   or hold settlement, or claims SCRUM-53/SCRUM-124.
 
-- (2026-10-15, #172) SCRUM-26's flag machinery merged before any source could
-raise a flag: `flagArrangements` (lib/reconsideration.ts) has no production
-caller — the AC1 warning screen is SCRUM-25's and every AC3 source is
-SCRUM-128/34/160/161/32/166's. Known when a pull request touches
-reconsideration or claims those stories.
+- (2026-10-15, #172; first caller 2026-10-18, #181) SCRUM-26's flag
+machinery merged before any source could raise a flag: #181's
+`decideChangeRequest` now calls `flagArrangements` on an impactful change,
+but the AC1 warning screen is still SCRUM-25's and the other AC3 sources
+(SCRUM-34/160/161/32/166) raise none, so a flag can be raised with nothing
+yet to show it. Known when a pull request touches reconsideration or claims
+those stories.
+
+- (2026-10-18, #216) SCRUM-190 (an event takes place within one day) is
+deferred past Release 1 with no customer answer, so a multi-day event
+stays requestable but can never be booked or confirmed — search covers
+one day and a date without times excludes only venues Closed that day
+(both PO-approved, SCRUM-38's change log), and a booking must fit one
+day's opening hours (SCRUM-34 AC7). Known when a pull request touches
+event periods, venue search or booking hours, or claims SCRUM-190.
+
+- (2026-10-18, #208) SCRUM-77 records each withdrawal in the event's audit
+history (`REGISTRATION_WITHDRAWN`), but no screen reads it: the event
+history view is SCRUM-71's, beyond Release 1, so a write-only entry there
+is deliberate. Known when a pull request touches the event audit log,
+`withdrawRegistration`, or claims SCRUM-71.
+
+- (2026-10-18, #181) SCRUM-128 merged Part of: a change request can't carry
+Registration needed yet (SCRUM-41's form lacks the field, so approving one
+never changes it), attendees hear of applied changes only at SCRUM-85's
+re-confirmation, and an event completing with a request still Submitted
+leaves it Submitted (SCRUM-82 AC11 will reject it). Known when a pull
+request touches change requests or claims SCRUM-41/SCRUM-82/SCRUM-85.
