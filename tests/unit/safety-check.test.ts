@@ -49,7 +49,7 @@ describe("the readiness checklist with a safety check — SCRUM-166 AC9", () => 
       startAt: START,
       endAt: END,
       bookings: [
-        { status: "APPROVED", decisionReason: null, createdAt: START, startAt: START, endAt: END },
+        { id: "bkg_1", venue: { name: "Main Hall" }, status: "APPROVED", decisionReason: null, createdAt: START, startAt: START, endAt: END },
       ],
       equipmentRequests: [],
       reservations: [],

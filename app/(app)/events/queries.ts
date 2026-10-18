@@ -63,9 +63,10 @@ export async function getBrowsableEvent(id: string) {
   const event = await prisma.event.findUnique({
     where: { id },
     include: {
+      // SCRUM-162 AC7: every approved venue, in the order requested.
       bookings: {
         where: { status: "APPROVED" },
-        take: 1,
+        orderBy: { createdAt: "asc" },
         include: { venue: { select: { name: true, location: true } } },
       },
       // SCRUM-73 AC: "immediately visible to the Attendee with a status of
