@@ -80,6 +80,45 @@ const emptyForm = {
   notes: "",
 };
 
+/** What venue search had entered, carried to the form by Request this venue. */
+export type SearchNeeds = {
+  facilities: string[];
+  accessibility: string[];
+  layout?: string;
+};
+
+/**
+ * SCRUM-38 AC9 — the facilities, accessibility features and layout entered in
+ * venue search, as the form starts with them: only values the form offers,
+ * and the layout only if the venue chosen in search supports it, so that
+ * venue is never dropped. Attendance isn't carried: the booking takes the
+ * event's (SCRUM-50 AC1) until SCRUM-162 lets it change.
+ */
+export function neededInSearch<
+  T extends {
+    id: string;
+    facilities: string[];
+    accessibilityFeatures: string[];
+    supportedLayouts: string[];
+  },
+>(venues: T[], venueId: string | undefined, needs: SearchNeeds) {
+  const offered = (pick: (v: T) => string[]) =>
+    new Set(venues.flatMap(pick));
+  const facilities = offered((v) => v.facilities);
+  const accessibility = offered((v) => v.accessibilityFeatures);
+  const fits = (layout: string) =>
+    venueId
+      ? venues.some(
+          (v) => v.id === venueId && v.supportedLayouts.includes(layout),
+        )
+      : offered((v) => v.supportedLayouts).has(layout);
+  return {
+    facilities: needs.facilities.filter((f) => facilities.has(f)),
+    accessibility: needs.accessibility.filter((a) => accessibility.has(a)),
+    layout: needs.layout && fits(needs.layout) ? needs.layout : "",
+  };
+}
+
 /** Radix Select cannot use "" as an item value, so "no preference" has its own. */
 const NO_LAYOUT = "none";
 
@@ -152,27 +191,24 @@ const emptySubscribe = () => () => {};
 export function RequestForm({
   events,
   venues,
+  initialEventId,
+  initialVenueId,
+  initialNeeds,
   judgements = [],
   judgeableEventIds = [],
 }: {
   events: BookableEvent[];
   venues: RequestableVenue[];
+  /** SCRUM-38 AC9: chosen in venue search, so the form opens with them. */
+  initialEventId?: string;
+  initialVenueId?: string;
+  /** SCRUM-38 AC9: what was entered in venue search (neededInSearch). */
+  initialNeeds?: SearchNeeds;
   /** SCRUM-40 AC8 — the Coordinator's judgements for these events. */
   judgements?: JudgementRow[];
   /** SCRUM-40 AC8 — the events this Coordinator may record a judgement for. */
   judgeableEventIds?: string[];
 }) {
-  const [form, setForm] = useState(emptyForm);
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
-  const [outcome, setOutcome] = useState<Outcome | null>(null);
-  const [isPending, startTransition] = useTransition();
-  // True once React has hydrated, so e2e tests wait before typing.
-  const isHydrated = useSyncExternalStore(
-    emptySubscribe,
-    () => true,
-    () => false,
-  );
-
   const facilityOptions = Array.from(
     new Set(venues.flatMap((v) => v.facilities)),
   ).sort();
@@ -184,13 +220,6 @@ export function RequestForm({
     new Set(venues.flatMap((v) => v.accessibilityFeatures)),
   ).sort();
 
-  function update<K extends keyof typeof emptyForm>(
-    key: K,
-    value: (typeof emptyForm)[K],
-  ) {
-    setForm((prev) => ({ ...prev, [key]: value }));
-  }
-
   /** A venue chosen earlier is dropped if it cannot take the new layout. */
   const venueFor = (venueId: string, layout: string) =>
     venuesForLayout(venues, layout).some((v) => v.id === venueId)
@@ -199,10 +228,10 @@ export function RequestForm({
 
   // SCRUM-170 AC2: the Organiser's answers are free text, shown beside the
   // form; the layout and facilities are the Coordinator's to enter.
-  function chooseEvent(eventId: string) {
+  function withEvent(prev: typeof emptyForm, eventId: string) {
     const event = events.find((e) => e.id === eventId);
     const period = event && eventBookingPeriod(event);
-    setForm((prev) => ({
+    return {
       ...prev,
       eventId,
       ...(event && {
@@ -210,7 +239,41 @@ export function RequestForm({
         end: utcToSgWallTime(period?.endAt),
         attendance: event.expectedAttendance?.toString() ?? "",
       }),
-    }));
+    };
+  }
+
+  // SCRUM-38 AC9: the event and venue picked in search are chosen already,
+  // with the facilities, accessibility features and layout entered there.
+  const [form, setForm] = useState(() => {
+    const withChosenEvent = initialEventId
+      ? withEvent(emptyForm, initialEventId)
+      : emptyForm;
+    return {
+      ...withChosenEvent,
+      ...(initialNeeds &&
+        neededInSearch(venues, initialVenueId, initialNeeds)),
+      ...(initialVenueId && { venueId: initialVenueId }),
+    };
+  });
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
+  const [outcome, setOutcome] = useState<Outcome | null>(null);
+  const [isPending, startTransition] = useTransition();
+  // True once React has hydrated, so e2e tests wait before typing.
+  const isHydrated = useSyncExternalStore(
+    emptySubscribe,
+    () => true,
+    () => false,
+  );
+
+  function update<K extends keyof typeof emptyForm>(
+    key: K,
+    value: (typeof emptyForm)[K],
+  ) {
+    setForm((prev) => ({ ...prev, [key]: value }));
+  }
+
+  function chooseEvent(eventId: string) {
+    setForm((prev) => withEvent(prev, eventId));
   }
   const chosenEvent = events.find((e) => e.id === form.eventId);
 
