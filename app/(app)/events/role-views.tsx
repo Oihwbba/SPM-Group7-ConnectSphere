@@ -85,9 +85,10 @@ export async function getBrowsableEvents(attendeeId: string) {
     // SCRUM-171 AC4: an event that doesn't need registration isn't listed.
     where: { status: "CONFIRMED", ...TAKES_REGISTRATION },
     include: {
+      // SCRUM-162 AC7: every approved venue, in the order requested.
       bookings: {
         where: { status: "APPROVED" },
-        take: 1,
+        orderBy: { createdAt: "asc" },
         include: { venue: { select: { name: true, location: true } } },
       },
       registrations: {

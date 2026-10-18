@@ -39,7 +39,6 @@ const STATE_BADGE_VARIANT = {
 export function AttendeeEventDetail({ event }: { event: BrowsableEvent }) {
   const state = computeRegistrationState(event, event._count.registrations);
   const remaining = remainingCapacity(event, event._count.registrations);
-  const venue = event.bookings[0];
   const registration = event.registrations[0];
   const isRegistered = registration?.status === "REGISTERED";
 
@@ -91,15 +90,23 @@ export function AttendeeEventDetail({ event }: { event: BrowsableEvent }) {
               <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
               <div>
                 <p className="text-xs font-semibold text-muted-foreground">
-                  Venue
+                  {event.bookings.length > 1 ? "Venues" : "Venue"}
                 </p>
-                <p className="text-foreground" data-testid="venue">
-                  {venue ? venue.venue.name : "To be confirmed"}
-                </p>
-                {venue && (
-                  <p className="text-xs text-muted-foreground">
-                    {venue.venue.location}
+                {/* SCRUM-162 AC7: the name and location of every approved
+                    venue. */}
+                {event.bookings.length === 0 ? (
+                  <p className="text-foreground" data-testid="venue">
+                    To be confirmed
                   </p>
+                ) : (
+                  event.bookings.map((booking) => (
+                    <div key={booking.id} data-testid="venue">
+                      <p className="text-foreground">{booking.venue.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {booking.venue.location}
+                      </p>
+                    </div>
+                  ))
                 )}
               </div>
             </div>

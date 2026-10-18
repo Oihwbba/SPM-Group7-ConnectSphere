@@ -19,6 +19,7 @@ import { ReconsiderationPanel } from "@/components/events/reconsideration-panel"
 import { CancelEvent } from "@/components/events/cancel-event";
 import { CANCELLABLE } from "@/lib/event-closing";
 import { ConfirmedArrangements } from "@/components/events/confirmed-arrangements";
+import { VenueBookings } from "@/components/events/venue-bookings";
 import { RegistrationListPanel } from "@/components/events/registration-list-panel";
 import { RegistrationControl } from "@/components/events/registration-control";
 import {
@@ -166,6 +167,14 @@ export function EventDetailsModal({
           )}
           {/* SCRUM-81: what a Confirmed event has secured */}
           {event.status === "CONFIRMED" && <ConfirmedArrangements eventId={event.id} />}
+          {/* SCRUM-162 AC7: every venue booking, once a venue can be requested */}
+          {(event.status === "APPROVED" ||
+            event.status === "PLANNING" ||
+            event.status === "CONFIRMED" ||
+            event.status === "CANCELLED" ||
+            event.status === "COMPLETED") && (
+            <VenueBookings key={`bookings-${reloads}`} eventId={event.id} />
+          )}
           {/* SCRUM-75 AC6: close or reopen registration */}
           {event.status === "CONFIRMED" && <RegistrationControl eventId={event.id} />}
 

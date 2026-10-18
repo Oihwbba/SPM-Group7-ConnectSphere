@@ -87,16 +87,22 @@ describe("RequestForm — SCRUM-50", () => {
     expect(html.indexOf("Room layout")).toBeLessThan(html.indexOf("Venue"));
   });
 
-  it("SCRUM-50 [AC1] TC-50-15: the period and attendance are shown read-only, taken from the event", () => {
+  it("SCRUM-162 [AC4] TC-162-05: the period and attendance can be changed for this venue: the times are editable and the attendance is a whole number from 1", () => {
     const html = renderToStaticMarkup(
       <RequestForm events={[event]} venues={[venue]} />,
     );
 
     for (const id of ["start", "end", "attendance"]) {
-      expect(html).toMatch(
+      expect(html).not.toMatch(
         new RegExp(`<input[^>]*id="${id}"[^>]*readOnly`, "i"),
       );
     }
+    for (const id of ["start", "end"]) {
+      expect(html).toMatch(
+        new RegExp(`<input[^>]*type="datetime-local"[^>]*id="${id}"`, "i"),
+      );
+    }
+    expect(html).toMatch(/<input[^>]*type="number"[^>]*id="attendance"[^>]*min="1"[^>]*step="1"/);
   });
 
   it("SCRUM-50 [AC1]: required facilities are toggle pills, none chosen until the coordinator picks", () => {
