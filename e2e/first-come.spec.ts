@@ -5,12 +5,15 @@ import { signedIn, usesLocalDatabase } from "./helpers";
 
 /**
  * SCRUM-134 — Venue Staff see which pending requests compete for the same
- * venue, and the later can't be approved until the earlier is decided. The
- * equipment side and every rule are in tests/unit/first-come.test.ts and
+ * venue, and the later can't be approved until the earlier is decided; and
+ * Technical Support see which open requests compete for the same equipment,
+ * and can't reserve the later one in a way that leaves the earlier short.
+ * Every rule is in tests/unit/first-come.test.ts and
  * tests/integration/first-come.test.ts. Test cases: docs/testing/SCRUM-134.md.
  *
- * Its events and their two requests are its own, on the Exhibition Hall in
- * December 2036, clear of anything seeded or booked by other specs.
+ * Its events and requests are its own: on the Exhibition Hall on 7 December
+ * 2036, and with an equipment type of its own on 14 December 2036, clear of
+ * anything seeded or booked by other specs.
  */
 const STAMP = Date.now();
 const START = new Date("2036-12-07T01:00:00.000Z");
@@ -21,16 +24,26 @@ test.describe("SCRUM-134 — competing venue requests, first come, first served"
   test.skip(!usesLocalDatabase, "writes its own events; local database only");
 
   const eventIds: string[] = [];
+  const equipmentIds: string[] = [];
 
   test.afterAll(async () => {
     const bookings = await prisma.booking.findMany({
       where: { eventId: { in: eventIds } },
       select: { id: true },
     });
+    const requests = await prisma.equipmentRequest.findMany({
+      where: { eventId: { in: eventIds } },
+      select: { id: true },
+    });
     await prisma.notification.deleteMany({ where: { eventId: { in: eventIds } } });
-    await prisma.auditLog.deleteMany({ where: { entityId: { in: bookings.map((b) => b.id) } } });
+    await prisma.auditLog.deleteMany({
+      where: { entityId: { in: [...bookings, ...requests].map((r) => r.id) } },
+    });
     await prisma.booking.deleteMany({ where: { eventId: { in: eventIds } } });
+    await prisma.reservation.deleteMany({ where: { eventId: { in: eventIds } } });
+    await prisma.equipmentRequest.deleteMany({ where: { eventId: { in: eventIds } } });
     await prisma.event.deleteMany({ where: { id: { in: eventIds } } });
+    await prisma.equipment.deleteMany({ where: { id: { in: equipmentIds } } });
   });
 
   test("SCRUM-134 [AC1, AC2, AC6] TC-134-01, TC-134-02, TC-134-06: the later request shows the earlier one, can't be approved before it, and the earlier is approved first", async ({
@@ -89,5 +102,91 @@ test.describe("SCRUM-134 — competing venue requests, first come, first served"
     await staff.getByLabel("Rejection reason").fill("The hall went to an earlier request.");
     await staff.getByRole("button", { name: "Reject request" }).click();
     await expect(card(names[1])).toHaveCount(0);
+  });
+
+  test("SCRUM-134 [AC4, AC5] TC-134-04, TC-134-05: Technical Support see the earlier request for the same equipment, can't reserve the later one ahead of it, and reserve the earlier first", async ({
+    browser,
+  }, testInfo) => {
+    const start = new Date("2036-12-14T01:00:00.000Z");
+    const end = new Date("2036-12-14T05:00:00.000Z");
+    const { id: equipmentId } = await prisma.equipment.create({
+      data: { type: `SCRUM-134 E2E kit ${testInfo.retry} ${STAMP}`, totalQuantity: 4 },
+      select: { id: true },
+    });
+    equipmentIds.push(equipmentId);
+    // Two events at the same time, each wanting 3 of the 4 units: the earlier
+    // approved, the later still in review.
+    const [earlier, later] = ["Earlier kit", "Later kit"].map(
+      (label) => `SCRUM-134 ${label} ${testInfo.retry} ${STAMP}`,
+    );
+    for (const [name, status, createdAt] of [
+      [earlier, "APPROVED", new Date("2036-01-01T01:00:00.000Z")],
+      [later, "IN_REVIEW", new Date("2036-01-02T01:00:00.000Z")],
+    ] as const) {
+      const { id } = await prisma.event.create({
+        data: {
+          name,
+          status: "PLANNING",
+          organiserId: "usr_organiser",
+          coordinatorId: "usr_coordinator",
+          startAt: start,
+          endAt: end,
+          expectedAttendance: 50,
+        },
+        select: { id: true },
+      });
+      eventIds.push(id);
+      await prisma.equipmentRequest.create({
+        data: {
+          eventId: id,
+          requestedById: "usr_coordinator",
+          status,
+          createdAt,
+          ...(status === "APPROVED" && { decidedAt: createdAt }),
+          lines: { create: [{ equipmentId, quantity: 3 }] },
+        },
+      });
+    }
+
+    // AC4: the later request's line lists the earlier one, with what is
+    // reserved for it.
+    const tech = await signedIn(browser, "techsupport@test.local");
+    await tech.goto("/equipment-requests");
+    const card = tech.getByTestId("review-request").filter({ hasText: later });
+    const competing = card.getByTestId("competing-requests");
+    await expect(competing).toContainText("Also wanted for overlapping events, earliest first:");
+    await expect(competing).toContainText(`"${earlier}"`);
+    await expect(competing).toContainText("3 requested, 0 reserved");
+
+    // AC5: once both are approved, reserving the later first would leave the
+    // earlier short, so nothing is reserved and the row says why.
+    await prisma.equipmentRequest.updateMany({
+      where: { event: { name: later } },
+      data: { status: "APPROVED", decidedAt: new Date() },
+    });
+    await tech.goto("/equipment");
+    await tech.locator('[data-hydrated="true"]').waitFor();
+    const choose = async (name: string) => {
+      const select = tech.getByLabel("Approved request");
+      const value = await select.locator("option", { hasText: name }).getAttribute("value");
+      await select.selectOption(value!);
+    };
+    await choose(later);
+    await tech.getByRole("button", { name: "Reserve all 1 item(s)" }).click();
+    await expect(
+      tech.getByText("Nothing was reserved: an earlier request comes first for the rows marked below."),
+    ).toBeVisible();
+    await expect(tech.getByText(/an earlier request still needs 3/)).toBeVisible();
+    expect(
+      await prisma.reservation.count({ where: { event: { name: later } } }),
+    ).toBe(0);
+
+    // AC6: the earlier one is reserved first.
+    await choose(earlier);
+    await tech.getByRole("button", { name: "Reserve all 1 item(s)" }).click();
+    await expect(tech.getByText(`Reserved 1 item(s) for ${earlier}.`)).toBeVisible();
+    expect(
+      await prisma.reservation.count({ where: { event: { name: earlier }, status: "CONFIRMED" } }),
+    ).toBe(1);
   });
 });
