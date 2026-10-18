@@ -1,6 +1,8 @@
 import { z } from "zod";
 import type { ChangeRequestStatus } from "@prisma/client";
 
+import { formatDateTime } from "@/lib/datetime";
+import { registrationNeededLabel } from "@/lib/schemas/event";
 import {
   CLARIFIABLE_FIELDS,
   checkSchedule,
@@ -9,11 +11,12 @@ import {
 
 /**
  * SCRUM-41 AC1 — the event fields a change request can ask to change: every
- * field of the request form. "schedule" is the start and end together, as in
- * a clarification (SCRUM-108).
+ * field of the request form, including Registration needed (SCRUM-171).
+ * "schedule" is the start and end together, as in a clarification (SCRUM-108).
  */
 export const CHANGEABLE_FIELDS = {
   ...CLARIFIABLE_FIELDS,
+  registrationRequired: "Registration needed",
   programme: "Programme",
   specialRequests: "Special requests",
 } as const;
@@ -38,9 +41,14 @@ const optionalText = (label: string, max: number) =>
 /**
  * SCRUM-41 AC4 — the requested values, under the request form's rules. The
  * programme and special requests are optional on the form, so they may be
- * cleared.
+ * cleared. Registration needed is Yes or No (SCRUM-171 AC1); whether it may
+ * become No while people are registered is decided with the request
+ * (SCRUM-171 AC5, SCRUM-128).
  */
 const changeRequestValues = requestFieldValues.extend({
+  registrationRequired: z.boolean({
+    invalid_type_error: "Choose whether the event needs registration.",
+  }),
   programme: optionalText("the programme", 5000),
   specialRequests: optionalText("special requests", 5000),
 });
@@ -119,6 +127,20 @@ export function changeFieldLabel(fieldName: string): string {
   if (fieldName === "startAt") return "Start";
   if (fieldName === "endAt") return "End";
   return CHANGEABLE_FIELDS[fieldName as ChangeableField] ?? fieldName;
+}
+
+/**
+ * A recorded value as it reads on screen, to the Organiser who raised the
+ * request (SCRUM-41 AC6) and the Coordinator who decides it (SCRUM-128 AC1).
+ */
+export function changeValueLabel(fieldName: string, value: string | null): string {
+  if (fieldName === "registrationRequired") {
+    return registrationNeededLabel(value === null ? null : value === "true");
+  }
+  if (value === null || value === "") return "—";
+  return fieldName === "startAt" || fieldName === "endAt"
+    ? formatDateTime(new Date(value))
+    : value;
 }
 
 /** SCRUM-41 AC6 — the status names the Organiser sees. */
