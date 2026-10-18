@@ -175,10 +175,10 @@ one set of rules instead of each editing the same constraints.
   action keeps the refusal itself: it takes the venue lock, then checks, then
   writes, in one transaction, so an approval can't land between the check and
   the write. The SCRUM-37 race test still saves exactly one.
-- One venue per event (SCRUM-50 AC8) is now held by the action's check alone;
-  the database holds one per venue. Two simultaneous requests for the same
-  event at two different venues could both be saved. SCRUM-162 makes that the
-  intended behaviour.
+- The database holds an event to one live booking per venue. Two simultaneous
+  requests for the same event at two different venues can both be saved,
+  which SCRUM-162 made the intended behaviour: an event books several venues,
+  and the action asks for an existing booking at the requested venue only.
 - Any Pending, Held or Approved write at a venue may also mark that venue's
   lapsed holds Expired, in the same transaction. Those booking rows are locked
   before the venue row. Today nothing takes the venue lock and then writes

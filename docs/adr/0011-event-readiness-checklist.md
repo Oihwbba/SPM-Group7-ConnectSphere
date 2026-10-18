@@ -54,6 +54,16 @@ Where the criteria are silent:
    "a venue booking for this event is Approved", but counting a booking for
    the wrong day would let a moved event read as ready, and equipment already
    has to cover the event's period.)
+
+   **Since SCRUM-162 (AC8), an event can book several venues.** The item lists
+   every Pending, Held and Approved booking, and is complete only when at
+   least one is Approved, none is Pending or Held, every Approved one covers
+   the event's whole period, and none is flagged. An approval no longer
+   outweighs a pending request or a hold beside it, and an old approval for
+   the wrong time keeps the item incomplete until it is withdrawn or
+   resolved. The item's own state names what stands in the way first: a flag,
+   then a hold, then a pending request, then an approval for a different
+   time. With no live booking, the newest ended one describes it, as before.
 2. **Which equipment requests count.** Pending, in-review and approved requests
    are live, and their lines are added up per item (two live requests for 2 and
    3 Projectors need 5). A cancelled request is no longer wanted. A rejected

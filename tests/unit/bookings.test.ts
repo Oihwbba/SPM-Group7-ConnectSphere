@@ -218,7 +218,7 @@ describe("submitBookingRequest — SCRUM-50", () => {
     expect(db.booking.create).toHaveBeenCalled();
   });
 
-  describe("SCRUM-50 [AC1] TC-50-15: the period and attendance are the event's", () => {
+  describe("SCRUM-50 [AC1] TC-50-15, SCRUM-162 [AC4]: the period covers the event, and the attendance is up to the event's", () => {
     it("SCRUM-50 [AC1] TC-50-15: the event's period, rounded out to the half hour, is accepted", async () => {
       db.event.findUnique.mockResolvedValue({
         organiserId: "usr_org",
@@ -234,10 +234,28 @@ describe("submitBookingRequest — SCRUM-50", () => {
       expect(result.ok).toBe(true);
     });
 
-    it("SCRUM-50 [AC1] TC-50-15: a period that is not the event's is refused against the start field, and nothing is written", async () => {
+    it("SCRUM-162 [AC4] TC-162-05: a longer period that still covers the whole event is accepted", async () => {
+      const result = await submitBookingRequest({
+        ...validRequest,
+        startAt: "2030-06-01T05:30:00.000Z",
+        endAt: "2030-06-01T09:00:00.000Z",
+      });
+
+      expect(result.ok).toBe(true);
+      expect(db.booking.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            startAt: new Date("2030-06-01T05:30:00.000Z"),
+            endAt: new Date("2030-06-01T09:00:00.000Z"),
+          }),
+        }),
+      );
+    });
+
+    it("SCRUM-162 [AC4] TC-162-06: a period that doesn't cover the event's whole period is refused against the start field, and nothing is written", async () => {
       for (const changed of [
         { startAt: "2030-06-01T06:30:00.000Z" },
-        { endAt: "2030-06-01T09:00:00.000Z" },
+        { endAt: "2030-06-01T07:30:00.000Z" },
         {
           startAt: "2030-06-02T06:00:00.000Z",
           endAt: "2030-06-02T08:00:00.000Z",
@@ -249,7 +267,7 @@ describe("submitBookingRequest — SCRUM-50", () => {
         });
 
         const message =
-          "The requested period must be the event's: 1 Jun 2030, 2:00 pm SGT to 1 Jun 2030, 4:00 pm SGT.";
+          "The requested period must cover the event's whole period: 1 Jun 2030, 2:00 pm SGT to 1 Jun 2030, 4:00 pm SGT.";
         expect(result).toEqual({
           ok: false,
           error: message,
@@ -260,21 +278,52 @@ describe("submitBookingRequest — SCRUM-50", () => {
       expect(db.booking.create).not.toHaveBeenCalled();
     });
 
-    it("SCRUM-50 [AC1] TC-50-15: an attendance that is not the event's is refused against the attendance field, and nothing is written", async () => {
-      for (const requestedAttendance of [39, 41]) {
+    it("SCRUM-162 [AC4] TC-162-07: an attendance above the event's is refused against the attendance field, and nothing is written", async () => {
+      const result = await submitBookingRequest({
+        ...validRequest,
+        requestedAttendance: 41,
+      });
+
+      const message =
+        "The expected attendance for this venue must be from 1 to the event's 40.";
+      expect(result).toEqual({
+        ok: false,
+        error: message,
+        fieldErrors: { requestedAttendance: [message] },
+      });
+      expect(db.booking.create).not.toHaveBeenCalled();
+    });
+
+    it.each([1, 39, 40])(
+      "SCRUM-162 [AC4, AC9] TC-162-07, TC-162-14: an attendance of %i, from 1 to the event's, is accepted and recorded for this venue",
+      async (requestedAttendance) => {
         const result = await submitBookingRequest({
           ...validRequest,
           requestedAttendance,
         });
 
-        const message = "The expected attendance must be the event's: 40.";
-        expect(result).toEqual({
-          ok: false,
-          error: message,
-          fieldErrors: { requestedAttendance: [message] },
-        });
-      }
-      expect(db.booking.create).not.toHaveBeenCalled();
+        expect(result.ok).toBe(true);
+        expect(db.booking.create).toHaveBeenCalledWith(
+          expect.objectContaining({
+            data: expect.objectContaining({ requestedAttendance }),
+          }),
+        );
+      },
+    );
+
+    it("SCRUM-162 [AC4] TC-162-07: an attendance of 0 is refused before anything is read", async () => {
+      const result = await submitBookingRequest({
+        ...validRequest,
+        requestedAttendance: 0,
+      });
+
+      expect(result).toMatchObject({
+        ok: false,
+        fieldErrors: {
+          requestedAttendance: ["Attendance must be greater than zero."],
+        },
+      });
+      expect(db.event.findUnique).not.toHaveBeenCalled();
     });
 
     it("SCRUM-50 [AC1] TC-50-15: an event without dates or expected attendance cannot be booked yet", async () => {
@@ -421,7 +470,7 @@ describe("submitBookingRequest — SCRUM-50", () => {
     });
   });
 
-  it("SCRUM-50 [AC8] TC-50-07, SCRUM-163 [AC4] TC-163-08: an event that already has a pending, approved or unexpired held booking, for any venue, is shown it and nothing is created", async () => {
+  it("SCRUM-162 [AC2] TC-162-02, SCRUM-163 [AC4] TC-163-08: an event that already has a pending, approved or unexpired held booking at this venue is shown it and nothing is created", async () => {
     db.booking.findFirst.mockResolvedValue(summaryRow);
 
     const result = await submitBookingRequest(validRequest);
@@ -435,6 +484,7 @@ describe("submitBookingRequest — SCRUM-50", () => {
       expect.objectContaining({
         where: {
           eventId: "evt_1",
+          venueId: "ven_1",
           OR: [
             { status: { in: ["PENDING", "APPROVED"] } },
             { status: "HELD", holdExpiresAt: { gt: expect.any(Date) } },
@@ -444,13 +494,13 @@ describe("submitBookingRequest — SCRUM-50", () => {
     );
   });
 
-  it("SCRUM-50 [AC8] TC-50-07: the event's existing booking is shown even when the request differs from it", async () => {
+  it("SCRUM-162 [AC2] TC-162-02: the existing booking at this venue is shown even when the request's other details differ from it", async () => {
     db.booking.findFirst.mockResolvedValue(summaryRow);
 
     const result = await submitBookingRequest({
       ...validRequest,
-      venueId: "ven_2",
       requestedAttendance: 1,
+      requestedLayout: "theatre",
     });
 
     expect(result).toEqual({
