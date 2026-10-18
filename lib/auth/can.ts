@@ -37,6 +37,7 @@ export type Action =
   | "event:no-equipment" // SCRUM-170 AC4: the assigned coordinator records No equipment needed
   | "event:edit" // SCRUM-25: the assigned coordinator edits an event's details directly
   | "event:assign" // SCRUM-165: the Lead assigns an unassigned request to a Coordinator
+  | "event:reassign" // SCRUM-21: the Lead moves an event to another Coordinator
   | "event:view-all" // SCRUM-141: see every non-draft event, read-only, for planning
   | "event-note:add" // SCRUM-25 AC6: add an operational note to an event
   | "event-note:read" // SCRUM-25 AC6: read an event's operational notes
@@ -101,6 +102,9 @@ export type Resource =
     }
   | { kind: "registration"; userId: string }
   | { kind: "notification"; userId: string };
+
+/** SCRUM-21 AC1, AC4 — the statuses in which the Lead may reassign an event. */
+export const REASSIGNABLE: EventStatus[] = ["UNDER_REVIEW", "PLANNING", "CONFIRMED"];
 
 /**
  * THE authorisation table — one source of truth mapping each role to the
@@ -188,6 +192,7 @@ const ROLE_ACTIONS: Record<Role, Action[]> = {
   // (SCRUM-34 AC2); SCRUM-165 and SCRUM-166 grant the rest.
   COORDINATOR_LEAD: [
     "event:assign",
+    "event:reassign",
     "event:view-all",
     "venue:read",
     "notification:read",
@@ -201,6 +206,7 @@ const ROLE_ACTIONS: Record<Role, Action[]> = {
  */
 function hasRelationship(
   user: SessionUser,
+  action: Action,
   resource: Resource,
 ): boolean {
   switch (resource.kind) {
@@ -215,8 +221,15 @@ function hasRelationship(
         return resource.coordinatorId === user.id;
       }
       // SCRUM-165 AC7, AC10: the Lead assigns a Submitted request that has
-      // no Coordinator yet; one that has one is reassigned (SCRUM-21).
+      // no Coordinator yet. SCRUM-21 AC1, AC4: one that has one is
+      // reassigned while it is Under Review, Planning or Confirmed.
       if (user.role === "COORDINATOR_LEAD") {
+        if (action === "event:reassign") {
+          return (
+            resource.coordinatorId !== null &&
+            REASSIGNABLE.includes(resource.status)
+          );
+        }
         return resource.coordinatorId === null && resource.status === "SUBMITTED";
       }
       // SCRUM-166 AC6, SCRUM-121 AC5: a Safety Officer reviews any event's
@@ -274,7 +287,7 @@ export function can(
 
   // 2. Relationship gate — only when the action targets a specific resource.
   if (resource) {
-    return hasRelationship(user, resource);
+    return hasRelationship(user, action, resource);
   }
 
   return true;

@@ -13,8 +13,12 @@ import { withdrawRegistration } from "./registration-actions";
  * only the click handler needs to run in the browser. */
 export function WithdrawButton({
   registrationId,
+  afterWithdrawHref,
 }: {
   registrationId: string;
+  /** SCRUM-85 AC9: where to go once withdrawn, when this page is no longer
+   * the Attendee's to see; otherwise the page refreshes in place. */
+  afterWithdrawHref?: string;
 }) {
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
@@ -27,7 +31,8 @@ export function WithdrawButton({
         return;
       }
       toast.success("You've withdrawn from this event.");
-      router.refresh();
+      if (afterWithdrawHref) router.push(afterWithdrawHref);
+      else router.refresh();
     });
   }
 

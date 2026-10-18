@@ -388,6 +388,15 @@ model Event {
   registrationOpensAt  DateTime?
   registrationClosesAt DateTime?
 
+  // SCRUM-85 — what Attendees were last told: the date, time and every
+  // approved venue ("Name — Location") when the event was last Confirmed.
+  // Set on each confirmation; null until the first. While the event is back
+  // in Planning, registered Attendees see these (AC9), and confirming again
+  // with different ones tells them (AC2).
+  confirmedStartAt DateTime?
+  confirmedEndAt   DateTime?
+  confirmedVenues  String[]  @default([])
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
