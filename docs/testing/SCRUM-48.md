@@ -18,7 +18,7 @@ AC8 cases write those rows directly. Times are UTC.
 | [TC-48-05](#tc-48-05) | Positive | AC 4 | Integration, e2e |
 | [TC-48-06](#tc-48-06) | Positive, Negative | AC 5 | Unit, integration |
 | [TC-48-07](#tc-48-07) | Positive | AC 5 | e2e |
-| [TC-48-08](#tc-48-08) | Positive | AC 5 (Safety Officer) | Blocked by SCRUM-166 |
+| [TC-48-08](#tc-48-08) | Positive | AC 5 (Safety Officer) | Unit, integration |
 | [TC-48-09](#tc-48-09) | Negative | AC 5, AC 6 | Unit, integration, e2e |
 | [TC-48-10](#tc-48-10) | Positive | AC 6 (several roles) | Integration |
 | [TC-48-11](#tc-48-11) | Positive | AC 7 | Integration |
@@ -126,12 +126,12 @@ AC8 cases write those rows directly. Times are UTC.
 |---|---|
 | Test Case ID | TC-48-08 |
 | Test Scenario | [Positive] AC 5: a Safety Officer's notification links to the safety check |
-| Pre-conditions | SCRUM-166 has built the safety check page. |
-| Test Steps | 1. Open a Safety Officer's notification about a safety check. |
+| Pre-conditions | A Coordinator has requested a safety check (SCRUM-166). Signed in as `safety@test.local`. |
+| Test Steps | 1. Open Notifications. <br> 2. Open "Safety check requested". |
 | Test Data | — |
-| Expected Result | The safety check opens. |
+| Expected Result | The notice links to that check (`/safety-checks/<id>`), and the check opens. |
 
-**Automated by:** none yet. **Blocked by SCRUM-166**, which builds the page; until then a Safety Officer's notification has no link (TC-48-06).
+**Automated by:** `tests/unit/notifications.test.ts` › "SCRUM-48 [AC5] TC-48-08: a Safety Officer's notice about a safety check opens that check"; `tests/integration/staff-notifications.test.ts` › "SCRUM-124 [AC8, AC11, AC14] TC-124-08, TC-124-11: a safety check's Changes requested flags the booking, and tells its Coordinator and each Venue Staff member once" (the officer's own list links to the check). SCRUM-166 writes the link; a Safety Officer can't open the event itself, so the notice's own link is followed (TC-48-06).
 
 ### TC-48-09
 

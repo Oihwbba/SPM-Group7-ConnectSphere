@@ -137,7 +137,7 @@ the open pull requests that change the same test files have merged.
 | [SCRUM-40](SCRUM-40.md) | Felicia Or | 11 | Every case automated (unit, integration for the one-per-event judgement and the advisory rule, e2e for the journey and the venue detail view); the search-results half of AC 1–AC 4 and AC 7 is SCRUM-38's TC-38-09 |
 | [SCRUM-41](SCRUM-41.md) | Jin Hong | 17 | Every case automated (unit, integration for the lock, index and rejection, e2e for both journeys); AC 8's cancellation half waits for SCRUM-82 |
 | [SCRUM-45](SCRUM-45.md) | Jin Hong | 8 | Every case automated; the triggers of unbuilt stories (AC 5–7, 9, 10 and the Lead's assignment) are listed as still to do |
-| [SCRUM-48](SCRUM-48.md) | Jin Hong | 15 | Every case automated except TC-48-08, blocked by SCRUM-166 |
+| [SCRUM-48](SCRUM-48.md) | Jin Hong | 15 | Every case automated |
 | [SCRUM-50](SCRUM-50.md) | Caylern Goh | 15 | Every case automated |
 | [SCRUM-52](SCRUM-52.md) | Caylern Goh | 6 | Every case automated |
 | [SCRUM-53](SCRUM-53.md) | Caylern Goh | 9 | Automated except TC-53-09 (AC 9), which is manual; AC 3 and AC 10 point to other cases |
