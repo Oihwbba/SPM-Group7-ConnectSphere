@@ -13,6 +13,7 @@ import {
   withdrawRegistrationClosedNotice,
 } from "@/lib/event-notifications";
 import { outdateSafetyChecks } from "@/lib/safety-checks";
+import { notifyRole } from "@/lib/staff-notifications";
 import {
   FLAGGABLE_BOOKING,
   bookingArrangement,
@@ -152,6 +153,7 @@ export async function resolveReconsiderationFlag(
       const event = await tx.event.findUniqueOrThrow({
         where: { id: eventId },
         select: {
+          name: true,
           status: true,
           coordinatorId: true,
           organiserId: true,
@@ -219,6 +221,12 @@ export async function resolveReconsiderationFlag(
         await tx.auditLog.create({
           data: resolutionEntry("Booking", id, user!.id, decision, booking.status),
         });
+        await notifyRole(
+          tx,
+          "VENUE_STAFF",
+          { id: eventId },
+          resolvedNotice(bookingArrangement(booking), event.name, decision),
+        );
       } else {
         const reservation = await tx.reservation.findUniqueOrThrow({
           where: { id },
@@ -252,6 +260,12 @@ export async function resolveReconsiderationFlag(
         await tx.auditLog.create({
           data: resolutionEntry("Reservation", id, user!.id, decision, "CONFIRMED"),
         });
+        await notifyRole(
+          tx,
+          "TECH_SUPPORT",
+          { id: eventId },
+          resolvedNotice(reservationArrangement(reservation), event.name, decision),
+        );
       }
 
       if (decision === "STILL_STANDS") {
@@ -323,6 +337,33 @@ const eventOwnerSelect = {
   eventId: true,
   event: { select: { organiserId: true, coordinatorId: true, status: true } },
 } as const;
+
+/**
+ * SCRUM-124 AC9, AC12 — what every Venue Staff member (a booking) or
+ * Technical Support member (a reservation) is told when the Coordinator
+ * resolves a flag, with a link to their own page.
+ */
+function resolvedNotice(
+  arrangement: Arrangement,
+  eventName: string,
+  decision: "STILL_STANDS" | "CANCEL",
+) {
+  const booking = arrangement.kind === "booking";
+  return {
+    type: "ARRANGEMENT_FLAG_RESOLVED" as const,
+    title:
+      decision === "CANCEL"
+        ? `A flagged ${arrangement.kind} was cancelled`
+        : `A flagged ${arrangement.kind} still stands`,
+    message:
+      decision === "CANCEL"
+        ? `The Coordinator cancelled ${arrangement.label} for "${eventName}", so ${
+            booking ? "its period is free again" : "it is back in the pool"
+          }.`
+        : `The Coordinator kept ${arrangement.label} for "${eventName}": it no longer needs reconsideration.`,
+    link: booking ? "/bookings" : "/equipment",
+  };
+}
 
 function resolutionEntry(
   entityType: "Booking" | "Reservation",
