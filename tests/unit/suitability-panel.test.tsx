@@ -68,6 +68,21 @@ describe("SuitabilityPanel — SCRUM-40", () => {
     }
   });
 
+  it("SCRUM-162 [AC3, AC9] TC-162-04: a breakout room is judged against the attendance and needs entered for that venue, not the event's", () => {
+    // The event expects 40; this request is for 12 of them.
+    const breakout = render({
+      needs: {
+        attendance: 12,
+        facilities: ["whiteboard"],
+        accessibilityFeatures: [],
+        layout: "boardroom",
+      },
+    });
+
+    expect(breakout).toContain('data-suitable="true"');
+    expect(render()).toContain("Capacity 14 &lt; attendance 40");
+  });
+
   it("SCRUM-40 [AC5] TC-40-05: a Suitable venue shows no reasons", () => {
     const html = render({
       needs: { attendance: 10, facilities: [], accessibilityFeatures: [], layout: null },

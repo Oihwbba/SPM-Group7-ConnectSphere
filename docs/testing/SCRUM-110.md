@@ -102,7 +102,7 @@ the reason after "Rejected".
 | Item            | Content                                                                                                                                                     |
 | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Test Case ID    | TC-110-05                                                                                                                                                   |
-| Test Scenario   | [Boundary] AC 1, AC 2: with several bookings, an approved one wins; otherwise a pending one; otherwise the latest rejection. Cancelled bookings are ignored |
+| Test Scenario   | [Boundary] AC 1, AC 2: with several bookings, an approved one wins; otherwise a pending one; otherwise the latest rejection. Cancelled bookings are ignored. Since SCRUM-162 AC8, an approval beside a live Pending or Held booking doesn't complete the item ([TC-162-13](SCRUM-162.md#tc-162-13)) |
 | Pre-conditions  | The event has more than one booking.                                                                                                                        |
 | Test Steps      | 1. Read the checklist for each combination below.                                                                                                           |
 | Test Data       | (a) REJECTED then APPROVED <br> (b) REJECTED then PENDING <br> (c) two REJECTED, reasons "old" then "new" <br> (d) only CANCELLED                           |

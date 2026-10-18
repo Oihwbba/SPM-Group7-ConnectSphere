@@ -353,6 +353,25 @@ describe("can — the Week 7 roles before their stories", () => {
   );
 });
 
+// SCRUM-128 AC9 — only the event's assigned Coordinator decides a change request.
+describe("can — deciding a change request (SCRUM-128)", () => {
+  const planning = {
+    kind: "event" as const,
+    organiserId: "orgA",
+    coordinatorId: "coord",
+    status: "PLANNING" as const,
+  };
+
+  it("SCRUM-128 [AC9] TC-128-08: only the event's assigned Coordinator may decide, never an unassigned one or the Organiser", () => {
+    expect(can(coordinator, "change-request:decide", planning)).toBe(true);
+    expect(can({ id: "other", role: "COORDINATOR" }, "change-request:decide", planning)).toBe(false);
+    expect(can(coordinator, "change-request:decide", { ...planning, coordinatorId: null })).toBe(false);
+    for (const user of [organiserA, attendee, { id: "so", role: "SAFETY_OFFICER" }] as SessionUser[]) {
+      expect(can(user, "change-request:decide")).toBe(false);
+    }
+  });
+});
+
 // SCRUM-82 AC1 — cancelling follows the same rule as confirming and rejecting.
 describe("can — cancelling an event (SCRUM-82)", () => {
   const confirmed = {
