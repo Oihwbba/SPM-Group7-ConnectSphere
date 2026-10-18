@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-15. Jira is the source of truth.
+     Synced from Jira on 2026-10-19. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-171 - Record whether an event needs registration
@@ -10,7 +10,7 @@
 | **Epic** | SCRUM-6 - Event Request Lifecycle |
 | **Priority** | High |
 | **Story points** | 3 |
-| **Status in Jira** | To Do |
+| **Status in Jira** | Done |
 | **Sprint** | SCRUM Sprint 3 |
 | **Jira** | https://smu-spm-group7.atlassian.net/browse/SCRUM-171 |
 
@@ -24,7 +24,7 @@
 2. Registration needed is required to submit (SCRUM-14); a draft can be saved without it (SCRUM-15).
 3. Given a request was created before this story, then its free-text registration answer is kept and shown next to the new field.
 4. Given Registration needed is No, then confirming the event (SCRUM-81) doesn't open registration, and the event isn't listed to Attendees or opened by its URL (SCRUM-72 AC8).
-5. Given the event has active registrations, Registration needed can't be changed to No, whether it is edited directly (SCRUM-25) or through a change request (SCRUM-128), and the number of active registrations is shown.
+5. Given the event has active registrations, Registration needed can't be changed to No when it is edited directly (SCRUM-25), and the number of active registrations is shown. The same rule for a change request is applied by SCRUM-128 AC11.
 
 **Related:** SCRUM-75 (registration window) applies only to events that need registration. The Event table already has a registrationRequired column that the form never sets.
 
@@ -38,5 +38,6 @@
 * 2026-10-08 (backlog refinement, PO approved): re-estimated from 2 to 3 points. AC4 hides events by Registration needed, not by closed registration, because manually closed events stay listed (SCRUM-72 AC4, SCRUM-75 AC6). AC5 added for changing the answer after submission. "Why" corrected: confirming already respects the setting, but the form never sets it. SCRUM-127 was dropped; this story doesn't depend on it.
 * 2026-10-10: Reword SCRUM-171 AC5 such that coordinator cannot edit the routine registration field (SCRUM-25) while registrations are active.
 * 2026-10-14 (PO approved): AC4 drops the sentence about closed events staying listed (owned by SCRUM-75 AC6 and SCRUM-72 AC4). AC5's last sentence, opening registration when a Confirmed event changes to Yes, moved to SCRUM-75 AC11.
+* 2026-10-17 (PO approved): AC5's change-request case moved to SCRUM-128 AC11, which applies change requests; this story keeps the rule for a direct edit (built in #209). No re-estimate: the rule and its message were built here and are reused by SCRUM-128.
 
 Functionality Area: Event Request Creation, Attendee Registration
