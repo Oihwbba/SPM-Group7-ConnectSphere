@@ -1,7 +1,11 @@
 import { requireSession } from "@/lib/auth/guard";
 import { can } from "@/lib/auth/can";
 import { Forbidden } from "@/components/app/forbidden";
-import { getBookableEvents, getRequestableVenues } from "../queries";
+import {
+  getBookableEvents,
+  getRequestableVenues,
+  getSuitabilityJudgements,
+} from "../queries";
 import { RequestForm } from "./request-form";
 
 // SCRUM-50 — an Event Coordinator asks for a venue. Who may see this page is
@@ -16,6 +20,13 @@ export default async function RequestVenuePage() {
     getBookableEvents(session.user.id),
     getRequestableVenues(),
   ]);
+  const judgements = await getSuitabilityJudgements(events.map((e) => e.id));
+  // SCRUM-40 AC8: only the assigned Coordinator records a judgement.
+  const judgeableEventIds = events
+    .filter((event) =>
+      can(session.user, "venue:judge", { kind: "event", ...event }),
+    )
+    .map((event) => event.id);
 
   return (
     <div className="space-y-6">
@@ -28,7 +39,12 @@ export default async function RequestVenuePage() {
           are Singapore time.
         </p>
       </div>
-      <RequestForm events={events} venues={venues} />
+      <RequestForm
+        events={events}
+        venues={venues}
+        judgements={judgements}
+        judgeableEventIds={judgeableEventIds}
+      />
     </div>
   );
 }

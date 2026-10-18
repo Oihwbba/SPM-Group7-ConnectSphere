@@ -86,6 +86,10 @@ export const bookingRequestSchema = z
       .int("Attendance must be a whole number.")
       .positive("Attendance must be greater than zero."),
     requiredFacilities: z.array(z.string().trim().min(1)).default([]),
+    // SCRUM-40 AC3 — compared with the venue's features for suitability.
+    requiredAccessibilityFeatures: z
+      .array(z.string().trim().min(1))
+      .default([]),
     requestedLayout: z.string().trim().max(100).optional(),
     requestNotes: z.string().trim().max(2000).optional(),
   })
