@@ -22,6 +22,7 @@ import {
 import { formatDateTime, formatEventTime, TIME_ZONE } from "@/lib/datetime";
 import { confirmedDetailsChanged, venueLabel } from "@/lib/confirmed-details";
 import { asSentence, notifyAboutEvent } from "@/lib/event-notifications";
+import { notifyRole } from "@/lib/staff-notifications";
 import { effectiveClosesAt } from "@/lib/registration-state";
 import { venueOptions, type VenueOptions } from "@/lib/venue-options";
 
@@ -431,6 +432,15 @@ export async function submitEventRequest(
           },
         });
       }
+
+      // SCRUM-124 AC10: every Lead hears that it is waiting in the
+      // Unassigned queue, and the notice opens it there.
+      await notifyRole(tx, "COORDINATOR_LEAD", { id: eventId! }, {
+        type: "REQUEST_AWAITING_ASSIGNMENT",
+        title: "A request is waiting to be assigned",
+        message: `"${name}" was submitted and is waiting in the Unassigned queue.`,
+        link: `/queue/${eventId}`,
+      });
     });
 
     revalidatePath("/events");
