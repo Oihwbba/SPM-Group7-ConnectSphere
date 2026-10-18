@@ -95,6 +95,8 @@ const U = {
   attendee4: "usr_attendee_4",
   safetyOfficer: "usr_safetyofficer",
   coordinatorLead: "usr_coordinatorlead",
+  coordinatorLead2: "usr_coordinatorlead_2",
+  safetyOfficer2: "usr_safetyofficer_2",
 } as const;
 
 const V = {
@@ -154,6 +156,13 @@ async function seedUsers(passwordHash: string) {
     { id: U.safetyOfficer, email: "safety@test.local", name: "Sam Safety", role: Role.SAFETY_OFFICER },
     // SCRUM-164: the Event Coordinator Lead (Week 7 change 5).
     { id: U.coordinatorLead, email: "lead@test.local", name: "Lee Lead", role: Role.COORDINATOR_LEAD },
+    // SCRUM-165 AC6: two Leads assigning at once. Seeded rather than made by a
+    // test, like the second Safety Officer below.
+    { id: U.coordinatorLead2, email: "lead2@test.local", name: "Lena Lead", role: Role.COORDINATOR_LEAD },
+    // SCRUM-166 AC8: two Safety Officers recording at once. Seeded rather than
+    // made by a test: every Safety Officer is told of each requested check, so
+    // one appearing or vanishing mid-run would race other suites.
+    { id: U.safetyOfficer2, email: "safety2@test.local", name: "Sasha Safety", role: Role.SAFETY_OFFICER },
   ];
 
   for (const u of users) {
@@ -688,6 +697,22 @@ async function seedBookings() {
   return bookings.length;
 }
 
+// SCRUM-85 — each seeded Confirmed event was last confirmed as it stands, so
+// re-planning it shows Attendees those details. The same rule as the
+// migration that added the fields.
+async function seedConfirmedDetails() {
+  await prisma.$executeRaw`
+    UPDATE "Event" e
+    SET "confirmedStartAt" = e."startAt",
+        "confirmedEndAt" = e."endAt",
+        "confirmedVenues" = COALESCE(
+          (SELECT array_agg(v."name" || ' — ' || v."location" ORDER BY b."createdAt")
+           FROM "Booking" b JOIN "Venue" v ON v."id" = b."venueId"
+           WHERE b."eventId" = e."id" AND b."status" = 'APPROVED'),
+          ARRAY[]::TEXT[])
+    WHERE e."status" = 'CONFIRMED'`;
+}
+
 // ---------------------------------------------------------------------------
 // Equipment requests and reservations — SCRUM-27/28/31.
 // ---------------------------------------------------------------------------
@@ -926,6 +951,7 @@ async function main() {
   const equipUnavail = await seedEquipmentUnavailability();
   const events = await seedEvents();
   const bookings = await seedBookings();
+  await seedConfirmedDetails();
   const eq = await seedEquipmentRequests();
   const reservations = await seedReservations();
   const registrations = await seedRegistrations();
