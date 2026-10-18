@@ -67,12 +67,12 @@ SCRUM-128, which isn't on `main` yet (TC-171-09).
 |---|---|
 | Test Case ID | TC-171-04 |
 | Test Scenario | [Positive] AC 3: a request made before this story keeps its registration answer, shown next to the new field |
-| Pre-conditions | An event with no Registration needed answer and the registration note "Walk-in, no sign-up needed". |
+| Pre-conditions | An event Under Review with its Coordinator, no Registration needed answer and the registration note "Walk-in, no sign-up needed". |
 | Test Steps | 1. Open its details as its Organiser. <br> 2. As its Coordinator, open Edit details. |
 | Test Data | `organiser@test.local`, `coordinator@test.local` |
 | Expected Result | 1: "Registration Needed: Not answered", with "Registration Notes: Walk-in, no sign-up needed" beside it. 2: neither Yes nor No is chosen, and the note is there to keep. |
 
-**Automated by:** `tests/unit/registration-state.test.ts` › "SCRUM-171 [AC3] TC-171-04: …"; `e2e/registration-needed.spec.ts` › "SCRUM-171 [AC3] TC-171-04: …" (step 1). Step 2 is manual.
+**Automated by:** `tests/unit/registration-state.test.ts` › "SCRUM-171 [AC3] TC-171-04: …"; `e2e/registration-needed.spec.ts` › "SCRUM-171 [AC3] TC-171-04: …" (both steps).
 
 ### TC-171-05
 
