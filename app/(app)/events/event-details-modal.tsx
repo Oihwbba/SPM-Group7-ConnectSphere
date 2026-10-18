@@ -19,6 +19,7 @@ import { ReconsiderationPanel } from "@/components/events/reconsideration-panel"
 import { CancelEvent } from "@/components/events/cancel-event";
 import { CANCELLABLE } from "@/lib/event-closing";
 import { ConfirmedArrangements } from "@/components/events/confirmed-arrangements";
+import { CurrentCoordinator } from "@/components/events/current-coordinator";
 import { RegistrationListPanel } from "@/components/events/registration-list-panel";
 import { RegistrationControl } from "@/components/events/registration-control";
 import {
@@ -138,6 +139,11 @@ export function EventDetailsModal({
                   {event.description || "—"}
                 </p>
               </div>
+              {/* SCRUM-21 AC8: who coordinates it now */}
+              <CurrentCoordinator
+                key={event.coordinatorId ?? "none"}
+                eventId={event.id}
+              />
                         </CardContent>
           </Card>
 

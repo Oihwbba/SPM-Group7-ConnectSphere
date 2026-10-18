@@ -114,3 +114,19 @@ export async function getEventArrangements(
   if (!arrangements) return err("Event not found.");
   return ok(arrangements);
 }
+
+/**
+ * SCRUM-21 AC8 — the name of the event's current Coordinator, or null while
+ * it has none, for its Organiser and Coordinator.
+ */
+export async function getEventCoordinator(
+  eventId: string,
+): Promise<ActionResult<{ name: string | null }>> {
+  if (!(await relatedEvent(eventId))) return err("Event not found.");
+
+  const event = await prisma.event.findUnique({
+    where: { id: eventId },
+    select: { coordinator: { select: { name: true } } },
+  });
+  return ok({ name: event?.coordinator?.name ?? null });
+}
