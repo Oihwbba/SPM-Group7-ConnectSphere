@@ -59,7 +59,7 @@ request.
 | `submitEventRequest` | The Organiser submits a request; a Coordinator is assigned automatically (SCRUM-13, 14, 20). | `event:create` | `submitEventRequestSchema` (lib/schemas/event.ts) | AuditLog, Event, Notification | Event row, advisory lock while a Coordinator is picked |
 | `getFormCatalogues` | The venue and equipment suggestions the request form offers, and the accessibility features and layouts venues have, Venue Staff's own included (SCRUM-13, SCRUM-34 AC6). | `event:create` | none | nothing (read only) | — |
 | `transitionEventStatus` | A Coordinator approves or rejects a request (SCRUM-19, 24). | `event:review` | `statusTransitionSchema` (same file) | AuditLog, ClarificationRequest, Event | — |
-| `confirmEvent` | The assigned Coordinator confirms a Planning event whose checklist is complete (SCRUM-81). | `event:confirm` | `confirmEventSchema` (same file) | AuditLog, Event | Event row |
+| `confirmEvent` | The assigned Coordinator confirms a Planning event whose checklist is complete (SCRUM-81). Records the date, time and every approved venue as what Attendees were last told; confirmed again with any of them changed, each Attendee still registered is told once (SCRUM-85 AC2). | `event:confirm` | `confirmEventSchema` (same file) | AuditLog, Event, Notification | Event row |
 | `startRequestFromRejected` | The Organiser starts a new Draft from a request rejected as needing a new submission (SCRUM-126). | `event:create` | `startRequestFromRejectedSchema` (same file) | AuditLog, Event | Event row |
 | `discardDraftEvent` | The Organiser discards a Draft (SCRUM-130). | `event:discard` | `discardDraftSchema` (same file) | AuditLog, Event | — |
 | `rejectPlanningEvent` | The assigned Coordinator rejects a Planning event that can't be fulfilled, releasing its arrangements (SCRUM-117). | `event:reject` | `rejectPlanningEventSchema` (same file) | AuditLog, Booking, EquipmentRequest, EquipmentRequestUpdate, Event, EventChangeRequest, Notification, Reservation | Event row |
@@ -111,7 +111,7 @@ request.
 
 | Action | What it does | Permission | Input | Writes | Locks |
 |---|---|---|---|---|---|
-| `registerForEvent` | An Attendee registers for a Confirmed event with places left (SCRUM-73, 74). An event whose Registration needed is No is refused as not open (SCRUM-171 AC4). | `registration:create` | `registerForEventSchema` (lib/schemas/registration.ts) | Registration | Event row |
+| `registerForEvent` | An Attendee registers for a Confirmed event with places left (SCRUM-73, 74). An event whose Registration needed is No is refused as not open (SCRUM-171 AC4). The Attendee gets one notification confirming it (SCRUM-85 AC1). | `registration:create` | `registerForEventSchema` (lib/schemas/registration.ts) | Notification, Registration | Event row |
 | `withdrawRegistration` | An Attendee withdraws their registration (SCRUM-74, 77). | `registration:withdraw` | `withdrawRegistrationSchema` (lib/schemas/registration.ts) | Registration | Event row |
 
 ## `app/(app)/events/registration-control-actions.ts`
