@@ -134,7 +134,7 @@ the open pull requests that change the same test files have merged.
 | [SCRUM-37](SCRUM-37.md) | Caylern Goh | 7 | Every case automated |
 | [SCRUM-38](SCRUM-38.md) | Felicia Or | 20 | Every case automated (unit, integration for occupied periods and opening hours against real rows, e2e for the journeys) |
 | [SCRUM-40](SCRUM-40.md) | Felicia Or | 11 | Every case automated (unit, integration for the one-per-event judgement and the advisory rule, e2e for the journey and the venue detail view); the search-results half of AC 1–AC 4 and AC 7 is SCRUM-38's TC-38-09 |
-| [SCRUM-41](SCRUM-41.md) | Jin Hong | 17 | Every case automated (unit, integration for the lock, index and rejection, e2e for both journeys); AC 8's cancellation half waits for SCRUM-82 |
+| [SCRUM-41](SCRUM-41.md) | Jin Hong | 18 | Every case automated (unit, integration for the lock, index and rejection, e2e for both journeys); AC 8's cancellation half is SCRUM-82's TC-82-04 |
 | [SCRUM-45](SCRUM-45.md) | Jin Hong | 8 | Every case automated; the triggers of unbuilt stories (AC 5–7, 9, 10 and the Lead's assignment) are listed as still to do |
 | [SCRUM-48](SCRUM-48.md) | Jin Hong | 15 | Every case automated except TC-48-08 and TC-48-10, blocked by SCRUM-166 and SCRUM-121 |
 | [SCRUM-50](SCRUM-50.md) | Caylern Goh | 15 | Every case automated |
@@ -147,14 +147,14 @@ the open pull requests that change the same test files have merged.
 | [SCRUM-126](SCRUM-126.md) | Jun Bin | 10 | Every case automated (unit, integration for the constraint, migration and simultaneous clicks, e2e for the journey) |
 | [SCRUM-130](SCRUM-130.md) | Felicia Or | 12 | Every case automated (unit, integration, e2e) |
 | [SCRUM-117](SCRUM-117.md) | Jun Bin | 10 | Every case automated (unit, integration for releasing arrangements in one transaction, e2e for both journeys) |
-| [SCRUM-163](SCRUM-163.md) | Jin Hong | 17 | Every case automated; TC-163-13's cancel half waits for SCRUM-82 |
+| [SCRUM-163](SCRUM-163.md) | Jin Hong | 17 | Every case automated; TC-163-13's cancel and flag halves are SCRUM-82's and SCRUM-161's tests |
 | [SCRUM-142](SCRUM-142.md) | Jin Hong | 18 | Every case automated (unit, integration for what each change writes and two withdrawals at once, e2e for the Coordinator's journeys) |
 | [SCRUM-191](SCRUM-191.md) | Jin Hong | 6 | A Bug task: the suites that raced each other, and the docs; automated except TC-191-06, a documentation check |
 | [SCRUM-155](SCRUM-155.md) | Jin Hong | 16 | Every case automated (unit, integration for all-or-nothing and the races, e2e for the journey) |
 | [SCRUM-156](SCRUM-156.md) | Jin Hong | 8 | Every case automated; TC-155-16 retired and the SCRUM-31 reserve cases mapped to SCRUM-155 |
 | [SCRUM-161](SCRUM-161.md) | Felicia Or | 16 | Every current case automated; TC-161-08 to TC-161-11 retired with former AC 5 and AC 6; supersedes TC-37-05 step 1 and TC-37-06 |
 | [SCRUM-159](SCRUM-159.md) | Jun Bin | 17 | Every case automated (unit, integration for the database's range and the simultaneous approvals, e2e for the calendar and the request form); AC 1's form is SCRUM-34's and AC 3's search SCRUM-38's |
-| [SCRUM-171](SCRUM-171.md) | Felicia Or | 10 | Automated (unit, integration for registering and editing against real rows, e2e for browsing and an older request) except TC-171-09, AC 5's change-request half, which waits for SCRUM-128 |
+| [SCRUM-171](SCRUM-171.md) | Felicia Or | 10 | Every case automated (unit, integration for registering, editing and the change-request decision against real rows, e2e for browsing and an older request) |
 | [SCRUM-172](SCRUM-172.md) | Jin Hong | 20 | Integration and unit; TC-172-15 step 3 is manual, and TC-172-16 is the whole suite |
 | [SCRUM-26](SCRUM-26.md) | Jun Bin | 15 | Every case automated (unit, integration for blocking, Still stands against real unavailability and simultaneous cancels, e2e for the journey); AC 1's warning screen is SCRUM-25's |
 | [SCRUM-70](SCRUM-70.md) | Hann Qian | 10 | Every case automated (unit for each role and the counts, e2e for the Organiser's and the Coordinator's view); AC 6 points to the withdraw action's not-found test |
