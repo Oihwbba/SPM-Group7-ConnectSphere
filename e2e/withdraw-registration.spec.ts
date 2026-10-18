@@ -22,7 +22,7 @@ async function signIn(page: Page, email: string) {
 test.describe("SCRUM-77 — Withdraw my registration", () => {
   test.skip(!usesLocalDatabase, "writes its own events; local database only");
 
-  let eventId: string;
+  let eventId = "";
   let eventName: string;
 
   async function createEventWithAmir(startAt: Date) {
@@ -49,10 +49,13 @@ test.describe("SCRUM-77 — Withdraw my registration", () => {
   }
 
   test.afterEach(async () => {
+    // An undefined filter matches every row, so never clean up without an id.
+    if (!eventId) return;
     await prisma.registration.deleteMany({ where: { eventId } });
     await prisma.notification.deleteMany({ where: { eventId } });
     await prisma.auditLog.deleteMany({ where: { entityId: eventId } });
     await prisma.event.deleteMany({ where: { id: eventId } });
+    eventId = "";
   });
 
   test("SCRUM-77 [AC1, AC4, AC7] TC-77-01, TC-77-06, TC-77-09: a withdrawal shows at once to me and in the Organiser's and Coordinator's registration views", async ({
