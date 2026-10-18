@@ -112,7 +112,7 @@ request.
 | Action | What it does | Permission | Input | Writes | Locks |
 |---|---|---|---|---|---|
 | `registerForEvent` | An Attendee registers for a Confirmed event with places left (SCRUM-73, 74). An event whose Registration needed is No is refused as not open (SCRUM-171 AC4). The Attendee gets one notification confirming it (SCRUM-85 AC1). | `registration:create` | `registerForEventSchema` (lib/schemas/registration.ts) | Notification, Registration | Event row |
-| `withdrawRegistration` | An Attendee withdraws their registration (SCRUM-74, 77). | `registration:withdraw` | `withdrawRegistrationSchema` (lib/schemas/registration.ts) | Registration | Event row |
+| `withdrawRegistration` | An Attendee withdraws their registration (SCRUM-74, 77); refused at or after the event's start (SCRUM-77 AC3), and each withdrawal is recorded in the event's history (SCRUM-77 AC6). Withdrawing from a full event tells the Organiser and the Coordinator (SCRUM-45 AC11). | `registration:withdraw` | `withdrawRegistrationSchema` (lib/schemas/registration.ts) | AuditLog, Notification, Registration | Event row |
 
 ## `app/(app)/events/registration-control-actions.ts`
 
