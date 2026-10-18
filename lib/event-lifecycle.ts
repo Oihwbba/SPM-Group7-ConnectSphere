@@ -40,14 +40,14 @@ export const EVENT_STATUS_LABEL: Record<EventStatus, string> = {
  *   AC13).
  * - Completed and Cancelled are final (AC13).
  * - Approved is never a resting status (AC12). A row left Approved from before
- *   approval moved straight to Planning may still go on to Planning or be
- *   cancelled, so it isn't stranded.
+ *   approval moved straight to Planning can still be cancelled, so it isn't
+ *   stuck holding its arrangements; no action moves it on to Planning.
  */
 const NEXT: Record<EventStatus, readonly EventStatus[]> = {
   DRAFT: ["SUBMITTED"],
   SUBMITTED: ["UNDER_REVIEW"],
   UNDER_REVIEW: ["PLANNING", "REJECTED", "CANCELLED"],
-  APPROVED: ["PLANNING", "CANCELLED"],
+  APPROVED: ["CANCELLED"],
   PLANNING: ["CONFIRMED", "REJECTED", "CANCELLED"],
   CONFIRMED: ["PLANNING", "CANCELLED", "COMPLETED"],
   REJECTED: ["SUBMITTED"],

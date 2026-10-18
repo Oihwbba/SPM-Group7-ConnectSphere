@@ -61,7 +61,7 @@ describe("canTransition — SCRUM-135", () => {
   it("SCRUM-135 [AC11] TC-135-11: every pair not in the table is refused", () => {
     const allowed = new Set(ALLOWED.map(([from, to]) => `${from}>${to}`));
     // The legacy Approved row may still move on (see lib/event-lifecycle.ts).
-    allowed.add("APPROVED>PLANNING").add("APPROVED>CANCELLED");
+    allowed.add("APPROVED>CANCELLED");
     for (const from of ALL) {
       for (const to of ALL) {
         if (from === "REJECTED" && to === "SUBMITTED") continue;

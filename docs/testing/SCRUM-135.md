@@ -106,7 +106,7 @@ every action asks it.
 | Pre-conditions | — |
 | Test Steps | Read the statuses an event can be cancelled from. |
 | Test Data | — |
-| Expected Result | Under Review, Planning and Confirmed (and a row left Approved from before approval moved straight to Planning, so it isn't stranded). The **Cancel event** button uses the same list. |
+| Expected Result | Under Review, Planning and Confirmed (and a row left Approved from before approval moved straight to Planning, so it isn't stuck holding its arrangements; nothing moves it on to Planning). The **Cancel event** button uses the same list. |
 
 **Automated by:** `tests/unit/event-lifecycle.test.ts` › "SCRUM-135 [AC9] TC-135-09: …"; `tests/unit/cancel-event.test.ts` › "SCRUM-82 [AC1] TC-82-01: …"
 
@@ -134,7 +134,7 @@ every action asks it.
 | Test Data | — |
 | Expected Result | It is Planning, with history entries for the approval and the move. No transition leads into Approved. |
 
-**Automated by:** `tests/unit/event-lifecycle.test.ts` › "SCRUM-135 [AC12] TC-135-12: …"; `tests/unit/event-status.test.ts` › "SCRUM-81 [AC1, AC2] TC-81-01: …"
+**Automated by:** `tests/unit/event-lifecycle.test.ts` › "SCRUM-135 [AC12] TC-135-12: …"; `tests/unit/event-status.test.ts` › "SCRUM-81 [AC1] TC-81-01: approving an assigned request moves it to Planning, recording who approved it and when"
 
 ### TC-135-13
 

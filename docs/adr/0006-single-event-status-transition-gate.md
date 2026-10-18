@@ -141,8 +141,9 @@ and SCRUM-108 AC11 had allowed).
    was ever Confirmed or has registrations (SCRUM-117, SCRUM-82 AC5) are still
    checked where they were. The table answers only "is this move allowed".
 4. **Approved stays in the enum** as a history value (AC12). A row left
-   Approved from before approval moved straight to Planning may still go on to
-   Planning or be cancelled, so it isn't stranded.
+   Approved from before approval moved straight to Planning can still be
+   cancelled, so it isn't stuck holding its arrangements. No action moves it
+   on to Planning, so the table doesn't offer that move either.
 
 ### Alternatives rejected
 

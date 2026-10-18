@@ -64,6 +64,8 @@ test.describe("SCRUM-69 — View only the events assigned to me", () => {
   });
 
   test.afterEach(async () => {
+    // Approving notifies the seeded Organiser; their list is shared by other specs.
+    await prisma.notification.deleteMany({ where: { eventId: { in: ids } } });
     await prisma.auditLog.deleteMany({ where: { entityId: { in: ids } } });
     await prisma.event.deleteMany({ where: { id: { in: ids } } });
     ids.length = 0;
