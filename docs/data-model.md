@@ -62,9 +62,9 @@ Officer**, who reviews an event's arrangements before it can be confirmed
 (SCRUM-166) and records the safety check's outcome: Approved, Changes
 requested or Rejected. Neither can confirm, plan or edit an event, nor approve or reject an
 event request, which is the Coordinator's decision (SCRUM-19); the Safety
-Officer's approval doesn't confirm the event (SCRUM-166 AC14). Until those
-stories land, each may only read its own notifications (`ROLE_ACTIONS` in
-`lib/auth/can.ts`), and no seeded account holds either role.
+Officer's approval doesn't confirm the event (SCRUM-166 AC14). Both are built (the Lead's queue
+in SCRUM-165, the safety check in SCRUM-166; reassignment is SCRUM-21), and
+two accounts of each are seeded.
 
 ### Event lifecycle
 
