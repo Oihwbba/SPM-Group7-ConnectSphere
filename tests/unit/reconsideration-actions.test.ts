@@ -135,6 +135,7 @@ function expectNothingWritten() {
   expect(tx.event.update).not.toHaveBeenCalled();
   expect(tx.auditLog.create).not.toHaveBeenCalled();
   expect(tx.safetyCheck.updateMany).not.toHaveBeenCalled();
+  expect(tx.notification.createMany).not.toHaveBeenCalled();
 }
 
 const resolvedBy = {

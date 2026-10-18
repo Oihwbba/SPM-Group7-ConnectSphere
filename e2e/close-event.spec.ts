@@ -141,5 +141,21 @@ test.describe("SCRUM-82 — Close an event", () => {
     expect((await prisma.event.findUniqueOrThrow({ where: { id: finishedId } })).status).toBe(
       "COMPLETED",
     );
+
+    // SCRUM-45 AC7: its Coordinator and its Organiser are each told, once, in
+    // their own list.
+    for (const [email, landing] of [
+      ["coordinator@test.local", "/events"],
+      ["organiser@test.local", "/events"],
+    ]) {
+      await signIn(page, email, landing);
+      await page.goto("/notifications");
+      await expect(
+        page
+          .getByTestId("notification")
+          .filter({ hasText: "Event completed" })
+          .filter({ hasText: finished }),
+      ).toHaveCount(1);
+    }
   });
 });

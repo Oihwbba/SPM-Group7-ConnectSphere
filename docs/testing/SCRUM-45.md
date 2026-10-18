@@ -27,8 +27,8 @@ registration-closed notice written ahead in TC-45-07 (SCRUM-82's TC-82-04).
 | [TC-45-06](#tc-45-06) | Positive, Boundary | AC 11, AC 13 | Unit, integration |
 | [TC-45-07](#tc-45-07) | Positive | AC 11 | Unit, integration |
 | [TC-45-08](#tc-45-08) | Positive, Negative | AC 12, AC 13 | Unit |
-| [TC-45-09](#tc-45-09) | Positive, Negative | AC 5, AC 12, AC 13 | Unit, integration |
-| [TC-45-10](#tc-45-10) | Positive, Negative | AC 7, AC 12, AC 13 | Unit, integration |
+| [TC-45-09](#tc-45-09) | Positive, Negative | AC 5, AC 12, AC 13 | Unit, integration, e2e |
+| [TC-45-10](#tc-45-10) | Positive, Negative | AC 7, AC 12, AC 13 | Unit, integration, e2e |
 | [TC-45-11](#tc-45-11) | Positive | AC 6 | Unit, integration (SCRUM-82's) |
 | [TC-45-12](#tc-45-12) | Positive | AC 9 | Unit, integration (SCRUM-128's) |
 
@@ -48,7 +48,7 @@ construction: every notice here goes to the event's Organiser or Coordinator.
 | Test Data | — |
 | Expected Result | Step 1: the Organiser gets "Request submitted": "\"Career Fair\" was submitted and is waiting to be assigned to a Coordinator." No assignment notice is sent yet: the request waits for the Lead. Step 2: it goes straight back to its Coordinator, so no submission notice. Step 3: one submission, with one set of notices. Step 4: the Organiser and the assigned Coordinator are each told. |
 
-**Automated by:** `tests/unit/submission-queue.test.ts` › "SCRUM-45 [AC1, AC12] TC-45-01: the Organiser is told the request was submitted and is waiting to be assigned; no assignment notice is sent until the Lead assigns"; `tests/unit/lead-queue.test.ts` › "SCRUM-165 [AC5] TC-165-07: [Positive] the Coordinator and the Organiser are notified" (step 4); `tests/unit/clarification-and-amend.test.ts` › "SCRUM-108 [AC9, AC11, AC14] TC-108-05: …", "SCRUM-108 [AC11, AC14] TC-108-14: …" and "SCRUM-108 [AC12] TC-108-08: …"; `tests/integration/concurrency.test.ts` › "SCRUM-14 AC: two simultaneous submissions of one draft succeed once and notify once"
+**Automated by:** `tests/unit/submission-queue.test.ts` › "SCRUM-45 [AC1, AC12] TC-45-01: the Organiser is told the request was submitted and is waiting to be assigned; no assignment notice is sent until the Lead assigns"; `tests/unit/lead-queue.test.ts` › "SCRUM-165 [AC5] TC-165-07: [Positive] the Coordinator and the Organiser are notified" (step 4); `tests/unit/clarification-and-amend.test.ts` › "SCRUM-108 [AC9, AC11, AC14] TC-108-05, SCRUM-165 [AC9] TC-165-12: the amended request goes back to the same Coordinator, and the resubmission is recorded", "SCRUM-108 [AC14] TC-108-14, SCRUM-165 [AC9] TC-165-12: when its Coordinator lost the role, the resubmitted request returns to the queue and the history records who held it" and "SCRUM-108 [AC12] TC-108-08: …"; `tests/integration/concurrency.test.ts` › "SCRUM-14 AC: two simultaneous submissions of one draft succeed once and notify once"
 
 ### TC-45-02
 
@@ -152,7 +152,7 @@ construction: every notice here goes to the event's Organiser or Coordinator.
 | Test Data | Expected attendance 40 → 60 |
 | Expected Result | Step 1: the Organiser gets "Your event is back in Planning": '"[event]" is back in Planning: a change to Expected attendance was approved. It needs confirming again before new registrations open.' Step 2: the same title, "its Coordinator cancelled a venue booking that needed reconsideration" (or "equipment", for a reservation). Each is written once, with the status change. Step 3: it isn't Confirmed, so no such notice. |
 
-**Automated by:** `tests/unit/change-decision.test.ts` › "SCRUM-45 [AC5, AC12] TC-45-09: back in Planning, the Organiser is told why" and `tests/unit/change-decision.test.ts` › "SCRUM-128 [AC6] TC-128-05, SCRUM-45 [AC5] TC-45-09: an impactful change to an event Under Review or in Planning keeps its status, and sends no back-in-Planning notice"; `tests/unit/reconsideration-actions.test.ts` › "SCRUM-45 [AC5, AC12] TC-45-09: cancelling a flagged %s of a Confirmed event tells its Organiser why it is back in Planning"; `tests/integration/workflow-notifications.test.ts` › "SCRUM-45 [AC5, AC12, AC13] TC-45-09: an approved change that returns a Confirmed event to Planning tells its Organiser once, with the reason" and `tests/integration/workflow-notifications.test.ts` › "SCRUM-45 [AC5, AC12, AC13] TC-45-09: cancelling a flagged booking of a Confirmed event tells its Organiser once why it is back in Planning"
+**Automated by:** `tests/unit/change-decision.test.ts` › "SCRUM-45 [AC5, AC12] TC-45-09: back in Planning, the Organiser is told why" and `tests/unit/change-decision.test.ts` › "SCRUM-128 [AC6] TC-128-05, SCRUM-45 [AC5] TC-45-09: an impactful change to an event Under Review or in Planning keeps its status, and sends no back-in-Planning notice"; `tests/unit/reconsideration-actions.test.ts` › "SCRUM-45 [AC5, AC12] TC-45-09: cancelling a flagged %s of a Confirmed event tells its Organiser why it is back in Planning"; `tests/integration/workflow-notifications.test.ts` › "SCRUM-45 [AC5, AC12, AC13] TC-45-09: an approved change that returns a Confirmed event to Planning tells its Organiser once, with the reason" and `tests/integration/workflow-notifications.test.ts` › "SCRUM-45 [AC5, AC12, AC13] TC-45-09: cancelling a flagged booking of a Confirmed event tells its Organiser once why it is back in Planning"; `e2e/change-decision.spec.ts` › "SCRUM-128 [AC1, AC2, AC4, AC5] TC-128-13: the Coordinator sees the current and requested values and what's affected, approves, and the Confirmed event returns to Planning with its booking flagged" (the Organiser's own list, step 1)
 
 ### TC-45-10
 
@@ -165,7 +165,7 @@ construction: every notice here goes to the event's Organiser or Coordinator.
 | Test Data | — |
 | Expected Result | Step 1: the Organiser and the Coordinator each get "Event completed": '"[event]" has ended and is now Completed.' The event with no Coordinator tells only its Organiser. Step 2: still one each. Step 3: nothing more. |
 
-**Automated by:** `tests/unit/event-closing.test.ts` › "SCRUM-45 [AC7, AC12, AC13] TC-45-10: each completed event tells its Organiser and Coordinator once, naming the event" and `tests/unit/event-closing.test.ts` › "SCRUM-82 [AC8] TC-82-10, SCRUM-45 [AC13] TC-45-10: when nothing has finished, or it was already completed, nothing is written and nobody is told"; `tests/integration/close-event.test.ts` › "SCRUM-82 [AC7, AC8, AC9] TC-82-10: a finished Confirmed event completes once, even when two pages load at the same moment; at its end time it is still Confirmed, and a Cancelled one never completes" (one notice each, with two pages at once)
+**Automated by:** `tests/unit/event-closing.test.ts` › "SCRUM-45 [AC7, AC12, AC13] TC-45-10: each completed event tells its Organiser and Coordinator once, naming the event" and `tests/unit/event-closing.test.ts` › "SCRUM-82 [AC8] TC-82-10, SCRUM-45 [AC13] TC-45-10: when nothing has finished, or it was already completed, nothing is written and nobody is told"; `tests/integration/close-event.test.ts` › "SCRUM-82 [AC7, AC8, AC9] TC-82-10: a finished Confirmed event completes once, even when two pages load at the same moment; at its end time it is still Confirmed, and a Cancelled one never completes" (one notice each, with two pages at once); `e2e/close-event.spec.ts` › "SCRUM-82 [AC7, AC10] TC-82-13: a request whose start has passed is marked Overdue for the Coordinator, and a finished Confirmed event reads as Completed" (each one's own list)
 
 ### TC-45-11
 

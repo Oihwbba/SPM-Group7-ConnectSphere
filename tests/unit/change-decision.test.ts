@@ -102,6 +102,7 @@ function expectNothingWritten() {
   expect(tx.eventChangeRequest.update).not.toHaveBeenCalled();
   expect(tx.auditLog.create).not.toHaveBeenCalled();
   expect(tx.notification.create).not.toHaveBeenCalled();
+  expect(tx.notification.createMany).not.toHaveBeenCalled();
   expect(mockFlag).not.toHaveBeenCalled();
   expect(mockCancel).not.toHaveBeenCalled();
 }
