@@ -61,6 +61,11 @@ const NAV_ROUTES: NavRoute[] = [
     href: "/safety-checks",
     label: "Safety Checks",
   },
+  // SCRUM-165: the Lead's queue of requests waiting for a Coordinator.
+  { action: "event:assign", href: "/queue", label: "Unassigned Queue" },
+  // SCRUM-141: every event, read-only, for planning. After the queue so the
+  // Lead still lands there, and after each role's own first page.
+  { action: "event:view-all", href: "/all-events", label: "All Events" },
   {
     action: "registration:read",
     href: "/registrations",
