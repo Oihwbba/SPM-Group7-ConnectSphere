@@ -19,7 +19,7 @@ otherwise. Every account's password is `Password123!`.
 | [TC-21-04](#tc-21-04) | Boundary | AC 3 | Unit |
 | [TC-21-05](#tc-21-05) | Negative | AC 4 | Unit, e2e |
 | [TC-21-06](#tc-21-06) | Positive | AC 5 | Unit, e2e |
-| [TC-21-07](#tc-21-07) | Positive | AC 6 | Unit, integration |
+| [TC-21-07](#tc-21-07) | Positive | AC 6 | Unit, integration, e2e |
 | [TC-21-08](#tc-21-08) | Positive | AC 8 | Unit, e2e |
 | [TC-21-09](#tc-21-09) | Negative | AC 10 | Unit |
 | [TC-21-10](#tc-21-10) | Negative | AC 3 | Unit |
@@ -35,7 +35,7 @@ otherwise. Every account's password is `Password123!`.
 | Test Data | — |
 | Expected Result | "Reassigned to Cara Coordinator." The page shows Cara as the Coordinator, with no acceptance step. The event's history records REASSIGNED by the Lead, from Cody to Cara, with the time. The Lead becomes the event's supervising Lead. |
 
-**Automated by:** `tests/unit/reassign.test.ts` › "SCRUM-21 [AC1] TC-21-01: the Lead may reassign a %s event that has a Coordinator" (3 tests) and "SCRUM-21 [AC1, AC7] TC-21-01: the new Coordinator is assigned at once, …"; `tests/unit/all-events.test.ts` › "SCRUM-21 [AC1, AC3] TC-21-01, TC-21-03: …"; `e2e/reassign.spec.ts` › "SCRUM-21 [AC1, AC5, AC8] TC-21-01, TC-21-06, TC-21-08: …"
+**Automated by:** `tests/unit/reassign.test.ts` › "SCRUM-21 [AC1] TC-21-01: the Lead may reassign a %s event that has a Coordinator" (3 tests) and "SCRUM-21 [AC1, AC7] TC-21-01: the new Coordinator is assigned at once, …"; `tests/unit/all-events.test.ts` › "SCRUM-21 [AC1, AC3] TC-21-01, TC-21-03: …"; `e2e/reassign.spec.ts` › "SCRUM-21 [AC1, AC5, AC6, AC8] TC-21-01, TC-21-06, TC-21-07, TC-21-08: …"
 
 ### TC-21-02
 
@@ -113,7 +113,7 @@ otherwise. Every account's password is `Password123!`.
 | Test Data | — |
 | Expected Result | One "reassigned" notice each: Cara's says the event is now hers; Cody's says it went to Cara and he can still view it from All Events; Olivia's names Cara. |
 
-**Automated by:** `tests/unit/reassign.test.ts` › "SCRUM-21 [AC6] TC-21-07: …"; `tests/integration/reassign.test.ts` › "… TC-21-02 …" (three notices for the one saved reassignment)
+**Automated by:** `tests/unit/reassign.test.ts` › "SCRUM-21 [AC6] TC-21-07: …"; `tests/integration/reassign.test.ts` › "… TC-21-02 …" (three notices for the one saved reassignment); `e2e/reassign.spec.ts` › "… TC-21-07 …" (each sees theirs in Notifications)
 
 ### TC-21-08
 

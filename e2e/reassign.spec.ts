@@ -33,7 +33,7 @@ test.describe("SCRUM-21 — Reassign an event to another Coordinator", () => {
     if (usesLocalDatabase) await removeTestEvents();
   });
 
-  test("SCRUM-21 [AC1, AC5, AC8] TC-21-01, TC-21-06, TC-21-08: the Lead reassigns an event at once; the previous Coordinator can only view it, and the Organiser sees the new Coordinator", async ({
+  test("SCRUM-21 [AC1, AC5, AC6, AC8] TC-21-01, TC-21-06, TC-21-07, TC-21-08: the Lead reassigns an event at once; the previous Coordinator can only view it, and the Organiser sees the new Coordinator", async ({
     browser,
   }) => {
     const event = await prisma.event.create({
@@ -93,6 +93,18 @@ test.describe("SCRUM-21 — Reassign an event to another Coordinator", () => {
     await expect(
       organiser.getByRole("dialog").getByTestId("current-coordinator"),
     ).toContainText("Cara Coordinator");
+
+    // AC6: the Organiser and both Coordinators are told.
+    for (const [page, title] of [
+      [organiser, "Your event has a new coordinator"],
+      [cody, "An event was reassigned"],
+      [await signedIn(browser, "coordinator2@test.local"), "An event was reassigned to you"],
+    ] as const) {
+      await page.goto("/notifications");
+      await expect(
+        page.getByTestId("notification").filter({ hasText: event.name }),
+      ).toContainText(title);
+    }
   });
 
   test("SCRUM-21 [AC4] TC-21-05: Reassign isn't offered for a Submitted request", async ({
