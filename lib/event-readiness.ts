@@ -21,14 +21,29 @@ export interface ChecklistItem {
   state: string;
   /** Internal detail, such as why Venue Staff rejected the booking. Hidden from the Organiser. */
   reason: string | null;
-  /** SCRUM-163 AC3: the live hold the Coordinator can confirm or release. */
-  heldBookingId?: string;
-  /** SCRUM-163 AC3, AC7: whether Venue Staff have approved that hold, which the Coordinator may confirm only then. */
-  holdApproved?: boolean;
-  /** SCRUM-142 AC4: the pending venue request the Coordinator can withdraw. */
-  pendingBookingId?: string;
+  /** SCRUM-162 AC8: the Venue booking item lists each live booking. */
+  bookings?: VenueBookingLine[];
   /** SCRUM-170 AC4: no live equipment request, so No equipment needed can be recorded. */
   noEquipmentOffered?: boolean;
+}
+
+/** SCRUM-162 AC8 — one Pending, Held or Approved booking of the event. */
+export interface VenueBookingLine {
+  id: string;
+  venueName: string;
+  attendance: number | null;
+  /** "Approved", "Approved for a different time", "Held until … – confirm to secure", "Pending", "Needs reconsideration" */
+  state: string;
+  /** Approved for the event's whole period and not flagged. */
+  complete: boolean;
+  /** The flag's reason. Hidden from the Organiser. */
+  reason: string | null;
+  /** SCRUM-163 AC3: a live hold, which the Coordinator can confirm or release. */
+  held: boolean;
+  /** SCRUM-163 AC3, AC7: Venue Staff approved the hold, so it can be confirmed. */
+  holdApproved: boolean;
+  /** SCRUM-142 AC4: a pending request, which the Coordinator can withdraw. */
+  pending: boolean;
 }
 
 export interface ReadinessChecklist {
@@ -68,6 +83,8 @@ export async function getReadinessChecklist(
           endAt: true,
           needsReconsideration: true,
           reconsiderationReason: true,
+          requestedAttendance: true,
+          venue: { select: { name: true } },
         },
       },
       equipmentRequests: {
@@ -149,10 +166,48 @@ type BookingRow = {
   endAt: Date;
   needsReconsideration: boolean;
   reconsiderationReason: string | null;
+  requestedAttendance: number | null;
+  venue: { name: string };
 };
 
 /** SCRUM-26 AC12: the flag's own state, with its reason for the Coordinator. */
 const NEEDS_RECONSIDERATION = "Needs reconsideration";
+
+/**
+ * SCRUM-162 AC8 — one live booking as the checklist lists it. A flag
+ * outranks the status (SCRUM-26 AC12); a hold isn't an approval, so the
+ * Coordinator confirms it (SCRUM-163 AC6); and an approval counts only for
+ * the event's whole period, since bookings keep their own times (ADR 0003).
+ */
+function bookingLine(booking: BookingRow, event: Period): VenueBookingLine {
+  const line = {
+    id: booking.id,
+    venueName: booking.venue.name,
+    attendance: booking.requestedAttendance,
+    complete: false,
+    reason: null,
+    held: booking.status === "HELD",
+    holdApproved: booking.status === "HELD" && booking.holdApprovedAt !== null,
+    pending: booking.status === "PENDING",
+  };
+  if (booking.needsReconsideration) {
+    return {
+      ...line,
+      state: NEEDS_RECONSIDERATION,
+      reason: booking.reconsiderationReason,
+    };
+  }
+  if (booking.status === "HELD") {
+    return {
+      ...line,
+      state: `Held until ${formatDateTime(booking.holdExpiresAt!)} – confirm to secure`,
+    };
+  }
+  if (booking.status === "PENDING") return { ...line, state: "Pending" };
+  return coversEvent(booking, event)
+    ? { ...line, state: "Approved", complete: true }
+    : { ...line, state: "Approved for a different time" };
+}
 
 function venueItem(
   event: Period & { bookings: BookingRow[] },
@@ -164,51 +219,33 @@ function venueItem(
     .map((b) => ({ ...b, status: bookingStatusAt(b, now) }))
     .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
   const item = { name: "Venue booking" as const, reason: null };
-  const approved = newestFirst.filter((b) => b.status === "APPROVED");
 
-  // SCRUM-26 AC12: a flagged booking keeps the event from being confirmed
-  // until its Coordinator resolves the flag, however it otherwise stands. A
-  // flagged hold that has expired has released the venue, so it no longer
-  // counts.
-  const flagged = newestFirst.find(
-    (b) => b.needsReconsideration && FLAGGABLE_BOOKING.includes(b.status),
-  );
-  if (flagged) {
+  // SCRUM-162 AC8: every Pending, Held or Approved booking is listed, oldest
+  // first, and the item is complete only when at least one is approved and
+  // every one is an approval for the event's whole period with no flag. A
+  // flagged hold that has expired has released its venue, so it isn't listed.
+  const bookings = newestFirst
+    .filter((b) => FLAGGABLE_BOOKING.includes(b.status))
+    .reverse()
+    .map((b) => bookingLine(b, event));
+  if (bookings.length > 0) {
+    const flagged = bookings.find((b) => b.state === NEEDS_RECONSIDERATION);
+    const held = bookings.find((b) => b.held);
+    const complete = bookings.every((b) => b.complete);
+    // The item names what stands in the way first: a flag (SCRUM-26 AC12),
+    // then a hold to confirm, then a request still pending.
+    const blocker =
+      flagged ??
+      held ??
+      bookings.find((b) => b.pending) ??
+      bookings.find((b) => !b.complete);
     return {
       ...item,
-      complete: false,
-      state: NEEDS_RECONSIDERATION,
-      reason: flagged.reconsiderationReason,
+      complete,
+      state: complete ? "Approved" : blocker!.state,
+      reason: flagged?.reason ?? null,
+      bookings,
     };
-  }
-
-  // After a rejection, or after the event moves, the Coordinator books again,
-  // so the most advanced booking describes where the venue stands.
-  if (approved.some((b) => coversEvent(b, event))) {
-    return { ...item, complete: true, state: "Approved" };
-  }
-  // SCRUM-163 AC6: a hold isn't an approval; the Coordinator confirms it.
-  const held = newestFirst.find((b) => b.status === "HELD");
-  if (held) {
-    return {
-      ...item,
-      complete: false,
-      state: `Held until ${formatDateTime(held.holdExpiresAt!)} – confirm to secure`,
-      heldBookingId: held.id,
-      holdApproved: held.holdApprovedAt !== null,
-    };
-  }
-  const pending = newestFirst.find((b) => b.status === "PENDING");
-  if (pending) {
-    return {
-      ...item,
-      complete: false,
-      state: "Pending",
-      pendingBookingId: pending.id,
-    };
-  }
-  if (approved.length > 0) {
-    return { ...item, complete: false, state: "Approved for a different time" };
   }
   // SCRUM-163 AC6: an expired hold counts like a rejection, and SCRUM-26 AC9:
   // so does a cancelled booking; the newest of them describes the venue. A
@@ -360,12 +397,19 @@ export function withoutInternalReasons(
 ): ReadinessChecklist {
   return {
     ...checklist,
-    items: checklist.items.map((item) => ({ ...item, reason: null })),
+    items: checklist.items.map((item) => ({
+      ...item,
+      reason: null,
+      ...(item.bookings && {
+        bookings: item.bookings.map((booking) => ({ ...booking, reason: null })),
+      }),
+    })),
   };
 }
 
 export interface ConfirmedArrangements {
-  venue: { name: string; location: string } | null;
+  /** SCRUM-162 AC7: every venue approved for the event's time, oldest first. */
+  venues: { name: string; location: string }[];
   startAt: Date | null;
   endAt: Date | null;
   timezone: string | null;
@@ -375,8 +419,9 @@ export interface ConfirmedArrangements {
 
 /**
  * SCRUM-81 AC 6 — what a Confirmed event has secured, for its Organiser: the
- * venue approved for the event's time, the date and time, and the equipment
- * reserved for the whole event. The same whole-event rule as the checklist.
+ * venues approved for the event's time (every one, SCRUM-162 AC7), the date
+ * and time, and the equipment reserved for the whole event. The same
+ * whole-event rule as the checklist.
  */
 export async function getConfirmedArrangements(
   db: Prisma.TransactionClient | PrismaClient,
@@ -410,11 +455,10 @@ export async function getConfirmedArrangements(
   });
   if (!event) return null;
 
-  // Newest first, as in the checklist's venue item: if two approved bookings
-  // cover the event, the later one is the Coordinator's current choice.
-  const booking = [...event.bookings]
-    .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
-    .find((b) => b.status === "APPROVED" && coversEvent(b, event));
+  const venues = [...event.bookings]
+    .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
+    .filter((b) => b.status === "APPROVED" && coversEvent(b, event))
+    .map((b) => b.venue);
   const reserved = new Map<string, number>();
   for (const r of event.reservations) {
     if (r.status !== "CONFIRMED" || !coversEvent(r, event)) continue;
@@ -425,10 +469,52 @@ export async function getConfirmedArrangements(
   }
 
   return {
-    venue: booking ? booking.venue : null,
+    venues,
     startAt: event.startAt,
     endAt: event.endAt,
     timezone: event.timezone,
     equipment: [...reserved].map(([type, quantity]) => `${type} × ${quantity}`),
   };
+}
+
+export interface EventVenueBooking {
+  id: string;
+  venueName: string;
+  attendance: number | null;
+  status: BookingStatus;
+  startAt: Date;
+  endAt: Date;
+}
+
+/**
+ * SCRUM-162 AC7 — every booking of the event, oldest first, with its venue,
+ * attendance and status. A hold past its expiry reads as Expired (SCRUM-163
+ * AC4). No decision reasons, so the Organiser may see it too.
+ */
+export async function getEventVenueBookings(
+  db: Prisma.TransactionClient | PrismaClient,
+  eventId: string,
+  now = new Date(),
+): Promise<EventVenueBooking[]> {
+  const bookings = await db.booking.findMany({
+    where: { eventId },
+    orderBy: { createdAt: "asc" },
+    select: {
+      id: true,
+      status: true,
+      holdExpiresAt: true,
+      requestedAttendance: true,
+      startAt: true,
+      endAt: true,
+      venue: { select: { name: true } },
+    },
+  });
+  return bookings.map((b) => ({
+    id: b.id,
+    venueName: b.venue.name,
+    attendance: b.requestedAttendance,
+    status: bookingStatusAt(b, now),
+    startAt: b.startAt,
+    endAt: b.endAt,
+  }));
 }

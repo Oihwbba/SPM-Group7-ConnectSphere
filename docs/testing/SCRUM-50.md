@@ -5,7 +5,7 @@ Format and conventions: [README.md](README.md). The overlap rule itself is
 [lib/period.ts](../../lib/period.ts); why the database enforces it is
 [ADR 0010](../adr/0010-database-prevents-venue-double-booking.md).
 
-> **Week 7 (SCRUM-158).** AC 1 fixes the booking's attendance to the event's, AC 2–AC 4 compare bare periods, AC 8 enforces one venue per event, and AC 10 lets only an Approved booking block a venue. SCRUM-162 replaces AC 1 and AC 8 (several venues per event, attendance per booking), SCRUM-159 replaces AC 2–AC 4 (occupied periods), and SCRUM-163 changes AC 10 (a Held booking blocks too). The cases below test the behaviour as built before those stories land.
+> **Week 7 (SCRUM-158).** AC 1 fixes the booking's attendance to the event's, AC 2–AC 4 compare bare periods, AC 8 enforces one venue per event, and AC 10 lets only an Approved booking block a venue. SCRUM-162 replaces AC 1 and AC 8 (several venues per event, attendance per booking), SCRUM-159 replaces AC 2–AC 4 (occupied periods), and SCRUM-163 changes AC 10 (a Held booking blocks too). SCRUM-162 has landed: TC-50-07's "for any venue" and TC-50-15's fixed period and attendance are now its cases (TC-162-01, TC-162-02, TC-162-05 to TC-162-07).
 
 **Shared pre-conditions for every case:** the database is migrated and seeded
 (`npm run db:deploy && npm run db:seed`), the app is running, and the tester
@@ -122,13 +122,13 @@ a manual tester creates the same events, or edits an event's dates.
 | Item | Content |
 |---|---|
 | Test Case ID | TC-50-07 |
-| Test Scenario | [Negative] AC 8: each event has one venue. Given the event already has a Pending or Approved booking, for any venue, a second request creates nothing and shows the existing one. Re-keyed on 2026-10-04 after the GLM review of #128; it was keyed on the coordinator, venue and period. |
+| Test Scenario | [Negative] AC 8: each event has one venue. Given the event already has a Pending or Approved booking, for any venue, a second request creates nothing and shows the existing one. Re-keyed on 2026-10-04 after the GLM review of #128; it was keyed on the coordinator, venue and period. **Superseded by SCRUM-162 AC1, AC2:** only the same venue shows the existing request ([TC-162-02](SCRUM-162.md#tc-162-02)); another venue is a new request ([TC-162-01](SCRUM-162.md#tc-162-01)). Step 1 still holds. |
 | Pre-conditions | TC-50-01 is still pending (or has been approved). |
 | Test Steps | 1. Click **Submit request** again with the same details. <br> 2. Choose the same event with the Grand Auditorium instead, and submit. |
 | Test Data | As TC-50-01 |
 | Expected Result | "This event already has a venue request. Each event has one venue." with the existing request's venue, times and status, both times. Still one booking row for the event. Since SCRUM-172 the database's `booking_one_per_venue_per_event` constraint holds an event to one Pending, Held or Approved booking per venue, so the refusal in step 2 is the action's until SCRUM-162 lets an event book several venues. A Rejected or Cancelled one does not count (TC-50-14). |
 
-**Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-50 [AC8] TC-50-07: submitting the same request twice leaves one request and shows the existing one", "…an event with a pending booking at another venue is shown it, and no request is created", "…an event with a approved booking at another venue…" and "SCRUM-172 [AC9] TC-172-12: the database refuses a second pending, held or approved booking for one event at the same venue, but not at another"; `tests/unit/bookings.test.ts` › "SCRUM-50 [AC8] TC-50-07, SCRUM-163 [AC4] TC-163-08: an event that already has a pending, approved or unexpired held booking, for any venue, is shown it and nothing is created" and "SCRUM-50 [AC8] TC-50-07: the event's existing booking is shown even when the request differs from it"; `e2e/bookings.spec.ts` › journey
+**Automated by:** step 1, `tests/integration/bookings.test.ts` › "SCRUM-50 [AC8] TC-50-07: submitting the same request twice leaves one request and shows the existing one"; step 2 is replaced by SCRUM-162's cases.
 
 ### TC-50-08
 
@@ -226,10 +226,10 @@ a manual tester creates the same events, or edits an event's dates.
 | Item | Content |
 |---|---|
 | Test Case ID | TC-50-15 |
-| Test Scenario | [Negative, Boundary] AC 1: the period and expected attendance are the event's and cannot be edited; the period is rounded out to the half hour. Added on 2026-10-04 after the GLM review of #128. |
+| Test Scenario | [Negative, Boundary] AC 1: the period and expected attendance are the event's and cannot be edited; the period is rounded out to the half hour. Added on 2026-10-04 after the GLM review of #128. **Superseded by SCRUM-162 AC4:** both start from the event's but can be changed; the period must cover the event and the attendance is from 1 to the event's ([TC-162-05](SCRUM-162.md#tc-162-05) to [TC-162-07](SCRUM-162.md#tc-162-07)). Step 3 still holds. |
 | Pre-conditions | An event running 09:10–12:45 expecting 120. |
 | Test Steps | 1. Choose the event and try to change Start, End and Expected attendance. <br> 2. Send a request directly to the server with a different period, or a different attendance. <br> 3. Send one for an event with no dates or no expected attendance. |
 | Test Data | E2E Hall — Morning Lecture (10 Mar 2035, 09:10–12:45, 120) |
 | Expected Result | Step 1: Start reads "10 Mar 2035, 9:00 am SGT", End "10 Mar 2035, 1:00 pm SGT", attendance "120"; none can be edited. Step 2: "The requested period must be the event's: … to …." or "The expected attendance must be the event's: 120.", against that field, and nothing is written. Step 3: "This event has no dates or expected attendance yet. Set them on the event before requesting a venue." |
 
-**Automated by:** `e2e/bookings.spec.ts` › "SCRUM-50 [AC1] TC-50-15: the period and attendance are the event's, rounded out to the half hour, and cannot be edited"; `tests/unit/bookings.test.ts` › every "SCRUM-50 [AC1] TC-50-15: the period and attendance are the event's" case; `tests/unit/request-form.test.tsx` › every "SCRUM-50 [AC1] TC-50-15: eventBookingPeriod" case and "SCRUM-50 [AC1] TC-50-15: the period and attendance are shown read-only, taken from the event"; `tests/integration/bookings.test.ts` › "SCRUM-50 [AC1] TC-50-15: a period or attendance that is not the event's is refused and nothing is written"
+**Automated by:** the rounding and step 3, `tests/unit/bookings.test.ts` › "SCRUM-50 [AC1] TC-50-15: the event's period, rounded out to the half hour, is accepted" and "SCRUM-50 [AC1] TC-50-15: an event without dates or expected attendance cannot be booked yet"; `tests/unit/request-form.test.tsx` › every "SCRUM-50 [AC1] TC-50-15: eventBookingPeriod" case; `e2e/bookings.spec.ts` › "SCRUM-50 [AC1] TC-50-15, SCRUM-162 [AC4] TC-162-05, TC-162-06, TC-162-07: …". Steps 1 and 2 are replaced by SCRUM-162's cases.

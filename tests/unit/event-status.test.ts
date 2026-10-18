@@ -22,7 +22,7 @@ import {
 // unchanged. tx.user.findMany defaults to [] (no coordinators), so
 // auto-assignment is a no-op in these tests; it's covered separately in
 // tests/unit/coordinator-assignment.test.ts and
-// tests/unit/event-auto-assignment.test.ts.
+// tests/unit/submission-queue.test.ts.
 const tx = vi.hoisted(() => ({
   event: {
     findUnique: vi.fn(),
@@ -83,7 +83,7 @@ beforeEach(() => {
 });
 
 describe("transitionEventStatus — SCRUM-24 single guarded gate", () => {
-  it("SCRUM-19, SCRUM-81 [AC1, AC2] TC-81-01: a coordinator approves an unassigned submitted request, becomes its coordinator, and it moves to Planning", async () => {
+  it("SCRUM-165 [AC8] TC-165-11: a Coordinator can't approve a request nobody has been assigned to; it waits for the Lead", async () => {
     mockAuth.mockResolvedValue(sessionFor("COORDINATOR", "usr_coord"));
     mockFindUnique.mockResolvedValue(eventRow());
 
@@ -92,40 +92,13 @@ describe("transitionEventStatus — SCRUM-24 single guarded gate", () => {
       nextStatus: "APPROVED",
     });
 
-    expect(result).toEqual({ ok: true, data: { status: "PLANNING" } });
-    expect(tx.event.updateMany).toHaveBeenCalledWith({
-      where: { id: "evt1", status: "SUBMITTED", coordinatorId: null },
-      data: expect.objectContaining({
-        status: "PLANNING",
-        coordinatorId: "usr_coord",
-        decidedById: "usr_coord",
-        decisionReason: null,
-      }),
+    expect(result).toEqual({
+      ok: false,
+      error: "Event not found.",
+      fieldErrors: undefined,
     });
-    // History: the approval by the coordinator, their assignment, then the
-    // automatic move to Planning.
-    expect(tx.auditLog.create.mock.calls.map((c) => c[0].data)).toEqual([
-      expect.objectContaining({
-        entityId: "evt1",
-        action: "STATUS_CHANGED",
-        actorId: "usr_coord",
-        oldValue: "SUBMITTED",
-        newValue: "APPROVED",
-      }),
-      expect.objectContaining({
-        action: "ASSIGNED",
-        actorId: "usr_coord",
-        fieldName: "coordinatorId",
-        oldValue: null,
-        newValue: "usr_coord",
-      }),
-      expect.objectContaining({
-        action: "STATUS_CHANGED",
-        actorId: null,
-        oldValue: "APPROVED",
-        newValue: "PLANNING",
-      }),
-    ]);
+    expect(tx.event.updateMany).not.toHaveBeenCalled();
+    expect(tx.auditLog.create).not.toHaveBeenCalled();
   });
 
   it("SCRUM-81 [AC1] TC-81-01: approving an assigned request moves it to Planning, recording who approved it and when", async () => {
@@ -141,7 +114,6 @@ describe("transitionEventStatus — SCRUM-24 single guarded gate", () => {
       where: { id: "evt1", status: "UNDER_REVIEW", coordinatorId: "usr_coord" },
       data: expect.objectContaining({
         status: "PLANNING",
-        coordinatorId: "usr_coord",
         decidedById: "usr_coord",
         decidedAt: expect.any(Date),
       }),
@@ -154,7 +126,9 @@ describe("transitionEventStatus — SCRUM-24 single guarded gate", () => {
 
   it("SCRUM-18: deciding an event closes its still-OPEN clarification so a resubmitted request can be questioned again", async () => {
     mockAuth.mockResolvedValue(sessionFor("COORDINATOR", "usr_coord"));
-    mockFindUnique.mockResolvedValue(eventRow());
+    mockFindUnique.mockResolvedValue(
+      eventRow({ status: "UNDER_REVIEW", coordinatorId: "usr_coord" }),
+    );
 
     await transitionEventStatus({
       eventId: "evt1",
@@ -171,7 +145,9 @@ describe("transitionEventStatus — SCRUM-24 single guarded gate", () => {
 
   it("SCRUM-18: a lost decision race closes nothing", async () => {
     mockAuth.mockResolvedValue(sessionFor("COORDINATOR", "usr_coord"));
-    mockFindUnique.mockResolvedValue(eventRow());
+    mockFindUnique.mockResolvedValue(
+      eventRow({ status: "UNDER_REVIEW", coordinatorId: "usr_coord" }),
+    );
     tx.event.updateMany.mockResolvedValue({ count: 0 });
 
     const result = await transitionEventStatus({
@@ -204,7 +180,9 @@ describe("transitionEventStatus — SCRUM-24 single guarded gate", () => {
 
   it("SCRUM-19: a rejection records its reason", async () => {
     mockAuth.mockResolvedValue(sessionFor("COORDINATOR", "usr_coord"));
-    mockFindUnique.mockResolvedValue(eventRow());
+    mockFindUnique.mockResolvedValue(
+      eventRow({ status: "UNDER_REVIEW", coordinatorId: "usr_coord" }),
+    );
 
     const result = await transitionEventStatus({
       eventId: "evt1",
@@ -226,7 +204,9 @@ describe("transitionEventStatus — SCRUM-24 single guarded gate", () => {
 
   it("SCRUM-41 [AC8] TC-41-12: rejecting the event rejects its Submitted change request with the same reason", async () => {
     mockAuth.mockResolvedValue(sessionFor("COORDINATOR", "usr_coord"));
-    mockFindUnique.mockResolvedValue(eventRow());
+    mockFindUnique.mockResolvedValue(
+      eventRow({ status: "UNDER_REVIEW", coordinatorId: "usr_coord" }),
+    );
 
     await transitionEventStatus({
       eventId: "evt1",
@@ -248,7 +228,9 @@ describe("transitionEventStatus — SCRUM-24 single guarded gate", () => {
 
   it("SCRUM-41 [AC8] TC-41-12: approving the event leaves its change request waiting", async () => {
     mockAuth.mockResolvedValue(sessionFor("COORDINATOR", "usr_coord"));
-    mockFindUnique.mockResolvedValue(eventRow());
+    mockFindUnique.mockResolvedValue(
+      eventRow({ status: "UNDER_REVIEW", coordinatorId: "usr_coord" }),
+    );
 
     await transitionEventStatus({ eventId: "evt1", nextStatus: "APPROVED" });
 
@@ -297,7 +279,9 @@ describe("transitionEventStatus — SCRUM-24 single guarded gate", () => {
 
   it("SCRUM-24: the loser of two simultaneous decisions is told to refresh, and no audit entry is written", async () => {
     mockAuth.mockResolvedValue(sessionFor("COORDINATOR", "usr_coord"));
-    mockFindUnique.mockResolvedValue(eventRow());
+    mockFindUnique.mockResolvedValue(
+      eventRow({ status: "UNDER_REVIEW", coordinatorId: "usr_coord" }),
+    );
     // Another coordinator's decision landed first, so the conditional update matches nothing.
     tx.event.updateMany.mockResolvedValue({ count: 0 });
 

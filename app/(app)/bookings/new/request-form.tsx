@@ -44,8 +44,11 @@ import type { ActionResult } from "@/lib/action-result";
 import { cn } from "@/lib/utils";
 import { isValidPeriod } from "@/lib/period";
 import {
+  attendanceOverEventMessage,
+  coversEventPeriod,
   eventBookingPeriod,
   INVALID_PERIOD_MESSAGE,
+  notCoveringEventMessage,
   overCapacityMessage,
 } from "@/lib/schemas/booking";
 import {
@@ -174,9 +177,12 @@ const emptySubscribe = () => () => {};
 
 /**
  * SCRUM-50 — the Coordinator's request form. Choosing an event fills in its
- * period and expected attendance, which cannot be changed here (AC1), and
- * shows the Organiser's venue and accessibility answers read-only; the
- * Coordinator enters the layout and facilities (SCRUM-170 AC2). The room
+ * period and expected attendance, which the Coordinator can change for this
+ * venue: the period may only grow to cover more than the event, and the
+ * attendance may be any part of the event's (SCRUM-162 AC4). It shows the
+ * Organiser's venue and accessibility answers read-only; the Coordinator
+ * enters this venue's layout, facilities and accessibility needs (SCRUM-170
+ * AC2, SCRUM-162 AC9). The room
  * layout comes before the venue and narrows the venues offered. Once a venue
  * and period are chosen, the server is asked whether the venue is free and the
  * answer is shown before submitting; a taken venue disables Submit. The
@@ -392,16 +398,38 @@ export function RequestForm({
 
   const layoutVenues = venuesForLayout(venues, form.layout);
 
-  // Caught as it is typed; the server refuses the same thing (actions.ts).
+  // Caught as it is typed; the server refuses the same things (actions.ts).
   const selectedVenue = venues.find((v) => v.id === form.venueId);
   const attendance = Number(form.attendance);
+  const eventPeriod = chosenEvent ? eventBookingPeriod(chosenEvent) : null;
+  const expected = chosenEvent?.expectedAttendance ?? null;
+  // SCRUM-162 AC4: a whole number from 1 to the event's expected attendance.
+  const attendanceProblem = !form.attendance
+    ? null
+    : !Number.isInteger(attendance) || attendance < 1
+      ? "Attendance must be a whole number greater than zero."
+      : expected !== null && attendance > expected
+        ? attendanceOverEventMessage(expected)
+        : null;
   const overCapacity =
-    selectedVenue && attendance > selectedVenue.capacity
+    !attendanceProblem && selectedVenue && attendance > selectedVenue.capacity
       ? overCapacityMessage(
           selectedVenue.name,
           selectedVenue.capacity,
           attendance,
         )
+      : null;
+  // SCRUM-162 AC4: the venue must hold the whole event.
+  const shortPeriod =
+    eventPeriod &&
+    startIso &&
+    endIso &&
+    !periodInvalid &&
+    !coversEventPeriod(
+      { startAt: new Date(startIso), endAt: new Date(endIso) },
+      eventPeriod,
+    )
+      ? notCoveringEventMessage(eventPeriod)
       : null;
 
   const fieldError = (key: string) =>
@@ -521,53 +549,69 @@ export function RequestForm({
                 <Label htmlFor="attendance">Expected attendance</Label>
                 <Input
                   id="attendance"
-                  readOnly
+                  type="number"
+                  inputMode="numeric"
+                  min={1}
+                  max={expected ?? undefined}
+                  step={1}
                   value={form.attendance}
+                  onChange={(e) => update("attendance", e.target.value)}
                   placeholder="Taken from the event"
-                  aria-invalid={overCapacity ? true : undefined}
+                  aria-invalid={
+                    attendanceProblem || overCapacity ? true : undefined
+                  }
                   aria-describedby={
-                    overCapacity ? "attendance-capacity" : undefined
+                    attendanceProblem || overCapacity
+                      ? "attendance-capacity"
+                      : undefined
                   }
                   className={cn(
-                    "bg-muted/40",
-                    overCapacity &&
+                    (attendanceProblem || overCapacity) &&
                       "border-destructive focus-visible:ring-destructive",
                   )}
                 />
-                {overCapacity ? (
+                {attendanceProblem || overCapacity ? (
                   <p
                     id="attendance-capacity"
                     className="text-xs text-destructive"
                   >
-                    {overCapacity}
+                    {attendanceProblem ?? overCapacity}
                   </p>
                 ) : (
                   fieldError("requestedAttendance")
                 )}
               </div>
 
-              {(["start", "end"] as const).map((which) => {
-                const iso = sgWallTimeToUtcIso(form[which]);
-                const label = which === "start" ? "Start" : "End";
-                return (
-                  <div key={which} className="space-y-2">
-                    <Label htmlFor={which}>{label}</Label>
-                    <Input
-                      id={which}
-                      readOnly
-                      value={iso ? formatDateTime(iso) : ""}
-                      placeholder="Taken from the event"
-                      className="bg-muted/40"
-                    />
-                    {fieldError(which === "start" ? "startAt" : "endAt")}
-                  </div>
-                );
-              })}
+              {(["start", "end"] as const).map((which) => (
+                <div key={which} className="space-y-2">
+                  <Label htmlFor={which}>
+                    {which === "start" ? "Start" : "End"}
+                  </Label>
+                  <Input
+                    id={which}
+                    type="datetime-local"
+                    step={1800}
+                    value={form[which]}
+                    onChange={(e) => update(which, e.target.value)}
+                  />
+                  {fieldError(which === "start" ? "startAt" : "endAt")}
+                </div>
+              ))}
+              {shortPeriod && (
+                <p
+                  className="text-xs text-destructive sm:col-span-2"
+                  data-testid="short-period"
+                >
+                  {shortPeriod}
+                </p>
+              )}
               {form.eventId && (
                 <p className="text-xs text-muted-foreground sm:col-span-2">
-                  The period and attendance are the event&apos;s, with the
-                  period rounded out to the half hour. Change them on the event
-                  if they are wrong.
+                  The period and attendance start from the event&apos;s, with
+                  the period rounded out to the half hour. For this venue the
+                  period can be longer but must cover the whole event, and the
+                  attendance can be part of the event&apos;s, for a breakout
+                  room.
                 </p>
               )}
 
@@ -673,7 +717,13 @@ export function RequestForm({
             <div className="flex justify-end border-t pt-4">
               <Button
                 type="submit"
-                disabled={isPending || overCapacity !== null || blockedLive}
+                disabled={
+                  isPending ||
+                  overCapacity !== null ||
+                  attendanceProblem !== null ||
+                  shortPeriod !== null ||
+                  blockedLive
+                }
               >
                 {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
                 Submit request
@@ -792,8 +842,8 @@ function SuccessDialog({
 }
 
 /**
- * The event's existing request (SCRUM-50 AC8), or a refusal, stays on the
- * page beside the form.
+ * The event's existing request for the venue (SCRUM-162 AC2), or a refusal,
+ * stays on the page beside the form.
  */
 function OutcomePanel({
   outcome,
@@ -826,7 +876,7 @@ function OutcomePanel({
       <Info className="mt-0.5 h-5 w-5 shrink-0" />
       <div>
         <p className="font-semibold">
-          This event already has a venue request. Each event has one venue.
+          This event already has a request for this venue.
         </p>
         <p>
           {booking.venueName}, {formatDateTime(booking.startAt)} to{" "}

@@ -14,16 +14,12 @@ export async function getOrganiserEvents(organiserId: string) {
   });
 }
 
-/** Requests assigned to one coordinator, plus submitted requests nobody has
- * picked up yet. Must mirror `can()`'s coordinator relationship exactly. */
+/** SCRUM-69 AC1, SCRUM-165 AC8: the events assigned to one coordinator; an
+ * unassigned request waits in the Lead's queue. Must mirror `can()`'s
+ * coordinator relationship exactly. */
 export async function getCoordinatorEvents(coordinatorId: string) {
   return prisma.event.findMany({
-    where: {
-      OR: [
-        { coordinatorId },
-        { coordinatorId: null, status: { not: "DRAFT" } },
-      ],
-    },
+    where: { coordinatorId },
     orderBy: { createdAt: "desc" },
   });
 }
@@ -53,8 +49,8 @@ export async function OrganiserEvents({
   return <EventsClient events={events} openEventId={openEventId} />;
 }
 
-/** Coordinator view: requests assigned to this coordinator, plus submitted
- * requests no coordinator has picked up yet. Lives in its own file (not
+/** Coordinator view: exactly the requests assigned to this coordinator;
+ * unassigned ones wait in the Lead's queue (SCRUM-165 AC8). Lives in its own file (not
  * page.tsx) so it can be imported directly by
  * tests/unit/coordinator-events-access.test.ts — a page.tsx file may only
  * export the specific names Next.js recognises (default, metadata, etc.),
@@ -85,9 +81,10 @@ export async function getBrowsableEvents(attendeeId: string) {
     // SCRUM-171 AC4: an event that doesn't need registration isn't listed.
     where: { status: "CONFIRMED", ...TAKES_REGISTRATION },
     include: {
+      // SCRUM-162 AC7: every approved venue, in the order requested.
       bookings: {
         where: { status: "APPROVED" },
-        take: 1,
+        orderBy: { createdAt: "asc" },
         include: { venue: { select: { name: true, location: true } } },
       },
       registrations: {

@@ -29,9 +29,9 @@ Lead) and `safety@test.local` (Safety Officer). Every account's password is
 | Pre-conditions | Signed out. |
 | Test Steps | 1. Sign in as the Lead. <br> 2. Look at the side menu and the user menu. |
 | Test Data | `lead@test.local` / `Password123!` |
-| Expected Result | The Lead lands on the first page its role allows: Notifications, until SCRUM-165 adds the Unassigned queue. The user menu reads "Event Coordinator Lead". The side menu has only Notifications and Venues (SCRUM-34 AC2), both derived from the permission table. |
+| Expected Result | The Lead lands on the first page its role allows, the Unassigned queue (SCRUM-165). The user menu reads "Event Coordinator Lead". The side menu has only Unassigned Queue, Notifications and Venues (SCRUM-34 AC2), all derived from the permission table. |
 
-**Automated by:** `e2e/coordinator-lead-role.spec.ts` › "SCRUM-164 [AC1, AC4] TC-164-01: …"; `tests/unit/nav.test.ts` › "SCRUM-172 [AC1] TC-172-01: COORDINATOR_LEAD is labelled and lands on its notifications"
+**Automated by:** `e2e/coordinator-lead-role.spec.ts` › "SCRUM-164 [AC1, AC4] TC-164-01: …"; `tests/unit/nav.test.ts` › "SCRUM-172 [AC1] TC-172-01, SCRUM-164 [AC1] TC-164-01, SCRUM-165 [AC10] TC-165-13: COORDINATOR_LEAD is labelled and lands on the Unassigned queue"
 
 ### TC-164-02
 
