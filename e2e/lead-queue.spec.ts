@@ -96,6 +96,22 @@ test.describe("SCRUM-165 — Lead assigns new requests from an unassigned queue"
     await signInAs(page, "coordinator@test.local");
     await expect(page.getByRole("cell", { name: eventName })).toHaveCount(0);
 
+    // AC2: an older request whose start has already passed is also waiting.
+    const overdueName = `SCRUM-165 Queue Test Overdue ${Date.now()}`;
+    await prisma.event.create({
+      data: {
+        name: overdueName,
+        purpose: "Waited too long",
+        description: "Owned by the SCRUM-165 e2e spec.",
+        status: "SUBMITTED",
+        organiserId: "usr_organiser",
+        startAt: new Date("2020-01-01T01:00:00Z"),
+        endAt: new Date("2020-01-01T05:00:00Z"),
+        expectedAttendance: 10,
+        submittedAt: new Date(submitted.submittedAt!.getTime() - 60 * 60 * 1000),
+      },
+    });
+
     // AC2: the Lead lands on the queue and sees it with its Organiser.
     await signInAs(page, "lead@test.local");
     await expect(page).toHaveURL(/\/queue$/);
@@ -104,6 +120,17 @@ test.describe("SCRUM-165 — Lead assigns new requests from an unassigned queue"
       .filter({ hasText: eventName });
     await expect(entry).toContainText("Olivia Organiser");
     await expect(entry).toContainText("50 expected");
+    await expect(entry.getByTestId("overdue")).toHaveCount(0);
+
+    // AC2: oldest submission first, and the one whose start has passed is Overdue.
+    const overdueEntry = page
+      .getByTestId("queue-request")
+      .filter({ hasText: overdueName });
+    await expect(overdueEntry.getByTestId("overdue")).toHaveText("Overdue");
+    const cards = await page.getByTestId("queue-request").allTextContents();
+    const position = (name: string) => cards.findIndex((t) => t.includes(name));
+    expect(position(overdueName)).toBeGreaterThanOrEqual(0);
+    expect(position(overdueName)).toBeLessThan(position(eventName));
 
     // AC3: opening it shows its basic information.
     await entry.click();
