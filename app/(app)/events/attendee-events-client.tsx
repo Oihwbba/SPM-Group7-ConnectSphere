@@ -119,7 +119,6 @@ export function AttendeeEventsClient({ events }: { events: BrowsableEvent[] }) {
               event,
               event._count.registrations,
             );
-            const venue = event.bookings[0];
             const isRegistered =
               event.registrations[0]?.status === "REGISTERED";
 
@@ -161,10 +160,13 @@ export function AttendeeEventsClient({ events }: { events: BrowsableEvent[] }) {
                       <MapPin className="h-3.5 w-3.5 shrink-0" />
                       {/* A Confirmed event is expected to carry an approved
                       booking; shown defensively rather than crashing if one
-                      is somehow missing. */}
+                      is somehow missing. SCRUM-162 AC7: every approved
+                      venue. */}
                       <span data-testid="venue">
-                        {venue
-                          ? `${venue.venue.name} — ${venue.venue.location}`
+                        {event.bookings.length > 0
+                          ? event.bookings
+                              .map((b) => `${b.venue.name} — ${b.venue.location}`)
+                              .join("; ")
                           : "Venue to be confirmed"}
                       </span>
                     </div>

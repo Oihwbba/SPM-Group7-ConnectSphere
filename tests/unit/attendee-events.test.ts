@@ -55,6 +55,20 @@ beforeEach(() => {
 });
 
 describe("getBrowsableEvent — SCRUM-72 attendee detail read", () => {
+  it("SCRUM-162 [AC7] TC-162-11: the detail read brings every approved venue's name and location, in the order requested", async () => {
+    mockAuth.mockResolvedValue(sessionFor("ATTENDEE", "usr_attendee"));
+    mockFindUnique.mockResolvedValue(eventRow());
+
+    await getBrowsableEvent("evt1");
+
+    const { bookings } = mockFindUnique.mock.calls[0][0].include;
+    expect(bookings).toEqual({
+      where: { status: "APPROVED" },
+      orderBy: { createdAt: "asc" },
+      include: { venue: { select: { name: true, location: true } } },
+    });
+  });
+
   it("[Positive] AC: an Attendee can load a Confirmed event by id", async () => {
     mockAuth.mockResolvedValue(sessionFor("ATTENDEE", "usr_attendee"));
     mockFindUnique.mockResolvedValue(eventRow());
@@ -171,13 +185,16 @@ describe("getBrowsableEvents — SCRUM-72 browse list", () => {
     );
   });
 
-  it("[Positive] AC: fetches the approved booking's venue, the caller's own registration, and the active-registration count for each event", async () => {
+  it("SCRUM-162 [AC7] TC-162-11, [Positive] AC: fetches every approved booking's venue, the caller's own registration, and the active-registration count for each event", async () => {
     mockFindMany.mockResolvedValue([]);
 
     await getBrowsableEvents("usr_attendee");
 
     const call = mockFindMany.mock.calls[0][0];
     expect(call.include.bookings.where).toEqual({ status: "APPROVED" });
+    // SCRUM-162 AC7: every approved venue, not just one.
+    expect(call.include.bookings).not.toHaveProperty("take");
+    expect(call.include.bookings.orderBy).toEqual({ createdAt: "asc" });
     expect(call.include.bookings.include.venue.select).toEqual({
       name: true,
       location: true,

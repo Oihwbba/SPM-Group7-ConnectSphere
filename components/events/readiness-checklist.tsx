@@ -43,7 +43,14 @@ const ITEM_ID: Record<Checklist["items"][number]["name"], string> = {
   "Safety check": "safety",
 };
 
-export function ReadinessChecklist({ eventId }: { eventId: string }) {
+export function ReadinessChecklist({
+  eventId,
+  onBookingsChanged,
+}: {
+  eventId: string;
+  /** SCRUM-162 AC7: told after a hold is settled or a request withdrawn. */
+  onBookingsChanged?: () => void;
+}) {
   const [checklist, setChecklist] = useState<
     | (Checklist & {
         canConfirm: boolean;
@@ -121,6 +128,7 @@ export function ReadinessChecklist({ eventId }: { eventId: string }) {
       if (!result.ok) toast.error(result.error);
       else toast.success(done);
       setLoads((n) => n + 1);
+      onBookingsChanged?.();
       router.refresh();
     });
   }
@@ -216,44 +224,82 @@ export function ReadinessChecklist({ eventId }: { eventId: string }) {
                         ? `${item.state} – ${item.reason}`
                         : item.state}
                     </p>
-                    {/* SCRUM-163 AC3, AC7: Venue Staff approve the hold
-                        first; only then can the Coordinator confirm it. */}
-                    {item.heldBookingId && (
-                      <p
-                        className="text-muted-foreground"
-                        data-testid="hold-approval"
-                      >
-                        {item.holdApproved
-                          ? "Approved by Venue Staff – awaiting confirmation."
-                          : "Waiting for Venue Staff to approve the hold before it can be confirmed."}
-                      </p>
-                    )}
-                    {item.heldBookingId && checklist.canSettleHold && (
-                      <div className="flex flex-wrap gap-2">
-                        <Button
-                          size="sm"
-                          onClick={() =>
-                            settleHold(item.heldBookingId!, "confirm")
-                          }
-                          disabled={settling || !item.holdApproved}
-                        >
-                          {settling && settlingHow === "confirm"
-                            ? "Confirming…"
-                            : "Confirm hold"}
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() =>
-                            settleHold(item.heldBookingId!, "release")
-                          }
-                          disabled={settling}
-                        >
-                          {settling && settlingHow === "release"
-                            ? "Releasing…"
-                            : "Release hold"}
-                        </Button>
-                      </div>
+                    {/* SCRUM-162 AC8: each live booking, with its own
+                        actions. */}
+                    {item.bookings && item.bookings.length > 0 && (
+                      <ul className="space-y-2" data-testid="venue-bookings">
+                        {item.bookings.map((booking) => (
+                          <li
+                            key={booking.id}
+                            className="space-y-1.5 rounded-md border px-2 py-1.5"
+                            data-testid="venue-booking"
+                            data-complete={booking.complete}
+                          >
+                            <p>
+                              <span className="font-medium">
+                                {booking.venueName}
+                              </span>
+                              {booking.attendance !== null &&
+                                ` · ${booking.attendance} people`}
+                              {" — "}
+                              {booking.reason
+                                ? `${booking.state} – ${booking.reason}`
+                                : booking.state}
+                            </p>
+                            {/* SCRUM-163 AC3, AC7: Venue Staff approve the
+                                hold first; only then can the Coordinator
+                                confirm it. */}
+                            {booking.held && (
+                              <p
+                                className="text-muted-foreground"
+                                data-testid="hold-approval"
+                              >
+                                {booking.holdApproved
+                                  ? "Approved by Venue Staff – awaiting confirmation."
+                                  : "Waiting for Venue Staff to approve the hold before it can be confirmed."}
+                              </p>
+                            )}
+                            {booking.held && checklist.canSettleHold && (
+                              <div className="flex flex-wrap gap-2">
+                                <Button
+                                  size="sm"
+                                  onClick={() =>
+                                    settleHold(booking.id, "confirm")
+                                  }
+                                  disabled={settling || !booking.holdApproved}
+                                >
+                                  {settling && settlingHow === "confirm"
+                                    ? "Confirming…"
+                                    : "Confirm hold"}
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() =>
+                                    settleHold(booking.id, "release")
+                                  }
+                                  disabled={settling}
+                                >
+                                  {settling && settlingHow === "release"
+                                    ? "Releasing…"
+                                    : "Release hold"}
+                                </Button>
+                              </div>
+                            )}
+                            {booking.pending &&
+                              checklist.canWithdrawBooking && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => setWithdrawing(booking.id)}
+                                  disabled={settling}
+                                >
+                                  Withdraw request
+                                </Button>
+                              )}
+                          </li>
+                        ))}
+                      </ul>
                     )}
                     {item.noEquipmentOffered &&
                       checklist.canRecordNoEquipment && (
@@ -266,16 +312,6 @@ export function ReadinessChecklist({ eventId }: { eventId: string }) {
                           {deciding ? "Recording…" : "No equipment needed"}
                         </Button>
                       )}
-                    {item.pendingBookingId && checklist.canWithdrawBooking && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setWithdrawing(item.pendingBookingId!)}
-                        disabled={settling}
-                      >
-                        Withdraw request
-                      </Button>
-                    )}
                   </div>
                 </li>
               ))}
