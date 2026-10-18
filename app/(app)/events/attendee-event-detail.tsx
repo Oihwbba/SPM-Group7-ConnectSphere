@@ -15,6 +15,7 @@ import {
   remainingCapacity,
   totalCapacity,
   canRegisterNow,
+  canWithdrawNow,
   registrationPeriodText,
   REGISTRATION_STATE_LABEL,
 } from "@/lib/registration-state";
@@ -134,7 +135,16 @@ export function AttendeeEventDetail({ event }: { event: BrowsableEvent }) {
                 >
                   <CheckCircle2 className="h-4 w-4" /> You&apos;re registered
                 </span>
-                <WithdrawButton registrationId={registration!.id} />
+                {canWithdrawNow(event) ? (
+                  <WithdrawButton registrationId={registration!.id} />
+                ) : (
+                  <span
+                    className="text-xs text-muted-foreground"
+                    data-testid="withdraw-closed"
+                  >
+                    The event has started, so you can no longer withdraw.
+                  </span>
+                )}
               </div>
             ) : (
               <RegisterButton

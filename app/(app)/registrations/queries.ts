@@ -28,6 +28,8 @@ export async function getMyRegistrations() {
           status: true,
           startAt: true,
           endAt: true,
+          // SCRUM-82 AC1: the reason is visible to anyone who can view the event.
+          cancellationReason: true,
           bookings: {
             where: { status: "APPROVED" },
             // An event can hold approved bookings on two venues at different

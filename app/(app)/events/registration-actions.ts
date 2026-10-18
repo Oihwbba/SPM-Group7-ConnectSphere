@@ -13,6 +13,7 @@ import { ok, err, type ActionResult } from "@/lib/action-result";
 import {
   computeRegistrationState,
   canRegisterNow,
+  canWithdrawNow,
   remainingCapacity,
   totalCapacity,
 } from "@/lib/registration-state";
@@ -152,14 +153,12 @@ export async function registerForEvent(
 type WithdrawOutcome = { error: string } | { id: string; eventId: string };
 
 /**
- * SCRUM-74/77 (partial) — an Attendee withdraws their own registration, so a
- * place they no longer need reopens for someone else. Only the slice SCRUM-74
- * actually needs is built here: status flips to WITHDRAWN (so it drops out of
- * the REGISTERED count `registerForEvent` and the browse/detail pages already
- * query) under the same event-row lock discipline, with the Attendee's own
- * Withdraw button on the detail page (./withdraw-button.tsx) as its entry
- * point. No organiser/coordinator registration view and no event-start-instant
- * cutoff — those are SCRUM-77's own remaining scope, not this one's.
+ * SCRUM-74/77 — an Attendee withdraws their own registration, so a place
+ * they no longer need reopens for someone else. Under the event-row lock the
+ * status flips to WITHDRAWN (so it drops out of the REGISTERED count), the
+ * event's start is re-read and a withdrawal at or after it is refused
+ * (SCRUM-77 AC3), and a REGISTRATION_WITHDRAWN audit entry records who
+ * withdrew and when, which re-registering never removes (SCRUM-77 AC6).
  */
 export async function withdrawRegistration(
   input: unknown,
@@ -208,8 +207,12 @@ export async function withdrawRegistration(
           organiserId: true,
           coordinatorId: true,
           expectedAttendance: true,
+          startAt: true,
         },
       });
+      if (!canWithdrawNow(event)) {
+        return { error: "You can't withdraw once the event has started." };
+      }
       const activeBefore = await tx.registration.count({
         where: { eventId: event.id, status: "REGISTERED" },
       });
@@ -223,6 +226,23 @@ export async function withdrawRegistration(
         where: { id: registrationId, status: "REGISTERED" },
         data: { status: "WITHDRAWN", withdrawnAt: new Date() },
       });
+
+      // SCRUM-77 AC6: re-registering reactivates this same row, so the
+      // withdrawal is kept in the event's history, not only on the row.
+      if (withdrawn.count === 1) {
+        await tx.auditLog.create({
+          data: {
+            entityType: "Event",
+            entityId: event.id,
+            action: "REGISTRATION_WITHDRAWN",
+            actorId: userId,
+            fieldName: "registrationStatus",
+            oldValue: "REGISTERED",
+            newValue: "WITHDRAWN",
+            summary: `Registration ${registration.id} withdrawn`,
+          },
+        });
+      }
 
       // SCRUM-45 AC11: an Attendee withdrew from a full event, so a place
       // is open again. An event with no capacity set was never full.
