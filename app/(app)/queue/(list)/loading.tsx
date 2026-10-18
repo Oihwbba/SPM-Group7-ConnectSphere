@@ -1,6 +1,10 @@
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
-/** Streamed while the server component loads the Lead's Unassigned queue. */
+/**
+ * Streamed while the server component loads the Lead's Unassigned queue. It
+ * sits in a route group so it doesn't wrap `/queue/[id]`, whose `notFound()`
+ * must still return a real 404 (as `events/[id]`).
+ */
 export default function Loading() {
   return (
     <div

@@ -321,7 +321,7 @@ describe("assignCoordinator — SCRUM-165", () => {
     expect(tx.notification.createMany).not.toHaveBeenCalled();
   });
 
-  it("SCRUM-165 [AC7] TC-165-10: [Negative] a request that left the queue without a Coordinator is refused", async () => {
+  it("SCRUM-165 [AC7, AC10] TC-165-10: [Negative] a request that left the queue without a Coordinator is refused as not found", async () => {
     mockAuth.mockResolvedValue(lead());
     tx.event.updateMany.mockResolvedValue({ count: 0 });
     tx.event.findUnique
@@ -335,15 +335,16 @@ describe("assignCoordinator — SCRUM-165", () => {
 
     const result = await assign();
 
-    expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.error).toMatch(/no longer waiting/);
+    expect(result).toMatchObject({ ok: false, error: "Request not found." });
   });
 
   it.each([
     null,
-    { id: "evt1", name: "Draft", organiserId: "usr_org", status: "DRAFT" },
+    ...(["DRAFT", "PLANNING", "CONFIRMED", "REJECTED", "CANCELLED"] as const).map(
+      (status) => ({ id: "evt1", name: "Gala", organiserId: "usr_org", status }),
+    ),
   ])(
-    "SCRUM-165 [AC10] TC-165-13: [Negative] a missing request or a draft looks not found (%#)",
+    "SCRUM-165 [AC10] TC-165-13: [Negative] a missing request, or an event that isn't in the queue, looks not found (%#)",
     async (row) => {
       mockAuth.mockResolvedValue(lead());
       tx.event.findUnique.mockResolvedValue(row);
