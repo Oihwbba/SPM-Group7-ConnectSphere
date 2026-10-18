@@ -197,6 +197,7 @@ export async function updateVenue(
           isActive: true,
           capacity: true,
           facilities: true,
+          accessibilityFeatures: true,
           supportedLayouts: true,
           openingHours: {
             select: { weekday: true, opensMinute: true, closesMinute: true },
@@ -218,6 +219,7 @@ export async function updateVenue(
           status: true,
           requestedAttendance: true,
           requiredFacilities: true,
+          requiredAccessibilityFeatures: true,
           requestedLayout: true,
           event: { select: { name: true } },
         },

@@ -79,7 +79,10 @@ const stored = {
   ),
 };
 
-/** A future Approved booking for 70 that asked for a projector, Tuesday 10:00–14:00. */
+/**
+ * A future Approved booking for 70 that asked for a projector and wheelchair
+ * access, Tuesday 10:00–14:00.
+ */
 const futureBooking = {
   id: "bkg_1",
   startAt: at("2036-03-04T10:00"),
@@ -87,6 +90,7 @@ const futureBooking = {
   status: "APPROVED",
   requestedAttendance: 70,
   requiredFacilities: ["projector"],
+  requiredAccessibilityFeatures: ["wheelchair-access"],
   requestedLayout: "theatre",
   event: { name: "Spring Gala" },
 };
@@ -383,6 +387,24 @@ describe("updateVenue — SCRUM-34 AC6, AC10", () => {
       data: expect.objectContaining({ capacity: 60 }),
     });
     expectFlagged("bkg_1", "Rooftop Garden changed: Capacity 60 < attendance 70");
+  });
+
+  it("SCRUM-34 [AC10] TC-34-12: removing an accessibility feature a future booking needs warns first, and writes nothing", async () => {
+    db.booking.findMany.mockResolvedValue([futureBooking]);
+
+    const result = await updateVenue({ ...input, accessibilityFeatures: "", venueId: "ven_1" });
+
+    expect(result).toMatchObject({
+      ok: false,
+      error: VENUE_CHANGE_AFFECTS_BOOKINGS_MESSAGE,
+      fieldErrors: {
+        affectedBookings: [
+          "Spring Gala, 4 Mar 2036, 10:00 am SGT (Approved): No wheelchair access; event needs wheelchair access",
+        ],
+        affectedBookingIds: ["bkg_1"],
+      },
+    });
+    expectNothingWritten();
   });
 
   it("SCRUM-34 [AC10] TC-34-12: a booking affected since Venue Staff were warned warns again, and nothing is written", async () => {
