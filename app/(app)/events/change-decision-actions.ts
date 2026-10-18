@@ -21,7 +21,10 @@ import { flagArrangements, flaggableArrangements } from "@/lib/reconsideration";
 import { withdrawRegistrationClosedNotice } from "@/lib/event-notifications";
 import { outdateSafetyChecks } from "@/lib/safety-checks";
 import { CHANGE_KEYS, CHANGE_REQUEST_STATUS_LABEL } from "@/lib/schemas/change-request";
-import { PAST_START_MESSAGE } from "@/lib/schemas/event-edit";
+import {
+  PAST_START_MESSAGE,
+  registrationStillNeededMessage,
+} from "@/lib/schemas/event-edit";
 
 const REASON_REQUIRED = "A reason is required to reject a change request.";
 
@@ -117,7 +120,7 @@ type Outcome =
   | { done: "APPROVED" | "REJECTED"; returnedToPlanning: boolean }
   | { refused: "reassigned" | "not-changeable" }
   | { refused: "decided"; status: ChangeRequestStatus }
-  | { refused: "attendance"; registered: number }
+  | { refused: "attendance" | "registration"; registered: number }
   | { refused: "past-start" };
 
 /**
@@ -243,6 +246,16 @@ export async function decideChangeRequest(
         }
       }
 
+      // SCRUM-171 AC5: nor can Registration needed become No while people
+      // are registered.
+      const needed = request.fields.find((f) => f.fieldName === "registrationRequired");
+      if (needed?.newValue === "false") {
+        const registered = await tx.registration.count({
+          where: { eventId, status: "REGISTERED" },
+        });
+        if (registered > 0) return { refused: "registration", registered };
+      }
+
       // The requested start was checked when it was raised, but the request
       // may have waited since. As with SCRUM-25's direct edit, the start can't
       // be in the past.
@@ -364,6 +377,8 @@ export async function decideChangeRequest(
           return err(
             `The expected attendance can't be lower than the ${outcome.registered} active registrations, so this change can't be approved.`,
           );
+        case "registration":
+          return err(registrationStillNeededMessage(outcome.registered));
         case "past-start":
           return err(
             `${PAST_START_MESSAGE} The requested start has passed, so reject this request and the organiser can ask for a new date.`,
