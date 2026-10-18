@@ -1,6 +1,11 @@
 import { Card, CardContent } from "@/components/ui/card";
 
-/** Streamed while the server component loads every event and, for the Lead, the Coordinators' loads. */
+/**
+ * Streamed while the server component loads every event and, for the Lead,
+ * the Coordinators' loads. It sits in a route group so it doesn't wrap
+ * `/all-events/[id]`, whose `notFound()` must still return a real 404 (as
+ * `events/[id]`).
+ */
 export default function Loading() {
   return (
     <div className="space-y-6" aria-busy="true" aria-label="Loading all events">

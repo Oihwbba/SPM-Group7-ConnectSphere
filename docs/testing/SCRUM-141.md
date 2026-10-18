@@ -39,7 +39,7 @@ password is `Password123!`.
 | [TC-141-08](#tc-141-08) | Positive, Negative | AC 5 | Unit, e2e |
 | [TC-141-09](#tc-141-09) | Negative | AC 1, AC 6 | Unit, e2e |
 | [TC-141-10](#tc-141-10) | Negative | AC 7 | e2e |
-| [TC-141-11](#tc-141-11) | Negative | AC 1 | Unit |
+| [TC-141-11](#tc-141-11) | Negative | AC 1 | Unit, e2e |
 
 ### TC-141-01
 
@@ -180,6 +180,6 @@ password is `Password123!`.
 | Pre-conditions | Signed in as Venue Staff. |
 | Test Steps | 1. Type `/all-events/<draft id>` and `/all-events/missing`. |
 | Test Data | — |
-| Expected Result | Not found for both. |
+| Expected Result | Not found for both, with HTTP 404. |
 
-**Automated by:** `tests/unit/all-events.test.ts` › "SCRUM-141 [AC1] TC-141-11: …"
+**Automated by:** `tests/unit/all-events.test.ts` › "SCRUM-141 [AC1] TC-141-11: …"; `e2e/all-events.spec.ts` › "SCRUM-141 [AC1] TC-141-11: a draft or a missing id is a real 404"

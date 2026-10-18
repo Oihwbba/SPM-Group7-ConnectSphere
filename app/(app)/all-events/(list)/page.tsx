@@ -20,7 +20,7 @@ import {
   LISTED_STATUSES,
   getAllEvents,
   parseAllEventsFilters,
-} from "./queries";
+} from "../queries";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 

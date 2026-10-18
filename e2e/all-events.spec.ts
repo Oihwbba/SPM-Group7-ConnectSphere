@@ -53,6 +53,17 @@ test.describe("SCRUM-141 — See every event read-only for planning", () => {
     await expect(page.getByTestId("all-events-row")).toHaveCount(0);
   });
 
+  test("SCRUM-141 [AC1] TC-141-11: a draft or a missing id is a real 404", async ({
+    page,
+  }) => {
+    await signInAs(page, "venuestaff@test.local");
+
+    for (const id of ["evt_draft", "missing"]) {
+      const response = await page.goto(`/all-events/${id}`);
+      expect(response?.status()).toBe(404);
+    }
+  });
+
   test("SCRUM-141 [AC3] TC-141-05: a Coordinator opens an event that isn't theirs read-only", async ({
     page,
   }) => {
