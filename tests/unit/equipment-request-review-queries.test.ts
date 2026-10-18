@@ -131,7 +131,7 @@ describe("getEquipmentRequestQueue — SCRUM-28", () => {
   });
 
   it("SCRUM-28 [AC1, AC4] TC-28-01, TC-28-07: an open request's lines carry what is free for the event, and a short line its alternatives", async () => {
-    db.equipmentRequest.findMany.mockResolvedValue([request()]);
+    db.equipmentRequest.findMany.mockResolvedValueOnce([request()]);
     db.reservation.findMany.mockResolvedValue([
       { equipmentId: "eqp_lectern", startAt: START, endAt: END, quantity: 2 },
     ]);
@@ -147,7 +147,7 @@ describe("getEquipmentRequestQueue — SCRUM-28", () => {
   });
 
   it("checks availability once per open request, and not at all for decided ones", async () => {
-    db.equipmentRequest.findMany.mockResolvedValue([
+    db.equipmentRequest.findMany.mockResolvedValueOnce([
       request({ id: "eqr_open" }),
       request({ id: "eqr_done", status: "APPROVED" }),
     ]);
@@ -161,7 +161,7 @@ describe("getEquipmentRequestQueue — SCRUM-28", () => {
   });
 
   it("leaves availability unknown for an event without dates", async () => {
-    db.equipmentRequest.findMany.mockResolvedValue([
+    db.equipmentRequest.findMany.mockResolvedValueOnce([
       request({
         event: { id: "evt_x", name: "TBC", startAt: null, endAt: null },
       }),
