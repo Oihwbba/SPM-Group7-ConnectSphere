@@ -7,8 +7,10 @@ The Organiser's answers are free text from the request form: venue
 requirements, preferred room layout, accessibility needs (Venue &
 Accessibility Requirements) and equipment requirements (Equipment & Technical
 Support). They are shown read-only, never used to pre-fill anything. AC1 was
-removed on 2026-10-08. AC6 needs SCRUM-38's venue search, which isn't built
-yet.
+removed on 2026-10-08. AC4's reset is automated in two places: a direct edit
+by SCRUM-25 (#186) and an approved change request by SCRUM-128 (#181). AC6 is
+automated by SCRUM-38's venue search (#216), which reuses
+`OrganiserVenueAnswers`.
 
 | ID | Type | Criterion | Automated |
 |---|---|---|---|
@@ -180,7 +182,7 @@ yet.
 | Test Data | — |
 | Expected Result | Both clear who and when together, and Equipment shows "Not decided" again. |
 
-**Automated by:** step 1 by `tests/unit/event-edit.test.ts` and `tests/integration/event-edit.test.ts` › "SCRUM-25 [AC3] TC-25-15: …" on SCRUM-25's branch (PR #186); step 2 by `tests/unit/change-decision.test.ts` and `tests/integration/change-decision.test.ts` › "SCRUM-170 [AC4] TC-170-12: …" on SCRUM-128's branch (PR #181).
+**Automated by:** step 1 by `tests/unit/event-edit.test.ts` and `tests/integration/event-edit.test.ts` › "SCRUM-25 [AC3] TC-25-15: …"; step 2 by `tests/unit/change-decision.test.ts` and `tests/integration/change-decision.test.ts` › "SCRUM-170 [AC4] TC-170-12: …".
 
 ### TC-170-13
 
@@ -193,4 +195,4 @@ yet.
 | Test Data | — |
 | Expected Result | The venue requirements, preferred room layout and accessibility needs are shown read-only beside the filters, as in TC-170-01. |
 
-**Automated by:** `tests/unit/venue-search-queries.test.ts` › "SCRUM-38 [AC1, AC2] TC-38-01: …" (the answers are read with the event); `e2e/venue-search.spec.ts` › "SCRUM-38 [AC1, AC8, AC11, AC14] TC-38-01, TC-38-09, TC-38-12: …" (step 1) and "SCRUM-38 [AC1] TC-38-02: …" (step 2). Built with SCRUM-38, which reuses `OrganiserVenueAnswers`.
+**Automated by:** `tests/unit/venue-search-queries.test.ts` › "SCRUM-38 [AC1, AC2] TC-38-01: …" (the answers are read with the event); `e2e/venue-search.spec.ts` › "SCRUM-38 [AC1, AC8, AC11, AC14] TC-38-01, TC-38-09, TC-38-12: …" (step 1) and "SCRUM-38 [AC1] TC-38-02: …" (step 2).
