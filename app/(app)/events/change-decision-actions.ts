@@ -302,6 +302,11 @@ export async function decideChangeRequest(
       const equipmentChanged = request.fields.some(
         (f) => f.fieldName === "equipmentRequirements",
       );
+      // SCRUM-171 AC4: an event that no longer needs registration doesn't take
+      // it, as confirming such an event leaves it closed.
+      const registrationNoLongerNeeded = request.fields.some(
+        (f) => f.fieldName === "registrationRequired" && f.newValue === "false",
+      );
       await tx.event.update({
         where: { id: eventId },
         data: {
@@ -311,6 +316,7 @@ export async function decideChangeRequest(
             noEquipmentNeededAt: null,
             noEquipmentNeededById: null,
           }),
+          ...(registrationNoLongerNeeded && { registrationEnabled: false }),
         },
       });
       // Who changed each value and when (AC10).
@@ -353,7 +359,9 @@ export async function decideChangeRequest(
       // Confirming wrote a "Registration closed" notice to show at the close
       // (SCRUM-45 AC11). Back in Planning it would be wrong, as it is after
       // SCRUM-26's return to Planning; confirming again writes a new one.
-      if (returnedToPlanning) {
+      // ...and with no registration, its scheduled "Registration closed"
+      // notice won't happen either.
+      if (returnedToPlanning || registrationNoLongerNeeded) {
         await withdrawRegistrationClosedNotice(tx, eventId, now);
       }
       await notify(

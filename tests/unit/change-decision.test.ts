@@ -282,7 +282,7 @@ describe("decideChangeRequest — attendance and cancellation (SCRUM-128 AC7, AC
     expectNothingWritten();
   });
 
-  it("SCRUM-171 [AC5] TC-171-09: with nobody registered, No is applied as No; Yes never counts registrations", async () => {
+  it("SCRUM-171 [AC4, AC5] TC-171-09: with nobody registered, No is applied as No and closes registration, withdrawing its notice; Yes counts no registrations and changes neither", async () => {
     const needed = (newValue: string) =>
       pendingRequest([
         { fieldName: "registrationRequired", oldValue: "x", newValue, isMajor: false },
@@ -293,7 +293,12 @@ describe("decideChangeRequest — attendance and cancellation (SCRUM-128 AC7, AC
       await decideChangeRequest({ changeRequestId: "cr1", decision: "APPROVED" }),
     ).toMatchObject({ ok: true });
     expect(tx.event.update).toHaveBeenCalledWith(
-      expect.objectContaining({ data: expect.objectContaining({ registrationRequired: false }) }),
+      expect.objectContaining({
+        data: expect.objectContaining({ registrationRequired: false, registrationEnabled: false }),
+      }),
+    );
+    expect(tx.notification.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: expect.objectContaining({ title: "Registration closed" }) }),
     );
 
     vi.clearAllMocks();
@@ -304,6 +309,8 @@ describe("decideChangeRequest — attendance and cancellation (SCRUM-128 AC7, AC
       await decideChangeRequest({ changeRequestId: "cr1", decision: "APPROVED" }),
     ).toMatchObject({ ok: true });
     expect(tx.registration.count).not.toHaveBeenCalled();
+    expect(tx.event.update.mock.calls[0][0].data).not.toHaveProperty("registrationEnabled");
+    expect(tx.notification.updateMany).not.toHaveBeenCalled();
   });
 
   it("SCRUM-128 [AC2] TC-128-15: a requested start that has passed while the request waited is refused, and nothing is written; a future one is applied", async () => {

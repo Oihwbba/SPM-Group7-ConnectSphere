@@ -238,12 +238,13 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-128 — deciding a change request", (
     expect(
       await decideChangeRequest({ changeRequestId: raised.data.id, decision: "APPROVED" }),
     ).toMatchObject({ ok: true });
+    // SCRUM-171 AC4: no longer taking registrations, as a confirmed No does.
     expect(
       await prisma.event.findUniqueOrThrow({
         where: { id: eventId },
-        select: { registrationRequired: true, status: true },
+        select: { registrationRequired: true, registrationEnabled: true, status: true },
       }),
-    ).toEqual({ registrationRequired: false, status: "CONFIRMED" });
+    ).toEqual({ registrationRequired: false, registrationEnabled: false, status: "CONFIRMED" });
   });
 
   it("SCRUM-170 [AC4] TC-170-12: approving a change to the equipment requirements clears No equipment needed, who and when together", async () => {
