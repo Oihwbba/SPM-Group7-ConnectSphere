@@ -157,7 +157,6 @@ export async function resolveReconsiderationFlag(
           status: true,
           coordinatorId: true,
           organiserId: true,
-          name: true,
           startAt: true,
           endAt: true,
           expectedAttendance: true,
