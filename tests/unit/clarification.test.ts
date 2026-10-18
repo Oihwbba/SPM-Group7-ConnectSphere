@@ -12,7 +12,7 @@ import {
 
 // SCRUM-18 — the clarification loop. Session and database are mocked; the
 // transaction runs its callback against a mock `tx`, same convention as
-// event-status.test.ts and event-auto-assignment.test.ts.
+// event-status.test.ts and submission-queue.test.ts.
 const tx = vi.hoisted(() => ({
   $queryRaw: vi.fn(),
   clarificationRequest: {

@@ -62,11 +62,9 @@ Officer**, who reviews an event's arrangements before it can be confirmed
 (SCRUM-166) and records the safety check's outcome: Approved, Changes
 requested or Rejected. Neither can confirm, plan or edit an event, nor approve or reject an
 event request, which is the Coordinator's decision (SCRUM-19); the Safety
-Officer's approval doesn't confirm the event (SCRUM-166 AC14). The Safety
-Officer's review is built (SCRUM-166), and two Safety Officers are seeded.
-Until SCRUM-164 and SCRUM-165 land, the Lead may only read its own
-notifications and the venue catalogue (`ROLE_ACTIONS` in `lib/auth/can.ts`),
-and no seeded account holds that role.
+Officer's approval doesn't confirm the event (SCRUM-166 AC14). Both are built (the Lead's queue
+in SCRUM-165, the safety check in SCRUM-166; reassignment is SCRUM-21), and
+two accounts of each are seeded.
 
 ### Event lifecycle
 
@@ -89,6 +87,7 @@ and no seeded account holds that role.
 | `Booking` | A venue booking request and its outcome. Carries its own `startAt`/`endAt` (see decision 4.1) plus the setup and turnaround minutes it was approved with (SCRUM-159 AC8). The database holds an event to one pending, held or approved booking per venue (SCRUM-162 AC2); until SCRUM-162 lands, the request action still allows one venue per event (SCRUM-50 AC8). Week 7 lets an event book several venues, each with its own attendance (SCRUM-162), and adds the Held and Expired statuses with `heldAt`, `holdExpiresAt` and `holdNote` (SCRUM-163). A hold blocks its venue only until its expiry, and can't be confirmed after it (ADR 0010, 2026-10-08 addendum). The row says Held until something writes it, so the application reads a hold past its expiry as Expired from the expiry itself (`lib/booking-holds.ts`). (Week 9; added by SCRUM-172 AC13.) Venue Staff approve a hold before its Coordinator confirms it (SCRUM-163 AC3, AC7), recorded as `holdApprovedAt` and `holdApprovedById`: both set or neither, only on a booking that was held and no earlier than it was (`booking_hold_approval_complete`), and kept once the hold is confirmed, released, rejected or expires. Venue Staff record it with the queue's Approve button, and only then can the Coordinator confirm the hold (SCRUM-163). The Needs Reconsideration flag carries its reason, when it was raised, and who resolved it and when (SCRUM-26). | SCRUM-26, 50, 52, 53, 159, 162, 163 |
 | `HoldExpiryChange` | (Week 9; added by SCRUM-172 AC14.) One row per change to a hold's expiry: the old expiry, the new one, who changed it and when, so a hold's earlier deadlines aren't lost when `Booking.holdExpiresAt` changes. A change to the same expiry is refused (`hold_expiry_change_differs`). Nothing writes it yet; the Week 9 story that lets a hold's expiry be changed will. | SCRUM-163, 172 |
 | `EventOperationalNote` | An operational note on an event, with its author and time. Permanent: the trigger `event_operational_note_permanent` refuses editing or deleting one (it lets a whole event's deletion cascade), and `event_operational_note_not_blank` a blank one. | SCRUM-25 |
+| `VenueSuitabilityJudgement` | The assigned Coordinator's own Suitable or Not suitable for one venue and one event, with a note (CHECK `venue_suitability_note_required`); one per event and venue. Advisory: nothing refuses a request or confirmation on it. `Booking.requiredAccessibilityFeatures` holds what a request needs, compared with the venue's features. | SCRUM-40 |
 
 ### Equipment
 

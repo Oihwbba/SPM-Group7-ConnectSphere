@@ -53,7 +53,12 @@ import {
   submitBookingRequest,
   type BookingSummary,
 } from "../actions";
-import type { BookableEvent, RequestableVenue } from "../queries";
+import type {
+  BookableEvent,
+  JudgementRow,
+  RequestableVenue,
+} from "../queries";
+import { SuitabilityPanel } from "./suitability-panel";
 import { OrganiserVenueAnswers } from "@/components/events/organiser-answers";
 
 type Outcome =
@@ -67,9 +72,49 @@ const emptyForm = {
   end: "",
   attendance: "",
   facilities: [] as string[],
+  accessibility: [] as string[],
   layout: "",
   notes: "",
 };
+
+/** What venue search had entered, carried to the form by Request this venue. */
+export type SearchNeeds = {
+  facilities: string[];
+  accessibility: string[];
+  layout?: string;
+};
+
+/**
+ * SCRUM-38 AC9 — the facilities, accessibility features and layout entered in
+ * venue search, as the form starts with them: only values the form offers,
+ * and the layout only if the venue chosen in search supports it, so that
+ * venue is never dropped. Attendance isn't carried: the booking takes the
+ * event's (SCRUM-50 AC1) until SCRUM-162 lets it change.
+ */
+export function neededInSearch<
+  T extends {
+    id: string;
+    facilities: string[];
+    accessibilityFeatures: string[];
+    supportedLayouts: string[];
+  },
+>(venues: T[], venueId: string | undefined, needs: SearchNeeds) {
+  const offered = (pick: (v: T) => string[]) =>
+    new Set(venues.flatMap(pick));
+  const facilities = offered((v) => v.facilities);
+  const accessibility = offered((v) => v.accessibilityFeatures);
+  const fits = (layout: string) =>
+    venueId
+      ? venues.some(
+          (v) => v.id === venueId && v.supportedLayouts.includes(layout),
+        )
+      : offered((v) => v.supportedLayouts).has(layout);
+  return {
+    facilities: needs.facilities.filter((f) => facilities.has(f)),
+    accessibility: needs.accessibility.filter((a) => accessibility.has(a)),
+    layout: needs.layout && fits(needs.layout) ? needs.layout : "",
+  };
+}
 
 /** Radix Select cannot use "" as an item value, so "no preference" has its own. */
 const NO_LAYOUT = "none";
@@ -140,11 +185,70 @@ const emptySubscribe = () => () => {};
 export function RequestForm({
   events,
   venues,
+  initialEventId,
+  initialVenueId,
+  initialNeeds,
+  judgements = [],
+  judgeableEventIds = [],
 }: {
   events: BookableEvent[];
   venues: RequestableVenue[];
+  /** SCRUM-38 AC9: chosen in venue search, so the form opens with them. */
+  initialEventId?: string;
+  initialVenueId?: string;
+  /** SCRUM-38 AC9: what was entered in venue search (neededInSearch). */
+  initialNeeds?: SearchNeeds;
+  /** SCRUM-40 AC8 — the Coordinator's judgements for these events. */
+  judgements?: JudgementRow[];
+  /** SCRUM-40 AC8 — the events this Coordinator may record a judgement for. */
+  judgeableEventIds?: string[];
 }) {
-  const [form, setForm] = useState(emptyForm);
+  const facilityOptions = Array.from(
+    new Set(venues.flatMap((v) => v.facilities)),
+  ).sort();
+  const layoutOptions = Array.from(
+    new Set(venues.flatMap((v) => v.supportedLayouts)),
+  ).sort();
+  // SCRUM-40 AC3 — the accessibility features any venue offers.
+  const accessibilityOptions = Array.from(
+    new Set(venues.flatMap((v) => v.accessibilityFeatures)),
+  ).sort();
+
+  /** A venue chosen earlier is dropped if it cannot take the new layout. */
+  const venueFor = (venueId: string, layout: string) =>
+    venuesForLayout(venues, layout).some((v) => v.id === venueId)
+      ? venueId
+      : "";
+
+  // SCRUM-170 AC2: the Organiser's answers are free text, shown beside the
+  // form; the layout and facilities are the Coordinator's to enter.
+  function withEvent(prev: typeof emptyForm, eventId: string) {
+    const event = events.find((e) => e.id === eventId);
+    const period = event && eventBookingPeriod(event);
+    return {
+      ...prev,
+      eventId,
+      ...(event && {
+        start: utcToSgWallTime(period?.startAt),
+        end: utcToSgWallTime(period?.endAt),
+        attendance: event.expectedAttendance?.toString() ?? "",
+      }),
+    };
+  }
+
+  // SCRUM-38 AC9: the event and venue picked in search are chosen already,
+  // with the facilities, accessibility features and layout entered there.
+  const [form, setForm] = useState(() => {
+    const withChosenEvent = initialEventId
+      ? withEvent(emptyForm, initialEventId)
+      : emptyForm;
+    return {
+      ...withChosenEvent,
+      ...(initialNeeds &&
+        neededInSearch(venues, initialVenueId, initialNeeds)),
+      ...(initialVenueId && { venueId: initialVenueId }),
+    };
+  });
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
   const [outcome, setOutcome] = useState<Outcome | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -155,13 +259,6 @@ export function RequestForm({
     () => false,
   );
 
-  const facilityOptions = Array.from(
-    new Set(venues.flatMap((v) => v.facilities)),
-  ).sort();
-  const layoutOptions = Array.from(
-    new Set(venues.flatMap((v) => v.supportedLayouts)),
-  ).sort();
-
   function update<K extends keyof typeof emptyForm>(
     key: K,
     value: (typeof emptyForm)[K],
@@ -169,26 +266,8 @@ export function RequestForm({
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
-  /** A venue chosen earlier is dropped if it cannot take the new layout. */
-  const venueFor = (venueId: string, layout: string) =>
-    venuesForLayout(venues, layout).some((v) => v.id === venueId)
-      ? venueId
-      : "";
-
-  // SCRUM-170 AC2: the Organiser's answers are free text, shown beside the
-  // form; the layout and facilities are the Coordinator's to enter.
   function chooseEvent(eventId: string) {
-    const event = events.find((e) => e.id === eventId);
-    const period = event && eventBookingPeriod(event);
-    setForm((prev) => ({
-      ...prev,
-      eventId,
-      ...(event && {
-        start: utcToSgWallTime(period?.startAt),
-        end: utcToSgWallTime(period?.endAt),
-        attendance: event.expectedAttendance?.toString() ?? "",
-      }),
-    }));
+    setForm((prev) => withEvent(prev, eventId));
   }
   const chosenEvent = events.find((e) => e.id === form.eventId);
 
@@ -206,6 +285,15 @@ export function RequestForm({
       form.facilities.includes(facility)
         ? form.facilities.filter((f) => f !== facility)
         : [...form.facilities, facility],
+    );
+  }
+
+  function toggleAccessibility(feature: string) {
+    update(
+      "accessibility",
+      form.accessibility.includes(feature)
+        ? form.accessibility.filter((f) => f !== feature)
+        : [...form.accessibility, feature],
     );
   }
 
@@ -264,6 +352,7 @@ export function RequestForm({
         endAt: sgWallTimeToUtcIso(form.end) ?? "",
         requestedAttendance: form.attendance,
         requiredFacilities: form.facilities,
+        requiredAccessibilityFeatures: form.accessibility,
         requestedLayout: form.layout,
         requestNotes: form.notes,
       });
@@ -488,6 +577,28 @@ export function RequestForm({
                   venueName={selectedVenue?.name ?? "The venue"}
                 />
               )}
+
+              {form.eventId && selectedVenue && (
+                <SuitabilityPanel
+                  eventId={form.eventId}
+                  venueId={selectedVenue.id}
+                  venue={selectedVenue}
+                  needs={{
+                    attendance: form.attendance ? attendance : null,
+                    facilities: form.facilities,
+                    accessibilityFeatures: form.accessibility,
+                    layout: form.layout || null,
+                  }}
+                  judgement={
+                    judgements.find(
+                      (j) =>
+                        j.eventId === form.eventId &&
+                        j.venueId === selectedVenue.id,
+                    ) ?? null
+                  }
+                  canJudge={judgeableEventIds.includes(form.eventId)}
+                />
+              )}
             </div>
 
             <fieldset className="space-y-2">
@@ -517,6 +628,36 @@ export function RequestForm({
                 })}
               </div>
             </fieldset>
+
+            {accessibilityOptions.length > 0 && (
+              <fieldset className="space-y-2">
+                <legend className="text-sm font-medium">
+                  Accessibility needs
+                </legend>
+                <div className="flex flex-wrap gap-2">
+                  {accessibilityOptions.map((feature) => {
+                    const selected = form.accessibility.includes(feature);
+                    return (
+                      <button
+                        key={feature}
+                        type="button"
+                        aria-pressed={selected}
+                        onClick={() => toggleAccessibility(feature)}
+                        className={cn(
+                          "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                          selected
+                            ? "border-foreground bg-foreground text-background"
+                            : "border-border bg-background text-muted-foreground hover:border-primary/50 hover:text-foreground",
+                        )}
+                      >
+                        {selected && <Check className="h-3.5 w-3.5" />}
+                        {feature}
+                      </button>
+                    );
+                  })}
+                </div>
+              </fieldset>
+            )}
 
             <div className="space-y-2">
               <Label htmlFor="notes">Other details for Venue Staff</Label>

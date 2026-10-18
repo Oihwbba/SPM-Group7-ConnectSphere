@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Flag } from "lucide-react";
@@ -154,7 +155,20 @@ export function ReconsiderationPanel({
                   Flagged {formatDateTime(arrangement.flaggedAt)}
                 </p>
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
+                {/* SCRUM-38 AC1: search from this booking request. */}
+                {arrangement.kind === "booking" && (
+                  <Button asChild size="sm" variant="outline">
+                    <Link
+                      href={{
+                        pathname: "/venues/search",
+                        query: { event: eventId, replace: arrangement.id },
+                      }}
+                    >
+                      Find a replacement venue
+                    </Link>
+                  </Button>
+                )}
                 <Button
                   size="sm"
                   variant="outline"

@@ -23,10 +23,10 @@ arrangements that can't clash:
 
 Week 7 added two more roles:
 
-- The **Event Coordinator Lead** will assign new requests to Coordinators from
-  an unassigned queue, replacing automatic assignment (SCRUM-165), and see
-  every Coordinator's workload (SCRUM-141). Until then the role can sign in
-  and read its notifications and the venue catalogue.
+- The **Event Coordinator Lead** assigns each new request to a Coordinator
+  from the Unassigned Queue, which replaced automatic assignment (SCRUM-165),
+  and sees every event and every Coordinator's assignments (SCRUM-141).
+  Reassigning an event comes with SCRUM-21.
 - The **Safety Officer** reviews an event's venue and equipment on the Safety
   Checks page before it can be confirmed, and records Approved, Changes
   requested or Rejected (SCRUM-166). Their approval doesn't confirm the
@@ -157,11 +157,9 @@ Every seeded account uses the password **`Password123!`**:
 | `attendee3@test.local` | Attendee | Has one withdrawn registration (SCRUM-77) |
 | `attendee4@test.local` | Attendee | Deliberately unregistered, so free to take the last place |
 | `safety@test.local` | Safety Officer | Reviews operational safety checks (SCRUM-166) |
+| `lead@test.local` | Event Coordinator Lead | Assigns new requests from the Unassigned Queue (SCRUM-165); reassignment arrives with SCRUM-21 |
+| `lead2@test.local` | Event Coordinator Lead | A second Lead, for two Leads assigning at once (SCRUM-165) |
 | `safety2@test.local` | Safety Officer | A second Safety Officer, for two people recording at once (SCRUM-166) |
-
-No seeded account has the **Event Coordinator Lead** role yet: until SCRUM-164
-and SCRUM-165 it has no page beyond Notifications and Venues, so there is
-nothing to demo. Its sign-in is unit-tested instead (SCRUM-172, TC-172-01).
 
 ---
 
