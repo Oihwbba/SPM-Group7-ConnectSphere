@@ -33,6 +33,7 @@ export type Action =
   | "event:review"
   | "event:confirm" // SCRUM-81: the assigned coordinator confirms a ready Planning event
   | "event:reject" // SCRUM-117: the assigned coordinator rejects a Planning event that can't be fulfilled
+  | "event:cancel" // SCRUM-82: the assigned coordinator cancels an event that won't go ahead
   | "event:no-equipment" // SCRUM-170 AC4: the assigned coordinator records No equipment needed
   | "event:edit" // SCRUM-25: the assigned coordinator edits an event's details directly
   | "event-note:add" // SCRUM-25 AC6: add an operational note to an event
@@ -120,6 +121,7 @@ const ROLE_ACTIONS: Record<Role, Action[]> = {
     "event:review",
     "event:confirm",
     "event:reject",
+    "event:cancel",
     "event:no-equipment",
     "event:edit",
     "event-note:add",
@@ -196,17 +198,19 @@ function hasRelationship(
         if (resource.coordinatorId === user.id) return true;
         // Any coordinator may review a request nobody has picked up yet, but
         // only the event's assigned coordinator may confirm it (SCRUM-81 AC 7),
-        // reject it from Planning (SCRUM-117 AC 5), confirm or release its
-        // venue holds (SCRUM-163 AC3), change or withdraw its requests
-        // (SCRUM-142 AC7), raise a change request on the organiser's behalf
-        // (SCRUM-41 AC10), record No equipment needed (SCRUM-170 AC4), edit
-        // its details (SCRUM-25 AC1, AC7), judge a venue's suitability for it
-        // (SCRUM-40 AC8), resolve a flag on its arrangements (SCRUM-26 AC7),
-        // request its safety check (SCRUM-166 AC1), close or reopen its
-        // registration (SCRUM-75 AC6) or see its registrations (SCRUM-70 AC1).
+        // reject it from Planning (SCRUM-117 AC 5), cancel it (SCRUM-82 AC1),
+        // confirm or release its venue holds (SCRUM-163 AC3), change or
+        // withdraw its requests (SCRUM-142 AC7), raise a change request on the
+        // organiser's behalf (SCRUM-41 AC10), record No equipment needed
+        // (SCRUM-170 AC4), edit its details (SCRUM-25 AC1, AC7), judge a
+        // venue's suitability for it (SCRUM-40 AC8), resolve a flag on its
+        // arrangements (SCRUM-26 AC7), request its safety check (SCRUM-166
+        // AC1), close or reopen its registration (SCRUM-75 AC6) or see its
+        // registrations (SCRUM-70 AC1).
         return (
           action !== "event:confirm" &&
           action !== "event:reject" &&
+          action !== "event:cancel" &&
           action !== "event:no-equipment" &&
           action !== "booking:settle-hold" &&
           action !== "booking:withdraw" &&
