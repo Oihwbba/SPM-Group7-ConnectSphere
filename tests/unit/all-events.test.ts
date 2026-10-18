@@ -284,6 +284,42 @@ describe("getEventForPlanning — SCRUM-141 AC3, AC4", () => {
     expect(found?.canEdit).toBe(false);
   });
 
+  it("SCRUM-21 [AC1, AC3] TC-21-01, TC-21-03: the Lead is offered Reassign for an event with a Coordinator, choosing from every Coordinator but its Organiser", async () => {
+    mockAuth.mockResolvedValue(sessionFor("COORDINATOR_LEAD", "usr_lead"));
+    mockFindUnique.mockResolvedValue(event);
+    mockUserFindMany.mockResolvedValue([
+      { id: "usr_cara", name: "Cara", _count: { coordinatedEvents: 2 } },
+      { id: "usr_org", name: "Olivia", _count: { coordinatedEvents: 0 } },
+      { id: "usr_cody", name: "Cody", _count: { coordinatedEvents: 1 } },
+    ]);
+
+    const found = await getEventForPlanning("evt1");
+
+    expect(found?.canReassign).toBe(true);
+    expect(found?.coordinators).toEqual([
+      { id: "usr_cara", name: "Cara", activeEvents: 2 },
+      { id: "usr_cody", name: "Cody", activeEvents: 1 },
+    ]);
+  });
+
+  it.each([
+    ["the Lead, for a Submitted request", "COORDINATOR_LEAD", { status: "SUBMITTED", coordinatorId: null }],
+    ["the Lead, for a Completed event", "COORDINATOR_LEAD", { status: "COMPLETED" }],
+    ["a Coordinator", "COORDINATOR", {}],
+  ] as const)(
+    "SCRUM-21 [AC4, AC10] TC-21-05, TC-21-09: Reassign isn't offered to %s, and no Coordinators are read",
+    async (_, role, overrides) => {
+      mockAuth.mockResolvedValue(sessionFor(role, "usr_x"));
+      mockFindUnique.mockResolvedValue({ ...event, ...overrides });
+
+      const found = await getEventForPlanning("evt1");
+
+      expect(found?.canReassign).toBe(false);
+      expect(found?.coordinators).toEqual([]);
+      expect(mockUserFindMany).not.toHaveBeenCalled();
+    },
+  );
+
   it.each([null, { ...event, status: "DRAFT" }])(
     "SCRUM-141 [AC1] TC-141-11: [Negative] a missing event or a draft looks not found (%#)",
     async (row) => {
