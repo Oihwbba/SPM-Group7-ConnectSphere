@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { TAKES_REGISTRATION } from "@/lib/registration-state";
 import { EventsClient } from "./events-client";
 import { AttendeeEventsClient } from "./attendee-events-client";
 
@@ -77,7 +78,8 @@ export async function CoordinatorEvents({
  * a status of registered" applies to the list too, not just the detail page). */
 export async function getBrowsableEvents(attendeeId: string) {
   return prisma.event.findMany({
-    where: { status: "CONFIRMED" },
+    // SCRUM-171 AC4: an event that doesn't need registration isn't listed.
+    where: { status: "CONFIRMED", ...TAKES_REGISTRATION },
     include: {
       bookings: {
         where: { status: "APPROVED" },

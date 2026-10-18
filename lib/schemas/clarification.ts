@@ -71,7 +71,12 @@ export const requestFieldValues = z.object({
   accessibilityNeeds: requiredText("Accessibility needs", 5000),
   preferredLayout: requiredText("Room layout", 200),
   equipmentRequirements: requiredText("Equipment requirements", 5000),
-  registrationNotes: requiredText("Registration needs", 5000),
+  // SCRUM-171 AC1: the note about registration is optional on the form, so
+  // it may be cleared here too.
+  registrationNotes: z
+    .string()
+    .trim()
+    .max(5000, "Keep registration notes under 5000 characters."),
 });
 
 /** A new schedule gives both ends, doesn't start in the past, and ends after it starts. */

@@ -218,6 +218,21 @@ describe("raiseChangeRequest — SCRUM-41", () => {
     ]);
   });
 
+  it("SCRUM-171 [AC1] TC-171-10: a change request can clear the registration note, which the form no longer requires", async () => {
+    signIn("ORGANISER", ORGANISER);
+
+    await raiseChangeRequest({ eventId: "evt1", changes: { registrationNotes: "" } });
+
+    expect(tx.eventChangeRequest.create.mock.calls[0][0].data.fields.create).toEqual([
+      {
+        fieldName: "registrationNotes",
+        oldValue: "Open to all students",
+        newValue: null,
+        isMajor: false,
+      },
+    ]);
+  });
+
   it("SCRUM-41 [AC1] TC-41-15: values equal to the event's are not a change, and nothing is written", async () => {
     signIn("ORGANISER", ORGANISER);
 

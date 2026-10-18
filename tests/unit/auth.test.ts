@@ -22,11 +22,21 @@ describe("can — role gate", () => {
     expect(can({ id: "vs", role: "VENUE_STAFF" }, "event:review")).toBe(false);
   });
 
-  // The Venue Catalogue (venue:read) is Coordinator-only. Pin both sides so a
-  // one-line re-grant of venue:read to VENUE_STAFF can't silently re-open it.
-  it("does not let venue staff read the venue catalogue", () => {
-    expect(can({ id: "vs", role: "VENUE_STAFF" }, "venue:read")).toBe(false);
-  });
+  // SCRUM-34 AC2: any internal user views the venue catalogue; the external
+  // roles don't. Pin both sides.
+  it.each(["VENUE_STAFF", "TECH_SUPPORT", "COORDINATOR_LEAD", "SAFETY_OFFICER"] as const)(
+    "SCRUM-34 [AC2] TC-34-02: %s, an internal user, reads the venue catalogue",
+    (role) => {
+      expect(can({ id: "u", role }, "venue:read")).toBe(true);
+    },
+  );
+
+  it.each(["ORGANISER", "ATTENDEE"] as const)(
+    "SCRUM-34 [AC2] TC-34-02: %s, an external user, doesn't read the venue catalogue",
+    (role) => {
+      expect(can({ id: "u", role }, "venue:read")).toBe(false);
+    },
+  );
 
   it("lets a coordinator read the venue catalogue", () => {
     expect(can(coordinator, "venue:read")).toBe(true);
@@ -185,6 +195,27 @@ describe("can — rejecting a Planning event (SCRUM-117)", () => {
     expect(can(organiserA, "event:reject", planning)).toBe(false);
     expect(can({ id: "ts", role: "TECH_SUPPORT" }, "event:reject", planning)).toBe(false);
     expect(can(coordinator, "event:reject", { ...planning, coordinatorId: null })).toBe(false);
+  });
+});
+
+// SCRUM-75 AC6 — the Organiser closes or reopens registration for their own
+// event; the assigned Coordinator may do it on their behalf, and no one else.
+describe("can — closing and reopening registration (SCRUM-75)", () => {
+  const confirmed = {
+    kind: "event" as const,
+    organiserId: "orgA",
+    coordinatorId: "coord",
+    status: "CONFIRMED" as const,
+  };
+
+  it("SCRUM-75 [AC6] TC-75-08: the Organiser and the assigned Coordinator may, and no one else", () => {
+    expect(can(organiserA, "registration:control", confirmed)).toBe(true);
+    expect(can(coordinator, "registration:control", confirmed)).toBe(true);
+    expect(can(organiserB, "registration:control", confirmed)).toBe(false);
+    expect(can({ id: "other", role: "COORDINATOR" }, "registration:control", confirmed)).toBe(false);
+    expect(can(coordinator, "registration:control", { ...confirmed, coordinatorId: null })).toBe(false);
+    expect(can(attendee, "registration:control", confirmed)).toBe(false);
+    expect(can({ id: "vs", role: "VENUE_STAFF" }, "registration:control", confirmed)).toBe(false);
   });
 });
 

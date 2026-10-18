@@ -117,7 +117,7 @@ events in other statuses, including a Cancelled one.
 | Test Data | The events' ids; a made-up id |
 | Expected Result | Each returns "not found", the same for a hidden event as for a missing one. |
 
-**Automated by:** `tests/unit/attendee-events.test.ts` › "[Negative] a missing id returns null without distinguishing it from a not-yet-visible one", "[Security gate] a role without event:browse (e.g. VENUE_STAFF) is refused before the query even runs", "[Negative] a signed-out caller is refused"; `e2e/attendee-events.spec.ts` › "AC: direct event URLs do not bypass visibility rules — a Cancelled event 404s for an Attendee", "a non-existent event id 404s the same way as a real but invisible one", "an Organiser hitting a Confirmed event's attendee-detail URL still 404s (unchanged pre-existing behaviour)"
+**Automated by:** `tests/unit/attendee-events.test.ts` › "[Negative] a missing id returns null without distinguishing it from a not-yet-visible one", "[Security gate] a role without event:browse (e.g. VENUE_STAFF) is refused before the query even runs", "[Negative] a signed-out caller is refused"; `e2e/attendee-events.spec.ts` › "AC: direct event URLs do not bypass visibility rules — a Cancelled event 404s for an Attendee", "a non-existent event id 404s the same way as a real but invisible one", "an Organiser hitting a Confirmed event's attendee-detail URL still 404s (unchanged pre-existing behaviour)"; `e2e/attendee-events.spec.ts` › "AC7, AC8: going straight to /events/${id} (not Confirmed) 404s", run for a Draft, a Planning and a Completed event
 
 ### TC-72-08
 

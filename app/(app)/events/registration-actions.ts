@@ -57,8 +57,14 @@ export async function registerForEvent(
       // Lock first: the capacity read below must see every registration a
       // concurrent request already committed, and no concurrent request may
       // read this event's state until this transaction is done with it.
+      // SCRUM-171 AC4: an event that doesn't need registration takes none,
+      // as if it weren't listed. NULL (requested before the choice existed)
+      // still takes registrations, hence IS DISTINCT FROM.
       const locked = await tx.$queryRaw<{ id: string }[]>`
-        SELECT "id" FROM "Event" WHERE "id" = ${eventId} AND "status" = 'CONFIRMED' FOR UPDATE
+        SELECT "id" FROM "Event"
+        WHERE "id" = ${eventId} AND "status" = 'CONFIRMED'
+          AND "registrationRequired" IS DISTINCT FROM false
+        FOR UPDATE
       `;
       if (!locked.length) {
         return { error: "This event is not open for registration." };

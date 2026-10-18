@@ -71,8 +71,13 @@ test.describe("SCRUM-165 — Lead assigns new requests from an unassigned queue"
       .getByLabel("Equipment & Technical Support Requirements *")
       .fill("Projector.");
     await page.getByRole("button", { name: "Next", exact: true }).click();
+    // SCRUM-171 AC1: Registration needed is required to submit; the note is optional.
     await page
-      .getByLabel("Registration Needs *")
+      .getByRole("group", { name: "Registration Needed *" })
+      .getByLabel("Yes")
+      .check();
+    await page
+      .getByLabel("Registration Notes (Optional)")
       .fill("Standard online registration.");
     await page.getByRole("button", { name: "Next", exact: true }).click();
     await page
