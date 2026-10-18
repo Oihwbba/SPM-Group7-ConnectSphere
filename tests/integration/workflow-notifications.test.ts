@@ -266,8 +266,14 @@ describe.skipIf(!usesLocalDatabase)(
         signIn(attendee, "ATTENDEE");
         return withdrawRegistration({ registrationId });
       };
+      // SCRUM-85 AC1: each Attendee's own confirmation is left out; this
+      // case is about what the Organiser and Coordinator are told.
+      const staffNotices = async () =>
+        (await notices(open.id)).filter(
+          (n) => n.type !== "REGISTRATION_CONFIRMED",
+        );
       const titles = async () =>
-        (await notices(open.id)).map((n) => [n.userId, n.title]);
+        (await staffNotices()).map((n) => [n.userId, n.title]);
 
       const first = await register("usr_attendee");
       expect(await titles()).toEqual([]);
@@ -283,7 +289,7 @@ describe.skipIf(!usesLocalDatabase)(
       // Now one place is taken of two, so this withdrawal isn't from a full event.
       await withdraw("usr_attendee_2", second!);
 
-      const written = await notices(open.id);
+      const written = await staffNotices();
       expect(written.map((n) => [n.userId, n.title])).toEqual([
         [COORDINATOR, "Registration is full"],
         [ORGANISER, "Registration is full"],

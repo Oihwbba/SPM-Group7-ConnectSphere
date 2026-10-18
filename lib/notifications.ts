@@ -19,8 +19,9 @@ export function visibleNotificationsWhere(
  * SCRUM-48 AC5 — where a notification takes this user: a page they are
  * allowed to open, or nowhere.
  *
- * - An Attendee goes to the event's Attendee page, which exists only for a
- *   Confirmed event (SCRUM-72); the re-planned view is SCRUM-85's.
+ * - An Attendee goes to the event's Attendee page: a Confirmed event
+ *   (SCRUM-72), or one back in Planning to be re-planned, where a registered
+ *   Attendee sees what was last confirmed (SCRUM-85 AC7, AC9).
  * - An Organiser or Coordinator goes to their events list with that event
  *   open. The list is scoped to what they may see, so a link to an event
  *   they've lost access to opens nothing.
@@ -37,7 +38,9 @@ export function notificationHref(
 ): string | null {
   const { event } = notification;
   if (event && can(user, "event:browse")) {
-    return event.status === "CONFIRMED" ? `/events/${event.id}` : null;
+    return event.status === "CONFIRMED" || event.status === "PLANNING"
+      ? `/events/${event.id}`
+      : null;
   }
   if (event && can(user, "event:list")) {
     return `/events?event=${event.id}`;

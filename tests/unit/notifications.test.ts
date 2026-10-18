@@ -82,7 +82,16 @@ describe("notificationHref — SCRUM-48 AC5", () => {
     ).toBe("/events/evt_1");
   });
 
-  it.each(["CANCELLED", "PLANNING", "COMPLETED"] as const)(
+  it("SCRUM-85 [AC7, AC9] TC-85-08: an Attendee's link to an event back in Planning opens its Attendee page, which shows what was last confirmed", () => {
+    expect(
+      notificationHref(user("ATTENDEE"), {
+        link: null,
+        event: event("PLANNING"),
+      }),
+    ).toBe(`/events/${event("PLANNING").id}`);
+  });
+
+  it.each(["CANCELLED", "COMPLETED"] as const)(
     "SCRUM-48 [AC5] TC-48-06: an Attendee gets no link for a %s event, which has no Attendee page",
     (status) => {
       expect(

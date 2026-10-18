@@ -5,6 +5,8 @@ import type { EventStatus, RegistrationStatus } from "@prisma/client";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatEventTime } from "@/lib/datetime";
+import { isBeingReplanned, venueLabel } from "@/lib/confirmed-details";
+import { REPLANNING_LABEL } from "../events/replanning-event-detail";
 import type { MyRegistration } from "./queries";
 
 const STATUS_LABEL: Record<RegistrationStatus, string> = {
@@ -58,10 +60,16 @@ export function RegistrationsList({
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {registrations.map(({ id, status, event }) => {
         const shown = shownRegistrationStatus(status, event.status);
-        const venue = event.bookings[0]?.venue;
-        // Only a Confirmed event has an Attendee detail page (SCRUM-72).
+        // SCRUM-85 AC8, AC9: while a registered event is re-planned, its card
+        // says so, never "Planning", and shows what was last confirmed.
+        const replanning = status === "REGISTERED" && isBeingReplanned(event);
+        const venues = replanning
+          ? event.confirmedVenues
+          : event.bookings.map((b) => venueLabel(b.venue));
+        // A Confirmed event has an Attendee detail page (SCRUM-72), and so
+        // does one being re-planned, for this Attendee (SCRUM-85 AC9).
         const title =
-          event.status === "CONFIRMED" ? (
+          event.status === "CONFIRMED" || replanning ? (
             <Link href={`/events/${event.id}`} className="hover:underline">
               {event.name}
             </Link>
@@ -82,10 +90,10 @@ export function RegistrationsList({
                   {title}
                 </CardTitle>
                 <Badge
-                  variant={STATUS_BADGE_VARIANT[shown]}
+                  variant={replanning ? "warning" : STATUS_BADGE_VARIANT[shown]}
                   data-testid="registration-status"
                 >
-                  {STATUS_LABEL[shown]}
+                  {replanning ? REPLANNING_LABEL : STATUS_LABEL[shown]}
                 </Badge>
               </div>
             </CardHeader>
@@ -93,15 +101,15 @@ export function RegistrationsList({
               <div className="flex items-center gap-1.5">
                 <CalendarDays className="h-3.5 w-3.5 shrink-0" />
                 <span data-testid="event-date">
-                  {formatEventTime(event.startAt, event.endAt)}
+                  {replanning
+                    ? formatEventTime(event.confirmedStartAt, event.confirmedEndAt)
+                    : formatEventTime(event.startAt, event.endAt)}
                 </span>
               </div>
               <div className="flex items-center gap-1.5">
                 <MapPin className="h-3.5 w-3.5 shrink-0" />
                 <span data-testid="venue">
-                  {venue
-                    ? `${venue.name} — ${venue.location}`
-                    : "Venue to be confirmed"}
+                  {venues.length > 0 ? venues.join("; ") : "Venue to be confirmed"}
                 </span>
               </div>
               {event.status === "CANCELLED" && event.cancellationReason && (

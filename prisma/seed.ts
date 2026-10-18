@@ -685,6 +685,22 @@ async function seedBookings() {
   return bookings.length;
 }
 
+// SCRUM-85 — each seeded Confirmed event was last confirmed as it stands, so
+// re-planning it shows Attendees those details. The same rule as the
+// migration that added the fields.
+async function seedConfirmedDetails() {
+  await prisma.$executeRaw`
+    UPDATE "Event" e
+    SET "confirmedStartAt" = e."startAt",
+        "confirmedEndAt" = e."endAt",
+        "confirmedVenues" = COALESCE(
+          (SELECT array_agg(v."name" || ' — ' || v."location" ORDER BY b."createdAt")
+           FROM "Booking" b JOIN "Venue" v ON v."id" = b."venueId"
+           WHERE b."eventId" = e."id" AND b."status" = 'APPROVED'),
+          ARRAY[]::TEXT[])
+    WHERE e."status" = 'CONFIRMED'`;
+}
+
 // ---------------------------------------------------------------------------
 // Equipment requests and reservations — SCRUM-27/28/31.
 // ---------------------------------------------------------------------------
@@ -923,6 +939,7 @@ async function main() {
   const equipUnavail = await seedEquipmentUnavailability();
   const events = await seedEvents();
   const bookings = await seedBookings();
+  await seedConfirmedDetails();
   const eq = await seedEquipmentRequests();
   const reservations = await seedReservations();
   const registrations = await seedRegistrations();
