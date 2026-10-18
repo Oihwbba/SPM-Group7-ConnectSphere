@@ -264,6 +264,55 @@ describe("decideChangeRequest — attendance and cancellation (SCRUM-128 AC7, AC
     ).toMatchObject({ ok: true });
   });
 
+  it("SCRUM-171 [AC5] TC-171-09: Registration needed can't be approved as No while people are registered; the message gives how many, and nothing is written", async () => {
+    tx.eventChangeRequest.findUniqueOrThrow.mockResolvedValue(
+      pendingRequest([
+        { fieldName: "registrationRequired", oldValue: "true", newValue: "false", isMajor: false },
+      ]),
+    );
+    tx.registration.count.mockResolvedValue(1);
+
+    expect(await decideChangeRequest({ changeRequestId: "cr1", decision: "APPROVED" })).toEqual({
+      ok: false,
+      error: "This event has 1 active registration, so Registration needed can't be changed to No.",
+    });
+    expect(tx.registration.count).toHaveBeenCalledWith({
+      where: { eventId: "evt1", status: "REGISTERED" },
+    });
+    expectNothingWritten();
+  });
+
+  it("SCRUM-171 [AC4, AC5] TC-171-09: with nobody registered, No is applied as No and closes registration, withdrawing its notice; Yes counts no registrations and changes neither", async () => {
+    const needed = (newValue: string) =>
+      pendingRequest([
+        { fieldName: "registrationRequired", oldValue: "x", newValue, isMajor: false },
+      ]);
+    tx.eventChangeRequest.findUniqueOrThrow.mockResolvedValue(needed("false"));
+    tx.registration.count.mockResolvedValue(0);
+    expect(
+      await decideChangeRequest({ changeRequestId: "cr1", decision: "APPROVED" }),
+    ).toMatchObject({ ok: true });
+    expect(tx.event.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ registrationRequired: false, registrationEnabled: false }),
+      }),
+    );
+    expect(tx.notification.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: expect.objectContaining({ title: "Registration closed" }) }),
+    );
+
+    vi.clearAllMocks();
+    mockTransaction.mockImplementation((cb: (t: typeof tx) => unknown) => cb(tx));
+    tx.event.findUniqueOrThrow.mockResolvedValue(eventNow());
+    tx.eventChangeRequest.findUniqueOrThrow.mockResolvedValue(needed("true"));
+    expect(
+      await decideChangeRequest({ changeRequestId: "cr1", decision: "APPROVED" }),
+    ).toMatchObject({ ok: true });
+    expect(tx.registration.count).not.toHaveBeenCalled();
+    expect(tx.event.update.mock.calls[0][0].data).not.toHaveProperty("registrationEnabled");
+    expect(tx.notification.updateMany).not.toHaveBeenCalled();
+  });
+
   it("SCRUM-128 [AC2] TC-128-15: a requested start that has passed while the request waited is refused, and nothing is written; a future one is applied", async () => {
     const startAt = (iso: string) => ({ fieldName: "startAt", oldValue: "2031-01-01T02:00:00.000Z", newValue: iso, isMajor: true });
     tx.eventChangeRequest.findUniqueOrThrow.mockResolvedValue(pendingRequest([startAt("2020-01-01T02:00:00.000Z")]));
