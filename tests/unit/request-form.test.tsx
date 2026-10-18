@@ -4,6 +4,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import {
   liveAnswer,
   LIVE_CHECK_FAILED_MESSAGE,
+  neededInSearch,
   RequestForm,
   venuesForLayout,
 } from "@/app/(app)/bookings/new/request-form";
@@ -87,16 +88,22 @@ describe("RequestForm — SCRUM-50", () => {
     expect(html.indexOf("Room layout")).toBeLessThan(html.indexOf("Venue"));
   });
 
-  it("SCRUM-50 [AC1] TC-50-15: the period and attendance are shown read-only, taken from the event", () => {
+  it("SCRUM-162 [AC4] TC-162-05: the period and attendance can be changed for this venue: the times are editable and the attendance is a whole number from 1", () => {
     const html = renderToStaticMarkup(
       <RequestForm events={[event]} venues={[venue]} />,
     );
 
     for (const id of ["start", "end", "attendance"]) {
-      expect(html).toMatch(
+      expect(html).not.toMatch(
         new RegExp(`<input[^>]*id="${id}"[^>]*readOnly`, "i"),
       );
     }
+    for (const id of ["start", "end"]) {
+      expect(html).toMatch(
+        new RegExp(`<input[^>]*type="datetime-local"[^>]*id="${id}"`, "i"),
+      );
+    }
+    expect(html).toMatch(/<input[^>]*type="number"[^>]*id="attendance"[^>]*min="1"[^>]*step="1"/);
   });
 
   it("SCRUM-50 [AC1]: required facilities are toggle pills, none chosen until the coordinator picks", () => {
@@ -256,5 +263,78 @@ describe("isPastSlot — no picking a time that has already passed today", () =>
   it("keeps the slot starting at this very minute, and disables nothing before a date is chosen", () => {
     expect(isPastSlot("2035-03-10", "14:00", "2035-03-10T14:00")).toBe(false);
     expect(isPastSlot("", "09:00", now)).toBe(false);
+  });
+});
+
+describe("what venue search carries to the form — SCRUM-38 AC9", () => {
+  const hall = {
+    id: "ven_hall",
+    facilities: ["stage", "sound-system"],
+    accessibilityFeatures: ["hearing-loop"],
+    supportedLayouts: ["theatre", "banquet"],
+  };
+  const room = {
+    id: "ven_room",
+    facilities: ["projector"],
+    accessibilityFeatures: ["wheelchair-access"],
+    supportedLayouts: ["classroom", "theatre"],
+  };
+
+  it("SCRUM-38 [AC9] TC-38-10: the facilities and accessibility features entered come across; ones no venue offers are dropped", () => {
+    expect(
+      neededInSearch([hall, room], "ven_room", {
+        facilities: ["projector", "stage", "jacuzzi"],
+        accessibility: ["wheelchair-access", "braille"],
+      }),
+    ).toEqual({
+      facilities: ["projector", "stage"],
+      accessibility: ["wheelchair-access"],
+      layout: "",
+    });
+  });
+
+  it("SCRUM-38 [AC9] TC-38-10: the layout comes across only if the venue chosen in search supports it, so that venue isn't dropped", () => {
+    const needs = { facilities: [], accessibility: [] };
+    expect(
+      neededInSearch([hall, room], "ven_room", { ...needs, layout: "theatre" })
+        .layout,
+    ).toBe("theatre");
+    expect(
+      neededInSearch([hall, room], "ven_room", { ...needs, layout: "banquet" })
+        .layout,
+    ).toBe("");
+    // With no venue chosen, any layout a venue supports.
+    expect(
+      neededInSearch([hall, room], undefined, { ...needs, layout: "banquet" })
+        .layout,
+    ).toBe("banquet");
+    expect(
+      neededInSearch([hall, room], undefined, { ...needs, layout: "cabaret" })
+        .layout,
+    ).toBe("");
+  });
+
+  it("SCRUM-38 [AC9] TC-38-10: the form opens with them chosen, and the attendance stays the event's", () => {
+    const html = renderToStaticMarkup(
+      <RequestForm
+        events={[event]}
+        venues={[venue]}
+        initialEventId="evt_1"
+        initialVenueId="ven_1"
+        initialNeeds={{
+          facilities: ["projector"],
+          accessibility: ["wheelchair-access"],
+          layout: "classroom",
+        }}
+      />,
+    );
+
+    expect(html).toMatch(
+      /<button[^>]*aria-pressed="true"[^>]*>(?:<svg.*?<\/svg>)?projector<\/button>/,
+    );
+    expect(html).toMatch(
+      /<button[^>]*aria-pressed="true"[^>]*>(?:<svg.*?<\/svg>)?wheelchair-access<\/button>/,
+    );
+    expect(html).toContain('value="120"');
   });
 });

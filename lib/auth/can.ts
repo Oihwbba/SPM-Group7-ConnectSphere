@@ -47,9 +47,11 @@ export type Action =
   | "clarification:request" // SCRUM-18: coordinator asks the organiser a question
   | "clarification:respond" // SCRUM-18: organiser answers an open question
   | "change-request:raise" // SCRUM-41: the organiser, or the assigned coordinator on their behalf
+  | "change-request:decide" // SCRUM-128: the assigned coordinator approves or rejects a change request
   | "venue:read" // SCRUM-34 AC2: any internal user views the venue catalogue and a venue's details
   | "venue:manage" // SCRUM-34 AC3, AC6, AC8, AC9: Venue Staff add, edit and retire venues
   | "venue:availability" // SCRUM-36: view a venue's availability calendar
+  | "venue:search" // SCRUM-38: search and filter venues, alone or for an event
   | "venue:judge" // SCRUM-40 AC8: the assigned coordinator records a venue's suitability for their event
   | "booking:request" // SCRUM-50: coordinator asks for a venue for their event
   | "booking:review" // SCRUM-52: read the pending-request queue
@@ -136,12 +138,14 @@ const ROLE_ACTIONS: Record<Role, Action[]> = {
     "safety-check:request",
     "clarification:request",
     "change-request:raise",
+    "change-request:decide",
     "registration:control",
     "venue:read",
     "equipment-request:list",
     "equipment-request:create",
     "equipment-request:change",
     "venue:availability",
+    "venue:search",
     "venue:judge",
     "booking:request",
     "booking:settle-hold",

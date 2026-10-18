@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import {
   Dialog,
   DialogContent,
@@ -20,6 +21,7 @@ import { CancelEvent } from "@/components/events/cancel-event";
 import { CANCELLABLE } from "@/lib/event-closing";
 import { ConfirmedArrangements } from "@/components/events/confirmed-arrangements";
 import { CurrentCoordinator } from "@/components/events/current-coordinator";
+import { VenueBookings } from "@/components/events/venue-bookings";
 import { RegistrationListPanel } from "@/components/events/registration-list-panel";
 import { RegistrationControl } from "@/components/events/registration-control";
 import {
@@ -36,12 +38,14 @@ import {
   ClipboardList,
   Info,
   AlertTriangle,
+  Search,
 } from "lucide-react";
 import type { Event } from "@prisma/client";
 import {
   REJECTION_OUTCOME_LABEL,
   registrationNeededLabel,
 } from "@/lib/schemas/event";
+import { BOOKABLE_EVENT_STATUSES } from "@/lib/schemas/booking";
 
 interface EventDetailsModalProps {
   event: Event | null;
@@ -68,6 +72,9 @@ export function EventDetailsModal({
   // Resolving a flag, or an edit that flags one (SCRUM-25 AC3), changes the
   // flagged arrangements and the readiness checklist, so both are read again.
   const [reloads, setReloads] = useState(0);
+  // SCRUM-162 AC7: a hold settled or a request withdrawn from the checklist
+  // changes the Venue bookings card beside it, so it is read again.
+  const [bookingChanges, setBookingChanges] = useState(0);
   if (!event) return null;
 
   return (
@@ -89,6 +96,20 @@ export function EventDetailsModal({
               </DialogDescription>
             </div>
             <div className="flex items-center gap-2">
+              {/* SCRUM-38 AC1: venue search for this event's period. */}
+              {isCoordinator &&
+                BOOKABLE_EVENT_STATUSES.includes(event.status) && (
+                  <Button asChild size="sm" variant="outline">
+                    <Link
+                      href={{
+                        pathname: "/venues/search",
+                        query: { event: event.id },
+                      }}
+                    >
+                      <Search className="h-4 w-4" aria-hidden /> Find a venue
+                    </Link>
+                  </Button>
+                )}
               {/* SCRUM-25: offered only to the assigned Coordinator. */}
               {isCoordinator && (
                 <EditDetailsDialog
@@ -168,10 +189,25 @@ export function EventDetailsModal({
             />
           )}
           {event.status === "PLANNING" && (
-            <ReadinessChecklist key={`checklist-${reloads}`} eventId={event.id} />
+            <ReadinessChecklist
+              key={`checklist-${reloads}`}
+              eventId={event.id}
+              onBookingsChanged={() => setBookingChanges((n) => n + 1)}
+            />
           )}
           {/* SCRUM-81: what a Confirmed event has secured */}
           {event.status === "CONFIRMED" && <ConfirmedArrangements eventId={event.id} />}
+          {/* SCRUM-162 AC7: every venue booking, once a venue can be requested */}
+          {(event.status === "APPROVED" ||
+            event.status === "PLANNING" ||
+            event.status === "CONFIRMED" ||
+            event.status === "CANCELLED" ||
+            event.status === "COMPLETED") && (
+            <VenueBookings
+              key={`bookings-${reloads}-${bookingChanges}`}
+              eventId={event.id}
+            />
+          )}
           {/* SCRUM-75 AC6: close or reopen registration */}
           {event.status === "CONFIRMED" && <RegistrationControl eventId={event.id} />}
 

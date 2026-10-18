@@ -6,12 +6,14 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import {
   getConfirmedArrangements,
+  getEventVenueBookings,
   getReadinessChecklist,
   type ConfirmedArrangements,
   type ReadinessChecklist,
 } from "@/lib/event-readiness";
 import {
   getEventArrangements,
+  getEventBookings,
   getEventCoordinator,
   getEventReadiness,
 } from "@/app/(app)/events/readiness-actions";
@@ -28,6 +30,7 @@ vi.mock("@/lib/event-readiness", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/event-readiness")>()),
   getReadinessChecklist: vi.fn(),
   getConfirmedArrangements: vi.fn(),
+  getEventVenueBookings: vi.fn(),
 }));
 
 const mockAuth = auth as unknown as Mock;
@@ -35,6 +38,7 @@ const mockEventFindUnique = prisma.event.findUnique as unknown as Mock;
 const mockAuditCount = prisma.auditLog.count as unknown as Mock;
 const mockChecklist = getReadinessChecklist as unknown as Mock;
 const mockArrangements = getConfirmedArrangements as unknown as Mock;
+const mockVenueBookings = getEventVenueBookings as unknown as Mock;
 
 const REASON = "Boardroom seats 14; the event expects 55 attendees.";
 const checklist: ReadinessChecklist = {
@@ -171,7 +175,7 @@ describe("getEventReadiness — SCRUM-110", () => {
 });
 
 const arrangements: ConfirmedArrangements = {
-  venue: { name: "Exhibition Hall", location: "Level 1" },
+  venues: [{ name: "Exhibition Hall", location: "Level 1" }],
   startAt: new Date("2031-06-02T01:00:00Z"),
   endAt: new Date("2031-06-02T09:00:00Z"),
   timezone: "Asia/Singapore",
@@ -381,6 +385,66 @@ describe("getEventReadiness — SCRUM-170 No equipment needed", () => {
       }),
     ).toBe(false);
   });
+});
+
+describe("getEventBookings — SCRUM-162 AC7", () => {
+  const bookings = [
+    {
+      id: "b1",
+      venueName: "Main Hall",
+      attendance: 200,
+      status: "APPROVED",
+      startAt: new Date("2031-06-02T01:00:00Z"),
+      endAt: new Date("2031-06-02T09:00:00Z"),
+    },
+  ];
+
+  beforeEach(() => {
+    mockVenueBookings.mockResolvedValue(bookings);
+  });
+
+  it.each([
+    { who: "its Organiser", session: sessionFor("ORGANISER", "usr_organiser") },
+    {
+      who: "its Coordinator",
+      session: sessionFor("COORDINATOR", "usr_coordinator"),
+    },
+  ])(
+    "SCRUM-162 [AC7] TC-162-11: $who sees every venue booking of the event",
+    async ({ session }) => {
+      mockAuth.mockResolvedValue(session);
+
+      expect(await getEventBookings("evt_test")).toEqual({
+        ok: true,
+        data: bookings,
+      });
+      expect(mockVenueBookings).toHaveBeenCalledWith(prisma, "evt_test");
+    },
+  );
+
+  it.each([
+    {
+      who: "another Organiser",
+      session: sessionFor("ORGANISER", "usr_organiser2"),
+    },
+    {
+      who: "a Coordinator it isn't assigned to",
+      session: sessionFor("COORDINATOR", "usr_coordinator_2"),
+    },
+    { who: "an Attendee", session: sessionFor("ATTENDEE", "usr_attendee") },
+    { who: "a signed-out visitor", session: null },
+  ])(
+    "SCRUM-162 [AC7] TC-162-11: $who is told the event was not found, and no booking is read",
+    async ({ session }) => {
+      mockAuth.mockResolvedValue(session);
+
+      expect(await getEventBookings("evt_test")).toEqual({
+        ok: false,
+        error: "Event not found.",
+      });
+      expect(mockVenueBookings).not.toHaveBeenCalled();
+    },
+  );
 });
 
 describe("getEventCoordinator — SCRUM-21 AC8", () => {
