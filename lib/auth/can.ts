@@ -33,6 +33,7 @@ export type Action =
   | "event:review"
   | "event:confirm" // SCRUM-81: the assigned coordinator confirms a ready Planning event
   | "event:reject" // SCRUM-117: the assigned coordinator rejects a Planning event that can't be fulfilled
+  | "event:cancel" // SCRUM-82: the assigned coordinator cancels an event that won't go ahead
   | "event:no-equipment" // SCRUM-170 AC4: the assigned coordinator records No equipment needed
   | "event:edit" // SCRUM-25: the assigned coordinator edits an event's details directly
   | "event:assign" // SCRUM-165: the Lead assigns an unassigned request to a Coordinator
@@ -121,6 +122,7 @@ const ROLE_ACTIONS: Record<Role, Action[]> = {
     "event:review",
     "event:confirm",
     "event:reject",
+    "event:cancel",
     "event:no-equipment",
     "event:edit",
     "event-note:add",

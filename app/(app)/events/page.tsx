@@ -1,6 +1,8 @@
 import { Suspense } from "react";
 
 import { requireSession } from "@/lib/auth/guard";
+import { prisma } from "@/lib/db";
+import { completeFinishedEvents } from "@/lib/event-closing";
 import { Forbidden } from "@/components/app/forbidden";
 import {
   OrganiserEvents,
@@ -31,6 +33,8 @@ export default async function EventsPage({
   searchParams: SearchParams;
 }) {
   const session = await requireSession();
+  // SCRUM-82 AC7: finished Confirmed events read as Completed, with no job.
+  await completeFinishedEvents(prisma);
   // SCRUM-48 AC5: a notification links here with the event to open.
   const { event } = await searchParams;
   const openEventId = Array.isArray(event) ? event[0] : event;
