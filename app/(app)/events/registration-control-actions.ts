@@ -15,7 +15,10 @@ import { registrationControlSchema } from "@/lib/schemas/registration";
 import { ok, err, type ActionResult } from "@/lib/action-result";
 import { auditValue } from "@/lib/audit-value";
 import { formatDateTime } from "@/lib/datetime";
-import { notifyAboutEvent } from "@/lib/event-notifications";
+import {
+  notifyAboutEvent,
+  withdrawRegistrationClosedNotice,
+} from "@/lib/event-notifications";
 import {
   REGISTRATION_STATE_LABEL,
   canCloseRegistration,
@@ -215,15 +218,7 @@ async function changeRegistration(
         // Confirming scheduled a "Registration closed" notice for the old
         // closing time (SCRUM-45 AC11); it no longer says when registration
         // closes. Reopening schedules one for the event's start instead.
-        await tx.notification.updateMany({
-          where: {
-            eventId,
-            title: "Registration closed",
-            withdrawnAt: null,
-            showFromAt: { gt: now },
-          },
-          data: { withdrawnAt: now },
-        });
+        await withdrawRegistrationClosedNotice(tx, eventId, now);
         if (change === "reopen") {
           await notifyAboutEvent(
             tx,

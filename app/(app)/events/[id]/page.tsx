@@ -1,6 +1,8 @@
 import { notFound } from "next/navigation";
 
 import { requireSession } from "@/lib/auth/guard";
+import { prisma } from "@/lib/db";
+import { completeFinishedEvents } from "@/lib/event-closing";
 import { getBrowsableEvent } from "../queries";
 import { AttendeeEventDetail } from "../attendee-event-detail";
 
@@ -23,6 +25,8 @@ export default async function EventDetailPage({
   params: Promise<{ id: string }>;
 }) {
   await requireSession();
+  // SCRUM-82 AC7: a finished event reads as Completed, so it isn't shown here.
+  await completeFinishedEvents(prisma);
 
   const { id } = await params;
   const event = await getBrowsableEvent(id);
