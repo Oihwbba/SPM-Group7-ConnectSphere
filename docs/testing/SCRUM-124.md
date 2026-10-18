@@ -5,9 +5,9 @@ Format and conventions: [README.md](README.md).
 
 **Status:** SCRUM-124 is a list of triggers. Every trigger whose step is
 built writes its notice, in the same transaction as the step, so a step that
-is refused or loses a race tells nobody (AC 14): AC 1 to AC 9. AC 10 (a request
-waiting for a Lead) and AC 11 (safety checks) wait for the stories that build
-those steps, SCRUM-165 and SCRUM-166; their cases are listed as still to do.
+is refused or loses a race tells nobody (AC 14). Every trigger is built: AC 10
+comes with SCRUM-165's Unassigned queue, and AC 11's notices are sent by
+SCRUM-166's safety check itself.
 
 How each notice reaches its reader (AC 12, AC 15): every notice names the
 event and the arrangement and says what happened, and appears in the
@@ -30,10 +30,10 @@ otherwise. Times are shown in Singapore time.
 | [TC-124-05](#tc-124-05) | Positive, Boundary         | AC 5                         | Unit, integration            |
 | [TC-124-06](#tc-124-06) | Positive, Negative         | AC 6, AC 12–14               | Unit, integration            |
 | [TC-124-07](#tc-124-07) | Positive                   | AC 7, AC 12, AC 14           | Unit, integration            |
-| [TC-124-08](#tc-124-08) | Positive, Negative         | AC 8, AC 12–14               | Unit, integration; partly to do |
+| [TC-124-08](#tc-124-08) | Positive, Negative         | AC 8, AC 12–14               | Unit, integration               |
 | [TC-124-09](#tc-124-09) | Positive, Negative         | AC 9, AC 12–14               | Unit, integration            |
-| [TC-124-10](#tc-124-10) | Positive                   | AC 10                        | Still to do (SCRUM-165)      |
-| [TC-124-11](#tc-124-11) | Positive                   | AC 11                        | Still to do (SCRUM-166)      |
+| [TC-124-10](#tc-124-10) | Positive                   | AC 10                        | Unit, integration            |
+| [TC-124-11](#tc-124-11) | Positive                   | AC 11                        | Integration                  |
 
 ---
 
@@ -139,7 +139,7 @@ otherwise. Times are shown in Singapore time.
 | Test Data | Reason "The event's expected attendance changed." |
 | Expected Result | 1: the Coordinator: "Arrangements flagged for reconsideration": 'Hall A (Approved), Hall B (Pending) and Projector × 2 for "[event]" need reconsideration. The event's expected attendance changed.' Each Venue Staff member: "Bookings flagged for reconsideration", naming the two bookings, '… and wait for the event's Coordinator to decide', opening Bookings. Each Technical Support member: "Reservations flagged for reconsideration", naming the projectors, opening Equipment. 2: nobody is told again. 3: Venue Staff and Technical Support are told; the Coordinator who made the change isn't. 4: only Technical Support are told. 5: each event's Coordinator is told only about their own. |
 
-**Automated by:** `tests/unit/reconsideration.test.ts` › the seven "SCRUM-124 … TC-124-08" tests; `tests/integration/staff-notifications.test.ts` › "SCRUM-124 [AC8, AC14] TC-124-08: flagging an arrangement twice tells its Coordinator and each Venue Staff member once". When the flag comes from venue unavailability, SCRUM-161 sends its own notices instead: the Coordinator's, "Alternative venue arrangements required", gives the venue, the reason and the period, and every Venue Staff member is told, each once (`tests/integration/unavailability.test.ts` › "SCRUM-161 [AC4] TC-161-06: each affected event's Coordinator, and every Venue Staff member, is notified once"). **Still to do:** flags from a safety check outcome (SCRUM-166) and from setup or turnaround changes (SCRUM-160) notify through the same function once those stories flag.
+**Automated by:** `tests/unit/reconsideration.test.ts` › the seven "SCRUM-124 … TC-124-08" tests; `tests/integration/staff-notifications.test.ts` › "SCRUM-124 [AC8, AC14] TC-124-08: flagging an arrangement twice tells its Coordinator and each Venue Staff member once". When the flag comes from venue unavailability, SCRUM-161 sends its own notices instead: the Coordinator's, "Alternative venue arrangements required", gives the venue, the reason and the period, and every Venue Staff member is told, each once (`tests/integration/unavailability.test.ts` › "SCRUM-161 [AC4] TC-161-06: each affected event's Coordinator, and every Venue Staff member, is notified once"). Flags from a safety check outcome (SCRUM-166) and from setup or turnaround changes (SCRUM-160) go through the same function, so they notify the same way: `tests/integration/staff-notifications.test.ts` › "SCRUM-124 [AC8, AC11, AC14] TC-124-08, TC-124-11: a safety check's Changes requested flags the booking, and tells its Coordinator and each Venue Staff member once".
 
 ### TC-124-09
 
@@ -163,9 +163,9 @@ otherwise. Times are shown in Singapore time.
 | Pre-conditions | A Lead account; requests go to the Unassigned queue (SCRUM-165). |
 | Test Steps | 1. As an Organiser, submit a request. |
 | Test Data | — |
-| Expected Result | Each Lead has one notice that the request is waiting in the Unassigned queue. |
+| Expected Result | Each Lead has one notice, "A request is waiting to be assigned", that opens the request in the Unassigned queue. A resubmission that returns to the queue tells them too; one that goes back to its Coordinator, or a refused submission, tells no Lead. |
 
-**Automated by:** none yet. **Still to do:** submitting still assigns a Coordinator automatically (SCRUM-20) until SCRUM-165 builds the Unassigned queue; the notice comes with it.
+**Automated by:** `tests/unit/submission-queue.test.ts` › "SCRUM-124 [AC10, AC12, AC14] TC-124-10: every Lead is told once that the request is waiting in the Unassigned queue, and the notice opens it there" and "SCRUM-124 [AC10] TC-124-10: a refused submission tells no Lead"; `tests/unit/clarification-and-amend.test.ts` › "SCRUM-108 [AC14] TC-108-14, SCRUM-165 [AC9] TC-165-12: …" (a resubmission back in the queue); `tests/integration/staff-notifications.test.ts` › "SCRUM-124 [AC10, AC12, AC14] TC-124-10: a submitted request tells every Lead once that it waits in the Unassigned queue, and opens it there"; `tests/integration/concurrency.test.ts` › "SCRUM-14 AC: two simultaneous submissions of one draft succeed once and notify once" (each Lead once)
 
 ### TC-124-11
 
@@ -178,4 +178,4 @@ otherwise. Times are shown in Singapore time.
 | Test Data | — |
 | Expected Result | 1: each Safety Officer has one notice. 2: the Coordinator has one notice with the note. |
 
-**Automated by:** none yet. **Still to do:** requesting and deciding a safety check is SCRUM-166, not merged yet.
+**Automated by:** `tests/integration/staff-notifications.test.ts` › "SCRUM-124 [AC8, AC11, AC14] TC-124-08, TC-124-11: a safety check's Changes requested flags the booking, and tells its Coordinator and each Venue Staff member once"; SCRUM-166's own `tests/integration/safety-check.test.ts` › "SCRUM-166 [AC1, AC9] TC-166-01: once the venue is arranged, a requested check awaits review, every Safety Officer is notified, and Confirm waits for it" and "SCRUM-166 [AC3, AC10] TC-166-05: Changes requested keeps the picked booking, flags it with the note, and the event stays in Planning". SCRUM-166 sends both notices; a Safety Officer who organises or coordinates the event isn't told (SCRUM-166 AC6).

@@ -22,6 +22,7 @@ import { toast } from "sonner";
 import type { Event, RejectionOutcome } from "@prisma/client";
 
 import { formatDate, formatDateTime } from "@/lib/datetime";
+import { isOverdue } from "@/lib/event-closing";
 import { StatusBadge } from "@/components/events/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -108,10 +109,10 @@ export function filterAndSortEvents<
 
   return events
     .filter((evt) => {
-      // SCRUM-20 auto-assigns on submission, so a tab scoped to SUBMITTED alone
-      // would hide a request the moment it is sent. For an organiser the tab is
-      // therefore everything that is not a draft; for a coordinator it is the
-      // queue they can still decide on, which is what their page is for.
+      // A submitted request moves to Under Review once the Lead assigns it
+      // (SCRUM-165), so a tab scoped to SUBMITTED alone would hide it then. For
+      // an organiser the tab is therefore everything that is not a draft; for
+      // a coordinator it is the requests they can still decide on.
       const matchesTab =
         activeTab === "DRAFT"
           ? evt.status === "DRAFT"
@@ -399,7 +400,7 @@ export function EventsClient({
           </Button>
         )}
         {/* SCRUM-19: decide a submitted or under-review request. There is no
-            manual "claim" — SCRUM-20 assigns automatically. */}
+            "claim": the Lead assigns it (SCRUM-165). */}
         {isCoordinator &&
           (event.status === "SUBMITTED" || event.status === "UNDER_REVIEW") && (
             <>
@@ -768,7 +769,18 @@ export function EventsClient({
                         </div>
                       </TableCell>
                       <TableCell role="cell" data-col="status">
-                        <StatusBadge status={event.status} />
+                        <div className="flex flex-wrap items-center gap-1">
+                          <StatusBadge status={event.status} />
+                          {/* SCRUM-82 AC10: started but still undecided. */}
+                          {isCoordinator && isOverdue(event) && (
+                            <span
+                              data-testid="overdue-badge"
+                              className="inline-flex items-center rounded-full border border-destructive/40 bg-destructive/10 px-2 py-0.5 text-[11px] font-semibold text-destructive"
+                            >
+                              Overdue
+                            </span>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell
                         role="cell"

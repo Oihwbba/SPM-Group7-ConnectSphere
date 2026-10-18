@@ -502,7 +502,7 @@ describe("raiseChangeRequest — SCRUM-41", () => {
     expect(tx.eventChangeRequest.create.mock.calls[0][0].data.requestedById).toBe(COORDINATOR);
   });
 
-  it("SCRUM-41 [AC10] TC-41-14: a Coordinator who isn't assigned is refused, and nothing is locked", async () => {
+  it("SCRUM-41 [AC10] TC-41-14, SCRUM-165 [AC8] TC-165-11: a Coordinator who isn't assigned is refused as if the event were missing, and nothing is locked", async () => {
     signIn("COORDINATOR", "usr_other_coord", { status: "UNDER_REVIEW", coordinatorId: null });
 
     const result = await raiseChangeRequest({
@@ -512,8 +512,8 @@ describe("raiseChangeRequest — SCRUM-41", () => {
 
     expect(result).toEqual({
       ok: false,
-      error:
-        "Only the event's organiser or its assigned coordinator can raise a change request.",
+      error: "Event not found.",
+      fieldErrors: undefined,
     });
     expect(mockTransaction).not.toHaveBeenCalled();
   });

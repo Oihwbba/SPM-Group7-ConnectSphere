@@ -419,8 +419,8 @@ describe("respondToClarification — SCRUM-108 AC2–AC5, AC14", () => {
   });
 });
 
-describe("transitionEventStatus — SCRUM-108 AC11 rejecting an unassigned request", () => {
-  it("SCRUM-108 [AC11] TC-108-07: the Coordinator who rejects a request nobody was assigned to becomes its coordinator", async () => {
+describe("transitionEventStatus — SCRUM-165 AC8 an unassigned request", () => {
+  it("SCRUM-165 [AC8] TC-165-11 (supersedes SCRUM-108 AC11): a Coordinator can't reject a request nobody was assigned to; it waits for the Lead", async () => {
     mockAuth.mockResolvedValue(coordinator());
     tx.event.findUnique.mockResolvedValue({
       id: "evt1",
@@ -429,29 +429,16 @@ describe("transitionEventStatus — SCRUM-108 AC11 rejecting an unassigned reque
       coordinatorId: null,
     });
 
-    await transitionEventStatus({
+    const result = await transitionEventStatus({
       eventId: "evt1",
       nextStatus: "REJECTED",
       decisionReason: "Too large for any venue.",
       rejectionOutcome: "AMEND_AND_RESUBMIT",
     });
 
-    expect(tx.event.updateMany).toHaveBeenCalledWith({
-      where: { id: "evt1", status: "SUBMITTED", coordinatorId: null },
-      data: expect.objectContaining({
-        status: "REJECTED",
-        coordinatorId: "usr_coord",
-      }),
-    });
-    expect(tx.auditLog.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({
-        action: "ASSIGNED",
-        actorId: "usr_coord",
-        oldValue: null,
-        newValue: "usr_coord",
-        summary: "Assigned to the rejecting coordinator (SCRUM-108)",
-      }),
-    });
+    expect(result.ok).toBe(false);
+    expect(tx.event.updateMany).not.toHaveBeenCalled();
+    expect(tx.auditLog.create).not.toHaveBeenCalled();
   });
 });
 
@@ -497,7 +484,7 @@ describe("submitEventRequest — SCRUM-108 AC9–AC12, AC14 resubmission", () =>
 
   beforeEach(() => mockAuth.mockResolvedValue(organiser()));
 
-  it("SCRUM-108 [AC9, AC11, AC14] TC-108-05: the amended request goes back to the same Coordinator, without automatic assignment, and the resubmission is recorded", async () => {
+  it("SCRUM-108 [AC9, AC11, AC14] TC-108-05, SCRUM-165 [AC9] TC-165-12: the amended request goes back to the same Coordinator, and the resubmission is recorded", async () => {
     tx.event.findFirst.mockResolvedValue(rejectedRow("usr_coord"));
     tx.user.findFirst.mockResolvedValue({ id: "usr_coord" });
 
@@ -606,28 +593,27 @@ describe("submitEventRequest — SCRUM-108 AC9–AC12, AC14 resubmission", () =>
     },
     { when: "it was rejected before anyone was assigned", coordinatorId: null },
   ])(
-    "SCRUM-108 [AC11] TC-108-06: when $when, automatic assignment picks a Coordinator",
+    "SCRUM-165 [AC9] TC-165-12 (supersedes SCRUM-108 AC11): when $when, the resubmitted request waits in the Lead's queue, Submitted with no Coordinator",
     async ({ coordinatorId }) => {
       tx.event.findFirst.mockResolvedValue(rejectedRow(coordinatorId));
       tx.user.findFirst.mockResolvedValue(null);
-      tx.user.findMany.mockResolvedValue([
-        { id: "usr_new", _count: { coordinatedEvents: 0 } },
-      ]);
 
-      await submitEventRequest(amended);
+      const result = await submitEventRequest(amended);
 
-      expect(tx.$executeRaw).toHaveBeenCalled();
-      expect(tx.event.update).toHaveBeenLastCalledWith({
-        where: { id: "evt1" },
-        data: { coordinatorId: "usr_new", status: "UNDER_REVIEW" },
-      });
+      expect(result).toEqual({ ok: true, data: { id: "evt1" } });
+      expect(tx.event.update).not.toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ status: "UNDER_REVIEW" }),
+        }),
+      );
+      expect(tx.notification.create).not.toHaveBeenCalled();
     },
   );
 
-  it("SCRUM-108 [AC11, AC14] TC-108-14: when its Coordinator lost the role and nobody can be assigned, the resubmitted request is left unassigned", async () => {
+  it("SCRUM-108 [AC14] TC-108-14, SCRUM-165 [AC9] TC-165-12: when its Coordinator lost the role, the resubmitted request returns to the queue and the history records who held it", async () => {
     tx.event.findFirst.mockResolvedValue(rejectedRow("usr_old"));
     tx.user.findFirst.mockResolvedValue(null);
-    tx.user.findMany.mockResolvedValue([]);
+    tx.user.findMany.mockResolvedValue([{ id: "usr_lead" }]);
 
     const result = await submitEventRequest(amended);
 
@@ -644,12 +630,19 @@ describe("submitEventRequest — SCRUM-108 AC9–AC12, AC14 resubmission", () =>
         newValue: null,
       }),
     });
-    // Nobody was assigned, so only the Organiser's submission notice
-    // (SCRUM-45 AC1) is written.
+    // Nobody was assigned: the Organiser's submission notice (SCRUM-45 AC1),
+    // and every Lead's that it is back in the queue (SCRUM-124 AC10).
     expect(tx.notification.create).not.toHaveBeenCalled();
-    expect(tx.notification.createMany).toHaveBeenCalledTimes(1);
-    expect(tx.notification.createMany.mock.calls[0][0].data).toEqual([
-      expect.objectContaining({ title: "Request submitted", eventId: "evt1" }),
+    expect(tx.notification.createMany.mock.calls.map((c) => c[0].data)).toEqual([
+      [expect.objectContaining({ title: "Request submitted", eventId: "evt1" })],
+      [
+        expect.objectContaining({
+          userId: "usr_lead",
+          type: "REQUEST_AWAITING_ASSIGNMENT",
+          eventId: "evt1",
+          link: "/queue/evt1",
+        }),
+      ],
     ]);
   });
 
