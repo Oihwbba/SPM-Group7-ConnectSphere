@@ -36,6 +36,7 @@ const db = vi.hoisted(() => ({
   },
   venueUnavailability: { findMany: vi.fn() },
   auditLog: { create: vi.fn() },
+  safetyCheck: { updateMany: vi.fn() },
   $transaction: vi.fn(),
 }));
 
@@ -744,12 +745,31 @@ describe("decideBookingRequest — SCRUM-53", () => {
     endAt: new Date(END),
     status: "PENDING",
     venue: { name: "Seminar Room", setupMinutes: 0, turnaroundMinutes: 0 },
+    event: { id: "evt_1", name: "Symposium", coordinatorId: "usr_coord" },
   };
 
   beforeEach(() => {
     mockAuth.mockResolvedValue(sessionFor("VENUE_STAFF", "usr_staff"));
     db.booking.findUnique.mockResolvedValue(pendingBooking);
     db.booking.updateMany.mockResolvedValue({ count: 1 });
+    db.safetyCheck.updateMany.mockResolvedValue({ count: 0 });
+  });
+
+  it("SCRUM-166 [AC13] TC-166-12: approving a booking makes the event's approved or awaiting safety check Outdated; rejecting a request doesn't", async () => {
+    await decideBookingRequest({ bookingId: "bkg_1", decision: "APPROVED" });
+
+    expect(db.safetyCheck.updateMany).toHaveBeenCalledWith({
+      where: { eventId: "evt_1", status: { in: ["AWAITING_REVIEW", "APPROVED"] } },
+      data: { status: "OUTDATED", outdatedAt: expect.any(Date) },
+    });
+
+    db.safetyCheck.updateMany.mockClear();
+    await decideBookingRequest({
+      bookingId: "bkg_1",
+      decision: "REJECTED",
+      reason: "Too small.",
+    });
+    expect(db.safetyCheck.updateMany).not.toHaveBeenCalled();
   });
 
   it("SCRUM-53 [AC1, AC4] TC-53-01: approving sets the request APPROVED and records who decided, when, and an audit entry", async () => {

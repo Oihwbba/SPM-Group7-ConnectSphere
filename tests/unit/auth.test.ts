@@ -22,11 +22,21 @@ describe("can — role gate", () => {
     expect(can({ id: "vs", role: "VENUE_STAFF" }, "event:review")).toBe(false);
   });
 
-  // The Venue Catalogue (venue:read) is Coordinator-only. Pin both sides so a
-  // one-line re-grant of venue:read to VENUE_STAFF can't silently re-open it.
-  it("does not let venue staff read the venue catalogue", () => {
-    expect(can({ id: "vs", role: "VENUE_STAFF" }, "venue:read")).toBe(false);
-  });
+  // SCRUM-34 AC2: any internal user views the venue catalogue; the external
+  // roles don't. Pin both sides.
+  it.each(["VENUE_STAFF", "TECH_SUPPORT", "COORDINATOR_LEAD", "SAFETY_OFFICER"] as const)(
+    "SCRUM-34 [AC2] TC-34-02: %s, an internal user, reads the venue catalogue",
+    (role) => {
+      expect(can({ id: "u", role }, "venue:read")).toBe(true);
+    },
+  );
+
+  it.each(["ORGANISER", "ATTENDEE"] as const)(
+    "SCRUM-34 [AC2] TC-34-02: %s, an external user, doesn't read the venue catalogue",
+    (role) => {
+      expect(can({ id: "u", role }, "venue:read")).toBe(false);
+    },
+  );
 
   it("lets a coordinator read the venue catalogue", () => {
     expect(can(coordinator, "venue:read")).toBe(true);
@@ -187,6 +197,27 @@ describe("can — rejecting a Planning event (SCRUM-117)", () => {
   });
 });
 
+// SCRUM-75 AC6 — the Organiser closes or reopens registration for their own
+// event; the assigned Coordinator may do it on their behalf, and no one else.
+describe("can — closing and reopening registration (SCRUM-75)", () => {
+  const confirmed = {
+    kind: "event" as const,
+    organiserId: "orgA",
+    coordinatorId: "coord",
+    status: "CONFIRMED" as const,
+  };
+
+  it("SCRUM-75 [AC6] TC-75-08: the Organiser and the assigned Coordinator may, and no one else", () => {
+    expect(can(organiserA, "registration:control", confirmed)).toBe(true);
+    expect(can(coordinator, "registration:control", confirmed)).toBe(true);
+    expect(can(organiserB, "registration:control", confirmed)).toBe(false);
+    expect(can({ id: "other", role: "COORDINATOR" }, "registration:control", confirmed)).toBe(false);
+    expect(can(coordinator, "registration:control", { ...confirmed, coordinatorId: null })).toBe(false);
+    expect(can(attendee, "registration:control", confirmed)).toBe(false);
+    expect(can({ id: "vs", role: "VENUE_STAFF" }, "registration:control", confirmed)).toBe(false);
+  });
+});
+
 // SCRUM-26 AC7 — resolving a Needs Reconsideration flag follows the same rule
 // as confirming: only the event's assigned Coordinator.
 describe("can — resolving a flagged arrangement (SCRUM-26)", () => {
@@ -301,7 +332,7 @@ describe("can — viewing venue availability (SCRUM-36)", () => {
 // AC2).
 describe("can — the Week 7 roles before their stories", () => {
   it.each(["COORDINATOR_LEAD", "SAFETY_OFFICER"] as const)(
-    "SCRUM-172 [AC1] TC-172-01: %s may read only its own notifications",
+    "SCRUM-172 [AC1] TC-172-01: %s reads only its own notifications and can't decide, plan or edit an event",
     (role) => {
       const user: SessionUser = { id: "usr_new", role };
       expect(can(user, "notification:read", { kind: "notification", userId: "usr_new" })).toBe(true);
@@ -319,4 +350,41 @@ describe("can — the Week 7 roles before their stories", () => {
       }
     },
   );
+});
+
+// SCRUM-166 — the Coordinator requests a check for their own event; a Safety
+// Officer reviews any event's check except one they organise or coordinate.
+describe("can — the operational safety check (SCRUM-166)", () => {
+  const planning = {
+    kind: "event" as const,
+    organiserId: "orgA",
+    coordinatorId: "coord",
+    status: "PLANNING" as const,
+  };
+  const officer: SessionUser = { id: "safety", role: "SAFETY_OFFICER" };
+
+  it("SCRUM-166 [AC1] TC-166-03: only the event's assigned Coordinator may request its safety check", () => {
+    expect(can(coordinator, "safety-check:request", planning)).toBe(true);
+    expect(can({ id: "other", role: "COORDINATOR" }, "safety-check:request", planning)).toBe(false);
+    expect(can(coordinator, "safety-check:request", { ...planning, coordinatorId: null })).toBe(false);
+    for (const user of [organiserA, attendee, officer, { id: "vs", role: "VENUE_STAFF" }] as SessionUser[]) {
+      expect(can(user, "safety-check:request")).toBe(false);
+    }
+  });
+
+  it("SCRUM-166 [AC6] TC-166-09: only a Safety Officer reviews a check, and never for an event they organise or coordinate", () => {
+    expect(can(officer, "safety-check:review", planning)).toBe(true);
+    expect(can(officer, "safety-check:review", { ...planning, organiserId: "safety" })).toBe(false);
+    expect(can(officer, "safety-check:review", { ...planning, coordinatorId: "safety" })).toBe(false);
+    for (const user of [
+      organiserA,
+      coordinator,
+      attendee,
+      { id: "vs", role: "VENUE_STAFF" },
+      { id: "ts", role: "TECH_SUPPORT" },
+      { id: "lead", role: "COORDINATOR_LEAD" },
+    ] as SessionUser[]) {
+      expect(can(user, "safety-check:review")).toBe(false);
+    }
+  });
 });

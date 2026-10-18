@@ -187,7 +187,11 @@ describe.skipIf(!usesLocalDatabase)(
     });
 
     it("SCRUM-45 [AC4, AC11, AC13] TC-45-04, TC-45-07: confirming tells the Organiser once, and writes the registration-closed notice to show at the event's start", async () => {
-      const ready = await event("Confirm", "PLANNING");
+      // SCRUM-170 AC4: no equipment, decided, so the venue makes it ready.
+      const ready = await event("Confirm", "PLANNING", {
+        noEquipmentNeededAt: new Date(),
+        noEquipmentNeededById: COORDINATOR,
+      });
       await prisma.booking.create({
         data: {
           eventId: ready.id,
@@ -196,6 +200,16 @@ describe.skipIf(!usesLocalDatabase)(
           endAt: ready.endAt!,
           status: "APPROVED",
           requestedById: COORDINATOR,
+        },
+      });
+      // SCRUM-166 AC9: confirming needs an approved safety check.
+      await prisma.safetyCheck.create({
+        data: {
+          eventId: ready.id,
+          status: "APPROVED",
+          requestedById: COORDINATOR,
+          decidedById: "usr_safetyofficer",
+          decidedAt: new Date(),
         },
       });
       signIn(COORDINATOR, "COORDINATOR");

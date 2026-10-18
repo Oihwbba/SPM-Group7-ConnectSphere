@@ -2,14 +2,17 @@ import { describe, it, expect, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 
 import {
-  layoutOption,
   liveAnswer,
   LIVE_CHECK_FAILED_MESSAGE,
   RequestForm,
   venuesForLayout,
 } from "@/app/(app)/bookings/new/request-form";
 import { eventBookingPeriod } from "@/lib/schemas/booking";
-import { HALF_HOUR_TIMES, isPastSlot } from "@/components/app/date-time-field";
+import {
+  HALF_HOUR_TIMES,
+  isPastSlot,
+  timesEvery,
+} from "@/components/app/date-time-field";
 
 // SCRUM-50 — what a coordinator sees before submitting. The server action is
 // never called here, so its dependencies are stubbed out.
@@ -17,12 +20,18 @@ vi.mock("@/app/(app)/bookings/actions", () => ({
   submitBookingRequest: vi.fn(),
   checkVenueAvailability: vi.fn(),
 }));
+// SCRUM-40: the form's suitability panel records judgements through this.
+vi.mock("@/app/(app)/venues/suitability-actions", () => ({
+  recordSuitabilityJudgement: vi.fn(),
+}));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 
 const venue = {
   id: "ven_1",
   name: "Seminar Room",
   capacity: 60,
   facilities: ["projector"],
+  accessibilityFeatures: ["wheelchair-access"],
   supportedLayouts: ["classroom"],
 };
 const event = {
@@ -31,8 +40,12 @@ const event = {
   startAt: new Date("2035-03-10T01:00:00.000Z"),
   endAt: new Date("2035-03-10T05:00:00.000Z"),
   expectedAttendance: 120,
-  requiredFacilities: [],
+  venueRequirements: null,
   preferredLayout: null,
+  accessibilityNeeds: null,
+  organiserId: "usr_organiser",
+  coordinatorId: "usr_coordinator",
+  status: "PLANNING" as const,
 };
 
 describe("RequestForm — SCRUM-50", () => {
@@ -143,23 +156,6 @@ describe("SCRUM-50 [AC3, AC4, AC5] TC-50-13: liveAnswer, the live check", () => 
   });
 });
 
-describe("SCRUM-50 [AC1] TC-50-12: layoutOption", () => {
-  const options = ["banquet", "classroom", "theatre"];
-
-  it("SCRUM-50 [AC1] TC-50-12: the event's preferred layout is pre-selected whatever its case or spacing", () => {
-    expect(layoutOption("classroom", options)).toBe("classroom");
-    expect(layoutOption("Classroom", options)).toBe("classroom");
-    expect(layoutOption("  THEATRE ", options)).toBe("theatre");
-  });
-
-  it("SCRUM-50 [AC1] TC-50-12: a layout no venue offers, or none at all, pre-selects nothing", () => {
-    expect(layoutOption("boardroom", options)).toBe("");
-    expect(layoutOption("", options)).toBe("");
-    expect(layoutOption(null, options)).toBe("");
-    expect(layoutOption(undefined, options)).toBe("");
-  });
-});
-
 describe("venuesForLayout — SCRUM-50", () => {
   const hall = { id: "hall", supportedLayouts: ["theatre", "banquet"] };
   const room = { id: "room", supportedLayouts: ["classroom", "theatre"] };
@@ -180,6 +176,23 @@ describe("the half-hour time grid — SCRUM-50", () => {
     expect(HALF_HOUR_TIMES).toHaveLength(48);
     expect(HALF_HOUR_TIMES.slice(0, 3)).toEqual(["00:00", "00:30", "01:00"]);
     expect(HALF_HOUR_TIMES.at(-1)).toBe("23:30");
+  });
+});
+
+describe("the quarter-hour time grid — SCRUM-161", () => {
+  it("SCRUM-161 [AC1] TC-161-16: unavailability can start and end on any quarter hour, and nothing in between", () => {
+    const quarters = timesEvery(15);
+    expect(quarters).toHaveLength(96);
+    expect(quarters.slice(0, 5)).toEqual([
+      "00:00",
+      "00:15",
+      "00:30",
+      "00:45",
+      "01:00",
+    ]);
+    expect(quarters).toContain("09:45");
+    expect(quarters).not.toContain("09:50");
+    expect(quarters.at(-1)).toBe("23:45");
   });
 });
 

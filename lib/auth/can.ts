@@ -33,15 +33,20 @@ export type Action =
   | "event:review"
   | "event:confirm" // SCRUM-81: the assigned coordinator confirms a ready Planning event
   | "event:reject" // SCRUM-117: the assigned coordinator rejects a Planning event that can't be fulfilled
+  | "event:no-equipment" // SCRUM-170 AC4: the assigned coordinator records No equipment needed
   | "event:edit" // SCRUM-25: the assigned coordinator edits an event's details directly
   | "event-note:add" // SCRUM-25 AC6: add an operational note to an event
   | "event-note:read" // SCRUM-25 AC6: read an event's operational notes
   | "arrangement:reconsider" // SCRUM-26: the assigned coordinator resolves a Needs Reconsideration flag
+  | "safety-check:request" // SCRUM-166: the assigned coordinator asks for an operational safety check
+  | "safety-check:review" // SCRUM-166: a Safety Officer reviews a check and records its outcome
   | "clarification:request" // SCRUM-18: coordinator asks the organiser a question
   | "clarification:respond" // SCRUM-18: organiser answers an open question
   | "change-request:raise" // SCRUM-41: the organiser, or the assigned coordinator on their behalf
-  | "venue:read"
+  | "venue:read" // SCRUM-34 AC2: any internal user views the venue catalogue and a venue's details
+  | "venue:manage" // SCRUM-34 AC3, AC6, AC8, AC9: Venue Staff add, edit and retire venues
   | "venue:availability" // SCRUM-36: view a venue's availability calendar
+  | "venue:judge" // SCRUM-40 AC8: the assigned coordinator records a venue's suitability for their event
   | "booking:request" // SCRUM-50: coordinator asks for a venue for their event
   | "booking:review" // SCRUM-52: read the pending-request queue
   | "booking:decide" // SCRUM-53: approve or reject a pending request
@@ -58,6 +63,7 @@ export type Action =
   | "event:browse" // attendees browsing events open for registration
   | "registration:create" // SCRUM-73: an attendee registers for an event
   | "registration:withdraw" // SCRUM-74/77: an attendee withdraws their own registration
+  | "registration:control" // SCRUM-75 AC6: the organiser, or the assigned coordinator on their behalf, closes or reopens registration
   | "registration:read"
   | "registration:list" // SCRUM-70: an event's Organiser or assigned Coordinator sees its registrations
   | "notification:read";
@@ -103,6 +109,7 @@ const ROLE_ACTIONS: Record<Role, Action[]> = {
     "event:read",
     "clarification:respond",
     "change-request:raise",
+    "registration:control",
     "event-note:read",
     "registration:list",
     "notification:read",
@@ -113,28 +120,30 @@ const ROLE_ACTIONS: Record<Role, Action[]> = {
     "event:review",
     "event:confirm",
     "event:reject",
+    "event:no-equipment",
     "event:edit",
     "event-note:add",
     "event-note:read",
     "arrangement:reconsider",
+    "safety-check:request",
     "clarification:request",
     "change-request:raise",
+    "registration:control",
     "venue:read",
     "equipment-request:list",
     "equipment-request:create",
     "equipment-request:change",
     "venue:availability",
+    "venue:judge",
     "booking:request",
     "booking:settle-hold",
     "booking:withdraw",
     "registration:list",
     "notification:read",
   ],
-  // `venue:read` gates the Venue Catalogue page, which is Coordinator-only, so
-  // it is deliberately NOT granted here — Venue Staff act on bookings, not the
-  // catalogue. Grant it here the day Venue Staff need the catalogue; that is the
-  // one-line change SCRUM-66 is about, with no page edits.
   VENUE_STAFF: [
+    "venue:read",
+    "venue:manage",
     "booking:review",
     "booking:decide",
     "booking:hold",
@@ -146,6 +155,7 @@ const ROLE_ACTIONS: Record<Role, Action[]> = {
   ],
   TECH_SUPPORT: [
     "equipment:read",
+    "venue:read",
     "equipment:reserve",
     "equipment-request:list",
     "equipment-request:review",
@@ -161,9 +171,10 @@ const ROLE_ACTIONS: Record<Role, Action[]> = {
     "notification:read",
   ],
   // SCRUM-164 — the Week 7 roles. Like every user they read their own
-  // notifications (SCRUM-48); SCRUM-165 and SCRUM-166 grant the rest.
-  COORDINATOR_LEAD: ["notification:read"],
-  SAFETY_OFFICER: ["notification:read"],
+  // notifications (SCRUM-48) and, as internal users, the venue catalogue
+  // (SCRUM-34 AC2); SCRUM-165 and SCRUM-166 grant the rest.
+  COORDINATOR_LEAD: ["venue:read", "notification:read"],
+  SAFETY_OFFICER: ["venue:read", "safety-check:review", "notification:read"],
 };
 
 /**
@@ -188,21 +199,34 @@ function hasRelationship(
         // reject it from Planning (SCRUM-117 AC 5), confirm or release its
         // venue holds (SCRUM-163 AC3), change or withdraw its requests
         // (SCRUM-142 AC7), raise a change request on the organiser's behalf
-        // (SCRUM-41 AC10), or edit its details (SCRUM-25 AC1, AC7), 
-        // or resolve a flag on its arrangements (SCRUM-26 AC7), or see its
-        // registrations (SCRUM-70 AC1).
+        // (SCRUM-41 AC10), record No equipment needed (SCRUM-170 AC4), edit
+        // its details (SCRUM-25 AC1, AC7), judge a venue's suitability for it
+        // (SCRUM-40 AC8), resolve a flag on its arrangements (SCRUM-26 AC7),
+        // request its safety check (SCRUM-166 AC1), close or reopen its
+        // registration (SCRUM-75 AC6) or see its registrations (SCRUM-70 AC1).
         return (
           action !== "event:confirm" &&
           action !== "event:reject" &&
+          action !== "event:no-equipment" &&
           action !== "booking:settle-hold" &&
           action !== "booking:withdraw" &&
           action !== "equipment-request:change" &&
           action !== "change-request:raise" &&
           action !== "event:edit" &&
+          action !== "venue:judge" &&
           action !== "arrangement:reconsider" &&
           action !== "registration:list" &&
+          action !== "registration:control" &&
+          action !== "safety-check:request" &&
           resource.coordinatorId === null &&
           resource.status !== "DRAFT"
+        );
+      }
+      // SCRUM-166 AC6, SCRUM-121 AC5: a Safety Officer reviews any event's
+      // check, but never one for an event they organise or coordinate.
+      if (user.role === "SAFETY_OFFICER") {
+        return (
+          resource.organiserId !== user.id && resource.coordinatorId !== user.id
         );
       }
       return false;

@@ -133,3 +133,24 @@ Consequences says "SCRUM-43 will move a Confirmed event back to Planning after
 an approved impactful change". SCRUM-43 was merged into SCRUM-41 and SCRUM-128,
 and SCRUM-128 AC 5 now returns a Confirmed event to Planning when an approved
 change is impactful. The same checklist and Confirm action then apply again.
+
+## Addendum (2026-10-16) — Registration needed is on the form (SCRUM-171)
+
+SCRUM-171 puts the Registration needed choice on the request form, required to
+submit, so the 2026-10-03 addendum's "not on the form yet" no longer holds.
+Requests submitted from now on store Yes or No in `registrationRequired`;
+requests made before it stay unset and keep opening, as before. Confirming is
+unchanged: registration opens unless the answer is No.
+
+## Addendum (2026-10-16) — Closing registration by hand (SCRUM-75)
+
+SCRUM-75 AC 6 lets the Organiser, or the assigned Coordinator, close and reopen
+registration on a Confirmed event. A close is stored as
+`registrationClosesAt = now`, not as `registrationEnabled = false`: step 2
+above sets `registrationEnabled` every time an event is confirmed, so a close
+stored as the flag would be undone when the event returns to Planning and is
+confirmed again. SCRUM-75 AC 9 says it must stay closed until it is reopened,
+and a closing time that has passed does exactly that. Reopening clears
+`registrationOpensAt` and `registrationClosesAt`, so registration is open from
+then until the event's start (AC 4, AC 6). Both lock the event row, as
+registering does, and an Attendee sees "Registration closed" either way.

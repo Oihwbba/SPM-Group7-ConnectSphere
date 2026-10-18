@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
-import type { EventStatus, Prisma } from "@prisma/client";
+import type { EventStatus, Prisma, SafetyCheckStatus } from "@prisma/client";
 
+import { formatDateTime } from "@/lib/datetime";
 import {
   getConfirmedArrangements,
   getReadinessChecklist,
@@ -40,10 +41,24 @@ interface Arrangements {
   status: EventStatus;
   startAt: Date | null;
   endAt: Date | null;
+  noEquipmentNeededAt: Date | null;
+  noEquipmentNeededBy: { name: string } | null;
   bookings: Booking[];
   equipmentRequests: Request[];
   reservations: Reservation[];
+  safetyChecks: { status: SafetyCheckStatus; note: string | null }[];
 }
+
+// SCRUM-166 AC9: the checklist now ends with a Safety check item. The SCRUM-110
+// cases below are about the venue and equipment, so their event's latest check
+// is Approved unless a case says otherwise.
+const APPROVED_CHECK = { status: "APPROVED" as const, note: null };
+const SAFETY_APPROVED = {
+  name: "Safety check",
+  complete: true,
+  state: "Approved",
+  reason: null,
+};
 
 const day = (n: number) => new Date(Date.UTC(2031, 0, n));
 const booking = (
@@ -83,14 +98,23 @@ const reserved = (
 const projectors = (n: number) => line("eqp_projector", "Projector", n);
 const mics = (n: number) => line("eqp_mic", "Wireless Microphone", n);
 
+// SCRUM-170 AC4: Equipment is always listed. Tests about the venue start
+// from No equipment needed recorded, so Equipment doesn't hold them back;
+// `undecided` is an event where the Coordinator hasn't decided yet.
+const DECIDED_AT = new Date("2031-05-20T02:00:00Z");
+const undecided = { noEquipmentNeededAt: null, noEquipmentNeededBy: null };
+
 function planningEvent(overrides: Partial<Arrangements> = {}): Arrangements {
   return {
     status: "PLANNING",
     startAt: START,
     endAt: END,
+    noEquipmentNeededAt: DECIDED_AT,
+    noEquipmentNeededBy: { name: "Cody Coordinator" },
     bookings: [booking("APPROVED")],
     equipmentRequests: [],
     reservations: [],
+    safetyChecks: [APPROVED_CHECK],
     ...overrides,
   };
 }
@@ -112,7 +136,7 @@ const equipment = (c: ReadinessChecklist | null) =>
   c?.items.find((i) => i.name === "Equipment");
 
 describe("getReadinessChecklist — SCRUM-110", () => {
-  it("SCRUM-110 [AC1, AC3, AC5] TC-110-01: an approved venue booking and no equipment request is a complete checklist with only the venue, ready to confirm", async () => {
+  it("SCRUM-110 [AC1, AC5] TC-110-01, SCRUM-170 [AC4] TC-170-08, SCRUM-166 [AC9]: an approved venue booking, No equipment needed recorded and an approved safety check is a complete checklist, ready to confirm, keeping who decided and when", async () => {
     const result = await checklistOf(planningEvent());
 
     expect(result).toEqual({
@@ -124,8 +148,43 @@ describe("getReadinessChecklist — SCRUM-110", () => {
           state: "Approved",
           reason: null,
         },
+        {
+          name: "Equipment",
+          complete: true,
+          state: "No equipment needed",
+          reason: `Recorded by Cody Coordinator, ${formatDateTime(DECIDED_AT)}`,
+        },
+        SAFETY_APPROVED,
       ],
     });
+  });
+
+  it("SCRUM-170 [AC4] TC-170-07: with no equipment request and nothing decided, Equipment is still listed as Not decided, incomplete, and blocks confirmation", async () => {
+    const result = await checklistOf(planningEvent(undecided));
+
+    expect(equipment(result)).toEqual({
+      name: "Equipment",
+      complete: false,
+      state: "Not decided",
+      reason: null,
+      noEquipmentOffered: true,
+    });
+    expect(result?.ready).toBe(false);
+  });
+
+  it("SCRUM-170 [AC4] TC-170-09: a live equipment request decides the item, and No equipment needed is not offered beside it", async () => {
+    const result = await checklistOf(
+      planningEvent({
+        ...undecided,
+        equipmentRequests: [request("PENDING_REVIEW", [projectors(2)])],
+      }),
+    );
+
+    expect(equipment(result)).toMatchObject({
+      complete: false,
+      state: "Not fully reserved: Projector",
+    });
+    expect(equipment(result)).not.toHaveProperty("noEquipmentOffered");
   });
 
   it("SCRUM-110 [AC2] TC-110-02: with no venue booking at all, Venue booking is still listed, as not requested and incomplete", async () => {
@@ -193,6 +252,18 @@ describe("getReadinessChecklist — SCRUM-110", () => {
       when: "only a cancelled booking",
       bookings: [booking("CANCELLED")],
       expected: { complete: false, state: "Not requested", reason: null },
+    },
+    {
+      // SCRUM-26 AC9: the Coordinator cancelled the newer booking; the older
+      // rejection's reason no longer describes the venue.
+      when: "a rejection then a newer cancelled booking",
+      bookings: [booking("REJECTED", 1, "old"), booking("CANCELLED", 2)],
+      expected: { complete: false, state: "Not requested", reason: null },
+    },
+    {
+      when: "a cancelled booking then a newer rejection",
+      bookings: [booking("CANCELLED", 1), booking("REJECTED", 2, "new")],
+      expected: { complete: false, state: "Rejected", reason: "new" },
     },
   ])(
     "SCRUM-110 [AC1, AC2] TC-110-05: with $when, the venue item reads as the most advanced booking",
@@ -380,20 +451,26 @@ describe("getReadinessChecklist — SCRUM-110", () => {
     expect(equipment(result)?.complete).toBe(false);
   });
 
-  it("SCRUM-110 [AC3] TC-110-09: a cancelled request adds no Equipment item and does not block confirmation", async () => {
+  it("SCRUM-110 TC-110-09, SCRUM-170 [AC4] TC-170-07: a cancelled request leaves Equipment Not decided, so it blocks confirmation until the Coordinator decides", async () => {
     const result = await checklistOf(
       planningEvent({
+        ...undecided,
         equipmentRequests: [request("CANCELLED", [projectors(2)])],
       }),
     );
 
-    expect(equipment(result)).toBeUndefined();
-    expect(result?.ready).toBe(true);
+    expect(equipment(result)).toMatchObject({
+      complete: false,
+      state: "Not decided",
+      noEquipmentOffered: true,
+    });
+    expect(result?.ready).toBe(false);
   });
 
   it("SCRUM-110 [AC4] TC-110-09: a request Technical Support rejected keeps Equipment incomplete until the Coordinator requests again", async () => {
     const result = await checklistOf(
       planningEvent({
+        ...undecided,
         equipmentRequests: [request("REJECTED", [projectors(2)])],
       }),
     );
@@ -403,6 +480,8 @@ describe("getReadinessChecklist — SCRUM-110", () => {
       complete: false,
       state: "Rejected",
       reason: null,
+      // SCRUM-170 AC4: the Coordinator may decide no equipment is needed after all.
+      noEquipmentOffered: true,
     });
     expect(result?.ready).toBe(false);
   });
@@ -599,7 +678,14 @@ describe("getReadinessChecklist — flagged arrangements (SCRUM-26 AC12)", () =>
         reservations: [flagged(reserved("eqp_projector", 1, { status: "CANCELLED" }))],
       }),
     );
-    expect(equipment(cancelled)).toBeUndefined();
+    // SCRUM-170 AC4: Equipment is always listed, so a cancelled flag leaves
+    // the No equipment needed decision as it was recorded.
+    expect(equipment(cancelled)).toEqual({
+      name: "Equipment",
+      complete: true,
+      state: "No equipment needed",
+      reason: `Recorded by Cody Coordinator, ${formatDateTime(DECIDED_AT)}`,
+    });
     expect(cancelled?.ready).toBe(true);
   });
 

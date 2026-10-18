@@ -7,7 +7,8 @@ and `filterAndSortEvents` are in [app/(app)/events/](<../../app/(app)/events/>).
 
 Written on 2026-10-12 from the acceptance criteria, then mapped to the tests
 that already existed (SCRUM-176). The tests predate the `SCRUM-n [ACx] TC-n-xx`
-title format, so each case names them by their current titles.
+title format, so each case names them by their current titles. TC-84-09 was
+added on 2026-10-13, so that every e2e test is named by a case.
 
 **Shared pre-conditions for every case:** the database is migrated and seeded
 and the app is running. Signed in as `organiser@test.local` (`Password123!`),
@@ -23,6 +24,7 @@ unless the case says otherwise.
 | [TC-84-06](#tc-84-06) | Positive | AC 7 | Unit, e2e |
 | [TC-84-07](#tc-84-07) | Positive | AC 8 | Unit, e2e |
 | [TC-84-08](#tc-84-08) | Boundary | AC 6, AC 9 | e2e |
+| [TC-84-09](#tc-84-09) | Positive | AC 3, AC 4 at phone width | e2e |
 
 ---
 
@@ -129,3 +131,16 @@ unless the case says otherwise.
 | Expected Result | "No requests match the selected filters." with a **Clear Filters** button. Clicking it clears the tab, filter and search, and lists every request again. |
 
 **Automated by:** `e2e/events.spec.ts` › "SCRUM-84 [AC6/AC9 - Filtered Empty State & Clear Filters]: filtered empty state shows 'No requests match' card with a Clear Filters CTA when search yields no results"
+
+### TC-84-09
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-84-09 |
+| Test Scenario | [Positive] AC 3, AC 4 at phone width: each request is a card with its fields labelled, and its actions still work |
+| Pre-conditions | Signed in as the Organiser, at a 375 × 812 screen. The seeded "Draft — Annual Tech Summit" is a draft. |
+| Test Steps | 1. Open **My Events**. <br> 2. Look at the first request and a draft. <br> 3. Tap a draft's **Resume Draft**. |
+| Test Data | Screen 375 × 812 |
+| Expected Result | Each request is a stacked card, not a table row, with **View Details** and its "Starts" and "Updated" labels shown as text. A draft keeps its 4 px left border. The page doesn't scroll sideways. **Resume Draft** opens "Resume Draft Event Request". |
+
+**Automated by:** `e2e/events.spec.ts` › "restyles rows as stacked cards with no page overflow, and Resume Draft opens the dialog"
