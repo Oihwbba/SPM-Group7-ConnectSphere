@@ -93,6 +93,7 @@ describe("navigation derives from the permission model — SCRUM-66", () => {
   const ROUTE_ACTION: Array<{ href: string; actions: Action[] }> = [
     { href: "/events", actions: ["event:list", "event:browse"] },
     { href: "/venues", actions: ["venue:read"] },
+    { href: "/venues/search", actions: ["venue:search"] },
     { href: "/bookings", actions: ["booking:review"] },
     { href: "/bookings/new", actions: ["booking:request"] },
     { href: "/venues/availability", actions: ["venue:availability"] },

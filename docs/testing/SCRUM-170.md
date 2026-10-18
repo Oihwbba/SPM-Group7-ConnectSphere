@@ -24,7 +24,7 @@ yet.
 | [TC-170-10](#tc-170-10) | Negative | AC 4 | Unit, integration |
 | [TC-170-11](#tc-170-11) | Concurrency | AC 4 | Unit, integration |
 | [TC-170-12](#tc-170-12) | Positive | AC 4 | Follows with SCRUM-25 and SCRUM-128 |
-| [TC-170-13](#tc-170-13) | Positive | AC 6 | Manual, waits for SCRUM-38 |
+| [TC-170-13](#tc-170-13) | Positive | AC 6 | Unit, e2e |
 
 ### TC-170-01
 
@@ -188,9 +188,9 @@ yet.
 |---|---|
 | Test Case ID | TC-170-13 |
 | Test Scenario | [Positive] AC 6: venue search opened from an event or its booking shows the Organiser's venue answers beside the filters |
-| Pre-conditions | SCRUM-38's venue search (and SCRUM-161's Find a replacement venue). |
+| Pre-conditions | Signed in as the assigned Coordinator of a Planning event whose Organiser answered the venue questions; one of its bookings is flagged (SCRUM-26). |
 | Test Steps | 1. Open venue search from an event. <br> 2. Open it from one of the event's bookings. |
 | Test Data | — |
 | Expected Result | The venue requirements, preferred room layout and accessibility needs are shown read-only beside the filters, as in TC-170-01. |
 
-**Automated by:** Manual. Not built: it waits for SCRUM-38, which will reuse `OrganiserVenueAnswers` from `components/events/organiser-answers.tsx`.
+**Automated by:** `tests/unit/venue-search-queries.test.ts` › "SCRUM-38 [AC1, AC2] TC-38-01: …" (the answers are read with the event); `e2e/venue-search.spec.ts` › "SCRUM-38 [AC1, AC8, AC11, AC14] TC-38-01, TC-38-09, TC-38-12: …" (step 1) and "SCRUM-38 [AC1] TC-38-02: …" (step 2). Built with SCRUM-38, which reuses `OrganiserVenueAnswers`.
