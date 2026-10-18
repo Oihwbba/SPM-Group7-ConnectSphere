@@ -20,10 +20,10 @@ and the app is running. Unless the case says otherwise, the event is owned by
   free text. It no longer asks for catalogue choices, since SCRUM-127, which
   would have made them so, was dropped on 2026-10-08. The change form offers
   the request form's catalogue suggestions to the Organiser.
-- **AC 8, cancellation:** cancelling an event is SCRUM-82, not built yet. Its
-  AC 3 rejects any Submitted change request with the cancellation reason, and
-  its tests will cover that half. Rejecting from Under Review (this story) and
-  from Planning (SCRUM-117, TC-117-08) are covered.
+- **AC 8, cancellation:** cancelling an event is SCRUM-82. Its AC 3 rejects
+  any Submitted change request with the cancellation reason, and its TC-82-04
+  covers that half. Rejecting from Under Review (this story) and from Planning
+  (SCRUM-117, TC-117-08) are covered here.
 
 | ID                    | Type        | Criterion          | Automated                |
 | --------------------- | ----------- | ------------------ | ------------------------ |
@@ -202,7 +202,7 @@ and the app is running. Unless the case says otherwise, the event is owned by
 | Test Data | Reason "No venue can take this event."; outcome Submit as a new request |
 | Expected Result | The change request is Rejected, with the event's reason, decided by the Coordinator. Approving the event leaves the request Submitted. |
 
-**Automated by:** `tests/unit/event-status.test.ts` › "SCRUM-41 [AC8] TC-41-12: rejecting the event rejects its Submitted change request with the same reason", "SCRUM-41 [AC8] TC-41-12: approving the event leaves its change request waiting"; `tests/integration/change-requests.test.ts` › "SCRUM-41 [AC8] TC-41-12: rejecting an event Under Review rejects its Submitted change request with the event's reason". From Planning: TC-117-08. On cancellation: SCRUM-82.
+**Automated by:** `tests/unit/event-status.test.ts` › "SCRUM-41 [AC8] TC-41-12: rejecting the event rejects its Submitted change request with the same reason", "SCRUM-41 [AC8] TC-41-12: approving the event leaves its change request waiting"; `tests/integration/change-requests.test.ts` › "SCRUM-41 [AC8] TC-41-12: rejecting an event Under Review rejects its Submitted change request with the event's reason". From Planning: TC-117-08. On cancellation (SCRUM-82): `tests/integration/close-event.test.ts` › "SCRUM-82 [AC3, AC6] TC-82-04: cancelling releases the booking, the hold, the reservation and its stock, the equipment request, the registration, the awaiting safety check and the change request together, and withdraws the notices written ahead"; `tests/unit/cancel-event.test.ts` › "SCRUM-82 [AC3] TC-82-04: in the same operation, bookings, holds and requests, reservations, open equipment requests and registrations are cancelled, an awaiting safety check is Outdated and submitted change requests are rejected with the reason".
 
 ### TC-41-13
 
