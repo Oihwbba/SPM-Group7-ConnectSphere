@@ -25,8 +25,8 @@ of one type.
 | [TC-134-01](#tc-134-01) | Positive | AC 1 | Unit, integration, e2e |
 | [TC-134-02](#tc-134-02) | Negative | AC 2 | Unit, integration, e2e |
 | [TC-134-03](#tc-134-03) | Boundary | AC 3 | Unit, integration |
-| [TC-134-04](#tc-134-04) | Positive | AC 4 | Unit, integration |
-| [TC-134-05](#tc-134-05) | Negative, Boundary | AC 5 | Unit, integration |
+| [TC-134-04](#tc-134-04) | Positive | AC 4 | Unit, integration, e2e |
+| [TC-134-05](#tc-134-05) | Negative, Boundary | AC 5 | Unit, integration, e2e |
 | [TC-134-06](#tc-134-06) | Positive | AC 6 | Unit, integration, e2e |
 
 ---
@@ -81,7 +81,7 @@ of one type.
 | Test Data | — |
 | Expected Result | The later request's line: "Also wanted for overlapping events, earliest first:" '"[earlier event]", submitted 1 Jan 2036, 8:00 am SGT: 3 requested, 3 reserved'. The earlier one's line lists the later one with 0 reserved. Requests whose events only touch, for other types, or that are rejected or cancelled, are not listed. |
 
-**Automated by:** `tests/unit/first-come.test.ts` › "SCRUM-134 [AC4] TC-134-04: other open requests for the type whose events overlap, earliest first; touching events, other types and the request itself are left out" and "SCRUM-134 [AC4] TC-134-04: reads each open request's lines with how much is reserved for each, from Pending Review, In Review and Approved requests with a dated event"; `tests/integration/first-come.test.ts` › "SCRUM-134 [AC4] TC-134-04: the review queue shows, on each line, the other open requests for the type with when they were submitted and what is reserved"
+**Automated by:** `tests/unit/first-come.test.ts` › "SCRUM-134 [AC4] TC-134-04: other open requests for the type whose events overlap, earliest first; touching events, other types and the request itself are left out" and "SCRUM-134 [AC4] TC-134-04: reads each open request's lines with how much is reserved for each, from Pending Review, In Review and Approved requests with a dated event"; `tests/integration/first-come.test.ts` › "SCRUM-134 [AC4] TC-134-04: the review queue shows, on each line, the other open requests for the type with when they were submitted and what is reserved"; `e2e/first-come.spec.ts` › "SCRUM-134 [AC4, AC5] TC-134-04, TC-134-05: Technical Support see the earlier request for the same equipment, can't reserve the later one ahead of it, and reserve the earlier first"
 
 ### TC-134-05
 
@@ -94,7 +94,7 @@ of one type.
 | Test Data | — |
 | Expected Result | 1: "Nothing was reserved: an earlier request comes first for the rows marked below." with 'Reserving 2 would leave 2 free, but an earlier request still needs 3: "[earlier event]", submitted [time]. Reserve it first, or wait until it is rejected or cancelled.' Nothing is reserved. 2: allowed, since exactly what the earlier still needs is left. 3: the earlier is reserved; the later is then short (SCRUM-155). 4: reserved. |
 
-**Automated by:** `tests/unit/first-come.test.ts` › the three "SCRUM-134 [AC5] TC-134-05" tests; `tests/integration/first-come.test.ts` › "SCRUM-134 [AC5] TC-134-05: stock can't be reserved for a later request while an earlier one still needs it; once the earlier is reserved, the later fits what is left or not" and "SCRUM-134 [AC5] TC-134-05: once the earlier request is rejected, the later one is reserved"
+**Automated by:** `tests/unit/first-come.test.ts` › the three "SCRUM-134 [AC5] TC-134-05" tests; `tests/integration/first-come.test.ts` › "SCRUM-134 [AC5] TC-134-05: stock can't be reserved for a later request while an earlier one still needs it; once the earlier is reserved, the later fits what is left or not" and "SCRUM-134 [AC5] TC-134-05: once the earlier request is rejected, the later one is reserved"; `e2e/first-come.spec.ts` › "SCRUM-134 [AC4, AC5] TC-134-04, TC-134-05: Technical Support see the earlier request for the same equipment, can't reserve the later one ahead of it, and reserve the earlier first"
 
 ### TC-134-06
 
