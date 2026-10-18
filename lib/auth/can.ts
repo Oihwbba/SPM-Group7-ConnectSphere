@@ -37,6 +37,7 @@ export type Action =
   | "event:no-equipment" // SCRUM-170 AC4: the assigned coordinator records No equipment needed
   | "event:edit" // SCRUM-25: the assigned coordinator edits an event's details directly
   | "event:assign" // SCRUM-165: the Lead assigns an unassigned request to a Coordinator
+  | "event:view-all" // SCRUM-141: see every non-draft event, read-only, for planning
   | "event-note:add" // SCRUM-25 AC6: add an operational note to an event
   | "event-note:read" // SCRUM-25 AC6: read an event's operational notes
   | "arrangement:reconsider" // SCRUM-26: the assigned coordinator resolves a Needs Reconsideration flag
@@ -143,6 +144,7 @@ const ROLE_ACTIONS: Record<Role, Action[]> = {
     "booking:request",
     "booking:settle-hold",
     "booking:withdraw",
+    "event:view-all",
     "registration:list",
     "notification:read",
   ],
@@ -156,6 +158,7 @@ const ROLE_ACTIONS: Record<Role, Action[]> = {
     "unavailability:record",
     "event-note:add",
     "event-note:read",
+    "event:view-all",
     "notification:read",
   ],
   TECH_SUPPORT: [
@@ -166,6 +169,7 @@ const ROLE_ACTIONS: Record<Role, Action[]> = {
     "equipment-request:review",
     "event-note:add",
     "event-note:read",
+    "event:view-all",
     "notification:read",
   ],
   ATTENDEE: [
@@ -178,7 +182,12 @@ const ROLE_ACTIONS: Record<Role, Action[]> = {
   // SCRUM-164 — the Week 7 roles. Like every user they read their own
   // notifications (SCRUM-48) and, as internal users, the venue catalogue
   // (SCRUM-34 AC2); SCRUM-165 and SCRUM-166 grant the rest.
-  COORDINATOR_LEAD: ["event:assign", "venue:read", "notification:read"],
+  COORDINATOR_LEAD: [
+    "event:assign",
+    "event:view-all",
+    "venue:read",
+    "notification:read",
+  ],
   SAFETY_OFFICER: ["venue:read", "safety-check:review", "notification:read"],
 };
 

@@ -38,7 +38,7 @@ describe("getCoordinatorLoads — SCRUM-165 AC4", () => {
     expect(query.where).toEqual({ role: "COORDINATOR" });
     expect(
       query.select._count.select.coordinatedEvents.where.status.in,
-    ).toEqual(["UNDER_REVIEW", "APPROVED", "PLANNING", "CONFIRMED"]);
+    ).toEqual(["UNDER_REVIEW", "PLANNING", "CONFIRMED"]);
     expect(query.orderBy).toEqual({ createdAt: "asc" });
   });
 });

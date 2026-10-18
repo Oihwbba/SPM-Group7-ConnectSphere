@@ -1,7 +1,12 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import type { Role } from "@prisma/client";
 
-import { NAV_BY_ROLE, LANDING_ROUTE_BY_ROLE, ROLE_LABEL, navFor } from "@/lib/nav";
+import {
+  NAV_BY_ROLE,
+  LANDING_ROUTE_BY_ROLE,
+  ROLE_LABEL,
+  navFor,
+} from "@/lib/nav";
 import { roleAllows, type Action } from "@/lib/auth/can";
 
 // SCRUM-66 — each role is shown only the functions its role allows, and lands
@@ -100,6 +105,9 @@ describe("navigation derives from the permission model — SCRUM-66", () => {
     { href: "/equipment", actions: ["equipment:read"] },
     { href: "/equipment-requests", actions: ["equipment-request:list"] },
     { href: "/registrations", actions: ["registration:read"] },
+    { href: "/safety-checks", actions: ["safety-check:review"] },
+    { href: "/queue", actions: ["event:assign"] },
+    { href: "/all-events", actions: ["event:view-all"] },
     { href: "/notifications", actions: ["notification:read"] },
   ];
 
@@ -121,10 +129,13 @@ describe("navigation derives from the permission model — SCRUM-66", () => {
     for (const role of ROLES) {
       for (const href of hrefsFor(role)) {
         const route = ROUTE_ACTION.find((entry) => entry.href === href);
-        expect(route, `${href} is in the menu with no action behind it`).toBeDefined();
         expect(
-          route!.actions.some((action) => roleAllows(role, action)),
-        ).toBe(true);
+          route,
+          `${href} is in the menu with no action behind it`,
+        ).toBeDefined();
+        expect(route!.actions.some((action) => roleAllows(role, action))).toBe(
+          true,
+        );
       }
     }
   });
@@ -186,7 +197,12 @@ describe("navigation for the Week 7 roles — SCRUM-172", () => {
   it("SCRUM-172 [AC1] TC-172-01, SCRUM-164 [AC1] TC-164-01, SCRUM-165 [AC10] TC-165-13: COORDINATOR_LEAD is labelled and lands on the Unassigned queue", () => {
     expect(ROLE_LABEL.COORDINATOR_LEAD).toBe("Event Coordinator Lead");
     // SCRUM-34 AC2 added the venue catalogue, listed last.
-    expect(hrefsFor("COORDINATOR_LEAD")).toEqual(["/queue", "/notifications", "/venues"]);
+    expect(hrefsFor("COORDINATOR_LEAD")).toEqual([
+      "/queue",
+      "/all-events",
+      "/notifications",
+      "/venues",
+    ]);
     expect(LANDING_ROUTE_BY_ROLE.COORDINATOR_LEAD).toBe("/queue");
   });
 
@@ -195,5 +211,28 @@ describe("navigation for the Week 7 roles — SCRUM-172", () => {
     expect(ROLE_LABEL.SAFETY_OFFICER).toBe("Safety Officer");
     expect(hrefsFor("SAFETY_OFFICER")).toEqual(["/safety-checks", "/notifications", "/venues"]);
     expect(LANDING_ROUTE_BY_ROLE.SAFETY_OFFICER).toBe("/safety-checks");
+  });
+});
+
+describe("the all-events list in the menu — SCRUM-141", () => {
+  it("SCRUM-141 [AC1, AC6] TC-141-09: Coordinators, the Lead, Venue Staff and Technical Support see All Events; Organisers, Attendees and Safety Officers don't", () => {
+    for (const role of [
+      "COORDINATOR",
+      "COORDINATOR_LEAD",
+      "VENUE_STAFF",
+      "TECH_SUPPORT",
+    ] as const) {
+      expect(hrefsFor(role)).toContain("/all-events");
+    }
+    for (const role of ["ORGANISER", "ATTENDEE", "SAFETY_OFFICER"] as const) {
+      expect(hrefsFor(role)).not.toContain("/all-events");
+    }
+  });
+
+  it("SCRUM-141: each role still lands on its own first page, not the list", () => {
+    expect(LANDING_ROUTE_BY_ROLE.COORDINATOR).toBe("/events");
+    expect(LANDING_ROUTE_BY_ROLE.COORDINATOR_LEAD).toBe("/queue");
+    expect(LANDING_ROUTE_BY_ROLE.VENUE_STAFF).not.toBe("/all-events");
+    expect(LANDING_ROUTE_BY_ROLE.TECH_SUPPORT).not.toBe("/all-events");
   });
 });

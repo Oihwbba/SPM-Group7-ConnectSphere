@@ -6,13 +6,13 @@ import type { Prisma, PrismaClient } from "@prisma/client";
  * automatically; Week 7 change 5 moved the choice to the Lead, so it now only
  * informs that choice.
  *
- * "Active" means the Coordinator is still doing something about the event:
- * UNDER_REVIEW, APPROVED, PLANNING or CONFIRMED. COMPLETED, CANCELLED and
- * REJECTED events no longer count as load.
+ * "Active" means Under Review, Planning or Confirmed (SCRUM-141 AC5), the
+ * same count the Lead sees on the all-events list. Approving moves an event
+ * straight to Planning (SCRUM-81), so Approved never lasts; Completed,
+ * Cancelled and Rejected events no longer count as load.
  */
 export const ACTIVE_EVENT_STATUSES = [
   "UNDER_REVIEW",
-  "APPROVED",
   "PLANNING",
   "CONFIRMED",
 ] as const;
