@@ -17,6 +17,8 @@ import { ClarificationPanel } from "@/components/events/clarification-panel";
 import { ChangeRequestPanel } from "@/components/events/change-request-panel";
 import { ReadinessChecklist } from "@/components/events/readiness-checklist";
 import { ReconsiderationPanel } from "@/components/events/reconsideration-panel";
+import { CancelEvent } from "@/components/events/cancel-event";
+import { CANCELLABLE } from "@/lib/event-closing";
 import { ConfirmedArrangements } from "@/components/events/confirmed-arrangements";
 import { RegistrationListPanel } from "@/components/events/registration-list-panel";
 import { RegistrationControl } from "@/components/events/registration-control";
@@ -190,6 +192,30 @@ export function EventDetailsModal({
             event.status === "CANCELLED" ||
             event.status === "COMPLETED") && (
             <RegistrationListPanel eventId={event.id} />
+          )}
+
+          {/* SCRUM-82 AC1: offered to the Coordinator; the server checks it's theirs. */}
+          {isCoordinator && CANCELLABLE.includes(event.status) && (
+            <div className="flex justify-end">
+              <CancelEvent eventId={event.id} />
+            </div>
+          )}
+          {event.status === "CANCELLED" && event.cancellationReason && (
+            <Card className="overflow-hidden" data-testid="cancellation-reason">
+              <CardHeader className="bg-destructive/5 px-4 py-3">
+                <CardTitle className="text-sm font-semibold text-destructive">
+                  Cancellation reason
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-1 p-4 text-xs">
+                <p className="whitespace-pre-wrap">{event.cancellationReason}</p>
+                {event.cancelledAt && (
+                  <p className="text-muted-foreground">
+                    Cancelled on {formatDateTime(event.cancelledAt)}
+                  </p>
+                )}
+              </CardContent>
+            </Card>
           )}
 
           {event.status === "REJECTED" && event.decisionReason && (
