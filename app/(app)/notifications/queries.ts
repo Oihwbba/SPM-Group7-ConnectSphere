@@ -31,7 +31,19 @@ export async function getMyNotifications(now = new Date()) {
       link: true,
       readAt: true,
       showFromAt: true,
-      event: { select: { id: true, status: true } },
+      event: {
+        select: {
+          id: true,
+          status: true,
+          // SCRUM-85 AC9: an event being re-planned opens only for an
+          // Attendee still registered for it.
+          confirmedStartAt: true,
+          registrations: {
+            where: { userId: user.id },
+            select: { status: true },
+          },
+        },
+      },
     },
     orderBy: [{ showFromAt: "desc" }, { createdAt: "desc" }, { id: "desc" }],
   });

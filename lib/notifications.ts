@@ -1,6 +1,7 @@
 import type { EventStatus, Prisma } from "@prisma/client";
 
 import { can, type SessionUser } from "@/lib/auth/can";
+import { isBeingReplanned } from "@/lib/confirmed-details";
 
 /**
  * SCRUM-48 AC6 and AC8 — the notifications a user can see at `now`: only
@@ -19,8 +20,10 @@ export function visibleNotificationsWhere(
  * SCRUM-48 AC5 — where a notification takes this user: a page they are
  * allowed to open, or nowhere.
  *
- * - An Attendee goes to the event's Attendee page, which exists only for a
- *   Confirmed event (SCRUM-72); the re-planned view is SCRUM-85's.
+ * - An Attendee goes to the event's Attendee page: a Confirmed event
+ *   (SCRUM-72), or one back in Planning to be re-planned, which only an
+ *   Attendee still registered for it may open, to see what was last
+ *   confirmed (SCRUM-85 AC7, AC9).
  * - An Organiser or Coordinator goes to their events list with that event
  *   open. The list is scoped to what they may see, so a link to an event
  *   they've lost access to opens nothing.
@@ -32,12 +35,25 @@ export function notificationHref(
   user: SessionUser,
   notification: {
     link: string | null;
-    event: { id: string; status: EventStatus } | null;
+    event: {
+      id: string;
+      status: EventStatus;
+      confirmedStartAt?: Date | null;
+      /** The recipient's own registration for the event, if any. */
+      registrations?: { status: string }[];
+    } | null;
   },
 ): string | null {
   const { event } = notification;
   if (event && can(user, "event:browse")) {
-    return event.status === "CONFIRMED" ? `/events/${event.id}` : null;
+    const replannedAndRegistered =
+      isBeingReplanned({
+        status: event.status,
+        confirmedStartAt: event.confirmedStartAt ?? null,
+      }) && event.registrations?.[0]?.status === "REGISTERED";
+    return event.status === "CONFIRMED" || replannedAndRegistered
+      ? `/events/${event.id}`
+      : null;
   }
   if (event && can(user, "event:list")) {
     return `/events?event=${event.id}`;
