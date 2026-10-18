@@ -36,7 +36,7 @@ change request. Every account's password is `Password123!`.
 | [TC-128-04](#tc-128-04) | Positive | AC 4 | Unit, integration |
 | [TC-128-05](#tc-128-05) | Positive | AC 5, AC 6 | Unit, integration |
 | [TC-128-06](#tc-128-06) | Negative, Boundary | AC 7 | Unit, integration |
-| [TC-128-07](#tc-128-07) | Positive | AC 8 | Unit, integration |
+| [TC-128-07](#tc-128-07) | Positive | AC 8 | Unit, integration, e2e |
 | [TC-128-08](#tc-128-08) | Negative | AC 9 | Unit, e2e |
 | [TC-128-09](#tc-128-09) | Positive | AC 10 | Unit |
 | [TC-128-10](#tc-128-10) | Concurrency, Negative | AC 2 | Unit, integration |
@@ -44,6 +44,7 @@ change request. Every account's password is `Password123!`.
 | [TC-128-12](#tc-128-12) | Negative | AC 2 | Integration |
 | [TC-128-13](#tc-128-13) | Positive | AC 1, AC 2, AC 4, AC 5 | e2e |
 | [TC-128-14](#tc-128-14) | Positive, Negative | AC 3, AC 9, AC 10 | e2e |
+| [TC-128-15](#tc-128-15) | Negative | AC 2 | Unit |
 
 ### TC-128-01
 
@@ -54,9 +55,9 @@ change request. Every account's password is `Password123!`.
 | Pre-conditions | The request asks to raise the attendance from 40 to 60; the event has an Approved booking, a hold, a reservation and an equipment request. |
 | Test Steps | Open the event's details as the Coordinator. |
 | Test Data | — |
-| Expected Result | Under the request, each field's value now and the requested one; "Potentially affected" lists the bookings, hold, reservation and equipment request. A cancellation request lists what it would release; a change that isn't impactful lists nothing. |
+| Expected Result | Under the request, each field's value now and the requested one; "Potentially affected" lists the bookings, hold, reservation and equipment request. A cancellation request lists what it would release; a change that isn't impactful lists nothing. A request on an event now Completed or Cancelled offers no decision. If the decision can't be loaded, "Couldn't load the decision for this change request." with **Try again**. |
 
-**Automated by:** `tests/unit/change-decision.test.ts` › "SCRUM-128 [AC1] TC-128-01: …", "SCRUM-128 [AC1, AC8] TC-128-01: …", "SCRUM-128 [AC1] TC-128-01: nothing awaits …"; `e2e/change-decision.spec.ts` (TC-128-13)
+**Automated by:** `tests/unit/change-decision.test.ts` › "SCRUM-128 [AC1] TC-128-01: …", "SCRUM-128 [AC1, AC8] TC-128-01: …", "SCRUM-128 [AC1] TC-128-01: nothing awaits …"; `e2e/change-decision.spec.ts` (TC-128-13); `e2e/change-decision.spec.ts` › "SCRUM-128 [AC1] TC-128-01: if the decision can't be loaded, the Coordinator is told and can try again"
 
 ### TC-128-02
 
@@ -132,9 +133,9 @@ change request. Every account's password is `Password123!`.
 | Pre-conditions | The request asks to cancel, with reason "The sponsor pulled out."; an Attendee is registered. |
 | Test Steps | Click **Approve**. |
 | Test Data | — |
-| Expected Result | "Change request approved. The event is cancelled." The event is Cancelled with the Organiser's reason, as SCRUM-82 does; the request stays Approved; the registration is Cancelled. |
+| Expected Result | "Change request approved. The event is cancelled." The event is Cancelled with the Organiser's reason, as SCRUM-82 does; the request stays Approved; the registration is Cancelled; the equipment and availability pages are refreshed. In the browser, the decision shows "Cancelling releases:" instead of a field table, and the Organiser then sees the event Cancelled with the reason. |
 
-**Automated by:** `tests/unit/change-decision.test.ts` › "SCRUM-128 [AC8] TC-128-07: …"; `tests/integration/change-decision.test.ts` › "SCRUM-128 [AC8] TC-128-07: …"
+**Automated by:** `tests/unit/change-decision.test.ts` › "SCRUM-128 [AC8] TC-128-07: …"; `tests/integration/change-decision.test.ts` › "SCRUM-128 [AC8] TC-128-07: …"; `e2e/change-decision.spec.ts` › "SCRUM-128 [AC8] TC-128-07: approving a cancellation request lists what it releases, cancels the event with the Organiser's reason, and the Organiser sees it Cancelled"
 
 ### TC-128-08
 
@@ -226,3 +227,16 @@ change request. Every account's password is `Password123!`.
 | Expected Result | 1. The request shows, with no Approve or Reject. 2. Rejected; attendance still 40. 3. The request reads Rejected with the reason. |
 
 **Automated by:** `e2e/change-decision.spec.ts` › "SCRUM-128 [AC3, AC9, AC10] TC-128-14: …"
+
+### TC-128-15
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-128-15 |
+| Test Scenario | [Negative] AC 2: a requested start that has passed while the request waited is refused |
+| Pre-conditions | A Submitted request moves the start to a date that has since passed. |
+| Test Steps | Click **Approve**. |
+| Test Data | — |
+| Expected Result | "The start can't be in the past. The requested start has passed, so reject this request and the organiser can ask for a new date." Nothing is changed, as SCRUM-25's direct edit refuses a past start. A future start is applied. |
+
+**Automated by:** `tests/unit/change-decision.test.ts` › "SCRUM-128 [AC2] TC-128-15: a requested start that has passed while the request waited is refused, and nothing is written; a future one is applied"

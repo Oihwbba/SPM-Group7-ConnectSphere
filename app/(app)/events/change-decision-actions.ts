@@ -21,6 +21,7 @@ import { flagArrangements, flaggableArrangements } from "@/lib/reconsideration";
 import { withdrawRegistrationClosedNotice } from "@/lib/event-notifications";
 import { outdateSafetyChecks } from "@/lib/safety-checks";
 import { CHANGE_KEYS, CHANGE_REQUEST_STATUS_LABEL } from "@/lib/schemas/change-request";
+import { PAST_START_MESSAGE } from "@/lib/schemas/event-edit";
 
 const REASON_REQUIRED = "A reason is required to reject a change request.";
 
@@ -85,7 +86,8 @@ export async function getChangeDecision(
     return err("Event not found.");
   }
   const pending = event.changeRequests[0];
-  if (!pending) return ok(null);
+  // A Completed or Cancelled event can't take the change (AC2), so it isn't offered.
+  if (!pending || !CHANGEABLE.includes(event.status)) return ok(null);
 
   const impactful = isImpactful(pending.fields);
   const affected =
@@ -115,7 +117,8 @@ type Outcome =
   | { done: "APPROVED" | "REJECTED"; returnedToPlanning: boolean }
   | { refused: "reassigned" | "not-changeable" }
   | { refused: "decided"; status: ChangeRequestStatus }
-  | { refused: "attendance"; registered: number };
+  | { refused: "attendance"; registered: number }
+  | { refused: "past-start" };
 
 /**
  * SCRUM-128 — the assigned Coordinator decides a Submitted change request.
@@ -240,6 +243,14 @@ export async function decideChangeRequest(
         }
       }
 
+      // The requested start was checked when it was raised, but the request
+      // may have waited since. As with SCRUM-25's direct edit, the start can't
+      // be in the past.
+      const start = request.fields.find((f) => f.fieldName === "startAt");
+      if (start?.newValue && new Date(start.newValue) < now) {
+        return { refused: "past-start" };
+      }
+
       // Marked Approved before a cancellation releases the event's arrangements,
       // which rejects any change request still Submitted (SCRUM-82 AC3).
       await tx.eventChangeRequest.update({
@@ -353,11 +364,17 @@ export async function decideChangeRequest(
           return err(
             `The expected attendance can't be lower than the ${outcome.registered} active registrations, so this change can't be approved.`,
           );
+        case "past-start":
+          return err(
+            `${PAST_START_MESSAGE} The requested start has passed, so reject this request and the organiser can ask for a new date.`,
+          );
       }
     }
 
     revalidatePath("/events");
     revalidatePath("/registrations");
+    revalidatePath("/equipment");
+    revalidatePath("/venues/availability");
     return ok({ decision: outcome.done, returnedToPlanning: outcome.returnedToPlanning });
   } catch (error) {
     if (error instanceof PermissionError) return err(error.message);

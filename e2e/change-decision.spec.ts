@@ -36,7 +36,7 @@ const PERIOD = {
 
 let eventId: string;
 
-async function eventWithRequest(name: string) {
+async function eventWithRequest(name: string, requestsCancellation = false) {
   const event = await prisma.event.create({
     data: {
       name,
@@ -64,14 +64,23 @@ async function eventWithRequest(name: string) {
     },
   });
   await prisma.eventChangeRequest.create({
-    data: {
-      eventId,
-      requestedById: "usr_organiser",
-      reason: "More people signed up.",
-      fields: {
-        create: [{ fieldName: "expectedAttendance", oldValue: "40", newValue: "60", isMajor: true }],
-      },
-    },
+    data: requestsCancellation
+      ? {
+          eventId,
+          requestedById: "usr_organiser",
+          reason: "The sponsor pulled out.",
+          requestsCancellation: true,
+        }
+      : {
+          eventId,
+          requestedById: "usr_organiser",
+          reason: "More people signed up.",
+          fields: {
+            create: [
+              { fieldName: "expectedAttendance", oldValue: "40", newValue: "60", isMajor: true },
+            ],
+          },
+        },
   });
 }
 
@@ -154,5 +163,74 @@ test.describe("SCRUM-128 — Decide a change request and apply it in one step", 
     dialog = await openDetails(page, name);
     await expect(dialog.getByTestId("change-request")).toHaveAttribute("data-status", "REJECTED");
     await expect(dialog.getByTestId("change-request")).toContainText(REASON);
+  });
+
+  test("SCRUM-128 [AC8] TC-128-07: approving a cancellation request lists what it releases, cancels the event with the Organiser's reason, and the Organiser sees it Cancelled", async ({
+    page,
+  }) => {
+    const name = `SCRUM-128 Cancel ${Date.now()}`;
+    await eventWithRequest(name, true);
+
+    await signIn(page, "coordinator@test.local");
+    const dialog = await openDetails(page, name);
+    const decision = dialog.getByTestId("change-request-decision");
+    // A cancellation has no fields to compare, only what it would release.
+    await expect(decision.getByRole("table")).toHaveCount(0);
+    await expect(decision.getByTestId("potentially-affected")).toContainText("Cancelling releases:");
+    await expect(decision.getByTestId("potentially-affected")).toContainText(
+      "Exhibition Hall (Approved)",
+    );
+
+    await decision.getByRole("button", { name: "Approve" }).click();
+    await expect(
+      page.getByText("Change request approved. The event is cancelled."),
+    ).toBeVisible();
+    expect(await prisma.event.findUniqueOrThrow({ where: { id: eventId } })).toMatchObject({
+      status: "CANCELLED",
+      cancellationReason: "The sponsor pulled out.",
+    });
+    expect((await prisma.booking.findFirstOrThrow({ where: { eventId } })).status).toBe("CANCELLED");
+
+    await signIn(page, "organiser@test.local");
+    const seen = await openDetails(page, name);
+    await expect(seen.getByTestId("cancellation-reason")).toContainText("The sponsor pulled out.");
+  });
+
+  test("SCRUM-128 [AC1] TC-128-01: if the decision can't be loaded, the Coordinator is told and can try again", async ({
+    page,
+  }) => {
+    const name = `SCRUM-128 Retry ${Date.now()}`;
+    await eventWithRequest(name);
+    await signIn(page, "coordinator@test.local");
+
+    // Server actions are POSTs to the page with a Next-Action header. Only the
+    // decision's own read fails, as a dropped connection would: its view is the
+    // one that names what the change could affect. The change request above it
+    // still loads.
+    let failing = true;
+    await page.route("**/events**", async (route) => {
+      const request = route.request();
+      if (!failing || request.method() !== "POST" || !request.headers()["next-action"]) {
+        return route.continue();
+      }
+      const response = await route.fetch();
+      const body = await response.text();
+      if (body.includes('"impactful"') && body.includes('"affected"')) {
+        return route.abort("failed");
+      }
+      return route.fulfill({ response, body });
+    });
+    const dialog = await openDetails(page, name);
+    const alert = dialog.getByRole("alert").filter({
+      hasText: "Couldn't load the decision for this change request.",
+    });
+    await expect(alert).toBeVisible();
+    await expect(dialog.getByTestId("change-request-decision")).toHaveCount(0);
+
+    failing = false;
+    await alert.getByRole("button", { name: "Try again" }).click();
+    await expect(
+      dialog.getByTestId("change-request-decision").getByRole("button", { name: "Approve" }),
+    ).toBeVisible();
   });
 });

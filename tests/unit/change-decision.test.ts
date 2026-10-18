@@ -3,6 +3,7 @@ import type { Session } from "next-auth";
 import type { EventStatus, Role } from "@prisma/client";
 
 import { auth } from "@/auth";
+import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { cancelInTransaction } from "@/lib/event-closing";
 import { flagArrangements, flaggableArrangements } from "@/lib/reconsideration";
@@ -263,6 +264,31 @@ describe("decideChangeRequest — attendance and cancellation (SCRUM-128 AC7, AC
     ).toMatchObject({ ok: true });
   });
 
+  it("SCRUM-128 [AC2] TC-128-15: a requested start that has passed while the request waited is refused, and nothing is written; a future one is applied", async () => {
+    const startAt = (iso: string) => ({ fieldName: "startAt", oldValue: "2031-01-01T02:00:00.000Z", newValue: iso, isMajor: true });
+    tx.eventChangeRequest.findUniqueOrThrow.mockResolvedValue(pendingRequest([startAt("2020-01-01T02:00:00.000Z")]));
+
+    expect(await decideChangeRequest({ changeRequestId: "cr1", decision: "APPROVED" })).toEqual({
+      ok: false,
+      error:
+        "The start can't be in the past. The requested start has passed, so reject this request and the organiser can ask for a new date.",
+    });
+    expectNothingWritten();
+
+    tx.eventChangeRequest.findUniqueOrThrow.mockResolvedValue(pendingRequest([startAt("2099-01-01T02:00:00.000Z")]));
+    expect(
+      await decideChangeRequest({ changeRequestId: "cr1", decision: "APPROVED" }),
+    ).toMatchObject({ ok: true });
+  });
+
+  it("SCRUM-128 [AC8] TC-128-07: approving refreshes the same pages SCRUM-82's Cancel does, since a cancellation releases bookings, holds and equipment", async () => {
+    await decideChangeRequest({ changeRequestId: "cr1", decision: "APPROVED" });
+
+    for (const path of ["/events", "/registrations", "/equipment", "/venues/availability"]) {
+      expect(revalidatePath).toHaveBeenCalledWith(path);
+    }
+  });
+
   it("SCRUM-128 [AC8] TC-128-07: approving a cancellation request marks it Approved first, then cancels the event with the Organiser's reason", async () => {
     tx.event.findUniqueOrThrow.mockResolvedValue(eventNow("CONFIRMED"));
     tx.eventChangeRequest.findUniqueOrThrow.mockResolvedValue(pendingRequest([], true));
@@ -459,6 +485,13 @@ describe("getChangeDecision — SCRUM-128 AC1", () => {
     mockEvent.mockResolvedValue(eventRow({ changeRequests: [] }));
 
     expect(await getChangeDecision("evt1")).toEqual({ ok: true, data: null });
+  });
+
+  it("SCRUM-128 [AC1, AC2] TC-128-01: a Submitted request on an event that is now Completed or Cancelled isn't offered for a decision, since it can't be applied", async () => {
+    for (const status of ["COMPLETED", "CANCELLED"]) {
+      mockEvent.mockResolvedValue(eventRow({ status }));
+      expect(await getChangeDecision("evt1")).toEqual({ ok: true, data: null });
+    }
   });
 
   it("SCRUM-128 [AC9] TC-128-08: anyone but the assigned Coordinator, a missing event or no session gets not found", async () => {
