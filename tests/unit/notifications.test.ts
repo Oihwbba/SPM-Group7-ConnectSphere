@@ -82,14 +82,33 @@ describe("notificationHref — SCRUM-48 AC5", () => {
     ).toBe("/events/evt_1");
   });
 
-  it("SCRUM-85 [AC7, AC9] TC-85-08: an Attendee's link to an event back in Planning opens its Attendee page, which shows what was last confirmed", () => {
+  const replanned = (registrations: { status: string }[]) => ({
+    ...event("PLANNING"),
+    confirmedStartAt: new Date("2031-06-01T01:00:00Z"),
+    registrations,
+  });
+
+  it("SCRUM-85 [AC7, AC9] TC-85-08: an Attendee still registered for an event back in Planning is linked to its Attendee page, which shows what was last confirmed", () => {
     expect(
       notificationHref(user("ATTENDEE"), {
         link: null,
-        event: event("PLANNING"),
+        event: replanned([{ status: "REGISTERED" }]),
       }),
-    ).toBe(`/events/${event("PLANNING").id}`);
+    ).toBe("/events/evt_1");
   });
+
+  it.each([
+    ["withdrew", replanned([{ status: "WITHDRAWN" }])],
+    ["never registered", replanned([])],
+    ["sees an event never confirmed", { ...event("PLANNING"), confirmedStartAt: null, registrations: [{ status: "REGISTERED" }] }],
+  ])(
+    "SCRUM-85 [AC5, AC9] TC-85-08: an Attendee who %s gets no link to an event in Planning, which they can't open",
+    (_, planningEvent) => {
+      expect(
+        notificationHref(user("ATTENDEE"), { link: null, event: planningEvent }),
+      ).toBeNull();
+    },
+  );
 
   it.each(["CANCELLED", "COMPLETED"] as const)(
     "SCRUM-48 [AC5] TC-48-06: an Attendee gets no link for a %s event, which has no Attendee page",

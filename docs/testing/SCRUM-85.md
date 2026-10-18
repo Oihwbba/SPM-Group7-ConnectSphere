@@ -15,7 +15,7 @@ re-planned" is one back in Planning after being Confirmed, as a flagged venue
 
 | ID | Type | Criterion | Automated |
 |---|---|---|---|
-| [TC-85-01](#tc-85-01) | Positive, Concurrency | AC 1, AC 6 | Unit, integration |
+| [TC-85-01](#tc-85-01) | Positive, Concurrency | AC 1, AC 6 | Unit, integration, e2e |
 | [TC-85-02](#tc-85-02) | Positive | AC 2, AC 3, AC 5, AC 11 | Unit, integration, e2e |
 | [TC-85-03](#tc-85-03) | Negative | AC 2, AC 11 | Unit |
 | [TC-85-04](#tc-85-04) | Boundary | AC 2 | Unit |
@@ -36,7 +36,7 @@ re-planned" is one back in Planning after being Confirmed, as a flagged venue
 | Test Data | — |
 | Expected Result | Step 1: one notification "You're registered", "You're registered for "_name_".". Step 2: refused as already registered; still one registration and one notification. |
 
-**Automated by:** `tests/unit/registration-actions.test.ts` › "SCRUM-85 [AC1, AC6] TC-85-01: …" and "SCRUM-85 [AC6] TC-85-01: …"; `tests/integration/attendee-updates.test.ts` › "SCRUM-85 [AC1, AC6] TC-85-01: an Attendee registering twice at the same moment gets one registration and one confirmation"
+**Automated by:** `tests/unit/registration-actions.test.ts` › "SCRUM-85 [AC1, AC6] TC-85-01: …" and "SCRUM-85 [AC6] TC-85-01: …"; `tests/integration/attendee-updates.test.ts` › "SCRUM-85 [AC1, AC6] TC-85-01: an Attendee registering twice at the same moment gets one registration and one confirmation"; `e2e/attendee-updates.spec.ts` › "SCRUM-85 [AC1, AC7] TC-85-01, TC-85-08: registering through the page sends a notice confirming it, which opens the event"
 
 ### TC-85-02
 
@@ -110,11 +110,11 @@ re-planned" is one back in Planning after being Confirmed, as a flagged venue
 | Test Case ID | TC-85-07 |
 | Test Scenario | [Positive, Negative] AC 9, AC 10: the Attendee view of an event being re-planned |
 | Pre-conditions | As TC-85-06. |
-| Test Steps | 1. Open the event from My Registrations. <br> 2. Open it as an Attendee not registered, or withdrawn. <br> 3. Browse events. |
+| Test Steps | 1. Open the event from My Registrations. <br> 2. Withdraw from it there. <br> 3. Open it as an Attendee not registered, or withdrawn. <br> 4. Browse events. |
 | Test Data | — |
-| Expected Result | Step 1: its name, description and the date, time and venues last confirmed, "Details being updated – registration paused", and no internal planning information; the Attendee can still withdraw. Step 2: not found. Step 3: not listed. |
+| Expected Result | Step 1: its name, description and the date, time and venues last confirmed, "Details being updated – registration paused", and no internal planning information. Step 2: "You've withdrawn from this event." and the Attendee is taken to My Registrations, where it reads Withdrawn, never to a page they can no longer open. Step 3: not found. Step 4: not listed. |
 
-**Automated by:** `tests/unit/replanning-views.test.tsx` › "SCRUM-85 [AC9] TC-85-07: …"; `tests/unit/attendee-events.test.ts` › "SCRUM-85 [AC9, AC10] TC-85-07: …" and "SCRUM-85 [AC5, AC9] TC-85-07: …" (2 tests); `tests/integration/attendee-updates.test.ts` › "… TC-85-07: …"; `e2e/attendee-updates.spec.ts` › "… TC-85-07 …"
+**Automated by:** `tests/unit/replanning-views.test.tsx` › "SCRUM-85 [AC9] TC-85-07: …"; `tests/unit/attendee-events.test.ts` › "SCRUM-85 [AC9, AC10] TC-85-07: …" and "SCRUM-85 [AC5, AC9] TC-85-07: …" (2 tests); `tests/integration/attendee-updates.test.ts` › "… TC-85-07: …"; `e2e/attendee-updates.spec.ts` › "… TC-85-07 …" and "SCRUM-85 [AC9] TC-85-07: withdrawing from the re-planned page takes the Attendee to My Registrations, showing it Withdrawn"
 
 ### TC-85-08
 
@@ -125,9 +125,9 @@ re-planned" is one back in Planning after being Confirmed, as a flagged venue
 | Pre-conditions | A notice about an event that is Confirmed, and one about an event being re-planned. |
 | Test Steps | 1. Open Notifications and follow each. |
 | Test Data | — |
-| Expected Result | Both are in the one list (SCRUM-48) and open `/events/<id>`. A Cancelled or Completed event's notice has no link. |
+| Expected Result | Both are in the one list (SCRUM-48) and open `/events/<id>`; the re-planned one only while the Attendee is still registered (withdrawn, or never registered: no link, since they can't open it). A Cancelled or Completed event's notice has no link. |
 
-**Automated by:** `tests/unit/notifications.test.ts` › "SCRUM-85 [AC7, AC9] TC-85-08: …"; `e2e/attendee-updates.spec.ts` › "… TC-85-08 …"
+**Automated by:** `tests/unit/notifications.test.ts` › "SCRUM-85 [AC7, AC9] TC-85-08: …" and "SCRUM-85 [AC5, AC9] TC-85-08: …" (3 tests); `e2e/attendee-updates.spec.ts` › "… TC-85-08 …" (2 tests)
 
 ### TC-85-09
 

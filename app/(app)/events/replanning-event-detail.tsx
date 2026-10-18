@@ -92,7 +92,11 @@ export function ReplanningEventDetail({
               >
                 <CheckCircle2 className="h-4 w-4" /> You&apos;re registered
               </span>
-              <WithdrawButton registrationId={registration.id} />
+              {/* Once withdrawn, this page is no longer theirs to see. */}
+              <WithdrawButton
+                registrationId={registration.id}
+                afterWithdrawHref="/registrations"
+              />
             </div>
           )}
         </CardContent>

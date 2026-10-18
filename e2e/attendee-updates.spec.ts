@@ -90,12 +90,12 @@ test.describe("SCRUM-85 — Attendees are kept informed", () => {
       },
     });
     await prisma.registration.create({
-      data: { eventId: event.id, userId: "usr_attendee_4", status: "REGISTERED" },
+      data: { eventId: event.id, userId: "usr_attendee_2", status: "REGISTERED" },
     });
 
     // AC8: My Registrations says it is being updated, never "Planning", with
     // the date last confirmed.
-    const attendee = await signedIn(browser, "attendee4@test.local");
+    const attendee = await signedIn(browser, "attendee2@test.local");
     await attendee.goto("/registrations");
     const card = attendee
       .getByTestId("registration-card")
@@ -152,5 +152,76 @@ test.describe("SCRUM-85 — Attendees are kept informed", () => {
     await attendee.goto(`/events/${event.id}`);
     await expect(attendee.getByTestId("replanning-event")).toHaveCount(0);
     await expect(attendee.getByTestId("already-registered")).toBeVisible();
+  });
+
+  test("SCRUM-85 [AC9] TC-85-07: withdrawing from the re-planned page takes the Attendee to My Registrations, showing it Withdrawn", async ({
+    browser,
+  }) => {
+    const name = `${PREFIX} Book Club ${Date.now()}`;
+    const event = await prisma.event.create({
+      data: {
+        name,
+        status: "PLANNING",
+        organiserId: "usr_organiser",
+        coordinatorId: "usr_coordinator",
+        ...MOVED,
+        expectedAttendance: 20,
+        registrationRequired: true,
+        registrationEnabled: true,
+        confirmedStartAt: CONFIRMED.startAt,
+        confirmedEndAt: CONFIRMED.endAt,
+        confirmedVenues: ["Seminar Room 2.1 — Level 2, Block B"],
+      },
+      select: { id: true },
+    });
+    await prisma.registration.create({
+      data: { eventId: event.id, userId: "usr_attendee_2", status: "REGISTERED" },
+    });
+
+    const attendee = await signedIn(browser, "attendee2@test.local");
+    await attendee.goto(`/events/${event.id}`);
+    await attendee.getByTestId("withdraw-button").click();
+
+    await attendee.waitForURL("**/registrations");
+    await expect(
+      attendee
+        .getByTestId("registration-card")
+        .filter({ hasText: name })
+        .getByTestId("registration-status"),
+    ).toHaveText("Withdrawn");
+  });
+
+  test("SCRUM-85 [AC1, AC7] TC-85-01, TC-85-08: registering through the page sends a notice confirming it, which opens the event", async ({
+    browser,
+  }) => {
+    const name = `${PREFIX} Open Mic ${Date.now()}`;
+    const event = await prisma.event.create({
+      data: {
+        name,
+        status: "CONFIRMED",
+        organiserId: "usr_organiser",
+        coordinatorId: "usr_coordinator",
+        ...CONFIRMED,
+        expectedAttendance: 20,
+        registrationRequired: true,
+        registrationEnabled: true,
+        confirmedStartAt: CONFIRMED.startAt,
+        confirmedEndAt: CONFIRMED.endAt,
+      },
+      select: { id: true },
+    });
+
+    const attendee = await signedIn(browser, "attendee2@test.local");
+    await attendee.goto(`/events/${event.id}`);
+    await attendee.getByTestId("register-button").click();
+    await expect(attendee.getByTestId("already-registered")).toBeVisible();
+
+    await attendee.goto("/notifications");
+    const notice = attendee
+      .getByTestId("notification")
+      .filter({ hasText: name });
+    await expect(notice).toContainText("You're registered");
+    await notice.click();
+    await attendee.waitForURL(`**/events/${event.id}`);
   });
 });
