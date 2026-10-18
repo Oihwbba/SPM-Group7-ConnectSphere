@@ -52,10 +52,15 @@ export function ConfirmedArrangements({ eventId }: { eventId: string }) {
           </p>
         ) : (
           <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2">
-            <dt className="font-semibold text-muted-foreground">Venue</dt>
+            <dt className="font-semibold text-muted-foreground">
+              {arrangements.venues.length > 1 ? "Venues" : "Venue"}
+            </dt>
+            {/* SCRUM-162 AC7: every approved venue. */}
             <dd data-testid="confirmed-venue">
-              {arrangements.venue
-                ? `${arrangements.venue.name}, ${arrangements.venue.location}`
+              {arrangements.venues.length > 0
+                ? arrangements.venues
+                    .map((venue) => `${venue.name}, ${venue.location}`)
+                    .join("; ")
                 : "—"}
             </dd>
             <dt className="font-semibold text-muted-foreground">Date & time</dt>

@@ -4,9 +4,11 @@ import type { EventStatus, Prisma, SafetyCheckStatus } from "@prisma/client";
 import { formatDateTime } from "@/lib/datetime";
 import {
   getConfirmedArrangements,
+  getEventVenueBookings,
   getReadinessChecklist,
   withoutInternalReasons,
   type ReadinessChecklist,
+  type VenueBookingLine,
 } from "@/lib/event-readiness";
 
 // SCRUM-110 — the readiness checklist. Test cases: docs/testing/SCRUM-110.md.
@@ -17,6 +19,9 @@ const START = new Date("2031-06-01T01:00:00Z"); // 09:00 Singapore
 const END = new Date("2031-06-01T09:00:00Z"); // 17:00 Singapore
 
 type Booking = {
+  id?: string;
+  venue?: { name: string };
+  requestedAttendance?: number | null;
   status: string;
   decisionReason: string | null;
   createdAt: Date;
@@ -66,6 +71,9 @@ const booking = (
   n = 1,
   decisionReason: string | null = null,
 ): Booking => ({
+  id: `bkg_${status.toLowerCase()}_${n}`,
+  venue: { name: "Main Hall" },
+  requestedAttendance: 100,
   status,
   decisionReason,
   createdAt: day(n),
@@ -132,6 +140,23 @@ async function checklistOf(event: Arrangements | null) {
 
 const venue = (c: ReadinessChecklist | null) =>
   c?.items.find((i) => i.name === "Venue booking");
+
+/** SCRUM-162 AC8 — the line the Venue booking item lists for `booking(...)`. */
+const listed = (
+  b: Booking,
+  overrides: Partial<VenueBookingLine> = {},
+): VenueBookingLine => ({
+  id: b.id!,
+  venueName: b.venue!.name,
+  attendance: b.requestedAttendance ?? null,
+  state: "Approved",
+  complete: true,
+  reason: null,
+  held: false,
+  holdApproved: false,
+  pending: false,
+  ...overrides,
+});
 const equipment = (c: ReadinessChecklist | null) =>
   c?.items.find((i) => i.name === "Equipment");
 
@@ -147,6 +172,7 @@ describe("getReadinessChecklist — SCRUM-110", () => {
           complete: true,
           state: "Approved",
           reason: null,
+          bookings: [listed(booking("APPROVED"))],
         },
         {
           name: "Equipment",
@@ -610,6 +636,13 @@ describe("getReadinessChecklist — flagged arrangements (SCRUM-26 AC12)", () =>
       complete: false,
       state: "Needs reconsideration",
       reason: REASON,
+      bookings: [
+        listed(booking("APPROVED"), {
+          state: "Needs reconsideration",
+          complete: false,
+          reason: REASON,
+        }),
+      ],
     });
   });
 
@@ -698,6 +731,192 @@ describe("getReadinessChecklist — flagged arrangements (SCRUM-26 AC12)", () =>
       state: "Needs reconsideration",
       reason: null,
     });
+  });
+});
+
+describe("getReadinessChecklist — several venues (SCRUM-162 AC8)", () => {
+  const hall = (status: string, n: number, extra: Partial<Booking> = {}) => ({
+    ...booking(status, n),
+    venue: { name: `Hall ${n}` },
+    ...extra,
+  });
+  const lines = (c: ReadinessChecklist | null) =>
+    venue(c)?.bookings?.map((b) => [b.venueName, b.state, b.complete]);
+
+  it("SCRUM-162 [AC8] TC-162-12: every booking approved for the whole event completes the item, and each is listed, oldest first", async () => {
+    const result = await checklistOf(
+      planningEvent({ bookings: [hall("APPROVED", 2), hall("APPROVED", 1)] }),
+    );
+
+    expect(result?.ready).toBe(true);
+    expect(venue(result)).toMatchObject({ complete: true, state: "Approved" });
+    expect(lines(result)).toEqual([
+      ["Hall 1", "Approved", true],
+      ["Hall 2", "Approved", true],
+    ]);
+  });
+
+  it("SCRUM-162 [AC8] TC-162-12: a rejected, cancelled or expired booking isn't listed and doesn't hold the event back", async () => {
+    const result = await checklistOf(
+      planningEvent({
+        bookings: [
+          hall("APPROVED", 1),
+          hall("REJECTED", 2, { decisionReason: "Too small." }),
+          hall("CANCELLED", 3),
+          hall("EXPIRED", 4),
+        ],
+      }),
+    );
+
+    expect(result?.ready).toBe(true);
+    expect(lines(result)).toEqual([["Hall 1", "Approved", true]]);
+  });
+
+  it("SCRUM-162 [AC8] TC-162-13: a pending request beside an approved one keeps the item incomplete, reading Pending", async () => {
+    const result = await checklistOf(
+      planningEvent({ bookings: [hall("APPROVED", 1), hall("PENDING", 2)] }),
+    );
+
+    expect(result?.ready).toBe(false);
+    expect(venue(result)).toMatchObject({ complete: false, state: "Pending" });
+    expect(venue(result)?.bookings?.[1]).toMatchObject({
+      venueName: "Hall 2",
+      pending: true,
+      complete: false,
+    });
+  });
+
+  it("SCRUM-162 [AC8] TC-162-13: an approved booking that doesn't cover the event's period keeps the item incomplete, beside one that does", async () => {
+    const result = await checklistOf(
+      planningEvent({
+        bookings: [
+          hall("APPROVED", 1),
+          hall("APPROVED", 2, { endAt: new Date("2031-06-01T05:00:00Z") }),
+        ],
+      }),
+    );
+
+    expect(venue(result)).toMatchObject({
+      complete: false,
+      state: "Approved for a different time",
+    });
+    expect(lines(result)).toEqual([
+      ["Hall 1", "Approved", true],
+      ["Hall 2", "Approved for a different time", false],
+    ]);
+  });
+
+  it("SCRUM-162 [AC8] TC-162-13: a flag on one booking keeps the item incomplete, and its reason shows on that booking", async () => {
+    const result = await checklistOf(
+      planningEvent({
+        bookings: [
+          hall("APPROVED", 1),
+          hall("APPROVED", 2, {
+            needsReconsideration: true,
+            reconsiderationReason: "The room flooded.",
+          } as Partial<Booking>),
+        ],
+      }),
+    );
+
+    expect(venue(result)).toMatchObject({
+      complete: false,
+      state: "Needs reconsideration",
+      reason: "The room flooded.",
+    });
+    expect(venue(result)?.bookings?.[1]).toMatchObject({
+      state: "Needs reconsideration",
+      reason: "The room flooded.",
+    });
+  });
+
+  it("SCRUM-162 [AC8] TC-162-13: pending or held requests with nothing approved are incomplete", async () => {
+    const result = await checklistOf(
+      planningEvent({
+        bookings: [
+          hall("PENDING", 1),
+          hall("HELD", 2, { holdExpiresAt: new Date("2031-05-25T10:00:00Z") } as Partial<Booking>),
+        ],
+      }),
+    );
+
+    expect(result?.ready).toBe(false);
+    expect(venue(result)?.complete).toBe(false);
+  });
+
+  it("SCRUM-162 [AC8], SCRUM-110 [AC6] TC-162-12: the Organiser sees each booking's state, but not a flag's internal reason", () => {
+    const flaggedLine = listed(hall("APPROVED", 1), {
+      state: "Needs reconsideration",
+      complete: false,
+      reason: "The room flooded.",
+    });
+    const checklist: ReadinessChecklist = {
+      ready: false,
+      items: [
+        {
+          name: "Venue booking",
+          complete: false,
+          state: "Needs reconsideration",
+          reason: "The room flooded.",
+          bookings: [flaggedLine],
+        },
+      ],
+    };
+
+    expect(withoutInternalReasons(checklist).items[0]).toEqual({
+      ...checklist.items[0],
+      reason: null,
+      bookings: [{ ...flaggedLine, reason: null }],
+    });
+  });
+});
+
+describe("getEventVenueBookings — SCRUM-162 AC7", () => {
+  it("SCRUM-162 [AC7] TC-162-11: lists every booking of the event, oldest first, with its venue, attendance and status; an expired hold reads Expired", async () => {
+    const findMany = vi.fn().mockResolvedValue([
+      {
+        id: "b1",
+        status: "APPROVED",
+        holdExpiresAt: null,
+        requestedAttendance: 200,
+        startAt: START,
+        endAt: END,
+        venue: { name: "Main Hall" },
+      },
+      {
+        id: "b2",
+        status: "HELD",
+        holdExpiresAt: new Date("2031-05-01T00:00:00Z"),
+        requestedAttendance: 30,
+        startAt: START,
+        endAt: END,
+        venue: { name: "Breakout Room" },
+      },
+      {
+        id: "b3",
+        status: "REJECTED",
+        holdExpiresAt: null,
+        requestedAttendance: null,
+        startAt: START,
+        endAt: END,
+        venue: { name: "Boardroom" },
+      },
+    ]);
+    const db = { booking: { findMany } } as unknown as Prisma.TransactionClient;
+
+    expect(
+      await getEventVenueBookings(db, "evt_test", new Date("2031-05-20T00:00:00Z")),
+    ).toEqual([
+      { id: "b1", venueName: "Main Hall", attendance: 200, status: "APPROVED", startAt: START, endAt: END },
+      { id: "b2", venueName: "Breakout Room", attendance: 30, status: "EXPIRED", startAt: START, endAt: END },
+      { id: "b3", venueName: "Boardroom", attendance: null, status: "REJECTED", startAt: START, endAt: END },
+    ]);
+    expect(findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { eventId: "evt_test" },
+        orderBy: { createdAt: "asc" },
+      }),
+    );
   });
 });
 
@@ -790,7 +1009,7 @@ describe("getConfirmedArrangements — SCRUM-81 AC6", () => {
     );
 
     expect(await getConfirmedArrangements(db, "evt_test")).toEqual({
-      venue: { name: "Exhibition Hall", location: "Level 1" },
+      venues: [{ name: "Exhibition Hall", location: "Level 1" }],
       startAt: START,
       endAt: END,
       timezone: "Asia/Singapore",
@@ -799,7 +1018,7 @@ describe("getConfirmedArrangements — SCRUM-81 AC6", () => {
     expect(findUnique.mock.calls[0][0].where).toEqual({ id: "evt_test" });
   });
 
-  it("SCRUM-81 [AC6] TC-81-06: when two approved bookings cover the event, the newer one is the confirmed venue", async () => {
+  it("SCRUM-81 [AC6] TC-81-06, SCRUM-162 [AC7] TC-162-11: when two approved bookings cover the event, the Organiser sees both venues, oldest first", async () => {
     const hall = { name: "Exhibition Hall", location: "Level 1" };
     const auditorium = { name: "Auditorium", location: "Level 2" };
     const { db } = eventWith(
@@ -811,9 +1030,10 @@ describe("getConfirmedArrangements — SCRUM-81 AC6", () => {
       [],
     );
 
-    expect((await getConfirmedArrangements(db, "evt_test"))?.venue).toEqual(
+    expect((await getConfirmedArrangements(db, "evt_test"))?.venues).toEqual([
+      hall,
       auditorium,
-    );
+    ]);
   });
 
   it("SCRUM-81 [AC6] TC-81-06: with no approved booking for the event's time and nothing reserved, the venue is empty and the equipment list is empty", async () => {
@@ -826,7 +1046,7 @@ describe("getConfirmedArrangements — SCRUM-81 AC6", () => {
     );
 
     expect(await getConfirmedArrangements(db, "evt_test")).toMatchObject({
-      venue: null,
+      venues: [],
       equipment: [],
     });
   });
