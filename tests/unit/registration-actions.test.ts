@@ -22,7 +22,7 @@ const tx = vi.hoisted(() => ({
     upsert: vi.fn(),
     updateMany: vi.fn(),
   },
-  notification: { createMany: vi.fn() },
+  notification: { createMany: vi.fn(), create: vi.fn() },
   auditLog: {
     create: vi.fn(),
     update: vi.fn(),
@@ -75,6 +75,7 @@ beforeEach(() => {
   tx.registration.count.mockResolvedValue(0);
   tx.registration.upsert.mockResolvedValue({ id: "reg1" });
   tx.registration.updateMany.mockResolvedValue({ count: 1 });
+  tx.notification.create.mockResolvedValue({});
   mockTransaction.mockImplementation((cb: (t: typeof tx) => unknown) => cb(tx));
 });
 
@@ -95,6 +96,32 @@ describe("registerForEvent — SCRUM-73", () => {
         },
       }),
     );
+  });
+
+  it("SCRUM-85 [AC1, AC6] TC-85-01: registering sends the Attendee exactly one notification confirming it", async () => {
+    mockAuth.mockResolvedValue(sessionFor("ATTENDEE", "usr_attendee"));
+    tx.event.findUniqueOrThrow.mockResolvedValue({ ...eventRow(), name: "Gala" });
+
+    await registerForEvent({ eventId: "evt1" });
+
+    expect(tx.notification.create).toHaveBeenCalledTimes(1);
+    expect(tx.notification.create).toHaveBeenCalledWith({
+      data: {
+        userId: "usr_attendee",
+        type: "REGISTRATION_CONFIRMED",
+        title: "You're registered",
+        message: `You're registered for "Gala".`,
+        eventId: "evt1",
+      },
+    });
+  });
+
+  it("SCRUM-85 [AC6] TC-85-01: registering again while already registered is refused and sends nothing", async () => {
+    mockAuth.mockResolvedValue(sessionFor("ATTENDEE", "usr_attendee"));
+    tx.registration.findUnique.mockResolvedValue({ status: "REGISTERED" });
+
+    expect((await registerForEvent({ eventId: "evt1" })).ok).toBe(false);
+    expect(tx.notification.create).not.toHaveBeenCalled();
   });
 
   it("[Positive] AC: registers with the fields SCRUM-73's own text names — no separate capacity value read", async () => {
