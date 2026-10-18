@@ -481,10 +481,9 @@ describe.skipIf(!usesLocalDatabase)(
         (await getPendingBookingQueue()).find((b) => b.id === id),
       ).toMatchObject({ status: "HELD", holdExpiresAt: expiry });
       const checklist = await getReadinessChecklist(prisma, eventIds[0]);
-      expect(checklist!.items[0]).toMatchObject({
-        heldBookingId: id,
-        holdApproved: true,
-      });
+      expect(checklist!.items[0].bookings).toEqual([
+        expect.objectContaining({ id, held: true, holdApproved: true }),
+      ]);
 
       const approvals = await prisma.notification.findMany({
         where: { bookingId: id, type: "HOLD_APPROVED" },
