@@ -45,8 +45,10 @@ status, one assigned Coordinator, and arrangements that can't clash.
 | **Event Coordinator Lead** | ConnectSphere staff | Reviews new requests' basic details in the Unassigned queue and assigns each to a Coordinator, becoming its supervising Lead (SCRUM-165); will reassign where needed (SCRUM-21) and sees every event with each Coordinator's active events on the All Events list (SCRUM-141). Can't approve or reject a request, or confirm, plan or edit an event. The role exists since SCRUM-172. | Unassigned Queue |
 | **Safety Officer** | ConnectSphere staff | Reviews an event's venue and equipment arrangements before it can be confirmed, and approves, rejects or requests changes on that safety check (SCRUM-166). Can't confirm, plan or edit the event: its approval doesn't confirm it; the Coordinator still does (SCRUM-166 AC14). | Safety Checks |
 
-Each account has one role today. The customer has said an account may hold
-several, which is in the backlog (SCRUM-121).
+An account has a primary role and may hold others (SCRUM-121): its
+permissions and navigation are those of every role held, and the events page
+switches between the views of its roles. Nobody decides a venue booking or
+reviews or reserves equipment for an event they organise or coordinate.
 
 What each role may do is one table, `ROLE_ACTIONS` in `lib/auth/can.ts`, and
 every page and action checks it on the server (ADR 0004). An event you aren't

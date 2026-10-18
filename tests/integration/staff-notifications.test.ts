@@ -65,7 +65,12 @@ describe.skipIf(!usesLocalDatabase)(
     const notices = (eventId: string, type: NotificationType) =>
       prisma.notification.findMany({
         where: { eventId, type },
-        select: { userId: true, title: true, link: true, user: { select: { role: true } } },
+        select: {
+          userId: true,
+          title: true,
+          link: true,
+          user: { select: { role: true, additionalRoles: true } },
+        },
       });
 
     /**
@@ -83,7 +88,10 @@ describe.skipIf(!usesLocalDatabase)(
       expect(rows.length).toBeGreaterThan(0);
       expect(new Set(users).size).toBe(users.length);
       expect(users).toContain(seeded);
-      expect(rows.every((r) => r.user.role === role)).toBe(true);
+      // SCRUM-121: held as the primary role or an additional one.
+      expect(
+        rows.every((r) => r.user.role === role || r.user.additionalRoles.includes(role)),
+      ).toBe(true);
       return rows;
     }
 
@@ -391,6 +399,13 @@ describe.skipIf(!usesLocalDatabase)(
         if (!requested.ok) throw new Error(requested.error);
         // AC11: every Safety Officer, once.
         await expectOncePerPerson(eventId, "SAFETY_CHECK_REQUESTED", "SAFETY_OFFICER", "usr_safetyofficer");
+        // SCRUM-48 AC5, TC-48-08: in the officer's own list, it opens the check.
+        mockAuth.mockResolvedValue(session("usr_safetyofficer", "SAFETY_OFFICER"));
+        expect(
+          (await getMyNotifications())
+            .filter((n) => n.title === "Safety check requested" && n.message.includes(`Staff notice safety check ${STAMP}`))
+            .map((n) => n.href),
+        ).toEqual([`/safety-checks/${requested.data.checkId}`]);
 
         mockAuth.mockResolvedValue(session("usr_safetyofficer", "SAFETY_OFFICER"));
         expect(

@@ -113,7 +113,9 @@ describe("submitEventRequest — SCRUM-124 AC10 the Leads are told", () => {
     await submitEventRequest(validInput);
 
     expect(tx.user.findMany).toHaveBeenCalledWith({
-      where: { role: "COORDINATOR_LEAD" },
+      where: {
+        OR: [{ role: "COORDINATOR_LEAD" }, { additionalRoles: { has: "COORDINATOR_LEAD" } }],
+      },
       select: { id: true },
     });
     const notice = {

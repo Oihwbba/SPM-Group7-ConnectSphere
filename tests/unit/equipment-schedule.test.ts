@@ -54,6 +54,7 @@ describe("getEquipmentSchedule — SCRUM-30", () => {
     startAt: new Date(from),
     endAt: new Date(to),
     quantity,
+    needsReconsideration: false,
     event: { name },
   });
 
@@ -101,7 +102,9 @@ describe("getEquipmentSchedule — SCRUM-30", () => {
         expect.objectContaining({ id: "r2", eventName: "B", quantity: 2 }),
       ]);
       expect(Object.keys(result.data.entries[0]).sort()).toEqual(
-        ["endAt", "eventName", "id", "kind", "note", "quantity", "reason", "startAt"],
+        // SCRUM-32: whether it was reported as no longer providable is a
+        // fact about the reservation, not a judgement of it.
+        ["endAt", "eventName", "id", "kind", "needsReconsideration", "note", "quantity", "reason", "startAt"],
       );
     }
   });

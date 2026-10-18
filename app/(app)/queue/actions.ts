@@ -50,9 +50,13 @@ export async function assignCoordinator(
         return { error: "Request not found." };
       }
 
-      // AC4: one active Coordinator, i.e. someone who holds the role now.
+      // AC4: one active Coordinator, i.e. someone who holds the role now,
+      // as their only role or besides another (SCRUM-121 AC2).
       const coordinator = await tx.user.findFirst({
-        where: { id: coordinatorId, role: "COORDINATOR" },
+        where: {
+          id: coordinatorId,
+          OR: [{ role: "COORDINATOR" }, { additionalRoles: { has: "COORDINATOR" } }],
+        },
         select: { id: true, name: true },
       });
       if (!coordinator) {

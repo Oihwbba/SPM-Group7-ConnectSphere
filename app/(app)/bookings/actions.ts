@@ -39,8 +39,10 @@ import {
 import { formatDateTime } from "@/lib/datetime";
 import {
   describeBlocker,
+  findCompetingRequests,
   findVenueBlockers,
   occupiedPeriod,
+  submittedBefore,
 } from "@/lib/venue-availability";
 import { outdateSafetyChecks } from "@/lib/safety-checks";
 import { openingHoursRefusal, type OpeningDay } from "@/lib/venue-hours";
@@ -372,7 +374,32 @@ const venueSelect = {
     select: { name: true, isActive: true, ...venueTimesSelect, ...openingHoursSelect },
   },
   needsReconsideration: true,
+  createdAt: true,
 } as const;
+
+/**
+ * SCRUM-134 AC2 — why a Pending request can't be approved or held yet: an
+ * earlier Pending request for the same venue overlaps it, and is decided
+ * first. Null when there is none. Rejecting is never checked (AC6).
+ */
+async function earlierRequestRefusal(
+  tx: Prisma.TransactionClient,
+  booking: {
+    id: string;
+    venueId: string;
+    startAt: Date;
+    endAt: Date;
+    createdAt: Date;
+    venue: { name: string; setupMinutes: number; turnaroundMinutes: number };
+  },
+): Promise<string | null> {
+  const earlier = (await findCompetingRequests(tx, booking, booking.venue)).find(
+    (other) => submittedBefore(other, booking),
+  );
+  return earlier
+    ? `An earlier request for ${booking.venue.name} overlapping this period is still pending: "${earlier.eventName}", submitted ${formatDateTime(earlier.createdAt)}. Approve, hold or reject it first. This request is still pending.`
+    : null;
+}
 
 /**
  * SCRUM-53 — Venue Staff approve or reject a pending request.
@@ -430,10 +457,13 @@ export async function decideBookingRequest(
         ...venueSelect,
         holdApprovedAt: true,
         requestedById: true,
-        event: { select: { id: true, name: true, coordinatorId: true } },
+        event: { select: { id: true, name: true, organiserId: true, coordinatorId: true } },
       },
     });
     if (!booking) return err("Booking request not found.");
+    // SCRUM-121 AC5: nobody decides a booking for an event they organise or
+    // coordinate, whatever roles they hold.
+    requirePermission(user, "booking:decide", { kind: "arrangement", ...booking.event });
     const now = new Date();
     const current = bookingStatusAt(booking, now);
     if (current === "HELD" && decision === "APPROVED") {
@@ -472,6 +502,9 @@ export async function decideBookingRequest(
               conflict(blockers.map(describeBlocker).join("; ")),
             );
           }
+          // SCRUM-134 AC2: first come, first served.
+          const earlier = await earlierRequestRefusal(tx, booking);
+          if (earlier) throw new DecisionError(earlier);
         }
 
         const updated = await tx.booking.updateMany({
@@ -753,10 +786,13 @@ export async function holdBookingRequest(
       select: {
         ...venueSelect,
         requestedById: true,
-        event: { select: { id: true, name: true, coordinatorId: true } },
+        event: { select: { id: true, name: true, organiserId: true, coordinatorId: true } },
       },
     });
     if (!booking) return err("Booking request not found.");
+    // SCRUM-121 AC5: nobody decides a booking for an event they organise or
+    // coordinate, whatever roles they hold.
+    requirePermission(user, "booking:hold", { kind: "arrangement", ...booking.event });
     const now = new Date();
     const current = bookingStatusAt(booking, now);
     if (current !== "PENDING") {
@@ -794,6 +830,9 @@ export async function holdBookingRequest(
               .join("; ")}. This request is still pending.`,
           );
         }
+        // SCRUM-134 AC2: an earlier competing request is decided first.
+        const earlier = await earlierRequestRefusal(tx, booking);
+        if (earlier) throw new DecisionError(earlier);
 
         const updated = await tx.booking.updateMany({
           // SCRUM-26 AC5: as for an approval, a flag raised since it was

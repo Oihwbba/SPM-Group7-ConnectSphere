@@ -259,9 +259,9 @@ describe("flag notices — SCRUM-124 AC8", () => {
       reservation: { updateManyAndReturn: vi.fn().mockResolvedValue(reservations) },
       event: { findMany: vi.fn().mockResolvedValue(events) },
       user: {
-        findMany: vi.fn(({ where }: { where: { role: string } }) =>
+        findMany: vi.fn(({ where }: { where: { OR: [{ role: string }] } }) =>
           Promise.resolve(
-            where.role === "VENUE_STAFF" ? [{ id: "usr_vs" }] : [{ id: "usr_ts" }],
+            where.OR[0].role === "VENUE_STAFF" ? [{ id: "usr_vs" }] : [{ id: "usr_ts" }],
           ),
         ),
       },
@@ -347,11 +347,11 @@ describe("flag notices — SCRUM-124 AC8", () => {
 
     expect(tx.notification.create).not.toHaveBeenCalled();
     expect(tx.user.findMany).toHaveBeenCalledWith({
-      where: { role: "TECH_SUPPORT" },
+      where: { OR: [{ role: "TECH_SUPPORT" }, { additionalRoles: { has: "TECH_SUPPORT" } }] },
       select: { id: true },
     });
     expect(tx.user.findMany).not.toHaveBeenCalledWith(
-      expect.objectContaining({ where: { role: "VENUE_STAFF" } }),
+      expect.objectContaining({ where: { OR: [{ role: "VENUE_STAFF" }, { additionalRoles: { has: "VENUE_STAFF" } }] } }),
     );
   });
 

@@ -11,6 +11,11 @@ import {
   type PoolAvailability,
 } from "@/lib/equipment/requests";
 import { RESERVABLE_EVENT_STATUSES } from "@/lib/schemas/reservation";
+import {
+  COMPETING_REQUEST_STATUSES,
+  competingLines,
+  openRequestLines,
+} from "@/lib/equipment/competing";
 
 /**
  * The reads behind the Equipment Requests page (SCRUM-27/28). They take the
@@ -229,12 +234,18 @@ export async function getEquipmentRequestQueue() {
     }),
   ]);
 
+  // SCRUM-134 AC4: read once, then matched to each line below.
+  const openLines = await openRequestLines(prisma);
   return Promise.all(
     requests.map(async (request) => {
       const { startAt, endAt } = request.event;
       const open = (OPEN_REQUEST_STATUSES as readonly string[]).includes(
         request.status,
       );
+      const competes =
+        (COMPETING_REQUEST_STATUSES as readonly string[]).includes(request.status) &&
+        startAt !== null &&
+        endAt !== null;
       const pool =
         open && startAt && endAt
           ? await getPoolAvailability(startAt, endAt)
@@ -250,6 +261,20 @@ export async function getEquipmentRequestQueue() {
                 catalogue,
               )
             : null,
+          // SCRUM-134 AC4: the other open requests for this type whose
+          // events overlap, earliest first, with what is reserved for each.
+          competing: competes
+            ? competingLines(openLines, request.id, line.equipment.id, {
+                startAt: startAt!,
+                endAt: endAt!,
+              }).map(({ requestId, eventName, submittedAt, quantity, reserved }) => ({
+                requestId,
+                eventName,
+                submittedAt,
+                quantity,
+                reserved,
+              }))
+            : [],
         })),
       };
     }),
