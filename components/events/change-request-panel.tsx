@@ -22,11 +22,11 @@ import {
   CHANGE_KEYS,
   CHANGE_REQUEST_STATUS_LABEL,
   changeFieldLabel,
+  changeValueLabel,
   type ChangeableField,
   type ChangeKey,
   type ChangeRequestChanges,
 } from "@/lib/schemas/change-request";
-import { registrationNeededLabel } from "@/lib/schemas/event";
 import {
   formatDateTime,
   sgWallTimeToUtcIso,
@@ -96,15 +96,6 @@ function changesBetween(before: Draft, after: Draft): ChangeRequestChanges {
   return changes;
 }
 
-function shown(fieldName: string, value: string | null): string {
-  if (fieldName === "registrationRequired") {
-    return registrationNeededLabel(value === null ? null : value === "true");
-  }
-  if (value === null || value === "") return "—";
-  return fieldName === "startAt" || fieldName === "endAt"
-    ? formatDateTime(new Date(value))
-    : value;
-}
 
 /** A number for attendance, a line for short text, a box for the rest. */
 function FieldControl({
@@ -183,9 +174,9 @@ function ChangeRequestItem({
                 </span>
               )}
               <span className="block text-muted-foreground">
-                {shown(field.fieldName, field.oldValue)} →{" "}
+                {changeValueLabel(field.fieldName, field.oldValue)} →{" "}
                 <span className="text-foreground">
-                  {shown(field.fieldName, field.newValue)}
+                  {changeValueLabel(field.fieldName, field.newValue)}
                 </span>
               </span>
             </li>

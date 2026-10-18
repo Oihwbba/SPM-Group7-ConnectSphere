@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
+import { formatDateTime } from "@/lib/datetime";
 import {
   getChangeRequestsForEvent,
   raiseChangeRequest,
@@ -12,6 +13,7 @@ import {
 import {
   CHANGE_REQUEST_STATUS_LABEL,
   changeFieldLabel,
+  changeValueLabel,
   raiseChangeRequestSchema,
 } from "@/lib/schemas/change-request";
 
@@ -699,6 +701,26 @@ describe("raiseChangeRequestSchema — SCRUM-41 AC1, AC4", () => {
         },
       }).success,
     ).toBe(true);
+  });
+});
+
+describe("changeValueLabel — SCRUM-41 AC6, SCRUM-128 AC1", () => {
+  it.each([
+    ["registrationRequired", "true", "Yes"],
+    ["registrationRequired", "false", "No"],
+    ["registrationRequired", null, "Not answered"],
+    ["programme", null, "—"],
+    ["programme", "", "—"],
+    ["description", "Booths and talks.", "Booths and talks."],
+    ["expectedAttendance", "40", "40"],
+  ])("SCRUM-41 [AC6] TC-41-18, TC-41-09: %s %j reads %j", (fieldName, value, label) => {
+    expect(changeValueLabel(fieldName, value)).toBe(label);
+  });
+
+  it("SCRUM-41 [AC6] TC-41-09: a start or end reads as a Singapore date and time", () => {
+    expect(changeValueLabel("startAt", "2031-05-10T01:00:00.000Z")).toBe(
+      formatDateTime(new Date("2031-05-10T01:00:00.000Z")),
+    );
   });
 });
 

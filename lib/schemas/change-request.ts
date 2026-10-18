@@ -1,6 +1,8 @@
 import { z } from "zod";
 import type { ChangeRequestStatus } from "@prisma/client";
 
+import { formatDateTime } from "@/lib/datetime";
+import { registrationNeededLabel } from "@/lib/schemas/event";
 import {
   CLARIFIABLE_FIELDS,
   checkSchedule,
@@ -125,6 +127,20 @@ export function changeFieldLabel(fieldName: string): string {
   if (fieldName === "startAt") return "Start";
   if (fieldName === "endAt") return "End";
   return CHANGEABLE_FIELDS[fieldName as ChangeableField] ?? fieldName;
+}
+
+/**
+ * A recorded value as it reads on screen, to the Organiser who raised the
+ * request (SCRUM-41 AC6) and the Coordinator who decides it (SCRUM-128 AC1).
+ */
+export function changeValueLabel(fieldName: string, value: string | null): string {
+  if (fieldName === "registrationRequired") {
+    return registrationNeededLabel(value === null ? null : value === "true");
+  }
+  if (value === null || value === "") return "—";
+  return fieldName === "startAt" || fieldName === "endAt"
+    ? formatDateTime(new Date(value))
+    : value;
 }
 
 /** SCRUM-41 AC6 — the status names the Organiser sees. */
