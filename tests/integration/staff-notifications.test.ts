@@ -23,6 +23,7 @@ import {
 import { createEquipmentRequest } from "@/app/(app)/equipment-requests/actions";
 import { resolveReconsiderationFlag } from "@/app/(app)/events/reconsideration-actions";
 import { getMyNotifications } from "@/app/(app)/notifications/queries";
+import { submitEventRequest } from "@/app/(app)/events/actions";
 
 // SCRUM-124 against a real, seeded Postgres: each trigger writes exactly one
 // notice for each person it concerns, even when the same action arrives twice
@@ -312,6 +313,45 @@ describe.skipIf(!usesLocalDatabase)(
         "usr_venuestaff",
       );
       expect(rows[0].title).toBe("A flagged booking was cancelled");
+    });
+
+    it("SCRUM-124 [AC10, AC12, AC14] TC-124-10: a submitted request tells every Lead once that it waits in the Unassigned queue, and opens it there", async () => {
+      mockAuth.mockResolvedValue(session("usr_organiser", "ORGANISER"));
+      const result = await submitEventRequest({
+        name: `Staff notice submission ${STAMP}`,
+        purpose: "SCRUM-124 AC10",
+        description: "A request for the Lead's queue.",
+        startAt: "2036-11-03T01:00:00.000Z",
+        endAt: "2036-11-03T03:00:00.000Z",
+        expectedAttendance: 20,
+        venueRequirements: "A room",
+        accessibilityNeeds: "None",
+        preferredLayout: "Classroom",
+        equipmentRequirements: "None",
+        registrationRequired: "no",
+        registrationNotes: "",
+      });
+      if (!result.ok) throw new Error(result.error);
+      const eventId = result.data.id;
+      try {
+        await expectOncePerPerson(
+          eventId,
+          "REQUEST_AWAITING_ASSIGNMENT",
+          "COORDINATOR_LEAD",
+          "usr_coordinatorlead",
+        );
+        mockAuth.mockResolvedValue(session("usr_coordinatorlead", "COORDINATOR_LEAD"));
+        const mine = (await getMyNotifications()).filter((n) =>
+          n.message.includes(`Staff notice submission ${STAMP}`),
+        );
+        expect(mine.map((n) => [n.title, n.href])).toEqual([
+          ["A request is waiting to be assigned", `/queue/${eventId}`],
+        ]);
+      } finally {
+        await prisma.notification.deleteMany({ where: { eventId } });
+        await prisma.auditLog.deleteMany({ where: { entityId: eventId } });
+        await prisma.event.delete({ where: { id: eventId } });
+      }
     });
   },
 );
