@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-09. Jira is the source of truth.
+     Synced from Jira on 2026-10-18. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-165 - Lead assigns new requests from an unassigned queue
@@ -30,6 +30,7 @@
 8. Given a request is unassigned, then Coordinators can't open it for decision or decide it; they see their own events and the read-only all-events list (SCRUM-141).
 9. Given a rejected request is amended and resubmitted (SCRUM-108), then it keeps its Coordinator; if that Coordinator no longer holds the role, it returns to the queue.
 10. Only Leads can see the queue and assign (SCRUM-67).
+11.  Given I assign a Coordinator to a request, then I'm recorded as the event's supervising Lead, since the Lead supervises the Coordinator they allocated for that event.
 
 **Related:** the Lead's view of every assignment and active event is SCRUM-141.
 
@@ -41,6 +42,7 @@
 
 **Change log**
 
-* 2026-10-07 (Week 7 change 5): created.
+*    * 2026-10-16 (W9 clarifications, PO approved): AC11 added. The Lead who assigns a request becomes its supervising Lead ("Lead is responsible for supervising the co-ordinator that he/she allocated for an event request"), recorded in the field SCRUM-172 AC12 added.
+   * 2026-10-07 (Week 7 change 5): created.
 
 Functionality Area: Coordinator Assignment

@@ -14,7 +14,7 @@ async function signInAsLead(page: Page) {
 }
 
 test.describe("SCRUM-164 — Event Coordinator Lead role", () => {
-  test("AC1, AC4: the seeded Lead signs in, lands on its home page, and its menu shows only what the role allows", async ({
+  test("SCRUM-164 [AC1, AC4] TC-164-01: the seeded Lead signs in, lands on its home page, and its menu shows only what the role allows", async ({
     page,
   }) => {
     await signInAsLead(page);
@@ -39,7 +39,7 @@ test.describe("SCRUM-164 — Event Coordinator Lead role", () => {
     "/equipment",
     "/registrations",
   ]) {
-    test(`AC2, AC3: the Lead typing ${url} directly is refused`, async ({
+    test(`SCRUM-164 [AC1, AC3] TC-164-03: the Lead typing ${url} directly is refused`, async ({
       page,
     }) => {
       await signInAsLead(page);
