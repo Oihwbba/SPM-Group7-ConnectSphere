@@ -25,7 +25,7 @@ request.
 | Action | What it does | Permission | Input | Writes | Locks |
 |---|---|---|---|---|---|
 | `checkVenueAvailability` | Checks whether a venue is free for a period, and names any clashes, including being outside its opening hours (SCRUM-50, SCRUM-34 AC7). | `booking:request` | `venueAvailabilityQuerySchema` (lib/schemas/booking.ts) | nothing (read only) | — |
-| `submitBookingRequest` | The Coordinator requests a venue for their event, with the accessibility features it needs (SCRUM-50, 40); refused outside the venue's opening hours (SCRUM-34 AC7). | `booking:request` | `bookingRequestSchema` (lib/schemas/booking.ts) | Booking | — |
+| `submitBookingRequest` | The Coordinator requests a venue for their event, with that venue's attendance, facilities, accessibility features and layout (SCRUM-50, 40, 162 AC9); refused outside the venue's opening hours (SCRUM-34 AC7). An event can book several venues; asking again for a venue it already has a Pending, Held or Approved booking at shows that booking instead (SCRUM-162 AC1, AC2). The period must cover the event's, and the attendance is from 1 to the event's (SCRUM-162 AC4). | `booking:request` | `bookingRequestSchema` (lib/schemas/booking.ts) | Booking | — |
 | `decideBookingRequest` | Venue Staff approve or reject a pending request, or approve or reject a held one before it expires (SCRUM-53, 163). Approving a hold keeps it Held, records who approved it and when, and tells its Coordinator (SCRUM-163 AC7, SCRUM-124 AC4). Approving either is refused outside the venue's opening hours (SCRUM-34 AC7). | `booking:decide` | `bookingDecisionSchema` (lib/schemas/booking.ts) | AuditLog, Booking, Notification | Event row (`FOR KEY SHARE`), when approving a hold |
 | `holdBookingRequest` | Venue Staff hold a pending request until a deadline, with a note for the Coordinator (SCRUM-163); refused outside the venue's opening hours, as approving is (SCRUM-34 AC7). | `booking:hold` | `bookingHoldSchema` (lib/schemas/booking.ts) | AuditLog, Booking, Notification | Event row (`FOR KEY SHARE`) |
 | `confirmHold` | The assigned Coordinator confirms a live hold Venue Staff have approved, which makes the booking Approved (SCRUM-163 AC3); refused outside the venue's opening hours (SCRUM-34 AC7). | `booking:settle-hold` | `holdSettlementSchema` (lib/schemas/booking.ts) | AuditLog, Booking, Notification, SafetyCheck | — |
@@ -97,8 +97,9 @@ request.
 
 | Action | What it does | Permission | Input | Writes | Locks |
 |---|---|---|---|---|---|
-| `getEventReadiness` | The event's readiness checklist (SCRUM-110, 170). | `event:read`; the result also says whether the viewer may review, reject or confirm, settle or withdraw a venue request, and record No equipment needed | an event id | nothing (read only) | — |
-| `getEventArrangements` | A Confirmed event's secured venue, time and equipment (SCRUM-81 AC6). | `event:read` | an event id | nothing (read only) | — |
+| `getEventReadiness` | The event's readiness checklist (SCRUM-110, 170), whose Venue item lists each live booking (SCRUM-162 AC8). | `event:read`; the result also says whether the viewer may review, reject or confirm, settle or withdraw a venue request, and record No equipment needed | an event id | nothing (read only) | — |
+| `getEventArrangements` | A Confirmed event's secured venues, time and equipment (SCRUM-81 AC6, SCRUM-162 AC7). | `event:read` | an event id | nothing (read only) | — |
+| `getEventBookings` | Every venue booking of the event, with its venue, attendance and status (SCRUM-162 AC7). | `event:read` | an event id | nothing (read only) | — |
 
 ## `app/(app)/events/registration-list-actions.ts`
 
