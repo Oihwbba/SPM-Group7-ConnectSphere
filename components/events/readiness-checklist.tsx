@@ -43,7 +43,14 @@ const ITEM_ID: Record<Checklist["items"][number]["name"], string> = {
   "Safety check": "safety",
 };
 
-export function ReadinessChecklist({ eventId }: { eventId: string }) {
+export function ReadinessChecklist({
+  eventId,
+  onBookingsChanged,
+}: {
+  eventId: string;
+  /** SCRUM-162 AC7: told after a hold is settled or a request withdrawn. */
+  onBookingsChanged?: () => void;
+}) {
   const [checklist, setChecklist] = useState<
     | (Checklist & {
         canConfirm: boolean;
@@ -121,6 +128,7 @@ export function ReadinessChecklist({ eventId }: { eventId: string }) {
       if (!result.ok) toast.error(result.error);
       else toast.success(done);
       setLoads((n) => n + 1);
+      onBookingsChanged?.();
       router.refresh();
     });
   }
