@@ -25,7 +25,7 @@ request.
 | Action | What it does | Permission | Input | Writes | Locks |
 |---|---|---|---|---|---|
 | `checkVenueAvailability` | Checks whether a venue is free for a period, and names any clashes, including being outside its opening hours (SCRUM-50, SCRUM-34 AC7). | `booking:request` | `venueAvailabilityQuerySchema` (lib/schemas/booking.ts) | nothing (read only) | — |
-| `submitBookingRequest` | The Coordinator requests a venue for their event (SCRUM-50); refused outside the venue's opening hours (SCRUM-34 AC7). Every Venue Staff member is told (SCRUM-124 AC1). | `booking:request` | `bookingRequestSchema` (lib/schemas/booking.ts) | Booking, Notification | — |
+| `submitBookingRequest` | The Coordinator requests a venue for their event, with the accessibility features it needs (SCRUM-50, 40); refused outside the venue's opening hours (SCRUM-34 AC7). Every Venue Staff member is told (SCRUM-124 AC1). | `booking:request` | `bookingRequestSchema` (lib/schemas/booking.ts) | Booking, Notification | — |
 | `decideBookingRequest` | Venue Staff approve or reject a pending request, or approve or reject a held one before it expires (SCRUM-53, 163). Approving a hold keeps it Held, records who approved it and when. Approving either is refused outside the venue's opening hours (SCRUM-34 AC7). Every decision tells the event's Coordinator, with the reason for a rejection (SCRUM-163 AC7, SCRUM-124 AC4). A pending request can't be approved while an earlier overlapping one is still pending (SCRUM-134 AC2). | `booking:decide` | `bookingDecisionSchema` (lib/schemas/booking.ts) | AuditLog, Booking, Notification | Event row (`FOR KEY SHARE`) |
 | `holdBookingRequest` | Venue Staff hold a pending request until a deadline, with a note for the Coordinator (SCRUM-163); refused outside the venue's opening hours, as approving is (SCRUM-34 AC7), or while an earlier overlapping request is still pending (SCRUM-134 AC2). | `booking:hold` | `bookingHoldSchema` (lib/schemas/booking.ts) | AuditLog, Booking, Notification | Event row (`FOR KEY SHARE`) |
 | `confirmHold` | The assigned Coordinator confirms a live hold Venue Staff have approved, which makes the booking Approved (SCRUM-163 AC3); refused outside the venue's opening hours (SCRUM-34 AC7). Every Venue Staff member is told (SCRUM-124 AC6). | `booking:settle-hold` | `holdSettlementSchema` (lib/schemas/booking.ts) | AuditLog, Booking, Notification, SafetyCheck | Event row (`FOR KEY SHARE`) |
@@ -57,7 +57,7 @@ request.
 | Action | What it does | Permission | Input | Writes | Locks |
 |---|---|---|---|---|---|
 | `createDraftEvent` | The Organiser saves a request as a draft (SCRUM-15). | `event:create` | `createDraftEventSchema` (lib/schemas/event.ts) | Event | — |
-| `submitEventRequest` | The Organiser submits a request; a Coordinator is assigned automatically (SCRUM-13, 14, 20). | `event:create` | `submitEventRequestSchema` (lib/schemas/event.ts) | AuditLog, Event, Notification | Event row, advisory lock while a Coordinator is picked |
+| `submitEventRequest` | The Organiser submits a request; it waits in the Lead's Unassigned queue (SCRUM-13, 14, 165), and every Lead is told (SCRUM-124 AC10). | `event:create` | `submitEventRequestSchema` (lib/schemas/event.ts) | AuditLog, Event, Notification | Event row, when submitting a draft |
 | `getFormCatalogues` | The venue and equipment suggestions the request form offers, and the accessibility features and layouts venues have, Venue Staff's own included (SCRUM-13, SCRUM-34 AC6). | `event:create` | none | nothing (read only) | — |
 | `transitionEventStatus` | A Coordinator approves or rejects a request (SCRUM-19, 24). | `event:review` | `statusTransitionSchema` (same file) | AuditLog, ClarificationRequest, Event | — |
 | `confirmEvent` | The assigned Coordinator confirms a Planning event whose checklist is complete (SCRUM-81). | `event:confirm` | `confirmEventSchema` (same file) | AuditLog, Event | Event row |
@@ -108,12 +108,18 @@ request.
 | `getEventReadiness` | The event's readiness checklist (SCRUM-110, 170). | `event:read`; the result also says whether the viewer may review, reject or confirm, settle or withdraw a venue request, and record No equipment needed | an event id | nothing (read only) | — |
 | `getEventArrangements` | A Confirmed event's secured venue, time and equipment (SCRUM-81 AC6). | `event:read` | an event id | nothing (read only) | — |
 
+## `app/(app)/events/registration-list-actions.ts`
+
+| Action | What it does | Permission | Input | Writes | Locks |
+|---|---|---|---|---|---|
+| `getEventRegistrations` | An event's registrations for its Organiser or assigned Coordinator: the registered count, remaining places and each Attendee's name and status, with Withdrawn and Cancelled apart and not counted (SCRUM-70). Anyone else, and a missing event, gets "Event not found." | `registration:list` | event id | nothing (read only) | — |
+
 ## `app/(app)/events/registration-actions.ts`
 
 | Action | What it does | Permission | Input | Writes | Locks |
 |---|---|---|---|---|---|
 | `registerForEvent` | An Attendee registers for a Confirmed event with places left (SCRUM-73, 74). An event whose Registration needed is No is refused as not open (SCRUM-171 AC4). | `registration:create` | `registerForEventSchema` (lib/schemas/registration.ts) | Registration | Event row |
-| `withdrawRegistration` | An Attendee withdraws their registration (SCRUM-74, 77). | `registration:withdraw` | `withdrawRegistrationSchema` (lib/schemas/registration.ts) | Registration | Event row |
+| `withdrawRegistration` | An Attendee withdraws their registration (SCRUM-74, 77); refused at or after the event's start (SCRUM-77 AC3), and each withdrawal is recorded in the event's history (SCRUM-77 AC6). Withdrawing from a full event tells the Organiser and the Coordinator (SCRUM-45 AC11). | `registration:withdraw` | `withdrawRegistrationSchema` (lib/schemas/registration.ts) | AuditLog, Notification, Registration | Event row |
 
 ## `app/(app)/events/registration-control-actions.ts`
 
@@ -142,3 +148,9 @@ request.
 | Action | What it does | Permission | Input | Writes | Locks |
 |---|---|---|---|---|---|
 | `recordUnavailability` | Venue Staff record that a venue is unavailable (SCRUM-37). Over bookings, it first returns the affected bookings unsaved; sent again confirming them, it saves the period and flags them Needs Reconsideration (SCRUM-161). The same period and reason again saves nothing (AC6). | `unavailability:record` | `recordUnavailabilitySchema` (lib/schemas/unavailability.ts) | VenueUnavailability, Booking (flag only), AuditLog, Notification | Affected events (`FOR KEY SHARE`), then affected bookings (`FOR UPDATE`), then the Venue row (`FOR NO KEY UPDATE`) |
+
+## `app/(app)/venues/suitability-actions.ts`
+
+| Action | What it does | Permission | Input | Writes | Locks |
+|---|---|---|---|---|---|
+| `recordSuitabilityJudgement` | The assigned Coordinator records whether a venue is suitable for their event, with a note; recording again replaces it (SCRUM-40 AC8). | `venue:judge` | `suitabilityJudgementSchema` (lib/schemas/suitability.ts) | AuditLog, VenueSuitabilityJudgement | — |

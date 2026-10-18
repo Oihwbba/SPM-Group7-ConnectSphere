@@ -33,6 +33,8 @@ test.describe("SCRUM-67 — typing another role's URL directly is refused", () =
   const restricted = [
     // SCRUM-34 AC2: every internal role reads the catalogue; the Organiser doesn't.
     { label: "staff-only venues page", url: "/venues" },
+    // SCRUM-38 TC-38-17
+    { label: "Coordinator-only venue search", url: "/venues/search" },
     { label: "Venue-Staff bookings page", url: "/bookings" },
     { label: "Tech-Support equipment page", url: "/equipment" },
   ];
@@ -105,8 +107,9 @@ test.describe("SCRUM-66 — on-screen actions are gated by role", () => {
   }) => {
     await signIn(page, "coordinator@test.local");
     await page.waitForURL("**/events");
-    // The seed leaves "Submitted — Alumni Homecoming" unclaimed, so it shows in
-    // the coordinator's queue with the Approve / Reject decision controls.
+    // The seed assigns "Under Review — Career Fair" to this coordinator, so it
+    // shows with the Approve / Reject decision controls. (An unassigned
+    // request waits in the Lead's queue instead, SCRUM-165.)
     await expect(
       page.getByRole("button", { name: "Approve", exact: true }).first(),
     ).toBeVisible();
@@ -124,6 +127,7 @@ test.describe("SCRUM-66 — each role's navigation shows only its own links", ()
   const ALL_ROUTES = [
     "/events",
     "/venues",
+    "/venues/search",
     "/bookings",
     "/bookings/new",
     "/venues/availability",
@@ -144,6 +148,7 @@ test.describe("SCRUM-66 — each role's navigation shows only its own links", ()
       present: [
         "/events",
         "/venues",
+        "/venues/search",
         "/bookings/new",
         "/venues/availability",
         "/notifications",

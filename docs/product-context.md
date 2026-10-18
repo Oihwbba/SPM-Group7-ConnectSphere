@@ -38,12 +38,12 @@ status, one assigned Coordinator, and arrangements that can't clash.
 | Role | Internal? | What they do in the system | Lands on |
 |---|---|---|---|
 | **Event Organiser** | External client | Creates event requests (as drafts first), submits them, answers the Coordinator's clarification questions, asks for changes or for cancellation once a Coordinator has the request (SCRUM-41), and follows their own events. Sees only their own events. | My Events |
-| **Event Coordinator** | ConnectSphere staff | Is assigned to a submitted request automatically (until SCRUM-165, when new requests go to the Lead's unassigned queue instead, per Week 7 change 5), reviews it, asks for clarification, approves or rejects it, requests a venue and equipment, and confirms the event once the arrangements are complete. Sees the events assigned to them, and submitted ones nobody is assigned to yet. | Events |
+| **Event Coordinator** | ConnectSphere staff | Is assigned a submitted request by the Lead (SCRUM-165, Week 7 change 5), reviews it, asks for clarification, approves or rejects it, requests a venue and equipment, and confirms the event once the arrangements are complete. Acts on the events assigned to them; unassigned requests wait in the Lead's queue. Sees every other event read-only on All Events (SCRUM-141), as Venue Staff and Technical Support do. | Events |
 | **Venue Staff** | ConnectSphere staff | Reviews venue booking requests and approves or rejects them, and records when a venue is unavailable (maintenance, equipment failure, renovation, a safety concern, or another reason). | Bookings |
 | **Technical Support Staff** | ConnectSphere staff | Reviews equipment requests, checks equipment availability, and reserves what was approved. | Equipment |
 | **Attendee** | External | Browses events open for registration, registers, and sees their own registrations. Never sees internal planning information. | Browse Events |
-| **Event Coordinator Lead** | ConnectSphere staff | Will review new requests' basic details in an unassigned queue, assign each to a Coordinator and reassign where needed (SCRUM-165, SCRUM-21), and see every Coordinator's assignments and active events (SCRUM-141). Can't approve or reject a request, or confirm, plan or edit an event. The role exists since SCRUM-172; until SCRUM-164 and SCRUM-165 land it only reads its own notifications. | Notifications |
-| **Safety Officer** | ConnectSphere staff | Will review an event's venue and equipment arrangements before it can be confirmed, and approve, reject or request changes on that safety check (SCRUM-166). Can't confirm, plan or edit the event: its approval doesn't confirm it; the Coordinator still does (SCRUM-166 AC14). The role exists since SCRUM-172; until SCRUM-164 and SCRUM-166 land it only reads its own notifications. | Notifications |
+| **Event Coordinator Lead** | ConnectSphere staff | Reviews new requests' basic details in the Unassigned queue and assigns each to a Coordinator, becoming its supervising Lead (SCRUM-165); will reassign where needed (SCRUM-21) and sees every event with each Coordinator's active events on the All Events list (SCRUM-141). Can't approve or reject a request, or confirm, plan or edit an event. The role exists since SCRUM-172. | Unassigned Queue |
+| **Safety Officer** | ConnectSphere staff | Reviews an event's venue and equipment arrangements before it can be confirmed, and approves, rejects or requests changes on that safety check (SCRUM-166). Can't confirm, plan or edit the event: its approval doesn't confirm it; the Coordinator still does (SCRUM-166 AC14). | Safety Checks |
 
 Each account has one role today. The customer has said an account may hold
 several, which is in the backlog (SCRUM-121).
@@ -58,7 +58,7 @@ related to looks exactly like one that doesn't exist (SCRUM-68).
 stateDiagram-v2
     [*] --> DRAFT: Organiser saves
     DRAFT --> SUBMITTED: Organiser submits
-    SUBMITTED --> UNDER_REVIEW: a Coordinator is assigned (automatically today; by the Lead from SCRUM-165)
+    SUBMITTED --> UNDER_REVIEW: the Lead assigns a Coordinator (SCRUM-165)
     SUBMITTED --> PLANNING: Coordinator approves
     UNDER_REVIEW --> PLANNING: Coordinator approves
     SUBMITTED --> REJECTED: Coordinator rejects
@@ -79,7 +79,7 @@ row lock (ADR 0006 for the Coordinator's decision).
 | Step | What happens | Stories, ADRs |
 |---|---|---|
 | **Draft → Submitted** | The Organiser can save an incomplete request and finish it later. Submitting needs every required field. | SCRUM-13, 14, 15 |
-| **Assignment** | Submitting assigns a Coordinator automatically and moves the request to Under Review. There is no manual claim step. Week 7 change 5 replaces this: a new request will wait in the Lead's unassigned queue until the Lead assigns it, and the Lead can reassign it later. Not built yet. | SCRUM-20; SCRUM-165, 21 |
+| **Assignment** | A new request waits in the Lead's Unassigned queue (oldest first) until a Lead assigns a Coordinator, which moves it to Under Review in the same step; the least-loaded Coordinator is suggested (Week 7 change 5). Reassignment by the Lead is SCRUM-21, not built yet. SCRUM-20's automatic assignment is superseded. | SCRUM-165; SCRUM-21 |
 | **Review** | The Coordinator can ask the Organiser a question and name the fields the answer may change. While a question is open the event stays Under Review; "awaiting clarification" is shown, not stored as a status. | SCRUM-17, 18, 108, ADR 0014 |
 | **Approve** | Approval moves the event straight to **Planning**: "Approved means there is enough information to start planning." Approved is recorded in the history but never stored on its own. | SCRUM-19, 81, ADR 0012 |
 | **Reject** | A rejection always has a reason and an outcome chosen by the Coordinator: **amend and resubmit** (back to the same Coordinator) or **submit as a new request** (a copy starts as a new Draft). | SCRUM-19, 126, 108, ADR 0013 |

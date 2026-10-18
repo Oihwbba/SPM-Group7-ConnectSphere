@@ -40,6 +40,8 @@ const db = vi.hoisted(() => ({
   user: { findMany: vi.fn() },
   // SCRUM-166: approving a booking or reserving outdates the event's safety check.
   safetyCheck: { updateMany: vi.fn() },
+  // SCRUM-40 AC10: the queue reads the Coordinator's suitability judgements.
+  venueSuitabilityJudgement: { findMany: vi.fn() },
   $queryRaw: vi.fn(),
   $transaction: vi.fn(),
 }));
@@ -84,6 +86,7 @@ beforeEach(() => {
   db.user.findMany.mockResolvedValue([]);
   db.booking.updateMany.mockResolvedValue({ count: 1 });
   db.safetyCheck.updateMany.mockResolvedValue({ count: 0 });
+  db.venueSuitabilityJudgement.findMany.mockResolvedValue([]);
   pendingOthers([]);
 });
 

@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 
 import {
   computeRegistrationState,
+  canWithdrawNow,
   effectiveClosesAt,
   registrationPeriodText,
   remainingCapacity,
@@ -263,7 +264,10 @@ describe("REGISTRATION_STATE_LABEL", () => {
 describe("SCRUM-129 [AC5 - One period convention]: the registration window includes its opening instant and excludes its closing one", () => {
   const opensAt = new Date("2031-06-01T01:00:00Z");
   const closesAt = new Date("2031-06-08T01:00:00Z");
-  const windowEvent = baseEvent({ registrationOpensAt: opensAt, registrationClosesAt: closesAt });
+  const windowEvent = baseEvent({
+    registrationOpensAt: opensAt,
+    registrationClosesAt: closesAt,
+  });
 
   it("SCRUM-129 [AC5 - One period convention]: registration is open at the exact opening instant", () => {
     expect(computeRegistrationState(windowEvent, 0, opensAt)).toBe("OPEN");
@@ -364,7 +368,9 @@ describe("SCRUM-72 AC3: registrationPeriodText — the period an Attendee sees",
         registrationClosesAt: closesAt,
         startAt,
       }),
-    ).toBe(`Opens ${formatDateTime(opensAt)} · Closes ${formatDateTime(closesAt)}`);
+    ).toBe(
+      `Opens ${formatDateTime(opensAt)} · Closes ${formatDateTime(closesAt)}`,
+    );
   });
 
   it("SCRUM-72 AC5: no window set shows the default — opens on confirmation, closes at the start", () => {
@@ -384,7 +390,9 @@ describe("SCRUM-72 AC3: registrationPeriodText — the period an Attendee sees",
         registrationClosesAt: new Date("2031-06-12T01:00:00Z"),
         startAt,
       }),
-    ).toBe(`Opens ${formatDateTime(opensAt)} · Closes ${formatDateTime(startAt)}`);
+    ).toBe(
+      `Opens ${formatDateTime(opensAt)} · Closes ${formatDateTime(startAt)}`,
+    );
   });
 
   it("omits the close when neither a closing time nor a start is set", () => {
@@ -395,5 +403,29 @@ describe("SCRUM-72 AC3: registrationPeriodText — the period an Attendee sees",
         startAt: null,
       }),
     ).toBe("Opens on confirmation");
+  });
+});
+
+describe("canWithdrawNow — SCRUM-77 AC3: up to, but not including, the event's start", () => {
+  const startAt = new Date("2031-06-10T01:00:00Z");
+
+  it("SCRUM-77 [AC3] TC-77-03: [Positive] before the start, withdrawal is allowed", () => {
+    expect(canWithdrawNow({ startAt }, new Date("2031-06-10T00:59:59Z"))).toBe(
+      true,
+    );
+  });
+
+  it("SCRUM-77 [AC3] TC-77-04: [Boundary] at the exact start instant, withdrawal is refused", () => {
+    expect(canWithdrawNow({ startAt }, startAt)).toBe(false);
+  });
+
+  it("SCRUM-77 [AC3] TC-77-05: [Negative] after the start, withdrawal is refused", () => {
+    expect(canWithdrawNow({ startAt }, new Date("2031-06-10T02:00:00Z"))).toBe(
+      false,
+    );
+  });
+
+  it("SCRUM-77 [AC3] TC-77-03: [Boundary] an event with no start set can still be withdrawn from", () => {
+    expect(canWithdrawNow({ startAt: null })).toBe(true);
   });
 });

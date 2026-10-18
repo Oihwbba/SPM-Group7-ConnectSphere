@@ -17,6 +17,8 @@ import {
   Search,
   MapPin,
   MessageSquareText,
+  Accessibility,
+  Scale,
   UserRound,
   Users,
   Wrench,
@@ -483,6 +485,36 @@ function RequestCard({
                   />
                 ))}
               </span>
+            )}
+          </Fact>
+          {booking.requiredAccessibilityFeatures.length > 0 && (
+            <Fact icon={Accessibility} label="Accessibility needed">
+              <span className="flex flex-wrap gap-1.5">
+                {booking.requiredAccessibilityFeatures.map((feature) => (
+                  <FacilityPill
+                    key={feature}
+                    facility={feature}
+                    ok={venue.accessibilityFeatures.includes(feature)}
+                  />
+                ))}
+              </span>
+            </Fact>
+          )}
+          {/* SCRUM-40 AC10 — the Coordinator's judgement and its note. */}
+          <Fact icon={Scale} label="Coordinator's suitability judgement">
+            {booking.judgement ? (
+              <span data-testid="queue-judgement" className="space-y-0.5">
+                <span className="block font-medium">
+                  {booking.judgement.suitable ? "Suitable" : "Not suitable"}
+                </span>
+                <span className="block">{booking.judgement.note}</span>
+                <span className="block text-xs text-muted-foreground">
+                  {booking.judgement.recordedByName},{" "}
+                  {formatDateTime(booking.judgement.recordedAt)}
+                </span>
+              </span>
+            ) : (
+              "None recorded"
             )}
           </Fact>
           {booking.requestNotes && (
