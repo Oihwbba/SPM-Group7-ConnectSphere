@@ -127,6 +127,35 @@ test.describe("SCRUM-41 — Raise and track a change request", () => {
     ).toEqual({ expectedAttendance: 40 });
   });
 
+  test("SCRUM-41 [AC1, AC6] TC-41-18: the Organiser asks for registration not to be needed, and the request shows Yes to No while the event still needs it", async ({
+    browser,
+  }) => {
+    const name = `SCRUM-41 Open Day ${STAMP}`;
+    const eventId = await planningEvent(name);
+    await prisma.event.update({ where: { id: eventId }, data: { registrationRequired: true } });
+
+    const page = await signedIn(browser, `${ORGANISER}@test.local`);
+    const dialog = await openEvent(page, name);
+    await dialog.getByRole("button", { name: "Request a change" }).click();
+    const form = dialog.getByRole("form", { name: "Request a change" });
+    const needed = form.getByRole("group", { name: "Registration needed" });
+    await expect(needed.getByLabel("Yes")).toBeChecked();
+    await needed.getByLabel("No").check();
+    await form.getByRole("button", { name: "Submit change request" }).click();
+
+    const request = dialog.getByTestId("change-request");
+    await expect(request).toContainText("Submitted");
+    await expect(request).toContainText("Registration needed");
+    await expect(request).toContainText("Yes → No");
+    await expect(request).not.toContainText("Impactful");
+    expect(
+      await prisma.event.findUniqueOrThrow({
+        where: { id: eventId },
+        select: { registrationRequired: true },
+      }),
+    ).toEqual({ registrationRequired: true });
+  });
+
   test("SCRUM-41 [AC1, AC9] TC-41-02, TC-41-13: the assigned Coordinator asks to cancel on the Organiser's behalf, and the Organiser sees it labelled", async ({
     browser,
   }) => {
