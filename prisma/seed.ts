@@ -171,8 +171,8 @@ async function seedUsers(passwordHash: string) {
     // one appearing or vanishing mid-run would race other suites.
     { id: U.safetyOfficer2, email: "safety2@test.local", name: "Sasha Safety", role: Role.SAFETY_OFFICER },
     // SCRUM-121: one account holding several roles, two of them with an
-    // events view. Venue Staff first, so automatic assignment (primary
-    // Coordinators only) never hands it an event.
+    // events view. The Lead can assign it events as a Coordinator, but never
+    // one it organises (AC4).
     {
       id: U.multiRole,
       email: "multirole@test.local",

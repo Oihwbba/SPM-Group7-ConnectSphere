@@ -16,6 +16,8 @@ import { prisma } from "@/lib/db";
 import { decideBookingRequest } from "@/app/(app)/bookings/actions";
 import { notifyRole } from "@/lib/staff-notifications";
 import { getMyNotifications } from "@/app/(app)/notifications/queries";
+import { getQueueRequest } from "@/app/(app)/queue/queries";
+import { assignCoordinator } from "@/app/(app)/queue/actions";
 
 // SCRUM-121 against a real, seeded Postgres: an account holds several roles,
 // existing accounts hold none extra, staff notices reach a role held as an
@@ -203,6 +205,71 @@ describe.skipIf(!usesLocalDatabase)("several roles on one account — real datab
     expect(await decideBookingRequest({ bookingId: id, decision: "APPROVED" })).toEqual({
       ok: true,
       data: { status: "APPROVED" },
+    });
+  });
+
+  describe("the Lead's assignment — SCRUM-121 AC2, AC4", () => {
+    const LEAD: Session = {
+      user: { id: "usr_coordinatorlead", role: "COORDINATOR_LEAD", name: "Lee Lead", email: "lead@test.local" },
+      expires: "2999-01-01T00:00:00.000Z",
+    };
+    const submitted: string[] = [];
+    const request = async (organiserId: string) => {
+      const { id } = await prisma.event.create({
+        data: {
+          name: `Several roles request ${organiserId} ${STAMP}`,
+          status: "SUBMITTED",
+          organiserId,
+          submittedAt: new Date(),
+          startAt: START,
+          endAt: END,
+          expectedAttendance: 40,
+        },
+        select: { id: true },
+      });
+      submitted.push(id);
+      return id;
+    };
+
+    afterAll(async () => {
+      await prisma.notification.deleteMany({ where: { eventId: { in: submitted } } });
+      await prisma.auditLog.deleteMany({ where: { entityId: { in: submitted } } });
+      await prisma.event.deleteMany({ where: { id: { in: submitted } } });
+    });
+
+    it("SCRUM-121 [AC4] TC-121-04: the Lead isn't offered an account that is the event's Organiser, and can't assign it, even though it also coordinates", async () => {
+      const id = await request(BOTH_ID);
+      mockAuth.mockResolvedValue(LEAD);
+
+      const shown = await getQueueRequest(id);
+      expect(shown?.coordinators.map((c) => c.id)).not.toContain(BOTH_ID);
+      expect(shown?.coordinators.map((c) => c.id)).toContain("usr_coordinator");
+
+      expect(await assignCoordinator({ eventId: id, coordinatorId: BOTH_ID })).toEqual({
+        ok: false,
+        error: "The event's own Organiser can't be its Coordinator.",
+      });
+      expect(
+        await prisma.event.findUniqueOrThrow({
+          where: { id },
+          select: { status: true, coordinatorId: true },
+        }),
+      ).toEqual({ status: "SUBMITTED", coordinatorId: null });
+      expect(await prisma.auditLog.count({ where: { entityId: id } })).toBe(0);
+    });
+
+    it("SCRUM-121 [AC2, AC4] TC-121-02, TC-121-04: for anyone else's request, the account's Coordinator role is offered and can be assigned", async () => {
+      const id = await request("usr_organiser");
+      mockAuth.mockResolvedValue(LEAD);
+
+      expect((await getQueueRequest(id))?.coordinators.map((c) => c.id)).toContain(BOTH_ID);
+      expect(await assignCoordinator({ eventId: id, coordinatorId: BOTH_ID })).toEqual({
+        ok: true,
+        data: { coordinatorName: "Morgan Multirole" },
+      });
+      expect(
+        await prisma.event.findUniqueOrThrow({ where: { id }, select: { coordinatorId: true } }),
+      ).toEqual({ coordinatorId: BOTH_ID });
     });
   });
 });

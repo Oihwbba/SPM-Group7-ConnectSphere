@@ -21,7 +21,7 @@ seeded account holds one role.
 | [TC-121-01](#tc-121-01) | Positive | AC 1 | Unit, integration, e2e |
 | [TC-121-02](#tc-121-02) | Positive | AC 2 | Unit, integration, e2e |
 | [TC-121-03](#tc-121-03) | Negative | AC 3 | Unit, e2e |
-| [TC-121-04](#tc-121-04) | Negative | AC 4 | Not yet: waits for SCRUM-165 and SCRUM-21 |
+| [TC-121-04](#tc-121-04) | Negative | AC 4 | Unit, integration; reassigning waits for SCRUM-21 |
 | [TC-121-05](#tc-121-05) | Negative | AC 5 | Unit, integration, e2e |
 
 ---
@@ -71,12 +71,12 @@ seeded account holds one role.
 |---|---|
 | Test Case ID | TC-121-04 |
 | Test Scenario | [Negative] AC 4: the Lead can't assign or reassign an event to a Coordinator who is its Organiser |
-| Pre-conditions | SCRUM-165 builds the Lead's assignment and SCRUM-21 the reassignment. An event organised by an account that is also a Coordinator. |
-| Test Steps | 1. As the Lead, assign the event to that account. <br> 2. Reassign it to that account. |
+| Pre-conditions | Signed in as `lead@test.local`. A Submitted request organised by `multirole@test.local`, which is also a Coordinator, and one organised by someone else. Reassigning is SCRUM-21. |
+| Test Steps | 1. Open the request it organises in the Unassigned Queue, and assign it to that account. <br> 2. Open the other request, and assign it to that account. <br> 3. Reassign an event to its own Organiser (SCRUM-21). |
 | Test Data | — |
-| Expected Result | Both are refused, and the event's Coordinator is unchanged. |
+| Expected Result | Step 1: the account isn't offered, and assigning it anyway is refused with "The event's own Organiser can't be its Coordinator."; the request stays Submitted with no Coordinator, and nothing is recorded. Step 2: it is offered, as a Coordinator held besides other roles (AC 2), and is assigned. Step 3: refused. |
 
-**Automated by:** none yet. **Waits for SCRUM-165 and SCRUM-21.** Until then, automatic assignment picks only primary Coordinators (`pickCoordinator` in [lib/coordinator-assignment.ts](../../lib/coordinator-assignment.ts)), so it never hands an Organiser who is also a Coordinator their own event.
+**Automated by:** `tests/integration/multiple-roles.test.ts` › "SCRUM-121 [AC4] TC-121-04: the Lead isn't offered an account that is the event's Organiser, and can't assign it, even though it also coordinates" and "SCRUM-121 [AC2, AC4] TC-121-02, TC-121-04: for anyone else's request, the account's Coordinator role is offered and can be assigned"; SCRUM-165's `tests/unit/lead-queue.test.ts` › "SCRUM-165 [AC7] TC-165-09: [Negative] the event's own Organiser is never offered, even if they also coordinate" and "SCRUM-165 [AC7] TC-165-09: [Negative] the event's own Organiser can't be its Coordinator". **Step 3 waits for SCRUM-21**, which builds reassignment: it should refuse the event's own Organiser in the same way.
 
 ### TC-121-05
 
