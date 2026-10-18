@@ -1,4 +1,4 @@
-import type { EventStatus, Prisma, PrismaClient } from "@prisma/client";
+import type { EventStatus, PrismaClient } from "@prisma/client";
 
 /**
  * SCRUM-82 — closing an event: cancelling one that won't go ahead, and
@@ -10,10 +10,12 @@ import type { EventStatus, Prisma, PrismaClient } from "@prisma/client";
  * docs/adr/0019-closing-an-event.md.
  */
 
-type Db = PrismaClient | Prisma.TransactionClient;
-
 /** AC1: the statuses the assigned Coordinator can cancel from. */
-export const CANCELLABLE: EventStatus[] = ["UNDER_REVIEW", "PLANNING", "CONFIRMED"];
+export const CANCELLABLE: EventStatus[] = [
+  "UNDER_REVIEW",
+  "PLANNING",
+  "CONFIRMED",
+];
 
 /** AC10: still being decided or planned, so it can become overdue. */
 const UNDECIDED: EventStatus[] = ["SUBMITTED", "UNDER_REVIEW", "PLANNING"];
@@ -40,17 +42,19 @@ export function isOverdue(
  * but a Confirmed event is touched, so a Cancelled one never completes and a
  * Completed one isn't completed twice. One UPDATE … RETURNING decides which
  * rows changed, so two pages loading at the same moment complete each event
- * once and write one history entry for it.
+ * once and write one history entry for it. The history entries are written in
+ * the same transaction, so a completed event always has one.
  *
  * Times are stored as UTC without a time zone, hence the ISO string cast to
  * `timestamp`.
  */
 export async function completeFinishedEvents(
-  db: Db,
+  db: PrismaClient,
   now: Date = new Date(),
 ): Promise<string[]> {
   const at = now.toISOString();
-  const completed = await db.$queryRaw<{ id: string }[]>`
+  return db.$transaction(async (tx) => {
+    const completed = await tx.$queryRaw<{ id: string }[]>`
     UPDATE "Event"
        SET "status" = 'COMPLETED',
            "completedAt" = ${at}::timestamp,
@@ -58,19 +62,20 @@ export async function completeFinishedEvents(
      WHERE "status" = 'CONFIRMED'
        AND "endAt" < ${at}::timestamp
     RETURNING "id"`;
-  if (completed.length > 0) {
-    await db.auditLog.createMany({
-      data: completed.map(({ id }) => ({
-        entityType: "Event",
-        entityId: id,
-        action: "STATUS_CHANGED",
-        actorId: null,
-        fieldName: "status",
-        oldValue: "CONFIRMED",
-        newValue: "COMPLETED",
-        summary: "Completed after its end time (SCRUM-82)",
-      })),
-    });
-  }
-  return completed.map(({ id }) => id);
+    if (completed.length > 0) {
+      await tx.auditLog.createMany({
+        data: completed.map(({ id }) => ({
+          entityType: "Event",
+          entityId: id,
+          action: "STATUS_CHANGED",
+          actorId: null,
+          fieldName: "status",
+          oldValue: "CONFIRMED",
+          newValue: "COMPLETED",
+          summary: "Completed after its end time (SCRUM-82)",
+        })),
+      });
+    }
+    return completed.map(({ id }) => id);
+  });
 }

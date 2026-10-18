@@ -7,7 +7,9 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { can, requirePermission, PermissionError } from "@/lib/auth/can";
 import { ok, err, type ActionResult } from "@/lib/action-result";
+import { withdrawPendingHoldNotices } from "@/lib/booking-holds";
 import { CANCELLABLE } from "@/lib/event-closing";
+import { withdrawRegistrationClosedNotice } from "@/lib/event-notifications";
 
 const REASON_REQUIRED = "A cancellation reason is required.";
 
@@ -26,7 +28,9 @@ const cancelSchema = z.object({
  *   bookings, holds and pending requests; equipment reservations, whose stock
  *   returns to the pool; open equipment requests; a safety check awaiting
  *   review becomes Outdated; registrations are cancelled; and submitted
- *   change requests are rejected with the reason.
+ *   change requests are rejected with the reason. Notices written ahead for
+ *   the event (a hold's reminder and expiry, and registration closing) are
+ *   withdrawn, since none of them will happen.
  * - The Organiser, the Coordinator and every Attendee whose registration was
  *   cancelled get a notification (AC6).
  *
@@ -81,6 +85,8 @@ export async function cancelEvent(
         where: { eventId, status: { in: ["PENDING", "HELD", "APPROVED"] } },
         data: { status: "CANCELLED" },
       });
+      await withdrawPendingHoldNotices(tx, { eventId }, now);
+      await withdrawRegistrationClosedNotice(tx, eventId, now);
       const reservations = await tx.reservation.updateMany({
         where: { eventId, status: "CONFIRMED" },
         data: { status: "CANCELLED", cancelledAt: now },
