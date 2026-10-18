@@ -43,6 +43,8 @@ test.describe("SCRUM-75 — Control and enforce the registration period", () => 
       })
     ).map((e) => e.id);
     await prisma.registration.deleteMany({ where: { eventId: { in: ids } } });
+    // SCRUM-85 AC1: registering now notifies the Attendee.
+    await prisma.notification.deleteMany({ where: { eventId: { in: ids } } });
     await prisma.event.deleteMany({ where: { id: { in: ids } } });
   });
 
