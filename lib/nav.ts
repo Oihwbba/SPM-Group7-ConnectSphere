@@ -61,6 +61,8 @@ const NAV_ROUTES: NavRoute[] = [
     href: "/safety-checks",
     label: "Safety Checks",
   },
+  // SCRUM-165: the Lead's queue of requests waiting for a Coordinator.
+  { action: "event:assign", href: "/queue", label: "Unassigned Queue" },
   {
     action: "registration:read",
     href: "/registrations",
