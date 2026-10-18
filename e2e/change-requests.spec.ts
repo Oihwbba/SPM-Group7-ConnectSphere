@@ -130,7 +130,7 @@ test.describe("SCRUM-41 — Raise and track a change request", () => {
   test("SCRUM-41 [AC1, AC6] TC-41-18: the Organiser asks for registration not to be needed, and the request shows Yes to No while the event still needs it", async ({
     browser,
   }) => {
-    const name = `SCRUM-41 Expo ${STAMP}`;
+    const name = `SCRUM-41 Open Day ${STAMP}`;
     const eventId = await planningEvent(name);
     await prisma.event.update({ where: { id: eventId }, data: { registrationRequired: true } });
 
