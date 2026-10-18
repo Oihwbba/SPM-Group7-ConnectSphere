@@ -806,7 +806,9 @@ describe.skipIf(!usesLocalDatabase)("event submission — repeat submission (SCR
 // so the database lets exactly one through; the other is told who got it.
 describe.skipIf(!usesLocalDatabase)("concurrency — the Lead's assignment (SCRUM-165)", () => {
   let eventId: string;
-  let secondLeadId: string;
+  // The seeded lead2@test.local: seeded, never made or deleted here, since
+  // other suites' notices to every Lead would reach a Lead made mid-run.
+  const secondLeadId = "usr_coordinatorlead_2";
 
   const asLead = (id: string) => ({
     user: { id, role: "COORDINATOR_LEAD", name: "Lead", email: `${id}@test.local` },
@@ -814,34 +816,21 @@ describe.skipIf(!usesLocalDatabase)("concurrency — the Lead's assignment (SCRU
   });
 
   beforeAll(async () => {
-    const [event, lead] = await Promise.all([
-      prisma.event.create({
-        data: {
-          name: `SCRUM-165 Concurrency Event ${Date.now()}`,
-          status: "SUBMITTED",
-          organiserId: "usr_organiser",
-        },
-        select: { id: true },
-      }),
-      prisma.user.create({
-        data: {
-          email: `concurrency-lead-${Date.now()}@test.local`,
-          name: "Concurrency Lead",
-          role: "COORDINATOR_LEAD",
-          passwordHash: "not-used-in-this-test",
-        },
-        select: { id: true },
-      }),
-    ]);
+    const event = await prisma.event.create({
+      data: {
+        name: `SCRUM-165 Concurrency Event ${Date.now()}`,
+        status: "SUBMITTED",
+        organiserId: "usr_organiser",
+      },
+      select: { id: true },
+    });
     eventId = event.id;
-    secondLeadId = lead.id;
   });
 
   afterAll(async () => {
     await prisma.notification.deleteMany({ where: { eventId } });
     await prisma.auditLog.deleteMany({ where: { entityId: eventId } });
     await prisma.event.delete({ where: { id: eventId } });
-    await prisma.user.delete({ where: { id: secondLeadId } });
   });
 
   it("SCRUM-165 [AC6] TC-165-08: [Concurrency] two Leads assign the same request at the same moment: exactly one assignment is saved and the other Lead is told who it went to", async () => {

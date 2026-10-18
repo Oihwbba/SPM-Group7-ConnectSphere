@@ -96,6 +96,8 @@ const U = {
   attendee4: "usr_attendee_4",
   safetyOfficer: "usr_safetyofficer",
   coordinatorLead: "usr_coordinatorlead",
+  coordinatorLead2: "usr_coordinatorlead_2",
+  safetyOfficer2: "usr_safetyofficer_2",
 } as const;
 
 const V = {
@@ -160,6 +162,13 @@ async function seedUsers(passwordHash: string) {
     { id: U.safetyOfficer, email: "safety@test.local", name: "Sam Safety", role: Role.SAFETY_OFFICER },
     // SCRUM-164: the Event Coordinator Lead (Week 7 change 5).
     { id: U.coordinatorLead, email: "lead@test.local", name: "Lee Lead", role: Role.COORDINATOR_LEAD },
+    // SCRUM-165 AC6: two Leads assigning at once. Seeded rather than made by a
+    // test, like the second Safety Officer below.
+    { id: U.coordinatorLead2, email: "lead2@test.local", name: "Lena Lead", role: Role.COORDINATOR_LEAD },
+    // SCRUM-166 AC8: two Safety Officers recording at once. Seeded rather than
+    // made by a test: every Safety Officer is told of each requested check, so
+    // one appearing or vanishing mid-run would race other suites.
+    { id: U.safetyOfficer2, email: "safety2@test.local", name: "Sasha Safety", role: Role.SAFETY_OFFICER },
   ];
 
   for (const u of users) {
