@@ -18,6 +18,7 @@ import {
 import { cancelInTransaction } from "@/lib/event-closing";
 import { EQUIPMENT_REQUEST_STATUS_LABEL } from "@/lib/equipment/requests";
 import { flagArrangements, flaggableArrangements } from "@/lib/reconsideration";
+import { withdrawRegistrationClosedNotice } from "@/lib/event-notifications";
 import { outdateSafetyChecks } from "@/lib/safety-checks";
 import { CHANGE_KEYS, CHANGE_REQUEST_STATUS_LABEL } from "@/lib/schemas/change-request";
 
@@ -125,7 +126,8 @@ type Outcome =
  *   active registrations (AC7). An impactful change flags the event's
  *   arrangements (SCRUM-26) and puts an approved or awaiting safety check out
  *   of date (AC4, SCRUM-166 AC13), and returns a Confirmed event to Planning,
- *   where registration pauses until it is confirmed again (AC5, SCRUM-75);
+ *   where registration pauses until it is confirmed again and its scheduled
+ *   "Registration closed" notice is withdrawn (AC5, SCRUM-75);
  *   otherwise the status stays (AC6). Approving a cancellation request cancels
  *   the event as SCRUM-82 does, with the Organiser's reason (AC8).
  * - Only the assigned Coordinator (AC9). Who and when are recorded, and the
@@ -323,6 +325,12 @@ export async function decideChangeRequest(
       }
       if (outdatesSafetyCheck(request.fields)) {
         await outdateSafetyChecks(tx, eventId, now);
+      }
+      // Confirming wrote a "Registration closed" notice to show at the close
+      // (SCRUM-45 AC11). Back in Planning it would be wrong, as it is after
+      // SCRUM-26's return to Planning; confirming again writes a new one.
+      if (returnedToPlanning) {
+        await withdrawRegistrationClosedNotice(tx, eventId, now);
       }
       await notify(
         "Change request approved",

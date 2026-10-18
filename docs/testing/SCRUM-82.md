@@ -82,10 +82,10 @@ organised by `organiser@test.local`. Every account's password is
 |---|---|
 | Test Case ID | TC-82-04 |
 | Test Scenario | [Positive] AC 3: everything held for the event is released in the same operation |
-| Pre-conditions | A Confirmed event with an Approved booking, a hold, a reservation of 2 projectors with its request, a safety check awaiting review, a registered Attendee and a submitted change request. |
+| Pre-conditions | A Confirmed event with an Approved booking, a hold, a reservation of 2 projectors with its request, a safety check awaiting review, a registered Attendee, a submitted change request, and the hold's reminder and a "Registration closed" notice written ahead. |
 | Test Steps | Cancel it. |
 | Test Data | Reason "Venue flooded." |
-| Expected Result | Both bookings, the reservation (its stock back in the pool) and the equipment request are Cancelled; the safety check is Outdated; the registration is Cancelled; the change request is Rejected with the reason. |
+| Expected Result | Both bookings, the reservation (its stock back in the pool) and the equipment request are Cancelled; the safety check is Outdated; the registration is Cancelled; the change request is Rejected with the reason; both notices written ahead are withdrawn, so they never show. |
 
 **Automated by:** `tests/unit/cancel-event.test.ts` › "SCRUM-82 [AC3] TC-82-04: …"; `tests/integration/close-event.test.ts` › "SCRUM-82 [AC3, AC6] TC-82-04: …"
 

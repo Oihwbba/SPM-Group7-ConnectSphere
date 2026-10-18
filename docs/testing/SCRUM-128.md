@@ -106,7 +106,7 @@ change request. Every account's password is `Password123!`.
 | Pre-conditions | The event is Confirmed, then Under Review, then in Planning. |
 | Test Steps | Approve an impactful change; approve one that isn't. |
 | Test Data | — |
-| Expected Result | Confirmed + impactful: Planning, with a history entry, registrations still Registered. Any other case: the status doesn't change. |
+| Expected Result | Confirmed + impactful: Planning, with a history entry, registrations still Registered, and the "Registration closed" notice confirming scheduled is withdrawn (confirming again writes a new one). Any other case: the status doesn't change. |
 
 **Automated by:** `tests/unit/change-decision.test.ts` › "SCRUM-128 [AC5] TC-128-05: …", "SCRUM-128 [AC6] TC-128-05: …" (2 tests); `tests/integration/change-decision.test.ts` (TC-128-11)
 
@@ -181,10 +181,10 @@ change request. Every account's password is `Password123!`.
 |---|---|
 | Test Case ID | TC-128-11 |
 | Test Scenario | [Positive] AC 2, AC 4, AC 5: an impactful approval against a real database |
-| Pre-conditions | A Confirmed event with an Approved booking, an Approved safety check and a registered Attendee; the request raises the attendance from 40 to 90. |
+| Pre-conditions | A Confirmed event with an Approved booking, an Approved safety check, a registered Attendee and the "Registration closed" notice confirming wrote ahead; the request raises the attendance from 40 to 90. |
 | Test Steps | Approve it. |
 | Test Data | — |
-| Expected Result | Attendance 90, status Planning, request Approved, booking flagged, check Outdated, registration still Registered. |
+| Expected Result | Attendance 90, status Planning, request Approved, booking flagged, check Outdated, registration still Registered, the notice withdrawn. |
 
 **Automated by:** `tests/integration/change-decision.test.ts` › "SCRUM-128 [AC2, AC4, AC5] TC-128-11: …"
 

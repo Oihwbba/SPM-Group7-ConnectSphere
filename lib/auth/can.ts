@@ -48,6 +48,7 @@ export type Action =
   | "venue:read" // SCRUM-34 AC2: any internal user views the venue catalogue and a venue's details
   | "venue:manage" // SCRUM-34 AC3, AC6, AC8, AC9: Venue Staff add, edit and retire venues
   | "venue:availability" // SCRUM-36: view a venue's availability calendar
+  | "venue:judge" // SCRUM-40 AC8: the assigned coordinator records a venue's suitability for their event
   | "booking:request" // SCRUM-50: coordinator asks for a venue for their event
   | "booking:review" // SCRUM-52: read the pending-request queue
   | "booking:decide" // SCRUM-53: approve or reject a pending request
@@ -137,6 +138,7 @@ const ROLE_ACTIONS: Record<Role, Action[]> = {
     "equipment-request:create",
     "equipment-request:change",
     "venue:availability",
+    "venue:judge",
     "booking:request",
     "booking:settle-hold",
     "booking:withdraw",
@@ -203,9 +205,10 @@ function hasRelationship(
         // withdraw its requests (SCRUM-142 AC7), raise a change request on the
         // organiser's behalf (SCRUM-41 AC10) or decide one (SCRUM-128 AC9),
         // record No equipment needed (SCRUM-170 AC4), edit its details
-        // (SCRUM-25 AC1, AC7), resolve a flag on its arrangements (SCRUM-26
-        // AC7), request its safety check (SCRUM-166 AC1), close or reopen its
-        // registration (SCRUM-75 AC6) or see its registrations (SCRUM-70 AC1).
+        // (SCRUM-25 AC1, AC7), judge a venue's suitability for it (SCRUM-40
+        // AC8), resolve a flag on its arrangements (SCRUM-26 AC7), request its
+        // safety check (SCRUM-166 AC1), close or reopen its registration
+        // (SCRUM-75 AC6) or see its registrations (SCRUM-70 AC1).
         return (
           action !== "event:confirm" &&
           action !== "event:reject" &&
@@ -216,6 +219,7 @@ function hasRelationship(
           action !== "equipment-request:change" &&
           action !== "change-request:raise" &&
           action !== "event:edit" &&
+          action !== "venue:judge" &&
           action !== "arrangement:reconsider" &&
           action !== "registration:list" &&
           action !== "registration:control" &&

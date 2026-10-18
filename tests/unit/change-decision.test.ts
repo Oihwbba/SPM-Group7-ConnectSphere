@@ -24,7 +24,7 @@ const tx = vi.hoisted(() => ({
   eventChangeRequest: { findUniqueOrThrow: vi.fn(), update: vi.fn() },
   registration: { count: vi.fn() },
   auditLog: { create: vi.fn(), createMany: vi.fn() },
-  notification: { create: vi.fn() },
+  notification: { create: vi.fn(), updateMany: vi.fn() },
 }));
 
 vi.mock("@/auth", () => ({ auth: vi.fn() }));
@@ -202,7 +202,7 @@ describe("decideChangeRequest — approving (SCRUM-128 AC2, AC4–AC6, AC10)", (
     expect(tx.event.update.mock.calls[0][0].data).not.toHaveProperty("noEquipmentNeededAt");
   });
 
-  it("SCRUM-128 [AC5] TC-128-05: an impactful change to a Confirmed event returns it to Planning in the same operation, with a history entry", async () => {
+  it("SCRUM-128 [AC5] TC-128-05: an impactful change to a Confirmed event returns it to Planning in the same operation, with a history entry, and withdraws its scheduled Registration closed notice", async () => {
     tx.event.findUniqueOrThrow.mockResolvedValue(eventNow("CONFIRMED"));
 
     expect(
@@ -217,6 +217,15 @@ describe("decideChangeRequest — approving (SCRUM-128 AC2, AC4–AC6, AC10)", (
       oldValue: "CONFIRMED",
       newValue: "PLANNING",
     });
+    expect(tx.notification.updateMany).toHaveBeenCalledWith({
+      where: {
+        eventId: "evt1",
+        title: "Registration closed",
+        withdrawnAt: null,
+        showFromAt: { gt: expect.any(Date) },
+      },
+      data: { withdrawnAt: expect.any(Date) },
+    });
   });
 
   it("SCRUM-128 [AC6] TC-128-05: an impactful change to an event Under Review or in Planning keeps its status", async () => {
@@ -225,6 +234,8 @@ describe("decideChangeRequest — approving (SCRUM-128 AC2, AC4–AC6, AC10)", (
       tx.event.findUniqueOrThrow.mockResolvedValue(eventNow(status));
       await decideChangeRequest({ changeRequestId: "cr1", decision: "APPROVED" });
       expect(tx.event.update.mock.calls[0][0].data).not.toHaveProperty("status");
+      // Not Confirmed, so no Registration closed notice was scheduled.
+      expect(tx.notification.updateMany).not.toHaveBeenCalled();
     }
   });
 });

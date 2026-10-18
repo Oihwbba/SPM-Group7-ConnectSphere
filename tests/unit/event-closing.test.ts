@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import type { EventStatus, Prisma } from "@prisma/client";
+import type { EventStatus, PrismaClient } from "@prisma/client";
 
 import { CANCELLABLE, completeFinishedEvents, isOverdue } from "@/lib/event-closing";
 
@@ -42,9 +42,21 @@ describe("completeFinishedEvents — SCRUM-82 AC7–AC9", () => {
   function client(completed: { id: string }[]) {
     const $queryRaw = vi.fn().mockResolvedValue(completed);
     const createMany = vi.fn();
-    const db = { $queryRaw, auditLog: { createMany } } as unknown as Prisma.TransactionClient;
-    return { db, $queryRaw, createMany };
+    const tx = { $queryRaw, auditLog: { createMany } };
+    const $transaction = vi.fn((work: (t: typeof tx) => unknown) => work(tx));
+    const db = { $transaction } as unknown as PrismaClient;
+    return { db, $queryRaw, createMany, $transaction };
   }
+
+  it("SCRUM-82 [AC7] TC-82-09: the completion and its history entries are written in one transaction", async () => {
+    const { db, $queryRaw, createMany, $transaction } = client([{ id: "evt_1" }]);
+
+    await completeFinishedEvents(db, NOW);
+
+    expect($transaction).toHaveBeenCalledTimes(1);
+    expect($queryRaw).toHaveBeenCalledTimes(1);
+    expect(createMany).toHaveBeenCalledTimes(1);
+  });
 
   it("SCRUM-82 [AC7] TC-82-09: completes Confirmed events whose end has passed, with a history entry each, and returns them", async () => {
     const { db, $queryRaw, createMany } = client([{ id: "evt_1" }, { id: "evt_2" }]);

@@ -53,7 +53,12 @@ import {
   submitBookingRequest,
   type BookingSummary,
 } from "../actions";
-import type { BookableEvent, RequestableVenue } from "../queries";
+import type {
+  BookableEvent,
+  JudgementRow,
+  RequestableVenue,
+} from "../queries";
+import { SuitabilityPanel } from "./suitability-panel";
 import { OrganiserVenueAnswers } from "@/components/events/organiser-answers";
 
 type Outcome =
@@ -67,6 +72,7 @@ const emptyForm = {
   end: "",
   attendance: "",
   facilities: [] as string[],
+  accessibility: [] as string[],
   layout: "",
   notes: "",
 };
@@ -140,9 +146,15 @@ const emptySubscribe = () => () => {};
 export function RequestForm({
   events,
   venues,
+  judgements = [],
+  judgeableEventIds = [],
 }: {
   events: BookableEvent[];
   venues: RequestableVenue[];
+  /** SCRUM-40 AC8 — the Coordinator's judgements for these events. */
+  judgements?: JudgementRow[];
+  /** SCRUM-40 AC8 — the events this Coordinator may record a judgement for. */
+  judgeableEventIds?: string[];
 }) {
   const [form, setForm] = useState(emptyForm);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
@@ -160,6 +172,10 @@ export function RequestForm({
   ).sort();
   const layoutOptions = Array.from(
     new Set(venues.flatMap((v) => v.supportedLayouts)),
+  ).sort();
+  // SCRUM-40 AC3 — the accessibility features any venue offers.
+  const accessibilityOptions = Array.from(
+    new Set(venues.flatMap((v) => v.accessibilityFeatures)),
   ).sort();
 
   function update<K extends keyof typeof emptyForm>(
@@ -206,6 +222,15 @@ export function RequestForm({
       form.facilities.includes(facility)
         ? form.facilities.filter((f) => f !== facility)
         : [...form.facilities, facility],
+    );
+  }
+
+  function toggleAccessibility(feature: string) {
+    update(
+      "accessibility",
+      form.accessibility.includes(feature)
+        ? form.accessibility.filter((f) => f !== feature)
+        : [...form.accessibility, feature],
     );
   }
 
@@ -264,6 +289,7 @@ export function RequestForm({
         endAt: sgWallTimeToUtcIso(form.end) ?? "",
         requestedAttendance: form.attendance,
         requiredFacilities: form.facilities,
+        requiredAccessibilityFeatures: form.accessibility,
         requestedLayout: form.layout,
         requestNotes: form.notes,
       });
@@ -488,6 +514,28 @@ export function RequestForm({
                   venueName={selectedVenue?.name ?? "The venue"}
                 />
               )}
+
+              {form.eventId && selectedVenue && (
+                <SuitabilityPanel
+                  eventId={form.eventId}
+                  venueId={selectedVenue.id}
+                  venue={selectedVenue}
+                  needs={{
+                    attendance: form.attendance ? attendance : null,
+                    facilities: form.facilities,
+                    accessibilityFeatures: form.accessibility,
+                    layout: form.layout || null,
+                  }}
+                  judgement={
+                    judgements.find(
+                      (j) =>
+                        j.eventId === form.eventId &&
+                        j.venueId === selectedVenue.id,
+                    ) ?? null
+                  }
+                  canJudge={judgeableEventIds.includes(form.eventId)}
+                />
+              )}
             </div>
 
             <fieldset className="space-y-2">
@@ -517,6 +565,36 @@ export function RequestForm({
                 })}
               </div>
             </fieldset>
+
+            {accessibilityOptions.length > 0 && (
+              <fieldset className="space-y-2">
+                <legend className="text-sm font-medium">
+                  Accessibility needs
+                </legend>
+                <div className="flex flex-wrap gap-2">
+                  {accessibilityOptions.map((feature) => {
+                    const selected = form.accessibility.includes(feature);
+                    return (
+                      <button
+                        key={feature}
+                        type="button"
+                        aria-pressed={selected}
+                        onClick={() => toggleAccessibility(feature)}
+                        className={cn(
+                          "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                          selected
+                            ? "border-foreground bg-foreground text-background"
+                            : "border-border bg-background text-muted-foreground hover:border-primary/50 hover:text-foreground",
+                        )}
+                      >
+                        {selected && <Check className="h-3.5 w-3.5" />}
+                        {feature}
+                      </button>
+                    );
+                  })}
+                </div>
+              </fieldset>
+            )}
 
             <div className="space-y-2">
               <Label htmlFor="notes">Other details for Venue Staff</Label>

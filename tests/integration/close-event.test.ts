@@ -1,4 +1,12 @@
-import { describe, it, expect, afterAll, afterEach, vi, type Mock } from "vitest";
+import {
+  describe,
+  it,
+  expect,
+  afterAll,
+  afterEach,
+  vi,
+  type Mock,
+} from "vitest";
 
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
@@ -17,7 +25,12 @@ vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
 const asCoordinator = () =>
   (auth as unknown as Mock).mockResolvedValue({
-    user: { id: "usr_coordinator", role: "COORDINATOR", name: "Cody", email: "coordinator@test.local" },
+    user: {
+      id: "usr_coordinator",
+      role: "COORDINATOR",
+      name: "Cody",
+      email: "coordinator@test.local",
+    },
     expires: "2999-01-01T00:00:00.000Z",
   });
 
@@ -51,10 +64,18 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-82 — closing an event", () => {
     await prisma.auditLog.deleteMany({
       where: { entityId: { in: [...created, ...bookings.map((b) => b.id)] } },
     });
-    await prisma.notification.deleteMany({ where: { eventId: { in: created } } });
-    await prisma.equipmentRequest.deleteMany({ where: { eventId: { in: created } } });
-    await prisma.registration.deleteMany({ where: { eventId: { in: created } } });
-    await prisma.reservation.deleteMany({ where: { eventId: { in: created } } });
+    await prisma.notification.deleteMany({
+      where: { eventId: { in: created } },
+    });
+    await prisma.equipmentRequest.deleteMany({
+      where: { eventId: { in: created } },
+    });
+    await prisma.registration.deleteMany({
+      where: { eventId: { in: created } },
+    });
+    await prisma.reservation.deleteMany({
+      where: { eventId: { in: created } },
+    });
     await prisma.booking.deleteMany({ where: { eventId: { in: created } } });
     await prisma.event.deleteMany({ where: { id: { in: created } } });
     created.length = 0;
@@ -64,7 +85,7 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-82 — closing an event", () => {
     await prisma.$disconnect();
   });
 
-  it("SCRUM-82 [AC3, AC6] TC-82-04: cancelling releases the booking, the hold, the reservation and its stock, the equipment request, the registration, the awaiting safety check and the change request together", async () => {
+  it("SCRUM-82 [AC3, AC6] TC-82-04: cancelling releases the booking, the hold, the reservation and its stock, the equipment request, the registration, the awaiting safety check and the change request together, and withdraws the notices written ahead", async () => {
     const period = {
       startAt: new Date("2032-12-01T02:00:00Z"),
       endAt: new Date("2032-12-01T06:00:00Z"),
@@ -81,7 +102,7 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-82 — closing an event", () => {
         decidedAt: new Date(),
       },
     });
-    await prisma.booking.create({
+    const hold = await prisma.booking.create({
       data: {
         eventId,
         venueId: "ven_seminar",
@@ -92,6 +113,31 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-82 — closing an event", () => {
         holdExpiresAt: new Date("2032-11-20T00:00:00Z"),
         holdNote: "Confirm the second room by 20 Nov.",
       },
+      select: { id: true },
+    });
+    // Written ahead: the hold's reminder (SCRUM-163) and registration closing
+    // (SCRUM-45 AC11). Neither will happen once the event is cancelled.
+    const ahead = new Date("2032-11-19T00:00:00Z");
+    await prisma.notification.createMany({
+      data: [
+        {
+          userId: "usr_coordinator",
+          type: "HOLD_EXPIRY_REMINDER",
+          title: "Hold expires soon",
+          message: "…",
+          eventId,
+          bookingId: hold.id,
+          showFromAt: ahead,
+        },
+        {
+          userId: "usr_organiser",
+          type: "EVENT_STATUS_CHANGED",
+          title: "Registration closed",
+          message: "…",
+          eventId,
+          showFromAt: ahead,
+        },
+      ],
     });
     const request = await prisma.equipmentRequest.create({
       data: {
@@ -112,8 +158,12 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-82 — closing an event", () => {
         requestId: request.id,
       },
     });
-    await prisma.safetyCheck.create({ data: { eventId, requestedById: "usr_coordinator" } });
-    await prisma.registration.create({ data: { eventId, userId: "usr_attendee" } });
+    await prisma.safetyCheck.create({
+      data: { eventId, requestedById: "usr_coordinator" },
+    });
+    await prisma.registration.create({
+      data: { eventId, userId: "usr_attendee" },
+    });
     await prisma.eventChangeRequest.create({
       data: { eventId, requestedById: "usr_organiser", reason: "Move it" },
     });
@@ -124,32 +174,55 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-82 — closing an event", () => {
       data: { status: "CANCELLED" },
     });
 
-    expect(await prisma.event.findUniqueOrThrow({ where: { id: eventId } })).toMatchObject({
+    expect(
+      await prisma.notification.count({
+        where: { eventId, showFromAt: ahead, withdrawnAt: null },
+      }),
+    ).toBe(0);
+    expect(
+      await prisma.event.findUniqueOrThrow({ where: { id: eventId } }),
+    ).toMatchObject({
       status: "CANCELLED",
       cancellationReason: "Venue flooded.",
       cancelledById: "usr_coordinator",
     });
     expect(
-      (await prisma.booking.findMany({ where: { eventId }, select: { status: true } })).map((b) => b.status),
+      (
+        await prisma.booking.findMany({
+          where: { eventId },
+          select: { status: true },
+        })
+      ).map((b) => b.status),
     ).toEqual(["CANCELLED", "CANCELLED"]);
     expect(
-      (await prisma.reservation.findFirstOrThrow({ where: { eventId } })).status,
+      (await prisma.reservation.findFirstOrThrow({ where: { eventId } }))
+        .status,
     ).toBe("CANCELLED");
     expect(
-      (await prisma.equipmentRequest.findUniqueOrThrow({ where: { id: request.id } })).status,
+      (
+        await prisma.equipmentRequest.findUniqueOrThrow({
+          where: { id: request.id },
+        })
+      ).status,
     ).toBe("CANCELLED");
-    expect((await prisma.safetyCheck.findFirstOrThrow({ where: { eventId } })).status).toBe(
-      "OUTDATED",
-    );
-    expect((await prisma.registration.findFirstOrThrow({ where: { eventId } })).status).toBe(
-      "CANCELLED",
-    );
+    expect(
+      (await prisma.safetyCheck.findFirstOrThrow({ where: { eventId } }))
+        .status,
+    ).toBe("OUTDATED");
+    expect(
+      (await prisma.registration.findFirstOrThrow({ where: { eventId } }))
+        .status,
+    ).toBe("CANCELLED");
     expect(
       await prisma.eventChangeRequest.findFirstOrThrow({ where: { eventId } }),
     ).toMatchObject({ status: "REJECTED", decisionReason: "Venue flooded." });
     expect(
       await prisma.notification.count({
-        where: { eventId, userId: "usr_attendee", type: "REGISTERED_EVENT_CANCELLED" },
+        where: {
+          eventId,
+          userId: "usr_attendee",
+          type: "REGISTERED_EVENT_CANCELLED",
+        },
       }),
     ).toBe(1);
   });
@@ -168,21 +241,30 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-82 — closing an event", () => {
 
     expect(results.every((r) => r.ok)).toBe(true);
     expect(
-      await prisma.auditLog.count({ where: { entityId: eventId, newValue: "CANCELLED" } }),
+      await prisma.auditLog.count({
+        where: { entityId: eventId, newValue: "CANCELLED" },
+      }),
     ).toBe(1);
   });
 
   it("SCRUM-82 [AC7, AC8, AC9] TC-82-10: a finished Confirmed event completes once, even when two pages load at the same moment; at its end time it is still Confirmed, and a Cancelled one never completes", async () => {
     // Dates in 2001, so nothing any other suite writes has ended this early.
     const end = new Date("2001-01-01T10:00:00.000Z");
-    const finished = await event("CONFIRMED", { startAt: new Date("2001-01-01T08:00:00Z"), endAt: end });
-    const cancelled = await event("CANCELLED", { startAt: new Date("2001-01-01T08:00:00Z"), endAt: end });
+    const finished = await event("CONFIRMED", {
+      startAt: new Date("2001-01-01T08:00:00Z"),
+      endAt: end,
+    });
+    const cancelled = await event("CANCELLED", {
+      startAt: new Date("2001-01-01T08:00:00Z"),
+      endAt: end,
+    });
 
     // AC7: at exactly the end it is still Confirmed.
     expect(await completeFinishedEvents(prisma, end)).not.toContain(finished);
-    expect((await prisma.event.findUniqueOrThrow({ where: { id: finished } })).status).toBe(
-      "CONFIRMED",
-    );
+    expect(
+      (await prisma.event.findUniqueOrThrow({ where: { id: finished } }))
+        .status,
+    ).toBe("CONFIRMED");
 
     const justAfter = new Date(end.getTime() + 1);
     const runs = await Promise.all([
@@ -191,17 +273,24 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-82 — closing an event", () => {
     ]);
 
     expect(runs.flat().filter((id) => id === finished)).toHaveLength(1);
-    expect(await prisma.event.findUniqueOrThrow({ where: { id: finished } })).toMatchObject({
+    expect(
+      await prisma.event.findUniqueOrThrow({ where: { id: finished } }),
+    ).toMatchObject({
       status: "COMPLETED",
       completedAt: justAfter,
     });
     expect(
-      await prisma.auditLog.count({ where: { entityId: finished, newValue: "COMPLETED" } }),
+      await prisma.auditLog.count({
+        where: { entityId: finished, newValue: "COMPLETED" },
+      }),
     ).toBe(1);
     // AC8: checking again changes nothing. AC9: Cancelled stays Cancelled.
-    expect(await completeFinishedEvents(prisma, justAfter)).not.toContain(finished);
-    expect((await prisma.event.findUniqueOrThrow({ where: { id: cancelled } })).status).toBe(
-      "CANCELLED",
+    expect(await completeFinishedEvents(prisma, justAfter)).not.toContain(
+      finished,
     );
+    expect(
+      (await prisma.event.findUniqueOrThrow({ where: { id: cancelled } }))
+        .status,
+    ).toBe("CANCELLED");
   });
 });

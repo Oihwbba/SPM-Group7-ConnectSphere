@@ -21,7 +21,7 @@ const tx = vi.hoisted(() => ({
   registration: { findMany: vi.fn(), updateMany: vi.fn() },
   eventChangeRequest: { updateMany: vi.fn() },
   auditLog: { createMany: vi.fn() },
-  notification: { createMany: vi.fn() },
+  notification: { createMany: vi.fn(), updateMany: vi.fn() },
 }));
 
 vi.mock("@/auth", () => ({ auth: vi.fn() }));
@@ -162,6 +162,28 @@ describe("cancelEvent — SCRUM-82 AC1", () => {
 });
 
 describe("cancelEvent — SCRUM-82 AC3", () => {
+  it("SCRUM-82 [AC3, AC6] TC-82-04: notices written ahead for the event (a hold's reminder and expiry, registration closing) are withdrawn, since none will happen", async () => {
+    await cancelEvent(valid);
+
+    expect(tx.notification.updateMany).toHaveBeenCalledWith({
+      where: {
+        eventId: "evt1",
+        bookingId: { not: null },
+        withdrawnAt: null,
+        showFromAt: { gt: expect.any(Date) },
+      },
+      data: { withdrawnAt: expect.any(Date) },
+    });
+    expect(tx.notification.updateMany).toHaveBeenCalledWith({
+      where: {
+        eventId: "evt1",
+        title: "Registration closed",
+        withdrawnAt: null,
+        showFromAt: { gt: expect.any(Date) },
+      },
+      data: { withdrawnAt: expect.any(Date) },
+    });
+  });
   it("SCRUM-82 [AC3] TC-82-04: in the same operation, bookings, holds and requests, reservations, open equipment requests and registrations are cancelled, an awaiting safety check is Outdated and submitted change requests are rejected with the reason", async () => {
     await cancelEvent(valid);
 

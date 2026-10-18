@@ -26,7 +26,9 @@ const cancelSchema = z.object({
  *   bookings, holds and pending requests; equipment reservations, whose stock
  *   returns to the pool; open equipment requests; a safety check awaiting
  *   review becomes Outdated; registrations are cancelled; and submitted
- *   change requests are rejected with the reason.
+ *   change requests are rejected with the reason. Notices written ahead for
+ *   the event (a hold's reminder and expiry, and registration closing) are
+ *   withdrawn, since none of them will happen.
  * - The Organiser, the Coordinator and every Attendee whose registration was
  *   cancelled get a notification (AC6).
  *
