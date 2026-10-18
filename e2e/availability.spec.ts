@@ -6,11 +6,12 @@ import { choose, setTime, signedIn, usesLocalDatabase } from "./helpers";
 /**
  * SCRUM-36 / SCRUM-37 — the availability calendar and recorded unavailability
  * in a real browser: Venue Staff record maintenance, a Coordinator sees it on
- * the calendar and is refused a request over it, a booking approved beside it
- * appears at once, flush against it, and maintenance over that booking is
- * refused with the clash shown.
+ * the calendar and is refused a request over it, and a booking approved beside
+ * it appears at once, flush against it. SCRUM-161: unavailability recorded
+ * over an approved booking is shown first, then saved, flagging the booking
+ * and telling its Coordinator.
  *
- * Uses the Grand Auditorium on 10 Jan 2036, clear of anything seeded, and
+ * Uses the Grand Auditorium on 10 and 12 Jan 2036, clear of anything seeded, and
  * clears those rows first so a local re-run or a CI retry starts clean. A
  * request is always for its event's period (SCRUM-50 AC1), so the spec
  * creates the two events it requests for, and removes them afterwards.
@@ -23,6 +24,9 @@ const CLASHING_EVENT = `${PREFIX} Afternoon Rehearsal`;
 const MORNING_EVENT = `${PREFIX} Morning Assembly`;
 // Booked straight into the database, as if approved by someone else.
 const ELSEWHERE_EVENT = `${PREFIX} Approved Elsewhere`;
+// SCRUM-161: approved on its own day, then made unavailable under it.
+const FLAGGED_DAY = "2036-01-12";
+const FLAGGED_EVENT = `${PREFIX} Flagged Conference`;
 
 async function removeTestEvents() {
   const events = await prisma.event.findMany({
@@ -39,6 +43,9 @@ async function removeTestEvents() {
       entityType: "Booking",
       entityId: { in: bookings.map((b) => b.id) },
     },
+  });
+  await prisma.notification.deleteMany({
+    where: { eventId: { in: eventIds } },
   });
   await prisma.booking.deleteMany({ where: { eventId: { in: eventIds } } });
   await prisma.event.deleteMany({ where: { id: { in: eventIds } } });
@@ -64,13 +71,18 @@ async function stretches(page: Page, day: string) {
     );
 }
 
-async function recordMaintenance(page: Page, start: string, end: string) {
-  await page.goto(calendarFor(AUDITORIUM, DAY));
+async function recordMaintenance(
+  page: Page,
+  start: string,
+  end: string,
+  reason = "Maintenance",
+) {
+  await page.goto(calendarFor(AUDITORIUM, start.split("T")[0]));
   await page.locator('[data-hydrated="true"]').waitFor();
   await page.getByRole("button", { name: "Record unavailability" }).click();
   await setTime(page, "Start", start);
   await setTime(page, "End", end);
-  await choose(page, "Reason", "Maintenance");
+  await choose(page, "Reason", reason);
   await page
     .getByRole("button", { name: "Record unavailability" })
     .last()
@@ -93,13 +105,13 @@ test.describe("SCRUM-36 / SCRUM-37 — venue availability calendar and recorded 
   test.beforeAll(async () => {
     if (!usesLocalDatabase) return;
     await removeTestEvents();
-    const event = (name: string, start: string, end: string) => ({
+    const event = (name: string, start: string, end: string, day = DAY) => ({
       name,
       status: "PLANNING" as const,
       organiserId: "usr_organiser",
       coordinatorId: "usr_coordinator",
-      startAt: new Date(`${DAY}T${start}:00+08:00`),
-      endAt: new Date(`${DAY}T${end}:00+08:00`),
+      startAt: new Date(`${day}T${start}:00+08:00`),
+      endAt: new Date(`${day}T${end}:00+08:00`),
       expectedAttendance: 100,
       preferredLayout: "theatre",
     });
@@ -108,6 +120,7 @@ test.describe("SCRUM-36 / SCRUM-37 — venue availability calendar and recorded 
         event(CLASHING_EVENT, "14:00", "16:00"),
         event(MORNING_EVENT, "09:00", "13:00"),
         event(ELSEWHERE_EVENT, "10:00", "12:00"),
+        event(FLAGGED_EVENT, "09:00", "13:00", FLAGGED_DAY),
       ],
     });
   });
@@ -137,7 +150,7 @@ test.describe("SCRUM-36 / SCRUM-37 — venue availability calendar and recorded 
     });
   });
 
-  test("SCRUM-37 [AC1-AC5], SCRUM-36 [AC2, AC3, AC5]: maintenance is recorded, seen, refused over, sat flush against a booking, and never overwrites one", async ({
+  test("SCRUM-37 [AC1, AC2, AC5], SCRUM-36 [AC2, AC3, AC5]: maintenance is recorded, seen, refused over, and sat flush against a booking", async ({
     browser,
   }, testInfo) => {
     test.skip(!usesLocalDatabase, "creates its own events");
@@ -253,23 +266,86 @@ test.describe("SCRUM-36 / SCRUM-37 — venue availability calendar and recorded 
       "Recorded by Vera Venue",
     );
     await expect(bookingDetails).toBeHidden();
+  });
 
-    // SCRUM-37 AC3 — maintenance over the approved booking is not saved; the
-    // clash is shown instead.
-    await recordMaintenance(staff, `${DAY}T10:00`, `${DAY}T12:00`);
-    await expect(staff.getByTestId("unavailability-outcome")).toContainText(
-      "Not recorded: Grand Auditorium is already booked from 10 Jan 2036, 9:00 am SGT to 10 Jan 2036, 1:00 pm SGT.",
+  test("SCRUM-161 [AC1-AC4] TC-161-01, TC-161-04, TC-161-06, TC-161-16: unavailability over an approved booking, on quarter hours, is confirmed, saved, flags the booking and tells its Coordinator", async ({
+    browser,
+  }) => {
+    test.skip(!usesLocalDatabase, "creates its own events");
+    const { id: eventId } = await prisma.event.findFirstOrThrow({
+      where: { name: FLAGGED_EVENT },
+      select: { id: true },
+    });
+    const booked = await prisma.booking.create({
+      data: {
+        eventId,
+        venueId: AUDITORIUM,
+        startAt: new Date(`${FLAGGED_DAY}T09:00:00+08:00`),
+        endAt: new Date(`${FLAGGED_DAY}T13:00:00+08:00`),
+        status: "APPROVED",
+        requestedById: "usr_coordinator",
+        decidedById: "usr_venuestaff",
+        decidedAt: new Date(),
+      },
+    });
+    const recordedThatDay = () =>
+      prisma.venueUnavailability.count({
+        where: {
+          venueId: AUDITORIUM,
+          startAt: { gte: new Date(`${FLAGGED_DAY}T00:00:00+08:00`) },
+        },
+      });
+    const staff = await signedIn(browser, "venuestaff@test.local");
+
+    // AC1, AC2 — the overlap doesn't refuse it; the booking is shown first.
+    // TC-161-16: times needn't fall on a half hour.
+    await recordMaintenance(
+      staff,
+      `${FLAGGED_DAY}T10:15`,
+      `${FLAGGED_DAY}T11:45`,
+      "Equipment failure",
     );
-    if (usesLocalDatabase) {
-      expect(
-        await prisma.venueUnavailability.count({
-          where: {
-            venueId: AUDITORIUM,
-            startAt: { gte: new Date(`${DAY}T00:00:00+08:00`) },
-          },
-        }),
-      ).toBe(1);
-    }
+    const affected = staff.getByTestId("affected-booking");
+    await expect(affected).toHaveCount(1);
+    await expect(affected).toContainText(FLAGGED_EVENT);
+    await expect(affected).toContainText("Coordinator: Cody Coordinator");
+    await expect(affected).toContainText("Approved");
+    expect(await recordedThatDay()).toBe(0);
+
+    await staff
+      .getByRole("button", { name: "Record and flag 1 booking" })
+      .click();
+    await expect(
+      staff.getByText(
+        "Recorded: Grand Auditorium is unavailable for that period. 1 booking flagged for their Coordinators.",
+      ),
+    ).toBeVisible();
+    expect(await recordedThatDay()).toBe(1);
+
+    // AC3 — flagged with the reason and period, and otherwise untouched.
+    expect(
+      await prisma.booking.findUniqueOrThrow({ where: { id: booked.id } }),
+    ).toMatchObject({
+      status: "APPROVED",
+      startAt: booked.startAt,
+      endAt: booked.endAt,
+      needsReconsideration: true,
+      reconsiderationReason:
+        "Grand Auditorium is unavailable: Equipment failure from 12 Jan 2036, 10:15 am SGT to 12 Jan 2036, 11:45 am SGT.",
+    });
+
+    // AC4 — the Coordinator is told alternative arrangements are required.
+    const coordinator = await signedIn(browser, "coordinator@test.local");
+    await coordinator.goto("/notifications");
+    const notice = coordinator
+      .getByRole("listitem")
+      .filter({ hasText: FLAGGED_EVENT });
+    await expect(notice).toContainText(
+      "Alternative venue arrangements required",
+    );
+    await expect(notice).toContainText(
+      "Grand Auditorium is unavailable (Equipment failure from 12 Jan 2036, 10:15 am SGT to 12 Jan 2036, 11:45 am SGT)",
+    );
   });
 
   test("SCRUM-36 [AC6] TC-36-04: a venue with nothing in the week reads as available throughout, not blank", async ({
@@ -380,6 +456,9 @@ test.describe("SCRUM-36 / SCRUM-37 — venue availability calendar and recorded 
         fullPage: false,
       });
     }
+    // The calendar refreshes itself; left open, it would load the server
+    // for every later test (SCRUM-182).
+    await context.close();
   });
 
   test("SCRUM-36 [AC2] TC-36-09: an open calendar picks up a booking approved elsewhere, without a reload", async ({

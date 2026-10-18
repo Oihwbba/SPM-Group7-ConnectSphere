@@ -10,7 +10,8 @@ A clarification is a `ClarificationRequest` row, not an event status
 
 Written on 2026-10-12 from the acceptance criteria, then mapped to the tests
 that already existed (SCRUM-176). The tests predate the `SCRUM-n [ACx] TC-n-xx`
-title format, so each case names them by their current titles.
+title format, so each case names them by their current titles. TC-18-11 was
+added on 2026-10-13, so that every e2e test is named by a case.
 
 Two references in the story have moved. The field-limited answer in AC 3 is
 SCRUM-108, which SCRUM-109 was merged into. The notifications in AC 6 are
@@ -32,6 +33,7 @@ with `coordinator@test.local` (both `Password123!`).
 | [TC-18-08](#tc-18-08) | Concurrency | AC 4, AC 5 | Unit, integration |
 | [TC-18-09](#tc-18-09) | Negative | AC 1 | Unit |
 | [TC-18-10](#tc-18-10) | Negative | Only the right people | Unit |
+| [TC-18-11](#tc-18-11) | Positive | AC 1 at phone width | e2e |
 
 ---
 
@@ -164,3 +166,16 @@ with `coordinator@test.local` (both `Password123!`).
 | Expected Result | Each is refused. Steps 3 get "not found", revealing nothing; step 4 is refused as not signed in. Nothing is written. |
 
 **Automated by:** `tests/unit/clarification.test.ts` › "[Negative] Security gate: an Organiser cannot request clarification on their own event", "[Negative] a Coordinator cannot respond on the organiser's behalf", "[Negative] SCRUM-68: another coordinator's event is indistinguishable from a missing one", "[Negative] another organiser's clarification is indistinguishable from a missing one", "[Negative] an unrelated user gets not-found, never the clarification content", "[Negative] a signed-out caller is refused"
+
+### TC-18-11
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-18-11 |
+| Test Scenario | [Positive] AC 1 at phone width: the review actions and the clarification dialog stay usable on a phone |
+| Pre-conditions | Signed in as the assigned Coordinator, at a 375 × 812 screen. A request is Under Review. |
+| Test Steps | 1. Open **Events** and find the request's card. <br> 2. Look at **View Details**, **Approve**, **Ask** and **Reject**. <br> 3. Tap **Ask**. |
+| Test Data | Screen 375 × 812 |
+| Expected Result | The four buttons are the same width, two to a row (**Reject** beside **Ask**, not alone on a line), and the page doesn't scroll sideways. In the clarification dialog, **Send request** and **Cancel** are stacked with at least 6 px between them. |
+
+**Automated by:** `e2e/events.spec.ts` › "SCRUM-18/19: the four review buttons form an even two-column grid and stacked dialog buttons are separated"

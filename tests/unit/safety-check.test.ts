@@ -53,6 +53,9 @@ describe("the readiness checklist with a safety check — SCRUM-166 AC9", () => 
       ],
       equipmentRequests: [],
       reservations: [],
+      // SCRUM-170 AC4: Equipment is always listed; this event needs none.
+      noEquipmentNeededAt: START,
+      noEquipmentNeededBy: { name: "Cody Coordinator" },
       safetyChecks,
     });
     return { db: { event: { findUnique } } as unknown as Prisma.TransactionClient, findUnique };

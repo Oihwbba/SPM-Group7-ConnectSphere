@@ -44,6 +44,7 @@ const validInput = {
   accessibilityNeeds: "Wheelchair access",
   preferredLayout: "Booths",
   equipmentRequirements: "Tables and chairs",
+  registrationRequired: "yes",
   registrationNotes: "Open registration",
 };
 

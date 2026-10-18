@@ -53,7 +53,13 @@ import {
   submitBookingRequest,
   type BookingSummary,
 } from "../actions";
-import type { BookableEvent, RequestableVenue } from "../queries";
+import type {
+  BookableEvent,
+  JudgementRow,
+  RequestableVenue,
+} from "../queries";
+import { SuitabilityPanel } from "./suitability-panel";
+import { OrganiserVenueAnswers } from "@/components/events/organiser-answers";
 
 type Outcome =
   | { kind: "created" | "existing"; booking: BookingSummary }
@@ -66,6 +72,7 @@ const emptyForm = {
   end: "",
   attendance: "",
   facilities: [] as string[],
+  accessibility: [] as string[],
   layout: "",
   notes: "",
 };
@@ -85,20 +92,6 @@ export function venuesForLayout<T extends { supportedLayouts: string[] }>(
   return layout
     ? venues.filter((venue) => venue.supportedLayouts.includes(layout))
     : venues;
-}
-
-/**
- * SCRUM-50 — the layout option to pre-select for an event's preferred
- * layout. Venues list layouts in lower case, but an Organiser may have typed
- * "Classroom", so they are matched ignoring case and surrounding spaces. Only
- * a layout some venue offers can be pre-selected; otherwise none is.
- */
-export function layoutOption(
-  preferred: string | null | undefined,
-  options: string[],
-): string {
-  const wanted = preferred?.trim().toLowerCase();
-  return (wanted && options.find((o) => o.toLowerCase() === wanted)) || "";
 }
 
 /** What the live availability check knows about the venue and period chosen. */
@@ -143,7 +136,8 @@ const emptySubscribe = () => () => {};
 /**
  * SCRUM-50 — the Coordinator's request form. Choosing an event fills in its
  * period and expected attendance, which cannot be changed here (AC1), and
- * pre-selects its facilities and layout, which can. The room
+ * shows the Organiser's venue and accessibility answers read-only; the
+ * Coordinator enters the layout and facilities (SCRUM-170 AC2). The room
  * layout comes before the venue and narrows the venues offered. Once a venue
  * and period are chosen, the server is asked whether the venue is free and the
  * answer is shown before submitting; a taken venue disables Submit. The
@@ -152,9 +146,15 @@ const emptySubscribe = () => () => {};
 export function RequestForm({
   events,
   venues,
+  judgements = [],
+  judgeableEventIds = [],
 }: {
   events: BookableEvent[];
   venues: RequestableVenue[];
+  /** SCRUM-40 AC8 — the Coordinator's judgements for these events. */
+  judgements?: JudgementRow[];
+  /** SCRUM-40 AC8 — the events this Coordinator may record a judgement for. */
+  judgeableEventIds?: string[];
 }) {
   const [form, setForm] = useState(emptyForm);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
@@ -168,13 +168,14 @@ export function RequestForm({
   );
 
   const facilityOptions = Array.from(
-    new Set([
-      ...venues.flatMap((v) => v.facilities),
-      ...events.flatMap((e) => e.requiredFacilities),
-    ]),
+    new Set(venues.flatMap((v) => v.facilities)),
   ).sort();
   const layoutOptions = Array.from(
     new Set(venues.flatMap((v) => v.supportedLayouts)),
+  ).sort();
+  // SCRUM-40 AC3 — the accessibility features any venue offers.
+  const accessibilityOptions = Array.from(
+    new Set(venues.flatMap((v) => v.accessibilityFeatures)),
   ).sort();
 
   function update<K extends keyof typeof emptyForm>(
@@ -190,9 +191,10 @@ export function RequestForm({
       ? venueId
       : "";
 
+  // SCRUM-170 AC2: the Organiser's answers are free text, shown beside the
+  // form; the layout and facilities are the Coordinator's to enter.
   function chooseEvent(eventId: string) {
     const event = events.find((e) => e.id === eventId);
-    const layout = layoutOption(event?.preferredLayout, layoutOptions);
     const period = event && eventBookingPeriod(event);
     setForm((prev) => ({
       ...prev,
@@ -201,12 +203,10 @@ export function RequestForm({
         start: utcToSgWallTime(period?.startAt),
         end: utcToSgWallTime(period?.endAt),
         attendance: event.expectedAttendance?.toString() ?? "",
-        facilities: event.requiredFacilities,
-        layout,
-        venueId: venueFor(prev.venueId, layout),
       }),
     }));
   }
+  const chosenEvent = events.find((e) => e.id === form.eventId);
 
   function chooseLayout(layout: string) {
     setForm((prev) => ({
@@ -222,6 +222,15 @@ export function RequestForm({
       form.facilities.includes(facility)
         ? form.facilities.filter((f) => f !== facility)
         : [...form.facilities, facility],
+    );
+  }
+
+  function toggleAccessibility(feature: string) {
+    update(
+      "accessibility",
+      form.accessibility.includes(feature)
+        ? form.accessibility.filter((f) => f !== feature)
+        : [...form.accessibility, feature],
     );
   }
 
@@ -280,6 +289,7 @@ export function RequestForm({
         endAt: sgWallTimeToUtcIso(form.end) ?? "",
         requestedAttendance: form.attendance,
         requiredFacilities: form.facilities,
+        requiredAccessibilityFeatures: form.accessibility,
         requestedLayout: form.layout,
         requestNotes: form.notes,
       });
@@ -366,6 +376,19 @@ export function RequestForm({
                 </Select>
                 {fieldError("eventId")}
               </div>
+
+              {chosenEvent && (
+                <div className="space-y-2 rounded-md border bg-muted/30 p-3 sm:col-span-2">
+                  <p className="text-xs font-medium">
+                    What the Organiser asked for
+                  </p>
+                  <OrganiserVenueAnswers answers={chosenEvent} />
+                  <p className="text-xs text-muted-foreground">
+                    Choose the layout and facilities yourself; these answers
+                    aren&apos;t copied into the request.
+                  </p>
+                </div>
+              )}
 
               <div className="space-y-2">
                 <Label htmlFor="layout">Room layout</Label>
@@ -491,6 +514,28 @@ export function RequestForm({
                   venueName={selectedVenue?.name ?? "The venue"}
                 />
               )}
+
+              {form.eventId && selectedVenue && (
+                <SuitabilityPanel
+                  eventId={form.eventId}
+                  venueId={selectedVenue.id}
+                  venue={selectedVenue}
+                  needs={{
+                    attendance: form.attendance ? attendance : null,
+                    facilities: form.facilities,
+                    accessibilityFeatures: form.accessibility,
+                    layout: form.layout || null,
+                  }}
+                  judgement={
+                    judgements.find(
+                      (j) =>
+                        j.eventId === form.eventId &&
+                        j.venueId === selectedVenue.id,
+                    ) ?? null
+                  }
+                  canJudge={judgeableEventIds.includes(form.eventId)}
+                />
+              )}
             </div>
 
             <fieldset className="space-y-2">
@@ -520,6 +565,36 @@ export function RequestForm({
                 })}
               </div>
             </fieldset>
+
+            {accessibilityOptions.length > 0 && (
+              <fieldset className="space-y-2">
+                <legend className="text-sm font-medium">
+                  Accessibility needs
+                </legend>
+                <div className="flex flex-wrap gap-2">
+                  {accessibilityOptions.map((feature) => {
+                    const selected = form.accessibility.includes(feature);
+                    return (
+                      <button
+                        key={feature}
+                        type="button"
+                        aria-pressed={selected}
+                        onClick={() => toggleAccessibility(feature)}
+                        className={cn(
+                          "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                          selected
+                            ? "border-foreground bg-foreground text-background"
+                            : "border-border bg-background text-muted-foreground hover:border-primary/50 hover:text-foreground",
+                        )}
+                      >
+                        {selected && <Check className="h-3.5 w-3.5" />}
+                        {feature}
+                      </button>
+                    );
+                  })}
+                </div>
+              </fieldset>
+            )}
 
             <div className="space-y-2">
               <Label htmlFor="notes">Other details for Venue Staff</Label>

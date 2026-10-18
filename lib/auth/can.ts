@@ -33,6 +33,7 @@ export type Action =
   | "event:review"
   | "event:confirm" // SCRUM-81: the assigned coordinator confirms a ready Planning event
   | "event:reject" // SCRUM-117: the assigned coordinator rejects a Planning event that can't be fulfilled
+  | "event:no-equipment" // SCRUM-170 AC4: the assigned coordinator records No equipment needed
   | "event:edit" // SCRUM-25: the assigned coordinator edits an event's details directly
   | "event:assign" // SCRUM-165: the Lead assigns an unassigned request to a Coordinator
   | "event:view-all" // SCRUM-141: see every non-draft event, read-only, for planning
@@ -44,8 +45,10 @@ export type Action =
   | "clarification:request" // SCRUM-18: coordinator asks the organiser a question
   | "clarification:respond" // SCRUM-18: organiser answers an open question
   | "change-request:raise" // SCRUM-41: the organiser, or the assigned coordinator on their behalf
-  | "venue:read"
+  | "venue:read" // SCRUM-34 AC2: any internal user views the venue catalogue and a venue's details
+  | "venue:manage" // SCRUM-34 AC3, AC6, AC8, AC9: Venue Staff add, edit and retire venues
   | "venue:availability" // SCRUM-36: view a venue's availability calendar
+  | "venue:judge" // SCRUM-40 AC8: the assigned coordinator records a venue's suitability for their event
   | "booking:request" // SCRUM-50: coordinator asks for a venue for their event
   | "booking:review" // SCRUM-52: read the pending-request queue
   | "booking:decide" // SCRUM-53: approve or reject a pending request
@@ -62,7 +65,9 @@ export type Action =
   | "event:browse" // attendees browsing events open for registration
   | "registration:create" // SCRUM-73: an attendee registers for an event
   | "registration:withdraw" // SCRUM-74/77: an attendee withdraws their own registration
+  | "registration:control" // SCRUM-75 AC6: the organiser, or the assigned coordinator on their behalf, closes or reopens registration
   | "registration:read"
+  | "registration:list" // SCRUM-70: an event's Organiser or assigned Coordinator sees its registrations
   | "notification:read";
 
 /**
@@ -106,7 +111,9 @@ const ROLE_ACTIONS: Record<Role, Action[]> = {
     "event:read",
     "clarification:respond",
     "change-request:raise",
+    "registration:control",
     "event-note:read",
+    "registration:list",
     "notification:read",
   ],
   COORDINATOR: [
@@ -115,6 +122,7 @@ const ROLE_ACTIONS: Record<Role, Action[]> = {
     "event:review",
     "event:confirm",
     "event:reject",
+    "event:no-equipment",
     "event:edit",
     "event-note:add",
     "event-note:read",
@@ -122,22 +130,23 @@ const ROLE_ACTIONS: Record<Role, Action[]> = {
     "safety-check:request",
     "clarification:request",
     "change-request:raise",
+    "registration:control",
     "venue:read",
     "equipment-request:list",
     "equipment-request:create",
     "equipment-request:change",
     "venue:availability",
+    "venue:judge",
     "booking:request",
     "booking:settle-hold",
     "booking:withdraw",
     "event:view-all",
+    "registration:list",
     "notification:read",
   ],
-  // `venue:read` gates the Venue Catalogue page, which is Coordinator-only, so
-  // it is deliberately NOT granted here — Venue Staff act on bookings, not the
-  // catalogue. Grant it here the day Venue Staff need the catalogue; that is the
-  // one-line change SCRUM-66 is about, with no page edits.
   VENUE_STAFF: [
+    "venue:read",
+    "venue:manage",
     "booking:review",
     "booking:decide",
     "booking:hold",
@@ -150,6 +159,7 @@ const ROLE_ACTIONS: Record<Role, Action[]> = {
   ],
   TECH_SUPPORT: [
     "equipment:read",
+    "venue:read",
     "equipment:reserve",
     "equipment-request:list",
     "equipment-request:review",
@@ -166,9 +176,15 @@ const ROLE_ACTIONS: Record<Role, Action[]> = {
     "notification:read",
   ],
   // SCRUM-164 — the Week 7 roles. Like every user they read their own
-  // notifications (SCRUM-48); SCRUM-165 and SCRUM-166 grant the rest.
-  COORDINATOR_LEAD: ["event:assign", "event:view-all", "notification:read"],
-  SAFETY_OFFICER: ["safety-check:review", "notification:read"],
+  // notifications (SCRUM-48) and, as internal users, the venue catalogue
+  // (SCRUM-34 AC2); SCRUM-165 and SCRUM-166 grant the rest.
+  COORDINATOR_LEAD: [
+    "event:assign",
+    "event:view-all",
+    "venue:read",
+    "notification:read",
+  ],
+  SAFETY_OFFICER: ["venue:read", "safety-check:review", "notification:read"],
 };
 
 /**
