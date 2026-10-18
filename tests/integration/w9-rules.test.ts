@@ -237,7 +237,10 @@ describe.skipIf(!usesLocalDatabase)(
           email: `w9-approver-${stamp}@test.local`,
           name: "Week 9 approver",
           passwordHash: "x",
-          role: "VENUE_STAFF",
+          // The database's rule doesn't depend on the role. Not Venue Staff, so
+          // other suites' staff notices (SCRUM-124) never reach this short-lived
+          // account and block its deletion, or fail on it.
+          role: "ATTENDEE",
         },
       });
       const row = await hold(6, 16);
