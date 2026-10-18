@@ -1076,6 +1076,10 @@ describe.skipIf(!usesLocalDatabase)("concurrency — withdrawal reopens capacity
 
   afterAll(async () => {
     await prisma.registration.deleteMany({ where: { eventId } });
+    // SCRUM-77 AC6: each withdrawal is in the history, and SCRUM-45 AC11 tells
+    // the Organiser a place opened.
+    await prisma.notification.deleteMany({ where: { eventId } });
+    await prisma.auditLog.deleteMany({ where: { entityId: eventId } });
     await prisma.event.delete({ where: { id: eventId } });
   });
 
