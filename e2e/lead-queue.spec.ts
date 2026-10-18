@@ -139,9 +139,15 @@ test.describe("SCRUM-165 — Lead assigns new requests from an unassigned queue"
       "Verify the Lead's queue.",
     );
 
-    // AC4: each Coordinator shows their active events; pick Cody.
+    // AC4: each Coordinator shows their active events, and the least loaded
+    // is pre-selected and marked as suggested; pick Cody.
     const choice = page.getByLabel("Coordinator");
     await expect(choice.locator("option")).toContainText([/active event/]);
+    const suggested = choice.locator("option", { hasText: "(suggested)" });
+    await expect(suggested).toHaveCount(1);
+    expect(await choice.inputValue()).toBe(
+      await suggested.getAttribute("value"),
+    );
     await choice.selectOption("usr_coordinator");
     await page.getByTestId("assign-button").click();
     await page.waitForURL("**/queue");

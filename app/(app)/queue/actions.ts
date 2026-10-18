@@ -17,6 +17,8 @@ type AssignOutcome = { error: string } | { coordinatorName: string };
  * Coordinator, so of two Leads assigning it at the same moment exactly one
  * succeeds (AC6), and a request that already has one is refused with its
  * current Coordinator named (AC7); changing it is reassignment (SCRUM-21).
+ * Any other event, or none, reads "Request not found.", so the answer never
+ * tells which ids exist (SCRUM-68).
  */
 export async function assignCoordinator(
   input: unknown,
@@ -41,7 +43,10 @@ export async function assignCoordinator(
         where: { id: eventId },
         select: { id: true, name: true, organiserId: true, status: true },
       });
-      if (!event || event.status === "DRAFT") {
+      if (
+        !event ||
+        (event.status !== "SUBMITTED" && event.status !== "UNDER_REVIEW")
+      ) {
         return { error: "Request not found." };
       }
 
@@ -79,7 +84,7 @@ export async function assignCoordinator(
         return {
           error: current?.coordinator
             ? `This request is already assigned to ${current.coordinator.name}.`
-            : "This request is no longer waiting to be assigned.",
+            : "Request not found.",
         };
       }
 

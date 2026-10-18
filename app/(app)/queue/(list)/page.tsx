@@ -7,7 +7,7 @@ import { Forbidden } from "@/components/app/forbidden";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatDateTime, formatEventTime } from "@/lib/datetime";
-import { getUnassignedQueue } from "./queries";
+import { getUnassignedQueue } from "../queries";
 
 /** SCRUM-165 — the Lead's Unassigned queue. Access is decided by `can()`
  * (SCRUM-66 / SCRUM-67), not a role list here. */

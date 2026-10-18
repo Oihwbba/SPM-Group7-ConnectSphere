@@ -49,8 +49,8 @@ export async function OrganiserEvents({
   return <EventsClient events={events} openEventId={openEventId} />;
 }
 
-/** Coordinator view: requests assigned to this coordinator, plus submitted
- * requests no coordinator has picked up yet. Lives in its own file (not
+/** Coordinator view: exactly the requests assigned to this coordinator;
+ * unassigned ones wait in the Lead's queue (SCRUM-165 AC8). Lives in its own file (not
  * page.tsx) so it can be imported directly by
  * tests/unit/coordinator-events-access.test.ts — a page.tsx file may only
  * export the specific names Next.js recognises (default, metadata, etc.),
