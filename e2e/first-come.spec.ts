@@ -155,7 +155,7 @@ test.describe("SCRUM-134 — competing venue requests, first come, first served"
     const card = tech.getByTestId("review-request").filter({ hasText: later });
     const competing = card.getByTestId("competing-requests");
     await expect(competing).toContainText("Also wanted for overlapping events, earliest first:");
-    await expect(competing).toContainText(`"${earlier}"`);
+    await expect(competing).toContainText(`“${earlier}”, submitted 1 Jan 2036`);
     await expect(competing).toContainText("3 requested, 0 reserved");
 
     // AC5: once both are approved, reserving the later first would leave the
