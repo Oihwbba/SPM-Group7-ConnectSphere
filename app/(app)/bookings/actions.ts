@@ -16,10 +16,11 @@ import {
   EVENT_NOT_SCHEDULED_MESSAGE,
   eventBookingPeriod,
   holdExpiryMessage,
+  attendanceOverEventMessage,
+  coversEventPeriod,
   holdSettlementSchema,
   INVALID_PERIOD_MESSAGE,
-  notEventAttendanceMessage,
-  notEventPeriodMessage,
+  notCoveringEventMessage,
   overCapacityMessage,
   PAST_START_MESSAGE,
   venueAvailabilityQuerySchema,
@@ -82,7 +83,7 @@ export type BookingSummary = {
 };
 
 /**
- * The bookings that hold an event's one venue (SCRUM-50 AC8). A Held one
+ * The bookings that hold a venue for an event (SCRUM-162 AC2). A Held one
  * counts too, as it does in booking_one_per_venue_per_event (SCRUM-172), but
  * only until its expiry: after that the Coordinator makes a new request
  * (SCRUM-163 AC4), even before anything has marked the hold Expired.
@@ -176,13 +177,15 @@ export async function checkVenueAvailability(
  *
  * - An invalid period, or one starting in the past, is refused before
  *   anything else (AC5).
- * - Each event has one venue: if the event already has a Pending or
- *   Approved booking, for any venue, nothing is created and that booking is
- *   returned (AC8). A Rejected or Cancelled one does not count, so asking
- *   again after it creates a new booking and keeps the old one (AC9).
- * - The period must be the event's (rounded out to the half hour) and the
- *   attendance the event's expected attendance; anything else is refused
- *   (AC1). An event without dates or attendance cannot be booked yet.
+ * - An event can book several venues (SCRUM-162 AC1). If it already has a
+ *   Pending, Held or Approved booking at this venue, nothing is created and
+ *   that booking is returned (SCRUM-162 AC2). A Rejected, Expired or
+ *   Cancelled one does not count, so asking again after it creates a new
+ *   booking and keeps the old one (AC9).
+ * - The period must cover the event's whole period (rounded out to the half
+ *   hour), and the attendance is a whole number from 1 to the event's
+ *   expected attendance; anything else is refused (SCRUM-162 AC4). An event
+ *   without dates or attendance cannot be booked yet.
  * - Expected attendance above the venue's capacity is refused.
  * - A venue that is approved-booked or unavailable for any part of the period
  *   refuses the request outright — no row is written (AC3). Touching at an
@@ -243,30 +246,31 @@ export async function submitBookingRequest(
       return err("A venue can only be requested for an approved event.");
     }
 
-    const existingForEvent = () =>
+    const existingAtVenue = () =>
       prisma.booking.findFirst({
-        where: { eventId: data.eventId, ...eventVenueWhere(new Date()) },
+        where: {
+          eventId: data.eventId,
+          venueId: data.venueId,
+          ...eventVenueWhere(new Date()),
+        },
         select: summarySelect,
       });
 
-    const existing = await existingForEvent();
+    const existing = await existingAtVenue();
     if (existing) return ok({ booking: toSummary(existing), created: false });
 
-    // AC1: the booking covers the event's period and its expected attendance,
-    // not values the Coordinator chose.
+    // SCRUM-162 AC4: the venue holds the whole event, for some or all of its
+    // attendance.
     const eventPeriod = eventBookingPeriod(event);
     if (!eventPeriod || event.expectedAttendance === null) {
       return err(EVENT_NOT_SCHEDULED_MESSAGE);
     }
-    if (
-      period.startAt.getTime() !== eventPeriod.startAt.getTime() ||
-      period.endAt.getTime() !== eventPeriod.endAt.getTime()
-    ) {
-      const message = notEventPeriodMessage(eventPeriod);
+    if (!coversEventPeriod(period, eventPeriod)) {
+      const message = notCoveringEventMessage(eventPeriod);
       return err(message, { startAt: [message] });
     }
-    if (data.requestedAttendance !== event.expectedAttendance) {
-      const message = notEventAttendanceMessage(event.expectedAttendance);
+    if (data.requestedAttendance > event.expectedAttendance) {
+      const message = attendanceOverEventMessage(event.expectedAttendance);
       return err(message, { requestedAttendance: [message] });
     }
 
@@ -315,6 +319,7 @@ export async function submitBookingRequest(
             status: "PENDING",
             requestedAttendance: data.requestedAttendance,
             requiredFacilities: data.requiredFacilities,
+            requiredAccessibilityFeatures: data.requiredAccessibilityFeatures,
             requestedLayout: data.requestedLayout || null,
             requestNotes: data.requestNotes || null,
             requestedById: user!.id,
@@ -331,7 +336,7 @@ export async function submitBookingRequest(
       if (!violatesExclusion(error, "booking_one_per_venue_per_event")) {
         throw error;
       }
-      const winner = await existingForEvent();
+      const winner = await existingAtVenue();
       if (!winner) throw error;
       return ok({ booking: toSummary(winner), created: false });
     }

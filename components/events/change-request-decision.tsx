@@ -14,6 +14,9 @@ import {
 import { changeFieldLabel } from "@/lib/schemas/change-request";
 import { formatDateTime } from "@/lib/datetime";
 
+const DECIDE_FAILED_MESSAGE =
+  "The decision couldn't be sent. If the request above isn't decided, try again.";
+
 function shown(fieldName: string, value: string | null): string {
   if (value === null) return "—";
   return fieldName === "startAt" || fieldName === "endAt"
@@ -35,6 +38,11 @@ export function ChangeRequestDecision({
   onDecided: () => void;
 }) {
   const [view, setView] = useState<ChangeDecisionView | null>(null);
+  // A read that throws (a dropped connection, a server error) is shown, so the
+  // Coordinator isn't left without the controls and no idea why. "Not found"
+  // is the answer for anyone who may not decide, so it still renders nothing.
+  const [failed, setFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
   const [rejecting, setRejecting] = useState(false);
   const [reason, setReason] = useState("");
   const [saving, startSave] = useTransition();
@@ -47,24 +55,55 @@ export function ChangeRequestDecision({
         if (!stale) setView(result.ok ? result.data : null);
       })
       .catch(() => {
-        if (!stale) setView(null);
+        if (!stale) setFailed(true);
       });
     return () => {
       stale = true;
     };
-  }, [eventId]);
+  }, [eventId, attempt]);
 
+  if (failed) {
+    return (
+      <p role="alert" className="border-t pt-3 text-xs text-muted-foreground">
+        Couldn&apos;t load the decision for this change request.{" "}
+        <button
+          type="button"
+          className="underline"
+          onClick={() => {
+            setFailed(false);
+            setAttempt((n) => n + 1);
+          }}
+        >
+          Try again
+        </button>
+      </p>
+    );
+  }
   if (!view) return null;
 
   function decide(decision: "APPROVED" | "REJECTED") {
     startSave(async () => {
-      const result = await decideChangeRequest({
-        changeRequestId: view!.changeRequestId,
-        decision,
-        reason,
-      });
+      let result: Awaited<ReturnType<typeof decideChangeRequest>>;
+      try {
+        result = await decideChangeRequest({
+          changeRequestId: view!.changeRequestId,
+          decision,
+          reason,
+        });
+      } catch {
+        // A lost connection or an unexpected server error: the decision may
+        // or may not have been saved, so the list is read again, as the raise
+        // form does.
+        toast.error(DECIDE_FAILED_MESSAGE);
+        onDecided();
+        return;
+      }
       if (!result.ok) {
         toast.error(result.error);
+        // A blank reason changed nothing on the server. Anything else (decided
+        // in another tab, the event reassigned or closed) may mean the list is
+        // out of date, so it is read again.
+        if (!result.fieldErrors) onDecided();
         return;
       }
       toast.success(

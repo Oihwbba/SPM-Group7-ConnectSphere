@@ -15,16 +15,13 @@ every action asks it.
 
 **What this story doesn't cover yet:**
 
-- **AC2:** the Lead assigning a Coordinator is SCRUM-165 (not built). Until
-  then SCRUM-20's automatic assignment makes the same move, Submitted → Under
-  Review, and a resubmitted request whose Coordinator left the role is
-  assigned the same way rather than waiting in the Lead's queue (AC6).
 - **AC16, reassignment:** SCRUM-21 isn't built. Nothing that changes an
   event's Coordinator writes its status.
 
 | ID | Type | Criterion | Automated |
 |---|---|---|---|
 | [TC-135-01](#tc-135-01) | Positive | AC 1, AC 2, AC 3, AC 4, AC 5, AC 7, AC 8, AC 9, AC 10 | Unit |
+| [TC-135-02](#tc-135-02) | Positive | AC 2, AC 6 | Unit, e2e |
 | [TC-135-03](#tc-135-03) | Negative | AC 3, AC 4, AC 11 | Unit, e2e |
 | [TC-135-04](#tc-135-04) | Negative | AC 4 | Unit, e2e |
 | [TC-135-06](#tc-135-06) | Positive, Negative | AC 6, AC 13 | Unit |
@@ -48,18 +45,31 @@ every action asks it.
 
 **Automated by:** `tests/unit/event-lifecycle.test.ts` › "SCRUM-135 TC-135-01: …" (11 tests). The actions themselves: SCRUM-14, SCRUM-20, SCRUM-81 (TC-81-01, TC-81-05), SCRUM-117, SCRUM-128, SCRUM-26 and SCRUM-82 (TC-82-01, TC-82-09).
 
+### TC-135-02
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-135-02 |
+| Test Scenario | [Positive] AC 2, AC 6: the Lead's assignment and a resubmission make the moves the lifecycle allows, Submitted → Under Review |
+| Pre-conditions | A Submitted request with no Coordinator; a Rejected request marked Amend and resubmit, once with its Coordinator still in the role and once without. |
+| Test Steps | 1. As the Lead, assign a Coordinator from the Unassigned queue (SCRUM-165). <br> 2. As the Organiser, resubmit each rejected request. |
+| Test Data | — |
+| Expected Result | 1. Under Review with that Coordinator. 2. Back Under Review with the same Coordinator; or, if they no longer hold the role, Submitted with no Coordinator in the Lead's queue. |
+
+**Automated by:** these moves are SCRUM-165's actions, so its tests are this case's: `tests/unit/lead-queue.test.ts` › "SCRUM-165 [AC5, AC11] TC-165-07, TC-165-14: …"; `e2e/lead-queue.spec.ts` › "SCRUM-165 [AC1–AC5, AC8, AC11] …"; `tests/unit/clarification-and-amend.test.ts` › "SCRUM-108 [AC9, AC11, AC14] TC-108-05, SCRUM-165 [AC9] TC-165-12: …" and "SCRUM-165 [AC9] TC-165-12 (supersedes SCRUM-108 AC11): …". The lifecycle table allowing Submitted → Under Review is TC-135-01.
+
 ### TC-135-03
 
 | Item | Content |
 |---|---|
 | Test Case ID | TC-135-03 |
-| Test Scenario | [Negative] AC 3, AC 4, AC 11: a Submitted request with no Coordinator can't be approved or rejected |
-| Pre-conditions | "Submitted — Alumni Homecoming" (seeded) has no Coordinator. |
-| Test Steps | 1. As the Coordinator, open **Events**. <br> 2. Approve or reject it directly. |
+| Test Scenario | [Negative] AC 3, AC 4, AC 11: a Submitted request can't be approved or rejected, not even by a Coordinator assigned to it |
+| Pre-conditions | "Submitted — Alumni Homecoming" (seeded) has no Coordinator; a second Submitted request is assigned to `coordinator@test.local`. |
+| Test Steps | 1. As the Coordinator, open **Events**. <br> 2. Approve or reject each directly. |
 | Test Data | — |
-| Expected Result | 1. Its row has **Ask** but no **Approve** or **Reject**. 2. "This event is Submitted, so it can't be approved." (or "rejected."). Nothing changes and no Coordinator is assigned. |
+| Expected Result | 1. The unassigned request isn't in the list at all: it waits in the Lead's queue (SCRUM-165 AC8). 2. The unassigned one: "Event not found." The assigned one: "This event is Submitted, so it can't be approved." (or "rejected."). Nothing changes and no Coordinator is assigned. |
 
-**Automated by:** `tests/unit/event-lifecycle.test.ts` › "SCRUM-135 [AC3, AC4] TC-135-03: …"; `tests/unit/event-status.test.ts` › "SCRUM-135 [AC3, AC4, AC11] TC-135-03: …" (2 tests); `e2e/coordinator-assigned-events.spec.ts` › "SCRUM-135 AC3, AC4: …"; `e2e/events.spec.ts` (SCRUM-23 & SCRUM-24 journey)
+**Automated by:** `tests/unit/event-lifecycle.test.ts` › "SCRUM-135 [AC3, AC4] TC-135-03: …"; `tests/unit/event-status.test.ts` › "SCRUM-135 [AC3, AC4, AC11] TC-135-03: a Submitted request can't be %s, even by its assigned Coordinator, …" (2 tests) and "SCRUM-165 [AC8] TC-165-11: …"; `e2e/coordinator-assigned-events.spec.ts` › "SCRUM-165 [AC8] TC-165-11 (supersedes AC4): …" and "SCRUM-135 AC3, AC4: my Under Review event can be approved, and moves to Planning"; `e2e/events.spec.ts` (SCRUM-23 & SCRUM-24 journey)
 
 ### TC-135-04
 
@@ -70,9 +80,9 @@ every action asks it.
 | Pre-conditions | A Submitted request with no Coordinator. |
 | Test Steps | Reject it directly, with a reason and an outcome. |
 | Test Data | Reason "Too large for any venue."; Amend and resubmit. |
-| Expected Result | "This event is Submitted, so it can't be rejected." No status change, no assignment, no history entry. |
+| Expected Result | Refused: since SCRUM-165 AC8 the request is "not found" for a Coordinator nobody assigned. No status change, no assignment, no history entry. |
 
-**Automated by:** `tests/unit/clarification-and-amend.test.ts` › "SCRUM-135 [AC4] TC-135-04: …"
+**Automated by:** `tests/unit/clarification-and-amend.test.ts` › "SCRUM-165 [AC8] TC-165-11 (supersedes SCRUM-108 AC11): a Coordinator can't reject a request nobody was assigned to; it waits for the Lead"
 
 ### TC-135-06
 

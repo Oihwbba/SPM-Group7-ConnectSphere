@@ -44,8 +44,11 @@ import type { ActionResult } from "@/lib/action-result";
 import { cn } from "@/lib/utils";
 import { isValidPeriod } from "@/lib/period";
 import {
+  attendanceOverEventMessage,
+  coversEventPeriod,
   eventBookingPeriod,
   INVALID_PERIOD_MESSAGE,
+  notCoveringEventMessage,
   overCapacityMessage,
 } from "@/lib/schemas/booking";
 import {
@@ -53,7 +56,12 @@ import {
   submitBookingRequest,
   type BookingSummary,
 } from "../actions";
-import type { BookableEvent, RequestableVenue } from "../queries";
+import type {
+  BookableEvent,
+  JudgementRow,
+  RequestableVenue,
+} from "../queries";
+import { SuitabilityPanel } from "./suitability-panel";
 import { OrganiserVenueAnswers } from "@/components/events/organiser-answers";
 
 type Outcome =
@@ -67,9 +75,49 @@ const emptyForm = {
   end: "",
   attendance: "",
   facilities: [] as string[],
+  accessibility: [] as string[],
   layout: "",
   notes: "",
 };
+
+/** What venue search had entered, carried to the form by Request this venue. */
+export type SearchNeeds = {
+  facilities: string[];
+  accessibility: string[];
+  layout?: string;
+};
+
+/**
+ * SCRUM-38 AC9 — the facilities, accessibility features and layout entered in
+ * venue search, as the form starts with them: only values the form offers,
+ * and the layout only if the venue chosen in search supports it, so that
+ * venue is never dropped. Attendance isn't carried: the booking takes the
+ * event's (SCRUM-50 AC1) until SCRUM-162 lets it change.
+ */
+export function neededInSearch<
+  T extends {
+    id: string;
+    facilities: string[];
+    accessibilityFeatures: string[];
+    supportedLayouts: string[];
+  },
+>(venues: T[], venueId: string | undefined, needs: SearchNeeds) {
+  const offered = (pick: (v: T) => string[]) =>
+    new Set(venues.flatMap(pick));
+  const facilities = offered((v) => v.facilities);
+  const accessibility = offered((v) => v.accessibilityFeatures);
+  const fits = (layout: string) =>
+    venueId
+      ? venues.some(
+          (v) => v.id === venueId && v.supportedLayouts.includes(layout),
+        )
+      : offered((v) => v.supportedLayouts).has(layout);
+  return {
+    facilities: needs.facilities.filter((f) => facilities.has(f)),
+    accessibility: needs.accessibility.filter((a) => accessibility.has(a)),
+    layout: needs.layout && fits(needs.layout) ? needs.layout : "",
+  };
+}
 
 /** Radix Select cannot use "" as an item value, so "no preference" has its own. */
 const NO_LAYOUT = "none";
@@ -129,9 +177,12 @@ const emptySubscribe = () => () => {};
 
 /**
  * SCRUM-50 — the Coordinator's request form. Choosing an event fills in its
- * period and expected attendance, which cannot be changed here (AC1), and
- * shows the Organiser's venue and accessibility answers read-only; the
- * Coordinator enters the layout and facilities (SCRUM-170 AC2). The room
+ * period and expected attendance, which the Coordinator can change for this
+ * venue: the period may only grow to cover more than the event, and the
+ * attendance may be any part of the event's (SCRUM-162 AC4). It shows the
+ * Organiser's venue and accessibility answers read-only; the Coordinator
+ * enters this venue's layout, facilities and accessibility needs (SCRUM-170
+ * AC2, SCRUM-162 AC9). The room
  * layout comes before the venue and narrows the venues offered. Once a venue
  * and period are chosen, the server is asked whether the venue is free and the
  * answer is shown before submitting; a taken venue disables Submit. The
@@ -140,11 +191,70 @@ const emptySubscribe = () => () => {};
 export function RequestForm({
   events,
   venues,
+  initialEventId,
+  initialVenueId,
+  initialNeeds,
+  judgements = [],
+  judgeableEventIds = [],
 }: {
   events: BookableEvent[];
   venues: RequestableVenue[];
+  /** SCRUM-38 AC9: chosen in venue search, so the form opens with them. */
+  initialEventId?: string;
+  initialVenueId?: string;
+  /** SCRUM-38 AC9: what was entered in venue search (neededInSearch). */
+  initialNeeds?: SearchNeeds;
+  /** SCRUM-40 AC8 — the Coordinator's judgements for these events. */
+  judgements?: JudgementRow[];
+  /** SCRUM-40 AC8 — the events this Coordinator may record a judgement for. */
+  judgeableEventIds?: string[];
 }) {
-  const [form, setForm] = useState(emptyForm);
+  const facilityOptions = Array.from(
+    new Set(venues.flatMap((v) => v.facilities)),
+  ).sort();
+  const layoutOptions = Array.from(
+    new Set(venues.flatMap((v) => v.supportedLayouts)),
+  ).sort();
+  // SCRUM-40 AC3 — the accessibility features any venue offers.
+  const accessibilityOptions = Array.from(
+    new Set(venues.flatMap((v) => v.accessibilityFeatures)),
+  ).sort();
+
+  /** A venue chosen earlier is dropped if it cannot take the new layout. */
+  const venueFor = (venueId: string, layout: string) =>
+    venuesForLayout(venues, layout).some((v) => v.id === venueId)
+      ? venueId
+      : "";
+
+  // SCRUM-170 AC2: the Organiser's answers are free text, shown beside the
+  // form; the layout and facilities are the Coordinator's to enter.
+  function withEvent(prev: typeof emptyForm, eventId: string) {
+    const event = events.find((e) => e.id === eventId);
+    const period = event && eventBookingPeriod(event);
+    return {
+      ...prev,
+      eventId,
+      ...(event && {
+        start: utcToSgWallTime(period?.startAt),
+        end: utcToSgWallTime(period?.endAt),
+        attendance: event.expectedAttendance?.toString() ?? "",
+      }),
+    };
+  }
+
+  // SCRUM-38 AC9: the event and venue picked in search are chosen already,
+  // with the facilities, accessibility features and layout entered there.
+  const [form, setForm] = useState(() => {
+    const withChosenEvent = initialEventId
+      ? withEvent(emptyForm, initialEventId)
+      : emptyForm;
+    return {
+      ...withChosenEvent,
+      ...(initialNeeds &&
+        neededInSearch(venues, initialVenueId, initialNeeds)),
+      ...(initialVenueId && { venueId: initialVenueId }),
+    };
+  });
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
   const [outcome, setOutcome] = useState<Outcome | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -155,13 +265,6 @@ export function RequestForm({
     () => false,
   );
 
-  const facilityOptions = Array.from(
-    new Set(venues.flatMap((v) => v.facilities)),
-  ).sort();
-  const layoutOptions = Array.from(
-    new Set(venues.flatMap((v) => v.supportedLayouts)),
-  ).sort();
-
   function update<K extends keyof typeof emptyForm>(
     key: K,
     value: (typeof emptyForm)[K],
@@ -169,26 +272,8 @@ export function RequestForm({
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
-  /** A venue chosen earlier is dropped if it cannot take the new layout. */
-  const venueFor = (venueId: string, layout: string) =>
-    venuesForLayout(venues, layout).some((v) => v.id === venueId)
-      ? venueId
-      : "";
-
-  // SCRUM-170 AC2: the Organiser's answers are free text, shown beside the
-  // form; the layout and facilities are the Coordinator's to enter.
   function chooseEvent(eventId: string) {
-    const event = events.find((e) => e.id === eventId);
-    const period = event && eventBookingPeriod(event);
-    setForm((prev) => ({
-      ...prev,
-      eventId,
-      ...(event && {
-        start: utcToSgWallTime(period?.startAt),
-        end: utcToSgWallTime(period?.endAt),
-        attendance: event.expectedAttendance?.toString() ?? "",
-      }),
-    }));
+    setForm((prev) => withEvent(prev, eventId));
   }
   const chosenEvent = events.find((e) => e.id === form.eventId);
 
@@ -206,6 +291,15 @@ export function RequestForm({
       form.facilities.includes(facility)
         ? form.facilities.filter((f) => f !== facility)
         : [...form.facilities, facility],
+    );
+  }
+
+  function toggleAccessibility(feature: string) {
+    update(
+      "accessibility",
+      form.accessibility.includes(feature)
+        ? form.accessibility.filter((f) => f !== feature)
+        : [...form.accessibility, feature],
     );
   }
 
@@ -264,6 +358,7 @@ export function RequestForm({
         endAt: sgWallTimeToUtcIso(form.end) ?? "",
         requestedAttendance: form.attendance,
         requiredFacilities: form.facilities,
+        requiredAccessibilityFeatures: form.accessibility,
         requestedLayout: form.layout,
         requestNotes: form.notes,
       });
@@ -303,16 +398,38 @@ export function RequestForm({
 
   const layoutVenues = venuesForLayout(venues, form.layout);
 
-  // Caught as it is typed; the server refuses the same thing (actions.ts).
+  // Caught as it is typed; the server refuses the same things (actions.ts).
   const selectedVenue = venues.find((v) => v.id === form.venueId);
   const attendance = Number(form.attendance);
+  const eventPeriod = chosenEvent ? eventBookingPeriod(chosenEvent) : null;
+  const expected = chosenEvent?.expectedAttendance ?? null;
+  // SCRUM-162 AC4: a whole number from 1 to the event's expected attendance.
+  const attendanceProblem = !form.attendance
+    ? null
+    : !Number.isInteger(attendance) || attendance < 1
+      ? "Attendance must be a whole number greater than zero."
+      : expected !== null && attendance > expected
+        ? attendanceOverEventMessage(expected)
+        : null;
   const overCapacity =
-    selectedVenue && attendance > selectedVenue.capacity
+    !attendanceProblem && selectedVenue && attendance > selectedVenue.capacity
       ? overCapacityMessage(
           selectedVenue.name,
           selectedVenue.capacity,
           attendance,
         )
+      : null;
+  // SCRUM-162 AC4: the venue must hold the whole event.
+  const shortPeriod =
+    eventPeriod &&
+    startIso &&
+    endIso &&
+    !periodInvalid &&
+    !coversEventPeriod(
+      { startAt: new Date(startIso), endAt: new Date(endIso) },
+      eventPeriod,
+    )
+      ? notCoveringEventMessage(eventPeriod)
       : null;
 
   const fieldError = (key: string) =>
@@ -432,53 +549,69 @@ export function RequestForm({
                 <Label htmlFor="attendance">Expected attendance</Label>
                 <Input
                   id="attendance"
-                  readOnly
+                  type="number"
+                  inputMode="numeric"
+                  min={1}
+                  max={expected ?? undefined}
+                  step={1}
                   value={form.attendance}
+                  onChange={(e) => update("attendance", e.target.value)}
                   placeholder="Taken from the event"
-                  aria-invalid={overCapacity ? true : undefined}
+                  aria-invalid={
+                    attendanceProblem || overCapacity ? true : undefined
+                  }
                   aria-describedby={
-                    overCapacity ? "attendance-capacity" : undefined
+                    attendanceProblem || overCapacity
+                      ? "attendance-capacity"
+                      : undefined
                   }
                   className={cn(
-                    "bg-muted/40",
-                    overCapacity &&
+                    (attendanceProblem || overCapacity) &&
                       "border-destructive focus-visible:ring-destructive",
                   )}
                 />
-                {overCapacity ? (
+                {attendanceProblem || overCapacity ? (
                   <p
                     id="attendance-capacity"
                     className="text-xs text-destructive"
                   >
-                    {overCapacity}
+                    {attendanceProblem ?? overCapacity}
                   </p>
                 ) : (
                   fieldError("requestedAttendance")
                 )}
               </div>
 
-              {(["start", "end"] as const).map((which) => {
-                const iso = sgWallTimeToUtcIso(form[which]);
-                const label = which === "start" ? "Start" : "End";
-                return (
-                  <div key={which} className="space-y-2">
-                    <Label htmlFor={which}>{label}</Label>
-                    <Input
-                      id={which}
-                      readOnly
-                      value={iso ? formatDateTime(iso) : ""}
-                      placeholder="Taken from the event"
-                      className="bg-muted/40"
-                    />
-                    {fieldError(which === "start" ? "startAt" : "endAt")}
-                  </div>
-                );
-              })}
+              {(["start", "end"] as const).map((which) => (
+                <div key={which} className="space-y-2">
+                  <Label htmlFor={which}>
+                    {which === "start" ? "Start" : "End"}
+                  </Label>
+                  <Input
+                    id={which}
+                    type="datetime-local"
+                    step={1800}
+                    value={form[which]}
+                    onChange={(e) => update(which, e.target.value)}
+                  />
+                  {fieldError(which === "start" ? "startAt" : "endAt")}
+                </div>
+              ))}
+              {shortPeriod && (
+                <p
+                  className="text-xs text-destructive sm:col-span-2"
+                  data-testid="short-period"
+                >
+                  {shortPeriod}
+                </p>
+              )}
               {form.eventId && (
                 <p className="text-xs text-muted-foreground sm:col-span-2">
-                  The period and attendance are the event&apos;s, with the
-                  period rounded out to the half hour. Change them on the event
-                  if they are wrong.
+                  The period and attendance start from the event&apos;s, with
+                  the period rounded out to the half hour. For this venue the
+                  period can be longer but must cover the whole event, and the
+                  attendance can be part of the event&apos;s, for a breakout
+                  room.
                 </p>
               )}
 
@@ -486,6 +619,28 @@ export function RequestForm({
                 <LiveAvailability
                   live={liveNow}
                   venueName={selectedVenue?.name ?? "The venue"}
+                />
+              )}
+
+              {form.eventId && selectedVenue && (
+                <SuitabilityPanel
+                  eventId={form.eventId}
+                  venueId={selectedVenue.id}
+                  venue={selectedVenue}
+                  needs={{
+                    attendance: form.attendance ? attendance : null,
+                    facilities: form.facilities,
+                    accessibilityFeatures: form.accessibility,
+                    layout: form.layout || null,
+                  }}
+                  judgement={
+                    judgements.find(
+                      (j) =>
+                        j.eventId === form.eventId &&
+                        j.venueId === selectedVenue.id,
+                    ) ?? null
+                  }
+                  canJudge={judgeableEventIds.includes(form.eventId)}
                 />
               )}
             </div>
@@ -518,6 +673,36 @@ export function RequestForm({
               </div>
             </fieldset>
 
+            {accessibilityOptions.length > 0 && (
+              <fieldset className="space-y-2">
+                <legend className="text-sm font-medium">
+                  Accessibility needs
+                </legend>
+                <div className="flex flex-wrap gap-2">
+                  {accessibilityOptions.map((feature) => {
+                    const selected = form.accessibility.includes(feature);
+                    return (
+                      <button
+                        key={feature}
+                        type="button"
+                        aria-pressed={selected}
+                        onClick={() => toggleAccessibility(feature)}
+                        className={cn(
+                          "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                          selected
+                            ? "border-foreground bg-foreground text-background"
+                            : "border-border bg-background text-muted-foreground hover:border-primary/50 hover:text-foreground",
+                        )}
+                      >
+                        {selected && <Check className="h-3.5 w-3.5" />}
+                        {feature}
+                      </button>
+                    );
+                  })}
+                </div>
+              </fieldset>
+            )}
+
             <div className="space-y-2">
               <Label htmlFor="notes">Other details for Venue Staff</Label>
               <Textarea
@@ -532,7 +717,13 @@ export function RequestForm({
             <div className="flex justify-end border-t pt-4">
               <Button
                 type="submit"
-                disabled={isPending || overCapacity !== null || blockedLive}
+                disabled={
+                  isPending ||
+                  overCapacity !== null ||
+                  attendanceProblem !== null ||
+                  shortPeriod !== null ||
+                  blockedLive
+                }
               >
                 {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
                 Submit request
@@ -651,8 +842,8 @@ function SuccessDialog({
 }
 
 /**
- * The event's existing request (SCRUM-50 AC8), or a refusal, stays on the
- * page beside the form.
+ * The event's existing request for the venue (SCRUM-162 AC2), or a refusal,
+ * stays on the page beside the form.
  */
 function OutcomePanel({
   outcome,
@@ -685,7 +876,7 @@ function OutcomePanel({
       <Info className="mt-0.5 h-5 w-5 shrink-0" />
       <div>
         <p className="font-semibold">
-          This event already has a venue request. Each event has one venue.
+          This event already has a request for this venue.
         </p>
         <p>
           {booking.venueName}, {formatDateTime(booking.startAt)} to{" "}

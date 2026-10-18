@@ -134,9 +134,8 @@ and SCRUM-108 AC11 had allowed).
    The **Cancel event** button reads `CANCELLABLE` from the same table.
 2. **Only Under Review is decided.** `transitionEventStatus` refuses a
    Submitted request, and the list no longer shows **Approve** or **Reject**
-   on one. The self-assignment on deciding is removed. Until SCRUM-165's Lead
-   assigns Coordinators, SCRUM-20's automatic assignment moves requests to
-   Under Review.
+   on one. The self-assignment on deciding is removed. The Lead's assignment
+   (SCRUM-165) is what moves a request to Under Review.
 3. **Rules that aren't about status stay with their action.** Who may act,
    whether the checklist is complete (SCRUM-81), and whether a Planning event
    was ever Confirmed or has registrations (SCRUM-117, SCRUM-82 AC5) are still
@@ -161,5 +160,5 @@ and SCRUM-108 AC11 had allowed).
 - A new transition is one line in the table, and a test that lists every
   allowed pair (TC-135-11) fails until the story's change is deliberate.
 - Refusals read the same everywhere.
-- A Submitted request no Coordinator was assigned to waits for one; with the
-  automatic assignment, that only happens when no Coordinator exists.
+- A Submitted request no Coordinator was assigned to waits in the Lead's
+  Unassigned queue (SCRUM-165).

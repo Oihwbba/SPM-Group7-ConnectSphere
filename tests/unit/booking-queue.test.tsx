@@ -32,6 +32,7 @@ const row: PendingBookingRow = {
   turnaroundMinutes: 0,
   requestedAttendance: 250,
   requiredFacilities: ["projector", "stage"],
+  requiredAccessibilityFeatures: [],
   requestedLayout: "banquet",
   requestNotes: null,
   createdAt: new Date("2035-01-01T01:00:00.000Z"),
@@ -49,6 +50,7 @@ const row: PendingBookingRow = {
     location: "Level 1, Block C",
     capacity: 200,
     facilities: ["sound-system", "projector"],
+    accessibilityFeatures: [],
     supportedLayouts: ["banquet"],
     setupMinutes: 0,
     turnaroundMinutes: 0,
@@ -56,6 +58,7 @@ const row: PendingBookingRow = {
   },
   outsideHours: null,
   blockers: [],
+  judgement: null,
 };
 
 describe("BookingQueue", () => {

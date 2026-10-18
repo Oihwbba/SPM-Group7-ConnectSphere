@@ -1,5 +1,8 @@
 import type { EventStatus, Prisma, PrismaClient } from "@prisma/client";
 
+import { withdrawPendingHoldNotices } from "@/lib/booking-holds";
+import { withdrawRegistrationClosedNotice } from "@/lib/event-notifications";
+
 /**
  * SCRUM-82 — closing an event: cancelling one that won't go ahead, and
  * completing one that has finished. There is no scheduler (the graders run
@@ -10,7 +13,6 @@ import type { EventStatus, Prisma, PrismaClient } from "@prisma/client";
  * docs/adr/0019-closing-an-event.md.
  */
 
-type Db = PrismaClient | Prisma.TransactionClient;
 
 /** AC10: still being decided or planned, so it can become overdue. */
 const UNDECIDED: EventStatus[] = ["SUBMITTED", "UNDER_REVIEW", "PLANNING"];
@@ -25,8 +27,10 @@ const UNDECIDED: EventStatus[] = ["SUBMITTED", "UNDER_REVIEW", "PLANNING"];
  * pending requests; equipment reservations, whose stock returns to the pool;
  * open equipment requests; a safety check awaiting review becomes Outdated;
  * registrations are cancelled; submitted change requests are rejected with the
- * reason. The Organiser, the Coordinator and each Attendee whose registration
- * was cancelled are notified.
+ * reason. Notices written ahead for the event (a hold's reminder and expiry,
+ * and registration closing) are withdrawn, since none of them will happen.
+ * The Organiser, the Coordinator and each Attendee whose registration was
+ * cancelled are notified.
  */
 export async function cancelInTransaction(
   tx: Prisma.TransactionClient,
@@ -55,6 +59,8 @@ export async function cancelInTransaction(
     where: { eventId, status: { in: ["PENDING", "HELD", "APPROVED"] } },
     data: { status: "CANCELLED" },
   });
+  await withdrawPendingHoldNotices(tx, { eventId }, now);
+  await withdrawRegistrationClosedNotice(tx, eventId, now);
   const reservations = await tx.reservation.updateMany({
     where: { eventId, status: "CONFIRMED" },
     data: { status: "CANCELLED", cancelledAt: now },
@@ -164,17 +170,19 @@ export function isOverdue(
  * but a Confirmed event is touched, so a Cancelled one never completes and a
  * Completed one isn't completed twice. One UPDATE … RETURNING decides which
  * rows changed, so two pages loading at the same moment complete each event
- * once and write one history entry for it.
+ * once and write one history entry for it. The history entries are written in
+ * the same transaction, so a completed event always has one.
  *
  * Times are stored as UTC without a time zone, hence the ISO string cast to
  * `timestamp`.
  */
 export async function completeFinishedEvents(
-  db: Db,
+  db: PrismaClient,
   now: Date = new Date(),
 ): Promise<string[]> {
   const at = now.toISOString();
-  const completed = await db.$queryRaw<{ id: string }[]>`
+  return db.$transaction(async (tx) => {
+    const completed = await tx.$queryRaw<{ id: string }[]>`
     UPDATE "Event"
        SET "status" = 'COMPLETED',
            "completedAt" = ${at}::timestamp,
@@ -182,19 +190,20 @@ export async function completeFinishedEvents(
      WHERE "status" = 'CONFIRMED'
        AND "endAt" < ${at}::timestamp
     RETURNING "id"`;
-  if (completed.length > 0) {
-    await db.auditLog.createMany({
-      data: completed.map(({ id }) => ({
-        entityType: "Event",
-        entityId: id,
-        action: "STATUS_CHANGED",
-        actorId: null,
-        fieldName: "status",
-        oldValue: "CONFIRMED",
-        newValue: "COMPLETED",
-        summary: "Completed after its end time (SCRUM-82)",
-      })),
-    });
-  }
-  return completed.map(({ id }) => id);
+    if (completed.length > 0) {
+      await tx.auditLog.createMany({
+        data: completed.map(({ id }) => ({
+          entityType: "Event",
+          entityId: id,
+          action: "STATUS_CHANGED",
+          actorId: null,
+          fieldName: "status",
+          oldValue: "CONFIRMED",
+          newValue: "COMPLETED",
+          summary: "Completed after its end time (SCRUM-82)",
+        })),
+      });
+    }
+    return completed.map(({ id }) => id);
+  });
 }

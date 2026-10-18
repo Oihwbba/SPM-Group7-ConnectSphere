@@ -91,7 +91,7 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-128 — deciding a change request", (
     await prisma.$disconnect();
   });
 
-  it("SCRUM-128 [AC2, AC4, AC5] TC-128-11: approving an impactful change to a Confirmed event applies it, flags the booking, outdates the safety check and returns the event to Planning, with registrations kept", async () => {
+  it("SCRUM-128 [AC2, AC4, AC5] TC-128-11: approving an impactful change to a Confirmed event applies it, flags the booking, outdates the safety check and returns the event to Planning, with registrations kept and its scheduled Registration closed notice withdrawn", async () => {
     const eventId = await confirmedEvent(3);
     const bookingId = (
       await prisma.booking.create({
@@ -118,6 +118,17 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-128 — deciding a change request", (
       select: { id: true },
     });
     await prisma.registration.create({ data: { eventId, userId: "usr_attendee" } });
+    // Confirming wrote it ahead, to show when registration closes (SCRUM-45 AC11).
+    await prisma.notification.create({
+      data: {
+        userId: "usr_organiser",
+        type: "EVENT_STATUS_CHANGED",
+        title: "Registration closed",
+        message: "…",
+        eventId,
+        showFromAt: day(3).startAt,
+      },
+    });
     const requestId = await changeRequest(eventId, [
       { fieldName: "expectedAttendance", oldValue: "40", newValue: "90", isMajor: true },
     ]);
@@ -146,6 +157,11 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-128 — deciding a change request", (
     expect((await prisma.registration.findFirstOrThrow({ where: { eventId } })).status).toBe(
       "REGISTERED",
     );
+    expect(
+      await prisma.notification.count({
+        where: { eventId, title: "Registration closed", withdrawnAt: null },
+      }),
+    ).toBe(0);
   });
 
   it("SCRUM-128 [AC2] TC-128-12: if applying fails, neither the event nor the request is saved", async () => {

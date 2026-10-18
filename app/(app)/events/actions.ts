@@ -14,7 +14,6 @@ import {
 } from "@/lib/schemas/event";
 import { ok, err, type ActionResult } from "@/lib/action-result";
 import { auditValue } from "@/lib/audit-value";
-import { pickCoordinator } from "@/lib/coordinator-assignment";
 import { getReadinessChecklist } from "@/lib/event-readiness";
 import {
   liveHoldWhere,
@@ -32,9 +31,8 @@ import { canTransition, transitionRefusal } from "@/lib/event-lifecycle";
  * one action. */
 class SubmitEventError extends Error {}
 
-// Coordinators decide; they do not claim. `submitted → under review` now
-// happens automatically inside submitEventRequest via SCRUM-20's
-// pickCoordinator, so it is deliberately not accepted here.
+// Coordinators decide; they do not claim. `submitted → under review` happens
+// when the Lead assigns a Coordinator (SCRUM-165), so it is not accepted here.
 const statusTransitionSchema = z.object({
   eventId: z.string().min(1),
   nextStatus: z.enum(["APPROVED", "REJECTED"]),
@@ -222,10 +220,7 @@ export async function submitEventRequest(
     // SCRUM-108: set when this submission is an amended rejected request.
     let resubmitted = false;
 
-    // SCRUM-14's write plus SCRUM-20's auto-assignment happen in ONE
-    // transaction: pickCoordinator takes an advisory lock that is held until
-    // this transaction commits, so a concurrent submission waits and then
-    // counts this event's assignment when it computes coordinator load.
+    // SCRUM-14's write, its history and its notice happen in ONE transaction.
     await prisma.$transaction(async (tx) => {
       if (id) {
         // Submit an existing draft event (US14/US15 transition from DRAFT -> SUBMITTED)
@@ -345,7 +340,6 @@ export async function submitEventRequest(
         eventId = created.id;
       }
 
-      // SCRUM-20: assign exactly one coordinator, fairly, no accept/decline.
       if (resubmitted) {
         // SCRUM-108 AC9, AC14: the same event, amended and resubmitted by
         // its Organiser, kept in its history.
@@ -363,9 +357,8 @@ export async function submitEventRequest(
         });
       }
 
-      // SCRUM-108 AC11: a resubmitted request goes back to the Coordinator
-      // who reviewed it, without running automatic assignment again, as long
-      // as they still hold the role.
+      // SCRUM-165 AC9: a resubmitted request goes back to the Coordinator who
+      // reviewed it, as long as they still hold the role.
       const keepsCoordinator =
         resubmitted &&
         previousCoordinatorId !== null &&
@@ -405,8 +398,8 @@ export async function submitEventRequest(
       }
 
       // SCRUM-45 AC1: the Organiser is told it was submitted and is waiting
-      // to be assigned. Being assigned is a notice of its own: below while
-      // assignment is automatic, and the Lead's once SCRUM-165 replaces it.
+      // to be assigned. Being assigned is a notice of its own, sent when the
+      // Lead assigns a Coordinator (SCRUM-165).
       await notifyAboutEvent(
         tx,
         [user!.id],
@@ -417,49 +410,10 @@ export async function submitEventRequest(
         },
       );
 
-      const coordinatorId = await pickCoordinator(tx);
-
-      if (coordinatorId) {
-        await tx.event.update({
-          where: { id: eventId! },
-          data: { coordinatorId, status: "UNDER_REVIEW" },
-        });
-
-        await tx.notification.createMany({
-          data: [
-            {
-              userId: user!.id,
-              type: "COORDINATOR_ASSIGNED",
-              title: "A coordinator was assigned",
-              message: `Your event "${name}" is now under review.`,
-              eventId: eventId!,
-            },
-            {
-              userId: coordinatorId,
-              type: "COORDINATOR_ASSIGNED",
-              title: "You were assigned an event",
-              message: `"${name}" was assigned to you for review.`,
-              eventId: eventId!,
-            },
-          ],
-        });
-
-        await tx.auditLog.create({
-          data: {
-            entityType: "Event",
-            entityId: eventId!,
-            action: "ASSIGNED",
-            actorId: null, // system-performed, not a specific user's action
-            fieldName: "coordinatorId",
-            oldValue: previousCoordinatorId,
-            newValue: coordinatorId,
-            summary: "Auto-assigned on submission (SCRUM-20)",
-          },
-        });
-      } else if (previousCoordinatorId) {
-        // SCRUM-108 AC11: a resubmission whose Coordinator lost the role,
-        // with nobody to assign, is left unassigned like a first submission,
-        // so it shows in every Coordinator's queue rather than in no one's.
+      // SCRUM-165 AC1: no Coordinator is assigned on submission; the request
+      // stays Submitted and waits in the Lead's Unassigned queue. AC9: a
+      // resubmission whose Coordinator no longer holds the role returns there.
+      if (previousCoordinatorId) {
         await tx.event.update({
           where: { id: eventId! },
           data: { coordinatorId: null },
@@ -474,14 +428,10 @@ export async function submitEventRequest(
             oldValue: previousCoordinatorId,
             newValue: null,
             summary:
-              "Unassigned on resubmission: the coordinator no longer holds the role (SCRUM-108)",
+              "Back in the Unassigned queue on resubmission: the coordinator no longer holds the role (SCRUM-165 AC9)",
           },
         });
       }
-      // No coordinator available: the event still reaches SUBMITTED (set
-      // above) and stays visible to coordinators — it must not fail
-      // silently, so we deliberately do nothing further here rather than
-      // throwing.
     });
 
     revalidatePath("/events");
@@ -619,7 +569,9 @@ export async function transitionEventStatus(
     // SCRUM-81: approval moves the event straight to Planning.
     const approved = nextStatus === "APPROVED";
     // SCRUM-135 AC3, AC4, AC11: only a request Under Review, which therefore
-    // has its Coordinator, is decided here. A Submitted request waits for one.
+    // has its Coordinator, is decided here. Only the assigned Coordinator
+    // gets this far (SCRUM-165 AC8), so deciding never changes who the
+    // Coordinator is; a Submitted request waits for the Lead to assign one.
     if (event.status !== "UNDER_REVIEW") {
       return err(transitionRefusal(event.status, approved ? "approved" : "rejected"));
     }

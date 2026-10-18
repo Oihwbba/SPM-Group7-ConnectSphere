@@ -1066,6 +1066,8 @@ describe("the readiness checklist's venue item — SCRUM-163 AC6", () => {
     holdExpiresAt: Date | null = null,
   ) => ({
     id: `bkg_${n}`,
+    venue: { name: "Main Hall" },
+    requestedAttendance: 100,
     status,
     holdExpiresAt,
     holdApprovedAt: null as Date | null,
@@ -1106,8 +1108,20 @@ describe("the readiness checklist's venue item — SCRUM-163 AC6", () => {
         complete: false,
         state: "Held until 25 May 2031, 6:00 pm SGT – confirm to secure",
         reason: null,
-        heldBookingId: "bkg_1",
-        holdApproved: false,
+        // SCRUM-162 AC8: the hold is listed, to confirm or release.
+        bookings: [
+          {
+            id: "bkg_1",
+            venueName: "Main Hall",
+            attendance: 100,
+            state: "Held until 25 May 2031, 6:00 pm SGT – confirm to secure",
+            complete: false,
+            reason: null,
+            held: true,
+            holdApproved: false,
+            pending: false,
+          },
+        ],
       },
     });
   });
@@ -1125,8 +1139,19 @@ describe("the readiness checklist's venue item — SCRUM-163 AC6", () => {
         complete: false,
         state: "Held until 25 May 2031, 6:00 pm SGT – confirm to secure",
         reason: null,
-        heldBookingId: "bkg_1",
-        holdApproved: true,
+        bookings: [
+          {
+            id: "bkg_1",
+            venueName: "Main Hall",
+            attendance: 100,
+            state: "Held until 25 May 2031, 6:00 pm SGT – confirm to secure",
+            complete: false,
+            reason: null,
+            held: true,
+            holdApproved: true,
+            pending: false,
+          },
+        ],
       },
     });
   });
@@ -1155,7 +1180,7 @@ describe("the readiness checklist's venue item — SCRUM-163 AC6", () => {
     ).toMatchObject({ state: "Rejected", reason: "Too small." });
   });
 
-  it("SCRUM-163 [AC6] TC-163-11: a pending request after an expired hold reads Pending; an approval covering the event still wins over a hold", async () => {
+  it("SCRUM-163 [AC6] TC-163-11, SCRUM-162 [AC8] TC-162-13: a pending request after an expired hold reads Pending; a live hold beside an approval keeps the venue incomplete", async () => {
     expect(
       (await venueOf([row("EXPIRED", 1, NOW), row("PENDING", 2)])).venue.state,
     ).toBe("Pending");
@@ -1164,6 +1189,12 @@ describe("the readiness checklist's venue item — SCRUM-163 AC6", () => {
         row("HELD", 1, new Date("2031-05-25T10:00:00Z")),
         row("APPROVED", 2),
       ]),
-    ).toMatchObject({ ready: true, venue: { state: "Approved" } });
+    ).toMatchObject({
+      ready: false,
+      venue: {
+        complete: false,
+        state: "Held until 25 May 2031, 6:00 pm SGT – confirm to secure",
+      },
+    });
   });
 });

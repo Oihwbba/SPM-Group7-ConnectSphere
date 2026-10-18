@@ -35,9 +35,9 @@ export const INVALID_PERIOD_MESSAGE =
 const HALF_HOUR_MS = 30 * 60 * 1000;
 
 /**
- * SCRUM-50 AC1 — the period a venue is requested for: the event's own, with
- * the start rounded down and the end rounded up to the half hour, so it is
- * never shorter than the event. Singapore is a whole number of hours from
+ * SCRUM-50 AC1, SCRUM-162 AC4 — the period a venue request starts from: the
+ * event's own, with the start rounded down and the end rounded up to the half
+ * hour, so it is never shorter than the event. Singapore is a whole number of hours from
  * UTC, so rounding the UTC instant rounds the Singapore time the same way.
  * An event without both dates has no period yet.
  */
@@ -57,15 +57,24 @@ export function eventBookingPeriod(event: {
 export const EVENT_NOT_SCHEDULED_MESSAGE =
   "This event has no dates or expected attendance yet. Set them on the event before requesting a venue.";
 
-export function notEventPeriodMessage(period: {
+/** SCRUM-162 AC4 — a venue is booked for at least the event's whole period. */
+export function coversEventPeriod(
+  period: { startAt: Date; endAt: Date },
+  eventPeriod: { startAt: Date; endAt: Date },
+): boolean {
+  return period.startAt <= eventPeriod.startAt && period.endAt >= eventPeriod.endAt;
+}
+
+export function notCoveringEventMessage(period: {
   startAt: Date;
   endAt: Date;
 }): string {
-  return `The requested period must be the event's: ${formatDateTime(period.startAt)} to ${formatDateTime(period.endAt)}.`;
+  return `The requested period must cover the event's whole period: ${formatDateTime(period.startAt)} to ${formatDateTime(period.endAt)}.`;
 }
 
-export function notEventAttendanceMessage(attendance: number): string {
-  return `The expected attendance must be the event's: ${attendance}.`;
+/** SCRUM-162 AC4 — a venue's attendance is from 1 to the event's expected attendance. */
+export function attendanceOverEventMessage(attendance: number): string {
+  return `The expected attendance for this venue must be from 1 to the event's ${attendance}.`;
 }
 
 /**
@@ -86,6 +95,10 @@ export const bookingRequestSchema = z
       .int("Attendance must be a whole number.")
       .positive("Attendance must be greater than zero."),
     requiredFacilities: z.array(z.string().trim().min(1)).default([]),
+    // SCRUM-40 AC3 — compared with the venue's features for suitability.
+    requiredAccessibilityFeatures: z
+      .array(z.string().trim().min(1))
+      .default([]),
     requestedLayout: z.string().trim().max(100).optional(),
     requestNotes: z.string().trim().max(2000).optional(),
   })

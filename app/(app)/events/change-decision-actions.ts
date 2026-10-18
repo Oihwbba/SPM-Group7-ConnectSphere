@@ -18,8 +18,10 @@ import {
 import { cancelInTransaction } from "@/lib/event-closing";
 import { EQUIPMENT_REQUEST_STATUS_LABEL } from "@/lib/equipment/requests";
 import { flagArrangements, flaggableArrangements } from "@/lib/reconsideration";
+import { withdrawRegistrationClosedNotice } from "@/lib/event-notifications";
 import { outdateSafetyChecks } from "@/lib/safety-checks";
 import { CHANGE_KEYS, CHANGE_REQUEST_STATUS_LABEL } from "@/lib/schemas/change-request";
+import { PAST_START_MESSAGE } from "@/lib/schemas/event-edit";
 
 const REASON_REQUIRED = "A reason is required to reject a change request.";
 
@@ -84,7 +86,8 @@ export async function getChangeDecision(
     return err("Event not found.");
   }
   const pending = event.changeRequests[0];
-  if (!pending) return ok(null);
+  // A Completed or Cancelled event can't take the change (AC2), so it isn't offered.
+  if (!pending || !CHANGEABLE.includes(event.status)) return ok(null);
 
   const impactful = isImpactful(pending.fields);
   const affected =
@@ -114,7 +117,8 @@ type Outcome =
   | { done: "APPROVED" | "REJECTED"; returnedToPlanning: boolean }
   | { refused: "reassigned" | "not-changeable" }
   | { refused: "decided"; status: ChangeRequestStatus }
-  | { refused: "attendance"; registered: number };
+  | { refused: "attendance"; registered: number }
+  | { refused: "past-start" };
 
 /**
  * SCRUM-128 — the assigned Coordinator decides a Submitted change request.
@@ -125,7 +129,8 @@ type Outcome =
  *   active registrations (AC7). An impactful change flags the event's
  *   arrangements (SCRUM-26) and puts an approved or awaiting safety check out
  *   of date (AC4, SCRUM-166 AC13), and returns a Confirmed event to Planning,
- *   where registration pauses until it is confirmed again (AC5, SCRUM-75);
+ *   where registration pauses until it is confirmed again and its scheduled
+ *   "Registration closed" notice is withdrawn (AC5, SCRUM-75);
  *   otherwise the status stays (AC6). Approving a cancellation request cancels
  *   the event as SCRUM-82 does, with the Organiser's reason (AC8).
  * - Only the assigned Coordinator (AC9). Who and when are recorded, and the
@@ -238,6 +243,14 @@ export async function decideChangeRequest(
         }
       }
 
+      // The requested start was checked when it was raised, but the request
+      // may have waited since. As with SCRUM-25's direct edit, the start can't
+      // be in the past.
+      const start = request.fields.find((f) => f.fieldName === "startAt");
+      if (start?.newValue && new Date(start.newValue) < now) {
+        return { refused: "past-start" };
+      }
+
       // Marked Approved before a cancellation releases the event's arrangements,
       // which rejects any change request still Submitted (SCRUM-82 AC3).
       await tx.eventChangeRequest.update({
@@ -324,6 +337,12 @@ export async function decideChangeRequest(
       if (outdatesSafetyCheck(request.fields)) {
         await outdateSafetyChecks(tx, eventId, now);
       }
+      // Confirming wrote a "Registration closed" notice to show at the close
+      // (SCRUM-45 AC11). Back in Planning it would be wrong, as it is after
+      // SCRUM-26's return to Planning; confirming again writes a new one.
+      if (returnedToPlanning) {
+        await withdrawRegistrationClosedNotice(tx, eventId, now);
+      }
       await notify(
         "Change request approved",
         `Your change request for "${event.name}" was approved: ${changed}.`,
@@ -345,11 +364,22 @@ export async function decideChangeRequest(
           return err(
             `The expected attendance can't be lower than the ${outcome.registered} active registrations, so this change can't be approved.`,
           );
+        case "past-start":
+          return err(
+            `${PAST_START_MESSAGE} The requested start has passed, so reject this request and the organiser can ask for a new date.`,
+          );
       }
     }
 
+    // What an approval can change: the event, its registrations, flagged or
+    // released bookings and equipment (as SCRUM-25's edit and SCRUM-82's Cancel
+    // refresh).
     revalidatePath("/events");
     revalidatePath("/registrations");
+    revalidatePath("/bookings");
+    revalidatePath("/equipment");
+    revalidatePath("/equipment-requests");
+    revalidatePath("/venues/availability");
     return ok({ decision: outcome.done, returnedToPlanning: outcome.returnedToPlanning });
   } catch (error) {
     if (error instanceof PermissionError) return err(error.message);

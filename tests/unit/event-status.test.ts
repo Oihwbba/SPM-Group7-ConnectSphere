@@ -22,7 +22,7 @@ import {
 // unchanged. tx.user.findMany defaults to [] (no coordinators), so
 // auto-assignment is a no-op in these tests; it's covered separately in
 // tests/unit/coordinator-assignment.test.ts and
-// tests/unit/event-auto-assignment.test.ts.
+// tests/unit/submission-queue.test.ts.
 const tx = vi.hoisted(() => ({
   event: {
     findUnique: vi.fn(),
@@ -84,14 +84,32 @@ beforeEach(() => {
 });
 
 describe("transitionEventStatus — SCRUM-24 single guarded gate", () => {
-  // SCRUM-135 AC3, AC4 supersede SCRUM-81 AC2: a Submitted request has no
-  // Coordinator yet, so nobody decides it, and nobody becomes its Coordinator
-  // by deciding it.
+  it("SCRUM-165 [AC8] TC-165-11: a Coordinator can't approve a request nobody has been assigned to; it waits for the Lead", async () => {
+    mockAuth.mockResolvedValue(sessionFor("COORDINATOR", "usr_coord"));
+    mockFindUnique.mockResolvedValue(eventRow({ status: "SUBMITTED", coordinatorId: null }));
+
+    const result = await transitionEventStatus({
+      eventId: "evt1",
+      nextStatus: "APPROVED",
+    });
+
+    expect(result).toEqual({
+      ok: false,
+      error: "Event not found.",
+      fieldErrors: undefined,
+    });
+    expect(tx.event.updateMany).not.toHaveBeenCalled();
+    expect(tx.auditLog.create).not.toHaveBeenCalled();
+  });
+
+  // SCRUM-135 AC3, AC4, AC11: only a request Under Review is decided. Even
+  // its assigned Coordinator can't decide one still Submitted, and the refusal
+  // names its status. (An unassigned one is not found at all, SCRUM-165 AC8.)
   it.each(["APPROVED", "REJECTED"] as const)(
-    "SCRUM-135 [AC3, AC4, AC11] TC-135-03: a Submitted request with no Coordinator can't be %s, and the refusal names its status",
+    "SCRUM-135 [AC3, AC4, AC11] TC-135-03: a Submitted request can't be %s, even by its assigned Coordinator, and the refusal names its status",
     async (nextStatus) => {
       mockAuth.mockResolvedValue(sessionFor("COORDINATOR", "usr_coord"));
-      mockFindUnique.mockResolvedValue(eventRow({ status: "SUBMITTED", coordinatorId: null }));
+      mockFindUnique.mockResolvedValue(eventRow({ status: "SUBMITTED", coordinatorId: "usr_coord" }));
 
       expect(
         await transitionEventStatus({
@@ -135,7 +153,9 @@ describe("transitionEventStatus — SCRUM-24 single guarded gate", () => {
 
   it("SCRUM-18: deciding an event closes its still-OPEN clarification so a resubmitted request can be questioned again", async () => {
     mockAuth.mockResolvedValue(sessionFor("COORDINATOR", "usr_coord"));
-    mockFindUnique.mockResolvedValue(eventRow());
+    mockFindUnique.mockResolvedValue(
+      eventRow({ status: "UNDER_REVIEW", coordinatorId: "usr_coord" }),
+    );
 
     await transitionEventStatus({
       eventId: "evt1",
@@ -152,7 +172,9 @@ describe("transitionEventStatus — SCRUM-24 single guarded gate", () => {
 
   it("SCRUM-18: a lost decision race closes nothing", async () => {
     mockAuth.mockResolvedValue(sessionFor("COORDINATOR", "usr_coord"));
-    mockFindUnique.mockResolvedValue(eventRow());
+    mockFindUnique.mockResolvedValue(
+      eventRow({ status: "UNDER_REVIEW", coordinatorId: "usr_coord" }),
+    );
     tx.event.updateMany.mockResolvedValue({ count: 0 });
 
     const result = await transitionEventStatus({
@@ -185,7 +207,9 @@ describe("transitionEventStatus — SCRUM-24 single guarded gate", () => {
 
   it("SCRUM-19: a rejection records its reason", async () => {
     mockAuth.mockResolvedValue(sessionFor("COORDINATOR", "usr_coord"));
-    mockFindUnique.mockResolvedValue(eventRow());
+    mockFindUnique.mockResolvedValue(
+      eventRow({ status: "UNDER_REVIEW", coordinatorId: "usr_coord" }),
+    );
 
     const result = await transitionEventStatus({
       eventId: "evt1",
@@ -207,7 +231,9 @@ describe("transitionEventStatus — SCRUM-24 single guarded gate", () => {
 
   it("SCRUM-41 [AC8] TC-41-12: rejecting the event rejects its Submitted change request with the same reason", async () => {
     mockAuth.mockResolvedValue(sessionFor("COORDINATOR", "usr_coord"));
-    mockFindUnique.mockResolvedValue(eventRow());
+    mockFindUnique.mockResolvedValue(
+      eventRow({ status: "UNDER_REVIEW", coordinatorId: "usr_coord" }),
+    );
 
     await transitionEventStatus({
       eventId: "evt1",
@@ -229,7 +255,9 @@ describe("transitionEventStatus — SCRUM-24 single guarded gate", () => {
 
   it("SCRUM-41 [AC8] TC-41-12: approving the event leaves its change request waiting", async () => {
     mockAuth.mockResolvedValue(sessionFor("COORDINATOR", "usr_coord"));
-    mockFindUnique.mockResolvedValue(eventRow());
+    mockFindUnique.mockResolvedValue(
+      eventRow({ status: "UNDER_REVIEW", coordinatorId: "usr_coord" }),
+    );
 
     await transitionEventStatus({ eventId: "evt1", nextStatus: "APPROVED" });
 
@@ -282,7 +310,9 @@ describe("transitionEventStatus — SCRUM-24 single guarded gate", () => {
 
   it("SCRUM-24: the loser of two simultaneous decisions is told to refresh, and no audit entry is written", async () => {
     mockAuth.mockResolvedValue(sessionFor("COORDINATOR", "usr_coord"));
-    mockFindUnique.mockResolvedValue(eventRow());
+    mockFindUnique.mockResolvedValue(
+      eventRow({ status: "UNDER_REVIEW", coordinatorId: "usr_coord" }),
+    );
     // Another coordinator's decision landed first, so the conditional update matches nothing.
     tx.event.updateMany.mockResolvedValue({ count: 0 });
 

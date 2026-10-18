@@ -109,10 +109,10 @@ export function filterAndSortEvents<
 
   return events
     .filter((evt) => {
-      // SCRUM-20 auto-assigns on submission, so a tab scoped to SUBMITTED alone
-      // would hide a request the moment it is sent. For an organiser the tab is
-      // therefore everything that is not a draft; for a coordinator it is the
-      // queue they can still decide on, which is what their page is for.
+      // A submitted request moves to Under Review once the Lead assigns it
+      // (SCRUM-165), so a tab scoped to SUBMITTED alone would hide it then. For
+      // an organiser the tab is therefore everything that is not a draft; for
+      // a coordinator it is the requests they can still decide on.
       const matchesTab =
         activeTab === "DRAFT"
           ? evt.status === "DRAFT"
@@ -400,7 +400,8 @@ export function EventsClient({
           </Button>
         )}
         {/* SCRUM-19: decide a request. SCRUM-135 AC3, AC4: only one Under
-            Review, which has its Coordinator; a Submitted one waits for one. */}
+            Review, which has its Coordinator. There is no "claim": the Lead
+            assigns a Submitted one (SCRUM-165). */}
         {isCoordinator &&
           (event.status === "SUBMITTED" || event.status === "UNDER_REVIEW") && (
             <>
