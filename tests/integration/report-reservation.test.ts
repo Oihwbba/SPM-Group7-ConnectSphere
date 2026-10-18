@@ -97,7 +97,12 @@ describe.skipIf(!usesLocalDatabase)(
 
     beforeEach(async () => {
       await prisma.notification.deleteMany({ where: { eventId } });
-      await prisma.auditLog.deleteMany({ where: { entityType: "Reservation", entityId: reservationId } });
+      // Only this event's reservations: before the first one exists, an undefined
+      // id would make Prisma drop the filter and delete every Reservation entry.
+      const earlier = await prisma.reservation.findMany({ where: { eventId }, select: { id: true } });
+      await prisma.auditLog.deleteMany({
+        where: { entityType: "Reservation", entityId: { in: earlier.map((r) => r.id) } },
+      });
       await prisma.reservation.deleteMany({ where: { eventId } });
       reservationId = (
         await prisma.reservation.create({
