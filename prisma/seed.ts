@@ -935,7 +935,7 @@ async function main() {
   const audit = await seedAuditLog();
 
   console.log("Seed complete:");
-  console.log(`  ${users} users (5 roles, plus a 2nd organiser/coordinator and 3 extra attendees)`);
+  console.log(`  ${users} users (one for each of the ${Object.values(Role).length} roles, plus extra organisers, coordinators and attendees)`);
   console.log(`  ${venues} venues, ${venueUnavail} venue unavailability period(s)`);
   console.log(`  ${equipment} equipment types, ${equipUnavail} equipment unavailability period(s)`);
   console.log(`  ${events} events (one per status, plus registration boundary cases)`);
