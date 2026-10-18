@@ -8,7 +8,10 @@ import { prisma } from "@/lib/db";
 import { can, requirePermission, PermissionError } from "@/lib/auth/can";
 import { ok, err, type ActionResult } from "@/lib/action-result";
 import { bookingStatusAt, withdrawPendingHoldNotices } from "@/lib/booking-holds";
-import { withdrawRegistrationClosedNotice } from "@/lib/event-notifications";
+import {
+  notifyBackInPlanning,
+  withdrawRegistrationClosedNotice,
+} from "@/lib/event-notifications";
 import { outdateSafetyChecks } from "@/lib/safety-checks";
 import { notifyRole } from "@/lib/staff-notifications";
 import {
@@ -153,6 +156,7 @@ export async function resolveReconsiderationFlag(
           name: true,
           status: true,
           coordinatorId: true,
+          organiserId: true,
           startAt: true,
           endAt: true,
           expectedAttendance: true,
@@ -292,6 +296,14 @@ export async function resolveReconsiderationFlag(
           summary: "A flagged arrangement was cancelled (SCRUM-26)",
         },
       });
+      // SCRUM-45 AC5: the Organiser is told why it is back in Planning.
+      await notifyBackInPlanning(
+        tx,
+        { id: eventId, name: event.name, organiserId: event.organiserId },
+        kind === "booking"
+          ? "its Coordinator cancelled a venue booking that needed reconsideration"
+          : "its Coordinator cancelled equipment that needed reconsideration",
+      );
       return { done: decision, returnedToPlanning: true };
     });
 

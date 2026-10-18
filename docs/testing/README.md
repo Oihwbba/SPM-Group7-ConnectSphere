@@ -136,7 +136,7 @@ the open pull requests that change the same test files have merged.
 | [SCRUM-38](SCRUM-38.md) | Felicia Or | 20 | Every case automated (unit, integration for occupied periods and opening hours against real rows, e2e for the journeys) |
 | [SCRUM-40](SCRUM-40.md) | Felicia Or | 11 | Every case automated (unit, integration for the one-per-event judgement and the advisory rule, e2e for the journey and the venue detail view); the search-results half of AC 1–AC 4 and AC 7 is SCRUM-38's TC-38-09 |
 | [SCRUM-41](SCRUM-41.md) | Jin Hong | 18 | Every case automated (unit, integration for the lock, index and rejection, e2e for both journeys); AC 8's cancellation half is SCRUM-82's TC-82-04 |
-| [SCRUM-45](SCRUM-45.md) | Jin Hong | 8 | Every case automated; the triggers of unbuilt stories (AC 5–7, 9, 10 and the Lead's assignment) are listed as still to do |
+| [SCRUM-45](SCRUM-45.md) | Jin Hong | 12 | Every case automated; AC 6, AC 9 and the Lead's assignment are notices SCRUM-82, SCRUM-128 and SCRUM-165 send, and AC 10 waits for SCRUM-21 |
 | [SCRUM-48](SCRUM-48.md) | Jin Hong | 15 | Every case automated |
 | [SCRUM-50](SCRUM-50.md) | Caylern Goh | 15 | Every case automated |
 | [SCRUM-52](SCRUM-52.md) | Caylern Goh | 6 | Every case automated |

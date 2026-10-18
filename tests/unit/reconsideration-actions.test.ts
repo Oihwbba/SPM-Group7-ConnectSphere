@@ -80,7 +80,15 @@ const START = new Date("2032-05-01T02:00:00Z");
 const END = new Date("2032-05-01T04:00:00Z");
 
 function eventNow(status: EventStatus = "PLANNING", coordinatorId = "usr_coord") {
-  return { status, coordinatorId, startAt: START, endAt: END, expectedAttendance: 40 };
+  return {
+    status,
+    coordinatorId,
+    organiserId: "usr_org",
+    name: "Graduation",
+    startAt: START,
+    endAt: END,
+    expectedAttendance: 40,
+  };
 }
 
 const flaggedBooking = {
@@ -131,6 +139,7 @@ function expectNothingWritten() {
   expect(tx.event.update).not.toHaveBeenCalled();
   expect(tx.auditLog.create).not.toHaveBeenCalled();
   expect(tx.safetyCheck.updateMany).not.toHaveBeenCalled();
+  expect(tx.notification.createMany).not.toHaveBeenCalled();
 }
 
 const resolvedBy = {
@@ -291,6 +300,35 @@ describe("resolveReconsiderationFlag — Cancel arrangement (SCRUM-26 AC9, AC10)
       data: { status: "OUTDATED", outdatedAt: expect.any(Date) },
     });
   });
+
+  it.each([
+    ["booking", "its Coordinator cancelled a venue booking that needed reconsideration."],
+    ["reservation", "its Coordinator cancelled equipment that needed reconsideration."],
+  ] as const)(
+    "SCRUM-45 [AC5, AC12] TC-45-09: cancelling a flagged %s of a Confirmed event tells its Organiser why it is back in Planning",
+    async (kind, why) => {
+      (kind === "booking" ? mockBooking : mockReservation).mockResolvedValue(owner("CONFIRMED"));
+      tx.event.findUniqueOrThrow.mockResolvedValue(eventNow("CONFIRMED"));
+
+      await resolveReconsiderationFlag({
+        kind,
+        id: kind === "booking" ? "bkg1" : "res1",
+        decision: "CANCEL",
+      });
+
+      expect(tx.notification.createMany).toHaveBeenCalledWith({
+        data: [
+          {
+            userId: "usr_org",
+            type: "EVENT_STATUS_CHANGED",
+            eventId: "evt1",
+            title: "Your event is back in Planning",
+            message: `"Graduation" is back in Planning: ${why} It needs confirming again before new registrations open.`,
+          },
+        ],
+      });
+    },
+  );
 
   it("SCRUM-26 [AC10] TC-26-11: cancelling an arrangement of a Confirmed event returns the event to Planning, with an audit entry", async () => {
     mockBooking.mockResolvedValue(owner("CONFIRMED"));

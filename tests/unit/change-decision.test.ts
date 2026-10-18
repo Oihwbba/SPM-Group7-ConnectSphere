@@ -25,7 +25,7 @@ const tx = vi.hoisted(() => ({
   eventChangeRequest: { findUniqueOrThrow: vi.fn(), update: vi.fn() },
   registration: { count: vi.fn() },
   auditLog: { create: vi.fn(), createMany: vi.fn() },
-  notification: { create: vi.fn(), updateMany: vi.fn() },
+  notification: { create: vi.fn(), createMany: vi.fn(), updateMany: vi.fn() },
 }));
 
 vi.mock("@/auth", () => ({ auth: vi.fn() }));
@@ -102,6 +102,7 @@ function expectNothingWritten() {
   expect(tx.eventChangeRequest.update).not.toHaveBeenCalled();
   expect(tx.auditLog.create).not.toHaveBeenCalled();
   expect(tx.notification.create).not.toHaveBeenCalled();
+  expect(tx.notification.createMany).not.toHaveBeenCalled();
   expect(mockFlag).not.toHaveBeenCalled();
   expect(mockCancel).not.toHaveBeenCalled();
 }
@@ -229,7 +230,26 @@ describe("decideChangeRequest — approving (SCRUM-128 AC2, AC4–AC6, AC10)", (
     });
   });
 
-  it("SCRUM-128 [AC6] TC-128-05: an impactful change to an event Under Review or in Planning keeps its status", async () => {
+  it("SCRUM-45 [AC5, AC12] TC-45-09: back in Planning, the Organiser is told why", async () => {
+    tx.event.findUniqueOrThrow.mockResolvedValue(eventNow("CONFIRMED"));
+
+    await decideChangeRequest({ changeRequestId: "cr1", decision: "APPROVED" });
+
+    expect(tx.notification.createMany).toHaveBeenCalledWith({
+      data: [
+        {
+          userId: "usr_org",
+          type: "EVENT_STATUS_CHANGED",
+          eventId: "evt1",
+          title: "Your event is back in Planning",
+          message:
+            '"Concert" is back in Planning: a change to Expected attendance was approved. It needs confirming again before new registrations open.',
+        },
+      ],
+    });
+  });
+
+  it("SCRUM-128 [AC6] TC-128-05, SCRUM-45 [AC5] TC-45-09: an impactful change to an event Under Review or in Planning keeps its status, and sends no back-in-Planning notice", async () => {
     for (const status of ["UNDER_REVIEW", "PLANNING"] as EventStatus[]) {
       tx.event.update.mockClear();
       tx.event.findUniqueOrThrow.mockResolvedValue(eventNow(status));
@@ -237,6 +257,7 @@ describe("decideChangeRequest — approving (SCRUM-128 AC2, AC4–AC6, AC10)", (
       expect(tx.event.update.mock.calls[0][0].data).not.toHaveProperty("status");
       // Not Confirmed, so no Registration closed notice was scheduled.
       expect(tx.notification.updateMany).not.toHaveBeenCalled();
+      expect(tx.notification.createMany).not.toHaveBeenCalled();
     }
   });
 });
