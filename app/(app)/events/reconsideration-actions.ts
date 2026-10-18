@@ -8,6 +8,7 @@ import { prisma } from "@/lib/db";
 import { can, requirePermission, PermissionError } from "@/lib/auth/can";
 import { ok, err, type ActionResult } from "@/lib/action-result";
 import { bookingStatusAt, withdrawPendingHoldNotices } from "@/lib/booking-holds";
+import { withdrawRegistrationClosedNotice } from "@/lib/event-notifications";
 import { outdateSafetyChecks } from "@/lib/safety-checks";
 import { notifyRole } from "@/lib/staff-notifications";
 import {
@@ -278,15 +279,7 @@ export async function resolveReconsiderationFlag(
       // (SCRUM-45 AC11); back in Planning, it would be wrong. Confirming again
       // writes a new one. Registering needs the event Confirmed, so
       // registrationEnabled can stay as it is.
-      await tx.notification.updateMany({
-        where: {
-          eventId,
-          title: "Registration closed",
-          withdrawnAt: null,
-          showFromAt: { gt: now },
-        },
-        data: { withdrawnAt: now },
-      });
+      await withdrawRegistrationClosedNotice(tx, eventId, now);
       await tx.auditLog.create({
         data: {
           entityType: "Event",

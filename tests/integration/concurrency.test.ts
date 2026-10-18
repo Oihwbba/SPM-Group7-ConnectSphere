@@ -19,6 +19,7 @@ import {
   transitionEventStatus,
   submitEventRequest,
 } from "@/app/(app)/events/actions";
+import { assignCoordinator } from "@/app/(app)/queue/actions";
 import {
   requestClarification,
   respondToClarification,
@@ -595,8 +596,10 @@ describe.skipIf(!usesLocalDatabase)("concurrency — status transitions (SCRUM-2
     const event = await prisma.event.create({
       data: {
         name: `SCRUM-24 Concurrency Event ${Date.now()}`,
-        status: "SUBMITTED",
+        status: "UNDER_REVIEW",
         organiserId: "usr_organiser",
+        // SCRUM-165 AC8: only the assigned Coordinator decides.
+        coordinatorId: "usr_coordinator",
       },
       select: { id: true },
     });
@@ -625,9 +628,9 @@ describe.skipIf(!usesLocalDatabase)("concurrency — status transitions (SCRUM-2
     expect(results.filter((r) => !r.ok)).toHaveLength(1);
 
     // Exactly one decision is recorded. An approval also records the move to
-    // Planning (SCRUM-81), so the entries leaving SUBMITTED are what count.
+    // Planning (SCRUM-81), so the entries leaving UNDER_REVIEW are what count.
     expect(
-      await prisma.auditLog.count({ where: { entityId: eventId, oldValue: "SUBMITTED" } }),
+      await prisma.auditLog.count({ where: { entityId: eventId, oldValue: "UNDER_REVIEW" } }),
     ).toBe(1);
   });
 });
@@ -787,124 +790,89 @@ describe.skipIf(!usesLocalDatabase)("event submission — repeat submission (SCR
 
     expect(results.filter((r) => r.ok)).toHaveLength(1);
     expect(results.filter((r) => !r.ok)).toHaveLength(1);
-    // One submission: the organiser's submission notice (SCRUM-45 AC1), one
-    // assignment notice each for the organiser and the coordinator, and a
-    // single ASSIGNED audit row.
-    expect(await prisma.notification.count({ where: { eventId: draft.id } })).toBe(3);
+    // One submission: only the organiser's submission notice (SCRUM-45 AC1).
+    // Nobody is assigned until the Lead does it (SCRUM-165 AC1).
+    expect(await prisma.notification.count({ where: { eventId: draft.id } })).toBe(1);
     expect(
       await prisma.auditLog.count({
         where: { entityId: draft.id, action: "ASSIGNED" },
       }),
-    ).toBe(1);
+    ).toBe(0);
   });
 });
 
-describe.skipIf(!usesLocalDatabase)("concurrency — coordinator auto-assignment (SCRUM-20)", () => {
-  let coordinatorAId: string;
-  let coordinatorBId: string;
+// SCRUM-165 AC6 — two Leads assigning one request at the same moment. The
+// assignment is a conditional write ("still Submitted with no Coordinator"),
+// so the database lets exactly one through; the other is told who got it.
+describe.skipIf(!usesLocalDatabase)("concurrency — the Lead's assignment (SCRUM-165)", () => {
+  let eventId: string;
+  let secondLeadId: string;
 
-  const ORGANISER: Session = {
-    user: {
-      id: "usr_organiser",
-      role: "ORGANISER",
-      name: "Olivia Organiser",
-      email: "organiser@test.local",
-    },
+  const asLead = (id: string) => ({
+    user: { id, role: "COORDINATOR_LEAD", name: "Lead", email: `${id}@test.local` },
     expires: "2999-01-01T00:00:00.000Z",
-  };
+  });
 
   beforeAll(async () => {
-    // Two throwaway coordinators, both starting at zero active events, so the
-    // fairness rule has an actual tie to resolve under concurrency.
-    const [a, b] = await Promise.all([
-      prisma.user.create({
+    const [event, lead] = await Promise.all([
+      prisma.event.create({
         data: {
-          email: `concurrency-coord-a-${Date.now()}@test.local`,
-          name: "Concurrency Coord A",
-          role: "COORDINATOR",
-          passwordHash: "not-used-in-this-test",
+          name: `SCRUM-165 Concurrency Event ${Date.now()}`,
+          status: "SUBMITTED",
+          organiserId: "usr_organiser",
         },
         select: { id: true },
       }),
       prisma.user.create({
         data: {
-          email: `concurrency-coord-b-${Date.now()}@test.local`,
-          name: "Concurrency Coord B",
-          role: "COORDINATOR",
+          email: `concurrency-lead-${Date.now()}@test.local`,
+          name: "Concurrency Lead",
+          role: "COORDINATOR_LEAD",
           passwordHash: "not-used-in-this-test",
         },
         select: { id: true },
       }),
     ]);
-    coordinatorAId = a.id;
-    coordinatorBId = b.id;
+    eventId = event.id;
+    secondLeadId = lead.id;
   });
 
   afterAll(async () => {
-    // Dependents first: the assignment notifications reference the throwaway
-    // coordinators through the required Notification.user FK, so deleting the
-    // users while they exist throws P2003.
-    const eventIds = (
-      await prisma.event.findMany({
-        where: { name: { startsWith: "SCRUM-20 Concurrency Event" } },
-        select: { id: true },
-      })
-    ).map((e) => e.id);
-    const coordinatorIds = [coordinatorAId, coordinatorBId];
-
-    await prisma.notification.deleteMany({
-      where: {
-        OR: [{ eventId: { in: eventIds } }, { userId: { in: coordinatorIds } }],
-      },
-    });
-    await prisma.auditLog.deleteMany({ where: { entityId: { in: eventIds } } });
-    await prisma.event.deleteMany({ where: { id: { in: eventIds } } });
-    await prisma.user.deleteMany({ where: { id: { in: coordinatorIds } } });
+    await prisma.notification.deleteMany({ where: { eventId } });
+    await prisma.auditLog.deleteMany({ where: { entityId: eventId } });
+    await prisma.event.delete({ where: { id: eventId } });
+    await prisma.user.delete({ where: { id: secondLeadId } });
   });
 
-  it("SCRUM-20: two events submitted at the same instant each end up with exactly one coordinator, and neither is left unassigned", async () => {
-    (auth as unknown as Mock).mockResolvedValue(ORGANISER);
-
-    const base = {
-      purpose: "Concurrency test",
-      description: "SCRUM-20 concurrency coverage",
-      startAt: "2031-05-01T09:00:00.000Z",
-      endAt: "2031-05-01T17:00:00.000Z",
-      expectedAttendance: 10,
-      venueRequirements: "Any room",
-      accessibilityNeeds: "None",
-      preferredLayout: "Classroom",
-      equipmentRequirements: "None",
-      registrationRequired: "yes",
-      registrationNotes: "None",
-    };
+  it("SCRUM-165 [AC6] TC-165-08: [Concurrency] two Leads assign the same request at the same moment: exactly one assignment is saved and the other Lead is told who it went to", async () => {
+    const mockAuth = auth as unknown as Mock;
+    mockAuth
+      .mockResolvedValueOnce(asLead("usr_coordinatorlead"))
+      .mockResolvedValueOnce(asLead(secondLeadId));
 
     const results = await Promise.all([
-      submitEventRequest({ ...base, name: `SCRUM-20 Concurrency Event A ${Date.now()}` }),
-      submitEventRequest({ ...base, name: `SCRUM-20 Concurrency Event B ${Date.now()}` }),
+      assignCoordinator({ eventId, coordinatorId: "usr_coordinator" }),
+      assignCoordinator({ eventId, coordinatorId: "usr_coordinator_2" }),
     ]);
 
-    expect(results.every((r) => r.ok)).toBe(true);
+    const won = results.filter((r) => r.ok);
+    const lost = results.filter((r) => !r.ok);
+    expect(won).toHaveLength(1);
+    expect(lost).toHaveLength(1);
 
-    const events = await prisma.event.findMany({
-      where: { name: { startsWith: "SCRUM-20 Concurrency Event" } },
-      select: { id: true, coordinatorId: true, status: true },
+    const event = await prisma.event.findUniqueOrThrow({
+      where: { id: eventId },
+      select: { coordinator: { select: { name: true } }, status: true },
     });
-
-    expect(events).toHaveLength(2);
-    // AC: "An event has at most one assigned Coordinator at any moment" —
-    // both submissions found a coordinator (there were two available) and
-    // neither was left unassigned.
-    for (const event of events) {
-      expect(event.coordinatorId).not.toBeNull();
-      expect(event.status).toBe("UNDER_REVIEW");
+    expect(event.status).toBe("UNDER_REVIEW");
+    if (!lost[0].ok) {
+      expect(lost[0].error).toBe(
+        `This request is already assigned to ${event.coordinator!.name}.`,
+      );
     }
-
-    // Fairness under concurrency: pickCoordinator holds an advisory lock
-    // until the assignment commits, so the second submission sees the first's
-    // load. At least two coordinators (the throwaway pair) start at zero
-    // active events, so a fair rule cannot hand both events to one of them.
-    expect(new Set(events.map((e) => e.coordinatorId)).size).toBe(2);
+    expect(
+      await prisma.auditLog.count({ where: { entityId: eventId, action: "ASSIGNED" } }),
+    ).toBe(1);
   });
 });
 
@@ -1108,6 +1076,10 @@ describe.skipIf(!usesLocalDatabase)("concurrency — withdrawal reopens capacity
 
   afterAll(async () => {
     await prisma.registration.deleteMany({ where: { eventId } });
+    // SCRUM-77 AC6: each withdrawal is in the history, and SCRUM-45 AC11 tells
+    // the Organiser a place opened.
+    await prisma.notification.deleteMany({ where: { eventId } });
+    await prisma.auditLog.deleteMany({ where: { entityId: eventId } });
     await prisma.event.delete({ where: { id: eventId } });
   });
 

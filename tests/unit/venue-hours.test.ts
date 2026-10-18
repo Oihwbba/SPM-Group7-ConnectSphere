@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 
 import {
+  closedOn,
   dayOutsideOpeningHours,
   describeDay,
   minutesToTime,
@@ -77,6 +78,37 @@ describe("opening hours — SCRUM-34 AC7", () => {
     expect(
       dayOutsideOpeningHours(period("2036-03-04T07:30", "2036-03-04T08:30"), boardroom)?.weekday,
     ).toBe(2);
+  });
+});
+
+describe("the closed day in a search without times — SCRUM-38 AC4", () => {
+  it("SCRUM-38 [AC4] TC-38-20: a weekday searched as a whole day isn't a closed day, though the venue isn't open all of it", () => {
+    expect(closedOn(at("2036-03-04T00:00"), boardroom)).toBeNull();
+  });
+
+  it("SCRUM-38 [AC4] TC-38-20: a day the venue is Closed is named", () => {
+    expect(closedOn(at("2036-03-08T00:00"), boardroom)).toEqual({
+      weekday: 6,
+      opensMinute: null,
+      closesMinute: null,
+    });
+  });
+
+  it("SCRUM-38 [AC4] TC-38-20: the SGT day decides, not the UTC one", () => {
+    // 00:30 SGT on Saturday is still Friday in UTC.
+    expect(closedOn(at("2036-03-08T00:30"), boardroom)?.weekday).toBe(6);
+    // 23:30 SGT on Friday is the Friday, open, though 00:00 Saturday is next.
+    expect(closedOn(at("2036-03-07T23:30"), boardroom)).toBeNull();
+  });
+
+  it("SCRUM-38 [AC4] TC-38-20: a weekday with no row is Closed, and a venue with no hours is never closed", () => {
+    const weekdaysOnly = boardroom.filter((d) => d.weekday <= 5);
+    expect(closedOn(at("2036-03-08T00:00"), weekdaysOnly)).toEqual({
+      weekday: 6,
+      opensMinute: null,
+      closesMinute: null,
+    });
+    expect(closedOn(at("2036-03-08T00:00"), [])).toBeNull();
   });
 });
 

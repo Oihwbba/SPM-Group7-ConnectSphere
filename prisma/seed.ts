@@ -95,6 +95,7 @@ const U = {
   attendee3: "usr_attendee_3",
   attendee4: "usr_attendee_4",
   safetyOfficer: "usr_safetyofficer",
+  coordinatorLead: "usr_coordinatorlead",
 } as const;
 
 const V = {
@@ -157,6 +158,8 @@ async function seedUsers(passwordHash: string) {
     { id: U.attendee4, email: "attendee4@test.local", name: "Ade Attendee", role: Role.ATTENDEE },
     // SCRUM-166: reviews operational safety checks.
     { id: U.safetyOfficer, email: "safety@test.local", name: "Sam Safety", role: Role.SAFETY_OFFICER },
+    // SCRUM-164: the Event Coordinator Lead (Week 7 change 5).
+    { id: U.coordinatorLead, email: "lead@test.local", name: "Lee Lead", role: Role.COORDINATOR_LEAD },
   ];
 
   for (const u of users) {
@@ -938,7 +941,7 @@ async function main() {
   const audit = await seedAuditLog();
 
   console.log("Seed complete:");
-  console.log(`  ${users} users (5 roles, plus a 2nd organiser/coordinator and 3 extra attendees)`);
+  console.log(`  ${users} users (one for each of the ${Object.values(Role).length} roles, plus extra organisers, coordinators and attendees)`);
   console.log(`  ${venues} venues, ${venueUnavail} venue unavailability period(s)`);
   console.log(`  ${equipment} equipment types, ${equipUnavail} equipment unavailability period(s)`);
   console.log(`  ${events} events (one per status, plus registration boundary cases)`);
