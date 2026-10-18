@@ -135,6 +135,11 @@ export interface ScheduleEntry {
   /** Why the units are out of the pool; null for a reservation. */
   reason: string | null;
   note: string | null;
+  /**
+   * SCRUM-32 — a reservation reported as no longer providable, waiting for
+   * its Coordinator (SCRUM-26). Always false for unavailability.
+   */
+  needsReconsideration: boolean;
 }
 
 /**
