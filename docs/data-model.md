@@ -49,7 +49,7 @@ AC12 to AC14), marked Week 9.
 
 | Table | Purpose | Stories |
 |---|---|---|
-| `User` | One row per person, with a `role`. Passwords are bcrypt hashes; there is no account creation: accounts arrive from outside (SCRUM-153, closed as not needed), so users come from the seed. One role per account today; SCRUM-121 will let an account hold several, and its permissions become the union of those roles. | SCRUM-65, 66, 67, 121 |
+| `User` | One row per person, with a primary `role` and any `additionalRoles` (empty for most; SCRUM-121). Passwords are bcrypt hashes; there is no account creation: accounts arrive from outside (SCRUM-153, closed as not needed), so users come from the seed. The permissions are the union of every role held, and a notice sent to a role reaches whoever holds it either way. | SCRUM-65, 66, 67, 121 |
 | `Account`, `Session`, `VerificationToken` | Auth.js adapter tables. Unused today (we use JWT sessions — see `adr/0002`) but kept so an OAuth provider can be added without a migration. | — |
 | `AuditLog` | Append-only: who did what, when, and the before/after value. No `updatedAt` on purpose — entries "cannot be edited or deleted through the application". | SCRUM-71, and SCRUM-21's "a record exists of who was previously assigned" |
 

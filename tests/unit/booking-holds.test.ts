@@ -1273,7 +1273,7 @@ describe("hold notices — SCRUM-124 AC4, AC6", () => {
     expect((await confirmHold({ bookingId: "bkg_1" })).ok).toBe(true);
 
     expect(db.user.findMany).toHaveBeenCalledWith({
-      where: { role: "VENUE_STAFF" },
+      where: { OR: [{ role: "VENUE_STAFF" }, { additionalRoles: { has: "VENUE_STAFF" } }] },
       select: { id: true },
     });
     expect(db.notification.createMany).toHaveBeenCalledWith(

@@ -18,7 +18,17 @@ import type { EventStatus, Role } from "@prisma/client";
 export type SessionUser = {
   id: string;
   role: Role;
+  /** SCRUM-121 AC1 — roles held besides `role`. Absent means none. */
+  additionalRoles?: Role[];
 };
+
+/** SCRUM-121 — every role the user holds, the primary one first. */
+export function rolesOf(user: SessionUser): Role[] {
+  return [
+    user.role,
+    ...new Set((user.additionalRoles ?? []).filter((role) => role !== user.role)),
+  ];
+}
 
 /**
  * Every capability in the system, named `entity:verb`. Feature developers add
@@ -100,6 +110,10 @@ export type Resource =
       hasVenueBooking: boolean;
       hasEquipmentRequest: boolean;
     }
+  // SCRUM-121 AC5 — a staff decision on an event's venue booking or
+  // equipment: deciding a booking, reviewing or reserving equipment. Nobody
+  // makes one for an event they organise or coordinate.
+  | { kind: "arrangement"; organiserId: string; coordinatorId: string | null }
   | { kind: "registration"; userId: string }
   | { kind: "notification"; userId: string };
 
@@ -250,6 +264,8 @@ function hasRelationship(
         (user.role === "TECH_SUPPORT" && resource.hasEquipmentRequest) ||
         (user.role === "ORGANISER" && resource.organiserId === user.id)
       );
+    case "arrangement":
+      return resource.organiserId !== user.id && resource.coordinatorId !== user.id;
     case "registration":
       return resource.userId === user.id;
     case "notification":
@@ -271,7 +287,7 @@ export function roleAllows(role: Role, action: Action): boolean {
 /**
  * The one function features call to ask "is this allowed?".
  *
- * @param user     the signed-in user (id + role)
+ * @param user     the signed-in user (id, role and any additional roles)
  * @param action   the capability being attempted
  * @param resource the specific row it targets, if any
  */
@@ -280,17 +296,14 @@ export function can(
   action: Action,
   resource?: Resource,
 ): boolean {
-  // 1. Role gate.
-  if (!roleAllows(user.role, action)) {
-    return false;
-  }
-
-  // 2. Relationship gate — only when the action targets a specific resource.
-  if (resource) {
-    return hasRelationship(user, action, resource);
-  }
-
-  return true;
+  // SCRUM-121 AC2, AC3: allowed when any role the user holds allows it —
+  // 1. the role gate — with that role's own relationship to the resource —
+  // 2. the relationship gate, only when the action targets a specific row.
+  return rolesOf(user).some(
+    (role) =>
+      roleAllows(role, action) &&
+      (!resource || hasRelationship({ ...user, role }, action, resource)),
+  );
 }
 
 /**

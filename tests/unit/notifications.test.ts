@@ -148,6 +148,15 @@ describe("notificationHref — SCRUM-48 AC5", () => {
     },
   );
 
+  it("SCRUM-48 [AC5] TC-48-08: a Safety Officer's notice about a safety check opens that check", () => {
+    expect(
+      notificationHref(user("SAFETY_OFFICER"), {
+        link: "/safety-checks/chk_1",
+        event: event("PLANNING"),
+      }),
+    ).toBe("/safety-checks/chk_1");
+  });
+
   it("SCRUM-48 [AC5] TC-48-06: a notification about no event keeps its own link", () => {
     expect(
       notificationHref(user("COORDINATOR"), {

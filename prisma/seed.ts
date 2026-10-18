@@ -98,6 +98,7 @@ const U = {
   coordinatorLead: "usr_coordinatorlead",
   coordinatorLead2: "usr_coordinatorlead_2",
   safetyOfficer2: "usr_safetyofficer_2",
+  multiRole: "usr_multirole",
 } as const;
 
 const V = {
@@ -139,7 +140,7 @@ const E = {
 // ---------------------------------------------------------------------------
 
 async function seedUsers(passwordHash: string) {
-  const users = [
+  const users: { id: string; email: string; name: string; role: Role; additionalRoles?: Role[] }[] = [
     { id: U.organiser, email: "organiser@test.local", name: "Olivia Organiser", role: Role.ORGANISER },
     { id: U.coordinator, email: "coordinator@test.local", name: "Cody Coordinator", role: Role.COORDINATOR },
     { id: U.venueStaff, email: "venuestaff@test.local", name: "Vera Venue", role: Role.VENUE_STAFF },
@@ -169,12 +170,28 @@ async function seedUsers(passwordHash: string) {
     // made by a test: every Safety Officer is told of each requested check, so
     // one appearing or vanishing mid-run would race other suites.
     { id: U.safetyOfficer2, email: "safety2@test.local", name: "Sasha Safety", role: Role.SAFETY_OFFICER },
+    // SCRUM-121: one account holding several roles, two of them with an
+    // events view. The Lead can assign it events as a Coordinator, but never
+    // one it organises (AC4).
+    {
+      id: U.multiRole,
+      email: "multirole@test.local",
+      name: "Morgan Multirole",
+      role: Role.VENUE_STAFF,
+      additionalRoles: [Role.TECH_SUPPORT, Role.COORDINATOR, Role.ORGANISER],
+    },
   ];
 
   for (const u of users) {
     await prisma.user.upsert({
       where: { id: u.id },
-      update: { email: u.email, name: u.name, role: u.role, passwordHash },
+      update: {
+        email: u.email,
+        name: u.name,
+        role: u.role,
+        additionalRoles: u.additionalRoles ?? [],
+        passwordHash,
+      },
       create: { ...u, passwordHash },
     });
   }

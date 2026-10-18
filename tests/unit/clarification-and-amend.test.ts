@@ -500,7 +500,10 @@ describe("submitEventRequest — SCRUM-108 AC9–AC12, AC14 resubmission", () =>
       }),
     );
     expect(tx.user.findFirst).toHaveBeenCalledWith({
-      where: { id: "usr_coord", role: "COORDINATOR" },
+      where: {
+        id: "usr_coord",
+        OR: [{ role: "COORDINATOR" }, { additionalRoles: { has: "COORDINATOR" } }],
+      },
       select: { id: true },
     });
     expect(tx.event.update).toHaveBeenLastCalledWith({

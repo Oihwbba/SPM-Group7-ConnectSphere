@@ -214,6 +214,11 @@ model User {
 
   role Role @default(ATTENDEE)
 
+  /// SCRUM-121 AC1 — roles held besides `role`. `role` stays the primary one:
+  /// where the user lands after signing in and what the header calls them.
+  /// Permissions are the union of all of them (lib/auth/can.ts, AC2).
+  additionalRoles Role[] @default([])
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

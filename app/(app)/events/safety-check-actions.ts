@@ -79,7 +79,8 @@ export async function requestSafetyCheck(
       // this event and so may not review it (AC6).
       const officers = await tx.user.findMany({
         where: {
-          role: "SAFETY_OFFICER",
+          // SCRUM-121 AC2: the role held besides another counts too.
+          OR: [{ role: "SAFETY_OFFICER" }, { additionalRoles: { has: "SAFETY_OFFICER" } }],
           id: { notIn: [event.organiserId, user!.id] },
         },
         select: { id: true },

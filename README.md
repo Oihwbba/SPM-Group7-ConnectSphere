@@ -161,6 +161,7 @@ Every seeded account uses the password **`Password123!`**:
 | `lead@test.local` | Event Coordinator Lead | Assigns new requests from the Unassigned Queue (SCRUM-165); reassignment arrives with SCRUM-21 |
 | `lead2@test.local` | Event Coordinator Lead | A second Lead, for two Leads assigning at once (SCRUM-165) |
 | `safety2@test.local` | Safety Officer | A second Safety Officer, for two people recording at once (SCRUM-166) |
+| `multirole@test.local` | Venue Staff, Technical Support, Event Coordinator and Event Organiser | One account with several roles (SCRUM-121) |
 
 ---
 
