@@ -20,6 +20,12 @@ no permission.
 When you add or change a Server Action, update its row in the same pull
 request.
 
+## `app/(app)/all-events/actions.ts`
+
+| Action | What it does | Permission | Input | Writes | Locks |
+|---|---|---|---|---|---|
+| `reassignCoordinator` | The Lead moves an Under Review, Planning or Confirmed event to another Coordinator, at once; not to its Organiser, and the current one changes nothing (SCRUM-21 AC1, AC3, AC4). Conditional on the Coordinator read, so of two simultaneous reassignments one is saved (AC9). The Lead becomes its supervising Lead (SCRUM-165 AC11); the new and previous Coordinators and the Organiser are told (AC6). | `event:reassign` | `assignCoordinatorSchema` (lib/schemas/assignment.ts) | AuditLog, Event, Notification | — (conditional update) |
+
 ## `app/(app)/bookings/actions.ts`
 
 | Action | What it does | Permission | Input | Writes | Locks |
@@ -99,6 +105,7 @@ request.
 |---|---|---|---|---|---|
 | `getEventReadiness` | The event's readiness checklist (SCRUM-110, 170). | `event:read`; the result also says whether the viewer may review, reject or confirm, settle or withdraw a venue request, and record No equipment needed | an event id | nothing (read only) | — |
 | `getEventArrangements` | A Confirmed event's secured venue, time and equipment (SCRUM-81 AC6). | `event:read` | an event id | nothing (read only) | — |
+| `getEventCoordinator` | The name of the event's current Coordinator, or none (SCRUM-21 AC8). | `event:read` | an event id | nothing (read only) | — |
 
 ## `app/(app)/events/registration-list-actions.ts`
 
