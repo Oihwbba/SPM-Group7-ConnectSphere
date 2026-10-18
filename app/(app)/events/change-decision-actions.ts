@@ -18,7 +18,10 @@ import {
 import { cancelInTransaction } from "@/lib/event-closing";
 import { EQUIPMENT_REQUEST_STATUS_LABEL } from "@/lib/equipment/requests";
 import { flagArrangements, flaggableArrangements } from "@/lib/reconsideration";
-import { withdrawRegistrationClosedNotice } from "@/lib/event-notifications";
+import {
+  notifyBackInPlanning,
+  withdrawRegistrationClosedNotice,
+} from "@/lib/event-notifications";
 import { outdateSafetyChecks } from "@/lib/safety-checks";
 import { CHANGE_KEYS, CHANGE_REQUEST_STATUS_LABEL } from "@/lib/schemas/change-request";
 import { PAST_START_MESSAGE } from "@/lib/schemas/event-edit";
@@ -342,6 +345,12 @@ export async function decideChangeRequest(
       // SCRUM-26's return to Planning; confirming again writes a new one.
       if (returnedToPlanning) {
         await withdrawRegistrationClosedNotice(tx, eventId, now);
+        // SCRUM-45 AC5: the Organiser is told why it is back in Planning.
+        await notifyBackInPlanning(
+          tx,
+          { id: eventId, name: event.name, organiserId: event.organiserId },
+          `a change to ${changed} was approved`,
+        );
       }
       await notify(
         "Change request approved",
