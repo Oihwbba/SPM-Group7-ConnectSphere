@@ -131,6 +131,10 @@ Gaps found by reviews (the #11 replay, 2026-09-14, and later merges), still
 true until a pull request fixes them. Raise one only when a pull request
 touches that code or claims that story, and say it was already known.
 
+- (2026-09-29, #99) A recorded unavailability period can't be removed or
+shortened from the app (a story is being written). Known when a pull request
+touches unavailability.
+
 - (2026-10-04, #120) Events approved before #120 sit in APPROVED with no way
 out: approval now writes PLANNING directly, `transitionEventStatus` only
 decides Submitted/Under Review, and `confirmEvent` refuses anything not
@@ -199,6 +203,5 @@ is deliberate. Known when a pull request touches the event audit log,
 Registration needed yet (SCRUM-41's form lacks the field, so approving one
 never changes it), attendees hear of applied changes only at SCRUM-85's
 re-confirmation, and an event completing with a request still Submitted
-leaves it Submitted — whether completing should reject it as cancelling now
-does is an open PO question. Known when a pull request touches change
-requests or claims SCRUM-41/SCRUM-85.
+leaves it Submitted (SCRUM-82 AC11 will reject it). Known when a pull
+request touches change requests or claims SCRUM-41/SCRUM-82/SCRUM-85.
