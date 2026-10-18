@@ -20,6 +20,7 @@ const tx = vi.hoisted(() => ({
   equipmentRequestUpdate: { createMany: vi.fn() },
   eventChangeRequest: { updateMany: vi.fn() },
   auditLog: { count: vi.fn(), createMany: vi.fn() },
+  registration: { count: vi.fn() },
   notification: { create: vi.fn(), updateMany: vi.fn() },
 }));
 
@@ -74,6 +75,7 @@ beforeEach(() => {
   tx.equipmentRequestUpdate.createMany.mockResolvedValue({ count: 1 });
   tx.eventChangeRequest.updateMany.mockResolvedValue({ count: 1 });
   tx.auditLog.count.mockResolvedValue(0);
+  tx.registration.count.mockResolvedValue(0);
   tx.auditLog.createMany.mockResolvedValue({ count: 3 });
   tx.notification.create.mockResolvedValue({});
   mockTransaction.mockImplementation((cb: (t: typeof tx) => unknown) => cb(tx));
@@ -86,6 +88,21 @@ function expectNothingWritten() {
   expect(tx.auditLog.createMany).not.toHaveBeenCalled();
   expect(tx.notification.create).not.toHaveBeenCalled();
 }
+
+describe("rejectPlanningEvent — SCRUM-82 AC5", () => {
+  it("SCRUM-82 [AC5] TC-82-08: an event with registrations is cancelled, not rejected, and nothing is written", async () => {
+    tx.registration.count.mockResolvedValue(2);
+
+    expect(await rejectPlanningEvent(valid)).toEqual({
+      ok: false,
+      error: "This event has registrations, so it can't be rejected. Cancel it instead.",
+    });
+    expect(tx.registration.count).toHaveBeenCalledWith({
+      where: { eventId: "evt1", status: "REGISTERED" },
+    });
+    expectNothingWritten();
+  });
+});
 
 describe("rejectPlanningEvent — SCRUM-117", () => {
   it("SCRUM-117 [AC1, AC2] TC-117-01: a Planning event never Confirmed becomes Rejected with its reason and outcome", async () => {
