@@ -127,6 +127,18 @@ export function computeRegistrationState(
   return "OPEN";
 }
 
+/**
+ * SCRUM-77 AC3: withdrawal is allowed up to, but not including, the event's
+ * start. The server and the Withdraw button both ask this, so the button is
+ * never offered when the server would refuse it.
+ */
+export function canWithdrawNow(
+  event: Pick<Event, "startAt">,
+  now: Date = new Date(),
+): boolean {
+  return !event.startAt || event.startAt > now;
+}
+
 export function canRegisterNow(state: RegistrationState): boolean {
   return state === "OPEN";
 }
