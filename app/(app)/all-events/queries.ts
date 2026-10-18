@@ -68,7 +68,8 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 export async function getAllEvents(filters: AllEventsFilters) {
   const session = await auth();
   if (!session?.user || !can(session.user, "event:view-all")) return null;
-  const isLead = session.user.role === "COORDINATOR_LEAD";
+  // The Lead's tools follow the permission to assign (SCRUM-165), never the role name.
+  const isLead = can(session.user, "event:assign");
 
   const startAt =
     filters.from || filters.to
