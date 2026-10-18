@@ -23,7 +23,13 @@ const tx = vi.hoisted(() => ({
     updateMany: vi.fn(),
   },
   notification: { createMany: vi.fn() },
-  auditLog: { create: vi.fn() },
+  auditLog: {
+    create: vi.fn(),
+    update: vi.fn(),
+    updateMany: vi.fn(),
+    delete: vi.fn(),
+    deleteMany: vi.fn(),
+  },
 }));
 
 vi.mock("@/auth", () => ({ auth: vi.fn() }));
@@ -294,7 +300,7 @@ describe("registerForEvent — SCRUM-73", () => {
   });
 });
 
-describe("withdrawRegistration — SCRUM-74/77 (minimal slice)", () => {
+describe("withdrawRegistration — SCRUM-74/77", () => {
   it("SCRUM-74 AC, SCRUM-77 [AC1, AC7] TC-77-01, TC-77-09: [Positive] withdrawing a REGISTERED registration flips it to WITHDRAWN, keeping the row", async () => {
     mockAuth.mockResolvedValue(sessionFor("ATTENDEE", "usr_attendee"));
     tx.registration.findUnique.mockResolvedValue({
@@ -587,8 +593,10 @@ describe("withdrawRegistration — SCRUM-77", () => {
         where: { eventId_userId: { eventId: "evt1", userId: "usr_attendee" } },
       }),
     );
-    // Re-registering never removes history: the action has no way to.
-    expect(tx).not.toHaveProperty("auditLog.deleteMany");
+    // Re-registering leaves the history alone: no audit entry is changed or removed.
+    for (const write of Object.values(tx.auditLog)) {
+      expect(write).not.toHaveBeenCalled();
+    }
   });
 
   it("SCRUM-77 [AC2] TC-77-02: [Negative] withdrawing an already-Withdrawn registration records nothing new", async () => {
