@@ -371,9 +371,14 @@ export async function decideChangeRequest(
       }
     }
 
+    // What an approval can change: the event, its registrations, flagged or
+    // released bookings and equipment (as SCRUM-25's edit and SCRUM-82's Cancel
+    // refresh).
     revalidatePath("/events");
     revalidatePath("/registrations");
+    revalidatePath("/bookings");
     revalidatePath("/equipment");
+    revalidatePath("/equipment-requests");
     revalidatePath("/venues/availability");
     return ok({ decision: outcome.done, returnedToPlanning: outcome.returnedToPlanning });
   } catch (error) {

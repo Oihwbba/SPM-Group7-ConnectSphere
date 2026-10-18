@@ -233,4 +233,39 @@ test.describe("SCRUM-128 — Decide a change request and apply it in one step", 
       dialog.getByTestId("change-request-decision").getByRole("button", { name: "Approve" }),
     ).toBeVisible();
   });
+
+  test("SCRUM-128 [AC2] TC-128-10: a decision that never reaches the server says so, and one already made elsewhere refreshes the request instead of offering it again", async ({
+    page,
+  }) => {
+    const name = `SCRUM-128 Lost ${Date.now()}`;
+    await eventWithRequest(name);
+    await signIn(page, "coordinator@test.local");
+    const dialog = await openDetails(page, name);
+    const decision = dialog.getByTestId("change-request-decision");
+    await expect(decision.getByRole("button", { name: "Approve" })).toBeVisible();
+
+    // The decision's POST carries the decision; it fails as a dropped connection would.
+    await page.route("**/events**", (route) =>
+      route.request().method() === "POST" && route.request().postData()?.includes('"decision"')
+        ? route.abort("failed")
+        : route.continue(),
+    );
+    await decision.getByRole("button", { name: "Approve" }).click();
+    await expect(
+      page.getByText("The decision couldn't be sent. If the request above isn't decided, try again."),
+    ).toBeVisible();
+    expect((await prisma.event.findUniqueOrThrow({ where: { id: eventId } })).expectedAttendance).toBe(40);
+    await page.unroute("**/events**");
+
+    // Meanwhile it is decided elsewhere (another tab): approving is refused and
+    // the request shows as decided, with nothing left to click.
+    await prisma.eventChangeRequest.updateMany({
+      where: { eventId },
+      data: { status: "REJECTED", decidedById: "usr_coordinator", decidedAt: new Date(), decisionReason: "Decided in another tab." },
+    });
+    await decision.getByRole("button", { name: "Approve" }).click();
+    await expect(page.getByText(/already Rejected; nothing was changed/)).toBeVisible();
+    await expect(dialog.getByTestId("change-request")).toHaveAttribute("data-status", "REJECTED");
+    await expect(dialog.getByTestId("change-request-decision")).toHaveCount(0);
+  });
 });

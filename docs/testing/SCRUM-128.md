@@ -39,7 +39,7 @@ change request. Every account's password is `Password123!`.
 | [TC-128-07](#tc-128-07) | Positive | AC 8 | Unit, integration, e2e |
 | [TC-128-08](#tc-128-08) | Negative | AC 9 | Unit, e2e |
 | [TC-128-09](#tc-128-09) | Positive | AC 10 | Unit |
-| [TC-128-10](#tc-128-10) | Concurrency, Negative | AC 2 | Unit, integration |
+| [TC-128-10](#tc-128-10) | Concurrency, Negative | AC 2 | Unit, integration, e2e |
 | [TC-128-11](#tc-128-11) | Positive | AC 2, AC 4, AC 5 | Integration |
 | [TC-128-12](#tc-128-12) | Negative | AC 2 | Integration |
 | [TC-128-13](#tc-128-13) | Positive | AC 1, AC 2, AC 4, AC 5 | e2e |
@@ -133,7 +133,7 @@ change request. Every account's password is `Password123!`.
 | Pre-conditions | The request asks to cancel, with reason "The sponsor pulled out."; an Attendee is registered. |
 | Test Steps | Click **Approve**. |
 | Test Data | — |
-| Expected Result | "Change request approved. The event is cancelled." The event is Cancelled with the Organiser's reason, as SCRUM-82 does; the request stays Approved; the registration is Cancelled; the equipment and availability pages are refreshed. In the browser, the decision shows "Cancelling releases:" instead of a field table, and the Organiser then sees the event Cancelled with the reason. |
+| Expected Result | "Change request approved. The event is cancelled." The event is Cancelled with the Organiser's reason, as SCRUM-82 does; the request stays Approved; the registration is Cancelled; the bookings, equipment and availability pages are refreshed, as SCRUM-25's edit and SCRUM-82's Cancel do. In the browser, the decision shows "Cancelling releases:" instead of a field table, and the Organiser then sees the event Cancelled with the reason. |
 
 **Automated by:** `tests/unit/change-decision.test.ts` › "SCRUM-128 [AC8] TC-128-07: …"; `tests/integration/change-decision.test.ts` › "SCRUM-128 [AC8] TC-128-07: …"; `e2e/change-decision.spec.ts` › "SCRUM-128 [AC8] TC-128-07: approving a cancellation request lists what it releases, cancels the event with the Organiser's reason, and the Organiser sees it Cancelled"
 
@@ -172,9 +172,9 @@ change request. Every account's password is `Password123!`.
 | Pre-conditions | — |
 | Test Steps | 1. Approve and reject at the same moment. <br> 2. Decide a request already decided, or on an event since cancelled or completed. |
 | Test Data | — |
-| Expected Result | 1. One succeeds; the other says "This change request is already Approved/Rejected; nothing was changed." One history entry. 2. Refused with nothing written. |
+| Expected Result | 1. One succeeds; the other says "This change request is already Approved/Rejected; nothing was changed." One history entry. 2. Refused with nothing written. In the browser, a decision decided elsewhere refreshes the request, which then reads as decided with no Approve or Reject; a decision that never reaches the server says "The decision couldn't be sent. If the request above isn't decided, try again." |
 
-**Automated by:** `tests/unit/change-decision.test.ts` › "SCRUM-128 [AC2] TC-128-10: …" (2 tests); `tests/integration/change-decision.test.ts` › "SCRUM-128 [AC2] TC-128-10: …"
+**Automated by:** `tests/unit/change-decision.test.ts` › "SCRUM-128 [AC2] TC-128-10: …" (2 tests); `tests/integration/change-decision.test.ts` › "SCRUM-128 [AC2] TC-128-10: …"; `e2e/change-decision.spec.ts` › "SCRUM-128 [AC2] TC-128-10: a decision that never reaches the server says so, and one already made elsewhere refreshes the request instead of offering it again"
 
 ### TC-128-11
 

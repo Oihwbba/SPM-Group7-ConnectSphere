@@ -281,10 +281,10 @@ describe("decideChangeRequest — attendance and cancellation (SCRUM-128 AC7, AC
     ).toMatchObject({ ok: true });
   });
 
-  it("SCRUM-128 [AC8] TC-128-07: approving refreshes the same pages SCRUM-82's Cancel does, since a cancellation releases bookings, holds and equipment", async () => {
+  it("SCRUM-128 [AC4, AC8] TC-128-07: approving refreshes every page it can change: flagged or released bookings and equipment, as SCRUM-25's edit and SCRUM-82's Cancel do", async () => {
     await decideChangeRequest({ changeRequestId: "cr1", decision: "APPROVED" });
 
-    for (const path of ["/events", "/registrations", "/equipment", "/venues/availability"]) {
+    for (const path of ["/events", "/registrations", "/bookings", "/equipment", "/equipment-requests", "/venues/availability"]) {
       expect(revalidatePath).toHaveBeenCalledWith(path);
     }
   });

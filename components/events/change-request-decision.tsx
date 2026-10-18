@@ -14,6 +14,9 @@ import {
 import { changeFieldLabel } from "@/lib/schemas/change-request";
 import { formatDateTime } from "@/lib/datetime";
 
+const DECIDE_FAILED_MESSAGE =
+  "The decision couldn't be sent. If the request above isn't decided, try again.";
+
 function shown(fieldName: string, value: string | null): string {
   if (value === null) return "—";
   return fieldName === "startAt" || fieldName === "endAt"
@@ -80,13 +83,27 @@ export function ChangeRequestDecision({
 
   function decide(decision: "APPROVED" | "REJECTED") {
     startSave(async () => {
-      const result = await decideChangeRequest({
-        changeRequestId: view!.changeRequestId,
-        decision,
-        reason,
-      });
+      let result: Awaited<ReturnType<typeof decideChangeRequest>>;
+      try {
+        result = await decideChangeRequest({
+          changeRequestId: view!.changeRequestId,
+          decision,
+          reason,
+        });
+      } catch {
+        // A lost connection or an unexpected server error: the decision may
+        // or may not have been saved, so the list is read again, as the raise
+        // form does.
+        toast.error(DECIDE_FAILED_MESSAGE);
+        onDecided();
+        return;
+      }
       if (!result.ok) {
         toast.error(result.error);
+        // A blank reason changed nothing on the server. Anything else (decided
+        // in another tab, the event reassigned or closed) may mean the list is
+        // out of date, so it is read again.
+        if (!result.fieldErrors) onDecided();
         return;
       }
       toast.success(
