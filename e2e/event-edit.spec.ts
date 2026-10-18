@@ -351,22 +351,22 @@ test.describe("SCRUM-25 — update routine event information during planning", (
  * a routine layout change puts a requested safety check out of date, and on
  * a Confirmed event, where no detail can be edited, closing or reopening
  * registration and operational notes stay available. Each test makes its own
- * event, with a prefix the serial tests above don't remove, and deletes it
- * with what it gathered (requesting a check notifies the Safety Officers).
+ * event, with a prefix the serial tests above don't remove, and deletes only
+ * that event, with what it gathered (requesting a check notifies the Safety
+ * Officers): these tests may run at once, so one mustn't remove another's.
  */
 const OWN = "E2E SCRUM-25 —";
 
 test.describe("SCRUM-25 — with the safety check and registration control", () => {
   test.describe.configure({ timeout: 90_000 });
   test.skip(!usesLocalDatabase, "creates its own events");
+  // A worker runs one test at a time, so this is the running test's event.
+  let eventId: string | undefined;
 
   test.afterEach(async () => {
-    const ids = (
-      await prisma.event.findMany({
-        where: { name: { startsWith: OWN } },
-        select: { id: true },
-      })
-    ).map((e) => e.id);
+    if (!eventId) return;
+    const ids = [eventId];
+    eventId = undefined;
     const related = [
       ...(await prisma.booking.findMany({ where: { eventId: { in: ids } }, select: { id: true } })),
       ...(await prisma.safetyCheck.findMany({ where: { eventId: { in: ids } }, select: { id: true } })),
@@ -387,7 +387,7 @@ test.describe("SCRUM-25 — with the safety check and registration control", () 
       startAt: new Date("2036-08-05T10:00:00+08:00"),
       endAt: new Date("2036-08-05T14:00:00+08:00"),
     };
-    const { id: eventId } = await prisma.event.create({
+    ({ id: eventId } = await prisma.event.create({
       data: {
         name,
         purpose: "SCRUM-25 with SCRUM-166",
@@ -404,7 +404,7 @@ test.describe("SCRUM-25 — with the safety check and registration control", () 
         noEquipmentNeededById: "usr_coordinator",
       },
       select: { id: true },
-    });
+    }));
     await prisma.booking.create({
       data: {
         eventId,
@@ -464,7 +464,7 @@ test.describe("SCRUM-25 — with the safety check and registration control", () 
   }) => {
     const name = `${OWN} Confirmed ${Date.now()}`;
     const NOTE = "Doors open 30 minutes early for registration.";
-    const { id: eventId } = await prisma.event.create({
+    ({ id: eventId } = await prisma.event.create({
       data: {
         name,
         purpose: "SCRUM-25 with SCRUM-75",
@@ -479,7 +479,7 @@ test.describe("SCRUM-25 — with the safety check and registration control", () 
         submittedAt: new Date(),
       },
       select: { id: true },
-    });
+    }));
 
     // AC5: the assigned Coordinator can't edit a Confirmed event's details,
     // but registration and notes aren't details.
