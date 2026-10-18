@@ -9,17 +9,19 @@ and the app is running. The event is assigned to `coordinator@test.local` and
 organised by `organiser@test.local`. Every account's password is
 `Password123!`.
 
-**What this story doesn't cover yet:**
+**Covered by other stories:**
 
 - **AC2:** the Organiser asks for cancellation through a change request
   (SCRUM-41), and approving it applies this story through the same
-  cancellation (`cancelInTransaction`). That is proven by SCRUM-128's
-  TC-128-07.
+  cancellation (`cancelInTransaction`). SCRUM-128's TC-128-07 proves it (unit,
+  integration, e2e).
+- **AC10, the Lead's queue:** SCRUM-165 marks unassigned requests Overdue
+  there (`tests/unit/lead-queue.test.ts` › "SCRUM-165 [AC2] TC-165-02: …"). The
+  Coordinator's list is TC-82-11. The two differ only at exactly the start
+  time: SCRUM-165 counts it as overdue, this story's list doesn't yet.
 - **AC6:** notification rows are written for the Organiser, the Coordinator
   and each Attendee whose registration was cancelled. Listing them is
   SCRUM-48; SCRUM-45 and SCRUM-85 own how they behave.
-- **AC10, the Lead's queue:** overdue unassigned requests are shown there by
-  SCRUM-165 (not built). The Coordinator's list already marks them.
 
 | ID | Type | Criterion | Automated |
 |---|---|---|---|
@@ -36,6 +38,7 @@ organised by `organiser@test.local`. Every account's password is
 | [TC-82-11](#tc-82-11) | Positive, Boundary | AC 10 | Unit, e2e |
 | [TC-82-12](#tc-82-12) | Positive | AC 1, AC 3, AC 4 | e2e |
 | [TC-82-13](#tc-82-13) | Positive | AC 7, AC 10 | e2e |
+| [TC-82-14](#tc-82-14) | Positive, Negative | AC 11 | Unit, integration |
 
 ### TC-82-01
 
@@ -205,3 +208,16 @@ organised by `organiser@test.local`. Every account's password is
 | Expected Result | The first is marked Overdue, the next week's isn't, and the finished one shows Completed. |
 
 **Automated by:** `e2e/close-event.spec.ts` › "SCRUM-82 [AC7, AC10] TC-82-13: …"
+
+### TC-82-14
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-82-14 |
+| Test Scenario | [Positive, Negative] AC 11: completing an event rejects a change request still Submitted |
+| Pre-conditions | A Confirmed event whose end has just passed, with one Submitted change request and one already Approved. |
+| Test Steps | Open **Events** (which completes finished events, AC7). |
+| Test Data | — |
+| Expected Result | The event is Completed. The Submitted request is Rejected with "The event has already taken place.", with no decider, a history entry, and the Organiser notified "Your change request for … was rejected: The event has already taken place." The Approved request is unchanged. With no Submitted request, nothing is rejected or sent. |
+
+**Automated by:** `tests/unit/event-closing.test.ts` › "SCRUM-82 [AC11] TC-82-14: …" (2 tests); `tests/integration/close-event.test.ts` › "SCRUM-82 [AC11] TC-82-14: completing an event rejects its still-Submitted change request with “The event has already taken place” and tells the Organiser; a decided one is left alone"

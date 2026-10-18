@@ -61,8 +61,16 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-82 — closing an event", () => {
       where: { eventId: { in: created } },
       select: { id: true },
     });
+    const requests = await prisma.eventChangeRequest.findMany({
+      where: { eventId: { in: created } },
+      select: { id: true },
+    });
     await prisma.auditLog.deleteMany({
-      where: { entityId: { in: [...created, ...bookings.map((b) => b.id)] } },
+      where: {
+        entityId: {
+          in: [...created, ...bookings.map((b) => b.id), ...requests.map((r) => r.id)],
+        },
+      },
     });
     await prisma.notification.deleteMany({
       where: { eventId: { in: created } },
@@ -245,6 +253,55 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-82 — closing an event", () => {
         where: { entityId: eventId, newValue: "CANCELLED" },
       }),
     ).toBe(1);
+  });
+
+  it("SCRUM-82 [AC11] TC-82-14: completing an event rejects its still-Submitted change request with “The event has already taken place” and tells the Organiser; a decided one is left alone", async () => {
+    // Dates in 2001, so nothing any other suite writes has ended this early.
+    const end = new Date("2001-02-01T10:00:00.000Z");
+    const eventId = await event("CONFIRMED", {
+      startAt: new Date("2001-02-01T08:00:00Z"),
+      endAt: end,
+    });
+    const submitted = await prisma.eventChangeRequest.create({
+      data: { eventId, requestedById: "usr_organiser", reason: "Move it" },
+      select: { id: true },
+    });
+    const approved = await prisma.eventChangeRequest.create({
+      data: {
+        eventId,
+        requestedById: "usr_organiser",
+        reason: "Earlier change",
+        status: "APPROVED",
+        decidedById: "usr_coordinator",
+        decidedAt: new Date("2001-01-20T00:00:00Z"),
+      },
+      select: { id: true },
+    });
+
+    await completeFinishedEvents(prisma, new Date(end.getTime() + 1));
+
+    expect(
+      await prisma.eventChangeRequest.findUniqueOrThrow({ where: { id: submitted.id } }),
+    ).toMatchObject({
+      status: "REJECTED",
+      decisionReason: "The event has already taken place.",
+      decidedById: null,
+    });
+    expect(
+      (await prisma.eventChangeRequest.findUniqueOrThrow({ where: { id: approved.id } })).status,
+    ).toBe("APPROVED");
+    expect(
+      await prisma.auditLog.count({ where: { entityId: submitted.id, action: "REJECTED" } }),
+    ).toBe(1);
+    expect(
+      await prisma.notification.findFirst({
+        where: { eventId, type: "CHANGE_REQUEST_OUTCOME" },
+        select: { userId: true, message: true },
+      }),
+    ).toEqual({
+      userId: "usr_organiser",
+      message: expect.stringMatching(/was rejected: The event has already taken place\.$/),
+    });
   });
 
   it("SCRUM-82 [AC7, AC8, AC9] TC-82-10: a finished Confirmed event completes once, even when two pages load at the same moment; at its end time it is still Confirmed, and a Cancelled one never completes", async () => {
