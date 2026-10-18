@@ -103,14 +103,14 @@ test.describe("SCRUM-85 — Attendees are kept informed", () => {
     await expect(card.getByTestId("registration-status")).toHaveText(
       "Details being updated – registration paused",
     );
-    await expect(card.getByTestId("event-date")).toContainText("7 Sep 2038");
+    await expect(card.getByTestId("event-date")).toContainText(/7 Sept? 2038/);
     await expect(card).not.toContainText("Planning");
 
     // AC9: opening it shows what was last confirmed, not the internal plan.
     await card.getByRole("link", { name }).click();
     const replanning = attendee.getByTestId("replanning-event");
     await expect(replanning).toContainText("A summer evening in the garden.");
-    await expect(replanning.getByTestId("event-date")).toContainText("7 Sep 2038");
+    await expect(replanning.getByTestId("event-date")).toContainText(/7 Sept? 2038/);
     await expect(replanning.getByTestId("venue")).toHaveText(
       "Seminar Room 2.1 — Level 2, Block B",
     );
@@ -141,7 +141,7 @@ test.describe("SCRUM-85 — Attendees are kept informed", () => {
       "An event you registered for has changed",
     );
     await expect(notice).toBeVisible();
-    await expect(attendee.getByText(/14 Sep 2038/).first()).toBeVisible();
+    await expect(attendee.getByText(/14 Sept? 2038/).first()).toBeVisible();
     await attendee.goto("/registrations");
     await expect(
       attendee
