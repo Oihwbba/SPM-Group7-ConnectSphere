@@ -70,11 +70,11 @@ the queue unassigned. Every account's password is `Password123!`.
 | Item | Content |
 |---|---|
 | Test Case ID | TC-165-03 |
-| Test Scenario | [Boundary] AC 2: overdue starts at the start instant |
+| Test Scenario | [Boundary] AC 2: overdue once the start has passed, by SCRUM-82 AC10's rule, so the queue and the Coordinator's list agree |
 | Pre-conditions | — |
-| Test Steps | 1. Check a request starting exactly now, one starting later, and one with no start. |
+| Test Steps | 1. Check a request starting exactly now, one a moment after its start, one starting later, and one with no start. |
 | Test Data | — |
-| Expected Result | Starting now: Overdue. Later, or no start: not Overdue. |
+| Expected Result | Starting exactly now: not Overdue yet. A moment after its start: Overdue. Later, or no start: not Overdue. |
 
 **Automated by:** `tests/unit/lead-queue.test.ts` › "SCRUM-165 [AC2] TC-165-03: …" (2 tests)
 
