@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import type { EventStatus } from "@prisma/client";
 
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
@@ -528,7 +529,7 @@ export async function getFormCatalogues(): Promise<
  */
 export async function transitionEventStatus(
   input: unknown,
-): Promise<ActionResult<{ status: string }>> {
+): Promise<ActionResult<{ status: EventStatus }>> {
   const session = await auth();
   const user = session?.user;
 

@@ -43,6 +43,7 @@ import {
 import type { ActionResult } from "@/lib/action-result";
 import { cn } from "@/lib/utils";
 import { isValidPeriod } from "@/lib/period";
+import { BOOKING_STATUS_LABEL } from "@/lib/status-labels";
 import {
   attendanceOverEventMessage,
   coversEventPeriod,
@@ -881,7 +882,7 @@ function OutcomePanel({
         <p>
           {booking.venueName}, {formatDateTime(booking.startAt)} to{" "}
           {formatDateTime(booking.endAt)} · status{" "}
-          {booking.status.toLowerCase()}
+          {BOOKING_STATUS_LABEL[booking.status]}
         </p>
       </div>
     </div>

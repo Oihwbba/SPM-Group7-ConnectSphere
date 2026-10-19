@@ -181,7 +181,7 @@ test.describe("SCRUM-25 — update routine event information during planning", (
       "The event's expected attendance changed.",
     );
     await expect(venueItem).toContainText(
-      "Needs reconsideration – The event's expected attendance changed.",
+      "Pending Needs Reconsideration – The event's expected attendance changed.",
     );
     expect(
       await prisma.booking.findFirstOrThrow({

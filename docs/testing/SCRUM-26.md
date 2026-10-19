@@ -210,9 +210,9 @@ same period. Flagged rows are created straight in the database or with
 | Pre-conditions | One flagged live booking or Confirmed reservation; a flag left on a cancelled one. |
 | Test Steps | Open the readiness checklist as the Coordinator, then as the Organiser. |
 | Test Data | Reason "The event moved to 2 June." |
-| Expected Result | Venue booking (or Equipment, naming the equipment) is incomplete with "Needs reconsideration" and the reason; the event isn't ready and Confirm is disabled. The Organiser sees the state without the reason. A flag on a cancelled row doesn't count. |
+| Expected Result | Venue booking (or Equipment, naming the equipment) is incomplete, still showing the arrangement's own status ("Approved", "Pending", "Held until …", or "Reserved: Projector") with a **Needs Reconsideration** badge beside it (SCRUM-131 AC3) and the reason; the event isn't ready and Confirm is disabled. The Organiser sees the state and the badge without the reason. A flag on a cancelled row doesn't count. |
 
-**Automated by:** `tests/unit/event-readiness.test.ts` › "SCRUM-26 [AC12] TC-26-13: …" (6 tests); `e2e/reconsideration.spec.ts` (TC-26-14)
+**Automated by:** `tests/unit/event-readiness.test.ts` › "SCRUM-26 [AC12] TC-26-13 …" (6 tests, three also SCRUM-131 [AC3]); `e2e/reconsideration.spec.ts` (TC-26-14)
 
 ### TC-26-14
 
@@ -223,7 +223,7 @@ same period. Flagged rows are created straight in the database or with
 | Pre-conditions | A Planning event and a Confirmed event, each with a flagged Approved booking. |
 | Test Steps | 1. As the Coordinator, open the Planning event: see the flag, its reason and the incomplete checklist; click **Still stands**. <br> 2. Open the Confirmed event, click **Cancel arrangement**, then **Keep it for now**; click it again and confirm. <br> 3. As the Organiser, open the Planning event. |
 | Test Data | `coordinator@test.local`, `organiser@test.local`. |
-| Expected Result | 1. The panel empties and the venue item is complete. 2. Keeping it writes nothing; confirming says "… was cancelled. The event is back in Planning." 3. "Needs reconsideration" without the reason, and no panel. |
+| Expected Result | 1. The panel empties and the venue item is complete. 2. Keeping it writes nothing; confirming says "… was cancelled. The event is back in Planning." 3. The booking's status with the Needs Reconsideration badge, without the reason, and no panel. |
 
 **Automated by:** `e2e/reconsideration.spec.ts` › "SCRUM-26 … TC-26-14: …" (3 tests); `tests/unit/reconsideration-actions.test.ts` › "SCRUM-26 [AC7, AC12] TC-26-14: …"
 

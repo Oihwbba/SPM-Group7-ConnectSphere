@@ -94,7 +94,7 @@ test.describe("SCRUM-26 — Flag and resolve arrangements affected by a change",
     eventId = undefined;
   });
 
-  test("SCRUM-26 [AC7, AC8, AC12] TC-26-14: the Coordinator sees the flag holding back confirmation, and keeps the booking with Still stands", async ({
+  test("SCRUM-26 [AC7, AC8, AC12] TC-26-14, SCRUM-131 [AC3] TC-131-04: the Coordinator sees the flag beside the booking's Approved status holding back confirmation, and keeps the booking with Still stands", async ({
     page,
   }) => {
     const name = `SCRUM-26 Still stands ${Date.now()}`;
@@ -108,8 +108,13 @@ test.describe("SCRUM-26 — Flag and resolve arrangements affected by a change",
     const panel = details.getByTestId("reconsideration-panel");
     await expect(panel).toContainText("Exhibition Hall (Approved)");
     await expect(panel).toContainText(REASON);
-    await expect(details.getByTestId("readiness-item-venue")).toContainText(
-      "Needs reconsideration",
+    // SCRUM-131 AC3: the flag is a badge beside the status, not in its place.
+    const venueItem = details.getByTestId("readiness-item-venue");
+    await expect(venueItem.getByTestId("venue-booking")).toContainText(
+      `Approved Needs Reconsideration – ${REASON}`,
+    );
+    await expect(venueItem.getByTestId("needs-reconsideration").first()).toHaveText(
+      "Needs Reconsideration",
     );
     await expect(details.getByRole("button", { name: "Confirm event" })).toBeDisabled();
 
@@ -118,10 +123,8 @@ test.describe("SCRUM-26 — Flag and resolve arrangements affected by a change",
 
     // The panel empties and the checklist reads the booking as Approved again.
     await expect(details.getByTestId("reconsideration-panel")).toHaveCount(0);
-    await expect(details.getByTestId("readiness-item-venue")).toHaveAttribute(
-      "data-complete",
-      "true",
-    );
+    await expect(venueItem).toHaveAttribute("data-complete", "true");
+    await expect(venueItem.getByTestId("needs-reconsideration")).toHaveCount(0);
     expect(
       await prisma.booking.findUniqueOrThrow({ where: { id: bookingId } }),
     ).toMatchObject({
@@ -174,7 +177,7 @@ test.describe("SCRUM-26 — Flag and resolve arrangements affected by a change",
     ).toBe("PLANNING");
   });
 
-  test("SCRUM-26 [AC7, AC12] TC-26-14: the Organiser sees the venue needs reconsideration, but no reason and no way to resolve it", async ({
+  test("SCRUM-26 [AC7, AC12] TC-26-14, SCRUM-131 [AC3] TC-131-04: the Organiser sees the venue needs reconsideration beside its status, but no reason and no way to resolve it", async ({
     page,
   }) => {
     const name = `SCRUM-26 Organiser ${Date.now()}`;
@@ -184,7 +187,7 @@ test.describe("SCRUM-26 — Flag and resolve arrangements affected by a change",
     const details = await openDetails(page, name);
 
     await expect(details.getByTestId("readiness-item-venue")).toContainText(
-      "Needs reconsideration",
+      "Approved Needs Reconsideration",
     );
     await expect(details.getByTestId("readiness-item-venue")).not.toContainText(REASON);
     await expect(details.getByTestId("reconsideration-panel")).toHaveCount(0);

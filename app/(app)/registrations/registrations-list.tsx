@@ -6,14 +6,9 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatEventTime } from "@/lib/datetime";
 import { isBeingReplanned, venueLabel } from "@/lib/confirmed-details";
+import { REGISTRATION_STATUS_LABEL } from "@/lib/status-labels";
 import { REPLANNING_LABEL } from "../events/replanning-event-detail";
 import type { MyRegistration } from "./queries";
-
-const STATUS_LABEL: Record<RegistrationStatus, string> = {
-  REGISTERED: "Registered",
-  WITHDRAWN: "Withdrawn",
-  CANCELLED: "Cancelled",
-};
 
 const STATUS_BADGE_VARIANT = {
   REGISTERED: "success",
@@ -93,7 +88,7 @@ export function RegistrationsList({
                   variant={replanning ? "warning" : STATUS_BADGE_VARIANT[shown]}
                   data-testid="registration-status"
                 >
-                  {replanning ? REPLANNING_LABEL : STATUS_LABEL[shown]}
+                  {replanning ? REPLANNING_LABEL : REGISTRATION_STATUS_LABEL[shown]}
                 </Badge>
               </div>
             </CardHeader>

@@ -1,22 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { BookingStatus } from "@prisma/client";
 import { Building2 } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getEventBookings } from "@/app/(app)/events/readiness-actions";
 import { formatEventTime } from "@/lib/datetime";
+import { BOOKING_STATUS_LABEL } from "@/lib/status-labels";
 import type { EventVenueBooking } from "@/lib/event-readiness";
-
-const STATUS_LABEL: Record<BookingStatus, string> = {
-  PENDING: "Pending",
-  HELD: "Held",
-  APPROVED: "Approved",
-  REJECTED: "Rejected",
-  CANCELLED: "Cancelled",
-  EXPIRED: "Expired",
-};
 
 /**
  * SCRUM-162 AC7 — every venue booking of the event, with its venue,
@@ -80,7 +71,7 @@ export function VenueBookings({ eventId }: { eventId: string }) {
                   </span>
                 </span>
                 <span className="font-semibold">
-                  {STATUS_LABEL[booking.status]}
+                  {BOOKING_STATUS_LABEL[booking.status]}
                 </span>
               </li>
             ))}
