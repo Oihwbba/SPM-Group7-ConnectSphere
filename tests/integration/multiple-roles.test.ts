@@ -18,6 +18,7 @@ import { notifyRole } from "@/lib/staff-notifications";
 import { getMyNotifications } from "@/app/(app)/notifications/queries";
 import { getQueueRequest } from "@/app/(app)/queue/queries";
 import { assignCoordinator } from "@/app/(app)/queue/actions";
+import { reassignCoordinator } from "@/app/(app)/all-events/actions";
 
 // SCRUM-121 against a real, seeded Postgres: an account holds several roles,
 // existing accounts hold none extra, staff notices reach a role held as an
@@ -266,6 +267,52 @@ describe.skipIf(!usesLocalDatabase)("several roles on one account — real datab
       expect(await assignCoordinator({ eventId: id, coordinatorId: BOTH_ID })).toEqual({
         ok: true,
         data: { coordinatorName: "Morgan Multirole" },
+      });
+      expect(
+        await prisma.event.findUniqueOrThrow({ where: { id }, select: { coordinatorId: true } }),
+      ).toEqual({ coordinatorId: BOTH_ID });
+    });
+
+    // Reassigning (SCRUM-21): an event already in Planning with a Coordinator.
+    const planning = async (organiserId: string) => {
+      const { id } = await prisma.event.create({
+        data: {
+          name: `Several roles reassign ${organiserId} ${STAMP}`,
+          status: "PLANNING",
+          organiserId,
+          coordinatorId: "usr_coordinator",
+          submittedAt: new Date(),
+          startAt: START,
+          endAt: END,
+          expectedAttendance: 40,
+        },
+        select: { id: true },
+      });
+      submitted.push(id);
+      return id;
+    };
+
+    it("SCRUM-121 [AC4] TC-121-04: the Lead can't reassign an event to an account that is its Organiser, even though it also coordinates", async () => {
+      const id = await planning(BOTH_ID);
+      mockAuth.mockResolvedValue(LEAD);
+
+      expect(await reassignCoordinator({ eventId: id, coordinatorId: BOTH_ID })).toEqual({
+        ok: false,
+        error: "The event's own Organiser can't be its Coordinator.",
+      });
+      expect(
+        await prisma.event.findUniqueOrThrow({ where: { id }, select: { coordinatorId: true } }),
+      ).toEqual({ coordinatorId: "usr_coordinator" });
+      expect(await prisma.auditLog.count({ where: { entityId: id } })).toBe(0);
+    });
+
+    it("SCRUM-121 [AC2, AC4] TC-121-02, TC-121-04: anyone else's event can be reassigned to the account's Coordinator role", async () => {
+      const id = await planning("usr_organiser");
+      mockAuth.mockResolvedValue(LEAD);
+
+      expect(await reassignCoordinator({ eventId: id, coordinatorId: BOTH_ID })).toMatchObject({
+        ok: true,
+        data: { coordinatorName: "Morgan Multirole", changed: true },
       });
       expect(
         await prisma.event.findUniqueOrThrow({ where: { id }, select: { coordinatorId: true } }),
