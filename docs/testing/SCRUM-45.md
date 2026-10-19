@@ -10,12 +10,12 @@ event.
 password `Password123!`. Each automated case makes its own event (assigned to
 `coordinator@test.local` or the second seeded Coordinator) and removes it.
 
-**Still to do, because the steps they report aren't built yet:** AC1's
-assignment by the Lead (SCRUM-165; today assignment is automatic and keeps
-its own notice), AC5 (SCRUM-128, SCRUM-26), AC6 and AC7 (SCRUM-82), AC9
-(SCRUM-128) and AC10 (SCRUM-21). Each gets its case with its story. When
-SCRUM-82 cancels an event, it must also withdraw the registration-closed
-notice written ahead in TC-45-07.
+**Notices sent by the stories that build their steps:** the Lead's
+assignment (AC1's second half) is SCRUM-165's, a cancellation (AC6) is
+SCRUM-82's, and a change request's outcome (AC9) is SCRUM-128's; TC-45-01,
+TC-45-11 and TC-45-12 cite their tests. Cancelling also withdraws the
+registration-closed notice written ahead in TC-45-07 (SCRUM-82's TC-82-04).
+Reassignment's notices (AC10) are SCRUM-21's; TC-45-13 cites its tests. Every criterion is covered.
 
 | ID | Type | Criterion | Automated |
 |---|---|---|---|
@@ -27,6 +27,11 @@ notice written ahead in TC-45-07.
 | [TC-45-06](#tc-45-06) | Positive, Boundary | AC 11, AC 13 | Unit, integration |
 | [TC-45-07](#tc-45-07) | Positive | AC 11 | Unit, integration |
 | [TC-45-08](#tc-45-08) | Positive, Negative | AC 12, AC 13 | Unit |
+| [TC-45-09](#tc-45-09) | Positive, Negative | AC 5, AC 12, AC 13 | Unit, integration, e2e |
+| [TC-45-10](#tc-45-10) | Positive, Negative | AC 7, AC 12, AC 13 | Unit, integration, e2e |
+| [TC-45-11](#tc-45-11) | Positive | AC 6 | Unit, integration (SCRUM-82's) |
+| [TC-45-12](#tc-45-12) | Positive | AC 9 | Unit, integration (SCRUM-128's) |
+| [TC-45-13](#tc-45-13) | Positive, Concurrency | AC 10, AC 13 | Unit, integration, e2e (SCRUM-21's) |
 
 AC 15 (no duplicates of SCRUM-85's or SCRUM-124's notices) holds by
 construction: every notice here goes to the event's Organiser or Coordinator.
@@ -40,11 +45,11 @@ construction: every notice here goes to the event's Organiser or Coordinator.
 | Test Case ID | TC-45-01 |
 | Test Scenario | [Positive, Negative] AC 1: a submitted request tells its Organiser it is waiting to be assigned |
 | Pre-conditions | Signed in as `organiser@test.local`. |
-| Test Steps | 1. Submit a new event request "Career Fair". <br> 2. Resubmit an amended rejected request whose Coordinator still holds the role. <br> 3. Submit a draft someone else submitted at the same moment. |
+| Test Steps | 1. Submit a new event request "Career Fair". <br> 2. Resubmit an amended rejected request whose Coordinator still holds the role. <br> 3. Submit a draft someone else submitted at the same moment. <br> 4. As the Lead, assign "Career Fair" to a Coordinator (SCRUM-165). |
 | Test Data | — |
-| Expected Result | Step 1: the Organiser gets "Request submitted": "\"Career Fair\" was submitted and is waiting to be assigned to a Coordinator." While assignment is automatic, the assignment notices for the Organiser and the Coordinator follow as their own notices. Step 2: it goes straight back to its Coordinator, so no submission notice. Step 3: one submission, with one set of notices. |
+| Expected Result | Step 1: the Organiser gets "Request submitted": "\"Career Fair\" was submitted and is waiting to be assigned to a Coordinator." No assignment notice is sent yet: the request waits for the Lead. Step 2: it goes straight back to its Coordinator, so no submission notice. Step 3: one submission, with one set of notices. Step 4: the Organiser and the assigned Coordinator are each told. |
 
-**Automated by:** `tests/unit/submission-queue.test.ts` › "SCRUM-45 [AC1, AC12] TC-45-01: the Organiser is told the request was submitted and is waiting to be assigned, then the assignment is a notice of its own" and "AC: no coordinator available — …"; `tests/unit/clarification-and-amend.test.ts` › "SCRUM-108 [AC9, AC11, AC14] TC-108-05: …", "SCRUM-108 [AC11, AC14] TC-108-14: …" and "SCRUM-108 [AC12] TC-108-08: …"; `tests/integration/concurrency.test.ts` › "SCRUM-14 AC: two simultaneous submissions of one draft succeed once and notify once"
+**Automated by:** `tests/unit/submission-queue.test.ts` › "SCRUM-45 [AC1, AC12] TC-45-01: the Organiser is told the request was submitted and is waiting to be assigned; no assignment notice is sent until the Lead assigns"; `tests/unit/lead-queue.test.ts` › "SCRUM-165 [AC5] TC-165-07: [Positive] the Coordinator and the Organiser are notified" (step 4); `tests/unit/clarification-and-amend.test.ts` › "SCRUM-108 [AC9, AC11, AC14] TC-108-05, SCRUM-165 [AC9] TC-165-12: the amended request goes back to the same Coordinator, and the resubmission is recorded", "SCRUM-108 [AC14] TC-108-14, SCRUM-165 [AC9] TC-165-12: when its Coordinator lost the role, the resubmitted request returns to the queue and the history records who held it" and "SCRUM-108 [AC12] TC-108-08: …"; `tests/integration/concurrency.test.ts` › "SCRUM-14 AC: two simultaneous submissions of one draft succeed once and notify once"
 
 ### TC-45-02
 
@@ -136,3 +141,68 @@ construction: every notice here goes to the event's Organiser or Coordinator.
 | Expected Result | Step 1: one each, about the event (so the list links to it), with the title and message given. Step 2: one, to the Organiser. |
 
 **Automated by:** `tests/unit/event-notifications.test.ts` › "SCRUM-45 [AC12] TC-45-08: …" and "SCRUM-45 [AC13] TC-45-08: …"
+
+### TC-45-09
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-45-09 |
+| Test Scenario | [Positive, Negative] AC 5, AC 12, AC 13: a Confirmed event back in Planning tells its Organiser why |
+| Pre-conditions | A Confirmed event with an approved venue booking. Signed in as its Coordinator. |
+| Test Steps | 1. Approve a change request that changes its expected attendance (SCRUM-128). <br> 2. On another Confirmed event, cancel a booking flagged Needs Reconsideration (SCRUM-26). <br> 3. Approve an impactful change for an event in Planning. |
+| Test Data | Expected attendance 40 → 60 |
+| Expected Result | Step 1: the Organiser gets "Your event is back in Planning": '"[event]" is back in Planning: a change to Expected attendance was approved. It needs confirming again before new registrations open.' Step 2: the same title, "its Coordinator cancelled a venue booking that needed reconsideration" (or "equipment", for a reservation). Each is written once, with the status change. Step 3: it isn't Confirmed, so no such notice. |
+
+**Automated by:** `tests/unit/change-decision.test.ts` › "SCRUM-45 [AC5, AC12] TC-45-09: back in Planning, the Organiser is told why" and `tests/unit/change-decision.test.ts` › "SCRUM-128 [AC6] TC-128-05, SCRUM-45 [AC5] TC-45-09: an impactful change to an event Under Review or in Planning keeps its status, and sends no back-in-Planning notice"; `tests/unit/reconsideration-actions.test.ts` › "SCRUM-45 [AC5, AC12] TC-45-09: cancelling a flagged %s of a Confirmed event tells its Organiser why it is back in Planning"; `tests/integration/workflow-notifications.test.ts` › "SCRUM-45 [AC5, AC12, AC13] TC-45-09: an approved change that returns a Confirmed event to Planning tells its Organiser once, with the reason" and `tests/integration/workflow-notifications.test.ts` › "SCRUM-45 [AC5, AC12, AC13] TC-45-09: cancelling a flagged booking of a Confirmed event tells its Organiser once why it is back in Planning"; `e2e/change-decision.spec.ts` › "SCRUM-128 [AC1, AC2, AC4, AC5] TC-128-13: the Coordinator sees the current and requested values and what's affected, approves, and the Confirmed event returns to Planning with its booking flagged" (the Organiser's own list, step 1)
+
+### TC-45-10
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-45-10 |
+| Test Scenario | [Positive, Negative] AC 7, AC 12, AC 13: a completed event tells its Organiser and Coordinator once |
+| Pre-conditions | A Confirmed event whose end has passed, and one with no Coordinator. |
+| Test Steps | 1. Load a page, which completes finished events (SCRUM-82). <br> 2. Load two pages at the same moment. <br> 3. Load a page again. |
+| Test Data | — |
+| Expected Result | Step 1: the Organiser and the Coordinator each get "Event completed": '"[event]" has ended and is now Completed.' The event with no Coordinator tells only its Organiser. Step 2: still one each. Step 3: nothing more. |
+
+**Automated by:** `tests/unit/event-closing.test.ts` › "SCRUM-45 [AC7, AC12, AC13] TC-45-10: each completed event tells its Organiser and Coordinator once, naming the event" and `tests/unit/event-closing.test.ts` › "SCRUM-82 [AC8] TC-82-10, SCRUM-45 [AC13] TC-45-10: when nothing has finished, or it was already completed, nothing is written and nobody is told"; `tests/integration/close-event.test.ts` › "SCRUM-82 [AC7, AC8, AC9] TC-82-10: a finished Confirmed event completes once, even when two pages load at the same moment; at its end time it is still Confirmed, and a Cancelled one never completes" (one notice each, with two pages at once); `e2e/close-event.spec.ts` › "SCRUM-82 [AC7, AC10] TC-82-13: a request whose start has passed is marked Overdue for the Coordinator, and a finished Confirmed event reads as Completed" (each one's own list)
+
+### TC-45-11
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-45-11 |
+| Test Scenario | [Positive] AC 6: cancelling an event tells its Organiser and its Coordinator, with the reason |
+| Pre-conditions | A Planning event. Signed in as its Coordinator. |
+| Test Steps | 1. Cancel the event with a reason (SCRUM-82). |
+| Test Data | Reason "Venue flooded." |
+| Expected Result | The Organiser and the Coordinator each get "Event cancelled" with the reason, and the registration-closed notice written ahead is withdrawn. |
+
+**Automated by:** SCRUM-82's `tests/unit/cancel-event.test.ts` › "SCRUM-82 [AC6] TC-82-06: the Organiser, the Coordinator and each Attendee whose registration was cancelled are notified with the reason" and `tests/integration/close-event.test.ts` › "SCRUM-82 [AC3, AC6] TC-82-04: cancelling releases the booking, the hold, the reservation and its stock, the equipment request, the registration, the awaiting safety check and the change request together, and withdraws the notices written ahead"
+
+### TC-45-12
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-45-12 |
+| Test Scenario | [Positive] AC 9: a change request's outcome tells the Organiser who raised it, with the reason if rejected |
+| Pre-conditions | A Submitted change request. Signed in as the event's Coordinator. |
+| Test Steps | 1. Approve it. <br> 2. Reject another with a reason (SCRUM-128). |
+| Test Data | — |
+| Expected Result | Step 1: "Change request approved", naming what changed. Step 2: "Change request rejected", with the reason. |
+
+**Automated by:** SCRUM-128's `tests/unit/change-decision.test.ts` › "SCRUM-128 [AC2, AC10] TC-128-02: the requested values become the event's and the request becomes Approved, with who and when, in one transaction" and `tests/unit/change-decision.test.ts` › "SCRUM-128 [AC3, AC10] TC-128-03: rejecting with a reason leaves the event unchanged, marks the request Rejected and tells the Organiser why"
+
+### TC-45-13
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-45-13 |
+| Test Scenario | [Positive, Concurrency] AC 10, AC 13: reassigning an event tells the new and previous Coordinators and the Organiser, once each |
+| Pre-conditions | A Planning event assigned to `coordinator@test.local`. Signed in as `lead@test.local`. |
+| Test Steps | 1. Reassign it to `coordinator2@test.local` (SCRUM-21). <br> 2. Two Leads reassign another event at the same moment. |
+| Test Data | — |
+| Expected Result | Step 1: the new Coordinator gets "An event was reassigned to you", the previous one "An event was reassigned", and the Organiser "Your event has a new coordinator", each in their own list. Step 2: one reassignment is saved, with three notices in all. |
+
+**Automated by:** SCRUM-21's `tests/unit/reassign.test.ts` › "SCRUM-21 [AC6] TC-21-07: the new and previous Coordinators and the Organiser are each notified once"; `tests/integration/reassign.test.ts` › "SCRUM-21 [AC2, AC9] TC-21-02: [Concurrency] two Leads reassign the same event at the same moment: exactly one is saved, the event has one Coordinator, and one history entry exists" (three notices); `e2e/reassign.spec.ts` › "SCRUM-21 [AC1, AC5, AC6, AC8] TC-21-01, TC-21-06, TC-21-07, TC-21-08: the Lead reassigns an event at once; the previous Coordinator can only view it, and the Organiser sees the new Coordinator" (each one's own list)

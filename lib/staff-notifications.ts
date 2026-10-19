@@ -17,8 +17,9 @@ export async function notifyRole(
     link: string;
   },
 ) {
+  // SCRUM-121: everyone who holds the role, as their primary role or not.
   const staff = await tx.user.findMany({
-    where: { role },
+    where: { OR: [{ role }, { additionalRoles: { has: role } }] },
     select: { id: true },
   });
   return tx.notification.createMany({

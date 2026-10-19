@@ -7,9 +7,9 @@ import { prisma } from "@/lib/db";
 import {
   getQueueRequest,
   getUnassignedQueue,
-  isOverdue,
 } from "@/app/(app)/queue/queries";
 import { assignCoordinator } from "@/app/(app)/queue/actions";
+import { isOverdue } from "@/lib/event-closing";
 
 // SCRUM-165 — the Lead's Unassigned queue and assignment. `can()` runs for
 // real so each role's actual permissions are under test; the database is
@@ -63,20 +63,28 @@ beforeEach(() => {
   tx.notification.createMany.mockResolvedValue({ count: 2 });
 });
 
-describe("isOverdue — SCRUM-165 AC2", () => {
+// SCRUM-165 AC2 uses SCRUM-82 AC10's Overdue rule, so the queue and the
+// Coordinator's list agree: a waiting request is overdue once its start has
+// passed.
+describe("isOverdue for a request in the queue — SCRUM-165 AC2", () => {
   const now = new Date("2031-06-01T00:00:00Z");
-
-  it("SCRUM-165 [AC2] TC-165-02: [Positive] a request whose start has passed is overdue", () => {
-    expect(isOverdue(new Date("2031-05-31T00:00:00Z"), now)).toBe(true);
+  const waiting = (startAt: Date | null) => ({
+    status: "SUBMITTED" as const,
+    startAt,
   });
 
-  it("SCRUM-165 [AC2] TC-165-03: [Boundary] a request starting exactly now has started, so it is overdue", () => {
-    expect(isOverdue(now, now)).toBe(true);
+  it("SCRUM-165 [AC2] TC-165-02: [Positive] a request whose start has passed is overdue", () => {
+    expect(isOverdue(waiting(new Date("2031-05-31T00:00:00Z")), now)).toBe(true);
+  });
+
+  it("SCRUM-165 [AC2] TC-165-03: [Boundary] a request starting exactly now hasn't passed its start yet, so it isn't overdue; a millisecond later it is", () => {
+    expect(isOverdue(waiting(now), now)).toBe(false);
+    expect(isOverdue(waiting(now), new Date(now.getTime() + 1))).toBe(true);
   });
 
   it("SCRUM-165 [AC2] TC-165-03: [Boundary] a request starting later isn't overdue, nor one with no start", () => {
-    expect(isOverdue(new Date("2031-06-02T00:00:00Z"), now)).toBe(false);
-    expect(isOverdue(null, now)).toBe(false);
+    expect(isOverdue(waiting(new Date("2031-06-02T00:00:00Z")), now)).toBe(false);
+    expect(isOverdue(waiting(null), now)).toBe(false);
   });
 });
 
@@ -268,7 +276,10 @@ describe("assignCoordinator — SCRUM-165", () => {
 
     expect(tx.user.findFirst).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { id: "usr_cody", role: "COORDINATOR" },
+        where: {
+          id: "usr_cody",
+          OR: [{ role: "COORDINATOR" }, { additionalRoles: { has: "COORDINATOR" } }],
+        },
       }),
     );
   });

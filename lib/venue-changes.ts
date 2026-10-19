@@ -2,6 +2,7 @@ import type { BookingStatus } from "@prisma/client";
 
 import { formatDateTime } from "@/lib/datetime";
 import { toTag } from "@/lib/schemas/venue";
+import { BOOKING_STATUS_LABEL } from "@/lib/status-labels";
 import {
   dayOutsideOpeningHours,
   describeDay,
@@ -13,14 +14,15 @@ import {
  * fitting. Pure, so the action and its tests ask the same question.
  *
  * A booking records the attendance, facilities and layout it asked for
- * (SCRUM-50), so those are judged, with the opening hours. It doesn't record
- * the accessibility features it needs yet: SCRUM-40 adds that, and the
- * suitability check (SCRUM-40) words its reasons the same way as these.
+ * (SCRUM-50) and the accessibility features it needs (SCRUM-40 AC3), so those
+ * are judged, with the opening hours. The suitability check (SCRUM-40) words
+ * its reasons the same way as these.
  */
 
 export type CatalogueVenue = {
   capacity: number;
   facilities: string[];
+  accessibilityFeatures: string[];
   supportedLayouts: string[];
   openingHours: OpeningDay[];
 };
@@ -31,6 +33,7 @@ export type BookingNeeds = {
   endAt: Date;
   requestedAttendance: number | null;
   requiredFacilities: string[];
+  requiredAccessibilityFeatures: string[];
   requestedLayout: string | null;
 };
 
@@ -42,7 +45,8 @@ function readable(tag: string): string {
 /**
  * Each requirement the booking fails at this venue, keyed so the same failure
  * before and after an edit can be matched, with why. Attendance equal to
- * capacity fits. Facilities and layouts are compared as tags. AC12: opening
+ * capacity fits. Facilities, accessibility features and layouts are compared
+ * as tags. AC12: opening
  * hours are judged on the booking period alone.
  */
 function failures(venue: CatalogueVenue, booking: BookingNeeds): Map<string, string> {
@@ -57,6 +61,13 @@ function failures(venue: CatalogueVenue, booking: BookingNeeds): Map<string, str
   for (const facility of booking.requiredFacilities) {
     if (!facilities.has(toTag(facility))) {
       failing.set(`facility:${toTag(facility)}`, `Missing facility: ${readable(facility)}`);
+    }
+  }
+  const features = new Set(venue.accessibilityFeatures.map(toTag));
+  for (const feature of booking.requiredAccessibilityFeatures) {
+    if (!features.has(toTag(feature))) {
+      const name = readable(feature);
+      failing.set(`accessibility:${toTag(feature)}`, `No ${name}; event needs ${name}`);
     }
   }
   if (
@@ -96,7 +107,6 @@ export function describeAffected(
   booking: { startAt: Date; status: BookingStatus; event: { name: string } },
   reasons: string[],
 ): string {
-  const status = booking.status.charAt(0) + booking.status.slice(1).toLowerCase();
-  const line = `${booking.event.name}, ${formatDateTime(booking.startAt)} (${status})`;
+  const line = `${booking.event.name}, ${formatDateTime(booking.startAt)} (${BOOKING_STATUS_LABEL[booking.status]})`;
   return reasons.length > 0 ? `${line}: ${reasons.join("; ")}` : line;
 }

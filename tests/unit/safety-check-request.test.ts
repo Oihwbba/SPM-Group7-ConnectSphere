@@ -51,7 +51,7 @@ const eventRow = (status: EventStatus = "PLANNING", coordinatorId = "usr_coord")
 });
 
 const checklist = (
-  venue: { complete: boolean; state: string },
+  venue: { complete: boolean; state: string; needsReconsideration?: boolean },
   safetyState = "Not requested",
 ): ReadinessChecklist => ({
   ready: false,
@@ -92,7 +92,10 @@ describe("requestSafetyCheck — SCRUM-166", () => {
     });
     // AC6: never an officer who organises or coordinates this event.
     expect(tx.user.findMany).toHaveBeenCalledWith({
-      where: { role: "SAFETY_OFFICER", id: { notIn: ["usr_org", "usr_coord"] } },
+      where: {
+        OR: [{ role: "SAFETY_OFFICER" }, { additionalRoles: { has: "SAFETY_OFFICER" } }],
+        id: { notIn: ["usr_org", "usr_coord"] },
+      },
       select: { id: true },
     });
     expect(tx.notification.createMany).toHaveBeenCalledWith({
@@ -131,6 +134,19 @@ describe("requestSafetyCheck — SCRUM-166", () => {
       ok: false,
       error:
         "Arrange the venue and equipment before requesting a safety check. Outstanding: Venue booking (Pending).",
+    });
+    expectNothingWritten();
+  });
+
+  it("SCRUM-131 [AC3] TC-131-10: a flagged booking is named in the refusal with Needs Reconsideration beside its status", async () => {
+    mockChecklist.mockResolvedValue(
+      checklist({ complete: false, state: "Approved", needsReconsideration: true }),
+    );
+
+    expect(await requestSafetyCheck({ eventId: "evt_1" })).toEqual({
+      ok: false,
+      error:
+        "Arrange the venue and equipment before requesting a safety check. Outstanding: Venue booking (Approved – Needs Reconsideration).",
     });
     expectNothingWritten();
   });

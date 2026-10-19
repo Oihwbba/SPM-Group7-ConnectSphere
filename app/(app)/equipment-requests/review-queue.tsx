@@ -206,11 +206,14 @@ function ReviewCard({ request }: { request: QueuedEquipmentRequest }) {
         <RequestLines
           lines={request.lines}
           detail={(line) => (
-            <LineAvailability
-              line={line}
-              requestId={request.id}
-              inReview={inReview}
-            />
+            <>
+              <LineAvailability
+                line={line}
+                requestId={request.id}
+                inReview={inReview}
+              />
+              <CompetingRequests line={line} />
+            </>
           )}
         />
         {request.notes && (
@@ -296,6 +299,30 @@ function ReviewCard({ request }: { request: QueuedEquipmentRequest }) {
         <OperationalNotes eventId={request.event.id} />
       </CardContent>
     </Card>
+  );
+}
+
+/**
+ * SCRUM-134 AC4 — the other open requests for the line's type whose events
+ * overlap, earliest submitted first, with what is reserved for each. Stock is
+ * reserved for them in that order (AC5).
+ */
+function CompetingRequests({ line }: { line: QueuedLine }) {
+  if (line.competing.length === 0) return null;
+  return (
+    <div className="mt-1 space-y-1 text-xs" data-testid="competing-requests">
+      <p className="font-medium text-muted-foreground">
+        Also wanted for overlapping events, earliest first:
+      </p>
+      <ul className="space-y-0.5">
+        {line.competing.map((other) => (
+          <li key={other.requestId}>
+            &ldquo;{other.eventName}&rdquo;, submitted {formatDateTime(other.submittedAt)}:{" "}
+            {other.quantity} requested, {other.reserved} reserved
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 

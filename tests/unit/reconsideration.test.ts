@@ -119,15 +119,45 @@ describe("flaggableArrangements — SCRUM-26 AC1", () => {
 });
 
 describe("flagArrangements — SCRUM-26 AC2, AC3, AC6", () => {
+  // The rows each update returns are what SCRUM-124 AC8 tells people about
+  // ("flag notices — SCRUM-124 AC8" below); here only the flag is checked.
   function client() {
-    const booking = { updateMany: vi.fn().mockResolvedValue({ count: 2 }) };
-    const reservation = { updateMany: vi.fn().mockResolvedValue({ count: 1 }) };
+    const booking = {
+      updateManyAndReturn: vi.fn().mockResolvedValue([
+        { id: "bkg_1", eventId: "evt_1", status: "APPROVED", venue: { name: "Hall A" } },
+        { id: "bkg_2", eventId: "evt_1", status: "PENDING", venue: { name: "Hall B" } },
+      ]),
+    };
+    const reservation = {
+      updateManyAndReturn: vi.fn().mockResolvedValue([
+        { id: "rsv_1", eventId: "evt_1", quantity: 2, equipment: { type: "Projector" } },
+      ]),
+    };
+    const event = {
+      findMany: vi.fn().mockResolvedValue([
+        { id: "evt_1", name: "Expo", coordinatorId: "usr_coord" },
+      ]),
+    };
+    const user = { findMany: vi.fn().mockResolvedValue([]) };
+    const notification = { create: vi.fn(), createMany: vi.fn() };
     return {
-      tx: { booking, reservation } as unknown as Prisma.TransactionClient,
+      tx: { booking, reservation, event, user, notification } as unknown as Prisma.TransactionClient,
       booking,
       reservation,
     };
   }
+  const bookingSelect = {
+    id: true,
+    eventId: true,
+    status: true,
+    venue: { select: { name: true } },
+  };
+  const reservationSelect = {
+    id: true,
+    eventId: true,
+    quantity: true,
+    equipment: { select: { type: true } },
+  };
   const now = new Date("2032-04-01T00:00:00Z");
   const flag = {
     needsReconsideration: true,
@@ -143,7 +173,7 @@ describe("flagArrangements — SCRUM-26 AC2, AC3, AC6", () => {
     expect(
       await flagArrangements(tx, { eventId: "evt_1" }, "The event moved to 2 May.", now),
     ).toEqual({ bookings: 2, reservations: 1 });
-    expect(booking.updateMany).toHaveBeenCalledWith({
+    expect(booking.updateManyAndReturn).toHaveBeenCalledWith({
       where: {
         eventId: "evt_1",
         OR: [
@@ -153,13 +183,15 @@ describe("flagArrangements — SCRUM-26 AC2, AC3, AC6", () => {
         needsReconsideration: false,
       },
       data: flag,
+      select: bookingSelect,
     });
-    expect(reservation.updateMany).toHaveBeenCalledWith({
+    expect(reservation.updateManyAndReturn).toHaveBeenCalledWith({
       where: { eventId: "evt_1", status: "CONFIRMED", needsReconsideration: false },
       data: flag,
+      select: reservationSelect,
     });
     // AC2, AC6: the status and the period are never part of the write.
-    for (const call of [booking.updateMany, reservation.updateMany]) {
+    for (const call of [booking.updateManyAndReturn, reservation.updateManyAndReturn]) {
       const { data } = call.mock.calls[0][0];
       expect(data).not.toHaveProperty("status");
       expect(data).not.toHaveProperty("startAt");
@@ -177,7 +209,7 @@ describe("flagArrangements — SCRUM-26 AC2, AC3, AC6", () => {
       now,
     );
 
-    expect(booking.updateMany.mock.calls[0][0].where).toEqual({
+    expect(booking.updateManyAndReturn.mock.calls[0][0].where).toEqual({
       id: { in: ["bkg_1"] },
       OR: [
         { status: { in: ["PENDING", "APPROVED"] } },
@@ -185,7 +217,7 @@ describe("flagArrangements — SCRUM-26 AC2, AC3, AC6", () => {
       ],
       needsReconsideration: false,
     });
-    expect(reservation.updateMany.mock.calls[0][0].where).toEqual({
+    expect(reservation.updateManyAndReturn.mock.calls[0][0].where).toEqual({
       id: { in: [] },
       status: "CONFIRMED",
       needsReconsideration: false,
@@ -197,7 +229,161 @@ describe("flagArrangements — SCRUM-26 AC2, AC3, AC6", () => {
 
     await flagArrangements(tx, { eventId: "evt_1" }, "Moved.");
 
-    expect(booking.updateMany.mock.calls[0][0].data.reconsiderationFlaggedAt).toBeInstanceOf(Date);
+    expect(
+      booking.updateManyAndReturn.mock.calls[0][0].data.reconsiderationFlaggedAt,
+    ).toBeInstanceOf(Date);
+  });
+});
+
+// SCRUM-124 AC8 — who is told when flagArrangements flags something.
+// Test cases: docs/testing/SCRUM-124.md.
+describe("flag notices — SCRUM-124 AC8", () => {
+  const REASON = "The event's expected attendance changed.";
+  const hallA = { id: "bkg_1", eventId: "evt_1", status: "APPROVED", venue: { name: "Hall A" } };
+  const hallB = { id: "bkg_2", eventId: "evt_1", status: "PENDING", venue: { name: "Hall B" } };
+  const projectors = {
+    id: "rsv_1",
+    eventId: "evt_1",
+    quantity: 2,
+    equipment: { type: "Projector" },
+  };
+  const expo = { id: "evt_1", name: "Expo", coordinatorId: "usr_coord" };
+
+  function client(
+    bookings: unknown[],
+    reservations: unknown[],
+    events: unknown[] = [expo],
+  ) {
+    const tx = {
+      booking: { updateManyAndReturn: vi.fn().mockResolvedValue(bookings) },
+      reservation: { updateManyAndReturn: vi.fn().mockResolvedValue(reservations) },
+      event: { findMany: vi.fn().mockResolvedValue(events) },
+      user: {
+        findMany: vi.fn(({ where }: { where: { OR: [{ role: string }] } }) =>
+          Promise.resolve(
+            where.OR[0].role === "VENUE_STAFF" ? [{ id: "usr_vs" }] : [{ id: "usr_ts" }],
+          ),
+        ),
+      },
+      notification: { create: vi.fn(), createMany: vi.fn() },
+    };
+    return { tx, client: tx as unknown as Prisma.TransactionClient };
+  }
+
+  it("SCRUM-124 [AC8, AC12] TC-124-08: the event's Coordinator is told every flagged arrangement and the reason", async () => {
+    const { tx, client: c } = client([hallA, hallB], [projectors]);
+
+    await flagArrangements(c, { eventId: "evt_1" }, REASON);
+
+    expect(tx.notification.create).toHaveBeenCalledTimes(1);
+    expect(tx.notification.create).toHaveBeenCalledWith({
+      data: {
+        userId: "usr_coord",
+        eventId: "evt_1",
+        type: "ARRANGEMENT_FLAGGED",
+        title: "Arrangements flagged for reconsideration",
+        message: `Hall A (Approved), Hall B (Pending) and Projector × 2 for "Expo" need reconsideration. ${REASON}`,
+      },
+    });
+  });
+
+  it("SCRUM-124 [AC8, AC12, AC13] TC-124-08: every Venue Staff member is told the event's bookings and every Technical Support member its reservations, each linking to their own page", async () => {
+    const { tx, client: c } = client([hallA, hallB], [projectors]);
+
+    await flagArrangements(c, { eventId: "evt_1" }, REASON);
+
+    expect(tx.notification.createMany).toHaveBeenCalledTimes(2);
+    expect(tx.notification.createMany).toHaveBeenCalledWith({
+      data: [
+        {
+          userId: "usr_vs",
+          eventId: "evt_1",
+          type: "ARRANGEMENT_FLAGGED",
+          title: "Bookings flagged for reconsideration",
+          message: `Hall A (Approved) and Hall B (Pending) for "Expo" need reconsideration, and wait for the event's Coordinator to decide. ${REASON}`,
+          link: "/bookings",
+        },
+      ],
+    });
+    expect(tx.notification.createMany).toHaveBeenCalledWith({
+      data: [
+        {
+          userId: "usr_ts",
+          eventId: "evt_1",
+          type: "ARRANGEMENT_FLAGGED",
+          title: "Reservations flagged for reconsideration",
+          message: `Projector × 2 for "Expo" needs reconsideration, and waits for the event's Coordinator to decide. ${REASON}`,
+          link: "/equipment",
+        },
+      ],
+    });
+  });
+
+  it("SCRUM-124 [AC8] TC-124-08: a Coordinator who raised the flag isn't told what they just did; staff still are", async () => {
+    const { tx, client: c } = client([hallA], []);
+
+    await flagArrangements(c, { eventId: "evt_1" }, REASON, new Date(), "usr_coord");
+
+    expect(tx.notification.create).not.toHaveBeenCalled();
+    expect(tx.notification.createMany).toHaveBeenCalledTimes(1);
+    expect(tx.notification.createMany.mock.calls[0][0].data[0]).toMatchObject({
+      userId: "usr_vs",
+      message: `Hall A (Approved) for "Expo" needs reconsideration, and waits for the event's Coordinator to decide. ${REASON}`,
+    });
+  });
+
+  it("SCRUM-124 [AC8] TC-124-08: someone else raising the flag, such as Venue Staff or a Safety Officer, tells the Coordinator", async () => {
+    const { tx, client: c } = client([hallA], []);
+
+    await flagArrangements(c, { bookingIds: ["bkg_1"], reservationIds: [] }, REASON, new Date(), "usr_staff");
+
+    expect(tx.notification.create.mock.calls[0][0].data.userId).toBe("usr_coord");
+  });
+
+  it("SCRUM-124 [AC8] TC-124-08: an event with no Coordinator tells only the staff", async () => {
+    const { tx, client: c } = client([], [projectors], [{ ...expo, coordinatorId: null }]);
+
+    await flagArrangements(c, { eventId: "evt_1" }, REASON);
+
+    expect(tx.notification.create).not.toHaveBeenCalled();
+    expect(tx.user.findMany).toHaveBeenCalledWith({
+      where: { OR: [{ role: "TECH_SUPPORT" }, { additionalRoles: { has: "TECH_SUPPORT" } }] },
+      select: { id: true },
+    });
+    expect(tx.user.findMany).not.toHaveBeenCalledWith(
+      expect.objectContaining({ where: { OR: [{ role: "VENUE_STAFF" }, { additionalRoles: { has: "VENUE_STAFF" } }] } }),
+    );
+  });
+
+  it("SCRUM-124 [AC8, AC14] TC-124-08: flagging what is already flagged tells nobody again", async () => {
+    const { tx, client: c } = client([], []);
+
+    expect(await flagArrangements(c, { eventId: "evt_1" }, REASON)).toEqual({
+      bookings: 0,
+      reservations: 0,
+    });
+    expect(tx.event.findMany).not.toHaveBeenCalled();
+    expect(tx.notification.create).not.toHaveBeenCalled();
+    expect(tx.notification.createMany).not.toHaveBeenCalled();
+  });
+
+  it("SCRUM-124 [AC8] TC-124-08: arrangements of two events tell each event's Coordinator only about their own", async () => {
+    const other = { id: "bkg_3", eventId: "evt_2", status: "HELD", venue: { name: "Hall A" } };
+    const { tx, client: c } = client([hallA, other], [], [
+      expo,
+      { id: "evt_2", name: "Fair", coordinatorId: "usr_coord2" },
+    ]);
+
+    await flagArrangements(c, { bookingIds: ["bkg_1", "bkg_3"], reservationIds: [] }, REASON);
+
+    expect(tx.event.findMany).toHaveBeenCalledWith({
+      where: { id: { in: ["evt_1", "evt_2"] } },
+      select: { id: true, name: true, coordinatorId: true },
+    });
+    expect(tx.notification.create.mock.calls.map(([{ data }]) => [data.userId, data.message])).toEqual([
+      ["usr_coord", `Hall A (Approved) for "Expo" needs reconsideration. ${REASON}`],
+      ["usr_coord2", `Hall A (Held) for "Fair" needs reconsideration. ${REASON}`],
+    ]);
   });
 });
 

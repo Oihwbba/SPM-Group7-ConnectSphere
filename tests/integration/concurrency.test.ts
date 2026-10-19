@@ -219,7 +219,11 @@ describe.skipIf(!usesLocalDatabase)(
     // most one live booking, and the seeded events already hold theirs.
     let firstEventId: string;
     let secondEventId: string;
-    const SECOND_STAFF_ID = `usr_venuestaff_concurrency_${Date.now()}`;
+    // The seeded second member of Venue Staff. Seeded, never made or deleted
+    // here: every Venue Staff member is told of other suites' venue requests
+    // and decisions (SCRUM-124), so one appearing or vanishing mid-run would
+    // change what they count, or fail their notices.
+    const SECOND_STAFF_ID = "usr_venuestaff_2";
 
     const staff = (id: string): Session => ({
       user: { id, role: "VENUE_STAFF", name: id, email: `${id}@test.local` },
@@ -250,16 +254,8 @@ describe.skipIf(!usesLocalDatabase)(
       prisma.booking.count({ where: { venueId, status: "APPROVED" } });
 
     beforeAll(async () => {
-      // Two different members of Venue Staff, as the criterion describes.
-      await prisma.user.create({
-        data: {
-          id: SECOND_STAFF_ID,
-          email: `${SECOND_STAFF_ID}@test.local`,
-          name: "Second Venue Staff",
-          passwordHash: "not-a-real-hash-test-user-cannot-sign-in",
-          role: "VENUE_STAFF",
-        },
-      });
+      // Two different members of Venue Staff, as the criterion describes: the
+      // seeded venuestaff@ and venuestaff2@.
       const period = {
         startAt: new Date("2033-01-01T00:00:00.000Z"),
         endAt: new Date("2033-01-01T02:00:00.000Z"),
@@ -295,9 +291,13 @@ describe.skipIf(!usesLocalDatabase)(
     });
 
     afterAll(async () => {
+      // Only the notices about its own events: every Venue Staff member gets
+      // other suites' notices too while they run, and those suites count them.
+      await prisma.notification.deleteMany({
+        where: { eventId: { in: [firstEventId, secondEventId] } },
+      });
       await removeEvents([firstEventId, secondEventId]);
       await prisma.venue.delete({ where: { id: venueId } });
-      await prisma.user.delete({ where: { id: SECOND_STAFF_ID } });
     });
 
     it("SCRUM-53 [AC5] TC-53-05: two staff approve overlapping requests at the same moment: one succeeds, one is returned as conflicting", async () => {
@@ -324,11 +324,13 @@ describe.skipIf(!usesLocalDatabase)(
         decideBookingRequest({ bookingId: second, decision: "APPROVED" }),
       ]);
 
-      expect(results.filter((r) => r.ok)).toHaveLength(1);
-      const refused = results.filter((r) => !r.ok);
-      expect(refused).toHaveLength(1);
-      expect(refused[0]).toMatchObject({
-        error: expect.stringMatching(/^Conflicting:/),
+      // SCRUM-134 AC2: the earlier request wins. The later is refused either
+      // as conflicting, or, if it looks before the earlier commits, because an
+      // earlier overlapping request is still pending.
+      expect(results[0].ok).toBe(true);
+      expect(results[1]).toMatchObject({
+        ok: false,
+        error: expect.stringMatching(/^(Conflicting:|An earlier request for )/),
       });
 
       // Never double-booked, and the loser is still pending for staff to reject.
@@ -448,9 +450,11 @@ describe.skipIf(!usesLocalDatabase)(
           decideBookingRequest({ bookingId: afternoon, decision: "APPROVED" }),
         ]);
 
-        expect(results.filter((r) => r.ok)).toHaveLength(1);
-        expect(results.find((r) => !r.ok)).toMatchObject({
-          error: expect.stringMatching(/^Conflicting:/),
+        // SCRUM-134 AC2: the earlier request (the morning's) wins.
+        expect(results[0].ok).toBe(true);
+        expect(results[1]).toMatchObject({
+          ok: false,
+          error: expect.stringMatching(/^(Conflicting:|An earlier request for )/),
         });
         expect(await approvedCount()).toBe(1);
       } finally {
@@ -584,7 +588,9 @@ describe.skipIf(!usesLocalDatabase)(
         expect(booking.needsReconsideration).toBe(true);
         expect(booking.status).toBe(approval.ok ? "APPROVED" : "PENDING");
       }
-    });
+      // Five real races take about 5 s alone, Vitest's default limit, and
+      // longer while the other test files run beside this one.
+    }, 30_000);
   },
 );
 
@@ -790,9 +796,19 @@ describe.skipIf(!usesLocalDatabase)("event submission — repeat submission (SCR
 
     expect(results.filter((r) => r.ok)).toHaveLength(1);
     expect(results.filter((r) => !r.ok)).toHaveLength(1);
-    // One submission: only the organiser's submission notice (SCRUM-45 AC1).
-    // Nobody is assigned until the Lead does it (SCRUM-165 AC1).
-    expect(await prisma.notification.count({ where: { eventId: draft.id } })).toBe(1);
+    // One submission: the organiser's submission notice (SCRUM-45 AC1), and
+    // one to each Lead that it waits in the queue (SCRUM-124 AC10). Nobody is
+    // assigned until the Lead does it (SCRUM-165 AC1).
+    const leads = await prisma.user.count({ where: { role: "COORDINATOR_LEAD" } });
+    expect(
+      await prisma.notification.count({ where: { eventId: draft.id, userId: "usr_organiser" } }),
+    ).toBe(1);
+    expect(
+      await prisma.notification.count({
+        where: { eventId: draft.id, type: "REQUEST_AWAITING_ASSIGNMENT" },
+      }),
+    ).toBe(leads);
+    expect(await prisma.notification.count({ where: { eventId: draft.id } })).toBe(1 + leads);
     expect(
       await prisma.auditLog.count({
         where: { entityId: draft.id, action: "ASSIGNED" },
@@ -806,7 +822,9 @@ describe.skipIf(!usesLocalDatabase)("event submission — repeat submission (SCR
 // so the database lets exactly one through; the other is told who got it.
 describe.skipIf(!usesLocalDatabase)("concurrency — the Lead's assignment (SCRUM-165)", () => {
   let eventId: string;
-  let secondLeadId: string;
+  // The seeded lead2@test.local: seeded, never made or deleted here, since
+  // other suites' notices to every Lead would reach a Lead made mid-run.
+  const secondLeadId = "usr_coordinatorlead_2";
 
   const asLead = (id: string) => ({
     user: { id, role: "COORDINATOR_LEAD", name: "Lead", email: `${id}@test.local` },
@@ -814,34 +832,21 @@ describe.skipIf(!usesLocalDatabase)("concurrency — the Lead's assignment (SCRU
   });
 
   beforeAll(async () => {
-    const [event, lead] = await Promise.all([
-      prisma.event.create({
-        data: {
-          name: `SCRUM-165 Concurrency Event ${Date.now()}`,
-          status: "SUBMITTED",
-          organiserId: "usr_organiser",
-        },
-        select: { id: true },
-      }),
-      prisma.user.create({
-        data: {
-          email: `concurrency-lead-${Date.now()}@test.local`,
-          name: "Concurrency Lead",
-          role: "COORDINATOR_LEAD",
-          passwordHash: "not-used-in-this-test",
-        },
-        select: { id: true },
-      }),
-    ]);
+    const event = await prisma.event.create({
+      data: {
+        name: `SCRUM-165 Concurrency Event ${Date.now()}`,
+        status: "SUBMITTED",
+        organiserId: "usr_organiser",
+      },
+      select: { id: true },
+    });
     eventId = event.id;
-    secondLeadId = lead.id;
   });
 
   afterAll(async () => {
     await prisma.notification.deleteMany({ where: { eventId } });
     await prisma.auditLog.deleteMany({ where: { entityId: eventId } });
     await prisma.event.delete({ where: { id: eventId } });
-    await prisma.user.delete({ where: { id: secondLeadId } });
   });
 
   it("SCRUM-165 [AC6] TC-165-08: [Concurrency] two Leads assign the same request at the same moment: exactly one assignment is saved and the other Lead is told who it went to", async () => {

@@ -23,8 +23,12 @@ async function signIn(page: Page, email: string) {
   await page.waitForURL("**/events");
 }
 
+// A worker runs one test at a time, so these are the running test's events.
+// Each test removes only its own: tests in this file may run at once.
+let created: string[] = [];
+
 async function event(name: string, data: Record<string, unknown>) {
-  return (
+  const id = (
     await prisma.event.create({
       data: {
         name,
@@ -43,13 +47,16 @@ async function event(name: string, data: Record<string, unknown>) {
       select: { id: true },
     })
   ).id;
+  created.push(id);
+  return id;
 }
 
 test.describe("SCRUM-171 — Record whether an event needs registration", () => {
   test.skip(!usesLocalDatabase, "writes its own events; local database only");
 
   test.afterEach(async () => {
-    await prisma.event.deleteMany({ where: { name: { startsWith: PREFIX } } });
+    await prisma.event.deleteMany({ where: { id: { in: created } } });
+    created = [];
   });
 
   test("SCRUM-171 [AC4] TC-171-06: an Attendee sees an event that needs registration, but not one that doesn't, in the list or by its URL", async ({
@@ -72,13 +79,14 @@ test.describe("SCRUM-171 — Record whether an event needs registration", () => 
     expect(response?.status()).toBe(404);
   });
 
-  test("SCRUM-171 [AC3] TC-171-04: a request made before the choice existed reads Not answered, with its own registration answer beside it", async ({
+  test("SCRUM-171 [AC3] TC-171-04: a request made before the choice existed reads Not answered, with its own registration answer beside it, and its Coordinator's edit keeps both", async ({
     page,
   }) => {
     const name = `${PREFIX} Legacy Talk ${Date.now()}`;
+    // Under Review with its Coordinator, so step 2 can open Edit details
+    // (SCRUM-25 AC1).
     await event(name, {
-      status: "SUBMITTED",
-      coordinatorId: null,
+      status: "UNDER_REVIEW",
       registrationRequired: null,
       registrationNotes: "Walk-in, no sign-up needed",
     });
@@ -93,5 +101,24 @@ test.describe("SCRUM-171 — Record whether an event needs registration", () => 
     await expect(answer).toContainText("Registration Needed:");
     await expect(answer).toContainText("Not answered");
     await expect(answer).toContainText("Walk-in, no sign-up needed");
+
+    // Step 2: the Coordinator's Edit details picks neither answer for them,
+    // and keeps the note.
+    await signIn(page, "coordinator@test.local");
+    await page
+      .getByRole("row", { name: new RegExp(name) })
+      .getByTestId("view-details-button")
+      .click();
+    await page
+      .getByRole("dialog", { name, exact: true })
+      .getByRole("button", { name: "Edit details" })
+      .click();
+    const edit = page.getByRole("dialog", { name: `Edit ${name}` });
+    const needed = edit.getByRole("group", { name: "Registration needed" });
+    await expect(needed.getByRole("radio", { name: "Yes" })).not.toBeChecked();
+    await expect(needed.getByRole("radio", { name: "No" })).not.toBeChecked();
+    await expect(edit.getByLabel("Registration notes")).toHaveValue(
+      "Walk-in, no sign-up needed",
+    );
   });
 });

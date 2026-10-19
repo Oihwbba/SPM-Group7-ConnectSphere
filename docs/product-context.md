@@ -43,10 +43,12 @@ status, one assigned Coordinator, and arrangements that can't clash.
 | **Technical Support Staff** | ConnectSphere staff | Reviews equipment requests, checks equipment availability, and reserves what was approved. | Equipment |
 | **Attendee** | External | Browses events open for registration, registers, and sees their own registrations. Never sees internal planning information. | Browse Events |
 | **Event Coordinator Lead** | ConnectSphere staff | Reviews new requests' basic details in the Unassigned queue and assigns each to a Coordinator, becoming its supervising Lead (SCRUM-165); will reassign where needed (SCRUM-21) and sees every event with each Coordinator's active events on the All Events list (SCRUM-141). Can't approve or reject a request, or confirm, plan or edit an event. The role exists since SCRUM-172. | Unassigned Queue |
-| **Safety Officer** | ConnectSphere staff | Will review an event's venue and equipment arrangements before it can be confirmed, and approve, reject or request changes on that safety check (SCRUM-166). Can't confirm, plan or edit the event: its approval doesn't confirm it; the Coordinator still does (SCRUM-166 AC14). The role exists since SCRUM-172; until SCRUM-164 and SCRUM-166 land it only reads its own notifications. | Notifications |
+| **Safety Officer** | ConnectSphere staff | Reviews an event's venue and equipment arrangements before it can be confirmed, and approves, rejects or requests changes on that safety check (SCRUM-166). Can't confirm, plan or edit the event: its approval doesn't confirm it; the Coordinator still does (SCRUM-166 AC14). | Safety Checks |
 
-Each account has one role today. The customer has said an account may hold
-several, which is in the backlog (SCRUM-121).
+An account has a primary role and may hold others (SCRUM-121): its
+permissions and navigation are those of every role held, and the events page
+switches between the views of its roles. Nobody decides a venue booking or
+reviews or reserves equipment for an event they organise or coordinate.
 
 What each role may do is one table, `ROLE_ACTIONS` in `lib/auth/can.ts`, and
 every page and action checks it on the server (ADR 0004). An event you aren't
@@ -174,7 +176,7 @@ these unless the backlog brings them back:
 | **Event request** | An `Event` row before approval. There is no separate request table. |
 | **Booking** | A **venue** for an event's period. Pending, then Approved or Rejected by Venue Staff; Cancelled when its event is rejected from Planning (SCRUM-117). Venue Staff can instead hold it until a deadline: it blocks the venue like an approved booking until then, and Expired after. Venue Staff approve the hold, and only then does its Coordinator confirm it (Approved); the Coordinator can release it (Cancelled) before it expires (SCRUM-163). |
 | **Equipment request** | What the Coordinator asks for: lines of equipment type and quantity. Approving it holds no stock. |
-| **Reservation** | **Equipment** actually held for an event's period. Stored as `CONFIRMED`; SCRUM-131 will show it as **Reserved** everywhere, so it isn't confused with an event's Confirmed status. The readiness checklist already says Reserved. |
+| **Reservation** | **Equipment** actually held for an event's period. Stored as `CONFIRMED` and shown as **Reserved** everywhere (SCRUM-131), so it isn't confused with an event's Confirmed status. |
 | **Planning** | The status after approval, while the venue and equipment are arranged. |
 | **Confirmed** | The event's arrangements are complete. Only the assigned Coordinator can confirm. |
 

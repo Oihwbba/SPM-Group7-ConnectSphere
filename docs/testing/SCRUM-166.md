@@ -245,6 +245,6 @@ and the app is running. The event is in Planning, assigned to
 | Pre-conditions | A check awaits review. |
 | Test Steps | 1. As the Safety Officer, choose **Request changes**; see **Record outcome** disabled without a note, then without a pick; add both and record. <br> 2. Open the event as the Coordinator, then as the Organiser. |
 | Test Data | Note "Keep the east fire exit clear of seating." |
-| Expected Result | 2. The Coordinator sees "Changes requested – <note>" and the venue Needs reconsideration; the Organiser sees Changes requested without the note. |
+| Expected Result | 2. The Coordinator sees "Changes requested – <note>" and the venue's Needs Reconsideration badge; the Organiser sees Changes requested without the note. |
 
 **Automated by:** `e2e/safety-check.spec.ts` › "SCRUM-166 [AC3, AC4, AC10] TC-166-16: …"

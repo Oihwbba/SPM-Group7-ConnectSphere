@@ -341,6 +341,15 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-82 — closing an event", () => {
         where: { entityId: finished, newValue: "COMPLETED" },
       }),
     ).toBe(1);
+    // SCRUM-45 AC7, AC13: its Organiser and Coordinator are each told once,
+    // even with two pages loading at the same moment.
+    expect(
+      await prisma.notification.findMany({
+        where: { eventId: finished, title: "Event completed" },
+        select: { userId: true },
+        orderBy: { userId: "asc" },
+      }),
+    ).toEqual([{ userId: "usr_coordinator" }, { userId: "usr_organiser" }]);
     // AC8: checking again changes nothing. AC9: Cancelled stays Cancelled.
     expect(await completeFinishedEvents(prisma, justAfter)).not.toContain(
       finished,

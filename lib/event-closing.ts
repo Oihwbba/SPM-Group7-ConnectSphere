@@ -1,7 +1,10 @@
 import type { EventStatus, Prisma, PrismaClient } from "@prisma/client";
 
 import { withdrawPendingHoldNotices } from "@/lib/booking-holds";
-import { withdrawRegistrationClosedNotice } from "@/lib/event-notifications";
+import {
+  notifyAboutEvent,
+  withdrawRegistrationClosedNotice,
+} from "@/lib/event-notifications";
 
 /**
  * SCRUM-82 — closing an event: cancelling one that won't go ahead, and
@@ -13,12 +16,6 @@ import { withdrawRegistrationClosedNotice } from "@/lib/event-notifications";
  * docs/adr/0019-closing-an-event.md.
  */
 
-/** AC1: the statuses the assigned Coordinator can cancel from. */
-export const CANCELLABLE: EventStatus[] = [
-  "UNDER_REVIEW",
-  "PLANNING",
-  "CONFIRMED",
-];
 
 /** AC10: still being decided or planned, so it can become overdue. */
 const UNDECIDED: EventStatus[] = ["SUBMITTED", "UNDER_REVIEW", "PLANNING"];
@@ -197,63 +194,72 @@ export async function completeFinishedEvents(
 ): Promise<string[]> {
   const at = now.toISOString();
   return db.$transaction(async (tx) => {
-    const completed = await tx.$queryRaw<{ id: string }[]>`
+    const completed = await tx.$queryRaw<
+      { id: string; name: string; organiserId: string; coordinatorId: string | null }[]
+    >`
     UPDATE "Event"
        SET "status" = 'COMPLETED',
            "completedAt" = ${at}::timestamp,
            "updatedAt" = ${at}::timestamp
      WHERE "status" = 'CONFIRMED'
        AND "endAt" < ${at}::timestamp
-    RETURNING "id"`;
-    if (completed.length === 0) return [];
-    const ids = completed.map(({ id }) => id);
-
-    await tx.auditLog.createMany({
-      data: ids.map((id) => ({
-        entityType: "Event",
-        entityId: id,
-        action: "STATUS_CHANGED",
-        actorId: null,
-        fieldName: "status",
-        oldValue: "CONFIRMED",
-        newValue: "COMPLETED",
-        summary: "Completed after its end time (SCRUM-82)",
-      })),
-    });
-
-    const pending = await tx.eventChangeRequest.findMany({
-      where: { eventId: { in: ids }, status: "PENDING_REVIEW" },
-      select: { id: true, event: { select: { id: true, name: true, organiserId: true } } },
-    });
-    if (pending.length > 0) {
-      await tx.eventChangeRequest.updateMany({
-        where: { id: { in: pending.map((r) => r.id) }, status: "PENDING_REVIEW" },
-        data: { status: "REJECTED", decidedAt: now, decisionReason: EVENT_TOOK_PLACE },
-      });
+    RETURNING "id", "name", "organiserId", "coordinatorId"`;
+    if (completed.length > 0) {
       await tx.auditLog.createMany({
-        data: pending.map((r) => ({
-          entityType: "EventChangeRequest",
-          entityId: r.id,
-          action: "REJECTED",
+        data: completed.map(({ id }) => ({
+          entityType: "Event",
+          entityId: id,
+          action: "STATUS_CHANGED",
           actorId: null,
           fieldName: "status",
-          oldValue: "PENDING_REVIEW",
-          newValue: "REJECTED",
-          summary: EVENT_TOOK_PLACE,
+          oldValue: "CONFIRMED",
+          newValue: "COMPLETED",
+          summary: "Completed after its end time (SCRUM-82)",
         })),
       });
-      // The same notice a Coordinator's rejection sends (SCRUM-128 AC10).
-      await tx.notification.createMany({
-        data: pending.map(({ event }) => ({
-          userId: event.organiserId,
-          type: "CHANGE_REQUEST_OUTCOME" as const,
-          title: "Change request rejected",
-          message: `Your change request for "${event.name}" was rejected: ${EVENT_TOOK_PLACE}`,
-          link: "/events",
-          eventId: event.id,
-        })),
+      // SCRUM-45 AC7: its Organiser and Coordinator are told, once, since
+      // only this UPDATE's own rows are notified.
+      for (const event of completed) {
+        await notifyAboutEvent(tx, [event.organiserId, event.coordinatorId], event, {
+          title: "Event completed",
+          message: `"${event.name}" has ended and is now Completed.`,
+        });
+      }
+
+      const pending = await tx.eventChangeRequest.findMany({
+        where: { eventId: { in: completed.map(({ id }) => id) }, status: "PENDING_REVIEW" },
+        select: { id: true, event: { select: { id: true, name: true, organiserId: true } } },
       });
+      if (pending.length > 0) {
+        await tx.eventChangeRequest.updateMany({
+          where: { id: { in: pending.map((r) => r.id) }, status: "PENDING_REVIEW" },
+          data: { status: "REJECTED", decidedAt: now, decisionReason: EVENT_TOOK_PLACE },
+        });
+        await tx.auditLog.createMany({
+          data: pending.map((r) => ({
+            entityType: "EventChangeRequest",
+            entityId: r.id,
+            action: "REJECTED",
+            actorId: null,
+            fieldName: "status",
+            oldValue: "PENDING_REVIEW",
+            newValue: "REJECTED",
+            summary: EVENT_TOOK_PLACE,
+          })),
+        });
+        // The same notice a Coordinator's rejection sends (SCRUM-128 AC10).
+        await tx.notification.createMany({
+          data: pending.map(({ event }) => ({
+            userId: event.organiserId,
+            type: "CHANGE_REQUEST_OUTCOME" as const,
+            title: "Change request rejected",
+            message: `Your change request for "${event.name}" was rejected: ${EVENT_TOOK_PLACE}`,
+            link: "/events",
+            eventId: event.id,
+          })),
+        });
+      }
     }
-    return ids;
+    return completed.map(({ id }) => id);
   });
 }

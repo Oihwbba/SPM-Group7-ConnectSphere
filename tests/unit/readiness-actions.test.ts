@@ -14,6 +14,7 @@ import {
 import {
   getEventArrangements,
   getEventBookings,
+  getEventCoordinator,
   getEventReadiness,
 } from "@/app/(app)/events/readiness-actions";
 
@@ -442,6 +443,57 @@ describe("getEventBookings — SCRUM-162 AC7", () => {
         error: "Event not found.",
       });
       expect(mockVenueBookings).not.toHaveBeenCalled();
+    },
+  );
+});
+
+describe("getEventCoordinator — SCRUM-21 AC8", () => {
+  it.each([
+    { who: "its Organiser", session: sessionFor("ORGANISER", "usr_organiser") },
+    {
+      who: "its Coordinator",
+      session: sessionFor("COORDINATOR", "usr_coordinator"),
+    },
+  ])(
+    "SCRUM-21 [AC8] TC-21-08: $who sees the current Coordinator's name",
+    async ({ session }) => {
+      mockAuth.mockResolvedValue(session);
+      mockEventFindUnique
+        .mockResolvedValueOnce(eventRow())
+        .mockResolvedValueOnce({ coordinator: { name: "Cara Coordinator" } });
+
+      expect(await getEventCoordinator("evt_test")).toEqual({
+        ok: true,
+        data: { name: "Cara Coordinator" },
+      });
+    },
+  );
+
+  it("SCRUM-21 [AC8] TC-21-08: an event with no Coordinator reads as none", async () => {
+    mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
+    mockEventFindUnique
+      .mockResolvedValueOnce({ ...eventRow("SUBMITTED"), coordinatorId: null })
+      .mockResolvedValueOnce({ coordinator: null });
+
+    expect(await getEventCoordinator("evt_test")).toEqual({
+      ok: true,
+      data: { name: null },
+    });
+  });
+
+  it.each([
+    { who: "another Organiser", session: sessionFor("ORGANISER", "usr_organiser2") },
+    { who: "an Attendee", session: sessionFor("ATTENDEE", "usr_attendee") },
+    { who: "a signed-out visitor", session: null },
+  ])(
+    "SCRUM-21 [AC8] TC-21-08: $who is told the event was not found",
+    async ({ session }) => {
+      mockAuth.mockResolvedValue(session);
+
+      expect(await getEventCoordinator("evt_test")).toEqual({
+        ok: false,
+        error: "Event not found.",
+      });
     },
   );
 });

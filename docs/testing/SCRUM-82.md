@@ -59,12 +59,12 @@ organised by `organiser@test.local`. Every account's password is
 |---|---|
 | Test Case ID | TC-82-02 |
 | Test Scenario | [Negative] AC 1: a reason is required, and only those statuses can be cancelled |
-| Pre-conditions | One at a time: no reason; the event is Draft, Submitted, Approved, Completed or Rejected. |
+| Pre-conditions | One at a time: no reason; the event is Draft, Submitted, Completed or Rejected. |
 | Test Steps | Try to cancel. |
 | Test Data | Reasons: none, empty, spaces. |
-| Expected Result | The dialog's **Cancel event** stays disabled; a direct request says "A cancellation reason is required." or "Only an event Under Review, in Planning or Confirmed can be cancelled." Nothing is written. |
+| Expected Result | The dialog's **Cancel event** stays disabled; a direct request says "A cancellation reason is required." or names the status, e.g. "This event is Draft, so it can't be cancelled." (SCRUM-135 AC11). Nothing is written. |
 
-**Automated by:** `tests/unit/cancel-event.test.ts` › "SCRUM-82 [AC1] TC-82-02: …" (6 tests); `e2e/close-event.spec.ts` (TC-82-12)
+**Automated by:** `tests/unit/cancel-event.test.ts` › "SCRUM-82 [AC1] TC-82-02: …" (5 tests); `e2e/close-event.spec.ts` (TC-82-12)
 
 ### TC-82-03
 

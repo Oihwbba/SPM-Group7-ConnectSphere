@@ -5,6 +5,8 @@ import { prisma } from "@/lib/db";
 import { completeFinishedEvents } from "@/lib/event-closing";
 import { getBrowsableEvent } from "../queries";
 import { AttendeeEventDetail } from "../attendee-event-detail";
+import { ReplanningEventDetail } from "../replanning-event-detail";
+import { isBeingReplanned } from "@/lib/confirmed-details";
 
 /**
  * SCRUM-72 — the attendee-facing event detail page, reachable by direct URL
@@ -34,5 +36,9 @@ export default async function EventDetailPage({
     notFound();
   }
 
-  return <AttendeeEventDetail event={event} />;
+  return isBeingReplanned(event) ? (
+    <ReplanningEventDetail event={event} />
+  ) : (
+    <AttendeeEventDetail event={event} />
+  );
 }

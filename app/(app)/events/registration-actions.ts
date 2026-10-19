@@ -123,6 +123,18 @@ export async function registerForEvent(
         select: { id: true },
       });
 
+      // SCRUM-85 AC1, AC6: one confirmation per registration. A repeat while
+      // already registered was refused above, so a retry adds nothing.
+      await tx.notification.create({
+        data: {
+          userId,
+          type: "REGISTRATION_CONFIRMED",
+          title: "You're registered",
+          message: `You're registered for "${event.name}".`,
+          eventId,
+        },
+      });
+
       // SCRUM-45 AC11: this registration took the last place.
       if (remainingCapacity(event, activeCount + 1) === 0) {
         await notifyAboutEvent(
