@@ -125,7 +125,7 @@ the open pull requests that change the same test files have merged.
 
 | Story | Owner | Test cases | Status |
 |---|---|---|---|
-| [SCRUM-25](SCRUM-25.md) | Felicia Or | 20 | Every case automated (unit, integration for the row lock, the warning and flags, the safety check and the permanent notes, e2e for both journeys); AC 2's safety check can be tried in the app once SCRUM-166 adds requesting one |
+| [SCRUM-25](SCRUM-25.md) | Felicia Or | 22 | Every case automated (unit, integration for the row lock, the warning and flags, the safety check and the permanent notes, e2e for both journeys, the safety check going Outdated and a Confirmed event's registration and notes) |
 | [SCRUM-27](SCRUM-27.md) | Jin Hong | 16 | Written with the story; every case automated |
 | [SCRUM-28](SCRUM-28.md) | Jin Hong | 11 | Written with the story; every case automated |
 | [SCRUM-31](SCRUM-31.md) | Jun Bin | 11 | Written from the acceptance criteria and existing tests; TC-31-04, -05 and -09 are partly manual |
