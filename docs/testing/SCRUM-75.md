@@ -15,9 +15,9 @@ time that has passed stays closed until it is reopened (AC 9). Reopening
 clears the opening and closing times, so registration is open from then until
 the event's start. Either way an Attendee sees "Registration closed".
 
-AC 11 can't be reached yet: a Confirmed event can't be edited directly
-(SCRUM-25 AC5), and a change request (SCRUM-128) can't change Registration
-needed (TC-75-14).
+AC 11 moved to SCRUM-128 AC11 on 17 Oct 2026 (PO approved): a Confirmed
+event's Registration needed changes only through a change request, which
+SCRUM-128 applies (TC-75-14).
 
 | ID | Type | Criterion | Automated |
 |---|---|---|---|
@@ -34,7 +34,7 @@ needed (TC-75-14).
 | [TC-75-11](#tc-75-11) | Concurrency | AC 6 | Unit, integration |
 | [TC-75-12](#tc-75-12) | Positive | AC 9 | Integration |
 | [TC-75-13](#tc-75-13) | Positive | AC 10 | Unit |
-| [TC-75-14](#tc-75-14) | Positive | AC 11 | Manual, waits for SCRUM-128 |
+| [TC-75-14](#tc-75-14) | Retired | — (moved to SCRUM-128 AC11) | — |
 
 ### TC-75-01
 
@@ -207,13 +207,4 @@ needed (TC-75-14).
 
 ### TC-75-14
 
-| Item | Content |
-|---|---|
-| Test Case ID | TC-75-14 |
-| Test Scenario | [Positive] AC 11: a Confirmed event whose Registration needed changes from No to Yes opens registration as in AC 4 |
-| Pre-conditions | SCRUM-128's change-request decision, able to change Registration needed. |
-| Test Steps | 1. Approve a change request setting Registration needed to Yes on a Confirmed event with No. <br> 2. As an Attendee, open it. |
-| Test Data | — |
-| Expected Result | Listed and open until the event's start. |
-
-**Automated by:** Manual. Waits for SCRUM-128: a Confirmed event can't be edited directly (SCRUM-25 AC5), and #181's change requests don't include Registration needed. The change should set `registrationEnabled` and clear the window, as `reopenRegistration` does.
+**Retired** on 17 Oct 2026, when AC 11 moved to SCRUM-128 AC11: a Confirmed event whose Registration needed changes from No to Yes through a change request opens registration as in AC 4. SCRUM-128 approves the change, so its tests own this case.

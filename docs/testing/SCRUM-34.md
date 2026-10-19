@@ -8,11 +8,10 @@ Opening hours are an opening and a closing time per day in SGT, or Closed
 Exhibition Hall 06:00–22:00 every day, Seminar Room 2.1 08:00–20:00 and
 Executive Boardroom 09:00–18:00 on weekdays, both Closed at weekends.
 
-**Not yet delivered, on purpose:** AC10 judges a booking's attendance, facilities, layout and period;
-a booking doesn't record the accessibility features it needs until SCRUM-40,
-which adds them to this check. AC6's search, filtering and suitability are
-SCRUM-38 and SCRUM-40, not built; the request form half is covered. AC12's
-warning is SCRUM-159 AC9.
+AC10 judges a booking's attendance, facilities, accessibility features
+(recorded on each request since SCRUM-40), layout and period. AC6 covers the
+detail view, the request form, and SCRUM-38's search and filtering with
+SCRUM-40's suitability. AC12's warning is SCRUM-159 AC9.
 
 ### TC-34-01
 
@@ -97,11 +96,11 @@ warning is SCRUM-159 AC9.
 | Item | Content |
 |---|---|
 | Test Case ID | TC-34-07 |
-| Test Scenario | [Positive] AC 6: an edit shows at once in the catalogue and on the request form |
-| Pre-conditions | Signed in as Venue Staff; a venue with no future bookings. |
-| Test Steps | 1. Edit its capacity and facilities. Save. <br> 2. Open it again; as a Coordinator, open Request Venue. |
-| Test Data | Capacity 80 → 120; add "projector" |
-| Expected Result | "Venue saved." The detail view and the request form's venue list show capacity 120 and the projector. An audit entry records who changed it. |
+| Test Scenario | [Positive] AC 6: an edit shows at once in the catalogue, on the request form, and in search, filtering and suitability |
+| Pre-conditions | Signed in as Venue Staff; a venue with capacity 80, a projector and no future bookings. |
+| Test Steps | 1. As a Coordinator, open Venue Search for 100 people needing a sound system, with Only show venues that fit on, then off. <br> 2. As Venue Staff, edit its capacity and facilities. Save. <br> 3. Open it again; as a Coordinator, open Request Venue, and repeat the search with Only show venues that fit on. |
+| Test Data | Capacity 80 → 120; add "sound system" |
+| Expected Result | 1: with the switch on, the venue isn't listed; off, it is Not suitable: "Capacity 80 < attendance 100", "Missing facility: sound system". 3: "Venue saved." The detail view and the request form's venue list show capacity 120 and the sound system, and the search lists the venue as Suitable, with no reasons. An audit entry records who changed it. |
 
 **Automated by:** `tests/unit/venue-catalogue.test.ts` › "SCRUM-34 [AC6] TC-34-07: …"; `tests/integration/venue-catalogue.test.ts` › "SCRUM-34 [AC6] TC-34-07: …"; `e2e/venue-catalogue.spec.ts`
 
@@ -163,10 +162,10 @@ warning is SCRUM-159 AC9.
 |---|---|
 | Test Case ID | TC-34-12 |
 | Test Scenario | [Negative] [Positive] AC 10: an edit that would stop a future booking fitting warns, then flags it |
-| Pre-conditions | Signed in as Venue Staff; a venue with a future Approved booking for 100 people that asked for a projector and a theatre layout, Tuesday 10:00–14:00. |
-| Test Steps | 1. Lower capacity to 80, and save. <br> 2. Remove the projector or theatre, and save. <br> 3. Change Tuesday's hours to 11:00–18:00, and save. <br> 4. After any of them, choose Save and flag 1 booking. <br> 5. Repeat 1 and 4 while a second booking is made at the venue in between. |
+| Pre-conditions | Signed in as Venue Staff; a venue with a future Approved booking for 100 people that asked for a projector, wheelchair access and a theatre layout, Tuesday 10:00–14:00. |
+| Test Steps | 1. Lower capacity to 80, and save. <br> 2. Remove the projector, wheelchair access or theatre, and save. <br> 3. Change Tuesday's hours to 11:00–18:00, and save. <br> 4. After any of them, choose Save and flag 1 booking. <br> 5. Repeat 1 and 4 while a second booking is made at the venue in between. |
 | Test Data | — |
-| Expected Result | 1–3: a warning, "This change would leave the future bookings below no longer fitting the venue. Nothing is saved yet: …", listing the booking with why, e.g. "Capacity 80 < attendance 100" or "Outside opening hours (Tuesday 11:00–18:00)". The venue and its hours are unchanged. 4: "Venue saved. 1 booking flagged Needs Reconsideration." The change is saved, and the booking is flagged with the reason, e.g. "… changed: Capacity 80 < attendance 100", still Approved, for its Coordinator to decide (SCRUM-26). 5: the warning again, listing both, and nothing is saved. Pending and live Held bookings count the same way. |
+| Expected Result | 1–3: a warning, "This change would leave the future bookings below no longer fitting the venue. Nothing is saved yet: …", listing the booking with why, e.g. "Capacity 80 < attendance 100", "No wheelchair access; event needs wheelchair access" or "Outside opening hours (Tuesday 11:00–18:00)". The venue and its hours are unchanged. 4: "Venue saved. 1 booking flagged Needs Reconsideration." The change is saved, and the booking is flagged with the reason, e.g. "… changed: Capacity 80 < attendance 100", still Approved, for its Coordinator to decide (SCRUM-26). 5: the warning again, listing both, and nothing is saved. Pending and live Held bookings count the same way. |
 
 **Automated by:** `tests/unit/venue-changes.test.ts` › "SCRUM-34 [AC10] TC-34-12: …"; `tests/unit/venue-catalogue.test.ts` › "SCRUM-34 [AC10] TC-34-12: …"; `tests/integration/venue-catalogue.test.ts` › "SCRUM-34 [AC10] TC-34-12: …"; `e2e/venue-catalogue.spec.ts`
 
@@ -179,7 +178,7 @@ warning is SCRUM-159 AC9.
 | Pre-conditions | As TC-34-12. |
 | Test Steps | 1. Lower capacity to exactly 100. <br> 2. Change something the booking didn't ask for. <br> 3. On a venue whose booking already asked for more than it had, change its location. <br> 4. On a venue with only past, Rejected, Cancelled or lapsed Held bookings, lower its capacity. |
 | Test Data | — |
-| Expected Result | All save: attendance equal to capacity fits, facilities and layouts match however they were written ("Sound System" is "sound-system"), a booking that named no attendance or layout isn't judged on them, an unrequested change affects nothing, a mismatch the edit didn't cause doesn't count, and only future Pending, Approved or live Held bookings are judged. |
+| Expected Result | All save: attendance equal to capacity fits, facilities, accessibility features and layouts match however they were written ("Sound System" is "sound-system"), a booking that named no attendance, accessibility features or layout isn't judged on them, an unrequested change affects nothing, a mismatch the edit didn't cause doesn't count, and only future Pending, Approved or live Held bookings are judged. |
 
 **Automated by:** `tests/unit/venue-changes.test.ts` › "SCRUM-34 [AC10] TC-34-13: …"; `tests/integration/venue-catalogue.test.ts` › "SCRUM-34 [AC10] TC-34-13: …"
 

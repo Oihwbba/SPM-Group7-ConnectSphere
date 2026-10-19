@@ -345,3 +345,180 @@ test.describe("SCRUM-25 — update routine event information during planning", (
     ).toBe(1);
   });
 });
+
+/**
+ * SCRUM-25 with SCRUM-166 and SCRUM-75, which AC2, AC4 and AC5 depend on:
+ * a routine layout change puts a requested safety check out of date, and on
+ * a Confirmed event, where no detail can be edited, closing or reopening
+ * registration and operational notes stay available. Each test makes its own
+ * event, with a prefix the serial tests above don't remove, and deletes only
+ * that event, with what it gathered (requesting a check notifies the Safety
+ * Officers): these tests may run at once, so one mustn't remove another's.
+ */
+const OWN = "E2E SCRUM-25 —";
+
+test.describe("SCRUM-25 — with the safety check and registration control", () => {
+  test.describe.configure({ timeout: 90_000 });
+  test.skip(!usesLocalDatabase, "creates its own events");
+  // A worker runs one test at a time, so this is the running test's event.
+  let eventId: string | undefined;
+
+  test.afterEach(async () => {
+    if (!eventId) return;
+    const ids = [eventId];
+    eventId = undefined;
+    const related = [
+      ...(await prisma.booking.findMany({ where: { eventId: { in: ids } }, select: { id: true } })),
+      ...(await prisma.safetyCheck.findMany({ where: { eventId: { in: ids } }, select: { id: true } })),
+    ].map((row) => row.id);
+    await prisma.auditLog.deleteMany({ where: { entityId: { in: [...ids, ...related] } } });
+    await prisma.notification.deleteMany({ where: { eventId: { in: ids } } });
+    await prisma.safetyCheck.deleteMany({ where: { eventId: { in: ids } } });
+    await prisma.booking.deleteMany({ where: { eventId: { in: ids } } });
+    // The events' notes go with them.
+    await prisma.event.deleteMany({ where: { id: { in: ids } } });
+  });
+
+  test("SCRUM-25 [AC2] TC-25-05: changing the layout of an event whose safety check awaits review puts the check out of date, and flags nothing", async ({
+    browser,
+  }) => {
+    const name = `${OWN} Layout ${Date.now()}`;
+    const period = {
+      startAt: new Date("2036-08-05T10:00:00+08:00"),
+      endAt: new Date("2036-08-05T14:00:00+08:00"),
+    };
+    ({ id: eventId } = await prisma.event.create({
+      data: {
+        name,
+        purpose: "SCRUM-25 with SCRUM-166",
+        status: "PLANNING",
+        organiserId: "usr_organiser",
+        coordinatorId: "usr_coordinator",
+        ...period,
+        expectedAttendance: 150,
+        preferredLayout: "Theatre",
+        submittedAt: new Date(),
+        // SCRUM-170 AC4: this event needs no equipment, so the venue is all
+        // a safety check waits for (SCRUM-166 AC1).
+        noEquipmentNeededAt: new Date(),
+        noEquipmentNeededById: "usr_coordinator",
+      },
+      select: { id: true },
+    }));
+    await prisma.booking.create({
+      data: {
+        eventId,
+        venueId: "ven_hall",
+        ...period,
+        status: "APPROVED",
+        requestedAttendance: 150,
+        requestedLayout: "theatre",
+        requestedById: "usr_coordinator",
+        decidedById: "usr_venuestaff",
+        decidedAt: new Date(),
+      },
+    });
+
+    const coordinator = await signedIn(browser, "coordinator@test.local");
+    await coordinator.goto("/events");
+    await openDetails(coordinator, name);
+    const details = coordinator.getByRole("dialog", { name, exact: true });
+    const safety = details.getByTestId("readiness-item-safety");
+    await details.getByRole("button", { name: "Request safety check" }).click();
+    await expect(safety).toContainText("Awaiting review");
+
+    await details.getByRole("button", { name: "Edit details" }).click();
+    const edit = coordinator.getByRole("dialog", { name: `Edit ${name}` });
+    await edit.getByLabel("Preferred room layout").fill("Classroom");
+    await edit.getByRole("button", { name: "Save details" }).click();
+    await expect(
+      coordinator.getByText(
+        "Details saved. The safety check is now out of date and needs requesting again.",
+      ),
+    ).toBeVisible();
+    await expect(safety).toContainText("Outdated");
+
+    expect(
+      await prisma.safetyCheck.findFirstOrThrow({
+        where: { eventId },
+        select: { status: true, outdatedAt: true },
+      }),
+    ).toEqual({ status: "OUTDATED", outdatedAt: expect.any(Date) });
+    // A routine edit changes neither the status nor the booking.
+    expect(
+      await prisma.event.findUniqueOrThrow({
+        where: { id: eventId },
+        select: { status: true, preferredLayout: true },
+      }),
+    ).toEqual({ status: "PLANNING", preferredLayout: "Classroom" });
+    expect(
+      await prisma.booking.findFirstOrThrow({
+        where: { eventId },
+        select: { status: true, needsReconsideration: true },
+      }),
+    ).toEqual({ status: "APPROVED", needsReconsideration: false });
+  });
+
+  test("SCRUM-25 [AC4, AC5, AC6] TC-25-22: on a Confirmed event nobody edits details, but the Coordinator and the Organiser close and reopen registration, and the Coordinator adds a note", async ({
+    browser,
+  }) => {
+    const name = `${OWN} Confirmed ${Date.now()}`;
+    const NOTE = "Doors open 30 minutes early for registration.";
+    ({ id: eventId } = await prisma.event.create({
+      data: {
+        name,
+        purpose: "SCRUM-25 with SCRUM-75",
+        status: "CONFIRMED",
+        organiserId: "usr_organiser",
+        coordinatorId: "usr_coordinator",
+        startAt: new Date("2036-09-02T10:00:00+08:00"),
+        endAt: new Date("2036-09-02T14:00:00+08:00"),
+        expectedAttendance: 40,
+        registrationRequired: true,
+        registrationEnabled: true,
+        submittedAt: new Date(),
+      },
+      select: { id: true },
+    }));
+
+    // AC5: the assigned Coordinator can't edit a Confirmed event's details,
+    // but registration and notes aren't details.
+    const coordinator = await signedIn(browser, "coordinator@test.local");
+    await coordinator.goto("/events");
+    let dialog = await openDetails(coordinator, name);
+    let panel = dialog.getByTestId("registration-control");
+    await expect(panel.getByTestId("registration-control-state")).toHaveText("Open");
+    await expect(dialog.getByRole("button", { name: "Edit details" })).toHaveCount(0);
+    await panel.getByRole("button", { name: "Close registration" }).click();
+    await expect(panel.getByTestId("registration-control-state")).toHaveText(
+      "Registration closed",
+    );
+    const notes = dialog.getByTestId("operational-notes");
+    await notes.getByLabel("Add a note").fill(NOTE);
+    await notes.getByRole("button", { name: "Add note" }).click();
+    await expect(notes.getByTestId("operational-note")).toContainText(NOTE);
+
+    // AC4: the Organiser's only direct control is registration.
+    const organiser = await signedIn(browser, "organiser@test.local");
+    await organiser.goto("/events");
+    dialog = await openDetails(organiser, name);
+    panel = dialog.getByTestId("registration-control");
+    await expect(dialog.getByRole("button", { name: "Edit details" })).toHaveCount(0);
+    await expect(dialog.getByTestId("operational-notes").getByLabel("Add a note")).toHaveCount(0);
+    await panel.getByRole("button", { name: "Reopen registration" }).click();
+    await expect(panel.getByTestId("registration-control-state")).toHaveText("Open");
+
+    expect(
+      await prisma.event.findUniqueOrThrow({
+        where: { id: eventId },
+        select: { status: true, name: true, registrationEnabled: true, registrationClosesAt: true },
+      }),
+    ).toEqual({ status: "CONFIRMED", name, registrationEnabled: true, registrationClosesAt: null });
+    expect(
+      await prisma.eventOperationalNote.findFirstOrThrow({
+        where: { eventId, body: NOTE },
+        select: { authorId: true },
+      }),
+    ).toEqual({ authorId: "usr_coordinator" });
+  });
+});

@@ -18,16 +18,21 @@ const everyDay = (opens: number, closes: number): OpeningDay[] =>
 const venue: CatalogueVenue = {
   capacity: 120,
   facilities: ["projector", "sound-system"],
+  accessibilityFeatures: ["wheelchair-access", "hearing-loop"],
   supportedLayouts: ["theatre", "banquet"],
   openingHours: everyDay(9 * 60, 22 * 60),
 };
 
-/** TC-34-12's booking: 100 people, a projector and a theatre layout, Tuesday 10:00–14:00. */
+/**
+ * TC-34-12's booking: 100 people, a projector, wheelchair access and a theatre
+ * layout, Tuesday 10:00–14:00.
+ */
 const booking: BookingNeeds = {
   startAt: at("2036-03-04T10:00"),
   endAt: at("2036-03-04T14:00"),
   requestedAttendance: 100,
   requiredFacilities: ["projector"],
+  requiredAccessibilityFeatures: ["wheelchair-access"],
   requestedLayout: "theatre",
 };
 
@@ -35,6 +40,11 @@ describe("what a venue edit stops fitting — SCRUM-34 AC10", () => {
   it.each([
     ["capacity lowered below the attendance", { capacity: 80 }, "Capacity 80 < attendance 100"],
     ["a facility it asked for removed", { facilities: ["sound-system"] }, "Missing facility: projector"],
+    [
+      "an accessibility feature it needs removed",
+      { accessibilityFeatures: ["hearing-loop"] },
+      "No wheelchair access; event needs wheelchair access",
+    ],
     ["its layout no longer supported", { supportedLayouts: ["banquet"] }, "Theatre layout not supported"],
     [
       "opening hours narrowed past its period",
@@ -47,16 +57,37 @@ describe("what a venue edit stops fitting — SCRUM-34 AC10", () => {
 
   it("SCRUM-34 [AC10] TC-34-12: every reason that applies is listed", () => {
     expect(
-      newlyUnfit(venue, { ...venue, capacity: 50, supportedLayouts: [] }, booking),
-    ).toEqual(["Capacity 50 < attendance 100", "Theatre layout not supported"]);
+      newlyUnfit(
+        venue,
+        { ...venue, capacity: 50, accessibilityFeatures: [], supportedLayouts: [] },
+        booking,
+      ),
+    ).toEqual([
+      "Capacity 50 < attendance 100",
+      "No wheelchair access; event needs wheelchair access",
+      "Theatre layout not supported",
+    ]);
   });
 
-  it("SCRUM-34 [AC10] TC-34-13: facilities and layouts are compared as tags, however they were written", () => {
-    const asked = { ...booking, requiredFacilities: ["Sound System"], requestedLayout: "Theatre" };
+  it("SCRUM-34 [AC10] TC-34-13: facilities, accessibility features and layouts are compared as tags, however they were written", () => {
+    const asked = {
+      ...booking,
+      requiredFacilities: ["Sound System"],
+      requiredAccessibilityFeatures: ["Hearing Loop"],
+      requestedLayout: "Theatre",
+    };
     expect(newlyUnfit(venue, { ...venue, capacity: 110 }, asked)).toEqual([]);
     expect(newlyUnfit(venue, { ...venue, facilities: ["projector"] }, asked)).toEqual([
       "Missing facility: sound system",
     ]);
+    expect(
+      newlyUnfit(venue, { ...venue, accessibilityFeatures: ["wheelchair-access"] }, asked),
+    ).toEqual(["No hearing loop; event needs hearing loop"]);
+  });
+
+  it("SCRUM-34 [AC10] TC-34-13: a booking that needs no accessibility features isn't judged on them", () => {
+    const needsNone = { ...booking, requiredAccessibilityFeatures: [] };
+    expect(newlyUnfit(venue, { ...venue, accessibilityFeatures: [] }, needsNone)).toEqual([]);
   });
 
   it("SCRUM-34 [AC10] TC-34-13: a booking that named no attendance or layout isn't judged on them", () => {

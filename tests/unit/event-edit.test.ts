@@ -988,6 +988,25 @@ describe("the permission table — SCRUM-25", () => {
     expect(can({ id: "usr_org", role: "ORGANISER" }, "event:edit", event("usr_coord"))).toBe(false);
   });
 
+  it("SCRUM-25 [AC4, AC5] TC-25-22: on a Confirmed event nobody edits details, but its Organiser and assigned Coordinator control registration and the Coordinator adds notes", () => {
+    const confirmed = {
+      kind: "event" as const,
+      organiserId: "usr_org",
+      coordinatorId: "usr_coord",
+      status: "CONFIRMED" as const,
+    };
+    const organiser = { id: "usr_org", role: "ORGANISER" as const };
+    const coordinator = { id: "usr_coord", role: "COORDINATOR" as const };
+    expect(can(organiser, "event:edit", confirmed)).toBe(false);
+    expect(can(organiser, "registration:control", confirmed)).toBe(true);
+    expect(can(organiser, "event-note:add", notes())).toBe(false);
+    expect(can(coordinator, "registration:control", confirmed)).toBe(true);
+    expect(can(coordinator, "event-note:add", notes())).toBe(true);
+    // Only this event's Organiser and Coordinator.
+    expect(can({ id: "usr_other", role: "ORGANISER" }, "registration:control", confirmed)).toBe(false);
+    expect(can({ id: "usr_other", role: "COORDINATOR" }, "registration:control", confirmed)).toBe(false);
+  });
+
   it("SCRUM-25 [AC6] TC-25-12: roles without a notes relationship are never related", () => {
     expect(
       can({ id: "u", role: "SAFETY_OFFICER" }, "event-note:read", notes({ hasVenueBooking: true })),
