@@ -15,7 +15,7 @@ assignment (AC1's second half) is SCRUM-165's, a cancellation (AC6) is
 SCRUM-82's, and a change request's outcome (AC9) is SCRUM-128's; TC-45-01,
 TC-45-11 and TC-45-12 cite their tests. Cancelling also withdraws the
 registration-closed notice written ahead in TC-45-07 (SCRUM-82's TC-82-04).
-**Still to do:** AC10, because reassignment (SCRUM-21) isn't built yet.
+Reassignment's notices (AC10) are SCRUM-21's; TC-45-13 cites its tests. Every criterion is covered.
 
 | ID | Type | Criterion | Automated |
 |---|---|---|---|
@@ -31,6 +31,7 @@ registration-closed notice written ahead in TC-45-07 (SCRUM-82's TC-82-04).
 | [TC-45-10](#tc-45-10) | Positive, Negative | AC 7, AC 12, AC 13 | Unit, integration, e2e |
 | [TC-45-11](#tc-45-11) | Positive | AC 6 | Unit, integration (SCRUM-82's) |
 | [TC-45-12](#tc-45-12) | Positive | AC 9 | Unit, integration (SCRUM-128's) |
+| [TC-45-13](#tc-45-13) | Positive, Concurrency | AC 10, AC 13 | Unit, integration, e2e (SCRUM-21's) |
 
 AC 15 (no duplicates of SCRUM-85's or SCRUM-124's notices) holds by
 construction: every notice here goes to the event's Organiser or Coordinator.
@@ -192,3 +193,16 @@ construction: every notice here goes to the event's Organiser or Coordinator.
 | Expected Result | Step 1: "Change request approved", naming what changed. Step 2: "Change request rejected", with the reason. |
 
 **Automated by:** SCRUM-128's `tests/unit/change-decision.test.ts` › "SCRUM-128 [AC2, AC10] TC-128-02: the requested values become the event's and the request becomes Approved, with who and when, in one transaction" and `tests/unit/change-decision.test.ts` › "SCRUM-128 [AC3, AC10] TC-128-03: rejecting with a reason leaves the event unchanged, marks the request Rejected and tells the Organiser why"
+
+### TC-45-13
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-45-13 |
+| Test Scenario | [Positive, Concurrency] AC 10, AC 13: reassigning an event tells the new and previous Coordinators and the Organiser, once each |
+| Pre-conditions | A Planning event assigned to `coordinator@test.local`. Signed in as `lead@test.local`. |
+| Test Steps | 1. Reassign it to `coordinator2@test.local` (SCRUM-21). <br> 2. Two Leads reassign another event at the same moment. |
+| Test Data | — |
+| Expected Result | Step 1: the new Coordinator gets "An event was reassigned to you", the previous one "An event was reassigned", and the Organiser "Your event has a new coordinator", each in their own list. Step 2: one reassignment is saved, with three notices in all. |
+
+**Automated by:** SCRUM-21's `tests/unit/reassign.test.ts` › "SCRUM-21 [AC6] TC-21-07: the new and previous Coordinators and the Organiser are each notified once"; `tests/integration/reassign.test.ts` › "SCRUM-21 [AC2, AC9] TC-21-02: [Concurrency] two Leads reassign the same event at the same moment: exactly one is saved, the event has one Coordinator, and one history entry exists" (three notices); `e2e/reassign.spec.ts` › "SCRUM-21 [AC1, AC5, AC6, AC8] TC-21-01, TC-21-06, TC-21-07, TC-21-08: the Lead reassigns an event at once; the previous Coordinator can only view it, and the Organiser sees the new Coordinator" (each one's own list)
