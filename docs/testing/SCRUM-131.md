@@ -16,7 +16,7 @@ and the app is running. Every account's password is `Password123!`.
 | [TC-131-02](#tc-131-02) | Positive | AC 2 | Unit |
 | [TC-131-03](#tc-131-03) | Negative | AC 2 | Unit |
 | [TC-131-04](#tc-131-04) | Positive, Negative | AC 3 | Unit, e2e |
-| [TC-131-05](#tc-131-05) | Positive | AC 2, AC 3 | Unit |
+| [TC-131-05](#tc-131-05) | Positive | AC 2, AC 3 | Unit, e2e |
 | [TC-131-06](#tc-131-06) | Negative | AC 4 | Unit |
 | [TC-131-07](#tc-131-07) | Positive | AC 5 | Unit |
 | [TC-131-08](#tc-131-08) | Positive | AC 7 | Unit, integration |
@@ -85,7 +85,7 @@ and the app is running. Every account's password is `Password123!`.
 | Test Data | Reason "One projector broke." |
 | Expected Result | Equipment is incomplete and reads "Reserved: Projector, Wireless Microphone", with the Needs Reconsideration badge and the reason. |
 
-**Automated by:** `tests/unit/event-readiness.test.ts` › "SCRUM-26 [AC12] TC-26-13, SCRUM-131 [AC2, AC3] TC-131-05: a flagged Confirmed reservation makes the equipment item incomplete, reading Reserved with the flag, naming the equipment, with the first reason"
+**Automated by:** `tests/unit/event-readiness.test.ts` › "SCRUM-26 [AC12] TC-26-13, SCRUM-131 [AC2, AC3] TC-131-05: a flagged Confirmed reservation makes the equipment item incomplete, reading Reserved with the flag, naming the equipment, with the first reason"; `e2e/reconsideration.spec.ts` › "SCRUM-26 [AC12] TC-26-13, SCRUM-131 [AC2, AC3] TC-131-05: a confirmed reservation reads Reserved, never Confirmed, and once flagged reads Reserved with the equipment named …" (the Coordinator's checklist, before and after the flag)
 
 ### TC-131-06
 
