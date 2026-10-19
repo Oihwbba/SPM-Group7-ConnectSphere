@@ -19,8 +19,13 @@ import {
 const db = vi.hoisted(() => ({
   venue: { create: vi.fn(), update: vi.fn(), findUnique: vi.fn() },
   venueOpeningHours: { upsert: vi.fn() },
-  booking: { findMany: vi.fn(), updateMany: vi.fn() },
-  reservation: { updateMany: vi.fn() },
+  // SCRUM-124 AC8: flagArrangements returns what it flagged and tells the
+  // people responsible.
+  booking: { findMany: vi.fn(), updateManyAndReturn: vi.fn() },
+  reservation: { updateManyAndReturn: vi.fn() },
+  event: { findMany: vi.fn() },
+  user: { findMany: vi.fn() },
+  notification: { create: vi.fn(), createMany: vi.fn() },
   auditLog: { create: vi.fn() },
   $queryRaw: vi.fn(),
   $transaction: vi.fn(),
@@ -100,13 +105,13 @@ function expectNothingWritten() {
   expect(db.venue.update).not.toHaveBeenCalled();
   expect(db.venueOpeningHours.upsert).not.toHaveBeenCalled();
   expect(db.auditLog.create).not.toHaveBeenCalled();
-  expect(db.booking.updateMany).not.toHaveBeenCalled();
+  expect(db.booking.updateManyAndReturn).not.toHaveBeenCalled();
 }
 
 /** AC10, AC11 — the one booking flagged, with its reason, and nothing else about it changed. */
 function expectFlagged(id: string, reason: string) {
-  expect(db.booking.updateMany).toHaveBeenCalledTimes(1);
-  expect(db.booking.updateMany).toHaveBeenCalledWith({
+  expect(db.booking.updateManyAndReturn).toHaveBeenCalledTimes(1);
+  expect(db.booking.updateManyAndReturn).toHaveBeenCalledWith({
     where: expect.objectContaining({ id: { in: [id] }, needsReconsideration: false }),
     data: {
       needsReconsideration: true,
@@ -115,6 +120,7 @@ function expectFlagged(id: string, reason: string) {
       reconsiderationResolvedAt: null,
       reconsiderationResolvedById: null,
     },
+    select: expect.any(Object),
   });
   expect(revalidatePath).toHaveBeenCalledWith("/events");
 }
@@ -126,8 +132,12 @@ beforeEach(() => {
   db.venue.create.mockResolvedValue({ id: "ven_new" });
   db.venue.findUnique.mockResolvedValue(stored);
   db.booking.findMany.mockResolvedValue([]);
-  db.booking.updateMany.mockResolvedValue({ count: 1 });
-  db.reservation.updateMany.mockResolvedValue({ count: 0 });
+  db.booking.updateManyAndReturn.mockResolvedValue([
+    { id: "bkg_1", eventId: "evt_1", status: "APPROVED", venue: { name: "Hall" } },
+  ]);
+  db.reservation.updateManyAndReturn.mockResolvedValue([]);
+  db.event.findMany.mockResolvedValue([]);
+  db.user.findMany.mockResolvedValue([]);
 });
 
 describe("createVenue — SCRUM-34 AC3–AC5", () => {
@@ -450,7 +460,7 @@ describe("updateVenue — SCRUM-34 AC6, AC10", () => {
       data: { id: "ven_1", flagged: 0 },
     });
     expect(db.venue.update).toHaveBeenCalled();
-    expect(db.booking.updateMany).not.toHaveBeenCalled();
+    expect(db.booking.updateManyAndReturn).not.toHaveBeenCalled();
   });
 
   it.each([

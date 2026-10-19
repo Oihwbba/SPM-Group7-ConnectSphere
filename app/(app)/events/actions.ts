@@ -19,8 +19,10 @@ import {
   liveHoldWhere,
   withdrawPendingHoldNotices,
 } from "@/lib/booking-holds";
-import { formatDateTime, TIME_ZONE } from "@/lib/datetime";
+import { formatDateTime, formatEventTime, TIME_ZONE } from "@/lib/datetime";
+import { confirmedDetailsChanged, venueLabel } from "@/lib/confirmed-details";
 import { asSentence, notifyAboutEvent } from "@/lib/event-notifications";
+import { notifyRole } from "@/lib/staff-notifications";
 import { effectiveClosesAt } from "@/lib/registration-state";
 import { venueOptions, type VenueOptions } from "@/lib/venue-options";
 
@@ -362,7 +364,10 @@ export async function submitEventRequest(
         previousCoordinatorId !== null &&
         Boolean(
           await tx.user.findFirst({
-            where: { id: previousCoordinatorId, role: "COORDINATOR" },
+            where: {
+              id: previousCoordinatorId,
+              OR: [{ role: "COORDINATOR" }, { additionalRoles: { has: "COORDINATOR" } }],
+            },
             select: { id: true },
           }),
         );
@@ -430,6 +435,15 @@ export async function submitEventRequest(
           },
         });
       }
+
+      // SCRUM-124 AC10: every Lead hears that it is waiting in the
+      // Unassigned queue, and the notice opens it there.
+      await notifyRole(tx, "COORDINATOR_LEAD", { id: eventId! }, {
+        type: "REQUEST_AWAITING_ASSIGNMENT",
+        title: "A request is waiting to be assigned",
+        message: `"${name}" was submitted and is waiting in the Unassigned queue.`,
+        link: `/queue/${eventId}`,
+      });
     });
 
     revalidatePath("/events");
@@ -726,6 +740,10 @@ export async function confirmEvent(
           registrationOpensAt: true,
           registrationClosesAt: true,
           startAt: true,
+          endAt: true,
+          confirmedStartAt: true,
+          confirmedEndAt: true,
+          confirmedVenues: true,
         },
       });
       if (current.status === "CONFIRMED") return "already-confirmed" as const;
@@ -743,9 +761,23 @@ export async function confirmEvent(
       // AC 5: registration opens unless the Organiser said it isn't needed
       // (SCRUM-171). Requests made before that choice existed leave it unset.
       const registrationEnabled = current.registrationRequired !== false;
+      // SCRUM-85: what Attendees are told now, with every approved venue.
+      const venues = (
+        await tx.booking.findMany({
+          where: { eventId, status: "APPROVED" },
+          orderBy: { createdAt: "asc" },
+          select: { venue: { select: { name: true, location: true } } },
+        })
+      ).map((b) => venueLabel(b.venue));
       await tx.event.update({
         where: { id: eventId },
-        data: { status: "CONFIRMED", registrationEnabled },
+        data: {
+          status: "CONFIRMED",
+          registrationEnabled,
+          confirmedStartAt: current.startAt,
+          confirmedEndAt: current.endAt,
+          confirmedVenues: venues,
+        },
       });
       // AC 5: who confirmed it and when (the entry's createdAt).
       await tx.auditLog.create({
@@ -788,6 +820,31 @@ export async function confirmEvent(
           title: "Registration closed",
           message: `Registration for "${current.name}" closed at ${formatDateTime(closesAt)}.`,
           showFromAt: closesAt,
+        });
+      }
+      // SCRUM-85 AC2, AC3, AC5, AC11: confirmed again with a different date,
+      // time or venue, so each Attendee still registered hears the new details
+      // once, every venue listed. Their registration stands. Only a real
+      // confirmation gets here, so a retry tells nobody twice (AC6).
+      if (
+        confirmedDetailsChanged(current, {
+          startAt: current.startAt,
+          endAt: current.endAt,
+          venues,
+        })
+      ) {
+        const registered = await tx.registration.findMany({
+          where: { eventId, status: "REGISTERED" },
+          select: { userId: true },
+        });
+        await tx.notification.createMany({
+          data: registered.map(({ userId }) => ({
+            userId,
+            type: "REGISTERED_EVENT_CHANGED" as const,
+            title: "An event you registered for has changed",
+            message: `"${current.name}" is confirmed with new details: ${formatEventTime(current.startAt, current.endAt)} at ${venues.join("; ")}. Your registration still stands.`,
+            eventId,
+          })),
         });
       }
       return "confirmed" as const;
