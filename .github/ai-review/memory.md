@@ -135,6 +135,9 @@ Gaps found by reviews (the #11 replay, 2026-09-14, and later merges), still
 true until a pull request fixes them. Raise one only when a pull request
 touches that code or claims that story, and say it was already known.
 
+- (2026-09-29, #99) Recorded unavailability can't be removed or shortened
+in the app. Known when a pull request touches unavailability.
+
 - (2026-10-04, #120; 2026-10-19, #226) Events approved before #120 sit in
 APPROVED with no way out: approval now writes PLANNING directly,
 `transitionEventStatus` only decides Submitted/Under Review, and
@@ -200,8 +203,7 @@ Planning at deploy show Attendees nothing last-confirmed. Known when a
 pull request touches the re-planned view.
 
 - (2026-10-19, #214) The Equipment schedule's "Reported as not
-providable" label shows for every Needs Reconsideration flag (the
-review's low, merged open): the flag is SCRUM-26's and shared — #181's
+providable" label shows for every Needs Reconsideration flag: the flag is SCRUM-26's and shared — #181's
 change request already raises it on reservations — so one flagged another
 way reads as a Technical Support report that never happened. Known when a
 pull request touches the equipment schedule panel or the flag sources.
