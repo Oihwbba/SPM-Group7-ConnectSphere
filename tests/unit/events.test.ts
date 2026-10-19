@@ -500,10 +500,7 @@ describe("User Story 13 — Event Request Creation", () => {
         where: {
           id: "evt_already_submitted",
           organiserId: "usr_organiser",
-          OR: [
-            { status: "DRAFT", discardedAt: null },
-            { status: "REJECTED", rejectionOutcome: "AMEND_AND_RESUBMIT" },
-          ],
+          discardedAt: null,
         },
       });
       expect(mockUpdate).not.toHaveBeenCalled();
@@ -511,6 +508,33 @@ describe("User Story 13 — Event Request Creation", () => {
       expect(mockTxNotificationCreateMany).not.toHaveBeenCalled();
       expect(mockTxAuditLogCreate).not.toHaveBeenCalled();
     });
+
+    it.each([
+      { status: "SUBMITTED", rejectionOutcome: null, label: "Submitted" },
+      { status: "PLANNING", rejectionOutcome: null, label: "Planning" },
+      { status: "REJECTED", rejectionOutcome: "NEW_REQUEST", label: "Rejected" },
+    ])(
+      "SCRUM-135 [AC11, AC13] TC-135-11: submitting a $label event ($rejectionOutcome) is refused, naming its status, and writes nothing",
+      async ({ status, rejectionOutcome, label }) => {
+        mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
+        mockFindFirst.mockResolvedValue({
+          id: "evt1",
+          organiserId: "usr_organiser",
+          status,
+          rejectionOutcome,
+          coordinatorId: "usr_coord",
+        });
+
+        expect(
+          await submitEventRequest({ ...validSubmissionInput, id: "evt1" }),
+        ).toEqual({
+          ok: false,
+          error: `This event is ${label}, so it can't be submitted.`,
+        });
+        expect(mockUpdate).not.toHaveBeenCalled();
+        expect(mockTxAuditLogCreate).not.toHaveBeenCalled();
+      },
+    );
 
     it("SCRUM-14 AC: the draft row is locked BEFORE its status is checked, so two simultaneous submissions cannot both pass", async () => {
       mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
@@ -535,6 +559,7 @@ describe("User Story 13 — Event Request Creation", () => {
         id: "evt_rejected",
         organiserId: "usr_organiser",
         status: "REJECTED",
+        rejectionOutcome: "AMEND_AND_RESUBMIT",
         coordinatorId: "usr_old_coordinator",
       });
       const result = await submitEventRequest({

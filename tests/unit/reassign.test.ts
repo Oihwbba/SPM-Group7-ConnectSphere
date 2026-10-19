@@ -137,6 +137,25 @@ describe("reassignCoordinator — SCRUM-21", () => {
     });
   });
 
+  it.each(REASSIGNABLE)(
+    "SCRUM-135 [AC16] TC-135-16: reassigning a %s event changes its Coordinator, never its status",
+    async (status) => {
+      mockAuth.mockResolvedValue(lead());
+      tx.event.findUnique.mockResolvedValue(event({ status }));
+
+      expect(await reassign()).toMatchObject({ ok: true, data: { changed: true } });
+      // The one write to the event: who coordinates and supervises it.
+      expect(tx.event.updateMany).toHaveBeenCalledTimes(1);
+      expect(Object.keys(tx.event.updateMany.mock.calls[0][0].data).sort()).toEqual([
+        "coordinatorId",
+        "supervisingLeadId",
+      ]);
+      expect(tx.auditLog.create).not.toHaveBeenCalledWith({
+        data: expect.objectContaining({ fieldName: "status" }),
+      });
+    },
+  );
+
   it("SCRUM-21 [AC6] TC-21-07: the new and previous Coordinators and the Organiser are each notified once", async () => {
     mockAuth.mockResolvedValue(lead());
 

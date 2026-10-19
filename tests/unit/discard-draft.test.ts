@@ -407,10 +407,7 @@ describe("A discarded draft cannot be reopened — SCRUM-130 AC1", () => {
       where: {
         id: "evt_draft",
         organiserId: "usr_org",
-        OR: [
-          { status: "DRAFT", discardedAt: null },
-          { status: "REJECTED", rejectionOutcome: "AMEND_AND_RESUBMIT" },
-        ],
+        discardedAt: null,
       },
     });
     expect(tx.event.update).not.toHaveBeenCalled();

@@ -7,7 +7,8 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { can, requirePermission, PermissionError } from "@/lib/auth/can";
 import { ok, err, type ActionResult } from "@/lib/action-result";
-import { CANCELLABLE, cancelInTransaction } from "@/lib/event-closing";
+import { cancelInTransaction } from "@/lib/event-closing";
+import { canTransition, transitionRefusal } from "@/lib/event-lifecycle";
 
 const REASON_REQUIRED = "A cancellation reason is required.";
 
@@ -64,7 +65,10 @@ export async function cancelEvent(
         select: { status: true, coordinatorId: true },
       });
       if (current.status === "CANCELLED") return "already-cancelled" as const;
-      if (!CANCELLABLE.includes(current.status)) return "not-cancellable" as const;
+      // SCRUM-135 AC9, AC11: only a lifecycle step, refused by name otherwise.
+      if (!canTransition(current.status, "CANCELLED")) {
+        return { refused: transitionRefusal(current.status, "cancelled") };
+      }
       if (current.coordinatorId !== user!.id) return "reassigned" as const;
 
       await cancelInTransaction(tx, {
@@ -78,9 +82,7 @@ export async function cancelEvent(
       return "cancelled" as const;
     });
 
-    if (outcome === "not-cancellable") {
-      return err("Only an event Under Review, in Planning or Confirmed can be cancelled.");
-    }
+    if (typeof outcome === "object") return err(outcome.refused);
     if (outcome === "reassigned") {
       return err("This event was updated by another user. Refresh and try again.");
     }
