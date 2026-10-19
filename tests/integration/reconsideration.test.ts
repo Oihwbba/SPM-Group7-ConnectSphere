@@ -97,6 +97,8 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-26 — Needs Reconsideration", () => 
         },
       },
     });
+    // SCRUM-45 AC5: returning an event to Planning tells its Organiser.
+    await prisma.notification.deleteMany({ where: { eventId: { in: created } } });
     await prisma.safetyCheck.deleteMany({ where: { eventId: { in: created } } });
     await prisma.registration.deleteMany({ where: { eventId: { in: created } } });
     await prisma.reservation.deleteMany({ where: { eventId: { in: created } } });

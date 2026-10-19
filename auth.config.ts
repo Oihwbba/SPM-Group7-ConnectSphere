@@ -93,6 +93,8 @@ export const authConfig = {
       if (user) {
         token.id = user.id as string;
         if (isRole(user.role)) token.role = user.role;
+        // SCRUM-121 AC1: the roles held besides the primary one.
+        token.additionalRoles = (user.additionalRoles ?? []).filter(isRole);
       }
       return token;
     },
@@ -108,6 +110,9 @@ export const authConfig = {
       if (isRole(token.role)) {
         session.user.role = token.role;
       }
+      session.user.additionalRoles = Array.isArray(token.additionalRoles)
+        ? token.additionalRoles.filter(isRole)
+        : [];
       return session;
     },
   },

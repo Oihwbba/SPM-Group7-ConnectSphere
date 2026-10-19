@@ -3,6 +3,7 @@ import { describe, it, expect, afterAll, afterEach, vi, type Mock } from "vitest
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { decideChangeRequest } from "@/app/(app)/events/change-decision-actions";
+import { raiseChangeRequest } from "@/app/(app)/events/change-request-actions";
 
 // SCRUM-128 — deciding a change request against a real database: all of an
 // approval or none of it, flags and an outdated safety check on an impactful
@@ -204,6 +205,46 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-128 — deciding a change request", (
         "The expected attendance can't be lower than the 3 active registrations, so this change can't be approved.",
     });
     expect((await prisma.event.findUniqueOrThrow({ where: { id: eventId } })).expectedAttendance).toBe(40);
+  });
+
+  it("SCRUM-41 [AC1] TC-41-18, SCRUM-171 [AC5] TC-171-09: a raised Registration needed No is refused while someone is registered, and applied as No once nobody is", async () => {
+    const eventId = await confirmedEvent(8);
+    await prisma.event.update({ where: { id: eventId }, data: { registrationRequired: true } });
+    await prisma.registration.create({ data: { eventId, userId: "usr_attendee" } });
+    (auth as unknown as Mock).mockResolvedValue({
+      user: { id: "usr_organiser", role: "ORGANISER", name: "Olivia", email: "organiser@test.local" },
+      expires: "2999-01-01T00:00:00.000Z",
+    });
+    const raised = await raiseChangeRequest({ eventId, changes: { registrationRequired: false } });
+    if (!raised.ok) throw new Error(raised.error);
+    asCoordinator();
+
+    expect(
+      await decideChangeRequest({ changeRequestId: raised.data.id, decision: "APPROVED" }),
+    ).toEqual({
+      ok: false,
+      error: "This event has 1 active registration, so Registration needed can't be changed to No.",
+    });
+    const unchanged = await prisma.event.findUniqueOrThrow({
+      where: { id: eventId },
+      select: { registrationRequired: true },
+    });
+    expect(unchanged).toEqual({ registrationRequired: true });
+    expect(
+      (await prisma.eventChangeRequest.findUniqueOrThrow({ where: { id: raised.data.id } })).status,
+    ).toBe("PENDING_REVIEW");
+
+    await prisma.registration.updateMany({ where: { eventId }, data: { status: "WITHDRAWN" } });
+    expect(
+      await decideChangeRequest({ changeRequestId: raised.data.id, decision: "APPROVED" }),
+    ).toMatchObject({ ok: true });
+    // SCRUM-171 AC4: no longer taking registrations, as a confirmed No does.
+    expect(
+      await prisma.event.findUniqueOrThrow({
+        where: { id: eventId },
+        select: { registrationRequired: true, registrationEnabled: true, status: true },
+      }),
+    ).toEqual({ registrationRequired: false, registrationEnabled: false, status: "CONFIRMED" });
   });
 
   it("SCRUM-170 [AC4] TC-170-12: approving a change to the equipment requirements clears No equipment needed, who and when together", async () => {

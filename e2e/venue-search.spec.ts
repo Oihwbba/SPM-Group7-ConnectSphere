@@ -215,8 +215,9 @@ test.describe("SCRUM-38 — Search and filter venues", () => {
     await expect(
       page.getByRole("combobox", { name: "Room layout" }),
     ).toContainText("theatre");
-    // The attendance is the event's 40, not the 20 searched (SCRUM-50 AC1).
-    await expect(page.getByLabel("Expected attendance")).toHaveValue("40");
+    // AC12: the 20 searched comes across, as a room for part of the event's
+    // 40 (SCRUM-162 AC4).
+    await expect(page.getByLabel("Expected attendance")).toHaveValue("20");
   });
 
   test("SCRUM-38 [AC1] TC-38-02: Find a replacement venue starts from the flagged booking request", async ({

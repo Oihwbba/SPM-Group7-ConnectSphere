@@ -130,7 +130,7 @@ automated by SCRUM-38's venue search (#216), which reuses
 | Test Data | `organiser@test.local` |
 | Expected Result | 1: Equipment is complete, "No equipment needed – Recorded by Cody Coordinator, …", and the summary reads "Ready to confirm". 2: the Organiser sees "No equipment needed" without who recorded it, and isn't offered the button. |
 
-**Automated by:** `tests/unit/event-readiness.test.ts` › "SCRUM-110 [AC1, AC5] TC-110-01, SCRUM-170 [AC4] TC-170-08: …"; `tests/integration/equipment-decision.test.ts`; `e2e/organiser-requirements.spec.ts`
+**Automated by:** `tests/unit/event-readiness.test.ts` › "SCRUM-110 [AC1, AC5] TC-110-01, SCRUM-170 [AC4] TC-170-08, SCRUM-166 [AC9]: …"; `tests/integration/equipment-decision.test.ts`; `e2e/organiser-requirements.spec.ts`
 
 ### TC-170-09
 

@@ -301,7 +301,10 @@ describe("suggestAlternativeEquipment — SCRUM-28 [AC4]", () => {
         id: true,
         status: true,
         requestedById: true,
-        event: { select: { id: true, name: true, startAt: true, endAt: true } },
+        // SCRUM-121 AC5: whose event it is.
+        event: {
+          select: { id: true, name: true, startAt: true, endAt: true, organiserId: true, coordinatorId: true },
+        },
         lines: {
           where: { id: "eql_1", removedAt: null },
           select: {
