@@ -123,20 +123,19 @@ the earlier request, not a defect.
 - (2026-10-09, #146) `docs/testing/*.md` cite test titles verbatim in
   'Automated by' lines (not shown to this review), so a rename must update
   the citing spec too; titles still in the old inline form match their specs.
-- (2026-10-19, #222) Vitest runs the integration files in parallel, so a
-  suite that creates or deletes a role account mid-run races every other
-  suite's role-wide notices (that is what broke #214's CI): the
-  SCRUM-165/166 race tests use the seeded `lead2@test.local` and
-  `safety2@test.local`, never throwaway accounts.
+- (2026-10-19, #222; #251) Vitest runs the integration files in parallel,
+  so every suite owns its data: no reading rows a sibling suite may delete
+  ("first active equipment" broke the staff-notice suite on #233, #247,
+  #249, PRs that never touched equipment, until #251's private pool) and
+  no mid-run role-account churn (that broke #214's CI) — SCRUM-165/166 use
+  the seeded `lead2@test.local` and `safety2@test.local`, never
+  throwaways.
 
 ## Known open gaps
 
 Gaps found by reviews (the #11 replay, 2026-09-14, and later merges), still
 true until a pull request fixes them. Raise one only when a pull request
 touches that code or claims that story, and say it was already known.
-
-- (2026-09-29, #99) Recorded unavailability can't be removed or shortened
-in the app. Known when a pull request touches unavailability.
 
 - (2026-10-04, #120; 2026-10-19, #226) Events approved before #120 sit in
 APPROVED with no way out: approval now writes PLANNING directly,
@@ -196,9 +195,9 @@ change request still Submitted leaves it Submitted (SCRUM-82 AC11 will
 reject it). Known when a pull request touches change requests or claims
 SCRUM-82.
 
-- (2026-10-19, #227) SCRUM-85's lows merged open: the re-planned page
-offers Withdraw after the event's start, its e2e pins no failure path, and
-the confirmed-details backfill covers Confirmed events only, so events in
+- (2026-10-19, #227; Withdraw-after-start and the e2e failure path closed
+by #250 the same day) SCRUM-85's last low is still open: the
+confirmed-details backfill covers Confirmed events only, so events in
 Planning at deploy show Attendees nothing last-confirmed. Known when a
 pull request touches the re-planned view.
 
