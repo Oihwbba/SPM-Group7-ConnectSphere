@@ -25,7 +25,7 @@ const CURRENT_VALUES = Object.fromEntries(
   CHANGE_KEYS.map((key) => [key, true]),
 ) as { [K in ChangeKey]: true };
 
-type CurrentValues = Record<ChangeKey, string | number | Date | null>;
+type CurrentValues = Record<ChangeKey, string | number | boolean | Date | null>;
 
 type Relationship = { coordinatorId: string | null; status: EventStatus };
 
@@ -57,7 +57,8 @@ function changedFields(current: CurrentValues, changes: ChangeRequestChanges) {
   const fields: FieldChange[] = [];
   for (const key of Object.keys(changes) as ChangeKey[]) {
     const requested = changes[key]!;
-    const next = key === "startAt" || key === "endAt" ? new Date(requested) : requested;
+    const next =
+      key === "startAt" || key === "endAt" ? new Date(requested as string) : requested;
     const oldValue = auditValue(current[key]);
     const newValue = auditValue(next);
     if (oldValue === newValue) continue;
@@ -115,14 +116,14 @@ export async function raiseChangeRequest(
       },
     });
     // SCRUM-68: an event the caller can't see looks exactly like a missing one.
-    if (!event || event.discardedAt || !can(user!, "event:read", { kind: "event", ...event })) {
+    // AC10: only its Organiser and its assigned Coordinator may raise one;
+    // since SCRUM-165 AC8 they are also exactly the people who can see it.
+    if (
+      !event ||
+      event.discardedAt ||
+      !can(user!, "change-request:raise", { kind: "event", ...event })
+    ) {
       return err("Event not found.");
-    }
-    // AC10: of those who can see it, only its Organiser and its assigned Coordinator.
-    if (!can(user!, "change-request:raise", { kind: "event", ...event })) {
-      return err(
-        "Only the event's organiser or its assigned coordinator can raise a change request.",
-      );
     }
     const refusal = refusalFor(event);
     if (refusal) return err(refusal);

@@ -22,6 +22,8 @@ import { toast } from "sonner";
 import type { Event, RejectionOutcome } from "@prisma/client";
 
 import { formatDate, formatDateTime } from "@/lib/datetime";
+import { isOverdue } from "@/lib/event-closing";
+import { EVENT_STATUS_LABEL } from "@/lib/status-labels";
 import { StatusBadge } from "@/components/events/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -108,10 +110,10 @@ export function filterAndSortEvents<
 
   return events
     .filter((evt) => {
-      // SCRUM-20 auto-assigns on submission, so a tab scoped to SUBMITTED alone
-      // would hide a request the moment it is sent. For an organiser the tab is
-      // therefore everything that is not a draft; for a coordinator it is the
-      // queue they can still decide on, which is what their page is for.
+      // A submitted request moves to Under Review once the Lead assigns it
+      // (SCRUM-165), so a tab scoped to SUBMITTED alone would hide it then. For
+      // an organiser the tab is therefore everything that is not a draft; for
+      // a coordinator it is the requests they can still decide on.
       const matchesTab =
         activeTab === "DRAFT"
           ? evt.status === "DRAFT"
@@ -238,7 +240,7 @@ export function EventsClient({
         return;
       }
       toast.success(
-        `Event status updated to ${result.data.status.replace("_", " ").toLowerCase()}.`,
+        `Event status updated to ${EVENT_STATUS_LABEL[result.data.status]}.`,
       );
       setRejectingEvent(null);
       setRejectionReason("");
@@ -398,19 +400,22 @@ export function EventsClient({
             Discard
           </Button>
         )}
-        {/* SCRUM-19: decide a submitted or under-review request. There is no
-            manual "claim" — SCRUM-20 assigns automatically. */}
+        {/* SCRUM-19: decide a request. SCRUM-135 AC3, AC4: only one Under
+            Review, which has its Coordinator. There is no "claim": the Lead
+            assigns a Submitted one (SCRUM-165). */}
         {isCoordinator &&
           (event.status === "SUBMITTED" || event.status === "UNDER_REVIEW") && (
             <>
-              <Button
-                size="sm"
-                className={actionButton}
-                disabled={isPending}
-                onClick={() => changeStatus(event, "APPROVED")}
-              >
-                <CheckCircle2 className="h-3.5 w-3.5" /> Approve
-              </Button>
+              {event.status === "UNDER_REVIEW" && (
+                <Button
+                  size="sm"
+                  className={actionButton}
+                  disabled={isPending}
+                  onClick={() => changeStatus(event, "APPROVED")}
+                >
+                  <CheckCircle2 className="h-3.5 w-3.5" /> Approve
+                </Button>
+              )}
               {/* SCRUM-18: ask the organiser a question instead of deciding. */}
               <Button
                 variant="outline"
@@ -425,19 +430,21 @@ export function EventsClient({
               >
                 <MessageCircleQuestion className="h-3.5 w-3.5" /> Ask
               </Button>
-              <Button
-                variant="destructive"
-                size="sm"
-                className={actionButton}
-                disabled={isPending}
-                onClick={() => {
-                  setRejectingEvent(event);
-                  setRejectionReason("");
-                  setRejectionOutcome(null);
-                }}
-              >
-                <XCircle className="h-3.5 w-3.5" /> Reject
-              </Button>
+              {event.status === "UNDER_REVIEW" && (
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  className={actionButton}
+                  disabled={isPending}
+                  onClick={() => {
+                    setRejectingEvent(event);
+                    setRejectionReason("");
+                    setRejectionOutcome(null);
+                  }}
+                >
+                  <XCircle className="h-3.5 w-3.5" /> Reject
+                </Button>
+              )}
             </>
           )}
       </div>
@@ -514,8 +521,9 @@ export function EventsClient({
                 setStatusFilter("ALL");
               }}
             >
-              {isCoordinator ? "Awaiting review" : "Submitted"} (
-              {submittedCount})
+              {/* SCRUM-131 AC1: "Sent", since the tab lists every request
+                  that isn't a draft, not only the Submitted ones. */}
+              {isCoordinator ? "Awaiting review" : "Sent"} ({submittedCount})
             </Button>
           </div>
 
@@ -527,15 +535,11 @@ export function EventsClient({
               aria-label="Filter by status"
             >
               <option value="ALL">All Statuses</option>
-              <option value="DRAFT">Draft</option>
-              <option value="SUBMITTED">Submitted</option>
-              <option value="UNDER_REVIEW">Under Review</option>
-              <option value="APPROVED">Approved</option>
-              <option value="REJECTED">Rejected</option>
-              <option value="PLANNING">Planning</option>
-              <option value="CONFIRMED">Confirmed</option>
-              <option value="COMPLETED">Completed</option>
-              <option value="CANCELLED">Cancelled</option>
+              {Object.entries(EVENT_STATUS_LABEL).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
             </select>
             <input
               type="text"
@@ -768,7 +772,18 @@ export function EventsClient({
                         </div>
                       </TableCell>
                       <TableCell role="cell" data-col="status">
-                        <StatusBadge status={event.status} />
+                        <div className="flex flex-wrap items-center gap-1">
+                          <StatusBadge status={event.status} />
+                          {/* SCRUM-82 AC10: started but still undecided. */}
+                          {isCoordinator && isOverdue(event) && (
+                            <span
+                              data-testid="overdue-badge"
+                              className="inline-flex items-center rounded-full border border-destructive/40 bg-destructive/10 px-2 py-0.5 text-[11px] font-semibold text-destructive"
+                            >
+                              Overdue
+                            </span>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell
                         role="cell"

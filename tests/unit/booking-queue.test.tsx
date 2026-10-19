@@ -32,6 +32,7 @@ const row: PendingBookingRow = {
   turnaroundMinutes: 0,
   requestedAttendance: 250,
   requiredFacilities: ["projector", "stage"],
+  requiredAccessibilityFeatures: [],
   requestedLayout: "banquet",
   requestNotes: null,
   createdAt: new Date("2035-01-01T01:00:00.000Z"),
@@ -49,6 +50,7 @@ const row: PendingBookingRow = {
     location: "Level 1, Block C",
     capacity: 200,
     facilities: ["sound-system", "projector"],
+    accessibilityFeatures: [],
     supportedLayouts: ["banquet"],
     setupMinutes: 0,
     turnaroundMinutes: 0,
@@ -57,6 +59,8 @@ const row: PendingBookingRow = {
   outsideHours: null,
   hoursWarning: null,
   blockers: [],
+  competing: [],
+  judgement: null,
 };
 
 describe("BookingQueue", () => {
@@ -169,6 +173,43 @@ describe("BookingQueue", () => {
       "Approved by Venue Staff – awaiting confirmation",
     );
     expect(buttons(approved)).toEqual(["Reject"]);
+  });
+});
+
+describe("competing requests on the card — SCRUM-134 AC1", () => {
+  const competing = [
+    {
+      id: "bkg_0",
+      startAt: new Date("2035-03-10T02:00:00.000Z"),
+      endAt: new Date("2035-03-10T03:00:00.000Z"),
+      createdAt: new Date("2034-12-31T01:00:00.000Z"),
+      eventName: "Earlier Expo",
+      earlier: true,
+    },
+    {
+      id: "bkg_2",
+      startAt: new Date("2035-03-10T04:00:00.000Z"),
+      endAt: new Date("2035-03-10T06:00:00.000Z"),
+      createdAt: new Date("2035-01-02T01:00:00.000Z"),
+      eventName: "Later Fair",
+      earlier: false,
+    },
+  ];
+
+  it("SCRUM-134 [AC1, AC2] TC-134-01: a pending request lists each competing request with its submission time, the earlier marked to be decided first", () => {
+    const html = renderToStaticMarkup(
+      <BookingQueue queue={[{ ...row, competing }]} canDecide />,
+    );
+
+    expect(html).toContain('data-testid="competing-requests"');
+    expect(html).toContain("“Earlier Expo”, submitted 31 Dec 2034, 9:00 am SGT — earlier, so decide it first");
+    expect(html).toContain("“Later Fair”, submitted 2 Jan 2035, 9:00 am SGT — later");
+  });
+
+  it("SCRUM-134 [AC1] TC-134-01: a request with no competitors shows no competing list", () => {
+    const html = renderToStaticMarkup(<BookingQueue queue={[row]} canDecide />);
+
+    expect(html).not.toContain("Competing requests");
   });
 });
 

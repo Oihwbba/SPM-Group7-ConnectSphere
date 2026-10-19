@@ -71,7 +71,7 @@ requirements are the fields SCRUM-26 warns about and flags on (AC3).
 | Test Data | — |
 | Expected Result | Step 1: the awaiting check becomes Outdated with the time it went out of date; the Rejected and Changes requested ones are unchanged (SCRUM-166 AC13: only Approved or awaiting review goes out of date); the message says the safety check needs requesting again. Step 2 leaves safety checks alone. |
 
-**Automated by:** `tests/unit/event-edit.test.ts` › "SCRUM-25 [AC2] TC-25-05: …"; `tests/integration/event-edit.test.ts` › "SCRUM-25 [AC2] TC-25-05: …"
+**Automated by:** `tests/unit/event-edit.test.ts` › "SCRUM-25 [AC2] TC-25-05: …"; `tests/integration/event-edit.test.ts` › "SCRUM-25 [AC2] TC-25-05: …"; `e2e/event-edit.spec.ts` › "SCRUM-25 [AC2] TC-25-05: …" (step 1 in the app: the Coordinator requests the check, changes the layout, and the checklist reads Outdated, with the booking unflagged)
 
 ### TC-25-06
 
@@ -277,6 +277,19 @@ requirements are the fields SCRUM-26 warns about and flags on (AC3).
 | Pre-conditions | As TC-25-06 step 3: a Planning event with a Pending booking of Exhibition Hall, its details open, with nothing flagged and the readiness checklist showing the venue booking Pending. |
 | Test Steps | 1. Choose Edit details, change the expected attendance, Save details, then Save and flag. <br> 2. Without closing or reopening the event, look at its details. |
 | Test Data | `coordinator@test.local` |
-| Expected Result | The edit dialog closes. The event's details now show "Exhibition Hall (Pending)" under Needs reconsideration with the reason "The event's expected attendance changed.", and the readiness checklist shows the venue booking as "Needs reconsideration" with the same reason (SCRUM-26 AC7, AC12). A warning that saved nothing, or a refused save, leaves both as they were; a save whose reply was lost reads both again, as it may have landed. |
+| Expected Result | The edit dialog closes. The event's details now show "Exhibition Hall (Pending)" under Needs Reconsideration with the reason "The event's expected attendance changed.", and the readiness checklist shows the venue booking as "Pending" with the Needs Reconsideration badge beside it (SCRUM-131 AC3) and the same reason (SCRUM-26 AC7, AC12). A warning that saved nothing, or a refused save, leaves both as they were; a save whose reply was lost reads both again, as it may have landed. |
 
 **Automated by:** `tests/unit/edit-details-dialog.test.ts` › "SCRUM-25 [AC3] TC-25-21: …", "SCRUM-25 [AC1] TC-25-21: …", "SCRUM-25 [AC1, AC3] TC-25-20, TC-25-21: …"; `e2e/event-edit.spec.ts` › "SCRUM-25 [AC1, AC2, AC3, AC6] …"
+
+### TC-25-22
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-25-22 |
+| Test Scenario | [Positive] [Negative] AC 4, AC 5: on a Confirmed event no detail is edited directly, but closing or reopening registration (SCRUM-75) and operational notes stay available |
+| Pre-conditions | A Confirmed event that needs registration, with registration open. |
+| Test Steps | 1. As its assigned Coordinator, open its details; close registration; add a note. <br> 2. As its Organiser, open its details; reopen registration. <br> 3. As another Organiser or Coordinator, try to close registration. |
+| Test Data | `coordinator@test.local`, `organiser@test.local` |
+| Expected Result | 1: no Edit details; registration reads "Registration closed"; the note shows with its author. 2: no Edit details and no Add a note; registration reads "Open" again. The event stays Confirmed with its details unchanged. 3: refused (SCRUM-75). |
+
+**Automated by:** `tests/unit/event-edit.test.ts` › "SCRUM-25 [AC4, AC5] TC-25-22: …"; `e2e/event-edit.spec.ts` › "SCRUM-25 [AC4, AC5, AC6] TC-25-22: …"

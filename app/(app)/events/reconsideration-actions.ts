@@ -8,7 +8,12 @@ import { prisma } from "@/lib/db";
 import { can, requirePermission, PermissionError } from "@/lib/auth/can";
 import { ok, err, type ActionResult } from "@/lib/action-result";
 import { bookingStatusAt, withdrawPendingHoldNotices } from "@/lib/booking-holds";
+import {
+  notifyBackInPlanning,
+  withdrawRegistrationClosedNotice,
+} from "@/lib/event-notifications";
 import { outdateSafetyChecks } from "@/lib/safety-checks";
+import { notifyRole } from "@/lib/staff-notifications";
 import {
   FLAGGABLE_BOOKING,
   bookingArrangement,
@@ -148,8 +153,10 @@ export async function resolveReconsiderationFlag(
       const event = await tx.event.findUniqueOrThrow({
         where: { id: eventId },
         select: {
+          name: true,
           status: true,
           coordinatorId: true,
+          organiserId: true,
           startAt: true,
           endAt: true,
           expectedAttendance: true,
@@ -213,6 +220,12 @@ export async function resolveReconsiderationFlag(
         await tx.auditLog.create({
           data: resolutionEntry("Booking", id, user!.id, decision, booking.status),
         });
+        await notifyRole(
+          tx,
+          "VENUE_STAFF",
+          { id: eventId },
+          resolvedNotice(bookingArrangement(booking), event.name, decision),
+        );
       } else {
         const reservation = await tx.reservation.findUniqueOrThrow({
           where: { id },
@@ -246,6 +259,12 @@ export async function resolveReconsiderationFlag(
         await tx.auditLog.create({
           data: resolutionEntry("Reservation", id, user!.id, decision, "CONFIRMED"),
         });
+        await notifyRole(
+          tx,
+          "TECH_SUPPORT",
+          { id: eventId },
+          resolvedNotice(reservationArrangement(reservation), event.name, decision),
+        );
       }
 
       if (decision === "STILL_STANDS") {
@@ -264,15 +283,7 @@ export async function resolveReconsiderationFlag(
       // (SCRUM-45 AC11); back in Planning, it would be wrong. Confirming again
       // writes a new one. Registering needs the event Confirmed, so
       // registrationEnabled can stay as it is.
-      await tx.notification.updateMany({
-        where: {
-          eventId,
-          title: "Registration closed",
-          withdrawnAt: null,
-          showFromAt: { gt: now },
-        },
-        data: { withdrawnAt: now },
-      });
+      await withdrawRegistrationClosedNotice(tx, eventId, now);
       await tx.auditLog.create({
         data: {
           entityType: "Event",
@@ -285,6 +296,14 @@ export async function resolveReconsiderationFlag(
           summary: "A flagged arrangement was cancelled (SCRUM-26)",
         },
       });
+      // SCRUM-45 AC5: the Organiser is told why it is back in Planning.
+      await notifyBackInPlanning(
+        tx,
+        { id: eventId, name: event.name, organiserId: event.organiserId },
+        kind === "booking"
+          ? "its Coordinator cancelled a venue booking that needed reconsideration"
+          : "its Coordinator cancelled equipment that needed reconsideration",
+      );
       return { done: decision, returnedToPlanning: true };
     });
 
@@ -317,6 +336,33 @@ const eventOwnerSelect = {
   eventId: true,
   event: { select: { organiserId: true, coordinatorId: true, status: true } },
 } as const;
+
+/**
+ * SCRUM-124 AC9, AC12 — what every Venue Staff member (a booking) or
+ * Technical Support member (a reservation) is told when the Coordinator
+ * resolves a flag, with a link to their own page.
+ */
+function resolvedNotice(
+  arrangement: Arrangement,
+  eventName: string,
+  decision: "STILL_STANDS" | "CANCEL",
+) {
+  const booking = arrangement.kind === "booking";
+  return {
+    type: "ARRANGEMENT_FLAG_RESOLVED" as const,
+    title:
+      decision === "CANCEL"
+        ? `A flagged ${arrangement.kind} was cancelled`
+        : `A flagged ${arrangement.kind} still stands`,
+    message:
+      decision === "CANCEL"
+        ? `The Coordinator cancelled ${arrangement.label} for "${eventName}", so ${
+            booking ? "its period is free again" : "it is back in the pool"
+          }.`
+        : `The Coordinator kept ${arrangement.label} for "${eventName}": it no longer needs reconsideration.`,
+    link: booking ? "/bookings" : "/equipment",
+  };
+}
 
 function resolutionEntry(
   entityType: "Booking" | "Reservation",

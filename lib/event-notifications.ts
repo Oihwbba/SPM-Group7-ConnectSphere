@@ -35,6 +35,44 @@ export function notifyAboutEvent(
 }
 
 /**
+ * SCRUM-45 AC5 — a Confirmed event back in Planning tells its Organiser why:
+ * an approved change that affects its arrangements (SCRUM-128 AC5), or a
+ * flagged arrangement its Coordinator cancelled (SCRUM-26 AC10).
+ */
+export function notifyBackInPlanning(
+  tx: Prisma.TransactionClient,
+  event: { id: string; name: string; organiserId: string },
+  reason: string,
+) {
+  return notifyAboutEvent(tx, [event.organiserId], event, {
+    title: "Your event is back in Planning",
+    message: `"${event.name}" is back in Planning: ${asSentence(reason)} It needs confirming again before new registrations open.`,
+  });
+}
+
+/**
+ * SCRUM-45 AC11 — confirming an event writes its "Registration closed" notice
+ * ahead, to show at the closing time. Once that time no longer holds (the
+ * event back in Planning, its registration closed or reopened by hand, or the
+ * event cancelled), the notice that hasn't shown yet never will.
+ */
+export function withdrawRegistrationClosedNotice(
+  tx: Prisma.TransactionClient,
+  eventId: string,
+  now: Date,
+) {
+  return tx.notification.updateMany({
+    where: {
+      eventId,
+      title: "Registration closed",
+      withdrawnAt: null,
+      showFromAt: { gt: now },
+    },
+    data: { withdrawnAt: now },
+  });
+}
+
+/**
  * A reason typed by a user, ending as a sentence, so the words after it in a
  * notice don't run on: "No venue available" becomes "No venue available.".
  */

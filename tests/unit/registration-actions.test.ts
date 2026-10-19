@@ -22,7 +22,14 @@ const tx = vi.hoisted(() => ({
     upsert: vi.fn(),
     updateMany: vi.fn(),
   },
-  notification: { createMany: vi.fn() },
+  notification: { createMany: vi.fn(), create: vi.fn() },
+  auditLog: {
+    create: vi.fn(),
+    update: vi.fn(),
+    updateMany: vi.fn(),
+    delete: vi.fn(),
+    deleteMany: vi.fn(),
+  },
 }));
 
 vi.mock("@/auth", () => ({ auth: vi.fn() }));
@@ -62,11 +69,13 @@ function eventRow(
 beforeEach(() => {
   vi.clearAllMocks();
   tx.$queryRaw.mockResolvedValue([{ id: "evt1" }]);
+  tx.auditLog.create.mockResolvedValue({});
   tx.event.findUniqueOrThrow.mockResolvedValue(eventRow());
   tx.registration.findUnique.mockResolvedValue(null);
   tx.registration.count.mockResolvedValue(0);
   tx.registration.upsert.mockResolvedValue({ id: "reg1" });
   tx.registration.updateMany.mockResolvedValue({ count: 1 });
+  tx.notification.create.mockResolvedValue({});
   mockTransaction.mockImplementation((cb: (t: typeof tx) => unknown) => cb(tx));
 });
 
@@ -87,6 +96,32 @@ describe("registerForEvent — SCRUM-73", () => {
         },
       }),
     );
+  });
+
+  it("SCRUM-85 [AC1, AC6] TC-85-01: registering sends the Attendee exactly one notification confirming it", async () => {
+    mockAuth.mockResolvedValue(sessionFor("ATTENDEE", "usr_attendee"));
+    tx.event.findUniqueOrThrow.mockResolvedValue({ ...eventRow(), name: "Gala" });
+
+    await registerForEvent({ eventId: "evt1" });
+
+    expect(tx.notification.create).toHaveBeenCalledTimes(1);
+    expect(tx.notification.create).toHaveBeenCalledWith({
+      data: {
+        userId: "usr_attendee",
+        type: "REGISTRATION_CONFIRMED",
+        title: "You're registered",
+        message: `You're registered for "Gala".`,
+        eventId: "evt1",
+      },
+    });
+  });
+
+  it("SCRUM-85 [AC6] TC-85-01: registering again while already registered is refused and sends nothing", async () => {
+    mockAuth.mockResolvedValue(sessionFor("ATTENDEE", "usr_attendee"));
+    tx.registration.findUnique.mockResolvedValue({ status: "REGISTERED" });
+
+    expect((await registerForEvent({ eventId: "evt1" })).ok).toBe(false);
+    expect(tx.notification.create).not.toHaveBeenCalled();
   });
 
   it("[Positive] AC: registers with the fields SCRUM-73's own text names — no separate capacity value read", async () => {
@@ -292,8 +327,8 @@ describe("registerForEvent — SCRUM-73", () => {
   });
 });
 
-describe("withdrawRegistration — SCRUM-74/77 (minimal slice)", () => {
-  it("[Positive] SCRUM-74 AC: withdrawing a REGISTERED registration flips it to WITHDRAWN", async () => {
+describe("withdrawRegistration — SCRUM-74/77", () => {
+  it("SCRUM-74 AC, SCRUM-77 [AC1, AC7] TC-77-01, TC-77-09: [Positive] withdrawing a REGISTERED registration flips it to WITHDRAWN, keeping the row", async () => {
     mockAuth.mockResolvedValue(sessionFor("ATTENDEE", "usr_attendee"));
     tx.registration.findUnique.mockResolvedValue({
       id: "reg1",
@@ -327,7 +362,7 @@ describe("withdrawRegistration — SCRUM-74/77 (minimal slice)", () => {
     expect(tx.$queryRaw).toHaveBeenCalled();
   });
 
-  it("[Positive] withdrawing an already-WITHDRAWN registration is a no-op — idempotent, no lock taken", async () => {
+  it("SCRUM-77 [AC2] TC-77-02: [Positive] withdrawing an already-WITHDRAWN registration is a no-op — idempotent, no lock taken", async () => {
     mockAuth.mockResolvedValue(sessionFor("ATTENDEE", "usr_attendee"));
     tx.registration.findUnique.mockResolvedValue({
       id: "reg1",
@@ -363,7 +398,7 @@ describe("withdrawRegistration — SCRUM-74/77 (minimal slice)", () => {
     );
   });
 
-  it("SCRUM-70 [AC6] TC-70-09: [Negative] not-found parity: an Attendee cannot withdraw another Attendee's registration", async () => {
+  it("SCRUM-70 [AC6] TC-70-09, SCRUM-77 [AC5] TC-77-07: [Negative] not-found parity: an Attendee cannot withdraw another Attendee's registration", async () => {
     mockAuth.mockResolvedValue(sessionFor("ATTENDEE", "usr_attendee"));
     tx.registration.findUnique.mockResolvedValue({
       id: "reg1",
@@ -379,7 +414,7 @@ describe("withdrawRegistration — SCRUM-74/77 (minimal slice)", () => {
     expect(tx.registration.updateMany).not.toHaveBeenCalled();
   });
 
-  it("[Negative] a non-existent registration id is refused the same way as someone else's", async () => {
+  it("SCRUM-77 [AC5] TC-77-07: [Negative] a non-existent registration id is refused the same way as someone else's", async () => {
     mockAuth.mockResolvedValue(sessionFor("ATTENDEE", "usr_attendee"));
     tx.registration.findUnique.mockResolvedValue(null);
 
@@ -515,5 +550,101 @@ describe("registration notices — SCRUM-45 AC11, AC13", () => {
         expect(tx.notification.createMany).not.toHaveBeenCalled();
       },
     );
+  });
+});
+
+describe("withdrawRegistration — SCRUM-77", () => {
+  const registered = {
+    id: "reg1",
+    eventId: "evt1",
+    userId: "usr_attendee",
+    status: "REGISTERED",
+  };
+
+  beforeEach(() => {
+    mockAuth.mockResolvedValue(sessionFor("ATTENDEE", "usr_attendee"));
+    tx.registration.findUnique.mockResolvedValue(registered);
+  });
+
+  it("SCRUM-77 [AC3] TC-77-03: [Positive] withdrawing before the event starts is allowed", async () => {
+    tx.event.findUniqueOrThrow.mockResolvedValue({
+      ...eventRow({ startAt: new Date("2999-01-01") }),
+      id: "evt1",
+    });
+
+    expect((await withdrawRegistration({ registrationId: "reg1" })).ok).toBe(
+      true,
+    );
+    expect(tx.registration.updateMany).toHaveBeenCalledTimes(1);
+  });
+
+  it("SCRUM-77 [AC3] TC-77-05: [Negative] withdrawing once the event has started is refused and nothing changes", async () => {
+    tx.event.findUniqueOrThrow.mockResolvedValue({
+      ...eventRow({ startAt: new Date("2000-01-01") }),
+      id: "evt1",
+    });
+
+    const result = await withdrawRegistration({ registrationId: "reg1" });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toMatch(/event has started/i);
+    expect(tx.registration.updateMany).not.toHaveBeenCalled();
+    expect(tx.auditLog.create).not.toHaveBeenCalled();
+  });
+
+  it("SCRUM-77 [AC6] TC-77-08: [Positive] a withdrawal is recorded in the event's history, who and when", async () => {
+    tx.event.findUniqueOrThrow.mockResolvedValue({ ...eventRow(), id: "evt1" });
+
+    await withdrawRegistration({ registrationId: "reg1" });
+
+    expect(tx.auditLog.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        entityType: "Event",
+        entityId: "evt1",
+        action: "REGISTRATION_WITHDRAWN",
+        actorId: "usr_attendee",
+        oldValue: "REGISTERED",
+        newValue: "WITHDRAWN",
+      }),
+    });
+  });
+
+  it("SCRUM-77 [AC6] TC-77-08: [Positive] registering again reactivates the same row and leaves the withdrawal in the history", async () => {
+    tx.registration.findUnique.mockResolvedValue({ status: "WITHDRAWN" });
+
+    const result = await registerForEvent({ eventId: "evt1" });
+
+    expect(result.ok).toBe(true);
+    expect(tx.registration.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { eventId_userId: { eventId: "evt1", userId: "usr_attendee" } },
+      }),
+    );
+    // Re-registering leaves the history alone: no audit entry is changed or removed.
+    for (const write of Object.values(tx.auditLog)) {
+      expect(write).not.toHaveBeenCalled();
+    }
+  });
+
+  it("SCRUM-77 [AC2] TC-77-02: [Negative] withdrawing an already-Withdrawn registration records nothing new", async () => {
+    tx.registration.findUnique.mockResolvedValue({
+      ...registered,
+      status: "WITHDRAWN",
+    });
+
+    expect((await withdrawRegistration({ registrationId: "reg1" })).ok).toBe(
+      true,
+    );
+    expect(tx.registration.updateMany).not.toHaveBeenCalled();
+    expect(tx.auditLog.create).not.toHaveBeenCalled();
+  });
+
+  it("SCRUM-77 [AC2] TC-77-02: [Negative] a withdrawal that loses a race to another update records nothing", async () => {
+    tx.event.findUniqueOrThrow.mockResolvedValue({ ...eventRow(), id: "evt1" });
+    tx.registration.updateMany.mockResolvedValue({ count: 0 });
+
+    await withdrawRegistration({ registrationId: "reg1" });
+
+    expect(tx.auditLog.create).not.toHaveBeenCalled();
   });
 });

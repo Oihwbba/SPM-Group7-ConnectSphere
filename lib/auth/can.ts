@@ -18,7 +18,17 @@ import type { EventStatus, Role } from "@prisma/client";
 export type SessionUser = {
   id: string;
   role: Role;
+  /** SCRUM-121 AC1 — roles held besides `role`. Absent means none. */
+  additionalRoles?: Role[];
 };
+
+/** SCRUM-121 — every role the user holds, the primary one first. */
+export function rolesOf(user: SessionUser): Role[] {
+  return [
+    user.role,
+    ...new Set((user.additionalRoles ?? []).filter((role) => role !== user.role)),
+  ];
+}
 
 /**
  * Every capability in the system, named `entity:verb`. Feature developers add
@@ -33,8 +43,12 @@ export type Action =
   | "event:review"
   | "event:confirm" // SCRUM-81: the assigned coordinator confirms a ready Planning event
   | "event:reject" // SCRUM-117: the assigned coordinator rejects a Planning event that can't be fulfilled
+  | "event:cancel" // SCRUM-82: the assigned coordinator cancels an event that won't go ahead
   | "event:no-equipment" // SCRUM-170 AC4: the assigned coordinator records No equipment needed
   | "event:edit" // SCRUM-25: the assigned coordinator edits an event's details directly
+  | "event:assign" // SCRUM-165: the Lead assigns an unassigned request to a Coordinator
+  | "event:reassign" // SCRUM-21: the Lead moves an event to another Coordinator
+  | "event:view-all" // SCRUM-141: see every non-draft event, read-only, for planning
   | "event-note:add" // SCRUM-25 AC6: add an operational note to an event
   | "event-note:read" // SCRUM-25 AC6: read an event's operational notes
   | "arrangement:reconsider" // SCRUM-26: the assigned coordinator resolves a Needs Reconsideration flag
@@ -43,9 +57,12 @@ export type Action =
   | "clarification:request" // SCRUM-18: coordinator asks the organiser a question
   | "clarification:respond" // SCRUM-18: organiser answers an open question
   | "change-request:raise" // SCRUM-41: the organiser, or the assigned coordinator on their behalf
+  | "change-request:decide" // SCRUM-128: the assigned coordinator approves or rejects a change request
   | "venue:read" // SCRUM-34 AC2: any internal user views the venue catalogue and a venue's details
   | "venue:manage" // SCRUM-34 AC3, AC6, AC8, AC9: Venue Staff add, edit and retire venues
   | "venue:availability" // SCRUM-36: view a venue's availability calendar
+  | "venue:search" // SCRUM-38: search and filter venues, alone or for an event
+  | "venue:judge" // SCRUM-40 AC8: the assigned coordinator records a venue's suitability for their event
   | "booking:request" // SCRUM-50: coordinator asks for a venue for their event
   | "booking:review" // SCRUM-52: read the pending-request queue
   | "booking:decide" // SCRUM-53: approve or reject a pending request
@@ -55,6 +72,7 @@ export type Action =
   | "unavailability:record" // SCRUM-37: record maintenance, closure, etc.
   | "equipment:read"
   | "equipment:reserve"
+  | "reservation:report" // SCRUM-32: Technical Support report reserved equipment that can no longer be provided
   | "equipment-request:list" // SCRUM-27: see the equipment requests scoped to me
   | "equipment-request:create" // SCRUM-27: coordinator raises one for their event
   | "equipment-request:change" // SCRUM-142: the assigned coordinator changes or withdraws it
@@ -73,8 +91,8 @@ export type Action =
  * specific row; omit it for create/list actions that are role-gated only.
  */
 export type Resource =
-  // `status` is required: the coordinator check treats "unassigned and not a
-  // draft" as visible, so an omitted status must not silently count as non-draft.
+  // `status` is required: the Lead may assign only a Submitted request
+  // (SCRUM-165), so an omitted status must not silently count as Submitted.
   | {
       kind: "event";
       organiserId: string;
@@ -92,8 +110,15 @@ export type Resource =
       hasVenueBooking: boolean;
       hasEquipmentRequest: boolean;
     }
+  // SCRUM-121 AC5 — a staff decision on an event's venue booking or
+  // equipment: deciding a booking, reviewing or reserving equipment. Nobody
+  // makes one for an event they organise or coordinate.
+  | { kind: "arrangement"; organiserId: string; coordinatorId: string | null }
   | { kind: "registration"; userId: string }
   | { kind: "notification"; userId: string };
+
+/** SCRUM-21 AC1, AC4 — the statuses in which the Lead may reassign an event. */
+export const REASSIGNABLE: EventStatus[] = ["UNDER_REVIEW", "PLANNING", "CONFIRMED"];
 
 /**
  * THE authorisation table — one source of truth mapping each role to the
@@ -119,6 +144,7 @@ const ROLE_ACTIONS: Record<Role, Action[]> = {
     "event:review",
     "event:confirm",
     "event:reject",
+    "event:cancel",
     "event:no-equipment",
     "event:edit",
     "event-note:add",
@@ -127,15 +153,19 @@ const ROLE_ACTIONS: Record<Role, Action[]> = {
     "safety-check:request",
     "clarification:request",
     "change-request:raise",
+    "change-request:decide",
     "registration:control",
     "venue:read",
     "equipment-request:list",
     "equipment-request:create",
     "equipment-request:change",
     "venue:availability",
+    "venue:search",
+    "venue:judge",
     "booking:request",
     "booking:settle-hold",
     "booking:withdraw",
+    "event:view-all",
     "registration:list",
     "notification:read",
   ],
@@ -149,16 +179,19 @@ const ROLE_ACTIONS: Record<Role, Action[]> = {
     "unavailability:record",
     "event-note:add",
     "event-note:read",
+    "event:view-all",
     "notification:read",
   ],
   TECH_SUPPORT: [
     "equipment:read",
     "venue:read",
     "equipment:reserve",
+    "reservation:report",
     "equipment-request:list",
     "equipment-request:review",
     "event-note:add",
     "event-note:read",
+    "event:view-all",
     "notification:read",
   ],
   ATTENDEE: [
@@ -171,7 +204,13 @@ const ROLE_ACTIONS: Record<Role, Action[]> = {
   // SCRUM-164 — the Week 7 roles. Like every user they read their own
   // notifications (SCRUM-48) and, as internal users, the venue catalogue
   // (SCRUM-34 AC2); SCRUM-165 and SCRUM-166 grant the rest.
-  COORDINATOR_LEAD: ["venue:read", "notification:read"],
+  COORDINATOR_LEAD: [
+    "event:assign",
+    "event:reassign",
+    "event:view-all",
+    "venue:read",
+    "notification:read",
+  ],
   SAFETY_OFFICER: ["venue:read", "safety-check:review", "notification:read"],
 };
 
@@ -186,38 +225,26 @@ function hasRelationship(
 ): boolean {
   switch (resource.kind) {
     case "event":
-      // Organisers own events; coordinators are assigned to them or review unassigned submitted requests.
+      // Organisers own events; coordinators are assigned to them.
       if (user.role === "ORGANISER") {
         return resource.organiserId === user.id;
       }
       if (user.role === "COORDINATOR") {
-        if (resource.coordinatorId === user.id) return true;
-        // Any coordinator may review a request nobody has picked up yet, but
-        // only the event's assigned coordinator may confirm it (SCRUM-81 AC 7),
-        // reject it from Planning (SCRUM-117 AC 5), confirm or release its
-        // venue holds (SCRUM-163 AC3), change or withdraw its requests
-        // (SCRUM-142 AC7), raise a change request on the organiser's behalf
-        // (SCRUM-41 AC10), record No equipment needed (SCRUM-170 AC4), edit
-        // its details (SCRUM-25 AC1, AC7), resolve a flag on its arrangements
-        // (SCRUM-26 AC7), request its safety check (SCRUM-166 AC1), close
-        // or reopen its registration (SCRUM-75 AC6) or see its registrations
-        // (SCRUM-70 AC1).
-        return (
-          action !== "event:confirm" &&
-          action !== "event:reject" &&
-          action !== "event:no-equipment" &&
-          action !== "booking:settle-hold" &&
-          action !== "booking:withdraw" &&
-          action !== "equipment-request:change" &&
-          action !== "change-request:raise" &&
-          action !== "event:edit" &&
-          action !== "arrangement:reconsider" &&
-          action !== "registration:list" &&
-          action !== "registration:control" &&
-          action !== "safety-check:request" &&
-          resource.coordinatorId === null &&
-          resource.status !== "DRAFT"
-        );
+        // SCRUM-165 AC8: a Coordinator acts only on the events assigned to
+        // them; an unassigned request waits for the Lead to assign it.
+        return resource.coordinatorId === user.id;
+      }
+      // SCRUM-165 AC7, AC10: the Lead assigns a Submitted request that has
+      // no Coordinator yet. SCRUM-21 AC1, AC4: one that has one is
+      // reassigned while it is Under Review, Planning or Confirmed.
+      if (user.role === "COORDINATOR_LEAD") {
+        if (action === "event:reassign") {
+          return (
+            resource.coordinatorId !== null &&
+            REASSIGNABLE.includes(resource.status)
+          );
+        }
+        return resource.coordinatorId === null && resource.status === "SUBMITTED";
       }
       // SCRUM-166 AC6, SCRUM-121 AC5: a Safety Officer reviews any event's
       // check, but never one for an event they organise or coordinate.
@@ -237,6 +264,8 @@ function hasRelationship(
         (user.role === "TECH_SUPPORT" && resource.hasEquipmentRequest) ||
         (user.role === "ORGANISER" && resource.organiserId === user.id)
       );
+    case "arrangement":
+      return resource.organiserId !== user.id && resource.coordinatorId !== user.id;
     case "registration":
       return resource.userId === user.id;
     case "notification":
@@ -258,7 +287,7 @@ export function roleAllows(role: Role, action: Action): boolean {
 /**
  * The one function features call to ask "is this allowed?".
  *
- * @param user     the signed-in user (id + role)
+ * @param user     the signed-in user (id, role and any additional roles)
  * @param action   the capability being attempted
  * @param resource the specific row it targets, if any
  */
@@ -267,17 +296,14 @@ export function can(
   action: Action,
   resource?: Resource,
 ): boolean {
-  // 1. Role gate.
-  if (!roleAllows(user.role, action)) {
-    return false;
-  }
-
-  // 2. Relationship gate — only when the action targets a specific resource.
-  if (resource) {
-    return hasRelationship(user, action, resource);
-  }
-
-  return true;
+  // SCRUM-121 AC2, AC3: allowed when any role the user holds allows it —
+  // 1. the role gate — with that role's own relationship to the resource —
+  // 2. the relationship gate, only when the action targets a specific row.
+  return rolesOf(user).some(
+    (role) =>
+      roleAllows(role, action) &&
+      (!resource || hasRelationship({ ...user, role }, action, resource)),
+  );
 }
 
 /**

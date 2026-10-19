@@ -13,6 +13,7 @@ export default async function EquipmentPage() {
     return <Forbidden />;
   }
   const canReserve = can(session.user, "equipment:reserve");
+  const canReport = can(session.user, "reservation:report");
 
   const [equipment, requests] = await Promise.all([
     prisma.equipment.findMany({
@@ -28,6 +29,7 @@ export default async function EquipmentPage() {
       equipment={equipment}
       requests={requests}
       canReserve={canReserve}
+      canReport={canReport}
     />
   );
 }

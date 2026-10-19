@@ -15,16 +15,19 @@ import {
 
 /**
  * The signed-in user's avatar + menu. Sign-out is a Server Action submitted by
- * a real <form>, so it works even without JavaScript.
+ * a real <form>, so it works even without JavaScript. The button names the
+ * primary role; the menu lists every role held (SCRUM-121).
  */
 export function UserMenu({
   name,
   email,
   roleLabel,
+  allRolesLabel,
 }: {
   name: string;
   email: string;
   roleLabel: string;
+  allRolesLabel: string;
 }) {
   const initials = name
     .split(" ")
@@ -59,7 +62,7 @@ export function UserMenu({
             {email}
           </span>
           <span className="mt-1 text-xs font-normal text-primary">
-            {roleLabel}
+            {allRolesLabel}
           </span>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />

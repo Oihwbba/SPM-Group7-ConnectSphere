@@ -22,7 +22,10 @@ describe.skipIf(!usesLocalDatabase)(
   "SCRUM-172 — Week 9 additions: supervising Lead, hold approval, hold expiry history",
   () => {
     const stamp = Date.now();
-    const leadId = `usr_w9_lead_${stamp}`;
+    // The seeded lead@test.local. Not made here: every Lead is told of each
+    // submitted request (SCRUM-124 AC10), so a Lead made and deleted mid-run
+    // would race other suites' submissions.
+    const leadId = "usr_coordinatorlead";
     let venueId: string;
     let eventIds: string[];
 
@@ -66,21 +69,11 @@ describe.skipIf(!usesLocalDatabase)(
           },
         })
       ).id;
-      await prisma.user.create({
-        data: {
-          id: leadId,
-          email: `w9-lead-${stamp}@test.local`,
-          name: "Week 9 Lead",
-          passwordHash: "x",
-          role: "COORDINATOR_LEAD",
-        },
-      });
     });
 
     afterAll(async () => {
       await removeEvents(eventIds);
       await prisma.venue.deleteMany({ where: { id: venueId } });
-      await prisma.user.deleteMany({ where: { id: leadId } });
     });
 
     describe("AC12 — the event's supervising Lead", () => {
@@ -125,7 +118,10 @@ describe.skipIf(!usesLocalDatabase)(
             email: `w9-gone-lead-${stamp}@test.local`,
             name: "Week 9 departing Lead",
             passwordHash: "x",
-            role: "COORDINATOR_LEAD",
+            // The database's rule doesn't depend on the role. Not a Lead, so
+            // other suites' notices to every Lead (SCRUM-124 AC10) never reach
+            // this account, which the test deletes.
+            role: "ATTENDEE",
           },
         });
         await prisma.event.update({
@@ -237,7 +233,10 @@ describe.skipIf(!usesLocalDatabase)(
           email: `w9-approver-${stamp}@test.local`,
           name: "Week 9 approver",
           passwordHash: "x",
-          role: "VENUE_STAFF",
+          // The database's rule doesn't depend on the role. Not Venue Staff, so
+          // other suites' staff notices (SCRUM-124) never reach this short-lived
+          // account and block its deletion, or fail on it.
+          role: "ATTENDEE",
         },
       });
       const row = await hold(6, 16);

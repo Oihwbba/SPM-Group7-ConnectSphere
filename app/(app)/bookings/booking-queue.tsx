@@ -13,10 +13,13 @@ import {
   Hourglass,
   Inbox,
   LayoutGrid,
+  ListOrdered,
   Mail,
   Search,
   MapPin,
   MessageSquareText,
+  Accessibility,
+  Scale,
   UserRound,
   Users,
   Wrench,
@@ -438,6 +441,22 @@ function RequestCard({
             )}
             {booking.hoursWarning && <HoursWarning>{booking.hoursWarning}</HoursWarning>}
           </Fact>
+          {booking.competing.length > 0 && (
+            <Fact icon={ListOrdered} label="Competing requests">
+              {/* SCRUM-134 AC1, AC2: an earlier one is decided first. */}
+              <ul className="space-y-1" data-testid="competing-requests">
+                {booking.competing.map((other) => (
+                  <li key={other.id}>
+                    <Mark ok={!other.earlier}>
+                      &ldquo;{other.eventName}&rdquo;, submitted{" "}
+                      {formatDateTime(other.createdAt)}
+                      {other.earlier ? " — earlier, so decide it first" : " — later"}
+                    </Mark>
+                  </li>
+                ))}
+              </ul>
+            </Fact>
+          )}
           <Fact icon={Users} label="Attendance">
             <Mark ok={fits}>
               {booking.requestedAttendance ?? "Not stated"} expected · venue
@@ -469,6 +488,36 @@ function RequestCard({
                   />
                 ))}
               </span>
+            )}
+          </Fact>
+          {booking.requiredAccessibilityFeatures.length > 0 && (
+            <Fact icon={Accessibility} label="Accessibility needed">
+              <span className="flex flex-wrap gap-1.5">
+                {booking.requiredAccessibilityFeatures.map((feature) => (
+                  <FacilityPill
+                    key={feature}
+                    facility={feature}
+                    ok={venue.accessibilityFeatures.includes(feature)}
+                  />
+                ))}
+              </span>
+            </Fact>
+          )}
+          {/* SCRUM-40 AC10 — the Coordinator's judgement and its note. */}
+          <Fact icon={Scale} label="Coordinator's suitability judgement">
+            {booking.judgement ? (
+              <span data-testid="queue-judgement" className="space-y-0.5">
+                <span className="block font-medium">
+                  {booking.judgement.suitable ? "Suitable" : "Not suitable"}
+                </span>
+                <span className="block">{booking.judgement.note}</span>
+                <span className="block text-xs text-muted-foreground">
+                  {booking.judgement.recordedByName},{" "}
+                  {formatDateTime(booking.judgement.recordedAt)}
+                </span>
+              </span>
+            ) : (
+              "None recorded"
             )}
           </Fact>
           {booking.requestNotes && (

@@ -1,6 +1,12 @@
 import { Suspense } from "react";
+import Link from "next/link";
+import type { Role } from "@prisma/client";
 
 import { requireSession } from "@/lib/auth/guard";
+import { rolesOf } from "@/lib/auth/can";
+import { ROLE_LABEL } from "@/lib/nav";
+import { prisma } from "@/lib/db";
+import { completeFinishedEvents } from "@/lib/event-closing";
 import { Forbidden } from "@/components/app/forbidden";
 import {
   OrganiserEvents,
@@ -31,20 +37,48 @@ export default async function EventsPage({
   searchParams: SearchParams;
 }) {
   const session = await requireSession();
+  // SCRUM-82 AC7: finished Confirmed events read as Completed, with no job.
+  await completeFinishedEvents(prisma);
   // SCRUM-48 AC5: a notification links here with the event to open.
-  const { event } = await searchParams;
+  const { event, as } = await searchParams;
   const openEventId = Array.isArray(event) ? event[0] : event;
 
+  // SCRUM-121 AC2: someone with more than one role that has an events view
+  // switches between them, starting with their primary role's. Only a view of
+  // a role they hold can be asked for.
+  const views = rolesOf(session.user).filter((role) => EVENT_VIEWS.includes(role));
+  const asked = Array.isArray(as) ? as[0] : as;
+  const role = views.find((view) => view === asked) ?? views[0] ?? session.user.role;
+
   return (
-    <Suspense fallback={<EventsListLoading />}>
-      <EventsRoleView
-        role={session.user.role}
-        userId={session.user.id}
-        openEventId={openEventId}
-      />
-    </Suspense>
+    <>
+      {views.length > 1 && (
+        <nav aria-label="View events as" className="mb-4 flex flex-wrap gap-2 text-sm">
+          {views.map((view) => (
+            <Link
+              key={view}
+              href={`/events?as=${view}`}
+              aria-current={view === role ? "page" : undefined}
+              className={
+                view === role
+                  ? "rounded-full bg-primary px-3 py-1 text-primary-foreground"
+                  : "rounded-full border px-3 py-1 text-muted-foreground hover:bg-muted"
+              }
+            >
+              {ROLE_LABEL[view]}
+            </Link>
+          ))}
+        </nav>
+      )}
+      <Suspense fallback={<EventsListLoading />}>
+        <EventsRoleView role={role} userId={session.user.id} openEventId={openEventId} />
+      </Suspense>
+    </>
   );
 }
+
+/** The roles with an events view, in the order the switch offers them. */
+const EVENT_VIEWS: Role[] = ["ORGANISER", "COORDINATOR", "ATTENDEE"];
 
 async function EventsRoleView({
   role,

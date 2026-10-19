@@ -19,6 +19,7 @@ import {
   transitionEventStatus,
   submitEventRequest,
 } from "@/app/(app)/events/actions";
+import { assignCoordinator } from "@/app/(app)/queue/actions";
 import {
   requestClarification,
   respondToClarification,
@@ -218,7 +219,11 @@ describe.skipIf(!usesLocalDatabase)(
     // most one live booking, and the seeded events already hold theirs.
     let firstEventId: string;
     let secondEventId: string;
-    const SECOND_STAFF_ID = `usr_venuestaff_concurrency_${Date.now()}`;
+    // The seeded second member of Venue Staff. Seeded, never made or deleted
+    // here: every Venue Staff member is told of other suites' venue requests
+    // and decisions (SCRUM-124), so one appearing or vanishing mid-run would
+    // change what they count, or fail their notices.
+    const SECOND_STAFF_ID = "usr_venuestaff_2";
 
     const staff = (id: string): Session => ({
       user: { id, role: "VENUE_STAFF", name: id, email: `${id}@test.local` },
@@ -249,16 +254,8 @@ describe.skipIf(!usesLocalDatabase)(
       prisma.booking.count({ where: { venueId, status: "APPROVED" } });
 
     beforeAll(async () => {
-      // Two different members of Venue Staff, as the criterion describes.
-      await prisma.user.create({
-        data: {
-          id: SECOND_STAFF_ID,
-          email: `${SECOND_STAFF_ID}@test.local`,
-          name: "Second Venue Staff",
-          passwordHash: "not-a-real-hash-test-user-cannot-sign-in",
-          role: "VENUE_STAFF",
-        },
-      });
+      // Two different members of Venue Staff, as the criterion describes: the
+      // seeded venuestaff@ and venuestaff2@.
       const period = {
         startAt: new Date("2033-01-01T00:00:00.000Z"),
         endAt: new Date("2033-01-01T02:00:00.000Z"),
@@ -294,9 +291,13 @@ describe.skipIf(!usesLocalDatabase)(
     });
 
     afterAll(async () => {
+      // Only the notices about its own events: every Venue Staff member gets
+      // other suites' notices too while they run, and those suites count them.
+      await prisma.notification.deleteMany({
+        where: { eventId: { in: [firstEventId, secondEventId] } },
+      });
       await removeEvents([firstEventId, secondEventId]);
       await prisma.venue.delete({ where: { id: venueId } });
-      await prisma.user.delete({ where: { id: SECOND_STAFF_ID } });
     });
 
     it("SCRUM-53 [AC5] TC-53-05: two staff approve overlapping requests at the same moment: one succeeds, one is returned as conflicting", async () => {
@@ -323,11 +324,13 @@ describe.skipIf(!usesLocalDatabase)(
         decideBookingRequest({ bookingId: second, decision: "APPROVED" }),
       ]);
 
-      expect(results.filter((r) => r.ok)).toHaveLength(1);
-      const refused = results.filter((r) => !r.ok);
-      expect(refused).toHaveLength(1);
-      expect(refused[0]).toMatchObject({
-        error: expect.stringMatching(/^Conflicting:/),
+      // SCRUM-134 AC2: the earlier request wins. The later is refused either
+      // as conflicting, or, if it looks before the earlier commits, because an
+      // earlier overlapping request is still pending.
+      expect(results[0].ok).toBe(true);
+      expect(results[1]).toMatchObject({
+        ok: false,
+        error: expect.stringMatching(/^(Conflicting:|An earlier request for )/),
       });
 
       // Never double-booked, and the loser is still pending for staff to reject.
@@ -447,9 +450,11 @@ describe.skipIf(!usesLocalDatabase)(
           decideBookingRequest({ bookingId: afternoon, decision: "APPROVED" }),
         ]);
 
-        expect(results.filter((r) => r.ok)).toHaveLength(1);
-        expect(results.find((r) => !r.ok)).toMatchObject({
-          error: expect.stringMatching(/^Conflicting:/),
+        // SCRUM-134 AC2: the earlier request (the morning's) wins.
+        expect(results[0].ok).toBe(true);
+        expect(results[1]).toMatchObject({
+          ok: false,
+          error: expect.stringMatching(/^(Conflicting:|An earlier request for )/),
         });
         expect(await approvedCount()).toBe(1);
       } finally {
@@ -583,7 +588,9 @@ describe.skipIf(!usesLocalDatabase)(
         expect(booking.needsReconsideration).toBe(true);
         expect(booking.status).toBe(approval.ok ? "APPROVED" : "PENDING");
       }
-    });
+      // Five real races take about 5 s alone, Vitest's default limit, and
+      // longer while the other test files run beside this one.
+    }, 30_000);
   },
 );
 
@@ -595,8 +602,10 @@ describe.skipIf(!usesLocalDatabase)("concurrency — status transitions (SCRUM-2
     const event = await prisma.event.create({
       data: {
         name: `SCRUM-24 Concurrency Event ${Date.now()}`,
-        status: "SUBMITTED",
+        status: "UNDER_REVIEW",
         organiserId: "usr_organiser",
+        // SCRUM-165 AC8: only the assigned Coordinator decides.
+        coordinatorId: "usr_coordinator",
       },
       select: { id: true },
     });
@@ -625,9 +634,9 @@ describe.skipIf(!usesLocalDatabase)("concurrency — status transitions (SCRUM-2
     expect(results.filter((r) => !r.ok)).toHaveLength(1);
 
     // Exactly one decision is recorded. An approval also records the move to
-    // Planning (SCRUM-81), so the entries leaving SUBMITTED are what count.
+    // Planning (SCRUM-81), so the entries leaving UNDER_REVIEW are what count.
     expect(
-      await prisma.auditLog.count({ where: { entityId: eventId, oldValue: "SUBMITTED" } }),
+      await prisma.auditLog.count({ where: { entityId: eventId, oldValue: "UNDER_REVIEW" } }),
     ).toBe(1);
   });
 });
@@ -787,124 +796,88 @@ describe.skipIf(!usesLocalDatabase)("event submission — repeat submission (SCR
 
     expect(results.filter((r) => r.ok)).toHaveLength(1);
     expect(results.filter((r) => !r.ok)).toHaveLength(1);
-    // One submission: the organiser's submission notice (SCRUM-45 AC1), one
-    // assignment notice each for the organiser and the coordinator, and a
-    // single ASSIGNED audit row.
-    expect(await prisma.notification.count({ where: { eventId: draft.id } })).toBe(3);
+    // One submission: the organiser's submission notice (SCRUM-45 AC1), and
+    // one to each Lead that it waits in the queue (SCRUM-124 AC10). Nobody is
+    // assigned until the Lead does it (SCRUM-165 AC1).
+    const leads = await prisma.user.count({ where: { role: "COORDINATOR_LEAD" } });
+    expect(
+      await prisma.notification.count({ where: { eventId: draft.id, userId: "usr_organiser" } }),
+    ).toBe(1);
+    expect(
+      await prisma.notification.count({
+        where: { eventId: draft.id, type: "REQUEST_AWAITING_ASSIGNMENT" },
+      }),
+    ).toBe(leads);
+    expect(await prisma.notification.count({ where: { eventId: draft.id } })).toBe(1 + leads);
     expect(
       await prisma.auditLog.count({
         where: { entityId: draft.id, action: "ASSIGNED" },
       }),
-    ).toBe(1);
+    ).toBe(0);
   });
 });
 
-describe.skipIf(!usesLocalDatabase)("concurrency — coordinator auto-assignment (SCRUM-20)", () => {
-  let coordinatorAId: string;
-  let coordinatorBId: string;
+// SCRUM-165 AC6 — two Leads assigning one request at the same moment. The
+// assignment is a conditional write ("still Submitted with no Coordinator"),
+// so the database lets exactly one through; the other is told who got it.
+describe.skipIf(!usesLocalDatabase)("concurrency — the Lead's assignment (SCRUM-165)", () => {
+  let eventId: string;
+  // The seeded lead2@test.local: seeded, never made or deleted here, since
+  // other suites' notices to every Lead would reach a Lead made mid-run.
+  const secondLeadId = "usr_coordinatorlead_2";
 
-  const ORGANISER: Session = {
-    user: {
-      id: "usr_organiser",
-      role: "ORGANISER",
-      name: "Olivia Organiser",
-      email: "organiser@test.local",
-    },
+  const asLead = (id: string) => ({
+    user: { id, role: "COORDINATOR_LEAD", name: "Lead", email: `${id}@test.local` },
     expires: "2999-01-01T00:00:00.000Z",
-  };
+  });
 
   beforeAll(async () => {
-    // Two throwaway coordinators, both starting at zero active events, so the
-    // fairness rule has an actual tie to resolve under concurrency.
-    const [a, b] = await Promise.all([
-      prisma.user.create({
-        data: {
-          email: `concurrency-coord-a-${Date.now()}@test.local`,
-          name: "Concurrency Coord A",
-          role: "COORDINATOR",
-          passwordHash: "not-used-in-this-test",
-        },
-        select: { id: true },
-      }),
-      prisma.user.create({
-        data: {
-          email: `concurrency-coord-b-${Date.now()}@test.local`,
-          name: "Concurrency Coord B",
-          role: "COORDINATOR",
-          passwordHash: "not-used-in-this-test",
-        },
-        select: { id: true },
-      }),
-    ]);
-    coordinatorAId = a.id;
-    coordinatorBId = b.id;
+    const event = await prisma.event.create({
+      data: {
+        name: `SCRUM-165 Concurrency Event ${Date.now()}`,
+        status: "SUBMITTED",
+        organiserId: "usr_organiser",
+      },
+      select: { id: true },
+    });
+    eventId = event.id;
   });
 
   afterAll(async () => {
-    // Dependents first: the assignment notifications reference the throwaway
-    // coordinators through the required Notification.user FK, so deleting the
-    // users while they exist throws P2003.
-    const eventIds = (
-      await prisma.event.findMany({
-        where: { name: { startsWith: "SCRUM-20 Concurrency Event" } },
-        select: { id: true },
-      })
-    ).map((e) => e.id);
-    const coordinatorIds = [coordinatorAId, coordinatorBId];
-
-    await prisma.notification.deleteMany({
-      where: {
-        OR: [{ eventId: { in: eventIds } }, { userId: { in: coordinatorIds } }],
-      },
-    });
-    await prisma.auditLog.deleteMany({ where: { entityId: { in: eventIds } } });
-    await prisma.event.deleteMany({ where: { id: { in: eventIds } } });
-    await prisma.user.deleteMany({ where: { id: { in: coordinatorIds } } });
+    await prisma.notification.deleteMany({ where: { eventId } });
+    await prisma.auditLog.deleteMany({ where: { entityId: eventId } });
+    await prisma.event.delete({ where: { id: eventId } });
   });
 
-  it("SCRUM-20: two events submitted at the same instant each end up with exactly one coordinator, and neither is left unassigned", async () => {
-    (auth as unknown as Mock).mockResolvedValue(ORGANISER);
-
-    const base = {
-      purpose: "Concurrency test",
-      description: "SCRUM-20 concurrency coverage",
-      startAt: "2031-05-01T09:00:00.000Z",
-      endAt: "2031-05-01T17:00:00.000Z",
-      expectedAttendance: 10,
-      venueRequirements: "Any room",
-      accessibilityNeeds: "None",
-      preferredLayout: "Classroom",
-      equipmentRequirements: "None",
-      registrationRequired: "yes",
-      registrationNotes: "None",
-    };
+  it("SCRUM-165 [AC6] TC-165-08: [Concurrency] two Leads assign the same request at the same moment: exactly one assignment is saved and the other Lead is told who it went to", async () => {
+    const mockAuth = auth as unknown as Mock;
+    mockAuth
+      .mockResolvedValueOnce(asLead("usr_coordinatorlead"))
+      .mockResolvedValueOnce(asLead(secondLeadId));
 
     const results = await Promise.all([
-      submitEventRequest({ ...base, name: `SCRUM-20 Concurrency Event A ${Date.now()}` }),
-      submitEventRequest({ ...base, name: `SCRUM-20 Concurrency Event B ${Date.now()}` }),
+      assignCoordinator({ eventId, coordinatorId: "usr_coordinator" }),
+      assignCoordinator({ eventId, coordinatorId: "usr_coordinator_2" }),
     ]);
 
-    expect(results.every((r) => r.ok)).toBe(true);
+    const won = results.filter((r) => r.ok);
+    const lost = results.filter((r) => !r.ok);
+    expect(won).toHaveLength(1);
+    expect(lost).toHaveLength(1);
 
-    const events = await prisma.event.findMany({
-      where: { name: { startsWith: "SCRUM-20 Concurrency Event" } },
-      select: { id: true, coordinatorId: true, status: true },
+    const event = await prisma.event.findUniqueOrThrow({
+      where: { id: eventId },
+      select: { coordinator: { select: { name: true } }, status: true },
     });
-
-    expect(events).toHaveLength(2);
-    // AC: "An event has at most one assigned Coordinator at any moment" —
-    // both submissions found a coordinator (there were two available) and
-    // neither was left unassigned.
-    for (const event of events) {
-      expect(event.coordinatorId).not.toBeNull();
-      expect(event.status).toBe("UNDER_REVIEW");
+    expect(event.status).toBe("UNDER_REVIEW");
+    if (!lost[0].ok) {
+      expect(lost[0].error).toBe(
+        `This request is already assigned to ${event.coordinator!.name}.`,
+      );
     }
-
-    // Fairness under concurrency: pickCoordinator holds an advisory lock
-    // until the assignment commits, so the second submission sees the first's
-    // load. At least two coordinators (the throwaway pair) start at zero
-    // active events, so a fair rule cannot hand both events to one of them.
-    expect(new Set(events.map((e) => e.coordinatorId)).size).toBe(2);
+    expect(
+      await prisma.auditLog.count({ where: { entityId: eventId, action: "ASSIGNED" } }),
+    ).toBe(1);
   });
 });
 
@@ -1108,6 +1081,10 @@ describe.skipIf(!usesLocalDatabase)("concurrency — withdrawal reopens capacity
 
   afterAll(async () => {
     await prisma.registration.deleteMany({ where: { eventId } });
+    // SCRUM-77 AC6: each withdrawal is in the history, and SCRUM-45 AC11 tells
+    // the Organiser a place opened.
+    await prisma.notification.deleteMany({ where: { eventId } });
+    await prisma.auditLog.deleteMany({ where: { entityId: eventId } });
     await prisma.event.delete({ where: { id: eventId } });
   });
 

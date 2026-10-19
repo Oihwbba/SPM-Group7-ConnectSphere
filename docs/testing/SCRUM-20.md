@@ -1,5 +1,7 @@
 # SCRUM-20 — Auto-assign a coordinator to a submitted event: test cases
 
+> **Superseded by SCRUM-165 (Week 7 change 5).** Requests are no longer assigned automatically; they wait in the Lead's Unassigned queue. The automatic-assignment tests named below were replaced by SCRUM-165's (see [SCRUM-165.md](SCRUM-165.md)); the least-loaded rule now only suggests a Coordinator (TC-165-05).
+
 Story and acceptance criteria: [docs/backlog/SCRUM-20.md](../backlog/SCRUM-20.md).
 Format and conventions: [README.md](README.md). A Coordinator is picked by
 `pickCoordinator` in

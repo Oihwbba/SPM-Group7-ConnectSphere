@@ -2,6 +2,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { can } from "@/lib/auth/can";
 import { takesRegistration } from "@/lib/registration-state";
+import { isBeingReplanned } from "@/lib/confirmed-details";
 
 /**
  * Load one event by id, but only if the signed-in user is allowed to see it
@@ -49,6 +50,9 @@ export async function getEventForUser(id: string) {
  * detail view needs (its approved venue booking, and the count of active
  * registrations for the remaining-capacity figure).
  *
+ * SCRUM-85 AC9: also an event back in Planning after being Confirmed, for an
+ * Attendee registered for it; the page then shows what was last confirmed.
+ *
  * Same not-found parity as `getEventForUser`: a Draft/Submitted/Rejected event,
  * a Cancelled one, and an id that does not exist are all indistinguishable —
  * the caller `notFound()`s on null either way, so a direct URL cannot be used
@@ -63,9 +67,10 @@ export async function getBrowsableEvent(id: string) {
   const event = await prisma.event.findUnique({
     where: { id },
     include: {
+      // SCRUM-162 AC7: every approved venue, in the order requested.
       bookings: {
         where: { status: "APPROVED" },
-        take: 1,
+        orderBy: { createdAt: "asc" },
         include: { venue: { select: { name: true, location: true } } },
       },
       // SCRUM-73 AC: "immediately visible to the Attendee with a status of
@@ -82,9 +87,18 @@ export async function getBrowsableEvent(id: string) {
     },
   });
 
+  if (!event) return null;
+  // SCRUM-85 AC9: an Attendee registered for an event being re-planned still
+  // opens it, to see what was last confirmed.
+  if (
+    isBeingReplanned(event) &&
+    event.registrations[0]?.status === "REGISTERED"
+  ) {
+    return event;
+  }
   // SCRUM-171 AC4: an event that doesn't need registration can't be opened
   // by its URL either, the same as the list (SCRUM-72 AC8).
-  if (!event || event.status !== "CONFIRMED" || !takesRegistration(event)) {
+  if (event.status !== "CONFIRMED" || !takesRegistration(event)) {
     return null;
   }
 

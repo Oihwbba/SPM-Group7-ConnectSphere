@@ -154,21 +154,16 @@ test.describe("SCRUM-50 / 52 / 53 — venue booking request, review and decision
     await requestHall(coordinator, eventName("morning"), tag);
     await expectSubmitted(coordinator);
 
-    // SCRUM-50 AC8 — each event has one venue: asking again, even for another
-    // venue, shows the existing request instead.
-    await fillHall(coordinator, eventName("morning"));
-    await choose(coordinator, "Venue", /^Grand Auditorium/);
-    await expect(coordinator.getByTestId("live-availability")).toHaveAttribute(
-      "data-state",
-      "free",
-    );
-    await coordinator.getByRole("button", { name: "Submit request" }).click();
+    // SCRUM-162 AC2 — asking for the same venue again shows the existing
+    // request instead of making a second one.
+    await requestHall(coordinator, eventName("morning"));
     const existing = coordinator.getByTestId("booking-outcome");
     await expect(existing).toContainText(
-      "This event already has a venue request. Each event has one venue.",
+      "This event already has a request for this venue.",
     );
     await expect(existing).toContainText("Exhibition Hall");
-    await expect(existing).toContainText("status pending");
+    // SCRUM-131 AC2: the booking's agreed status name.
+    await expect(existing).toContainText("status Pending");
 
     // SCRUM-52 — staff see it with what they need to decide.
     const staff = await signedIn(browser, "venuestaff@test.local");
@@ -224,7 +219,7 @@ test.describe("SCRUM-50 / 52 / 53 — venue booking request, review and decision
     await expectSubmitted(coordinator);
   });
 
-  test("SCRUM-50 [AC1] TC-50-15: the period and attendance are the event's, rounded out to the half hour, and cannot be edited", async ({
+  test("SCRUM-50 [AC1] TC-50-15, SCRUM-162 [AC4] TC-162-05, TC-162-06, TC-162-07: the period and attendance start from the event's, rounded out to the half hour; a shorter period or a larger attendance disables Submit", async ({
     browser,
   }) => {
     const coordinator = await signedIn(browser, "coordinator@test.local");
@@ -234,8 +229,8 @@ test.describe("SCRUM-50 / 52 / 53 — venue booking request, review and decision
     const start = coordinator.getByLabel("Start", { exact: true });
     const end = coordinator.getByLabel("End", { exact: true });
     const attendance = coordinator.getByLabel("Expected attendance");
-    await expect(start).toHaveValue("10 Mar 2035, 9:00 am SGT");
-    await expect(end).toHaveValue("10 Mar 2035, 1:00 pm SGT");
+    await expect(start).toHaveValue("2035-03-10T09:00");
+    await expect(end).toHaveValue("2035-03-10T13:00");
     await expect(attendance).toHaveValue("120");
     // Its preferred layout, stored as "Theatre", is shown but not pre-selected:
     // the Coordinator chooses the layout (SCRUM-170 AC2).
@@ -245,9 +240,32 @@ test.describe("SCRUM-50 / 52 / 53 — venue booking request, review and decision
     await expect(
       coordinator.getByTestId("organiser-venue-answers"),
     ).toContainText("Theatre");
-    for (const field of [start, end, attendance]) {
-      await expect(field).not.toBeEditable();
-    }
+    await choose(coordinator, "Venue", /^Exhibition Hall/);
+    const submit = coordinator.getByRole("button", { name: "Submit request" });
+    await expect(submit).toBeEnabled();
+
+    // A period that ends before the event does is refused (TC-162-06).
+    await end.fill("2035-03-10T12:30");
+    await expect(coordinator.getByTestId("short-period")).toContainText(
+      "must cover the event's whole period",
+    );
+    await expect(submit).toBeDisabled();
+    // Longer than the event is fine (TC-162-05).
+    await end.fill("2035-03-10T14:00");
+    await expect(coordinator.getByTestId("short-period")).toHaveCount(0);
+
+    // Part of the event's attendance, for a breakout room, is fine; more is
+    // refused (TC-162-07).
+    await attendance.fill("121");
+    await expect(
+      coordinator.getByText(
+        "The expected attendance for this venue must be from 1 to the event's 120.",
+      ),
+    ).toBeVisible();
+    await expect(submit).toBeDisabled();
+    await attendance.fill("30");
+    await expect(attendance).not.toHaveAttribute("aria-invalid", "true");
+    await expect(submit).toBeEnabled();
   });
 
   test("SCRUM-50 [AC5] TC-50-11: an event that has already started is reported before submitting, and Submit is disabled", async ({

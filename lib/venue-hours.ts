@@ -55,8 +55,11 @@ export function describeDay(day: OpeningDay): string {
 function sgDay(at: Date): { weekday: number; midnight: number } {
   const shifted = new Date(at.getTime() + SG_OFFSET_MS);
   const midnight =
-    Date.UTC(shifted.getUTCFullYear(), shifted.getUTCMonth(), shifted.getUTCDate()) -
-    SG_OFFSET_MS;
+    Date.UTC(
+      shifted.getUTCFullYear(),
+      shifted.getUTCMonth(),
+      shifted.getUTCDate(),
+    ) - SG_OFFSET_MS;
   const weekday = ((shifted.getUTCDay() + 6) % 7) + 1;
   return { weekday, midnight };
 }
@@ -89,6 +92,20 @@ export function dayOutsideOpeningHours(
   const within =
     end <= DAY_MINUTES && start >= day.opensMinute && end <= day.closesMinute;
   return within ? null : day;
+}
+
+/**
+ * SCRUM-38 AC4 — for a search with no booking period (a date without both
+ * times): the SGT day `at` falls on, if the venue is Closed then, or null. A
+ * search covers one day (AC2), so its start names the day. A weekday
+ * with no row is Closed; a venue with no hours recorded is closed on no day.
+ */
+export function closedOn(at: Date, hours: OpeningDay[]): OpeningDay | null {
+  if (hours.length === 0) return null;
+  const { weekday } = sgDay(at);
+  const day = hours.find((h) => h.weekday === weekday);
+  if (!day) return { weekday, opensMinute: null, closesMinute: null };
+  return day.opensMinute === null || day.closesMinute === null ? day : null;
 }
 
 /** AC7 — the refusal, with that day's opening hours. */

@@ -86,6 +86,7 @@ const U = {
   organiser: "usr_organiser",
   coordinator: "usr_coordinator",
   venueStaff: "usr_venuestaff",
+  venueStaff2: "usr_venuestaff_2",
   techSupport: "usr_techsupport",
   attendee: "usr_attendee",
   organiser2: "usr_organiser_2",
@@ -94,6 +95,10 @@ const U = {
   attendee3: "usr_attendee_3",
   attendee4: "usr_attendee_4",
   safetyOfficer: "usr_safetyofficer",
+  coordinatorLead: "usr_coordinatorlead",
+  coordinatorLead2: "usr_coordinatorlead_2",
+  safetyOfficer2: "usr_safetyofficer_2",
+  multiRole: "usr_multirole",
 } as const;
 
 const V = {
@@ -135,10 +140,15 @@ const E = {
 // ---------------------------------------------------------------------------
 
 async function seedUsers(passwordHash: string) {
-  const users = [
+  const users: { id: string; email: string; name: string; role: Role; additionalRoles?: Role[] }[] = [
     { id: U.organiser, email: "organiser@test.local", name: "Olivia Organiser", role: Role.ORGANISER },
     { id: U.coordinator, email: "coordinator@test.local", name: "Cody Coordinator", role: Role.COORDINATOR },
     { id: U.venueStaff, email: "venuestaff@test.local", name: "Vera Venue", role: Role.VENUE_STAFF },
+    // SCRUM-53 AC5: two members of Venue Staff approving at the same moment.
+    // Seeded rather than made by a test: every Venue Staff member is told of
+    // venue requests (SCRUM-124), so one appearing mid-run would change what
+    // other suites count.
+    { id: U.venueStaff2, email: "venuestaff2@test.local", name: "Victor Venue", role: Role.VENUE_STAFF },
     { id: U.techSupport, email: "techsupport@test.local", name: "Theo Tech", role: Role.TECH_SUPPORT },
     { id: U.attendee, email: "attendee@test.local", name: "Aria Attendee", role: Role.ATTENDEE },
     // SCRUM-68: Organiser A must not be able to load Organiser B's event.
@@ -151,12 +161,37 @@ async function seedUsers(passwordHash: string) {
     { id: U.attendee4, email: "attendee4@test.local", name: "Ade Attendee", role: Role.ATTENDEE },
     // SCRUM-166: reviews operational safety checks.
     { id: U.safetyOfficer, email: "safety@test.local", name: "Sam Safety", role: Role.SAFETY_OFFICER },
+    // SCRUM-164: the Event Coordinator Lead (Week 7 change 5).
+    { id: U.coordinatorLead, email: "lead@test.local", name: "Lee Lead", role: Role.COORDINATOR_LEAD },
+    // SCRUM-165 AC6: two Leads assigning at once. Seeded rather than made by a
+    // test, like the second Safety Officer below.
+    { id: U.coordinatorLead2, email: "lead2@test.local", name: "Lena Lead", role: Role.COORDINATOR_LEAD },
+    // SCRUM-166 AC8: two Safety Officers recording at once. Seeded rather than
+    // made by a test: every Safety Officer is told of each requested check, so
+    // one appearing or vanishing mid-run would race other suites.
+    { id: U.safetyOfficer2, email: "safety2@test.local", name: "Sasha Safety", role: Role.SAFETY_OFFICER },
+    // SCRUM-121: one account holding several roles, two of them with an
+    // events view. The Lead can assign it events as a Coordinator, but never
+    // one it organises (AC4).
+    {
+      id: U.multiRole,
+      email: "multirole@test.local",
+      name: "Morgan Multirole",
+      role: Role.VENUE_STAFF,
+      additionalRoles: [Role.TECH_SUPPORT, Role.COORDINATOR, Role.ORGANISER],
+    },
   ];
 
   for (const u of users) {
     await prisma.user.upsert({
       where: { id: u.id },
-      update: { email: u.email, name: u.name, role: u.role, passwordHash },
+      update: {
+        email: u.email,
+        name: u.name,
+        role: u.role,
+        additionalRoles: u.additionalRoles ?? [],
+        passwordHash,
+      },
       create: { ...u, passwordHash },
     });
   }
@@ -685,6 +720,22 @@ async function seedBookings() {
   return bookings.length;
 }
 
+// SCRUM-85 — each seeded Confirmed event was last confirmed as it stands, so
+// re-planning it shows Attendees those details. The same rule as the
+// migration that added the fields.
+async function seedConfirmedDetails() {
+  await prisma.$executeRaw`
+    UPDATE "Event" e
+    SET "confirmedStartAt" = e."startAt",
+        "confirmedEndAt" = e."endAt",
+        "confirmedVenues" = COALESCE(
+          (SELECT array_agg(v."name" || ' — ' || v."location" ORDER BY b."createdAt")
+           FROM "Booking" b JOIN "Venue" v ON v."id" = b."venueId"
+           WHERE b."eventId" = e."id" AND b."status" = 'APPROVED'),
+          ARRAY[]::TEXT[])
+    WHERE e."status" = 'CONFIRMED'`;
+}
+
 // ---------------------------------------------------------------------------
 // Equipment requests and reservations — SCRUM-27/28/31.
 // ---------------------------------------------------------------------------
@@ -923,6 +974,7 @@ async function main() {
   const equipUnavail = await seedEquipmentUnavailability();
   const events = await seedEvents();
   const bookings = await seedBookings();
+  await seedConfirmedDetails();
   const eq = await seedEquipmentRequests();
   const reservations = await seedReservations();
   const registrations = await seedRegistrations();
@@ -932,7 +984,7 @@ async function main() {
   const audit = await seedAuditLog();
 
   console.log("Seed complete:");
-  console.log(`  ${users} users (5 roles, plus a 2nd organiser/coordinator and 3 extra attendees)`);
+  console.log(`  ${users} users (one for each of the ${Object.values(Role).length} roles, plus extra organisers, coordinators and attendees)`);
   console.log(`  ${venues} venues, ${venueUnavail} venue unavailability period(s)`);
   console.log(`  ${equipment} equipment types, ${equipUnavail} equipment unavailability period(s)`);
   console.log(`  ${events} events (one per status, plus registration boundary cases)`);
