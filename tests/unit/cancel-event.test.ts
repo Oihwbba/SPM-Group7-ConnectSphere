@@ -78,6 +78,26 @@ function expectNothingWritten() {
 }
 
 describe("cancelEvent — SCRUM-82 AC1", () => {
+  // SCRUM-135 AC12: a row left Approved from before approval moved straight
+  // to Planning isn't a resting status, but it can still be cancelled, so it
+  // doesn't keep its arrangements forever.
+  it("SCRUM-82 [AC1, AC3] TC-82-01, SCRUM-135 [AC9, AC12] TC-135-09: a legacy Approved event can be cancelled, and its arrangements are released", async () => {
+    tx.event.findUniqueOrThrow.mockResolvedValue({ status: "APPROVED", coordinatorId: "usr_coord" });
+
+    expect(await cancelEvent(valid)).toEqual({ ok: true, data: { status: "CANCELLED" } });
+    expect(tx.event.update).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ status: "CANCELLED" }) }),
+    );
+    expect(tx.booking.updateMany).toHaveBeenCalledWith({
+      where: { eventId: "evt1", status: { in: ["PENDING", "HELD", "APPROVED"] } },
+      data: { status: "CANCELLED" },
+    });
+    expect(tx.auditLog.createMany.mock.calls[0][0].data[0]).toMatchObject({
+      oldValue: "APPROVED",
+      newValue: "CANCELLED",
+    });
+  });
+
   it.each(["UNDER_REVIEW", "PLANNING", "CONFIRMED"] as EventStatus[])(
     "SCRUM-82 [AC1] TC-82-01: a %s event becomes Cancelled with the reason, who and when",
     async (status) => {

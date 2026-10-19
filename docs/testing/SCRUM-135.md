@@ -13,11 +13,6 @@ The lifecycle is one table, `lib/event-lifecycle.ts`. Each transition's own
 story proves the action that makes it; this story proves the table and that
 every action asks it.
 
-**What this story doesn't cover yet:**
-
-- **AC16, reassignment:** SCRUM-21 isn't built. Nothing that changes an
-  event's Coordinator writes its status.
-
 | ID | Type | Criterion | Automated |
 |---|---|---|---|
 | [TC-135-01](#tc-135-01) | Positive | AC 1, AC 2, AC 3, AC 4, AC 5, AC 7, AC 8, AC 9, AC 10 | Unit |
@@ -31,6 +26,7 @@ every action asks it.
 | [TC-135-13](#tc-135-13) | Negative | AC 13 | Unit |
 | [TC-135-14](#tc-135-14) | Concurrency | AC 14 | Unit, integration |
 | [TC-135-15](#tc-135-15) | Positive | AC 15, AC 16 | Unit |
+| [TC-135-16](#tc-135-16) | Positive | AC 16 | Unit, integration |
 
 ### TC-135-01
 
@@ -108,7 +104,7 @@ every action asks it.
 | Test Data | — |
 | Expected Result | Under Review, Planning and Confirmed (and a row left Approved from before approval moved straight to Planning, so it isn't stuck holding its arrangements; nothing moves it on to Planning). The **Cancel event** button uses the same list. |
 
-**Automated by:** `tests/unit/event-lifecycle.test.ts` › "SCRUM-135 [AC9] TC-135-09: …"; `tests/unit/cancel-event.test.ts` › "SCRUM-82 [AC1] TC-82-01: …"
+**Automated by:** `tests/unit/event-lifecycle.test.ts` › "SCRUM-135 [AC9] TC-135-09: …"; `tests/unit/cancel-event.test.ts` › "SCRUM-82 [AC1] TC-82-01: …" and "SCRUM-82 [AC1, AC3] TC-82-01, SCRUM-135 [AC9, AC12] TC-135-09: a legacy Approved event can be cancelled, and its arrangements are released"
 
 ### TC-135-11
 
@@ -174,3 +170,16 @@ every action asks it.
 | Expected Result | Exactly Draft, Submitted, Under Review, Approved, Planning, Confirmed, Completed, Cancelled and Rejected. The event stays Under Review, and in Planning. |
 
 **Automated by:** `tests/unit/event-lifecycle.test.ts` › "SCRUM-135 [AC15, AC16] TC-135-15: …"; SCRUM-18's clarification tests and SCRUM-166's safety-check tests leave the status unchanged.
+
+### TC-135-16
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-135-16 |
+| Test Scenario | [Positive] AC 16: reassigning an event changes its Coordinator, never its status |
+| Pre-conditions | An event Under Review, in Planning or Confirmed, with a Coordinator. Signed in as the Lead. |
+| Test Steps | Reassign it to another Coordinator (SCRUM-21). |
+| Test Data | — |
+| Expected Result | The new Coordinator and the supervising Lead are saved; the status is what it was, and no status history entry is written. |
+
+**Automated by:** `tests/unit/reassign.test.ts` › "SCRUM-135 [AC16] TC-135-16: reassigning a %s event changes its Coordinator, never its status" (3 tests, one per status SCRUM-21 can reassign from); `tests/integration/reassign.test.ts` › "SCRUM-21 [AC2, AC9] TC-21-02: …", where the event is still Planning after the reassignment

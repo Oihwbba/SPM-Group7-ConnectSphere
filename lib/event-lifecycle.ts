@@ -2,9 +2,14 @@ import type { EventStatus, RejectionOutcome } from "@prisma/client";
 
 /**
  * SCRUM-135 — the event lifecycle: the one list of status changes the system
- * allows. Every action that changes an event's status asks `canTransition`
- * under a lock on the event row, and refuses anything else with
- * `transitionRefusal`, which names the event's current status (AC11).
+ * allows. Submit, decide, confirm, reject from Planning and cancel each ask
+ * `canTransition` for their own step and refuse anything else with
+ * `transitionRefusal`, which names the event's current status (AC11). Each
+ * then writes under a lock on the event row or with a write conditional on
+ * the status it read, so a status changed meanwhile isn't overwritten. The
+ * Lead's assignment (SCRUM-165) and the two returns to Planning (SCRUM-128,
+ * SCRUM-26) make one fixed move the table allows, guarded the same way by
+ * their conditional writes.
  *
  * Test cases: docs/testing/SCRUM-135.md. Why: docs/adr/0006 (2026-10-14
  * addendum).

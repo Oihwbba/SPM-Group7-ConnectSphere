@@ -582,11 +582,16 @@ export async function transitionEventStatus(
 
     // SCRUM-81: approval moves the event straight to Planning.
     const approved = nextStatus === "APPROVED";
-    // SCRUM-135 AC3, AC4, AC11: only a request Under Review, which therefore
-    // has its Coordinator, is decided here. Only the assigned Coordinator
-    // gets this far (SCRUM-165 AC8), so deciding never changes who the
-    // Coordinator is; a Submitted request waits for the Lead to assign one.
-    if (event.status !== "UNDER_REVIEW") {
+    // SCRUM-135 AC3, AC4, AC11: deciding is the table's step out of Under
+    // Review, and only that one: Planning → Rejected is SCRUM-117's reject from
+    // Planning, and Confirmed → Planning a return to Planning, each its own
+    // action. A request Under Review has its Coordinator, and only that
+    // Coordinator gets this far (SCRUM-165 AC8), so deciding never changes who
+    // the Coordinator is; a Submitted request waits for the Lead to assign one.
+    if (
+      event.status !== "UNDER_REVIEW" ||
+      !canTransition(event.status, approved ? "PLANNING" : "REJECTED")
+    ) {
       return err(transitionRefusal(event.status, approved ? "approved" : "rejected"));
     }
 
