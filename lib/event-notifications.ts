@@ -35,6 +35,22 @@ export function notifyAboutEvent(
 }
 
 /**
+ * SCRUM-45 AC5 — a Confirmed event back in Planning tells its Organiser why:
+ * an approved change that affects its arrangements (SCRUM-128 AC5), or a
+ * flagged arrangement its Coordinator cancelled (SCRUM-26 AC10).
+ */
+export function notifyBackInPlanning(
+  tx: Prisma.TransactionClient,
+  event: { id: string; name: string; organiserId: string },
+  reason: string,
+) {
+  return notifyAboutEvent(tx, [event.organiserId], event, {
+    title: "Your event is back in Planning",
+    message: `"${event.name}" is back in Planning: ${asSentence(reason)} It needs confirming again before new registrations open.`,
+  });
+}
+
+/**
  * SCRUM-45 AC11 — confirming an event writes its "Registration closed" notice
  * ahead, to show at the closing time. Once that time no longer holds (the
  * event back in Planning, its registration closed or reopened by hand, or the

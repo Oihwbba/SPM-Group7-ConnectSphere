@@ -64,3 +64,17 @@ and the table, not by writing a new conditional in a feature.
   point is `proxy.ts`, on Node.js (ADR 0002). It still gates routes by
   authentication only; relationship checks need the row, so they still happen
   where the data is read.
+
+## Addendum (2026-10-17) — Several roles on one account (SCRUM-121)
+
+- A session carries the primary `role` and any `additionalRoles`. `can()`
+  allows an action when any role held allows it, and checks the relationship
+  as that role (`rolesOf`), so a Coordinator who also organises still can't
+  edit an event assigned to someone else. A single role behaves exactly as
+  before.
+- A new resource kind, `arrangement`, is a venue booking's, equipment
+  request's or reservation's event: no one who organises or coordinates it
+  may decide it. The table is unchanged; the rule is one more relationship.
+- A page with a view per role offers each one the user holds: the events
+  page a view per role that has one (ADR 0001's addendum), and Equipment
+  Requests the review queue and your own requests when your roles do both.

@@ -13,6 +13,7 @@ const tx = vi.hoisted(() => ({
   event: { findFirst: vi.fn(), update: vi.fn(), create: vi.fn() },
   notification: { createMany: vi.fn() },
   auditLog: { create: vi.fn() },
+  user: { findMany: vi.fn() },
 }));
 
 vi.mock("@/auth", () => ({ auth: vi.fn() }));
@@ -53,6 +54,7 @@ beforeEach(() => {
   tx.event.create.mockResolvedValue({ id: "evt_new" });
   tx.notification.createMany.mockResolvedValue({ count: 2 });
   tx.auditLog.create.mockResolvedValue({});
+  tx.user.findMany.mockResolvedValue([{ id: "usr_lead" }, { id: "usr_lead_2" }]);
   mockTransaction.mockImplementation((cb: (t: typeof tx) => unknown) => cb(tx));
   mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
 });
@@ -91,17 +93,50 @@ describe("submitEventRequest — SCRUM-45 AC1 submission notice", () => {
     const written = tx.notification.createMany.mock.calls.map(
       (call) => call[0].data,
     );
-    expect(written).toEqual([
-      [
-        {
-          userId: "usr_organiser",
-          type: "EVENT_STATUS_CHANGED",
-          eventId: "evt_new",
-          title: "Request submitted",
-          message:
-            '"Career Fair" was submitted and is waiting to be assigned to a Coordinator.',
-        },
-      ],
+    expect(written[0]).toEqual([
+      {
+        userId: "usr_organiser",
+        type: "EVENT_STATUS_CHANGED",
+        eventId: "evt_new",
+        title: "Request submitted",
+        message:
+          '"Career Fair" was submitted and is waiting to be assigned to a Coordinator.',
+      },
     ]);
+    // The other notice is the Leads' (SCRUM-124 AC10), not an assignment.
+    expect(written.flat().map((n) => n.type)).not.toContain("COORDINATOR_ASSIGNED");
+  });
+});
+
+describe("submitEventRequest — SCRUM-124 AC10 the Leads are told", () => {
+  it("SCRUM-124 [AC10, AC12, AC14] TC-124-10: every Lead is told once that the request is waiting in the Unassigned queue, and the notice opens it there", async () => {
+    await submitEventRequest(validInput);
+
+    expect(tx.user.findMany).toHaveBeenCalledWith({
+      where: {
+        OR: [{ role: "COORDINATOR_LEAD" }, { additionalRoles: { has: "COORDINATOR_LEAD" } }],
+      },
+      select: { id: true },
+    });
+    const notice = {
+      eventId: "evt_new",
+      type: "REQUEST_AWAITING_ASSIGNMENT",
+      title: "A request is waiting to be assigned",
+      message: '"Career Fair" was submitted and is waiting in the Unassigned queue.',
+      link: "/queue/evt_new",
+    };
+    expect(tx.notification.createMany).toHaveBeenLastCalledWith({
+      data: [
+        { userId: "usr_lead", ...notice },
+        { userId: "usr_lead_2", ...notice },
+      ],
+    });
+  });
+
+  it("SCRUM-124 [AC10] TC-124-10: a refused submission tells no Lead", async () => {
+    const result = await submitEventRequest({ ...validInput, name: "" });
+
+    expect(result.ok).toBe(false);
+    expect(tx.notification.createMany).not.toHaveBeenCalled();
   });
 });

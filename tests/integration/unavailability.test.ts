@@ -165,7 +165,9 @@ describe.skipIf(!usesLocalDatabase)(
     const venueStaffIds = async () =>
       (
         await prisma.user.findMany({
-          where: { role: "VENUE_STAFF" },
+          where: {
+            OR: [{ role: "VENUE_STAFF" }, { additionalRoles: { has: "VENUE_STAFF" } }],
+          },
           select: { id: true },
         })
       ).map((u) => u.id);

@@ -129,6 +129,16 @@ test.describe("SCRUM-128 — Decide a change request and apply it in one step", 
     expect(
       (await prisma.booking.findFirstOrThrow({ where: { eventId } })).needsReconsideration,
     ).toBe(true);
+
+    // SCRUM-45 AC5: the Organiser is told, once, in their own list, why.
+    await signIn(page, "organiser@test.local");
+    await page.goto("/notifications");
+    const back = page
+      .getByTestId("notification")
+      .filter({ hasText: "Your event is back in Planning" })
+      .filter({ hasText: name });
+    await expect(back).toHaveCount(1);
+    await expect(back).toContainText("a change to Expected attendance was approved");
   });
 
   test("SCRUM-128 [AC3, AC9, AC10] TC-128-14: rejecting needs a reason, which the Organiser then sees; the Organiser can't decide", async ({
