@@ -83,7 +83,9 @@ export async function getReadinessChecklist(
           holdExpiresAt: true,
           holdApprovedAt: true,
           decisionReason: true,
+          decidedAt: true,
           createdAt: true,
+          updatedAt: true,
           startAt: true,
           endAt: true,
           needsReconsideration: true,
@@ -167,7 +169,9 @@ type BookingRow = {
   holdExpiresAt: Date | null;
   holdApprovedAt: Date | null;
   decisionReason: string | null;
+  decidedAt: Date | null;
   createdAt: Date;
+  updatedAt: Date;
   startAt: Date;
   endAt: Date;
   needsReconsideration: boolean;
@@ -248,12 +252,15 @@ function venueItem(
     };
   }
   // SCRUM-163 AC6: an expired hold counts like a rejection, and SCRUM-26 AC9:
-  // so does a cancelled booking; the newest of them describes the venue. A
-  // cancellation leaves nothing requested, so an older rejection's reason no
-  // longer applies.
-  const ended = newestFirst.find(
-    (b) => b.status === "REJECTED" || b.status === "EXPIRED" || b.status === "CANCELLED",
-  );
+  // so does a cancelled booking. The one that ended last describes the venue
+  // (PO, 19 Oct: the latest outcome decides), whichever was requested first.
+  // A cancellation leaves nothing requested, so an earlier rejection's reason
+  // no longer applies.
+  const ended = newestFirst
+    .filter(
+      (b) => b.status === "REJECTED" || b.status === "EXPIRED" || b.status === "CANCELLED",
+    )
+    .sort((a, b) => endedAt(b) - endedAt(a))[0];
   if (ended?.status === "CANCELLED") {
     return { ...item, complete: false, state: "Not requested" };
   }
@@ -269,6 +276,23 @@ function venueItem(
     };
   }
   return { ...item, complete: false, state: "Not requested" };
+}
+
+/**
+ * When an ended booking reached its final state, so the venue item shows the
+ * latest outcome. A rejection ended when it was decided; a hold when it
+ * expired, even before anything marks it Expired; a cancellation at the
+ * booking's last write, since nothing writes a cancelled booking again. The
+ * PO's ruling (19 Oct) has SCRUM-170's Equipment item follow the same rule.
+ */
+function endedAt(b: BookingRow): number {
+  const at =
+    b.status === "EXPIRED"
+      ? b.holdExpiresAt
+      : b.status === "REJECTED"
+        ? b.decidedAt
+        : null;
+  return (at ?? b.updatedAt).getTime();
 }
 
 type EventRow = {

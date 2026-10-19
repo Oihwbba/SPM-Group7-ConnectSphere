@@ -13,19 +13,32 @@ same period. Flagged rows are created straight in the database or with
 `flagArrangements`, because the stories that raise flags aren't built yet
 (see below). Every account's password is `Password123!`.
 
-**What this story doesn't cover yet:**
+**Covered by other stories:**
 
 - **AC1's warning screen** belongs to the Coordinator's edit form, SCRUM-25
   (TC-25-06, TC-25-13). This story provides what that form calls:
   `impactfulChanges` (which edited fields count, TC-26-01),
   `flaggableArrangements` (what the warning lists, TC-26-02) and
   `flagArrangements` (raising the flag on confirm, TC-26-03).
-- **AC3's flag sources** are each another story's action: SCRUM-25, SCRUM-128,
-  SCRUM-34, SCRUM-160, SCRUM-161, SCRUM-32 and SCRUM-166. Each calls
-  `flagArrangements` with its own reason; TC-26-03 proves what that does.
+- **AC3's flag sources** are each another story's action, all merged:
+  SCRUM-25, SCRUM-128, SCRUM-34, SCRUM-160, SCRUM-161, SCRUM-166 and SCRUM-32.
+  Each calls `flagArrangements` with its own reason; TC-26-03 proves what that
+  does. The last one to arrive, Technical Support reporting that reserved
+  equipment can't be provided, is SCRUM-32's TC-32-01:
+  `tests/unit/report-reservation.test.ts` › "SCRUM-32 [AC1, AC4] TC-32-01: a
+  report flags the reservation with the reason, and changes nothing else about
+  it"; `tests/integration/report-reservation.test.ts` › "SCRUM-32 [AC1, AC2,
+  AC4, AC5] TC-32-01: …"; `e2e/report-reservation.spec.ts` › "SCRUM-32 [AC1,
+  AC2, AC4] TC-32-01, TC-32-02: …".
 - **AC14** says changing equipment lines is SCRUM-142; there is nothing to
   test here.
-- **Notifications** when a flag is raised or resolved are SCRUM-124.
+- **Notifications** when a flag is raised or resolved are SCRUM-124's
+  TC-124-08 and TC-124-09: `tests/unit/reconsideration.test.ts` › "SCRUM-124
+  [AC8, AC12] TC-124-08: the event's Coordinator is told every flagged
+  arrangement and the reason" (and the rest of TC-124-08);
+  `tests/unit/reconsideration-actions.test.ts` › "SCRUM-124 [AC9, AC12]
+  TC-124-09: …"; `tests/integration/staff-notifications.test.ts` › "SCRUM-124
+  [AC8, AC14] TC-124-08: …" and "SCRUM-124 [AC9, AC14] TC-124-09: …".
 
 | ID | Type | Criterion | Automated |
 |---|---|---|---|
@@ -171,9 +184,9 @@ same period. Flagged rows are created straight in the database or with
 | Pre-conditions | A flagged booking and a flagged reservation. |
 | Test Steps | 1. Click **Cancel arrangement**, then confirm. <br> 2. Try again on one already resolved or cancelled. |
 | Test Data | — |
-| Expected Result | 1. The booking (or reservation, with its cancelled time) is Cancelled, its flag off, who and when saved, with a status history entry; the event's other arrangements are untouched. The confirm dialog and the message say what happens next: "Request a venue again when you're ready." for a booking, "Technical Support will reserve it again." for a reservation, whose equipment request stays Approved. The readiness checklist's venue item reads "Not requested", even if an older request was rejected: the newer cancellation replaces the old reason. 2. "This arrangement no longer needs reconsideration. Refresh to see where it stands." Nothing is written. |
+| Expected Result | 1. The booking (or reservation, with its cancelled time) is Cancelled, its flag off, who and when saved, with a status history entry; the event's other arrangements are untouched. The confirm dialog and the message say what happens next: "Request a venue again when you're ready." for a booking, "Technical Support will reserve it again." for a reservation, whose equipment request stays Approved. The readiness checklist's venue item reads "Not requested", even if an older request was rejected: the newer cancellation replaces the old reason. 2. "This arrangement no longer needs reconsideration. Refresh to see where it stands." Nothing is written. The venue item then reads by whichever booking ended last, not whichever was requested last (PO, 19 Oct): a booking cancelled after another was rejected reads "Not requested"; one rejected after another was cancelled reads "Rejected". |
 
-**Automated by:** `tests/unit/reconsideration-actions.test.ts` › "SCRUM-26 [AC9] TC-26-10: …" (5 tests); `tests/unit/reconsideration-panel.test.tsx` › "SCRUM-26 [AC9] TC-26-10: …" (2 tests); `tests/unit/event-readiness.test.ts` › "SCRUM-110 [AC1, AC2] TC-110-05: with a rejection then a newer cancelled booking, …"; `e2e/reconsideration.spec.ts` (TC-26-14, the booking's message)
+**Automated by:** `tests/unit/reconsideration-actions.test.ts` › "SCRUM-26 [AC9] TC-26-10: …" (5 tests); `tests/unit/reconsideration-panel.test.tsx` › "SCRUM-26 [AC9] TC-26-10: …" (2 tests); `tests/unit/event-readiness.test.ts` › "SCRUM-110 [AC1, AC2] TC-110-05: with a rejection then a newer cancelled booking, …", "… with an older request rejected after a newer one was cancelled, …" and "… with an older request cancelled after a newer one was rejected, …"; `e2e/reconsideration.spec.ts` (TC-26-14, the booking's message)
 
 ### TC-26-11
 

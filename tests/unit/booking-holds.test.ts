@@ -1070,6 +1070,7 @@ describe("the readiness checklist's venue item — SCRUM-163 AC6", () => {
     status: string,
     n: number,
     holdExpiresAt: Date | null = null,
+    decidedAt: Date = new Date(Date.UTC(2031, 0, n)),
   ) => ({
     id: `bkg_${n}`,
     venue: { name: "Main Hall" },
@@ -1078,7 +1079,9 @@ describe("the readiness checklist's venue item — SCRUM-163 AC6", () => {
     holdExpiresAt,
     holdApprovedAt: null as Date | null,
     decisionReason: status === "REJECTED" ? "Too small." : null,
+    decidedAt: status === "REJECTED" ? decidedAt : null,
     createdAt: new Date(Date.UTC(2031, 0, n)),
+    updatedAt: decidedAt,
     startAt: START,
     endAt: END,
   });
@@ -1177,12 +1180,13 @@ describe("the readiness checklist's venue item — SCRUM-163 AC6", () => {
     );
   });
 
-  it("SCRUM-163 [AC6] TC-163-11: an expired hold counts like a rejection: the newer of the two describes the venue", async () => {
+  it("SCRUM-163 [AC6] TC-163-11: an expired hold counts like a rejection: the one that ended last describes the venue", async () => {
+    const afterExpiry = new Date(NOW.getTime() + 86_400_000);
     expect(
       (await venueOf([row("REJECTED", 1), row("EXPIRED", 2, NOW)])).venue.state,
     ).toBe("Hold expired");
     expect(
-      (await venueOf([row("EXPIRED", 1, NOW), row("REJECTED", 2)])).venue,
+      (await venueOf([row("EXPIRED", 1, NOW), row("REJECTED", 2, null, afterExpiry)])).venue,
     ).toMatchObject({ state: "Rejected", reason: "Too small." });
   });
 
