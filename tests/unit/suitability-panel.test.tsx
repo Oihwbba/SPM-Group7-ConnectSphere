@@ -151,6 +151,7 @@ describe("BookingQueue — SCRUM-40 AC10", () => {
       openingHours: [],
     },
     outsideHours: null,
+    hoursWarning: null,
     blockers: [],
     competing: [],
     judgement: null,

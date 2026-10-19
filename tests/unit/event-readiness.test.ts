@@ -24,7 +24,9 @@ type Booking = {
   requestedAttendance?: number | null;
   status: string;
   decisionReason: string | null;
+  decidedAt?: Date | null;
   createdAt: Date;
+  updatedAt?: Date;
   startAt: Date;
   endAt: Date;
   needsReconsideration?: boolean;
@@ -72,17 +74,21 @@ const SAFETY_APPROVED = {
 };
 
 const day = (n: number) => new Date(Date.UTC(2031, 0, n));
+/** A booking requested on day `n`; one that has ended did so on day `ended`. */
 const booking = (
   status: string,
   n = 1,
   decisionReason: string | null = null,
+  ended = n,
 ): Booking => ({
   id: `bkg_${status.toLowerCase()}_${n}`,
   venue: { name: "Main Hall" },
   requestedAttendance: 100,
   status,
   decisionReason,
+  decidedAt: status === "REJECTED" ? day(ended) : null,
   createdAt: day(n),
+  updatedAt: day(ended),
   startAt: START,
   endAt: END,
   needsReconsideration: false,
@@ -305,6 +311,17 @@ describe("getReadinessChecklist — SCRUM-110", () => {
       when: "a cancelled booking then a newer rejection",
       bookings: [booking("CANCELLED", 1), booking("REJECTED", 2, "new")],
       expected: { complete: false, state: "Rejected", reason: "new" },
+    },
+    // The latest outcome decides, not the latest request (PO, 19 Oct).
+    {
+      when: "an older request rejected after a newer one was cancelled",
+      bookings: [booking("REJECTED", 1, "decided last", 5), booking("CANCELLED", 2, null, 3)],
+      expected: { complete: false, state: "Rejected", reason: "decided last" },
+    },
+    {
+      when: "an older request cancelled after a newer one was rejected",
+      bookings: [booking("CANCELLED", 1, null, 5), booking("REJECTED", 2, "decided first", 3)],
+      expected: { complete: false, state: "Not requested", reason: null },
     },
   ])(
     "SCRUM-110 [AC1, AC2] TC-110-05: with $when, the venue item reads as the most advanced booking",

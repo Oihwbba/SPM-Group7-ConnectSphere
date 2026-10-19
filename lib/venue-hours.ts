@@ -132,3 +132,43 @@ export function openingHoursRefusal(
   const day = dayOutsideOpeningHours(period, venue.openingHours ?? []);
   return day && outsideOpeningHoursMessage(venue.name, day);
 }
+
+/** A time of day, wrapping past midnight either way: -30 -> "23:30". */
+function clock(minutes: number): string {
+  return minutesToTime(((minutes % DAY_MINUTES) + DAY_MINUTES) % DAY_MINUTES);
+}
+
+/**
+ * SCRUM-159 AC9 — when the booking period is within opening hours but its
+ * setup starts before opening or its turnaround ends after closing, a warning
+ * naming which, for Venue Staff reviewing, holding or approving it; otherwise
+ * null. Nothing is refused for it: Venue Staff decide (W9).
+ */
+export function setupTurnaroundWarning(
+  period: Period,
+  minutes: { setupMinutes: number; turnaroundMinutes: number },
+  venue: { name: string; openingHours?: OpeningDay[] },
+): string | null {
+  const hours = venue.openingHours ?? [];
+  if (hours.length === 0 || dayOutsideOpeningHours(period, hours)) return null;
+
+  // Within the hours, so that day is open.
+  const { weekday, midnight } = sgDay(period.startAt);
+  const day = hours.find((h) => h.weekday === weekday)!;
+  const setupFrom =
+    (period.startAt.getTime() - midnight) / 60_000 - minutes.setupMinutes;
+  const turnaroundUntil =
+    (period.endAt.getTime() - midnight) / 60_000 + minutes.turnaroundMinutes;
+
+  const outside = [
+    ...(setupFrom < day.opensMinute!
+      ? [`setup time (${minutes.setupMinutes} minutes, from ${clock(setupFrom)})`]
+      : []),
+    ...(turnaroundUntil > day.closesMinute!
+      ? [`turnaround time (${minutes.turnaroundMinutes} minutes, until ${clock(turnaroundUntil)})`]
+      : []),
+  ];
+  if (outside.length === 0) return null;
+  const what = outside.join(" and ");
+  return `The ${what} ${outside.length > 1 ? "fall" : "falls"} outside ${venue.name}'s opening hours, ${describeHours(day)} on ${WEEKDAYS[weekday - 1]}s. You can still hold or approve it.`;
+}
