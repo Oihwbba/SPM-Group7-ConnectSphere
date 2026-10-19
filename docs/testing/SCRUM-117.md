@@ -71,7 +71,7 @@ and the app is running. Unless the case says otherwise, the event is in
 | Pre-conditions  | The event is Under Review, Confirmed, Rejected or Cancelled.                |
 | Test Steps      | 1. Send a reject request for it.                                            |
 | Test Data       | —                                                                           |
-| Expected Result | Refused: "Only an event in Planning can be rejected here." Nothing changes. |
+| Expected Result | Refused, naming the status (SCRUM-135 AC 11), e.g. "This event is Confirmed, so it can't be rejected here." Nothing changes. |
 
 **Automated by:** `tests/unit/reject-planning.test.ts` › "SCRUM-117 [AC1] TC-117-04: …"
 

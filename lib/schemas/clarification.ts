@@ -59,8 +59,9 @@ export const requestFieldValues = z.object({
   name: requiredText("The event name", 200),
   purpose: requiredText("The purpose", 1000),
   description: requiredText("The description", 5000),
-  startAt: z.string().min(1),
-  endAt: z.string().min(1),
+  // SCRUM-132 AC4: say which field to fix and how.
+  startAt: z.string().min(1, "Choose the start date and time."),
+  endAt: z.string().min(1, "Choose the end date and time."),
   expectedAttendance: z
     .number({
       invalid_type_error: "Attendance must be a positive whole number.",

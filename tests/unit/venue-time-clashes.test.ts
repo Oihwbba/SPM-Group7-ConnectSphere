@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { Prisma } from "@prisma/client";
 
+import { flagArrangements } from "@/lib/reconsideration";
 import {
   TIMES_CHANGED_REASON,
   describeClash,
@@ -15,6 +16,11 @@ import {
 // time makes clash. Test cases: docs/testing/SCRUM-160.md. The database is
 // mocked; tests/integration/venue-time-clashes.test.ts runs the same rules
 // against Postgres.
+
+vi.mock("@/lib/reconsideration", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/reconsideration")>()),
+  flagArrangements: vi.fn(),
+}));
 
 const db = {
   booking: { findMany: vi.fn(), updateMany: vi.fn() },
@@ -298,26 +304,22 @@ function clash(over: Partial<TimeClash["booking"]> = {}, withId = "bkg_other"): 
 }
 
 describe("flagTimeClashes — SCRUM-160 AC2, AC3, AC7", () => {
-  const venue = { name: "Exhibition Hall" };
+  beforeEach(() => {
+    vi.mocked(flagArrangements).mockResolvedValue({ bookings: 1, reservations: 0 });
+  });
 
-  it("SCRUM-160 [AC2, AC3] TC-160-07: flags the booking with the reason, records the clash, and notifies its Coordinator and every Venue Staff member", async () => {
-    expect(await flagTimeClashes(tx, venue, [clash()], "usr_staff", NOW)).toBe(1);
+  it("SCRUM-160 [AC2, AC3] TC-160-07: flags the booking with the reason through flagArrangements, which notifies its Coordinator and every Venue Staff member once, and records the clash", async () => {
+    expect(await flagTimeClashes(tx, [clash()], "usr_staff", NOW)).toBe(1);
 
-    expect(db.booking.updateMany).toHaveBeenCalledWith({
-      where: {
-        id: { in: ["bkg_1"] },
-        OR: [
-          { status: { in: ["PENDING", "APPROVED"] } },
-          { status: "HELD", holdExpiresAt: { gt: NOW } },
-        ],
-        needsReconsideration: false,
-      },
-      data: expect.objectContaining({
-        needsReconsideration: true,
-        reconsiderationReason: TIMES_CHANGED_REASON,
-        reconsiderationFlaggedAt: NOW,
-      }),
-    });
+    // SCRUM-26 raises the flag and SCRUM-124 AC8 sends its notices; who
+    // changed the times is passed on, so a Coordinator isn't told their own act.
+    expect(flagArrangements).toHaveBeenCalledWith(
+      tx,
+      { bookingIds: ["bkg_1"], reservationIds: [] },
+      TIMES_CHANGED_REASON,
+      NOW,
+      "usr_staff",
+    );
     expect(db.auditLog.createMany).toHaveBeenCalledWith({
       data: [
         {
@@ -333,56 +335,27 @@ describe("flagTimeClashes — SCRUM-160 AC2, AC3, AC7", () => {
         },
       ],
     });
-    expect(db.notification.create).toHaveBeenCalledWith({
-      data: {
-        userId: "usr_coord",
-        type: "ARRANGEMENT_FLAGGED",
-        title: "Booking needs reconsideration",
-        message:
-          '"Robotics Expo": Exhibition Hall, 10 Mar 2031, 9:00 pm SGT to 10 Mar 2031, 11:00 pm SGT. Setup or turnaround time changed, so it now clashes with another booking from 10 Mar 2031, 6:00 pm SGT to 10 Mar 2031, 8:00 pm SGT. Decide whether it still stands.',
-        link: "/events",
-        eventId: "evt_1",
-      },
-    });
-    expect(db.user.findMany).toHaveBeenCalledWith({
-      where: { role: "VENUE_STAFF" },
-      select: { id: true },
-    });
-    const staffNotices = db.notification.createMany.mock.calls[0][0].data;
-    expect(staffNotices.map((n: { userId: string }) => n.userId)).toEqual(["usr_staff1", "usr_staff2"]);
-    expect(staffNotices[0]).toMatchObject({
-      type: "ARRANGEMENT_FLAGGED",
-      link: "/bookings",
-      eventId: "evt_1",
-      message: expect.stringContaining('clashes with "Career Fair"\'s booking'),
-    });
+    // No second notice of its own beside SCRUM-124's.
+    expect(db.notification.create).not.toHaveBeenCalled();
+    expect(db.notification.createMany).not.toHaveBeenCalled();
   });
 
-  it("SCRUM-160 [AC2, AC3] TC-160-07: a booking with two clashes is flagged once, with one notice listing both and both recorded", async () => {
+  it("SCRUM-160 [AC2, AC3] TC-160-07: a booking with two clashes is flagged once, and both are recorded", async () => {
     const two = [clash(), clash({}, "bkg_third")];
 
-    expect(await flagTimeClashes(tx, venue, two, "usr_staff", NOW)).toBe(1);
+    expect(await flagTimeClashes(tx, two, "usr_staff", NOW)).toBe(1);
 
-    expect(db.booking.updateMany).toHaveBeenCalledTimes(1);
-    expect(db.notification.create).toHaveBeenCalledTimes(1);
-    expect(db.notification.create.mock.calls[0][0].data.message).toContain("; another booking");
+    expect(flagArrangements).toHaveBeenCalledTimes(1);
     expect(db.auditLog.createMany.mock.calls[0][0].data.map((d: { newValue: string }) => d.newValue)).toEqual([
       "booking:bkg_other",
       "booking:bkg_third",
     ]);
   });
 
-  it("SCRUM-160 [AC3] TC-160-07: with no Coordinator assigned, only Venue Staff are notified", async () => {
-    await flagTimeClashes(tx, venue, [clash({ coordinatorId: null })], "usr_staff", NOW);
-
-    expect(db.notification.create).not.toHaveBeenCalled();
-    expect(db.notification.createMany).toHaveBeenCalledTimes(1);
-  });
-
   it("SCRUM-160 [AC7] TC-160-08: a clash already recorded for the booking flags nothing, even after its flag was resolved", async () => {
     db.auditLog.findMany.mockResolvedValue([{ entityId: "bkg_1", newValue: "booking:bkg_other" }]);
 
-    expect(await flagTimeClashes(tx, venue, [clash()], "usr_staff", NOW)).toBe(0);
+    expect(await flagTimeClashes(tx, [clash()], "usr_staff", NOW)).toBe(0);
 
     expect(db.auditLog.findMany).toHaveBeenCalledWith({
       where: {
@@ -393,41 +366,38 @@ describe("flagTimeClashes — SCRUM-160 AC2, AC3, AC7", () => {
       },
       select: { entityId: true, newValue: true },
     });
-    expect(db.booking.updateMany).not.toHaveBeenCalled();
+    expect(flagArrangements).not.toHaveBeenCalled();
     expect(db.auditLog.createMany).not.toHaveBeenCalled();
-    expect(db.notification.create).not.toHaveBeenCalled();
   });
 
   it("SCRUM-160 [AC6, AC7] TC-160-09: a booking still waiting for this reason gains the new clash, with no second flag or notice", async () => {
     const waiting = clash({ needsReconsideration: true, reconsiderationReason: TIMES_CHANGED_REASON });
 
-    expect(await flagTimeClashes(tx, venue, [waiting], "usr_staff", NOW)).toBe(0);
+    expect(await flagTimeClashes(tx, [waiting], "usr_staff", NOW)).toBe(0);
 
-    expect(db.booking.updateMany).not.toHaveBeenCalled();
-    expect(db.notification.create).not.toHaveBeenCalled();
+    expect(flagArrangements).not.toHaveBeenCalled();
     expect(db.auditLog.createMany).toHaveBeenCalledTimes(1);
   });
 
   it("SCRUM-160 [AC6] TC-160-09: a booking waiting for another reason keeps it, and this clash isn't recorded", async () => {
     const other = clash({ needsReconsideration: true, reconsiderationReason: "Change approved: date and time." });
 
-    expect(await flagTimeClashes(tx, venue, [other], "usr_staff", NOW)).toBe(0);
+    expect(await flagTimeClashes(tx, [other], "usr_staff", NOW)).toBe(0);
 
-    expect(db.booking.updateMany).not.toHaveBeenCalled();
+    expect(flagArrangements).not.toHaveBeenCalled();
     expect(db.auditLog.createMany).not.toHaveBeenCalled();
   });
 
   it("SCRUM-160 [AC7] TC-160-08: a booking flagged by someone else since it was read is left alone", async () => {
-    db.booking.updateMany.mockResolvedValue({ count: 0 });
+    vi.mocked(flagArrangements).mockResolvedValue({ bookings: 0, reservations: 0 });
 
-    expect(await flagTimeClashes(tx, venue, [clash()], "usr_staff", NOW)).toBe(0);
+    expect(await flagTimeClashes(tx, [clash()], "usr_staff", NOW)).toBe(0);
 
     expect(db.auditLog.createMany).not.toHaveBeenCalled();
-    expect(db.notification.create).not.toHaveBeenCalled();
   });
 
   it("SCRUM-160 [AC6] TC-160-09: no clashes, nothing read or written", async () => {
-    expect(await flagTimeClashes(tx, venue, [], "usr_staff", NOW)).toBe(0);
+    expect(await flagTimeClashes(tx, [], "usr_staff", NOW)).toBe(0);
     expect(db.auditLog.findMany).not.toHaveBeenCalled();
   });
 });
@@ -441,12 +411,9 @@ describe("describeClash — SCRUM-160", () => {
     reason: "MAINTENANCE" as const,
   };
 
-  it("SCRUM-160 [AC3] TC-160-07: a Coordinator is told only the other booking's times; Venue Staff also see its event", () => {
+  it("SCRUM-160 [AC5] TC-160-11: a clashing booking is named by its event, unavailability by its reason", () => {
     const other = clash().with;
     expect(describeClash(other)).toBe(
-      "another booking from 10 Mar 2031, 6:00 pm SGT to 10 Mar 2031, 8:00 pm SGT",
-    );
-    expect(describeClash(other, true)).toBe(
       '"Career Fair"\'s booking from 10 Mar 2031, 6:00 pm SGT to 10 Mar 2031, 8:00 pm SGT',
     );
     expect(describeClash(una)).toBe(

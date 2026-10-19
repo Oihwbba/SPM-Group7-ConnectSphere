@@ -20,8 +20,9 @@ function row(page: Page, name: string) {
 }
 
 /**
- * SCRUM-69 — a Coordinator's default list holds the events assigned to them
- * plus unassigned Submitted ones. Handover (SCRUM-21) isn't built yet, so AC3
+ * SCRUM-69 — a Coordinator's default list holds the events assigned to them.
+ * SCRUM-165 replaced AC1/AC4's "plus unassigned Submitted ones": those now
+ * wait in the Lead's queue (e2e/lead-queue.spec.ts). Handover (SCRUM-21) isn't built yet, so AC3
  * changes the assignment directly, as the story's change log says to.
  */
 test.describe("SCRUM-69 — View only the events assigned to me", () => {
@@ -63,19 +64,21 @@ test.describe("SCRUM-69 — View only the events assigned to me", () => {
   });
 
   test.afterEach(async () => {
+    // Approving notifies the seeded Organiser; their list is shared by other specs.
+    await prisma.notification.deleteMany({ where: { eventId: { in: ids } } });
     await prisma.auditLog.deleteMany({ where: { entityId: { in: ids } } });
     await prisma.event.deleteMany({ where: { id: { in: ids } } });
     ids.length = 0;
   });
 
-  test("AC1, AC4: my default list shows my events and unassigned Submitted ones, not another Coordinator's", async ({
+  test("AC1, SCRUM-165 [AC8] TC-165-11: my default list shows my events, not another Coordinator's and not unassigned requests (they wait for the Lead)", async ({
     page,
   }) => {
     await signInAs(page, "coordinator@test.local");
 
     await expect(row(page, mine)).toBeVisible();
-    await expect(row(page, unassigned)).toBeVisible();
     await expect(row(page, theirs)).toHaveCount(0);
+    await expect(row(page, unassigned)).toHaveCount(0);
   });
 
   test("AC2: the list shows each event's name, proposed date and status, and can be searched", async ({
@@ -90,9 +93,12 @@ test.describe("SCRUM-69 — View only the events assigned to me", () => {
     );
     await expect(myRow).toContainText("SGT");
 
+    await page
+      .getByLabel("Search by name or purpose")
+      .fill("no event is called this");
+    await expect(row(page, mine)).toHaveCount(0);
     await page.getByLabel("Search by name or purpose").fill(mine);
     await expect(row(page, mine)).toBeVisible();
-    await expect(row(page, unassigned)).toHaveCount(0);
   });
 
   test("AC3: an event handed to another Coordinator leaves my list and appears in theirs", async ({
@@ -103,38 +109,37 @@ test.describe("SCRUM-69 — View only the events assigned to me", () => {
       data: { coordinatorId: "usr_coordinator_2" },
     });
 
-    await signInAs(page, "coordinator@test.local");
-    await expect(row(page, unassigned)).toBeVisible();
-    await expect(row(page, mine)).toHaveCount(0);
-
     await signInAs(page, "coordinator2@test.local");
     await expect(row(page, mine)).toBeVisible();
-  });
-
-  test("AC4: an unassigned Submitted event appears in every Coordinator's list", async ({
-    page,
-  }) => {
-    await signInAs(page, "coordinator2@test.local");
-
-    await expect(row(page, unassigned)).toBeVisible();
     await expect(row(page, theirs)).toBeVisible();
+
+    await signInAs(page, "coordinator@test.local");
     await expect(row(page, mine)).toHaveCount(0);
   });
 
-  test("AC4: a Coordinator who approves an unassigned Submitted event becomes its Coordinator, so it leaves the others' lists", async ({
+  test("SCRUM-165 [AC8] TC-165-11 (supersedes AC4): an unassigned Submitted event is in no Coordinator's list", async ({
+    page,
+  }) => {
+    for (const email of ["coordinator@test.local", "coordinator2@test.local"]) {
+      await signInAs(page, email);
+      // The list has loaded: each sees their own event first.
+      await expect(
+        row(page, email.startsWith("coordinator2") ? theirs : mine),
+      ).toBeVisible();
+      await expect(row(page, unassigned)).toHaveCount(0);
+    }
+  });
+
+  test("SCRUM-135 AC3, AC4: my Under Review event can be approved, and moves to Planning", async ({
     page,
   }) => {
     await signInAs(page, "coordinator@test.local");
-    const unassignedRow = row(page, unassigned);
-    await unassignedRow.getByRole("button", { name: "Approve" }).click();
+    const myRow = row(page, mine);
+    await myRow.getByRole("button", { name: "Approve" }).click();
     // SCRUM-81: approval moves the event straight to Planning.
-    await expect(unassignedRow.getByTestId("status-badge")).toHaveAttribute(
+    await expect(myRow.getByTestId("status-badge")).toHaveAttribute(
       "data-status",
       "PLANNING",
     );
-
-    await signInAs(page, "coordinator2@test.local");
-    await expect(row(page, theirs)).toBeVisible();
-    await expect(row(page, unassigned)).toHaveCount(0);
   });
 });

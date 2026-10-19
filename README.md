@@ -21,15 +21,16 @@ arrangements that can't clash:
 4. When the arrangements are complete, the Coordinator **confirms** the event.
 5. **Attendees** register for confirmed events, up to each event's capacity.
 
-Week 7 added two more roles. They can sign in, but until their stories land
-they only read their own notifications:
+Week 7 added two more roles:
 
-- The **Event Coordinator Lead** will assign new requests to Coordinators from
-  an unassigned queue, replacing automatic assignment (SCRUM-165), and see
-  every Coordinator's workload (SCRUM-141).
-- The **Safety Officer** will review an event's venue and equipment before it
-  can be confirmed (SCRUM-166). Their approval doesn't confirm the event; the
-  Coordinator still does.
+- The **Event Coordinator Lead** assigns each new request to a Coordinator
+  from the Unassigned Queue, which replaced automatic assignment (SCRUM-165),
+  and sees every event and every Coordinator's assignments (SCRUM-141).
+  Reassigning an event comes with SCRUM-21.
+- The **Safety Officer** reviews an event's venue and equipment on the Safety
+  Checks page before it can be confirmed, and records Approved, Changes
+  requested or Rejected (SCRUM-166). Their approval doesn't confirm the
+  event; the Coordinator still does.
 
 Release 1 covers the twenty features in the Week 4 project instructions, and
 Sprint 3 adds the Week 7 changes. The full picture (all seven roles, the event
@@ -120,14 +121,18 @@ terminal at Docker first, so a forgotten `.env` can't send them to Supabase:
 
 ```bash
 docker compose up -d
-export DATABASE_URL="postgresql://connectsphere:connectsphere@localhost:5432/connectsphere?schema=public"
+export DATABASE_URL="postgresql://connectsphere:connectsphere@127.0.0.1:5432/connectsphere?schema=public"
 export DIRECT_URL="$DATABASE_URL"
 npm run db:reset           # LOCAL ONLY: drop, migrate, seed
 npm run test:coverage      # likewise test:integration, test:e2e, db:migrate
 ```
 
-In PowerShell, set `$env:DATABASE_URL` and `$env:DIRECT_URL` instead. The
-integration tests skip unless `DATABASE_URL` is localhost, and so do the e2e
+In PowerShell, set `$env:DATABASE_URL` and `$env:DIRECT_URL` instead. Use
+`127.0.0.1`, not `localhost`: on Windows with Docker Desktop, `localhost`
+resolves to IPv6 first, and every parameterised query then takes about 40 ms
+instead of 1 ms, so the integration tests run ten times slower and the
+race tests (e.g. SCRUM-161's TC-161-12, SCRUM-75's TC-75-11) time out. The
+integration tests skip unless `DATABASE_URL` is localhost or `127.0.0.1`, and so do the e2e
 specs that guard with `usesLocalDatabase`. Some older e2e specs (for example
 `e2e/events.spec.ts`) write without that guard, so never run `test:e2e`
 with `.env` pointing at Supabase.
@@ -148,6 +153,7 @@ Every seeded account uses the password **`Password123!`**:
 | `organiser@test.local` | Event Organiser | Owns most seeded events |
 | `coordinator@test.local` | Event Coordinator | Assigned to most seeded events |
 | `venuestaff@test.local` | Venue Staff | Decided the seeded venue bookings |
+| `venuestaff2@test.local` | Venue Staff | A second member of Venue Staff, for two people deciding at once (SCRUM-53) |
 | `techsupport@test.local` | Technical Support | Owns the seeded equipment reservations |
 | `attendee@test.local` | Attendee | Registered for several events |
 | `organiser2@test.local` | Event Organiser | Owns one event, to prove another organiser is refused (SCRUM-68) |
@@ -156,10 +162,10 @@ Every seeded account uses the password **`Password123!`**:
 | `attendee3@test.local` | Attendee | Has one withdrawn registration (SCRUM-77) |
 | `attendee4@test.local` | Attendee | Deliberately unregistered, so free to take the last place |
 | `safety@test.local` | Safety Officer | Reviews operational safety checks (SCRUM-166) |
-
-No seeded account has the **Event Coordinator Lead** or **Safety Officer**
-role yet: neither role has a page beyond Notifications, so there is nothing to
-demo. Their sign-in is unit-tested instead (SCRUM-172, TC-172-01).
+| `lead@test.local` | Event Coordinator Lead | Assigns new requests from the Unassigned Queue (SCRUM-165); reassignment arrives with SCRUM-21 |
+| `lead2@test.local` | Event Coordinator Lead | A second Lead, for two Leads assigning at once (SCRUM-165) |
+| `safety2@test.local` | Safety Officer | A second Safety Officer, for two people recording at once (SCRUM-166) |
+| `multirole@test.local` | Venue Staff, Technical Support, Event Coordinator and Event Organiser | One account with several roles (SCRUM-121) |
 
 ---
 
@@ -245,8 +251,9 @@ check, so don't work around them.
   held or approved booking whose occupied period overlaps recorded
   unavailability, and refuses two overlapping unavailability periods at one
   venue (SCRUM-37, ADR 0010). Since SCRUM-172 the database allows
-  unavailability over a booking, for SCRUM-161 to flag it; until then the
-  record action still refuses it, under the same venue lock.
+  unavailability over a booking: the record action saves it and flags the
+  bookings it overlaps Needs Reconsideration instead (SCRUM-161, ADR 0010's
+  addendum).
 - **One live booking per venue per event.** An event can hold at most one
   pending, held or approved booking at each venue; rejected, cancelled and
   expired ones don't count (SCRUM-162 AC2). One venue per event (SCRUM-50 AC8)
@@ -275,6 +282,36 @@ transaction. **Don't remove these locks.**
 - **Registration capacity** (SCRUM-74): lock the `Event` row.
 - **Equipment quantity** (SCRUM-31, ADR 0007): lock the `Equipment` rows, in
   id order, after the `Event` row.
+
+---
+
+## Performance and growth (SCRUM-132)
+
+**Release 1 is not load-tested for three years of growth** (briefing §8e).
+The briefing gives no dataset size or traffic figures, so the team set its
+own testable limits instead: the core pages work at 360 px with no
+horizontal scroll, and viewing an event, searching venues, opening a venue's
+availability, checking equipment availability and registering each respond
+within 2 seconds on the seed data. `e2e/phone-and-speed.spec.ts` checks both
+on every pull request; the timings for the sprint review are in
+`docs/evidence/`.
+
+What the design already does for growth:
+
+- **The database enforces the rules that matter under load.** Double-booking
+  is refused by an `EXCLUDE` constraint, and counted pools (registration
+  capacity, equipment quantity) are checked under row locks, so more
+  concurrent users can't break them (see "Rules the database enforces").
+- **Foreign keys the app filters by are indexed** (`@@index` in
+  `prisma/schema.prisma`), and the double-booking constraint is backed by a
+  GiST index.
+- **One shared Prisma client and a pooled connection** through the Supabase
+  session pooler, so connections don't grow with requests.
+
+What would need work first: **lists are not paginated.** My Event
+Requests, the all-events list, the booking and equipment review queues and
+notifications each read every matching row. Paging them is the first change
+to make once any of them reaches a few thousand rows.
 
 ---
 

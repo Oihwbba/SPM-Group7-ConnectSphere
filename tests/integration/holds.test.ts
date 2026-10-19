@@ -278,13 +278,14 @@ describe.skipIf(!usesLocalDatabase)(
 
       const results = await Promise.all([hold(a.id), hold(b.id)]);
 
-      expect(results.filter((r) => r.ok)).toHaveLength(1);
-      expect(results.find((r) => !r.ok)).toMatchObject({
-        error: expect.stringMatching(/^Conflicting: /),
+      // SCRUM-134 AC2: the earlier request (a) is the one held; b is refused
+      // as conflicting, or because an earlier overlapping request is pending.
+      expect(results[0].ok).toBe(true);
+      expect(results[1]).toMatchObject({
+        ok: false,
+        error: expect.stringMatching(/^(Conflicting: |An earlier request for )/),
       });
-      expect(
-        [await statusOf(a.id), await statusOf(b.id)].sort(),
-      ).toEqual(["HELD", "PENDING"]);
+      expect([await statusOf(a.id), await statusOf(b.id)]).toEqual(["HELD", "PENDING"]);
     });
 
     it("SCRUM-163 [AC3, AC5, AC7] TC-163-06, TC-163-10, TC-163-12, TC-163-16: a hold is confirmed only once Venue Staff approve it, and only once, and confirming withdraws only its notices not yet shown", async () => {
@@ -480,10 +481,9 @@ describe.skipIf(!usesLocalDatabase)(
         (await getPendingBookingQueue()).find((b) => b.id === id),
       ).toMatchObject({ status: "HELD", holdExpiresAt: expiry });
       const checklist = await getReadinessChecklist(prisma, eventIds[0]);
-      expect(checklist!.items[0]).toMatchObject({
-        heldBookingId: id,
-        holdApproved: true,
-      });
+      expect(checklist!.items[0].bookings).toEqual([
+        expect.objectContaining({ id, held: true, holdApproved: true }),
+      ]);
 
       const approvals = await prisma.notification.findMany({
         where: { bookingId: id, type: "HOLD_APPROVED" },

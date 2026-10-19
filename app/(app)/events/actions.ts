@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import type { EventStatus } from "@prisma/client";
 
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
@@ -14,16 +15,19 @@ import {
 } from "@/lib/schemas/event";
 import { ok, err, type ActionResult } from "@/lib/action-result";
 import { auditValue } from "@/lib/audit-value";
-import { pickCoordinator } from "@/lib/coordinator-assignment";
 import { getReadinessChecklist } from "@/lib/event-readiness";
+import { NEEDS_RECONSIDERATION } from "@/lib/status-labels";
 import {
   liveHoldWhere,
   withdrawPendingHoldNotices,
 } from "@/lib/booking-holds";
-import { formatDateTime, TIME_ZONE } from "@/lib/datetime";
+import { formatDateTime, formatEventTime, TIME_ZONE } from "@/lib/datetime";
+import { confirmedDetailsChanged, venueLabel } from "@/lib/confirmed-details";
 import { asSentence, notifyAboutEvent } from "@/lib/event-notifications";
+import { notifyRole } from "@/lib/staff-notifications";
 import { effectiveClosesAt } from "@/lib/registration-state";
 import { venueOptions, type VenueOptions } from "@/lib/venue-options";
+import { canTransition, transitionRefusal } from "@/lib/event-lifecycle";
 
 /** Thrown inside submitEventRequest's transaction for an expected failure
  * (not found / wrong state), caught below and converted to an ActionResult —
@@ -31,9 +35,8 @@ import { venueOptions, type VenueOptions } from "@/lib/venue-options";
  * one action. */
 class SubmitEventError extends Error {}
 
-// Coordinators decide; they do not claim. `submitted → under review` now
-// happens automatically inside submitEventRequest via SCRUM-20's
-// pickCoordinator, so it is deliberately not accepted here.
+// Coordinators decide; they do not claim. `submitted → under review` happens
+// when the Lead assigns a Coordinator (SCRUM-165), so it is not accepted here.
 const statusTransitionSchema = z.object({
   eventId: z.string().min(1),
   nextStatus: z.enum(["APPROVED", "REJECTED"]),
@@ -221,10 +224,7 @@ export async function submitEventRequest(
     // SCRUM-108: set when this submission is an amended rejected request.
     let resubmitted = false;
 
-    // SCRUM-14's write plus SCRUM-20's auto-assignment happen in ONE
-    // transaction: pickCoordinator takes an advisory lock that is held until
-    // this transaction commits, so a concurrent submission waits and then
-    // counts this event's assignment when it computes coordinator load.
+    // SCRUM-14's write, its history and its notice happen in ONE transaction.
     await prisma.$transaction(async (tx) => {
       if (id) {
         // Submit an existing draft event (US14/US15 transition from DRAFT -> SUBMITTED)
@@ -234,23 +234,24 @@ export async function submitEventRequest(
         // second waits here, then finds the event already submitted.
         await tx.$queryRaw`SELECT "id" FROM "Event" WHERE "id" = ${id} FOR UPDATE`;
         const existing = await tx.event.findFirst({
-          where: {
-            id,
-            organiserId: user!.id,
-            // SCRUM-126 AC2/AC3: a rejection marked "Submit as a new request"
-            // stays Rejected and read-only.
-            OR: [
-              // SCRUM-130 AC1: a discarded draft cannot be submitted.
-              { status: "DRAFT", discardedAt: null },
-              { status: "REJECTED", rejectionOutcome: "AMEND_AND_RESUBMIT" },
-            ],
-          },
+          // SCRUM-130 AC1: a discarded draft cannot be submitted.
+          where: { id, organiserId: user!.id, discardedAt: null },
         });
 
         if (!existing) {
           throw new SubmitEventError(
             "Draft or rejected event not found or cannot be submitted.",
           );
+        }
+        // SCRUM-135 AC1, AC6, AC11: a Draft, or a Rejected request marked
+        // Amend and resubmit; one marked "Submit as a new request" stays
+        // Rejected and read-only (SCRUM-126 AC2, AC3).
+        if (
+          !canTransition(existing.status, "SUBMITTED", {
+            rejectionOutcome: existing.rejectionOutcome,
+          })
+        ) {
+          throw new SubmitEventError(transitionRefusal(existing.status, "submitted"));
         }
         previousCoordinatorId = existing.coordinatorId;
         resubmitted = existing.status === "REJECTED";
@@ -343,7 +344,6 @@ export async function submitEventRequest(
         eventId = created.id;
       }
 
-      // SCRUM-20: assign exactly one coordinator, fairly, no accept/decline.
       if (resubmitted) {
         // SCRUM-108 AC9, AC14: the same event, amended and resubmitted by
         // its Organiser, kept in its history.
@@ -361,15 +361,17 @@ export async function submitEventRequest(
         });
       }
 
-      // SCRUM-108 AC11: a resubmitted request goes back to the Coordinator
-      // who reviewed it, without running automatic assignment again, as long
-      // as they still hold the role.
+      // SCRUM-165 AC9: a resubmitted request goes back to the Coordinator who
+      // reviewed it, as long as they still hold the role.
       const keepsCoordinator =
         resubmitted &&
         previousCoordinatorId !== null &&
         Boolean(
           await tx.user.findFirst({
-            where: { id: previousCoordinatorId, role: "COORDINATOR" },
+            where: {
+              id: previousCoordinatorId,
+              OR: [{ role: "COORDINATOR" }, { additionalRoles: { has: "COORDINATOR" } }],
+            },
             select: { id: true },
           }),
         );
@@ -403,8 +405,8 @@ export async function submitEventRequest(
       }
 
       // SCRUM-45 AC1: the Organiser is told it was submitted and is waiting
-      // to be assigned. Being assigned is a notice of its own: below while
-      // assignment is automatic, and the Lead's once SCRUM-165 replaces it.
+      // to be assigned. Being assigned is a notice of its own, sent when the
+      // Lead assigns a Coordinator (SCRUM-165).
       await notifyAboutEvent(
         tx,
         [user!.id],
@@ -415,49 +417,10 @@ export async function submitEventRequest(
         },
       );
 
-      const coordinatorId = await pickCoordinator(tx);
-
-      if (coordinatorId) {
-        await tx.event.update({
-          where: { id: eventId! },
-          data: { coordinatorId, status: "UNDER_REVIEW" },
-        });
-
-        await tx.notification.createMany({
-          data: [
-            {
-              userId: user!.id,
-              type: "COORDINATOR_ASSIGNED",
-              title: "A coordinator was assigned",
-              message: `Your event "${name}" is now under review.`,
-              eventId: eventId!,
-            },
-            {
-              userId: coordinatorId,
-              type: "COORDINATOR_ASSIGNED",
-              title: "You were assigned an event",
-              message: `"${name}" was assigned to you for review.`,
-              eventId: eventId!,
-            },
-          ],
-        });
-
-        await tx.auditLog.create({
-          data: {
-            entityType: "Event",
-            entityId: eventId!,
-            action: "ASSIGNED",
-            actorId: null, // system-performed, not a specific user's action
-            fieldName: "coordinatorId",
-            oldValue: previousCoordinatorId,
-            newValue: coordinatorId,
-            summary: "Auto-assigned on submission (SCRUM-20)",
-          },
-        });
-      } else if (previousCoordinatorId) {
-        // SCRUM-108 AC11: a resubmission whose Coordinator lost the role,
-        // with nobody to assign, is left unassigned like a first submission,
-        // so it shows in every Coordinator's queue rather than in no one's.
+      // SCRUM-165 AC1: no Coordinator is assigned on submission; the request
+      // stays Submitted and waits in the Lead's Unassigned queue. AC9: a
+      // resubmission whose Coordinator no longer holds the role returns there.
+      if (previousCoordinatorId) {
         await tx.event.update({
           where: { id: eventId! },
           data: { coordinatorId: null },
@@ -472,14 +435,19 @@ export async function submitEventRequest(
             oldValue: previousCoordinatorId,
             newValue: null,
             summary:
-              "Unassigned on resubmission: the coordinator no longer holds the role (SCRUM-108)",
+              "Back in the Unassigned queue on resubmission: the coordinator no longer holds the role (SCRUM-165 AC9)",
           },
         });
       }
-      // No coordinator available: the event still reaches SUBMITTED (set
-      // above) and stays visible to coordinators — it must not fail
-      // silently, so we deliberately do nothing further here rather than
-      // throwing.
+
+      // SCRUM-124 AC10: every Lead hears that it is waiting in the
+      // Unassigned queue, and the notice opens it there.
+      await notifyRole(tx, "COORDINATOR_LEAD", { id: eventId! }, {
+        type: "REQUEST_AWAITING_ASSIGNMENT",
+        title: "A request is waiting to be assigned",
+        message: `"${name}" was submitted and is waiting in the Unassigned queue.`,
+        link: `/queue/${eventId}`,
+      });
     });
 
     revalidatePath("/events");
@@ -561,10 +529,14 @@ export async function getFormCatalogues(): Promise<
  *   one — so the action cannot be used to probe which event ids exist (SCRUM-68).
  * - The update is conditional on the status and coordinator this caller
  *   observed, so of two simultaneous decisions only one can win (SCRUM-24).
+ * - SCRUM-135 AC3, AC4: only a request Under Review is decided, by its
+ *   assigned Coordinator. A Submitted request has no Coordinator yet, so the
+ *   older rule that whoever decided one became its Coordinator (SCRUM-81 AC2)
+ *   no longer applies.
  */
 export async function transitionEventStatus(
   input: unknown,
-): Promise<ActionResult<{ status: string }>> {
+): Promise<ActionResult<{ status: EventStatus }>> {
   const session = await auth();
   const user = session?.user;
 
@@ -610,20 +582,20 @@ export async function transitionEventStatus(
       });
     if (!event || !related) return err("Event not found.");
 
-    // SCRUM-19: a submitted (or under-review) request can be decided.
-    if (event.status !== "SUBMITTED" && event.status !== "UNDER_REVIEW") {
-      return err(
-        "That status change is not allowed from the event's current status.",
-      );
-    }
-
-    // SCRUM-81: approval moves the event straight to Planning. Whoever
-    // decides a request nobody was assigned to becomes its coordinator: on
-    // approval because only the assigned coordinator may confirm it (SCRUM-81
-    // AC2), on rejection so it leaves other coordinators' lists and comes back
-    // to them if it is resubmitted (SCRUM-108 AC11).
+    // SCRUM-81: approval moves the event straight to Planning.
     const approved = nextStatus === "APPROVED";
-    const coordinatorId = event.coordinatorId ?? user!.id;
+    // SCRUM-135 AC3, AC4, AC11: deciding is the table's step out of Under
+    // Review, and only that one: Planning → Rejected is SCRUM-117's reject from
+    // Planning, and Confirmed → Planning a return to Planning, each its own
+    // action. A request Under Review has its Coordinator, and only that
+    // Coordinator gets this far (SCRUM-165 AC8), so deciding never changes who
+    // the Coordinator is; a Submitted request waits for the Lead to assign one.
+    if (
+      event.status !== "UNDER_REVIEW" ||
+      !canTransition(event.status, approved ? "PLANNING" : "REJECTED")
+    ) {
+      return err(transitionRefusal(event.status, approved ? "approved" : "rejected"));
+    }
 
     const updated = await prisma.$transaction(async (tx) => {
       const now = new Date();
@@ -635,7 +607,6 @@ export async function transitionEventStatus(
         },
         data: {
           status: approved ? "PLANNING" : "REJECTED",
-          coordinatorId,
           decidedAt: now,
           decidedById: user!.id,
           decisionReason: approved ? null : decisionReason,
@@ -678,22 +649,6 @@ export async function transitionEventStatus(
             decidedById: user!.id,
             decidedAt: now,
             decisionReason,
-          },
-        });
-      }
-      if (coordinatorId !== event.coordinatorId) {
-        await tx.auditLog.create({
-          data: {
-            entityType: "Event",
-            entityId: event.id,
-            action: "ASSIGNED",
-            actorId: user!.id,
-            fieldName: "coordinatorId",
-            oldValue: event.coordinatorId,
-            newValue: coordinatorId,
-            summary: approved
-              ? "Assigned to the approving coordinator (SCRUM-81)"
-              : "Assigned to the rejecting coordinator (SCRUM-108)",
           },
         });
       }
@@ -796,26 +751,51 @@ export async function confirmEvent(
           registrationOpensAt: true,
           registrationClosesAt: true,
           startAt: true,
+          endAt: true,
+          confirmedStartAt: true,
+          confirmedEndAt: true,
+          confirmedVenues: true,
         },
       });
       if (current.status === "CONFIRMED") return "already-confirmed" as const;
-      if (current.status !== "PLANNING") return "not-planning" as const;
+      // SCRUM-135 AC7, AC11: only Planning moves to Confirmed.
+      if (!canTransition(current.status, "CONFIRMED")) {
+        return { refused: transitionRefusal(current.status, "confirmed") };
+      }
       if (current.coordinatorId !== user!.id) return "reassigned" as const;
 
       const checklist = (await getReadinessChecklist(tx, eventId))!;
       if (!checklist.ready) {
         return checklist.items
           .filter((item) => !item.complete)
-          .map((item) => `${item.name} (${item.state})`)
+          // SCRUM-131 AC3: a flagged item is named with its flag, which is why it is outstanding.
+          .map(
+            (item) =>
+              `${item.name} (${item.state}${item.needsReconsideration ? ` – ${NEEDS_RECONSIDERATION}` : ""})`,
+          )
           .join(", ");
       }
 
       // AC 5: registration opens unless the Organiser said it isn't needed
       // (SCRUM-171). Requests made before that choice existed leave it unset.
       const registrationEnabled = current.registrationRequired !== false;
+      // SCRUM-85: what Attendees are told now, with every approved venue.
+      const venues = (
+        await tx.booking.findMany({
+          where: { eventId, status: "APPROVED" },
+          orderBy: { createdAt: "asc" },
+          select: { venue: { select: { name: true, location: true } } },
+        })
+      ).map((b) => venueLabel(b.venue));
       await tx.event.update({
         where: { id: eventId },
-        data: { status: "CONFIRMED", registrationEnabled },
+        data: {
+          status: "CONFIRMED",
+          registrationEnabled,
+          confirmedStartAt: current.startAt,
+          confirmedEndAt: current.endAt,
+          confirmedVenues: venues,
+        },
       });
       // AC 5: who confirmed it and when (the entry's createdAt).
       await tx.auditLog.create({
@@ -860,12 +840,35 @@ export async function confirmEvent(
           showFromAt: closesAt,
         });
       }
+      // SCRUM-85 AC2, AC3, AC5, AC11: confirmed again with a different date,
+      // time or venue, so each Attendee still registered hears the new details
+      // once, every venue listed. Their registration stands. Only a real
+      // confirmation gets here, so a retry tells nobody twice (AC6).
+      if (
+        confirmedDetailsChanged(current, {
+          startAt: current.startAt,
+          endAt: current.endAt,
+          venues,
+        })
+      ) {
+        const registered = await tx.registration.findMany({
+          where: { eventId, status: "REGISTERED" },
+          select: { userId: true },
+        });
+        await tx.notification.createMany({
+          data: registered.map(({ userId }) => ({
+            userId,
+            type: "REGISTERED_EVENT_CHANGED" as const,
+            title: "An event you registered for has changed",
+            message: `"${current.name}" is confirmed with new details: ${formatEventTime(current.startAt, current.endAt)} at ${venues.join("; ")}. Your registration still stands.`,
+            eventId,
+          })),
+        });
+      }
       return "confirmed" as const;
     });
 
-    if (outcome === "not-planning") {
-      return err("Only an event in Planning can be confirmed.");
-    }
+    if (typeof outcome === "object") return err(outcome.refused);
     if (outcome === "reassigned") {
       return err(
         "This event was updated by another user. Refresh and try again.",
@@ -1116,7 +1119,11 @@ export async function rejectPlanningEvent(
         where: { id: eventId },
         select: { status: true, coordinatorId: true },
       });
-      if (current.status !== "PLANNING") return "not-planning" as const;
+      // SCRUM-135 AC5, AC11: this rejection is from Planning only; one Under
+      // Review is rejected through the review (transitionEventStatus).
+      if (current.status !== "PLANNING") {
+        return { refused: transitionRefusal(current.status, "rejected here") };
+      }
       if (current.coordinatorId !== user!.id) return "reassigned" as const;
       // AC4: confirming writes this history entry (SCRUM-81).
       const confirmedBefore = await tx.auditLog.count({
@@ -1128,6 +1135,11 @@ export async function rejectPlanningEvent(
         },
       });
       if (confirmedBefore > 0) return "confirmed-before" as const;
+      // SCRUM-82 AC5: an event with registrations is cancelled, not rejected.
+      const registrations = await tx.registration.count({
+        where: { eventId, status: "REGISTERED" },
+      });
+      if (registrations > 0) return "has-registrations" as const;
 
       const now = new Date();
       await tx.event.update({
@@ -1234,9 +1246,7 @@ export async function rejectPlanningEvent(
       return "rejected" as const;
     });
 
-    if (outcome === "not-planning") {
-      return err("Only an event in Planning can be rejected here.");
-    }
+    if (typeof outcome === "object") return err(outcome.refused);
     if (outcome === "reassigned") {
       return err(
         "This event was updated by another user. Refresh and try again.",
@@ -1245,6 +1255,11 @@ export async function rejectPlanningEvent(
     if (outcome === "confirmed-before") {
       return err(
         "This event has been confirmed before, so it can't be rejected. Cancel it instead.",
+      );
+    }
+    if (outcome === "has-registrations") {
+      return err(
+        "This event has registrations, so it can't be rejected. Cancel it instead.",
       );
     }
     revalidatePath("/events");

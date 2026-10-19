@@ -214,6 +214,11 @@ model User {
 
   role Role @default(ATTENDEE)
 
+  /// SCRUM-121 AC1 — roles held besides `role`. `role` stays the primary one:
+  /// where the user lands after signing in and what the header calls them.
+  /// Permissions are the union of all of them (lib/auth/can.ts, AC2).
+  additionalRoles Role[] @default([])
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -251,9 +256,11 @@ model User {
   requestedSafetyChecks    SafetyCheck[] @relation("SafetyCheckRequestedBy")
   decidedSafetyChecks      SafetyCheck[] @relation("SafetyCheckDecidedBy")
 
-  approvedHolds     Booking[]          @relation("BookingHoldApprovedBy")
-  holdExpiryChanges HoldExpiryChange[] @relation("HoldExpiryChangedBy")
-  operationalNotes         EventOperationalNote[]
+  approvedHolds     Booking[]              @relation("BookingHoldApprovedBy")
+  holdExpiryChanges HoldExpiryChange[]     @relation("HoldExpiryChangedBy")
+  operationalNotes  EventOperationalNote[]
+
+  suitabilityJudgements VenueSuitabilityJudgement[] @relation("VenueSuitabilityJudgedBy")
 }
 
 model Account {
@@ -386,6 +393,15 @@ model Event {
   registrationOpensAt  DateTime?
   registrationClosesAt DateTime?
 
+  // SCRUM-85 — what Attendees were last told: the date, time and every
+  // approved venue ("Name — Location") when the event was last Confirmed.
+  // Set on each confirmation; null until the first. While the event is back
+  // in Planning, registered Attendees see these (AC9), and confirming again
+  // with different ones tells them (AC2).
+  confirmedStartAt DateTime?
+  confirmedEndAt   DateTime?
+  confirmedVenues  String[]  @default([])
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -405,6 +421,7 @@ model Event {
   notifications         Notification[]
   safetyChecks          SafetyCheck[]
   operationalNotes      EventOperationalNote[]
+  suitabilityJudgements VenueSuitabilityJudgement[]
 
   @@index([organiserId])
   @@index([coordinatorId])
@@ -494,6 +511,7 @@ model Venue {
   bookings       Booking[]
   unavailability VenueUnavailability[]
   openingHours   VenueOpeningHours[]
+  judgements     VenueSuitabilityJudgement[]
 }
 
 /// SCRUM-34 AC3 — a venue's opening hours for one day of the week, in SGT:
@@ -564,10 +582,13 @@ model Booking {
 
   // SCRUM-50: "Request captures venue, date/time, expected attendance,
   // required facilities/layout, and other relevant event details."
-  requestedAttendance Int?
-  requiredFacilities  String[] @default([])
-  requestedLayout     String?
-  requestNotes        String?
+  requestedAttendance           Int?
+  requiredFacilities            String[] @default([])
+  requestedLayout               String?
+  requestNotes                  String?
+  // SCRUM-40 AC3 — the accessibility features this request needs, compared
+  // with the venue's for suitability.
+  requiredAccessibilityFeatures String[] @default([])
 
   requestedById String
 
@@ -645,6 +666,28 @@ model HoldExpiryChange {
   changedBy User    @relation("HoldExpiryChangedBy", fields: [changedById], references: [id])
 
   @@index([bookingId])
+}
+
+/// SCRUM-40 AC8 — the assigned Coordinator's own judgement of a venue for an
+/// event: Suitable or Not suitable, with a note (CHECK
+/// venue_suitability_note_required). One per event and venue; recording it
+/// again replaces it. It counts for the event, but never blocks a request or
+/// confirmation (AC9). Venue Staff see it on the request (AC10).
+model VenueSuitabilityJudgement {
+  id           String   @id @default(cuid())
+  eventId      String
+  venueId      String
+  suitable     Boolean
+  note         String
+  recordedById String
+  recordedAt   DateTime @default(now())
+
+  event      Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  venue      Venue @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  recordedBy User  @relation("VenueSuitabilityJudgedBy", fields: [recordedById], references: [id])
+
+  @@unique([eventId, venueId])
+  @@index([venueId])
 }
 
 // ---------------------------------------------------------------------------
@@ -882,13 +925,13 @@ model EventChangeRequest {
 
   /// The Organiser, or the assigned Coordinator raising it on their behalf
   /// (SCRUM-41 AC9).
-  requestedById String
-  status        ChangeRequestStatus @default(PENDING_REVIEW)
-  reason        String?
+  requestedById        String
+  status               ChangeRequestStatus @default(PENDING_REVIEW)
+  reason               String?
   /// SCRUM-41 AC1 — asks for the event to be cancelled instead of changing
   /// fields; then it has no fields, and the CHECK
   /// event_change_request_cancellation_has_reason requires the reason.
-  requestsCancellation Boolean @default(false)
+  requestsCancellation Boolean             @default(false)
 
   decidedById    String?
   decidedAt      DateTime?

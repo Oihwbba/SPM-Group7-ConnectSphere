@@ -17,6 +17,7 @@ import {
   submitBookingRequest,
 } from "@/app/(app)/bookings/actions";
 import { getPendingBookingQueue, getRequestableVenues } from "@/app/(app)/bookings/queries";
+import { searchVenues } from "@/lib/venue-search";
 import { createPlanningEvents, removeEvents } from "./test-events";
 
 // SCRUM-34 against a real, seeded Postgres: venues added, edited and retired
@@ -97,6 +98,7 @@ describe.skipIf(!usesLocalDatabase)("venue catalogue — real database (SCRUM-34
       status: "PENDING" | "APPROVED" | "CANCELLED";
       requestedAttendance: number;
       requiredFacilities: string[];
+      requiredAccessibilityFeatures: string[];
     }> = {},
   ) {
     const eventId = await event(start, end, data.requestedAttendance ?? 40);
@@ -191,8 +193,22 @@ describe.skipIf(!usesLocalDatabase)("venue catalogue — real database (SCRUM-34
     ).rejects.toSatisfy((error) => violatesCheck(error, "venue_opening_hours_valid"));
   });
 
-  it("SCRUM-34 [AC6] TC-34-07: an edit shows at once in the detail view and the request form's venue list", async () => {
+  it("SCRUM-34 [AC6] TC-34-07: an edit shows at once in the detail view, the request form's venue list, and search, filtering and suitability", async () => {
     const id = await addVenue("Edited");
+    // SCRUM-38 search with SCRUM-40 suitability, for 100 people needing a sound system.
+    const searchFor = async (onlyFitting: boolean) =>
+      (
+        await searchVenues(prisma, {
+          period: null,
+          onlyFitting,
+          filters: { attendance: 100, facilities: ["sound-system"], accessibilityFeatures: [] },
+        })
+      ).find((v) => v.id === id);
+    expect(await searchFor(true)).toBeUndefined();
+    expect((await searchFor(false))?.suitability).toEqual({
+      suitable: false,
+      reasons: ["Capacity 80 < attendance 100", "Missing facility: sound system"],
+    });
 
     const result = await updateVenue({
       ...venueInput("Edited"),
@@ -205,6 +221,10 @@ describe.skipIf(!usesLocalDatabase)("venue catalogue — real database (SCRUM-34
     expect((await getVenueDetail(id))?.capacity).toBe(120);
     const offered = (await getRequestableVenues()).find((v) => v.id === id);
     expect(offered).toMatchObject({ capacity: 120, facilities: ["projector", "sound-system"] });
+    expect(await searchFor(true)).toMatchObject({
+      capacity: 120,
+      suitability: { suitable: true, reasons: [] },
+    });
     expect(await prisma.auditLog.count({ where: { entityId: id, action: "UPDATED" } })).toBe(1);
   });
 
@@ -436,12 +456,14 @@ describe.skipIf(!usesLocalDatabase)("venue catalogue — real database (SCRUM-34
       status: "APPROVED",
       requestedAttendance: 70,
       requiredFacilities: ["projector"],
+      requiredAccessibilityFeatures: ["wheelchair-access"],
     });
     asVenueStaff();
 
     for (const change of [
       { capacity: 60 },
       { facilities: "" },
+      { accessibilityFeatures: "" },
       { openingHours: hoursInput({ opensAt: "11:00", closesAt: "22:00" }) },
     ]) {
       const result = await updateVenue({ ...venueInput("AC10"), venueId: id, ...change });
@@ -452,7 +474,11 @@ describe.skipIf(!usesLocalDatabase)("venue catalogue — real database (SCRUM-34
     }
 
     const venue = await getVenueDetail(id);
-    expect(venue).toMatchObject({ capacity: 80, facilities: ["projector"] });
+    expect(venue).toMatchObject({
+      capacity: 80,
+      facilities: ["projector"],
+      accessibilityFeatures: ["wheelchair-access"],
+    });
     expect(venue!.openingHours[1]).toEqual({ weekday: 2, opensMinute: 600, closesMinute: 1320 });
     expect(await prisma.auditLog.count({ where: { entityId: id, action: "UPDATED" } })).toBe(0);
   });

@@ -1,8 +1,12 @@
 import { notFound } from "next/navigation";
 
 import { requireSession } from "@/lib/auth/guard";
+import { prisma } from "@/lib/db";
+import { completeFinishedEvents } from "@/lib/event-closing";
 import { getBrowsableEvent } from "../queries";
 import { AttendeeEventDetail } from "../attendee-event-detail";
+import { ReplanningEventDetail } from "../replanning-event-detail";
+import { isBeingReplanned } from "@/lib/confirmed-details";
 
 /**
  * SCRUM-72 — the attendee-facing event detail page, reachable by direct URL
@@ -23,6 +27,8 @@ export default async function EventDetailPage({
   params: Promise<{ id: string }>;
 }) {
   await requireSession();
+  // SCRUM-82 AC7: a finished event reads as Completed, so it isn't shown here.
+  await completeFinishedEvents(prisma);
 
   const { id } = await params;
   const event = await getBrowsableEvent(id);
@@ -30,5 +36,9 @@ export default async function EventDetailPage({
     notFound();
   }
 
-  return <AttendeeEventDetail event={event} />;
+  return isBeingReplanned(event) ? (
+    <ReplanningEventDetail event={event} />
+  ) : (
+    <AttendeeEventDetail event={event} />
+  );
 }

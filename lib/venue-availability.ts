@@ -198,6 +198,58 @@ export async function findVenueBlockers(
   ].sort((a, b) => a.startAt.getTime() - b.startAt.getTime());
 }
 
+/** SCRUM-134 — another Pending request competing for the same venue. */
+export type CompetingRequest = {
+  id: string;
+  startAt: Date;
+  endAt: Date;
+  /** When it was submitted: the earlier is decided first (AC2). */
+  createdAt: Date;
+  eventName: string;
+};
+
+/** SCRUM-134 AC2 — `a` was submitted before `b`; the id breaks a tie. */
+export function submittedBefore(
+  a: { id: string; createdAt: Date },
+  b: { id: string; createdAt: Date },
+): boolean {
+  const diff = a.createdAt.getTime() - b.createdAt.getTime();
+  return diff < 0 || (diff === 0 && a.id < b.id);
+}
+
+/**
+ * SCRUM-134 AC1, AC3 — every other Pending request for the venue whose
+ * occupied period overlaps this one's, earliest submitted first. Both are
+ * Pending, so both occupy the venue with its current setup and turnaround
+ * (SCRUM-159). Periods that only touch don't compete.
+ */
+export async function findCompetingRequests(
+  db: Db,
+  booking: { id: string; venueId: string; startAt: Date; endAt: Date },
+  venue: SetupTurnaround,
+): Promise<CompetingRequest[]> {
+  const occupied = occupiedPeriod(booking, venue);
+  const pending = await db.booking.findMany({
+    where: {
+      venueId: booking.venueId,
+      status: "PENDING",
+      id: { not: booking.id },
+      ...reachingInto(occupied),
+    },
+    select: {
+      id: true,
+      startAt: true,
+      endAt: true,
+      createdAt: true,
+      event: { select: { name: true } },
+    },
+    orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+  });
+  return pending
+    .filter((other) => overlaps(occupiedPeriod(other, venue), occupied))
+    .map(({ event, ...other }) => ({ ...other, eventName: event.name }));
+}
+
 /**
  * SCRUM-36 — the same blockers as `findVenueBlockers`, carrying what the
  * calendar shows on hover: the booking's event, who requested it and what it

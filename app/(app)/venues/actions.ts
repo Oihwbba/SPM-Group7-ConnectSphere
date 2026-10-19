@@ -97,7 +97,7 @@ function clashWarnings(clashes: TimeClash[], listed: Affected[]): Affected[] {
   }
   return [...byBooking.values()].map((own) => {
     const { booking } = own[0];
-    const withWhat = own.map((c) => describeClash(c.with, true)).join("; ");
+    const withWhat = own.map((c) => describeClash(c.with)).join("; ");
     return {
       id: booking.id,
       line: describeAffected(
@@ -232,6 +232,7 @@ export async function updateVenue(
           isActive: true,
           capacity: true,
           facilities: true,
+          accessibilityFeatures: true,
           supportedLayouts: true,
           setupMinutes: true,
           turnaroundMinutes: true,
@@ -255,6 +256,7 @@ export async function updateVenue(
           status: true,
           requestedAttendance: true,
           requiredFacilities: true,
+          requiredAccessibilityFeatures: true,
           requestedLayout: true,
           event: { select: { name: true } },
         },
@@ -301,7 +303,7 @@ export async function updateVenue(
       // their people told; one already flagged for a fit reason above keeps
       // that reason (SCRUM-26).
       const unfit = await flagAffected(tx, affected, now);
-      return unfit + (await flagTimeClashes(tx, { name: data.name }, clashes, user!.id, now));
+      return unfit + (await flagTimeClashes(tx, clashes, user!.id, now));
     });
 
     revalidateVenue(venueId, flagged);

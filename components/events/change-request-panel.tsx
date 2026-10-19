@@ -16,11 +16,13 @@ import {
   type ChangeRequestView,
 } from "@/app/(app)/events/change-request-actions";
 import { getFormCatalogues } from "@/app/(app)/events/actions";
+import { ChangeRequestDecision } from "@/components/events/change-request-decision";
 import {
   CHANGEABLE_FIELDS,
   CHANGE_KEYS,
   CHANGE_REQUEST_STATUS_LABEL,
   changeFieldLabel,
+  changeValueLabel,
   type ChangeableField,
   type ChangeKey,
   type ChangeRequestChanges,
@@ -31,11 +33,17 @@ import {
   utcToSgWallTime,
 } from "@/lib/datetime";
 
-type TextField = Exclude<ChangeKey, "startAt" | "endAt" | "expectedAttendance">;
+type TextField = Exclude<
+  ChangeKey,
+  "startAt" | "endAt" | "expectedAttendance" | "registrationRequired"
+>;
 
 const TEXT_FIELDS = CHANGE_KEYS.filter(
   (key): key is TextField =>
-    key !== "startAt" && key !== "endAt" && key !== "expectedAttendance",
+    key !== "startAt" &&
+    key !== "endAt" &&
+    key !== "expectedAttendance" &&
+    key !== "registrationRequired",
 );
 
 const SHORT_FIELDS: readonly string[] = ["name", "purpose", "preferredLayout"];
@@ -63,6 +71,9 @@ function draftFrom(event: Event): Draft {
     startAt: utcToSgWallTime(event.startAt),
     endAt: utcToSgWallTime(event.endAt),
     expectedAttendance: event.expectedAttendance?.toString() ?? "",
+    // SCRUM-171: blank on a request made before the question was asked.
+    registrationRequired:
+      event.registrationRequired === null ? "" : event.registrationRequired ? "yes" : "no",
   };
 }
 
@@ -76,18 +87,15 @@ function changesBetween(before: Draft, after: Draft): ChangeRequestChanges {
   if (after.expectedAttendance !== before.expectedAttendance) {
     changes.expectedAttendance = Number(after.expectedAttendance);
   }
+  if (after.registrationRequired !== before.registrationRequired) {
+    changes.registrationRequired = after.registrationRequired === "yes";
+  }
   for (const key of TEXT_FIELDS) {
     if (after[key] !== before[key]) changes[key] = after[key];
   }
   return changes;
 }
 
-function shown(fieldName: string, value: string | null): string {
-  if (value === null || value === "") return "—";
-  return fieldName === "startAt" || fieldName === "endAt"
-    ? formatDateTime(new Date(value))
-    : value;
-}
 
 /** A number for attendance, a line for short text, a box for the rest. */
 function FieldControl({
@@ -97,7 +105,7 @@ function FieldControl({
   invalid,
   describedBy,
 }: {
-  field: Exclude<ChangeableField, "schedule">;
+  field: Exclude<ChangeableField, "schedule" | "registrationRequired">;
   value: string;
   onChange: (value: string) => void;
   invalid: boolean;
@@ -122,7 +130,13 @@ function FieldControl({
   return <Textarea {...props} onChange={(e) => onChange(e.target.value)} />;
 }
 
-function ChangeRequestItem({ request }: { request: ChangeRequestView }) {
+function ChangeRequestItem({
+  request,
+  children,
+}: {
+  request: ChangeRequestView;
+  children?: React.ReactNode;
+}) {
   const fields = [...request.fields].sort(
     (a, b) => FIELD_ORDER.indexOf(a.fieldName) - FIELD_ORDER.indexOf(b.fieldName),
   );
@@ -160,9 +174,9 @@ function ChangeRequestItem({ request }: { request: ChangeRequestView }) {
                 </span>
               )}
               <span className="block text-muted-foreground">
-                {shown(field.fieldName, field.oldValue)} →{" "}
+                {changeValueLabel(field.fieldName, field.oldValue)} →{" "}
                 <span className="text-foreground">
-                  {shown(field.fieldName, field.newValue)}
+                  {changeValueLabel(field.fieldName, field.newValue)}
                 </span>
               </span>
             </li>
@@ -181,6 +195,7 @@ function ChangeRequestItem({ request }: { request: ChangeRequestView }) {
           {request.decisionReason}
         </p>
       )}
+      {children}
     </li>
   );
 }
@@ -328,7 +343,12 @@ export function ChangeRequestPanel({ event }: { event: Event }) {
         ) : (
           <ul className="space-y-2">
             {requests.map((request) => (
-              <ChangeRequestItem key={request.id} request={request} />
+              <ChangeRequestItem key={request.id} request={request}>
+                {/* SCRUM-128: the assigned Coordinator decides it here. */}
+                {request.status === "PENDING_REVIEW" && (
+                  <ChangeRequestDecision eventId={event.id} onDecided={reload} />
+                )}
+              </ChangeRequestItem>
             ))}
           </ul>
         )}
@@ -395,6 +415,35 @@ export function ChangeRequestPanel({ event }: { event: Event }) {
                           </label>
                         ))}
                       </div>
+                    ) : field === "registrationRequired" ? (
+                      <fieldset
+                        key={field}
+                        className="space-y-1"
+                        aria-describedby={describedBy(field)}
+                      >
+                        <legend className="font-medium">
+                          {CHANGEABLE_FIELDS[field]}
+                        </legend>
+                        <div className="flex gap-4">
+                          {(["yes", "no"] as const).map((value) => (
+                            <label key={value} className="flex items-center gap-1.5">
+                              <input
+                                type="radio"
+                                name="change-registrationRequired"
+                                value={value}
+                                checked={draft.registrationRequired === value}
+                                onChange={() => set(field)(value)}
+                                className="h-4 w-4 accent-primary"
+                              />
+                              {value === "yes" ? "Yes" : "No"}
+                            </label>
+                          ))}
+                        </div>
+                        <FieldError
+                          id={`change-${field}-error`}
+                          messages={errors[field]}
+                        />
+                      </fieldset>
                     ) : (
                       // A div, not a label: the suggestion buttons must not
                       // become the field's labelled control.

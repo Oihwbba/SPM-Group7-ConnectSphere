@@ -2,6 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { AlertTriangle, CalendarClock, CheckCircle2, Wrench } from "lucide-react";
+import { toast } from "sonner";
+
+import { badgeVariants } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { FieldError } from "@/components/ui/field-error";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 import { formatDateTime } from "@/lib/datetime";
 import {
@@ -10,8 +17,14 @@ import {
   type AvailabilityVerdict,
   type ScheduleEntry,
 } from "@/lib/equipment/availability";
+import { NEEDS_RECONSIDERATION, RESERVATION_STATUS_LABEL } from "@/lib/status-labels";
+import { cn } from "@/lib/utils";
 
-import { getEquipmentSchedule, type EquipmentSchedule } from "./actions";
+import {
+  getEquipmentSchedule,
+  reportUnprovidableEquipment,
+  type EquipmentSchedule,
+} from "./actions";
 
 /**
  * SCRUM-30 — what an equipment item is already committed to, in two places on
@@ -104,7 +117,108 @@ const ROW_TONE: Record<Tone, string> = {
   neutral: "bg-muted/20",
 };
 
-function CommitmentRow({ entry, tone }: { entry: ScheduleEntry; tone: Tone }) {
+/**
+ * SCRUM-32 — Technical Support report that a reservation can no longer be
+ * provided, with the reason (AC1, AC2). It stays reserved until the event's
+ * Coordinator decides (AC4); this only flags it.
+ */
+function ReportReservation({
+  reservationId,
+  onReported,
+}: {
+  reservationId: string;
+  onReported: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [reason, setReason] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [pending, setPending] = useState(false);
+  const fieldId = `report-reason-${reservationId}`;
+
+  if (!open) {
+    return (
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="mt-2"
+        onClick={() => setOpen(true)}
+      >
+        Can&apos;t provide this
+      </Button>
+    );
+  }
+
+  async function submit() {
+    setPending(true);
+    setError(null);
+    try {
+      const result = await reportUnprovidableEquipment({ reservationId, reason });
+      if (!result.ok) {
+        setError(result.fieldErrors?.reason?.[0] ?? result.error);
+        return;
+      }
+      toast.success("Reported. The event's Coordinator has been told.");
+      setOpen(false);
+      setReason("");
+      onReported();
+    } catch {
+      setError("The report couldn't be sent. Try again.");
+    } finally {
+      setPending(false);
+    }
+  }
+
+  return (
+    <div className="mt-2 space-y-2" data-testid="report-reservation">
+      <Label htmlFor={fieldId} className="text-xs">
+        Why can&apos;t it be provided?
+      </Label>
+      <Textarea
+        id={fieldId}
+        value={reason}
+        onChange={(e) => setReason(e.target.value)}
+        aria-invalid={error ? true : undefined}
+        aria-describedby={error ? `${fieldId}-error` : undefined}
+        rows={2}
+        maxLength={500}
+      />
+      <FieldError id={`${fieldId}-error`} messages={error ? [error] : undefined} />
+      <div className="flex gap-2">
+        <Button
+          type="button"
+          size="sm"
+          onClick={submit}
+          disabled={pending || reason.trim() === ""}
+        >
+          {pending ? "Reporting…" : "Report"}
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          onClick={() => {
+            setOpen(false);
+            setError(null);
+          }}
+          disabled={pending}
+        >
+          Cancel
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function CommitmentRow({
+  entry,
+  tone,
+  onReported,
+}: {
+  entry: ScheduleEntry;
+  tone: Tone;
+  onReported?: () => void;
+}) {
   return (
     <li
       data-testid="schedule-entry"
@@ -128,6 +242,38 @@ function CommitmentRow({ entry, tone }: { entry: ScheduleEntry; tone: Tone }) {
         {formatDateTime(entry.startAt)} → {formatDateTime(entry.endAt)}
       </p>
       {entry.note && <p className="mt-1 text-muted-foreground italic">{entry.note}</p>}
+      {entry.kind === "reservation" && (
+        <>
+          {/* SCRUM-131 AC2, AC3 — the schedule lists only CONFIRMED
+              reservations, shown as Reserved; a flag is a badge beside that
+              status, never in its place. */}
+          <p className="mt-2 font-medium text-foreground" data-testid="reservation-status">
+            {RESERVATION_STATUS_LABEL.CONFIRMED}
+            {entry.needsReconsideration && (
+              <>
+                {" "}
+                <span
+                  data-testid="needs-reconsideration"
+                  className={cn(
+                    badgeVariants({ variant: "warning" }),
+                    "gap-1 px-2 py-0 align-middle",
+                  )}
+                >
+                  <AlertTriangle aria-hidden="true" className="h-3 w-3" />
+                  {NEEDS_RECONSIDERATION}
+                </span>
+              </>
+            )}
+          </p>
+          {entry.needsReconsideration ? (
+            <p className="mt-1 text-muted-foreground" data-testid="reported-reservation">
+              Waiting for the event&apos;s Coordinator to decide.
+            </p>
+          ) : (
+            onReported && <ReportReservation reservationId={entry.id} onReported={onReported} />
+          )}
+        </>
+      )}
     </li>
   );
 }
@@ -155,12 +301,15 @@ export function RequestedPeriodCommitments({
   totalQuantity,
   period,
   verdict,
+  onReported,
 }: {
   state: ScheduleState;
   equipmentType: string;
   totalQuantity: number;
   period: Period | null;
   verdict: AvailabilityVerdict | null;
+  /** SCRUM-32: given only to those who may report a reservation. */
+  onReported?: () => void;
 }) {
   // `aria-live` rather than `role="status"`: the reservation panel above owns
   // the page's status role, and a second one would make "the status message"
@@ -227,7 +376,7 @@ export function RequestedPeriodCommitments({
           </p>
           <ul className="space-y-2">
             {during.map((entry) => (
-              <CommitmentRow key={entry.id} entry={entry} tone={tone} />
+              <CommitmentRow key={entry.id} entry={entry} tone={tone} onReported={onReported} />
             ))}
           </ul>
         </>
@@ -246,10 +395,13 @@ export function OtherCommitments({
   state,
   equipmentType,
   period,
+  onReported,
 }: {
   state: ScheduleState;
   equipmentType: string;
   period: Period | null;
+  /** SCRUM-32: given only to those who may report a reservation. */
+  onReported?: () => void;
 }) {
   // Loading and errors are shown once, in the requested-period section.
   if (!state.schedule) return null;
@@ -279,7 +431,7 @@ export function OtherCommitments({
       ) : (
         <ul className="space-y-2">
           {other.map((entry) => (
-            <CommitmentRow key={entry.id} entry={entry} tone="neutral" />
+            <CommitmentRow key={entry.id} entry={entry} tone="neutral" onReported={onReported} />
           ))}
         </ul>
       )}

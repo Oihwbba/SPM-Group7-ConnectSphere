@@ -38,15 +38,17 @@ status, one assigned Coordinator, and arrangements that can't clash.
 | Role | Internal? | What they do in the system | Lands on |
 |---|---|---|---|
 | **Event Organiser** | External client | Creates event requests (as drafts first), submits them, answers the Coordinator's clarification questions, asks for changes or for cancellation once a Coordinator has the request (SCRUM-41), and follows their own events. Sees only their own events. | My Events |
-| **Event Coordinator** | ConnectSphere staff | Is assigned to a submitted request automatically (until SCRUM-165, when new requests go to the Lead's unassigned queue instead, per Week 7 change 5), reviews it, asks for clarification, approves or rejects it, requests a venue and equipment, and confirms the event once the arrangements are complete. Sees the events assigned to them, and submitted ones nobody is assigned to yet. | Events |
+| **Event Coordinator** | ConnectSphere staff | Is assigned a submitted request by the Lead (SCRUM-165, Week 7 change 5), reviews it, asks for clarification, approves or rejects it, requests a venue and equipment, and confirms the event once the arrangements are complete. Acts on the events assigned to them; unassigned requests wait in the Lead's queue. Sees every other event read-only on All Events (SCRUM-141), as Venue Staff and Technical Support do. | Events |
 | **Venue Staff** | ConnectSphere staff | Reviews venue booking requests and approves or rejects them, and records when a venue is unavailable (maintenance, equipment failure, renovation, a safety concern, or another reason). | Bookings |
 | **Technical Support Staff** | ConnectSphere staff | Reviews equipment requests, checks equipment availability, and reserves what was approved. | Equipment |
 | **Attendee** | External | Browses events open for registration, registers, and sees their own registrations. Never sees internal planning information. | Browse Events |
-| **Event Coordinator Lead** | ConnectSphere staff | Will review new requests' basic details in an unassigned queue, assign each to a Coordinator and reassign where needed (SCRUM-165, SCRUM-21), and see every Coordinator's assignments and active events (SCRUM-141). Can't approve or reject a request, or confirm, plan or edit an event. The role exists since SCRUM-172; until SCRUM-164 and SCRUM-165 land it only reads its own notifications. | Notifications |
-| **Safety Officer** | ConnectSphere staff | Will review an event's venue and equipment arrangements before it can be confirmed, and approve, reject or request changes on that safety check (SCRUM-166). Can't confirm, plan or edit the event: its approval doesn't confirm it; the Coordinator still does (SCRUM-166 AC14). The role exists since SCRUM-172; until SCRUM-164 and SCRUM-166 land it only reads its own notifications. | Notifications |
+| **Event Coordinator Lead** | ConnectSphere staff | Reviews new requests' basic details in the Unassigned queue and assigns each to a Coordinator, becoming its supervising Lead (SCRUM-165); will reassign where needed (SCRUM-21) and sees every event with each Coordinator's active events on the All Events list (SCRUM-141). Can't approve or reject a request, or confirm, plan or edit an event. The role exists since SCRUM-172. | Unassigned Queue |
+| **Safety Officer** | ConnectSphere staff | Reviews an event's venue and equipment arrangements before it can be confirmed, and approves, rejects or requests changes on that safety check (SCRUM-166). Can't confirm, plan or edit the event: its approval doesn't confirm it; the Coordinator still does (SCRUM-166 AC14). | Safety Checks |
 
-Each account has one role today. The customer has said an account may hold
-several, which is in the backlog (SCRUM-121).
+An account has a primary role and may hold others (SCRUM-121): its
+permissions and navigation are those of every role held, and the events page
+switches between the views of its roles. Nobody decides a venue booking or
+reviews or reserves equipment for an event they organise or coordinate.
 
 What each role may do is one table, `ROLE_ACTIONS` in `lib/auth/can.ts`, and
 every page and action checks it on the server (ADR 0004). An event you aren't
@@ -58,7 +60,7 @@ related to looks exactly like one that doesn't exist (SCRUM-68).
 stateDiagram-v2
     [*] --> DRAFT: Organiser saves
     DRAFT --> SUBMITTED: Organiser submits
-    SUBMITTED --> UNDER_REVIEW: a Coordinator is assigned (automatically today; by the Lead from SCRUM-165)
+    SUBMITTED --> UNDER_REVIEW: the Lead assigns a Coordinator (SCRUM-165)
     SUBMITTED --> PLANNING: Coordinator approves
     UNDER_REVIEW --> PLANNING: Coordinator approves
     SUBMITTED --> REJECTED: Coordinator rejects
@@ -79,18 +81,20 @@ row lock (ADR 0006 for the Coordinator's decision).
 | Step | What happens | Stories, ADRs |
 |---|---|---|
 | **Draft → Submitted** | The Organiser can save an incomplete request and finish it later. Submitting needs every required field. | SCRUM-13, 14, 15 |
-| **Assignment** | Submitting assigns a Coordinator automatically and moves the request to Under Review. There is no manual claim step. Week 7 change 5 replaces this: a new request will wait in the Lead's unassigned queue until the Lead assigns it, and the Lead can reassign it later. Not built yet. | SCRUM-20; SCRUM-165, 21 |
+| **Assignment** | A new request waits in the Lead's Unassigned queue (oldest first) until a Lead assigns a Coordinator, which moves it to Under Review in the same step; the least-loaded Coordinator is suggested (Week 7 change 5). Reassignment by the Lead is SCRUM-21, not built yet. SCRUM-20's automatic assignment is superseded. | SCRUM-165; SCRUM-21 |
 | **Review** | The Coordinator can ask the Organiser a question and name the fields the answer may change. While a question is open the event stays Under Review; "awaiting clarification" is shown, not stored as a status. | SCRUM-17, 18, 108, ADR 0014 |
 | **Approve** | Approval moves the event straight to **Planning**: "Approved means there is enough information to start planning." Approved is recorded in the history but never stored on its own. | SCRUM-19, 81, ADR 0012 |
 | **Reject** | A rejection always has a reason and an outcome chosen by the Coordinator: **amend and resubmit** (back to the same Coordinator) or **submit as a new request** (a copy starts as a new Draft). | SCRUM-19, 126, 108, ADR 0013 |
-| **Planning** | The Coordinator books one venue and raises one equipment request. Venue Staff and Technical Support decide them. A Planning event that can't be fulfilled is rejected, and its bookings and reservations are released in the same step. Week 7 changes 3 and 4 add more: an event will be able to book several venues, and Venue Staff will be able to hold a venue until a deadline instead of approving it. Neither is built yet. Until the event is Confirmed, the Organiser can ask for changes through a change request (SCRUM-41), which the Coordinator decides and applies (SCRUM-128). | SCRUM-50, 53, 27, 28, 117, ADR 0015; SCRUM-162, 163, 41, 128 |
+| **Planning** | The Coordinator books one venue and raises one equipment request. Venue Staff and Technical Support decide them. A Planning event that can't be fulfilled is rejected, and its bookings and reservations are released in the same step. Since Week 7 an event can book several venues, each requested and decided on its own (SCRUM-162), and Venue Staff can hold a venue until a deadline instead of approving it (SCRUM-163). Until the event is Confirmed, the Organiser can ask for changes through a change request (SCRUM-41), which the Coordinator decides and applies (SCRUM-128). | SCRUM-50, 53, 27, 28, 117, ADR 0015; SCRUM-162, 163, 41, 128 |
 | **Confirm** | A readiness checklist shows what is still missing (the venue, and the equipment if any was requested). When it is complete, only the assigned Coordinator can confirm: "Confirmed means the essential arrangements are complete." Week 7 change 6 adds a step: the Safety Officer must approve the event's safety check before it can be confirmed. Not built yet. | SCRUM-110, 81, ADR 0011, 0012; SCRUM-166 |
 | **Registration** | Attendees register for an event open for registration, up to its expected attendance, within its registration period. | SCRUM-72 to 77 |
 
 ### Venue and equipment, step by step
 
 - **A venue** is requested by the Coordinator for the event's period and
-  decided by Venue Staff. An event has one venue (several from SCRUM-162). An
+  decided by Venue Staff. An event can book several venues, each with its own
+  attendance and needs, and is ready only when every one is approved
+  (SCRUM-162). An
   approved booking blocks the venue for that period, and the database refuses
   a clash, even when two approvals happen at the same instant (SCRUM-50, 53,
   ADR 0010).
@@ -172,7 +176,7 @@ these unless the backlog brings them back:
 | **Event request** | An `Event` row before approval. There is no separate request table. |
 | **Booking** | A **venue** for an event's period. Pending, then Approved or Rejected by Venue Staff; Cancelled when its event is rejected from Planning (SCRUM-117). Venue Staff can instead hold it until a deadline: it blocks the venue like an approved booking until then, and Expired after. Venue Staff approve the hold, and only then does its Coordinator confirm it (Approved); the Coordinator can release it (Cancelled) before it expires (SCRUM-163). |
 | **Equipment request** | What the Coordinator asks for: lines of equipment type and quantity. Approving it holds no stock. |
-| **Reservation** | **Equipment** actually held for an event's period. Stored as `CONFIRMED`; SCRUM-131 will show it as **Reserved** everywhere, so it isn't confused with an event's Confirmed status. The readiness checklist already says Reserved. |
+| **Reservation** | **Equipment** actually held for an event's period. Stored as `CONFIRMED` and shown as **Reserved** everywhere (SCRUM-131), so it isn't confused with an event's Confirmed status. |
 | **Planning** | The status after approval, while the venue and equipment are arranged. |
 | **Confirmed** | The event's arrangements are complete. Only the assigned Coordinator can confirm. |
 

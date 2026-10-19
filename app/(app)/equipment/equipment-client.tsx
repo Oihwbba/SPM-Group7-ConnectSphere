@@ -134,10 +134,13 @@ export function EquipmentClient({
   equipment,
   requests,
   canReserve,
+  canReport,
 }: {
   equipment: Equipment[];
   requests: ReservableRequest[];
   canReserve: boolean;
+  /** SCRUM-32: may report a reservation that can no longer be provided. */
+  canReport: boolean;
 }) {
   const isHydrated = useSyncExternalStore(emptySubscribe, () => true, () => false);
 
@@ -678,6 +681,7 @@ export function EquipmentClient({
               totalQuantity={selectedEquipment.totalQuantity}
               period={requestedPeriod}
               verdict={verdict}
+              onReported={canReport ? () => setRefresh((n) => n + 1) : undefined}
             />
           )}
 
@@ -748,6 +752,7 @@ export function EquipmentClient({
               state={scheduleState}
               equipmentType={selectedEquipment.type}
               period={requestedPeriod}
+              onReported={canReport ? () => setRefresh((n) => n + 1) : undefined}
             />
           )}
         </CardContent>

@@ -202,7 +202,7 @@ shown in Singapore time and stored in UTC.
 | Test Data | Reason "The venue can't be secured.", outcome Amend and resubmit |
 | Expected Result | The hold is `CANCELLED` and its notices still to come are withdrawn. A lapsed hold is left Expired. |
 
-**Automated by:** `tests/integration/holds.test.ts` › "SCRUM-163 [AC9] TC-163-13: rejecting the event releases its live hold and withdraws its notices still to come"; `tests/unit/reject-planning.test.ts` › "SCRUM-117 [AC3] TC-117-03: …". Unavailability recorded over a hold flags it, and it stays Held (`tests/integration/unavailability.test.ts` › "SCRUM-161 [AC3] TC-161-04: pending, held and approved bookings are all flagged, and their status, times and events don't change"). **Still to do:** cancelling the event releases its holds once SCRUM-82 builds cancelling.
+**Automated by:** `tests/integration/holds.test.ts` › "SCRUM-163 [AC9] TC-163-13: rejecting the event releases its live hold and withdraws its notices still to come"; `tests/unit/reject-planning.test.ts` › "SCRUM-117 [AC3] TC-117-03: …". Unavailability recorded over a hold flags it, and it stays Held (`tests/integration/unavailability.test.ts` › "SCRUM-161 [AC3] TC-161-04: pending, held and approved bookings are all flagged, and their status, times and events don't change"). Cancelling the event releases its holds too (SCRUM-82): `tests/integration/close-event.test.ts` › "SCRUM-82 [AC3, AC6] TC-82-04: cancelling releases the booking, the hold, the reservation and its stock, the equipment request, the registration, the awaiting safety check and the change request together, and withdraws the notices written ahead".
 
 ### TC-163-14
 

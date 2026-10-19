@@ -485,7 +485,7 @@ describe("recordUnavailability — over existing bookings (SCRUM-161)", () => {
     });
     // SCRUM-124 AC8: every Venue Staff member, once per flagged booking.
     expect(db.user.findMany).toHaveBeenCalledWith({
-      where: { role: "VENUE_STAFF" },
+      where: { OR: [{ role: "VENUE_STAFF" }, { additionalRoles: { has: "VENUE_STAFF" } }] },
       select: { id: true },
     });
     expect(db.notification.createMany).toHaveBeenNthCalledWith(2, {

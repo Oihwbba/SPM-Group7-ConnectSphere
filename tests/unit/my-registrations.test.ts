@@ -62,14 +62,20 @@ describe("getMyRegistrations — SCRUM-76", () => {
     });
   });
 
-  it("[Positive] AC1: with two approved bookings, the venue shown is the one in use when the event starts", async () => {
+  it("SCRUM-162 [AC7], SCRUM-85 [AC8] TC-85-06: every approved venue is read, in the order requested, with what was last confirmed for an event being re-planned", async () => {
     mockAuth.mockResolvedValue(sessionFor("ATTENDEE", "usr_attendee"));
 
     await getMyRegistrations();
 
-    const { bookings } = mockFindMany.mock.calls[0][0].select.event.select;
-    expect(bookings.orderBy).toEqual({ startAt: "asc" });
-    expect(bookings.take).toBe(1);
+    const { select } = mockFindMany.mock.calls[0][0].select.event;
+    expect(select.bookings.orderBy).toEqual({ createdAt: "asc" });
+    expect(select.bookings).not.toHaveProperty("take");
+    expect(select).toMatchObject({
+      status: true,
+      confirmedStartAt: true,
+      confirmedEndAt: true,
+      confirmedVenues: true,
+    });
   });
 
   it("[Positive] AC4: event details are read live from the event, not from a copy on the registration", async () => {

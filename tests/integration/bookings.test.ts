@@ -304,7 +304,7 @@ describe.skipIf(!usesLocalDatabase)(
         expect(await bookingCount()).toBe(1);
       });
 
-      it("SCRUM-50 [AC8] TC-50-08: two identical requests submitted at the same instant still leave one", async () => {
+      it("SCRUM-50 [AC8] TC-50-08, SCRUM-162 [AC6] TC-162-10: two identical requests submitted at the same instant still leave one", async () => {
         const results = await Promise.all([
           submitBookingRequest(request()),
           submitBookingRequest(request()),
@@ -316,26 +316,58 @@ describe.skipIf(!usesLocalDatabase)(
         expect(await bookingCount()).toBe(1);
       });
 
-      it("SCRUM-50 [AC1] TC-50-15: a period or attendance that is not the event's is refused and nothing is written", async () => {
+      it("SCRUM-162 [AC4] TC-162-06: a period that doesn't cover the event's whole period is refused against the start, and nothing is written", async () => {
         for (const changed of [
           { startAt: fromStart(1) },
-          { endAt: fromEnd(2) },
+          { endAt: fromEnd(-1) },
           { startAt: fromEnd(0), endAt: fromEnd(2) },
-          { requestedAttendance: attendance - 1 },
-          { requestedAttendance: attendance + 1 },
         ]) {
           const result = await submitBookingRequest(request(changed));
           expect(result).toMatchObject({
             ok: false,
-            error: expect.stringMatching(/must be the event's/),
+            error: expect.stringMatching(/must cover the event's whole period/),
+            fieldErrors: { startAt: [expect.any(String)] },
           });
         }
         expect(await bookingCount()).toBe(0);
       });
 
+      it("SCRUM-162 [AC4] TC-162-05: a longer period that still covers the whole event is accepted", async () => {
+        const result = await submitBookingRequest(
+          request({ startAt: fromStart(-1), endAt: fromEnd(1) }),
+        );
+
+        expect(result.ok && result.data.created).toBe(true);
+        expect(
+          await prisma.booking.findFirstOrThrow({ where: { venueId } }),
+        ).toMatchObject({
+          startAt: new Date(fromStart(-1)),
+          endAt: new Date(fromEnd(1)),
+        });
+      });
+
+      it("SCRUM-162 [AC4] TC-162-07: attendance above the event's is refused; 1, part of the event, is accepted and recorded", async () => {
+        const over = await submitBookingRequest(
+          request({ requestedAttendance: attendance + 1 }),
+        );
+        expect(over).toMatchObject({
+          ok: false,
+          error: `The expected attendance for this venue must be from 1 to the event's ${attendance}.`,
+        });
+        expect(await bookingCount()).toBe(0);
+
+        const one = await submitBookingRequest(
+          request({ requestedAttendance: 1 }),
+        );
+        expect(one.ok && one.data.created).toBe(true);
+        expect(
+          await prisma.booking.findFirstOrThrow({ where: { venueId } }),
+        ).toMatchObject({ requestedAttendance: 1 });
+      });
+
       for (const status of ["PENDING", "APPROVED"] as const) {
-        it(`SCRUM-50 [AC8] TC-50-07: an event with a ${status.toLowerCase()} booking at another venue is shown it, and no request is created`, async () => {
-          const existing = await prisma.booking.create({
+        it(`SCRUM-162 [AC1] TC-162-01: an event with a ${status.toLowerCase()} booking at another venue gets a new request for this one, linked to the same event`, async () => {
+          await prisma.booking.create({
             data: {
               eventId,
               venueId: otherVenueId,
@@ -346,19 +378,81 @@ describe.skipIf(!usesLocalDatabase)(
             },
           });
 
+          const result = await submitBookingRequest(request());
+
+          expect(result.ok && result.data.created).toBe(true);
+          expect(
+            await prisma.booking.findMany({
+              where: { eventId },
+              select: { venueId: true },
+              orderBy: { createdAt: "asc" },
+            }),
+          ).toEqual([{ venueId: otherVenueId }, { venueId }]);
+        });
+      }
+
+      const holdUntil = () => new Date(Date.now() + 24 * HOUR_MS);
+      const liveAtVenue = {
+        PENDING: {},
+        APPROVED: {},
+        HELD: { heldAt: new Date(), holdExpiresAt: holdUntil(), holdNote: "Confirm the layout." },
+      } as const;
+      for (const status of ["PENDING", "HELD", "APPROVED"] as const) {
+        it(`SCRUM-162 [AC2] TC-162-02: an event with a ${status.toLowerCase()} booking at this venue is shown it, and no request is created`, async () => {
+          const existing = await prisma.booking.create({
+            data: {
+              eventId,
+              venueId,
+              startAt: period.startAt,
+              endAt: period.endAt,
+              status,
+              requestedById: "usr_coordinator",
+              ...liveAtVenue[status],
+            },
+          });
+
           const again = await submitBookingRequest(request());
 
           expect(again.ok && again.data.created).toBe(false);
           if (!again.ok) return;
           expect(again.data.booking).toMatchObject({ id: existing.id, status });
-          expect(await bookingCount()).toBe(0);
+          expect(await bookingCount()).toBe(1);
+        });
+      }
+
+      const endedAtVenue = {
+        REJECTED: { decisionReason: "Room closed that week.", decidedById: "usr_venuestaff", decidedAt: new Date() },
+        CANCELLED: {},
+        EXPIRED: {
+          heldAt: new Date(Date.now() - 2 * HOUR_MS),
+          holdExpiresAt: new Date(Date.now() - HOUR_MS),
+          holdNote: "Confirm the layout.",
+        },
+      } as const;
+      for (const status of ["REJECTED", "CANCELLED", "EXPIRED"] as const) {
+        it(`SCRUM-162 [AC2] TC-162-03: a ${status.toLowerCase()} booking at this venue doesn't stop a new request, and is kept`, async () => {
+          await prisma.booking.create({
+            data: {
+              eventId,
+              venueId,
+              startAt: period.startAt,
+              endAt: period.endAt,
+              status,
+              requestedById: "usr_coordinator",
+              ...endedAtVenue[status],
+            },
+          });
+
+          const result = await submitBookingRequest(request());
+
+          expect(result.ok && result.data.created).toBe(true);
+          expect(await bookingCount()).toBe(2);
         });
       }
 
       // Until SCRUM-172 the database held an event to one live booking at any
       // venue. It now holds it to one per venue (SCRUM-162 AC2), so an event
-      // can book several venues; one venue per event (AC8) is the action's
-      // check above until SCRUM-162 replaces it.
+      // can book several venues (SCRUM-162 AC1).
       it("SCRUM-172 [AC9] TC-172-12: the database refuses a second pending, held or approved booking for one event at the same venue, but not at another", async () => {
         const row = (
           venue: string,
@@ -451,14 +545,17 @@ describe.skipIf(!usesLocalDatabase)(
       });
 
       it("SCRUM-50 TC-50-09: the form offers only approved events the coordinator may act on, exactly as can() allows", async () => {
+        const before = new Date();
         const offered = await getBookableEvents("usr_coordinator");
         const ids = offered.map((e) => e.id);
 
         expect(ids).toEqual(
           expect.arrayContaining([APPROVED_EVENT, PLANNING_EVENT]),
         );
+        // Other suites run alongside and may confirm one of these events
+        // after the list was read; only rows unchanged since then are judged.
         const rows = await prisma.event.findMany({
-          where: { id: { in: ids } },
+          where: { id: { in: ids }, updatedAt: { lt: before } },
           select: {
             id: true,
             organiserId: true,
@@ -466,6 +563,9 @@ describe.skipIf(!usesLocalDatabase)(
             status: true,
           },
         });
+        expect(rows.map((row) => row.id)).toEqual(
+          expect.arrayContaining([APPROVED_EVENT, PLANNING_EVENT]),
+        );
         for (const row of rows) {
           expect(
             can(COORDINATOR.user, "booking:request", { kind: "event", ...row }),
@@ -699,6 +799,25 @@ describe.skipIf(!usesLocalDatabase)(
         mockAuth.mockResolvedValue(VENUE_STAFF);
         return result.data.booking.id;
       }
+
+      it("SCRUM-162 [AC3, AC5] TC-162-08: Venue Staff decide each of an event's requests separately; rejecting one leaves the other unchanged", async () => {
+        const kept = await pending({ venueId: otherVenueId });
+        const rejected = await pending();
+
+        const result = await decideBookingRequest({
+          bookingId: rejected,
+          decision: "REJECTED",
+          reason: "Too small for the breakout.",
+        });
+
+        expect(result).toEqual({ ok: true, data: { status: "REJECTED" } });
+        expect(
+          await prisma.booking.findUniqueOrThrow({
+            where: { id: kept },
+            select: { status: true, decidedAt: true },
+          }),
+        ).toEqual({ status: "PENDING", decidedAt: null });
+      });
 
       it("SCRUM-53 [AC1, AC2] TC-53-02: rejecting with a reason saves the rejection, the reason, and an audit entry", async () => {
         const id = await pending();

@@ -351,7 +351,8 @@ test.describe("User Story 16 — Distinguish Drafts from Submitted Requests Jour
     await expect(page.getByRole("cell", { name: draftTitle })).toBeVisible();
     await expect(page.getByRole("cell", { name: submittedTitle })).not.toBeVisible();
 
-    await page.getByRole("button", { name: /Submitted/i }).click();
+    // SCRUM-131 AC1: the tab of every non-draft request is named Sent.
+    await page.getByRole("button", { name: /^Sent \(/ }).click();
     await expect(page.getByRole("cell", { name: submittedTitle })).toBeVisible();
     await expect(page.getByRole("cell", { name: draftTitle })).not.toBeVisible();
 
@@ -766,13 +767,32 @@ const usesLocalDatabase = /@(localhost|127\.0\.0\.1)[:/]/.test(
 );
 
 test.describe("User Story 23 & 24 — Event Status View & Consistency Journey", () => {
-  test.beforeEach(async () => {
+  test.afterAll(async () => {
     if (!usesLocalDatabase) return;
-    // Reset both events used by tests so CI retries stay green
+    // Back to the seed: unassigned and waiting in the Lead's queue.
     await prisma.event.updateMany({
       where: { id: "evt_submitted" },
       data: {
         status: "SUBMITTED",
+        coordinatorId: null,
+        decisionReason: null,
+        decidedAt: null,
+        decidedById: null,
+      },
+    });
+  });
+
+  test.beforeEach(async () => {
+    if (!usesLocalDatabase) return;
+    // Reset both events used by tests so CI retries stay green. Since
+    // SCRUM-165 an unassigned request waits for the Lead, so these journeys
+    // start from "Alumni Homecoming" as the Lead would leave it: assigned to
+    // coordinator@ and not yet decided.
+    await prisma.event.updateMany({
+      where: { id: "evt_submitted" },
+      data: {
+        status: "SUBMITTED",
+        coordinatorId: "usr_coordinator",
         decisionReason: null,
         decidedAt: null,
         decidedById: null,
@@ -782,6 +802,7 @@ test.describe("User Story 23 & 24 — Event Status View & Consistency Journey", 
       where: { id: "evt_under_review" },
       data: {
         status: "UNDER_REVIEW",
+        rejectionOutcome: null,
         decisionReason: null,
         decidedAt: null,
         decidedById: null,
@@ -814,13 +835,15 @@ test.describe("User Story 23 & 24 — Event Status View & Consistency Journey", 
     await expect(detailModal.getByTestId("status-badge")).toHaveAttribute("data-status", "UNDER_REVIEW");
     await page.keyboard.press("Escape");
 
-    // 4. Test status transition & decision validation: Reject a submitted event request
+    // 4. SCRUM-135 AC3, AC4: an unassigned Submitted request offers no
+    // decision; the Under Review one assigned to this Coordinator is rejected.
     const submittedRow = page.getByRole("row", { name: /Submitted — Alumni Homecoming/i });
     await expect(submittedRow).toBeVisible();
     await expect(submittedRow.getByTestId("status-badge")).toHaveAttribute("data-status", "SUBMITTED");
+    await expect(submittedRow.getByRole("button", { name: "Reject", exact: true })).toHaveCount(0);
 
     // Click Reject button
-    await submittedRow.getByRole("button", { name: /Reject/i }).click();
+    await underReviewRow.getByRole("button", { name: "Reject", exact: true }).click();
     const rejectModal = page.getByRole("dialog", { name: /Reject event request/i });
     await expect(rejectModal).toBeVisible();
 
@@ -837,8 +860,8 @@ test.describe("User Story 23 & 24 — Event Status View & Consistency Journey", 
     await submitRejectBtn.click();
 
     // 5. Verify updated status is consistent across list and detail views
-    await expect(submittedRow.getByTestId("status-badge")).toHaveAttribute("data-status", "REJECTED");
-    await submittedRow.getByRole("button", { name: /View Details|Details/i }).click();
+    await expect(underReviewRow.getByTestId("status-badge")).toHaveAttribute("data-status", "REJECTED");
+    await underReviewRow.getByRole("button", { name: /View Details|Details/i }).click();
     await expect(detailModal).toBeVisible();
     await expect(detailModal.getByTestId("status-badge")).toHaveAttribute("data-status", "REJECTED");
   });
@@ -875,8 +898,8 @@ test.describe("User Story 23 & 24 — Event Status View & Consistency Journey", 
   test("two users viewing the same event simultaneously see consistent live status without manual refresh (SCRUM-24)", async ({
     browser,
   }) => {
-    // Reads the coordinator this request was auto-assigned to, so it needs the
-    // local database the other write-heavy tests use.
+    // Assigns its own event the way the Lead would, so it needs the local
+    // database the other write-heavy tests use.
     test.skip(!usesLocalDatabase, "reads its own event; local database only");
 
     // 1. Sign in as Organiser in first browser context
@@ -917,12 +940,21 @@ test.describe("User Story 23 & 24 — Event Status View & Consistency Journey", 
 
     await organiserPage.getByRole("button", { name: /Submit Request for Review/i }).click();
 
-    // Verify the submitted event appears on the Organiser's table. SCRUM-20
-    // auto-assigns a coordinator on submission, so a freshly submitted request
-    // is already UNDER_REVIEW whenever a coordinator exists (the seed has one).
+    // Verify the submitted event appears on the Organiser's table. Since
+    // SCRUM-165 it waits, Submitted, in the Lead's Unassigned queue.
     const organiserRow = organiserPage.getByRole("row", { name: new RegExp(syncEventName) });
     await expect(organiserRow).toBeVisible();
-    await expect(organiserRow.getByTestId("status-badge")).toHaveAttribute("data-status", "UNDER_REVIEW");
+    await expect(organiserRow.getByTestId("status-badge")).toHaveAttribute("data-status", "SUBMITTED");
+
+    // The Lead assigns it to coordinator@ (SCRUM-165, covered end to end in
+    // e2e/lead-queue.spec.ts); the Organiser's table picks it up unprompted.
+    await prisma.event.updateMany({
+      where: { name: syncEventName },
+      data: { coordinatorId: "usr_coordinator", status: "UNDER_REVIEW" },
+    });
+    await expect(organiserRow.getByTestId("status-badge")).toHaveAttribute("data-status", "UNDER_REVIEW", {
+      timeout: 12000,
+    });
 
     // Organiser opens the EventDetailsModal to view submitted request specifications
     await organiserRow.getByTestId("view-details-button").click();
@@ -930,16 +962,8 @@ test.describe("User Story 23 & 24 — Event Status View & Consistency Journey", 
     await expect(organiserModal).toBeVisible();
     await expect(organiserModal.getByTestId("status-badge")).toHaveAttribute("data-status", "UNDER_REVIEW");
 
-    // 3. Sign in as the coordinator the request was actually assigned to.
-    //    SCRUM-20 assigns the least-loaded coordinator, and the seed has two,
-    //    so hard-coding one of them makes this test a coin flip: the other
-    //    coordinator does not see an event already assigned away from them.
-    const assignment = await prisma.event.findFirst({
-      where: { name: syncEventName },
-      select: { coordinator: { select: { email: true } } },
-    });
-    const coordinatorEmail =
-      assignment?.coordinator?.email ?? "coordinator@test.local";
+    // 3. Sign in as the coordinator the request was assigned to.
+    const coordinatorEmail = "coordinator@test.local";
 
     const coordinatorContext = await browser.newContext();
     const coordinatorPage = await coordinatorContext.newPage();

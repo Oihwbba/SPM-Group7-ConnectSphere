@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-09. Jira is the source of truth.
+     Synced from Jira on 2026-10-18. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-162 - Book several venues for one event
@@ -28,6 +28,7 @@
 6. Given two requests for the same venue and event are submitted at the same moment, then only one is created.
 7. The event page lists every booking with its venue, attendance and status. Once the event is Confirmed, the Organiser sees every Approved venue (SCRUM-81), and Attendees see the name and location of every Approved venue (SCRUM-72).
 8. The readiness checklist's Venue item (SCRUM-110) lists each booking and is complete only when at least one booking is Approved, none is Pending or Held, every Approved booking covers the event's period, and none is flagged.
+9. Each request records, for that venue, the attendance, required facilities, accessibility features and layout, entered by the Coordinator.
 
 **Supersedes:** SCRUM-50 AC1 (attendance fixed to the event's) and AC8 (one venue per event), SCRUM-72 AC2, SCRUM-81 AC6, SCRUM-110 AC1–AC2, and SCRUM-117 AC3 (one booking released).
 
@@ -38,5 +39,6 @@
 **Change log**
 
 * 2026-10-07 (Week 7 change 3): created.
+* 2026-10-16 (W9 clarifications, `PO approved`): AC9 added. Each venue request records its own attendance, required facilities, accessibility features and layout, so a replacement room keeps needs such as wheelchair access (accessibility counts for suitability per G4, and the safety check shows it per venue, SCRUM-166 AC2). A separate capacity refusal isn't needed; SCRUM-50 AC6 already covers it.
 
 Functionality Area: Venue Booking Request, Venue Suitability Checking, Booking Conflict Detection

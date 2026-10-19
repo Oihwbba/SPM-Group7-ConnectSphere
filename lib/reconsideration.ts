@@ -3,6 +3,8 @@ import type { BookingStatus, Prisma, PrismaClient } from "@prisma/client";
 import { liveHoldWhere } from "@/lib/booking-holds";
 import { formatDateTime } from "@/lib/datetime";
 import { LIVE_LINE } from "@/lib/equipment/requests";
+import { notifyRole } from "@/lib/staff-notifications";
+import { BOOKING_STATUS_LABEL } from "@/lib/status-labels";
 import {
   describeBlocker,
   findVenueBlockers,
@@ -39,15 +41,6 @@ export function liveBookingWhere(now: Date): Prisma.BookingWhereInput {
 export function flaggedLiveBookingWhere(now: Date): Prisma.BookingWhereInput {
   return { needsReconsideration: true, ...liveBookingWhere(now) };
 }
-
-const BOOKING_STATUS_LABEL: Record<BookingStatus, string> = {
-  PENDING: "Pending",
-  HELD: "Held",
-  APPROVED: "Approved",
-  REJECTED: "Rejected",
-  CANCELLED: "Cancelled",
-  EXPIRED: "Expired",
-};
 
 /**
  * AC1, SCRUM-25 AC3 — the event fields whose change flags its arrangements:
@@ -167,12 +160,18 @@ export type FlagTarget =
  * times, so an arrangement keeps its original period after the event moves
  * (AC6). An arrangement already flagged keeps its first reason; it is waiting
  * for the Coordinator either way, and Still stands re-checks everything.
+ *
+ * SCRUM-124 AC8 — the people responsible are told in the same transaction
+ * (`notifyFlagged`). `actorId` is whoever raised the flag: an event's
+ * Coordinator who flagged their own arrangements isn't told what they just
+ * did.
  */
 export async function flagArrangements(
   tx: Prisma.TransactionClient,
   target: FlagTarget,
   reason: string,
   now: Date = new Date(),
+  actorId?: string,
 ): Promise<{ bookings: number; reservations: number }> {
   const [bookingScope, reservationScope] =
     "eventId" in target
@@ -186,19 +185,108 @@ export async function flagArrangements(
     reconsiderationResolvedById: null,
   };
 
-  const bookings = await tx.booking.updateMany({
+  const bookings = await tx.booking.updateManyAndReturn({
     where: {
       ...bookingScope,
       ...liveBookingWhere(now),
       needsReconsideration: false,
     },
     data: flag,
+    select: { id: true, eventId: true, status: true, venue: { select: { name: true } } },
   });
-  const reservations = await tx.reservation.updateMany({
+  const reservations = await tx.reservation.updateManyAndReturn({
     where: { ...reservationScope, status: "CONFIRMED", needsReconsideration: false },
     data: flag,
+    select: {
+      id: true,
+      eventId: true,
+      quantity: true,
+      equipment: { select: { type: true } },
+    },
   });
-  return { bookings: bookings.count, reservations: reservations.count };
+  await notifyFlagged(
+    tx,
+    [
+      ...bookings.map((b) => ({ eventId: b.eventId, arrangement: bookingArrangement(b) })),
+      ...reservations.map((r) => ({
+        eventId: r.eventId,
+        arrangement: reservationArrangement(r),
+      })),
+    ],
+    reason,
+    actorId,
+  );
+  return { bookings: bookings.length, reservations: reservations.length };
+}
+
+/** "A", "A and B", "A, B and C". */
+function listed(labels: string[]): string {
+  return labels.length === 1
+    ? labels[0]
+    : `${labels.slice(0, -1).join(", ")} and ${labels[labels.length - 1]}`;
+}
+
+/**
+ * SCRUM-124 AC8, AC12–AC14 — one notice per person for each event whose
+ * arrangements were just flagged: its assigned Coordinator, with every
+ * arrangement and the reason; every Venue Staff member, with its bookings;
+ * every Technical Support member, with its reservations. Only arrangements
+ * this call flagged are named, so flagging again tells nobody twice.
+ */
+async function notifyFlagged(
+  tx: Prisma.TransactionClient,
+  flagged: { eventId: string; arrangement: Arrangement }[],
+  reason: string,
+  actorId: string | undefined,
+) {
+  if (flagged.length === 0) return;
+  const events = await tx.event.findMany({
+    where: { id: { in: [...new Set(flagged.map((f) => f.eventId))] } },
+    select: { id: true, name: true, coordinatorId: true },
+  });
+  for (const event of events) {
+    const mine = flagged.filter((f) => f.eventId === event.id).map((f) => f.arrangement);
+    // Staff are also told that it now waits for the Coordinator.
+    const sentence = (arrangements: Arrangement[], staff: boolean) => {
+      const one = arrangements.length === 1;
+      const waiting = staff
+        ? `, and ${one ? "waits" : "wait"} for the event's Coordinator to decide`
+        : "";
+      return `${listed(arrangements.map((a) => a.label))} for "${event.name}" ${
+        one ? "needs" : "need"
+      } reconsideration${waiting}. ${reason}`;
+    };
+
+    if (event.coordinatorId && event.coordinatorId !== actorId) {
+      await tx.notification.create({
+        data: {
+          userId: event.coordinatorId,
+          eventId: event.id,
+          type: "ARRANGEMENT_FLAGGED",
+          title: "Arrangements flagged for reconsideration",
+          message: sentence(mine, false),
+        },
+      });
+    }
+    const bookings = mine.filter((a) => a.kind === "booking");
+    if (bookings.length > 0) {
+      await notifyRole(tx, "VENUE_STAFF", event, {
+        type: "ARRANGEMENT_FLAGGED",
+        title: "Bookings flagged for reconsideration",
+        message: sentence(bookings, true),
+        link: "/bookings",
+      });
+    }
+    const reservations = mine.filter((a) => a.kind === "reservation");
+    if (reservations.length > 0) {
+      await notifyRole(tx, "TECH_SUPPORT", event, {
+        type: "ARRANGEMENT_FLAGGED",
+        title: "Reservations flagged for reconsideration",
+        message: sentence(reservations, true),
+        link: "/equipment",
+      });
+    }
+  }
 }
 
 /** The event as Still stands judges it (AC8). */

@@ -16,10 +16,11 @@ import {
   EVENT_NOT_SCHEDULED_MESSAGE,
   eventBookingPeriod,
   holdExpiryMessage,
+  attendanceOverEventMessage,
+  coversEventPeriod,
   holdSettlementSchema,
   INVALID_PERIOD_MESSAGE,
-  notEventAttendanceMessage,
-  notEventPeriodMessage,
+  notCoveringEventMessage,
   overCapacityMessage,
   PAST_START_MESSAGE,
   venueAvailabilityQuerySchema,
@@ -38,9 +39,11 @@ import {
 import { formatDateTime } from "@/lib/datetime";
 import {
   describeBlocker,
+  findCompetingRequests,
   findVenueBlockers,
   lockVenueTimes,
   occupiedPeriod,
+  submittedBefore,
   type SetupTurnaround,
 } from "@/lib/venue-availability";
 import { outdateSafetyChecks } from "@/lib/safety-checks";
@@ -114,7 +117,7 @@ export type BookingSummary = {
 };
 
 /**
- * The bookings that hold an event's one venue (SCRUM-50 AC8). A Held one
+ * The bookings that hold a venue for an event (SCRUM-162 AC2). A Held one
  * counts too, as it does in booking_one_per_venue_per_event (SCRUM-172), but
  * only until its expiry: after that the Coordinator makes a new request
  * (SCRUM-163 AC4), even before anything has marked the hold Expired.
@@ -208,13 +211,15 @@ export async function checkVenueAvailability(
  *
  * - An invalid period, or one starting in the past, is refused before
  *   anything else (AC5).
- * - Each event has one venue: if the event already has a Pending or
- *   Approved booking, for any venue, nothing is created and that booking is
- *   returned (AC8). A Rejected or Cancelled one does not count, so asking
- *   again after it creates a new booking and keeps the old one (AC9).
- * - The period must be the event's (rounded out to the half hour) and the
- *   attendance the event's expected attendance; anything else is refused
- *   (AC1). An event without dates or attendance cannot be booked yet.
+ * - An event can book several venues (SCRUM-162 AC1). If it already has a
+ *   Pending, Held or Approved booking at this venue, nothing is created and
+ *   that booking is returned (SCRUM-162 AC2). A Rejected, Expired or
+ *   Cancelled one does not count, so asking again after it creates a new
+ *   booking and keeps the old one (AC9).
+ * - The period must cover the event's whole period (rounded out to the half
+ *   hour), and the attendance is a whole number from 1 to the event's
+ *   expected attendance; anything else is refused (SCRUM-162 AC4). An event
+ *   without dates or attendance cannot be booked yet.
  * - Expected attendance above the venue's capacity is refused.
  * - A venue that is approved-booked or unavailable for any part of the period
  *   refuses the request outright — no row is written (AC3). Touching at an
@@ -258,6 +263,7 @@ export async function submitBookingRequest(
     const event = await prisma.event.findUnique({
       where: { id: data.eventId },
       select: {
+        name: true,
         organiserId: true,
         coordinatorId: true,
         status: true,
@@ -275,30 +281,31 @@ export async function submitBookingRequest(
       return err("A venue can only be requested for an approved event.");
     }
 
-    const existingForEvent = () =>
+    const existingAtVenue = () =>
       prisma.booking.findFirst({
-        where: { eventId: data.eventId, ...eventVenueWhere(new Date()) },
+        where: {
+          eventId: data.eventId,
+          venueId: data.venueId,
+          ...eventVenueWhere(new Date()),
+        },
         select: summarySelect,
       });
 
-    const existing = await existingForEvent();
+    const existing = await existingAtVenue();
     if (existing) return ok({ booking: toSummary(existing), created: false });
 
-    // AC1: the booking covers the event's period and its expected attendance,
-    // not values the Coordinator chose.
+    // SCRUM-162 AC4: the venue holds the whole event, for some or all of its
+    // attendance.
     const eventPeriod = eventBookingPeriod(event);
     if (!eventPeriod || event.expectedAttendance === null) {
       return err(EVENT_NOT_SCHEDULED_MESSAGE);
     }
-    if (
-      period.startAt.getTime() !== eventPeriod.startAt.getTime() ||
-      period.endAt.getTime() !== eventPeriod.endAt.getTime()
-    ) {
-      const message = notEventPeriodMessage(eventPeriod);
+    if (!coversEventPeriod(period, eventPeriod)) {
+      const message = notCoveringEventMessage(eventPeriod);
       return err(message, { startAt: [message] });
     }
-    if (data.requestedAttendance !== event.expectedAttendance) {
-      const message = notEventAttendanceMessage(event.expectedAttendance);
+    if (data.requestedAttendance > event.expectedAttendance) {
+      const message = attendanceOverEventMessage(event.expectedAttendance);
       return err(message, { requestedAttendance: [message] });
     }
 
@@ -337,21 +344,33 @@ export async function submitBookingRequest(
     }
 
     try {
+      // SCRUM-124 AC1, AC14: Venue Staff are told in the same transaction, so
+      // a request the database refuses below tells nobody.
       const created = await onceMoreOnDeadlock(() =>
-        prisma.booking.create({
-          data: {
-            eventId: data.eventId,
-            venueId: data.venueId,
-            startAt: period.startAt,
-            endAt: period.endAt,
-            status: "PENDING",
-            requestedAttendance: data.requestedAttendance,
-            requiredFacilities: data.requiredFacilities,
-            requestedLayout: data.requestedLayout || null,
-            requestNotes: data.requestNotes || null,
-            requestedById: user!.id,
-          },
-          select: summarySelect,
+        prisma.$transaction(async (tx) => {
+          const booking = await tx.booking.create({
+            data: {
+              eventId: data.eventId,
+              venueId: data.venueId,
+              startAt: period.startAt,
+              endAt: period.endAt,
+              status: "PENDING",
+              requestedAttendance: data.requestedAttendance,
+              requiredFacilities: data.requiredFacilities,
+              requiredAccessibilityFeatures: data.requiredAccessibilityFeatures,
+              requestedLayout: data.requestedLayout || null,
+              requestNotes: data.requestNotes || null,
+              requestedById: user!.id,
+            },
+            select: summarySelect,
+          });
+          await notifyRole(tx, "VENUE_STAFF", { id: data.eventId }, {
+            type: "BOOKING_REQUESTED",
+            title: "A venue was requested",
+            message: `The Coordinator requested ${venue.name} for "${event.name}", ${formatDateTime(period.startAt)} to ${formatDateTime(period.endAt)}, for ${data.requestedAttendance} attendees.`,
+            link: "/bookings",
+          });
+          return booking;
         }),
       );
       revalidatePath("/bookings");
@@ -363,7 +382,7 @@ export async function submitBookingRequest(
       if (!violatesExclusion(error, "booking_one_per_venue_per_event")) {
         throw error;
       }
-      const winner = await existingForEvent();
+      const winner = await existingAtVenue();
       if (!winner) throw error;
       return ok({ booking: toSummary(winner), created: false });
     }
@@ -387,7 +406,32 @@ const venueSelect = {
     select: { name: true, isActive: true, ...venueTimesSelect, ...openingHoursSelect },
   },
   needsReconsideration: true,
+  createdAt: true,
 } as const;
+
+/**
+ * SCRUM-134 AC2 — why a Pending request can't be approved or held yet: an
+ * earlier Pending request for the same venue overlaps it, and is decided
+ * first. Null when there is none. Rejecting is never checked (AC6).
+ */
+async function earlierRequestRefusal(
+  tx: Prisma.TransactionClient,
+  booking: {
+    id: string;
+    venueId: string;
+    startAt: Date;
+    endAt: Date;
+    createdAt: Date;
+    venue: { name: string; setupMinutes: number; turnaroundMinutes: number };
+  },
+): Promise<string | null> {
+  const earlier = (await findCompetingRequests(tx, booking, booking.venue)).find(
+    (other) => submittedBefore(other, booking),
+  );
+  return earlier
+    ? `An earlier request for ${booking.venue.name} overlapping this period is still pending: "${earlier.eventName}", submitted ${formatDateTime(earlier.createdAt)}. Approve, hold or reject it first. This request is still pending.`
+    : null;
+}
 
 /**
  * SCRUM-53 — Venue Staff approve or reject a pending request.
@@ -445,10 +489,13 @@ export async function decideBookingRequest(
         ...venueSelect,
         holdApprovedAt: true,
         requestedById: true,
-        event: { select: { id: true, name: true, coordinatorId: true } },
+        event: { select: { id: true, name: true, organiserId: true, coordinatorId: true } },
       },
     });
     if (!booking) return err("Booking request not found.");
+    // SCRUM-121 AC5: nobody decides a booking for an event they organise or
+    // coordinate, whatever roles they hold.
+    requirePermission(user, "booking:decide", { kind: "arrangement", ...booking.event });
     const now = new Date();
     const current = bookingStatusAt(booking, now);
     if (current === "HELD" && decision === "APPROVED") {
@@ -471,6 +518,10 @@ export async function decideBookingRequest(
 
     const decide = () =>
       prisma.$transaction(async (tx) => {
+        // The notice below references the event, which takes a key-share
+        // lock on its row. Take it before the booking row, in the order
+        // holding a request uses, so the two can't deadlock (ADR 0007).
+        await tx.$queryRaw`SELECT "id" FROM "Event" WHERE "id" = ${booking.event.id} FOR KEY SHARE`;
         const check = async (times: SetupTurnaround) => {
           const blockers = await findVenueBlockers(
             tx,
@@ -487,6 +538,9 @@ export async function decideBookingRequest(
         let times: SetupTurnaround = booking.venue;
         if (decision === "APPROVED") {
           await check(times);
+          // SCRUM-134 AC2: first come, first served.
+          const earlier = await earlierRequestRefusal(tx, booking);
+          if (earlier) throw new DecisionError(earlier);
           // SCRUM-160: the minutes the approval copies are read under the
           // venue's lock, which a change to them takes too, so a change can't
           // slip in between. Checked again only if they changed meanwhile.
@@ -545,6 +599,18 @@ export async function decideBookingRequest(
             summary: decision === "REJECTED" ? reason : undefined,
           },
         });
+        // SCRUM-124 AC4: the event's Coordinator is told, with the reason for
+        // a rejection. An event with no Coordinator yet tells whoever
+        // requested the venue, as holding does.
+        await tx.notification.create({
+          data: {
+            userId: booking.event.coordinatorId ?? booking.requestedById,
+            eventId: booking.event.id,
+            bookingId: booking.id,
+            type: "BOOKING_DECISION",
+            ...decisionNotice(booking, decision, rejectingHold, reason),
+          },
+        });
       });
     await onceMoreOnDeadlock(decide);
 
@@ -572,6 +638,40 @@ export async function decideBookingRequest(
     }
     throw error;
   }
+}
+
+/**
+ * SCRUM-124 AC4, AC12 — the Coordinator's notice of a decision: approved,
+ * with the period; or rejected, a request or a hold, with the reason.
+ */
+function decisionNotice(
+  booking: {
+    startAt: Date;
+    endAt: Date;
+    venue: { name: string };
+    event: { name: string };
+  },
+  decision: "APPROVED" | "REJECTED",
+  rejectingHold: boolean,
+  reason: string | undefined,
+): { title: string; message: string } {
+  const { venue, event } = booking;
+  if (rejectingHold) {
+    return {
+      title: "Venue Staff rejected your hold",
+      message: `Venue Staff rejected the hold on ${venue.name} for "${event.name}". Their reason: ${reason}`,
+    };
+  }
+  if (decision === "APPROVED") {
+    return {
+      title: "Your venue request was approved",
+      message: `Venue Staff approved ${venue.name} for "${event.name}", ${formatDateTime(booking.startAt)} to ${formatDateTime(booking.endAt)}.`,
+    };
+  }
+  return {
+    title: "Your venue request was rejected",
+    message: `Venue Staff rejected the request for ${venue.name} for "${event.name}". Their reason: ${reason}`,
+  };
 }
 
 /** SCRUM-26 AC5 — a flagged request waits for its Coordinator. */
@@ -726,10 +826,13 @@ export async function holdBookingRequest(
       select: {
         ...venueSelect,
         requestedById: true,
-        event: { select: { id: true, name: true, coordinatorId: true } },
+        event: { select: { id: true, name: true, organiserId: true, coordinatorId: true } },
       },
     });
     if (!booking) return err("Booking request not found.");
+    // SCRUM-121 AC5: nobody decides a booking for an event they organise or
+    // coordinate, whatever roles they hold.
+    requirePermission(user, "booking:hold", { kind: "arrangement", ...booking.event });
     const now = new Date();
     const current = bookingStatusAt(booking, now);
     if (current !== "PENDING") {
@@ -770,6 +873,9 @@ export async function holdBookingRequest(
           }
         };
         await check(booking.venue);
+        // SCRUM-134 AC2: an earlier competing request is decided first.
+        const earlier = await earlierRequestRefusal(tx, booking);
+        if (earlier) throw new DecisionError(earlier);
         // SCRUM-160: as for an approval, the minutes are read under the lock.
         const times = await lockedVenueTimes(tx, booking, booking.venue, check);
 
@@ -938,6 +1044,7 @@ async function settleHold(
         event: {
           select: {
             id: true,
+            name: true,
             organiserId: true,
             coordinatorId: true,
             status: true,
@@ -968,9 +1075,15 @@ async function settleHold(
 
     const settle = () =>
       prisma.$transaction(async (tx) => {
-        const refused =
-          refusal?.(await lockedEventStatus(tx, booking.event.id)) ?? null;
-        if (refused) throw new DecisionError(refused);
+        // The Venue Staff notice below references the event, so its row is
+        // locked before the booking's (ADR 0007): fully for a withdrawal,
+        // which re-reads its status, and key-share otherwise.
+        if (refusal) {
+          const refused = refusal(await lockedEventStatus(tx, booking.event.id));
+          if (refused) throw new DecisionError(refused);
+        } else {
+          await tx.$queryRaw`SELECT "id" FROM "Event" WHERE "id" = ${booking.event.id} FOR KEY SHARE`;
+        }
 
         const updated = await tx.booking.updateMany({
           where: {
@@ -1014,6 +1127,26 @@ async function settleHold(
             newValue: to,
           },
         });
+        // SCRUM-124 AC6: every Venue Staff member is told.
+        const where = `${booking.venue.name} for "${booking.event.name}"`;
+        await notifyRole(
+          tx,
+          "VENUE_STAFF",
+          booking.event,
+          confirming
+            ? {
+                type: "HOLD_CONFIRMED",
+                title: "A hold was confirmed",
+                message: `The Coordinator confirmed the hold on ${where}, so it is now booked.`,
+                link: "/bookings",
+              }
+            : {
+                type: "HOLD_RELEASED",
+                title: "A hold was released",
+                message: `The Coordinator released the hold on ${where}, so its period is free again.`,
+                link: "/bookings",
+              },
+        );
       });
     try {
       await onceMoreOnDeadlock(settle);

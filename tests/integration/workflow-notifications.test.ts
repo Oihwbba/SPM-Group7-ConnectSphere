@@ -19,6 +19,8 @@ import {
   transitionEventStatus,
 } from "@/app/(app)/events/actions";
 import { requestClarification } from "@/app/(app)/events/clarification-actions";
+import { decideChangeRequest } from "@/app/(app)/events/change-decision-actions";
+import { resolveReconsiderationFlag } from "@/app/(app)/events/reconsideration-actions";
 import {
   registerForEvent,
   withdrawRegistration,
@@ -29,7 +31,7 @@ import {
 // mocked. Each test makes its own event, assigned to the second seeded
 // Coordinator, and the suite removes them, so it only runs on a localhost
 // database. The submission notice (AC1) is in
-// tests/unit/event-auto-assignment.test.ts, and its count against a real
+// tests/unit/submission-queue.test.ts, and its count against a real
 // database in tests/integration/concurrency.test.ts.
 vi.mock("@/auth", () => ({ auth: vi.fn() }));
 const mockAuth = auth as unknown as Mock;
@@ -109,6 +111,9 @@ describe.skipIf(!usesLocalDatabase)(
         where: { eventId: { in: eventIds } },
       });
       await prisma.registration.deleteMany({
+        where: { eventId: { in: eventIds } },
+      });
+      await prisma.eventChangeRequest.deleteMany({
         where: { eventId: { in: eventIds } },
       });
       await prisma.clarificationRequest.deleteMany({
@@ -266,8 +271,14 @@ describe.skipIf(!usesLocalDatabase)(
         signIn(attendee, "ATTENDEE");
         return withdrawRegistration({ registrationId });
       };
+      // SCRUM-85 AC1: each Attendee's own confirmation is left out; this
+      // case is about what the Organiser and Coordinator are told.
+      const staffNotices = async () =>
+        (await notices(open.id)).filter(
+          (n) => n.type !== "REGISTRATION_CONFIRMED",
+        );
       const titles = async () =>
-        (await notices(open.id)).map((n) => [n.userId, n.title]);
+        (await staffNotices()).map((n) => [n.userId, n.title]);
 
       const first = await register("usr_attendee");
       expect(await titles()).toEqual([]);
@@ -283,7 +294,7 @@ describe.skipIf(!usesLocalDatabase)(
       // Now one place is taken of two, so this withdrawal isn't from a full event.
       await withdraw("usr_attendee_2", second!);
 
-      const written = await notices(open.id);
+      const written = await staffNotices();
       expect(written.map((n) => [n.userId, n.title])).toEqual([
         [COORDINATOR, "Registration is full"],
         [ORGANISER, "Registration is full"],
@@ -293,6 +304,75 @@ describe.skipIf(!usesLocalDatabase)(
       expect(written[0].message).toBe(
         `"${open.name}" has reached its capacity of 2.`,
       );
+    });
+
+    const backInPlanning = async (eventId: string) =>
+      (await notices(eventId)).filter(
+        (n) => n.title === "Your event is back in Planning",
+      );
+
+    it("SCRUM-45 [AC5, AC12, AC13] TC-45-09: an approved change that returns a Confirmed event to Planning tells its Organiser once, with the reason", async () => {
+      const confirmed = await event("Back via change", "CONFIRMED");
+      const { id: changeRequestId } = await prisma.eventChangeRequest.create({
+        data: {
+          eventId: confirmed.id,
+          requestedById: ORGANISER,
+          reason: "More people coming.",
+          fields: {
+            create: [
+              { fieldName: "expectedAttendance", oldValue: "40", newValue: "60", isMajor: true },
+            ],
+          },
+        },
+        select: { id: true },
+      });
+      signIn(COORDINATOR, "COORDINATOR");
+
+      expect(
+        await decideChangeRequest({ changeRequestId, decision: "APPROVED" }),
+      ).toMatchObject({ ok: true, data: { returnedToPlanning: true } });
+
+      expect(await backInPlanning(confirmed.id)).toEqual([
+        expect.objectContaining({
+          userId: ORGANISER,
+          type: "EVENT_STATUS_CHANGED",
+          message: `"${confirmed.name}" is back in Planning: a change to Expected attendance was approved. It needs confirming again before new registrations open.`,
+        }),
+      ]);
+    });
+
+    it("SCRUM-45 [AC5, AC12, AC13] TC-45-09: cancelling a flagged booking of a Confirmed event tells its Organiser once why it is back in Planning", async () => {
+      const confirmed = await event("Back via flag", "CONFIRMED");
+      const { id: bookingId } = await prisma.booking.create({
+        data: {
+          eventId: confirmed.id,
+          venueId,
+          // A day of its own at the suite's venue, clear of the other tests' bookings.
+          startAt: new Date(confirmed.startAt!.getTime() + 10 * DAY),
+          endAt: new Date(confirmed.endAt!.getTime() + 10 * DAY),
+          status: "APPROVED",
+          requestedAttendance: 40,
+          requestedById: COORDINATOR,
+          decidedById: "usr_venuestaff",
+          decidedAt: new Date(),
+          needsReconsideration: true,
+          reconsiderationReason: "The venue changed.",
+          reconsiderationFlaggedAt: new Date(),
+        },
+        select: { id: true },
+      });
+      signIn(COORDINATOR, "COORDINATOR");
+
+      expect(
+        await resolveReconsiderationFlag({ kind: "booking", id: bookingId, decision: "CANCEL" }),
+      ).toMatchObject({ ok: true, data: { returnedToPlanning: true } });
+
+      expect(await backInPlanning(confirmed.id)).toEqual([
+        expect.objectContaining({
+          userId: ORGANISER,
+          message: `"${confirmed.name}" is back in Planning: its Coordinator cancelled a venue booking that needed reconsideration. It needs confirming again before new registrations open.`,
+        }),
+      ]);
     });
   },
 );

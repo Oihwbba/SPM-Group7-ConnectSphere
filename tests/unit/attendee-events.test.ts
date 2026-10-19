@@ -30,7 +30,12 @@ function sessionFor(role: Role, id: string): Session {
 }
 
 function eventRow(
-  over: Partial<{ status: string; registrationRequired: boolean | null }> = {},
+  over: Partial<{
+    status: string;
+    registrationRequired: boolean | null;
+    confirmedStartAt: Date | null;
+    registrations: { id: string; status: string }[];
+  }> = {},
 ) {
   return {
     id: "evt1",
@@ -45,6 +50,9 @@ function eventRow(
     registrationOpensAt: null,
     registrationClosesAt: null,
     bookings: [],
+    registrations: [] as { id: string; status: string }[],
+    // SCRUM-85: never confirmed before, unless a case says otherwise.
+    confirmedStartAt: null as Date | null,
     _count: { registrations: 0 },
     ...over,
   };
@@ -55,6 +63,20 @@ beforeEach(() => {
 });
 
 describe("getBrowsableEvent — SCRUM-72 attendee detail read", () => {
+  it("SCRUM-162 [AC7] TC-162-11: the detail read brings every approved venue's name and location, in the order requested", async () => {
+    mockAuth.mockResolvedValue(sessionFor("ATTENDEE", "usr_attendee"));
+    mockFindUnique.mockResolvedValue(eventRow());
+
+    await getBrowsableEvent("evt1");
+
+    const { bookings } = mockFindUnique.mock.calls[0][0].include;
+    expect(bookings).toEqual({
+      where: { status: "APPROVED" },
+      orderBy: { createdAt: "asc" },
+      include: { venue: { select: { name: true, location: true } } },
+    });
+  });
+
   it("[Positive] AC: an Attendee can load a Confirmed event by id", async () => {
     mockAuth.mockResolvedValue(sessionFor("ATTENDEE", "usr_attendee"));
     mockFindUnique.mockResolvedValue(eventRow());
@@ -83,6 +105,38 @@ describe("getBrowsableEvent — SCRUM-72 attendee detail read", () => {
 
     expect(await getBrowsableEvent("evt1")).toBeNull();
   });
+
+  it("SCRUM-85 [AC9, AC10] TC-85-07: an Attendee registered for an event back in Planning after being Confirmed can open it", async () => {
+    mockAuth.mockResolvedValue(sessionFor("ATTENDEE", "usr_attendee"));
+    mockFindUnique.mockResolvedValue(
+      eventRow({
+        status: "PLANNING",
+        confirmedStartAt: new Date("2031-06-01T02:00:00Z"),
+        registrations: [{ id: "reg1", status: "REGISTERED" }],
+      }),
+    );
+
+    expect((await getBrowsableEvent("evt1"))?.id).toBe("evt1");
+  });
+
+  it.each([
+    ["not registered", []],
+    ["whose registration was withdrawn", [{ id: "reg1", status: "WITHDRAWN" }]],
+  ])(
+    "SCRUM-85 [AC5, AC9] TC-85-07: an Attendee %s can't open an event being re-planned — the same null as a missing one",
+    async (_, registrations) => {
+      mockAuth.mockResolvedValue(sessionFor("ATTENDEE", "usr_attendee"));
+      mockFindUnique.mockResolvedValue(
+        eventRow({
+          status: "PLANNING",
+          confirmedStartAt: new Date("2031-06-01T02:00:00Z"),
+          registrations,
+        }),
+      );
+
+      expect(await getBrowsableEvent("evt1")).toBeNull();
+    },
+  );
 
   it("[Negative] AC: a non-Confirmed event (e.g. Planning) is not browsable — same null as missing", async () => {
     mockAuth.mockResolvedValue(sessionFor("ATTENDEE", "usr_attendee"));
@@ -171,13 +225,16 @@ describe("getBrowsableEvents — SCRUM-72 browse list", () => {
     );
   });
 
-  it("[Positive] AC: fetches the approved booking's venue, the caller's own registration, and the active-registration count for each event", async () => {
+  it("SCRUM-162 [AC7] TC-162-11, [Positive] AC: fetches every approved booking's venue, the caller's own registration, and the active-registration count for each event", async () => {
     mockFindMany.mockResolvedValue([]);
 
     await getBrowsableEvents("usr_attendee");
 
     const call = mockFindMany.mock.calls[0][0];
     expect(call.include.bookings.where).toEqual({ status: "APPROVED" });
+    // SCRUM-162 AC7: every approved venue, not just one.
+    expect(call.include.bookings).not.toHaveProperty("take");
+    expect(call.include.bookings.orderBy).toEqual({ createdAt: "asc" });
     expect(call.include.bookings.include.venue.select).toEqual({
       name: true,
       location: true,

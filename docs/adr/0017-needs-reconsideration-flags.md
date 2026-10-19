@@ -77,3 +77,13 @@ a reason and a resolution has both who and when.
   needs every reason kept, it should add an audit entry or move flags to
   their own table.
 - Notifications on raising and resolving are SCRUM-124's.
+
+## Addendum (2026-10-19) — The flag is a badge beside the status (SCRUM-131)
+
+Decision 6 made a flagged item read "Needs reconsideration" in place of its
+state. SCRUM-131 AC3 shows Needs Reconsideration as a warning badge beside a
+booking's or reservation's own status instead: the checklist keeps "Approved",
+"Pending", "Held until …" or "Reserved: Projector", adds the badge, and the
+item is still incomplete, so the event still can't be confirmed (AC12). The
+Organiser sees the status and the badge without the reason. The name is
+`NEEDS_RECONSIDERATION` in `lib/status-labels.ts`.

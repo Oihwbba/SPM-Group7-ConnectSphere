@@ -98,9 +98,10 @@ describe("can — relationship gate", () => {
     ).toBe(false);
   });
 
-  it("lets any coordinator read a submitted request nobody has picked up yet", () => {
+  it("SCRUM-165 [AC8] TC-165-11: a Coordinator can't open or decide a submitted request nobody is assigned to", () => {
     const unassigned = { ...eventOwnedByA, coordinatorId: null };
-    expect(can(coordinator, "event:read", unassigned)).toBe(true);
+    expect(can(coordinator, "event:read", unassigned)).toBe(false);
+    expect(can(coordinator, "event:review", unassigned)).toBe(false);
   });
 
   it("hides an unassigned draft from coordinators", () => {
@@ -171,10 +172,10 @@ describe("can — confirming an event (SCRUM-81)", () => {
     expect(can(attendee, "event:confirm", planning)).toBe(false);
   });
 
-  it("SCRUM-81: no Coordinator may confirm an event nobody is assigned to, though any may still read it", () => {
+  it("SCRUM-81, SCRUM-165 [AC8] TC-165-11: no Coordinator may confirm or open an event nobody is assigned to", () => {
     const unassigned = { ...planning, coordinatorId: null };
     expect(can(coordinator, "event:confirm", unassigned)).toBe(false);
-    expect(can(coordinator, "event:read", unassigned)).toBe(true);
+    expect(can(coordinator, "event:read", unassigned)).toBe(false);
   });
 });
 
@@ -352,6 +353,44 @@ describe("can — the Week 7 roles before their stories", () => {
   );
 });
 
+// SCRUM-128 AC9 — only the event's assigned Coordinator decides a change request.
+describe("can — deciding a change request (SCRUM-128)", () => {
+  const planning = {
+    kind: "event" as const,
+    organiserId: "orgA",
+    coordinatorId: "coord",
+    status: "PLANNING" as const,
+  };
+
+  it("SCRUM-128 [AC9] TC-128-08: only the event's assigned Coordinator may decide, never an unassigned one or the Organiser", () => {
+    expect(can(coordinator, "change-request:decide", planning)).toBe(true);
+    expect(can({ id: "other", role: "COORDINATOR" }, "change-request:decide", planning)).toBe(false);
+    expect(can(coordinator, "change-request:decide", { ...planning, coordinatorId: null })).toBe(false);
+    for (const user of [organiserA, attendee, { id: "so", role: "SAFETY_OFFICER" }] as SessionUser[]) {
+      expect(can(user, "change-request:decide")).toBe(false);
+    }
+  });
+});
+
+// SCRUM-82 AC1 — cancelling follows the same rule as confirming and rejecting.
+describe("can — cancelling an event (SCRUM-82)", () => {
+  const confirmed = {
+    kind: "event" as const,
+    organiserId: "orgA",
+    coordinatorId: "coord",
+    status: "CONFIRMED" as const,
+  };
+
+  it("SCRUM-82 [AC1] TC-82-03: only the event's assigned Coordinator may cancel it, never an unassigned one", () => {
+    expect(can(coordinator, "event:cancel", confirmed)).toBe(true);
+    expect(can({ id: "other", role: "COORDINATOR" }, "event:cancel", confirmed)).toBe(false);
+    expect(can(coordinator, "event:cancel", { ...confirmed, coordinatorId: null })).toBe(false);
+    for (const user of [organiserA, attendee, { id: "so", role: "SAFETY_OFFICER" }] as SessionUser[]) {
+      expect(can(user, "event:cancel")).toBe(false);
+    }
+  });
+});
+
 // SCRUM-166 — the Coordinator requests a check for their own event; a Safety
 // Officer reviews any event's check except one they organise or coordinate.
 describe("can — the operational safety check (SCRUM-166)", () => {
@@ -385,6 +424,54 @@ describe("can — the operational safety check (SCRUM-166)", () => {
       { id: "lead", role: "COORDINATOR_LEAD" },
     ] as SessionUser[]) {
       expect(can(user, "safety-check:review")).toBe(false);
+    }
+  });
+});
+
+// SCRUM-165 — the Lead assigns Submitted requests that have no Coordinator.
+describe("can — the Lead's assignment (SCRUM-165)", () => {
+  const lead: SessionUser = { id: "lead", role: "COORDINATOR_LEAD" };
+  const waiting = {
+    kind: "event" as const,
+    organiserId: "orgA",
+    coordinatorId: null,
+    status: "SUBMITTED" as const,
+  };
+
+  it("SCRUM-165 [AC10] TC-165-13: only a Lead may assign, and only a Submitted request with no Coordinator", () => {
+    expect(can(lead, "event:assign", waiting)).toBe(true);
+    for (const user of [
+      organiserA,
+      coordinator,
+      attendee,
+      { id: "vs", role: "VENUE_STAFF" },
+      { id: "ts", role: "TECH_SUPPORT" },
+      { id: "so", role: "SAFETY_OFFICER" },
+    ] as SessionUser[]) {
+      expect(can(user, "event:assign", waiting)).toBe(false);
+    }
+  });
+
+  it("SCRUM-165 [AC7] TC-165-10: a request that already has a Coordinator can't be assigned again; that is reassignment (SCRUM-21)", () => {
+    expect(
+      can(lead, "event:assign", { ...waiting, coordinatorId: "coord" }),
+    ).toBe(false);
+  });
+
+  it("SCRUM-165 [AC1] TC-165-01: only Submitted requests are in the queue, not drafts or decided events", () => {
+    for (const status of ["DRAFT", "UNDER_REVIEW", "REJECTED"] as const) {
+      expect(can(lead, "event:assign", { ...waiting, status })).toBe(false);
+    }
+  });
+
+  it("SCRUM-164 [AC2], SCRUM-165 [AC10] TC-165-13: the Lead still can't decide, plan or edit an event", () => {
+    for (const action of [
+      "event:review",
+      "event:confirm",
+      "event:reject",
+      "event:edit",
+    ] as const) {
+      expect(can(lead, action, waiting)).toBe(false);
     }
   });
 });

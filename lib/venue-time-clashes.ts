@@ -10,7 +10,6 @@ import { overlaps, type Period } from "@/lib/period";
 import { flagArrangements } from "@/lib/reconsideration";
 import { UNAVAILABILITY_REASON_LABEL } from "@/lib/schemas/unavailability";
 import { MAX_SETUP_TURNAROUND_MINUTES } from "@/lib/schemas/venue";
-import { notifyRole } from "@/lib/staff-notifications";
 import { occupiedPeriod, type SetupTurnaround } from "@/lib/venue-availability";
 
 /**
@@ -66,15 +65,13 @@ export function clashKey(clash: ClashWith): string {
   return `${clash.kind}:${clash.id}`;
 }
 
-/** "another booking from …" or "unavailability (maintenance) from …". */
-export function describeClash(clash: ClashWith, withEvent = false): string {
+/** `"Career Fair"'s booking from …` or "unavailability (maintenance) from …". */
+export function describeClash(clash: ClashWith): string {
   const when = `from ${formatDateTime(clash.startAt)} to ${formatDateTime(clash.endAt)}`;
   if (clash.kind === "unavailability") {
     return `unavailability (${UNAVAILABILITY_REASON_LABEL[clash.reason].toLowerCase()}) ${when}`;
   }
-  return withEvent
-    ? `"${clash.eventName}"'s booking ${when}`
-    : `another booking ${when}`;
+  return `"${clash.eventName}"'s booking ${when}`;
 }
 
 /**
@@ -233,12 +230,12 @@ export async function pendingTimeClashes(
  * clash without a second flag or notice. One waiting for another reason
  * keeps that reason (SCRUM-26), and this clash isn't recorded, so it can be
  * flagged for it later. A newly flagged booking's Coordinator and all Venue
- * Staff are notified (AC3, SCRUM-124 AC8). Returns how many bookings were
- * newly flagged.
+ * Staff are told by `flagArrangements` (AC3, SCRUM-124 AC8), once; what it
+ * clashes with is on the Venue Staff list (AC5). Returns how many bookings
+ * were newly flagged.
  */
 export async function flagTimeClashes(
   tx: Prisma.TransactionClient,
-  venue: { name: string },
   clashes: TimeClash[],
   actorId: string,
   now: Date = new Date(),
@@ -256,10 +253,10 @@ export async function flagTimeClashes(
         { bookingIds: [bookingId], reservationIds: [] },
         TIMES_CHANGED_REASON,
         now,
+        actorId,
       );
       if (bookings === 0) continue;
       flagged += 1;
-      await notifyFlagged(tx, venue, booking, fresh);
     }
     await tx.auditLog.createMany({
       data: fresh.map((c) => ({
@@ -269,7 +266,7 @@ export async function flagTimeClashes(
         actorId,
         fieldName: "clashesWith",
         newValue: clashKey(c.with),
-        summary: `${TIMES_CHANGED_REASON}: it now clashes with ${describeClash(c.with, true)} (SCRUM-160).`,
+        summary: `${TIMES_CHANGED_REASON}: it now clashes with ${describeClash(c.with)} (SCRUM-160).`,
         // Matched against the flag's own time by listTimeClashFlags.
         createdAt: now,
       })),
@@ -366,38 +363,8 @@ export async function listTimeClashFlags(db: Db): Promise<TimeClashFlag[]> {
       )
       .map((r) => {
         const clash = clashes.get(String(r.newValue));
-        return clash ? describeClash(clash, true) : "unavailability that has since been removed";
+        return clash ? describeClash(clash) : "unavailability that has since been removed";
       }),
   }));
 }
 
-async function notifyFlagged(
-  tx: Prisma.TransactionClient,
-  venue: { name: string },
-  booking: TimeClash["booking"],
-  clashes: TimeClash[],
-) {
-  const period = `${formatDateTime(booking.startAt)} to ${formatDateTime(booking.endAt)}`;
-  const title = "Booking needs reconsideration";
-  // Coordinators never see another organisation's event (SCRUM-68).
-  const forCoordinator = clashes.map((c) => describeClash(c.with)).join("; ");
-  const forStaff = clashes.map((c) => describeClash(c.with, true)).join("; ");
-  if (booking.coordinatorId) {
-    await tx.notification.create({
-      data: {
-        userId: booking.coordinatorId,
-        type: "ARRANGEMENT_FLAGGED",
-        title,
-        message: `"${booking.eventName}": ${venue.name}, ${period}. ${TIMES_CHANGED_REASON}, so it now clashes with ${forCoordinator}. Decide whether it still stands.`,
-        link: "/events",
-        eventId: booking.eventId,
-      },
-    });
-  }
-  await notifyRole(tx, "VENUE_STAFF", { id: booking.eventId }, {
-    type: "ARRANGEMENT_FLAGGED",
-    title,
-    message: `"${booking.eventName}": ${venue.name}, ${period}. ${TIMES_CHANGED_REASON}, so it now clashes with ${forStaff}.`,
-    link: "/bookings",
-  });
-}

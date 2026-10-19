@@ -28,12 +28,16 @@ export async function getMyRegistrations() {
           status: true,
           startAt: true,
           endAt: true,
+          // SCRUM-82 AC1: the reason is visible to anyone who can view the event.
+          cancellationReason: true,
+          // SCRUM-85 AC8: while it is re-planned, what was last confirmed.
+          confirmedStartAt: true,
+          confirmedEndAt: true,
+          confirmedVenues: true,
+          // SCRUM-162 AC7: every approved venue, in the order requested.
           bookings: {
             where: { status: "APPROVED" },
-            // An event can hold approved bookings on two venues at different
-            // times; show the one in use when the event starts.
-            orderBy: { startAt: "asc" },
-            take: 1,
+            orderBy: { createdAt: "asc" },
             select: { venue: { select: { name: true, location: true } } },
           },
         },
