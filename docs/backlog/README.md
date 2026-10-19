@@ -82,7 +82,7 @@ _32 stories, 86 points_
 | [SCRUM-166](SCRUM-166.md) | Operational safety check: Safety Officer reviews arrangements before the event can be confirmed | 8 | Highest | SCRUM Sprint 3 | In Review |
 | [SCRUM-167](SCRUM-167.md) | [MERGED INTO SCRUM-166] An event can't be confirmed until its safety check is approved | 0 | Highest | Backlog | Done |
 | [SCRUM-170](SCRUM-170.md) | Show the Organiser's requirements to the people planning the event | 3 | High | SCRUM Sprint 3 | In Progress |
-| [SCRUM-171](SCRUM-171.md) | Record whether an event needs registration | 3 | High | SCRUM Sprint 3 | To Do |
+| [SCRUM-171](SCRUM-171.md) | Record whether an event needs registration | 3 | High | SCRUM Sprint 3 | In Progress |
 
 ## SCRUM-7 - Venue Management
 
