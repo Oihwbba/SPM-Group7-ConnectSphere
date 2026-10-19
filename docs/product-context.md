@@ -176,7 +176,7 @@ these unless the backlog brings them back:
 | **Event request** | An `Event` row before approval. There is no separate request table. |
 | **Booking** | A **venue** for an event's period. Pending, then Approved or Rejected by Venue Staff; Cancelled when its event is rejected from Planning (SCRUM-117). Venue Staff can instead hold it until a deadline: it blocks the venue like an approved booking until then, and Expired after. Venue Staff approve the hold, and only then does its Coordinator confirm it (Approved); the Coordinator can release it (Cancelled) before it expires (SCRUM-163). |
 | **Equipment request** | What the Coordinator asks for: lines of equipment type and quantity. Approving it holds no stock. |
-| **Reservation** | **Equipment** actually held for an event's period. Stored as `CONFIRMED`; SCRUM-131 will show it as **Reserved** everywhere, so it isn't confused with an event's Confirmed status. The readiness checklist already says Reserved. |
+| **Reservation** | **Equipment** actually held for an event's period. Stored as `CONFIRMED` and shown as **Reserved** everywhere (SCRUM-131), so it isn't confused with an event's Confirmed status. |
 | **Planning** | The status after approval, while the venue and equipment are arranged. |
 | **Confirmed** | The event's arrangements are complete. Only the assigned Coordinator can confirm. |
 

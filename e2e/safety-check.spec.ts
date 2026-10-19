@@ -156,9 +156,9 @@ test.describe("SCRUM-166 — Operational safety check", () => {
     await expect(checklist.getByTestId("readiness-item-safety")).toContainText(
       `Changes requested – ${NOTE}`,
     );
-    await expect(checklist.getByTestId("readiness-item-venue")).toContainText(
-      "Needs reconsideration",
-    );
+    await expect(
+      checklist.getByTestId("readiness-item-venue").getByTestId("needs-reconsideration").first(),
+    ).toHaveText("Needs Reconsideration");
 
     // AC4: the Organiser sees the state, not the note.
     await signIn(page, "organiser@test.local", "/events");

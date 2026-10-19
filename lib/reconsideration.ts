@@ -4,6 +4,7 @@ import { liveHoldWhere } from "@/lib/booking-holds";
 import { formatDateTime } from "@/lib/datetime";
 import { LIVE_LINE } from "@/lib/equipment/requests";
 import { notifyRole } from "@/lib/staff-notifications";
+import { BOOKING_STATUS_LABEL } from "@/lib/status-labels";
 import {
   describeBlocker,
   findVenueBlockers,
@@ -40,15 +41,6 @@ export function liveBookingWhere(now: Date): Prisma.BookingWhereInput {
 export function flaggedLiveBookingWhere(now: Date): Prisma.BookingWhereInput {
   return { needsReconsideration: true, ...liveBookingWhere(now) };
 }
-
-const BOOKING_STATUS_LABEL: Record<BookingStatus, string> = {
-  PENDING: "Pending",
-  HELD: "Held",
-  APPROVED: "Approved",
-  REJECTED: "Rejected",
-  CANCELLED: "Cancelled",
-  EXPIRED: "Expired",
-};
 
 /**
  * AC1, SCRUM-25 AC3 — the event fields whose change flags its arrangements:

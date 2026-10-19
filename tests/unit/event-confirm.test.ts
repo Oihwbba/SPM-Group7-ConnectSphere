@@ -273,6 +273,30 @@ describe("confirmEvent — SCRUM-81", () => {
     expectNothingWritten();
   });
 
+  it("SCRUM-131 [AC3] TC-131-10: a flagged booking is named in the refusal with Needs Reconsideration beside its status, and nothing changes", async () => {
+    mockChecklist.mockResolvedValue({
+      ready: false,
+      items: [
+        {
+          name: "Venue booking",
+          complete: false,
+          state: "Approved",
+          reason: "The event's expected attendance changed.",
+          needsReconsideration: true,
+        },
+      ],
+    } satisfies ReadinessChecklist);
+
+    const result = await confirmEvent({ eventId: "evt1" });
+
+    expect(result).toEqual({
+      ok: false,
+      error:
+        "This event isn't ready to confirm yet. Outstanding: Venue booking (Approved – Needs Reconsideration).",
+    });
+    expectNothingWritten();
+  });
+
   it.each([
     {
       when: "already Confirmed when first read",

@@ -7,8 +7,10 @@ The Organiser's answers are free text from the request form: venue
 requirements, preferred room layout, accessibility needs (Venue &
 Accessibility Requirements) and equipment requirements (Equipment & Technical
 Support). They are shown read-only, never used to pre-fill anything. AC1 was
-removed on 2026-10-08. AC6 needs SCRUM-38's venue search, which isn't built
-yet.
+removed on 2026-10-08. AC4's reset is automated in two places: a direct edit
+by SCRUM-25 (#186) and an approved change request by SCRUM-128 (#181). AC6 is
+automated by SCRUM-38's venue search (#216), which reuses
+`OrganiserVenueAnswers`.
 
 | ID | Type | Criterion | Automated |
 |---|---|---|---|
@@ -110,12 +112,12 @@ yet.
 |---|---|
 | Test Case ID | TC-170-07 |
 | Test Scenario | [Negative] AC 4: with no equipment request and nothing decided, Equipment is listed as Not decided and blocks confirmation |
-| Pre-conditions | A Planning event with an Approved venue booking and no live equipment request: none, or only a cancelled one. |
+| Pre-conditions | A Planning event with an Approved venue booking and no live equipment request: none, only a cancelled one, or a rejected one followed by a later cancelled one. |
 | Test Steps | 1. Open the event's details. |
 | Test Data | — |
-| Expected Result | The checklist lists Equipment as "Not decided", incomplete, with **No equipment needed** offered to the Coordinator; the summary says "Not ready to confirm yet". An event with only a rejected request shows "Rejected" and is offered the same. (SCRUM-110 AC 3, which left the item out, is superseded.) |
+| Expected Result | The checklist lists Equipment as "Not decided", incomplete, with **No equipment needed** offered to the Coordinator; the summary says "Not ready to confirm yet". The latest outcome decides, by when each request ended (its last status change), not when it was made: an event whose last request to end was rejected shows "Rejected" and is offered the same; a rejection followed by a cancelled request shows "Not decided" (Product Owner, 19 Oct; the venue item follows the same rule, SCRUM-26). (SCRUM-110 AC 3, which left the item out, is superseded.) |
 
-**Automated by:** `tests/unit/event-readiness.test.ts` › "SCRUM-170 [AC4] TC-170-07: …", "SCRUM-110 TC-110-09, SCRUM-170 [AC4] TC-170-07: …"; `tests/integration/equipment-decision.test.ts`; `e2e/organiser-requirements.spec.ts`
+**Automated by:** `tests/unit/event-readiness.test.ts` › "SCRUM-170 [AC4] TC-170-07: with no equipment request and nothing decided …", "SCRUM-110 TC-110-09, SCRUM-170 [AC4] TC-170-07: …", "SCRUM-170 [AC4] TC-170-07: a rejected request followed by a cancelled one leaves Equipment Not decided …", "SCRUM-170 [AC4] TC-170-07: a cancelled request followed by a rejected one leaves Equipment Rejected …"; `tests/integration/equipment-decision.test.ts`; `e2e/organiser-requirements.spec.ts`
 
 ### TC-170-08
 
@@ -180,7 +182,7 @@ yet.
 | Test Data | — |
 | Expected Result | Both clear who and when together, and Equipment shows "Not decided" again. |
 
-**Automated by:** step 1 by `tests/unit/event-edit.test.ts` and `tests/integration/event-edit.test.ts` › "SCRUM-25 [AC3] TC-25-15: …" on SCRUM-25's branch (PR #186); step 2 by `tests/unit/change-decision.test.ts` and `tests/integration/change-decision.test.ts` › "SCRUM-170 [AC4] TC-170-12: …" on SCRUM-128's branch (PR #181).
+**Automated by:** step 1 by `tests/unit/event-edit.test.ts` and `tests/integration/event-edit.test.ts` › "SCRUM-25 [AC3] TC-25-15: …"; step 2 by `tests/unit/change-decision.test.ts` and `tests/integration/change-decision.test.ts` › "SCRUM-170 [AC4] TC-170-12: …".
 
 ### TC-170-13
 
@@ -193,4 +195,4 @@ yet.
 | Test Data | — |
 | Expected Result | The venue requirements, preferred room layout and accessibility needs are shown read-only beside the filters, as in TC-170-01. |
 
-**Automated by:** `tests/unit/venue-search-queries.test.ts` › "SCRUM-38 [AC1, AC2] TC-38-01: …" (the answers are read with the event); `e2e/venue-search.spec.ts` › "SCRUM-38 [AC1, AC8, AC11, AC14] TC-38-01, TC-38-09, TC-38-12: …" (step 1) and "SCRUM-38 [AC1] TC-38-02: …" (step 2). Built with SCRUM-38, which reuses `OrganiserVenueAnswers`.
+**Automated by:** `tests/unit/venue-search-queries.test.ts` › "SCRUM-38 [AC1, AC2] TC-38-01: …" (the answers are read with the event); `e2e/venue-search.spec.ts` › "SCRUM-38 [AC1, AC8, AC11, AC14] TC-38-01, TC-38-09, TC-38-12: …" (step 1) and "SCRUM-38 [AC1] TC-38-02: …" (step 2).

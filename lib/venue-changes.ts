@@ -2,6 +2,7 @@ import type { BookingStatus } from "@prisma/client";
 
 import { formatDateTime } from "@/lib/datetime";
 import { toTag } from "@/lib/schemas/venue";
+import { BOOKING_STATUS_LABEL } from "@/lib/status-labels";
 import {
   dayOutsideOpeningHours,
   describeDay,
@@ -106,7 +107,6 @@ export function describeAffected(
   booking: { startAt: Date; status: BookingStatus; event: { name: string } },
   reasons: string[],
 ): string {
-  const status = booking.status.charAt(0) + booking.status.slice(1).toLowerCase();
-  const line = `${booking.event.name}, ${formatDateTime(booking.startAt)} (${status})`;
+  const line = `${booking.event.name}, ${formatDateTime(booking.startAt)} (${BOOKING_STATUS_LABEL[booking.status]})`;
   return reasons.length > 0 ? `${line}: ${reasons.join("; ")}` : line;
 }
