@@ -246,6 +246,10 @@ describe.skipIf(!usesLocalDatabase)(
         where: { eventId: { in: eventIds } },
       });
       await prisma.event.deleteMany({ where: { id: { in: eventIds } } });
+      // TC-142-18's own venue, should that test time out before its finally.
+      await prisma.venue.deleteMany({
+        where: { name: `SCRUM-142 AC10 venue ${STAMP}` },
+      });
       await prisma.venue.delete({ where: { id: venueId } });
     });
 
@@ -911,9 +915,11 @@ describe.skipIf(!usesLocalDatabase)(
           "Outdated",
         ]);
       } finally {
-        await prisma.booking.delete({ where: { id: booking.id } });
-        await prisma.venue.delete({ where: { id: venue.id } });
+        // deleteMany, as afterAll may already have deleted the booking.
+        await prisma.booking.deleteMany({ where: { id: booking.id } });
+        await prisma.venue.deleteMany({ where: { id: venue.id } });
       }
-    });
+      // About twenty round trips: over Vitest's 5 s default alongside other files.
+    }, 30_000);
   },
 );
