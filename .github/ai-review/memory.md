@@ -125,17 +125,17 @@ the earlier request, not a defect.
   the citing spec too; titles still in the old inline form match their specs.
 - (2026-10-19, #222; #251) Vitest runs the integration files in parallel,
   so every suite owns its data: no reading rows a sibling suite may delete
-  ("first active equipment" broke the staff-notice suite on #233, #247,
-  #249, PRs that never touched equipment, until #251's private pool) and
-  no mid-run role-account churn (that broke #214's CI) — SCRUM-165/166 use
-  the seeded `lead2@test.local` and `safety2@test.local`, never
-  throwaways.
+  (#251) and no mid-run role-account churn (#222) — SCRUM-165/166 use the
+  seeded `lead2@test.local` and `safety2@test.local`, never throwaways.
 
 ## Known open gaps
 
 Gaps found by reviews (the #11 replay, 2026-09-14, and later merges), still
 true until a pull request fixes them. Raise one only when a pull request
 touches that code or claims that story, and say it was already known.
+
+- (2026-09-29, #99) Recorded unavailability can't be removed or shortened
+in the app. Known when a pull request touches unavailability.
 
 - (2026-10-04, #120; 2026-10-19, #226) Events approved before #120 sit in
 APPROVED with no way out: approval now writes PLANNING directly,
