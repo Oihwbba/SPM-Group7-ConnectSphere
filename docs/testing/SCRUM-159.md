@@ -17,9 +17,9 @@ are signed in as `coordinator@test.local`, approvals as
 
 - **AC6** was removed on 2026-10-09: refusing a request, hold or approval
   outside opening hours is SCRUM-34 AC7.
-- **AC1's form:** there is no venue edit screen yet. SCRUM-34 builds it and
-  uses the shared rule `venueTimesSchema` (lib/schemas/venue.ts) tested here;
-  the database refuses the same values.
+- **AC1's form** is SCRUM-34's venue edit, which uses the shared rule
+  `venueTimesSchema` (lib/schemas/venue.ts) tested here; the database refuses
+  the same values.
 - **AC3's search:** venue search is SCRUM-38 (not built). It uses the same
   lookup (`findVenueBlockers`) and database constraint, so it inherits the
   occupied period without a second rule. Placing a hold (SCRUM-163) checks the
@@ -49,6 +49,8 @@ are signed in as `coordinator@test.local`, approvals as
 | [TC-159-15](#tc-159-15) | Negative | AC 3 | Unit, integration |
 | [TC-159-16](#tc-159-16) | Boundary | AC 3 | Integration |
 | [TC-159-17](#tc-159-17) | Negative, Positive | AC 3, AC 8 | Unit |
+| [TC-159-18](#tc-159-18) | Positive | AC 9 | Unit, integration, e2e |
+| [TC-159-19](#tc-159-19) | Boundary, Negative | AC 9 | Unit |
 
 ---
 
@@ -272,3 +274,29 @@ are signed in as `coordinator@test.local`, approvals as
 | Expected Result | 1. "Conflicting: … is already booked from …": the earlier booking ends inside the request's setup. Nothing is written. 2. The request is Held with 30 and 45 minutes saved on it. |
 
 **Automated by:** `tests/unit/booking-holds.test.ts` › "SCRUM-159 [AC3, AC8] TC-159-17: a hold is refused where only setup or turnaround clash, and otherwise keeps the venue's minutes"
+
+### TC-159-18
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-159-18 |
+| Test Scenario | [Positive] AC 9: Venue Staff are warned when a request's setup or turnaround falls outside opening hours, and can still hold or approve it |
+| Pre-conditions | The venue is open 10:00–22:00 on Tuesdays, with 30 minutes' setup and 45 minutes' turnaround, and no other bookings. Pending requests for Tuesday 10:00–12:00 and 20:00–22:00. Signed in as `venuestaff@test.local`. |
+| Test Steps | 1. Open **Bookings** and read each request's card. <br> 2. Click **Hold** on the first. <br> 3. Approve the first; hold the second. |
+| Test Data | Any hold expiry before the request starts. |
+| Expected Result | 1. The first reads "The setup time (30 minutes, from 09:30) falls outside …'s opening hours, 10:00–22:00 on Tuesdays. You can still hold or approve it."; the second names the turnaround time until 22:45. Both are still "Free for this period". A request with both outside names both. <br> 2. The Hold dialog shows the same warning. <br> 3. Both succeed: the warning never refuses. |
+
+**Automated by:** `tests/unit/venue-hours.test.ts` › "SCRUM-159 [AC9] TC-159-18: …" (4 tests); `tests/unit/booking-queue.test.tsx` › "SCRUM-159 [AC9] TC-159-18: …"; `tests/integration/venue-catalogue.test.ts` › "SCRUM-159 [AC9] TC-159-18: setup or turnaround outside opening hours is a warning in the queue, and the request can still be approved or held"; `e2e/setup-turnaround.spec.ts` › "SCRUM-159 [AC9] TC-159-18: …"
+
+### TC-159-19
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-159-19 |
+| Test Scenario | [Boundary, Negative] AC 9: no warning when setup and turnaround fit exactly, when no hours are recorded, or when the booking itself is outside the hours |
+| Pre-conditions | The venue is open 09:00–18:00 on weekdays and Closed at weekends, with 30 and 45 minutes. |
+| Test Steps | Read the warning for: 1. Tuesday 09:30–17:15. <br> 2. The same at a venue with no hours recorded. <br> 3. Saturday 10:00–12:00. |
+| Test Data | — |
+| Expected Result | No warning in each case. 1. Setup ends exactly at opening and turnaround exactly at closing. 3. The request is refused instead (SCRUM-34 AC7). |
+
+**Automated by:** `tests/unit/venue-hours.test.ts` › "SCRUM-159 [AC9] TC-159-19: …" (2 tests)

@@ -336,6 +336,37 @@ describe.skipIf(!usesLocalDatabase)("venue catalogue — real database (SCRUM-34
     expect(queued?.outsideHours).toMatch(/is closed on Sundays, so it can't be booked then\.$/);
   });
 
+  it("SCRUM-159 [AC9] TC-159-18: setup or turnaround outside opening hours is a warning in the queue, and the request can still be approved or held", async () => {
+    const id = await addVenue("AC9", { setupMinutes: 30, turnaroundMinutes: 45 });
+    // Tuesday 10:00–22:00: both events fit, but setup from 09:30 and
+    // turnaround until 22:45 don't.
+    const early = await booking(id, `${TUESDAY}T10:00`, `${TUESDAY}T12:00`);
+    const late = await booking(id, `${TUESDAY}T20:00`, `${TUESDAY}T22:00`);
+
+    const queue = await getPendingBookingQueue();
+    expect(queue.find((b) => b.id === early.id)).toMatchObject({
+      outsideHours: null,
+      hoursWarning: expect.stringMatching(
+        /^The setup time \(30 minutes, from 09:30\) falls outside SCRUM-34 AC9 \d+'s opening hours, 10:00–22:00 on Tuesdays\./,
+      ),
+    });
+    expect(queue.find((b) => b.id === late.id)?.hoursWarning).toMatch(
+      /^The turnaround time \(45 minutes, until 22:45\) falls outside/,
+    );
+
+    asVenueStaff();
+    expect(
+      await decideBookingRequest({ bookingId: early.id, decision: "APPROVED" }),
+    ).toMatchObject({ ok: true });
+    expect(
+      await holdBookingRequest({
+        bookingId: late.id,
+        holdExpiresAt: sg(`${TUESDAY}T12:00`).toISOString(),
+        holdNote: "Confirm the guest list.",
+      }),
+    ).toMatchObject({ ok: true });
+  });
+
   it("SCRUM-34 [AC7] TC-34-09: a hold outside opening hours can't be approved or confirmed, and stays as it was; within them it can", async () => {
     const id = await addVenue("AC7 hold");
     const unapproved = await heldBooking(id, `${SUNDAY}T12:00`, `${SUNDAY}T14:00`);

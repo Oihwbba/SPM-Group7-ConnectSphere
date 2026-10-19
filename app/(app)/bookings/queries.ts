@@ -7,7 +7,7 @@ import {
   submittedBefore,
 } from "@/lib/venue-availability";
 import { liveHoldWhere } from "@/lib/booking-holds";
-import { openingHoursRefusal } from "@/lib/venue-hours";
+import { openingHoursRefusal, setupTurnaroundWarning } from "@/lib/venue-hours";
 
 /**
  * SCRUM-50 — the events a coordinator may request a venue for: approved ones
@@ -149,35 +149,40 @@ export async function getPendingBookingQueue(now = new Date()) {
   );
   // A held request reserves its own period, so it isn't its own blocker.
   return Promise.all(
-    pending.map(async (booking) => ({
-      ...booking,
-      // SCRUM-34 AC7: approving or holding it would be refused for this.
-      outsideHours: openingHoursRefusal(booking, booking.venue),
-      blockers: (
-        await findVenueBlockers(
-          prisma,
-          booking.venue.id,
-          occupiedPeriod(booking, booking.status === "HELD" ? booking : booking.venue),
-          now,
-        )
-      ).filter((blocker) => blocker.id !== booking.id),
-      // SCRUM-134 AC1: the other Pending requests it competes with, each
-      // marked if it came first and so is decided first (AC2).
-      competing:
-        booking.status === "PENDING"
-          ? (
-              await findCompetingRequests(
-                prisma,
-                { ...booking, venueId: booking.venue.id },
-                booking.venue,
-              )
-            ).map((other) => ({ ...other, earlier: submittedBefore(other, booking) }))
-          : [],
-      judgement:
-        judgements.find(
-          (j) => j.eventId === booking.eventId && j.venueId === booking.venue.id,
-        ) ?? null,
-    })),
+    pending.map(async (booking) => {
+      const minutes = booking.status === "HELD" ? booking : booking.venue;
+      return {
+        ...booking,
+        // SCRUM-34 AC7: approving or holding it would be refused for this.
+        outsideHours: openingHoursRefusal(booking, booking.venue),
+        // SCRUM-159 AC9: shown, but Venue Staff can still hold or approve it.
+        hoursWarning: setupTurnaroundWarning(booking, minutes, booking.venue),
+        blockers: (
+          await findVenueBlockers(
+            prisma,
+            booking.venue.id,
+            occupiedPeriod(booking, minutes),
+            now,
+          )
+        ).filter((blocker) => blocker.id !== booking.id),
+        // SCRUM-134 AC1: the other Pending requests it competes with, each
+        // marked if it came first and so is decided first (AC2).
+        competing:
+          booking.status === "PENDING"
+            ? (
+                await findCompetingRequests(
+                  prisma,
+                  { ...booking, venueId: booking.venue.id },
+                  booking.venue,
+                )
+              ).map((other) => ({ ...other, earlier: submittedBefore(other, booking) }))
+            : [],
+        judgement:
+          judgements.find(
+            (j) => j.eventId === booking.eventId && j.venueId === booking.venue.id,
+          ) ?? null,
+      };
+    }),
   );
 }
 
