@@ -95,7 +95,9 @@ describe.skipIf(!usesLocalDatabase)(
 
       await db.query(sqlOf(MIGRATION));
       await db.query(sqlOf(FOLLOW_UP));
-    });
+      // Replaying every earlier migration takes a few seconds alone, and over
+      // Vitest's 10 s hook default while the other files run alongside it.
+    }, 60_000);
 
     afterAll(async () => {
       await db.end();

@@ -224,4 +224,57 @@ test.describe("SCRUM-85 — Attendees are kept informed", () => {
     await notice.click();
     await attendee.waitForURL(`**/events/${event.id}`);
   });
+
+  test("SCRUM-85 [AC5, AC9] TC-85-07, TC-85-08: an event being re-planned is a 404 to an Attendee not registered for it, and a withdrawn Attendee's old notice no longer links to it", async ({
+    browser,
+  }) => {
+    const name = `${PREFIX} Film Night ${Date.now()}`;
+    const event = await prisma.event.create({
+      data: {
+        name,
+        status: "PLANNING",
+        organiserId: "usr_organiser",
+        coordinatorId: "usr_coordinator",
+        ...MOVED,
+        expectedAttendance: 20,
+        registrationRequired: true,
+        registrationEnabled: true,
+        confirmedStartAt: CONFIRMED.startAt,
+        confirmedEndAt: CONFIRMED.endAt,
+        confirmedVenues: ["Seminar Room 2.1 — Level 2, Block B"],
+      },
+      select: { id: true },
+    });
+    // attendee2 registered while it was Confirmed, then withdrew.
+    await prisma.registration.create({
+      data: {
+        eventId: event.id,
+        userId: "usr_attendee_2",
+        status: "WITHDRAWN",
+        withdrawnAt: new Date(),
+      },
+    });
+    await prisma.notification.create({
+      data: {
+        userId: "usr_attendee_2",
+        type: "REGISTRATION_CONFIRMED",
+        title: "You're registered",
+        message: `You're registered for "${name}".`,
+        eventId: event.id,
+      },
+    });
+
+    // Never registered: the URL reads as missing (SCRUM-68 parity).
+    const stranger = await signedIn(browser, "attendee@test.local");
+    expect((await stranger.goto(`/events/${event.id}`))?.status()).toBe(404);
+
+    // Withdrawn: the page is a 404 too, and the old notice no longer opens it.
+    const withdrawn = await signedIn(browser, "attendee2@test.local");
+    expect((await withdrawn.goto(`/events/${event.id}`))?.status()).toBe(404);
+    await withdrawn.goto("/notifications");
+    const notice = withdrawn.getByTestId("notification").filter({ hasText: name });
+    await expect(notice).toContainText("You're registered");
+    // The arrow is shown only for a notice that opens something.
+    await expect(notice.locator("svg.lucide-chevron-right")).toHaveCount(0);
+  });
 });

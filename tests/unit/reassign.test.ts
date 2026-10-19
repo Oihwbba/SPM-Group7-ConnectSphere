@@ -206,7 +206,10 @@ describe("reassignCoordinator — SCRUM-21", () => {
     });
     expect(tx.user.findFirst).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { id: "usr_attendee", role: "COORDINATOR" },
+        where: {
+          id: "usr_attendee",
+          OR: [{ role: "COORDINATOR" }, { additionalRoles: { has: "COORDINATOR" } }],
+        },
       }),
     );
     expect(tx.event.updateMany).not.toHaveBeenCalled();

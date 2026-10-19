@@ -23,6 +23,7 @@ import type { Event, RejectionOutcome } from "@prisma/client";
 
 import { formatDate, formatDateTime } from "@/lib/datetime";
 import { isOverdue } from "@/lib/event-closing";
+import { EVENT_STATUS_LABEL } from "@/lib/status-labels";
 import { StatusBadge } from "@/components/events/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -239,7 +240,7 @@ export function EventsClient({
         return;
       }
       toast.success(
-        `Event status updated to ${result.data.status.replace("_", " ").toLowerCase()}.`,
+        `Event status updated to ${EVENT_STATUS_LABEL[result.data.status]}.`,
       );
       setRejectingEvent(null);
       setRejectionReason("");
@@ -520,8 +521,9 @@ export function EventsClient({
                 setStatusFilter("ALL");
               }}
             >
-              {isCoordinator ? "Awaiting review" : "Submitted"} (
-              {submittedCount})
+              {/* SCRUM-131 AC1: "Sent", since the tab lists every request
+                  that isn't a draft, not only the Submitted ones. */}
+              {isCoordinator ? "Awaiting review" : "Sent"} ({submittedCount})
             </Button>
           </div>
 
@@ -533,15 +535,11 @@ export function EventsClient({
               aria-label="Filter by status"
             >
               <option value="ALL">All Statuses</option>
-              <option value="DRAFT">Draft</option>
-              <option value="SUBMITTED">Submitted</option>
-              <option value="UNDER_REVIEW">Under Review</option>
-              <option value="APPROVED">Approved</option>
-              <option value="REJECTED">Rejected</option>
-              <option value="PLANNING">Planning</option>
-              <option value="CONFIRMED">Confirmed</option>
-              <option value="COMPLETED">Completed</option>
-              <option value="CANCELLED">Cancelled</option>
+              {Object.entries(EVENT_STATUS_LABEL).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
             </select>
             <input
               type="text"

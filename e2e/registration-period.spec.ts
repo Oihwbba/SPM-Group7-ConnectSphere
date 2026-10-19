@@ -78,6 +78,8 @@ test.describe("SCRUM-75 — Control and enforce the registration period", () => 
     await expect(panel.getByTestId("registration-control-state")).toHaveText(
       "Registration closed",
     );
+    // SCRUM-132 AC4: the change is confirmed.
+    await expect(page.getByText("Registration closed.", { exact: true })).toBeVisible();
     await expect(panel.getByRole("button", { name: "Reopen registration" })).toBeVisible();
 
     // --- The Attendee still sees it, as closed --------------------------
@@ -97,6 +99,7 @@ test.describe("SCRUM-75 — Control and enforce the registration period", () => 
     panel = await registrationPanel(page, name);
     await panel.getByRole("button", { name: "Reopen registration" }).click();
     await expect(panel.getByTestId("registration-control-state")).toHaveText("Open");
+    await expect(page.getByText("Registration reopened.", { exact: true })).toBeVisible();
 
     // --- The Attendee registers -----------------------------------------
     await signIn(page, "attendee4@test.local");

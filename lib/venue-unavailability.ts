@@ -1,5 +1,6 @@
 import {
   Prisma,
+  type BookingStatus,
   type PrismaClient,
   type VenueUnavailabilityReason,
 } from "@prisma/client";
@@ -9,6 +10,7 @@ import { formatDateTime } from "@/lib/datetime";
 import { overlaps, type Period } from "@/lib/period";
 import { UNAVAILABILITY_REASON_LABEL } from "@/lib/schemas/unavailability";
 import { notifyRole } from "@/lib/staff-notifications";
+import { BOOKING_STATUS_LABEL } from "@/lib/status-labels";
 
 /**
  * SCRUM-161 — venue unavailability recorded over existing bookings. The
@@ -25,13 +27,7 @@ type Db = PrismaClient | Prisma.TransactionClient;
 const MAX_REACH_MS = 1440 * 60 * 1000;
 const MINUTE_MS = 60 * 1000;
 
-const STATUS_LABEL = {
-  PENDING: "Pending",
-  HELD: "Held",
-  APPROVED: "Approved",
-} as const;
-
-export type AffectedStatus = keyof typeof STATUS_LABEL;
+export type AffectedStatus = Extract<BookingStatus, "PENDING" | "HELD" | "APPROVED">;
 
 /** A Pending, Held or Approved booking the unavailability overlaps (AC3). */
 export interface AffectedBooking extends Period {
@@ -171,7 +167,7 @@ export function affectedBookingView(booking: AffectedBooking) {
     bookingId: booking.id,
     eventName: booking.event.name,
     coordinatorName: booking.event.coordinator?.name ?? null,
-    status: STATUS_LABEL[booking.status],
+    status: BOOKING_STATUS_LABEL[booking.status],
     startAt: booking.startAt,
     endAt: booking.endAt,
   };
@@ -234,7 +230,7 @@ export async function flagForUnavailability(
       userId: b.event.coordinatorId ?? b.requestedById,
       type: "ARRANGEMENT_FLAGGED" as const,
       title: "Alternative venue arrangements required",
-      message: `"${b.event.name}": ${venueName} is unavailable (${what}), which overlaps your ${STATUS_LABEL[b.status].toLowerCase()} booking there. Alternative arrangements are required: find a replacement venue, then cancel this booking.`,
+      message: `"${b.event.name}": ${venueName} is unavailable (${what}), which overlaps your ${BOOKING_STATUS_LABEL[b.status].toLowerCase()} booking there. Alternative arrangements are required: find a replacement venue, then cancel this booking.`,
       link: "/events",
       eventId: b.event.id,
       bookingId: b.id,
@@ -244,7 +240,7 @@ export async function flagForUnavailability(
     await notifyRole(tx, "VENUE_STAFF", b.event, {
       type: "ARRANGEMENT_FLAGGED",
       title: "Booking needs reconsideration",
-      message: `"${b.event.name}": its ${STATUS_LABEL[b.status].toLowerCase()} booking of ${venueName}, ${formatDateTime(b.startAt)} to ${formatDateTime(b.endAt)}, is flagged because the venue is unavailable (${what}).`,
+      message: `"${b.event.name}": its ${BOOKING_STATUS_LABEL[b.status].toLowerCase()} booking of ${venueName}, ${formatDateTime(b.startAt)} to ${formatDateTime(b.endAt)}, is flagged because the venue is unavailable (${what}).`,
       link: "/bookings",
     });
   }
