@@ -18,10 +18,13 @@ import {
 import { cancelInTransaction } from "@/lib/event-closing";
 import { EQUIPMENT_REQUEST_STATUS_LABEL } from "@/lib/equipment/requests";
 import { flagArrangements, flaggableArrangements } from "@/lib/reconsideration";
+import { formatDateTime } from "@/lib/datetime";
 import {
+  notifyAboutEvent,
   notifyBackInPlanning,
   withdrawRegistrationClosedNotice,
 } from "@/lib/event-notifications";
+import { effectiveClosesAt } from "@/lib/registration-state";
 import { outdateSafetyChecks } from "@/lib/safety-checks";
 import { CHANGE_KEYS, CHANGE_REQUEST_STATUS_LABEL } from "@/lib/schemas/change-request";
 import {
@@ -310,6 +313,15 @@ export async function decideChangeRequest(
       const registrationNoLongerNeeded = request.fields.some(
         (f) => f.fieldName === "registrationRequired" && f.newValue === "false",
       );
+      // AC11 (SCRUM-75 AC11): a Confirmed event that now needs registration
+      // opens it, as confirming would (SCRUM-75 AC4). One sent back to
+      // Planning opens it when it is confirmed again.
+      const registrationNowNeeded =
+        event.status === "CONFIRMED" &&
+        !returnedToPlanning &&
+        request.fields.some(
+          (f) => f.fieldName === "registrationRequired" && f.newValue === "true",
+        );
       await tx.event.update({
         where: { id: eventId },
         data: {
@@ -320,6 +332,7 @@ export async function decideChangeRequest(
             noEquipmentNeededById: null,
           }),
           ...(registrationNoLongerNeeded && { registrationEnabled: false }),
+          ...(registrationNowNeeded && { registrationEnabled: true }),
         },
       });
       // Who changed each value and when (AC10).
@@ -366,6 +379,30 @@ export async function decideChangeRequest(
       // notice won't happen either.
       if (returnedToPlanning || registrationNoLongerNeeded) {
         await withdrawRegistrationClosedNotice(tx, eventId, now);
+      }
+      // AC11: registration now open closes at a time known now, so its
+      // notice is written ahead, as confirming writes it (SCRUM-45 AC11).
+      if (registrationNowNeeded) {
+        const closesAt = effectiveClosesAt(
+          await tx.event.findUniqueOrThrow({
+            where: { id: eventId },
+            select: { startAt: true, registrationClosesAt: true },
+          }),
+        );
+        if (closesAt && closesAt > now) {
+          await notifyAboutEvent(
+            tx,
+            [event.organiserId, event.coordinatorId],
+            { id: eventId, name: event.name },
+            {
+              title: "Registration closed",
+              message: `Registration for "${event.name}" closed at ${formatDateTime(closesAt)}.`,
+              showFromAt: closesAt,
+            },
+          );
+        }
+      }
+      if (returnedToPlanning) {
         // SCRUM-45 AC5: the Organiser is told why it is back in Planning.
         await notifyBackInPlanning(
           tx,
