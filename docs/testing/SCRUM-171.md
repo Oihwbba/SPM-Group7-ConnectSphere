@@ -138,7 +138,7 @@ request ask for it.
 | Test Data | — |
 | Expected Result | Step 1: "This event has 1 active registration, so Registration needed can't be changed to No."; the event still needs registration, the request stays Submitted, and nothing is written. Step 2: approved, and the event no longer needs registration. |
 
-**Automated by:** `tests/unit/change-decision.test.ts` › "SCRUM-171 [AC5] TC-171-09: Registration needed can't be approved as No while people are registered; the message gives how many, and nothing is written" and "SCRUM-171 [AC5] TC-171-09: with nobody registered, No is applied as No; Yes never counts registrations"; `tests/integration/change-decision.test.ts` › "SCRUM-41 [AC1] TC-41-18, SCRUM-171 [AC5] TC-171-09: a raised Registration needed No is refused while someone is registered, and applied as No once nobody is"
+**Automated by:** `tests/unit/change-decision.test.ts` › "SCRUM-171 [AC5] TC-171-09: Registration needed can't be approved as No while people are registered; the message gives how many, and nothing is written" and "SCRUM-171 [AC4, AC5] TC-171-09: with nobody registered, No is applied as No and closes registration, withdrawing its notice; Yes counts no registrations and changes neither"; `tests/integration/change-decision.test.ts` › "SCRUM-41 [AC1] TC-41-18, SCRUM-171 [AC5] TC-171-09: a raised Registration needed No is refused while someone is registered, and applied as No once nobody is"
 
 ### TC-171-10
 
