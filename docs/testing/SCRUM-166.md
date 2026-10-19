@@ -11,16 +11,24 @@ and the app is running. The event is in Planning, assigned to
 (capacity 200) covering its whole period. The Safety Officer is
 `safety@test.local`. Every account's password is `Password123!`.
 
-**What this story doesn't cover yet:**
+**Covered by other stories:**
 
-- **AC1, AC4, notifications:** a notification is written for every Safety
-  Officer on a request and for the Coordinator on an outcome, and shows in
-  SCRUM-48's list. Anything further about how they behave is SCRUM-124
-  (#213, not merged).
-- **AC13, an approved change request:** applying one is SCRUM-128 (#181),
-  which calls `outdateSafetyChecks`. SCRUM-25's edits, approving a booking,
-  placing, rejecting, confirming or releasing a hold, withdrawing a request,
-  reserving equipment and cancelling a flagged arrangement already do.
+- **AC1, AC4, notifications:** this story writes a notification for every
+  Safety Officer on a request (TC-166-01) and for the Coordinator on an
+  outcome (TC-166-07). How notifications behave is SCRUM-124's AC11, merged in
+  #213: `tests/integration/staff-notifications.test.ts` › "SCRUM-124 [AC8,
+  AC11, AC14] TC-124-08, TC-124-11: a safety check's Changes requested flags
+  the booking, and tells its Coordinator and each Venue Staff member once".
+- **AC13, an approved change request:** SCRUM-128, merged in #181, puts an
+  approved or awaiting check out of date with `outdateSafetyChecks`:
+  `tests/unit/change-decision.test.ts` › "SCRUM-128 [AC4] TC-128-04: an
+  impactful change flags the event's arrangements and outdates its safety
+  check" and "SCRUM-128 [AC4] TC-128-04: a layout change outdates a safety
+  check without flagging anything"; `tests/integration/change-decision.test.ts`
+  › "SCRUM-128 [AC2, AC4, AC5] TC-128-11: …". SCRUM-25's edits, approving a
+  booking, placing, rejecting, confirming or releasing a hold, withdrawing a
+  request, reserving equipment and cancelling a flagged arrangement do the same
+  (TC-166-12).
 
 | ID | Type | Criterion | Automated |
 |---|---|---|---|
