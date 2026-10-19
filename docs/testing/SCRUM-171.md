@@ -34,7 +34,7 @@ request ask for it.
 | Test Data | `organiser@test.local` |
 | Expected Result | Both submit. The event stores Registration needed Yes, then No, with no note. |
 
-**Automated by:** `tests/unit/events.test.ts` › "SCRUM-171 [AC1, AC2] TC-171-01: …" (3 tests); `tests/integration/registration-needed.test.ts` › "SCRUM-171 [AC1, AC2] TC-171-01: …"; `e2e/events.spec.ts` and `e2e/coordinator-assignment.spec.ts` submit through the form choosing Yes.
+**Automated by:** `tests/unit/events.test.ts` › "SCRUM-171 [AC1, AC2] TC-171-01: …" (3 tests); `tests/integration/registration-needed.test.ts` › "SCRUM-171 [AC1, AC2] TC-171-01: …"; `e2e/events.spec.ts` and `e2e/lead-queue.spec.ts` submit through the form choosing Yes.
 
 ### TC-171-02
 
