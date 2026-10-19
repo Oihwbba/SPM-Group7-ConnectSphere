@@ -154,11 +154,11 @@ describe.skipIf(!usesLocalDatabase)(
           },
         })
       ).id;
+      // Its own pool: another suite may delete its throwaway equipment mid-run.
       equipmentId = (
-        await prisma.equipment.findFirstOrThrow({
-          where: { isActive: true },
+        await prisma.equipment.create({
+          data: { type: `Staff notice equipment ${STAMP}`, totalQuantity: 5 },
           select: { id: true },
-          orderBy: { id: "asc" },
         })
       ).id;
     });
@@ -168,6 +168,7 @@ describe.skipIf(!usesLocalDatabase)(
     afterAll(async () => {
       await clear();
       await prisma.venue.delete({ where: { id: venueId } });
+      await prisma.equipment.delete({ where: { id: equipmentId } });
       await prisma.event.deleteMany({ where: { id: { in: eventIds } } });
     });
 

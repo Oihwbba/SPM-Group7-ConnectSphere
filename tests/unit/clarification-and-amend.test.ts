@@ -463,6 +463,7 @@ describe("submitEventRequest — SCRUM-108 AC9–AC12, AC14 resubmission", () =>
     id: "evt1",
     organiserId: "usr_org",
     status: "REJECTED",
+    rejectionOutcome: "AMEND_AND_RESUBMIT",
     coordinatorId,
     name: "Amended Summit",
     purpose: "Networking",

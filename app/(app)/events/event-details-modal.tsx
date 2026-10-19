@@ -18,7 +18,7 @@ import { ChangeRequestPanel } from "@/components/events/change-request-panel";
 import { ReadinessChecklist } from "@/components/events/readiness-checklist";
 import { ReconsiderationPanel } from "@/components/events/reconsideration-panel";
 import { CancelEvent } from "@/components/events/cancel-event";
-import { CANCELLABLE } from "@/lib/event-closing";
+import { CANCELLABLE } from "@/lib/event-lifecycle";
 import { ConfirmedArrangements } from "@/components/events/confirmed-arrangements";
 import { CurrentCoordinator } from "@/components/events/current-coordinator";
 import { VenueBookings } from "@/components/events/venue-bookings";
@@ -95,7 +95,8 @@ export function EventDetailsModal({
                   ` • Submitted ${formatDate(event.submittedAt)}`}
               </DialogDescription>
             </div>
-            <div className="flex items-center gap-2">
+            {/* Wraps on a phone, so the dialog never scrolls sideways (SCRUM-132 AC1). */}
+            <div className="flex flex-wrap items-center gap-2">
               {/* SCRUM-38 AC1: venue search for this event's period. */}
               {isCoordinator &&
                 BOOKABLE_EVENT_STATUSES.includes(event.status) && (
@@ -138,6 +139,28 @@ export function EventDetailsModal({
 
         {/* Singular Page Layout — Displays all entered details at a glance */}
         <div className="space-y-4 py-2">
+          {/* SCRUM-132 AC3: the arrangements and what is still outstanding
+              come first, beside the status, so a desktop screen shows them
+              without scrolling. */}
+          {/* SCRUM-26: flagged arrangements, for the assigned Coordinator to resolve */}
+          {(event.status === "PLANNING" || event.status === "CONFIRMED") && (
+            <ReconsiderationPanel
+              key={`flags-${reloads}`}
+              eventId={event.id}
+              onResolved={() => setReloads((n) => n + 1)}
+            />
+          )}
+          {/* SCRUM-110: what is still outstanding before the event can be confirmed */}
+          {event.status === "PLANNING" && (
+            <ReadinessChecklist
+              key={`checklist-${reloads}`}
+              eventId={event.id}
+              onBookingsChanged={() => setBookingChanges((n) => n + 1)}
+            />
+          )}
+          {/* SCRUM-81: what a Confirmed event has secured */}
+          {event.status === "CONFIRMED" && <ConfirmedArrangements eventId={event.id} />}
+
           {/* Section 1: Basic Event Information */}
           <Card className="overflow-hidden">
             <CardHeader className="bg-muted/30 px-4 py-3">
@@ -179,24 +202,6 @@ export function EventDetailsModal({
             <ChangeRequestPanel key={event.id} event={event} />
           )}
 
-          {/* SCRUM-110: what is still outstanding before the event can be confirmed */}
-          {/* SCRUM-26: flagged arrangements, for the assigned Coordinator to resolve */}
-          {(event.status === "PLANNING" || event.status === "CONFIRMED") && (
-            <ReconsiderationPanel
-              key={`flags-${reloads}`}
-              eventId={event.id}
-              onResolved={() => setReloads((n) => n + 1)}
-            />
-          )}
-          {event.status === "PLANNING" && (
-            <ReadinessChecklist
-              key={`checklist-${reloads}`}
-              eventId={event.id}
-              onBookingsChanged={() => setBookingChanges((n) => n + 1)}
-            />
-          )}
-          {/* SCRUM-81: what a Confirmed event has secured */}
-          {event.status === "CONFIRMED" && <ConfirmedArrangements eventId={event.id} />}
           {/* SCRUM-162 AC7: every venue booking, once a venue can be requested */}
           {(event.status === "APPROVED" ||
             event.status === "PLANNING" ||

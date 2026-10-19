@@ -2,21 +2,15 @@
 
 import { useEffect, useState } from "react";
 import { Users } from "lucide-react";
-import type { RegistrationStatus } from "@prisma/client";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getEventRegistrations } from "@/app/(app)/events/registration-list-actions";
+import { REGISTRATION_STATUS_LABEL } from "@/lib/status-labels";
 import type {
   EventRegistrationList,
   RegistrationRow,
 } from "@/lib/registration-list";
-
-const STATUS_LABEL: Record<RegistrationStatus, string> = {
-  REGISTERED: "Registered",
-  WITHDRAWN: "Withdrawn",
-  CANCELLED: "Cancelled",
-};
 
 const STATUS_BADGE_VARIANT = {
   REGISTERED: "success",
@@ -36,7 +30,7 @@ function RegistrationRows({ rows }: { rows: RegistrationRow[] }) {
         >
           <span>{row.attendeeName}</span>
           <Badge variant={STATUS_BADGE_VARIANT[row.status]}>
-            {STATUS_LABEL[row.status]}
+            {REGISTRATION_STATUS_LABEL[row.status]}
           </Badge>
         </li>
       ))}

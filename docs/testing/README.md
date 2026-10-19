@@ -136,7 +136,7 @@ the open pull requests that change the same test files have merged.
 | [SCRUM-38](SCRUM-38.md) | Felicia Or | 21 | Every current case automated (unit, integration for occupied periods and opening hours against real rows, e2e for the journeys); TC-38-19 retired before merge, a date alone is searched as the whole day (TC-38-04) |
 | [SCRUM-40](SCRUM-40.md) | Felicia Or | 11 | Every case automated (unit, integration for the one-per-event judgement and the advisory rule, e2e for the journey and the venue detail view); the search-results half of AC 1–AC 4 and AC 7 is SCRUM-38's TC-38-09 |
 | [SCRUM-41](SCRUM-41.md) | Jin Hong | 18 | Every case automated (unit, integration for the lock, index and rejection, e2e for both journeys); AC 8's cancellation half is SCRUM-82's TC-82-04 |
-| [SCRUM-45](SCRUM-45.md) | Jin Hong | 12 | Every case automated; AC 6, AC 9 and the Lead's assignment are notices SCRUM-82, SCRUM-128 and SCRUM-165 send, and AC 10 waits for SCRUM-21 |
+| [SCRUM-45](SCRUM-45.md) | Jin Hong | 13 | Every case automated; AC 6, AC 9, AC 10 and the Lead's assignment are notices SCRUM-82, SCRUM-128, SCRUM-21 and SCRUM-165 send |
 | [SCRUM-48](SCRUM-48.md) | Jin Hong | 15 | Every case automated |
 | [SCRUM-50](SCRUM-50.md) | Caylern Goh | 15 | Every case automated |
 | [SCRUM-52](SCRUM-52.md) | Caylern Goh | 6 | Every case automated |
@@ -145,7 +145,7 @@ the open pull requests that change the same test files have merged.
 | [SCRUM-110](SCRUM-110.md) | Jun Bin | 15 | Every case automated (unit, and e2e for the page); AC 3 is superseded by SCRUM-170 AC 4 (TC-110-01 and TC-110-09 note it) |
 | [SCRUM-108](SCRUM-108.md) | Jun Bin | 14 | Every case automated (unit, e2e for both journeys); AC 6, 8 and 10 point to existing tests |
 | [SCRUM-134](SCRUM-134.md) | Jin Hong | 6 | Written with the story; every case automated |
-| [SCRUM-121](SCRUM-121.md) | Jin Hong | 5 | Written with the story; every case automated except reassigning (TC-121-04 step 3), which waits for SCRUM-21 |
+| [SCRUM-121](SCRUM-121.md) | Jin Hong | 5 | Written with the story; every case automated |
 | [SCRUM-124](SCRUM-124.md) | Jin Hong | 11 | Every case automated (unit, integration); the unavailability notices are SCRUM-161's and the safety check's SCRUM-166's own tests |
 | [SCRUM-126](SCRUM-126.md) | Jun Bin | 10 | Every case automated (unit, integration for the constraint, migration and simultaneous clicks, e2e for the journey) |
 | [SCRUM-130](SCRUM-130.md) | Felicia Or | 12 | Every case automated (unit, integration, e2e) |
@@ -153,11 +153,16 @@ the open pull requests that change the same test files have merged.
 | [SCRUM-163](SCRUM-163.md) | Jin Hong | 17 | Every case automated; TC-163-13's cancel and flag halves are SCRUM-82's and SCRUM-161's tests |
 | [SCRUM-142](SCRUM-142.md) | Jin Hong | 18 | Every case automated (unit, integration for what each change writes and two withdrawals at once, e2e for the Coordinator's journeys) |
 | [SCRUM-191](SCRUM-191.md) | Jin Hong | 6 | A Bug task: the suites that raced each other, and the docs; automated except TC-191-06, a documentation check |
+| [SCRUM-193](SCRUM-193.md) | Jin Hong | 2 | A Bug task: the tests that timed out alongside other files; automated except TC-193-02, a forced timeout |
+| [SCRUM-201](SCRUM-201.md) | Jin Hong | 1 | A Bug task: TC-124-02 used another suite's equipment; automated (the whole suite) |
 | [SCRUM-155](SCRUM-155.md) | Jin Hong | 16 | Every case automated (unit, integration for all-or-nothing and the races, e2e for the journey) |
 | [SCRUM-156](SCRUM-156.md) | Jin Hong | 8 | Every case automated; TC-155-16 retired and the SCRUM-31 reserve cases mapped to SCRUM-155 |
 | [SCRUM-161](SCRUM-161.md) | Felicia Or | 16 | Every current case automated; TC-161-08 to TC-161-11 retired with former AC 5 and AC 6; supersedes TC-37-05 step 1 and TC-37-06 |
 | [SCRUM-159](SCRUM-159.md) | Jun Bin | 17 | Every case automated (unit, integration for the database's range and the simultaneous approvals, e2e for the calendar and the request form); AC 1's form is SCRUM-34's and AC 3's search SCRUM-38's |
+| [SCRUM-170](SCRUM-170.md) | Felicia Or | 13 | Every case automated (unit, integration for the No equipment needed decision racing a new request, e2e for the Organiser's answers on each form and review queue); TC-170-12 and TC-170-13 are automated by SCRUM-25's, SCRUM-128's and SCRUM-38's tests |
 | [SCRUM-171](SCRUM-171.md) | Felicia Or | 10 | Every case automated (unit, integration for registering, editing and the change-request decision against real rows, e2e for browsing and an older request) |
+| [SCRUM-131](SCRUM-131.md) | Felicia Or | 9 | Every case automated (unit for every status name and the checklist badge, e2e for the Organiser's Sent tab and status filter and the Needs Reconsideration badge beside a booking and a reservation, integration for the safety check keeping the event in Planning); AC 6 is SCRUM-85's TC-85-06 |
+| [SCRUM-132](SCRUM-132.md) | Felicia Or | 10 | Automated except two reviews (e2e for every AC 1 page at 360 px, AC 2's five timings and AC 3's desktop view; unit for AC 4's date messages); TC-132-09's confirmation audit and TC-132-10's README check are manual |
 | [SCRUM-172](SCRUM-172.md) | Jin Hong | 20 | Integration and unit; TC-172-15 step 3 is manual, and TC-172-16 is the whole suite |
 | [SCRUM-26](SCRUM-26.md) | Jun Bin | 15 | Every case automated (unit, integration for blocking, Still stands against real unavailability and simultaneous cancels, e2e for the journey); AC 1's warning screen is SCRUM-25's |
 | [SCRUM-70](SCRUM-70.md) | Hann Qian | 10 | Every case automated (unit for each role and the counts, e2e for the Organiser's and the Coordinator's view); AC 6 points to the withdraw action's not-found test |
@@ -166,8 +171,8 @@ the open pull requests that change the same test files have merged.
 | [SCRUM-128](SCRUM-128.md) | Jun Bin | 15 | Every case automated (unit, integration for all-or-nothing, flags, cancellation and simultaneous decisions, e2e for approving, rejecting, approving a cancellation and failed loads or sends); AC 11 waits on SCRUM-41's form and AC 10's attendee notices on SCRUM-85 |
 | [SCRUM-166](SCRUM-166.md) | Jun Bin | 16 | Every case automated (unit, integration for one check per event, simultaneous officers, flags and Outdated, e2e for both journeys); "No equipment needed" waits on SCRUM-170 |
 | [SCRUM-162](SCRUM-162.md) | Hann Qian | 14 | Every case automated (unit for the checklist, the bookings list and the form, integration for several venues, the same venue again, the covering period, separate decisions and simultaneous requests, e2e for the form); AC 5's releases are SCRUM-82's and SCRUM-117's tests |
-| [SCRUM-164](SCRUM-164.md) | Hann Qian | 6 | Automated (unit, integration for the direct call, e2e for the Lead's sign-in and refusals) except TC-164-06, a document check; the Lead's own work (TC-164-05) waits for SCRUM-165, SCRUM-21 and SCRUM-141 |
-| [SCRUM-165](SCRUM-165.md) | Hann Qian | 14 | Every case automated (unit, integration for two Leads at once, e2e for the journey); AC 1's Lead notice is SCRUM-124 AC10, AC 7's Organiser case needs SCRUM-121 for real data, and AC 8's all-events list is SCRUM-141 |
-| [SCRUM-141](SCRUM-141.md) | Hann Qian | 11 | Every case automated (unit, e2e for each role's view, the Lead's filters and refusals); AC 3's reassign and AC 4's reassignment wait for SCRUM-21 |
+| [SCRUM-164](SCRUM-164.md) | Hann Qian | 6 | Automated (unit, integration for the direct call, e2e for the Lead's sign-in and refusals) except TC-164-06, a document check; the Lead's own work (TC-164-05) is SCRUM-165's, SCRUM-21's and SCRUM-141's tests |
+| [SCRUM-165](SCRUM-165.md) | Hann Qian | 14 | Every case automated (unit, integration for two Leads at once, e2e for the journey); AC 1's Lead notice is SCRUM-124's tests, AC 7's real multi-role case SCRUM-121's, and AC 8's all-events list SCRUM-141's |
+| [SCRUM-141](SCRUM-141.md) | Hann Qian | 11 | Every case automated (unit, e2e for each role's view, the Lead's filters and refusals); AC 3's reassign and AC 4's reassignment are SCRUM-21's tests |
 | [SCRUM-85](SCRUM-85.md) | Hann Qian | 9 | Every case automated (unit for each notice and view, integration for confirming again and registering twice at once, e2e for the re-planning journey); AC 4 and AC 12's cancellation was built and tested with SCRUM-82 |
 | [SCRUM-21](SCRUM-21.md) | Hann Qian | 10 | Every case automated (unit for the permission rule and every refusal, integration for two Leads at once, e2e for the Lead's reassignment, the previous Coordinator's read-only view and the Organiser's view) |

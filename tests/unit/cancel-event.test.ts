@@ -5,6 +5,7 @@ import type { EventStatus, Role } from "@prisma/client";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { cancelEvent } from "@/app/(app)/events/cancel-actions";
+import { EVENT_STATUS_LABEL } from "@/lib/event-lifecycle";
 
 // SCRUM-82 — the assigned Coordinator cancels an event, releasing everything
 // held for it. Test cases: docs/testing/SCRUM-82.md. Session and database are
@@ -77,6 +78,26 @@ function expectNothingWritten() {
 }
 
 describe("cancelEvent — SCRUM-82 AC1", () => {
+  // SCRUM-135 AC12: a row left Approved from before approval moved straight
+  // to Planning isn't a resting status, but it can still be cancelled, so it
+  // doesn't keep its arrangements forever.
+  it("SCRUM-82 [AC1, AC3] TC-82-01, SCRUM-135 [AC9, AC12] TC-135-09: a legacy Approved event can be cancelled, and its arrangements are released", async () => {
+    tx.event.findUniqueOrThrow.mockResolvedValue({ status: "APPROVED", coordinatorId: "usr_coord" });
+
+    expect(await cancelEvent(valid)).toEqual({ ok: true, data: { status: "CANCELLED" } });
+    expect(tx.event.update).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ status: "CANCELLED" }) }),
+    );
+    expect(tx.booking.updateMany).toHaveBeenCalledWith({
+      where: { eventId: "evt1", status: { in: ["PENDING", "HELD", "APPROVED"] } },
+      data: { status: "CANCELLED" },
+    });
+    expect(tx.auditLog.createMany.mock.calls[0][0].data[0]).toMatchObject({
+      oldValue: "APPROVED",
+      newValue: "CANCELLED",
+    });
+  });
+
   it.each(["UNDER_REVIEW", "PLANNING", "CONFIRMED"] as EventStatus[])(
     "SCRUM-82 [AC1] TC-82-01: a %s event becomes Cancelled with the reason, who and when",
     async (status) => {
@@ -121,14 +142,14 @@ describe("cancelEvent — SCRUM-82 AC1", () => {
     expect(mockTransaction).not.toHaveBeenCalled();
   });
 
-  it.each(["DRAFT", "SUBMITTED", "APPROVED", "COMPLETED", "REJECTED"] as EventStatus[])(
-    "SCRUM-82 [AC1] TC-82-02: a %s event can't be cancelled and nothing is written",
+  it.each(["DRAFT", "SUBMITTED", "COMPLETED", "REJECTED"] as EventStatus[])(
+    "SCRUM-82 [AC1] TC-82-02, SCRUM-135 [AC11]: a %s event can't be cancelled, the refusal names its status, and nothing is written",
     async (status) => {
       tx.event.findUniqueOrThrow.mockResolvedValue({ status, coordinatorId: "usr_coord" });
 
       expect(await cancelEvent(valid)).toEqual({
         ok: false,
-        error: "Only an event Under Review, in Planning or Confirmed can be cancelled.",
+        error: `This event is ${EVENT_STATUS_LABEL[status]}, so it can't be cancelled.`,
       });
       expectNothingWritten();
     },
