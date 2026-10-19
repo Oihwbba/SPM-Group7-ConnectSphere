@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { AlertTriangle, CalendarClock, CheckCircle2, Wrench } from "lucide-react";
 import { toast } from "sonner";
 
+import { badgeVariants } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { FieldError } from "@/components/ui/field-error";
 import { Label } from "@/components/ui/label";
@@ -16,6 +17,8 @@ import {
   type AvailabilityVerdict,
   type ScheduleEntry,
 } from "@/lib/equipment/availability";
+import { NEEDS_RECONSIDERATION, RESERVATION_STATUS_LABEL } from "@/lib/status-labels";
+import { cn } from "@/lib/utils";
 
 import {
   getEquipmentSchedule,
@@ -239,18 +242,38 @@ function CommitmentRow({
         {formatDateTime(entry.startAt)} → {formatDateTime(entry.endAt)}
       </p>
       {entry.note && <p className="mt-1 text-muted-foreground italic">{entry.note}</p>}
-      {entry.kind === "reservation" &&
-        (entry.needsReconsideration ? (
-          <p
-            className="mt-2 flex items-center gap-1.5 font-medium text-warning-foreground"
-            data-testid="reported-reservation"
-          >
-            <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-            Reported as not providable — waiting for the event&apos;s Coordinator to decide.
+      {entry.kind === "reservation" && (
+        <>
+          {/* SCRUM-131 AC2, AC3 — the schedule lists only CONFIRMED
+              reservations, shown as Reserved; a flag is a badge beside that
+              status, never in its place. */}
+          <p className="mt-2 font-medium text-foreground" data-testid="reservation-status">
+            {RESERVATION_STATUS_LABEL.CONFIRMED}
+            {entry.needsReconsideration && (
+              <>
+                {" "}
+                <span
+                  data-testid="needs-reconsideration"
+                  className={cn(
+                    badgeVariants({ variant: "warning" }),
+                    "gap-1 px-2 py-0 align-middle",
+                  )}
+                >
+                  <AlertTriangle aria-hidden="true" className="h-3 w-3" />
+                  {NEEDS_RECONSIDERATION}
+                </span>
+              </>
+            )}
           </p>
-        ) : (
-          onReported && <ReportReservation reservationId={entry.id} onReported={onReported} />
-        ))}
+          {entry.needsReconsideration ? (
+            <p className="mt-1 text-muted-foreground" data-testid="reported-reservation">
+              Waiting for the event&apos;s Coordinator to decide.
+            </p>
+          ) : (
+            onReported && <ReportReservation reservationId={entry.id} onReported={onReported} />
+          )}
+        </>
+      )}
     </li>
   );
 }

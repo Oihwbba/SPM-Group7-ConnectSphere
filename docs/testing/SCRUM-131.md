@@ -22,6 +22,7 @@ and the app is running. Every account's password is `Password123!`.
 | [TC-131-08](#tc-131-08) | Positive | AC 7 | Unit, integration |
 | [TC-131-09](#tc-131-09) | Negative | AC 6 | Unit (SCRUM-85) |
 | [TC-131-10](#tc-131-10) | Positive | AC 3 | Unit |
+| [TC-131-11](#tc-131-11) | Positive, Negative | AC 2, AC 3 | Unit, e2e |
 
 ### TC-131-01
 
@@ -152,3 +153,16 @@ and the app is running. Every account's password is `Password123!`.
 | Expected Result | 1. "This event isn't ready to confirm yet. Outstanding: Venue booking (Approved – Needs Reconsideration)." and the event stays in Planning. 2. "Arrange the venue and equipment before requesting a safety check. Outstanding: Venue booking (Approved – Needs Reconsideration)." and no check is created. |
 
 **Automated by:** `tests/unit/event-confirm.test.ts` › "SCRUM-131 [AC3] TC-131-10: a flagged booking is named in the refusal with Needs Reconsideration beside its status, and nothing changes"; `tests/unit/safety-check-request.test.ts` › "SCRUM-131 [AC3] TC-131-10: a flagged booking is named in the refusal with Needs Reconsideration beside its status"
+
+### TC-131-11
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-131-11 |
+| Test Scenario | [Positive, Negative] AC 2, AC 3: on Technical Support's equipment schedule, a reservation reads Reserved, and a flagged one keeps Reserved with the Needs Reconsideration badge beside it |
+| Pre-conditions | A Planning event with a reservation of two units of an equipment type, not yet flagged. |
+| Test Steps | 1. As Technical Support, open Equipment and choose the equipment type. <br> 2. On the event's reservation, choose Can't provide this, give a reason and choose Report. |
+| Test Data | `techsupport@test.local` |
+| Expected Result | 1. The reservation reads "Reserved", with no badge, and offers Can't provide this. 2. It reads "Reserved" followed by a **Needs Reconsideration** badge, then "Waiting for the event's Coordinator to decide."; never "Reported as not providable" in place of the status, never "Confirmed", and no report button. |
+
+**Automated by:** `tests/unit/equipment-schedule-panel.test.tsx` › "SCRUM-131 [AC2, AC3] TC-131-11: a flagged reservation reads Reserved with the Needs Reconsideration badge beside it, not in place of it" and "SCRUM-131 [AC2, AC3] TC-131-11: an unflagged reservation reads Reserved, without the badge, and can still be reported"; `e2e/report-reservation.spec.ts` › "SCRUM-32 [AC1, AC2, AC4] TC-32-01, TC-32-02: …" (the row's status before and after the report)
