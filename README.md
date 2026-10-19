@@ -53,6 +53,7 @@ the customer where it matters, so you rarely need to open the folder.
 | See the planned test cases for a story | `docs/testing/SCRUM-n.md` |
 | Build a feature and open a pull request | [`CONTRIBUTING.md`](CONTRIBUTING.md) |
 | Know why something is built the way it is | [`docs/adr/`](docs/adr/README.md) |
+| See each sprint's commitment, outcome and retrospective, how we estimate, and the Definition of Done | [`docs/scrum/`](docs/scrum/README.md) |
 | Add a column or table | [`docs/data-model.md`](docs/data-model.md) |
 | Work with an AI coding assistant | [`CLAUDE.md`](CLAUDE.md) |
 
