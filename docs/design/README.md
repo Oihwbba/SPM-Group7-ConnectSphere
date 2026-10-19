@@ -18,7 +18,7 @@ open pull requests named below, and the Jira stories each diagram cites
 | Diagram | Status | Notes |
 |---|---|---|
 | [Containers](diagrams/c4-2-containers.svg) (C4 level 2) | Built | What runs where: the browser, the one Next.js app, PostgreSQL on Supabase, and Prisma migrations and seed. Each person's description lists their Release 1 duties, not only what's built today. |
-| [Components of the web application](diagrams/c4-3-components.svg) (C4 level 3) | Mixed | Which module does what. Solid boxes are on `main`, orange dashed ones are in open pull requests, and grey dashed ones are planned Sprint 3 stories. The venue catalogue (SCRUM-34, 38 and 40) is a placeholder page on `main`, so it is drawn as planned. |
+| [Components of the web application](diagrams/c4-3-components.svg) (C4 level 3) | Mixed | Which module does what. Solid boxes are on `main`, orange dashed ones are in open pull requests, and grey dashed ones are planned Sprint 3 stories. The venue catalogue, search and suitability (SCRUM-34, 38 and 40) are built on `main`; the other boxes' statuses date from when the diagram was drawn. |
 | [Event status, Release 1 target](diagrams/state-01-event-target.svg) | Target | SCRUM-135, with the Lead's queue (SCRUM-165) and the safety check (SCRUM-166). The lifecycle as built is in [`docs/product-context.md`](../product-context.md). |
 | [Venue booking](diagrams/state-03-booking.svg) | Target | Statuses with holds (SCRUM-163, #154) and the Needs Reconsideration flag (SCRUM-26). |
 | [Safety check](diagrams/state-05-safety-check.svg) | Target | SCRUM-166. |
