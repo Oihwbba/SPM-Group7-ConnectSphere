@@ -92,7 +92,10 @@ describe("requestSafetyCheck — SCRUM-166", () => {
     });
     // AC6: never an officer who organises or coordinates this event.
     expect(tx.user.findMany).toHaveBeenCalledWith({
-      where: { role: "SAFETY_OFFICER", id: { notIn: ["usr_org", "usr_coord"] } },
+      where: {
+        OR: [{ role: "SAFETY_OFFICER" }, { additionalRoles: { has: "SAFETY_OFFICER" } }],
+        id: { notIn: ["usr_org", "usr_coord"] },
+      },
       select: { id: true },
     });
     expect(tx.notification.createMany).toHaveBeenCalledWith({

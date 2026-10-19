@@ -12,6 +12,7 @@ import {
   Hourglass,
   Inbox,
   LayoutGrid,
+  ListOrdered,
   Mail,
   Search,
   MapPin,
@@ -437,6 +438,22 @@ function RequestCard({
               </>
             )}
           </Fact>
+          {booking.competing.length > 0 && (
+            <Fact icon={ListOrdered} label="Competing requests">
+              {/* SCRUM-134 AC1, AC2: an earlier one is decided first. */}
+              <ul className="space-y-1" data-testid="competing-requests">
+                {booking.competing.map((other) => (
+                  <li key={other.id}>
+                    <Mark ok={!other.earlier}>
+                      &ldquo;{other.eventName}&rdquo;, submitted{" "}
+                      {formatDateTime(other.createdAt)}
+                      {other.earlier ? " — earlier, so decide it first" : " — later"}
+                    </Mark>
+                  </li>
+                ))}
+              </ul>
+            </Fact>
+          )}
           <Fact icon={Users} label="Attendance">
             <Mark ok={fits}>
               {booking.requestedAttendance ?? "Not stated"} expected · venue

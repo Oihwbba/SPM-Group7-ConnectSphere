@@ -214,6 +214,11 @@ model User {
 
   role Role @default(ATTENDEE)
 
+  /// SCRUM-121 AC1 — roles held besides `role`. `role` stays the primary one:
+  /// where the user lands after signing in and what the header calls them.
+  /// Permissions are the union of all of them (lib/auth/can.ts, AC2).
+  additionalRoles Role[] @default([])
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -387,6 +392,15 @@ model Event {
   registrationCapacity Int?
   registrationOpensAt  DateTime?
   registrationClosesAt DateTime?
+
+  // SCRUM-85 — what Attendees were last told: the date, time and every
+  // approved venue ("Name — Location") when the event was last Confirmed.
+  // Set on each confirmation; null until the first. While the event is back
+  // in Planning, registered Attendees see these (AC9), and confirming again
+  // with different ones tells them (AC2).
+  confirmedStartAt DateTime?
+  confirmedEndAt   DateTime?
+  confirmedVenues  String[]  @default([])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

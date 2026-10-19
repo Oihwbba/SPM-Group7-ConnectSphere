@@ -18,11 +18,12 @@ export type RecordedChange = {
 
 /**
  * AC2 — the event's new values. A change request records every value as text
- * (`auditValue`), so the start and end are read back as dates and the
- * attendance as a number; a cleared optional field becomes empty again.
+ * (`auditValue`), so the start and end are read back as dates, the
+ * attendance as a number and Registration needed as Yes or No (SCRUM-171); a
+ * cleared optional field becomes empty again.
  */
 export function eventUpdateFrom(changes: RecordedChange[]): Prisma.EventUncheckedUpdateInput {
-  const data: Record<string, string | number | Date | null> = {};
+  const data: Record<string, string | number | boolean | Date | null> = {};
   for (const { fieldName, newValue } of changes) {
     data[fieldName] =
       newValue === null
@@ -31,7 +32,9 @@ export function eventUpdateFrom(changes: RecordedChange[]): Prisma.EventUnchecke
           ? new Date(newValue)
           : fieldName === "expectedAttendance"
             ? Number(newValue)
-            : newValue;
+            : fieldName === "registrationRequired"
+              ? newValue === "true"
+              : newValue;
   }
   return data;
 }

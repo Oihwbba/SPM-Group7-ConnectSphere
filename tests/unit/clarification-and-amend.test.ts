@@ -500,7 +500,10 @@ describe("submitEventRequest — SCRUM-108 AC9–AC12, AC14 resubmission", () =>
       }),
     );
     expect(tx.user.findFirst).toHaveBeenCalledWith({
-      where: { id: "usr_coord", role: "COORDINATOR" },
+      where: {
+        id: "usr_coord",
+        OR: [{ role: "COORDINATOR" }, { additionalRoles: { has: "COORDINATOR" } }],
+      },
       select: { id: true },
     });
     expect(tx.event.update).toHaveBeenLastCalledWith({
@@ -613,7 +616,7 @@ describe("submitEventRequest — SCRUM-108 AC9–AC12, AC14 resubmission", () =>
   it("SCRUM-108 [AC14] TC-108-14, SCRUM-165 [AC9] TC-165-12: when its Coordinator lost the role, the resubmitted request returns to the queue and the history records who held it", async () => {
     tx.event.findFirst.mockResolvedValue(rejectedRow("usr_old"));
     tx.user.findFirst.mockResolvedValue(null);
-    tx.user.findMany.mockResolvedValue([]);
+    tx.user.findMany.mockResolvedValue([{ id: "usr_lead" }]);
 
     const result = await submitEventRequest(amended);
 
@@ -630,12 +633,19 @@ describe("submitEventRequest — SCRUM-108 AC9–AC12, AC14 resubmission", () =>
         newValue: null,
       }),
     });
-    // Nobody was assigned, so only the Organiser's submission notice
-    // (SCRUM-45 AC1) is written.
+    // Nobody was assigned: the Organiser's submission notice (SCRUM-45 AC1),
+    // and every Lead's that it is back in the queue (SCRUM-124 AC10).
     expect(tx.notification.create).not.toHaveBeenCalled();
-    expect(tx.notification.createMany).toHaveBeenCalledTimes(1);
-    expect(tx.notification.createMany.mock.calls[0][0].data).toEqual([
-      expect.objectContaining({ title: "Request submitted", eventId: "evt1" }),
+    expect(tx.notification.createMany.mock.calls.map((c) => c[0].data)).toEqual([
+      [expect.objectContaining({ title: "Request submitted", eventId: "evt1" })],
+      [
+        expect.objectContaining({
+          userId: "usr_lead",
+          type: "REQUEST_AWAITING_ASSIGNMENT",
+          eventId: "evt1",
+          link: "/queue/evt1",
+        }),
+      ],
     ]);
   });
 
