@@ -22,6 +22,8 @@ const tx = vi.hoisted(() => ({
   event: { findUniqueOrThrow: vi.fn(), update: vi.fn() },
   auditLog: { create: vi.fn() },
   notification: { createMany: vi.fn() },
+  booking: { findMany: vi.fn() },
+  registration: { findMany: vi.fn() },
 }));
 
 vi.mock("@/auth", () => ({ auth: vi.fn() }));
@@ -86,6 +88,10 @@ function eventRow(
     coordinatorId: "usr_coordinator" as string | null,
     status: "PLANNING" as EventStatus,
     registrationRequired: null as boolean | null,
+    // SCRUM-85: never confirmed before, unless a case says otherwise.
+    confirmedStartAt: null as Date | null,
+    confirmedEndAt: null as Date | null,
+    confirmedVenues: [] as string[],
     ...over,
   };
 }
@@ -99,6 +105,8 @@ beforeEach(() => {
   tx.event.findUniqueOrThrow.mockResolvedValue(eventRow());
   tx.event.update.mockResolvedValue({});
   tx.auditLog.create.mockResolvedValue({});
+  tx.booking.findMany.mockResolvedValue([]);
+  tx.registration.findMany.mockResolvedValue([]);
   mockChecklist.mockResolvedValue(ready);
   mockTransaction.mockImplementation((cb: (t: typeof tx) => unknown) => cb(tx));
 });
@@ -115,7 +123,10 @@ describe("confirmEvent — SCRUM-81", () => {
     expect(result).toEqual({ ok: true, data: { status: "CONFIRMED" } });
     expect(tx.event.update).toHaveBeenCalledWith({
       where: { id: "evt1" },
-      data: { status: "CONFIRMED", registrationEnabled: true },
+      data: expect.objectContaining({
+        status: "CONFIRMED",
+        registrationEnabled: true,
+      }),
     });
     expect(tx.auditLog.create).toHaveBeenCalledTimes(1);
     expect(tx.auditLog.create).toHaveBeenCalledWith({
@@ -150,7 +161,10 @@ describe("confirmEvent — SCRUM-81", () => {
 
       expect(tx.event.update).toHaveBeenCalledWith({
         where: { id: "evt1" },
-        data: { status: "CONFIRMED", registrationEnabled: opens },
+        data: expect.objectContaining({
+          status: "CONFIRMED",
+          registrationEnabled: opens,
+        }),
       });
     },
   );
@@ -389,5 +403,122 @@ describe("confirmEvent — SCRUM-81", () => {
     await expect(confirmEvent({ eventId: "evt1" })).rejects.toThrow(
       "connection lost",
     );
+  });
+});
+
+describe("confirmEvent — what registered Attendees are told (SCRUM-85)", () => {
+  const START = new Date("2031-06-01T01:00:00Z");
+  const END = new Date("2031-06-01T05:00:00Z");
+  const HALL = { venue: { name: "Main Hall", location: "Level 1" } };
+  const ROOM = { venue: { name: "Room 2", location: "Level 2" } };
+  const lastConfirmed = {
+    confirmedStartAt: START,
+    confirmedEndAt: END,
+    confirmedVenues: ["Main Hall — Level 1"],
+  };
+  const changedNotices = () =>
+    tx.notification.createMany.mock.calls
+      .map(([arg]) => arg.data)
+      .flat()
+      .filter((n: { type: string }) => n.type === "REGISTERED_EVENT_CHANGED");
+
+  function planning(over: Record<string, unknown>) {
+    tx.event.findUniqueOrThrow.mockResolvedValue({
+      ...eventRow(),
+      name: "Gala",
+      startAt: START,
+      endAt: END,
+      ...over,
+    });
+  }
+
+  beforeEach(() => {
+    tx.registration.findMany.mockResolvedValue([
+      { userId: "usr_attendee" },
+      { userId: "usr_attendee_2" },
+    ]);
+  });
+
+  it("SCRUM-85 [AC2] TC-85-04: confirming records the date, time and every approved venue, oldest first, as what Attendees were last told", async () => {
+    planning({});
+    tx.booking.findMany.mockResolvedValue([HALL, ROOM]);
+
+    await confirmEvent({ eventId: "evt1" });
+
+    expect(tx.booking.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { eventId: "evt1", status: "APPROVED" },
+        orderBy: { createdAt: "asc" },
+      }),
+    );
+    expect(tx.event.update).toHaveBeenCalledWith({
+      where: { id: "evt1" },
+      data: expect.objectContaining({
+        confirmedStartAt: START,
+        confirmedEndAt: END,
+        confirmedVenues: ["Main Hall — Level 1", "Room 2 — Level 2"],
+      }),
+    });
+  });
+
+  it("SCRUM-85 [AC2] TC-85-04: the first confirmation tells no Attendee of a change", async () => {
+    planning({});
+    tx.booking.findMany.mockResolvedValue([HALL]);
+
+    await confirmEvent({ eventId: "evt1" });
+
+    expect(changedNotices()).toEqual([]);
+    expect(tx.registration.findMany).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["the start moved", { startAt: new Date("2031-06-02T01:00:00Z") }, [HALL]],
+    ["the end moved", { endAt: new Date("2031-06-01T06:00:00Z") }, [HALL]],
+    ["a venue was added", {}, [HALL, ROOM]],
+    ["a venue was replaced", {}, [ROOM]],
+  ] as const)(
+    "SCRUM-85 [AC2, AC3, AC5, AC11] TC-85-02: confirmed again after %s, each Attendee still registered gets one notice with the new details and every venue",
+    async (_, moved, bookings) => {
+      planning({ ...lastConfirmed, ...moved });
+      tx.booking.findMany.mockResolvedValue([...bookings]);
+
+      await confirmEvent({ eventId: "evt1" });
+
+      // AC5: only those still Registered are asked for.
+      expect(tx.registration.findMany).toHaveBeenCalledWith({
+        where: { eventId: "evt1", status: "REGISTERED" },
+        select: { userId: true },
+      });
+      const notices = changedNotices();
+      expect(notices.map((n: { userId: string }) => n.userId)).toEqual([
+        "usr_attendee",
+        "usr_attendee_2",
+      ]);
+      for (const venue of bookings) {
+        expect(notices[0].message).toContain(venue.venue.name);
+      }
+      expect(notices[0]).toMatchObject({
+        eventId: "evt1",
+        message: expect.stringContaining("Your registration still stands."),
+      });
+    },
+  );
+
+  it("SCRUM-85 [AC2, AC11] TC-85-03: confirmed again with the same date, time and venues tells no Attendee anything", async () => {
+    planning(lastConfirmed);
+    tx.booking.findMany.mockResolvedValue([HALL]);
+
+    await confirmEvent({ eventId: "evt1" });
+
+    expect(changedNotices()).toEqual([]);
+  });
+
+  it("SCRUM-85 [AC6] TC-85-05: confirming an event that is already Confirmed tells nobody again", async () => {
+    planning({ ...lastConfirmed, status: "CONFIRMED", startAt: new Date("2031-06-02T01:00:00Z") });
+
+    await confirmEvent({ eventId: "evt1" });
+
+    expect(tx.notification.createMany).not.toHaveBeenCalled();
+    expect(tx.registration.findMany).not.toHaveBeenCalled();
   });
 });

@@ -35,7 +35,10 @@ describe("getCoordinatorLoads — SCRUM-165 AC4", () => {
     await getCoordinatorLoads(db as never);
 
     const query = mockFindMany.mock.calls[0][0];
-    expect(query.where).toEqual({ role: "COORDINATOR" });
+    // SCRUM-121 AC2: also those who hold the role besides another.
+    expect(query.where).toEqual({
+      OR: [{ role: "COORDINATOR" }, { additionalRoles: { has: "COORDINATOR" } }],
+    });
     expect(
       query.select._count.select.coordinatedEvents.where.status.in,
     ).toEqual(["UNDER_REVIEW", "PLANNING", "CONFIRMED"]);

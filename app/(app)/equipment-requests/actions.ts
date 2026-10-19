@@ -126,7 +126,7 @@ export async function createEquipmentRequest(
 
     const event = await prisma.event.findUnique({
       where: { id: eventId },
-      select: { organiserId: true, coordinatorId: true, status: true },
+      select: { name: true, organiserId: true, coordinatorId: true, status: true },
     });
     const requestable =
       event &&
@@ -187,6 +187,16 @@ export async function createEquipmentRequest(
             note: "Request submitted.",
           },
         });
+        // SCRUM-124 AC2, AC14: every Technical Support member is told, in the
+        // same transaction, so a submission that loses a race tells nobody.
+        await notifyRole(tx, "TECH_SUPPORT", { id: eventId }, {
+          type: "EQUIPMENT_REQUEST_SUBMITTED",
+          title: "An equipment request was submitted",
+          message: `The Coordinator requested equipment for "${event!.name}": ${lines
+            .map((line) => `${known.types.get(line.equipmentId)} × ${line.quantity}`)
+            .join(", ")}.`,
+          link: "/equipment-requests",
+        });
         return request;
       });
 
@@ -240,10 +250,13 @@ export async function updateEquipmentRequestStatus(
         id: true,
         status: true,
         requestedById: true,
-        event: { select: { id: true, name: true } },
+        event: { select: { id: true, name: true, organiserId: true, coordinatorId: true } },
       },
     });
     if (!request) return err(NOT_FOUND);
+    // SCRUM-121 AC5: nobody reviews equipment for an event they organise or
+    // coordinate, whatever roles they hold.
+    requirePermission(user, "equipment-request:review", { kind: "arrangement", ...request.event });
 
     const from = request.status;
     if (!canMoveRequest(from, toStatus)) {
@@ -322,7 +335,9 @@ export async function suggestAlternativeEquipment(
         id: true,
         status: true,
         requestedById: true,
-        event: { select: { id: true, name: true, startAt: true, endAt: true } },
+        event: {
+          select: { id: true, name: true, startAt: true, endAt: true, organiserId: true, coordinatorId: true },
+        },
         lines: {
           where: { id: lineId, ...LIVE_LINE },
           select: {
@@ -335,6 +350,9 @@ export async function suggestAlternativeEquipment(
     });
     const line = request?.lines[0];
     if (!request || !line) return err(NOT_FOUND);
+    // SCRUM-121 AC5: nobody reviews equipment for an event they organise or
+    // coordinate, whatever roles they hold.
+    requirePermission(user, "equipment-request:review", { kind: "arrangement", ...request.event });
     if (request.status !== "IN_REVIEW") {
       return err("Start the review before suggesting alternatives.");
     }

@@ -1,7 +1,10 @@
 import type { EventStatus, Prisma, PrismaClient } from "@prisma/client";
 
 import { withdrawPendingHoldNotices } from "@/lib/booking-holds";
-import { withdrawRegistrationClosedNotice } from "@/lib/event-notifications";
+import {
+  notifyAboutEvent,
+  withdrawRegistrationClosedNotice,
+} from "@/lib/event-notifications";
 
 /**
  * SCRUM-82 — closing an event: cancelling one that won't go ahead, and
@@ -182,14 +185,16 @@ export async function completeFinishedEvents(
 ): Promise<string[]> {
   const at = now.toISOString();
   return db.$transaction(async (tx) => {
-    const completed = await tx.$queryRaw<{ id: string }[]>`
+    const completed = await tx.$queryRaw<
+      { id: string; name: string; organiserId: string; coordinatorId: string | null }[]
+    >`
     UPDATE "Event"
        SET "status" = 'COMPLETED',
            "completedAt" = ${at}::timestamp,
            "updatedAt" = ${at}::timestamp
      WHERE "status" = 'CONFIRMED'
        AND "endAt" < ${at}::timestamp
-    RETURNING "id"`;
+    RETURNING "id", "name", "organiserId", "coordinatorId"`;
     if (completed.length > 0) {
       await tx.auditLog.createMany({
         data: completed.map(({ id }) => ({
@@ -203,6 +208,14 @@ export async function completeFinishedEvents(
           summary: "Completed after its end time (SCRUM-82)",
         })),
       });
+      // SCRUM-45 AC7: its Organiser and Coordinator are told, once, since
+      // only this UPDATE's own rows are notified.
+      for (const event of completed) {
+        await notifyAboutEvent(tx, [event.organiserId, event.coordinatorId], event, {
+          title: "Event completed",
+          message: `"${event.name}" has ended and is now Completed.`,
+        });
+      }
     }
     return completed.map(({ id }) => id);
   });
