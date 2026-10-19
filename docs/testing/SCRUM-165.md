@@ -10,17 +10,13 @@ and the app is running. The Lead is `lead@test.local`; the Coordinators are
 Organiser is `organiser@test.local`. "Submitted — Alumni Homecoming" waits in
 the queue unassigned. Every account's password is `Password123!`.
 
-**What this story doesn't cover yet:**
+**Covered with other stories:**
 
-- **AC1, "every Lead is notified":** SCRUM-124 AC10 (Jin Hong) adds that
-  notice to the submit step. Until then a new request reaches the queue
-  without one.
-- **AC7, the event's own Organiser:** the queue never offers them and the
-  action refuses them (TC-165-09), but a person can only be both once one
-  account can hold several roles (SCRUM-121). Until then the case is proved
-  in unit tests only.
-- **AC8, the read-only all-events list:** SCRUM-141. Coordinators already
-  can't open or decide an unassigned request (TC-165-11).
+- **AC1, "every Lead is notified":** the notice is SCRUM-124 AC10's, written
+  at the submit step; TC-165-01 cites its tests.
+- **AC7, the event's own Organiser:** one account can be both since
+  SCRUM-121 (`multirole@test.local`); TC-165-09 cites its integration tests.
+- **AC8, the read-only all-events list:** SCRUM-141 (TC-141-01, TC-141-05).
 
 | ID | Type | Criterion | Automated |
 |---|---|---|---|
@@ -50,7 +46,7 @@ the queue unassigned. Every account's password is `Password123!`.
 | Test Data | Any complete request, e.g. 50 expected, 1 Nov 2031 09:00–17:00. |
 | Expected Result | The request is Submitted with no Coordinator, nothing is recorded as assigned, and it is listed in the Lead's Unassigned queue. |
 
-**Automated by:** `tests/unit/submission-queue.test.ts` › "SCRUM-165 [AC1] TC-165-01: …" (2 tests); `tests/unit/auth.test.ts` › "SCRUM-165 [AC1] TC-165-01: …"; `e2e/lead-queue.spec.ts` › "SCRUM-165 [AC1–AC5, AC8, AC11] … a submitted request waits in the queue, the Lead assigns it, …"
+**Automated by:** the Lead notice by `tests/unit/submission-queue.test.ts` › "SCRUM-124 [AC10, AC12, AC14] TC-124-10: …" and `tests/integration/staff-notifications.test.ts` › "SCRUM-124 [AC10, AC12, AC14] TC-124-10: …"; `tests/unit/submission-queue.test.ts` › "SCRUM-165 [AC1] TC-165-01: …" (2 tests); `tests/unit/auth.test.ts` › "SCRUM-165 [AC1] TC-165-01: …"; `e2e/lead-queue.spec.ts` › "SCRUM-165 [AC1–AC5, AC8, AC11] … a submitted request waits in the queue, the Lead assigns it, …"
 
 ### TC-165-02
 
@@ -149,12 +145,12 @@ the queue unassigned. Every account's password is `Password123!`.
 |---|---|
 | Test Case ID | TC-165-09 |
 | Test Scenario | [Negative] AC 7: the event's own Organiser can't be its Coordinator |
-| Pre-conditions | An account that is both the request's Organiser and a Coordinator (needs SCRUM-121). |
+| Pre-conditions | An account that is both the request's Organiser and a Coordinator (SCRUM-121, e.g. `multirole@test.local`). |
 | Test Steps | 1. Open the request. <br> 2. Send an assignment naming them directly. |
 | Test Data | — |
 | Expected Result | 1. They aren't offered. 2. "The event's own Organiser can't be its Coordinator." Nothing is written. |
 
-**Automated by:** `tests/unit/lead-queue.test.ts` › "SCRUM-165 [AC7] TC-165-09: …" (2 tests)
+**Automated by:** `tests/unit/lead-queue.test.ts` › "SCRUM-165 [AC7] TC-165-09: …" (2 tests); with a real multi-role account, `tests/integration/multiple-roles.test.ts` › "SCRUM-121 [AC4] TC-121-04: the Lead isn't offered an account that is the event's Organiser, and can't assign it, even though it also coordinates"
 
 ### TC-165-10
 
