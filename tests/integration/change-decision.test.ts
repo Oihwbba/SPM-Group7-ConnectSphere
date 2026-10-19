@@ -247,6 +247,38 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-128 — deciding a change request", (
     ).toEqual({ registrationRequired: false, registrationEnabled: false, status: "CONFIRMED" });
   });
 
+  it("SCRUM-128 [AC11] TC-128-16: Registration needed raised as Yes on a Confirmed event opens registration when approved, with its Registration closed notice written for the event's start", async () => {
+    const eventId = await confirmedEvent(10);
+    await prisma.event.update({
+      where: { id: eventId },
+      data: { registrationRequired: false, registrationEnabled: false },
+    });
+    (auth as unknown as Mock).mockResolvedValue({
+      user: { id: "usr_organiser", role: "ORGANISER", name: "Olivia", email: "organiser@test.local" },
+      expires: "2999-01-01T00:00:00.000Z",
+    });
+    const raised = await raiseChangeRequest({ eventId, changes: { registrationRequired: true } });
+    if (!raised.ok) throw new Error(raised.error);
+    asCoordinator();
+
+    expect(
+      await decideChangeRequest({ changeRequestId: raised.data.id, decision: "APPROVED" }),
+    ).toEqual({ ok: true, data: { decision: "APPROVED", returnedToPlanning: false } });
+    expect(
+      await prisma.event.findUniqueOrThrow({
+        where: { id: eventId },
+        select: { registrationRequired: true, registrationEnabled: true, status: true },
+      }),
+    ).toEqual({ registrationRequired: true, registrationEnabled: true, status: "CONFIRMED" });
+    const notices = await prisma.notification.findMany({
+      where: { eventId, title: "Registration closed", withdrawnAt: null },
+      select: { userId: true, showFromAt: true },
+      orderBy: { userId: "asc" },
+    });
+    expect(notices).toEqual(
+      ["usr_coordinator", "usr_organiser"].map((userId) => ({ userId, showFromAt: day(10).startAt })),
+    );
+  });
   it("SCRUM-170 [AC4] TC-170-12: approving a change to the equipment requirements clears No equipment needed, who and when together", async () => {
     const eventId = await confirmedEvent(9);
     await prisma.event.update({

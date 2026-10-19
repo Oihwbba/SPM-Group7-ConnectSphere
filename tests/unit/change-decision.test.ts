@@ -334,6 +334,93 @@ describe("decideChangeRequest — attendance and cancellation (SCRUM-128 AC7, AC
     expect(tx.notification.updateMany).not.toHaveBeenCalled();
   });
 
+  describe("SCRUM-128 AC11 — Registration needed changed to Yes on a Confirmed event", () => {
+    const toYes = () =>
+      pendingRequest([
+        { fieldName: "registrationRequired", oldValue: "false", newValue: "true", isMajor: false },
+      ]);
+    const confirmedWith = (times: { startAt: Date; registrationClosesAt: Date | null }) =>
+      tx.event.findUniqueOrThrow
+        .mockResolvedValueOnce(eventNow("CONFIRMED"))
+        .mockResolvedValueOnce(times);
+    const closingNotice = (showFromAt: Date) =>
+      ["usr_org", "usr_coord"].map((userId) => ({
+        userId,
+        type: "EVENT_STATUS_CHANGED",
+        eventId: "evt1",
+        title: "Registration closed",
+        message: expect.stringMatching(/^Registration for "Concert" closed at .+\.$/),
+        showFromAt,
+      }));
+
+    beforeEach(() => {
+      tx.eventChangeRequest.findUniqueOrThrow.mockResolvedValue(toYes());
+    });
+
+    it("SCRUM-128 [AC11] TC-128-16: registration opens as confirming would open it (SCRUM-75 AC4), and its Registration closed notice is written for the event's start", async () => {
+      const startAt = new Date("2099-03-01T02:00:00.000Z");
+      confirmedWith({ startAt, registrationClosesAt: null });
+
+      expect(
+        await decideChangeRequest({ changeRequestId: "cr1", decision: "APPROVED" }),
+      ).toEqual({ ok: true, data: { decision: "APPROVED", returnedToPlanning: false } });
+      expect(tx.event.update.mock.calls[0][0].data).toMatchObject({
+        registrationRequired: true,
+        registrationEnabled: true,
+      });
+      expect(tx.event.update.mock.calls[0][0].data).not.toHaveProperty("status");
+      expect(tx.notification.createMany).toHaveBeenCalledWith({ data: closingNotice(startAt) });
+    });
+
+    it("SCRUM-128 [AC11] TC-128-16: with a window closing before the start, the notice is for the window's close; with the close already past, none is written", async () => {
+      const startAt = new Date("2099-03-01T02:00:00.000Z");
+      const windowCloses = new Date("2099-02-20T02:00:00.000Z");
+      confirmedWith({ startAt, registrationClosesAt: windowCloses });
+      await decideChangeRequest({ changeRequestId: "cr1", decision: "APPROVED" });
+      expect(tx.notification.createMany).toHaveBeenCalledWith({ data: closingNotice(windowCloses) });
+
+      tx.notification.createMany.mockClear();
+      confirmedWith({ startAt, registrationClosesAt: new Date("2000-01-01T00:00:00.000Z") });
+      await decideChangeRequest({ changeRequestId: "cr1", decision: "APPROVED" });
+      expect(tx.event.update.mock.lastCall![0].data).toMatchObject({ registrationEnabled: true });
+      expect(tx.notification.createMany).not.toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.arrayContaining([expect.objectContaining({ title: "Registration closed" })]) }),
+      );
+    });
+
+    it("SCRUM-128 [AC11] TC-128-16: an event that isn't Confirmed opens registration when it is confirmed, so nothing opens now", async () => {
+      tx.event.findUniqueOrThrow.mockResolvedValue(eventNow("PLANNING"));
+
+      await decideChangeRequest({ changeRequestId: "cr1", decision: "APPROVED" });
+
+      expect(tx.event.update.mock.calls[0][0].data).not.toHaveProperty("registrationEnabled");
+      expect(tx.notification.createMany).not.toHaveBeenCalled();
+    });
+  });
+
+  it("SCRUM-128 [AC11], SCRUM-45 [AC5]: turning registration off on a Confirmed event withdraws its notice but doesn't say the event is back in Planning, since it isn't", async () => {
+    tx.event.findUniqueOrThrow.mockResolvedValue(eventNow("CONFIRMED"));
+    tx.eventChangeRequest.findUniqueOrThrow.mockResolvedValue(
+      pendingRequest([
+        { fieldName: "registrationRequired", oldValue: "true", newValue: "false", isMajor: false },
+      ]),
+    );
+    tx.registration.count.mockResolvedValue(0);
+
+    await decideChangeRequest({ changeRequestId: "cr1", decision: "APPROVED" });
+
+    expect(tx.notification.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: expect.objectContaining({ title: "Registration closed" }) }),
+    );
+    expect(tx.notification.createMany).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.arrayContaining([
+          expect.objectContaining({ title: "Your event is back in Planning" }),
+        ]),
+      }),
+    );
+  });
+
   it("SCRUM-128 [AC2] TC-128-15: a requested start that has passed while the request waited is refused, and nothing is written; a future one is applied", async () => {
     const startAt = (iso: string) => ({ fieldName: "startAt", oldValue: "2031-01-01T02:00:00.000Z", newValue: iso, isMajor: true });
     tx.eventChangeRequest.findUniqueOrThrow.mockResolvedValue(pendingRequest([startAt("2020-01-01T02:00:00.000Z")]));
