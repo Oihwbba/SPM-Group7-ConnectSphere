@@ -83,6 +83,7 @@ test.describe("SCRUM-32 — report reserved equipment that can no longer be prov
       .getByTestId("schedule-entry")
       .filter({ hasText: EVENT });
     await expect(row).toContainText("2 unit(s)");
+    await expect(row.getByTestId("reservation-status")).toHaveText("Reserved");
     await row.getByRole("button", { name: "Can't provide this" }).click();
 
     // AC2: no report without a reason.
@@ -95,7 +96,14 @@ test.describe("SCRUM-32 — report reserved equipment that can no longer be prov
     await send.click();
     await expect(tech.getByText("Reported. The event's Coordinator has been told.")).toBeVisible();
     // AC1, AC4: still reserved, now marked as reported, and not reportable again.
-    await expect(row.getByTestId("reported-reservation")).toBeVisible();
+    // SCRUM-131 AC3: the flag is a badge beside Reserved, never in its place.
+    await expect(row.getByTestId("reservation-status")).toHaveText(
+      "Reserved Needs Reconsideration",
+    );
+    await expect(row.getByTestId("needs-reconsideration")).toHaveText("Needs Reconsideration");
+    await expect(row.getByTestId("reported-reservation")).toHaveText(
+      "Waiting for the event's Coordinator to decide.",
+    );
     await expect(row).toContainText("2 unit(s)");
     await expect(row.getByRole("button", { name: "Can't provide this" })).toHaveCount(0);
 
