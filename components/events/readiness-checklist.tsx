@@ -3,9 +3,10 @@
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { CheckCircle2, CircleDashed, ListChecks } from "lucide-react";
+import { AlertTriangle, CheckCircle2, CircleDashed, ListChecks } from "lucide-react";
 import type { RejectionOutcome } from "@prisma/client";
 
+import { badgeVariants } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -28,6 +29,8 @@ import { recordNoEquipmentNeeded } from "@/app/(app)/events/equipment-decision-a
 import { requestSafetyCheck } from "@/app/(app)/events/safety-check-actions";
 import type { ReadinessChecklist as Checklist } from "@/lib/event-readiness";
 import { REJECTION_OUTCOME_LABEL } from "@/lib/schemas/event";
+import { NEEDS_RECONSIDERATION } from "@/lib/status-labels";
+import { cn } from "@/lib/utils";
 
 /**
  * SCRUM-110 — the readiness checklist on a Planning event's details, and
@@ -42,6 +45,42 @@ const ITEM_ID: Record<Checklist["items"][number]["name"], string> = {
   Equipment: "equipment",
   "Safety check": "safety",
 };
+
+/**
+ * SCRUM-131 AC3 — the arrangement's status, with Needs Reconsideration as a
+ * warning badge beside it, never in its place, then the flag's reason.
+ */
+function StateWithFlag({
+  state,
+  needsReconsideration,
+  reason,
+}: {
+  state: string;
+  needsReconsideration?: boolean;
+  reason: string | null;
+}) {
+  return (
+    <>
+      {state}
+      {needsReconsideration && (
+        <>
+          {" "}
+          <span
+            data-testid="needs-reconsideration"
+            className={cn(
+              badgeVariants({ variant: "warning" }),
+              "gap-1 px-2 py-0 align-middle",
+            )}
+          >
+            <AlertTriangle aria-hidden="true" className="h-3 w-3" />
+            {NEEDS_RECONSIDERATION}
+          </span>
+        </>
+      )}
+      {reason && ` – ${reason}`}
+    </>
+  );
+}
 
 export function ReadinessChecklist({
   eventId,
@@ -220,9 +259,7 @@ export function ReadinessChecklist({
                         {item.complete ? ", complete" : ", incomplete"}
                       </span>
                       {" — "}
-                      {item.reason
-                        ? `${item.state} – ${item.reason}`
-                        : item.state}
+                      <StateWithFlag {...item} />
                     </p>
                     {/* SCRUM-162 AC8: each live booking, with its own
                         actions. */}
@@ -242,9 +279,7 @@ export function ReadinessChecklist({
                               {booking.attendance !== null &&
                                 ` · ${booking.attendance} people`}
                               {" — "}
-                              {booking.reason
-                                ? `${booking.state} – ${booking.reason}`
-                                : booking.state}
+                              <StateWithFlag {...booking} />
                             </p>
                             {/* SCRUM-163 AC3, AC7: Venue Staff approve the
                                 hold first; only then can the Coordinator

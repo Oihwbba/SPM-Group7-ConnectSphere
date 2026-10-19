@@ -351,7 +351,8 @@ test.describe("User Story 16 — Distinguish Drafts from Submitted Requests Jour
     await expect(page.getByRole("cell", { name: draftTitle })).toBeVisible();
     await expect(page.getByRole("cell", { name: submittedTitle })).not.toBeVisible();
 
-    await page.getByRole("button", { name: /Submitted/i }).click();
+    // SCRUM-131 AC1: the tab of every non-draft request is named Sent.
+    await page.getByRole("button", { name: /^Sent \(/ }).click();
     await expect(page.getByRole("cell", { name: submittedTitle })).toBeVisible();
     await expect(page.getByRole("cell", { name: draftTitle })).not.toBeVisible();
 

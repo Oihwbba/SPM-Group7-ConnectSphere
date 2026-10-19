@@ -5,6 +5,7 @@ import { LIVE_LINE } from "@/lib/equipment/requests";
 import { formatDateTime } from "@/lib/datetime";
 import { FLAGGABLE_BOOKING } from "@/lib/reconsideration";
 import { safetyCheckItem } from "@/lib/safety-checks";
+import { RESERVATION_STATUS_LABEL } from "@/lib/status-labels";
 
 /**
  * SCRUM-110 — an event's readiness checklist: the essential arrangements that
@@ -17,10 +18,12 @@ import { safetyCheckItem } from "@/lib/safety-checks";
 export interface ChecklistItem {
   name: "Venue booking" | "Equipment" | "Safety check";
   complete: boolean;
-  /** "Approved", "Held until … – confirm to secure", "Pending", "Rejected", "Hold expired", "Not requested", "Reserved", "Not fully reserved: Projector", "Awaiting Technical Support review", "Not decided", "No equipment needed" */
+  /** "Approved", "Held until … – confirm to secure", "Pending", "Rejected", "Hold expired", "Not requested", "Reserved", "Reserved: Projector", "Not fully reserved: Projector", "Awaiting Technical Support review", "Not decided", "No equipment needed" */
   state: string;
   /** Internal detail, such as why Venue Staff rejected the booking. Hidden from the Organiser. */
   reason: string | null;
+  /** SCRUM-26 AC12, SCRUM-131 AC3: a flagged arrangement, shown as a badge beside the state. */
+  needsReconsideration?: boolean;
   /** SCRUM-162 AC8: the Venue booking item lists each live booking. */
   bookings?: VenueBookingLine[];
   /** SCRUM-170 AC4: no live equipment request, so No equipment needed can be recorded. */
@@ -32,10 +35,12 @@ export interface VenueBookingLine {
   id: string;
   venueName: string;
   attendance: number | null;
-  /** "Approved", "Approved for a different time", "Held until … – confirm to secure", "Pending", "Needs reconsideration" */
+  /** "Approved", "Approved for a different time", "Held until … – confirm to secure", "Pending" */
   state: string;
   /** Approved for the event's whole period and not flagged. */
   complete: boolean;
+  /** SCRUM-131 AC3: shown as a badge beside the state, never in place of it. */
+  needsReconsideration: boolean;
   /** The flag's reason. Hidden from the Organiser. */
   reason: string | null;
   /** SCRUM-163 AC3: a live hold, which the Coordinator can confirm or release. */
@@ -170,33 +175,26 @@ type BookingRow = {
   venue: { name: string };
 };
 
-/** SCRUM-26 AC12: the flag's own state, with its reason for the Coordinator. */
-const NEEDS_RECONSIDERATION = "Needs reconsideration";
-
 /**
- * SCRUM-162 AC8 — one live booking as the checklist lists it. A flag
- * outranks the status (SCRUM-26 AC12); a hold isn't an approval, so the
- * Coordinator confirms it (SCRUM-163 AC6); and an approval counts only for
- * the event's whole period, since bookings keep their own times (ADR 0003).
+ * SCRUM-162 AC8 — one live booking as the checklist lists it. A hold isn't
+ * an approval, so the Coordinator confirms it (SCRUM-163 AC6); an approval
+ * counts only for the event's whole period, since bookings keep their own
+ * times (ADR 0003); and a flagged booking keeps its status beside the flag
+ * (SCRUM-131 AC3) but is never complete (SCRUM-26 AC12).
  */
 function bookingLine(booking: BookingRow, event: Period): VenueBookingLine {
+  const flagged = booking.needsReconsideration;
   const line = {
     id: booking.id,
     venueName: booking.venue.name,
     attendance: booking.requestedAttendance,
     complete: false,
-    reason: null,
+    needsReconsideration: flagged,
+    reason: flagged ? booking.reconsiderationReason : null,
     held: booking.status === "HELD",
     holdApproved: booking.status === "HELD" && booking.holdApprovedAt !== null,
     pending: booking.status === "PENDING",
   };
-  if (booking.needsReconsideration) {
-    return {
-      ...line,
-      state: NEEDS_RECONSIDERATION,
-      reason: booking.reconsiderationReason,
-    };
-  }
   if (booking.status === "HELD") {
     return {
       ...line,
@@ -205,7 +203,7 @@ function bookingLine(booking: BookingRow, event: Period): VenueBookingLine {
   }
   if (booking.status === "PENDING") return { ...line, state: "Pending" };
   return coversEvent(booking, event)
-    ? { ...line, state: "Approved", complete: true }
+    ? { ...line, state: "Approved", complete: !flagged }
     : { ...line, state: "Approved for a different time" };
 }
 
@@ -229,7 +227,7 @@ function venueItem(
     .reverse()
     .map((b) => bookingLine(b, event));
   if (bookings.length > 0) {
-    const flagged = bookings.find((b) => b.state === NEEDS_RECONSIDERATION);
+    const flagged = bookings.find((b) => b.needsReconsideration);
     const held = bookings.find((b) => b.held);
     const complete = bookings.every((b) => b.complete);
     // The item names what stands in the way first: a flag (SCRUM-26 AC12),
@@ -244,6 +242,7 @@ function venueItem(
       complete,
       state: complete ? "Approved" : blocker!.state,
       reason: flagged?.reason ?? null,
+      ...(flagged && { needsReconsideration: true }),
       bookings,
     };
   }
@@ -308,8 +307,9 @@ function equipmentItem(event: EventRow): ChecklistItem {
     return {
       name: "Equipment",
       complete: false,
-      state: `${NEEDS_RECONSIDERATION}: ${types.join(", ")}`,
+      state: `${RESERVATION_STATUS_LABEL.CONFIRMED}: ${types.join(", ")}`,
       reason: flagged[0].reconsiderationReason,
+      needsReconsideration: true,
     };
   }
 
@@ -386,7 +386,9 @@ function equipmentItem(event: EventRow): ChecklistItem {
   return {
     name: "Equipment",
     complete: !awaitingReview,
-    state: awaitingReview ? "Awaiting Technical Support review" : "Reserved",
+    state: awaitingReview
+      ? "Awaiting Technical Support review"
+      : RESERVATION_STATUS_LABEL.CONFIRMED,
     reason: null,
   };
 }
