@@ -482,8 +482,9 @@ export function CreateEventDialog({
             </div>
           )}
 
-        {/* Step Indicator Bar — Allows direct navigation between steps */}
-        <div className="mb-4 flex items-center justify-between gap-2 overflow-x-auto border-b pb-3 text-xs font-medium text-muted-foreground">
+        {/* Step Indicator Bar — Allows direct navigation between steps. It
+            wraps on a phone, so the dialog never scrolls sideways (SCRUM-132 AC1). */}
+        <div className="mb-4 flex flex-wrap items-center gap-1 border-b pb-3 text-xs font-medium text-muted-foreground md:justify-between md:gap-2">
           <button
             type="button"
             onClick={() => goToStep(1)}

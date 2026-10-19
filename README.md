@@ -280,6 +280,36 @@ transaction. **Don't remove these locks.**
 
 ---
 
+## Performance and growth (SCRUM-132)
+
+**Release 1 is not load-tested for three years of growth** (briefing §8e).
+The briefing gives no dataset size or traffic figures, so the team set its
+own testable limits instead: the core pages work at 360 px with no
+horizontal scroll, and viewing an event, searching venues, opening a venue's
+availability, checking equipment availability and registering each respond
+within 2 seconds on the seed data. `e2e/phone-and-speed.spec.ts` checks both
+on every pull request; the timings for the sprint review are in
+`docs/evidence/`.
+
+What the design already does for growth:
+
+- **The database enforces the rules that matter under load.** Double-booking
+  is refused by an `EXCLUDE` constraint, and counted pools (registration
+  capacity, equipment quantity) are checked under row locks, so more
+  concurrent users can't break them (see "Rules the database enforces").
+- **Foreign keys the app filters by are indexed** (`@@index` in
+  `prisma/schema.prisma`), and the double-booking constraint is backed by a
+  GiST index.
+- **One shared Prisma client and a pooled connection** through the Supabase
+  session pooler, so connections don't grow with requests.
+
+What would need work first: **lists are not paginated.** My Event
+Requests, the all-events list, the booking and equipment review queues and
+notifications each read every matching row. Paging them is the first change
+to make once any of them reaches a few thousand rows.
+
+---
+
 ## Scripts
 
 | Command | What it does |
