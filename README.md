@@ -121,14 +121,18 @@ terminal at Docker first, so a forgotten `.env` can't send them to Supabase:
 
 ```bash
 docker compose up -d
-export DATABASE_URL="postgresql://connectsphere:connectsphere@localhost:5432/connectsphere?schema=public"
+export DATABASE_URL="postgresql://connectsphere:connectsphere@127.0.0.1:5432/connectsphere?schema=public"
 export DIRECT_URL="$DATABASE_URL"
 npm run db:reset           # LOCAL ONLY: drop, migrate, seed
 npm run test:coverage      # likewise test:integration, test:e2e, db:migrate
 ```
 
-In PowerShell, set `$env:DATABASE_URL` and `$env:DIRECT_URL` instead. The
-integration tests skip unless `DATABASE_URL` is localhost, and so do the e2e
+In PowerShell, set `$env:DATABASE_URL` and `$env:DIRECT_URL` instead. Use
+`127.0.0.1`, not `localhost`: on Windows with Docker Desktop, `localhost`
+resolves to IPv6 first, and every parameterised query then takes about 40 ms
+instead of 1 ms, so the integration tests run ten times slower and the
+race tests (e.g. SCRUM-161's TC-161-12, SCRUM-75's TC-75-11) time out. The
+integration tests skip unless `DATABASE_URL` is localhost or `127.0.0.1`, and so do the e2e
 specs that guard with `usesLocalDatabase`. Some older e2e specs (for example
 `e2e/events.spec.ts`) write without that guard, so never run `test:e2e`
 with `.env` pointing at Supabase.
