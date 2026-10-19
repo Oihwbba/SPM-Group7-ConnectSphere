@@ -212,7 +212,7 @@ same period. Flagged rows are created straight in the database or with
 | Test Data | Reason "The event moved to 2 June." |
 | Expected Result | Venue booking (or Equipment, naming the equipment) is incomplete, still showing the arrangement's own status ("Approved", "Pending", "Held until …", or "Reserved: Projector") with a **Needs Reconsideration** badge beside it (SCRUM-131 AC3) and the reason; the event isn't ready and Confirm is disabled. The Organiser sees the state and the badge without the reason. A flag on a cancelled row doesn't count. |
 
-**Automated by:** `tests/unit/event-readiness.test.ts` › "SCRUM-26 [AC12] TC-26-13 …" (6 tests, three also SCRUM-131 [AC3]); `e2e/reconsideration.spec.ts` (TC-26-14)
+**Automated by:** `tests/unit/event-readiness.test.ts` › "SCRUM-26 [AC12] TC-26-13 …" (6 tests, three also SCRUM-131 [AC3]); `e2e/reconsideration.spec.ts` (TC-26-14), and › "SCRUM-26 [AC12] TC-26-13, SCRUM-131 [AC2, AC3] TC-131-05: …" for a flagged reservation in the Coordinator's checklist
 
 ### TC-26-14
 
