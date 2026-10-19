@@ -33,7 +33,6 @@ async function openDetails(page: Page, eventName: string) {
   return page.getByRole("dialog").first();
 }
 
-/** An open dialog must fit the window as well as the page behind it. */
 /**
  * An open dialog must fit the window, and nothing in it may reach past the
  * window's edge, as a row scrolling sideways inside it would. Polled, since

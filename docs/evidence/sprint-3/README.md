@@ -24,3 +24,11 @@ Captured 2026-10-19 on a developer laptop (Windows 11), from the branch
 `SCRUM-132-phone-and-response-time` built on `main` at `02a3030`. The table is
 the last of four runs that day; in every run each operation took under
 600 ms (the slowest was a registration at 558 ms).
+
+**Re-run after merging `main` at `4f7fdc97`** (SCRUM-25, SCRUM-38, SCRUM-75,
+SCRUM-161 and SCRUM-171 had merged since `02a3030`), same laptop, production
+build, local database seeded that day but changed by manual testing since:
+view an event 210 ms, search venues 369 ms, open a venue's availability
+138 ms, check equipment availability 25 ms, submit a registration 165 ms.
+Each is still well under 2,000 ms. Re-run on a freshly seeded database for
+the sprint review.

@@ -136,7 +136,7 @@ e2e run serves it). Every account's password is `Password123!`.
 | Test Data | The client components under `app/` and `components/` that import from an `actions.ts`. |
 | Expected Result | Every writing action confirms success (a toast, or a status message in the form). Two exceptions, both deliberate: marking a notification read happens as it opens, and the list or page it opens is the confirmation; the edit-details dialog confirms through `showSaveReply`'s `close`. |
 
-**Automated by:** Manual audit, run for this story on 19 Oct 2026 over every writing action a client component imports; the only one without a confirmation was closing or reopening registration, fixed in TC-132-07. The individual confirmations are covered by each story's own tests.
+**Automated by:** Manual audit, run for this story on 19 Oct 2026 over every writing action a client component imports; the only one without a confirmation was closing or reopening registration, fixed in TC-132-07. Re-run the same day against `main` at `4f7fdc97`, after SCRUM-25, SCRUM-38, SCRUM-75, SCRUM-161 and SCRUM-171 merged: their writing actions (editing details, recording unavailability, retiring a venue, recording a suitability judgement, closing registration) all confirm success. The individual confirmations are covered by each story's own tests.
 
 ### TC-132-10
 
