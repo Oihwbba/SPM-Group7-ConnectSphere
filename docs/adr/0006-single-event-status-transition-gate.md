@@ -107,3 +107,59 @@ duplicate change when two requests race. The details are in ADR 0012.
 The 2026-09-19 addendum says the two-browser e2e test checks that the badge
 flips to `APPROVED`. Since the 2026-09-30 addendum, approval moves the event
 straight to Planning, and `e2e/events.spec.ts` checks for `PLANNING`.
+
+---
+
+## Addendum (2026-10-14) — One lifecycle table, and only assigned requests are decided (SCRUM-135)
+
+### Context
+
+By Sprint 3, seven actions change an event's status: submit, approve or
+reject, reject from Planning (SCRUM-117), confirm, return to Planning
+(SCRUM-128, SCRUM-26), cancel (SCRUM-82) and complete. Each checked the
+current status its own way, with its own wording, and none listed which moves
+the lifecycle allows overall. SCRUM-135 needs one list and a refusal that
+names the current status. Week 7 change 5 also lets Coordinators manage only
+events assigned to them, so a Coordinator can no longer decide a Submitted
+request nobody was assigned to and become its Coordinator (which SCRUM-81 AC2
+and SCRUM-108 AC11 had allowed).
+
+### Decision
+
+1. **One table, `lib/event-lifecycle.ts`.** It lists each status's allowed
+   next statuses, plus the one conditional move (Rejected → Submitted only
+   for Amend and resubmit). Every action that changes a status asks
+   `canTransition` after locking the event row, and refuses with
+   `transitionRefusal`, e.g. "This event is Draft, so it can't be confirmed."
+   The **Cancel event** button reads `CANCELLABLE` from the same table.
+2. **Only Under Review is decided.** `transitionEventStatus` refuses a
+   Submitted request, and the list no longer shows **Approve** or **Reject**
+   on one. The self-assignment on deciding is removed. The Lead's assignment
+   (SCRUM-165) is what moves a request to Under Review.
+3. **Rules that aren't about status stay with their action.** Who may act,
+   whether the checklist is complete (SCRUM-81), and whether a Planning event
+   was ever Confirmed or has registrations (SCRUM-117, SCRUM-82 AC5) are still
+   checked where they were. The table answers only "is this move allowed".
+4. **Approved stays in the enum** as a history value (AC12). A row left
+   Approved from before approval moved straight to Planning can still be
+   cancelled, so it isn't stuck holding its arrangements. No action moves it
+   on to Planning, so the table doesn't offer that move either.
+
+### Alternatives rejected
+
+- **A state-machine library.** Nine statuses and twelve moves fit a plain
+  object; CONTRIBUTING.md asks for no new dependencies.
+- **One action that performs every transition.** Each transition has its own
+  side effects (releasing arrangements, notifications, readiness checks), so
+  merging them would hide each story's rules. The table is shared; the actions
+  stay separate.
+- **A database trigger.** It would refuse with a database error the user
+  can't read, and the refusal must name the status in plain words (AC11).
+
+### Consequences
+
+- A new transition is one line in the table, and a test that lists every
+  allowed pair (TC-135-11) fails until the story's change is deliberate.
+- Refusals read the same everywhere.
+- A Submitted request no Coordinator was assigned to waits in the Lead's
+  Unassigned queue (SCRUM-165).

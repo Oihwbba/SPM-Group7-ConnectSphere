@@ -54,6 +54,9 @@ stayed in every Coordinator's list).
 8. **Whoever decides an unassigned request becomes its coordinator**, on
    rejection as on approval (SCRUM-81 AC 2), so the rejected request leaves
    other Coordinators' lists and comes back to them on resubmission.
+   **Superseded (2026-10-14) by SCRUM-135 AC 3 and AC 4:** only a request
+   Under Review, which has its Coordinator, is decided. See ADR 0006's
+   2026-10-14 addendum.
 
 ## Alternatives rejected
 

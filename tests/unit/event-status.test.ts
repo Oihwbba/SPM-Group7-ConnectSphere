@@ -64,11 +64,12 @@ function sessionFor(role: Role, id: string): Session {
 function eventRow(
   over: Partial<{ status: EventStatus; coordinatorId: string | null }> = {},
 ) {
+  // SCRUM-135 AC3, AC4: a request is decided Under Review, by its Coordinator.
   return {
     id: "evt1",
-    status: "SUBMITTED" as EventStatus,
+    status: "UNDER_REVIEW" as EventStatus,
     organiserId: "usr_org",
-    coordinatorId: null as string | null,
+    coordinatorId: "usr_coord" as string | null,
     ...over,
   };
 }
@@ -85,7 +86,7 @@ beforeEach(() => {
 describe("transitionEventStatus — SCRUM-24 single guarded gate", () => {
   it("SCRUM-165 [AC8] TC-165-11: a Coordinator can't approve a request nobody has been assigned to; it waits for the Lead", async () => {
     mockAuth.mockResolvedValue(sessionFor("COORDINATOR", "usr_coord"));
-    mockFindUnique.mockResolvedValue(eventRow());
+    mockFindUnique.mockResolvedValue(eventRow({ status: "SUBMITTED", coordinatorId: null }));
 
     const result = await transitionEventStatus({
       eventId: "evt1",
@@ -100,6 +101,30 @@ describe("transitionEventStatus — SCRUM-24 single guarded gate", () => {
     expect(tx.event.updateMany).not.toHaveBeenCalled();
     expect(tx.auditLog.create).not.toHaveBeenCalled();
   });
+
+  // SCRUM-135 AC3, AC4, AC11: only a request Under Review is decided. Even
+  // its assigned Coordinator can't decide one still Submitted, and the refusal
+  // names its status. (An unassigned one is not found at all, SCRUM-165 AC8.)
+  it.each(["APPROVED", "REJECTED"] as const)(
+    "SCRUM-135 [AC3, AC4, AC11] TC-135-03: a Submitted request can't be %s, even by its assigned Coordinator, and the refusal names its status",
+    async (nextStatus) => {
+      mockAuth.mockResolvedValue(sessionFor("COORDINATOR", "usr_coord"));
+      mockFindUnique.mockResolvedValue(eventRow({ status: "SUBMITTED", coordinatorId: "usr_coord" }));
+
+      expect(
+        await transitionEventStatus({
+          eventId: "evt1",
+          nextStatus,
+          decisionReason: "No.",
+          rejectionOutcome: "NEW_REQUEST",
+        }),
+      ).toEqual({
+        ok: false,
+        error: `This event is Submitted, so it can't be ${nextStatus === "APPROVED" ? "approved" : "rejected"}.`,
+      });
+      expect(tx.event.updateMany).not.toHaveBeenCalled();
+    },
+  );
 
   it("SCRUM-81 [AC1] TC-81-01: approving an assigned request moves it to Planning, recording who approved it and when", async () => {
     mockAuth.mockResolvedValue(sessionFor("COORDINATOR", "usr_coord"));
@@ -118,6 +143,8 @@ describe("transitionEventStatus — SCRUM-24 single guarded gate", () => {
         decidedAt: expect.any(Date),
       }),
     });
+    // SCRUM-135 AC3: the Coordinator stays as assigned.
+    expect(tx.event.updateMany.mock.calls[0][0].data).not.toHaveProperty("coordinatorId");
     expect(tx.auditLog.create.mock.calls.map((c) => c[0].data)).toEqual([
       expect.objectContaining({ actorId: "usr_coord", oldValue: "UNDER_REVIEW", newValue: "APPROVED" }),
       expect.objectContaining({ actorId: null, oldValue: "APPROVED", newValue: "PLANNING" }),
@@ -253,29 +280,33 @@ describe("transitionEventStatus — SCRUM-24 single guarded gate", () => {
   });
 
   it.each([
-    "DRAFT",
-    "APPROVED",
-    "REJECTED",
-    "PLANNING",
-    "CONFIRMED",
-    "COMPLETED",
-    "CANCELLED",
-  ] as EventStatus[])("refuses to decide an event that is %s", async (status) => {
-    mockAuth.mockResolvedValue(sessionFor("COORDINATOR", "usr_coord"));
-    // Assigned to this coordinator, so only the status rule can refuse it.
-    mockFindUnique.mockResolvedValue(
-      eventRow({ status, coordinatorId: "usr_coord" }),
-    );
+    ["DRAFT", "Draft"],
+    ["SUBMITTED", "Submitted"],
+    ["APPROVED", "Approved"],
+    ["REJECTED", "Rejected"],
+    ["PLANNING", "Planning"],
+    ["CONFIRMED", "Confirmed"],
+    ["COMPLETED", "Completed"],
+    ["CANCELLED", "Cancelled"],
+  ] as [EventStatus, string][])(
+    "SCRUM-135 [AC11] TC-135-11: refuses to decide an event that is %s, naming its status",
+    async (status, label) => {
+      mockAuth.mockResolvedValue(sessionFor("COORDINATOR", "usr_coord"));
+      // Assigned to this coordinator, so only the status rule can refuse it.
+      mockFindUnique.mockResolvedValue(eventRow({ status, coordinatorId: "usr_coord" }));
 
-    const result = await transitionEventStatus({
-      eventId: "evt1",
-      nextStatus: "APPROVED",
-    });
+      const result = await transitionEventStatus({
+        eventId: "evt1",
+        nextStatus: "APPROVED",
+      });
 
-    expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.error).toMatch(/not allowed/i);
-    expect(tx.event.updateMany).not.toHaveBeenCalled();
-  });
+      expect(result).toEqual({
+        ok: false,
+        error: `This event is ${label}, so it can't be approved.`,
+      });
+      expect(tx.event.updateMany).not.toHaveBeenCalled();
+    },
+  );
 
   it("SCRUM-24: the loser of two simultaneous decisions is told to refresh, and no audit entry is written", async () => {
     mockAuth.mockResolvedValue(sessionFor("COORDINATOR", "usr_coord"));
@@ -364,7 +395,11 @@ describe("submitEventRequest — SCRUM-19/24 rejected → submitted", () => {
 
   it("an organiser resubmits an amended rejected request and the old decision is cleared", async () => {
     mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_org"));
-    mockFindFirst.mockResolvedValue({ id: "evt1", status: "REJECTED" });
+    mockFindFirst.mockResolvedValue({
+      id: "evt1",
+      status: "REJECTED",
+      rejectionOutcome: "AMEND_AND_RESUBMIT",
+    });
     mockUpdate.mockResolvedValue({ id: "evt1" });
 
     const result = await submitEventRequest({
@@ -385,14 +420,7 @@ describe("submitEventRequest — SCRUM-19/24 rejected → submitted", () => {
 
     expect(result.ok).toBe(true);
     expect(mockFindFirst).toHaveBeenCalledWith({
-      where: {
-        id: "evt1",
-        organiserId: "usr_org",
-        OR: [
-          { status: "DRAFT", discardedAt: null },
-          { status: "REJECTED", rejectionOutcome: "AMEND_AND_RESUBMIT" },
-        ],
-      },
+      where: { id: "evt1", organiserId: "usr_org", discardedAt: null },
     });
     expect(mockUpdate).toHaveBeenCalledWith(
       expect.objectContaining({

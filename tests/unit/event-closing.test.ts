@@ -1,18 +1,12 @@
 import { describe, it, expect, vi } from "vitest";
 import type { EventStatus, PrismaClient } from "@prisma/client";
 
-import { CANCELLABLE, completeFinishedEvents, isOverdue } from "@/lib/event-closing";
+import { completeFinishedEvents, isOverdue } from "@/lib/event-closing";
 
 // SCRUM-82 — which events can be cancelled, which are overdue, and completing
 // finished events without a job. Test cases: docs/testing/SCRUM-82.md.
 
 const NOW = new Date("2032-06-01T04:00:00.000Z");
-
-describe("CANCELLABLE — SCRUM-82 AC1", () => {
-  it("SCRUM-82 [AC1] TC-82-01: an event Under Review, in Planning or Confirmed can be cancelled", () => {
-    expect(CANCELLABLE).toEqual(["UNDER_REVIEW", "PLANNING", "CONFIRMED"]);
-  });
-});
 
 describe("isOverdue — SCRUM-82 AC10", () => {
   const before = new Date(NOW.getTime() - 60_000);
