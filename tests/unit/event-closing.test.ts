@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import type { EventStatus, PrismaClient } from "@prisma/client";
 
-import { completeFinishedEvents, isOverdue } from "@/lib/event-closing";
+import { completeFinishedEvents, EVENT_TOOK_PLACE, isOverdue } from "@/lib/event-closing";
 
 // SCRUM-82 — which events can be cancelled, which are overdue, and completing
 // finished events without a job. Test cases: docs/testing/SCRUM-82.md.
@@ -32,7 +32,7 @@ describe("isOverdue — SCRUM-82 AC10", () => {
   });
 });
 
-describe("completeFinishedEvents — SCRUM-82 AC7–AC9", () => {
+describe("completeFinishedEvents — SCRUM-82 AC7–AC9, AC11", () => {
   type Completed = { id: string; name: string; organiserId: string; coordinatorId: string | null };
   const finished = (id: string, coordinatorId: string | null = "usr_coord"): Completed => ({
     id,
@@ -40,14 +40,23 @@ describe("completeFinishedEvents — SCRUM-82 AC7–AC9", () => {
     organiserId: "usr_org",
     coordinatorId,
   });
-  function client(completed: Completed[]) {
+  function client(
+    completed: Completed[],
+    pending: { id: string; event: { id: string; name: string; organiserId: string } }[] = [],
+  ) {
     const $queryRaw = vi.fn().mockResolvedValue(completed);
     const createMany = vi.fn();
     const notify = vi.fn();
-    const tx = { $queryRaw, auditLog: { createMany }, notification: { createMany: notify } };
+    const changeRequests = { findMany: vi.fn().mockResolvedValue(pending), updateMany: vi.fn() };
+    const tx = {
+      $queryRaw,
+      auditLog: { createMany },
+      notification: { createMany: notify },
+      eventChangeRequest: changeRequests,
+    };
     const $transaction = vi.fn((work: (t: typeof tx) => unknown) => work(tx));
     const db = { $transaction } as unknown as PrismaClient;
-    return { db, $queryRaw, createMany, notify, $transaction };
+    return { db, $queryRaw, createMany, notify, $transaction, changeRequests };
   }
 
   it("SCRUM-82 [AC7] TC-82-09: the completion and its history entries are written in one transaction", async () => {
@@ -58,6 +67,62 @@ describe("completeFinishedEvents — SCRUM-82 AC7–AC9", () => {
     expect($transaction).toHaveBeenCalledTimes(1);
     expect($queryRaw).toHaveBeenCalledTimes(1);
     expect(createMany).toHaveBeenCalledTimes(1);
+  });
+
+  it("SCRUM-82 [AC11] TC-82-14: a change request still Submitted is rejected with “The event has already taken place”, recorded, and the Organiser told, in the same transaction", async () => {
+    const { db, createMany, changeRequests, notify } = client(
+      [finished("evt_1"), finished("evt_2")],
+      [{ id: "cr_1", event: { id: "evt_1", name: "Concert", organiserId: "usr_org" } }],
+    );
+
+    await completeFinishedEvents(db, NOW);
+
+    expect(changeRequests.findMany).toHaveBeenCalledWith({
+      where: { eventId: { in: ["evt_1", "evt_2"] }, status: "PENDING_REVIEW" },
+      select: { id: true, event: { select: { id: true, name: true, organiserId: true } } },
+    });
+    expect(changeRequests.updateMany).toHaveBeenCalledWith({
+      where: { id: { in: ["cr_1"] }, status: "PENDING_REVIEW" },
+      data: { status: "REJECTED", decidedAt: NOW, decisionReason: EVENT_TOOK_PLACE },
+    });
+    expect(EVENT_TOOK_PLACE).toBe("The event has already taken place.");
+    expect(createMany).toHaveBeenLastCalledWith({
+      data: [
+        {
+          entityType: "EventChangeRequest",
+          entityId: "cr_1",
+          action: "REJECTED",
+          actorId: null,
+          fieldName: "status",
+          oldValue: "PENDING_REVIEW",
+          newValue: "REJECTED",
+          summary: EVENT_TOOK_PLACE,
+        },
+      ],
+    });
+    expect(notify).toHaveBeenCalledWith({
+      data: [
+        {
+          userId: "usr_org",
+          type: "CHANGE_REQUEST_OUTCOME",
+          title: "Change request rejected",
+          message: 'Your change request for "Concert" was rejected: The event has already taken place.',
+          link: "/events",
+          eventId: "evt_1",
+        },
+      ],
+    });
+  });
+
+  it("SCRUM-82 [AC11] TC-82-14: with no Submitted change request, nothing is rejected and no rejection is sent", async () => {
+    const { db, changeRequests, notify } = client([finished("evt_1")]);
+
+    await completeFinishedEvents(db, NOW);
+
+    expect(changeRequests.updateMany).not.toHaveBeenCalled();
+    expect(notify.mock.calls.flatMap((call) => call[0].data)).not.toContainEqual(
+      expect.objectContaining({ type: "CHANGE_REQUEST_OUTCOME" }),
+    );
   });
 
   it("SCRUM-82 [AC7] TC-82-09: completes Confirmed events whose end has passed, with a history entry each, and returns them", async () => {
@@ -107,11 +172,12 @@ describe("completeFinishedEvents — SCRUM-82 AC7–AC9", () => {
   });
 
   it("SCRUM-82 [AC8] TC-82-10, SCRUM-45 [AC13] TC-45-10: when nothing has finished, or it was already completed, nothing is written and nobody is told", async () => {
-    const { db, createMany, notify } = client([]);
+    const { db, createMany, notify, changeRequests } = client([]);
 
     expect(await completeFinishedEvents(db, NOW)).toEqual([]);
     expect(createMany).not.toHaveBeenCalled();
     expect(notify).not.toHaveBeenCalled();
+    expect(changeRequests.findMany).not.toHaveBeenCalled();
   });
 
   it("SCRUM-82 [AC7] TC-82-09: uses the current time when none is given", async () => {
