@@ -85,14 +85,14 @@ export type SearchNeeds = {
   facilities: string[];
   accessibility: string[];
   layout?: string;
+  attendance?: string;
 };
 
 /**
  * SCRUM-38 AC9 — the facilities, accessibility features and layout entered in
  * venue search, as the form starts with them: only values the form offers,
  * and the layout only if the venue chosen in search supports it, so that
- * venue is never dropped. Attendance isn't carried: the booking takes the
- * event's (SCRUM-50 AC1) until SCRUM-162 lets it change.
+ * venue is never dropped. The attendance is searchedAttendance's.
  */
 export function neededInSearch<
   T extends {
@@ -117,6 +117,24 @@ export function neededInSearch<
     accessibility: needs.accessibility.filter((a) => accessibility.has(a)),
     layout: needs.layout && fits(needs.layout) ? needs.layout : "",
   };
+}
+
+/**
+ * SCRUM-38 AC9, AC12 — the attendance searched, as the form starts with it,
+ * when it is one a booking may have: a whole number from 1 to the event's
+ * expected attendance (SCRUM-162 AC4), so a room for part of the audience
+ * keeps its lowered figure. Anything else leaves the event's.
+ */
+export function searchedAttendance(
+  searched: string | undefined,
+  expectedAttendance: number | null,
+): string | undefined {
+  if (!searched || !/^\d+$/.test(searched)) return undefined;
+  const attendance = Number(searched);
+  return attendance >= 1 &&
+    (expectedAttendance === null || attendance <= expectedAttendance)
+    ? String(attendance)
+    : undefined;
 }
 
 /** Radix Select cannot use "" as an item value, so "no preference" has its own. */
@@ -243,15 +261,24 @@ export function RequestForm({
   }
 
   // SCRUM-38 AC9: the event and venue picked in search are chosen already,
-  // with the facilities, accessibility features and layout entered there.
+  // with the attendance, facilities, accessibility features and layout
+  // entered there.
   const [form, setForm] = useState(() => {
     const withChosenEvent = initialEventId
       ? withEvent(emptyForm, initialEventId)
       : emptyForm;
+    const attendance =
+      withChosenEvent.eventId &&
+      searchedAttendance(
+        initialNeeds?.attendance,
+        events.find((e) => e.id === withChosenEvent.eventId)
+          ?.expectedAttendance ?? null,
+      );
     return {
       ...withChosenEvent,
       ...(initialNeeds &&
         neededInSearch(venues, initialVenueId, initialNeeds)),
+      ...(attendance && { attendance }),
       ...(initialVenueId && { venueId: initialVenueId }),
     };
   });

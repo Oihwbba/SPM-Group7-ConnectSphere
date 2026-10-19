@@ -6,6 +6,7 @@ import {
   LIVE_CHECK_FAILED_MESSAGE,
   neededInSearch,
   RequestForm,
+  searchedAttendance,
   venuesForLayout,
 } from "@/app/(app)/bookings/new/request-form";
 import { eventBookingPeriod } from "@/lib/schemas/booking";
@@ -314,7 +315,26 @@ describe("what venue search carries to the form — SCRUM-38 AC9", () => {
     ).toBe("");
   });
 
-  it("SCRUM-38 [AC9] TC-38-10: the form opens with them chosen, and the attendance stays the event's", () => {
+  it("SCRUM-38 [AC9, AC12] TC-38-10: an attendance lowered in search comes across, from 1 up to the event's", () => {
+    // SCRUM-162 AC4: a booking's attendance is a whole number from 1 to the event's.
+    expect(searchedAttendance("120", 120)).toBe("120");
+    expect(searchedAttendance("20", 120)).toBe("20");
+    expect(searchedAttendance("1", 120)).toBe("1");
+    expect(searchedAttendance("020", 120)).toBe("20");
+    expect(searchedAttendance("20", null)).toBe("20");
+  });
+
+  it("SCRUM-38 [AC9, AC12] TC-38-10: an attendance a booking can't have leaves the event's", () => {
+    expect(searchedAttendance("121", 120)).toBeUndefined();
+    expect(searchedAttendance("0", 120)).toBeUndefined();
+    expect(searchedAttendance("-5", 120)).toBeUndefined();
+    expect(searchedAttendance("2.5", 120)).toBeUndefined();
+    expect(searchedAttendance("many", 120)).toBeUndefined();
+    expect(searchedAttendance("", 120)).toBeUndefined();
+    expect(searchedAttendance(undefined, 120)).toBeUndefined();
+  });
+
+  it("SCRUM-38 [AC9] TC-38-10: the form opens with them chosen, with the attendance searched", () => {
     const html = renderToStaticMarkup(
       <RequestForm
         events={[event]}
@@ -325,6 +345,7 @@ describe("what venue search carries to the form — SCRUM-38 AC9", () => {
           facilities: ["projector"],
           accessibility: ["wheelchair-access"],
           layout: "classroom",
+          attendance: "60",
         }}
       />,
     );
@@ -335,6 +356,21 @@ describe("what venue search carries to the form — SCRUM-38 AC9", () => {
     expect(html).toMatch(
       /<button[^>]*aria-pressed="true"[^>]*>(?:<svg.*?<\/svg>)?wheelchair-access<\/button>/,
     );
-    expect(html).toContain('value="120"');
+    expect(html).toMatch(/<input[^>]*id="attendance"[^>]*value="60"/);
+  });
+
+  it("SCRUM-38 [AC9] TC-38-10: with an attendance over the event's, or none, the form opens with the event's", () => {
+    for (const attendance of ["121", undefined]) {
+      const html = renderToStaticMarkup(
+        <RequestForm
+          events={[event]}
+          venues={[venue]}
+          initialEventId="evt_1"
+          initialVenueId="ven_1"
+          initialNeeds={{ facilities: [], accessibility: [], attendance }}
+        />,
+      );
+      expect(html).toMatch(/<input[^>]*id="attendance"[^>]*value="120"/);
+    }
   });
 });
