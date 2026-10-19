@@ -112,12 +112,12 @@ automated by SCRUM-38's venue search (#216), which reuses
 |---|---|
 | Test Case ID | TC-170-07 |
 | Test Scenario | [Negative] AC 4: with no equipment request and nothing decided, Equipment is listed as Not decided and blocks confirmation |
-| Pre-conditions | A Planning event with an Approved venue booking and no live equipment request: none, or only a cancelled one. |
+| Pre-conditions | A Planning event with an Approved venue booking and no live equipment request: none, only a cancelled one, or a rejected one followed by a later cancelled one. |
 | Test Steps | 1. Open the event's details. |
 | Test Data | — |
-| Expected Result | The checklist lists Equipment as "Not decided", incomplete, with **No equipment needed** offered to the Coordinator; the summary says "Not ready to confirm yet". An event with only a rejected request shows "Rejected" and is offered the same. (SCRUM-110 AC 3, which left the item out, is superseded.) |
+| Expected Result | The checklist lists Equipment as "Not decided", incomplete, with **No equipment needed** offered to the Coordinator; the summary says "Not ready to confirm yet". The latest outcome decides, by when each request ended (its last status change), not when it was made: an event whose last request to end was rejected shows "Rejected" and is offered the same; a rejection followed by a cancelled request shows "Not decided" (Product Owner, 19 Oct; the venue item follows the same rule, SCRUM-26). (SCRUM-110 AC 3, which left the item out, is superseded.) |
 
-**Automated by:** `tests/unit/event-readiness.test.ts` › "SCRUM-170 [AC4] TC-170-07: …", "SCRUM-110 TC-110-09, SCRUM-170 [AC4] TC-170-07: …"; `tests/integration/equipment-decision.test.ts`; `e2e/organiser-requirements.spec.ts`
+**Automated by:** `tests/unit/event-readiness.test.ts` › "SCRUM-170 [AC4] TC-170-07: with no equipment request and nothing decided …", "SCRUM-110 TC-110-09, SCRUM-170 [AC4] TC-170-07: …", "SCRUM-170 [AC4] TC-170-07: a rejected request followed by a cancelled one leaves Equipment Not decided …", "SCRUM-170 [AC4] TC-170-07: a cancelled request followed by a rejected one leaves Equipment Rejected …"; `tests/integration/equipment-decision.test.ts`; `e2e/organiser-requirements.spec.ts`
 
 ### TC-170-08
 

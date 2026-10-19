@@ -91,6 +91,7 @@ export async function getReadinessChecklist(
         select: {
           status: true,
           createdAt: true,
+          updatedAt: true,
           lines: {
             where: LIVE_LINE,
             select: {
@@ -279,6 +280,7 @@ type EventRow = {
   equipmentRequests: {
     status: string;
     createdAt: Date;
+    updatedAt: Date;
     lines: {
       equipmentId: string;
       quantity: number;
@@ -333,14 +335,17 @@ function equipmentItem(event: EventRow): ChecklistItem {
         reason: `Recorded by ${event.noEquipmentNeededBy!.name}, ${formatDateTime(event.noEquipmentNeededAt)}`,
       };
     }
-    // With only a rejected request, the equipment is still wanted but not
-    // arranged; with none, or only cancelled ones, nothing is decided yet.
+    // The request that ended last decides (PO, 19 Oct, as for the venue in
+    // SCRUM-26): after a rejection the equipment is still wanted but not
+    // arranged; after a cancellation, or with no request, nothing is decided.
+    // An ended request is never written again, so updatedAt is when it ended.
+    const lastEnded = [...event.equipmentRequests].sort(
+      (a, b) => b.updatedAt.getTime() - a.updatedAt.getTime(),
+    )[0];
     return {
       name: "Equipment",
       complete: false,
-      state: oldestFirst.some((r) => r.status === "REJECTED")
-        ? "Rejected"
-        : "Not decided",
+      state: lastEnded?.status === "REJECTED" ? "Rejected" : "Not decided",
       reason: null,
       noEquipmentOffered: true,
     };

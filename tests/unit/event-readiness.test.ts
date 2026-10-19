@@ -33,7 +33,12 @@ type Line = {
   quantity: number;
   equipment: { type: string };
 };
-type Request = { status: string; createdAt: Date; lines: Line[] };
+type Request = {
+  status: string;
+  createdAt: Date;
+  updatedAt: Date;
+  lines: Line[];
+};
 type Reservation = {
   equipmentId: string;
   quantity: number;
@@ -85,10 +90,17 @@ const line = (equipmentId: string, type: string, quantity: number): Line => ({
   quantity,
   equipment: { type },
 });
-const request = (status: string, lines: Line[], n = 1): Request => ({
+// `endedOn` is the day its last status change was written (updatedAt).
+const request = (
+  status: string,
+  lines: Line[],
+  n = 1,
+  endedOn = n,
+): Request => ({
   status,
   lines,
   createdAt: day(n),
+  updatedAt: day(endedOn),
 });
 const reserved = (
   equipmentId: string,
@@ -510,6 +522,50 @@ describe("getReadinessChecklist — SCRUM-110", () => {
       noEquipmentOffered: true,
     });
     expect(result?.ready).toBe(false);
+  });
+
+  it("SCRUM-170 [AC4] TC-170-07: a rejected request followed by a cancelled one leaves Equipment Not decided, because the latest outcome decides", async () => {
+    const result = await checklistOf(
+      planningEvent({
+        ...undecided,
+        equipmentRequests: [
+          request("REJECTED", [projectors(2)], 1, 2),
+          request("CANCELLED", [projectors(2)], 3, 4),
+        ],
+      }),
+    );
+
+    expect(equipment(result)).toEqual({
+      name: "Equipment",
+      complete: false,
+      state: "Not decided",
+      reason: null,
+      noEquipmentOffered: true,
+    });
+    expect(result?.ready).toBe(false);
+  });
+
+  it("SCRUM-170 [AC4] TC-170-07: a cancelled request followed by a rejected one leaves Equipment Rejected, whichever was requested first", async () => {
+    const cancelledThenRejected = [
+      request("CANCELLED", [projectors(2)], 1, 2),
+      request("REJECTED", [projectors(2)], 3, 4),
+    ];
+    // The order the requests were made doesn't matter, only when each ended.
+    const requestedLaterEndedFirst = [
+      request("CANCELLED", [projectors(2)], 3, 4),
+      request("REJECTED", [projectors(2)], 1, 5),
+    ];
+
+    for (const equipmentRequests of [cancelledThenRejected, requestedLaterEndedFirst]) {
+      const result = await checklistOf(
+        planningEvent({ ...undecided, equipmentRequests }),
+      );
+      expect(equipment(result)).toMatchObject({
+        complete: false,
+        state: "Rejected",
+        noEquipmentOffered: true,
+      });
+    }
   });
 
   it("SCRUM-110 [AC3] TC-110-09: a new request after a rejection replaces it, and live requests for the same item add up", async () => {
