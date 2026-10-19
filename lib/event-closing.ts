@@ -167,6 +167,9 @@ export function isOverdue(
   );
 }
 
+/** AC11: why a change request still Submitted when its event completes is rejected. */
+export const EVENT_TOOK_PLACE = "The event has already taken place.";
+
 /**
  * AC7–AC9 — every Confirmed event whose end has passed becomes Completed, with
  * a history entry. At exactly the end time it is still Confirmed, and nothing
@@ -175,6 +178,12 @@ export function isOverdue(
  * rows changed, so two pages loading at the same moment complete each event
  * once and write one history entry for it. The history entries are written in
  * the same transaction, so a completed event always has one.
+ *
+ * AC11: a change request still Submitted can no longer be applied (SCRUM-128
+ * applies changes only before the event is over), so completing the event
+ * rejects it with EVENT_TOOK_PLACE, records that in its history and tells the
+ * Organiser, in the same transaction. No one decided it, so it has no
+ * decider.
  *
  * Times are stored as UTC without a time zone, hence the ISO string cast to
  * `timestamp`.
@@ -214,6 +223,40 @@ export async function completeFinishedEvents(
         await notifyAboutEvent(tx, [event.organiserId, event.coordinatorId], event, {
           title: "Event completed",
           message: `"${event.name}" has ended and is now Completed.`,
+        });
+      }
+
+      const pending = await tx.eventChangeRequest.findMany({
+        where: { eventId: { in: completed.map(({ id }) => id) }, status: "PENDING_REVIEW" },
+        select: { id: true, event: { select: { id: true, name: true, organiserId: true } } },
+      });
+      if (pending.length > 0) {
+        await tx.eventChangeRequest.updateMany({
+          where: { id: { in: pending.map((r) => r.id) }, status: "PENDING_REVIEW" },
+          data: { status: "REJECTED", decidedAt: now, decisionReason: EVENT_TOOK_PLACE },
+        });
+        await tx.auditLog.createMany({
+          data: pending.map((r) => ({
+            entityType: "EventChangeRequest",
+            entityId: r.id,
+            action: "REJECTED",
+            actorId: null,
+            fieldName: "status",
+            oldValue: "PENDING_REVIEW",
+            newValue: "REJECTED",
+            summary: EVENT_TOOK_PLACE,
+          })),
+        });
+        // The same notice a Coordinator's rejection sends (SCRUM-128 AC10).
+        await tx.notification.createMany({
+          data: pending.map(({ event }) => ({
+            userId: event.organiserId,
+            type: "CHANGE_REQUEST_OUTCOME" as const,
+            title: "Change request rejected",
+            message: `Your change request for "${event.name}" was rejected: ${EVENT_TOOK_PLACE}`,
+            link: "/events",
+            eventId: event.id,
+          })),
         });
       }
     }

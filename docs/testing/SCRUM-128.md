@@ -11,19 +11,21 @@ and the app is running. The event is assigned to `coordinator@test.local`,
 organised by `organiser@test.local`, expects 40 attendees, and has a Submitted
 change request. Every account's password is `Password123!`.
 
-**What this story doesn't cover yet:**
+**Covered by other stories:**
 
 - **AC5, pausing registration:** registration only takes a Confirmed event,
   so it pauses while the event is back in Planning; closing and reopening it is
   SCRUM-75.
-- **AC10, notifications:** a notification row tells the Organiser the outcome.
-  Listing it is SCRUM-48; telling Attendees of a new date, time or venue once
-  the event is Confirmed again is SCRUM-85.
-- **Registration needed (SCRUM-171 AC5, SCRUM-75 AC11):** a change request
-  can't carry Registration needed yet (SCRUM-41 AC1's fields), so approving
-  one never changes it. Once it can, approving a change to No is refused with
-  `registrationStillNeededMessage` while people are registered, and a change
-  to Yes opens registration.
+- **AC10, Attendees:** the Organiser's notification is this story's
+  (TC-128-02, TC-128-03). Attendees are told of a new date, time or venue
+  when the event is Confirmed again, by SCRUM-85's confirmation:
+  `tests/integration/attendee-updates.test.ts` › "SCRUM-85 [AC2, AC3, AC5,
+  AC9, AC11] TC-85-02, TC-85-07: …" and `e2e/attendee-updates.spec.ts` ›
+  "SCRUM-85 [AC2, AC7, AC8, AC9, AC10, AC11] …".
+- **AC11's No half:** a change to No is refused while people are registered,
+  with `registrationStillNeededMessage`, and otherwise closes registration
+  (SCRUM-41 #221, TC-171-09 in [SCRUM-171.md](SCRUM-171.md#tc-171-09)). The
+  Yes half is TC-128-16.
 - **Equipment requirements (SCRUM-170 AC4):** approving a change to them puts
   Equipment back to Not decided; see TC-170-12 in
   [SCRUM-170.md](SCRUM-170.md#tc-170-12).
@@ -45,6 +47,7 @@ change request. Every account's password is `Password123!`.
 | [TC-128-13](#tc-128-13) | Positive | AC 1, AC 2, AC 4, AC 5 | e2e |
 | [TC-128-14](#tc-128-14) | Positive, Negative | AC 3, AC 9, AC 10 | e2e |
 | [TC-128-15](#tc-128-15) | Negative | AC 2 | Unit |
+| [TC-128-16](#tc-128-16) | Positive, Negative | AC 11 | Unit, integration |
 
 ### TC-128-01
 
@@ -240,3 +243,16 @@ change request. Every account's password is `Password123!`.
 | Expected Result | "The start can't be in the past. The requested start has passed, so reject this request and the organiser can ask for a new date." Nothing is changed, as SCRUM-25's direct edit refuses a past start. A future start is applied. |
 
 **Automated by:** `tests/unit/change-decision.test.ts` › "SCRUM-128 [AC2] TC-128-15: a requested start that has passed while the request waited is refused, and nothing is written; a future one is applied"
+
+### TC-128-16
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-128-16 |
+| Test Scenario | [Positive, Negative] AC 11: Registration needed changed from No to Yes on a Confirmed event opens registration |
+| Pre-conditions | A Confirmed event whose Registration needed is No, so registration is closed. The Organiser raises a change request setting it to Yes (SCRUM-41). |
+| Test Steps | 1. As its Coordinator, approve the request. <br> 2. Repeat with a registration window that closes before the start, and with one already past. <br> 3. Repeat on an event in Planning. |
+| Test Data | — |
+| Expected Result | 1. The event stays Confirmed and registration opens as confirming opens it (SCRUM-75 AC4). A "Registration closed" notice for the Organiser and the Coordinator is written to show at the event's start. 2. The notice shows at the window's close; with the close already past, registration is enabled but no notice is written. 3. Nothing opens now: confirming the event opens it. Turning registration off on a Confirmed event withdraws the notice without saying the event is back in Planning. |
+
+**Automated by:** `tests/unit/change-decision.test.ts` › "SCRUM-128 [AC11] TC-128-16: …" (3 tests) and "SCRUM-128 [AC11], SCRUM-45 [AC5]: turning registration off on a Confirmed event withdraws its notice but doesn't say the event is back in Planning, since it isn't"; `tests/integration/change-decision.test.ts` › "SCRUM-128 [AC11] TC-128-16: Registration needed raised as Yes on a Confirmed event opens registration when approved, with its Registration closed notice written for the event's start"
