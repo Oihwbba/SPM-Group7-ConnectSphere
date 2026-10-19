@@ -87,6 +87,8 @@ beforeEach(() => {
   db.booking.updateMany.mockResolvedValue({ count: 1 });
   db.safetyCheck.updateMany.mockResolvedValue({ count: 0 });
   db.venueSuitabilityJudgement.findMany.mockResolvedValue([]);
+  // SCRUM-160: the venue's minutes, read under its lock, are unchanged.
+  db.$queryRaw.mockResolvedValue([]);
   pendingOthers([]);
 });
 

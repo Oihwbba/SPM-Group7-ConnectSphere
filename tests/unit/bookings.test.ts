@@ -810,6 +810,7 @@ describe("decideBookingRequest — SCRUM-53", () => {
     mockAuth.mockResolvedValue(sessionFor("VENUE_STAFF", "usr_staff"));
     db.booking.findUnique.mockResolvedValue(pendingBooking);
     db.booking.updateMany.mockResolvedValue({ count: 1 });
+    db.$queryRaw.mockResolvedValue([{ setupMinutes: 0, turnaroundMinutes: 0 }]);
     db.safetyCheck.updateMany.mockResolvedValue({ count: 0 });
   });
 
@@ -863,6 +864,77 @@ describe("decideBookingRequest — SCRUM-53", () => {
       ...pendingBooking,
       venue: { name: "Seminar Room", setupMinutes: 30, turnaroundMinutes: 45 },
     };
+
+    beforeEach(() => {
+      db.$queryRaw.mockResolvedValue([{ setupMinutes: 30, turnaroundMinutes: 45 }]);
+    });
+
+    it("SCRUM-160 [AC1] TC-160-10: approving copies the minutes read under a lock on the venue, and checks availability again if they changed meanwhile", async () => {
+      // First read before a change to the venue's times committed.
+      db.booking.findUnique.mockResolvedValue(pendingBooking);
+
+      await decideBookingRequest({ bookingId: "bkg_1", decision: "APPROVED" });
+
+      // The event (ADR 0007), then the booking, then the venue: the order
+      // recording unavailability takes.
+      const sql = db.$queryRaw.mock.calls.map(([parts]) => (parts as string[]).join("?"));
+      const eventLock = sql.findIndex((q) => q.includes('FROM "Event" WHERE "id" = ? FOR KEY SHARE'));
+      const bookingLock = sql.findIndex((q) => q.includes('FROM "Booking" WHERE "id" = ? FOR UPDATE'));
+      const venueLock = sql.findIndex((q) => q.includes("FOR NO KEY UPDATE"));
+      expect(eventLock).toBe(0);
+      expect(bookingLock).toBeGreaterThan(eventLock);
+      expect(db.$queryRaw.mock.calls[bookingLock][1]).toBe("bkg_1");
+      expect(venueLock).toBe(bookingLock + 1);
+      // Checked once with the first minutes, locked, then again with the new.
+      expect(db.$queryRaw.mock.invocationCallOrder[bookingLock]).toBeGreaterThan(
+        db.booking.findMany.mock.invocationCallOrder[0],
+      );
+      expect(db.booking.findMany.mock.invocationCallOrder.at(-1)).toBeGreaterThan(
+        db.$queryRaw.mock.invocationCallOrder[venueLock],
+      );
+      expect(db.booking.updateMany.mock.calls[0][0].data).toMatchObject({
+        setupMinutes: 30,
+        turnaroundMinutes: 45,
+      });
+    });
+
+    it("SCRUM-160 [AC1] TC-160-10: unchanged minutes under the lock aren't checked twice", async () => {
+      db.booking.findUnique.mockResolvedValue(withTimes);
+
+      await decideBookingRequest({ bookingId: "bkg_1", decision: "APPROVED" });
+
+      // Nothing is read for availability after the venue's minutes are locked.
+      const sql = db.$queryRaw.mock.calls.map(([parts]) => (parts as string[]).join("?"));
+      const venueLock = sql.findIndex((q) => q.includes("FOR NO KEY UPDATE"));
+      expect(db.booking.findMany.mock.invocationCallOrder.at(-1)).toBeLessThan(
+        db.$queryRaw.mock.invocationCallOrder[venueLock],
+      );
+    });
+
+    it("SCRUM-160 [AC1] TC-160-10: if the venue can't be read under the lock, the first read's minutes are used", async () => {
+      db.booking.findUnique.mockResolvedValue(withTimes);
+      db.$queryRaw.mockResolvedValue([]);
+
+      await decideBookingRequest({ bookingId: "bkg_1", decision: "APPROVED" });
+
+      expect(db.booking.updateMany.mock.calls[0][0].data).toMatchObject({
+        setupMinutes: 30,
+        turnaroundMinutes: 45,
+      });
+    });
+
+    it("SCRUM-160: rejecting takes no lock on the venue", async () => {
+      db.booking.findUnique.mockResolvedValue(withTimes);
+
+      await decideBookingRequest({
+        bookingId: "bkg_1",
+        decision: "REJECTED",
+        reason: "Too small.",
+      });
+
+      const sql = db.$queryRaw.mock.calls.map(([parts]) => (parts as string[]).join("?"));
+      expect(sql.some((q) => q.includes('FROM "Booking"') || q.includes('FROM "Venue"'))).toBe(false);
+    });
 
     it("SCRUM-159 [AC8] TC-159-12: approving copies the venue's current setup and turnaround onto the booking", async () => {
       db.booking.findUnique.mockResolvedValue(withTimes);
@@ -1269,6 +1341,8 @@ describe("staff and Coordinator notices — SCRUM-124 AC1, AC4", () => {
       mockAuth.mockResolvedValue(sessionFor("VENUE_STAFF", "usr_staff"));
       db.booking.findUnique.mockResolvedValue(pending());
       db.booking.updateMany.mockResolvedValue({ count: 1 });
+      // SCRUM-160: the venue's minutes, read under its lock, are unchanged.
+      db.$queryRaw.mockResolvedValue([]);
     });
 
     it("SCRUM-124 [AC4, AC12] TC-124-04: approving tells the event's Coordinator the venue, event and period", async () => {

@@ -69,6 +69,8 @@ beforeEach(() => {
   );
   db.booking.findMany.mockResolvedValue([]);
   db.venueUnavailability.findMany.mockResolvedValue([]);
+  // SCRUM-160: the venue's minutes, read under its lock, as first read.
+  db.$queryRaw.mockResolvedValue([]);
   db.booking.updateMany.mockResolvedValue({ count: 1 });
   db.notification.createMany.mockResolvedValue({ count: 3 });
   db.notification.updateMany.mockResolvedValue({ count: 2 });

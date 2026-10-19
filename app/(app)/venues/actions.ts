@@ -19,6 +19,15 @@ import {
   type VenueData,
 } from "@/lib/schemas/venue";
 import { describeAffected, newlyUnfit } from "@/lib/venue-changes";
+import {
+  TIMES_CHANGED_REASON,
+  describeClash,
+  findTimeClashes,
+  flagTimeClashes,
+  lengthens,
+  pendingTimeClashes,
+  type TimeClash,
+} from "@/lib/venue-time-clashes";
 
 /** A future booking a change affects, as Venue Staff are shown it (AC10, AC11). */
 type Affected = { id: string; line: string; reason: string };
@@ -72,6 +81,32 @@ async function flagAffected(tx: Prisma.TransactionClient, affected: Affected[], 
     flagged += result.bookings;
   }
   return flagged;
+}
+
+/**
+ * SCRUM-160 AC1 — each booking a longer setup or turnaround time would make
+ * clash, as Venue Staff are warned of it, with what it would clash with. A
+ * booking already listed for no longer fitting isn't listed twice.
+ */
+function clashWarnings(clashes: TimeClash[], listed: Affected[]): Affected[] {
+  const listedIds = new Set(listed.map((a) => a.id));
+  const byBooking = new Map<string, TimeClash[]>();
+  for (const clash of clashes) {
+    if (listedIds.has(clash.booking.id)) continue;
+    byBooking.set(clash.booking.id, [...(byBooking.get(clash.booking.id) ?? []), clash]);
+  }
+  return [...byBooking.values()].map((own) => {
+    const { booking } = own[0];
+    const withWhat = own.map((c) => describeClash(c.with)).join("; ");
+    return {
+      id: booking.id,
+      line: describeAffected(
+        { startAt: booking.startAt, status: booking.status, event: { name: booking.eventName } },
+        [`${TIMES_CHANGED_REASON}, it would clash with ${withWhat}`],
+      ),
+      reason: TIMES_CHANGED_REASON,
+    };
+  });
 }
 
 function invalid(fieldErrors: Record<string, string[] | undefined>) {
@@ -169,8 +204,8 @@ export async function createVenue(input: unknown): Promise<ActionResult<{ id: st
  * - A booking that already didn't fit in the same way doesn't count: the
  *   edit didn't cause it (a request isn't refused for a missing facility
  *   or layout, SCRUM-50).
- * - A longer setup or turnaround time is saved as entered; the clashes it
- *   creates are SCRUM-160's.
+ * - SCRUM-160: a longer setup or turnaround time warns the same way, listing
+ *   the bookings it would make clash, and once confirmed flags them.
  *
  * The venue row is locked first, so two edits, or an edit and a retirement,
  * can't both judge the bookings against a venue the other is changing.
@@ -199,6 +234,8 @@ export async function updateVenue(
           facilities: true,
           accessibilityFeatures: true,
           supportedLayouts: true,
+          setupMinutes: true,
+          turnaroundMinutes: true,
           openingHours: {
             select: { weekday: true, opensMinute: true, closesMinute: true },
           },
@@ -233,7 +270,16 @@ export async function updateVenue(
           line: describeAffected(booking, reasons),
           reason: `${data.name} changed: ${reasons.join("; ")}`,
         }));
-      requireConfirmed(affected, confirmedBookingIds, VENUE_CHANGE_AFFECTS_BOOKINGS_MESSAGE);
+      // SCRUM-160 AC1: a longer setup or turnaround time also warns, listing
+      // the bookings it would make clash, before anything is saved.
+      const clashes = lengthens(current, data)
+        ? await pendingTimeClashes(tx, await findTimeClashes(tx, venueId, data, now))
+        : [];
+      requireConfirmed(
+        [...affected, ...clashWarnings(clashes, affected)],
+        confirmedBookingIds,
+        VENUE_CHANGE_AFFECTS_BOOKINGS_MESSAGE,
+      );
 
       await tx.venue.update({ where: { id: venueId }, data: venueFields(data) });
       for (const day of after.openingHours) {
@@ -253,7 +299,11 @@ export async function updateVenue(
           summary: data.name,
         },
       });
-      return flagAffected(tx, affected, now);
+      // SCRUM-160 AC2, AC3, AC7: clashing bookings are flagged, recorded and
+      // their people told; one already flagged for a fit reason above keeps
+      // that reason (SCRUM-26).
+      const unfit = await flagAffected(tx, affected, now);
+      return unfit + (await flagTimeClashes(tx, clashes, user!.id, now));
     });
 
     revalidateVenue(venueId, flagged);

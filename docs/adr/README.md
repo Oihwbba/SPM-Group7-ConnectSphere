@@ -26,6 +26,7 @@ it can be read aloud in the oral exam.
 | [0018](0018-operational-safety-check.md) | The safety check is a checklist item with its own rows, not an event status | SCRUM-166 | Current |
 | [0019](0019-closing-an-event.md) | Events complete on the next read after they end, not by a scheduled job | SCRUM-82 | Current |
 | [0020](0020-deciding-a-change-request.md) | An approved change request is applied in the same transaction that approves it | SCRUM-128 | Current |
+| [0021](0021-flagging-setup-and-turnaround-clashes.md) | A longer setup or turnaround flags the bookings it makes clash; it moves none | SCRUM-160 | Current |
 
 ## Writing one
 

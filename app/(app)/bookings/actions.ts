@@ -41,8 +41,10 @@ import {
   describeBlocker,
   findCompetingRequests,
   findVenueBlockers,
+  lockVenueTimes,
   occupiedPeriod,
   submittedBefore,
+  type SetupTurnaround,
 } from "@/lib/venue-availability";
 import { outdateSafetyChecks } from "@/lib/safety-checks";
 import { openingHoursRefusal, type OpeningDay } from "@/lib/venue-hours";
@@ -50,6 +52,36 @@ import { notifyRole } from "@/lib/staff-notifications";
 
 /** A venue's setup and turnaround time (SCRUM-159). */
 const venueTimesSelect = { setupMinutes: true, turnaroundMinutes: true } as const;
+
+/**
+ * SCRUM-160 — the venue's setup and turnaround as they stand now, read under
+ * its row lock, which a change to them (SCRUM-34's edit) takes too. A booking
+ * approved or held during a change therefore copies the new minutes, or is
+ * already Approved or Held when the change looks for clashes. The lock comes
+ * after the availability check, so the check of two simultaneous requests
+ * isn't serialised; `check` runs again only if the minutes changed since
+ * `first` was read. The booking's row is locked first: recording
+ * unavailability and the occupancy trigger take the booking before the venue,
+ * so the reverse order here would deadlock with them.
+ */
+async function lockedVenueTimes(
+  tx: Prisma.TransactionClient,
+  booking: { id: string; venueId: string },
+  first: SetupTurnaround,
+  check: (times: SetupTurnaround) => Promise<void>,
+): Promise<SetupTurnaround> {
+  await tx.$queryRaw`SELECT "id" FROM "Booking" WHERE "id" = ${booking.id} FOR UPDATE`;
+  const locked = await lockVenueTimes(tx, booking.venueId);
+  if (
+    !locked ||
+    (locked.setupMinutes === first.setupMinutes &&
+      locked.turnaroundMinutes === first.turnaroundMinutes)
+  ) {
+    return first;
+  }
+  await check(locked);
+  return locked;
+}
 
 /** A venue's opening hours (SCRUM-34 AC3). */
 const openingHoursSelect = {
@@ -490,11 +522,11 @@ export async function decideBookingRequest(
         // lock on its row. Take it before the booking row, in the order
         // holding a request uses, so the two can't deadlock (ADR 0007).
         await tx.$queryRaw`SELECT "id" FROM "Event" WHERE "id" = ${booking.event.id} FOR KEY SHARE`;
-        if (decision === "APPROVED") {
+        const check = async (times: SetupTurnaround) => {
           const blockers = await findVenueBlockers(
             tx,
             booking.venueId,
-            occupiedPeriod(booking, booking.venue),
+            occupiedPeriod(booking, times),
             now,
           );
           if (blockers.length > 0) {
@@ -502,9 +534,17 @@ export async function decideBookingRequest(
               conflict(blockers.map(describeBlocker).join("; ")),
             );
           }
+        };
+        let times: SetupTurnaround = booking.venue;
+        if (decision === "APPROVED") {
+          await check(times);
           // SCRUM-134 AC2: first come, first served.
           const earlier = await earlierRequestRefusal(tx, booking);
           if (earlier) throw new DecisionError(earlier);
+          // SCRUM-160: the minutes the approval copies are read under the
+          // venue's lock, which a change to them takes too, so a change can't
+          // slip in between. Checked again only if they changed meanwhile.
+          times = await lockedVenueTimes(tx, booking, times, check);
         }
 
         const updated = await tx.booking.updateMany({
@@ -521,8 +561,8 @@ export async function decideBookingRequest(
             decidedAt: now,
             decisionReason: decision === "REJECTED" ? reason : null,
             ...(decision === "APPROVED" && {
-              setupMinutes: booking.venue.setupMinutes,
-              turnaroundMinutes: booking.venue.turnaroundMinutes,
+              setupMinutes: times.setupMinutes,
+              turnaroundMinutes: times.turnaroundMinutes,
             }),
           },
         });
@@ -817,22 +857,27 @@ export async function holdBookingRequest(
         await tx.$queryRaw`SELECT "id" FROM "Event" WHERE "id" = ${booking.event.id} FOR KEY SHARE`;
         // SCRUM-159 AC3: a hold occupies the venue for its setup and
         // turnaround too, with the venue's minutes, which it keeps (AC8).
-        const blockers = await findVenueBlockers(
-          tx,
-          booking.venueId,
-          occupiedPeriod(booking, booking.venue),
-          now,
-        );
-        if (blockers.length > 0) {
-          throw new DecisionError(
-            `Conflicting: ${booking.venue.name} is ${blockers
-              .map(describeBlocker)
-              .join("; ")}. This request is still pending.`,
+        const check = async (minutes: SetupTurnaround) => {
+          const blockers = await findVenueBlockers(
+            tx,
+            booking.venueId,
+            occupiedPeriod(booking, minutes),
+            now,
           );
-        }
+          if (blockers.length > 0) {
+            throw new DecisionError(
+              `Conflicting: ${booking.venue.name} is ${blockers
+                .map(describeBlocker)
+                .join("; ")}. This request is still pending.`,
+            );
+          }
+        };
+        await check(booking.venue);
         // SCRUM-134 AC2: an earlier competing request is decided first.
         const earlier = await earlierRequestRefusal(tx, booking);
         if (earlier) throw new DecisionError(earlier);
+        // SCRUM-160: as for an approval, the minutes are read under the lock.
+        const times = await lockedVenueTimes(tx, booking, booking.venue, check);
 
         const updated = await tx.booking.updateMany({
           // SCRUM-26 AC5: as for an approval, a flag raised since it was
@@ -843,8 +888,8 @@ export async function holdBookingRequest(
             heldAt: now,
             holdExpiresAt,
             holdNote,
-            setupMinutes: booking.venue.setupMinutes,
-            turnaroundMinutes: booking.venue.turnaroundMinutes,
+            setupMinutes: times.setupMinutes,
+            turnaroundMinutes: times.turnaroundMinutes,
           },
         });
         if (updated.count !== 1) {

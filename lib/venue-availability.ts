@@ -35,6 +35,24 @@ export function occupiedPeriod(period: Period, times: SetupTurnaround): Period {
 }
 
 /**
+ * SCRUM-160 — a venue's setup and turnaround, read under the lock on its row
+ * that every write making the venue unavailable already takes (the occupancy
+ * trigger, ADR 0010). Changing the times and approving a booking both read
+ * them this way, so they take turns: a booking approved during a change
+ * either copies the new minutes, or is already Approved when the change
+ * looks for clashes. Null when there is no such venue.
+ */
+export async function lockVenueTimes(
+  tx: Prisma.TransactionClient,
+  venueId: string,
+): Promise<SetupTurnaround | null> {
+  const [times] = await tx.$queryRaw<SetupTurnaround[]>`
+    SELECT "setupMinutes", "turnaroundMinutes" FROM "Venue"
+    WHERE "id" = ${venueId} FOR NO KEY UPDATE`;
+  return times ?? null;
+}
+
+/**
  * The booked periods that could occupy any part of `period`. A booking's
  * setup and turnaround never exceed MAX_SETUP_TURNAROUND_MINUTES, so a
  * booking more than that far away cannot reach it; the rows this loads are

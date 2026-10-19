@@ -12,6 +12,12 @@ import {
   VENUE_CHANGE_AFFECTS_BOOKINGS_MESSAGE,
   VENUE_RETIRE_HAS_BOOKINGS_MESSAGE,
 } from "@/lib/schemas/venue";
+import {
+  findTimeClashes,
+  flagTimeClashes,
+  pendingTimeClashes,
+  type TimeClash,
+} from "@/lib/venue-time-clashes";
 
 // SCRUM-34 — adding, editing and retiring venues, with the database mocked:
 // permission, validation and every refusal. The same criteria are proven
@@ -34,6 +40,14 @@ const db = vi.hoisted(() => ({
 vi.mock("@/auth", () => ({ auth: vi.fn() }));
 vi.mock("@/lib/db", () => ({ prisma: db }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
+// SCRUM-160: finding and flagging the clashes have their own tests
+// (venue-time-clashes.test.ts); here only how the edit uses them.
+vi.mock("@/lib/venue-time-clashes", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/venue-time-clashes")>()),
+  findTimeClashes: vi.fn(),
+  pendingTimeClashes: vi.fn(),
+  flagTimeClashes: vi.fn(),
+}));
 
 const mockAuth = auth as unknown as Mock;
 
@@ -138,6 +152,9 @@ beforeEach(() => {
   db.reservation.updateManyAndReturn.mockResolvedValue([]);
   db.event.findMany.mockResolvedValue([]);
   db.user.findMany.mockResolvedValue([]);
+  vi.mocked(findTimeClashes).mockResolvedValue([]);
+  vi.mocked(pendingTimeClashes).mockImplementation(async (_db, clashes) => clashes);
+  vi.mocked(flagTimeClashes).mockResolvedValue(0);
 });
 
 describe("createVenue — SCRUM-34 AC3–AC5", () => {
@@ -479,6 +496,111 @@ describe("updateVenue — SCRUM-34 AC6, AC10", () => {
       fieldErrors: { venueId: ["Choose a venue."] },
     });
     expect(db.$transaction).not.toHaveBeenCalled();
+  });
+});
+
+describe("updateVenue — SCRUM-160 AC1–AC3, AC6", () => {
+  /** A clash the longer times would make: bkg_1 with another event's booking. */
+  const clash = (bookingId = "bkg_1", withId = "bkg_other"): TimeClash => ({
+    booking: {
+      id: bookingId,
+      status: "APPROVED",
+      startAt: at("2036-03-04T13:00"),
+      endAt: at("2036-03-04T15:00"),
+      eventId: "evt_1",
+      eventName: "Spring Gala",
+      coordinatorId: "usr_coord",
+      coordinatorName: "Cody",
+      needsReconsideration: false,
+      reconsiderationReason: null,
+    },
+    with: {
+      kind: "booking",
+      id: withId,
+      startAt: at("2036-03-04T10:00"),
+      endAt: at("2036-03-04T12:00"),
+      eventName: "Career Fair",
+    },
+  });
+  const longer = { ...input, venueId: "ven_1", setupMinutes: "30", turnaroundMinutes: "45" };
+
+  beforeEach(() => {
+    db.venue.findUnique.mockResolvedValue({ ...stored, setupMinutes: 0, turnaroundMinutes: 0 });
+  });
+
+  it("SCRUM-160 [AC1] TC-160-01: lengthening setup or turnaround warns first, listing each booking it would make clash and with what, and writes nothing", async () => {
+    vi.mocked(findTimeClashes).mockResolvedValue([clash(), clash("bkg_1", "bkg_third")]);
+
+    expect(await updateVenue(longer)).toEqual({
+      ok: false,
+      error: VENUE_CHANGE_AFFECTS_BOOKINGS_MESSAGE,
+      fieldErrors: {
+        affectedBookings: [
+          `Spring Gala, 4 Mar 2036, 1:00 pm SGT (Approved): Setup or turnaround time changed, it would clash with "Career Fair"'s booking from 4 Mar 2036, 10:00 am SGT to 4 Mar 2036, 12:00 pm SGT; "Career Fair"'s booking from 4 Mar 2036, 10:00 am SGT to 4 Mar 2036, 12:00 pm SGT`,
+        ],
+        affectedBookingIds: ["bkg_1"],
+      },
+    });
+    expect(findTimeClashes).toHaveBeenCalledWith(
+      db,
+      "ven_1",
+      expect.objectContaining({ setupMinutes: 30, turnaroundMinutes: 45 }),
+      expect.any(Date),
+    );
+    expectNothingWritten();
+  });
+
+  it("SCRUM-160 [AC2, AC3] TC-160-07: once confirmed, the times are saved and the clashing bookings flagged, with the count returned", async () => {
+    vi.mocked(findTimeClashes).mockResolvedValue([clash()]);
+    vi.mocked(flagTimeClashes).mockResolvedValue(1);
+
+    expect(await updateVenue({ ...longer, confirmedBookingIds: ["bkg_1"] })).toEqual({
+      ok: true,
+      data: { id: "ven_1", flagged: 1 },
+    });
+    expect(db.venue.update).toHaveBeenCalledWith({
+      where: { id: "ven_1" },
+      data: expect.objectContaining({ setupMinutes: 30, turnaroundMinutes: 45 }),
+    });
+    expect(flagTimeClashes).toHaveBeenCalledWith(
+      db,
+      [clash()],
+      "usr_venue_staff",
+      expect.any(Date),
+    );
+  });
+
+  it("SCRUM-160 [AC1] TC-160-01: a booking that also stops fitting is listed once, for that reason", async () => {
+    db.booking.findMany.mockResolvedValue([futureBooking]);
+    vi.mocked(findTimeClashes).mockResolvedValue([clash()]);
+
+    const result = await updateVenue({ ...longer, capacity: "60" });
+
+    expect(result).toMatchObject({
+      ok: false,
+      fieldErrors: {
+        affectedBookings: [
+          "Spring Gala, 4 Mar 2036, 10:00 am SGT (Approved): Capacity 60 < attendance 70",
+        ],
+        affectedBookingIds: ["bkg_1"],
+      },
+    });
+  });
+
+  it("SCRUM-160 [AC7] TC-160-08: clashes already recorded aren't warned of again", async () => {
+    vi.mocked(findTimeClashes).mockResolvedValue([clash()]);
+    vi.mocked(pendingTimeClashes).mockResolvedValue([]);
+
+    expect(await updateVenue(longer)).toEqual({ ok: true, data: { id: "ven_1", flagged: 0 } });
+  });
+
+  it("SCRUM-160 [AC6] TC-160-06: shortening, or saving the same times, doesn't look for clashes", async () => {
+    db.venue.findUnique.mockResolvedValue({ ...stored, setupMinutes: 30, turnaroundMinutes: 45 });
+
+    await updateVenue({ ...longer, setupMinutes: "15" });
+    await updateVenue(longer);
+
+    expect(findTimeClashes).not.toHaveBeenCalled();
   });
 });
 
