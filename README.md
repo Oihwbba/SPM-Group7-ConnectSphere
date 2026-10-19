@@ -251,8 +251,9 @@ check, so don't work around them.
   held or approved booking whose occupied period overlaps recorded
   unavailability, and refuses two overlapping unavailability periods at one
   venue (SCRUM-37, ADR 0010). Since SCRUM-172 the database allows
-  unavailability over a booking, for SCRUM-161 to flag it; until then the
-  record action still refuses it, under the same venue lock.
+  unavailability over a booking: the record action saves it and flags the
+  bookings it overlaps Needs Reconsideration instead (SCRUM-161, ADR 0010's
+  addendum).
 - **One live booking per venue per event.** An event can hold at most one
   pending, held or approved booking at each venue; rejected, cancelled and
   expired ones don't count (SCRUM-162 AC2). One venue per event (SCRUM-50 AC8)
