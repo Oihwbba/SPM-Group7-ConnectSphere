@@ -22,6 +22,7 @@ import {
   type FlaggedArrangement,
 } from "@/app/(app)/events/reconsideration-actions";
 import { formatDateTime } from "@/lib/datetime";
+import { NEEDS_RECONSIDERATION } from "@/lib/status-labels";
 
 /**
  * SCRUM-26 AC9 — what happens after an arrangement is cancelled, so the
@@ -118,7 +119,7 @@ export function ReconsiderationPanel({
   }
 
   // A refusal (not this event's Coordinator) shows nothing; a failed request
-  // says so, since the checklist may still read "Needs reconsideration".
+  // says so, since the checklist may still show the Needs Reconsideration badge.
   if (loadFailed) {
     return (
       <p role="alert" className="text-xs text-muted-foreground">
@@ -132,8 +133,8 @@ export function ReconsiderationPanel({
     <Card className="overflow-hidden border-warning/40" data-testid="reconsideration-panel">
       <CardHeader className="bg-warning/10 px-4 py-3">
         <CardTitle className="flex items-center gap-2 text-sm font-semibold">
-          <Flag aria-hidden="true" className="h-4 w-4 text-warning" /> Needs
-          reconsideration
+          <Flag aria-hidden="true" className="h-4 w-4 text-warning" />{" "}
+          {NEEDS_RECONSIDERATION}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3 p-4 text-xs">

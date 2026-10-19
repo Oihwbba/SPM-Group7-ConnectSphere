@@ -194,7 +194,7 @@ time.
 | Pre-conditions | One Approved booking covering the event, beside each of: a Pending request; a live Held one; an Approved one ending at 1:00 pm on the day before; a flagged one. Also an event with only Pending and Held requests. |
 | Test Steps | 1. Open the readiness checklist for each. |
 | Test Data | — |
-| Expected Result | Incomplete each time, so the event isn't ready to confirm. The item reads what stands in the way first: "Needs reconsideration – _reason_", then "Held until … – confirm to secure", then "Pending", then "Approved for a different time". The hold keeps its Confirm and Release buttons and a pending request its Withdraw button, on its own line. |
+| Expected Result | Incomplete each time, so the event isn't ready to confirm. The item reads what stands in the way first: a flagged booking's status with the Needs Reconsideration badge and its reason (SCRUM-131 AC3), then "Held until … – confirm to secure", then "Pending", then "Approved for a different time". The hold keeps its Confirm and Release buttons and a pending request its Withdraw button, on its own line. |
 
 **Automated by:** `tests/unit/event-readiness.test.ts` › "SCRUM-162 [AC8] TC-162-13: …" (4 tests); `tests/unit/booking-holds.test.ts` › "SCRUM-163 [AC6] TC-163-11, SCRUM-162 [AC8] TC-162-13: a pending request after an expired hold reads Pending; a live hold beside an approval keeps the venue incomplete"
 

@@ -27,6 +27,7 @@ type Booking = {
   createdAt: Date;
   startAt: Date;
   endAt: Date;
+  needsReconsideration?: boolean;
 };
 type Line = {
   equipmentId: string;
@@ -84,6 +85,7 @@ const booking = (
   createdAt: day(n),
   startAt: START,
   endAt: END,
+  needsReconsideration: false,
 });
 const line = (equipmentId: string, type: string, quantity: number): Line => ({
   equipmentId,
@@ -163,6 +165,7 @@ const listed = (
   attendance: b.requestedAttendance ?? null,
   state: "Approved",
   complete: true,
+  needsReconsideration: false,
   reason: null,
   held: false,
   holdApproved: false,
@@ -675,13 +678,14 @@ describe("getReadinessChecklist — SCRUM-110", () => {
 });
 
 // SCRUM-26 AC12 — a flagged booking or reservation keeps the event from being
-// confirmed until its Coordinator resolves the flag.
-describe("getReadinessChecklist — flagged arrangements (SCRUM-26 AC12)", () => {
+// confirmed until its Coordinator resolves the flag. SCRUM-131 AC3 — the flag
+// is a separate badge, so the arrangement's own status is still shown.
+describe("getReadinessChecklist — flagged arrangements (SCRUM-26 AC12, SCRUM-131 AC3)", () => {
   const REASON = "The event moved to 2 June.";
   const flagged = <T extends object>(row: T, reason = REASON) =>
     ({ ...row, needsReconsideration: true, reconsiderationReason: reason }) as T;
 
-  it("SCRUM-26 [AC12] TC-26-13: a flagged Approved booking makes the venue item incomplete with the reason, so the event isn't ready", async () => {
+  it("SCRUM-26 [AC12] TC-26-13, SCRUM-131 [AC3] TC-131-04: a flagged Approved booking makes the venue item incomplete with the reason, still reading Approved beside the flag", async () => {
     const result = await checklistOf(
       planningEvent({ bookings: [flagged(booking("APPROVED"))] }),
     );
@@ -690,28 +694,49 @@ describe("getReadinessChecklist — flagged arrangements (SCRUM-26 AC12)", () =>
     expect(venue(result)).toEqual({
       name: "Venue booking",
       complete: false,
-      state: "Needs reconsideration",
+      state: "Approved",
+      needsReconsideration: true,
       reason: REASON,
       bookings: [
         listed(booking("APPROVED"), {
-          state: "Needs reconsideration",
+          state: "Approved",
           complete: false,
+          needsReconsideration: true,
           reason: REASON,
         }),
       ],
     });
   });
 
-  it("SCRUM-26 [AC12] TC-26-13: a flagged Pending or Held booking counts too, even beside another approved one", async () => {
-    for (const status of ["PENDING", "HELD"]) {
+  it("SCRUM-26 [AC12] TC-26-13, SCRUM-131 [AC3] TC-131-04: a flagged Pending or Held booking counts too, even beside another approved one, and keeps its own status", async () => {
+    const holdExpiresAt = new Date("2031-05-25T10:00:00Z");
+    const cases = [
+      { status: "PENDING", extra: {}, state: "Pending" },
+      {
+        status: "HELD",
+        extra: { holdExpiresAt, holdApprovedAt: null },
+        state: `Held until ${formatDateTime(holdExpiresAt)} – confirm to secure`,
+      },
+    ];
+    for (const { status, extra, state } of cases) {
       const result = await checklistOf(
         planningEvent({
-          bookings: [booking("APPROVED", 1), flagged(booking(status, 2))],
+          bookings: [
+            booking("APPROVED", 1),
+            flagged({ ...booking(status, 2), ...extra } as Booking),
+          ],
         }),
       );
       expect(venue(result)).toMatchObject({
         complete: false,
-        state: "Needs reconsideration",
+        state,
+        needsReconsideration: true,
+        reason: REASON,
+      });
+      expect(venue(result)?.bookings?.[0]).toMatchObject({
+        state: "Approved",
+        complete: true,
+        needsReconsideration: false,
       });
     }
   });
@@ -723,10 +748,13 @@ describe("getReadinessChecklist — flagged arrangements (SCRUM-26 AC12)", () =>
       }),
     );
 
-    expect(venue(result)).toMatchObject({ complete: true, state: "Approved" });
+    expect(venue(result)).toEqual(
+      expect.objectContaining({ complete: true, state: "Approved" }),
+    );
+    expect(venue(result)).not.toHaveProperty("needsReconsideration");
   });
 
-  it("SCRUM-26 [AC12] TC-26-13: a flagged Confirmed reservation makes the equipment item incomplete, naming the equipment, with the first reason", async () => {
+  it("SCRUM-26 [AC12] TC-26-13, SCRUM-131 [AC2, AC3] TC-131-05: a flagged Confirmed reservation makes the equipment item incomplete, reading Reserved with the flag, naming the equipment, with the first reason", async () => {
     const withType = (equipmentId: string, type: string, quantity: number) =>
       ({ ...reserved(equipmentId, quantity), equipment: { type } }) as Reservation;
     const result = await checklistOf(
@@ -744,7 +772,8 @@ describe("getReadinessChecklist — flagged arrangements (SCRUM-26 AC12)", () =>
     expect(equipment(result)).toEqual({
       name: "Equipment",
       complete: false,
-      state: "Needs reconsideration: Projector, Wireless Microphone",
+      state: "Reserved: Projector, Wireless Microphone",
+      needsReconsideration: true,
       reason: "One projector broke.",
     });
   });
@@ -759,7 +788,8 @@ describe("getReadinessChecklist — flagged arrangements (SCRUM-26 AC12)", () =>
     );
     expect(equipment(result)).toMatchObject({
       complete: false,
-      state: "Needs reconsideration: Projector",
+      state: "Reserved: Projector",
+      needsReconsideration: true,
     });
 
     const cancelled = await checklistOf(
@@ -784,7 +814,8 @@ describe("getReadinessChecklist — flagged arrangements (SCRUM-26 AC12)", () =>
     ))!;
 
     expect(venue(withoutInternalReasons(result))).toMatchObject({
-      state: "Needs reconsideration",
+      state: "Approved",
+      needsReconsideration: true,
       reason: null,
     });
   });
@@ -877,11 +908,14 @@ describe("getReadinessChecklist — several venues (SCRUM-162 AC8)", () => {
 
     expect(venue(result)).toMatchObject({
       complete: false,
-      state: "Needs reconsideration",
+      state: "Approved",
+      needsReconsideration: true,
       reason: "The room flooded.",
     });
     expect(venue(result)?.bookings?.[1]).toMatchObject({
-      state: "Needs reconsideration",
+      state: "Approved",
+      complete: false,
+      needsReconsideration: true,
       reason: "The room flooded.",
     });
   });
@@ -902,8 +936,8 @@ describe("getReadinessChecklist — several venues (SCRUM-162 AC8)", () => {
 
   it("SCRUM-162 [AC8], SCRUM-110 [AC6] TC-162-12: the Organiser sees each booking's state, but not a flag's internal reason", () => {
     const flaggedLine = listed(hall("APPROVED", 1), {
-      state: "Needs reconsideration",
       complete: false,
+      needsReconsideration: true,
       reason: "The room flooded.",
     });
     const checklist: ReadinessChecklist = {
@@ -912,7 +946,8 @@ describe("getReadinessChecklist — several venues (SCRUM-162 AC8)", () => {
         {
           name: "Venue booking",
           complete: false,
-          state: "Needs reconsideration",
+          state: "Approved",
+          needsReconsideration: true,
           reason: "The room flooded.",
           bookings: [flaggedLine],
         },
