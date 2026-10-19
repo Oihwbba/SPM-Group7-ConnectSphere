@@ -9,6 +9,7 @@ import { can, requirePermission, PermissionError } from "@/lib/auth/can";
 import { ok, err, type ActionResult } from "@/lib/action-result";
 import { getReadinessChecklist } from "@/lib/event-readiness";
 import { SAFETY_CHECK_LABEL } from "@/lib/safety-checks";
+import { NEEDS_RECONSIDERATION } from "@/lib/status-labels";
 
 const requestSchema = z.object({ eventId: z.string().min(1) });
 
@@ -67,7 +68,13 @@ export async function requestSafetyCheck(
       if (outstanding.length > 0) {
         return {
           refused: "not-ready" as const,
-          outstanding: outstanding.map((item) => `${item.name} (${item.state})`).join(", "),
+          // SCRUM-131 AC3: a flagged item is named with its flag, which is why it is outstanding.
+          outstanding: outstanding
+            .map(
+              (item) =>
+                `${item.name} (${item.state}${item.needsReconsideration ? ` – ${NEEDS_RECONSIDERATION}` : ""})`,
+            )
+            .join(", "),
         };
       }
 

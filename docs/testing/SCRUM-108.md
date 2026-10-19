@@ -1,8 +1,9 @@
 # SCRUM-108 — Answer a clarification, or amend and resubmit a rejected request: test cases
 
 Story and acceptance criteria: [docs/backlog/SCRUM-108.md](../backlog/SCRUM-108.md)
-(AC 11 extended on 4 Oct: rejecting an unassigned request makes the rejecting
-Coordinator its coordinator). Format and conventions: [README.md](README.md).
+(AC 11's 4 Oct extension, where rejecting an unassigned request made the
+rejecting Coordinator its coordinator, is superseded by SCRUM-135 AC 4: see
+TC-108-07). Format and conventions: [README.md](README.md).
 Clarifications are handled in
 [app/(app)/events/clarification-actions.ts](<../../app/(app)/events/clarification-actions.ts>),
 resubmission and decisions in
@@ -22,7 +23,7 @@ and the app is running. Unless the case says otherwise, the event is owned by
 | [TC-108-04](#tc-108-04) | Negative | AC 5                            | Unit                 |
 | [TC-108-05](#tc-108-05) | Positive | AC 9, AC 11, AC 14              | Unit                 |
 | [TC-108-06](#tc-108-06) | Boundary | AC 11                           | Unit                 |
-| [TC-108-07](#tc-108-07) | Positive | AC 11                           | Unit                 |
+| [TC-108-07](#tc-108-07) | Superseded | AC 11                         | —                    |
 | [TC-108-08](#tc-108-08) | Negative | AC 12                           | Unit                 |
 | [TC-108-09](#tc-108-09) | Negative | AC 13                           | Unit                 |
 | [TC-108-10](#tc-108-10) | Positive | AC 1, AC 2, AC 3, AC 14         | e2e                  |
@@ -108,15 +109,10 @@ and the app is running. Unless the case says otherwise, the event is owned by
 
 ### TC-108-07
 
-| Item            | Content                                                                                                                       |
-| --------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| Test Scenario   | [Positive] AC 11: rejecting a request nobody was assigned to makes the rejecting Coordinator its coordinator                  |
-| Pre-conditions  | A Submitted request with no Coordinator. Signed in as a Coordinator.                                                          |
-| Test Steps      | 1. Reject it with a reason and an outcome.                                                                                    |
-| Test Data       | —                                                                                                                             |
-| Expected Result | It is Rejected with that Coordinator as its coordinator; history records "Assigned to the rejecting coordinator (SCRUM-108)". |
-
-**Automated by:** `tests/unit/clarification-and-amend.test.ts` › "SCRUM-108 [AC11] TC-108-07: …"
+**Superseded (14 Oct) by SCRUM-135 AC 4** (Week 7 change 5: Coordinators
+manage only events assigned to them). A Submitted request with no Coordinator
+can no longer be rejected, so nobody becomes its coordinator that way. See
+[TC-135-04](SCRUM-135.md#tc-135-04).
 
 ### TC-108-08
 

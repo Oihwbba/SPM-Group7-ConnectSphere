@@ -91,6 +91,7 @@ describe("ReplanningEventDetail — SCRUM-85 AC9", () => {
           confirmedStartAt: CONFIRMED_AT,
           confirmedEndAt: CONFIRMED_END,
           confirmedVenues: ["Main Hall — Level 1", "Room 2 — Level 2"],
+          startAt: MOVED_AT,
           registrations: [{ id: "reg1", status: "REGISTERED" }],
         }}
       />,
@@ -104,6 +105,42 @@ describe("ReplanningEventDetail — SCRUM-85 AC9", () => {
     expect(html).toContain("1 Jun 2031");
     expect(html).not.toMatch(/Planning|Coordinator|Approved|Pending/);
     expect(html).toContain("You&#x27;re registered");
+  });
+});
+
+describe("ReplanningEventDetail — withdrawing (SCRUM-85 AC9, SCRUM-77 AC3)", () => {
+  const page = (startAt: Date | null) =>
+    renderToStaticMarkup(
+      <ReplanningEventDetail
+        event={{
+          name: "Charity Gala",
+          description: null,
+          confirmedStartAt: CONFIRMED_AT,
+          confirmedEndAt: CONFIRMED_END,
+          confirmedVenues: ["Main Hall — Level 1"],
+          startAt,
+          registrations: [{ id: "reg1", status: "REGISTERED" }],
+        }}
+      />,
+    );
+
+  it.each([
+    ["has yet to start", new Date(Date.now() + 24 * 60 * 60 * 1000)],
+    ["has no start set", null],
+  ])(
+    "SCRUM-85 [AC9] TC-85-07: Withdraw is offered while the event %s",
+    (_, startAt) => {
+      const html = page(startAt);
+      expect(html).toContain('data-testid="withdraw-button"');
+      expect(html).not.toContain('data-testid="withdraw-closed"');
+    },
+  );
+
+  it("SCRUM-85 [AC9] TC-85-07, SCRUM-77 [AC3]: once the event has started, Withdraw isn't offered, as the server would refuse it", () => {
+    const html = page(new Date(Date.now() - 60 * 1000));
+
+    expect(html).not.toContain('data-testid="withdraw-button"');
+    expect(html).toContain("The event has started, so you can no longer withdraw.");
   });
 });
 

@@ -16,12 +16,6 @@ import {
  * docs/adr/0019-closing-an-event.md.
  */
 
-/** AC1: the statuses the assigned Coordinator can cancel from. */
-export const CANCELLABLE: EventStatus[] = [
-  "UNDER_REVIEW",
-  "PLANNING",
-  "CONFIRMED",
-];
 
 /** AC10: still being decided or planned, so it can become overdue. */
 const UNDECIDED: EventStatus[] = ["SUBMITTED", "UNDER_REVIEW", "PLANNING"];

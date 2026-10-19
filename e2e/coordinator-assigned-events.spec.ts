@@ -64,6 +64,8 @@ test.describe("SCRUM-69 — View only the events assigned to me", () => {
   });
 
   test.afterEach(async () => {
+    // Approving notifies the seeded Organiser; their list is shared by other specs.
+    await prisma.notification.deleteMany({ where: { eventId: { in: ids } } });
     await prisma.auditLog.deleteMany({ where: { entityId: { in: ids } } });
     await prisma.event.deleteMany({ where: { id: { in: ids } } });
     ids.length = 0;
@@ -126,5 +128,18 @@ test.describe("SCRUM-69 — View only the events assigned to me", () => {
       ).toBeVisible();
       await expect(row(page, unassigned)).toHaveCount(0);
     }
+  });
+
+  test("SCRUM-135 AC3, AC4: my Under Review event can be approved, and moves to Planning", async ({
+    page,
+  }) => {
+    await signInAs(page, "coordinator@test.local");
+    const myRow = row(page, mine);
+    await myRow.getByRole("button", { name: "Approve" }).click();
+    // SCRUM-81: approval moves the event straight to Planning.
+    await expect(myRow.getByTestId("status-badge")).toHaveAttribute(
+      "data-status",
+      "PLANNING",
+    );
   });
 });

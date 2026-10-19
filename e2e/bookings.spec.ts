@@ -162,7 +162,8 @@ test.describe("SCRUM-50 / 52 / 53 — venue booking request, review and decision
       "This event already has a request for this venue.",
     );
     await expect(existing).toContainText("Exhibition Hall");
-    await expect(existing).toContainText("status pending");
+    // SCRUM-131 AC2: the booking's agreed status name.
+    await expect(existing).toContainText("status Pending");
 
     // SCRUM-52 — staff see it with what they need to decide.
     const staff = await signedIn(browser, "venuestaff@test.local");

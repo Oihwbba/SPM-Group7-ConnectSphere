@@ -4,6 +4,7 @@ import { ArrowLeft, CalendarDays, CheckCircle2, MapPin } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatEventTime } from "@/lib/datetime";
+import { canWithdrawNow } from "@/lib/registration-state";
 import { WithdrawButton } from "./withdraw-button";
 
 export const REPLANNING_LABEL = "Details being updated – registration paused";
@@ -23,6 +24,8 @@ export function ReplanningEventDetail({
     confirmedStartAt: Date | null;
     confirmedEndAt: Date | null;
     confirmedVenues: string[];
+    /** The live start, which the server's withdrawal cut-off uses (SCRUM-77 AC3). */
+    startAt: Date | null;
     registrations: { id: string; status: string }[];
   };
 }) {
@@ -92,11 +95,22 @@ export function ReplanningEventDetail({
               >
                 <CheckCircle2 className="h-4 w-4" /> You&apos;re registered
               </span>
-              {/* Once withdrawn, this page is no longer theirs to see. */}
-              <WithdrawButton
-                registrationId={registration.id}
-                afterWithdrawHref="/registrations"
-              />
+              {/* SCRUM-77 AC3: offered only before the start, as the server
+                  allows. Once withdrawn, this page is no longer theirs to
+                  see. */}
+              {canWithdrawNow(event) ? (
+                <WithdrawButton
+                  registrationId={registration.id}
+                  afterWithdrawHref="/registrations"
+                />
+              ) : (
+                <span
+                  className="text-xs text-muted-foreground"
+                  data-testid="withdraw-closed"
+                >
+                  The event has started, so you can no longer withdraw.
+                </span>
+              )}
             </div>
           )}
         </CardContent>

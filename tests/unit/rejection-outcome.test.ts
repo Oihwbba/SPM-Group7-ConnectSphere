@@ -218,6 +218,7 @@ describe("submitEventRequest — SCRUM-126 only an amendable rejection is resubm
     tx.event.findFirst.mockResolvedValue({
       id: "evt1",
       status: "REJECTED",
+      rejectionOutcome: "AMEND_AND_RESUBMIT",
       coordinatorId: "usr_coord",
     });
     tx.event.update.mockResolvedValue({ id: "evt1" });
@@ -229,10 +230,7 @@ describe("submitEventRequest — SCRUM-126 only an amendable rejection is resubm
       where: {
         id: "evt1",
         organiserId: "usr_org",
-        OR: [
-          { status: "DRAFT", discardedAt: null },
-          { status: "REJECTED", rejectionOutcome: "AMEND_AND_RESUBMIT" },
-        ],
+        discardedAt: null,
       },
     });
     expect(tx.event.update).toHaveBeenCalledWith(
