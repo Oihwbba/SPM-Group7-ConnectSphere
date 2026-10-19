@@ -7,11 +7,13 @@ import { StatusBadge } from "@/components/events/status-badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { formatEventTime } from "@/lib/datetime";
 import { getEventForPlanning } from "../queries";
+import { ReassignForm } from "./reassign-form";
 
 /** SCRUM-141 AC3, AC4 — an event's details, read-only, for anyone who may see
  * the all-events list. `getEventForPlanning` is the gate: null for other
  * roles, a draft or a missing id. Only the assigned Coordinator edits, from
- * their own Events page; the Lead's action here is assigning (SCRUM-165). */
+ * their own Events page; the Lead's actions here are assigning (SCRUM-165)
+ * and reassigning (SCRUM-21). */
 export default async function PlanningEventPage({
   params,
 }: {
@@ -24,7 +26,7 @@ export default async function PlanningEventPage({
   if (!found) {
     notFound();
   }
-  const { event, canEdit, canAssign } = found;
+  const { event, canEdit, canAssign, canReassign, coordinators } = found;
 
   const details: [string, string | null][] = [
     ["Purpose", event.purpose],
@@ -103,6 +105,13 @@ export default async function PlanningEventPage({
             >
               Assign a Coordinator
             </Link>
+          )}
+          {canReassign && event.coordinatorId && (
+            <ReassignForm
+              eventId={event.id}
+              currentId={event.coordinatorId}
+              coordinators={coordinators}
+            />
           )}
         </CardContent>
       </Card>

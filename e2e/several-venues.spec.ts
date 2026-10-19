@@ -35,8 +35,18 @@ async function removeTestEvents() {
 
 const START = new Date("2038-08-12T09:00:00+08:00");
 const END = new Date("2038-08-12T13:00:00+08:00");
+// The tests run in parallel, so each books the venues on its own day.
+const OPEN_DAY = {
+  startAt: new Date("2038-08-19T09:00:00+08:00"),
+  endAt: new Date("2038-08-19T13:00:00+08:00"),
+};
+type Period = { startAt: Date; endAt: Date };
 
-async function createEvent(name: string, status: "PLANNING" | "CONFIRMED") {
+async function createEvent(
+  name: string,
+  status: "PLANNING" | "CONFIRMED",
+  period: Period = { startAt: START, endAt: END },
+) {
   const event = await prisma.event.create({
     data: {
       name: `${PREFIX} ${name} ${Date.now()}`,
@@ -45,8 +55,7 @@ async function createEvent(name: string, status: "PLANNING" | "CONFIRMED") {
       status,
       organiserId: "usr_organiser",
       coordinatorId: "usr_coordinator",
-      startAt: START,
-      endAt: END,
+      ...period,
       expectedAttendance: 300,
       registrationRequired: true,
       registrationEnabled: true,
@@ -57,13 +66,17 @@ async function createEvent(name: string, status: "PLANNING" | "CONFIRMED") {
 }
 
 /** An Approved booking written directly, as Venue Staff would leave it. */
-function approved(eventId: string, venueId: string, attendance: number) {
+function approved(
+  eventId: string,
+  venueId: string,
+  attendance: number,
+  period: Period = { startAt: START, endAt: END },
+) {
   return prisma.booking.create({
     data: {
       eventId,
       venueId,
-      startAt: START,
-      endAt: END,
+      ...period,
       status: "APPROVED",
       requestedAttendance: attendance,
       requestedById: "usr_coordinator",
@@ -186,9 +199,9 @@ test.describe("SCRUM-162 — Book several venues for one event", () => {
   test("SCRUM-162 [AC7] TC-162-11: once Confirmed, the Organiser and Attendees see every approved venue", async ({
     browser,
   }) => {
-    const event = await createEvent("Open Day", "CONFIRMED");
-    await approved(event.id, "ven_auditorium", 300);
-    await approved(event.id, "ven_seminar", 40);
+    const event = await createEvent("Open Day", "CONFIRMED", OPEN_DAY);
+    await approved(event.id, "ven_auditorium", 300, OPEN_DAY);
+    await approved(event.id, "ven_seminar", 40, OPEN_DAY);
 
     const organiser = await signedIn(browser, "organiser@test.local");
     const details = await openDetails(organiser, event.name);

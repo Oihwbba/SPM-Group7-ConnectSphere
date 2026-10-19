@@ -91,16 +91,18 @@ const ROLES: Role[] = [
   "SAFETY_OFFICER",
 ];
 
+const linkFor = (route: NavRoute, role: Role): NavItem => ({
+  href: route.href,
+  label:
+    typeof route.label === "string"
+      ? route.label
+      : (route.label[role] ?? route.href.replace("/", "")),
+});
+
 /** The links a role sees: every nav route whose action that role holds. */
 export function navFor(role: Role): NavItem[] {
   return NAV_ROUTES.filter((route) => roleAllows(role, route.action)).map(
-    (route) => ({
-      href: route.href,
-      label:
-        typeof route.label === "string"
-          ? route.label
-          : (route.label[role] ?? route.href.replace("/", "")),
-    }),
+    (route) => linkFor(route, role),
   );
 }
 
@@ -115,6 +117,34 @@ export const NAV_BY_ROLE: Record<Role, NavItem[]> = Object.fromEntries(
 export const LANDING_ROUTE_BY_ROLE: Record<Role, string> = Object.fromEntries(
   ROLES.map((role) => [role, navFor(role)[0]?.href ?? "/notifications"]),
 ) as Record<Role, string>;
+
+/**
+ * SCRUM-121 AC2 — the links for every role the user holds, primary role
+ * first: each route any of them may use, once, in the routes' own order. A
+ * route two roles reach is labelled as the first of them names it, and only
+ * one link to a page is kept.
+ */
+export function navForRoles(roles: Role[]): NavItem[] {
+  const hrefs = new Set<string>();
+  return NAV_ROUTES.flatMap((route) => {
+    const role = roles.find((held) => roleAllows(held, route.action));
+    if (!role || hrefs.has(route.href)) return [];
+    hrefs.add(route.href);
+    return [linkFor(route, role)];
+  });
+}
+
+/** SCRUM-121 — every role held, the primary first, as the user menu lists them. */
+export function rolesLabel(roles: Role[]): string {
+  return roles.map((role) => ROLE_LABEL[role]).join(" · ");
+}
+
+/** SCRUM-121 — the top bar's shorter label: the primary role, and how many more. */
+export function primaryRoleLabel(roles: Role[]): string {
+  return roles.length > 1
+    ? `${ROLE_LABEL[roles[0]]} +${roles.length - 1}`
+    : ROLE_LABEL[roles[0]];
+}
 
 /** Human-readable role label for the header. */
 export const ROLE_LABEL: Record<Role, string> = {

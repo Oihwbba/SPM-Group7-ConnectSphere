@@ -36,6 +36,17 @@ describe("eventUpdateFrom — SCRUM-128 AC2", () => {
   });
 });
 
+describe("eventUpdateFrom — SCRUM-41 AC1, SCRUM-171", () => {
+  it("SCRUM-41 [AC1] TC-41-18: reads Registration needed back as Yes or No, not as text", () => {
+    expect(
+      eventUpdateFrom([change("registrationRequired", "false"), change("name", "Expo")]),
+    ).toEqual({ registrationRequired: false, name: "Expo" });
+    expect(eventUpdateFrom([change("registrationRequired", "true")])).toEqual({
+      registrationRequired: true,
+    });
+  });
+});
+
 describe("isImpactful and outdatesSafetyCheck — SCRUM-128 AC4–AC6", () => {
   it("SCRUM-128 [AC4, AC6] TC-128-04: a change is impactful when any field SCRUM-41 marked major changed", () => {
     expect(isImpactful([change("description", "x"), change("expectedAttendance", "9", true)])).toBe(true);

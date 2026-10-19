@@ -13,6 +13,7 @@ import type { Role } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 
 import { auth } from "@/auth";
+import { formatDateTime } from "@/lib/datetime";
 import {
   checkVenueAvailability,
   decideBookingRequest,
@@ -36,6 +37,11 @@ const db = vi.hoisted(() => ({
   },
   venueUnavailability: { findMany: vi.fn() },
   auditLog: { create: vi.fn() },
+  // SCRUM-124: the staff and Coordinator notices these actions write, which
+  // the SCRUM-124 tests at the end of this file check.
+  user: { findMany: vi.fn() },
+  notification: { create: vi.fn(), createMany: vi.fn() },
+  $queryRaw: vi.fn(),
   safetyCheck: { updateMany: vi.fn() },
   $transaction: vi.fn(),
 }));
@@ -130,6 +136,7 @@ beforeEach(() => {
   db.booking.findMany.mockResolvedValue([]);
   db.venueUnavailability.findMany.mockResolvedValue([]);
   db.booking.create.mockResolvedValue(summaryRow);
+  db.user.findMany.mockResolvedValue([]);
 });
 
 describe("submitBookingRequest — SCRUM-50", () => {
@@ -795,7 +802,8 @@ describe("decideBookingRequest — SCRUM-53", () => {
     endAt: new Date(END),
     status: "PENDING",
     venue: { name: "Seminar Room", setupMinutes: 0, turnaroundMinutes: 0 },
-    event: { id: "evt_1", name: "Symposium", coordinatorId: "usr_coord" },
+    requestedById: "usr_coord",
+    event: { id: "evt_1", name: "Graduation", coordinatorId: "usr_coord" },
   };
 
   beforeEach(() => {
@@ -1158,5 +1166,212 @@ describe("decideBookingRequest — SCRUM-53", () => {
     await expect(
       decideBookingRequest({ bookingId: "bkg_1", decision: "APPROVED" }),
     ).rejects.toThrow("connection lost");
+  });
+});
+
+// SCRUM-124 — the notices these two actions write. Test cases:
+// docs/testing/SCRUM-124.md.
+describe("staff and Coordinator notices — SCRUM-124 AC1, AC4", () => {
+  const VENUE_STAFF = [{ id: "usr_vs1" }, { id: "usr_vs2" }];
+  const PERIOD = `${formatDateTime(new Date(START))} to ${formatDateTime(new Date(END))}`;
+
+  beforeEach(() => {
+    db.user.findMany.mockResolvedValue(VENUE_STAFF);
+  });
+
+  describe("a venue request (AC1)", () => {
+    beforeEach(() => {
+      db.event.findUnique.mockResolvedValue({
+        name: "Graduation",
+        organiserId: "usr_org",
+        coordinatorId: "usr_coord",
+        status: "PLANNING",
+        startAt: new Date(START),
+        endAt: new Date(END),
+        expectedAttendance: 40,
+      });
+    });
+
+    it("SCRUM-124 [AC1, AC12, AC13] TC-124-01: a new request tells every Venue Staff member the venue, event, period and attendance, linking to their queue", async () => {
+      await submitBookingRequest(validRequest);
+
+      expect(db.user.findMany).toHaveBeenCalledWith({
+        where: { OR: [{ role: "VENUE_STAFF" }, { additionalRoles: { has: "VENUE_STAFF" } }] },
+        select: { id: true },
+      });
+      const notice = {
+        eventId: "evt_1",
+        type: "BOOKING_REQUESTED",
+        title: "A venue was requested",
+        message: `The Coordinator requested Seminar Room for "Graduation", ${PERIOD}, for 40 attendees.`,
+        link: "/bookings",
+      };
+      expect(db.notification.createMany).toHaveBeenCalledWith({
+        data: [
+          { userId: "usr_vs1", ...notice },
+          { userId: "usr_vs2", ...notice },
+        ],
+      });
+      // In the transaction that creates the request, so both or neither.
+      expect(db.$transaction).toHaveBeenCalledTimes(1);
+    });
+
+    it("SCRUM-124 [AC14] TC-124-01: asking again while the event already has its booking tells nobody", async () => {
+      db.booking.findFirst.mockResolvedValue(summaryRow);
+
+      expect(await submitBookingRequest(validRequest)).toEqual({
+        ok: true,
+        data: { booking: summary, created: false },
+      });
+      expect(db.notification.createMany).not.toHaveBeenCalled();
+    });
+
+    it("SCRUM-124 [AC14] TC-124-01: a request the database refuses as the event's second booking for the venue tells nobody", async () => {
+      db.booking.create.mockRejectedValue(secondVenueForEvent());
+      db.booking.findFirst.mockResolvedValueOnce(null).mockResolvedValue(summaryRow);
+
+      expect(await submitBookingRequest(validRequest)).toEqual({
+        ok: true,
+        data: { booking: summary, created: false },
+      });
+      expect(db.notification.createMany).not.toHaveBeenCalled();
+    });
+
+    it("SCRUM-124 [AC1] TC-124-01: a refused request tells nobody", async () => {
+      db.venue.findFirst.mockResolvedValue({
+        id: "ven_1",
+        name: "Seminar Room",
+        capacity: 30,
+        setupMinutes: 0,
+        turnaroundMinutes: 0,
+      });
+
+      expect((await submitBookingRequest(validRequest)).ok).toBe(false);
+      expect(db.user.findMany).not.toHaveBeenCalled();
+      expect(db.notification.createMany).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("a decision on a pending request (AC4)", () => {
+    const pending = (coordinatorId: string | null = "usr_coord") => ({
+      id: "bkg_1",
+      venueId: "ven_1",
+      startAt: new Date(START),
+      endAt: new Date(END),
+      status: "PENDING",
+      needsReconsideration: false,
+      venue: { name: "Seminar Room", setupMinutes: 0, turnaroundMinutes: 0 },
+      requestedById: "usr_requester",
+      event: { id: "evt_1", name: "Graduation", coordinatorId },
+    });
+
+    beforeEach(() => {
+      mockAuth.mockResolvedValue(sessionFor("VENUE_STAFF", "usr_staff"));
+      db.booking.findUnique.mockResolvedValue(pending());
+      db.booking.updateMany.mockResolvedValue({ count: 1 });
+    });
+
+    it("SCRUM-124 [AC4, AC12] TC-124-04: approving tells the event's Coordinator the venue, event and period", async () => {
+      await decideBookingRequest({ bookingId: "bkg_1", decision: "APPROVED" });
+
+      expect(db.notification.create).toHaveBeenCalledTimes(1);
+      expect(db.notification.create).toHaveBeenCalledWith({
+        data: {
+          userId: "usr_coord",
+          eventId: "evt_1",
+          bookingId: "bkg_1",
+          type: "BOOKING_DECISION",
+          title: "Your venue request was approved",
+          message: `Venue Staff approved Seminar Room for "Graduation", ${PERIOD}.`,
+        },
+      });
+    });
+
+    it("SCRUM-124 [AC4, AC12] TC-124-04: rejecting tells the event's Coordinator the reason", async () => {
+      await decideBookingRequest({
+        bookingId: "bkg_1",
+        decision: "REJECTED",
+        reason: "  The hall is being repainted.  ",
+      });
+
+      expect(db.notification.create).toHaveBeenCalledWith({
+        data: {
+          userId: "usr_coord",
+          eventId: "evt_1",
+          bookingId: "bkg_1",
+          type: "BOOKING_DECISION",
+          title: "Your venue request was rejected",
+          message:
+            'Venue Staff rejected the request for Seminar Room for "Graduation". Their reason: The hall is being repainted.',
+        },
+      });
+    });
+
+    it("SCRUM-124 [AC4] TC-124-04: an approval sent with a reason still reads as approved", async () => {
+      await decideBookingRequest({
+        bookingId: "bkg_1",
+        decision: "APPROVED",
+        reason: "Fine by us.",
+      });
+
+      expect(db.notification.create.mock.calls[0][0].data.title).toBe(
+        "Your venue request was approved",
+      );
+    });
+
+    it("SCRUM-124 [AC4] TC-124-04: an event with no Coordinator yet tells whoever requested the venue", async () => {
+      db.booking.findUnique.mockResolvedValue(pending(null));
+
+      await decideBookingRequest({ bookingId: "bkg_1", decision: "APPROVED" });
+
+      expect(db.notification.create.mock.calls[0][0].data.userId).toBe("usr_requester");
+    });
+
+    it("SCRUM-124 [AC4, AC14] TC-124-04: a decision that loses to another one tells nobody", async () => {
+      db.booking.updateMany.mockResolvedValue({ count: 0 });
+      db.booking.findUniqueOrThrow.mockResolvedValue({
+        status: "APPROVED",
+        holdExpiresAt: null,
+      });
+
+      const result = await decideBookingRequest({
+        bookingId: "bkg_1",
+        decision: "REJECTED",
+        reason: "No.",
+      });
+
+      expect(result.ok).toBe(false);
+      expect(db.notification.create).not.toHaveBeenCalled();
+    });
+
+    it("SCRUM-124 [AC4] TC-124-04: a conflicting approval tells nobody", async () => {
+      db.booking.findMany.mockResolvedValue([
+        {
+          id: "bkg_9",
+          startAt: new Date(START),
+          endAt: new Date(END),
+          status: "APPROVED",
+          setupMinutes: 0,
+          turnaroundMinutes: 0,
+          holdExpiresAt: null,
+          venue: { setupMinutes: 0, turnaroundMinutes: 0 },
+        },
+      ]);
+
+      const result = await decideBookingRequest({ bookingId: "bkg_1", decision: "APPROVED" });
+
+      expect(result.ok).toBe(false);
+      expect(db.notification.create).not.toHaveBeenCalled();
+    });
+
+    it("SCRUM-124 [AC4] TC-124-04: the event's row is locked before the booking's, the order holding a request uses", async () => {
+      await decideBookingRequest({ bookingId: "bkg_1", decision: "APPROVED" });
+
+      const [lock] = db.$queryRaw.mock.calls[0] as [TemplateStringsArray];
+      expect(lock.join("?")).toContain('FROM "Event" WHERE "id" = ? FOR KEY SHARE');
+      expect(db.$queryRaw.mock.invocationCallOrder[0]).toBeLessThan(
+        db.booking.updateMany.mock.invocationCallOrder[0],
+      );
+    });
   });
 });
