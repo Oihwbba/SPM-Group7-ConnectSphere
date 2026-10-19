@@ -839,32 +839,34 @@ describe.skipIf(!usesLocalDatabase)(
         select: { startAt: true, endAt: true },
       });
       // Its own venue, so this approved booking can't overlap another test's.
-      const venue = await prisma.venue.create({
-        data: {
-          name: `SCRUM-142 AC10 venue ${STAMP}`,
-          location: "Test block",
-          capacity: 100,
-        },
-        select: { id: true },
-      });
-      const booking = await prisma.booking.create({
-        data: {
-          eventId,
-          venueId: venue.id,
-          ...eventBookingPeriod({ startAt: ev.startAt!, endAt: ev.endAt! })!,
-          status: "APPROVED",
-          requestedById: COORDINATOR,
-        },
-        select: { id: true },
-      });
-      const equipmentItem = async () =>
-        (await getReadinessChecklist(prisma, eventId))!.items.find(
-          (i) => i.name === "Equipment",
-        );
-      // SCRUM-166 AC9: ready also needs an approved safety check.
-      await safetyCheck(eventId, "APPROVED");
-
+      const venueName = `SCRUM-142 AC10 venue ${STAMP}`;
+      // The setup is inside the try, so a later failure still removes the venue.
       try {
+        const venue = await prisma.venue.create({
+          data: {
+            name: venueName,
+            location: "Test block",
+            capacity: 100,
+          },
+          select: { id: true },
+        });
+        await prisma.booking.create({
+          data: {
+            eventId,
+            venueId: venue.id,
+            ...eventBookingPeriod({ startAt: ev.startAt!, endAt: ev.endAt! })!,
+            status: "APPROVED",
+            requestedById: COORDINATOR,
+          },
+          select: { id: true },
+        });
+        const equipmentItem = async () =>
+          (await getReadinessChecklist(prisma, eventId))!.items.find(
+            (i) => i.name === "Equipment",
+          );
+        // SCRUM-166 AC9: ready also needs an approved safety check.
+        await safetyCheck(eventId, "APPROVED");
+
         expect(await equipmentItem()).toMatchObject({
           complete: true,
           state: "Reserved",
@@ -915,9 +917,10 @@ describe.skipIf(!usesLocalDatabase)(
           "Outdated",
         ]);
       } finally {
-        // deleteMany, as afterAll may already have deleted the booking.
-        await prisma.booking.deleteMany({ where: { id: booking.id } });
-        await prisma.venue.deleteMany({ where: { id: venue.id } });
+        // By name and with deleteMany: afterAll may already have deleted the
+        // booking, and the setup may have stopped before either was made.
+        await prisma.booking.deleteMany({ where: { venue: { name: venueName } } });
+        await prisma.venue.deleteMany({ where: { name: venueName } });
       }
       // About twenty round trips: over Vitest's 5 s default alongside other files.
     }, 30_000);
