@@ -21,6 +21,7 @@ and the app is running. Every account's password is `Password123!`.
 | [TC-131-07](#tc-131-07) | Positive | AC 5 | Unit |
 | [TC-131-08](#tc-131-08) | Positive | AC 7 | Unit, integration |
 | [TC-131-09](#tc-131-09) | Negative | AC 6 | Unit (SCRUM-85) |
+| [TC-131-10](#tc-131-10) | Positive | AC 3 | Unit |
 
 ### TC-131-01
 
@@ -138,3 +139,16 @@ and the app is running. Every account's password is `Password123!`.
 | Expected Result | The card reads "Details being updated – registration paused", never "Planning". The Attendee's pages show no event status badge at all; browse lists only Confirmed events. |
 
 **Automated by:** SCRUM-85's cases, which AC 6 points to: `tests/unit/replanning-views.test.tsx` › "SCRUM-85 [AC8, AC10] TC-85-06: the card says details are being updated, never Planning, with what was last confirmed, and links to the event"
+
+### TC-131-10
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-131-10 |
+| Test Scenario | [Positive] AC 3: a refusal that names what is outstanding shows Needs Reconsideration beside a flagged booking's status |
+| Pre-conditions | A Planning event whose only booking is Approved but flagged after the Coordinator opened the page, so Confirm and Request safety check are still offered. |
+| Test Steps | 1. As the Coordinator, choose Confirm. <br> 2. Choose Request safety check. |
+| Test Data | `coordinator@test.local`; reason "The event's expected attendance changed." |
+| Expected Result | 1. "This event isn't ready to confirm yet. Outstanding: Venue booking (Approved – Needs Reconsideration)." and the event stays in Planning. 2. "Arrange the venue and equipment before requesting a safety check. Outstanding: Venue booking (Approved – Needs Reconsideration)." and no check is created. |
+
+**Automated by:** `tests/unit/event-confirm.test.ts` › "SCRUM-131 [AC3] TC-131-10: a flagged booking is named in the refusal with Needs Reconsideration beside its status, and nothing changes"; `tests/unit/safety-check-request.test.ts` › "SCRUM-131 [AC3] TC-131-10: a flagged booking is named in the refusal with Needs Reconsideration beside its status"

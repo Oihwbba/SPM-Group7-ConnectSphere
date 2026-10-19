@@ -16,6 +16,7 @@ import {
 import { ok, err, type ActionResult } from "@/lib/action-result";
 import { auditValue } from "@/lib/audit-value";
 import { getReadinessChecklist } from "@/lib/event-readiness";
+import { NEEDS_RECONSIDERATION } from "@/lib/status-labels";
 import {
   liveHoldWhere,
   withdrawPendingHoldNotices,
@@ -755,7 +756,11 @@ export async function confirmEvent(
       if (!checklist.ready) {
         return checklist.items
           .filter((item) => !item.complete)
-          .map((item) => `${item.name} (${item.state})`)
+          // SCRUM-131 AC3: a flagged item is named with its flag, which is why it is outstanding.
+          .map(
+            (item) =>
+              `${item.name} (${item.state}${item.needsReconsideration ? ` – ${NEEDS_RECONSIDERATION}` : ""})`,
+          )
           .join(", ");
       }
 
