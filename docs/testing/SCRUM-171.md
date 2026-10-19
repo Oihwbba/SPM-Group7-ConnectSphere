@@ -34,7 +34,7 @@ request ask for it.
 | Test Data | `organiser@test.local` |
 | Expected Result | Both submit. The event stores Registration needed Yes, then No, with no note. |
 
-**Automated by:** `tests/unit/events.test.ts` › "SCRUM-171 [AC1, AC2] TC-171-01: …" (3 tests); `tests/integration/registration-needed.test.ts` › "SCRUM-171 [AC1, AC2] TC-171-01: …"; `e2e/events.spec.ts` and `e2e/coordinator-assignment.spec.ts` submit through the form choosing Yes.
+**Automated by:** `tests/unit/events.test.ts` › "SCRUM-171 [AC1, AC2] TC-171-01: …" (3 tests); `tests/integration/registration-needed.test.ts` › "SCRUM-171 [AC1, AC2] TC-171-01: …"; `e2e/events.spec.ts` and `e2e/lead-queue.spec.ts` submit through the form choosing Yes.
 
 ### TC-171-02
 
@@ -68,12 +68,12 @@ request ask for it.
 |---|---|
 | Test Case ID | TC-171-04 |
 | Test Scenario | [Positive] AC 3: a request made before this story keeps its registration answer, shown next to the new field |
-| Pre-conditions | An event with no Registration needed answer and the registration note "Walk-in, no sign-up needed". |
+| Pre-conditions | An event Under Review with its Coordinator, no Registration needed answer and the registration note "Walk-in, no sign-up needed". |
 | Test Steps | 1. Open its details as its Organiser. <br> 2. As its Coordinator, open Edit details. |
 | Test Data | `organiser@test.local`, `coordinator@test.local` |
 | Expected Result | 1: "Registration Needed: Not answered", with "Registration Notes: Walk-in, no sign-up needed" beside it. 2: neither Yes nor No is chosen, and the note is there to keep. |
 
-**Automated by:** `tests/unit/registration-state.test.ts` › "SCRUM-171 [AC3] TC-171-04: …"; `e2e/registration-needed.spec.ts` › "SCRUM-171 [AC3] TC-171-04: …" (step 1). Step 2 is manual.
+**Automated by:** `tests/unit/registration-state.test.ts` › "SCRUM-171 [AC3] TC-171-04: …"; `e2e/registration-needed.spec.ts` › "SCRUM-171 [AC3] TC-171-04: …" (both steps).
 
 ### TC-171-05
 
@@ -138,7 +138,7 @@ request ask for it.
 | Test Data | — |
 | Expected Result | Step 1: "This event has 1 active registration, so Registration needed can't be changed to No."; the event still needs registration, the request stays Submitted, and nothing is written. Step 2: approved, and the event no longer needs registration. |
 
-**Automated by:** `tests/unit/change-decision.test.ts` › "SCRUM-171 [AC5] TC-171-09: Registration needed can't be approved as No while people are registered; the message gives how many, and nothing is written" and "SCRUM-171 [AC5] TC-171-09: with nobody registered, No is applied as No; Yes never counts registrations"; `tests/integration/change-decision.test.ts` › "SCRUM-41 [AC1] TC-41-18, SCRUM-171 [AC5] TC-171-09: a raised Registration needed No is refused while someone is registered, and applied as No once nobody is"
+**Automated by:** `tests/unit/change-decision.test.ts` › "SCRUM-171 [AC5] TC-171-09: Registration needed can't be approved as No while people are registered; the message gives how many, and nothing is written" and "SCRUM-171 [AC4, AC5] TC-171-09: with nobody registered, No is applied as No and closes registration, withdrawing its notice; Yes counts no registrations and changes neither"; `tests/integration/change-decision.test.ts` › "SCRUM-41 [AC1] TC-41-18, SCRUM-171 [AC5] TC-171-09: a raised Registration needed No is refused while someone is registered, and applied as No once nobody is"
 
 ### TC-171-10
 
