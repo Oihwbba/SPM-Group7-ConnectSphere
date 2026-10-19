@@ -23,12 +23,15 @@ export type CoordinatorLoad = {
   activeEvents: number;
 };
 
-/** Every user who currently holds the Coordinator role, with their load. */
+/**
+ * Every user who currently holds the Coordinator role, with their load,
+ * including those who hold it besides another role (SCRUM-121 AC2).
+ */
 export async function getCoordinatorLoads(
   db: Prisma.TransactionClient | PrismaClient,
 ): Promise<CoordinatorLoad[]> {
   const coordinators = await db.user.findMany({
-    where: { role: "COORDINATOR" },
+    where: { OR: [{ role: "COORDINATOR" }, { additionalRoles: { has: "COORDINATOR" } }] },
     select: {
       id: true,
       name: true,

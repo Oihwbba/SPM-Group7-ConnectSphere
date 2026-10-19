@@ -268,7 +268,10 @@ describe("assignCoordinator — SCRUM-165", () => {
 
     expect(tx.user.findFirst).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { id: "usr_cody", role: "COORDINATOR" },
+        where: {
+          id: "usr_cody",
+          OR: [{ role: "COORDINATOR" }, { additionalRoles: { has: "COORDINATOR" } }],
+        },
       }),
     );
   });
