@@ -74,8 +74,13 @@ export async function reassignCoordinator(
         };
       }
 
+      // SCRUM-121 AC2: someone who holds the role besides another counts too,
+      // as in the list the Lead picks from (getCoordinatorLoads).
       const coordinator = await tx.user.findFirst({
-        where: { id: coordinatorId, role: "COORDINATOR" },
+        where: {
+          id: coordinatorId,
+          OR: [{ role: "COORDINATOR" }, { additionalRoles: { has: "COORDINATOR" } }],
+        },
         select: { id: true, name: true },
       });
       if (!coordinator) {
