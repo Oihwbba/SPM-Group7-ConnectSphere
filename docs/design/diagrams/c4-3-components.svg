@@ -416,10 +416,10 @@
 <!-- catalogue -->
 <g id="node16" class="node">
 <title>catalogue</title>
-<path fill="#c9ddf2" stroke="#6e7f91" stroke-width="1.8" stroke-dasharray="5,2" d="M2199.5,-917.75C2199.5,-917.75 2002.5,-917.75 2002.5,-917.75 1996.5,-917.75 1990.5,-911.75 1990.5,-905.75 1990.5,-905.75 1990.5,-817.75 1990.5,-817.75 1990.5,-811.75 1996.5,-805.75 2002.5,-805.75 2002.5,-805.75 2199.5,-805.75 2199.5,-805.75 2205.5,-805.75 2211.5,-811.75 2211.5,-817.75 2211.5,-817.75 2211.5,-905.75 2211.5,-905.75 2211.5,-911.75 2205.5,-917.75 2199.5,-917.75"/>
+<path fill="#85bbf0" stroke="#3c7fc0" stroke-width="1.2" d="M2199.5,-917.75C2199.5,-917.75 2002.5,-917.75 2002.5,-917.75 1996.5,-917.75 1990.5,-911.75 1990.5,-905.75 1990.5,-905.75 1990.5,-817.75 1990.5,-817.75 1990.5,-811.75 1996.5,-805.75 2002.5,-805.75 2002.5,-805.75 2199.5,-805.75 2199.5,-805.75 2205.5,-805.75 2211.5,-811.75 2211.5,-817.75 2211.5,-817.75 2211.5,-905.75 2211.5,-905.75 2211.5,-911.75 2205.5,-917.75 2199.5,-917.75"/>
 <text text-anchor="start" x="2003.5" y="-898.55" font-family="Inter" font-weight="bold" font-size="14.00" fill="#0b2540">Venue catalogue and search</text>
 <text text-anchor="start" x="2030" y="-888.55" font-family="Inter" font-size="9.00" fill="#0b2540">[Component: app/(app)/venues/*]</text>
-<text text-anchor="start" x="2061" y="-879.55" font-family="Inter" font-weight="bold" font-size="9.00" fill="#0b2540">Planned (Sprint 3)</text>
+<text text-anchor="start" x="2091.5" y="-879.55" font-family="Inter" font-weight="bold" font-size="9.00" fill="#0b2540">Built</text>
 <text text-anchor="start" x="2046.5" y="-857.35" font-family="Inter" font-size="8.00" fill="#0b2540">Maintain venues; search and</text>
 <text text-anchor="start" x="2053" y="-849.35" font-family="Inter" font-size="8.00" fill="#0b2540">filter by period, capacity,</text>
 <text text-anchor="start" x="2063" y="-841.35" font-family="Inter" font-size="8.00" fill="#0b2540">facilities, layout and</text>
