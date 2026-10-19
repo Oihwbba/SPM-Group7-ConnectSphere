@@ -6,8 +6,9 @@ Test cases for [docs/backlog/SCRUM-171.md](../backlog/SCRUM-171.md). Format:
 Registration needed is stored in `Event.registrationRequired`: true (Yes),
 false (No), or null for a request made before this story, which keeps working
 as it always has (it takes registrations). The note about registration is the
-existing `registrationNotes`, now optional. AC5's change-request half needs
-SCRUM-128, which isn't on `main` yet (TC-171-09).
+existing `registrationNotes`, now optional. AC5's change-request half is
+checked when SCRUM-128 approves the request (TC-171-09); SCRUM-41 lets a change
+request ask for it.
 
 | ID | Type | Criterion | Automated |
 |---|---|---|---|
@@ -19,7 +20,7 @@ SCRUM-128, which isn't on `main` yet (TC-171-09).
 | [TC-171-06](#tc-171-06) | Negative | AC 4 | Unit, integration, e2e |
 | [TC-171-07](#tc-171-07) | Negative | AC 4 | Integration |
 | [TC-171-08](#tc-171-08) | Negative, Boundary | AC 5 | Unit, integration |
-| [TC-171-09](#tc-171-09) | Negative | AC 5 | Manual, waits for SCRUM-128 |
+| [TC-171-09](#tc-171-09) | Negative | AC 5 | Unit, integration |
 | [TC-171-10](#tc-171-10) | Positive | AC 1 | Unit |
 
 ### TC-171-01
@@ -132,12 +133,12 @@ SCRUM-128, which isn't on `main` yet (TC-171-09).
 |---|---|
 | Test Case ID | TC-171-09 |
 | Test Scenario | [Negative] AC 5: an approved change request can't change Registration needed to No while people are registered |
-| Pre-conditions | SCRUM-128's change-request decision. |
-| Test Steps | 1. Approve a change request setting Registration needed to No on an event with active registrations. |
+| Pre-conditions | A Confirmed event that needs registration, with one active registration, and the Organiser's change request asking for Registration needed No. Signed in as its Coordinator. |
+| Test Steps | 1. Approve the change request. <br> 2. After the registration is withdrawn, approve it again. |
 | Test Data | — |
-| Expected Result | Refused with the number of active registrations; nothing changes. |
+| Expected Result | Step 1: "This event has 1 active registration, so Registration needed can't be changed to No."; the event still needs registration, the request stays Submitted, and nothing is written. Step 2: approved, and the event no longer needs registration. |
 
-**Automated by:** Manual. Waits for SCRUM-128 (#181), whose approval should use `registrationStillNeededMessage` from `lib/schemas/event-edit.ts`.
+**Automated by:** `tests/unit/change-decision.test.ts` › "SCRUM-171 [AC5] TC-171-09: Registration needed can't be approved as No while people are registered; the message gives how many, and nothing is written" and "SCRUM-171 [AC5] TC-171-09: with nobody registered, No is applied as No; Yes never counts registrations"; `tests/integration/change-decision.test.ts` › "SCRUM-41 [AC1] TC-41-18, SCRUM-171 [AC5] TC-171-09: a raised Registration needed No is refused while someone is registered, and applied as No once nobody is"
 
 ### TC-171-10
 

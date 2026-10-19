@@ -11,18 +11,11 @@ import {
   getChangeDecision,
   type ChangeDecisionView,
 } from "@/app/(app)/events/change-decision-actions";
-import { changeFieldLabel } from "@/lib/schemas/change-request";
-import { formatDateTime } from "@/lib/datetime";
+import { changeFieldLabel, changeValueLabel } from "@/lib/schemas/change-request";
 
 const DECIDE_FAILED_MESSAGE =
   "The decision couldn't be sent. If the request above isn't decided, try again.";
 
-function shown(fieldName: string, value: string | null): string {
-  if (value === null) return "—";
-  return fieldName === "startAt" || fieldName === "endAt"
-    ? formatDateTime(new Date(value))
-    : value;
-}
 
 /**
  * SCRUM-128 — under a Submitted change request, for its event's assigned
@@ -135,8 +128,8 @@ export function ChangeRequestDecision({
             {view.fields.map((field) => (
               <tr key={field.fieldName}>
                 <td className="pr-2 font-medium">{changeFieldLabel(field.fieldName)}</td>
-                <td className="pr-2">{shown(field.fieldName, field.current)}</td>
-                <td>{shown(field.fieldName, field.requested)}</td>
+                <td className="pr-2">{changeValueLabel(field.fieldName, field.current)}</td>
+                <td>{changeValueLabel(field.fieldName, field.requested)}</td>
               </tr>
             ))}
           </tbody>

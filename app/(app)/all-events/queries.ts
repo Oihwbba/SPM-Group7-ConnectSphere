@@ -166,9 +166,18 @@ export async function getEventForPlanning(id: string) {
     coordinatorId: event.coordinatorId,
     status: event.status,
   };
+  // SCRUM-21: the Lead reassigns, choosing from every Coordinator except
+  // the event's own Organiser (AC3).
+  const canReassign = can(session.user, "event:reassign", resource);
   return {
     event,
     canEdit: can(session.user, "event:edit", resource),
     canAssign: can(session.user, "event:assign", resource),
+    canReassign,
+    coordinators: canReassign
+      ? (await getCoordinatorLoads(prisma)).filter(
+          (c) => c.id !== event.organiserId,
+        )
+      : [],
   };
 }

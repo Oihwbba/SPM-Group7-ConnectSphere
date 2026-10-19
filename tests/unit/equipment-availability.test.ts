@@ -138,6 +138,7 @@ const entry = (
   eventName: `Event ${id}`,
   reason: null,
   note: null,
+  needsReconsideration: false,
   ...extra,
 });
 
