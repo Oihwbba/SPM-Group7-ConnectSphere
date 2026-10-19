@@ -154,7 +154,7 @@ describe.skipIf(!usesLocalDatabase)(
           },
         })
       ).id;
-      // SCRUM-201: its own pool, never another suite's throwaway equipment.
+      // Its own pool: another suite may delete its throwaway equipment mid-run.
       equipmentId = (
         await prisma.equipment.create({
           data: { type: `Staff notice equipment ${STAMP}`, totalQuantity: 5 },
