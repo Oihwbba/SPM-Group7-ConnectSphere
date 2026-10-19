@@ -13,19 +13,32 @@ same period. Flagged rows are created straight in the database or with
 `flagArrangements`, because the stories that raise flags aren't built yet
 (see below). Every account's password is `Password123!`.
 
-**What this story doesn't cover yet:**
+**Covered by other stories:**
 
 - **AC1's warning screen** belongs to the Coordinator's edit form, SCRUM-25
   (TC-25-06, TC-25-13). This story provides what that form calls:
   `impactfulChanges` (which edited fields count, TC-26-01),
   `flaggableArrangements` (what the warning lists, TC-26-02) and
   `flagArrangements` (raising the flag on confirm, TC-26-03).
-- **AC3's flag sources** are each another story's action: SCRUM-25, SCRUM-128,
-  SCRUM-34, SCRUM-160, SCRUM-161, SCRUM-32 and SCRUM-166. Each calls
-  `flagArrangements` with its own reason; TC-26-03 proves what that does.
+- **AC3's flag sources** are each another story's action, all merged:
+  SCRUM-25, SCRUM-128, SCRUM-34, SCRUM-160, SCRUM-161, SCRUM-166 and SCRUM-32.
+  Each calls `flagArrangements` with its own reason; TC-26-03 proves what that
+  does. The last one to arrive, Technical Support reporting that reserved
+  equipment can't be provided, is SCRUM-32's TC-32-01:
+  `tests/unit/report-reservation.test.ts` › "SCRUM-32 [AC1, AC4] TC-32-01: a
+  report flags the reservation with the reason, and changes nothing else about
+  it"; `tests/integration/report-reservation.test.ts` › "SCRUM-32 [AC1, AC2,
+  AC4, AC5] TC-32-01: …"; `e2e/report-reservation.spec.ts` › "SCRUM-32 [AC1,
+  AC2, AC4] TC-32-01, TC-32-02: …".
 - **AC14** says changing equipment lines is SCRUM-142; there is nothing to
   test here.
-- **Notifications** when a flag is raised or resolved are SCRUM-124.
+- **Notifications** when a flag is raised or resolved are SCRUM-124's
+  TC-124-08 and TC-124-09: `tests/unit/reconsideration.test.ts` › "SCRUM-124
+  [AC8, AC12] TC-124-08: the event's Coordinator is told every flagged
+  arrangement and the reason" (and the rest of TC-124-08);
+  `tests/unit/reconsideration-actions.test.ts` › "SCRUM-124 [AC9, AC12]
+  TC-124-09: …"; `tests/integration/staff-notifications.test.ts` › "SCRUM-124
+  [AC8, AC14] TC-124-08: …" and "SCRUM-124 [AC9, AC14] TC-124-09: …".
 
 | ID | Type | Criterion | Automated |
 |---|---|---|---|
