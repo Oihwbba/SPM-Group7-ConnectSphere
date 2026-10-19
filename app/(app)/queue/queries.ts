@@ -5,11 +5,9 @@ import {
   getCoordinatorLoads,
   suggestCoordinator,
 } from "@/lib/coordinator-assignment";
-
-/** SCRUM-165 AC2: a request whose start has passed while still waiting. */
-export function isOverdue(startAt: Date | null, now: Date = new Date()) {
-  return startAt !== null && startAt <= now;
-}
+// SCRUM-165 AC2: Overdue is SCRUM-82 AC10's rule, the same in the
+// Coordinator's list and here: the start has passed.
+import { isOverdue } from "@/lib/event-closing";
 
 const UNASSIGNED = { status: "SUBMITTED", coordinatorId: null } as const;
 
@@ -39,7 +37,7 @@ export async function getUnassignedQueue() {
   const now = new Date();
   return requests.map((request) => ({
     ...request,
-    overdue: isOverdue(request.startAt, now),
+    overdue: isOverdue({ status: "SUBMITTED", startAt: request.startAt }, now),
   }));
 }
 
@@ -94,7 +92,7 @@ export async function getQueueRequest(id: string) {
   );
 
   return {
-    request: { ...request, overdue: isOverdue(request.startAt) },
+    request: { ...request, overdue: isOverdue(request) },
     coordinators,
     suggestedId: suggestCoordinator(coordinators),
   };

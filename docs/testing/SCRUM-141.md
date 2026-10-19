@@ -19,13 +19,12 @@ password is `Password123!`.
 - **"Active"** is Under Review, Planning or Confirmed (AC5), the same count the
   Lead's queue shows when assigning (SCRUM-165 AC4).
 
-**What this story doesn't cover yet:**
+**Covered with other stories:**
 
-- **AC3, reassigning:** the Lead's Reassign action is SCRUM-21. Assigning
-  (SCRUM-165) is linked from an unassigned event's page.
-- **AC4, after a reassignment:** reassigning is SCRUM-21. The rule is already
-  in place: any Coordinator can open any event here read-only, and only the
-  assigned one can edit it (TC-141-07).
+- **AC3, reassigning:** the Lead's Reassign form on an event's page here is
+  SCRUM-21's; assigning (SCRUM-165) is linked from an unassigned one.
+- **AC4, after a reassignment:** reassigning is SCRUM-21; TC-141-07 cites its
+  journey, where the previous Coordinator opens the event here read-only.
 
 | ID | Type | Criterion | Automated |
 |---|---|---|---|
@@ -111,13 +110,13 @@ password is `Password123!`.
 | Item | Content |
 |---|---|
 | Test Case ID | TC-141-06 |
-| Test Scenario | [Positive, Negative] AC 3: the Lead's only action here is assigning (reassigning is SCRUM-21) |
+| Test Scenario | [Positive, Negative] AC 3: the Lead's only actions here are assigning (SCRUM-165) and reassigning (SCRUM-21) |
 | Pre-conditions | Signed in as the Lead. |
 | Test Steps | 1. Open Alumni Homecoming. <br> 2. Click **Assign a Coordinator**. <br> 3. Open Charity Gala. |
 | Test Data | — |
-| Expected Result | 1–2. The link opens the request in the Unassigned queue (SCRUM-165). 3. No assign or edit action. |
+| Expected Result | 1–2. The link opens the request in the Unassigned queue (SCRUM-165). 3. No assign or edit action; the Reassign form (SCRUM-21). |
 
-**Automated by:** `tests/unit/all-events.test.ts` › "SCRUM-141 [AC3] TC-141-06: …" (2 tests); `e2e/all-events.spec.ts` › "… TC-141-06 …"
+**Automated by:** `tests/unit/all-events.test.ts` › "SCRUM-141 [AC3] TC-141-06: …" (2 tests) and "SCRUM-21 [AC1, AC3] TC-21-01, TC-21-03: …"; `e2e/all-events.spec.ts` › "… TC-141-06 …"; `e2e/reassign.spec.ts` › "SCRUM-21 [AC1, AC5, AC6, AC8] …"
 
 ### TC-141-07
 
@@ -130,7 +129,7 @@ password is `Password123!`.
 | Test Data | — |
 | Expected Result | It opens read-only; Cody can't edit it. |
 
-**Automated by:** `tests/unit/all-events.test.ts` › "SCRUM-141 [AC4] TC-141-07: …"
+**Automated by:** `tests/unit/all-events.test.ts` › "SCRUM-141 [AC4] TC-141-07: …"; `e2e/reassign.spec.ts` › "SCRUM-21 [AC1, AC5, AC6, AC8] TC-21-01, TC-21-06, …" (Cody opens it read-only after it moves to Cara)
 
 ### TC-141-08
 

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { Users } from "lucide-react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -46,8 +47,17 @@ export function RegistrationControl({ eventId }: { eventId: string }) {
     setError(null);
     startTransition(async () => {
       const result = await action({ eventId });
-      if (result.ok) setControl(result.data);
-      else setError(result.error);
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
+      setControl(result.data);
+      // SCRUM-132 AC4: every action that changes data confirms it.
+      toast.success(
+        action === closeRegistration
+          ? "Registration closed."
+          : "Registration reopened.",
+      );
     });
   }
 

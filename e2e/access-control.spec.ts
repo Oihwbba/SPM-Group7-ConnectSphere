@@ -92,8 +92,8 @@ test.describe("SCRUM-66 — on-screen actions are gated by role", () => {
       page.getByRole("heading", { name: "My Events" }),
     ).toBeVisible();
 
-    // Approve / Reject only render for a coordinator on a submitted or
-    // under-review request — the organiser's own list must offer neither.
+    // Approve / Reject only render for a coordinator on an under-review
+    // request — the organiser's own list must offer neither.
     await expect(
       page.getByRole("button", { name: "Approve", exact: true }),
     ).toHaveCount(0);
@@ -102,14 +102,14 @@ test.describe("SCRUM-66 — on-screen actions are gated by role", () => {
     ).toHaveCount(0);
   });
 
-  test("a coordinator sees the decision controls on a submitted request", async ({
+  test("a coordinator sees the decision controls on a request under review", async ({
     page,
   }) => {
     await signIn(page, "coordinator@test.local");
     await page.waitForURL("**/events");
     // The seed assigns "Under Review — Career Fair" to this coordinator, so it
-    // shows with the Approve / Reject decision controls. (An unassigned
-    // request waits in the Lead's queue instead, SCRUM-165.)
+    // shows with the Approve / Reject decision controls (SCRUM-135 AC3, AC4).
+    // An unassigned request waits in the Lead's queue instead (SCRUM-165).
     await expect(
       page.getByRole("button", { name: "Approve", exact: true }).first(),
     ).toBeVisible();

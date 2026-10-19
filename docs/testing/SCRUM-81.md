@@ -38,7 +38,7 @@ and, if equipment was requested, every line reserved in full.
 | Item            | Content                                                                                                                                                                                                                                                                    |
 | --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Test Case ID    | TC-81-01                                                                                                                                                                                                                                                                   |
-| Test Scenario   | [Positive] AC 1, AC 2: approving a request moves the event straight to Planning, and the approval (who, when) is recorded in its history. Approving an unassigned request makes the approver its Coordinator                                                               |
+| Test Scenario   | [Positive] AC 1, AC 2: approving a request moves the event straight to Planning, and the approval (who, when) is recorded in its history. (Approving an unassigned request is refused since SCRUM-135 AC 3: TC-135-03.)                                                  |
 | Pre-conditions  | Signed in as the assigned Coordinator. The event is Under Review.                                                                                                                                                                                                          |
 | Test Steps      | 1. On **Events**, click **Approve** on the event's row.                                                                                                                                                                                                                    |
 | Test Data       | —                                                                                                                                                                                                                                                                          |
@@ -172,9 +172,9 @@ and, if equipment was requested, every line reserved in full.
 | Pre-conditions  | The event is Under Review (then Cancelled).                                |
 | Test Steps      | 1. Send a confirm request.                                                 |
 | Test Data       | —                                                                          |
-| Expected Result | Refused: "Only an event in Planning can be confirmed." Nothing is written. |
+| Expected Result | Refused, naming the status (SCRUM-135 AC 11): "This event is Under Review, so it can't be confirmed." Nothing is written. |
 
-**Automated by:** `tests/unit/event-confirm.test.ts` › "SCRUM-81 [AC5] TC-81-11: …"
+**Automated by:** `tests/unit/event-confirm.test.ts` › "SCRUM-81 [AC5] TC-81-11, SCRUM-135 [AC11]: …"
 
 ### TC-81-12
 

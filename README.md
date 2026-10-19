@@ -251,8 +251,9 @@ check, so don't work around them.
   held or approved booking whose occupied period overlaps recorded
   unavailability, and refuses two overlapping unavailability periods at one
   venue (SCRUM-37, ADR 0010). Since SCRUM-172 the database allows
-  unavailability over a booking, for SCRUM-161 to flag it; until then the
-  record action still refuses it, under the same venue lock.
+  unavailability over a booking: the record action saves it and flags the
+  bookings it overlaps Needs Reconsideration instead (SCRUM-161, ADR 0010's
+  addendum).
 - **One live booking per venue per event.** An event can hold at most one
   pending, held or approved booking at each venue; rejected, cancelled and
   expired ones don't count (SCRUM-162 AC2). One venue per event (SCRUM-50 AC8)
@@ -281,6 +282,36 @@ transaction. **Don't remove these locks.**
 - **Registration capacity** (SCRUM-74): lock the `Event` row.
 - **Equipment quantity** (SCRUM-31, ADR 0007): lock the `Equipment` rows, in
   id order, after the `Event` row.
+
+---
+
+## Performance and growth (SCRUM-132)
+
+**Release 1 is not load-tested for three years of growth** (briefing §8e).
+The briefing gives no dataset size or traffic figures, so the team set its
+own testable limits instead: the core pages work at 360 px with no
+horizontal scroll, and viewing an event, searching venues, opening a venue's
+availability, checking equipment availability and registering each respond
+within 2 seconds on the seed data. `e2e/phone-and-speed.spec.ts` checks both
+on every pull request; the timings for the sprint review are in
+`docs/evidence/`.
+
+What the design already does for growth:
+
+- **The database enforces the rules that matter under load.** Double-booking
+  is refused by an `EXCLUDE` constraint, and counted pools (registration
+  capacity, equipment quantity) are checked under row locks, so more
+  concurrent users can't break them (see "Rules the database enforces").
+- **Foreign keys the app filters by are indexed** (`@@index` in
+  `prisma/schema.prisma`), and the double-booking constraint is backed by a
+  GiST index.
+- **One shared Prisma client and a pooled connection** through the Supabase
+  session pooler, so connections don't grow with requests.
+
+What would need work first: **lists are not paginated.** My Event
+Requests, the all-events list, the booking and equipment review queues and
+notifications each read every matching row. Paging them is the first change
+to make once any of them reaches a few thousand rows.
 
 ---
 
