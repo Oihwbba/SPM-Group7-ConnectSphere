@@ -162,6 +162,43 @@ describe.skipIf(!usesLocalDatabase)(
         where: { eventId: { in: eventIds }, type: "ARRANGEMENT_FLAGGED" },
         orderBy: { userId: "asc" },
       });
+    const venueStaffIds = async () =>
+      (
+        await prisma.user.findMany({
+          where: {
+            OR: [{ role: "VENUE_STAFF" }, { additionalRoles: { has: "VENUE_STAFF" } }],
+          },
+          select: { id: true },
+        })
+      ).map((u) => u.id);
+
+    /**
+     * SCRUM-161 AC4: every Venue Staff member is told once per flagged event.
+     * Test files share the database and run in parallel, so the staff can
+     * change while this runs: "every member" is checked against the staff
+     * there both before and after recording, and no one outside the staff at
+     * either moment may be told.
+     */
+    async function expectVenueStaffToldOnce(
+      eventIds: string[],
+      staffBefore: string[],
+    ) {
+      const staffAfter = await venueStaffIds();
+      const throughout = staffBefore.filter((id) => staffAfter.includes(id));
+      const atEitherMoment = new Set([...staffBefore, ...staffAfter]);
+      const toStaff = (await notificationsFor(eventIds)).filter(
+        (n) => n.title === "Booking needs reconsideration",
+      );
+      expect(throughout).toContain(VENUE_STAFF.user.id);
+      for (const eventId of eventIds) {
+        const told = toStaff
+          .filter((n) => n.eventId === eventId)
+          .map((n) => n.userId);
+        expect(new Set(told).size).toBe(told.length);
+        expect(told).toEqual(expect.arrayContaining(throughout));
+        expect(told.filter((id) => !atEitherMoment.has(id))).toEqual([]);
+      }
+    }
 
     async function clear() {
       const ids = (
@@ -504,6 +541,7 @@ describe.skipIf(!usesLocalDatabase)(
           decidedAt: null,
         });
 
+        const staffBefore = await venueStaffIds();
         await recordConfirmed(at(11, 2), at(11, 4), "RENOVATION");
 
         const period =
@@ -530,18 +568,7 @@ describe.skipIf(!usesLocalDatabase)(
           ],
         ]);
 
-        const venueStaff = await prisma.user.count({
-          where: {
-            OR: [{ role: "VENUE_STAFF" }, { additionalRoles: { has: "VENUE_STAFF" } }],
-          },
-        });
-        const toStaff = (await notificationsFor([blockingEventId, e3])).filter(
-          (n) => n.title === "Booking needs reconsideration",
-        );
-        expect(toStaff).toHaveLength(venueStaff * 2);
-        expect(
-          new Set(toStaff.map((n) => `${n.userId} ${n.eventId}`)).size,
-        ).toBe(venueStaff * 2);
+        await expectVenueStaffToldOnce([blockingEventId, e3], staffBefore);
       });
 
       it("SCRUM-161 [AC2] TC-161-07: a booking that became affected since is shown before anything is saved", async () => {
