@@ -155,8 +155,23 @@ export async function createEquipmentRequest(
       const created = await prisma.$transaction(async (tx) => {
         // SCRUM-170 AC4: a request replaces a No equipment needed decision.
         // The event row is locked first, so recordNoEquipmentNeeded, which
-        // locks it too, can't record the decision beside this request.
-        await tx.$queryRaw`SELECT "id" FROM "Event" WHERE "id" = ${eventId} FOR UPDATE`;
+        // locks it too, can't record the decision beside this request. The
+        // event read above can be stale: a confirmation, rejection,
+        // cancellation or reassignment that committed since must not get a
+        // new request, so who may ask and when is decided again here.
+        const [locked] = await tx.$queryRaw<
+          { status: EventStatus; organiserId: string; coordinatorId: string | null }[]
+        >`
+          SELECT "status", "organiserId", "coordinatorId" FROM "Event"
+           WHERE "id" = ${eventId} FOR UPDATE
+        `;
+        if (
+          !locked ||
+          !(REQUESTABLE_EVENT_STATUSES as readonly string[]).includes(locked.status) ||
+          !can(user!, "equipment-request:create", { kind: "event", ...locked })
+        ) {
+          return null;
+        }
         await tx.event.updateMany({
           where: { id: eventId, noEquipmentNeededAt: { not: null } },
           data: { noEquipmentNeededAt: null, noEquipmentNeededById: null },
@@ -200,6 +215,7 @@ export async function createEquipmentRequest(
         return request;
       });
 
+      if (!created) return err(NOT_REQUESTABLE, { eventId: [NOT_REQUESTABLE] });
       revalidatePath("/equipment-requests");
       return ok({ id: created.id, existing: false });
     } catch (error) {

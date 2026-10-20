@@ -126,7 +126,7 @@ the open pull requests that change the same test files have merged.
 | Story | Owner | Test cases | Status |
 |---|---|---|---|
 | [SCRUM-25](SCRUM-25.md) | Felicia Or | 22 | Every case automated (unit, integration for the row lock, the warning and flags, the safety check and the permanent notes, e2e for both journeys, the safety check going Outdated and a Confirmed event's registration and notes) |
-| [SCRUM-27](SCRUM-27.md) | Jin Hong | 16 | Written with the story; every case automated |
+| [SCRUM-27](SCRUM-27.md) | Jin Hong | 17 | Written with the story; every case automated |
 | [SCRUM-28](SCRUM-28.md) | Jin Hong | 11 | Written with the story; every case automated |
 | [SCRUM-31](SCRUM-31.md) | Jun Bin | 11 | Written from the acceptance criteria and existing tests; TC-31-04, -05 and -09 are partly manual |
 | [SCRUM-32](SCRUM-32.md) | Jin Hong | 6 | Written with the story; every case automated |
@@ -138,7 +138,7 @@ the open pull requests that change the same test files have merged.
 | [SCRUM-41](SCRUM-41.md) | Jin Hong | 18 | Every case automated (unit, integration for the lock, index and rejection, e2e for both journeys); AC 8's cancellation half is SCRUM-82's TC-82-04 |
 | [SCRUM-45](SCRUM-45.md) | Jin Hong | 13 | Every case automated; AC 6, AC 9, AC 10 and the Lead's assignment are notices SCRUM-82, SCRUM-128, SCRUM-21 and SCRUM-165 send |
 | [SCRUM-48](SCRUM-48.md) | Jin Hong | 15 | Every case automated |
-| [SCRUM-50](SCRUM-50.md) | Caylern Goh | 15 | Every case automated |
+| [SCRUM-50](SCRUM-50.md) | Caylern Goh | 16 | Every case automated |
 | [SCRUM-52](SCRUM-52.md) | Caylern Goh | 6 | Every case automated |
 | [SCRUM-53](SCRUM-53.md) | Caylern Goh | 9 | Automated except TC-53-09 (AC 9), which is manual; AC 3 and AC 10 point to other cases |
 | [SCRUM-81](SCRUM-81.md) | Jun Bin | 13 | Every case automated (unit, integration for the simultaneous confirm, e2e for the journey) |
