@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-15. Jira is the source of truth.
+     Synced from Jira on 2026-10-20. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-142 - Change equipment lines or withdraw a venue request before confirmation
@@ -10,7 +10,7 @@
 | **Epic** | SCRUM-10 - Equipment Management |
 | **Priority** | High |
 | **Story points** | 3 |
-| **Status in Jira** | Done |
+| **Status in Jira** | In Review |
 | **Sprint** | SCRUM Sprint 3 |
 | **Jira** | https://smu-spm-group7.atlassian.net/browse/SCRUM-142 |
 

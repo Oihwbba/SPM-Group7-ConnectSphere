@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-09. Jira is the source of truth.
+     Synced from Jira on 2026-10-20. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-156 - Make the one-type equipment form availability-only (follow-up to SCRUM-31 and SCRUM-155)
@@ -45,5 +45,6 @@
 * 2026-10-04: written from the SCRUM-31 review feedback.
 * 2026-10-05: PO chose option (b). Title, user story and ACs rewritten for an availability-only form; the decision section replaced.
 * 2026-10-05 (PR #135): AC 3 places the request card at the top and checking availability below it (team feedback). AC 5 added: reserve the rest of a partly reserved request, or a second request for the same event, which option (b) would otherwise block. AC 6 added: the availability check refreshes after reserving. Seed decision recorded.
+* 2026-10-16 (PO decision): AC 5's "second approved request" case is withdrawn by SCRUM-186: an event has one active equipment request, and more equipment is added by changing its lines (SCRUM-142), which didn't exist on 5 Oct. AC 5 still covers a partly reserved request. This story stays Done; the change is built and tested under SCRUM-186.
 
-**Related:** SCRUM-31 (reserve equipment), SCRUM-155 (reserve an approved request in one step), SCRUM-28 (approve a request), SCRUM-29/30 (availability and commitments), SCRUM-142 (changing lines before confirmation).
+**Related:** SCRUM-31 (reserve equipment), SCRUM-155 (reserve an approved request in one step), SCRUM-28 (approve a request), SCRUM-29/30 (availability and commitments), SCRUM-142 (changing lines before confirmation), SCRUM-186 (one active equipment request per event).

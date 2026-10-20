@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-09. Jira is the source of truth.
+     Synced from Jira on 2026-10-20. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-121 - Accounts can hold multiple roles
@@ -10,7 +10,7 @@
 | **Epic** | SCRUM-9 - Access Control |
 | **Priority** | Medium |
 | **Story points** | 3 |
-| **Status in Jira** | To Do |
+| **Status in Jira** | Done |
 | **Sprint** | SCRUM Sprint 3 |
 | **Jira** | https://smu-spm-group7.atlassian.net/browse/SCRUM-121 |
 

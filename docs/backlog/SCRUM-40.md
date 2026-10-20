@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-15. Jira is the source of truth.
+     Synced from Jira on 2026-10-20. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-40 - Flag venue suitability, with the reason
@@ -10,7 +10,7 @@
 | **Epic** | SCRUM-7 - Venue Management |
 | **Priority** | Highest |
 | **Story points** | 3 |
-| **Status in Jira** | In Progress |
+| **Status in Jira** | Done |
 | **Sprint** | SCRUM Sprint 3 |
 | **Jira** | https://smu-spm-group7.atlassian.net/browse/SCRUM-40 |
 
@@ -22,7 +22,7 @@
 
 1. Given the attendance for this venue is greater than the venue's capacity, then the venue is marked Not suitable. Given it equals capacity, it is not marked unsuitable on capacity. The attendance for a venue is the attendance on that venue's booking request (SCRUM-162 AC4); in search results, before a request exists, it is the attendance entered in the search (SCRUM-38).
 2. Given the booking request, or the search before a request exists, requires a facility that the venue doesn't have, then the venue is marked Not suitable.
-3. Given the booking request, or the search before a request exists, needs an accessibility feature that the venue doesn't provide, then the venue is marked Not suitable.
+3. Given the booking request, or the search before a request exists, needs an accessibility feature that the venue doesn't provide, then the venue is marked Not suitable. 
 4. Given the booking request, or the search before a request exists, requires a room layout the venue doesn't support, then the venue is marked Not suitable only in the search.
 5. Given none of AC1–AC4 applies, then the venue is marked Suitable and no reasons are shown.
 6. Every reason that applies is listed, naming the mismatch and both values where relevant, e.g. "Capacity 100 < attendance 150", "Missing facility: projector", "No wheelchair access; event needs wheelchair access", "Banquet layout not supported".

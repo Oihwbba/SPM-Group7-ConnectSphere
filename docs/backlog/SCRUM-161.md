@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-15. Jira is the source of truth.
+     Synced from Jira on 2026-10-20. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-161 - Mark a venue unavailable over existing bookings and find a replacement venue
@@ -10,7 +10,7 @@
 | **Epic** | SCRUM-7 - Venue Management |
 | **Priority** | Highest |
 | **Story points** | 5 |
-| **Status in Jira** | In Progress |
+| **Status in Jira** | In Review |
 | **Sprint** | SCRUM Sprint 3 |
 | **Jira** | https://smu-spm-group7.atlassian.net/browse/SCRUM-161 |
 
@@ -27,9 +27,9 @@
 5. Given an approval and an unavailability for overlapping periods are saved at the same moment, then the unavailability is saved, and the booking ends up either refused or Approved and flagged, never Approved without a flag.
 6. Recording the same unavailability twice saves it once and flags nothing new.
 
-**Supersedes:** SCRUM-37 AC1 (reason list), AC3 (refused over an Approved booking), the booking half of AC4, and its Related note (managing unavailability beyond Release 1).
+**Supersedes:** SCRUM-37 AC1 (reason list), AC3 (refused over an Approved booking), the booking half of AC4, and its Related note (managing unavailability beyond Release 1).  
 
-**Related:** searching for and requesting a replacement venue is SCRUM-38 AC1, AC3 and SCRUM-162. Resolving the flag (Still stands or Cancel arrangement) is SCRUM-26 AC5, AC8 and AC9. Planning-only is what still makes a Confirmed event cancel first (SCRUM-50 AC7).
+**Related:** searching for and requesting a replacement venue is SCRUM-38 AC1, AC3 and SCRUM-162. Resolving the flag (Still stands or Cancel arrangement) is SCRUM-26 AC5, AC8 and AC9. Planning-only is what still makes a Confirmed event cancel first (SCRUM-50 AC7).  
 
 **Customer basis:** Week 7 change 2: "ConnectSphere needs Venue Staff to be able to mark a venue temporarily unavailable because of maintenance, equipment failure, renovation, safety concerns, or other operational reasons. This may occur even when future events have already been booked at the venue. When this happens, the existing event itself should not automatically be cancelled. Instead, affected bookings should be identified and the relevant Event Coordinators informed that alternative arrangements are required. The system should preserve the original event information while allowing the coordinator to search for and request a replacement venue."
 
