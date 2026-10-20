@@ -556,16 +556,14 @@ function Fact({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex gap-3">
-      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-        <Icon className="h-4 w-4" aria-hidden />
-      </span>
-      <div className="min-w-0 space-y-1">
-        <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          {label}
-        </dt>
-        <dd className="space-y-0.5">{children}</dd>
-      </div>
+    <div className="relative min-w-0 space-y-1 pl-11">
+      <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        <span className="absolute left-0 top-0 flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+          <Icon className="h-4 w-4" aria-hidden />
+        </span>
+        {label}
+      </dt>
+      <dd className="space-y-0.5">{children}</dd>
     </div>
   );
 }

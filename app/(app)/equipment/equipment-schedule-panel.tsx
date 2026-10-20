@@ -281,10 +281,10 @@ function CommitmentRow({
 function SectionHeading({ title, equipmentType }: { title: string; equipmentType: string }) {
   return (
     <div className="space-y-0.5">
-      <h4 className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
+      <h3 className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
         <CalendarClock className="h-3.5 w-3.5" />
         {title}
-      </h4>
+      </h3>
       <p className="text-[11px] text-muted-foreground">{equipmentType}</p>
     </div>
   );
