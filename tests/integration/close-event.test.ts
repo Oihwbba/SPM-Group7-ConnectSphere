@@ -11,6 +11,7 @@ import {
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { cancelEvent } from "@/app/(app)/events/cancel-actions";
+import { respondToClarification } from "@/app/(app)/events/clarification-actions";
 import { completeFinishedEvents } from "@/lib/event-closing";
 
 // SCRUM-82 — closing an event against a real database: cancelling releases
@@ -36,8 +37,19 @@ const asCoordinator = () =>
 
 const created: string[] = [];
 
+const asOrganiser = () =>
+  (auth as unknown as Mock).mockResolvedValue({
+    user: {
+      id: "usr_organiser",
+      role: "ORGANISER",
+      name: "Olivia",
+      email: "organiser@test.local",
+    },
+    expires: "2999-01-01T00:00:00.000Z",
+  });
+
 async function event(
-  status: "PLANNING" | "CONFIRMED" | "CANCELLED",
+  status: "UNDER_REVIEW" | "PLANNING" | "CONFIRMED" | "CANCELLED",
   period: { startAt: Date; endAt: Date },
 ) {
   const row = await prisma.event.create({
@@ -73,6 +85,9 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-82 — closing an event", () => {
       },
     });
     await prisma.notification.deleteMany({
+      where: { eventId: { in: created } },
+    });
+    await prisma.clarificationRequest.deleteMany({
       where: { eventId: { in: created } },
     });
     await prisma.equipmentRequest.deleteMany({
@@ -358,5 +373,92 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-82 — closing an event", () => {
       (await prisma.event.findUniqueOrThrow({ where: { id: cancelled } }))
         .status,
     ).toBe("CANCELLED");
+  });
+
+  it("SCRUM-82 [AC3, AC4] TC-82-15: cancelling closes an open clarification, and the Organiser's answer afterwards is refused and changes nothing", async () => {
+    const eventId = await event("UNDER_REVIEW", {
+      startAt: new Date("2033-02-01T02:00:00Z"),
+      endAt: new Date("2033-02-01T06:00:00Z"),
+    });
+    const { name } = await prisma.event.findUniqueOrThrow({
+      where: { id: eventId },
+      select: { name: true },
+    });
+    const { id: clarificationId } = await prisma.clarificationRequest.create({
+      data: {
+        eventId,
+        requestedById: "usr_coordinator",
+        message: "Is the name final?",
+        editableFields: ["name"],
+      },
+      select: { id: true },
+    });
+    asCoordinator();
+    expect(await cancelEvent({ eventId, reason: "The speaker withdrew." })).toEqual({
+      ok: true,
+      data: { status: "CANCELLED" },
+    });
+
+    asOrganiser();
+    expect(
+      await respondToClarification({
+        clarificationId,
+        response: "Renamed it.",
+        changes: { name: "Renamed after cancelling" },
+      }),
+    ).toEqual({
+      ok: false,
+      error: "This clarification request was closed when the event was decided or cancelled.",
+    });
+    expect(
+      await prisma.event.findUniqueOrThrow({
+        where: { id: eventId },
+        select: { name: true, status: true },
+      }),
+    ).toEqual({ name, status: "CANCELLED" });
+    expect(
+      await prisma.clarificationRequest.findUniqueOrThrow({
+        where: { id: clarificationId },
+        select: { status: true, response: true },
+      }),
+    ).toEqual({ status: "CLOSED", response: null });
+    expect(
+      await prisma.notification.count({
+        where: { eventId, title: "Clarification answered" },
+      }),
+    ).toBe(0);
+  });
+
+  it("SCRUM-82 [AC3] TC-82-16: a hold past its expiry stays Expired when the event is cancelled; the live booking is cancelled", async () => {
+    const period = {
+      startAt: new Date("2033-03-01T02:00:00Z"),
+      endAt: new Date("2033-03-01T06:00:00Z"),
+    };
+    const eventId = await event("PLANNING", period);
+    const live = await prisma.booking.create({
+      data: { eventId, venueId: "ven_hall", ...period, status: "PENDING", requestedById: "usr_coordinator" },
+      select: { id: true },
+    });
+    const lapsed = await prisma.booking.create({
+      data: {
+        eventId,
+        venueId: "ven_seminar",
+        ...period,
+        status: "HELD",
+        requestedById: "usr_coordinator",
+        heldAt: new Date("2020-01-01T00:00:00Z"),
+        holdExpiresAt: new Date("2020-01-02T00:00:00Z"),
+        holdNote: "Confirm the headcount.",
+      },
+      select: { id: true },
+    });
+    asCoordinator();
+
+    expect((await cancelEvent({ eventId, reason: "Not going ahead." })).ok).toBe(true);
+    const status = async (id: string) =>
+      (await prisma.booking.findUniqueOrThrow({ where: { id }, select: { status: true } })).status;
+    expect(await status(live.id)).toBe("CANCELLED");
+    // Still Held (read as Expired) or already marked Expired, but never Cancelled.
+    expect(["HELD", "EXPIRED"]).toContain(await status(lapsed.id));
   });
 });
