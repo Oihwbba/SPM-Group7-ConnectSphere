@@ -1202,7 +1202,7 @@ export async function rejectPlanningEvent(
         },
       });
       // SCRUM-166 AC13: its bookings and reservations changed, so a check
-      // awaiting review or approved is Outdated, as cancelling makes it.
+      // awaiting review or approved is Outdated.
       await outdateSafetyChecks(tx, eventId, now);
 
       // AC6: who rejected it and when (the entries' createdAt).
