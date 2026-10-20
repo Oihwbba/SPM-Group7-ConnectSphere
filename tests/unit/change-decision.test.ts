@@ -82,6 +82,8 @@ const eventNow = (status: EventStatus = "PLANNING", coordinatorId = "usr_coord")
   coordinatorId,
   organiserId: "usr_org",
   name: "Concert",
+  startAt: new Date("2031-01-01T02:00:00.000Z"),
+  endAt: new Date("2031-01-01T06:00:00.000Z"),
 });
 
 beforeEach(() => {
@@ -432,10 +434,43 @@ describe("decideChangeRequest — attendance and cancellation (SCRUM-128 AC7, AC
     });
     expectNothingWritten();
 
-    tx.eventChangeRequest.findUniqueOrThrow.mockResolvedValue(pendingRequest([startAt("2099-01-01T02:00:00.000Z")]));
+    tx.eventChangeRequest.findUniqueOrThrow.mockResolvedValue(pendingRequest([startAt("2031-01-01T03:00:00.000Z")]));
     expect(
       await decideChangeRequest({ changeRequestId: "cr1", decision: "APPROVED" }),
     ).toMatchObject({ ok: true });
+  });
+
+  it("SCRUM-128 [AC2] TC-128-17: a requested end that is no longer after the start, because the start moved while the request waited, is refused and nothing is written", async () => {
+    // The event now starts at 05:00; the request only moves the end, to 03:00.
+    tx.event.findUniqueOrThrow.mockResolvedValue({
+      ...eventNow(),
+      startAt: new Date("2031-01-01T05:00:00.000Z"),
+    });
+    const endAt = (iso: string) => ({ fieldName: "endAt", oldValue: "2031-01-01T06:00:00.000Z", newValue: iso, isMajor: true });
+    tx.eventChangeRequest.findUniqueOrThrow.mockResolvedValue(pendingRequest([endAt("2031-01-01T03:00:00.000Z")]));
+
+    const refused = {
+      ok: false,
+      error:
+        "The event's times changed after this request was raised, so it would now end before it starts. Reject it and the organiser can ask for new times.",
+    };
+    expect(await decideChangeRequest({ changeRequestId: "cr1", decision: "APPROVED" })).toEqual(refused);
+    expectNothingWritten();
+
+    // An end equal to the start is refused too; one minute after it is applied.
+    tx.eventChangeRequest.findUniqueOrThrow.mockResolvedValue(pendingRequest([endAt("2031-01-01T05:00:00.000Z")]));
+    expect(await decideChangeRequest({ changeRequestId: "cr1", decision: "APPROVED" })).toEqual(refused);
+    tx.eventChangeRequest.findUniqueOrThrow.mockResolvedValue(pendingRequest([endAt("2031-01-01T05:01:00.000Z")]));
+    expect(await decideChangeRequest({ changeRequestId: "cr1", decision: "APPROVED" })).toMatchObject({ ok: true });
+  });
+
+  it("SCRUM-128 [AC2] TC-128-17: a requested start judged against the end the event has now", async () => {
+    tx.eventChangeRequest.findUniqueOrThrow.mockResolvedValue(
+      pendingRequest([{ fieldName: "startAt", oldValue: "2031-01-01T02:00:00.000Z", newValue: "2031-01-01T07:00:00.000Z", isMajor: true }]),
+    );
+
+    expect((await decideChangeRequest({ changeRequestId: "cr1", decision: "APPROVED" })).ok).toBe(false);
+    expectNothingWritten();
   });
 
   it("SCRUM-128 [AC4, AC8] TC-128-07: approving refreshes every page it can change: flagged or released bookings and equipment, as SCRUM-25's edit and SCRUM-82's Cancel do", async () => {

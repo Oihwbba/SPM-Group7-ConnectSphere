@@ -28,6 +28,7 @@ import { notifyRole } from "@/lib/staff-notifications";
 import { effectiveClosesAt } from "@/lib/registration-state";
 import { venueOptions, type VenueOptions } from "@/lib/venue-options";
 import { canTransition, transitionRefusal } from "@/lib/event-lifecycle";
+import { outdateSafetyChecks } from "@/lib/safety-checks";
 
 /** Thrown inside submitEventRequest's transaction for an expected failure
  * (not found / wrong state), caught below and converted to an ActionResult —
@@ -1200,6 +1201,9 @@ export async function rejectPlanningEvent(
           decisionReason,
         },
       });
+      // SCRUM-166 AC13: its bookings and reservations changed, so a check
+      // awaiting review or approved is Outdated.
+      await outdateSafetyChecks(tx, eventId, now);
 
       // AC6: who rejected it and when (the entries' createdAt).
       await tx.auditLog.createMany({

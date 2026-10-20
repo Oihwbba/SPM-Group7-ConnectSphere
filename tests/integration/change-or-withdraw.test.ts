@@ -832,6 +832,42 @@ describe.skipIf(!usesLocalDatabase)(
       expect((await reserve(reopened.version)).ok).toBe(true);
     });
 
+    it("SCRUM-142 [AC2, AC10] TC-142-19: when Technical Support rejects a changed request, what its unchanged lines still reserve returns to the pool, once", async () => {
+      const { eventId, requestId } = await reservedRequest();
+
+      // Removing the lectern releases it and keeps the projectors and mics (AC10).
+      await changeEquipmentRequest({
+        requestId,
+        lines: [
+          { equipmentId: PROJECTOR, quantity: 2 },
+          { equipmentId: MIC, quantity: 3 },
+        ],
+      });
+      expect((await reservations(eventId)).map((r) => r.status)).toEqual(
+        expect.arrayContaining(["CONFIRMED", "CANCELLED"]),
+      );
+
+      signIn("usr_techsupport", "TECH_SUPPORT");
+      for (const toStatus of ["IN_REVIEW", "REJECTED"] as const) {
+        const note = toStatus === "REJECTED" ? "Not enough microphones." : undefined;
+        expect(await updateEquipmentRequestStatus({ requestId, toStatus, note })).toEqual({
+          ok: true,
+          data: { status: toStatus },
+        });
+      }
+
+      expect((await reservations(eventId)).every((r) => r.status === "CANCELLED")).toBe(true);
+      const history = await prisma.equipmentRequestUpdate.findFirstOrThrow({
+        where: { requestId, toStatus: "REJECTED" },
+        select: { note: true },
+      });
+      expect(history.note).toBe("Not enough microphones. 2 reservation(s) cancelled.");
+      // Rejecting again is refused, and nothing is released twice.
+      expect(
+        (await updateEquipmentRequestStatus({ requestId, toStatus: "REJECTED", note: "Again." })).ok,
+      ).toBe(false);
+    });
+
     it("SCRUM-142 [AC10] TC-142-18: after a line is only removed, Confirm waits for Technical Support to approve the request again", async () => {
       const { eventId, requestId } = await reservedRequest();
       const ev = await prisma.event.findUniqueOrThrow({

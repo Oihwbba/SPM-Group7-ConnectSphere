@@ -258,7 +258,10 @@ export async function respondToClarification(
       return ok({ id: clarificationId });
     }
     if (clarification.status !== "OPEN") {
-      return err("This clarification request has already been answered.");
+      return err(CLOSED_MESSAGE[clarification.status]);
+    }
+    if (!REVIEWABLE.includes(clarification.event.status)) {
+      return err(NOT_REVIEWABLE);
     }
 
     // AC5: anything the Coordinator didn't name goes through a change request.
@@ -297,6 +300,14 @@ export async function respondToClarification(
     }
 
     const answered = await prisma.$transaction(async (tx) => {
+      // The event's status read above can be stale: a cancellation or decision
+      // that committed in between has closed the question, and answering it
+      // would rewrite an event that is no longer under review (SCRUM-82).
+      const [locked] = await tx.$queryRaw<{ status: string }[]>`
+        SELECT "status" FROM "Event" WHERE "id" = ${event.id} FOR UPDATE
+      `;
+      if (!locked || !REVIEWABLE.includes(locked.status)) return "not-reviewable" as const;
+
       // Claim the OPEN row atomically. The status check above ran before this
       // transaction, so two simultaneous replies could both pass it; only one
       // update can still match `status: "OPEN"`, and the other must not
@@ -305,7 +316,7 @@ export async function respondToClarification(
         where: { id: clarificationId, status: "OPEN" },
         data: { status: "ANSWERED", response, respondedAt: new Date() },
       });
-      if (claimed.count === 0) return false;
+      if (claimed.count === 0) return "taken" as const;
 
       if (changed.length > 0) {
         await tx.event.update({ where: { id: event.id }, data: update });
@@ -348,10 +359,11 @@ export async function respondToClarification(
         })),
       });
 
-      return true;
+      return "answered" as const;
     });
 
-    if (!answered) {
+    if (answered === "not-reviewable") return err(NOT_REVIEWABLE);
+    if (answered === "taken") {
       return err("This clarification request has already been answered.");
     }
 
@@ -362,6 +374,17 @@ export async function respondToClarification(
     throw error;
   }
 }
+
+/** A question can be answered only while its event is being reviewed. */
+const REVIEWABLE: string[] = ["SUBMITTED", "UNDER_REVIEW"];
+
+const NOT_REVIEWABLE =
+  "This event is no longer under review, so the question can't be answered.";
+
+const CLOSED_MESSAGE = {
+  ANSWERED: "This clarification request has already been answered.",
+  CLOSED: "This clarification request was closed when the event was decided or cancelled.",
+} as const;
 
 /** A field's value as the history records it. */
 function asText(value: string | number | Date | null): string | null {

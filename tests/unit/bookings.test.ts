@@ -116,6 +116,8 @@ beforeEach(() => {
   db.$transaction.mockImplementation((cb: (tx: typeof db) => unknown) =>
     cb(db),
   );
+  // The event's status as submitBookingRequest re-reads it under its lock.
+  db.$queryRaw.mockResolvedValue([{ status: "PLANNING", organiserId: "usr_org", coordinatorId: "usr_coord" }]);
   mockAuth.mockResolvedValue(sessionFor("COORDINATOR", "usr_coord"));
   db.event.findUnique.mockResolvedValue({
     organiserId: "usr_org",
@@ -1447,5 +1449,33 @@ describe("staff and Coordinator notices — SCRUM-124 AC1, AC4", () => {
         db.booking.updateMany.mock.invocationCallOrder[0],
       );
     });
+  });
+});
+
+describe("submitBookingRequest — the event's status under its lock", () => {
+  it.each(["CONFIRMED", "REJECTED", "CANCELLED"])(
+    "SCRUM-50 [AC1] TC-50-16: an event that became %s after its status was read gets no request, and nothing is written",
+    async (status) => {
+      db.$queryRaw.mockResolvedValue([{ ...{ status: "PLANNING", organiserId: "usr_org", coordinatorId: "usr_coord" }, status }]);
+
+      expect(await submitBookingRequest(validRequest)).toEqual({
+        ok: false,
+        error: "A venue can only be requested for an approved event.",
+      });
+      expect(db.booking.create).not.toHaveBeenCalled();
+      expect(db.notification.createMany).not.toHaveBeenCalled();
+    },
+  );
+});
+
+describe("submitBookingRequest — the event's Coordinator under its lock", () => {
+  it("SCRUM-50 [AC1] TC-50-16: an event reassigned to another Coordinator after it was read gets no request from the previous one", async () => {
+    db.$queryRaw.mockResolvedValue([{ status: "PLANNING", organiserId: "usr_org", coordinatorId: "usr_other" }]);
+
+    expect(await submitBookingRequest(validRequest)).toEqual({
+      ok: false,
+      error: "A venue can only be requested for an approved event.",
+    });
+    expect(db.booking.create).not.toHaveBeenCalled();
   });
 });
