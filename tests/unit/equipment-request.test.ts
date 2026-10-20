@@ -79,6 +79,8 @@ beforeEach(() => {
     async (fn: (client: typeof tx) => unknown) => fn(tx),
   );
   tx.equipmentRequest.create.mockResolvedValue({ id: "eqr_new" });
+  // The event's status as createEquipmentRequest re-reads it under its lock.
+  tx.$queryRaw.mockResolvedValue([{ status: "PLANNING", organiserId: "usr_org", coordinatorId: "usr_coord" }]);
   tx.equipmentRequestUpdate.create.mockResolvedValue({});
   tx.user.findMany.mockResolvedValue([]);
 });
@@ -390,5 +392,31 @@ describe("the submission notice — SCRUM-124 AC2", () => {
 
     expect((await createEquipmentRequest(input())).ok).toBe(false);
     expect(tx.notification.createMany).not.toHaveBeenCalled();
+  });
+});
+
+describe("createEquipmentRequest — the event's status under its lock", () => {
+  it.each(["CONFIRMED", "REJECTED", "CANCELLED"])(
+    "SCRUM-27 [AC1] TC-27-17: an event that became %s after its status was read gets no request, and nothing is written",
+    async (status) => {
+      tx.$queryRaw.mockResolvedValue([{ ...{ status: "PLANNING", organiserId: "usr_org", coordinatorId: "usr_coord" }, status }]);
+
+      expect(await createEquipmentRequest(input())).toEqual({
+        ok: false,
+        error: "Choose one of your approved events.",
+        fieldErrors: { eventId: ["Choose one of your approved events."] },
+      });
+      expect(tx.equipmentRequest.create).not.toHaveBeenCalled();
+      expect(tx.event.updateMany).not.toHaveBeenCalled();
+    },
+  );
+});
+
+describe("createEquipmentRequest — the event's Coordinator under its lock", () => {
+  it("SCRUM-27 [AC1] TC-27-17: an event reassigned to another Coordinator after it was read gets no request from the previous one", async () => {
+    tx.$queryRaw.mockResolvedValue([{ status: "PLANNING", organiserId: "usr_org", coordinatorId: "usr_other" }]);
+
+    expect((await createEquipmentRequest(input())).ok).toBe(false);
+    expect(tx.equipmentRequest.create).not.toHaveBeenCalled();
   });
 });
