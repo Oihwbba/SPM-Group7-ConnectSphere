@@ -20,13 +20,14 @@ export interface QueuedSafetyCheck {
 /**
  * SCRUM-166 AC1 — checks awaiting review, oldest request first. A check for
  * an event the officer organises or coordinates is left out, since they may
- * not review it (AC6).
+ * not review it (AC6), and so is one for an event no longer in Planning,
+ * since recording it would be refused.
  */
 export async function getSafetyCheckQueue(
   user: SessionUser,
 ): Promise<QueuedSafetyCheck[]> {
   const checks = await prisma.safetyCheck.findMany({
-    where: { status: "AWAITING_REVIEW" },
+    where: { status: "AWAITING_REVIEW", event: { status: "PLANNING" } },
     orderBy: { createdAt: "asc" },
     select: {
       id: true,
