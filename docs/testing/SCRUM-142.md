@@ -30,6 +30,7 @@ venue requests; the suite removes them.
 | [TC-142-16](#tc-142-16) | Concurrency | AC 5 | Unit, integration |
 | [TC-142-17](#tc-142-17) | Negative | AC 1, AC 2 | Integration |
 | [TC-142-18](#tc-142-18) | Positive, Negative | AC 10 | Unit, integration, e2e |
+| [TC-142-19](#tc-142-19) | Positive, Negative | AC 2, AC 10 | Unit, integration |
 
 ---
 
@@ -266,3 +267,16 @@ venue requests; the suite removes them.
 | Expected Result | Step 1: the request is Pending Review and the other lines stay reserved. Step 2: Equipment shows "Awaiting Technical Support review" and is incomplete, and Confirm is disabled. The server refuses a confirmation with "This event isn't ready to confirm yet. Outstanding: Equipment (Awaiting Technical Support review).", and the event stays in Planning. Step 4: Equipment is Reserved and the event is Ready to confirm. While an item isn't reserved in full, Equipment names it instead ("Not fully reserved: …"), as before. |
 
 **Automated by:** `tests/unit/event-readiness.test.ts` › "SCRUM-142 [AC10] TC-142-18: a %s request keeps Equipment incomplete even with every line reserved, so the event isn't ready", "SCRUM-142 [AC10] TC-142-18: a request awaiting review holds back an approved one, and an item not reserved in full is named first"; `tests/integration/change-or-withdraw.test.ts` › "SCRUM-142 [AC10] TC-142-18: after a line is only removed, Confirm waits for Technical Support to approve the request again"; `e2e/change-or-withdraw.spec.ts` › "SCRUM-142 [AC10] TC-142-18: after only removing a line, the checklist waits for Technical Support's re-check before Confirm"
+
+### TC-142-19
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-142-19 |
+| Test Scenario | [Positive, Negative] AC 2, AC 10: rejecting a changed request releases what its unchanged lines still reserve |
+| Pre-conditions | An Approved request for a Planning event, with 2 projectors, 3 microphones and 1 lectern reserved. The Coordinator removes the lectern, so the request returns to Pending Review and the projectors and microphones stay reserved (AC 10). |
+| Test Steps | As `techsupport@test.local`: 1. Mark the request In Review. 2. Reject it with a note. 3. Reject it again. |
+| Test Data | Note: "Not enough microphones." |
+| Expected Result | Step 2: every reservation for the event is Cancelled and its stock returns to the pool. The history says "Not enough microphones. 2 reservation(s) cancelled.", and the Coordinator is told the request is Rejected and its reserved equipment was released. Step 3 is refused and releases nothing. Approving instead keeps the reservations. |
+
+**Automated by:** `tests/unit/equipment-request-review.test.ts` › "SCRUM-142 [AC2, AC10] TC-142-19: …" (3 tests); `tests/integration/change-or-withdraw.test.ts` › "SCRUM-142 [AC2, AC10] TC-142-19: when Technical Support rejects a changed request, what its unchanged lines still reserve returns to the pool, once"

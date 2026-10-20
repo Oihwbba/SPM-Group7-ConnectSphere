@@ -32,6 +32,9 @@ type ReassignOutcome =
  * - The reassigning Lead becomes the event's supervising Lead (SCRUM-165
  *   AC11). The history records who, from whom, to whom and when (AC7), and
  *   the new and previous Coordinators and the Organiser are told (AC6).
+ * - Notices written ahead for the previous Coordinator and not shown yet (a
+ *   hold's reminder and expiry, SCRUM-163; registration closing, SCRUM-45
+ *   AC11) move to the new one, who will be coordinating when they show.
  */
 export async function reassignCoordinator(
   input: unknown,
@@ -125,6 +128,16 @@ export async function reassignCoordinator(
           newValue: coordinator.id,
           summary: `Reassigned by the Lead from ${previous} to ${coordinator.name} (SCRUM-21)`,
         },
+      });
+
+      await tx.notification.updateMany({
+        where: {
+          eventId,
+          userId: event.coordinatorId!,
+          withdrawnAt: null,
+          showFromAt: { gt: new Date() },
+        },
+        data: { userId: coordinator.id },
       });
 
       // AC6 (SCRUM-45 AC10): the new and previous Coordinators and the

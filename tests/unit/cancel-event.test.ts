@@ -21,6 +21,7 @@ const tx = vi.hoisted(() => ({
   safetyCheck: { updateMany: vi.fn() },
   registration: { findMany: vi.fn(), updateMany: vi.fn() },
   eventChangeRequest: { updateMany: vi.fn() },
+  clarificationRequest: { updateMany: vi.fn() },
   auditLog: { createMany: vi.fn() },
   notification: { createMany: vi.fn(), updateMany: vi.fn() },
 }));
@@ -89,7 +90,13 @@ describe("cancelEvent — SCRUM-82 AC1", () => {
       expect.objectContaining({ data: expect.objectContaining({ status: "CANCELLED" }) }),
     );
     expect(tx.booking.updateMany).toHaveBeenCalledWith({
-      where: { eventId: "evt1", status: { in: ["PENDING", "HELD", "APPROVED"] } },
+      where: {
+        eventId: "evt1",
+        OR: [
+          { status: { in: ["PENDING", "APPROVED"] } },
+          { status: "HELD", holdExpiresAt: { gt: expect.any(Date) } },
+        ],
+      },
       data: { status: "CANCELLED" },
     });
     expect(tx.auditLog.createMany.mock.calls[0][0].data[0]).toMatchObject({
@@ -209,7 +216,13 @@ describe("cancelEvent — SCRUM-82 AC3", () => {
     await cancelEvent(valid);
 
     expect(tx.booking.updateMany).toHaveBeenCalledWith({
-      where: { eventId: "evt1", status: { in: ["PENDING", "HELD", "APPROVED"] } },
+      where: {
+        eventId: "evt1",
+        OR: [
+          { status: { in: ["PENDING", "APPROVED"] } },
+          { status: "HELD", holdExpiresAt: { gt: expect.any(Date) } },
+        ],
+      },
       data: { status: "CANCELLED" },
     });
     // Cancelling a reservation is what returns its stock (SCRUM-29).
@@ -292,5 +305,24 @@ describe("cancelEvent — SCRUM-82 AC4, AC6", () => {
   it("does not swallow an unexpected database error", async () => {
     mockTransaction.mockRejectedValue(new Error("connection lost"));
     await expect(cancelEvent(valid)).rejects.toThrow("connection lost");
+  });
+
+  it("SCRUM-82 [AC3] TC-82-15: cancelling closes a clarification still waiting on the Organiser, in the same operation", async () => {
+    await cancelEvent(valid);
+
+    expect(tx.clarificationRequest.updateMany).toHaveBeenCalledWith({
+      where: { eventId: "evt1", status: "OPEN" },
+      data: { status: "CLOSED" },
+    });
+  });
+
+  it("SCRUM-82 [AC3] TC-82-16: only bookings that still hold or may get their venue are cancelled; a hold past its expiry stays Expired", async () => {
+    await cancelEvent(valid);
+
+    const { where } = tx.booking.updateMany.mock.calls[0][0];
+    const liveHold = where.OR[1];
+    // The expiry compared is the moment of cancelling.
+    expect(liveHold.holdExpiresAt.gt.getTime()).toBeLessThanOrEqual(Date.now());
+    expect(where.OR[0].status.in).not.toContain("HELD");
   });
 });
