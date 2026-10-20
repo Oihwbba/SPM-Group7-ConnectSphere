@@ -37,9 +37,9 @@ events in other statuses, including a Cancelled one.
 | Pre-conditions | Signed in as the Attendee. |
 | Test Steps | 1. Open **Events**. <br> 2. Read an event's entry. |
 | Test Data | The seeded Confirmed events |
-| Expected Result | Only Confirmed events are listed, soonest first. Each shows its name, description, date and times (with the end date when it ends on a later day), venue name and location. |
+| Expected Result | Only Confirmed events are listed, soonest first. Each shows its name, description, date and times (with the end date when it ends on a later day), venue name and location. Since SCRUM-171 AC 4, only Confirmed events that take registrations are listed ([TC-171-06](SCRUM-171.md#tc-171-06)); since SCRUM-162 AC 7, an event with several venues shows each approved one ([TC-162-11](SCRUM-162.md#tc-162-11)). |
 
-**Automated by:** `tests/unit/attendee-events.test.ts` › "[Positive] AC: queries only CONFIRMED events, ordered by start date", "[Positive] AC: fetches the approved booking's venue, the caller's own registration, and the active-registration count for each event"; `tests/unit/datetime.test.ts` › "[Positive] SCRUM-72 AC2: a same-day event shows its date, start time and end time", "[Positive] SCRUM-72 AC2: an event that ends on a later day shows the full end date"; `e2e/attendee-events.spec.ts` › "AC: browse list shows Confirmed events with venue, capacity and registration state; excludes Cancelled"
+**Automated by:** `tests/unit/attendee-events.test.ts` › "SCRUM-171 [AC4] TC-171-06, [Positive] AC: queries only CONFIRMED events that take registrations, ordered by start date", "SCRUM-162 [AC7] TC-162-11, [Positive] AC: fetches every approved booking's venue, the caller's own registration, and the active-registration count for each event"; `tests/unit/datetime.test.ts` › "[Positive] SCRUM-72 AC2: a same-day event shows its date, start time and end time", "[Positive] SCRUM-72 AC2: an event that ends on a later day shows the full end date"; `e2e/attendee-events.spec.ts` › "AC: browse list shows Confirmed events with venue, capacity and registration state; excludes Cancelled"
 
 ### TC-72-02
 

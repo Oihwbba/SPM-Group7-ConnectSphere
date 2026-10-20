@@ -73,7 +73,7 @@ and the app is running. Unless the case says otherwise, the event is in
 | Test Data       | —                                                                           |
 | Expected Result | Refused, naming the status (SCRUM-135 AC 11), e.g. "This event is Confirmed, so it can't be rejected here." Nothing changes. |
 
-**Automated by:** `tests/unit/reject-planning.test.ts` › "SCRUM-117 [AC1] TC-117-04: …"
+**Automated by:** `tests/unit/reject-planning.test.ts` › "SCRUM-117 [AC1] TC-117-04, SCRUM-135 [AC11]: a %s event can't be rejected here, the refusal names its status, and nothing changes"
 
 ### TC-117-05
 

@@ -43,7 +43,7 @@ phone and to a screen reader, where a grid of every venue would not.
 | Test Data | — |
 | Expected Result | The day reads "Available midnight to 9:00 am", "Booked 9:00 am to 1:00 pm", "Available 1:00 pm to midnight", with a solid bar for the booking. A pending request does not appear. |
 
-**Automated by:** `tests/unit/venue-availability.test.ts` › "SCRUM-36 [AC2] TC-36-01: an approved booking reads as unavailable, with free time either side"; `e2e/availability.spec.ts` › "SCRUM-37 [AC1-AC5], SCRUM-36 [AC2, AC3, AC5]: maintenance is recorded, seen, refused over, sat flush against a booking, and never overwrites one"
+**Automated by:** `tests/unit/venue-availability.test.ts` › "SCRUM-36 [AC2] TC-36-01: an approved booking reads as unavailable, with free time either side"; `e2e/availability.spec.ts` › "SCRUM-37 [AC1, AC2, AC5], SCRUM-36 [AC2, AC3, AC5]: maintenance is recorded, seen, refused over, and sat flush against a booking"
 
 ### TC-36-02
 
@@ -134,7 +134,7 @@ phone and to a screen reader, where a grid of every venue would not.
 | Test Data | — |
 | Expected Result | On the calendar, the booking is a card showing "9:00 am – 1:00 pm", the event, the requester's initials and the attendance; the maintenance is a striped card showing "1:00 pm – 5:00 pm", "Maintenance" and its note. Step 1: a card with the event ("Approved — Research Symposium"), "Booked", the whole period, "Requested by Cody Coordinator", the expected attendance and the layout. Step 2: a card with the reason ("Maintenance"), "Unavailable", the whole period, the note and "Recorded by Vera Venue"; the booking's card closes. Step 3: the same card as step 1, and a screen reader reads it as the block's description. A period that crosses midnight shows its whole span, not just that day's part. The calendar is for internal staff only, so the event is named. |
 
-**Automated by:** `e2e/availability.spec.ts` › "SCRUM-37 [AC1-AC5], SCRUM-36 [AC2, AC3, AC5]: maintenance is recorded, seen, refused over, sat flush against a booking, and never overwrites one" (hover steps); `tests/unit/venue-availability.test.ts` › "SCRUM-36 — carries what a hover shows: the booking's event, requester and needs; the unavailability's note and recorder" and "SCRUM-36 — a stretch clipped to one day keeps the whole period in its details"
+**Automated by:** `e2e/availability.spec.ts` › "SCRUM-37 [AC1, AC2, AC5], SCRUM-36 [AC2, AC3, AC5]: maintenance is recorded, seen, refused over, and sat flush against a booking" (hover steps); `tests/unit/venue-availability.test.ts` › "SCRUM-36 — carries what a hover shows: the booking's event, requester and needs; the unavailability's note and recorder" and "SCRUM-36 — a stretch clipped to one day keeps the whole period in its details"
 
 ### TC-36-09
 
@@ -147,6 +147,6 @@ phone and to a screen reader, where a grid of every venue would not.
 | Test Data | As above |
 | Expected Result | Step 2 shows "Booked 9:00 am to 1:00 pm" straight away. Approving refreshes the calendar page on the server. Step 3: the open calendar picks the change up within 15 seconds without a reload. |
 
-**Automated by:** `e2e/availability.spec.ts` › "SCRUM-37 [AC1-AC5], SCRUM-36 [AC2, AC3, AC5]: maintenance is recorded, seen, refused over, sat flush against a booking, and never overwrites one" (approval step); `tests/unit/bookings.test.ts` › "SCRUM-36 [AC2] TC-36-09: approving refreshes the availability calendar; rejecting does not need to"; `e2e/availability.spec.ts` › "SCRUM-36 [AC2] TC-36-09: an open calendar picks up a booking approved elsewhere, without a reload" (step 3).
+**Automated by:** `e2e/availability.spec.ts` › "SCRUM-37 [AC1, AC2, AC5], SCRUM-36 [AC2, AC3, AC5]: maintenance is recorded, seen, refused over, and sat flush against a booking" (approval step); `tests/unit/bookings.test.ts` › "SCRUM-36 [AC2] TC-36-09: approving refreshes the availability calendar; rejecting does not need to"; `e2e/availability.spec.ts` › "SCRUM-36 [AC2] TC-36-09: an open calendar picks up a booking approved elsewhere, without a reload" (step 3).
 
 Moved here from TC-37-01 on 2026-10-09.

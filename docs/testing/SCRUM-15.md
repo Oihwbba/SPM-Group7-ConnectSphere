@@ -179,7 +179,7 @@ unless the case says otherwise.
 | Test Data | The Organiser's draft |
 | Expected Result | The draft is not on the Coordinator's list; their list never includes Draft events. |
 
-**Automated by:** `tests/unit/events.test.ts` › "SCRUM-16 [AC4 - Coordinator View Exclusion]: executes coordinator query excluding DRAFT status events"; `tests/unit/coordinator-assigned-events.test.ts` › "[Negative] AC1: an unassigned draft is not in any Coordinator's list"
+**Automated by:** `tests/unit/events.test.ts` › "SCRUM-16 [AC4 - Coordinator View Exclusion], SCRUM-165 [AC8] TC-165-11: the coordinator query lists only their own events, so no draft or unassigned request"; `tests/unit/coordinator-assigned-events.test.ts` › "[Negative] AC1: an unassigned draft is not in any Coordinator's list"
 
 ### TC-15-12
 

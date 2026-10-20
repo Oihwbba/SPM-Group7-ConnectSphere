@@ -22,7 +22,7 @@ and the app is running. Unless the case says otherwise, the event is owned by
 | [TC-108-03](#tc-108-03) | Boundary | AC 4                            | Unit                 |
 | [TC-108-04](#tc-108-04) | Negative | AC 5                            | Unit                 |
 | [TC-108-05](#tc-108-05) | Positive | AC 9, AC 11, AC 14              | Unit                 |
-| [TC-108-06](#tc-108-06) | Boundary | AC 11                           | Unit                 |
+| [TC-108-06](#tc-108-06) | Superseded | AC 11                         | —                    |
 | [TC-108-07](#tc-108-07) | Superseded | AC 11                         | —                    |
 | [TC-108-08](#tc-108-08) | Negative | AC 12                           | Unit                 |
 | [TC-108-09](#tc-108-09) | Negative | AC 13                           | Unit                 |
@@ -93,19 +93,13 @@ and the app is running. Unless the case says otherwise, the event is owned by
 | Test Data       | —                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | Expected Result | The same event is updated (no new event); it ends Under Review with the same Coordinator, who is notified; automatic assignment doesn't run; history records Rejected → Submitted by the Organiser and Submitted → Under Review. The amendment changed the description and attendance, so history also has one change entry for each, by the Organiser, with the old and new value; fields left as they were get no entry. |
 
-**Automated by:** `tests/unit/clarification-and-amend.test.ts` › "SCRUM-108 [AC9, AC11, AC14] TC-108-05: …"
+**Automated by:** `tests/unit/clarification-and-amend.test.ts` › "SCRUM-108 [AC9, AC11, AC14] TC-108-05, SCRUM-165 [AC9] TC-165-12: the amended request goes back to the same Coordinator, and the resubmission is recorded"
 
 ### TC-108-06
 
-| Item            | Content                                                                                                                      |
-| --------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| Test Scenario   | [Boundary] AC 11: automatic assignment picks a Coordinator when the previous one no longer holds the role, or there was none |
-| Pre-conditions  | A rejected event whose Coordinator (a) is no longer a Coordinator, (b) is not set.                                           |
-| Test Steps      | 1. Resubmit it.                                                                                                              |
-| Test Data       | —                                                                                                                            |
-| Expected Result | Automatic assignment runs and the least-loaded Coordinator is assigned.                                                      |
+**Superseded** on 20 Oct 2026 by SCRUM-165 AC 9 ([TC-165-12](SCRUM-165.md#tc-165-12)). When the previous Coordinator no longer held the role, or there was none, automatic assignment picked the least-loaded Coordinator. Automatic assignment no longer exists: the resubmitted request waits in the Lead's queue, Submitted with no Coordinator.
 
-**Automated by:** `tests/unit/clarification-and-amend.test.ts` › "SCRUM-108 [AC11] TC-108-06: …" (both)
+**Automated by** (SCRUM-165's tests): `tests/unit/clarification-and-amend.test.ts` › "SCRUM-165 [AC9] TC-165-12 (supersedes SCRUM-108 AC11): when $when, the resubmitted request waits in the Lead's queue, Submitted with no Coordinator" (both cases)
 
 ### TC-108-07
 
@@ -194,6 +188,6 @@ can no longer be rejected, so nobody becomes its coordinator that way. See
 | Pre-conditions  | The event was rejected with Amend and resubmit; its Coordinator has since lost the role, and no user holds it.                                                                                                                                                       |
 | Test Steps      | 1. Amend and resubmit it.                                                                                                                                                                                                                                            |
 | Test Data       | —                                                                                                                                                                                                                                                                    |
-| Expected Result | The resubmission succeeds and the event stays Submitted with no Coordinator, like a first submission, so it shows in every Coordinator's queue once one exists. History records the unassignment from the previous Coordinator. Raised by the GLM review of PR #129. |
+| Expected Result | The resubmission succeeds and the event stays Submitted with no Coordinator, like a first submission, so it waits in the Lead's Unassigned queue (SCRUM-165 AC 9, [TC-165-12](SCRUM-165.md#tc-165-12), which supersedes showing it in every Coordinator's queue). History records the unassignment from the previous Coordinator. Raised by the GLM review of PR #129. |
 
-**Automated by:** `tests/unit/clarification-and-amend.test.ts` › "SCRUM-108 [AC11, AC14] TC-108-14: …"
+**Automated by:** `tests/unit/clarification-and-amend.test.ts` › "SCRUM-108 [AC14] TC-108-14, SCRUM-165 [AC9] TC-165-12: when its Coordinator lost the role, the resubmitted request returns to the queue and the history records who held it"

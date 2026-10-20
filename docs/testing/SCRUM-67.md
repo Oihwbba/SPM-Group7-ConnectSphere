@@ -31,11 +31,13 @@ and the app is running. Every seeded account's password is `Password123!`.
 | Test Case ID | TC-67-01 |
 | Test Scenario | [Negative] AC 1: a role is refused an action it doesn't hold |
 | Pre-conditions | None beyond the shared ones. |
-| Test Steps | 1. As the Attendee, create an event request. <br> 2. As Venue Staff, review an event request, and open the venue catalogue. <br> 3. As the Coordinator, open the catalogue and raise an equipment request. |
+| Test Steps | 1. As the Attendee, create an event request. <br> 2. As Venue Staff, review an event request. <br> 3. As the Organiser or the Attendee, open the venue catalogue. <br> 4. As the Coordinator, open the catalogue and raise an equipment request. |
 | Test Data | The seeded accounts |
-| Expected Result | Steps 1 and 2 are refused. The Coordinator may open the catalogue and raise the equipment request. |
+| Expected Result | Steps 1, 2 and 3 are refused. The Coordinator may open the catalogue and raise the equipment request. |
 
-**Automated by:** `tests/unit/auth.test.ts` › "does not let an attendee create events", "does not let a venue-staff member review events", "does not let venue staff read the venue catalogue", "lets a coordinator read the venue catalogue", "lets a coordinator create and list equipment requests"
+**Superseded in part** on 20 Oct 2026 by SCRUM-34 AC 2 ([TC-34-02](SCRUM-34.md#tc-34-02)): Venue Staff opening the catalogue was refused; every internal user, Venue Staff included, now reads it, and only the external roles are refused (`venue:read` in [lib/auth/can.ts](../../lib/auth/can.ts)). Step 3 checks that refusal instead.
+
+**Automated by:** `tests/unit/auth.test.ts` › "does not let an attendee create events", "does not let a venue-staff member review events", "SCRUM-34 [AC2] TC-34-02: %s, an external user, doesn't read the venue catalogue", "lets a coordinator read the venue catalogue", "lets a coordinator create and list equipment requests"; the Venue Staff half by "SCRUM-34 [AC2] TC-34-02: %s, an internal user, reads the venue catalogue"
 
 ### TC-67-02
 

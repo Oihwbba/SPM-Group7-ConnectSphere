@@ -58,7 +58,7 @@ reservations and maintenance holds at the busiest moment.
 | Test Data | Seeded `eqr_planning` |
 | Expected Result | "Review started. The coordinator has been notified." The status becomes **In Review**, and the note, **Approve** and **Reject** appear. |
 
-**Automated by:** `e2e/equipment-request-review.spec.ts` › "SCRUM-28 [AC2, AC3, AC5, AC6] TC-28-02, TC-28-03, TC-28-09, TC-28-10: reviewing then approving updates the status, notifies the coordinator and logs each change"; `tests/integration/equipment-request-review.test.ts` › "SCRUM-28 [AC2, AC3, AC5, AC6] TC-28-02, TC-28-03, TC-28-09, TC-28-10: review then approval each move the request, log one entry and notify the coordinator once"; `tests/unit/equipment-request-review.test.ts` › "SCRUM-28 [AC2, AC5, AC6] TC-28-02, TC-28-09, TC-28-10: takes a pending request into review, records it and tells the coordinator"; `tests/unit/equipment-request-review-rules.test.ts` › "allows PENDING_REVIEW → IN_REVIEW"
+**Automated by:** `e2e/equipment-request-review.spec.ts` › "SCRUM-28 [AC2, AC3, AC5, AC6] TC-28-02, TC-28-03, TC-28-09, TC-28-10: reviewing then approving updates the status, notifies the coordinator and logs each change"; `tests/integration/equipment-request-review.test.ts` › "SCRUM-28 [AC2, AC3, AC5, AC6] TC-28-02, TC-28-03, TC-28-09, TC-28-10: review then approval each move the request, log one entry and notify the coordinator once"; `tests/unit/equipment-request-review.test.ts` › "SCRUM-28 [AC2, AC5, AC6] TC-28-02, TC-28-09, TC-28-10: takes a pending request into review, records it and tells the coordinator"; `tests/unit/equipment-request-review-rules.test.ts` › "allows %s → %s" (PENDING_REVIEW → IN_REVIEW)
 
 ### TC-28-03
 

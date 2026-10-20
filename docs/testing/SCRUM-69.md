@@ -1,19 +1,19 @@
 # SCRUM-69 — View only the events assigned to me: test cases
 
 Story and acceptance criteria: [docs/backlog/SCRUM-69.md](../backlog/SCRUM-69.md).
-Format and conventions: [README.md](README.md). A Coordinator's list is the
-events assigned to them plus the unassigned events that aren't drafts, the
-same rule `can()` applies to opening one
-([lib/auth/can.ts](../../lib/auth/can.ts)).
+Format and conventions: [README.md](README.md). A Coordinator's list is
+exactly the events assigned to them, the same rule `can()` applies to opening
+one ([lib/auth/can.ts](../../lib/auth/can.ts)).
 
 Written on 2026-10-12 from the acceptance criteria, then mapped to the tests
 that already existed (SCRUM-176). The tests predate the `SCRUM-n [ACx] TC-n-xx`
 title format, so each case names them by their current titles.
 
-**What changes next:** SCRUM-165 sends new requests to the Lead's unassigned
-queue, so unassigned events will leave the Coordinators' lists (AC 4), and
-SCRUM-21 replaces the handover in AC 3 with reassignment by the Lead. These
-cases describe the system as built today.
+**Since written:** SCRUM-165 sends new requests to the Lead's unassigned
+queue, so unassigned events left the Coordinators' lists (it supersedes AC 1's
+unassigned half and AC 4: TC-69-01 is superseded in part and TC-69-05 in
+full), and SCRUM-21 replaced the handover in AC 3 with reassignment by the
+Lead. TC-69-04 checks the lists after a change of Coordinator, however made.
 
 **Shared pre-conditions for every case:** the database is migrated and seeded
 and the app is running. Signed in as `coordinator@test.local`
@@ -26,7 +26,7 @@ unassigned Submitted one.
 | [TC-69-02](#tc-69-02) | Negative | AC 1 | Unit, e2e |
 | [TC-69-03](#tc-69-03) | Positive | AC 2 | Unit, e2e |
 | [TC-69-04](#tc-69-04) | Positive | AC 3 | Unit, e2e |
-| [TC-69-05](#tc-69-05) | Positive | AC 4 | e2e |
+| [TC-69-05](#tc-69-05) | Superseded | AC 4 | — (SCRUM-165: TC-165-11) |
 
 ---
 
@@ -35,13 +35,15 @@ unassigned Submitted one.
 | Item | Content |
 |---|---|
 | Test Case ID | TC-69-01 |
-| Test Scenario | [Positive] AC 1, AC 4: my list is my events plus the Submitted ones nobody has yet |
+| Test Scenario | [Positive] AC 1: my list is exactly my events |
 | Pre-conditions | Signed in as the Coordinator. |
 | Test Steps | 1. Open **Events**. <br> 2. Open one of the listed events. |
 | Test Data | The seeded events |
-| Expected Result | The list holds the events assigned to this Coordinator and the unassigned Submitted ones, and each opens. The same unassigned event is in the other Coordinator's list too. |
+| Expected Result | The list holds the events assigned to this Coordinator, and each opens. The unassigned Submitted event is in neither Coordinator's list. |
 
-**Automated by:** `tests/unit/coordinator-assigned-events.test.ts` › "[Positive] AC1: my list is the events assigned to me, plus unassigned events that are not drafts", "[Positive] AC1: an event assigned to me is one I can open", "[Positive] AC4: a Submitted event with no Coordinator is in every Coordinator's list"; `e2e/coordinator-assigned-events.spec.ts` › "AC1, AC4: my default list shows my events and unassigned Submitted ones, not another Coordinator's", "AC4: an unassigned Submitted event appears in every Coordinator's list"
+**Superseded in part** on 20 Oct 2026 by SCRUM-165 AC 8 ([TC-165-11](SCRUM-165.md#tc-165-11)): the list also held the unassigned Submitted events, in every Coordinator's list; they now wait in the Lead's queue.
+
+**Automated by:** `tests/unit/coordinator-assigned-events.test.ts` › "[Positive] AC1, SCRUM-165 [AC8] TC-165-11: my list is exactly the events assigned to me", "[Positive] AC1: an event assigned to me is one I can open" and "[Negative] SCRUM-165 [AC8] TC-165-11 (supersedes AC4): a Submitted event with no Coordinator is in no Coordinator's list; it waits for the Lead"; `e2e/coordinator-assigned-events.spec.ts` › "AC1, SCRUM-165 [AC8] TC-165-11: my default list shows my events, not another Coordinator's and not unassigned requests (they wait for the Lead)" and "SCRUM-165 [AC8] TC-165-11 (supersedes AC4): an unassigned Submitted event is in no Coordinator's list"
 
 ### TC-69-02
 
@@ -54,7 +56,7 @@ unassigned Submitted one.
 | Test Data | Their ids |
 | Expected Result | Neither is listed, and both reads are refused. |
 
-**Automated by:** `tests/unit/coordinator-assigned-events.test.ts` › "[Negative] AC1: an event assigned to another Coordinator is neither listed nor openable", "[Negative] AC1: an unassigned draft is not in any Coordinator's list"; `e2e/coordinator-assigned-events.spec.ts` › "AC1, AC4: my default list shows my events and unassigned Submitted ones, not another Coordinator's"
+**Automated by:** `tests/unit/coordinator-assigned-events.test.ts` › "[Negative] AC1: an event assigned to another Coordinator is neither listed nor openable", "[Negative] AC1: an unassigned draft is not in any Coordinator's list"; `e2e/coordinator-assigned-events.spec.ts` › "AC1, SCRUM-165 [AC8] TC-165-11: my default list shows my events, not another Coordinator's and not unassigned requests (they wait for the Lead)"
 
 ### TC-69-03
 
@@ -84,13 +86,6 @@ unassigned Submitted one.
 
 ### TC-69-05
 
-| Item | Content |
-|---|---|
-| Test Case ID | TC-69-05 |
-| Test Scenario | [Positive] AC 4: the Coordinator who approves an unassigned event becomes its Coordinator, and it leaves the others' lists |
-| Pre-conditions | An unassigned Submitted event, in both Coordinators' lists. |
-| Test Steps | 1. As this Coordinator, approve it. <br> 2. Open **Events** as the other Coordinator. |
-| Test Data | The unassigned event |
-| Expected Result | This Coordinator is now its Coordinator, and it is no longer in the other's list. |
+**Superseded** on 20 Oct 2026 by SCRUM-165 AC 8 ([TC-165-11](SCRUM-165.md#tc-165-11)) and SCRUM-135 AC 3 ([TC-135-03](SCRUM-135.md#tc-135-03)). The Coordinator who approved an unassigned Submitted event became its Coordinator, and it left the others' lists. No Coordinator sees or can approve an unassigned request now; the Lead assigns it (TC-165-07).
 
-**Automated by:** `e2e/coordinator-assigned-events.spec.ts` › "AC4: a Coordinator who approves an unassigned Submitted event becomes its Coordinator, so it leaves the others' lists"; `tests/unit/event-status.test.ts` › "SCRUM-19, SCRUM-81 [AC1, AC2] TC-81-01: a coordinator approves an unassigned submitted request, becomes its coordinator, and it moves to Planning"
+**Automated by** (SCRUM-165's tests): `tests/unit/event-status.test.ts` › "SCRUM-165 [AC8] TC-165-11: a Coordinator can't approve a request nobody has been assigned to; it waits for the Lead"; `e2e/coordinator-assigned-events.spec.ts` › "SCRUM-165 [AC8] TC-165-11 (supersedes AC4): an unassigned Submitted event is in no Coordinator's list"

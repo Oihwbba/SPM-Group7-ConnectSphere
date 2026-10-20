@@ -56,7 +56,7 @@ the reason after "Rejected".
 | Test Data       | Booking status APPROVED                                                                                                                                         |
 | Expected Result | "Venue booking — Approved", marked complete. Since SCRUM-170 AC 4 (which supersedes AC 3), Equipment is always listed: with No equipment needed recorded it is complete, and without a decision it is "Not decided" and the event is not ready (TC-170-07, TC-170-08). "Ready to confirm" is shown. |
 
-**Automated by:** `tests/unit/event-readiness.test.ts` › "SCRUM-110 [AC1, AC5] TC-110-01, SCRUM-170 [AC4] TC-170-08: …"; `e2e/readiness.spec.ts` › "SCRUM-110 [AC3, AC5, AC6] TC-110-01, TC-110-06: …"
+**Automated by:** `tests/unit/event-readiness.test.ts` › "SCRUM-110 [AC1, AC5] TC-110-01, SCRUM-170 [AC4] TC-170-08, SCRUM-166 [AC9]: …"; `e2e/readiness.spec.ts` › "SCRUM-110 [AC3, AC5, AC6] TC-110-01, TC-110-06: …"
 
 ### TC-110-02
 

@@ -96,22 +96,22 @@ the open pull requests that change the same test files have merged.
 | Story | Owner | Test cases | Status |
 |---|---|---|---|
 | [SCRUM-13](SCRUM-13.md) | Felicia Or | 14 | Automated except the accepted attendance of 1 in TC-13-08; notes what SCRUM-129 and SCRUM-170 changed in AC 1, 2, 4 and 6 |
-| [SCRUM-14](SCRUM-14.md) | Hann Qian | 6 | Automated except TC-14-02's whole submission with no Coordinator; its assignment step is unit-tested |
+| [SCRUM-14](SCRUM-14.md) | Hann Qian | 6 | Every current case automated; TC-14-02, and TC-14-01's assignment step, superseded by SCRUM-165 |
 | [SCRUM-15](SCRUM-15.md) | Felicia Or | 12 | Every case automated; AC 9's marking for correction isn't built, since the requirements are free text |
 | [SCRUM-16](SCRUM-16.md) | Felicia Or | 5 | Automated except TC-16-05 (AC 8), which is manual |
-| [SCRUM-17](SCRUM-17.md) | Hann Qian | 3 | Every case automated |
+| [SCRUM-17](SCRUM-17.md) | Hann Qian | 3 | Every case automated; TC-17-02's unassigned request superseded by SCRUM-165 |
 | [SCRUM-18](SCRUM-18.md) | Hann Qian | 11 | Every case automated |
 | [SCRUM-19](SCRUM-19.md) | Hann Qian | 6 | Every case automated; approval now ends in Planning (SCRUM-81) |
-| [SCRUM-20](SCRUM-20.md) | Hann Qian | 5 | Every case automated; describes automatic assignment until SCRUM-165 |
+| [SCRUM-20](SCRUM-20.md) | Hann Qian | 5 | TC-20-01 to TC-20-04 superseded by SCRUM-165, citing its tests; TC-20-05 automated |
 | [SCRUM-23](SCRUM-23.md) | Jun Bin | 2 | Every case automated |
 | [SCRUM-24](SCRUM-24.md) | Jun Bin | 6 | Automated except TC-24-06 (AC 5, waiting on SCRUM-128) and TC-24-03's message |
 | [SCRUM-29](SCRUM-29.md) | Jin Hong | 8 | Every case automated; reserving is SCRUM-155's |
 | [SCRUM-30](SCRUM-30.md) | Jin Hong | 7 | Every case automated |
 | [SCRUM-65](SCRUM-65.md) | Caylern Goh | 4 | Every case automated |
 | [SCRUM-66](SCRUM-66.md) | Caylern Goh | 4 | Every case automated |
-| [SCRUM-67](SCRUM-67.md) | Caylern Goh | 6 | Every case automated |
+| [SCRUM-67](SCRUM-67.md) | Caylern Goh | 6 | Every case automated; TC-67-01's Venue Staff catalogue step superseded by SCRUM-34 AC 2 |
 | [SCRUM-68](SCRUM-68.md) | Caylern Goh | 3 | Every case automated |
-| [SCRUM-69](SCRUM-69.md) | Hann Qian | 5 | Every case automated; describes the lists until SCRUM-165 and SCRUM-21 |
+| [SCRUM-69](SCRUM-69.md) | Hann Qian | 5 | Every current case automated; TC-69-05, and TC-69-01's unassigned events, superseded by SCRUM-165 |
 | [SCRUM-72](SCRUM-72.md) | Hann Qian | 8 | Every case automated |
 | [SCRUM-73](SCRUM-73.md) | Hann Qian | 8 | Every case automated |
 | [SCRUM-74](SCRUM-74.md) | Hann Qian | 6 | Every case automated |
@@ -143,7 +143,7 @@ the open pull requests that change the same test files have merged.
 | [SCRUM-53](SCRUM-53.md) | Caylern Goh | 9 | Automated except TC-53-09 (AC 9), which is manual; AC 3 and AC 10 point to other cases |
 | [SCRUM-81](SCRUM-81.md) | Jun Bin | 13 | Every case automated (unit, integration for the simultaneous confirm, e2e for the journey) |
 | [SCRUM-110](SCRUM-110.md) | Jun Bin | 15 | Every case automated (unit, and e2e for the page); AC 3 is superseded by SCRUM-170 AC 4 (TC-110-01 and TC-110-09 note it) |
-| [SCRUM-108](SCRUM-108.md) | Jun Bin | 14 | Every case automated (unit, e2e for both journeys); AC 6, 8 and 10 point to existing tests |
+| [SCRUM-108](SCRUM-108.md) | Jun Bin | 14 | Every current case automated (unit, e2e for both journeys); AC 6, 8 and 10 point to existing tests; TC-108-06 superseded by SCRUM-165 and TC-108-07 by SCRUM-135 |
 | [SCRUM-134](SCRUM-134.md) | Jin Hong | 6 | Written with the story; every case automated |
 | [SCRUM-121](SCRUM-121.md) | Jin Hong | 5 | Written with the story; every case automated |
 | [SCRUM-124](SCRUM-124.md) | Jin Hong | 11 | Every case automated (unit, integration); the unavailability notices are SCRUM-161's and the safety check's SCRUM-166's own tests |

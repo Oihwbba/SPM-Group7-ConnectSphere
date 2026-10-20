@@ -104,7 +104,7 @@ automated by SCRUM-38's venue search (#216), which reuses
 | Test Data | `coordinator@test.local` |
 | Expected Result | "Recorded: no equipment needed." The event stores who recorded it and when, and one audit entry records the change. Step 3 changes nothing and keeps the first time. |
 
-**Automated by:** `tests/unit/equipment-decision.test.ts` › "SCRUM-170 [AC4] TC-170-06: …" (2 tests); `tests/integration/equipment-decision.test.ts` › "SCRUM-170 [AC4] TC-170-06, TC-170-07, TC-170-08: …"; `e2e/organiser-requirements.spec.ts` › "SCRUM-170 [AC4] TC-170-06, TC-170-07, TC-170-08: …"
+**Automated by:** `tests/unit/equipment-decision.test.ts` › "SCRUM-170 [AC4] TC-170-06: …" (2 tests); `tests/integration/equipment-decision.test.ts` › "SCRUM-170 [AC4] TC-170-06, TC-170-07, TC-170-08: …"; `e2e/organiser-requirements.spec.ts` › "SCRUM-170 [AC4] TC-170-06, TC-170-07, TC-170-08, SCRUM-166 [AC1]: …"
 
 ### TC-170-07
 

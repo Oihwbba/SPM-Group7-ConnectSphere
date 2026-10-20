@@ -142,7 +142,7 @@ refuses sees no card at all.
 | Test Data | — |
 | Expected Result | "Registration not found.", the same as a missing id; nothing changes. |
 
-**Automated by:** `tests/unit/registration-actions.test.ts` › "SCRUM-70 [AC6] TC-70-09: …"
+**Automated by:** `tests/unit/registration-actions.test.ts` › "SCRUM-70 [AC6] TC-70-09, SCRUM-77 [AC5] TC-77-07: [Negative] not-found parity: an Attendee cannot withdraw another Attendee's registration"
 
 ### TC-70-10
 

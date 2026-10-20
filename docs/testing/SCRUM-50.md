@@ -89,7 +89,7 @@ a manual tester creates the same events, or edits an event's dates.
 | Test Data | `coordinator2@test.local` then `coordinator@test.local`, same venue, same period |
 | Expected Result | The second request is also created Pending. Staff choose between them. |
 
-**Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-50 [AC3, AC10] TC-50-04: a PENDING request by another coordinator does not block a new request" and "SCRUM-50 [AC3, AC10] TC-50-04: another event's pending request for the same venue and period blocks nobody"; `tests/unit/venue-availability.test.ts` › "SCRUM-50 [AC3, AC10] TC-50-04, SCRUM-163 [AC2, AC4] TC-163-04: asks only for APPROVED bookings and unexpired holds that overlap the period — a pending request blocks nobody"
+**Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-50 [AC3, AC10] TC-50-04: a PENDING request by another coordinator does not block a new request" and "SCRUM-50 [AC3, AC10] TC-50-04: another event's pending request for the same venue and period blocks nobody"; `tests/unit/venue-availability.test.ts` › "SCRUM-50 [AC3, AC10] TC-50-04, SCRUM-159 [AC3] TC-159-15, SCRUM-163 [AC2, AC4] TC-163-04: asks only for APPROVED bookings and unexpired holds — a pending request blocks nobody — near enough for their setup or turnaround to reach the period"
 
 ### TC-50-05
 
@@ -141,7 +141,7 @@ a manual tester creates the same events, or edits an event's dates.
 | Test Data | As TC-50-01 |
 | Expected Result | Both calls report the same booking id and one row exists. `booking_one_per_venue_per_event` lets one insert in; a deadlock between the two is retried once (ADR 0010). |
 
-**Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-50 [AC8] TC-50-08: two identical requests submitted at the same instant still leave one"; `tests/unit/bookings.test.ts` › "SCRUM-50 [AC8] TC-50-08: a second request for the event that races past the check is caught by the database and the winner is returned" and "SCRUM-50 [AC8] TC-50-08: a deadlock between two identical submissions is retried once and then resolved"
+**Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-50 [AC8] TC-50-08, SCRUM-162 [AC6] TC-162-10: two identical requests submitted at the same instant still leave one"; `tests/unit/bookings.test.ts` › "SCRUM-50 [AC8] TC-50-08: a second request for the event that races past the check is caught by the database and the winner is returned" and "SCRUM-50 [AC8] TC-50-08: a deadlock between two identical submissions is retried once and then resolved"
 
 ### TC-50-09
 
@@ -193,7 +193,7 @@ a manual tester creates the same events, or edits an event's dates.
 | Test Data | Seeded venues and their supported layouts |
 | Expected Result | Room layout sits above Venue. Step 2: only Seminar Room 2.1 is offered, with "Showing venues that support the classroom layout." Step 3: the venue is cleared because Seminar Room 2.1 cannot be set up for a banquet. Step 4: every active venue is offered. Choosing an event doesn't change the layout: since SCRUM-170 AC2 (PO decision of 8 Oct, replacing the pre-selection added on 4 Oct) the Coordinator chooses it, with the Organiser's preferred layout shown read-only beside the form. |
 
-**Automated by:** `e2e/bookings.spec.ts` › "SCRUM-50 [AC1] TC-50-12: the room layout is chosen first, and only venues that support it are offered"; `tests/unit/request-form.test.tsx` › "SCRUM-50 [AC1] TC-50-12: once a layout is chosen, only venues that support it are offered", "SCRUM-50 [AC1] TC-50-12: with no layout preference, every venue is offered" and "SCRUM-50 [AC1] TC-50-12: the room layout is asked for before the venue"; `e2e/bookings.spec.ts` › "SCRUM-50 [AC1] TC-50-15: the period and attendance are the event's, rounded out to the half hour, and cannot be edited" (an event stored as "Theatre" leaves the layout at No preference)
+**Automated by:** `e2e/bookings.spec.ts` › "SCRUM-50 [AC1] TC-50-12: the room layout is chosen first, and only venues that support it are offered"; `tests/unit/request-form.test.tsx` › "SCRUM-50 [AC1] TC-50-12: once a layout is chosen, only venues that support it are offered", "SCRUM-50 [AC1] TC-50-12: with no layout preference, every venue is offered" and "SCRUM-50 [AC1] TC-50-12: the room layout is asked for before the venue"; `e2e/bookings.spec.ts` › "SCRUM-50 [AC1] TC-50-15, SCRUM-162 [AC4] TC-162-05, TC-162-06, TC-162-07: the period and attendance start from the event's, rounded out to the half hour; a shorter period or a larger attendance disables Submit" (an event stored as "Theatre" leaves the layout at No preference)
 
 ### TC-50-13
 
@@ -206,7 +206,7 @@ a manual tester creates the same events, or edits an event's dates.
 | Test Data | E2E Hall — Overlapping Talk; E2E Hall — Afternoon Workshop |
 | Expected Result | While the answer is fetched, "Checking whether Exhibition Hall is free…". Step 1: "…is unavailable for this period: already booked from … to …", and Submit is disabled. Step 2: "Exhibition Hall is available for this period.", and Submit is enabled (the touching end is not an overlap). An invalid period is reported as "The requested period is invalid: the end must be after the start." and disables Submit. If the check itself cannot answer (no connection), it says "Availability could not be checked right now; it will be checked again when you submit." and leaves Submit enabled; submitting then decides. A pending request blocks nobody, so it still reads available. A retired venue reads "Venue not found.", as it does on submit. The check writes nothing. Submitting checks again on the server, because a booking can be approved in between. |
 
-**Automated by:** `tests/unit/bookings.test.ts` › every "SCRUM-50 [AC3, AC4, AC5] TC-50-13: checkVenueAvailability, the live check" case; `tests/integration/bookings.test.ts` › every "SCRUM-50 [AC3, AC4, AC5] TC-50-13: the live availability check in the form" case; `e2e/bookings.spec.ts` › journey and "SCRUM-50 [AC3, AC4, AC5] TC-50-13: when the live check cannot answer, the form says so and leaves Submit to the server"; `tests/unit/request-form.test.tsx` › every "SCRUM-50 [AC3, AC4, AC5] TC-50-13: liveAnswer, the live check" case; `e2e/availability.spec.ts` › "SCRUM-37 [AC1-AC5], SCRUM-36 [AC2, AC3, AC5]: maintenance is recorded, seen, refused over, sat flush against a booking, and never overwrites one" (maintenance shown live)
+**Automated by:** `tests/unit/bookings.test.ts` › every "SCRUM-50 [AC3, AC4, AC5] TC-50-13: checkVenueAvailability, the live check" case; `tests/integration/bookings.test.ts` › every "SCRUM-50 [AC3, AC4, AC5] TC-50-13: the live availability check in the form" case; `e2e/bookings.spec.ts` › journey and "SCRUM-50 [AC3, AC4, AC5] TC-50-13: when the live check cannot answer, the form says so and leaves Submit to the server"; `tests/unit/request-form.test.tsx` › every "SCRUM-50 [AC3, AC4, AC5] TC-50-13: liveAnswer, the live check" case; `e2e/availability.spec.ts` › "SCRUM-37 [AC1, AC2, AC5], SCRUM-36 [AC2, AC3, AC5]: maintenance is recorded, seen, refused over, and sat flush against a booking" (maintenance shown live)
 
 ### TC-50-14
 
@@ -219,7 +219,7 @@ a manual tester creates the same events, or edits an event's dates.
 | Test Data | As TC-50-01 |
 | Expected Result | A new PENDING booking is created with a new id. The earlier booking still exists with its REJECTED or CANCELLED status. Two booking rows exist. |
 
-**Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-50 [AC9] TC-50-14: after a rejected request, a new request creates a new booking record and the earlier one is kept" and "…after a cancelled request, …"
+**Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-50 [AC9] TC-50-14: after a rejected request, a new request creates a new booking record and the earlier one is kept" (and the cancelled one)
 
 ### TC-50-15
 

@@ -176,7 +176,7 @@ the queue unassigned. Every account's password is `Password123!`.
 | Test Data | — |
 | Expected Result | 1. It isn't listed; only Cody's own events are. 2. "Event not found." and nothing changes. |
 
-**Automated by:** `tests/unit/auth.test.ts`, `event-status.test.ts`, `clarification-and-amend.test.ts`, `change-requests.test.ts`, `coordinator-assigned-events.test.ts`, `coordinator-events-access.test.ts`, `events.test.ts` › "… SCRUM-165 [AC8] TC-165-11 …"; `e2e/coordinator-assigned-events.spec.ts` › "… TC-165-11 …" (2 tests); `e2e/lead-queue.spec.ts` › "… TC-165-11 …"
+**Automated by:** `tests/unit/auth.test.ts`, `tests/unit/event-status.test.ts`, `tests/unit/clarification-and-amend.test.ts`, `tests/unit/change-requests.test.ts`, `tests/unit/coordinator-assigned-events.test.ts`, `tests/unit/coordinator-events-access.test.ts` and `tests/unit/events.test.ts` › "… SCRUM-165 [AC8] TC-165-11 …"; `e2e/coordinator-assigned-events.spec.ts` › "… TC-165-11 …" (2 tests); `e2e/lead-queue.spec.ts` › "… TC-165-11 …"
 
 ### TC-165-12
 
