@@ -20,6 +20,7 @@ const tx = vi.hoisted(() => ({
   equipmentRequest: { findMany: vi.fn(), updateMany: vi.fn() },
   equipmentRequestUpdate: { createMany: vi.fn() },
   eventChangeRequest: { updateMany: vi.fn() },
+  safetyCheck: { updateMany: vi.fn() },
   auditLog: { count: vi.fn(), createMany: vi.fn() },
   registration: { count: vi.fn() },
   notification: { create: vi.fn(), updateMany: vi.fn() },
@@ -370,5 +371,15 @@ describe("rejectPlanningEvent — SCRUM-117", () => {
     mockTransaction.mockRejectedValue(new Error("connection lost"));
 
     await expect(rejectPlanningEvent(valid)).rejects.toThrow("connection lost");
+  });
+});
+
+describe("rejectPlanningEvent — SCRUM-166 AC13", () => {
+  it("SCRUM-166 [AC13] TC-166-17: rejecting a Planning event makes its awaiting or approved safety check Outdated, in the same operation", async () => {
+    expect(await rejectPlanningEvent(valid)).toEqual({ ok: true, data: { status: "REJECTED" } });
+    expect(tx.safetyCheck.updateMany).toHaveBeenCalledWith({
+      where: { eventId: "evt1", status: { in: ["AWAITING_REVIEW", "APPROVED"] } },
+      data: { status: "OUTDATED", outdatedAt: expect.any(Date) },
+    });
   });
 });
