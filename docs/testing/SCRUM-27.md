@@ -30,6 +30,7 @@ the seed.
 | [TC-27-14](#tc-27-14) | Positive | AC 8 | Unit, e2e |
 | [TC-27-15](#tc-27-15) | Negative | AC 8 | e2e |
 | [TC-27-16](#tc-27-16) | Positive | AC 6 | e2e |
+| [TC-27-17](#tc-27-17) | Negative, Concurrency | AC 1 | Unit |
 
 ---
 
@@ -240,3 +241,16 @@ the seed.
 | Expected Result | The request is submitted with the item on it: its card in the list shows the line "Laptop 2". Nothing the coordinator entered is dropped. |
 
 **Automated by:** `e2e/equipment-requests.spec.ts` › "equipment picked but not yet added is included when the request is submitted"
+
+### TC-27-17
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-27-17 |
+| Test Scenario | [Negative, Concurrency] AC 1: an event confirmed, rejected, cancelled or reassigned while the request is being sent gets no request |
+| Pre-conditions | A Planning event. Its Coordinator fills the equipment request; before they send it, the event is confirmed, rejected or cancelled. |
+| Test Steps | Click **Submit request**. |
+| Test Data | — |
+| Expected Result | "Choose one of your approved events." The status and Coordinator are re-read under the lock the request already takes on the event (SCRUM-170 AC4), so a reassignment to another Coordinator is seen too; no request is created and a No equipment needed decision is left as it was. |
+
+**Automated by:** `tests/unit/equipment-request.test.ts` › "SCRUM-27 [AC1] TC-27-17: an event that became %s after its status was read gets no request, and nothing is written" (Confirmed, Rejected, Cancelled) and "SCRUM-27 [AC1] TC-27-17: an event reassigned to another Coordinator after it was read gets no request from the previous one"

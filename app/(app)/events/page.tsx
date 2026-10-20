@@ -99,7 +99,12 @@ async function EventsRoleView({
         <CoordinatorEvents coordinatorId={userId} openEventId={openEventId} />
       );
     case "ATTENDEE":
-      return <AttendeeEvents attendeeId={userId} />;
+      return (
+        <>
+          <h1 className="sr-only">Browse Events</h1>
+          <AttendeeEvents attendeeId={userId} />
+        </>
+      );
     default:
       return <Forbidden />;
   }

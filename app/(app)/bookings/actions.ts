@@ -278,7 +278,7 @@ export async function submitBookingRequest(
       return err("Event not found.");
     }
     if (!BOOKABLE_EVENT_STATUSES.includes(event.status)) {
-      return err("A venue can only be requested for an approved event.");
+      return err(NOT_BOOKABLE);
     }
 
     const existingAtVenue = () =>
@@ -348,6 +348,23 @@ export async function submitBookingRequest(
       // a request the database refuses below tells nobody.
       const created = await onceMoreOnDeadlock(() =>
         prisma.$transaction(async (tx) => {
+          // The event read above can be stale: a confirmation, rejection,
+          // cancellation or reassignment that committed since must not get a
+          // new request, so who may ask and when is decided again here.
+          const [locked] = await tx.$queryRaw<
+            { status: EventStatus; organiserId: string; coordinatorId: string | null }[]
+          >`
+            SELECT "status", "organiserId", "coordinatorId" FROM "Event"
+             WHERE "id" = ${data.eventId} FOR UPDATE
+          `;
+          if (
+            !locked ||
+            !BOOKABLE_EVENT_STATUSES.includes(locked.status) ||
+            !can(user!, "booking:request", { kind: "event", ...locked })
+          ) {
+            return null;
+          }
+
           const booking = await tx.booking.create({
             data: {
               eventId: data.eventId,
@@ -373,6 +390,7 @@ export async function submitBookingRequest(
           return booking;
         }),
       );
+      if (!created) return err(NOT_BOOKABLE);
       revalidatePath("/bookings");
       return ok({ booking: toSummary(created), created: true });
     } catch (error) {
@@ -391,6 +409,8 @@ export async function submitBookingRequest(
     throw error;
   }
 }
+
+const NOT_BOOKABLE = "A venue can only be requested for an approved event.";
 
 /** Thrown inside the decision transaction for an expected refusal. */
 class DecisionError extends Error {}

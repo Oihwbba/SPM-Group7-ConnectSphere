@@ -103,6 +103,10 @@ describe.skipIf(!usesLocalDatabase)(
         await prisma.eventChangeRequest.create({
           data: { eventId, requestedById: "usr_organiser", reason: "Move it" },
         });
+        // SCRUM-166 AC13: a check awaiting review (TC-166-17).
+        await prisma.safetyCheck.create({
+          data: { eventId, requestedById: "usr_coordinator" },
+        });
         const before = await projectorsHeld();
 
         const result = await rejectPlanningEvent({
@@ -122,6 +126,7 @@ describe.skipIf(!usesLocalDatabase)(
             reservations: { select: { status: true } },
             equipmentRequests: { select: { status: true } },
             changeRequests: { select: { status: true, decisionReason: true } },
+            safetyChecks: { select: { status: true } },
           },
         });
         expect(after).toEqual({
@@ -137,6 +142,7 @@ describe.skipIf(!usesLocalDatabase)(
               decisionReason: "No venue can take it after all.",
             },
           ],
+          safetyChecks: [{ status: "OUTDATED" }],
         });
         // The request's own history says who cancelled it and why.
         expect(
@@ -164,6 +170,7 @@ describe.skipIf(!usesLocalDatabase)(
         await prisma.reservation.deleteMany({ where: { eventId } });
         await prisma.equipmentRequest.deleteMany({ where: { eventId } });
         await prisma.booking.deleteMany({ where: { eventId } });
+        await prisma.safetyCheck.deleteMany({ where: { eventId } });
         await prisma.event.deleteMany({ where: { id: eventId } });
       }
     });

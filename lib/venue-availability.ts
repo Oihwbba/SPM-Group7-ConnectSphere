@@ -411,6 +411,14 @@ export interface AvailabilityDay {
   segments: DaySegment[];
 }
 
+/** Where blockers overlap, the lower number is shown (SCRUM-161). */
+const PRECEDENCE: Record<CalendarEntry["kind"], number> = {
+  unavailability: 0,
+  booking: 1,
+  setup: 2,
+  turnaround: 2,
+};
+
 /** Midnight at the start of a Singapore calendar day, as a UTC instant. */
 export function startOfSgDay(day: string): Date {
   return parseSingaporeDateTime(`${day}T00:00`)!;
@@ -431,10 +439,14 @@ export function addDays(day: string, offset: number): string {
  * not spill into the next day. Stretches are clipped to the day and laid end
  * to end: where one unavailable period ends exactly as another begins, they
  * sit flush, with no free sliver between them and no moment counted twice
- * (AC5). A day with nothing on it is one free stretch (AC6). Blockers never
- * overlap one another (the database refuses it — ADR 0010), and since
- * SCRUM-159 that includes a booking's setup and turnaround stretches, which
- * the database compares as part of its occupied period.
+ * (AC5). A day with nothing on it is one free stretch (AC6).
+ *
+ * Bookings never overlap one another (the database refuses it — ADR 0010),
+ * setup and turnaround included (SCRUM-159). Unavailability can lie over a
+ * booking that still stands, flagged (SCRUM-161 AC1, AC3), so where blockers
+ * overlap each moment shows the one that matters most: unavailability, then
+ * the booking, then its setup or turnaround. A booking with maintenance in
+ * its middle shows as booking, maintenance, booking.
  */
 export function availabilityByDay(
   blockers: CalendarEntry[],
@@ -447,24 +459,38 @@ export function availabilityByDay(
       startAt: startOfSgDay(day),
       endAt: startOfSgDay(addDays(day, 1)),
     };
-    const segments: DaySegment[] = [];
-    let cursor = dayPeriod.startAt;
+    const onThisDay = blockers.filter((b) => overlaps(b, dayPeriod));
+    // Every instant where what is on the calendar can change, within the day.
+    const cuts = [
+      ...new Set(
+        [
+          dayPeriod.startAt,
+          dayPeriod.endAt,
+          ...onThisDay.flatMap((b) => [b.startAt, b.endAt]),
+        ]
+          .map((t) => t.getTime())
+          .filter((t) => t >= dayPeriod.startAt.getTime() && t <= dayPeriod.endAt.getTime()),
+      ),
+    ].sort((a, b) => a - b);
 
-    const onThisDay = blockers
-      .filter((b) => overlaps(b, dayPeriod))
-      .sort((a, b) => a.startAt.getTime() - b.startAt.getTime());
-    for (const blocker of onThisDay) {
-      const startAt = blocker.startAt > cursor ? blocker.startAt : cursor;
-      const endAt =
-        blocker.endAt < dayPeriod.endAt ? blocker.endAt : dayPeriod.endAt;
-      if (startAt > cursor) {
-        segments.push({ kind: "free", startAt: cursor, endAt: startAt });
+    const segments: DaySegment[] = [];
+    let lastSource: CalendarEntry | "free" | undefined;
+    for (let i = 0; i < cuts.length - 1; i++) {
+      const startAt = new Date(cuts[i]);
+      const endAt = new Date(cuts[i + 1]);
+      const covering = onThisDay
+        .filter((b) => b.startAt <= startAt && b.endAt >= endAt)
+        .sort((a, b) => PRECEDENCE[a.kind] - PRECEDENCE[b.kind]);
+      const source: CalendarEntry | "free" = covering.length > 0 ? covering[0] : "free";
+      const last = segments.at(-1);
+      if (last && source === lastSource) {
+        last.endAt = endAt;
+      } else {
+        segments.push(
+          source === "free" ? { kind: "free", startAt, endAt } : { ...source, startAt, endAt },
+        );
+        lastSource = source;
       }
-      segments.push({ ...blocker, startAt, endAt });
-      cursor = endAt;
-    }
-    if (cursor < dayPeriod.endAt) {
-      segments.push({ kind: "free", startAt: cursor, endAt: dayPeriod.endAt });
     }
     days.push({ day, segments });
   }

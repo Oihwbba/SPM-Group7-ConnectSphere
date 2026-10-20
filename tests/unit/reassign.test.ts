@@ -13,7 +13,7 @@ const tx = vi.hoisted(() => ({
   event: { findUnique: vi.fn(), updateMany: vi.fn() },
   user: { findFirst: vi.fn() },
   auditLog: { create: vi.fn() },
-  notification: { createMany: vi.fn() },
+  notification: { createMany: vi.fn(), updateMany: vi.fn() },
 }));
 
 vi.mock("@/auth", () => ({ auth: vi.fn() }));
@@ -308,5 +308,30 @@ describe("reassignCoordinator — SCRUM-21", () => {
     mockTransaction.mockRejectedValue(new Error("DB down"));
 
     await expect(reassign()).rejects.toThrow("DB down");
+  });
+});
+
+describe("reassignCoordinator — notices written ahead (SCRUM-21 AC6)", () => {
+  it("SCRUM-21 [AC6] TC-21-11: notices still to show for the previous Coordinator move to the new one; ones already shown or withdrawn stay", async () => {
+    mockAuth.mockResolvedValue(lead());
+
+    expect(await reassign()).toMatchObject({ ok: true, data: { changed: true } });
+    expect(tx.notification.updateMany).toHaveBeenCalledWith({
+      where: {
+        eventId: "evt1",
+        userId: "usr_cody",
+        withdrawnAt: null,
+        showFromAt: { gt: expect.any(Date) },
+      },
+      data: { userId: "usr_cara" },
+    });
+  });
+
+  it("SCRUM-21 [AC6] TC-21-11: reassigning to the same Coordinator moves nothing", async () => {
+    mockAuth.mockResolvedValue(lead());
+    tx.user.findFirst.mockResolvedValue({ id: "usr_cody", name: "Cody" });
+
+    expect(await reassign("usr_cody")).toMatchObject({ ok: true, data: { changed: false } });
+    expect(tx.notification.updateMany).not.toHaveBeenCalled();
   });
 });

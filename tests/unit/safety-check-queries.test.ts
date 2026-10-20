@@ -52,7 +52,8 @@ describe("getSafetyCheckQueue — SCRUM-166 AC1, AC6", () => {
       },
     ]);
     const query = mockFindMany.mock.calls[0][0];
-    expect(query.where).toEqual({ status: "AWAITING_REVIEW" });
+    // An event no longer in Planning can't have its check recorded (TC-166-17).
+    expect(query.where).toEqual({ status: "AWAITING_REVIEW", event: { status: "PLANNING" } });
     expect(query.orderBy).toEqual({ createdAt: "asc" });
   });
 

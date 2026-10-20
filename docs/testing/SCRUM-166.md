@@ -48,6 +48,7 @@ and the app is running. The event is in Planning, assigned to
 | [TC-166-14](#tc-166-14) | Positive | AC 5 | Unit |
 | [TC-166-15](#tc-166-15) | Positive | AC 1, AC 2, AC 3, AC 9, AC 14 | e2e |
 | [TC-166-16](#tc-166-16) | Positive, Negative | AC 3, AC 4, AC 10 | e2e |
+| [TC-166-17](#tc-166-17) | Positive | AC 1, AC 13 | Unit, integration |
 
 ### TC-166-01
 
@@ -256,3 +257,16 @@ and the app is running. The event is in Planning, assigned to
 | Expected Result | 2. The Coordinator sees "Changes requested – <note>" and the venue's Needs Reconsideration badge; the Organiser sees Changes requested without the note. |
 
 **Automated by:** `e2e/safety-check.spec.ts` › "SCRUM-166 [AC3, AC4, AC10] TC-166-16: …"
+
+### TC-166-17
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-166-17 |
+| Test Scenario | [Positive] AC 1, AC 13: rejecting a Planning event outdates its safety check, and the queue lists only Planning events' checks |
+| Pre-conditions | A Planning event with an approved booking, a reservation and a safety check awaiting review. |
+| Test Steps | 1. As its Coordinator, reject the event (SCRUM-117). <br> 2. As `safety@test.local`, open **Safety checks**. |
+| Test Data | — |
+| Expected Result | Step 1: in the same operation as the bookings and reservations are released, the check becomes Outdated, as any change to its bookings or reservations makes it (AC 13); an approved check would too. Step 2: the check isn't listed. A check awaiting review on any event no longer in Planning is left out of the queue, since recording it would be refused. |
+
+**Automated by:** `tests/unit/reject-planning.test.ts` › "SCRUM-166 [AC13] TC-166-17: rejecting a Planning event makes its awaiting or approved safety check Outdated, in the same operation"; `tests/integration/reject-planning.test.ts` › "SCRUM-117 [AC1, AC3, AC6] TC-117-08: the event is Rejected and its booking, reservation, equipment request and change request are released together, returning the stock" (the check is Outdated); `tests/unit/safety-check-queries.test.ts` › "SCRUM-166 [AC1] TC-166-01: lists checks awaiting review, oldest request first, with the event and who asked" (the query keeps to Planning events)
