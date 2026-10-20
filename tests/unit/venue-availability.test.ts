@@ -669,3 +669,60 @@ describe("findVenueCalendar — SCRUM-36 hover details", () => {
     });
   });
 });
+
+describe("availabilityByDay — unavailability over a booking (SCRUM-161)", () => {
+  const DAY = "2035-03-10";
+  const at = (hhmm: string) => new Date(`${DAY}T${hhmm}:00+08:00`);
+  const booking = { kind: "booking" as const, id: "bkg", startAt: at("10:00"), endAt: at("12:00") };
+  const maintenance = (start: string, end: string) => ({
+    kind: "unavailability" as const,
+    id: "vun",
+    startAt: at(start),
+    endAt: at(end),
+    reason: "MAINTENANCE" as const,
+  });
+  const shape = (blockers: CalendarEntry[]) =>
+    availabilityByDay(blockers, DAY, DAY)[0].segments.map((s) => [
+      s.kind,
+      s.startAt.toISOString(),
+      s.endAt.toISOString(),
+    ]);
+  const seg = (kind: string, start: string, end: string) => [
+    kind,
+    (start === "24:00" ? new Date(`2035-03-11T00:00:00+08:00`) : at(start)).toISOString(),
+    (end === "24:00" ? new Date(`2035-03-11T00:00:00+08:00`) : at(end)).toISOString(),
+  ];
+
+  it("SCRUM-161 [AC1, AC3] TC-161-17: maintenance inside a booking that still stands shows in its place, with the booking either side, and no hour of it shows as free", () => {
+    expect(shape([booking, maintenance("10:30", "11:00")])).toEqual([
+      seg("free", "00:00", "10:00"),
+      seg("booking", "10:00", "10:30"),
+      seg("unavailability", "10:30", "11:00"),
+      seg("booking", "11:00", "12:00"),
+      seg("free", "12:00", "24:00"),
+    ]);
+  });
+
+  it("SCRUM-161 [AC1, AC3] TC-161-17: maintenance that starts inside a booking and runs past it shows from where it starts", () => {
+    expect(shape([booking, maintenance("11:30", "13:00")])).toEqual([
+      seg("free", "00:00", "10:00"),
+      seg("booking", "10:00", "11:30"),
+      seg("unavailability", "11:30", "13:00"),
+      seg("free", "13:00", "24:00"),
+    ]);
+  });
+
+  it("SCRUM-161 [AC1] TC-161-17: however blockers overlap, the stretches cover the day once, in order, with none running backwards", () => {
+    const segments = availabilityByDay(
+      [booking, maintenance("09:00", "10:30"), maintenance("11:00", "11:15"), maintenance("11:45", "12:15")],
+      DAY,
+      DAY,
+    )[0].segments;
+    for (const [i, s] of segments.entries()) {
+      expect(s.endAt.getTime()).toBeGreaterThan(s.startAt.getTime());
+      if (i > 0) expect(s.startAt).toEqual(segments[i - 1].endAt);
+    }
+    expect(segments[0].startAt).toEqual(at("00:00"));
+    expect(segments.at(-1)!.endAt).toEqual(new Date("2035-03-11T00:00:00+08:00"));
+  });
+});
