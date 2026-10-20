@@ -11,7 +11,7 @@ that already existed (SCRUM-176). The tests predate the `SCRUM-n [ACx] TC-n-xx`
 title format, so each case names them by their current titles.
 
 - **AC 4 and AC 6:** each transition's own story tests it: SCRUM-14 submits,
-  SCRUM-20 assigns, SCRUM-19 decides, SCRUM-108 resubmits, SCRUM-81 confirms
+  SCRUM-165 assigns (SCRUM-20 did, before it), SCRUM-19 decides, SCRUM-108 resubmits, SCRUM-81 confirms
   and SCRUM-117 rejects from Planning. TC-24-03 tests that the gate refuses a
   transition the lifecycle doesn't have.
 - **AC 5 (Confirmed back to Planning):** an approved impactful change

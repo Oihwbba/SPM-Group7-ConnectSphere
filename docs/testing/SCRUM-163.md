@@ -137,7 +137,7 @@ shown in Singapore time and stored in UTC.
 | Test Data | — |
 | Expected Result | Step 1: "This hold expired at … so the venue is free for other requests. Make a new request if you still need it." Release, and Venue Staff's approve or reject, get the same answer. Step 2: "Hold expired"; the hold isn't in the queue. Step 3: approved, and the hold is now stored `EXPIRED`. Step 4: a new request is created (a lapsed hold isn't the event's booking any more), and the hold is stored `EXPIRED`; a hold that hasn't expired is returned as the event's booking instead. Step 5: Held, then Expired. |
 
-**Automated by:** `tests/integration/holds.test.ts` › "SCRUM-163 [AC4] TC-163-08: from its expiry, a hold no longer reserves the venue, leaves the queue, reads Expired and can't be confirmed", "… after its hold lapses, the event can request the same venue again, even before anything marks it Expired" and "… a live hold is still the event's booking when it asks again"; `tests/unit/booking-holds.test.ts` › the "TC-163-08" tests; `tests/unit/bookings.test.ts` › "SCRUM-50 [AC8] TC-50-07, SCRUM-163 [AC4] TC-163-08: …"
+**Automated by:** `tests/integration/holds.test.ts` › "SCRUM-163 [AC4] TC-163-08: from its expiry, a hold no longer reserves the venue, leaves the queue, reads Expired and can't be confirmed", "… after its hold lapses, the event can request the same venue again, even before anything marks it Expired" and "… a live hold is still the event's booking when it asks again"; `tests/unit/booking-holds.test.ts` › the "TC-163-08" tests; `tests/unit/bookings.test.ts` › "SCRUM-162 [AC2] TC-162-02, SCRUM-163 [AC4] TC-163-08: an event that already has a pending, approved or unexpired held booking at this venue is shown it and nothing is created"
 
 ### TC-163-09
 

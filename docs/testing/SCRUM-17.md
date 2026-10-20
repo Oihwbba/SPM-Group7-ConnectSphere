@@ -40,13 +40,15 @@ assigned to `coordinator@test.local` (both `Password123!`).
 | Item | Content |
 |---|---|
 | Test Case ID | TC-17-02 |
-| Test Scenario | [Positive] AC 2: a Coordinator can open the requests assigned to them, and submitted ones nobody has picked up |
+| Test Scenario | [Positive] AC 2: a Coordinator can open the requests assigned to them |
 | Pre-conditions | Signed in as a Coordinator. |
-| Test Steps | 1. Open **Events**. <br> 2. Open an assigned request, then an unassigned submitted one. |
+| Test Steps | 1. Open **Events**. <br> 2. Open an assigned request, then an unassigned submitted one directly. |
 | Test Data | The seeded events |
-| Expected Result | Both open. The list holds exactly the events assigned to this Coordinator and the unassigned events that aren't drafts. |
+| Expected Result | The assigned request opens; the unassigned one is refused as if it didn't exist. The list holds exactly the events assigned to this Coordinator. |
 
-**Automated by:** `tests/unit/coordinator-events-access.test.ts` › "[Positive] AC: queries events assigned to this coordinator, or unclaimed and not a draft", "[Positive] AC/SCRUM-68 parity: an unclaimed, non-draft event is viewable — matches the query's second OR branch"
+**Superseded in part** on 20 Oct 2026 by SCRUM-165 AC 8 ([TC-165-11](SCRUM-165.md#tc-165-11)): a Coordinator could also open a submitted request nobody had picked up; it now waits in the Lead's queue.
+
+**Automated by:** `tests/unit/coordinator-events-access.test.ts` › "[Positive] AC, SCRUM-165 [AC8] TC-165-11: queries only the events assigned to this coordinator" and "[Negative] SCRUM-165 [AC8] TC-165-11: an unclaimed Submitted event is not viewable by a coordinator; it waits in the Lead's queue"
 
 ### TC-17-03
 

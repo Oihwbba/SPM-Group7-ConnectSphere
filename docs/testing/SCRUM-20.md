@@ -1,20 +1,22 @@
 # SCRUM-20 — Auto-assign a coordinator to a submitted event: test cases
 
-> **Superseded by SCRUM-165 (Week 7 change 5).** Requests are no longer assigned automatically; they wait in the Lead's Unassigned queue. The automatic-assignment tests named below were replaced by SCRUM-165's (see [SCRUM-165.md](SCRUM-165.md)); the least-loaded rule now only suggests a Coordinator (TC-165-05).
+> **Superseded by SCRUM-165 (Week 7 change 5).** Requests are no longer assigned automatically; they wait in the Lead's Unassigned queue. The automatic-assignment tests were removed and replaced by SCRUM-165's (see [SCRUM-165.md](SCRUM-165.md)); the least-loaded rule now only suggests a Coordinator (TC-165-05). TC-20-01 to TC-20-04 are superseded and keep their IDs, each citing the SCRUM-165 tests that now cover it; TC-20-05 still holds.
 
 Story and acceptance criteria: [docs/backlog/SCRUM-20.md](../backlog/SCRUM-20.md).
-Format and conventions: [README.md](README.md). A Coordinator is picked by
-`pickCoordinator` in
-[lib/coordinator-assignment.ts](../../lib/coordinator-assignment.ts), under a
-transaction-scoped advisory lock, inside `submitEventRequest`.
+Format and conventions: [README.md](README.md). A Coordinator was picked by
+`pickCoordinator` inside `submitEventRequest`. Since SCRUM-165,
+[lib/coordinator-assignment.ts](../../lib/coordinator-assignment.ts) only
+counts each Coordinator's active events and suggests the least-loaded one to
+the Lead.
 
 Written on 2026-10-12 from the acceptance criteria, then mapped to the tests
 that already existed (SCRUM-176). The tests predate the `SCRUM-n [ACx] TC-n-xx`
 title format, so each case names them by their current titles.
 
-**What changes next:** SCRUM-165 replaces automatic assignment with the Lead's
-unassigned queue (Week 7 change 5). These cases describe the system as built
-today. AC 7's notification is now SCRUM-45 (AC 1); SCRUM-46 no longer exists.
+**Since written:** SCRUM-165 replaced automatic assignment with the Lead's
+unassigned queue (Week 7 change 5), so TC-20-01 to TC-20-04 were superseded on
+20 Oct 2026. AC 7's notification is now SCRUM-45 (AC 1); SCRUM-46 no longer
+exists.
 
 **Shared pre-conditions for every case:** the database is migrated and seeded
 and the app is running. Signed in as `organiser@test.local` (`Password123!`).
@@ -22,65 +24,37 @@ The seed has two active Coordinators.
 
 | ID | Type | Criterion | Automated |
 |---|---|---|---|
-| [TC-20-01](#tc-20-01) | Positive | AC 1, AC 2, AC 3, AC 7, AC 8 | Unit, e2e |
-| [TC-20-02](#tc-20-02) | Positive | AC 4, AC 5 | Unit |
-| [TC-20-03](#tc-20-03) | Concurrency | AC 6 | Unit, integration |
-| [TC-20-04](#tc-20-04) | Boundary | AC 9 | Unit |
+| [TC-20-01](#tc-20-01) | Superseded | AC 1, AC 2, AC 3, AC 7, AC 8 | — (SCRUM-165: TC-165-01, TC-165-07) |
+| [TC-20-02](#tc-20-02) | Superseded | AC 4, AC 5 | — (SCRUM-165: TC-165-05) |
+| [TC-20-03](#tc-20-03) | Superseded | AC 6 | — (SCRUM-165: TC-165-08) |
+| [TC-20-04](#tc-20-04) | Superseded | AC 9 | — (SCRUM-165: TC-165-01) |
 | [TC-20-05](#tc-20-05) | Negative | AC 1 | Unit |
 
 ---
 
 ### TC-20-01
 
-| Item | Content |
-|---|---|
-| Test Case ID | TC-20-01 |
-| Test Scenario | [Positive] AC 1, AC 2, AC 3, AC 7, AC 8: a submitted request gets exactly one Coordinator, moves to Under Review, and both people are told |
-| Pre-conditions | Signed in as the Organiser. |
-| Test Steps | 1. Submit a complete request. <br> 2. Open it. <br> 3. Sign in as the Coordinator it names and open **Notifications**. |
-| Test Data | Any complete request |
-| Expected Result | The request is Under Review with one named Coordinator, recorded as its contact, with no accept or decline step. The assignment is in its history, and the Organiser and the Coordinator each have one notification. |
+**Superseded** on 20 Oct 2026 by SCRUM-165 AC 1 and AC 5 ([TC-165-01](SCRUM-165.md#tc-165-01), [TC-165-07](SCRUM-165.md#tc-165-07)). A submitted request was assigned one Coordinator, moved Under Review, and both people were told. It now stays Submitted with no Coordinator until the Lead assigns one; that assignment moves it Under Review in one write, is recorded with the Lead, and tells the Coordinator and the Organiser. `tests/unit/event-auto-assignment.test.ts` and `e2e/coordinator-assignment.spec.ts` were removed.
 
-**Automated by:** `tests/unit/event-auto-assignment.test.ts` › "AC: a coordinator is available — event is assigned, moved to UNDER_REVIEW, both parties notified", "AC: an event has at most one assigned coordinator — the update sets exactly one coordinatorId", "AC: the assignment is logged for auditability", "AC: no accept/decline step — assignment and status change happen in the same write, nothing awaits a response"; `e2e/coordinator-assignment.spec.ts` › "submitting an event automatically assigns exactly one coordinator and moves it to Under Review, with no accept/decline step"
+**Automated by** (SCRUM-165's tests): `tests/unit/submission-queue.test.ts` › "SCRUM-165 [AC1] TC-165-01: [Positive] a new request stays Submitted with no Coordinator"; `tests/unit/lead-queue.test.ts` › "SCRUM-165 [AC5, AC11] TC-165-07, TC-165-14: [Positive] the event gets the Coordinator, moves to Under Review and records the supervising Lead in one write", "SCRUM-165 [AC5] TC-165-07: [Positive] the Coordinator and the Organiser are notified" and "SCRUM-165 [AC5] TC-165-07: [Positive] the assignment is recorded with the Lead who made it"; `e2e/lead-queue.spec.ts` › "SCRUM-165 [AC1–AC5, AC8, AC11] TC-165-01, TC-165-02, TC-165-04, TC-165-05, TC-165-07, TC-165-11, TC-165-14: a submitted request waits in the queue, the Lead assigns it, and only then does the Coordinator get it"
 
 ### TC-20-02
 
-| Item | Content |
-|---|---|
-| Test Case ID | TC-20-02 |
-| Test Scenario | [Positive] AC 4, AC 5: the Coordinator with the fewest active events gets the request, whatever their load |
-| Pre-conditions | Coordinator A has two events Under Review; Coordinator B has one in Planning and three Completed. |
-| Test Steps | 1. Submit a request. <br> 2. With only one Coordinator, submit another, whatever their load. |
-| Test Data | The loads above |
-| Expected Result | Step 1 goes to B, because Completed, Cancelled and Rejected events don't count. Step 2 goes to the only Coordinator; there is no cap. |
+**Superseded** on 20 Oct 2026 by SCRUM-165 AC 4 ([TC-165-05](SCRUM-165.md#tc-165-05)). The Coordinator with the fewest active events was assigned the request. The same load count now only suggests a Coordinator to the Lead, who chooses; Completed, Cancelled and Rejected events still don't count.
 
-**Automated by:** `tests/unit/coordinator-assignment.test.ts` › "AC: picks the coordinator with the fewest active events", "AC: only counts ACTIVE events as load, not terminal ones (COMPLETED/CANCELLED/REJECTED excluded by the query)", "Boundary: a single coordinator is always picked, regardless of their load"
+**Automated by** (SCRUM-165's tests): `tests/unit/coordinator-assignment.test.ts` › "SCRUM-165 [AC4] TC-165-05: [Positive] suggests the least-loaded Coordinator", "SCRUM-165 [AC4] TC-165-05: [Positive] only people who hold the Coordinator role now, and only active events count as load" and "SCRUM-165 [AC4] TC-165-05: [Boundary] on a tie, suggests the first listed (the earliest created)"
 
 ### TC-20-03
 
-| Item | Content |
-|---|---|
-| Test Case ID | TC-20-03 |
-| Test Scenario | [Concurrency] AC 6: two requests submitted at the same moment are assigned one after the other |
-| Pre-conditions | Two Organisers' tabs, each with a complete draft. |
-| Test Steps | 1. Submit both at the same moment. |
-| Test Data | Two complete drafts |
-| Expected Result | Each request has exactly one Coordinator and neither is left unassigned. The second assignment counts the first. |
+**Superseded** on 20 Oct 2026 by SCRUM-165 AC 6 ([TC-165-08](SCRUM-165.md#tc-165-08)). Two submissions at the same moment no longer assign anyone, so they can't race for a Coordinator. The race that remains is two Leads assigning the same request at once: exactly one assignment is saved.
 
-**Automated by:** `tests/unit/coordinator-assignment.test.ts` › "AC: takes the assignment lock BEFORE reading load, so a concurrent submission counts this one's assignment"; `tests/integration/concurrency.test.ts` › "SCRUM-20: two events submitted at the same instant each end up with exactly one coordinator, and neither is left unassigned"
+**Automated by** (SCRUM-165's tests): `tests/integration/concurrency.test.ts` › "SCRUM-165 [AC6] TC-165-08: [Concurrency] two Leads assign the same request at the same moment: exactly one assignment is saved and the other Lead is told who it went to"; `tests/unit/lead-queue.test.ts` › "SCRUM-165 [AC6, AC7] TC-165-08, TC-165-10: [Negative] a request someone else assigned first is refused, naming who it went to, and nothing else is written"
 
 ### TC-20-04
 
-| Item | Content |
-|---|---|
-| Test Case ID | TC-20-04 |
-| Test Scenario | [Boundary] AC 9: with no Coordinator account, the request stays Submitted and doesn't fail |
-| Pre-conditions | A test database with no active Coordinator. |
-| Test Steps | 1. Submit a complete request. |
-| Test Data | Any complete request |
-| Expected Result | The submission succeeds and the request is Submitted, not Under Review. |
+**Superseded** on 20 Oct 2026 by SCRUM-165 AC 1 ([TC-165-01](SCRUM-165.md#tc-165-01)). With no Coordinator account, the request stayed Submitted. Every submitted request now stays Submitted with no Coordinator, whether or not any Coordinator exists, and with none the Lead is offered no suggestion.
 
-**Automated by:** `tests/unit/event-auto-assignment.test.ts` › "AC: no coordinator available — event still reaches SUBMITTED and does not fail silently (no throw)"; `tests/unit/coordinator-assignment.test.ts` › "AC: no coordinators available — returns null rather than throwing, so the caller can still reach SUBMITTED". An e2e run isn't possible: removing every seeded Coordinator would break the shared data other tests use. `e2e/coordinator-assignment.spec.ts` › "when no coordinators exist, the event still reaches Submitted rather than failing" holds the case but is skipped (`test.skip`) for that reason, so CI reports it as Not Executed.
+**Automated by** (SCRUM-165's tests): `tests/unit/submission-queue.test.ts` › "SCRUM-165 [AC1] TC-165-01: [Positive] a new request stays Submitted with no Coordinator" and "SCRUM-165 [AC1] TC-165-01: [Positive] nobody is recorded as assigned until the Lead chooses"; `tests/unit/coordinator-assignment.test.ts` › "SCRUM-165 [AC4] TC-165-05: [Boundary] suggests nobody when there are no Coordinators"
 
 ### TC-20-05
 

@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-09. Jira is the source of truth.
+     Synced from Jira on 2026-10-20. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-15 - Save an event request as a draft
@@ -10,7 +10,7 @@
 | **Epic** | SCRUM-6 - Event Request Lifecycle |
 | **Priority** | High |
 | **Story points** | 1 |
-| **Status in Jira** | Done |
+| **Status in Jira** | In Review |
 | **Sprint** | SCRUM Sprint 1 |
 | **Jira** | https://smu-spm-group7.atlassian.net/browse/SCRUM-15 |
 

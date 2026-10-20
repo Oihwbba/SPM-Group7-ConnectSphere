@@ -54,8 +54,8 @@ That is why the two decisions differ.
 - The losing approval stays pending, so staff can reject it with a reason.
 - Maintenance periods are enforced by the application check, not the
   constraint. A maintenance period recorded at the same instant as an
-  approval could slip through. Recording unavailability arrives with
-  SCRUM-37, and that story should revisit this.
+  approval could slip through. SCRUM-37, which built recording
+  unavailability, closed this gap (Addendum 2026-09-28 below).
 - The constraint needs the `btree_gist` extension, which Supabase provides.
 
 ---

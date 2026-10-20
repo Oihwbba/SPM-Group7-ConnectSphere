@@ -17,8 +17,8 @@ organised by `organiser@test.local`. Every account's password is
   integration, e2e).
 - **AC10, the Lead's queue:** SCRUM-165 marks unassigned requests Overdue
   there (`tests/unit/lead-queue.test.ts` › "SCRUM-165 [AC2] TC-165-02: …"). The
-  Coordinator's list is TC-82-11. The two differ only at exactly the start
-  time: SCRUM-165 counts it as overdue, this story's list doesn't yet.
+  Coordinator's list is TC-82-11. The two agree at exactly the start time:
+  neither counts it as overdue (TC-165-03, TC-82-11).
 - **AC6:** notification rows are written for the Organiser, the Coordinator
   and each Attendee whose registration was cancelled. Listing them is
   SCRUM-48; SCRUM-45 and SCRUM-85 own how they behave.
@@ -53,7 +53,7 @@ organised by `organiser@test.local`. Every account's password is
 | Test Data | Reason "The keynote speaker withdrew." |
 | Expected Result | "Event cancelled. Its arrangements and registrations were released." The event is Cancelled with the reason, who and when, and a history entry. |
 
-**Automated by:** `tests/unit/cancel-event.test.ts` › "SCRUM-82 [AC1] TC-82-01: …" (3 tests); `tests/unit/event-closing.test.ts` › "SCRUM-82 [AC1] TC-82-01: …"
+**Automated by:** `tests/unit/cancel-event.test.ts` › "SCRUM-82 [AC1] TC-82-01: …" (3 tests); `tests/unit/event-lifecycle.test.ts` › "SCRUM-135 [AC9] TC-135-09: an event can be cancelled from Under Review, Planning or Confirmed (and a legacy Approved row)"
 
 ### TC-82-02
 
@@ -170,7 +170,7 @@ organised by `organiser@test.local`. Every account's password is
 | Test Data | — |
 | Expected Result | The Confirmed one is completed once, with one history entry; checking again changes nothing; the Cancelled one stays Cancelled. |
 
-**Automated by:** `tests/unit/event-closing.test.ts` › "SCRUM-82 [AC8] TC-82-10: …"; `tests/integration/close-event.test.ts` › "SCRUM-82 [AC7, AC8, AC9] TC-82-10: …"
+**Automated by:** `tests/unit/event-closing.test.ts` › "SCRUM-82 [AC8] TC-82-10, SCRUM-45 [AC13] TC-45-10: …"; `tests/integration/close-event.test.ts` › "SCRUM-82 [AC7, AC8, AC9] TC-82-10: …"
 
 ### TC-82-11
 

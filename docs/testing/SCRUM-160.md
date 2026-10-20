@@ -120,7 +120,7 @@ clash with any SCRUM-34 AC10 warning, and saving again confirms.
 | Test Data | — |
 | Expected Result | The times are saved. The 13:00–15:00 booking is flagged Needs Reconsideration with "Setup or turnaround time changed", once, with both clashes in its history. Its status, times and minutes don't change; the 10:00–12:00 booking isn't flagged. Its Coordinator and every Venue Staff member get one SCRUM-124 notice each that it needs reconsideration, with the reason; what it clashes with is on the Venue Staff list (TC-160-11). |
 
-**Automated by:** `tests/unit/venue-time-clashes.test.ts` › "SCRUM-160 [AC2, AC3] TC-160-07: …" (2 tests), "SCRUM-160 [AC3] TC-160-07: …" (2 tests); `tests/unit/venue-catalogue.test.ts` › "SCRUM-160 [AC2, AC3] TC-160-07: …"; `tests/integration/venue-time-clashes.test.ts` › "SCRUM-160 [AC2, AC3, AC5] TC-160-07: …"
+**Automated by:** `tests/unit/venue-time-clashes.test.ts` › "SCRUM-160 [AC2, AC3] TC-160-07: …" (2 tests); `tests/unit/venue-catalogue.test.ts` › "SCRUM-160 [AC2, AC3] TC-160-07: …"; `tests/integration/venue-time-clashes.test.ts` › "SCRUM-160 [AC2, AC3, AC5] TC-160-07: …"
 
 ### TC-160-08
 

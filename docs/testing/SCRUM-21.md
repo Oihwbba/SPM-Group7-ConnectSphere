@@ -140,7 +140,7 @@ otherwise. Every account's password is `Password123!`.
 | Test Data | — |
 | Expected Result | Refused before anything is read, even for an event the caller organises or coordinates. The Reassign form is shown to Leads only. |
 
-**Automated by:** `tests/unit/reassign.test.ts` › "SCRUM-21 [AC10] TC-21-09: …" (9 tests); `tests/unit/all-events.test.ts` › "SCRUM-21 [AC4, AC10] TC-21-05, TC-21-09: Reassign isn't offered to a Coordinator, …"
+**Automated by:** `tests/unit/reassign.test.ts` › "SCRUM-21 [AC10] TC-21-09: …" (9 tests); `tests/unit/all-events.test.ts` › "SCRUM-21 [AC4, AC10] TC-21-05, TC-21-09: Reassign isn't offered to %s, and no Coordinators are read"
 
 ### TC-21-10
 

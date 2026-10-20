@@ -40,7 +40,7 @@ time.
 | Test Data | Exhibition Hall, 9:00 am–1:00 pm, 120 |
 | Expected Result | "Request submitted". The event now has two bookings: the Grand Auditorium and the Exhibition Hall. The other venue's approval doesn't make this one unavailable: availability is checked for the requested venue only. |
 
-**Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-162 [AC1] TC-162-01: an event with a pending booking at another venue gets a new request for this one, linked to the same event" and "…an approved booking at another venue…"
+**Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-162 [AC1] TC-162-01: an event with a pending booking at another venue gets a new request for this one, linked to the same event" (and the approved one)
 
 ### TC-162-02
 

@@ -40,13 +40,13 @@ the database keeps or refuses. Times are UTC.
 | Item | Content |
 |---|---|
 | Test Case ID | TC-172-01 |
-| Test Scenario | [Positive] AC 1: users can hold the Event Coordinator Lead and Safety Officer roles; until SCRUM-164 gives them work, each may only read its own notifications |
+| Test Scenario | [Positive] AC 1: users can hold the Event Coordinator Lead and Safety Officer roles; each reads only its own notifications and can't create, decide, plan or edit an event |
 | Pre-conditions | — |
 | Test Steps | 1. List the database's `Role` values. <br> 2. Ask `can()` what each new role may do. <br> 3. Read each new role's navigation and label. <br> 4. Call `createDraftEvent` as each new role. <br> 5. Sign in as each new role, then as a user whose stored role isn't a role. |
 | Test Data | `COORDINATOR_LEAD`, `SAFETY_OFFICER`; `ADMIN`, which isn't a role |
-| Expected Result | Step 1: the five Release 1 roles, then `COORDINATOR_LEAD` and `SAFETY_OFFICER`. Step 2: each reads its own notifications but not someone else's, and can't create, review, confirm or reject an event, decide a booking, record unavailability or reserve equipment. Step 3: "Event Coordinator Lead" and "Safety Officer", each with only Notifications, landing there. Step 4: "You do not have permission to do that." and nothing is written. Step 5: each new role is kept on the sign-in token and the session; a value that isn't a role is put on neither. |
+| Expected Result | Step 1: the five Release 1 roles, then `COORDINATOR_LEAD` and `SAFETY_OFFICER`. Step 2: each reads its own notifications but not someone else's, and can't create, review, confirm or reject an event, decide a booking, record unavailability or reserve equipment. Step 3: "Event Coordinator Lead", landing on the Unassigned queue, and "Safety Officer", landing on the safety check queue. Until SCRUM-165 and SCRUM-166 gave them work, each had only Notifications and landed there; those stories superseded that half of step 3 ([TC-165-13](SCRUM-165.md#tc-165-13), [TC-166-03](SCRUM-166.md#tc-166-03)). Step 4: "You do not have permission to do that." and nothing is written. Step 5: each new role is kept on the sign-in token and the session; a value that isn't a role is put on neither. |
 
-**Automated by:** `tests/integration/week7-rules.test.ts` › "SCRUM-172 [AC1] TC-172-01: users can hold the Event Coordinator Lead and Safety Officer roles"; `tests/unit/auth.test.ts` › "SCRUM-172 [AC1] TC-172-01: %s may read only its own notifications"; `tests/unit/nav.test.ts` › "SCRUM-172 [AC1] TC-172-01: %s is labelled and lands on its notifications"; `tests/integration/permission-guard.test.ts` › "refuses %s directly and leaves the database unchanged"; `tests/unit/auth-config.test.ts` › "SCRUM-172 [AC1] TC-172-01: a %s keeps its role on the token and the session" and "SCRUM-172 [AC1] TC-172-01: a value that isn't a role is never put on the token or the session"
+**Automated by:** `tests/integration/week7-rules.test.ts` › "SCRUM-172 [AC1] TC-172-01: users can hold the Event Coordinator Lead and Safety Officer roles"; `tests/unit/auth.test.ts` › "SCRUM-172 [AC1] TC-172-01: %s reads only its own notifications and can't decide, plan or edit an event"; `tests/unit/nav.test.ts` › "SCRUM-172 [AC1] TC-172-01, SCRUM-164 [AC1] TC-164-01, SCRUM-165 [AC10] TC-165-13: COORDINATOR_LEAD is labelled and lands on the Unassigned queue" and "SCRUM-172 [AC1] TC-172-01, SCRUM-166 [AC1] TC-166-03: SAFETY_OFFICER is labelled and lands on the safety check queue"; `tests/integration/permission-guard.test.ts` › "refuses %s directly and leaves the database unchanged"; `tests/unit/auth-config.test.ts` › "SCRUM-172 [AC1] TC-172-01: a %s keeps its role on the token and the session" and "SCRUM-172 [AC1] TC-172-01: a value that isn't a role is never put on the token or the session"
 
 ### TC-172-02
 
@@ -174,7 +174,7 @@ the database keeps or refuses. Times are UTC.
 | Pre-conditions | An approved booking at one venue and a held booking at another, both 10:00–12:00. |
 | Test Steps | 1. Record unavailability 11:00–15:00 over the approved booking, and 10:00–12:00 over the hold, directly in the database. <br> 2. Record 14:00–16:00 at the first venue. <br> 3. Record 15:00–16:00 there. |
 | Test Data | — |
-| Expected Result | Step 1: both saved, and the booking stays Approved (SCRUM-161 flags it; the refusal SCRUM-37 AC4 describes is now the action's, until SCRUM-161). Step 2: refused by `unavailability_overlaps_unavailability`. Step 3: saved; touching. |
+| Expected Result | Step 1: both saved, and the booking stays Approved (SCRUM-161 flags it; the refusal SCRUM-37 AC4 describes is gone). Step 2: refused by `unavailability_overlaps_unavailability`. Step 3: saved; touching. |
 
 **Automated by:** `tests/integration/week7-rules.test.ts` › "SCRUM-172 [AC9] TC-172-11: unavailability may overlap Approved and Held bookings but not other unavailability"; `tests/integration/unavailability.test.ts` › "SCRUM-172 [AC9] TC-172-11: the database accepts unavailability written over an approved booking"
 
@@ -213,9 +213,9 @@ the database keeps or refuses. Times are UTC.
 | Pre-conditions | Real PostgreSQL. |
 | Test Steps | 1. Approve 10:00–12:00 with 45 minutes' turnaround and 12:00–14:00 with 30 minutes' setup at the same moment. |
 | Test Data | — |
-| Expected Result | One is saved; the other is refused by `booking_no_double_booking` (or as a deadlock, which the actions retry once). One Approved booking. The SCRUM-53 and SCRUM-37 races still hold under the new rules. |
+| Expected Result | One is saved; the other is refused by `booking_no_double_booking` (or as a deadlock, which the actions retry once). One Approved booking. The SCRUM-53 race still holds under the new rules. The SCRUM-37 race (TC-37-06) was superseded by SCRUM-161 AC 5 ([TC-161-12](SCRUM-161.md#tc-161-12)): the unavailability is always saved, and the booking is refused or flagged. |
 
-**Automated by:** `tests/integration/week7-rules.test.ts` › "SCRUM-172 [AC9] TC-172-14: two approvals whose booked periods only touch but whose occupied periods overlap, at the same moment: exactly one is saved"; `tests/integration/concurrency.test.ts` › "SCRUM-37 [AC4] TC-37-06: an approval and a maintenance record for overlapping periods at the same moment: exactly one is saved"
+**Automated by:** `tests/integration/week7-rules.test.ts` › "SCRUM-172 [AC9] TC-172-14: two approvals whose booked periods only touch but whose occupied periods overlap, at the same moment: exactly one is saved"; `tests/integration/concurrency.test.ts` › "SCRUM-161 [AC5] TC-161-12: both past their own checks before either writes: the unavailability is saved, and the booking is refused or flagged" and "SCRUM-161 [AC5] TC-161-12: never Approved without a flag, over repeated unforced races"
 
 ### TC-172-15
 

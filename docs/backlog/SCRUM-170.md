@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-15. Jira is the source of truth.
+     Synced from Jira on 2026-10-20. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-170 - Show the Organiser's requirements to the people planning the event
@@ -10,7 +10,7 @@
 | **Epic** | SCRUM-6 - Event Request Lifecycle |
 | **Priority** | High |
 | **Story points** | 3 |
-| **Status in Jira** | In Progress |
+| **Status in Jira** | Done |
 | **Sprint** | SCRUM Sprint 3 |
 | **Jira** | https://smu-spm-group7.atlassian.net/browse/SCRUM-170 |
 
@@ -43,5 +43,6 @@
 * 2026-10-08 (backlog refinement, PO approved): SCRUM-127 dropped, so the Organiser's answers stay free text. They are shown, not pre-filled. AC1 removed (SCRUM-162 AC7 shows booked venues). AC2 and AC3 show the answers to the Coordinator, Venue Staff and Technical Support. AC4's second sentence removed (it repeated SCRUM-110 AC3); the first replaced with the Coordinator's No equipment needed decision, which resets if the equipment requirements change. AC5 added so every event's details view shows the same fields. Estimate stays at 3: removing the pre-fill is offset by the new decision and its reset.
 * 2026-10-09: Added in AC6 so Coordinator knows what Organiser asked for.
 * 2026-10-14 (PO approved): user story covers recording No equipment needed (AC4), which it didn't mention. No AC change.
+* 2026-10-19 (PO approved): the readiness checklist shows the latest outcome of a venue booking or equipment request; a rejection followed by a cancel or withdrawal shows Not requested (venue) or Not decided (equipment), matching AC4. No AC change.
 
 Functionality Area: Venue Booking Request, Equipment Request Management

@@ -34,9 +34,9 @@ who has registrations in the seed.
 | Pre-conditions | Signed in as the Attendee, Registered for one event and Withdrawn from another. |
 | Test Steps | 1. Open **My Registrations**. |
 | Test Data | The seeded registrations |
-| Expected Result | Each row shows the event's name, date, time and venue, and the status "Registered" or "Withdrawn", soonest event first. When the event has two venues, the one in use at its start is shown. |
+| Expected Result | Each row shows the event's name, date, time and venue, and the status "Registered" or "Withdrawn", soonest event first. When the event has two venues, each approved venue is shown, in the order requested (SCRUM-162 AC 7, which superseded showing only the one in use at its start). |
 
-**Automated by:** `tests/unit/my-registrations.test.ts` › "[Positive] AC1: fetches the event name, date, time, venue and the registration status", "[Positive] AC1: with two approved bookings, the venue shown is the one in use when the event starts", "[Positive] lists the soonest event first"; `e2e/my-registrations.spec.ts` › "AC1, AC2: my list shows each event's name, date, venue and status"
+**Automated by:** `tests/unit/my-registrations.test.ts` › "[Positive] AC1: fetches the event name, date, time, venue and the registration status", "SCRUM-162 [AC7], SCRUM-85 [AC8] TC-85-06: every approved venue is read, in the order requested, with what was last confirmed for an event being re-planned", "[Positive] lists the soonest event first"; `e2e/my-registrations.spec.ts` › "AC1, AC2: my list shows each event's name, date, venue and status"
 
 ### TC-76-02
 

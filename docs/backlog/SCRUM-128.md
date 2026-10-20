@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-15. Jira is the source of truth.
+     Synced from Jira on 2026-10-20. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-128 - Decide a change request and apply it in one step
@@ -30,6 +30,7 @@
 8. Given the change request asks for cancellation, when I approve it, then the event is cancelled as described in SCRUM-82, using the Organiser's reason.
 9. Only the event's assigned Coordinator can decide a change request.
 10. The decision is recorded with who and when. The Organiser is notified of the outcome (SCRUM-45). Attendees are told of approved date, time or venue changes when the event is Confirmed again (SCRUM-85).
+11. Given the change request changes Registration needed (SCRUM-171): a change to No is refused while the event has active registrations, and the number of active registrations is shown; given the event is Confirmed and it changes from No to Yes, then registration opens as in SCRUM-75 AC4.
 
 **Customer basis:** "Change requests may cover several field and the Coordinator will review and processes updates." G4: "Significant changes are those affecting arrangements (date/time, attendance, venue, equipment). Other edits are ordinary." G4: "Approval = sufficient info for planning. Confirmation = essential arrangements completed."
 
@@ -42,5 +43,6 @@
 * 2026-10-07 (backlog refinement): AC4 points to SCRUM-166, which SCRUM-167 was merged into.
 * 2026-10-08 (PO review): replaced a G3 clarification in the Customer basis with the G4 definition of confirmation.
 * 2026-10-09 (PO review): removed two quotes from the Customer basis that aren't in any customer document, and added the G4 definition of significant changes, which is what "impactful" means in AC4–AC6.
+* 2026-10-17 (PO approved): AC11 added. Applying a change to Registration needed through a change request moved here from SCRUM-171 AC5 and SCRUM-75 AC11, because this story applies change requests; the rules are SCRUM-171's and SCRUM-75's (SCRUM-171's registrationStillNeededMessage is reused). Agreed with the story owner. SCRUM-41 AC1 already lets a change request cover Registration needed.
 
 Functionality Area: Event Change Requests

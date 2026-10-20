@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-15. Jira is the source of truth.
+     Synced from Jira on 2026-10-20. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-26 - Flag and resolve arrangements affected by a change
@@ -10,7 +10,7 @@
 | **Epic** | SCRUM-6 - Event Request Lifecycle |
 | **Priority** | Highest |
 | **Story points** | 5 |
-| **Status in Jira** | In Review |
+| **Status in Jira** | Done |
 | **Sprint** | SCRUM Sprint 3 |
 | **Jira** | https://smu-spm-group7.atlassian.net/browse/SCRUM-26 |
 
@@ -49,5 +49,6 @@
 * 2026-10-09 (PO review): AC1 points to SCRUM-25 AC3, because SCRUM-127 was dropped. Removed a quote from the Customer basis that isn't in any customer document.
 * 2026-10-11 (PO review): AC8 requires the booking's attendance to be within both the event's expected attendance and the venue's capacity; "or" let a booking through if it met only one.
 * 2026-10-15 (PO request, after SCRUM-163's Venue Staff hold approval): AC5 also refuses Venue Staff approving a flagged hold, and says a flagged request or hold can still be rejected or released.
+* 2026-10-19 (PO approved): the readiness checklist shows the latest outcome of a venue booking or equipment request, taken from the one that most recently reached its final state; a rejection followed by a cancel or withdrawal shows Not requested (venue) or Not decided (equipment, SCRUM-170 AC4). No AC change.
 
 Functionality Area: Event Information Management, Event Change Requests

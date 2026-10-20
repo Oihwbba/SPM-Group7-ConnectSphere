@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-15. Jira is the source of truth.
+     Synced from Jira on 2026-10-20. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-82 - Close an event: cancel it, or mark it completed once it has passed
@@ -30,6 +30,7 @@
 8. Given an event is already Completed, then checking again changes nothing.
 9. A Cancelled event is never marked Completed.
 10. Given an event's start time passes while it is still Submitted, Under Review or Planning, then it is not completed automatically; it is shown as Overdue in the Coordinator's event list (SCRUM-69), or in the Lead's queue while no Coordinator is assigned (SCRUM-165), until it is cancelled or rejected. An unassigned request is first assigned by the Lead; its Coordinator then cancels or rejects it.
+11. Given a Confirmed event completes (AC7) while a change request for it is still Submitted, then that request is rejected in the same operation with the reason "The event has already taken place", and the Organiser is notified of the outcome (SCRUM-45).
 
 **Related:** there is no scheduler. Graders run the app on their own machines and deployments go through GitHub Actions, so AC7 works without a job, the same way hold expiry does (SCRUM-163).
 
@@ -44,5 +45,6 @@
 * 2026-10-08 (PO review): Customer basis now quotes the current-process problem from the briefing's Background section instead of the archived Week 1 table.
 * 2026-10-09 (PO review): AC11 removed (closure record): Step 14 only says attendance, notes or issues "may" be recorded, Completed events are locked by SCRUM-41 AC2 and SCRUM-25 AC1, and notes stay available through SCRUM-25 AC6. The completion notification removed from AC7 and AC8, because it isn't in the Week 4 notification list. Re-estimated from 5 to 3.
 * 2026-10-11 (PO review): AC3 makes a safety check awaiting review Outdated instead of "closing" it, because Outdated is one of SCRUM-166's states.
+* 2026-10-18 (PO approved): new AC11 (unrelated to the closure-record AC11 removed on 2026-10-09). Completing an event rejects any still-Submitted change request, as cancelling does (AC3), so an Organiser's request never stays Submitted on an event that is over. Raised by the SCRUM-128 GLM review (PR #181). No re-estimate: it is one more write in AC7's existing completion step.
 
 Functionality Area: Event Status Management

@@ -91,7 +91,7 @@ every action asks it.
 | Test Data | — |
 | Expected Result | The first goes back to Submitted, then Under Review with the same Coordinator (TC-108-05). The second: "This event is Rejected, so it can't be submitted." |
 
-**Automated by:** `tests/unit/event-lifecycle.test.ts` › "SCRUM-135 [AC6, AC13] TC-135-06: …"; `tests/unit/events.test.ts` › "SCRUM-135 [AC11, AC13] TC-135-11: …"; `tests/unit/clarification-and-amend.test.ts` › "… TC-108-05: …"
+**Automated by:** `tests/unit/event-lifecycle.test.ts` › "SCRUM-135 [AC6, AC13] TC-135-06: …"; `tests/unit/events.test.ts` › "SCRUM-135 [AC11, AC13] TC-135-11: …"; `tests/unit/clarification-and-amend.test.ts` › "SCRUM-108 [AC9, AC11, AC14] TC-108-05, …"
 
 ### TC-135-09
 
@@ -117,7 +117,7 @@ every action asks it.
 | Test Data | E.g. confirm an Under Review event; cancel a Draft; submit a Planning event. |
 | Expected Result | "This event is Under Review, so it can't be confirmed." and so on. The status doesn't change and nothing is written. |
 
-**Automated by:** `tests/unit/event-lifecycle.test.ts` › "SCRUM-135 [AC11] TC-135-11: …" (10 tests); `tests/unit/event-status.test.ts`, `tests/unit/event-confirm.test.ts` (TC-81-11), `tests/unit/reject-planning.test.ts` (TC-117-04), `tests/unit/cancel-event.test.ts` (TC-82-02) and `tests/unit/events.test.ts` › "… SCRUM-135 [AC11] …"
+**Automated by:** `tests/unit/event-lifecycle.test.ts` › "SCRUM-135 [AC11] TC-135-11: …" (10 tests); `tests/unit/event-status.test.ts`, `tests/unit/event-confirm.test.ts` (TC-81-11), `tests/unit/reject-planning.test.ts` (TC-117-04), `tests/unit/cancel-event.test.ts` (TC-82-02) and `tests/unit/events.test.ts` › "SCRUM-135 [AC11, AC13] TC-135-11: …"
 
 ### TC-135-12
 
