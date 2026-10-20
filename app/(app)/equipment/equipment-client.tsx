@@ -416,7 +416,7 @@ export function EquipmentClient({
           {/* The period, with separate Date & Time visual bars */}
           <div className="space-y-2">
             <div>
-              <h3 className="text-sm font-semibold text-foreground">Period</h3>
+              <h2 className="text-sm font-semibold text-foreground">Period</h2>
               <p className="text-xs text-muted-foreground">
                 The start and end date & time to check, in Singapore time.
               </p>
@@ -620,7 +620,7 @@ export function EquipmentClient({
                       <SelectedIcon className="h-6 w-6" />
                     </div>
                     <div>
-                      <h4 className="text-base font-bold text-foreground">{selectedEquipment.type}</h4>
+                      <h3 className="text-base font-bold text-foreground">{selectedEquipment.type}</h3>
                       <p className="text-xs text-muted-foreground">{selectedEquipment.totalQuantity} total unit(s)</p>
                     </div>
                   </div>
@@ -687,9 +687,9 @@ export function EquipmentClient({
 
           {/* Grid of Other Equipment */}
           <div className="space-y-3">
-            <h4 className="text-xs font-semibold text-muted-foreground">
+            <h3 className="text-xs font-semibold text-muted-foreground">
               {selectedEquipment ? "Other equipment (for the same period)" : "Equipment pool"}
-            </h4>
+            </h3>
 
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               {(selectedEquipment ? otherEquipment : equipment).map((item) => {

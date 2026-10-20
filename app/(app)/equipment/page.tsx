@@ -25,11 +25,14 @@ export default async function EquipmentPage() {
   ]);
 
   return (
-    <EquipmentClient
-      equipment={equipment}
-      requests={requests}
-      canReserve={canReserve}
-      canReport={canReport}
-    />
+    <>
+      <h1 className="sr-only">Equipment</h1>
+      <EquipmentClient
+        equipment={equipment}
+        requests={requests}
+        canReserve={canReserve}
+        canReport={canReport}
+      />
+    </>
   );
 }
