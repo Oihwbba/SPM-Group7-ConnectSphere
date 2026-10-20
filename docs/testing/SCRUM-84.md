@@ -19,7 +19,7 @@ unless the case says otherwise.
 | [TC-84-01](#tc-84-01) | Negative | AC 1 | Unit, e2e |
 | [TC-84-02](#tc-84-02) | Positive | AC 2 | Unit |
 | [TC-84-03](#tc-84-03) | Positive | AC 3, AC 4 | Unit, e2e |
-| [TC-84-04](#tc-84-04) | Boundary | AC 5 | Unit (the data); the message is manual |
+| [TC-84-04](#tc-84-04) | Boundary | AC 5 | Unit |
 | [TC-84-05](#tc-84-05) | Positive | AC 6, AC 9 | Unit, e2e |
 | [TC-84-06](#tc-84-06) | Positive | AC 7 | Unit, e2e |
 | [TC-84-07](#tc-84-07) | Positive | AC 8 | Unit, e2e |
@@ -78,7 +78,7 @@ unless the case says otherwise.
 | Test Data | None |
 | Expected Result | "No events yet" with "Create your first draft event to get started. You can complete the details and submit it for review later." and a **Create Event Request** button, which opens the form. |
 
-**Automated by:** `tests/unit/events.test.ts` › "SCRUM-84 [AC5 - Edge Case / Empty State]: returns an empty array when an organiser has not created any event requests". The message and button are **Manual**.
+**Automated by:** `tests/unit/events.test.ts` › "SCRUM-84 [AC5 - Edge Case / Empty State]: returns an empty array when an organiser has not created any event requests" (the data); `tests/unit/organiser-empty-state.test.tsx` › "SCRUM-84 [AC5] TC-84-04: says there are no events yet and offers Create Event Request" (the message and the button, beside the header's). The button opens the same form as the header's, which `e2e/events.spec.ts` drives.
 
 ### TC-84-05
 

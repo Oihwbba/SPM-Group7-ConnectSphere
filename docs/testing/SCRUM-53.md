@@ -21,7 +21,7 @@ the app is running, and the tester signs in as Venue Staff
 | [TC-53-06](#tc-53-06) | Boundary, Concurrency | AC 6 | Integration |
 | [TC-53-07](#tc-53-07) | Negative | AC 7 | Unit, integration |
 | [TC-53-08](#tc-53-08) | Negative | Venue Staff only | Unit |
-| [TC-53-09](#tc-53-09) | Positive | AC 9 | Manual |
+| [TC-53-09](#tc-53-09) | Positive | AC 9 | Integration |
 
 **Criteria with no case of their own:**
 
@@ -151,4 +151,4 @@ the app is running, and the tester signs in as Venue Staff
 | Test Data | Reason: "The hall is set for an exhibition that week." |
 | Expected Result | Step 2: the event is still Planning. Step 3: a new PENDING booking is created with a new id, and the rejected booking is kept with its reason. |
 
-**Automated by:** **Manual** — no automated test yet. `tests/integration/bookings.test.ts` › "SCRUM-50 [AC9] TC-50-14: after a rejected request, a new request creates a new booking record and the earlier one is kept" covers step 3 only: it writes the rejected booking directly rather than through the decision action, and doesn't check the event's status.
+**Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-53 [AC9] TC-53-09: after Venue Staff reject a request, the event stays in Planning and asking again creates a new booking; the rejected one keeps its reason" (the rejection goes through the decision action). SCRUM-50's TC-50-14 covers asking again after a cancellation too.

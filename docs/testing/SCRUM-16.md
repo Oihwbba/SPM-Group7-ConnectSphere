@@ -21,7 +21,7 @@ otherwise.
 | [TC-16-02](#tc-16-02) | Positive | AC 2, AC 5 | Unit |
 | [TC-16-03](#tc-16-03) | Negative | AC 4 | Unit |
 | [TC-16-04](#tc-16-04) | Negative | AC 7 | Unit, e2e |
-| [TC-16-05](#tc-16-05) | Negative | AC 8 | Manual |
+| [TC-16-05](#tc-16-05) | Negative | AC 8 | e2e |
 
 ---
 
@@ -88,4 +88,4 @@ otherwise.
 | Test Data | One draft |
 | Expected Result | The draft is still a Draft, with no new history entry. |
 
-**Automated by:** **Manual.** No test asserts that viewing or filtering leaves the status alone; the status changes only through the actions SCRUM-24 lists.
+**Automated by:** `e2e/draft-views.spec.ts` › "SCRUM-16 [AC8] TC-16-05: switching tabs, opening a draft and closing Resume Draft leave it a Draft with no new history" (status, last change and history are read from the database).
