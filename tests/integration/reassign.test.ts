@@ -85,7 +85,7 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-21 — reassigning against a real dat
     ).toBe(3);
   });
 
-  it("SCRUM-21 [AC6] TC-21-11: a hold's reminder and expiry notices still to show move to the new Coordinator; a shown one stays with the previous", async () => {
+  it("SCRUM-21 [AC6] TC-21-11: notices still to show (a hold's reminder and expiry, registration closing) move to the new Coordinator; shown or withdrawn ones stay with the previous", async () => {
     const { id: heldEventId } = await prisma.event.create({
       data: {
         name: `SCRUM-21 scheduled notices ${Date.now()}`,
@@ -111,6 +111,24 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-21 — reassigning against a real dat
           notice("Already shown", new Date(Date.now() - 60 * 1000)),
         ],
       });
+      // SCRUM-45 AC11's notice for a Confirmed event's registration closing,
+      // and a withdrawn hold notice, which nobody will see.
+      await prisma.notification.createMany({
+        data: [
+          {
+            userId: "usr_coordinator",
+            type: "EVENT_STATUS_CHANGED",
+            title: "Registration closed",
+            message: "Registration closed.",
+            eventId: heldEventId,
+            showFromAt: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000),
+          },
+          {
+            ...notice("Withdrawn", new Date(Date.now() + 5 * 24 * 60 * 60 * 1000)),
+            withdrawnAt: new Date(),
+          },
+        ],
+      });
       (auth as unknown as Mock).mockResolvedValue(asLead("usr_coordinatorlead"));
 
       expect(
@@ -126,7 +144,14 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-21 — reassigning against a real dat
         { title: "Already shown", userId: "usr_coordinator" },
         { title: "Hold expired", userId: "usr_coordinator_2" },
         { title: "Hold expires tomorrow", userId: "usr_coordinator_2" },
+        { title: "Withdrawn", userId: "usr_coordinator" },
       ]);
+      expect(
+        await prisma.notification.findFirstOrThrow({
+          where: { eventId: heldEventId, title: "Registration closed" },
+          select: { userId: true },
+        }),
+      ).toEqual({ userId: "usr_coordinator_2" });
     } finally {
       await prisma.notification.deleteMany({ where: { eventId: heldEventId } });
       await prisma.auditLog.deleteMany({ where: { entityId: heldEventId } });

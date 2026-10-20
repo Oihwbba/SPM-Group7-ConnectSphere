@@ -164,6 +164,6 @@ otherwise. Every account's password is `Password123!`.
 | Pre-conditions | A Planning event coordinated by `coordinator@test.local`, with a venue hold whose reminder and expiry notices haven't shown yet (SCRUM-163), and one notice already shown. Signed in as `lead@test.local`. |
 | Test Steps | Reassign the event to `coordinator2@test.local`. |
 | Test Data | — |
-| Expected Result | The reminder and expiry notices still to show now belong to `coordinator2@test.local`, who will be coordinating when they show; the shown notice stays with `coordinator@test.local`. The same holds for a Confirmed event's "Registration closed" notice (SCRUM-45 AC11). Reassigning to the same Coordinator moves nothing. |
+| Expected Result | The reminder and expiry notices still to show now belong to `coordinator2@test.local`, who will be coordinating when they show; the shown notice, and any withdrawn one, stays with `coordinator@test.local`. The same holds for a Confirmed event's "Registration closed" notice (SCRUM-45 AC11). Reassigning to the same Coordinator moves nothing. |
 
-**Automated by:** `tests/unit/reassign.test.ts` › "SCRUM-21 [AC6] TC-21-11: …" (2 tests); `tests/integration/reassign.test.ts` › "SCRUM-21 [AC6] TC-21-11: a hold's reminder and expiry notices still to show move to the new Coordinator; a shown one stays with the previous"
+**Automated by:** `tests/unit/reassign.test.ts` › "SCRUM-21 [AC6] TC-21-11: …" (2 tests); `tests/integration/reassign.test.ts` › "SCRUM-21 [AC6] TC-21-11: notices still to show (a hold's reminder and expiry, registration closing) move to the new Coordinator; shown or withdrawn ones stay with the previous"
