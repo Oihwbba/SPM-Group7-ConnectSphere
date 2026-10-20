@@ -460,3 +460,47 @@ describe("getClarificationForEvent — SCRUM-18/17 read path", () => {
     expect(mockClarificationFindFirst).not.toHaveBeenCalled();
   });
 });
+
+describe("respondToClarification — SCRUM-82 AC3", () => {
+  const question = (clarificationStatus: string, eventStatus: string) => ({
+    id: "clar1",
+    status: clarificationStatus,
+    requestedById: "usr_coord",
+    event: eventRow({ status: eventStatus }),
+  });
+  const NOT_REVIEWABLE = "This event is no longer under review, so the question can't be answered.";
+
+  it("SCRUM-82 [AC3] TC-82-15: a question on a Cancelled event can't be answered, and nothing is written", async () => {
+    mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_org"));
+    mockClarificationFindUnique.mockResolvedValue(question("OPEN", "CANCELLED"));
+
+    expect(
+      await respondToClarification({ clarificationId: "clar1", response: "Answer" }),
+    ).toEqual({ ok: false, error: NOT_REVIEWABLE });
+    expect(mockTransaction).not.toHaveBeenCalled();
+  });
+
+  it("SCRUM-82 [AC3] TC-82-15: a cancellation that commits after the question was read is caught under the event's lock, and nothing is written", async () => {
+    mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_org"));
+    mockClarificationFindUnique.mockResolvedValue(question("OPEN", "UNDER_REVIEW"));
+    tx.$queryRaw.mockResolvedValue([{ status: "CANCELLED" }]);
+
+    expect(
+      await respondToClarification({ clarificationId: "clar1", response: "Answer" }),
+    ).toEqual({ ok: false, error: NOT_REVIEWABLE });
+    expect(tx.clarificationRequest.updateMany).not.toHaveBeenCalled();
+    expect(tx.notification.createMany).not.toHaveBeenCalled();
+  });
+
+  it("SCRUM-82 [AC3] TC-82-15: a question the cancellation closed says it was closed, not answered", async () => {
+    mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_org"));
+    mockClarificationFindUnique.mockResolvedValue(question("CLOSED", "CANCELLED"));
+
+    expect(
+      await respondToClarification({ clarificationId: "clar1", response: "Answer" }),
+    ).toEqual({
+      ok: false,
+      error: "This clarification request was closed when the event was decided or cancelled.",
+    });
+  });
+});

@@ -122,12 +122,15 @@ export async function getChangeDecision(
   });
 }
 
+const PERIOD_INVERTED =
+  "The event's times changed after this request was raised, so it would now end before it starts. Reject it and the organiser can ask for new times.";
+
 type Outcome =
   | { done: "APPROVED" | "REJECTED"; returnedToPlanning: boolean }
   | { refused: "reassigned" | "not-changeable" }
   | { refused: "decided"; status: ChangeRequestStatus }
   | { refused: "attendance" | "registration"; registered: number }
-  | { refused: "past-start" };
+  | { refused: "past-start" | "period" };
 
 /**
  * SCRUM-128 — the assigned Coordinator decides a Submitted change request.
@@ -183,7 +186,14 @@ export async function decideChangeRequest(
       await tx.$queryRaw`SELECT "id" FROM "Event" WHERE "id" = ${eventId} FOR UPDATE`;
       const event = await tx.event.findUniqueOrThrow({
         where: { id: eventId },
-        select: { status: true, coordinatorId: true, organiserId: true, name: true },
+        select: {
+          status: true,
+          coordinatorId: true,
+          organiserId: true,
+          name: true,
+          startAt: true,
+          endAt: true,
+        },
       });
       if (event.coordinatorId !== user!.id) return { refused: "reassigned" };
 
@@ -268,6 +278,15 @@ export async function decideChangeRequest(
       const start = request.fields.find((f) => f.fieldName === "startAt");
       if (start?.newValue && new Date(start.newValue) < now) {
         return { refused: "past-start" };
+      }
+      // A request records only the times it changes, and the other may have
+      // moved since (a clarification answer or SCRUM-25's edit), so the period
+      // it would leave must still end after it starts.
+      const end = request.fields.find((f) => f.fieldName === "endAt");
+      if (start?.newValue || end?.newValue) {
+        const startAt = start?.newValue ? new Date(start.newValue) : event.startAt;
+        const endAt = end?.newValue ? new Date(end.newValue) : event.endAt;
+        if (startAt && endAt && endAt <= startAt) return { refused: "period" };
       }
 
       // Marked Approved before a cancellation releases the event's arrangements,
@@ -437,6 +456,8 @@ export async function decideChangeRequest(
           return err(
             `${PAST_START_MESSAGE} The requested start has passed, so reject this request and the organiser can ask for a new date.`,
           );
+        case "period":
+          return err(PERIOD_INVERTED);
       }
     }
 

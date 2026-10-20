@@ -241,6 +241,10 @@ export async function createEquipmentRequest(
  * The write is conditional on the status this reviewer saw, so of two
  * reviewers acting at once only one moves the request; the other is told, and
  * neither the history (AC 6) nor the notification (AC 5) is written twice.
+ *
+ * Rejecting releases whatever is still reserved for the request: after a
+ * change (SCRUM-142 AC10) its unchanged lines keep their reservations while
+ * Technical Support re-checks it, and a rejected request must not hold stock.
  */
 export async function updateEquipmentRequestStatus(
   input: unknown,
@@ -267,6 +271,7 @@ export async function updateEquipmentRequestStatus(
         status: true,
         requestedById: true,
         event: { select: { id: true, name: true, organiserId: true, coordinatorId: true } },
+        lines: { select: { equipmentId: true } },
       },
     });
     if (!request) return err(NOT_FOUND);
@@ -291,19 +296,33 @@ export async function updateEquipmentRequestStatus(
       });
       if (result.count !== 1) return false;
 
+      const released =
+        toStatus === "REJECTED"
+          ? (
+              await releaseReservations(
+                tx,
+                request,
+                request.lines.map((line) => line.equipmentId),
+                new Date(),
+              )
+            ).count
+          : 0;
+      const releasedNote = released > 0 ? `${released} reservation(s) cancelled.` : null;
+
       await tx.equipmentRequestUpdate.create({
         data: {
           requestId: request.id,
           actorId: user!.id,
           fromStatus: from,
           toStatus,
-          note,
+          note: releasedNote ? [note, releasedNote].filter(Boolean).join(" ") : note,
         },
       });
       await notifyCoordinator(
         tx,
         request,
         `Your equipment request for "${request.event.name}" is now ${EQUIPMENT_REQUEST_STATUS_LABEL[toStatus]}.` +
+          (released > 0 ? " The equipment reserved for it was released." : "") +
           (note ? ` Note: ${note}` : ""),
       );
       return true;
