@@ -18,6 +18,7 @@ const tx = vi.hoisted(() => ({
   equipmentRequest: { updateMany: vi.fn() },
   equipmentRequestLine: { update: vi.fn() },
   equipmentRequestUpdate: { create: vi.fn() },
+  reservation: { updateMany: vi.fn() },
   notification: { create: vi.fn() },
 }));
 const db = vi.hoisted(() => ({
@@ -78,6 +79,7 @@ beforeEach(() => {
   tx.equipmentRequestLine.update.mockResolvedValue({});
   tx.equipmentRequestUpdate.create.mockResolvedValue({});
   tx.notification.create.mockResolvedValue({});
+  tx.reservation.updateMany.mockResolvedValue({ count: 0 });
 });
 
 describe("updateEquipmentRequestStatus — SCRUM-28", () => {
@@ -522,5 +524,54 @@ describe("suggestAlternativeEquipment — SCRUM-28 [AC4]", () => {
     await expect(suggestAlternativeEquipment(input)).rejects.toThrow(
       "connection lost",
     );
+  });
+});
+
+describe("updateEquipmentRequestStatus — SCRUM-142 AC2, AC10", () => {
+  const rechecked = () =>
+    stored("IN_REVIEW", [{ equipmentId: "eqp_projector" }, { equipmentId: "eqp_mic" }]);
+
+  it("SCRUM-142 [AC2, AC10] TC-142-19: rejecting a re-checked request releases what is still reserved for it, records it and tells the Coordinator", async () => {
+    db.equipmentRequest.findUnique.mockResolvedValue(rechecked());
+    tx.reservation.updateMany.mockResolvedValue({ count: 2 });
+
+    expect(
+      await updateEquipmentRequestStatus({
+        requestId: "eqr_1",
+        toStatus: "REJECTED",
+        note: "Not enough microphones.",
+      }),
+    ).toEqual({ ok: true, data: { status: "REJECTED" } });
+    expect(tx.reservation.updateMany).toHaveBeenCalledWith({
+      where: {
+        eventId: "evt_1",
+        equipmentId: { in: ["eqp_projector", "eqp_mic"] },
+        status: "CONFIRMED",
+        OR: [{ requestId: "eqr_1" }, { requestId: null }],
+      },
+      data: { status: "CANCELLED", cancelledAt: expect.any(Date) },
+    });
+    expect(tx.equipmentRequestUpdate.create.mock.calls[0][0].data.note).toBe(
+      "Not enough microphones. 2 reservation(s) cancelled.",
+    );
+    expect(tx.notification.create.mock.calls[0][0].data.message).toBe(
+      'Your equipment request for "Research Symposium" is now Rejected. The equipment reserved for it was released. Note: Not enough microphones.',
+    );
+  });
+
+  it("SCRUM-142 [AC2, AC10] TC-142-19: approving a re-checked request keeps its reservations", async () => {
+    db.equipmentRequest.findUnique.mockResolvedValue(rechecked());
+
+    await updateEquipmentRequestStatus({ requestId: "eqr_1", toStatus: "APPROVED" });
+
+    expect(tx.reservation.updateMany).not.toHaveBeenCalled();
+  });
+
+  it("SCRUM-142 [AC2] TC-142-19: a rejection that loses the race to another reviewer releases nothing", async () => {
+    db.equipmentRequest.findUnique.mockResolvedValue(rechecked());
+    tx.equipmentRequest.updateMany.mockResolvedValue({ count: 0 });
+
+    expect((await updateEquipmentRequestStatus({ requestId: "eqr_1", toStatus: "REJECTED" })).ok).toBe(false);
+    expect(tx.reservation.updateMany).not.toHaveBeenCalled();
   });
 });
