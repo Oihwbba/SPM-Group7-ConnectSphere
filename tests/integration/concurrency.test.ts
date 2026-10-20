@@ -203,6 +203,15 @@ describe.skipIf(!usesLocalDatabase)("concurrency — equipment pool (SCRUM-31)",
     expect((await reserveEquipmentRequest(morning)).ok).toBe(true);
     expect((await reserveEquipmentRequest(midday)).ok).toBe(true);
     expect((await reserveEquipmentRequest(dawn)).ok).toBe(true);
+
+    // A fourth that overlaps the midday one by a minute finds the unit taken.
+    const [overlapping] = await approvedRequestsFor([
+      { startAt: "2031-04-01T04:59:00.000Z", endAt: "2031-04-01T05:30:00.000Z" },
+    ]);
+    expect((await reserveEquipmentRequest(overlapping)).ok).toBe(false);
+    expect(
+      await prisma.reservation.count({ where: { requestId: overlapping.requestId } }),
+    ).toBe(0);
   });
 });
 

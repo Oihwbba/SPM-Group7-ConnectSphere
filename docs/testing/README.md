@@ -95,16 +95,16 @@ the open pull requests that change the same test files have merged.
 
 | Story | Owner | Test cases | Status |
 |---|---|---|---|
-| [SCRUM-13](SCRUM-13.md) | Felicia Or | 14 | Automated except the accepted attendance of 1 in TC-13-08; notes what SCRUM-129 and SCRUM-170 changed in AC 1, 2, 4 and 6 |
+| [SCRUM-13](SCRUM-13.md) | Felicia Or | 14 | Every case automated; notes what SCRUM-129 and SCRUM-170 changed in AC 1, 2, 4 and 6 |
 | [SCRUM-14](SCRUM-14.md) | Hann Qian | 6 | Automated except TC-14-02's whole submission with no Coordinator; its assignment step is unit-tested |
 | [SCRUM-15](SCRUM-15.md) | Felicia Or | 12 | Every case automated; AC 9's marking for correction isn't built, since the requirements are free text |
-| [SCRUM-16](SCRUM-16.md) | Felicia Or | 5 | Automated except TC-16-05 (AC 8), which is manual |
+| [SCRUM-16](SCRUM-16.md) | Felicia Or | 5 | Every case automated (TC-16-05 by e2e) |
 | [SCRUM-17](SCRUM-17.md) | Hann Qian | 3 | Every case automated |
 | [SCRUM-18](SCRUM-18.md) | Hann Qian | 11 | Every case automated |
 | [SCRUM-19](SCRUM-19.md) | Hann Qian | 6 | Every case automated; approval now ends in Planning (SCRUM-81) |
 | [SCRUM-20](SCRUM-20.md) | Hann Qian | 5 | Every case automated; describes automatic assignment until SCRUM-165 |
 | [SCRUM-23](SCRUM-23.md) | Jun Bin | 2 | Every case automated |
-| [SCRUM-24](SCRUM-24.md) | Jun Bin | 6 | Automated except TC-24-06 (AC 5, waiting on SCRUM-128) and TC-24-03's message |
+| [SCRUM-24](SCRUM-24.md) | Jun Bin | 6 | Every case automated; TC-24-06 tests the refusals, and AC 5's two ways back to Planning are SCRUM-128's and SCRUM-26's tests |
 | [SCRUM-29](SCRUM-29.md) | Jin Hong | 8 | Every case automated; reserving is SCRUM-155's |
 | [SCRUM-30](SCRUM-30.md) | Jin Hong | 7 | Every case automated |
 | [SCRUM-65](SCRUM-65.md) | Caylern Goh | 4 | Every case automated |
@@ -117,7 +117,7 @@ the open pull requests that change the same test files have merged.
 | [SCRUM-74](SCRUM-74.md) | Hann Qian | 6 | Every case automated |
 | [SCRUM-75](SCRUM-75.md) | Felicia Or | 14 | Automated (unit, integration for closing against real registrations, a close racing a registration and a new confirmation, e2e for the journey). TC-75-14 is retired: AC 11 moved to SCRUM-128 AC11 |
 | [SCRUM-76](SCRUM-76.md) | Hann Qian | 5 | Every case automated |
-| [SCRUM-84](SCRUM-84.md) | Felicia Or | 9 | Automated except TC-84-04's message and button |
+| [SCRUM-84](SCRUM-84.md) | Felicia Or | 9 | Every case automated |
 | [SCRUM-129](SCRUM-129.md) | Felicia Or | 6 | Every case automated |
 | [SCRUM-168](SCRUM-168.md) | Felicia Or | 3 | Automated at phone width; TC-168-01 at desktop width is manual |
 
@@ -128,7 +128,7 @@ the open pull requests that change the same test files have merged.
 | [SCRUM-25](SCRUM-25.md) | Felicia Or | 22 | Every case automated (unit, integration for the row lock, the warning and flags, the safety check and the permanent notes, e2e for both journeys, the safety check going Outdated and a Confirmed event's registration and notes) |
 | [SCRUM-27](SCRUM-27.md) | Jin Hong | 17 | Written with the story; every case automated |
 | [SCRUM-28](SCRUM-28.md) | Jin Hong | 11 | Written with the story; every case automated |
-| [SCRUM-31](SCRUM-31.md) | Jun Bin | 11 | Written from the acceptance criteria and existing tests; TC-31-04, -05 and -09 are partly manual |
+| [SCRUM-31](SCRUM-31.md) | Jun Bin | 11 | Written from the acceptance criteria and existing tests; every case automated, TC-31-04 and -09 through SCRUM-155's |
 | [SCRUM-32](SCRUM-32.md) | Jin Hong | 6 | Written with the story; every case automated |
 | [SCRUM-34](SCRUM-34.md) | Felicia Or | 22 | Every case automated (unit, integration for the database's hours check, the migration converting existing hours, opening hours and retirement refusing requests, holds and approvals, and two retirements at once, e2e for both journeys and the detail page's 404) |
 | [SCRUM-36](SCRUM-36.md) | Caylern Goh | 9 | Automated; a real screen-reader pass is manual |
@@ -140,7 +140,7 @@ the open pull requests that change the same test files have merged.
 | [SCRUM-48](SCRUM-48.md) | Jin Hong | 15 | Every case automated |
 | [SCRUM-50](SCRUM-50.md) | Caylern Goh | 16 | Every case automated |
 | [SCRUM-52](SCRUM-52.md) | Caylern Goh | 6 | Every case automated |
-| [SCRUM-53](SCRUM-53.md) | Caylern Goh | 9 | Automated except TC-53-09 (AC 9), which is manual; AC 3 and AC 10 point to other cases |
+| [SCRUM-53](SCRUM-53.md) | Caylern Goh | 9 | Every case automated; AC 3 and AC 10 point to other cases |
 | [SCRUM-81](SCRUM-81.md) | Jun Bin | 13 | Every case automated (unit, integration for the simultaneous confirm, e2e for the journey) |
 | [SCRUM-110](SCRUM-110.md) | Jun Bin | 15 | Every case automated (unit, and e2e for the page); AC 3 is superseded by SCRUM-170 AC 4 (TC-110-01 and TC-110-09 note it) |
 | [SCRUM-108](SCRUM-108.md) | Jun Bin | 14 | Every case automated (unit, e2e for both journeys); AC 6, 8 and 10 point to existing tests |
