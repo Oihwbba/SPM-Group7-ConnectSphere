@@ -42,7 +42,7 @@ status, one assigned Coordinator, and arrangements that can't clash.
 | **Venue Staff** | ConnectSphere staff | Reviews venue booking requests and approves or rejects them, and records when a venue is unavailable (maintenance, equipment failure, renovation, a safety concern, or another reason). | Bookings |
 | **Technical Support Staff** | ConnectSphere staff | Reviews equipment requests, checks equipment availability, and reserves what was approved. | Equipment |
 | **Attendee** | External | Browses events open for registration, registers, and sees their own registrations. Never sees internal planning information. | Browse Events |
-| **Event Coordinator Lead** | ConnectSphere staff | Reviews new requests' basic details in the Unassigned queue and assigns each to a Coordinator, becoming its supervising Lead (SCRUM-165); will reassign where needed (SCRUM-21) and sees every event with each Coordinator's active events on the All Events list (SCRUM-141). Can't approve or reject a request, or confirm, plan or edit an event. The role exists since SCRUM-172. | Unassigned Queue |
+| **Event Coordinator Lead** | ConnectSphere staff | Reviews new requests' basic details in the Unassigned queue and assigns each to a Coordinator, becoming its supervising Lead (SCRUM-165); reassigns where needed (SCRUM-21) and sees every event with each Coordinator's active events on the All Events list (SCRUM-141). Can't approve or reject a request, or confirm, plan or edit an event. The role exists since SCRUM-172. | Unassigned Queue |
 | **Safety Officer** | ConnectSphere staff | Reviews an event's venue and equipment arrangements before it can be confirmed, and approves, rejects or requests changes on that safety check (SCRUM-166). Can't confirm, plan or edit the event: its approval doesn't confirm it; the Coordinator still does (SCRUM-166 AC14). | Safety Checks |
 
 An account has a primary role and may hold others (SCRUM-121): its
@@ -61,17 +61,16 @@ stateDiagram-v2
     [*] --> DRAFT: Organiser saves
     DRAFT --> SUBMITTED: Organiser submits
     SUBMITTED --> UNDER_REVIEW: the Lead assigns a Coordinator (SCRUM-165)
-    SUBMITTED --> PLANNING: Coordinator approves
     UNDER_REVIEW --> PLANNING: Coordinator approves
-    SUBMITTED --> REJECTED: Coordinator rejects
     UNDER_REVIEW --> REJECTED: Coordinator rejects
     REJECTED --> SUBMITTED: Organiser amends and resubmits
     PLANNING --> CONFIRMED: assigned Coordinator confirms
     PLANNING --> REJECTED: it can't be fulfilled
-    CONFIRMED --> COMPLETED: not built yet (SCRUM-82)
-    UNDER_REVIEW --> CANCELLED: not built yet (SCRUM-82)
-    PLANNING --> CANCELLED: not built yet (SCRUM-82)
-    CONFIRMED --> CANCELLED: not built yet (SCRUM-82)
+    CONFIRMED --> PLANNING: an approved impactful change (SCRUM-128) or a cancelled flagged arrangement (SCRUM-26)
+    CONFIRMED --> COMPLETED: its end has passed (SCRUM-82)
+    UNDER_REVIEW --> CANCELLED: assigned Coordinator cancels (SCRUM-82)
+    PLANNING --> CANCELLED: assigned Coordinator cancels (SCRUM-82)
+    CONFIRMED --> CANCELLED: assigned Coordinator cancels (SCRUM-82)
 ```
 
 There are exactly nine statuses (SCRUM-23). Each change is its own action, and
@@ -188,9 +187,10 @@ building on one.
 
 - **"Awaiting clarification" is not a status** (data model, decision 4.2).
   If the customer wants it as a status, it becomes a tenth value.
-- **Requests are decided in the order they were made** (SCRUM-134, not built).
-  Approving an equipment request holds no stock, so a later request could be
-  reserved first until it is.
+- **Requests are decided in the order they were made** (SCRUM-134). A later
+  venue request can't be approved or held, nor a later equipment request
+  reserved, ahead of an earlier one it competes with; rejecting is never
+  blocked.
 - **All event times are Singapore time** (SCRUM-129): ConnectSphere's venues
   are in Singapore.
 

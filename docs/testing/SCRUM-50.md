@@ -126,7 +126,7 @@ a manual tester creates the same events, or edits an event's dates.
 | Pre-conditions | TC-50-01 is still pending (or has been approved). |
 | Test Steps | 1. Click **Submit request** again with the same details. <br> 2. Choose the same event with the Grand Auditorium instead, and submit. |
 | Test Data | As TC-50-01 |
-| Expected Result | "This event already has a venue request. Each event has one venue." with the existing request's venue, times and status, both times. Still one booking row for the event. Since SCRUM-172 the database's `booking_one_per_venue_per_event` constraint holds an event to one Pending, Held or Approved booking per venue, so the refusal in step 2 is the action's until SCRUM-162 lets an event book several venues. A Rejected or Cancelled one does not count (TC-50-14). |
+| Expected Result | "This event already has a venue request. Each event has one venue." with the existing request's venue, times and status, both times. Still one booking row for the event. Since SCRUM-172 the database's `booking_one_per_venue_per_event` constraint holds an event to one Pending, Held or Approved booking per venue, so the refusal in step 2 was the action's until SCRUM-162 let an event book several venues; step 2 now creates a request (TC-162-01). A Rejected or Cancelled one does not count (TC-50-14). |
 
 **Automated by:** step 1, `tests/integration/bookings.test.ts` › "SCRUM-50 [AC8] TC-50-07: submitting the same request twice leaves one request and shows the existing one"; step 2 is replaced by SCRUM-162's cases.
 

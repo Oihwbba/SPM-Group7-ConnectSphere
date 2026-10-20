@@ -12,9 +12,9 @@ that already existed (SCRUM-176). The tests predate the `SCRUM-n [ACx] TC-n-xx`
 title format, so each case names them by their current titles.
 
 **AC 6:** registration opens at confirmation; a later opening time, and the
-close, are set through SCRUM-75 (not built yet; today the window comes from
-the seed). AC 7's return to Planning is SCRUM-128's (not built yet); the
-refusal itself is built and tested (TC-73-07).
+close, are set through SCRUM-75 (TC-75-01 to TC-75-14). AC 7's return to
+Planning is SCRUM-128's (TC-128-05); the refusal itself is tested here
+(TC-73-07).
 
 **Shared pre-conditions for every case:** the database is migrated and seeded
 and the app is running. Signed in as `attendee@test.local` (`Password123!`).

@@ -10,8 +10,9 @@ and the app is running. The event is in Planning, assigned to
 `coordinator@test.local`, from 10:00 to 12:00 Singapore time, expecting 40
 attendees, with an Approved booking of Exhibition Hall (capacity 200) for the
 same period. Flagged rows are created straight in the database or with
-`flagArrangements`, because the stories that raise flags aren't built yet
-(see below). Every account's password is `Password123!`.
+`flagArrangements`, so each case doesn't depend on the stories that raise
+flags (SCRUM-25, SCRUM-32, SCRUM-34, SCRUM-128, SCRUM-160, SCRUM-161 and
+SCRUM-166, which test their own; see below). Every account's password is `Password123!`.
 
 **Covered by other stories:**
 

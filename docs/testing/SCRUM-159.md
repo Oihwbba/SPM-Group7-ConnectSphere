@@ -20,7 +20,7 @@ are signed in as `coordinator@test.local`, approvals as
 - **AC1's form** is SCRUM-34's venue edit, which uses the shared rule
   `venueTimesSchema` (lib/schemas/venue.ts) tested here; the database refuses
   the same values.
-- **AC3's search:** venue search is SCRUM-38 (not built). It uses the same
+- **AC3's search:** venue search is SCRUM-38's. It uses the same
   lookup (`findVenueBlockers`) and database constraint, so it inherits the
   occupied period without a second rule. Placing a hold (SCRUM-163) checks the
   occupied period and keeps the venue's minutes (TC-159-17), and a live hold

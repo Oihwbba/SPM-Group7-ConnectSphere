@@ -162,7 +162,7 @@ Every seeded account uses the password **`Password123!`**:
 | `attendee3@test.local` | Attendee | Has one withdrawn registration (SCRUM-77) |
 | `attendee4@test.local` | Attendee | Deliberately unregistered, so free to take the last place |
 | `safety@test.local` | Safety Officer | Reviews operational safety checks (SCRUM-166) |
-| `lead@test.local` | Event Coordinator Lead | Assigns new requests from the Unassigned Queue (SCRUM-165); reassignment arrives with SCRUM-21 |
+| `lead@test.local` | Event Coordinator Lead | Assigns new requests from the Unassigned Queue (SCRUM-165) and reassigns events from All Events (SCRUM-21) |
 | `lead2@test.local` | Event Coordinator Lead | A second Lead, for two Leads assigning at once (SCRUM-165) |
 | `safety2@test.local` | Safety Officer | A second Safety Officer, for two people recording at once (SCRUM-166) |
 | `multirole@test.local` | Venue Staff, Technical Support, Event Coordinator and Event Organiser | One account with several roles (SCRUM-121) |
@@ -256,8 +256,8 @@ check, so don't work around them.
   addendum).
 - **One live booking per venue per event.** An event can hold at most one
   pending, held or approved booking at each venue; rejected, cancelled and
-  expired ones don't count (SCRUM-162 AC2). One venue per event (SCRUM-50 AC8)
-  is now enforced by the request action only, until SCRUM-162 lifts it.
+  expired ones don't count (SCRUM-162 AC2). An event can book several venues:
+  SCRUM-162 replaced SCRUM-50 AC8's one venue per event.
 - **One open equipment request per event**, and no equipment type twice on a
   request (SCRUM-27).
 - **One registration per attendee per event** (SCRUM-73).

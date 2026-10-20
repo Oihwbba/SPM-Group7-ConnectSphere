@@ -17,8 +17,8 @@ organised by `organiser@test.local`. Every account's password is
   integration, e2e).
 - **AC10, the Lead's queue:** SCRUM-165 marks unassigned requests Overdue
   there (`tests/unit/lead-queue.test.ts` › "SCRUM-165 [AC2] TC-165-02: …"). The
-  Coordinator's list is TC-82-11. The two differ only at exactly the start
-  time: SCRUM-165 counts it as overdue, this story's list doesn't yet.
+  Coordinator's list is TC-82-11. The two agree at exactly the start time:
+  neither counts it as overdue (TC-165-03, TC-82-11).
 - **AC6:** notification rows are written for the Organiser, the Coordinator
   and each Attendee whose registration was cancelled. Listing them is
   SCRUM-48; SCRUM-45 and SCRUM-85 own how they behave.

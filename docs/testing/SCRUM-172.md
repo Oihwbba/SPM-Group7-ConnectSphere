@@ -174,7 +174,7 @@ the database keeps or refuses. Times are UTC.
 | Pre-conditions | An approved booking at one venue and a held booking at another, both 10:00–12:00. |
 | Test Steps | 1. Record unavailability 11:00–15:00 over the approved booking, and 10:00–12:00 over the hold, directly in the database. <br> 2. Record 14:00–16:00 at the first venue. <br> 3. Record 15:00–16:00 there. |
 | Test Data | — |
-| Expected Result | Step 1: both saved, and the booking stays Approved (SCRUM-161 flags it; the refusal SCRUM-37 AC4 describes is now the action's, until SCRUM-161). Step 2: refused by `unavailability_overlaps_unavailability`. Step 3: saved; touching. |
+| Expected Result | Step 1: both saved, and the booking stays Approved (SCRUM-161 flags it; the refusal SCRUM-37 AC4 describes is gone). Step 2: refused by `unavailability_overlaps_unavailability`. Step 3: saved; touching. |
 
 **Automated by:** `tests/integration/week7-rules.test.ts` › "SCRUM-172 [AC9] TC-172-11: unavailability may overlap Approved and Held bookings but not other unavailability"; `tests/integration/unavailability.test.ts` › "SCRUM-172 [AC9] TC-172-11: the database accepts unavailability written over an approved booking"
 
