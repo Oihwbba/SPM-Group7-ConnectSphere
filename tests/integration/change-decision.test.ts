@@ -167,10 +167,11 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-128 — deciding a change request", (
 
   it("SCRUM-128 [AC2] TC-128-12: if applying fails, neither the event nor the request is saved", async () => {
     const eventId = await confirmedEvent(4);
-    // A start after the event's end breaks event_period_valid mid-apply.
+    // An attendance of 0 passes the registrations check (none are taken) but
+    // breaks event_attendance_positive mid-apply.
     const requestId = await changeRequest(eventId, [
       { fieldName: "description", oldValue: null, newValue: "Changed", isMajor: false },
-      { fieldName: "startAt", oldValue: null, newValue: "2033-01-05T02:00:00.000Z", isMajor: true },
+      { fieldName: "expectedAttendance", oldValue: "40", newValue: "0", isMajor: true },
     ]);
     asCoordinator();
 
@@ -347,5 +348,39 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-128 — deciding a change request", (
     expect(
       await prisma.auditLog.count({ where: { entityId: requestId, oldValue: "PENDING_REVIEW" } }),
     ).toBe(1);
+  });
+
+  it("SCRUM-128 [AC2] TC-128-17: a request that only moves the end is refused once the start has moved past it, and the event and request are left as they were", async () => {
+    const eventId = await confirmedEvent(20);
+    const requestId = await changeRequest(eventId, [
+      {
+        fieldName: "endAt",
+        oldValue: day(20).endAt.toISOString(),
+        newValue: new Date("2033-01-20T04:00:00Z").toISOString(),
+        isMajor: true,
+      },
+    ]);
+    // The start moves to 05:00 while the request waits (SCRUM-25's edit).
+    const movedStart = new Date("2033-01-20T05:00:00Z");
+    await prisma.event.update({ where: { id: eventId }, data: { startAt: movedStart } });
+    asCoordinator();
+
+    expect(await decideChangeRequest({ changeRequestId: requestId, decision: "APPROVED" })).toEqual({
+      ok: false,
+      error:
+        "The event's times changed after this request was raised, so it would now end before it starts. Reject it and the organiser can ask for new times.",
+    });
+    expect(
+      await prisma.event.findUniqueOrThrow({
+        where: { id: eventId },
+        select: { startAt: true, endAt: true, status: true },
+      }),
+    ).toEqual({ startAt: movedStart, endAt: day(20).endAt, status: "CONFIRMED" });
+    expect(
+      await prisma.eventChangeRequest.findUniqueOrThrow({
+        where: { id: requestId },
+        select: { status: true },
+      }),
+    ).toEqual({ status: "PENDING_REVIEW" });
   });
 });

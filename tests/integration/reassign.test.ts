@@ -84,4 +84,78 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-21 — reassigning against a real dat
       }),
     ).toBe(3);
   });
+
+  it("SCRUM-21 [AC6] TC-21-11: notices still to show (a hold's reminder and expiry, registration closing) move to the new Coordinator; shown or withdrawn ones stay with the previous", async () => {
+    const { id: heldEventId } = await prisma.event.create({
+      data: {
+        name: `SCRUM-21 scheduled notices ${Date.now()}`,
+        status: "PLANNING",
+        organiserId: "usr_organiser",
+        coordinatorId: "usr_coordinator",
+      },
+      select: { id: true },
+    });
+    const notice = (title: string, showFromAt: Date) => ({
+      userId: "usr_coordinator",
+      type: "HOLD_EXPIRY_REMINDER" as const,
+      title,
+      message: "A hold expires soon.",
+      eventId: heldEventId,
+      showFromAt,
+    });
+    try {
+      await prisma.notification.createMany({
+        data: [
+          notice("Hold expires tomorrow", new Date(Date.now() + 2 * 24 * 60 * 60 * 1000)),
+          notice("Hold expired", new Date(Date.now() + 3 * 24 * 60 * 60 * 1000)),
+          notice("Already shown", new Date(Date.now() - 60 * 1000)),
+        ],
+      });
+      // SCRUM-45 AC11's notice for a Confirmed event's registration closing,
+      // and a withdrawn hold notice, which nobody will see.
+      await prisma.notification.createMany({
+        data: [
+          {
+            userId: "usr_coordinator",
+            type: "EVENT_STATUS_CHANGED",
+            title: "Registration closed",
+            message: "Registration closed.",
+            eventId: heldEventId,
+            showFromAt: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000),
+          },
+          {
+            ...notice("Withdrawn", new Date(Date.now() + 5 * 24 * 60 * 60 * 1000)),
+            withdrawnAt: new Date(),
+          },
+        ],
+      });
+      (auth as unknown as Mock).mockResolvedValue(asLead("usr_coordinatorlead"));
+
+      expect(
+        await reassignCoordinator({ eventId: heldEventId, coordinatorId: "usr_coordinator_2" }),
+      ).toMatchObject({ ok: true, data: { changed: true } });
+      expect(
+        await prisma.notification.findMany({
+          where: { eventId: heldEventId, type: "HOLD_EXPIRY_REMINDER" },
+          select: { title: true, userId: true },
+          orderBy: { title: "asc" },
+        }),
+      ).toEqual([
+        { title: "Already shown", userId: "usr_coordinator" },
+        { title: "Hold expired", userId: "usr_coordinator_2" },
+        { title: "Hold expires tomorrow", userId: "usr_coordinator_2" },
+        { title: "Withdrawn", userId: "usr_coordinator" },
+      ]);
+      expect(
+        await prisma.notification.findFirstOrThrow({
+          where: { eventId: heldEventId, title: "Registration closed" },
+          select: { userId: true },
+        }),
+      ).toEqual({ userId: "usr_coordinator_2" });
+    } finally {
+      await prisma.notification.deleteMany({ where: { eventId: heldEventId } });
+      await prisma.auditLog.deleteMany({ where: { entityId: heldEventId } });
+      await prisma.event.delete({ where: { id: heldEventId } });
+    }
+  });
 });

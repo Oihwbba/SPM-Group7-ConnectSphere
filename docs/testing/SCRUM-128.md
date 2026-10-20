@@ -48,6 +48,7 @@ change request. Every account's password is `Password123!`.
 | [TC-128-14](#tc-128-14) | Positive, Negative | AC 3, AC 9, AC 10 | e2e |
 | [TC-128-15](#tc-128-15) | Negative | AC 2 | Unit |
 | [TC-128-16](#tc-128-16) | Positive, Negative | AC 11 | Unit, integration |
+| [TC-128-17](#tc-128-17) | Negative, Boundary | AC 2 | Unit, integration |
 
 ### TC-128-01
 
@@ -198,7 +199,7 @@ change request. Every account's password is `Password123!`.
 |---|---|
 | Test Case ID | TC-128-12 |
 | Test Scenario | [Negative] AC 2: a failure part-way saves nothing |
-| Pre-conditions | The request changes the description and moves the start after the event's end, which the database refuses. |
+| Pre-conditions | The request changes the description and sets the expected attendance to 0, which the database refuses (`event_attendance_positive`) while the change is applied. |
 | Test Steps | Approve it. |
 | Test Data | — |
 | Expected Result | The approval fails; the description is unchanged, the event still Confirmed, and the request still Submitted. |
@@ -256,3 +257,16 @@ change request. Every account's password is `Password123!`.
 | Expected Result | 1. The event stays Confirmed and registration opens as confirming opens it (SCRUM-75 AC4). A "Registration closed" notice for the Organiser and the Coordinator is written to show at the event's start. 2. The notice shows at the window's close; with the close already past, registration is enabled but no notice is written. 3. Nothing opens now: confirming the event opens it. Turning registration off on a Confirmed event withdraws the notice without saying the event is back in Planning. |
 
 **Automated by:** `tests/unit/change-decision.test.ts` › "SCRUM-128 [AC11] TC-128-16: …" (3 tests) and "SCRUM-128 [AC11], SCRUM-45 [AC5]: turning registration off on a Confirmed event withdraws its notice but doesn't say the event is back in Planning, since it isn't"; `tests/integration/change-decision.test.ts` › "SCRUM-128 [AC11] TC-128-16: Registration needed raised as Yes on a Confirmed event opens registration when approved, with its Registration closed notice written for the event's start"
+
+### TC-128-17
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-128-17 |
+| Test Scenario | [Negative, Boundary] AC 2: a request whose times no longer make a valid period is refused, not failed |
+| Pre-conditions | A Confirmed event from 10:00 to 14:00 SGT. A Submitted request moves only the end, to 12:00. Before it is decided, the start moves to 13:00 (SCRUM-25's edit or a clarification answer). |
+| Test Steps | Click **Approve**. |
+| Test Data | — |
+| Expected Result | "The event's times changed after this request was raised, so it would now end before it starts. Reject it and the organiser can ask for new times." The event and the request are unchanged. An end equal to the start is refused too; an end one minute after the start is applied. A requested start after the event's current end is refused the same way. |
+
+**Automated by:** `tests/unit/change-decision.test.ts` › "SCRUM-128 [AC2] TC-128-17: …" (2 tests); `tests/integration/change-decision.test.ts` › "SCRUM-128 [AC2] TC-128-17: a request that only moves the end is refused once the start has moved past it, and the event and request are left as they were"

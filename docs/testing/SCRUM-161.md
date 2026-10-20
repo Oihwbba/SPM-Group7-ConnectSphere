@@ -41,6 +41,7 @@ case names one.
 | [TC-161-14](#tc-161-14) | Negative | AC 1 (Venue Staff only, SCRUM-37 AC6) | Unit |
 | [TC-161-15](#tc-161-15) | Positive | AC 3, AC 4 | Unit, integration |
 | [TC-161-16](#tc-161-16) | Boundary | AC 1 (start and end on quarter hours) | Unit, e2e |
+| [TC-161-17](#tc-161-17) | Positive | AC 1, AC 3 | Unit |
 
 ---
 
@@ -215,3 +216,16 @@ case names one.
 | Expected Result | Step 1: the list offers every 15 minutes (… 9:45 am, 10:00 am, 10:15 am …) and nothing in between. Step 2: saved for exactly 10:15 to 11:45, and the booking's flag reason names those times. A booking request's and a hold expiry's time lists still offer half hours only (SCRUM-50 AC1, SCRUM-163). |
 
 **Automated by:** `tests/unit/request-form.test.tsx` › "SCRUM-161 [AC1] TC-161-16: unavailability can start and end on any quarter hour, and nothing in between"; `e2e/availability.spec.ts` › "SCRUM-161 [AC1-AC4] TC-161-01, TC-161-04, TC-161-06, TC-161-16: …"
+
+### TC-161-17
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-161-17 |
+| Test Scenario | [Positive] AC 1, AC 3: the availability calendar shows unavailability recorded over a booking that still stands |
+| Pre-conditions | A venue with a booking from 10:00 to 12:00 SGT. Maintenance is recorded over part of it, so the booking is flagged but keeps its status (AC 3). |
+| Test Steps | Open **Availability** for that venue and day (SCRUM-36). |
+| Test Data | Maintenance 10:30–11:00; then maintenance 11:30–13:00 |
+| Expected Result | Maintenance 10:30–11:00: booking 10:00–10:30, maintenance 10:30–11:00, booking 11:00–12:00; nothing between 10:00 and 12:00 shows as free. Maintenance 11:30–13:00: booking 10:00–11:30, maintenance 11:30–13:00. However blockers overlap, the stretches cover the day once, in order, with none running backwards. |
+
+**Automated by:** `tests/unit/venue-availability.test.ts` › "SCRUM-161 [AC1, AC3] TC-161-17: …" (2 tests) and "SCRUM-161 [AC1] TC-161-17: however blockers overlap, the stretches cover the day once, in order, with none running backwards"
