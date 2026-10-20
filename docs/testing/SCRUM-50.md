@@ -36,6 +36,7 @@ a manual tester creates the same events, or edits an event's dates.
 | [TC-50-13](#tc-50-13) | Negative, Boundary | AC 3, AC 4, AC 5 shown live, before submitting | Unit, integration, e2e |
 | [TC-50-14](#tc-50-14) | Positive | AC 9 (a new request after a rejection or cancellation) | Integration |
 | [TC-50-15](#tc-50-15) | Negative, Boundary | AC 1 (period and attendance fixed to the event) | Unit, integration, e2e |
+| [TC-50-16](#tc-50-16) | Negative, Concurrency | AC 1 | Unit |
 
 ---
 
@@ -233,3 +234,16 @@ a manual tester creates the same events, or edits an event's dates.
 | Expected Result | Step 1: Start reads "10 Mar 2035, 9:00 am SGT", End "10 Mar 2035, 1:00 pm SGT", attendance "120"; none can be edited. Step 2: "The requested period must be the event's: … to …." or "The expected attendance must be the event's: 120.", against that field, and nothing is written. Step 3: "This event has no dates or expected attendance yet. Set them on the event before requesting a venue." |
 
 **Automated by:** the rounding and step 3, `tests/unit/bookings.test.ts` › "SCRUM-50 [AC1] TC-50-15: the event's period, rounded out to the half hour, is accepted" and "SCRUM-50 [AC1] TC-50-15: an event without dates or expected attendance cannot be booked yet"; `tests/unit/request-form.test.tsx` › every "SCRUM-50 [AC1] TC-50-15: eventBookingPeriod" case; `e2e/bookings.spec.ts` › "SCRUM-50 [AC1] TC-50-15, SCRUM-162 [AC4] TC-162-05, TC-162-06, TC-162-07: …". Steps 1 and 2 are replaced by SCRUM-162's cases.
+
+### TC-50-16
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-50-16 |
+| Test Scenario | [Negative, Concurrency] AC 1: an event confirmed, rejected, cancelled or reassigned while the request is being sent gets no request |
+| Pre-conditions | A Planning event. Its Coordinator opens **Request Venue** and fills the form; before they send it, the event is confirmed, rejected or cancelled. |
+| Test Steps | Click **Submit request**. |
+| Test Data | — |
+| Expected Result | "A venue can only be requested for an approved event." The status and Coordinator are re-read under a lock on the event, so a change that committed after the form loaded is seen, a reassignment to another Coordinator included; no booking is created and Venue Staff aren't told. |
+
+**Automated by:** `tests/unit/bookings.test.ts` › "SCRUM-50 [AC1] TC-50-16: an event that became %s after its status was read gets no request, and nothing is written" (Confirmed, Rejected, Cancelled) and "SCRUM-50 [AC1] TC-50-16: an event reassigned to another Coordinator after it was read gets no request from the previous one"

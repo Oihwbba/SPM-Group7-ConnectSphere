@@ -270,7 +270,8 @@ function WeekGrid({
                     <span
                       className={cn(
                         "text-xl font-semibold leading-tight",
-                        isToday && "text-primary",
+                        // Bold makes it large text, which the accent meets on the muted fill.
+                        isToday && "font-bold text-primary",
                       )}
                     >
                       {Number(day.slice(8))}

@@ -1,6 +1,6 @@
 import type { EventStatus, Prisma, PrismaClient } from "@prisma/client";
 
-import { withdrawPendingHoldNotices } from "@/lib/booking-holds";
+import { liveBookingWhere, withdrawPendingHoldNotices } from "@/lib/booking-holds";
 import {
   notifyAboutEvent,
   withdrawRegistrationClosedNotice,
@@ -30,7 +30,8 @@ const UNDECIDED: EventStatus[] = ["SUBMITTED", "UNDER_REVIEW", "PLANNING"];
  * pending requests; equipment reservations, whose stock returns to the pool;
  * open equipment requests; a safety check awaiting review becomes Outdated;
  * registrations are cancelled; submitted change requests are rejected with the
- * reason. Notices written ahead for the event (a hold's reminder and expiry,
+ * reason; a clarification still waiting on the Organiser is closed, so it
+ * can't be answered into a cancelled event. Notices written ahead for the event (a hold's reminder and expiry,
  * and registration closing) are withdrawn, since none of them will happen.
  * The Organiser, the Coordinator and each Attendee whose registration was
  * cancelled are notified.
@@ -58,8 +59,10 @@ export async function cancelInTransaction(
     },
   });
 
+  // A lapsed hold has already released its venue, so it stays Expired
+  // (SCRUM-163 AC4), as rejecting an event leaves it (SCRUM-117).
   const bookings = await tx.booking.updateMany({
-    where: { eventId, status: { in: ["PENDING", "HELD", "APPROVED"] } },
+    where: { eventId, ...liveBookingWhere(now) },
     data: { status: "CANCELLED" },
   });
   await withdrawPendingHoldNotices(tx, { eventId }, now);
@@ -105,6 +108,10 @@ export async function cancelInTransaction(
       decidedAt: now,
       decisionReason: reason,
     },
+  });
+  await tx.clarificationRequest.updateMany({
+    where: { eventId, status: "OPEN" },
+    data: { status: "CLOSED" },
   });
 
   // Who cancelled it and when (the entries' createdAt).

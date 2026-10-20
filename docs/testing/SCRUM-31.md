@@ -35,7 +35,7 @@ needs them.
 | [TC-31-06](#tc-31-06) | Concurrency | AC 5 | Unit, integration |
 | [TC-31-07](#tc-31-07) | Negative, Boundary | AC 6 | Unit, e2e |
 | [TC-31-08](#tc-31-08) | Positive | AC 7 | Unit |
-| [TC-31-09](#tc-31-09) | Negative, Boundary | Valid period | Unit (end equal to start only) |
+| [TC-31-09](#tc-31-09) | Negative, Boundary | Valid period | Unit, e2e (SCRUM-155's) |
 | [TC-31-10](#tc-31-10) | Positive, Negative | Approved and Planning events only | Unit, integration |
 | [TC-31-11](#tc-31-11) | Negative | Technical Support only | Unit |
 
@@ -91,7 +91,7 @@ needs them.
 | Test Data | As in TC-155-04. |
 | Expected Result | As in TC-155-04. |
 
-**Automated by:** `tests/unit/request-reservation.test.ts` › "SCRUM-155 [AC3] TC-155-04: rows that all fit are reserved together, each Confirmed and linked to the event and the request"; `tests/integration/request-reservation.test.ts` › "SCRUM-155 [AC3] TC-155-04: …". Step 3 is **Manual**.
+**Automated by:** `tests/unit/request-reservation.test.ts` › "SCRUM-155 [AC3] TC-155-04: rows that all fit are reserved together, each Confirmed and linked to the event and the request"; `tests/integration/request-reservation.test.ts` › "SCRUM-155 [AC3] TC-155-04: …". One unit more is refused by `tests/integration/request-reservation.test.ts` › "SCRUM-155 [AC4] TC-155-05: when one row is short, nothing is reserved — not even the rows that fit".
 
 ### TC-31-05
 
@@ -104,7 +104,7 @@ needs them.
 | Test Data | Pool: 1 unit <br> Middle: 2031-03-02 09:00–12:00 <br> Before: 2031-03-02 06:00–09:00 <br> After: 2031-03-02 12:00–15:00 <br> Quantity: 1 each |
 | Expected Result | All three reservations are confirmed, and the unit is never counted twice. A fourth reservation from 11:59 to 12:30, which does overlap, is refused as 1 short. |
 
-**Automated by:** `tests/integration/concurrency.test.ts` › "SCRUM-31 [AC4] TC-31-05: accepts reservations that touch at an endpoint — periods sharing an endpoint do not overlap" (real Postgres); `tests/unit/reservation.test.ts` › "SCRUM-31 [AC4] TC-31-05: overlap is half-open — a period that only touches another does not count against it". The overlapping fourth reservation is **Manual**.
+**Automated by:** `tests/integration/concurrency.test.ts` › "SCRUM-31 [AC4] TC-31-05: accepts reservations that touch at an endpoint — periods sharing an endpoint do not overlap" (real Postgres); `tests/unit/reservation.test.ts` › "SCRUM-31 [AC4] TC-31-05: overlap is half-open — a period that only touches another does not count against it". The overlapping fourth reservation is refused in the same integration test.
 
 ### TC-31-06
 
@@ -156,7 +156,7 @@ needs them.
 | Test Data | As in TC-155-09. |
 | Expected Result | As in TC-155-09. |
 
-**Automated by:** `tests/unit/reservation.test.ts` › "SCRUM-31 TC-31-09: refuses a period whose end is not after its start" (case A). Case B, and both cases on the live availability table, are **Manual**.
+**Automated by:** `tests/unit/reservation.test.ts` › "SCRUM-31 TC-31-09: refuses a period whose end is not after its start" (case A); `tests/unit/request-reservation.test.ts` › "SCRUM-155 [AC7] TC-155-09: …" (an end at or before the start, on the form that replaced the one-type one); `e2e/request-reservation.spec.ts` › "SCRUM-155 [AC7] TC-155-09: a cleared start or end reserves nothing and says so at the field". The live availability table is availability-only since SCRUM-156, so it reserves nothing.
 
 ### TC-31-10
 

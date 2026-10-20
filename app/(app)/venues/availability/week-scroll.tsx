@@ -21,7 +21,14 @@ export function WeekScroll({
   }, [top]);
 
   return (
-    <div ref={ref} className="max-h-[36rem] overflow-y-auto">
+    <div
+      ref={ref}
+      // A scrolling area keyboard users can focus and scroll with the arrows.
+      tabIndex={0}
+      role="region"
+      aria-label="Week, by hour"
+      className="max-h-[36rem] overflow-y-auto rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    >
       {children}
     </div>
   );

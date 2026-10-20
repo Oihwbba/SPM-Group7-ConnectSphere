@@ -800,6 +800,33 @@ describe.skipIf(!usesLocalDatabase)(
         return result.data.booking.id;
       }
 
+      it("SCRUM-53 [AC9] TC-53-09: after Venue Staff reject a request, the event stays in Planning and asking again creates a new booking; the rejected one keeps its reason", async () => {
+        const first = await pending();
+
+        expect(
+          await decideBookingRequest({
+            bookingId: first,
+            decision: "REJECTED",
+            reason: "The hall is closed that week.",
+          }),
+        ).toEqual({ ok: true, data: { status: "REJECTED" } });
+        expect(
+          await prisma.event.findUniqueOrThrow({ where: { id: eventId }, select: { status: true } }),
+        ).toEqual({ status: "PLANNING" });
+
+        mockAuth.mockResolvedValue(COORDINATOR);
+        const again = await submitBookingRequest(request());
+        expect(again).toMatchObject({ ok: true, data: { created: true, booking: { status: "PENDING" } } });
+        if (!again.ok) return;
+        expect(again.data.booking.id).not.toBe(first);
+        expect(
+          await prisma.booking.findUniqueOrThrow({
+            where: { id: first },
+            select: { status: true, decisionReason: true },
+          }),
+        ).toEqual({ status: "REJECTED", decisionReason: "The hall is closed that week." });
+      });
+
       it("SCRUM-162 [AC3, AC5] TC-162-08: Venue Staff decide each of an event's requests separately; rejecting one leaves the other unchanged", async () => {
         const kept = await pending({ venueId: otherVenueId });
         const rejected = await pending();

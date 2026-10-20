@@ -23,6 +23,7 @@ otherwise. Every account's password is `Password123!`.
 | [TC-21-08](#tc-21-08) | Positive | AC 8 | Unit, e2e |
 | [TC-21-09](#tc-21-09) | Negative | AC 10 | Unit |
 | [TC-21-10](#tc-21-10) | Negative | AC 3 | Unit |
+| [TC-21-11](#tc-21-11) | Positive | AC 6 | Unit, integration |
 
 ### TC-21-01
 
@@ -153,3 +154,16 @@ otherwise. Every account's password is `Password123!`.
 | Expected Result | "Choose someone who is a Coordinator." Nothing is written. |
 
 **Automated by:** `tests/unit/reassign.test.ts` › "SCRUM-21 [AC3] TC-21-10: someone who isn't a Coordinator is refused"
+
+### TC-21-11
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-21-11 |
+| Test Scenario | [Positive] AC 6: notices written ahead for the previous Coordinator go to the new one |
+| Pre-conditions | A Planning event coordinated by `coordinator@test.local`, with a venue hold whose reminder and expiry notices haven't shown yet (SCRUM-163), and one notice already shown. Signed in as `lead@test.local`. |
+| Test Steps | Reassign the event to `coordinator2@test.local`. |
+| Test Data | — |
+| Expected Result | The reminder and expiry notices still to show now belong to `coordinator2@test.local`, who will be coordinating when they show; the shown notice, and any withdrawn one, stays with `coordinator@test.local`. The same holds for a Confirmed event's "Registration closed" notice (SCRUM-45 AC11). Reassigning to the same Coordinator moves nothing. |
+
+**Automated by:** `tests/unit/reassign.test.ts` › "SCRUM-21 [AC6] TC-21-11: …" (2 tests); `tests/integration/reassign.test.ts` › "SCRUM-21 [AC6] TC-21-11: notices still to show (a hold's reminder and expiry, registration closing) move to the new Coordinator; shown or withdrawn ones stay with the previous"

@@ -270,6 +270,18 @@ describe("User Story 13 — Event Request Creation", () => {
       expect(mockCreate).not.toHaveBeenCalled();
     });
 
+    it("SCRUM-13 [AC7] TC-13-08: an attendance of 1, the smallest positive whole number, is accepted", async () => {
+      mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
+      mockCreate.mockResolvedValue({ id: "evt_one" });
+
+      expect(
+        await submitEventRequest({ ...validSubmissionInput, expectedAttendance: 1 }),
+      ).toEqual({ ok: true, data: { id: "evt_one" } });
+      expect(mockCreate).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ expectedAttendance: 1 }) }),
+      );
+    });
+
     it("SCRUM-13 [AC7 - Domain Boundary]: rejects submission when expected attendance is a negative number", async () => {
       mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
 

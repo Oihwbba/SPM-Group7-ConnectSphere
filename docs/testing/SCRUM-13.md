@@ -145,7 +145,7 @@ unless the case says otherwise. "A start a month from now" is any future time.
 | Test Data | 0, -5, then 1 |
 | Expected Result | 0 and -5 are refused with "Attendance must be a positive whole number." and nothing is created. 1 is accepted. |
 
-**Automated by:** `tests/unit/events.test.ts` › "SCRUM-13 [AC7 - Domain Boundary]: rejects submission when expected attendance is 0", "SCRUM-13 [AC7 - Domain Boundary]: rejects submission when expected attendance is a negative number". The accepted value of 1 is **Manual**.
+**Automated by:** `tests/unit/events.test.ts` › "SCRUM-13 [AC7 - Domain Boundary]: rejects submission when expected attendance is 0", "SCRUM-13 [AC7 - Domain Boundary]: rejects submission when expected attendance is a negative number" and "SCRUM-13 [AC7] TC-13-08: an attendance of 1, the smallest positive whole number, is accepted".
 
 ### TC-13-09
 

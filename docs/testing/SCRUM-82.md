@@ -39,6 +39,8 @@ organised by `organiser@test.local`. Every account's password is
 | [TC-82-12](#tc-82-12) | Positive | AC 1, AC 3, AC 4 | e2e |
 | [TC-82-13](#tc-82-13) | Positive | AC 7, AC 10 | e2e |
 | [TC-82-14](#tc-82-14) | Positive, Negative | AC 11 | Unit, integration |
+| [TC-82-15](#tc-82-15) | Negative | AC 3, AC 4 | Unit, integration |
+| [TC-82-16](#tc-82-16) | Boundary | AC 3 | Unit, integration |
 
 ### TC-82-01
 
@@ -221,3 +223,29 @@ organised by `organiser@test.local`. Every account's password is
 | Expected Result | The event is Completed. The Submitted request is Rejected with "The event has already taken place.", with no decider, a history entry, and the Organiser notified "Your change request for … was rejected: The event has already taken place." The Approved request is unchanged. With no Submitted request, nothing is rejected or sent. |
 
 **Automated by:** `tests/unit/event-closing.test.ts` › "SCRUM-82 [AC11] TC-82-14: …" (2 tests); `tests/integration/close-event.test.ts` › "SCRUM-82 [AC11] TC-82-14: completing an event rejects its still-Submitted change request with “The event has already taken place” and tells the Organiser; a decided one is left alone"
+
+### TC-82-15
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-82-15 |
+| Test Scenario | [Negative] AC 3, AC 4: cancelling closes a clarification still waiting on the Organiser, and it can't be answered afterwards |
+| Pre-conditions | An Under Review event with an open clarification (SCRUM-18) that lets the Organiser change the event name. |
+| Test Steps | 1. As `coordinator@test.local`, cancel the event with a reason. <br> 2. As `organiser@test.local`, answer the clarification and change the name. |
+| Test Data | New name: "Renamed after cancelling" |
+| Expected Result | Step 1: the clarification is Closed in the same operation. Step 2: "This clarification request was closed when the event was decided or cancelled." The event keeps its name and stays Cancelled, the clarification has no answer, and no "Clarification answered" notice is sent. A cancellation that commits after the question was read is caught under the event's lock: "This event is no longer under review, so the question can't be answered.", and nothing is written. |
+
+**Automated by:** `tests/unit/cancel-event.test.ts` › "SCRUM-82 [AC3] TC-82-15: cancelling closes a clarification still waiting on the Organiser, in the same operation"; `tests/unit/clarification.test.ts` › "SCRUM-82 [AC3] TC-82-15: …" (3 tests); `tests/integration/close-event.test.ts` › "SCRUM-82 [AC3, AC4] TC-82-15: cancelling closes an open clarification, and the Organiser's answer afterwards is refused and changes nothing"
+
+### TC-82-16
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-82-16 |
+| Test Scenario | [Boundary] AC 3: a hold already past its expiry stays Expired when the event is cancelled |
+| Pre-conditions | A Planning event with a Pending venue request and a hold whose expiry has passed. |
+| Test Steps | Cancel the event with a reason. |
+| Test Data | Hold expiry: a past date |
+| Expected Result | The Pending request is Cancelled. The lapsed hold is not: it already released its venue (SCRUM-163 AC4), so it stays Expired, as rejecting the event leaves it (SCRUM-117). |
+
+**Automated by:** `tests/unit/cancel-event.test.ts` › "SCRUM-82 [AC3] TC-82-16: only bookings that still hold or may get their venue are cancelled; a hold past its expiry stays Expired"; `tests/integration/close-event.test.ts` › "SCRUM-82 [AC3] TC-82-16: a hold past its expiry stays Expired when the event is cancelled; the live booking is cancelled"
