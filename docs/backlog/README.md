@@ -84,7 +84,7 @@ _33 stories, 88 points_
 | [SCRUM-167](SCRUM-167.md) | [MERGED INTO SCRUM-166] An event can't be confirmed until its safety check is approved | 0 | Highest | Backlog | Done |
 | [SCRUM-170](SCRUM-170.md) | Show the Organiser's requirements to the people planning the event | 3 | High | SCRUM Sprint 3 | Done |
 | [SCRUM-171](SCRUM-171.md) | Record whether an event needs registration | 3 | High | SCRUM Sprint 3 | Done |
-| [SCRUM-190](SCRUM-190.md) | An event takes place within one day | 2 | Medium | SCRUM Sprint 4 | To Do |
+| [SCRUM-190](SCRUM-190.md) | An event takes place within one day | 2 | Medium | SCRUM Sprint 4 | In Progress |
 
 ## SCRUM-7 - Venue Management
 
