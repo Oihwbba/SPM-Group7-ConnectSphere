@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-20. Jira is the source of truth.
+     Synced from Jira on 2026-10-21. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-161 - Mark a venue unavailable over existing bookings and find a replacement venue
@@ -10,7 +10,7 @@
 | **Epic** | SCRUM-7 - Venue Management |
 | **Priority** | Highest |
 | **Story points** | 5 |
-| **Status in Jira** | In Review |
+| **Status in Jira** | Done |
 | **Sprint** | SCRUM Sprint 3 |
 | **Jira** | https://smu-spm-group7.atlassian.net/browse/SCRUM-161 |
 

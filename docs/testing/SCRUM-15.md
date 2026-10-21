@@ -12,10 +12,11 @@ Written on 2026-10-12 from the acceptance criteria, then mapped to the tests
 that already existed (SCRUM-176). The tests predate the `SCRUM-n [ACx] TC-n-xx`
 title format, so each case names them by their current titles.
 
-**AC 9's second half isn't built.** A draft that names a venue or equipment no
-longer in the catalogue opens with its saved text (TC-15-10), but no field is
-marked for correction. Venue and equipment requirements are free text
-(SCRUM-170), so the draft holds no catalogue reference that could go stale.
+**AC 9 was reworded on 21 Oct.** It used to also require a field naming an
+inactive catalogue item to be marked for correction. Venue and equipment
+requirements are free text (SCRUM-170), so a draft holds no catalogue
+reference that could go stale, and AC 9 now asks only that a reopened draft
+opens with what was saved (TC-15-10).
 
 **Shared pre-conditions for every case:** the database is migrated and seeded
 and the app is running. Signed in as `organiser@test.local` (`Password123!`),
@@ -164,7 +165,7 @@ unless the case says otherwise.
 | Pre-conditions | Signed in as the Organiser, with a draft whose venue and equipment requirements name an item since made inactive. |
 | Test Steps | 1. Resume the draft. |
 | Test Data | Venue requirements naming a retired venue |
-| Expected Result | The draft opens with the saved text unchanged. No field is marked for correction (see the note above). |
+| Expected Result | The draft opens with the saved text unchanged. |
 
 **Automated by:** `tests/unit/events.test.ts` › "SCRUM-15 [AC2, AC9 - Inactive Catalogue Reference Retention]: draft saves and reopens successfully when venue or equipment fields contain references to inactive catalogue items (stored as free text, no FK constraint)"
 

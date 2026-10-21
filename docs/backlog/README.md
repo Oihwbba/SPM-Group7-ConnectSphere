@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-20. Jira is the source of truth.
+     Synced from Jira on 2026-10-21. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # Product backlog - acceptance criteria for every story
@@ -26,7 +26,7 @@ either covered by a test or visibly not done yet. Reviewers do the same.
 
 ## Staleness - read this
 
-**Jira is the source of truth. These files are a snapshot, last synced on 2026-10-20.**
+**Jira is the source of truth. These files are a snapshot, last synced on 2026-10-21.**
 
 - Never edit these files by hand. Edit the story in Jira, then re-sync.
 - Re-sync after every backlog refinement, and before each sprint review.
@@ -36,37 +36,38 @@ either covered by a test or visibly not done yet. Reviewers do the same.
 
 | | |
 |---|---|
-| Stories | **91** |
-| Tasks | **52** |
+| Stories | **97** |
+| Tasks | **61** |
 | Subtasks | **18** |
-| Total story points | **253** |
+| Total story points | **267** |
 | Points committed to Sprint 1 | **37** |
 | Points committed to Sprint 2 | **56** |
 | Points committed to Sprint 3 | **126** |
-| Last synced from Jira | **2026-10-20** |
+| Points committed to Sprint 4 | **15** |
+| Last synced from Jira | **2026-10-21** |
 
 ## SCRUM-6 - Event Request Lifecycle
 
-_33 stories, 86 points_
+_33 stories, 88 points_
 
 | Story | Summary | Pts | Priority | Sprint | Status |
 |---|---|---|---|---|---|
 | [SCRUM-13](SCRUM-13.md) | Create an event request | 2 | Highest | SCRUM Sprint 1 | Done |
 | [SCRUM-14](SCRUM-14.md) | Submit an event request for review | 1 | Highest | SCRUM Sprint 1 | Done |
-| [SCRUM-15](SCRUM-15.md) | Save an event request as a draft | 1 | High | SCRUM Sprint 1 | In Review |
+| [SCRUM-15](SCRUM-15.md) | Save an event request as a draft | 1 | High | SCRUM Sprint 1 | Done |
 | [SCRUM-16](SCRUM-16.md) | Distinguish drafts from submitted requests | 1 | Medium | SCRUM Sprint 1 | Done |
 | [SCRUM-17](SCRUM-17.md) | Review a submitted event request | 1 | Highest | SCRUM Sprint 1 | Done |
 | [SCRUM-18](SCRUM-18.md) | Request clarification on an event under review | 2 | Highest | SCRUM Sprint 1 | Done |
 | [SCRUM-19](SCRUM-19.md) | Approve or reject an event request | 2 | Highest | SCRUM Sprint 1 | Done |
 | [SCRUM-20](SCRUM-20.md) | Auto-assign a coordinator to a submitted event | 3 | Highest | SCRUM Sprint 1 | Done |
-| [SCRUM-21](SCRUM-21.md) | Reassign an event to another Coordinator and show who is currently assigned | 3 | Highest | SCRUM Sprint 3 | In Review |
+| [SCRUM-21](SCRUM-21.md) | Reassign an event to another Coordinator and show who is currently assigned | 3 | Highest | SCRUM Sprint 3 | Done |
 | [SCRUM-23](SCRUM-23.md) | View an event's current status | 1 | Highest | SCRUM Sprint 1 | Done |
 | [SCRUM-24](SCRUM-24.md) | Keep event status consistent with actions taken | 5 | Highest | SCRUM Sprint 1 | Done |
 | [SCRUM-25](SCRUM-25.md) | Update routine event information during planning | 3 | Highest | SCRUM Sprint 3 | Done |
 | [SCRUM-26](SCRUM-26.md) | Flag and resolve arrangements affected by a change | 5 | Highest | SCRUM Sprint 3 | Done |
 | [SCRUM-71](SCRUM-71.md) | Record who changed what and when | 5 | Low | Backlog | To Do |
 | [SCRUM-81](SCRUM-81.md) | Move an approved event through planning to confirmed | 5 | Highest | SCRUM Sprint 2 | Done |
-| [SCRUM-82](SCRUM-82.md) | Close an event: cancel it, or mark it completed once it has passed | 3 | Highest | SCRUM Sprint 3 | In Review |
+| [SCRUM-82](SCRUM-82.md) | Close an event: cancel it, or mark it completed once it has passed | 3 | Highest | SCRUM Sprint 3 | Done |
 | [SCRUM-84](SCRUM-84.md) | Organiser views their own event requests | 2 | Highest | SCRUM Sprint 1 | Done |
 | [SCRUM-108](SCRUM-108.md) | Answer a clarification, or amend and resubmit a rejected request | 5 | High | SCRUM Sprint 2 | Done |
 | [SCRUM-109](SCRUM-109.md) | [MERGED INTO SCRUM-108] Respond to an event clarification request | 0 | High | SCRUM Sprint 2 | Done |
@@ -79,15 +80,15 @@ _33 stories, 86 points_
 | [SCRUM-131](SCRUM-131.md) | Use the agreed status names on every screen | 2 | Medium | SCRUM Sprint 3 | Done |
 | [SCRUM-135](SCRUM-135.md) | Refuse any event status change the lifecycle does not allow | 3 | Medium | SCRUM Sprint 3 | Done |
 | [SCRUM-165](SCRUM-165.md) | Lead assigns new requests from an unassigned queue | 5 | Highest | SCRUM Sprint 3 | Done |
-| [SCRUM-166](SCRUM-166.md) | Operational safety check: Safety Officer reviews arrangements before the event can be confirmed | 8 | Highest | SCRUM Sprint 3 | In Review |
+| [SCRUM-166](SCRUM-166.md) | Operational safety check: Safety Officer reviews arrangements before the event can be confirmed | 8 | Highest | SCRUM Sprint 3 | Done |
 | [SCRUM-167](SCRUM-167.md) | [MERGED INTO SCRUM-166] An event can't be confirmed until its safety check is approved | 0 | Highest | Backlog | Done |
 | [SCRUM-170](SCRUM-170.md) | Show the Organiser's requirements to the people planning the event | 3 | High | SCRUM Sprint 3 | Done |
 | [SCRUM-171](SCRUM-171.md) | Record whether an event needs registration | 3 | High | SCRUM Sprint 3 | Done |
-| [SCRUM-190](SCRUM-190.md) | An event takes place within one day | - | Medium | Backlog | To Do |
+| [SCRUM-190](SCRUM-190.md) | An event takes place within one day | 2 | Medium | SCRUM Sprint 4 | To Do |
 
 ## SCRUM-7 - Venue Management
 
-_15 stories, 48 points_
+_16 stories, 50 points_
 
 | Story | Summary | Pts | Priority | Sprint | Status |
 |---|---|---|---|---|---|
@@ -103,9 +104,10 @@ _15 stories, 48 points_
 | [SCRUM-134](SCRUM-134.md) | Decide competing venue and equipment requests in the order they were made | 3 | Medium | SCRUM Sprint 3 | Done |
 | [SCRUM-159](SCRUM-159.md) | Include setup and turnaround time when checking venue availability | 5 | Highest | SCRUM Sprint 3 | Done |
 | [SCRUM-160](SCRUM-160.md) | Identify bookings that clash once setup and turnaround apply | 3 | Highest | SCRUM Sprint 3 | Done |
-| [SCRUM-161](SCRUM-161.md) | Mark a venue unavailable over existing bookings and find a replacement venue | 5 | Highest | SCRUM Sprint 3 | In Review |
+| [SCRUM-161](SCRUM-161.md) | Mark a venue unavailable over existing bookings and find a replacement venue | 5 | Highest | SCRUM Sprint 3 | Done |
 | [SCRUM-162](SCRUM-162.md) | Book several venues for one event | 5 | Highest | SCRUM Sprint 3 | Done |
 | [SCRUM-163](SCRUM-163.md) | Hold a venue tentatively until a deadline | 5 | Highest | SCRUM Sprint 3 | Done |
+| [SCRUM-188](SCRUM-188.md) | Request a venue for exactly the event's period | 2 | Medium | SCRUM Sprint 4 | To Do |
 
 ## SCRUM-8 - Event Change & Notifications
 
@@ -119,7 +121,7 @@ _7 stories, 29 points_
 | [SCRUM-85](SCRUM-85.md) | Attendees are kept informed when an event they registered for changes or is cancelled | 5 | High | SCRUM Sprint 3 | Done |
 | [SCRUM-122](SCRUM-122.md) | Remind Coordinators about incomplete and overdue arrangements | 3 | Low | Backlog | To Do |
 | [SCRUM-124](SCRUM-124.md) | Staff and arrangement notifications | 5 | Highest | SCRUM Sprint 3 | Done |
-| [SCRUM-128](SCRUM-128.md) | Decide a change request and apply it in one step | 5 | Highest | SCRUM Sprint 3 | In Review |
+| [SCRUM-128](SCRUM-128.md) | Decide a change request and apply it in one step | 5 | Highest | SCRUM Sprint 3 | Done |
 
 ## SCRUM-9 - Access Control
 
@@ -141,7 +143,7 @@ _11 stories, 37 points_
 
 ## SCRUM-10 - Equipment Management
 
-_11 stories, 26 points_
+_12 stories, 28 points_
 
 | Story | Summary | Pts | Priority | Sprint | Status |
 |---|---|---|---|---|---|
@@ -154,8 +156,9 @@ _11 stories, 26 points_
 | [SCRUM-33](SCRUM-33.md) | [MERGED INTO SCRUM-27] View Event Reservations | 0 | Medium | SCRUM Sprint 2 | Done |
 | [SCRUM-55](SCRUM-55.md) | [MERGED INTO SCRUM-30] View Equipment Availability Calendar | 0 | Low | Backlog | Done |
 | [SCRUM-119](SCRUM-119.md) | Maintain the equipment catalogue and record unavailability | 5 | Low | Backlog | To Do |
-| [SCRUM-142](SCRUM-142.md) | Change equipment lines or withdraw a venue request before confirmation | 3 | High | SCRUM Sprint 3 | In Review |
+| [SCRUM-142](SCRUM-142.md) | Change equipment lines or withdraw a venue request before confirmation | 3 | High | SCRUM Sprint 3 | Done |
 | [SCRUM-156](SCRUM-156.md) | Make the one-type equipment form availability-only (follow-up to SCRUM-31 and SCRUM-155) | 2 | Medium | SCRUM Sprint 2 | Done |
+| [SCRUM-186](SCRUM-186.md) | One active equipment request per event; more equipment is added by changing its lines | 2 | Medium | SCRUM Sprint 4 | To Do |
 
 ## SCRUM-11 - Attendee Registration
 
@@ -176,14 +179,18 @@ _10 stories, 21 points_
 
 ## Stories with no epic
 
-_4 stories, 6 points_
+_8 stories, 14 points_
 
 | Story | Summary | Pts | Priority | Sprint | Status |
 |---|---|---|---|---|---|
 | [SCRUM-132](SCRUM-132.md) | Core pages work on a phone and respond within 2 seconds | 2 | Medium | SCRUM Sprint 3 | Done |
 | [SCRUM-155](SCRUM-155.md) | Reserve an approved equipment request in one step, pre-filled from the Coordinator's request (follow-up to SCRUM-31) | 3 | Medium | SCRUM Sprint 2 | Done |
-| [SCRUM-186](SCRUM-186.md) | One active equipment request per event; more equipment is added by changing its lines | - | Medium | Backlog | To Do |
-| [SCRUM-188](SCRUM-188.md) | Request a venue for exactly the event's period | 1 | Medium | Backlog | To Do |
+| [SCRUM-207](SCRUM-207.md) | Shared page conventions on every page | 2 | High | SCRUM Sprint 4 | To Do |
+| [SCRUM-208](SCRUM-208.md) | One page per event, not a pop-up | 2 | High | SCRUM Sprint 4 | To Do |
+| [SCRUM-209](SCRUM-209.md) | Arrange venues, equipment and the safety check from the event page | 2 | High | SCRUM Sprint 4 | To Do |
+| [SCRUM-210](SCRUM-210.md) | Menus grouped by task | 1 | High | SCRUM Sprint 4 | To Do |
+| [SCRUM-211](SCRUM-211.md) | One layout for every work queue | 1 | Medium | SCRUM Sprint 4 | To Do |
+| [SCRUM-212](SCRUM-212.md) | Attendee pages show registration state at a glance | 1 | Medium | SCRUM Sprint 4 | To Do |
 
 ## Tasks (technical work, no customer-facing story)
 
@@ -221,23 +228,32 @@ _4 stories, 6 points_
 | [SCRUM-180](SCRUM-180.md) | Chore: Raise the GLM reviewer's memory limit from 8,000 to 12,000 characters | SCRUM Sprint 3 | Done |
 | [SCRUM-181](SCRUM-181.md) | Chore: Fix the GLM reviewer gaps found by auditing a week of reviews | SCRUM Sprint 3 | Done |
 | [SCRUM-182](SCRUM-182.md) | Chore: Close the e2e sign-in pages that slow CI past its time limit | SCRUM Sprint 3 | Done |
-| [SCRUM-183](SCRUM-183.md) | Chore: SCRUM-18 clarification.spec.ts | Backlog | To Do |
+| [SCRUM-183](SCRUM-183.md) | Chore: SCRUM-18 clarification.spec.ts | SCRUM Sprint 4 | To Do |
 | [SCRUM-184](SCRUM-184.md) | Chore: SCRUM-50 facility picker inconsistency | Backlog | To Do |
 | [SCRUM-185](SCRUM-185.md) | Chore:  Fix SCRUM-25 "Needs Reconsideration" only appears after reopening the modal | SCRUM Sprint 3 | Done |
-| [SCRUM-187](SCRUM-187.md) | Bug: The clarification answer form stays on "Sending…" when sending fails | Backlog | To Do |
-| [SCRUM-189](SCRUM-189.md) | Chore: Stop long e2e journeys failing at the 30-second test limit on CI | Backlog | To Do |
+| [SCRUM-187](SCRUM-187.md) | Bug: The clarification answer form stays on "Sending…" when sending fails | SCRUM Sprint 4 | To Do |
+| [SCRUM-189](SCRUM-189.md) | Chore: Stop long e2e journeys failing at the 30-second test limit on CI | SCRUM Sprint 4 | To Do |
 | [SCRUM-191](SCRUM-191.md) | Bug: Integration suites race each other through shared data, and the docs still describe the Safety Officer as unbuilt | SCRUM Sprint 3 | Done |
 | [SCRUM-193](SCRUM-193.md) | Bug: SCRUM-142's TC-142-18 and SCRUM-172's migration suites time out alongside other files, and a timed-out TC-142-18 leaves a test venue behind | SCRUM Sprint 3 | Done |
-| [SCRUM-194](SCRUM-194.md) | Chore: Record each sprint, how we estimate, and the Definition of Done in docs/scrum | Backlog | To Do |
+| [SCRUM-194](SCRUM-194.md) | Chore: Record each sprint, how we estimate, and the Definition of Done in docs/scrum | SCRUM Sprint 4 | To Do |
 | [SCRUM-195](SCRUM-195.md) | Chore: Remove the placeholder tests for features that are built | Backlog | To Do |
 | [SCRUM-196](SCRUM-196.md) | Chore: Check in CI that every test case cites tests and files that exist | Backlog | To Do |
-| [SCRUM-197](SCRUM-197.md) | Chore: Document how the team uses AI and who owns each part of the system | Backlog | To Do |
-| [SCRUM-198](SCRUM-198.md) | Chore: Add a demo script for the core workflows, including conflicts, changes and failures | Backlog | To Do |
+| [SCRUM-197](SCRUM-197.md) | Chore: Document how the team uses AI and who owns each part of the system | SCRUM Sprint 4 | To Do |
+| [SCRUM-198](SCRUM-198.md) | Chore: Add a demo script for the core workflows, including conflicts, changes and failures | SCRUM Sprint 4 | To Do |
 | [SCRUM-199](SCRUM-199.md) | Chore: Bring the component diagram up to date with main | Backlog | To Do |
 | [SCRUM-200](SCRUM-200.md) | Chore: Decide whether to format the repo with Prettier and check it in CI | Backlog | To Do |
 | [SCRUM-201](SCRUM-201.md) | Bug: SCRUM-124's TC-124-02 borrows another suite's equipment and fails at random | SCRUM Sprint 3 | Done |
-| [SCRUM-202](SCRUM-202.md) | Bug: A venue edit can deadlock with a simultaneous booking decision or event edit | Backlog | To Do |
-| [SCRUM-203](SCRUM-203.md) | Chore: Bring test-case citations, stale notes and the backlog snapshot up to date with main | SCRUM Sprint 3 | In Progress |
-| [SCRUM-204](SCRUM-204.md) | Bug: A venue or equipment request can be created for an event that was just confirmed, closed or reassigned | SCRUM Sprint 3 | In Review |
-| [SCRUM-205](SCRUM-205.md) | Bug: Accessibility and error-page gaps found in the 20 Oct audit | SCRUM Sprint 3 | In Review |
-| [SCRUM-206](SCRUM-206.md) | Chore: Automate the test cases still run by hand on Done stories | SCRUM Sprint 3 | In Review |
+| [SCRUM-202](SCRUM-202.md) | Bug: A venue edit can deadlock with a simultaneous booking decision or event edit | SCRUM Sprint 4 | To Do |
+| [SCRUM-203](SCRUM-203.md) | Chore: Bring test-case citations, stale notes and the backlog snapshot up to date with main | SCRUM Sprint 3 | Done |
+| [SCRUM-204](SCRUM-204.md) | Bug: A venue or equipment request can be created for an event that was just confirmed, closed or reassigned | SCRUM Sprint 3 | Done |
+| [SCRUM-205](SCRUM-205.md) | Bug: Accessibility and error-page gaps found in the 20 Oct audit | SCRUM Sprint 3 | Done |
+| [SCRUM-206](SCRUM-206.md) | Chore: Automate the test cases still run by hand on Done stories | SCRUM Sprint 3 | Done |
+| [SCRUM-213](SCRUM-213.md) | Chore: Epic check for SCRUM-6 Event Request Lifecycle | SCRUM Sprint 4 | To Do |
+| [SCRUM-214](SCRUM-214.md) | Chore: Epic check for SCRUM-7 Venue Management | SCRUM Sprint 4 | To Do |
+| [SCRUM-215](SCRUM-215.md) | Chore: Epic check for SCRUM-8 Event Change & Notifications | SCRUM Sprint 4 | To Do |
+| [SCRUM-216](SCRUM-216.md) | Chore: Epic check for SCRUM-9 Access Control | SCRUM Sprint 4 | To Do |
+| [SCRUM-217](SCRUM-217.md) | Chore: Epic check for SCRUM-10 Equipment Management | SCRUM Sprint 4 | To Do |
+| [SCRUM-218](SCRUM-218.md) | Chore: Epic check for SCRUM-11 Attendee Registration | SCRUM Sprint 4 | To Do |
+| [SCRUM-219](SCRUM-219.md) | Chore: Slide deck against the rubric on the Week 11 template | SCRUM Sprint 4 | To Do |
+| [SCRUM-220](SCRUM-220.md) | Chore: Assemble the Week 12 submission zip with all seven folders | SCRUM Sprint 4 | To Do |
+| [SCRUM-221](SCRUM-221.md) | Chore: Re-sync docs/backlog from Jira at the start of Sprint 4 | SCRUM Sprint 4 | In Progress |

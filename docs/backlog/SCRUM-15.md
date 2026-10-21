@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-20. Jira is the source of truth.
+     Synced from Jira on 2026-10-21. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-15 - Save an event request as a draft
@@ -10,7 +10,7 @@
 | **Epic** | SCRUM-6 - Event Request Lifecycle |
 | **Priority** | High |
 | **Story points** | 1 |
-| **Status in Jira** | In Review |
+| **Status in Jira** | Done |
 | **Sprint** | SCRUM Sprint 1 |
 | **Jira** | https://smu-spm-group7.atlassian.net/browse/SCRUM-15 |
 
@@ -43,7 +43,10 @@ _Acceptance Criteria:_
 * AC6 (Auto-save and unsaved changes warning): If an Organiser attempts to navigate away from an edited draft without saving, the system displays a confirmation prompt warning of unsaved changes.
 * NEW AC7 (Draft save idempotency): Repeatedly selecting “Save as Draft” for the same draft updates the existing draft record and does not create duplicate event requests.
 * NEW AC8 (Draft reviewer exclusion): Saving an event request as DRAFT does not make it visible in Coordinator review queues, Coordinator dashboards, calendars, or submitted-event views.
-* NEW AC9 (Draft resume with inactive catalogue reference): If a reopened draft references a venue or equipment catalogue item that no longer exists or is no longer active, the draft still opens with the saved information, but the affected field is marked for correction before formal submission.
+* NEW AC9 (Draft resume): Given I reopen a draft, then it opens with the information I saved.
 
+**Change log**
+
+* 2026-10-21 (PO approved, after the 20 Oct audit): AC9 reworded. It used to say a draft referencing a venue or equipment catalogue item that is no longer active has that field marked for correction. Venue and equipment requirements are free text (SCRUM-127 was dropped, SCRUM-170), so a draft holds no catalogue item that can be removed, and there is nothing to mark. AC9 now states what is delivered and tested. No code change.
 
 Functionality Area: Draft Event Requests

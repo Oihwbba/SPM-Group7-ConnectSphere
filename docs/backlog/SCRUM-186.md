@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-20. Jira is the source of truth.
+     Synced from Jira on 2026-10-21. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-186 - One active equipment request per event; more equipment is added by changing its lines
@@ -7,11 +7,11 @@
 | | |
 |---|---|
 | **Type** | Story |
-| **Epic** | - |
+| **Epic** | SCRUM-10 - Equipment Management |
 | **Priority** | Medium |
-| **Story points** | - |
+| **Story points** | 2 |
 | **Status in Jira** | To Do |
-| **Sprint** | Backlog |
+| **Sprint** | SCRUM Sprint 4 |
 | **Jira** | https://smu-spm-group7.atlassian.net/browse/SCRUM-186 |
 
 ---
@@ -24,8 +24,8 @@
 2. Given the event's only requests are Rejected or Cancelled, then I can create a new request (SCRUM-27, SCRUM-142 AC3).
 3. Given I need more or different equipment for an event with an active request, then I add or change lines on that request (SCRUM-142 AC1), which returns it to Technical Support for re-check.
 4. A direct attempt to create a second active request is refused on the server and writes nothing, including when two requests are submitted at the same moment.
-5. Given an event that already has two active requests from before this change, then nothing is removed or cancelled automatically; both keep counting as they do today (SCRUM-110, SCRUM-156 AC5).
-6. SCRUM-156 AC5 no longer covers "a second approved request for an event that already has reservations"; it keeps covering a request whose lines are only partly reserved.
+5. Given an event that already has two active requests from before this change, then nothing is removed or cancelled automatically. Each request keeps counting towards the readiness checklist (SCRUM-110), and each can still be reserved line by line, because a line counts as reserved only by reservations made for that request (SCRUM-156 AC5, per-line rule).
+6. SCRUM-156 AC5 no longer offers "a second approved request for an event that already has reservations" as a normal case; it keeps covering a request whose lines are only partly reserved. Legacy second requests are reserved under AC5 above.
 
 **Customer basis:** "Can Coordinator add/remove equipment line items anytime before confirmation? Yes, changes allowed; Technical Support Staff re-check suitability." (Week 4 G4). Line changes on one request satisfy this; a second request isn't needed.
 
@@ -36,5 +36,6 @@
 **Change log**
 
 * 2026-10-16 (PO decision): created. Backlog until the team confirms capacity for Sprint 3.
+* 2026-10-21 (for the PO to confirm, no new scope): AC5 states how legacy second requests are counted and reserved instead of citing the SCRUM-156 AC5 case that AC6 withdraws; AC6 points to AC5 for legacy requests.
 
 Functionality Area: Equipment Request Management
