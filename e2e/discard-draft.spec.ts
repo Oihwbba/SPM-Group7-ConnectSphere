@@ -159,12 +159,10 @@ test.describe("SCRUM-130 — Discard a draft request", () => {
       .click();
     await expect(warning).toBeVisible();
 
-    // Updating the start to a future date clears it.
+    // Updating the event date to a future one clears it.
     await page.getByRole("button", { name: "Next", exact: true }).click();
     const nextYear = new Date().getUTCFullYear() + 1;
-    await page
-      .getByLabel("Proposed Start Date & Time *")
-      .fill(`${nextYear}-06-01T10:00`);
+    await page.getByLabel("Event Date *").fill(`${nextYear}-06-01`);
     await expect(warning).toHaveCount(0);
   });
 });

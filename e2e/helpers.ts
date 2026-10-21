@@ -96,3 +96,18 @@ export async function pickDate(
   }
   await page.locator(`[data-date="${day}"]`).click();
 }
+
+/**
+ * SCRUM-190 AC1 — the request form's one event date with a start and an end
+ * time, Singapore time: "2031-11-01", "09:00", "17:00".
+ */
+export async function fillEventSchedule(
+  page: Page,
+  date: string,
+  startTime: string,
+  endTime: string,
+) {
+  await page.getByLabel("Event Date *").fill(date);
+  await page.getByLabel("Start Time *").fill(startTime);
+  await page.getByLabel("End Time *").fill(endTime);
+}
