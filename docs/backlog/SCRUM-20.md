@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-09. Jira is the source of truth.
+     Synced from Jira on 2026-10-21. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-20 - Auto-assign a coordinator to a submitted event
@@ -15,6 +15,8 @@
 | **Jira** | https://smu-spm-group7.atlassian.net/browse/SCRUM-20 |
 
 ---
+
+**Superseded by:** SCRUM-165 (Week 7 change 5). Requests are no longer assigned automatically: they wait in the Lead's Unassigned queue until the Event Coordinator Lead assigns a Coordinator. The criteria below describe Sprint 1 behaviour and are kept for history.
 
 **As ConnectSphere**, I want every submitted event to be assigned a single Event Coordinator automatically, so that every event has one clear internal point of contact without anyone having to claim it.
 
@@ -39,5 +41,9 @@
 * Three automatic-retry criteria were removed: retry when availability changes, idempotent retries, and moving to Under Review exactly once when a Coordinator becomes available. They were not built, and cannot occur in Release 1: Coordinator accounts come only from the seed because account creation is out of scope, so a running system never has zero Coordinators. If account creation is added later, retry should return as its own story.
 
 **INVEST:** Independent (assignment does not depend on review/approval being finished); Negotiable (the fairness mechanism was the team's choice); Valuable (one clear internal point of contact); Estimable and Small; Testable (including the no-Coordinator and simultaneous-submission cases).
+
+**Change log**
+
+* 2026-10-21 (PO approved, after the 20 Oct audit): marked superseded by SCRUM-165. The customer's Week 7 change 5 replaced automatic assignment with the Lead's Unassigned queue; the least-loaded count lives on as the suggestion shown when the Lead assigns (SCRUM-165 AC4). Story stays Done.
 
 Functionality Area: Coordinator Assignment

@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-20. Jira is the source of truth.
+     Synced from Jira on 2026-10-21. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-128 - Decide a change request and apply it in one step
@@ -10,7 +10,7 @@
 | **Epic** | SCRUM-8 - Event Change & Notifications |
 | **Priority** | Highest |
 | **Story points** | 5 |
-| **Status in Jira** | In Review |
+| **Status in Jira** | Done |
 | **Sprint** | SCRUM Sprint 3 |
 | **Jira** | https://smu-spm-group7.atlassian.net/browse/SCRUM-128 |
 
