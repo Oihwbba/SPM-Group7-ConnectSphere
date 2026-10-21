@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-21. Jira is the source of truth.
+     Synced from Jira on 2026-10-22. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-188 - Request a venue for exactly the event's period
@@ -23,8 +23,6 @@
 1. Given I choose an event on the venue request form (SCRUM-50, SCRUM-162), then the period is filled in exactly as the event's start and end, not rounded, and can't be edited.
 2. Given a request whose period isn't exactly the event's, longer or shorter, then it is refused with "The requested period must be the event's: <start> to <end>." and nothing is saved.
 3. Given venue search lists a venue as free for my event (SCRUM-38 AC1, AC2), then requesting it is checked for the same period, so it isn't refused unless something was booked there in between.
-4. Bookings already made keep the periods they were made with, including rounded ones; they are not re-saved or flagged by this change (team decision recorded in ADR 0003 in the repository's docs).
-
 **Supersedes:** SCRUM-50 AC1, "start rounded down and end rounded up to the half hour", and SCRUM-162 AC4, "must cover the event's whole period (a shorter period is refused)", which also allowed a longer period. The readiness checklist rule that an Approved booking covers the event's period (SCRUM-110 AC1, SCRUM-162 AC8) is unchanged; an exact period covers it.
 
 **Related:** SCRUM-38 AC2 fixes the search period to the event's own (change log, 2026-10-10).
@@ -36,6 +34,6 @@
 **Change log**
 
 * 2026-10-16: created from SCRUM-38 development; supersedes SCRUM-50 AC1's rounding.
-* 2026-10-21 (for the PO to approve): Supersedes adds SCRUM-162 AC4, whose "must cover" allowed a longer period; AC2 says longer or shorter periods are refused; AC4 says where ADR 0003 is and that old bookings aren't flagged.
+* 2026-10-21: PO Approved
 
 Functionality Area: Venue Booking Request
