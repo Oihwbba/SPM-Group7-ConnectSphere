@@ -1,6 +1,8 @@
 import { test, expect, type Page } from "@playwright/test";
 import { prisma } from "@/lib/db";
 
+import { fillEventSchedule } from "./helpers";
+
 /**
  * SCRUM-165 — a submitted request waits in the Lead's Unassigned queue until
  * the Lead assigns a Coordinator (replaces SCRUM-20's automatic assignment).
@@ -53,12 +55,7 @@ test.describe("SCRUM-165 — Lead assigns new requests from an unassigned queue"
       .getByLabel("Event Description *")
       .fill("SCRUM-165 end-to-end coverage.");
     await page.getByRole("button", { name: "Next", exact: true }).click();
-    await page
-      .getByLabel("Proposed Start Date & Time *")
-      .fill("2031-11-01T09:00");
-    await page
-      .getByLabel("Proposed End Date & Time *")
-      .fill("2031-11-01T17:00");
+    await fillEventSchedule(page, "2031-11-01", "09:00", "17:00");
     await page.getByLabel("Expected Attendance *").fill("50");
     await page.getByRole("button", { name: "Next", exact: true }).click();
     await page.getByLabel("Venue Requirements *").fill("Any mid-size room.");

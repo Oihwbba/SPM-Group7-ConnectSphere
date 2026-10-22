@@ -29,9 +29,11 @@ import {
 } from "@/lib/schemas/change-request";
 import {
   formatDateTime,
-  sgWallTimeToUtcIso,
-  utcToSgWallTime,
+  joinEventPeriod,
+  splitEventPeriod,
+  type EventPeriodFields,
 } from "@/lib/datetime";
+import { EventPeriodInputs } from "@/components/events/event-period-inputs";
 
 type TextField = Exclude<
   ChangeKey,
@@ -68,8 +70,8 @@ const SEND_FAILED_MESSAGE =
 function draftFrom(event: Event): Draft {
   return {
     ...Object.fromEntries(TEXT_FIELDS.map((f) => [f, event[f] ?? ""])),
-    startAt: utcToSgWallTime(event.startAt),
-    endAt: utcToSgWallTime(event.endAt),
+    // SCRUM-190 AC3: the schedule is one date with a start and an end time.
+    ...splitEventPeriod(event.startAt, event.endAt),
     expectedAttendance: event.expectedAttendance?.toString() ?? "",
     // SCRUM-171: blank on a request made before the question was asked.
     registrationRequired:
@@ -80,9 +82,14 @@ function draftFrom(event: Event): Draft {
 /** Only what was edited, in the shape the action takes. */
 function changesBetween(before: Draft, after: Draft): ChangeRequestChanges {
   const changes: ChangeRequestChanges = {};
-  if (after.startAt !== before.startAt || after.endAt !== before.endAt) {
-    changes.startAt = sgWallTimeToUtcIso(after.startAt) ?? after.startAt;
-    changes.endAt = sgWallTimeToUtcIso(after.endAt) ?? after.endAt;
+  if (
+    (["date", "startTime", "endTime"] as const).some(
+      (key) => after[key] !== before[key],
+    )
+  ) {
+    const period = joinEventPeriod(after as EventPeriodFields);
+    changes.startAt = period.startAt ?? "";
+    changes.endAt = period.endAt ?? "";
   }
   if (after.expectedAttendance !== before.expectedAttendance) {
     changes.expectedAttendance = Number(after.expectedAttendance);
@@ -392,29 +399,13 @@ export function ChangeRequestPanel({ event }: { event: Event }) {
                 {(Object.keys(CHANGEABLE_FIELDS) as ChangeableField[]).map(
                   (field) =>
                     field === "schedule" ? (
-                      <div
+                      <EventPeriodInputs
                         key={field}
-                        className="grid grid-cols-1 gap-2 sm:grid-cols-2"
-                      >
-                        {(["startAt", "endAt"] as const).map((key) => (
-                          <label key={key} className="space-y-1">
-                            <span className="font-medium">
-                              {key === "startAt" ? "Start" : "End"}
-                            </span>
-                            <Input
-                              type="datetime-local"
-                              value={draft[key]}
-                              onChange={(e) => set(key)(e.target.value)}
-                              aria-invalid={Boolean(errors[key])}
-                              aria-describedby={describedBy(key)}
-                            />
-                            <FieldError
-                              id={`change-${key}-error`}
-                              messages={errors[key]}
-                            />
-                          </label>
-                        ))}
-                      </div>
+                        idPrefix="change"
+                        value={draft as EventPeriodFields}
+                        onChange={(key, value) => set(key)(value)}
+                        errors={errors}
+                      />
                     ) : field === "registrationRequired" ? (
                       <fieldset
                         key={field}

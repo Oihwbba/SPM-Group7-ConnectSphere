@@ -1,6 +1,8 @@
 import { test, expect, type Page } from "@playwright/test";
 import { prisma } from "@/lib/db";
 
+import { fillEventSchedule } from "./helpers";
+
 /**
  * End-to-End (E2E) Test Suite for User Story 13: Create an Event Request.
  * Tests full browser interaction from user login, form section navigation, partial draft saving,
@@ -75,10 +77,8 @@ test.describe("User Story 13 — Event Request Creation Journey", () => {
     await page.getByRole("button", { name: "Next", exact: true }).click();
 
     // --- STEP 2: Proposed Schedule & Attendance ---
-    const futureStartDate = "2027-10-15T09:00";
-    const futureEndDate = "2027-10-16T18:00";
-    await page.getByLabel("Proposed Start Date & Time *").fill(futureStartDate);
-    await page.getByLabel("Proposed End Date & Time *").fill(futureEndDate);
+    // SCRUM-190 AC1: one event date with a start and an end time.
+    await fillEventSchedule(page, "2027-10-15", "09:00", "18:00");
     await page.getByLabel("Expected Attendance *").fill("250");
     await page.getByRole("button", { name: "Next", exact: true }).click();
 
@@ -178,8 +178,7 @@ test.describe("User Story 15 — Draft Event Request Lifecycle Journey", () => {
     await page.getByLabel("Event Description *").fill("Detailed description for resumed draft.");
     await page.getByRole("button", { name: "Next", exact: true }).click();
 
-    await page.getByLabel("Proposed Start Date & Time *").fill("2027-11-20T10:00");
-    await page.getByLabel("Proposed End Date & Time *").fill("2027-11-20T18:00");
+    await fillEventSchedule(page, "2027-11-20", "10:00", "18:00");
 
     // Save as draft at Step 2
     await page.getByRole("button", { name: /Save as Draft/i }).click();
@@ -198,8 +197,9 @@ test.describe("User Story 15 — Draft Event Request Lifecycle Journey", () => {
     await page.getByRole("button", { name: "Next", exact: true }).click();
 
     // Verify Singapore wall-time round trip on resumed draft inputs
-    await expect(page.getByLabel("Proposed Start Date & Time *")).toHaveValue("2027-11-20T10:00");
-    await expect(page.getByLabel("Proposed End Date & Time *")).toHaveValue("2027-11-20T18:00");
+    await expect(page.getByLabel("Event Date *")).toHaveValue("2027-11-20");
+    await expect(page.getByLabel("Start Time *")).toHaveValue("10:00");
+    await expect(page.getByLabel("End Time *")).toHaveValue("18:00");
 
     // 6. Complete missing fields across steps
     await page.getByLabel("Expected Attendance *").fill("100");
@@ -220,8 +220,8 @@ test.describe("User Story 15 — Draft Event Request Lifecycle Journey", () => {
 
     // 7. Review and Submit
     await expect(page.getByRole("heading", { name: /Review Entered Details/i })).toBeVisible();
-    await expect(page.getByRole("dialog").getByText(/Start:\s*20 Nov 2027, 10:00 am SGT/i)).toBeVisible();
-    await expect(page.getByRole("dialog").getByText(/End:\s*20 Nov 2027, 6:00 pm SGT/i)).toBeVisible();
+    await expect(page.getByRole("dialog").getByText(/Date:\s*20 Nov 2027/i)).toBeVisible();
+    await expect(page.getByRole("dialog").getByText(/Time:\s*10:00 am SGT – 6:00 pm SGT/i)).toBeVisible();
     await page.getByRole("button", { name: /Submit Request for Review/i }).click();
 
     // 8. Verify event submitted successfully
@@ -304,8 +304,7 @@ test.describe("User Story 16 — Distinguish Drafts from Submitted Requests Jour
     await page.getByLabel("Event Description *").fill("US16 visual distinguishability test description");
     await page.getByRole("button", { name: "Next", exact: true }).click();
 
-    await page.getByLabel("Proposed Start Date & Time *").fill("2027-12-01T09:00");
-    await page.getByLabel("Proposed End Date & Time *").fill("2027-12-01T17:00");
+    await fillEventSchedule(page, "2027-12-01", "09:00", "17:00");
     await page.getByLabel("Expected Attendance *").fill("80");
     await page.getByRole("button", { name: "Next", exact: true }).click();
 
@@ -621,11 +620,10 @@ test.describe("User Story 129, 13 & 84 — Singapore time, unsaved changes and l
     await expect(dialog.getByLabel(/timezone/i)).toHaveCount(0);
 
     // SCRUM-129 AC3: the review step labels the entered times SGT.
-    await page.getByLabel("Proposed Start Date & Time *").fill("2031-11-20T10:00");
-    await page.getByLabel("Proposed End Date & Time *").fill("2031-11-20T18:00");
+    await fillEventSchedule(page, "2031-11-20", "10:00", "18:00");
     await page.getByRole("button", { name: "6. Review" }).click();
-    await expect(dialog.getByText(/Start:\s*20 Nov 2031, 10:00 am SGT/)).toBeVisible();
-    await expect(dialog.getByText(/End:\s*20 Nov 2031, 6:00 pm SGT/)).toBeVisible();
+    await expect(dialog.getByText(/Date:\s*20 Nov 2031/)).toBeVisible();
+    await expect(dialog.getByText(/Time:\s*10:00 am SGT – 6:00 pm SGT/)).toBeVisible();
     await expect(dialog.getByText(/Timezone:/)).toHaveCount(0);
   });
 
@@ -714,8 +712,7 @@ test.describe("User Story 129, 13 & 84 — Singapore time, unsaved changes and l
     await page.getByRole("button", { name: "Next", exact: true }).click();
 
     // AC9: enter a start date clearly in the past.
-    await page.getByLabel("Proposed Start Date & Time *").fill("2020-01-01T10:00");
-    await page.getByLabel("Proposed End Date & Time *").fill("2020-01-01T12:00");
+    await fillEventSchedule(page, "2020-01-01", "10:00", "12:00");
     await page.getByRole("button", { name: "Next", exact: true }).click();
 
     // The step validator should reject the past date and display an inline error.
@@ -727,6 +724,45 @@ test.describe("User Story 129, 13 & 84 — Singapore time, unsaved changes and l
     await expect(
       page.getByRole("heading", { name: /Schedule.*Attendance/i }),
     ).toBeVisible();
+  });
+
+  test("SCRUM-190 [AC1, AC2] TC-190-01, TC-190-04: the form asks for one date with a start and an end time, and an end time not after the start stops it at Step 2", async ({
+    page,
+  }) => {
+    await page.goto("/login");
+    await page.getByLabel("Email", { exact: true }).fill("organiser@test.local");
+    await page.getByLabel("Password", { exact: true }).fill("Password123!");
+    await page.getByRole("button", { name: "Sign in" }).click();
+    await page.waitForURL("**/events");
+
+    await page.getByRole("button", { name: /Create Event Request/i }).first().click();
+    await page.getByLabel("Event Name *").fill("One Day Validation Test");
+    await page.getByRole("button", { name: "Next", exact: true }).click();
+
+    // AC1: one date and two times, not a start and an end date-time.
+    const dialog = page.getByRole("dialog");
+    await expect(dialog.getByLabel("Event Date *")).toHaveAttribute("type", "date");
+    await expect(dialog.getByLabel("Start Time *")).toHaveAttribute("type", "time");
+    await expect(dialog.getByLabel("End Time *")).toHaveAttribute("type", "time");
+    await expect(dialog.locator('input[type="datetime-local"]')).toHaveCount(0);
+
+    // AC2: an end time equal to the start time is not after it.
+    await fillEventSchedule(page, "2031-09-01", "14:00", "14:00");
+    await page.getByRole("button", { name: "Next", exact: true }).click();
+    await expect(
+      dialog.getByText("The end time must be after the start time."),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: /Schedule.*Attendance/i }),
+    ).toBeVisible();
+
+    // One minute later is a valid range, and the form moves on.
+    await page.getByLabel("End Time *").fill("14:01");
+    await expect(
+      dialog.getByText("The end time must be after the start time."),
+    ).toHaveCount(0);
+    await page.getByRole("button", { name: "Next", exact: true }).click();
+    await expect(page.getByLabel("Venue Requirements *")).toBeVisible();
   });
 
   test("SCRUM-84 [AC6/AC9 - Filtered Empty State & Clear Filters]: filtered empty state shows 'No requests match' card with a Clear Filters CTA when search yields no results", async ({
@@ -920,8 +956,7 @@ test.describe("User Story 23 & 24 — Event Status View & Consistency Journey", 
     await organiserPage.getByLabel("Event Description *").fill("Testing live status updates between two concurrent users");
     await organiserPage.getByRole("button", { name: "Next", exact: true }).click();
 
-    await organiserPage.getByLabel("Proposed Start Date & Time *").fill("2027-12-15T09:00");
-    await organiserPage.getByLabel("Proposed End Date & Time *").fill("2027-12-15T18:00");
+    await fillEventSchedule(organiserPage, "2027-12-15", "09:00", "18:00");
     await organiserPage.getByLabel("Expected Attendance *").fill("50");
     await organiserPage.getByRole("button", { name: "Next", exact: true }).click();
 

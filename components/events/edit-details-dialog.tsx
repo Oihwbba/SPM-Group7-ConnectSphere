@@ -17,7 +17,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { sgWallTimeToUtcIso, utcToSgWallTime } from "@/lib/datetime";
+import { EventPeriodInputs } from "@/components/events/event-period-inputs";
+import { joinEventPeriod, splitEventPeriod } from "@/lib/datetime";
 import { LAYOUT_OPTIONS } from "@/lib/schemas/event";
 import type { Arrangement } from "@/lib/reconsideration";
 import {
@@ -37,8 +38,10 @@ type Form = {
   registrationRequired: "" | "yes" | "no";
   programme: string;
   specialRequests: string;
-  start: string;
-  end: string;
+  /** SCRUM-190 AC3: one date with a start and an end time. */
+  date: string;
+  startTime: string;
+  endTime: string;
   expectedAttendance: string;
   venueRequirements: string;
   equipmentRequirements: string;
@@ -60,8 +63,7 @@ function formFrom(event: Event): Form {
           : "",
     programme: event.programme ?? "",
     specialRequests: event.specialRequests ?? "",
-    start: utcToSgWallTime(event.startAt),
-    end: utcToSgWallTime(event.endAt),
+    ...splitEventPeriod(event.startAt, event.endAt),
     expectedAttendance: event.expectedAttendance?.toString() ?? "",
     venueRequirements: event.venueRequirements ?? "",
     equipmentRequirements: event.equipmentRequirements ?? "",
@@ -254,8 +256,8 @@ export function EditDetailsDialog({
           registrationRequired: form.registrationRequired || undefined,
           programme: form.programme,
           specialRequests: form.specialRequests,
-          startAt: sgWallTimeToUtcIso(form.start) ?? "",
-          endAt: sgWallTimeToUtcIso(form.end) ?? "",
+          startAt: joinEventPeriod(form).startAt ?? "",
+          endAt: joinEventPeriod(form).endAt ?? "",
           expectedAttendance: form.expectedAttendance,
           venueRequirements: form.venueRequirements,
           equipmentRequirements: form.equipmentRequirements,
@@ -421,27 +423,13 @@ export function EditDetailsDialog({
                 Singapore time (SGT, UTC+8).
               </p>
               <div className="grid gap-3 sm:grid-cols-3">
-                <div className="space-y-1">
-                  <Label htmlFor="edit-start">Start</Label>
-                  <Input
-                    id="edit-start"
-                    type="datetime-local"
-                    value={form.start}
-                    onChange={(e) => update("start", e.target.value)}
-                    aria-invalid={invalid("startAt")}
+                <div className="sm:col-span-3">
+                  <EventPeriodInputs
+                    idPrefix="edit"
+                    value={form}
+                    onChange={update}
+                    errors={fieldErrors}
                   />
-                  {fieldError("startAt")}
-                </div>
-                <div className="space-y-1">
-                  <Label htmlFor="edit-end">End</Label>
-                  <Input
-                    id="edit-end"
-                    type="datetime-local"
-                    value={form.end}
-                    onChange={(e) => update("end", e.target.value)}
-                    aria-invalid={invalid("endAt")}
-                  />
-                  {fieldError("endAt")}
                 </div>
                 <div className="space-y-1">
                   <Label htmlFor="edit-attendance">Expected attendance</Label>

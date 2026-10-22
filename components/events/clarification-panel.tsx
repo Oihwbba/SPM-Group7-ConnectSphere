@@ -20,7 +20,12 @@ import {
   type ClarifiableField,
   type ClarificationChanges,
 } from "@/lib/schemas/clarification";
-import { sgWallTimeToUtcIso, utcToSgWallTime } from "@/lib/datetime";
+import { EventPeriodInputs } from "@/components/events/event-period-inputs";
+import {
+  joinEventPeriod,
+  splitEventPeriod,
+  type EventPeriodFields,
+} from "@/lib/datetime";
 
 interface ClarificationPanelProps {
   /** The event as currently stored, to pre-fill the fields the answer may change. */
@@ -57,8 +62,8 @@ const TEXT_FIELDS = [
 function draftFrom(event: Event): Draft {
   return {
     ...Object.fromEntries(TEXT_FIELDS.map((f) => [f, event[f] ?? ""])),
-    startAt: utcToSgWallTime(event.startAt),
-    endAt: utcToSgWallTime(event.endAt),
+    // SCRUM-190 AC3: the schedule is one date with a start and an end time.
+    ...splitEventPeriod(event.startAt, event.endAt),
     expectedAttendance: event.expectedAttendance?.toString() ?? "",
   };
 }
@@ -72,9 +77,14 @@ function changesBetween(
   const changes: ClarificationChanges = {};
   for (const field of fields) {
     if (field === "schedule") {
-      if (after.startAt !== before.startAt || after.endAt !== before.endAt) {
-        changes.startAt = sgWallTimeToUtcIso(after.startAt) ?? after.startAt;
-        changes.endAt = sgWallTimeToUtcIso(after.endAt) ?? after.endAt;
+      if (
+        (["date", "startTime", "endTime"] as const).some(
+          (key) => after[key] !== before[key],
+        )
+      ) {
+        const period = joinEventPeriod(after as EventPeriodFields);
+        changes.startAt = period.startAt ?? "";
+        changes.endAt = period.endAt ?? "";
       }
     } else if (field === "expectedAttendance") {
       if (after.expectedAttendance !== before.expectedAttendance) {
@@ -228,31 +238,13 @@ export function ClarificationPanel({
           <div className="space-y-2 pt-1">
             {named.map((field) =>
               field === "schedule" ? (
-                <div
+                <EventPeriodInputs
                   key={field}
-                  className="grid grid-cols-1 gap-2 sm:grid-cols-2"
-                >
-                  {(["startAt", "endAt"] as const).map((key) => (
-                    <label key={key} className="space-y-1">
-                      <span className="font-medium">
-                        {key === "startAt" ? "Start" : "End"}
-                      </span>
-                      <Input
-                        type="datetime-local"
-                        value={draft[key]}
-                        onChange={(e) => set(key)(e.target.value)}
-                        aria-invalid={Boolean(errors[key])}
-                        aria-describedby={
-                          errors[key] ? `clarify-${key}-error` : undefined
-                        }
-                      />
-                      <FieldError
-                        id={`clarify-${key}-error`}
-                        messages={errors[key]}
-                      />
-                    </label>
-                  ))}
-                </div>
+                  idPrefix="clarify"
+                  value={draft as EventPeriodFields}
+                  onChange={(key, value) => set(key)(value)}
+                  errors={errors}
+                />
               ) : (
                 <label key={field} className="block space-y-1">
                   <span className="font-medium">

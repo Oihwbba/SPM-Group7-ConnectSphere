@@ -74,7 +74,7 @@ unless the case says otherwise.
 | Pre-conditions | Signed in as the Organiser, with a draft saved with a name and both dates. |
 | Test Steps | 1. On **My Events**, click **Resume Draft** on the draft's row. <br> 2. Step through the form. |
 | Test Data | Start 20 Nov 2027 10:00, end 20 Nov 2027 18:00 |
-| Expected Result | "Resume Draft Event Request" opens with the saved name, and the dates read 2027-11-20T10:00 and 2027-11-20T18:00. The review step shows "Start: 20 Nov 2027, 10:00 am SGT" and "End: 20 Nov 2027, 6:00 pm SGT". |
+| Expected Result | "Resume Draft Event Request" opens with the saved name, and the schedule reads Event Date 2027-11-20, Start Time 10:00 and End Time 18:00 (SCRUM-190). The review step shows "Date: 20 Nov 2027" and "Time: 10:00 am SGT – 6:00 pm SGT". |
 
 **Automated by:** `tests/unit/events.test.ts` › "SCRUM-15 [AC2 - Happy Path]: retains existing field values when updating an existing draft request", "SCRUM-15 [AC1, AC2 - Data retention]: a new draft saved with both proposed dates persists them as UTC instants"; `e2e/events.spec.ts` › "organiser saves partial draft, locates and resumes draft with preserved fields, then completes and submits"
 

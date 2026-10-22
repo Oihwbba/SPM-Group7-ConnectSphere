@@ -1,7 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import { prisma } from "@/lib/db";
 
-import { usesLocalDatabase } from "./helpers";
+import { fillEventSchedule, usesLocalDatabase } from "./helpers";
 
 /**
  * SCRUM-108 — the Organiser answers a clarification by changing only the
@@ -205,17 +205,13 @@ test.describe("SCRUM-108 — Answer a clarification, or amend and resubmit", () 
     await next.click();
     // Failure path: the amendment is checked like a first submission (AC10),
     // so a start date in the past stops it at this step.
-    const start = page.getByLabel("Proposed Start Date & Time *");
-    const end = page.getByLabel("Proposed End Date & Time *");
-    await start.fill("2020-01-01T10:00");
-    await end.fill("2020-01-01T12:00");
+    await fillEventSchedule(page, "2020-01-01", "10:00", "12:00");
     await next.click();
     await expect(
       page.getByText("Proposed date cannot be in the past."),
     ).toBeVisible();
     // Back to the request's own dates (10:00–18:00 SGT on 1 Aug 2031).
-    await start.fill("2031-08-01T10:00");
-    await end.fill("2031-08-01T18:00");
+    await fillEventSchedule(page, "2031-08-01", "10:00", "18:00");
     await next.click();
     await page
       .getByLabel("Venue Requirements *")
