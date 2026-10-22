@@ -1,5 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 import { prisma } from "@/lib/db";
+import { selectFrom, optionsOf, openEquipmentRequest, openReview } from "./helpers";
 
 /**
  * SCRUM-28 — Review and Update Equipment Request. Technical Support reviews a
@@ -76,8 +77,6 @@ async function makeRig(label: string) {
   return event;
 }
 
-const card = (page: Page, name: string) =>
-  page.getByTestId("review-request").filter({ hasText: name });
 
 test.describe("SCRUM-28 — Review and Update Equipment Request", () => {
   test.skip(
@@ -98,7 +97,7 @@ test.describe("SCRUM-28 — Review and Update Equipment Request", () => {
     const rig = await makeRig("details");
     await openRequests(page, "techsupport@test.local");
 
-    const request = card(page, rig.name);
+    const request = await openReview(page, rig.name);
     await expect(request.getByTestId("request-status")).toHaveText(
       "Pending Review",
     );
@@ -124,12 +123,12 @@ test.describe("SCRUM-28 — Review and Update Equipment Request", () => {
     );
   });
 
-  test("SCRUM-28 [AC2, AC3, AC5, AC6] TC-28-02, TC-28-03, TC-28-09, TC-28-10: reviewing then approving updates the status, notifies the coordinator and logs each change", async ({
+  test("SCRUM-28 [AC2, AC3, AC5, AC6] TC-28-02, TC-28-03, TC-28-09, TC-28-10, SCRUM-207 TC-207-24: reviewing then approving updates the status, notifies the coordinator and logs each change", async ({
     page,
   }) => {
     const rig = await makeRig("approve");
     await openRequests(page, "techsupport@test.local");
-    const request = card(page, rig.name);
+    const request = await openReview(page, rig.name);
 
     await request.getByRole("button", { name: "Start review" }).click();
     await expect(
@@ -145,13 +144,15 @@ test.describe("SCRUM-28 — Review and Update Equipment Request", () => {
       page.getByText("Request approved. The coordinator has been notified."),
     ).toBeVisible();
 
+    await expect(request.getByTestId("request-status")).toHaveText("Approved");
+    await page.keyboard.press("Escape");
     await page.getByRole("button", { name: /^Decided/ }).click();
-    const decided = card(page, rig.name);
+    const decided = await openReview(page, rig.name);
     await expect(decided.getByTestId("request-status")).toHaveText("Approved");
-    await decided.getByText(/^History/).click();
+    await decided.getByRole("tab", { name: /^History/ }).click();
     await expect(decided.getByTestId("history-entry")).toHaveText([
       /Submitted as Pending Review\s*Request submitted\./,
-      /by Theo Tech\s*Pending Review → In Review/,
+      /Pending Review → In Review.*by Theo Tech/,
       /In Review → Approved\s*Lecterns swapped for laptops\./,
     ]);
 
@@ -171,7 +172,7 @@ test.describe("SCRUM-28 — Review and Update Equipment Request", () => {
   }) => {
     const rig = await makeRig("reject");
     await openRequests(page, "techsupport@test.local");
-    const request = card(page, rig.name);
+    const request = await openReview(page, rig.name);
     await request.getByRole("button", { name: "Start review" }).click();
     await expect(request.getByTestId("request-status")).toHaveText("In Review");
 
@@ -211,7 +212,7 @@ test.describe("SCRUM-28 — Review and Update Equipment Request", () => {
   }) => {
     const rig = await makeRig("reason-visible");
     await openRequests(page, "techsupport@test.local");
-    const request = card(page, rig.name);
+    const request = await openReview(page, rig.name);
     await request.getByRole("button", { name: "Start review" }).click();
     await expect(request.getByTestId("request-status")).toHaveText("In Review");
     await request
@@ -227,17 +228,18 @@ test.describe("SCRUM-28 — Review and Update Equipment Request", () => {
       .getByTestId("equipment-request")
       .filter({ hasText: rig.name });
     await expect(mine.getByTestId("request-status")).toHaveText("Rejected");
-    await expect(mine.getByTestId("rejection-reason")).toContainText(
+    const rejected = await openEquipmentRequest(page, rig.name);
+    await expect(rejected.getByTestId("rejection-reason")).toContainText(
       "Not enough lecterns that day.",
     );
   });
 
-  test("SCRUM-28 [AC4, AC5, AC6] TC-28-07, TC-28-09, TC-28-10: an unavailable line gets an alternative, and the coordinator sees it and the history", async ({
+  test("SCRUM-28 [AC4, AC5, AC6] TC-28-07, TC-28-09, TC-28-10, SCRUM-207 TC-207-24: an unavailable line gets an alternative, and the coordinator sees it and the history", async ({
     page,
   }) => {
     const rig = await makeRig("suggest");
     await openRequests(page, "techsupport@test.local");
-    const request = card(page, rig.name);
+    const request = await openReview(page, rig.name);
 
     // Only offered once the request is in review.
     await expect(
@@ -250,10 +252,10 @@ test.describe("SCRUM-28 — Review and Update Equipment Request", () => {
       .getByTestId("request-line")
       .filter({ hasText: "Lectern" });
     const choices = lectern.getByLabel("Suggest instead of Lectern");
-    await expect(choices.locator("option", { hasText: "Lectern" })).toHaveCount(
-      0,
-    );
-    await choices.selectOption("eqp_laptop");
+    expect(
+      (await optionsOf(choices)).some((o) => o.label.includes("Lectern")),
+    ).toBe(false);
+    await selectFrom(choices, "eqp_laptop");
     await lectern.getByRole("button", { name: "Suggest" }).click();
 
     await expect(
@@ -284,16 +286,17 @@ test.describe("SCRUM-28 — Review and Update Equipment Request", () => {
       .getByTestId("equipment-request")
       .filter({ hasText: rig.name });
     await expect(mine.getByTestId("request-status")).toHaveText("In Review");
-    await expect(mine.getByTestId("suggested-alternative")).toHaveText(
+    const details = await openEquipmentRequest(page, rig.name);
+    await expect(details.getByTestId("suggested-alternative")).toHaveText(
       "Suggested instead: Laptop",
     );
-    await mine.getByText(/^History/).click();
-    await expect(mine.getByTestId("history-entry").last()).toContainText(
+    await details.getByRole("tab", { name: /History/ }).click();
+    await expect(details.getByTestId("history-entry").last()).toContainText(
       "Suggested Laptop instead of Lectern (only 4 of 4 free).",
     );
     // A coordinator follows the request; they cannot review it.
     await expect(
-      mine.getByRole("button", { name: "Start review" }),
+      details.getByRole("button", { name: "Start review" }),
     ).toHaveCount(0);
   });
 

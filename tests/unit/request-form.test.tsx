@@ -99,9 +99,11 @@ describe("RequestForm — SCRUM-50", () => {
         new RegExp(`<input[^>]*id="${id}"[^>]*readOnly`, "i"),
       );
     }
+    // The times are picked with the app's date and time picker, enabled.
     for (const id of ["start", "end"]) {
-      expect(html).toMatch(
-        new RegExp(`<input[^>]*type="datetime-local"[^>]*id="${id}"`, "i"),
+      expect(html).toMatch(new RegExp(`<button[^>]*id="${id}"`, "i"));
+      expect(html).not.toMatch(
+        new RegExp(`<button[^>]*id="${id}"[^>]* disabled=""`, "i"),
       );
     }
     expect(html).toMatch(/<input[^>]*type="number"[^>]*id="attendance"[^>]*min="1"[^>]*step="1"/);

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import { PersonPill } from "@/components/app/audit-trail";
 import { getEventCoordinator } from "@/app/(app)/events/readiness-actions";
 
 /**
@@ -28,7 +29,9 @@ export function CurrentCoordinator({ eventId }: { eventId: string }) {
   return (
     <div data-testid="current-coordinator">
       <span className="font-semibold text-muted-foreground">Coordinator:</span>
-      <p className="mt-0.5 text-foreground">{name ?? "Not assigned yet"}</p>
+      <p className="mt-0.5 text-foreground">
+        {name ? <PersonPill name={name} /> : "Not assigned yet"}
+      </p>
     </div>
   );
 }

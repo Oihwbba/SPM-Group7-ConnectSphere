@@ -66,7 +66,11 @@ describe("role-based navigation — SCRUM-66", () => {
   // SCRUM-34 AC2: Venues is every internal role's last link, so granting it
   // moved nobody's landing page.
   it("SCRUM-34 [AC2] TC-34-02: every internal role has Venues last, and lands where it did before", () => {
-    for (const role of ["COORDINATOR", "VENUE_STAFF", "TECH_SUPPORT"] as const) {
+    for (const role of [
+      "COORDINATOR",
+      "VENUE_STAFF",
+      "TECH_SUPPORT",
+    ] as const) {
       expect(hrefsFor(role).at(-1)).toBe("/venues");
     }
     expect(LANDING_ROUTE_BY_ROLE.COORDINATOR).toBe("/events");
@@ -108,7 +112,6 @@ describe("navigation derives from the permission model — SCRUM-66", () => {
     { href: "/safety-checks", actions: ["safety-check:review"] },
     { href: "/queue", actions: ["event:assign"] },
     { href: "/all-events", actions: ["event:view-all"] },
-    { href: "/notifications", actions: ["notification:read"] },
   ];
 
   it("shows a link only to a role that holds the action behind it", () => {
@@ -146,10 +149,10 @@ describe("navigation derives from the permission model — SCRUM-66", () => {
     }
   });
 
-  it("gives every role its notifications, the one link every role holds", () => {
+  it("SCRUM-207 TC-207-15: gives every role its notifications from the bell, not from the menu", () => {
     for (const role of ROLES) {
       expect(roleAllows(role, "notification:read")).toBe(true);
-      expect(hrefsFor(role)).toContain("/notifications");
+      expect(hrefsFor(role)).not.toContain("/notifications");
     }
   });
 });
@@ -200,7 +203,7 @@ describe("navigation for the Week 7 roles — SCRUM-172", () => {
     expect(hrefsFor("COORDINATOR_LEAD")).toEqual([
       "/queue",
       "/all-events",
-      "/notifications",
+
       "/venues",
     ]);
     expect(LANDING_ROUTE_BY_ROLE.COORDINATOR_LEAD).toBe("/queue");
@@ -209,7 +212,7 @@ describe("navigation for the Week 7 roles — SCRUM-172", () => {
   // SCRUM-166 gave the Safety Officer their own page, which comes first.
   it("SCRUM-172 [AC1] TC-172-01, SCRUM-166 [AC1] TC-166-03: SAFETY_OFFICER is labelled and lands on the safety check queue", () => {
     expect(ROLE_LABEL.SAFETY_OFFICER).toBe("Safety Officer");
-    expect(hrefsFor("SAFETY_OFFICER")).toEqual(["/safety-checks", "/notifications", "/venues"]);
+    expect(hrefsFor("SAFETY_OFFICER")).toEqual(["/safety-checks", "/venues"]);
     expect(LANDING_ROUTE_BY_ROLE.SAFETY_OFFICER).toBe("/safety-checks");
   });
 });

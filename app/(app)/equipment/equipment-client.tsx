@@ -2,9 +2,6 @@
 
 import { useEffect, useRef, useState, useTransition, useSyncExternalStore } from "react";
 import {
-  Calendar,
-  Clock,
-  ChevronDown,
   ArrowRight,
   Minus,
   Plus,
@@ -26,6 +23,8 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { AppSelect } from "@/components/app/app-select";
+import { DateTimePicker } from "@/components/app/date-time-picker";
 import { getAllEquipmentAvailability } from "./actions";
 import { ReserveRequestCard } from "./reserve-request-card";
 import {
@@ -37,12 +36,9 @@ import { allAvailabilitySchema } from "@/lib/schemas/reservation";
 import type { ReservableRequest } from "@/lib/equipment/request-queries";
 import { checkQuantity } from "@/lib/equipment/availability";
 import {
-  formatDate,
   formatDateTime,
-  formatTime,
   parseSingaporeDateTime,
   sgWallTimeToUtcIso,
-  utcToSgWallTime,
 } from "@/lib/datetime";
 
 type Equipment = { id: string; type: string; totalQuantity: number };
@@ -53,28 +49,6 @@ const emptySubscribe = () => () => {};
 /** Convert naive Singapore local datetime string into UTC ISO string. */
 function toUtcIso(localValue: string): string {
   return sgWallTimeToUtcIso(localValue) ?? localValue;
-}
-
-function formatDateDisplay(isoString: string): string {
-  if (!isoString) return "Select date";
-  const dateOnly = isoString.includes("T") ? isoString.split("T")[0] : isoString;
-  if (!dateOnly) return "Select date";
-  const [y, m, d] = dateOnly.split("-").map((n) => parseInt(n, 10));
-  if (!y || !m || !d) return "Select date";
-  const dateObj = new Date(Date.UTC(y, m - 1, d, 4, 0, 0));
-  return formatDate(dateObj);
-}
-
-function formatTimeDisplay(isoString: string): string {
-  if (!isoString || !isoString.includes("T")) return "Select time";
-  const timeOnly = isoString.split("T")[1]?.slice(0, 5);
-  if (!timeOnly) return "Select time";
-  const [hStr, mStr] = timeOnly.split(":");
-  const h = parseInt(hStr, 10);
-  const m = parseInt(mStr, 10);
-  if (Number.isNaN(h) || Number.isNaN(m)) return "Select time";
-  const dateObj = new Date(Date.UTC(2020, 0, 1, h - 8, m, 0));
-  return formatTime(dateObj);
 }
 
 function getDurationDisplay(startAt: string, endAt: string) {
@@ -287,46 +261,6 @@ export function EquipmentClient({
       ? { startAt: periodStart, endAt: periodEnd }
       : null;
 
-  const startDate =
-    form.startAt && !form.startAt.startsWith("T")
-      ? form.startAt.split("T")[0]
-      : "";
-  const startTime =
-    form.startAt && form.startAt.includes("T")
-      ? form.startAt.split("T")[1].slice(0, 5)
-      : "";
-  const endDate =
-    form.endAt && !form.endAt.startsWith("T")
-      ? form.endAt.split("T")[0]
-      : "";
-  const endTime =
-    form.endAt && form.endAt.includes("T")
-      ? form.endAt.split("T")[1].slice(0, 5)
-      : "";
-
-  const updateStartPart = (field: "date" | "time", val: string, currentStart: string) => {
-    const curDate = currentStart && !currentStart.startsWith("T") ? currentStart.split("T")[0] : "";
-    const curTime = currentStart && currentStart.includes("T") ? currentStart.split("T")[1].slice(0, 5) : "";
-    if (field === "date") {
-      if (!val) return curTime ? `T${curTime}` : "";
-      return curTime ? `${val}T${curTime}` : val;
-    }
-    if (!val) return curDate;
-    return curDate ? `${curDate}T${val}` : `T${val}`;
-  };
-
-  const updateEndPart = (field: "date" | "time", val: string, currentEnd: string) => {
-    const curDate = currentEnd && !currentEnd.startsWith("T") ? currentEnd.split("T")[0] : "";
-    const curTime = currentEnd && currentEnd.includes("T") ? currentEnd.split("T")[1].slice(0, 5) : "";
-    if (field === "date") {
-      if (!val) return curTime ? `T${curTime}` : "";
-      return curTime ? `${val}T${curTime}` : val;
-    }
-    if (!val) return curDate;
-    return curDate ? `${curDate}T${val}` : `T${val}`;
-  };
-
-  const [sgToday, sgNowTime] = utcToSgWallTime(new Date()).split("T");
 
   const reqQty = parseInt(form.quantity || "1", 10);
   const isQuantityValid = !Number.isNaN(reqQty) && reqQty > 0;
@@ -390,27 +324,20 @@ export function EquipmentClient({
         <CardContent className="space-y-6 pt-2">
           <div className="space-y-2 sm:max-w-md">
             <Label htmlFor="equipment" className="text-sm font-semibold">Equipment type</Label>
-            <select
+            <AppSelect
               id="equipment"
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
               value={form.equipmentId}
-              onChange={(e) => update("equipmentId", e.target.value)}
-            >
-              <option value="">Select equipment</option>
-              {equipment.map((item) => {
+              placeholder="Select equipment"
+              onValueChange={(value) => update("equipmentId", value)}
+              options={equipment.map((item) => {
                 const liveCount = allAvailability?.[item.id]?.available;
                 const statusSuffix =
                   liveCount !== undefined
                     ? ` — ${liveCount} of ${item.totalQuantity} available`
                     : ` (${item.totalQuantity} total)`;
-                return (
-                  <option key={item.id} value={item.id}>
-                    {item.type}
-                    {statusSuffix}
-                  </option>
-                );
+                return { value: item.id, label: `${item.type}${statusSuffix}` };
               })}
-            </select>
+            />
           </div>
 
           {/* The period, with separate Date & Time visual bars */}
@@ -425,57 +352,15 @@ export function EquipmentClient({
             <div className="flex flex-col md:flex-row md:items-start gap-4 pt-1">
               {/* Start Controls */}
               <div className="space-y-1.5 flex-1 max-w-sm">
-                <Label htmlFor="startDate" className="text-xs font-medium text-muted-foreground">
+                <Label htmlFor="start" className="text-xs font-medium text-muted-foreground">
                   Start
                 </Label>
-                <div className="relative flex items-center gap-2">
-                  {/* Visual & Interactive Date Box */}
-                  <div className="relative flex-1 flex items-center gap-2 h-10 px-3 rounded-lg border bg-background text-sm shadow-2xs hover:border-primary/50 focus-within:border-primary focus-within:ring-2 focus-within:ring-ring transition-colors">
-                    <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
-                    <span className={`truncate ${startDate ? "text-foreground font-medium" : "text-muted-foreground"}`}>
-                      {formatDateDisplay(form.startAt)}
-                    </span>
-                    <input
-                      id="startDate"
-                      type="date"
-                      aria-label="Start date"
-                      value={startDate}
-                      min={sgToday}
-                      onChange={(e) => update("startAt", updateStartPart("date", e.target.value, form.startAt))}
-                      onClick={(e) => {
-                        try {
-                          e.currentTarget.showPicker();
-                        } catch {}
-                      }}
-                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:cursor-pointer"
-                    />
-                  </div>
-
-                  {/* Visual & Interactive Time Box */}
-                  <div className="relative flex-1 flex items-center justify-between h-10 px-3 rounded-lg border bg-background text-sm shadow-2xs hover:border-primary/50 focus-within:border-primary focus-within:ring-2 focus-within:ring-ring transition-colors">
-                    <div className="flex items-center gap-2 overflow-hidden">
-                      <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
-                      <span className={`truncate ${startTime ? "text-foreground font-medium" : "text-muted-foreground"}`}>
-                        {formatTimeDisplay(form.startAt)}
-                      </span>
-                    </div>
-                    <ChevronDown className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                    <input
-                      id="startTime"
-                      type="time"
-                      aria-label="Start time"
-                      value={startTime}
-                      min={startDate === sgToday ? sgNowTime : undefined}
-                      onChange={(e) => update("startAt", updateStartPart("time", e.target.value, form.startAt))}
-                      onClick={(e) => {
-                        try {
-                          e.currentTarget.showPicker();
-                        } catch {}
-                      }}
-                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:cursor-pointer"
-                    />
-                  </div>
-                </div>
+                <DateTimePicker
+                  id="start"
+                  value={form.startAt}
+                  onChange={(value) => update("startAt", value)}
+                  aria-invalid={Boolean(fieldErrors.startAt?.[0])}
+                />
                 <div className="min-h-[1.25rem]">
                   {fieldErrors.startAt?.[0] && (
                     <p className="text-xs text-destructive">{fieldErrors.startAt[0]}</p>
@@ -489,57 +374,16 @@ export function EquipmentClient({
 
               {/* End Controls */}
               <div className="space-y-1.5 flex-1 max-w-sm">
-                <Label htmlFor="endDate" className="text-xs font-medium text-muted-foreground">
+                <Label htmlFor="end" className="text-xs font-medium text-muted-foreground">
                   End
                 </Label>
-                <div className="relative flex items-center gap-2">
-                  {/* Visual & Interactive Date Box */}
-                  <div className="relative flex-1 flex items-center gap-2 h-10 px-3 rounded-lg border bg-background text-sm shadow-2xs hover:border-primary/50 focus-within:border-primary focus-within:ring-2 focus-within:ring-ring transition-colors">
-                    <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
-                    <span className={`truncate ${endDate ? "text-foreground font-medium" : "text-muted-foreground"}`}>
-                      {formatDateDisplay(form.endAt)}
-                    </span>
-                    <input
-                      id="endDate"
-                      type="date"
-                      aria-label="End date"
-                      value={endDate}
-                      min={startDate || sgToday}
-                      onChange={(e) => update("endAt", updateEndPart("date", e.target.value, form.endAt))}
-                      onClick={(e) => {
-                        try {
-                          e.currentTarget.showPicker();
-                        } catch {}
-                      }}
-                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:cursor-pointer"
-                    />
-                  </div>
-
-                  {/* Visual & Interactive Time Box */}
-                  <div className="relative flex-1 flex items-center justify-between h-10 px-3 rounded-lg border bg-background text-sm shadow-2xs hover:border-primary/50 focus-within:border-primary focus-within:ring-2 focus-within:ring-ring transition-colors">
-                    <div className="flex items-center gap-2 overflow-hidden">
-                      <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
-                      <span className={`truncate ${endTime ? "text-foreground font-medium" : "text-muted-foreground"}`}>
-                        {formatTimeDisplay(form.endAt)}
-                      </span>
-                    </div>
-                    <ChevronDown className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                    <input
-                      id="endTime"
-                      type="time"
-                      aria-label="End time"
-                      value={endTime}
-                      min={endDate === startDate && startTime ? startTime : undefined}
-                      onChange={(e) => update("endAt", updateEndPart("time", e.target.value, form.endAt))}
-                      onClick={(e) => {
-                        try {
-                          e.currentTarget.showPicker();
-                        } catch {}
-                      }}
-                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:cursor-pointer"
-                    />
-                  </div>
-                </div>
+                <DateTimePicker
+                  id="end"
+                  value={form.endAt}
+                  openOn={form.startAt.split("T")[0] || undefined}
+                  onChange={(value) => update("endAt", value)}
+                  aria-invalid={Boolean(fieldErrors.endAt?.[0])}
+                />
                 <div className="min-h-[1.25rem]">
                   {fieldErrors.endAt?.[0] && (
                     <p className="text-xs text-destructive">{fieldErrors.endAt[0]}</p>

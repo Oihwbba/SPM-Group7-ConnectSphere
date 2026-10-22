@@ -1,7 +1,7 @@
 import { test, expect, type Page, type Route } from "@playwright/test";
 import { prisma } from "@/lib/db";
 
-import { signedIn, usesLocalDatabase } from "./helpers";
+import { signedIn, usesLocalDatabase, pickOptions, openBooking, openReview } from "./helpers";
 
 /**
  * SCRUM-25 — editing an event's details and adding operational notes in a
@@ -221,7 +221,8 @@ test.describe("SCRUM-25 — update routine event information during planning", (
       where: { eventId },
       select: { id: true },
     });
-    const card = staff.getByTestId(`booking-${booking.id}`);
+    const card = await openBooking(staff, { id: booking.id });
+    await card.getByRole("tab", { name: "Operational notes" }).click();
     const staffNotes = card.getByTestId("operational-notes");
     await staffNotes.getByLabel("Add a note").fill("Banquet tables confirmed for 120.");
     await staffNotes.getByRole("button", { name: "Add note" }).click();
@@ -253,9 +254,9 @@ test.describe("SCRUM-25 — update routine event information during planning", (
 
     const tech = await signedIn(browser, "techsupport@test.local");
     await tech.goto("/equipment-requests");
-    const notes = tech
-      .locator(`#request-${requestId}`)
-      .getByTestId("operational-notes");
+    const notes = (await openReview(tech, { id: requestId })).getByTestId(
+      "operational-notes",
+    );
     // The notes the Coordinator and Venue Staff added show here too.
     await expect(notes.getByText("Auction items arrive at 17:00.")).toBeVisible();
     await notes.getByLabel("Add a note").fill("Projector tested with the venue HDMI.");
@@ -429,7 +430,7 @@ test.describe("SCRUM-25 — with the safety check and registration control", () 
 
     await details.getByRole("button", { name: "Edit details" }).click();
     const edit = coordinator.getByRole("dialog", { name: `Edit ${name}` });
-    await edit.getByLabel("Preferred room layout").fill("Classroom");
+    await pickOptions(edit.getByLabel("Preferred room layout"), ["Classroom"]);
     await edit.getByRole("button", { name: "Save details" }).click();
     await expect(
       coordinator.getByText(

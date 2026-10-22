@@ -1,7 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import { prisma } from "@/lib/db";
 
-import { choose, signedIn, usesLocalDatabase } from "./helpers";
+import { choose, signedIn, usesLocalDatabase, pickDateTime, openBooking } from "./helpers";
 
 /**
  * SCRUM-50 / 52 / 53 — the venue booking journey in a real browser: a
@@ -143,7 +143,7 @@ test.describe("SCRUM-50 / 52 / 53 — venue booking request, review and decision
     });
   });
 
-  test("SCRUM-50 [AC2], SCRUM-52 [AC1-AC3], SCRUM-53 [AC1, AC4]: a coordinator requests, staff approve, and the venue becomes unavailable", async ({
+  test("SCRUM-50 [AC2], SCRUM-52 [AC1-AC3], SCRUM-53 [AC1, AC4], SCRUM-207 [AC3, AC4] TC-207-06, TC-207-08: a coordinator requests, staff approve, and the venue becomes unavailable", async ({
     browser,
   }, testInfo) => {
     const tag = `e2e-journey-${testInfo.retry}`;
@@ -168,8 +168,9 @@ test.describe("SCRUM-50 / 52 / 53 — venue booking request, review and decision
     // SCRUM-52 — staff see it with what they need to decide.
     const staff = await signedIn(browser, "venuestaff@test.local");
     await staff.goto("/bookings");
-    const card = staff.getByTestId(/^booking-/).filter({ hasText: tag });
-    await expect(card).toHaveCount(1);
+    // Change 13: the queue is a table; the request opens in its details.
+    const card = await openBooking(staff, eventName("morning"));
+    await expect(card).toContainText(tag);
     await expect(card).toContainText("Exhibition Hall");
     await expect(card).toContainText(
       "10 Mar 2035, 9:00 am SGT to 10 Mar 2035, 1:00 pm SGT",
@@ -181,9 +182,12 @@ test.describe("SCRUM-50 / 52 / 53 — venue booking request, review and decision
 
     // SCRUM-53 AC1 — approve.
     await card.getByRole("button", { name: "Approve" }).click();
-    await expect(
-      staff.getByText(/^Approved: Exhibition Hall is now booked/),
-    ).toBeVisible();
+    // Approving shows a tick and a way to the event.
+    const approved = staff.getByTestId("venue-approved");
+    await expect(approved).toContainText(
+      /Approved: Exhibition Hall is now booked/,
+    );
+    await expect(approved.getByRole("button", { name: "View event" })).toBeVisible();
     await expect(card).toHaveCount(0);
 
     // SCRUM-53 AC4 / SCRUM-50 AC3 — an event overlapping that period now
@@ -229,8 +233,8 @@ test.describe("SCRUM-50 / 52 / 53 — venue booking request, review and decision
     const start = coordinator.getByLabel("Start", { exact: true });
     const end = coordinator.getByLabel("End", { exact: true });
     const attendance = coordinator.getByLabel("Expected attendance");
-    await expect(start).toHaveValue("2035-03-10T09:00");
-    await expect(end).toHaveValue("2035-03-10T13:00");
+    await expect(start).toHaveAttribute("data-value", "2035-03-10T09:00");
+    await expect(end).toHaveAttribute("data-value", "2035-03-10T13:00");
     await expect(attendance).toHaveValue("120");
     // Its preferred layout, stored as "Theatre", is shown but not pre-selected:
     // the Coordinator chooses the layout (SCRUM-170 AC2).
@@ -245,13 +249,13 @@ test.describe("SCRUM-50 / 52 / 53 — venue booking request, review and decision
     await expect(submit).toBeEnabled();
 
     // A period that ends before the event does is refused (TC-162-06).
-    await end.fill("2035-03-10T12:30");
+    await pickDateTime(end, "2035-03-10T12:30");
     await expect(coordinator.getByTestId("short-period")).toContainText(
       "must cover the event's whole period",
     );
     await expect(submit).toBeDisabled();
     // Longer than the event is fine (TC-162-05).
-    await end.fill("2035-03-10T14:00");
+    await pickDateTime(end, "2035-03-10T14:00");
     await expect(coordinator.getByTestId("short-period")).toHaveCount(0);
 
     // Part of the event's attendance, for a breakout room, is fine; more is
@@ -372,15 +376,14 @@ test.describe("SCRUM-50 / 52 / 53 — venue booking request, review and decision
 
     const staff = await signedIn(browser, "venuestaff@test.local");
     await staff.goto("/bookings");
-    const card = staff.getByTestId(/^booking-/).filter({ hasText: tag });
-
     // SCRUM-52 — search narrows the queue to matching requests.
     const search = staff.getByLabel("Search pending requests");
     await search.fill("no-such-request-anywhere");
     await expect(staff.getByText(/^No requests match/)).toBeVisible();
     await search.fill(tag);
-    await expect(staff.getByTestId(/^booking-/)).toHaveCount(1);
-    await expect(card).toHaveCount(1);
+    await expect(staff.getByTestId("queue-row")).toHaveCount(1);
+    const card = await openBooking(staff, eventName("rejected"));
+    await expect(card).toContainText(tag);
 
     await card.getByRole("button", { name: "Reject" }).click();
 

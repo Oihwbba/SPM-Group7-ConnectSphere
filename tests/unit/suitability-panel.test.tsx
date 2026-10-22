@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 
 import { SuitabilityPanel } from "@/app/(app)/bookings/new/suitability-panel";
-import { BookingQueue } from "@/app/(app)/bookings/booking-queue";
+import { BookingDetails } from "@/app/(app)/bookings/booking-queue";
 import type { PendingBookingRow } from "@/app/(app)/bookings/queries";
 
 // SCRUM-40 AC5, AC6, AC8–AC10 — what the request form and the review queue
@@ -113,7 +113,7 @@ describe("SuitabilityPanel — SCRUM-40", () => {
   });
 });
 
-describe("BookingQueue — SCRUM-40 AC10", () => {
+describe("a request's details in the queue — SCRUM-40 AC10", () => {
   const row: PendingBookingRow = {
     id: "bkg_1",
     status: "PENDING",
@@ -159,9 +159,8 @@ describe("BookingQueue — SCRUM-40 AC10", () => {
 
   it("SCRUM-40 [AC10] TC-40-11: Venue Staff see the Coordinator's judgement and note on the request", () => {
     const html = renderToStaticMarkup(
-      <BookingQueue
-        queue={[
-          {
+      <BookingDetails
+        booking={{
             ...row,
             judgement: {
               eventId: "evt_1",
@@ -171,8 +170,7 @@ describe("BookingQueue — SCRUM-40 AC10", () => {
               recordedAt: new Date("2035-01-02T02:00:00Z"),
               recordedByName: "Cody Coordinator",
             },
-          },
-        ]}
+          }}
         canDecide
       />,
     );
@@ -183,7 +181,7 @@ describe("BookingQueue — SCRUM-40 AC10", () => {
   });
 
   it("SCRUM-40 [AC10] TC-40-11: without a judgement it says none was recorded, and the accessibility needed is shown", () => {
-    const html = renderToStaticMarkup(<BookingQueue queue={[row]} canDecide />);
+    const html = renderToStaticMarkup(<BookingDetails booking={row} canDecide />);
 
     expect(html).toContain("None recorded");
     expect(html).toContain("Accessibility needed");
