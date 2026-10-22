@@ -214,7 +214,7 @@ export function NewRequestDialog({
         }
         if (result.data.existing) {
           toast.info(
-            "This event already has a request waiting for review, so no new one was made. It's highlighted below.",
+            "This event already has an equipment request, so no new one was made. It's highlighted below: use Change lines on it to add or change equipment.",
           );
         } else {
           toast.success("Request submitted. It's now Pending Review.");
