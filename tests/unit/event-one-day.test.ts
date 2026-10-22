@@ -152,19 +152,19 @@ const edit = {
 
 // AC3: the same rule wherever an event's date or time is set after the form.
 describe.each([
-  { path: "submitting (SCRUM-14)", schema: submitEventRequestSchema, base: submission },
-  { path: "saving a draft (SCRUM-15)", schema: createDraftEventSchema, base: { name: "Draft" } },
-  { path: "a clarification answer (SCRUM-108)", schema: clarificationChangesSchema, base: {} },
-  { path: "a change request (SCRUM-41 AC4)", schema: changeRequestChangesSchema, base: {} },
-  { path: "the Coordinator's edit (SCRUM-25 AC3)", schema: eventDetailsEditSchema, base: edit },
-])("$path — SCRUM-190 AC3", ({ path, schema, base }) => {
+  { tc: "TC-190-06", path: "submitting (SCRUM-14)", schema: submitEventRequestSchema, base: submission },
+  { tc: "TC-190-10", path: "saving a draft (SCRUM-15)", schema: createDraftEventSchema, base: { name: "Draft" } },
+  { tc: "TC-190-07", path: "a clarification answer (SCRUM-108)", schema: clarificationChangesSchema, base: {} },
+  { tc: "TC-190-08", path: "a change request (SCRUM-41 AC4)", schema: changeRequestChangesSchema, base: {} },
+  { tc: "TC-190-09", path: "the Coordinator's edit (SCRUM-25 AC3)", schema: eventDetailsEditSchema, base: edit },
+])("$path — SCRUM-190 AC3", ({ tc, path, schema, base }) => {
   const period = (startAt: Date, endAt: Date) => ({
     ...base,
     startAt: startAt.toISOString(),
     endAt: endAt.toISOString(),
   });
 
-  it(`SCRUM-190 [AC3] TC-190-06: ${path} refuses an event running into the next day`, () => {
+  it(`SCRUM-190 [AC3] ${tc}: ${path} refuses an event running into the next day`, () => {
     expect(endErrors(schema, period(NINE_AM, FIVE_PM_NEXT_DAY))).toEqual([NOT_ONE_DAY]);
   });
 
