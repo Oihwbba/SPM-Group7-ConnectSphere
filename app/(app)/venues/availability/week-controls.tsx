@@ -2,9 +2,10 @@
 
 import { useEffect, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, ChevronRight, User } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 import { DatePicker } from "@/components/app/date-picker";
+import { CapacityTag } from "@/components/app/capacity-tag";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
@@ -134,14 +135,7 @@ export function VenuePicker({
             <SelectItem key={venue.id} value={venue.id}>
               <span className="flex items-center gap-2">
                 {venue.name}
-                <span
-                  className="inline-flex items-center gap-1 text-muted-foreground"
-                  title={`Holds up to ${venue.capacity} people`}
-                >
-                  <User className="h-3.5 w-3.5" aria-hidden />
-                  <span className="sr-only">max capacity</span>
-                  {venue.capacity}
-                </span>
+                <CapacityTag capacity={venue.capacity} />
               </span>
             </SelectItem>
           ))}

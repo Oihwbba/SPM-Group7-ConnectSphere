@@ -1,9 +1,17 @@
 import type { EquipmentRequestStatus } from "@prisma/client";
 
-import { formatDateTime } from "@/lib/datetime";
+import {
+  ArrowRightLeft,
+  CheckCircle2,
+  MessageSquare,
+  Send,
+  XCircle,
+} from "lucide-react";
+
+import type { TrailEntry } from "@/components/app/audit-trail";
 import { EQUIPMENT_REQUEST_STATUS_LABEL } from "@/lib/equipment/requests";
 
-type Entry = {
+export type Entry = {
   id: string;
   createdAt: Date;
   fromStatus: EquipmentRequestStatus | null;
@@ -22,46 +30,32 @@ function describe(entry: Entry): string | null {
 
 /**
  * SCRUM-28 AC 6 — "a chronological history log of all updates made", oldest
- * first. Collapsed by default so a long log doesn't push the next request
- * off-screen; the summary says how many entries it holds.
+ * first, as the timeline shows it: what moved, who, when and why.
  */
-export function RequestHistory({ entries }: { entries: Entry[] }) {
-  return (
-    <details
-      className="group rounded-md border bg-muted/20 text-sm"
-      data-testid="request-history"
-    >
-      <summary className="cursor-pointer select-none px-3 py-2 font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-        History ({entries.length})
-      </summary>
-      {entries.length === 0 && (
-        <p className="border-t px-3 py-3 text-muted-foreground">
-          No updates yet.
-        </p>
-      )}
-      <ol className="space-y-3 border-t px-3 py-3 empty:hidden">
-        {entries.map((entry) => {
-          const change = describe(entry);
-          return (
-            <li
-              key={entry.id}
-              className="space-y-0.5"
-              data-testid="history-entry"
-            >
-              <p className="text-xs text-muted-foreground">
-                <time dateTime={entry.createdAt.toISOString()}>
-                  {formatDateTime(entry.createdAt)}
-                </time>
-                {entry.actor.name ? `, by ${entry.actor.name}` : ""}
-              </p>
-              {change && <p className="font-medium">{change}</p>}
-              {entry.note && (
-                <p className="whitespace-pre-line">{entry.note}</p>
-              )}
-            </li>
-          );
-        })}
-      </ol>
-    </details>
-  );
+export function trailOf(entries: Entry[]): TrailEntry[] {
+  return entries.map((entry) => ({
+    id: entry.id,
+    at: entry.createdAt,
+    title: describe(entry),
+    by: entry.actor.name,
+    note: entry.note,
+    icon:
+      entry.toStatus === "APPROVED"
+        ? CheckCircle2
+        : entry.toStatus === "REJECTED" || entry.toStatus === "CANCELLED"
+          ? XCircle
+          : !entry.fromStatus
+            ? Send
+            : entry.toStatus
+              ? ArrowRightLeft
+              : MessageSquare,
+    tone:
+      entry.toStatus === "APPROVED"
+        ? "success"
+        : entry.toStatus === "REJECTED" || entry.toStatus === "CANCELLED"
+          ? "danger"
+          : entry.toStatus
+            ? "info"
+            : "default",
+  }));
 }

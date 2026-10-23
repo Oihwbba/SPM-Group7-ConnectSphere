@@ -1,7 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import { prisma } from "@/lib/db";
 
-import { choose, setTime, signedIn, usesLocalDatabase } from "./helpers";
+import { choose, setTime, signedIn, usesLocalDatabase, openBooking } from "./helpers";
 
 /**
  * SCRUM-36 / SCRUM-37 — the availability calendar and recorded unavailability
@@ -200,9 +200,10 @@ test.describe("SCRUM-36 / SCRUM-37 — venue availability calendar and recorded 
 
     // Staff approve it.
     await staff.goto("/bookings");
-    const card = staff.getByTestId(/^booking-/).filter({
-      hasText: "10 Jan 2036, 9:00 am SGT to 10 Jan 2036, 1:00 pm SGT",
-    });
+    const card = await openBooking(staff, MORNING_EVENT);
+    await expect(card).toContainText(
+      "10 Jan 2036, 9:00 am SGT to 10 Jan 2036, 1:00 pm SGT",
+    );
     await card.getByRole("button", { name: "Approve" }).click();
     await expect(staff.getByText(/^Approved: Grand Auditorium/)).toBeVisible();
 

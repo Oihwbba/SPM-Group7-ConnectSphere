@@ -84,20 +84,21 @@ test.describe("SCRUM-34 — browse and maintain the venue catalogue", () => {
     // AC4: capacity 0 is refused against capacity.
     await add.getByLabel("Capacity *").fill("0");
     // AC5: Tuesday closing before it opens is refused against Tuesday.
-    await add.getByLabel("Tuesday opens").fill("18:00");
-    await add.getByLabel("Tuesday closes").fill("09:00");
+    await pickDateTime(add.getByLabel("Tuesday opens"), "18:00");
+    await pickDateTime(add.getByLabel("Tuesday closes"), "09:00");
     await add.getByRole("button", { name: "Add venue" }).click();
     await expect(add.getByText("Capacity must be a whole number greater than 0.")).toBeVisible();
     await expect(add.getByLabel("Capacity *")).toHaveAttribute("aria-invalid", "true");
     await expect(add.getByText("The closing time must be after the opening time.")).toBeVisible();
-    await expect(add.getByLabel("Tuesday opens")).toHaveAttribute("aria-invalid", "true");
-    await expect(add.getByLabel("Monday opens")).not.toHaveAttribute("aria-invalid", "true");
+    // The time pickers mark the day invalid, and point to its message.
+    await expect(add.getByLabel("Tuesday opens")).toHaveAttribute("data-invalid", "true");
+    await expect(add.getByLabel("Monday opens")).not.toHaveAttribute("data-invalid", "true");
     expect(await prisma.venue.count({ where: { name } })).toBe(0);
 
     // AC3: valid now; Sunday Closed.
     await add.getByLabel("Capacity *").fill("80");
-    await add.getByLabel("Tuesday closes").fill("22:00");
-    await add.getByLabel("Tuesday opens").fill("10:00");
+    await pickDateTime(add.getByLabel("Tuesday closes"), "22:00");
+    await pickDateTime(add.getByLabel("Tuesday opens"), "10:00");
     await add.getByLabel("Sunday closed").check();
     await add.getByRole("button", { name: "Add venue" }).click();
     await expect(staff.getByText("Venue added.")).toBeVisible();
@@ -358,7 +359,7 @@ test.describe("SCRUM-34 — browse and maintain the venue catalogue", () => {
     await staff.getByRole("button", { name: "Edit venue" }).click();
     const edit = staff.getByRole("dialog", { name: `Edit ${name}` });
     await expect(edit).toContainText("This venue's opening hours aren't recorded yet.");
-    await expect(edit.getByLabel("Monday opens")).toHaveValue("");
+    await expect(edit.getByLabel("Monday opens")).toHaveAttribute("data-value", "");
 
     await edit.getByLabel("Capacity *").fill("60");
     await edit.getByRole("button", { name: "Save venue" }).click();

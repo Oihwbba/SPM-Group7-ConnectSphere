@@ -7,13 +7,7 @@ Format and conventions: [README.md](README.md).
 (`npm run db:deploy && npm run db:seed`), the app is running, and every seeded
 account signs in with `Password123!`.
 
-**Two parts.** The change is split in two pull requests so each fits the
-reviewer: part 1 holds the shared pieces, My Events, the request form, the
-event pop-up and notifications; part 2, stacked on it, holds Booking
-Requests, Request a Venue, Venue Search and the Equipment pages. A case whose
-tests arrive with part 2 says so under **Automated by**.
-
-**What this change delivers.** The first part of the story: the shared
+**What this pull request delivers.** The first part of the story: the shared
 pieces every page now uses (one status badge, empty states on the lists it
 changed, one confirmation pop-up for submitting a request and approving a
 booking), and the customer's page-by-page changes built on them (TC-207-11 to
@@ -100,7 +94,7 @@ criterion.
 | Test Data | `techsupport@test.local` |
 | Expected Result | The row's Status column shows the shared status badge reading "Pending Review", the same badge the request's details and the Coordinator's table use. |
 
-**Automated by** (in part 2, the stacked pull request for Booking Requests, Venues and Equipment): `tests/unit/shared-conventions-lists.test.tsx` › "SCRUM-207 [AC2] TC-207-03: …"
+**Automated by:** `tests/unit/shared-conventions-lists.test.tsx` › "SCRUM-207 [AC2] TC-207-03: …"
 
 ### TC-207-04
 
@@ -113,7 +107,7 @@ criterion.
 | Test Data | `techsupport@test.local` |
 | Expected Result | "No requests waiting for review", and "New equipment requests from coordinators appear here." No table is shown. |
 
-**Automated by** (in part 2, the stacked pull request for Booking Requests, Venues and Equipment): `tests/unit/shared-conventions-lists.test.tsx` › "SCRUM-207 [AC3] TC-207-04: …"
+**Automated by:** `tests/unit/shared-conventions-lists.test.tsx` › "SCRUM-207 [AC3] TC-207-04: …"
 
 ### TC-207-05
 
@@ -126,7 +120,7 @@ criterion.
 | Test Data | `coordinator@test.local` |
 | Expected Result | "No equipment requests yet", "Ask for projectors, microphones and anything else from the equipment list for one of your approved events.", and a **New request** button in the empty state. |
 
-**Automated by** (in part 2, the stacked pull request for Booking Requests, Venues and Equipment): `tests/unit/shared-conventions-lists.test.tsx` › "SCRUM-207 [AC3] TC-207-05: …"
+**Automated by:** `tests/unit/shared-conventions-lists.test.tsx` › "SCRUM-207 [AC3] TC-207-05: …"
 
 ### TC-207-06
 
@@ -139,7 +133,7 @@ criterion.
 | Test Data | `venuestaff@test.local`, `coordinator@test.local` |
 | Expected Result | 1: "No requests match …", and no rows. 2: "No venues match" and "Try another time or location, or turn off a filter." |
 
-**Automated by** (in part 2, the stacked pull request for Booking Requests, Venues and Equipment): `e2e/bookings.spec.ts` › "SCRUM-50 [AC2], SCRUM-52 [AC1-AC3], SCRUM-53 [AC1, AC4], SCRUM-207 [AC3, AC4] TC-207-06, TC-207-08: …"; `e2e/venue-search.spec.ts` › "SCRUM-38 [AC2, AC6, AC10] TC-38-07, TC-38-11, SCRUM-207 [AC3] TC-207-06: …"
+**Automated by:** `e2e/bookings.spec.ts` › "SCRUM-50 [AC2], SCRUM-52 [AC1-AC3], SCRUM-53 [AC1, AC4], SCRUM-207 [AC3, AC4] TC-207-06, TC-207-08: …"; `e2e/venue-search.spec.ts` › "SCRUM-38 [AC2, AC6, AC10] TC-38-07, TC-38-11, SCRUM-207 [AC3] TC-207-06: …"
 
 ### TC-207-07
 
@@ -165,7 +159,7 @@ criterion.
 | Test Data | `venuestaff@test.local` |
 | Expected Result | The same pop-up as TC-207-07, saying "Approved: … is now booked", with **View event**. |
 
-**Automated by** (in part 2, the stacked pull request for Booking Requests, Venues and Equipment): `e2e/bookings.spec.ts` › "SCRUM-50 [AC2], SCRUM-52 [AC1-AC3], SCRUM-53 [AC1, AC4], SCRUM-207 [AC3, AC4] TC-207-06, TC-207-08: …"
+**Automated by:** `e2e/bookings.spec.ts` › "SCRUM-50 [AC2], SCRUM-52 [AC1-AC3], SCRUM-53 [AC1, AC4], SCRUM-207 [AC3, AC4] TC-207-06, TC-207-08: …"
 
 ### TC-207-09
 
@@ -336,7 +330,7 @@ Inline only: **Venue Search** and the sign-in page. Toast only: **Booking Reques
 | Test Data | `venuestaff@test.local` |
 | Expected Result | 1: the row shows the key facts and an eye, but no Approve, Reject or Hold. 2: the details offer them. |
 
-**Automated by** (in part 2, the stacked pull request for Booking Requests, Venues and Equipment): `tests/unit/booking-queue.test.tsx` › "SCRUM-207 TC-207-20: …"
+**Automated by:** `tests/unit/booking-queue.test.tsx` › "SCRUM-207 TC-207-20: …"
 
 ### TC-207-21
 
@@ -362,7 +356,7 @@ Inline only: **Venue Search** and the sign-in page. Toast only: **Booking Reques
 | Test Data | — |
 | Expected Result | 09:10 rounds up to 09:30; 09:30 stays; at 23:31, past the day's last 30-minute step, nothing is offered. |
 
-**Automated by** (in part 2, the stacked pull request for Booking Requests, Venues and Equipment): `tests/unit/venue-search-time-field.test.tsx` › "SCRUM-207 TC-207-22: …"
+**Automated by:** `tests/unit/venue-search-time-field.test.tsx` › "SCRUM-207 TC-207-22: …"
 
 ### TC-207-23
 
@@ -375,7 +369,7 @@ Inline only: **Venue Search** and the sign-in page. Toast only: **Booking Reques
 | Test Data | `coordinator@test.local` |
 | Expected Result | 1: the event's card beside the form, and no results. 2: the results, with **Search again** back to the form. |
 
-**Automated by** (in part 2, the stacked pull request for Booking Requests, Venues and Equipment): `e2e/venue-search.spec.ts` › "SCRUM-38 [AC1, AC2, AC8, AC9, AC14] TC-38-01, TC-38-09, TC-38-10, TC-38-14, SCRUM-207 TC-207-23: …"
+**Automated by:** `e2e/venue-search.spec.ts` › "SCRUM-38 [AC1, AC2, AC8, AC9, AC14] TC-38-01, TC-38-09, TC-38-10, TC-38-14, SCRUM-207 TC-207-23: …"
 
 ### TC-207-24
 
@@ -388,4 +382,4 @@ Inline only: **Venue Search** and the sign-in page. Toast only: **Booking Reques
 | Test Data | `techsupport@test.local`, `coordinator@test.local` |
 | Expected Result | Both open a pop-up with a **Details** tab (lines and actions) and a **History** tab (the timeline of every change). |
 
-**Automated by** (in part 2, the stacked pull request for Booking Requests, Venues and Equipment): `e2e/equipment-request-review.spec.ts` › "SCRUM-28 [AC2, AC3, AC5, AC6] TC-28-02, TC-28-03, TC-28-09, TC-28-10, SCRUM-207 TC-207-24: …" and "SCRUM-28 [AC4, AC5, AC6] TC-28-07, TC-28-09, TC-28-10, SCRUM-207 TC-207-24: …"
+**Automated by:** `e2e/equipment-request-review.spec.ts` › "SCRUM-28 [AC2, AC3, AC5, AC6] TC-28-02, TC-28-03, TC-28-09, TC-28-10, SCRUM-207 TC-207-24: …" and "SCRUM-28 [AC4, AC5, AC6] TC-28-07, TC-28-09, TC-28-10, SCRUM-207 TC-207-24: …"

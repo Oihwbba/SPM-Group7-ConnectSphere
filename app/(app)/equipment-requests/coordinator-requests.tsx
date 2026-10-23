@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { PackagePlus, Plus } from "lucide-react";
+import { Eye, PackagePlus, Plus, Search } from "lucide-react";
 import { toast } from "sonner";
 
 import { RequestStatusBadge } from "@/components/equipment/request-status-badge";
@@ -15,23 +15,30 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Card, CardContent } from "@/components/ui/card";
+import { trailOf } from "@/components/equipment/request-history";
+import { AppSelect } from "@/components/app/app-select";
+import { AuditTrail } from "@/components/app/audit-trail";
+import { Tabs } from "@/components/app/tabs";
+import { Input } from "@/components/ui/input";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { RequestHistory } from "@/components/equipment/request-history";
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { RequestLines } from "@/components/equipment/request-lines";
 import type { CoordinatorEquipmentRequest } from "@/lib/equipment/request-queries";
 import {
   CHANGEABLE_REQUEST_STATUSES,
+  EQUIPMENT_REQUEST_STATUS_LABEL,
   REQUESTABLE_EVENT_STATUSES,
   formatEventPeriod,
 } from "@/lib/equipment/requests";
 import { withdrawEquipmentRequest } from "./actions";
-import { formatDateTime } from "@/lib/datetime";
+import { formatDate, formatDateTime } from "@/lib/datetime";
 import { cn } from "@/lib/utils";
 import {
   NewRequestDialog,
@@ -69,6 +76,17 @@ export function CoordinatorRequests({
     useState<CoordinatorEquipmentRequest | null>(null);
   const [isWithdrawing, startWithdraw] = useTransition();
   const router = useRouter();
+  const [query, setQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("ALL");
+  const [viewingId, setViewingId] = useState<string | null>(null);
+  // Read from the list, so the pop-up follows a refresh.
+  const viewing = requests.find((request) => request.id === viewingId) ?? null;
+  const q = query.trim().toLowerCase();
+  const shown = requests.filter(
+    (request) =>
+      (statusFilter === "ALL" || request.status === statusFilter) &&
+      (!q || request.event.name.toLowerCase().includes(q)),
+  );
 
   function withdraw(request: CoordinatorEquipmentRequest) {
     startWithdraw(async () => {
@@ -144,32 +162,191 @@ export function CoordinatorRequests({
           </CardContent>
         </Card>
       ) : (
-        <ul className="space-y-4" aria-label="Your equipment requests">
-          {requests.map((request) => (
-            <li key={request.id}>
-              <RequestCard
-                request={request}
-                highlighted={request.id === highlightedId}
-              >
-                {canChange && isChangeable(request) && (
-                  <div className="flex flex-wrap justify-end gap-2 border-t pt-3">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setWithdrawing(request)}
-                    >
-                      Withdraw request
-                    </Button>
-                    <Button size="sm" onClick={() => setChanging(request)}>
-                      Change lines
-                    </Button>
-                  </div>
-                )}
-              </RequestCard>
-            </li>
-          ))}
-        </ul>
+        <>
+          {/* Change 11: the requests as a table, searched by event and
+              filtered by status; the eye opens the details and history. */}
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="relative w-full max-w-sm">
+              <Search
+                className="pointer-events-none absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                aria-hidden
+              />
+              <Input
+                type="search"
+                aria-label="Search by event name"
+                placeholder="Search by event name..."
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+            <AppSelect
+              value={statusFilter}
+              onValueChange={setStatusFilter}
+              aria-label="Filter by status"
+              className="w-44"
+              options={[
+                { value: "ALL", label: "All statuses" },
+                ...Object.entries(EQUIPMENT_REQUEST_STATUS_LABEL).map(
+                  ([value, label]) => ({ value, label }),
+                ),
+              ]}
+            />
+          </div>
+          {shown.length === 0 ? (
+            <Card>
+              <CardContent className="flex flex-col items-center gap-2 py-12 text-center">
+                <p className="text-sm font-medium text-muted-foreground">
+                  No requests match the search or filter.
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setQuery("");
+                    setStatusFilter("ALL");
+                  }}
+                >
+                  Clear filters
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card>
+              <CardContent className="p-0">
+                <Table aria-label="Your equipment requests">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Event</TableHead>
+                      <TableHead>Items</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Submitted</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {shown.map((request) => (
+                      <TableRow
+                        key={request.id}
+                        id={`request-${request.id}`}
+                        data-testid="equipment-request"
+                        data-highlighted={request.id === highlightedId}
+                        className={cn(
+                          "scroll-mt-24",
+                          request.id === highlightedId && "bg-primary/5",
+                        )}
+                      >
+                        <TableCell className="md:w-full md:max-w-0">
+                          <p
+                            className="truncate font-medium"
+                            title={request.event.name}
+                          >
+                            {request.event.name}
+                          </p>
+                          <p className="truncate text-xs text-muted-foreground">
+                            {formatEventPeriod(request.event)}
+                          </p>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {request.lines.length}{" "}
+                          {request.lines.length === 1 ? "item" : "items"}
+                        </TableCell>
+                        <TableCell>
+                          <RequestStatusBadge status={request.status} />
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {formatDate(request.createdAt)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0"
+                            aria-label={`View details of ${request.event.name}`}
+                            title="View details"
+                            data-testid="view-request-button"
+                            onClick={() => setViewingId(request.id)}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          )}
+        </>
       )}
+
+      <Dialog
+        open={!!viewing}
+        onOpenChange={(open) => !open && setViewingId(null)}
+      >
+        {viewing && (
+          <DialogContent
+            className="max-h-[90vh] max-w-2xl overflow-y-auto"
+            data-testid="equipment-request-details"
+          >
+            <DialogHeader>
+              <div className="flex flex-wrap items-center gap-2 pr-8">
+                <DialogTitle>{viewing.event.name}</DialogTitle>
+                <RequestStatusBadge status={viewing.status} />
+              </div>
+              <DialogDescription>
+                {formatEventPeriod(viewing.event)}
+              </DialogDescription>
+            </DialogHeader>
+            <Tabs
+              label="Equipment request"
+              tabs={[
+                {
+                  id: "details",
+                  label: "Details",
+                  content: (
+                    <RequestDetails request={viewing}>
+                      {canChange && isChangeable(viewing) && (
+                        <div className="flex flex-wrap justify-end gap-2 border-t pt-3">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setViewingId(null);
+                              setWithdrawing(viewing);
+                            }}
+                          >
+                            Withdraw request
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={() => {
+                              setViewingId(null);
+                              setChanging(viewing);
+                            }}
+                          >
+                            Change lines
+                          </Button>
+                        </div>
+                      )}
+                    </RequestDetails>
+                  ),
+                },
+                {
+                  id: "history",
+                  label: `History (${viewing.updates.length})`,
+                  content: (
+                    <AuditTrail
+                      entries={trailOf(viewing.updates)}
+                      entryTestId="history-entry"
+                    />
+                  ),
+                },
+              ]}
+            />
+          </DialogContent>
+        )}
+      </Dialog>
 
       {changing && (
         <NewRequestDialog
@@ -254,19 +431,18 @@ function isChangeable(request: CoordinatorEquipmentRequest): boolean {
   );
 }
 
-function RequestCard({
+/** The request's lines, and why it was rejected or what was noted. */
+function RequestDetails({
   request,
-  highlighted,
   children,
 }: {
   request: CoordinatorEquipmentRequest;
-  highlighted: boolean;
   children?: React.ReactNode;
 }) {
   // SCRUM-27 AC8 — the status, "Rejected with the reason". A rejection needs a
   // reason (SCRUM-28 AC3), and it is the last history entry's note, so it is
   // read from the history already fetched rather than asked for again. Shown
-  // on the card rather than only in the collapsed log, because it is what the
+  // with the details rather than only in the history, because it is what the
   // coordinator acts on.
   const rejectionReason =
     request.status === "REJECTED"
@@ -276,46 +452,27 @@ function RequestCard({
       : undefined;
 
   return (
-    <Card
-      id={`request-${request.id}`}
-      data-testid="equipment-request"
-      data-highlighted={highlighted}
-      className={cn(
-        "scroll-mt-24 transition-shadow",
-        highlighted &&
-          "ring-2 ring-primary ring-offset-2 ring-offset-background",
-      )}
-    >
-      <CardHeader className="flex-row flex-wrap items-start justify-between gap-3 space-y-0">
-        <div className="min-w-0 space-y-1">
-          <CardTitle className="text-base">{request.event.name}</CardTitle>
-          <CardDescription>{formatEventPeriod(request.event)}</CardDescription>
-        </div>
-        <RequestStatusBadge status={request.status} />
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <RequestLines lines={request.lines} />
-        {rejectionReason && (
-          <p
-            className="whitespace-pre-line rounded-md border border-destructive/40 bg-destructive/5 p-2 text-sm"
-            data-testid="rejection-reason"
-          >
-            <span className="font-medium">Reason: </span>
-            {rejectionReason}
-          </p>
-        )}
-        {request.notes && (
-          <p className="whitespace-pre-line text-sm">
-            <span className="font-medium">Notes: </span>
-            {request.notes}
-          </p>
-        )}
-        <p className="text-xs text-muted-foreground">
-          Submitted {formatDateTime(request.createdAt)}
+    <div className="space-y-3">
+      <RequestLines lines={request.lines} />
+      {rejectionReason && (
+        <p
+          className="whitespace-pre-line rounded-md border border-destructive/40 bg-destructive/5 p-2 text-sm"
+          data-testid="rejection-reason"
+        >
+          <span className="font-medium">Reason: </span>
+          {rejectionReason}
         </p>
-        <RequestHistory entries={request.updates} />
-        {children}
-      </CardContent>
-    </Card>
+      )}
+      {request.notes && (
+        <p className="whitespace-pre-line text-sm">
+          <span className="font-medium">Notes: </span>
+          {request.notes}
+        </p>
+      )}
+      <p className="text-xs text-muted-foreground">
+        Submitted {formatDateTime(request.createdAt)}
+      </p>
+      {children}
+    </div>
   );
 }

@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 
 import { prisma } from "@/lib/db";
-import { signedIn, usesLocalDatabase } from "./helpers";
+import { signedIn, usesLocalDatabase, openBooking } from "./helpers";
 
 /**
  * SCRUM-121 — one account with several roles in a real browser, as the seeded
@@ -166,7 +166,7 @@ test.describe("SCRUM-121 — accounts with several roles", () => {
 
     const page = await signedIn(browser, "multirole@test.local");
     await page.goto("/bookings");
-    const card = page.getByTestId(/^booking-/).filter({ hasText: event.name });
+    const card = await openBooking(page, event.name);
     await card.getByRole("button", { name: "Approve" }).click();
 
     await expect(page.getByText("You do not have permission to do that.")).toBeVisible();
