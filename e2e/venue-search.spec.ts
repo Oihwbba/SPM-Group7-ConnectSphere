@@ -64,9 +64,9 @@ const toggle = (page: Page, value: string) =>
   page.locator("label", { hasText: new RegExp(`^${value}$`) }).click();
 
 /**
- * An event from 10:15 to 11:45 Singapore time on `day`; a booking would run
- * 10:00–12:00 (SCRUM-50 AC1). Each test uses its own day, because tests run
- * in parallel and one test's booking would take another's venue.
+ * An event from 10:15 to 11:45 Singapore time on `day`. Each test uses its
+ * own day, because tests run in parallel and one test's booking would take
+ * another's venue.
  */
 async function planningEvent(name: string, day: string) {
   return (
@@ -91,8 +91,9 @@ async function planningEvent(name: string, day: string) {
 const bookingFor = (eventId: string, venueId: string, day: string) => ({
   eventId,
   venueId,
-  startAt: new Date(`${day}T10:00:00+08:00`),
-  endAt: new Date(`${day}T12:00:00+08:00`),
+  // Exactly the event's period, as every request is (SCRUM-188 AC1).
+  startAt: new Date(`${day}T10:15:00+08:00`),
+  endAt: new Date(`${day}T11:45:00+08:00`),
   requestedById: "usr_coordinator",
 });
 

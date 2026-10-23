@@ -8,8 +8,8 @@ import { choose, signedIn, usesLocalDatabase } from "./helpers";
  * Coordinator asks for a venue, Venue Staff see the request and decide, and
  * once approved the venue is unavailable for that period.
  *
- * A request is always for its event's period and attendance (SCRUM-50 AC1),
- * so this spec creates its own 2035 events on the Exhibition Hall, clear of
+ * A request is always for exactly its event's period (SCRUM-188 AC1), so
+ * this spec creates its own 2035 events on the Exhibition Hall, clear of
  * anything seeded, and removes them afterwards. It clears those bookings
  * first so a local re-run or a CI retry starts clean.
  */
@@ -18,8 +18,9 @@ const PREFIX = "E2E Hall —";
 
 /** Events for coordinator@test.local, by name: Singapore wall times. */
 const EVENTS = {
-  // 09:10 to 12:45 is requested as 9:00 am to 1:00 pm.
-  morning: ["Morning Lecture", "2035-03-10T09:10", "2035-03-10T12:45", 120],
+  // Requested as exactly 9:10 am to 1:00 pm, not rounded (SCRUM-188 AC1); the
+  // afternoon event starts as it ends.
+  morning: ["Morning Lecture", "2035-03-10T09:10", "2035-03-10T13:00", 120],
   overlapping: [
     "Overlapping Talk",
     "2035-03-10T11:00",
@@ -99,7 +100,10 @@ async function expectSubmitted(page: Page) {
 test.describe("SCRUM-50 / 52 / 53 — venue booking request, review and decision", () => {
   // Two users sign in and several round trips are made; these journeys need
   // more than the default 30 seconds.
-  test.describe.configure({ timeout: 90_000 });
+  // One worker runs these in order: beforeAll removes and recreates the
+  // spec's events, which would pull them from under a test running in another
+  // worker (fullyParallel).
+  test.describe.configure({ mode: "default", timeout: 90_000 });
 
   test.beforeAll(async () => {
     if (!usesLocalDatabase) return;
@@ -172,7 +176,7 @@ test.describe("SCRUM-50 / 52 / 53 — venue booking request, review and decision
     await expect(card).toHaveCount(1);
     await expect(card).toContainText("Exhibition Hall");
     await expect(card).toContainText(
-      "10 Mar 2035, 9:00 am SGT to 10 Mar 2035, 1:00 pm SGT",
+      "10 Mar 2035, 9:10 am SGT to 10 Mar 2035, 1:00 pm SGT",
     );
     await expect(card).toContainText("120 expected · venue holds 200");
     await expect(card).toContainText("Requested by Cody Coordinator");
@@ -193,7 +197,7 @@ test.describe("SCRUM-50 / 52 / 53 — venue booking request, review and decision
     const live = coordinator.getByTestId("live-availability");
     await expect(live).toHaveAttribute("data-state", "taken");
     await expect(live).toContainText(
-      "Exhibition Hall is unavailable for this period: already booked from 10 Mar 2035, 9:00 am SGT to 10 Mar 2035, 1:00 pm SGT.",
+      "Exhibition Hall is unavailable for this period: already booked from 10 Mar 2035, 9:10 am SGT to 10 Mar 2035, 1:00 pm SGT.",
     );
     await expect(
       coordinator.getByRole("button", { name: "Submit request" }),
@@ -219,7 +223,7 @@ test.describe("SCRUM-50 / 52 / 53 — venue booking request, review and decision
     await expectSubmitted(coordinator);
   });
 
-  test("SCRUM-50 [AC1] TC-50-15, SCRUM-162 [AC4] TC-162-05, TC-162-06, TC-162-07: the period and attendance start from the event's, rounded out to the half hour; a shorter period or a larger attendance disables Submit", async ({
+  test("SCRUM-188 [AC1] TC-188-01, SCRUM-162 [AC4] TC-162-07: the period is exactly the event's and can't be edited; the attendance starts as the event's, and a larger one disables Submit", async ({
     browser,
   }) => {
     const coordinator = await signedIn(browser, "coordinator@test.local");
@@ -229,9 +233,13 @@ test.describe("SCRUM-50 / 52 / 53 — venue booking request, review and decision
     const start = coordinator.getByLabel("Start", { exact: true });
     const end = coordinator.getByLabel("End", { exact: true });
     const attendance = coordinator.getByLabel("Expected attendance");
-    await expect(start).toHaveValue("2035-03-10T09:00");
+    // 9:10 am, not rounded down to 9:00 am.
+    await expect(start).toHaveValue("2035-03-10T09:10");
     await expect(end).toHaveValue("2035-03-10T13:00");
+    await expect(start).not.toBeEditable();
+    await expect(end).not.toBeEditable();
     await expect(attendance).toHaveValue("120");
+    await expect(attendance).toBeEditable();
     // Its preferred layout, stored as "Theatre", is shown but not pre-selected:
     // the Coordinator chooses the layout (SCRUM-170 AC2).
     await expect(
@@ -243,16 +251,6 @@ test.describe("SCRUM-50 / 52 / 53 — venue booking request, review and decision
     await choose(coordinator, "Venue", /^Exhibition Hall/);
     const submit = coordinator.getByRole("button", { name: "Submit request" });
     await expect(submit).toBeEnabled();
-
-    // A period that ends before the event does is refused (TC-162-06).
-    await end.fill("2035-03-10T12:30");
-    await expect(coordinator.getByTestId("short-period")).toContainText(
-      "must cover the event's whole period",
-    );
-    await expect(submit).toBeDisabled();
-    // Longer than the event is fine (TC-162-05).
-    await end.fill("2035-03-10T14:00");
-    await expect(coordinator.getByTestId("short-period")).toHaveCount(0);
 
     // Part of the event's attendance, for a breakout room, is fine; more is
     // refused (TC-162-07).

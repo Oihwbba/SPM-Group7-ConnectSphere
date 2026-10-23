@@ -13,8 +13,8 @@ import { choose, setTime, signedIn, usesLocalDatabase } from "./helpers";
  *
  * Uses the Grand Auditorium on 10 and 12 Jan 2036, clear of anything seeded, and
  * clears those rows first so a local re-run or a CI retry starts clean. A
- * request is always for its event's period (SCRUM-50 AC1), so the spec
- * creates the two events it requests for, and removes them afterwards.
+ * request is always for exactly its event's period (SCRUM-188 AC1), so the
+ * spec creates the two events it requests for, and removes them afterwards.
  */
 const AUDITORIUM = "ven_auditorium";
 const DAY = "2036-01-10";
@@ -100,7 +100,10 @@ async function requestAuditorium(page: Page, event: string) {
 
 test.describe("SCRUM-36 / SCRUM-37 — venue availability calendar and recorded unavailability", () => {
   // Two users, the calendar paged out to 2036, and several round trips.
-  test.describe.configure({ timeout: 180_000 });
+  // One worker runs these in order: beforeAll removes and recreates the
+  // spec's events, which would pull them from under a test running in another
+  // worker (fullyParallel).
+  test.describe.configure({ mode: "default", timeout: 180_000 });
 
   test.beforeAll(async () => {
     if (!usesLocalDatabase) return;
