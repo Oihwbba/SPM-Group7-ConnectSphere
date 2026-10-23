@@ -1,5 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 import { prisma } from "@/lib/db";
+import { selectFrom, fillOther, pickDateTime, submitRequest, optionsOf } from "./helpers";
 
 /**
  * SCRUM-165 — a submitted request waits in the Lead's Unassigned queue until
@@ -53,23 +54,15 @@ test.describe("SCRUM-165 — Lead assigns new requests from an unassigned queue"
       .getByLabel("Event Description *")
       .fill("SCRUM-165 end-to-end coverage.");
     await page.getByRole("button", { name: "Next", exact: true }).click();
-    await page
-      .getByLabel("Proposed Start Date & Time *")
-      .fill("2031-11-01T09:00");
-    await page
-      .getByLabel("Proposed End Date & Time *")
-      .fill("2031-11-01T17:00");
+    await pickDateTime(page.getByLabel("Proposed Start Date & Time *"), "2031-11-01T09:00");
+    await pickDateTime(page.getByLabel("Proposed End Date & Time *"), "2031-11-01T17:00");
     await page.getByLabel("Expected Attendance *").fill("50");
     await page.getByRole("button", { name: "Next", exact: true }).click();
-    await page.getByLabel("Venue Requirements *").fill("Any mid-size room.");
-    await page.getByLabel("Preferred Room Layout *").fill("Classroom");
-    await page
-      .getByLabel("Accessibility Needs *")
-      .fill("Wheelchair accessible entrance.");
+    await fillOther(page.getByLabel("Venue Requirements *"), "Any mid-size room.");
+    await fillOther(page.getByLabel("Preferred Room Layout *"), "Classroom");
+    await fillOther(page.getByLabel("Accessibility Needs *"), "Wheelchair accessible entrance.");
     await page.getByRole("button", { name: "Next", exact: true }).click();
-    await page
-      .getByLabel("Equipment & Technical Support Requirements *")
-      .fill("Projector.");
+    await fillOther(page.getByLabel("Equipment & Technical Support Requirements *"), "Projector.");
     await page.getByRole("button", { name: "Next", exact: true }).click();
     // SCRUM-171 AC1: Registration needed is required to submit; the note is optional.
     await page
@@ -80,9 +73,7 @@ test.describe("SCRUM-165 — Lead assigns new requests from an unassigned queue"
       .getByLabel("Registration Notes (Optional)")
       .fill("Standard online registration.");
     await page.getByRole("button", { name: "Next", exact: true }).click();
-    await page
-      .getByRole("button", { name: /Submit Request for Review/i })
-      .click();
+    await submitRequest(page);
     await expect(page.getByRole("cell", { name: eventName })).toBeVisible();
 
     // AC1: nobody is assigned; it stays Submitted.
@@ -142,13 +133,12 @@ test.describe("SCRUM-165 — Lead assigns new requests from an unassigned queue"
     // AC4: each Coordinator shows their active events, and the least loaded
     // is pre-selected and marked as suggested; pick Cody.
     const choice = page.getByLabel("Coordinator");
-    await expect(choice.locator("option")).toContainText([/active event/]);
-    const suggested = choice.locator("option", { hasText: "(suggested)" });
-    await expect(suggested).toHaveCount(1);
-    expect(await choice.inputValue()).toBe(
-      await suggested.getAttribute("value"),
-    );
-    await choice.selectOption("usr_coordinator");
+    const offered = await optionsOf(choice);
+    expect(offered.every((o) => /active event/.test(o.label))).toBe(true);
+    const suggested = offered.filter((o) => o.label.includes("(suggested)"));
+    expect(suggested).toHaveLength(1);
+    await expect(choice).toHaveAttribute("data-value", suggested[0].value);
+    await selectFrom(choice, "usr_coordinator");
     await page.getByTestId("assign-button").click();
     await page.waitForURL("**/queue");
     await expect(

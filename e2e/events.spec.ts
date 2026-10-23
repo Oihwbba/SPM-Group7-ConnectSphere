@@ -1,5 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 import { prisma } from "@/lib/db";
+import { pickDateTime, selectFrom, fillOther, saveDraft, submitRequest } from "./helpers";
 
 /**
  * End-to-End (E2E) Test Suite for User Story 13: Create an Event Request.
@@ -7,6 +8,9 @@ import { prisma } from "@/lib/db";
  * detail review, and final request submission.
  */
 test.describe("User Story 13 — Event Request Creation Journey", () => {
+  // Every step is filled through the app's pickers and dropdowns, which take
+  // more clicks than typing did; the whole journey needs more than 30 seconds.
+  test.describe.configure({ timeout: 90_000 });
   /**
    * TEST 1: Unblocked Step Navigation & Partial Draft Saving
    * Verifies that an organiser can freely navigate between form steps (e.g. Step 1 to Step 2)
@@ -37,7 +41,7 @@ test.describe("User Story 13 — Event Request Creation Journey", () => {
     await expect(page.getByRole("heading", { name: /Schedule & Attendance/i })).toBeVisible();
 
     // 6. Click "Save as Draft" at Step 2
-    await page.getByRole("button", { name: /Save as Draft/i }).click();
+    await saveDraft(page);
 
     // 7. Verify the partial draft event was created and appears in the organiser's events table
     await expect(page.getByRole("cell", { name: draftName })).toBeVisible();
@@ -77,19 +81,19 @@ test.describe("User Story 13 — Event Request Creation Journey", () => {
     // --- STEP 2: Proposed Schedule & Attendance ---
     const futureStartDate = "2027-10-15T09:00";
     const futureEndDate = "2027-10-16T18:00";
-    await page.getByLabel("Proposed Start Date & Time *").fill(futureStartDate);
-    await page.getByLabel("Proposed End Date & Time *").fill(futureEndDate);
+    await pickDateTime(page.getByLabel("Proposed Start Date & Time *"), futureStartDate);
+    await pickDateTime(page.getByLabel("Proposed End Date & Time *"), futureEndDate);
     await page.getByLabel("Expected Attendance *").fill("250");
     await page.getByRole("button", { name: "Next", exact: true }).click();
 
     // --- STEP 3: Venue, Layout & Accessibility Requirements ---
-    await page.getByLabel("Venue Requirements *").fill("Requires Grand Auditorium or large exhibition hall capacity with stage.");
-    await page.getByLabel("Preferred Room Layout *").fill("Theatre");
-    await page.getByLabel("Accessibility Needs *").fill("Wheelchair accessible ramps, designated accessible seating in front row, and accessible facility arrangements.");
+    await fillOther(page.getByLabel("Venue Requirements *"), "Requires Grand Auditorium or large exhibition hall capacity with stage.");
+    await fillOther(page.getByLabel("Preferred Room Layout *"), "Theatre");
+    await fillOther(page.getByLabel("Accessibility Needs *"), "Wheelchair accessible ramps, designated accessible seating in front row, and accessible facility arrangements.");
     await page.getByRole("button", { name: "Next", exact: true }).click();
 
     // --- STEP 4: Equipment Requirements ---
-    await page.getByLabel("Equipment & Technical Support Requirements *").fill("2 HD Projectors, 4 Wireless Lapel Microphones, Live Streaming Video Kit, Onsite Technical Support.");
+    await fillOther(page.getByLabel("Equipment & Technical Support Requirements *"), "2 HD Projectors, 4 Wireless Lapel Microphones, Live Streaming Video Kit, Onsite Technical Support.");
     await page.getByRole("button", { name: "Next", exact: true }).click();
 
     // --- STEP 5: Registration & Additional Details ---
@@ -107,7 +111,7 @@ test.describe("User Story 13 — Event Request Creation Journey", () => {
     await expect(page.getByText("Wheelchair accessible ramps")).toBeVisible();
 
     // 4. Click "Submit Request for Review"
-    await page.getByRole("button", { name: /Submit Request for Review/i }).click();
+    await submitRequest(page);
 
     // 5. Verify the submitted event appears in the organiser's events table
     await expect(page.getByRole("cell", { name: eventName })).toBeVisible();
@@ -147,7 +151,7 @@ test.describe("User Story 13 — Event Request Creation Journey", () => {
       page.getByText("Please fix the highlighted fields before submitting."),
     ).toBeVisible();
 
-    await page.getByRole("button", { name: "1. Basics" }).click();
+    await page.getByRole("button", { name: "1 - Basics" }).click();
     await expect(page.getByLabel("Event Name *")).toHaveAttribute("aria-invalid", "true");
     await expect(page.getByText("Event name is required.")).toBeVisible();
   });
@@ -178,11 +182,11 @@ test.describe("User Story 15 — Draft Event Request Lifecycle Journey", () => {
     await page.getByLabel("Event Description *").fill("Detailed description for resumed draft.");
     await page.getByRole("button", { name: "Next", exact: true }).click();
 
-    await page.getByLabel("Proposed Start Date & Time *").fill("2027-11-20T10:00");
-    await page.getByLabel("Proposed End Date & Time *").fill("2027-11-20T18:00");
+    await pickDateTime(page.getByLabel("Proposed Start Date & Time *"), "2027-11-20T10:00");
+    await pickDateTime(page.getByLabel("Proposed End Date & Time *"), "2027-11-20T18:00");
 
     // Save as draft at Step 2
-    await page.getByRole("button", { name: /Save as Draft/i }).click();
+    await saveDraft(page);
 
     // 3. Locate draft row on table with "Resume Draft" button
     const row = page.getByRole("row", { name: draftName });
@@ -198,19 +202,19 @@ test.describe("User Story 15 — Draft Event Request Lifecycle Journey", () => {
     await page.getByRole("button", { name: "Next", exact: true }).click();
 
     // Verify Singapore wall-time round trip on resumed draft inputs
-    await expect(page.getByLabel("Proposed Start Date & Time *")).toHaveValue("2027-11-20T10:00");
-    await expect(page.getByLabel("Proposed End Date & Time *")).toHaveValue("2027-11-20T18:00");
+    await expect(page.getByLabel("Proposed Start Date & Time *")).toHaveAttribute("data-value", "2027-11-20T10:00");
+    await expect(page.getByLabel("Proposed End Date & Time *")).toHaveAttribute("data-value", "2027-11-20T18:00");
 
     // 6. Complete missing fields across steps
     await page.getByLabel("Expected Attendance *").fill("100");
     await page.getByRole("button", { name: "Next", exact: true }).click();
 
-    await page.getByLabel("Venue Requirements *").fill("Grand Hall");
-    await page.getByLabel("Preferred Room Layout *").fill("Banquet");
-    await page.getByLabel("Accessibility Needs *").fill("Wheelchair ramp");
+    await fillOther(page.getByLabel("Venue Requirements *"), "Grand Hall");
+    await fillOther(page.getByLabel("Preferred Room Layout *"), "Banquet");
+    await fillOther(page.getByLabel("Accessibility Needs *"), "Wheelchair ramp");
     await page.getByRole("button", { name: "Next", exact: true }).click();
 
-    await page.getByLabel("Equipment & Technical Support Requirements *").fill("Projector & Mic");
+    await fillOther(page.getByLabel("Equipment & Technical Support Requirements *"), "Projector & Mic");
     await page.getByRole("button", { name: "Next", exact: true }).click();
 
     // SCRUM-171 AC1: Registration needed is required to submit; the note is optional.
@@ -222,7 +226,7 @@ test.describe("User Story 15 — Draft Event Request Lifecycle Journey", () => {
     await expect(page.getByRole("heading", { name: /Review Entered Details/i })).toBeVisible();
     await expect(page.getByRole("dialog").getByText(/Start:\s*20 Nov 2027, 10:00 am SGT/i)).toBeVisible();
     await expect(page.getByRole("dialog").getByText(/End:\s*20 Nov 2027, 6:00 pm SGT/i)).toBeVisible();
-    await page.getByRole("button", { name: /Submit Request for Review/i }).click();
+    await submitRequest(page);
 
     // 8. Verify event submitted successfully
     await expect(page.getByRole("cell", { name: draftName })).toBeVisible();
@@ -247,7 +251,7 @@ test.describe("User Story 15 — Draft Event Request Lifecycle Journey", () => {
     // 1. Create the initial draft.
     await page.getByRole("button", { name: /Create Event Request/i }).first().click();
     await page.getByLabel("Event Name *").fill(draftName);
-    await page.getByRole("button", { name: /Save as Draft/i }).click();
+    await saveDraft(page);
 
     // Exactly one row must exist.
     const initialRows = page.getByRole("row", { name: new RegExp(draftName) });
@@ -257,7 +261,7 @@ test.describe("User Story 15 — Draft Event Request Lifecycle Journey", () => {
     await initialRows.getByRole("button", { name: /Resume Draft/i }).click();
     const updatedName = `${draftName} — Updated`;
     await page.getByLabel("Event Name *").fill(updatedName);
-    await page.getByRole("button", { name: /Save as Draft/i }).click();
+    await saveDraft(page);
 
     // 3. Exactly one row total contains the draft substring (draftName is a substring of updatedName).
     // If a bug created a duplicate row instead of updating, there would be two rows matching draftName (one old, one new).
@@ -295,7 +299,7 @@ test.describe("User Story 16 — Distinguish Drafts from Submitted Requests Jour
     // 2. Create a Partial Draft Request
     await page.getByRole("button", { name: /Create Event Request/i }).first().click();
     await page.getByLabel("Event Name *").fill(draftTitle);
-    await page.getByRole("button", { name: /Save as Draft/i }).click();
+    await saveDraft(page);
 
     // 3. Create and Submit a Complete Event Request
     await page.getByRole("button", { name: /Create Event Request/i }).first().click();
@@ -304,17 +308,17 @@ test.describe("User Story 16 — Distinguish Drafts from Submitted Requests Jour
     await page.getByLabel("Event Description *").fill("US16 visual distinguishability test description");
     await page.getByRole("button", { name: "Next", exact: true }).click();
 
-    await page.getByLabel("Proposed Start Date & Time *").fill("2027-12-01T09:00");
-    await page.getByLabel("Proposed End Date & Time *").fill("2027-12-01T17:00");
+    await pickDateTime(page.getByLabel("Proposed Start Date & Time *"), "2027-12-01T09:00");
+    await pickDateTime(page.getByLabel("Proposed End Date & Time *"), "2027-12-01T17:00");
     await page.getByLabel("Expected Attendance *").fill("80");
     await page.getByRole("button", { name: "Next", exact: true }).click();
 
-    await page.getByLabel("Venue Requirements *").fill("Standard Seminar Room");
-    await page.getByLabel("Preferred Room Layout *").fill("Classroom");
-    await page.getByLabel("Accessibility Needs *").fill("Standard ramp access");
+    await fillOther(page.getByLabel("Venue Requirements *"), "Standard Seminar Room");
+    await fillOther(page.getByLabel("Preferred Room Layout *"), "Classroom");
+    await fillOther(page.getByLabel("Accessibility Needs *"), "Standard ramp access");
     await page.getByRole("button", { name: "Next", exact: true }).click();
 
-    await page.getByLabel("Equipment & Technical Support Requirements *").fill("Microphone & Projector");
+    await fillOther(page.getByLabel("Equipment & Technical Support Requirements *"), "Microphone & Projector");
     await page.getByRole("button", { name: "Next", exact: true }).click();
 
     // SCRUM-171 AC1: Registration needed is required to submit; the note is optional.
@@ -323,7 +327,7 @@ test.describe("User Story 16 — Distinguish Drafts from Submitted Requests Jour
     await page.getByRole("button", { name: "Next", exact: true }).click();
 
     await expect(page.getByRole("heading", { name: /Review Entered Details/i })).toBeVisible();
-    await page.getByRole("button", { name: /Submit Request for Review/i }).click();
+    await submitRequest(page);
 
     // 4. Verify Both Requests Appear on Table Side-by-Side with Distinct Visual Treatments
     const draftRow = page.getByRole("row", { name: new RegExp(draftTitle) });
@@ -332,9 +336,11 @@ test.describe("User Story 16 — Distinguish Drafts from Submitted Requests Jour
     await expect(draftRow).toBeVisible();
     await expect(submittedRow).toBeVisible();
 
-    // 5. Verify Draft Row features visual "Draft — Incomplete" tag and "Resume Draft" button (AC 1 & AC 2)
-    await expect(draftRow.getByTestId("draft-label")).toBeVisible();
-    await expect(draftRow.getByText("Draft — Incomplete")).toBeVisible();
+    // 5. Verify the Draft row's Draft badge and "Resume Draft" button (AC 1 & AC 2).
+    // The status badge is the one Draft marker (shared page conventions,
+    // change 3: no second "Draft — Incomplete" tag).
+    await expect(draftRow.getByTestId("status-badge")).toHaveAttribute("data-status", "DRAFT");
+    await expect(draftRow.getByText("Draft — Incomplete")).toHaveCount(0);
     await expect(draftRow.getByTestId("resume-draft-button")).toBeVisible();
 
     // 6. Verify Submitted Row features "View Details" button and info badge (not confused with draft)
@@ -386,7 +392,7 @@ test.describe("User Story 84 — Organiser Views Their Own Event Requests Journe
     // 2. Create a Draft Event Request
     await page.getByRole("button", { name: /Create Event Request/i }).first().click();
     await page.getByLabel("Event Name *").fill(eventTitle);
-    await page.getByRole("button", { name: /Save as Draft/i }).click();
+    await saveDraft(page);
 
     // 3. Assert event row is displayed with Name and Status Badge (AC 1 & AC 2)
     const row = page.getByRole("row", { name: new RegExp(eventTitle) });
@@ -478,7 +484,7 @@ test.describe("User Story 84 — Events list on mobile (375x812)", () => {
     await expect(startsLabel).toHaveText("Starts");
     const createdLabel = page.locator('td[data-col="created"] span').first();
     await expect(createdLabel).toBeVisible();
-    await expect(createdLabel).toHaveText("Updated");
+    await expect(createdLabel).toHaveText("Last Updated");
 
     // A draft card keeps its accent: the 4px muted left border only renders
     // when the row's data-status="DRAFT" drives the CSS, so this guards against
@@ -553,14 +559,15 @@ test.describe("User Story 84 — Events list on mobile (375x812)", () => {
       }
       const [viewBox, approveBox, askBox, rejectBox] = boxes;
 
-      // Two columns of equal width, two per row: Reject sits beside Ask
+      // Two columns of equal width, two per row, in the order View, Ask,
+      // Approve, Reject (shared page conventions): Reject sits beside Approve
       // instead of wrapping onto a line of its own.
       for (const box of boxes) {
         expect(Math.abs(box.width - viewBox.width)).toBeLessThanOrEqual(1);
       }
-      expect(Math.abs(viewBox.y - approveBox.y)).toBeLessThanOrEqual(1);
-      expect(Math.abs(askBox.y - rejectBox.y)).toBeLessThanOrEqual(1);
-      expect(askBox.y).toBeGreaterThan(viewBox.y);
+      expect(Math.abs(viewBox.y - askBox.y)).toBeLessThanOrEqual(1);
+      expect(Math.abs(approveBox.y - rejectBox.y)).toBeLessThanOrEqual(1);
+      expect(approveBox.y).toBeGreaterThan(viewBox.y);
 
       // Nothing pushes the page wider than the phone.
       const overflowsX = await page.evaluate(
@@ -621,9 +628,9 @@ test.describe("User Story 129, 13 & 84 — Singapore time, unsaved changes and l
     await expect(dialog.getByLabel(/timezone/i)).toHaveCount(0);
 
     // SCRUM-129 AC3: the review step labels the entered times SGT.
-    await page.getByLabel("Proposed Start Date & Time *").fill("2031-11-20T10:00");
-    await page.getByLabel("Proposed End Date & Time *").fill("2031-11-20T18:00");
-    await page.getByRole("button", { name: "6. Review" }).click();
+    await pickDateTime(page.getByLabel("Proposed Start Date & Time *"), "2031-11-20T10:00");
+    await pickDateTime(page.getByLabel("Proposed End Date & Time *"), "2031-11-20T18:00");
+    await page.getByRole("button", { name: "6 - Review" }).click();
     await expect(dialog.getByText(/Start:\s*20 Nov 2031, 10:00 am SGT/)).toBeVisible();
     await expect(dialog.getByText(/End:\s*20 Nov 2031, 6:00 pm SGT/)).toBeVisible();
     await expect(dialog.getByText(/Timezone:/)).toHaveCount(0);
@@ -688,8 +695,8 @@ test.describe("User Story 129, 13 & 84 — Singapore time, unsaved changes and l
     }
 
     // Status Select Filter test - select DRAFT and assert draft row is visible while SUBMITTED rows are excluded
-    await page.getByLabel("Filter by status").selectOption("DRAFT");
-    await expect(page.getByLabel("Filter by status")).toHaveValue("DRAFT");
+    await selectFrom(page.getByLabel("Filter by status"), "DRAFT");
+    await expect(page.getByLabel("Filter by status")).toHaveText("Draft");
     await expect(page.getByTestId("draft-event-row").first()).toBeVisible();
     await expect(page.locator('[data-status="SUBMITTED"]')).not.toBeVisible();
 
@@ -714,8 +721,8 @@ test.describe("User Story 129, 13 & 84 — Singapore time, unsaved changes and l
     await page.getByRole("button", { name: "Next", exact: true }).click();
 
     // AC9: enter a start date clearly in the past.
-    await page.getByLabel("Proposed Start Date & Time *").fill("2020-01-01T10:00");
-    await page.getByLabel("Proposed End Date & Time *").fill("2020-01-01T12:00");
+    await pickDateTime(page.getByLabel("Proposed Start Date & Time *"), "2020-01-01T10:00");
+    await pickDateTime(page.getByLabel("Proposed End Date & Time *"), "2020-01-01T12:00");
     await page.getByRole("button", { name: "Next", exact: true }).click();
 
     // The step validator should reject the past date and display an inline error.
@@ -920,17 +927,17 @@ test.describe("User Story 23 & 24 — Event Status View & Consistency Journey", 
     await organiserPage.getByLabel("Event Description *").fill("Testing live status updates between two concurrent users");
     await organiserPage.getByRole("button", { name: "Next", exact: true }).click();
 
-    await organiserPage.getByLabel("Proposed Start Date & Time *").fill("2027-12-15T09:00");
-    await organiserPage.getByLabel("Proposed End Date & Time *").fill("2027-12-15T18:00");
+    await pickDateTime(organiserPage.getByLabel("Proposed Start Date & Time *"), "2027-12-15T09:00");
+    await pickDateTime(organiserPage.getByLabel("Proposed End Date & Time *"), "2027-12-15T18:00");
     await organiserPage.getByLabel("Expected Attendance *").fill("50");
     await organiserPage.getByRole("button", { name: "Next", exact: true }).click();
 
-    await organiserPage.getByLabel("Venue Requirements *").fill("Conference Room");
-    await organiserPage.getByLabel("Preferred Room Layout *").fill("Boardroom");
-    await organiserPage.getByLabel("Accessibility Needs *").fill("Wheelchair ramp");
+    await fillOther(organiserPage.getByLabel("Venue Requirements *"), "Conference Room");
+    await fillOther(organiserPage.getByLabel("Preferred Room Layout *"), "Boardroom");
+    await fillOther(organiserPage.getByLabel("Accessibility Needs *"), "Wheelchair ramp");
     await organiserPage.getByRole("button", { name: "Next", exact: true }).click();
 
-    await organiserPage.getByLabel("Equipment & Technical Support Requirements *").fill("Projector");
+    await fillOther(organiserPage.getByLabel("Equipment & Technical Support Requirements *"), "Projector");
     await organiserPage.getByRole("button", { name: "Next", exact: true }).click();
 
     // SCRUM-171 AC1: Registration needed is required to submit; the note is optional.
@@ -938,7 +945,7 @@ test.describe("User Story 23 & 24 — Event Status View & Consistency Journey", 
     await organiserPage.getByLabel("Registration Notes (Optional)").fill("Online registration");
     await organiserPage.getByRole("button", { name: "Next", exact: true }).click();
 
-    await organiserPage.getByRole("button", { name: /Submit Request for Review/i }).click();
+    await submitRequest(organiserPage);
 
     // Verify the submitted event appears on the Organiser's table. Since
     // SCRUM-165 it waits, Submitted, in the Lead's Unassigned queue.
@@ -1150,12 +1157,12 @@ test.describe("SCRUM-19 — Reject with a reason, then amend and resubmit", () =
     const next = page.getByRole("button", { name: "Next", exact: true });
     await next.click();
     await next.click();
-    await page.getByLabel("Venue Requirements *").fill("Any room — a different date is fine.");
+    await fillOther(page.getByLabel("Venue Requirements *"), "Any room — a different date is fine.");
     for (let i = 0; i < 3; i++) {
       await next.click();
     }
     await expect(page.getByRole("heading", { name: /Review Entered Details/i })).toBeVisible();
-    await page.getByRole("button", { name: /Submit Request for Review/i }).click();
+    await submitRequest(page);
     await expect(
       page.getByText("Event request submitted for review successfully!"),
     ).toBeVisible();

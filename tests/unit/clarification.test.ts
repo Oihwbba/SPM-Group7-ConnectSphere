@@ -29,7 +29,11 @@ vi.mock("@/auth", () => ({ auth: vi.fn() }));
 vi.mock("@/lib/db", () => ({
   prisma: {
     event: { findUnique: vi.fn() },
-    clarificationRequest: { findFirst: vi.fn(), findUnique: vi.fn() },
+    clarificationRequest: {
+      findFirst: vi.fn(),
+      findMany: vi.fn(),
+      findUnique: vi.fn(),
+    },
     $transaction: vi.fn(),
   },
 }));
@@ -38,6 +42,8 @@ const mockAuth = auth as unknown as Mock;
 const mockEventFindUnique = prisma.event.findUnique as unknown as Mock;
 const mockClarificationFindFirst = prisma.clarificationRequest
   .findFirst as unknown as Mock;
+const mockClarificationFindMany = prisma.clarificationRequest
+  .findMany as unknown as Mock;
 const mockClarificationFindUnique = prisma.clarificationRequest
   .findUnique as unknown as Mock;
 const mockTransaction = prisma.$transaction as unknown as Mock;
@@ -433,10 +439,30 @@ describe("getClarificationForEvent — SCRUM-18/17 read path", () => {
       respondedAt: null,
     });
 
+    mockClarificationFindMany.mockResolvedValue([]);
+
     const result = await getClarificationForEvent("evt1");
 
     expect(result.ok).toBe(true);
     if (result.ok) expect(result.data.clarification?.id).toBe("clar1");
+  });
+
+  it("SCRUM-207 TC-207-21: returns the earlier questions too, oldest first, so the thread reads as one log", async () => {
+    mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_org"));
+    mockEventFindUnique.mockResolvedValue(eventRow());
+    mockClarificationFindFirst.mockResolvedValue({ id: "clar2", status: "OPEN" });
+    const earlier = [{ id: "clar1", status: "ANSWERED", response: "Yes." }];
+    mockClarificationFindMany.mockResolvedValue(earlier);
+
+    const result = await getClarificationForEvent("evt1");
+
+    expect(result.ok && result.data.earlier).toEqual(earlier);
+    expect(mockClarificationFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { eventId: "evt1", id: { not: "clar2" } },
+        orderBy: { createdAt: "asc" },
+      }),
+    );
   });
 
   it("[Positive] returns null when the event has never had a clarification", async () => {
@@ -448,6 +474,8 @@ describe("getClarificationForEvent — SCRUM-18/17 read path", () => {
 
     expect(result.ok).toBe(true);
     if (result.ok) expect(result.data.clarification).toBeNull();
+    if (result.ok) expect(result.data.earlier).toEqual([]);
+    expect(mockClarificationFindMany).not.toHaveBeenCalled();
   });
 
   it("[Negative] an unrelated user gets not-found, never the clarification content", async () => {

@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import type { CoordinatorLoad } from "@/lib/coordinator-assignment";
 import { assignCoordinator } from "./actions";
+import { AppSelect } from "@/components/app/app-select";
 
 /** SCRUM-165 AC4 — choose one Coordinator; each shows their active events,
  * and the least-loaded is pre-selected and marked as suggested. */
@@ -48,20 +49,18 @@ export function AssignForm({
     <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
       <label className="flex flex-1 flex-col gap-1 text-sm">
         <span className="font-medium">Coordinator</span>
-        <select
+        <AppSelect
           value={coordinatorId}
-          onChange={(e) => setCoordinatorId(e.target.value)}
+          onValueChange={setCoordinatorId}
           aria-label="Coordinator"
-          className="h-9 rounded-md border border-input bg-background px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-        >
-          {coordinators.map((coordinator) => (
-            <option key={coordinator.id} value={coordinator.id}>
-              {coordinator.name} — {coordinator.activeEvents} active event
-              {coordinator.activeEvents === 1 ? "" : "s"}
-              {coordinator.id === suggestedId ? " (suggested)" : ""}
-            </option>
-          ))}
-        </select>
+          className="h-9"
+          options={coordinators.map((coordinator) => ({
+            value: coordinator.id,
+            label: `${coordinator.name} — ${coordinator.activeEvents} active event${
+              coordinator.activeEvents === 1 ? "" : "s"
+            }${coordinator.id === suggestedId ? " (suggested)" : ""}`,
+          }))}
+        />
       </label>
       <Button
         onClick={handleAssign}

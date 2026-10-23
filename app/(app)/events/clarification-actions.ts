@@ -133,17 +133,25 @@ export async function requestClarification(
  * recent request, whether still OPEN or already ANSWERED. Read-gated the
  * same way as the write actions above, so an unrelated user sees nothing.
  */
+type ClarificationRow = {
+  id: string;
+  message: string;
+  editableFields: string[];
+  status: string;
+  response: string | null;
+  createdAt: Date;
+  respondedAt: Date | null;
+};
+
+/**
+ * The event's clarification thread for a related user: the latest question,
+ * which may still be open, and the earlier ones, oldest first, so the thread
+ * reads as one log of questions and answers (shared page conventions).
+ */
 export async function getClarificationForEvent(eventId: string): Promise<
   ActionResult<{
-    clarification: {
-      id: string;
-      message: string;
-      editableFields: string[];
-      status: string;
-      response: string | null;
-      createdAt: Date;
-      respondedAt: Date | null;
-    } | null;
+    clarification: ClarificationRow | null;
+    earlier: ClarificationRow[];
   }>
 > {
   const session = await auth();
@@ -183,8 +191,23 @@ export async function getClarificationForEvent(eventId: string): Promise<
       respondedAt: true,
     },
   });
+  const earlier = clarification
+    ? await prisma.clarificationRequest.findMany({
+        where: { eventId, id: { not: clarification.id } },
+        orderBy: { createdAt: "asc" },
+        select: {
+          id: true,
+          message: true,
+          editableFields: true,
+          status: true,
+          response: true,
+          createdAt: true,
+          respondedAt: true,
+        },
+      })
+    : [];
 
-  return ok({ clarification });
+  return ok({ clarification, earlier });
 }
 
 /**

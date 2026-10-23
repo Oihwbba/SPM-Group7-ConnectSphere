@@ -1,7 +1,7 @@
 import { test, expect, type Page, type Route } from "@playwright/test";
 import { prisma } from "@/lib/db";
 
-import { signedIn, usesLocalDatabase } from "./helpers";
+import { signedIn, usesLocalDatabase, pickOptions } from "./helpers";
 
 /**
  * SCRUM-25 — editing an event's details and adding operational notes in a
@@ -429,7 +429,7 @@ test.describe("SCRUM-25 — with the safety check and registration control", () 
 
     await details.getByRole("button", { name: "Edit details" }).click();
     const edit = coordinator.getByRole("dialog", { name: `Edit ${name}` });
-    await edit.getByLabel("Preferred room layout").fill("Classroom");
+    await pickOptions(edit.getByLabel("Preferred room layout"), ["Classroom"]);
     await edit.getByRole("button", { name: "Save details" }).click();
     await expect(
       coordinator.getByText(
