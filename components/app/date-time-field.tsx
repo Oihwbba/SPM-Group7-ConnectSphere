@@ -27,7 +27,10 @@ export function timesEvery(step: 15 | 30): string[] {
   });
 }
 
-/** The half-hour steps booking requests and holds use (SCRUM-50, SCRUM-163). */
+/**
+ * The half-hour steps a hold's expiry uses (SCRUM-163). A booking request's
+ * period is its event's, to the minute (SCRUM-188).
+ */
 export const HALF_HOUR_TIMES = timesEvery(30);
 
 /**
