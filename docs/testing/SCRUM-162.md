@@ -8,8 +8,8 @@ and changes the readiness checklist's Venue item (SCRUM-110, ADR 0011).
 **Shared pre-conditions for every case:** the database is migrated and seeded
 and the app is running. The tester signs in as the event's assigned
 Coordinator (`coordinator@test.local` / `Password123!`) unless the case says
-otherwise. The event is in Planning, runs 09:10–12:45 on 10 Mar 2035 (so its
-booking period is 9:00 am to 1:00 pm) and expects 120. Times are Singapore
+otherwise. The event is in Planning, runs 9:10 am to 1:00 pm on 10 Mar 2035
+(its booking period is exactly that, SCRUM-188) and expects 120. Times are Singapore
 time.
 
 | ID | Type | Criterion | Automated |
@@ -18,8 +18,8 @@ time.
 | [TC-162-02](#tc-162-02) | Negative | AC 2 | Unit, integration, e2e |
 | [TC-162-03](#tc-162-03) | Positive | AC 2 | Integration |
 | [TC-162-04](#tc-162-04) | Positive | AC 3, AC 9 | Unit |
-| [TC-162-05](#tc-162-05) | Positive, Boundary | AC 4 | Unit, integration, e2e |
-| [TC-162-06](#tc-162-06) | Negative, Boundary | AC 4 | Unit, integration, e2e |
+| [TC-162-05](#tc-162-05) | Positive, Boundary | AC 4 (period: superseded by SCRUM-188) | Replaced by TC-188-01 to TC-188-03 |
+| [TC-162-06](#tc-162-06) | Negative, Boundary | AC 4 (period: superseded by SCRUM-188) | Replaced by TC-188-04 |
 | [TC-162-07](#tc-162-07) | Negative, Boundary | AC 4 | Unit, integration, e2e |
 | [TC-162-08](#tc-162-08) | Positive | AC 3, AC 5 | Integration |
 | [TC-162-09](#tc-162-09) | Positive | AC 5 | Unit, integration |
@@ -37,7 +37,7 @@ time.
 | Test Scenario | [Positive] AC 1, AC 3: an event that already has a booking at one venue gets a request for another venue, linked to the same event |
 | Pre-conditions | The event has a Pending or Approved booking at the Grand Auditorium for its period. |
 | Test Steps | 1. Open **Request Venue**. <br> 2. Choose the event and the Exhibition Hall, and submit. |
-| Test Data | Exhibition Hall, 9:00 am–1:00 pm, 120 |
+| Test Data | Exhibition Hall, 9:10 am–1:00 pm, 120 |
 | Expected Result | "Request submitted". The event now has two bookings: the Grand Auditorium and the Exhibition Hall. The other venue's approval doesn't make this one unavailable: availability is checked for the requested venue only. |
 
 **Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-162 [AC1] TC-162-01: an event with a pending booking at another venue gets a new request for this one, linked to the same event" (and the approved one)
@@ -86,26 +86,26 @@ time.
 | Item | Content |
 |---|---|
 | Test Case ID | TC-162-05 |
-| Test Scenario | [Positive, Boundary] AC 4: the period is pre-filled from the event and may be longer, as long as it covers the event |
+| Test Scenario | [Positive, Boundary] AC 4: the period is pre-filled from the event and may be longer, as long as it covers the event. **Superseded by SCRUM-188 AC1, AC2:** the period is exactly the event's and can't be edited; a longer one is refused ([TC-188-01](SCRUM-188.md#tc-188-01) to [TC-188-03](SCRUM-188.md#tc-188-03)). |
 | Pre-conditions | — |
 | Test Steps | 1. Choose the event. <br> 2. Change the end to 2:00 pm, or the start to 8:30 am, and submit. |
 | Test Data | Exhibition Hall |
 | Expected Result | Step 1: Start reads 9:00 am and End 1:00 pm on 10 Mar 2035, both editable. Step 2: the request is created with the longer period. Exactly the event's period is accepted too. |
 
-**Automated by:** `tests/unit/bookings.test.ts` › "SCRUM-162 [AC4] TC-162-05: a longer period that still covers the whole event is accepted"; `tests/integration/bookings.test.ts` › "SCRUM-162 [AC4] TC-162-05: a longer period that still covers the whole event is accepted"; `tests/unit/request-form.test.tsx` › "SCRUM-162 [AC4] TC-162-05: …"; `e2e/bookings.spec.ts` › "SCRUM-50 [AC1] TC-50-15, SCRUM-162 [AC4] TC-162-05, TC-162-06, TC-162-07: …"
+**Automated by:** superseded; its tests were replaced by SCRUM-188's ([TC-188-01](SCRUM-188.md#tc-188-01) to [TC-188-03](SCRUM-188.md#tc-188-03)).
 
 ### TC-162-06
 
 | Item | Content |
 |---|---|
 | Test Case ID | TC-162-06 |
-| Test Scenario | [Negative, Boundary] AC 4: a period that doesn't cover the event's whole period is refused |
+| Test Scenario | [Negative, Boundary] AC 4: a period that doesn't cover the event's whole period is refused. **Superseded by SCRUM-188 AC2:** a shorter or moved period is still refused, now with "The requested period must be the event's: … to …." ([TC-188-04](SCRUM-188.md#tc-188-04)). |
 | Pre-conditions | — |
 | Test Steps | 1. Change the end to 12:30 pm. <br> 2. Send directly to the server a request starting at 9:30 am, one ending at 12:30 pm, and one on the next day. |
 | Test Data | — |
 | Expected Result | Step 1: "The requested period must cover the event's whole period: 10 Mar 2035, 9:00 am SGT to 10 Mar 2035, 1:00 pm SGT." and Submit is disabled. Step 2: the same message against the start field, and nothing is written. |
 
-**Automated by:** `tests/unit/bookings.test.ts` › "SCRUM-162 [AC4] TC-162-06: a period that doesn't cover the event's whole period is refused against the start field, and nothing is written"; `tests/integration/bookings.test.ts` › "SCRUM-162 [AC4] TC-162-06: …"; `e2e/bookings.spec.ts` › "… TC-162-06 …"
+**Automated by:** superseded; its tests were replaced by SCRUM-188's ([TC-188-04](SCRUM-188.md#tc-188-04)).
 
 ### TC-162-07
 
