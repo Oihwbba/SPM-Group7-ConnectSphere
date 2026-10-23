@@ -196,7 +196,8 @@ const emptySubscribe = () => () => {};
 
 /**
  * SCRUM-50 — the Coordinator's request form. Choosing an event fills in its
- * period and expected attendance, which the Coordinator can change for this
+ * period, to the minute (SCRUM-188 AC1), and its expected attendance, which
+ * the Coordinator can change for this
  * venue: the period may only grow to cover more than the event, and the
  * attendance may be any part of the event's (SCRUM-162 AC4). It shows the
  * Organiser's venue and accessibility answers read-only; the Coordinator
@@ -618,7 +619,8 @@ export function RequestForm({
                   <Input
                     id={which}
                     type="datetime-local"
-                    step={1800}
+                    // SCRUM-188 AC1: any minute, so the event's own times fit.
+                    step={60}
                     value={form[which]}
                     onChange={(e) => update(which, e.target.value)}
                   />
@@ -635,11 +637,10 @@ export function RequestForm({
               )}
               {form.eventId && (
                 <p className="text-xs text-muted-foreground sm:col-span-2">
-                  The period and attendance start from the event&apos;s, with
-                  the period rounded out to the half hour. For this venue the
-                  period can be longer but must cover the whole event, and the
-                  attendance can be part of the event&apos;s, for a breakout
-                  room.
+                  The period and attendance start from the event&apos;s, exactly
+                  as the event has them. For this venue the period can be
+                  longer but must cover the whole event, and the attendance
+                  can be part of the event&apos;s, for a breakout room.
                 </p>
               )}
 

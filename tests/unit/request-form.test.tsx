@@ -107,6 +107,32 @@ describe("RequestForm — SCRUM-50", () => {
     expect(html).toMatch(/<input[^>]*type="number"[^>]*id="attendance"[^>]*min="1"[^>]*step="1"/);
   });
 
+  it("SCRUM-188 [AC1] TC-188-01: choosing an event fills in its start and end to the minute, and the fields take any minute", () => {
+    const html = renderToStaticMarkup(
+      <RequestForm
+        events={[
+          {
+            ...event,
+            startAt: new Date("2035-03-10T09:10:00+08:00"),
+            endAt: new Date("2035-03-10T12:45:00+08:00"),
+          },
+        ]}
+        venues={[venue]}
+        initialEventId={event.id}
+      />,
+    );
+
+    expect(html).toMatch(
+      /<input[^>]*id="start"[^>]*value="2035-03-10T09:10"/,
+    );
+    expect(html).toMatch(/<input[^>]*id="end"[^>]*value="2035-03-10T12:45"/);
+    for (const id of ["start", "end"]) {
+      expect(html).toMatch(new RegExp(`<input[^>]*id="${id}"[^>]*step="60"`));
+    }
+    expect(html).toContain("exactly as the event has them");
+    expect(html).not.toContain("half hour");
+  });
+
   it("SCRUM-50 [AC1]: required facilities are toggle pills, none chosen until the coordinator picks", () => {
     const html = renderToStaticMarkup(
       <RequestForm events={[event]} venues={[venue]} />,
@@ -179,7 +205,7 @@ describe("venuesForLayout — SCRUM-50", () => {
   });
 });
 
-describe("the half-hour time grid — SCRUM-50", () => {
+describe("the half-hour time grid — SCRUM-163", () => {
   it("offers every half hour of the day, and nothing in between", () => {
     expect(HALF_HOUR_TIMES).toHaveLength(48);
     expect(HALF_HOUR_TIMES.slice(0, 3)).toEqual(["00:00", "00:30", "01:00"]);
@@ -204,37 +230,41 @@ describe("the quarter-hour time grid — SCRUM-161", () => {
   });
 });
 
-describe("SCRUM-50 [AC1] TC-50-15: eventBookingPeriod", () => {
-  // Singapore times: 09:10 to 16:45, and 23:50 crossing midnight.
+describe("SCRUM-188 [AC1]: eventBookingPeriod", () => {
   const sg = (wall: string) => new Date(`${wall}:00+08:00`);
 
-  it("SCRUM-50 [AC1] TC-50-15: the event's start rounds down and its end rounds up, so the period is never shortened", () => {
+  it("SCRUM-188 [AC1] TC-188-01: the period is exactly the event's start and end, not rounded to the half hour", () => {
     expect(
       eventBookingPeriod({
         startAt: sg("2035-03-10T09:10"),
-        endAt: sg("2035-03-10T16:45"),
+        endAt: sg("2035-03-10T12:45"),
       }),
     ).toEqual({
-      startAt: sg("2035-03-10T09:00"),
-      endAt: sg("2035-03-10T17:00"),
+      startAt: sg("2035-03-10T09:10"),
+      endAt: sg("2035-03-10T12:45"),
     });
+    // One minute either side of a half hour, and an end just before midnight,
+    // which rounding would have carried into the next day.
     expect(
       eventBookingPeriod({
-        startAt: sg("2035-03-10T22:00"),
-        endAt: sg("2035-03-10T23:50"),
-      })?.endAt,
-    ).toEqual(sg("2035-03-11T00:00"));
+        startAt: sg("2035-03-10T09:29"),
+        endAt: sg("2035-03-10T23:59"),
+      }),
+    ).toEqual({
+      startAt: sg("2035-03-10T09:29"),
+      endAt: sg("2035-03-10T23:59"),
+    });
   });
 
-  it("SCRUM-50 [AC1] TC-50-15: times already on the half hour are left alone", () => {
+  it("SCRUM-188 [AC1] TC-188-01: an event's times given as ISO strings come back as the same instants", () => {
     expect(
       eventBookingPeriod({
-        startAt: sg("2035-03-10T09:30"),
-        endAt: "2035-03-10T09:00:00.000Z",
+        startAt: "2035-03-10T01:31:00.000Z",
+        endAt: "2035-03-10T04:44:00.000Z",
       }),
     ).toEqual({
-      startAt: sg("2035-03-10T09:30"),
-      endAt: new Date("2035-03-10T09:00:00.000Z"),
+      startAt: new Date("2035-03-10T01:31:00.000Z"),
+      endAt: new Date("2035-03-10T04:44:00.000Z"),
     });
   });
 
