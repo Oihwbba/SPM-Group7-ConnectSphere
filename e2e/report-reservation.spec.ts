@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 
 import { prisma } from "@/lib/db";
-import { signedIn, usesLocalDatabase } from "./helpers";
+import { signedIn, usesLocalDatabase, selectFrom } from "./helpers";
 
 /**
  * SCRUM-32 — Technical Support report, from the Equipment page, that reserved
@@ -76,7 +76,7 @@ test.describe("SCRUM-32 — report reserved equipment that can no longer be prov
     const tech = await signedIn(browser, "techsupport@test.local");
     await tech.goto("/equipment");
     await tech.locator('[data-hydrated="true"]').waitFor();
-    await tech.getByLabel("Equipment type").selectOption({ value: equipmentId });
+    await selectFrom(tech.getByLabel("Equipment type"), { value: equipmentId });
 
     const row = tech
       .getByTestId("commitments-other")

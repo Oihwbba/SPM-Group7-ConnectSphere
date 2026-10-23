@@ -33,9 +33,7 @@ describe("TimeClashFlags — SCRUM-160 AC5", () => {
     expect(html).toContain("Career Fair");
   });
 
-  it("SCRUM-160 [AC5, AC6] TC-160-11: says so when nothing is waiting", () => {
-    expect(renderToStaticMarkup(<TimeClashFlags flags={[]} />)).toContain(
-      "No booking is waiting on a setup or turnaround change.",
-    );
+  it("SCRUM-160 [AC5, AC6] TC-160-11: with nothing waiting, the section isn't shown", () => {
+    expect(renderToStaticMarkup(<TimeClashFlags flags={[]} />)).toBe("");
   });
 });

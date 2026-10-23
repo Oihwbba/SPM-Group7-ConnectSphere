@@ -8,8 +8,8 @@ import {
 } from "@playwright/test";
 
 /**
- * Shared steps for the venue journeys (SCRUM-36/37/50/52/53): signing in, and
- * driving the app's Select, calendar and half-hour time pickers.
+ * Shared steps for the journeys: signing in, and driving the app's dropdown
+ * and its date and time picker (shared page conventions).
  */
 
 export const usesLocalDatabase = /@(localhost|127\.0\.0\.1)[:/]/.test(
@@ -66,37 +66,7 @@ export async function setTime(
   which: "Start" | "End" | "Expiry",
   wallTime: string,
 ) {
-  const [date, time] = wallTime.split("T");
-  await pickDate(page, which, date);
-  await choose(page, `${which} time`, timeOption(time));
-}
-
-/** Open the in-app calendar, page to the target month, and pick the day. */
-export async function pickDate(
-  page: Page,
-  which: "Start" | "End" | "Expiry",
-  day: string,
-) {
-  await page.getByLabel(`${which} date`).click();
-  const heading = page.locator("[data-month]");
-  const [targetYear, targetMonth] = day.split("-").map(Number);
-  for (;;) {
-    const [y, m] = (await heading.getAttribute("data-month"))!
-      .split("-")
-      .map(Number);
-    const months = targetYear * 12 + targetMonth - (y * 12 + m);
-    if (months === 0) break;
-    const step =
-      Math.abs(months) >= 12
-        ? months > 0
-          ? "Next year"
-          : "Previous year"
-        : months > 0
-          ? "Next month"
-          : "Previous month";
-    await page.getByRole("menuitem", { name: step }).click();
-  }
-  await page.locator(`[data-date="${day}"]`).click();
+  await pickDateTime(page.getByLabel(which, { exact: true }), wallTime);
 }
 
 /**
@@ -263,4 +233,58 @@ export async function optionsOf(trigger: Locator) {
   await page.keyboard.press("Escape");
   await list.waitFor({ state: "hidden" });
   return options;
+}
+
+/**
+ * Open a request in Venue Staff's booking queue (shared page conventions,
+ * change 13): the row showing `text` (the event's name, say), then its
+ * details, where it is decided. Returns the details pop-up.
+ */
+export async function openBooking(
+  page: Page,
+  which: string | RegExp | { id: string },
+) {
+  const row =
+    typeof which === "object" && "id" in which
+      ? page.locator(`[data-testid="queue-row"][data-booking="${which.id}"]`)
+      : page.getByTestId("queue-row").filter({ hasText: which });
+  await row.getByTestId("view-booking-button").click();
+  const details = page.getByTestId(/^booking-/);
+  await expect(details).toBeVisible();
+  return details;
+}
+
+/**
+ * Open a Coordinator's equipment request (shared page conventions, change
+ * 11): the table row for the event, then its details. Returns the pop-up,
+ * whose History tab holds the request's log.
+ */
+export async function openEquipmentRequest(page: Page, eventName: string) {
+  await page
+    .getByTestId("equipment-request")
+    .filter({ hasText: eventName })
+    .getByTestId("view-request-button")
+    .click();
+  const details = page.getByTestId("equipment-request-details");
+  await expect(details).toBeVisible();
+  return details;
+}
+
+/**
+ * Open a request in Technical Support's review queue (shared page
+ * conventions): its table row, by event name or id, then its details. Returns
+ * the pop-up, whose History tab holds the request's log.
+ */
+export async function openReview(
+  page: Page,
+  request: string | { id: string },
+) {
+  const row =
+    typeof request === "string"
+      ? page.getByTestId("review-row").filter({ hasText: request })
+      : page.locator(`#request-${request.id}`);
+  await row.getByTestId("view-review-button").click();
+  const details = page.getByTestId("review-request");
+  await expect(details).toBeVisible();
+  return details;
 }

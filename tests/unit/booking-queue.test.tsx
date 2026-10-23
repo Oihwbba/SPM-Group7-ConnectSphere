@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 
 import {
+  BookingDetails,
   BookingQueue,
   matchesSearch,
 } from "@/app/(app)/bookings/booking-queue";
@@ -66,7 +67,7 @@ const row: PendingBookingRow = {
 describe("BookingQueue", () => {
   it("SCRUM-170 [AC2] TC-170-02: Venue Staff see the Organiser's venue and accessibility answers on the request, as entered", () => {
     const html = renderToStaticMarkup(
-      <BookingQueue queue={[row]} canDecide={false} />,
+      <BookingDetails booking={row} canDecide={false} />,
     );
     const answers = html.slice(
       html.indexOf('data-testid="organiser-venue-answers"'),
@@ -78,6 +79,22 @@ describe("BookingQueue", () => {
     expect(answers).toContain("Wheelchair access");
   });
 
+  it("SCRUM-207 TC-207-20: the queue is a table of key facts; requests are decided only in their details", () => {
+    const html = renderToStaticMarkup(
+      <BookingQueue queue={[row]} canDecide canHold />,
+    );
+    const buttons = [...html.matchAll(/<button[^>]*>.*?<\/button>/g)].map(
+      (m) => m[0],
+    );
+
+    expect(html).toContain('data-testid="queue-row"');
+    expect(html).toContain("Exhibition Hall");
+    // The only control on the row opens the details.
+    expect(buttons).toHaveLength(1);
+    expect(buttons[0]).toContain('data-testid="view-booking-button"');
+    expect(html).not.toMatch(/>(Approve|Reject|Hold)</);
+  });
+
   it("SCRUM-52 [AC4] TC-52-06: an empty queue says there is nothing pending rather than rendering nothing", () => {
     const html = renderToStaticMarkup(<BookingQueue queue={[]} canDecide />);
 
@@ -87,7 +104,7 @@ describe("BookingQueue", () => {
 
   it("SCRUM-52 [AC3] TC-52-02: a request is cross-checked against the venue: what it meets and what it does not", () => {
     const html = renderToStaticMarkup(
-      <BookingQueue queue={[row]} canDecide={false} />,
+      <BookingDetails booking={row} canDecide={false} />,
     );
 
     expect(html).toContain("Free for this period");
@@ -100,7 +117,7 @@ describe("BookingQueue", () => {
     const outside = "Exhibition Hall is closed on Saturdays, so it can't be booked then.";
 
     const html = renderToStaticMarkup(
-      <BookingQueue queue={[{ ...row, outsideHours: outside }]} canDecide={false} />,
+      <BookingDetails booking={{ ...row, outsideHours: outside }} canDecide={false} />,
     );
 
     expect(html).not.toContain("Free for this period");
@@ -114,7 +131,7 @@ describe("BookingQueue", () => {
       "The setup time (30 minutes, from 08:30) falls outside Exhibition Hall's opening hours, 09:00–18:00 on Saturdays. You can still hold or approve it.";
 
     const html = renderToStaticMarkup(
-      <BookingQueue queue={[{ ...row, hoursWarning: warning }]} canDecide />,
+      <BookingDetails booking={{ ...row, hoursWarning: warning }} canDecide />,
     );
 
     expect(html).toContain('data-testid="hours-warning"');
@@ -127,10 +144,10 @@ describe("BookingQueue", () => {
 
   it("SCRUM-53 — the Approve and Reject controls render only for a user who may decide", () => {
     const withControls = renderToStaticMarkup(
-      <BookingQueue queue={[row]} canDecide />,
+      <BookingDetails booking={row} canDecide />,
     );
     const withoutControls = renderToStaticMarkup(
-      <BookingQueue queue={[row]} canDecide={false} />,
+      <BookingDetails booking={row} canDecide={false} />,
     );
 
     // Match the buttons, not text: the event's own name contains "Approve".
@@ -155,15 +172,14 @@ describe("BookingQueue", () => {
       );
 
     const unapproved = renderToStaticMarkup(
-      <BookingQueue queue={[hold]} canDecide canHold />,
+      <BookingDetails booking={hold} canDecide canHold />,
     );
     expect(unapproved).toContain("Held until 5 Mar 2035, 10:00 am SGT");
     expect(unapproved).not.toContain("Approved by Venue Staff");
     expect(buttons(unapproved)).toEqual(["Reject", "Approve"]);
 
     const approved = renderToStaticMarkup(
-      <BookingQueue
-        queue={[{ ...hold, holdApprovedAt: new Date("2035-03-01T02:00:00.000Z") }]}
+      <BookingDetails booking={{ ...hold, holdApprovedAt: new Date("2035-03-01T02:00:00.000Z") }}
         canDecide
         canHold
       />,
@@ -198,7 +214,7 @@ describe("competing requests on the card — SCRUM-134 AC1", () => {
 
   it("SCRUM-134 [AC1, AC2] TC-134-01: a pending request lists each competing request with its submission time, the earlier marked to be decided first", () => {
     const html = renderToStaticMarkup(
-      <BookingQueue queue={[{ ...row, competing }]} canDecide />,
+      <BookingDetails booking={{ ...row, competing }} canDecide />,
     );
 
     expect(html).toContain('data-testid="competing-requests"');
@@ -207,7 +223,7 @@ describe("competing requests on the card — SCRUM-134 AC1", () => {
   });
 
   it("SCRUM-134 [AC1] TC-134-01: a request with no competitors shows no competing list", () => {
-    const html = renderToStaticMarkup(<BookingQueue queue={[row]} canDecide />);
+    const html = renderToStaticMarkup(<BookingDetails booking={row} canDecide />);
 
     expect(html).not.toContain("Competing requests");
   });

@@ -6,14 +6,19 @@ import {
   CalendarRange,
   CircleCheck,
   CircleX,
+  Lock,
   MapPin,
+  Pin,
   Scale,
+  Search,
   SearchX,
   Users,
 } from "lucide-react";
 
 import { requireSession } from "@/lib/auth/guard";
 import { can } from "@/lib/auth/can";
+import { AppSelect } from "@/components/app/app-select";
+import { DateTimePicker } from "@/components/app/date-time-picker";
 import { Forbidden } from "@/components/app/forbidden";
 import { OrganiserVenueAnswers } from "@/components/events/organiser-answers";
 import { Button } from "@/components/ui/button";
@@ -21,7 +26,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { prisma } from "@/lib/db";
-import { formatDateTime, utcToSgWallTime } from "@/lib/datetime";
+import {
+  formatDate,
+  formatDateTime,
+  formatTime,
+  utcToSgWallTime,
+} from "@/lib/datetime";
 import type { Period } from "@/lib/period";
 import {
   filtersOn,
@@ -54,8 +64,6 @@ type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 const SEARCH_FORM_ID = "venue-search-form";
 
 /** A native select, so its value is sent with the GET form like the inputs. */
-const SELECT_CLASS =
-  "flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring";
 
 /**
  * SCRUM-38 — search venues by date, time and location, and filter them by
@@ -122,7 +130,13 @@ export default async function VenueSearchPage({
     ? { period: event.period, bookingPeriod: true }
     : query && searchPeriod(query, today);
   const periodError = resolved && "error" in resolved ? resolved.error : null;
-  const searched = resolved && "period" in resolved ? resolved : null;
+  // Shared page conventions: results show once a search is run, not on
+  // opening the page; a link that already says what to search runs it.
+  const ran = Object.keys(params).some(
+    (name) => !["event", "replace", "searchedFor"].includes(name),
+  );
+  const searched =
+    ran && resolved && "period" in resolved ? resolved : null;
 
   const [results, judgements] = await Promise.all([
     searched
@@ -233,11 +247,12 @@ function DateField({
   return (
     <div className="space-y-2">
       <Label htmlFor={name}>Date</Label>
-      <Input
+      <DateTimePicker
         id={name}
+        mode="date"
         name={name}
-        type="date"
         defaultValue={value ?? ""}
+        placeholder="Any date"
         aria-invalid={messages ? true : undefined}
         aria-describedby={messages ? errorId : undefined}
       />
@@ -273,7 +288,7 @@ function SearchForm({
           // The address holds the search; a browser restoring what was typed
           // on reload would show fields that don't match the results.
           autoComplete="off"
-          className="space-y-5"
+          className="scroll-mt-24 space-y-5"
           noValidate
         >
           <input type="hidden" name="searched" value="1" />
@@ -282,187 +297,196 @@ function SearchForm({
             <input type="hidden" name="replace" value={event.replacing.id} />
           )}
 
-          <EventPicker
-            events={events}
-            value={event?.id ?? ""}
-            className={SELECT_CLASS}
-          />
+          <EventPicker events={events} value={event?.id ?? ""} />
 
-          {event ? (
+          {/* Change 9: for an event, its card on the left third and the
+              search on the right two thirds. */}
+          <div className={event ? "grid gap-6 lg:grid-cols-3" : "contents"}>
+            {event && (
+              <aside
+                className="h-fit rounded-xl border bg-muted/40 p-4 text-sm lg:sticky lg:top-24"
+                data-testid="search-event"
+              >
+                <p className="flex items-start gap-2 font-medium">
+                  <Pin
+                    className="mt-0.5 h-4 w-4 shrink-0 text-primary"
+                    aria-hidden
+                  />
+                  {event.replacing
+                    ? `Finding a replacement for ${event.replacing.venueName} — ${event.name}`
+                    : `For ${event.name}`}
+                </p>
+                <p className="mt-1 text-muted-foreground">
+                  {formatDateTime(event.period.startAt)} to{" "}
+                  {formatDateTime(event.period.endAt)}: the event&apos;s date
+                  and time, which can&apos;t be changed here. Change them on the
+                  event if they are wrong.
+                </p>
+                {/* AC1 (SCRUM-170 AC6): what the Organiser asked for. */}
+                <div className="mt-3 space-y-2 border-t pt-3">
+                  <p className="text-xs font-medium">
+                    What the Organiser asked for
+                  </p>
+                  <OrganiserVenueAnswers answers={event.answers} />
+                  <p className="text-xs text-muted-foreground">
+                    Set the attendance, layout, facilities and accessibility
+                    features yourself; these answers aren&apos;t copied into the
+                    search.
+                  </p>
+                </div>
+              </aside>
+            )}
             <div
-              className="rounded-lg border bg-muted/40 p-3 text-sm"
-              data-testid="search-event"
+              className={
+                event ? "space-y-5 lg:col-span-2 lg:border-l lg:pl-6" : "contents"
+              }
             >
-              <p className="font-medium">
-                {event.replacing
-                  ? `Finding a replacement for ${event.replacing.venueName} — ${event.name}`
-                  : `For ${event.name}`}
-              </p>
-              <p className="text-muted-foreground">
-                {formatDateTime(event.period.startAt)} to{" "}
-                {formatDateTime(event.period.endAt)}: the event&apos;s date and
-                time, which can&apos;t be changed here. Change them on the event
-                if they are wrong.
-              </p>
-              {/* AC1 (SCRUM-170 AC6): what the Organiser asked for. */}
-              <div className="mt-3 space-y-2 border-t pt-3">
-                <p className="text-xs font-medium">
-                  What the Organiser asked for
-                </p>
-                <OrganiserVenueAnswers answers={event.answers} />
-                <p className="text-xs text-muted-foreground">
-                  Set the attendance, layout, facilities and accessibility
-                  features below yourself; these answers aren&apos;t copied into
-                  the search.
-                </p>
+              {event ? (
+                <FixedPeriod period={event.period} />
+              ) : (
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <DateField value={query?.date} messages={fieldErrors.date} />
+                  <TimeField
+                    name="from"
+                    label="Start time"
+                    value={query?.from}
+                    messages={fieldErrors.from}
+                  />
+                  <TimeField
+                    name="to"
+                    label="End time"
+                    value={query?.to}
+                    messages={fieldErrors.to}
+                  />
+                  <p className="text-xs text-muted-foreground sm:col-span-3">
+                    Use a date, a time range on it, a location, or any of them
+                    together. A search covers one day: a date alone means that
+                    whole day, and times without a date are today. With a start
+                    and an end time, venues closed at those times are left out;
+                    without them, only venues closed that day are.
+                  </p>
+                </div>
+              )}
+
+              <div className="grid gap-4 sm:grid-cols-3">
+                <div className="space-y-2">
+                  <Label htmlFor="location">Location</Label>
+                  <AppSelect
+                    id="location"
+                    name="location"
+                    defaultValue={query?.location ?? ""}
+                    options={[
+                      { value: "", label: "Any location" },
+                      ...options.locations.map((location) => ({
+                        value: location,
+                        label: location,
+                      })),
+                    ]}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="attendance">Attendance</Label>
+                  <Input
+                    id="attendance"
+                    name="attendance"
+                    type="number"
+                    min={1}
+                    defaultValue={filters.attendance ?? ""}
+                    placeholder="Any"
+                    aria-describedby={
+                      fieldErrors.attendance
+                        ? "attendance-error"
+                        : "attendance-hint"
+                    }
+                  />
+                  {fieldErrors.attendance ? (
+                    <FieldMessage
+                      id="attendance-error"
+                      messages={fieldErrors.attendance}
+                    />
+                  ) : (
+                    <p
+                      id="attendance-hint"
+                      className="text-xs text-muted-foreground"
+                    >
+                      Lower it when a room only needs to hold part of the
+                      audience.
+                    </p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="layout">Room layout</Label>
+                  <AppSelect
+                    id="layout"
+                    name="layout"
+                    defaultValue={filters.layout ?? ""}
+                    options={[
+                      { value: "", label: "Any layout" },
+                      ...Array.from(
+                        new Set([
+                          ...options.layouts,
+                          ...(filters.layout ? [filters.layout] : []),
+                        ]),
+                      ).map((layout) => ({ value: layout, label: layout })),
+                    ]}
+                  />
+                </div>
+              </div>
+
+              <CheckboxGroup
+                legend="Required facilities"
+                name="facility"
+                values={options.facilities}
+                checked={filters.facilities}
+              />
+              <CheckboxGroup
+                legend="Accessibility features"
+                name="access"
+                values={options.accessibilityFeatures}
+                checked={filters.accessibilityFeatures}
+              />
+
+              {/* AC11: the needs above as filters, or only as suitability (AC8). */}
+              <div className="flex items-start gap-2">
+                <input
+                  id="fit"
+                  name="fit"
+                  type="checkbox"
+                  value="1"
+                  defaultChecked={onlyFitting}
+                  className="mt-0.5 h-4 w-4 rounded border-input accent-primary"
+                  aria-describedby="fit-hint"
+                />
+                <div className="space-y-0.5">
+                  <Label htmlFor="fit">Only show venues that fit</Label>
+                  <p id="fit-hint" className="text-xs text-muted-foreground">
+                    Untick to see every free venue, each marked Suitable or Not
+                    suitable with the reasons.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center justify-end gap-3 border-t pt-4">
+                <ResetLink
+                  formId={SEARCH_FORM_ID}
+                  href={{
+                    pathname: "/venues/search",
+                    query: event
+                      ? {
+                          event: event.id,
+                          ...(event.replacing && {
+                            replace: event.replacing.id,
+                          }),
+                        }
+                      : {},
+                  }}
+                  className="text-sm text-muted-foreground underline-offset-4 hover:underline"
+                >
+                  Reset
+                </ResetLink>
+                <Button type="submit">Search</Button>
               </div>
             </div>
-          ) : (
-            <div className="grid gap-4 sm:grid-cols-3">
-              <DateField value={query?.date} messages={fieldErrors.date} />
-              <TimeField
-                name="from"
-                label="Start time"
-                value={query?.from}
-                messages={fieldErrors.from}
-                className={SELECT_CLASS}
-              />
-              <TimeField
-                name="to"
-                label="End time"
-                value={query?.to}
-                messages={fieldErrors.to}
-                className={SELECT_CLASS}
-              />
-              <p className="text-xs text-muted-foreground sm:col-span-3">
-                Use a date, a time range on it, a location, or any of them
-                together. A search covers one day: a date alone means that whole
-                day, and times without a date are today. With a start and an end
-                time, venues closed at those times are left out; without them,
-                only venues closed that day are.
-              </p>
-            </div>
-          )}
-
-          <div className="grid gap-4 sm:grid-cols-3">
-            <div className="space-y-2">
-              <Label htmlFor="location">Location</Label>
-              <select
-                id="location"
-                name="location"
-                defaultValue={query?.location ?? ""}
-                className={SELECT_CLASS}
-              >
-                <option value="">Any location</option>
-                {options.locations.map((location) => (
-                  <option key={location} value={location}>
-                    {location}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="attendance">Attendance</Label>
-              <Input
-                id="attendance"
-                name="attendance"
-                type="number"
-                min={1}
-                defaultValue={filters.attendance ?? ""}
-                placeholder="Any"
-                aria-describedby={
-                  fieldErrors.attendance
-                    ? "attendance-error"
-                    : "attendance-hint"
-                }
-              />
-              {fieldErrors.attendance ? (
-                <FieldMessage
-                  id="attendance-error"
-                  messages={fieldErrors.attendance}
-                />
-              ) : (
-                <p
-                  id="attendance-hint"
-                  className="text-xs text-muted-foreground"
-                >
-                  Lower it when a room only needs to hold part of the audience.
-                </p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="layout">Room layout</Label>
-              <select
-                id="layout"
-                name="layout"
-                defaultValue={filters.layout ?? ""}
-                className={SELECT_CLASS}
-              >
-                <option value="">Any layout</option>
-                {Array.from(
-                  new Set([
-                    ...options.layouts,
-                    ...(filters.layout ? [filters.layout] : []),
-                  ]),
-                ).map((layout) => (
-                  <option key={layout} value={layout}>
-                    {layout}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <CheckboxGroup
-            legend="Required facilities"
-            name="facility"
-            values={options.facilities}
-            checked={filters.facilities}
-          />
-          <CheckboxGroup
-            legend="Accessibility features"
-            name="access"
-            values={options.accessibilityFeatures}
-            checked={filters.accessibilityFeatures}
-          />
-
-          {/* AC11: the needs above as filters, or only as suitability (AC8). */}
-          <div className="flex items-start gap-2">
-            <input
-              id="fit"
-              name="fit"
-              type="checkbox"
-              value="1"
-              defaultChecked={onlyFitting}
-              className="mt-0.5 h-4 w-4 rounded border-input accent-primary"
-              aria-describedby="fit-hint"
-            />
-            <div className="space-y-0.5">
-              <Label htmlFor="fit">Only show venues that fit</Label>
-              <p id="fit-hint" className="text-xs text-muted-foreground">
-                Untick to see every free venue, each marked Suitable or Not
-                suitable with the reasons.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center justify-end gap-3 border-t pt-4">
-            <ResetLink
-              formId={SEARCH_FORM_ID}
-              href={{
-                pathname: "/venues/search",
-                query: event
-                  ? {
-                      event: event.id,
-                      ...(event.replacing && { replace: event.replacing.id }),
-                    }
-                  : {},
-              }}
-              className="text-sm text-muted-foreground underline-offset-4 hover:underline"
-            >
-              Reset
-            </ResetLink>
-            <Button type="submit">Search</Button>
           </div>
         </Form>
       </CardContent>
@@ -559,6 +583,17 @@ function SuitabilityLine({
   );
 }
 
+/** Back up to the form, to change the search and run it again. */
+function SearchAgain() {
+  return (
+    <Button asChild size="sm" variant="outline">
+      <a href={`#${SEARCH_FORM_ID}`}>
+        <Search className="h-4 w-4" aria-hidden /> Search again
+      </a>
+    </Button>
+  );
+}
+
 /** AC8–AC10 — what was found, or a message saying nothing was. */
 function Results({
   results,
@@ -588,6 +623,7 @@ function Results({
           <p className="max-w-md text-sm text-muted-foreground">
             Try another time or location, or turn off a filter.
           </p>
+          <SearchAgain />
         </CardContent>
       </Card>
     );
@@ -595,11 +631,14 @@ function Results({
 
   return (
     <section aria-labelledby="results-heading" className="space-y-3">
-      <h2 id="results-heading" className="text-sm font-medium">
-        {results.length} {results.length === 1 ? "venue" : "venues"}
-        {period &&
-          ` free from ${formatDateTime(period.startAt)} to ${formatDateTime(period.endAt)}`}
-      </h2>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 id="results-heading" className="text-sm font-medium">
+          {results.length} {results.length === 1 ? "venue" : "venues"}
+          {period &&
+            ` free from ${formatDateTime(period.startAt)} to ${formatDateTime(period.endAt)}`}
+        </h2>
+        <SearchAgain />
+      </div>
       <ul className="space-y-2">
         {results.map((venue) => (
           <li key={venue.id} data-testid="venue-result" data-venue={venue.id}>
@@ -666,5 +705,47 @@ function Results({
         ))}
       </ul>
     </section>
+  );
+}
+
+/**
+ * Change 9 — for an event, the period searched is the event's own: shown in
+ * the form, read-only, where the date and times would be (SCRUM-38 AC1).
+ */
+function FixedPeriod({ period }: { period: { startAt: Date; endAt: Date } }) {
+  const fields = [
+    {
+      id: "event-date",
+      label: "Event date",
+      value: formatDate(period.startAt),
+    },
+    {
+      id: "event-start",
+      label: "Event start",
+      value: formatTime(period.startAt),
+    },
+    {
+      id: "event-end",
+      label: "Event end",
+      value: formatDateTime(period.endAt),
+    },
+  ];
+  return (
+    <div className="grid gap-4 sm:grid-cols-3">
+      {fields.map((field) => (
+        <div key={field.id} className="space-y-2">
+          <Label htmlFor={field.id} className="flex items-center gap-1.5">
+            <Lock className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
+            {field.label}
+          </Label>
+          <Input
+            id={field.id}
+            value={field.value}
+            readOnly
+            className="bg-muted/50"
+          />
+        </div>
+      ))}
+    </div>
   );
 }
