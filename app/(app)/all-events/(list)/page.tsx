@@ -3,6 +3,8 @@ import { CalendarSearch } from "lucide-react";
 
 import { requireSession } from "@/lib/auth/guard";
 import { can } from "@/lib/auth/can";
+import { AppSelect } from "@/components/app/app-select";
+import { DateTimePicker } from "@/components/app/date-time-picker";
 import { Forbidden } from "@/components/app/forbidden";
 import { StatusBadge, STATUS_META } from "@/components/events/status-badge";
 import { Button } from "@/components/ui/button";
@@ -23,9 +25,6 @@ import {
 } from "../queries";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
-
-const fieldClass =
-  "h-9 rounded-md border border-input bg-background px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring";
 
 /** SCRUM-141 — every event, read-only, for planning. Access is decided by
  * `can()` (SCRUM-67): Organisers, Attendees and Safety Officers are refused. */
@@ -78,53 +77,53 @@ export default async function AllEventsPage({
       <form className="flex flex-wrap items-end gap-3" method="get">
         <label className="flex flex-col gap-1 text-xs font-medium">
           Status
-          <select
+          <AppSelect
             name="status"
             defaultValue={filters.status ?? ""}
-            className={fieldClass}
-          >
-            <option value="">All statuses</option>
-            {LISTED_STATUSES.map((status) => (
-              <option key={status} value={status}>
-                {STATUS_META[status].label}
-              </option>
-            ))}
-          </select>
+            className="h-9 w-44 text-sm font-normal"
+            options={[
+              { value: "", label: "All statuses" },
+              ...LISTED_STATUSES.map((status) => ({
+                value: status,
+                label: STATUS_META[status].label,
+              })),
+            ]}
+          />
         </label>
         <label className="flex flex-col gap-1 text-xs font-medium">
           Starts from
-          <input
-            type="date"
+          <DateTimePicker
+            mode="date"
             name="from"
-            defaultValue={filters.from}
-            className={fieldClass}
+            defaultValue={filters.from ?? ""}
+            className="h-9 w-44 font-normal"
           />
         </label>
         <label className="flex flex-col gap-1 text-xs font-medium">
           Starts by
-          <input
-            type="date"
+          <DateTimePicker
+            mode="date"
             name="to"
-            defaultValue={filters.to}
-            className={fieldClass}
+            defaultValue={filters.to ?? ""}
+            className="h-9 w-44 font-normal"
           />
         </label>
         {isLead && (
           <>
             <label className="flex flex-col gap-1 text-xs font-medium">
               Coordinator
-              <select
+              <AppSelect
                 name="coordinator"
                 defaultValue={filters.coordinatorId ?? ""}
-                className={fieldClass}
-              >
-                <option value="">All Coordinators</option>
-                {coordinators.map((coordinator) => (
-                  <option key={coordinator.id} value={coordinator.id}>
-                    {coordinator.name}
-                  </option>
-                ))}
-              </select>
+                className="h-9 w-48 text-sm font-normal"
+                options={[
+                  { value: "", label: "All Coordinators" },
+                  ...coordinators.map((coordinator) => ({
+                    value: coordinator.id,
+                    label: coordinator.name,
+                  })),
+                ]}
+              />
             </label>
             <label className="flex h-9 items-center gap-2 text-sm">
               <input
@@ -142,7 +141,7 @@ export default async function AllEventsPage({
         </Button>
         <Link
           href="/all-events"
-          className="text-sm text-muted-foreground hover:text-foreground"
+          className="flex h-9 items-center px-2 text-sm text-muted-foreground hover:text-foreground"
         >
           Clear
         </Link>

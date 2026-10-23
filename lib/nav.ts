@@ -71,11 +71,8 @@ const NAV_ROUTES: NavRoute[] = [
     href: "/registrations",
     label: "My Registrations",
   },
-  {
-    action: "notification:read",
-    href: "/notifications",
-    label: "Notifications",
-  },
+  // Notifications are reached from the bell beside the user's name, the one
+  // way in (shared page conventions, change 9), not from this menu.
   // SCRUM-34 AC2: every internal role reads the catalogue. Listed last, so it
   // never becomes a role's first link and so never moves where it lands.
   { action: "venue:read", href: "/venues", label: "Venues" },

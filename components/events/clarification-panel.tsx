@@ -6,9 +6,9 @@ import { toast } from "sonner";
 import { MessageCircleQuestion } from "lucide-react";
 import type { Event } from "@prisma/client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DateTimePicker } from "@/components/app/date-time-picker";
 import { Textarea } from "@/components/ui/textarea";
 import { FieldError } from "@/components/ui/field-error";
 import {
@@ -20,7 +20,12 @@ import {
   type ClarifiableField,
   type ClarificationChanges,
 } from "@/lib/schemas/clarification";
-import { sgWallTimeToUtcIso, utcToSgWallTime } from "@/lib/datetime";
+import {
+  formatDateTime,
+  sgWallTimeToUtcIso,
+  utcToSgWallTime,
+} from "@/lib/datetime";
+import { cn } from "@/lib/utils";
 
 interface ClarificationPanelProps {
   /** The event as currently stored, to pre-fill the fields the answer may change. */
@@ -28,6 +33,9 @@ interface ClarificationPanelProps {
   /** True when the viewer is the Coordinator (read-only here); false means
    * the viewer is the Organiser, who can respond while a request is OPEN. */
   isCoordinator: boolean;
+  /** Told once loaded whether the event has a thread, so the details
+   * pop-up can offer it as its own tab. */
+  onLoaded?: (hasThread: boolean) => void;
 }
 
 type Clarification = {
@@ -101,10 +109,12 @@ function changesBetween(
 export function ClarificationPanel({
   event,
   isCoordinator,
+  onLoaded,
 }: ClarificationPanelProps) {
   const [clarification, setClarification] = useState<Clarification | null>(
     null,
   );
+  const [earlier, setEarlier] = useState<Clarification[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadFailed, setLoadFailed] = useState(false);
   const [response, setResponse] = useState("");
@@ -119,8 +129,11 @@ export function ClarificationPanel({
     getClarificationForEvent(event.id)
       .then((result) => {
         if (cancelled) return;
-        if (result.ok) setClarification(result.data.clarification);
-        else setLoadFailed(true);
+        if (result.ok) {
+          setClarification(result.data.clarification);
+          setEarlier(result.data.earlier);
+          onLoaded?.(result.data.clarification !== null);
+        } else setLoadFailed(true);
       })
       .catch(() => {
         if (!cancelled) setLoadFailed(true);
@@ -131,6 +144,8 @@ export function ClarificationPanel({
     return () => {
       cancelled = true;
     };
+    // onLoaded is the parent's setter; reading again for it isn't wanted.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [event.id]);
 
   async function submitResponse() {
@@ -183,109 +198,126 @@ export function ClarificationPanel({
   const set = (key: string) => (value: string) =>
     setDraft((current) => ({ ...current, [key]: value }));
 
+  const fieldsNote = (fields: string[]) => {
+    const names = fields
+      .filter((f): f is ClarifiableField => f in CLARIFIABLE_FIELDS)
+      .map((f) => CLARIFIABLE_FIELDS[f]);
+    return names.length > 0
+      ? `The organiser may change: ${names.join(", ")}.`
+      : "Text answer only.";
+  };
+
+  // Shared page conventions, change 2: the thread as messages, one
+  // Coordinator question and one Organiser answer at a time.
   return (
-    <Card>
-      <CardHeader className="bg-warning/15 px-4 py-3">
-        <CardTitle className="flex items-center gap-2 text-sm font-semibold">
-          <MessageCircleQuestion className="h-4 w-4 text-warning" />
-          Clarification {isOpen ? "requested" : "thread"}
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3 p-4 text-xs">
-        <div>
-          <span className="font-semibold text-muted-foreground">
-            Coordinator asked:
-          </span>
-          <p className="mt-0.5 whitespace-pre-wrap text-foreground">
-            {clarification.message}
-          </p>
-        </div>
-
-        <p data-testid="clarification-fields" className="text-muted-foreground">
-          {named.length > 0
-            ? `The organiser may change: ${named.map((f) => CLARIFIABLE_FIELDS[f]).join(", ")}.`
-            : "Text answer only."}
-        </p>
-
-        {clarification.status === "ANSWERED" && (
-          <div>
-            <span className="font-semibold text-muted-foreground">
-              Organiser responded:
-            </span>
-            <p className="mt-0.5 whitespace-pre-wrap text-foreground">
-              {clarification.response}
-            </p>
-          </div>
-        )}
-
-        {isOpen && isCoordinator && (
-          <p className="text-muted-foreground">
-            Waiting for the organiser&apos;s response.
-          </p>
-        )}
-
-        {isOpen && !isCoordinator && (
-          <div className="space-y-2 pt-1">
-            {named.map((field) =>
-              field === "schedule" ? (
-                <div
-                  key={field}
-                  className="grid grid-cols-1 gap-2 sm:grid-cols-2"
+    <section
+      aria-label="Clarification thread"
+      className="space-y-4 text-sm"
+      data-testid="clarification-thread"
+    >
+      <h3 className="flex items-center gap-2 text-sm font-semibold">
+        <MessageCircleQuestion className="h-4 w-4 text-warning" />
+        Clarification {isOpen ? "requested" : "thread"}
+      </h3>
+      <ol className="space-y-3">
+        {[...earlier, clarification].map((item) => {
+          const current = item.id === clarification.id;
+          return (
+            <li key={item.id} className="space-y-3">
+              <Message
+                from="Coordinator asked:"
+                at={item.createdAt}
+                side="left"
+              >
+                <p className="whitespace-pre-wrap">{item.message}</p>
+                <p
+                  data-testid={current ? "clarification-fields" : undefined}
+                  className="mt-1 text-xs text-muted-foreground"
                 >
-                  {(["startAt", "endAt"] as const).map((key) => (
-                    <label key={key} className="space-y-1">
-                      <span className="font-medium">
-                        {key === "startAt" ? "Start" : "End"}
-                      </span>
-                      <Input
-                        type="datetime-local"
-                        value={draft[key]}
-                        onChange={(e) => set(key)(e.target.value)}
-                        aria-invalid={Boolean(errors[key])}
-                        aria-describedby={
-                          errors[key] ? `clarify-${key}-error` : undefined
-                        }
-                      />
-                      <FieldError
-                        id={`clarify-${key}-error`}
-                        messages={errors[key]}
-                      />
+                  {fieldsNote(item.editableFields)}
+                </p>
+              </Message>
+              {item.status === "ANSWERED" && (
+                <Message
+                  from="Organiser responded:"
+                  at={item.respondedAt}
+                  side="right"
+                >
+                  <p className="whitespace-pre-wrap">{item.response}</p>
+                </Message>
+              )}
+            </li>
+          );
+        })}
+      </ol>
+
+      {isOpen && isCoordinator && (
+        <p className="text-xs text-muted-foreground">
+          Waiting for the organiser&apos;s response.
+        </p>
+      )}
+
+      {isOpen && !isCoordinator && (
+        <div className="space-y-2 rounded-xl border bg-background p-3 text-xs">
+          {named.map((field) =>
+            field === "schedule" ? (
+              <div
+                key={field}
+                className="grid grid-cols-1 gap-2 sm:grid-cols-2"
+              >
+                {(["startAt", "endAt"] as const).map((key) => (
+                  <div key={key} className="space-y-1">
+                    <label
+                      htmlFor={`clarify-${key}`}
+                      className="block font-medium"
+                    >
+                      {key === "startAt" ? "Start" : "End"}
                     </label>
-                  ))}
-                </div>
-              ) : (
-                <label key={field} className="block space-y-1">
-                  <span className="font-medium">
-                    {CLARIFIABLE_FIELDS[field]}
-                  </span>
-                  <Input
-                    type={field === "expectedAttendance" ? "number" : "text"}
-                    min={field === "expectedAttendance" ? 1 : undefined}
-                    value={draft[field]}
-                    onChange={(e) => set(field)(e.target.value)}
-                    aria-invalid={Boolean(errors[field])}
-                    aria-describedby={
-                      errors[field] ? `clarify-${field}-error` : undefined
-                    }
-                  />
-                  <FieldError
-                    id={`clarify-${field}-error`}
-                    messages={errors[field]}
-                  />
-                </label>
-              ),
-            )}
-            <Textarea
-              value={response}
-              onChange={(e) => setResponse(e.target.value)}
-              placeholder="Type your response…"
-              aria-label="Response to clarification"
-              aria-invalid={Boolean(errors.response)}
-            />
-            <FieldError
-              id="clarify-response-error"
-              messages={errors.response}
-            />
+                    <DateTimePicker
+                      id={`clarify-${key}`}
+                      value={draft[key]}
+                      onChange={set(key)}
+                      aria-invalid={Boolean(errors[key])}
+                      aria-describedby={
+                        errors[key] ? `clarify-${key}-error` : undefined
+                      }
+                    />
+                    <FieldError
+                      id={`clarify-${key}-error`}
+                      messages={errors[key]}
+                    />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <label key={field} className="block space-y-1">
+                <span className="font-medium">{CLARIFIABLE_FIELDS[field]}</span>
+                <Input
+                  type={field === "expectedAttendance" ? "number" : "text"}
+                  min={field === "expectedAttendance" ? 1 : undefined}
+                  value={draft[field]}
+                  onChange={(e) => set(field)(e.target.value)}
+                  aria-invalid={Boolean(errors[field])}
+                  aria-describedby={
+                    errors[field] ? `clarify-${field}-error` : undefined
+                  }
+                />
+                <FieldError
+                  id={`clarify-${field}-error`}
+                  messages={errors[field]}
+                />
+              </label>
+            ),
+          )}
+          <Textarea
+            value={response}
+            onChange={(e) => setResponse(e.target.value)}
+            placeholder="Type your response…"
+            aria-label="Response to clarification"
+            aria-invalid={Boolean(errors.response)}
+          />
+          <FieldError id="clarify-response-error" messages={errors.response} />
+          <div className="flex justify-end">
             <Button
               size="sm"
               disabled={submitting || !response.trim()}
@@ -294,8 +326,44 @@ export function ClarificationPanel({
               {submitting ? "Sending…" : "Send response"}
             </Button>
           </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
+/** One message in the thread: the Coordinator's on the left, the Organiser's on the right. */
+function Message({
+  from,
+  at,
+  side,
+  children,
+}: {
+  from: string;
+  at: string | Date | null;
+  side: "left" | "right";
+  children: React.ReactNode;
+}) {
+  return (
+    <div className={cn("flex", side === "right" && "justify-end")}>
+      <div
+        className={cn(
+          "max-w-[85%] space-y-1 rounded-2xl px-4 py-3",
+          side === "left"
+            ? "rounded-tl-sm bg-muted"
+            : "rounded-tr-sm bg-primary/10",
         )}
-      </CardContent>
-    </Card>
+      >
+        <p className="flex flex-wrap items-baseline gap-x-2 text-xs">
+          <span className="font-semibold text-muted-foreground">{from}</span>
+          {at && (
+            <span className="text-muted-foreground/80">
+              {formatDateTime(at)}
+            </span>
+          )}
+        </p>
+        {children}
+      </div>
+    </div>
   );
 }
