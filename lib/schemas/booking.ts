@@ -24,52 +24,49 @@ export const PAST_START_MESSAGE = "The start time cannot be in the past.";
 
 /**
  * How far in the past a start may be and still count as "now": a request
- * started at the current half hour is not refused over the seconds it took to
- * submit. The equipment form allows the same minute (SCRUM-31).
+ * starting this minute is not refused over the seconds it took to submit.
+ * The equipment form allows the same minute (SCRUM-31).
  */
 const PAST_START_GRACE_MS = 60_000;
 
 export const INVALID_PERIOD_MESSAGE =
   "The requested period is invalid: the end must be after the start.";
 
-const HALF_HOUR_MS = 30 * 60 * 1000;
-
 /**
- * SCRUM-50 AC1, SCRUM-162 AC4 — the period a venue request starts from: the
- * event's own, with the start rounded down and the end rounded up to the half
- * hour, so it is never shorter than the event. Singapore is a whole number of hours from
- * UTC, so rounding the UTC instant rounds the Singapore time the same way.
- * An event without both dates has no period yet.
+ * SCRUM-188 AC1 — the period a venue request is for: exactly the event's, not
+ * rounded, so the event, its booking and venue search (SCRUM-38 AC2) never
+ * disagree about the time. An event without both dates has no period yet.
  */
 export function eventBookingPeriod(event: {
   startAt: Date | string | null;
   endAt: Date | string | null;
 }): { startAt: Date; endAt: Date } | null {
   if (!event.startAt || !event.endAt) return null;
-  const start = new Date(event.startAt).getTime();
-  const end = new Date(event.endAt).getTime();
-  return {
-    startAt: new Date(Math.floor(start / HALF_HOUR_MS) * HALF_HOUR_MS),
-    endAt: new Date(Math.ceil(end / HALF_HOUR_MS) * HALF_HOUR_MS),
-  };
+  return { startAt: new Date(event.startAt), endAt: new Date(event.endAt) };
 }
 
 export const EVENT_NOT_SCHEDULED_MESSAGE =
   "This event has no dates or expected attendance yet. Set them on the event before requesting a venue.";
 
-/** SCRUM-162 AC4 — a venue is booked for at least the event's whole period. */
-export function coversEventPeriod(
+/**
+ * SCRUM-188 AC2 — a venue is booked for exactly the event's period: neither
+ * longer nor shorter.
+ */
+export function isEventPeriod(
   period: { startAt: Date; endAt: Date },
   eventPeriod: { startAt: Date; endAt: Date },
 ): boolean {
-  return period.startAt <= eventPeriod.startAt && period.endAt >= eventPeriod.endAt;
+  return (
+    period.startAt.getTime() === eventPeriod.startAt.getTime() &&
+    period.endAt.getTime() === eventPeriod.endAt.getTime()
+  );
 }
 
-export function notCoveringEventMessage(period: {
+export function notEventPeriodMessage(period: {
   startAt: Date;
   endAt: Date;
 }): string {
-  return `The requested period must cover the event's whole period: ${formatDateTime(period.startAt)} to ${formatDateTime(period.endAt)}.`;
+  return `The requested period must be the event's: ${formatDateTime(period.startAt)} to ${formatDateTime(period.endAt)}.`;
 }
 
 /** SCRUM-162 AC4 — a venue's attendance is from 1 to the event's expected attendance. */

@@ -35,21 +35,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  formatDateTime,
-  sgWallTimeToUtcIso,
-  utcToSgWallTime,
-} from "@/lib/datetime";
+import { formatDateTime, utcToSgWallTime } from "@/lib/datetime";
 import type { ActionResult } from "@/lib/action-result";
 import { cn } from "@/lib/utils";
 import { isValidPeriod } from "@/lib/period";
 import { BOOKING_STATUS_LABEL } from "@/lib/status-labels";
 import {
   attendanceOverEventMessage,
-  coversEventPeriod,
   eventBookingPeriod,
   INVALID_PERIOD_MESSAGE,
-  notCoveringEventMessage,
   overCapacityMessage,
 } from "@/lib/schemas/booking";
 import {
@@ -72,8 +66,6 @@ type Outcome =
 const emptyForm = {
   eventId: "",
   venueId: "",
-  start: "",
-  end: "",
   attendance: "",
   facilities: [] as string[],
   accessibility: [] as string[],
@@ -196,13 +188,12 @@ const emptySubscribe = () => () => {};
 
 /**
  * SCRUM-50 — the Coordinator's request form. Choosing an event fills in its
- * period and expected attendance, which the Coordinator can change for this
- * venue: the period may only grow to cover more than the event, and the
- * attendance may be any part of the event's (SCRUM-162 AC4). It shows the
- * Organiser's venue and accessibility answers read-only; the Coordinator
- * enters this venue's layout, facilities and accessibility needs (SCRUM-170
- * AC2, SCRUM-162 AC9). The room
- * layout comes before the venue and narrows the venues offered. Once a venue
+ * period exactly, which can't be edited (SCRUM-188 AC1), and its expected
+ * attendance, which can be any part of the event's for this venue
+ * (SCRUM-162 AC4). It shows the Organiser's venue and accessibility answers
+ * read-only; the Coordinator enters this venue's layout, facilities and
+ * accessibility needs (SCRUM-170 AC2, SCRUM-162 AC9). The room layout comes
+ * before the venue and narrows the venues offered. Once a venue
  * and period are chosen, the server is asked whether the venue is free and the
  * answer is shown before submitting; a taken venue disables Submit. The
  * submission still checks again, so the server stays the one that decides.
@@ -249,13 +240,10 @@ export function RequestForm({
   // form; the layout and facilities are the Coordinator's to enter.
   function withEvent(prev: typeof emptyForm, eventId: string) {
     const event = events.find((e) => e.id === eventId);
-    const period = event && eventBookingPeriod(event);
     return {
       ...prev,
       eventId,
       ...(event && {
-        start: utcToSgWallTime(period?.startAt),
-        end: utcToSgWallTime(period?.endAt),
         attendance: event.expectedAttendance?.toString() ?? "",
       }),
     };
@@ -331,12 +319,17 @@ export function RequestForm({
     );
   }
 
+  // SCRUM-188 AC1: the period is the chosen event's, sent as its own
+  // instants rather than read back from the minute-precision inputs, so it is
+  // exactly the event's.
+  const eventPeriod = chosenEvent ? eventBookingPeriod(chosenEvent) : null;
+  const startIso = eventPeriod?.startAt.toISOString();
+  const endIso = eventPeriod?.endAt.toISOString();
+
   // SCRUM-50 AC3 — tell the Coordinator whether the venue is free before
   // they submit. An end at or before the start is caught here without asking
-  // the server; otherwise the server is asked once typing pauses, and an
+  // the server; otherwise the server is asked once the choice settles, and an
   // answer is shown only for the venue and period it was asked about.
-  const startIso = sgWallTimeToUtcIso(form.start);
-  const endIso = sgWallTimeToUtcIso(form.end);
   const periodInvalid =
     !!startIso &&
     !!endIso &&
@@ -382,8 +375,8 @@ export function RequestForm({
       const result = await submitBookingRequest({
         eventId: form.eventId,
         venueId: form.venueId,
-        startAt: sgWallTimeToUtcIso(form.start) ?? "",
-        endAt: sgWallTimeToUtcIso(form.end) ?? "",
+        startAt: startIso ?? "",
+        endAt: endIso ?? "",
         requestedAttendance: form.attendance,
         requiredFacilities: form.facilities,
         requiredAccessibilityFeatures: form.accessibility,
@@ -429,7 +422,6 @@ export function RequestForm({
   // Caught as it is typed; the server refuses the same things (actions.ts).
   const selectedVenue = venues.find((v) => v.id === form.venueId);
   const attendance = Number(form.attendance);
-  const eventPeriod = chosenEvent ? eventBookingPeriod(chosenEvent) : null;
   const expected = chosenEvent?.expectedAttendance ?? null;
   // SCRUM-162 AC4: a whole number from 1 to the event's expected attendance.
   const attendanceProblem = !form.attendance
@@ -447,19 +439,6 @@ export function RequestForm({
           attendance,
         )
       : null;
-  // SCRUM-162 AC4: the venue must hold the whole event.
-  const shortPeriod =
-    eventPeriod &&
-    startIso &&
-    endIso &&
-    !periodInvalid &&
-    !coversEventPeriod(
-      { startAt: new Date(startIso), endAt: new Date(endIso) },
-      eventPeriod,
-    )
-      ? notCoveringEventMessage(eventPeriod)
-      : null;
-
   const fieldError = (key: string) =>
     fieldErrors[key]?.[0] && (
       <p className="text-xs text-destructive">{fieldErrors[key][0]}</p>
@@ -610,6 +589,7 @@ export function RequestForm({
                 )}
               </div>
 
+              {/* SCRUM-188 AC1: the event's own period, shown but not editable. */}
               {(["start", "end"] as const).map((which) => (
                 <div key={which} className="space-y-2">
                   <Label htmlFor={which}>
@@ -618,30 +598,22 @@ export function RequestForm({
                   <Input
                     id={which}
                     type="datetime-local"
-                    step={1800}
-                    value={form[which]}
-                    onChange={(e) => update(which, e.target.value)}
+                    readOnly
+                    value={utcToSgWallTime(
+                      which === "start"
+                        ? eventPeriod?.startAt
+                        : eventPeriod?.endAt,
+                    )}
+                    className="bg-muted/40 text-muted-foreground"
                   />
                   {fieldError(which === "start" ? "startAt" : "endAt")}
                 </div>
               ))}
-              {shortPeriod && (
-                <p
-                  className="text-xs text-destructive sm:col-span-2"
-                  data-testid="short-period"
-                >
-                  {shortPeriod}
-                </p>
-              )}
-              {form.eventId && (
-                <p className="text-xs text-muted-foreground sm:col-span-2">
-                  The period and attendance start from the event&apos;s, with
-                  the period rounded out to the half hour. For this venue the
-                  period can be longer but must cover the whole event, and the
-                  attendance can be part of the event&apos;s, for a breakout
-                  room.
-                </p>
-              )}
+              <p className="text-xs text-muted-foreground sm:col-span-2">
+                The period is exactly the event&apos;s and can&apos;t be
+                changed here. The attendance starts as the event&apos;s and can
+                be part of it, for a breakout room.
+              </p>
 
               {liveNow && (
                 <LiveAvailability
@@ -749,7 +721,6 @@ export function RequestForm({
                   isPending ||
                   overCapacity !== null ||
                   attendanceProblem !== null ||
-                  shortPeriod !== null ||
                   blockedLive
                 }
               >

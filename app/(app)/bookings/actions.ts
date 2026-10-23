@@ -17,10 +17,10 @@ import {
   eventBookingPeriod,
   holdExpiryMessage,
   attendanceOverEventMessage,
-  coversEventPeriod,
+  isEventPeriod,
   holdSettlementSchema,
   INVALID_PERIOD_MESSAGE,
-  notCoveringEventMessage,
+  notEventPeriodMessage,
   overCapacityMessage,
   PAST_START_MESSAGE,
   venueAvailabilityQuerySchema,
@@ -216,10 +216,10 @@ export async function checkVenueAvailability(
  *   that booking is returned (SCRUM-162 AC2). A Rejected, Expired or
  *   Cancelled one does not count, so asking again after it creates a new
  *   booking and keeps the old one (AC9).
- * - The period must cover the event's whole period (rounded out to the half
- *   hour), and the attendance is a whole number from 1 to the event's
- *   expected attendance; anything else is refused (SCRUM-162 AC4). An event
- *   without dates or attendance cannot be booked yet.
+ * - The period must be exactly the event's, neither longer nor shorter
+ *   (SCRUM-188 AC2), and the attendance is a whole number from 1 to the
+ *   event's expected attendance (SCRUM-162 AC4); anything else is refused. An
+ *   event without dates or attendance cannot be booked yet.
  * - Expected attendance above the venue's capacity is refused.
  * - A venue that is approved-booked or unavailable for any part of the period
  *   refuses the request outright — no row is written (AC3). Touching at an
@@ -294,14 +294,15 @@ export async function submitBookingRequest(
     const existing = await existingAtVenue();
     if (existing) return ok({ booking: toSummary(existing), created: false });
 
-    // SCRUM-162 AC4: the venue holds the whole event, for some or all of its
+    // SCRUM-188 AC2: the venue is held for exactly the event's period, the
+    // one venue search checked (AC3); SCRUM-162 AC4: for some or all of its
     // attendance.
     const eventPeriod = eventBookingPeriod(event);
     if (!eventPeriod || event.expectedAttendance === null) {
       return err(EVENT_NOT_SCHEDULED_MESSAGE);
     }
-    if (!coversEventPeriod(period, eventPeriod)) {
-      const message = notCoveringEventMessage(eventPeriod);
+    if (!isEventPeriod(period, eventPeriod)) {
+      const message = notEventPeriodMessage(eventPeriod);
       return err(message, { startAt: [message] });
     }
     if (data.requestedAttendance > event.expectedAttendance) {
