@@ -227,66 +227,87 @@ describe("submitBookingRequest — SCRUM-50", () => {
     expect(db.booking.create).toHaveBeenCalled();
   });
 
-  describe("SCRUM-50 [AC1] TC-50-15, SCRUM-162 [AC4]: the period covers the event, and the attendance is up to the event's", () => {
-    it("SCRUM-50 [AC1] TC-50-15: the event's period, rounded out to the half hour, is accepted", async () => {
+  describe("SCRUM-188 [AC1, AC2], SCRUM-162 [AC4]: the period is exactly the event's, and the attendance is up to the event's", () => {
+    // 2:10 pm to 3:50 pm SGT, on neither the hour nor the half hour.
+    const EVENT_START = "2030-06-01T06:10:00.000Z";
+    const EVENT_END = "2030-06-01T07:50:00.000Z";
+    const MINUTE_MS = 60_000;
+    const shift = (iso: string, minutes: number) =>
+      new Date(new Date(iso).getTime() + minutes * MINUTE_MS).toISOString();
+
+    beforeEach(() => {
       db.event.findUnique.mockResolvedValue({
         organiserId: "usr_org",
         coordinatorId: "usr_coord",
         status: "APPROVED",
-        startAt: new Date("2030-06-01T06:10:00.000Z"),
-        endAt: new Date("2030-06-01T07:45:00.000Z"),
+        startAt: new Date(EVENT_START),
+        endAt: new Date(EVENT_END),
         expectedAttendance: 40,
       });
-
-      const result = await submitBookingRequest(validRequest);
-
-      expect(result.ok).toBe(true);
     });
 
-    it("SCRUM-162 [AC4] TC-162-05: a longer period that still covers the whole event is accepted", async () => {
+    it("SCRUM-188 [AC1, AC2] TC-188-02: exactly the event's period, not rounded to the half hour, is accepted and stored as it is", async () => {
       const result = await submitBookingRequest({
         ...validRequest,
-        startAt: "2030-06-01T05:30:00.000Z",
-        endAt: "2030-06-01T09:00:00.000Z",
+        startAt: EVENT_START,
+        endAt: EVENT_END,
       });
 
       expect(result.ok).toBe(true);
       expect(db.booking.create).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
-            startAt: new Date("2030-06-01T05:30:00.000Z"),
-            endAt: new Date("2030-06-01T09:00:00.000Z"),
+            startAt: new Date(EVENT_START),
+            endAt: new Date(EVENT_END),
           }),
         }),
       );
     });
 
-    it("SCRUM-162 [AC4] TC-162-06: a period that doesn't cover the event's whole period is refused against the start field, and nothing is written", async () => {
-      for (const changed of [
-        { startAt: "2030-06-01T06:30:00.000Z" },
-        { endAt: "2030-06-01T07:30:00.000Z" },
-        {
-          startAt: "2030-06-02T06:00:00.000Z",
-          endAt: "2030-06-02T08:00:00.000Z",
-        },
-      ]) {
-        const result = await submitBookingRequest({
-          ...validRequest,
-          ...changed,
-        });
+    it.each([
+      ["rounded out to the half hour", { startAt: "2030-06-01T06:00:00.000Z", endAt: "2030-06-01T08:00:00.000Z" }],
+      ["starting a minute early", { startAt: shift(EVENT_START, -1), endAt: EVENT_END }],
+      ["ending a minute late", { startAt: EVENT_START, endAt: shift(EVENT_END, 1) }],
+    ])(
+      "SCRUM-188 [AC2] TC-188-03: a longer period, %s, is refused against the start field, and nothing is written",
+      async (_, period) => {
+        const result = await submitBookingRequest({ ...validRequest, ...period });
 
         const message =
-          "The requested period must cover the event's whole period: 1 Jun 2030, 2:00 pm SGT to 1 Jun 2030, 4:00 pm SGT.";
+          "The requested period must be the event's: 1 Jun 2030, 2:10 pm SGT to 1 Jun 2030, 3:50 pm SGT.";
         expect(result).toEqual({
           ok: false,
           error: message,
           fieldErrors: { startAt: [message] },
         });
-      }
-      expect(db.venue.findFirst).not.toHaveBeenCalled();
-      expect(db.booking.create).not.toHaveBeenCalled();
-    });
+        expect(db.venue.findFirst).not.toHaveBeenCalled();
+        expect(db.booking.create).not.toHaveBeenCalled();
+      },
+    );
 
+    it.each([
+      ["starting a minute late", { startAt: shift(EVENT_START, 1), endAt: EVENT_END }],
+      ["ending a minute early", { startAt: EVENT_START, endAt: shift(EVENT_END, -1) }],
+      ["the same times on the next day", { startAt: shift(EVENT_START, 24 * 60), endAt: shift(EVENT_END, 24 * 60) }],
+    ])(
+      "SCRUM-188 [AC2] TC-188-04: a shorter or moved period, %s, is refused against the start field, and nothing is written",
+      async (_, period) => {
+        const result = await submitBookingRequest({ ...validRequest, ...period });
+
+        const message =
+          "The requested period must be the event's: 1 Jun 2030, 2:10 pm SGT to 1 Jun 2030, 3:50 pm SGT.";
+        expect(result).toEqual({
+          ok: false,
+          error: message,
+          fieldErrors: { startAt: [message] },
+        });
+        expect(db.venue.findFirst).not.toHaveBeenCalled();
+        expect(db.booking.create).not.toHaveBeenCalled();
+      },
+    );
+  });
+
+  describe("SCRUM-162 [AC4]: the attendance is up to the event's", () => {
     it("SCRUM-162 [AC4] TC-162-07: an attendance above the event's is refused against the attendance field, and nothing is written", async () => {
       const result = await submitBookingRequest({
         ...validRequest,

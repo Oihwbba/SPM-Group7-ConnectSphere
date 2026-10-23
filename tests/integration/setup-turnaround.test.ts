@@ -12,7 +12,6 @@ import type { Session } from "next-auth";
 
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
-import { eventBookingPeriod } from "@/lib/schemas/booking";
 import { findVenueCalendar } from "@/lib/venue-availability";
 import {
   checkVenueAvailability,
@@ -31,9 +30,9 @@ import { createPlanningEvents, removeEvents } from "./test-events";
 // afterwards), so they only run against a localhost database — CI's service
 // container, or the Docker DB — never against the shared Supabase database.
 //
-// A request's period is its event's, rounded out to the half hour (SCRUM-50
-// AC1), so these use half-hour times; the criterion's own 10:00–12:00 /
-// 13:15 example is proven exactly in tests/unit/venue-availability.test.ts.
+// A request's period is exactly its event's (SCRUM-188), so each request
+// here has its own event; the criterion's own 10:00–12:00 / 13:15 example is
+// proven exactly in tests/unit/venue-availability.test.ts.
 vi.mock("@/auth", () => ({ auth: vi.fn() }));
 const mockAuth = auth as unknown as Mock;
 
@@ -105,12 +104,6 @@ describe.skipIf(!usesLocalDatabase)(
         })),
       );
       Object.values(events).forEach((e, i) => (e.id = ids[i]));
-      // The periods above are already on the half hour.
-      for (const e of Object.values(events)) {
-        expect(
-          eventBookingPeriod({ startAt: sg(e.start), endAt: sg(e.end) }),
-        ).toEqual({ startAt: sg(e.start), endAt: sg(e.end) });
-      }
 
       const venue = await prisma.venue.create({
         data: {

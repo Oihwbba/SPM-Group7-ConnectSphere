@@ -89,21 +89,32 @@ describe("RequestForm — SCRUM-50", () => {
     expect(html.indexOf("Room layout")).toBeLessThan(html.indexOf("Venue"));
   });
 
-  it("SCRUM-162 [AC4] TC-162-05: the period and attendance can be changed for this venue: the times are editable and the attendance is a whole number from 1", () => {
+  it("SCRUM-188 [AC1] TC-188-01: with the event chosen, the period is its exact start and end and can't be edited; the attendance is a whole number from 1", () => {
     const html = renderToStaticMarkup(
-      <RequestForm events={[event]} venues={[venue]} />,
+      <RequestForm
+        events={[
+          {
+            ...event,
+            // 9:10 am to 12:45 pm SGT, which the half-hour rounding made 9:00 to 1:00.
+            startAt: new Date("2035-03-10T01:10:00.000Z"),
+            endAt: new Date("2035-03-10T04:45:00.000Z"),
+          },
+        ]}
+        venues={[venue]}
+        initialEventId="evt_1"
+      />,
     );
 
-    for (const id of ["start", "end", "attendance"]) {
-      expect(html).not.toMatch(
-        new RegExp(`<input[^>]*id="${id}"[^>]*readOnly`, "i"),
-      );
-    }
+    expect(html).toMatch(
+      /<input[^>]*type="datetime-local"[^>]*readOnly=""[^>]*value="2035-03-10T09:10"/i,
+    );
+    expect(html).toMatch(
+      /<input[^>]*type="datetime-local"[^>]*readOnly=""[^>]*value="2035-03-10T12:45"/i,
+    );
     for (const id of ["start", "end"]) {
-      expect(html).toMatch(
-        new RegExp(`<input[^>]*type="datetime-local"[^>]*id="${id}"`, "i"),
-      );
+      expect(html).toMatch(new RegExp(`<input[^>]*id="${id}"[^>]*readOnly`, "i"));
     }
+    expect(html).not.toMatch(/<input[^>]*id="attendance"[^>]*readOnly/i);
     expect(html).toMatch(/<input[^>]*type="number"[^>]*id="attendance"[^>]*min="1"[^>]*step="1"/);
   });
 
@@ -204,37 +215,28 @@ describe("the quarter-hour time grid — SCRUM-161", () => {
   });
 });
 
-describe("SCRUM-50 [AC1] TC-50-15: eventBookingPeriod", () => {
-  // Singapore times: 09:10 to 16:45, and 23:50 crossing midnight.
+describe("SCRUM-188 [AC1] TC-188-01: eventBookingPeriod", () => {
   const sg = (wall: string) => new Date(`${wall}:00+08:00`);
 
-  it("SCRUM-50 [AC1] TC-50-15: the event's start rounds down and its end rounds up, so the period is never shortened", () => {
+  it("SCRUM-188 [AC1] TC-188-01: the period is exactly the event's start and end, not rounded to the half hour", () => {
     expect(
       eventBookingPeriod({
         startAt: sg("2035-03-10T09:10"),
         endAt: sg("2035-03-10T16:45"),
       }),
     ).toEqual({
-      startAt: sg("2035-03-10T09:00"),
-      endAt: sg("2035-03-10T17:00"),
+      startAt: sg("2035-03-10T09:10"),
+      endAt: sg("2035-03-10T16:45"),
     });
+    // Stored instants come to the form as strings too; seconds are kept.
     expect(
       eventBookingPeriod({
-        startAt: sg("2035-03-10T22:00"),
-        endAt: sg("2035-03-10T23:50"),
-      })?.endAt,
-    ).toEqual(sg("2035-03-11T00:00"));
-  });
-
-  it("SCRUM-50 [AC1] TC-50-15: times already on the half hour are left alone", () => {
-    expect(
-      eventBookingPeriod({
-        startAt: sg("2035-03-10T09:30"),
-        endAt: "2035-03-10T09:00:00.000Z",
+        startAt: "2035-03-10T01:10:30.000Z",
+        endAt: "2035-03-10T08:45:00.000Z",
       }),
     ).toEqual({
-      startAt: sg("2035-03-10T09:30"),
-      endAt: new Date("2035-03-10T09:00:00.000Z"),
+      startAt: new Date("2035-03-10T01:10:30.000Z"),
+      endAt: new Date("2035-03-10T08:45:00.000Z"),
     });
   });
 

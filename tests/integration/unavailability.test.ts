@@ -56,8 +56,8 @@ describe.skipIf(!usesLocalDatabase)(
     let requestEventId: string;
     let blockingEventId: string;
     let otherEventIds: string[];
-    // SCRUM-50 AC1: a request is always for its event's period and
-    // attendance, so maintenance that should meet it is placed around those.
+    // SCRUM-188 AC2: a request is always for exactly its event's period, so
+    // maintenance that should meet it is placed around that.
     let event: { startAt: Date; endAt: Date; attendance: number };
     const hoursFrom = (instant: Date, hours: number) =>
       new Date(instant.getTime() + hours * 60 * 60 * 1000).toISOString();

@@ -13,6 +13,7 @@ import type { Session } from "next-auth";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { can } from "@/lib/auth/can";
+import { formatDateTime } from "@/lib/datetime";
 import { eventBookingPeriod } from "@/lib/schemas/booking";
 import { createPlanningEvents, removeEvents } from "./test-events";
 import {
@@ -67,8 +68,8 @@ describe.skipIf(!usesLocalDatabase)(
     let eventId: string;
     let blockingEventId: string;
     let rivalEventId: string;
-    // SCRUM-50 AC1: a request is for the event's own period and attendance,
-    // so every other instant here is placed around the event's.
+    // SCRUM-188 AC2: a request is for exactly the event's period, so every
+    // other instant here is placed around the event's.
     let period: { startAt: Date; endAt: Date };
     let attendance: number;
     /** `hours` after the start of the event's period (negative: before). */
@@ -316,34 +317,25 @@ describe.skipIf(!usesLocalDatabase)(
         expect(await bookingCount()).toBe(1);
       });
 
-      it("SCRUM-162 [AC4] TC-162-06: a period that doesn't cover the event's whole period is refused against the start, and nothing is written", async () => {
+      it("SCRUM-188 [AC2] TC-188-03, TC-188-04: a period longer, shorter or other than the event's is refused against the start, and nothing is written", async () => {
+        const minute = 1 / 60;
         for (const changed of [
-          { startAt: fromStart(1) },
-          { endAt: fromEnd(-1) },
+          { startAt: fromStart(-minute) },
+          { endAt: fromEnd(minute) },
+          { startAt: fromStart(-1), endAt: fromEnd(1) },
+          { startAt: fromStart(minute) },
+          { endAt: fromEnd(-minute) },
           { startAt: fromEnd(0), endAt: fromEnd(2) },
         ]) {
           const result = await submitBookingRequest(request(changed));
-          expect(result).toMatchObject({
+          const message = `The requested period must be the event's: ${formatDateTime(period.startAt)} to ${formatDateTime(period.endAt)}.`;
+          expect(result).toEqual({
             ok: false,
-            error: expect.stringMatching(/must cover the event's whole period/),
-            fieldErrors: { startAt: [expect.any(String)] },
+            error: message,
+            fieldErrors: { startAt: [message] },
           });
         }
         expect(await bookingCount()).toBe(0);
-      });
-
-      it("SCRUM-162 [AC4] TC-162-05: a longer period that still covers the whole event is accepted", async () => {
-        const result = await submitBookingRequest(
-          request({ startAt: fromStart(-1), endAt: fromEnd(1) }),
-        );
-
-        expect(result.ok && result.data.created).toBe(true);
-        expect(
-          await prisma.booking.findFirstOrThrow({ where: { venueId } }),
-        ).toMatchObject({
-          startAt: new Date(fromStart(-1)),
-          endAt: new Date(fromEnd(1)),
-        });
       });
 
       it("SCRUM-162 [AC4] TC-162-07: attendance above the event's is refused; 1, part of the event, is accepted and recorded", async () => {
@@ -614,20 +606,25 @@ describe.skipIf(!usesLocalDatabase)(
           data: {
             venueId,
             startAt: new Date(fromStart(-2)),
-            endAt: new Date(fromStart(0)),
+            endAt: new Date(fromStart(0.5)),
             reason: "MAINTENANCE",
             recordedById: "usr_venuestaff",
           },
         });
 
-        const live = await check(fromStart(-1), fromEnd(0));
+        // SCRUM-188: the live check asks about the event's own period, the
+        // one the request is for, which overlaps both.
+        const live = await check(fromStart(0), fromEnd(0));
         expect(live.ok && live.data.available).toBe(false);
         expect(live.ok && live.data.clashes).toHaveLength(2);
 
-        const submitted = await submitBookingRequest(
-          request({ startAt: fromStart(-1), endAt: fromEnd(0) }),
-        );
+        const submitted = await submitBookingRequest(request());
         expect(submitted.ok).toBe(false);
+        if (submitted.ok) return;
+        expect(submitted.error).toMatch(/is unavailable for that period: /);
+        expect(submitted.error).toMatch(/already booked/);
+        expect(submitted.error).toMatch(/unavailable \(maintenance\)/);
+        expect(await bookingCount()).toBe(1);
       });
 
       it("SCRUM-50 [AC4] TC-50-13: periods touching a booking at either end are reported available", async () => {
