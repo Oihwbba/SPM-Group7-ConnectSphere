@@ -147,8 +147,11 @@ export function EventPage({
           )}
           {/* SCRUM-81: what a Confirmed event has secured */}
           {event.status === "CONFIRMED" && <ConfirmedArrangements eventId={event.id} />}
-          {/* SCRUM-162 AC7: every venue booking */}
-          <VenueBookings key={`bookings-${reloads}-${bookingChanges}`} eventId={event.id} />
+          {/* SCRUM-162 AC7: every venue booking (a Confirmed event lists
+              them among its confirmed arrangements). */}
+          {event.status !== "CONFIRMED" && (
+            <VenueBookings key={`bookings-${reloads}-${bookingChanges}`} eventId={event.id} />
+          )}
         </div>
       ) : (
         <Empty>Arrangements start once the request is approved.</Empty>

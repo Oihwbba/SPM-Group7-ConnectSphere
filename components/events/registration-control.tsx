@@ -129,12 +129,36 @@ export function RegistrationControl({
                   label: "Status",
                   value: control.label,
                   testId: "registration-control-state",
+                  // Open is good news; closed, by hand or by time, is not.
+                  tone:
+                    control.state === "OPEN"
+                      ? "success"
+                      : control.state === "CLOSED" || control.state === "EXPIRED"
+                        ? "danger"
+                        : undefined,
                 },
-                { icon: CalendarRange, label: "Period", value: control.period },
+                {
+                  icon: CalendarRange,
+                  label: "Period",
+                  // When it opens, and when it closes, one to a line.
+                  value: control.period.split(" · ").map((part) => (
+                    <span key={part} className="block">
+                      {part}
+                    </span>
+                  )),
+                },
                 {
                   icon: Users,
                   label: "Registered",
-                  value: `${control.registered} of ${control.capacity}`,
+                  value: (
+                    <>
+                      {control.registered}
+                      <span className="text-sm font-normal text-muted-foreground">
+                        {" "}
+                        of {control.capacity}
+                      </span>
+                    </>
+                  ),
                 },
               ]}
             />

@@ -45,7 +45,10 @@ export function EventProgress({
       className="py-1"
     >
       <p className="sr-only">Status: {EVENT_STATUS_LABEL[status]}</p>
-      <ol className="flex items-center gap-1 overflow-x-auto" aria-label="Progress">
+      <ol
+        className="flex items-center gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        aria-label="Progress"
+      >
         {STEPS.map((step, i) => {
           const done = i < current || (finished && i === current);
           const here = i === current && !finished;

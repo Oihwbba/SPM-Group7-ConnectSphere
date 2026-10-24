@@ -10,6 +10,10 @@ export type Stat = {
   hint?: React.ReactNode;
   /** On the value, so tests and links can find it by itself. */
   testId?: string;
+  /** A value that is good or bad news: green or red instead of the primary colour. */
+  tone?: "success" | "danger";
+  /** A list or longer text, in normal weight rather than bold and coloured. */
+  plain?: boolean;
 };
 
 /**
@@ -34,7 +38,7 @@ export function StatStrip({
         className,
       )}
     >
-      {stats.map(({ icon: Icon, label, value, hint, testId: valueTestId }) => (
+      {stats.map(({ icon: Icon, label, value, hint, testId: valueTestId, tone, plain }) => (
         <div key={label} className="flex min-w-0 items-center gap-3 py-3 sm:px-5 sm:first:pl-0 sm:last:pr-0">
           <span
             aria-hidden
@@ -45,7 +49,14 @@ export function StatStrip({
           <div className="min-w-0">
             <dt className="text-xs font-medium text-muted-foreground">{label}</dt>
             <dd
-              className="break-words text-lg font-bold leading-snug text-primary"
+              className={cn(
+                "break-words leading-snug",
+                plain
+                  ? "text-sm font-normal text-foreground"
+                  : "text-lg font-bold text-primary",
+                tone === "success" && "text-success",
+                tone === "danger" && "text-destructive",
+              )}
               data-testid={valueTestId}
             >
               {value}

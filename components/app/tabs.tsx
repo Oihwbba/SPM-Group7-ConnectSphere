@@ -55,7 +55,7 @@ export function Tabs({
         aria-label={label}
         hidden={!showTabs}
         // On a phone the tabs scroll sideways rather than squeezing (SCRUM-132).
-        className="flex gap-1 overflow-x-auto border-b"
+        className="flex gap-1 overflow-x-auto border-b [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
         {tabs.map((tab, i) => {
           const selected = tab.id === active;
