@@ -1,7 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import { prisma } from "@/lib/db";
 
-import { usesLocalDatabase } from "./helpers";
+import { usesLocalDatabase, openEvent } from "./helpers";
 
 /**
  * SCRUM-128 — the assigned Coordinator decides an Organiser's change request
@@ -19,14 +19,9 @@ async function signIn(page: Page, email: string) {
   await page.waitForURL("**/events");
 }
 
-async function openDetails(page: Page, name: string) {
-  await page
-    .getByRole("row", { name: new RegExp(name) })
-    .getByTestId("view-details-button")
-    .click();
-  const dialog = page.getByRole("dialog");
-  await expect(dialog).toBeVisible();
-  return dialog;
+/** SCRUM-208: the event's page, on the tab this journey works in. */
+async function openDetails(page: Page, name: string, tab = "Changes") {
+  return openEvent(page, name, tab);
 }
 
 const PERIOD = {
@@ -266,6 +261,10 @@ test.describe("SCRUM-128 — Decide a change request and apply it in one step", 
     ).toBeVisible();
     expect((await prisma.event.findUniqueOrThrow({ where: { id: eventId } })).expectedAttendance).toBe(40);
     await page.unroute("**/events**");
+    // The request list is read again after the failure; let that finish (it
+    // queues behind the page's own refresh, SCRUM-208) before anything else.
+    await page.waitForLoadState("networkidle");
+    await expect(decision.getByRole("button", { name: "Approve" })).toBeVisible();
 
     // Meanwhile it is decided elsewhere (another tab): approving is refused and
     // the request shows as decided, with nothing left to click.

@@ -1,7 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import { prisma } from "@/lib/db";
 
-import { usesLocalDatabase } from "./helpers";
+import { usesLocalDatabase, openEvent } from "./helpers";
 
 /**
  * SCRUM-82 — closing an event: the assigned Coordinator cancels it with a
@@ -22,11 +22,9 @@ async function signIn(page: Page, email: string, landing: string) {
 
 const row = (page: Page, name: string) => page.getByRole("row", { name: new RegExp(name) });
 
-async function openDetails(page: Page, name: string) {
-  await row(page, name).getByTestId("view-details-button").click();
-  const dialog = page.getByRole("dialog");
-  await expect(dialog).toBeVisible();
-  return dialog;
+/** SCRUM-208: the event's page, on the tab this journey works in. */
+async function openDetails(page: Page, name: string, tab?: string) {
+  return openEvent(page, name, tab);
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000;

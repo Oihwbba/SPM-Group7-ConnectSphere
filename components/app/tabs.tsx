@@ -19,16 +19,26 @@ export function Tabs({
   tabs,
   label,
   initial,
+  value,
+  onChange,
   showTabs = true,
 }: {
   tabs: Tab[];
   /** What the tabs are, for screen readers, e.g. "Event request". */
   label: string;
   initial?: string;
+  /** The open tab, when the caller keeps it (e.g. in the page's link). */
+  value?: string;
+  onChange?: (id: string) => void;
   /** False shows only the first panel and no tabs, keeping the rest mounted. */
   showTabs?: boolean;
 }) {
-  const [active, setActive] = useState(initial ?? tabs[0]?.id);
+  const [own, setOwn] = useState(initial ?? tabs[0]?.id);
+  const active = value ?? own;
+  const setActive = (id: string) => {
+    setOwn(id);
+    onChange?.(id);
+  };
   const base = useId();
   const buttons = useRef<(HTMLButtonElement | null)[]>([]);
 
@@ -44,7 +54,8 @@ export function Tabs({
         role="tablist"
         aria-label={label}
         hidden={!showTabs}
-        className="flex gap-1 border-b"
+        // On a phone the tabs scroll sideways rather than squeezing (SCRUM-132).
+        className="flex gap-1 overflow-x-auto border-b"
       >
         {tabs.map((tab, i) => {
           const selected = tab.id === active;
@@ -66,7 +77,7 @@ export function Tabs({
                 if (e.key === "ArrowLeft") move(i, -1);
               }}
               className={cn(
-                "-mb-px inline-flex flex-1 items-center justify-center gap-1.5 border-b-2 px-3 py-2 text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                "relative -mb-px inline-flex flex-1 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-2 text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                 selected
                   ? "border-primary font-semibold text-primary"
                   : "border-transparent text-muted-foreground hover:text-foreground",

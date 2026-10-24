@@ -400,21 +400,21 @@ test.describe("User Story 84 — Organiser Views Their Own Event Requests Journe
     await expect(row.getByTestId("status-badge")).toBeVisible();
     await expect(row.getByTestId("status-badge")).toHaveAttribute("data-status", "DRAFT");
 
-    // 4. Select entry (Clicking Event Name Link) opens Full Detail Modal (AC 5)
+    // 4. Selecting the entry by its name opens its page (AC 5, SCRUM-208 AC1)
     await row.getByTestId("event-name-link").click();
-    await expect(page.getByRole("dialog")).toBeVisible();
-    await expect(page.getByRole("heading", { name: eventTitle })).toBeVisible();
-    await expect(page.getByRole("dialog").getByText(/Draft Event Request/i)).toBeVisible();
+    await expect(page).toHaveURL(/\/events\/[^/?]+$/);
+    await expect(page.getByRole("heading", { level: 1, name: eventTitle })).toBeVisible();
+    await expect(page.getByTestId("next-step")).toContainText(
+      "Your turn: finish the request and submit it for review",
+    );
 
-    // Close detail modal
-    await page.getByRole("dialog").getByRole("button", { name: "Close" }).first().click();
-    await expect(page.getByRole("dialog")).not.toBeVisible();
+    // Back to the list
+    await page.getByRole("link", { name: "Back to My Events" }).click();
+    await expect(page).toHaveURL(/\/events$/);
 
-    // 5. Select entry via "View Details" button also opens Full Detail Modal (AC 5)
+    // 5. "View Details" opens the same page (AC 5)
     await row.getByTestId("view-details-button").click();
-    await expect(page.getByRole("dialog")).toBeVisible();
-    await expect(page.getByRole("heading", { name: eventTitle })).toBeVisible();
-    await page.getByRole("dialog").getByRole("button", { name: "Close" }).first().click();
+    await expect(page.getByRole("heading", { level: 1, name: eventTitle })).toBeVisible();
   });
 
   test("SCRUM-84 [AC1 - Ownership Data Isolation]: enforces ownership isolation: organiser2 sees only their own events", async ({
@@ -835,12 +835,11 @@ test.describe("User Story 23 & 24 — Event Status View & Consistency Journey", 
     await expect(underReviewRow).toBeVisible();
     await expect(underReviewRow.getByTestId("status-badge")).toHaveAttribute("data-status", "UNDER_REVIEW");
 
-    // Open detail modal and verify same status badge
-    await underReviewRow.getByRole("button", { name: /View Details|Details/i }).click();
-    const detailModal = page.getByRole("dialog");
-    await expect(detailModal).toBeVisible();
-    await expect(detailModal.getByTestId("status-badge")).toHaveAttribute("data-status", "UNDER_REVIEW");
-    await page.keyboard.press("Escape");
+    // Open the event's page and verify the same status badge (SCRUM-208)
+    await underReviewRow.getByTestId("view-details-button").click();
+    const detailModal = page.getByTestId("event-page");
+    await expect(detailModal.getByTestId("status-badge").first()).toHaveAttribute("data-status", "UNDER_REVIEW");
+    await page.getByRole("link", { name: "Back to Events" }).click();
 
     // 4. SCRUM-135 AC3, AC4: an unassigned Submitted request offers no
     // decision; the Under Review one assigned to this Coordinator is rejected.
@@ -868,9 +867,8 @@ test.describe("User Story 23 & 24 — Event Status View & Consistency Journey", 
 
     // 5. Verify updated status is consistent across list and detail views
     await expect(underReviewRow.getByTestId("status-badge")).toHaveAttribute("data-status", "REJECTED");
-    await underReviewRow.getByRole("button", { name: /View Details|Details/i }).click();
-    await expect(detailModal).toBeVisible();
-    await expect(detailModal.getByTestId("status-badge")).toHaveAttribute("data-status", "REJECTED");
+    await underReviewRow.getByTestId("view-details-button").click();
+    await expect(detailModal.getByTestId("status-badge").first()).toHaveAttribute("data-status", "REJECTED");
   });
 
   test("SCRUM-81 [AC1, AC2] TC-81-01: coordinator approves an under-review event and status moves to PLANNING (SCRUM-24)", async ({
@@ -895,11 +893,10 @@ test.describe("User Story 23 & 24 — Event Status View & Consistency Journey", 
     await underReviewRow.getByRole("button", { name: /Approve/i }).click();
     await expect(underReviewRow.getByTestId("status-badge")).toHaveAttribute("data-status", "PLANNING");
 
-    // 5. Open detail modal and verify the same PLANNING status (SCRUM-81: approval moves it straight to Planning)
-    await underReviewRow.getByRole("button", { name: /View Details|Details/i }).click();
-    const detailModal = page.getByRole("dialog");
-    await expect(detailModal).toBeVisible();
-    await expect(detailModal.getByTestId("status-badge")).toHaveAttribute("data-status", "PLANNING");
+    // 5. Open the event's page and verify the same PLANNING status (SCRUM-81: approval moves it straight to Planning)
+    await underReviewRow.getByTestId("view-details-button").click();
+    const detailModal = page.getByTestId("event-page");
+    await expect(detailModal.getByTestId("status-badge").first()).toHaveAttribute("data-status", "PLANNING");
   });
 
   test("two users viewing the same event simultaneously see consistent live status without manual refresh (SCRUM-24)", async ({
@@ -963,11 +960,10 @@ test.describe("User Story 23 & 24 — Event Status View & Consistency Journey", 
       timeout: 12000,
     });
 
-    // Organiser opens the EventDetailsModal to view submitted request specifications
+    // Organiser opens the event's page (SCRUM-208)
     await organiserRow.getByTestId("view-details-button").click();
-    const organiserModal = organiserPage.getByRole("dialog");
-    await expect(organiserModal).toBeVisible();
-    await expect(organiserModal.getByTestId("status-badge")).toHaveAttribute("data-status", "UNDER_REVIEW");
+    const organiserModal = organiserPage.getByTestId("event-page");
+    await expect(organiserModal.getByTestId("status-badge").first()).toHaveAttribute("data-status", "UNDER_REVIEW");
 
     // 3. Sign in as the coordinator the request was assigned to.
     const coordinatorEmail = "coordinator@test.local";
@@ -991,20 +987,19 @@ test.describe("User Story 23 & 24 — Event Status View & Consistency Journey", 
 
     // 5. Organiser page (WITHOUT any manual reload or interaction) receives auto-refresh:
     // Both the open detail modal badge AND the underlying table row update to PLANNING in lockstep
-    await expect(organiserModal.getByTestId("status-badge")).toHaveAttribute("data-status", "PLANNING", {
+    await expect(organiserModal.getByTestId("status-badge").first()).toHaveAttribute("data-status", "PLANNING", {
       timeout: 12000,
     });
 
-    // Close the modal and confirm underlying table row also reflects PLANNING
-    await organiserModal.getByRole("button", { name: "Close" }).first().click();
-    await expect(organiserModal).not.toBeVisible();
+    // Back to the list, whose row also reflects PLANNING
+    await organiserPage.getByRole("link", { name: "Back to My Events" }).click();
     await expect(organiserRow.getByTestId("status-badge")).toHaveAttribute("data-status", "PLANNING");
 
     await organiserContext.close();
     await coordinatorContext.close();
   });
 
-  test("open modal remains mounted with warning when viewed event is dropped from review queue (SCRUM-24)", async ({
+  test("SCRUM-208 TC-208-16: an open event page stays, with a warning, when the event is dropped from the review queue (SCRUM-24)", async ({
     page,
   }) => {
     // 1. Sign in as Event Coordinator (coordinator@test.local)
@@ -1014,14 +1009,13 @@ test.describe("User Story 23 & 24 — Event Status View & Consistency Journey", 
     await page.getByRole("button", { name: "Sign in" }).click();
     await page.waitForURL("**/events");
 
-    // 2. Open details modal for an event currently visible in review queue
+    // 2. Open the page of an event currently visible in the review queue
     const submittedRow = page.getByRole("row", { name: /Submitted — Alumni Homecoming/i });
     await expect(submittedRow).toBeVisible();
-    await submittedRow.getByRole("button", { name: /View Details|Details/i }).click();
+    await submittedRow.getByTestId("view-details-button").click();
 
-    const detailModal = page.getByRole("dialog");
-    await expect(detailModal).toBeVisible();
-    await expect(detailModal.getByTestId("status-badge")).toHaveAttribute("data-status", "SUBMITTED");
+    const detailModal = page.getByTestId("event-page");
+    await expect(detailModal.getByTestId("status-badge").first()).toHaveAttribute("data-status", "SUBMITTED");
 
     // 3. Reassign this event to coordinator2 in database to simulate mid-view reassignment (SCRUM-20/21)
     if (usesLocalDatabase) {
@@ -1032,7 +1026,7 @@ test.describe("User Story 23 & 24 — Event Status View & Consistency Journey", 
         });
 
         // 4. On next auto-refresh, event drops from coordinator1's query:
-        // The modal stays mounted and displays the warning notice instead of silently vanishing
+        // The page stays and displays the warning notice instead of silently vanishing
         await expect(
           detailModal.getByTestId("event-no-longer-available-warning"),
         ).toBeVisible({ timeout: 12000 });
@@ -1137,14 +1131,15 @@ test.describe("SCRUM-19 — Reject with a reason, then amend and resubmit", () =
       "REJECTED",
     );
     await organiserRow.getByTestId("view-details-button").click();
-    const details = page.getByRole("dialog");
+    // SCRUM-208 AC2: a final state shows its outcome and reason at the top.
+    const details = page.getByTestId("next-step");
     await expect(details.getByText("Rejection reason")).toBeVisible();
     await expect(details.getByText(reason)).toBeVisible();
     // SCRUM-126 AC5: the chosen outcome is shown with the reason.
     await expect(details.getByTestId("rejection-outcome")).toHaveText(
       "Next step: Amend and resubmit",
     );
-    await page.keyboard.press("Escape");
+    await page.getByRole("link", { name: "Back to My Events" }).click();
 
     // --- Organiser amends and resubmits -----------------------------------
     await organiserRow.getByTestId("amend-rejected-button").click();
@@ -1173,7 +1168,8 @@ test.describe("SCRUM-19 — Reject with a reason, then amend and resubmit", () =
       /^(SUBMITTED|UNDER_REVIEW)$/,
     );
     await organiserRow.getByTestId("view-details-button").click();
-    await expect(page.getByRole("dialog").getByText("Rejection reason")).toHaveCount(0);
+    await expect(page.getByTestId("event-page").getByRole("heading", { level: 1 })).toBeVisible();
+    await expect(page.getByTestId("event-page").getByText("Rejection reason")).toHaveCount(0);
   });
 });
 
@@ -1237,8 +1233,9 @@ test.describe("SCRUM-17 — Coordinator reviews a submitted request's full detai
     await expect(row).toBeVisible();
     await row.getByTestId("view-details-button").click();
 
-    const modal = page.getByRole("dialog");
-    await expect(modal.getByRole("heading", { name: eventName })).toBeVisible();
+    // SCRUM-208 AC3: what the Organiser asked for is the Request tab.
+    await expect(page.getByRole("heading", { level: 1, name: eventName })).toBeVisible();
+    const modal = page.getByTestId("event-page").getByRole("tabpanel");
     await expect(modal.getByText("Showcase the department's annual research output.")).toBeVisible();
     // Dates are shown in Singapore time (SCRUM-129), so 02:00Z/10:00Z become
     // 10:00 am SGT / 6:00 pm SGT.
@@ -1304,7 +1301,7 @@ test.describe("SCRUM-129 — Event times are shown in Singapore time", () => {
     await expect(row).toContainText("1 Aug 2031, 10:00 am SGT");
 
     await row.getByTestId("view-details-button").click();
-    const modal = page.getByRole("dialog");
+    const modal = page.getByTestId("event-page").getByRole("tabpanel");
     await expect(modal.getByText("1 Aug 2031, 10:00 am SGT")).toBeVisible();
     await expect(modal.getByText("1 Aug 2031, 6:00 pm SGT")).toBeVisible();
     await expect(modal.getByText(/Event Timezone/)).toHaveCount(0);

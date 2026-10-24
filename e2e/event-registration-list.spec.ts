@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
+import { openEvent } from "./helpers";
 
 /**
  * SCRUM-70 — the Organiser and the assigned Coordinator see an event's
@@ -13,11 +14,9 @@ async function openGala(page: Page, email: string) {
   await page.getByRole("button", { name: "Sign in" }).click();
   await page.waitForURL("**/events");
 
-  await page
-    .getByRole("row", { name: /Confirmed — Charity Gala/ })
-    .getByTestId("view-details-button")
-    .click();
-  return page.getByRole("dialog").getByTestId("registration-list");
+  // SCRUM-208: the list is on the event page's Registrations tab.
+  const event = await openEvent(page, "Confirmed — Charity Gala", "Registrations");
+  return event.getByTestId("registration-list");
 }
 
 test.describe("SCRUM-70 — an event's registration list", () => {

@@ -2,7 +2,7 @@ import { test, expect, type Page } from "@playwright/test";
 import bcrypt from "bcryptjs";
 
 import { prisma } from "@/lib/db";
-import { signedIn, usesLocalDatabase } from "./helpers";
+import { signedIn, usesLocalDatabase, openEvent as openEventPage } from "./helpers";
 
 /**
  * SCRUM-41 — an Organiser raises a change request on their Planning event and
@@ -49,15 +49,10 @@ async function planningEvent(name: string) {
   return id;
 }
 
+/** SCRUM-208: the event's page, on its Changes tab. */
 async function openEvent(page: Page, name: string) {
   await page.goto("/events");
-  await page
-    .getByRole("row", { name: new RegExp(name) })
-    .getByTestId("view-details-button")
-    .click();
-  const dialog = page.getByRole("dialog");
-  await expect(dialog.getByRole("heading", { name })).toBeVisible();
-  return dialog;
+  return openEventPage(page, name, "Changes");
 }
 
 test.describe("SCRUM-41 — Raise and track a change request", () => {
@@ -118,6 +113,7 @@ test.describe("SCRUM-41 — Raise and track a change request", () => {
     // AC7: one Submitted request at a time.
     await expect(dialog.getByRole("button", { name: "Request a change" })).toHaveCount(0);
     // AC6: the event keeps its own values until the request is decided.
+    await dialog.getByRole("tab", { name: /^Request/ }).click();
     await expect(dialog.getByText("40 attendees")).toBeVisible();
     expect(
       await prisma.event.findUniqueOrThrow({

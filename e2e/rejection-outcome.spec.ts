@@ -109,12 +109,13 @@ test.describe("SCRUM-126 — Rejected as needing a new request", () => {
       0,
     );
     await rejectedRow.getByTestId("view-details-button").click();
-    const details = page.getByRole("dialog");
+    // SCRUM-208 AC2: the outcome and reason are at the top of the page.
+    const details = page.getByTestId("next-step");
     await expect(details.getByText(reason)).toBeVisible();
     await expect(details.getByTestId("rejection-outcome")).toHaveText(
       "Next step: Submit as a new request",
     );
-    await page.keyboard.press("Escape");
+    await page.getByRole("link", { name: "Back to My Events" }).click();
 
     // --- Organiser starts a new Draft from it (AC4) -----------------------
     await rejectedRow.getByTestId("start-new-request-button").click();
