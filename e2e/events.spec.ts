@@ -1239,8 +1239,11 @@ test.describe("SCRUM-17 — Coordinator reviews a submitted request's full detai
     await expect(modal.getByText("Showcase the department's annual research output.")).toBeVisible();
     // Dates are shown in Singapore time (SCRUM-129), so 02:00Z/10:00Z become
     // 10:00 am SGT / 6:00 pm SGT.
-    await expect(modal.getByText("1 Aug 2031, 10:00 am SGT")).toBeVisible();
-    await expect(modal.getByText("1 Aug 2031, 6:00 pm SGT")).toBeVisible();
+    // SCRUM-208: the Request tab shows the date, then the times beneath it.
+    await expect(modal.getByTestId("request-schedule")).toContainText("1 Aug 2031");
+    await expect(modal.getByTestId("request-schedule")).toContainText(
+      "10:00 am SGT to 6:00 pm SGT",
+    );
     await expect(modal.getByText("120 attendees")).toBeVisible();
     await expect(modal.getByText("Auditorium with a raised stage.")).toBeVisible();
     await expect(modal.getByText("Wheelchair-accessible entrance and seating.")).toBeVisible();
@@ -1302,8 +1305,11 @@ test.describe("SCRUM-129 — Event times are shown in Singapore time", () => {
 
     await row.getByTestId("view-details-button").click();
     const modal = page.getByTestId("event-page").getByRole("tabpanel");
-    await expect(modal.getByText("1 Aug 2031, 10:00 am SGT")).toBeVisible();
-    await expect(modal.getByText("1 Aug 2031, 6:00 pm SGT")).toBeVisible();
+    // SCRUM-208: the Request tab shows the date, then the times beneath it.
+    await expect(modal.getByTestId("request-schedule")).toContainText("1 Aug 2031");
+    await expect(modal.getByTestId("request-schedule")).toContainText(
+      "10:00 am SGT to 6:00 pm SGT",
+    );
     await expect(modal.getByText(/Event Timezone/)).toHaveCount(0);
 
     // The stored instants were not rewritten.
