@@ -22,6 +22,7 @@ export function Tabs({
   value,
   onChange,
   showTabs = true,
+  lazy = false,
 }: {
   tabs: Tab[];
   /** What the tabs are, for screen readers, e.g. "Event request". */
@@ -32,6 +33,11 @@ export function Tabs({
   onChange?: (id: string) => void;
   /** False shows only the first panel and no tabs, keeping the rest mounted. */
   showTabs?: boolean;
+  /**
+   * Mount a panel only once its tab is first opened, then keep it, so a page
+   * of many panels loads only what is shown (SCRUM-208).
+   */
+  lazy?: boolean;
 }) {
   const [own, setOwn] = useState(initial ?? tabs[0]?.id);
   const active = value ?? own;
@@ -39,6 +45,12 @@ export function Tabs({
     setOwn(id);
     onChange?.(id);
   };
+  // The tabs opened so far, for `lazy`; recorded while rendering, so the
+  // panel of a tab opened from outside (the caller's value) mounts at once.
+  const [opened, setOpened] = useState<string[]>(active ? [active] : []);
+  if (lazy && active && !opened.includes(active)) {
+    setOpened([...opened, active]);
+  }
   const base = useId();
   const buttons = useRef<(HTMLButtonElement | null)[]>([]);
 
@@ -96,7 +108,7 @@ export function Tabs({
           aria-labelledby={`${base}-${tab.id}-tab`}
           hidden={showTabs ? tab.id !== active : tab.id !== tabs[0]?.id}
         >
-          {tab.content}
+          {!lazy || opened.includes(tab.id) || tab.id === active ? tab.content : null}
         </div>
       ))}
     </div>

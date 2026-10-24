@@ -10,7 +10,7 @@ import { openEvent, signedIn, usesLocalDatabase } from "./helpers";
  */
 const PREFIX = "SCRUM-208 Event page";
 
-async function underReviewWithQuestion(name: string, over: object = {}) {
+async function underReviewWithQuestion(name: string, over: object = {}, question = true) {
   const event = await prisma.event.create({
     data: {
       name,
@@ -34,6 +34,7 @@ async function underReviewWithQuestion(name: string, over: object = {}) {
     },
     select: { id: true },
   });
+  if (!question) return event.id;
   await prisma.clarificationRequest.create({
     data: {
       eventId: event.id,
@@ -72,9 +73,7 @@ test.describe("SCRUM-208 — One page per event, not a pop-up", () => {
     // AC2: the name as the title, and the status once, as the badge.
     await expect(event.getByRole("heading", { level: 1 })).toHaveText(name);
     await expect(event.getByTestId("status-badge")).toHaveCount(1);
-    // AC2: the key facts at the top, and the status as the step it has reached.
-    // The key facts are on the Request tab, as a strip of stats.
-    await expect(event.getByTestId("request-schedule")).toContainText("80 attendees");
+    // AC2: the status as the step it has reached.
     await expect(event.getByTestId("status-badge").locator('[aria-current="step"]')).toContainText(
       "Review",
     );
@@ -90,7 +89,9 @@ test.describe("SCRUM-208 — One page per event, not a pop-up", () => {
     // AC3: the tab holding it opens first, and is marked for attention.
     await expect(tab(page, "Clarification")).toHaveAttribute("aria-selected", "true");
     await expect(tab(page, "Clarification").getByTestId("tab-attention")).toHaveCount(1);
+    // The key facts are on the Request tab, as a strip of stats.
     await tab(page, "Request").click();
+    await expect(event.getByTestId("request-schedule")).toContainText("80 attendees");
     await step.getByRole("button", { name: "Answer the question" }).click();
     await expect(tab(page, "Clarification")).toHaveAttribute("aria-selected", "true");
   });
@@ -151,7 +152,7 @@ test.describe("SCRUM-208 — One page per event, not a pop-up", () => {
     browser,
   }) => {
     const name = `${PREFIX} tabs ${Date.now()}`;
-    await underReviewWithQuestion(name, { registrationRequired: false });
+    await underReviewWithQuestion(name, { registrationRequired: false }, false);
     const page = await signedIn(browser, "organiser@test.local");
     const event = await openEvent(page, name);
 
@@ -169,6 +170,36 @@ test.describe("SCRUM-208 — One page per event, not a pop-up", () => {
     await expect(event.getByRole("tabpanel")).toHaveText(
       "Arrangements start once the request is approved.",
     );
+    // No question yet: the thread says so.
+    await tab(page, "Clarification").click();
+    await expect(event.getByRole("tabpanel")).toHaveText("No questions from the Coordinator.");
+  });
+
+  test("SCRUM-208 [AC2] TC-208-04: a request under review is the Coordinator's to decide in the banner; approving keeps the page open", async ({
+    browser,
+  }) => {
+    const name = `${PREFIX} review ${Date.now()}`;
+    const id = await underReviewWithQuestion(name, {}, false);
+
+    const organiser = await signedIn(browser, "organiser@test.local");
+    const waiting = (await openEvent(organiser, name)).getByTestId("next-step");
+    await expect(waiting).toContainText("Waiting for Cody Coordinator to review the request");
+    await expect(waiting.getByRole("button")).toHaveCount(0);
+
+    const coordinator = await signedIn(browser, "coordinator@test.local");
+    const event = await openEvent(coordinator, name);
+    const step = event.getByTestId("next-step");
+    await expect(step).toContainText(
+      "Your turn: review the request, then approve it, reject it or ask a question",
+    );
+    await expect(step.getByRole("button", { name: "Ask" })).toBeVisible();
+    await expect(step.getByRole("button", { name: "Reject" })).toBeVisible();
+    await step.getByRole("button", { name: "Approve" }).click();
+
+    // The decision is made, and the page stays, now in Planning.
+    await expect(event.getByTestId("status-badge")).toHaveAttribute("data-status", "PLANNING");
+    await expect(coordinator).toHaveURL(new RegExp(`/events/${id}`));
+    expect((await prisma.event.findUniqueOrThrow({ where: { id } })).status).toBe("PLANNING");
   });
 
   test("SCRUM-208 [AC5] TC-208-13: another Coordinator's event is the same 404 as one that doesn't exist", async ({

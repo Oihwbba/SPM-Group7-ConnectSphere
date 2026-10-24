@@ -52,20 +52,45 @@ export function RegistrationListPanel({
   action?: React.ReactNode;
 }) {
   const [list, setList] = useState<EventRegistrationList | null>(null);
+  const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     getEventRegistrations(eventId)
       .then((result) => {
-        if (!cancelled && result.ok) setList(result.data);
+        if (cancelled) return;
+        if (result.ok) setList(result.data);
+        else setFailed(true);
       })
-      .catch(() => {});
+      .catch(() => {
+        if (!cancelled) setFailed(true);
+      });
     return () => {
       cancelled = true;
     };
   }, [eventId]);
 
-  if (!list) return null;
+  if (!list) {
+    // The action in the header (e.g. Close registration) is never held back
+    // by the list it sits above; without one, nothing shows until it loads.
+    if (!action) return null;
+    return (
+      <Card className="overflow-hidden">
+        <CardHeader className="flex-row flex-wrap items-center justify-between gap-2 space-y-0 bg-muted/30 px-4 py-3">
+          <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+            <Users aria-hidden="true" className="h-4 w-4 text-primary" />
+            Registrations
+          </CardTitle>
+          {action}
+        </CardHeader>
+        <CardContent className="p-4 text-xs">
+          <p role={failed ? "alert" : "status"} className="text-muted-foreground">
+            {failed ? "Couldn't load the registrations." : "Loading registrations…"}
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="overflow-hidden" data-testid="registration-list">

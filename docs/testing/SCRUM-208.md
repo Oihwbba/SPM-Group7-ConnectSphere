@@ -11,21 +11,36 @@ assigned to `coordinator@test.local` (Cody Coordinator), with an open question
 from the Coordinator that lets the Organiser also update Expected attendance.
 
 **How the page is built.** An event opens at `/events/[id]`. The top of the
-page, shown whatever tab is open, has a back link, the event's name, its
-progress from request to completed event, and the **Next step** banner with
-who is handling the event. Below it are the tabs Request,
-Clarification, Arrangements, Changes, Registrations and Notes. The open tab is
-part of the link (`?tab=`). Every panel is the one the pop-up showed, with the
-same rules and the same people allowed to act.
+page, shown whatever tab is open, has:
+
+- a back link ("← Back to My Events", or "← Back to Events" for a Coordinator);
+- the event's name as the title, with the Coordinator's own actions beside it
+  (Find a venue, Edit details, Cancel event) where they apply;
+- its **progress**, Request → Review → Planning → Confirmed → Completed: the
+  steps done ticked, the current one marked with a glowing dot, a Rejected
+  request marked where it stopped and a Cancelled event shown as far as it got;
+- the **Next step** banner: what happens next, whose turn it is, and who is
+  handling the event ("Handled by …"). When it is the viewer's turn it has a
+  way straight there; a Coordinator deciding a request under review has Ask,
+  Approve and Reject in it.
+
+Below it are the tabs, in the order the work happens: **Request**,
+**Clarification**, **Arrangements**, **Changes**, **Registrations** (only when
+the event needs registration) and **Notes**. The open tab is part of the link
+(`?tab=`), and a tab that needs the viewer shows a dot or a count. Key facts
+are shown as **stat strips**, each a round icon, a label and a bold value, split
+by thin lines: the Request tab's schedule and attendance, a Confirmed event's
+arrangements, and registration's status, period and count. Every panel is the
+one the pop-up showed, with the same rules and the same people allowed to act.
 
 | ID | Type | Criterion | Automated |
 |---|---|---|---|
 | [TC-208-01](#tc-208-01) | Positive | AC 1 | Unit, e2e |
-| [TC-208-02](#tc-208-02) | Positive | AC 2 | e2e |
+| [TC-208-02](#tc-208-02) | Positive | AC 2 | Unit, e2e |
 | [TC-208-03](#tc-208-03) | Positive | AC 2 | Unit, e2e |
-| [TC-208-04](#tc-208-04) | Positive | AC 2 | Unit |
+| [TC-208-04](#tc-208-04) | Positive | AC 2 | Unit, e2e |
 | [TC-208-05](#tc-208-05) | Positive | AC 2 | Unit |
-| [TC-208-06](#tc-208-06) | Positive | AC 2 | Unit |
+| [TC-208-06](#tc-208-06) | Positive | AC 2 | Unit, e2e |
 | [TC-208-07](#tc-208-07) | Positive | AC 2 | Unit, e2e |
 | [TC-208-08](#tc-208-08) | Positive | AC 3 | Unit, e2e |
 | [TC-208-09](#tc-208-09) | Negative | AC 3 | Unit, e2e |
@@ -36,6 +51,7 @@ same rules and the same people allowed to act.
 | [TC-208-14](#tc-208-14) | Positive | SCRUM-132 (phone) | e2e |
 | [TC-208-15](#tc-208-15) | Negative | AC 1 (Attendees unchanged) | e2e |
 | [TC-208-16](#tc-208-16) | Positive | SCRUM-24 (live view) | e2e |
+| [TC-208-17](#tc-208-17) | Positive | AC 2, AC 3 | Unit, e2e |
 
 ---
 
@@ -50,20 +66,20 @@ same rules and the same people allowed to act.
 | Test Data | `organiser@test.local` |
 | Expected Result | Each opens `/events/<id>` with the event's page, and no dialog. **← Back to My Events** returns to the list. An old `/events?event=<id>` link goes to the same page. |
 
-**Automated by:** `e2e/event-page.spec.ts` › "SCRUM-208 [AC1, AC2] TC-208-01, TC-208-02, TC-208-03: …"; `e2e/events.spec.ts` › "User Story 84 … selects an entry for full detail"; `tests/unit/notifications.test.ts` › "SCRUM-48 [AC5] TC-48-06, SCRUM-208 [AC1] TC-208-01: …"
+**Automated by:** `e2e/event-page.spec.ts` › "SCRUM-208 [AC1, AC2] TC-208-01, TC-208-02, TC-208-03: …"; `e2e/events.spec.ts` › "organiser views list of their own events with names, status badges, and selects an entry for full detail"; `tests/unit/notifications.test.ts` › "SCRUM-48 [AC5] TC-48-06, SCRUM-208 [AC1] TC-208-01: …"
 
 ### TC-208-02
 
 | Item | Content |
 |---|---|
 | Test Case ID | TC-208-02 |
-| Test Scenario | [Positive] AC 2: the top shows the event's name as the title, its status as a step on the way from request to completed, and who is handling it |
-| Pre-conditions | Signed in as the Organiser; the event expects 80. |
-| Test Steps | 1. Open the event. <br> 2. Open each tab in turn. |
+| Test Scenario | [Positive] AC 2: the top shows the event's name as the title, its progress from request to completed event, and who is handling it |
+| Pre-conditions | Signed in as the Organiser. Further events: one Rejected, one Cancelled from Confirmed, one Completed. |
+| Test Steps | 1. Open the Under Review event. <br> 2. Open each tab in turn. <br> 3. Open the Rejected, Cancelled and Completed events. |
 | Test Data | `organiser@test.local` |
-| Expected Result | The title is the event's name only. Under it, the progress Request → Review → Planning → Confirmed → Completed in violet: Request ticked and Review the current step, marked with a glowing violet dot (a Rejected request shows Rejected there in red; a Cancelled event shows how far it got, then Cancelled). The Next step banner says "Handled by Cody Coordinator" ("Waiting for a Coordinator" while none is assigned). The key facts are on the tabs as strips of stats: the Request tab shows the proposed date and times, "80 attendees" and the duration. The top stays the same on every tab. |
+| Expected Result | 1: the title is the event's name only, with no status badge beside it. The progress shows Request ticked and Review as the current step; a screen reader hears "Status: Under Review". The Next step banner says "Handled by Cody Coordinator" ("Waiting for a Coordinator" while none is assigned). 2: the top stays the same on every tab. 3: Rejected is marked at Review in red, with only Request ticked; the Cancelled event has Request, Review and Planning ticked, then Cancelled; the Completed event has every step ticked and none current. |
 
-**Automated by:** `e2e/event-page.spec.ts` › "SCRUM-208 [AC1, AC2] TC-208-01, TC-208-02, TC-208-03: …"; `e2e/reassign.spec.ts` (the Coordinator's name after a reassignment)
+**Automated by:** `tests/unit/event-page-parts.test.tsx` › "SCRUM-208 [AC2] TC-208-02: …" (five tests); `e2e/event-page.spec.ts` › "SCRUM-208 [AC1, AC2] TC-208-01, TC-208-02, TC-208-03: …"; `e2e/reassign.spec.ts` (the Coordinator's name after a reassignment)
 
 ### TC-208-03
 
@@ -83,13 +99,13 @@ same rules and the same people allowed to act.
 | Item | Content |
 |---|---|
 | Test Case ID | TC-208-04 |
-| Test Scenario | [Positive] AC 2: a request waiting for review is the Coordinator's to decide; the Organiser waits; with no Coordinator, both wait for one |
+| Test Scenario | [Positive] AC 2: a request waiting for review is the Coordinator's to decide, right in the banner; the Organiser waits; with no Coordinator, both wait for one |
 | Pre-conditions | The event is Under Review with no open question; a second event is Submitted with no Coordinator. |
-| Test Steps | 1. As the Coordinator, open the first event. <br> 2. As the Organiser, open it, then the Submitted one. |
-| Test Data | `coordinator@test.local`, `organiser@test.local` |
-| Expected Result | 1: "Your turn: review the request, then approve it, reject it or ask a question", with **Ask**, **Approve** and **Reject** right there, working as on the list. 2: "Waiting for Cody Coordinator to review the request"; for the Submitted one, "Waiting for a Coordinator to be assigned". |
+| Test Steps | 1. As the Organiser, open the first event. <br> 2. As the Coordinator, open it and choose **Approve** in the banner. <br> 3. Open the Submitted one. |
+| Test Data | `organiser@test.local`, `coordinator@test.local` |
+| Expected Result | 1: "Waiting for Cody Coordinator to review the request", with no button. 2: "Your turn: review the request, then approve it, reject it or ask a question", with **Ask**, **Approve** and **Reject**; approving keeps the page open, now in Planning. 3: "Waiting for a Coordinator to be assigned". |
 
-**Automated by:** `tests/unit/event-next-step.test.ts` › "SCRUM-208 [AC2] TC-208-04: …" (both tests)
+**Automated by:** `tests/unit/event-next-step.test.ts` › "SCRUM-208 [AC2] TC-208-04: …" (both tests); `e2e/event-page.spec.ts` › "SCRUM-208 [AC2] TC-208-04: …"
 
 ### TC-208-05
 
@@ -110,12 +126,12 @@ same rules and the same people allowed to act.
 |---|---|
 | Test Case ID | TC-208-06 |
 | Test Scenario | [Positive] AC 2: a change request waiting for a decision comes before the checklist |
-| Pre-conditions | The event is in Planning with a change request waiting. |
+| Pre-conditions | The event has a change request waiting. |
 | Test Steps | 1. Open it as the Coordinator, then as the Organiser. |
 | Test Data | `coordinator@test.local`, `organiser@test.local` |
-| Expected Result | Coordinator: "Your turn: decide the change request", opening on Changes, whose tab shows a count. Organiser: "Waiting for Cody Coordinator to decide your change request". |
+| Expected Result | Coordinator: "Your turn: decide the change request", opening on Changes, whose tab shows the count 1; Approve and Reject there are green and red. Organiser: "Waiting for Cody Coordinator to decide your change request". |
 
-**Automated by:** `tests/unit/event-next-step.test.ts` › "SCRUM-208 [AC2] TC-208-06: …"; `e2e/change-decision.spec.ts` (the decision on the Changes tab)
+**Automated by:** `tests/unit/event-next-step.test.ts` › "SCRUM-208 [AC2] TC-208-06: …"; `e2e/change-decision.spec.ts` › "SCRUM-128 [AC1, AC2, AC4, AC5] TC-128-13, SCRUM-208 [AC2] TC-208-06: …"
 
 ### TC-208-07
 
@@ -178,7 +194,7 @@ same rules and the same people allowed to act.
 | Pre-conditions | The event has an open question. |
 | Test Steps | 1. As the Organiser, open the Clarification tab. <br> 2. As the Coordinator, open it. |
 | Test Data | `organiser@test.local`, `coordinator@test.local` |
-| Expected Result | Both see the question, oldest first, from Cody Coordinator with its time. 1: "You can also update: Expected attendance.", the field, and the answer box under the question. 2: "The Organiser can also update: Expected attendance." and no answer box. An event with no question shows "No questions from the Coordinator." |
+| Expected Result | Both see the question, oldest first, from Cody Coordinator with its time. 1: "You can also update: Expected attendance.", the field, and the answer box under the question. 2: "The Organiser can also update: Expected attendance." and no answer box. |
 
 **Automated by:** `e2e/event-page.spec.ts` › "SCRUM-208 [AC2, AC3, AC4] TC-208-03, TC-208-11: …"; `tests/unit/clarification.test.ts` › "SCRUM-208 [AC3] TC-208-11: …"; `e2e/clarification.spec.ts`; `e2e/clarification-and-amend.spec.ts`
 
@@ -188,10 +204,10 @@ same rules and the same people allowed to act.
 |---|---|
 | Test Case ID | TC-208-12 |
 | Test Scenario | [Boundary] AC 3, AC 4: a tab that can never apply is hidden; a tab with nothing in it yet says so in one line |
-| Pre-conditions | The event doesn't need registration and isn't approved yet. |
-| Test Steps | 1. Open the event. <br> 2. Open **Arrangements**. |
+| Pre-conditions | The event doesn't need registration, isn't approved yet, and has no question from the Coordinator. |
+| Test Steps | 1. Open the event. <br> 2. Open **Arrangements**. <br> 3. Open **Clarification**. |
 | Test Data | `organiser@test.local` |
-| Expected Result | 1: the tabs are Request, Clarification, Arrangements, Changes and Notes, with no Registrations. 2: "Arrangements start once the request is approved." |
+| Expected Result | 1: the tabs are Request, Clarification, Arrangements, Changes and Notes, with no Registrations. 2: "Arrangements start once the request is approved." 3: "No questions from the Coordinator." |
 
 **Automated by:** `e2e/event-page.spec.ts` › "SCRUM-208 [AC3, AC4] TC-208-12: …"
 
@@ -246,3 +262,16 @@ same rules and the same people allowed to act.
 | Expected Result | 1: the Organiser's page shows Planning within a few seconds, without a reload. 2: the first Coordinator's page keeps its last view, with "This event request is no longer available in your view…". |
 
 **Automated by:** `e2e/events.spec.ts` › "two users viewing the same event simultaneously see consistent live status …" and "SCRUM-208 TC-208-16: …"
+
+### TC-208-17
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-208-17 |
+| Test Scenario | [Positive] AC 2, AC 3: the key facts show as strips of stats where they belong |
+| Pre-conditions | The event is Confirmed, at Grand Auditorium, with 2 projectors reserved and registration open with 2 of 250 places taken. |
+| Test Steps | 1. As the Coordinator, open **Request**. <br> 2. Open **Arrangements**. <br> 3. Open **Registrations**, and choose **Close registration** in the list's header. |
+| Test Data | `coordinator@test.local` |
+| Expected Result | 1: Schedule & Attendance comes first, across the page: the proposed date with its times underneath, the expected attendance and the duration; the other four sections below it, two by two. 2: Venue, Date & time, Equipment (one type to a line, in normal text) and Venue bookings (an approval with a green tick). 3: Status "Open" in green, the period on two lines, and "2" with "of 250" in normal text; closing makes the status "Registration closed", in red. |
+
+**Automated by:** `tests/unit/event-page-parts.test.tsx` › "SCRUM-208 [AC2, AC3] TC-208-17: …"; `e2e/event-page.spec.ts` › "SCRUM-208 [AC1, AC2] TC-208-01, TC-208-02, TC-208-03: …" (the Request tab's attendance); `e2e/confirm.spec.ts` › "SCRUM-81 [AC3, AC5, AC6, AC7] TC-81-02, TC-81-05, TC-81-06, TC-81-08: …" (the confirmed venue and equipment); `e2e/event-edit.spec.ts` › "SCRUM-25 [AC4, AC5, AC6] TC-25-22: …" and `e2e/registration-period.spec.ts` › "SCRUM-75 [AC6] TC-75-06, TC-75-07: …" (closing and reopening registration)

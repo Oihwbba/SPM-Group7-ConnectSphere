@@ -95,7 +95,7 @@ test.describe("SCRUM-128 — Decide a change request and apply it in one step", 
     await prisma.event.deleteMany({ where: { id: eventId } });
   });
 
-  test("SCRUM-128 [AC1, AC2, AC4, AC5] TC-128-13: the Coordinator sees the current and requested values and what's affected, approves, and the Confirmed event returns to Planning with its booking flagged", async ({
+  test("SCRUM-128 [AC1, AC2, AC4, AC5] TC-128-13, SCRUM-208 [AC2] TC-208-06: the Coordinator sees the current and requested values and what's affected, approves, and the Confirmed event returns to Planning with its booking flagged", async ({
     page,
   }) => {
     const name = `SCRUM-128 Approve ${Date.now()}`;
@@ -103,6 +103,10 @@ test.describe("SCRUM-128 — Decide a change request and apply it in one step", 
 
     await signIn(page, "coordinator@test.local");
     const dialog = await openDetails(page, name);
+    // SCRUM-208 AC2, AC3: the request waiting on the Coordinator is counted on its tab.
+    await expect(
+      dialog.getByRole("tab", { name: /^Changes/ }).getByTestId("tab-attention"),
+    ).toContainText("1");
     const decision = dialog.getByTestId("change-request-decision");
     await expect(decision.getByRole("row", { name: /Expected attendance/ })).toContainText("40");
     await expect(decision.getByRole("row", { name: /Expected attendance/ })).toContainText("60");

@@ -276,7 +276,8 @@ export function EventPage({
         />
       </header>
 
-      <Tabs label="Event" tabs={tabs} value={tab} onChange={openTab} />
+      {/* Lazy: opening an event loads only the tab shown, not all six. */}
+      <Tabs label="Event" tabs={tabs} value={tab} onChange={openTab} lazy />
 
       {/* AC2: a Draft's next step is the Organiser finishing it. */}
       {event.status === "DRAFT" && resuming && (

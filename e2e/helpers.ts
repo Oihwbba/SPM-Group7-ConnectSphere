@@ -303,7 +303,8 @@ export async function openEvent(page: Page, name: string, tab?: string) {
     .first()
     .click();
   const event = page.getByTestId("event-page");
-  await expect(event.getByRole("heading", { level: 1, name })).toBeVisible();
+  // A navigation, not a pop-up: allow for the page's first load.
+  await expect(event.getByRole("heading", { level: 1, name })).toBeVisible({ timeout: 15_000 });
   if (tab) await event.getByRole("tab", { name: new RegExp(`^${tab}`) }).click();
   return event;
 }
