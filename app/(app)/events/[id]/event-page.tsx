@@ -455,12 +455,7 @@ function NextStepBanner({
 function RequestTab({ event }: { event: Event }) {
   return (
     <div className="space-y-4">
-      <Section icon={Info} title="Basics">
-        <Field label="Event Purpose">{event.purpose}</Field>
-        <Field label="Event Description" multiline>
-          {event.description}
-        </Field>
-      </Section>
+      {/* The key facts first, across the page. */}
       <Section icon={Calendar} title="Schedule & Attendance">
         {/* Shared page conventions: the key facts as a strip of stats. */}
         <StatStrip
@@ -488,28 +483,37 @@ function RequestTab({ event }: { event: Event }) {
           ]}
         />
       </Section>
-      <Section icon={Building2} title="Venue, Layout & Accessibility">
-        {/* SCRUM-170 AC5: the Organiser's answers exactly as entered. */}
-        <OrganiserVenueAnswers answers={event} />
-      </Section>
-      <Section icon={Wrench} title="Equipment & Technical Support">
-        <OrganiserEquipmentAnswer equipmentRequirements={event.equipmentRequirements} />
-      </Section>
-      <Section icon={ClipboardList} title="Registration & Other Details">
-        {/* SCRUM-171 AC3: an older request shows "Not answered". */}
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2" data-testid="registration-needed">
-          <Field label="Registration Needed" strong>
-            {registrationNeededLabel(event.registrationRequired)}
+      {/* Then the rest of what was asked for, two by two. */}
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <Section icon={Info} title="Basics">
+          <Field label="Event Purpose">{event.purpose}</Field>
+          <Field label="Event Description" multiline>
+            {event.description}
           </Field>
-          <Field label="Registration Notes" multiline>
-            {event.registrationNotes}
-          </Field>
-        </div>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <Field label="Event Programme">{event.programme || "Not specified"}</Field>
-          <Field label="Special Requests">{event.specialRequests || "None"}</Field>
-        </div>
-      </Section>
+        </Section>
+        <Section icon={Building2} title="Venue, Layout & Accessibility">
+          {/* SCRUM-170 AC5: the Organiser's answers exactly as entered. */}
+          <OrganiserVenueAnswers answers={event} />
+        </Section>
+        <Section icon={Wrench} title="Equipment & Technical Support">
+          <OrganiserEquipmentAnswer equipmentRequirements={event.equipmentRequirements} />
+        </Section>
+        <Section icon={ClipboardList} title="Registration & Other Details">
+          {/* SCRUM-171 AC3: an older request shows "Not answered". */}
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2" data-testid="registration-needed">
+            <Field label="Registration Needed" strong>
+              {registrationNeededLabel(event.registrationRequired)}
+            </Field>
+            <Field label="Registration Notes" multiline>
+              {event.registrationNotes}
+            </Field>
+          </div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <Field label="Event Programme">{event.programme || "Not specified"}</Field>
+            <Field label="Special Requests">{event.specialRequests || "None"}</Field>
+          </div>
+        </Section>
+      </div>
     </div>
   );
 }
