@@ -190,10 +190,13 @@ export function EventPage({
             label: <TabLabel label="Registrations" />,
             content: (
               <div className="space-y-4">
-                {/* SCRUM-75 AC6: close or reopen registration */}
-                {event.status === "CONFIRMED" && <RegistrationControl eventId={event.id} />}
-                {/* SCRUM-70 */}
-                {["PLANNING", "CONFIRMED", "CANCELLED", "COMPLETED"].includes(event.status) ? (
+                {/* SCRUM-75 AC6: close or reopen registration, from the list's
+                    header; SCRUM-70: the list itself. */}
+                {event.status === "CONFIRMED" ? (
+                  <RegistrationControl eventId={event.id}>
+                    {(action) => <RegistrationListPanel eventId={event.id} action={action} />}
+                  </RegistrationControl>
+                ) : ["PLANNING", "CANCELLED", "COMPLETED"].includes(event.status) ? (
                   <RegistrationListPanel eventId={event.id} />
                 ) : (
                   <Empty>Registrations open once the event is being planned.</Empty>
@@ -408,12 +411,12 @@ function NextStepBanner({
       data-kind={step.kind}
       className={cn(
         "flex flex-wrap items-center justify-between gap-3 rounded-xl border-l-4 px-4 py-3 text-sm",
-        mine ? "border-violet-600 bg-violet-50 dark:bg-violet-500/10" : "border-muted-foreground/40 bg-muted/40",
+        mine ? "border-primary bg-primary/5" : "border-muted-foreground/40 bg-muted/40",
       )}
     >
       <div className="space-y-1">
         <p className="flex items-center gap-2 font-medium">
-          <Info className={cn("h-4 w-4 shrink-0", mine ? "text-violet-600" : "text-muted-foreground")} aria-hidden />
+          <Info className={cn("h-4 w-4 shrink-0", mine ? "text-primary" : "text-muted-foreground")} aria-hidden />
           {step.text}
         </p>
         {handledBy}
@@ -556,7 +559,7 @@ function Field({
 }: {
   label: string;
   multiline?: boolean;
-  /** A key answer, in bold violet. */
+  /** A key answer, in bold primary-coloured. */
   strong?: boolean;
   children: React.ReactNode;
 }) {
@@ -567,7 +570,7 @@ function Field({
         className={cn(
           "mt-0.5 font-medium text-foreground",
           multiline && "whitespace-pre-wrap",
-          strong && "text-base font-bold text-violet-700 dark:text-violet-300",
+          strong && "text-base font-bold text-primary",
         )}
       >
         {children || "—"}

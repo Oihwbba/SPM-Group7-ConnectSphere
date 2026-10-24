@@ -21,7 +21,7 @@ const STEP_OF: Record<EventStatus, number> = {
 
 /**
  * SCRUM-208 AC2 — the event's status as its place on the way: the steps done
- * are ticked, the current one glows violet, and a Rejected request is marked
+ * are ticked, the current one glows in the site's primary colour, and a Rejected request is marked
  * where it stopped. A Cancelled event shows how far it got, then Cancelled.
  * Carries the status for tests and screen readers as the badge did.
  */
@@ -61,8 +61,8 @@ export function EventProgress({
                   aria-hidden
                   className={cn(
                     "flex h-5 w-5 items-center justify-center rounded-full border-2",
-                    done && "border-violet-600 bg-violet-600 text-white",
-                    here && !stopped && "border-violet-600 bg-violet-100",
+                    done && "border-primary bg-primary text-white",
+                    here && !stopped && "border-primary bg-primary/15",
                     stopped && "border-destructive bg-destructive text-white",
                     !done && !here && "border-muted-foreground/30 bg-background",
                   )}
@@ -71,15 +71,15 @@ export function EventProgress({
                   {stopped && <X className="h-3 w-3" strokeWidth={3} />}
                   {here && !stopped && (
                     <span className="relative flex h-2.5 w-2.5">
-                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-violet-500 opacity-75" />
-                      <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-violet-600 shadow-[0_0_8px_2px_rgba(124,58,237,0.6)]" />
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
+                      <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-primary shadow-[0_0_8px_2px_hsl(var(--primary)/0.6)]" />
                     </span>
                   )}
                 </span>
                 <span
                   className={cn(
                     "whitespace-nowrap text-sm",
-                    here ? "font-semibold text-violet-700" : "text-muted-foreground",
+                    here ? "font-semibold text-primary" : "text-muted-foreground",
                     stopped && "text-destructive",
                   )}
                 >
@@ -91,7 +91,7 @@ export function EventProgress({
                   aria-hidden
                   className={cn(
                     "mx-2 h-0.5 min-w-4 flex-1 rounded-full",
-                    i < current || finished ? "bg-violet-600" : "bg-muted-foreground/20",
+                    i < current || finished ? "bg-primary" : "bg-muted-foreground/20",
                   )}
                 />
               )}

@@ -14,7 +14,7 @@ export type Stat = {
 
 /**
  * The key facts of something, side by side and split by thin lines, each a
- * round icon, a label and a bold violet value (shared page conventions). On a
+ * round icon, a label and a bold primary-coloured value (shared page conventions). On a
  * phone they stack, split by lines across.
  */
 export function StatStrip({
@@ -38,14 +38,14 @@ export function StatStrip({
         <div key={label} className="flex min-w-0 items-center gap-3 py-3 sm:px-5 sm:first:pl-0 sm:last:pr-0">
           <span
             aria-hidden
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-violet-100 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary"
           >
             <Icon className="h-5 w-5" />
           </span>
           <div className="min-w-0">
             <dt className="text-xs font-medium text-muted-foreground">{label}</dt>
             <dd
-              className="break-words text-lg font-bold leading-snug text-violet-700 dark:text-violet-300"
+              className="break-words text-lg font-bold leading-snug text-primary"
               data-testid={valueTestId}
             >
               {value}

@@ -43,7 +43,14 @@ function RegistrationRows({ rows }: { rows: RegistrationRow[] }) {
  * Coordinator. Shows nothing to anyone the server refuses, so the panel never
  * hints that a list exists (AC5).
  */
-export function RegistrationListPanel({ eventId }: { eventId: string }) {
+export function RegistrationListPanel({
+  eventId,
+  action,
+}: {
+  eventId: string;
+  /** e.g. Close registration, shown in the list's header (SCRUM-208). */
+  action?: React.ReactNode;
+}) {
   const [list, setList] = useState<EventRegistrationList | null>(null);
 
   useEffect(() => {
@@ -62,11 +69,12 @@ export function RegistrationListPanel({ eventId }: { eventId: string }) {
 
   return (
     <Card className="overflow-hidden" data-testid="registration-list">
-      <CardHeader className="bg-muted/30 px-4 py-3">
+      <CardHeader className="flex-row flex-wrap items-center justify-between gap-2 space-y-0 bg-muted/30 px-4 py-3">
         <CardTitle className="flex items-center gap-2 text-sm font-semibold">
           <Users aria-hidden="true" className="h-4 w-4 text-primary" />
           Registrations
         </CardTitle>
+        {action}
       </CardHeader>
       <CardContent className="space-y-3 p-4 text-xs">
         <p data-testid="registration-summary">
