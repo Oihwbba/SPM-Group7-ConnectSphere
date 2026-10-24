@@ -1,4 +1,4 @@
-import type { BookingStatus, Event, EventStatus } from "@prisma/client";
+import type { Event, EventStatus } from "@prisma/client";
 
 import { prisma } from "@/lib/db";
 import { can, type SessionUser } from "@/lib/auth/can";
@@ -15,8 +15,6 @@ export type EventPageData = {
   organiserName: string | null;
   coordinatorName: string | null;
   step: NextStep;
-  /** The venues requested and not withdrawn, rejected or expired. */
-  venues: { name: string; status: BookingStatus }[];
   /** For a Cancelled event, the status it was cancelled from. */
   cancelledFrom: EventStatus | null;
   /** What the tabs show as needing attention, and their empty states. */
@@ -67,7 +65,6 @@ export async function getEventPageData(
     flaggedBookings,
     flaggedReservations,
     checklist,
-    bookings,
     cancellation,
   ] =
     await Promise.all([
@@ -84,11 +81,6 @@ export async function getEventPageData(
       event.status === "PLANNING" || event.status === "APPROVED"
         ? getReadinessChecklist(prisma, eventId, now)
         : null,
-      prisma.booking.findMany({
-        where: { eventId, status: { in: ["PENDING", "HELD", "APPROVED"] } },
-        select: { status: true, venue: { select: { name: true } } },
-        orderBy: { createdAt: "asc" },
-      }),
       event.status === "CANCELLED"
         ? prisma.auditLog.findFirst({
             where: {
@@ -127,7 +119,6 @@ export async function getEventPageData(
     organiserName: organiser.name,
     coordinatorName: coordinator?.name ?? null,
     step,
-    venues: bookings.map((b) => ({ name: b.venue.name, status: b.status })),
     cancelledFrom: (cancellation?.oldValue as EventStatus | undefined) ?? null,
     attention: {
       openClarification: openClarifications > 0,

@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { Users } from "lucide-react";
+import { CalendarRange, CircleDot, Users } from "lucide-react";
+import { StatStrip } from "@/components/app/stat-strip";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -80,16 +81,23 @@ export function RegistrationControl({ eventId }: { eventId: string }) {
           </p>
         ) : (
           <>
-            <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2">
-              <dt className="font-semibold text-muted-foreground">Status</dt>
-              <dd data-testid="registration-control-state">{control.label}</dd>
-              <dt className="font-semibold text-muted-foreground">Period</dt>
-              <dd>{control.period}</dd>
-              <dt className="font-semibold text-muted-foreground">Registered</dt>
-              <dd>
-                {control.registered} of {control.capacity}
-              </dd>
-            </dl>
+            {/* Shared page conventions: the state of registration at a glance. */}
+            <StatStrip
+              stats={[
+                {
+                  icon: CircleDot,
+                  label: "Status",
+                  value: control.label,
+                  testId: "registration-control-state",
+                },
+                { icon: CalendarRange, label: "Period", value: control.period },
+                {
+                  icon: Users,
+                  label: "Registered",
+                  value: `${control.registered} of ${control.capacity}`,
+                },
+              ]}
+            />
             {error && (
               <p role="alert" className="text-destructive">
                 {error}

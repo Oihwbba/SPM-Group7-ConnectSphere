@@ -73,11 +73,15 @@ test.describe("SCRUM-208 — One page per event, not a pop-up", () => {
     await expect(event.getByRole("heading", { level: 1 })).toHaveText(name);
     await expect(event.getByTestId("status-badge")).toHaveCount(1);
     // AC2: the key facts at the top, and the status as the step it has reached.
-    await expect(event.getByTestId("event-summary")).toContainText(/Expected attendance\s*80\s*people/);
+    // The key facts are on the Request tab, as a strip of stats.
+    await expect(event.getByTestId("request-schedule")).toContainText("80 attendees");
     await expect(event.getByTestId("status-badge").locator('[aria-current="step"]')).toContainText(
       "Review",
     );
-    await expect(event.getByTestId("current-coordinator")).toContainText("Cody Coordinator");
+    // AC2: who is handling it, beside the next step.
+    await expect(event.getByTestId("current-coordinator")).toContainText(
+      "Handled by Cody Coordinator",
+    );
 
     // AC2: the Organiser's turn, with a way straight there.
     const step = event.getByTestId("next-step");

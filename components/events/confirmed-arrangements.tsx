@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { BadgeCheck } from "lucide-react";
+import { BadgeCheck, Building2, Calendar, Wrench } from "lucide-react";
+import { StatStrip } from "@/components/app/stat-strip";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getEventArrangements } from "@/app/(app)/events/readiness-actions";
-import { formatDateTime } from "@/lib/datetime";
+import { formatDate, formatTime } from "@/lib/datetime";
 import type { ConfirmedArrangements as Arrangements } from "@/lib/event-readiness";
 
 /**
@@ -51,32 +52,40 @@ export function ConfirmedArrangements({ eventId }: { eventId: string }) {
             Loading arrangements…
           </p>
         ) : (
-          <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2">
-            <dt className="font-semibold text-muted-foreground">
-              {arrangements.venues.length > 1 ? "Venues" : "Venue"}
-            </dt>
-            {/* SCRUM-162 AC7: every approved venue. */}
-            <dd data-testid="confirmed-venue">
-              {arrangements.venues.length > 0
-                ? arrangements.venues
-                    .map((venue) => `${venue.name}, ${venue.location}`)
-                    .join("; ")
-                : "—"}
-            </dd>
-            <dt className="font-semibold text-muted-foreground">Date & time</dt>
-            <dd>
-              {arrangements.startAt
-                ? formatDateTime(arrangements.startAt)
-                : "—"}{" "}
-              to {arrangements.endAt ? formatDateTime(arrangements.endAt) : "—"}
-            </dd>
-            <dt className="font-semibold text-muted-foreground">Equipment</dt>
-            <dd data-testid="confirmed-equipment">
-              {arrangements.equipment.length > 0
-                ? arrangements.equipment.join(", ")
-                : "None reserved"}
-            </dd>
-          </dl>
+          // Shared page conventions: what is secured, as a strip of stats.
+          <StatStrip
+            stats={[
+              {
+                icon: Building2,
+                label: arrangements.venues.length > 1 ? "Venues" : "Venue",
+                // SCRUM-162 AC7: every approved venue.
+                value:
+                  arrangements.venues.length > 0
+                    ? arrangements.venues.map((venue) => venue.name).join(", ")
+                    : "—",
+                hint: arrangements.venues.map((venue) => venue.location).join("; ") || undefined,
+                testId: "confirmed-venue",
+              },
+              {
+                icon: Calendar,
+                label: "Date & time",
+                value: arrangements.startAt ? formatDate(arrangements.startAt) : "—",
+                hint:
+                  arrangements.startAt && arrangements.endAt
+                    ? `${formatTime(arrangements.startAt)} to ${formatTime(arrangements.endAt)}`
+                    : undefined,
+              },
+              {
+                icon: Wrench,
+                label: "Equipment",
+                value:
+                  arrangements.equipment.length > 0
+                    ? arrangements.equipment.join(", ")
+                    : "None reserved",
+                testId: "confirmed-equipment",
+              },
+            ]}
+          />
         )}
       </CardContent>
     </Card>

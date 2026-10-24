@@ -12,12 +12,12 @@ import {
   ClipboardList,
   Info,
   Search,
-  UserRound,
+  Timer,
   Users,
   Wrench,
   XCircle,
 } from "lucide-react";
-import type { BookingStatus, Event } from "@prisma/client";
+import type { Event } from "@prisma/client";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -49,19 +49,13 @@ import {
   type NextStep,
 } from "@/lib/event-next-step";
 import { cn } from "@/lib/utils";
+import { PersonPill } from "@/components/app/audit-trail";
+import { StatStrip } from "@/components/app/stat-strip";
 import { CreateEventDialog } from "../create-event-dialog";
 import { isEventStillVisible } from "../readiness-actions";
 import type { EventPageData } from "./event-page-data";
 import { EventProgress } from "./event-progress";
 
-const BOOKING_STATE: Record<BookingStatus, string> = {
-  PENDING: "Pending",
-  HELD: "Held",
-  APPROVED: "Approved",
-  REJECTED: "Rejected",
-  CANCELLED: "Cancelled",
-  EXPIRED: "Expired",
-};
 
 /**
  * SCRUM-208 — one event on its own page. The top says, whatever tab is open,
@@ -75,7 +69,6 @@ export function EventPage({
   viewer,
   coordinatorName,
   step,
-  venues,
   cancelledFrom,
   attention,
   requestedTab,
@@ -268,61 +261,10 @@ export function EventPage({
         {/* AC2: the state, as the event's place on the way to taking place. */}
         <EventProgress status={event.status} cancelledFrom={cancelledFrom} />
 
-        {/* AC2: the key facts at a glance, and who is handling it. */}
-        <dl
-          className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4"
-          data-testid="event-summary"
-        >
-          <Metric icon={Calendar} label="When">
-            {event.startAt && event.endAt ? (
-              <>
-                <span className="block">{formatDate(event.startAt)}</span>
-                <span className="block text-sm font-normal text-muted-foreground">
-                  {formatTime(event.startAt)} to {formatTime(event.endAt)}
-                </span>
-              </>
-            ) : (
-              "Not set"
-            )}
-          </Metric>
-          <Metric icon={Users} label="Expected attendance">
-            {event.expectedAttendance ? (
-              <>
-                {event.expectedAttendance}
-                <span className="ml-1 text-sm font-normal text-muted-foreground">people</span>
-              </>
-            ) : (
-              "Not set"
-            )}
-          </Metric>
-          <Metric icon={UserRound} label="Coordinator" testId="current-coordinator">
-            {coordinatorName ?? (
-              <span className="text-base font-normal text-muted-foreground">
-                Waiting for a Coordinator
-              </span>
-            )}
-          </Metric>
-          <Metric icon={Building2} label="Venue">
-            {venues.length > 0 ? (
-              venues.map((venue) => (
-                <span key={venue.name} className="block">
-                  {venue.name}
-                  <span className="ml-1 text-sm font-normal text-muted-foreground">
-                    {BOOKING_STATE[venue.status]}
-                  </span>
-                </span>
-              ))
-            ) : (
-              <span className="text-base font-normal text-muted-foreground">
-                Not requested yet
-              </span>
-            )}
-          </Metric>
-        </dl>
-
         <NextStepBanner
           step={step}
           event={event}
+          coordinatorName={coordinatorName}
           onTab={openTab}
           onResume={() => setResuming(true)}
         />
@@ -342,29 +284,6 @@ export function EventPage({
           }}
         />
       )}
-    </div>
-  );
-}
-
-/** One key fact in the summary at the top of the page (AC2). */
-function Metric({
-  icon: Icon,
-  label,
-  testId,
-  children,
-}: {
-  icon: typeof Info;
-  label: string;
-  testId?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="rounded-xl border bg-card px-4 py-3" data-testid={testId}>
-      <dt className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-        <Icon className="h-3.5 w-3.5" aria-hidden />
-        {label}
-      </dt>
-      <dd className="mt-1 text-lg font-semibold leading-snug text-foreground">{children}</dd>
     </div>
   );
 }
@@ -406,11 +325,13 @@ function Empty({ children }: { children: React.ReactNode }) {
 function NextStepBanner({
   step,
   event,
+  coordinatorName,
   onTab,
   onResume,
 }: {
   step: NextStep;
   event: Event;
+  coordinatorName: string | null;
   onTab: (tab: EventTab) => void;
   onResume: () => void;
 }) {
@@ -434,6 +355,9 @@ function NextStepBanner({
             <CheckCircle2 className="h-4 w-4 text-success" aria-hidden />
           )}
           {step.text}
+        </p>
+        <p className="text-xs text-muted-foreground" data-testid="current-coordinator">
+          Handled by {coordinatorName ?? "no Coordinator"}
         </p>
         {event.status === "REJECTED" && (
           <>
@@ -463,6 +387,20 @@ function NextStepBanner({
   }
 
   const mine = step.kind === "yours";
+  // AC2: who is handling the event, beside what happens next.
+  const handledBy = (
+    <span
+      className="inline-flex items-center gap-1.5 text-xs text-muted-foreground"
+      data-testid="current-coordinator"
+    >
+      Handled by{" "}
+      {coordinatorName ? (
+        <PersonPill name={coordinatorName} />
+      ) : (
+        <span className="font-medium text-foreground">Waiting for a Coordinator</span>
+      )}
+    </span>
+  );
   return (
     <section
       aria-label="Next step"
@@ -470,13 +408,16 @@ function NextStepBanner({
       data-kind={step.kind}
       className={cn(
         "flex flex-wrap items-center justify-between gap-3 rounded-xl border-l-4 px-4 py-3 text-sm",
-        mine ? "border-primary bg-primary/5" : "border-muted-foreground/40 bg-muted/40",
+        mine ? "border-violet-600 bg-violet-50 dark:bg-violet-500/10" : "border-muted-foreground/40 bg-muted/40",
       )}
     >
-      <p className="flex items-center gap-2 font-medium">
-        <Info className={cn("h-4 w-4 shrink-0", mine ? "text-primary" : "text-muted-foreground")} aria-hidden />
-        {step.text}
-      </p>
+      <div className="space-y-1">
+        <p className="flex items-center gap-2 font-medium">
+          <Info className={cn("h-4 w-4 shrink-0", mine ? "text-violet-600" : "text-muted-foreground")} aria-hidden />
+          {step.text}
+        </p>
+        {handledBy}
+      </div>
       {step.kind === "yours" && (
         <div className="flex flex-wrap gap-2">
           {step.action.kind === "tab" && (
@@ -514,12 +455,32 @@ function RequestTab({ event }: { event: Event }) {
           {event.description}
         </Field>
       </Section>
-      <Section icon={Calendar} title="Schedule & Attendance" grid>
-        <Field label="Proposed Start">{event.startAt && formatDateTime(event.startAt)}</Field>
-        <Field label="Proposed End">{event.endAt && formatDateTime(event.endAt)}</Field>
-        <Field label="Expected Attendance">
-          {event.expectedAttendance && `${event.expectedAttendance} attendees`}
-        </Field>
+      <Section icon={Calendar} title="Schedule & Attendance">
+        {/* Shared page conventions: the key facts as a strip of stats. */}
+        <StatStrip
+          testId="request-schedule"
+          stats={[
+            {
+              icon: Calendar,
+              label: "Proposed date",
+              value: event.startAt ? formatDate(event.startAt) : "Not set",
+              hint:
+                event.startAt && event.endAt
+                  ? `${formatTime(event.startAt)} to ${formatTime(event.endAt)}`
+                  : undefined,
+            },
+            {
+              icon: Users,
+              label: "Expected attendance",
+              value: event.expectedAttendance ? `${event.expectedAttendance} attendees` : "Not set",
+            },
+            {
+              icon: Timer,
+              label: "Duration",
+              value: duration(event.startAt, event.endAt),
+            },
+          ]}
+        />
       </Section>
       <Section icon={Building2} title="Venue, Layout & Accessibility">
         {/* SCRUM-170 AC5: the Organiser's answers exactly as entered. */}
@@ -531,7 +492,9 @@ function RequestTab({ event }: { event: Event }) {
       <Section icon={ClipboardList} title="Registration & Other Details">
         {/* SCRUM-171 AC3: an older request shows "Not answered". */}
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2" data-testid="registration-needed">
-          <Field label="Registration Needed">{registrationNeededLabel(event.registrationRequired)}</Field>
+          <Field label="Registration Needed" strong>
+            {registrationNeededLabel(event.registrationRequired)}
+          </Field>
           <Field label="Registration Notes" multiline>
             {event.registrationNotes}
           </Field>
@@ -543,6 +506,16 @@ function RequestTab({ event }: { event: Event }) {
       </Section>
     </div>
   );
+}
+
+/** How long the event runs, e.g. "8 hours" or "2 h 30 min". */
+function duration(startAt: Date | null, endAt: Date | null): string {
+  if (!startAt || !endAt) return "Not set";
+  const minutes = Math.round((new Date(endAt).getTime() - new Date(startAt).getTime()) / 60_000);
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  if (rest === 0) return `${hours} ${hours === 1 ? "hour" : "hours"}`;
+  return hours > 0 ? `${hours} h ${rest} min` : `${rest} min`;
 }
 
 function Section({
@@ -578,16 +551,25 @@ function Section({
 function Field({
   label,
   multiline = false,
+  strong = false,
   children,
 }: {
   label: string;
   multiline?: boolean;
+  /** A key answer, in bold violet. */
+  strong?: boolean;
   children: React.ReactNode;
 }) {
   return (
     <div>
       <p className="text-xs font-semibold text-muted-foreground">{label}</p>
-      <p className={cn("mt-0.5 text-foreground", multiline && "whitespace-pre-wrap")}>
+      <p
+        className={cn(
+          "mt-0.5 font-medium text-foreground",
+          multiline && "whitespace-pre-wrap",
+          strong && "text-base font-bold text-violet-700 dark:text-violet-300",
+        )}
+      >
         {children || "—"}
       </p>
     </div>
