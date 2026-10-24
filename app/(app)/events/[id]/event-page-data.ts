@@ -1,4 +1,4 @@
-import type { Event } from "@prisma/client";
+import type { BookingStatus, Event, EventStatus } from "@prisma/client";
 
 import { prisma } from "@/lib/db";
 import { can, type SessionUser } from "@/lib/auth/can";
@@ -15,6 +15,10 @@ export type EventPageData = {
   organiserName: string | null;
   coordinatorName: string | null;
   step: NextStep;
+  /** The venues requested and not withdrawn, rejected or expired. */
+  venues: { name: string; status: BookingStatus }[];
+  /** For a Cancelled event, the status it was cancelled from. */
+  cancelledFrom: EventStatus | null;
   /** What the tabs show as needing attention, and their empty states. */
   attention: {
     openClarification: boolean;
@@ -57,7 +61,15 @@ export async function getEventPageData(
   const reconsiders = can(user, "arrangement:reconsider", resource);
   const now = new Date();
 
-  const [openClarifications, pendingChangeRequests, flaggedBookings, flaggedReservations, checklist] =
+  const [
+    openClarifications,
+    pendingChangeRequests,
+    flaggedBookings,
+    flaggedReservations,
+    checklist,
+    bookings,
+    cancellation,
+  ] =
     await Promise.all([
       prisma.clarificationRequest.count({ where: { eventId, status: "OPEN" } }),
       prisma.eventChangeRequest.count({ where: { eventId, status: "PENDING_REVIEW" } }),
@@ -71,6 +83,23 @@ export async function getEventPageData(
         : 0,
       event.status === "PLANNING" || event.status === "APPROVED"
         ? getReadinessChecklist(prisma, eventId, now)
+        : null,
+      prisma.booking.findMany({
+        where: { eventId, status: { in: ["PENDING", "HELD", "APPROVED"] } },
+        select: { status: true, venue: { select: { name: true } } },
+        orderBy: { createdAt: "asc" },
+      }),
+      event.status === "CANCELLED"
+        ? prisma.auditLog.findFirst({
+            where: {
+              entityType: "Event",
+              entityId: eventId,
+              fieldName: "status",
+              newValue: "CANCELLED",
+            },
+            select: { oldValue: true },
+            orderBy: { createdAt: "desc" },
+          })
         : null,
     ]);
 
@@ -98,6 +127,8 @@ export async function getEventPageData(
     organiserName: organiser.name,
     coordinatorName: coordinator?.name ?? null,
     step,
+    venues: bookings.map((b) => ({ name: b.venue.name, status: b.status })),
+    cancelledFrom: (cancellation?.oldValue as EventStatus | undefined) ?? null,
     attention: {
       openClarification: openClarifications > 0,
       pendingChangeRequests,

@@ -321,7 +321,9 @@ export function ChangeRequestPanel({
     reload();
   }
 
-  if (loaded === null) return null;
+  if (loaded === null) {
+    return <p className="text-xs text-muted-foreground">Loading change requests…</p>;
+  }
   if (loaded === "failed") {
     return (
       <p role="alert" className="text-xs text-muted-foreground">

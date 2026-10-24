@@ -11,9 +11,9 @@ assigned to `coordinator@test.local` (Cody Coordinator), with an open question
 from the Coordinator that lets the Organiser also update Expected attendance.
 
 **How the page is built.** An event opens at `/events/[id]`. The top of the
-page, shown whatever tab is open, has a back link, the event's name, its status
-badge, one line with the date and time, the expected attendance and the
-Coordinator, and the **Next step** banner. Below it are the tabs Request,
+page, shown whatever tab is open, has a back link, the event's name, its
+progress from request to completed event, the key facts (when, expected
+attendance, Coordinator, venue) and the **Next step** banner. Below it are the tabs Request,
 Clarification, Arrangements, Changes, Registrations and Notes. The open tab is
 part of the link (`?tab=`). Every panel is the one the pop-up showed, with the
 same rules and the same people allowed to act.
@@ -57,11 +57,11 @@ same rules and the same people allowed to act.
 | Item | Content |
 |---|---|
 | Test Case ID | TC-208-02 |
-| Test Scenario | [Positive] AC 2: the top shows the event's name as the title, the status once as the badge, and the date, attendance and Coordinator |
+| Test Scenario | [Positive] AC 2: the top shows the event's name as the title, its status as a step on the way from request to completed, and the key facts: when, the attendance, the Coordinator and the venue |
 | Pre-conditions | Signed in as the Organiser; the event expects 80. |
 | Test Steps | 1. Open the event. <br> 2. Open each tab in turn. |
 | Test Data | `organiser@test.local` |
-| Expected Result | The title is the event's name only, with one status badge beside it. Under it: the date and time, "80 expected", and "Coordinator:" with Cody Coordinator in a pill ("Waiting for a Coordinator" while none is assigned). The top stays the same on every tab. |
+| Expected Result | The title is the event's name only. Under it, the progress Request → Review → Planning → Confirmed → Completed: Request ticked and Review the current step, marked with a green dot (a Rejected request shows Rejected there in red; a Cancelled event shows how far it got, then Cancelled). Then the key facts: When (the date, and the start and end times), Expected attendance "80 people", Coordinator "Cody Coordinator" ("Waiting for a Coordinator" while none is assigned), and Venue ("Not requested yet" until one is). The top stays the same on every tab. |
 
 **Automated by:** `e2e/event-page.spec.ts` › "SCRUM-208 [AC1, AC2] TC-208-01, TC-208-02, TC-208-03: …"; `e2e/reassign.spec.ts` (the Coordinator's name after a reassignment)
 

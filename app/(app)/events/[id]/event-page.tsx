@@ -12,17 +12,16 @@ import {
   ClipboardList,
   Info,
   Search,
+  UserRound,
   Users,
   Wrench,
   XCircle,
 } from "lucide-react";
-import type { Event } from "@prisma/client";
+import type { BookingStatus, Event } from "@prisma/client";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs } from "@/components/app/tabs";
-import { PersonPill } from "@/components/app/audit-trail";
-import { StatusBadge } from "@/components/events/status-badge";
 import { ClarificationPanel } from "@/components/events/clarification-panel";
 import { ChangeRequestPanel } from "@/components/events/change-request-panel";
 import { ReadinessChecklist } from "@/components/events/readiness-checklist";
@@ -42,7 +41,7 @@ import {
 import { CANCELLABLE } from "@/lib/event-lifecycle";
 import { BOOKABLE_EVENT_STATUSES } from "@/lib/schemas/booking";
 import { registrationNeededLabel } from "@/lib/schemas/event";
-import { formatDateTime } from "@/lib/datetime";
+import { formatDate, formatDateTime, formatTime } from "@/lib/datetime";
 import {
   ARRANGEMENT_STATUSES,
   defaultTab,
@@ -53,6 +52,16 @@ import { cn } from "@/lib/utils";
 import { CreateEventDialog } from "../create-event-dialog";
 import { isEventStillVisible } from "../readiness-actions";
 import type { EventPageData } from "./event-page-data";
+import { EventProgress } from "./event-progress";
+
+const BOOKING_STATE: Record<BookingStatus, string> = {
+  PENDING: "Pending",
+  HELD: "Held",
+  APPROVED: "Approved",
+  REJECTED: "Rejected",
+  CANCELLED: "Cancelled",
+  EXPIRED: "Expired",
+};
 
 /**
  * SCRUM-208 — one event on its own page. The top says, whatever tab is open,
@@ -66,6 +75,8 @@ export function EventPage({
   viewer,
   coordinatorName,
   step,
+  venues,
+  cancelledFrom,
   attention,
   requestedTab,
 }: EventPageData & { requestedTab: EventTab | null }) {
@@ -230,42 +241,12 @@ export function EventPage({
         </div>
       )}
 
-      <header className="space-y-3">
+      <header className="space-y-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0 space-y-2">
-            {/* AC2: the name only; the status is the badge, once. */}
-            <div className="flex flex-wrap items-center gap-2">
-              <h1 className="break-words text-2xl font-semibold tracking-tight">
-                {event.name}
-              </h1>
-              <StatusBadge status={event.status} />
-            </div>
-            <p
-              className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground"
-              data-testid="event-summary"
-            >
-              <span className="inline-flex items-center gap-1.5">
-                <Calendar className="h-4 w-4" aria-hidden />
-                {event.startAt && event.endAt
-                  ? `${formatDateTime(event.startAt)} to ${formatDateTime(event.endAt)}`
-                  : "Date and time not set"}
-              </span>
-              <span className="inline-flex items-center gap-1.5">
-                <Users className="h-4 w-4" aria-hidden />
-                {event.expectedAttendance
-                  ? `${event.expectedAttendance} expected`
-                  : "Attendance not set"}
-              </span>
-              <span className="inline-flex items-center gap-1.5" data-testid="current-coordinator">
-                <span>Coordinator:</span>
-                {coordinatorName ? (
-                  <PersonPill name={coordinatorName} />
-                ) : (
-                  <span>Waiting for a Coordinator</span>
-                )}
-              </span>
-            </p>
-          </div>
+          {/* AC2: the name only; the status is the progress below. */}
+          <h1 className="min-w-0 break-words text-2xl font-semibold tracking-tight">
+            {event.name}
+          </h1>
           {isCoordinator && (
             <div className="flex flex-wrap items-center gap-2">
               {/* SCRUM-38 AC1: venue search for this event's period. */}
@@ -283,6 +264,61 @@ export function EventPage({
             </div>
           )}
         </div>
+
+        {/* AC2: the state, as the event's place on the way to taking place. */}
+        <EventProgress status={event.status} cancelledFrom={cancelledFrom} />
+
+        {/* AC2: the key facts at a glance, and who is handling it. */}
+        <dl
+          className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4"
+          data-testid="event-summary"
+        >
+          <Metric icon={Calendar} label="When">
+            {event.startAt && event.endAt ? (
+              <>
+                <span className="block">{formatDate(event.startAt)}</span>
+                <span className="block text-sm font-normal text-muted-foreground">
+                  {formatTime(event.startAt)} to {formatTime(event.endAt)}
+                </span>
+              </>
+            ) : (
+              "Not set"
+            )}
+          </Metric>
+          <Metric icon={Users} label="Expected attendance">
+            {event.expectedAttendance ? (
+              <>
+                {event.expectedAttendance}
+                <span className="ml-1 text-sm font-normal text-muted-foreground">people</span>
+              </>
+            ) : (
+              "Not set"
+            )}
+          </Metric>
+          <Metric icon={UserRound} label="Coordinator" testId="current-coordinator">
+            {coordinatorName ?? (
+              <span className="text-base font-normal text-muted-foreground">
+                Waiting for a Coordinator
+              </span>
+            )}
+          </Metric>
+          <Metric icon={Building2} label="Venue">
+            {venues.length > 0 ? (
+              venues.map((venue) => (
+                <span key={venue.name} className="block">
+                  {venue.name}
+                  <span className="ml-1 text-sm font-normal text-muted-foreground">
+                    {BOOKING_STATE[venue.status]}
+                  </span>
+                </span>
+              ))
+            ) : (
+              <span className="text-base font-normal text-muted-foreground">
+                Not requested yet
+              </span>
+            )}
+          </Metric>
+        </dl>
 
         <NextStepBanner
           step={step}
@@ -306,6 +342,29 @@ export function EventPage({
           }}
         />
       )}
+    </div>
+  );
+}
+
+/** One key fact in the summary at the top of the page (AC2). */
+function Metric({
+  icon: Icon,
+  label,
+  testId,
+  children,
+}: {
+  icon: typeof Info;
+  label: string;
+  testId?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-xl border bg-card px-4 py-3" data-testid={testId}>
+      <dt className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        <Icon className="h-3.5 w-3.5" aria-hidden />
+        {label}
+      </dt>
+      <dd className="mt-1 text-lg font-semibold leading-snug text-foreground">{children}</dd>
     </div>
   );
 }
