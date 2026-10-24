@@ -30,10 +30,10 @@ test.describe("SCRUM-16 — looking at a draft changes nothing", () => {
         await page.getByRole("button", { name: tab }).click();
       }
       const row = page.getByRole("row", { name: new RegExp(name) });
-      await row.getByRole("button", { name: "View Details" }).click();
-      await expect(page.getByRole("dialog")).toBeVisible();
-      await page.keyboard.press("Escape");
-      await expect(page.getByRole("dialog")).toBeHidden();
+      // SCRUM-208: the draft opens on its own page; reading it changes nothing.
+      await row.getByRole("link", { name: "View Details" }).click();
+      await expect(page.getByRole("heading", { level: 1, name })).toBeVisible();
+      await page.getByRole("link", { name: "Back to My Events" }).click();
 
       await row.getByRole("button", { name: "Resume Draft" }).click();
       await expect(page.getByRole("dialog")).toBeVisible();

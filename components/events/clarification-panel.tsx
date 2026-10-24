@@ -33,8 +33,7 @@ interface ClarificationPanelProps {
   /** True when the viewer is the Coordinator (read-only here); false means
    * the viewer is the Organiser, who can respond while a request is OPEN. */
   isCoordinator: boolean;
-  /** Told once loaded whether the event has a thread, so the details
-   * pop-up can offer it as its own tab. */
+  /** Told once loaded whether the event has a thread. */
   onLoaded?: (hasThread: boolean) => void;
 }
 
@@ -46,6 +45,7 @@ type Clarification = {
   response: string | null;
   createdAt: string | Date;
   respondedAt: string | Date | null;
+  requestedBy?: { name: string | null };
 };
 
 type Draft = Record<string, string>;
@@ -97,14 +97,12 @@ function changesBetween(
 }
 
 /**
- * SCRUM-18 — shown inside the event details modal for both roles. A
- * Coordinator sees their question, which fields they let the Organiser change
- * (SCRUM-108 AC1) and, once answered, the Organiser's reply. An Organiser
- * sees the question and, while it's OPEN, the named fields to edit and a box
- * to reply (SCRUM-108 AC2).
- *
- * Renders nothing when there is no clarification thread on this event, so it
- * adds no visual noise to events that were never questioned.
+ * SCRUM-18 — the event page's Clarification tab, for both roles (SCRUM-208
+ * AC3). A Coordinator sees their questions, which fields they let the
+ * Organiser change (SCRUM-108 AC1) and, once answered, the Organiser's reply.
+ * An Organiser sees the questions and, while one is OPEN, the named fields to
+ * edit and a box to reply under it (SCRUM-108 AC2). The thread reads as a
+ * conversation, oldest first, each message with who sent it and when.
  */
 export function ClarificationPanel({
   event,
@@ -115,6 +113,7 @@ export function ClarificationPanel({
     null,
   );
   const [earlier, setEarlier] = useState<Clarification[]>([]);
+  const [organiserName, setOrganiserName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadFailed, setLoadFailed] = useState(false);
   const [response, setResponse] = useState("");
@@ -132,6 +131,7 @@ export function ClarificationPanel({
         if (result.ok) {
           setClarification(result.data.clarification);
           setEarlier(result.data.earlier);
+          setOrganiserName(result.data.organiserName);
           onLoaded?.(result.data.clarification !== null);
         } else setLoadFailed(true);
       })
@@ -189,7 +189,13 @@ export function ClarificationPanel({
     );
   }
 
-  if (!clarification) return null;
+  if (!clarification) {
+    return (
+      <p className="text-sm text-muted-foreground" data-testid="no-clarification">
+        No questions from the Coordinator.
+      </p>
+    );
+  }
 
   const isOpen = clarification.status === "OPEN";
   const named = clarification.editableFields.filter(
@@ -198,13 +204,20 @@ export function ClarificationPanel({
   const set = (key: string) => (value: string) =>
     setDraft((current) => ({ ...current, [key]: value }));
 
+  // SCRUM-208 AC3: what the answer may change, in plain words, said to
+  // whoever is reading.
   const fieldsNote = (fields: string[]) => {
     const names = fields
       .filter((f): f is ClarifiableField => f in CLARIFIABLE_FIELDS)
       .map((f) => CLARIFIABLE_FIELDS[f]);
-    return names.length > 0
-      ? `The organiser may change: ${names.join(", ")}.`
-      : "Text answer only.";
+    if (names.length === 0) {
+      return isCoordinator
+        ? "The Organiser replies in text. No fields need changing."
+        : "Reply in text. No fields need changing.";
+    }
+    return isCoordinator
+      ? `The Organiser can also update: ${names.join(", ")}.`
+      : `You can also update: ${names.join(", ")}.`;
   };
 
   // Shared page conventions, change 2: the thread as messages, one
@@ -225,7 +238,8 @@ export function ClarificationPanel({
           return (
             <li key={item.id} className="space-y-3">
               <Message
-                from="Coordinator asked:"
+                from={item.requestedBy?.name ?? "The Coordinator"}
+                role="Coordinator"
                 at={item.createdAt}
                 side="left"
               >
@@ -239,7 +253,8 @@ export function ClarificationPanel({
               </Message>
               {item.status === "ANSWERED" && (
                 <Message
-                  from="Organiser responded:"
+                  from={organiserName ?? "The Organiser"}
+                  role="Organiser"
                   at={item.respondedAt}
                   side="right"
                 >
@@ -335,11 +350,13 @@ export function ClarificationPanel({
 /** One message in the thread: the Coordinator's on the left, the Organiser's on the right. */
 function Message({
   from,
+  role,
   at,
   side,
   children,
 }: {
   from: string;
+  role: string;
   at: string | Date | null;
   side: "left" | "right";
   children: React.ReactNode;
@@ -355,7 +372,8 @@ function Message({
         )}
       >
         <p className="flex flex-wrap items-baseline gap-x-2 text-xs">
-          <span className="font-semibold text-muted-foreground">{from}</span>
+          <span className="font-semibold text-foreground">{from}</span>
+          <span className="text-muted-foreground">{role}</span>
           {at && (
             <span className="text-muted-foreground/80">
               {formatDateTime(at)}

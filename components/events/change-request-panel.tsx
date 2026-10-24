@@ -202,13 +202,19 @@ function ChangeRequestItem({
 }
 
 /**
- * SCRUM-41 — inside the event details dialog for the Organiser and the
+ * SCRUM-41 — on the event page's Changes tab, for the Organiser and the
  * Coordinator. Lists the event's change requests with their status (AC6),
  * and lets the Organiser or the assigned Coordinator raise one (AC1, AC9)
- * while none is waiting for a decision (AC7). Renders nothing for an event
- * that has none and can't take one.
+ * while none is waiting for a decision (AC7). For an event that has none and
+ * can't take one, shows `whenEmpty` (SCRUM-208 AC3), or nothing.
  */
-export function ChangeRequestPanel({ event }: { event: Event }) {
+export function ChangeRequestPanel({
+  event,
+  whenEmpty = null,
+}: {
+  event: Event;
+  whenEmpty?: React.ReactNode;
+}) {
   // null while loading; "failed" if the read failed.
   const [loaded, setLoaded] = useState<
     { requests: ChangeRequestView[]; canRaise: boolean } | "failed" | null
@@ -315,7 +321,9 @@ export function ChangeRequestPanel({ event }: { event: Event }) {
     reload();
   }
 
-  if (loaded === null) return null;
+  if (loaded === null) {
+    return <p className="text-xs text-muted-foreground">Loading change requests…</p>;
+  }
   if (loaded === "failed") {
     return (
       <p role="alert" className="text-xs text-muted-foreground">
@@ -324,7 +332,7 @@ export function ChangeRequestPanel({ event }: { event: Event }) {
     );
   }
   const { requests, canRaise } = loaded;
-  if (requests.length === 0 && !canRaise) return null;
+  if (requests.length === 0 && !canRaise) return whenEmpty;
 
   const set = (key: string) => (value: string) =>
     setDraft((current) => ({ ...current, [key]: value }));

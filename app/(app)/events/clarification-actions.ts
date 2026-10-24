@@ -141,6 +141,8 @@ type ClarificationRow = {
   response: string | null;
   createdAt: Date;
   respondedAt: Date | null;
+  /** SCRUM-208 AC3: who asked; the Organiser answers. */
+  requestedBy: { name: string | null };
 };
 
 /**
@@ -152,6 +154,7 @@ export async function getClarificationForEvent(eventId: string): Promise<
   ActionResult<{
     clarification: ClarificationRow | null;
     earlier: ClarificationRow[];
+    organiserName: string | null;
   }>
 > {
   const session = await auth();
@@ -160,7 +163,12 @@ export async function getClarificationForEvent(eventId: string): Promise<
 
   const event = await prisma.event.findUnique({
     where: { id: eventId },
-    select: { organiserId: true, coordinatorId: true, status: true },
+    select: {
+      organiserId: true,
+      coordinatorId: true,
+      status: true,
+      organiser: { select: { name: true } },
+    },
   });
   const related =
     event &&
@@ -189,6 +197,7 @@ export async function getClarificationForEvent(eventId: string): Promise<
       response: true,
       createdAt: true,
       respondedAt: true,
+      requestedBy: { select: { name: true } },
     },
   });
   const earlier = clarification
@@ -203,11 +212,12 @@ export async function getClarificationForEvent(eventId: string): Promise<
           response: true,
           createdAt: true,
           respondedAt: true,
+          requestedBy: { select: { name: true } },
         },
       })
     : [];
 
-  return ok({ clarification, earlier });
+  return ok({ clarification, earlier, organiserName: event.organiser.name });
 }
 
 /**
