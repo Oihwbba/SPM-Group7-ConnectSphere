@@ -86,19 +86,59 @@ Nothing was carried over to Sprint 3.
 
 ## Sprint review
 
-_To be completed by the team._ Who was Product Owner, what was demonstrated, and which stories the
-Product Owner accepted or sent back.
+Held on Wed 7 Oct 2026 at 2pm, about 3.5 hours, together with the
+retrospective and Sprint 3 planning. Felicia, Caylern, Hann Qian and Jun Bin
+(who left before the end) attended. Jin Hong was absent, so Felicia
+demonstrated his stories. The meeting was transcribed but not recorded.
+Source: Felicia's minutes of 7 Oct, from the auto-generated transcript, in the
+team's SPM Documentation (Google Docs).
+
+- **Product Owner:** Felicia, who also reviewed and merged pull requests.
+  Jun Bin was Scrum Master.
+- **Accepted:** every story was reviewed against its acceptance criteria and
+  all stayed Done; the sprint was closed that day. The minutes record no story
+  sent back. The gaps found below were handled as Sprint 3 decisions and new
+  work instead of reopening stories.
+
+| Presenter | Stories | What was shown | Gaps found |
+|---|---|---|---|
+| Jun Bin | SCRUM-108 | The Organiser answers a clarification; amend and resubmit returns the same request to Under Review, with no duplicate. | No notifications yet (a later sprint) |
+| Jun Bin | SCRUM-110 | Confirm stays greyed out until the venue and equipment are both booked. | The Organiser's equipment choice doesn't reach the checklist; the Venue Staff view needed a refresh |
+| Jun Bin | SCRUM-81 | The Coordinator confirms once the checklist is complete; the Organiser sees the confirmed arrangements read-only. | None |
+| Jun Bin | SCRUM-117, 126 | Submit as new creates a fresh draft; a rejected request becomes read-only and nothing stays booked. | Unsure the two stories are well split |
+| Caylern | SCRUM-50 | A request from an approved event, with live availability and no overlaps. | Times are pre-filled from the event |
+| Caylern | SCRUM-52, 53 | Venue Staff approve, or reject with a reason; the backend blocks overlaps. | Booking history is a later sprint |
+| Caylern | SCRUM-36, 37 | A calendar view with hover details; unavailability blocks bookings. | The calendar runs 24 hours |
+| Hann Qian | SCRUM-72, 73, 74, 76 | The event list with places left and open, closed or full states; register, withdraw, re-register; My Registrations. | Only the start time shown; a placeholder search bar; SCRUM-73 AC7 couldn't be shown |
+| Hann Qian | SCRUM-69 | Each Coordinator sees only their assigned requests. | "Unassigned visible to all" is hard to test |
+| Felicia, for Jin Hong | SCRUM-27 to 30, 155, 156 | One request per event, quantity checks, approve, reject or suggest an alternative, amber and red availability, the duplicate form removed. | Only an overall status, not one per line; 155 and 156 not fully shown |
+
+SCRUM-129 and 130 are Done but the minutes don't record them as demonstrated.
+
+Fourteen issues were raised. The ones that changed the backlog:
+
+- **The Organiser's venue and equipment needs:** free text that didn't reach
+  the Coordinator or the checklist. The fixes were bundled into SCRUM-127,
+  which was dropped on 13 Oct; SCRUM-170 (Sprint 3) shows those needs to the
+  people planning the event instead.
+- **The full time frame on the Attendee event list:** fixed the same day in
+  PR #139.
+- **The placeholder search bar:** removed by SCRUM-168 (Sprint 3, 8 Oct).
+- **Story merges:** SCRUM-167 into 166 and SCRUM-133 into 85, on 7 Oct.
 
 ## Retrospective
 
+Run asynchronously in the team's Telegram group, as agreed at the meeting.
+
 ### What went well
 
-_To be completed by the team._
+_To be completed by the team_ from the Telegram retrospective; the 7 Oct
+minutes haven't copied it in yet.
 
 ### What to improve
 
-_To be completed by the team._
+_To be completed by the team_, from the same source.
 
 ### Actions, and what came of them
 
-_To be completed by the team._
+_To be completed by the team_, from the same source.

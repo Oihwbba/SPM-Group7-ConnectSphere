@@ -54,6 +54,11 @@ estimates. The sprint records give the stories behind each figure.
 | [Sprint 2](sprint-2.md) | 45 | 11 | **56** | 25 |
 | [Sprint 3](sprint-3.md) | 124 (120 at today's estimates) | 6 | **126** | 34 |
 
+At the Sprint 1 review the team counted 31 of the 37 points, leaving out
+SCRUM-13, 15 and 31 because their tests were incomplete
+([Sprint 1 review](sprint-1.md#sprint-review)). This table keeps the Jira
+figure so every sprint is measured the same way.
+
 No sprint left a story unfinished. At today's estimates, the points done in
 each sprint equal the points committed plus the points added.
 

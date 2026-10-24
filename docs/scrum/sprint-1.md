@@ -12,6 +12,7 @@ Coordinator's approval decision, with every action gated by the user's role."
 | Points committed at start | 34 (15 stories) |
 | Points added during the sprint | 3 (SCRUM-31, on 10 Sep) |
 | Points done by close | **37**: this sprint's velocity |
+| Points counted at the review | 31: SCRUM-13, 15 and 31 (6 points) left out for incomplete tests (see [Sprint review](#sprint-review)) |
 | Highest-priority points | 35 of 37 |
 | Pull requests merged into `main` | 52 (#1 to #78) |
 
@@ -69,8 +70,44 @@ sprint and was finished again before it closed.
 
 ## Sprint review
 
-_To be completed by the team._ Who was Product Owner, what was demonstrated, and which stories the
-Product Owner accepted or sent back.
+Held on Wed 23 Sep 2026 at 12.29pm, online, with all five members, together
+with the retrospective and Sprint 2 planning. Source: the minutes in the
+team's SPM Documentation (Google Docs, "Sprint 1 Minutes" tab) and the
+meeting transcript in Drive.
+
+- **Product Owner:** Jin Hong, who also reviewed and merged pull requests.
+  Felicia was Scrum Master.
+- **Accepted:** all 16 stories stayed Done and the sprint was closed that
+  day. The minutes record the goal as met.
+- **Counted towards velocity:** 31 of the 37 points. SCRUM-13, 15 and 31
+  (6 points) stayed Done but weren't counted, because their test coverage was
+  incomplete at the review. The Sprint 2 chore SCRUM-114 finished it. No story
+  was sent back.
+
+| Presenter | Stories | What was shown | Gaps found |
+|---|---|---|---|
+| Jun Bin | SCRUM-23 | An Organiser sees an event's current status at any time. | None |
+| Jun Bin | SCRUM-31 | Technical Support reserves equipment: positive quantity within the pool, end after start, availability updates (7 → 5 after reserving 2). | Tests incomplete |
+| Caylern | SCRUM-65 to 68 | Sign-in with invalid-credential handling; role-based access, including refusing direct URLs; the base UI on web and mobile. | Some classes still needed unit tests |
+| Felicia | SCRUM-13 | The event request form: mandatory and optional fields, attendance above zero, date validation, character limits, times stored as UTC. | Tests incomplete |
+| Felicia | SCRUM-15, 16 | Drafts save with missing fields, are marked and can be resumed; an unsaved-changes warning; Coordinators can't see drafts; filter and sort. | SCRUM-15 tests incomplete |
+| Hann Qian | SCRUM-14 | Submission blocked, with errors highlighted, when mandatory fields are missing; a submitted request can't be submitted again. | Showed Under Review straight away |
+| Hann Qian | SCRUM-20 | Each submitted event is assigned to exactly one Coordinator, spread fairly; it stays Submitted if there is none. | No maximum per Coordinator defined |
+| Hann Qian | SCRUM-17 to 19 | The Coordinator reviews, asks for clarification, approves, or rejects with a reason. | A mobile layout issue on the clarification screen |
+
+SCRUM-24 and 84 are Done but the minutes don't record them as demonstrated.
+
+Issues raised and what was decided:
+
+- **SCRUM-14:** a request stays Submitted until a Coordinator is assigned,
+  then Under Review. SCRUM-14 to be amended.
+- **Planning and Under Review:** the customer said verbally they are the
+  same; to be confirmed in writing.
+- **Coordinator workload:** no maximum; assignment is least-loaded. SCRUM-20
+  was updated on 23 Sep.
+- **Missing tests:** a story isn't Done until its unit and end-to-end tests
+  are complete and documented. This became the Definition of Done
+  ([definition-of-done.md](definition-of-done.md)).
 
 What Jira and git already show:
 
@@ -82,17 +119,27 @@ What Jira and git already show:
 
 ## Retrospective
 
+Held at the same meeting, as Start, Stop, Continue. Source: the 23 Sep
+minutes.
+
 ### What went well
 
-_To be completed by the team._
+- Consistent communication.
+- At least three stand-ups in the sprint.
 
 ### What to improve
 
-_To be completed by the team._
+- Stop making last-minute changes.
+- Stop merging without tests.
+- Start documenting work as it is done.
 
 ### Actions, and what came of them
 
-_To be completed by the team._
+| Action | Owner | What came of it |
+|---|---|---|
+| Finish the missing unit and end-to-end tests for Sprint 1's stories | Each story owner | Done in Sprint 2 by SCRUM-114, 29 Sep |
+| Make complete, documented tests part of Done | The team | The Definition of Done, kept in the Functional Test Cases and DoD sheet and in [definition-of-done.md](definition-of-done.md) |
+| Hold at least three stand-ups a sprint | Jun Bin, Scrum Master for Sprint 2 | Planned for 25 Sep, 29 Sep and 2 Oct; the calendar records the 29 Sep mid-sprint sync |
 
 Follow-ups the backlog already records:
 

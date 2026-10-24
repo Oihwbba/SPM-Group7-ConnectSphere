@@ -139,8 +139,16 @@ committed to Sprint 4 at its start.
 
 ## Sprint review
 
-_To be completed by the team._ Who was Product Owner, what was demonstrated, and which stories the
-Product Owner accepted or sent back.
+Held on Wed 21 Oct 2026 from 12pm, with all five members, and recorded
+(recording 1, together with the retrospective). Sprint 4 Planning followed as
+a separate recording.
+
+- **Product Owner:** Caylern, who reviewed pull requests and took no stories.
+  Hann Qian was Scrum Master.
+- **What was demonstrated, and what was accepted or sent back:** _To be
+  completed by the team_ from recording 1.
+  The minutes in the team's SPM Documentation (Google Docs) are still a draft
+  written before the meeting.
 
 What Jira and git already show:
 
