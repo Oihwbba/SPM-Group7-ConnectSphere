@@ -1,7 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import { prisma } from "@/lib/db";
 
-import { choose, signedIn, usesLocalDatabase } from "./helpers";
+import { choose, signedIn, usesLocalDatabase, pickDateTime, fillOther, pickOptions } from "./helpers";
 
 /**
  * SCRUM-34 — the venue catalogue in a real browser. Venue Staff add a venue
@@ -175,17 +175,18 @@ test.describe("SCRUM-34 — browse and maintain the venue catalogue", () => {
     await organiser.getByLabel("Event Purpose *").fill("Check the venue options.");
     await organiser.getByLabel("Event Description *").fill("SCRUM-34 AC6.");
     await organiser.getByRole("button", { name: "Next", exact: true }).click();
-    await organiser.getByLabel("Proposed Start Date & Time *").fill("2036-11-01T09:00");
-    await organiser.getByLabel("Proposed End Date & Time *").fill("2036-11-01T17:00");
+    await pickDateTime(organiser.getByLabel("Proposed Start Date & Time *"), "2036-11-01T09:00");
+    await pickDateTime(organiser.getByLabel("Proposed End Date & Time *"), "2036-11-01T17:00");
     await organiser.getByLabel("Expected Attendance *").fill("50");
     await organiser.getByRole("button", { name: "Next", exact: true }).click();
 
-    await organiser.getByRole("button", { name: "Garden party", exact: true }).click();
-    await expect(organiser.getByLabel("Preferred Room Layout *")).toHaveValue("Garden party");
-    await organiser.getByLabel("Accessibility Needs *").fill("Seats near the exit");
-    await organiser.getByRole("button", { name: "Tactile paving", exact: true }).click();
-    await expect(organiser.getByLabel("Accessibility Needs *")).toHaveValue(
-      "Seats near the exit, Tactile paving",
+    await pickOptions(organiser.getByLabel("Preferred Room Layout *"), ["Garden party"]);
+    await expect(organiser.locator('[data-pill="Garden party"]')).toBeVisible();
+    await fillOther(organiser.getByLabel("Accessibility Needs *"), "Seats near the exit");
+    await pickOptions(organiser.getByLabel("Accessibility Needs *"), ["Tactile paving"]);
+    await expect(organiser.locator('[data-pill="Tactile paving"]')).toBeVisible();
+    await expect(organiser.getByLabel("Other accessibility needs")).toHaveValue(
+      "Seats near the exit",
     );
   });
 

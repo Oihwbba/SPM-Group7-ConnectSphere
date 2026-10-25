@@ -16,9 +16,12 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { DateTimePicker } from "@/components/app/date-time-picker";
 import { Textarea } from "@/components/ui/textarea";
 import { sgWallTimeToUtcIso, utcToSgWallTime } from "@/lib/datetime";
 import { LAYOUT_OPTIONS } from "@/lib/schemas/event";
+import { PillSelect } from "@/components/app/pill-select";
+import { splitChoice } from "@/lib/requirement-choices";
 import type { Arrangement } from "@/lib/reconsideration";
 import {
   canEditEventDetails,
@@ -214,6 +217,7 @@ export function EditDetailsDialog({
     setForm((prev) => ({ ...prev, [key]: value }));
     setToFlag(null);
   };
+  const layoutChoice = splitChoice(form.preferredLayout, LAYOUT_OPTIONS);
   const invalid = (key: string) => Boolean(fieldErrors[key]?.length);
   const fieldError = (key: string) =>
     fieldErrors[key]?.[0] && (
@@ -338,27 +342,18 @@ export function EditDetailsDialog({
 
             <div className="space-y-1">
               <Label htmlFor="edit-preferredLayout">Preferred room layout</Label>
-              <div className="mb-2 flex flex-wrap gap-2">
-                {LAYOUT_OPTIONS.map((layout) => (
-                  <Button
-                    key={layout}
-                    type="button"
-                    variant={form.preferredLayout === layout ? "default" : "outline"}
-                    size="sm"
-                    className="h-8 text-xs"
-                    aria-pressed={form.preferredLayout === layout}
-                    onClick={() => update("preferredLayout", layout)}
-                  >
-                    {layout}
-                  </Button>
-                ))}
-              </div>
-              <Input
+              <PillSelect
                 id="edit-preferredLayout"
-                placeholder="e.g. Theatre style or custom arrangement"
-                value={form.preferredLayout}
-                onChange={(e) => update("preferredLayout", e.target.value)}
-                aria-invalid={invalid("preferredLayout")}
+                multiple={false}
+                placeholder="Select a layout"
+                options={LAYOUT_OPTIONS.map((value) => ({ value }))}
+                selected={layoutChoice.chosen}
+                onChange={([chosen = ""]) => update("preferredLayout", chosen)}
+                other={layoutChoice.other}
+                onOtherChange={(other) => update("preferredLayout", other)}
+                otherLabel="Other room layout"
+                otherPlaceholder="e.g. Theatre style or custom arrangement"
+                invalid={invalid("preferredLayout")}
               />
               {fieldError("preferredLayout")}
             </div>
@@ -423,22 +418,21 @@ export function EditDetailsDialog({
               <div className="grid gap-3 sm:grid-cols-3">
                 <div className="space-y-1">
                   <Label htmlFor="edit-start">Start</Label>
-                  <Input
+                  <DateTimePicker
                     id="edit-start"
-                    type="datetime-local"
                     value={form.start}
-                    onChange={(e) => update("start", e.target.value)}
+                    onChange={(value) => update("start", value)}
                     aria-invalid={invalid("startAt")}
                   />
                   {fieldError("startAt")}
                 </div>
                 <div className="space-y-1">
                   <Label htmlFor="edit-end">End</Label>
-                  <Input
+                  <DateTimePicker
                     id="edit-end"
-                    type="datetime-local"
                     value={form.end}
-                    onChange={(e) => update("end", e.target.value)}
+                    openOn={form.start.split("T")[0] || undefined}
+                    onChange={(value) => update("end", value)}
                     aria-invalid={invalid("endAt")}
                   />
                   {fieldError("endAt")}

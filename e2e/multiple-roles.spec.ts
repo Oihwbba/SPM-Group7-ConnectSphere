@@ -72,7 +72,6 @@ test.describe("SCRUM-121 — accounts with several roles", () => {
       "Equipment Requests", // Technical Support
       "Request Venue", // Coordinator
       "Events", // Coordinator and Organiser
-      "Notifications", // every role
     ]) {
       await expect(nav.getByRole("link", { name: label, exact: true })).toHaveCount(1);
     }
@@ -80,6 +79,8 @@ test.describe("SCRUM-121 — accounts with several roles", () => {
     // Attendee's pages stay out.
     await expect(nav.getByRole("link", { name: "My Events", exact: true })).toHaveCount(0);
     await expect(nav.getByRole("link", { name: "Browse Events", exact: true })).toHaveCount(0);
+    // Notifications are reached from the bell beside the name, not the menu.
+    await expect(nav.getByRole("link", { name: "Notifications", exact: true })).toHaveCount(0);
 
     const menu = page.getByRole("button", { name: "Open user menu" });
     await expect(menu).toContainText("Venue Staff +3");
