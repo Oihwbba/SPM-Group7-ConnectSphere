@@ -1,7 +1,12 @@
 import { test, expect, type Page } from "@playwright/test";
 import { prisma } from "@/lib/db";
 
-import { usesLocalDatabase } from "./helpers";
+import {
+  usesLocalDatabase,
+  fillOther,
+  pickDateTime,
+  submitRequest,
+} from "./helpers";
 
 /**
  * SCRUM-108 — the Organiser answers a clarification by changing only the
@@ -84,6 +89,8 @@ test.describe("SCRUM-108 — Answer a clarification, or amend and resubmit", () 
       .getByTestId("view-details-button")
       .click();
     const details = page.getByRole("dialog");
+    // The thread is the details' second tab (shared page conventions, change 2).
+    await details.getByRole("tab", { name: /Clarification/ }).click();
     await expect(details.getByTestId("clarification-fields")).toHaveText(
       "The organiser may change: Expected attendance.",
     );
@@ -207,26 +214,25 @@ test.describe("SCRUM-108 — Answer a clarification, or amend and resubmit", () 
     // so a start date in the past stops it at this step.
     const start = page.getByLabel("Proposed Start Date & Time *");
     const end = page.getByLabel("Proposed End Date & Time *");
-    await start.fill("2020-01-01T10:00");
-    await end.fill("2020-01-01T12:00");
+    await pickDateTime(start, "2020-01-01T10:00");
+    await pickDateTime(end, "2020-01-01T12:00");
     await next.click();
     await expect(
       page.getByText("Proposed date cannot be in the past."),
     ).toBeVisible();
     // Back to the request's own dates (10:00–18:00 SGT on 1 Aug 2031).
-    await start.fill("2031-08-01T10:00");
-    await end.fill("2031-08-01T18:00");
+    await pickDateTime(start, "2031-08-01T10:00");
+    await pickDateTime(end, "2031-08-01T18:00");
     await next.click();
-    await page
-      .getByLabel("Venue Requirements *")
-      .fill("Any hall — a different date is fine.");
+    await fillOther(
+      page.getByLabel("Venue Requirements *"),
+      "Any hall — a different date is fine.",
+    );
     await expect(page.getByTestId("amend-rejection-reason")).toContainText(
       reason,
     );
     for (let i = 0; i < 3; i++) await next.click();
-    await page
-      .getByRole("button", { name: /Submit Request for Review/i })
-      .click();
+    await submitRequest(page);
     await expect(
       page.getByText("Event request submitted for review successfully!"),
     ).toBeVisible();

@@ -1,5 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 import { prisma } from "@/lib/db";
+import { pickDateTime, selectFrom } from "./helpers";
 
 /**
  * SCRUM-156 — the one-type form only checks availability. Reserving happens
@@ -20,11 +21,9 @@ async function signInAsTechSupport(page: Page) {
 }
 
 async function fillCheck(page: Page, quantity: string) {
-  await page.getByLabel("Start date").fill("2031-05-10");
-  await page.getByLabel("Start time").fill("09:00");
-  await page.getByLabel("End date").fill("2031-05-10");
-  await page.getByLabel("End time").fill("17:00");
-  await page.getByLabel("Equipment type").selectOption({ value: "eqp_lectern" });
+  await pickDateTime(page.getByLabel("Start", { exact: true }), "2031-05-10T09:00");
+  await pickDateTime(page.getByLabel("End", { exact: true }), "2031-05-10T17:00");
+  await selectFrom(page.getByLabel("Equipment type"), { value: "eqp_lectern" });
   await page.getByLabel("Quantity", { exact: true }).fill(quantity);
 }
 
@@ -40,7 +39,7 @@ test.describe("SCRUM-156 — the one-type form only checks availability", () => 
     await expect(
       page.getByRole("status").filter({ hasText: "unit(s) available" }),
     ).toContainText(/\d+ unit\(s\) available for this period/);
-    await expect(page.locator("span", { hasText: /\d+ of 4 available/ })).toBeVisible();
+    await expect(page.getByTestId("selected-availability")).toHaveText(/\d+ of 4 available/);
 
     await expect(page.getByLabel("Approved event")).toHaveCount(0);
     await expect(page.getByRole("button", { name: /Reserve.*equipment/ })).toHaveCount(0);
@@ -85,10 +84,8 @@ test.describe("SCRUM-156 — the one-type form only checks availability", () => 
 
   test("SCRUM-29 AC 7: an invalid period (end earlier than start) triggers a live inline error", async ({ page }) => {
     await signInAsTechSupport(page);
-    await page.getByLabel("Start date").fill("2031-05-10");
-    await page.getByLabel("Start time").fill("17:00");
-    await page.getByLabel("End date").fill("2031-05-10");
-    await page.getByLabel("End time").fill("09:00");
+    await pickDateTime(page.getByLabel("Start", { exact: true }), "2031-05-10T17:00");
+    await pickDateTime(page.getByLabel("End", { exact: true }), "2031-05-10T09:00");
 
     await expect(
       page.getByText("End time must be after the start time.").first(),
@@ -97,11 +94,9 @@ test.describe("SCRUM-156 — the one-type form only checks availability", () => 
 
   test("a start time in the past triggers a live inline error and no availability", async ({ page }) => {
     await signInAsTechSupport(page);
-    await page.getByLabel("Equipment type").selectOption({ value: "eqp_lectern" });
-    await page.getByLabel("Start date").fill("2020-01-01");
-    await page.getByLabel("Start time").fill("09:00");
-    await page.getByLabel("End date").fill("2020-01-01");
-    await page.getByLabel("End time").fill("17:00");
+    await selectFrom(page.getByLabel("Equipment type"), { value: "eqp_lectern" });
+    await pickDateTime(page.getByLabel("Start", { exact: true }), "2020-01-01T09:00");
+    await pickDateTime(page.getByLabel("End", { exact: true }), "2020-01-01T17:00");
 
     await expect(
       page.getByText("Start time cannot be in the past.").first(),
@@ -184,11 +179,9 @@ async function buildRig({
 
 /** Fill the availability check for the rig over [from, to) on RIG_DAY. */
 async function fillRigPeriod(page: Page, from: number, to: number, quantity: string) {
-  await page.getByLabel("Start date").fill(RIG_DAY);
-  await page.getByLabel("Start time").fill(sgTime(from));
-  await page.getByLabel("End date").fill(RIG_DAY);
-  await page.getByLabel("End time").fill(sgTime(to));
-  await page.getByLabel("Equipment type").selectOption({ value: rigId() });
+  await pickDateTime(page.getByLabel("Start", { exact: true }), `${RIG_DAY}T${sgTime(from)}`);
+  await pickDateTime(page.getByLabel("End", { exact: true }), `${RIG_DAY}T${sgTime(to)}`);
+  await selectFrom(page.getByLabel("Equipment type"), { value: rigId() });
   await page.getByLabel("Quantity", { exact: true }).fill(quantity);
 }
 
@@ -212,7 +205,7 @@ test.describe("SCRUM-156 [AC1] TC-156-02: View Equipment Conflicts", () => {
     page,
   }) => {
     await signInAsTechSupport(page);
-    await page.getByLabel("Equipment type").selectOption({ value: "eqp_speaker" });
+    await selectFrom(page.getByLabel("Equipment type"), { value: "eqp_speaker" });
 
     // No period yet, so nothing can be "during" it: everything is an other commitment.
     await expect(page.getByTestId("during-no-period")).toBeVisible();
@@ -224,7 +217,7 @@ test.describe("SCRUM-156 [AC1] TC-156-02: View Equipment Conflicts", () => {
   test("SCRUM-30 [AC1]: the seeded maintenance on the projector pool is listed", async ({ page }) => {
     test.skip(!usesLocalDatabase, "reads seeded commitments; local database only");
     await signInAsTechSupport(page);
-    await page.getByLabel("Equipment type").selectOption({ value: "eqp_projector" });
+    await selectFrom(page.getByLabel("Equipment type"), { value: "eqp_projector" });
 
     await expect(other(page)).toBeVisible();
     await expect(other(page)).toContainText("Under maintenance");
@@ -413,9 +406,7 @@ test.describe("SCRUM-156 [AC1] TC-156-02: View Equipment Conflicts", () => {
     await expect(page.getByTestId("selected-availability")).toHaveText("4 of 4 available");
 
     const approved = page.getByLabel("Approved request");
-    await approved.selectOption({
-      label: (await approved.locator("option", { hasText: rigEventName() }).textContent())!,
-    });
+    await selectFrom(approved, { containing: rigEventName() });
     await page.getByRole("button", { name: "Reserve all 1 item(s)" }).click();
     await expect(page.getByText(`Reserved 1 item(s) for ${rigEventName()}.`)).toBeVisible();
 
@@ -431,7 +422,7 @@ test.describe("SCRUM-156 [AC1] TC-156-02: View Equipment Conflicts", () => {
     await buildRig();
 
     await signInAsTechSupport(page);
-    await page.getByLabel("Equipment type").selectOption({ value: rigId() });
+    await selectFrom(page.getByLabel("Equipment type"), { value: rigId() });
 
     await expect(page.getByTestId("schedule-fully-available")).toContainText(
       "nothing is reserved or out of service",
@@ -453,7 +444,7 @@ test.describe("SCRUM-156 [AC1] TC-156-02: View Equipment Conflicts", () => {
 
     await signInAsTechSupport(page);
     await prisma.equipment.update({ where: { id: rigId() }, data: { isActive: false } });
-    await page.getByLabel("Equipment type").selectOption({ value: rigId() });
+    await selectFrom(page.getByLabel("Equipment type"), { value: rigId() });
 
     await expect(page.getByTestId("schedule-error")).toHaveText("Equipment type is unavailable.");
     await expect(other(page)).toHaveCount(0);

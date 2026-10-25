@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 
 import { prisma } from "@/lib/db";
-import { signedIn, usesLocalDatabase } from "./helpers";
+import { signedIn, usesLocalDatabase, selectFrom, openEquipmentRequest } from "./helpers";
 
 /**
  * SCRUM-142 — while an event is being planned, its Coordinator changes an
@@ -103,11 +103,13 @@ test.describe("SCRUM-142 — Change equipment lines or withdraw a venue request"
     const card = page
       .getByTestId("equipment-request")
       .filter({ hasText: event.name });
-    await card.getByRole("button", { name: "Change lines" }).click();
+    await (await openEquipmentRequest(page, event.name))
+      .getByRole("button", { name: "Change lines" })
+      .click();
 
     const dialog = page.getByRole("dialog");
     await dialog.getByRole("button", { name: /^Remove Projector/ }).click();
-    await dialog.getByLabel("Equipment type").selectOption("eqp_mic");
+    await selectFrom(dialog.getByLabel("Equipment type"), "eqp_mic");
     await dialog.getByLabel("Quantity").fill("3");
     await dialog.getByRole("button", { name: "Add equipment" }).click();
     await dialog.getByRole("button", { name: "Save changes" }).click();
@@ -117,7 +119,9 @@ test.describe("SCRUM-142 — Change equipment lines or withdraw a venue request"
       "PENDING_REVIEW",
     );
     // The history says what changed; the removed line is kept but not live.
-    await expect(card).toContainText(
+    const changed = await openEquipmentRequest(page, event.name);
+    await changed.getByRole("tab", { name: /History/ }).click();
+    await expect(changed).toContainText(
       "added Wireless Microphone × 3; removed Projector. 1 reservation(s) cancelled.",
     );
     expect(
@@ -246,7 +250,9 @@ test.describe("SCRUM-142 — Change equipment lines or withdraw a venue request"
     const card = page
       .getByTestId("equipment-request")
       .filter({ hasText: event.name });
-    await card.getByRole("button", { name: "Change lines" }).click();
+    await (await openEquipmentRequest(page, event.name))
+      .getByRole("button", { name: "Change lines" })
+      .click();
     const dialog = page.getByRole("dialog");
     await dialog
       .getByRole("button", { name: /^Remove Wireless Microphone/ })
@@ -308,14 +314,18 @@ test.describe("SCRUM-142 — Change equipment lines or withdraw a venue request"
     const card = page
       .getByTestId("equipment-request")
       .filter({ hasText: request.name });
-    await card.getByRole("button", { name: "Withdraw request" }).click();
+    await (await openEquipmentRequest(page, request.name))
+      .getByRole("button", { name: "Withdraw request" })
+      .click();
     const confirm = page.getByRole("dialog", {
       name: "Withdraw this equipment request?",
     });
     // Keeping it changes nothing.
     await confirm.getByRole("button", { name: "Keep it" }).click();
     await expect(confirm).toHaveCount(0);
-    await card.getByRole("button", { name: "Withdraw request" }).click();
+    await (await openEquipmentRequest(page, request.name))
+      .getByRole("button", { name: "Withdraw request" })
+      .click();
     await confirm.getByRole("button", { name: "Withdraw request" }).click();
 
     await expect(card.getByTestId("request-status")).toHaveAttribute(
@@ -341,13 +351,11 @@ test.describe("SCRUM-142 — Change equipment lines or withdraw a venue request"
 
     const page = await signedIn(browser, "coordinator@test.local");
     await page.goto("/equipment-requests");
-    await page
-      .getByTestId("equipment-request")
-      .filter({ hasText: request.name })
+    await (await openEquipmentRequest(page, request.name))
       .getByRole("button", { name: "Change lines" })
       .click();
     const dialog = page.getByRole("dialog");
-    await dialog.getByLabel("Equipment type").selectOption("eqp_mic");
+    await selectFrom(dialog.getByLabel("Equipment type"), "eqp_mic");
     await dialog.getByLabel("Quantity").fill("0");
     await dialog.getByRole("button", { name: "Save changes" }).click();
 

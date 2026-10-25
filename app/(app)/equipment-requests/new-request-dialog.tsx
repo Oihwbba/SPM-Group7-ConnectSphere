@@ -14,6 +14,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { AppSelect } from "@/components/app/app-select";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { formatDate, formatDateTime } from "@/lib/datetime";
@@ -53,8 +54,6 @@ const EMPTY_DRAFT = {
   quantity: "1",
   technicalRequirements: "",
 };
-const SELECT_CLASS =
-  "flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring";
 
 function FieldError({ id, messages }: { id: string; messages?: string[] }) {
   if (!messages?.[0]) return null;
@@ -246,28 +245,25 @@ export function NewRequestDialog({
         <div className="space-y-6">
           <div className={editing ? "hidden" : "space-y-2"}>
             <Label htmlFor="request-event">Event</Label>
-            <select
+            <AppSelect
               id="request-event"
-              className={SELECT_CLASS}
               value={eventId}
+              placeholder="Select an event"
               aria-invalid={Boolean(errors.eventId)}
               aria-describedby={
                 errors.eventId ? "request-event-error" : undefined
               }
-              onChange={(e) => {
-                setEventId(e.target.value);
+              onValueChange={(value) => {
+                setEventId(value);
                 setErrors((current) => ({ ...current, eventId: undefined }));
               }}
-            >
-              <option value="">Select an event</option>
-              {events.map((event) => (
-                <option key={event.id} value={event.id}>
-                  {event.startAt
-                    ? `${event.name} — ${formatDate(event.startAt)}`
-                    : event.name}
-                </option>
-              ))}
-            </select>
+              options={events.map((event) => ({
+                value: event.id,
+                label: event.startAt
+                  ? `${event.name} — ${formatDate(event.startAt)}`
+                  : event.name,
+              }))}
+            />
             {selectedEvent?.startAt && selectedEvent.endAt && (
               <p
                 className="text-xs text-muted-foreground"
@@ -299,25 +295,22 @@ export function NewRequestDialog({
             <div className="grid gap-3 sm:grid-cols-[1fr_7rem]">
               <div className="space-y-2">
                 <Label htmlFor="draft-equipment">Equipment type</Label>
-                <select
+                <AppSelect
                   id="draft-equipment"
-                  className={SELECT_CLASS}
                   value={draft.equipmentId}
+                  placeholder="Select equipment"
                   aria-invalid={Boolean(draftErrors.equipmentId)}
                   aria-describedby={
                     draftErrors.equipmentId
                       ? "draft-equipment-error"
                       : undefined
                   }
-                  onChange={(e) => updateDraft("equipmentId", e.target.value)}
-                >
-                  <option value="">Select equipment</option>
-                  {equipment.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.type} ({item.totalQuantity} in the pool)
-                    </option>
-                  ))}
-                </select>
+                  onValueChange={(value) => updateDraft("equipmentId", value)}
+                  options={equipment.map((item) => ({
+                    value: item.id,
+                    label: `${item.type} (${item.totalQuantity} in the pool)`,
+                  }))}
+                />
                 <FieldError
                   id="draft-equipment-error"
                   messages={draftErrors.equipmentId}

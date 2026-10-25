@@ -1,6 +1,7 @@
 "use client";
 
 import { Label } from "@/components/ui/label";
+import { AppSelect } from "@/components/app/app-select";
 
 /**
  * SCRUM-38 AC1 — which of the Coordinator's events the search is for.
@@ -10,29 +11,23 @@ import { Label } from "@/components/ui/label";
 export function EventPicker({
   events,
   value,
-  className,
 }: {
   events: { id: string; name: string }[];
   value: string;
-  className: string;
 }) {
   return (
     <div className="space-y-2">
       <Label htmlFor="event">For event</Label>
-      <select
+      <AppSelect
         id="event"
         name="event"
         defaultValue={value}
-        className={className}
-        onChange={(e) => e.currentTarget.form?.requestSubmit()}
-      >
-        <option value="">None: search any period</option>
-        {events.map((event) => (
-          <option key={event.id} value={event.id}>
-            {event.name}
-          </option>
-        ))}
-      </select>
+        submitOnChange
+        options={[
+          { value: "", label: "None: search any period" },
+          ...events.map((event) => ({ value: event.id, label: event.name })),
+        ]}
+      />
     </div>
   );
 }
