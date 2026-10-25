@@ -244,9 +244,11 @@ test.describe("SCRUM-132 [AC3] the event detail on a desktop screen", () => {
 
     await expect(details.getByTestId("status-badge")).toBeInViewport();
     const checklist = details.getByTestId("readiness-checklist");
-    await expect(checklist.getByTestId("readiness-item-venue")).toBeInViewport();
-    await expect(checklist.getByTestId("readiness-item-equipment")).toBeInViewport();
-    await expect(checklist.getByTestId("readiness-item-safety")).toBeInViewport();
+    // SCRUM-209: each item's state and Confirm head the tab, above the
+    // sections' detail.
+    const items = checklist.getByTestId("readiness-summary-item");
+    await expect(items).toHaveText([/^Venue booking:/, /^Equipment:/, /^Safety check:/]);
+    for (const item of await items.all()) await expect(item).toBeInViewport();
     await expect(checklist.getByRole("button", { name: "Confirm event" })).toBeInViewport();
   });
 
