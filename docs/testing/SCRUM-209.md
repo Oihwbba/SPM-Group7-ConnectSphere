@@ -18,8 +18,9 @@ three sections, in the order they are made, side by side on a wide screen:
 **Venues**, **Equipment** and **Safety check**. Each section's title has its
 checklist item's state beside it, as the readiness checklist reads it
 (SCRUM-110), ticked when complete and crossed when not for the Coordinator,
-with any reason below; its actions sit, small, at its bottom right. The buttons are the separate pages' own actions, unchanged
-(SCRUM-50, 162, 27, 142, 170, 166); people who can't use them see no button.
+with any reason below; its actions sit, small, at its bottom right. The
+buttons are the separate pages' own actions, unchanged (SCRUM-50, 162, 27,
+142, 170, 166); people who can't use them see no button.
 The Next step banner's "Request a venue", "Settle equipment" and "Request the
 safety check" open the tab at that section.
 
@@ -90,11 +91,12 @@ test and "SCRUM-209 [AC2, AC4] TC-209-03"; `tests/unit/equipment-request-queries
 **Change lines and Withdraw, with SCRUM-142's rules.**
 
 1. From TC-209-03, Technical Support approves the request.
-2. Select **Change lines**, set the Projector quantity to 2 and save.
+2. Select **Change lines**, remove the Projector, add 3 Wireless Microphones
+   and save.
 3. Select **Withdraw**, then **Keep it**.
 
 **Expected:** after the change the request is back to Pending Review, on the
-same page. Withdraw asks "Withdraw this equipment request?" first; keeping it
+same page, and lists the Wireless Microphone. Withdraw asks "Withdraw this equipment request?" first; keeping it
 changes nothing. The request's history (Technical Support's updates) shows
 under it for the Coordinator.
 
