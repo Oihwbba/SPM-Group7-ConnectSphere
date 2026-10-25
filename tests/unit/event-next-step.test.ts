@@ -38,6 +38,154 @@ const checklist = (
   })),
 });
 
+describe("SCRUM-208 — the Next step, step by step", () => {
+  const booking = {
+    id: "b1",
+    venueName: "Hall A",
+    attendance: 50,
+    state: "Held",
+    complete: false,
+    needsReconsideration: false,
+    reason: null,
+    held: true,
+    holdApproved: false,
+    pending: false,
+  };
+  const inPlanning = (
+    items: Partial<ReadinessChecklist["items"][number]>[],
+    over: Partial<NextStepFacts> = {},
+  ) => facts({ status: "PLANNING", viewer: "coordinator", checklist: checklist(items), ...over });
+
+  it.each([
+    {
+      when: "a flagged venue booking",
+      items: [{ name: "Venue booking" as const, complete: false, state: "Approved", needsReconsideration: true }],
+      text: "Your turn: decide the flagged venue booking",
+    },
+    {
+      when: "a hold Venue Staff approved",
+      items: [{ name: "Venue booking" as const, complete: false, state: "Held", bookings: [{ ...booking, holdApproved: true }] }],
+      text: "Your turn: confirm or release the hold on Hall A",
+    },
+    {
+      when: "a hold not yet approved",
+      items: [{ name: "Venue booking" as const, complete: false, state: "Held", bookings: [booking] }],
+      text: "Waiting for Venue Staff to approve the hold on Hall A",
+    },
+    {
+      when: "a flagged equipment reservation",
+      items: [{ name: "Equipment" as const, complete: false, state: "Reserved", needsReconsideration: true }],
+      text: "Your turn: decide the flagged equipment reservation",
+    },
+    {
+      when: "an equipment request awaiting review",
+      items: [{ name: "Equipment" as const, complete: false, state: "Awaiting Technical Support review" }],
+      text: "Waiting for Technical Support to review the equipment request",
+    },
+    {
+      when: "equipment not fully reserved",
+      items: [{ name: "Equipment" as const, complete: false, state: "Not fully reserved: Projector" }],
+      text: "Waiting for Technical Support to reserve the equipment",
+    },
+    {
+      when: "a safety check awaiting review",
+      items: [{ name: "Safety check" as const, complete: false, state: "Awaiting review" }],
+      text: "Waiting for the Safety Officer to review the safety check",
+    },
+    {
+      when: "a safety check with changes requested",
+      items: [{ name: "Safety check" as const, complete: false, state: "Changes requested" }],
+      text: "Your turn: act on the safety check (Changes requested)",
+    },
+  ])("SCRUM-208 [AC2] TC-208-05: in Planning, with $when: \"$text\"", ({ items, text }) => {
+    expect(nextStep(inPlanning(items))).toMatchObject({ text, tab: "arrangements" });
+  });
+
+  it("SCRUM-208 [AC2] TC-208-05: the Organiser waits on the Coordinator by name, or as \"the Coordinator\" when none is named", () => {
+    const hold = [{ name: "Venue booking" as const, complete: false, state: "Held", bookings: [{ ...booking, holdApproved: true }] }];
+    expect(nextStep(inPlanning(hold, { viewer: "organiser" }))).toEqual({
+      kind: "waiting",
+      text: "Waiting for Cody Coordinator to confirm or release the hold on Hall A",
+      tab: "arrangements",
+    });
+    expect(
+      nextStep(inPlanning([{ name: "Safety check", complete: false, state: "Not requested" }], { viewer: "organiser", coordinatorName: null })),
+    ).toMatchObject({ text: "Waiting for the Coordinator to request the safety check" });
+  });
+
+  it("SCRUM-208 [AC2] TC-208-05: with no checklist read yet, confirming is all that is shown", () => {
+    expect(nextStep(facts({ status: "APPROVED", viewer: "coordinator", checklist: null }))).toMatchObject({
+      kind: "yours",
+      text: "Your turn: confirm the event",
+    });
+  });
+
+  it("SCRUM-208 [AC2] TC-208-06: flagged arrangements come first for the Coordinator; the Organiser isn't told", () => {
+    expect(nextStep(facts({ status: "PLANNING", viewer: "coordinator", flaggedArrangements: 2 }))).toMatchObject({
+      kind: "yours",
+      text: "Your turn: decide what happens to the flagged arrangements",
+      tab: "changes",
+    });
+    expect(nextStep(facts({ status: "PLANNING", flaggedArrangements: 2, checklist: checklist([]) }))).toMatchObject({
+      kind: "waiting",
+      text: "Waiting for Cody Coordinator to confirm the event",
+    });
+  });
+
+  it("SCRUM-208 [AC2] TC-208-03: an open question waits on the Organiser by name, or as \"the Organiser\"", () => {
+    expect(
+      nextStep(facts({ viewer: "coordinator", openClarification: true, organiserName: null })),
+    ).toMatchObject({ text: "Waiting for the Organiser to answer your question" });
+  });
+
+  it("SCRUM-208 [AC2] TC-208-04: a Submitted request can be reviewed or questioned, not yet decided", () => {
+    expect(nextStep(facts({ status: "SUBMITTED", viewer: "coordinator" }))).toMatchObject({
+      kind: "yours",
+      text: "Your turn: review the request, or ask the Organiser a question",
+      action: { kind: "review" },
+    });
+  });
+
+  it.each([
+    {
+      status: "DRAFT" as const,
+      step: { kind: "yours", text: "Your turn: finish the request and submit it for review", tab: "request", action: { kind: "resume" } },
+    },
+    {
+      status: "CONFIRMED" as const,
+      step: { kind: "waiting", text: "Confirmed: the arrangements are secured. Nothing is waiting before the event.", tab: "arrangements" },
+    },
+  ])("SCRUM-208 [AC2] TC-208-02: a $status event's single next step", ({ status, step }) => {
+    expect(nextStep(facts({ status }))).toEqual(step);
+  });
+
+  it("SCRUM-208 [AC2] TC-208-07: a Completed event shows its outcome", () => {
+    expect(nextStep(facts({ status: "COMPLETED" }))).toEqual({
+      kind: "outcome",
+      text: "This event has taken place and is completed.",
+      reason: null,
+      detail: null,
+      tone: "success",
+    });
+  });
+
+  it("SCRUM-208 [AC2] TC-208-07: a Rejected request with no outcome recorded has no detail", () => {
+    expect(nextStep(facts({ status: "REJECTED", decisionReason: "No budget" }))).toMatchObject({
+      kind: "outcome",
+      reason: "No budget",
+      detail: null,
+    });
+  });
+
+  it("SCRUM-208 [AC2] TC-208-02: a status the page doesn't know waits on nothing", () => {
+    expect(nextStep(facts({ status: "ARCHIVED" as NextStepFacts["status"] }))).toEqual({
+      kind: "waiting",
+      text: "Nothing is waiting.",
+      tab: null,
+    });
+  });
+});
+
 describe("SCRUM-208 — the Next step banner", () => {
   it("SCRUM-208 [AC2] TC-208-03: an open question is the Organiser's turn, and the Coordinator waits for it", () => {
     const organiser = nextStep(facts({ openClarification: true }));

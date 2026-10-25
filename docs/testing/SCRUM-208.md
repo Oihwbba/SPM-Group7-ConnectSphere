@@ -79,7 +79,7 @@ one the pop-up showed, with the same rules and the same people allowed to act.
 | Test Data | `organiser@test.local` |
 | Expected Result | 1: the title is the event's name only, with no status badge beside it. The progress shows Request ticked and Review as the current step; a screen reader hears "Status: Under Review". The Next step banner says "Handled by Cody Coordinator" ("Waiting for a Coordinator" while none is assigned). 2: the top stays the same on every tab. 3: Rejected is marked at Review in red, with only Request ticked; the Cancelled event has Request, Review and Planning ticked, then Cancelled; the Completed event has every step ticked and none current. |
 
-**Automated by:** `tests/unit/event-page-parts.test.tsx` › "SCRUM-208 [AC2] TC-208-02: …" (five tests); `e2e/event-page.spec.ts` › "SCRUM-208 [AC1, AC2] TC-208-01, TC-208-02, TC-208-03: …"; `e2e/reassign.spec.ts` (the Coordinator's name after a reassignment)
+**Automated by:** `tests/unit/event-page-parts.test.tsx` › "SCRUM-208 [AC2] TC-208-02: …" (five tests); `tests/unit/event-next-step.test.ts` › every "SCRUM-208 [AC2] TC-208-02: …" test; `e2e/event-page.spec.ts` › "SCRUM-208 [AC1, AC2] TC-208-01, TC-208-02, TC-208-03: …"; `e2e/reassign.spec.ts` (the Coordinator's name after a reassignment)
 
 ### TC-208-03
 
@@ -92,7 +92,7 @@ one the pop-up showed, with the same rules and the same people allowed to act.
 | Test Data | `organiser@test.local`, `coordinator@test.local` |
 | Expected Result | 1: "Your turn: answer the Coordinator's question" with **Answer the question**, which opens the Clarification tab. 2: "Waiting for Olivia Organiser to answer your question", shown as information, with no button. |
 
-**Automated by:** `tests/unit/event-next-step.test.ts` › "SCRUM-208 [AC2] TC-208-03: …"; `e2e/event-page.spec.ts` › "… TC-208-03: …" (both tests)
+**Automated by:** `tests/unit/event-next-step.test.ts` › every "SCRUM-208 [AC2] TC-208-03: …" test; `tests/integration/event-page-data.test.ts` › "SCRUM-208 [AC2] TC-208-03: …"; `e2e/event-page.spec.ts` › "… TC-208-03: …" (both tests)
 
 ### TC-208-04
 
@@ -105,7 +105,7 @@ one the pop-up showed, with the same rules and the same people allowed to act.
 | Test Data | `organiser@test.local`, `coordinator@test.local` |
 | Expected Result | 1: "Waiting for Cody Coordinator to review the request", with no button. 2: "Your turn: review the request, then approve it, reject it or ask a question", with **Ask**, **Approve** and **Reject**; approving keeps the page open, now in Planning. 3: "Waiting for a Coordinator to be assigned". |
 
-**Automated by:** `tests/unit/event-next-step.test.ts` › "SCRUM-208 [AC2] TC-208-04: …" (both tests); `e2e/event-page.spec.ts` › "SCRUM-208 [AC2] TC-208-04: …"
+**Automated by:** `tests/unit/event-next-step.test.ts` › every "SCRUM-208 [AC2] TC-208-04: …" test; `e2e/event-page.spec.ts` › "SCRUM-208 [AC2] TC-208-04: …"
 
 ### TC-208-05
 
@@ -118,7 +118,7 @@ one the pop-up showed, with the same rules and the same people allowed to act.
 | Test Data | `coordinator@test.local`, `organiser@test.local` |
 | Expected Result | Pending venue: "Waiting for Venue Staff to approve Hall A", with no button, for both. Equipment not decided: the Coordinator sees "Your turn: request the equipment, or record that none is needed" with **Go to Arrangements**; the Organiser sees "Waiting for Cody Coordinator to …". All complete: "Your turn: confirm the event". |
 
-**Automated by:** `tests/unit/event-next-step.test.ts` › "SCRUM-208 [AC2] TC-208-05: …" (both tests)
+**Automated by:** `tests/unit/event-next-step.test.ts` › every "SCRUM-208 [AC2] TC-208-05: …" test; `tests/integration/event-page-data.test.ts` › "SCRUM-208 [AC2, AC4] TC-208-05: …" and "SCRUM-208 [AC2] TC-208-05: …"
 
 ### TC-208-06
 
@@ -131,7 +131,7 @@ one the pop-up showed, with the same rules and the same people allowed to act.
 | Test Data | `coordinator@test.local`, `organiser@test.local` |
 | Expected Result | Coordinator: "Your turn: decide the change request", opening on Changes, whose tab shows the count 1; Approve and Reject there are green and red. Organiser: "Waiting for Cody Coordinator to decide your change request". |
 
-**Automated by:** `tests/unit/event-next-step.test.ts` › "SCRUM-208 [AC2] TC-208-06: …"; `e2e/change-decision.spec.ts` › "SCRUM-128 [AC1, AC2, AC4, AC5] TC-128-13, SCRUM-208 [AC2] TC-208-06: …"
+**Automated by:** `tests/unit/event-next-step.test.ts` › every "SCRUM-208 [AC2] TC-208-06: …" test; `tests/integration/event-page-data.test.ts` › "SCRUM-208 [AC2] TC-208-06: …"; `e2e/change-decision.spec.ts` › "SCRUM-128 [AC1, AC2, AC4, AC5] TC-128-13, SCRUM-208 [AC2] TC-208-06: …"
 
 ### TC-208-07
 
@@ -144,7 +144,7 @@ one the pop-up showed, with the same rules and the same people allowed to act.
 | Test Data | `organiser@test.local` |
 | Expected Result | Rejected: "This request was rejected.", "Rejection reason: …" and "Next step: Amend and resubmit". Cancelled: "This event was cancelled.", the reason and when. No button. |
 
-**Automated by:** `tests/unit/event-next-step.test.ts` › "SCRUM-208 [AC2] TC-208-07: …"; `e2e/events.spec.ts` › "SCRUM-126 [AC2] TC-126-03: …"; `e2e/rejection-outcome.spec.ts`; `e2e/close-event.spec.ts`
+**Automated by:** `tests/unit/event-next-step.test.ts` › every "SCRUM-208 [AC2] TC-208-07: …" test; `tests/integration/event-page-data.test.ts` › "SCRUM-208 [AC2] TC-208-07: …"; `e2e/events.spec.ts` › "SCRUM-126 [AC2] TC-126-03: …"; `e2e/rejection-outcome.spec.ts`; `e2e/close-event.spec.ts`
 
 ### TC-208-08
 
@@ -222,7 +222,7 @@ one the pop-up showed, with the same rules and the same people allowed to act.
 | Test Data | `organiser@test.local`, `coordinator2@test.local` |
 | Expected Result | Every one answers 404, with nothing about the event shown. |
 
-**Automated by:** `e2e/access-control.spec.ts` › "SCRUM-208 [AC5] TC-208-13: …"; `e2e/event-page.spec.ts` › "SCRUM-208 [AC5] TC-208-13: …"; `e2e/notifications.spec.ts` › "SCRUM-48 [AC5, AC6] TC-48-09: …"
+**Automated by:** `tests/integration/event-page-data.test.ts` › "SCRUM-208 [AC5] TC-208-13: …" (four cases); `e2e/access-control.spec.ts` › "SCRUM-208 [AC5] TC-208-13: …"; `e2e/event-page.spec.ts` › "SCRUM-208 [AC5] TC-208-13: …"; `e2e/notifications.spec.ts` › "SCRUM-48 [AC5, AC6] TC-48-09: …"
 
 ### TC-208-14
 
@@ -261,7 +261,7 @@ one the pop-up showed, with the same rules and the same people allowed to act.
 | Test Data | `organiser@test.local`, `coordinator@test.local` |
 | Expected Result | 1: the Organiser's page shows Planning within a few seconds, without a reload. 2: the first Coordinator's page keeps its last view, with "This event request is no longer available in your view…". |
 
-**Automated by:** `e2e/events.spec.ts` › "two users viewing the same event simultaneously see consistent live status …" and "SCRUM-208 TC-208-16: …"
+**Automated by:** `tests/unit/readiness-actions.test.ts` › every "SCRUM-208 TC-208-16: …" test; `e2e/events.spec.ts` › "two users viewing the same event simultaneously see consistent live status …" and "SCRUM-208 TC-208-16: …"
 
 ### TC-208-17
 
