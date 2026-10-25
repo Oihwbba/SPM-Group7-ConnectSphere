@@ -197,7 +197,7 @@ test.describe("SCRUM-170 — Show the Organiser's requirements to the people pla
     await expect(equipment).toHaveAttribute("data-complete", "false");
     await expect(equipment).toContainText("Not decided");
     await expect(details.getByTestId("readiness-summary")).toHaveText(
-      /Not ready to confirm yet/,
+      /^[0-2]\/3 items completed$/,
     );
 
     await equipment
@@ -212,7 +212,7 @@ test.describe("SCRUM-170 — Show the Organiser's requirements to the people pla
     // SCRUM-166 AC1, AC9: with the venue and equipment complete, the safety
     // check is the one item left, and it can now be requested.
     await expect(details.getByTestId("readiness-summary")).toHaveText(
-      /Not ready to confirm yet/,
+      "2/3 items completed",
     );
     await expect(details.getByTestId("readiness-item-safety")).toContainText(
       "Not requested",

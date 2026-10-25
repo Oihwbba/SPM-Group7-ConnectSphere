@@ -10,11 +10,15 @@ is in Planning, organised by `organiser@test.local` (Olivia Organiser) and
 assigned to `coordinator@test.local` (Cody Coordinator), with no venue, no
 equipment request and no safety check yet.
 
-**How the tab is built.** The event page's Arrangements tab has three
-sections, in the order they are made: **Venues**, **Equipment** and **Safety
-check**, then the checklist's summary with Confirm and Reject. Each section
-names its checklist item and its state, as the readiness checklist reads it
-(SCRUM-110). The buttons are the separate pages' own actions, unchanged
+**How the tab is built.** The event page's Arrangements tab opens with the
+checklist's summary: how many of the three items are complete ("2/3 items
+completed", and "3/3 items completed · Ready to confirm" once all are), with
+Reject event (red) and Confirm event (green) at its top right. Below it are
+three sections, in the order they are made, side by side on a wide screen:
+**Venues**, **Equipment** and **Safety check**. Each section's title has its
+checklist item's state beside it, as the readiness checklist reads it
+(SCRUM-110), ticked when complete and crossed when not for the Coordinator,
+with any reason below; its actions sit, small, at its bottom right. The buttons are the separate pages' own actions, unchanged
 (SCRUM-50, 162, 27, 142, 170, 166); people who can't use them see no button.
 The Next step banner's "Request a venue", "Settle equipment" and "Request the
 safety check" open the tab at that section.

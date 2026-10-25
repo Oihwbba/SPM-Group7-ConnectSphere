@@ -8,11 +8,11 @@ import {
   AlertTriangle,
   Building2,
   CheckCircle2,
-  CircleDashed,
   Plus,
   Search,
   ShieldCheck,
   Wrench,
+  XCircle,
   type LucideIcon,
 } from "lucide-react";
 import type { RejectionOutcome } from "@prisma/client";
@@ -58,7 +58,10 @@ import type {
   EventVenueBooking,
 } from "@/lib/event-readiness";
 import { REJECTION_OUTCOME_LABEL } from "@/lib/schemas/event";
-import { BOOKING_STATUS_LABEL, NEEDS_RECONSIDERATION } from "@/lib/status-labels";
+import {
+  BOOKING_STATUS_LABEL,
+  NEEDS_RECONSIDERATION,
+} from "@/lib/status-labels";
 import { cn } from "@/lib/utils";
 
 /**
@@ -133,11 +136,17 @@ export function ReadinessChecklist({
   const [bookings, setBookings] = useState<EventVenueBooking[]>([]);
   // SCRUM-209 AC2: the event's equipment requests and what may be done.
   const [equipment, setEquipment] = useState<
-    Extract<Awaited<ReturnType<typeof getEventEquipment>>, { ok: true }>["data"] | null
+    | Extract<
+        Awaited<ReturnType<typeof getEventEquipment>>,
+        { ok: true }
+      >["data"]
+    | null
   >(null);
   const [requestingEquipment, setRequestingEquipment] = useState(false);
   const [changingRequest, setChangingRequest] = useState(false);
-  const [withdrawingRequest, setWithdrawingRequest] = useState<string | null>(null);
+  const [withdrawingRequest, setWithdrawingRequest] = useState<string | null>(
+    null,
+  );
   const [withdrawingEquipment, startWithdrawEquipment] = useTransition();
   const [loadFailed, setLoadFailed] = useState(false);
   // Bumped after a hold is settled or a safety check requested, so the
@@ -335,7 +344,11 @@ export function ReadinessChecklist({
           id: line.id,
           venueName: line.venueName,
           attendance: line.attendance,
-          status: (line.held ? "HELD" : line.pending ? "PENDING" : "APPROVED") as EventVenueBooking["status"],
+          status: (line.held
+            ? "HELD"
+            : line.pending
+              ? "PENDING"
+              : "APPROVED") as EventVenueBooking["status"],
           startAt: null as Date | null,
           endAt: null as Date | null,
         },
@@ -347,30 +360,25 @@ export function ReadinessChecklist({
 
   return (
     <div className="space-y-4" data-testid="readiness-checklist">
-      {/* SCRUM-132 AC3: where the event stands, and Confirm, before the
+      {/* SCRUM-132 AC3: whether it is ready, and Confirm, before the
           sections' detail, so they show without scrolling. */}
       <Card>
-        <CardContent className="space-y-3 p-4 text-xs">
-          <ul className="flex flex-wrap gap-x-4 gap-y-1" aria-label="Checklist">
-            {[venue, equipmentItem, safety].map((item) => (
-              <li key={item.name} className="flex items-center gap-1.5" data-testid="readiness-summary-item">
-                {item.complete ? (
-                  <CheckCircle2 aria-hidden="true" className="h-3.5 w-3.5 text-success" />
-                ) : (
-                  <CircleDashed aria-hidden="true" className="h-3.5 w-3.5 text-muted-foreground" />
-                )}
-                <span className="font-medium">{item.name}:</span> {item.state}
-              </li>
-            ))}
-          </ul>
+        <CardContent className="p-4 text-xs">
           <div className="flex flex-wrap items-center justify-between gap-2">
+            {/* How many of the three items are complete; Confirm opens at all. */}
             <p
-              className={checklist.ready ? "font-semibold text-success" : "text-muted-foreground"}
+              className="text-base font-bold text-primary"
               data-testid="readiness-summary"
             >
-              {checklist.ready
-                ? "Ready to confirm"
-                : "Not ready to confirm yet: complete the items below."}
+              {
+                [venue, equipmentItem, safety].filter((item) => item.complete)
+                  .length
+              }
+              /3 items completed
+              {/* SCRUM-110 AC5: every item complete reads Ready to confirm. */}
+              {checklist.ready && (
+                <span className="text-success"> · Ready to confirm</span>
+              )}
             </p>
             <div className="flex flex-wrap gap-2">
               {/* SCRUM-117: for the assigned Coordinator, unless the event was
@@ -379,6 +387,7 @@ export function ReadinessChecklist({
                 <Button
                   size="sm"
                   variant="outline"
+                  className="border-destructive/40 bg-destructive/10 text-destructive hover:bg-destructive/20 hover:text-destructive"
                   onClick={() => {
                     setReason("");
                     setOutcome(null);
@@ -391,7 +400,13 @@ export function ReadinessChecklist({
               )}
               {/* SCRUM-81: only usable once every item is complete. */}
               {checklist.canConfirm && (
-                <Button size="sm" onClick={confirm} disabled={!checklist.ready || confirming}>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="border-success/40 bg-success/10 text-success hover:bg-success/20 hover:text-success"
+                  onClick={confirm}
+                  disabled={!checklist.ready || confirming}
+                >
                   {confirming ? "Confirming…" : "Confirm event"}
                 </Button>
               )}
@@ -400,217 +415,273 @@ export function ReadinessChecklist({
         </CardContent>
       </Card>
 
-      {/* SCRUM-209: the arrangements in the order they are made. */}
-      <Section
-        id="arrangements-venues"
-        icon={Building2}
-        title="Venues"
-        testId="readiness-item-venue"
-        item={venue}
-        action={
-          // SCRUM-209 AC1: search for this event, and come back here after.
-          checklist.canRequestVenue && (
-            <Button asChild size="sm" variant="outline">
-              <Link
-                href={{
-                  pathname: "/venues/search",
-                  query: { event: eventId, return: "event" },
-                }}
-              >
-                <Search className="h-4 w-4" aria-hidden /> Find a venue
-              </Link>
-            </Button>
-          )
-        }
-      >
-        {venueRows.length === 0 ? (
-          <p className="text-muted-foreground">No venues requested yet.</p>
-        ) : (
-          // SCRUM-162 AC7: every booking with its status; SCRUM-162 AC8: the
-          // live ones with their own state and actions.
-          <ul className="space-y-2" data-testid="venue-bookings-panel">
-            {venueRows.map(({ booking, line }) => (
-              <li
-                key={booking.id}
-                className="rounded-md border px-3 py-2"
-                data-testid="event-venue-booking"
-                data-status={booking.status}
-              >
-                <div
-                  className="space-y-1.5"
-                  data-testid={line ? "venue-booking" : undefined}
-                  data-complete={line?.complete}
+      {/* SCRUM-209: the arrangements in the order they are made; side by side
+          on a wide screen, so each one's state shows without scrolling
+          (SCRUM-132 AC3). */}
+      <div className="grid gap-4 lg:grid-cols-3">
+        <Section
+          id="arrangements-venues"
+          icon={Building2}
+          title="Venues"
+          testId="readiness-item-venue"
+          marked={coordinates}
+          item={venue}
+          action={
+            // SCRUM-209 AC1: search for this event, and come back here after.
+            checklist.canRequestVenue && (
+              <Button asChild size="sm" variant="outline">
+                <Link
+                  href={{
+                    pathname: "/venues/search",
+                    query: { event: eventId, return: "event" },
+                  }}
                 >
-                  <p className="flex flex-wrap items-baseline justify-between gap-x-3">
-                    <span>
-                      <span className="font-medium">{booking.venueName}</span>
-                      {booking.attendance !== null && ` · ${booking.attendance} people`}
-                      {booking.startAt && booking.endAt && (
-                        <span className="text-muted-foreground">
-                          {" · "}
-                          {formatEventTime(booking.startAt, booking.endAt)}
-                        </span>
-                      )}
-                    </span>
-                    <span
-                      className={
-                        booking.status === "APPROVED"
-                          ? "inline-flex items-center gap-1 font-semibold text-success"
-                          : "font-semibold"
-                      }
-                    >
-                      {booking.status === "APPROVED" && (
-                        <CheckCircle2 className="h-3.5 w-3.5" aria-hidden />
-                      )}
-                      {line ? <StateWithFlag {...line} /> : BOOKING_STATUS_LABEL[booking.status]}
-                    </span>
-                  </p>
-                  {/* SCRUM-163 AC3, AC7: Venue Staff approve the hold first;
-                      only then can the Coordinator confirm it. */}
-                  {line?.held && (
-                    <p className="text-muted-foreground" data-testid="hold-approval">
-                      {line.holdApproved
-                        ? "Approved by Venue Staff – awaiting confirmation."
-                        : "Waiting for Venue Staff to approve the hold before it can be confirmed."}
-                    </p>
-                  )}
-                  {line?.held && checklist.canSettleHold && (
-                    <div className="flex flex-wrap gap-2">
-                      <Button
-                        size="sm"
-                        onClick={() => settleHold(line.id, "confirm")}
-                        disabled={settling || !line.holdApproved}
+                  <Search className="h-4 w-4" aria-hidden /> Find a venue
+                </Link>
+              </Button>
+            )
+          }
+        >
+          {venueRows.length === 0 ? (
+            <p className="text-muted-foreground">No venues requested yet.</p>
+          ) : (
+            // SCRUM-162 AC7: every booking with its status; SCRUM-162 AC8: the
+            // live ones with their own state and actions.
+            <ul className="space-y-2" data-testid="venue-bookings-panel">
+              {venueRows.map(({ booking, line }) => (
+                <li
+                  key={booking.id}
+                  className="rounded-md border px-3 py-2"
+                  data-testid="event-venue-booking"
+                  data-status={booking.status}
+                >
+                  <div
+                    className="space-y-1.5"
+                    data-testid={line ? "venue-booking" : undefined}
+                    data-complete={line?.complete}
+                  >
+                    <p className="flex flex-wrap items-baseline justify-between gap-x-3">
+                      <span>
+                        <span className="font-medium">{booking.venueName}</span>
+                        {booking.attendance !== null &&
+                          ` · ${booking.attendance} people`}
+                        {booking.startAt && booking.endAt && (
+                          <span className="text-muted-foreground">
+                            {" · "}
+                            {formatEventTime(booking.startAt, booking.endAt)}
+                          </span>
+                        )}
+                      </span>
+                      <span
+                        className={
+                          booking.status === "APPROVED"
+                            ? "inline-flex items-center gap-1 font-semibold text-success"
+                            : "font-semibold"
+                        }
                       >
-                        {settling && settlingHow === "confirm" ? "Confirming…" : "Confirm hold"}
-                      </Button>
+                        {booking.status === "APPROVED" && (
+                          <CheckCircle2 className="h-3.5 w-3.5" aria-hidden />
+                        )}
+                        {line ? (
+                          <StateWithFlag {...line} />
+                        ) : (
+                          BOOKING_STATUS_LABEL[booking.status]
+                        )}
+                      </span>
+                    </p>
+                    {/* SCRUM-163 AC3, AC7: Venue Staff approve the hold first;
+                        only then can the Coordinator confirm it. */}
+                    {line?.held && (
+                      <p
+                        className="text-muted-foreground"
+                        data-testid="hold-approval"
+                      >
+                        {line.holdApproved
+                          ? "Approved by Venue Staff – awaiting confirmation."
+                          : "Waiting for Venue Staff to approve the hold before it can be confirmed."}
+                      </p>
+                    )}
+                    {line?.held && checklist.canSettleHold && (
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          size="sm"
+                          onClick={() => settleHold(line.id, "confirm")}
+                          disabled={settling || !line.holdApproved}
+                        >
+                          {settling && settlingHow === "confirm"
+                            ? "Confirming…"
+                            : "Confirm hold"}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => settleHold(line.id, "release")}
+                          disabled={settling}
+                        >
+                          {settling && settlingHow === "release"
+                            ? "Releasing…"
+                            : "Release hold"}
+                        </Button>
+                      </div>
+                    )}
+                    {line?.pending && checklist.canWithdrawBooking && (
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => settleHold(line.id, "release")}
+                        onClick={() => setWithdrawing(line.id)}
                         disabled={settling}
                       >
-                        {settling && settlingHow === "release" ? "Releasing…" : "Release hold"}
+                        Withdraw request
                       </Button>
-                    </div>
-                  )}
-                  {line?.pending && checklist.canWithdrawBooking && (
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Section>
+
+        <Section
+          id="arrangements-equipment"
+          icon={Wrench}
+          title="Equipment"
+          testId="readiness-item-equipment"
+          marked={coordinates}
+          item={equipmentItem}
+          action={
+            ((equipment?.canCreate && !liveRequest) ||
+              (equipmentItem.noEquipmentOffered &&
+                checklist.canRecordNoEquipment)) && (
+              <div className="flex flex-wrap gap-2">
+                {/* SCRUM-209 AC2: raised in place, for this event only. Raising
+                  one also replaces No equipment needed (SCRUM-170 AC4). */}
+                {equipment?.canCreate && !liveRequest && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setRequestingEquipment(true)}
+                  >
+                    <Plus className="h-4 w-4" aria-hidden /> Request equipment
+                  </Button>
+                )}
+                {equipmentItem.noEquipmentOffered &&
+                  checklist.canRecordNoEquipment && (
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => setWithdrawing(line.id)}
-                      disabled={settling}
+                      onClick={recordNoEquipment}
+                      disabled={deciding}
                     >
-                      Withdraw request
+                      {deciding ? "Recording…" : "No equipment needed"}
                     </Button>
                   )}
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </Section>
-
-      <Section
-        id="arrangements-equipment"
-        icon={Wrench}
-        title="Equipment"
-        testId="readiness-item-equipment"
-        item={equipmentItem}
-        action={
-          <div className="flex flex-wrap gap-2">
-            {/* SCRUM-209 AC2: raised in place, for this event only. Raising
-                one also replaces No equipment needed (SCRUM-170 AC4). */}
-            {equipment?.canCreate && !liveRequest && (
-              <Button size="sm" variant="outline" onClick={() => setRequestingEquipment(true)}>
-                <Plus className="h-4 w-4" aria-hidden /> Request equipment
-              </Button>
-            )}
-            {equipmentItem.noEquipmentOffered && checklist.canRecordNoEquipment && (
-              <Button size="sm" variant="outline" onClick={recordNoEquipment} disabled={deciding}>
-                {deciding ? "Recording…" : "No equipment needed"}
-              </Button>
-            )}
-          </div>
-        }
-      >
-        {equipmentItem.state === "No equipment needed" && equipment?.canCreate && (
-          <p className="text-muted-foreground">
-            To change this, request equipment: the request replaces it.
-          </p>
-        )}
-        {shownRequest ? (
-          <div className="space-y-3 rounded-md border px-3 py-2" data-testid="event-equipment-request">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="font-medium">
-                Equipment request · submitted {formatDate(shownRequest.createdAt)}
-              </p>
-              <RequestStatusBadge status={shownRequest.status} />
-            </div>
-            <RequestLines lines={shownRequest.lines} />
-            {shownRequest.notes && (
-              <p className="whitespace-pre-line">
-                <span className="font-medium">Notes: </span>
-                {shownRequest.notes}
-              </p>
-            )}
-            {shownRequest.updates.length > 0 && (
-              <details className="rounded-md border bg-muted/20">
-                <summary className="cursor-pointer select-none px-3 py-2 font-medium">
-                  History ({shownRequest.updates.length})
-                </summary>
-                <div className="border-t px-3 py-3">
-                  <AuditTrail entries={trailOf(shownRequest.updates)} entryTestId="history-entry" />
-                </div>
-              </details>
-            )}
-            {/* SCRUM-142: the same rules as on Equipment Requests. */}
-            {equipment?.canChange && changeable && (
-              <div className="flex flex-wrap justify-end gap-2 border-t pt-2">
-                <Button size="sm" variant="outline" onClick={() => setWithdrawingRequest(liveRequest!.id)}>
-                  Withdraw
-                </Button>
-                <Button size="sm" onClick={() => setChangingRequest(true)}>
-                  Change lines
-                </Button>
               </div>
+            )
+          }
+        >
+          {equipmentItem.state === "No equipment needed" &&
+            equipment?.canCreate && (
+              <p className="text-muted-foreground">
+                To change this, request equipment: the request replaces it.
+              </p>
             )}
-          </div>
-        ) : (
-          equipmentItem.state !== "No equipment needed" && (
-            <p className="text-muted-foreground">No equipment requested yet.</p>
-          )
-        )}
-      </Section>
+          {shownRequest ? (
+            <div
+              className="space-y-3 rounded-md border px-3 py-2"
+              data-testid="event-equipment-request"
+            >
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="font-medium">
+                  Equipment request · submitted{" "}
+                  {formatDate(shownRequest.createdAt)}
+                </p>
+                <RequestStatusBadge status={shownRequest.status} />
+              </div>
+              <RequestLines lines={shownRequest.lines} />
+              {shownRequest.notes && (
+                <p className="whitespace-pre-line">
+                  <span className="font-medium">Notes: </span>
+                  {shownRequest.notes}
+                </p>
+              )}
+              {shownRequest.updates.length > 0 && (
+                <details className="rounded-md border bg-muted/20">
+                  <summary className="cursor-pointer select-none px-3 py-2 font-medium">
+                    History ({shownRequest.updates.length})
+                  </summary>
+                  <div className="border-t px-3 py-3">
+                    <AuditTrail
+                      entries={trailOf(shownRequest.updates)}
+                      entryTestId="history-entry"
+                    />
+                  </div>
+                </details>
+              )}
+              {/* SCRUM-142: the same rules as on Equipment Requests. */}
+              {equipment?.canChange && changeable && (
+                <div className="flex flex-wrap justify-end gap-2 border-t pt-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setWithdrawingRequest(liveRequest!.id)}
+                  >
+                    Withdraw
+                  </Button>
+                  <Button size="sm" onClick={() => setChangingRequest(true)}>
+                    Change lines
+                  </Button>
+                </div>
+              )}
+            </div>
+          ) : (
+            equipmentItem.state !== "No equipment needed" && (
+              <p className="text-muted-foreground">
+                No equipment requested yet.
+              </p>
+            )
+          )}
+        </Section>
 
-      <Section
-        id="arrangements-safety"
-        icon={ShieldCheck}
-        title="Safety check"
-        testId="readiness-item-safety"
-        item={safety}
-        action={
-          checklist.canRequestSafetyCheck && (
-            <Button size="sm" variant="outline" onClick={requestCheck} disabled={requesting}>
-              {requesting ? "Requesting…" : "Request safety check"}
-            </Button>
-          )
-        }
-      >
-        {/* SCRUM-209 AC3: what the request is waiting for, in one line, rather
-            than a button that can't be used. */}
-        {coordinates &&
-          !checklist.canRequestSafetyCheck &&
-          !safety.complete &&
-          safety.state !== "Awaiting review" && (
-            <p className="text-muted-foreground" data-testid="safety-check-waiting">
-              Request once a venue is approved and equipment is settled.
+        <Section
+          id="arrangements-safety"
+          icon={ShieldCheck}
+          title="Safety check"
+          testId="readiness-item-safety"
+          marked={coordinates}
+          item={safety}
+          action={
+            checklist.canRequestSafetyCheck && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={requestCheck}
+                disabled={requesting}
+              >
+                {requesting ? "Requesting…" : "Request safety check"}
+              </Button>
+            )
+          }
+        >
+          {/* SCRUM-209 AC3: what the request is waiting for, in one line, rather
+              than a button that can't be used. */}
+          {coordinates &&
+            !checklist.canRequestSafetyCheck &&
+            !safety.complete &&
+            safety.state !== "Awaiting review" && (
+              <p
+                className="text-muted-foreground"
+                data-testid="safety-check-waiting"
+              >
+                Request once a venue is approved and equipment is settled.
+              </p>
+            )}
+          {safety.state === "Awaiting review" && (
+            <p className="text-muted-foreground">
+              Waiting for a Safety Officer to review it.
             </p>
           )}
-        {safety.state === "Awaiting review" && (
-          <p className="text-muted-foreground">Waiting for a Safety Officer to review it.</p>
-        )}
-      </Section>
-
+        </Section>
+      </div>
 
       {equipment && requestingEquipment && (
         <NewRequestDialog
@@ -655,13 +726,18 @@ export function ReadinessChecklist({
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="secondary" onClick={() => setWithdrawingRequest(null)}>
+            <Button
+              variant="secondary"
+              onClick={() => setWithdrawingRequest(null)}
+            >
               Keep it
             </Button>
             <Button
               variant="destructive"
               disabled={withdrawingEquipment}
-              onClick={() => withdrawingRequest && withdrawRequest(withdrawingRequest)}
+              onClick={() =>
+                withdrawingRequest && withdrawRequest(withdrawingRequest)
+              }
             >
               Withdraw request
             </Button>
@@ -755,8 +831,9 @@ export function ReadinessChecklist({
 }
 
 /**
- * One arrangement: its title and action, the checklist item's state (named
- * and marked complete or not, as the checklist reads it), then its details.
+ * One arrangement: its title with the checklist item's state beside it (for
+ * the assigned Coordinator, ticked when complete and crossed when not), its
+ * details, then its actions.
  */
 function Section({
   id,
@@ -764,6 +841,7 @@ function Section({
   title,
   testId,
   item,
+  marked,
   action,
   children,
 }: {
@@ -772,38 +850,58 @@ function Section({
   title: string;
   testId: string;
   item: Checklist["items"][number];
+  /** SCRUM-209: the Coordinator sees a tick or a cross beside the state. */
+  marked: boolean;
   action?: React.ReactNode;
   children?: React.ReactNode;
 }) {
   return (
     <Card
-      className="scroll-mt-24 overflow-hidden"
+      className="flex scroll-mt-24 flex-col overflow-hidden [&_button]:h-7 [&_button]:px-2.5 [&_button]:text-xs"
       id={id}
       data-testid={testId}
       data-complete={item.complete}
     >
       <CardHeader className="flex-row flex-wrap items-center justify-between gap-2 space-y-0 bg-muted/30 px-4 py-3">
-        <CardTitle className="flex items-center gap-2 text-sm font-semibold">
-          <Icon aria-hidden="true" className="h-4 w-4 text-primary" /> {title}
-        </CardTitle>
-        {action}
-      </CardHeader>
-      <CardContent className="space-y-3 p-4 text-xs">
-        <p className="flex items-start gap-2">
-          {item.complete ? (
-            <CheckCircle2 aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-success" />
-          ) : (
-            <CircleDashed aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-          )}
-          <span>
-            <span className="font-semibold">{item.name}</span>
-            <span className="sr-only">{item.complete ? ", complete" : ", incomplete"}</span>
-            {" — "}
-            <StateWithFlag {...item} />
+        <CardTitle className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm font-semibold">
+          <span className="flex items-center gap-2">
+            <Icon aria-hidden="true" className="h-4 w-4 text-primary" /> {title}
           </span>
-        </p>
+          <span
+            data-testid="item-status"
+            className={cn(
+              "flex items-center gap-1 text-xs font-medium",
+              marked && (item.complete ? "text-success" : "text-destructive"),
+              !marked && "text-muted-foreground",
+            )}
+          >
+            {marked &&
+              (item.complete ? (
+                <CheckCircle2 aria-hidden="true" className="h-4 w-4 shrink-0" />
+              ) : (
+                <XCircle aria-hidden="true" className="h-4 w-4 shrink-0" />
+              ))}
+            <span className="sr-only">
+              {item.name}, {item.complete ? "complete" : "incomplete"}:{" "}
+            </span>
+            <StateWithFlag {...item} reason={null} />
+          </span>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="flex-1 space-y-3 p-4 text-xs empty:hidden">
+        {item.reason && (
+          <p className="text-muted-foreground" data-testid="item-reason">
+            {item.reason}
+          </p>
+        )}
         {children}
       </CardContent>
+      {/* SCRUM-209: the section's actions, small, at its bottom right. */}
+      {action && (
+        <div className="mt-auto flex flex-wrap justify-end gap-2 px-4 pb-4 [&_a]:h-7 [&_a]:px-2.5 [&_a]:text-xs">
+          {action}
+        </div>
+      )}
     </Card>
   );
 }

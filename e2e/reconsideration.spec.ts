@@ -252,7 +252,7 @@ test.describe("SCRUM-26 — Flag and resolve arrangements affected by a change",
     // AC2: reserved in full, so the item is complete and reads Reserved.
     let equipment = details.getByTestId("readiness-item-equipment");
     await expect(equipment).toHaveAttribute("data-complete", "true");
-    await expect(equipment).toContainText("Equipment, complete — Reserved");
+    await expect(equipment.getByTestId("item-status")).toHaveText("Equipment, complete: Reserved");
     await expect(equipment).not.toContainText("Confirmed");
     await expect(equipment.getByTestId("needs-reconsideration")).toHaveCount(0);
 
@@ -273,11 +273,11 @@ test.describe("SCRUM-26 — Flag and resolve arrangements affected by a change",
     // flagged types may be listed in either order.
     equipment = details.getByTestId("readiness-item-equipment");
     await expect(equipment).toHaveAttribute("data-complete", "false");
-    await expect(equipment).toContainText(
-      new RegExp(
-        `Reserved: (Projector, Wireless Microphone|Wireless Microphone, Projector) Needs Reconsideration – ${EQUIPMENT_REASON.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`,
-      ),
+    // SCRUM-209: the state beside the section's title, the reason below it.
+    await expect(equipment.getByTestId("item-status")).toHaveText(
+      /Reserved: (Projector, Wireless Microphone|Wireless Microphone, Projector) Needs Reconsideration$/,
     );
+    await expect(equipment.getByTestId("item-reason")).toHaveText(EQUIPMENT_REASON);
     await expect(equipment.getByTestId("needs-reconsideration")).toHaveText(
       "Needs Reconsideration",
     );
