@@ -21,6 +21,8 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { AppSelect } from "@/components/app/app-select";
+import { DateTimePicker } from "@/components/app/date-time-picker";
 import { checkQuantity, type Availability } from "@/lib/equipment/availability";
 import { formatEventPeriod } from "@/lib/equipment/requests";
 import type { ReservableRequest } from "@/lib/equipment/request-queries";
@@ -46,9 +48,6 @@ const OFFLINE =
   "Couldn't reach the server. Check your connection and try again.";
 const PREVIEW_FAILED =
   "Couldn't check what is free for this period. You can still reserve; the server checks again.";
-
-const SELECT_CLASS =
-  "flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring";
 
 let nextRowKey = 0;
 const newRow = (
@@ -242,23 +241,22 @@ export function ReserveRequestCard({
             <Label htmlFor="approved-request" className="text-sm font-semibold">
               Approved request
             </Label>
-            <select
+            <AppSelect
               id="approved-request"
-              className={SELECT_CLASS}
               value={requestId}
-              onChange={(event) => choose(event.target.value)}
-            >
-              <option value="">Select a request</option>
-              {requests.map((request) => (
-                <option key={request.id} value={request.id}>
-                  {request.event.name} — {formatEventPeriod(request.event)}
-                  {request.alreadyReserved === "request" &&
-                    " (rest of a partly reserved request)"}
-                  {request.alreadyReserved === "event" &&
-                    " (event already partly reserved)"}
-                </option>
-              ))}
-            </select>
+              placeholder="Select a request"
+              onValueChange={choose}
+              options={requests.map((request) => ({
+                value: request.id,
+                label: `${request.event.name} — ${formatEventPeriod(request.event)}${
+                  request.alreadyReserved === "request"
+                    ? " (rest of a partly reserved request)"
+                    : request.alreadyReserved === "event"
+                      ? " (event already partly reserved)"
+                      : ""
+                }`,
+              }))}
+            />
           </div>
         )}
 
@@ -299,13 +297,10 @@ export function ReserveRequestCard({
                 >
                   Reservation starts (Singapore time)
                 </Label>
-                <Input
+                <DateTimePicker
                   id="request-starts"
-                  type="datetime-local"
                   value={startAt}
-                  onChange={(event) =>
-                    changePeriod(setStartAt, event.target.value)
-                  }
+                  onChange={(value) => changePeriod(setStartAt, value)}
                   aria-invalid={Boolean(fieldErrors.startAt)}
                 />
                 <FieldError messages={fieldErrors.startAt} />
@@ -314,13 +309,11 @@ export function ReserveRequestCard({
                 <Label htmlFor="request-ends" className="text-sm font-semibold">
                   Reservation ends (Singapore time)
                 </Label>
-                <Input
+                <DateTimePicker
                   id="request-ends"
-                  type="datetime-local"
                   value={endAt}
-                  onChange={(event) =>
-                    changePeriod(setEndAt, event.target.value)
-                  }
+                  openOn={startAt.split("T")[0] || undefined}
+                  onChange={(value) => changePeriod(setEndAt, value)}
                   aria-invalid={Boolean(fieldErrors.endAt)}
                 />
                 <FieldError messages={fieldErrors.endAt} />
@@ -350,31 +343,32 @@ export function ReserveRequestCard({
                         <Label htmlFor={`item-${row.key}`} className="text-xs">
                           Item {index + 1}
                         </Label>
-                        <select
+                        <AppSelect
                           id={`item-${row.key}`}
-                          className={SELECT_CLASS}
                           value={row.equipmentId}
-                          onChange={(event) =>
-                            changeRow(row.key, {
-                              equipmentId: event.target.value,
-                            })
+                          placeholder="Select a type"
+                          onValueChange={(equipmentId) =>
+                            changeRow(row.key, { equipmentId })
                           }
-                        >
-                          <option value="">Select a type</option>
-                          {row.equipmentId &&
+                          options={[
+                            ...(row.equipmentId &&
                             !equipment.some(
                               (item) => item.id === row.equipmentId,
-                            ) && (
-                              <option value={row.equipmentId} disabled>
-                                {row.requestedType} (no longer available)
-                              </option>
-                            )}
-                          {equipment.map((item) => (
-                            <option key={item.id} value={item.id}>
-                              {item.type}
-                            </option>
-                          ))}
-                        </select>
+                            )
+                              ? [
+                                  {
+                                    value: row.equipmentId,
+                                    label: `${row.requestedType} (no longer available)`,
+                                    disabled: true,
+                                  },
+                                ]
+                              : []),
+                            ...equipment.map((item) => ({
+                              value: item.id,
+                              label: item.type,
+                            })),
+                          ]}
+                        />
                       </div>
                       <div className="space-y-1">
                         <Label htmlFor={`units-${row.key}`} className="text-xs">

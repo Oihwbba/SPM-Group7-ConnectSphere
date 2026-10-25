@@ -12,6 +12,7 @@ vi.mock("@/auth", () => ({ auth: vi.fn() }));
 vi.mock("@/lib/db", () => ({
   prisma: {
     event: { findMany: vi.fn() },
+    clarificationRequest: { findMany: vi.fn().mockResolvedValue([]) },
   },
 }));
 const mockFindMany = prisma.event.findMany as unknown as Mock;
@@ -19,6 +20,7 @@ const mockFindMany = prisma.event.findMany as unknown as Mock;
 beforeEach(() => {
   vi.clearAllMocks();
   mockFindMany.mockResolvedValue([]);
+  vi.mocked(prisma.clarificationRequest.findMany).mockResolvedValue([]);
 });
 
 describe("OrganiserEvents — the reference feature's own-events scope", () => {

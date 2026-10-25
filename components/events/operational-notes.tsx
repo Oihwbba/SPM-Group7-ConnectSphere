@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { formatDateTime } from "@/lib/datetime";
+import { AuditTrail } from "@/components/app/audit-trail";
 import {
   addOperationalNote,
   getOperationalNotes,
@@ -101,20 +101,18 @@ export function OperationalNotes({ eventId }: { eventId: string }) {
             {state.notes.length === 0 ? (
               <p className="text-muted-foreground">No notes yet.</p>
             ) : (
-              <ul className="space-y-2">
-                {state.notes.map((note) => (
-                  <li
-                    key={note.id}
-                    data-testid="operational-note"
-                    className="rounded-md border p-2"
-                  >
-                    <p className="whitespace-pre-wrap text-foreground">{note.body}</p>
-                    <p className="mt-1 text-muted-foreground">
-                      {note.authorName}, {formatDateTime(note.createdAt)}
-                    </p>
-                  </li>
-                ))}
-              </ul>
+              // Shared page conventions: notes as a timeline, like a history.
+              <AuditTrail
+                entryTestId="operational-note"
+                entries={state.notes.map((note) => ({
+                  id: note.id,
+                  at: note.createdAt,
+                  note: note.body,
+                  by: note.authorName,
+                  icon: NotebookPen,
+                  tone: "info",
+                }))}
+              />
             )}
             {state.canAdd && (
               <div className="space-y-2 border-t pt-3">

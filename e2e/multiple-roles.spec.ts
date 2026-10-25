@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 
 import { prisma } from "@/lib/db";
-import { signedIn, usesLocalDatabase } from "./helpers";
+import { signedIn, usesLocalDatabase, openBooking } from "./helpers";
 
 /**
  * SCRUM-121 — one account with several roles in a real browser, as the seeded
@@ -72,7 +72,6 @@ test.describe("SCRUM-121 — accounts with several roles", () => {
       "Equipment Requests", // Technical Support
       "Request Venue", // Coordinator
       "Events", // Coordinator and Organiser
-      "Notifications", // every role
     ]) {
       await expect(nav.getByRole("link", { name: label, exact: true })).toHaveCount(1);
     }
@@ -80,6 +79,8 @@ test.describe("SCRUM-121 — accounts with several roles", () => {
     // Attendee's pages stay out.
     await expect(nav.getByRole("link", { name: "My Events", exact: true })).toHaveCount(0);
     await expect(nav.getByRole("link", { name: "Browse Events", exact: true })).toHaveCount(0);
+    // Notifications are reached from the bell beside the name, not the menu.
+    await expect(nav.getByRole("link", { name: "Notifications", exact: true })).toHaveCount(0);
 
     const menu = page.getByRole("button", { name: "Open user menu" });
     await expect(menu).toContainText("Venue Staff +3");
@@ -165,7 +166,7 @@ test.describe("SCRUM-121 — accounts with several roles", () => {
 
     const page = await signedIn(browser, "multirole@test.local");
     await page.goto("/bookings");
-    const card = page.getByTestId(/^booking-/).filter({ hasText: event.name });
+    const card = await openBooking(page, event.name);
     await card.getByRole("button", { name: "Approve" }).click();
 
     await expect(page.getByText("You do not have permission to do that.")).toBeVisible();
