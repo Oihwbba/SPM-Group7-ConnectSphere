@@ -24,7 +24,7 @@ import {
 } from "lucide-react";
 import type { Role } from "@prisma/client";
 
-import { navForRoles } from "@/lib/nav";
+import { navGroupsForRoles } from "@/lib/nav";
 import { cn } from "@/lib/utils";
 
 // Icons are a presentation detail attached here on the client, keyed by route.
@@ -56,6 +56,10 @@ const ICON_BY_HREF: Record<string, LucideIcon> = {
  * layout; it works out the items itself, because the icons are React
  * components and can't cross the server/client boundary. Several roles show
  * the links of all of them (SCRUM-121 AC2).
+ *
+ * SCRUM-210: the links are grouped by task. Expanded, each group of more than
+ * one link has its heading; collapsed, a thin line divides the groups; on a
+ * phone the bar keeps them in one row, in the same order.
  */
 export function Sidebar({ roles }: { roles: Role[] }) {
   const [collapsed, setCollapsed] = useState(true);
@@ -82,7 +86,8 @@ export function Sidebar({ roles }: { roles: Role[] }) {
     });
   }
 
-  const items = navForRoles(roles);
+  const groups = navGroupsForRoles(roles);
+  const items = groups.flatMap((group) => group.items);
   // The most specific link that matches wins, so /venues/availability does
   // not also light up /venues.
   const activeHref = items
@@ -134,51 +139,73 @@ export function Sidebar({ roles }: { roles: Role[] }) {
           collapsed ? "md:items-center" : "md:items-stretch",
         )}
       >
-        {items.map((item) => {
-          const Icon = ICON_BY_HREF[item.href] ?? LayoutGrid;
-          const isActive = item.href === activeHref;
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              title={item.label}
-              aria-label={item.label}
-              aria-current={isActive ? "page" : undefined}
-              className={cn(
-                "group flex items-center justify-center gap-3 rounded-full transition-colors",
-                // Mobile: each item takes an equal share of the bar (½ for two
-                // items), so the active highlight can fill that whole segment.
-                "flex-1 md:flex-none",
-                collapsed ? "md:justify-center" : "md:justify-start md:pr-4",
-              )}
-            >
-              <span
-                className={cn(
-                  // Mobile: the highlight stretches to fill the item's share;
-                  // on desktop it's the fixed circular icon button.
-                  "flex h-11 w-full shrink-0 items-center justify-center rounded-full transition-colors md:w-11",
-                  isActive
-                    ? "bg-foreground text-background shadow-glass-sm"
-                    : "text-muted-foreground group-hover:bg-secondary group-hover:text-foreground",
-                )}
-              >
-                <Icon className="h-5 w-5" />
-              </span>
-              {!collapsed && (
-                <span
+        {groups.map((group, index) => (
+          <div
+            key={group.heading ?? group.items[0].href}
+            // A named group for assistive technology; on a phone its links
+            // stay direct items of the bar.
+            role={group.heading ? "group" : undefined}
+            aria-label={group.heading ?? undefined}
+            className={cn(
+              "contents md:flex md:w-full md:flex-col md:gap-2",
+              collapsed ? "md:items-center" : "md:items-stretch",
+              index > 0 && "md:border-t md:border-border/60 md:pt-2",
+            )}
+          >
+            {group.heading && !collapsed && (
+              <p className="hidden px-3 pt-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground md:block">
+                {group.heading}
+              </p>
+            )}
+            {group.items.map((item) => {
+              const Icon = ICON_BY_HREF[item.href] ?? LayoutGrid;
+              const isActive = item.href === activeHref;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  title={item.label}
+                  aria-label={item.label}
+                  aria-current={isActive ? "page" : undefined}
                   className={cn(
-                    "hidden truncate text-sm font-medium md:inline",
-                    isActive
-                      ? "text-foreground"
-                      : "text-muted-foreground group-hover:text-foreground",
+                    "group flex items-center justify-center gap-3 rounded-full transition-colors",
+                    // Mobile: each item takes an equal share of the bar (½ for two
+                    // items), so the active highlight can fill that whole segment.
+                    "flex-1 md:flex-none",
+                    collapsed
+                      ? "md:justify-center"
+                      : "md:justify-start md:pr-4",
                   )}
                 >
-                  {item.label}
-                </span>
-              )}
-            </Link>
-          );
-        })}
+                  <span
+                    className={cn(
+                      // Mobile: the highlight stretches to fill the item's share;
+                      // on desktop it's the fixed circular icon button.
+                      "flex h-11 w-full shrink-0 items-center justify-center rounded-full transition-colors md:w-11",
+                      isActive
+                        ? "bg-foreground text-background shadow-glass-sm"
+                        : "text-muted-foreground group-hover:bg-secondary group-hover:text-foreground",
+                    )}
+                  >
+                    <Icon className="h-5 w-5" />
+                  </span>
+                  {!collapsed && (
+                    <span
+                      className={cn(
+                        "hidden truncate text-sm font-medium md:inline",
+                        isActive
+                          ? "text-foreground"
+                          : "text-muted-foreground group-hover:text-foreground",
+                      )}
+                    >
+                      {item.label}
+                    </span>
+                  )}
+                </Link>
+              );
+            })}
+          </div>
+        ))}
       </nav>
     </aside>
   );
