@@ -64,6 +64,9 @@ test.describe("SCRUM-126 — Rejected as needing a new request", () => {
   test("SCRUM-126 [AC1, AC3, AC4, AC5, AC6] TC-126-08: the Coordinator rejects as a new request; the Organiser cannot amend it but starts a new Draft from it", async ({
     page,
   }) => {
+    // SCRUM-189: a long journey, three sign-ins and a new draft from the rejection.
+    // Three times the 30-second limit, not a retry under CI load.
+    test.slow();
     const reason = "This is a different event now — please submit it fresh.";
 
     // --- Coordinator rejects, choosing "Submit as a new request" (AC1) -----

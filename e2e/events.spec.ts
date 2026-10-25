@@ -1,4 +1,4 @@
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect, type BrowserContext, type Page } from "@playwright/test";
 import { prisma } from "@/lib/db";
 import { pickDateTime, selectFrom, fillOther, saveDraft, submitRequest } from "./helpers";
 
@@ -166,6 +166,9 @@ test.describe("User Story 15 — Draft Event Request Lifecycle Journey", () => {
   test("organiser saves partial draft, locates and resumes draft with preserved fields, then completes and submits", async ({
     page,
   }) => {
+    // SCRUM-189: a long journey, two passes through the request form.
+    // Three times the 30-second limit, not a retry under CI load.
+    test.slow();
     // 1. Sign in as seeded event organiser
     await page.goto("/login");
     await page.getByLabel("Email", { exact: true }).fill("organiser@test.local");
@@ -285,6 +288,9 @@ test.describe("User Story 16 — Distinguish Drafts from Submitted Requests Jour
   test("organiser can visually distinguish draft requests from submitted ones side-by-side and filter by status", async ({
     page,
   }) => {
+    // SCRUM-189: a long journey, a draft and a submitted request, then filters.
+    // Three times the 30-second limit, not a retry under CI load.
+    test.slow();
     // 1. Sign in as seeded event organiser
     await page.goto("/login");
     await page.getByLabel("Email", { exact: true }).fill("organiser@test.local");
@@ -789,6 +795,13 @@ test.describe("User Story 23 & 24 — Event Status View & Consistency Journey", 
     });
   });
 
+  // SCRUM-189 AC4: browsers a test opens itself are closed even when a step
+  // fails, so they can't keep the test server busy for the tests after it.
+  const ownContexts: BrowserContext[] = [];
+  test.afterEach(async () => {
+    await Promise.all(ownContexts.splice(0).map((context) => context.close()));
+  });
+
   test.beforeEach(async () => {
     if (!usesLocalDatabase) return;
     // Reset both events used by tests so CI retries stay green. Since
@@ -902,15 +915,19 @@ test.describe("User Story 23 & 24 — Event Status View & Consistency Journey", 
     await expect(detailModal.getByTestId("status-badge")).toHaveAttribute("data-status", "PLANNING");
   });
 
-  test("two users viewing the same event simultaneously see consistent live status without manual refresh (SCRUM-24)", async ({
+  test("SCRUM-24 [AC7] TC-24-05: two users viewing the same event simultaneously see consistent live status without manual refresh", async ({
     browser,
   }) => {
+    // SCRUM-189: a long journey, two browsers, the form and two 4-second refreshes.
+    // Three times the 30-second limit, not a retry under CI load.
+    test.slow();
     // Assigns its own event the way the Lead would, so it needs the local
     // database the other write-heavy tests use.
     test.skip(!usesLocalDatabase, "reads its own event; local database only");
 
     // 1. Sign in as Organiser in first browser context
     const organiserContext = await browser.newContext();
+    ownContexts.push(organiserContext);
     const organiserPage = await organiserContext.newPage();
     await organiserPage.goto("/login");
     await organiserPage.getByLabel("Email", { exact: true }).fill("organiser@test.local");
@@ -973,6 +990,7 @@ test.describe("User Story 23 & 24 — Event Status View & Consistency Journey", 
     const coordinatorEmail = "coordinator@test.local";
 
     const coordinatorContext = await browser.newContext();
+    ownContexts.push(coordinatorContext);
     const coordinatorPage = await coordinatorContext.newPage();
     await coordinatorPage.goto("/login");
     await coordinatorPage.getByLabel("Email", { exact: true }).fill(coordinatorEmail);
@@ -999,9 +1017,6 @@ test.describe("User Story 23 & 24 — Event Status View & Consistency Journey", 
     await organiserModal.getByRole("button", { name: "Close" }).first().click();
     await expect(organiserModal).not.toBeVisible();
     await expect(organiserRow.getByTestId("status-badge")).toHaveAttribute("data-status", "PLANNING");
-
-    await organiserContext.close();
-    await coordinatorContext.close();
   });
 
   test("open modal remains mounted with warning when viewed event is dropped from review queue (SCRUM-24)", async ({
@@ -1104,6 +1119,9 @@ test.describe("SCRUM-19 — Reject with a reason, then amend and resubmit", () =
   test("SCRUM-126 [AC2] TC-126-03: coordinator rejects with a reason, organiser sees it, amends and resubmits it back into review", async ({
     page,
   }) => {
+    // SCRUM-189: a long journey, two sign-ins and the form again to amend.
+    // Three times the 30-second limit, not a retry under CI load.
+    test.slow();
     const reason = "Venue is unavailable on that date — please propose another.";
 
     // --- Coordinator rejects, and a blank reason is refused ---------------
