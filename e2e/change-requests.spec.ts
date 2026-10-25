@@ -80,7 +80,8 @@ test.describe("SCRUM-41 — Raise and track a change request", () => {
 
     await expect(dialog.getByText("No change requests yet.")).toBeVisible();
     await dialog.getByRole("button", { name: "Request a change" }).click();
-    const form = dialog.getByRole("form", { name: "Request a change" });
+    // SCRUM-208: the form opens in a pop-up over the tab.
+    const form = page.getByRole("dialog").getByRole("form", { name: "Request a change" });
     const attendance = form.getByLabel("Expected attendance");
 
     // AC4: the request form's rule, shown next to the field; nothing is saved.
@@ -133,7 +134,8 @@ test.describe("SCRUM-41 — Raise and track a change request", () => {
     const page = await signedIn(browser, `${ORGANISER}@test.local`);
     const dialog = await openEvent(page, name);
     await dialog.getByRole("button", { name: "Request a change" }).click();
-    const form = dialog.getByRole("form", { name: "Request a change" });
+    // SCRUM-208: the form opens in a pop-up over the tab.
+    const form = page.getByRole("dialog").getByRole("form", { name: "Request a change" });
     const needed = form.getByRole("group", { name: "Registration needed" });
     await expect(needed.getByLabel("Yes")).toBeChecked();
     await needed.getByLabel("No").check();
@@ -161,7 +163,8 @@ test.describe("SCRUM-41 — Raise and track a change request", () => {
     const coordinator = await signedIn(browser, COORDINATOR_EMAIL);
     const dialog = await openEvent(coordinator, name);
     await dialog.getByRole("button", { name: "Request a change" }).click();
-    const form = dialog.getByRole("form", { name: "Request a change" });
+    // SCRUM-208: the form opens in a pop-up over the tab.
+    const form = coordinator.getByRole("dialog").getByRole("form", { name: "Request a change" });
     await form.getByLabel("Ask to cancel the event instead").check();
 
     // AC1: a cancellation needs its reason.
@@ -191,7 +194,8 @@ test.describe("SCRUM-41 — Raise and track a change request", () => {
     const page = await signedIn(browser, `${ORGANISER}@test.local`);
     const dialog = await openEvent(page, name);
     await dialog.getByRole("button", { name: "Request a change" }).click();
-    const form = dialog.getByRole("form", { name: "Request a change" });
+    // SCRUM-208: the form opens in a pop-up over the tab.
+    const form = page.getByRole("dialog").getByRole("form", { name: "Request a change" });
     await form.getByLabel("Expected attendance").fill("55");
 
     // A server action is a POST with a Next-Action header. Drop the next one,
@@ -209,7 +213,7 @@ test.describe("SCRUM-41 — Raise and track a change request", () => {
     await submit.click();
 
     await expect(form.getByRole("alert")).toHaveText(
-      "The change request couldn't be sent. If it isn't in the list above, try again.",
+      "The change request couldn't be sent. If it isn't in the list of change requests, try again.",
     );
     await expect(submit).toBeEnabled();
     await expect(form.getByRole("button", { name: "Discard changes" })).toBeEnabled();
