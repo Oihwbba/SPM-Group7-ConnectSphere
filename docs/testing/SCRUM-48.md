@@ -103,9 +103,9 @@ AC8 cases write those rows directly. Times are UTC.
 | Pre-conditions | A notification about event `evt_1`, for each role in turn. |
 | Test Steps | 1. Work out the notification's link for each role. |
 | Test Data | Event status Planning, Confirmed, Cancelled or Completed; stored link `/bookings`, `/equipment-requests` or none |
-| Expected Result | Organiser and Coordinator: `/events?event=evt_1`, the events list with that event open. Attendee: `/events/evt_1` for a Confirmed event, or one back in Planning to be re-planned (SCRUM-85 AC7, AC9), and no link for a Cancelled or Completed one, which has no Attendee page. Venue Staff and Technical Support, who can't open the event: the notification's own link, or none. Event Coordinator Lead and Safety Officer: none yet. A notification about no event keeps its own link. |
+| Expected Result | Organiser and Coordinator: `/events/evt_1`, the event's own page (SCRUM-208). Attendee: `/events/evt_1` for a Confirmed event, or one back in Planning to be re-planned (SCRUM-85 AC7, AC9), and no link for a Cancelled or Completed one, which has no Attendee page. Venue Staff and Technical Support, who can't open the event: the notification's own link, or none. Event Coordinator Lead and Safety Officer: none yet. A notification about no event keeps its own link. |
 
-**Automated by:** `tests/unit/notifications.test.ts` › every "SCRUM-48 [AC5] TC-48-06: …" test; `tests/integration/notifications.test.ts` › "SCRUM-48 [AC5] TC-48-06: an Organiser's notification about their event links to it in the events list"
+**Automated by:** `tests/unit/notifications.test.ts` › every "SCRUM-48 [AC5] TC-48-06: …" test; `tests/integration/notifications.test.ts` › "SCRUM-48 [AC5] TC-48-06: an Organiser's notification about their event links to the event's page"
 
 ### TC-48-07
 
