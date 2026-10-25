@@ -1,4 +1,4 @@
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect, type Page, type Route } from "@playwright/test";
 import { prisma } from "@/lib/db";
 
 import { usesLocalDatabase } from "./helpers";
@@ -294,5 +294,121 @@ test.describe("SCRUM-108 — Answer a clarification, or amend and resubmit", () 
       createdAt: expect.any(Date),
     });
     expect(history.every((row) => row.createdAt instanceof Date)).toBe(true);
+  });
+});
+
+/**
+ * SCRUM-187 — an answer whose send gets no reply doesn't strand the form on
+ * "Sending…". Test cases: docs/testing/SCRUM-187.md.
+ */
+test.describe("SCRUM-187 — A clarification answer that gets no reply", () => {
+  test.skip(!usesLocalDatabase, "writes its own events; local database only");
+
+  const SEND_FAILED =
+    "Your response couldn't be sent. If it isn't shown as answered above, try again.";
+  let eventId: string;
+
+  test.afterEach(async () => {
+    await prisma.notification.deleteMany({ where: { eventId } });
+    await prisma.auditLog.deleteMany({ where: { entityId: eventId } });
+    await prisma.event.deleteMany({ where: { id: eventId } });
+  });
+
+  /** An event Under Review with an open, text-only question, open for the Organiser. */
+  async function openQuestion(page: Page, label: string) {
+    const name = `SCRUM-187 ${label} ${Date.now()}`;
+    eventId = (
+      await prisma.event.create({
+        data: {
+          ...request(name),
+          status: "UNDER_REVIEW",
+          clarificationRequests: {
+            create: {
+              requestedById: "usr_coordinator",
+              message: "Is the date fixed?",
+            },
+          },
+        },
+        select: { id: true },
+      })
+    ).id;
+    await signIn(page, "organiser@test.local");
+    await page
+      .getByRole("row", { name: new RegExp(name) })
+      .getByTestId("view-details-button")
+      .click();
+    const details = page.getByRole("dialog");
+    await details.getByLabel("Response to clarification").fill("Yes, it is fixed.");
+    return details;
+  }
+
+  const isServerAction = (route: Route) =>
+    route.request().method() === "POST" &&
+    Boolean(route.request().headers()["next-action"]);
+
+  const answers = () =>
+    prisma.auditLog.count({
+      where: { entityId: eventId, action: "CLARIFICATION_ANSWERED" },
+    });
+
+  test("SCRUM-187 [AC1, AC4] TC-187-01: a send that never reaches the server says so, and the same answer can be sent again", async ({
+    page,
+  }) => {
+    const details = await openQuestion(page, "Dropped");
+    // Drop the next server action, the send, as a lost connection would.
+    let dropNext = true;
+    await page.route("**/*", (route) => {
+      if (dropNext && isServerAction(route)) {
+        dropNext = false;
+        return route.abort("failed");
+      }
+      return route.continue();
+    });
+    const send = details.getByRole("button", { name: "Send response" });
+    await send.click();
+
+    await expect(details.getByRole("alert")).toHaveText(SEND_FAILED);
+    await expect(send).toBeEnabled();
+    expect(
+      await prisma.clarificationRequest.findFirstOrThrow({
+        where: { eventId },
+        select: { status: true },
+      }),
+    ).toEqual({ status: "OPEN" });
+    expect(await answers()).toBe(0);
+
+    await send.click();
+    await expect(page.getByText("Response sent to the coordinator.")).toBeVisible();
+    await expect(details.getByRole("alert")).toHaveCount(0);
+    expect(await answers()).toBe(1);
+  });
+
+  test("SCRUM-187 [AC2, AC4] TC-187-02: an answer saved whose reply is lost shows as answered, so it isn't sent twice", async ({
+    page,
+  }) => {
+    const details = await openQuestion(page, "Saved");
+    // Let the send reach the server and be saved, then lose its reply.
+    let loseNext = true;
+    await page.route("**/*", async (route) => {
+      if (loseNext && isServerAction(route)) {
+        loseNext = false;
+        await route.fetch();
+        return route.abort("failed");
+      }
+      return route.continue();
+    });
+    await details.getByRole("button", { name: "Send response" }).click();
+
+    // The thread is read again, so the saved answer replaces the form.
+    await expect(details.getByText("Organiser responded:")).toBeVisible();
+    await expect(details.getByText("Yes, it is fixed.")).toBeVisible();
+    await expect(details.getByRole("button", { name: "Send response" })).toHaveCount(0);
+    expect(
+      await prisma.clarificationRequest.findFirstOrThrow({
+        where: { eventId },
+        select: { status: true, response: true },
+      }),
+    ).toEqual({ status: "ANSWERED", response: "Yes, it is fixed." });
+    expect(await answers()).toBe(1);
   });
 });

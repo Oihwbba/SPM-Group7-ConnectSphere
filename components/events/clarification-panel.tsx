@@ -42,6 +42,10 @@ type Clarification = {
 
 type Draft = Record<string, string>;
 
+/** SCRUM-187 AC1 — shown when the answer never got a reply, e.g. the connection dropped. */
+const SEND_FAILED_MESSAGE =
+  "Your response couldn't be sent. If it isn't shown as answered above, try again.";
+
 const TEXT_FIELDS = [
   "name",
   "purpose",
@@ -112,6 +116,9 @@ export function ClarificationPanel({
   // The server's validation errors, keyed by field (SCRUM-108 AC2).
   const [errors, setErrors] = useState<Record<string, string[]>>({});
   const [submitting, setSubmitting] = useState(false);
+  const [sendFailed, setSendFailed] = useState(false);
+  // Bumped after a send that got no reply, so the thread is read again.
+  const [version, setVersion] = useState(0);
   const router = useRouter();
 
   useEffect(() => {
@@ -131,21 +138,34 @@ export function ClarificationPanel({
     return () => {
       cancelled = true;
     };
-  }, [event.id]);
+  }, [event.id, version]);
 
   async function submitResponse() {
     if (!clarification || !response.trim()) return;
     setSubmitting(true);
-    const result = await respondToClarification({
-      clarificationId: clarification.id,
-      response,
-      changes: changesBetween(
-        clarification.editableFields,
-        draftFrom(event),
-        draft,
-      ),
-    });
-    setSubmitting(false);
+    setSendFailed(false);
+    let result: Awaited<ReturnType<typeof respondToClarification>>;
+    try {
+      result = await respondToClarification({
+        clarificationId: clarification.id,
+        response,
+        changes: changesBetween(
+          clarification.editableFields,
+          draftFrom(event),
+          draft,
+        ),
+      });
+    } catch {
+      // SCRUM-187 AC1, AC2: the action rethrows anything unexpected, and a
+      // lost connection rejects too. Either way the answer may or may not
+      // have been saved, so the thread is read again rather than guessed.
+      setErrors({});
+      setSendFailed(true);
+      setVersion((v) => v + 1);
+      return;
+    } finally {
+      setSubmitting(false);
+    }
     if (!result.ok) {
       setErrors(result.fieldErrors ?? {});
       toast.error(result.error);
@@ -286,6 +306,11 @@ export function ClarificationPanel({
               id="clarify-response-error"
               messages={errors.response}
             />
+            {sendFailed && (
+              <p role="alert" className="text-destructive">
+                {SEND_FAILED_MESSAGE}
+              </p>
+            )}
             <Button
               size="sm"
               disabled={submitting || !response.trim()}
