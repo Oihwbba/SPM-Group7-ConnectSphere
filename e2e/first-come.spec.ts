@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 
 import { prisma } from "@/lib/db";
-import { signedIn, usesLocalDatabase } from "./helpers";
+import { selectFrom, signedIn, usesLocalDatabase, openBooking, openReview } from "./helpers";
 
 /**
  * SCRUM-134 — Venue Staff see which pending requests compete for the same
@@ -81,27 +81,35 @@ test.describe("SCRUM-134 — competing venue requests, first come, first served"
 
     const staff = await signedIn(browser, "venuestaff@test.local");
     await staff.goto("/bookings");
-    // By its own event name: a card also names its competitors.
+    // By its own event name, as each row shows it.
     const card = (name: string) =>
-      staff.getByTestId(/^booking-/).filter({ has: staff.getByText(name, { exact: true }) });
+      openBooking(staff, new RegExp(`^${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}Requested by`));
 
     // AC1: the later request names the earlier one, and when it was submitted.
-    const competing = card(names[1]).getByTestId("competing-requests");
+    const later = await card(names[1]);
+    const competing = later.getByTestId("competing-requests");
     await expect(competing).toContainText(`“${names[0]}”, submitted 1 Jan 2036, 9:00 am`);
     await expect(competing).toContainText("earlier, so decide it first");
 
     // AC2: approving the later one is refused, and it stays in the queue.
-    await card(names[1]).getByRole("button", { name: "Approve" }).click();
+    await later.getByRole("button", { name: "Approve" }).click();
     await expect(staff.getByText(/^An earlier request for Exhibition Hall/)).toBeVisible();
-    await expect(card(names[1])).toHaveCount(1);
+    await expect(later).toHaveCount(1);
+    await staff.keyboard.press("Escape");
 
     // The earlier one is approved; the later then conflicts, and can be rejected (AC6).
-    await card(names[0]).getByRole("button", { name: "Approve" }).click();
+    await (await card(names[0])).getByRole("button", { name: "Approve" }).click();
     await expect(staff.getByText(/^Approved: Exhibition Hall is now booked/)).toBeVisible();
-    await card(names[1]).getByRole("button", { name: "Reject" }).click();
+    await staff
+      .getByTestId("venue-approved")
+      .getByRole("button", { name: "Close" })
+      .click();
+    await (await card(names[1])).getByRole("button", { name: "Reject" }).click();
     await staff.getByLabel("Rejection reason").fill("The hall went to an earlier request.");
     await staff.getByRole("button", { name: "Reject request" }).click();
-    await expect(card(names[1])).toHaveCount(0);
+    await expect(
+      staff.getByTestId("queue-row").filter({ hasText: names[1] }),
+    ).toHaveCount(0);
   });
 
   test("SCRUM-134 [AC4, AC5] TC-134-04, TC-134-05: Technical Support see the earlier request for the same equipment, can't reserve the later one ahead of it, and reserve the earlier first", async ({
@@ -152,7 +160,7 @@ test.describe("SCRUM-134 — competing venue requests, first come, first served"
     // reserved for it.
     const tech = await signedIn(browser, "techsupport@test.local");
     await tech.goto("/equipment-requests");
-    const card = tech.getByTestId("review-request").filter({ hasText: later });
+    const card = await openReview(tech, later);
     const competing = card.getByTestId("competing-requests");
     await expect(competing).toContainText("Also wanted for overlapping events, earliest first:");
     await expect(competing).toContainText(`“${earlier}”, submitted 1 Jan 2036`);
@@ -167,9 +175,9 @@ test.describe("SCRUM-134 — competing venue requests, first come, first served"
     await tech.goto("/equipment");
     await tech.locator('[data-hydrated="true"]').waitFor();
     const choose = async (name: string) => {
-      const select = tech.getByLabel("Approved request");
-      const value = await select.locator("option", { hasText: name }).getAttribute("value");
-      await select.selectOption(value!);
+      await selectFrom(tech.getByLabel("Approved request"), {
+        containing: name,
+      });
     };
     await choose(later);
     await tech.getByRole("button", { name: "Reserve all 1 item(s)" }).click();

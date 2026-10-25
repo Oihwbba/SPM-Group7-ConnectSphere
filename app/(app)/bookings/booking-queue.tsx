@@ -10,6 +10,7 @@ import {
   CalendarClock,
   Check,
   CheckCircle2,
+  Eye,
   Hourglass,
   Inbox,
   LayoutGrid,
@@ -42,10 +43,21 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { DateTimeField } from "@/components/app/date-time-field";
+import { SubmittedDialog } from "@/components/app/submitted-dialog";
+import { Tabs } from "@/components/app/tabs";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Label } from "@/components/ui/label";
 import {
   formatDate,
   formatDateTime,
+  formatTime,
   sgWallTimeToUtcIso,
   utcToSgWallTime,
 } from "@/lib/datetime";
@@ -109,6 +121,14 @@ export function BookingQueue({
   const [holdErrors, setHoldErrors] = useState<Record<string, string[]>>({});
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
+  // Change 13: the request open in its details pop-up, read from the queue so
+  // it follows a refresh (and closes once decided), and the approval just made.
+  const [viewingId, setViewingId] = useState<string | null>(null);
+  const viewing = queue.find((booking) => booking.id === viewingId) ?? null;
+  const [approved, setApproved] = useState<{
+    eventId: string;
+    message: string;
+  } | null>(null);
 
   function hold(booking: PendingBookingRow) {
     startTransition(async () => {
@@ -144,13 +164,19 @@ export function BookingQueue({
         reason: decisionReason,
       });
       if (result.ok) {
-        toast.success(
-          decision === "REJECTED"
-            ? `Rejected the request for ${booking.event.name}.`
-            : booking.status === "HELD"
-              ? `Approved the hold: ${booking.event.name}'s Coordinator can now confirm it.`
-              : `Approved: ${booking.venue.name} is now booked for ${booking.event.name}.`,
-        );
+        if (decision === "REJECTED") {
+          toast.success(`Rejected the request for ${booking.event.name}.`);
+        } else {
+          // Change 13: an animated tick, and a way straight to the event.
+          setApproved({
+            eventId: booking.eventId,
+            message:
+              booking.status === "HELD"
+                ? `Approved the hold: ${booking.event.name}'s Coordinator can now confirm it.`
+                : `Approved: ${booking.venue.name} is now booked for ${booking.event.name}.`,
+          });
+        }
+        setViewingId(null);
         setRejecting(null);
         setReason("");
       } else {
@@ -195,11 +221,11 @@ export function BookingQueue({
             className="pl-9"
           />
         </div>
-        <p className="text-sm text-muted-foreground" aria-live="polite">
-          {query
-            ? `Showing ${shown.length} of ${queue.length} requests`
-            : `${queue.length} ${queue.length === 1 ? "request" : "requests"} pending or held`}
-        </p>
+        {query && (
+          <p className="text-sm text-muted-foreground" aria-live="polite">
+            Showing {shown.length} of {queue.length} requests
+          </p>
+        )}
       </div>
 
       {shown.length === 0 && (
@@ -213,56 +239,112 @@ export function BookingQueue({
         </Card>
       )}
 
-      <ul className="space-y-4">
-        {shown.map((booking) => (
-          <li key={booking.id}>
-            <RequestCard booking={booking}>
-              {canDecide && (
-                <div className="flex flex-wrap justify-end gap-2 border-t pt-4">
-                  <Button
-                    variant="outline"
-                    disabled={isPending}
-                    className="border-destructive/60 bg-transparent text-destructive hover:bg-destructive/10 hover:text-destructive"
-                    onClick={() => {
-                      setRejecting(booking);
-                      setReason("");
-                    }}
-                  >
-                    <XCircle className="h-4 w-4" /> Reject
-                  </Button>
-                  {/* SCRUM-163 AC7: a held request is approved here once,
-                      then confirmed by its Coordinator (AC3); it isn't held
-                      again. */}
-                  {booking.status === "PENDING" && canHold && (
-                    <Button
-                      variant="outline"
+      {/* Change 13: the queue as a table of the key facts; the eye opens
+          the request, where it is decided. */}
+      {shown.length > 0 && (
+        <Card>
+          <CardContent className="p-0">
+            <Table aria-label="Pending booking requests">
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Event</TableHead>
+                  <TableHead>Venue</TableHead>
+                  <TableHead>When</TableHead>
+                  <TableHead>Attendance</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Availability</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {shown.map((booking) => (
+                  <QueueRow
+                    key={booking.id}
+                    booking={booking}
+                    onView={() => setViewingId(booking.id)}
+                  />
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
+
+      <Dialog
+        open={!!viewing}
+        onOpenChange={(open) => !open && setViewingId(null)}
+      >
+        {viewing && (
+          <DialogContent
+            className="max-h-[90vh] max-w-3xl overflow-y-auto"
+            data-testid={`booking-${viewing.id}`}
+          >
+            <DialogHeader>
+              <div className="flex flex-wrap items-center gap-2 pr-8">
+                <DialogTitle>{viewing.event.name}</DialogTitle>
+              </div>
+              <DialogDescription>
+                {viewing.venue.name}, {formatDateTime(viewing.startAt)} to{" "}
+                {formatDateTime(viewing.endAt)}
+              </DialogDescription>
+            </DialogHeader>
+            <Tabs
+              label="Booking request"
+              tabs={[
+                {
+                  id: "overview",
+                  label: "Overview",
+                  content: (
+                    <BookingDetails
+                      booking={viewing}
+                      canDecide={canDecide}
+                      canHold={canHold}
                       disabled={isPending}
-                      onClick={() => {
-                        setHolding(booking);
+                      // One dialog at a time: the reason or hold replaces the details.
+                      onReject={() => {
+                        setViewingId(null);
+                        setRejecting(viewing);
+                        setReason("");
+                      }}
+                      onHold={() => {
+                        setViewingId(null);
+                        setHolding(viewing);
                         setHoldExpiry("");
                         setHoldNote("");
                         setHoldErrors({});
                       }}
-                    >
-                      <Hourglass className="h-4 w-4" /> Hold
-                    </Button>
-                  )}
-                  {(booking.status === "PENDING" || !booking.holdApprovedAt) && (
-                    <Button
-                      disabled={isPending}
-                      onClick={() => decide(booking, "APPROVED")}
-                      variant="outline"
-                      className="border-success/60 bg-transparent text-success hover:bg-success/10 hover:text-success"
-                    >
-                      <CheckCircle2 className="h-4 w-4" /> Approve
-                    </Button>
-                  )}
-                </div>
-              )}
-            </RequestCard>
-          </li>
-        ))}
-      </ul>
+                      onApprove={() => decide(viewing, "APPROVED")}
+                    />
+                  ),
+                },
+                {
+                  id: "notes",
+                  label: "Operational notes",
+                  // SCRUM-25 AC6: Venue Staff add notes once the event has a booking.
+                  content: <OperationalNotes eventId={viewing.eventId} />,
+                },
+              ]}
+            />
+          </DialogContent>
+        )}
+      </Dialog>
+
+      <SubmittedDialog
+        open={approved !== null}
+        title="Booking approved"
+        testId="venue-approved"
+        closeLabel="Close"
+        onClose={() => setApproved(null)}
+        action={{
+          label: "View event",
+          onClick: () => {
+            if (approved) router.push(`/all-events/${approved.eventId}`);
+            setApproved(null);
+          },
+        }}
+      >
+        {approved?.message}
+      </SubmittedDialog>
 
       <Dialog
         open={!!rejecting}
@@ -368,13 +450,131 @@ export function BookingQueue({
   );
 }
 
-function RequestCard({
+/**
+ * Change 13 — a request's overview in its details pop-up, with the decisions
+ * Venue Staff take on it, offered only here and only to a user who may.
+ */
+export function BookingDetails({
   booking,
-  children,
+  canDecide,
+  canHold = false,
+  disabled = false,
+  onReject,
+  onHold,
+  onApprove,
 }: {
   booking: PendingBookingRow;
-  children?: React.ReactNode;
+  canDecide: boolean;
+  canHold?: boolean;
+  disabled?: boolean;
+  onReject?: () => void;
+  onHold?: () => void;
+  onApprove?: () => void;
 }) {
+  return (
+    <div className="space-y-4">
+      <RequestOverview booking={booking} />
+      {canDecide && (
+        <div className="flex flex-wrap justify-end gap-2 border-t pt-4">
+          <Button
+            variant="outline"
+            disabled={disabled}
+            className="border-destructive/60 bg-transparent text-destructive hover:bg-destructive/10 hover:text-destructive"
+            onClick={onReject}
+          >
+            <XCircle className="h-4 w-4" /> Reject
+          </Button>
+          {/* SCRUM-163 AC7: a held request is approved here once, then
+              confirmed by its Coordinator (AC3); it isn't held again. */}
+          {booking.status === "PENDING" && canHold && (
+            <Button variant="outline" disabled={disabled} onClick={onHold}>
+              <Hourglass className="h-4 w-4" /> Hold
+            </Button>
+          )}
+          {(booking.status === "PENDING" || !booking.holdApprovedAt) && (
+            <Button
+              disabled={disabled}
+              onClick={onApprove}
+              variant="outline"
+              className="border-success/60 bg-transparent text-success hover:bg-success/10 hover:text-success"
+            >
+              <CheckCircle2 className="h-4 w-4" /> Approve
+            </Button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** One request as a row: who, where, when, how many, and whether it's free. */
+function QueueRow({
+  booking,
+  onView,
+}: {
+  booking: PendingBookingRow;
+  onView: () => void;
+}) {
+  const free = booking.blockers.length === 0 && !booking.outsideHours;
+  return (
+    <TableRow data-testid="queue-row" data-booking={booking.id}>
+      <TableCell className="md:w-full md:max-w-0">
+        <p className="truncate font-medium" title={booking.event.name}>
+          {booking.event.name}
+        </p>
+        <p className="truncate text-xs text-muted-foreground">
+          Requested by {booking.requestedBy.name}
+        </p>
+      </TableCell>
+      <TableCell>{booking.venue.name}</TableCell>
+      <TableCell className="text-muted-foreground">
+        {formatDateTime(booking.startAt)} to {formatTime(booking.endAt)}
+      </TableCell>
+      <TableCell className="text-muted-foreground">
+        {booking.requestedAttendance ?? "—"} / {booking.venue.capacity}
+      </TableCell>
+      <TableCell>
+        <StatusBadges booking={booking} />
+      </TableCell>
+      <TableCell>
+        <Mark ok={free}>{free ? "Free" : "Clash"}</Mark>
+      </TableCell>
+      <TableCell className="text-right">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-8 w-8 p-0"
+          aria-label={`View request for ${booking.event.name}`}
+          title="View details"
+          data-testid="view-booking-button"
+          onClick={onView}
+        >
+          <Eye className="h-4 w-4" />
+        </Button>
+      </TableCell>
+    </TableRow>
+  );
+}
+
+/** Pending, or Held until when (and approved, if it has been). */
+function StatusBadges({ booking }: { booking: PendingBookingRow }) {
+  return booking.status === "HELD" ? (
+    <span className="flex flex-wrap items-center gap-1">
+      <Badge variant="info">
+        Held until {formatDateTime(booking.holdExpiresAt!)}
+      </Badge>
+      {booking.holdApprovedAt && (
+        <Badge variant="success">
+          Approved by Venue Staff – awaiting confirmation
+        </Badge>
+      )}
+    </span>
+  ) : (
+    <Badge variant="warning">Pending</Badge>
+  );
+}
+
+function RequestOverview({ booking }: { booking: PendingBookingRow }) {
   const { venue } = booking;
   const free = booking.blockers.length === 0 && !booking.outsideHours;
   const fits =
@@ -382,11 +582,10 @@ function RequestCard({
     booking.requestedAttendance <= venue.capacity;
 
   return (
-    <Card data-testid={`booking-${booking.id}`}>
-      <CardContent className="space-y-4 pt-6">
+    <div className="space-y-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="space-y-1.5">
-            <p className="text-base font-semibold">{booking.event.name}</p>
+            <StatusBadges booking={booking} />
             <p className="flex items-center gap-2 text-sm text-muted-foreground">
               <CalendarClock className="h-4 w-4 shrink-0" aria-hidden />
               {formatDateTime(booking.startAt)} to{" "}
@@ -402,20 +601,6 @@ function RequestCard({
               on {formatDateTime(booking.createdAt)}
             </p>
           </div>
-          {booking.status === "HELD" ? (
-            <div className="flex flex-col items-end gap-1">
-              <Badge variant="info">
-                Held until {formatDateTime(booking.holdExpiresAt!)}
-              </Badge>
-              {booking.holdApprovedAt && (
-                <Badge variant="success">
-                  Approved by Venue Staff – awaiting confirmation
-                </Badge>
-              )}
-            </div>
-          ) : (
-            <Badge variant="warning">Pending</Badge>
-          )}
         </div>
 
         <dl className="grid gap-x-6 gap-y-4 text-sm sm:grid-cols-2">
@@ -537,11 +722,7 @@ function RequestCard({
           <p className="text-xs font-medium">What the Organiser asked for</p>
           <OrganiserVenueAnswers answers={booking.event} />
         </div>
-        {/* SCRUM-25 AC6: Venue Staff add notes once the event has a booking. */}
-        <OperationalNotes eventId={booking.eventId} />
-        {children}
-      </CardContent>
-    </Card>
+    </div>
   );
 }
 

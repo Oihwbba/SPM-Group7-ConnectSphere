@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 
 import { prisma } from "@/lib/db";
-import { choose, signedIn, usesLocalDatabase } from "./helpers";
+import { choose, signedIn, usesLocalDatabase, openBooking } from "./helpers";
 
 /**
  * SCRUM-124 — staff and arrangement notifications in a real browser: a
@@ -88,7 +88,7 @@ test.describe("SCRUM-124 — staff and arrangement notifications", () => {
     // AC12: it opens their queue, where they decide.
     await requested.click();
     await staff.waitForURL(/\/bookings$/);
-    const card = staff.getByTestId(/^booking-/).filter({ hasText: event.name });
+    const card = await openBooking(staff, event.name);
     await card.getByRole("button", { name: "Approve" }).click();
     await expect(staff.getByText(/^Approved: Exhibition Hall is now booked/)).toBeVisible();
 
@@ -122,7 +122,7 @@ test.describe("SCRUM-124 — staff and arrangement notifications", () => {
 
     const staff = await signedIn(browser, "venuestaff@test.local");
     await staff.goto("/bookings");
-    const card = staff.getByTestId(/^booking-/).filter({ hasText: event.name });
+    const card = await openBooking(staff, event.name);
     await card.getByRole("button", { name: "Reject" }).click();
     await staff.getByLabel("Rejection reason").fill("The hall is closed for repairs.");
     await staff.getByRole("button", { name: "Reject request" }).click();
