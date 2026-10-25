@@ -43,12 +43,12 @@ change request to move it one day later.
 4. **Failure:** as **`coordinator@test.local`**, type `/queue` in the address
    bar. The page says **Access denied**: only the Lead assigns (SCRUM-165
    AC10).
-5. Open the seeded **Under Review — Career Fair**. Its clarification is
-   **Waiting for the organiser's response**: the event stays Under Review, as
-   clarification is not a status (SCRUM-18).
-6. Switch to **`organiser@test.local`**, open the Career Fair, type an answer
-   and **Send response**. Switch back to the coordinator: it shows
-   **Organiser responded:** with the answer.
+5. Open the seeded **Under Review — Career Fair** and its **Clarification**
+   tab. The question is **Waiting for the organiser's response**: the event
+   stays Under Review, as clarification is not a status (SCRUM-18).
+6. Switch to **`organiser@test.local`**, open the Career Fair's
+   **Clarification** tab, type an answer and **Send response**. Switch back
+   to the coordinator: it shows **Organiser responded:** with the answer.
 7. In **Events**, click **Approve** on your new request. It goes straight to
    **Planning**; Approved is recorded but never a resting status (SCRUM-81,
    SCRUM-135 AC12).
