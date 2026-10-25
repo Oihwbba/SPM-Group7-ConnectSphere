@@ -66,6 +66,8 @@ test.describe("SCRUM-121 — accounts with several roles", () => {
     await page.waitForURL(/\/bookings$/);
 
     const nav = page.getByRole("complementary", { name: "Primary" });
+    // SCRUM-210: Request Venue is under Venues, which opens to show it.
+    await nav.getByRole("button", { name: "Venues", exact: true }).click();
     for (const label of [
       "Bookings", // Venue Staff
       "Equipment", // Technical Support

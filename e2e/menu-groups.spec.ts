@@ -90,19 +90,26 @@ const menu = (page: Page) => page.getByRole("complementary", { name: "Primary" }
 const names = (links: ReturnType<Page["getByRole"]>) =>
   links.evaluateAll((all) => all.map((link) => link.getAttribute("aria-label")));
 
+/**
+ * The menu as the original design, grouped: one item per single link or per
+ * group, in order; each group opened shows its own links, once.
+ */
 async function expectMenu(page: Page, groups: Expected["groups"]) {
   const nav = menu(page);
-  // Every link, once, in the menu's order.
-  const all = groups.flatMap(([, links]) => links);
-  await expect(nav.getByRole("link")).toHaveCount(all.length);
-  expect(await names(nav.getByRole("link"))).toEqual(all);
+  // The top level: single links, and a button for each group of several.
+  const top = nav.locator("nav > a, nav > div > button");
+  expect(await top.evaluateAll((all) => all.map((item) => item.getAttribute("aria-label")))).toEqual(
+    groups.map(([heading, links]) => heading ?? links[0]),
+  );
   for (const [heading, links] of groups) {
     if (!heading) continue;
+    const toggle = nav.getByRole("button", { name: heading, exact: true });
+    if ((await toggle.getAttribute("aria-expanded")) !== "true") await toggle.click();
+    await expect(toggle).toHaveAttribute("aria-expanded", "true");
     expect(await names(nav.getByRole("group", { name: heading }).getByRole("link"))).toEqual(links);
   }
-  // A group's heading is named once; single links have none.
-  const headings = groups.flatMap(([heading]) => (heading ? [heading] : []));
-  await expect(nav.getByRole("group")).toHaveCount(headings.length);
+  // With every group open, each link shows once.
+  expect(await names(nav.getByRole("link"))).toEqual(groups.flatMap(([, links]) => links));
 }
 
 test.describe("SCRUM-210 — Menus grouped by task", () => {
@@ -118,20 +125,38 @@ test.describe("SCRUM-210 — Menus grouped by task", () => {
     });
   }
 
-  test("SCRUM-210 [AC1] TC-210-09: expanded, the rail shows each group's heading; collapsed, the same links show as icons", async ({
+  test("SCRUM-210 [AC1] TC-210-09: a group opens to show its links beneath it, indented, and the group of the page being viewed starts open", async ({
     browser,
   }) => {
     const page = await signedIn(browser, "coordinator@test.local");
     const nav = menu(page);
+    const venues = nav.getByRole("button", { name: "Venues", exact: true });
 
-    // Collapsed by default: icons, no heading text.
-    await expect(nav.getByText("Venues", { exact: true })).toHaveCount(0);
+    // On Events, Venues starts closed: its links aren't shown.
+    await expect(venues).toHaveAttribute("aria-expanded", "false");
+    await expect(nav.getByRole("link", { name: "Venue Search" })).toHaveCount(0);
+
+    // Expanded, the group reads "Venues" and opens beneath itself, indented.
     await nav.getByRole("button", { name: "Expand navigation" }).click();
-    await expect(nav.getByText("Venues", { exact: true })).toBeVisible();
-    await expectMenu(page, MENUS.Coordinator.groups);
+    await expect(venues).toContainText("Venues");
+    await venues.click();
+    const search = nav.getByRole("link", { name: "Venue Search" });
+    await expect(search).toBeVisible();
+    const indent = (await search.boundingBox())!.x - (await venues.boundingBox())!.x;
+    expect(indent).toBeGreaterThan(8);
+    await venues.click();
+    await expect(search).toHaveCount(0);
+
+    // On one of its pages, the group starts open, with that page current.
+    await page.goto("/venues/availability");
+    await expect(venues).toHaveAttribute("aria-expanded", "true");
+    await expect(nav.getByRole("link", { name: "Availability" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
   });
 
-  test("SCRUM-210 [AC1] TC-210-09: on a phone (SCRUM-132) the bar keeps every link, in the same order, without headings", async ({
+  test("SCRUM-210 [AC1] TC-210-09: on a phone (SCRUM-132) a group opens its links in a panel above the bar", async ({
     browser,
   }) => {
     const context = await browser.newContext({ viewport: { width: 360, height: 740 } });
@@ -143,11 +168,17 @@ test.describe("SCRUM-210 — Menus grouped by task", () => {
     await expect(page).toHaveURL(/\/events$/);
 
     const nav = menu(page);
-    for (const link of await nav.getByRole("link").all()) await expect(link).toBeVisible();
-    expect(await names(nav.getByRole("link"))).toEqual(
-      MENUS.Coordinator.groups.flatMap(([, links]) => links),
-    );
-    await expect(nav.getByText("Venues", { exact: true })).toHaveCount(0);
+    // The bar: Events, Venues, Equipment Requests, All Events.
+    for (const name of ["Events", "Equipment Requests", "All Events"]) {
+      await expect(nav.getByRole("link", { name, exact: true })).toBeVisible();
+    }
+    await nav.getByRole("button", { name: "Venues", exact: true }).click();
+    const panel = nav.getByRole("group", { name: "Venues" });
+    expect(await names(panel.getByRole("link"))).toEqual(MENUS.Coordinator.groups[1][1]);
+    for (const link of await panel.getByRole("link").all()) await expect(link).toBeVisible();
+    await panel.getByRole("link", { name: "Venue Search" }).click();
+    await expect(page).toHaveURL(/\/venues\/search/);
+    await expect(panel).toHaveCount(0);
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth > document.documentElement.clientWidth,

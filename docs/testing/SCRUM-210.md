@@ -12,15 +12,18 @@ needs in the permission table (`lib/auth/can.ts`, SCRUM-66) and to a task:
 **My work** (the role's own lists), **Venues**, **Equipment** and
 **Planning**, in that order. A role sees a link only if it holds its action,
 and only the groups it has links in. A group with one link shows just that
-link, with no heading. Equipment Requests is in My work for a role that also
+link, as before. Equipment Requests is in My work for a role that also
 reviews them (Technical Support), and under Equipment otherwise. Notifications
 is not in the menu: it is reached from the bell (SCRUM-207 AC6). Jira's AC1
 was updated on 26 Oct 2026 to drop Notifications from its example; the
 backlog snapshot predates that.
 
-Expanded, the rail shows each heading above its links; collapsed, its icons
-with a thin line between groups; on a phone, one bar with every link in the
-same order.
+The menu keeps its original look. A group of several links is one item, with
+its own icon and name (for example **Venues**); selecting it opens its links
+beneath it, with their icons and labels, indented. In the collapsed rail they
+show as smaller, indented icons. The group holding the page being viewed
+starts open. On a phone the bar shows the single links and the groups; a
+group opens its links in a panel just above the bar.
 
 | ID | Type | Criterion | Automated |
 |---|---|---|---|
@@ -40,7 +43,8 @@ same order.
 
 1. Sign in as each role in turn and look at the side menu.
 
-**Expected:** (headings in bold; a link without one stands alone)
+**Expected:** (a group in bold, with the links it opens to; a link without one
+stands alone)
 
 | Role | Menu |
 |---|---|
@@ -143,15 +147,18 @@ Availability, Venue Catalogue; All Events.
 
 ## TC-210-09
 
-**The grouped menu works collapsed, expanded and on a phone (SCRUM-132).**
+**A group opens to show its links, on a desktop and on a phone (SCRUM-132).**
 
-1. As the Coordinator, look at the rail collapsed, then select **Expand
-   navigation**.
-2. At 360 px wide, look at the bottom bar.
+1. As the Coordinator on Events, look at the rail; select **Expand
+   navigation**, then **Venues**, then **Venues** again.
+2. Open Availability.
+3. At 360 px wide, select **Venues** in the bottom bar, then Venue Search.
 
-**Expected:** collapsed, the links show as icons, in the same order, with no
-heading text; expanded, "Venues" heads its four links. On a phone every link
-is in the bar, in the same order, without headings, and the page doesn't
-scroll sideways.
+**Expected:** 1: Venues starts closed; selected, it opens Venue Search,
+Request Venue, Availability and Venue Catalogue beneath it, indented; selected
+again, it closes. 2: on one of its pages, Venues starts open, with that page
+marked current. 3: the bar shows Events, Venues, Equipment Requests and All
+Events; Venues opens its four links in a panel above the bar, which closes
+once a link is chosen. The page doesn't scroll sideways.
 
 *Automated:* `e2e/menu-groups.spec.ts` both "SCRUM-210 [AC1] TC-210-09" tests.

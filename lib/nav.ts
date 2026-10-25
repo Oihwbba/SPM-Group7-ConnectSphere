@@ -33,7 +33,7 @@ export type NavItem = {
  * SCRUM-210 — the tasks the menu is grouped by, in the order they appear.
  * "work" is the role's own lists, where it lands.
  */
-type GroupId = "work" | "venues" | "equipment" | "planning";
+export type GroupId = "work" | "venues" | "equipment" | "planning";
 
 const GROUP_ORDER: GroupId[] = ["work", "venues", "equipment", "planning"];
 
@@ -46,9 +46,11 @@ const GROUP_HEADING: Record<GroupId, string> = {
 
 /**
  * A group of links under its heading. A group with one link has no heading,
- * since a heading over a single link says nothing (SCRUM-210 AC1).
+ * since a heading over a single link says nothing (SCRUM-210 AC1): the menu
+ * shows that link on its own.
  */
 export type NavGroup = {
+  id: GroupId;
   heading: string | null;
   items: NavItem[];
 };
@@ -195,7 +197,9 @@ export function navGroupsForRoles(roles: Role[]): NavGroup[] {
   return GROUP_ORDER.flatMap((id) => {
     const items = byGroup.get(id);
     if (!items) return [];
-    return [{ heading: items.length > 1 ? GROUP_HEADING[id] : null, items }];
+    return [
+      { id, heading: items.length > 1 ? GROUP_HEADING[id] : null, items },
+    ];
   });
 }
 
