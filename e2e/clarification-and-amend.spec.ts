@@ -344,6 +344,8 @@ test.describe("SCRUM-187 — A clarification answer that gets no reply", () => {
       .getByTestId("view-details-button")
       .click();
     const details = page.getByRole("dialog");
+    // The thread is the details' second tab (shared page conventions, change 2).
+    await details.getByRole("tab", { name: /Clarification/ }).click();
     await details.getByLabel("Response to clarification").fill("Yes, it is fixed.");
     return details;
   }
