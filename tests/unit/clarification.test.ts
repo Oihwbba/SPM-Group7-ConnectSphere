@@ -67,6 +67,7 @@ function eventRow(
     name: "Career Fair",
     status: "UNDER_REVIEW",
     organiserId: "usr_org",
+    organiser: { name: "Olivia Organiser" },
     coordinatorId: "usr_coord",
     ...over,
   };
@@ -445,6 +446,16 @@ describe("getClarificationForEvent — SCRUM-18/17 read path", () => {
 
     expect(result.ok).toBe(true);
     if (result.ok) expect(result.data.clarification?.id).toBe("clar1");
+  });
+
+  it("SCRUM-208 [AC3] TC-208-11: names who answers, so each message says who sent it", async () => {
+    mockAuth.mockResolvedValue(sessionFor("COORDINATOR", "usr_coord"));
+    mockEventFindUnique.mockResolvedValue(eventRow());
+    mockClarificationFindFirst.mockResolvedValue(null);
+
+    const result = await getClarificationForEvent("evt1");
+
+    expect(result.ok && result.data.organiserName).toBe("Olivia Organiser");
   });
 
   it("SCRUM-207 TC-207-21: returns the earlier questions too, oldest first, so the thread reads as one log", async () => {

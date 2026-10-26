@@ -56,10 +56,8 @@ export async function getEventForUser(eventId: string, organiserId: string) {
  * to the signed-in organiser, so an Organiser can never see another's events. */
 export async function OrganiserEvents({
   organiserId,
-  openEventId,
 }: {
   organiserId: string;
-  openEventId?: string;
 }) {
   // RELATIONSHIP enforced in the query: an organiser only ever loads their own
   // rows. This is the read-side counterpart to `can()`'s relationship check.
@@ -72,7 +70,6 @@ export async function OrganiserEvents({
   return (
     <EventsClient
       events={events}
-      openEventId={openEventId}
       awaitingAnswerIds={awaitingAnswerIds}
       clarifiedEventIds={clarifiedEventIds}
     />
@@ -87,17 +84,15 @@ export async function OrganiserEvents({
  * so an extra named export here would break the build's page-type check. */
 export async function CoordinatorEvents({
   coordinatorId,
-  openEventId,
 }: {
   coordinatorId: string;
-  openEventId?: string;
 }) {
   // Must mirror `can()`'s coordinator relationship exactly — a looser query
   // here would list events assigned to OTHER coordinators.
   const events = await getCoordinatorEvents(coordinatorId);
 
   return (
-    <EventsClient events={events} isCoordinator openEventId={openEventId} />
+    <EventsClient events={events} isCoordinator />
   );
 }
 

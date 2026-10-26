@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Building2 } from "lucide-react";
+import { Building2, CheckCircle2 } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getEventBookings } from "@/app/(app)/events/readiness-actions";
@@ -70,7 +70,17 @@ export function VenueBookings({ eventId }: { eventId: string }) {
                     {formatEventTime(booking.startAt, booking.endAt)}
                   </span>
                 </span>
-                <span className="font-semibold">
+                <span
+                  className={
+                    booking.status === "APPROVED"
+                      ? "inline-flex items-center gap-1 font-semibold text-success"
+                      : "font-semibold"
+                  }
+                >
+                  {/* Shared page conventions: an approval stands out. */}
+                  {booking.status === "APPROVED" && (
+                    <CheckCircle2 className="h-4 w-4" aria-hidden />
+                  )}
                   {BOOKING_STATUS_LABEL[booking.status]}
                 </span>
               </li>

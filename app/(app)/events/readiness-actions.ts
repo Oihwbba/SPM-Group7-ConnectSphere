@@ -39,6 +39,15 @@ async function relatedEvent(
 }
 
 /**
+ * SCRUM-24, SCRUM-208 — whether the signed-in user can still see the event,
+ * asked before the open event page refreshes, so a reassignment or a removal
+ * shows a notice instead of the page turning into "not found" under them.
+ */
+export async function isEventStillVisible(eventId: string): Promise<boolean> {
+  return (await relatedEvent(eventId)) !== null;
+}
+
+/**
  * SCRUM-110 AC 6 — the readiness checklist for the event page. The event's
  * Coordinator sees it in full; its Organiser sees the same items and states
  * without internal reasons. `canConfirm` tells the page whether to offer

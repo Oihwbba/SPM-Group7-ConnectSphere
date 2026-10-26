@@ -1,7 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import { prisma } from "@/lib/db";
 
-import { usesLocalDatabase } from "./helpers";
+import { usesLocalDatabase, openEvent } from "./helpers";
 
 /**
  * SCRUM-171 — Registration needed in a real browser. Attendees don't see an
@@ -92,25 +92,18 @@ test.describe("SCRUM-171 — Record whether an event needs registration", () => 
     });
 
     await signIn(page, "organiser@test.local");
-    await page
-      .getByRole("row", { name: new RegExp(name) })
-      .getByTestId("view-details-button")
-      .click();
-
-    const answer = page.getByRole("dialog").getByTestId("registration-needed");
-    await expect(answer).toContainText("Registration Needed:");
+    // SCRUM-208: the answers are on the event page's Request tab.
+    const answer = (await openEvent(page, name, "Request")).getByTestId(
+      "registration-needed",
+    );
+    await expect(answer).toContainText("Registration Needed");
     await expect(answer).toContainText("Not answered");
     await expect(answer).toContainText("Walk-in, no sign-up needed");
 
     // Step 2: the Coordinator's Edit details picks neither answer for them,
     // and keeps the note.
     await signIn(page, "coordinator@test.local");
-    await page
-      .getByRole("row", { name: new RegExp(name) })
-      .getByTestId("view-details-button")
-      .click();
-    await page
-      .getByRole("dialog", { name, exact: true })
+    await (await openEvent(page, name))
       .getByRole("button", { name: "Edit details" })
       .click();
     const edit = page.getByRole("dialog", { name: `Edit ${name}` });

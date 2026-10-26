@@ -1,7 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import { prisma } from "@/lib/db";
 
-import { usesLocalDatabase } from "./helpers";
+import { usesLocalDatabase, openEvent } from "./helpers";
 
 /**
  * SCRUM-110 — the readiness checklist on a Planning event's details. Each test
@@ -31,11 +31,9 @@ async function signIn(page: Page, email: string) {
 }
 
 async function openChecklist(page: Page, eventName: string) {
-  await page
-    .getByRole("row", { name: new RegExp(eventName) })
-    .getByTestId("view-details-button")
-    .click();
-  const checklist = page.getByRole("dialog").getByTestId("readiness-checklist");
+  // SCRUM-208: the checklist is on the event page's Arrangements tab.
+  const event = await openEvent(page, eventName, "Arrangements");
+  const checklist = event.getByTestId("readiness-checklist");
   await expect(checklist).toBeVisible();
   return checklist;
 }

@@ -1,5 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 import { prisma } from "@/lib/db";
+import { openEvent } from "./helpers";
 
 // Writes its own events, so it runs only against a local database (CI's).
 const usesLocalDatabase = /@(localhost|127\.0\.0\.1)[:/]/.test(
@@ -74,11 +75,10 @@ test.describe("SCRUM-77 — Withdraw my registration", () => {
     );
 
     await signIn(page, "organiser@test.local");
-    await page
-      .getByRole("row", { name: new RegExp(eventName) })
-      .getByTestId("view-details-button")
-      .click();
-    const list = page.getByRole("dialog").getByTestId("registration-list");
+    // SCRUM-208: registrations are on the event page's Registrations tab.
+    const list = (await openEvent(page, eventName, "Registrations")).getByTestId(
+      "registration-list",
+    );
     await expect(list.getByTestId("registration-summary")).toHaveText(
       "0 registered · 5 of 5 places remaining",
     );
@@ -88,13 +88,9 @@ test.describe("SCRUM-77 — Withdraw my registration", () => {
 
     // ...and in the assigned Coordinator's.
     await signIn(page, "coordinator@test.local");
-    await page
-      .getByRole("row", { name: new RegExp(eventName) })
-      .getByTestId("view-details-button")
-      .click();
-    const coordinatorList = page
-      .getByRole("dialog")
-      .getByTestId("registration-list");
+    const coordinatorList = (
+      await openEvent(page, eventName, "Registrations")
+    ).getByTestId("registration-list");
     await expect(
       coordinatorList.getByTestId("registration-summary"),
     ).toHaveText("0 registered · 5 of 5 places remaining");

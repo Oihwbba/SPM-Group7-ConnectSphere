@@ -1,12 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import { prisma } from "@/lib/db";
 
-import {
-  usesLocalDatabase,
-  fillOther,
-  pickDateTime,
-  submitRequest,
-} from "./helpers";
+import { usesLocalDatabase, fillOther, pickDateTime, submitRequest, openEvent } from "./helpers";
 
 /**
  * SCRUM-108 — the Organiser answers a clarification by changing only the
@@ -84,15 +79,11 @@ test.describe("SCRUM-108 — Answer a clarification, or amend and resubmit", () 
 
     // --- Organiser sees the question and only that field (AC2) -----------
     await signIn(page, "organiser@test.local");
-    await page
-      .getByRole("row", { name: new RegExp(name) })
-      .getByTestId("view-details-button")
-      .click();
-    const details = page.getByRole("dialog");
-    // The thread is the details' second tab (shared page conventions, change 2).
-    await details.getByRole("tab", { name: /Clarification/ }).click();
+    // SCRUM-208 AC3: the thread is the event page's Clarification tab, and
+    // it says in plain words what the answer may also update.
+    const details = await openEvent(page, name, "Clarification");
     await expect(details.getByTestId("clarification-fields")).toHaveText(
-      "The organiser may change: Expected attendance.",
+      "You can also update: Expected attendance.",
     );
     await expect(details.getByLabel("Event name")).toHaveCount(0);
 
