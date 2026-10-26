@@ -212,7 +212,7 @@ the seed.
 | Pre-conditions | A coordinator has raised a request. Technical Support has suggested an alternative for one line and then rejected the request with a reason. |
 | Test Steps | 1. Sign in as the coordinator. <br> 2. Open **Equipment Requests**. |
 | Test Data | The rig from `e2e/equipment-request-review.spec.ts`, rejected with "Not enough lecterns that day." |
-| Expected Result | The card shows each line's type, quantity and technical requirements; the status badge; the suggested alternative; and the history. When the status is Rejected, the reason is on the card itself, not only inside the collapsed history log. |
+| Expected Result | The request's details show each line's type, quantity and technical requirements; the status badge; the suggested alternative; and, on their History tab, the history. When the status is Rejected, the reason is in the details themselves, not only in the history log. |
 
 **Automated by:** `e2e/equipment-request-review.spec.ts` › "SCRUM-27 [AC8] TC-27-14: the coordinator sees a rejected request with its reason, without opening the history"; `e2e/equipment-requests.spec.ts` › "SCRUM-27 [AC1, AC2, AC5, AC6] TC-27-01, TC-27-03, TC-27-07, TC-27-08: …" (lines and status); `tests/unit/equipment-request-queries.test.ts` › "SCRUM-28 [AC4, AC6] TC-28-07, TC-28-10: includes suggested alternatives and the history, oldest first"
 
@@ -238,7 +238,7 @@ the seed.
 | Pre-conditions | As TC-27-01, with **New request** open. |
 | Test Steps | 1. Choose the event. <br> 2. Choose an **Equipment type** and enter a **Quantity**, without clicking **Add equipment**. <br> 3. Click **Submit request**. |
 | Test Data | Laptop × 2 |
-| Expected Result | The request is submitted with the item on it: its card in the list shows the line "Laptop 2". Nothing the coordinator entered is dropped. |
+| Expected Result | The request is submitted with the item on it: its details show the line "Laptop 2". Nothing the coordinator entered is dropped. |
 
 **Automated by:** `e2e/equipment-requests.spec.ts` › "equipment picked but not yet added is included when the request is submitted"
 

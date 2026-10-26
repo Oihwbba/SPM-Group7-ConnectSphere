@@ -141,6 +141,6 @@ unless the case says otherwise.
 | Pre-conditions | Signed in as the Organiser, at a 375 × 812 screen. The seeded "Draft — Annual Tech Summit" is a draft. |
 | Test Steps | 1. Open **My Events**. <br> 2. Look at the first request and a draft. <br> 3. Tap a draft's **Resume Draft**. |
 | Test Data | Screen 375 × 812 |
-| Expected Result | Each request is a stacked card, not a table row, with **View Details** and its "Starts" and "Updated" labels shown as text. A draft keeps its 4 px left border. The page doesn't scroll sideways. **Resume Draft** opens "Resume Draft Event Request". |
+| Expected Result | Each request is a stacked card, not a table row, with **View Details** (an eye icon, named for screen readers) and its "Starts" and "Last Updated" labels shown as text. A draft keeps its 4 px left border. The page doesn't scroll sideways. **Resume Draft** opens "Resume Draft Event Request". |
 
 **Automated by:** `e2e/events.spec.ts` › "restyles rows as stacked cards with no page overflow, and Resume Draft opens the dialog"

@@ -24,8 +24,16 @@ export default async function BookingsPage() {
   return (
     <div className="space-y-6">
       <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">
+        {/* Change 12: how many are pending or held, beside the title. */}
+        <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
           Pending booking requests
+          <span
+            data-testid="queue-count"
+            aria-label={`${queue.length} pending or held`}
+            className="rounded-full bg-primary/10 px-2.5 py-0.5 text-sm font-medium text-primary"
+          >
+            {queue.length}
+          </span>
         </h1>
         <p className="text-sm text-muted-foreground">
           Soonest first, with held requests until they are confirmed, released

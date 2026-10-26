@@ -1,7 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import { prisma } from "@/lib/db";
 
-import { choose, signedIn, usesLocalDatabase } from "./helpers";
+import { choose, signedIn, usesLocalDatabase, selectFrom, openBooking, openReview } from "./helpers";
 
 /**
  * SCRUM-170 — the Organiser's answers reach the people planning the event, in
@@ -136,9 +136,7 @@ test.describe("SCRUM-170 — Show the Organiser's requirements to the people pla
     // AC2: Venue Staff see the same answers on the request they review.
     const staff = await signedIn(browser, "venuestaff@test.local");
     await staff.goto("/bookings");
-    const card = staff
-      .getByTestId(/^booking-/)
-      .filter({ hasText: VENUE_EVENT });
+    const card = await openBooking(staff, VENUE_EVENT);
     await expect(card.getByTestId("organiser-venue-answers")).toContainText(
       ANSWERS.venueRequirements,
     );
@@ -173,12 +171,12 @@ test.describe("SCRUM-170 — Show the Organiser's requirements to the people pla
     const dialog = coordinator.getByRole("dialog", {
       name: "New equipment request",
     });
-    await dialog.getByLabel("Event").selectOption(event.id);
+    await selectFrom(dialog.getByLabel("Event"), event.id);
 
     await expect(
       dialog.getByTestId("organiser-equipment-answer"),
     ).toContainText(ANSWERS.equipmentRequirements);
-    await dialog.getByLabel("Equipment type").selectOption("eqp_projector");
+    await selectFrom(dialog.getByLabel("Equipment type"), "eqp_projector");
     await dialog.getByLabel("Quantity").fill("1");
     await dialog.getByRole("button", { name: "Add equipment" }).click();
     await dialog.getByRole("button", { name: "Submit request" }).click();
@@ -188,9 +186,7 @@ test.describe("SCRUM-170 — Show the Organiser's requirements to the people pla
 
     const tech = await signedIn(browser, "techsupport@test.local");
     await tech.goto("/equipment-requests");
-    const request = tech
-      .getByTestId("review-request")
-      .filter({ hasText: EQUIPMENT_EVENT });
+    const request = await openReview(tech, EQUIPMENT_EVENT);
     await expect(
       request.getByTestId("organiser-equipment-answer"),
     ).toContainText(ANSWERS.equipmentRequirements);

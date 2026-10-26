@@ -1,21 +1,8 @@
 "use client";
 
-import { Clock } from "lucide-react";
-
-import { DatePicker } from "@/components/app/date-picker";
+import { DateTimePicker } from "@/components/app/date-time-picker";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  formatTime,
-  parseSingaporeDateTime,
-  utcToSgWallTime,
-} from "@/lib/datetime";
+import { utcToSgWallTime } from "@/lib/datetime";
 
 /** Every `step` minutes of the day as "HH:mm", the times a picker offers. */
 export function timesEvery(step: 15 | 30): string[] {
@@ -40,10 +27,11 @@ export function isPastSlot(date: string, time: string, now: string): boolean {
 }
 
 /**
- * A date box and a time picker for one end of the period, holding a single
- * "YYYY-MM-DDTHH:mm" Singapore wall time between them. Times are offered every
- * half hour unless `stepMinutes` says 15, as for recorded unavailability,
- * which needn't fall on a half hour (SCRUM-161).
+ * One end of a period as the app's date and time picker, holding a single
+ * "YYYY-MM-DDTHH:mm" Singapore wall time. Times are offered every half hour
+ * unless `stepMinutes` says 15, as for recorded unavailability, which needn't
+ * fall on a half hour (SCRUM-161). Nothing that has already begun can be
+ * picked (isPastSlot).
  */
 export function DateTimeField({
   name,
@@ -62,43 +50,19 @@ export function DateTimeField({
   error: React.ReactNode;
   stepMinutes?: 15 | 30;
 }) {
-  const [date = "", time = ""] = value.split("T");
   const id = name.toLowerCase();
-  const join = (d: string, t: string) => (d || t ? `${d}T${t}` : "");
-
   return (
     <div className="space-y-2">
-      <Label htmlFor={`${id}Date`}>{name}</Label>
-      <div className="flex gap-2">
-        <DatePicker
-          id={`${id}Date`}
-          label={name}
-          value={date}
-          openOn={openOn}
-          onChange={(day) => onChange(join(day, time))}
-          className="flex-1"
-        />
-        <Select value={time} onValueChange={(t) => onChange(join(date, t))}>
-          <SelectTrigger
-            aria-label={`${name} time`}
-            className="shadow-2xs w-36 justify-start gap-2 rounded-lg bg-background hover:border-primary/50 [&>svg:last-of-type]:ml-auto"
-          >
-            <Clock className="h-4 w-4 shrink-0 text-muted-foreground" />
-            <SelectValue placeholder="Time" />
-          </SelectTrigger>
-          <SelectContent className="max-h-64">
-            {timesEvery(stepMinutes).map((t) => (
-              <SelectItem
-                key={t}
-                value={t}
-                disabled={isPastSlot(date, t, utcToSgWallTime(new Date()))}
-              >
-                {formatTime(parseSingaporeDateTime(`2000-01-01T${t}`)!)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      <Label htmlFor={id}>{name}</Label>
+      <DateTimePicker
+        id={id}
+        value={value}
+        onChange={onChange}
+        openOn={openOn}
+        min={utcToSgWallTime(new Date())}
+        minuteStep={stepMinutes}
+        clearable={false}
+      />
       {error}
     </div>
   );

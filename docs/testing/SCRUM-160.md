@@ -170,7 +170,7 @@ clash with any SCRUM-34 AC10 warning, and saving again confirms.
 | Pre-conditions | TC-160-07 done. |
 | Test Steps | Open **Bookings**. |
 | Test Data | — |
-| Expected Result | "Clashes after a setup or turnaround change" lists the 13:00–15:00 booking with its venue, event, Coordinator (or "Not assigned"), period and both clashes. Clashes from an earlier, resolved flag aren't shown. With nothing flagged, it says so. |
+| Expected Result | "Clashes after a setup or turnaround change" lists the 13:00–15:00 booking with its venue, event, Coordinator (or "Not assigned"), period and both clashes. Clashes from an earlier, resolved flag aren't shown. With nothing flagged, the section isn't shown (shared page conventions, change 14). |
 
 **Automated by:** `tests/unit/venue-time-clashes.test.ts` › "SCRUM-160 [AC5] TC-160-11: …", "SCRUM-160 [AC5, AC6] TC-160-11: …"; `tests/unit/time-clash-flags.test.tsx` (2 tests); `tests/integration/venue-time-clashes.test.ts` (TC-160-07); `e2e/setup-turnaround-clashes.spec.ts` › "SCRUM-160 [AC5] TC-160-11: …"
 

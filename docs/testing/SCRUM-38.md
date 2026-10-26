@@ -63,9 +63,9 @@ SCRUM-40's reasons. Opened from an event, the Coordinator's own judgement
 | Test Case ID | TC-38-01 |
 | Test Scenario | [Positive] AC 1, AC 2: opened from an event, the period is fixed to the event's and the attendance starts as the event's |
 | Pre-conditions | Signed in as the assigned Coordinator of a Planning event from 10:15 to 11:45, expecting 40. |
-| Test Steps | 1. Open the event and choose **Find a venue**. <br> 2. Add `&date=…&from=…&endDate=…&to=…` to the address and open it. <br> 3. Change the attendance to 20 and search. |
+| Test Steps | 1. Open the event and choose **Find a venue**, then **Search**. <br> 2. Add `&date=…&from=…&endDate=…&to=…` to the address and open it. <br> 3. Change the attendance to 20 and search. |
 | Test Data | `coordinator@test.local` |
-| Expected Result | 1: the search shows exactly the event's period, 10:15 to 11:45, not rounded, with no start or end date or time fields; only Location can be added. Attendance is 40; no facility, accessibility feature or layout is chosen. The Organiser's venue requirements, preferred room layout and accessibility needs are shown read-only, exactly as entered (SCRUM-170 AC6). 2: the period and results are still the event's 10:15 to 11:45: dates in the address are ignored. 3: the attendance stays 20: the event's figure applies only when search is opened. |
+| Expected Result | 1: the search shows exactly the event's period, 10:15 to 11:45, not rounded, with no start or end date or time fields; only Location can be added. Attendance is 40; no facility, accessibility feature or layout is chosen. No results show until **Search** is chosen; the results then offer **Search again**, back to the form. The Organiser's venue requirements, preferred room layout and accessibility needs are shown read-only, exactly as entered (SCRUM-170 AC6). 2: the period and results are still the event's 10:15 to 11:45: dates in the address are ignored. 3: the attendance stays 20: the event's figure applies only when search is opened. |
 
 **Automated by:** `tests/unit/venue-search-queries.test.ts` › "SCRUM-38 [AC1, AC2] TC-38-01: …"; `e2e/venue-search.spec.ts` › "SCRUM-38 [AC1, AC2, AC8, AC9, AC14] …" and "SCRUM-38 [AC1, AC8, AC11, AC14] TC-38-01, TC-38-09, TC-38-12: …"
 
@@ -314,8 +314,8 @@ Retired on 2026-10-16, before it was merged: a date-only search listing venues f
 | Test Case ID | TC-38-21 |
 | Test Scenario | [Positive] AC 2: on its own, a time is picked as hour, minute and AM or PM, an hour alone is enough, and Reset clears every field |
 | Pre-conditions | Venue search on its own. |
-| Test Steps | 1. Date a Tuesday; Start time hour 3 and PM; End time hour 5 and PM, minutes left alone; search. <br> 2. Tick projector and type attendance 30, without searching; choose **Reset**. <br> 3. With nothing searched, enter a date and a start hour; choose **Reset**. |
+| Test Steps | 1. Date a Tuesday; in the Start time picker choose PM and hour 03, and in the End time picker PM and hour 05, minutes left alone; search. <br> 2. Tick projector and type attendance 30, without searching; choose **Reset**. <br> 3. With nothing searched, enter a date and a start hour; choose **Reset**. |
 | Test Data | — |
-| Expected Result | 1: searched as 15:00 to 17:00 (`from=15:00&to=17:00`), not as no end time, and the End time shows 5, 00, PM again. 12 AM is midnight and 12 PM noon. 2, 3: the search is back as it opens: no date, no times, no attendance, nothing ticked. A browser time input sends nothing until every part is filled in, so before this "5 PM" without minutes searched to midnight. |
+| Expected Result | 1: searched as 15:00 to 17:00 (`from=15:00&to=17:00`), not as no end time, and the End time shows 5:00 pm again. 12 AM is midnight and 12 PM noon. 2, 3: the search is back as it opens: no date, no times, no attendance, nothing ticked. A browser time input sends nothing until every part is filled in, so before this "5 PM" without minutes searched to midnight. |
 
 **Automated by:** `tests/unit/venue-search-time-field.test.tsx` › "SCRUM-38 [AC2] TC-38-21: …"; `e2e/venue-search.spec.ts` › "SCRUM-38 [AC2] TC-38-21: …"

@@ -6,7 +6,7 @@ import {
   parseSingaporeDateTime,
   utcToSgWallTime,
 } from "@/lib/datetime";
-import { setTime, signedIn, usesLocalDatabase } from "./helpers";
+import { setTime, signedIn, usesLocalDatabase, openBooking } from "./helpers";
 
 /**
  * SCRUM-163 — Venue Staff hold a pending request until a deadline and approve
@@ -67,9 +67,10 @@ async function pendingRequest(label: string) {
 
 async function placeHold(page: Page, bookingId: string, expiry: string) {
   await page.goto("/bookings");
-  const card = page.getByTestId(`booking-${bookingId}`);
+  const card = await openBooking(page, { id: bookingId });
+  // Hold opens in place of the request's details.
   await card.getByRole("button", { name: "Hold" }).click();
-  const dialog = page.getByRole("dialog");
+  const dialog = page.getByRole("dialog", { name: "Hold this venue" });
   await setTime(page, "Expiry", expiry);
   await dialog
     .getByLabel("What the Coordinator must finalise")
@@ -106,7 +107,8 @@ test.describe("SCRUM-163 — Hold a venue tentatively until a deadline", () => {
     made.push(request);
 
     const staff = await signedIn(browser, "venuestaff@test.local");
-    const card = await placeHold(staff, request.bookingId, EXPIRY);
+    await placeHold(staff, request.bookingId, EXPIRY);
+    let card = await openBooking(staff, { id: request.bookingId });
 
     await expect(card).toContainText(heldUntil);
     await expect(card).toContainText("Confirm the final headcount.");
@@ -135,6 +137,10 @@ test.describe("SCRUM-163 — Hold a venue tentatively until a deadline", () => {
 
     // AC7: Venue Staff approve the hold once; it stays Held.
     await card.getByRole("button", { name: "Approve" }).click();
+    const approved = staff.getByTestId("venue-approved");
+    await expect(approved).toContainText("Approved the hold");
+    await approved.getByRole("button", { name: "Close" }).click();
+    card = await openBooking(staff, { id: request.bookingId });
     await expect(card).toContainText(
       "Approved by Venue Staff – awaiting confirmation",
     );
@@ -185,7 +191,7 @@ test.describe("SCRUM-163 — Hold a venue tentatively until a deadline", () => {
     made.push(request);
 
     const staff = await signedIn(browser, "venuestaff@test.local");
-    const card = await placeHold(staff, request.bookingId, AFTER_START);
+    await placeHold(staff, request.bookingId, AFTER_START);
 
     await expect(
       staff
@@ -195,6 +201,7 @@ test.describe("SCRUM-163 — Hold a venue tentatively until a deadline", () => {
         ),
     ).toBeVisible();
     await staff.keyboard.press("Escape");
+    const card = await openBooking(staff, { id: request.bookingId });
     await expect(card).toContainText("Pending");
     expect(
       (

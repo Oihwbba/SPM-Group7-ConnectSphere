@@ -1,7 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import { prisma } from "@/lib/db";
 
-import { choose, signedIn, usesLocalDatabase } from "./helpers";
+import { choose, signedIn, usesLocalDatabase, openBooking } from "./helpers";
 
 /**
  * SCRUM-159 — a venue's setup and turnaround time in a real browser: the
@@ -251,7 +251,7 @@ test.describe("SCRUM-159 — setup and turnaround time", () => {
 
     const staff = await signedIn(browser, "venuestaff@test.local");
     await staff.goto("/bookings");
-    const card = staff.getByTestId(`booking-${booking.id}`);
+    let card = await openBooking(staff, { id: booking.id });
     await expect(card.getByTestId("hours-warning")).toContainText(warning);
     await expect(card).toContainText("Free for this period");
 
@@ -260,6 +260,7 @@ test.describe("SCRUM-159 — setup and turnaround time", () => {
     await expect(dialog.getByTestId("hours-warning")).toContainText(warning);
     await dialog.getByRole("button", { name: "Cancel" }).click();
 
+    card = await openBooking(staff, { id: booking.id });
     await card.getByRole("button", { name: "Approve" }).click();
     await expect(
       staff.getByText(`Approved: ${PREFIX} Studio is now booked for ${PREFIX} Breakfast Briefing.`),
