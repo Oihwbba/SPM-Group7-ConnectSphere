@@ -163,7 +163,7 @@ test.describe("User Story 13 — Event Request Creation Journey", () => {
  * completing mandatory requirements, and submitting for review.
  */
 test.describe("User Story 15 — Draft Event Request Lifecycle Journey", () => {
-  test("organiser saves partial draft, locates and resumes draft with preserved fields, then completes and submits", async ({
+  test("SCRUM-15 [AC3] TC-15-05: organiser saves partial draft, locates and resumes draft with preserved fields, then completes and submits", async ({
     page,
   }) => {
     // SCRUM-189: a long journey, two passes through the request form.
@@ -285,7 +285,7 @@ test.describe("User Story 15 — Draft Event Request Lifecycle Journey", () => {
  * badges, styling, and filter tabs so they cannot be mistaken for submitted or under review requests.
  */
 test.describe("User Story 16 — Distinguish Drafts from Submitted Requests Journey", () => {
-  test("organiser can visually distinguish draft requests from submitted ones side-by-side and filter by status", async ({
+  test("SCRUM-16 [AC7] TC-16-04: organiser can visually distinguish draft requests from submitted ones side-by-side and filter by status", async ({
     page,
   }) => {
     // SCRUM-189: a long journey, a draft and a submitted request, then filters.
