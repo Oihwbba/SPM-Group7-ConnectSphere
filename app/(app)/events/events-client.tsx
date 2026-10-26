@@ -7,6 +7,7 @@ import {
   Pencil,
   Eye,
   CalendarPlus,
+  BellRing,
   FileEdit,
   Filter,
   CheckCircle2,
@@ -17,6 +18,9 @@ import {
   ArrowUp,
   ArrowDown,
   Trash2,
+  Send,
+  Inbox,
+  MessagesSquare,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { Event, RejectionOutcome } from "@prisma/client";
@@ -39,6 +43,8 @@ import {
 import styles from "./events-list.module.css";
 import { CreateEventDialog } from "./create-event-dialog";
 import { EventDetailsModal } from "./event-details-modal";
+import { AppSelect } from "@/components/app/app-select";
+import { SubmittedDialog } from "@/components/app/submitted-dialog";
 import {
   discardDraftEvent,
   startRequestFromRejected,
@@ -62,12 +68,16 @@ import {
 
 interface EventsClientProps {
   events: Event[];
+  /** The requests with a clarification waiting on the Organiser's answer. */
+  awaitingAnswerIds?: string[];
+  /** The Organiser's events with a clarification thread, open or answered. */
+  clarifiedEventIds?: string[];
   isCoordinator?: boolean;
   /** SCRUM-48 AC5: the event whose details open first, from `?event=`. */
   openEventId?: string;
 }
 
-export type FilterTab = "ALL" | "DRAFT" | "SUBMITTED";
+export type FilterTab = "ALL" | "DRAFT" | "SUBMITTED" | "ACTION";
 export type SortField = "name" | "status" | "startAt" | "updatedAt";
 export type SortOrder = "asc" | "desc";
 
@@ -82,6 +92,22 @@ export interface FilterAndSortOptions {
    * ("awaiting-review"), since Approve, Ask and Reject only render on those
    * two statuses. */
   submittedMeans?: "non-draft" | "awaiting-review";
+  /** Which requests the "Actions required" tab lists. */
+  needsAction?: (event: { id?: string; status: string }) => boolean;
+}
+
+/**
+ * Shared page conventions, change 1 — an Organiser's request waits on them
+ * when it was rejected to be amended and resubmitted, or a Coordinator asked
+ * a clarification they haven't answered. A request rejected for a new one
+ * to be started (SCRUM-126) stays rejected, so it isn't listed.
+ */
+export function needsOrganiserAction(
+  event: { id: string; status: string; rejectionOutcome?: string | null },
+  awaitingAnswer: ReadonlySet<string>,
+): boolean {
+  if (awaitingAnswer.has(event.id)) return true;
+  return event.status === "REJECTED" && event.rejectionOutcome !== "NEW_REQUEST";
 }
 
 /** The statuses a coordinator can still decide on (SCRUM-19). */
@@ -104,6 +130,7 @@ export function filterAndSortEvents<
     sortField = "updatedAt",
     sortOrder = "desc",
     submittedMeans = "non-draft",
+    needsAction,
   } = options;
 
   const q = searchQuery.trim().toLowerCase();
@@ -117,6 +144,8 @@ export function filterAndSortEvents<
       const matchesTab =
         activeTab === "DRAFT"
           ? evt.status === "DRAFT"
+          : activeTab === "ACTION"
+            ? (needsAction?.(evt) ?? false)
           : activeTab === "SUBMITTED"
             ? submittedMeans === "awaiting-review"
               ? AWAITING_REVIEW.includes(evt.status)
@@ -159,6 +188,8 @@ export function EventsClient({
   events,
   isCoordinator = false,
   openEventId,
+  awaitingAnswerIds = [],
+  clarifiedEventIds = [],
 }: EventsClientProps) {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [editingDraft, setEditingDraft] = useState<Event | null>(null);
@@ -166,6 +197,14 @@ export function EventsClient({
   // this user's own list can open, so the link grants nothing new.
   const [viewingEvent, setViewingEvent] = useState<Event | null>(
     () => events.find((e) => e.id === openEventId) ?? null,
+  );
+  // Change 8: the request just submitted, and the one to show once the
+  // refreshed list has it.
+  const [submittedId, setSubmittedId] = useState<string | null>(null);
+  const [viewAfterSubmit, setViewAfterSubmit] = useState<string | null>(null);
+  // Which tab the details open on: the Clarifications action opens its thread.
+  const [viewingTab, setViewingTab] = useState<"details" | "clarification">(
+    "details",
   );
   const [activeTab, setActiveTab] = useState<FilterTab>("ALL");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
@@ -219,7 +258,10 @@ export function EventsClient({
   const activeEvent = viewingEvent
     ? (events.find((e) => e.id === viewingEvent.id) ?? null)
     : null;
-  const eventToDisplay = activeEvent ?? viewingEvent;
+  const justSubmitted = viewAfterSubmit
+    ? (events.find((e) => e.id === viewAfterSubmit) ?? null)
+    : null;
+  const eventToDisplay = activeEvent ?? viewingEvent ?? justSubmitted;
   const isEventNoLongerAvailable = Boolean(viewingEvent && !activeEvent);
 
   function changeStatus(
@@ -318,6 +360,9 @@ export function EventsClient({
   // everything they have sent. Both the filter and the count follow this.
   const submittedMeans = isCoordinator ? "awaiting-review" : "non-draft";
 
+  const awaitingAnswer = new Set(awaitingAnswerIds);
+  const clarified = new Set(clarifiedEventIds);
+  const needsAction = (evt: Event) => needsOrganiserAction(evt, awaitingAnswer);
   const filteredEvents = filterAndSortEvents(events, {
     activeTab,
     statusFilter,
@@ -325,7 +370,9 @@ export function EventsClient({
     sortField,
     sortOrder,
     submittedMeans,
+    needsAction: (evt) => needsAction(evt as Event),
   });
+  const actionCount = events.filter(needsAction).length;
 
   const draftCount = events.filter((evt) => evt.status === "DRAFT").length;
   const submittedCount = events.filter((evt) =>
@@ -347,20 +394,34 @@ export function EventsClient({
     // buttons, so a fourth button no longer wraps alone onto a second line; from
     // md up they are the compact inline row the desktop table has always had.
     const actionButton = "h-10 w-full gap-1.5 text-xs md:h-8 md:w-auto";
+    // Change 3: actions whose icon says it all are icon-only, named for
+    // screen readers and with a tooltip.
+    const iconButton = "h-10 w-full md:h-8 md:w-8 md:p-0";
     return (
-      <div className="grid grid-cols-2 gap-2 md:flex md:flex-wrap md:items-center md:justify-end md:gap-1.5 [&>*:only-child]:col-span-2 md:[&>*:only-child]:col-span-1">
-        {(isDraft || (!isCoordinator && isRejected && !startsAgain)) && (
+      <div className="grid grid-cols-2 gap-2 md:flex md:flex-nowrap md:items-center md:justify-end md:gap-1.5 [&>*:only-child]:col-span-2 md:[&>*:only-child]:col-span-1">
+        {isDraft && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className={iconButton}
+            onClick={() => setEditingDraft(event)}
+            data-testid="resume-draft-button"
+            aria-label="Resume Draft"
+            title="Resume Draft"
+          >
+            <Pencil className="h-4 w-4" />
+          </Button>
+        )}
+        {!isCoordinator && isRejected && !startsAgain && (
           <Button
             variant="outline"
             size="sm"
             className={cn(actionButton, "font-medium")}
             onClick={() => setEditingDraft(event)}
-            data-testid={
-              isDraft ? "resume-draft-button" : "amend-rejected-button"
-            }
+            data-testid="amend-rejected-button"
           >
             <Pencil className="h-3.5 w-3.5" />
-            {isDraft ? "Resume Draft" : "Amend & Resubmit"}
+            Amend & Resubmit
           </Button>
         )}
         {!isCoordinator && isRejected && startsAgain && (
@@ -379,25 +440,50 @@ export function EventsClient({
         <Button
           variant="ghost"
           size="sm"
-          className={actionButton}
-          onClick={() => setViewingEvent(event)}
+          className={iconButton}
+          onClick={() => {
+            setViewingTab("details");
+            setViewingEvent(event);
+          }}
           data-testid="view-details-button"
+          aria-label="View Details"
+          title="View Details"
         >
-          <Eye className="h-3.5 w-3.5" />
-          View Details
+          <Eye className="h-4 w-4" />
         </Button>
+        {/* Shared page conventions: the thread is one click away. */}
+        {!isCoordinator && clarified.has(event.id) && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className={iconButton}
+            onClick={() => {
+              setViewingTab("clarification");
+              setViewingEvent(event);
+            }}
+            data-testid="clarifications-button"
+            aria-label="Clarifications"
+            title="Clarifications"
+          >
+            <MessagesSquare className="h-4 w-4" />
+          </Button>
+        )}
         {/* SCRUM-130 AC3: offered only on the Organiser's own Drafts. */}
         {!isCoordinator && isDraft && (
           <Button
             variant="ghost"
             size="sm"
-            className={cn(actionButton, "text-destructive hover:text-destructive")}
+            className={cn(
+              iconButton,
+              "text-destructive hover:bg-destructive/10 hover:text-destructive",
+            )}
             disabled={isPending}
             onClick={() => setDiscardingEvent(event)}
             data-testid="discard-draft-button"
+            aria-label="Discard"
+            title="Discard"
           >
-            <Trash2 className="h-3.5 w-3.5" />
-            Discard
+            <Trash2 className="h-4 w-4" />
           </Button>
         )}
         {/* SCRUM-19: decide a request. SCRUM-135 AC3, AC4: only one Under
@@ -406,16 +492,8 @@ export function EventsClient({
         {isCoordinator &&
           (event.status === "SUBMITTED" || event.status === "UNDER_REVIEW") && (
             <>
-              {event.status === "UNDER_REVIEW" && (
-                <Button
-                  size="sm"
-                  className={actionButton}
-                  disabled={isPending}
-                  onClick={() => changeStatus(event, "APPROVED")}
-                >
-                  <CheckCircle2 className="h-3.5 w-3.5" /> Approve
-                </Button>
-              )}
+              {/* Change 8: View, Ask, Approve, Reject; the decisions in
+                  transparent green and red. */}
               {/* SCRUM-18: ask the organiser a question instead of deciding. */}
               <Button
                 variant="outline"
@@ -432,9 +510,26 @@ export function EventsClient({
               </Button>
               {event.status === "UNDER_REVIEW" && (
                 <Button
-                  variant="destructive"
+                  variant="ghost"
                   size="sm"
-                  className={actionButton}
+                  className={cn(
+                    actionButton,
+                    "border border-success/40 bg-success/10 text-success hover:bg-success/20 hover:text-success",
+                  )}
+                  disabled={isPending}
+                  onClick={() => changeStatus(event, "APPROVED")}
+                >
+                  <CheckCircle2 className="h-3.5 w-3.5" /> Approve
+                </Button>
+              )}
+              {event.status === "UNDER_REVIEW" && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={cn(
+                    actionButton,
+                    "border border-destructive/40 bg-destructive/10 text-destructive hover:bg-destructive/20 hover:text-destructive",
+                  )}
                   disabled={isPending}
                   onClick={() => {
                     setRejectingEvent(event);
@@ -515,32 +610,57 @@ export function EventsClient({
             <Button
               variant={activeTab === "SUBMITTED" ? "secondary" : "ghost"}
               size="sm"
-              className="h-8 shrink-0 text-xs font-medium"
+              className={cn(
+                "h-8 shrink-0 gap-1.5 text-xs font-medium",
+                activeTab === "SUBMITTED" && "font-semibold",
+              )}
               onClick={() => {
                 setActiveTab("SUBMITTED");
                 setStatusFilter("ALL");
               }}
             >
+              {isCoordinator ? (
+                <Inbox className="h-3.5 w-3.5" />
+              ) : (
+                <Send className="h-3.5 w-3.5" />
+              )}
               {/* SCRUM-131 AC1: "Sent", since the tab lists every request
                   that isn't a draft, not only the Submitted ones. */}
               {isCoordinator ? "Awaiting review" : "Sent"} ({submittedCount})
             </Button>
+            {!isCoordinator && (
+              <Button
+                variant={activeTab === "ACTION" ? "secondary" : "ghost"}
+                size="sm"
+                className={cn(
+                  "h-8 shrink-0 gap-1.5 text-xs font-medium",
+                  activeTab === "ACTION" && "font-semibold",
+                )}
+                onClick={() => {
+                  setActiveTab("ACTION");
+                  setStatusFilter("ALL");
+                }}
+              >
+                <BellRing className="h-3.5 w-3.5" />
+                Actions required ({actionCount})
+              </Button>
+            )}
           </div>
 
           <div className="flex items-center gap-2 w-full max-w-sm">
-            <select
+            <AppSelect
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="h-8 rounded-md border border-input bg-background px-2 text-xs text-foreground shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              onValueChange={setStatusFilter}
               aria-label="Filter by status"
-            >
-              <option value="ALL">All Statuses</option>
-              {Object.entries(EVENT_STATUS_LABEL).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
+              className="h-9 w-40 shrink-0 text-xs"
+              options={[
+                { value: "ALL", label: "All Statuses" },
+                ...Object.entries(EVENT_STATUS_LABEL).map(([value, label]) => ({
+                  value,
+                  label,
+                })),
+              ]}
+            />
             <input
               type="text"
               aria-label="Search by name or purpose"
@@ -709,10 +829,10 @@ export function EventsClient({
                     <button
                       type="button"
                       onClick={() => toggleSort("updatedAt")}
-                      aria-label="Sort by Updated"
+                      aria-label="Sort by Last Updated"
                       className="flex items-center gap-1.5 font-semibold focus:outline-none focus:ring-1 focus:ring-ring rounded px-1 py-0.5 hover:bg-muted/50 transition-colors"
                     >
-                      <span>Updated</span>
+                      <span>Last Updated</span>
                       {sortField === "updatedAt" ? (
                         sortOrder === "asc" ? (
                           <ArrowUp className="h-3.5 w-3.5 text-primary" />
@@ -748,27 +868,20 @@ export function EventsClient({
                       <TableCell
                         role="cell"
                         data-col="name"
-                        className="font-medium"
+                        // Change 6: the name takes the room left and is cut
+                        // short, so the other columns never wrap or shift.
+                        className="font-medium md:w-full md:max-w-0"
                       >
-                        <div className="flex flex-wrap items-center gap-2">
+                        <div className="flex items-center gap-2">
                           <button
                             type="button"
                             onClick={() => setViewingEvent(event)}
-                            className="cursor-pointer text-left font-medium text-foreground hover:underline focus:outline-none"
+                            title={event.name}
+                            className="min-w-0 cursor-pointer truncate text-left font-medium text-foreground hover:underline focus:outline-none"
                             data-testid="event-name-link"
                           >
                             {event.name}
                           </button>
-                          {/* User Story 16: Draft requests are visually marked with a clear Draft label tag */}
-                          {isDraft && (
-                            <span
-                              className="inline-flex items-center gap-1 rounded border border-border bg-muted px-2 py-0.5 text-[11px] font-semibold text-muted-foreground"
-                              data-testid="draft-label"
-                            >
-                              <FileEdit className="h-3 w-3" />
-                              Draft — Incomplete
-                            </span>
-                          )}
                         </div>
                       </TableCell>
                       <TableCell role="cell" data-col="status">
@@ -806,7 +919,7 @@ export function EventsClient({
                         className="text-muted-foreground"
                       >
                         <span className="mb-0.5 block text-xs md:hidden">
-                          Updated
+                          Last Updated
                         </span>
                         {formatDate(event.updatedAt || event.createdAt)}
                       </TableCell>
@@ -831,6 +944,7 @@ export function EventsClient({
         key={createDialogOpen ? "create-open" : "create-closed"}
         open={createDialogOpen}
         onOpenChange={setCreateDialogOpen}
+        onSubmitted={setSubmittedId}
       />
 
       {/* Controlled Dialog Instance for Editing/Resuming Draft */}
@@ -845,22 +959,45 @@ export function EventsClient({
             }
           }}
           draftEvent={draftInEditor}
+          onSubmitted={setSubmittedId}
         />
       )}
+
+      {/* Change 8: the request went through; close, or see what was sent. */}
+      <SubmittedDialog
+        open={submittedId !== null}
+        title="Request submitted"
+        testId="event-request-submitted"
+        closeLabel="Close"
+        onClose={() => setSubmittedId(null)}
+        action={{
+          label: "View Details",
+          onClick: () => {
+            setViewAfterSubmit(submittedId);
+            setSubmittedId(null);
+          },
+        }}
+      >
+        Your event request has been sent for review. You&apos;ll be notified
+        when a Coordinator decides on it.
+      </SubmittedDialog>
 
       {/* Controlled Singular-Page Modal for Viewing Submitted Event Details */}
       {eventToDisplay && (
         <EventDetailsModal
-          open={!!viewingEvent}
+          open={!!viewingEvent || !!justSubmitted}
           onOpenChange={(open) => {
             if (open) return;
             setViewingEvent(null);
+            setViewingTab("details");
+            setViewAfterSubmit(null);
             // So a refresh doesn't open it again.
             if (openEventId) router.replace("/events");
           }}
           event={eventToDisplay}
           isCoordinator={isCoordinator}
           isNoLongerAvailable={isEventNoLongerAvailable}
+          initialTab={viewingTab}
         />
       )}
 

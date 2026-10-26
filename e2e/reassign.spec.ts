@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { prisma } from "@/lib/db";
 
-import { signedIn, usesLocalDatabase } from "./helpers";
+import { signedIn, usesLocalDatabase, selectFrom, optionsOf } from "./helpers";
 
 /**
  * SCRUM-21 — the Lead reassigns an event from Cody to Cara. The spec writes
@@ -56,14 +56,15 @@ test.describe("SCRUM-21 — Reassign an event to another Coordinator", () => {
     await lead.goto(`/all-events/${event.id}`);
     const form = lead.getByTestId("reassign-form");
     const choice = form.getByLabel("Reassign to");
-    await expect(
-      choice.locator("option", { hasText: "(current)" }),
-    ).toContainText("Cody Coordinator");
+    const offered = await optionsOf(choice);
+    expect(offered.find((o) => o.label.includes("(current)"))?.label).toContain(
+      "Cody Coordinator",
+    );
     // AC3: the event's own Organiser isn't offered.
-    await expect(
-      choice.locator("option", { hasText: "Olivia Organiser" }),
-    ).toHaveCount(0);
-    await choice.selectOption("usr_coordinator_2");
+    expect(offered.some((o) => o.label.includes("Olivia Organiser"))).toBe(
+      false,
+    );
+    await selectFrom(choice, "usr_coordinator_2");
     await form.getByRole("button", { name: "Reassign" }).click();
     await expect(lead.getByTestId("event-details")).toContainText(
       "Cara Coordinator",

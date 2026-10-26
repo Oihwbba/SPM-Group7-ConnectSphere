@@ -98,6 +98,8 @@ test.describe("SCRUM-18 — Request clarification on a submitted request", () =>
     // AC: awaiting the organiser is shown on the request, not as a status.
     await coordinatorRow.getByTestId("view-details-button").click();
     const coordinatorDetails = page.getByRole("dialog");
+    // The thread is the details' second tab (shared page conventions, change 2).
+    await coordinatorDetails.getByRole("tab", { name: /Clarification/ }).click();
     await expect(coordinatorDetails.getByText(question)).toBeVisible();
     await expect(
       coordinatorDetails.getByText("Waiting for the organiser's response."),
@@ -120,6 +122,8 @@ test.describe("SCRUM-18 — Request clarification on a submitted request", () =>
     await organiserRow.getByTestId("view-details-button").click();
 
     const organiserDetails = page.getByRole("dialog");
+    // The thread is the details' second tab (shared page conventions, change 2).
+    await organiserDetails.getByRole("tab", { name: /Clarification/ }).click();
     await expect(organiserDetails.getByText(question)).toBeVisible();
 
     // Failure path: an empty reply cannot be sent.
@@ -139,6 +143,8 @@ test.describe("SCRUM-18 — Request clarification on a submitted request", () =>
     const reviewRow = page.getByRole("row", { name: new RegExp(eventName) });
     await reviewRow.getByTestId("view-details-button").click();
     const reviewDetails = page.getByRole("dialog");
+    // The thread is the details' second tab (shared page conventions, change 2).
+    await reviewDetails.getByRole("tab", { name: /Clarification/ }).click();
     await expect(reviewDetails.getByText("Organiser responded:")).toBeVisible();
     await expect(reviewDetails.getByText(answer)).toBeVisible();
     await page.keyboard.press("Escape");

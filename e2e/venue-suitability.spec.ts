@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { prisma } from "@/lib/db";
 
-import { choose, signedIn, usesLocalDatabase } from "./helpers";
+import { choose, signedIn, usesLocalDatabase, openBooking } from "./helpers";
 
 /**
  * SCRUM-40 — venue suitability in a real browser: the Coordinator sees why a
@@ -131,7 +131,7 @@ test.describe("SCRUM-40 — flag venue suitability, with the reason", () => {
     });
     // AC3: the request stores the accessibility need asked for.
     expect(booking.requiredAccessibilityFeatures).toEqual(["hearing-loop"]);
-    const card = staff.getByTestId(`booking-${booking.id}`);
+    const card = await openBooking(staff, { id: booking.id });
     await expect(card.getByTestId("queue-judgement")).toContainText("Suitable");
     await expect(card.getByTestId("queue-judgement")).toContainText(
       "We bring our own portable stage.",

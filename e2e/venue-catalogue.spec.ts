@@ -1,7 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import { prisma } from "@/lib/db";
 
-import { choose, signedIn, usesLocalDatabase } from "./helpers";
+import { choose, signedIn, usesLocalDatabase, pickDateTime, fillOther, pickOptions } from "./helpers";
 
 /**
  * SCRUM-34 — the venue catalogue in a real browser. Venue Staff add a venue
@@ -84,20 +84,21 @@ test.describe("SCRUM-34 — browse and maintain the venue catalogue", () => {
     // AC4: capacity 0 is refused against capacity.
     await add.getByLabel("Capacity *").fill("0");
     // AC5: Tuesday closing before it opens is refused against Tuesday.
-    await add.getByLabel("Tuesday opens").fill("18:00");
-    await add.getByLabel("Tuesday closes").fill("09:00");
+    await pickDateTime(add.getByLabel("Tuesday opens"), "18:00");
+    await pickDateTime(add.getByLabel("Tuesday closes"), "09:00");
     await add.getByRole("button", { name: "Add venue" }).click();
     await expect(add.getByText("Capacity must be a whole number greater than 0.")).toBeVisible();
     await expect(add.getByLabel("Capacity *")).toHaveAttribute("aria-invalid", "true");
     await expect(add.getByText("The closing time must be after the opening time.")).toBeVisible();
-    await expect(add.getByLabel("Tuesday opens")).toHaveAttribute("aria-invalid", "true");
-    await expect(add.getByLabel("Monday opens")).not.toHaveAttribute("aria-invalid", "true");
+    // The time pickers mark the day invalid, and point to its message.
+    await expect(add.getByLabel("Tuesday opens")).toHaveAttribute("data-invalid", "true");
+    await expect(add.getByLabel("Monday opens")).not.toHaveAttribute("data-invalid", "true");
     expect(await prisma.venue.count({ where: { name } })).toBe(0);
 
     // AC3: valid now; Sunday Closed.
     await add.getByLabel("Capacity *").fill("80");
-    await add.getByLabel("Tuesday closes").fill("22:00");
-    await add.getByLabel("Tuesday opens").fill("10:00");
+    await pickDateTime(add.getByLabel("Tuesday closes"), "22:00");
+    await pickDateTime(add.getByLabel("Tuesday opens"), "10:00");
     await add.getByLabel("Sunday closed").check();
     await add.getByRole("button", { name: "Add venue" }).click();
     await expect(staff.getByText("Venue added.")).toBeVisible();
@@ -175,17 +176,18 @@ test.describe("SCRUM-34 — browse and maintain the venue catalogue", () => {
     await organiser.getByLabel("Event Purpose *").fill("Check the venue options.");
     await organiser.getByLabel("Event Description *").fill("SCRUM-34 AC6.");
     await organiser.getByRole("button", { name: "Next", exact: true }).click();
-    await organiser.getByLabel("Proposed Start Date & Time *").fill("2036-11-01T09:00");
-    await organiser.getByLabel("Proposed End Date & Time *").fill("2036-11-01T17:00");
+    await pickDateTime(organiser.getByLabel("Proposed Start Date & Time *"), "2036-11-01T09:00");
+    await pickDateTime(organiser.getByLabel("Proposed End Date & Time *"), "2036-11-01T17:00");
     await organiser.getByLabel("Expected Attendance *").fill("50");
     await organiser.getByRole("button", { name: "Next", exact: true }).click();
 
-    await organiser.getByRole("button", { name: "Garden party", exact: true }).click();
-    await expect(organiser.getByLabel("Preferred Room Layout *")).toHaveValue("Garden party");
-    await organiser.getByLabel("Accessibility Needs *").fill("Seats near the exit");
-    await organiser.getByRole("button", { name: "Tactile paving", exact: true }).click();
-    await expect(organiser.getByLabel("Accessibility Needs *")).toHaveValue(
-      "Seats near the exit, Tactile paving",
+    await pickOptions(organiser.getByLabel("Preferred Room Layout *"), ["Garden party"]);
+    await expect(organiser.locator('[data-pill="Garden party"]')).toBeVisible();
+    await fillOther(organiser.getByLabel("Accessibility Needs *"), "Seats near the exit");
+    await pickOptions(organiser.getByLabel("Accessibility Needs *"), ["Tactile paving"]);
+    await expect(organiser.locator('[data-pill="Tactile paving"]')).toBeVisible();
+    await expect(organiser.getByLabel("Other accessibility needs")).toHaveValue(
+      "Seats near the exit",
     );
   });
 
@@ -357,7 +359,7 @@ test.describe("SCRUM-34 — browse and maintain the venue catalogue", () => {
     await staff.getByRole("button", { name: "Edit venue" }).click();
     const edit = staff.getByRole("dialog", { name: `Edit ${name}` });
     await expect(edit).toContainText("This venue's opening hours aren't recorded yet.");
-    await expect(edit.getByLabel("Monday opens")).toHaveValue("");
+    await expect(edit.getByLabel("Monday opens")).toHaveAttribute("data-value", "");
 
     await edit.getByLabel("Capacity *").fill("60");
     await edit.getByRole("button", { name: "Save venue" }).click();

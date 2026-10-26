@@ -13,20 +13,16 @@ import {
   CircleCheck,
   Info,
   Loader2,
-  User,
+  Pin,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { DateTimePicker } from "@/components/app/date-time-picker";
+import { SubmittedDialog } from "@/components/app/submitted-dialog";
+import { CapacityTag } from "@/components/app/capacity-tag";
 import {
   Select,
   SelectContent,
@@ -478,7 +474,6 @@ export function RequestForm({
       <Card>
         <CardContent className="pt-6">
           <form onSubmit={submit} className="space-y-5" noValidate>
-            <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="eventId">Event</Label>
                 <Select value={form.eventId} onValueChange={chooseEvent}>
@@ -496,18 +491,38 @@ export function RequestForm({
                 {fieldError("eventId")}
               </div>
 
+            {/* Change 9: with an event chosen, its card on the left third and
+                the request on the right two thirds. */}
+            <div className={chosenEvent ? "grid gap-6 lg:grid-cols-3" : ""}>
               {chosenEvent && (
-                <div className="space-y-2 rounded-md border bg-muted/30 p-3 sm:col-span-2">
-                  <p className="text-xs font-medium">
-                    What the Organiser asked for
+                <aside
+                  className="h-fit space-y-2 rounded-xl border bg-muted/40 p-4 text-sm lg:sticky lg:top-24"
+                  data-testid="request-event"
+                >
+                  <p className="flex items-start gap-2 font-medium">
+                    <Pin className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />
+                    {chosenEvent.name}
                   </p>
-                  <OrganiserVenueAnswers answers={chosenEvent} />
-                  <p className="text-xs text-muted-foreground">
-                    Choose the layout and facilities yourself; these answers
-                    aren&apos;t copied into the request.
-                  </p>
-                </div>
+                  {chosenEvent.startAt && chosenEvent.endAt && (
+                    <p className="text-muted-foreground">
+                      {formatDateTime(chosenEvent.startAt)} to{" "}
+                      {formatDateTime(chosenEvent.endAt)}
+                    </p>
+                  )}
+                  <div className="space-y-2 border-t pt-3">
+                    <p className="text-xs font-medium">
+                      What the Organiser asked for
+                    </p>
+                    <OrganiserVenueAnswers answers={chosenEvent} />
+                    <p className="text-xs text-muted-foreground">
+                      Choose the layout and facilities yourself; these answers
+                      aren&apos;t copied into the request.
+                    </p>
+                  </div>
+                </aside>
               )}
+              <div className={chosenEvent ? "space-y-5 lg:col-span-2" : "space-y-5"}>
+            <div className="grid gap-4 sm:grid-cols-2">
 
               <div className="space-y-2">
                 <Label htmlFor="layout">Room layout</Label>
@@ -552,14 +567,7 @@ export function RequestForm({
                       <SelectItem key={venue.id} value={venue.id}>
                         <span className="flex items-center gap-2">
                           {venue.name}
-                          <span
-                            className="inline-flex items-center gap-1 text-muted-foreground"
-                            title={`Holds up to ${venue.capacity} people`}
-                          >
-                            <User className="h-3.5 w-3.5" aria-hidden />
-                            <span className="sr-only">max capacity</span>
-                            {venue.capacity}
-                          </span>
+                          <CapacityTag capacity={venue.capacity} />
                         </span>
                       </SelectItem>
                     ))}
@@ -615,12 +623,16 @@ export function RequestForm({
                   <Label htmlFor={which}>
                     {which === "start" ? "Start" : "End"}
                   </Label>
-                  <Input
+                  <DateTimePicker
                     id={which}
-                    type="datetime-local"
-                    step={1800}
+                    minuteStep={30}
                     value={form[which]}
-                    onChange={(e) => update(which, e.target.value)}
+                    openOn={
+                      which === "end"
+                        ? form.start.split("T")[0] || undefined
+                        : undefined
+                    }
+                    onChange={(value) => update(which, value)}
                   />
                   {fieldError(which === "start" ? "startAt" : "endAt")}
                 </div>
@@ -757,6 +769,8 @@ export function RequestForm({
                 Submit request
               </Button>
             </div>
+              </div>
+            </div>
           </form>
         </CardContent>
       </Card>
@@ -835,37 +849,19 @@ function SuccessDialog({
   onClose: () => void;
 }) {
   return (
-    <Dialog open={booking !== null} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent
-        data-testid="booking-success"
-        className="max-w-sm text-center sm:text-center"
-      >
-        <div className="mx-auto mt-2 flex h-20 w-20 items-center justify-center">
-          <span className="absolute h-20 w-20 animate-ping rounded-full bg-success/20 [animation-iteration-count:2]" />
-          <span className="relative flex h-20 w-20 items-center justify-center rounded-full bg-success text-success-foreground shadow-lg duration-500 animate-in zoom-in-50">
-            <Check
-              className="h-10 w-10 delay-200 duration-500 animate-in fade-in-0 zoom-in-0 fill-mode-both"
-              strokeWidth={3}
-            />
-          </span>
-        </div>
-        <DialogTitle className="text-xl">Request submitted</DialogTitle>
-        <DialogDescription>
-          {booking && (
-            <>
-              {booking.venueName}, {formatDateTime(booking.startAt)} to{" "}
-              {formatDateTime(booking.endAt)}. It is pending Venue Staff
-              approval.
-            </>
-          )}
-        </DialogDescription>
-        <DialogFooter className="sm:justify-center">
-          <Button onClick={onClose} className="w-full sm:w-auto">
-            Done
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <SubmittedDialog
+      open={booking !== null}
+      title="Request submitted"
+      testId="booking-success"
+      onClose={onClose}
+    >
+      {booking && (
+        <>
+          {booking.venueName}, {formatDateTime(booking.startAt)} to{" "}
+          {formatDateTime(booking.endAt)}. It is pending Venue Staff approval.
+        </>
+      )}
+    </SubmittedDialog>
   );
 }
 

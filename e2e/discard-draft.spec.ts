@@ -1,7 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import { prisma } from "@/lib/db";
 
-import { usesLocalDatabase } from "./helpers";
+import { usesLocalDatabase, pickDateTime } from "./helpers";
 
 /**
  * SCRUM-130 — an Organiser discards a Draft they no longer need. Each test
@@ -162,9 +162,7 @@ test.describe("SCRUM-130 — Discard a draft request", () => {
     // Updating the start to a future date clears it.
     await page.getByRole("button", { name: "Next", exact: true }).click();
     const nextYear = new Date().getUTCFullYear() + 1;
-    await page
-      .getByLabel("Proposed Start Date & Time *")
-      .fill(`${nextYear}-06-01T10:00`);
+    await pickDateTime(page.getByLabel("Proposed Start Date & Time *"), `${nextYear}-06-01T10:00`);
     await expect(warning).toHaveCount(0);
   });
 });

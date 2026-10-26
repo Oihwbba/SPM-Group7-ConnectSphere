@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 
-import { signedIn } from "./helpers";
+import { signedIn, optionsOf } from "./helpers";
 
 /**
  * SCRUM-131 — every screen uses the agreed status names. Read-only: it uses
@@ -16,9 +16,10 @@ test.describe("SCRUM-131 agreed status names", () => {
     await expect(page.getByRole("button", { name: /^Sent \(\d+\)$/ })).toBeVisible();
     await expect(page.getByRole("button", { name: /^Submitted \(/ })).toHaveCount(0);
 
-    await expect(
-      page.getByRole("combobox", { name: "Filter by status" }).locator("option"),
-    ).toHaveText([
+    const offered = await optionsOf(
+      page.getByRole("combobox", { name: "Filter by status" }),
+    );
+    expect(offered.map((option) => option.label)).toEqual([
       "All Statuses",
       "Draft",
       "Submitted",
