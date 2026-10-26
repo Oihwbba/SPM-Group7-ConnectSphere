@@ -459,6 +459,18 @@ export function checkCompletion({ content, finishReason, usage }) {
   throw new Error(`GLM stopped before answering: ${why}${tokens}.`);
 }
 
+/**
+ * BigModel's refusal once the Coding Plan's weekly or monthly quota is used up:
+ * HTTP 429 with error code 1310, until the reset time its message names
+ * (Beijing time, UTC+8). A retry gets the same answer until then (SCRUM-225).
+ */
+export class GlmQuotaError extends Error {
+  constructor(detail) {
+    super(`GLM quota used up: ${detail}`);
+    this.resetsAt = /\d{4}-\d{2}-\d{2} \d{2}:\d{2}(?::\d{2})?/.exec(detail)?.[0] ?? null;
+  }
+}
+
 /** One streamed GLM call; returns the answer text (thinking is ignored), why it stopped, and usage. */
 export async function askGlm({ apiKey, model, system, user, timeoutMs, effort }) {
   const response = await fetch(GLM_URL, {
@@ -483,6 +495,7 @@ export async function askGlm({ apiKey, model, system, user, timeoutMs, effort })
 
   if (!response.ok) {
     const detail = (await response.text()).slice(0, 300);
+    if (response.status === 429 && /"code"\s*:\s*"?1310\b/.test(detail)) throw new GlmQuotaError(detail);
     throw new Error(`GLM request failed: HTTP ${response.status} ${detail}`);
   }
 
@@ -577,6 +590,26 @@ export function renderTooLargeReview({ model, sha, size, max, runUrl }) {
       "or ask Jin Hong to merge it as admin after a human review.",
     "",
     `<sub>${model} · no GLM call made · [workflow run](${runUrl})</sub>`,
+  ].join("\n");
+}
+
+/**
+ * The comment for a review skipped because the GLM quota is used up. The code
+ * was never looked at, but the check passes rather than blocking every pull
+ * request until the reset; `build-and-test` still gates the merge (SCRUM-225).
+ */
+export function renderQuotaSkipped({ model, sha, resetsAt, seconds, runUrl }) {
+  return [
+    MARKER,
+    `## 🤖 ${model} code review`,
+    "",
+    `⏭️ **Review skipped** for commit \`${sha.slice(0, 7)}\`: the GLM quota is used up` +
+      (resetsAt ? ` until ${resetsAt} (UTC+8)` : "") +
+      ", so this check passed without a review. `build-and-test` still has to pass before merging.",
+    "",
+    "Read the diff yourself before merging, or re-run the **GLM Code Review** job after the reset to get a review.",
+    "",
+    `<sub>${model} · ${seconds}s · [workflow run](${runUrl})</sub>`,
   ].join("\n");
 }
 
@@ -1652,6 +1685,7 @@ async function main() {
   // less likely to be cut off.
   const failures = [];
   let review;
+  let quota;
   // The GLM budget starts now, so waiting for CI doesn't eat into it.
   const glmStarted = Date.now();
   for (const [index, effort] of EFFORTS.entries()) {
@@ -1673,11 +1707,25 @@ async function main() {
       review = { ...parseReview(result.content), usage: result.usage };
       break;
     } catch (error) {
+      if (error instanceof GlmQuotaError) {
+        quota = error;
+        break;
+      }
       failures.push(`attempt ${index + 1}: ${oneLine(error.message)}`);
       console.log(`::warning::GLM attempt ${index + 1} failed: ${error.message}`);
     }
   }
 
+  if (!review && quota) {
+    await upsertReviewComment(
+      github,
+      repo,
+      env.PR_NUMBER,
+      renderQuotaSkipped({ model, sha: env.HEAD_SHA, resetsAt: quota.resetsAt, seconds: elapsed(), runUrl: env.RUN_URL }),
+    );
+    console.log(`::warning::GLM review skipped, so this check passes without one: ${oneLine(quota.message)}`);
+    return;
+  }
   if (!review) {
     await upsertReviewComment(
       github,

@@ -165,7 +165,8 @@ The graders check that tests are **evidence**, not just that they exist.
 
 `main` is protected. You can't push to it, and a pull request can merge only
 when both required checks are green: **`build-and-test`** (including e2e) and
-the **GLM review**, which fails on a critical finding. Once both pass, merge
+the **GLM review**, which fails on a critical finding (it passes, skipped,
+while the GLM quota is used up). Once both pass, merge
 your own PR. `main` is what deploys to production and what the graders see,
 so it stays green by construction, not by discipline.
 
@@ -296,7 +297,10 @@ misreading something deliberate, you can also add a dated lesson by hand.
 
 **When it fails to run.** It retries once. If that also fails, the check
 turns red and says why: re-run the **GLM Code Review** job from the PR's
-Checks tab. A PR whose reviewable diff is over 400,000 characters is not
+Checks tab. The exception is a used-up GLM quota: GLM refuses every call
+until the reset, so the review is skipped, the comment says until when, and
+the check passes. Read the diff yourself before merging, or re-run the job
+after the reset. A PR whose reviewable diff is over 400,000 characters is not
 reviewed and fails the check, so split it.
 
 **Why GLM and not Copilot.** Copilot code review spends Copilot credits,

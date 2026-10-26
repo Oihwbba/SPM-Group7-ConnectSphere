@@ -11,7 +11,10 @@ name: GLM Code Review
 # SCRUM key the PR names.
 #
 # The check turns red when the review finds a critical issue, or when no review
-# could be completed. It is a required status check on `main` alongside
+# could be completed. One exception (SCRUM-225): when GLM refuses because the
+# quota is used up (HTTP 429, code 1310), the review is skipped with a comment
+# saying so and the check passes, since every PR would otherwise stay red until
+# the reset; `build-and-test` still gates the merge. It is a required status check on `main` alongside
 # `build-and-test`, so neither can merge. If GLM stops before answering, the
 # script retries once with less thinking. See docs/adr/0008.
 #
