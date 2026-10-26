@@ -53,6 +53,9 @@ test.describe("SCRUM-108 — Answer a clarification, or amend and resubmit", () 
   test("SCRUM-108 [AC1, AC2, AC3, AC14] TC-108-10: the Coordinator lets the Organiser change the attendance, and the answer changes only that", async ({
     page,
   }) => {
+    // SCRUM-189: a long journey, two sign-ins, a refused answer and an accepted one.
+    // Three times the 30-second limit, not a retry under CI load.
+    test.slow();
     const name = `SCRUM-108 Clarify ${Date.now()}`;
     eventId = (
       await prisma.event.create({
@@ -159,6 +162,9 @@ test.describe("SCRUM-108 — Answer a clarification, or amend and resubmit", () 
   test("SCRUM-108 [AC7, AC9, AC10, AC11, AC14] TC-108-11: an amended request shows its rejection reason while editing and goes back to the same Coordinator", async ({
     page,
   }) => {
+    // SCRUM-189: a long journey, the whole form to amend, with a refused step.
+    // Three times the 30-second limit, not a retry under CI load.
+    test.slow();
     const name = `SCRUM-108 Amend ${Date.now()}`;
     const reason =
       "Venue is unavailable on that date — please propose another.";
