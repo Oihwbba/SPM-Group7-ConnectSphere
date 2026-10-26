@@ -188,7 +188,7 @@ _8 stories, 14 points_
 | [SCRUM-207](SCRUM-207.md) | Shared page conventions on every page | 2 | High | SCRUM Sprint 4 | In Progress |
 | [SCRUM-208](SCRUM-208.md) | One page per event, not a pop-up | 2 | High | SCRUM Sprint 4 | To Do |
 | [SCRUM-209](SCRUM-209.md) | Arrange venues, equipment and the safety check from the event page | 2 | High | SCRUM Sprint 4 | To Do |
-| [SCRUM-210](SCRUM-210.md) | Menus grouped by task | 1 | High | SCRUM Sprint 4 | To Do |
+| [SCRUM-210](SCRUM-210.md) | Menus grouped by task | 1 | High | SCRUM Sprint 4 | In Review |
 | [SCRUM-211](SCRUM-211.md) | One layout for every work queue | 1 | Medium | SCRUM Sprint 4 | To Do |
 | [SCRUM-212](SCRUM-212.md) | Attendee pages show registration state at a glance | 1 | Medium | SCRUM Sprint 4 | To Do |
 
