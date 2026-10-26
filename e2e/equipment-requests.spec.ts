@@ -1,5 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 import { prisma } from "@/lib/db";
+import { selectFrom, optionsOf, openEquipmentRequest } from "./helpers";
 
 /**
  * SCRUM-27 — Create Equipment Request. An Event Coordinator asks Technical
@@ -52,7 +53,7 @@ async function addLine(
   requirements = "",
 ) {
   const dialog = page.getByRole("dialog");
-  await dialog.getByLabel("Equipment type").selectOption(equipmentId);
+  await selectFrom(dialog.getByLabel("Equipment type"), equipmentId);
   await dialog.getByLabel("Quantity").fill(quantity);
   await dialog
     .getByLabel("Technical requirements (optional)")
@@ -80,10 +81,11 @@ test.describe("SCRUM-27 — Create Equipment Request", () => {
     const dialog = page.getByRole("dialog", { name: "New equipment request" });
 
     // AC 1: the event is chosen by its name and date.
-    await expect(dialog.locator(`option[value="${rig.id}"]`)).toHaveText(
+    const events = await optionsOf(dialog.getByLabel("Event"));
+    expect(events.find((o) => o.value === rig.id)?.label).toBe(
       `${rig.name} — 20 Aug 2032`,
     );
-    await dialog.getByLabel("Event").selectOption(rig.id);
+    await selectFrom(dialog.getByLabel("Event"), rig.id);
     await expect(dialog.getByTestId("selected-event-period")).toContainText(
       "20 Aug 2032",
     );
@@ -108,13 +110,14 @@ test.describe("SCRUM-27 — Create Equipment Request", () => {
     await expect(card.getByTestId("request-status")).toHaveText(
       "Pending Review",
     );
-    await expect(card.getByTestId("request-line").nth(0)).toContainText(
+    const details = await openEquipmentRequest(page, rig.name);
+    await expect(details.getByTestId("request-line").nth(0)).toContainText(
       /Projector\s*2\s*HDMI to the lectern/,
     );
-    await expect(card.getByTestId("request-line").nth(1)).toContainText(
+    await expect(details.getByTestId("request-line").nth(1)).toContainText(
       /Wireless Microphone\s*3\s*None given/,
     );
-    await expect(card).toContainText("Keynote at 10am.");
+    await expect(details).toContainText("Keynote at 10am.");
 
     const saved = await prisma.equipmentRequest.findFirstOrThrow({
       where: { eventId: rig.id },
@@ -136,14 +139,12 @@ test.describe("SCRUM-27 — Create Equipment Request", () => {
       select: { id: true },
       orderBy: { type: "asc" },
     });
-    const offered = await page
-      .getByRole("dialog")
-      .getByLabel("Equipment type")
-      .locator("option:not([value=''])")
-      .evaluateAll((options) =>
-        options.map((option) => (option as HTMLOptionElement).value),
-      );
-    expect(offered).toEqual(active.map((item) => item.id));
+    const offered = await optionsOf(
+      page.getByRole("dialog").getByLabel("Equipment type"),
+    );
+    expect(offered.map((option) => option.value)).toEqual(
+      active.map((item) => item.id),
+    );
   });
 
   test("SCRUM-27 [AC3] TC-27-05: a quantity that is not a positive whole number is refused next to the field", async ({
@@ -205,7 +206,7 @@ test.describe("SCRUM-27 — Create Equipment Request", () => {
 
     await page.getByRole("button", { name: "New request" }).first().click();
     const dialog = page.getByRole("dialog");
-    await dialog.getByLabel("Event").selectOption(rig.id);
+    await selectFrom(dialog.getByLabel("Event"), rig.id);
     await addLine(page, "eqp_projector", "2");
     await dialog.getByRole("button", { name: "Submit request" }).click();
 
@@ -217,7 +218,10 @@ test.describe("SCRUM-27 — Create Equipment Request", () => {
     const shown = page.locator(`#request-${existing.id}`);
     await expect(shown).toHaveAttribute("data-highlighted", "true");
     await expect(shown).toBeInViewport();
-    await expect(shown.getByTestId("request-line")).toContainText("Lectern");
+    await shown.getByTestId("view-request-button").click();
+    await expect(
+      page.getByTestId("equipment-request-details").getByTestId("request-line"),
+    ).toContainText("Lectern");
     expect(
       await prisma.equipmentRequest.count({ where: { eventId: rig.id } }),
     ).toBe(1);
@@ -289,15 +293,13 @@ test.describe("SCRUM-27 — Create Equipment Request", () => {
     await page.getByRole("button", { name: "New request" }).first().click();
     const dialog = page.getByRole("dialog");
 
-    await dialog.getByLabel("Event").selectOption(rig.id);
-    await dialog.getByLabel("Equipment type").selectOption("eqp_laptop");
+    await selectFrom(dialog.getByLabel("Event"), rig.id);
+    await selectFrom(dialog.getByLabel("Equipment type"), "eqp_laptop");
     await dialog.getByLabel("Quantity").fill("2");
     await dialog.getByRole("button", { name: "Submit request" }).click();
 
-    const card = page
-      .getByTestId("equipment-request")
-      .filter({ hasText: rig.name });
-    await expect(card.getByTestId("request-line")).toContainText(/Laptop\s*2/);
+    const details = await openEquipmentRequest(page, rig.name);
+    await expect(details.getByTestId("request-line")).toContainText(/Laptop\s*2/);
   });
 });
 

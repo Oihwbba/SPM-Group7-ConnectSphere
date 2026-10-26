@@ -8,6 +8,7 @@ import type { Event } from "@prisma/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DateTimePicker } from "@/components/app/date-time-picker";
 import { Textarea } from "@/components/ui/textarea";
 import { FieldError } from "@/components/ui/field-error";
 import {
@@ -397,14 +398,17 @@ export function ChangeRequestPanel({ event }: { event: Event }) {
                         className="grid grid-cols-1 gap-2 sm:grid-cols-2"
                       >
                         {(["startAt", "endAt"] as const).map((key) => (
-                          <label key={key} className="space-y-1">
-                            <span className="font-medium">
+                          <div key={key} className="space-y-1">
+                            <label
+                              htmlFor={`change-${key}`}
+                              className="block font-medium"
+                            >
                               {key === "startAt" ? "Start" : "End"}
-                            </span>
-                            <Input
-                              type="datetime-local"
+                            </label>
+                            <DateTimePicker
+                              id={`change-${key}`}
                               value={draft[key]}
-                              onChange={(e) => set(key)(e.target.value)}
+                              onChange={set(key)}
                               aria-invalid={Boolean(errors[key])}
                               aria-describedby={describedBy(key)}
                             />
@@ -412,7 +416,7 @@ export function ChangeRequestPanel({ event }: { event: Event }) {
                               id={`change-${key}-error`}
                               messages={errors[key]}
                             />
-                          </label>
+                          </div>
                         ))}
                       </div>
                     ) : field === "registrationRequired" ? (

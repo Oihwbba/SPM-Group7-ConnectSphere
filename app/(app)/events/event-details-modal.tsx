@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "@/components/events/status-badge";
 import { ClarificationPanel } from "@/components/events/clarification-panel";
+import { Tabs } from "@/components/app/tabs";
 import { ChangeRequestPanel } from "@/components/events/change-request-panel";
 import { ReadinessChecklist } from "@/components/events/readiness-checklist";
 import { ReconsiderationPanel } from "@/components/events/reconsideration-panel";
@@ -39,6 +40,7 @@ import {
   Info,
   AlertTriangle,
   Search,
+  MessageCircleQuestion,
 } from "lucide-react";
 import type { Event } from "@prisma/client";
 import {
@@ -56,6 +58,8 @@ interface EventDetailsModalProps {
    * so the Organiser's existing usage needs no changes. */
   isCoordinator?: boolean;
   isNoLongerAvailable?: boolean;
+  /** The tab shown first, e.g. "clarification". */
+  initialTab?: "details" | "clarification";
 }
 
 /**
@@ -68,6 +72,7 @@ export function EventDetailsModal({
   onOpenChange,
   isCoordinator = false,
   isNoLongerAvailable = false,
+  initialTab,
 }: EventDetailsModalProps) {
   // Resolving a flag, or an edit that flags one (SCRUM-25 AC3), changes the
   // flagged arrangements and the readiness checklist, so both are read again.
@@ -75,17 +80,21 @@ export function EventDetailsModal({
   // SCRUM-162 AC7: a hold settled or a request withdrawn from the checklist
   // changes the Venue bookings card beside it, so it is read again.
   const [bookingChanges, setBookingChanges] = useState(0);
+  const [hasThread, setHasThread] = useState(false);
   if (!event) return null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
         <DialogHeader>
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b pb-3 pr-8">
+          <div className="flex flex-wrap items-center justify-between gap-2 pr-8">
             <div>
-              <DialogTitle className="text-xl font-bold">
-                {event.name}
-              </DialogTitle>
+              <div className="flex flex-wrap items-center gap-2">
+                <DialogTitle className="text-xl font-bold">
+                  {event.name}
+                </DialogTitle>
+                <StatusBadge status={event.status} />
+              </div>
               <DialogDescription className="mt-1 text-xs text-muted-foreground">
                 {event.status === "DRAFT"
                   ? "Draft Event Request"
@@ -118,7 +127,6 @@ export function EventDetailsModal({
                   onSaved={() => setReloads((n) => n + 1)}
                 />
               )}
-              <StatusBadge status={event.status} />
             </div>
           </div>
         </DialogHeader>
@@ -137,259 +145,287 @@ export function EventDetailsModal({
           </div>
         )}
 
-        {/* Singular Page Layout — Displays all entered details at a glance */}
-        <div className="space-y-4 py-2">
-          {/* SCRUM-132 AC3: the arrangements and what is still outstanding
-              come first, beside the status, so a desktop screen shows them
-              without scrolling. */}
-          {/* SCRUM-26: flagged arrangements, for the assigned Coordinator to resolve */}
-          {(event.status === "PLANNING" || event.status === "CONFIRMED") && (
-            <ReconsiderationPanel
-              key={`flags-${reloads}`}
-              eventId={event.id}
-              onResolved={() => setReloads((n) => n + 1)}
-            />
-          )}
-          {/* SCRUM-110: what is still outstanding before the event can be confirmed */}
-          {event.status === "PLANNING" && (
-            <ReadinessChecklist
-              key={`checklist-${reloads}`}
-              eventId={event.id}
-              onBookingsChanged={() => setBookingChanges((n) => n + 1)}
-            />
-          )}
-          {/* SCRUM-81: what a Confirmed event has secured */}
-          {event.status === "CONFIRMED" && <ConfirmedArrangements eventId={event.id} />}
+        {/* Change 2: the details, and the clarification thread when the
+            event has one, as two tabs. */}
+        <Tabs
+          label="Event request"
+          showTabs={hasThread}
+          initial={initialTab}
+          tabs={[
+            {
+              id: "details",
+              label: "Event details",
+              content: (
+                <div className="space-y-4 py-2">
+                  {/* SCRUM-132 AC3: the arrangements and what is still outstanding
+                      come first, beside the status, so a desktop screen shows them
+                      without scrolling. */}
+                  {/* SCRUM-26: flagged arrangements, for the assigned Coordinator to resolve */}
+                  {(event.status === "PLANNING" || event.status === "CONFIRMED") && (
+                    <ReconsiderationPanel
+                      key={`flags-${reloads}`}
+                      eventId={event.id}
+                      onResolved={() => setReloads((n) => n + 1)}
+                    />
+                  )}
+                  {/* SCRUM-110: what is still outstanding before the event can be confirmed */}
+                  {event.status === "PLANNING" && (
+                    <ReadinessChecklist
+                      key={`checklist-${reloads}`}
+                      eventId={event.id}
+                      onBookingsChanged={() => setBookingChanges((n) => n + 1)}
+                    />
+                  )}
+                  {/* SCRUM-81: what a Confirmed event has secured */}
+                  {event.status === "CONFIRMED" && <ConfirmedArrangements eventId={event.id} />}
 
-          {/* Section 1: Basic Event Information */}
-          <Card className="overflow-hidden">
-            <CardHeader className="bg-muted/30 px-4 py-3">
-              <CardTitle className="flex items-center gap-2 text-sm font-semibold">
-                <Info className="h-4 w-4 text-primary" /> Basic Information
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2 p-4 text-xs">
-              <div>
-                <span className="font-semibold text-muted-foreground">
-                  Event Purpose:
-                </span>
-                <p className="mt-0.5 text-foreground">{event.purpose || "—"}</p>
-              </div>
-              <div>
-                <span className="font-semibold text-muted-foreground">
-                  Event Description:
-                </span>
-                <p className="mt-0.5 whitespace-pre-wrap text-foreground">
-                  {event.description || "—"}
-                </p>
-              </div>
-              {/* SCRUM-21 AC8: who coordinates it now */}
-              <CurrentCoordinator
-                key={event.coordinatorId ?? "none"}
-                eventId={event.id}
-              />
-                        </CardContent>
-          </Card>
+                  {/* Section 1: Basic Event Information */}
+                  <Card className="overflow-hidden">
+                    <CardHeader className="bg-muted/30 px-4 py-3">
+                      <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+                        <Info className="h-4 w-4 text-primary" /> Basic Information
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-2 p-4 text-xs">
+                      <div>
+                        <span className="font-semibold text-muted-foreground">
+                          Event Purpose:
+                        </span>
+                        <p className="mt-0.5 text-foreground">{event.purpose || "—"}</p>
+                      </div>
+                      <div>
+                        <span className="font-semibold text-muted-foreground">
+                          Event Description:
+                        </span>
+                        <p className="mt-0.5 whitespace-pre-wrap text-foreground">
+                          {event.description || "—"}
+                        </p>
+                      </div>
+                      {/* SCRUM-21 AC8: who coordinates it now */}
+                      <CurrentCoordinator
+                        key={event.coordinatorId ?? "none"}
+                        eventId={event.id}
+                      />
+                                </CardContent>
+                  </Card>
 
-          {/* SCRUM-25 AC6: shows nothing to a user who may not read them */}
-          <OperationalNotes eventId={event.id} />
+                  {/* SCRUM-25 AC6: shows nothing to a user who may not read them */}
+                  <OperationalNotes eventId={event.id} />
 
-          {/* SCRUM-18: shows nothing if there's no clarification thread */}
-          <ClarificationPanel event={event} isCoordinator={isCoordinator} />
+                  {/* SCRUM-41: shows nothing for an event with none that can't take one */}
+                  {event.status !== "DRAFT" && (
+                    <ChangeRequestPanel key={event.id} event={event} />
+                  )}
 
-          {/* SCRUM-41: shows nothing for an event with none that can't take one */}
-          {event.status !== "DRAFT" && (
-            <ChangeRequestPanel key={event.id} event={event} />
-          )}
+                  {/* SCRUM-162 AC7: every venue booking, once a venue can be requested */}
+                  {(event.status === "APPROVED" ||
+                    event.status === "PLANNING" ||
+                    event.status === "CONFIRMED" ||
+                    event.status === "CANCELLED" ||
+                    event.status === "COMPLETED") && (
+                    <VenueBookings
+                      key={`bookings-${reloads}-${bookingChanges}`}
+                      eventId={event.id}
+                    />
+                  )}
+                  {/* SCRUM-75 AC6: close or reopen registration */}
+                  {event.status === "CONFIRMED" && <RegistrationControl eventId={event.id} />}
 
-          {/* SCRUM-162 AC7: every venue booking, once a venue can be requested */}
-          {(event.status === "APPROVED" ||
-            event.status === "PLANNING" ||
-            event.status === "CONFIRMED" ||
-            event.status === "CANCELLED" ||
-            event.status === "COMPLETED") && (
-            <VenueBookings
-              key={`bookings-${reloads}-${bookingChanges}`}
-              eventId={event.id}
-            />
-          )}
-          {/* SCRUM-75 AC6: close or reopen registration */}
-          {event.status === "CONFIRMED" && <RegistrationControl eventId={event.id} />}
+                  {/* SCRUM-70: shows nothing to a user who may not see the registrations */}
+                  {(event.status === "CONFIRMED" ||
+                    event.status === "PLANNING" ||
+                    event.status === "CANCELLED" ||
+                    event.status === "COMPLETED") && (
+                    <RegistrationListPanel eventId={event.id} />
+                  )}
 
-          {/* SCRUM-70: shows nothing to a user who may not see the registrations */}
-          {(event.status === "CONFIRMED" ||
-            event.status === "PLANNING" ||
-            event.status === "CANCELLED" ||
-            event.status === "COMPLETED") && (
-            <RegistrationListPanel eventId={event.id} />
-          )}
+                  {/* SCRUM-82 AC1: offered to the Coordinator; the server checks it's theirs. */}
+                  {isCoordinator && CANCELLABLE.includes(event.status) && (
+                    <div className="flex justify-end">
+                      <CancelEvent eventId={event.id} />
+                    </div>
+                  )}
+                  {event.status === "CANCELLED" && event.cancellationReason && (
+                    <Card className="overflow-hidden" data-testid="cancellation-reason">
+                      <CardHeader className="bg-destructive/5 px-4 py-3">
+                        <CardTitle className="text-sm font-semibold text-destructive">
+                          Cancellation reason
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-1 p-4 text-xs">
+                        <p className="whitespace-pre-wrap">{event.cancellationReason}</p>
+                        {event.cancelledAt && (
+                          <p className="text-muted-foreground">
+                            Cancelled on {formatDateTime(event.cancelledAt)}
+                          </p>
+                        )}
+                      </CardContent>
+                    </Card>
+                  )}
 
-          {/* SCRUM-82 AC1: offered to the Coordinator; the server checks it's theirs. */}
-          {isCoordinator && CANCELLABLE.includes(event.status) && (
-            <div className="flex justify-end">
-              <CancelEvent eventId={event.id} />
-            </div>
-          )}
-          {event.status === "CANCELLED" && event.cancellationReason && (
-            <Card className="overflow-hidden" data-testid="cancellation-reason">
-              <CardHeader className="bg-destructive/5 px-4 py-3">
-                <CardTitle className="text-sm font-semibold text-destructive">
-                  Cancellation reason
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-1 p-4 text-xs">
-                <p className="whitespace-pre-wrap">{event.cancellationReason}</p>
-                {event.cancelledAt && (
-                  <p className="text-muted-foreground">
-                    Cancelled on {formatDateTime(event.cancelledAt)}
-                  </p>
-                )}
-              </CardContent>
-            </Card>
-          )}
+                  {event.status === "REJECTED" && event.decisionReason && (
+                    <Card className="overflow-hidden">
+                      <CardHeader className="bg-destructive/5 px-4 py-3">
+                        <CardTitle className="text-sm font-semibold text-destructive">
+                          Rejection reason
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-2 p-4 text-xs">
+                        <p className="whitespace-pre-wrap">{event.decisionReason}</p>
+                        {/* SCRUM-126 AC5: what the Coordinator said happens next. */}
+                        {event.rejectionOutcome && (
+                          <p data-testid="rejection-outcome">
+                            <span className="font-semibold">Next step:</span>{" "}
+                            {REJECTION_OUTCOME_LABEL[event.rejectionOutcome]}
+                          </p>
+                        )}
+                      </CardContent>
+                    </Card>
+                  )}
 
-          {event.status === "REJECTED" && event.decisionReason && (
-            <Card className="overflow-hidden">
-              <CardHeader className="bg-destructive/5 px-4 py-3">
-                <CardTitle className="text-sm font-semibold text-destructive">
-                  Rejection reason
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2 p-4 text-xs">
-                <p className="whitespace-pre-wrap">{event.decisionReason}</p>
-                {/* SCRUM-126 AC5: what the Coordinator said happens next. */}
-                {event.rejectionOutcome && (
-                  <p data-testid="rejection-outcome">
-                    <span className="font-semibold">Next step:</span>{" "}
-                    {REJECTION_OUTCOME_LABEL[event.rejectionOutcome]}
-                  </p>
-                )}
-              </CardContent>
-            </Card>
-          )}
+                  {/* Section 2: Schedule & Expected Attendance */}
+                  <Card className="overflow-hidden">
+                    <CardHeader className="bg-muted/30 px-4 py-3">
+                      <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+                        <Calendar className="h-4 w-4 text-primary" /> Schedule &
+                        Attendance
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="grid grid-cols-1 gap-3 p-4 text-xs sm:grid-cols-3">
+                      <div>
+                        <span className="font-semibold text-muted-foreground">
+                          Proposed Start:
+                        </span>
+                        <p className="mt-0.5 text-foreground">
+                          {event.startAt ? formatDateTime(event.startAt) : "—"}
+                        </p>
+                      </div>
+                      <div>
+                        <span className="font-semibold text-muted-foreground">
+                          Proposed End:
+                        </span>
+                        <p className="mt-0.5 text-foreground">
+                          {event.endAt ? formatDateTime(event.endAt) : "—"}
+                        </p>
+                      </div>
+                      <div>
+                        <span className="font-semibold text-muted-foreground">
+                          Expected Attendance:
+                        </span>
+                        <p className="mt-0.5 font-medium text-foreground">
+                          {event.expectedAttendance
+                            ? `${event.expectedAttendance} attendees`
+                            : "—"}
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
 
-          {/* Section 2: Schedule & Expected Attendance */}
-          <Card className="overflow-hidden">
-            <CardHeader className="bg-muted/30 px-4 py-3">
-              <CardTitle className="flex items-center gap-2 text-sm font-semibold">
-                <Calendar className="h-4 w-4 text-primary" /> Schedule &
-                Attendance
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="grid grid-cols-1 gap-3 p-4 text-xs sm:grid-cols-3">
-              <div>
-                <span className="font-semibold text-muted-foreground">
-                  Proposed Start:
-                </span>
-                <p className="mt-0.5 text-foreground">
-                  {event.startAt ? formatDateTime(event.startAt) : "—"}
-                </p>
-              </div>
-              <div>
-                <span className="font-semibold text-muted-foreground">
-                  Proposed End:
-                </span>
-                <p className="mt-0.5 text-foreground">
-                  {event.endAt ? formatDateTime(event.endAt) : "—"}
-                </p>
-              </div>
-              <div>
-                <span className="font-semibold text-muted-foreground">
-                  Expected Attendance:
-                </span>
-                <p className="mt-0.5 font-medium text-foreground">
-                  {event.expectedAttendance
-                    ? `${event.expectedAttendance} attendees`
-                    : "—"}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+                  {/* Section 3: Venue, Layout & Accessibility Requirements */}
+                  <Card className="overflow-hidden">
+                    <CardHeader className="bg-muted/30 px-4 py-3">
+                      <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+                        <Building2 className="h-4 w-4 text-primary" /> Venue &
+                        Accessibility Requirements
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-4">
+                      {/* SCRUM-170 AC5: the Organiser's answers exactly as entered, the
+                          same for every event. Required Facilities is not shown: the
+                          Coordinator enters facilities on each venue request. */}
+                      <OrganiserVenueAnswers answers={event} />
+                    </CardContent>
+                  </Card>
 
-          {/* Section 3: Venue, Layout & Accessibility Requirements */}
-          <Card className="overflow-hidden">
-            <CardHeader className="bg-muted/30 px-4 py-3">
-              <CardTitle className="flex items-center gap-2 text-sm font-semibold">
-                <Building2 className="h-4 w-4 text-primary" /> Venue &
-                Accessibility Requirements
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-4">
-              {/* SCRUM-170 AC5: the Organiser's answers exactly as entered, the
-                  same for every event. Required Facilities is not shown: the
-                  Coordinator enters facilities on each venue request. */}
-              <OrganiserVenueAnswers answers={event} />
-            </CardContent>
-          </Card>
+                  {/* Section 4: Equipment & Technical Support */}
+                  <Card className="overflow-hidden">
+                    <CardHeader className="bg-muted/30 px-4 py-3">
+                      <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+                        <Wrench className="h-4 w-4 text-primary" /> Equipment &
+                        Technical Support
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-4">
+                      <OrganiserEquipmentAnswer
+                        equipmentRequirements={event.equipmentRequirements}
+                      />
+                    </CardContent>
+                  </Card>
 
-          {/* Section 4: Equipment & Technical Support */}
-          <Card className="overflow-hidden">
-            <CardHeader className="bg-muted/30 px-4 py-3">
-              <CardTitle className="flex items-center gap-2 text-sm font-semibold">
-                <Wrench className="h-4 w-4 text-primary" /> Equipment &
-                Technical Support
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-4">
-              <OrganiserEquipmentAnswer
-                equipmentRequirements={event.equipmentRequirements}
-              />
-            </CardContent>
-          </Card>
-
-          {/* Section 5: Registration & Additional Details */}
-          <Card className="overflow-hidden">
-            <CardHeader className="bg-muted/30 px-4 py-3">
-              <CardTitle className="flex items-center gap-2 text-sm font-semibold">
-                <ClipboardList className="h-4 w-4 text-primary" /> Registration
-                & Additional Details
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 p-4 text-xs">
-              {/* SCRUM-171 AC3: a request made before Registration needed
-                  existed shows "Not answered", with its own answer beside it. */}
-              <div
-                className="grid grid-cols-1 gap-3 sm:grid-cols-2"
-                data-testid="registration-needed"
-              >
-                <div>
-                  <span className="font-semibold text-muted-foreground">
-                    Registration Needed:
-                  </span>
-                  <p className="mt-0.5 font-medium text-foreground">
-                    {registrationNeededLabel(event.registrationRequired)}
-                  </p>
+                  {/* Section 5: Registration & Additional Details */}
+                  <Card className="overflow-hidden">
+                    <CardHeader className="bg-muted/30 px-4 py-3">
+                      <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+                        <ClipboardList className="h-4 w-4 text-primary" /> Registration
+                        & Additional Details
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3 p-4 text-xs">
+                      {/* SCRUM-171 AC3: a request made before Registration needed
+                          existed shows "Not answered", with its own answer beside it. */}
+                      <div
+                        className="grid grid-cols-1 gap-3 sm:grid-cols-2"
+                        data-testid="registration-needed"
+                      >
+                        <div>
+                          <span className="font-semibold text-muted-foreground">
+                            Registration Needed:
+                          </span>
+                          <p className="mt-0.5 font-medium text-foreground">
+                            {registrationNeededLabel(event.registrationRequired)}
+                          </p>
+                        </div>
+                        <div>
+                          <span className="font-semibold text-muted-foreground">
+                            Registration Notes:
+                          </span>
+                          <p className="mt-0.5 whitespace-pre-wrap text-foreground">
+                            {event.registrationNotes || "—"}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        <div>
+                          <span className="font-semibold text-muted-foreground">
+                            Event Programme:
+                          </span>
+                          <p className="mt-0.5 text-foreground">
+                            {event.programme || "Not specified"}
+                          </p>
+                        </div>
+                        <div>
+                          <span className="font-semibold text-muted-foreground">
+                            Special Requests:
+                          </span>
+                          <p className="mt-0.5 text-foreground">
+                            {event.specialRequests || "None"}
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
                 </div>
-                <div>
-                  <span className="font-semibold text-muted-foreground">
-                    Registration Notes:
-                  </span>
-                  <p className="mt-0.5 whitespace-pre-wrap text-foreground">
-                    {event.registrationNotes || "—"}
-                  </p>
-                </div>
-              </div>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <div>
-                  <span className="font-semibold text-muted-foreground">
-                    Event Programme:
-                  </span>
-                  <p className="mt-0.5 text-foreground">
-                    {event.programme || "Not specified"}
-                  </p>
-                </div>
-                <div>
-                  <span className="font-semibold text-muted-foreground">
-                    Special Requests:
-                  </span>
-                  <p className="mt-0.5 text-foreground">
-                    {event.specialRequests || "None"}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+              ),
+            },
+            {
+              id: "clarification",
+              label: (
+                <>
+                  <MessageCircleQuestion className="h-4 w-4" aria-hidden />
+                  Clarification
+                </>
+              ),
+              // SCRUM-18: renders nothing when there's no thread.
+              content: (
+                <ClarificationPanel
+                  event={event}
+                  isCoordinator={isCoordinator}
+                  onLoaded={setHasThread}
+                />
+              ),
+            },
+          ]}
+        />
 
         <DialogFooter className="border-t pt-3">
           <Button

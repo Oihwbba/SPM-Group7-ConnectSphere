@@ -13,6 +13,8 @@ import {
   ClipboardList,
   Info,
   AlertCircle,
+  Check,
+  Save,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -30,6 +32,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DateTimePicker } from "@/components/app/date-time-picker";
+import { PillSelect } from "@/components/app/pill-select";
+import { Stepper } from "@/components/app/stepper";
+import { CapacityTag } from "@/components/app/capacity-tag";
+import {
+  joinChoices,
+  splitChoice,
+  splitChoices,
+} from "@/lib/requirement-choices";
 import {
   formatDateTime,
   parseSingaporeDateTime,
@@ -47,7 +58,6 @@ import {
   draftStartIsInPast,
 } from "@/lib/schemas/event";
 import {
-  addAccessibilityNeed,
   PREDEFINED_VENUE_OPTIONS,
   tagLabel,
   withVenueLayouts,
@@ -118,7 +128,16 @@ interface CreateEventDialogProps {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   trigger?: React.ReactNode;
+  /** Called with the request's id once it is submitted for review. */
+  onSubmitted?: (id: string) => void;
 }
+
+const STEPS = ["Basics", "Schedule", "Venue", "Equipment", "Details", "Review"];
+
+// How the catalogue choices are written into the free-text answers, as the
+// catalogue buttons wrote them (lib/requirement-choices.ts).
+const VENUE_PREFIX = "Preferred venue: ";
+const EQUIPMENT_PREFIX = "Requested equipment: ";
 
 /** Helper to format a naive wall-time string (YYYY-MM-DDTHH:mm) for display */
 function formatWallDateTime(val: string | null | undefined): string {
@@ -165,6 +184,7 @@ export function CreateEventDialog({
   open: openProp,
   onOpenChange: onOpenChangeProp,
   trigger,
+  onSubmitted,
 }: CreateEventDialogProps = {}) {
   const router = useRouter();
   const [internalOpen, setInternalOpen] = useState(false);
@@ -196,10 +216,15 @@ export function CreateEventDialog({
   );
   const canSaveDraft = !draftEvent || draftEvent.status === "DRAFT";
 
-  const minStartDateTime = utcToSgWallTime(new Date());
 
   const [isDirty, setIsDirty] = useState(false);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
+  // A new request saved as a draft while the form stays open: later saves,
+  // and the submission, update that draft rather than creating another.
+  const [savedDraftId, setSavedDraftId] = useState<string | null>(null);
+  const [justSaved, setJustSaved] = useState(false);
+  const [savingDraft, setSavingDraft] = useState(false);
+  const eventId = draftEvent?.id ?? savedDraftId ?? undefined;
 
   const [prevOpen, setPrevOpen] = useState(open);
   if (open !== prevOpen) {
@@ -209,6 +234,8 @@ export function CreateEventDialog({
       setFieldErrors({});
       setStep(1);
       setIsDirty(false);
+      setSavedDraftId(null);
+      setJustSaved(false);
     }
   }
 
@@ -252,13 +279,15 @@ export function CreateEventDialog({
     setFieldErrors({});
     setStep(1);
     setIsDirty(false);
+    setSavedDraftId(null);
+    setJustSaved(false);
   }
 
-  const minEndDateTime = formData.startAt ? formData.startAt : minStartDateTime;
 
   function updateField<K extends keyof FormState>(key: K, value: FormState[K]) {
     setFormData((prev) => ({ ...prev, [key]: value }));
     setIsDirty(true);
+    setJustSaved(false);
     if (fieldErrors[key]) {
       setFieldErrors((prev) => {
         const next = { ...prev };
@@ -325,9 +354,10 @@ export function CreateEventDialog({
   }
 
   async function handleSaveDraft() {
+    setSavingDraft(true);
     startTransition(async () => {
       const payload = {
-        id: draftEvent?.id,
+        id: eventId,
         ...formData,
         name: formData.name.trim() || "Draft Event Request",
         expectedAttendance:
@@ -341,14 +371,20 @@ export function CreateEventDialog({
       };
 
       const result = await createDraftEvent(payload);
+      setSavingDraft(false);
 
       if (result.ok) {
         toast.success(
-          draftEvent
+          eventId
             ? "Draft event request updated successfully."
             : "Draft event request saved successfully.",
         );
-        resetForm();
+        // Change 2: the form stays open, and the button says it was saved.
+        setSavedDraftId(result.data.id);
+        setIsDirty(false);
+        setJustSaved(true);
+        setFieldErrors({});
+        router.refresh();
         return;
       }
 
@@ -360,7 +396,7 @@ export function CreateEventDialog({
   async function handleSubmitForReview() {
     startTransition(async () => {
       const payload = {
-        id: draftEvent?.id,
+        id: eventId,
         ...formData,
         expectedAttendance:
           formData.expectedAttendance !== ""
@@ -376,6 +412,7 @@ export function CreateEventDialog({
       if (result.ok) {
         toast.success("Event request submitted for review successfully!");
         resetForm();
+        onSubmitted?.(result.data.id);
         return;
       }
 
@@ -395,6 +432,29 @@ export function CreateEventDialog({
     forceCloseDialog(false);
     router.refresh();
   }
+
+  // Change 7: the free-text answers shown as choices plus "Other".
+  const layoutOptions = withVenueLayouts(
+    LAYOUT_OPTIONS,
+    catalogues.options.supportedLayouts,
+  );
+  const accessibilityOptions =
+    catalogues.options.accessibilityFeatures.map(tagLabel);
+  const venueChoices = splitChoices(
+    formData.venueRequirements,
+    catalogues.venues.map((v) => v.name),
+    VENUE_PREFIX,
+  );
+  const layoutChoice = splitChoice(formData.preferredLayout, layoutOptions);
+  const accessibilityChoices = splitChoices(
+    formData.accessibilityNeeds,
+    accessibilityOptions,
+  );
+  const equipmentChoices = splitChoices(
+    formData.equipmentRequirements,
+    catalogues.equipment.map((eq) => eq.type),
+    EQUIPMENT_PREFIX,
+  );
 
   // Check which mandatory submission fields are currently missing
   const missingSubmissionFields = {
@@ -432,19 +492,14 @@ export function CreateEventDialog({
       )}
       <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center justify-between gap-2 pr-8 text-xl font-bold">
-            <span>
-              {draftEvent
-                ? isReadOnly
-                  ? "Submitted Event Request Details"
-                  : draftEvent.status === "REJECTED"
-                    ? "Amend Rejected Event Request"
-                    : "Resume Draft Event Request"
-                : "Create Event Request"}
-            </span>
-            <span className="shrink-0 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-normal text-primary">
-              Step {step} of 6
-            </span>
+          <DialogTitle className="pr-8 text-xl font-bold">
+            {draftEvent
+              ? isReadOnly
+                ? "Submitted Event Request Details"
+                : draftEvent.status === "REJECTED"
+                  ? "Amend Rejected Event Request"
+                  : "Resume Draft Event Request"
+              : "Create Event Request"}
           </DialogTitle>
           <DialogDescription>
             {isReadOnly
@@ -482,62 +537,15 @@ export function CreateEventDialog({
             </div>
           )}
 
-        {/* Step Indicator Bar — Allows direct navigation between steps. It
-            wraps on a phone, so the dialog never scrolls sideways (SCRUM-132 AC1). */}
-        <div className="mb-4 flex flex-wrap items-center gap-1 border-b pb-3 text-xs font-medium text-muted-foreground md:justify-between md:gap-2">
-          <button
-            type="button"
-            onClick={() => goToStep(1)}
-            className={`flex items-center gap-1.5 rounded px-2 py-1 transition-colors ${step === 1 ? "bg-primary font-semibold text-primary-foreground" : "hover:bg-accent"}`}
-          >
-            <Info className="h-3.5 w-3.5" /> 1. Basics
-          </button>
-          <ChevronRight className="h-3 w-3 shrink-0" />
-          <button
-            type="button"
-            onClick={() => goToStep(2)}
-            className={`flex items-center gap-1.5 rounded px-2 py-1 transition-colors ${step === 2 ? "bg-primary font-semibold text-primary-foreground" : "hover:bg-accent"}`}
-          >
-            <Calendar className="h-3.5 w-3.5" /> 2. Schedule
-          </button>
-          <ChevronRight className="h-3 w-3 shrink-0" />
-          <button
-            type="button"
-            onClick={() => goToStep(3)}
-            className={`flex items-center gap-1.5 rounded px-2 py-1 transition-colors ${step === 3 ? "bg-primary font-semibold text-primary-foreground" : "hover:bg-accent"}`}
-          >
-            <Building2 className="h-3.5 w-3.5" /> 3. Venue
-          </button>
-          <ChevronRight className="h-3 w-3 shrink-0" />
-          <button
-            type="button"
-            onClick={() => goToStep(4)}
-            className={`flex items-center gap-1.5 rounded px-2 py-1 transition-colors ${step === 4 ? "bg-primary font-semibold text-primary-foreground" : "hover:bg-accent"}`}
-          >
-            <Wrench className="h-3.5 w-3.5" /> 4. Equipment
-          </button>
-          <ChevronRight className="h-3 w-3 shrink-0" />
-          <button
-            type="button"
-            onClick={() => goToStep(5)}
-            className={`flex items-center gap-1.5 rounded px-2 py-1 transition-colors ${step === 5 ? "bg-primary font-semibold text-primary-foreground" : "hover:bg-accent"}`}
-          >
-            <ClipboardList className="h-3.5 w-3.5" /> 5. Details
-          </button>
-          <ChevronRight className="h-3 w-3 shrink-0" />
-          <button
-            type="button"
-            onClick={() => goToStep(6)}
-            className={`flex items-center gap-1.5 rounded px-2 py-1 transition-colors ${step === 6 ? "bg-primary font-semibold text-primary-foreground" : "hover:bg-accent"}`}
-          >
-            <Eye className="h-3.5 w-3.5" /> 6. Review
-          </button>
+        {/* Change 1: one clean line of steps. Any step can be visited. */}
+        <div className="mb-2 min-w-0">
+          <Stepper steps={STEPS} current={step} onStep={goToStep} />
         </div>
 
         {/* Step 1: Basic Event Information */}
         {step === 1 && (
           <div className="space-y-4">
-            <h3 className="flex items-center gap-2 border-b pb-2 text-base font-semibold">
+            <h3 className="flex items-center gap-2 text-base font-semibold">
               <Info className="h-4 w-4 text-primary" /> Basic Event Information
             </h3>
             <div className="space-y-2">
@@ -595,51 +603,40 @@ export function CreateEventDialog({
         {/* Step 2: Proposed Schedule & Attendance */}
         {step === 2 && (
           <div className="space-y-4">
-            <h3 className="flex items-center gap-2 border-b pb-2 text-base font-semibold">
+            <h3 className="flex items-center gap-2 text-base font-semibold">
               <Calendar className="h-4 w-4 text-primary" /> Schedule &
               Attendance
             </h3>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="startAt">Proposed Start Date & Time *</Label>
-                <Input
+                <DateTimePicker
                   id="startAt"
-                  type="datetime-local"
-                  min={minStartDateTime}
                   value={formData.startAt}
-                  onChange={(e) => updateField("startAt", e.target.value)}
+                  onChange={(value) => updateField("startAt", value)}
                   aria-invalid={!!fieldErrors.startAt}
-                  className="relative w-full max-w-xs cursor-pointer pr-8 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-3 [&::-webkit-calendar-picker-indicator]:top-1/2 [&::-webkit-calendar-picker-indicator]:-translate-y-1/2 [&::-webkit-calendar-picker-indicator]:cursor-pointer"
                 />
                 {fieldErrors.startAt?.map((msg) => (
                   <p key={msg} className="text-xs text-destructive">
                     {msg}
                   </p>
                 ))}
-                <p className="text-[11px] text-muted-foreground">
-                  Must be a future date & time.
-                </p>
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="endAt">Proposed End Date & Time *</Label>
-                <Input
+                <DateTimePicker
                   id="endAt"
-                  type="datetime-local"
-                  min={minEndDateTime}
+                  openOn={formData.startAt.split("T")[0] || undefined}
                   value={formData.endAt}
-                  onChange={(e) => updateField("endAt", e.target.value)}
+                  onChange={(value) => updateField("endAt", value)}
                   aria-invalid={!!fieldErrors.endAt}
-                  className="relative w-full max-w-xs cursor-pointer pr-8 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-3 [&::-webkit-calendar-picker-indicator]:top-1/2 [&::-webkit-calendar-picker-indicator]:-translate-y-1/2 [&::-webkit-calendar-picker-indicator]:cursor-pointer"
                 />
                 {fieldErrors.endAt?.map((msg) => (
                   <p key={msg} className="text-xs text-destructive">
                     {msg}
                   </p>
                 ))}
-                <p className="text-[11px] text-muted-foreground">
-                  Must be strictly after start date & time.
-                </p>
               </div>
             </div>
 
@@ -679,9 +676,6 @@ export function CreateEventDialog({
                   {msg}
                 </p>
               ))}
-              <p className="text-[11px] text-muted-foreground">
-                Must be a positive whole number greater than 0.
-              </p>
             </div>
           </div>
         )}
@@ -689,51 +683,43 @@ export function CreateEventDialog({
         {/* Step 3: Venue & Accessibility Requirements (Grouped together) */}
         {step === 3 && (
           <div className="space-y-4">
-            <h3 className="flex items-center gap-2 border-b pb-2 text-base font-semibold">
+            <h3 className="flex items-center gap-2 text-base font-semibold">
               <Building2 className="h-4 w-4 text-primary" /> Venue, Layout &
               Accessibility Requirements
             </h3>
 
-            {catalogues.venues.length > 0 && (
-              <div className="space-y-1 rounded-lg border bg-muted/40 p-3 text-xs">
-                <p className="font-medium text-foreground">
-                  Available ConnectSphere Venues Catalogue:
-                </p>
-                <div className="flex flex-wrap gap-2 pt-1">
-                  {catalogues.venues.map((v) => (
-                    <button
-                      key={v.id}
-                      type="button"
-                      className="cursor-pointer rounded border bg-background px-2 py-0.5 text-xs hover:bg-accent focus:outline-none focus:ring-1 focus:ring-ring"
-                      onClick={() =>
-                        updateField(
-                          "venueRequirements",
-                          formData.venueRequirements
-                            ? `${formData.venueRequirements}, ${v.name}`
-                            : `Preferred venue: ${v.name}`,
-                        )
-                      }
-                    >
-                      {v.name} (Cap: {v.capacity})
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-
-
             <div className="space-y-2">
               <Label htmlFor="venueRequirements">Venue Requirements *</Label>
-              <Textarea
+              <PillSelect
                 id="venueRequirements"
-                placeholder="Specify space size, hall preference, or specific space requirements..."
-                rows={3}
-                value={formData.venueRequirements}
-                onChange={(e) =>
-                  updateField("venueRequirements", e.target.value)
+                placeholder="Select venues"
+                options={catalogues.venues.map((v) => ({
+                  value: v.name,
+                  label: (
+                    <span className="flex w-full items-center justify-between gap-3">
+                      {v.name}
+                      <CapacityTag capacity={v.capacity} />
+                    </span>
+                  ),
+                }))}
+                selected={venueChoices.chosen}
+                onChange={(chosen) =>
+                  updateField(
+                    "venueRequirements",
+                    joinChoices({ ...venueChoices, chosen }, VENUE_PREFIX),
+                  )
                 }
-                aria-invalid={!!fieldErrors.venueRequirements}
+                other={venueChoices.other}
+                onOtherChange={(other) =>
+                  updateField(
+                    "venueRequirements",
+                    joinChoices({ ...venueChoices, other }, VENUE_PREFIX),
+                  )
+                }
+                otherLabel="Other venue requirements"
+                otherPlaceholder="Specify space size, hall preference, or specific space requirements..."
+                otherMultiline
+                invalid={!!fieldErrors.venueRequirements}
               />
               {fieldErrors.venueRequirements?.map((msg) => (
                 <p key={msg} className="text-xs text-destructive">
@@ -744,33 +730,20 @@ export function CreateEventDialog({
 
             <div className="space-y-2">
               <Label htmlFor="preferredLayout">Preferred Room Layout *</Label>
-              <div className="mb-2 flex flex-wrap gap-2">
-                {withVenueLayouts(
-                  LAYOUT_OPTIONS,
-                  catalogues.options.supportedLayouts,
-                ).map((layout) => (
-                  <Button
-                    key={layout}
-                    type="button"
-                    variant={
-                      formData.preferredLayout === layout
-                        ? "default"
-                        : "outline"
-                    }
-                    size="sm"
-                    className="h-8 text-xs"
-                    onClick={() => updateField("preferredLayout", layout)}
-                  >
-                    {layout}
-                  </Button>
-                ))}
-              </div>
-              <Input
+              <PillSelect
                 id="preferredLayout"
-                placeholder="e.g. Theatre style or custom arrangement"
-                value={formData.preferredLayout}
-                onChange={(e) => updateField("preferredLayout", e.target.value)}
-                aria-invalid={!!fieldErrors.preferredLayout}
+                multiple={false}
+                placeholder="Select a layout"
+                options={layoutOptions.map((value) => ({ value }))}
+                selected={layoutChoice.chosen}
+                onChange={([chosen = ""]) =>
+                  updateField("preferredLayout", chosen)
+                }
+                other={layoutChoice.other}
+                onOtherChange={(other) => updateField("preferredLayout", other)}
+                otherLabel="Other room layout"
+                otherPlaceholder="e.g. Theatre style or custom arrangement"
+                invalid={!!fieldErrors.preferredLayout}
               />
               {fieldErrors.preferredLayout?.map((msg) => (
                 <p key={msg} className="text-xs text-destructive">
@@ -782,47 +755,34 @@ export function CreateEventDialog({
             <div className="space-y-2">
               <Label htmlFor="accessibilityNeeds">Accessibility Needs *</Label>
               {/* SCRUM-34 AC6: the features venues offer, Venue Staff's own included. */}
-              <div className="mb-2 flex flex-wrap gap-2">
-                {catalogues.options.accessibilityFeatures.map((feature) => (
-                  <Button
-                    key={feature}
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="h-8 text-xs"
-                    onClick={() =>
-                      updateField(
-                        "accessibilityNeeds",
-                        addAccessibilityNeed(
-                          formData.accessibilityNeeds,
-                          tagLabel(feature),
-                        ),
-                      )
-                    }
-                  >
-                    {tagLabel(feature)}
-                  </Button>
-                ))}
-              </div>
-              <Textarea
+              <PillSelect
                 id="accessibilityNeeds"
-                placeholder="State any wheelchair access, special physical seating, mobility, or facility arrangements required for attendees..."
-                rows={3}
-                value={formData.accessibilityNeeds}
-                onChange={(e) =>
-                  updateField("accessibilityNeeds", e.target.value)
+                placeholder="Select accessibility needs"
+                options={accessibilityOptions.map((value) => ({ value }))}
+                selected={accessibilityChoices.chosen}
+                onChange={(chosen) =>
+                  updateField(
+                    "accessibilityNeeds",
+                    joinChoices({ ...accessibilityChoices, chosen }),
+                  )
                 }
-                aria-invalid={!!fieldErrors.accessibilityNeeds}
+                other={accessibilityChoices.other}
+                onOtherChange={(other) =>
+                  updateField(
+                    "accessibilityNeeds",
+                    joinChoices({ ...accessibilityChoices, other }),
+                  )
+                }
+                otherLabel="Other accessibility needs"
+                otherPlaceholder="State any wheelchair access, special physical seating, mobility, or facility arrangements required for attendees..."
+                otherMultiline
+                invalid={!!fieldErrors.accessibilityNeeds}
               />
               {fieldErrors.accessibilityNeeds?.map((msg) => (
                 <p key={msg} className="text-xs text-destructive">
                   {msg}
                 </p>
               ))}
-              <p className="text-[11px] text-muted-foreground">
-                Include wheelchair access, ramp access, physical seating
-                arrangements, or hearing loops.
-              </p>
             </div>
           </div>
         )}
@@ -830,50 +790,47 @@ export function CreateEventDialog({
         {/* Step 4: Equipment Requirements (Grouped together) */}
         {step === 4 && (
           <div className="space-y-4">
-            <h3 className="flex items-center gap-2 border-b pb-2 text-base font-semibold">
+            <h3 className="flex items-center gap-2 text-base font-semibold">
               <Wrench className="h-4 w-4 text-primary" /> Equipment & Technical
               Support Requirements
             </h3>
-
-            {catalogues.equipment.length > 0 && (
-              <div className="space-y-1 rounded-lg border bg-muted/40 p-3 text-xs">
-                <p className="font-medium text-foreground">
-                  ConnectSphere Equipment Catalogue:
-                </p>
-                <div className="flex flex-wrap gap-2 pt-1">
-                  {catalogues.equipment.map((eq) => (
-                    <span
-                      key={eq.id}
-                      className="cursor-pointer rounded border bg-background px-2 py-0.5 text-xs hover:bg-accent"
-                      onClick={() =>
-                        updateField(
-                          "equipmentRequirements",
-                          formData.equipmentRequirements
-                            ? `${formData.equipmentRequirements}, ${eq.type}`
-                            : `Requested equipment: ${eq.type}`,
-                        )
-                      }
-                    >
-                      {eq.type} (Avail: {eq.totalQuantity})
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
 
             <div className="space-y-2">
               <Label htmlFor="equipmentRequirements">
                 Equipment & Technical Support Requirements *
               </Label>
-              <Textarea
+              <PillSelect
                 id="equipmentRequirements"
-                placeholder="List required technical equipment (microphones, projectors, sound systems, live streaming, technical staff support)..."
-                rows={5}
-                value={formData.equipmentRequirements}
-                onChange={(e) =>
-                  updateField("equipmentRequirements", e.target.value)
+                placeholder="Select equipment"
+                options={catalogues.equipment.map((eq) => ({
+                  value: eq.type,
+                  label: (
+                    <span className="flex w-full items-center justify-between gap-3">
+                      {eq.type}
+                      <span className="text-xs text-muted-foreground">
+                        {eq.totalQuantity} available
+                      </span>
+                    </span>
+                  ),
+                }))}
+                selected={equipmentChoices.chosen}
+                onChange={(chosen) =>
+                  updateField(
+                    "equipmentRequirements",
+                    joinChoices({ ...equipmentChoices, chosen }, EQUIPMENT_PREFIX),
+                  )
                 }
-                aria-invalid={!!fieldErrors.equipmentRequirements}
+                other={equipmentChoices.other}
+                onOtherChange={(other) =>
+                  updateField(
+                    "equipmentRequirements",
+                    joinChoices({ ...equipmentChoices, other }, EQUIPMENT_PREFIX),
+                  )
+                }
+                otherLabel="Other equipment and technical support"
+                otherPlaceholder="List required technical equipment (microphones, projectors, sound systems, live streaming, technical staff support)..."
+                otherMultiline
+                invalid={!!fieldErrors.equipmentRequirements}
               />
               {fieldErrors.equipmentRequirements?.map((msg) => (
                 <p key={msg} className="text-xs text-destructive">
@@ -887,7 +844,7 @@ export function CreateEventDialog({
         {/* Step 5: Registration Needs & Programme */}
         {step === 5 && (
           <div className="space-y-4">
-            <h3 className="flex items-center gap-2 border-b pb-2 text-base font-semibold">
+            <h3 className="flex items-center gap-2 text-base font-semibold">
               <ClipboardList className="h-4 w-4 text-primary" /> Registration &
               Additional Details
             </h3>
@@ -987,7 +944,7 @@ export function CreateEventDialog({
         {/* Step 6: Review & Confirmation Step */}
         {step === 6 && (
           <div className="space-y-4">
-            <h3 className="flex items-center gap-2 border-b pb-2 text-base font-semibold">
+            <h3 className="flex items-center gap-2 text-base font-semibold">
               <Eye className="h-4 w-4 text-primary" /> Review Entered Details
             </h3>
 
@@ -1237,10 +1194,21 @@ export function CreateEventDialog({
                 type="button"
                 variant="secondary"
                 size="sm"
+                className="gap-1.5"
                 disabled={isPending}
                 onClick={handleSaveDraft}
+                data-saved={justSaved || undefined}
               >
-                Save as Draft
+                {justSaved ? (
+                  <>
+                    <Check className="h-4 w-4 text-success" /> Saved as draft
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4" />
+                    {savingDraft ? "Saving…" : "Save as Draft"}
+                  </>
+                )}
               </Button>
             )}
           </div>
