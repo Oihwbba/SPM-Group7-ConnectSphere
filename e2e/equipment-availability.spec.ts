@@ -1,5 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 import { prisma } from "@/lib/db";
+import { pickDateTime, selectFrom } from "./helpers";
 
 /**
  * SCRUM-29 — Check Equipment Availability. Technical Support enters a type, a
@@ -92,11 +93,9 @@ async function buildRig({
 
 /** Fill the availability check for the rig over [from, to) on RIG_DAY. */
 async function fillRigPeriod(page: Page, from: number, to: number, quantity: string) {
-  await page.getByLabel("Start date").fill(RIG_DAY);
-  await page.getByLabel("Start time").fill(sgTime(from));
-  await page.getByLabel("End date").fill(RIG_DAY);
-  await page.getByLabel("End time").fill(sgTime(to));
-  await page.getByLabel("Equipment type").selectOption({ value: rigId() });
+  await pickDateTime(page.getByLabel("Start", { exact: true }), `${RIG_DAY}T${sgTime(from)}`);
+  await pickDateTime(page.getByLabel("End", { exact: true }), `${RIG_DAY}T${sgTime(to)}`);
+  await selectFrom(page.getByLabel("Equipment type"), { value: rigId() });
   await page.getByLabel("Quantity", { exact: true }).fill(quantity);
 }
 
@@ -217,7 +216,7 @@ test.describe("SCRUM-29 — Check Equipment Availability", () => {
     await expect(page.getByText("Enter a quantity of at least 1.")).toBeVisible();
 
     await page.getByLabel("Quantity", { exact: true }).fill("1");
-    await page.getByLabel("End time").fill(sgTime(8));
+    await pickDateTime(page.getByLabel("End", { exact: true }), `${RIG_DAY}T${sgTime(8)}`);
     await expect(page.getByText("End time must be after the start time.").first()).toBeVisible();
     await expect(page.getByTestId("selected-availability")).toHaveText("— of 4 available");
   });

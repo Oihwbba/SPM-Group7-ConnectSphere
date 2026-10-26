@@ -14,6 +14,25 @@ export async function getOrganiserEvents(organiserId: string) {
   });
 }
 
+/** The organiser's requests with a clarification still waiting on their
+ * answer (shared page conventions, change 1: "Actions required"). */
+export async function getAwaitingAnswerIds(organiserId: string) {
+  const open = await prisma.clarificationRequest.findMany({
+    where: { status: "OPEN", event: { organiserId, discardedAt: null } },
+    select: { eventId: true },
+  });
+  return [...new Set(open.map((row) => row.eventId))];
+}
+
+/** The organiser's events that have a clarification thread, open or answered. */
+export async function getClarifiedEventIds(organiserId: string) {
+  const asked = await prisma.clarificationRequest.findMany({
+    where: { event: { organiserId, discardedAt: null } },
+    select: { eventId: true },
+  });
+  return [...new Set(asked.map((row) => row.eventId))];
+}
+
 /** SCRUM-69 AC1, SCRUM-165 AC8: the events assigned to one coordinator; an
  * unassigned request waits in the Lead's queue. Must mirror `can()`'s
  * coordinator relationship exactly. */
@@ -44,9 +63,20 @@ export async function OrganiserEvents({
 }) {
   // RELATIONSHIP enforced in the query: an organiser only ever loads their own
   // rows. This is the read-side counterpart to `can()`'s relationship check.
-  const events = await getOrganiserEvents(organiserId);
+  const [events, awaitingAnswerIds, clarifiedEventIds] = await Promise.all([
+    getOrganiserEvents(organiserId),
+    getAwaitingAnswerIds(organiserId),
+    getClarifiedEventIds(organiserId),
+  ]);
 
-  return <EventsClient events={events} openEventId={openEventId} />;
+  return (
+    <EventsClient
+      events={events}
+      openEventId={openEventId}
+      awaitingAnswerIds={awaitingAnswerIds}
+      clarifiedEventIds={clarifiedEventIds}
+    />
+  );
 }
 
 /** Coordinator view: exactly the requests assigned to this coordinator;

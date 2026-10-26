@@ -12,9 +12,11 @@ import type { TimeClashFlag } from "@/lib/venue-time-clashes";
 /**
  * SCRUM-160 AC5 — the bookings flagged because a venue's setup or turnaround
  * time changed, with the venue, the event, its Coordinator and what each
- * clashes with. The Coordinator resolves each flag (SCRUM-26).
+ * clashes with. The Coordinator resolves each flag (SCRUM-26). With nothing
+ * flagged, the section isn't shown (shared page conventions, change 14).
  */
 export function TimeClashFlags({ flags }: { flags: TimeClashFlag[] }) {
+  if (flags.length === 0) return null;
   return (
     <section className="space-y-3" aria-labelledby="time-clash-flags">
       <div className="space-y-1">
@@ -26,11 +28,6 @@ export function TimeClashFlags({ flags }: { flags: TimeClashFlag[] }) {
           decides whether each still stands.
         </p>
       </div>
-      {flags.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
-          No booking is waiting on a setup or turnaround change.
-        </p>
-      ) : (
         <Table>
           <TableHeader>
             <TableRow>
@@ -61,7 +58,6 @@ export function TimeClashFlags({ flags }: { flags: TimeClashFlag[] }) {
             ))}
           </TableBody>
         </Table>
-      )}
     </section>
   );
 }

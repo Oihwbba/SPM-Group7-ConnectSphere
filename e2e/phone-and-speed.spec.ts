@@ -1,7 +1,7 @@
 import { test, expect, type Browser, type Locator, type Page } from "@playwright/test";
 import { prisma } from "@/lib/db";
 
-import { signedIn, usesLocalDatabase } from "./helpers";
+import { signedIn, usesLocalDatabase, pickDateTime, selectFrom } from "./helpers";
 
 /**
  * SCRUM-132 — the core pages work on a phone (AC1), the main operations
@@ -60,7 +60,7 @@ test.describe("SCRUM-132 [AC1] core pages at 360 px", () => {
   const pages: { name: string; email: string | null; path: string; ready: (page: Page) => Locator }[] = [
     { name: "sign-in", email: null, path: "/login", ready: h1("Welcome back") },
     { name: "My Event Requests", email: "organiser@test.local", path: "/events", ready: h1("My Events") },
-    { name: "venue search", email: "coordinator@test.local", path: "/venues/search?event=evt_planning", ready: (page) => page.getByTestId("venue-result").first() },
+    { name: "venue search", email: "coordinator@test.local", path: "/venues/search?event=evt_planning&searched=1", ready: (page) => page.getByTestId("venue-result").first() },
     { name: "venue availability", email: "coordinator@test.local", path: "/venues/availability?venue=ven_hall", ready: h1("Venue availability") },
     { name: "booking review", email: "venuestaff@test.local", path: "/bookings", ready: h1() },
     { name: "equipment review", email: "techsupport@test.local", path: "/equipment-requests", ready: h1() },
@@ -165,7 +165,7 @@ test.describe("SCRUM-132 [AC2] operations respond within 2 seconds", () => {
     await page.keyboard.press("Escape");
 
     await timed("search venues", async () => {
-      await page.goto("/venues/search?event=evt_planning");
+      await page.goto("/venues/search?event=evt_planning&searched=1");
       await expect(page.getByTestId("venue-result").first()).toBeVisible();
     });
 
@@ -181,14 +181,12 @@ test.describe("SCRUM-132 [AC2] operations respond within 2 seconds", () => {
   }) => {
     const page = await signedIn(browser, "techsupport@test.local");
     await page.goto("/equipment");
-    await page.getByLabel("Start date").fill("2032-08-18");
-    await page.getByLabel("Start time").fill("09:00");
-    await page.getByLabel("End date").fill("2032-08-18");
-    await page.getByLabel("End time").fill("12:00");
+    await pickDateTime(page.getByLabel("Start", { exact: true }), "2032-08-18T09:00");
+    await pickDateTime(page.getByLabel("End", { exact: true }), "2032-08-18T12:00");
     await page.getByLabel("Quantity", { exact: true }).fill("1");
 
     await timed("check equipment availability", async () => {
-      await page.getByLabel("Equipment type").selectOption({ value: "eqp_projector" });
+      await selectFrom(page.getByLabel("Equipment type"), { value: "eqp_projector" });
       await expect(page.getByTestId("selected-availability")).toHaveText(/of \d+ available/);
     });
   });

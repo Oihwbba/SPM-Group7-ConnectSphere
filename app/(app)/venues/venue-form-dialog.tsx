@@ -17,6 +17,7 @@ import {
 import { FieldError } from "@/components/ui/field-error";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { DateTimePicker } from "@/components/app/date-time-picker";
 import { Textarea } from "@/components/ui/textarea";
 import type { ActionResult } from "@/lib/action-result";
 import { venueSchema, venueUpdateSchema } from "@/lib/schemas/venue";
@@ -262,24 +263,26 @@ export function VenueFormDialog({
                       </label>
                       {!day.closed && (
                         <>
-                          <Input
-                            type="time"
-                            className="w-32"
+                          <DateTimePicker
+                            mode="time"
+                            className="w-36"
                             aria-label={`${name} opens`}
                             value={day.opensAt}
+                            clearable={false}
                             aria-invalid={Boolean(dayErrors)}
                             aria-describedby={dayErrors ? errorId : undefined}
-                            onChange={(e) => setDay(day.weekday, { opensAt: e.target.value })}
+                            onChange={(opensAt) => setDay(day.weekday, { opensAt })}
                           />
                           <span className="text-sm text-muted-foreground">to</span>
-                          <Input
-                            type="time"
-                            className="w-32"
+                          <DateTimePicker
+                            mode="time"
+                            className="w-36"
                             aria-label={`${name} closes`}
                             value={day.closesAt}
+                            clearable={false}
                             aria-invalid={Boolean(dayErrors)}
                             aria-describedby={dayErrors ? errorId : undefined}
-                            onChange={(e) => setDay(day.weekday, { closesAt: e.target.value })}
+                            onChange={(closesAt) => setDay(day.weekday, { closesAt })}
                           />
                         </>
                       )}

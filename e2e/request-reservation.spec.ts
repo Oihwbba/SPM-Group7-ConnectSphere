@@ -1,7 +1,12 @@
 import { test, expect, type Page } from "@playwright/test";
 import { prisma } from "@/lib/db";
 
-import { usesLocalDatabase } from "./helpers";
+import {
+  usesLocalDatabase,
+  selectFrom,
+  optionsOf,
+  pickDateTime,
+} from "./helpers";
 
 /**
  * SCRUM-155 — Technical Support reserves an approved request in one step. Each
@@ -30,11 +35,9 @@ async function signInAsTechSupport(page: Page) {
 }
 
 async function chooseRequest(page: Page, eventName: string) {
-  const select = page.getByLabel("Approved request");
-  const value = await select
-    .locator("option", { hasText: eventName })
-    .getAttribute("value");
-  await select.selectOption(value!);
+  await selectFrom(page.getByLabel("Approved request"), {
+    containing: eventName,
+  });
 }
 
 test.describe("SCRUM-155 — Reserve an approved request in one step", () => {
@@ -122,11 +125,11 @@ test.describe("SCRUM-155 — Reserve an approved request in one step", () => {
     });
     await signInAsTechSupport(page);
 
-    const options = page
-      .getByLabel("Approved request")
-      .locator("option", { hasText: name });
-    await expect(options).toHaveCount(1);
-    await expect(options).toContainText("(event already partly reserved)");
+    const options = (
+      await optionsOf(page.getByLabel("Approved request"))
+    ).filter((option) => option.label.includes(name));
+    expect(options).toHaveLength(1);
+    expect(options[0].label).toContain("(event already partly reserved)");
   });
 
   test("SCRUM-156 [AC5] TC-156-07: a partly reserved request is offered again with only what is missing", async ({
@@ -151,14 +154,15 @@ test.describe("SCRUM-155 — Reserve an approved request in one step", () => {
     });
     await signInAsTechSupport(page);
 
-    const option = page
-      .getByLabel("Approved request")
-      .locator("option", { hasText: name });
-    await expect(option).toContainText("(rest of a partly reserved request)");
+    const option = (await optionsOf(page.getByLabel("Approved request"))).find(
+      (o) => o.label.includes(name),
+    );
+    expect(option?.label).toContain("(rest of a partly reserved request)");
     await chooseRequest(page, name);
 
     await expect(page.getByTestId("request-row")).toHaveCount(1);
-    await expect(page.getByLabel("Item 1", { exact: true })).toHaveValue(
+    await expect(page.getByLabel("Item 1", { exact: true })).toHaveAttribute(
+      "data-value",
       "eqp_mic",
     );
     await expect(page.getByLabel("Units for item 1")).toHaveValue("2");
@@ -167,9 +171,16 @@ test.describe("SCRUM-155 — Reserve an approved request in one step", () => {
     await expect(
       page.getByText(`Reserved 1 item(s) for ${name}.`),
     ).toBeVisible();
-    await expect(
-      page.getByLabel("Approved request").locator("option", { hasText: name }),
-    ).toHaveCount(0);
+    // Each check opens the dropdown, so the list gets longer to refresh.
+    await expect
+      .poll(
+        async () =>
+          (await optionsOf(page.getByLabel("Approved request"))).some((o) =>
+            o.label.includes(name),
+          ),
+        { timeout: 15_000 },
+      )
+      .toBe(false);
   });
 
   test("SCRUM-155 [AC1, AC2] TC-155-02: choosing an approved request fills in its period and one row per requested item", async ({
@@ -183,19 +194,23 @@ test.describe("SCRUM-155 — Reserve an approved request in one step", () => {
 
     await chooseRequest(page, name);
 
-    await expect(page.getByLabel("Reservation starts")).toHaveValue(
+    await expect(page.getByLabel("Reservation starts")).toHaveAttribute(
+      "data-value",
       "2033-08-01T09:00",
     );
-    await expect(page.getByLabel("Reservation ends")).toHaveValue(
+    await expect(page.getByLabel("Reservation ends")).toHaveAttribute(
+      "data-value",
       "2033-08-01T17:00",
     );
     const rows = page.getByTestId("request-row");
     await expect(rows).toHaveCount(2);
-    await expect(page.getByLabel("Item 1", { exact: true })).toHaveValue(
+    await expect(page.getByLabel("Item 1", { exact: true })).toHaveAttribute(
+      "data-value",
       "eqp_projector",
     );
     await expect(page.getByLabel("Units for item 1")).toHaveValue("1");
-    await expect(page.getByLabel("Item 2", { exact: true })).toHaveValue(
+    await expect(page.getByLabel("Item 2", { exact: true })).toHaveAttribute(
+      "data-value",
       "eqp_mic",
     );
     await expect(page.getByLabel("Units for item 2")).toHaveValue("2");
@@ -237,6 +252,8 @@ test.describe("SCRUM-155 — Reserve an approved request in one step", () => {
     const card = page.locator(`#request-${requestId}`);
     await expect(card).toContainText(name);
     await expect(card).toBeInViewport();
+    // Shared page conventions: the linked request opens in its details.
+    await expect(page.getByTestId("review-request")).toContainText(name);
     // The sticky header must not cover the request's title.
     await expect
       .poll(async () => (await card.boundingBox())!.y)
@@ -253,7 +270,7 @@ test.describe("SCRUM-155 — Reserve an approved request in one step", () => {
     await signInAsTechSupport(page);
     await chooseRequest(page, name);
 
-    await page.getByLabel("Reservation starts").fill("");
+    await pickDateTime(page.getByLabel("Reservation starts"), "");
     await page.getByRole("button", { name: "Reserve all 2 item(s)" }).click();
 
     await expect(
@@ -284,10 +301,8 @@ test.describe("SCRUM-155 — Reserve an approved request in one step", () => {
       await chooseRequest(page, name);
 
       const item = page.getByLabel("Item 1", { exact: true });
-      await expect(item).toHaveValue(retired.id);
-      await expect(item.locator("option:checked")).toHaveText(
-        `${retired.type} (no longer available)`,
-      );
+      await expect(item).toHaveAttribute("data-value", retired.id);
+      await expect(item).toHaveText(`${retired.type} (no longer available)`);
       await page.getByRole("button", { name: "Reserve all 2 item(s)" }).click();
 
       await expect(
@@ -314,7 +329,7 @@ test.describe("SCRUM-155 — Reserve an approved request in one step", () => {
 
     await page.getByRole("button", { name: "Remove item 2" }).click();
     await page.getByRole("button", { name: "Add item" }).click();
-    await page.getByLabel("Item 2", { exact: true }).selectOption("eqp_laptop");
+    await selectFrom(page.getByLabel("Item 2", { exact: true }), "eqp_laptop");
     await page.getByLabel("Units for item 2").fill("3");
     await page.getByLabel("Units for item 1").fill("2");
     await page.getByRole("button", { name: "Reserve all 2 item(s)" }).click();
@@ -346,9 +361,16 @@ test.describe("SCRUM-155 — Reserve an approved request in one step", () => {
     await expect(
       page.getByText(`Reserved 2 item(s) for ${name}.`),
     ).toBeVisible();
-    await expect(
-      page.getByLabel("Approved request").locator("option", { hasText: name }),
-    ).toHaveCount(0);
+    // Each check opens the dropdown, so the list gets longer to refresh.
+    await expect
+      .poll(
+        async () =>
+          (await optionsOf(page.getByLabel("Approved request"))).some((o) =>
+            o.label.includes(name),
+          ),
+        { timeout: 15_000 },
+      )
+      .toBe(false);
     const reserved = await prisma.reservation.findMany({
       where: { requestId, status: "CONFIRMED" },
       select: { equipmentId: true, quantity: true, startAt: true, endAt: true },
