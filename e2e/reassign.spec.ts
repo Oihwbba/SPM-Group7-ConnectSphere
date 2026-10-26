@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { prisma } from "@/lib/db";
 
-import { signedIn, usesLocalDatabase, selectFrom, optionsOf } from "./helpers";
+import { signedIn, usesLocalDatabase, selectFrom, optionsOf, openEvent } from "./helpers";
 
 /**
  * SCRUM-21 — the Lead reassigns an event from Cody to Cara. The spec writes
@@ -87,12 +87,9 @@ test.describe("SCRUM-21 — Reassign an event to another Coordinator", () => {
     // AC8: the Organiser sees the current Coordinator's name.
     const organiser = await signedIn(browser, "organiser@test.local");
     await organiser.goto("/events");
-    await organiser
-      .getByRole("row", { name: new RegExp(event.name) })
-      .getByTestId("view-details-button")
-      .click();
+    // SCRUM-208 AC2: the Coordinator is named at the top of the event page.
     await expect(
-      organiser.getByRole("dialog").getByTestId("current-coordinator"),
+      (await openEvent(organiser, event.name)).getByTestId("current-coordinator"),
     ).toContainText("Cara Coordinator");
 
     // AC6: the Organiser and both Coordinators are told.

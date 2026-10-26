@@ -245,8 +245,8 @@ test.describe("SCRUM-72 — Attendee browses confirmed events", () => {
   });
 });
 
-test.describe("SCRUM-72 — the attendee detail route stays 404 for other roles", () => {
-  test("an Organiser hitting a Confirmed event's attendee-detail URL still 404s (unchanged pre-existing behaviour)", async ({
+test.describe("SCRUM-72 — the attendee view stays the Attendee's", () => {
+  test("SCRUM-72, SCRUM-208 [AC1] TC-208-15: the Organiser at their Confirmed event's URL gets their own event page, never the attendee view", async ({
     page,
   }) => {
     await page.goto("/login");
@@ -257,7 +257,10 @@ test.describe("SCRUM-72 — the attendee detail route stays 404 for other roles"
     await page.getByRole("button", { name: "Sign in" }).click();
     await page.waitForURL("**/events");
 
+    // SCRUM-208 AC1: the event is theirs, so the address is its page.
     const response = await page.goto("/events/evt_confirmed");
-    expect(response?.status()).toBe(404);
+    expect(response?.status()).toBe(200);
+    await expect(page.getByTestId("event-page")).toBeVisible();
+    await expect(page.getByTestId("registration-state-badge")).toHaveCount(0);
   });
 });

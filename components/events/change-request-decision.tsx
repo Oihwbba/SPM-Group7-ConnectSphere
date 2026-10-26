@@ -175,12 +175,20 @@ export function ChangeRequestDecision({
         </div>
       ) : (
         <div className="flex gap-2">
-          <Button size="sm" disabled={saving} onClick={() => decide("APPROVED")}>
+          {/* Shared page conventions: the decisions in green and red. */}
+          <Button
+            size="sm"
+            variant="ghost"
+            className="border border-success/40 bg-success/10 text-success hover:bg-success/20 hover:text-success"
+            disabled={saving}
+            onClick={() => decide("APPROVED")}
+          >
             {saving ? "Saving…" : "Approve"}
           </Button>
           <Button
             size="sm"
-            variant="outline"
+            variant="ghost"
+            className="border border-destructive/40 bg-destructive/10 text-destructive hover:bg-destructive/20 hover:text-destructive"
             disabled={saving}
             onClick={() => {
               setReason("");
