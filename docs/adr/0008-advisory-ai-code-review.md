@@ -3,9 +3,11 @@
 > **Status: amended by the addenda below.** The review began as advisory. It
 > is now a **required check that blocks merging on a critical finding**
 > (addendum "a required merge gate on critical findings"), reads the project's
-> stories and conventions, and keeps its own memory. `CONTRIBUTING.md`
-> describes how it works today. Why the team runs its own GLM reviewer instead
-> of Copilot code review is in the 2026-10-13 addendum.
+> stories and conventions, and keeps its own memory. When GLM's quota or rate
+> limit stops a review, the review is skipped and the check passes (2026-10-26
+> addendum). `CONTRIBUTING.md` describes how it works today. Why the team runs
+> its own GLM reviewer instead of Copilot code review is in the 2026-10-13
+> addendum.
 
 ## Context
 
