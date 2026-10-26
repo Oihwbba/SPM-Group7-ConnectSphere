@@ -31,6 +31,7 @@ and a Pending request for 40 at it, and remove them afterwards.
 | [TC-202-01](#tc-202-01) | Negative | AC 1 | Unit |
 | [TC-202-02](#tc-202-02) | Concurrency | AC 1, AC 2 | Integration |
 | [TC-202-03](#tc-202-03) | Concurrency | AC 2 | Integration |
+| [TC-202-04](#tc-202-04) | Negative | AC 2 | Unit |
 
 ---
 
@@ -72,3 +73,16 @@ and a Pending request for 40 at it, and remove them afterwards.
 | Expected Result | Neither throws. The edit is saved with 1 flagged, and the booking ends flagged: Approved and then flagged, or flagged first and the approval refused (SCRUM-26 AC5). |
 
 **Automated by:** `tests/integration/venue-edit-deadlock.test.ts` › "SCRUM-202 [AC2] TC-202-03: an edit and an approval of the same booking at the same moment both end in a defined outcome"
+
+### TC-202-04
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-202-04 |
+| Test Scenario | [Negative] AC 2: a deadlock raised inside a raw query (an approval locking the venue) is recognised and run once more |
+| Pre-conditions | The database aborts the first attempt as a deadlock while it runs a raw query |
+| Test Steps | 1. Read the error of a deadlock from a model query and from a raw query. <br> 2. Run an attempt whose first try is aborted by a raw-query deadlock. <br> 3. Run an attempt that fails a raw query for another reason. |
+| Test Data | Error code `40P01`, "deadlock detected", as a P2010 error's `meta.driverAdapterError`; code `23505` for step 3 |
+| Expected Result | 1. Both read as code `40P01`. 2. The attempt runs twice and the second is saved. 3. The error is thrown at once, without a retry. Without this, an approval aborted while locking the venue threw "deadlock detected" and TC-202-03 failed. |
+
+**Automated by:** `tests/unit/db-errors.test.ts` › "SCRUM-202 [AC2] TC-202-04: …" (3 tests)
