@@ -16,6 +16,7 @@ import {
   getEventBookings,
   getEventCoordinator,
   getEventReadiness,
+  isEventStillVisible,
 } from "@/app/(app)/events/readiness-actions";
 
 // SCRUM-110 AC 6 — who may read an event's readiness checklist, and how much of
@@ -79,6 +80,26 @@ beforeEach(() => {
   mockEventFindUnique.mockResolvedValue(eventRow());
   mockChecklist.mockResolvedValue(checklist);
   mockAuditCount.mockResolvedValue(0);
+});
+
+describe("isEventStillVisible — SCRUM-24, SCRUM-208", () => {
+  it.each([
+    { who: "its Organiser", session: sessionFor("ORGANISER", "usr_organiser"), visible: true },
+    { who: "its Coordinator", session: sessionFor("COORDINATOR", "usr_coordinator"), visible: true },
+    { who: "a Coordinator it was reassigned away from", session: sessionFor("COORDINATOR", "usr_coordinator_2"), visible: false },
+    { who: "a signed-out visitor", session: null, visible: false },
+  ])("SCRUM-208 TC-208-16: for $who, the open page is still visible: $visible", async ({ session, visible }) => {
+    mockAuth.mockResolvedValue(session);
+
+    expect(await isEventStillVisible("evt_test")).toBe(visible);
+  });
+
+  it("SCRUM-208 TC-208-16: an event that was removed is no longer visible", async () => {
+    mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
+    mockEventFindUnique.mockResolvedValue(null);
+
+    expect(await isEventStillVisible("evt_test")).toBe(false);
+  });
 });
 
 describe("getEventReadiness — SCRUM-110", () => {

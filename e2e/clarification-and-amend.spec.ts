@@ -1,12 +1,7 @@
 import { test, expect, type Page, type Route } from "@playwright/test";
 import { prisma } from "@/lib/db";
 
-import {
-  usesLocalDatabase,
-  fillOther,
-  pickDateTime,
-  submitRequest,
-} from "./helpers";
+import { usesLocalDatabase, fillOther, pickDateTime, submitRequest, openEvent } from "./helpers";
 
 /**
  * SCRUM-108 — the Organiser answers a clarification by changing only the
@@ -62,6 +57,9 @@ test.describe("SCRUM-108 — Answer a clarification, or amend and resubmit", () 
   test("SCRUM-108 [AC1, AC2, AC3, AC14] TC-108-10: the Coordinator lets the Organiser change the attendance, and the answer changes only that", async ({
     page,
   }) => {
+    // SCRUM-189: a long journey, two sign-ins, a refused answer and an accepted one.
+    // Three times the 30-second limit, not a retry under CI load.
+    test.slow();
     const name = `SCRUM-108 Clarify ${Date.now()}`;
     eventId = (
       await prisma.event.create({
@@ -88,15 +86,11 @@ test.describe("SCRUM-108 — Answer a clarification, or amend and resubmit", () 
 
     // --- Organiser sees the question and only that field (AC2) -----------
     await signIn(page, "organiser@test.local");
-    await page
-      .getByRole("row", { name: new RegExp(name) })
-      .getByTestId("view-details-button")
-      .click();
-    const details = page.getByRole("dialog");
-    // The thread is the details' second tab (shared page conventions, change 2).
-    await details.getByRole("tab", { name: /Clarification/ }).click();
+    // SCRUM-208 AC3: the thread is the event page's Clarification tab, and
+    // it says in plain words what the answer may also update.
+    const details = await openEvent(page, name, "Clarification");
     await expect(details.getByTestId("clarification-fields")).toHaveText(
-      "The organiser may change: Expected attendance.",
+      "You can also update: Expected attendance.",
     );
     await expect(details.getByLabel("Event name")).toHaveCount(0);
 
@@ -172,6 +166,9 @@ test.describe("SCRUM-108 — Answer a clarification, or amend and resubmit", () 
   test("SCRUM-108 [AC7, AC9, AC10, AC11, AC14] TC-108-11: an amended request shows its rejection reason while editing and goes back to the same Coordinator", async ({
     page,
   }) => {
+    // SCRUM-189: a long journey, the whole form to amend, with a refused step.
+    // Three times the 30-second limit, not a retry under CI load.
+    test.slow();
     const name = `SCRUM-108 Amend ${Date.now()}`;
     const reason =
       "Venue is unavailable on that date — please propose another.";
