@@ -344,13 +344,8 @@ test.describe("SCRUM-187 — A clarification answer that gets no reply", () => {
       })
     ).id;
     await signIn(page, "organiser@test.local");
-    await page
-      .getByRole("row", { name: new RegExp(name) })
-      .getByTestId("view-details-button")
-      .click();
-    const details = page.getByRole("dialog");
-    // The thread is the details' second tab (shared page conventions, change 2).
-    await details.getByRole("tab", { name: /Clarification/ }).click();
+    // SCRUM-208 AC3: the thread is the event page's Clarification tab.
+    const details = await openEvent(page, name, "Clarification");
     await details.getByLabel("Response to clarification").fill("Yes, it is fixed.");
     return details;
   }
