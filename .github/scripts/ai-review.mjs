@@ -43,6 +43,10 @@ const MIN_RETRY_MS = 8 * 60 * 1000;
 // high and 19 at low — which is why reviews ran for 10-15 minutes. Reviews use
 // "high"; the retry uses "low", so it finishes.
 const EFFORTS = ["high", "low"];
+// GLM's rate limit (code 1302) trips when many reviews call at once, as after
+// a merge brings every open pull request up to date. Each wait is stretched by
+// up to as much again at random, so waiting reviews don't all call together.
+export const RATE_LIMIT_WAITS_MS = [30_000, 60_000, 120_000, 240_000];
 // GLM-5.3 accepts 1M input tokens, so this isn't a model limit: it keeps one
 // review to roughly 100K tokens of diff, about 2.5x the largest diff so far,
 // so the review stays thorough and inside the time budget. A bigger diff fails
@@ -460,14 +464,41 @@ export function checkCompletion({ content, finishReason, usage }) {
 }
 
 /**
- * BigModel's refusal once the Coding Plan's weekly or monthly quota is used up:
- * HTTP 429 with error code 1310, until the reset time its message names
- * (Beijing time, UTC+8). A retry gets the same answer until then (SCRUM-225).
+ * BigModel refusing to serve at all, HTTP 429 (SCRUM-225): code 1310 once the
+ * Coding Plan's weekly or monthly quota is used up, until the reset time its
+ * message names (Beijing time, UTC+8); code 1302 for its short rate limit.
  */
-export class GlmQuotaError extends Error {
-  constructor(detail) {
-    super(`GLM quota used up: ${detail}`);
-    this.resetsAt = /\d{4}-\d{2}-\d{2} \d{2}:\d{2}(?::\d{2})?/.exec(detail)?.[0] ?? null;
+export class GlmUnavailableError extends Error {
+  constructor(kind, detail) {
+    super(`${kind === "quota" ? "GLM quota used up" : "GLM rate limit"}: ${detail}`);
+    this.kind = kind;
+    this.resetsAt = kind === "quota" ? (/\d{4}-\d{2}-\d{2} \d{2}:\d{2}(?::\d{2})?/.exec(detail)?.[0] ?? null) : null;
+  }
+}
+
+const UNAVAILABLE_CODES = new Map([
+  ["1310", "quota"],
+  ["1302", "rate"],
+]);
+
+/**
+ * askGlm, waiting out the rate limit a few times while the deadline allows.
+ * A used-up quota isn't waited out: it lasts until the reset.
+ */
+export async function askGlmPatiently(
+  { deadline, ...request },
+  { waits = RATE_LIMIT_WAITS_MS, sleep = (ms) => new Promise((done) => setTimeout(done, ms)) } = {},
+) {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await askGlm({ ...request, timeoutMs: deadline - Date.now() });
+    } catch (error) {
+      const wait = waits[attempt] == null ? null : waits[attempt] * (1 + Math.random());
+      const rateLimited = error instanceof GlmUnavailableError && error.kind === "rate";
+      if (!rateLimited || wait == null || Date.now() + wait + MIN_RETRY_MS > deadline) throw error;
+      console.log(`::warning::GLM's rate limit refused the call; trying again in ${Math.round(wait / 1000)}s.`);
+      await sleep(wait);
+    }
   }
 }
 
@@ -495,7 +526,8 @@ export async function askGlm({ apiKey, model, system, user, timeoutMs, effort })
 
   if (!response.ok) {
     const detail = (await response.text()).slice(0, 300);
-    if (response.status === 429 && /"code"\s*:\s*"?1310\b/.test(detail)) throw new GlmQuotaError(detail);
+    const kind = response.status === 429 && UNAVAILABLE_CODES.get(/"code"\s*:\s*"?(\d+)/.exec(detail)?.[1]);
+    if (kind) throw new GlmUnavailableError(kind, detail);
     throw new Error(`GLM request failed: HTTP ${response.status} ${detail}`);
   }
 
@@ -594,20 +626,24 @@ export function renderTooLargeReview({ model, sha, size, max, runUrl }) {
 }
 
 /**
- * The comment for a review skipped because the GLM quota is used up. The code
- * was never looked at, but the check passes rather than blocking every pull
- * request until the reset; `build-and-test` still gates the merge (SCRUM-225).
+ * The comment for a review skipped because GLM wouldn't serve: its quota is
+ * used up, or its rate limit outlasted every wait. The code was never looked
+ * at, but the check passes rather than blocking every pull request on GLM;
+ * `build-and-test` still gates the merge (SCRUM-225).
  */
-export function renderQuotaSkipped({ model, sha, resetsAt, seconds, runUrl }) {
+export function renderUnavailableSkipped({ model, sha, kind, resetsAt, seconds, runUrl }) {
+  const why =
+    kind === "quota"
+      ? `the GLM quota is used up${resetsAt ? ` until ${resetsAt} (UTC+8)` : ""}`
+      : "GLM's rate limit kept refusing the call, after every wait";
   return [
     MARKER,
     `## 🤖 ${model} code review`,
     "",
-    `⏭️ **Review skipped** for commit \`${sha.slice(0, 7)}\`: the GLM quota is used up` +
-      (resetsAt ? ` until ${resetsAt} (UTC+8)` : "") +
-      ", so this check passed without a review. `build-and-test` still has to pass before merging.",
+    `⏭️ **Review skipped** for commit \`${sha.slice(0, 7)}\`: ${why}, ` +
+      "so this check passed without a review. `build-and-test` still has to pass before merging.",
     "",
-    "Read the diff yourself before merging, or re-run the **GLM Code Review** job after the reset to get a review.",
+    `Read the diff yourself before merging, or re-run the **GLM Code Review** job ${kind === "quota" ? "after the reset" : "later"} to get a review.`,
     "",
     `<sub>${model} · ${seconds}s · [workflow run](${runUrl})</sub>`,
   ].join("\n");
@@ -1685,7 +1721,7 @@ async function main() {
   // less likely to be cut off.
   const failures = [];
   let review;
-  let quota;
+  let unavailable;
   // The GLM budget starts now, so waiting for CI doesn't eat into it.
   const glmStarted = Date.now();
   for (const [index, effort] of EFFORTS.entries()) {
@@ -1696,7 +1732,7 @@ async function main() {
     }
     const attemptStarted = Date.now();
     try {
-      const result = await askGlm({ apiKey: env.ZHIPU_API_KEY, model, system, user, timeoutMs: remaining, effort });
+      const result = await askGlmPatiently({ apiKey: env.ZHIPU_API_KEY, model, system, user, deadline: Date.now() + remaining, effort });
       console.log(
         `GLM attempt ${index + 1}${effort ? ` (${effort} effort)` : ""}: finish_reason=${result.finishReason ?? "none"}, ` +
           `${formatCount(result.usage?.completion_tokens ?? 0)} output tokens ` +
@@ -1707,8 +1743,8 @@ async function main() {
       review = { ...parseReview(result.content), usage: result.usage };
       break;
     } catch (error) {
-      if (error instanceof GlmQuotaError) {
-        quota = error;
+      if (error instanceof GlmUnavailableError) {
+        unavailable = error;
         break;
       }
       failures.push(`attempt ${index + 1}: ${oneLine(error.message)}`);
@@ -1716,14 +1752,21 @@ async function main() {
     }
   }
 
-  if (!review && quota) {
+  if (!review && unavailable) {
     await upsertReviewComment(
       github,
       repo,
       env.PR_NUMBER,
-      renderQuotaSkipped({ model, sha: env.HEAD_SHA, resetsAt: quota.resetsAt, seconds: elapsed(), runUrl: env.RUN_URL }),
+      renderUnavailableSkipped({
+        model,
+        sha: env.HEAD_SHA,
+        kind: unavailable.kind,
+        resetsAt: unavailable.resetsAt,
+        seconds: elapsed(),
+        runUrl: env.RUN_URL,
+      }),
     );
-    console.log(`::warning::GLM review skipped, so this check passes without one: ${oneLine(quota.message)}`);
+    console.log(`::warning::GLM review skipped, so this check passes without one: ${oneLine(unavailable.message)}`);
     return;
   }
   if (!review) {

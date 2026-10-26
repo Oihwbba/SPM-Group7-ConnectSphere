@@ -96,8 +96,8 @@ disagrees with Jira, Jira wins and the sync is overdue. The index at
   checks are green: `build-and-test` (including e2e) and the GLM `review`,
   which fails on a critical finding or when no review completes (a PR that
   changes only Markdown, lockfiles or `docs/backlog` isn't reviewed and
-  passes, and so does any PR while the GLM quota is used up: the review
-  comment then says it was skipped). Read the GLM
+  passes, and so does a PR whose review GLM's quota or rate limit stopped:
+  the review comment then says it was skipped). Read the GLM
   review before you merge. Changes to `.github/`, `package.json`, the test
   configs, `vercel.json` or `.gitattributes` need a teammate's approval
   (CODEOWNERS lists the whole team), because they control the checks.
