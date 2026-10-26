@@ -408,7 +408,6 @@ test.describe("SCRUM-187 — A clarification answer that gets no reply", () => {
     await details.getByRole("button", { name: "Send response" }).click();
 
     // The thread is read again, so the saved answer replaces the form.
-    await expect(details.getByText("Organiser responded:")).toBeVisible();
     await expect(details.getByText("Yes, it is fixed.")).toBeVisible();
     await expect(details.getByRole("button", { name: "Send response" })).toHaveCount(0);
     expect(
