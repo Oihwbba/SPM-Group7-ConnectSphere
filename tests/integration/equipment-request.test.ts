@@ -26,10 +26,11 @@ import {
 // submissions racing — the unique line per type (AC 4), and that the
 // coordinator's reads return exactly the rows can() allows.
 //
-// They use the seeded "Approved — Research Symposium" rather than creating
-// events: other suites count Event rows while this one runs in parallel
-// (permission-guard.test.ts), so it must never add or remove one. The seed
-// gives that event no request; each test removes the ones it created.
+// They use the seeded "Approved — Research Symposium". The seed gives that
+// event no request; each test removes the ones it created. The one test that
+// needs an unassigned event makes its own under a name nobody else uses and
+// removes it: suites running in parallel count events by name
+// (permission-guard.test.ts), so it disturbs no one.
 //
 // They WRITE requests, so they only run against a localhost database (CI's
 // service container or the Docker DB) — never the shared Supabase database
@@ -256,6 +257,42 @@ describe.skipIf(!usesLocalDatabase)(
         ],
       });
       expect(theirs.map((row) => row.id)).not.toContain(created.data.id);
+    });
+
+    it("SCRUM-229 [AC3] SCRUM-165 [AC8] TC-27-18: an event with no Coordinator is neither offered nor listed to a Coordinator", async () => {
+      // Its own name, so suites counting events by name aren't disturbed.
+      const unassigned = await prisma.event.create({
+        data: {
+          name: `SCRUM-229 unassigned ${Date.now()}`,
+          status: "PLANNING",
+          organiserId: "usr_organiser",
+          coordinatorId: null,
+          startAt: new Date("2032-09-01T01:00:00.000Z"),
+          endAt: new Date("2032-09-01T09:00:00.000Z"),
+        },
+        select: { id: true },
+      });
+      try {
+        const { id: requestId } = await prisma.equipmentRequest.create({
+          data: {
+            eventId: unassigned.id,
+            requestedById: COORDINATOR,
+            status: "PENDING_REVIEW",
+            lines: { create: [{ equipmentId: "eqp_projector", quantity: 1 }] },
+          },
+          select: { id: true },
+        });
+
+        for (const coordinator of [COORDINATOR, OTHER_COORDINATOR]) {
+          const offered = await getRequestableEvents(coordinator);
+          const listed = await getCoordinatorEquipmentRequests(coordinator);
+          expect(offered.map((event) => event.id)).not.toContain(unassigned.id);
+          expect(listed.map((row) => row.id)).not.toContain(requestId);
+        }
+      } finally {
+        await prisma.equipmentRequest.deleteMany({ where: { eventId: unassigned.id } });
+        await prisma.event.delete({ where: { id: unassigned.id } });
+      }
     });
   },
 );

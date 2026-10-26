@@ -31,6 +31,7 @@ the seed.
 | [TC-27-15](#tc-27-15) | Negative | AC 8 | e2e |
 | [TC-27-16](#tc-27-16) | Positive | AC 6 | e2e |
 | [TC-27-17](#tc-27-17) | Negative, Concurrency | AC 1 | Unit |
+| [TC-27-18](#tc-27-18) | Negative | AC 1 | Unit, integration |
 
 ---
 
@@ -254,3 +255,16 @@ the seed.
 | Expected Result | "Choose one of your approved events." The status and Coordinator are re-read under the lock the request already takes on the event (SCRUM-170 AC4), so a reassignment to another Coordinator is seen too; no request is created and a No equipment needed decision is left as it was. |
 
 **Automated by:** `tests/unit/equipment-request.test.ts` › "SCRUM-27 [AC1] TC-27-17: an event that became %s after its status was read gets no request, and nothing is written" (Confirmed, Rejected, Cancelled) and "SCRUM-27 [AC1] TC-27-17: an event reassigned to another Coordinator after it was read gets no request from the previous one"
+
+### TC-27-18
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-27-18 |
+| Test Scenario | [Negative] AC 1: an event with no Coordinator yet is neither offered to a Coordinator for a new request nor listed with their requests (SCRUM-165 AC8, SCRUM-229) |
+| Pre-conditions | A Planning event with no Coordinator assigned, holding one equipment request. |
+| Test Steps | 1. As `coordinator@test.local`, open **New request** on Equipment Requests. <br> 2. Look through the list of requests. <br> 3. Repeat as `coordinator2@test.local`. |
+| Test Data | — |
+| Expected Result | Neither Coordinator is offered the event, and neither sees its request. A Coordinator sees only the events assigned to them, the rule `can()` applies when they act. |
+
+**Automated by:** `tests/integration/equipment-request.test.ts` › "SCRUM-229 [AC3] SCRUM-165 [AC8] TC-27-18: an event with no Coordinator is neither offered nor listed to a Coordinator"; `tests/unit/equipment-request-queries.test.ts` › "SCRUM-27 [AC1] TC-27-01, SCRUM-170 [AC3] TC-170-03: offers only this coordinator's events that are going ahead, soonest first, with the Organiser's equipment answer"
