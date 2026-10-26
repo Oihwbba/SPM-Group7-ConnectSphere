@@ -48,7 +48,7 @@ Symposium" (`evt_approved`), unless the case says otherwise.
 | Pre-conditions | An approved event of the Coordinator's whose only equipment request is Approved (Lectern × 1). |
 | Test Steps | 1. On Equipment Requests, choose New request. <br> 2. Choose the event, add Projector × 2. <br> 3. Submit request. |
 | Test Data | Lectern × 1 already approved; Projector × 2 submitted |
-| Expected Result | "This event already has an equipment request, so no new one was made. It's highlighted below: use Change lines on it to add or change equipment." The Approved request is scrolled into view and highlighted, with its Change lines button. The event still has exactly that one request, still Approved. |
+| Expected Result | "This event already has an equipment request, so no new one was made. It's highlighted below: use Change lines on it to add or change equipment." The Approved request is scrolled into view and highlighted, and opening its details offers Change lines (since SCRUM-207 the actions sit in the details dialog). The event still has exactly that one request, still Approved. |
 
 **Automated by:** `e2e/equipment-requests.spec.ts` › "SCRUM-186 [AC1] TC-186-01: submitting for an event with an Approved request shows that request and points to changing its lines"
 

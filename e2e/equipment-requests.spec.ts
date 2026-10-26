@@ -245,7 +245,7 @@ test.describe("SCRUM-27 — Create Equipment Request", () => {
 
     await page.getByRole("button", { name: "New request" }).first().click();
     const dialog = page.getByRole("dialog");
-    await dialog.getByLabel("Event").selectOption(rig.id);
+    await selectFrom(dialog.getByLabel("Event"), rig.id);
     await addLine(page, "eqp_projector", "2");
     await dialog.getByRole("button", { name: "Submit request" }).click();
 
@@ -257,8 +257,11 @@ test.describe("SCRUM-27 — Create Equipment Request", () => {
     const shown = page.locator(`#request-${existing.id}`);
     await expect(shown).toHaveAttribute("data-highlighted", "true");
     await expect(shown).toBeInViewport();
+    await shown.getByTestId("view-request-button").click();
     await expect(
-      shown.getByRole("button", { name: "Change lines" }),
+      page
+        .getByTestId("equipment-request-details")
+        .getByRole("button", { name: "Change lines" }),
     ).toBeVisible();
     expect(
       await prisma.equipmentRequest.findMany({
