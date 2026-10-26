@@ -1,7 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import { prisma } from "@/lib/db";
 
-import { usesLocalDatabase } from "./helpers";
+import { usesLocalDatabase, openEvent } from "./helpers";
 
 /**
  * SCRUM-81 — the assigned Coordinator confirms a Planning event once its
@@ -25,14 +25,9 @@ async function signIn(page: Page, email: string) {
   await page.waitForURL("**/events");
 }
 
-async function openDetails(page: Page, eventName: string) {
-  await page
-    .getByRole("row", { name: new RegExp(eventName) })
-    .getByTestId("view-details-button")
-    .click();
-  const dialog = page.getByRole("dialog");
-  await expect(dialog).toBeVisible();
-  return dialog;
+/** SCRUM-208: the event's page, on the tab this journey works in. */
+async function openDetails(page: Page, eventName: string, tab = "Arrangements") {
+  return openEvent(page, eventName, tab);
 }
 
 async function planningEvent(name: string) {

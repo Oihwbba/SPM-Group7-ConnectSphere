@@ -1,12 +1,7 @@
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect, type Page, type Route } from "@playwright/test";
 import { prisma } from "@/lib/db";
 
-import {
-  usesLocalDatabase,
-  fillOther,
-  pickDateTime,
-  submitRequest,
-} from "./helpers";
+import { usesLocalDatabase, fillOther, pickDateTime, submitRequest, openEvent } from "./helpers";
 
 /**
  * SCRUM-108 — the Organiser answers a clarification by changing only the
@@ -47,17 +42,24 @@ const request = (name: string) => ({
 test.describe("SCRUM-108 — Answer a clarification, or amend and resubmit", () => {
   test.skip(!usesLocalDatabase, "writes its own events; local database only");
 
-  let eventId: string;
+  let eventId: string | undefined;
 
   test.afterEach(async () => {
+    // Unset if the event was never made: with no id, deleteMany would match
+    // every row, other suites' included.
+    if (!eventId) return;
     await prisma.notification.deleteMany({ where: { eventId } });
     await prisma.auditLog.deleteMany({ where: { entityId: eventId } });
     await prisma.event.deleteMany({ where: { id: eventId } });
+    eventId = undefined;
   });
 
   test("SCRUM-108 [AC1, AC2, AC3, AC14] TC-108-10: the Coordinator lets the Organiser change the attendance, and the answer changes only that", async ({
     page,
   }) => {
+    // SCRUM-189: a long journey, two sign-ins, a refused answer and an accepted one.
+    // Three times the 30-second limit, not a retry under CI load.
+    test.slow();
     const name = `SCRUM-108 Clarify ${Date.now()}`;
     eventId = (
       await prisma.event.create({
@@ -84,15 +86,11 @@ test.describe("SCRUM-108 — Answer a clarification, or amend and resubmit", () 
 
     // --- Organiser sees the question and only that field (AC2) -----------
     await signIn(page, "organiser@test.local");
-    await page
-      .getByRole("row", { name: new RegExp(name) })
-      .getByTestId("view-details-button")
-      .click();
-    const details = page.getByRole("dialog");
-    // The thread is the details' second tab (shared page conventions, change 2).
-    await details.getByRole("tab", { name: /Clarification/ }).click();
+    // SCRUM-208 AC3: the thread is the event page's Clarification tab, and
+    // it says in plain words what the answer may also update.
+    const details = await openEvent(page, name, "Clarification");
     await expect(details.getByTestId("clarification-fields")).toHaveText(
-      "The organiser may change: Expected attendance.",
+      "You can also update: Expected attendance.",
     );
     await expect(details.getByLabel("Event name")).toHaveCount(0);
 
@@ -168,6 +166,9 @@ test.describe("SCRUM-108 — Answer a clarification, or amend and resubmit", () 
   test("SCRUM-108 [AC7, AC9, AC10, AC11, AC14] TC-108-11: an amended request shows its rejection reason while editing and goes back to the same Coordinator", async ({
     page,
   }) => {
+    // SCRUM-189: a long journey, the whole form to amend, with a refused step.
+    // Three times the 30-second limit, not a retry under CI load.
+    test.slow();
     const name = `SCRUM-108 Amend ${Date.now()}`;
     const reason =
       "Venue is unavailable on that date — please propose another.";
@@ -300,5 +301,121 @@ test.describe("SCRUM-108 — Answer a clarification, or amend and resubmit", () 
       createdAt: expect.any(Date),
     });
     expect(history.every((row) => row.createdAt instanceof Date)).toBe(true);
+  });
+});
+
+/**
+ * SCRUM-187 — an answer whose send gets no reply doesn't strand the form on
+ * "Sending…". Test cases: docs/testing/SCRUM-187.md.
+ */
+test.describe("SCRUM-187 — A clarification answer that gets no reply", () => {
+  test.skip(!usesLocalDatabase, "writes its own events; local database only");
+
+  const SEND_FAILED =
+    "Your response couldn't be sent. If it isn't shown as answered above, try again.";
+  let eventId: string | undefined;
+
+  test.afterEach(async () => {
+    // Unset if the event was never made: with no id, deleteMany would match
+    // every row, other suites' included.
+    if (!eventId) return;
+    await prisma.notification.deleteMany({ where: { eventId } });
+    await prisma.auditLog.deleteMany({ where: { entityId: eventId } });
+    await prisma.event.deleteMany({ where: { id: eventId } });
+    eventId = undefined;
+  });
+
+  /** An event Under Review with an open, text-only question, open for the Organiser. */
+  async function openQuestion(page: Page, label: string) {
+    const name = `SCRUM-187 ${label} ${Date.now()}`;
+    eventId = (
+      await prisma.event.create({
+        data: {
+          ...request(name),
+          status: "UNDER_REVIEW",
+          clarificationRequests: {
+            create: {
+              requestedById: "usr_coordinator",
+              message: "Is the date fixed?",
+            },
+          },
+        },
+        select: { id: true },
+      })
+    ).id;
+    await signIn(page, "organiser@test.local");
+    // SCRUM-208 AC3: the thread is the event page's Clarification tab.
+    const details = await openEvent(page, name, "Clarification");
+    await details.getByLabel("Response to clarification").fill("Yes, it is fixed.");
+    return details;
+  }
+
+  const isServerAction = (route: Route) =>
+    route.request().method() === "POST" &&
+    Boolean(route.request().headers()["next-action"]);
+
+  const answers = () =>
+    prisma.auditLog.count({
+      where: { entityId: eventId, action: "CLARIFICATION_ANSWERED" },
+    });
+
+  test("SCRUM-187 [AC1, AC4] TC-187-01: a send that never reaches the server says so, and the same answer can be sent again", async ({
+    page,
+  }) => {
+    const details = await openQuestion(page, "Dropped");
+    // Drop the next server action, the send, as a lost connection would.
+    let dropNext = true;
+    await page.route("**/*", (route) => {
+      if (dropNext && isServerAction(route)) {
+        dropNext = false;
+        return route.abort("failed");
+      }
+      return route.continue();
+    });
+    const send = details.getByRole("button", { name: "Send response" });
+    await send.click();
+
+    await expect(details.getByRole("alert")).toHaveText(SEND_FAILED);
+    await expect(send).toBeEnabled();
+    expect(
+      await prisma.clarificationRequest.findFirstOrThrow({
+        where: { eventId },
+        select: { status: true },
+      }),
+    ).toEqual({ status: "OPEN" });
+    expect(await answers()).toBe(0);
+
+    await send.click();
+    await expect(page.getByText("Response sent to the coordinator.")).toBeVisible();
+    await expect(details.getByRole("alert")).toHaveCount(0);
+    expect(await answers()).toBe(1);
+  });
+
+  test("SCRUM-187 [AC2, AC4] TC-187-02: an answer saved whose reply is lost shows as answered, so it isn't sent twice", async ({
+    page,
+  }) => {
+    const details = await openQuestion(page, "Saved");
+    // Let the send reach the server and be saved, then lose its reply.
+    let loseNext = true;
+    await page.route("**/*", async (route) => {
+      if (loseNext && isServerAction(route)) {
+        loseNext = false;
+        await route.fetch();
+        return route.abort("failed");
+      }
+      return route.continue();
+    });
+    await details.getByRole("button", { name: "Send response" }).click();
+
+    // The thread is read again, so the saved answer replaces the form.
+    await expect(details.getByText("Yes, it is fixed.")).toBeVisible();
+    await expect(details.getByRole("button", { name: "Send response" })).toHaveCount(0);
+    expect(
+      await prisma.clarificationRequest.findFirstOrThrow({
+        where: { eventId },
+        select: { status: true, response: true },
+      }),
+    ).toEqual({ status: "ANSWERED", response: "Yes, it is fixed." });
+    expect(await answers()).toBe(1);
   });
 });

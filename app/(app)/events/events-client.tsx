@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   Plus,
@@ -10,9 +11,6 @@ import {
   BellRing,
   FileEdit,
   Filter,
-  CheckCircle2,
-  XCircle,
-  MessageCircleQuestion,
   CopyPlus,
   ArrowUpDown,
   ArrowUp,
@@ -23,7 +21,7 @@ import {
   MessagesSquare,
 } from "lucide-react";
 import { toast } from "sonner";
-import type { Event, RejectionOutcome } from "@prisma/client";
+import type { Event } from "@prisma/client";
 
 import { formatDate, formatDateTime } from "@/lib/datetime";
 import { isOverdue } from "@/lib/event-closing";
@@ -42,21 +40,10 @@ import {
 } from "@/components/ui/table";
 import styles from "./events-list.module.css";
 import { CreateEventDialog } from "./create-event-dialog";
-import { EventDetailsModal } from "./event-details-modal";
+import { ReviewDecision } from "@/components/events/review-decision";
 import { AppSelect } from "@/components/app/app-select";
 import { SubmittedDialog } from "@/components/app/submitted-dialog";
-import {
-  discardDraftEvent,
-  startRequestFromRejected,
-  transitionEventStatus,
-} from "./actions";
-import { REJECTION_OUTCOME_LABEL } from "@/lib/schemas/event";
-import {
-  CLARIFIABLE_FIELDS,
-  type ClarifiableField,
-} from "@/lib/schemas/clarification";
-import { requestClarification } from "./clarification-actions";
-import { Textarea } from "@/components/ui/textarea";
+import { discardDraftEvent, startRequestFromRejected } from "./actions";
 import {
   Dialog,
   DialogContent,
@@ -73,8 +60,6 @@ interface EventsClientProps {
   /** The Organiser's events with a clarification thread, open or answered. */
   clarifiedEventIds?: string[];
   isCoordinator?: boolean;
-  /** SCRUM-48 AC5: the event whose details open first, from `?event=`. */
-  openEventId?: string;
 }
 
 export type FilterTab = "ALL" | "DRAFT" | "SUBMITTED" | "ACTION";
@@ -187,33 +172,18 @@ export function filterAndSortEvents<
 export function EventsClient({
   events,
   isCoordinator = false,
-  openEventId,
   awaitingAnswerIds = [],
   clarifiedEventIds = [],
 }: EventsClientProps) {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [editingDraft, setEditingDraft] = useState<Event | null>(null);
-  // SCRUM-48 AC5: a notification opens its event's details. Only events in
-  // this user's own list can open, so the link grants nothing new.
-  const [viewingEvent, setViewingEvent] = useState<Event | null>(
-    () => events.find((e) => e.id === openEventId) ?? null,
-  );
   // Change 8: the request just submitted, and the one to show once the
   // refreshed list has it.
   const [submittedId, setSubmittedId] = useState<string | null>(null);
-  const [viewAfterSubmit, setViewAfterSubmit] = useState<string | null>(null);
-  // Which tab the details open on: the Clarifications action opens its thread.
-  const [viewingTab, setViewingTab] = useState<"details" | "clarification">(
-    "details",
-  );
   const [activeTab, setActiveTab] = useState<FilterTab>("ALL");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [sortField, setSortField] = useState<SortField>("updatedAt");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
-  const [rejectingEvent, setRejectingEvent] = useState<Event | null>(null);
-  const [rejectionReason, setRejectionReason] = useState("");
-  const [rejectionOutcome, setRejectionOutcome] =
-    useState<RejectionOutcome | null>(null);
   // Which row's Start New Request is in flight, so only that button says so.
   const [startingFrom, setStartingFrom] = useState<string | null>(null);
   // The draft just started from a rejection, opened once the refreshed list
@@ -226,11 +196,6 @@ export function EventsClient({
   const draftInEditor = editingDraft ?? startedDraft;
   // SCRUM-130: the draft awaiting confirmation before it is discarded.
   const [discardingEvent, setDiscardingEvent] = useState<Event | null>(null);
-  const [clarifyingEvent, setClarifyingEvent] = useState<Event | null>(null);
-  const [clarificationMessage, setClarificationMessage] = useState("");
-  const [clarificationFields, setClarificationFields] = useState<
-    ClarifiableField[]
-  >([]);
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
 
@@ -252,44 +217,6 @@ export function EventsClient({
 
     return () => clearInterval(interval);
   }, [router, isPending]);
-
-  // Derive active event from freshly polled events list if present,
-  // falling back to viewingEvent snapshot if a poll drops it (e.g. reassigned coordinator).
-  const activeEvent = viewingEvent
-    ? (events.find((e) => e.id === viewingEvent.id) ?? null)
-    : null;
-  const justSubmitted = viewAfterSubmit
-    ? (events.find((e) => e.id === viewAfterSubmit) ?? null)
-    : null;
-  const eventToDisplay = activeEvent ?? viewingEvent ?? justSubmitted;
-  const isEventNoLongerAvailable = Boolean(viewingEvent && !activeEvent);
-
-  function changeStatus(
-    event: Event,
-    nextStatus: "APPROVED" | "REJECTED",
-    decisionReason?: string,
-    outcome?: RejectionOutcome,
-  ) {
-    startTransition(async () => {
-      const result = await transitionEventStatus({
-        eventId: event.id,
-        nextStatus,
-        decisionReason,
-        rejectionOutcome: outcome,
-      });
-      if (!result.ok) {
-        toast.error(result.error);
-        return;
-      }
-      toast.success(
-        `Event status updated to ${EVENT_STATUS_LABEL[result.data.status]}.`,
-      );
-      setRejectingEvent(null);
-      setRejectionReason("");
-      setRejectionOutcome(null);
-      router.refresh();
-    });
-  }
 
   // SCRUM-126 AC4: a request rejected as needing a new submission becomes the
   // starting point of a new Draft, found under the Drafts tab.
@@ -333,28 +260,6 @@ export function EventsClient({
   }
 
   const [searchQuery, setSearchQuery] = useState("");
-
-  // SCRUM-18: coordinator asks the organiser a question instead of deciding
-  // yet. The event's own status is untouched.
-  function submitClarification() {
-    if (!clarifyingEvent || !clarificationMessage.trim()) return;
-    startTransition(async () => {
-      const result = await requestClarification({
-        eventId: clarifyingEvent.id,
-        message: clarificationMessage,
-        editableFields: clarificationFields,
-      });
-      if (!result.ok) {
-        toast.error(result.error);
-        return;
-      }
-      toast.success("Clarification request sent to the organiser.");
-      setClarifyingEvent(null);
-      setClarificationMessage("");
-      setClarificationFields([]);
-      router.refresh();
-    });
-  }
 
   // A coordinator's second tab is their review queue; an organiser's is
   // everything they have sent. Both the filter and the count follow this.
@@ -437,35 +342,33 @@ export function EventsClient({
             {startingFrom === event.id ? "Starting…" : "Start New Request"}
           </Button>
         )}
+        {/* SCRUM-208 AC1: the event opens on its own page. */}
         <Button
+          asChild
           variant="ghost"
           size="sm"
           className={iconButton}
-          onClick={() => {
-            setViewingTab("details");
-            setViewingEvent(event);
-          }}
-          data-testid="view-details-button"
-          aria-label="View Details"
-          title="View Details"
         >
-          <Eye className="h-4 w-4" />
+          <Link
+            href={`/events/${event.id}`}
+            data-testid="view-details-button"
+            aria-label="View Details"
+            title="View Details"
+          >
+            <Eye className="h-4 w-4" />
+          </Link>
         </Button>
         {/* Shared page conventions: the thread is one click away. */}
         {!isCoordinator && clarified.has(event.id) && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className={iconButton}
-            onClick={() => {
-              setViewingTab("clarification");
-              setViewingEvent(event);
-            }}
-            data-testid="clarifications-button"
-            aria-label="Clarifications"
-            title="Clarifications"
-          >
-            <MessagesSquare className="h-4 w-4" />
+          <Button asChild variant="ghost" size="sm" className={iconButton}>
+            <Link
+              href={`/events/${event.id}?tab=clarification`}
+              data-testid="clarifications-button"
+              aria-label="Clarifications"
+              title="Clarifications"
+            >
+              <MessagesSquare className="h-4 w-4" />
+            </Link>
           </Button>
         )}
         {/* SCRUM-130 AC3: offered only on the Organiser's own Drafts. */}
@@ -494,52 +397,7 @@ export function EventsClient({
             <>
               {/* Change 8: View, Ask, Approve, Reject; the decisions in
                   transparent green and red. */}
-              {/* SCRUM-18: ask the organiser a question instead of deciding. */}
-              <Button
-                variant="outline"
-                size="sm"
-                className={actionButton}
-                disabled={isPending}
-                onClick={() => {
-                  setClarifyingEvent(event);
-                  setClarificationMessage("");
-                  setClarificationFields([]);
-                }}
-              >
-                <MessageCircleQuestion className="h-3.5 w-3.5" /> Ask
-              </Button>
-              {event.status === "UNDER_REVIEW" && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className={cn(
-                    actionButton,
-                    "border border-success/40 bg-success/10 text-success hover:bg-success/20 hover:text-success",
-                  )}
-                  disabled={isPending}
-                  onClick={() => changeStatus(event, "APPROVED")}
-                >
-                  <CheckCircle2 className="h-3.5 w-3.5" /> Approve
-                </Button>
-              )}
-              {event.status === "UNDER_REVIEW" && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className={cn(
-                    actionButton,
-                    "border border-destructive/40 bg-destructive/10 text-destructive hover:bg-destructive/20 hover:text-destructive",
-                  )}
-                  disabled={isPending}
-                  onClick={() => {
-                    setRejectingEvent(event);
-                    setRejectionReason("");
-                    setRejectionOutcome(null);
-                  }}
-                >
-                  <XCircle className="h-3.5 w-3.5" /> Reject
-                </Button>
-              )}
+              <ReviewDecision event={event} buttonClassName={actionButton} />
             </>
           )}
       </div>
@@ -873,15 +731,14 @@ export function EventsClient({
                         className="font-medium md:w-full md:max-w-0"
                       >
                         <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => setViewingEvent(event)}
+                          <Link
+                            href={`/events/${event.id}`}
                             title={event.name}
-                            className="min-w-0 cursor-pointer truncate text-left font-medium text-foreground hover:underline focus:outline-none"
+                            className="min-w-0 truncate text-left font-medium text-foreground hover:underline focus:outline-none"
                             data-testid="event-name-link"
                           >
                             {event.name}
-                          </button>
+                          </Link>
                         </div>
                       </TableCell>
                       <TableCell role="cell" data-col="status">
@@ -973,7 +830,7 @@ export function EventsClient({
         action={{
           label: "View Details",
           onClick: () => {
-            setViewAfterSubmit(submittedId);
+            if (submittedId) router.push(`/events/${submittedId}`);
             setSubmittedId(null);
           },
         }}
@@ -982,89 +839,6 @@ export function EventsClient({
         when a Coordinator decides on it.
       </SubmittedDialog>
 
-      {/* Controlled Singular-Page Modal for Viewing Submitted Event Details */}
-      {eventToDisplay && (
-        <EventDetailsModal
-          open={!!viewingEvent || !!justSubmitted}
-          onOpenChange={(open) => {
-            if (open) return;
-            setViewingEvent(null);
-            setViewingTab("details");
-            setViewAfterSubmit(null);
-            // So a refresh doesn't open it again.
-            if (openEventId) router.replace("/events");
-          }}
-          event={eventToDisplay}
-          isCoordinator={isCoordinator}
-          isNoLongerAvailable={isEventNoLongerAvailable}
-          initialTab={viewingTab}
-        />
-      )}
-
-      <Dialog
-        open={!!rejectingEvent}
-        onOpenChange={(open) => !open && setRejectingEvent(null)}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Reject event request</DialogTitle>
-            <DialogDescription>
-              Give the organiser a clear reason, and choose whether they amend
-              this request or start a new one.
-            </DialogDescription>
-          </DialogHeader>
-          <Textarea
-            value={rejectionReason}
-            onChange={(event) => setRejectionReason(event.target.value)}
-            placeholder="Reason for rejection"
-            aria-label="Rejection reason"
-          />
-          {/* SCRUM-126 AC1: one outcome must be chosen with the reason. */}
-          <fieldset className="space-y-2 text-sm">
-            <legend className="mb-1 font-medium">
-              What can the organiser do next?
-            </legend>
-            {(Object.keys(REJECTION_OUTCOME_LABEL) as RejectionOutcome[]).map(
-              (outcome) => (
-                <label key={outcome} className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                    name="rejection-outcome"
-                    value={outcome}
-                    checked={rejectionOutcome === outcome}
-                    onChange={() => setRejectionOutcome(outcome)}
-                    className="accent-primary"
-                  />
-                  {REJECTION_OUTCOME_LABEL[outcome]}
-                </label>
-              ),
-            )}
-          </fieldset>
-          <DialogFooter>
-            <Button variant="secondary" onClick={() => setRejectingEvent(null)}>
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              disabled={
-                isPending || !rejectionReason.trim() || !rejectionOutcome
-              }
-              onClick={() =>
-                rejectingEvent &&
-                rejectionOutcome &&
-                changeStatus(
-                  rejectingEvent,
-                  "REJECTED",
-                  rejectionReason,
-                  rejectionOutcome,
-                )
-              }
-            >
-              {isPending ? "Rejecting…" : "Reject request"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
       {/* SCRUM-130 AC1/AC2: nothing is discarded until this is confirmed. */}
       <Dialog
         open={!!discardingEvent}
@@ -1091,65 +865,6 @@ export function EventsClient({
               onClick={() => discardingEvent && discardDraft(discardingEvent)}
             >
               {isPending ? "Discarding…" : "Discard Draft"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      <Dialog
-        open={!!clarifyingEvent}
-        onOpenChange={(open) => !open && setClarifyingEvent(null)}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Request clarification</DialogTitle>
-            <DialogDescription>
-              Ask the organiser what you need before deciding. The event
-              stays under review while you wait for their response.
-            </DialogDescription>
-          </DialogHeader>
-          <Textarea
-            value={clarificationMessage}
-            onChange={(event) => setClarificationMessage(event.target.value)}
-            placeholder="What do you need clarified?"
-            aria-label="Clarification message"
-          />
-          {/* SCRUM-108 AC1: the fields the organiser may change in the
-              answer; none ticked means a text answer only. */}
-          <fieldset className="space-y-2 text-sm">
-            <legend className="mb-1 font-medium">
-              Fields the organiser may change (optional)
-            </legend>
-            <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
-              {(Object.keys(CLARIFIABLE_FIELDS) as ClarifiableField[]).map(
-                (field) => (
-                  <label key={field} className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={clarificationFields.includes(field)}
-                      onChange={(e) =>
-                        setClarificationFields((current) =>
-                          e.target.checked
-                            ? [...current, field]
-                            : current.filter((f) => f !== field),
-                        )
-                      }
-                      className="accent-primary"
-                    />
-                    {CLARIFIABLE_FIELDS[field]}
-                  </label>
-                ),
-              )}
-            </div>
-          </fieldset>
-          <DialogFooter>
-            <Button variant="secondary" onClick={() => setClarifyingEvent(null)}>
-              Cancel
-            </Button>
-            <Button
-              disabled={isPending || !clarificationMessage.trim()}
-              onClick={submitClarification}
-            >
-              Send request
             </Button>
           </DialogFooter>
         </DialogContent>

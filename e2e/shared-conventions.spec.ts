@@ -187,7 +187,8 @@ test.describe("SCRUM-207 — Shared page conventions on every page", () => {
     ).toBeVisible();
     await submitted.getByRole("button", { name: "View Details" }).click();
     await expect(submitted).toHaveCount(0);
-    await expect(page.getByRole("dialog")).toContainText(name);
+    // SCRUM-208: the request opens on its own page.
+    await expect(page.getByRole("heading", { level: 1, name })).toBeVisible();
 
     // What was chosen is saved as the same text as before (change 7).
     const saved = await prisma.event.findFirstOrThrow({
@@ -218,7 +219,8 @@ test.describe("SCRUM-207 — Shared page conventions on every page", () => {
     ).toHaveText("Last Updated");
     const draft = page.getByTestId("draft-event-row").first();
     await expect(draft.getByText("Draft — Incomplete")).toHaveCount(0);
-    const view = draft.getByRole("button", { name: "View Details" });
+    // SCRUM-208: View Details is a link to the event's page.
+    const view = draft.getByRole("link", { name: "View Details" });
     const discard = draft.getByRole("button", { name: "Discard" });
     await expect(view).toHaveText("");
     await expect(discard).toHaveText("");
@@ -274,24 +276,23 @@ test.describe("SCRUM-207 — Shared page conventions on every page", () => {
     const row = page
       .getByTestId("submitted-event-row")
       .filter({ hasText: name });
-    await row.getByRole("button", { name: "Clarifications" }).click();
+    await row.getByRole("link", { name: "Clarifications" }).click();
 
-    const dialog = page.getByRole("dialog");
-    const tab = dialog.getByRole("tab", { name: "Clarification" });
+    // SCRUM-208: the event's page, open on its Clarification tab.
+    const dialog = page.getByTestId("event-page");
+    const tab = dialog.getByRole("tab", { name: /^Clarification/ });
     await expect(tab).toHaveAttribute("aria-selected", "true");
     await expect(dialog.getByTestId("clarification-thread")).toContainText(
       "How many guests need step-free access?",
     );
-    // The two tabs share the dialog's width.
-    const details = dialog.getByRole("tab", { name: "Event details" });
+    // The tabs share the page's full width: the first starts at its left
+    // edge and the last ends at its right.
     const list = (await dialog.getByRole("tablist").boundingBox())!;
-    const widths = [
-      (await details.boundingBox())!.width,
-      (await tab.boundingBox())!.width,
-    ];
-    expect(Math.round(widths[0] + widths[1])).toBeGreaterThanOrEqual(
-      Math.round(list.width) - 8,
-    );
+    const tabs = dialog.getByRole("tab");
+    const first = (await tabs.first().boundingBox())!;
+    const last = (await tabs.last().boundingBox())!;
+    expect(first.x).toBeLessThanOrEqual(list.x + 2);
+    expect(last.x + last.width).toBeGreaterThanOrEqual(list.x + list.width - 2);
   });
 
   test("SCRUM-207 TC-207-15: notifications are reached from one bell, beside the user's name", async ({

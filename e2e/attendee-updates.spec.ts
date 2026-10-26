@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { prisma } from "@/lib/db";
 
-import { signedIn, usesLocalDatabase } from "./helpers";
+import { signedIn, usesLocalDatabase, openEvent } from "./helpers";
 
 /**
  * SCRUM-85 — an event an Attendee registered for goes back to Planning with a
@@ -124,12 +124,8 @@ test.describe("SCRUM-85 — Attendees are kept informed", () => {
     // The Coordinator confirms it again, on the new date.
     const coordinator = await signedIn(browser, "coordinator@test.local");
     await coordinator.goto("/events");
-    await coordinator
-      .getByRole("row", { name: new RegExp(name) })
-      .getByTestId("view-details-button")
-      .click();
-    await coordinator
-      .getByRole("dialog")
+    // SCRUM-208: Confirm is in the checklist, on the Arrangements tab.
+    await (await openEvent(coordinator, name, "Arrangements"))
       .getByRole("button", { name: "Confirm event" })
       .click();
     await expect(coordinator.getByText("Event confirmed.")).toBeVisible();

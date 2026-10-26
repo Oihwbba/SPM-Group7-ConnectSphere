@@ -2,7 +2,7 @@ import { test, expect, type Page } from "@playwright/test";
 import { formatDateTime } from "@/lib/datetime";
 import { prisma } from "@/lib/db";
 
-import { usesLocalDatabase, pickDateTime, selectFrom } from "./helpers";
+import { usesLocalDatabase, pickDateTime, selectFrom, openEvent } from "./helpers";
 
 /**
  * SCRUM-38 — venue search in a real browser: opened from an event, from a
@@ -21,14 +21,9 @@ async function signIn(page: Page, email: string) {
   await page.waitForURL("**/events");
 }
 
-async function openDetails(page: Page, name: string) {
-  await page
-    .getByRole("row", { name: new RegExp(name) })
-    .getByTestId("view-details-button")
-    .click();
-  const dialog = page.getByRole("dialog");
-  await expect(dialog).toBeVisible();
-  return dialog;
+/** SCRUM-208: the event's page, on the tab this journey works in. */
+async function openDetails(page: Page, name: string, tab = "Request") {
+  return openEvent(page, name, tab);
 }
 
 /** The venues listed, by name, in order. */
@@ -254,7 +249,7 @@ test.describe("SCRUM-38 — Search and filter venues", () => {
     });
 
     await signIn(page, "coordinator@test.local");
-    const details = await openDetails(page, name);
+    const details = await openDetails(page, name, "Changes");
     await details
       .getByTestId("reconsideration-panel")
       .getByRole("link", { name: "Find a replacement venue" })
