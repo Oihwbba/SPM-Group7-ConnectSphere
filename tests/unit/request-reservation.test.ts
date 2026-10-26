@@ -131,13 +131,13 @@ describe("reservationVersion — SCRUM-226", () => {
     { equipmentId: "eq_mic", outstanding: 3 },
   ];
 
-  it("SCRUM-226 [AC2]: is the same for the same request and outstanding lines, in any order", () => {
+  it("SCRUM-226 [AC2] TC-155-17: is the same for the same request and outstanding lines, in any order", () => {
     expect(reservationVersion(AT, both)).toBe(
       reservationVersion(AT, [...both].reverse()),
     );
   });
 
-  it("SCRUM-226 [AC1]: changes when the request changes, or when what is left to reserve does", () => {
+  it("SCRUM-226 [AC1] TC-155-17: changes when the request changes, or when what is left to reserve does", () => {
     const before = reservationVersion(AT, both);
 
     expect(reservationVersion(new Date(AT.getTime() + 1), both)).not.toBe(before);
@@ -182,7 +182,7 @@ describe("reserveEquipmentRequest — SCRUM-226", () => {
     expect(tx.reservation.createMany).not.toHaveBeenCalled();
   });
 
-  it("SCRUM-226 [AC2]: a form whose version still matches reserves as before, with its rows edited", async () => {
+  it("SCRUM-226 [AC2] TC-155-17: a form whose version still matches reserves as before, with its rows edited", async () => {
     approvedRequestWithStock();
 
     const result = await reserveEquipmentRequest({
