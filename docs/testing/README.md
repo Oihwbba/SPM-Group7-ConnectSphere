@@ -155,7 +155,7 @@ the open pull requests that change the same test files have merged.
 | [SCRUM-191](SCRUM-191.md) | Jin Hong | 6 | A Bug task: the suites that raced each other, and the docs; automated except TC-191-06, a documentation check |
 | [SCRUM-193](SCRUM-193.md) | Jin Hong | 2 | A Bug task: the tests that timed out alongside other files; automated except TC-193-02, a forced timeout |
 | [SCRUM-201](SCRUM-201.md) | Jin Hong | 1 | A Bug task: TC-124-02 used another suite's equipment; automated (the whole suite) |
-| [SCRUM-155](SCRUM-155.md) | Jin Hong | 16 | Every case automated (unit, integration for all-or-nothing and the races, e2e for the journey) |
+| [SCRUM-155](SCRUM-155.md) | Jin Hong | 17 | Every case automated (unit, integration for all-or-nothing and the races, e2e for the journey). TC-155-17 added by SCRUM-226 |
 | [SCRUM-156](SCRUM-156.md) | Jin Hong | 8 | Every case automated; TC-155-16 retired and the SCRUM-31 reserve cases mapped to SCRUM-155 |
 | [SCRUM-161](SCRUM-161.md) | Felicia Or | 17 | Every current case automated; TC-161-08 to TC-161-11 retired with former AC 5 and AC 6; supersedes TC-37-05 step 1 and TC-37-06 |
 | [SCRUM-159](SCRUM-159.md) | Jun Bin | 17 | Every case automated (unit, integration for the database's range and the simultaneous approvals, e2e for the calendar and the request form); AC 1's form is SCRUM-34's and AC 3's search SCRUM-38's |

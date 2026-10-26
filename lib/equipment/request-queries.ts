@@ -7,6 +7,7 @@ import {
   OPEN_REQUEST_STATUSES,
   REQUESTABLE_EVENT_STATUSES,
   outstandingLines,
+  reservationVersion,
   reviewLine,
   type PoolAvailability,
 } from "@/lib/equipment/requests";
@@ -367,9 +368,10 @@ export async function getReservableRequests(now = new Date()) {
     return [
       {
         id,
-        // SCRUM-142: the request as the form saw it, so a reservation made
-        // after its lines changed is refused rather than reserving old lines.
-        version: updatedAt.toISOString(),
+        // SCRUM-142, SCRUM-226: the request as the form saw it, so a
+        // reservation made after its lines changed, or after someone else
+        // reserved part of it, is refused rather than reserving a line twice.
+        version: reservationVersion(updatedAt, missing),
         notes,
         requestedBy,
         event: {

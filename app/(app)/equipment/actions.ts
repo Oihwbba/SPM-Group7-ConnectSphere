@@ -16,7 +16,11 @@ import {
   CONFIRMED_HOLDS,
   reservableRequest,
 } from "@/lib/equipment/request-queries";
-import { LIVE_LINE, outstandingLines } from "@/lib/equipment/requests";
+import {
+  LIVE_LINE,
+  outstandingLines,
+  reservationVersion,
+} from "@/lib/equipment/requests";
 import { formatDateTime } from "@/lib/datetime";
 import { outdateSafetyChecks } from "@/lib/safety-checks";
 import { fieldErrorsByPath } from "@/lib/schemas/equipment-request";
@@ -355,15 +359,15 @@ export async function reserveEquipmentRequest(
         });
         // AC 6 — read under the event lock, which every reservation for the
         // event takes, so what is outstanding can't change before the insert.
-        if (
-          !request ||
-          outstandingLines(
-            requestId,
-            request.lines,
-            request.event,
-            request.event.reservations,
-          ).length === 0
-        )
+        const missing = request
+          ? outstandingLines(
+              requestId,
+              request.lines,
+              request.event,
+              request.event.reservations,
+            )
+          : [];
+        if (!request || missing.length === 0)
           return {
             error:
               "This request is not waiting to be reserved: it is already reserved, or no longer approved.",
@@ -375,9 +379,11 @@ export async function reserveEquipmentRequest(
         // SCRUM-142: the Coordinator can change an approved request's lines
         // (it goes back for review and may be approved again), so a form
         // opened before that would reserve lines the request no longer has.
+        // SCRUM-226 (AC 5): and a form opened before someone else reserved
+        // part of the request would reserve that part a second time.
         if (
           requestVersion &&
-          request.updatedAt.toISOString() !== requestVersion
+          reservationVersion(request.updatedAt, missing) !== requestVersion
         )
           return {
             error:

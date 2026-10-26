@@ -5,6 +5,7 @@ import type { Role } from "@prisma/client";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { reserveEquipmentRequest } from "@/app/(app)/equipment/actions";
+import { reservationVersion } from "@/lib/equipment/requests";
 import { RESERVABLE_EVENT_STATUSES } from "@/lib/schemas/reservation";
 
 // SCRUM-155 — reserve an approved request in one step, all rows or none.
@@ -48,6 +49,9 @@ const validInput = {
   ],
 };
 
+// SCRUM-142, SCRUM-226: when the request last changed, part of its version.
+const REQUEST_UPDATED_AT = new Date("2031-01-01T00:00:00.000Z");
+
 const POOLS = [
   { id: "eq_mic", totalQuantity: 4 },
   { id: "eq_projector", totalQuantity: 10 },
@@ -81,6 +85,7 @@ function approvedRequestWithStock({
     .mockResolvedValueOnce(pools);
   tx.equipmentRequest.findFirst.mockResolvedValue({
     eventId: "evt_1",
+    updatedAt: REQUEST_UPDATED_AT,
     event: { ...event, reservations },
     lines: [
       { equipmentId: "eq_projector", quantity: 2 },
@@ -116,6 +121,82 @@ describe("reserveEquipmentRequest — SCRUM-166 AC13", () => {
       where: { eventId: "evt_1", status: { in: ["AWAITING_REVIEW", "APPROVED"] } },
       data: { status: "OUTDATED", outdatedAt: expect.any(Date) },
     });
+  });
+});
+
+describe("reservationVersion — SCRUM-226", () => {
+  const AT = new Date("2031-01-01T00:00:00.000Z");
+  const both = [
+    { equipmentId: "eq_projector", outstanding: 2 },
+    { equipmentId: "eq_mic", outstanding: 3 },
+  ];
+
+  it("SCRUM-226 [AC2]: is the same for the same request and outstanding lines, in any order", () => {
+    expect(reservationVersion(AT, both)).toBe(
+      reservationVersion(AT, [...both].reverse()),
+    );
+  });
+
+  it("SCRUM-226 [AC1]: changes when the request changes, or when what is left to reserve does", () => {
+    const before = reservationVersion(AT, both);
+
+    expect(reservationVersion(new Date(AT.getTime() + 1), both)).not.toBe(before);
+    expect(reservationVersion(AT, [both[1]])).not.toBe(before);
+    expect(
+      reservationVersion(AT, [{ ...both[0], outstanding: 1 }, both[1]]),
+    ).not.toBe(before);
+  });
+});
+
+describe("reserveEquipmentRequest — SCRUM-226", () => {
+  /** The request's version while nothing on it is reserved. */
+  const openedVersion = reservationVersion(REQUEST_UPDATED_AT, [
+    { equipmentId: "eq_projector", outstanding: 2 },
+    { equipmentId: "eq_mic", outstanding: 3 },
+  ]);
+  it("SCRUM-226 [AC1] TC-155-17: a form opened before someone else reserved part of the request is refused, and nothing is reserved", async () => {
+    approvedRequestWithStock({
+      // Since the form opened, the projectors were reserved for this request.
+      reservations: [
+        {
+          requestId: "eqr_1",
+          equipmentId: "eq_projector",
+          quantity: 2,
+          startAt: new Date(START),
+          endAt: new Date(END),
+        },
+      ],
+    });
+
+    const result = await reserveEquipmentRequest({
+      ...validInput,
+      requestVersion: openedVersion,
+    });
+
+    expect(result).toEqual({
+      ok: false,
+      error:
+        "This request has changed since you opened it. Choose it again to see it as it is now.",
+      fieldErrors: undefined,
+    });
+    expect(tx.reservation.createMany).not.toHaveBeenCalled();
+  });
+
+  it("SCRUM-226 [AC2]: a form whose version still matches reserves as before, with its rows edited", async () => {
+    approvedRequestWithStock();
+
+    const result = await reserveEquipmentRequest({
+      ...validInput,
+      requestVersion: openedVersion,
+      // SCRUM-155 AC2: a row's quantity changed before saving.
+      lines: [
+        { equipmentId: "eq_projector", quantity: 3 },
+        { equipmentId: "eq_mic", quantity: 3 },
+      ],
+    });
+
+    expect(result).toEqual({ ok: true, data: { reserved: 2 } });
+    expect(tx.reservation.createMany).toHaveBeenCalledTimes(1);
   });
 });
 

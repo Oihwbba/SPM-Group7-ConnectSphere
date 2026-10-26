@@ -33,6 +33,7 @@ Approved and asks for 1 Projector and 2 Wireless Microphones.
 | [TC-155-14](#tc-155-14) | Negative    | AC 2, AC 7 | Unit, e2e              |
 | [TC-155-15](#tc-155-15) | Concurrency | AC 5       | Unit, integration      |
 | [TC-155-16](#tc-155-16) | Concurrency | AC 5, 6    | Retired (SCRUM-156)    |
+| [TC-155-17](#tc-155-17) | Concurrency | AC 5, 6    | Unit, integration      |
 
 ---
 
@@ -243,3 +244,16 @@ Approved and asks for 1 Projector and 2 Wireless Microphones.
 | Expected Result | The one-type form waits for the event before the equipment, so step 2 is not blocked: the two take turns on the event instead of deadlocking over the equipment rows. |
 
 **Retired by SCRUM-156:** the one-type form no longer reserves, so it can no longer race this card. The rejecting race (TC-155-15) still holds the lock order.
+
+### TC-155-17
+
+| Item            | Content |
+| --------------- | ------- |
+| Test Case ID    | TC-155-17 |
+| Test Scenario   | [Concurrency] AC 5, 6: two Technical Support staff open the same request; the first reserves part of it, and the second's form, opened before that, is refused, so no line is reserved twice (SCRUM-226) |
+| Pre-conditions  | An approved request for a Planning event with two lines, neither reserved. Two Technical Support sessions with the request chosen in the card. |
+| Test Steps      | 1. In the first session, remove the second row and reserve. <br> 2. In the second session, reserve both rows as loaded. <br> 3. In the second session, choose the request again and reserve. |
+| Test Data       | Line 1 × 1 (a type with room), line 2 × 1 (a type with one unit) |
+| Expected Result | Step 1 reserves line 1. Step 2 reserves nothing: "This request has changed since you opened it. Choose it again to see it as it is now." Step 3 offers only line 2 and reserves it, so each line is reserved once. |
+
+**Automated by:** `tests/integration/request-reservation.test.ts` › "SCRUM-226 [AC1, AC3] SCRUM-155 [AC5] TC-155-17: a form opened before someone else reserved part of the request is refused, so no line is reserved twice"; `tests/unit/request-reservation.test.ts` › "SCRUM-226 [AC1] TC-155-17: a form opened before someone else reserved part of the request is refused, and nothing is reserved", "SCRUM-226 [AC2]: a form whose version still matches reserves as before, with its rows edited", "SCRUM-226 [AC1]: changes when the request changes, or when what is left to reserve does", "SCRUM-226 [AC2]: is the same for the same request and outstanding lines, in any order"

@@ -37,7 +37,7 @@ either covered by a test or visibly not done yet. Reviewers do the same.
 | | |
 |---|---|
 | Stories | **97** |
-| Tasks | **61** |
+| Tasks | **62** |
 | Subtasks | **18** |
 | Total story points | **267** |
 | Points committed to Sprint 1 | **37** |
@@ -257,3 +257,4 @@ _8 stories, 14 points_
 | [SCRUM-219](SCRUM-219.md) | Chore: Slide deck against the rubric on the Week 11 template | SCRUM Sprint 4 | To Do |
 | [SCRUM-220](SCRUM-220.md) | Chore: Assemble the Week 12 submission zip with all seven folders | SCRUM Sprint 4 | To Do |
 | [SCRUM-221](SCRUM-221.md) | Chore: Re-sync docs/backlog from Jira at the start of Sprint 4 | SCRUM Sprint 4 | In Progress |
+| [SCRUM-226](SCRUM-226.md) | Bug: Two Technical Support staff can reserve the same line of an approved request twice | SCRUM Sprint 4 | In Review |
