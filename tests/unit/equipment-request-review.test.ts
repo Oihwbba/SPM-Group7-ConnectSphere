@@ -53,10 +53,14 @@ const event = {
   endAt: END,
 };
 
+// SCRUM-227: when the request was last updated, as the reviewer read it.
+const READ_AT = new Date("2031-01-20T08:00:00.000Z");
+
 const stored = (status: string, lines: unknown[] = []) => ({
   id: "eqr_1",
   status,
   requestedById: "usr_coord",
+  updatedAt: READ_AT,
   event,
   lines,
 });
@@ -93,7 +97,7 @@ describe("updateEquipmentRequestStatus — SCRUM-28", () => {
 
     expect(result).toEqual({ ok: true, data: { status: "IN_REVIEW" } });
     expect(tx.equipmentRequest.updateMany).toHaveBeenCalledWith({
-      where: { id: "eqr_1", status: "PENDING_REVIEW" },
+      where: { id: "eqr_1", status: "PENDING_REVIEW", updatedAt: READ_AT },
       data: { status: "IN_REVIEW", decidedAt: null },
     });
     // AC 6: the update joins the request's history.
@@ -132,7 +136,7 @@ describe("updateEquipmentRequestStatus — SCRUM-28", () => {
 
     expect(result).toEqual({ ok: true, data: { status: "APPROVED" } });
     expect(tx.equipmentRequest.updateMany).toHaveBeenCalledWith({
-      where: { id: "eqr_1", status: "IN_REVIEW" },
+      where: { id: "eqr_1", status: "IN_REVIEW", updatedAt: READ_AT },
       data: { status: "APPROVED", decidedAt: expect.any(Date) },
     });
     expect(tx.notification.create.mock.calls[0][0].data.message).toBe(
@@ -303,6 +307,7 @@ describe("suggestAlternativeEquipment — SCRUM-28 [AC4]", () => {
         id: true,
         status: true,
         requestedById: true,
+        updatedAt: true,
         // SCRUM-121 AC5: whose event it is.
         event: {
           select: { id: true, name: true, startAt: true, endAt: true, organiserId: true, coordinatorId: true },
@@ -319,7 +324,7 @@ describe("suggestAlternativeEquipment — SCRUM-28 [AC4]", () => {
     });
     expect(mockPool).toHaveBeenCalledWith(START, END);
     expect(tx.equipmentRequest.updateMany).toHaveBeenCalledWith({
-      where: { id: "eqr_1", status: "IN_REVIEW" },
+      where: { id: "eqr_1", status: "IN_REVIEW", updatedAt: READ_AT },
       data: { updatedAt: expect.any(Date) },
     });
     expect(tx.equipmentRequestLine.update).toHaveBeenCalledWith({
@@ -479,7 +484,7 @@ describe("suggestAlternativeEquipment — SCRUM-28 [AC4]", () => {
     });
   });
 
-  it("when the request left review in the meantime, says so and records nothing", async () => {
+  it("SCRUM-227 [AC1] SCRUM-28 [AC7]: when the request left review or was suggested on in the meantime, says so and records nothing", async () => {
     tx.equipmentRequest.updateMany.mockResolvedValue({ count: 0 });
 
     const result = await suggestAlternativeEquipment(input);

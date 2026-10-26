@@ -238,9 +238,11 @@ export async function createEquipmentRequest(
  * SCRUM-28 AC 2, AC 3 — Technical Support moves a request on: Pending Review → In
  * Review, then In Review → Approved or Rejected (`canMoveRequest`).
  *
- * The write is conditional on the status this reviewer saw, so of two
- * reviewers acting at once only one moves the request; the other is told, and
- * neither the history (AC 6) nor the notification (AC 5) is written twice.
+ * The write is conditional on the request as this reviewer read it, its
+ * status and when it was last updated, so of two updates at once (two moves,
+ * or a move and a suggestion) only the first is saved; the other is told, and
+ * neither the history (AC 6) nor the notification (AC 5) is written twice
+ * (AC 7, SCRUM-227).
  *
  * Rejecting releases whatever is still reserved for the request: after a
  * change (SCRUM-142 AC10) its unchanged lines keep their reservations while
@@ -270,6 +272,7 @@ export async function updateEquipmentRequestStatus(
         id: true,
         status: true,
         requestedById: true,
+        updatedAt: true,
         event: { select: { id: true, name: true, organiserId: true, coordinatorId: true } },
         lines: { select: { equipmentId: true } },
       },
@@ -288,7 +291,7 @@ export async function updateEquipmentRequestStatus(
 
     const moved = await prisma.$transaction(async (tx) => {
       const result = await tx.equipmentRequest.updateMany({
-        where: { id: request.id, status: from },
+        where: { id: request.id, status: from, updatedAt: request.updatedAt },
         data: {
           status: toStatus,
           decidedAt: toStatus === "IN_REVIEW" ? null : new Date(),
@@ -370,6 +373,7 @@ export async function suggestAlternativeEquipment(
         id: true,
         status: true,
         requestedById: true,
+        updatedAt: true,
         event: {
           select: { id: true, name: true, startAt: true, endAt: true, organiserId: true, coordinatorId: true },
         },
@@ -430,10 +434,12 @@ export async function suggestAlternativeEquipment(
 
     const shortage = `only ${requested.available} of ${requested.total}`;
     const saved = await prisma.$transaction(async (tx) => {
-      // Touching the request, conditional on it still being in review, stops
-      // a suggestion landing on a request someone has just decided.
+      // Touching the request, conditional on it being as this reviewer read
+      // it, stops a suggestion landing on a request someone has just decided
+      // or suggested on: of two updates at once, only the first is saved
+      // (AC 7, SCRUM-227).
       const result = await tx.equipmentRequest.updateMany({
-        where: { id: request.id, status: "IN_REVIEW" },
+        where: { id: request.id, status: "IN_REVIEW", updatedAt: request.updatedAt },
         data: { updatedAt: new Date() },
       });
       if (result.count !== 1) return false;
