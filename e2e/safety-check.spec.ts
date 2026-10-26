@@ -1,7 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import { prisma } from "@/lib/db";
 
-import { usesLocalDatabase } from "./helpers";
+import { usesLocalDatabase, openEvent } from "./helpers";
 
 /**
  * SCRUM-166 — the operational safety check, end to end: the Coordinator
@@ -20,11 +20,9 @@ async function signIn(page: Page, email: string, landing: string) {
 }
 
 async function openChecklist(page: Page, name: string) {
-  await page
-    .getByRole("row", { name: new RegExp(name) })
-    .getByTestId("view-details-button")
-    .click();
-  const checklist = page.getByRole("dialog").getByTestId("readiness-checklist");
+  // SCRUM-208: the checklist is on the event page's Arrangements tab.
+  const event = await openEvent(page, name, "Arrangements");
+  const checklist = event.getByTestId("readiness-checklist");
   await expect(checklist).toBeVisible();
   return checklist;
 }

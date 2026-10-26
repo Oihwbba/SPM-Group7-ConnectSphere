@@ -256,13 +256,14 @@ describe.skipIf(!usesLocalDatabase)(
       });
     });
 
-    it("SCRUM-48 [AC5] TC-48-06: an Organiser's notification about their event links to it in the events list", async () => {
+    it("SCRUM-48 [AC5] TC-48-06: an Organiser's notification about their event links to the event's page", async () => {
       await notify({ title: "About my event" });
 
+      // SCRUM-208: the event's own page, not the old pop-up link.
       expect(await getMyNotifications()).toEqual([
         expect.objectContaining({
           title: "About my event",
-          href: `/events?event=${eventId}`,
+          href: `/events/${eventId}`,
         }),
       ]);
     });

@@ -50,7 +50,7 @@ unless the case says otherwise.
 | Test Data | Name "Partial planning draft" |
 | Expected Result | "Draft event request saved successfully." The draft is listed with a **Resume Draft** button, its dates, attendance, venue and equipment still empty. |
 
-**Automated by:** `tests/unit/events.test.ts` › "SCRUM-15 [AC1 - Happy Path]: allows saving a draft with mandatory submission fields left empty", "SCRUM-15 [AC4 - Relaxation Rule]: allows saving a draft with missing mandatory fields (dates/venue/equipment/attendance omitted)"; `e2e/events.spec.ts` › "organiser saves partial draft, locates and resumes draft with preserved fields, then completes and submits"
+**Automated by:** `tests/unit/events.test.ts` › "SCRUM-15 [AC1 - Happy Path]: allows saving a draft with mandatory submission fields left empty", "SCRUM-15 [AC4 - Relaxation Rule]: allows saving a draft with missing mandatory fields (dates/venue/equipment/attendance omitted)"; `e2e/events.spec.ts` › "SCRUM-15 [AC3] TC-15-05: organiser saves partial draft, locates and resumes draft with preserved fields, then completes and submits"
 
 ### TC-15-02
 
@@ -76,7 +76,7 @@ unless the case says otherwise.
 | Test Data | Start 20 Nov 2027 10:00, end 20 Nov 2027 18:00 |
 | Expected Result | "Resume Draft Event Request" opens with the saved name, and the dates read 2027-11-20T10:00 and 2027-11-20T18:00. The review step shows "Start: 20 Nov 2027, 10:00 am SGT" and "End: 20 Nov 2027, 6:00 pm SGT". |
 
-**Automated by:** `tests/unit/events.test.ts` › "SCRUM-15 [AC2 - Happy Path]: retains existing field values when updating an existing draft request", "SCRUM-15 [AC1, AC2 - Data retention]: a new draft saved with both proposed dates persists them as UTC instants"; `e2e/events.spec.ts` › "organiser saves partial draft, locates and resumes draft with preserved fields, then completes and submits"
+**Automated by:** `tests/unit/events.test.ts` › "SCRUM-15 [AC2 - Happy Path]: retains existing field values when updating an existing draft request", "SCRUM-15 [AC1, AC2 - Data retention]: a new draft saved with both proposed dates persists them as UTC instants"; `e2e/events.spec.ts` › "SCRUM-15 [AC3] TC-15-05: organiser saves partial draft, locates and resumes draft with preserved fields, then completes and submits"
 
 ### TC-15-04
 
@@ -102,7 +102,7 @@ unless the case says otherwise.
 | Test Data | Name "Partial planning draft" |
 | Expected Result | "Draft event request saved successfully." The draft is listed as a Draft, and resuming it opens the form to continue. |
 
-**Automated by:** `e2e/events.spec.ts` › "organiser can navigate steps freely without mandatory fields and save partial draft", "organiser saves partial draft, locates and resumes draft with preserved fields, then completes and submits"
+**Automated by:** `e2e/events.spec.ts` › "organiser can navigate steps freely without mandatory fields and save partial draft", "SCRUM-15 [AC3] TC-15-05: organiser saves partial draft, locates and resumes draft with preserved fields, then completes and submits"
 
 ### TC-15-06
 
@@ -128,7 +128,7 @@ unless the case says otherwise.
 | Test Data | A complete set of values |
 | Expected Result | After step 1 it is still a Draft. After step 2 it is no longer a Draft: it is Submitted, or Under Review once a Coordinator is assigned (SCRUM-20). |
 
-**Automated by:** `tests/unit/events.test.ts` › "SCRUM-15 [AC5 - State Transition]: transitions draft status from DRAFT to SUBMITTED when draft is fully completed and submitted"; `e2e/events.spec.ts` › "organiser saves partial draft, locates and resumes draft with preserved fields, then completes and submits"
+**Automated by:** `tests/unit/events.test.ts` › "SCRUM-15 [AC5 - State Transition]: transitions draft status from DRAFT to SUBMITTED when draft is fully completed and submitted"; `e2e/events.spec.ts` › "SCRUM-15 [AC3] TC-15-05: organiser saves partial draft, locates and resumes draft with preserved fields, then completes and submits"
 
 ### TC-15-08
 

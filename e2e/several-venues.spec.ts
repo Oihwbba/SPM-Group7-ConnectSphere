@@ -1,7 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import { prisma } from "@/lib/db";
 
-import { choose, signedIn, usesLocalDatabase } from "./helpers";
+import { choose, signedIn, usesLocalDatabase, openEvent } from "./helpers";
 
 /**
  * SCRUM-162 — one event books several venues: a main hall and a breakout
@@ -86,15 +86,9 @@ function approved(
   });
 }
 
-async function openDetails(page: Page, eventName: string) {
-  await page.goto("/events");
-  await page
-    .getByRole("row", { name: new RegExp(eventName) })
-    .getByTestId("view-details-button")
-    .click();
-  const dialog = page.getByRole("dialog");
-  await expect(dialog).toBeVisible();
-  return dialog;
+/** SCRUM-208: the event's page, on the tab this journey works in. */
+async function openDetails(page: Page, eventName: string, tab = "Arrangements") {
+  return openEvent(page, eventName, tab);
 }
 
 test.describe("SCRUM-162 — Book several venues for one event", () => {

@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-22. Jira is the source of truth.
+     Synced from Jira on 2026-10-23. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-188 - Request a venue for exactly the event's period
@@ -10,7 +10,7 @@
 | **Epic** | SCRUM-7 - Venue Management |
 | **Priority** | Medium |
 | **Story points** | 2 |
-| **Status in Jira** | To Do |
+| **Status in Jira** | In Progress |
 | **Sprint** | SCRUM Sprint 4 |
 | **Jira** | https://smu-spm-group7.atlassian.net/browse/SCRUM-188 |
 
@@ -20,10 +20,10 @@
 
 **Acceptance criteria**
 
-1. Given I choose an event on the venue request form (SCRUM-50, SCRUM-162), then the period is filled in exactly as the event's start and end, not rounded, and can't be edited.
-2. Given a request whose period isn't exactly the event's, longer or shorter, then it is refused with "The requested period must be the event's: <start> to <end>." and nothing is saved.
-3. Given venue search lists a venue as free for my event (SCRUM-38 AC1, AC2), then requesting it is checked for the same period, so it isn't refused unless something was booked there in between.
-**Supersedes:** SCRUM-50 AC1, "start rounded down and end rounded up to the half hour", and SCRUM-162 AC4, "must cover the event's whole period (a shorter period is refused)", which also allowed a longer period. The readiness checklist rule that an Approved booking covers the event's period (SCRUM-110 AC1, SCRUM-162 AC8) is unchanged; an exact period covers it.
+1. Given I choose an event on the venue request form (SCRUM-50, SCRUM-162), then the period is filled in exactly as the event's start and end, not rounded.
+2. Given venue search lists a venue as free for my event (SCRUM-38 AC1, AC2), then requesting it is checked for the same period.
+
+**Supersedes:** SCRUM-50 AC1, "start rounded down and end rounded up to the half hour".
 
 **Related:** SCRUM-38 AC2 fixes the search period to the event's own (change log, 2026-10-10).
 
@@ -35,5 +35,6 @@
 
 * 2026-10-16: created from SCRUM-38 development; supersedes SCRUM-50 AC1's rounding.
 * 2026-10-21: PO Approved
+* 2026-10-23: PO Approved Changes
 
 Functionality Area: Venue Booking Request
