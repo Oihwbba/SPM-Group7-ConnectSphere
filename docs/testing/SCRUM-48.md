@@ -103,9 +103,9 @@ AC8 cases write those rows directly. Times are UTC.
 | Pre-conditions | A notification about event `evt_1`, for each role in turn. |
 | Test Steps | 1. Work out the notification's link for each role. |
 | Test Data | Event status Planning, Confirmed, Cancelled or Completed; stored link `/bookings`, `/equipment-requests` or none |
-| Expected Result | Organiser and Coordinator: `/events?event=evt_1`, the events list with that event open. Attendee: `/events/evt_1` for a Confirmed event, or one back in Planning to be re-planned (SCRUM-85 AC7, AC9), and no link for a Cancelled or Completed one, which has no Attendee page. Venue Staff and Technical Support, who can't open the event: the notification's own link, or none. Event Coordinator Lead and Safety Officer: none yet. A notification about no event keeps its own link. |
+| Expected Result | Organiser and Coordinator: `/events/evt_1`, the event's own page (SCRUM-208). Attendee: `/events/evt_1` for a Confirmed event, or one back in Planning to be re-planned (SCRUM-85 AC7, AC9), and no link for a Cancelled or Completed one, which has no Attendee page. Venue Staff and Technical Support, who can't open the event: the notification's own link, or none. Event Coordinator Lead and Safety Officer: none yet. A notification about no event keeps its own link. |
 
-**Automated by:** `tests/unit/notifications.test.ts` › every "SCRUM-48 [AC5] TC-48-06: …" test; `tests/integration/notifications.test.ts` › "SCRUM-48 [AC5] TC-48-06: an Organiser's notification about their event links to it in the events list"
+**Automated by:** `tests/unit/notifications.test.ts` › every "SCRUM-48 [AC5] TC-48-06: …" test; `tests/integration/notifications.test.ts` › "SCRUM-48 [AC5] TC-48-06: an Organiser's notification about their event links to the event's page"
 
 ### TC-48-07
 
@@ -116,7 +116,7 @@ AC8 cases write those rows directly. Times are UTC.
 | Pre-conditions | As TC-48-02. |
 | Test Steps | 1. Open the newest notification. |
 | Test Data | `organiser@test.local`, "Under Review — Career Fair" |
-| Expected Result | The address is `/events?event=evt_under_review` and the details of "Under Review — Career Fair" are open. Closing them leaves `/events`. |
+| Expected Result | The address is `/events/evt_under_review` and the event's own page for "Under Review — Career Fair" opens (SCRUM-208); there is no dialog to close. |
 
 **Automated by:** `e2e/notifications.spec.ts` › "SCRUM-48 [AC1, AC2, AC3, AC5] TC-48-02, TC-48-04, TC-48-07: …"
 
@@ -142,7 +142,7 @@ AC8 cases write those rows directly. Times are UTC.
 | Pre-conditions | I have one notification and another user has one. |
 | Test Steps | 1. Open Notifications. <br> 2. Try to mark the other user's notification read by its id. |
 | Test Data | — |
-| Expected Result | Step 1: only mine is listed and counted. Step 2: "Notification not found." (the same as an id that doesn't exist), and the other user's notification is still unread. Signed out, the list is empty and nothing is queried. A link to another Organiser's event, or to one that doesn't exist (`/events?event=…`), opens nothing and shows nothing of it. |
+| Expected Result | Step 1: only mine is listed and counted. Step 2: "Notification not found." (the same as an id that doesn't exist), and the other user's notification is still unread. Signed out, the list is empty and nothing is queried. A link to another Organiser's event, or to one that doesn't exist, at `/events/<id>` shows the not-found page and nothing of the event (SCRUM-208 AC5). |
 
 **Automated by:** `e2e/notifications.spec.ts` › "SCRUM-48 [AC5, AC6] TC-48-09: a link to another Organiser's event, or to one that doesn't exist, opens nothing"; `tests/integration/notifications.test.ts` › "SCRUM-48 [AC6] TC-48-09: another user's notifications are never listed or counted, and can't be marked read"; `tests/unit/notifications.test.ts` › "SCRUM-48 [AC6, AC8] TC-48-09: only my own, not withdrawn, and shown from their time on", "SCRUM-48 [AC6] TC-48-09: a signed-out caller gets an empty list, before the query runs" and "SCRUM-48 [AC6] TC-48-09: a notification that isn't mine or isn't showing is not found, and nothing is written"
 

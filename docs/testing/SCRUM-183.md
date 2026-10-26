@@ -13,13 +13,13 @@ takes 8–11 s, far from the 30-second limit. So the failures the chore records
 weren't in CI; they were most likely local runs, which have no retry and run
 against a busier machine. Nothing in CI pins down the cause.
 
-**What was still fragile, and changed:** the journey closes a dialog with
-Escape and opens the next one straight away, and finds the details dialog by
-role alone. If a click landed while the previous dialog was still closing, or
-two dialogs were briefly on screen, a step could fail on a slow run. Each
-Escape is now followed by waiting for that dialog to be gone, and the second
-Ask waits for its dialog to open. The test is named with the cases it
-automates: TC-18-01, TC-18-03, TC-18-05 and TC-18-07.
+**What was still fragile, and changed:** the journey opened a dialog, typed
+into it and closed it with Escape without waiting for it, then moved on. On
+a slow run a step could act on a dialog still opening or closing. Since
+SCRUM-208 (#275) the event details are a page rather than a dialog, so only
+the Ask dialog is left: the second Ask now waits for it to open before
+typing, and for it to be gone after Escape. The test is named with the cases
+it automates: TC-18-01, TC-18-03, TC-18-05 and TC-18-07.
 
 **Shared pre-conditions:** a local PostgreSQL migrated with `npm run db:deploy`
 and seeded with `npm run db:seed`, as in CI's `build-and-test`.

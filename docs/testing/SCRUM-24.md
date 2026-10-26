@@ -100,7 +100,7 @@ with `coordinator@test.local` (both `Password123!`).
 | Test Data | The Under Review request |
 | Expected Result | Both see Planning without reloading. A dialog left open on an event that has left the queue stays open, with a warning. |
 
-**Automated by:** `e2e/events.spec.ts` › "coordinator views assigned event status and status remains consistent across views (SCRUM-23 & SCRUM-24)", "two users viewing the same event simultaneously see consistent live status without manual refresh (SCRUM-24)", "open modal remains mounted with warning when viewed event is dropped from review queue (SCRUM-24)"
+**Automated by:** `e2e/events.spec.ts` › "coordinator views assigned event status and status remains consistent across views (SCRUM-23 & SCRUM-24)", "SCRUM-24 [AC7] TC-24-05: two users viewing the same event simultaneously see consistent live status without manual refresh", "open modal remains mounted with warning when viewed event is dropped from review queue (SCRUM-24)"
 
 ### TC-24-06
 

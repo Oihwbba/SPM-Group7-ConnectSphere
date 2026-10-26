@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import type { Role } from "@prisma/client";
 
 import { requireSession } from "@/lib/auth/guard";
@@ -39,9 +40,11 @@ export default async function EventsPage({
   const session = await requireSession();
   // SCRUM-82 AC7: finished Confirmed events read as Completed, with no job.
   await completeFinishedEvents(prisma);
-  // SCRUM-48 AC5: a notification links here with the event to open.
+  // SCRUM-48 AC5: a notification links here with the event to open, which
+  // now has its own page (SCRUM-208); its page checks who may see it.
   const { event, as } = await searchParams;
   const openEventId = Array.isArray(event) ? event[0] : event;
+  if (openEventId) redirect(`/events/${encodeURIComponent(openEventId)}`);
 
   // SCRUM-121 AC2: someone with more than one role that has an events view
   // switches between them, starting with their primary role's. Only a view of
@@ -71,7 +74,7 @@ export default async function EventsPage({
         </nav>
       )}
       <Suspense fallback={<EventsListLoading />}>
-        <EventsRoleView role={role} userId={session.user.id} openEventId={openEventId} />
+        <EventsRoleView role={role} userId={session.user.id} />
       </Suspense>
     </>
   );
@@ -83,20 +86,18 @@ const EVENT_VIEWS: Role[] = ["ORGANISER", "COORDINATOR", "ATTENDEE"];
 async function EventsRoleView({
   role,
   userId,
-  openEventId,
 }: {
   role: string;
   userId: string;
-  openEventId?: string;
 }) {
   switch (role) {
     case "ORGANISER":
       return (
-        <OrganiserEvents organiserId={userId} openEventId={openEventId} />
+        <OrganiserEvents organiserId={userId} />
       );
     case "COORDINATOR":
       return (
-        <CoordinatorEvents coordinatorId={userId} openEventId={openEventId} />
+        <CoordinatorEvents coordinatorId={userId} />
       );
     case "ATTENDEE":
       return (
