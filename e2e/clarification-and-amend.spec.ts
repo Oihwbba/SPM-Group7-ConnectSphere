@@ -47,12 +47,16 @@ const request = (name: string) => ({
 test.describe("SCRUM-108 — Answer a clarification, or amend and resubmit", () => {
   test.skip(!usesLocalDatabase, "writes its own events; local database only");
 
-  let eventId: string;
+  let eventId: string | undefined;
 
   test.afterEach(async () => {
+    // Unset if the event was never made: with no id, deleteMany would match
+    // every row, other suites' included.
+    if (!eventId) return;
     await prisma.notification.deleteMany({ where: { eventId } });
     await prisma.auditLog.deleteMany({ where: { entityId: eventId } });
     await prisma.event.deleteMany({ where: { id: eventId } });
+    eventId = undefined;
   });
 
   test("SCRUM-108 [AC1, AC2, AC3, AC14] TC-108-10: the Coordinator lets the Organiser change the attendance, and the answer changes only that", async ({
@@ -312,12 +316,16 @@ test.describe("SCRUM-187 — A clarification answer that gets no reply", () => {
 
   const SEND_FAILED =
     "Your response couldn't be sent. If it isn't shown as answered above, try again.";
-  let eventId: string;
+  let eventId: string | undefined;
 
   test.afterEach(async () => {
+    // Unset if the event was never made: with no id, deleteMany would match
+    // every row, other suites' included.
+    if (!eventId) return;
     await prisma.notification.deleteMany({ where: { eventId } });
     await prisma.auditLog.deleteMany({ where: { entityId: eventId } });
     await prisma.event.deleteMany({ where: { id: eventId } });
+    eventId = undefined;
   });
 
   /** An event Under Review with an open, text-only question, open for the Organiser. */
