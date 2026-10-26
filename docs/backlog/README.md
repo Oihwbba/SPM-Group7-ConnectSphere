@@ -185,7 +185,7 @@ _8 stories, 14 points_
 |---|---|---|---|---|---|
 | [SCRUM-132](SCRUM-132.md) | Core pages work on a phone and respond within 2 seconds | 2 | Medium | SCRUM Sprint 3 | Done |
 | [SCRUM-155](SCRUM-155.md) | Reserve an approved equipment request in one step, pre-filled from the Coordinator's request (follow-up to SCRUM-31) | 3 | Medium | SCRUM Sprint 2 | Done |
-| [SCRUM-207](SCRUM-207.md) | Shared page conventions on every page | 2 | High | SCRUM Sprint 4 | To Do |
+| [SCRUM-207](SCRUM-207.md) | Shared page conventions on every page | 2 | High | SCRUM Sprint 4 | In Progress |
 | [SCRUM-208](SCRUM-208.md) | One page per event, not a pop-up | 2 | High | SCRUM Sprint 4 | To Do |
 | [SCRUM-209](SCRUM-209.md) | Arrange venues, equipment and the safety check from the event page | 2 | High | SCRUM Sprint 4 | To Do |
 | [SCRUM-210](SCRUM-210.md) | Menus grouped by task | 1 | High | SCRUM Sprint 4 | To Do |
