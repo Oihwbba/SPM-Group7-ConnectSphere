@@ -175,6 +175,12 @@ test.describe("SCRUM-66 — each role's navigation shows only its own links", ()
       await signIn(page, email);
 
       const rail = page.locator("aside");
+      // SCRUM-210: a group's links render only while it is open.
+      const closed = rail.locator('button[aria-expanded="false"]');
+      for (let n = await closed.count(); n > 0; n--) {
+        await closed.first().click();
+        await expect(closed).toHaveCount(n - 1);
+      }
       for (const href of ALL_ROUTES) {
         const link = rail.locator(`a[href="${href}"]`);
         if (present.includes(href)) {
