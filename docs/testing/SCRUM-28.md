@@ -192,7 +192,7 @@ A suggestion is an update too: TC-28-12 and TC-28-13 cover two suggestions, and 
 | Test Data | Lectern × 3; 2 of 4 Lecterns already reserved for the event's period |
 | Expected Result | The first suggestion is saved. The second session gets "Someone else updated this request first. Refresh to see its current status." The line suggests Projector, and the request has one suggestion entry in its history and the coordinator one notice for it, not two. |
 
-**Automated by:** `tests/integration/equipment-request-review.test.ts` › "SCRUM-227 [AC1, AC3] SCRUM-28 [AC7] TC-28-12: two suggestions on the same request at once — the first is saved, the second is told, nothing is doubled"; `tests/unit/equipment-request-review.test.ts` › "SCRUM-227 [AC1] SCRUM-28 [AC7]: when the request left review or was suggested on in the meantime, says so and records nothing"
+**Automated by:** `tests/integration/equipment-request-review.test.ts` › "SCRUM-227 [AC1, AC3] SCRUM-28 [AC7] TC-28-12: two suggestions on the same request at once — the first is saved, the second is told, nothing is doubled"; `tests/unit/equipment-request-review.test.ts` › "SCRUM-227 [AC1] SCRUM-28 [AC7] TC-28-12: when the request left review or was suggested on in the meantime, says so and records nothing"
 
 ### TC-28-13
 

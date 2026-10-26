@@ -484,7 +484,7 @@ describe("suggestAlternativeEquipment — SCRUM-28 [AC4]", () => {
     });
   });
 
-  it("SCRUM-227 [AC1] SCRUM-28 [AC7]: when the request left review or was suggested on in the meantime, says so and records nothing", async () => {
+  it("SCRUM-227 [AC1] SCRUM-28 [AC7] TC-28-12: when the request left review or was suggested on in the meantime, says so and records nothing", async () => {
     tx.equipmentRequest.updateMany.mockResolvedValue({ count: 0 });
 
     const result = await suggestAlternativeEquipment(input);
