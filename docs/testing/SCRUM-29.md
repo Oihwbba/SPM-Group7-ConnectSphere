@@ -113,9 +113,9 @@ seed's own projector pool has 10, with 3 in for maintenance.
 | Pre-conditions | On **Equipment**. |
 | Test Steps | 1. Enter **Quantity** 0. <br> 2. Enter an end earlier than the start. |
 | Test Data | Quantity 0; start 17:00, end 09:00 on the same day |
-| Expected Result | Step 1: "Enter a quantity of at least 1." Step 2: "End time must be after the start time." at once. No availability is shown, and nothing is read or written. |
+| Expected Result | Step 1: "Enter a whole number of at least 1.", with no availability figure (SCRUM-229); a decimal such as 1.5 gets the same. Step 2: "End time must be after the start time." at once. No availability is shown, and nothing is read or written. |
 
-**Automated by:** `tests/unit/reservation.test.ts` › "SCRUM-29 AC 7: rejects an end before the start with field errors and reads nothing"; `tests/integration/equipment-availability.test.ts` › "SCRUM-29 [AC7]: an end before the start is rejected, reads nothing and writes nothing"; `e2e/equipment.spec.ts` › "SCRUM-29 [AC7] TC-29-06, SCRUM-31 [AC6] TC-31-07: a quantity of zero asks for at least one", "SCRUM-29 [AC7] TC-29-06: an invalid period (end earlier than start) triggers a live inline error"; `e2e/equipment-availability.spec.ts` › "SCRUM-29 [AC7] TC-29-06: a zero quantity or an end before the start is rejected with no result"
+**Automated by:** `tests/unit/equipment-availability.test.ts` › "SCRUM-229 [AC1] SCRUM-29 [AC7] TC-29-06: %j is not a positive whole number, so no result is shown for it", "SCRUM-229 [AC2] SCRUM-29 [AC7] TC-29-06: %j is a quantity of %i"; `tests/unit/reservation.test.ts` › "SCRUM-29 AC 7: rejects an end before the start with field errors and reads nothing"; `tests/integration/equipment-availability.test.ts` › "SCRUM-29 [AC7]: an end before the start is rejected, reads nothing and writes nothing"; `e2e/equipment.spec.ts` › "SCRUM-29 [AC7] TC-29-06, SCRUM-31 [AC6] TC-31-07: a quantity of zero asks for a whole number of at least one", "SCRUM-29 [AC7] TC-29-06: an invalid period (end earlier than start) triggers a live inline error"; `e2e/equipment-availability.spec.ts` › "SCRUM-29 [AC7] TC-29-06, SCRUM-229 [AC1]: a zero or decimal quantity, or an end before the start, is rejected with no result"
 
 ### TC-29-07
 

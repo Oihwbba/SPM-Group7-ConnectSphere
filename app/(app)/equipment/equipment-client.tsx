@@ -34,7 +34,7 @@ import {
 } from "./equipment-schedule-panel";
 import { allAvailabilitySchema } from "@/lib/schemas/reservation";
 import type { ReservableRequest } from "@/lib/equipment/request-queries";
-import { checkQuantity } from "@/lib/equipment/availability";
+import { checkQuantity, requestedQuantity } from "@/lib/equipment/availability";
 import {
   formatDateTime,
   parseSingaporeDateTime,
@@ -262,13 +262,13 @@ export function EquipmentClient({
       : null;
 
 
-  const reqQty = parseInt(form.quantity || "1", 10);
-  const isQuantityValid = !Number.isNaN(reqQty) && reqQty > 0;
+  const reqQty = requestedQuantity(form.quantity);
+  const isQuantityValid = reqQty !== null;
 
   // SCRUM-29 — the verdict comes from the same function the server reserves
   // with, so the shortfall shown here is the one the reservation would report.
   const verdict =
-    availability !== null && isQuantityValid
+    availability !== null && reqQty !== null
       ? checkQuantity(
           {
             total: selectedEquipment?.totalQuantity ?? availability,
@@ -474,7 +474,8 @@ export function EquipmentClient({
                       className="text-sm font-bold text-foreground"
                       data-testid="selected-availability"
                     >
-                      {availability !== null
+                      {/* SCRUM-29 AC7: no figure for an invalid quantity. */}
+                      {availability !== null && isQuantityValid
                         ? `${availability} of ${selectedEquipment.totalQuantity} available`
                         : `— of ${selectedEquipment.totalQuantity} available`}
                     </span>
@@ -500,7 +501,7 @@ export function EquipmentClient({
                         {availability === null
                           ? "Select period above to calculate live availability."
                           : !isQuantityValid
-                          ? "Enter a quantity of at least 1."
+                          ? "Enter a whole number of at least 1."
                           : isQuantityExceeded
                           ? `Requested quantity (${reqQty}) exceeds availability (${availability} unit(s) available for this period) — ${verdict?.shortfall} short.`
                           : `Your requested quantity is available (${availability} unit(s) available for this period).`}

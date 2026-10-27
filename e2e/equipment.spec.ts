@@ -75,11 +75,11 @@ test.describe("SCRUM-156 — the one-type form only checks availability", () => 
     );
   });
 
-  test("SCRUM-29 [AC7] TC-29-06, SCRUM-31 [AC6] TC-31-07: a quantity of zero asks for at least one", async ({ page }) => {
+  test("SCRUM-29 [AC7] TC-29-06, SCRUM-31 [AC6] TC-31-07: a quantity of zero asks for a whole number of at least one", async ({ page }) => {
     await signInAsTechSupport(page);
     await fillCheck(page, "0");
 
-    await expect(page.getByRole("status")).toContainText("Enter a quantity of at least 1.");
+    await expect(page.getByRole("status")).toContainText("Enter a whole number of at least 1.");
   });
 
   test("SCRUM-29 [AC7] TC-29-06: an invalid period (end earlier than start) triggers a live inline error", async ({ page }) => {
