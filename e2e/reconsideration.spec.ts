@@ -1,7 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import { prisma } from "@/lib/db";
 
-import { usesLocalDatabase } from "./helpers";
+import { usesLocalDatabase, openEvent } from "./helpers";
 
 /**
  * SCRUM-26 — the assigned Coordinator resolves arrangements flagged Needs
@@ -21,14 +21,9 @@ async function signIn(page: Page, email: string) {
   await page.waitForURL("**/events");
 }
 
-async function openDetails(page: Page, name: string) {
-  await page
-    .getByRole("row", { name: new RegExp(name) })
-    .getByTestId("view-details-button")
-    .click();
-  const dialog = page.getByRole("dialog");
-  await expect(dialog).toBeVisible();
-  return dialog;
+/** SCRUM-208: the event's page, on the tab this journey works in. */
+async function openDetails(page: Page, name: string, tab = "Changes") {
+  return openEvent(page, name, tab);
 }
 
 const START = new Date("2032-09-01T01:00:00Z");
@@ -156,6 +151,8 @@ test.describe("SCRUM-26 — Flag and resolve arrangements affected by a change",
     const panel = details.getByTestId("reconsideration-panel");
     await expect(panel).toContainText("Exhibition Hall (Approved)");
     await expect(panel).toContainText(REASON);
+    // SCRUM-208 AC3: the checklist is on Arrangements, the flag on Changes.
+    await details.getByRole("tab", { name: /^Arrangements/ }).click();
     // SCRUM-131 AC3: the flag is a badge beside the status, not in its place.
     const venueItem = details.getByTestId("readiness-item-venue");
     await expect(venueItem.getByTestId("venue-booking")).toContainText(
@@ -166,11 +163,13 @@ test.describe("SCRUM-26 — Flag and resolve arrangements affected by a change",
     );
     await expect(details.getByRole("button", { name: "Confirm event" })).toBeDisabled();
 
+    await details.getByRole("tab", { name: /^Changes/ }).click();
     await panel.getByRole("button", { name: "Still stands" }).click();
     await expect(page.getByText("Exhibition Hall (Approved) still stands.")).toBeVisible();
 
     // The panel empties and the checklist reads the booking as Approved again.
     await expect(details.getByTestId("reconsideration-panel")).toHaveCount(0);
+    await details.getByRole("tab", { name: /^Arrangements/ }).click();
     await expect(venueItem).toHaveAttribute("data-complete", "true");
     await expect(venueItem.getByTestId("needs-reconsideration")).toHaveCount(0);
     expect(
@@ -232,7 +231,7 @@ test.describe("SCRUM-26 — Flag and resolve arrangements affected by a change",
     ({ eventId } = await eventWithFlaggedBooking(name, "PLANNING"));
 
     await signIn(page, "organiser@test.local");
-    const details = await openDetails(page, name);
+    const details = await openDetails(page, name, "Arrangements");
 
     await expect(details.getByTestId("readiness-item-venue")).toContainText(
       "Approved Needs Reconsideration",
@@ -248,12 +247,12 @@ test.describe("SCRUM-26 — Flag and resolve arrangements affected by a change",
     ({ eventId } = await eventWithReservedEquipment(name));
 
     await signIn(page, "coordinator@test.local");
-    let details = await openDetails(page, name);
+    let details = await openDetails(page, name, "Arrangements");
 
     // AC2: reserved in full, so the item is complete and reads Reserved.
     let equipment = details.getByTestId("readiness-item-equipment");
     await expect(equipment).toHaveAttribute("data-complete", "true");
-    await expect(equipment).toContainText("Equipment, complete — Reserved");
+    await expect(equipment.getByTestId("item-status")).toHaveText("Equipment, complete: Reserved");
     await expect(equipment).not.toContainText("Confirmed");
     await expect(equipment.getByTestId("needs-reconsideration")).toHaveCount(0);
 
@@ -267,18 +266,18 @@ test.describe("SCRUM-26 — Flag and resolve arrangements affected by a change",
       },
     });
     await page.reload();
-    details = await openDetails(page, name);
+    details = await openDetails(page, name, "Arrangements");
 
     // AC3: still Reserved, naming what is flagged, with the badge beside it
     // and then the reason; SCRUM-26 AC12: the item is now incomplete. The
     // flagged types may be listed in either order.
     equipment = details.getByTestId("readiness-item-equipment");
     await expect(equipment).toHaveAttribute("data-complete", "false");
-    await expect(equipment).toContainText(
-      new RegExp(
-        `Reserved: (Projector, Wireless Microphone|Wireless Microphone, Projector) Needs Reconsideration – ${EQUIPMENT_REASON.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`,
-      ),
+    // SCRUM-209: the state beside the section's title, the reason below it.
+    await expect(equipment.getByTestId("item-status")).toHaveText(
+      /Reserved: (Projector, Wireless Microphone|Wireless Microphone, Projector) Needs Reconsideration$/,
     );
+    await expect(equipment.getByTestId("item-reason")).toHaveText(EQUIPMENT_REASON);
     await expect(equipment.getByTestId("needs-reconsideration")).toHaveText(
       "Needs Reconsideration",
     );

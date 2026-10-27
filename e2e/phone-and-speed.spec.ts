@@ -1,7 +1,7 @@
 import { test, expect, type Browser, type Locator, type Page } from "@playwright/test";
 import { prisma } from "@/lib/db";
 
-import { signedIn, usesLocalDatabase, pickDateTime, selectFrom } from "./helpers";
+import { signedIn, usesLocalDatabase, pickDateTime, selectFrom, openEvent } from "./helpers";
 
 /**
  * SCRUM-132 — the core pages work on a phone (AC1), the main operations
@@ -25,12 +25,9 @@ async function onPhone(browser: Browser, email: string | null) {
   return page;
 }
 
-async function openDetails(page: Page, eventName: string) {
-  await page
-    .getByRole("row", { name: new RegExp(eventName) })
-    .getByTestId("view-details-button")
-    .click();
-  return page.getByRole("dialog").first();
+/** SCRUM-208: the event's page, on the tab this journey works in. */
+async function openDetails(page: Page, eventName: string, tab = "Arrangements") {
+  return openEvent(page, eventName, tab);
 }
 
 /**
@@ -88,11 +85,11 @@ test.describe("SCRUM-132 [AC1] core pages at 360 px", () => {
   }) => {
     const page = await onPhone(browser, "coordinator@test.local");
     await page.goto("/events");
+    // SCRUM-208: the event is a page, so nothing on it may scroll sideways.
     const details = await openDetails(page, "Planning — Freshman Orientation");
     await expect(details.getByTestId("readiness-checklist")).toBeVisible();
     await expect(details.getByText("Checking arrangements…")).toHaveCount(0);
     expect(await overflow(page)).toBeLessThanOrEqual(0);
-    await expectDialogFits(page);
   });
 
   test("SCRUM-132 [AC1] TC-132-01: the request form has no horizontal scroll at 360 px", async ({
@@ -247,9 +244,13 @@ test.describe("SCRUM-132 [AC3] the event detail on a desktop screen", () => {
 
     await expect(details.getByTestId("status-badge")).toBeInViewport();
     const checklist = details.getByTestId("readiness-checklist");
-    await expect(checklist.getByTestId("readiness-item-venue")).toBeInViewport();
-    await expect(checklist.getByTestId("readiness-item-equipment")).toBeInViewport();
-    await expect(checklist.getByTestId("readiness-item-safety")).toBeInViewport();
+    // SCRUM-209: each item's state beside its section's title, the sections
+    // side by side, and Confirm at the top of the tab.
+    for (const item of ["venue", "equipment", "safety"]) {
+      await expect(
+        checklist.getByTestId(`readiness-item-${item}`).getByTestId("item-status"),
+      ).toBeInViewport();
+    }
     await expect(checklist.getByRole("button", { name: "Confirm event" })).toBeInViewport();
   });
 

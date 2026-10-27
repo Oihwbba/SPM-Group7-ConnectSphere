@@ -17,7 +17,6 @@ import {
   CHANGEABLE_REQUEST_STATUSES,
   EQUIPMENT_REQUEST_STATUS_LABEL,
   LIVE_LINE,
-  OPEN_REQUEST_STATUSES,
   REQUESTABLE_EVENT_STATUSES,
   canMoveRequest,
   lineChanges,
@@ -87,9 +86,18 @@ async function knownTypes(
   return Object.keys(fieldErrors).length ? { fieldErrors } : { types };
 }
 
-function findOpenRequest(eventId: string) {
-  return prisma.equipmentRequest.findFirst({
-    where: { eventId, status: { in: [...OPEN_REQUEST_STATUSES] } },
+/**
+ * SCRUM-186 AC1 — the event's active request: Pending Review, In Review or
+ * Approved. Approved counts too, because more equipment is added by changing
+ * that request's lines (SCRUM-142), never by a second request.
+ */
+function findActiveRequest(
+  client: Pick<Prisma.TransactionClient, "equipmentRequest">,
+  eventId: string,
+) {
+  return client.equipmentRequest.findFirst({
+    where: { eventId, status: { in: [...CHANGEABLE_REQUEST_STATUSES] } },
+    orderBy: { createdAt: "asc" },
     select: { id: true },
   });
 }
@@ -100,11 +108,13 @@ function findOpenRequest(eventId: string) {
  * - An event the coordinator has no relationship to, one that doesn't exist and
  *   one that isn't going ahead all get the same answer, so the action can't be
  *   used to probe which event ids exist (SCRUM-68).
- * - AC 7: an event keeps at most one open request. A second submission returns
- *   the existing request with `existing: true` so the page can show it. The
- *   partial unique index "EquipmentRequest_one_open_per_event" is what makes
- *   that hold when two submissions race: the loser's insert fails, and it is
- *   answered with the winner's request instead of an error.
+ * - SCRUM-186 AC1, AC4 (extending SCRUM-27 AC 7): an event keeps one active
+ *   request. A second submission returns the existing request with
+ *   `existing: true` so the page can show it. The check is made again under
+ *   the event's row lock, so of two submissions at once the second sees the
+ *   first. A unique index can't do this for Approved requests: events from
+ *   before SCRUM-186 may already have two (AC5). The partial unique index
+ *   "EquipmentRequest_one_open_per_event" stays as a backstop for open ones.
  */
 export async function createEquipmentRequest(
   input: unknown,
@@ -148,8 +158,8 @@ export async function createEquipmentRequest(
       return ok({ id, existing: true });
     };
 
-    const open = await findOpenRequest(eventId);
-    if (open) return showExisting(open.id);
+    const active = await findActiveRequest(prisma, eventId);
+    if (active) return showExisting(active.id);
 
     try {
       const created = await prisma.$transaction(async (tx) => {
@@ -172,6 +182,8 @@ export async function createEquipmentRequest(
         ) {
           return null;
         }
+        const raced = await findActiveRequest(tx, eventId);
+        if (raced) return { id: raced.id, existing: true };
         await tx.event.updateMany({
           where: { id: eventId, noEquipmentNeededAt: { not: null } },
           data: { noEquipmentNeededAt: null, noEquipmentNeededById: null },
@@ -212,18 +224,19 @@ export async function createEquipmentRequest(
             .join(", ")}.`,
           link: "/equipment-requests",
         });
-        return request;
+        return { id: request.id, existing: false };
       });
 
       if (!created) return err(NOT_REQUESTABLE, { eventId: [NOT_REQUESTABLE] });
+      if (created.existing) return showExisting(created.id);
       revalidatePath("/equipment-requests");
-      return ok({ id: created.id, existing: false });
+      return ok(created);
     } catch (error) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === "P2002"
       ) {
-        const winner = await findOpenRequest(eventId);
+        const winner = await findActiveRequest(prisma, eventId);
         if (winner) return showExisting(winner.id);
       }
       throw error;
@@ -238,9 +251,11 @@ export async function createEquipmentRequest(
  * SCRUM-28 AC 2, AC 3 — Technical Support moves a request on: Pending Review → In
  * Review, then In Review → Approved or Rejected (`canMoveRequest`).
  *
- * The write is conditional on the status this reviewer saw, so of two
- * reviewers acting at once only one moves the request; the other is told, and
- * neither the history (AC 6) nor the notification (AC 5) is written twice.
+ * The write is conditional on the request as this reviewer read it, its
+ * status and when it was last updated, so of two updates at once (two moves,
+ * or a move and a suggestion) only the first is saved; the other is told, and
+ * neither the history (AC 6) nor the notification (AC 5) is written twice
+ * (AC 7, SCRUM-227).
  *
  * Rejecting releases whatever is still reserved for the request: after a
  * change (SCRUM-142 AC10) its unchanged lines keep their reservations while
@@ -270,6 +285,7 @@ export async function updateEquipmentRequestStatus(
         id: true,
         status: true,
         requestedById: true,
+        updatedAt: true,
         event: { select: { id: true, name: true, organiserId: true, coordinatorId: true } },
         lines: { select: { equipmentId: true } },
       },
@@ -288,7 +304,7 @@ export async function updateEquipmentRequestStatus(
 
     const moved = await prisma.$transaction(async (tx) => {
       const result = await tx.equipmentRequest.updateMany({
-        where: { id: request.id, status: from },
+        where: { id: request.id, status: from, updatedAt: request.updatedAt },
         data: {
           status: toStatus,
           decidedAt: toStatus === "IN_REVIEW" ? null : new Date(),
@@ -370,6 +386,7 @@ export async function suggestAlternativeEquipment(
         id: true,
         status: true,
         requestedById: true,
+        updatedAt: true,
         event: {
           select: { id: true, name: true, startAt: true, endAt: true, organiserId: true, coordinatorId: true },
         },
@@ -430,10 +447,12 @@ export async function suggestAlternativeEquipment(
 
     const shortage = `only ${requested.available} of ${requested.total}`;
     const saved = await prisma.$transaction(async (tx) => {
-      // Touching the request, conditional on it still being in review, stops
-      // a suggestion landing on a request someone has just decided.
+      // Touching the request, conditional on it being as this reviewer read
+      // it, stops a suggestion landing on a request someone has just decided
+      // or suggested on: of two updates at once, only the first is saved
+      // (AC 7, SCRUM-227).
       const result = await tx.equipmentRequest.updateMany({
-        where: { id: request.id, status: "IN_REVIEW" },
+        where: { id: request.id, status: "IN_REVIEW", updatedAt: request.updatedAt },
         data: { updatedAt: new Date() },
       });
       if (result.count !== 1) return false;

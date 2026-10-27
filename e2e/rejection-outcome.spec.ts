@@ -64,6 +64,9 @@ test.describe("SCRUM-126 — Rejected as needing a new request", () => {
   test("SCRUM-126 [AC1, AC3, AC4, AC5, AC6] TC-126-08: the Coordinator rejects as a new request; the Organiser cannot amend it but starts a new Draft from it", async ({
     page,
   }) => {
+    // SCRUM-189: a long journey, three sign-ins and a new draft from the rejection.
+    // Three times the 30-second limit, not a retry under CI load.
+    test.slow();
     const reason = "This is a different event now — please submit it fresh.";
 
     // --- Coordinator rejects, choosing "Submit as a new request" (AC1) -----
@@ -109,12 +112,13 @@ test.describe("SCRUM-126 — Rejected as needing a new request", () => {
       0,
     );
     await rejectedRow.getByTestId("view-details-button").click();
-    const details = page.getByRole("dialog");
+    // SCRUM-208 AC2: the outcome and reason are at the top of the page.
+    const details = page.getByTestId("next-step");
     await expect(details.getByText(reason)).toBeVisible();
     await expect(details.getByTestId("rejection-outcome")).toHaveText(
       "Next step: Submit as a new request",
     );
-    await page.keyboard.press("Escape");
+    await page.getByRole("link", { name: "Back to My Events" }).click();
 
     // --- Organiser starts a new Draft from it (AC4) -----------------------
     await rejectedRow.getByTestId("start-new-request-button").click();

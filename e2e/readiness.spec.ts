@@ -1,7 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import { prisma } from "@/lib/db";
 
-import { usesLocalDatabase } from "./helpers";
+import { usesLocalDatabase, openEvent } from "./helpers";
 
 /**
  * SCRUM-110 — the readiness checklist on a Planning event's details. Each test
@@ -31,11 +31,9 @@ async function signIn(page: Page, email: string) {
 }
 
 async function openChecklist(page: Page, eventName: string) {
-  await page
-    .getByRole("row", { name: new RegExp(eventName) })
-    .getByTestId("view-details-button")
-    .click();
-  const checklist = page.getByRole("dialog").getByTestId("readiness-checklist");
+  // SCRUM-208: the checklist is on the event page's Arrangements tab.
+  const event = await openEvent(page, eventName, "Arrangements");
+  const checklist = event.getByTestId("readiness-checklist");
   await expect(checklist).toBeVisible();
   return checklist;
 }
@@ -125,13 +123,15 @@ test.describe("SCRUM-110 — See an event's readiness checklist", () => {
     const venue = checklist.getByTestId("readiness-item-venue");
     const equipment = checklist.getByTestId("readiness-item-equipment");
     await expect(venue).toHaveAttribute("data-complete", "false");
-    await expect(venue).toContainText(`Rejected – ${REASON}`);
+    // SCRUM-209: the state beside the section's title, the reason below it.
+    await expect(venue.getByTestId("item-status")).toContainText("Rejected");
+    await expect(venue.getByTestId("item-reason")).toHaveText(REASON);
     await expect(equipment).toHaveAttribute("data-complete", "false");
     // AC 4: the short item is named, without counts.
     await expect(equipment).toContainText("Not fully reserved: Projector");
     await expect(equipment).not.toContainText("3/5");
     await expect(checklist.getByTestId("readiness-summary")).toHaveText(
-      /Not ready to confirm yet/,
+      /^[0-2]\/3 items completed$/,
     );
 
     // The Organiser: the same items and states, but not the internal reason.
@@ -202,7 +202,7 @@ test.describe("SCRUM-110 — See an event's readiness checklist", () => {
       checklist.getByTestId("readiness-item-equipment"),
     ).toContainText("Reserved");
     await expect(checklist.getByTestId("readiness-summary")).toHaveText(
-      "Ready to confirm",
+      "3/3 items completed · Ready to confirm",
     );
   });
 });

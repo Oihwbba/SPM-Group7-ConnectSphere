@@ -59,7 +59,7 @@ test.describe("SCRUM-18 — Request clarification on a submitted request", () =>
     await prisma.event.deleteMany({ where: { id: eventId } });
   });
 
-  test("coordinator asks, organiser replies, coordinator sees the answer (AC: sub-state, notify, respond, re-review)", async ({
+  test("SCRUM-18 [AC1, AC2, AC4, AC5, AC6] TC-18-01, TC-18-03, TC-18-05, TC-18-07: the coordinator asks, the organiser replies, and the coordinator sees the answer", async ({
     page,
   }) => {
     const question = "Can you confirm the expected headcount?";
@@ -97,23 +97,27 @@ test.describe("SCRUM-18 — Request clarification on a submitted request", () =>
 
     // AC: awaiting the organiser is shown on the request, not as a status.
     await coordinatorRow.getByTestId("view-details-button").click();
-    const coordinatorDetails = page.getByRole("dialog");
-    // The thread is the details' second tab (shared page conventions, change 2).
-    await coordinatorDetails.getByRole("tab", { name: /Clarification/ }).click();
+    const coordinatorDetails = page.getByTestId("event-page");
+    // SCRUM-208 AC3: the thread is the event page's Clarification tab.
+    await coordinatorDetails.getByRole("tab", { name: /^Clarification/ }).click();
     await expect(coordinatorDetails.getByText(question)).toBeVisible();
     await expect(
       coordinatorDetails.getByText("Waiting for the organiser's response."),
     ).toBeVisible();
-    await page.keyboard.press("Escape");
+    await page.goto("/events");
 
     // AC: a second open clarification on the same event is refused.
     await coordinatorRow.getByRole("button", { name: "Ask" }).click();
+    // SCRUM-183: the Ask dialog is open before it is typed in, and gone
+    // before the next sign-in.
+    await expect(askDialog).toBeVisible();
     await askDialog.getByLabel("Clarification message").fill("A second question");
     await askDialog.getByRole("button", { name: "Send request" }).click();
     await expect(
       page.getByText("There is already an open clarification request on this event."),
     ).toBeVisible();
     await page.keyboard.press("Escape");
+    await expect(askDialog).toBeHidden();
 
     // --- Organiser sees the question and replies --------------------------
     await signIn(page, "organiser@test.local");
@@ -121,9 +125,9 @@ test.describe("SCRUM-18 — Request clarification on a submitted request", () =>
     await expect(organiserRow).toBeVisible();
     await organiserRow.getByTestId("view-details-button").click();
 
-    const organiserDetails = page.getByRole("dialog");
-    // The thread is the details' second tab (shared page conventions, change 2).
-    await organiserDetails.getByRole("tab", { name: /Clarification/ }).click();
+    const organiserDetails = page.getByTestId("event-page");
+    // SCRUM-208 AC3: the thread is the event page's Clarification tab.
+    await organiserDetails.getByRole("tab", { name: /^Clarification/ }).click();
     await expect(organiserDetails.getByText(question)).toBeVisible();
 
     // Failure path: an empty reply cannot be sent.
@@ -133,21 +137,25 @@ test.describe("SCRUM-18 — Request clarification on a submitted request", () =>
     await organiserDetails.getByLabel("Response to clarification").fill(answer);
     await sendResponse.click();
     await expect(page.getByText("Response sent to the coordinator.")).toBeVisible();
-    await expect(organiserDetails.getByText("Organiser responded:")).toBeVisible();
+    // SCRUM-208 AC3: each message says who sent it.
+    await expect(organiserDetails.getByTestId("clarification-thread")).toContainText(
+      "Olivia Organiser",
+    );
     await expect(organiserDetails.getByText(answer)).toBeVisible();
     await expect(sendResponse).not.toBeVisible();
-    await page.keyboard.press("Escape");
+    await page.goto("/events");
 
     // --- Coordinator sees the answer and can re-review --------------------
     await signIn(page, "coordinator@test.local");
     const reviewRow = page.getByRole("row", { name: new RegExp(eventName) });
     await reviewRow.getByTestId("view-details-button").click();
-    const reviewDetails = page.getByRole("dialog");
-    // The thread is the details' second tab (shared page conventions, change 2).
-    await reviewDetails.getByRole("tab", { name: /Clarification/ }).click();
-    await expect(reviewDetails.getByText("Organiser responded:")).toBeVisible();
+    const reviewDetails = page.getByTestId("event-page");
+    await reviewDetails.getByRole("tab", { name: /^Clarification/ }).click();
+    await expect(reviewDetails.getByTestId("clarification-thread")).toContainText(
+      "Olivia Organiser",
+    );
     await expect(reviewDetails.getByText(answer)).toBeVisible();
-    await page.keyboard.press("Escape");
+    await page.goto("/events");
 
     // The request is still reviewable: the decision buttons are still there.
     await expect(reviewRow.getByRole("button", { name: "Approve" })).toBeVisible();

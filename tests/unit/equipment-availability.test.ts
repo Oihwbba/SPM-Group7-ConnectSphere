@@ -9,6 +9,7 @@ import {
   splitByPeriod,
   summariseAvailability,
   type ScheduleEntry,
+  requestedQuantity,
 } from "@/lib/equipment/availability";
 
 // SCRUM-29 (check availability) and SCRUM-30 (commitments by requested period). The overlap
@@ -256,4 +257,24 @@ describe("sortSchedule", () => {
 
     expect(rows.map((e) => e.id)).toEqual(["b", "a"]);
   });
+});
+
+describe("requestedQuantity — SCRUM-29 AC 7", () => {
+  it.each([
+    ["1", 1],
+    ["12", 12],
+    [" 3 ", 3],
+  ])(
+    "SCRUM-229 [AC2] SCRUM-29 [AC7] TC-29-06: %j is a quantity of %i",
+    (text, quantity) => {
+      expect(requestedQuantity(text)).toBe(quantity);
+    },
+  );
+
+  it.each(["0", "-1", "1.5", "2abc", "", "  ", "1e2"])(
+    "SCRUM-229 [AC1] SCRUM-29 [AC7] TC-29-06: %j is not a positive whole number, so no result is shown for it",
+    (text) => {
+      expect(requestedQuantity(text)).toBeNull();
+    },
+  );
 });
