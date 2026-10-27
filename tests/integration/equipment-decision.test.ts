@@ -71,6 +71,23 @@ describe.skipIf(!usesLocalDatabase)(
         (item) => item.name === "Equipment",
       );
 
+    /**
+     * Waits until another session is queued behind the `holder` session's
+     * lock. One that never queues, because it no longer takes the event's
+     * lock, fails the test rather than slipping past it.
+     */
+    async function queuedBehind(holder: number) {
+      for (let tries = 0; tries < 200; tries++) {
+        const [{ queued }] = await prisma.$queryRaw<{ queued: number }[]>`
+          SELECT count(*)::int AS queued FROM pg_stat_activity
+           WHERE ${holder}::int = ANY(pg_blocking_pids(pid))
+        `;
+        if (queued > 0) return;
+        await new Promise((resolve) => setTimeout(resolve, 25));
+      }
+      throw new Error("The request never queued behind the held event row.");
+    }
+
     beforeEach(() => mockAuth.mockResolvedValue(COORDINATOR));
 
     afterAll(async () => {
@@ -138,11 +155,12 @@ describe.skipIf(!usesLocalDatabase)(
     it("SCRUM-170 [AC4] TC-170-11: a request made while the decision is being recorded waits for it, then clears it: the two never stand together", async () => {
       const eventId = await planningEvent();
 
-      let commit!: () => void;
-      const committed = new Promise<void>((resolve) => (commit = resolve));
       // Record the decision by hand inside a transaction that holds the event
-      // row, as recordNoEquipmentNeeded does, and keep it open.
-      const recording = prisma.$transaction(
+      // row, as recordNoEquipmentNeeded does. The request starts only once the
+      // row is held, and the decision commits only once the request is queued
+      // behind it, so the two interleave the same way on every run (SCRUM-228).
+      let request!: ReturnType<typeof createEquipmentRequest>;
+      await prisma.$transaction(
         async (tx) => {
           await tx.$queryRaw`SELECT "id" FROM "Event" WHERE "id" = ${eventId} FOR UPDATE`;
           await tx.event.update({
@@ -152,15 +170,14 @@ describe.skipIf(!usesLocalDatabase)(
               noEquipmentNeededById: "usr_coordinator",
             },
           });
-          await committed;
+          const [{ holder }] = await tx.$queryRaw<{ holder: number }[]>`
+            SELECT pg_backend_pid() AS holder
+          `;
+          request = createEquipmentRequest(projectors(eventId));
+          await queuedBehind(holder);
         },
         { timeout: 10_000 },
       );
-      await new Promise((resolve) => setTimeout(resolve, 200));
-      const request = createEquipmentRequest(projectors(eventId));
-      await new Promise((resolve) => setTimeout(resolve, 300));
-      commit();
-      await recording;
 
       expect((await request).ok).toBe(true);
       expect(await decision(eventId)).toEqual({
