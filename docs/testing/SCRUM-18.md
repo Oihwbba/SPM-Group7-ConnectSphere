@@ -178,4 +178,4 @@ with `coordinator@test.local` (both `Password123!`).
 | Test Data | Screen 375 × 812 |
 | Expected Result | The four buttons are the same width, two to a row (**Reject** beside **Ask**, not alone on a line), and the page doesn't scroll sideways. In the clarification dialog, **Send request** and **Cancel** are stacked with at least 6 px between them. |
 
-**Automated by:** `e2e/events.spec.ts` › "SCRUM-18/19: the four review buttons form an even two-column grid and stacked dialog buttons are separated"
+**Automated by:** `e2e/events.spec.ts` › "SCRUM-18 [AC1] TC-18-11: the four review buttons form an even two-column grid and stacked dialog buttons are separated"

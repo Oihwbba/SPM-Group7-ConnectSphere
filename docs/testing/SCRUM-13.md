@@ -54,7 +54,7 @@ unless the case says otherwise. "A start a month from now" is any future time.
 | Test Data | Name "Regional Innovation Summit", attendance 250, layout "Theatre", a start a month from now and an end two hours later |
 | Expected Result | **Review Entered Details** shows every value entered, including the accessibility needs. After submitting, the request is on **My Events**. |
 
-**Automated by:** `tests/unit/events.test.ts` › "SCRUM-13 [AC1, AC10 - Happy Path]: successfully creates complete event request when all mandatory and optional fields are valid"; `e2e/events.spec.ts` › "organiser fills event request sections, reviews details, and submits request"
+**Automated by:** `tests/unit/events.test.ts` › "SCRUM-13 [AC1, AC10 - Happy Path]: successfully creates complete event request when all mandatory and optional fields are valid"; `e2e/events.spec.ts` › "SCRUM-13 [AC1, AC3, AC10] TC-13-01, TC-13-04, SCRUM-14 [AC1] TC-14-01: organiser fills event request sections, reviews details, and submits request"
 
 ### TC-13-02
 
@@ -93,7 +93,7 @@ unless the case says otherwise. "A start a month from now" is any future time.
 | Test Data | As TC-13-01; then programme "Day 1: Keynotes & Panel; Day 2: Workshops & Closing Ceremony" |
 | Expected Result | Both submissions succeed. The second keeps the programme and special requests. |
 
-**Automated by:** `tests/unit/events.test.ts` › "SCRUM-13 [AC3 - Happy Path]: accepts request when optional fields (programme, special requests) are omitted", "SCRUM-13 [AC3 - Happy Path]: successfully submits request with optional programme and special requests populated"; `e2e/events.spec.ts` › "organiser fills event request sections, reviews details, and submits request"
+**Automated by:** `tests/unit/events.test.ts` › "SCRUM-13 [AC3 - Happy Path]: accepts request when optional fields (programme, special requests) are omitted", "SCRUM-13 [AC3 - Happy Path]: successfully submits request with optional programme and special requests populated"; `e2e/events.spec.ts` › "SCRUM-13 [AC1, AC3, AC10] TC-13-01, TC-13-04, SCRUM-14 [AC1] TC-14-01: organiser fills event request sections, reviews details, and submits request"
 
 ### TC-13-05
 
@@ -106,7 +106,7 @@ unless the case says otherwise. "A start a month from now" is any future time.
 | Test Data | Every field empty; then "   " in the text fields |
 | Expected Result | "Please fix the highlighted fields before submitting." and nothing is created. Each empty field is marked with its own message, for example "Event name is required." and "Venue requirements are required."; empty dates say "Proposed start date and time is required." rather than calling the date invalid. Spaces count as empty. |
 
-**Automated by:** `tests/unit/events.test.ts` › "SCRUM-13 [AC4 - Business-Rule Negative]: returns field errors when any mandatory field is missing upon submission", "SCRUM-13 [AC4 - Business-Rule Negative]: blank start and end dates are reported as required, not as invalid dates", "SCRUM-13 [AC4 - Business-Rule Negative]: rejects whitespace-only values for mandatory string fields"; `e2e/events.spec.ts` › "SCRUM-13 [AC4] / SCRUM-14 AC2: submitting with mandatory fields left blank is refused and missing fields are indicated"
+**Automated by:** `tests/unit/events.test.ts` › "SCRUM-13 [AC4 - Business-Rule Negative]: returns field errors when any mandatory field is missing upon submission", "SCRUM-13 [AC4 - Business-Rule Negative]: blank start and end dates are reported as required, not as invalid dates", "SCRUM-13 [AC4 - Business-Rule Negative]: rejects whitespace-only values for mandatory string fields"; `e2e/events.spec.ts` › "SCRUM-13 [AC4] TC-13-05, SCRUM-14 [AC2] TC-14-03: submitting with mandatory fields left blank is refused and missing fields are indicated"
 
 ### TC-13-06
 
@@ -119,7 +119,7 @@ unless the case says otherwise. "A start a month from now" is any future time.
 | Test Data | Name "Partial planning draft" |
 | Expected Result | The draft is saved with the mandatory submission fields still empty, and is listed as a Draft. The rest of draft saving is SCRUM-15. |
 
-**Automated by:** `tests/unit/events.test.ts` › "SCRUM-15 [AC1 - Happy Path]: allows saving a draft with mandatory submission fields left empty"; `e2e/events.spec.ts` › "organiser can navigate steps freely without mandatory fields and save partial draft"
+**Automated by:** `tests/unit/events.test.ts` › "SCRUM-15 [AC1 - Happy Path]: allows saving a draft with mandatory submission fields left empty"; `e2e/events.spec.ts` › "SCRUM-13 [AC5] TC-13-06, SCRUM-15 [AC3] TC-15-05: organiser can navigate steps freely without mandatory fields and save partial draft"
 
 ### TC-13-07
 
@@ -132,7 +132,7 @@ unless the case says otherwise. "A start a month from now" is any future time.
 | Test Data | A start at 09:00 SGT |
 | Expected Result | The form has no timezone field and says its times are SGT. The start is stored as 01:00 UTC, and shown again as 09:00 SGT. |
 
-**Automated by:** `tests/unit/datetime.test.ts` › "converts Singapore wall-time string to UTC ISO instant", "SCRUM-129 [AC4 - UTC storage]: a Singapore wall time round-trips through the UTC instant it is stored as"; `e2e/events.spec.ts` › "SCRUM-129 [AC1 - Singapore timezone]: the request form has no timezone selector and states its times are SGT"
+**Automated by:** `tests/unit/datetime.test.ts` › "converts Singapore wall-time string to UTC ISO instant", "SCRUM-129 [AC4 - UTC storage]: a Singapore wall time round-trips through the UTC instant it is stored as"; `e2e/events.spec.ts` › "SCRUM-13 [AC6] TC-13-07, SCRUM-129 [AC1] TC-129-01: the request form has no timezone selector and states its times are SGT"
 
 ### TC-13-08
 
@@ -171,7 +171,7 @@ unless the case says otherwise. "A start a month from now" is any future time.
 | Test Data | A start yesterday; a start a minute ago |
 | Expected Result | Step 1 stays on the date step with an inline error. Step 2 is refused with "Proposed date cannot be in the past." and nothing is created. |
 
-**Automated by:** `tests/unit/events.test.ts` › "SCRUM-13 [AC9 - Domain Boundary]: rejects submission when proposed start date is in the past", "SCRUM-13 [AC9] × SCRUM-129 [AC4]: rejects a UTC ISO start datetime that represents a past moment, confirming converted Singapore wall-times are rejected at the schema layer"; `e2e/events.spec.ts` › "SCRUM-13 [AC9]: entering a past start date on Step 2 blocks navigation to Step 3 and shows an inline error"
+**Automated by:** `tests/unit/events.test.ts` › "SCRUM-13 [AC9 - Domain Boundary]: rejects submission when proposed start date is in the past", "SCRUM-13 [AC9] × SCRUM-129 [AC4]: rejects a UTC ISO start datetime that represents a past moment, confirming converted Singapore wall-times are rejected at the schema layer"; `e2e/events.spec.ts` › "SCRUM-13 [AC9] TC-13-10: entering a past start date on Step 2 blocks navigation to Step 3 and shows an inline error"
 
 ### TC-13-11
 

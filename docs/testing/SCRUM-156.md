@@ -100,7 +100,7 @@ maintenance don't overlap it.
 | Test Data       | —                                                                                                                                                                 |
 | Expected Result | 1. "4 of 4 available", nothing during the period. 2. Without reloading: "3 of 4 available", and the new reservation is listed under the period, naming the event. |
 
-**Automated by:** `e2e/equipment.spec.ts` › "SCRUM-156 [AC6] TC-156-06, SCRUM-30 AC 1: …"
+**Automated by:** `e2e/equipment.spec.ts` › "SCRUM-30 [AC1] TC-30-01, SCRUM-156 [AC6] TC-156-06: a reservation made in the request card appears in the commitments without a reload"
 
 ### TC-156-07
 
