@@ -216,8 +216,8 @@ export async function checkVenueAvailability(
  *   that booking is returned (SCRUM-162 AC2). A Rejected, Expired or
  *   Cancelled one does not count, so asking again after it creates a new
  *   booking and keeps the old one (AC9).
- * - The period must cover the event's whole period (rounded out to the half
- *   hour), and the attendance is a whole number from 1 to the event's
+ * - The period must cover the event's whole period, exactly as the event has
+ *   it (SCRUM-188 AC1), and the attendance is a whole number from 1 to the event's
  *   expected attendance; anything else is refused (SCRUM-162 AC4). An event
  *   without dates or attendance cannot be booked yet.
  * - Expected attendance above the venue's capacity is refused.

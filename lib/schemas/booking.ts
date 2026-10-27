@@ -24,34 +24,26 @@ export const PAST_START_MESSAGE = "The start time cannot be in the past.";
 
 /**
  * How far in the past a start may be and still count as "now": a request
- * started at the current half hour is not refused over the seconds it took to
- * submit. The equipment form allows the same minute (SCRUM-31).
+ * starting this minute is not refused over the seconds it took to submit. The equipment form allows the same minute (SCRUM-31).
  */
 const PAST_START_GRACE_MS = 60_000;
 
 export const INVALID_PERIOD_MESSAGE =
   "The requested period is invalid: the end must be after the start.";
 
-const HALF_HOUR_MS = 30 * 60 * 1000;
-
 /**
- * SCRUM-50 AC1, SCRUM-162 AC4 — the period a venue request starts from: the
- * event's own, with the start rounded down and the end rounded up to the half
- * hour, so it is never shorter than the event. Singapore is a whole number of hours from
- * UTC, so rounding the UTC instant rounds the Singapore time the same way.
- * An event without both dates has no period yet.
+ * SCRUM-188 AC1, SCRUM-162 AC4 — the period a venue request starts from: the
+ * event's own start and end, not rounded, so the request is checked for the
+ * same period venue search found the venue free for (SCRUM-188 AC2, SCRUM-38
+ * AC1). This replaces SCRUM-50 AC1's rounding out to the half hour. An event
+ * without both dates has no period yet.
  */
 export function eventBookingPeriod(event: {
   startAt: Date | string | null;
   endAt: Date | string | null;
 }): { startAt: Date; endAt: Date } | null {
   if (!event.startAt || !event.endAt) return null;
-  const start = new Date(event.startAt).getTime();
-  const end = new Date(event.endAt).getTime();
-  return {
-    startAt: new Date(Math.floor(start / HALF_HOUR_MS) * HALF_HOUR_MS),
-    endAt: new Date(Math.ceil(end / HALF_HOUR_MS) * HALF_HOUR_MS),
-  };
+  return { startAt: new Date(event.startAt), endAt: new Date(event.endAt) };
 }
 
 export const EVENT_NOT_SCHEDULED_MESSAGE =
