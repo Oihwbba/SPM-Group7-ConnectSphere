@@ -36,6 +36,7 @@ safety check" open the tab at that section.
 | [TC-209-08](#tc-209-08) | Negative | AC 4 | Unit, e2e |
 | [TC-209-09](#tc-209-09) | Negative | AC 4 | Unit, e2e |
 | [TC-209-10](#tc-209-10) | Positive | AC 1, AC 2, AC 3 | Unit, e2e |
+| [TC-209-11](#tc-209-11) | Positive | AC 2 | e2e |
 
 ## TC-209-01
 
@@ -188,3 +189,20 @@ Venues, Equipment and Safety check.
 *Automated:* `tests/unit/event-next-step.test.ts` "SCRUM-209 [AC1, AC2, AC3] TC-209-10";
 `e2e/arrange-from-event-page.spec.ts` "SCRUM-209 [AC1] TC-209-01, TC-209-02, TC-209-10",
 "SCRUM-209 [AC2] TC-209-03, TC-209-04, TC-209-10".
+
+## TC-209-11
+
+**Every live equipment request is shown, each with its own actions (GLM review of #282).**
+
+1. The event has two live requests from before SCRUM-186: one Approved
+   (Projector), one Pending Review (Wireless Microphone).
+2. As the Coordinator, open Arrangements; on the Wireless Microphone request,
+   choose **Withdraw**, then **Withdraw request**.
+
+**Expected:** 1: both requests are shown, each with its lines, status and
+history, and its own **Change lines** and **Withdraw** (SCRUM-142 rules). 2: the
+withdrawn request becomes Cancelled and leaves the section; the Projector
+request stays, still Approved. With no live request, the newest decided one is
+shown instead.
+
+*Automated:* `e2e/arrange-from-event-page.spec.ts` "SCRUM-209 [AC2] TC-209-11, SCRUM-186 [AC5]".

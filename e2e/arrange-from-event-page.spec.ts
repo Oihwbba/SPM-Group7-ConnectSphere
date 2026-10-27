@@ -11,7 +11,14 @@ import { openEvent, selectFrom, signedIn, usesLocalDatabase } from "./helpers";
  */
 const PREFIX = "SCRUM-209 Arrange";
 // Each journey on its own day, so their venues never overlap.
-const DAY = { venue: "10", equipment: "11", safety: "12", readonly: "13" } as const;
+const DAY = {
+  venue: "10",
+  equipment: "11",
+  safety: "12",
+  readonly: "13",
+  two: "14",
+  reset: "15",
+} as const;
 const periodOn = (label: keyof typeof DAY) => ({
   startAt: new Date(`2036-03-${DAY[label]}T02:00:00Z`),
   endAt: new Date(`2036-03-${DAY[label]}T06:00:00Z`),
@@ -278,5 +285,48 @@ test.describe("SCRUM-209 — Arrange venues, equipment and the safety check from
     await expect(other.getByRole("link", { name: "Back to event" })).toHaveCount(0);
 
     expect(await writtenFor(id)).toEqual(before);
+  });
+
+  test("SCRUM-209 [AC2] TC-209-11, SCRUM-186 [AC5]: an event with two live equipment requests shows both, each with its own actions; withdrawing one leaves the other", async ({
+    browser,
+  }) => {
+    const { id, name } = await planningEvent("two");
+    // From before SCRUM-186: one Approved, one Pending Review.
+    const request = (status: "APPROVED" | "PENDING_REVIEW", equipmentId: string) =>
+      prisma.equipmentRequest.create({
+        data: {
+          eventId: id,
+          requestedById: "usr_coordinator",
+          status,
+          lines: { create: [{ equipmentId, quantity: 1 }] },
+        },
+        select: { id: true },
+      });
+    const approved = await request("APPROVED", "eqp_projector");
+    const pending = await request("PENDING_REVIEW", "eqp_mic");
+
+    const page = await signedIn(browser, "coordinator@test.local");
+    const event = await openEvent(page, name, "Arrangements");
+    const requests = event.getByTestId("event-equipment-request");
+    await expect(requests).toHaveCount(2);
+    const approvedCard = event.locator(`[data-request="${approved.id}"]`);
+    const pendingCard = event.locator(`[data-request="${pending.id}"]`);
+    await expect(approvedCard).toContainText("Projector");
+    await expect(pendingCard).toContainText("Wireless Microphone");
+    for (const card of [approvedCard, pendingCard]) {
+      await expect(card.getByRole("button", { name: "Withdraw" })).toBeVisible();
+      await expect(card.getByRole("button", { name: "Change lines" })).toBeVisible();
+    }
+
+    await pendingCard.getByRole("button", { name: "Withdraw" }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "Withdraw request" }).click();
+    await expect(pendingCard).toHaveCount(0);
+    await expect(approvedCard).toContainText("Projector");
+    expect(
+      (await prisma.equipmentRequest.findUniqueOrThrow({ where: { id: pending.id } })).status,
+    ).toBe("CANCELLED");
+    expect(
+      (await prisma.equipmentRequest.findUniqueOrThrow({ where: { id: approved.id } })).status,
+    ).toBe("APPROVED");
   });
 });

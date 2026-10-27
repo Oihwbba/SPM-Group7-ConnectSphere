@@ -143,7 +143,8 @@ export function ReadinessChecklist({
     | null
   >(null);
   const [requestingEquipment, setRequestingEquipment] = useState(false);
-  const [changingRequest, setChangingRequest] = useState(false);
+  // The live request whose lines are being changed.
+  const [changingRequest, setChangingRequest] = useState<string | null>(null);
   const [withdrawingRequest, setWithdrawingRequest] = useState<string | null>(
     null,
   );
@@ -267,17 +268,25 @@ export function ReadinessChecklist({
     });
   }
 
-  // SCRUM-209 AC2: the event's equipment request, changed or withdrawn here.
+  // SCRUM-209 AC2: the event's equipment requests, changed or withdrawn here.
+  // Every live one is shown, each with its own actions: an event from before
+  // SCRUM-186 can hold two (AC5). With none live, the newest decided one.
   const requests = equipment?.requests ?? [];
-  const liveRequest = requests.find((request) =>
+  const liveRequests = requests.filter((request) =>
     (CHANGEABLE_REQUEST_STATUSES as readonly string[]).includes(request.status),
   );
-  const shownRequest = liveRequest ?? requests[0] ?? null;
+  const hasLiveRequest = liveRequests.length > 0;
+  const shownRequests = hasLiveRequest ? liveRequests : requests.slice(0, 1);
+  const changing = liveRequests.find(
+    (request) => request.id === changingRequest,
+  );
   // SCRUM-142 AC5: only while the event is still being planned.
-  const changeable =
-    Boolean(liveRequest) &&
+  const changeable = (request: (typeof requests)[number]) =>
+    (CHANGEABLE_REQUEST_STATUSES as readonly string[]).includes(
+      request.status,
+    ) &&
     (REQUESTABLE_EVENT_STATUSES as readonly string[]).includes(
-      liveRequest!.event.status,
+      request.event.status,
     );
 
   function withdrawRequest(requestId: string) {
@@ -296,7 +305,7 @@ export function ReadinessChecklist({
 
   function equipmentDone() {
     setRequestingEquipment(false);
-    setChangingRequest(false);
+    setChangingRequest(null);
     setLoads((n) => n + 1);
     router.refresh();
   }
@@ -549,13 +558,13 @@ export function ReadinessChecklist({
           marked={coordinates}
           item={equipmentItem}
           action={
-            ((equipment?.canCreate && !liveRequest) ||
+            ((equipment?.canCreate && !hasLiveRequest) ||
               (equipmentItem.noEquipmentOffered &&
                 checklist.canRecordNoEquipment)) && (
               <div className="flex flex-wrap gap-2">
                 {/* SCRUM-209 AC2: raised in place, for this event only. Raising
                   one also replaces No equipment needed (SCRUM-170 AC4). */}
-                {equipment?.canCreate && !liveRequest && (
+                {equipment?.canCreate && !hasLiveRequest && (
                   <Button
                     size="sm"
                     variant="outline"
@@ -585,54 +594,63 @@ export function ReadinessChecklist({
                 To change this, request equipment: the request replaces it.
               </p>
             )}
-          {shownRequest ? (
-            <div
-              className="space-y-3 rounded-md border px-3 py-2"
-              data-testid="event-equipment-request"
-            >
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="font-medium">
-                  Equipment request · submitted{" "}
-                  {formatDate(shownRequest.createdAt)}
-                </p>
-                <RequestStatusBadge status={shownRequest.status} />
-              </div>
-              <RequestLines lines={shownRequest.lines} />
-              {shownRequest.notes && (
-                <p className="whitespace-pre-line">
-                  <span className="font-medium">Notes: </span>
-                  {shownRequest.notes}
-                </p>
-              )}
-              {shownRequest.updates.length > 0 && (
-                <details className="rounded-md border bg-muted/20">
-                  <summary className="cursor-pointer select-none px-3 py-2 font-medium">
-                    History ({shownRequest.updates.length})
-                  </summary>
-                  <div className="border-t px-3 py-3">
-                    <AuditTrail
-                      entries={trailOf(shownRequest.updates)}
-                      entryTestId="history-entry"
-                    />
+          {shownRequests.length > 0 ? (
+            <ul className="space-y-3">
+              {shownRequests.map((request) => (
+                <li
+                  key={request.id}
+                  className="space-y-3 rounded-md border px-3 py-2"
+                  data-testid="event-equipment-request"
+                  data-request={request.id}
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="font-medium">
+                      Equipment request · submitted{" "}
+                      {formatDate(request.createdAt)}
+                    </p>
+                    <RequestStatusBadge status={request.status} />
                   </div>
-                </details>
-              )}
-              {/* SCRUM-142: the same rules as on Equipment Requests. */}
-              {equipment?.canChange && changeable && (
-                <div className="flex flex-wrap justify-end gap-2 border-t pt-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setWithdrawingRequest(liveRequest!.id)}
-                  >
-                    Withdraw
-                  </Button>
-                  <Button size="sm" onClick={() => setChangingRequest(true)}>
-                    Change lines
-                  </Button>
-                </div>
-              )}
-            </div>
+                  <RequestLines lines={request.lines} />
+                  {request.notes && (
+                    <p className="whitespace-pre-line">
+                      <span className="font-medium">Notes: </span>
+                      {request.notes}
+                    </p>
+                  )}
+                  {request.updates.length > 0 && (
+                    <details className="rounded-md border bg-muted/20">
+                      <summary className="cursor-pointer select-none px-3 py-2 font-medium">
+                        History ({request.updates.length})
+                      </summary>
+                      <div className="border-t px-3 py-3">
+                        <AuditTrail
+                          entries={trailOf(request.updates)}
+                          entryTestId="history-entry"
+                        />
+                      </div>
+                    </details>
+                  )}
+                  {/* SCRUM-142: the same rules as on Equipment Requests. */}
+                  {equipment?.canChange && changeable(request) && (
+                    <div className="flex flex-wrap justify-end gap-2 border-t pt-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setWithdrawingRequest(request.id)}
+                      >
+                        Withdraw
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={() => setChangingRequest(request.id)}
+                      >
+                        Change lines
+                      </Button>
+                    </div>
+                  )}
+                </li>
+              ))}
+            </ul>
           ) : (
             equipmentItem.state !== "No equipment needed" && (
               <p className="text-muted-foreground">
@@ -693,17 +711,17 @@ export function ReadinessChecklist({
           onDone={equipmentDone}
         />
       )}
-      {equipment && changingRequest && liveRequest && (
+      {equipment && changing && (
         <NewRequestDialog
-          key={liveRequest.id}
+          key={changing.id}
           open
-          onOpenChange={(open) => !open && setChangingRequest(false)}
+          onOpenChange={(open) => !open && setChangingRequest(null)}
           events={[equipment.event]}
           equipment={equipment.equipment}
           editing={{
-            requestId: liveRequest.id,
-            eventName: liveRequest.event.name,
-            lines: liveRequest.lines.map((line) => ({
+            requestId: changing.id,
+            eventName: changing.event.name,
+            lines: changing.lines.map((line) => ({
               equipmentId: line.equipment.id,
               quantity: line.quantity,
               technicalRequirements: line.technicalRequirements,
