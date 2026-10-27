@@ -265,7 +265,7 @@ and the app is running. Unless the case says otherwise, the event is owned by
 | Pre-conditions | A Planning event with expected attendance 40. Signed in as its Organiser, with **Request a change** open. |
 | Test Steps | 1. Set **Expected attendance** to 55. <br> 2. Choose **Submit change request** while the connection to the server drops. <br> 3. Choose **Submit change request** again once it is back. |
 | Test Data | Expected attendance 55 |
-| Expected Result | Step 2: "The change request couldn't be sent. If it isn't in the list above, try again." above the form; **Submit change request** and **Discard changes** are enabled again, and nothing is written. Step 3: the request is listed, reading "40 → 55", and only one is written. |
+| Expected Result | Step 2: "The change request couldn't be sent. If it isn't in the list of change requests, try again." at the top of the form; **Submit change request** and **Discard changes** are enabled again, and nothing is written. Step 3: the request is listed, reading "40 → 55", and only one is written. |
 
 **Automated by:** `e2e/change-requests.spec.ts` › "SCRUM-41 regression: a submission that never reaches the server says so and can be sent again"
 

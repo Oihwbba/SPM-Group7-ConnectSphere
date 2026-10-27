@@ -62,14 +62,14 @@ describe("visibleNotificationsWhere — SCRUM-48 AC6, AC8", () => {
 
 describe("notificationHref — SCRUM-48 AC5", () => {
   it.each(["ORGANISER", "COORDINATOR"] as const)(
-    "SCRUM-48 [AC5] TC-48-06: a %s goes to their events list with the event open",
+    "SCRUM-48 [AC5] TC-48-06, SCRUM-208 [AC1] TC-208-01: a %s goes to the event's own page",
     (role) => {
       expect(
         notificationHref(user(role), {
           link: "/equipment-requests",
           event: event("PLANNING"),
         }),
-      ).toBe("/events?event=evt_1");
+      ).toBe("/events/evt_1");
     },
   );
 
@@ -207,7 +207,7 @@ describe("getMyNotifications — SCRUM-48", () => {
         message: "Approved.",
         readAt: null,
         showFromAt: NOW,
-        href: "/events?event=evt_1",
+        href: "/events/evt_1",
       },
     ]);
   });

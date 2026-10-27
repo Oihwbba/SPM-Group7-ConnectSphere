@@ -1,11 +1,24 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { BadgeCheck } from "lucide-react";
+import {
+  BadgeCheck,
+  Building2,
+  Calendar,
+  CheckCircle2,
+  ClipboardList,
+  Wrench,
+} from "lucide-react";
+import { StatStrip } from "@/components/app/stat-strip";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { getEventArrangements } from "@/app/(app)/events/readiness-actions";
-import { formatDateTime } from "@/lib/datetime";
+import {
+  getEventArrangements,
+  getEventBookings,
+} from "@/app/(app)/events/readiness-actions";
+import { BOOKING_STATUS_LABEL } from "@/lib/status-labels";
+import type { EventVenueBooking } from "@/lib/event-readiness";
+import { formatDate, formatTime } from "@/lib/datetime";
 import type { ConfirmedArrangements as Arrangements } from "@/lib/event-readiness";
 
 /**
@@ -14,13 +27,16 @@ import type { ConfirmedArrangements as Arrangements } from "@/lib/event-readines
  */
 export function ConfirmedArrangements({ eventId }: { eventId: string }) {
   const [arrangements, setArrangements] = useState<Arrangements | null>(null);
+  // SCRUM-162 AC7: every venue booking, shown beside what was secured.
+  const [bookings, setBookings] = useState<EventVenueBooking[]>([]);
   const [loadFailed, setLoadFailed] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
-    getEventArrangements(eventId)
-      .then((result) => {
+    Promise.all([getEventArrangements(eventId), getEventBookings(eventId)])
+      .then(([result, booked]) => {
         if (cancelled) return;
+        if (booked.ok) setBookings(booked.data);
         if (result.ok) setArrangements(result.data);
         else setLoadFailed(true);
       })
@@ -51,32 +67,76 @@ export function ConfirmedArrangements({ eventId }: { eventId: string }) {
             Loading arrangements…
           </p>
         ) : (
-          <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2">
-            <dt className="font-semibold text-muted-foreground">
-              {arrangements.venues.length > 1 ? "Venues" : "Venue"}
-            </dt>
-            {/* SCRUM-162 AC7: every approved venue. */}
-            <dd data-testid="confirmed-venue">
-              {arrangements.venues.length > 0
-                ? arrangements.venues
-                    .map((venue) => `${venue.name}, ${venue.location}`)
-                    .join("; ")
-                : "—"}
-            </dd>
-            <dt className="font-semibold text-muted-foreground">Date & time</dt>
-            <dd>
-              {arrangements.startAt
-                ? formatDateTime(arrangements.startAt)
-                : "—"}{" "}
-              to {arrangements.endAt ? formatDateTime(arrangements.endAt) : "—"}
-            </dd>
-            <dt className="font-semibold text-muted-foreground">Equipment</dt>
-            <dd data-testid="confirmed-equipment">
-              {arrangements.equipment.length > 0
-                ? arrangements.equipment.join(", ")
-                : "None reserved"}
-            </dd>
-          </dl>
+          // Shared page conventions: what is secured, as a strip of stats.
+          <StatStrip
+            stats={[
+              {
+                icon: Building2,
+                label: arrangements.venues.length > 1 ? "Venues" : "Venue",
+                // SCRUM-162 AC7: every approved venue.
+                value:
+                  arrangements.venues.length > 0
+                    ? arrangements.venues.map((venue) => venue.name).join(", ")
+                    : "—",
+                hint: arrangements.venues.map((venue) => venue.location).join("; ") || undefined,
+                testId: "confirmed-venue",
+              },
+              {
+                icon: Calendar,
+                label: "Date & time",
+                value: arrangements.startAt ? formatDate(arrangements.startAt) : "—",
+                hint:
+                  arrangements.startAt && arrangements.endAt
+                    ? `${formatTime(arrangements.startAt)} to ${formatTime(arrangements.endAt)}`
+                    : undefined,
+              },
+              {
+                icon: Wrench,
+                label: "Equipment",
+                // One type to a line, in normal text.
+                plain: true,
+                value:
+                  arrangements.equipment.length > 0
+                    ? arrangements.equipment.map((item) => (
+                        <span key={item} className="block">
+                          {item}
+                        </span>
+                      ))
+                    : "None reserved",
+                testId: "confirmed-equipment",
+              },
+              {
+                icon: ClipboardList,
+                label: "Venue bookings",
+                plain: true,
+                value:
+                  bookings.length > 0
+                    ? bookings.map((booking) => (
+                        <span
+                          key={booking.id}
+                          className="flex flex-wrap items-center gap-x-1.5"
+                          data-testid="event-venue-booking"
+                          data-status={booking.status}
+                        >
+                          {booking.venueName}
+                          <span
+                            className={
+                              booking.status === "APPROVED"
+                                ? "inline-flex items-center gap-1 font-semibold text-success"
+                                : "font-semibold text-muted-foreground"
+                            }
+                          >
+                            {booking.status === "APPROVED" && (
+                              <CheckCircle2 className="h-3.5 w-3.5" aria-hidden />
+                            )}
+                            {BOOKING_STATUS_LABEL[booking.status]}
+                          </span>
+                        </span>
+                      ))
+                    : "None",
+              },
+            ]}
+          />
         )}
       </CardContent>
     </Card>
