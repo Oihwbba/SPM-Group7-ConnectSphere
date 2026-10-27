@@ -186,7 +186,7 @@ test.describe("SCRUM-41 — Raise and track a change request", () => {
 
   // #162's review: the form stayed on "Submitting…", both buttons disabled,
   // when the submission's request failed instead of answering.
-  test("SCRUM-41 regression: a submission that never reaches the server says so and can be sent again", async ({
+  test("SCRUM-41 TC-41-17: a submission that never reaches the server says so and can be sent again", async ({
     browser,
   }) => {
     const name = `SCRUM-41 Expo ${STAMP}`;

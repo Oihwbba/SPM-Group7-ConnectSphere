@@ -6,7 +6,7 @@ import { test, expect } from "@playwright/test";
 // email is refused the SAME way (no account enumeration), and signing out makes
 // protected pages unreachable again.
 
-test("a wrong password is refused", async ({ page }) => {
+test("SCRUM-65 [AC2] TC-65-02: a wrong password is refused", async ({ page }) => {
   await page.goto("/login");
   await page.getByLabel("Email", { exact: true }).fill("organiser@test.local");
   await page.getByLabel("Password", { exact: true }).fill("WrongPassword!");
@@ -15,7 +15,7 @@ test("a wrong password is refused", async ({ page }) => {
   await expect(page.getByText("Invalid email or password.")).toBeVisible();
 });
 
-test("an unknown email gets the same refusal (no account enumeration)", async ({
+test("SCRUM-65 [AC2] TC-65-02: an unknown email gets the same refusal (no account enumeration)", async ({
   page,
 }) => {
   await page.goto("/login");
@@ -28,7 +28,7 @@ test("an unknown email gets the same refusal (no account enumeration)", async ({
   await expect(page.getByText("Invalid email or password.")).toBeVisible();
 });
 
-test("signing out makes protected pages unreachable again", async ({ page }) => {
+test("SCRUM-65 [AC4, AC5] TC-65-04: signing out makes protected pages unreachable again", async ({ page }) => {
   // Sign in.
   await page.goto("/login");
   await page.getByLabel("Email", { exact: true }).fill("organiser@test.local");

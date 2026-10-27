@@ -71,7 +71,7 @@ test.describe("SCRUM-69 — View only the events assigned to me", () => {
     ids.length = 0;
   });
 
-  test("AC1, SCRUM-165 [AC8] TC-165-11: my default list shows my events, not another Coordinator's and not unassigned requests (they wait for the Lead)", async ({
+  test("SCRUM-69 [AC1, AC4] TC-69-01, TC-69-02, SCRUM-165 [AC8] TC-165-11: my default list shows my events, not another Coordinator's and not unassigned requests (they wait for the Lead)", async ({
     page,
   }) => {
     await signInAs(page, "coordinator@test.local");
@@ -81,7 +81,7 @@ test.describe("SCRUM-69 — View only the events assigned to me", () => {
     await expect(row(page, unassigned)).toHaveCount(0);
   });
 
-  test("AC2: the list shows each event's name, proposed date and status, and can be searched", async ({
+  test("SCRUM-69 [AC2] TC-69-03, SCRUM-168 [AC2] TC-168-02: the list shows each event's name, proposed date and status, and can be searched", async ({
     page,
   }) => {
     await signInAs(page, "coordinator@test.local");
@@ -101,7 +101,7 @@ test.describe("SCRUM-69 — View only the events assigned to me", () => {
     await expect(row(page, mine)).toBeVisible();
   });
 
-  test("AC3: an event handed to another Coordinator leaves my list and appears in theirs", async ({
+  test("SCRUM-69 [AC3] TC-69-04: an event handed to another Coordinator leaves my list and appears in theirs", async ({
     page,
   }) => {
     await prisma.event.update({
@@ -117,7 +117,7 @@ test.describe("SCRUM-69 — View only the events assigned to me", () => {
     await expect(row(page, mine)).toHaveCount(0);
   });
 
-  test("SCRUM-165 [AC8] TC-165-11 (supersedes AC4): an unassigned Submitted event is in no Coordinator's list", async ({
+  test("SCRUM-69 [AC1, AC4] TC-69-01, TC-69-05, SCRUM-135 [AC3, AC4, AC11] TC-135-03, SCRUM-165 [AC4, AC8] TC-165-11: an unassigned Submitted event is in no Coordinator's list", async ({
     page,
   }) => {
     for (const email of ["coordinator@test.local", "coordinator2@test.local"]) {
@@ -130,7 +130,7 @@ test.describe("SCRUM-69 — View only the events assigned to me", () => {
     }
   });
 
-  test("SCRUM-135 AC3, AC4: my Under Review event can be approved, and moves to Planning", async ({
+  test("SCRUM-135 [AC3, AC4, AC11] TC-135-03: my Under Review event can be approved, and moves to Planning", async ({
     page,
   }) => {
     await signInAs(page, "coordinator@test.local");

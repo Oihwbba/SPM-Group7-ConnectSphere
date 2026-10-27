@@ -32,9 +32,9 @@ and the app is running. Every seeded account's password is `Password123!`.
 | Pre-conditions | Signed out, on `/login`. |
 | Test Steps | 1. Enter **Email** and **Password** and click **Sign in**. <br> 2. Look at the navigation. <br> 3. Repeat as each seeded role. |
 | Test Data | `organiser@test.local`; then `attendee@test.local` |
-| Expected Result | The user lands signed in, and the navigation holds only their role's links: the Organiser sees Events and Notifications; the Attendee sees Events, Registrations and Notifications. |
+| Expected Result | The user lands signed in, and the navigation holds only their role's links: the Organiser's holds `/events`; the Attendee's `/events` and `/registrations`. Notifications are reached from the bell in the header, not the navigation (SCRUM-207, TC-207-15). |
 
-**Automated by:** `tests/unit/login-schema.test.ts` › "accepts an email and a password"; `tests/unit/auth-actions.test.ts` › "re-throws a non-auth error (the NEXT_REDIRECT thrown on a successful sign-in)"; `e2e/access-control.spec.ts` › "Organiser sees only /events, /notifications", "Attendee sees only /events, /registrations, /notifications"
+**Automated by:** `tests/unit/login-schema.test.ts` › "accepts an email and a password"; `tests/unit/auth-actions.test.ts` › "re-throws a non-auth error (the NEXT_REDIRECT thrown on a successful sign-in)"; `e2e/access-control.spec.ts` › "SCRUM-65 [AC1, AC3] TC-65-01, SCRUM-66 [AC1, AC2, AC3] TC-66-01: Organiser sees only /events" and "SCRUM-65 [AC1, AC3] TC-65-01, SCRUM-66 [AC1, AC2, AC3] TC-66-01: Attendee sees only /events, /registrations"
 
 ### TC-65-02
 
@@ -47,7 +47,7 @@ and the app is running. Every seeded account's password is `Password123!`.
 | Test Data | Password "wrong-password" |
 | Expected Result | Both show "Invalid email or password.", so the message doesn't say whether the account exists. Neither signs in. |
 
-**Automated by:** `tests/unit/auth-actions.test.ts` › "returns a generic message when credentials are rejected (no account enumeration)"; `e2e/auth.spec.ts` › "a wrong password is refused", "an unknown email gets the same refusal (no account enumeration)"
+**Automated by:** `tests/unit/auth-actions.test.ts` › "returns a generic message when credentials are rejected (no account enumeration)"; `e2e/auth.spec.ts` › "SCRUM-65 [AC2] TC-65-02: a wrong password is refused", "SCRUM-65 [AC2] TC-65-02: an unknown email gets the same refusal (no account enumeration)"
 
 ### TC-65-03
 
@@ -73,4 +73,4 @@ and the app is running. Every seeded account's password is `Password123!`.
 | Test Data | None |
 | Expected Result | The user is sent to `/login`. Going to `/events` sends them back to `/login`. |
 
-**Automated by:** `tests/unit/auth-actions.test.ts` › "signs the user out and sends them back to /login"; `tests/unit/auth-guard.test.ts` › "redirects to /login when there is no session (deny path)"; `e2e/auth.spec.ts` › "signing out makes protected pages unreachable again"
+**Automated by:** `tests/unit/auth-actions.test.ts` › "signs the user out and sends them back to /login"; `tests/unit/auth-guard.test.ts` › "redirects to /login when there is no session (deny path)"; `e2e/auth.spec.ts` › "SCRUM-65 [AC4, AC5] TC-65-04: signing out makes protected pages unreachable again"

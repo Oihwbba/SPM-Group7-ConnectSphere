@@ -32,7 +32,7 @@ seed holds one pending request (`bkg_pending`, Seminar Room 2.1).
 | Test Data | As TC-50-01 |
 | Expected Result | The card shows the event, "10 Mar 2035, 9:00 am to 10 Mar 2035, 1:00 pm", "Requested by Cody Coordinator" with "coordinator@test.local", Exhibition Hall and its location, "120 expected · venue holds 200", the facilities (as green or red pills) and layout asked for, and the notes, each fact led by its own icon. Soonest request first. |
 
-**Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-52 [AC1, AC2] TC-52-01: the queue lists pending requests with venue, timing, attendance, needs and the requesting coordinator"; `e2e/bookings.spec.ts` › "SCRUM-50 [AC2], SCRUM-52 [AC1-AC3], SCRUM-53 [AC1, AC4]: a coordinator requests, staff approve, and the venue becomes unavailable"
+**Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-52 [AC1, AC2] TC-52-01: the queue lists pending requests with venue, timing, attendance, needs and the requesting coordinator"; `e2e/bookings.spec.ts` › "SCRUM-50 [AC1, AC2] TC-50-01, SCRUM-52 [AC1, AC2] TC-52-01, SCRUM-53 [AC1, AC4] TC-53-01, SCRUM-162 [AC2] TC-162-02, SCRUM-207 [AC3, AC4] TC-207-06, TC-207-08: a coordinator requests, staff approve, and the venue becomes unavailable"
 
 ### TC-52-02
 
@@ -71,7 +71,7 @@ seed holds one pending request (`bkg_pending`, Seminar Room 2.1).
 | Test Data | `coordinator@test.local` |
 | Expected Result | No Bookings link. The server renders "Access denied" rather than the queue. |
 
-**Automated by:** `e2e/bookings.spec.ts` › "SCRUM-52 TC-52-04: a coordinator typing the queue's address is refused by the server"; `tests/unit/auth.test.ts` › "SCRUM-52 TC-52-04: only venue staff may read the pending-request queue"; `e2e/access-control.spec.ts` › "Coordinator sees only …"
+**Automated by:** `e2e/bookings.spec.ts` › "SCRUM-52 TC-52-04: a coordinator typing the queue's address is refused by the server"; `tests/unit/auth.test.ts` › "SCRUM-52 TC-52-04: only venue staff may read the pending-request queue"; `e2e/access-control.spec.ts` › "SCRUM-65 [AC1, AC3] TC-65-01, SCRUM-66 [AC1, AC2, AC3] TC-66-01: ${role} sees only …" (the Coordinator case)
 
 ### TC-52-05
 

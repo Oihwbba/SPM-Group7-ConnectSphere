@@ -133,7 +133,7 @@ criterion.
 | Test Data | `venuestaff@test.local`, `coordinator@test.local` |
 | Expected Result | 1: "No requests match …", and no rows. 2: "No venues match" and "Try another time or location, or turn off a filter." |
 
-**Automated by:** `e2e/bookings.spec.ts` › "SCRUM-50 [AC2], SCRUM-52 [AC1-AC3], SCRUM-53 [AC1, AC4], SCRUM-207 [AC3, AC4] TC-207-06, TC-207-08: …"; `e2e/venue-search.spec.ts` › "SCRUM-38 [AC2, AC6, AC10] TC-38-07, TC-38-11, SCRUM-207 [AC3] TC-207-06: …"
+**Automated by:** `e2e/bookings.spec.ts` › "SCRUM-50 [AC1, AC2] TC-50-01, SCRUM-52 [AC1, AC2] TC-52-01, SCRUM-53 [AC1, AC4] TC-53-01, SCRUM-162 [AC2] TC-162-02, SCRUM-207 [AC3, AC4] TC-207-06, TC-207-08: a coordinator requests, staff approve, and the venue becomes unavailable"; `e2e/venue-search.spec.ts` › "SCRUM-38 [AC2, AC6, AC10] TC-38-07, TC-38-11, SCRUM-207 [AC3] TC-207-06: …"
 
 ### TC-207-07
 
@@ -159,7 +159,7 @@ criterion.
 | Test Data | `venuestaff@test.local` |
 | Expected Result | The same pop-up as TC-207-07, saying "Approved: … is now booked", with **View event**. |
 
-**Automated by:** `e2e/bookings.spec.ts` › "SCRUM-50 [AC2], SCRUM-52 [AC1-AC3], SCRUM-53 [AC1, AC4], SCRUM-207 [AC3, AC4] TC-207-06, TC-207-08: …"
+**Automated by:** `e2e/bookings.spec.ts` › "SCRUM-50 [AC1, AC2] TC-50-01, SCRUM-52 [AC1, AC2] TC-52-01, SCRUM-53 [AC1, AC4] TC-53-01, SCRUM-162 [AC2] TC-162-02, SCRUM-207 [AC3, AC4] TC-207-06, TC-207-08: a coordinator requests, staff approve, and the venue becomes unavailable"
 
 ### TC-207-09
 

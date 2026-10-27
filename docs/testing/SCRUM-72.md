@@ -39,7 +39,7 @@ events in other statuses, including a Cancelled one.
 | Test Data | The seeded Confirmed events |
 | Expected Result | Only Confirmed events are listed, soonest first. Each shows its name, description, date and times (with the end date when it ends on a later day), venue name and location. Since SCRUM-171 AC 4, only Confirmed events that take registrations are listed ([TC-171-06](SCRUM-171.md#tc-171-06)); since SCRUM-162 AC 7, an event with several venues shows each approved one ([TC-162-11](SCRUM-162.md#tc-162-11)). |
 
-**Automated by:** `tests/unit/attendee-events.test.ts` › "SCRUM-171 [AC4] TC-171-06, [Positive] AC: queries only CONFIRMED events that take registrations, ordered by start date", "SCRUM-162 [AC7] TC-162-11, [Positive] AC: fetches every approved booking's venue, the caller's own registration, and the active-registration count for each event"; `tests/unit/datetime.test.ts` › "[Positive] SCRUM-72 AC2: a same-day event shows its date, start time and end time", "[Positive] SCRUM-72 AC2: an event that ends on a later day shows the full end date"; `e2e/attendee-events.spec.ts` › "AC: browse list shows Confirmed events with venue, capacity and registration state; excludes Cancelled"
+**Automated by:** `tests/unit/attendee-events.test.ts` › "SCRUM-171 [AC4] TC-171-06, [Positive] AC: queries only CONFIRMED events that take registrations, ordered by start date", "SCRUM-162 [AC7] TC-162-11, [Positive] AC: fetches every approved booking's venue, the caller's own registration, and the active-registration count for each event"; `tests/unit/datetime.test.ts` › "[Positive] SCRUM-72 AC2: a same-day event shows its date, start time and end time", "[Positive] SCRUM-72 AC2: an event that ends on a later day shows the full end date"; `e2e/attendee-events.spec.ts` › "SCRUM-72 [AC1, AC2, AC7] TC-72-01, TC-72-06: the browse list shows Confirmed events with venue, capacity and registration state, and excludes Cancelled ones"
 
 ### TC-72-02
 
@@ -52,7 +52,7 @@ events in other statuses, including a Cancelled one.
 | Test Data | The seeded event with a window |
 | Expected Result | The page shows when registration opens and closes, in SGT, and 40 places left. |
 
-**Automated by:** `tests/unit/registration-state.test.ts` › "SCRUM-72 AC3: a set window shows its opening and closing times", "AC: subtracts active registrations from the total"; `e2e/attendee-events.spec.ts` › "AC: an open event's detail page shows the registration period and an honestly-disabled Register button"
+**Automated by:** `tests/unit/registration-state.test.ts` › "SCRUM-72 AC3: a set window shows its opening and closing times", "AC: subtracts active registrations from the total"; `e2e/attendee-events.spec.ts` › "SCRUM-72 [AC3] TC-72-02: an open event's detail page shows the registration period and an honestly-disabled Register button"
 
 ### TC-72-03
 
@@ -65,7 +65,7 @@ events in other statuses, including a Cancelled one.
 | Test Data | The three events |
 | Expected Result | All three are listed. Each shows its state ("Registration not yet open" or "Registration closed") with **Register** disabled. |
 
-**Automated by:** `tests/unit/registration-state.test.ts` › "[Negative] AC: registrationOpensAt in the future → NOT_YET_OPEN", "[Negative] AC: registrationEnabled false → CLOSED, regardless of capacity or period", "[Negative] AC: registrationClosesAt in the past → EXPIRED", "has a human label for every state (exhaustive at the type level too)"; `e2e/attendee-events.spec.ts` › "AC4, AC8: going straight to /events/${id} shows …"
+**Automated by:** `tests/unit/registration-state.test.ts` › "[Negative] AC: registrationOpensAt in the future → NOT_YET_OPEN", "[Negative] AC: registrationEnabled false → CLOSED, regardless of capacity or period", "[Negative] AC: registrationClosesAt in the past → EXPIRED", "has a human label for every state (exhaustive at the type level too)"; `e2e/attendee-events.spec.ts` › "SCRUM-72 [AC4, AC8] TC-72-03: going straight to /events/${id} shows "${label}" with Register disabled"
 
 ### TC-72-04
 
@@ -91,7 +91,7 @@ events in other statuses, including a Cancelled one.
 | Test Data | The seeded full event |
 | Expected Result | The full event is listed and shown as "Full", with **Register** disabled. The other is open. |
 
-**Automated by:** `tests/unit/registration-state.test.ts` › "[Negative] AC: remaining capacity zero → FULL", "[Boundary] AC: one remaining place → OPEN, not FULL"; `e2e/attendee-events.spec.ts` › "AC: opening a full event's detail page shows it as full with the register action disabled"
+**Automated by:** `tests/unit/registration-state.test.ts` › "[Negative] AC: remaining capacity zero → FULL", "[Boundary] AC: one remaining place → OPEN, not FULL"; `e2e/attendee-events.spec.ts` › "SCRUM-72 [AC6] TC-72-05, SCRUM-74 [AC4] TC-74-04: opening a full event's detail page shows it as full with the register action disabled"
 
 ### TC-72-06
 
@@ -104,7 +104,7 @@ events in other statuses, including a Cancelled one.
 | Test Data | The seeded Cancelled and Planning events |
 | Expected Result | Neither appears. |
 
-**Automated by:** `tests/unit/attendee-events.test.ts` › "[Negative] AC: a non-Confirmed event (e.g. Planning) is not browsable — same null as missing", "[Negative] AC: a Cancelled event is not browsable"; `e2e/attendee-events.spec.ts` › "AC: browse list shows Confirmed events with venue, capacity and registration state; excludes Cancelled"
+**Automated by:** `tests/unit/attendee-events.test.ts` › "[Negative] AC: a non-Confirmed event (e.g. Planning) is not browsable — same null as missing", "[Negative] AC: a Cancelled event is not browsable"; `e2e/attendee-events.spec.ts` › "SCRUM-72 [AC1, AC2, AC7] TC-72-01, TC-72-06: the browse list shows Confirmed events with venue, capacity and registration state, and excludes Cancelled ones"
 
 ### TC-72-07
 
@@ -115,9 +115,9 @@ events in other statuses, including a Cancelled one.
 | Pre-conditions | Signed in as the Attendee; then as an Organiser. |
 | Test Steps | 1. As the Attendee, go to the address of a Cancelled event, a Planning event, and an id that doesn't exist. <br> 2. As an Organiser, go to a Confirmed event's Attendee page. |
 | Test Data | The events' ids; a made-up id |
-| Expected Result | Each returns "not found", the same for a hidden event as for a missing one. |
+| Expected Result | Step 1: each returns "not found", the same for a hidden event as for a missing one. Step 2 is superseded by SCRUM-208 (TC-208-15): the Organiser at their own Confirmed event's address gets their event page, never the Attendee's view. |
 
-**Automated by:** `tests/unit/attendee-events.test.ts` › "[Negative] a missing id returns null without distinguishing it from a not-yet-visible one", "[Security gate] a role without event:browse (e.g. VENUE_STAFF) is refused before the query even runs", "[Negative] a signed-out caller is refused"; `e2e/attendee-events.spec.ts` › "AC: direct event URLs do not bypass visibility rules — a Cancelled event 404s for an Attendee", "a non-existent event id 404s the same way as a real but invisible one", "an Organiser hitting a Confirmed event's attendee-detail URL still 404s (unchanged pre-existing behaviour)"; `e2e/attendee-events.spec.ts` › "AC7, AC8: going straight to /events/${id} (not Confirmed) 404s", run for a Draft, a Planning and a Completed event
+**Automated by:** `tests/unit/attendee-events.test.ts` › "[Negative] a missing id returns null without distinguishing it from a not-yet-visible one", "[Security gate] a role without event:browse (e.g. VENUE_STAFF) is refused before the query even runs", "[Negative] a signed-out caller is refused"; `e2e/attendee-events.spec.ts` › "SCRUM-72 [AC8] TC-72-07: direct event URLs do not bypass visibility rules — a Cancelled event 404s for an Attendee", "SCRUM-72 [AC8] TC-72-07: a non-existent event id 404s the same way as a real but invisible one"; `e2e/attendee-events.spec.ts` › "SCRUM-72 [AC7, AC8] TC-72-07: going straight to /events/${id} (not Confirmed) 404s", run for a Draft, a Planning and a Completed event; step 2, as SCRUM-208 changed it: `e2e/attendee-events.spec.ts` › "SCRUM-208 [AC1] TC-208-15: the Organiser at their Confirmed event's URL gets their own event page, never the attendee view"
 
 ### TC-72-08
 
@@ -130,4 +130,4 @@ events in other statuses, including a Cancelled one.
 | Test Data | A keyword with spaces around it |
 | Expected Result | Only events whose name or description contains the keyword are listed; clearing it lists them all again. |
 
-**Automated by:** `tests/unit/attendee-events-search.test.ts` › "[Positive] keeps events whose name contains the keyword", "[Positive] matches the description too, ignoring upper/lower case", "[Positive] a blank or whitespace keyword keeps every event", "[Boundary] trims surrounding spaces before matching"; `e2e/attendee-events.spec.ts` › "SCRUM-72 review: typing a keyword narrows the list to matching events, ignoring case"
+**Automated by:** `tests/unit/attendee-events-search.test.ts` › "[Positive] keeps events whose name contains the keyword", "[Positive] matches the description too, ignoring upper/lower case", "[Positive] a blank or whitespace keyword keeps every event", "[Boundary] trims surrounding spaces before matching"; `e2e/attendee-events.spec.ts` › "SCRUM-72 [AC1] TC-72-08, SCRUM-168 [AC2] TC-168-02: typing a keyword narrows the list to matching events, ignoring case"
