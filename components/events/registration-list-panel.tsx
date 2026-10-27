@@ -40,8 +40,9 @@ function RegistrationRows({ rows }: { rows: RegistrationRow[] }) {
 
 /**
  * SCRUM-70 — the event's registrations, for its Organiser and its assigned
- * Coordinator. Shows nothing to anyone the server refuses, so the panel never
- * hints that a list exists (AC5).
+ * Coordinator, who alone reach the event's page (AC5 is the server's: anyone
+ * else gets nothing from it). While the list loads, or if it can't, the card
+ * says so under its header instead of leaving the tab blank (SCRUM-208).
  */
 export function RegistrationListPanel({
   eventId,
@@ -72,10 +73,9 @@ export function RegistrationListPanel({
 
   if (!list) {
     // The action in the header (e.g. Close registration) is never held back
-    // by the list it sits above; without one, nothing shows until it loads.
-    if (!action) return null;
+    // by the list it sits above.
     return (
-      <Card className="overflow-hidden">
+      <Card className="overflow-hidden" data-testid="registration-list-pending">
         <CardHeader className="flex-row flex-wrap items-center justify-between gap-2 space-y-0 bg-muted/30 px-4 py-3">
           <CardTitle className="flex items-center gap-2 text-sm font-semibold">
             <Users aria-hidden="true" className="h-4 w-4 text-primary" />

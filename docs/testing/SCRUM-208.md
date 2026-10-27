@@ -54,6 +54,7 @@ one the pop-up showed, with the same rules and the same people allowed to act.
 | [TC-208-17](#tc-208-17) | Positive | AC 2, AC 3 | Unit, e2e |
 | [TC-208-18](#tc-208-18) | Positive, Negative | AC 3, AC 4 | Integration, e2e |
 | [TC-208-19](#tc-208-19) | Boundary | AC 4 | Integration, e2e |
+| [TC-208-20](#tc-208-20) | Negative | AC 4 | e2e |
 
 ---
 
@@ -303,3 +304,16 @@ one the pop-up showed, with the same rules and the same people allowed to act.
 | Expected Result | "No change requests, and nothing flagged Needs Reconsideration." for both. |
 
 **Automated by:** `tests/integration/event-page-data.test.ts` › "SCRUM-208 [AC4] TC-208-19: …"; `e2e/event-page.spec.ts` › "SCRUM-208 [AC4] TC-208-19: …"
+
+### TC-208-20
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-208-20 |
+| Test Scenario | [Negative] AC 4: a registrations list that is loading, or can't load, says so under its header (GLM review of #275) |
+| Pre-conditions | The event is in Planning and needs registration. |
+| Test Steps | 1. As the Organiser, open **Registrations** while the list can't be read (the connection drops). |
+| Test Data | `organiser@test.local` |
+| Expected Result | The Registrations card shows its header with "Couldn't load the registrations." ("Loading registrations…" while it loads), and its action, e.g. Close registration, only when there is one. The tab is never blank. |
+
+**Automated by:** `e2e/event-page.spec.ts` › "SCRUM-208 [AC4] TC-208-20: …"

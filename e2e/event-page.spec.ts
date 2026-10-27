@@ -321,4 +321,27 @@ test.describe("SCRUM-208 — One page per event, not a pop-up", () => {
       );
     }
   });
+
+  test("SCRUM-208 [AC4] TC-208-20: a registrations list that can't load says so under its header, rather than leaving the tab blank", async ({
+    browser,
+  }) => {
+    const name = `${PREFIX} registrations ${Date.now()}`;
+    const id = await underReviewWithQuestion(
+      name,
+      { status: "PLANNING", registrationRequired: true },
+      false,
+    );
+    const page = await signedIn(browser, "organiser@test.local");
+    await page.goto(`/events/${id}?tab=request`);
+    await expect(tab(page, "Registrations")).toBeVisible();
+    // Every server action from here fails, as with a lost connection.
+    await page.route("**/*", (route) =>
+      route.request().headers()["next-action"] ? route.abort() : route.continue(),
+    );
+
+    await tab(page, "Registrations").click();
+    const pending = page.getByTestId("registration-list-pending");
+    await expect(pending).toContainText("Registrations");
+    await expect(pending).toContainText("Couldn't load the registrations.");
+  });
 });

@@ -64,9 +64,9 @@ export function EventProgress({
                   aria-hidden
                   className={cn(
                     "flex h-5 w-5 items-center justify-center rounded-full border-2",
-                    done && "border-primary bg-primary text-white",
+                    done && "border-primary bg-primary text-primary-foreground",
                     here && !stopped && "border-primary bg-primary/15",
-                    stopped && "border-destructive bg-destructive text-white",
+                    stopped && "border-destructive bg-destructive text-destructive-foreground",
                     !done && !here && "border-muted-foreground/30 bg-background",
                   )}
                 >

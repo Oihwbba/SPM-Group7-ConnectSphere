@@ -316,7 +316,7 @@ function TabLabel({ label, dot = false, count = 0 }: { label: string; dot?: bool
       {label}
       {count > 0 ? (
         <span
-          className="rounded-full bg-destructive px-1.5 text-[11px] font-semibold leading-4 text-white"
+          className="rounded-full bg-destructive px-1.5 text-[11px] font-semibold leading-4 text-destructive-foreground"
           data-testid="tab-attention"
         >
           {count}
