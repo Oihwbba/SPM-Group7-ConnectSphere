@@ -457,20 +457,21 @@ async function seedEvents() {
       registrationClosesAt: at(9, 12),
     },
     {
+      // SCRUM-190: an event takes place within one day (09:00–18:00 SGT).
       id: E.completed,
       name: "Completed — Hackathon",
       description: "Ran last month.",
       status: EventStatus.COMPLETED,
       ...common,
       startAt: at(-30, 1),
-      endAt: at(-29, 10),
+      endAt: at(-30, 10),
       expectedAttendance: 90,
       organiserId: U.organiser,
       coordinatorId: U.coordinator,
       submittedAt: at(-60, 3),
       decidedAt: at(-58, 3),
       decidedById: U.coordinator,
-      completedAt: at(-29, 11),
+      completedAt: at(-30, 11),
     },
     {
       // SCRUM-82: a cancellation reason is recorded and visible.

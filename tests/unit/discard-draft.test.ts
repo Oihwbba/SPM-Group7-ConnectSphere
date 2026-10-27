@@ -18,6 +18,7 @@ import {
   PAST_DRAFT_DATES_MESSAGE,
   draftStartIsInPast,
 } from "@/lib/schemas/event";
+import { sgtPeriod } from "../one-day-period";
 
 // SCRUM-130 — an Organiser discards a Draft they no longer need. Session and
 // database are mocked; `can()` is NOT, so every permission case below runs the
@@ -381,7 +382,7 @@ describe("A discarded draft cannot be reopened — SCRUM-130 AC1", () => {
   it("SCRUM-130 [AC1] TC-130-02: submitting a discarded draft is refused — the lookup only matches an undiscarded Draft", async () => {
     mockAuth.mockResolvedValue(owner());
     tx.event.findFirst.mockResolvedValue(null);
-    const start = new Date(Date.now() + 86_400_000);
+    const { startAt: start, endAt: end } = sgtPeriod(1);
 
     const result = await submitEventRequest({
       id: "evt_draft",
@@ -389,7 +390,7 @@ describe("A discarded draft cannot be reopened — SCRUM-130 AC1", () => {
       purpose: "Purpose",
       description: "Description",
       startAt: start.toISOString(),
-      endAt: new Date(start.getTime() + 3_600_000).toISOString(),
+      endAt: end.toISOString(),
       expectedAttendance: 20,
       venueRequirements: "Any room",
       preferredLayout: "Theatre",

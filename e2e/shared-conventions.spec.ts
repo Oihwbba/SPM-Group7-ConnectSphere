@@ -2,8 +2,8 @@ import { test, expect, type Page } from "@playwright/test";
 import { prisma } from "@/lib/db";
 
 import {
+  fillEventSchedule,
   fillOther,
-  pickDateTime,
   pickOptions,
   signedIn,
   usesLocalDatabase,
@@ -35,14 +35,7 @@ async function fillRequest(page: Page, name: string) {
     .getByLabel("Event Description *")
     .fill("Filled by the shared conventions spec.");
   await page.getByRole("button", { name: "Next", exact: true }).click();
-  await pickDateTime(
-    page.getByLabel("Proposed Start Date & Time *"),
-    "2037-03-02T09:00",
-  );
-  await pickDateTime(
-    page.getByLabel("Proposed End Date & Time *"),
-    "2037-03-02T17:00",
-  );
+  await fillEventSchedule(page, "2037-03-02", "09:00", "17:00");
   await page.getByLabel("Expected Attendance *").fill("40");
   await page.getByRole("button", { name: "Next", exact: true }).click();
   await pickOptions(page.getByLabel("Venue Requirements *"), [

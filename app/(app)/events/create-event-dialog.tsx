@@ -42,10 +42,11 @@ import {
   splitChoices,
 } from "@/lib/requirement-choices";
 import {
-  formatDateTime,
-  parseSingaporeDateTime,
-  sgWallTimeToUtcIso,
-  utcToSgWallTime,
+  formatDate,
+  formatTime,
+  joinEventPeriod,
+  sgDate,
+  splitEventPeriod,
 } from "@/lib/datetime";
 import {
   createDraftEvent,
@@ -56,6 +57,7 @@ import {
   LAYOUT_OPTIONS,
   PAST_DRAFT_DATES_MESSAGE,
   draftStartIsInPast,
+  eventPeriodError,
 } from "@/lib/schemas/event";
 import {
   PREDEFINED_VENUE_OPTIONS,
@@ -68,8 +70,10 @@ interface FormState {
   name: string;
   purpose: string;
   description: string;
-  startAt: string;
-  endAt: string;
+  /** SCRUM-190 AC1: one date with a start and an end time, Singapore time. */
+  eventDate: string;
+  startTime: string;
+  endTime: string;
   expectedAttendance: string;
   venueRequirements: string;
   requiredFacilities: string[];
@@ -87,8 +91,9 @@ const initialFormState: FormState = {
   name: "",
   purpose: "",
   description: "",
-  startAt: "",
-  endAt: "",
+  eventDate: "",
+  startTime: "",
+  endTime: "",
   expectedAttendance: "",
   venueRequirements: "",
   requiredFacilities: [],
@@ -139,23 +144,47 @@ const STEPS = ["Basics", "Schedule", "Venue", "Equipment", "Details", "Review"];
 const VENUE_PREFIX = "Preferred venue: ";
 const EQUIPMENT_PREFIX = "Requested equipment: ";
 
-/** Helper to format a naive wall-time string (YYYY-MM-DDTHH:mm) for display */
-function formatWallDateTime(val: string | null | undefined): string {
-  if (!val) return "";
-  const d = parseSingaporeDateTime(val);
-  return d ? formatDateTime(d) : val.replace("T", " ");
+/** The form's date and times as the UTC instants the actions take. */
+function periodOf(form: FormState) {
+  return joinEventPeriod({
+    date: form.eventDate,
+    startTime: form.startTime,
+    endTime: form.endTime,
+  });
 }
 
-function getInitialFormData(draftEvent?: DraftEventData | null): FormState {
+export const REENTER_PERIOD_MESSAGE =
+  "Events now take place within one day. Please choose the date and times again.";
+
+/**
+ * SCRUM-190 AC3 — a Draft or Rejected request saved across two Singapore days
+ * before the one-day rule. One date can't show it, and joining its fields would
+ * move the end onto the start's day, so the Organiser chooses the period again.
+ */
+export function storedAcrossTwoDays(draftEvent?: DraftEventData | null) {
+  return Boolean(
+    draftEvent?.startAt &&
+      draftEvent.endAt &&
+      (draftEvent.status === "DRAFT" || draftEvent.status === "REJECTED") &&
+      sgDate(draftEvent.startAt) !== sgDate(draftEvent.endAt),
+  );
+}
+
+/** The form as a draft or rejected request reopens. Exported for its unit test. */
+export function getInitialFormData(draftEvent?: DraftEventData | null): FormState {
   if (!draftEvent) return initialFormState;
   // SCRUM-129 AC2: a draft saved under another timezone keeps its stored
   // instants; they are simply shown and edited as Singapore wall time.
+  const period = storedAcrossTwoDays(draftEvent)
+    ? { date: "", startTime: "", endTime: "" }
+    : splitEventPeriod(draftEvent.startAt, draftEvent.endAt);
   return {
     name: draftEvent.name || "",
     purpose: draftEvent.purpose || "",
     description: draftEvent.description || "",
-    startAt: utcToSgWallTime(draftEvent.startAt),
-    endAt: utcToSgWallTime(draftEvent.endAt),
+    eventDate: period.date,
+    startTime: period.startTime,
+    endTime: period.endTime,
     expectedAttendance:
       draftEvent.expectedAttendance !== null &&
       draftEvent.expectedAttendance !== undefined
@@ -288,10 +317,17 @@ export function CreateEventDialog({
     setFormData((prev) => ({ ...prev, [key]: value }));
     setIsDirty(true);
     setJustSaved(false);
-    if (fieldErrors[key]) {
+    // The date and times are checked, and reported, as the start and end.
+    const reportedAs: string[] =
+      key === "eventDate" || key === "startTime"
+        ? ["startAt", "endAt"]
+        : key === "endTime"
+          ? ["endAt"]
+          : [key];
+    if (reportedAs.some((field) => fieldErrors[field])) {
       setFieldErrors((prev) => {
         const next = { ...prev };
-        delete next[key];
+        for (const field of reportedAs) delete next[field];
         return next;
       });
     }
@@ -305,21 +341,14 @@ export function CreateEventDialog({
     const errors: Record<string, string[]> = {};
 
     if (currentStep === 2) {
-      if (formData.startAt) {
-        const startIso = sgWallTimeToUtcIso(formData.startAt);
-        if (startIso && new Date(startIso) < new Date()) {
-          errors.startAt = ["Proposed date cannot be in the past."];
-        }
+      const { startAt, endAt } = periodOf(formData);
+      if (startAt && new Date(startAt) < new Date()) {
+        errors.startAt = ["Proposed date cannot be in the past."];
       }
-      if (formData.startAt && formData.endAt) {
-        const startIso = sgWallTimeToUtcIso(formData.startAt);
-        const endIso = sgWallTimeToUtcIso(formData.endAt);
-        if (startIso && endIso && new Date(endIso) <= new Date(startIso)) {
-          errors.endAt = [
-            "Proposed end date and time must be strictly after the start date and time.",
-          ];
-        }
-      }
+      // SCRUM-190 AC2: the same rule the actions apply.
+      const periodError =
+        startAt && endAt && eventPeriodError(new Date(startAt), new Date(endAt));
+      if (periodError) errors.endAt = [periodError];
       if (formData.expectedAttendance !== "") {
         const num = Number(formData.expectedAttendance);
         if (isNaN(num) || num <= 0 || !Number.isInteger(num)) {
@@ -366,8 +395,8 @@ export function CreateEventDialog({
             : undefined,
         description: formData.description || undefined,
         purpose: formData.purpose || undefined,
-        startAt: sgWallTimeToUtcIso(formData.startAt),
-        endAt: sgWallTimeToUtcIso(formData.endAt),
+        // SCRUM-190 AC3: a draft can still be saved without a date or times.
+        ...periodOf(formData),
       };
 
       const result = await createDraftEvent(payload);
@@ -402,9 +431,9 @@ export function CreateEventDialog({
           formData.expectedAttendance !== ""
             ? Number(formData.expectedAttendance)
             : undefined,
-        // Empty string (not undefined) so a missing date gets the "required" message.
-        startAt: sgWallTimeToUtcIso(formData.startAt) ?? "",
-        endAt: sgWallTimeToUtcIso(formData.endAt) ?? "",
+        // Empty string (not undefined) so a missing date or time gets the "required" message.
+        startAt: periodOf(formData).startAt ?? "",
+        endAt: periodOf(formData).endAt ?? "",
       };
 
       const result = await submitEventRequest(payload);
@@ -461,8 +490,9 @@ export function CreateEventDialog({
     name: !formData.name.trim(),
     purpose: !formData.purpose.trim(),
     description: !formData.description.trim(),
-    startAt: !formData.startAt,
-    endAt: !formData.endAt,
+    eventDate: !formData.eventDate,
+    startTime: !formData.startTime,
+    endTime: !formData.endTime,
     expectedAttendance: !formData.expectedAttendance,
     venueRequirements: !formData.venueRequirements.trim(),
     preferredLayout: !formData.preferredLayout.trim(),
@@ -470,6 +500,8 @@ export function CreateEventDialog({
     equipmentRequirements: !formData.equipmentRequirements.trim(),
     registrationRequired: !formData.registrationRequired,
   };
+
+  const reviewPeriod = periodOf(formData);
 
   const hasMissingSubmissionFields = Object.values(
     missingSubmissionFields,
@@ -526,7 +558,7 @@ export function CreateEventDialog({
         {/* SCRUM-130 AC6: follows the field, so it clears once the start is
             moved to the future. */}
         {draftEvent?.status === "DRAFT" &&
-          draftStartIsInPast(sgWallTimeToUtcIso(formData.startAt)) && (
+          draftStartIsInPast(periodOf(formData).startAt) && (
             <div
               role="alert"
               data-testid="draft-dates-in-past"
@@ -607,41 +639,72 @@ export function CreateEventDialog({
               <Calendar className="h-4 w-4 text-primary" /> Schedule &
               Attendance
             </h3>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            {storedAcrossTwoDays(draftEvent) && (
+              <p
+                role="status"
+                data-testid="reenter-period"
+                className="rounded-md border border-warning/40 bg-warning/10 p-2 text-xs"
+              >
+                {REENTER_PERIOD_MESSAGE}
+              </p>
+            )}
+            {/* SCRUM-190 AC1: an event takes place within one day. */}
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
               <div className="space-y-2">
-                <Label htmlFor="startAt">Proposed Start Date & Time *</Label>
+                <Label htmlFor="eventDate">Event Date *</Label>
                 <DateTimePicker
-                  id="startAt"
-                  value={formData.startAt}
-                  onChange={(value) => updateField("startAt", value)}
+                  id="eventDate"
+                  mode="date"
+                  value={formData.eventDate}
+                  onChange={(value) => updateField("eventDate", value)}
                   aria-invalid={!!fieldErrors.startAt}
+                  aria-describedby="startAt-error"
                 />
-                {fieldErrors.startAt?.map((msg) => (
-                  <p key={msg} className="text-xs text-destructive">
-                    {msg}
-                  </p>
-                ))}
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="endAt">Proposed End Date & Time *</Label>
+                <Label htmlFor="startTime">Start Time *</Label>
                 <DateTimePicker
-                  id="endAt"
-                  openOn={formData.startAt.split("T")[0] || undefined}
-                  value={formData.endAt}
-                  onChange={(value) => updateField("endAt", value)}
-                  aria-invalid={!!fieldErrors.endAt}
+                  id="startTime"
+                  mode="time"
+                  value={formData.startTime}
+                  onChange={(value) => updateField("startTime", value)}
+                  aria-invalid={!!fieldErrors.startAt}
+                  aria-describedby="startAt-error"
                 />
-                {fieldErrors.endAt?.map((msg) => (
-                  <p key={msg} className="text-xs text-destructive">
-                    {msg}
-                  </p>
-                ))}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="endTime">End Time *</Label>
+                <DateTimePicker
+                  id="endTime"
+                  mode="time"
+                  value={formData.endTime}
+                  onChange={(value) => updateField("endTime", value)}
+                  aria-invalid={!!fieldErrors.endAt}
+                  aria-describedby="endAt-error"
+                />
               </div>
             </div>
 
+            <div id="startAt-error">
+              {fieldErrors.startAt?.map((msg) => (
+                <p key={msg} className="text-xs text-destructive">
+                  {msg}
+                </p>
+              ))}
+            </div>
+            <div id="endAt-error">
+              {fieldErrors.endAt?.map((msg) => (
+                <p key={msg} className="text-xs text-destructive">
+                  {msg}
+                </p>
+              ))}
+            </div>
+
             <p className="text-[11px] text-muted-foreground">
-              All times are Singapore time (SGT, UTC+8).
+              A future date; the end time must be after the start time on
+              the same day. All times are Singapore time (SGT, UTC+8).
             </p>
 
             <div className="space-y-2">
@@ -1027,9 +1090,9 @@ export function CreateEventDialog({
                 </CardHeader>
                 <CardContent className="space-y-1 px-4 pb-3 text-xs">
                   <p>
-                    <span className="font-semibold">Start:</span>{" "}
-                    {formData.startAt ? (
-                      formatWallDateTime(formData.startAt)
+                    <span className="font-semibold">Date:</span>{" "}
+                    {reviewPeriod.startAt ? (
+                      formatDate(reviewPeriod.startAt)
                     ) : (
                       <span className="rounded bg-destructive/10 px-1.5 py-0.5 text-[11px] font-medium text-destructive">
                         Missing (Required to Submit)
@@ -1037,9 +1100,9 @@ export function CreateEventDialog({
                     )}
                   </p>
                   <p>
-                    <span className="font-semibold">End:</span>{" "}
-                    {formData.endAt ? (
-                      formatWallDateTime(formData.endAt)
+                    <span className="font-semibold">Time:</span>{" "}
+                    {reviewPeriod.startAt && reviewPeriod.endAt ? (
+                      `${formatTime(reviewPeriod.startAt)} – ${formatTime(reviewPeriod.endAt)}`
                     ) : (
                       <span className="rounded bg-destructive/10 px-1.5 py-0.5 text-[11px] font-medium text-destructive">
                         Missing (Required to Submit)
