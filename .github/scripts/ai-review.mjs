@@ -1489,6 +1489,80 @@ function capped(text, max) {
   return text.length > max ? `${text.slice(0, max)}\n\n[truncated at ${formatCount(max)} characters]` : text;
 }
 
+/**
+ * The GLM attempts, sharing one time budget: high effort, then, if GLM
+ * stopped before answering, a retry that thinks less, since a shorter think
+ * is far less likely to be cut off. `ask(effort, deadline)` makes one call.
+ * GLM refusing to serve (SCRUM-225) ends the attempts at once: a retry would
+ * meet the same quota or rate limit. Returns the review, or why there is none.
+ */
+export async function attemptReview({
+  ask,
+  efforts = EFFORTS,
+  budgetMs = GLM_BUDGET_MS,
+  minRetryMs = MIN_RETRY_MS,
+  log = console.log,
+}) {
+  const failures = [];
+  const started = Date.now();
+  for (const [index, effort] of efforts.entries()) {
+    const remaining = started + budgetMs - Date.now();
+    if (index > 0 && remaining < minRetryMs) {
+      failures.push(`no retry: only ${Math.round(remaining / 60_000)} minute(s) of the time budget were left`);
+      break;
+    }
+    const attemptStarted = Date.now();
+    try {
+      const result = await ask(effort, Date.now() + remaining);
+      log(
+        `GLM attempt ${index + 1}${effort ? ` (${effort} effort)` : ""}: finish_reason=${result.finishReason ?? "none"}, ` +
+          `${formatCount(result.usage?.completion_tokens ?? 0)} output tokens ` +
+          `(${formatCount(result.usage?.completion_tokens_details?.reasoning_tokens ?? 0)} thinking), ` +
+          `${Math.round((Date.now() - attemptStarted) / 1000)}s.`,
+      );
+      checkCompletion(result);
+      return { review: { ...parseReview(result.content), usage: result.usage }, failures };
+    } catch (error) {
+      if (error instanceof GlmUnavailableError) return { unavailable: error, failures };
+      failures.push(`attempt ${index + 1}: ${oneLine(error.message)}`);
+      log(`::warning::GLM attempt ${index + 1} failed: ${error.message}`);
+    }
+  }
+  return { failures };
+}
+
+/**
+ * What to post, log and exit with when no review came back. GLM refusing to
+ * serve skips the review and passes the check (SCRUM-225); any other failure
+ * fails it, since a required check must not pass on a review that didn't run.
+ *
+ * @param {{ model: string, sha: string, unavailable?: GlmUnavailableError, failures: string[], seconds: number, runUrl: string }} result
+ */
+export function unreviewedOutcome({ model, sha, unavailable, failures, seconds, runUrl }) {
+  if (unavailable) {
+    return {
+      body: renderUnavailableSkipped({ model, sha, kind: unavailable.kind, resetsAt: unavailable.resetsAt, seconds, runUrl }),
+      log: `::warning::GLM review skipped, so this check passes without one: ${oneLine(unavailable.message)}`,
+      exitCode: 0,
+    };
+  }
+  return {
+    body: [
+      MARKER,
+      `## 🤖 ${model} code review`,
+      "",
+      `❌ **The review did not complete** for commit \`${sha.slice(0, 7)}\`, so this required check failed. ` +
+        "Re-run the failed **GLM Code Review** job, or push a new commit.",
+      "",
+      ...failures.map((failure) => `- ${failure}`),
+      "",
+      `<sub>${model} · ${seconds}s · [workflow run](${runUrl})</sub>`,
+    ].join("\n"),
+    log: `::error::The GLM review did not complete: ${failures.join("; ")}`,
+    exitCode: 1,
+  };
+}
+
 async function main() {
   const env = process.env;
   if (!env.ZHIPU_API_KEY) {
@@ -1717,77 +1791,23 @@ async function main() {
     .filter(Boolean)
     .join("\n\n");
 
-  // If GLM stops before answering, the retry thinks less: a shorter think is far
-  // less likely to be cut off.
-  const failures = [];
-  let review;
-  let unavailable;
   // The GLM budget starts now, so waiting for CI doesn't eat into it.
-  const glmStarted = Date.now();
-  for (const [index, effort] of EFFORTS.entries()) {
-    const remaining = glmStarted + GLM_BUDGET_MS - Date.now();
-    if (index > 0 && remaining < MIN_RETRY_MS) {
-      failures.push(`no retry: only ${Math.round(remaining / 60_000)} minute(s) of the time budget were left`);
-      break;
-    }
-    const attemptStarted = Date.now();
-    try {
-      const result = await askGlmPatiently({ apiKey: env.ZHIPU_API_KEY, model, system, user, deadline: Date.now() + remaining, effort });
-      console.log(
-        `GLM attempt ${index + 1}${effort ? ` (${effort} effort)` : ""}: finish_reason=${result.finishReason ?? "none"}, ` +
-          `${formatCount(result.usage?.completion_tokens ?? 0)} output tokens ` +
-          `(${formatCount(result.usage?.completion_tokens_details?.reasoning_tokens ?? 0)} thinking), ` +
-          `${Math.round((Date.now() - attemptStarted) / 1000)}s.`,
-      );
-      checkCompletion(result);
-      review = { ...parseReview(result.content), usage: result.usage };
-      break;
-    } catch (error) {
-      if (error instanceof GlmUnavailableError) {
-        unavailable = error;
-        break;
-      }
-      failures.push(`attempt ${index + 1}: ${oneLine(error.message)}`);
-      console.log(`::warning::GLM attempt ${index + 1} failed: ${error.message}`);
-    }
-  }
-
-  if (!review && unavailable) {
-    await upsertReviewComment(
-      github,
-      repo,
-      env.PR_NUMBER,
-      renderUnavailableSkipped({
-        model,
-        sha: env.HEAD_SHA,
-        kind: unavailable.kind,
-        resetsAt: unavailable.resetsAt,
-        seconds: elapsed(),
-        runUrl: env.RUN_URL,
-      }),
-    );
-    console.log(`::warning::GLM review skipped, so this check passes without one: ${oneLine(unavailable.message)}`);
-    return;
-  }
+  const { review, unavailable, failures } = await attemptReview({
+    ask: (effort, deadline) =>
+      askGlmPatiently({ apiKey: env.ZHIPU_API_KEY, model, system, user, deadline, effort }),
+  });
   if (!review) {
-    await upsertReviewComment(
-      github,
-      repo,
-      env.PR_NUMBER,
-      [
-        MARKER,
-        `## 🤖 ${model} code review`,
-        "",
-        `❌ **The review did not complete** for commit \`${env.HEAD_SHA.slice(0, 7)}\`, so this required check failed. ` +
-          "Re-run the failed **GLM Code Review** job, or push a new commit.",
-        "",
-        ...failures.map((failure) => `- ${failure}`),
-        "",
-        `<sub>${model} · ${elapsed()}s · [workflow run](${env.RUN_URL})</sub>`,
-      ].join("\n"),
-    );
-    console.log(`::error::The GLM review did not complete: ${failures.join("; ")}`);
-    process.exitCode = 1;
+    const outcome = unreviewedOutcome({
+      model,
+      sha: env.HEAD_SHA,
+      unavailable,
+      failures,
+      seconds: elapsed(),
+      runUrl: env.RUN_URL,
+    });
+    await upsertReviewComment(github, repo, env.PR_NUMBER, outcome.body);
+    console.log(outcome.log);
+    process.exitCode = outcome.exitCode;
     return;
   }
   if (failures.length) {
