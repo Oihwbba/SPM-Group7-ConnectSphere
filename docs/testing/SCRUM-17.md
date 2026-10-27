@@ -33,7 +33,7 @@ assigned to `coordinator@test.local` (both `Password123!`).
 | Test Data | A request with purpose "Showcase the department's annual research output.", 120 attendees, 1 Aug 2031 10:00 am to 6:00 pm SGT |
 | Expected Result | The details show the name, purpose, both times ("1 Aug 2031, 10:00 am SGT" and "1 Aug 2031, 6:00 pm SGT"), "120 attendees", and the venue, accessibility, equipment and registration needs as entered. |
 
-**Automated by:** `e2e/events.spec.ts` › "every field the organiser submitted is visible to the assigned coordinator"
+**Automated by:** `e2e/events.spec.ts` › "SCRUM-17 [AC1] TC-17-01: every field the organiser submitted is visible to the assigned coordinator"
 
 ### TC-17-02
 

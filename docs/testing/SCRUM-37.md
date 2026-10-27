@@ -40,7 +40,7 @@ Moved to [TC-36-09](SCRUM-36.md#tc-36-09) on 2026-10-09. A newly approved bookin
 | Test Data | Start 10 Jan 2036 1:00 pm, End 5:00 pm, Reason Maintenance |
 | Expected Result | "Recorded: Grand Auditorium is unavailable for that period." The calendar shows "Unavailable (maintenance) 1:00 pm to 5:00 pm", striped. The row stores the period, reason, note and who recorded it. |
 
-**Automated by:** `tests/integration/unavailability.test.ts` › "SCRUM-37 [AC1] TC-37-02: venue staff record a period and a reason, and it is saved"; `tests/unit/unavailability.test.ts` › "SCRUM-37 [AC1, AC2] TC-37-02: venue staff record a period and a reason; the calendar is refreshed" and "SCRUM-37 [AC1] TC-37-02: a blank note is stored as none"; `e2e/availability.spec.ts` › "SCRUM-37 [AC1, AC2, AC5], SCRUM-36 [AC2, AC3, AC5]: maintenance is recorded, seen, refused over, and sat flush against a booking"
+**Automated by:** `tests/integration/unavailability.test.ts` › "SCRUM-37 [AC1] TC-37-02: venue staff record a period and a reason, and it is saved"; `tests/unit/unavailability.test.ts` › "SCRUM-37 [AC1, AC2] TC-37-02: venue staff record a period and a reason; the calendar is refreshed" and "SCRUM-37 [AC1] TC-37-02: a blank note is stored as none"; `e2e/availability.spec.ts` › "SCRUM-37 [AC1, AC2, AC5] TC-37-02, SCRUM-36 [AC2, AC3, AC5] TC-36-01, TC-36-08, TC-36-09: maintenance is recorded, seen, refused over, and sat flush against a booking"
 
 ### TC-37-03
 
@@ -53,7 +53,7 @@ Moved to [TC-36-09](SCRUM-36.md#tc-36-09) on 2026-10-09. A newly approved bookin
 | Test Data | — |
 | Expected Result | Step 1: "The requested period is invalid: the end must be after the start." Step 2: "Choose a reason." Nothing is saved. Step 3: no **Record unavailability** button. Step 4: "Access denied". Called directly as any other role, the action refuses. |
 
-**Automated by:** `tests/unit/unavailability.test.ts` › "SCRUM-37 [AC1] TC-37-03: an end at or before the start is refused as an invalid period", "SCRUM-37 [AC1] TC-37-03: a period with no reason is refused with field errors", "SCRUM-37 [AC6] TC-37-03: only venue staff may record unavailability" and "SCRUM-37 [AC1] TC-37-03: an unknown or retired venue is refused"; `tests/integration/unavailability.test.ts` › "SCRUM-37 [AC1] TC-37-03: an end at or before the start is refused as an invalid period"; `tests/unit/auth.test.ts` › both "SCRUM-37 [AC6] TC-37-03: …" cases; `e2e/availability.spec.ts` › "SCRUM-36, SCRUM-37 TC-36-07: who can see the calendar and record unavailability"
+**Automated by:** `tests/unit/unavailability.test.ts` › "SCRUM-37 [AC1] TC-37-03: an end at or before the start is refused as an invalid period", "SCRUM-37 [AC1] TC-37-03: a period with no reason is refused with field errors", "SCRUM-37 [AC6] TC-37-03: only venue staff may record unavailability" and "SCRUM-37 [AC1] TC-37-03: an unknown or retired venue is refused"; `tests/integration/unavailability.test.ts` › "SCRUM-37 [AC1] TC-37-03: an end at or before the start is refused as an invalid period"; `tests/unit/auth.test.ts` › both "SCRUM-37 [AC6] TC-37-03: …" cases; `e2e/availability.spec.ts` › "SCRUM-36 [AC7] TC-36-07, SCRUM-37 [AC1, AC6] TC-37-03: who can see the calendar and record unavailability"
 
 ### TC-37-04
 

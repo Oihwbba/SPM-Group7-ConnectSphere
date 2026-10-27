@@ -50,7 +50,7 @@ seed's own projector pool has 10, with 3 in for maintenance.
 | Test Data | 10 May 2031, 09:00 to 17:00 SGT |
 | Expected Result | "2 of 4 available": the busiest moment in the period has 2 reserved. The unreserved request takes nothing, and neither does a cancelled reservation. |
 
-**Automated by:** `tests/integration/equipment-availability.test.ts` › "SCRUM-29 [AC1, AC4]: reports the busiest instant, not the sum of everything touching the period", "does not count a cancelled reservation against the pool", "gives the same answer for the pool in the all-equipment view"; `tests/unit/equipment-availability.test.ts` › "finds a peak that starts partway through the window", "adds commitments that genuinely share an instant"; `tests/unit/reservation.test.ts` › "SCRUM-31 [AC7] TC-31-08: deducts confirmed reservations and maintenance from the pool"; `e2e/equipment.spec.ts` › "SCRUM-156 [AC1] TC-156-01: checks a type and period without choosing an event, and offers no way to reserve"; `e2e/equipment-availability.spec.ts` › "SCRUM-29 [AC1]: shows the free quantity for the period, from the busiest instant", "SCRUM-29 [AC4]: equipment reserved for an overlapping period is excluded"
+**Automated by:** `tests/integration/equipment-availability.test.ts` › "SCRUM-29 [AC1, AC4]: reports the busiest instant, not the sum of everything touching the period", "does not count a cancelled reservation against the pool", "gives the same answer for the pool in the all-equipment view"; `tests/unit/equipment-availability.test.ts` › "finds a peak that starts partway through the window", "adds commitments that genuinely share an instant"; `tests/unit/reservation.test.ts` › "SCRUM-31 [AC7] TC-31-08: deducts confirmed reservations and maintenance from the pool"; `e2e/equipment.spec.ts` › "SCRUM-156 [AC1] TC-156-01: checks a type and period without choosing an event, and offers no way to reserve"; `e2e/equipment-availability.spec.ts` › "SCRUM-29 [AC1] TC-29-01: shows the free quantity for the period, from the busiest instant", "SCRUM-29 [AC4] TC-29-01: equipment reserved for an overlapping period is excluded"
 
 ### TC-29-02
 
@@ -63,7 +63,7 @@ seed's own projector pool has 10, with 3 in for maintenance.
 | Test Data | Quantity 2 |
 | Expected Result | Step 1 reports them available with no shortfall. Step 2 is accepted. |
 
-**Automated by:** `tests/unit/equipment-availability.test.ts` › "accepts a quantity at the limit and reports no shortfall"; `tests/integration/equipment-availability.test.ts` › "SCRUM-29 [AC2]: a quantity that fits the whole period is accepted by the locked reservation path"; `e2e/equipment-availability.spec.ts` › "SCRUM-29 [AC2]: a quantity that fits is reported available" (step 1, with 1 unit free and 1 asked for)
+**Automated by:** `tests/unit/equipment-availability.test.ts` › "accepts a quantity at the limit and reports no shortfall"; `tests/integration/equipment-availability.test.ts` › "SCRUM-29 [AC2]: a quantity that fits the whole period is accepted by the locked reservation path"; `e2e/equipment-availability.spec.ts` › "SCRUM-29 [AC2] TC-29-02: a quantity that fits is reported available" (step 1, with 1 unit free and 1 asked for)
 
 ### TC-29-03
 
@@ -76,7 +76,7 @@ seed's own projector pool has 10, with 3 in for maintenance.
 | Test Data | Quantity 3 |
 | Expected Result | Step 1 shows the shortfall at once ("1 short"). Step 2 is refused with the shortfall, and nothing is written. |
 
-**Automated by:** `tests/unit/equipment-availability.test.ts` › "refuses a quantity over the limit and states how many short"; `tests/integration/equipment-availability.test.ts` › "SCRUM-29 [AC3]: a quantity over the free units is refused with the shortfall, and nothing is written"; `e2e/equipment.spec.ts` › "SCRUM-29 AC 3: more than the pool shows the shortfall live"; `e2e/equipment-availability.spec.ts` › "SCRUM-29 [AC3]: a quantity over the free units reports the shortfall"
+**Automated by:** `tests/unit/equipment-availability.test.ts` › "refuses a quantity over the limit and states how many short"; `tests/integration/equipment-availability.test.ts` › "SCRUM-29 [AC3]: a quantity over the free units is refused with the shortfall, and nothing is written"; `e2e/equipment.spec.ts` › "SCRUM-29 [AC3] TC-29-03: more than the pool shows the shortfall live"; `e2e/equipment-availability.spec.ts` › "SCRUM-29 [AC3] TC-29-03: a quantity over the free units reports the shortfall"
 
 ### TC-29-04
 
@@ -89,7 +89,7 @@ seed's own projector pool has 10, with 3 in for maintenance.
 | Test Data | The reservation above |
 | Expected Result | Step 1: all 4 are free. Step 2: none are free, since one minute is shared. |
 
-**Automated by:** `tests/unit/equipment-availability.test.ts` › "does not treat periods that touch at an endpoint as overlapping", "treats any shared instant as an overlap, in either order", "frees a reservation that ends exactly when the requested period starts", "counts back-to-back commitments once, not twice"; `tests/integration/equipment-availability.test.ts` › "SCRUM-29 [AC5]: a reservation ending exactly when the period starts leaves the whole pool free"; `e2e/equipment-availability.spec.ts` › "SCRUM-29 [AC5]: a reservation that ends exactly when the period begins leaves the pool free" (step 1, with one reservation ending as the period starts and another starting as it ends)
+**Automated by:** `tests/unit/equipment-availability.test.ts` › "does not treat periods that touch at an endpoint as overlapping", "treats any shared instant as an overlap, in either order", "frees a reservation that ends exactly when the requested period starts", "counts back-to-back commitments once, not twice"; `tests/integration/equipment-availability.test.ts` › "SCRUM-29 [AC5]: a reservation ending exactly when the period starts leaves the whole pool free"; `e2e/equipment-availability.spec.ts` › "SCRUM-29 [AC5] TC-29-04: a reservation that ends exactly when the period begins leaves the pool free" (step 1, with one reservation ending as the period starts and another starting as it ends)
 
 ### TC-29-05
 
@@ -102,7 +102,7 @@ seed's own projector pool has 10, with 3 in for maintenance.
 | Test Data | The seeded records |
 | Expected Result | Those units are left out of the free quantity, together with any reservations at the same moment. The pool never shows below zero. |
 
-**Automated by:** `tests/integration/equipment-availability.test.ts` › "SCRUM-29 [AC6]: units under maintenance or damaged are not available"; `tests/unit/equipment-availability.test.ts` › "weighs reservations and unavailability together at the same instant", "never reports a negative pool when more is committed than exists"; `e2e/equipment-availability.spec.ts` › "SCRUM-29 [AC6]: units under maintenance or damaged are not shown as available"
+**Automated by:** `tests/integration/equipment-availability.test.ts` › "SCRUM-29 [AC6]: units under maintenance or damaged are not available"; `tests/unit/equipment-availability.test.ts` › "weighs reservations and unavailability together at the same instant", "never reports a negative pool when more is committed than exists"; `e2e/equipment-availability.spec.ts` › "SCRUM-29 [AC6] TC-29-05: units under maintenance or damaged are not shown as available"
 
 ### TC-29-06
 
@@ -115,7 +115,7 @@ seed's own projector pool has 10, with 3 in for maintenance.
 | Test Data | Quantity 0; start 17:00, end 09:00 on the same day |
 | Expected Result | Step 1: "Enter a whole number of at least 1.", with no availability figure (SCRUM-229); a decimal such as 1.5 gets the same. Step 2: "End time must be after the start time." at once. No availability is shown, and nothing is read or written. |
 
-**Automated by:** `tests/unit/equipment-availability.test.ts` › "SCRUM-229 [AC1] SCRUM-29 [AC7] TC-29-06: %j is not a positive whole number, so no result is shown for it", "SCRUM-229 [AC2] SCRUM-29 [AC7] TC-29-06: %j is a quantity of %i"; `tests/unit/reservation.test.ts` › "SCRUM-29 AC 7: rejects an end before the start with field errors and reads nothing"; `tests/integration/equipment-availability.test.ts` › "SCRUM-29 [AC7]: an end before the start is rejected, reads nothing and writes nothing"; `e2e/equipment.spec.ts` › "SCRUM-29 [AC7] TC-29-06: a quantity of zero asks for a whole number of at least one", "SCRUM-29 AC 7: an invalid period (end earlier than start) triggers a live inline error"; `e2e/equipment-availability.spec.ts` › "SCRUM-29 [AC7] TC-29-06, SCRUM-229 [AC1]: a zero or decimal quantity, or an end before the start, is rejected with no result"
+**Automated by:** `tests/unit/equipment-availability.test.ts` › "SCRUM-229 [AC1] SCRUM-29 [AC7] TC-29-06: %j is not a positive whole number, so no result is shown for it", "SCRUM-229 [AC2] SCRUM-29 [AC7] TC-29-06: %j is a quantity of %i"; `tests/unit/reservation.test.ts` › "SCRUM-29 AC 7: rejects an end before the start with field errors and reads nothing"; `tests/integration/equipment-availability.test.ts` › "SCRUM-29 [AC7]: an end before the start is rejected, reads nothing and writes nothing"; `e2e/equipment.spec.ts` › "SCRUM-29 [AC7] TC-29-06, SCRUM-31 [AC6] TC-31-07: a quantity of zero asks for a whole number of at least one", "SCRUM-29 [AC7] TC-29-06: an invalid period (end earlier than start) triggers a live inline error"; `e2e/equipment-availability.spec.ts` › "SCRUM-29 [AC7] TC-29-06, SCRUM-229 [AC1]: a zero or decimal quantity, or an end before the start, is rejected with no result"
 
 ### TC-29-07
 
@@ -141,4 +141,4 @@ seed's own projector pool has 10, with 3 in for maintenance.
 | Test Data | 1 Jan 2020, 09:00 to 17:00 SGT |
 | Expected Result | "Start time cannot be in the past." at once, and the count reads "— of 4 available": no availability is shown. |
 
-**Automated by:** `e2e/equipment.spec.ts` › "a start time in the past triggers a live inline error and no availability"
+**Automated by:** `e2e/equipment.spec.ts` › "SCRUM-29 TC-29-08: a start time in the past triggers a live inline error and no availability"

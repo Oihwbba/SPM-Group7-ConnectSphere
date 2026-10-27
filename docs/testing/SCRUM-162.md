@@ -53,7 +53,7 @@ time.
 | Test Data | Exhibition Hall |
 | Expected Result | "This event already has a request for this venue." with the existing booking's venue, times and status. No new row. |
 
-**Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-162 [AC2] TC-162-02: an event with a pending booking at this venue is shown it, and no request is created" (and the held and approved ones); `tests/unit/bookings.test.ts` › "SCRUM-162 [AC2] TC-162-02, SCRUM-163 [AC4] TC-163-08: an event that already has a pending, approved or unexpired held booking at this venue is shown it and nothing is created" and "SCRUM-162 [AC2] TC-162-02: the existing booking at this venue is shown even when the request's other details differ from it"; `e2e/bookings.spec.ts` › "SCRUM-50 [AC2], SCRUM-52 [AC1-AC3], SCRUM-53 [AC1, AC4]: a coordinator requests, staff approve, and the venue becomes unavailable"
+**Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-162 [AC2] TC-162-02: an event with a pending booking at this venue is shown it, and no request is created" (and the held and approved ones); `tests/unit/bookings.test.ts` › "SCRUM-162 [AC2] TC-162-02, SCRUM-163 [AC4] TC-163-08: an event that already has a pending, approved or unexpired held booking at this venue is shown it and nothing is created" and "SCRUM-162 [AC2] TC-162-02: the existing booking at this venue is shown even when the request's other details differ from it"; `e2e/bookings.spec.ts` › "SCRUM-50 [AC1, AC2] TC-50-01, SCRUM-52 [AC1, AC2] TC-52-01, SCRUM-53 [AC1, AC4] TC-53-01, SCRUM-162 [AC2] TC-162-02, SCRUM-207 [AC3, AC4] TC-207-06, TC-207-08: a coordinator requests, staff approve, and the venue becomes unavailable"
 
 ### TC-162-03
 

@@ -47,7 +47,7 @@ the app is running, and the tester signs in as Venue Staff
 | Test Data | As TC-50-01 |
 | Expected Result | "Approved: Exhibition Hall is now booked for …" and the card leaves the queue. The booking is APPROVED with the deciding user and time, and one audit entry is written. Step 3 is refused. The availability calendar (SCRUM-36) arrives in the next pull request; until then, the refusal is the evidence. |
 
-**Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-53 [AC1, AC4] TC-53-01: approving makes the venue unavailable: a later overlapping request is refused"; `tests/unit/bookings.test.ts` › "SCRUM-53 [AC1, AC4] TC-53-01: approving sets the request APPROVED and records who decided, when, and an audit entry"; `e2e/bookings.spec.ts` › "SCRUM-50 [AC2], SCRUM-52 [AC1-AC3], SCRUM-53 [AC1, AC4]: a coordinator requests, staff approve, and the venue becomes unavailable"
+**Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-53 [AC1, AC4] TC-53-01: approving makes the venue unavailable: a later overlapping request is refused"; `tests/unit/bookings.test.ts` › "SCRUM-53 [AC1, AC4] TC-53-01: approving sets the request APPROVED and records who decided, when, and an audit entry"; `e2e/bookings.spec.ts` › "SCRUM-50 [AC1, AC2] TC-50-01, SCRUM-52 [AC1, AC2] TC-52-01, SCRUM-53 [AC1, AC4] TC-53-01, SCRUM-162 [AC2] TC-162-02, SCRUM-207 [AC3, AC4] TC-207-06, TC-207-08: a coordinator requests, staff approve, and the venue becomes unavailable"
 
 ### TC-53-02
 

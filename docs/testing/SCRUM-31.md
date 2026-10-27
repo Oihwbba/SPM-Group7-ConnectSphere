@@ -130,7 +130,7 @@ needs them.
 | Test Data | As in TC-155-09. |
 | Expected Result | As in TC-155-09. |
 
-**Automated by:** `tests/unit/request-reservation.test.ts` › "SCRUM-155 [AC7] TC-155-09: invalid rows or periods reserve nothing and say where the problem is"; `e2e/equipment.spec.ts` › "SCRUM-29 AC 7: a quantity of zero asks for at least one"
+**Automated by:** `tests/unit/request-reservation.test.ts` › "SCRUM-155 [AC7] TC-155-09: invalid rows or periods reserve nothing and say where the problem is"; `e2e/equipment.spec.ts` › "SCRUM-29 [AC7] TC-29-06, SCRUM-31 [AC6] TC-31-07: a quantity of zero asks for a whole number of at least one"
 
 ### TC-31-08
 

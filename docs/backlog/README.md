@@ -37,7 +37,7 @@ either covered by a test or visibly not done yet. Reviewers do the same.
 | | |
 |---|---|
 | Stories | **97** |
-| Tasks | **66** |
+| Tasks | **68** |
 | Subtasks | **18** |
 | Total story points | **267** |
 | Points committed to Sprint 1 | **37** |
@@ -263,3 +263,4 @@ _8 stories, 14 points_
 | [SCRUM-227](SCRUM-227.md) | Bug: Two simultaneous updates to one equipment request can both be saved when one is a suggestion | SCRUM Sprint 4 | In Review |
 | [SCRUM-228](SCRUM-228.md) | Chore: Make SCRUM-170's race test wait for its locks instead of sleeping | SCRUM Sprint 4 | In Review |
 | [SCRUM-229](SCRUM-229.md) | Bug: Equipment availability shows a result for an invalid quantity, and Coordinator equipment lists include unassigned events | SCRUM Sprint 4 | In Review |
+| [SCRUM-232](SCRUM-232.md) | Chore: Name every e2e test after the story, criteria and test case it proves | SCRUM Sprint 4 | In Review |

@@ -52,7 +52,7 @@ every action asks it.
 | Test Data | — |
 | Expected Result | 1. Under Review with that Coordinator. 2. Back Under Review with the same Coordinator; or, if they no longer hold the role, Submitted with no Coordinator in the Lead's queue. |
 
-**Automated by:** these moves are SCRUM-165's actions, so its tests are this case's: `tests/unit/lead-queue.test.ts` › "SCRUM-165 [AC5, AC11] TC-165-07, TC-165-14: …"; `e2e/lead-queue.spec.ts` › "SCRUM-165 [AC1–AC5, AC8, AC11] …"; `tests/unit/clarification-and-amend.test.ts` › "SCRUM-108 [AC9, AC11, AC14] TC-108-05, SCRUM-165 [AC9] TC-165-12: …" and "SCRUM-165 [AC9] TC-165-12 (supersedes SCRUM-108 AC11): …". The lifecycle table allowing Submitted → Under Review is TC-135-01.
+**Automated by:** these moves are SCRUM-165's actions, so its tests are this case's: `tests/unit/lead-queue.test.ts` › "SCRUM-165 [AC5, AC11] TC-165-07, TC-165-14: …"; `e2e/lead-queue.spec.ts` › "SCRUM-14 [AC1] TC-14-01, SCRUM-20 [AC1, AC2, AC3, AC7, AC8] TC-20-01, SCRUM-135 [AC2, AC6] TC-135-02, SCRUM-164 [AC2] TC-164-05, SCRUM-165 [AC1, AC2, AC3, AC4, AC5, AC8, AC11] TC-165-01, TC-165-02, TC-165-04, TC-165-05, TC-165-07, TC-165-11, TC-165-14: a submitted request waits in the queue, the Lead assigns it, and only then does the Coordinator get it"; `tests/unit/clarification-and-amend.test.ts` › "SCRUM-108 [AC9, AC11, AC14] TC-108-05, SCRUM-165 [AC9] TC-165-12: …" and "SCRUM-165 [AC9] TC-165-12 (supersedes SCRUM-108 AC11): …". The lifecycle table allowing Submitted → Under Review is TC-135-01.
 
 ### TC-135-03
 
@@ -65,7 +65,7 @@ every action asks it.
 | Test Data | — |
 | Expected Result | 1. The unassigned request isn't in the list at all: it waits in the Lead's queue (SCRUM-165 AC8). 2. The unassigned one: "Event not found." The assigned one: "This event is Submitted, so it can't be approved." (or "rejected."). Nothing changes and no Coordinator is assigned. |
 
-**Automated by:** `tests/unit/event-lifecycle.test.ts` › "SCRUM-135 [AC3, AC4] TC-135-03: …"; `tests/unit/event-status.test.ts` › "SCRUM-135 [AC3, AC4, AC11] TC-135-03: a Submitted request can't be %s, even by its assigned Coordinator, …" (2 tests) and "SCRUM-165 [AC8] TC-165-11: …"; `e2e/coordinator-assigned-events.spec.ts` › "SCRUM-165 [AC8] TC-165-11 (supersedes AC4): …" and "SCRUM-135 AC3, AC4: my Under Review event can be approved, and moves to Planning"; `e2e/events.spec.ts` (SCRUM-23 & SCRUM-24 journey)
+**Automated by:** `tests/unit/event-lifecycle.test.ts` › "SCRUM-135 [AC3, AC4] TC-135-03: …"; `tests/unit/event-status.test.ts` › "SCRUM-135 [AC3, AC4, AC11] TC-135-03: a Submitted request can't be %s, even by its assigned Coordinator, …" (2 tests) and "SCRUM-165 [AC8] TC-165-11: …"; `e2e/coordinator-assigned-events.spec.ts` › "SCRUM-69 [AC1, AC4] TC-69-01, TC-69-05, SCRUM-135 [AC3, AC4, AC11] TC-135-03, SCRUM-165 [AC4, AC8] TC-165-11: an unassigned Submitted event is in no Coordinator's list" and "SCRUM-135 [AC3, AC4, AC11] TC-135-03: my Under Review event can be approved, and moves to Planning"; `e2e/events.spec.ts` (SCRUM-23 & SCRUM-24 journey)
 
 ### TC-135-04
 

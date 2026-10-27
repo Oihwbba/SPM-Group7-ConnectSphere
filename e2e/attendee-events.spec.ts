@@ -29,7 +29,7 @@ test.describe("SCRUM-72 — Attendee browses confirmed events", () => {
     await page.waitForURL("**/events");
   });
 
-  test("AC: browse list shows Confirmed events with venue, capacity and registration state; excludes Cancelled", async ({
+  test("SCRUM-72 [AC1, AC2, AC7] TC-72-01, TC-72-06: the browse list shows Confirmed events with venue, capacity and registration state, and excludes Cancelled ones", async ({
     page,
   }) => {
     const galaCard = page.getByTestId("browsable-event-card").filter({
@@ -104,7 +104,7 @@ test.describe("SCRUM-72 — Attendee browses confirmed events", () => {
     ).not.toBeVisible();
   });
 
-  test("AC: opening a full event's detail page shows it as full with the register action disabled", async ({
+  test("SCRUM-72 [AC6] TC-72-05, SCRUM-74 [AC4] TC-74-04: opening a full event's detail page shows it as full with the register action disabled", async ({
     page,
   }) => {
     // attendee@test.local (this describe's default, via beforeEach) is
@@ -146,7 +146,7 @@ test.describe("SCRUM-72 — Attendee browses confirmed events", () => {
     ).toBeVisible();
   });
 
-  test("AC: an open event's detail page shows the registration period and an honestly-disabled Register button", async ({
+  test("SCRUM-72 [AC3] TC-72-02: an open event's detail page shows the registration period and an honestly-disabled Register button", async ({
     page,
   }) => {
     const notOpenCard = page.getByTestId("browsable-event-card").filter({
@@ -168,7 +168,7 @@ test.describe("SCRUM-72 — Attendee browses confirmed events", () => {
     await expect(page.getByTestId("register-button")).toBeDisabled();
   });
 
-  test("AC: direct event URLs do not bypass visibility rules — a Cancelled event 404s for an Attendee", async ({
+  test("SCRUM-72 [AC8] TC-72-07: direct event URLs do not bypass visibility rules — a Cancelled event 404s for an Attendee", async ({
     page,
   }) => {
     const response = await page.goto("/events/evt_cancelled");
@@ -176,7 +176,7 @@ test.describe("SCRUM-72 — Attendee browses confirmed events", () => {
   });
 
   for (const id of ["evt_draft", "evt_planning", "evt_completed"]) {
-    test(`AC7, AC8: going straight to /events/${id} (not Confirmed) 404s`, async ({
+    test(`SCRUM-72 [AC7, AC8] TC-72-07: going straight to /events/${id} (not Confirmed) 404s`, async ({
       page,
     }) => {
       const response = await page.goto(`/events/${id}`);
@@ -188,7 +188,7 @@ test.describe("SCRUM-72 — Attendee browses confirmed events", () => {
     { id: "evt_reg_closed", label: "Registration closed" },
     { id: "evt_reg_not_open", label: "Registration not yet open" },
   ]) {
-    test(`AC4, AC8: going straight to /events/${id} shows "${label}" with Register disabled`, async ({
+    test(`SCRUM-72 [AC4, AC8] TC-72-03: going straight to /events/${id} shows "${label}" with Register disabled`, async ({
       page,
     }) => {
       // attendee4 holds no registrations in the seed, so the Register button
@@ -211,7 +211,7 @@ test.describe("SCRUM-72 — Attendee browses confirmed events", () => {
     });
   }
 
-  test("SCRUM-72 review: typing a keyword narrows the list to matching events, ignoring case", async ({
+  test("SCRUM-72 [AC1] TC-72-08, SCRUM-168 [AC2] TC-168-02: typing a keyword narrows the list to matching events, ignoring case", async ({
     page,
   }) => {
     const search = page.getByLabel("Search events by name or description");
@@ -237,7 +237,7 @@ test.describe("SCRUM-72 — Attendee browses confirmed events", () => {
     ).toBeVisible();
   });
 
-  test("a non-existent event id 404s the same way as a real but invisible one", async ({
+  test("SCRUM-72 [AC8] TC-72-07: a non-existent event id 404s the same way as a real but invisible one", async ({
     page,
   }) => {
     const response = await page.goto("/events/evt_does_not_exist_at_all");
@@ -246,7 +246,7 @@ test.describe("SCRUM-72 — Attendee browses confirmed events", () => {
 });
 
 test.describe("SCRUM-72 — the attendee view stays the Attendee's", () => {
-  test("SCRUM-72, SCRUM-208 [AC1] TC-208-15: the Organiser at their Confirmed event's URL gets their own event page, never the attendee view", async ({
+  test("SCRUM-208 [AC1] TC-208-15: the Organiser at their Confirmed event's URL gets their own event page, never the attendee view", async ({
     page,
   }) => {
     await page.goto("/login");

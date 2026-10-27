@@ -32,7 +32,7 @@ test.describe("Top bar — SCRUM-168", () => {
     "techsupport@test.local",
     "attendee@test.local",
   ]) {
-    test(`SCRUM-168 [AC1, AC3]: at phone width, ${email} sees no search box, the brand on the left, and the bell and profile menu together on the right`, async ({
+    test(`SCRUM-168 [AC1, AC3] TC-168-01, TC-168-03: at phone width, ${email} sees no search box, the brand on the left, and the bell and profile menu together on the right`, async ({
       page,
     }) => {
       await signIn(page, email);

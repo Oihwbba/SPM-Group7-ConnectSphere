@@ -16,7 +16,7 @@ test.describe("User Story 13 — Event Request Creation Journey", () => {
    * Verifies that an organiser can freely navigate between form steps (e.g. Step 1 to Step 2)
    * without being blocked by unfilled mandatory fields, and can save a draft at any step.
    */
-  test("organiser can navigate steps freely without mandatory fields and save partial draft", async ({
+  test("SCRUM-13 [AC5] TC-13-06, SCRUM-15 [AC3] TC-15-05: organiser can navigate steps freely without mandatory fields and save partial draft", async ({
     page,
   }) => {
     // 1. Sign in as seeded event organiser
@@ -52,7 +52,7 @@ test.describe("User Story 13 — Event Request Creation Journey", () => {
    * Verifies that an organiser can fill all form sections (Basics, Schedule, Venue & Accessibility,
    * Equipment, Registration & Details), review entered details on Step 6, and submit for review.
    */
-  test("organiser fills event request sections, reviews details, and submits request", async ({
+  test("SCRUM-13 [AC1, AC3, AC10] TC-13-01, TC-13-04, SCRUM-14 [AC1] TC-14-01: organiser fills event request sections, reviews details, and submits request", async ({
     page,
   }) => {
     // 1. Sign in as seeded event organiser
@@ -120,7 +120,7 @@ test.describe("User Story 13 — Event Request Creation Journey", () => {
    * Step navigation is not blocked by missing values, so this test reaches Review
    * with empty inputs and verifies submit is rejected with field-level feedback.
    */
-  test("SCRUM-13 [AC4] / SCRUM-14 AC2: submitting with mandatory fields left blank is refused and missing fields are indicated", async ({
+  test("SCRUM-13 [AC4] TC-13-05, SCRUM-14 [AC2] TC-14-03: submitting with mandatory fields left blank is refused and missing fields are indicated", async ({
     page,
   }) => {
     await page.goto("/login");
@@ -238,7 +238,7 @@ test.describe("User Story 15 — Draft Event Request Lifecycle Journey", () => {
    * Verifies that reopening a saved draft and clicking "Save as Draft" again
    * updates the existing row in-place rather than creating a duplicate row.
    */
-  test("SCRUM-15 [AC2, AC7 - Draft Save Idempotency]: saving an existing draft a second time updates the record in-place without creating duplicate rows", async ({
+  test("SCRUM-15 [AC2, AC7] TC-15-09: saving an existing draft a second time updates the record in-place without creating duplicate rows", async ({
     page,
   }) => {
     await page.goto("/login");
@@ -378,7 +378,7 @@ test.describe("User Story 16 — Distinguish Drafts from Submitted Requests Jour
  * and selecting any entry opens the full event details.
  */
 test.describe("User Story 84 — Organiser Views Their Own Event Requests Journey", () => {
-  test("organiser views list of their own events with names, status badges, and selects an entry for full detail", async ({
+  test("SCRUM-84 [AC3, AC4] TC-84-03, SCRUM-208 [AC1] TC-208-01: organiser views list of their own events with names, status badges, and selects an entry for full detail", async ({
     page,
   }) => {
     // 1. Sign in as seeded event organiser
@@ -420,7 +420,7 @@ test.describe("User Story 84 — Organiser Views Their Own Event Requests Journe
     await expect(page.getByRole("heading", { level: 1, name: eventTitle })).toBeVisible();
   });
 
-  test("SCRUM-84 [AC1 - Ownership Data Isolation]: enforces ownership isolation: organiser2 sees only their own events", async ({
+  test("SCRUM-68 [AC1, AC5] TC-68-01, SCRUM-84 [AC1] TC-84-01: enforces ownership isolation: organiser2 sees only their own events", async ({
     page,
   }) => {
     // 1. Sign in as organiser2 (owns evt_other_organiser per seed data)
@@ -456,7 +456,7 @@ test.describe("User Story 84 — Organiser Views Their Own Event Requests Journe
 test.describe("User Story 84 — Events list on mobile (375x812)", () => {
   test.use({ viewport: { width: 375, height: 812 } });
 
-  test("restyles rows as stacked cards with no page overflow, and Resume Draft opens the dialog", async ({
+  test("SCRUM-84 [AC3, AC4] TC-84-09: restyles rows as stacked cards with no page overflow, and Resume Draft opens the dialog", async ({
     page,
   }) => {
     await page.goto("/login");
@@ -519,7 +519,7 @@ test.describe("User Story 84 — Events list on mobile (375x812)", () => {
   // dialog. Two things broke on a real phone and are pinned here: the four
   // review buttons wrapped unevenly (Reject alone on a second line), and the
   // dialog's stacked footer buttons touched.
-  test("SCRUM-18/19: the four review buttons form an even two-column grid and stacked dialog buttons are separated", async ({
+  test("SCRUM-18 [AC1] TC-18-11: the four review buttons form an even two-column grid and stacked dialog buttons are separated", async ({
     page,
   }) => {
     // Read at run time: the const is declared further down this file.
@@ -613,7 +613,7 @@ test.describe("User Story 84 — Events list on mobile (375x812)", () => {
  * headers the sort test clicks are hidden.
  */
 test.describe("User Story 129, 13 & 84 — Singapore time, unsaved changes and list controls", () => {
-  test("SCRUM-129 [AC1 - Singapore timezone]: the request form has no timezone selector and states its times are SGT", async ({
+  test("SCRUM-13 [AC6] TC-13-07, SCRUM-129 [AC1] TC-129-01: the request form has no timezone selector and states its times are SGT", async ({
     page,
   }) => {
     await page.goto("/login");
@@ -638,7 +638,7 @@ test.describe("User Story 129, 13 & 84 — Singapore time, unsaved changes and l
     await expect(dialog.getByText(/Timezone:/)).toHaveCount(0);
   });
 
-  test("SCRUM-15 [AC6 - Unsaved Changes Warning]: unsaved changes warning appears when closing an edited draft dialog", async ({
+  test("SCRUM-15 [AC6] TC-15-08: unsaved changes warning appears when closing an edited draft dialog", async ({
     page,
   }) => {
     await page.goto("/login");
@@ -674,7 +674,7 @@ test.describe("User Story 129, 13 & 84 — Singapore time, unsaved changes and l
     await expect(page.getByRole("cell", { name: draftTitle })).not.toBeVisible();
   });
 
-  test("SCRUM-84 AC7-AC9: organiser sorts columns and filters list by status dropdown and search", async ({
+  test("SCRUM-84 [AC6, AC7, AC8, AC9] TC-84-05, TC-84-06, TC-84-07, SCRUM-168 [AC2] TC-168-02: organiser sorts columns and filters list by status dropdown and search", async ({
     page,
   }) => {
     await page.goto("/login");
@@ -709,7 +709,7 @@ test.describe("User Story 129, 13 & 84 — Singapore time, unsaved changes and l
     await expect(page.getByText("Career Fair")).not.toBeVisible();
   });
 
-  test("SCRUM-13 [AC9]: entering a past start date on Step 2 blocks navigation to Step 3 and shows an inline error", async ({
+  test("SCRUM-13 [AC9] TC-13-10: entering a past start date on Step 2 blocks navigation to Step 3 and shows an inline error", async ({
     page,
   }) => {
     await page.goto("/login");
@@ -786,7 +786,7 @@ test.describe("User Story 129, 13 & 84 — Singapore time, unsaved changes and l
     await expect(page.getByLabel("Venue Requirements *")).toBeVisible();
   });
 
-  test("SCRUM-84 [AC6/AC9 - Filtered Empty State & Clear Filters]: filtered empty state shows 'No requests match' card with a Clear Filters CTA when search yields no results", async ({
+  test("SCRUM-84 [AC6, AC9] TC-84-08, SCRUM-168 [AC2] TC-168-02: filtered empty state shows 'No requests match' card with a Clear Filters CTA when search yields no results", async ({
     page,
   }) => {
     // AC6 & AC9 cover status filtering, search queries, and search cleared behavior.
@@ -874,7 +874,7 @@ test.describe("User Story 23 & 24 — Event Status View & Consistency Journey", 
     });
   });
 
-  test("coordinator views assigned event status and status remains consistent across views (SCRUM-23 & SCRUM-24)", async ({
+  test("SCRUM-23 [AC2] TC-23-02, SCRUM-24 [AC7] TC-24-05: coordinator views assigned event status and status remains consistent across views", async ({
     page,
   }) => {
     // 1. Sign in as Event Coordinator
@@ -1057,7 +1057,7 @@ test.describe("User Story 23 & 24 — Event Status View & Consistency Journey", 
     await expect(organiserRow.getByTestId("status-badge")).toHaveAttribute("data-status", "PLANNING");
   });
 
-  test("SCRUM-208 TC-208-16: an open event page stays, with a warning, when the event is dropped from the review queue (SCRUM-24)", async ({
+  test("SCRUM-208 TC-208-16: an open event page stays, with a warning, when the event is dropped from the review queue", async ({
     page,
   }) => {
     // 1. Sign in as Event Coordinator (coordinator@test.local)
@@ -1281,7 +1281,7 @@ test.describe("SCRUM-17 — Coordinator reviews a submitted request's full detai
     await prisma.event.deleteMany({ where: { id: eventId } });
   });
 
-  test("every field the organiser submitted is visible to the assigned coordinator", async ({
+  test("SCRUM-17 [AC1] TC-17-01: every field the organiser submitted is visible to the assigned coordinator", async ({
     page,
   }) => {
     await page.goto("/login");
@@ -1352,7 +1352,7 @@ test.describe("SCRUM-129 — Event times are shown in Singapore time", () => {
     await prisma.event.deleteMany({ where: { id: eventId } });
   });
 
-  test("SCRUM-129 [AC3 - SGT label] × [AC4 - UTC storage]: the list and details show the stored UTC instants in SGT", async ({
+  test("SCRUM-129 [AC3, AC4] TC-129-04: the list and details show the stored UTC instants in SGT", async ({
     page,
   }) => {
     await page.goto("/login");
