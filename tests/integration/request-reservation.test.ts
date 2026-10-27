@@ -262,6 +262,62 @@ describe.skipIf(!usesLocalDatabase)(
       expect(await totalReserved(roomy)).toBe(1);
     });
 
+    it("SCRUM-226 [AC1, AC3] SCRUM-155 [AC5] TC-155-17: a form opened before someone else reserved part of the request is refused, so no line is reserved twice", async () => {
+      const eventId = await event("PLANNING");
+      const requestId = await approvedRequest(eventId, [
+        { equipmentId: roomy, quantity: 1 },
+        { equipmentId: scarce, quantity: 1 },
+      ]);
+      // Both staff open the request while nothing on it is reserved.
+      const opened = (await getReservableRequests()).find(
+        (request) => request.id === requestId,
+      )!;
+
+      // The first reserves only the roomy line, removing the other row.
+      const first = await reserveEquipmentRequest({
+        requestId,
+        requestVersion: opened.version,
+        ...PERIOD,
+        lines: [{ equipmentId: roomy, quantity: 1 }],
+      });
+      expect(first).toEqual({ ok: true, data: { reserved: 1 } });
+
+      // The second still has both rows, and the scarce line is still to do.
+      const second = await reserveEquipmentRequest({
+        requestId,
+        requestVersion: opened.version,
+        ...PERIOD,
+        lines: [
+          { equipmentId: roomy, quantity: 1 },
+          { equipmentId: scarce, quantity: 1 },
+        ],
+      });
+      expect(second).toEqual({
+        ok: false,
+        error:
+          "This request has changed since you opened it. Choose it again to see it as it is now.",
+      });
+      expect(await reservedFor(requestId)).toEqual([
+        { equipmentId: roomy, quantity: 1 },
+      ]);
+
+      // Opened again, it offers only what is still missing, which then reserves.
+      const reopened = (await getReservableRequests()).find(
+        (request) => request.id === requestId,
+      )!;
+      expect(reopened.lines.map((line) => line.equipment.id)).toEqual([scarce]);
+      expect(
+        await reserveEquipmentRequest({
+          requestId,
+          requestVersion: reopened.version,
+          ...PERIOD,
+          lines: [{ equipmentId: scarce, quantity: 1 }],
+        }),
+      ).toEqual({ ok: true, data: { reserved: 1 } });
+      expect(await totalReserved(roomy)).toBe(1);
+      expect(await totalReserved(scarce)).toBe(1);
+    });
+
     it("SCRUM-155 [AC5] TC-155-08: two requests racing for the last unit never over-allocate, even with their rows in opposite order", async () => {
       const first = await approvedRequest(await event("PLANNING"), [
         { equipmentId: roomy, quantity: 1 },
