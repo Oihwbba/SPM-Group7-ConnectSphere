@@ -31,6 +31,8 @@ export const LIVE_LINE = { removedAt: null } as const;
 /**
  * SCRUM-142 AC1, AC3 — a request the Coordinator can still change or
  * withdraw. A Rejected one is replaced by a new request (SCRUM-27).
+ * SCRUM-186 AC1: these are also the event's active requests, and an event
+ * gets no second one while it has one of them.
  */
 export const CHANGEABLE_REQUEST_STATUSES = [
   "PENDING_REVIEW",
