@@ -118,3 +118,42 @@ the same rows in opposite orders can deadlock, and Postgres then cancels one.
 - Reserving can't deadlock with rejecting the same event (TC-155-15), and
   confirming takes the event first too.
 - A new action that locks any of these rows must take them in the same order.
+
+## Addendum (2026-10-25) — The venue edit takes the venue first, and retries a deadlock (SCRUM-202)
+
+### Context
+
+SCRUM-34's venue edit and retirement (`updateVenue`, `retireVenue` in
+`app/(app)/venues/actions.ts`) lock the `Venue` row first, so two edits can't
+judge the bookings against a venue the other is changing, and then flag the
+bookings the change affects. Approving or holding a booking (SCRUM-53,
+SCRUM-163) locks the event, then the booking, then the venue
+(`lockedVenueTimes`, since SCRUM-160), and flagging a booking inserts
+notifications that take a key-share lock on its event (SCRUM-124). So an edit
+and an approval of a booking at that venue, at the same moment, take the same
+rows in opposite orders. Postgres aborts one as a deadlock (40P01), and the
+venue actions had no retry, so Venue Staff got an unhandled error. Found by
+the GLM review of #213 and the PO's review of #195.
+
+### Decision
+
+The venue edit and retirement keep their order and run once more on a
+deadlock (`onceMoreOnDeadlock`, `lib/db-errors.ts`), as the booking actions
+already do.
+
+**Alternative rejected:** taking the rows in this ADR's order (each affected
+booking's event, then the booking, then the venue). The edit only knows which
+bookings it affects after reading the venue's current values under its lock,
+so it would have to read, lock the events and bookings, lock the venue, and
+then read again in case a new request arrived in between. That is a large
+change to two actions for a case Postgres already resolves safely.
+
+### Consequences
+
+- Nothing is ever half-written: the aborted attempt rolls back, and the retry
+  judges the bookings as the approval left them. A booking it now affects
+  that Venue Staff weren't shown makes the edit warn again (SCRUM-34 AC10).
+- The venue edit and retirement are the one exception to "a new action takes
+  the rows in the same order" above; both are covered by a forced deadlock
+  and a real race in `tests/integration/venue-edit-deadlock.test.ts`
+  (TC-202-02, TC-202-03).

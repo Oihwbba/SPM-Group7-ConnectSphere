@@ -8,6 +8,7 @@ import { prisma } from "@/lib/db";
 import { requirePermission, PermissionError } from "@/lib/auth/can";
 import { err, ok, type ActionResult } from "@/lib/action-result";
 import { liveBookingWhere } from "@/lib/booking-holds";
+import { onceMoreOnDeadlock } from "@/lib/db-errors";
 import { flagArrangements } from "@/lib/reconsideration";
 import {
   openingHoursRows,
@@ -209,6 +210,12 @@ export async function createVenue(input: unknown): Promise<ActionResult<{ id: st
  *
  * The venue row is locked first, so two edits, or an edit and a retirement,
  * can't both judge the bookings against a venue the other is changing.
+ *
+ * SCRUM-202: approving or holding a booking locks the booking and then the
+ * venue (ADR 0007), the reverse of this edit, which locks the venue and then
+ * flags bookings. If the two meet at one booking, Postgres aborts one as a
+ * deadlock; the edit is then run once more, and judges the bookings as the
+ * approval left them.
  */
 export async function updateVenue(
   input: unknown,
@@ -224,7 +231,7 @@ export async function updateVenue(
     const { venueId, confirmedBookingIds, ...data } = parsed.data;
     const now = new Date();
 
-    const flagged = await prisma.$transaction(async (tx) => {
+    const flagged = await onceMoreOnDeadlock(() => prisma.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT "id" FROM "Venue" WHERE "id" = ${venueId} FOR UPDATE`;
       const current = await tx.venue.findUnique({
         where: { id: venueId },
@@ -304,7 +311,7 @@ export async function updateVenue(
       // that reason (SCRUM-26).
       const unfit = await flagAffected(tx, affected, now);
       return unfit + (await flagTimeClashes(tx, clashes, user!.id, now));
-    });
+    }));
 
     revalidateVenue(venueId, flagged);
     return ok({ id: venueId, flagged });
@@ -326,7 +333,8 @@ export async function updateVenue(
  * they confirm, it is retired and the bookings are flagged Needs
  * Reconsideration (SCRUM-26); none is cancelled. The venue row is locked
  * before it is read, so a second retirement waits, then finds it retired and
- * changes nothing.
+ * changes nothing. A deadlock with an approval is run once more, as for an
+ * edit (SCRUM-202).
  */
 export async function retireVenue(
   input: unknown,
@@ -342,7 +350,7 @@ export async function retireVenue(
     const { venueId, confirmedBookingIds } = parsed.data;
     const now = new Date();
 
-    const flagged = await prisma.$transaction(async (tx) => {
+    const flagged = await onceMoreOnDeadlock(() => prisma.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT "id" FROM "Venue" WHERE "id" = ${venueId} FOR UPDATE`;
       const venue = await tx.venue.findUnique({
         where: { id: venueId },
@@ -377,7 +385,7 @@ export async function retireVenue(
         },
       });
       return flagAffected(tx, affected, now);
-    });
+    }));
 
     revalidateVenue(venueId, flagged);
     return ok({ id: venueId, flagged });
