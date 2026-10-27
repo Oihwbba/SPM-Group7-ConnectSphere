@@ -91,7 +91,7 @@ export default async function PlanningEventPage({
           </dl>
           {canEdit && (
             <Link
-              href={`/events?event=${event.id}`}
+              href={`/events/${event.id}`}
               className="inline-block text-sm font-medium text-primary hover:underline"
             >
               Open in my Events

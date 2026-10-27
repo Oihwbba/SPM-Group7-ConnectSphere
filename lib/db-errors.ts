@@ -7,12 +7,18 @@
 /**
  * The PostgreSQL error code and message behind a failed query. Through the
  * `pg` driver adapter, Prisma surfaces a database refusal as a
- * DriverAdapterError whose `cause` carries the original code and message.
+ * DriverAdapterError whose `cause` carries the original code and message. A
+ * raw query (`$queryRaw`) wraps that DriverAdapterError in a P2010 error's
+ * `meta.driverAdapterError` instead (SCRUM-202: an approval aborted as a
+ * deadlock while locking the venue).
  */
 export function postgresError(error: unknown) {
-  const cause = (error as { cause?: unknown } | null)?.cause as
-    | { originalCode?: string; originalMessage?: string }
-    | undefined;
+  type Cause = { originalCode?: string; originalMessage?: string };
+  const wrapped = error as {
+    cause?: Cause;
+    meta?: { driverAdapterError?: { cause?: Cause } };
+  } | null;
+  const cause = wrapped?.cause ?? wrapped?.meta?.driverAdapterError?.cause;
   return { code: cause?.originalCode, message: cause?.originalMessage ?? "" };
 }
 

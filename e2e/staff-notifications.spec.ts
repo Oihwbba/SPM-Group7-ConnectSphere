@@ -100,7 +100,8 @@ test.describe("SCRUM-124 — staff and arrangement notifications", () => {
     await expect(approved).toHaveCount(1);
     await expect(approved).toContainText("Your venue request was approved");
     await approved.click();
-    await coordinator.waitForURL(new RegExp(`/events\\?event=${event.id}$`));
+    // SCRUM-208: the notice opens the event's own page.
+    await coordinator.waitForURL(new RegExp(`/events/${event.id}$`));
   });
 
   test("SCRUM-124 [AC4, AC12] TC-124-04: rejecting a request in the queue tells the Coordinator the reason", async ({

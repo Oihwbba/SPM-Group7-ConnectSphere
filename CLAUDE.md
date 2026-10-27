@@ -149,6 +149,8 @@ module requires us to be transparent about AI assistance.
 - **Test cases, story by story:** `docs/testing/` (format: `docs/testing/README.md`)
 - **Data model & story→table map:** `docs/data-model.md`, `prisma/schema.prisma`
 - **Architecture decisions:** `docs/adr/` (index: `docs/adr/README.md`)
+- **Sprint records, estimation and the Definition of Done:** `docs/scrum/`
+  (index: `docs/scrum/README.md`)
 - **Setup, seed accounts, run commands:** `README.md`
 - **What the AI reviewer checks:** `.github/ai-review/instructions.md`, and
   lessons from past reviews in `.github/ai-review/memory.md`

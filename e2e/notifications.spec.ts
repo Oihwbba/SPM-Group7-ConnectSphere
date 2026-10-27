@@ -96,14 +96,11 @@ test.describe("SCRUM-48 — User views their notification list", () => {
 
     await items.first().click();
 
-    await page.waitForURL(new RegExp(`/events\\?event=${eventId}$`));
+    // SCRUM-208: the notice opens the event's own page.
+    await page.waitForURL(new RegExp(`/events/${eventId}$`));
     await expect(
-      page.getByRole("dialog").getByRole("heading", { name: EVENT_NAME }),
+      page.getByRole("heading", { level: 1, name: EVENT_NAME }),
     ).toBeVisible();
-    // An open dialog hides the header from assistive technology; closing it
-    // also drops ?event=, so a refresh doesn't open it again.
-    await page.keyboard.press("Escape");
-    await page.waitForURL(/\/events$/);
     await expect(bell).toHaveAccessibleName("Notifications, none unread");
     expect(
       (
@@ -129,13 +126,10 @@ test.describe("SCRUM-48 — User views their notification list", () => {
 
     // The seeded "Under Review — Career Fair" belongs to organiser@test.local.
     for (const id of ["evt_under_review", "evt_does_not_exist"]) {
-      await page.goto(`/events?event=${id}`);
-      // The Organiser's list has loaded…
-      await expect(
-        page.getByRole("button", { name: /Create Event Request/i }).first(),
-      ).toBeVisible();
-      // …and no event's details opened.
-      await expect(page.getByRole("dialog")).toHaveCount(0);
+      // An old link goes to the event's page, which is "not found" for both
+      // (SCRUM-68, SCRUM-208 AC5).
+      const response = await page.goto(`/events?event=${id}`);
+      expect(response?.status()).toBe(404);
       await expect(page.getByText("Under Review — Career Fair")).toHaveCount(0);
     }
   });

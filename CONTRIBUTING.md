@@ -242,7 +242,7 @@ accepted it.
 
 | | What happens | Takes |
 |---|---|---|
-| **GitHub Actions** (`build-and-test`) | migrate → seed → typecheck → lint → unit and integration tests with the coverage check → e2e | 10–20 minutes |
+| **GitHub Actions** (`build-and-test`) | migrate → seed → typecheck → lint → unit and integration tests with the coverage check → e2e | 11–18 minutes; cancelled after 35 |
 | **GLM review** | one AI reviewer reads the change (except Markdown, lockfiles and `docs/backlog`) and posts one review comment; skipped for drafts, and passes without a review when only those files changed or when GLM's quota or rate limit stops it | 5–15 minutes after CI finishes |
 
 Every push re-runs both.

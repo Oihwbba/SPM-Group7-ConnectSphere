@@ -288,3 +288,23 @@ export async function openReview(
   await expect(details).toBeVisible();
   return details;
 }
+
+/**
+ * Open an event's page from the events list (SCRUM-208): its name in the
+ * list, then, when given, one of its tabs. Returns the page.
+ */
+export async function openEvent(page: Page, name: string, tab?: string) {
+  if (!/^\/events\/?$/.test(new URL(page.url()).pathname)) {
+    await page.goto("/events");
+  }
+  await page
+    .getByTestId("event-name-link")
+    .getByText(name, { exact: true })
+    .first()
+    .click();
+  const event = page.getByTestId("event-page");
+  // A navigation, not a pop-up: allow for the page's first load.
+  await expect(event.getByRole("heading", { level: 1, name })).toBeVisible({ timeout: 15_000 });
+  if (tab) await event.getByRole("tab", { name: new RegExp(`^${tab}`) }).click();
+  return event;
+}

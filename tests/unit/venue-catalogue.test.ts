@@ -679,6 +679,48 @@ describe("retireVenue — SCRUM-34 AC8, AC11", () => {
   });
 });
 
+describe("a deadlock with a booking decision — SCRUM-202 AC1", () => {
+  const deadlock = () =>
+    Object.assign(new Error("deadlock detected"), {
+      name: "DriverAdapterError",
+      cause: { originalCode: "40P01", originalMessage: "deadlock detected" },
+    });
+
+  it("SCRUM-202 [AC1] TC-202-01: an edit aborted as a deadlock is run once more and saved", async () => {
+    db.$transaction
+      .mockRejectedValueOnce(deadlock())
+      .mockImplementation((work: (tx: typeof db) => unknown) => work(db));
+
+    expect(await updateVenue({ ...input, capacity: "120", venueId: "ven_1" })).toEqual({
+      ok: true,
+      data: { id: "ven_1", flagged: 0 },
+    });
+    expect(db.$transaction).toHaveBeenCalledTimes(2);
+    expect(db.venue.update).toHaveBeenCalledTimes(1);
+  });
+
+  it("SCRUM-202 [AC1] TC-202-01: a retirement aborted as a deadlock is run once more and saved", async () => {
+    db.venue.findUnique.mockResolvedValue({ name: "Rooftop Garden", isActive: true });
+    db.$transaction
+      .mockRejectedValueOnce(deadlock())
+      .mockImplementation((work: (tx: typeof db) => unknown) => work(db));
+
+    expect(await retireVenue({ venueId: "ven_1" })).toEqual({
+      ok: true,
+      data: { id: "ven_1", flagged: 0 },
+    });
+    expect(db.$transaction).toHaveBeenCalledTimes(2);
+  });
+
+  it("SCRUM-202 [AC1] TC-202-01: a second deadlock in a row is thrown, not retried again", async () => {
+    db.$transaction.mockRejectedValue(deadlock());
+
+    await expect(updateVenue({ ...input, venueId: "ven_1" })).rejects.toThrow("deadlock detected");
+    await expect(retireVenue({ venueId: "ven_1" })).rejects.toThrow("deadlock detected");
+    expect(db.$transaction).toHaveBeenCalledTimes(4);
+  });
+});
+
 describe("an unexpected database error — SCRUM-34", () => {
   it("is thrown, not reported as a refusal", async () => {
     db.$transaction.mockRejectedValue(new Error("connection lost"));

@@ -70,7 +70,10 @@ function sessionFor(role: Role, id: string): Session {
 const ATTENDANCE = { fieldName: "expectedAttendance", oldValue: "40", newValue: "80", isMajor: true };
 const DESCRIPTION = { fieldName: "description", oldValue: "Old", newValue: "New", isMajor: false };
 
-const pendingRequest = (fields = [ATTENDANCE], requestsCancellation = false) => ({
+/** A requested change as stored: either value is null when the field was empty. */
+type Field = { fieldName: string; oldValue: string | null; newValue: string | null; isMajor: boolean };
+
+const pendingRequest = (fields: Field[] = [ATTENDANCE], requestsCancellation = false) => ({
   status: "PENDING_REVIEW",
   reason: requestsCancellation ? "The sponsor pulled out." : "More people coming.",
   requestsCancellation,
@@ -387,6 +390,28 @@ describe("decideChangeRequest — attendance and cancellation (SCRUM-128 AC7, AC
       expect(tx.event.update.mock.lastCall![0].data).toMatchObject({ registrationEnabled: true });
       expect(tx.notification.createMany).not.toHaveBeenCalledWith(
         expect.objectContaining({ data: expect.arrayContaining([expect.objectContaining({ title: "Registration closed" })]) }),
+      );
+    });
+
+    it("SCRUM-128 [AC11] TC-128-16, SCRUM-45 [AC13]: a Registration closed notice confirming already wrote is withdrawn before the new one, so nobody is told twice", async () => {
+      // An event confirmed before Registration needed was asked (SCRUM-171)
+      // counts as needing it, so confirming already wrote its notice.
+      tx.eventChangeRequest.findUniqueOrThrow.mockResolvedValue(
+        pendingRequest([
+          { fieldName: "registrationRequired", oldValue: null, newValue: "true", isMajor: false },
+        ]),
+      );
+      const startAt = new Date("2099-03-01T02:00:00.000Z");
+      confirmedWith({ startAt, registrationClosesAt: null });
+
+      await decideChangeRequest({ changeRequestId: "cr1", decision: "APPROVED" });
+
+      expect(tx.notification.updateMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: expect.objectContaining({ title: "Registration closed" }) }),
+      );
+      expect(tx.notification.createMany).toHaveBeenCalledWith({ data: closingNotice(startAt) });
+      expect(tx.notification.updateMany.mock.invocationCallOrder[0]).toBeLessThan(
+        tx.notification.createMany.mock.invocationCallOrder[0],
       );
     });
 

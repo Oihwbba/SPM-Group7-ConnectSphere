@@ -6,6 +6,8 @@ import {
   getRequestableVenues,
   getSuitabilityJudgements,
 } from "../queries";
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 import { RequestForm } from "./request-form";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
@@ -48,8 +50,19 @@ export default async function RequestVenuePage({
     )
     .map((event) => event.id);
 
+  // SCRUM-209 AC1: from the event's page, the request leads back there.
+  const fromEvent = one(params.return) === "event" && Boolean(initialEventId);
+
   return (
     <div className="space-y-6">
+      {fromEvent && (
+        <Link
+          href={`/events/${initialEventId}?tab=arrangements`}
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground"
+        >
+          <ArrowLeft className="h-4 w-4" aria-hidden /> Back to event
+        </Link>
+      )}
       <div className="space-y-1">
         <h1 className="text-2xl font-semibold tracking-tight">
           Request a venue
@@ -72,6 +85,7 @@ export default async function RequestVenuePage({
         }}
         judgements={judgements}
         judgeableEventIds={judgeableEventIds}
+        returnToEvent={fromEvent}
       />
     </div>
   );

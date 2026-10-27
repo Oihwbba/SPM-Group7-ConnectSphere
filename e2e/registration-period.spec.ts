@@ -1,7 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import { prisma } from "@/lib/db";
 
-import { usesLocalDatabase } from "./helpers";
+import { usesLocalDatabase, openEvent } from "./helpers";
 
 /**
  * SCRUM-75 AC6 in a real browser: the Organiser closes registration, the
@@ -23,11 +23,9 @@ async function signIn(page: Page, email: string) {
 }
 
 async function registrationPanel(page: Page, name: string) {
-  await page
-    .getByRole("row", { name: new RegExp(name) })
-    .getByTestId("view-details-button")
-    .click();
-  const panel = page.getByRole("dialog").getByTestId("registration-control");
+  // SCRUM-208: registration is on the event page's Registrations tab.
+  const event = await openEvent(page, name, "Registrations");
+  const panel = event.getByTestId("registration-control");
   await expect(panel).toBeVisible();
   return panel;
 }

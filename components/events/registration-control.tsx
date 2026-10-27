@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { Users } from "lucide-react";
+import { CalendarRange, CircleDot, Users } from "lucide-react";
+import { StatStrip } from "@/components/app/stat-strip";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -18,7 +19,18 @@ import {
  * and assigned Coordinator see where registration stands and can close it,
  * or reopen it until the event's start. Shows nothing for any other event.
  */
-export function RegistrationControl({ eventId }: { eventId: string }) {
+export function RegistrationControl({
+  eventId,
+  children,
+}: {
+  eventId: string;
+  /**
+   * SCRUM-208: shows what sits below the state, given the Close or Reopen
+   * button to place there (the registrations list puts it in its header).
+   * Without it, the button stays in this card.
+   */
+  children?: (action: React.ReactNode) => React.ReactNode;
+}) {
   // undefined while loading; null when the event has no registration to control.
   const [control, setControl] = useState<Control | null | undefined>(undefined);
   const [loadFailed, setLoadFailed] = useState(false);
@@ -41,7 +53,7 @@ export function RegistrationControl({ eventId }: { eventId: string }) {
     };
   }, [eventId]);
 
-  if (control === null) return null;
+  if (control === null) return children ? <>{children(null)}</> : null;
 
   function act(action: typeof closeRegistration) {
     setError(null);
@@ -61,8 +73,37 @@ export function RegistrationControl({ eventId }: { eventId: string }) {
     });
   }
 
-  return (
-    <Card className="overflow-hidden" data-testid="registration-control">
+  const action = control ? (
+    <div className="flex flex-wrap items-center gap-2">
+      {error && (
+        <p role="alert" className="text-destructive">
+          {error}
+        </p>
+      )}
+      {control.canClose && (
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={pending}
+          onClick={() => act(closeRegistration)}
+        >
+          {pending ? "Closing…" : "Close registration"}
+        </Button>
+      )}
+      {control.canReopen && (
+        <Button
+          size="sm"
+          disabled={pending}
+          onClick={() => act(reopenRegistration)}
+        >
+          {pending ? "Reopening…" : "Reopen registration"}
+        </Button>
+      )}
+    </div>
+  ) : null;
+
+  const card = (
+    <Card className="overflow-hidden" data-testid={children ? undefined : "registration-control"}>
       <CardHeader className="bg-muted/30 px-4 py-3">
         <CardTitle className="flex items-center gap-2 text-sm font-semibold">
           <Users aria-hidden="true" className="h-4 w-4 text-primary" />{" "}
@@ -80,43 +121,58 @@ export function RegistrationControl({ eventId }: { eventId: string }) {
           </p>
         ) : (
           <>
-            <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2">
-              <dt className="font-semibold text-muted-foreground">Status</dt>
-              <dd data-testid="registration-control-state">{control.label}</dd>
-              <dt className="font-semibold text-muted-foreground">Period</dt>
-              <dd>{control.period}</dd>
-              <dt className="font-semibold text-muted-foreground">Registered</dt>
-              <dd>
-                {control.registered} of {control.capacity}
-              </dd>
-            </dl>
-            {error && (
-              <p role="alert" className="text-destructive">
-                {error}
-              </p>
-            )}
-            {control.canClose && (
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={pending}
-                onClick={() => act(closeRegistration)}
-              >
-                {pending ? "Closing…" : "Close registration"}
-              </Button>
-            )}
-            {control.canReopen && (
-              <Button
-                size="sm"
-                disabled={pending}
-                onClick={() => act(reopenRegistration)}
-              >
-                {pending ? "Reopening…" : "Reopen registration"}
-              </Button>
-            )}
+            {/* Shared page conventions: the state of registration at a glance. */}
+            <StatStrip
+              stats={[
+                {
+                  icon: CircleDot,
+                  label: "Status",
+                  value: control.label,
+                  testId: "registration-control-state",
+                  // Open is good news; closed, by hand or by time, is not.
+                  tone:
+                    control.state === "OPEN"
+                      ? "success"
+                      : control.state === "CLOSED" || control.state === "EXPIRED"
+                        ? "danger"
+                        : undefined,
+                },
+                {
+                  icon: CalendarRange,
+                  label: "Period",
+                  // When it opens, and when it closes, one to a line.
+                  value: control.period.split(" · ").map((part) => (
+                    <span key={part} className="block">
+                      {part}
+                    </span>
+                  )),
+                },
+                {
+                  icon: Users,
+                  label: "Registered",
+                  value: (
+                    <>
+                      {control.registered}
+                      <span className="text-sm font-normal text-muted-foreground">
+                        {" "}
+                        of {control.capacity}
+                      </span>
+                    </>
+                  ),
+                },
+              ]}
+            />
+            {!children && action}
           </>
         )}
       </CardContent>
     </Card>
+  );
+  if (!children) return card;
+  return (
+    <div className="space-y-4" data-testid="registration-control">
+      {card}
+      {children(action)}
+    </div>
   );
 }
