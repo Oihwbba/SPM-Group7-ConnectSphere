@@ -158,7 +158,8 @@ Availability, Venue Catalogue; All Events.
 Request Venue, Availability and Venue Catalogue beneath it, indented; selected
 again, it closes. 2: on one of its pages, Venues starts open, with that page
 marked current. 3: the bar shows Events, Venues, Equipment Requests and All
-Events; Venues opens its four links in a panel above the bar, which closes
-once a link is chosen. The page doesn't scroll sideways.
+Events; Venues opens its four links in a panel above the bar, and its
+button reads as expanded while the panel is open; the panel closes once a
+link is chosen. The page doesn't scroll sideways.
 
 *Automated:* `e2e/menu-groups.spec.ts` both "SCRUM-210 [AC1] TC-210-09" tests.

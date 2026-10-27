@@ -174,7 +174,11 @@ test.describe("SCRUM-210 — Menus grouped by task", () => {
     for (const name of ["Events", "Equipment Requests", "All Events"]) {
       await expect(nav.getByRole("link", { name, exact: true })).toBeVisible();
     }
-    await nav.getByRole("button", { name: "Venues", exact: true }).click();
+    const venues = nav.getByRole("button", { name: "Venues", exact: true });
+    await expect(venues).toHaveAttribute("aria-expanded", "false");
+    await venues.click();
+    // The button says its panel is open.
+    await expect(venues).toHaveAttribute("aria-expanded", "true");
     const panel = nav.getByRole("group", { name: "Venues" });
     expect(await names(panel.getByRole("link"))).toEqual(MENUS.Coordinator.groups[1][1]);
     for (const link of await panel.getByRole("link").all()) await expect(link).toBeVisible();

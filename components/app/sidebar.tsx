@@ -211,7 +211,8 @@ export function Sidebar({ roles }: { roles: Role[] }) {
                 type="button"
                 title={group.heading}
                 aria-label={group.heading}
-                aria-expanded={open}
+                // On a phone the group opens in the panel above the bar.
+                aria-expanded={open || phoneGroup === group.id}
                 onClick={() => {
                   // The rail opens the group in place; a phone, in its panel.
                   if (window.matchMedia("(min-width: 768px)").matches) {
