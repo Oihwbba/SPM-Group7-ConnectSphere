@@ -125,7 +125,8 @@ test.describe("SCRUM-38 — Search and filter venues", () => {
     });
 
     await signIn(page, "coordinator@test.local");
-    const details = await openDetails(page, name);
+    // SCRUM-209: Find a venue is in the Arrangements tab's Venues section.
+    const details = await openDetails(page, name, "Arrangements");
     await details.getByRole("link", { name: "Find a venue" }).click();
     await page.waitForURL(/\/venues\/search\?event=/);
 

@@ -59,7 +59,7 @@ test.describe("SCRUM-18 — Request clarification on a submitted request", () =>
     await prisma.event.deleteMany({ where: { id: eventId } });
   });
 
-  test("coordinator asks, organiser replies, coordinator sees the answer (AC: sub-state, notify, respond, re-review)", async ({
+  test("SCRUM-18 [AC1, AC2, AC4, AC5, AC6] TC-18-01, TC-18-03, TC-18-05, TC-18-07: the coordinator asks, the organiser replies, and the coordinator sees the answer", async ({
     page,
   }) => {
     const question = "Can you confirm the expected headcount?";
@@ -108,12 +108,16 @@ test.describe("SCRUM-18 — Request clarification on a submitted request", () =>
 
     // AC: a second open clarification on the same event is refused.
     await coordinatorRow.getByRole("button", { name: "Ask" }).click();
+    // SCRUM-183: the Ask dialog is open before it is typed in, and gone
+    // before the next sign-in.
+    await expect(askDialog).toBeVisible();
     await askDialog.getByLabel("Clarification message").fill("A second question");
     await askDialog.getByRole("button", { name: "Send request" }).click();
     await expect(
       page.getByText("There is already an open clarification request on this event."),
     ).toBeVisible();
     await page.keyboard.press("Escape");
+    await expect(askDialog).toBeHidden();
 
     // --- Organiser sees the question and replies --------------------------
     await signIn(page, "organiser@test.local");

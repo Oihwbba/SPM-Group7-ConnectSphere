@@ -1,5 +1,7 @@
 "use client";
 
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import {
   useEffect,
   useState,
@@ -212,6 +214,7 @@ export function RequestForm({
   initialNeeds,
   judgements = [],
   judgeableEventIds = [],
+  returnToEvent = false,
 }: {
   events: BookableEvent[];
   venues: RequestableVenue[];
@@ -224,7 +227,13 @@ export function RequestForm({
   judgements?: JudgementRow[];
   /** SCRUM-40 AC8 — the events this Coordinator may record a judgement for. */
   judgeableEventIds?: string[];
+  /**
+   * SCRUM-209 AC1: opened from the event's page (through venue search), so
+   * a request made goes back there, saying so, instead of staying here.
+   */
+  returnToEvent?: boolean;
 }) {
+  const router = useRouter();
   const facilityOptions = Array.from(
     new Set(venues.flatMap((v) => v.facilities)),
   ).sort();
@@ -389,6 +398,13 @@ export function RequestForm({
       });
       if (result.ok) {
         setFieldErrors({});
+        if (result.data.created && returnToEvent) {
+          toast.success(
+            `Venue requested: ${result.data.booking.venueName}. It is pending Venue Staff approval.`,
+          );
+          router.push(`/events/${form.eventId}?tab=arrangements`);
+          return;
+        }
         if (result.data.created) setForm(emptyForm);
         setOutcome({
           kind: result.data.created ? "created" : "existing",

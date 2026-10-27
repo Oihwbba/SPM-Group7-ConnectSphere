@@ -81,6 +81,7 @@ export function NewRequestDialog({
   equipment,
   onDone,
   editing,
+  fixedEventId,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -88,8 +89,13 @@ export function NewRequestDialog({
   equipment: EquipmentOption[];
   onDone: (requestId: string) => void;
   editing?: { requestId: string; eventName: string; lines: Line[] };
+  /**
+   * SCRUM-209 AC2: raised from the event's own page, so the event is already
+   * chosen and there is no event to pick.
+   */
+  fixedEventId?: string;
 }) {
-  const [eventId, setEventId] = useState("");
+  const [eventId, setEventId] = useState(fixedEventId ?? "");
   const [notes, setNotes] = useState("");
   const [lines, setLines] = useState<Line[]>(editing?.lines ?? []);
   const [draft, setDraft] = useState(EMPTY_DRAFT);
@@ -103,7 +109,7 @@ export function NewRequestDialog({
   const draftType = equipment.find((item) => item.id === draft.equipmentId);
 
   const reset = () => {
-    setEventId("");
+    setEventId(fixedEventId ?? "");
     setNotes("");
     setLines(editing?.lines ?? []);
     setDraft(EMPTY_DRAFT);
@@ -213,7 +219,7 @@ export function NewRequestDialog({
         }
         if (result.data.existing) {
           toast.info(
-            "This event already has a request waiting for review, so no new one was made. It's highlighted below.",
+            "This event already has an equipment request, so no new one was made. It's highlighted below: use Change lines on it to add or change equipment.",
           );
         } else {
           toast.success("Request submitted. It's now Pending Review.");
@@ -238,12 +244,14 @@ export function NewRequestDialog({
           <DialogDescription>
             {editing
               ? `For ${editing.eventName}. Saving sends the request back to Pending Review for Technical Support to re-check, and equipment reserved for a changed or removed line is released.`
-              : "Technical Support reviews each request and updates its status."}
+              : fixedEventId && selectedEvent
+                ? `For ${selectedEvent.name}. Technical Support reviews the request and updates its status.`
+                : "Technical Support reviews each request and updates its status."}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6">
-          <div className={editing ? "hidden" : "space-y-2"}>
+          <div className={editing || fixedEventId ? "hidden" : "space-y-2"}>
             <Label htmlFor="request-event">Event</Label>
             <AppSelect
               id="request-event"
