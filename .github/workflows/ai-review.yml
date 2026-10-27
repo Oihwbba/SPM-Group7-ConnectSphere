@@ -11,9 +11,12 @@ name: GLM Code Review
 # SCRUM key the PR names.
 #
 # The check turns red when the review finds a critical issue, or when no review
-# could be completed. It is a required status check on `main` alongside
-# `build-and-test`, so neither can merge. If GLM stops before answering, the
-# script retries once with less thinking. See docs/adr/0008.
+# could be completed. If GLM stops before answering, the script retries once
+# with less thinking. One exception (SCRUM-225): when GLM won't serve, because
+# the quota is used up (HTTP 429, code 1310) or its rate limit (code 1302)
+# outlasts a few waits, the review is skipped with a comment saying so and the
+# check passes, rather than every PR going red over GLM; `build-and-test` still
+# gates the merge. See docs/adr/0008.
 #
 # One-time setup (repo owner): Settings -> Secrets and variables -> Actions ->
 # New repository secret `ZHIPU_API_KEY`. Until it exists the check fails, since

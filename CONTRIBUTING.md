@@ -165,7 +165,8 @@ The graders check that tests are **evidence**, not just that they exist.
 
 `main` is protected. You can't push to it, and a pull request can merge only
 when both required checks are green: **`build-and-test`** (including e2e) and
-the **GLM review**, which fails on a critical finding. Once both pass, merge
+the **GLM review**, which fails on a critical finding (it passes, skipped,
+when GLM's quota or rate limit stops it reviewing). Once both pass, merge
 your own PR. `main` is what deploys to production and what the graders see,
 so it stays green by construction, not by discipline.
 
@@ -242,7 +243,7 @@ accepted it.
 | | What happens | Takes |
 |---|---|---|
 | **GitHub Actions** (`build-and-test`) | migrate → seed → typecheck → lint → unit and integration tests with the coverage check → e2e | 11–18 minutes; cancelled after 35 |
-| **GLM review** | one AI reviewer reads the change (except Markdown, lockfiles and `docs/backlog`) and posts one review comment; skipped for drafts, and passes without a review when only those files changed | 5–15 minutes after CI finishes |
+| **GLM review** | one AI reviewer reads the change (except Markdown, lockfiles and `docs/backlog`) and posts one review comment; skipped for drafts, and passes without a review when only those files changed or when GLM's quota or rate limit stops it | 5–15 minutes after CI finishes |
 
 Every push re-runs both.
 
@@ -296,7 +297,12 @@ misreading something deliberate, you can also add a dated lesson by hand.
 
 **When it fails to run.** It retries once. If that also fails, the check
 turns red and says why: re-run the **GLM Code Review** job from the PR's
-Checks tab. A PR whose reviewable diff is over 400,000 characters is not
+Checks tab. The exception is GLM refusing to serve. When its quota is used
+up it refuses every call until the reset; when many reviews call at once its
+rate limit refuses some, and the review waits and tries again a few times.
+If GLM still won't serve, the review is skipped, the comment says why, and
+the check passes. Read the diff yourself before merging, or re-run the job
+later. A PR whose reviewable diff is over 400,000 characters is not
 reviewed and fails the check, so split it.
 
 **Why GLM and not Copilot.** Copilot code review spends Copilot credits,

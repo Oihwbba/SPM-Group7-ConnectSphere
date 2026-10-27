@@ -43,6 +43,10 @@ const MIN_RETRY_MS = 8 * 60 * 1000;
 // high and 19 at low — which is why reviews ran for 10-15 minutes. Reviews use
 // "high"; the retry uses "low", so it finishes.
 const EFFORTS = ["high", "low"];
+// GLM's rate limit (code 1302) trips when many reviews call at once, as after
+// a merge brings every open pull request up to date. Each wait is stretched by
+// up to as much again at random, so waiting reviews don't all call together.
+export const RATE_LIMIT_WAITS_MS = [30_000, 60_000, 120_000, 240_000];
 // GLM-5.3 accepts 1M input tokens, so this isn't a model limit: it keeps one
 // review to roughly 100K tokens of diff, about 2.5x the largest diff so far,
 // so the review stays thorough and inside the time budget. A bigger diff fails
@@ -459,6 +463,45 @@ export function checkCompletion({ content, finishReason, usage }) {
   throw new Error(`GLM stopped before answering: ${why}${tokens}.`);
 }
 
+/**
+ * BigModel refusing to serve at all, HTTP 429 (SCRUM-225): code 1310 once the
+ * Coding Plan's weekly or monthly quota is used up, until the reset time its
+ * message names (Beijing time, UTC+8); code 1302 for its short rate limit.
+ */
+export class GlmUnavailableError extends Error {
+  constructor(kind, detail) {
+    super(`${kind === "quota" ? "GLM quota used up" : "GLM rate limit"}: ${detail}`);
+    this.kind = kind;
+    this.resetsAt = kind === "quota" ? (/\d{4}-\d{2}-\d{2} \d{2}:\d{2}(?::\d{2})?/.exec(detail)?.[0] ?? null) : null;
+  }
+}
+
+const UNAVAILABLE_CODES = new Map([
+  ["1310", "quota"],
+  ["1302", "rate"],
+]);
+
+/**
+ * askGlm, waiting out the rate limit a few times while the deadline allows.
+ * A used-up quota isn't waited out: it lasts until the reset.
+ */
+export async function askGlmPatiently(
+  { deadline, ...request },
+  { waits = RATE_LIMIT_WAITS_MS, sleep = (ms) => new Promise((done) => setTimeout(done, ms)) } = {},
+) {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await askGlm({ ...request, timeoutMs: deadline - Date.now() });
+    } catch (error) {
+      const wait = waits[attempt] == null ? null : waits[attempt] * (1 + Math.random());
+      const rateLimited = error instanceof GlmUnavailableError && error.kind === "rate";
+      if (!rateLimited || wait == null || Date.now() + wait + MIN_RETRY_MS > deadline) throw error;
+      console.log(`::warning::GLM's rate limit refused the call; trying again in ${Math.round(wait / 1000)}s.`);
+      await sleep(wait);
+    }
+  }
+}
+
 /** One streamed GLM call; returns the answer text (thinking is ignored), why it stopped, and usage. */
 export async function askGlm({ apiKey, model, system, user, timeoutMs, effort }) {
   const response = await fetch(GLM_URL, {
@@ -483,6 +526,8 @@ export async function askGlm({ apiKey, model, system, user, timeoutMs, effort })
 
   if (!response.ok) {
     const detail = (await response.text()).slice(0, 300);
+    const kind = response.status === 429 && UNAVAILABLE_CODES.get(/"code"\s*:\s*"?(\d+)/.exec(detail)?.[1]);
+    if (kind) throw new GlmUnavailableError(kind, detail);
     throw new Error(`GLM request failed: HTTP ${response.status} ${detail}`);
   }
 
@@ -577,6 +622,30 @@ export function renderTooLargeReview({ model, sha, size, max, runUrl }) {
       "or ask Jin Hong to merge it as admin after a human review.",
     "",
     `<sub>${model} · no GLM call made · [workflow run](${runUrl})</sub>`,
+  ].join("\n");
+}
+
+/**
+ * The comment for a review skipped because GLM wouldn't serve: its quota is
+ * used up, or its rate limit outlasted every wait. The code was never looked
+ * at, but the check passes rather than blocking every pull request on GLM;
+ * `build-and-test` still gates the merge (SCRUM-225).
+ */
+export function renderUnavailableSkipped({ model, sha, kind, resetsAt, seconds, runUrl }) {
+  const why =
+    kind === "quota"
+      ? `the GLM quota is used up${resetsAt ? ` until ${resetsAt} (UTC+8)` : ""}`
+      : "GLM's rate limit kept refusing the call, after every wait";
+  return [
+    MARKER,
+    `## 🤖 ${model} code review`,
+    "",
+    `⏭️ **Review skipped** for commit \`${sha.slice(0, 7)}\`: ${why}, ` +
+      "so this check passed without a review. `build-and-test` still has to pass before merging.",
+    "",
+    `Read the diff yourself before merging, or re-run the **GLM Code Review** job ${kind === "quota" ? "after the reset" : "later"} to get a review.`,
+    "",
+    `<sub>${model} · ${seconds}s · [workflow run](${runUrl})</sub>`,
   ].join("\n");
 }
 
@@ -1420,6 +1489,80 @@ function capped(text, max) {
   return text.length > max ? `${text.slice(0, max)}\n\n[truncated at ${formatCount(max)} characters]` : text;
 }
 
+/**
+ * The GLM attempts, sharing one time budget: high effort, then, if GLM
+ * stopped before answering, a retry that thinks less, since a shorter think
+ * is far less likely to be cut off. `ask(effort, deadline)` makes one call.
+ * GLM refusing to serve (SCRUM-225) ends the attempts at once: a retry would
+ * meet the same quota or rate limit. Returns the review, or why there is none.
+ */
+export async function attemptReview({
+  ask,
+  efforts = EFFORTS,
+  budgetMs = GLM_BUDGET_MS,
+  minRetryMs = MIN_RETRY_MS,
+  log = console.log,
+}) {
+  const failures = [];
+  const started = Date.now();
+  for (const [index, effort] of efforts.entries()) {
+    const remaining = started + budgetMs - Date.now();
+    if (index > 0 && remaining < minRetryMs) {
+      failures.push(`no retry: only ${Math.round(remaining / 60_000)} minute(s) of the time budget were left`);
+      break;
+    }
+    const attemptStarted = Date.now();
+    try {
+      const result = await ask(effort, Date.now() + remaining);
+      log(
+        `GLM attempt ${index + 1}${effort ? ` (${effort} effort)` : ""}: finish_reason=${result.finishReason ?? "none"}, ` +
+          `${formatCount(result.usage?.completion_tokens ?? 0)} output tokens ` +
+          `(${formatCount(result.usage?.completion_tokens_details?.reasoning_tokens ?? 0)} thinking), ` +
+          `${Math.round((Date.now() - attemptStarted) / 1000)}s.`,
+      );
+      checkCompletion(result);
+      return { review: { ...parseReview(result.content), usage: result.usage }, failures };
+    } catch (error) {
+      if (error instanceof GlmUnavailableError) return { unavailable: error, failures };
+      failures.push(`attempt ${index + 1}: ${oneLine(error.message)}`);
+      log(`::warning::GLM attempt ${index + 1} failed: ${error.message}`);
+    }
+  }
+  return { failures };
+}
+
+/**
+ * What to post, log and exit with when no review came back. GLM refusing to
+ * serve skips the review and passes the check (SCRUM-225); any other failure
+ * fails it, since a required check must not pass on a review that didn't run.
+ *
+ * @param {{ model: string, sha: string, unavailable?: GlmUnavailableError, failures: string[], seconds: number, runUrl: string }} result
+ */
+export function unreviewedOutcome({ model, sha, unavailable, failures, seconds, runUrl }) {
+  if (unavailable) {
+    return {
+      body: renderUnavailableSkipped({ model, sha, kind: unavailable.kind, resetsAt: unavailable.resetsAt, seconds, runUrl }),
+      log: `::warning::GLM review skipped, so this check passes without one: ${oneLine(unavailable.message)}`,
+      exitCode: 0,
+    };
+  }
+  return {
+    body: [
+      MARKER,
+      `## 🤖 ${model} code review`,
+      "",
+      `❌ **The review did not complete** for commit \`${sha.slice(0, 7)}\`, so this required check failed. ` +
+        "Re-run the failed **GLM Code Review** job, or push a new commit.",
+      "",
+      ...failures.map((failure) => `- ${failure}`),
+      "",
+      `<sub>${model} · ${seconds}s · [workflow run](${runUrl})</sub>`,
+    ].join("\n"),
+    log: `::error::The GLM review did not complete: ${failures.join("; ")}`,
+    exitCode: 1,
+  };
+}
+
 async function main() {
   const env = process.env;
   if (!env.ZHIPU_API_KEY) {
@@ -1648,55 +1791,23 @@ async function main() {
     .filter(Boolean)
     .join("\n\n");
 
-  // If GLM stops before answering, the retry thinks less: a shorter think is far
-  // less likely to be cut off.
-  const failures = [];
-  let review;
   // The GLM budget starts now, so waiting for CI doesn't eat into it.
-  const glmStarted = Date.now();
-  for (const [index, effort] of EFFORTS.entries()) {
-    const remaining = glmStarted + GLM_BUDGET_MS - Date.now();
-    if (index > 0 && remaining < MIN_RETRY_MS) {
-      failures.push(`no retry: only ${Math.round(remaining / 60_000)} minute(s) of the time budget were left`);
-      break;
-    }
-    const attemptStarted = Date.now();
-    try {
-      const result = await askGlm({ apiKey: env.ZHIPU_API_KEY, model, system, user, timeoutMs: remaining, effort });
-      console.log(
-        `GLM attempt ${index + 1}${effort ? ` (${effort} effort)` : ""}: finish_reason=${result.finishReason ?? "none"}, ` +
-          `${formatCount(result.usage?.completion_tokens ?? 0)} output tokens ` +
-          `(${formatCount(result.usage?.completion_tokens_details?.reasoning_tokens ?? 0)} thinking), ` +
-          `${Math.round((Date.now() - attemptStarted) / 1000)}s.`,
-      );
-      checkCompletion(result);
-      review = { ...parseReview(result.content), usage: result.usage };
-      break;
-    } catch (error) {
-      failures.push(`attempt ${index + 1}: ${oneLine(error.message)}`);
-      console.log(`::warning::GLM attempt ${index + 1} failed: ${error.message}`);
-    }
-  }
-
+  const { review, unavailable, failures } = await attemptReview({
+    ask: (effort, deadline) =>
+      askGlmPatiently({ apiKey: env.ZHIPU_API_KEY, model, system, user, deadline, effort }),
+  });
   if (!review) {
-    await upsertReviewComment(
-      github,
-      repo,
-      env.PR_NUMBER,
-      [
-        MARKER,
-        `## 🤖 ${model} code review`,
-        "",
-        `❌ **The review did not complete** for commit \`${env.HEAD_SHA.slice(0, 7)}\`, so this required check failed. ` +
-          "Re-run the failed **GLM Code Review** job, or push a new commit.",
-        "",
-        ...failures.map((failure) => `- ${failure}`),
-        "",
-        `<sub>${model} · ${elapsed()}s · [workflow run](${env.RUN_URL})</sub>`,
-      ].join("\n"),
-    );
-    console.log(`::error::The GLM review did not complete: ${failures.join("; ")}`);
-    process.exitCode = 1;
+    const outcome = unreviewedOutcome({
+      model,
+      sha: env.HEAD_SHA,
+      unavailable,
+      failures,
+      seconds: elapsed(),
+      runUrl: env.RUN_URL,
+    });
+    await upsertReviewComment(github, repo, env.PR_NUMBER, outcome.body);
+    console.log(outcome.log);
+    process.exitCode = outcome.exitCode;
     return;
   }
   if (failures.length) {
