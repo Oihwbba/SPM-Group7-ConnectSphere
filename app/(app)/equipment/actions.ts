@@ -533,8 +533,10 @@ export async function reserveEquipmentRequest(
       },
     );
 
-    if ("error" in result) return err(result.error, result.fieldErrors);
+    // SCRUM-226: a refusal refreshes the page too, so a request someone else
+    // reserved part of is chosen again with its current version.
     revalidatePath("/equipment");
+    if ("error" in result) return err(result.error, result.fieldErrors);
     return ok(result);
   } catch (error) {
     if (error instanceof PermissionError) return err(error.message);

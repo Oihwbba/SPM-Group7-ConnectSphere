@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
 import type { Session } from "next-auth";
 import type { Role } from "@prisma/client";
+import { revalidatePath } from "next/cache";
 
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
@@ -180,6 +181,8 @@ describe("reserveEquipmentRequest — SCRUM-226", () => {
       fieldErrors: undefined,
     });
     expect(tx.reservation.createMany).not.toHaveBeenCalled();
+    // The page is refreshed, so choosing the request again sends its new version.
+    expect(revalidatePath).toHaveBeenCalledWith("/equipment");
   });
 
   it("SCRUM-226 [AC2] TC-155-17: a form whose version still matches reserves as before, with its rows edited", async () => {
