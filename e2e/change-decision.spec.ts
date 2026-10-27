@@ -91,8 +91,77 @@ test.describe("SCRUM-128 — Decide a change request and apply it in one step", 
       },
     });
     await prisma.notification.deleteMany({ where: { eventId } });
+    await prisma.registration.deleteMany({ where: { eventId } });
     await prisma.booking.deleteMany({ where: { eventId } });
     await prisma.event.deleteMany({ where: { id: eventId } });
+  });
+
+  test("SCRUM-128 [AC11] TC-128-16: approving Registration needed No → Yes on a Confirmed event opens it to Attendees, who can then register", async ({
+    page,
+  }) => {
+    // The browser half of AC11, which GLM's review of #239 found
+    // only the unit and integration tests covered.
+    const name = `SCRUM-128 Registration ${Date.now()}`;
+    eventId = (
+      await prisma.event.create({
+        data: {
+          name,
+          purpose: "SCRUM-128 journey",
+          description: "Owned by the SCRUM-128 e2e spec.",
+          status: "CONFIRMED",
+          organiserId: "usr_organiser",
+          coordinatorId: "usr_coordinator",
+          ...PERIOD,
+          expectedAttendance: 40,
+          registrationRequired: false,
+          registrationEnabled: false,
+          submittedAt: new Date(),
+        },
+        select: { id: true },
+      })
+    ).id;
+    await prisma.eventChangeRequest.create({
+      data: {
+        eventId,
+        requestedById: "usr_organiser",
+        reason: "We now want people to sign up.",
+        fields: {
+          create: [
+            { fieldName: "registrationRequired", oldValue: "false", newValue: "true", isMajor: false },
+          ],
+        },
+      },
+    });
+    const card = () => page.getByTestId("browsable-event-card").filter({ hasText: name });
+
+    // Failure path: until it's approved, the event takes no registration, so
+    // Attendees don't see it (SCRUM-171 AC4).
+    await signIn(page, "attendee@test.local");
+    await expect(card()).toHaveCount(0);
+
+    await signIn(page, "coordinator@test.local");
+    const event = await openDetails(page, name);
+    await event
+      .getByTestId("change-request-decision")
+      .getByRole("button", { name: "Approve" })
+      .click();
+    await expect(page.getByText("Change request approved and applied.")).toBeVisible();
+
+    // It stays Confirmed and registration opens, as confirming would open it.
+    await signIn(page, "attendee@test.local");
+    await expect(card()).toHaveCount(1);
+    await card().click();
+    await page.getByTestId("register-button").click();
+    await expect(page.getByText("You're registered for this event.")).toBeVisible();
+    expect(
+      await prisma.event.findUniqueOrThrow({
+        where: { id: eventId },
+        select: { status: true, registrationRequired: true, registrationEnabled: true },
+      }),
+    ).toEqual({ status: "CONFIRMED", registrationRequired: true, registrationEnabled: true });
+    expect(
+      await prisma.registration.count({ where: { eventId, status: "REGISTERED" } }),
+    ).toBe(1);
   });
 
   test("SCRUM-128 [AC1, AC2, AC4, AC5] TC-128-13, SCRUM-208 [AC2] TC-208-06: the Coordinator sees the current and requested values and what's affected, approves, and the Confirmed event returns to Planning with its booking flagged", async ({

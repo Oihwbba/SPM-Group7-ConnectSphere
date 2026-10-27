@@ -14,6 +14,13 @@ import {
 } from "@/lib/event-readiness";
 import { ok, err, type ActionResult } from "@/lib/action-result";
 import { safetyCheckRequestable } from "@/lib/safety-checks";
+import { BOOKABLE_EVENT_STATUSES } from "@/lib/schemas/booking";
+import {
+  getEquipmentCatalogue,
+  getEventEquipmentRequests,
+  type CoordinatorEquipmentRequest,
+} from "@/lib/equipment/request-queries";
+import { REQUESTABLE_EVENT_STATUSES } from "@/lib/equipment/requests";
 
 /**
  * The event, if the signed-in user is its Organiser or its Coordinator.
@@ -73,6 +80,7 @@ export async function getEventReadiness(
       canWithdrawBooking: boolean;
       canRecordNoEquipment: boolean;
       canRequestSafetyCheck: boolean;
+      canRequestVenue: boolean;
     }
   >
 > {
@@ -109,6 +117,10 @@ export async function getEventReadiness(
       resource.status === "PLANNING" &&
       can(user, "safety-check:request", resource) &&
       safetyCheckRequestable(checklist),
+    // SCRUM-209 AC1: Find a venue, as the request form's own rule (SCRUM-50).
+    canRequestVenue:
+      can(user, "booking:request", resource) &&
+      BOOKABLE_EVENT_STATUSES.includes(resource.status),
   });
 }
 
@@ -151,4 +163,56 @@ export async function getEventCoordinator(
     select: { coordinator: { select: { name: true } } },
   });
   return ok({ name: event?.coordinator?.name ?? null });
+}
+
+/**
+ * SCRUM-209 AC2 — the event page's Equipment section: the event's requests,
+ * newest first, and what this user may do there. The rules are the actions'
+ * own (SCRUM-27, SCRUM-142): `canCreate` and `canChange` only decide which
+ * buttons show. The Organiser sees the lines and status, without Technical
+ * Support's notes or the history, as with the checklist's internal reasons.
+ */
+export async function getEventEquipment(eventId: string): Promise<
+  ActionResult<{
+    requests: CoordinatorEquipmentRequest[];
+    canCreate: boolean;
+    canChange: boolean;
+    event: {
+      id: string;
+      name: string;
+      startAt: Date | null;
+      endAt: Date | null;
+      equipmentRequirements: string | null;
+    };
+    equipment: Awaited<ReturnType<typeof getEquipmentCatalogue>>;
+  }>
+> {
+  const related = await relatedEvent(eventId);
+  if (!related) return err("Event not found.");
+  const { user, resource } = related;
+
+  const event = await prisma.event.findUnique({
+    where: { id: eventId },
+    select: { id: true, name: true, startAt: true, endAt: true, equipmentRequirements: true },
+  });
+  if (!event) return err("Event not found.");
+
+  const canCreate =
+    can(user, "equipment-request:create", resource) &&
+    (REQUESTABLE_EVENT_STATUSES as readonly string[]).includes(resource.status);
+  const canChange = can(user, "equipment-request:change", resource);
+  const coordinates = can(user, "event:review", resource);
+  const [requests, equipment] = await Promise.all([
+    getEventEquipmentRequests(eventId),
+    canCreate || canChange ? getEquipmentCatalogue() : [],
+  ]);
+  return ok({
+    requests: coordinates
+      ? requests
+      : requests.map((request) => ({ ...request, notes: null, updates: [] })),
+    canCreate,
+    canChange,
+    event,
+    equipment,
+  });
 }

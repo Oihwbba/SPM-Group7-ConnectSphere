@@ -11,7 +11,6 @@ import {
   CheckCircle2,
   ClipboardList,
   Info,
-  Search,
   Timer,
   Users,
   Wrench,
@@ -39,12 +38,12 @@ import {
   OrganiserVenueAnswers,
 } from "@/components/events/organiser-answers";
 import { CANCELLABLE } from "@/lib/event-lifecycle";
-import { BOOKABLE_EVENT_STATUSES } from "@/lib/schemas/booking";
 import { registrationNeededLabel } from "@/lib/schemas/event";
 import { formatDate, formatDateTime, formatTime } from "@/lib/datetime";
 import {
   ARRANGEMENT_STATUSES,
   defaultTab,
+  type ArrangementSection,
   type EventTab,
   type NextStep,
 } from "@/lib/event-next-step";
@@ -110,6 +109,19 @@ export function EventPage({
     window.history.replaceState(window.history.state, "", url);
   }
 
+  // SCRUM-209: open Arrangements at a section, once the section has loaded.
+  function openSection(next: EventTab, section?: ArrangementSection) {
+    openTab(next);
+    if (!section) return;
+    let tries = 0;
+    const scroll = () => {
+      const target = document.getElementById(`arrangements-${section}`);
+      if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
+      else if (tries++ < 40) window.setTimeout(scroll, 100);
+    };
+    window.setTimeout(scroll, 0);
+  }
+
   const yours = (target: EventTab) =>
     step.kind === "yours" && step.tab === target;
   const changesWaiting = isCoordinator
@@ -149,7 +161,8 @@ export function EventPage({
           {event.status === "CONFIRMED" && <ConfirmedArrangements eventId={event.id} />}
           {/* SCRUM-162 AC7: every venue booking (a Confirmed event lists
               them among its confirmed arrangements). */}
-          {event.status !== "CONFIRMED" && (
+          {/* Planning's are in the Venues section above (SCRUM-209). */}
+          {(event.status === "CANCELLED" || event.status === "COMPLETED") && (
             <VenueBookings key={`bookings-${reloads}-${bookingChanges}`} eventId={event.id} />
           )}
         </div>
@@ -248,14 +261,6 @@ export function EventPage({
           </h1>
           {isCoordinator && (
             <div className="flex flex-wrap items-center gap-2">
-              {/* SCRUM-38 AC1: venue search for this event's period. */}
-              {BOOKABLE_EVENT_STATUSES.includes(event.status) && (
-                <Button asChild size="sm" variant="outline">
-                  <Link href={{ pathname: "/venues/search", query: { event: event.id } }}>
-                    <Search className="h-4 w-4" aria-hidden /> Find a venue
-                  </Link>
-                </Button>
-              )}
               {/* SCRUM-25: the assigned Coordinator edits details. */}
               <EditDetailsDialog event={event} onSaved={() => setReloads((n) => n + 1)} />
               {/* SCRUM-82 AC1: the server checks the event is theirs. */}
@@ -271,7 +276,7 @@ export function EventPage({
           step={step}
           event={event}
           coordinatorName={coordinatorName}
-          onTab={openTab}
+          onTab={openSection}
           onResume={() => setResuming(true)}
         />
       </header>
@@ -339,7 +344,7 @@ function NextStepBanner({
   step: NextStep;
   event: Event;
   coordinatorName: string | null;
-  onTab: (tab: EventTab) => void;
+  onTab: (tab: EventTab, section?: ArrangementSection) => void;
   onResume: () => void;
 }) {
   if (step.kind === "outcome") {
@@ -428,7 +433,13 @@ function NextStepBanner({
       {step.kind === "yours" && (
         <div className="flex flex-wrap gap-2">
           {step.action.kind === "tab" && (
-            <Button size="sm" onClick={() => onTab((step.action as { tab: EventTab }).tab)}>
+            <Button
+              size="sm"
+              onClick={() => {
+                const action = step.action as { tab: EventTab; section?: ArrangementSection };
+                onTab(action.tab, action.section);
+              }}
+            >
               {step.action.label}
             </Button>
           )}

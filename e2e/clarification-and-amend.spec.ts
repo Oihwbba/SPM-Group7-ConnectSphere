@@ -403,9 +403,13 @@ test.describe("SCRUM-187 — A clarification answer that gets no reply", () => {
     });
     await details.getByRole("button", { name: "Send response" }).click();
 
-    // The thread is read again, so the saved answer replaces the form.
-    await expect(details.getByText("Yes, it is fixed.")).toBeVisible();
-    await expect(details.getByRole("button", { name: "Send response" })).toHaveCount(0);
+    // The send ends with no reply, and the thread is read again: the saved
+    // answer replaces the form, under the Organiser's name. The answer box
+    // goes only once that re-read finds it answered; the typed answer, or the
+    // button reading "Sending…", would pass before the server had saved it.
+    await expect(details.getByLabel("Response to clarification")).toHaveCount(0);
+    await expect(details.getByTestId("clarification-thread")).toContainText("Olivia Organiser");
+    await expect(details.getByTestId("clarification-thread")).toContainText("Yes, it is fixed.");
     expect(
       await prisma.clarificationRequest.findFirstOrThrow({
         where: { eventId },
