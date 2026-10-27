@@ -8,7 +8,6 @@ import type { Event } from "@prisma/client";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { DateTimePicker } from "@/components/app/date-time-picker";
 import { Textarea } from "@/components/ui/textarea";
 import { FieldError } from "@/components/ui/field-error";
 import {
@@ -20,10 +19,12 @@ import {
   type ClarifiableField,
   type ClarificationChanges,
 } from "@/lib/schemas/clarification";
+import { EventPeriodInputs } from "@/components/events/event-period-inputs";
 import {
   formatDateTime,
-  sgWallTimeToUtcIso,
-  utcToSgWallTime,
+  joinEventPeriod,
+  splitEventPeriod,
+  type EventPeriodFields,
 } from "@/lib/datetime";
 import { cn } from "@/lib/utils";
 
@@ -33,8 +34,7 @@ interface ClarificationPanelProps {
   /** True when the viewer is the Coordinator (read-only here); false means
    * the viewer is the Organiser, who can respond while a request is OPEN. */
   isCoordinator: boolean;
-  /** Told once loaded whether the event has a thread, so the details
-   * pop-up can offer it as its own tab. */
+  /** Told once loaded whether the event has a thread. */
   onLoaded?: (hasThread: boolean) => void;
 }
 
@@ -46,9 +46,14 @@ type Clarification = {
   response: string | null;
   createdAt: string | Date;
   respondedAt: string | Date | null;
+  requestedBy?: { name: string | null };
 };
 
 type Draft = Record<string, string>;
+
+/** SCRUM-187 AC1 — shown when the answer never got a reply, e.g. the connection dropped. */
+const SEND_FAILED_MESSAGE =
+  "Your response couldn't be sent. If it isn't shown as answered above, try again.";
 
 const TEXT_FIELDS = [
   "name",
@@ -65,8 +70,8 @@ const TEXT_FIELDS = [
 function draftFrom(event: Event): Draft {
   return {
     ...Object.fromEntries(TEXT_FIELDS.map((f) => [f, event[f] ?? ""])),
-    startAt: utcToSgWallTime(event.startAt),
-    endAt: utcToSgWallTime(event.endAt),
+    // SCRUM-190 AC3: the schedule is one date with a start and an end time.
+    ...splitEventPeriod(event.startAt, event.endAt),
     expectedAttendance: event.expectedAttendance?.toString() ?? "",
   };
 }
@@ -80,9 +85,14 @@ function changesBetween(
   const changes: ClarificationChanges = {};
   for (const field of fields) {
     if (field === "schedule") {
-      if (after.startAt !== before.startAt || after.endAt !== before.endAt) {
-        changes.startAt = sgWallTimeToUtcIso(after.startAt) ?? after.startAt;
-        changes.endAt = sgWallTimeToUtcIso(after.endAt) ?? after.endAt;
+      if (
+        (["date", "startTime", "endTime"] as const).some(
+          (key) => after[key] !== before[key],
+        )
+      ) {
+        const period = joinEventPeriod(after as EventPeriodFields);
+        changes.startAt = period.startAt ?? "";
+        changes.endAt = period.endAt ?? "";
       }
     } else if (field === "expectedAttendance") {
       if (after.expectedAttendance !== before.expectedAttendance) {
@@ -97,14 +107,12 @@ function changesBetween(
 }
 
 /**
- * SCRUM-18 — shown inside the event details modal for both roles. A
- * Coordinator sees their question, which fields they let the Organiser change
- * (SCRUM-108 AC1) and, once answered, the Organiser's reply. An Organiser
- * sees the question and, while it's OPEN, the named fields to edit and a box
- * to reply (SCRUM-108 AC2).
- *
- * Renders nothing when there is no clarification thread on this event, so it
- * adds no visual noise to events that were never questioned.
+ * SCRUM-18 — the event page's Clarification tab, for both roles (SCRUM-208
+ * AC3). A Coordinator sees their questions, which fields they let the
+ * Organiser change (SCRUM-108 AC1) and, once answered, the Organiser's reply.
+ * An Organiser sees the questions and, while one is OPEN, the named fields to
+ * edit and a box to reply under it (SCRUM-108 AC2). The thread reads as a
+ * conversation, oldest first, each message with who sent it and when.
  */
 export function ClarificationPanel({
   event,
@@ -115,6 +123,7 @@ export function ClarificationPanel({
     null,
   );
   const [earlier, setEarlier] = useState<Clarification[]>([]);
+  const [organiserName, setOrganiserName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadFailed, setLoadFailed] = useState(false);
   const [response, setResponse] = useState("");
@@ -122,6 +131,9 @@ export function ClarificationPanel({
   // The server's validation errors, keyed by field (SCRUM-108 AC2).
   const [errors, setErrors] = useState<Record<string, string[]>>({});
   const [submitting, setSubmitting] = useState(false);
+  const [sendFailed, setSendFailed] = useState(false);
+  // Bumped after a send that got no reply, so the thread is read again.
+  const [version, setVersion] = useState(0);
   const router = useRouter();
 
   useEffect(() => {
@@ -132,6 +144,7 @@ export function ClarificationPanel({
         if (result.ok) {
           setClarification(result.data.clarification);
           setEarlier(result.data.earlier);
+          setOrganiserName(result.data.organiserName);
           onLoaded?.(result.data.clarification !== null);
         } else setLoadFailed(true);
       })
@@ -146,21 +159,34 @@ export function ClarificationPanel({
     };
     // onLoaded is the parent's setter; reading again for it isn't wanted.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [event.id]);
+  }, [event.id, version]);
 
   async function submitResponse() {
     if (!clarification || !response.trim()) return;
     setSubmitting(true);
-    const result = await respondToClarification({
-      clarificationId: clarification.id,
-      response,
-      changes: changesBetween(
-        clarification.editableFields,
-        draftFrom(event),
-        draft,
-      ),
-    });
-    setSubmitting(false);
+    setSendFailed(false);
+    let result: Awaited<ReturnType<typeof respondToClarification>>;
+    try {
+      result = await respondToClarification({
+        clarificationId: clarification.id,
+        response,
+        changes: changesBetween(
+          clarification.editableFields,
+          draftFrom(event),
+          draft,
+        ),
+      });
+    } catch {
+      // SCRUM-187 AC1, AC2: the action rethrows anything unexpected, and a
+      // lost connection rejects too. Either way the answer may or may not
+      // have been saved, so the thread is read again rather than guessed.
+      setErrors({});
+      setSendFailed(true);
+      setVersion((v) => v + 1);
+      return;
+    } finally {
+      setSubmitting(false);
+    }
     if (!result.ok) {
       setErrors(result.fieldErrors ?? {});
       toast.error(result.error);
@@ -189,7 +215,13 @@ export function ClarificationPanel({
     );
   }
 
-  if (!clarification) return null;
+  if (!clarification) {
+    return (
+      <p className="text-sm text-muted-foreground" data-testid="no-clarification">
+        No questions from the Coordinator.
+      </p>
+    );
+  }
 
   const isOpen = clarification.status === "OPEN";
   const named = clarification.editableFields.filter(
@@ -198,13 +230,20 @@ export function ClarificationPanel({
   const set = (key: string) => (value: string) =>
     setDraft((current) => ({ ...current, [key]: value }));
 
+  // SCRUM-208 AC3: what the answer may change, in plain words, said to
+  // whoever is reading.
   const fieldsNote = (fields: string[]) => {
     const names = fields
       .filter((f): f is ClarifiableField => f in CLARIFIABLE_FIELDS)
       .map((f) => CLARIFIABLE_FIELDS[f]);
-    return names.length > 0
-      ? `The organiser may change: ${names.join(", ")}.`
-      : "Text answer only.";
+    if (names.length === 0) {
+      return isCoordinator
+        ? "The Organiser replies in text. No fields need changing."
+        : "Reply in text. No fields need changing.";
+    }
+    return isCoordinator
+      ? `The Organiser can also update: ${names.join(", ")}.`
+      : `You can also update: ${names.join(", ")}.`;
   };
 
   // Shared page conventions, change 2: the thread as messages, one
@@ -225,7 +264,8 @@ export function ClarificationPanel({
           return (
             <li key={item.id} className="space-y-3">
               <Message
-                from="Coordinator asked:"
+                from={item.requestedBy?.name ?? "The Coordinator"}
+                role="Coordinator"
                 at={item.createdAt}
                 side="left"
               >
@@ -239,7 +279,8 @@ export function ClarificationPanel({
               </Message>
               {item.status === "ANSWERED" && (
                 <Message
-                  from="Organiser responded:"
+                  from={organiserName ?? "The Organiser"}
+                  role="Organiser"
                   at={item.respondedAt}
                   side="right"
                 >
@@ -261,34 +302,13 @@ export function ClarificationPanel({
         <div className="space-y-2 rounded-xl border bg-background p-3 text-xs">
           {named.map((field) =>
             field === "schedule" ? (
-              <div
+              <EventPeriodInputs
                 key={field}
-                className="grid grid-cols-1 gap-2 sm:grid-cols-2"
-              >
-                {(["startAt", "endAt"] as const).map((key) => (
-                  <div key={key} className="space-y-1">
-                    <label
-                      htmlFor={`clarify-${key}`}
-                      className="block font-medium"
-                    >
-                      {key === "startAt" ? "Start" : "End"}
-                    </label>
-                    <DateTimePicker
-                      id={`clarify-${key}`}
-                      value={draft[key]}
-                      onChange={set(key)}
-                      aria-invalid={Boolean(errors[key])}
-                      aria-describedby={
-                        errors[key] ? `clarify-${key}-error` : undefined
-                      }
-                    />
-                    <FieldError
-                      id={`clarify-${key}-error`}
-                      messages={errors[key]}
-                    />
-                  </div>
-                ))}
-              </div>
+                idPrefix="clarify"
+                value={draft as EventPeriodFields}
+                onChange={(key, value) => set(key)(value)}
+                errors={errors}
+              />
             ) : (
               <label key={field} className="block space-y-1">
                 <span className="font-medium">{CLARIFIABLE_FIELDS[field]}</span>
@@ -317,6 +337,11 @@ export function ClarificationPanel({
             aria-invalid={Boolean(errors.response)}
           />
           <FieldError id="clarify-response-error" messages={errors.response} />
+          {sendFailed && (
+            <p role="alert" className="text-destructive">
+              {SEND_FAILED_MESSAGE}
+            </p>
+          )}
           <div className="flex justify-end">
             <Button
               size="sm"
@@ -335,11 +360,13 @@ export function ClarificationPanel({
 /** One message in the thread: the Coordinator's on the left, the Organiser's on the right. */
 function Message({
   from,
+  role,
   at,
   side,
   children,
 }: {
   from: string;
+  role: string;
   at: string | Date | null;
   side: "left" | "right";
   children: React.ReactNode;
@@ -355,7 +382,8 @@ function Message({
         )}
       >
         <p className="flex flex-wrap items-baseline gap-x-2 text-xs">
-          <span className="font-semibold text-muted-foreground">{from}</span>
+          <span className="font-semibold text-foreground">{from}</span>
+          <span className="text-muted-foreground">{role}</span>
           {at && (
             <span className="text-muted-foreground/80">
               {formatDateTime(at)}

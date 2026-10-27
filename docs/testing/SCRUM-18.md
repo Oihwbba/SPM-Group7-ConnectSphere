@@ -25,11 +25,11 @@ with `coordinator@test.local` (both `Password123!`).
 |---|---|---|---|
 | [TC-18-01](#tc-18-01) | Positive | AC 1, AC 6 | Unit, e2e |
 | [TC-18-02](#tc-18-02) | Positive | AC 2 | Unit, e2e |
-| [TC-18-03](#tc-18-03) | Negative | AC 2 | Unit |
+| [TC-18-03](#tc-18-03) | Negative | AC 2 | Unit, e2e |
 | [TC-18-04](#tc-18-04) | Negative | AC 3 | Unit |
 | [TC-18-05](#tc-18-05) | Positive | AC 4, AC 6 | Unit, e2e |
 | [TC-18-06](#tc-18-06) | Negative | AC 4 | Unit |
-| [TC-18-07](#tc-18-07) | Boundary | AC 5 | Unit |
+| [TC-18-07](#tc-18-07) | Boundary | AC 5 | Unit, e2e |
 | [TC-18-08](#tc-18-08) | Concurrency | AC 4, AC 5 | Unit, integration |
 | [TC-18-09](#tc-18-09) | Negative | AC 1 | Unit |
 | [TC-18-10](#tc-18-10) | Negative | Only the right people | Unit |
@@ -48,7 +48,7 @@ with `coordinator@test.local` (both `Password123!`).
 | Test Data | "What is the expected start time?" |
 | Expected Result | The request is still Under Review, shown as awaiting clarification. The Organiser has a notification of the question. |
 
-**Automated by:** `tests/unit/clarification.test.ts` › "[Positive] AC: coordinator requests clarification, event status is untouched, organiser is notified"; `e2e/clarification.spec.ts` › "coordinator asks, organiser replies, coordinator sees the answer (AC: sub-state, notify, respond, re-review)"
+**Automated by:** `tests/unit/clarification.test.ts` › "[Positive] AC: coordinator requests clarification, event status is untouched, organiser is notified"; `e2e/clarification.spec.ts` › "SCRUM-18 [AC1, AC2, AC4, AC5, AC6] TC-18-01, TC-18-03, TC-18-05, TC-18-07: the coordinator asks, the organiser replies, and the coordinator sees the answer"
 
 ### TC-18-02
 
@@ -74,7 +74,7 @@ with `coordinator@test.local` (both `Password123!`).
 | Test Data | ""; a field "budget" |
 | Expected Result | Step 1 is refused with "Say what you need clarified."; step 2 is refused. Neither creates a clarification. |
 
-**Automated by:** `tests/unit/clarification.test.ts` › "[Negative] AC: a blank message is rejected and nothing is written"; `tests/unit/clarification-and-amend.test.ts` › "SCRUM-108 [AC1] TC-108-01: a field that isn't on the request form is refused and nothing is created"
+**Automated by:** `tests/unit/clarification.test.ts` › "[Negative] AC: a blank message is rejected and nothing is written"; `tests/unit/clarification-and-amend.test.ts` › "SCRUM-108 [AC1] TC-108-01: a field that isn't on the request form is refused and nothing is created"; `e2e/clarification.spec.ts` › "SCRUM-18 [AC1, AC2, AC4, AC5, AC6] TC-18-01, TC-18-03, TC-18-05, TC-18-07: …" (Send stays disabled for a blank question)
 
 ### TC-18-04
 
@@ -100,7 +100,7 @@ with `coordinator@test.local` (both `Password123!`).
 | Test Data | "It starts at 9am." |
 | Expected Result | The clarification is Answered. The Coordinator is notified, sees the answer and can review the request again. |
 
-**Automated by:** `tests/unit/clarification.test.ts` › "[Positive] AC: organiser responds, clarification is marked answered, coordinator is notified", "[Positive] AC: a question asked on an unclaimed event still notifies the coordinator who asked"; `e2e/clarification.spec.ts` › "coordinator asks, organiser replies, coordinator sees the answer (AC: sub-state, notify, respond, re-review)"
+**Automated by:** `tests/unit/clarification.test.ts` › "[Positive] AC: organiser responds, clarification is marked answered, coordinator is notified", "[Positive] AC: a question asked on an unclaimed event still notifies the coordinator who asked"; `e2e/clarification.spec.ts` › "SCRUM-18 [AC1, AC2, AC4, AC5, AC6] TC-18-01, TC-18-03, TC-18-05, TC-18-07: the coordinator asks, the organiser replies, and the coordinator sees the answer"
 
 ### TC-18-06
 
@@ -126,7 +126,7 @@ with `coordinator@test.local` (both `Password123!`).
 | Test Data | "Also, how many speakers?" |
 | Expected Result | Refused with "There is already an open clarification request on this event." There is still one open clarification. |
 
-**Automated by:** `tests/unit/clarification.test.ts` › "[Boundary] AC: no second open clarification is created for the same event"
+**Automated by:** `tests/unit/clarification.test.ts` › "[Boundary] AC: no second open clarification is created for the same event"; `e2e/clarification.spec.ts` › "SCRUM-18 [AC1, AC2, AC4, AC5, AC6] TC-18-01, TC-18-03, TC-18-05, TC-18-07: …" (the second question, in the browser)
 
 ### TC-18-08
 
@@ -178,4 +178,4 @@ with `coordinator@test.local` (both `Password123!`).
 | Test Data | Screen 375 × 812 |
 | Expected Result | The four buttons are the same width, two to a row (**Reject** beside **Ask**, not alone on a line), and the page doesn't scroll sideways. In the clarification dialog, **Send request** and **Cancel** are stacked with at least 6 px between them. |
 
-**Automated by:** `e2e/events.spec.ts` › "SCRUM-18/19: the four review buttons form an even two-column grid and stacked dialog buttons are separated"
+**Automated by:** `e2e/events.spec.ts` › "SCRUM-18 [AC1] TC-18-11: the four review buttons form an even two-column grid and stacked dialog buttons are separated"

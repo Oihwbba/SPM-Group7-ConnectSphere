@@ -100,7 +100,7 @@ maintenance don't overlap it.
 | Test Data       | —                                                                                                                                                                 |
 | Expected Result | 1. "4 of 4 available", nothing during the period. 2. Without reloading: "3 of 4 available", and the new reservation is listed under the period, naming the event. |
 
-**Automated by:** `e2e/equipment.spec.ts` › "SCRUM-156 [AC6] TC-156-06, SCRUM-30 AC 1: …"
+**Automated by:** `e2e/equipment.spec.ts` › "SCRUM-30 [AC1] TC-30-01, SCRUM-156 [AC6] TC-156-06: a reservation made in the request card appears in the commitments without a reload"
 
 ### TC-156-07
 
@@ -121,7 +121,7 @@ maintenance don't overlap it.
 | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Test Case ID    | TC-156-08                                                                                                                                                                     |
 | Test Scenario   | [Positive] AC 5: a second approved request for an event that already has reservations is reserved in its own right                                                            |
-| Pre-conditions  | An event whose first approved request is reserved in full, and a second approved request for the same event (SCRUM-27 allows one once the first is decided).                  |
+| Pre-conditions  | An event whose first approved request is reserved in full, and a second approved request for the same event (since SCRUM-186 only an event from before that story has one: SCRUM-186 AC 5, AC 6).                  |
 | Test Steps      | 1. Open the **Approved request** list. 2. Reserve the second request.                                                                                                         |
 | Test Data       | Both requests ask for Projector × 1.                                                                                                                                          |
 | Expected Result | 1. Only the second request is listed, as "(event already partly reserved)": the first request's reservations don't cover it. 2. Reserved; the event now holds two projectors. |

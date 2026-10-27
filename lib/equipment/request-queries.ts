@@ -7,6 +7,7 @@ import {
   OPEN_REQUEST_STATUSES,
   REQUESTABLE_EVENT_STATUSES,
   outstandingLines,
+  reservationVersion,
   reviewLine,
   type PoolAvailability,
 } from "@/lib/equipment/requests";
@@ -24,14 +25,13 @@ import {
  * public endpoint, and these must not be callable with someone else's id.
  */
 
-/** Must mirror `can()`'s coordinator relationship with an event exactly. */
+/**
+ * Must mirror `can()`'s coordinator relationship with an event exactly: since
+ * SCRUM-165 AC8 a Coordinator acts only on the events assigned to them, and an
+ * unassigned one waits for the Lead (SCRUM-229).
+ */
 function coordinatorEventScope(coordinatorId: string) {
-  return {
-    OR: [
-      { coordinatorId },
-      { coordinatorId: null, status: { not: "DRAFT" as const } },
-    ],
-  };
+  return { coordinatorId };
 }
 
 // Lines are inserted together and can share a timestamp; the id (a cuid,
@@ -84,6 +84,36 @@ export async function getEquipmentCatalogue() {
   });
 }
 
+/** What a Coordinator sees of a request: its event, live lines and history. */
+const COORDINATOR_REQUEST_SELECT = {
+  id: true,
+  status: true,
+  notes: true,
+  createdAt: true,
+  event: {
+    select: {
+      id: true,
+      name: true,
+      startAt: true,
+      endAt: true,
+      // SCRUM-142 AC5: whether its requests can still be changed.
+      status: true,
+    },
+  },
+  lines: {
+    where: LIVE_LINE,
+    select: {
+      id: true,
+      quantity: true,
+      technicalRequirements: true,
+      equipment: { select: { id: true, type: true } },
+      suggestedAlternative: { select: { id: true, type: true } },
+    },
+    orderBy: IN_ENTRY_ORDER,
+  },
+  updates: HISTORY,
+} satisfies Prisma.EquipmentRequestSelect;
+
 /**
  * The requests raised for this coordinator's events, newest first, with what
  * Technical Support suggested and every update made (SCRUM-28 AC 4 and 6).
@@ -91,34 +121,20 @@ export async function getEquipmentCatalogue() {
 export async function getCoordinatorEquipmentRequests(coordinatorId: string) {
   return prisma.equipmentRequest.findMany({
     where: { event: coordinatorEventScope(coordinatorId) },
-    select: {
-      id: true,
-      status: true,
-      notes: true,
-      createdAt: true,
-      event: {
-        select: {
-          id: true,
-          name: true,
-          startAt: true,
-          endAt: true,
-          // SCRUM-142 AC5: whether its requests can still be changed.
-          status: true,
-        },
-      },
-      lines: {
-        where: LIVE_LINE,
-        select: {
-          id: true,
-          quantity: true,
-          technicalRequirements: true,
-          equipment: { select: { id: true, type: true } },
-          suggestedAlternative: { select: { id: true, type: true } },
-        },
-        orderBy: IN_ENTRY_ORDER,
-      },
-      updates: HISTORY,
-    },
+    select: COORDINATOR_REQUEST_SELECT,
+    orderBy: { createdAt: "desc" },
+  });
+}
+
+/**
+ * SCRUM-209 AC2 — one event's equipment requests, newest first, as the
+ * Coordinator's list shows them, for the event page's Equipment section.
+ * Callers check who may read the event first.
+ */
+export async function getEventEquipmentRequests(eventId: string) {
+  return prisma.equipmentRequest.findMany({
+    where: { eventId },
+    select: COORDINATOR_REQUEST_SELECT,
     orderBy: { createdAt: "desc" },
   });
 }
@@ -367,9 +383,10 @@ export async function getReservableRequests(now = new Date()) {
     return [
       {
         id,
-        // SCRUM-142: the request as the form saw it, so a reservation made
-        // after its lines changed is refused rather than reserving old lines.
-        version: updatedAt.toISOString(),
+        // SCRUM-142, SCRUM-226: the request as the form saw it, so a
+        // reservation made after its lines changed, or after someone else
+        // reserved part of it, is refused rather than reserving a line twice.
+        version: reservationVersion(updatedAt, missing),
         notes,
         requestedBy,
         event: {

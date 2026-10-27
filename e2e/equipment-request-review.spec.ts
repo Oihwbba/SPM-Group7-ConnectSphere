@@ -304,7 +304,7 @@ test.describe("SCRUM-28 — Review and Update Equipment Request", () => {
     ).toHaveCount(0);
   });
 
-  test("Technical Support finds the queue in their navigation, with requests waiting for review first", async ({
+  test("SCRUM-28 [AC1] TC-28-01: Technical Support finds the queue in their navigation, with requests waiting for review first", async ({
     page,
   }) => {
     await makeRig("nav");

@@ -32,7 +32,7 @@ and the app is running. Every seeded account's password is `Password123!`.
 | Test Data | `organiser@test.local`, `coordinator@test.local`, `venuestaff@test.local`, `techsupport@test.local`, `attendee@test.local` |
 | Expected Result | The top bar shows the ConnectSphere brand, the notifications bell and the profile menu, and nothing to type into: no search box and no text field. |
 
-**Automated by:** `e2e/top-bar.spec.ts` › "SCRUM-168 [AC1, AC3]: at phone width, ${email} sees no search box, the brand on the left, and the bell and profile menu together on the right", run once for each of the five roles. The test runs at phone width. The header has no markup that changes with the width, but a pass at desktop width is **Manual**.
+**Automated by:** `e2e/top-bar.spec.ts` › "SCRUM-168 [AC1, AC3] TC-168-01, TC-168-03: at phone width, ${email} sees no search box, the brand on the left, and the bell and profile menu together on the right", run once for each of the five roles. The test runs at phone width. The header has no markup that changes with the width, but a pass at desktop width is **Manual**.
 
 ### TC-168-02
 
@@ -45,7 +45,7 @@ and the app is running. Every seeded account's password is `Password123!`.
 | Test Data | "Annual"; "xyznonexistent99999" (as `organiser2@test.local`); a test event's name; a request's notes; "WINE" |
 | Expected Result | Each search narrows its own list to the matches, a search with no match says so, and clearing it restores the list, as before the search box was removed. |
 
-**Automated by:** `e2e/events.spec.ts` › "SCRUM-84 AC7-AC9: organiser sorts columns and filters list by status dropdown and search", "SCRUM-84 [AC6/AC9 - Filtered Empty State & Clear Filters]: filtered empty state shows 'No requests match' card with a Clear Filters CTA when search yields no results"; `e2e/coordinator-assigned-events.spec.ts` › "AC2: the list shows each event's name, proposed date and status, and can be searched"; `e2e/bookings.spec.ts` › "SCRUM-53 [AC2] TC-53-02, TC-53-03: rejecting needs a written reason, and the reason is saved" (its queue search); `e2e/attendee-events.spec.ts` › "SCRUM-72 review: typing a keyword narrows the list to matching events, ignoring case"
+**Automated by:** `e2e/events.spec.ts` › "SCRUM-84 [AC6, AC7, AC8, AC9] TC-84-05, TC-84-06, TC-84-07, SCRUM-168 [AC2] TC-168-02: organiser sorts columns and filters list by status dropdown and search", "SCRUM-84 [AC6, AC9] TC-84-08, SCRUM-168 [AC2] TC-168-02: filtered empty state shows 'No requests match' card with a Clear Filters CTA when search yields no results"; `e2e/coordinator-assigned-events.spec.ts` › "SCRUM-69 [AC2] TC-69-03, SCRUM-168 [AC2] TC-168-02: the list shows each event's name, proposed date and status, and can be searched"; `e2e/bookings.spec.ts` › "SCRUM-53 [AC2] TC-53-02, TC-53-03: rejecting needs a written reason, and the reason is saved" (its queue search); `e2e/attendee-events.spec.ts` › "SCRUM-72 [AC1] TC-72-08, SCRUM-168 [AC2] TC-168-02: typing a keyword narrows the list to matching events, ignoring case"
 
 ### TC-168-03
 
@@ -58,4 +58,4 @@ and the app is running. Every seeded account's password is `Password123!`.
 | Test Data | The five roles in TC-168-01; screen 375 × 812 |
 | Expected Result | All three sit inside the one bar. The brand starts in the left quarter of the screen. The bell and the profile menu are side by side (at most 8 px apart) with the menu at the right edge (within 32 px). The page is no wider than the screen. |
 
-**Automated by:** `e2e/top-bar.spec.ts` › "SCRUM-168 [AC1, AC3]: at phone width, ${email} sees no search box, the brand on the left, and the bell and profile menu together on the right", run once for each of the five roles
+**Automated by:** `e2e/top-bar.spec.ts` › "SCRUM-168 [AC1, AC3] TC-168-01, TC-168-03: at phone width, ${email} sees no search box, the brand on the left, and the bell and profile menu together on the right", run once for each of the five roles

@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { sgDate } from "@/lib/datetime";
+
 /** Room layouts offered as presets on the request and edit forms. */
 export const LAYOUT_OPTIONS = [
   "Theatre",
@@ -46,6 +48,26 @@ export function registrationNeededLabel(
     : registrationRequired === false
       ? "No"
       : "Not answered";
+}
+
+export const EVENT_START_REQUIRED_MESSAGE =
+  "Choose the event date and a start time.";
+export const EVENT_END_REQUIRED_MESSAGE = "Choose an end time.";
+export const END_NOT_AFTER_START_MESSAGE =
+  "The end time must be after the start time.";
+export const NOT_ONE_DAY_MESSAGE =
+  "An event starts and ends on the same day. Choose one date with a start and an end time.";
+
+/**
+ * SCRUM-190 AC2, AC3 — why an event's period is refused, or null. It must end
+ * after it starts, on the Singapore day it starts: every venue books within
+ * one day's opening hours (SCRUM-34 AC7), so a longer event could never be
+ * booked or confirmed. Shared by the request form, submitting, a
+ * clarification answer, a change request and the Coordinator's edit.
+ */
+export function eventPeriodError(startAt: Date, endAt: Date): string | null {
+  if (!(endAt.getTime() > startAt.getTime())) return END_NOT_AFTER_START_MESSAGE;
+  return sgDate(startAt) === sgDate(endAt) ? null : NOT_ONE_DAY_MESSAGE;
 }
 
 /**
@@ -131,10 +153,14 @@ export const createDraftEventSchema = z
     if (data.startAt && data.endAt) {
       const startDate = new Date(data.startAt);
       const endDate = new Date(data.endAt);
-      if (!isNaN(startDate.getTime()) && !isNaN(endDate.getTime()) && endDate <= startDate) {
+      const periodError =
+        !isNaN(startDate.getTime()) &&
+        !isNaN(endDate.getTime()) &&
+        eventPeriodError(startDate, endDate);
+      if (periodError) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: "Proposed end date and time must be strictly after the start date and time.",
+          message: periodError,
           path: ["endAt"],
         });
       }
@@ -167,12 +193,13 @@ export const submitEventRequestSchema = z
       .trim()
       .min(1, "Event description is required.")
       .max(5000, "Keep description under 5000 characters."),
+    // SCRUM-190 AC1: one date with a start and an end time, joined in the browser.
     startAt: z
-      .string({ required_error: "Proposed start date and time is required." })
-      .min(1, "Proposed start date and time is required."),
+      .string({ required_error: EVENT_START_REQUIRED_MESSAGE })
+      .min(1, EVENT_START_REQUIRED_MESSAGE),
     endAt: z
-      .string({ required_error: "Proposed end date and time is required." })
-      .min(1, "Proposed end date and time is required."),
+      .string({ required_error: EVENT_END_REQUIRED_MESSAGE })
+      .min(1, EVENT_END_REQUIRED_MESSAGE),
     expectedAttendance: z
       .preprocess(
         (val) => (val === "" || val === null || val === undefined ? NaN : Number(val)),
@@ -250,10 +277,14 @@ export const submitEventRequestSchema = z
     if (data.startAt && data.endAt) {
       const startDate = new Date(data.startAt);
       const endDate = new Date(data.endAt);
-      if (!isNaN(startDate.getTime()) && !isNaN(endDate.getTime()) && endDate <= startDate) {
+      const periodError =
+        !isNaN(startDate.getTime()) &&
+        !isNaN(endDate.getTime()) &&
+        eventPeriodError(startDate, endDate);
+      if (periodError) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: "Proposed end date and time must be strictly after the start date and time.",
+          message: periodError,
           path: ["endAt"],
         });
       }

@@ -2,6 +2,7 @@ import Form from "next/form";
 import Link from "next/link";
 import {
   AlertCircle,
+  ArrowLeft,
   Building2,
   CalendarRange,
   CircleCheck,
@@ -133,7 +134,7 @@ export default async function VenueSearchPage({
   // Shared page conventions: results show once a search is run, not on
   // opening the page; a link that already says what to search runs it.
   const ran = Object.keys(params).some(
-    (name) => !["event", "replace", "searchedFor"].includes(name),
+    (name) => !["event", "replace", "searchedFor", "return"].includes(name),
   );
   const searched =
     ran && resolved && "period" in resolved ? resolved : null;
@@ -154,9 +155,13 @@ export default async function VenueSearchPage({
     event ? getSuitabilityJudgements([event.id]) : [],
   ]);
 
+  // SCRUM-209 AC1: opened from the event's page, it leads back there.
+  const fromEvent = params.return === "event" && event ? event.id : null;
+
   return (
-    <SearchShell>
+    <SearchShell backToEvent={fromEvent}>
       <SearchForm
+        fromEvent={Boolean(fromEvent)}
         // A new address rebuilds the form, so each field shows what the
         // address says, not what was left typed in it (Reset, Back).
         key={formKey(params)}
@@ -186,9 +191,24 @@ export default async function VenueSearchPage({
   );
 }
 
-function SearchShell({ children }: { children: React.ReactNode }) {
+function SearchShell({
+  children,
+  backToEvent = null,
+}: {
+  children: React.ReactNode;
+  /** The event the search was opened from, to go back to (SCRUM-209). */
+  backToEvent?: string | null;
+}) {
   return (
     <div className="space-y-6">
+      {backToEvent && (
+        <Link
+          href={`/events/${backToEvent}?tab=arrangements`}
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground"
+        >
+          <ArrowLeft className="h-4 w-4" aria-hidden /> Back to event
+        </Link>
+      )}
       <div className="space-y-1">
         <h1 className="text-2xl font-semibold tracking-tight">Venue search</h1>
         <p className="text-sm text-muted-foreground">
@@ -263,6 +283,7 @@ function DateField({
 
 /** AC1, AC2, AC11–AC14 — the criteria and filters, sent together as one GET. */
 function SearchForm({
+  fromEvent = false,
   event,
   events,
   query,
@@ -271,6 +292,8 @@ function SearchForm({
   options,
   fieldErrors,
 }: {
+  /** SCRUM-209 AC1: carried to the request form, which returns to the event. */
+  fromEvent?: boolean;
   event: SearchEvent | null;
   events: { id: string; name: string }[];
   query: VenueSearchQuery | null;
@@ -293,6 +316,7 @@ function SearchForm({
         >
           <input type="hidden" name="searched" value="1" />
           <input type="hidden" name="searchedFor" value={event?.id ?? ""} />
+          {fromEvent && <input type="hidden" name="return" value="event" />}
           {event?.replacing && (
             <input type="hidden" name="replace" value={event.replacing.id} />
           )}
@@ -725,9 +749,15 @@ function FixedPeriod({ period }: { period: { startAt: Date; endAt: Date } }) {
       value: formatTime(period.startAt),
     },
     {
+      // SCRUM-188: a time on the event date, like the start. An event stored
+      // across two days before SCRUM-190 keeps its end date, so it isn't
+      // shown as ending on the day it starts.
       id: "event-end",
       label: "Event end",
-      value: formatDateTime(period.endAt),
+      value:
+        formatDate(period.endAt) === formatDate(period.startAt)
+          ? formatTime(period.endAt)
+          : formatDateTime(period.endAt),
     },
   ];
   return (

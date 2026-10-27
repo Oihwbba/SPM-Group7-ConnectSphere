@@ -7,8 +7,14 @@ import type { Event } from "@prisma/client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { DateTimePicker } from "@/components/app/date-time-picker";
 import { Textarea } from "@/components/ui/textarea";
 import { FieldError } from "@/components/ui/field-error";
 import {
@@ -30,9 +36,11 @@ import {
 } from "@/lib/schemas/change-request";
 import {
   formatDateTime,
-  sgWallTimeToUtcIso,
-  utcToSgWallTime,
+  joinEventPeriod,
+  splitEventPeriod,
+  type EventPeriodFields,
 } from "@/lib/datetime";
+import { EventPeriodInputs } from "@/components/events/event-period-inputs";
 
 type TextField = Exclude<
   ChangeKey,
@@ -64,13 +72,13 @@ const SUGGESTION_LEAD: Record<keyof Suggestions, string> = {
 
 /** Shown when the submission never got an answer, e.g. the connection dropped. */
 const SEND_FAILED_MESSAGE =
-  "The change request couldn't be sent. If it isn't in the list above, try again.";
+  "The change request couldn't be sent. If it isn't in the list of change requests, try again.";
 
 function draftFrom(event: Event): Draft {
   return {
     ...Object.fromEntries(TEXT_FIELDS.map((f) => [f, event[f] ?? ""])),
-    startAt: utcToSgWallTime(event.startAt),
-    endAt: utcToSgWallTime(event.endAt),
+    // SCRUM-190 AC3: the schedule is one date with a start and an end time.
+    ...splitEventPeriod(event.startAt, event.endAt),
     expectedAttendance: event.expectedAttendance?.toString() ?? "",
     // SCRUM-171: blank on a request made before the question was asked.
     registrationRequired:
@@ -81,9 +89,14 @@ function draftFrom(event: Event): Draft {
 /** Only what was edited, in the shape the action takes. */
 function changesBetween(before: Draft, after: Draft): ChangeRequestChanges {
   const changes: ChangeRequestChanges = {};
-  if (after.startAt !== before.startAt || after.endAt !== before.endAt) {
-    changes.startAt = sgWallTimeToUtcIso(after.startAt) ?? after.startAt;
-    changes.endAt = sgWallTimeToUtcIso(after.endAt) ?? after.endAt;
+  if (
+    (["date", "startTime", "endTime"] as const).some(
+      (key) => after[key] !== before[key],
+    )
+  ) {
+    const period = joinEventPeriod(after as EventPeriodFields);
+    changes.startAt = period.startAt ?? "";
+    changes.endAt = period.endAt ?? "";
   }
   if (after.expectedAttendance !== before.expectedAttendance) {
     changes.expectedAttendance = Number(after.expectedAttendance);
@@ -202,13 +215,20 @@ function ChangeRequestItem({
 }
 
 /**
- * SCRUM-41 — inside the event details dialog for the Organiser and the
+ * SCRUM-41 — on the event page's Changes tab, for the Organiser and the
  * Coordinator. Lists the event's change requests with their status (AC6),
  * and lets the Organiser or the assigned Coordinator raise one (AC1, AC9)
- * while none is waiting for a decision (AC7). Renders nothing for an event
- * that has none and can't take one.
+ * while none is waiting for a decision (AC7), in a pop-up over the tab
+ * (SCRUM-208). For an event that has none and can't take one, shows
+ * `whenEmpty` (SCRUM-208 AC3), or nothing.
  */
-export function ChangeRequestPanel({ event }: { event: Event }) {
+export function ChangeRequestPanel({
+  event,
+  whenEmpty = null,
+}: {
+  event: Event;
+  whenEmpty?: React.ReactNode;
+}) {
   // null while loading; "failed" if the read failed.
   const [loaded, setLoaded] = useState<
     { requests: ChangeRequestView[]; canRaise: boolean } | "failed" | null
@@ -315,7 +335,9 @@ export function ChangeRequestPanel({ event }: { event: Event }) {
     reload();
   }
 
-  if (loaded === null) return null;
+  if (loaded === null) {
+    return <p className="text-xs text-muted-foreground">Loading change requests…</p>;
+  }
   if (loaded === "failed") {
     return (
       <p role="alert" className="text-xs text-muted-foreground">
@@ -324,7 +346,7 @@ export function ChangeRequestPanel({ event }: { event: Event }) {
     );
   }
   const { requests, canRaise } = loaded;
-  if (requests.length === 0 && !canRaise) return null;
+  if (requests.length === 0 && !canRaise) return whenEmpty;
 
   const set = (key: string) => (value: string) =>
     setDraft((current) => ({ ...current, [key]: value }));
@@ -354,175 +376,165 @@ export function ChangeRequestPanel({ event }: { event: Event }) {
           </ul>
         )}
 
-        {canRaise && !formOpen && (
+        {canRaise && (
           <Button size="sm" variant="outline" onClick={openForm}>
             Request a change
           </Button>
         )}
 
-        {formOpen && (
-          <form
-            aria-label="Request a change"
-            // The shared schema's message, next to the field, not the browser's.
-            noValidate
-            className="space-y-3 border-t pt-3"
-            onSubmit={(e) => {
-              e.preventDefault();
-              void submit();
-            }}
-          >
-            <p className="text-muted-foreground">
-              Your coordinator reviews the request before anything changes.
-            </p>
-            {formError && (
-              <p role="alert" className="text-destructive">
-                {formError}
-              </p>
-            )}
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={cancelling}
-                onChange={(e) => setCancelling(e.target.checked)}
-              />
-              <span>Ask to cancel the event instead</span>
-            </label>
+        <Dialog
+          open={formOpen}
+          // Closing keeps what was typed, as Discard changes always has.
+          onOpenChange={(open) => !open && !submitting && closeForm()}
+        >
+          <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Request a change</DialogTitle>
+              <DialogDescription>
+                Your coordinator reviews the request before anything changes.
+              </DialogDescription>
+            </DialogHeader>
+            <form
+              aria-label="Request a change"
+              // The shared schema's message, next to the field, not the browser's.
+              noValidate
+              className="space-y-3 text-xs"
+              onSubmit={(e) => {
+                e.preventDefault();
+                void submit();
+              }}
+            >
+              {formError && (
+                <p role="alert" className="text-destructive">
+                  {formError}
+                </p>
+              )}
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={cancelling}
+                  onChange={(e) => setCancelling(e.target.checked)}
+                />
+                <span>Ask to cancel the event instead</span>
+              </label>
 
-            {!cancelling && (
-              <div className="space-y-2">
-                {(Object.keys(CHANGEABLE_FIELDS) as ChangeableField[]).map(
-                  (field) =>
-                    field === "schedule" ? (
-                      <div
-                        key={field}
-                        className="grid grid-cols-1 gap-2 sm:grid-cols-2"
-                      >
-                        {(["startAt", "endAt"] as const).map((key) => (
-                          <div key={key} className="space-y-1">
-                            <label
-                              htmlFor={`change-${key}`}
-                              className="block font-medium"
-                            >
-                              {key === "startAt" ? "Start" : "End"}
-                            </label>
-                            <DateTimePicker
-                              id={`change-${key}`}
-                              value={draft[key]}
-                              onChange={set(key)}
-                              aria-invalid={Boolean(errors[key])}
-                              aria-describedby={describedBy(key)}
-                            />
-                            <FieldError
-                              id={`change-${key}-error`}
-                              messages={errors[key]}
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    ) : field === "registrationRequired" ? (
-                      <fieldset
-                        key={field}
-                        className="space-y-1"
-                        aria-describedby={describedBy(field)}
-                      >
-                        <legend className="font-medium">
-                          {CHANGEABLE_FIELDS[field]}
-                        </legend>
-                        <div className="flex gap-4">
-                          {(["yes", "no"] as const).map((value) => (
-                            <label key={value} className="flex items-center gap-1.5">
-                              <input
-                                type="radio"
-                                name="change-registrationRequired"
-                                value={value}
-                                checked={draft.registrationRequired === value}
-                                onChange={() => set(field)(value)}
-                                className="h-4 w-4 accent-primary"
-                              />
-                              {value === "yes" ? "Yes" : "No"}
-                            </label>
-                          ))}
-                        </div>
-                        <FieldError
-                          id={`change-${field}-error`}
-                          messages={errors[field]}
+              {!cancelling && (
+                <div className="space-y-2">
+                  {(Object.keys(CHANGEABLE_FIELDS) as ChangeableField[]).map(
+                    (field) =>
+                      field === "schedule" ? (
+                        <EventPeriodInputs
+                          key={field}
+                          idPrefix="change"
+                          value={draft as EventPeriodFields}
+                          onChange={(key, value) => set(key)(value)}
+                          errors={errors}
                         />
-                      </fieldset>
-                    ) : (
-                      // A div, not a label: the suggestion buttons must not
-                      // become the field's labelled control.
-                      <div key={field} className="space-y-1">
-                        <label
-                          htmlFor={`change-${field}`}
-                          className="block font-medium"
+                      ) : field === "registrationRequired" ? (
+                        <fieldset
+                          key={field}
+                          className="space-y-1"
+                          aria-describedby={describedBy(field)}
                         >
-                          {CHANGEABLE_FIELDS[field]}
-                        </label>
-                        {suggestions &&
-                          (field === "venueRequirements" ||
-                            field === "equipmentRequirements") &&
-                          suggestions[field].length > 0 && (
-                            <span className="flex flex-wrap gap-1.5">
-                              {suggestions[field].map((name) => (
-                                <button
-                                  key={name}
-                                  type="button"
-                                  aria-label={`Add ${name} to ${CHANGEABLE_FIELDS[field].toLowerCase()}`}
-                                  className="rounded border bg-background px-2 py-0.5 text-[11px] hover:bg-accent focus:outline-none focus:ring-1 focus:ring-ring"
-                                  onClick={() => suggest(field, name)}
-                                >
-                                  {name}
-                                </button>
-                              ))}
-                            </span>
-                          )}
-                        <FieldControl
-                          field={field}
-                          value={draft[field]}
-                          onChange={set(field)}
-                          invalid={Boolean(errors[field])}
-                          describedBy={describedBy(field)}
-                        />
-                        <FieldError
-                          id={`change-${field}-error`}
-                          messages={errors[field]}
-                        />
-                      </div>
-                    ),
-                )}
-                <FieldError id="change-changes-error" messages={errors.changes} />
+                          <legend className="font-medium">
+                            {CHANGEABLE_FIELDS[field]}
+                          </legend>
+                          <div className="flex gap-4">
+                            {(["yes", "no"] as const).map((value) => (
+                              <label key={value} className="flex items-center gap-1.5">
+                                <input
+                                  type="radio"
+                                  name="change-registrationRequired"
+                                  value={value}
+                                  checked={draft.registrationRequired === value}
+                                  onChange={() => set(field)(value)}
+                                  className="h-4 w-4 accent-primary"
+                                />
+                                {value === "yes" ? "Yes" : "No"}
+                              </label>
+                            ))}
+                          </div>
+                          <FieldError
+                            id={`change-${field}-error`}
+                            messages={errors[field]}
+                          />
+                        </fieldset>
+                      ) : (
+                        // A div, not a label: the suggestion buttons must not
+                        // become the field's labelled control.
+                        <div key={field} className="space-y-1">
+                          <label
+                            htmlFor={`change-${field}`}
+                            className="block font-medium"
+                          >
+                            {CHANGEABLE_FIELDS[field]}
+                          </label>
+                          {suggestions &&
+                            (field === "venueRequirements" ||
+                              field === "equipmentRequirements") &&
+                            suggestions[field].length > 0 && (
+                              <span className="flex flex-wrap gap-1.5">
+                                {suggestions[field].map((name) => (
+                                  <button
+                                    key={name}
+                                    type="button"
+                                    aria-label={`Add ${name} to ${CHANGEABLE_FIELDS[field].toLowerCase()}`}
+                                    className="rounded border bg-background px-2 py-0.5 text-[11px] hover:bg-accent focus:outline-none focus:ring-1 focus:ring-ring"
+                                    onClick={() => suggest(field, name)}
+                                  >
+                                    {name}
+                                  </button>
+                                ))}
+                              </span>
+                            )}
+                          <FieldControl
+                            field={field}
+                            value={draft[field]}
+                            onChange={set(field)}
+                            invalid={Boolean(errors[field])}
+                            describedBy={describedBy(field)}
+                          />
+                          <FieldError
+                            id={`change-${field}-error`}
+                            messages={errors[field]}
+                          />
+                        </div>
+                      ),
+                  )}
+                  <FieldError id="change-changes-error" messages={errors.changes} />
+                </div>
+              )}
+
+              <label className="block space-y-1">
+                <span className="font-medium">
+                  {cancelling ? "Reason for cancelling" : "Reason (optional)"}
+                </span>
+                <Textarea
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value)}
+                  aria-invalid={Boolean(errors.reason)}
+                  aria-describedby={describedBy("reason")}
+                />
+                <FieldError id="change-reason-error" messages={errors.reason} />
+              </label>
+
+              <div className="flex flex-wrap gap-2">
+                <Button type="submit" size="sm" disabled={submitting}>
+                  {submitting ? "Submitting…" : "Submit change request"}
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  disabled={submitting}
+                  onClick={closeForm}
+                >
+                  Discard changes
+                </Button>
               </div>
-            )}
-
-            <label className="block space-y-1">
-              <span className="font-medium">
-                {cancelling ? "Reason for cancelling" : "Reason (optional)"}
-              </span>
-              <Textarea
-                value={reason}
-                onChange={(e) => setReason(e.target.value)}
-                aria-invalid={Boolean(errors.reason)}
-                aria-describedby={describedBy("reason")}
-              />
-              <FieldError id="change-reason-error" messages={errors.reason} />
-            </label>
-
-            <div className="flex flex-wrap gap-2">
-              <Button type="submit" size="sm" disabled={submitting}>
-                {submitting ? "Submitting…" : "Submit change request"}
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                disabled={submitting}
-                onClick={closeForm}
-              >
-                Discard changes
-              </Button>
-            </div>
-          </form>
-        )}
+            </form>
+          </DialogContent>
+        </Dialog>
       </CardContent>
     </Card>
   );

@@ -31,9 +31,10 @@ import { createPlanningEvents, removeEvents } from "./test-events";
 // afterwards), so they only run against a localhost database — CI's service
 // container, or the Docker DB — never against the shared Supabase database.
 //
-// A request's period is its event's, rounded out to the half hour (SCRUM-50
-// AC1), so these use half-hour times; the criterion's own 10:00–12:00 /
-// 13:15 example is proven exactly in tests/unit/venue-availability.test.ts.
+// A request's period is its event's, to the minute (SCRUM-188). These were
+// written with half-hour times when it was rounded (SCRUM-50 AC1) and still
+// hold; the criterion's own 10:00–12:00 / 13:15 example is proven exactly in
+// tests/unit/venue-availability.test.ts.
 vi.mock("@/auth", () => ({ auth: vi.fn() }));
 const mockAuth = auth as unknown as Mock;
 
@@ -105,7 +106,7 @@ describe.skipIf(!usesLocalDatabase)(
         })),
       );
       Object.values(events).forEach((e, i) => (e.id = ids[i]));
-      // The periods above are already on the half hour.
+      // Each request below is for its event's own period (SCRUM-188 AC1).
       for (const e of Object.values(events)) {
         expect(
           eventBookingPeriod({ startAt: sg(e.start), endAt: sg(e.end) }),

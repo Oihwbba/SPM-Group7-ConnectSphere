@@ -6,7 +6,7 @@ import {
   parseSingaporeDateTime,
   utcToSgWallTime,
 } from "@/lib/datetime";
-import { setTime, signedIn, usesLocalDatabase, openBooking } from "./helpers";
+import { setTime, signedIn, usesLocalDatabase, openBooking, openEvent } from "./helpers";
 
 /**
  * SCRUM-163 — Venue Staff hold a pending request until a deadline and approve
@@ -117,13 +117,11 @@ test.describe("SCRUM-163 — Hold a venue tentatively until a deadline", () => {
 
     // AC3: before Venue Staff approve the hold, Confirm hold is unavailable.
     const coordinator = await signedIn(browser, "coordinator@test.local");
-    const openVenueItem = async () => {
-      await coordinator
-        .getByRole("row", { name: new RegExp(request.name) })
-        .getByTestId("view-details-button")
-        .click();
-      return coordinator.getByRole("dialog").getByTestId("readiness-item-venue");
-    };
+    // SCRUM-208: the checklist is on the event page's Arrangements tab.
+    const openVenueItem = async () =>
+      (await openEvent(coordinator, request.name, "Arrangements")).getByTestId(
+        "readiness-item-venue",
+      );
     let venueItem = await openVenueItem();
     await expect(venueItem).toContainText(
       `${heldUntil} – confirm to secure`,
@@ -157,12 +155,11 @@ test.describe("SCRUM-163 — Hold a venue tentatively until a deadline", () => {
       `Venue Staff approved the hold on ${request.name} venue for "${request.name}". Confirm it before ${formatDateTime(parseSingaporeDateTime(EXPIRY)!)} to secure the venue.`,
     );
     await notice.click();
-    await coordinator.waitForURL(
-      new RegExp(`/events\\?event=${request.eventId}$`),
-    );
-    venueItem = coordinator
-      .getByRole("dialog")
-      .getByTestId("readiness-item-venue");
+    // SCRUM-208: the notice's link opens the event's own page.
+    await coordinator.waitForURL(new RegExp(`/events/${request.eventId}`));
+    const opened = coordinator.getByTestId("event-page");
+    await opened.getByRole("tab", { name: /^Arrangements/ }).click();
+    venueItem = opened.getByTestId("readiness-item-venue");
     await expect(venueItem).toContainText(
       "Approved by Venue Staff – awaiting confirmation.",
     );
@@ -228,13 +225,9 @@ test.describe("SCRUM-163 — Hold a venue tentatively until a deadline", () => {
     });
 
     const coordinator = await signedIn(browser, "coordinator@test.local");
-    await coordinator
-      .getByRole("row", { name: new RegExp(request.name) })
-      .getByTestId("view-details-button")
-      .click();
-    const venueItem = coordinator
-      .getByRole("dialog")
-      .getByTestId("readiness-item-venue");
+    const venueItem = (await openEvent(coordinator, request.name, "Arrangements")).getByTestId(
+      "readiness-item-venue",
+    );
     await expect(venueItem).toContainText(`${heldUntil} – confirm to secure`);
 
     await venueItem.getByRole("button", { name: "Release hold" }).click();

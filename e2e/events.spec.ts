@@ -1,6 +1,6 @@
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect, type BrowserContext, type Page } from "@playwright/test";
 import { prisma } from "@/lib/db";
-import { pickDateTime, selectFrom, fillOther, saveDraft, submitRequest } from "./helpers";
+import { pickDateTime, selectFrom, fillOther, fillEventSchedule, saveDraft, submitRequest } from "./helpers";
 
 /**
  * End-to-End (E2E) Test Suite for User Story 13: Create an Event Request.
@@ -16,7 +16,7 @@ test.describe("User Story 13 — Event Request Creation Journey", () => {
    * Verifies that an organiser can freely navigate between form steps (e.g. Step 1 to Step 2)
    * without being blocked by unfilled mandatory fields, and can save a draft at any step.
    */
-  test("organiser can navigate steps freely without mandatory fields and save partial draft", async ({
+  test("SCRUM-13 [AC5] TC-13-06, SCRUM-15 [AC3] TC-15-05: organiser can navigate steps freely without mandatory fields and save partial draft", async ({
     page,
   }) => {
     // 1. Sign in as seeded event organiser
@@ -52,7 +52,7 @@ test.describe("User Story 13 — Event Request Creation Journey", () => {
    * Verifies that an organiser can fill all form sections (Basics, Schedule, Venue & Accessibility,
    * Equipment, Registration & Details), review entered details on Step 6, and submit for review.
    */
-  test("organiser fills event request sections, reviews details, and submits request", async ({
+  test("SCRUM-13 [AC1, AC3, AC10] TC-13-01, TC-13-04, SCRUM-14 [AC1] TC-14-01: organiser fills event request sections, reviews details, and submits request", async ({
     page,
   }) => {
     // 1. Sign in as seeded event organiser
@@ -79,10 +79,8 @@ test.describe("User Story 13 — Event Request Creation Journey", () => {
     await page.getByRole("button", { name: "Next", exact: true }).click();
 
     // --- STEP 2: Proposed Schedule & Attendance ---
-    const futureStartDate = "2027-10-15T09:00";
-    const futureEndDate = "2027-10-16T18:00";
-    await pickDateTime(page.getByLabel("Proposed Start Date & Time *"), futureStartDate);
-    await pickDateTime(page.getByLabel("Proposed End Date & Time *"), futureEndDate);
+    // SCRUM-190 AC1: one event date with a start and an end time.
+    await fillEventSchedule(page, "2027-10-15", "09:00", "18:00");
     await page.getByLabel("Expected Attendance *").fill("250");
     await page.getByRole("button", { name: "Next", exact: true }).click();
 
@@ -122,7 +120,7 @@ test.describe("User Story 13 — Event Request Creation Journey", () => {
    * Step navigation is not blocked by missing values, so this test reaches Review
    * with empty inputs and verifies submit is rejected with field-level feedback.
    */
-  test("SCRUM-13 [AC4] / SCRUM-14 AC2: submitting with mandatory fields left blank is refused and missing fields are indicated", async ({
+  test("SCRUM-13 [AC4] TC-13-05, SCRUM-14 [AC2] TC-14-03: submitting with mandatory fields left blank is refused and missing fields are indicated", async ({
     page,
   }) => {
     await page.goto("/login");
@@ -163,9 +161,12 @@ test.describe("User Story 13 — Event Request Creation Journey", () => {
  * completing mandatory requirements, and submitting for review.
  */
 test.describe("User Story 15 — Draft Event Request Lifecycle Journey", () => {
-  test("organiser saves partial draft, locates and resumes draft with preserved fields, then completes and submits", async ({
+  test("SCRUM-15 [AC3] TC-15-05: organiser saves partial draft, locates and resumes draft with preserved fields, then completes and submits", async ({
     page,
   }) => {
+    // SCRUM-189: a long journey, two passes through the request form.
+    // Three times the 30-second limit, not a retry under CI load.
+    test.slow();
     // 1. Sign in as seeded event organiser
     await page.goto("/login");
     await page.getByLabel("Email", { exact: true }).fill("organiser@test.local");
@@ -182,8 +183,7 @@ test.describe("User Story 15 — Draft Event Request Lifecycle Journey", () => {
     await page.getByLabel("Event Description *").fill("Detailed description for resumed draft.");
     await page.getByRole("button", { name: "Next", exact: true }).click();
 
-    await pickDateTime(page.getByLabel("Proposed Start Date & Time *"), "2027-11-20T10:00");
-    await pickDateTime(page.getByLabel("Proposed End Date & Time *"), "2027-11-20T18:00");
+    await fillEventSchedule(page, "2027-11-20", "10:00", "18:00");
 
     // Save as draft at Step 2
     await saveDraft(page);
@@ -202,8 +202,9 @@ test.describe("User Story 15 — Draft Event Request Lifecycle Journey", () => {
     await page.getByRole("button", { name: "Next", exact: true }).click();
 
     // Verify Singapore wall-time round trip on resumed draft inputs
-    await expect(page.getByLabel("Proposed Start Date & Time *")).toHaveAttribute("data-value", "2027-11-20T10:00");
-    await expect(page.getByLabel("Proposed End Date & Time *")).toHaveAttribute("data-value", "2027-11-20T18:00");
+    await expect(page.getByLabel("Event Date *")).toHaveAttribute("data-value", "2027-11-20");
+    await expect(page.getByLabel("Start Time *")).toHaveAttribute("data-value", "10:00");
+    await expect(page.getByLabel("End Time *")).toHaveAttribute("data-value", "18:00");
 
     // 6. Complete missing fields across steps
     await page.getByLabel("Expected Attendance *").fill("100");
@@ -224,8 +225,8 @@ test.describe("User Story 15 — Draft Event Request Lifecycle Journey", () => {
 
     // 7. Review and Submit
     await expect(page.getByRole("heading", { name: /Review Entered Details/i })).toBeVisible();
-    await expect(page.getByRole("dialog").getByText(/Start:\s*20 Nov 2027, 10:00 am SGT/i)).toBeVisible();
-    await expect(page.getByRole("dialog").getByText(/End:\s*20 Nov 2027, 6:00 pm SGT/i)).toBeVisible();
+    await expect(page.getByRole("dialog").getByText(/Date:\s*20 Nov 2027/i)).toBeVisible();
+    await expect(page.getByRole("dialog").getByText(/Time:\s*10:00 am SGT – 6:00 pm SGT/i)).toBeVisible();
     await submitRequest(page);
 
     // 8. Verify event submitted successfully
@@ -237,7 +238,7 @@ test.describe("User Story 15 — Draft Event Request Lifecycle Journey", () => {
    * Verifies that reopening a saved draft and clicking "Save as Draft" again
    * updates the existing row in-place rather than creating a duplicate row.
    */
-  test("SCRUM-15 [AC2, AC7 - Draft Save Idempotency]: saving an existing draft a second time updates the record in-place without creating duplicate rows", async ({
+  test("SCRUM-15 [AC2, AC7] TC-15-09: saving an existing draft a second time updates the record in-place without creating duplicate rows", async ({
     page,
   }) => {
     await page.goto("/login");
@@ -282,9 +283,12 @@ test.describe("User Story 15 — Draft Event Request Lifecycle Journey", () => {
  * badges, styling, and filter tabs so they cannot be mistaken for submitted or under review requests.
  */
 test.describe("User Story 16 — Distinguish Drafts from Submitted Requests Journey", () => {
-  test("organiser can visually distinguish draft requests from submitted ones side-by-side and filter by status", async ({
+  test("SCRUM-16 [AC7] TC-16-04: organiser can visually distinguish draft requests from submitted ones side-by-side and filter by status", async ({
     page,
   }) => {
+    // SCRUM-189: a long journey, a draft and a submitted request, then filters.
+    // Three times the 30-second limit, not a retry under CI load.
+    test.slow();
     // 1. Sign in as seeded event organiser
     await page.goto("/login");
     await page.getByLabel("Email", { exact: true }).fill("organiser@test.local");
@@ -308,8 +312,7 @@ test.describe("User Story 16 — Distinguish Drafts from Submitted Requests Jour
     await page.getByLabel("Event Description *").fill("US16 visual distinguishability test description");
     await page.getByRole("button", { name: "Next", exact: true }).click();
 
-    await pickDateTime(page.getByLabel("Proposed Start Date & Time *"), "2027-12-01T09:00");
-    await pickDateTime(page.getByLabel("Proposed End Date & Time *"), "2027-12-01T17:00");
+    await fillEventSchedule(page, "2027-12-01", "09:00", "17:00");
     await page.getByLabel("Expected Attendance *").fill("80");
     await page.getByRole("button", { name: "Next", exact: true }).click();
 
@@ -375,7 +378,7 @@ test.describe("User Story 16 — Distinguish Drafts from Submitted Requests Jour
  * and selecting any entry opens the full event details.
  */
 test.describe("User Story 84 — Organiser Views Their Own Event Requests Journey", () => {
-  test("organiser views list of their own events with names, status badges, and selects an entry for full detail", async ({
+  test("SCRUM-84 [AC3, AC4] TC-84-03, SCRUM-208 [AC1] TC-208-01: organiser views list of their own events with names, status badges, and selects an entry for full detail", async ({
     page,
   }) => {
     // 1. Sign in as seeded event organiser
@@ -400,24 +403,24 @@ test.describe("User Story 84 — Organiser Views Their Own Event Requests Journe
     await expect(row.getByTestId("status-badge")).toBeVisible();
     await expect(row.getByTestId("status-badge")).toHaveAttribute("data-status", "DRAFT");
 
-    // 4. Select entry (Clicking Event Name Link) opens Full Detail Modal (AC 5)
+    // 4. Selecting the entry by its name opens its page (AC 5, SCRUM-208 AC1)
     await row.getByTestId("event-name-link").click();
-    await expect(page.getByRole("dialog")).toBeVisible();
-    await expect(page.getByRole("heading", { name: eventTitle })).toBeVisible();
-    await expect(page.getByRole("dialog").getByText(/Draft Event Request/i)).toBeVisible();
+    await expect(page).toHaveURL(/\/events\/[^/?]+$/);
+    await expect(page.getByRole("heading", { level: 1, name: eventTitle })).toBeVisible();
+    await expect(page.getByTestId("next-step")).toContainText(
+      "Your turn: finish the request and submit it for review",
+    );
 
-    // Close detail modal
-    await page.getByRole("dialog").getByRole("button", { name: "Close" }).first().click();
-    await expect(page.getByRole("dialog")).not.toBeVisible();
+    // Back to the list
+    await page.getByRole("link", { name: "Back to My Events" }).click();
+    await expect(page).toHaveURL(/\/events$/);
 
-    // 5. Select entry via "View Details" button also opens Full Detail Modal (AC 5)
+    // 5. "View Details" opens the same page (AC 5)
     await row.getByTestId("view-details-button").click();
-    await expect(page.getByRole("dialog")).toBeVisible();
-    await expect(page.getByRole("heading", { name: eventTitle })).toBeVisible();
-    await page.getByRole("dialog").getByRole("button", { name: "Close" }).first().click();
+    await expect(page.getByRole("heading", { level: 1, name: eventTitle })).toBeVisible();
   });
 
-  test("SCRUM-84 [AC1 - Ownership Data Isolation]: enforces ownership isolation: organiser2 sees only their own events", async ({
+  test("SCRUM-68 [AC1, AC5] TC-68-01, SCRUM-84 [AC1] TC-84-01: enforces ownership isolation: organiser2 sees only their own events", async ({
     page,
   }) => {
     // 1. Sign in as organiser2 (owns evt_other_organiser per seed data)
@@ -453,7 +456,7 @@ test.describe("User Story 84 — Organiser Views Their Own Event Requests Journe
 test.describe("User Story 84 — Events list on mobile (375x812)", () => {
   test.use({ viewport: { width: 375, height: 812 } });
 
-  test("restyles rows as stacked cards with no page overflow, and Resume Draft opens the dialog", async ({
+  test("SCRUM-84 [AC3, AC4] TC-84-09: restyles rows as stacked cards with no page overflow, and Resume Draft opens the dialog", async ({
     page,
   }) => {
     await page.goto("/login");
@@ -516,7 +519,7 @@ test.describe("User Story 84 — Events list on mobile (375x812)", () => {
   // dialog. Two things broke on a real phone and are pinned here: the four
   // review buttons wrapped unevenly (Reject alone on a second line), and the
   // dialog's stacked footer buttons touched.
-  test("SCRUM-18/19: the four review buttons form an even two-column grid and stacked dialog buttons are separated", async ({
+  test("SCRUM-18 [AC1] TC-18-11: the four review buttons form an even two-column grid and stacked dialog buttons are separated", async ({
     page,
   }) => {
     // Read at run time: the const is declared further down this file.
@@ -610,7 +613,7 @@ test.describe("User Story 84 — Events list on mobile (375x812)", () => {
  * headers the sort test clicks are hidden.
  */
 test.describe("User Story 129, 13 & 84 — Singapore time, unsaved changes and list controls", () => {
-  test("SCRUM-129 [AC1 - Singapore timezone]: the request form has no timezone selector and states its times are SGT", async ({
+  test("SCRUM-13 [AC6] TC-13-07, SCRUM-129 [AC1] TC-129-01: the request form has no timezone selector and states its times are SGT", async ({
     page,
   }) => {
     await page.goto("/login");
@@ -628,15 +631,14 @@ test.describe("User Story 129, 13 & 84 — Singapore time, unsaved changes and l
     await expect(dialog.getByLabel(/timezone/i)).toHaveCount(0);
 
     // SCRUM-129 AC3: the review step labels the entered times SGT.
-    await pickDateTime(page.getByLabel("Proposed Start Date & Time *"), "2031-11-20T10:00");
-    await pickDateTime(page.getByLabel("Proposed End Date & Time *"), "2031-11-20T18:00");
+    await fillEventSchedule(page, "2031-11-20", "10:00", "18:00");
     await page.getByRole("button", { name: "6 - Review" }).click();
-    await expect(dialog.getByText(/Start:\s*20 Nov 2031, 10:00 am SGT/)).toBeVisible();
-    await expect(dialog.getByText(/End:\s*20 Nov 2031, 6:00 pm SGT/)).toBeVisible();
+    await expect(dialog.getByText(/Date:\s*20 Nov 2031/)).toBeVisible();
+    await expect(dialog.getByText(/Time:\s*10:00 am SGT – 6:00 pm SGT/)).toBeVisible();
     await expect(dialog.getByText(/Timezone:/)).toHaveCount(0);
   });
 
-  test("SCRUM-15 [AC6 - Unsaved Changes Warning]: unsaved changes warning appears when closing an edited draft dialog", async ({
+  test("SCRUM-15 [AC6] TC-15-08: unsaved changes warning appears when closing an edited draft dialog", async ({
     page,
   }) => {
     await page.goto("/login");
@@ -672,7 +674,7 @@ test.describe("User Story 129, 13 & 84 — Singapore time, unsaved changes and l
     await expect(page.getByRole("cell", { name: draftTitle })).not.toBeVisible();
   });
 
-  test("SCRUM-84 AC7-AC9: organiser sorts columns and filters list by status dropdown and search", async ({
+  test("SCRUM-84 [AC6, AC7, AC8, AC9] TC-84-05, TC-84-06, TC-84-07, SCRUM-168 [AC2] TC-168-02: organiser sorts columns and filters list by status dropdown and search", async ({
     page,
   }) => {
     await page.goto("/login");
@@ -707,7 +709,7 @@ test.describe("User Story 129, 13 & 84 — Singapore time, unsaved changes and l
     await expect(page.getByText("Career Fair")).not.toBeVisible();
   });
 
-  test("SCRUM-13 [AC9]: entering a past start date on Step 2 blocks navigation to Step 3 and shows an inline error", async ({
+  test("SCRUM-13 [AC9] TC-13-10: entering a past start date on Step 2 blocks navigation to Step 3 and shows an inline error", async ({
     page,
   }) => {
     await page.goto("/login");
@@ -721,8 +723,7 @@ test.describe("User Story 129, 13 & 84 — Singapore time, unsaved changes and l
     await page.getByRole("button", { name: "Next", exact: true }).click();
 
     // AC9: enter a start date clearly in the past.
-    await pickDateTime(page.getByLabel("Proposed Start Date & Time *"), "2020-01-01T10:00");
-    await pickDateTime(page.getByLabel("Proposed End Date & Time *"), "2020-01-01T12:00");
+    await fillEventSchedule(page, "2020-01-01", "10:00", "12:00");
     await page.getByRole("button", { name: "Next", exact: true }).click();
 
     // The step validator should reject the past date and display an inline error.
@@ -736,7 +737,56 @@ test.describe("User Story 129, 13 & 84 — Singapore time, unsaved changes and l
     ).toBeVisible();
   });
 
-  test("SCRUM-84 [AC6/AC9 - Filtered Empty State & Clear Filters]: filtered empty state shows 'No requests match' card with a Clear Filters CTA when search yields no results", async ({
+  test("SCRUM-190 [AC1, AC2] TC-190-01, TC-190-04: the form asks for one date with a start and an end time, and an end time not after the start stops it at Step 2", async ({
+    page,
+  }) => {
+    await page.goto("/login");
+    await page.getByLabel("Email", { exact: true }).fill("organiser@test.local");
+    await page.getByLabel("Password", { exact: true }).fill("Password123!");
+    await page.getByRole("button", { name: "Sign in" }).click();
+    await page.waitForURL("**/events");
+
+    await page.getByRole("button", { name: /Create Event Request/i }).first().click();
+    await page.getByLabel("Event Name *").fill("One Day Validation Test");
+    await page.getByRole("button", { name: "Next", exact: true }).click();
+
+    // AC1: one date and two times, not a start and an end date-time: the
+    // date's picker has no time columns, and the times' have no calendar.
+    const dialog = page.getByRole("dialog");
+    const menu = page.getByRole("menu");
+    for (const [label, offers, lacks] of [
+      ["Event Date *", "[data-date]", "[data-hour]"],
+      ["Start Time *", "[data-hour]", "[data-date]"],
+      ["End Time *", "[data-hour]", "[data-date]"],
+    ]) {
+      await dialog.getByLabel(label).click();
+      await expect(menu.locator(offers).first()).toBeVisible();
+      await expect(menu.locator(lacks)).toHaveCount(0);
+      await page.keyboard.press("Escape");
+      await menu.waitFor({ state: "hidden" });
+    }
+    await expect(dialog.getByLabel(/Date & Time/)).toHaveCount(0);
+
+    // AC2: an end time equal to the start time is not after it.
+    await fillEventSchedule(page, "2031-09-01", "14:00", "14:00");
+    await page.getByRole("button", { name: "Next", exact: true }).click();
+    await expect(
+      dialog.getByText("The end time must be after the start time."),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: /Schedule.*Attendance/i }),
+    ).toBeVisible();
+
+    // One minute later is a valid range, and the form moves on.
+    await pickDateTime(page.getByLabel("End Time *"), "14:01");
+    await expect(
+      dialog.getByText("The end time must be after the start time."),
+    ).toHaveCount(0);
+    await page.getByRole("button", { name: "Next", exact: true }).click();
+    await expect(page.getByLabel("Venue Requirements *")).toBeVisible();
+  });
+
+  test("SCRUM-84 [AC6, AC9] TC-84-08, SCRUM-168 [AC2] TC-168-02: filtered empty state shows 'No requests match' card with a Clear Filters CTA when search yields no results", async ({
     page,
   }) => {
     // AC6 & AC9 cover status filtering, search queries, and search cleared behavior.
@@ -789,6 +839,13 @@ test.describe("User Story 23 & 24 — Event Status View & Consistency Journey", 
     });
   });
 
+  // SCRUM-189 AC4: browsers a test opens itself are closed even when a step
+  // fails, so they can't keep the test server busy for the tests after it.
+  const ownContexts: BrowserContext[] = [];
+  test.afterEach(async () => {
+    await Promise.all(ownContexts.splice(0).map((context) => context.close()));
+  });
+
   test.beforeEach(async () => {
     if (!usesLocalDatabase) return;
     // Reset both events used by tests so CI retries stay green. Since
@@ -817,7 +874,7 @@ test.describe("User Story 23 & 24 — Event Status View & Consistency Journey", 
     });
   });
 
-  test("coordinator views assigned event status and status remains consistent across views (SCRUM-23 & SCRUM-24)", async ({
+  test("SCRUM-23 [AC2] TC-23-02, SCRUM-24 [AC7] TC-24-05: coordinator views assigned event status and status remains consistent across views", async ({
     page,
   }) => {
     // 1. Sign in as Event Coordinator
@@ -835,12 +892,11 @@ test.describe("User Story 23 & 24 — Event Status View & Consistency Journey", 
     await expect(underReviewRow).toBeVisible();
     await expect(underReviewRow.getByTestId("status-badge")).toHaveAttribute("data-status", "UNDER_REVIEW");
 
-    // Open detail modal and verify same status badge
-    await underReviewRow.getByRole("button", { name: /View Details|Details/i }).click();
-    const detailModal = page.getByRole("dialog");
-    await expect(detailModal).toBeVisible();
-    await expect(detailModal.getByTestId("status-badge")).toHaveAttribute("data-status", "UNDER_REVIEW");
-    await page.keyboard.press("Escape");
+    // Open the event's page and verify the same status badge (SCRUM-208)
+    await underReviewRow.getByTestId("view-details-button").click();
+    const detailModal = page.getByTestId("event-page");
+    await expect(detailModal.getByTestId("status-badge").first()).toHaveAttribute("data-status", "UNDER_REVIEW");
+    await page.getByRole("link", { name: "Back to Events" }).click();
 
     // 4. SCRUM-135 AC3, AC4: an unassigned Submitted request offers no
     // decision; the Under Review one assigned to this Coordinator is rejected.
@@ -868,9 +924,8 @@ test.describe("User Story 23 & 24 — Event Status View & Consistency Journey", 
 
     // 5. Verify updated status is consistent across list and detail views
     await expect(underReviewRow.getByTestId("status-badge")).toHaveAttribute("data-status", "REJECTED");
-    await underReviewRow.getByRole("button", { name: /View Details|Details/i }).click();
-    await expect(detailModal).toBeVisible();
-    await expect(detailModal.getByTestId("status-badge")).toHaveAttribute("data-status", "REJECTED");
+    await underReviewRow.getByTestId("view-details-button").click();
+    await expect(detailModal.getByTestId("status-badge").first()).toHaveAttribute("data-status", "REJECTED");
   });
 
   test("SCRUM-81 [AC1, AC2] TC-81-01: coordinator approves an under-review event and status moves to PLANNING (SCRUM-24)", async ({
@@ -895,22 +950,25 @@ test.describe("User Story 23 & 24 — Event Status View & Consistency Journey", 
     await underReviewRow.getByRole("button", { name: /Approve/i }).click();
     await expect(underReviewRow.getByTestId("status-badge")).toHaveAttribute("data-status", "PLANNING");
 
-    // 5. Open detail modal and verify the same PLANNING status (SCRUM-81: approval moves it straight to Planning)
-    await underReviewRow.getByRole("button", { name: /View Details|Details/i }).click();
-    const detailModal = page.getByRole("dialog");
-    await expect(detailModal).toBeVisible();
-    await expect(detailModal.getByTestId("status-badge")).toHaveAttribute("data-status", "PLANNING");
+    // 5. Open the event's page and verify the same PLANNING status (SCRUM-81: approval moves it straight to Planning)
+    await underReviewRow.getByTestId("view-details-button").click();
+    const detailModal = page.getByTestId("event-page");
+    await expect(detailModal.getByTestId("status-badge").first()).toHaveAttribute("data-status", "PLANNING");
   });
 
-  test("two users viewing the same event simultaneously see consistent live status without manual refresh (SCRUM-24)", async ({
+  test("SCRUM-24 [AC7] TC-24-05: two users viewing the same event simultaneously see consistent live status without manual refresh", async ({
     browser,
   }) => {
+    // SCRUM-189: a long journey, two browsers, the form and two 4-second refreshes.
+    // Three times the 30-second limit, not a retry under CI load.
+    test.slow();
     // Assigns its own event the way the Lead would, so it needs the local
     // database the other write-heavy tests use.
     test.skip(!usesLocalDatabase, "reads its own event; local database only");
 
     // 1. Sign in as Organiser in first browser context
     const organiserContext = await browser.newContext();
+    ownContexts.push(organiserContext);
     const organiserPage = await organiserContext.newPage();
     await organiserPage.goto("/login");
     await organiserPage.getByLabel("Email", { exact: true }).fill("organiser@test.local");
@@ -927,8 +985,7 @@ test.describe("User Story 23 & 24 — Event Status View & Consistency Journey", 
     await organiserPage.getByLabel("Event Description *").fill("Testing live status updates between two concurrent users");
     await organiserPage.getByRole("button", { name: "Next", exact: true }).click();
 
-    await pickDateTime(organiserPage.getByLabel("Proposed Start Date & Time *"), "2027-12-15T09:00");
-    await pickDateTime(organiserPage.getByLabel("Proposed End Date & Time *"), "2027-12-15T18:00");
+    await fillEventSchedule(organiserPage, "2027-12-15", "09:00", "18:00");
     await organiserPage.getByLabel("Expected Attendance *").fill("50");
     await organiserPage.getByRole("button", { name: "Next", exact: true }).click();
 
@@ -963,16 +1020,16 @@ test.describe("User Story 23 & 24 — Event Status View & Consistency Journey", 
       timeout: 12000,
     });
 
-    // Organiser opens the EventDetailsModal to view submitted request specifications
+    // Organiser opens the event's page (SCRUM-208)
     await organiserRow.getByTestId("view-details-button").click();
-    const organiserModal = organiserPage.getByRole("dialog");
-    await expect(organiserModal).toBeVisible();
-    await expect(organiserModal.getByTestId("status-badge")).toHaveAttribute("data-status", "UNDER_REVIEW");
+    const organiserModal = organiserPage.getByTestId("event-page");
+    await expect(organiserModal.getByTestId("status-badge").first()).toHaveAttribute("data-status", "UNDER_REVIEW");
 
     // 3. Sign in as the coordinator the request was assigned to.
     const coordinatorEmail = "coordinator@test.local";
 
     const coordinatorContext = await browser.newContext();
+    ownContexts.push(coordinatorContext);
     const coordinatorPage = await coordinatorContext.newPage();
     await coordinatorPage.goto("/login");
     await coordinatorPage.getByLabel("Email", { exact: true }).fill(coordinatorEmail);
@@ -991,20 +1048,16 @@ test.describe("User Story 23 & 24 — Event Status View & Consistency Journey", 
 
     // 5. Organiser page (WITHOUT any manual reload or interaction) receives auto-refresh:
     // Both the open detail modal badge AND the underlying table row update to PLANNING in lockstep
-    await expect(organiserModal.getByTestId("status-badge")).toHaveAttribute("data-status", "PLANNING", {
+    await expect(organiserModal.getByTestId("status-badge").first()).toHaveAttribute("data-status", "PLANNING", {
       timeout: 12000,
     });
 
-    // Close the modal and confirm underlying table row also reflects PLANNING
-    await organiserModal.getByRole("button", { name: "Close" }).first().click();
-    await expect(organiserModal).not.toBeVisible();
+    // Back to the list, whose row also reflects PLANNING
+    await organiserPage.getByRole("link", { name: "Back to My Events" }).click();
     await expect(organiserRow.getByTestId("status-badge")).toHaveAttribute("data-status", "PLANNING");
-
-    await organiserContext.close();
-    await coordinatorContext.close();
   });
 
-  test("open modal remains mounted with warning when viewed event is dropped from review queue (SCRUM-24)", async ({
+  test("SCRUM-208 TC-208-16: an open event page stays, with a warning, when the event is dropped from the review queue", async ({
     page,
   }) => {
     // 1. Sign in as Event Coordinator (coordinator@test.local)
@@ -1014,14 +1067,13 @@ test.describe("User Story 23 & 24 — Event Status View & Consistency Journey", 
     await page.getByRole("button", { name: "Sign in" }).click();
     await page.waitForURL("**/events");
 
-    // 2. Open details modal for an event currently visible in review queue
+    // 2. Open the page of an event currently visible in the review queue
     const submittedRow = page.getByRole("row", { name: /Submitted — Alumni Homecoming/i });
     await expect(submittedRow).toBeVisible();
-    await submittedRow.getByRole("button", { name: /View Details|Details/i }).click();
+    await submittedRow.getByTestId("view-details-button").click();
 
-    const detailModal = page.getByRole("dialog");
-    await expect(detailModal).toBeVisible();
-    await expect(detailModal.getByTestId("status-badge")).toHaveAttribute("data-status", "SUBMITTED");
+    const detailModal = page.getByTestId("event-page");
+    await expect(detailModal.getByTestId("status-badge").first()).toHaveAttribute("data-status", "SUBMITTED");
 
     // 3. Reassign this event to coordinator2 in database to simulate mid-view reassignment (SCRUM-20/21)
     if (usesLocalDatabase) {
@@ -1032,7 +1084,7 @@ test.describe("User Story 23 & 24 — Event Status View & Consistency Journey", 
         });
 
         // 4. On next auto-refresh, event drops from coordinator1's query:
-        // The modal stays mounted and displays the warning notice instead of silently vanishing
+        // The page stays and displays the warning notice instead of silently vanishing
         await expect(
           detailModal.getByTestId("event-no-longer-available-warning"),
         ).toBeVisible({ timeout: 12000 });
@@ -1104,6 +1156,9 @@ test.describe("SCRUM-19 — Reject with a reason, then amend and resubmit", () =
   test("SCRUM-126 [AC2] TC-126-03: coordinator rejects with a reason, organiser sees it, amends and resubmits it back into review", async ({
     page,
   }) => {
+    // SCRUM-189: a long journey, two sign-ins and the form again to amend.
+    // Three times the 30-second limit, not a retry under CI load.
+    test.slow();
     const reason = "Venue is unavailable on that date — please propose another.";
 
     // --- Coordinator rejects, and a blank reason is refused ---------------
@@ -1137,14 +1192,15 @@ test.describe("SCRUM-19 — Reject with a reason, then amend and resubmit", () =
       "REJECTED",
     );
     await organiserRow.getByTestId("view-details-button").click();
-    const details = page.getByRole("dialog");
+    // SCRUM-208 AC2: a final state shows its outcome and reason at the top.
+    const details = page.getByTestId("next-step");
     await expect(details.getByText("Rejection reason")).toBeVisible();
     await expect(details.getByText(reason)).toBeVisible();
     // SCRUM-126 AC5: the chosen outcome is shown with the reason.
     await expect(details.getByTestId("rejection-outcome")).toHaveText(
       "Next step: Amend and resubmit",
     );
-    await page.keyboard.press("Escape");
+    await page.getByRole("link", { name: "Back to My Events" }).click();
 
     // --- Organiser amends and resubmits -----------------------------------
     await organiserRow.getByTestId("amend-rejected-button").click();
@@ -1173,7 +1229,8 @@ test.describe("SCRUM-19 — Reject with a reason, then amend and resubmit", () =
       /^(SUBMITTED|UNDER_REVIEW)$/,
     );
     await organiserRow.getByTestId("view-details-button").click();
-    await expect(page.getByRole("dialog").getByText("Rejection reason")).toHaveCount(0);
+    await expect(page.getByTestId("event-page").getByRole("heading", { level: 1 })).toBeVisible();
+    await expect(page.getByTestId("event-page").getByText("Rejection reason")).toHaveCount(0);
   });
 });
 
@@ -1224,7 +1281,7 @@ test.describe("SCRUM-17 — Coordinator reviews a submitted request's full detai
     await prisma.event.deleteMany({ where: { id: eventId } });
   });
 
-  test("every field the organiser submitted is visible to the assigned coordinator", async ({
+  test("SCRUM-17 [AC1] TC-17-01: every field the organiser submitted is visible to the assigned coordinator", async ({
     page,
   }) => {
     await page.goto("/login");
@@ -1237,13 +1294,17 @@ test.describe("SCRUM-17 — Coordinator reviews a submitted request's full detai
     await expect(row).toBeVisible();
     await row.getByTestId("view-details-button").click();
 
-    const modal = page.getByRole("dialog");
-    await expect(modal.getByRole("heading", { name: eventName })).toBeVisible();
+    // SCRUM-208 AC3: what the Organiser asked for is the Request tab.
+    await expect(page.getByRole("heading", { level: 1, name: eventName })).toBeVisible();
+    const modal = page.getByTestId("event-page").getByRole("tabpanel");
     await expect(modal.getByText("Showcase the department's annual research output.")).toBeVisible();
     // Dates are shown in Singapore time (SCRUM-129), so 02:00Z/10:00Z become
     // 10:00 am SGT / 6:00 pm SGT.
-    await expect(modal.getByText("1 Aug 2031, 10:00 am SGT")).toBeVisible();
-    await expect(modal.getByText("1 Aug 2031, 6:00 pm SGT")).toBeVisible();
+    // SCRUM-208: the Request tab shows the date, then the times beneath it.
+    await expect(modal.getByTestId("request-schedule")).toContainText("1 Aug 2031");
+    await expect(modal.getByTestId("request-schedule")).toContainText(
+      "10:00 am SGT to 6:00 pm SGT",
+    );
     await expect(modal.getByText("120 attendees")).toBeVisible();
     await expect(modal.getByText("Auditorium with a raised stage.")).toBeVisible();
     await expect(modal.getByText("Wheelchair-accessible entrance and seating.")).toBeVisible();
@@ -1291,7 +1352,7 @@ test.describe("SCRUM-129 — Event times are shown in Singapore time", () => {
     await prisma.event.deleteMany({ where: { id: eventId } });
   });
 
-  test("SCRUM-129 [AC3 - SGT label] × [AC4 - UTC storage]: the list and details show the stored UTC instants in SGT", async ({
+  test("SCRUM-129 [AC3, AC4] TC-129-04: the list and details show the stored UTC instants in SGT", async ({
     page,
   }) => {
     await page.goto("/login");
@@ -1304,9 +1365,12 @@ test.describe("SCRUM-129 — Event times are shown in Singapore time", () => {
     await expect(row).toContainText("1 Aug 2031, 10:00 am SGT");
 
     await row.getByTestId("view-details-button").click();
-    const modal = page.getByRole("dialog");
-    await expect(modal.getByText("1 Aug 2031, 10:00 am SGT")).toBeVisible();
-    await expect(modal.getByText("1 Aug 2031, 6:00 pm SGT")).toBeVisible();
+    const modal = page.getByTestId("event-page").getByRole("tabpanel");
+    // SCRUM-208: the Request tab shows the date, then the times beneath it.
+    await expect(modal.getByTestId("request-schedule")).toContainText("1 Aug 2031");
+    await expect(modal.getByTestId("request-schedule")).toContainText(
+      "10:00 am SGT to 6:00 pm SGT",
+    );
     await expect(modal.getByText(/Event Timezone/)).toHaveCount(0);
 
     // The stored instants were not rewritten.

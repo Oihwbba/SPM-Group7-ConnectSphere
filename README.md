@@ -48,12 +48,14 @@ the customer where it matters, so you rarely need to open the folder.
 | If you want to… | Read |
 |---|---|
 | Run the app | [Getting started](#getting-started), below |
+| Demonstrate the core workflows with the seeded accounts | [`docs/demo.md`](docs/demo.md) |
 | Know what we are building and for whom | [`docs/product-context.md`](docs/product-context.md) |
 | Check a story's acceptance criteria | `docs/backlog/SCRUM-n.md` (the key is in your branch name) |
 | See the planned test cases for a story | `docs/testing/SCRUM-n.md` |
 | Build a feature and open a pull request | [`CONTRIBUTING.md`](CONTRIBUTING.md) |
 | Know why something is built the way it is | [`docs/adr/`](docs/adr/README.md) |
 | Add a column or table | [`docs/data-model.md`](docs/data-model.md) |
+| See each sprint's commitment and outcome, how we estimate, and the Definition of Done | [`docs/scrum/`](docs/scrum/README.md) |
 | Work with an AI coding assistant | [`CLAUDE.md`](CLAUDE.md) |
 
 ## Stack
@@ -214,6 +216,9 @@ unread notifications; and audit entries.
 Dates are **relative to today**, not hard-coded, so "registration closes next
 week" stays true all term. Row IDs are fixed and tests use them directly, so
 don't rename one without updating its callers.
+
+For a scripted walkthrough of every core workflow on this seed, with a
+conflict, change or failure in each, see [`docs/demo.md`](docs/demo.md).
 
 ---
 
@@ -418,6 +423,7 @@ docs/
   testing/                    Test case specifications, one file per story
   data-model.md               What each table is for and which story needs it
   adr/                        Architecture Decision Records, with an index
+  scrum/                      Sprint records, estimation and the Definition of Done
   evidence/                   Screenshots and CI logs captured for sprint reviews
 .github/
   workflows/                  CI, the GLM review, its memory, and deploys

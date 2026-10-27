@@ -46,7 +46,7 @@ the queue unassigned. Every account's password is `Password123!`.
 | Test Data | Any complete request, e.g. 50 expected, 1 Nov 2031 09:00–17:00. |
 | Expected Result | The request is Submitted with no Coordinator, nothing is recorded as assigned, and it is listed in the Lead's Unassigned queue. |
 
-**Automated by:** the Lead notice by `tests/unit/submission-queue.test.ts` › "SCRUM-124 [AC10, AC12, AC14] TC-124-10: …" and `tests/integration/staff-notifications.test.ts` › "SCRUM-124 [AC10, AC12, AC14] TC-124-10: …"; `tests/unit/submission-queue.test.ts` › "SCRUM-165 [AC1] TC-165-01: …" (2 tests); `tests/unit/auth.test.ts` › "SCRUM-165 [AC1] TC-165-01: …"; `e2e/lead-queue.spec.ts` › "SCRUM-165 [AC1–AC5, AC8, AC11] … a submitted request waits in the queue, the Lead assigns it, …"
+**Automated by:** the Lead notice by `tests/unit/submission-queue.test.ts` › "SCRUM-124 [AC10, AC12, AC14] TC-124-10: …" and `tests/integration/staff-notifications.test.ts` › "SCRUM-124 [AC10, AC12, AC14] TC-124-10: …"; `tests/unit/submission-queue.test.ts` › "SCRUM-165 [AC1] TC-165-01: …" (2 tests); `tests/unit/auth.test.ts` › "SCRUM-165 [AC1] TC-165-01: …"; `e2e/lead-queue.spec.ts` › "SCRUM-14 [AC1] TC-14-01, SCRUM-20 [AC1, AC2, AC3, AC7, AC8] TC-20-01, SCRUM-135 [AC2, AC6] TC-135-02, SCRUM-164 [AC2] TC-164-05, SCRUM-165 [AC1, AC2, AC3, AC4, AC5, AC8, AC11] TC-165-01, TC-165-02, TC-165-04, TC-165-05, TC-165-07, TC-165-11, TC-165-14: a submitted request waits in the queue, the Lead assigns it, and only then does the Coordinator get it"
 
 ### TC-165-02
 
@@ -176,7 +176,7 @@ the queue unassigned. Every account's password is `Password123!`.
 | Test Data | — |
 | Expected Result | 1. It isn't listed; only Cody's own events are. 2. "Event not found." and nothing changes. |
 
-**Automated by:** `tests/unit/auth.test.ts`, `tests/unit/event-status.test.ts`, `tests/unit/clarification-and-amend.test.ts`, `tests/unit/change-requests.test.ts`, `tests/unit/coordinator-assigned-events.test.ts`, `tests/unit/coordinator-events-access.test.ts` and `tests/unit/events.test.ts` › "… SCRUM-165 [AC8] TC-165-11 …"; `e2e/coordinator-assigned-events.spec.ts` › "… TC-165-11 …" (2 tests); `e2e/lead-queue.spec.ts` › "… TC-165-11 …"
+**Automated by:** `tests/unit/auth.test.ts`, `tests/unit/event-status.test.ts`, `tests/unit/clarification-and-amend.test.ts`, `tests/unit/change-requests.test.ts`, `tests/unit/coordinator-assigned-events.test.ts`, `tests/unit/coordinator-events-access.test.ts` and `tests/unit/events.test.ts` › "… SCRUM-165 [AC8] TC-165-11 …"; `e2e/coordinator-assigned-events.spec.ts` › "SCRUM-69 [AC1, AC4] TC-69-01, TC-69-05, SCRUM-135 [AC3, AC4, AC11] TC-135-03, SCRUM-165 [AC4, AC8] TC-165-11: an unassigned Submitted event is in no Coordinator's list" (2 tests); `e2e/lead-queue.spec.ts` › "… TC-165-11 …"
 
 ### TC-165-12
 

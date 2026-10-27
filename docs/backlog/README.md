@@ -37,7 +37,7 @@ either covered by a test or visibly not done yet. Reviewers do the same.
 | | |
 |---|---|
 | Stories | **97** |
-| Tasks | **61** |
+| Tasks | **68** |
 | Subtasks | **18** |
 | Total story points | **267** |
 | Points committed to Sprint 1 | **37** |
@@ -185,10 +185,10 @@ _8 stories, 14 points_
 |---|---|---|---|---|---|
 | [SCRUM-132](SCRUM-132.md) | Core pages work on a phone and respond within 2 seconds | 2 | Medium | SCRUM Sprint 3 | Done |
 | [SCRUM-155](SCRUM-155.md) | Reserve an approved equipment request in one step, pre-filled from the Coordinator's request (follow-up to SCRUM-31) | 3 | Medium | SCRUM Sprint 2 | Done |
-| [SCRUM-207](SCRUM-207.md) | Shared page conventions on every page | 2 | High | SCRUM Sprint 4 | To Do |
+| [SCRUM-207](SCRUM-207.md) | Shared page conventions on every page | 2 | High | SCRUM Sprint 4 | In Progress |
 | [SCRUM-208](SCRUM-208.md) | One page per event, not a pop-up | 2 | High | SCRUM Sprint 4 | To Do |
 | [SCRUM-209](SCRUM-209.md) | Arrange venues, equipment and the safety check from the event page | 2 | High | SCRUM Sprint 4 | To Do |
-| [SCRUM-210](SCRUM-210.md) | Menus grouped by task | 1 | High | SCRUM Sprint 4 | To Do |
+| [SCRUM-210](SCRUM-210.md) | Menus grouped by task | 1 | High | SCRUM Sprint 4 | In Review |
 | [SCRUM-211](SCRUM-211.md) | One layout for every work queue | 1 | Medium | SCRUM Sprint 4 | To Do |
 | [SCRUM-212](SCRUM-212.md) | Attendee pages show registration state at a glance | 1 | Medium | SCRUM Sprint 4 | To Do |
 
@@ -257,3 +257,10 @@ _8 stories, 14 points_
 | [SCRUM-219](SCRUM-219.md) | Chore: Slide deck against the rubric on the Week 11 template | SCRUM Sprint 4 | To Do |
 | [SCRUM-220](SCRUM-220.md) | Chore: Assemble the Week 12 submission zip with all seven folders | SCRUM Sprint 4 | To Do |
 | [SCRUM-221](SCRUM-221.md) | Chore: Re-sync docs/backlog from Jira at the start of Sprint 4 | SCRUM Sprint 4 | In Progress |
+| [SCRUM-222](SCRUM-222.md) | Chore: Bring the Server Actions reference, testing index and SCRUM-50 supersession note up to date | SCRUM Sprint 4 | In Review |
+| [SCRUM-225](SCRUM-225.md) | Chore: Skip the GLM review with a green check when GLM's quota or rate limit stops it | SCRUM Sprint 4 | In Review |
+| [SCRUM-226](SCRUM-226.md) | Bug: Two Technical Support staff can reserve the same line of an approved request twice | SCRUM Sprint 4 | In Review |
+| [SCRUM-227](SCRUM-227.md) | Bug: Two simultaneous updates to one equipment request can both be saved when one is a suggestion | SCRUM Sprint 4 | In Review |
+| [SCRUM-228](SCRUM-228.md) | Chore: Make SCRUM-170's race test wait for its locks instead of sleeping | SCRUM Sprint 4 | In Review |
+| [SCRUM-229](SCRUM-229.md) | Bug: Equipment availability shows a result for an invalid quantity, and Coordinator equipment lists include unassigned events | SCRUM Sprint 4 | In Review |
+| [SCRUM-232](SCRUM-232.md) | Chore: Name every e2e test after the story, criteria and test case it proves | SCRUM Sprint 4 | In Review |

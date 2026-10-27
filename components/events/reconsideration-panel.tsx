@@ -163,7 +163,7 @@ export function ReconsiderationPanel({
                     <Link
                       href={{
                         pathname: "/venues/search",
-                        query: { event: eventId, replace: arrangement.id },
+                        query: { event: eventId, replace: arrangement.id, return: "event" },
                       }}
                     >
                       Find a replacement venue

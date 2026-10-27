@@ -8,9 +8,14 @@ Format and conventions: [README.md](README.md).
 signs in as the Event Coordinator (`coordinator@test.local` / `Password123!`)
 unless the case says otherwise. Requests are raised on the **Equipment
 Requests** page (`/equipment-requests`) with **New request**. An event can
-hold only one open request, so a case that submits one needs an event without
-an open request: "Approved — Research Symposium" (`evt_approved`) has none in
-the seed.
+hold only one active request (Pending Review, In Review or Approved, since
+SCRUM-186), so a case that submits one needs an event without one:
+"Approved — Research Symposium" (`evt_approved`) has none in the seed.
+
+**SCRUM-186 extended AC 7** to Approved requests: more equipment is added by
+changing the request's lines (SCRUM-142), not by a second request. TC-27-09's
+message changed with it, and TC-27-11 now frees the event with a rejection.
+SCRUM-186's own cases are in [SCRUM-186.md](SCRUM-186.md).
 
 | ID | Type | Criterion | Automated |
 |---|---|---|---|
@@ -31,6 +36,7 @@ the seed.
 | [TC-27-15](#tc-27-15) | Negative | AC 8 | e2e |
 | [TC-27-16](#tc-27-16) | Positive | AC 6 | e2e |
 | [TC-27-17](#tc-27-17) | Negative, Concurrency | AC 1 | Unit |
+| [TC-27-18](#tc-27-18) | Negative | AC 1 | Unit, integration |
 
 ---
 
@@ -45,7 +51,7 @@ the seed.
 | Test Data | Event: Approved — Research Symposium |
 | Expected Result | The list shows each of the coordinator's approved and planning events as "name — date", and nothing confirmed, still under review, or assigned to another coordinator. After step 3, "Runs …" shows the event's full start and end. The saved request's `eventId` is that event. |
 
-**Automated by:** `e2e/equipment-requests.spec.ts` › "SCRUM-27 [AC1, AC2, AC5, AC6] TC-27-01, TC-27-03, TC-27-07, TC-27-08: a coordinator requests equipment for their event and it is saved as Pending Review"; `tests/unit/equipment-request-queries.test.ts` › "SCRUM-27 [AC1] TC-27-01, SCRUM-170 [AC3] TC-170-03: offers only this coordinator's events that are going ahead, soonest first, with the Organiser's equipment answer"; `tests/integration/equipment-request.test.ts` › "SCRUM-27 [AC1] TC-27-01: offers the coordinator their going-ahead events, and not one still under review or someone else's"; `e2e/equipment-requests.spec.ts` › "a coordinator finds Equipment Requests in their navigation" (step 1: the page is reached from the navigation)
+**Automated by:** `e2e/equipment-requests.spec.ts` › "SCRUM-27 [AC1, AC2, AC5, AC6] TC-27-01, TC-27-03, TC-27-07, TC-27-08: a coordinator requests equipment for their event and it is saved as Pending Review"; `tests/unit/equipment-request-queries.test.ts` › "SCRUM-27 [AC1] TC-27-01, SCRUM-170 [AC3] TC-170-03: offers only this coordinator's events that are going ahead, soonest first, with the Organiser's equipment answer"; `tests/integration/equipment-request.test.ts` › "SCRUM-27 [AC1] TC-27-01: offers the coordinator their going-ahead events, and not one still under review or someone else's"; `e2e/equipment-requests.spec.ts` › "SCRUM-27 [AC1] TC-27-01: a coordinator finds Equipment Requests in their navigation" (step 1: the page is reached from the navigation)
 
 ### TC-27-02
 
@@ -147,9 +153,9 @@ the seed.
 | Pre-conditions | As TC-27-01. The event already has a request in Pending Review. |
 | Test Steps | 1. Open **New request**. <br> 2. Choose the same event, add any equipment and submit. |
 | Test Data | Seeded: "Planning — Freshman Orientation" already has `eqr_planning` in Pending Review |
-| Expected Result | "This event already has a request waiting for review, so no new one was made. It's highlighted below." The existing request is scrolled into view and highlighted. The event still has exactly one request. |
+| Expected Result | "This event already has an equipment request, so no new one was made. It's highlighted below: use Change lines on it to add or change equipment." (since SCRUM-186) The existing request is scrolled into view and highlighted. The event still has exactly one request. |
 
-**Automated by:** `e2e/equipment-requests.spec.ts` › "SCRUM-27 [AC7] TC-27-09: submitting for an event with a request pending review shows that request instead"; `tests/unit/equipment-request.test.ts` › "SCRUM-27 [AC7] TC-27-09: an event with a request pending review shows that request instead of creating a second"; `tests/integration/equipment-request.test.ts` › "SCRUM-27 [AC7] TC-27-09: a second submission for the same event returns the request pending review"
+**Automated by:** `e2e/equipment-requests.spec.ts` › "SCRUM-27 [AC7] TC-27-09: submitting for an event with a request pending review shows that request instead"; `tests/unit/equipment-request.test.ts` › "SCRUM-27 [AC7] TC-27-09, SCRUM-186 [AC1] TC-186-02: an event with an active request (Pending Review, In Review or Approved) shows the oldest instead of creating a second"; `tests/integration/equipment-request.test.ts` › "SCRUM-27 [AC7] TC-27-09: a second submission for the same event returns the request pending review"
 
 ### TC-27-10
 
@@ -169,13 +175,13 @@ the seed.
 | Item | Content |
 |---|---|
 | Test Case ID | TC-27-11 |
-| Test Scenario | [Boundary] AC 7: once an event's request has been decided, a new one can be raised |
-| Pre-conditions | The event's only request is APPROVED. |
+| Test Scenario | [Boundary] AC 7: once an event's request has been rejected, a new one can be raised |
+| Pre-conditions | The event's only request is REJECTED. (Until SCRUM-186 an APPROVED request freed the event too; it no longer does, see TC-186-02.) |
 | Test Steps | 1. Submit a new request for the event. |
 | Test Data | Seeded "Approved — Research Symposium" (`evt_approved`), still requestable under AC 1 |
 | Expected Result | A new request is created in Pending Review. The event now has two requests, one of them open. |
 
-**Automated by:** `tests/integration/equipment-request.test.ts` › "SCRUM-27 [AC7] TC-27-11: once the open request is decided, a new one can be raised"
+**Automated by:** `tests/integration/equipment-request.test.ts` › "SCRUM-27 [AC7] TC-27-11: once the open request is rejected, a new one can be raised"
 
 ### TC-27-12
 
@@ -188,7 +194,7 @@ the seed.
 | Test Data | Roles: ORGANISER, VENUE_STAFF, TECH_SUPPORT, ATTENDEE |
 | Expected Result | The page shows "Access denied", and the action is refused with "You do not have permission to do that." before anything is read or written. |
 
-**Automated by:** `tests/unit/equipment-request.test.ts` › "refuses %s before reading anything" (all four), "SCRUM-27 TC-27-12: refuses a signed-out caller"; `tests/unit/auth.test.ts` › "does not let %s create an equipment request"; `e2e/equipment-requests.spec.ts` › "SCRUM-27 TC-27-12: an organiser typing the URL is refused server-side"
+**Automated by:** `tests/unit/equipment-request.test.ts` › "SCRUM-27 TC-27-12: refuses %s before reading anything" (all four), "SCRUM-27 TC-27-12: refuses a signed-out caller"; `tests/unit/auth.test.ts` › "SCRUM-27 TC-27-12: does not let %s create an equipment request"; `e2e/equipment-requests.spec.ts` › "SCRUM-27 TC-27-12: an organiser typing the URL is refused server-side"
 
 ### TC-27-13
 
@@ -240,7 +246,7 @@ the seed.
 | Test Data | Laptop × 2 |
 | Expected Result | The request is submitted with the item on it: its details show the line "Laptop 2". Nothing the coordinator entered is dropped. |
 
-**Automated by:** `e2e/equipment-requests.spec.ts` › "equipment picked but not yet added is included when the request is submitted"
+**Automated by:** `e2e/equipment-requests.spec.ts` › "SCRUM-27 [AC6] TC-27-16: equipment picked but not yet added is included when the request is submitted"
 
 ### TC-27-17
 
@@ -254,3 +260,16 @@ the seed.
 | Expected Result | "Choose one of your approved events." The status and Coordinator are re-read under the lock the request already takes on the event (SCRUM-170 AC4), so a reassignment to another Coordinator is seen too; no request is created and a No equipment needed decision is left as it was. |
 
 **Automated by:** `tests/unit/equipment-request.test.ts` › "SCRUM-27 [AC1] TC-27-17: an event that became %s after its status was read gets no request, and nothing is written" (Confirmed, Rejected, Cancelled) and "SCRUM-27 [AC1] TC-27-17: an event reassigned to another Coordinator after it was read gets no request from the previous one"
+
+### TC-27-18
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-27-18 |
+| Test Scenario | [Negative] AC 1: an event with no Coordinator yet is neither offered to a Coordinator for a new request nor listed with their requests (SCRUM-165 AC8, SCRUM-229) |
+| Pre-conditions | A Planning event with no Coordinator assigned, holding one equipment request. |
+| Test Steps | 1. As `coordinator@test.local`, open **New request** on Equipment Requests. <br> 2. Look through the list of requests. <br> 3. Repeat as `coordinator2@test.local`. |
+| Test Data | — |
+| Expected Result | Neither Coordinator is offered the event, and neither sees its request. A Coordinator sees only the events assigned to them, the rule `can()` applies when they act. |
+
+**Automated by:** `tests/integration/equipment-request.test.ts` › "SCRUM-229 [AC3] SCRUM-165 [AC8] TC-27-18: an event with no Coordinator is neither offered nor listed to a Coordinator"; `tests/unit/equipment-request-queries.test.ts` › "SCRUM-27 [AC1] TC-27-01, SCRUM-170 [AC3] TC-170-03: offers only this coordinator's events that are going ahead, soonest first, with the Organiser's equipment answer"

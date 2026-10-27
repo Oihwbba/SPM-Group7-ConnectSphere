@@ -569,9 +569,11 @@ describe("updateEventDetails — SCRUM-25", () => {
   });
 
   it("SCRUM-25 [AC3] TC-25-06: a start moved into the past is refused against the start", async () => {
+    // Both ends move, so the period stays within one day (SCRUM-190 AC3).
     const result = await updateEventDetails({
       ...unchanged,
       startAt: "2020-01-01T02:00:00.000Z",
+      endAt: "2020-01-01T06:00:00.000Z",
     });
 
     expect(result).toEqual({
@@ -590,9 +592,29 @@ describe("updateEventDetails — SCRUM-25", () => {
 
     expect(result).toMatchObject({
       ok: false,
-      error: "The end must be after the start.",
+      error: "The end time must be after the start time.",
     });
     expect(db.event.findUnique).not.toHaveBeenCalled();
+  });
+
+  it("SCRUM-190 [AC3] TC-190-09: an end on the next day is refused as not one day, and nothing is read or written", async () => {
+    const result = await updateEventDetails({
+      ...unchanged,
+      endAt: new Date(END.getTime() + 24 * 60 * 60 * 1000).toISOString(),
+    });
+
+    expect(result).toEqual({
+      ok: false,
+      error:
+        "An event starts and ends on the same day. Choose one date with a start and an end time.",
+      fieldErrors: {
+        endAt: [
+          "An event starts and ends on the same day. Choose one date with a start and an end time.",
+        ],
+      },
+    });
+    expect(db.event.findUnique).not.toHaveBeenCalled();
+    expect(db.$transaction).not.toHaveBeenCalled();
   });
 
   it.each([

@@ -159,7 +159,8 @@ these unless the backlog brings them back:
 - equipment catalogue maintenance as a feature (SCRUM-119): equipment rows
   come from the seed;
 - an activity timeline (SCRUM-71). Recording who did what and when is still
-  part of every story's Definition of Done, through the audit log;
+  part of every story's [Definition of Done](scrum/definition-of-done.md),
+  through the audit log;
 - a single calendar of all events (SCRUM-120), finding an event by search
   (SCRUM-115), reminders about overdue arrangements (SCRUM-122) and
   preparation progress (SCRUM-123);

@@ -1,6 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 import { prisma } from "@/lib/db";
-import { selectFrom, fillOther, pickDateTime, submitRequest, optionsOf } from "./helpers";
+import { selectFrom, fillOther, fillEventSchedule, submitRequest, optionsOf } from "./helpers";
 
 /**
  * SCRUM-165 — a submitted request waits in the Lead's Unassigned queue until
@@ -39,7 +39,7 @@ test.describe("SCRUM-165 — Lead assigns new requests from an unassigned queue"
     await prisma.event.deleteMany({ where: { id: { in: eventIds } } });
   });
 
-  test("SCRUM-165 [AC1–AC5, AC8, AC11] TC-165-01, TC-165-02, TC-165-04, TC-165-05, TC-165-07, TC-165-11, TC-165-14: a submitted request waits in the queue, the Lead assigns it, and only then does the Coordinator get it", async ({
+  test("SCRUM-14 [AC1] TC-14-01, SCRUM-20 [AC1, AC2, AC3, AC7, AC8] TC-20-01, SCRUM-135 [AC2, AC6] TC-135-02, SCRUM-164 [AC2] TC-164-05, SCRUM-165 [AC1, AC2, AC3, AC4, AC5, AC8, AC11] TC-165-01, TC-165-02, TC-165-04, TC-165-05, TC-165-07, TC-165-11, TC-165-14: a submitted request waits in the queue, the Lead assigns it, and only then does the Coordinator get it", async ({
     page,
   }) => {
     // The Organiser submits a complete request (same flow as SCRUM-14's spec).
@@ -54,8 +54,7 @@ test.describe("SCRUM-165 — Lead assigns new requests from an unassigned queue"
       .getByLabel("Event Description *")
       .fill("SCRUM-165 end-to-end coverage.");
     await page.getByRole("button", { name: "Next", exact: true }).click();
-    await pickDateTime(page.getByLabel("Proposed Start Date & Time *"), "2031-11-01T09:00");
-    await pickDateTime(page.getByLabel("Proposed End Date & Time *"), "2031-11-01T17:00");
+    await fillEventSchedule(page, "2031-11-01", "09:00", "17:00");
     await page.getByLabel("Expected Attendance *").fill("50");
     await page.getByRole("button", { name: "Next", exact: true }).click();
     await fillOther(page.getByLabel("Venue Requirements *"), "Any mid-size room.");

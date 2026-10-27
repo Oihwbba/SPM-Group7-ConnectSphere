@@ -1,8 +1,10 @@
 # Server Actions reference
 
 Every command and every server read the pages call, from `app/` on `main`
-at commit `d54ed6e` (2026-10-13). There is no REST API: the browser calls
-these as Server Actions.
+at commit `d54ed6e` (2026-10-13). The actions added after it (`cancelEvent`,
+`getChangeDecision`, `decideChangeRequest`, `requestSafetyCheck`,
+`recordSafetyCheckOutcome` and `assignCoordinator`) were added on 2026-10-23
+(SCRUM-222), and `isEventStillVisible` (SCRUM-208) on 2026-10-27. There is no REST API: the browser calls these as Server Actions.
 
 How to read it:
 
@@ -31,7 +33,7 @@ request.
 | Action | What it does | Permission | Input | Writes | Locks |
 |---|---|---|---|---|---|
 | `checkVenueAvailability` | Checks whether a venue is free for a period, and names any clashes, including being outside its opening hours (SCRUM-50, SCRUM-34 AC7). | `booking:request` | `venueAvailabilityQuerySchema` (lib/schemas/booking.ts) | nothing (read only) | — |
-| `submitBookingRequest` | The Coordinator requests a venue for their event, with that venue's attendance, facilities, accessibility features and layout (SCRUM-50, 40, 162 AC9); refused outside the venue's opening hours (SCRUM-34 AC7). An event can book several venues; asking again for a venue it already has a Pending, Held or Approved booking at shows that booking instead (SCRUM-162 AC1, AC2). The period must cover the event's, and the attendance is from 1 to the event's (SCRUM-162 AC4). Every Venue Staff member is told (SCRUM-124 AC1). | `booking:request` | `bookingRequestSchema` (lib/schemas/booking.ts) | Booking, Notification | — |
+| `submitBookingRequest` | The Coordinator requests a venue for their event, with that venue's attendance, facilities, accessibility features and layout (SCRUM-50, 40, 162 AC9); refused outside the venue's opening hours (SCRUM-34 AC7). An event can book several venues; asking again for a venue it already has a Pending, Held or Approved booking at shows that booking instead (SCRUM-162 AC1, AC2). The period starts as exactly the event's start and end, not rounded, so it is checked as venue search checked it (SCRUM-188); it must cover the event's, and the attendance is from 1 to the event's (SCRUM-162 AC4). Every Venue Staff member is told (SCRUM-124 AC1). | `booking:request` | `bookingRequestSchema` (lib/schemas/booking.ts) | Booking, Notification | — |
 | `decideBookingRequest` | Venue Staff approve or reject a pending request, or approve or reject a held one before it expires (SCRUM-53, 163). Approving a hold keeps it Held, records who approved it and when. Approving either is refused outside the venue's opening hours (SCRUM-34 AC7). Every decision tells the event's Coordinator, with the reason for a rejection (SCRUM-163 AC7, SCRUM-124 AC4). A pending request can't be approved while an earlier overlapping one is still pending (SCRUM-134 AC2). | `booking:decide`, and not on an event you organise or coordinate (SCRUM-121 AC5) | `bookingDecisionSchema` (lib/schemas/booking.ts) | AuditLog, Booking, Notification | Event row (`FOR KEY SHARE`) |
 | `holdBookingRequest` | Venue Staff hold a pending request until a deadline, with a note for the Coordinator (SCRUM-163); refused outside the venue's opening hours, as approving is (SCRUM-34 AC7), or while an earlier overlapping request is still pending (SCRUM-134 AC2). | `booking:hold`, and not on an event you organise or coordinate (SCRUM-121 AC5) | `bookingHoldSchema` (lib/schemas/booking.ts) | AuditLog, Booking, Notification | Event row (`FOR KEY SHARE`) |
 | `confirmHold` | The assigned Coordinator confirms a live hold Venue Staff have approved, which makes the booking Approved (SCRUM-163 AC3); refused outside the venue's opening hours (SCRUM-34 AC7). Every Venue Staff member is told (SCRUM-124 AC6). | `booking:settle-hold` | `holdSettlementSchema` (lib/schemas/booking.ts) | AuditLog, Booking, Notification, SafetyCheck | Event row (`FOR KEY SHARE`) |
@@ -42,7 +44,7 @@ request.
 
 | Action | What it does | Permission | Input | Writes | Locks |
 |---|---|---|---|---|---|
-| `createEquipmentRequest` | The Coordinator raises the event's equipment request (SCRUM-27), clearing a No equipment needed decision (SCRUM-170 AC4), and every Technical Support member is told (SCRUM-124 AC2). | `equipment-request:create` | `createEquipmentRequestSchema` (lib/schemas/equipment-request.ts) | Event, EquipmentRequest, EquipmentRequestLine, EquipmentRequestUpdate, Notification | Event row |
+| `createEquipmentRequest` | The Coordinator raises the event's equipment request (SCRUM-27), clearing a No equipment needed decision (SCRUM-170 AC4), and every Technical Support member is told (SCRUM-124 AC2). An event with an active request (Pending Review, In Review or Approved) is shown that one instead, checked again under the event lock (SCRUM-186). | `equipment-request:create` | `createEquipmentRequestSchema` (lib/schemas/equipment-request.ts) | Event, EquipmentRequest, EquipmentRequestLine, EquipmentRequestUpdate, Notification | Event row |
 | `updateEquipmentRequestStatus` | Technical Support moves a request from Pending Review to In Review, then to Approved or Rejected (SCRUM-28). | `equipment-request:review`, and not on an event you organise or coordinate (SCRUM-121 AC5) | `reviewEquipmentRequestSchema` (lib/schemas/equipment-request.ts) | EquipmentRequest, EquipmentRequestUpdate, Notification | — |
 | `suggestAlternativeEquipment` | Technical Support suggests another equipment type on a line (SCRUM-28 AC4). | `equipment-request:review`, and not on an event you organise or coordinate (SCRUM-121 AC5) | `suggestAlternativeSchema` (lib/schemas/equipment-request.ts) | EquipmentRequest, EquipmentRequestLine, EquipmentRequestUpdate, Notification | — |
 | `changeEquipmentRequest` | The assigned Coordinator changes an equipment request's lines; it goes back to Technical Support, and changed lines' reservations are released (SCRUM-142 AC1, AC2). | `equipment-request:change` | `changeEquipmentRequestSchema` (lib/schemas/equipment-request.ts) | EquipmentRequest, EquipmentRequestLine, EquipmentRequestUpdate, Notification, Reservation, SafetyCheck | EquipmentRequest row, Event row |
@@ -70,6 +72,19 @@ request.
 | `startRequestFromRejected` | The Organiser starts a new Draft from a request rejected as needing a new submission (SCRUM-126). | `event:create` | `startRequestFromRejectedSchema` (same file) | AuditLog, Event | Event row |
 | `discardDraftEvent` | The Organiser discards a Draft (SCRUM-130). | `event:discard` | `discardDraftSchema` (same file) | AuditLog, Event | — |
 | `rejectPlanningEvent` | The assigned Coordinator rejects a Planning event that can't be fulfilled, releasing its arrangements (SCRUM-117). | `event:reject` | `rejectPlanningEventSchema` (same file) | AuditLog, Booking, EquipmentRequest, EquipmentRequestUpdate, Event, EventChangeRequest, Notification, Reservation | Event row |
+
+## `app/(app)/events/cancel-actions.ts`
+
+| Action | What it does | Permission | Input | Writes | Locks |
+|---|---|---|---|---|---|
+| `cancelEvent` | The assigned Coordinator cancels an Under Review, Planning or Confirmed event with a reason (SCRUM-82 AC1, AC4). Everything held for it is released in the same transaction: bookings, holds and pending requests, reservations, open equipment requests, an awaiting safety check (Outdated), registrations and submitted change requests; notices written ahead for it are withdrawn (AC3). The Organiser, the Coordinator and each Attendee whose registration was cancelled are told (AC6). See ADR 0019. | `event:cancel` | `cancelSchema` (same file) | AuditLog, Booking, ClarificationRequest, EquipmentRequest, EquipmentRequestUpdate, Event, EventChangeRequest, Notification, Registration, Reservation, SafetyCheck | Event row |
+
+## `app/(app)/events/change-decision-actions.ts`
+
+| Action | What it does | Permission | Input | Writes | Locks |
+|---|---|---|---|---|---|
+| `getChangeDecision` | What the assigned Coordinator sees before deciding the event's Submitted change request: each changed field's current and requested value, and, for an impactful change or a cancellation, every arrangement it could affect (SCRUM-128 AC1). | `change-request:decide` | an event id | nothing (read only) | — |
+| `decideChangeRequest` | The assigned Coordinator approves or rejects a Submitted change request (SCRUM-128). Rejecting needs a reason and leaves the event as it is (AC3). Approving applies the values in one transaction (AC2), refused if the attendance would drop below active registrations (AC7); an impactful change flags the event's arrangements and puts its safety check out of date, and returns a Confirmed event to Planning (AC4, AC5, SCRUM-166 AC13). Approving a cancellation request cancels the event as `cancelEvent` does (AC8). The Organiser is told (AC10). | `change-request:decide` | `decisionSchema` (same file) | AuditLog, Booking, Event, EventChangeRequest, Notification, Reservation, SafetyCheck; a cancellation also writes what `cancelEvent` does | Event row |
 
 ## `app/(app)/events/change-request-actions.ts`
 
@@ -115,6 +130,7 @@ request.
 | `getEventArrangements` | A Confirmed event's secured venues, time and equipment (SCRUM-81 AC6, SCRUM-162 AC7). | `event:read` | an event id | nothing (read only) | — |
 | `getEventBookings` | Every venue booking of the event, with its venue, attendance and status (SCRUM-162 AC7). | `event:read` | an event id | nothing (read only) | — |
 | `getEventCoordinator` | The name of the event's current Coordinator, or none (SCRUM-21 AC8). | `event:read` | an event id | nothing (read only) | — |
+| `isEventStillVisible` | Whether the signed-in user can still see the event, asked before the open event page refreshes, so a reassignment or removal shows a notice instead of "not found" (SCRUM-24, SCRUM-208). | `event:read`; any other user gets `false`, the same as a missing event | an event id | nothing (read only) | — |
 
 ## `app/(app)/events/registration-list-actions.ts`
 
@@ -137,11 +153,29 @@ request.
 | `closeRegistration` | The Organiser, or the assigned Coordinator, closes open registration now, by setting the closing time to now, so a later confirmation doesn't reopen it (SCRUM-75 AC6, AC9). Withdraws the pending "Registration closed" notice. | `registration:control` | `registrationControlSchema` (lib/schemas/registration.ts) | Event, AuditLog, Notification | Event row |
 | `reopenRegistration` | Reopens closed registration until the event's start by clearing the opening and closing times; refused at or after the start (SCRUM-75 AC6, AC8). Schedules a "Registration closed" notice for the start. | `registration:control` | `registrationControlSchema` (lib/schemas/registration.ts) | Event, AuditLog, Notification | Event row |
 
+## `app/(app)/events/safety-check-actions.ts`
+
+| Action | What it does | Permission | Input | Writes | Locks |
+|---|---|---|---|---|---|
+| `requestSafetyCheck` | The assigned Coordinator requests an operational safety check for a Planning event whose venue and equipment are arranged; every Safety Officer is told (SCRUM-166 AC1, AC12). A check already awaiting review is returned instead of a second one (AC7). | `safety-check:request` | `requestSchema` (same file) | AuditLog, Notification, SafetyCheck | Event row |
+
 ## `app/(app)/notifications/actions.ts`
 
 | Action | What it does | Permission | Input | Writes | Locks |
 |---|---|---|---|---|---|
 | `markNotificationRead` | A user marks one of their own notifications read (SCRUM-48). | `notification:read` | `markNotificationReadSchema` (lib/schemas/notification.ts) | Notification | — |
+
+## `app/(app)/queue/actions.ts`
+
+| Action | What it does | Permission | Input | Writes | Locks |
+|---|---|---|---|---|---|
+| `assignCoordinator` | The Event Coordinator Lead assigns an unassigned Submitted request to a Coordinator (SCRUM-165). The write is conditional on the request still having no Coordinator, so of two Leads at once exactly one succeeds (AC6), and one that already has a Coordinator is refused, naming them (AC7); changing it is `reassignCoordinator` (SCRUM-21). | `event:assign` | `assignCoordinatorSchema` (lib/schemas/assignment.ts) | AuditLog, Event, Notification | — (conditional update) |
+
+## `app/(app)/safety-checks/actions.ts`
+
+| Action | What it does | Permission | Input | Writes | Locks |
+|---|---|---|---|---|---|
+| `recordSafetyCheckOutcome` | A Safety Officer records a check's outcome (SCRUM-166). Changes requested and Rejected need a note, and Changes requested names at least one of the event's arrangements (AC3). The update is conditional on the check still awaiting review, so a second recording changes nothing (AC7, AC8) and an Outdated check can't be approved (AC13). Changes requested flags the picked arrangements, Rejected flags all of them (AC10, AC11); the event stays in Planning (AC14). The Coordinator is told (AC4). | `safety-check:review`, and not on an event you organise or coordinate (AC6) | `outcomeSchema` (same file) | AuditLog, Booking, Notification, Reservation, SafetyCheck, SafetyCheckArrangement | Event row (`FOR SHARE`) |
 
 ## `app/(app)/venues/actions.ts`
 

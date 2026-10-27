@@ -16,9 +16,15 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { DateTimePicker } from "@/components/app/date-time-picker";
 import { Textarea } from "@/components/ui/textarea";
-import { sgWallTimeToUtcIso, utcToSgWallTime } from "@/lib/datetime";
+import { EventPeriodInputs } from "@/components/events/event-period-inputs";
+import {
+  formatDateTime,
+  joinEventPeriod,
+  sgDate,
+  splitEventPeriod,
+  type EventPeriodFields,
+} from "@/lib/datetime";
 import { LAYOUT_OPTIONS } from "@/lib/schemas/event";
 import { PillSelect } from "@/components/app/pill-select";
 import { splitChoice } from "@/lib/requirement-choices";
@@ -40,8 +46,10 @@ type Form = {
   registrationRequired: "" | "yes" | "no";
   programme: string;
   specialRequests: string;
-  start: string;
-  end: string;
+  /** SCRUM-190 AC3: one date with a start and an end time. */
+  date: string;
+  startTime: string;
+  endTime: string;
   expectedAttendance: string;
   venueRequirements: string;
   equipmentRequirements: string;
@@ -63,8 +71,7 @@ function formFrom(event: Event): Form {
           : "",
     programme: event.programme ?? "",
     specialRequests: event.specialRequests ?? "",
-    start: utcToSgWallTime(event.startAt),
-    end: utcToSgWallTime(event.endAt),
+    ...splitEventPeriod(event.startAt, event.endAt),
     expectedAttendance: event.expectedAttendance?.toString() ?? "",
     venueRequirements: event.venueRequirements ?? "",
     equipmentRequirements: event.equipmentRequirements ?? "",
@@ -119,6 +126,36 @@ function savedMessage({ changed, flagged, safetyCheckOutdated }: EventDetailsSav
   ]
     .filter(Boolean)
     .join(" ");
+}
+
+type StoredPeriod = {
+  startAt: Date | string | null;
+  endAt: Date | string | null;
+};
+
+/**
+ * SCRUM-190 AC3 — the period a save sends. While the date and times are as
+ * they were read, it is the stored period itself: an event entered across two
+ * days before the one-day rule can't be shown as one date, and joining its
+ * fields would move its end onto the start's day without the Coordinator
+ * seeing it. Sent as stored, it is refused until they set one day.
+ * Exported for its unit test.
+ */
+export function periodToSave(
+  stored: StoredPeriod,
+  form: EventPeriodFields,
+): { startAt: string; endAt: string } {
+  const before = splitEventPeriod(stored.startAt, stored.endAt);
+  const touched = (["date", "startTime", "endTime"] as const).some(
+    (key) => form[key] !== before[key],
+  );
+  if (touched) {
+    const period = joinEventPeriod(form);
+    return { startAt: period.startAt ?? "", endAt: period.endAt ?? "" };
+  }
+  const iso = (value: Date | string | null) =>
+    value === null ? "" : new Date(value).toISOString();
+  return { startAt: iso(stored.startAt), endAt: iso(stored.endAt) };
 }
 
 type SaveReply = Awaited<ReturnType<typeof updateEventDetails>>;
@@ -258,8 +295,7 @@ export function EditDetailsDialog({
           registrationRequired: form.registrationRequired || undefined,
           programme: form.programme,
           specialRequests: form.specialRequests,
-          startAt: sgWallTimeToUtcIso(form.start) ?? "",
-          endAt: sgWallTimeToUtcIso(form.end) ?? "",
+          ...periodToSave(event, form),
           expectedAttendance: form.expectedAttendance,
           venueRequirements: form.venueRequirements,
           equipmentRequirements: form.equipmentRequirements,
@@ -415,27 +451,29 @@ export function EditDetailsDialog({
                 you&apos;ll see which before anything is saved. Times are
                 Singapore time (SGT, UTC+8).
               </p>
+              {/* SCRUM-190 AC3: a period stored before the one-day rule. */}
+              {event.startAt &&
+                event.endAt &&
+                sgDate(event.startAt) !== sgDate(event.endAt) && (
+                  <p
+                    data-testid="edit-details-two-days"
+                    className="rounded-md border border-warning/40 bg-warning/10 p-2 text-xs"
+                  >
+                    This event is saved as running from{" "}
+                    {formatDateTime(event.startAt)} to{" "}
+                    {formatDateTime(event.endAt)}, across two days. An event now
+                    starts and ends on the same day, so set one date with a
+                    start and an end time before saving.
+                  </p>
+                )}
               <div className="grid gap-3 sm:grid-cols-3">
-                <div className="space-y-1">
-                  <Label htmlFor="edit-start">Start</Label>
-                  <DateTimePicker
-                    id="edit-start"
-                    value={form.start}
-                    onChange={(value) => update("start", value)}
-                    aria-invalid={invalid("startAt")}
+                <div className="sm:col-span-3">
+                  <EventPeriodInputs
+                    idPrefix="edit"
+                    value={form}
+                    onChange={update}
+                    errors={fieldErrors}
                   />
-                  {fieldError("startAt")}
-                </div>
-                <div className="space-y-1">
-                  <Label htmlFor="edit-end">End</Label>
-                  <DateTimePicker
-                    id="edit-end"
-                    value={form.end}
-                    openOn={form.start.split("T")[0] || undefined}
-                    onChange={(value) => update("end", value)}
-                    aria-invalid={invalid("endAt")}
-                  />
-                  {fieldError("endAt")}
                 </div>
                 <div className="space-y-1">
                   <Label htmlFor="edit-attendance">Expected attendance</Label>

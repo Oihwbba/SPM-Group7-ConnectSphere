@@ -43,7 +43,7 @@ test.describe("SCRUM-73/74 — Attendee registers for an event", () => {
     await prisma.event.deleteMany({ where: { id: eventId } });
   });
 
-  test("AC: registering shows as registered immediately, and capacity decreases by one", async ({
+  test("SCRUM-73 [AC1, AC2, AC4] TC-73-01, SCRUM-74 [AC2] TC-74-02: registering shows as registered immediately, and capacity decreases by one", async ({
     page,
   }) => {
     await page.goto("/login");
@@ -90,7 +90,7 @@ test.describe("SCRUM-73/74 — Attendee registers for an event", () => {
     );
   });
 
-  test("AC: a full event refuses direct registration and shows no register action", async ({
+  test("SCRUM-74 [AC5] TC-74-05: a full event refuses direct registration and shows no register action", async ({
     page,
   }) => {
     // Fill both places with two other attendees before this test's own user
@@ -164,7 +164,7 @@ test.describe("SCRUM-74/77 — Attendee withdraws from an event", () => {
     await prisma.event.deleteMany({ where: { id: eventId } });
   });
 
-  test("AC: withdrawing reopens capacity immediately and lets another attendee register", async ({
+  test("SCRUM-74 [AC2] TC-74-06: withdrawing reopens capacity immediately and lets another attendee register", async ({
     page,
   }) => {
     await page.goto("/login");

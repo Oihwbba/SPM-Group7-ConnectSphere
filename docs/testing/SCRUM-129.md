@@ -36,7 +36,7 @@ unless the case says otherwise.
 | Test Data | Any future times |
 | Expected Result | The form has no timezone field and says its times are SGT. Both the draft and the submitted request are stored with the timezone Asia/Singapore. |
 
-**Automated by:** `tests/unit/datetime.test.ts` › "SCRUM-129 [AC1 - Singapore timezone]: the event timezone is Asia/Singapore (UTC+8)"; `tests/unit/events.test.ts` › "SCRUM-129 [AC1 - Singapore timezone]: a new draft and an updated draft are stored as Asia/Singapore events", "SCRUM-129 [AC1 - Singapore timezone]: a new submission and a submitted draft are stored as Asia/Singapore events"; `tests/integration/event-timezone.test.ts` › "SCRUM-129 [AC1 - Singapore timezone]: a new event with no timezone given is stored as Asia/Singapore"; `e2e/events.spec.ts` › "SCRUM-129 [AC1 - Singapore timezone]: the request form has no timezone selector and states its times are SGT"
+**Automated by:** `tests/unit/datetime.test.ts` › "SCRUM-129 [AC1 - Singapore timezone]: the event timezone is Asia/Singapore (UTC+8)"; `tests/unit/events.test.ts` › "SCRUM-129 [AC1 - Singapore timezone]: a new draft and an updated draft are stored as Asia/Singapore events", "SCRUM-129 [AC1 - Singapore timezone]: a new submission and a submitted draft are stored as Asia/Singapore events"; `tests/integration/event-timezone.test.ts` › "SCRUM-129 [AC1 - Singapore timezone]: a new event with no timezone given is stored as Asia/Singapore"; `e2e/events.spec.ts` › "SCRUM-13 [AC6] TC-13-07, SCRUM-129 [AC1] TC-129-01: the request form has no timezone selector and states its times are SGT"
 
 ### TC-129-02
 
@@ -75,7 +75,7 @@ unless the case says otherwise.
 | Test Data | A start stored as 02:00 UTC |
 | Expected Result | The list and details show 10:00 am SGT. A date shown without a time carries no label. |
 
-**Automated by:** `tests/unit/datetime.test.ts` › "SCRUM-129 [AC3 - SGT label]: every displayed time is labelled SGT", "SCRUM-129 [AC3 - SGT label]: date-only formats carry no time, so no label", "SCRUM-129 [AC4 - UTC storage]: a Singapore wall time round-trips through the UTC instant it is stored as"; `tests/unit/events.test.ts` › "SCRUM-129 [AC4 - UTC storage]: the submitted UTC instants are stored exactly as sent"; `e2e/events.spec.ts` › "SCRUM-129 [AC3 - SGT label] × [AC4 - UTC storage]: the list and details show the stored UTC instants in SGT"
+**Automated by:** `tests/unit/datetime.test.ts` › "SCRUM-129 [AC3 - SGT label]: every displayed time is labelled SGT", "SCRUM-129 [AC3 - SGT label]: date-only formats carry no time, so no label", "SCRUM-129 [AC4 - UTC storage]: a Singapore wall time round-trips through the UTC instant it is stored as"; `tests/unit/events.test.ts` › "SCRUM-129 [AC4 - UTC storage]: the submitted UTC instants are stored exactly as sent"; `e2e/events.spec.ts` › "SCRUM-129 [AC3, AC4] TC-129-04: the list and details show the stored UTC instants in SGT"
 
 ### TC-129-05
 

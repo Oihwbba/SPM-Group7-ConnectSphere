@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-09. Jira is the source of truth.
+     Synced from Jira on 2026-10-23. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-50 - Submit a venue booking request
@@ -17,6 +17,8 @@
 ---
 
 **User story:** As an Event Coordinator, I want to submit a request to book a venue with the event's timing and requirements, so that Venue Staff have what they need to assess it.
+
+**Superseded in part:** AC1's rounding of the period ("start rounded down and end rounded up to the half hour") is superseded by SCRUM-188: choosing the event fills in the period exactly as the event's start and end, so venue search and the request check the same period. The criteria below are kept as accepted in Sprint 2.
 
 **Acceptance criteria**
 
@@ -41,5 +43,6 @@
 * 2026-10-01 (mid-sprint correction): requested period stated as the event's period; duplicate rule merged into AC8 (both revised below).
 * 2026-10-01 (audit): the booking form now follows the event as its source of truth: period and expected attendance are pre-filled and not editable, while opening-hours validation remains with SCRUM-34 and capacity/past-start validation remains here. AC8 stays because the customer asked for one venue per event. Before acceptance, the duplicate-request constraint (booking_no_duplicate_pending_request) still needs to be keyed on the event rather than the requesting Coordinator; this is tracked as a separate implementation task.
 * 2026-10-07: the Related note points the period and attendance pre-fill to SCRUM-170, which took it over when SCRUM-127 was split.
+* 2026-10-23 (SCRUM-222): marked AC1's half-hour rounding as superseded by SCRUM-188 (PO approved 2026-10-21), so the story no longer reads as current where the code follows SCRUM-188.
 
 Functionality Area: Venue Booking Request, Booking Conflict Detection

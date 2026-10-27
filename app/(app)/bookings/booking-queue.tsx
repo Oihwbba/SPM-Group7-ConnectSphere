@@ -505,7 +505,6 @@ function Fact({
   );
 }
 
-/** One compared fact: a green tick when the venue meets it, a red cross when it does not. */
 /** SCRUM-159 AC9: worth knowing before deciding, but nothing stops it. */
 function HoursWarning({ children }: { children: React.ReactNode }) {
   return (
@@ -523,6 +522,7 @@ function HoursWarning({ children }: { children: React.ReactNode }) {
   );
 }
 
+/** One compared fact: a green tick when the venue meets it, a red cross when it does not. */
 function Mark({ ok, children }: { ok: boolean; children: React.ReactNode }) {
   const Icon = ok ? Check : X;
   return (

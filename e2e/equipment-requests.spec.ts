@@ -211,7 +211,7 @@ test.describe("SCRUM-27 — Create Equipment Request", () => {
     await dialog.getByRole("button", { name: "Submit request" }).click();
 
     await expect(
-      page.getByText("This event already has a request waiting for review", {
+      page.getByText("This event already has an equipment request, so no new one was made", {
         exact: false,
       }),
     ).toBeVisible();
@@ -225,6 +225,50 @@ test.describe("SCRUM-27 — Create Equipment Request", () => {
     expect(
       await prisma.equipmentRequest.count({ where: { eventId: rig.id } }),
     ).toBe(1);
+  });
+
+  test("SCRUM-186 [AC1] TC-186-01: submitting for an event with an Approved request shows that request and points to changing its lines", async ({
+    page,
+  }) => {
+    const rig = await makeRig("approved");
+    const existing = await prisma.equipmentRequest.create({
+      data: {
+        eventId: rig.id,
+        requestedById: "usr_coordinator",
+        status: "APPROVED",
+        decidedAt: new Date(),
+        lines: { create: [{ equipmentId: "eqp_lectern", quantity: 1 }] },
+      },
+      select: { id: true },
+    });
+    await openRequests(page);
+
+    await page.getByRole("button", { name: "New request" }).first().click();
+    const dialog = page.getByRole("dialog");
+    await selectFrom(dialog.getByLabel("Event"), rig.id);
+    await addLine(page, "eqp_projector", "2");
+    await dialog.getByRole("button", { name: "Submit request" }).click();
+
+    await expect(
+      page.getByText(
+        "This event already has an equipment request, so no new one was made. It's highlighted below: use Change lines on it to add or change equipment.",
+      ),
+    ).toBeVisible();
+    const shown = page.locator(`#request-${existing.id}`);
+    await expect(shown).toHaveAttribute("data-highlighted", "true");
+    await expect(shown).toBeInViewport();
+    await shown.getByTestId("view-request-button").click();
+    await expect(
+      page
+        .getByTestId("equipment-request-details")
+        .getByRole("button", { name: "Change lines" }),
+    ).toBeVisible();
+    expect(
+      await prisma.equipmentRequest.findMany({
+        where: { eventId: rig.id },
+        select: { id: true, status: true },
+      }),
+    ).toEqual([{ id: existing.id, status: "APPROVED" }]);
   });
 
   test("SCRUM-27 TC-27-13: a request needs an event and at least one item before it is sent", async ({
@@ -244,7 +288,7 @@ test.describe("SCRUM-27 — Create Equipment Request", () => {
     await expect(dialog).toBeVisible();
   });
 
-  test("equipment picked but not yet added is included when the request is submitted", async ({
+  test("SCRUM-27 [AC6] TC-27-16: equipment picked but not yet added is included when the request is submitted", async ({
     page,
   }) => {
     const rig = await makeRig("pending-line");
@@ -263,7 +307,7 @@ test.describe("SCRUM-27 — Create Equipment Request", () => {
 });
 
 test.describe("SCRUM-27 — who can raise equipment requests", () => {
-  test("a coordinator finds Equipment Requests in their navigation", async ({
+  test("SCRUM-27 [AC1] TC-27-01: a coordinator finds Equipment Requests in their navigation", async ({
     page,
   }) => {
     await signIn(page, "coordinator@test.local");

@@ -121,7 +121,7 @@ e2e run serves it). Every account's password is `Password123!`.
 | Pre-conditions | — |
 | Test Steps | 1. Validate an empty start and end. <br> 2. Validate a given start and end. |
 | Test Data | `""`; `2031-06-01T01:00:00.000Z` to `2031-06-01T05:00:00.000Z` |
-| Expected Result | 1. "Choose the start date and time." on Start and "Choose the end date and time." on End, not Zod's "String must contain at least 1 character(s)". 2. Valid. |
+| Expected Result | 1. "Choose the event date and a start time." on Start and "Choose an end time." on End (SCRUM-190), not Zod's "String must contain at least 1 character(s)". 2. Valid. |
 
 **Automated by:** `tests/unit/validation-messages.test.ts` › "SCRUM-132 [AC4] TC-132-08: an empty start or end names the field and asks for a date and time" and "SCRUM-132 [AC4] TC-132-08: a start and end that are given pass this check"
 

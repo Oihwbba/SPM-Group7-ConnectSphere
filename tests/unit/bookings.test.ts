@@ -228,19 +228,60 @@ describe("submitBookingRequest — SCRUM-50", () => {
   });
 
   describe("SCRUM-50 [AC1] TC-50-15, SCRUM-162 [AC4]: the period covers the event, and the attendance is up to the event's", () => {
-    it("SCRUM-50 [AC1] TC-50-15: the event's period, rounded out to the half hour, is accepted", async () => {
-      db.event.findUnique.mockResolvedValue({
-        organiserId: "usr_org",
-        coordinatorId: "usr_coord",
-        status: "APPROVED",
-        startAt: new Date("2030-06-01T06:10:00.000Z"),
-        endAt: new Date("2030-06-01T07:45:00.000Z"),
-        expectedAttendance: 40,
+    describe("SCRUM-188 [AC1]: an event off the half hour, 2:10 pm to 3:45 pm SGT", () => {
+      const EXACT_START = "2030-06-01T06:10:00.000Z";
+      const EXACT_END = "2030-06-01T07:45:00.000Z";
+
+      beforeEach(() => {
+        db.event.findUnique.mockResolvedValue({
+          organiserId: "usr_org",
+          coordinatorId: "usr_coord",
+          status: "APPROVED",
+          startAt: new Date(EXACT_START),
+          endAt: new Date(EXACT_END),
+          expectedAttendance: 40,
+        });
       });
 
-      const result = await submitBookingRequest(validRequest);
+      it("SCRUM-188 [AC1] TC-188-02: a request for exactly the event's period is accepted and stored to the minute", async () => {
+        const result = await submitBookingRequest({
+          ...validRequest,
+          startAt: EXACT_START,
+          endAt: EXACT_END,
+        });
 
-      expect(result.ok).toBe(true);
+        expect(result.ok).toBe(true);
+        expect(db.booking.create).toHaveBeenCalledWith(
+          expect.objectContaining({
+            data: expect.objectContaining({
+              startAt: new Date(EXACT_START),
+              endAt: new Date(EXACT_END),
+            }),
+          }),
+        );
+      });
+
+      it("SCRUM-188 [AC1] TC-188-03: one minute short of the event at either end is refused, naming the event's own times, and nothing is written", async () => {
+        const message =
+          "The requested period must cover the event's whole period: 1 Jun 2030, 2:10 pm SGT to 1 Jun 2030, 3:45 pm SGT.";
+        for (const changed of [
+          { startAt: "2030-06-01T06:11:00.000Z", endAt: EXACT_END },
+          { startAt: EXACT_START, endAt: "2030-06-01T07:44:00.000Z" },
+        ]) {
+          const result = await submitBookingRequest({
+            ...validRequest,
+            ...changed,
+          });
+
+          expect(result).toEqual({
+            ok: false,
+            error: message,
+            fieldErrors: { startAt: [message] },
+          });
+        }
+        expect(db.venue.findFirst).not.toHaveBeenCalled();
+        expect(db.booking.create).not.toHaveBeenCalled();
+      });
     });
 
     it("SCRUM-162 [AC4] TC-162-05: a longer period that still covers the whole event is accepted", async () => {

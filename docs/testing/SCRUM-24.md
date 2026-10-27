@@ -61,7 +61,7 @@ with `coordinator@test.local` (both `Password123!`).
 | Test Data | "What is the expected start time?" |
 | Expected Result | The status is still Under Review; the question is a clarification on the event, not a status. |
 
-**Automated by:** `tests/unit/clarification.test.ts` › "[Positive] AC: coordinator requests clarification, event status is untouched, organiser is notified"; `e2e/clarification.spec.ts` › "coordinator asks, organiser replies, coordinator sees the answer (AC: sub-state, notify, respond, re-review)"
+**Automated by:** `tests/unit/clarification.test.ts` › "[Positive] AC: coordinator requests clarification, event status is untouched, organiser is notified"; `e2e/clarification.spec.ts` › "SCRUM-18 [AC1, AC2, AC4, AC5, AC6] TC-18-01, TC-18-03, TC-18-05, TC-18-07: the coordinator asks, the organiser replies, and the coordinator sees the answer"
 
 ### TC-24-03
 
@@ -100,7 +100,7 @@ with `coordinator@test.local` (both `Password123!`).
 | Test Data | The Under Review request |
 | Expected Result | Both see Planning without reloading. A dialog left open on an event that has left the queue stays open, with a warning. |
 
-**Automated by:** `e2e/events.spec.ts` › "coordinator views assigned event status and status remains consistent across views (SCRUM-23 & SCRUM-24)", "two users viewing the same event simultaneously see consistent live status without manual refresh (SCRUM-24)", "open modal remains mounted with warning when viewed event is dropped from review queue (SCRUM-24)"
+**Automated by:** `e2e/events.spec.ts` › "SCRUM-23 [AC2] TC-23-02, SCRUM-24 [AC7] TC-24-05: coordinator views assigned event status and status remains consistent across views", "SCRUM-24 [AC7] TC-24-05: two users viewing the same event simultaneously see consistent live status without manual refresh", "SCRUM-208 TC-208-16: an open event page stays, with a warning, when the event is dropped from the review queue" (the details dialog became the event page in SCRUM-208)
 
 ### TC-24-06
 

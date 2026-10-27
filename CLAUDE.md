@@ -96,7 +96,8 @@ disagrees with Jira, Jira wins and the sync is overdue. The index at
   checks are green: `build-and-test` (including e2e) and the GLM `review`,
   which fails on a critical finding or when no review completes (a PR that
   changes only Markdown, lockfiles or `docs/backlog` isn't reviewed and
-  passes). Read the GLM
+  passes, and so does a PR whose review GLM's quota or rate limit stopped:
+  the review comment then says it was skipped). Read the GLM
   review before you merge. Changes to `.github/`, `package.json`, the test
   configs, `vercel.json` or `.gitattributes` need a teammate's approval
   (CODEOWNERS lists the whole team), because they control the checks.
@@ -148,6 +149,8 @@ module requires us to be transparent about AI assistance.
 - **Test cases, story by story:** `docs/testing/` (format: `docs/testing/README.md`)
 - **Data model & story→table map:** `docs/data-model.md`, `prisma/schema.prisma`
 - **Architecture decisions:** `docs/adr/` (index: `docs/adr/README.md`)
+- **Sprint records, estimation and the Definition of Done:** `docs/scrum/`
+  (index: `docs/scrum/README.md`)
 - **Setup, seed accounts, run commands:** `README.md`
 - **What the AI reviewer checks:** `.github/ai-review/instructions.md`, and
   lessons from past reviews in `.github/ai-review/memory.md`

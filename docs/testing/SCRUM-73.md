@@ -44,7 +44,7 @@ The seed has a Confirmed event with registration open and places left.
 | Test Data | The seeded open event |
 | Expected Result | The Attendee immediately sees themselves as Registered; there is no approval queue. The event now has 39 places left. |
 
-**Automated by:** `tests/unit/registration-actions.test.ts` › "[Positive] AC: registering creates a REGISTERED registration for the caller", "[Positive] AC2: places are first come, first served — the registration is REGISTERED at once, with no approval step", "[Negative] SCRUM-74 AC: registration is accepted with capacity remaining, decreasing it by exactly one"; `e2e/registration.spec.ts` › "AC: registering shows as registered immediately, and capacity decreases by one"
+**Automated by:** `tests/unit/registration-actions.test.ts` › "[Positive] AC: registering creates a REGISTERED registration for the caller", "[Positive] AC2: places are first come, first served — the registration is REGISTERED at once, with no approval step", "[Negative] SCRUM-74 AC: registration is accepted with capacity remaining, decreasing it by exactly one"; `e2e/registration.spec.ts` › "SCRUM-73 [AC1, AC2, AC4] TC-73-01, SCRUM-74 [AC2] TC-74-02: registering shows as registered immediately, and capacity decreases by one"
 
 ### TC-73-02
 
