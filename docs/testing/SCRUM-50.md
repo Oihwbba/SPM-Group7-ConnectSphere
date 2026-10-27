@@ -7,6 +7,8 @@ Format and conventions: [README.md](README.md). The overlap rule itself is
 
 > **Week 7 (SCRUM-158).** AC 1 fixes the booking's attendance to the event's, AC 2–AC 4 compare bare periods, AC 8 enforces one venue per event, and AC 10 lets only an Approved booking block a venue. SCRUM-162 replaces AC 1 and AC 8 (several venues per event, attendance per booking), SCRUM-159 replaces AC 2–AC 4 (occupied periods), and SCRUM-163 changes AC 10 (a Held booking blocks too). SCRUM-162 has landed: TC-50-07's "for any venue" and TC-50-15's fixed period and attendance are now its cases (TC-162-01, TC-162-02, TC-162-05 to TC-162-07).
 
+> **SCRUM-188** supersedes AC 1's rounding: a request's period starts as exactly the event's start and end, so venue search and the request agree ([SCRUM-188 test cases](SCRUM-188.md)). The e2e events below are booked for their own times; the Morning Lecture (09:10–12:45) is no longer requested as 9:00 am to 1:00 pm.
+
 **Shared pre-conditions for every case:** the database is migrated and seeded
 (`npm run db:deploy && npm run db:seed`), the app is running, and the tester
 signs in as an Event Coordinator (`coordinator@test.local` / `Password123!`)
@@ -49,7 +51,7 @@ a manual tester creates the same events, or edits an event's dates.
 | Pre-conditions | Signed in as a Coordinator. No approved booking or unavailability on the Exhibition Hall overlaps the test period. |
 | Test Steps | 1. Open **Request Venue**. <br> 2. Choose the event, the layout, the venue and notes; the period and attendance come from the event. <br> 3. Click **Submit request**. |
 | Test Data | Event: E2E Hall — Morning Lecture (10 Mar 2035, 09:10–12:45, 120 expected) <br> Layout: theatre <br> Venue: Exhibition Hall |
-| Expected Result | A pop-up with a green tick: "Request submitted", the venue and times (9:00 am to 1:00 pm), and "It is pending Venue Staff approval." The form is then cleared. One PENDING booking exists holding the venue, times, attendance, facilities, layout, notes and the requesting coordinator. |
+| Expected Result | A pop-up with a green tick: "Request submitted", the venue and times (9:10 am to 12:45 pm, the event's own since SCRUM-188), and "It is pending Venue Staff approval." The form is then cleared. One PENDING booking exists holding the venue, times, attendance, facilities, layout, notes and the requesting coordinator. |
 
 **Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-50 [AC1, AC2] TC-50-01: a request for a free period is created PENDING with everything the staff need"; `tests/unit/bookings.test.ts` › "SCRUM-50 [AC1, AC2] TC-50-01: a request for a free period is created PENDING"; `e2e/bookings.spec.ts` › "SCRUM-50 [AC2], SCRUM-52 [AC1-AC3], SCRUM-53 [AC1, AC4]: a coordinator requests, staff approve, and the venue becomes unavailable"
 
@@ -62,7 +64,7 @@ a manual tester creates the same events, or edits an event's dates.
 | Pre-conditions | TC-50-01's request has been approved by Venue Staff (see TC-53-01). |
 | Test Steps | 1. Open **Request Venue**. <br> 2. Choose an event whose period overlaps the approved booking, and the Exhibition Hall. <br> 3. Read the availability line under the period. <br> 4. Send the same request directly to the server. |
 | Test Data | Event: E2E Hall — Overlapping Talk (10 Mar 2035, 11:00–15:00) |
-| Expected Result | Step 3, before anything is submitted: "Exhibition Hall is unavailable for this period: already booked from 10 Mar 2035, 9:00 am SGT to 10 Mar 2035, 1:00 pm SGT." **Submit request** is disabled. Step 4: the server refuses it with "…is unavailable for that period: …". No new booking row exists. The other booking's event is not named. |
+| Expected Result | Step 3, before anything is submitted: "Exhibition Hall is unavailable for this period: already booked from 10 Mar 2035, 9:10 am SGT to 10 Mar 2035, 12:45 pm SGT." **Submit request** is disabled. Step 4: the server refuses it with "…is unavailable for that period: …". No new booking row exists. The other booking's event is not named. |
 
 **Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-50 [AC3] TC-50-02: a request overlapping an approved booking is refused and nothing is written"; `tests/unit/bookings.test.ts` › "SCRUM-50 [AC3] TC-50-02: a venue already booked for part of the period refuses the request and names the clash"; `tests/unit/period.test.ts` › every "SCRUM-50 [AC3] TC-50-02: …" case (overlapping, contained, identical, shared start, one minute); `e2e/bookings.spec.ts` › journey (screenshot attached to the report)
 
@@ -98,9 +100,9 @@ a manual tester creates the same events, or edits an event's dates.
 |---|---|
 | Test Case ID | TC-50-05 |
 | Test Scenario | [Boundary] AC 4: periods touching at an endpoint do not overlap |
-| Pre-conditions | An approved booking 09:00–13:00 (TC-50-02). |
-| Test Steps | 1. Request the hall for an event running 13:00–15:00. <br> 2. Separately, for an event ending at exactly 09:00. |
-| Test Data | Event: E2E Hall — Afternoon Workshop (10 Mar 2035, 13:00–15:00) |
+| Pre-conditions | An approved booking 09:10–12:45 (TC-50-02). |
+| Test Steps | 1. Request the hall for an event running 12:45–15:00. <br> 2. Separately, for an event ending at exactly 09:10. |
+| Test Data | Event: E2E Hall — Afternoon Workshop (10 Mar 2035, 12:45–15:00) |
 | Expected Result | Both requests are created Pending. |
 
 **Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-50 [AC4] TC-50-05: a period beginning exactly as an approved booking ends is accepted" and "SCRUM-50 [AC4] TC-50-05: a period ending exactly as an approved booking begins is accepted"; `tests/unit/period.test.ts` › every "SCRUM-50 [AC4] TC-50-05: …" case; `e2e/bookings.spec.ts` › journey (last step)
@@ -194,7 +196,7 @@ a manual tester creates the same events, or edits an event's dates.
 | Test Data | Seeded venues and their supported layouts |
 | Expected Result | Room layout sits above Venue. Step 2: only Seminar Room 2.1 is offered, with "Showing venues that support the classroom layout." Step 3: the venue is cleared because Seminar Room 2.1 cannot be set up for a banquet. Step 4: every active venue is offered. Choosing an event doesn't change the layout: since SCRUM-170 AC2 (PO decision of 8 Oct, replacing the pre-selection added on 4 Oct) the Coordinator chooses it, with the Organiser's preferred layout shown read-only beside the form. |
 
-**Automated by:** `e2e/bookings.spec.ts` › "SCRUM-50 [AC1] TC-50-12: the room layout is chosen first, and only venues that support it are offered"; `tests/unit/request-form.test.tsx` › "SCRUM-50 [AC1] TC-50-12: once a layout is chosen, only venues that support it are offered", "SCRUM-50 [AC1] TC-50-12: with no layout preference, every venue is offered" and "SCRUM-50 [AC1] TC-50-12: the room layout is asked for before the venue"; `e2e/bookings.spec.ts` › "SCRUM-50 [AC1] TC-50-15, SCRUM-162 [AC4] TC-162-05, TC-162-06, TC-162-07: the period and attendance start from the event's, rounded out to the half hour; a shorter period or a larger attendance disables Submit" (an event stored as "Theatre" leaves the layout at No preference)
+**Automated by:** `e2e/bookings.spec.ts` › "SCRUM-50 [AC1] TC-50-12: the room layout is chosen first, and only venues that support it are offered"; `tests/unit/request-form.test.tsx` › "SCRUM-50 [AC1] TC-50-12: once a layout is chosen, only venues that support it are offered", "SCRUM-50 [AC1] TC-50-12: with no layout preference, every venue is offered" and "SCRUM-50 [AC1] TC-50-12: the room layout is asked for before the venue"; `e2e/bookings.spec.ts` › "SCRUM-188 [AC1] TC-188-01, SCRUM-162 [AC4] TC-162-05, TC-162-06, TC-162-07: the period and attendance start from the event's, the period exactly as the event has it; a shorter period or a larger attendance disables Submit" (an event stored as "Theatre" leaves the layout at No preference)
 
 ### TC-50-13
 
@@ -202,8 +204,8 @@ a manual tester creates the same events, or edits an event's dates.
 |---|---|
 | Test Case ID | TC-50-13 |
 | Test Scenario | [Negative, Boundary] AC 3, AC 4, AC 5: whether the venue is free is shown live as the period is chosen, and a taken venue or an invalid period disables Submit. Added on 2026-10-04 at the Product Owner's request. |
-| Pre-conditions | An approved booking on the Exhibition Hall 2035-03-10 09:00–13:00 (TC-50-02). |
-| Test Steps | 1. Choose the Exhibition Hall and the event running 11:00–15:00 that day. <br> 2. Change to the event running 13:00–15:00. |
+| Pre-conditions | An approved booking on the Exhibition Hall 2035-03-10 09:10–12:45 (TC-50-02). |
+| Test Steps | 1. Choose the Exhibition Hall and the event running 11:00–15:00 that day. <br> 2. Change to the event running 12:45–15:00. |
 | Test Data | E2E Hall — Overlapping Talk; E2E Hall — Afternoon Workshop |
 | Expected Result | While the answer is fetched, "Checking whether Exhibition Hall is free…". Step 1: "…is unavailable for this period: already booked from … to …", and Submit is disabled. Step 2: "Exhibition Hall is available for this period.", and Submit is enabled (the touching end is not an overlap). An invalid period is reported as "The requested period is invalid: the end must be after the start." and disables Submit. If the check itself cannot answer (no connection), it says "Availability could not be checked right now; it will be checked again when you submit." and leaves Submit enabled; submitting then decides. A pending request blocks nobody, so it still reads available. A retired venue reads "Venue not found.", as it does on submit. The check writes nothing. Submitting checks again on the server, because a booking can be approved in between. |
 
@@ -227,13 +229,13 @@ a manual tester creates the same events, or edits an event's dates.
 | Item | Content |
 |---|---|
 | Test Case ID | TC-50-15 |
-| Test Scenario | [Negative, Boundary] AC 1: the period and expected attendance are the event's and cannot be edited; the period is rounded out to the half hour. Added on 2026-10-04 after the GLM review of #128. **Superseded by SCRUM-162 AC4:** both start from the event's but can be changed; the period must cover the event and the attendance is from 1 to the event's ([TC-162-05](SCRUM-162.md#tc-162-05) to [TC-162-07](SCRUM-162.md#tc-162-07)). Step 3 still holds. |
+| Test Scenario | [Negative, Boundary] AC 1: the period and expected attendance are the event's and cannot be edited; the period is rounded out to the half hour. Added on 2026-10-04 after the GLM review of #128. **Superseded by SCRUM-162 AC4:** both start from the event's but can be changed; the period must cover the event and the attendance is from 1 to the event's ([TC-162-05](SCRUM-162.md#tc-162-05) to [TC-162-07](SCRUM-162.md#tc-162-07)). **Rounding superseded by SCRUM-188 AC1:** the period is the event's exact start and end ([TC-188-01](SCRUM-188.md#tc-188-01) to [TC-188-03](SCRUM-188.md#tc-188-03)). Step 3 still holds. |
 | Pre-conditions | An event running 09:10–12:45 expecting 120. |
 | Test Steps | 1. Choose the event and try to change Start, End and Expected attendance. <br> 2. Send a request directly to the server with a different period, or a different attendance. <br> 3. Send one for an event with no dates or no expected attendance. |
 | Test Data | E2E Hall — Morning Lecture (10 Mar 2035, 09:10–12:45, 120) |
 | Expected Result | Step 1: Start reads "10 Mar 2035, 9:00 am SGT", End "10 Mar 2035, 1:00 pm SGT", attendance "120"; none can be edited. Step 2: "The requested period must be the event's: … to …." or "The expected attendance must be the event's: 120.", against that field, and nothing is written. Step 3: "This event has no dates or expected attendance yet. Set them on the event before requesting a venue." |
 
-**Automated by:** the rounding and step 3, `tests/unit/bookings.test.ts` › "SCRUM-50 [AC1] TC-50-15: the event's period, rounded out to the half hour, is accepted" and "SCRUM-50 [AC1] TC-50-15: an event without dates or expected attendance cannot be booked yet"; `tests/unit/request-form.test.tsx` › every "SCRUM-50 [AC1] TC-50-15: eventBookingPeriod" case; `e2e/bookings.spec.ts` › "SCRUM-50 [AC1] TC-50-15, SCRUM-162 [AC4] TC-162-05, TC-162-06, TC-162-07: …". Steps 1 and 2 are replaced by SCRUM-162's cases.
+**Automated by:** step 3, `tests/unit/bookings.test.ts` › "SCRUM-50 [AC1] TC-50-15: an event without dates or expected attendance cannot be booked yet"; `tests/unit/request-form.test.tsx` › "SCRUM-50 [AC1] TC-50-15: an event without both dates has no period yet". Steps 1 and 2 are replaced by SCRUM-162's cases, and the rounding by SCRUM-188's (TC-188-01 to TC-188-03).
 
 ### TC-50-16
 
