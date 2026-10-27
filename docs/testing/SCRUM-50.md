@@ -53,7 +53,7 @@ a manual tester creates the same events, or edits an event's dates.
 | Test Data | Event: E2E Hall — Morning Lecture (10 Mar 2035, 09:10–12:45, 120 expected) <br> Layout: theatre <br> Venue: Exhibition Hall |
 | Expected Result | A pop-up with a green tick: "Request submitted", the venue and times (9:10 am to 12:45 pm, the event's own since SCRUM-188), and "It is pending Venue Staff approval." The form is then cleared. One PENDING booking exists holding the venue, times, attendance, facilities, layout, notes and the requesting coordinator. |
 
-**Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-50 [AC1, AC2] TC-50-01: a request for a free period is created PENDING with everything the staff need"; `tests/unit/bookings.test.ts` › "SCRUM-50 [AC1, AC2] TC-50-01: a request for a free period is created PENDING"; `e2e/bookings.spec.ts` › "SCRUM-50 [AC2], SCRUM-52 [AC1-AC3], SCRUM-53 [AC1, AC4]: a coordinator requests, staff approve, and the venue becomes unavailable"
+**Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-50 [AC1, AC2] TC-50-01: a request for a free period is created PENDING with everything the staff need"; `tests/unit/bookings.test.ts` › "SCRUM-50 [AC1, AC2] TC-50-01: a request for a free period is created PENDING"; `e2e/bookings.spec.ts` › "SCRUM-50 [AC2], SCRUM-52 [AC1-AC3], SCRUM-53 [AC1, AC4], SCRUM-207 [AC3, AC4] TC-207-06, TC-207-08: a coordinator requests, staff approve, and the venue becomes unavailable"
 
 ### TC-50-02
 
