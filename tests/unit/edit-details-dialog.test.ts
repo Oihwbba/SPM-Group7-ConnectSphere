@@ -1,6 +1,11 @@
 import { describe, it, expect, vi } from "vitest";
 
-import { showSaveReply } from "@/components/events/edit-details-dialog";
+import {
+  periodToSave,
+  showSaveReply,
+} from "@/components/events/edit-details-dialog";
+import { NOT_ONE_DAY_MESSAGE } from "@/lib/schemas/event";
+import { eventDetailsEditSchema } from "@/lib/schemas/event-edit";
 
 // SCRUM-25 AC3 — what the Edit details dialog does with a save's reply. The
 // action and the router are never reached: the reply is given directly.
@@ -87,5 +92,68 @@ describe("showSaveReply — SCRUM-25", () => {
     expect(ui.close).not.toHaveBeenCalled();
     expect(ui.onSaved).toHaveBeenCalledTimes(1);
     expect(ui.refresh).toHaveBeenCalledTimes(1);
+  });
+});
+
+// SCRUM-190 AC3 — an event entered across two days before the one-day rule
+// (09:00 SGT on 3 Mar 2036 to 17:00 SGT on 4 Mar) can't be shown as one date.
+describe("periodToSave — SCRUM-190 AC3", () => {
+  const twoDays = {
+    startAt: new Date("2036-03-03T01:00:00.000Z"),
+    endAt: new Date("2036-03-04T09:00:00.000Z"),
+  };
+  const asRead = { date: "2036-03-03", startTime: "09:00", endTime: "17:00" };
+
+  function editWith(period: { startAt: string; endAt: string }) {
+    return eventDetailsEditSchema.safeParse({
+      eventId: "evt_1",
+      name: "Renamed",
+      expectedAttendance: 10,
+      ...period,
+    });
+  }
+
+  it("SCRUM-190 [AC3] TC-190-11: a save that leaves a two-day period's fields as read sends the stored period, not one moved onto the start's day", () => {
+    expect(periodToSave(twoDays, asRead)).toEqual({
+      startAt: "2036-03-03T01:00:00.000Z",
+      endAt: "2036-03-04T09:00:00.000Z",
+    });
+  });
+
+  it("SCRUM-190 [AC3] TC-190-11: so that save is refused as not one day, until the Coordinator sets one", () => {
+    const result = editWith(periodToSave(twoDays, asRead));
+
+    expect(result.success).toBe(false);
+    expect(result.error?.flatten().fieldErrors.endAt).toEqual([
+      NOT_ONE_DAY_MESSAGE,
+    ]);
+  });
+
+  it("SCRUM-190 [AC3] TC-190-11: once the Coordinator changes a time, the period saved is the one date with the times they see", () => {
+    const period = periodToSave(twoDays, { ...asRead, endTime: "17:30" });
+
+    expect(period).toEqual({
+      startAt: "2036-03-03T01:00:00.000Z",
+      endAt: "2036-03-03T09:30:00.000Z",
+    });
+    expect(editWith(period).success).toBe(true);
+  });
+
+  it("SCRUM-190 [AC3] TC-190-11: a one-day period left as read is saved unchanged", () => {
+    const oneDay = {
+      startAt: "2036-03-03T01:00:00.000Z",
+      endAt: "2036-03-03T09:00:00.000Z",
+    };
+
+    expect(periodToSave(oneDay, asRead)).toEqual(oneDay);
+  });
+
+  it("SCRUM-190 [AC3] TC-190-11: a period never set stays empty, so the save asks for it", () => {
+    expect(
+      periodToSave(
+        { startAt: null, endAt: null },
+        { date: "", startTime: "", endTime: "" },
+      ),
+    ).toEqual({ startAt: "", endAt: "" });
   });
 });

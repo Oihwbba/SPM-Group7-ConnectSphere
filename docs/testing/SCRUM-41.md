@@ -135,7 +135,7 @@ and the app is running. Unless the case says otherwise, the event is owned by
 | Pre-conditions | Signed in as the Organiser. |
 | Test Steps | 1. Ask for each invalid value. <br> 2. Ask for the allowed boundaries. |
 | Test Data | Invalid: attendance 0, -5, 1.5; a blank name; a start with no end; an end before, or equal to, the start; a start a minute in the past; a date that isn't one; a programme of 5001 characters; a Registration needed that isn't Yes or No; a field the form doesn't have. Allowed: attendance 1; an end one minute after the start; an empty programme. |
-| Expected Result | Each invalid value is refused, with the form's own message next to its field ("Attendance must be a positive whole number.", "Proposed date cannot be in the past.", "Proposed end date and time must be strictly after the start date and time.", …), and nothing is read or written. The boundaries are accepted. For the Organiser, Venue requirements and Equipment requirements offer the request form's catalogue suggestions; choosing a venue fills "Preferred venue: [name]". Venue and equipment requirements are free text, as AC 4 says, under the request form's own rules (not blank). A Coordinator gets no suggestions: only the Organiser may read the catalogue (SCRUM-13). |
+| Expected Result | Each invalid value is refused, with the form's own message next to its field ("Attendance must be a positive whole number.", "Proposed date cannot be in the past.", "The end time must be after the start time.", and for an end on another day "An event starts and ends on the same day. Choose one date with a start and an end time." (SCRUM-190), …), and nothing is read or written. The boundaries are accepted. For the Organiser, Venue requirements and Equipment requirements offer the request form's catalogue suggestions; choosing a venue fills "Preferred venue: [name]". Venue and equipment requirements are free text, as AC 4 says, under the request form's own rules (not blank). A Coordinator gets no suggestions: only the Organiser may read the catalogue (SCRUM-13). |
 
 **Automated by:** `tests/unit/change-requests.test.ts` › "SCRUM-41 [AC4] TC-41-07: %j is refused: %s", "SCRUM-41 [AC4] TC-41-07: the boundaries that are allowed: attendance 1, an end one minute after the start, an empty programme", "SCRUM-41 [AC4] TC-41-07: invalid values are refused next to their field, before anything is read"; `e2e/change-requests.spec.ts` › "SCRUM-41 [AC1, AC4, AC5, AC6, AC7] TC-41-07, TC-41-09: …"
 
@@ -267,7 +267,7 @@ and the app is running. Unless the case says otherwise, the event is owned by
 | Test Data | Expected attendance 55 |
 | Expected Result | Step 2: "The change request couldn't be sent. If it isn't in the list of change requests, try again." at the top of the form; **Submit change request** and **Discard changes** are enabled again, and nothing is written. Step 3: the request is listed, reading "40 → 55", and only one is written. |
 
-**Automated by:** `e2e/change-requests.spec.ts` › "SCRUM-41 regression: a submission that never reaches the server says so and can be sent again"
+**Automated by:** `e2e/change-requests.spec.ts` › "SCRUM-41 TC-41-17: a submission that never reaches the server says so and can be sent again"
 
 ### TC-41-18
 

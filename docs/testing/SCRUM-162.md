@@ -8,8 +8,9 @@ and changes the readiness checklist's Venue item (SCRUM-110, ADR 0011).
 **Shared pre-conditions for every case:** the database is migrated and seeded
 and the app is running. The tester signs in as the event's assigned
 Coordinator (`coordinator@test.local` / `Password123!`) unless the case says
-otherwise. The event is in Planning, runs 09:10–12:45 on 10 Mar 2035 (so its
-booking period is 9:00 am to 1:00 pm) and expects 120. Times are Singapore
+otherwise. The event is in Planning, runs 09:10–12:45 on 10 Mar 2035 (its
+booking period is exactly that, since SCRUM-188 stopped rounding it to 9:00 am
+to 1:00 pm) and expects 120. Times are Singapore
 time.
 
 | ID | Type | Criterion | Automated |
@@ -37,7 +38,7 @@ time.
 | Test Scenario | [Positive] AC 1, AC 3: an event that already has a booking at one venue gets a request for another venue, linked to the same event |
 | Pre-conditions | The event has a Pending or Approved booking at the Grand Auditorium for its period. |
 | Test Steps | 1. Open **Request Venue**. <br> 2. Choose the event and the Exhibition Hall, and submit. |
-| Test Data | Exhibition Hall, 9:00 am–1:00 pm, 120 |
+| Test Data | Exhibition Hall, 9:10 am–12:45 pm, 120 |
 | Expected Result | "Request submitted". The event now has two bookings: the Grand Auditorium and the Exhibition Hall. The other venue's approval doesn't make this one unavailable: availability is checked for the requested venue only. |
 
 **Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-162 [AC1] TC-162-01: an event with a pending booking at another venue gets a new request for this one, linked to the same event" (and the approved one)
@@ -53,7 +54,7 @@ time.
 | Test Data | Exhibition Hall |
 | Expected Result | "This event already has a request for this venue." with the existing booking's venue, times and status. No new row. |
 
-**Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-162 [AC2] TC-162-02: an event with a pending booking at this venue is shown it, and no request is created" (and the held and approved ones); `tests/unit/bookings.test.ts` › "SCRUM-162 [AC2] TC-162-02, SCRUM-163 [AC4] TC-163-08: an event that already has a pending, approved or unexpired held booking at this venue is shown it and nothing is created" and "SCRUM-162 [AC2] TC-162-02: the existing booking at this venue is shown even when the request's other details differ from it"; `e2e/bookings.spec.ts` › "SCRUM-50 [AC2], SCRUM-52 [AC1-AC3], SCRUM-53 [AC1, AC4]: a coordinator requests, staff approve, and the venue becomes unavailable"
+**Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-162 [AC2] TC-162-02: an event with a pending booking at this venue is shown it, and no request is created" (and the held and approved ones); `tests/unit/bookings.test.ts` › "SCRUM-162 [AC2] TC-162-02, SCRUM-163 [AC4] TC-163-08: an event that already has a pending, approved or unexpired held booking at this venue is shown it and nothing is created" and "SCRUM-162 [AC2] TC-162-02: the existing booking at this venue is shown even when the request's other details differ from it"; `e2e/bookings.spec.ts` › "SCRUM-50 [AC1, AC2] TC-50-01, SCRUM-52 [AC1, AC2] TC-52-01, SCRUM-53 [AC1, AC4] TC-53-01, SCRUM-162 [AC2] TC-162-02, SCRUM-207 [AC3, AC4] TC-207-06, TC-207-08: a coordinator requests, staff approve, and the venue becomes unavailable"
 
 ### TC-162-03
 
@@ -90,9 +91,9 @@ time.
 | Pre-conditions | — |
 | Test Steps | 1. Choose the event. <br> 2. Change the end to 2:00 pm, or the start to 8:30 am, and submit. |
 | Test Data | Exhibition Hall |
-| Expected Result | Step 1: Start reads 9:00 am and End 1:00 pm on 10 Mar 2035, both editable. Step 2: the request is created with the longer period. Exactly the event's period is accepted too. |
+| Expected Result | Step 1: Start reads 9:10 am and End 12:45 pm on 10 Mar 2035 (SCRUM-188 AC1), both editable. Step 2: the request is created with the longer period. Exactly the event's period is accepted too. |
 
-**Automated by:** `tests/unit/bookings.test.ts` › "SCRUM-162 [AC4] TC-162-05: a longer period that still covers the whole event is accepted"; `tests/integration/bookings.test.ts` › "SCRUM-162 [AC4] TC-162-05: a longer period that still covers the whole event is accepted"; `tests/unit/request-form.test.tsx` › "SCRUM-162 [AC4] TC-162-05: …"; `e2e/bookings.spec.ts` › "SCRUM-50 [AC1] TC-50-15, SCRUM-162 [AC4] TC-162-05, TC-162-06, TC-162-07: …"
+**Automated by:** `tests/unit/bookings.test.ts` › "SCRUM-162 [AC4] TC-162-05: a longer period that still covers the whole event is accepted"; `tests/integration/bookings.test.ts` › "SCRUM-162 [AC4] TC-162-05: a longer period that still covers the whole event is accepted"; `tests/unit/request-form.test.tsx` › "SCRUM-162 [AC4] TC-162-05: …"; `e2e/bookings.spec.ts` › "SCRUM-188 [AC1] TC-188-01, SCRUM-162 [AC4] TC-162-05, TC-162-06, TC-162-07: …"
 
 ### TC-162-06
 
@@ -103,7 +104,7 @@ time.
 | Pre-conditions | — |
 | Test Steps | 1. Change the end to 12:30 pm. <br> 2. Send directly to the server a request starting at 9:30 am, one ending at 12:30 pm, and one on the next day. |
 | Test Data | — |
-| Expected Result | Step 1: "The requested period must cover the event's whole period: 10 Mar 2035, 9:00 am SGT to 10 Mar 2035, 1:00 pm SGT." and Submit is disabled. Step 2: the same message against the start field, and nothing is written. |
+| Expected Result | Step 1: "The requested period must cover the event's whole period: 10 Mar 2035, 9:10 am SGT to 10 Mar 2035, 12:45 pm SGT." and Submit is disabled. Step 2: the same message against the start field, and nothing is written. |
 
 **Automated by:** `tests/unit/bookings.test.ts` › "SCRUM-162 [AC4] TC-162-06: a period that doesn't cover the event's whole period is refused against the start field, and nothing is written"; `tests/integration/bookings.test.ts` › "SCRUM-162 [AC4] TC-162-06: …"; `e2e/bookings.spec.ts` › "… TC-162-06 …"
 

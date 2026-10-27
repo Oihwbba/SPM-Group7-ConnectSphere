@@ -749,9 +749,15 @@ function FixedPeriod({ period }: { period: { startAt: Date; endAt: Date } }) {
       value: formatTime(period.startAt),
     },
     {
+      // SCRUM-188: a time on the event date, like the start. An event stored
+      // across two days before SCRUM-190 keeps its end date, so it isn't
+      // shown as ending on the day it starts.
       id: "event-end",
       label: "Event end",
-      value: formatDateTime(period.endAt),
+      value:
+        formatDate(period.endAt) === formatDate(period.startAt)
+          ? formatTime(period.endAt)
+          : formatDateTime(period.endAt),
     },
   ];
   return (

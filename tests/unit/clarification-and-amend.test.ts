@@ -13,6 +13,7 @@ import {
   respondToClarification,
 } from "@/app/(app)/events/clarification-actions";
 import { clarificationChangesSchema } from "@/lib/schemas/clarification";
+import { sgtPeriod } from "../one-day-period";
 
 // SCRUM-108 — answer a clarification (only the fields it names), or amend
 // and resubmit a rejected request to the same Coordinator. Test cases:
@@ -62,8 +63,11 @@ function sessionFor(role: Role, id: string): Session {
 const organiser = () => sessionFor("ORGANISER", "usr_org");
 const coordinator = () => sessionFor("COORDINATOR", "usr_coord");
 
-const FUTURE_START = new Date(Date.now() + 10 * 86400000);
-const FUTURE_END = new Date(FUTURE_START.getTime() + 4 * 3600000);
+// SCRUM-190: 09:00–13:00 SGT in ten days, never crossing midnight SGT.
+const { startAt: FUTURE_START, endAt: FUTURE_END } = sgtPeriod(10, 9, 13);
+// SCRUM-190: 09:00 SGT one day to 17:00 SGT the next.
+const { startAt: TWO_DAY_START } = sgtPeriod(20, 9, 17);
+const TWO_DAY_END = new Date(TWO_DAY_START.getTime() + 32 * 60 * 60 * 1000);
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -401,6 +405,29 @@ describe("respondToClarification — SCRUM-108 AC2–AC5, AC14", () => {
     },
   );
 
+  it("SCRUM-190 [AC3] TC-190-07: an answer moving the event across two days is refused against the end, and nothing is read or written", async () => {
+    const result = await respondToClarification({
+      clarificationId: "clr1",
+      response: "Running it over two days.",
+      changes: {
+        startAt: TWO_DAY_START.toISOString(),
+        endAt: TWO_DAY_END.toISOString(),
+      },
+    });
+
+    expect(result).toEqual({
+      ok: false,
+      error: "Please fix the highlighted fields.",
+      fieldErrors: {
+        endAt: [
+          "An event starts and ends on the same day. Choose one date with a start and an end time.",
+        ],
+      },
+    });
+    expect(tx.clarificationRequest.findUnique).not.toHaveBeenCalled();
+    expect(tx.event.update).not.toHaveBeenCalled();
+  });
+
   it("SCRUM-171 [AC1] TC-171-10: a clarification answer can clear the registration note, which the form no longer requires", () => {
     expect(
       clarificationChangesSchema.safeParse({ registrationNotes: "" }).success,
@@ -484,6 +511,25 @@ describe("submitEventRequest — SCRUM-108 AC9–AC12, AC14 resubmission", () =>
   });
 
   beforeEach(() => mockAuth.mockResolvedValue(organiser()));
+
+  it("SCRUM-190 [AC3] TC-190-06: an amended request running across two days can't be resubmitted, and nothing is written", async () => {
+    tx.event.findFirst.mockResolvedValue(rejectedRow("usr_coord"));
+
+    const result = await submitEventRequest({
+      ...amended,
+      startAt: TWO_DAY_START.toISOString(),
+      endAt: TWO_DAY_END.toISOString(),
+    });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.fieldErrors?.endAt).toEqual([
+        "An event starts and ends on the same day. Choose one date with a start and an end time.",
+      ]);
+    }
+    expect(tx.event.update).not.toHaveBeenCalled();
+    expect(tx.event.create).not.toHaveBeenCalled();
+  });
 
   it("SCRUM-108 [AC9, AC11, AC14] TC-108-05, SCRUM-165 [AC9] TC-165-12: the amended request goes back to the same Coordinator, and the resubmission is recorded", async () => {
     tx.event.findFirst.mockResolvedValue(rejectedRow("usr_coord"));

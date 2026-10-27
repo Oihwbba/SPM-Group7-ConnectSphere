@@ -65,11 +65,12 @@ const toggle = (page: Page, value: string) =>
   page.locator("label", { hasText: new RegExp(`^${value}$`) }).click();
 
 /**
- * An event from 10:15 to 11:45 Singapore time on `day`; a booking would run
- * 10:00–12:00 (SCRUM-50 AC1). Each test uses its own day, because tests run
- * in parallel and one test's booking would take another's venue.
+ * An event from 10:15 to 11:45 Singapore time on `day`, off the half hour; a
+ * booking for it runs exactly then (SCRUM-188 AC1). Each test uses its own
+ * day, because tests run in parallel and one test's booking would take
+ * another's venue.
  */
-async function planningEvent(name: string, day: string) {
+async function planningEvent(name: string, day: string, from = "10:15", to = "11:45") {
   return (
     await prisma.event.create({
       data: {
@@ -79,8 +80,8 @@ async function planningEvent(name: string, day: string) {
         status: "PLANNING",
         organiserId: "usr_organiser",
         coordinatorId: "usr_coordinator",
-        startAt: new Date(`${day}T10:15:00+08:00`),
-        endAt: new Date(`${day}T11:45:00+08:00`),
+        startAt: new Date(`${day}T${from}:00+08:00`),
+        endAt: new Date(`${day}T${to}:00+08:00`),
         expectedAttendance: 40,
         submittedAt: new Date(),
       },
@@ -92,8 +93,8 @@ async function planningEvent(name: string, day: string) {
 const bookingFor = (eventId: string, venueId: string, day: string) => ({
   eventId,
   venueId,
-  startAt: new Date(`${day}T10:00:00+08:00`),
-  endAt: new Date(`${day}T12:00:00+08:00`),
+  startAt: new Date(`${day}T10:15:00+08:00`),
+  endAt: new Date(`${day}T11:45:00+08:00`),
   requestedById: "usr_coordinator",
 });
 
@@ -227,6 +228,92 @@ test.describe("SCRUM-38 — Search and filter venues", () => {
     // AC12: the 20 searched comes across, as a room for part of the event's
     // 40 (SCRUM-162 AC4).
     await expect(page.getByLabel("Expected attendance")).toHaveValue("20");
+  });
+
+  test("SCRUM-188 [AC1, AC2] TC-188-01, TC-188-06: a venue search lists as free is requested for exactly the event's period, and is free when requested", async ({
+    page,
+  }) => {
+    const day = "2034-11-20";
+    const name = `SCRUM-188 Exact ${Date.now()}`;
+    eventId = await planningEvent(name, day);
+    // Another event's approved booking of the hall ends at 10:15, exactly as
+    // this event starts. Rounded down to 10:00, the request would overlap it.
+    const otherId = await planningEvent(
+      `SCRUM-188 Before ${Date.now()}`,
+      day,
+      "08:00",
+      "10:15",
+    );
+    try {
+      await prisma.booking.create({
+        data: {
+          eventId: otherId,
+          venueId: "ven_hall",
+          startAt: new Date(`${day}T08:00:00+08:00`),
+          endAt: new Date(`${day}T10:15:00+08:00`),
+          status: "APPROVED",
+          requestedById: "usr_coordinator",
+          decidedById: "usr_venuestaff",
+          decidedAt: new Date(),
+        },
+      });
+
+      await signIn(page, "coordinator@test.local");
+      // SCRUM-209: Find a venue is in the Arrangements tab's Venues section.
+      const details = await openDetails(page, name, "Arrangements");
+      await details.getByRole("link", { name: "Find a venue" }).click();
+      await page.waitForURL(/\/venues\/search\?event=/);
+      // The event's period, locked: one date, and the end a time like the
+      // start, since the event ends on the day it starts.
+      await expect(page.getByLabel("Event date")).toHaveValue("20 Nov 2034");
+      await expect(page.getByLabel("Event start")).toHaveValue("10:15 am SGT");
+      await expect(page.getByLabel("Event end")).toHaveValue("11:45 am SGT");
+      await page.getByRole("button", { name: "Search", exact: true }).click();
+      await expect(page).toHaveURL(/searched=1/);
+      expect(await resultNames(page)).toContain("Exhibition Hall");
+
+      await page
+        .locator('[data-venue="ven_hall"]')
+        .getByRole("button", { name: "Request this venue" })
+        .click();
+      await page.waitForURL(/\/bookings\/new\?.*venue=ven_hall/);
+      await page.locator('[data-hydrated="true"]').waitFor();
+
+      // AC1: the event's own 10:15 to 11:45, not 10:00 to 12:00.
+      await expect(page.getByLabel("Start", { exact: true })).toHaveAttribute(
+        "data-value",
+        `${day}T10:15`,
+      );
+      await expect(page.getByLabel("End", { exact: true })).toHaveAttribute(
+        "data-value",
+        `${day}T11:45`,
+      );
+      // AC2: checked for that same period, the hall is free, as search said.
+      const live = page.getByTestId("live-availability");
+      await expect(live).toHaveAttribute("data-state", "free");
+      await page.getByRole("button", { name: "Submit request" }).click();
+      // SCRUM-209: started from the event page, the request returns there.
+      await page.waitForURL(
+        new RegExp(`/events/${eventId}\\?tab=arrangements$`),
+      );
+      await expect(
+        page.getByText(
+          "Venue requested: Exhibition Hall. It is pending Venue Staff approval.",
+        ),
+      ).toBeVisible();
+      const booking = await prisma.booking.findFirstOrThrow({
+        where: { eventId, venueId: "ven_hall" },
+        select: { startAt: true, endAt: true, status: true },
+      });
+      expect(booking).toEqual({
+        startAt: new Date(`${day}T10:15:00+08:00`),
+        endAt: new Date(`${day}T11:45:00+08:00`),
+        status: "PENDING",
+      });
+    } finally {
+      await prisma.booking.deleteMany({ where: { eventId: otherId } });
+      await prisma.event.deleteMany({ where: { id: otherId } });
+    }
   });
 
   test("SCRUM-38 [AC1] TC-38-02: Find a replacement venue starts from the flagged booking request", async ({

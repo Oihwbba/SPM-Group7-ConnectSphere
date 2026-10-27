@@ -109,7 +109,7 @@ test.describe("SCRUM-29 — Check Equipment Availability", () => {
 
   // Two reservations of three that never share an instant commit three units,
   // not six. Before the fix the page summed them and showed 0 of 4.
-  test("SCRUM-29 [AC1]: shows the free quantity for the period, from the busiest instant", async ({
+  test("SCRUM-29 [AC1] TC-29-01: shows the free quantity for the period, from the busiest instant", async ({
     page,
   }) => {
     test.skip(!usesLocalDatabase, "writes its own equipment; local database only");
@@ -126,7 +126,7 @@ test.describe("SCRUM-29 — Check Equipment Availability", () => {
     await expect(page.getByTestId("selected-availability")).toHaveText("1 of 4 available");
   });
 
-  test("SCRUM-29 [AC2]: a quantity that fits is reported available", async ({
+  test("SCRUM-29 [AC2] TC-29-02: a quantity that fits is reported available", async ({
     page,
   }) => {
     test.skip(!usesLocalDatabase, "writes its own equipment; local database only");
@@ -145,7 +145,7 @@ test.describe("SCRUM-29 — Check Equipment Availability", () => {
     );
   });
 
-  test("SCRUM-29 [AC3]: a quantity over the free units reports the shortfall", async ({
+  test("SCRUM-29 [AC3] TC-29-03: a quantity over the free units reports the shortfall", async ({
     page,
   }) => {
     test.skip(!usesLocalDatabase, "writes its own equipment; local database only");
@@ -159,7 +159,7 @@ test.describe("SCRUM-29 — Check Equipment Availability", () => {
     );
   });
 
-  test("SCRUM-29 [AC4]: equipment reserved for an overlapping period is excluded", async ({
+  test("SCRUM-29 [AC4] TC-29-01: equipment reserved for an overlapping period is excluded", async ({
     page,
   }) => {
     test.skip(!usesLocalDatabase, "writes its own equipment; local database only");
@@ -171,7 +171,7 @@ test.describe("SCRUM-29 — Check Equipment Availability", () => {
     await expect(page.getByTestId("selected-availability")).toHaveText("0 of 4 available");
   });
 
-  test("SCRUM-29 [AC5]: a reservation that ends exactly when the period begins leaves the pool free", async ({
+  test("SCRUM-29 [AC5] TC-29-04: a reservation that ends exactly when the period begins leaves the pool free", async ({
     page,
   }) => {
     test.skip(!usesLocalDatabase, "writes its own equipment; local database only");
@@ -188,7 +188,7 @@ test.describe("SCRUM-29 — Check Equipment Availability", () => {
     await expect(page.getByTestId("selected-availability")).toHaveText("4 of 4 available");
   });
 
-  test("SCRUM-29 [AC6]: units under maintenance or damaged are not shown as available", async ({
+  test("SCRUM-29 [AC6] TC-29-05: units under maintenance or damaged are not shown as available", async ({
     page,
   }) => {
     test.skip(!usesLocalDatabase, "writes its own equipment; local database only");

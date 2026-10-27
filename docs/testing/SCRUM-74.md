@@ -49,7 +49,7 @@ and the app is running. Signed in as `attendee@test.local` (`Password123!`).
 | Test Data | The event |
 | Expected Result | The registration is accepted, and the event has 39 places left. |
 
-**Automated by:** `tests/unit/registration-actions.test.ts` › "[Negative] SCRUM-74 AC: registration is accepted with capacity remaining, decreasing it by exactly one"; `tests/unit/registration-state.test.ts` › "AC: subtracts active registrations from the total"; `e2e/registration.spec.ts` › "AC: registering shows as registered immediately, and capacity decreases by one"
+**Automated by:** `tests/unit/registration-actions.test.ts` › "[Negative] SCRUM-74 AC: registration is accepted with capacity remaining, decreasing it by exactly one"; `tests/unit/registration-state.test.ts` › "AC: subtracts active registrations from the total"; `e2e/registration.spec.ts` › "SCRUM-73 [AC1, AC2, AC4] TC-73-01, SCRUM-74 [AC2] TC-74-02: registering shows as registered immediately, and capacity decreases by one"
 
 ### TC-74-03
 
@@ -75,7 +75,7 @@ and the app is running. Signed in as `attendee@test.local` (`Password123!`).
 | Test Data | The two events |
 | Expected Result | The full event shows "Full" with no way to register. The other is open. Remaining places never show below zero, even if more are registered than the capacity. |
 
-**Automated by:** `tests/unit/registration-state.test.ts` › "[Negative] AC: remaining capacity zero → FULL", "[Boundary] AC: one remaining place → OPEN, not FULL", "Boundary: exactly at capacity returns zero, not negative", "Boundary: over capacity (a pre-existing data anomaly) still floors at zero"; `e2e/attendee-events.spec.ts` › "AC: opening a full event's detail page shows it as full with the register action disabled"
+**Automated by:** `tests/unit/registration-state.test.ts` › "[Negative] AC: remaining capacity zero → FULL", "[Boundary] AC: one remaining place → OPEN, not FULL", "Boundary: exactly at capacity returns zero, not negative", "Boundary: over capacity (a pre-existing data anomaly) still floors at zero"; `e2e/attendee-events.spec.ts` › "SCRUM-72 [AC6] TC-72-05, SCRUM-74 [AC4] TC-74-04: opening a full event's detail page shows it as full with the register action disabled"
 
 ### TC-74-05
 
@@ -88,7 +88,7 @@ and the app is running. Signed in as `attendee@test.local` (`Password123!`).
 | Test Data | The event's id |
 | Expected Result | Refused with "This event is full." and no registration is created. |
 
-**Automated by:** `tests/unit/registration-actions.test.ts` › "[Negative] SCRUM-74 AC: a full event refuses a direct registration request and creates nothing"; `e2e/registration.spec.ts` › "AC: a full event refuses direct registration and shows no register action"
+**Automated by:** `tests/unit/registration-actions.test.ts` › "[Negative] SCRUM-74 AC: a full event refuses a direct registration request and creates nothing"; `e2e/registration.spec.ts` › "SCRUM-74 [AC5] TC-74-05: a full event refuses direct registration and shows no register action"
 
 ### TC-74-06
 
@@ -101,4 +101,4 @@ and the app is running. Signed in as `attendee@test.local` (`Password123!`).
 | Test Data | The event |
 | Expected Result | The place is free immediately, and the other Attendee's registration is accepted. Withdrawal locks the event too, so it can't interleave with a registration. |
 
-**Automated by:** `tests/unit/registration-actions.test.ts` › "SCRUM-74 AC, SCRUM-77 [AC1, AC7] TC-77-01, TC-77-09: [Positive] withdrawing a REGISTERED registration flips it to WITHDRAWN, keeping the row", "[Positive] SCRUM-74 AC: withdrawal locks the Event row before writing, so a concurrent registration for the freed place cannot interleave"; `tests/integration/concurrency.test.ts` › "withdrawing the sole registration on a full event lets a new registration succeed"; `e2e/registration.spec.ts` › "AC: withdrawing reopens capacity immediately and lets another attendee register"
+**Automated by:** `tests/unit/registration-actions.test.ts` › "SCRUM-74 AC, SCRUM-77 [AC1, AC7] TC-77-01, TC-77-09: [Positive] withdrawing a REGISTERED registration flips it to WITHDRAWN, keeping the row", "[Positive] SCRUM-74 AC: withdrawal locks the Event row before writing, so a concurrent registration for the freed place cannot interleave"; `tests/integration/concurrency.test.ts` › "withdrawing the sole registration on a full event lets a new registration succeed"; `e2e/registration.spec.ts` › "SCRUM-74 [AC2] TC-74-06: withdrawing reopens capacity immediately and lets another attendee register"

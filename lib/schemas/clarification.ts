@@ -1,5 +1,11 @@
 import { z } from "zod";
 
+import {
+  EVENT_END_REQUIRED_MESSAGE,
+  EVENT_START_REQUIRED_MESSAGE,
+  eventPeriodError,
+} from "@/lib/schemas/event";
+
 /**
  * SCRUM-108 AC1 — the request-form fields a Coordinator can let the Organiser
  * change in a clarification answer. "schedule" is the start and end together,
@@ -60,8 +66,8 @@ export const requestFieldValues = z.object({
   purpose: requiredText("The purpose", 1000),
   description: requiredText("The description", 5000),
   // SCRUM-132 AC4: say which field to fix and how.
-  startAt: z.string().min(1, "Choose the start date and time."),
-  endAt: z.string().min(1, "Choose the end date and time."),
+  startAt: z.string().min(1, EVENT_START_REQUIRED_MESSAGE),
+  endAt: z.string().min(1, EVENT_END_REQUIRED_MESSAGE),
   expectedAttendance: z
     .number({
       invalid_type_error: "Attendance must be a positive whole number.",
@@ -80,7 +86,10 @@ export const requestFieldValues = z.object({
     .max(5000, "Keep registration notes under 5000 characters."),
 });
 
-/** A new schedule gives both ends, doesn't start in the past, and ends after it starts. */
+/**
+ * A new schedule gives both ends, doesn't start in the past, and ends after it
+ * starts on the same day (SCRUM-190 AC3).
+ */
 export function checkSchedule(
   changes: { startAt?: string; endAt?: string },
   ctx: z.RefinementCtx,
@@ -108,13 +117,15 @@ export function checkSchedule(
       message: "Proposed date cannot be in the past.",
       path: ["startAt"],
     });
-  } else if (end <= start) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message:
-        "Proposed end date and time must be strictly after the start date and time.",
-      path: ["endAt"],
-    });
+  } else {
+    const periodError = eventPeriodError(start, end);
+    if (periodError) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: periodError,
+        path: ["endAt"],
+      });
+    }
   }
 }
 

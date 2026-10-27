@@ -19,6 +19,7 @@ import {
   submitEventRequest,
 } from "@/app/(app)/events/actions";
 import { getOrganiserEvents } from "@/app/(app)/events/role-views";
+import { sgtPeriod } from "../one-day-period";
 
 vi.mock("@/auth", () => ({ auth: vi.fn() }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
@@ -47,7 +48,7 @@ let counter = 0;
 
 /** A Draft owned by usr_organiser, complete enough to be submitted. */
 async function makeDraft(over: { startAt?: Date; endAt?: Date } = {}) {
-  const start = new Date(Date.now() + 30 * 86_400_000);
+  const { startAt: start, endAt: end } = sgtPeriod(30);
   const draft = await prisma.event.create({
     data: {
       name: `${PREFIX} draft ${++counter}`,
@@ -56,7 +57,7 @@ async function makeDraft(over: { startAt?: Date; endAt?: Date } = {}) {
       purpose: "Discard journey",
       description: "Owned by the SCRUM-130 integration suite.",
       startAt: start,
-      endAt: new Date(start.getTime() + 2 * 3_600_000),
+      endAt: end,
       expectedAttendance: 20,
       venueRequirements: "Any room",
       accessibilityNeeds: "None",
@@ -274,13 +275,13 @@ describe.skipIf(!usesLocalDatabase)(
         (await getOrganiserEvents("usr_organiser")).map((e) => e.id),
       ).toContain(draft.id);
       signIn("ORGANISER", "usr_organiser");
-      const future = new Date(Date.now() + 10 * 86_400_000);
+      const future = sgtPeriod(10);
       expect(
         await createDraftEvent({
           id: draft.id,
           name: draft.name,
-          startAt: future.toISOString(),
-          endAt: new Date(future.getTime() + 3_600_000).toISOString(),
+          startAt: future.startAt.toISOString(),
+          endAt: future.endAt.toISOString(),
         }),
       ).toEqual({ ok: true, data: { id: draft.id } });
     });

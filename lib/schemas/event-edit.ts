@@ -2,6 +2,12 @@ import { z } from "zod";
 
 import type { EventStatus } from "@prisma/client";
 
+import {
+  EVENT_END_REQUIRED_MESSAGE,
+  EVENT_START_REQUIRED_MESSAGE,
+  eventPeriodError,
+} from "@/lib/schemas/event";
+
 /**
  * SCRUM-25 — the assigned Coordinator edits an event's details directly.
  *
@@ -106,7 +112,6 @@ export function arrangementsFlaggedReason(fields: EditableField[]): string {
 export const CONFIRMATION_OUT_OF_DATE_MESSAGE =
   "Something was booked or reserved for this event since you were warned. Check the list again before saving.";
 
-export const INVALID_PERIOD_MESSAGE = "The end must be after the start.";
 export const PAST_START_MESSAGE = "The start can't be in the past.";
 
 const text = (max: number) => z.string().trim().max(max).optional();
@@ -134,8 +139,8 @@ export const eventDetailsEditSchema = z
     programme: text(5000),
     specialRequests: text(5000),
     // UTC ISO strings, converted from Singapore wall time in the browser.
-    startAt: z.string().min(1, "Choose a start time."),
-    endAt: z.string().min(1, "Choose an end time."),
+    startAt: z.string().min(1, EVENT_START_REQUIRED_MESSAGE),
+    endAt: z.string().min(1, EVENT_END_REQUIRED_MESSAGE),
     expectedAttendance: z.coerce
       .number({ invalid_type_error: "Attendance must be a positive whole number." })
       .int("Attendance must be a positive whole number.")
@@ -147,13 +152,16 @@ export const eventDetailsEditSchema = z
     confirmedArrangements: z.array(z.string()).default([]),
   })
   .superRefine((data, ctx) => {
-    const start = new Date(data.startAt).getTime();
-    const end = new Date(data.endAt).getTime();
-    if (Number.isNaN(start) || Number.isNaN(end) || end <= start) {
+    // SCRUM-190 AC3: the same one-day rule as the request form.
+    const periodError = eventPeriodError(
+      new Date(data.startAt),
+      new Date(data.endAt),
+    );
+    if (periodError) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["endAt"],
-        message: INVALID_PERIOD_MESSAGE,
+        message: periodError,
       });
     }
   });

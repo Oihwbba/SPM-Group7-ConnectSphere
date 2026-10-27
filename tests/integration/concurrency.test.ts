@@ -742,8 +742,9 @@ describe.skipIf(!usesLocalDatabase)("event submission — repeat submission (SCR
     name: eventName,
     purpose: "Repeat submission coverage",
     description: "SCRUM-14 integration coverage",
-    startAt: "2031-07-01T09:00:00.000Z",
-    endAt: "2031-07-01T17:00:00.000Z",
+    // 09:00–17:00 SGT: within one Singapore day (SCRUM-190).
+    startAt: "2031-07-01T01:00:00.000Z",
+    endAt: "2031-07-01T09:00:00.000Z",
     expectedAttendance: 10,
     venueRequirements: "Any room",
     accessibilityNeeds: "None",

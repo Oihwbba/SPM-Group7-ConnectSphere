@@ -42,7 +42,7 @@ test.describe("SCRUM-67 — typing another role's URL directly is refused", () =
   ];
 
   for (const { label, url } of restricted) {
-    test(`organiser is refused the ${label} (${url})`, async ({ page }) => {
+    test(`SCRUM-67 [AC3] TC-67-04: an Organiser is refused the ${label} (${url})`, async ({ page }) => {
       await signIn(page, "organiser@test.local");
 
       await page.goto(url);
@@ -80,7 +80,7 @@ test.describe("an event's page by identifier", () => {
 // coordinator-only decision (events-client.tsx), so an organiser must never see
 // them, and a coordinator with a submitted request in view must.
 test.describe("SCRUM-66 — on-screen actions are gated by role", () => {
-  test("an organiser sees no coordinator decision controls on /events", async ({
+  test("SCRUM-66 [AC3] TC-66-02: an organiser sees no coordinator decision controls on /events", async ({
     page,
   }) => {
     await signIn(page, "organiser@test.local");
@@ -99,7 +99,7 @@ test.describe("SCRUM-66 — on-screen actions are gated by role", () => {
     ).toHaveCount(0);
   });
 
-  test("a coordinator sees the decision controls on a request under review", async ({
+  test("SCRUM-66 [AC3] TC-66-02: a coordinator sees the decision controls on a request under review", async ({
     page,
   }) => {
     await signIn(page, "coordinator@test.local");
@@ -168,7 +168,7 @@ test.describe("SCRUM-66 — each role's navigation shows only its own links", ()
   ];
 
   for (const { email, role, present } of cases) {
-    test(`${role} sees only ${present.join(", ")}`, async ({ page }) => {
+    test(`SCRUM-65 [AC1, AC3] TC-65-01, SCRUM-66 [AC1, AC2, AC3] TC-66-01: ${role} sees only ${present.join(", ")}`, async ({ page }) => {
       await signIn(page, email);
 
       const rail = page.locator("aside");
@@ -191,7 +191,7 @@ test.describe("SCRUM-66 — each role's navigation shows only its own links", ()
 // session at all; the middleware (proxy.ts) redirects it to /login.
 test.describe("SCRUM-67 — signed-out access to a protected URL redirects to login", () => {
   for (const url of ["/events", "/venues", "/bookings", "/equipment"]) {
-    test(`${url} bounces a signed-out visitor to /login`, async ({ page }) => {
+    test(`SCRUM-67 [AC3] TC-67-04: ${url} bounces a signed-out visitor to /login`, async ({ page }) => {
       await page.goto(url);
       await page.waitForURL("**/login");
       await expect(page.getByRole("button", { name: "Sign in" })).toBeVisible();

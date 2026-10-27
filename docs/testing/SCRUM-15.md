@@ -74,7 +74,7 @@ unless the case says otherwise.
 | Pre-conditions | Signed in as the Organiser, with a draft saved with a name and both dates. |
 | Test Steps | 1. On **My Events**, click **Resume Draft** on the draft's row. <br> 2. Step through the form. |
 | Test Data | Start 20 Nov 2027 10:00, end 20 Nov 2027 18:00 |
-| Expected Result | "Resume Draft Event Request" opens with the saved name, and the dates read 2027-11-20T10:00 and 2027-11-20T18:00. The review step shows "Start: 20 Nov 2027, 10:00 am SGT" and "End: 20 Nov 2027, 6:00 pm SGT". |
+| Expected Result | "Resume Draft Event Request" opens with the saved name, and the schedule reads Event Date 2027-11-20, Start Time 10:00 and End Time 18:00 (SCRUM-190). The review step shows "Date: 20 Nov 2027" and "Time: 10:00 am SGT – 6:00 pm SGT". |
 
 **Automated by:** `tests/unit/events.test.ts` › "SCRUM-15 [AC2 - Happy Path]: retains existing field values when updating an existing draft request", "SCRUM-15 [AC1, AC2 - Data retention]: a new draft saved with both proposed dates persists them as UTC instants"; `e2e/events.spec.ts` › "SCRUM-15 [AC3] TC-15-05: organiser saves partial draft, locates and resumes draft with preserved fields, then completes and submits"
 
@@ -102,7 +102,7 @@ unless the case says otherwise.
 | Test Data | Name "Partial planning draft" |
 | Expected Result | "Draft event request saved successfully." The draft is listed as a Draft, and resuming it opens the form to continue. |
 
-**Automated by:** `e2e/events.spec.ts` › "organiser can navigate steps freely without mandatory fields and save partial draft", "SCRUM-15 [AC3] TC-15-05: organiser saves partial draft, locates and resumes draft with preserved fields, then completes and submits"
+**Automated by:** `e2e/events.spec.ts` › "SCRUM-13 [AC5] TC-13-06, SCRUM-15 [AC3] TC-15-05: organiser can navigate steps freely without mandatory fields and save partial draft", "SCRUM-15 [AC3] TC-15-05: organiser saves partial draft, locates and resumes draft with preserved fields, then completes and submits"
 
 ### TC-15-06
 
@@ -141,7 +141,7 @@ unless the case says otherwise.
 | Test Data | Any name |
 | Expected Result | "Unsaved Changes" opens: "You have unsaved changes in this event request". **Continue Editing** returns to the form with the name still there; closing again asks again. |
 
-**Automated by:** `e2e/events.spec.ts` › "SCRUM-15 [AC6 - Unsaved Changes Warning]: unsaved changes warning appears when closing an edited draft dialog"
+**Automated by:** `e2e/events.spec.ts` › "SCRUM-15 [AC6] TC-15-08: unsaved changes warning appears when closing an edited draft dialog"
 
 ### TC-15-09
 
@@ -154,7 +154,7 @@ unless the case says otherwise.
 | Test Data | A new purpose |
 | Expected Result | "Draft event request updated successfully." There is still one draft, holding the new value. |
 
-**Automated by:** `e2e/events.spec.ts` › "SCRUM-15 [AC2, AC7 - Draft Save Idempotency]: saving an existing draft a second time updates the record in-place without creating duplicate rows"; `tests/unit/events.test.ts` › "SCRUM-15 [AC2, AC7 - Data retention on re-save]: updating a draft with only an end date persists that end and leaves the start empty"
+**Automated by:** `e2e/events.spec.ts` › "SCRUM-15 [AC2, AC7] TC-15-09: saving an existing draft a second time updates the record in-place without creating duplicate rows"; `tests/unit/events.test.ts` › "SCRUM-15 [AC2, AC7 - Data retention on re-save]: updating a draft with only an end date persists that end and leaves the start empty"
 
 ### TC-15-10
 
