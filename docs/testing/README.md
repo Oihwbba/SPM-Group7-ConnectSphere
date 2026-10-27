@@ -101,6 +101,7 @@ the open pull requests that change the same test files have merged.
 | [SCRUM-16](SCRUM-16.md) | Felicia Or | 5 | Every case automated (TC-16-05 by e2e) |
 | [SCRUM-17](SCRUM-17.md) | Hann Qian | 3 | Every case automated; TC-17-02's unassigned request superseded by SCRUM-165 |
 | [SCRUM-18](SCRUM-18.md) | Hann Qian | 11 | Every case automated |
+| [SCRUM-183](SCRUM-183.md) | Jun Bin | 1 | A Chore task: SCRUM-18's clarification spec waits for each dialog to close; automated (the whole suite, in CI) |
 | [SCRUM-19](SCRUM-19.md) | Hann Qian | 6 | Every case automated; approval now ends in Planning (SCRUM-81) |
 | [SCRUM-20](SCRUM-20.md) | Hann Qian | 5 | TC-20-01 to TC-20-04 superseded by SCRUM-165, citing its tests; TC-20-05 automated |
 | [SCRUM-23](SCRUM-23.md) | Jun Bin | 2 | Every case automated |
@@ -184,3 +185,4 @@ the open pull requests that change the same test files have merged.
 | [SCRUM-202](SCRUM-202.md) | Jun Bin | 3 | A Bug task: a venue edit deadlocking with a booking decision; automated (unit for the retry, integration for a forced deadlock and a real race) |
 | [SCRUM-207](SCRUM-207.md) | Caylern Goh | 24 | Part of the story: AC 2, AC 3 and the shared confirmation automated (unit for the shared badge and empty states, e2e for the submit and approve pop-ups), and the customer's page-by-page changes automated (TC-207-11 to TC-207-24); TC-207-01, -02, -09 and -10 (AC 1, AC 4 across every page, AC 5) are still to do, marked Manual |
 | [SCRUM-208](SCRUM-208.md) | Caylern Goh | 17 | Every case automated (unit for the Next step, the tab chosen, the progress and the stat strips, e2e for the page, its link and tabs, the answer box, not found, the phone layout, the Attendee page and the live view); the panels' own rules stay with their stories' tests |
+| [SCRUM-209](SCRUM-209.md) | Caylern Goh | 10 | Every case automated (unit for who is offered Find a venue and the equipment actions, and the Next step's sections; e2e for the venue round trip, equipment in place, No equipment needed, the safety check, and the read-only and refused views); the actions' own refusals stay with their stories' tests |
