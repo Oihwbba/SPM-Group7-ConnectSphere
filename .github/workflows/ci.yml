@@ -29,9 +29,11 @@ concurrency:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
-    # A normal run takes about 3 minutes; stop a hung Postgres or Playwright
-    # step long before the 360-minute default.
-    timeout-minutes: 20
+    # A normal run takes 11–18 minutes (Oct 2026). 35 leaves room for a slow
+    # runner, which at 20 was cancelled before e2e even started (SCRUM-231),
+    # and still stops a hung Postgres or Playwright step long before the
+    # 360-minute default.
+    timeout-minutes: 35
 
     # Postgres for the whole job: migrations, seed, and the Playwright run all
     # talk to this service container.

@@ -13,7 +13,8 @@ import { EQUIPMENT_REQUEST_STATUS_LABEL } from "@/lib/equipment/requests";
 const tx = vi.hoisted(() => ({
   $queryRaw: vi.fn(),
   event: { updateMany: vi.fn() },
-  equipmentRequest: { create: vi.fn() },
+  // findFirst: SCRUM-186 AC4, the active request looked for again under the lock.
+  equipmentRequest: { create: vi.fn(), findFirst: vi.fn() },
   equipmentRequestUpdate: { create: vi.fn() },
   // SCRUM-124 AC2: Technical Support are told of a submission
   // (the SCRUM-124 tests at the end of this file).
@@ -79,6 +80,7 @@ beforeEach(() => {
     async (fn: (client: typeof tx) => unknown) => fn(tx),
   );
   tx.equipmentRequest.create.mockResolvedValue({ id: "eqr_new" });
+  tx.equipmentRequest.findFirst.mockResolvedValue(null);
   // The event's status as createEquipmentRequest re-reads it under its lock.
   tx.$queryRaw.mockResolvedValue([{ status: "PLANNING", organiserId: "usr_org", coordinatorId: "usr_coord" }]);
   tx.equipmentRequestUpdate.create.mockResolvedValue({});
@@ -221,7 +223,7 @@ describe("createEquipmentRequest — SCRUM-27", () => {
     expect(db.$transaction).not.toHaveBeenCalled();
   });
 
-  it("SCRUM-27 [AC7] TC-27-09: an event with a request pending review shows that request instead of creating a second", async () => {
+  it("SCRUM-27 [AC7] TC-27-09, SCRUM-186 [AC1] TC-186-02: an event with an active request (Pending Review, In Review or Approved) shows the oldest instead of creating a second", async () => {
     db.equipmentRequest.findFirst.mockResolvedValue({ id: "eqr_existing" });
 
     const result = await createEquipmentRequest(input());
@@ -233,13 +235,40 @@ describe("createEquipmentRequest — SCRUM-27", () => {
     expect(db.equipmentRequest.findFirst).toHaveBeenCalledWith({
       where: {
         eventId: "evt_approved",
-        status: { in: ["PENDING_REVIEW", "IN_REVIEW"] },
+        status: { in: ["PENDING_REVIEW", "IN_REVIEW", "APPROVED"] },
       },
+      orderBy: { createdAt: "asc" },
       select: { id: true },
     });
     expect(db.$transaction).not.toHaveBeenCalled();
     // The existing request may postdate the coordinator's page, so the list
     // is refreshed for it to be there to highlight.
+    expect(revalidatePath).toHaveBeenCalledWith("/equipment-requests");
+  });
+
+  it("SCRUM-186 [AC4] TC-186-05: a request that became active after the first check is found again under the event's lock, and nothing is written", async () => {
+    tx.equipmentRequest.findFirst.mockResolvedValue({ id: "eqr_raced" });
+
+    const result = await createEquipmentRequest(input());
+
+    expect(result).toEqual({
+      ok: true,
+      data: { id: "eqr_raced", existing: true },
+    });
+    expect(tx.equipmentRequest.findFirst).toHaveBeenCalledWith({
+      where: {
+        eventId: "evt_approved",
+        status: { in: ["PENDING_REVIEW", "IN_REVIEW", "APPROVED"] },
+      },
+      orderBy: { createdAt: "asc" },
+      select: { id: true },
+    });
+    const order = (fn: Mock) => fn.mock.invocationCallOrder[0];
+    expect(order(tx.$queryRaw)).toBeLessThan(order(tx.equipmentRequest.findFirst));
+    expect(tx.event.updateMany).not.toHaveBeenCalled();
+    expect(tx.equipmentRequest.create).not.toHaveBeenCalled();
+    expect(tx.equipmentRequestUpdate.create).not.toHaveBeenCalled();
+    expect(tx.notification.createMany).not.toHaveBeenCalled();
     expect(revalidatePath).toHaveBeenCalledWith("/equipment-requests");
   });
 
