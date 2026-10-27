@@ -171,7 +171,7 @@ unless the case says otherwise. "A start a month from now" is any future time.
 | Test Data | A start yesterday; a start a minute ago |
 | Expected Result | Step 1 stays on the date step with an inline error. Step 2 is refused with "Proposed date cannot be in the past." and nothing is created. |
 
-**Automated by:** `tests/unit/events.test.ts` › "SCRUM-13 [AC9 - Domain Boundary]: rejects submission when proposed start date is in the past", "SCRUM-13 [AC9] × SCRUM-129 [AC4]: rejects a UTC ISO start datetime that represents a past moment, confirming converted Singapore wall-times are rejected at the schema layer"; `e2e/events.spec.ts` › "SCRUM-13 [AC9]: entering a past start date on Step 2 blocks navigation to Step 3 and shows an inline error"
+**Automated by:** `tests/unit/events.test.ts` › "SCRUM-13 [AC9 - Domain Boundary]: rejects submission when proposed start date is in the past", "SCRUM-13 [AC9] × SCRUM-129 [AC4]: rejects a UTC ISO start datetime that represents a past moment, confirming converted Singapore wall-times are rejected at the schema layer"; `e2e/events.spec.ts` › "SCRUM-13 [AC9] TC-13-10: entering a past start date on Step 2 blocks navigation to Step 3 and shows an inline error"
 
 ### TC-13-11
 

@@ -713,7 +713,7 @@ test.describe("User Story 129, 13 & 84 — Singapore time, unsaved changes and l
     await expect(page.getByText("Career Fair")).not.toBeVisible();
   });
 
-  test("SCRUM-13 [AC9]: entering a past start date on Step 2 blocks navigation to Step 3 and shows an inline error", async ({
+  test("SCRUM-13 [AC9] TC-13-10: entering a past start date on Step 2 blocks navigation to Step 3 and shows an inline error", async ({
     page,
   }) => {
     await page.goto("/login");

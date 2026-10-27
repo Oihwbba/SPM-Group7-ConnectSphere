@@ -40,7 +40,7 @@ Moved to [TC-36-09](SCRUM-36.md#tc-36-09) on 2026-10-09. A newly approved bookin
 | Test Data | Start 10 Jan 2036 1:00 pm, End 5:00 pm, Reason Maintenance |
 | Expected Result | "Recorded: Grand Auditorium is unavailable for that period." The calendar shows "Unavailable (maintenance) 1:00 pm to 5:00 pm", striped. The row stores the period, reason, note and who recorded it. |
 
-**Automated by:** `tests/integration/unavailability.test.ts` › "SCRUM-37 [AC1] TC-37-02: venue staff record a period and a reason, and it is saved"; `tests/unit/unavailability.test.ts` › "SCRUM-37 [AC1, AC2] TC-37-02: venue staff record a period and a reason; the calendar is refreshed" and "SCRUM-37 [AC1] TC-37-02: a blank note is stored as none"; `e2e/availability.spec.ts` › "SCRUM-37 [AC1, AC2, AC5], SCRUM-36 [AC2, AC3, AC5]: maintenance is recorded, seen, refused over, and sat flush against a booking"
+**Automated by:** `tests/integration/unavailability.test.ts` › "SCRUM-37 [AC1] TC-37-02: venue staff record a period and a reason, and it is saved"; `tests/unit/unavailability.test.ts` › "SCRUM-37 [AC1, AC2] TC-37-02: venue staff record a period and a reason; the calendar is refreshed" and "SCRUM-37 [AC1] TC-37-02: a blank note is stored as none"; `e2e/availability.spec.ts` › "SCRUM-37 [AC1, AC2, AC5] TC-37-02, SCRUM-36 [AC2, AC3, AC5] TC-36-01, TC-36-08, TC-36-09: maintenance is recorded, seen, refused over, and sat flush against a booking"
 
 ### TC-37-03
 

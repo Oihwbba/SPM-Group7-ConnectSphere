@@ -246,7 +246,7 @@ test.describe("SCRUM-72 — Attendee browses confirmed events", () => {
 });
 
 test.describe("SCRUM-72 — the attendee view stays the Attendee's", () => {
-  test("SCRUM-72, SCRUM-208 [AC1] TC-208-15: the Organiser at their Confirmed event's URL gets their own event page, never the attendee view", async ({
+  test("SCRUM-208 [AC1] TC-208-15: the Organiser at their Confirmed event's URL gets their own event page, never the attendee view", async ({
     page,
   }) => {
     await page.goto("/login");

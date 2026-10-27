@@ -32,7 +32,7 @@ and the app is running. Every seeded account's password is `Password123!`.
 | Test Data | `organiser@test.local`, `coordinator@test.local`, `venuestaff@test.local`, `techsupport@test.local`, `attendee@test.local` |
 | Expected Result | The top bar shows the ConnectSphere brand, the notifications bell and the profile menu, and nothing to type into: no search box and no text field. |
 
-**Automated by:** `e2e/top-bar.spec.ts` › "SCRUM-168 [AC1, AC3]: at phone width, ${email} sees no search box, the brand on the left, and the bell and profile menu together on the right", run once for each of the five roles. The test runs at phone width. The header has no markup that changes with the width, but a pass at desktop width is **Manual**.
+**Automated by:** `e2e/top-bar.spec.ts` › "SCRUM-168 [AC1, AC3] TC-168-01, TC-168-03: at phone width, ${email} sees no search box, the brand on the left, and the bell and profile menu together on the right", run once for each of the five roles. The test runs at phone width. The header has no markup that changes with the width, but a pass at desktop width is **Manual**.
 
 ### TC-168-02
 
@@ -58,4 +58,4 @@ and the app is running. Every seeded account's password is `Password123!`.
 | Test Data | The five roles in TC-168-01; screen 375 × 812 |
 | Expected Result | All three sit inside the one bar. The brand starts in the left quarter of the screen. The bell and the profile menu are side by side (at most 8 px apart) with the menu at the right edge (within 32 px). The page is no wider than the screen. |
 
-**Automated by:** `e2e/top-bar.spec.ts` › "SCRUM-168 [AC1, AC3]: at phone width, ${email} sees no search box, the brand on the left, and the bell and profile menu together on the right", run once for each of the five roles
+**Automated by:** `e2e/top-bar.spec.ts` › "SCRUM-168 [AC1, AC3] TC-168-01, TC-168-03: at phone width, ${email} sees no search box, the brand on the left, and the bell and profile menu together on the right", run once for each of the five roles

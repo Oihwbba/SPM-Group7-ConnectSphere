@@ -248,7 +248,7 @@ one the pop-up showed, with the same rules and the same people allowed to act.
 | Test Data | `attendee@test.local` |
 | Expected Result | The Attendee's event page, with its registration state; not the Organiser's or Coordinator's page. The event's Organiser at the same address gets their own event page, never the Attendee's. |
 
-**Automated by:** `e2e/event-page.spec.ts` › "SCRUM-208 [AC1] TC-208-15: …"; `e2e/attendee-events.spec.ts` › "SCRUM-72, SCRUM-208 [AC1] TC-208-15: …"; `e2e/several-venues.spec.ts`
+**Automated by:** `e2e/event-page.spec.ts` › "SCRUM-208 [AC1] TC-208-15: …"; `e2e/attendee-events.spec.ts` › "SCRUM-208 [AC1] TC-208-15: the Organiser at their Confirmed event's URL gets their own event page, never the attendee view"; `e2e/several-venues.spec.ts`
 
 ### TC-208-16
 
