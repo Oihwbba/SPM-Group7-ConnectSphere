@@ -18,7 +18,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { EventPeriodInputs } from "@/components/events/event-period-inputs";
-import { joinEventPeriod, splitEventPeriod } from "@/lib/datetime";
+import {
+  formatDateTime,
+  joinEventPeriod,
+  sgDate,
+  splitEventPeriod,
+  type EventPeriodFields,
+} from "@/lib/datetime";
 import { LAYOUT_OPTIONS } from "@/lib/schemas/event";
 import { PillSelect } from "@/components/app/pill-select";
 import { splitChoice } from "@/lib/requirement-choices";
@@ -120,6 +126,36 @@ function savedMessage({ changed, flagged, safetyCheckOutdated }: EventDetailsSav
   ]
     .filter(Boolean)
     .join(" ");
+}
+
+type StoredPeriod = {
+  startAt: Date | string | null;
+  endAt: Date | string | null;
+};
+
+/**
+ * SCRUM-190 AC3 — the period a save sends. While the date and times are as
+ * they were read, it is the stored period itself: an event entered across two
+ * days before the one-day rule can't be shown as one date, and joining its
+ * fields would move its end onto the start's day without the Coordinator
+ * seeing it. Sent as stored, it is refused until they set one day.
+ * Exported for its unit test.
+ */
+export function periodToSave(
+  stored: StoredPeriod,
+  form: EventPeriodFields,
+): { startAt: string; endAt: string } {
+  const before = splitEventPeriod(stored.startAt, stored.endAt);
+  const touched = (["date", "startTime", "endTime"] as const).some(
+    (key) => form[key] !== before[key],
+  );
+  if (touched) {
+    const period = joinEventPeriod(form);
+    return { startAt: period.startAt ?? "", endAt: period.endAt ?? "" };
+  }
+  const iso = (value: Date | string | null) =>
+    value === null ? "" : new Date(value).toISOString();
+  return { startAt: iso(stored.startAt), endAt: iso(stored.endAt) };
 }
 
 type SaveReply = Awaited<ReturnType<typeof updateEventDetails>>;
@@ -259,8 +295,7 @@ export function EditDetailsDialog({
           registrationRequired: form.registrationRequired || undefined,
           programme: form.programme,
           specialRequests: form.specialRequests,
-          startAt: joinEventPeriod(form).startAt ?? "",
-          endAt: joinEventPeriod(form).endAt ?? "",
+          ...periodToSave(event, form),
           expectedAttendance: form.expectedAttendance,
           venueRequirements: form.venueRequirements,
           equipmentRequirements: form.equipmentRequirements,
@@ -416,6 +451,21 @@ export function EditDetailsDialog({
                 you&apos;ll see which before anything is saved. Times are
                 Singapore time (SGT, UTC+8).
               </p>
+              {/* SCRUM-190 AC3: a period stored before the one-day rule. */}
+              {event.startAt &&
+                event.endAt &&
+                sgDate(event.startAt) !== sgDate(event.endAt) && (
+                  <p
+                    data-testid="edit-details-two-days"
+                    className="rounded-md border border-warning/40 bg-warning/10 p-2 text-xs"
+                  >
+                    This event is saved as running from{" "}
+                    {formatDateTime(event.startAt)} to{" "}
+                    {formatDateTime(event.endAt)}, across two days. An event now
+                    starts and ends on the same day, so set one date with a
+                    start and an end time before saving.
+                  </p>
+                )}
               <div className="grid gap-3 sm:grid-cols-3">
                 <div className="sm:col-span-3">
                   <EventPeriodInputs

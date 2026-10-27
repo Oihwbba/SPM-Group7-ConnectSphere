@@ -40,6 +40,7 @@ unless the case says otherwise.
 | [TC-190-08](#tc-190-08) | Negative | AC 3 (change request) | Unit |
 | [TC-190-09](#tc-190-09) | Negative | AC 3 (Coordinator's edit) | Unit |
 | [TC-190-10](#tc-190-10) | Positive | AC 3 (draft) | Unit |
+| [TC-190-11](#tc-190-11) | Negative | AC 3 (Coordinator's edit of an event stored across two days) | Unit |
 
 ---
 
@@ -172,3 +173,16 @@ unless the case says otherwise.
 | Expected Result | The draft is saved. Reopened, **Event Date**, **Start Time** and **End Time** are empty. A time entered without a date gives no start or end. A draft whose dates are given still follows the one-day rule (SCRUM-15 AC 4). |
 
 **Automated by:** `tests/unit/event-one-day.test.ts` › "SCRUM-190 [AC3] TC-190-10: a draft can still be saved without a date or times", "SCRUM-190 [AC1, AC3] TC-190-10: without the date there is no start or end, so a draft saves without them", "SCRUM-190 [AC1, AC3] TC-190-10: a draft with no date or times shows empty fields"; `tests/unit/events.test.ts` › "SCRUM-15 [AC4 - Validation Rule]: a draft with $rule is refused, because dates that are provided must still be valid" (the "end on a later day than the start" row); `tests/unit/event-one-day.test.ts` › "SCRUM-190 [AC3] TC-190-10: saving a draft (SCRUM-15) refuses an event running into the next day"
+
+### TC-190-11
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-190-11 |
+| Test Scenario | [Negative] AC 3: the Coordinator's edit never moves a period stored across two days, from before this story, onto one day without them setting it |
+| Pre-conditions | Signed in as `coordinator@test.local`; an event assigned to them, Under Review or in Planning, stored from 09:00 SGT on 3 Mar 2036 to 17:00 SGT on 4 Mar 2036 (allowed before SCRUM-190). |
+| Test Steps | 1. Click **Edit details**. <br> 2. Change only **Event name** and save. <br> 3. Change **End time** to 17:30 and save. |
+| Test Data | Stored 2036-03-03T01:00Z to 2036-03-04T09:00Z |
+| Expected Result | The dialog says the event is saved as running across two days and asks for one date with a start and an end time. Step 2 sends the stored period unchanged and is refused with "An event starts and ends on the same day. Choose one date with a start and an end time.", so the end isn't moved without the Coordinator seeing it. Step 3 saves 2036-03-03T01:00Z to 2036-03-03T09:30Z, the one date and times shown. A one-day period left as it was read is sent unchanged. |
+
+**Automated by:** `tests/unit/edit-details-dialog.test.ts` › "SCRUM-190 [AC3] TC-190-11: a save that leaves a two-day period's fields as read sends the stored period, not one moved onto the start's day", "SCRUM-190 [AC3] TC-190-11: so that save is refused as not one day, until the Coordinator sets one", "SCRUM-190 [AC3] TC-190-11: once the Coordinator changes a time, the period saved is the one date with the times they see", "SCRUM-190 [AC3] TC-190-11: a one-day period left as read is saved unchanged", "SCRUM-190 [AC3] TC-190-11: a period never set stays empty, so the save asks for it"
