@@ -12,8 +12,9 @@ describe("SCRUM-132 validation messages", () => {
 
     expect(parsed.success).toBe(false);
     expect(parsed.error?.flatten().fieldErrors).toEqual({
-      startAt: ["Choose the start date and time."],
-      endAt: ["Choose the end date and time."],
+      // SCRUM-190 AC1: the form asks for one date with a start and an end time.
+      startAt: ["Choose the event date and a start time."],
+      endAt: ["Choose an end time."],
     });
   });
 
