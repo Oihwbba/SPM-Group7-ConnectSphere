@@ -3,9 +3,11 @@
 > **Status: amended by the addenda below.** The review began as advisory. It
 > is now a **required check that blocks merging on a critical finding**
 > (addendum "a required merge gate on critical findings"), reads the project's
-> stories and conventions, and keeps its own memory. `CONTRIBUTING.md`
-> describes how it works today. Why the team runs its own GLM reviewer instead
-> of Copilot code review is in the 2026-10-13 addendum.
+> stories and conventions, and keeps its own memory. When GLM's quota or rate
+> limit stops a review, the review is skipped and the check passes (2026-10-26
+> addendum). `CONTRIBUTING.md` describes how it works today. Why the team runs
+> its own GLM reviewer instead of Copilot code review is in the 2026-10-13
+> addendum.
 
 ## Context
 
@@ -698,3 +700,45 @@ earlier versions were read from the comment's edit history.
   word or rank findings differently; what changed is that the previous
   findings are now in front of it, and it is told not to drop one without a
   reason.
+
+## Addendum (2026-10-26, SCRUM-225) — GLM refusing to serve skips the review
+
+The review runs on the owner's GLM Coding Plan, and its weekly or monthly
+quota has run out more than once mid-sprint. GLM then refuses every call with
+HTTP 429, error code 1310, and a reset time. The script counted that as a
+review that didn't complete, so the check went red on every pull request until
+the reset, for code nobody had looked at, and retrying only spent the wait.
+The same day, with credit back, a dozen pull requests brought up to date at
+once hit GLM's rate limit (HTTP 429, code 1302) together; the retry came a
+second later, met the same limit, and those checks went red too.
+The team had already taken the review off `main`'s required checks to keep
+merging (2026-10-16), which also let a critical finding through unblocked.
+
+### Decision
+
+- **A quota refusal skips the review and passes the check.** The script
+  recognises HTTP 429 with code 1310, doesn't retry, and posts a comment
+  saying the review was skipped and when the quota resets (UTC+8, as GLM
+  gives it). `build-and-test` still has to pass.
+- **The rate limit is waited out.** On code 1302 the call is tried again
+  after 30 seconds, then 1, 2 and 4 minutes, each stretched by up to as much
+  again at random so waiting reviews don't all call together, and only while
+  at least 8 minutes of the budget would be left for the call. If GLM
+  is still refusing, the review is skipped and passes, as for the quota.
+- **Every other failure still fails the check:** a timeout, a cut-off answer,
+  a reply that isn't a review, a 429 with any other code, a diff over the size
+  limit, and a missing key.
+- **The author reads the diff** before merging a skipped pull request, or
+  re-runs the job after the reset.
+
+### Trade-offs
+
+- While the quota is out, pull requests merge without an AI review. That is
+  what already happened with the review off the required checks; the
+  difference is that the comment now says so on each pull request, and that
+  once the quota is back a critical finding can block again if the review is
+  made required.
+- The rule rests on BigModel's error codes. If they change, those refusals
+  fail the check again, as before, rather than passing.
+- A rate-limited review can take up to about 15 minutes longer before it
+  starts, which is still inside its 27-minute budget.

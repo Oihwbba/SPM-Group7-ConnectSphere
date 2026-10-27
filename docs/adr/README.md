@@ -13,7 +13,7 @@ it can be read aloud in the oral exam.
 | [0005](0005-ephemeral-ci-database.md) | CI runs against a throwaway Postgres, migrated and seeded from nothing | — | Current |
 | [0006](0006-single-event-status-transition-gate.md) | Every Coordinator status change goes through one gate that checks the current status | SCRUM-23, 24, 19, 20, 81 | Current, with addenda |
 | [0007](0007-lock-equipment-pools-when-reserving.md) | Lock the equipment rows while reserving; lock the event, then the request, then equipment by id | SCRUM-31, 155, 156 | Amended 2026-10-05 |
-| [0008](0008-advisory-ai-code-review.md) | An AI review on every pull request, on GLM because the team has no Copilot review credits; a required check on critical findings | SCRUM-88, 111, 112, 152, 157, 178, 180, 181 | Amended 2026-10-13 |
+| [0008](0008-advisory-ai-code-review.md) | An AI review on every pull request, on GLM because the team has no Copilot review credits; a required check on critical findings | SCRUM-88, 111, 112, 152, 157, 178, 180, 181, 225 | Amended 2026-10-26 |
 | [0009](0009-deploy-from-github-actions.md) | Deploy production from GitHub Actions, not Vercel's Git integration | — | Current |
 | [0010](0010-database-prevents-venue-double-booking.md) | The database, not the application, prevents venue double-booking, over occupied periods and holds since Week 7 | SCRUM-53, 37, 159, 161, 162, 163, 172 | Amended 2026-10-08 |
 | [0011](0011-event-readiness-checklist.md) | The readiness checklist is computed on demand, per viewer | SCRUM-110 | Amended 2026-10-04 |
