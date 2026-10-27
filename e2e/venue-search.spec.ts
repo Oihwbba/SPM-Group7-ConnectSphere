@@ -263,6 +263,11 @@ test.describe("SCRUM-38 — Search and filter venues", () => {
       const details = await openDetails(page, name, "Arrangements");
       await details.getByRole("link", { name: "Find a venue" }).click();
       await page.waitForURL(/\/venues\/search\?event=/);
+      // The event's period, locked: one date, and the end a time like the
+      // start, since the event ends on the day it starts.
+      await expect(page.getByLabel("Event date")).toHaveValue("20 Nov 2034");
+      await expect(page.getByLabel("Event start")).toHaveValue("10:15 am SGT");
+      await expect(page.getByLabel("Event end")).toHaveValue("11:45 am SGT");
       await page.getByRole("button", { name: "Search", exact: true }).click();
       await expect(page).toHaveURL(/searched=1/);
       expect(await resultNames(page)).toContain("Exhibition Hall");
