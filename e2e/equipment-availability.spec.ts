@@ -205,7 +205,7 @@ test.describe("SCRUM-29 — Check Equipment Availability", () => {
     await expect(page.getByTestId("selected-availability")).toHaveText("2 of 4 available");
   });
 
-  test("SCRUM-29 [AC7]: a zero quantity or an end before the start is rejected with no result", async ({
+  test("SCRUM-29 [AC7] TC-29-06, SCRUM-229 [AC1]: a zero or decimal quantity, or an end before the start, is rejected with no result", async ({
     page,
   }) => {
     test.skip(!usesLocalDatabase, "writes its own equipment; local database only");
@@ -213,7 +213,12 @@ test.describe("SCRUM-29 — Check Equipment Availability", () => {
 
     await signInAsTechSupport(page);
     await fillRigPeriod(page, 9, 12, "0");
-    await expect(page.getByText("Enter a quantity of at least 1.")).toBeVisible();
+    await expect(page.getByText("Enter a whole number of at least 1.")).toBeVisible();
+    // SCRUM-229: no figure either, and a decimal is no quantity at all.
+    await expect(page.getByTestId("selected-availability")).toHaveText("— of 4 available");
+    await page.getByLabel("Quantity", { exact: true }).fill("1.5");
+    await expect(page.getByText("Enter a whole number of at least 1.")).toBeVisible();
+    await expect(page.getByTestId("selected-availability")).toHaveText("— of 4 available");
 
     await page.getByLabel("Quantity", { exact: true }).fill("1");
     await pickDateTime(page.getByLabel("End", { exact: true }), `${RIG_DAY}T${sgTime(8)}`);

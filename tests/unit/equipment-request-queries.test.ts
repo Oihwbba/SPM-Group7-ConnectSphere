@@ -22,10 +22,9 @@ const db = vi.hoisted(() => ({
 
 vi.mock("@/lib/db", () => ({ prisma: db }));
 
-// The same relationship can() grants a coordinator on an event.
-const coordinatorScope = (coordinatorId: string) => ({
-  OR: [{ coordinatorId }, { coordinatorId: null, status: { not: "DRAFT" } }],
-});
+// The same relationship can() grants a coordinator on an event: only the
+// events assigned to them (SCRUM-165 AC8, SCRUM-229).
+const coordinatorScope = (coordinatorId: string) => ({ coordinatorId });
 
 beforeEach(() => {
   vi.clearAllMocks();
