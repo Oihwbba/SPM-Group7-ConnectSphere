@@ -15,7 +15,7 @@ page, shown whatever tab is open, has:
 
 - a back link ("← Back to My Events", or "← Back to Events" for a Coordinator);
 - the event's name as the title, with the Coordinator's own actions beside it
-  (Find a venue, Edit details, Cancel event) where they apply;
+  (Edit details, Cancel event; Find a venue is on the Arrangements tab, SCRUM-209) where they apply;
 - its **progress**, Request → Review → Planning → Confirmed → Completed: the
   steps done ticked, the current one marked with a glowing dot, a Rejected
   request marked where it stopped and a Cancelled event shown as far as it got;

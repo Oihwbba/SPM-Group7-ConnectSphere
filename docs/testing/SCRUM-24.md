@@ -61,7 +61,7 @@ with `coordinator@test.local` (both `Password123!`).
 | Test Data | "What is the expected start time?" |
 | Expected Result | The status is still Under Review; the question is a clarification on the event, not a status. |
 
-**Automated by:** `tests/unit/clarification.test.ts` › "[Positive] AC: coordinator requests clarification, event status is untouched, organiser is notified"; `e2e/clarification.spec.ts` › "coordinator asks, organiser replies, coordinator sees the answer (AC: sub-state, notify, respond, re-review)"
+**Automated by:** `tests/unit/clarification.test.ts` › "[Positive] AC: coordinator requests clarification, event status is untouched, organiser is notified"; `e2e/clarification.spec.ts` › "SCRUM-18 [AC1, AC2, AC4, AC5, AC6] TC-18-01, TC-18-03, TC-18-05, TC-18-07: the coordinator asks, the organiser replies, and the coordinator sees the answer"
 
 ### TC-24-03
 
