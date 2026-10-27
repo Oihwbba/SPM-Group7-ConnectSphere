@@ -329,4 +329,19 @@ test.describe("SCRUM-209 — Arrange venues, equipment and the safety check from
       (await prisma.equipmentRequest.findUniqueOrThrow({ where: { id: approved.id } })).status,
     ).toBe("APPROVED");
   });
+
+  test("SCRUM-209 [AC1] TC-209-12: Reset on a venue search opened from the event still leads back to it", async ({
+    browser,
+  }) => {
+    const { id } = await planningEvent("reset");
+    const page = await signedIn(browser, "coordinator@test.local");
+    await page.goto(`/venues/search?event=${id}&return=event&attendance=10`);
+
+    await page.getByRole("link", { name: "Reset" }).click();
+    await page.waitForURL(new RegExp(`/venues/search\\?event=${id}&return=event$`));
+    await expect(page.getByRole("link", { name: "Back to event" })).toHaveAttribute(
+      "href",
+      `/events/${id}?tab=arrangements`,
+    );
+  });
 });

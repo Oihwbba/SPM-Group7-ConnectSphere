@@ -41,6 +41,7 @@ import {
   getEventReadiness,
 } from "@/app/(app)/events/readiness-actions";
 import { withdrawEquipmentRequest } from "@/app/(app)/equipment-requests/actions";
+import { ListState } from "@/components/events/list-state";
 import { NewRequestDialog } from "@/app/(app)/equipment-requests/new-request-dialog";
 import { AuditTrail } from "@/components/app/audit-trail";
 import { trailOf } from "@/components/equipment/request-history";
@@ -142,6 +143,12 @@ export function ReadinessChecklist({
       >["data"]
     | null
   >(null);
+  // Whether the venue and equipment lists have loaded, so a list not yet read
+  // (or not readable) isn't shown as empty.
+  const [listsLoad, setListsLoad] = useState<{
+    bookings: "loading" | "ready" | "failed";
+    equipment: "loading" | "ready" | "failed";
+  }>({ bookings: "loading", equipment: "loading" });
   const [requestingEquipment, setRequestingEquipment] = useState(false);
   // The live request whose lines are being changed.
   const [changingRequest, setChangingRequest] = useState<string | null>(null);
@@ -178,13 +185,23 @@ export function ReadinessChecklist({
       .catch(() => {
         if (!cancelled) setLoadFailed(true);
       });
-    // Read beside the checklist; a failure leaves its part empty.
+    // Read beside the checklist. A read again keeps what is shown until it
+    // answers; a failure says so in its section.
+    const loaded = (list: "bookings" | "equipment", ok: boolean) =>
+      !cancelled &&
+      setListsLoad((now) => ({ ...now, [list]: ok ? "ready" : "failed" }));
     getEventBookings(eventId)
-      .then((result) => !cancelled && result.ok && setBookings(result.data))
-      .catch(() => {});
+      .then((result) => {
+        if (!cancelled && result.ok) setBookings(result.data);
+        loaded("bookings", result.ok);
+      })
+      .catch(() => loaded("bookings", false));
     getEventEquipment(eventId)
-      .then((result) => !cancelled && result.ok && setEquipment(result.data))
-      .catch(() => {});
+      .then((result) => {
+        if (!cancelled && result.ok) setEquipment(result.data);
+        loaded("equipment", result.ok);
+      })
+      .catch(() => loaded("equipment", false));
     return () => {
       cancelled = true;
     };
@@ -452,7 +469,9 @@ export function ReadinessChecklist({
           }
         >
           {venueRows.length === 0 ? (
-            <p className="text-muted-foreground">No venues requested yet.</p>
+            <ListState state={listsLoad.bookings} what="venue requests">
+              No venues requested yet.
+            </ListState>
           ) : (
             // SCRUM-162 AC7: every booking with its status; SCRUM-162 AC8: the
             // live ones with their own state and actions.
@@ -653,9 +672,9 @@ export function ReadinessChecklist({
             </ul>
           ) : (
             equipmentItem.state !== "No equipment needed" && (
-              <p className="text-muted-foreground">
+              <ListState state={listsLoad.equipment} what="equipment requests">
                 No equipment requested yet.
-              </p>
+              </ListState>
             )
           )}
         </Section>
@@ -847,6 +866,7 @@ export function ReadinessChecklist({
     </div>
   );
 }
+
 
 /**
  * One arrangement: its title with the checklist item's state beside it (for

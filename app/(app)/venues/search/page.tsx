@@ -136,8 +136,7 @@ export default async function VenueSearchPage({
   const ran = Object.keys(params).some(
     (name) => !["event", "replace", "searchedFor", "return"].includes(name),
   );
-  const searched =
-    ran && resolved && "period" in resolved ? resolved : null;
+  const searched = ran && resolved && "period" in resolved ? resolved : null;
 
   const [results, judgements] = await Promise.all([
     searched
@@ -362,7 +361,9 @@ function SearchForm({
             )}
             <div
               className={
-                event ? "space-y-5 lg:col-span-2 lg:border-l lg:pl-6" : "contents"
+                event
+                  ? "space-y-5 lg:col-span-2 lg:border-l lg:pl-6"
+                  : "contents"
               }
             >
               {event ? (
@@ -501,6 +502,8 @@ function SearchForm({
                           ...(event.replacing && {
                             replace: event.replacing.id,
                           }),
+                          // SCRUM-209: still leads back to the event.
+                          ...(fromEvent && { return: "event" }),
                         }
                       : {},
                   }}
