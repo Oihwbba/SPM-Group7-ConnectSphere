@@ -45,6 +45,7 @@ import {
   formatDate,
   formatTime,
   joinEventPeriod,
+  sgDate,
   splitEventPeriod,
 } from "@/lib/datetime";
 import {
@@ -152,11 +153,31 @@ function periodOf(form: FormState) {
   });
 }
 
-function getInitialFormData(draftEvent?: DraftEventData | null): FormState {
+export const REENTER_PERIOD_MESSAGE =
+  "Events now take place within one day. Please choose the date and times again.";
+
+/**
+ * SCRUM-190 AC3 — a Draft or Rejected request saved across two Singapore days
+ * before the one-day rule. One date can't show it, and joining its fields would
+ * move the end onto the start's day, so the Organiser chooses the period again.
+ */
+export function storedAcrossTwoDays(draftEvent?: DraftEventData | null) {
+  return Boolean(
+    draftEvent?.startAt &&
+      draftEvent.endAt &&
+      (draftEvent.status === "DRAFT" || draftEvent.status === "REJECTED") &&
+      sgDate(draftEvent.startAt) !== sgDate(draftEvent.endAt),
+  );
+}
+
+/** The form as a draft or rejected request reopens. Exported for its unit test. */
+export function getInitialFormData(draftEvent?: DraftEventData | null): FormState {
   if (!draftEvent) return initialFormState;
   // SCRUM-129 AC2: a draft saved under another timezone keeps its stored
   // instants; they are simply shown and edited as Singapore wall time.
-  const period = splitEventPeriod(draftEvent.startAt, draftEvent.endAt);
+  const period = storedAcrossTwoDays(draftEvent)
+    ? { date: "", startTime: "", endTime: "" }
+    : splitEventPeriod(draftEvent.startAt, draftEvent.endAt);
   return {
     name: draftEvent.name || "",
     purpose: draftEvent.purpose || "",
@@ -618,6 +639,15 @@ export function CreateEventDialog({
               <Calendar className="h-4 w-4 text-primary" /> Schedule &
               Attendance
             </h3>
+            {storedAcrossTwoDays(draftEvent) && (
+              <p
+                role="status"
+                data-testid="reenter-period"
+                className="rounded-md border border-warning/40 bg-warning/10 p-2 text-xs"
+              >
+                {REENTER_PERIOD_MESSAGE}
+              </p>
+            )}
             {/* SCRUM-190 AC1: an event takes place within one day. */}
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
               <div className="space-y-2">
