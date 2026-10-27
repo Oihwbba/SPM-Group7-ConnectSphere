@@ -34,7 +34,7 @@ and the app is running. Every seeded account's password is `Password123!`.
 | Test Data | `organiser@test.local`; then `attendee@test.local` |
 | Expected Result | The user lands signed in, and the navigation holds only their role's links: the Organiser sees Events and Notifications; the Attendee sees Events, Registrations and Notifications. |
 
-**Automated by:** `tests/unit/login-schema.test.ts` › "accepts an email and a password"; `tests/unit/auth-actions.test.ts` › "re-throws a non-auth error (the NEXT_REDIRECT thrown on a successful sign-in)"; `e2e/access-control.spec.ts` › "Organiser sees only /events, /notifications", "Attendee sees only /events, /registrations, /notifications"
+**Automated by:** `tests/unit/login-schema.test.ts` › "accepts an email and a password"; `tests/unit/auth-actions.test.ts` › "re-throws a non-auth error (the NEXT_REDIRECT thrown on a successful sign-in)"; `e2e/access-control.spec.ts` › "SCRUM-65 [AC1, AC3] TC-65-01, SCRUM-66 [AC1, AC2, AC3] TC-66-01: ${role} sees only …" (the Organiser case), "Attendee sees only /events, /registrations, /notifications"
 
 ### TC-65-02
 

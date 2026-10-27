@@ -49,7 +49,7 @@ each have events (`Password123!`).
 | Test Data | The other Organiser's event id; a made-up id |
 | Expected Result | Steps 1 and 2 get the same "not found" answer, revealing nothing. Step 3 returns "not found", since no event has its own page. |
 
-**Automated by:** `tests/unit/auth.test.ts` › "does not let a different organiser read someone else's event"; `tests/unit/clarification.test.ts` › "[Negative] another organiser's clarification is indistinguishable from a missing one"; `e2e/access-control.spec.ts` › "a per-event URL 404s from routing, for any id"
+**Automated by:** `tests/unit/auth.test.ts` › "does not let a different organiser read someone else's event"; `tests/unit/clarification.test.ts` › "[Negative] another organiser's clarification is indistinguishable from a missing one"; `e2e/access-control.spec.ts` › "SCRUM-208 [AC5] TC-208-13: another organiser's event and a made-up id are the same 404"; `e2e/event-page.spec.ts` › "SCRUM-208 [AC5] TC-208-13: another Coordinator's event is the same 404 as one that doesn't exist"
 
 ### TC-68-03
 

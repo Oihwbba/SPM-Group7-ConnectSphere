@@ -145,7 +145,7 @@ SCRUM-40's reasons. Opened from an event, the Coordinator's own judgement
 | Test Data | — |
 | Expected Result | 1, 2, 4: "The time range is invalid: the end must be after the start." beside the end time, and no results. 4: a search covers one day (AC2), so 09:00 is before 18:00 on the same day, and the end date in the address is ignored. 3: searched, not refused as invalid. |
 
-**Automated by:** `tests/unit/venue-search-schema.test.ts` › "SCRUM-38 [AC6] TC-38-07: …" and "SCRUM-38 [AC2, AC6] TC-38-07: …"; `e2e/venue-search.spec.ts` › "SCRUM-38 [AC2, AC6, AC10] TC-38-07, TC-38-11: …"
+**Automated by:** `tests/unit/venue-search-schema.test.ts` › "SCRUM-38 [AC6] TC-38-07: …" and "SCRUM-38 [AC2, AC6] TC-38-07: …"; `e2e/venue-search.spec.ts` › "SCRUM-38 [AC2, AC6, AC10] TC-38-07, TC-38-11, SCRUM-207 [AC3] TC-207-06: …"
 
 ### TC-38-08
 
@@ -197,7 +197,7 @@ SCRUM-40's reasons. Opened from an event, the Coordinator's own judgement
 | Test Data | — |
 | Expected Result | "No venues match", not an empty list: the only venue there, the Executive Boardroom, holds 14. |
 
-**Automated by:** `e2e/venue-search.spec.ts` › "SCRUM-38 [AC2, AC6, AC10] TC-38-07, TC-38-11: …"
+**Automated by:** `e2e/venue-search.spec.ts` › "SCRUM-38 [AC2, AC6, AC10] TC-38-07, TC-38-11, SCRUM-207 [AC3] TC-207-06: …"
 
 ### TC-38-12
 
@@ -275,7 +275,7 @@ SCRUM-40's reasons. Opened from an event, the Coordinator's own judgement
 | Test Data | `organiser@test.local`, `venuestaff@test.local`, `techsupport@test.local`, `attendee@test.local` |
 | Expected Result | Refused, and **Venue Search** isn't in their menus. A Coordinator sees it. |
 
-**Automated by:** `tests/unit/nav.test.ts` (the `/venues/search` route); `e2e/access-control.spec.ts` › "organiser is refused the Coordinator-only venue search (/venues/search)" and "SCRUM-66 — each role's navigation shows only its own links"
+**Automated by:** `tests/unit/nav.test.ts` (the `/venues/search` route); `e2e/access-control.spec.ts` › "SCRUM-67 [AC3] TC-67-04: an Organiser is refused the ${label} (${url})" (the Coordinator-only venue search case) and "SCRUM-66 — each role's navigation shows only its own links"
 
 ### TC-38-18
 

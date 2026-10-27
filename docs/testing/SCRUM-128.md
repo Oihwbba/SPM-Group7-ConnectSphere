@@ -217,7 +217,7 @@ change request. Every account's password is `Password123!`.
 | Test Data | — |
 | Expected Result | "Now 40, Requested 60"; "Exhibition Hall (Approved)" listed; then "Change request approved. The event is back in Planning and its arrangements are flagged." |
 
-**Automated by:** `e2e/change-decision.spec.ts` › "SCRUM-128 [AC1, AC2, AC4, AC5] TC-128-13: …"
+**Automated by:** `e2e/change-decision.spec.ts` › "SCRUM-128 [AC1, AC2, AC4, AC5] TC-128-13, SCRUM-208 [AC2] TC-208-06: …"
 
 ### TC-128-14
 

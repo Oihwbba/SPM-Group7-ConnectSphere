@@ -76,7 +76,7 @@ and the app is running. Every seeded account's password is `Password123!`.
 | Test Data | `/bookings`, `/equipment` |
 | Expected Result | Step 1 is refused by the server. Step 2 returns "not found": no event has its own page. Step 3 sends the visitor to `/login`. |
 
-**Automated by:** `tests/unit/auth-guard.test.ts` › "redirects to /login when there is no session (deny path)", "redirects to /login when the session has no user (deny path)", "returns the session and does not redirect when signed in (allow path)"; `e2e/access-control.spec.ts` › "SCRUM-67 — typing another role's URL directly is refused", "a per-event URL 404s from routing, for any id", "SCRUM-67 — signed-out access to a protected URL redirects to login"
+**Automated by:** `tests/unit/auth-guard.test.ts` › "redirects to /login when there is no session (deny path)", "redirects to /login when the session has no user (deny path)", "returns the session and does not redirect when signed in (allow path)"; `e2e/access-control.spec.ts` › "SCRUM-67 — typing another role's URL directly is refused", "SCRUM-67 — signed-out access to a protected URL redirects to login"; `e2e/access-control.spec.ts` › "SCRUM-208 [AC5] TC-208-13: another organiser's event and a made-up id are the same 404"; `e2e/event-page.spec.ts` › "SCRUM-208 [AC5] TC-208-13: another Coordinator's event is the same 404 as one that doesn't exist"
 
 ### TC-67-05
 
