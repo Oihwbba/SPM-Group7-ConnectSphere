@@ -12,9 +12,14 @@ import {
   type ReadinessChecklist,
 } from "@/lib/event-readiness";
 import {
+  getEquipmentCatalogue,
+  getEventEquipmentRequests,
+} from "@/lib/equipment/request-queries";
+import {
   getEventArrangements,
   getEventBookings,
   getEventCoordinator,
+  getEventEquipment,
   getEventReadiness,
   isEventStillVisible,
 } from "@/app/(app)/events/readiness-actions";
@@ -33,6 +38,10 @@ vi.mock("@/lib/event-readiness", async (importOriginal) => ({
   getConfirmedArrangements: vi.fn(),
   getEventVenueBookings: vi.fn(),
 }));
+vi.mock("@/lib/equipment/request-queries", () => ({
+  getEquipmentCatalogue: vi.fn(),
+  getEventEquipmentRequests: vi.fn(),
+}));
 
 const mockAuth = auth as unknown as Mock;
 const mockEventFindUnique = prisma.event.findUnique as unknown as Mock;
@@ -40,6 +49,8 @@ const mockAuditCount = prisma.auditLog.count as unknown as Mock;
 const mockChecklist = getReadinessChecklist as unknown as Mock;
 const mockArrangements = getConfirmedArrangements as unknown as Mock;
 const mockVenueBookings = getEventVenueBookings as unknown as Mock;
+const mockCatalogue = getEquipmentCatalogue as unknown as Mock;
+const mockEventRequests = getEventEquipmentRequests as unknown as Mock;
 
 const REASON = "Boardroom seats 14; the event expects 55 attendees.";
 const checklist: ReadinessChecklist = {
@@ -118,6 +129,8 @@ describe("getEventReadiness — SCRUM-110", () => {
         canWithdrawBooking: true,
         canRecordNoEquipment: true,
         canRequestSafetyCheck: false,
+        // SCRUM-209 AC1: Find a venue, for the assigned Coordinator in Planning.
+        canRequestVenue: true,
       },
     });
     expect(mockChecklist).toHaveBeenCalledWith(prisma, "evt_test");
@@ -139,6 +152,7 @@ describe("getEventReadiness — SCRUM-110", () => {
         canWithdrawBooking: false,
         canRecordNoEquipment: false,
         canRequestSafetyCheck: false,
+        canRequestVenue: false,
       },
     });
   });
@@ -515,6 +529,131 @@ describe("getEventCoordinator — SCRUM-21 AC8", () => {
         ok: false,
         error: "Event not found.",
       });
+    },
+  );
+});
+
+describe("getEventEquipment — SCRUM-209 AC2, AC4", () => {
+  const details = {
+    id: "evt_test",
+    name: "Spring Gala",
+    startAt: new Date("2031-06-02T01:00:00Z"),
+    endAt: new Date("2031-06-02T09:00:00Z"),
+    equipmentRequirements: "Two projectors",
+  };
+  const request = {
+    id: "req_1",
+    status: "PENDING_REVIEW",
+    notes: "Projector bulb on order.",
+    updates: [{ id: "upd_1" }],
+  };
+  const catalogue = [{ id: "eq_projector", name: "Projector" }];
+
+  function eventIs(status: EventStatus) {
+    mockEventFindUnique
+      .mockReset()
+      .mockResolvedValueOnce(eventRow(status))
+      .mockResolvedValueOnce(details);
+  }
+
+  beforeEach(() => {
+    eventIs("PLANNING");
+    mockEventRequests.mockResolvedValue([request]);
+    mockCatalogue.mockResolvedValue(catalogue);
+  });
+
+  it("SCRUM-209 [AC2] TC-209-03: the assigned Coordinator gets the request in full, with its history and the catalogue, and may request and change", async () => {
+    mockAuth.mockResolvedValue(sessionFor("COORDINATOR", "usr_coordinator"));
+
+    expect(await getEventEquipment("evt_test")).toEqual({
+      ok: true,
+      data: {
+        requests: [request],
+        canCreate: true,
+        canChange: true,
+        event: details,
+        equipment: catalogue,
+      },
+    });
+    expect(mockEventRequests).toHaveBeenCalledWith("evt_test");
+  });
+
+  it.each([
+    { status: "APPROVED" as const, offered: true },
+    { status: "PLANNING" as const, offered: true },
+    { status: "UNDER_REVIEW" as const, offered: false },
+    { status: "CONFIRMED" as const, offered: false },
+  ])(
+    "SCRUM-209 [AC2, AC4] TC-209-03: at $status, a new request offered is $offered (SCRUM-27's own rule)",
+    async ({ status, offered }) => {
+      mockAuth.mockResolvedValue(sessionFor("COORDINATOR", "usr_coordinator"));
+      eventIs(status);
+
+      const result = await getEventEquipment("evt_test");
+
+      expect(result.ok && result.data.canCreate).toBe(offered);
+    },
+  );
+
+  it("SCRUM-209 [AC2] TC-209-03: the event vanishing between the two reads is not found, and no request is read", async () => {
+    mockAuth.mockResolvedValue(sessionFor("COORDINATOR", "usr_coordinator"));
+    mockEventFindUnique.mockReset().mockResolvedValueOnce(eventRow()).mockResolvedValueOnce(null);
+
+    expect(await getEventEquipment("evt_test")).toEqual({ ok: false, error: "Event not found." });
+    expect(mockEventRequests).not.toHaveBeenCalled();
+  });
+
+  it("SCRUM-209 [AC4] TC-209-08: the Organiser reads the lines and status only: no notes, no history, no catalogue, no actions", async () => {
+    mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
+
+    expect(await getEventEquipment("evt_test")).toEqual({
+      ok: true,
+      data: {
+        requests: [{ ...request, notes: null, updates: [] }],
+        canCreate: false,
+        canChange: false,
+        event: details,
+        equipment: [],
+      },
+    });
+    expect(mockCatalogue).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    {
+      who: "a Coordinator it isn't assigned to",
+      session: sessionFor("COORDINATOR", "usr_coordinator_2"),
+    },
+    { who: "another Organiser", session: sessionFor("ORGANISER", "usr_organiser2") },
+    { who: "a signed-out visitor", session: null },
+  ])(
+    "SCRUM-209 [AC4] TC-209-09: $who is told the event was not found, and no request is read",
+    async ({ session }) => {
+      mockAuth.mockResolvedValue(session);
+
+      expect(await getEventEquipment("evt_test")).toEqual({
+        ok: false,
+        error: "Event not found.",
+      });
+      expect(mockEventRequests).not.toHaveBeenCalled();
+    },
+  );
+});
+
+describe("getEventReadiness — SCRUM-209 AC1 Find a venue", () => {
+  it.each([
+    { who: "the assigned Coordinator in Approved", id: "usr_coordinator", role: "COORDINATOR" as const, status: "APPROVED" as const, offered: true },
+    { who: "the assigned Coordinator in Confirmed", id: "usr_coordinator", role: "COORDINATOR" as const, status: "CONFIRMED" as const, offered: false },
+    { who: "the Organiser", id: "usr_organiser", role: "ORGANISER" as const, status: "PLANNING" as const, offered: false },
+  ])(
+    "SCRUM-209 [AC1, AC4] TC-209-01: Find a venue for $who is offered: $offered",
+    async ({ id, role, status, offered }) => {
+      mockAuth.mockResolvedValue(sessionFor(role, id));
+      mockEventFindUnique.mockResolvedValue(eventRow(status));
+
+      const result = await getEventReadiness("evt_test");
+
+      expect(result.ok && result.data.canRequestVenue).toBe(offered);
     },
   );
 });

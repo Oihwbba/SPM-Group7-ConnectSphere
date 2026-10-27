@@ -395,8 +395,11 @@ export async function decideChangeRequest(
       // (SCRUM-45 AC11). Back in Planning it would be wrong, as it is after
       // SCRUM-26's return to Planning; confirming again writes a new one.
       // ...and with no registration, its scheduled "Registration closed"
-      // notice won't happen either.
-      if (returnedToPlanning || registrationNoLongerNeeded) {
+      // notice won't happen either. When registration is now needed, the
+      // notice is written again below; one confirming already wrote (an
+      // unanswered Registration needed counts as needed) is replaced, so
+      // each person is told once (SCRUM-45 AC13).
+      if (returnedToPlanning || registrationNoLongerNeeded || registrationNowNeeded) {
         await withdrawRegistrationClosedNotice(tx, eventId, now);
       }
       // AC11: registration now open closes at a time known now, so its

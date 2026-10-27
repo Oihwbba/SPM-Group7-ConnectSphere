@@ -10,7 +10,7 @@ import {
   type Mock,
 } from "vitest";
 import type { Session } from "next-auth";
-import { Prisma } from "@prisma/client";
+import { Prisma, type EquipmentRequestStatus } from "@prisma/client";
 
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
@@ -185,12 +185,14 @@ describe.skipIf(!usesLocalDatabase)(
       ).rejects.toBeInstanceOf(Prisma.PrismaClientKnownRequestError);
     });
 
-    it("SCRUM-27 [AC7] TC-27-11: once the open request is decided, a new one can be raised", async () => {
+    // SCRUM-186 narrowed this case: an Approved request now blocks a new one
+    // too (TC-186-02), so the decision that frees the event is a rejection.
+    it("SCRUM-27 [AC7] TC-27-11: once the open request is rejected, a new one can be raised", async () => {
       const first = await createEquipmentRequest(request(eventId));
       if (!first.ok) throw new Error(first.error);
       await prisma.equipmentRequest.update({
         where: { id: first.data.id },
-        data: { status: "APPROVED" },
+        data: { status: "REJECTED" },
       });
 
       const second = await createEquipmentRequest(request(eventId));
@@ -293,6 +295,108 @@ describe.skipIf(!usesLocalDatabase)(
         await prisma.equipmentRequest.deleteMany({ where: { eventId: unassigned.id } });
         await prisma.event.delete({ where: { id: unassigned.id } });
       }
+    });
+
+    // SCRUM-186 — one active equipment request per event. Requests in a
+    // given status are written directly, as Technical Support's decisions
+    // would leave them.
+    const existingRequest = (
+      status: EquipmentRequestStatus,
+      createdAt = new Date(),
+    ) =>
+      prisma.equipmentRequest.create({
+        data: {
+          eventId,
+          requestedById: COORDINATOR,
+          status,
+          createdAt,
+          lines: { create: [{ equipmentId: "eqp_lectern", quantity: 1 }] },
+        },
+        select: { id: true },
+      });
+    const writtenFor = async () => ({
+      requests: await prisma.equipmentRequest.findMany({
+        where: { eventId },
+        select: { id: true, status: true },
+        orderBy: { createdAt: "asc" },
+      }),
+      history: await prisma.equipmentRequestUpdate.count({
+        where: { request: { eventId } },
+      }),
+      notices: await prisma.notification.count({
+        where: { eventId, type: "EQUIPMENT_REQUEST_SUBMITTED" },
+      }),
+    });
+
+    it.each(["PENDING_REVIEW", "IN_REVIEW", "APPROVED"] as const)(
+      "SCRUM-186 [AC1, AC4] TC-186-02: with a %s request, a direct submission is shown that request, and nothing is written",
+      async (status) => {
+        const existing = await existingRequest(status);
+        const before = await writtenFor();
+
+        const result = await createEquipmentRequest(request(eventId));
+
+        expect(result).toEqual({
+          ok: true,
+          data: { id: existing.id, existing: true },
+        });
+        expect(await writtenFor()).toEqual(before);
+        expect(before.requests).toEqual([{ id: existing.id, status }]);
+      },
+    );
+
+    it("SCRUM-186 [AC2] TC-186-03: when the event's only requests are Rejected and Cancelled, a new request is created", async () => {
+      await existingRequest("REJECTED", new Date("2026-01-01T00:00:00Z"));
+      await existingRequest("CANCELLED", new Date("2026-01-02T00:00:00Z"));
+
+      const result = await createEquipmentRequest(request(eventId));
+
+      expect(result.ok && result.data.existing).toBe(false);
+      expect((await writtenFor()).requests.map((r) => r.status)).toEqual([
+        "REJECTED",
+        "CANCELLED",
+        "PENDING_REVIEW",
+      ]);
+    });
+
+    it("SCRUM-186 [AC4] TC-186-04: two submissions at the same moment for an event with only a rejected request leave one new request", async () => {
+      await existingRequest("REJECTED", new Date("2026-01-01T00:00:00Z"));
+
+      const results = await Promise.all([
+        createEquipmentRequest(request(eventId)),
+        createEquipmentRequest(request(eventId)),
+      ]);
+
+      const ids = results.map((r) => (r.ok ? r.data.id : r.error));
+      expect(ids[0]).toBe(ids[1]);
+      expect((await writtenFor()).requests.map((r) => r.status)).toEqual([
+        "REJECTED",
+        "PENDING_REVIEW",
+      ]);
+    });
+
+    it("SCRUM-186 [AC5] TC-186-06: an event that already has two Approved requests keeps both, and a submission is shown the older one", async () => {
+      const older = await existingRequest(
+        "APPROVED",
+        new Date("2026-01-01T00:00:00Z"),
+      );
+      const newer = await existingRequest(
+        "APPROVED",
+        new Date("2026-01-02T00:00:00Z"),
+      );
+      const before = await writtenFor();
+
+      const result = await createEquipmentRequest(request(eventId));
+
+      expect(result).toEqual({
+        ok: true,
+        data: { id: older.id, existing: true },
+      });
+      expect(await writtenFor()).toEqual(before);
+      expect(before.requests).toEqual([
+        { id: older.id, status: "APPROVED" },
+        { id: newer.id, status: "APPROVED" },
+      ]);
     });
   },
 );

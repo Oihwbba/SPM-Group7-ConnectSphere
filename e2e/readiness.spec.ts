@@ -123,13 +123,15 @@ test.describe("SCRUM-110 — See an event's readiness checklist", () => {
     const venue = checklist.getByTestId("readiness-item-venue");
     const equipment = checklist.getByTestId("readiness-item-equipment");
     await expect(venue).toHaveAttribute("data-complete", "false");
-    await expect(venue).toContainText(`Rejected – ${REASON}`);
+    // SCRUM-209: the state beside the section's title, the reason below it.
+    await expect(venue.getByTestId("item-status")).toContainText("Rejected");
+    await expect(venue.getByTestId("item-reason")).toHaveText(REASON);
     await expect(equipment).toHaveAttribute("data-complete", "false");
     // AC 4: the short item is named, without counts.
     await expect(equipment).toContainText("Not fully reserved: Projector");
     await expect(equipment).not.toContainText("3/5");
     await expect(checklist.getByTestId("readiness-summary")).toHaveText(
-      /Not ready to confirm yet/,
+      /^[0-2]\/3 items completed$/,
     );
 
     // The Organiser: the same items and states, but not the internal reason.
@@ -200,7 +202,7 @@ test.describe("SCRUM-110 — See an event's readiness checklist", () => {
       checklist.getByTestId("readiness-item-equipment"),
     ).toContainText("Reserved");
     await expect(checklist.getByTestId("readiness-summary")).toHaveText(
-      "Ready to confirm",
+      "3/3 items completed · Ready to confirm",
     );
   });
 });

@@ -320,3 +320,48 @@ describe("SCRUM-208 — the Next step banner", () => {
     expect(isEventTab(undefined)).toBe(false);
   });
 });
+
+describe("SCRUM-209 — the Next step opens Arrangements at its section", () => {
+  type Item = Partial<ReadinessChecklist["items"][number]>;
+  const actionFor = (items: Item[]) => {
+    const step = nextStep(
+      facts({ status: "PLANNING", viewer: "coordinator", checklist: checklist(items) }),
+    );
+    return step.kind === "yours" ? step.action : null;
+  };
+
+  it.each([
+    {
+      missing: "no venue",
+      items: [{ name: "Venue booking" as const, complete: false, state: "Not requested" }],
+      label: "Request a venue",
+      section: "venues",
+    },
+    {
+      missing: "equipment not decided",
+      items: [{ name: "Equipment" as const, complete: false, state: "Not decided" }],
+      label: "Settle equipment",
+      section: "equipment",
+    },
+    {
+      missing: "no safety check",
+      items: [{ name: "Safety check" as const, complete: false, state: "Not requested" }],
+      label: "Request the safety check",
+      section: "safety",
+    },
+  ])(
+    "SCRUM-209 [AC1, AC2, AC3] TC-209-10: with $missing, the button reads \"$label\" and opens the $section section",
+    ({ items, label, section }) => {
+      expect(actionFor(items as Item[])).toEqual({ kind: "tab", label, tab: "arrangements", section });
+    },
+  );
+
+  it("SCRUM-209 [AC1, AC2, AC3] TC-209-10: a step with no section of its own still opens the tab", () => {
+    expect(actionFor([])).toEqual({
+      kind: "tab",
+      label: "Go to Arrangements",
+      tab: "arrangements",
+      section: undefined,
+    });
+  });
+});

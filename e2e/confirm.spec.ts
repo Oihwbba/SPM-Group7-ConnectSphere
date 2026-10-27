@@ -122,7 +122,7 @@ test.describe("SCRUM-81 — Move an approved event through planning to confirmed
     await signIn(page, "organiser@test.local");
     let dialog = await openDetails(page, name);
     await expect(dialog.getByTestId("readiness-summary")).toHaveText(
-      "Ready to confirm",
+      "3/3 items completed · Ready to confirm",
     );
     await expect(
       dialog.getByRole("button", { name: "Confirm event" }),
@@ -192,7 +192,7 @@ test.describe("SCRUM-81 — Move an approved event through planning to confirmed
       "Pending",
     );
     await expect(dialog.getByTestId("readiness-summary")).toHaveText(
-      /Not ready to confirm yet/,
+      /^[0-2]\/3 items completed$/,
     );
     await expect(
       dialog.getByRole("button", { name: "Confirm event" }),
