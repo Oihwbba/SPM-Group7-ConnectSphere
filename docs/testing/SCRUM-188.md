@@ -95,8 +95,8 @@ Planning, with times off the half hour. Times are Singapore time.
 | Test Case ID | TC-188-06 |
 | Test Scenario | [Positive] AC 1, AC 2: in the browser, from venue search to a submitted request, for an event off the half hour |
 | Pre-conditions | A Planning event running 10:15–11:45 on 20 Nov 2034. Another event's Approved booking of the Exhibition Hall from 08:00 to 10:15. |
-| Test Steps | 1. Open the event's details and choose **Find a venue**. <br> 2. Choose **Request this venue** on the Exhibition Hall. <br> 3. Read Start, End and the availability line, and click **Submit request**. |
+| Test Steps | 1. Open the event's details, go to **Arrangements** and choose **Find a venue**. <br> 2. Choose **Request this venue** on the Exhibition Hall. <br> 3. Read Start, End and the availability line, and click **Submit request**. |
 | Test Data | `coordinator@test.local`; Exhibition Hall |
-| Expected Result | Step 1: the Exhibition Hall is listed. Step 3: Start 10:15, End 11:45, "Exhibition Hall is available for this period.", then "Request submitted". One Pending booking from 10:15 to 11:45. |
+| Expected Result | Step 1: the Exhibition Hall is listed. Step 3: Start 10:15, End 11:45, "Exhibition Hall is available for this period.", then back on the event's Arrangements, "Venue requested: Exhibition Hall. It is pending Venue Staff approval." (SCRUM-209). One Pending booking from 10:15 to 11:45. |
 
 **Automated by:** `e2e/venue-search.spec.ts` › "SCRUM-188 [AC1, AC2] TC-188-01, TC-188-06: a venue search lists as free is requested for exactly the event's period, and is free when requested"

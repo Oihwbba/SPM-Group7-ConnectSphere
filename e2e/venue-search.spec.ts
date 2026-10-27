@@ -259,7 +259,8 @@ test.describe("SCRUM-38 — Search and filter venues", () => {
       });
 
       await signIn(page, "coordinator@test.local");
-      const details = await openDetails(page, name);
+      // SCRUM-209: Find a venue is in the Arrangements tab's Venues section.
+      const details = await openDetails(page, name, "Arrangements");
       await details.getByRole("link", { name: "Find a venue" }).click();
       await page.waitForURL(/\/venues\/search\?event=/);
       await page.getByRole("button", { name: "Search", exact: true }).click();
@@ -286,9 +287,15 @@ test.describe("SCRUM-38 — Search and filter venues", () => {
       const live = page.getByTestId("live-availability");
       await expect(live).toHaveAttribute("data-state", "free");
       await page.getByRole("button", { name: "Submit request" }).click();
-      await expect(page.getByTestId("booking-success")).toContainText(
-        "Request submitted",
+      // SCRUM-209: started from the event page, the request returns there.
+      await page.waitForURL(
+        new RegExp(`/events/${eventId}\\?tab=arrangements$`),
       );
+      await expect(
+        page.getByText(
+          "Venue requested: Exhibition Hall. It is pending Venue Staff approval.",
+        ),
+      ).toBeVisible();
       const booking = await prisma.booking.findFirstOrThrow({
         where: { eventId, venueId: "ven_hall" },
         select: { startAt: true, endAt: true, status: true },
