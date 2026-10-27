@@ -16,9 +16,9 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { DateTimePicker } from "@/components/app/date-time-picker";
 import { Textarea } from "@/components/ui/textarea";
-import { sgWallTimeToUtcIso, utcToSgWallTime } from "@/lib/datetime";
+import { EventPeriodInputs } from "@/components/events/event-period-inputs";
+import { joinEventPeriod, splitEventPeriod } from "@/lib/datetime";
 import { LAYOUT_OPTIONS } from "@/lib/schemas/event";
 import { PillSelect } from "@/components/app/pill-select";
 import { splitChoice } from "@/lib/requirement-choices";
@@ -40,8 +40,10 @@ type Form = {
   registrationRequired: "" | "yes" | "no";
   programme: string;
   specialRequests: string;
-  start: string;
-  end: string;
+  /** SCRUM-190 AC3: one date with a start and an end time. */
+  date: string;
+  startTime: string;
+  endTime: string;
   expectedAttendance: string;
   venueRequirements: string;
   equipmentRequirements: string;
@@ -63,8 +65,7 @@ function formFrom(event: Event): Form {
           : "",
     programme: event.programme ?? "",
     specialRequests: event.specialRequests ?? "",
-    start: utcToSgWallTime(event.startAt),
-    end: utcToSgWallTime(event.endAt),
+    ...splitEventPeriod(event.startAt, event.endAt),
     expectedAttendance: event.expectedAttendance?.toString() ?? "",
     venueRequirements: event.venueRequirements ?? "",
     equipmentRequirements: event.equipmentRequirements ?? "",
@@ -258,8 +259,8 @@ export function EditDetailsDialog({
           registrationRequired: form.registrationRequired || undefined,
           programme: form.programme,
           specialRequests: form.specialRequests,
-          startAt: sgWallTimeToUtcIso(form.start) ?? "",
-          endAt: sgWallTimeToUtcIso(form.end) ?? "",
+          startAt: joinEventPeriod(form).startAt ?? "",
+          endAt: joinEventPeriod(form).endAt ?? "",
           expectedAttendance: form.expectedAttendance,
           venueRequirements: form.venueRequirements,
           equipmentRequirements: form.equipmentRequirements,
@@ -416,26 +417,13 @@ export function EditDetailsDialog({
                 Singapore time (SGT, UTC+8).
               </p>
               <div className="grid gap-3 sm:grid-cols-3">
-                <div className="space-y-1">
-                  <Label htmlFor="edit-start">Start</Label>
-                  <DateTimePicker
-                    id="edit-start"
-                    value={form.start}
-                    onChange={(value) => update("start", value)}
-                    aria-invalid={invalid("startAt")}
+                <div className="sm:col-span-3">
+                  <EventPeriodInputs
+                    idPrefix="edit"
+                    value={form}
+                    onChange={update}
+                    errors={fieldErrors}
                   />
-                  {fieldError("startAt")}
-                </div>
-                <div className="space-y-1">
-                  <Label htmlFor="edit-end">End</Label>
-                  <DateTimePicker
-                    id="edit-end"
-                    value={form.end}
-                    openOn={form.start.split("T")[0] || undefined}
-                    onChange={(value) => update("end", value)}
-                    aria-invalid={invalid("endAt")}
-                  />
-                  {fieldError("endAt")}
                 </div>
                 <div className="space-y-1">
                   <Label htmlFor="edit-attendance">Expected attendance</Label>

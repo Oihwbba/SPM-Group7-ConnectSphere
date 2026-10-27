@@ -1,6 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 import { prisma } from "@/lib/db";
-import { selectFrom, fillOther, pickDateTime, submitRequest, optionsOf } from "./helpers";
+import { selectFrom, fillOther, fillEventSchedule, submitRequest, optionsOf } from "./helpers";
 
 /**
  * SCRUM-165 — a submitted request waits in the Lead's Unassigned queue until
@@ -54,8 +54,7 @@ test.describe("SCRUM-165 — Lead assigns new requests from an unassigned queue"
       .getByLabel("Event Description *")
       .fill("SCRUM-165 end-to-end coverage.");
     await page.getByRole("button", { name: "Next", exact: true }).click();
-    await pickDateTime(page.getByLabel("Proposed Start Date & Time *"), "2031-11-01T09:00");
-    await pickDateTime(page.getByLabel("Proposed End Date & Time *"), "2031-11-01T17:00");
+    await fillEventSchedule(page, "2031-11-01", "09:00", "17:00");
     await page.getByLabel("Expected Attendance *").fill("50");
     await page.getByRole("button", { name: "Next", exact: true }).click();
     await fillOther(page.getByLabel("Venue Requirements *"), "Any mid-size room.");
