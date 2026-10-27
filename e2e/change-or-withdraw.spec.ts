@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 
 import { prisma } from "@/lib/db";
-import { signedIn, usesLocalDatabase, selectFrom, openEquipmentRequest } from "./helpers";
+import { signedIn, usesLocalDatabase, selectFrom, openEquipmentRequest, openEvent } from "./helpers";
 
 /**
  * SCRUM-142 — while an event is being planned, its Coordinator changes an
@@ -165,13 +165,10 @@ test.describe("SCRUM-142 — Change equipment lines or withdraw a venue request"
     });
 
     const page = await signedIn(browser, "coordinator@test.local");
-    await page
-      .getByRole("row", { name: new RegExp(event.name) })
-      .getByTestId("view-details-button")
-      .click();
-    const venueItem = page
-      .getByRole("dialog")
-      .getByTestId("readiness-item-venue");
+    // SCRUM-208: the checklist is on the event page's Arrangements tab.
+    const venueItem = (await openEvent(page, event.name, "Arrangements")).getByTestId(
+      "readiness-item-venue",
+    );
     await expect(venueItem).toContainText("Pending");
 
     await venueItem.getByRole("button", { name: "Withdraw request" }).click();
@@ -265,11 +262,7 @@ test.describe("SCRUM-142 — Change equipment lines or withdraw a venue request"
 
     // The projectors are still reserved, but Confirm waits for the re-check.
     await page.goto("/events");
-    await page
-      .getByRole("row", { name: new RegExp(event.name) })
-      .getByTestId("view-details-button")
-      .click();
-    const details = page.getByRole("dialog");
+    const details = await openEvent(page, event.name, "Arrangements");
     await expect(details.getByTestId("readiness-item-equipment")).toContainText(
       "Awaiting Technical Support review",
     );

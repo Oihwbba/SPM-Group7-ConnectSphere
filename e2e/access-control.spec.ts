@@ -54,18 +54,13 @@ test.describe("SCRUM-67 — typing another role's URL directly is refused", () =
   }
 });
 
-// There is no /events/[id] detail route — event details open in a modal (see
-// events-client.tsx). This test only pins that fact: any per-event URL 404s
-// from routing, whether the id belongs to another organiser or to nothing at
-// all. It deliberately makes NO claim about the ownership filter (it would pass
-// even if that filter were removed), so it carries no SCRUM-68 label.
-//
-// SCRUM-68's actual ownership rule — that another organiser's event is
-// indistinguishable from a non-existent one — is covered at the data layer by
-// tests/unit/event-access.test.ts, and end-to-end by the organiser2 isolation
-// test in events.spec.ts.
-test.describe("no event detail route is exposed by identifier", () => {
-  test("a per-event URL 404s from routing, for any id", async ({ page }) => {
+// SCRUM-208 AC5: each event has its own page at /events/[id], for its
+// Organiser and its assigned Coordinator. Another organiser's event and an id
+// that doesn't exist give the same 404, so the page never reveals which ids
+// exist (SCRUM-68). The ownership rule itself is also covered at the data
+// layer by tests/unit/event-access.test.ts.
+test.describe("an event's page by identifier", () => {
+  test("SCRUM-208 [AC5] TC-208-13: another organiser's event and a made-up id are the same 404", async ({ page }) => {
     await signIn(page, "organiser@test.local");
 
     // evt_other_organiser is seeded as organiser2's event (prisma/seed.ts).

@@ -1,7 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import { prisma } from "@/lib/db";
 
-import { choose, signedIn, usesLocalDatabase, selectFrom, openBooking, openReview } from "./helpers";
+import { choose, signedIn, usesLocalDatabase, selectFrom, openBooking, openReview, openEvent } from "./helpers";
 
 /**
  * SCRUM-170 — the Organiser's answers reach the people planning the event, in
@@ -65,13 +65,9 @@ function planningEvent(name: string, day: string) {
   });
 }
 
-async function openDetails(page: Page, name: string) {
-  await page.goto("/events");
-  await page
-    .getByRole("row", { name: new RegExp(name) })
-    .getByTestId("view-details-button")
-    .click();
-  return page.getByRole("dialog").first();
+/** SCRUM-208: the event's page, on the tab this journey works in. */
+async function openDetails(page: Page, name: string, tab = "Request") {
+  return openEvent(page, name, tab);
 }
 
 test.describe("SCRUM-170 — Show the Organiser's requirements to the people planning the event", () => {
@@ -196,7 +192,7 @@ test.describe("SCRUM-170 — Show the Organiser's requirements to the people pla
     browser,
   }) => {
     const coordinator = await signedIn(browser, "coordinator@test.local");
-    let details = await openDetails(coordinator, CHECKLIST_EVENT);
+    let details = await openDetails(coordinator, CHECKLIST_EVENT, "Arrangements");
     const equipment = details.getByTestId("readiness-item-equipment");
     await expect(equipment).toHaveAttribute("data-complete", "false");
     await expect(equipment).toContainText("Not decided");
@@ -226,7 +222,7 @@ test.describe("SCRUM-170 — Show the Organiser's requirements to the people pla
     ).toBeVisible();
 
     const organiser = await signedIn(browser, "organiser@test.local");
-    details = await openDetails(organiser, CHECKLIST_EVENT);
+    details = await openDetails(organiser, CHECKLIST_EVENT, "Arrangements");
     const seen = details.getByTestId("readiness-item-equipment");
     await expect(seen).toContainText("No equipment needed");
     await expect(seen).not.toContainText("Recorded by");

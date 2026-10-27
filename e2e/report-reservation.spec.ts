@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 
 import { prisma } from "@/lib/db";
-import { signedIn, usesLocalDatabase, selectFrom } from "./helpers";
+import { signedIn, usesLocalDatabase, selectFrom, openEvent } from "./helpers";
 
 /**
  * SCRUM-32 — Technical Support report, from the Equipment page, that reserved
@@ -109,11 +109,10 @@ test.describe("SCRUM-32 — report reserved equipment that can no longer be prov
 
     // AC2: the Coordinator reads the reason on the event, where they resolve it.
     const coordinator = await signedIn(browser, "coordinator@test.local");
-    await coordinator
-      .getByRole("row", { name: new RegExp(EVENT) })
-      .getByTestId("view-details-button")
-      .click();
-    const panel = coordinator.getByRole("dialog").getByTestId("reconsideration-panel");
+    // SCRUM-208: flags are on the event page's Changes tab.
+    const panel = (await openEvent(coordinator, EVENT, "Changes")).getByTestId(
+      "reconsideration-panel",
+    );
     await expect(panel).toContainText(`${RIG} × 2`);
     await expect(panel).toContainText(REASON);
   });
