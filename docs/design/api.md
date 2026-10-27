@@ -4,7 +4,7 @@ Every command and every server read the pages call, from `app/` on `main`
 at commit `d54ed6e` (2026-10-13). The actions added after it (`cancelEvent`,
 `getChangeDecision`, `decideChangeRequest`, `requestSafetyCheck`,
 `recordSafetyCheckOutcome` and `assignCoordinator`) were added on 2026-10-23
-(SCRUM-222). There is no REST API: the browser calls these as Server Actions.
+(SCRUM-222), and `isEventStillVisible` (SCRUM-208) on 2026-10-27. There is no REST API: the browser calls these as Server Actions.
 
 How to read it:
 
@@ -130,6 +130,7 @@ request.
 | `getEventArrangements` | A Confirmed event's secured venues, time and equipment (SCRUM-81 AC6, SCRUM-162 AC7). | `event:read` | an event id | nothing (read only) | — |
 | `getEventBookings` | Every venue booking of the event, with its venue, attendance and status (SCRUM-162 AC7). | `event:read` | an event id | nothing (read only) | — |
 | `getEventCoordinator` | The name of the event's current Coordinator, or none (SCRUM-21 AC8). | `event:read` | an event id | nothing (read only) | — |
+| `isEventStillVisible` | Whether the signed-in user can still see the event, asked before the open event page refreshes, so a reassignment or removal shows a notice instead of "not found" (SCRUM-24, SCRUM-208). | `event:read`; any other user gets `false`, the same as a missing event | an event id | nothing (read only) | — |
 
 ## `app/(app)/events/registration-list-actions.ts`
 
