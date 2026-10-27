@@ -25,14 +25,13 @@ import {
  * public endpoint, and these must not be callable with someone else's id.
  */
 
-/** Must mirror `can()`'s coordinator relationship with an event exactly. */
+/**
+ * Must mirror `can()`'s coordinator relationship with an event exactly: since
+ * SCRUM-165 AC8 a Coordinator acts only on the events assigned to them, and an
+ * unassigned one waits for the Lead (SCRUM-229).
+ */
 function coordinatorEventScope(coordinatorId: string) {
-  return {
-    OR: [
-      { coordinatorId },
-      { coordinatorId: null, status: { not: "DRAFT" as const } },
-    ],
-  };
+  return { coordinatorId };
 }
 
 // Lines are inserted together and can share a timestamp; the id (a cuid,

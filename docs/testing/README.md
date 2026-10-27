@@ -127,7 +127,7 @@ the open pull requests that change the same test files have merged.
 | Story | Owner | Test cases | Status |
 |---|---|---|---|
 | [SCRUM-25](SCRUM-25.md) | Felicia Or | 22 | Every case automated (unit, integration for the row lock, the warning and flags, the safety check and the permanent notes, e2e for both journeys, the safety check going Outdated and a Confirmed event's registration and notes) |
-| [SCRUM-27](SCRUM-27.md) | Jin Hong | 17 | Written with the story; every case automated |
+| [SCRUM-27](SCRUM-27.md) | Jin Hong | 18 | Written with the story; every case automated. TC-27-18 added by SCRUM-229 |
 | [SCRUM-28](SCRUM-28.md) | Jin Hong | 13 | Written with the story; every case automated. TC-28-12 and TC-28-13 added by SCRUM-227 |
 | [SCRUM-31](SCRUM-31.md) | Jun Bin | 11 | Written from the acceptance criteria and existing tests; every case automated, TC-31-04 and -09 through SCRUM-155's |
 | [SCRUM-32](SCRUM-32.md) | Jin Hong | 6 | Written with the story; every case automated |
@@ -186,3 +186,4 @@ the open pull requests that change the same test files have merged.
 | [SCRUM-207](SCRUM-207.md) | Caylern Goh | 24 | Part of the story: AC 2, AC 3 and the shared confirmation automated (unit for the shared badge and empty states, e2e for the submit and approve pop-ups), and the customer's page-by-page changes automated (TC-207-11 to TC-207-24); TC-207-01, -02, -09 and -10 (AC 1, AC 4 across every page, AC 5) are still to do, marked Manual |
 | [SCRUM-208](SCRUM-208.md) | Caylern Goh | 17 | Every case automated (unit for the Next step, the tab chosen, the progress and the stat strips, e2e for the page, its link and tabs, the answer box, not found, the phone layout, the Attendee page and the live view); the panels' own rules stay with their stories' tests |
 | [SCRUM-209](SCRUM-209.md) | Caylern Goh | 10 | Every case automated (unit for who is offered Find a venue and the equipment actions, and the Next step's sections; e2e for the venue round trip, equipment in place, No equipment needed, the safety check, and the read-only and refused views); the actions' own refusals stay with their stories' tests |
+| [SCRUM-225](SCRUM-225.md) | Jin Hong | 5 | A Chore task: the GLM review skipped with a passing check on its quota or rate limit; automated by unit tests except TC-225-05, a document check |
