@@ -258,6 +258,7 @@ _8 stories, 14 points_
 | [SCRUM-220](SCRUM-220.md) | Chore: Assemble the Week 12 submission zip with all seven folders | SCRUM Sprint 4 | To Do |
 | [SCRUM-221](SCRUM-221.md) | Chore: Re-sync docs/backlog from Jira at the start of Sprint 4 | SCRUM Sprint 4 | In Progress |
 | [SCRUM-222](SCRUM-222.md) | Chore: Bring the Server Actions reference, testing index and SCRUM-50 supersession note up to date | SCRUM Sprint 4 | In Review |
+| [SCRUM-225](SCRUM-225.md) | Chore: Skip the GLM review with a green check when GLM's quota or rate limit stops it | SCRUM Sprint 4 | In Review |
 | [SCRUM-226](SCRUM-226.md) | Bug: Two Technical Support staff can reserve the same line of an approved request twice | SCRUM Sprint 4 | In Review |
 | [SCRUM-227](SCRUM-227.md) | Bug: Two simultaneous updates to one equipment request can both be saved when one is a suggestion | SCRUM Sprint 4 | In Review |
 | [SCRUM-228](SCRUM-228.md) | Chore: Make SCRUM-170's race test wait for its locks instead of sleeping | SCRUM Sprint 4 | In Review |

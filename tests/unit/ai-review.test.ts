@@ -2,9 +2,12 @@ import { execFileSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, it, expect } from "vitest";
+import { afterEach, describe, it, expect, vi } from "vitest";
 
 import {
+  askGlm,
+  askGlmPatiently,
+  attemptReview,
   buildSystemPrompt,
   changesSchema,
   checkCompletion,
@@ -40,7 +43,10 @@ import {
   renderConversation,
   renderReview,
   renderTestInventory,
+  renderUnavailableSkipped,
+  unreviewedOutcome,
   renderTooLargeReview,
+  GlmUnavailableError,
 } from "../../.github/scripts/ai-review.mjs";
 
 // SCRUM-88 — the GLM reviewer's pure logic. Line numbers must match git's
@@ -493,6 +499,144 @@ describe("renderTooLargeReview", () => {
     expect(body).toContain("so this check failed");
     expect(body).toContain("Split the pull request");
     expect(body).toContain("no GLM call made · [workflow run](https://run)");
+  });
+});
+
+describe("GLM refusing to serve — SCRUM-225", () => {
+  const QUOTA_REPLY =
+    '{"error":{"code":"1310","message":"您已达到每周/每月使用上限，您的限额将在 2026-10-25 14:23:41 重置。"}}';
+  const RATE_REPLY = '{"error":{"code":"1302","message":"您的账户已达到速率限制，请您控制请求频率"}}';
+  const ANSWER = 'data: {"choices":[{"delta":{"content":"ok"},"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n';
+  const request = { apiKey: "k", model: "glm-5.3", system: "s", user: "u", effort: "high" };
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  /** Stubs fetch to answer each call with the next reply, the last one repeating. */
+  function replies(...answers: [number, string][]) {
+    const fetch = vi.fn(async () => {
+      const [status, body] = answers[Math.min(fetch.mock.calls.length - 1, answers.length - 1)];
+      return new Response(body, { status });
+    });
+    vi.stubGlobal("fetch", fetch);
+    return fetch;
+  }
+
+  function replyWith(status: number, body: string) {
+    replies([status, body]);
+    return askGlm({ ...request, timeoutMs: 1_000 });
+  }
+
+  it("SCRUM-225 [AC1] TC-225-01: HTTP 429 with code 1310 is a used-up quota, carrying the reset time", async () => {
+    const refusal = await replyWith(429, QUOTA_REPLY).catch((error) => error);
+
+    expect(refusal).toBeInstanceOf(GlmUnavailableError);
+    expect(refusal.kind).toBe("quota");
+    expect(refusal.resetsAt).toBe("2026-10-25 14:23:41");
+  });
+
+  it("SCRUM-225 [AC2] TC-225-02: HTTP 429 with code 1302 is the rate limit, with no reset time", async () => {
+    const refusal = await replyWith(429, RATE_REPLY).catch((error) => error);
+
+    expect(refusal).toBeInstanceOf(GlmUnavailableError);
+    expect(refusal.kind).toBe("rate");
+    expect(refusal.resetsAt).toBeNull();
+  });
+
+  it("SCRUM-225 [AC3] TC-225-03: any other refusal still fails the review, a 429 with another code included", async () => {
+    for (const [status, body] of [
+      [429, '{"error":{"code":"1113","message":"insufficient balance"}}'],
+      [500, '{"error":{"code":"1310"}}'],
+      [401, "unauthorised"],
+    ] as const) {
+      const refusal = await replyWith(status, body).catch((error) => error);
+
+      expect(refusal).not.toBeInstanceOf(GlmUnavailableError);
+      expect(refusal.message).toBe(`GLM request failed: HTTP ${status} ${body}`);
+    }
+  });
+
+  it("SCRUM-225 [AC2] TC-225-02: the rate limit is waited out, and the review goes ahead once GLM answers", async () => {
+    const fetch = replies([429, RATE_REPLY], [429, RATE_REPLY], [200, ANSWER]);
+    const sleep = vi.fn(async (_ms: number) => {});
+
+    const result = await askGlmPatiently(
+      { ...request, deadline: Date.now() + GLM_BUDGET_MS },
+      { waits: [30_000, 60_000, 120_000], sleep },
+    );
+
+    expect(result.content).toBe("ok");
+    expect(fetch).toHaveBeenCalledTimes(3);
+    expect(sleep).toHaveBeenCalledTimes(2);
+    const [first, second] = sleep.mock.calls.map(([ms]) => ms);
+    expect(first).toBeGreaterThanOrEqual(30_000);
+    expect(first).toBeLessThan(60_000);
+    expect(second).toBeGreaterThanOrEqual(60_000);
+    expect(second).toBeLessThan(120_000);
+  });
+
+  it("SCRUM-225 [AC2] TC-225-02: a rate limit that outlasts every wait is given up on, as the rate limit", async () => {
+    const fetch = replies([429, RATE_REPLY]);
+
+    const refusal = await askGlmPatiently(
+      { ...request, deadline: Date.now() + GLM_BUDGET_MS },
+      { waits: [1, 1], sleep: async () => {} },
+    ).catch((error) => error);
+
+    expect(fetch).toHaveBeenCalledTimes(3);
+    expect(refusal).toBeInstanceOf(GlmUnavailableError);
+    expect(refusal.kind).toBe("rate");
+  });
+
+  it("SCRUM-225 [AC1, AC2] TC-225-01, TC-225-02: no wait runs past the deadline, and a used-up quota is never waited out", async () => {
+    const rateFetch = replies([429, RATE_REPLY]);
+    const sleep = vi.fn(async (_ms: number) => {});
+    const late = await askGlmPatiently({ ...request, deadline: Date.now() + 60_000 }, { waits: [30_000], sleep }).catch(
+      (error) => error,
+    );
+    expect(late.kind).toBe("rate");
+    expect(rateFetch).toHaveBeenCalledTimes(1);
+
+    const quotaFetch = replies([429, QUOTA_REPLY]);
+    const quota = await askGlmPatiently(
+      { ...request, deadline: Date.now() + GLM_BUDGET_MS },
+      { waits: [1, 1], sleep },
+    ).catch((error) => error);
+    expect(quota.kind).toBe("quota");
+    expect(quotaFetch).toHaveBeenCalledTimes(1);
+    expect(sleep).not.toHaveBeenCalled();
+  });
+
+  it("SCRUM-225 [AC1] TC-225-04: a skipped review says why, until when, and that build-and-test still gates the merge", () => {
+    const body = renderUnavailableSkipped({
+      model: "glm-5.3",
+      sha: "abc1234def5678",
+      kind: "quota",
+      resetsAt: "2026-10-25 14:23:41",
+      seconds: 3,
+      runUrl: "https://run",
+    });
+
+    expect(body.startsWith("<!-- glm-review -->")).toBe(true);
+    expect(body).toContain(
+      "⏭️ **Review skipped** for commit `abc1234`: the GLM quota is used up until 2026-10-25 14:23:41 (UTC+8), so this check passed without a review.",
+    );
+    expect(body).toContain("`build-and-test` still has to pass before merging.");
+    expect(body).toContain("re-run the **GLM Code Review** job after the reset");
+    expect(body).toContain("glm-5.3 · 3s · [workflow run](https://run)");
+    expect(reviewedCommit(body)).toBeNull();
+  });
+
+  it("SCRUM-225 [AC1, AC2] TC-225-04: a rate-limit skip, and a quota with no reset time, say so without inventing one", () => {
+    const rate = renderUnavailableSkipped({ model: "glm-5.3", sha: "abc1234", kind: "rate", resetsAt: null, seconds: 1, runUrl: "u" });
+    expect(rate).toContain("GLM's rate limit kept refusing the call, after every wait, so this check passed without a review.");
+    expect(rate).toContain("re-run the **GLM Code Review** job later");
+
+    expect(new GlmUnavailableError("quota", '{"error":{"code":"1310"}}').resetsAt).toBeNull();
+    expect(
+      renderUnavailableSkipped({ model: "glm-5.3", sha: "abc1234", kind: "quota", resetsAt: null, seconds: 1, runUrl: "u" }),
+    ).toContain("the GLM quota is used up, so this check passed without a review.");
   });
 });
 
@@ -1506,5 +1650,99 @@ describe("the reviewer audit fixes — SCRUM-181", () => {
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
+  });
+});
+
+describe("the review's attempts, and what happens without a review — SCRUM-225", () => {
+  const QUOTA = '{"error":{"code":"1310","message":"您已达到每周/每月使用上限，您的限额将在 2026-10-25 14:23:41 重置。"}}';
+  const RATE = '{"error":{"code":"1302","message":"rate limit"}}';
+  const ANSWER = { content: '{"summary":"Looks fine.","findings":[]}', finishReason: "stop", usage: null };
+  const quiet = () => {};
+  const outcomeFor = (result: { unavailable?: GlmUnavailableError; failures: string[] }) =>
+    unreviewedOutcome({ model: "glm-5.3", sha: "abc1234def5678", seconds: 2, runUrl: "https://run", ...result });
+
+  it("SCRUM-225 [AC1] TC-225-01: a used-up quota ends the attempts at once, with no second, low-effort attempt", async () => {
+    const ask = vi.fn(async () => {
+      throw new GlmUnavailableError("quota", QUOTA);
+    });
+
+    const result = await attemptReview({ ask, log: quiet });
+
+    expect(ask).toHaveBeenCalledTimes(1);
+    expect(ask).toHaveBeenCalledWith("high", expect.any(Number));
+    expect(result.review).toBeUndefined();
+    expect(result.unavailable?.kind).toBe("quota");
+    expect(result.failures).toEqual([]);
+  });
+
+  it("SCRUM-225 [AC1] TC-225-01: without a review because of the quota, the skip comment is posted and the check exits 0", async () => {
+    const result = await attemptReview({
+      ask: async () => {
+        throw new GlmUnavailableError("quota", QUOTA);
+      },
+      log: quiet,
+    });
+
+    const outcome = outcomeFor(result);
+
+    expect(outcome.exitCode).toBe(0);
+    expect(outcome.body).toBe(
+      renderUnavailableSkipped({ model: "glm-5.3", sha: "abc1234def5678", kind: "quota", resetsAt: "2026-10-25 14:23:41", seconds: 2, runUrl: "https://run" }),
+    );
+    expect(outcome.body).not.toContain("did not complete");
+    expect(outcome.log).toMatch(/^::warning::GLM review skipped/);
+  });
+
+  it("SCRUM-225 [AC2] TC-225-02: a rate limit that never clears, even after a first attempt failed for another reason, skips the review and exits 0", async () => {
+    const ask = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("GLM stopped before answering: the output limit was reached."))
+      .mockRejectedValueOnce(new GlmUnavailableError("rate", RATE));
+
+    const result = await attemptReview({ ask, log: quiet });
+
+    expect(ask).toHaveBeenCalledTimes(2);
+    expect(ask.mock.calls.map(([effort]) => effort)).toEqual(["high", "low"]);
+    expect(result.unavailable?.kind).toBe("rate");
+    expect(outcomeFor(result).exitCode).toBe(0);
+    expect(outcomeFor(result).body).toContain("GLM's rate limit kept refusing the call");
+  });
+
+  it("SCRUM-225 [AC3] TC-225-03: any other failure on both attempts leaves no review, posts did not complete with each failure, and fails the check", async () => {
+    const ask = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("GLM request failed: HTTP 500 boom"))
+      .mockRejectedValueOnce(new Error("GLM request failed: HTTP 502 bad gateway"));
+
+    const result = await attemptReview({ ask, log: quiet });
+    const outcome = outcomeFor(result);
+
+    expect(result.unavailable).toBeUndefined();
+    expect(outcome.exitCode).toBe(1);
+    expect(outcome.body).toContain("❌ **The review did not complete** for commit `abc1234`");
+    expect(outcome.body).toContain("- attempt 1: GLM request failed: HTTP 500 boom");
+    expect(outcome.body).toContain("- attempt 2: GLM request failed: HTTP 502 bad gateway");
+    expect(outcome.log).toMatch(/^::error::The GLM review did not complete/);
+  });
+
+  it("SCRUM-225 [AC3] TC-225-03: with too little of the budget left, there is no retry, and the check fails", async () => {
+    const ask = vi.fn().mockRejectedValueOnce(new Error("GLM stopped before answering: timed out."));
+
+    const result = await attemptReview({ ask, budgetMs: 1_000, minRetryMs: 60_000, log: quiet });
+
+    expect(ask).toHaveBeenCalledTimes(1);
+    expect(result.failures[1]).toMatch(/^no retry: only 0 minute\(s\) of the time budget were left$/);
+    expect(outcomeFor(result).exitCode).toBe(1);
+  });
+
+  it("SCRUM-225 [AC1, AC2] TC-225-01, TC-225-02: when GLM answers, the review is returned and nothing is skipped", async () => {
+    const ask = vi.fn(async () => ANSWER);
+
+    const result = await attemptReview({ ask, log: quiet });
+
+    expect(ask).toHaveBeenCalledTimes(1);
+    expect(result.review?.summary).toBe("Looks fine.");
+    expect(result.unavailable).toBeUndefined();
+    expect(result.failures).toEqual([]);
   });
 });
