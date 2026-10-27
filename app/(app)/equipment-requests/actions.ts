@@ -17,7 +17,6 @@ import {
   CHANGEABLE_REQUEST_STATUSES,
   EQUIPMENT_REQUEST_STATUS_LABEL,
   LIVE_LINE,
-  OPEN_REQUEST_STATUSES,
   REQUESTABLE_EVENT_STATUSES,
   canMoveRequest,
   lineChanges,
@@ -87,9 +86,18 @@ async function knownTypes(
   return Object.keys(fieldErrors).length ? { fieldErrors } : { types };
 }
 
-function findOpenRequest(eventId: string) {
-  return prisma.equipmentRequest.findFirst({
-    where: { eventId, status: { in: [...OPEN_REQUEST_STATUSES] } },
+/**
+ * SCRUM-186 AC1 — the event's active request: Pending Review, In Review or
+ * Approved. Approved counts too, because more equipment is added by changing
+ * that request's lines (SCRUM-142), never by a second request.
+ */
+function findActiveRequest(
+  client: Pick<Prisma.TransactionClient, "equipmentRequest">,
+  eventId: string,
+) {
+  return client.equipmentRequest.findFirst({
+    where: { eventId, status: { in: [...CHANGEABLE_REQUEST_STATUSES] } },
+    orderBy: { createdAt: "asc" },
     select: { id: true },
   });
 }
@@ -100,11 +108,13 @@ function findOpenRequest(eventId: string) {
  * - An event the coordinator has no relationship to, one that doesn't exist and
  *   one that isn't going ahead all get the same answer, so the action can't be
  *   used to probe which event ids exist (SCRUM-68).
- * - AC 7: an event keeps at most one open request. A second submission returns
- *   the existing request with `existing: true` so the page can show it. The
- *   partial unique index "EquipmentRequest_one_open_per_event" is what makes
- *   that hold when two submissions race: the loser's insert fails, and it is
- *   answered with the winner's request instead of an error.
+ * - SCRUM-186 AC1, AC4 (extending SCRUM-27 AC 7): an event keeps one active
+ *   request. A second submission returns the existing request with
+ *   `existing: true` so the page can show it. The check is made again under
+ *   the event's row lock, so of two submissions at once the second sees the
+ *   first. A unique index can't do this for Approved requests: events from
+ *   before SCRUM-186 may already have two (AC5). The partial unique index
+ *   "EquipmentRequest_one_open_per_event" stays as a backstop for open ones.
  */
 export async function createEquipmentRequest(
   input: unknown,
@@ -148,8 +158,8 @@ export async function createEquipmentRequest(
       return ok({ id, existing: true });
     };
 
-    const open = await findOpenRequest(eventId);
-    if (open) return showExisting(open.id);
+    const active = await findActiveRequest(prisma, eventId);
+    if (active) return showExisting(active.id);
 
     try {
       const created = await prisma.$transaction(async (tx) => {
@@ -172,6 +182,8 @@ export async function createEquipmentRequest(
         ) {
           return null;
         }
+        const raced = await findActiveRequest(tx, eventId);
+        if (raced) return { id: raced.id, existing: true };
         await tx.event.updateMany({
           where: { id: eventId, noEquipmentNeededAt: { not: null } },
           data: { noEquipmentNeededAt: null, noEquipmentNeededById: null },
@@ -212,18 +224,19 @@ export async function createEquipmentRequest(
             .join(", ")}.`,
           link: "/equipment-requests",
         });
-        return request;
+        return { id: request.id, existing: false };
       });
 
       if (!created) return err(NOT_REQUESTABLE, { eventId: [NOT_REQUESTABLE] });
+      if (created.existing) return showExisting(created.id);
       revalidatePath("/equipment-requests");
-      return ok({ id: created.id, existing: false });
+      return ok(created);
     } catch (error) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === "P2002"
       ) {
-        const winner = await findOpenRequest(eventId);
+        const winner = await findActiveRequest(prisma, eventId);
         if (winner) return showExisting(winner.id);
       }
       throw error;
