@@ -236,22 +236,41 @@ export async function optionsOf(trigger: Locator) {
 }
 
 /**
- * Open a request in Venue Staff's booking queue (shared page conventions,
- * change 13): the row showing `text` (the event's name, say), then its
- * details, where it is decided. Returns the details pop-up.
+ * Open a request in Venue Staff's booking queue (SCRUM-211): its row, by
+ * event name or booking id, opens it on the same page. Returns the opened
+ * request: its details beside the decision.
  */
 export async function openBooking(
   page: Page,
   which: string | RegExp | { id: string },
 ) {
-  const row =
-    typeof which === "object" && "id" in which
-      ? page.locator(`[data-testid="queue-row"][data-booking="${which.id}"]`)
-      : page.getByTestId("queue-row").filter({ hasText: which });
-  await row.getByTestId("view-booking-button").click();
-  const details = page.getByTestId(/^booking-/);
+  const id = await openQueueRow(page, which);
+  const details = page.locator(`[data-testid="booking-${id}"][data-item="${id}"]`);
   await expect(details).toBeVisible();
   return details;
+}
+
+/**
+ * SCRUM-211 — open an item from any work queue's list: the row for an event
+ * name, or for an item's id. Returns the item's id.
+ */
+export async function openQueueRow(
+  page: Page,
+  which: string | RegExp | { id: string },
+) {
+  // After a decision the next item is open: back to the list first.
+  if (/[?&]open=/.test(page.url())) {
+    await page.getByRole("link", { name: /^All (requests|checks)$/ }).click();
+    await page.waitForURL((url) => !url.searchParams.has("open"));
+  }
+  const row =
+    typeof which === "object" && "id" in which
+      ? page.locator(`[data-testid="queue-row"][data-item="${which.id}"]`)
+      : page.getByTestId("queue-row").filter({ hasText: which });
+  const id = (await row.getAttribute("data-item"))!;
+  await row.getByRole("link").click();
+  await page.waitForURL(new RegExp(`[?&]open=${id}`));
+  return id;
 }
 
 /**
@@ -271,20 +290,16 @@ export async function openEquipmentRequest(page: Page, eventName: string) {
 }
 
 /**
- * Open a request in Technical Support's review queue (shared page
- * conventions): its table row, by event name or id, then its details. Returns
- * the pop-up, whose History tab holds the request's log.
+ * Open a request in Technical Support's review queue (SCRUM-211): its row,
+ * by event name or id. Returns the opened request: its details, history and
+ * notes beside the decision.
  */
 export async function openReview(
   page: Page,
   request: string | { id: string },
 ) {
-  const row =
-    typeof request === "string"
-      ? page.getByTestId("review-row").filter({ hasText: request })
-      : page.locator(`#request-${request.id}`);
-  await row.getByTestId("view-review-button").click();
-  const details = page.getByTestId("review-request");
+  const id = await openQueueRow(page, request);
+  const details = page.locator(`[data-testid="review-item"][data-item="${id}"]`);
   await expect(details).toBeVisible();
   return details;
 }

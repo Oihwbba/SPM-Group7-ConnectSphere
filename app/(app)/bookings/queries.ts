@@ -186,6 +186,38 @@ export async function getPendingBookingQueue(now = new Date()) {
   );
 }
 
+/**
+ * SCRUM-211 AC2 — the queue's Decided filter: requests Venue Staff have
+ * decided and that have left the queue (approved, rejected, or a hold that
+ * ended), most recently decided first. Read-only; the page asks `can()` for
+ * `booking:review` before reading it, as for the queue itself.
+ */
+export async function getDecidedBookings() {
+  return prisma.booking.findMany({
+    where: { decidedAt: { not: null }, status: { notIn: ["PENDING", "HELD"] } },
+    orderBy: { decidedAt: "desc" },
+    select: {
+      id: true,
+      status: true,
+      startAt: true,
+      endAt: true,
+      requestedAttendance: true,
+      requestedLayout: true,
+      requiredFacilities: true,
+      createdAt: true,
+      decidedAt: true,
+      decisionReason: true,
+      needsReconsideration: true,
+      decidedBy: { select: { name: true } },
+      requestedBy: { select: { name: true } },
+      event: { select: { name: true } },
+      venue: { select: { name: true, capacity: true } },
+    },
+  });
+}
+
+export type DecidedBookingRow = Awaited<ReturnType<typeof getDecidedBookings>>[number];
+
 export type PendingBookingRow = Awaited<
   ReturnType<typeof getPendingBookingQueue>
 >[number];

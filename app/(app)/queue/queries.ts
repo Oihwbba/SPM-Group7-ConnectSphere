@@ -97,3 +97,36 @@ export async function getQueueRequest(id: string) {
     suggestedId: suggestCoordinator(coordinators),
   };
 }
+
+/**
+ * SCRUM-211 AC2 — the queue's Decided filter: requests a Lead has assigned
+ * from it (they carry the supervising Lead, SCRUM-165 AC11), with who now
+ * coordinates them. Read-only, and only for Leads, as the queue itself.
+ */
+export async function getAssignedFromQueue() {
+  const session = await auth();
+  if (!session?.user || !can(session.user, "event:assign")) return [];
+
+  return prisma.event.findMany({
+    where: { supervisingLeadId: { not: null }, NOT: UNASSIGNED },
+    select: {
+      id: true,
+      name: true,
+      purpose: true,
+      description: true,
+      startAt: true,
+      endAt: true,
+      expectedAttendance: true,
+      venueRequirements: true,
+      accessibilityNeeds: true,
+      preferredLayout: true,
+      equipmentRequirements: true,
+      submittedAt: true,
+      organiser: { select: { name: true } },
+      coordinator: { select: { name: true } },
+    },
+    orderBy: { submittedAt: "asc" },
+  });
+}
+
+export type AssignedEntry = Awaited<ReturnType<typeof getAssignedFromQueue>>[number];

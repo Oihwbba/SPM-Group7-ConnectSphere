@@ -61,6 +61,51 @@ export async function getSafetyCheckQueue(
     }));
 }
 
+/**
+ * SCRUM-211 AC2 — the queue's Decided filter: checks with an outcome
+ * recorded, most recently decided first, for events this officer may review
+ * (AC6). Read-only.
+ */
+export async function getDecidedSafetyChecks(
+  user: SessionUser,
+): Promise<(QueuedSafetyCheck & { status: SafetyCheckStatus })[]> {
+  const checks = await prisma.safetyCheck.findMany({
+    where: { status: { not: "AWAITING_REVIEW" } },
+    orderBy: { decidedAt: "desc" },
+    select: {
+      id: true,
+      status: true,
+      createdAt: true,
+      requestedBy: { select: { name: true } },
+      event: {
+        select: {
+          name: true,
+          startAt: true,
+          endAt: true,
+          expectedAttendance: true,
+          organiserId: true,
+          coordinatorId: true,
+          status: true,
+        },
+      },
+    },
+  });
+  return checks
+    .filter((c) => can(user, "safety-check:review", { kind: "event", ...c.event }))
+    .map((c) => ({
+      id: c.id,
+      status: c.status,
+      requestedAt: c.createdAt,
+      requestedBy: c.requestedBy.name,
+      event: {
+        name: c.event.name,
+        startAt: c.event.startAt,
+        endAt: c.event.endAt,
+        expectedAttendance: c.event.expectedAttendance,
+      },
+    }));
+}
+
 export interface SafetyCheckReview {
   id: string;
   status: SafetyCheckStatus;

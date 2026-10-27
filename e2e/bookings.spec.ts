@@ -182,12 +182,10 @@ test.describe("SCRUM-50 / 52 / 53 — venue booking request, review and decision
 
     // SCRUM-53 AC1 — approve.
     await card.getByRole("button", { name: "Approve" }).click();
-    // Approving shows a tick and a way to the event.
-    const approved = staff.getByTestId("venue-approved");
-    await expect(approved).toContainText(
-      /Approved: Exhibition Hall is now booked/,
-    );
-    await expect(approved.getByRole("button", { name: "View event" })).toBeVisible();
+    // Approving says so, with a way to the event (SCRUM-211 AC4: the
+    // request leaves the page for the next one).
+    await expect(staff.getByText(/Approved: Exhibition Hall is now booked/)).toBeVisible();
+    await expect(staff.getByRole("button", { name: "View event" })).toBeVisible();
     await expect(card).toHaveCount(0);
 
     // SCRUM-53 AC4 / SCRUM-50 AC3 — an event overlapping that period now
@@ -376,11 +374,11 @@ test.describe("SCRUM-50 / 52 / 53 — venue booking request, review and decision
 
     const staff = await signedIn(browser, "venuestaff@test.local");
     await staff.goto("/bookings");
-    // SCRUM-52 — search narrows the queue to matching requests.
-    const search = staff.getByLabel("Search pending requests");
+    // SCRUM-52, SCRUM-211 AC2 — search narrows the queue by event name.
+    const search = staff.getByLabel("Search by event name");
     await search.fill("no-such-request-anywhere");
     await expect(staff.getByText(/^No requests match/)).toBeVisible();
-    await search.fill(tag);
+    await search.fill(eventName("rejected"));
     await expect(staff.getByTestId("queue-row")).toHaveCount(1);
     const card = await openBooking(staff, eventName("rejected"));
     await expect(card).toContainText(tag);

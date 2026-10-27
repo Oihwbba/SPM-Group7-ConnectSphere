@@ -1,20 +1,8 @@
 "use client";
 
-import {
-  useEffect,
-  useState,
-  useSyncExternalStore,
-  useTransition,
-} from "react";
-import {
-  Check,
-  ClipboardCheck,
-  Eye,
-  Loader2,
-  PlayCircle,
-  Search,
-  X,
-} from "lucide-react";
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { Check, Loader2, PlayCircle, Repeat, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { trailOf } from "@/components/equipment/request-history";
@@ -23,7 +11,6 @@ import { RequestLines } from "@/components/equipment/request-lines";
 import { RequestStatusBadge } from "@/components/equipment/request-status-badge";
 import { OrganiserEquipmentAnswer } from "@/components/events/organiser-answers";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -31,28 +18,20 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { AppSelect } from "@/components/app/app-select";
 import { AuditTrail } from "@/components/app/audit-trail";
-import { Tabs } from "@/components/app/tabs";
+import {
+  ConfirmDialog,
+  DECISION_BUTTON,
+} from "@/components/queues/confirm-dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import type { QueuedEquipmentRequest } from "@/lib/equipment/request-queries";
 import {
   EQUIPMENT_REQUEST_STATUS_LABEL,
-  OPEN_REQUEST_STATUSES,
-  formatEventPeriod,
+  isOpenRequest,
 } from "@/lib/equipment/requests";
-import { formatDate, formatDateTime } from "@/lib/datetime";
-import { cn } from "@/lib/utils";
+import { formatDateTime } from "@/lib/datetime";
 import {
   suggestAlternativeEquipment,
   updateEquipmentRequestStatus,
@@ -69,350 +48,33 @@ const DONE_MESSAGE = {
   REJECTED: "Request rejected. The coordinator has been notified.",
 } as const;
 
-const isOpen = (request: QueuedEquipmentRequest) =>
-  (OPEN_REQUEST_STATUSES as readonly string[]).includes(request.status);
-
-function subscribeToHash(onChange: () => void) {
-  window.addEventListener("hashchange", onChange);
-  return () => window.removeEventListener("hashchange", onChange);
-}
-
-const readHash = () => window.location.hash;
-
 /**
- * SCRUM-28 — Technical Support's queue. Requests waiting for review come
- * first, oldest first, so nothing is left behind; decided ones are one tab
- * away, newest decision first, for their history. Shared page conventions:
- * a table searched by event and filtered by status, whose eye opens the
- * request's details and history.
+ * SCRUM-28, SCRUM-211 AC3 — a request's details, on the left of the opened
+ * item: each line's type, quantity and technical requirements, how many are
+ * free for the event, the requests competing for them (SCRUM-134 AC4), what
+ * the Organiser asked for, the history, and the event's operational notes.
  */
-export function ReviewQueue({
-  requests,
+export function ReviewDetails({
+  request,
 }: {
-  requests: QueuedEquipmentRequest[];
+  request: QueuedEquipmentRequest;
 }) {
-  // A link to one request (the reserve card's "View request", SCRUM-155)
-  // opens the tab it is on, until the user picks a tab, brings it into view
-  // and opens it.
-  const hash = useSyncExternalStore(subscribeToHash, readHash, () => "");
-  const linkedId = hash.match(/^#request-(.+)$/)?.[1];
-  const linked = requests.find((request) => request.id === linkedId);
-  const [picked, setTab] = useState<"open" | "decided" | null>(null);
-  const tab = picked ?? (linked && !isOpen(linked) ? "decided" : "open");
-  const [query, setQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState("ALL");
-  const [viewingId, setViewingId] = useState<string | null>(null);
-  // The linked request opens until its pop-up is closed.
-  const [closedLink, setClosedLink] = useState<string | null>(null);
-  const openId =
-    viewingId ?? (linked && linked.id !== closedLink ? linked.id : null);
-  // Read from the list, so the pop-up follows a decision.
-  const viewing = requests.find((request) => request.id === openId) ?? null;
-
-  useEffect(() => {
-    if (!linked) return;
-    document
-      .getElementById(`request-${linked.id}`)
-      ?.scrollIntoView({ block: "start" });
-  }, [linked, tab]);
-
-  const open = requests.filter(isOpen);
-  const decided = requests
-    .filter((request) => !isOpen(request))
-    .sort(
-      (a, b) => (b.decidedAt?.getTime() ?? 0) - (a.decidedAt?.getTime() ?? 0),
-    );
-  const inTab = tab === "open" ? open : decided;
-  const q = query.trim().toLowerCase();
-  const shown = inTab.filter(
-    (request) =>
-      (statusFilter === "ALL" || request.status === statusFilter) &&
-      (!q || request.event.name.toLowerCase().includes(q)),
-  );
-  // The statuses this tab can hold.
-  const statuses = Object.entries(EQUIPMENT_REQUEST_STATUS_LABEL).filter(
-    ([value]) =>
-      (OPEN_REQUEST_STATUSES as readonly string[]).includes(value) ===
-      (tab === "open"),
-  );
-
-  function pickTab(next: "open" | "decided") {
-    setTab(next);
-    setStatusFilter("ALL");
-  }
-
   return (
-    <div className="space-y-4 md:space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-xl font-semibold tracking-tight md:text-2xl">
-          Equipment requests
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          Review what coordinators need, suggest alternatives, and keep them
-          updated.
-        </p>
-      </div>
-
-      <div
-        className="flex flex-wrap gap-2 border-b pb-3"
-        role="group"
-        aria-label="Show requests"
-      >
-        <Button
-          size="sm"
-          variant={tab === "open" ? "secondary" : "ghost"}
-          aria-pressed={tab === "open"}
-          onClick={() => pickTab("open")}
-        >
-          Waiting for review ({open.length})
-        </Button>
-        <Button
-          size="sm"
-          variant={tab === "decided" ? "secondary" : "ghost"}
-          aria-pressed={tab === "decided"}
-          onClick={() => pickTab("decided")}
-        >
-          Decided ({decided.length})
-        </Button>
-      </div>
-
-      {inTab.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center gap-3 py-16 text-center">
-            <span className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
-              <ClipboardCheck className="h-6 w-6" />
-            </span>
-            <p className="text-base font-medium">
-              {tab === "open"
-                ? "No requests waiting for review"
-                : "No decided requests yet"}
-            </p>
-            <p className="max-w-sm text-sm text-muted-foreground">
-              {tab === "open"
-                ? "New equipment requests from coordinators appear here."
-                : "Requests you approve or reject move here, with their history."}
-            </p>
-          </CardContent>
-        </Card>
-      ) : (
-        <>
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="relative w-full max-w-sm">
-              <Search
-                className="pointer-events-none absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-                aria-hidden
-              />
-              <Input
-                type="search"
-                aria-label="Search by event name"
-                placeholder="Search by event name..."
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                className="pl-9"
-              />
-            </div>
-            <AppSelect
-              value={statusFilter}
-              onValueChange={setStatusFilter}
-              aria-label="Filter by status"
-              className="w-44"
-              options={[
-                { value: "ALL", label: "All statuses" },
-                ...statuses.map(([value, label]) => ({ value, label })),
-              ]}
-            />
-          </div>
-          {shown.length === 0 ? (
-            <Card>
-              <CardContent className="flex flex-col items-center gap-2 py-12 text-center">
-                <p className="text-sm font-medium text-muted-foreground">
-                  No requests match the search or filter.
-                </p>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setQuery("");
-                    setStatusFilter("ALL");
-                  }}
-                >
-                  Clear filters
-                </Button>
-              </CardContent>
-            </Card>
-          ) : (
-            <Card>
-              <CardContent className="p-0">
-                <Table aria-label="Equipment requests">
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Event</TableHead>
-                      <TableHead>Requested by</TableHead>
-                      <TableHead>Items</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>
-                        {tab === "open" ? "Submitted" : "Decided"}
-                      </TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {shown.map((request) => (
-                      <TableRow
-                        key={request.id}
-                        id={`request-${request.id}`}
-                        data-testid="review-row"
-                        data-status={request.status}
-                        className={cn(
-                          "scroll-mt-24",
-                          request.id === linkedId && "bg-primary/5",
-                        )}
-                      >
-                        <TableCell className="md:w-full md:max-w-0">
-                          <p
-                            className="truncate font-medium"
-                            title={request.event.name}
-                          >
-                            {request.event.name}
-                          </p>
-                          <p className="truncate text-xs text-muted-foreground">
-                            {formatEventPeriod(request.event)}
-                          </p>
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {request.requestedBy.name ?? "A coordinator"}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {request.lines.length}{" "}
-                          {request.lines.length === 1 ? "item" : "items"}
-                        </TableCell>
-                        <TableCell>
-                          <RequestStatusBadge status={request.status} />
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {formatDate(
-                            tab === "open"
-                              ? request.createdAt
-                              : (request.decidedAt ?? request.createdAt),
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 w-8 p-0"
-                            aria-label={`View details of ${request.event.name}`}
-                            title="View details"
-                            data-testid="view-review-button"
-                            onClick={() => setViewingId(request.id)}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          )}
-        </>
-      )}
-
-      <Dialog
-        open={!!viewing}
-        onOpenChange={(open) => {
-          if (open) return;
-          setViewingId(null);
-          setClosedLink(linked?.id ?? null);
-        }}
-      >
-        {viewing && (
-          <DialogContent
-            className="max-h-[90vh] max-w-2xl overflow-y-auto"
-            data-testid="review-request"
-            data-status={viewing.status}
-          >
-            <DialogHeader>
-              <div className="flex flex-wrap items-center gap-2 pr-8">
-                <DialogTitle>{viewing.event.name}</DialogTitle>
-                <RequestStatusBadge status={viewing.status} />
-              </div>
-              <DialogDescription>
-                {formatEventPeriod(viewing.event)}
-              </DialogDescription>
-            </DialogHeader>
-            <Tabs
-              label="Equipment request"
-              tabs={[
-                {
-                  id: "details",
-                  label: "Details",
-                  content: <ReviewDetails request={viewing} />,
-                },
-                {
-                  id: "history",
-                  label: `History (${viewing.updates.length})`,
-                  content: (
-                    <AuditTrail
-                      entries={trailOf(viewing.updates)}
-                      entryTestId="history-entry"
-                    />
-                  ),
-                },
-              ]}
-            />
-          </DialogContent>
-        )}
-      </Dialog>
-    </div>
-  );
-}
-
-/** A request's lines, what the Organiser asked for, and the review itself. */
-function ReviewDetails({ request }: { request: QueuedEquipmentRequest }) {
-  const [note, setNote] = useState("");
-  const [noteError, setNoteError] = useState<string | null>(null);
-  const [pending, startTransition] = useTransition();
-  const inReview = request.status === "IN_REVIEW";
-  const noteId = `note-${request.id}`;
-
-  const move = (toStatus: keyof typeof DONE_MESSAGE) =>
-    startTransition(async () => {
-      try {
-        const result = await updateEquipmentRequestStatus({
-          requestId: request.id,
-          toStatus,
-          note,
-        });
-        if (!result.ok) {
-          setNoteError(result.fieldErrors?.note?.[0] ?? null);
-          toast.error(result.error);
-          return;
-        }
-        setNote("");
-        setNoteError(null);
-        toast.success(DONE_MESSAGE[toStatus]);
-      } catch {
-        toast.error(OFFLINE);
-      }
-    });
-
-  return (
-    <div className="space-y-4">
-      <p className="text-xs text-muted-foreground">
+    <div
+      className="space-y-4"
+      data-testid="review-request"
+      data-status={request.status}
+    >
+      <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+        <RequestStatusBadge status={request.status} />
         Requested by {request.requestedBy.name ?? "a coordinator"} on{" "}
         {formatDateTime(request.createdAt)}
-      </p>
+      </div>
       <RequestLines
         lines={request.lines}
         detail={(line) => (
           <>
-            <LineAvailability
-              line={line}
-              requestId={request.id}
-              inReview={inReview}
-            />
+            <LineAvailability line={line} />
             <CompetingRequests line={line} />
           </>
         )}
@@ -430,13 +92,107 @@ function ReviewDetails({ request }: { request: QueuedEquipmentRequest }) {
           equipmentRequirements={request.event.equipmentRequirements}
         />
       </div>
+      {/* SCRUM-28 AC5: the request's history. */}
+      <section className="space-y-2" aria-label="History">
+        <h3 className="text-sm font-semibold">
+          History ({request.updates.length})
+        </h3>
+        <AuditTrail
+          entries={trailOf(request.updates)}
+          entryTestId="history-entry"
+        />
+      </section>
+      {/* SCRUM-25 AC6: Technical Support add notes once there is a request. */}
+      <OperationalNotes eventId={request.event.id} />
+    </div>
+  );
+}
 
-      {request.status === "PENDING_REVIEW" && (
-        <div className="flex flex-wrap items-center gap-3">
+/**
+ * SCRUM-28, SCRUM-211 AC3, AC4 — the decision, on the right of the opened
+ * item. A request waiting for review is started first, as before (the
+ * coordinator sees it is In Review). In review, the buttons come in the order
+ * every queue uses: Approve, Suggest alternative, Reject. Reject asks first;
+ * its note stays required. Once approved or rejected, the next waiting
+ * request opens; a refusal is shown here and the request stays open.
+ */
+export function ReviewDecision({
+  request,
+  nextHref,
+}: {
+  request: QueuedEquipmentRequest;
+  nextHref: string;
+}) {
+  const [note, setNote] = useState("");
+  const [noteError, setNoteError] = useState<string | null>(null);
+  const [refusal, setRefusal] = useState<string | null>(null);
+  const [rejecting, setRejecting] = useState(false);
+  const [suggesting, setSuggesting] = useState(false);
+  const [pending, startTransition] = useTransition();
+  const router = useRouter();
+  const noteId = `note-${request.id}`;
+  const shortLines = request.lines.filter((line) => line.review?.shortfall);
+
+  if (!isOpenRequest(request)) {
+    return (
+      <div className="space-y-2 rounded-xl border bg-card p-4">
+        <h2 className="text-sm font-semibold">Decided</h2>
+        <p className="text-sm text-muted-foreground" data-testid="decided-note">
+          {EQUIPMENT_REQUEST_STATUS_LABEL[request.status]}
+          {request.decidedAt && ` on ${formatDateTime(request.decidedAt)}`}.
+        </p>
+      </div>
+    );
+  }
+
+  const move = (toStatus: keyof typeof DONE_MESSAGE) =>
+    startTransition(async () => {
+      try {
+        const result = await updateEquipmentRequestStatus({
+          requestId: request.id,
+          toStatus,
+          note,
+        });
+        if (!result.ok) {
+          setRejecting(false);
+          setNoteError(result.fieldErrors?.note?.[0] ?? null);
+          setRefusal(result.fieldErrors?.note ? null : result.error);
+          toast.error(result.error);
+          router.refresh();
+          return;
+        }
+        toast.success(DONE_MESSAGE[toStatus]);
+        setNote("");
+        setNoteError(null);
+        setRefusal(null);
+        if (toStatus === "IN_REVIEW") router.refresh();
+        else router.push(nextHref);
+      } catch {
+        toast.error(OFFLINE);
+      }
+    });
+
+  return (
+    <div
+      className="space-y-3 rounded-xl border bg-card p-4"
+      data-testid="review-decision"
+    >
+      <h2 className="text-sm font-semibold">Decision</h2>
+      {refusal && (
+        <p
+          role="alert"
+          className="text-sm text-destructive"
+          data-testid="decision-refused"
+        >
+          {refusal}
+        </p>
+      )}
+      {request.status === "PENDING_REVIEW" ? (
+        <>
           <Button
             onClick={() => move("IN_REVIEW")}
             disabled={pending}
-            className="gap-2"
+            className="w-full gap-2"
           >
             {pending ? <Loader2 className="animate-spin" /> : <PlayCircle />}
             Start review
@@ -444,59 +200,98 @@ function ReviewDetails({ request }: { request: QueuedEquipmentRequest }) {
           <p className="text-xs text-muted-foreground">
             The coordinator sees the request is In Review.
           </p>
-        </div>
-      )}
-
-      {inReview && (
-        <div className="space-y-2 rounded-md border p-3">
-          <Label htmlFor={noteId}>Note for the coordinator</Label>
-          <Textarea
-            id={noteId}
-            rows={2}
-            value={note}
-            placeholder="Required when rejecting: say why, so they can adjust the request."
-            aria-invalid={Boolean(noteError)}
-            aria-describedby={noteError ? `${noteId}-error` : undefined}
-            onChange={(e) => {
-              setNote(e.target.value);
-              setNoteError(null);
-            }}
-          />
-          {noteError && (
-            <p id={`${noteId}-error`} className="text-xs text-destructive">
-              {noteError}
-            </p>
-          )}
-          <div className="flex flex-wrap gap-2 pt-1">
+        </>
+      ) : (
+        <>
+          <div className="space-y-1">
+            <Label htmlFor={noteId}>Note for the coordinator</Label>
+            <Textarea
+              id={noteId}
+              rows={3}
+              value={note}
+              placeholder="Required when rejecting: say why, so they can adjust the request."
+              aria-invalid={Boolean(noteError)}
+              aria-describedby={noteError ? `${noteId}-error` : undefined}
+              onChange={(e) => {
+                setNote(e.target.value);
+                setNoteError(null);
+              }}
+            />
+            {noteError && (
+              <p id={`${noteId}-error`} className="text-xs text-destructive">
+                {noteError}
+              </p>
+            )}
+          </div>
+          <div className="flex flex-col gap-2">
             <Button
+              variant="outline"
               onClick={() => move("APPROVED")}
               disabled={pending}
-              className="gap-2"
+              className={`${DECISION_BUTTON.positive} gap-2`}
             >
               {pending ? <Loader2 className="animate-spin" /> : <Check />}
               Approve
             </Button>
             <Button
-              variant="destructive"
-              onClick={() => move("REJECTED")}
+              variant="outline"
+              onClick={() => setSuggesting(true)}
+              disabled={pending || shortLines.length === 0}
+              title={
+                shortLines.length === 0 ? "Every line is available." : undefined
+              }
+              className={`${DECISION_BUTTON.middle} gap-2`}
+            >
+              <Repeat />
+              Suggest alternative
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => setRejecting(true)}
               disabled={pending}
-              className="gap-2"
+              className={`${DECISION_BUTTON.negative} gap-2`}
             >
               <X />
               Reject
             </Button>
           </div>
-        </div>
+        </>
       )}
 
-      {request.decidedAt && !isOpen(request) && (
-        <p className="text-xs text-muted-foreground">
-          Decided {formatDateTime(request.decidedAt)}
-        </p>
-      )}
+      <ConfirmDialog
+        open={rejecting}
+        onOpenChange={setRejecting}
+        title="Reject this equipment request?"
+        description={
+          note.trim()
+            ? `The coordinator is told why: “${note.trim()}”`
+            : "A note for the coordinator is required: say why, so they can adjust the request."
+        }
+        confirmLabel="Reject request"
+        pending={pending}
+        onConfirm={() => move("REJECTED")}
+      />
 
-      {/* SCRUM-25 AC6: Technical Support add notes once there is a request. */}
-      <OperationalNotes eventId={request.event.id} />
+      <Dialog open={suggesting} onOpenChange={setSuggesting}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Suggest an alternative</DialogTitle>
+            <DialogDescription>
+              For each line that is short, choose equipment that could cover the
+              whole quantity. The coordinator sees the suggestion.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            {shortLines.map((line) => (
+              <LineSuggestion
+                key={line.id}
+                line={line}
+                requestId={request.id}
+              />
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -516,8 +311,9 @@ function CompetingRequests({ line }: { line: QueuedLine }) {
       <ul className="space-y-0.5">
         {line.competing.map((other) => (
           <li key={other.requestId}>
-            &ldquo;{other.eventName}&rdquo;, submitted {formatDateTime(other.submittedAt)}:{" "}
-            {other.quantity} requested, {other.reserved} reserved
+            &ldquo;{other.eventName}&rdquo;, submitted{" "}
+            {formatDateTime(other.submittedAt)}: {other.quantity} requested,{" "}
+            {other.reserved} reserved
           </li>
         ))}
       </ul>
@@ -525,40 +321,48 @@ function CompetingRequests({ line }: { line: QueuedLine }) {
   );
 }
 
+/** SCRUM-28 AC 1 — how a line stands against what is free for the event. */
+function LineAvailability({ line }: { line: QueuedLine }) {
+  if (!line.review) return null;
+  const { available, total, shortfall } = line.review;
+  return shortfall ? (
+    <p
+      className="text-xs font-medium text-destructive"
+      data-testid="line-availability"
+      data-short="true"
+    >
+      Unavailable: only {available} of {total} free for this event, {shortfall}{" "}
+      short.
+    </p>
+  ) : (
+    <p
+      className="text-xs text-success"
+      data-testid="line-availability"
+      data-short="false"
+    >
+      Available: {available} of {total} free for this event.
+    </p>
+  );
+}
+
 /**
- * SCRUM-28 AC 1 & 4 — how a line stands against what is free for the event,
- * and, when it is short and the request is in review, the alternatives that
- * could cover the whole quantity.
+ * SCRUM-28 AC 4 — for a short line, the alternatives that could cover the
+ * whole quantity, and the suggestion sent to the coordinator.
  */
-function LineAvailability({
+function LineSuggestion({
   line,
   requestId,
-  inReview,
 }: {
   line: QueuedLine;
   requestId: string;
-  inReview: boolean;
 }) {
   const [alternativeId, setAlternativeId] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
-
-  if (!line.review) return null;
-  const { available, total, shortfall, alternatives } = line.review;
-
-  if (!shortfall) {
-    return (
-      <p
-        className="text-xs text-success"
-        data-testid="line-availability"
-        data-short="false"
-      >
-        Available: {available} of {total} free for this event.
-      </p>
-    );
-  }
-
+  const router = useRouter();
+  const alternatives = line.review?.alternatives ?? [];
   const selectId = `alternative-${line.id}`;
+
   const suggest = () =>
     startTransition(async () => {
       try {
@@ -578,73 +382,62 @@ function LineAvailability({
         toast.success(`${type} suggested to the coordinator.`);
         setAlternativeId("");
         setError(null);
+        router.refresh();
       } catch {
         toast.error(OFFLINE);
       }
     });
 
+  if (alternatives.length === 0) {
+    return (
+      <p className="text-sm text-muted-foreground">
+        No other equipment type has {line.quantity} free for this event, to
+        replace {line.equipment.type}.
+      </p>
+    );
+  }
   return (
     <div
-      className="space-y-2 rounded-md border border-destructive/30 bg-destructive/5 p-3"
-      data-testid="line-availability"
-      data-short="true"
+      className="flex flex-wrap items-end gap-2"
+      data-testid="line-suggestion"
     >
-      <p className="text-xs font-medium text-destructive">
-        Unavailable: only {available} of {total} free for this event,{" "}
-        {shortfall} short.
-      </p>
-      {!inReview ? (
-        <p className="text-xs text-muted-foreground">
-          Start the review to suggest an alternative.
+      <div className="min-w-48 flex-1 space-y-1">
+        <Label htmlFor={selectId} className="text-xs">
+          {line.suggestedAlternative
+            ? `Change the suggestion for ${line.equipment.type}`
+            : `Suggest instead of ${line.equipment.type}`}
+        </Label>
+        <AppSelect
+          id={selectId}
+          className="h-9"
+          value={alternativeId}
+          placeholder="Choose equipment"
+          aria-invalid={Boolean(error)}
+          aria-describedby={error ? `${selectId}-error` : undefined}
+          onValueChange={(value) => {
+            setAlternativeId(value);
+            setError(null);
+          }}
+          options={alternatives.map((item) => ({
+            value: item.id,
+            label: `${item.type} (${item.available} free)`,
+          }))}
+        />
+      </div>
+      <Button
+        size="sm"
+        variant="outline"
+        onClick={suggest}
+        disabled={pending || !alternativeId}
+        className="gap-2"
+      >
+        {pending && <Loader2 className="animate-spin" />}
+        Suggest
+      </Button>
+      {error && (
+        <p id={`${selectId}-error`} className="w-full text-xs text-destructive">
+          {error}
         </p>
-      ) : alternatives.length === 0 ? (
-        <p className="text-xs text-muted-foreground">
-          No other equipment type has {line.quantity} free for this event.
-        </p>
-      ) : (
-        <div className="flex flex-wrap items-end gap-2">
-          <div className="min-w-48 flex-1 space-y-1">
-            <Label htmlFor={selectId} className="text-xs">
-              {line.suggestedAlternative
-                ? `Change the suggestion for ${line.equipment.type}`
-                : `Suggest instead of ${line.equipment.type}`}
-            </Label>
-            <AppSelect
-              id={selectId}
-              className="h-9"
-              value={alternativeId}
-              placeholder="Choose equipment"
-              aria-invalid={Boolean(error)}
-              aria-describedby={error ? `${selectId}-error` : undefined}
-              onValueChange={(value) => {
-                setAlternativeId(value);
-                setError(null);
-              }}
-              options={alternatives.map((item) => ({
-                value: item.id,
-                label: `${item.type} (${item.available} free)`,
-              }))}
-            />
-          </div>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={suggest}
-            disabled={pending || !alternativeId}
-            className="gap-2"
-          >
-            {pending && <Loader2 className="animate-spin" />}
-            Suggest
-          </Button>
-          {error && (
-            <p
-              id={`${selectId}-error`}
-              className="w-full text-xs text-destructive"
-            >
-              {error}
-            </p>
-          )}
-        </div>
       )}
     </div>
   );

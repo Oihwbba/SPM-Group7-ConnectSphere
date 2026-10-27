@@ -171,7 +171,6 @@ describe("a request's details in the queue — SCRUM-40 AC10", () => {
               recordedByName: "Cody Coordinator",
             },
           }}
-        canDecide
       />,
     );
 
@@ -181,7 +180,7 @@ describe("a request's details in the queue — SCRUM-40 AC10", () => {
   });
 
   it("SCRUM-40 [AC10] TC-40-11: without a judgement it says none was recorded, and the accessibility needed is shown", () => {
-    const html = renderToStaticMarkup(<BookingDetails booking={row} canDecide />);
+    const html = renderToStaticMarkup(<BookingDetails booking={row} />);
 
     expect(html).toContain("None recorded");
     expect(html).toContain("Accessibility needed");

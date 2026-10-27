@@ -96,7 +96,7 @@ and the app is running. The event is in Planning, assigned to
 | Test Case ID | TC-166-04 |
 | Test Scenario | [Positive] AC 3, AC 5, AC 14: the Safety Officer approves |
 | Pre-conditions | A check awaits review. Signed in as `safety@test.local`. |
-| Test Steps | 1. Open **Safety Checks** and the event. <br> 2. Choose **Approve** and click **Record outcome**. |
+| Test Steps | 1. Open **Safety Checks** and the event. <br> 2. Choose **Approve**. |
 | Test Data | No note. |
 | Expected Result | The status reads Approved, with who and when. Nothing is flagged and the event stays in Planning. |
 
@@ -109,7 +109,7 @@ and the app is running. The event is in Planning, assigned to
 | Test Case ID | TC-166-05 |
 | Test Scenario | [Positive] AC 3, AC 10: Changes requested flags the picked arrangements with the note |
 | Pre-conditions | A check awaits review. |
-| Test Steps | Choose **Request changes**, tick Exhibition Hall, write a note, click **Record outcome**. |
+| Test Steps | Choose **Request changes**; in the dialog, tick Exhibition Hall, write a note, and choose **Request changes**. |
 | Test Data | Note "Move the stage away from the east exit." |
 | Expected Result | The check is Changes requested with the note and the picked booking kept. The booking stays Approved and is flagged "Safety check changes requested: …". The event stays in Planning. |
 
@@ -150,7 +150,7 @@ and the app is running. The event is in Planning, assigned to
 | Pre-conditions | A check awaits review. |
 | Test Steps | 1. Choose **Request changes** with no note and no pick. <br> 2. Send it directly; send a pick from another event. |
 | Test Data | — |
-| Expected Result | 1. **Record outcome** stays disabled. 2. "A note is required for Changes requested or Rejected.", "Pick at least one venue booking or equipment reservation the changes affect." or "Pick only this event's current venue bookings or equipment reservations." Nothing is written. |
+| Expected Result | 1. The dialog's **Request changes** stays disabled. 2. "A note is required for Changes requested or Rejected.", "Pick at least one venue booking or equipment reservation the changes affect." or "Pick only this event's current venue bookings or equipment reservations." Nothing is written. |
 
 **Automated by:** `tests/unit/safety-check-outcome.test.ts` › "SCRUM-166 [AC3] TC-166-08: …" (2 tests); `e2e/safety-check.spec.ts` (TC-166-16)
 
@@ -252,7 +252,7 @@ and the app is running. The event is in Planning, assigned to
 | Test Case ID | TC-166-16 |
 | Test Scenario | [Positive, Negative] AC 3, AC 4, AC 10: request changes in the browser |
 | Pre-conditions | A check awaits review. |
-| Test Steps | 1. As the Safety Officer, choose **Request changes**; see **Record outcome** disabled without a note, then without a pick; add both and record. <br> 2. Open the event as the Coordinator, then as the Organiser. |
+| Test Steps | 1. As the Safety Officer, choose **Request changes**; see the dialog's **Request changes** disabled without a note, then without a pick; add both and record. <br> 2. Open the event as the Coordinator, then as the Organiser. |
 | Test Data | Note "Keep the east fire exit clear of seating." |
 | Expected Result | 2. The Coordinator sees "Changes requested – <note>" and the venue's Needs Reconsideration badge; the Organiser sees Changes requested without the note. |
 
