@@ -55,6 +55,7 @@ the customer where it matters, so you rarely need to open the folder.
 | Build a feature and open a pull request | [`CONTRIBUTING.md`](CONTRIBUTING.md) |
 | Know why something is built the way it is | [`docs/adr/`](docs/adr/README.md) |
 | Add a column or table | [`docs/data-model.md`](docs/data-model.md) |
+| See each sprint's commitment and outcome, how we estimate, and the Definition of Done | [`docs/scrum/`](docs/scrum/README.md) |
 | Work with an AI coding assistant | [`CLAUDE.md`](CLAUDE.md) |
 
 ## Stack
@@ -422,6 +423,7 @@ docs/
   testing/                    Test case specifications, one file per story
   data-model.md               What each table is for and which story needs it
   adr/                        Architecture Decision Records, with an index
+  scrum/                      Sprint records, estimation and the Definition of Done
   evidence/                   Screenshots and CI logs captured for sprint reviews
 .github/
   workflows/                  CI, the GLM review, its memory, and deploys

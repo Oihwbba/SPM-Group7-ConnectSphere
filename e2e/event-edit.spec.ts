@@ -1,7 +1,7 @@
 import { test, expect, type Page, type Route } from "@playwright/test";
 import { prisma } from "@/lib/db";
 
-import { signedIn, usesLocalDatabase, pickOptions, openBooking, openReview } from "./helpers";
+import { signedIn, usesLocalDatabase, pickOptions, openBooking, openReview, openEvent } from "./helpers";
 
 /**
  * SCRUM-25 — editing an event's details and adding operational notes in a
@@ -46,12 +46,9 @@ function isServerAction(route: Route): boolean {
   return request.method() === "POST" && Boolean(request.headers()["next-action"]);
 }
 
-async function openDetails(page: Page, eventName: string) {
-  await page
-    .getByRole("row", { name: new RegExp(eventName) })
-    .getByTestId("view-details-button")
-    .click();
-  return page.getByRole("dialog").first();
+/** SCRUM-208: the event's page, on the tab this journey works in. */
+async function openDetails(page: Page, eventName: string, tab = "Request") {
+  return openEvent(page, eventName, tab);
 }
 
 test.describe("SCRUM-25 — update routine event information during planning", () => {
@@ -136,10 +133,8 @@ test.describe("SCRUM-25 — update routine event information during planning", (
     // AC3, SCRUM-26 AC1: the venue is requested, so an attendance change
     // first lists the booking it will flag, and saves nothing until confirmed.
     await coordinator.goto("/events");
-    await openDetails(coordinator, NAME);
-    // The open event's details, named so a locator never lands on the edit
-    // dialog, which hides them from the accessibility tree while it is open.
-    const details = coordinator.getByRole("dialog", { name: NAME, exact: true });
+    // SCRUM-208: the checklist is on Arrangements; the flags on Changes.
+    const details = await openDetails(coordinator, NAME, "Arrangements");
     // Before the flag: nothing to reconsider, and the venue reads Pending.
     const flaggedPanel = details.getByTestId("reconsideration-panel");
     const venueItem = details.getByTestId("readiness-item-venue");
@@ -171,17 +166,18 @@ test.describe("SCRUM-25 — update routine event information during planning", (
       ),
     ).toBeVisible();
 
-    // TC-25-21: the flag shows in the open event's details straight away, in
-    // the panel and the readiness checklist, without reopening the event.
+    // TC-25-21: the flag shows on the open event's page straight away, in
+    // the checklist and the flags panel, without reopening the event.
     await expect(edit).toHaveCount(0);
+    await expect(venueItem).toContainText(
+      "Pending Needs Reconsideration – The event's expected attendance changed.",
+    );
+    await details.getByRole("tab", { name: /^Changes/ }).click();
     await expect(flaggedPanel.getByTestId("flagged-booking")).toContainText(
       "Exhibition Hall (Pending)",
     );
     await expect(flaggedPanel.getByTestId("flagged-booking")).toContainText(
       "The event's expected attendance changed.",
-    );
-    await expect(venueItem).toContainText(
-      "Pending Needs Reconsideration – The event's expected attendance changed.",
     );
     expect(
       await prisma.booking.findFirstOrThrow({
@@ -202,7 +198,7 @@ test.describe("SCRUM-25 — update routine event information during planning", (
 
     // AC6: an operational note, shown with its author.
     await coordinator.goto("/events");
-    dialog = await openDetails(coordinator, NAME);
+    dialog = await openDetails(coordinator, NAME, "Notes");
     const notes = dialog.getByTestId("operational-notes");
     await notes.getByLabel("Add a note").fill("Auction items arrive at 17:00.");
     await notes.getByRole("button", { name: "Add note" }).click();
@@ -232,7 +228,7 @@ test.describe("SCRUM-25 — update routine event information during planning", (
 
     const organiser = await signedIn(browser, "organiser@test.local");
     await organiser.goto("/events");
-    const dialog = await openDetails(organiser, NAME);
+    const dialog = await openDetails(organiser, NAME, "Notes");
     const notes = dialog.getByTestId("operational-notes");
     await expect(notes.getByText("Banquet tables confirmed for 120.")).toBeVisible();
     await expect(notes.getByLabel("Add a note")).toHaveCount(0);
@@ -279,7 +275,7 @@ test.describe("SCRUM-25 — update routine event information during planning", (
     const NOTE = "Stage riser delivered and checked.";
     const coordinator = await signedIn(browser, "coordinator@test.local");
     await coordinator.goto("/events");
-    const dialog = await openDetails(coordinator, NAME);
+    const dialog = await openDetails(coordinator, NAME, "Notes");
     const notes = dialog.getByTestId("operational-notes");
     await expect(notes.getByLabel("Add a note")).toBeVisible();
 
@@ -422,8 +418,7 @@ test.describe("SCRUM-25 — with the safety check and registration control", () 
 
     const coordinator = await signedIn(browser, "coordinator@test.local");
     await coordinator.goto("/events");
-    await openDetails(coordinator, name);
-    const details = coordinator.getByRole("dialog", { name, exact: true });
+    const details = await openDetails(coordinator, name, "Arrangements");
     const safety = details.getByTestId("readiness-item-safety");
     await details.getByRole("button", { name: "Request safety check" }).click();
     await expect(safety).toContainText("Awaiting review");
@@ -486,7 +481,7 @@ test.describe("SCRUM-25 — with the safety check and registration control", () 
     // but registration and notes aren't details.
     const coordinator = await signedIn(browser, "coordinator@test.local");
     await coordinator.goto("/events");
-    let dialog = await openDetails(coordinator, name);
+    let dialog = await openDetails(coordinator, name, "Registrations");
     let panel = dialog.getByTestId("registration-control");
     await expect(panel.getByTestId("registration-control-state")).toHaveText("Open");
     await expect(dialog.getByRole("button", { name: "Edit details" })).toHaveCount(0);
@@ -494,6 +489,7 @@ test.describe("SCRUM-25 — with the safety check and registration control", () 
     await expect(panel.getByTestId("registration-control-state")).toHaveText(
       "Registration closed",
     );
+    await dialog.getByRole("tab", { name: /^Notes/ }).click();
     const notes = dialog.getByTestId("operational-notes");
     await notes.getByLabel("Add a note").fill(NOTE);
     await notes.getByRole("button", { name: "Add note" }).click();
@@ -502,7 +498,7 @@ test.describe("SCRUM-25 — with the safety check and registration control", () 
     // AC4: the Organiser's only direct control is registration.
     const organiser = await signedIn(browser, "organiser@test.local");
     await organiser.goto("/events");
-    dialog = await openDetails(organiser, name);
+    dialog = await openDetails(organiser, name, "Registrations");
     panel = dialog.getByTestId("registration-control");
     await expect(dialog.getByRole("button", { name: "Edit details" })).toHaveCount(0);
     await expect(dialog.getByTestId("operational-notes").getByLabel("Add a note")).toHaveCount(0);

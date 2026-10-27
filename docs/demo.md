@@ -14,7 +14,9 @@ e2e spec that automates the same steps. Created for SCRUM-198.
 2. Every account's password is `Password123!`. The accounts are listed in the
    README under "Sign in".
 3. Use two browser windows (one private) where a step needs two people at once.
-4. **Open an event** by clicking its row in **Events** (or **My Events**).
+4. **Open an event** by clicking its name in **Events** (or **My Events**). It
+   opens on its own page (SCRUM-208), with tabs such as **Clarification** and
+   **Changes**.
    "Switch to *account*" means sign out and sign in as that account.
 
 The seeded dates are relative to the day you seed. **Planning — Freshman

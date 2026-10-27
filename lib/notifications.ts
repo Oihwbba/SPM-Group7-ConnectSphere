@@ -55,8 +55,9 @@ export function notificationHref(
       ? `/events/${event.id}`
       : null;
   }
+  // SCRUM-208: the event's own page, which checks who may see it.
   if (event && can(user, "event:list")) {
-    return `/events?event=${event.id}`;
+    return `/events/${event.id}`;
   }
   return notification.link;
 }
