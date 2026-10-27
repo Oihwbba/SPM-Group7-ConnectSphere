@@ -288,7 +288,7 @@ test.describe("SCRUM-27 — Create Equipment Request", () => {
     await expect(dialog).toBeVisible();
   });
 
-  test("equipment picked but not yet added is included when the request is submitted", async ({
+  test("SCRUM-27 [AC6] TC-27-16: equipment picked but not yet added is included when the request is submitted", async ({
     page,
   }) => {
     const rig = await makeRig("pending-line");
@@ -307,7 +307,7 @@ test.describe("SCRUM-27 — Create Equipment Request", () => {
 });
 
 test.describe("SCRUM-27 — who can raise equipment requests", () => {
-  test("a coordinator finds Equipment Requests in their navigation", async ({
+  test("SCRUM-27 [AC1] TC-27-01: a coordinator finds Equipment Requests in their navigation", async ({
     page,
   }) => {
     await signIn(page, "coordinator@test.local");

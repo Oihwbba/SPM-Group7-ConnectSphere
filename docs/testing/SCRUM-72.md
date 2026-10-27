@@ -52,7 +52,7 @@ events in other statuses, including a Cancelled one.
 | Test Data | The seeded event with a window |
 | Expected Result | The page shows when registration opens and closes, in SGT, and 40 places left. |
 
-**Automated by:** `tests/unit/registration-state.test.ts` › "SCRUM-72 AC3: a set window shows its opening and closing times", "AC: subtracts active registrations from the total"; `e2e/attendee-events.spec.ts` › "AC: an open event's detail page shows the registration period and an honestly-disabled Register button"
+**Automated by:** `tests/unit/registration-state.test.ts` › "SCRUM-72 AC3: a set window shows its opening and closing times", "AC: subtracts active registrations from the total"; `e2e/attendee-events.spec.ts` › "SCRUM-72 [AC3] TC-72-02: an open event's detail page shows the registration period and an honestly-disabled Register button"
 
 ### TC-72-03
 
@@ -65,7 +65,7 @@ events in other statuses, including a Cancelled one.
 | Test Data | The three events |
 | Expected Result | All three are listed. Each shows its state ("Registration not yet open" or "Registration closed") with **Register** disabled. |
 
-**Automated by:** `tests/unit/registration-state.test.ts` › "[Negative] AC: registrationOpensAt in the future → NOT_YET_OPEN", "[Negative] AC: registrationEnabled false → CLOSED, regardless of capacity or period", "[Negative] AC: registrationClosesAt in the past → EXPIRED", "has a human label for every state (exhaustive at the type level too)"; `e2e/attendee-events.spec.ts` › "AC4, AC8: going straight to /events/${id} shows …"
+**Automated by:** `tests/unit/registration-state.test.ts` › "[Negative] AC: registrationOpensAt in the future → NOT_YET_OPEN", "[Negative] AC: registrationEnabled false → CLOSED, regardless of capacity or period", "[Negative] AC: registrationClosesAt in the past → EXPIRED", "has a human label for every state (exhaustive at the type level too)"; `e2e/attendee-events.spec.ts` › "SCRUM-72 [AC4, AC8] TC-72-03: going straight to /events/${id} shows "${label}" with Register disabled"
 
 ### TC-72-04
 
@@ -91,7 +91,7 @@ events in other statuses, including a Cancelled one.
 | Test Data | The seeded full event |
 | Expected Result | The full event is listed and shown as "Full", with **Register** disabled. The other is open. |
 
-**Automated by:** `tests/unit/registration-state.test.ts` › "[Negative] AC: remaining capacity zero → FULL", "[Boundary] AC: one remaining place → OPEN, not FULL"; `e2e/attendee-events.spec.ts` › "AC: opening a full event's detail page shows it as full with the register action disabled"
+**Automated by:** `tests/unit/registration-state.test.ts` › "[Negative] AC: remaining capacity zero → FULL", "[Boundary] AC: one remaining place → OPEN, not FULL"; `e2e/attendee-events.spec.ts` › "SCRUM-72 [AC6] TC-72-05, SCRUM-74 [AC4] TC-74-04: opening a full event's detail page shows it as full with the register action disabled"
 
 ### TC-72-06
 
@@ -117,7 +117,7 @@ events in other statuses, including a Cancelled one.
 | Test Data | The events' ids; a made-up id |
 | Expected Result | Each returns "not found", the same for a hidden event as for a missing one. |
 
-**Automated by:** `tests/unit/attendee-events.test.ts` › "[Negative] a missing id returns null without distinguishing it from a not-yet-visible one", "[Security gate] a role without event:browse (e.g. VENUE_STAFF) is refused before the query even runs", "[Negative] a signed-out caller is refused"; `e2e/attendee-events.spec.ts` › "AC: direct event URLs do not bypass visibility rules — a Cancelled event 404s for an Attendee", "a non-existent event id 404s the same way as a real but invisible one", "an Organiser hitting a Confirmed event's attendee-detail URL still 404s (unchanged pre-existing behaviour)"; `e2e/attendee-events.spec.ts` › "AC7, AC8: going straight to /events/${id} (not Confirmed) 404s", run for a Draft, a Planning and a Completed event
+**Automated by:** `tests/unit/attendee-events.test.ts` › "[Negative] a missing id returns null without distinguishing it from a not-yet-visible one", "[Security gate] a role without event:browse (e.g. VENUE_STAFF) is refused before the query even runs", "[Negative] a signed-out caller is refused"; `e2e/attendee-events.spec.ts` › "SCRUM-72 [AC8] TC-72-07: direct event URLs do not bypass visibility rules — a Cancelled event 404s for an Attendee", "SCRUM-72 [AC8] TC-72-07: a non-existent event id 404s the same way as a real but invisible one", "an Organiser hitting a Confirmed event's attendee-detail URL still 404s (unchanged pre-existing behaviour)"; `e2e/attendee-events.spec.ts` › "SCRUM-72 [AC7, AC8] TC-72-07: going straight to /events/${id} (not Confirmed) 404s", run for a Draft, a Planning and a Completed event
 
 ### TC-72-08
 
@@ -130,4 +130,4 @@ events in other statuses, including a Cancelled one.
 | Test Data | A keyword with spaces around it |
 | Expected Result | Only events whose name or description contains the keyword are listed; clearing it lists them all again. |
 
-**Automated by:** `tests/unit/attendee-events-search.test.ts` › "[Positive] keeps events whose name contains the keyword", "[Positive] matches the description too, ignoring upper/lower case", "[Positive] a blank or whitespace keyword keeps every event", "[Boundary] trims surrounding spaces before matching"; `e2e/attendee-events.spec.ts` › "SCRUM-72 review: typing a keyword narrows the list to matching events, ignoring case"
+**Automated by:** `tests/unit/attendee-events-search.test.ts` › "[Positive] keeps events whose name contains the keyword", "[Positive] matches the description too, ignoring upper/lower case", "[Positive] a blank or whitespace keyword keeps every event", "[Boundary] trims surrounding spaces before matching"; `e2e/attendee-events.spec.ts` › "SCRUM-72 [AC1] TC-72-08, SCRUM-168 [AC2] TC-168-02: typing a keyword narrows the list to matching events, ignoring case"

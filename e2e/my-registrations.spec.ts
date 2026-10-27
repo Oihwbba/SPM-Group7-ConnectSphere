@@ -23,7 +23,7 @@ function card(page: Page, eventName: string) {
 }
 
 test.describe("SCRUM-76 — Attendee views their registration status", () => {
-  test("AC1, AC2: my list shows each event's name, date, venue and status", async ({
+  test("SCRUM-76 [AC1, AC2] TC-76-01: my list shows each event's name, date, venue and status", async ({
     page,
   }) => {
     await signInAs(page, "attendee3@test.local");
@@ -47,7 +47,7 @@ test.describe("SCRUM-76 — Attendee views their registration status", () => {
     ).toHaveText("Withdrawn");
   });
 
-  test("AC5: the list contains only my registrations", async ({ page }) => {
+  test("SCRUM-76 [AC5] TC-76-04: the list contains only my registrations", async ({ page }) => {
     await signInAs(page, "attendee3@test.local");
     await page.goto("/registrations");
 
@@ -58,7 +58,7 @@ test.describe("SCRUM-76 — Attendee views their registration status", () => {
     );
   });
 
-  test("AC3: a registration for an event ConnectSphere cancelled shows as Cancelled", async ({
+  test("SCRUM-76 [AC3] TC-76-02, SCRUM-85 [AC4, AC5, AC12] TC-85-09: a registration for an event ConnectSphere cancelled shows as Cancelled", async ({
     page,
   }) => {
     await signInAs(page, "attendee@test.local");
@@ -71,7 +71,7 @@ test.describe("SCRUM-76 — Attendee views their registration status", () => {
     ).toHaveText("Cancelled");
   });
 
-  test("an Attendee with no registrations sees the empty state with a link to browse events", async ({
+  test("SCRUM-76 [AC1] TC-76-05: an Attendee with no registrations sees the empty state with a link to browse events", async ({
     page,
   }) => {
     await signInAs(page, "attendee4@test.local");
@@ -86,7 +86,7 @@ test.describe("SCRUM-76 — Attendee views their registration status", () => {
     await page.waitForURL("**/events");
   });
 
-  test("an Organiser typing /registrations directly is refused", async ({
+  test("SCRUM-76 [AC5] TC-76-04: an Organiser typing /registrations directly is refused", async ({
     page,
   }) => {
     await signInAs(page, "organiser@test.local");

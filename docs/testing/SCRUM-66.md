@@ -46,7 +46,7 @@ and the app is running. Every seeded account's password is `Password123!`.
 | Test Data | A submitted request |
 | Expected Result | The Organiser has no venue, equipment or booking links and no decision buttons. The Coordinator sees the decision buttons. The Coordinator sees equipment requests but not the equipment pool. |
 
-**Automated by:** `tests/unit/nav.test.ts` › "keeps venue, equipment and booking work out of an organiser's nav", "shows a coordinator equipment requests but not the equipment pool", "shows Technical Support the equipment pool and the requests to review", "gives an attendee only their events and registrations", "never shows a link a role has no action for"; `e2e/access-control.spec.ts` › "an organiser sees no coordinator decision controls on /events", "a coordinator sees the decision controls on a request under review"
+**Automated by:** `tests/unit/nav.test.ts` › "keeps venue, equipment and booking work out of an organiser's nav", "shows a coordinator equipment requests but not the equipment pool", "shows Technical Support the equipment pool and the requests to review", "gives an attendee only their events and registrations", "never shows a link a role has no action for"; `e2e/access-control.spec.ts` › "SCRUM-66 [AC3] TC-66-02: an organiser sees no coordinator decision controls on /events", "SCRUM-66 [AC3] TC-66-02: a coordinator sees the decision controls on a request under review"
 
 ### TC-66-03
 

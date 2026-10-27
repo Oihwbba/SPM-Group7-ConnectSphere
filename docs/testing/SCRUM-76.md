@@ -36,7 +36,7 @@ who has registrations in the seed.
 | Test Data | The seeded registrations |
 | Expected Result | Each row shows the event's name, date, time and venue, and the status "Registered" or "Withdrawn", soonest event first. When the event has two venues, each approved venue is shown, in the order requested (SCRUM-162 AC 7, which superseded showing only the one in use at its start). |
 
-**Automated by:** `tests/unit/my-registrations.test.ts` › "[Positive] AC1: fetches the event name, date, time, venue and the registration status", "SCRUM-162 [AC7], SCRUM-85 [AC8] TC-85-06: every approved venue is read, in the order requested, with what was last confirmed for an event being re-planned", "[Positive] lists the soonest event first"; `e2e/my-registrations.spec.ts` › "AC1, AC2: my list shows each event's name, date, venue and status"
+**Automated by:** `tests/unit/my-registrations.test.ts` › "[Positive] AC1: fetches the event name, date, time, venue and the registration status", "SCRUM-162 [AC7], SCRUM-85 [AC8] TC-85-06: every approved venue is read, in the order requested, with what was last confirmed for an event being re-planned", "[Positive] lists the soonest event first"; `e2e/my-registrations.spec.ts` › "SCRUM-76 [AC1, AC2] TC-76-01: my list shows each event's name, date, venue and status"
 
 ### TC-76-02
 
@@ -49,7 +49,7 @@ who has registrations in the seed.
 | Test Data | The seeded cancelled event |
 | Expected Result | Its registration shows "Cancelled". |
 
-**Automated by:** `e2e/my-registrations.spec.ts` › "AC3: a registration for an event ConnectSphere cancelled shows as Cancelled"
+**Automated by:** `e2e/my-registrations.spec.ts` › "SCRUM-76 [AC3] TC-76-02, SCRUM-85 [AC4, AC5, AC12] TC-85-09: a registration for an event ConnectSphere cancelled shows as Cancelled"
 
 ### TC-76-03
 
@@ -75,7 +75,7 @@ who has registrations in the seed.
 | Test Data | The other Attendee's registrations |
 | Expected Result | Step 1 lists only this Attendee's registrations. Step 2 is refused. Step 3 returns nothing. |
 
-**Automated by:** `tests/unit/my-registrations.test.ts` › "[Positive] AC5: the list contains only my registrations — filtered by the session's user id", "[Negative] a signed-out caller gets an empty list, before the query runs"; `e2e/my-registrations.spec.ts` › "AC5: the list contains only my registrations", "an Organiser typing /registrations directly is refused"
+**Automated by:** `tests/unit/my-registrations.test.ts` › "[Positive] AC5: the list contains only my registrations — filtered by the session's user id", "[Negative] a signed-out caller gets an empty list, before the query runs"; `e2e/my-registrations.spec.ts` › "SCRUM-76 [AC5] TC-76-04: the list contains only my registrations", "SCRUM-76 [AC5] TC-76-04: an Organiser typing /registrations directly is refused"
 
 ### TC-76-05
 
@@ -88,4 +88,4 @@ who has registrations in the seed.
 | Test Data | None |
 | Expected Result | "No registrations yet", with a **Browse events** link that opens the event list. |
 
-**Automated by:** `e2e/my-registrations.spec.ts` › "an Attendee with no registrations sees the empty state with a link to browse events"
+**Automated by:** `e2e/my-registrations.spec.ts` › "SCRUM-76 [AC1] TC-76-05: an Attendee with no registrations sees the empty state with a link to browse events"

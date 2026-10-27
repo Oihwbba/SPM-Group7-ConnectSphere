@@ -269,7 +269,7 @@ test.describe("SCRUM-36 / SCRUM-37 — venue availability calendar and recorded 
     await expect(bookingDetails).toBeHidden();
   });
 
-  test("SCRUM-161 [AC1-AC4] TC-161-01, TC-161-04, TC-161-06, TC-161-16: unavailability over an approved booking, on quarter hours, is confirmed, saved, flags the booking and tells its Coordinator", async ({
+  test("SCRUM-161 [AC1, AC2, AC3, AC4] TC-161-01, TC-161-04, TC-161-06, TC-161-16: unavailability over an approved booking, on quarter hours, is confirmed, saved, flags the booking and tells its Coordinator", async ({
     browser,
   }) => {
     test.skip(!usesLocalDatabase, "creates its own events");
@@ -500,7 +500,7 @@ test.describe("SCRUM-36 / SCRUM-37 — venue availability calendar and recorded 
     );
   });
 
-  test("SCRUM-36, SCRUM-37 TC-36-07: who can see the calendar and record unavailability", async ({
+  test("SCRUM-36 [AC7] TC-36-07, SCRUM-37 [AC1, AC6] TC-37-03: who can see the calendar and record unavailability", async ({
     browser,
   }) => {
     for (const email of ["organiser@test.local", "techsupport@test.local"]) {

@@ -76,7 +76,7 @@ seed's own projector pool has 10, with 3 in for maintenance.
 | Test Data | Quantity 3 |
 | Expected Result | Step 1 shows the shortfall at once ("1 short"). Step 2 is refused with the shortfall, and nothing is written. |
 
-**Automated by:** `tests/unit/equipment-availability.test.ts` › "refuses a quantity over the limit and states how many short"; `tests/integration/equipment-availability.test.ts` › "SCRUM-29 [AC3]: a quantity over the free units is refused with the shortfall, and nothing is written"; `e2e/equipment.spec.ts` › "SCRUM-29 AC 3: more than the pool shows the shortfall live"; `e2e/equipment-availability.spec.ts` › "SCRUM-29 [AC3]: a quantity over the free units reports the shortfall"
+**Automated by:** `tests/unit/equipment-availability.test.ts` › "refuses a quantity over the limit and states how many short"; `tests/integration/equipment-availability.test.ts` › "SCRUM-29 [AC3]: a quantity over the free units is refused with the shortfall, and nothing is written"; `e2e/equipment.spec.ts` › "SCRUM-29 [AC3] TC-29-03: more than the pool shows the shortfall live"; `e2e/equipment-availability.spec.ts` › "SCRUM-29 [AC3]: a quantity over the free units reports the shortfall"
 
 ### TC-29-04
 
@@ -115,7 +115,7 @@ seed's own projector pool has 10, with 3 in for maintenance.
 | Test Data | Quantity 0; start 17:00, end 09:00 on the same day |
 | Expected Result | Step 1: "Enter a quantity of at least 1." Step 2: "End time must be after the start time." at once. No availability is shown, and nothing is read or written. |
 
-**Automated by:** `tests/unit/reservation.test.ts` › "SCRUM-29 AC 7: rejects an end before the start with field errors and reads nothing"; `tests/integration/equipment-availability.test.ts` › "SCRUM-29 [AC7]: an end before the start is rejected, reads nothing and writes nothing"; `e2e/equipment.spec.ts` › "SCRUM-29 AC 7: a quantity of zero asks for at least one", "SCRUM-29 AC 7: an invalid period (end earlier than start) triggers a live inline error"; `e2e/equipment-availability.spec.ts` › "SCRUM-29 [AC7]: a zero quantity or an end before the start is rejected with no result"
+**Automated by:** `tests/unit/reservation.test.ts` › "SCRUM-29 AC 7: rejects an end before the start with field errors and reads nothing"; `tests/integration/equipment-availability.test.ts` › "SCRUM-29 [AC7]: an end before the start is rejected, reads nothing and writes nothing"; `e2e/equipment.spec.ts` › "SCRUM-29 [AC7] TC-29-06, SCRUM-31 [AC6] TC-31-07: a quantity of zero asks for at least one", "SCRUM-29 [AC7] TC-29-06: an invalid period (end earlier than start) triggers a live inline error"; `e2e/equipment-availability.spec.ts` › "SCRUM-29 [AC7]: a zero quantity or an end before the start is rejected with no result"
 
 ### TC-29-07
 
@@ -141,4 +141,4 @@ seed's own projector pool has 10, with 3 in for maintenance.
 | Test Data | 1 Jan 2020, 09:00 to 17:00 SGT |
 | Expected Result | "Start time cannot be in the past." at once, and the count reads "— of 4 available": no availability is shown. |
 
-**Automated by:** `e2e/equipment.spec.ts` › "a start time in the past triggers a live inline error and no availability"
+**Automated by:** `e2e/equipment.spec.ts` › "SCRUM-29 TC-29-08: a start time in the past triggers a live inline error and no availability"

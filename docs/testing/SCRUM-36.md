@@ -121,7 +121,7 @@ phone and to a screen reader, where a grid of every venue would not.
 | Test Data | `organiser@test.local`, `techsupport@test.local` |
 | Expected Result | "Access denied", and no Availability link in their navigation. |
 
-**Automated by:** `tests/unit/auth.test.ts` › both "SCRUM-36 [AC7] TC-36-07: …" cases; `e2e/availability.spec.ts` › "SCRUM-36, SCRUM-37 TC-36-07: who can see the calendar and record unavailability"; `e2e/access-control.spec.ts` › each role's navigation
+**Automated by:** `tests/unit/auth.test.ts` › both "SCRUM-36 [AC7] TC-36-07: …" cases; `e2e/availability.spec.ts` › "SCRUM-36 [AC7] TC-36-07, SCRUM-37 [AC1, AC6] TC-37-03: who can see the calendar and record unavailability"; `e2e/access-control.spec.ts` › each role's navigation
 
 ### TC-36-08
 

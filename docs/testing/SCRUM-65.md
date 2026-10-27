@@ -47,7 +47,7 @@ and the app is running. Every seeded account's password is `Password123!`.
 | Test Data | Password "wrong-password" |
 | Expected Result | Both show "Invalid email or password.", so the message doesn't say whether the account exists. Neither signs in. |
 
-**Automated by:** `tests/unit/auth-actions.test.ts` › "returns a generic message when credentials are rejected (no account enumeration)"; `e2e/auth.spec.ts` › "a wrong password is refused", "an unknown email gets the same refusal (no account enumeration)"
+**Automated by:** `tests/unit/auth-actions.test.ts` › "returns a generic message when credentials are rejected (no account enumeration)"; `e2e/auth.spec.ts` › "SCRUM-65 [AC2] TC-65-02: a wrong password is refused", "SCRUM-65 [AC2] TC-65-02: an unknown email gets the same refusal (no account enumeration)"
 
 ### TC-65-03
 
@@ -73,4 +73,4 @@ and the app is running. Every seeded account's password is `Password123!`.
 | Test Data | None |
 | Expected Result | The user is sent to `/login`. Going to `/events` sends them back to `/login`. |
 
-**Automated by:** `tests/unit/auth-actions.test.ts` › "signs the user out and sends them back to /login"; `tests/unit/auth-guard.test.ts` › "redirects to /login when there is no session (deny path)"; `e2e/auth.spec.ts` › "signing out makes protected pages unreachable again"
+**Automated by:** `tests/unit/auth-actions.test.ts` › "signs the user out and sends them back to /login"; `tests/unit/auth-guard.test.ts` › "redirects to /login when there is no session (deny path)"; `e2e/auth.spec.ts` › "SCRUM-65 [AC4, AC5] TC-65-04: signing out makes protected pages unreachable again"

@@ -36,7 +36,7 @@ each have events (`Password123!`).
 | Test Data | organiser2's "Another Client's Event — Product Launch"; organiser@test.local's "Draft — Annual Tech Summit" |
 | Expected Result | organiser2's own event is listed, newest-updated first. Nothing of the other Organiser's appears anywhere on the page. |
 
-**Automated by:** `tests/unit/organiser-attendee-events-access.test.ts` › "[Positive] AC: queries only events owned by this organiser, newest-updated first"; `tests/unit/events.test.ts` › "SCRUM-84 [AC1, AC2 - Happy Path / Ownership Isolation]: executes organiser query filtering only events belonging to logged-in organiser"; `e2e/events.spec.ts` › "SCRUM-84 [AC1 - Ownership Data Isolation]: enforces ownership isolation: organiser2 sees only their own events"
+**Automated by:** `tests/unit/organiser-attendee-events-access.test.ts` › "[Positive] AC: queries only events owned by this organiser, newest-updated first"; `tests/unit/events.test.ts` › "SCRUM-84 [AC1, AC2 - Happy Path / Ownership Isolation]: executes organiser query filtering only events belonging to logged-in organiser"; `e2e/events.spec.ts` › "SCRUM-68 [AC1, AC5] TC-68-01, SCRUM-84 [AC1] TC-84-01: enforces ownership isolation: organiser2 sees only their own events"
 
 ### TC-68-02
 

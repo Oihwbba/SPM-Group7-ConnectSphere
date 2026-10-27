@@ -39,7 +39,7 @@ unless the case says otherwise.
 | Test Data | organiser2's seeded "Another Client's Event — Product Launch"; organiser@test.local's "Draft — Annual Tech Summit" |
 | Expected Result | "Another Client's Event — Product Launch" is listed. Nothing of organiser@test.local's, such as "Draft — Annual Tech Summit", appears anywhere on the page. |
 
-**Automated by:** `tests/unit/events.test.ts` › "SCRUM-84 [AC1, AC2 - Happy Path / Ownership Isolation]: executes organiser query filtering only events belonging to logged-in organiser"; `e2e/events.spec.ts` › "SCRUM-84 [AC1 - Ownership Data Isolation]: enforces ownership isolation: organiser2 sees only their own events"
+**Automated by:** `tests/unit/events.test.ts` › "SCRUM-84 [AC1, AC2 - Happy Path / Ownership Isolation]: executes organiser query filtering only events belonging to logged-in organiser"; `e2e/events.spec.ts` › "SCRUM-68 [AC1, AC5] TC-68-01, SCRUM-84 [AC1] TC-84-01: enforces ownership isolation: organiser2 sees only their own events"
 
 ### TC-84-02
 
@@ -65,7 +65,7 @@ unless the case says otherwise.
 | Test Data | The seeded events |
 | Expected Result | The most recently updated request is first. Each row shows the name, proposed dates and status badge. Clicking a row opens that request's full details. |
 
-**Automated by:** `tests/unit/events.test.ts` › "SCRUM-84 [AC3 - Implicit Rule / Default Sort]: filterAndSortEvents orders list by updatedAt descending by default", "SCRUM-84 [AC3 - Happy Path]: exposes event name and current status badge properties for list display", "SCRUM-84 [AC4 - Happy Path]: retrieves full detail model when selecting a specific event request"; `e2e/events.spec.ts` › "organiser views list of their own events with names, status badges, and selects an entry for full detail"
+**Automated by:** `tests/unit/events.test.ts` › "SCRUM-84 [AC3 - Implicit Rule / Default Sort]: filterAndSortEvents orders list by updatedAt descending by default", "SCRUM-84 [AC3 - Happy Path]: exposes event name and current status badge properties for list display", "SCRUM-84 [AC4 - Happy Path]: retrieves full detail model when selecting a specific event request"; `e2e/events.spec.ts` › "SCRUM-84 [AC3, AC4] TC-84-03, SCRUM-208 [AC1] TC-208-01: organiser views list of their own events with names, status badges, and selects an entry for full detail"
 
 ### TC-84-04
 
@@ -91,7 +91,7 @@ unless the case says otherwise.
 | Test Data | "Annual" |
 | Expected Result | Step 1 shows only that status. Step 2 shows "Annual Tech Summit" and not "Career Fair". Step 3 brings back every request for the chosen filter. |
 
-**Automated by:** `tests/unit/events.test.ts` › "SCRUM-84 [AC6 - Happy Path / Search Filter]: filters event list by search query matching event name or purpose via filterAndSortEvents", "SCRUM-84 [AC9 - Search Cleared State & Partial Matches]: matches partial string and restores list when search is cleared"; `e2e/events.spec.ts` › "SCRUM-84 AC7-AC9: organiser sorts columns and filters list by status dropdown and search"
+**Automated by:** `tests/unit/events.test.ts` › "SCRUM-84 [AC6 - Happy Path / Search Filter]: filters event list by search query matching event name or purpose via filterAndSortEvents", "SCRUM-84 [AC9 - Search Cleared State & Partial Matches]: matches partial string and restores list when search is cleared"; `e2e/events.spec.ts` › "SCRUM-84 [AC6, AC7, AC8, AC9] TC-84-05, TC-84-06, TC-84-07, SCRUM-168 [AC2] TC-168-02: organiser sorts columns and filters list by status dropdown and search"
 
 ### TC-84-06
 
@@ -104,7 +104,7 @@ unless the case says otherwise.
 | Test Data | The seeded events |
 | Expected Result | By default the most recently updated is first. After step 2 the rows are in name order. |
 
-**Automated by:** `tests/unit/events.test.ts` › "SCRUM-84 [AC7 - Default & Custom Sorting]: orders event list by updatedAt descending by default and by name asc when specified"; `e2e/events.spec.ts` › "SCRUM-84 AC7-AC9: organiser sorts columns and filters list by status dropdown and search"
+**Automated by:** `tests/unit/events.test.ts` › "SCRUM-84 [AC7 - Default & Custom Sorting]: orders event list by updatedAt descending by default and by name asc when specified"; `e2e/events.spec.ts` › "SCRUM-84 [AC6, AC7, AC8, AC9] TC-84-05, TC-84-06, TC-84-07, SCRUM-168 [AC2] TC-168-02: organiser sorts columns and filters list by status dropdown and search"
 
 ### TC-84-07
 
@@ -117,7 +117,7 @@ unless the case says otherwise.
 | Test Data | "Annual" |
 | Expected Result | Only requests that match the tab, the filter and the search, all three, are listed. |
 
-**Automated by:** `tests/unit/events.test.ts` › "SCRUM-84 [AC8 - Multi-Criteria Filtering Combination]: filters events by active tab AND status filter AND search query simultaneously"; `e2e/events.spec.ts` › "SCRUM-84 AC7-AC9: organiser sorts columns and filters list by status dropdown and search"
+**Automated by:** `tests/unit/events.test.ts` › "SCRUM-84 [AC8 - Multi-Criteria Filtering Combination]: filters events by active tab AND status filter AND search query simultaneously"; `e2e/events.spec.ts` › "SCRUM-84 [AC6, AC7, AC8, AC9] TC-84-05, TC-84-06, TC-84-07, SCRUM-168 [AC2] TC-168-02: organiser sorts columns and filters list by status dropdown and search"
 
 ### TC-84-08
 
@@ -130,7 +130,7 @@ unless the case says otherwise.
 | Test Data | "xyznonexistent99999" |
 | Expected Result | "No requests match the selected filters." with a **Clear Filters** button. Clicking it clears the tab, filter and search, and lists every request again. |
 
-**Automated by:** `e2e/events.spec.ts` › "SCRUM-84 [AC6/AC9 - Filtered Empty State & Clear Filters]: filtered empty state shows 'No requests match' card with a Clear Filters CTA when search yields no results"
+**Automated by:** `e2e/events.spec.ts` › "SCRUM-84 [AC6, AC9] TC-84-08, SCRUM-168 [AC2] TC-168-02: filtered empty state shows 'No requests match' card with a Clear Filters CTA when search yields no results"
 
 ### TC-84-09
 
@@ -143,4 +143,4 @@ unless the case says otherwise.
 | Test Data | Screen 375 × 812 |
 | Expected Result | Each request is a stacked card, not a table row, with **View Details** (an eye icon, named for screen readers) and its "Starts" and "Last Updated" labels shown as text. A draft keeps its 4 px left border. The page doesn't scroll sideways. **Resume Draft** opens "Resume Draft Event Request". |
 
-**Automated by:** `e2e/events.spec.ts` › "restyles rows as stacked cards with no page overflow, and Resume Draft opens the dialog"
+**Automated by:** `e2e/events.spec.ts` › "SCRUM-84 [AC3, AC4] TC-84-09: restyles rows as stacked cards with no page overflow, and Resume Draft opens the dialog"

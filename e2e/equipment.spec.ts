@@ -66,7 +66,7 @@ test.describe("SCRUM-156 — the one-type form only checks availability", () => 
       .toBeGreaterThanOrEqual((await page.locator("header").boundingBox())!.height);
   });
 
-  test("SCRUM-29 AC 3: more than the pool shows the shortfall live", async ({ page }) => {
+  test("SCRUM-29 [AC3] TC-29-03: more than the pool shows the shortfall live", async ({ page }) => {
     await signInAsTechSupport(page);
     await fillCheck(page, "99");
 
@@ -75,14 +75,14 @@ test.describe("SCRUM-156 — the one-type form only checks availability", () => 
     );
   });
 
-  test("SCRUM-29 AC 7: a quantity of zero asks for at least one", async ({ page }) => {
+  test("SCRUM-29 [AC7] TC-29-06, SCRUM-31 [AC6] TC-31-07: a quantity of zero asks for at least one", async ({ page }) => {
     await signInAsTechSupport(page);
     await fillCheck(page, "0");
 
     await expect(page.getByRole("status")).toContainText("Enter a quantity of at least 1.");
   });
 
-  test("SCRUM-29 AC 7: an invalid period (end earlier than start) triggers a live inline error", async ({ page }) => {
+  test("SCRUM-29 [AC7] TC-29-06: an invalid period (end earlier than start) triggers a live inline error", async ({ page }) => {
     await signInAsTechSupport(page);
     await pickDateTime(page.getByLabel("Start", { exact: true }), "2031-05-10T17:00");
     await pickDateTime(page.getByLabel("End", { exact: true }), "2031-05-10T09:00");
@@ -92,7 +92,7 @@ test.describe("SCRUM-156 — the one-type form only checks availability", () => 
     ).toBeVisible();
   });
 
-  test("a start time in the past triggers a live inline error and no availability", async ({ page }) => {
+  test("SCRUM-29 TC-29-08: a start time in the past triggers a live inline error and no availability", async ({ page }) => {
     await signInAsTechSupport(page);
     await selectFrom(page.getByLabel("Equipment type"), { value: "eqp_lectern" });
     await pickDateTime(page.getByLabel("Start", { exact: true }), "2020-01-01T09:00");
@@ -247,7 +247,7 @@ test.describe("SCRUM-156 [AC1] TC-156-02: View Equipment Conflicts", () => {
     await expect(other(page).getByTestId("schedule-entry")).toHaveCount(2);
   });
 
-  test("the requested-period section sits under the selected item, and other commitments below the other equipment", async ({
+  test("SCRUM-30 [AC2] TC-30-02: the requested-period section sits under the selected item, and other commitments below the other equipment", async ({
     page,
   }) => {
     test.skip(!usesLocalDatabase, "writes its own equipment; local database only");
@@ -332,7 +332,7 @@ test.describe("SCRUM-156 [AC1] TC-156-02: View Equipment Conflicts", () => {
 
   // Two reservations outside the period that together exceed the pool: they
   // do not affect this request, so they stay neutral.
-  test("other commitments stay neutral even when they overlap each other", async ({ page }) => {
+  test("SCRUM-30 [AC2] TC-30-02: other commitments stay neutral even when they overlap each other", async ({ page }) => {
     test.skip(!usesLocalDatabase, "writes its own equipment; local database only");
     await buildRig({
       reservations: [
@@ -372,7 +372,7 @@ test.describe("SCRUM-156 [AC1] TC-156-02: View Equipment Conflicts", () => {
   // omits the reservation just made answers it wrongly at exactly the moment
   // someone looks. Since SCRUM-156 that reservation is made in the approved-
   // request card above the check.
-  test("SCRUM-156 [AC6] TC-156-06, SCRUM-30 AC 1: a reservation made in the request card appears in the commitments without a reload", async ({
+  test("SCRUM-30 [AC1] TC-30-01, SCRUM-156 [AC6] TC-156-06: a reservation made in the request card appears in the commitments without a reload", async ({
     page,
   }) => {
     test.skip(!usesLocalDatabase, "writes its own equipment; local database only");
@@ -436,7 +436,7 @@ test.describe("SCRUM-156 [AC1] TC-156-02: View Equipment Conflicts", () => {
 
   // The panel must degrade inline rather than take the page down: the
   // availability check stays usable when the schedule cannot be read.
-  test("shows the schedule's own error when the item can no longer be read, and keeps the form", async ({
+  test("SCRUM-30 [AC1] TC-30-07: shows the schedule's own error when the item can no longer be read, and keeps the form", async ({
     page,
   }) => {
     test.skip(!usesLocalDatabase, "writes its own equipment; local database only");
