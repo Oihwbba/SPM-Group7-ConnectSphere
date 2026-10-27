@@ -50,7 +50,8 @@ change request to move it one day later.
    stays Under Review, as clarification is not a status (SCRUM-18).
 6. Switch to **`organiser@test.local`**, open the Career Fair's
    **Clarification** tab, type an answer and **Send response**. Switch back
-   to the coordinator: it shows **Organiser responded:** with the answer.
+   to the coordinator: the thread shows the answer under **Olivia
+   Organiser**'s name.
 7. In **Events**, click **Approve** on your new request. It goes straight to
    **Planning**; Approved is recorded but never a resting status (SCRUM-81,
    SCRUM-135 AC12).
@@ -70,9 +71,10 @@ change request to move it one day later.
    (SCRUM-50 TC-50-10).
 2. Switch to **`venuestaff@test.local`** and open **Bookings**. The pending
    **Seminar Room 2.1** request for the Freshman Orientation is there.
-3. **Failure:** click **Reject** with no reason. It is refused: a rejection
-   needs a written reason (SCRUM-53 AC2). Close it without rejecting.
-4. Click **Approve**. The Seminar Room is booked for the event.
+3. **Failure:** click **Reject**. **Reject request** stays disabled until a
+   reason is written (SCRUM-53 AC2). Close it without rejecting.
+4. Open the request again and click **Approve**. The Seminar Room is booked
+   for the event.
 5. Open **Availability**, pick **Seminar Room 2.1** and go to the event's
    week. The booking is shown, with any setup and turnaround time hatched on
    either side (SCRUM-36, SCRUM-159 AC7).
@@ -84,10 +86,11 @@ change request to move it one day later.
 | **Stories** | SCRUM-28 (review), SCRUM-155 (reserve in one step), SCRUM-29, SCRUM-156 (availability) |
 | **Automated by** | `e2e/equipment-request-review.spec.ts`, `e2e/request-reservation.spec.ts`, `e2e/equipment-availability.spec.ts` |
 
-1. As **`techsupport@test.local`**, open **Equipment**. Check a **Projector**
-   for the Freshman Orientation's period with a quantity of 8. **Conflict:**
-   three of the ten projectors are in for maintenance, so fewer than 8 are
-   available (SCRUM-29).
+1. As **`techsupport@test.local`**, open **Equipment**. Check a **PA
+   Speaker** for the Freshman Orientation's period with a quantity of 8.
+   **Conflict:** one of the eight is damaged and out of use all month, so it
+   reads **7 of 8 available** (SCRUM-29). (The projectors' maintenance is
+   on other days, so all ten are free that day.)
 2. Open **Equipment Requests**, find the Freshman Orientation's request, and
    click **Start review** ("Review started. The coordinator has been
    notified."), then **Approve** ("Request approved. The coordinator has been
@@ -103,20 +106,21 @@ change request to move it one day later.
 | **Stories** | SCRUM-110 (readiness checklist), SCRUM-166 (safety check), SCRUM-81 (confirm) |
 | **Automated by** | `e2e/readiness.spec.ts`, `e2e/safety-check.spec.ts`, `e2e/confirm.spec.ts` |
 
-1. As **`coordinator@test.local`**, open the Freshman Orientation. The
-   checklist shows the venue and equipment complete and the safety check
-   **Not requested**. **Failure:** **Confirm event** isn't offered yet
-   (SCRUM-166 AC9).
+1. As **`coordinator@test.local`**, open the Freshman Orientation's
+   **Arrangements** tab. The readiness checklist shows the venue and
+   equipment complete and the safety check **Not requested**. **Failure:**
+   **Confirm event** is there but disabled (SCRUM-166 AC9).
 2. Click **Request safety check** ("Safety check requested. The Safety
    Officers have been notified.").
 3. Switch to **`safety@test.local`**, open **Safety Checks** and the event.
    Everything is read-only: attendance, capacity, layouts, accessibility,
    setup and turnaround, restrictions and notes (SCRUM-166 AC2).
-4. **Failure:** choose **Request changes** with no note and click **Record
-   outcome**. It is refused: a note, and at least one arrangement, are needed
-   (AC3). Then choose **Approve** and **Record outcome**.
-5. Switch back to the coordinator and click **Confirm event** ("Event
-   confirmed."). Approval alone didn't confirm it (AC14).
+4. **Failure:** choose **Request changes**. **Record outcome** stays disabled
+   until there is a note and at least one arrangement is picked (AC3). Then
+   choose **Approve** and **Record outcome**.
+5. Switch back to the coordinator, open the **Arrangements** tab and click
+   **Confirm event** ("Event confirmed."). Approval alone didn't confirm it
+   (AC14).
 
 ## 5. Registration
 
@@ -129,11 +133,11 @@ change request to move it one day later.
    Masterclass** and register ("You're registered for this event."). It is
    now full.
 2. **Conflict:** as **`attendee@test.local`**, open **Full — Wine Tasting
-   Evening**. It is full, so there is no register action, and a direct
+   Evening**. It is full, so there is no **Register** button, and a direct
    request is refused (SCRUM-74).
 3. **Failure:** open **Registration Not Yet Open — Summer Camp** and
-   **Registration Closed — Leadership Retreat**: neither can be registered
-   for (SCRUM-75).
+   **Registration Closed — Leadership Retreat**: neither has a **Register**
+   button (SCRUM-75).
 4. Switch back to **`attendee4@test.local`** and withdraw from the
    Masterclass ("You've withdrawn from this event."). The place is free again
    (SCRUM-77).
@@ -146,20 +150,23 @@ change request to move it one day later.
 | **Automated by** | `e2e/change-requests.spec.ts`, `e2e/change-decision.spec.ts`, `e2e/reconsideration.spec.ts` |
 
 1. As **`coordinator@test.local`**, open the Freshman Orientation, now
-   Confirmed. Its seeded change request moves it one day later: each field
-   shows its current and requested value, and the arrangements it could
-   affect are listed (SCRUM-128 AC1).
-2. **Failure:** leave **Reason for rejecting the change request** empty and
-   click **Reject change request**. It is refused (AC3).
+   Confirmed, and its **Changes** tab. Its seeded change request moves it one
+   day later: each field shows its current and requested value, and the
+   arrangements it could affect are listed (SCRUM-128 AC1).
+2. **Failure:** click **Reject**. **Reject change request** stays disabled
+   until a reason is written (AC3). Open the event again without rejecting.
 3. Click **Approve**. In one step the dates change, the event goes **back to
    Planning**, its venue booking and equipment reservations are flagged
    **Needs Reconsideration**, and the safety check becomes **Outdated**
    (SCRUM-128 AC2, AC4, AC5).
-4. **Failure:** on the flagged Seminar Room booking, click **Still stands**.
-   It is refused with the reason: the booking keeps its original day, so it
-   no longer covers the event's period (SCRUM-26 AC6, AC8).
-5. Click **Cancel arrangement**. Only that booking is cancelled; nothing was
-   cancelled until the Coordinator chose to (SCRUM-26 AC9, AC11).
+4. **Failure:** in the **Needs Reconsideration** panel on the same tab, click
+   **Still stands** on the Seminar Room booking. It is refused: "It can't
+   stand as it is: … Cancel the arrangement and request again." The booking
+   keeps its original day, so it no longer covers the event's period
+   (SCRUM-26 AC6, AC8).
+5. Click **Cancel arrangement** on it, and confirm. Only that booking is
+   cancelled; nothing was cancelled until the Coordinator chose to (SCRUM-26
+   AC9, AC11).
 
 ## 7. Week 7: holds, unavailability, setup and turnaround
 
@@ -171,18 +178,22 @@ change request to move it one day later.
 1. As **`coordinator@test.local`**, **Request Venue** for the Freshman
    Orientation's new day at **Seminar Room 2.1**, with the **Classroom**
    layout. The cancelled booking doesn't stop a new request (SCRUM-162 AC2).
-2. Switch to **`venuestaff@test.local`**. In **Bookings**, click **Hold** on
-   it, set a deadline before the event starts, and **Hold venue**. The venue
-   is held, not booked. **Failure:** a deadline after the event starts is
-   refused (SCRUM-163 AC1).
-3. Open **Availability** for Seminar Room 2.1 and click **Record
-   unavailability** over the held period (for example maintenance). It is
-   allowed over a booking, which is flagged rather than removed: the button
-   reads **Record and flag 1 booking** (SCRUM-161).
+2. Switch to **`venuestaff@test.local`**. In **Bookings**, open the request
+   and click **Hold**. Write **What the Coordinator must finalise** (required),
+   set the **Expiry** after the event starts, and click **Hold venue**.
+   **Failure:** "The hold must expire after now and before the booking starts
+   (…)" (SCRUM-163 AC1). Set an expiry before the event starts and click
+   **Hold venue** again. The venue is held, not booked.
+3. Open **Availability** for Seminar Room 2.1, go to the event's week, and
+   click **Record unavailability** over the held period (for example
+   maintenance). It is allowed over a booking, which is flagged rather than
+   removed: the button reads **Record and flag 1 booking** (SCRUM-161).
 4. Open **Venues** → **Grand Auditorium** → **Edit venue** and lengthen its
    turnaround time. If any upcoming bookings there would now clash, you are
    shown them first and the button reads **Save and flag …**; nothing is
-   moved or cancelled (SCRUM-160 AC1, AC2).
+   moved or cancelled (SCRUM-160 AC1, AC2). On the seed data no Auditorium
+   bookings are that close together, so it saves straight away; set it back
+   afterwards (see below).
 
 ## 8. Closing an event, and permissions
 
@@ -192,10 +203,11 @@ change request to move it one day later.
 | **Automated by** | `e2e/close-event.spec.ts`, `e2e/access-control.spec.ts`, `e2e/events.spec.ts` (SCRUM-84 AC1) |
 
 1. As **`coordinator@test.local`**, open the Freshman Orientation and click
-   **Cancel event**. **Failure:** with an empty **Cancellation reason** it is
-   refused. With a reason: "Event cancelled. Its arrangements and
-   registrations were released." Every booking, hold, reservation and open
-   request is released in the same step (SCRUM-82 AC3).
+   **Cancel event**. **Failure:** the dialog's **Cancel event** stays
+   disabled until a **Cancellation reason** is written. With a reason: "Event
+   cancelled. Its arrangements and registrations were released." Every
+   booking, hold, reservation and open request is released in the same step
+   (SCRUM-82 AC3).
 2. Open **Completed — Hackathon**: it is Completed, with no status actions
    left. A Confirmed event becomes Completed by itself the first time it is
    read after its end time, with no scheduled job (SCRUM-82 AC7).
@@ -206,4 +218,23 @@ change request to move it one day later.
    The page says **Access denied**: the server refuses it, not just the menu
    (SCRUM-67).
 
-When you're done, run `npm run db:seed` again to put the seeded rows back.
+## After the demo
+
+`npm run db:seed` puts the seeded events, bookings, equipment requests and
+registrations back, but not everything the demo changes:
+
+- **The seeded change request** stays Approved: the seed creates it but never
+  resets it.
+- **The Grand Auditorium's turnaround time** stays as you set it in section 7:
+  the seed doesn't set venue setup or turnaround times. Set it back in
+  **Edit venue**.
+- **What the demo created** stays: the new request from section 1, the safety
+  check, reservations and second Seminar Room request on the Freshman
+  Orientation, and the recorded unavailability. They are Cancelled or
+  Outdated, but a second run would show the safety check as **Outdated**
+  rather than **Not requested**.
+
+So a second run on the same database needs those cleared first.
+
+Last run end to end on 27 Oct 2026, on a freshly seeded database, with every
+step above checked in the app and in the database (SCRUM-198 AC3).
