@@ -107,6 +107,18 @@ export interface AvailabilityVerdict extends Availability {
 }
 
 /**
+ * SCRUM-29 AC 7 — the quantity typed into the availability check, or null
+ * when it isn't a positive whole number (0, a negative number, a decimal or
+ * text), so no figure and no verdict are shown for it (SCRUM-229).
+ */
+export function requestedQuantity(text: string): number | null {
+  const trimmed = text.trim();
+  if (!/^\d+$/.test(trimmed)) return null;
+  const quantity = Number(trimmed);
+  return quantity > 0 ? quantity : null;
+}
+
+/**
  * SCRUM-29 — the answer to "can we fulfil this?", stated on both sides: the
  * accepted case reports what is free, the refused case reports the shortfall.
  */

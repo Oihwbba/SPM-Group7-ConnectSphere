@@ -43,4 +43,4 @@ unless the case says otherwise.
 | Test Data | The Under Review request |
 | Expected Result | Both see "Under Review" on the list and on the details, without asking anyone. |
 
-**Automated by:** `tests/unit/events.test.ts` › "SCRUM-84 [AC3 - Happy Path]: exposes event name and current status badge properties for list display"; `e2e/events.spec.ts` › "coordinator views assigned event status and status remains consistent across views (SCRUM-23 & SCRUM-24)"
+**Automated by:** `tests/unit/events.test.ts` › "SCRUM-84 [AC3 - Happy Path]: exposes event name and current status badge properties for list display"; `e2e/events.spec.ts` › "SCRUM-23 [AC2] TC-23-02, SCRUM-24 [AC7] TC-24-05: coordinator views assigned event status and status remains consistent across views"

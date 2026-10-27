@@ -149,3 +149,46 @@ export function utcToSgWallTime(
   if (Number.isNaN(d.getTime())) return "";
   return new Date(d.getTime() + SG_OFFSET_MS).toISOString().slice(0, 16);
 }
+
+/** The Singapore calendar date, "YYYY-MM-DD", an instant falls on. */
+export function sgDate(value: Date | string): string {
+  return utcToSgWallTime(value).slice(0, 10);
+}
+
+/** The three fields an event's period is entered as (SCRUM-190 AC1). */
+export type EventPeriodFields = {
+  date: string;
+  startTime: string;
+  endTime: string;
+};
+
+/**
+ * SCRUM-190 AC1 — a stored period as the request form's one date and two
+ * times, in Singapore time. The date is the start's.
+ */
+export function splitEventPeriod(
+  startAt: Date | string | null | undefined,
+  endAt: Date | string | null | undefined,
+): EventPeriodFields {
+  const start = utcToSgWallTime(startAt);
+  const end = utcToSgWallTime(endAt);
+  return {
+    date: start.slice(0, 10) || end.slice(0, 10),
+    startTime: start.slice(11, 16),
+    endTime: end.slice(11, 16),
+  };
+}
+
+/**
+ * SCRUM-190 AC1 — the one date and two times as UTC ISO instants. A time
+ * without the date, or the date without that time, gives no instant.
+ */
+export function joinEventPeriod({ date, startTime, endTime }: EventPeriodFields): {
+  startAt?: string;
+  endAt?: string;
+} {
+  return {
+    startAt: date && startTime ? sgWallTimeToUtcIso(`${date}T${startTime}`) : undefined,
+    endAt: date && endTime ? sgWallTimeToUtcIso(`${date}T${endTime}`) : undefined,
+  };
+}

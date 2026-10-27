@@ -16,6 +16,7 @@ import {
   getCoordinatorEvents,
   getEventForUser,
 } from "@/app/(app)/events/role-views";
+import { sgtPeriod } from "../one-day-period";
 
 // ============================================================================
 // MOCKS & SETUP
@@ -105,8 +106,9 @@ beforeEach(() => {
 // ============================================================================
 describe("User Story 13 — Event Request Creation", () => {
   // Relative dates to ensure tests pass reliably regardless of when they run
-  const futureStart = new Date(Date.now() + 86400000).toISOString(); // 1 day in future
-  const futureEnd = new Date(Date.now() + 86400000 + 7200000).toISOString(); // 1 day + 2 hours in future
+  // SCRUM-190: 10:00–12:00 SGT tomorrow, so the period never crosses midnight SGT.
+  const futureStart = sgtPeriod(1).startAt.toISOString();
+  const futureEnd = sgtPeriod(1).endAt.toISOString();
   const pastDate = new Date(Date.now() - 86400000).toISOString(); // 1 day in past
 
   /**
@@ -353,7 +355,7 @@ describe("User Story 13 — Event Request Creation", () => {
       expect(result.ok).toBe(false);
       if (!result.ok) {
         expect(result.fieldErrors?.endAt).toContain(
-          "Proposed end date and time must be strictly after the start date and time.",
+          "The end time must be after the start time.",
         );
       }
       expect(mockCreate).not.toHaveBeenCalled();
@@ -373,10 +375,31 @@ describe("User Story 13 — Event Request Creation", () => {
       expect(result.ok).toBe(false);
       if (!result.ok) {
         expect(result.fieldErrors?.endAt).toContain(
-          "Proposed end date and time must be strictly after the start date and time.",
+          "The end time must be after the start time.",
         );
       }
       expect(mockCreate).not.toHaveBeenCalled();
+    });
+
+    it("SCRUM-190 [AC3] TC-190-06: a request running from one day into the next can't be submitted, and nothing is created", async () => {
+      mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
+      const { startAt } = sgtPeriod(1, 9);
+
+      const result = await submitEventRequest({
+        ...validSubmissionInput,
+        startAt: startAt.toISOString(),
+        // 17:00 SGT the following day.
+        endAt: new Date(startAt.getTime() + 32 * 60 * 60 * 1000).toISOString(),
+      });
+
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.fieldErrors?.endAt).toEqual([
+          "An event starts and ends on the same day. Choose one date with a start and an end time.",
+        ]);
+      }
+      expect(mockCreate).not.toHaveBeenCalled();
+      expect(mockUpdate).not.toHaveBeenCalled();
     });
 
     it.each([
@@ -412,40 +435,34 @@ describe("User Story 13 — Event Request Creation", () => {
       expect(result.ok).toBe(false);
       if (!result.ok) {
         expect(result.fieldErrors?.startAt).toEqual([
-          "Proposed start date and time is required.",
+          "Choose the event date and a start time.",
         ]);
         expect(result.fieldErrors?.endAt).toEqual([
-          "Proposed end date and time is required.",
+          "Choose an end time.",
         ]);
       }
       expect(mockCreate).not.toHaveBeenCalled();
     });
 
-    it("SCRUM-13 [AC8 - Implicit Rule]: accepts valid cross-midnight overnight event schedules spanning across calendar days", async () => {
+    // SCRUM-190 supersedes SCRUM-13 AC8's overnight case: an event is one day.
+    it("SCRUM-190 [AC1, AC3] TC-190-05: an overnight request from 23:00 to 01:00 SGT the next day is refused, and nothing is created", async () => {
       mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
-      mockCreate.mockResolvedValue({ id: "evt_overnight" });
-
-      // Overnight event: starts 23:30 today, ends 02:30 tomorrow (+27 hours from now)
-      const overnightStart = new Date(Date.now() + 86400000).toISOString();
-      const overnightEnd = new Date(Date.now() + 86400000 + 10800000).toISOString();
+      const overnight = sgtPeriod(1, 23, 25);
 
       const result = await submitEventRequest({
         ...validSubmissionInput,
         name: "Overnight Hackathon Session",
-        startAt: overnightStart,
-        endAt: overnightEnd,
+        startAt: overnight.startAt.toISOString(),
+        endAt: overnight.endAt.toISOString(),
       });
 
-      expect(result.ok).toBe(true);
-      expect(mockCreate).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.objectContaining({
-            name: "Overnight Hackathon Session",
-            startAt: new Date(overnightStart),
-            endAt: new Date(overnightEnd),
-          }),
-        }),
-      );
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.fieldErrors?.endAt).toEqual([
+          "An event starts and ends on the same day. Choose one date with a start and an end time.",
+        ]);
+      }
+      expect(mockCreate).not.toHaveBeenCalled();
     });
 
     it("SCRUM-13 [AC4 - Business-Rule Negative]: returns field errors when any mandatory field is missing upon submission", async () => {
@@ -737,8 +754,8 @@ describe("User Story 13 — Event Request Creation", () => {
 // USER STORY 15 UNIT TESTS — Save an event request as draft & Resume drafts
 // ============================================================================
 describe("User Story 15 — Save an event request as draft", () => {
-  const futureStart = new Date(Date.now() + 86400000).toISOString();
-  const futureEnd = new Date(Date.now() + 86400000 + 7200000).toISOString();
+  const futureStart = sgtPeriod(1).startAt.toISOString();
+  const futureEnd = sgtPeriod(1).endAt.toISOString();
 
   it("SCRUM-15 [AC1 - Happy Path]: allows saving a draft with mandatory submission fields left empty", async () => {
     mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
@@ -963,7 +980,17 @@ describe("User Story 15 — Save an event request as draft", () => {
       rule: "an end date that is not after the start",
       dates: { startAt: futureEnd, endAt: futureStart },
       field: "endAt",
-      message: "Proposed end date and time must be strictly after the start date and time.",
+      message: "The end time must be after the start time.",
+    },
+    {
+      rule: "an end on a later day than the start (SCRUM-190 AC3)",
+      dates: {
+        startAt: futureStart,
+        endAt: new Date(new Date(futureStart).getTime() + 24 * 60 * 60 * 1000).toISOString(),
+      },
+      field: "endAt",
+      message:
+        "An event starts and ends on the same day. Choose one date with a start and an end time.",
     },
   ] as const)(
     "SCRUM-15 [AC4 - Validation Rule]: a draft with $rule is refused, because dates that are provided must still be valid",
@@ -1231,8 +1258,8 @@ describe("User Story 15 — Save an event request as draft", () => {
       name: "Completed Resumed Event",
       purpose: "Networking",
       description: "Full description",
-      startAt: new Date(Date.now() + 86400000).toISOString(),
-      endAt: new Date(Date.now() + 86400000 + 7200000).toISOString(),
+      startAt: sgtPeriod(1).startAt.toISOString(),
+      endAt: sgtPeriod(1).endAt.toISOString(),
       expectedAttendance: 100,
       venueRequirements: "Auditorium",
       preferredLayout: "Theatre",
@@ -1327,8 +1354,8 @@ describe("User Story 16 — Distinguish drafts from submitted requests", () => {
     });
     mockUpdate.mockResolvedValue({ id: "evt_draft_to_submit", status: "SUBMITTED" });
 
-    const futureStart = new Date(Date.now() + 86400000).toISOString();
-    const futureEnd = new Date(Date.now() + 86400000 + 7200000).toISOString();
+    const futureStart = sgtPeriod(1).startAt.toISOString();
+    const futureEnd = sgtPeriod(1).endAt.toISOString();
 
     const submittedResult = await submitEventRequest({
       id: "evt_draft_to_submit",

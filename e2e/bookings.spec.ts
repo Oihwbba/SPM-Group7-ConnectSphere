@@ -144,7 +144,7 @@ test.describe("SCRUM-50 / 52 / 53 — venue booking request, review and decision
     });
   });
 
-  test("SCRUM-50 [AC2], SCRUM-52 [AC1-AC3], SCRUM-53 [AC1, AC4], SCRUM-207 [AC3, AC4] TC-207-06, TC-207-08: a coordinator requests, staff approve, and the venue becomes unavailable", async ({
+  test("SCRUM-50 [AC1, AC2] TC-50-01, SCRUM-52 [AC1, AC2] TC-52-01, SCRUM-53 [AC1, AC4] TC-53-01, SCRUM-162 [AC2] TC-162-02, SCRUM-207 [AC3, AC4] TC-207-06, TC-207-08: a coordinator requests, staff approve, and the venue becomes unavailable", async ({
     browser,
   }, testInfo) => {
     const tag = `e2e-journey-${testInfo.retry}`;
@@ -343,7 +343,7 @@ test.describe("SCRUM-50 / 52 / 53 — venue booking request, review and decision
     );
   });
 
-  test("SCRUM-50 TC-50-10: an event's attendance over the chosen venue's capacity is flagged, and Submit is disabled", async ({
+  test("SCRUM-50 [AC6] TC-50-10: an event's attendance over the chosen venue's capacity is flagged, and Submit is disabled", async ({
     browser,
   }) => {
     const coordinator = await signedIn(browser, "coordinator@test.local");
@@ -422,7 +422,7 @@ test.describe("SCRUM-50 / 52 / 53 — venue booking request, review and decision
     ).toBeVisible();
   });
 
-  test("SCRUM-50 TC-50-09: venue staff typing the request form's address are refused by the server", async ({
+  test("SCRUM-50 [AC7] TC-50-09: venue staff typing the request form's address are refused by the server", async ({
     browser,
   }) => {
     const staff = await signedIn(browser, "venuestaff@test.local");

@@ -10,6 +10,7 @@ import {
   transitionEventStatus,
 } from "@/app/(app)/events/actions";
 import { REJECTION_OUTCOME_LABEL } from "@/lib/schemas/event";
+import { sgtPeriod } from "../one-day-period";
 
 // SCRUM-126 — the Coordinator who rejects a request chooses whether the
 // Organiser amends it or starts a new one. Test cases:
@@ -195,8 +196,8 @@ describe("transitionEventStatus — SCRUM-126 rejection outcome", () => {
 });
 
 describe("submitEventRequest — SCRUM-126 only an amendable rejection is resubmitted", () => {
-  const start = new Date(Date.now() + 86400000).toISOString();
-  const end = new Date(Date.now() + 86400000 + 7200000).toISOString();
+  const start = sgtPeriod(1).startAt.toISOString();
+  const end = sgtPeriod(1).endAt.toISOString();
   const amended = {
     id: "evt1",
     name: "Amended Summit",

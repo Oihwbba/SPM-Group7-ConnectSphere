@@ -8,6 +8,7 @@ import {
   submitEventRequest,
   transitionEventStatus,
 } from "@/app/(app)/events/actions";
+import { sgtPeriod } from "../one-day-period";
 
 // SCRUM-24 (one guarded status gate), SCRUM-19 (approve / reject / resubmit) and
 // SCRUM-68 (not-found parity). Session and database are mocked; the transaction
@@ -390,8 +391,8 @@ describe("transitionEventStatus — SCRUM-24 single guarded gate", () => {
 });
 
 describe("submitEventRequest — SCRUM-19/24 rejected → submitted", () => {
-  const futureStart = new Date(Date.now() + 86400000).toISOString();
-  const futureEnd = new Date(Date.now() + 86400000 + 7200000).toISOString();
+  const futureStart = sgtPeriod(1).startAt.toISOString();
+  const futureEnd = sgtPeriod(1).endAt.toISOString();
 
   it("an organiser resubmits an amended rejected request and the old decision is cleared", async () => {
     mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_org"));

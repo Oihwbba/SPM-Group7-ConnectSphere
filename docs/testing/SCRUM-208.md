@@ -66,7 +66,7 @@ one the pop-up showed, with the same rules and the same people allowed to act.
 | Test Data | `organiser@test.local` |
 | Expected Result | Each opens `/events/<id>` with the event's page, and no dialog. **← Back to My Events** returns to the list. An old `/events?event=<id>` link goes to the same page. |
 
-**Automated by:** `e2e/event-page.spec.ts` › "SCRUM-208 [AC1, AC2] TC-208-01, TC-208-02, TC-208-03: …"; `e2e/events.spec.ts` › "organiser views list of their own events with names, status badges, and selects an entry for full detail"; `tests/unit/notifications.test.ts` › "SCRUM-48 [AC5] TC-48-06, SCRUM-208 [AC1] TC-208-01: …"
+**Automated by:** `e2e/event-page.spec.ts` › "SCRUM-208 [AC1, AC2] TC-208-01, TC-208-02, TC-208-03: …"; `e2e/events.spec.ts` › "SCRUM-84 [AC3, AC4] TC-84-03, SCRUM-208 [AC1] TC-208-01: organiser views list of their own events with names, status badges, and selects an entry for full detail"; `tests/unit/notifications.test.ts` › "SCRUM-48 [AC5] TC-48-06, SCRUM-208 [AC1] TC-208-01: …"
 
 ### TC-208-02
 
@@ -248,7 +248,7 @@ one the pop-up showed, with the same rules and the same people allowed to act.
 | Test Data | `attendee@test.local` |
 | Expected Result | The Attendee's event page, with its registration state; not the Organiser's or Coordinator's page. The event's Organiser at the same address gets their own event page, never the Attendee's. |
 
-**Automated by:** `e2e/event-page.spec.ts` › "SCRUM-208 [AC1] TC-208-15: …"; `e2e/attendee-events.spec.ts` › "SCRUM-72, SCRUM-208 [AC1] TC-208-15: …"; `e2e/several-venues.spec.ts`
+**Automated by:** `e2e/event-page.spec.ts` › "SCRUM-208 [AC1] TC-208-15: …"; `e2e/attendee-events.spec.ts` › "SCRUM-208 [AC1] TC-208-15: the Organiser at their Confirmed event's URL gets their own event page, never the attendee view"; `e2e/several-venues.spec.ts`
 
 ### TC-208-16
 
@@ -261,7 +261,7 @@ one the pop-up showed, with the same rules and the same people allowed to act.
 | Test Data | `organiser@test.local`, `coordinator@test.local` |
 | Expected Result | 1: the Organiser's page shows Planning within a few seconds, without a reload. 2: the first Coordinator's page keeps its last view, with "This event request is no longer available in your view…". |
 
-**Automated by:** `tests/unit/readiness-actions.test.ts` › every "SCRUM-208 TC-208-16: …" test; `e2e/events.spec.ts` › "two users viewing the same event simultaneously see consistent live status …" and "SCRUM-208 TC-208-16: …"
+**Automated by:** `tests/unit/readiness-actions.test.ts` › every "SCRUM-208 TC-208-16: …" test; `e2e/events.spec.ts` › "SCRUM-24 [AC7] TC-24-05: two users viewing the same event simultaneously see consistent live status without manual refresh" and "SCRUM-208 TC-208-16: an open event page stays, with a warning, when the event is dropped from the review queue"
 
 ### TC-208-17
 

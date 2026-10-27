@@ -16,6 +16,7 @@ import {
   changeValueLabel,
   raiseChangeRequestSchema,
 } from "@/lib/schemas/change-request";
+import { sgtPeriod } from "../one-day-period";
 
 // SCRUM-41 — raising and tracking a change request. Session and database are
 // mocked; the transaction runs its callback against a mock `tx`, as in
@@ -44,9 +45,9 @@ const mockTransaction = prisma.$transaction as unknown as Mock;
 
 const ORGANISER = "usr_org";
 const COORDINATOR = "usr_coord";
-const IN_A_MONTH = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-const START = new Date(IN_A_MONTH.getTime());
-const END = new Date(IN_A_MONTH.getTime() + 3 * 60 * 60 * 1000);
+// SCRUM-190: 10:00–13:00 SGT a month from now, never crossing midnight SGT.
+const { startAt: START, endAt: END } = sgtPeriod(30, 10, 13);
+const IN_A_MONTH = START;
 
 function sessionFor(role: Role, id: string): Session {
   return {
@@ -637,6 +638,29 @@ describe("raiseChangeRequest — SCRUM-41", () => {
   });
 });
 
+describe("raiseChangeRequest — SCRUM-190 AC3", () => {
+  it("SCRUM-190 [AC3] TC-190-08: a change request moving the event across two days is refused against the end, and nothing is written", async () => {
+    signIn("ORGANISER", ORGANISER);
+
+    const result = await raiseChangeRequest({
+      eventId: "evt1",
+      changes: {
+        startAt: START.toISOString(),
+        endAt: new Date(START.getTime() + 24 * 60 * 60 * 1000).toISOString(),
+      },
+      reason: "Make it a two-day fair.",
+    });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(JSON.stringify(result.fieldErrors)).toContain(
+        "An event starts and ends on the same day. Choose one date with a start and an end time.",
+      );
+    }
+    nothingWritten();
+  });
+});
+
 describe("raiseChangeRequestSchema — SCRUM-41 AC1, AC4", () => {
   const parse = (input: object) =>
     raiseChangeRequestSchema.safeParse({ eventId: "evt1", ...input });
@@ -670,11 +694,11 @@ describe("raiseChangeRequestSchema — SCRUM-41 AC1, AC4", () => {
     [{ startAt: IN_A_MONTH.toISOString() }, "Give both the start and the end."],
     [
       { startAt: END.toISOString(), endAt: START.toISOString() },
-      "Proposed end date and time must be strictly after the start date and time.",
+      "The end time must be after the start time.",
     ],
     [
       { startAt: START.toISOString(), endAt: START.toISOString() },
-      "Proposed end date and time must be strictly after the start date and time.",
+      "The end time must be after the start time.",
     ],
     [
       { startAt: new Date(Date.now() - 60_000).toISOString(), endAt: END.toISOString() },

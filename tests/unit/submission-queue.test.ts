@@ -5,6 +5,7 @@ import type { Role } from "@prisma/client";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { submitEventRequest } from "@/app/(app)/events/actions";
+import { sgtPeriod } from "../one-day-period";
 
 // SCRUM-165 AC1 — submitting no longer assigns a Coordinator: the request
 // stays Submitted and waits in the Lead's Unassigned queue. (It replaces
@@ -31,8 +32,8 @@ function sessionFor(role: Role, id: string): Session {
   };
 }
 
-const futureStart = new Date(Date.now() + 86400000).toISOString();
-const futureEnd = new Date(Date.now() + 86400000 + 7200000).toISOString();
+const futureStart = sgtPeriod(1).startAt.toISOString();
+const futureEnd = sgtPeriod(1).endAt.toISOString();
 
 const validInput = {
   name: "Career Fair",

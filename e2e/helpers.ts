@@ -308,3 +308,18 @@ export async function openEvent(page: Page, name: string, tab?: string) {
   if (tab) await event.getByRole("tab", { name: new RegExp(`^${tab}`) }).click();
   return event;
 }
+
+/**
+ * SCRUM-190 AC1 — the request form's one event date with a start and an end
+ * time, Singapore time: "2031-11-01", "09:00", "17:00".
+ */
+export async function fillEventSchedule(
+  page: Page,
+  date: string,
+  startTime: string,
+  endTime: string,
+) {
+  await pickDateTime(page.getByLabel("Event Date *"), date);
+  await pickDateTime(page.getByLabel("Start Time *"), startTime);
+  await pickDateTime(page.getByLabel("End Time *"), endTime);
+}

@@ -19,6 +19,10 @@ import {
 } from "@/lib/reconsideration";
 import { outdateSafetyChecks } from "@/lib/safety-checks";
 import {
+  END_NOT_AFTER_START_MESSAGE,
+  NOT_ONE_DAY_MESSAGE,
+} from "@/lib/schemas/event";
+import {
   ARRANGEMENT_FIELDS,
   arrangementsFlaggedReason,
   CHANGED_WHILE_EDITING_MESSAGE,
@@ -26,7 +30,6 @@ import {
   CONFIRMED_NOT_EDITABLE_MESSAGE,
   EDITABLE_STATUSES,
   eventDetailsEditSchema,
-  INVALID_PERIOD_MESSAGE,
   operationalNoteSchema,
   PAST_START_MESSAGE,
   registrationStillNeededMessage,
@@ -105,12 +108,12 @@ export async function updateEventDetails(
     const parsed = eventDetailsEditSchema.safeParse(input);
     if (!parsed.success) {
       const fieldErrors = parsed.error.flatten().fieldErrors;
-      return err(
-        fieldErrors.endAt?.includes(INVALID_PERIOD_MESSAGE)
-          ? INVALID_PERIOD_MESSAGE
-          : "Please fix the highlighted fields.",
-        fieldErrors,
+      const periodError = fieldErrors.endAt?.find(
+        (message) =>
+          message === END_NOT_AFTER_START_MESSAGE ||
+          message === NOT_ONE_DAY_MESSAGE,
       );
+      return err(periodError ?? "Please fix the highlighted fields.", fieldErrors);
     }
     const { eventId, confirmedArrangements, ...data } = parsed.data;
 
