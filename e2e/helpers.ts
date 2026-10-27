@@ -308,3 +308,34 @@ export async function openEvent(page: Page, name: string, tab?: string) {
   if (tab) await event.getByRole("tab", { name: new RegExp(`^${tab}`) }).click();
   return event;
 }
+
+/**
+ * SCRUM-210 — open a menu group, only if it is closed. A group holding the
+ * current page opens by itself, so a click would close it; and while a page
+ * is still loading the group can switch, so this retries until it reads open.
+ */
+export async function openMenuGroup(page: Page, name: string) {
+  const toggle = page
+    .getByRole("complementary", { name: "Primary" })
+    .getByRole("button", { name, exact: true });
+  await expect(async () => {
+    if ((await toggle.getAttribute("aria-expanded")) !== "true") await toggle.click();
+    await expect(toggle).toHaveAttribute("aria-expanded", "true", { timeout: 1_000 });
+  }).toPass({ timeout: 15_000 });
+}
+
+/**
+ * SCRUM-210 — open every menu group, once sign-in has landed on the role's
+ * page (on `/` nothing is current yet, so a group the landing page opens
+ * would still read closed).
+ */
+export async function openMenuGroups(page: Page) {
+  await page.waitForURL((url) => url.pathname !== "/" && !url.pathname.startsWith("/login"));
+  const toggles = page
+    .getByRole("complementary", { name: "Primary" })
+    .locator("button[aria-expanded]");
+  const names = await toggles.evaluateAll((buttons) =>
+    buttons.map((button) => button.getAttribute("aria-label") ?? ""),
+  );
+  for (const name of names) await openMenuGroup(page, name);
+}

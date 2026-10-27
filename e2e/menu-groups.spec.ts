@@ -1,6 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 
-import { signedIn } from "./helpers";
+import { openMenuGroup, signedIn } from "./helpers";
 
 /**
  * SCRUM-210 — each role signs in to its own list, and its menu is grouped by
@@ -103,13 +103,15 @@ async function expectMenu(page: Page, groups: Expected["groups"]) {
   );
   for (const [heading, links] of groups) {
     if (!heading) continue;
-    const toggle = nav.getByRole("button", { name: heading, exact: true });
-    if ((await toggle.getAttribute("aria-expanded")) !== "true") await toggle.click();
-    await expect(toggle).toHaveAttribute("aria-expanded", "true");
-    expect(await names(nav.getByRole("group", { name: heading }).getByRole("link"))).toEqual(links);
+    await openMenuGroup(page, heading);
+    const groupLinks = nav.getByRole("group", { name: heading }).getByRole("link");
+    await expect(groupLinks).toHaveCount(links.length);
+    expect(await names(groupLinks)).toEqual(links);
   }
   // With every group open, each link shows once.
-  expect(await names(nav.getByRole("link"))).toEqual(groups.flatMap(([, links]) => links));
+  const all = groups.flatMap(([, links]) => links);
+  await expect(nav.getByRole("link")).toHaveCount(all.length);
+  expect(await names(nav.getByRole("link"))).toEqual(all);
 }
 
 test.describe("SCRUM-210 — Menus grouped by task", () => {
