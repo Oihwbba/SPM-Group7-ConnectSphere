@@ -19,9 +19,18 @@ export function isEventTab(value: unknown): value is EventTab {
   return EVENT_TABS.includes(value as EventTab);
 }
 
+/** The Arrangements tab's sections, in the order they are made (SCRUM-209). */
+export type ArrangementSection = "venues" | "equipment" | "safety";
+
 /** What the viewer can do on the step: open a tab, or a page elsewhere. */
 export type StepAction =
-  | { kind: "tab"; label: string; tab: EventTab }
+  | {
+      kind: "tab";
+      label: string;
+      tab: EventTab;
+      /** SCRUM-209: the part of the Arrangements tab the step is in. */
+      section?: ArrangementSection;
+    }
   | { kind: "link"; label: string; href: string }
   | { kind: "review" }
   | { kind: "resume" };
@@ -72,19 +81,30 @@ const organiser = (facts: NextStepFacts) =>
 /** The first thing between the event and being confirmed, from the checklist. */
 function planningStep(facts: NextStepFacts): NextStep {
   const mine = facts.viewer === "coordinator";
-  const yours = (text: string): NextStep => ({
+  // SCRUM-209: the button opens the Arrangements tab at the step's section.
+  const SECTION_LABEL: Record<ArrangementSection, string> = {
+    venues: "Request a venue",
+    equipment: "Settle equipment",
+    safety: "Request the safety check",
+  };
+  const yours = (text: string, section?: ArrangementSection): NextStep => ({
     kind: "yours",
     text: `Your turn: ${text}`,
     tab: "arrangements",
-    action: { kind: "tab", label: "Go to Arrangements", tab: "arrangements" },
+    action: {
+      kind: "tab",
+      label: section ? SECTION_LABEL[section] : "Go to Arrangements",
+      tab: "arrangements",
+      section,
+    },
   });
   const waiting = (who: string, text: string): NextStep => ({
     kind: "waiting",
     text: `Waiting for ${who} to ${text}`,
     tab: "arrangements",
   });
-  const byCoordinator = (text: string) =>
-    mine ? yours(text) : waiting(coordinator(facts), text);
+  const byCoordinator = (text: string, section?: ArrangementSection) =>
+    mine ? yours(text, section) : waiting(coordinator(facts), text);
 
   const items = facts.checklist?.items ?? [];
   const venue = items.find((item) => item.name === "Venue booking");
@@ -94,10 +114,20 @@ function planningStep(facts: NextStepFacts): NextStep {
     if (venue.needsReconsideration) {
       return byCoordinator("decide the flagged venue booking");
     }
-    if (held?.holdApproved) return byCoordinator(`confirm or release the hold on ${held.venueName}`);
+    if (held?.holdApproved) {
+      const text = `confirm or release the hold on ${held.venueName}`;
+      return mine
+        ? {
+            kind: "yours",
+            text: `Your turn: ${text}`,
+            tab: "arrangements",
+            action: { kind: "tab", label: "Go to Venues", tab: "arrangements", section: "venues" },
+          }
+        : waiting(coordinator(facts), text);
+    }
     if (held) return waiting("Venue Staff", `approve the hold on ${held.venueName}`);
     if (pending) return waiting("Venue Staff", `approve ${pending.venueName}`);
-    return byCoordinator("request a venue");
+    return byCoordinator("request a venue", "venues");
   }
   const equipment = items.find((item) => item.name === "Equipment");
   if (equipment && !equipment.complete) {
@@ -110,15 +140,15 @@ function planningStep(facts: NextStepFacts): NextStep {
     if (equipment.state.startsWith("Not fully reserved")) {
       return waiting("Technical Support", "reserve the equipment");
     }
-    return byCoordinator("request the equipment, or record that none is needed");
+    return byCoordinator("request the equipment, or record that none is needed", "equipment");
   }
   const safety = items.find((item) => item.name === "Safety check");
   if (safety && !safety.complete) {
     if (safety.state === SAFETY_CHECK_LABEL.AWAITING_REVIEW) {
       return waiting("the Safety Officer", "review the safety check");
     }
-    if (safety.state === NOT_REQUESTED) return byCoordinator("request the safety check");
-    return byCoordinator(`act on the safety check (${safety.state})`);
+    if (safety.state === NOT_REQUESTED) return byCoordinator("request the safety check", "safety");
+    return byCoordinator(`act on the safety check (${safety.state})`, "safety");
   }
   return byCoordinator("confirm the event");
 }

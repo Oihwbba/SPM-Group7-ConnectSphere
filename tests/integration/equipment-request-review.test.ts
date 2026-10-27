@@ -201,6 +201,122 @@ describe.skipIf(!usesLocalDatabase)(
       ).toBe(1);
     });
 
+    /**
+     * SCRUM-227: two updates "at the same moment", on every run rather than by
+     * luck. The request's row is held while the updates start, one at a time,
+     * each waiting until its write is queued behind the hold, so every one of
+     * them read the request before any could write. Postgres hands the row to
+     * waiters in the order they queued, so `starts` also fixes who goes first.
+     */
+    async function inTurn<T>(starts: (() => Promise<T>)[]): Promise<T[]> {
+      const running: Promise<T>[] = [];
+      await prisma.$transaction(
+        async (tx) => {
+          await tx.$queryRaw`SELECT "id" FROM "EquipmentRequest" WHERE "id" = ${requestId} FOR UPDATE`;
+          const [{ holder }] = await tx.$queryRaw<{ holder: number }[]>`
+            SELECT pg_backend_pid() AS holder
+          `;
+          for (const start of starts) {
+            running.push(start());
+            await queuedBehind(holder, running.length);
+          }
+        },
+        { timeout: 15_000 },
+      );
+      return Promise.all(running);
+    }
+
+    /**
+     * Waits until `count` sessions are queued behind the `holder` session.
+     * Only the first waits on the holder itself; each later one waits on the
+     * one before it, so the queue is followed link by link.
+     */
+    async function queuedBehind(holder: number, count: number) {
+      for (let tries = 0; tries < 200; tries++) {
+        const [{ queued }] = await prisma.$queryRaw<{ queued: number }[]>`
+          WITH RECURSIVE queue(pid) AS (
+            SELECT pid FROM pg_stat_activity
+             WHERE ${holder}::int = ANY(pg_blocking_pids(pid))
+            UNION
+            SELECT a.pid FROM pg_stat_activity a
+              JOIN queue q ON q.pid = ANY(pg_blocking_pids(a.pid))
+          )
+          SELECT count(*)::int AS queued FROM queue
+        `;
+        if (queued >= count) return;
+        await new Promise((resolve) => setTimeout(resolve, 25));
+      }
+      throw new Error(`Only some of the ${count} updates queued behind the held request.`);
+    }
+
+    it("SCRUM-227 [AC1, AC3] SCRUM-28 [AC7] TC-28-12: two suggestions on the same request at once — the first is saved, the second is told, nothing is doubled", async () => {
+      await updateEquipmentRequestStatus({ requestId, toStatus: "IN_REVIEW" });
+      await reserveLecterns(2);
+
+      const [first, second] = await inTurn([
+        () => suggestAlternativeEquipment({ requestId, lineId: lecternLineId, alternativeId: "eqp_projector" }),
+        () => suggestAlternativeEquipment({ requestId, lineId: lecternLineId, alternativeId: "eqp_mic" }),
+      ]);
+
+      expect(first).toEqual({ ok: true, data: { alternativeId: "eqp_projector" } });
+      expect(second).toMatchObject({
+        ok: false,
+        error:
+          "Someone else updated this request first. Refresh to see its current status.",
+      });
+      const line = await prisma.equipmentRequestLine.findUniqueOrThrow({
+        where: { id: lecternLineId },
+      });
+      expect(line.suggestedAlternativeId).toBe("eqp_projector");
+      // The review's own entry and notice, then the first suggestion's only.
+      expect(
+        await prisma.equipmentRequestUpdate.count({ where: { requestId } }),
+      ).toBe(2);
+      expect(
+        await prisma.notification.count({
+          where: { eventId, type: "EQUIPMENT_REQUEST_UPDATED" },
+        }),
+      ).toBe(2);
+    });
+
+    it("SCRUM-227 [AC1, AC3] SCRUM-28 [AC7] TC-28-13: a suggestion and an approval at once — the suggestion is saved, the approval is told, the request stays In Review", async () => {
+      await updateEquipmentRequestStatus({ requestId, toStatus: "IN_REVIEW" });
+      await reserveLecterns(2);
+
+      const [suggested, approved] = await inTurn<{ ok: boolean; error?: string }>([
+        () => suggestAlternativeEquipment({ requestId, lineId: lecternLineId, alternativeId: "eqp_projector" }),
+        () => updateEquipmentRequestStatus({ requestId, toStatus: "APPROVED" }),
+      ]);
+
+      expect(suggested).toMatchObject({ ok: true });
+      expect(approved).toMatchObject({
+        ok: false,
+        error:
+          "Someone else updated this request first. Refresh to see its current status.",
+      });
+      const request = await prisma.equipmentRequest.findUniqueOrThrow({
+        where: { id: requestId },
+        select: {
+          status: true,
+          decidedAt: true,
+          lines: { where: { id: lecternLineId }, select: { suggestedAlternativeId: true } },
+        },
+      });
+      expect(request).toEqual({
+        status: "IN_REVIEW",
+        decidedAt: null,
+        lines: [{ suggestedAlternativeId: "eqp_projector" }],
+      });
+      expect(
+        await prisma.equipmentRequestUpdate.count({ where: { requestId } }),
+      ).toBe(2);
+      expect(
+        await prisma.notification.count({
+          where: { eventId, type: "EQUIPMENT_REQUEST_UPDATED" },
+        }),
+      ).toBe(2);
+    });
+
     it("SCRUM-28 [AC2, AC3] TC-28-05: a request cannot be approved before it is reviewed, and stays Pending Review", async () => {
       const result = await updateEquipmentRequestStatus({
         requestId,

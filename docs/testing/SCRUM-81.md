@@ -68,7 +68,7 @@ and, if equipment was requested, every line reserved in full.
 | Pre-conditions  | Signed in as the assigned Coordinator. The event is Planning; its only venue booking is pending.                    |
 | Test Steps      | 1. Open the event's details.                                                                                        |
 | Test Data       | Booking PENDING                                                                                                     |
-| Expected Result | "Venue booking — Pending" and "Not ready to confirm yet". The **Confirm event** button is disabled.                 |
+| Expected Result | "Venue booking — Pending" and fewer than "3/3 items completed". The **Confirm event** button is disabled.                 |
 
 **Automated by:** `e2e/confirm.spec.ts` › "SCRUM-81 [AC4] TC-81-03: …"
 

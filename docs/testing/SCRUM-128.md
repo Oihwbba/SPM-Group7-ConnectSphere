@@ -47,7 +47,7 @@ change request. Every account's password is `Password123!`.
 | [TC-128-13](#tc-128-13) | Positive | AC 1, AC 2, AC 4, AC 5 | e2e |
 | [TC-128-14](#tc-128-14) | Positive, Negative | AC 3, AC 9, AC 10 | e2e |
 | [TC-128-15](#tc-128-15) | Negative | AC 2 | Unit |
-| [TC-128-16](#tc-128-16) | Positive, Negative | AC 11 | Unit, integration |
+| [TC-128-16](#tc-128-16) | Positive, Negative | AC 11 | Unit, integration, e2e |
 | [TC-128-17](#tc-128-17) | Negative, Boundary | AC 2 | Unit, integration |
 
 ### TC-128-01
@@ -256,7 +256,7 @@ change request. Every account's password is `Password123!`.
 | Test Data | — |
 | Expected Result | 1. The event stays Confirmed and registration opens as confirming opens it (SCRUM-75 AC4). A "Registration closed" notice for the Organiser and the Coordinator is written to show at the event's start. 2. The notice shows at the window's close; with the close already past, registration is enabled but no notice is written. 3. Nothing opens now: confirming the event opens it. Turning registration off on a Confirmed event withdraws the notice without saying the event is back in Planning. |
 
-**Automated by:** `tests/unit/change-decision.test.ts` › "SCRUM-128 [AC11] TC-128-16: …" (3 tests) and "SCRUM-128 [AC11], SCRUM-45 [AC5]: turning registration off on a Confirmed event withdraws its notice but doesn't say the event is back in Planning, since it isn't"; `tests/integration/change-decision.test.ts` › "SCRUM-128 [AC11] TC-128-16: Registration needed raised as Yes on a Confirmed event opens registration when approved, with its Registration closed notice written for the event's start"
+**Automated by:** `tests/unit/change-decision.test.ts` › "SCRUM-128 [AC11] TC-128-16: …" (3 tests) and "SCRUM-128 [AC11], SCRUM-45 [AC5]: turning registration off on a Confirmed event withdraws its notice but doesn't say the event is back in Planning, since it isn't"; `tests/integration/change-decision.test.ts` › "SCRUM-128 [AC11] TC-128-16: Registration needed raised as Yes on a Confirmed event opens registration when approved, with its Registration closed notice written for the event's start"; `e2e/change-decision.spec.ts` › "SCRUM-128 [AC11] TC-128-16: approving Registration needed No → Yes on a Confirmed event opens it to Attendees, who can then register"; and `tests/unit/change-decision.test.ts` › "SCRUM-128 [AC11] TC-128-16, SCRUM-45 [AC13]: a Registration closed notice confirming already wrote is withdrawn before the new one, so nobody is told twice" (found by the GLM review of #239)
 
 ### TC-128-17
 
