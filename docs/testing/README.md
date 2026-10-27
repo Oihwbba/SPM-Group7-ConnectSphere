@@ -145,6 +145,7 @@ the open pull requests that change the same test files have merged.
 | [SCRUM-110](SCRUM-110.md) | Jun Bin | 15 | Every case automated (unit, and e2e for the page); AC 3 is superseded by SCRUM-170 AC 4 (TC-110-01 and TC-110-09 note it) |
 | [SCRUM-108](SCRUM-108.md) | Jun Bin | 14 | Every current case automated (unit, e2e for both journeys); AC 6, 8 and 10 point to existing tests; TC-108-06 superseded by SCRUM-165 and TC-108-07 by SCRUM-135 |
 | [SCRUM-134](SCRUM-134.md) | Jin Hong | 6 | Written with the story; every case automated |
+| [SCRUM-135](SCRUM-135.md) | Jun Bin | 12 | Every case automated (unit for the lifecycle table and every action asking it, integration for a repeated transition recorded once and a reassignment leaving the status alone, e2e through SCRUM-165's Lead queue and assigned-events journeys) |
 | [SCRUM-121](SCRUM-121.md) | Jin Hong | 5 | Written with the story; every case automated |
 | [SCRUM-124](SCRUM-124.md) | Jin Hong | 11 | Every case automated (unit, integration); the unavailability notices are SCRUM-161's and the safety check's SCRUM-166's own tests |
 | [SCRUM-126](SCRUM-126.md) | Jun Bin | 10 | Every case automated (unit, integration for the constraint, migration and simultaneous clicks, e2e for the journey) |
@@ -160,10 +161,10 @@ the open pull requests that change the same test files have merged.
 | [SCRUM-155](SCRUM-155.md) | Jin Hong | 16 | Every case automated (unit, integration for all-or-nothing and the races, e2e for the journey) |
 | [SCRUM-156](SCRUM-156.md) | Jin Hong | 8 | Every case automated; TC-155-16 retired and the SCRUM-31 reserve cases mapped to SCRUM-155 |
 | [SCRUM-161](SCRUM-161.md) | Felicia Or | 17 | Every current case automated; TC-161-08 to TC-161-11 retired with former AC 5 and AC 6; supersedes TC-37-05 step 1 and TC-37-06 |
-| [SCRUM-159](SCRUM-159.md) | Jun Bin | 17 | Every case automated (unit, integration for the database's range and the simultaneous approvals, e2e for the calendar and the request form); AC 1's form is SCRUM-34's and AC 3's search SCRUM-38's |
+| [SCRUM-159](SCRUM-159.md) | Jun Bin | 19 | Every case automated (unit, integration for the database's range and the simultaneous approvals, e2e for the calendar and the request form); AC 1's form is SCRUM-34's and AC 3's search SCRUM-38's |
 | [SCRUM-170](SCRUM-170.md) | Felicia Or | 13 | Every case automated (unit, integration for the No equipment needed decision racing a new request, e2e for the Organiser's answers on each form and review queue); TC-170-12 and TC-170-13 are automated by SCRUM-25's, SCRUM-128's and SCRUM-38's tests |
 | [SCRUM-171](SCRUM-171.md) | Felicia Or | 10 | Every case automated (unit, integration for registering, editing and the change-request decision against real rows, e2e for browsing and an older request) |
-| [SCRUM-131](SCRUM-131.md) | Felicia Or | 9 | Every case automated (unit for every status name and the checklist badge, e2e for the Organiser's Sent tab and status filter and the Needs Reconsideration badge beside a booking and a reservation, integration for the safety check keeping the event in Planning); AC 6 is SCRUM-85's TC-85-06 |
+| [SCRUM-131](SCRUM-131.md) | Felicia Or | 11 | Every case automated (unit for every status name and the checklist badge, e2e for the Organiser's Sent tab and status filter and the Needs Reconsideration badge beside a booking and a reservation, integration for the safety check keeping the event in Planning); AC 6 is SCRUM-85's TC-85-06 |
 | [SCRUM-132](SCRUM-132.md) | Felicia Or | 10 | Automated except two reviews (e2e for every AC 1 page at 360 px, AC 2's five timings and AC 3's desktop view; unit for AC 4's date messages); TC-132-09's confirmation audit and TC-132-10's README check are manual |
 | [SCRUM-172](SCRUM-172.md) | Jin Hong | 20 | Integration and unit; TC-172-15 step 3 is manual, and TC-172-16 is the whole suite |
 | [SCRUM-26](SCRUM-26.md) | Jun Bin | 15 | Every case automated (unit, integration for blocking, Still stands against real unavailability and simultaneous cancels, e2e for the journey); AC 1's warning screen is SCRUM-25's |
