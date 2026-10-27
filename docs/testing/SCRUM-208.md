@@ -52,6 +52,8 @@ one the pop-up showed, with the same rules and the same people allowed to act.
 | [TC-208-15](#tc-208-15) | Negative | AC 1 (Attendees unchanged) | e2e |
 | [TC-208-16](#tc-208-16) | Positive | SCRUM-24 (live view) | e2e |
 | [TC-208-17](#tc-208-17) | Positive | AC 2, AC 3 | Unit, e2e |
+| [TC-208-18](#tc-208-18) | Positive, Negative | AC 3, AC 4 | Integration, e2e |
+| [TC-208-19](#tc-208-19) | Boundary | AC 4 | Integration, e2e |
 
 ---
 
@@ -275,3 +277,29 @@ one the pop-up showed, with the same rules and the same people allowed to act.
 | Expected Result | 1: Schedule & Attendance comes first, across the page: the proposed date with its times underneath, the expected attendance and the duration; the other four sections below it, two by two. 2: Venue, Date & time, Equipment (one type to a line, in normal text) and Venue bookings (an approval with a green tick). 3: Status "Open" in green, the period on two lines, and "2" with "of 250" in normal text; closing makes the status "Registration closed", in red. |
 
 **Automated by:** `tests/unit/event-page-parts.test.tsx` › "SCRUM-208 [AC2, AC3] TC-208-17: …"; `e2e/event-page.spec.ts` › "SCRUM-208 [AC1, AC2] TC-208-01, TC-208-02, TC-208-03: …" (the Request tab's attendance); `e2e/confirm.spec.ts` › "SCRUM-81 [AC3, AC5, AC6, AC7] TC-81-02, TC-81-05, TC-81-06, TC-81-08: …" (the confirmed venue and equipment); `e2e/event-edit.spec.ts` › "SCRUM-25 [AC4, AC5, AC6] TC-25-22: …" and `e2e/registration-period.spec.ts` › "SCRUM-75 [AC6] TC-75-06, TC-75-07: …" (closing and reopening registration)
+
+### TC-208-18
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-208-18 |
+| Test Scenario | [Positive, Negative] AC 3, AC 4: a closed event's unresolved flag is listed on Changes, never left blank or called "nothing flagged" (GLM review of #275) |
+| Pre-conditions | The event is Completed; its Seminar Room 2.1 booking is still flagged Needs Reconsideration ("The venue's capacity was lowered."). No change requests. |
+| Test Steps | 1. As the Coordinator, open **Changes**. <br> 2. As the Organiser, open **Changes**. |
+| Test Data | `coordinator@test.local`, `organiser@test.local` |
+| Expected Result | 1: the flag is listed, Seminar Room 2.1 with its reason, read-only (no Still stands, Cancel arrangement or Find a replacement venue), with "This event is closed, so these flags can no longer be resolved." 2: the same flag, without the reason (SCRUM-131 AC3), read-only. Neither says nothing is flagged. In Planning or Confirmed the Coordinator still resolves flags here as before; who may resolve one is unchanged. Only the Coordinator gets the reason from the server; anyone else unrelated to the event is told it wasn't found. |
+
+**Automated by:** `tests/integration/event-page-data.test.ts` › "SCRUM-208 [AC3, AC4] TC-208-18: …" and "SCRUM-208 [AC3, AC4] TC-208-18, SCRUM-131 [AC3]: …"; `e2e/event-page.spec.ts` › "SCRUM-208 [AC3, AC4] TC-208-18: …"
+
+### TC-208-19
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-208-19 |
+| Test Scenario | [Boundary] AC 4: with no change requests and nothing flagged, Changes says so in one line |
+| Pre-conditions | The event is Completed, with no change requests and nothing flagged. |
+| Test Steps | 1. Open **Changes** as the Coordinator, then as the Organiser. |
+| Test Data | `coordinator@test.local`, `organiser@test.local` |
+| Expected Result | "No change requests, and nothing flagged Needs Reconsideration." for both. |
+
+**Automated by:** `tests/integration/event-page-data.test.ts` › "SCRUM-208 [AC4] TC-208-19: …"; `e2e/event-page.spec.ts` › "SCRUM-208 [AC4] TC-208-19: …"

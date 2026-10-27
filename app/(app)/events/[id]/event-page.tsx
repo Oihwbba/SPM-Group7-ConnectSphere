@@ -178,12 +178,21 @@ export function EventPage({
           <Empty>Changes can be asked for once the request is submitted.</Empty>
         ) : (
           <div className="space-y-4">
-            {/* SCRUM-26: flagged arrangements, for the assigned Coordinator */}
-            {(event.status === "PLANNING" || event.status === "CONFIRMED") && (
+            {/* SCRUM-26: flagged arrangements. The assigned Coordinator
+                resolves them while the event is in Planning or Confirmed;
+                otherwise, and for the Organiser, they are listed read-only,
+                so the tab is never blank and never says nothing is flagged
+                while something is. */}
+            {attention.unresolvedFlags > 0 && (
               <ReconsiderationPanel
                 key={`flags-${reloads}`}
                 eventId={event.id}
                 onResolved={() => setReloads((n) => n + 1)}
+                readOnly={
+                  !isCoordinator ||
+                  (event.status !== "PLANNING" && event.status !== "CONFIRMED")
+                }
+                closed={event.status === "COMPLETED" || event.status === "CANCELLED"}
               />
             )}
             {/* SCRUM-41: says when there is nothing here, and nothing to raise. */}
@@ -191,7 +200,7 @@ export function EventPage({
               key={event.id}
               event={event}
               whenEmpty={
-                attention.flaggedArrangements === 0 && (
+                attention.unresolvedFlags === 0 && (
                   <Empty>No change requests, and nothing flagged Needs Reconsideration.</Empty>
                 )
               }

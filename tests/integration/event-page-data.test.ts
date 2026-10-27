@@ -1,9 +1,19 @@
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, vi, type Mock } from "vitest";
+import type { Session } from "next-auth";
 import type { Role } from "@prisma/client";
 
+import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import type { SessionUser } from "@/lib/auth/can";
 import { getEventPageData } from "@/app/(app)/events/[id]/event-page-data";
+import { getEventFlags } from "@/app/(app)/events/reconsideration-actions";
+
+vi.mock("@/auth", () => ({ auth: vi.fn() }));
+const signInAs = (user: SessionUser) =>
+  (auth as unknown as Mock).mockResolvedValue({
+    user,
+    expires: "2999-01-01T00:00:00.000Z",
+  } as Session);
 
 // SCRUM-208 against a real Postgres: what the event's own page reads, for its
 // Organiser and its Coordinator, and the same "not found" for everyone else.
@@ -79,6 +89,26 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-208 — the event page's data, agains
       },
     });
     await event("cancelled-unlogged", { status: "CANCELLED" });
+    // A Completed event whose venue was flagged and never resolved.
+    const completed = await event("completed", {
+      status: "COMPLETED",
+      coordinatorId: "usr_coordinator",
+    });
+    await prisma.booking.create({
+      data: {
+        eventId: completed,
+        venueId: "ven_seminar",
+        ...PERIOD,
+        status: "APPROVED",
+        requestedAttendance: 40,
+        requestedById: "usr_coordinator",
+        decidedById: "usr_venuestaff",
+        decidedAt: new Date(),
+        needsReconsideration: true,
+        reconsiderationFlaggedAt: new Date(),
+        reconsiderationReason: "The venue's capacity was lowered.",
+      },
+    });
     await event("discarded", { status: "DRAFT", discardedAt: new Date() });
   });
 
@@ -149,5 +179,41 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-208 — the event page's data, agains
     { who: "anyone, for an id that doesn't exist", user: organiser, key: "missing" },
   ])("SCRUM-208 [AC5] TC-208-13: $who gets not found", async ({ user, key }) => {
     expect(await getEventPageData(user, ids[key] ?? `evt_missing_${STAMP}`)).toBeNull();
+  });
+
+  it("SCRUM-208 [AC3, AC4] TC-208-18: a Completed event's unresolved flag is counted for its Organiser and its Coordinator, and only the Coordinator is asked to act", async () => {
+    expect((await getEventPageData(organiser, ids.completed))?.attention).toMatchObject({
+      unresolvedFlags: 1,
+      flaggedArrangements: 0,
+    });
+    expect((await getEventPageData(coordinator, ids.completed))?.attention).toMatchObject({
+      unresolvedFlags: 1,
+    });
+  });
+
+  it("SCRUM-208 [AC4] TC-208-19: an event with nothing flagged counts none, for either viewer", async () => {
+    for (const user of [organiser, coordinator]) {
+      expect((await getEventPageData(user, ids.approved))?.attention).toMatchObject({
+        unresolvedFlags: 0,
+        flaggedArrangements: 0,
+      });
+    }
+  });
+
+  it("SCRUM-208 [AC3, AC4] TC-208-18, SCRUM-131 [AC3]: the flags read gives the Coordinator the reason and the Organiser the flag without it; anyone else is told not found", async () => {
+    signInAs(coordinator);
+    expect(await getEventFlags(ids.completed)).toMatchObject({
+      ok: true,
+      data: [{ kind: "booking", reason: "The venue's capacity was lowered." }],
+    });
+
+    signInAs(organiser);
+    const forOrganiser = await getEventFlags(ids.completed);
+    expect(forOrganiser).toMatchObject({ ok: true, data: [{ kind: "booking", reason: null }] });
+
+    signInAs(as("usr_coordinator_2", "COORDINATOR"));
+    expect(await getEventFlags(ids.completed)).toEqual({ ok: false, error: "Event not found." });
+    (auth as unknown as Mock).mockResolvedValue(null);
+    expect(await getEventFlags(ids.completed)).toEqual({ ok: false, error: "Event not found." });
   });
 });

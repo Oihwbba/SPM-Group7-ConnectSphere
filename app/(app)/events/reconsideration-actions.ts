@@ -57,6 +57,39 @@ export async function getFlaggedArrangements(
     return err("Event not found.");
   }
 
+  return ok(await readFlags(eventId, true));
+}
+
+/**
+ * SCRUM-208 — the event's unresolved flags for its Changes tab, read-only,
+ * for anyone who may read the event (its Organiser or its Coordinator), at
+ * any status. The reason is internal to the Coordinator (SCRUM-131 AC3), so
+ * only a user who may resolve the flags gets it. Anyone else gets "not found".
+ */
+export async function getEventFlags(
+  eventId: string,
+): Promise<ActionResult<(Omit<FlaggedArrangement, "reason"> & { reason: string | null })[]>> {
+  const session = await auth();
+  const user = session?.user;
+  if (!user) return err("Event not found.");
+
+  const event = await prisma.event.findUnique({
+    where: { id: eventId },
+    select: { organiserId: true, coordinatorId: true, status: true },
+  });
+  const resource = event && ({ kind: "event", ...event } as const);
+  if (!resource || !can(user, "event:read", resource)) return err("Event not found.");
+
+  return ok(await readFlags(eventId, can(user, "arrangement:reconsider", resource)));
+}
+
+/** The event's flagged live bookings and reservations, oldest flag first. */
+async function readFlags(eventId: string, withReasons: true): Promise<FlaggedArrangement[]>;
+async function readFlags(
+  eventId: string,
+  withReasons: boolean,
+): Promise<(Omit<FlaggedArrangement, "reason"> & { reason: string | null })[]>;
+async function readFlags(eventId: string, withReasons: boolean) {
   const [bookings, reservations] = await Promise.all([
     prisma.booking.findMany({
       where: { eventId, ...flaggedLiveBookingWhere(new Date()) },
@@ -83,7 +116,7 @@ export async function getFlaggedArrangements(
   ]);
 
   // A raised flag always has its reason and time (CHECK booking_flag_has_reason).
-  return ok([
+  return [
     ...bookings.map((b) => ({
       ...bookingArrangement(b),
       reason: b.reconsiderationReason!,
@@ -94,7 +127,7 @@ export async function getFlaggedArrangements(
       reason: r.reconsiderationReason!,
       flaggedAt: r.reconsiderationFlaggedAt!,
     })),
-  ]);
+  ].map((flag) => (withReasons ? flag : { ...flag, reason: null }));
 }
 
 type Outcome =

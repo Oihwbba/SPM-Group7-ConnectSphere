@@ -54,6 +54,7 @@ test.describe("SCRUM-208 — One page per event, not a pop-up", () => {
   test.skip(!usesLocalDatabase, "writes its own events; local database only");
 
   test.afterAll(async () => {
+    await prisma.booking.deleteMany({ where: { event: { name: { startsWith: PREFIX } } } });
     await prisma.event.deleteMany({ where: { name: { startsWith: PREFIX } } });
   });
 
@@ -252,5 +253,72 @@ test.describe("SCRUM-208 — One page per event, not a pop-up", () => {
       ),
     ).toBe(false);
     await context.close();
+  });
+
+  /** A Completed event, its venue flagged and never resolved (or not flagged). */
+  async function completedEvent(name: string, flagged: boolean) {
+    const id = await underReviewWithQuestion(name, { status: "COMPLETED" }, false);
+    if (flagged) {
+      await prisma.booking.create({
+        data: {
+          eventId: id,
+          venueId: "ven_seminar",
+          startAt: new Date("2036-10-05T01:00:00Z"),
+          endAt: new Date("2036-10-05T05:00:00Z"),
+          status: "APPROVED",
+          requestedAttendance: 40,
+          requestedById: "usr_coordinator",
+          decidedById: "usr_venuestaff",
+          decidedAt: new Date(),
+          needsReconsideration: true,
+          reconsiderationFlaggedAt: new Date(),
+          reconsiderationReason: "The venue's capacity was lowered.",
+        },
+      });
+    }
+    return id;
+  }
+
+  test("SCRUM-208 [AC3, AC4] TC-208-18: a Completed event's unresolved flag is listed on Changes, read-only and closed; the Organiser sees it without the reason", async ({
+    browser,
+  }) => {
+    const name = `${PREFIX} flagged ${Date.now()}`;
+    const id = await completedEvent(name, true);
+
+    const coordinator = await signedIn(browser, "coordinator@test.local");
+    await coordinator.goto(`/events/${id}?tab=changes`);
+    const flags = coordinator.getByTestId("reconsideration-panel");
+    await expect(flags).toHaveAttribute("data-read-only", "true");
+    await expect(flags).toContainText("Seminar Room 2.1");
+    await expect(flags).toContainText("The venue's capacity was lowered.");
+    await expect(flags.getByTestId("flags-note")).toHaveText(
+      "This event is closed, so these flags can no longer be resolved.",
+    );
+    await expect(flags.getByRole("button")).toHaveCount(0);
+    await expect(coordinator.getByText(/nothing flagged/)).toHaveCount(0);
+
+    // SCRUM-131 AC3: the Organiser sees the flag, not Venue Staff's reason.
+    const organiser = await signedIn(browser, "organiser@test.local");
+    await organiser.goto(`/events/${id}?tab=changes`);
+    const theirs = organiser.getByTestId("reconsideration-panel");
+    await expect(theirs).toContainText("Seminar Room 2.1");
+    await expect(theirs).not.toContainText("The venue's capacity was lowered.");
+    await expect(theirs.getByRole("button")).toHaveCount(0);
+    await expect(organiser.getByText(/nothing flagged/)).toHaveCount(0);
+  });
+
+  test("SCRUM-208 [AC4] TC-208-19: with no change requests and nothing flagged, Changes says so in one line", async ({
+    browser,
+  }) => {
+    const name = `${PREFIX} quiet ${Date.now()}`;
+    const id = await completedEvent(name, false);
+
+    for (const email of ["coordinator@test.local", "organiser@test.local"]) {
+      const page = await signedIn(browser, email);
+      await page.goto(`/events/${id}?tab=changes`);
+      await expect(page.getByTestId("event-page").getByRole("tabpanel")).toHaveText(
+        "No change requests, and nothing flagged Needs Reconsideration.",
+      );
+    }
   });
 });
