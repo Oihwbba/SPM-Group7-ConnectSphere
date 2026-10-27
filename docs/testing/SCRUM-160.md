@@ -17,13 +17,13 @@ clash with any SCRUM-34 AC10 warning, and saving again confirms.
 
 | ID | Type | Criterion | Automated |
 |---|---|---|---|
-| [TC-160-01](#tc-160-01) | Positive | AC 1, AC 2 | Unit, integration |
+| [TC-160-01](#tc-160-01) | Positive | AC 1, AC 2 | Unit, integration, e2e |
 | [TC-160-02](#tc-160-02) | Boundary | AC 1 | Unit |
 | [TC-160-03](#tc-160-03) | Positive | AC 2 | Unit |
 | [TC-160-04](#tc-160-04) | Positive | AC 1, AC 2 | Unit, integration |
 | [TC-160-05](#tc-160-05) | Boundary | AC 1 | Unit |
 | [TC-160-06](#tc-160-06) | Negative | AC 6 | Unit, integration |
-| [TC-160-07](#tc-160-07) | Positive | AC 2, AC 3 | Unit, integration |
+| [TC-160-07](#tc-160-07) | Positive | AC 2, AC 3 | Unit, integration, e2e |
 | [TC-160-08](#tc-160-08) | Negative | AC 7 | Unit, integration |
 | [TC-160-09](#tc-160-09) | Negative | AC 6, AC 7 | Unit |
 | [TC-160-10](#tc-160-10) | Concurrency | AC 1 | Unit, integration |
@@ -42,7 +42,7 @@ clash with any SCRUM-34 AC10 warning, and saving again confirms.
 | Test Data | 30, 45 |
 | Expected Result | Not saved: the edit warns and lists the 13:00–15:00 booking with both clashes, the 10:00–12:00 booking (now 09:30–12:45 against 12:30–15:45) and the maintenance. A booking that also stops fitting the venue (SCRUM-34 AC10) is listed once, for that. No booking is flagged. |
 
-**Automated by:** `tests/unit/venue-time-clashes.test.ts` › "SCRUM-160 [AC1] TC-160-01: …", "SCRUM-160 [AC1, AC2] TC-160-01: …" (3 tests); `tests/unit/venue-catalogue.test.ts` › "SCRUM-160 [AC1] TC-160-01: …" (2 tests); `tests/integration/venue-time-clashes.test.ts` › "SCRUM-160 [AC1] TC-160-01: …"
+**Automated by:** `tests/unit/venue-time-clashes.test.ts` › "SCRUM-160 [AC1] TC-160-01: …", "SCRUM-160 [AC1, AC2] TC-160-01: …" (3 tests); `tests/unit/venue-catalogue.test.ts` › "SCRUM-160 [AC1] TC-160-01: …" (2 tests); `tests/integration/venue-time-clashes.test.ts` › "SCRUM-160 [AC1] TC-160-01: …"; `e2e/setup-turnaround-clashes.spec.ts` › "SCRUM-160 [AC1, AC2, AC5] TC-160-01, TC-160-07, TC-160-11: Venue Staff lengthen the turnaround, are shown the clash before anything is saved, confirm, and the later booking is flagged"
 
 ### TC-160-02
 
@@ -120,7 +120,7 @@ clash with any SCRUM-34 AC10 warning, and saving again confirms.
 | Test Data | — |
 | Expected Result | The times are saved. The 13:00–15:00 booking is flagged Needs Reconsideration with "Setup or turnaround time changed", once, with both clashes in its history. Its status, times and minutes don't change; the 10:00–12:00 booking isn't flagged. Its Coordinator and every Venue Staff member get one SCRUM-124 notice each that it needs reconsideration, with the reason; what it clashes with is on the Venue Staff list (TC-160-11). |
 
-**Automated by:** `tests/unit/venue-time-clashes.test.ts` › "SCRUM-160 [AC2, AC3] TC-160-07: …" (2 tests); `tests/unit/venue-catalogue.test.ts` › "SCRUM-160 [AC2, AC3] TC-160-07: …"; `tests/integration/venue-time-clashes.test.ts` › "SCRUM-160 [AC2, AC3, AC5] TC-160-07: …"
+**Automated by:** `tests/unit/venue-time-clashes.test.ts` › "SCRUM-160 [AC2, AC3] TC-160-07: …" (2 tests); `tests/unit/venue-catalogue.test.ts` › "SCRUM-160 [AC2, AC3] TC-160-07: …"; `tests/integration/venue-time-clashes.test.ts` › "SCRUM-160 [AC2, AC3, AC5] TC-160-07: …"; `e2e/setup-turnaround-clashes.spec.ts` › "SCRUM-160 [AC1, AC2, AC5] TC-160-01, TC-160-07, TC-160-11: Venue Staff lengthen the turnaround, are shown the clash before anything is saved, confirm, and the later booking is flagged"
 
 ### TC-160-08
 
@@ -172,7 +172,7 @@ clash with any SCRUM-34 AC10 warning, and saving again confirms.
 | Test Data | — |
 | Expected Result | "Clashes after a setup or turnaround change" lists the 13:00–15:00 booking with its venue, event, Coordinator (or "Not assigned"), period and both clashes. Clashes from an earlier, resolved flag aren't shown. With nothing flagged, the section isn't shown (shared page conventions, change 14). |
 
-**Automated by:** `tests/unit/venue-time-clashes.test.ts` › "SCRUM-160 [AC5] TC-160-11: …", "SCRUM-160 [AC5, AC6] TC-160-11: …"; `tests/unit/time-clash-flags.test.tsx` (2 tests); `tests/integration/venue-time-clashes.test.ts` (TC-160-07); `e2e/setup-turnaround-clashes.spec.ts` › "SCRUM-160 [AC5] TC-160-11: …"
+**Automated by:** `tests/unit/venue-time-clashes.test.ts` › "SCRUM-160 [AC5] TC-160-11: …", "SCRUM-160 [AC5, AC6] TC-160-11: …"; `tests/unit/time-clash-flags.test.tsx` (2 tests); `tests/integration/venue-time-clashes.test.ts` (TC-160-07); `e2e/setup-turnaround-clashes.spec.ts` › "SCRUM-160 [AC5] TC-160-11: …"; `e2e/setup-turnaround-clashes.spec.ts` › "SCRUM-160 [AC1, AC2, AC5] TC-160-01, TC-160-07, TC-160-11: Venue Staff lengthen the turnaround, are shown the clash before anything is saved, confirm, and the later booking is flagged"
 
 ### TC-160-12
 

@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
   getCoordinatorEquipmentRequests,
   getEquipmentCatalogue,
+  getEventEquipmentRequests,
   getRequestableEvents,
   getReservableRequests,
 } from "@/lib/equipment/request-queries";
@@ -74,6 +75,18 @@ describe("getRequestableEvents — SCRUM-27 AC 1", () => {
     // SCRUM-31 reserves against SCRUM-27's requests, so a request for an event
     // that cannot be reserved for would be unfulfillable.
     expect(RESERVABLE_EVENT_STATUSES).toEqual([...REQUESTABLE_EVENT_STATUSES]);
+  });
+});
+
+describe("getEventEquipmentRequests — SCRUM-209 AC2", () => {
+  it("SCRUM-209 [AC2] TC-209-03: lists one event's requests, newest first, read as the Equipment Requests page reads them", async () => {
+    await getEventEquipmentRequests("evt_1");
+    await getCoordinatorEquipmentRequests("usr_coord");
+
+    const [[forEvent], [forCoordinator]] = db.equipmentRequest.findMany.mock.calls;
+    expect(forEvent.where).toEqual({ eventId: "evt_1" });
+    expect(forEvent.orderBy).toEqual({ createdAt: "desc" });
+    expect(forEvent.select).toEqual(forCoordinator.select);
   });
 });
 
