@@ -16,6 +16,11 @@ Two criteria were overtaken by later stories:
 - **AC 1, AC 4 and AC 6 (event timezone):** SCRUM-129 made every event
   Singapore time. The form has no timezone field; it states its times are SGT,
   and times are stored as UTC (TC-13-07).
+- **AC 1 and AC 8 (the date and times):** SCRUM-190 replaced the separate
+  start and end date/time with one event date, a start time and an end time,
+  and an event must end on the Singapore day it starts. TC-13-01 and
+  TC-13-04 use the new fields and messages, and TC-13-09's overnight step is
+  now refused ([TC-190-05](SCRUM-190.md#tc-190-05)).
 - **AC 2 (catalogue selections):** venue and equipment requirements are free
   text. The form offers the active venue and equipment catalogues as
   suggestions (TC-13-02); choosing from a catalogue was SCRUM-127, which was
@@ -50,8 +55,8 @@ unless the case says otherwise. "A start a month from now" is any future time.
 | Test Case ID | TC-13-01 |
 | Test Scenario | [Positive] AC 1, AC 10: the form captures every field, and shows them all for review before submitting |
 | Pre-conditions | Signed in as the Organiser. |
-| Test Steps | 1. On **My Events**, click **Create Event Request**. <br> 2. Fill **Event Name**, **Event Purpose** and **Event Description**; click **Next**. <br> 3. Fill **Proposed Start Date & Time**, **Proposed End Date & Time** and **Expected Attendance**; click **Next**. <br> 4. Fill **Venue Requirements**, **Preferred Room Layout** and **Accessibility Needs**; click **Next**. <br> 5. Fill **Equipment & Technical Support Requirements**; click **Next**. <br> 6. Fill **Registration Needs**, **Event Programme (Optional)** and **Special Requests / Arrangements (Optional)**; click **Next**. <br> 7. Read **Review Entered Details**, then click **Submit Request for Review**. |
-| Test Data | Name "Regional Innovation Summit", attendance 250, layout "Theatre", a start a month from now and an end two hours later |
+| Test Steps | 1. On **My Events**, click **Create Event Request**. <br> 2. Fill **Event Name**, **Event Purpose** and **Event Description**; click **Next**. <br> 3. Fill **Event Date**, **Start Time**, **End Time** (SCRUM-190) and **Expected Attendance**; click **Next**. <br> 4. Fill **Venue Requirements**, **Preferred Room Layout** and **Accessibility Needs**; click **Next**. <br> 5. Fill **Equipment & Technical Support Requirements**; click **Next**. <br> 6. Fill **Registration Needs**, **Event Programme (Optional)** and **Special Requests / Arrangements (Optional)**; click **Next**. <br> 7. Read **Review Entered Details**, then click **Submit Request for Review**. |
+| Test Data | Name "Regional Innovation Summit", attendance 250, layout "Theatre", a date a month from now, 10:00 to 12:00 |
 | Expected Result | **Review Entered Details** shows every value entered, including the accessibility needs. After submitting, the request is on **My Events**. |
 
 **Automated by:** `tests/unit/events.test.ts` › "SCRUM-13 [AC1, AC10 - Happy Path]: successfully creates complete event request when all mandatory and optional fields are valid"; `e2e/events.spec.ts` › "organiser fills event request sections, reviews details, and submits request"
@@ -104,7 +109,7 @@ unless the case says otherwise. "A start a month from now" is any future time.
 | Pre-conditions | Signed in as the Organiser. |
 | Test Steps | 1. Click **Create Event Request** and click **Next** through every step without filling anything. <br> 2. Click **Submit Request for Review**. <br> 3. Click **1. Basics**. <br> 4. Repeat with the name, purpose and description filled with spaces only. |
 | Test Data | Every field empty; then "   " in the text fields |
-| Expected Result | "Please fix the highlighted fields before submitting." and nothing is created. Each empty field is marked with its own message, for example "Event name is required." and "Venue requirements are required."; empty dates say "Proposed start date and time is required." rather than calling the date invalid. Spaces count as empty. |
+| Expected Result | "Please fix the highlighted fields before submitting." and nothing is created. Each empty field is marked with its own message, for example "Event name is required." and "Venue requirements are required."; an empty date or time says "Choose the event date and a start time." or "Choose an end time." (SCRUM-190) rather than calling the date invalid. Spaces count as empty. |
 
 **Automated by:** `tests/unit/events.test.ts` › "SCRUM-13 [AC4 - Business-Rule Negative]: returns field errors when any mandatory field is missing upon submission", "SCRUM-13 [AC4 - Business-Rule Negative]: blank start and end dates are reported as required, not as invalid dates", "SCRUM-13 [AC4 - Business-Rule Negative]: rejects whitespace-only values for mandatory string fields"; `e2e/events.spec.ts` › "SCRUM-13 [AC4] / SCRUM-14 AC2: submitting with mandatory fields left blank is refused and missing fields are indicated"
 
@@ -152,13 +157,13 @@ unless the case says otherwise. "A start a month from now" is any future time.
 | Item | Content |
 |---|---|
 | Test Case ID | TC-13-09 |
-| Test Scenario | [Boundary] AC 8: an end equal to or before the start is refused; an overnight event is fine |
+| Test Scenario | [Boundary] AC 8: an end equal to or before the start is refused; an overnight event is refused too (SCRUM-190) |
 | Pre-conditions | Signed in as the Organiser, with every other field valid. |
 | Test Steps | 1. Enter an end equal to the start and submit. <br> 2. Enter an end an hour before the start and submit. <br> 3. Enter a start of 22:00 and an end of 02:00 the next day, and submit. |
 | Test Data | Start and end on a future date |
-| Expected Result | Steps 1 and 2 are refused with "Proposed end date and time must be strictly after the start date and time." and nothing is created. Step 3 is accepted. |
+| Expected Result | Steps 1 and 2 are refused with "The end time must be after the start time." and nothing is created. Step 3, once accepted, is now refused with "An event starts and ends on the same day. Choose one date with a start and an end time." (SCRUM-190 supersedes it; see [TC-190-05](SCRUM-190.md#tc-190-05)). |
 
-**Automated by:** `tests/unit/events.test.ts` › "SCRUM-13 [AC8 - Domain Boundary]: rejects submission when proposed end date is equal to start date (zero-duration)", "SCRUM-13 [AC8 - Domain Boundary]: rejects submission when proposed end date is earlier than start date", "SCRUM-13 [AC8 - Implicit Rule]: accepts valid cross-midnight overnight event schedules spanning across calendar days"
+**Automated by:** `tests/unit/events.test.ts` › "SCRUM-13 [AC8 - Domain Boundary]: rejects submission when proposed end date is equal to start date (zero-duration)", "SCRUM-13 [AC8 - Domain Boundary]: rejects submission when proposed end date is earlier than start date"; step 3 by `tests/unit/events.test.ts` › "SCRUM-190 [AC1, AC3] TC-190-05: an overnight request from 23:00 to 01:00 SGT the next day is refused, and nothing is created"
 
 ### TC-13-10
 
