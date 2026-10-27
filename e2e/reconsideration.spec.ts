@@ -122,12 +122,16 @@ test.describe("SCRUM-26 — Flag and resolve arrangements affected by a change",
     // A test that failed before creating its event has nothing to remove. An
     // undefined id would empty the filters below and delete every booking.
     if (!eventId) return;
-    const bookings = await prisma.booking.findMany({
-      where: { eventId },
-      select: { id: true },
-    });
+    const where = { where: { eventId }, select: { id: true } };
+    const bookings = await prisma.booking.findMany(where);
+    // Resolving a flagged reservation logs against the reservation (TC-26-08).
+    const reservations = await prisma.reservation.findMany(where);
     await prisma.auditLog.deleteMany({
-      where: { entityId: { in: [eventId, ...bookings.map((b) => b.id)] } },
+      where: {
+        entityId: {
+          in: [eventId, ...[...bookings, ...reservations].map((row) => row.id)],
+        },
+      },
     });
     // TC-131-05's reservations go first: they reference its equipment request.
     await prisma.reservation.deleteMany({ where: { eventId } });
