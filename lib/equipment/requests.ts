@@ -31,6 +31,8 @@ export const LIVE_LINE = { removedAt: null } as const;
 /**
  * SCRUM-142 AC1, AC3 — a request the Coordinator can still change or
  * withdraw. A Rejected one is replaced by a new request (SCRUM-27).
+ * SCRUM-186 AC1: these are also the event's active requests, and an event
+ * gets no second one while it has one of them.
  */
 export const CHANGEABLE_REQUEST_STATUSES = [
   "PENDING_REVIEW",
@@ -163,6 +165,24 @@ export function outstandingLines<
       ),
     }))
     .filter((line) => line.outstanding > 0);
+}
+
+/**
+ * SCRUM-142, SCRUM-226 — an approved request as the reserve form loaded it:
+ * when the request last changed, and what each line still had to reserve.
+ * Reserving compares it under the event's lock, so a form opened before the
+ * lines changed, or before someone else reserved part of the request, is
+ * refused rather than reserving a line twice (SCRUM-155 AC5).
+ */
+export function reservationVersion(
+  updatedAt: Date,
+  missing: { equipmentId: string; outstanding: number }[],
+): string {
+  const left = missing
+    .map((line) => `${line.equipmentId}:${line.outstanding}`)
+    .sort()
+    .join(",");
+  return `${updatedAt.toISOString()}|${left}`;
 }
 
 type RequestedLine = {

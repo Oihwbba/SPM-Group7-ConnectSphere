@@ -151,9 +151,10 @@ test.describe("SCRUM-166 — Operational safety check", () => {
     // AC10: the booking is flagged with the note; the Coordinator sees why.
     await signIn(page, "coordinator@test.local", "/events");
     const checklist = await openChecklist(page, name);
-    await expect(checklist.getByTestId("readiness-item-safety")).toContainText(
-      `Changes requested – ${NOTE}`,
-    );
+    // SCRUM-209: the state beside the section's title, the note below it.
+    const safety = checklist.getByTestId("readiness-item-safety");
+    await expect(safety.getByTestId("item-status")).toContainText("Changes requested");
+    await expect(safety.getByTestId("item-reason")).toHaveText(NOTE);
     await expect(
       checklist.getByTestId("readiness-item-venue").getByTestId("needs-reconsideration").first(),
     ).toHaveText("Needs Reconsideration");
