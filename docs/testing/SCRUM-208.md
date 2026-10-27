@@ -261,7 +261,7 @@ one the pop-up showed, with the same rules and the same people allowed to act.
 | Test Data | `organiser@test.local`, `coordinator@test.local` |
 | Expected Result | 1: the Organiser's page shows Planning within a few seconds, without a reload. 2: the first Coordinator's page keeps its last view, with "This event request is no longer available in your view…". |
 
-**Automated by:** `tests/unit/readiness-actions.test.ts` › every "SCRUM-208 TC-208-16: …" test; `e2e/events.spec.ts` › "two users viewing the same event simultaneously see consistent live status …" and "SCRUM-208 TC-208-16: an open event page stays, with a warning, when the event is dropped from the review queue"
+**Automated by:** `tests/unit/readiness-actions.test.ts` › every "SCRUM-208 TC-208-16: …" test; `e2e/events.spec.ts` › "SCRUM-24 [AC7] TC-24-05: two users viewing the same event simultaneously see consistent live status without manual refresh" and "SCRUM-208 TC-208-16: an open event page stays, with a warning, when the event is dropped from the review queue"
 
 ### TC-208-17
 

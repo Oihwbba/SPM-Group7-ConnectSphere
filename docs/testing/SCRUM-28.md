@@ -179,7 +179,7 @@ A suggestion is an update too: TC-28-12 and TC-28-13 cover two suggestions, and 
 | Test Data | Roles: ORGANISER, COORDINATOR, VENUE_STAFF, ATTENDEE |
 | Expected Result | Each call is refused with "You do not have permission to do that." before anything is read. The coordinator's page shows the request with no **Start review**, **Approve** or **Reject**. |
 
-**Automated by:** `tests/unit/equipment-request-review.test.ts` › "refuses %s before reading anything" (both actions, all four roles); `tests/unit/auth.test.ts` › "does not let %s review an equipment request"; `e2e/equipment-request-review.spec.ts` › "SCRUM-28 [AC4, AC5, AC6] TC-28-07, TC-28-09, TC-28-10, SCRUM-207 TC-207-24: …" (coordinator view)
+**Automated by:** `tests/unit/equipment-request-review.test.ts` › "refuses %s before reading anything" (both actions, all four roles); `tests/unit/auth.test.ts` › "SCRUM-28 TC-28-11: does not let %s review an equipment request"; `e2e/equipment-request-review.spec.ts` › "SCRUM-28 [AC4, AC5, AC6] TC-28-07, TC-28-09, TC-28-10, SCRUM-207 TC-207-24: …" (coordinator view)
 
 ### TC-28-12
 
