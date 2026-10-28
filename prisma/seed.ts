@@ -1328,7 +1328,9 @@ async function seedSafetyChecks() {
 
 async function seedWorkflowRegistrations() {
   const registrations = [
-    // SCRUM-85 AC9: Attendees of the re-planned event.
+    // SCRUM-85 AC9: Attendees of the re-planned event. Only Aria gets the
+    // seeded notice of the change: attendee-updates.spec.ts tells attendee2
+    // of a change itself and looks for that title.
     { id: "reg_replanning_1", eventId: W.replanning, userId: U.attendee, status: RegistrationStatus.REGISTERED, registeredAt: at(-8, 4) },
     { id: "reg_replanning_2", eventId: W.replanning, userId: U.attendee2, status: RegistrationStatus.REGISTERED, registeredAt: at(-8, 5) },
     // SCRUM-76: a registration for an event that has taken place.
@@ -1419,7 +1421,6 @@ async function seedWorkflowNotifications() {
     { id: "ntf_reservation_cancelled", userId: U.coordinator, type: T.RESERVATION_CANCELLED, title: "A reservation was cancelled", message: "Laptop × 2 for Cancelled — Winter Workshop was released.", eventId: E.cancelled, createdAt: at(-1, 3), readAt: at(-1, 4) },
     { id: "ntf_change_outcome", userId: U.organiser, type: T.CHANGE_REQUEST_OUTCOME, title: "Change request approved", message: "Your change to Flagged — Sustainability Forum was approved.", eventId: W.flagged, createdAt: at(-1, 5) },
     { id: "ntf_event_changed", userId: U.attendee, type: T.REGISTERED_EVENT_CHANGED, title: "An event you registered for has changed", message: "Re-planning — Jazz Night is being re-planned; we'll tell you when it's confirmed again.", eventId: W.replanning, createdAt: at(-2, 3) },
-    { id: "ntf_event_changed_2", userId: U.attendee2, type: T.REGISTERED_EVENT_CHANGED, title: "An event you registered for has changed", message: "Re-planning — Jazz Night is being re-planned; we'll tell you when it's confirmed again.", eventId: W.replanning, createdAt: at(-2, 3) },
     { id: "ntf_booking_requested", userId: U.venueStaff, type: T.BOOKING_REQUESTED, title: "New venue request", message: "Exhibition Hall is requested for Equipment In Review — Media Workshop.", eventId: W.equipmentInReview, bookingId: "bkg_pending_2", createdAt: at(-2, 3) },
     { id: "ntf_equipment_submitted", userId: U.techSupport, type: T.EQUIPMENT_REQUEST_SUBMITTED, title: "New equipment request", message: "Equipment In Review — Media Workshop asks for projectors and microphones.", eventId: W.equipmentInReview, createdAt: at(-3, 3), readAt: at(-1, 4) },
     { id: "ntf_equipment_changed", userId: U.techSupport, type: T.EQUIPMENT_REQUEST_CHANGED, title: "Equipment request changed", message: "PA Speaker was taken off the request for Equipment In Review — Media Workshop.", eventId: W.equipmentInReview, createdAt: at(-1, 3) },
