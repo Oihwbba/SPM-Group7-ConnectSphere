@@ -153,6 +153,8 @@ Availability, Venue Catalogue; All Events.
    navigation**, then **Venues**, then **Venues** again.
 2. Open Availability.
 3. At 360 px wide, select **Venues** in the bottom bar, then Venue Search.
+4. At 360 px wide, sign in as Technical Support, then select **My work**
+   twice.
 
 **Expected:** 1: Venues starts closed; selected, it opens Venue Search,
 Request Venue, Availability and Venue Catalogue beneath it, indented; selected
@@ -160,6 +162,9 @@ again, it closes. 2: on one of its pages, Venues starts open, with that page
 marked current. 3: the bar shows Events, Venues, Equipment Requests and All
 Events; Venues opens its four links in a panel above the bar, and its
 button reads as expanded while the panel is open; the panel closes once a
-link is chosen. The page doesn't scroll sideways.
+link is chosen. The page doesn't scroll sideways. 4: on Equipment, My work
+reads as collapsed and shows as the current page's group; selected, its panel
+opens with Equipment marked current and it reads as expanded; selected again,
+it reads as collapsed.
 
-*Automated:* `e2e/menu-groups.spec.ts` both "SCRUM-210 [AC1] TC-210-09" tests.
+*Automated:* `e2e/menu-groups.spec.ts` the three "SCRUM-210 [AC1] TC-210-09" tests.

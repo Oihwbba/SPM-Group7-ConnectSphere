@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -54,6 +54,16 @@ const ICON_BY_GROUP: Record<GroupId, LucideIcon> = {
   equipment: Wrench,
   planning: LayoutList,
 };
+
+// SCRUM-210: the rail from `md` up, the phone's bar below it. The server
+// renders the rail; a phone switches once mounted.
+const DESKTOP = "(min-width: 768px)";
+function onWidthChange(notify: () => void) {
+  const query = window.matchMedia(DESKTOP);
+  query.addEventListener("change", notify);
+  return () => query.removeEventListener("change", notify);
+}
+const isDesktop = () => window.matchMedia(DESKTOP).matches;
 
 /**
  * The left navigation rail. Collapsed by default: a slim column with a toggle
@@ -111,6 +121,7 @@ export function Sidebar({ roles }: { roles: Role[] }) {
   const [opened, setOpened] = useState<Partial<Record<GroupId, boolean>>>({});
   // On a phone, the group whose links show in the panel above the bar.
   const [phoneGroup, setPhoneGroup] = useState<GroupId | null>(null);
+  const desktop = useSyncExternalStore(onWidthChange, isDesktop, () => true);
   const holdsActive = (links: NavItem[]) =>
     links.some((item) => item.href === activeHref);
 
@@ -197,8 +208,11 @@ export function Sidebar({ roles }: { roles: Role[] }) {
           }
           const open = opened[group.id] ?? holdsActive(group.items);
           const Icon = ICON_BY_GROUP[group.id];
+          // Whether its links are in view: in place on the rail, in the
+          // panel on a phone.
+          const shown = desktop ? open : phoneGroup === group.id;
           // Closed over the page being viewed, the group shows as active.
-          const lit = holdsActive(group.items) && !open;
+          const lit = holdsActive(group.items) && !shown;
           return (
             <div
               key={group.id}
@@ -211,11 +225,10 @@ export function Sidebar({ roles }: { roles: Role[] }) {
                 type="button"
                 title={group.heading}
                 aria-label={group.heading}
-                // On a phone the group opens in the panel above the bar.
-                aria-expanded={open || phoneGroup === group.id}
+                aria-expanded={shown}
                 onClick={() => {
                   // The rail opens the group in place; a phone, in its panel.
-                  if (window.matchMedia("(min-width: 768px)").matches) {
+                  if (desktop) {
                     setOpened((current) => ({ ...current, [group.id]: !open }));
                   } else {
                     setPhoneGroup((current) =>

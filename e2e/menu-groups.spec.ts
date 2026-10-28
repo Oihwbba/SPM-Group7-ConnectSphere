@@ -192,4 +192,32 @@ test.describe("SCRUM-210 — Menus grouped by task", () => {
     ).toBe(false);
     await context.close();
   });
+
+  test("SCRUM-210 [AC1] TC-210-09: on a phone, the group holding the current page reads closed until it is opened", async ({
+    browser,
+  }) => {
+    const context = await browser.newContext({ viewport: { width: 360, height: 740 } });
+    const page = await context.newPage();
+    await page.goto("/login");
+    await page.getByLabel("Email", { exact: true }).fill("techsupport@test.local");
+    await page.getByLabel("Password", { exact: true }).fill("Password123!");
+    await page.getByRole("button", { name: "Sign in" }).click();
+    await expect(page).toHaveURL(/\/equipment$/);
+
+    // Equipment is in My work, whose panel is shut: the rail's "open while it
+    // holds the page" doesn't apply to the phone's bar.
+    const nav = menu(page);
+    const work = nav.getByRole("button", { name: "My work", exact: true });
+    await expect(work).toHaveAttribute("aria-expanded", "false");
+    await expect(nav.getByRole("group", { name: "My work" })).toHaveCount(0);
+
+    await work.click();
+    await expect(work).toHaveAttribute("aria-expanded", "true");
+    await expect(
+      nav.getByRole("group", { name: "My work" }).getByRole("link", { name: "Equipment", exact: true }),
+    ).toHaveAttribute("aria-current", "page");
+    await work.click();
+    await expect(work).toHaveAttribute("aria-expanded", "false");
+    await context.close();
+  });
 });
