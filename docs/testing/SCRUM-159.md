@@ -25,10 +25,11 @@ are signed in as `coordinator@test.local`, approvals as
   occupied period without a second rule. Placing a hold (SCRUM-163) checks the
   occupied period and keeps the venue's minutes (TC-159-17), and a live hold
   blocks like an approval (TC-159-15, TC-159-16).
-- A request's period is its event's, rounded out to the half hour (SCRUM-50
-  AC1), so a request for 13:15 can't be made in the app. The criterion's
-  exact 13:15 example is proven in unit tests; the integration and e2e tests
-  use half-hour equivalents.
+- A request's period is its event's, to the minute, since SCRUM-188. While it
+  was rounded out to the half hour (SCRUM-50 AC1) a request for 13:15 couldn't
+  be made in the app, so the criterion's exact 13:15 example is proven in unit
+  tests and the integration and e2e tests use the half-hour equivalents they
+  were written with, which still hold.
 
 | ID | Type | Criterion | Automated |
 |---|---|---|---|

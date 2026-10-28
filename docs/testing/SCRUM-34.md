@@ -35,7 +35,7 @@ SCRUM-40's suitability. AC12's warning is SCRUM-159 AC9.
 | Pre-conditions | — |
 | Test Steps | 1. Check `venue:read` for each role. <br> 2. Check each role's navigation. |
 | Test Data | All seven roles |
-| Expected Result | Coordinator, Venue Staff, Technical Support, Lead and Safety Officer may read venues and have Venues as their last link, so no landing page moves. The Organiser and the Attendee may not, and have no Venues link. |
+| Expected Result | Coordinator, Venue Staff, Technical Support, Lead and Safety Officer may read venues and have the Venue Catalogue link, never as their first link (SCRUM-210 groups it under Venues), so no landing page moves. The Organiser and the Attendee may not, and have no catalogue link. |
 
 **Automated by:** `tests/unit/auth.test.ts` › "SCRUM-34 [AC2] TC-34-02: …"; `tests/unit/nav.test.ts` › "SCRUM-34 [AC2] TC-34-02: …"
 

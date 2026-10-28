@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-27. Jira is the source of truth.
+     Synced from Jira on 2026-10-28. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-234 - Chore: Add the missing e2e journeys for SCRUM-142 AC5 and SCRUM-26's flagged reservation

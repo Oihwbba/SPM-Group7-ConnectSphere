@@ -209,11 +209,11 @@ case names one.
 | Item | Content |
 |---|---|
 | Test Case ID | TC-161-16 |
-| Test Scenario | [Boundary] AC 1: the start and end can be any quarter hour, not only the half hour that booking requests use |
+| Test Scenario | [Boundary] AC 1: the start and end can be any quarter hour, not only the half hour that a hold's expiry uses |
 | Pre-conditions | As TC-161-01. |
 | Test Steps | 1. Open **Record unavailability** and open the Start time list. <br> 2. Record 10:15 am to 11:45 am over the approved booking, and confirm. |
 | Test Data | Start 12 Jan 2036 10:15 am, End 11:45 am, Equipment failure |
-| Expected Result | Step 1: the list offers every 15 minutes (… 9:45 am, 10:00 am, 10:15 am …) and nothing in between. Step 2: saved for exactly 10:15 to 11:45, and the booking's flag reason names those times. A booking request's and a hold expiry's time lists still offer half hours only (SCRUM-50 AC1, SCRUM-163). |
+| Expected Result | Step 1: the list offers every 15 minutes (… 9:45 am, 10:00 am, 10:15 am …) and nothing in between. Step 2: saved for exactly 10:15 to 11:45, and the booking's flag reason names those times. A hold expiry's time list still offers half hours only (SCRUM-163); a booking request's period is its event's, to the minute (SCRUM-188). |
 
 **Automated by:** `tests/unit/request-form.test.tsx` › "SCRUM-161 [AC1] TC-161-16: unavailability can start and end on any quarter hour, and nothing in between"; `e2e/availability.spec.ts` › "SCRUM-161 [AC1, AC2, AC3, AC4] TC-161-01, TC-161-04, TC-161-06, TC-161-16: unavailability over an approved booking, on quarter hours, is confirmed, saved, flags the booking and tells its Coordinator"
 
