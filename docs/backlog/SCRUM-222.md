@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-23. Jira is the source of truth.
+     Synced from Jira on 2026-10-28. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-222 - Chore: Bring the Server Actions reference, testing index and SCRUM-50 supersession note up to date
@@ -10,7 +10,7 @@
 | **Epic** | - |
 | **Priority** | Medium |
 | **Story points** | 0 |
-| **Status in Jira** | In Review |
+| **Status in Jira** | Done |
 | **Sprint** | SCRUM Sprint 4 |
 | **Jira** | https://smu-spm-group7.atlassian.net/browse/SCRUM-222 |
 
