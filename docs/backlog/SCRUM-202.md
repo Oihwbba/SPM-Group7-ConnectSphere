@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-21. Jira is the source of truth.
+     Synced from Jira on 2026-10-28. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-202 - Bug: A venue edit can deadlock with a simultaneous booking decision or event edit
@@ -10,7 +10,7 @@
 | **Epic** | - |
 | **Priority** | Medium |
 | **Story points** | - |
-| **Status in Jira** | To Do |
+| **Status in Jira** | Done |
 | **Sprint** | SCRUM Sprint 4 |
 | **Jira** | https://smu-spm-group7.atlassian.net/browse/SCRUM-202 |
 

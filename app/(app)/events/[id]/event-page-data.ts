@@ -22,6 +22,12 @@ export type EventPageData = {
     openClarification: boolean;
     pendingChangeRequests: number;
     flaggedArrangements: number;
+    /**
+     * Arrangements still flagged Needs Reconsideration, for any viewer, at
+     * any status: the Changes tab lists them and never says nothing is flagged
+     * while one is (SCRUM-208). Only the Coordinator's count asks for action.
+     */
+    unresolvedFlags: number;
   };
 };
 
@@ -70,14 +76,10 @@ export async function getEventPageData(
     await Promise.all([
       prisma.clarificationRequest.count({ where: { eventId, status: "OPEN" } }),
       prisma.eventChangeRequest.count({ where: { eventId, status: "PENDING_REVIEW" } }),
-      reconsiders
-        ? prisma.booking.count({ where: { eventId, ...flaggedLiveBookingWhere(now) } })
-        : 0,
-      reconsiders
-        ? prisma.reservation.count({
-            where: { eventId, needsReconsideration: true, status: "CONFIRMED" },
-          })
-        : 0,
+      prisma.booking.count({ where: { eventId, ...flaggedLiveBookingWhere(now) } }),
+      prisma.reservation.count({
+        where: { eventId, needsReconsideration: true, status: "CONFIRMED" },
+      }),
       event.status === "PLANNING" || event.status === "APPROVED"
         ? getReadinessChecklist(prisma, eventId, now)
         : null,
@@ -95,7 +97,9 @@ export async function getEventPageData(
         : null,
     ]);
 
-  const flaggedArrangements = flaggedBookings + flaggedReservations;
+  const unresolvedFlags = flaggedBookings + flaggedReservations;
+  // Only the Coordinator, who may resolve them, is asked to act on them.
+  const flaggedArrangements = reconsiders ? unresolvedFlags : 0;
   const step = nextStep({
     status: event.status,
     viewer,
@@ -124,6 +128,7 @@ export async function getEventPageData(
       openClarification: openClarifications > 0,
       pendingChangeRequests,
       flaggedArrangements,
+      unresolvedFlags,
     },
   };
 }

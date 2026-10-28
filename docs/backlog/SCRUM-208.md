@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-21. Jira is the source of truth.
+     Synced from Jira on 2026-10-28. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-208 - One page per event, not a pop-up
@@ -10,7 +10,7 @@
 | **Epic** | - |
 | **Priority** | High |
 | **Story points** | 2 |
-| **Status in Jira** | To Do |
+| **Status in Jira** | In Review |
 | **Sprint** | SCRUM Sprint 4 |
 | **Jira** | https://smu-spm-group7.atlassian.net/browse/SCRUM-208 |
 

@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-26. Jira is the source of truth.
+     Synced from Jira on 2026-10-28. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-225 - Chore: Skip the GLM review with a green check when GLM's quota or rate limit stops it
@@ -22,8 +22,8 @@ When the owner's GLM Coding Plan quota runs out, BigModel answers every review w
 
 **Done when:**
 
-- a quota refusal posts a "review skipped" comment and exits green, without a second attempt;
-- a rate-limit refusal is waited out and retried, within the time budget, and skipped green if it never clears;
-- other failures still post "did not complete" and fail;
-- unit tests cover each;
-- `ai-review.yml`, `CONTRIBUTING.md`, `CLAUDE.md` and an ADR 0008 addendum say so.
+* a quota refusal posts a "review skipped" comment and exits green, without a second attempt;
+* a rate-limit refusal is waited out and retried, within the time budget, and skipped green if it never clears;
+* other failures still post "did not complete" and fail;
+* unit tests cover each;
+* `ai-review.yml`, `CONTRIBUTING.md`, `CLAUDE.md` and an ADR 0008 addendum say so.

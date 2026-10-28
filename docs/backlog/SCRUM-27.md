@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-20. Jira is the source of truth.
+     Synced from Jira on 2026-10-28. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-27 - Create an equipment request
@@ -38,5 +38,7 @@
 * 2026-10-01 (audit): restored to the criteria the merged code was built against: the request has one status (Pending Review, In Review, Approved, Rejected) and stock is held by separate reservations (SCRUM-31). The per-item wording is withdrawn. Changing lines before confirmation, which the customer asked for, moved to SCRUM-142. SCRUM-33 (view requests) was merged here, so AC8 states what the Coordinator sees, as built. One code change is needed before acceptance: the merged code also accepts Confirmed events (REQUESTABLE_EVENT_STATUSES in lib/equipment/requests.ts), and AC1 limits requests to Planning because a Confirmed event's details can't change.
 * 2026-10-07: the Related note points pre-filling to SCRUM-170, which took it over when SCRUM-127 was split.
 * 2026-10-16 (PO decision): AC7 is extended by SCRUM-186: a second request is also refused while the first is Approved; more equipment is added by changing lines (SCRUM-142). This story stays Done; the change is built and tested under SCRUM-186.
+* 2026-10-27 (PO decision, Hann Qian): known item for AC1. REQUESTABLE_EVENT_STATUSES in lib/equipment/requests.ts still accepts Approved as well as Planning. No event can reach Approved any more, only the seeded evt_approved, so it is left as it is: SCRUM-233 makes that event Planning and removes APPROVED from the list in the same chore.
+* 2026-10-27 (PO decision, Hann Qian): since SCRUM-207, the lines, rejection reason, alternative and history are shown in the request's details dialog, one click from the list.
 
 Functionality Area: Equipment Request Management

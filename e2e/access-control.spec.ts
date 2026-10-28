@@ -1,5 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 
+import { openMenuGroups } from "./helpers";
+
 /**
  * SCRUM-66 / SCRUM-67 — access control at the route and UI level.
  *
@@ -170,6 +172,9 @@ test.describe("SCRUM-66 — each role's navigation shows only its own links", ()
       await signIn(page, email);
 
       const rail = page.locator("aside");
+      // SCRUM-210: a group's links render only while it is open; open the
+      // closed ones, leaving open any the landing page opened by itself.
+      await openMenuGroups(page);
       for (const href of ALL_ROUTES) {
         const link = rail.locator(`a[href="${href}"]`);
         if (present.includes(href)) {
