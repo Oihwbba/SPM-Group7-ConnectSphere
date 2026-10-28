@@ -127,6 +127,9 @@ export default async function BookingsPage({
             {BOOKING_STATUS_LABEL[done.status]}
             {done.decidedBy && ` by ${done.decidedBy.name}`}
             {done.decidedAt && ` on ${formatDateTime(done.decidedAt)}`}.
+            {!done.decidedAt &&
+              done.heldAt &&
+              ` Held on ${formatDateTime(done.heldAt)}.`}
             {done.decisionReason && ` Reason: ${done.decisionReason}`}
           </DecidedNote>
         ) : null

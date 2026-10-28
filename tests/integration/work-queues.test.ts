@@ -4,7 +4,10 @@ import type { Session } from "next-auth";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { getAssignedFromQueue } from "@/app/(app)/queue/queries";
-import { getDecidedBookings } from "@/app/(app)/bookings/queries";
+import {
+  getDecidedBookings,
+  getPendingBookingQueue,
+} from "@/app/(app)/bookings/queries";
 import { getDecidedSafetyChecks } from "@/app/(app)/safety-checks/queries";
 
 // SCRUM-211 AC2 — the Decided filter's reads against a real database: what
@@ -83,6 +86,35 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-211 — what each queue's Decided fil
     ids.approved = (await booking("APPROVED", "ven_hall", true)).id;
     ids.pending = (await booking("PENDING", "ven_seminar", false)).id;
 
+    // SCRUM-163 holds Venue Staff placed that ended without a decision: one
+    // the Coordinator released, one marked Expired, and one whose expiry has
+    // passed but which nothing has marked yet; and a live hold, still waiting.
+    const hold = (
+      status: "CANCELLED" | "EXPIRED" | "HELD",
+      venueId: string,
+      heldAt: Date,
+      holdExpiresAt: Date,
+    ) =>
+      prisma.booking.create({
+        data: {
+          eventId: planning,
+          venueId,
+          ...PERIOD,
+          status,
+          requestedAttendance: 40,
+          requestedById: "usr_coordinator_2",
+          heldAt,
+          holdExpiresAt,
+          holdNote: "Confirm the catering numbers",
+        },
+        select: { id: true },
+      });
+    const daysAgo = (days: number) => new Date(Date.now() - days * 86_400_000);
+    ids.released = (await hold("CANCELLED", "ven_auditorium", daysAgo(3), daysAgo(1))).id;
+    ids.expired = (await hold("EXPIRED", "ven_boardroom", daysAgo(5), daysAgo(2))).id;
+    ids.lapsed = (await hold("HELD", "ven_auditorium", daysAgo(4), daysAgo(1))).id;
+    ids.liveHold = (await hold("HELD", "ven_boardroom", daysAgo(1), daysAgo(-3))).id;
+
     // A check this officer may review, decided; one awaiting review; and a
     // decided one for an event the officer coordinates, which they may not see.
     const check = (eventId: string, status: "APPROVED" | "AWAITING_REVIEW") =>
@@ -136,6 +168,34 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-211 — what each queue's Decided fil
       venue: { name: "Exhibition Hall" },
     });
     expect(decided.map((b) => b.id)).not.toContain(ids.pending);
+  });
+
+  it("SCRUM-211 [AC2] TC-211-12: a hold that was released or expired is under Decided, newest first by when it was held, and no longer waiting", async () => {
+    const decided = await getDecidedBookings();
+    const waiting = (await getPendingBookingQueue()).map((b) => b.id);
+    const ended = decided.filter((b) =>
+      [ids.released, ids.expired, ids.lapsed].includes(b.id),
+    );
+
+    // Held 3, 4 and 5 days ago: the most recently held first.
+    expect(ended.map((b) => [b.id, b.status])).toEqual([
+      [ids.released, "CANCELLED"],
+      [ids.lapsed, "EXPIRED"],
+      [ids.expired, "EXPIRED"],
+    ]);
+    expect(ended.every((b) => b.decidedAt === null && b.heldAt !== null)).toBe(true);
+    for (const id of [ids.released, ids.expired, ids.lapsed]) {
+      expect(waiting).not.toContain(id);
+    }
+    // The other side: a hold still live waits, and is not decided.
+    expect(waiting).toContain(ids.liveHold);
+    expect(decided.map((b) => b.id)).not.toContain(ids.liveHold);
+  });
+
+  it("SCRUM-211 [AC2] TC-211-12: a decided request ranks by its decision, before a hold placed earlier", async () => {
+    const decided = (await getDecidedBookings()).map((b) => b.id);
+
+    expect(decided.indexOf(ids.approved)).toBeLessThan(decided.indexOf(ids.released));
   });
 
   it("SCRUM-211 [AC2] TC-211-03: Safety Checks' Decided lists recorded checks the officer may review, and not those awaiting review or their own event's (SCRUM-166 AC6)", async () => {

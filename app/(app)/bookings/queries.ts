@@ -6,7 +6,7 @@ import {
   occupiedPeriod,
   submittedBefore,
 } from "@/lib/venue-availability";
-import { liveHoldWhere } from "@/lib/booking-holds";
+import { bookingStatusAt, liveHoldWhere } from "@/lib/booking-holds";
 import { openingHoursRefusal, setupTurnaroundWarning } from "@/lib/venue-hours";
 
 /**
@@ -189,16 +189,26 @@ export async function getPendingBookingQueue(now = new Date()) {
 /**
  * SCRUM-211 AC2 — the queue's Decided filter: requests Venue Staff have
  * decided and that have left the queue (approved, rejected, or a hold that
- * ended), most recently decided first. Read-only; the page asks `can()` for
- * `booking:review` before reading it, as for the queue itself.
+ * ended), most recently decided first. A hold that was released (Cancelled)
+ * or expired has no decision, so it counts from when it was held; one whose
+ * expiry has passed is here even before anything marks it Expired, as it
+ * leaves the queue at that moment (SCRUM-163 AC7). Read-only; the page asks
+ * `can()` for `booking:review` before reading it, as for the queue itself.
  */
-export async function getDecidedBookings() {
-  return prisma.booking.findMany({
-    where: { decidedAt: { not: null }, status: { notIn: ["PENDING", "HELD"] } },
-    orderBy: { decidedAt: "desc" },
+export async function getDecidedBookings(now = new Date()) {
+  const decided = await prisma.booking.findMany({
+    where: {
+      OR: [
+        { decidedAt: { not: null }, status: { notIn: ["PENDING", "HELD"] } },
+        { heldAt: { not: null }, status: { in: ["CANCELLED", "EXPIRED"] } },
+        { status: "HELD", holdExpiresAt: { lte: now } },
+      ],
+    },
     select: {
       id: true,
       status: true,
+      heldAt: true,
+      holdExpiresAt: true,
       startAt: true,
       endAt: true,
       requestedAttendance: true,
@@ -214,6 +224,11 @@ export async function getDecidedBookings() {
       venue: { select: { name: true, capacity: true } },
     },
   });
+  const since = (booking: (typeof decided)[number]) =>
+    (booking.decidedAt ?? booking.heldAt)!.getTime();
+  return decided
+    .map((booking) => ({ ...booking, status: bookingStatusAt(booking, now) }))
+    .sort((a, b) => since(b) - since(a));
 }
 
 export type DecidedBookingRow = Awaited<ReturnType<typeof getDecidedBookings>>[number];

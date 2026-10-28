@@ -40,6 +40,7 @@ with the same rules, permissions, locks, notifications and messages.
 | [TC-211-09](#tc-211-09) | Negative | AC 3, AC 4 | e2e |
 | [TC-211-10](#tc-211-10) | Negative | AC 3 | e2e |
 | [TC-211-11](#tc-211-11) | Positive | AC 3 | e2e |
+| [TC-211-12](#tc-211-12) | Positive, Boundary | AC 2 | Integration |
 
 ## TC-211-01
 
@@ -84,7 +85,8 @@ TC-211-03, TC-211-04: …" tests.
 1. Open each queue; choose **Decided**, then **All**.
 
 **Expected:** Waiting is the default. Decided lists the queue's decided items:
-requests a Lead assigned, bookings approved or rejected, equipment requests
+requests a Lead assigned, bookings approved or rejected (and holds that
+ended, TC-211-12), equipment requests
 approved or rejected, checks with an outcome (only for events the officer may
 review, SCRUM-166 AC6). All lists both. An opened decided item says what was
 decided, with no decision buttons. The filter is kept in the link.
@@ -223,3 +225,23 @@ or its registrations.
 sideways.
 
 *Automated:* `e2e/work-queues.spec.ts` › "SCRUM-211 [AC3] TC-211-11: …".
+
+## TC-211-12
+
+**A hold that ended without a decision is under Decided in Bookings, not lost.**
+
+*Pre-conditions:* holds Venue Staff placed (SCRUM-163): one the Coordinator
+released, one marked Expired, one whose expiry has passed but which nothing
+has marked yet, and one still live.
+
+1. In **Bookings**, choose **Waiting**, then **Decided**.
+
+**Expected:** the released hold (Cancelled) and both expired ones (Expired) are
+under Decided and not under Waiting; the live hold is under Waiting and not
+under Decided. A hold that ended has no decision, so it counts from when it
+was held: the most recently held first, and a request decided today comes
+before a hold placed days ago. Opened, it says how it ended and when it was
+held.
+
+*Automated:* `tests/integration/work-queues.test.ts` › both "SCRUM-211 [AC2]
+TC-211-12: …" tests.
