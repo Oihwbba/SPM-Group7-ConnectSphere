@@ -80,7 +80,7 @@ row lock (ADR 0006 for the Coordinator's decision).
 | Step | What happens | Stories, ADRs |
 |---|---|---|
 | **Draft → Submitted** | The Organiser can save an incomplete request and finish it later. Submitting needs every required field. | SCRUM-13, 14, 15 |
-| **Assignment** | A new request waits in the Lead's Unassigned queue (oldest first) until a Lead assigns a Coordinator, which moves it to Under Review in the same step; the least-loaded Coordinator is suggested (Week 7 change 5). Reassignment by the Lead is SCRUM-21, not built yet. SCRUM-20's automatic assignment is superseded. | SCRUM-165; SCRUM-21 |
+| **Assignment** | A new request waits in the Lead's Unassigned queue (oldest first) until a Lead assigns a Coordinator, which moves it to Under Review in the same step; the least-loaded Coordinator is suggested (Week 7 change 5). The Lead can reassign an event Under Review, in Planning or Confirmed to another Coordinator from All Events (SCRUM-21). SCRUM-20's automatic assignment is superseded. | SCRUM-165; SCRUM-21 |
 | **Review** | The Coordinator can ask the Organiser a question and name the fields the answer may change. While a question is open the event stays Under Review; "awaiting clarification" is shown, not stored as a status. | SCRUM-17, 18, 108, ADR 0014 |
 | **Approve** | Approval moves the event straight to **Planning**: "Approved means there is enough information to start planning." Approved is recorded in the history but never stored on its own. | SCRUM-19, 81, ADR 0012 |
 | **Reject** | A rejection always has a reason and an outcome chosen by the Coordinator: **amend and resubmit** (back to the same Coordinator) or **submit as a new request** (a copy starts as a new Draft). | SCRUM-19, 126, 108, ADR 0013 |
