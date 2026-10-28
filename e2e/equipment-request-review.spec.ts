@@ -148,6 +148,7 @@ test.describe("SCRUM-28 — Review and Update Equipment Request", () => {
     // under Decided, with its history.
     await expect(request).toHaveCount(0);
     await page.getByRole("link", { name: "Decided", exact: true }).click();
+    await page.waitForURL(/status=decided/);
     const decided = await openReview(page, rig.name);
     await expect(decided.getByTestId("request-status")).toHaveText("Approved");
     await expect(decided.getByTestId("history-entry")).toHaveText([

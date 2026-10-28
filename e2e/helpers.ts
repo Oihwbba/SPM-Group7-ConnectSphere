@@ -268,8 +268,12 @@ export async function openQueueRow(
       ? page.locator(`[data-testid="queue-row"][data-item="${which.id}"]`)
       : page.getByTestId("queue-row").filter({ hasText: which });
   const id = (await row.getAttribute("data-item"))!;
-  await row.getByRole("link").click();
-  await page.waitForURL(new RegExp(`[?&]open=${id}`));
+  // A list still settling after a filter or a decision can re-render under
+  // the click, so it is retried until the item opens.
+  await expect(async () => {
+    await row.getByRole("link").click({ timeout: 2_000 });
+    await page.waitForURL(new RegExp(`[?&]open=${id}`), { timeout: 5_000 });
+  }).toPass({ timeout: 20_000 });
   return id;
 }
 
