@@ -3,12 +3,11 @@
 Story and acceptance criteria: [docs/backlog/SCRUM-211.md](../backlog/SCRUM-211.md).
 Format and conventions: [README.md](README.md).
 
-**AC1 is being agreed with the PO.** These cases follow the proposed wording:
-"Every queue shows the same four columns: event, event date, what's asked,
-and requested (date and how long ago). Other details appear when an item is
-opened. Each queue keeps its current default order, and users can sort by
-event date or requested." The backlog snapshot still has the earlier wording
-(oldest first, "waiting since").
+**AC1 was reworded on 27 Oct 2026, with the PO's approval** (see the story's
+change log). "Oldest item first" conflicted with SCRUM-52 AC1 (Bookings list
+the soonest event first), so each queue keeps its own default order and users
+can sort; "waiting since" became "requested" (the date and how long ago), which
+still shows the submission time first-come-first-served needs (SCRUM-134).
 
 **Shared pre-conditions for every case:** the database is migrated and seeded
 (`npm run db:deploy && npm run db:seed`), the app is running, and every seeded
