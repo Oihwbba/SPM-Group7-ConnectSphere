@@ -17,10 +17,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  getEventFlags,
   getFlaggedArrangements,
   resolveReconsiderationFlag,
   type FlaggedArrangement,
 } from "@/app/(app)/events/reconsideration-actions";
+
+type Flag = Omit<FlaggedArrangement, "reason"> & { reason: string | null };
 import { formatDateTime } from "@/lib/datetime";
 import { NEEDS_RECONSIDERATION } from "@/lib/status-labels";
 
@@ -41,24 +44,32 @@ export function afterCancelling(kind: FlaggedArrangement["kind"]): string {
  * its assigned Coordinator to resolve with Still stands or Cancel
  * arrangement. The server returns nothing to anyone else, so for them this
  * renders nothing, as it does when nothing is flagged.
+ *
+ * SCRUM-208: `readOnly` lists the same flags with nothing to do, for the
+ * Organiser (without the internal reason, SCRUM-131 AC3) and for an event
+ * that can't take a decision any more; `closed` says the event is closed.
  */
 export function ReconsiderationPanel({
   eventId,
   onResolved,
+  readOnly = false,
+  closed = false,
 }: {
   eventId: string;
   onResolved: () => void;
+  readOnly?: boolean;
+  closed?: boolean;
 }) {
-  const [flagged, setFlagged] = useState<FlaggedArrangement[]>([]);
+  const [flagged, setFlagged] = useState<Flag[]>([]);
   const [loadFailed, setLoadFailed] = useState(false);
   const [reload, setReload] = useState(0);
-  const [cancelling, setCancelling] = useState<FlaggedArrangement | null>(null);
+  const [cancelling, setCancelling] = useState<Flag | null>(null);
   const [pending, startTransition] = useTransition();
   const router = useRouter();
 
   useEffect(() => {
     let stale = false;
-    getFlaggedArrangements(eventId)
+    (readOnly ? getEventFlags(eventId) : getFlaggedArrangements(eventId))
       .then((result) => {
         if (stale) return;
         setFlagged(result.ok ? result.data : []);
@@ -70,12 +81,9 @@ export function ReconsiderationPanel({
     return () => {
       stale = true;
     };
-  }, [eventId, reload]);
+  }, [eventId, reload, readOnly]);
 
-  function resolve(
-    arrangement: FlaggedArrangement,
-    decision: "STILL_STANDS" | "CANCEL",
-  ) {
+  function resolve(arrangement: Flag, decision: "STILL_STANDS" | "CANCEL") {
     startTransition(async () => {
       let result: Awaited<ReturnType<typeof resolveReconsiderationFlag>>;
       try {
@@ -87,7 +95,9 @@ export function ReconsiderationPanel({
       } catch {
         // An unexpected error or a lost connection: the decision may or may
         // not have been saved, so the flags are read again.
-        toast.error("Couldn't save your decision. Check the list and try again.");
+        toast.error(
+          "Couldn't save your decision. Check the list and try again.",
+        );
         setCancelling(null);
         setReload((n) => n + 1);
         return;
@@ -106,7 +116,8 @@ export function ReconsiderationPanel({
           : [
               `${arrangement.label} was cancelled.`,
               afterCancelling(arrangement.kind),
-              result.data.returnedToPlanning && "The event is back in Planning.",
+              result.data.returnedToPlanning &&
+                "The event is back in Planning.",
             ]
               .filter(Boolean)
               .join(" "),
@@ -130,7 +141,11 @@ export function ReconsiderationPanel({
   if (flagged.length === 0) return null;
 
   return (
-    <Card className="overflow-hidden border-warning/40" data-testid="reconsideration-panel">
+    <Card
+      className="overflow-hidden border-warning/40"
+      data-testid="reconsideration-panel"
+      data-read-only={readOnly}
+    >
       <CardHeader className="bg-warning/10 px-4 py-3">
         <CardTitle className="flex items-center gap-2 text-sm font-semibold">
           <Flag aria-hidden="true" className="h-4 w-4 text-warning" />{" "}
@@ -138,9 +153,12 @@ export function ReconsiderationPanel({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3 p-4 text-xs">
-        <p className="text-muted-foreground">
-          These arrangements were flagged because something they depend on
-          changed. Each keeps its venue or equipment until you decide.
+        <p className="text-muted-foreground" data-testid="flags-note">
+          {closed
+            ? "This event is closed, so these flags can no longer be resolved."
+            : readOnly
+              ? "These arrangements were flagged because something they depend on changed. The Coordinator decides what happens to each."
+              : "These arrangements were flagged because something they depend on changed. Each keeps its venue or equipment until you decide."}
         </p>
         <ul className="space-y-3">
           {flagged.map((arrangement) => (
@@ -151,54 +169,64 @@ export function ReconsiderationPanel({
             >
               <div>
                 <p className="font-semibold">{arrangement.label}</p>
-                <p>{arrangement.reason}</p>
+                {arrangement.reason && <p>{arrangement.reason}</p>}
                 <p className="text-muted-foreground">
                   Flagged {formatDateTime(arrangement.flaggedAt)}
                 </p>
               </div>
-              <div className="flex flex-wrap gap-2">
-                {/* SCRUM-38 AC1: search from this booking request. */}
-                {arrangement.kind === "booking" && (
-                  <Button asChild size="sm" variant="outline">
-                    <Link
-                      href={{
-                        pathname: "/venues/search",
-                        query: { event: eventId, replace: arrangement.id, return: "event" },
-                      }}
-                    >
-                      Find a replacement venue
-                    </Link>
+              {!readOnly && (
+                <div className="flex flex-wrap gap-2">
+                  {/* SCRUM-38 AC1: search from this booking request. */}
+                  {arrangement.kind === "booking" && (
+                    <Button asChild size="sm" variant="outline">
+                      <Link
+                        href={{
+                          pathname: "/venues/search",
+                          query: {
+                            event: eventId,
+                            replace: arrangement.id,
+                            return: "event",
+                          },
+                        }}
+                      >
+                        Find a replacement venue
+                      </Link>
+                    </Button>
+                  )}
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={pending}
+                    onClick={() => resolve(arrangement, "STILL_STANDS")}
+                  >
+                    Still stands
                   </Button>
-                )}
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={pending}
-                  onClick={() => resolve(arrangement, "STILL_STANDS")}
-                >
-                  Still stands
-                </Button>
-                <Button
-                  size="sm"
-                  variant="destructive"
-                  disabled={pending}
-                  onClick={() => setCancelling(arrangement)}
-                >
-                  Cancel arrangement
-                </Button>
-              </div>
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    disabled={pending}
+                    onClick={() => setCancelling(arrangement)}
+                  >
+                    Cancel arrangement
+                  </Button>
+                </div>
+              )}
             </li>
           ))}
         </ul>
       </CardContent>
 
-      <Dialog open={cancelling !== null} onOpenChange={(open) => !open && setCancelling(null)}>
+      <Dialog
+        open={cancelling !== null}
+        onOpenChange={(open) => !open && setCancelling(null)}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Cancel {cancelling?.label}?</DialogTitle>
             <DialogDescription>
-              Its {cancelling?.kind === "booking" ? "venue period" : "equipment"}{" "}
-              is released for others.{" "}
+              Its{" "}
+              {cancelling?.kind === "booking" ? "venue period" : "equipment"} is
+              released for others.{" "}
               {cancelling && afterCancelling(cancelling.kind)} A Confirmed event
               goes back to Planning.
             </DialogDescription>
