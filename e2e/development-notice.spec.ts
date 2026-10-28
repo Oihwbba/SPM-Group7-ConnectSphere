@@ -73,6 +73,15 @@ test.describe("SCRUM-237 — the development-environment notice", () => {
       await expect(
         page.getByRole("banner").getByRole("link", { name: /^Notifications,/ }),
       ).toBeVisible();
+
+      // The strip scrolls away while the top bar stays put, so on a long page
+      // it never sits over the bar or the content.
+      await page.evaluate(() => window.scrollTo(0, 400));
+      await expect
+        .poll(async () => (await page.getByRole("banner").boundingBox())!.y)
+        .toBe(0);
+      const scrolled = await notice.boundingBox();
+      expect(scrolled!.y + scrolled!.height).toBeLessThanOrEqual(0);
     });
   });
 });

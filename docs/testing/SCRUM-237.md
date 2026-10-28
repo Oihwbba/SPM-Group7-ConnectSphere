@@ -52,9 +52,9 @@ on any database.
 | Test Case ID | TC-237-03 |
 | Test Scenario | [Boundary] AC 2: at phone width the notice fits, leaves the top bar's controls clear, and uses the theme's colours |
 | Pre-conditions | Signed in as the Coordinator, with the window 375 px wide. |
-| Test Steps | 1. Look at the notice. <br> 2. Open the profile menu, close it, and look at the bell. |
+| Test Steps | 1. Look at the notice. <br> 2. Open the profile menu, close it, and look at the bell. <br> 3. Scroll down the page. |
 | Test Data | `coordinator@test.local` / `Password123!` |
-| Expected Result | The notice wraps inside the page, and the page doesn't scroll sideways. The profile menu opens and the bell is visible, so the notice covers neither. Its colours are the theme's muted tokens, with no hard-coded colour. |
+| Expected Result | The notice wraps inside the page, and the page doesn't scroll sideways. The profile menu opens and the bell is visible, so the notice covers neither. Scrolled, the top bar stays at the top of the screen and the notice scrolls away above it. Its colours are the theme's muted tokens, with no hard-coded colour. |
 
 **Automated by:** `e2e/development-notice.spec.ts` › "SCRUM-237 [AC2] TC-237-03: at 375 px the notice wraps inside the page and leaves the top bar's controls clear"; `tests/unit/development-notice.test.tsx` › "SCRUM-237 [AC2] TC-237-03: both use the theme's colours, the strip across the page and the panel as a card"
 
