@@ -27,7 +27,7 @@ that remain.
 | [TC-207-07](#tc-207-07) | Positive | AC 4 | e2e |
 | [TC-207-08](#tc-207-08) | Positive | AC 4 | e2e |
 | [TC-207-09](#tc-207-09) | Positive, Negative | AC 4 | **Still to do** (Manual) |
-| [TC-207-10](#tc-207-10) | Positive | AC 5 | **Still to do** (Manual) |
+| [TC-207-10](#tc-207-10) | Positive | AC 5 | Unit, e2e for Attendee Withdraw; **still to do** elsewhere (Manual) |
 | [TC-207-11](#tc-207-11) | Positive | User story | e2e |
 | [TC-207-12](#tc-207-12) | Positive | User story | e2e |
 | [TC-207-13](#tc-207-13) | Positive | User story | e2e |
@@ -193,14 +193,15 @@ Inline only: **Venue Search** and the sign-in page. Toast only: **Booking Reques
 | Test Data | Every seeded account |
 | Expected Result | Each asks in the same dialog, with the same layout and buttons; the way back changes nothing. |
 
-**Automated by:** Manual. **Still to do** on these pages (audited 23 Oct): each irreversible action asks in a dialog of its own, built separately, and two don't ask at all (marked *no confirmation*). They all need the one shared dialog:
+**Automated by:** the shared dialog is `components/app/confirm-dialog.tsx` (SCRUM-212's pull request). `tests/unit/confirm-dialog.test.tsx` › "SCRUM-207 [AC5] TC-207-10: …" (eight tests: its wording, way back, red button for a destructive action, pending state, and a refusal shown inside it without closing); an Attendee withdrawing a registration uses it, on the event page and on **My Registrations**: `e2e/registration-at-a-glance.spec.ts` › "SCRUM-212 [AC2] TC-212-09, SCRUM-207 [AC5] TC-207-10: …".
+
+**Still to do** (Manual) on these pages (audited 23 Oct): each irreversible action asks in a dialog of its own, built separately, and one doesn't ask at all (marked *no confirmation*). They all need to move to the shared dialog:
 
 - **My Events**: discard a draft, reject a request;
 - **Equipment Requests**: withdraw a request (Coordinator); reject a request (Technical Support, *no confirmation*);
 - **Booking Requests**: reject a request;
 - the event pop-up: cancel the event, withdraw or release a venue booking (readiness checklist), decide a change request, the reconsideration choices;
-- **Venues**: retire a venue;
-- an event's page for Attendees (`/events/[id]`): withdraw a registration (*no confirmation*).
+- **Venues**: retire a venue.
 
 ### TC-207-11
 
