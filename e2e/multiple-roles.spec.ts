@@ -134,13 +134,13 @@ test.describe("SCRUM-121 — accounts with several roles", () => {
     const mine = views.getByRole("link", { name: "My requests" });
 
     await expect(queue).toHaveAttribute("aria-current", "page");
-    await expect(page.getByText("Review what coordinators need")).toBeVisible();
+    await expect(page.getByText("Oldest request first. Open one to check each line")).toBeVisible();
 
     await mine.click();
     await page.waitForURL(/\/equipment-requests\?view=mine$/);
     await expect(mine).toHaveAttribute("aria-current", "page");
     await expect(page.getByText("Tell Technical Support what your events need")).toBeVisible();
-    await expect(page.getByText("Review what coordinators need")).toHaveCount(0);
+    await expect(page.getByText("Oldest request first. Open one to check each line")).toHaveCount(0);
   });
 
   test("SCRUM-121 [AC5] TC-121-05: approving the venue booking of an event it coordinates is refused, and the request stays pending", async ({
@@ -171,7 +171,9 @@ test.describe("SCRUM-121 — accounts with several roles", () => {
     const card = await openBooking(page, event.name);
     await card.getByRole("button", { name: "Approve" }).click();
 
-    await expect(page.getByText("You do not have permission to do that.")).toBeVisible();
+    await expect(card.getByTestId("decision-refused")).toHaveText(
+      "You do not have permission to do that.",
+    );
     await expect(card).toHaveCount(1);
     expect(
       await prisma.booking.findUniqueOrThrow({ where: { id: bookingId }, select: { status: true } }),

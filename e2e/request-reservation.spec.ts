@@ -248,12 +248,17 @@ test.describe("SCRUM-155 — Reserve an approved request in one step", () => {
     await expect(rows.nth(1).getByTestId("row-requirements")).toHaveCount(0);
 
     await summary.getByRole("link", { name: "View request" }).click();
-    await expect(page).toHaveURL(`/equipment-requests#request-${requestId}`);
-    const card = page.locator(`#request-${requestId}`);
+    await expect(page).toHaveURL(
+      `/equipment-requests?status=all&open=${requestId}`,
+    );
+    const card = page.locator(
+      `[data-testid="review-item"][data-item="${requestId}"]`,
+    );
     await expect(card).toContainText(name);
     await expect(card).toBeInViewport();
     // Shared page conventions: the linked request opens in its details.
-    await expect(page.getByTestId("review-request")).toContainText(name);
+    await expect(card.getByTestId("queue-item-name")).toHaveText(name);
+    await expect(card.getByTestId("review-request")).toBeVisible();
     // The sticky header must not cover the request's title.
     await expect
       .poll(async () => (await card.boundingBox())!.y)
