@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 
 import { prisma } from "@/lib/db";
-import { signedIn, usesLocalDatabase, openBooking } from "./helpers";
+import { signedIn, usesLocalDatabase, openBooking, openMenuGroup } from "./helpers";
 
 /**
  * SCRUM-121 — one account with several roles in a real browser, as the seeded
@@ -66,6 +66,8 @@ test.describe("SCRUM-121 — accounts with several roles", () => {
     await page.waitForURL(/\/bookings$/);
 
     const nav = page.getByRole("complementary", { name: "Primary" });
+    // SCRUM-210: Request Venue is under Venues, which opens to show it.
+    await openMenuGroup(page, "Venues");
     for (const label of [
       "Bookings", // Venue Staff
       "Equipment", // Technical Support

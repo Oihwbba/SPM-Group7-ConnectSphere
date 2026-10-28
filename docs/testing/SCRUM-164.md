@@ -29,7 +29,7 @@ Lead) and `safety@test.local` (Safety Officer). Every account's password is
 | Pre-conditions | Signed out. |
 | Test Steps | 1. Sign in as the Lead. <br> 2. Look at the side menu and the user menu. |
 | Test Data | `lead@test.local` / `Password123!` |
-| Expected Result | The Lead lands on the first page its role allows, the Unassigned queue (SCRUM-165). The user menu reads "Event Coordinator Lead". The side menu has only Unassigned Queue, Notifications and Venues (SCRUM-34 AC2), all derived from the permission table. |
+| Expected Result | The Lead lands on the first page its role allows, the Unassigned queue (SCRUM-165). The user menu reads "Event Coordinator Lead". The side menu has only Unassigned Queue, Venue Catalogue (SCRUM-34 AC2) and All Events (SCRUM-141), all derived from the permission table; notifications are reached from the bell (SCRUM-207). |
 
 **Automated by:** `e2e/coordinator-lead-role.spec.ts` › "SCRUM-164 [AC1, AC4] TC-164-01: …"; `tests/unit/nav.test.ts` › "SCRUM-172 [AC1] TC-172-01, SCRUM-164 [AC1] TC-164-01, SCRUM-165 [AC10] TC-165-13: COORDINATOR_LEAD is labelled and lands on the Unassigned queue"
 
@@ -42,7 +42,7 @@ Lead) and `safety@test.local` (Safety Officer). Every account's password is
 | Pre-conditions | Signed out. |
 | Test Steps | 1. Sign in as the Safety Officer. <br> 2. Look at the side menu. |
 | Test Data | `safety@test.local` / `Password123!` |
-| Expected Result | The Safety Officer lands on Safety Checks. The side menu has only Safety Checks, Notifications and Venues. |
+| Expected Result | The Safety Officer lands on Safety Checks. The side menu has only Safety Checks and Venue Catalogue; notifications are reached from the bell (SCRUM-207). |
 
 **Automated by:** `tests/unit/nav.test.ts` › "SCRUM-172 [AC1] TC-172-01, SCRUM-166 [AC1] TC-166-03: SAFETY_OFFICER is labelled and lands on the safety check queue"; `e2e/safety-check.spec.ts` › "SCRUM-166 [AC1, AC2, AC3, AC9, AC14] TC-166-15: …" (signs in as `safety@test.local` and lands on `/safety-checks`)
 

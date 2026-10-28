@@ -1,17 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   ArrowLeft,
   ArrowRight,
   Bell,
+  Briefcase,
   Building2,
   CalendarCheck,
   CalendarPlus,
   CalendarRange,
   CalendarDays,
+  ChevronDown,
   ClipboardList,
   LayoutGrid,
   Search,
@@ -24,7 +26,7 @@ import {
 } from "lucide-react";
 import type { Role } from "@prisma/client";
 
-import { navForRoles } from "@/lib/nav";
+import { navGroupsForRoles, type GroupId, type NavItem } from "@/lib/nav";
 import { cn } from "@/lib/utils";
 
 // Icons are a presentation detail attached here on the client, keyed by route.
@@ -45,6 +47,24 @@ const ICON_BY_HREF: Record<string, LucideIcon> = {
   "/notifications": Bell,
 };
 
+// SCRUM-210: the icon of a group that opens to show its links.
+const ICON_BY_GROUP: Record<GroupId, LucideIcon> = {
+  work: Briefcase,
+  venues: Building2,
+  equipment: Wrench,
+  planning: LayoutList,
+};
+
+// SCRUM-210: the rail from `md` up, the phone's bar below it. The server
+// renders the rail; a phone switches once mounted.
+const DESKTOP = "(min-width: 768px)";
+function onWidthChange(notify: () => void) {
+  const query = window.matchMedia(DESKTOP);
+  query.addEventListener("change", notify);
+  return () => query.removeEventListener("change", notify);
+}
+const isDesktop = () => window.matchMedia(DESKTOP).matches;
+
 /**
  * The left navigation rail. Collapsed by default: a slim column with a toggle
  * at the top and the role's items as circular icon buttons stacked inside one
@@ -56,6 +76,11 @@ const ICON_BY_HREF: Record<string, LucideIcon> = {
  * layout; it works out the items itself, because the icons are React
  * components and can't cross the server/client boundary. Several roles show
  * the links of all of them (SCRUM-121 AC2).
+ *
+ * SCRUM-210: the links are grouped by task. A group of more than one link is
+ * one item, named for the task; selecting it opens its links beneath it,
+ * indented (on a phone, in a panel above the bar). The group of the page
+ * being viewed starts open. A group of one link is just that link.
  */
 export function Sidebar({ roles }: { roles: Role[] }) {
   const [collapsed, setCollapsed] = useState(true);
@@ -82,13 +107,23 @@ export function Sidebar({ roles }: { roles: Role[] }) {
     });
   }
 
-  const items = navForRoles(roles);
+  const groups = navGroupsForRoles(roles);
+  const items = groups.flatMap((group) => group.items);
   // The most specific link that matches wins, so /venues/availability does
   // not also light up /venues.
   const activeHref = items
     .map((item) => item.href)
     .filter((href) => pathname === href || pathname.startsWith(`${href}/`))
     .sort((a, b) => b.length - a.length)[0];
+
+  // A group opened or closed by hand; otherwise it is open while it holds
+  // the page being viewed.
+  const [opened, setOpened] = useState<Partial<Record<GroupId, boolean>>>({});
+  // On a phone, the group whose links show in the panel above the bar.
+  const [phoneGroup, setPhoneGroup] = useState<GroupId | null>(null);
+  const desktop = useSyncExternalStore(onWidthChange, isDesktop, () => true);
+  const holdsActive = (links: NavItem[]) =>
+    links.some((item) => item.href === activeHref);
 
   return (
     <aside
@@ -123,6 +158,31 @@ export function Sidebar({ roles }: { roles: Role[] }) {
         )}
       </button>
 
+      {/* SCRUM-210: on a phone, an opened group's links in a panel above the
+          bar. */}
+      {groups.map(
+        (group) =>
+          group.heading &&
+          phoneGroup === group.id && (
+            <div
+              key={group.id}
+              role="group"
+              aria-label={group.heading}
+              className="absolute inset-x-0 bottom-full mb-2 flex flex-col gap-1 rounded-3xl border border-border/50 bg-background p-2 shadow-glass md:hidden"
+            >
+              {group.items.map((item) => (
+                <NavLink
+                  key={item.href}
+                  item={item}
+                  active={item.href === activeHref}
+                  inPanel
+                  onSelect={() => setPhoneGroup(null)}
+                />
+              ))}
+            </div>
+          ),
+      )}
+
       {/* Nav items: a spaced-out row across the bottom bar on mobile; the tall
           rounded pill container on desktop. */}
       <nav
@@ -134,52 +194,182 @@ export function Sidebar({ roles }: { roles: Role[] }) {
           collapsed ? "md:items-center" : "md:items-stretch",
         )}
       >
-        {items.map((item) => {
-          const Icon = ICON_BY_HREF[item.href] ?? LayoutGrid;
-          const isActive = item.href === activeHref;
+        {groups.map((group) => {
+          if (!group.heading) {
+            const item = group.items[0];
+            return (
+              <NavLink
+                key={item.href}
+                item={item}
+                active={item.href === activeHref}
+                collapsed={collapsed}
+              />
+            );
+          }
+          const open = opened[group.id] ?? holdsActive(group.items);
+          const Icon = ICON_BY_GROUP[group.id];
+          // Whether its links are in view: in place on the rail, in the
+          // panel on a phone.
+          const shown = desktop ? open : phoneGroup === group.id;
+          // Closed over the page being viewed, the group shows as active.
+          const lit = holdsActive(group.items) && !shown;
           return (
-            <Link
-              key={item.href}
-              href={item.href}
-              title={item.label}
-              aria-label={item.label}
-              aria-current={isActive ? "page" : undefined}
+            <div
+              key={group.id}
               className={cn(
-                "group flex items-center justify-center gap-3 rounded-full transition-colors",
-                // Mobile: each item takes an equal share of the bar (½ for two
-                // items), so the active highlight can fill that whole segment.
-                "flex-1 md:flex-none",
-                collapsed ? "md:justify-center" : "md:justify-start md:pr-4",
+                "contents md:flex md:w-full md:flex-col md:gap-2",
+                collapsed ? "md:items-center" : "md:items-stretch",
               )}
             >
-              <span
+              <button
+                type="button"
+                title={group.heading}
+                aria-label={group.heading}
+                aria-expanded={shown}
+                onClick={() => {
+                  // The rail opens the group in place; a phone, in its panel.
+                  if (desktop) {
+                    setOpened((current) => ({ ...current, [group.id]: !open }));
+                  } else {
+                    setPhoneGroup((current) =>
+                      current === group.id ? null : group.id,
+                    );
+                  }
+                }}
                 className={cn(
-                  // Mobile: the highlight stretches to fill the item's share;
-                  // on desktop it's the fixed circular icon button.
-                  "flex h-11 w-full shrink-0 items-center justify-center rounded-full transition-colors md:w-11",
-                  isActive
-                    ? "bg-foreground text-background shadow-glass-sm"
-                    : "text-muted-foreground group-hover:bg-secondary group-hover:text-foreground",
+                  "group flex items-center justify-center gap-3 rounded-full transition-colors",
+                  "flex-1 md:flex-none",
+                  collapsed ? "md:justify-center" : "md:justify-start md:pr-4",
                 )}
               >
-                <Icon className="h-5 w-5" />
-              </span>
-              {!collapsed && (
                 <span
                   className={cn(
-                    "hidden truncate text-sm font-medium md:inline",
-                    isActive
-                      ? "text-foreground"
-                      : "text-muted-foreground group-hover:text-foreground",
+                    "flex h-11 w-full shrink-0 items-center justify-center rounded-full transition-colors md:w-11",
+                    lit
+                      ? "bg-foreground text-background shadow-glass-sm"
+                      : phoneGroup === group.id
+                        ? "bg-secondary text-foreground md:bg-transparent md:text-muted-foreground"
+                        : "text-muted-foreground group-hover:bg-secondary group-hover:text-foreground",
                   )}
                 >
-                  {item.label}
+                  <Icon className="h-5 w-5" />
                 </span>
+                {!collapsed && (
+                  <span className="hidden flex-1 items-center justify-between text-sm font-medium text-muted-foreground group-hover:text-foreground md:flex">
+                    <span className="truncate">{group.heading}</span>
+                    <ChevronDown
+                      aria-hidden="true"
+                      className={cn(
+                        "h-4 w-4 transition-transform",
+                        open && "rotate-180",
+                      )}
+                    />
+                  </span>
+                )}
+              </button>
+              {open && (
+                <div
+                  role="group"
+                  aria-label={group.heading}
+                  className={cn(
+                    "hidden flex-col gap-1 md:flex",
+                    // Indented under the group: further in when labelled; in
+                    // the narrow rail, smaller icons set in from the left.
+                    collapsed
+                      ? "md:items-end md:self-stretch md:pr-0.5"
+                      : "md:pl-6",
+                  )}
+                >
+                  {group.items.map((item) => (
+                    <NavLink
+                      key={item.href}
+                      item={item}
+                      active={item.href === activeHref}
+                      collapsed={collapsed}
+                      nested
+                    />
+                  ))}
+                </div>
               )}
-            </Link>
+            </div>
           );
         })}
       </nav>
     </aside>
+  );
+}
+
+/**
+ * One link: its icon in a circle, and its label beside it when the rail is
+ * expanded. Nested under a group, the icon is a little smaller; in the
+ * phone's panel, the label always shows.
+ */
+function NavLink({
+  item,
+  active,
+  collapsed = false,
+  nested = false,
+  inPanel = false,
+  onSelect,
+}: {
+  item: NavItem;
+  active: boolean;
+  collapsed?: boolean;
+  nested?: boolean;
+  inPanel?: boolean;
+  onSelect?: () => void;
+}) {
+  const Icon = ICON_BY_HREF[item.href] ?? LayoutGrid;
+  return (
+    <Link
+      href={item.href}
+      title={item.label}
+      aria-label={item.label}
+      aria-current={active ? "page" : undefined}
+      onClick={onSelect}
+      className={cn(
+        "group flex items-center gap-3 rounded-full transition-colors",
+        inPanel
+          ? "justify-start pr-4"
+          : cn(
+              "justify-center",
+              // Mobile: each item takes an equal share of the bar (½ for two
+              // items), so the active highlight can fill that whole segment.
+              "flex-1 md:flex-none",
+              collapsed ? "md:justify-center" : "md:justify-start md:pr-4",
+            ),
+      )}
+    >
+      <span
+        className={cn(
+          "flex shrink-0 items-center justify-center rounded-full transition-colors",
+          inPanel
+            ? "h-10 w-10"
+            : nested
+              ? "h-11 w-full md:h-9 md:w-9"
+              : // Mobile: the highlight stretches to fill the item's share;
+                // on desktop it's the fixed circular icon button.
+                "h-11 w-full md:w-11",
+          active
+            ? "bg-foreground text-background shadow-glass-sm"
+            : "text-muted-foreground group-hover:bg-secondary group-hover:text-foreground",
+        )}
+      >
+        <Icon className={nested ? "h-4 w-4" : "h-5 w-5"} />
+      </span>
+      {(inPanel || !collapsed) && (
+        <span
+          className={cn(
+            "truncate text-sm font-medium",
+            !inPanel && "hidden md:inline",
+            active
+              ? "text-foreground"
+              : "text-muted-foreground group-hover:text-foreground",
+          )}
+        >
+          {item.label}
+        </span>
+      )}
+    </Link>
   );
 }
