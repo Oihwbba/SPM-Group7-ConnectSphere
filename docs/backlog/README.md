@@ -37,7 +37,7 @@ either covered by a test or visibly not done yet. Reviewers do the same.
 | | |
 |---|---|
 | Stories | **97** |
-| Tasks | **76** |
+| Tasks | **77** |
 | Subtasks | **18** |
 | Total story points | **267** |
 | Points committed to Sprint 1 | **37** |
@@ -272,3 +272,4 @@ _7 stories, 11 points_
 | [SCRUM-234](SCRUM-234.md) | Chore: Add the missing e2e journeys for SCRUM-142 AC5 and SCRUM-26's flagged reservation | SCRUM Sprint 4 | In Review |
 | [SCRUM-235](SCRUM-235.md) | Chore: Re-sync docs/backlog from Jira (28 Oct) | SCRUM Sprint 4 | To Do |
 | [SCRUM-236](SCRUM-236.md) | Chore: Name every unit and integration test after the story, criteria and test case it proves, and fix the test-case docs' format | SCRUM Sprint 4 | To Do |
+| [SCRUM-237](SCRUM-237.md) | Chore: Say on the website and in the README that it is the team's development environment, not a service for customers | SCRUM Sprint 4 | In Progress |
