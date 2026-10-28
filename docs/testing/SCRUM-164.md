@@ -18,7 +18,7 @@ Lead) and `safety@test.local` (Safety Officer). Every account's password is
 | [TC-164-03](#tc-164-03) | Negative | AC 1, AC 3 | e2e |
 | [TC-164-04](#tc-164-04) | Negative | AC 2, AC 3 | Unit, integration |
 | [TC-164-05](#tc-164-05) | Positive | AC 2 | Unit, integration, e2e |
-| [TC-164-06](#tc-164-06) | Positive | AC 5 | Manual |
+| [TC-164-06](#tc-164-06) | Positive | AC 5 | Unit |
 
 ### TC-164-01
 
@@ -96,4 +96,4 @@ Lead) and `safety@test.local` (Safety Officer). Every account's password is
 | Test Data | — |
 | Expected Result | Seven roles are listed, including the Event Coordinator Lead and the Safety Officer. |
 
-**Automated by:** **Manual** (a document check)
+**Automated by:** `tests/unit/product-context.test.ts` › "SCRUM-164 [AC5] TC-164-06: the product overview lists all seven roles" (reads the "Who uses it" table of `docs/product-context.md`)
