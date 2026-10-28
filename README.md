@@ -203,15 +203,33 @@ never simply `totalQuantity` (SCRUM-29/30).
 
 **Also seeded:** an open clarification request; a pending change request with
 three changed fields (two major, one not); venue bookings that are approved,
-pending, rejected and cancelled (none held or expired yet); an
-approved and a pending equipment request with a status history; read and
-unread notifications; and audit entries.
+pending, rejected and cancelled; an approved and a pending equipment request
+with a status history; read and unread notifications; and audit entries.
 
-> **To demo reserving equipment** (SCRUM-155): sign in as Technical Support,
-> open **Equipment requests**, start reviewing and approve the pending
-> "Planning — Freshman Orientation" request, then reserve it on **Equipment**.
-> The seed has no approved request ready to reserve on purpose: SCRUM-27's
-> tests need "Approved — Research Symposium" to have none.
+**Every role's work** (SCRUM-238): each role has something to see and to act
+on, and every status has a row. These events sit 50 or more days out:
+
+| Signed in as | What's waiting |
+|---|---|
+| Coordinator (`coordinator@`) | "Ready to Confirm — Alumni Networking Night" (venue, equipment and safety check done); "Flagged — Sustainability Forum" (a flagged booking and reservation to resolve); "Hold Approved — Founders' Breakfast" (a hold to confirm or release); "Cancellation Requested — Spring Concert" (a cancellation to decide) |
+| Cara Coordinator (`coordinator2@`) | "Safety Changes — Robotics Showcase": the Safety Officer asked for changes; No equipment needed recorded |
+| Lead (`lead@`) | "Overdue — Orientation Volunteers Briefing", unassigned with a past start, plus the other Submitted requests |
+| Venue Staff (`venuestaff@`) | two pending requests (oldest first), a held Boardroom whose deadline was moved, an expired hold, and a flagged booking |
+| Technical Support (`techsupport@`) | a request in review with a line short of stock and Laptop suggested instead, an approved request ready to reserve ("Ready to Reserve — Robotics Open House"), a flagged reservation, and rejected and cancelled requests |
+| Safety Officer (`safety@`) | a check awaiting review ("Safety Review — Engineering Open Day"), with checks that were approved, rejected, sent back for changes and outdated; the Exhibition Hall has a known restriction |
+| Organiser (`organiser@`) | a complete draft ready to submit, a discarded draft, a rejection that asks for a new request, a clarification naming the fields to change, and approved and rejected change requests |
+| Attendee (`attendee@`, `attendee2@`) | "Re-planning — Jazz Night", still showing its last confirmed details; a Confirmed event that takes no registrations |
+| Multi-role (`multirole@`) | organises "Multi-role Organiser — Lab Tour", so it can't decide that venue request as Venue Staff; coordinates "Multi-role Coordinator — Debate Finals" |
+
+Every notification type is seeded for the person who would receive it, some
+read, one shown only from tomorrow and one withdrawn. Venue and equipment
+unavailability has a row for every reason.
+
+> **To demo reserving equipment** (SCRUM-155): sign in as Technical Support
+> and reserve "Ready to Reserve — Robotics Open House" on **Equipment**. Or
+> start from the beginning: review and approve the pending "Planning —
+> Freshman Orientation" request first. "Approved — Research Symposium" has no
+> equipment request on purpose: SCRUM-27's tests need it to have none.
 
 Dates are **relative to today**, not hard-coded, so "registration closes next
 week" stays true all term. Row IDs are fixed and tests use them directly, so

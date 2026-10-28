@@ -25,6 +25,13 @@ pending Seminar Room 2.1 request, a rejected Executive Boardroom request, a
 pending equipment request (a projector and two microphones) and a pending
 change request to move it one day later.
 
+Every role also has work waiting that this script doesn't touch (SCRUM-238):
+a safety check to review, a hold to approve or confirm, flagged arrangements,
+an equipment request in review and one ready to reserve, an overdue request
+for the Lead, and more. The README's "Every role's work" table lists them by
+account. They sit 50 or more days out, so they never clash with the steps
+below.
+
 ---
 
 ## 1. From request to review

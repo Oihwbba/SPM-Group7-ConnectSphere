@@ -35,6 +35,7 @@ import {
   ChangeRequestStatus,
   NotificationType,
   RejectionOutcome,
+  SafetyCheckStatus,
 } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg";
@@ -963,6 +964,494 @@ async function seedAuditLog() {
 }
 
 // ---------------------------------------------------------------------------
+// SCRUM-238 — one scenario for every role's work, and a row in every status.
+//
+// Everything above stays as it is: tests rely on it. These rows sit 50 or more
+// days out, on venue/day pairs nothing else uses, so they never clash with the
+// rows above or with the dates the tests pick. Each event belongs to Olivia
+// Organiser and Cody Coordinator unless it says otherwise.
+// ---------------------------------------------------------------------------
+
+const W = {
+  safetyAwaiting: "evt_safety_awaiting",
+  safetyChanges: "evt_safety_changes",
+  readyToConfirm: "evt_ready_to_confirm",
+  hold: "evt_hold",
+  holdApproved: "evt_hold_approved",
+  flagged: "evt_flagged",
+  equipmentInReview: "evt_equipment_in_review",
+  readyToReserve: "evt_ready_to_reserve",
+  cancellationRequested: "evt_cancellation_requested",
+  noRegistration: "evt_no_registration",
+  replanning: "evt_replanning",
+  draftReady: "evt_draft_ready",
+  draftDiscarded: "evt_draft_discarded",
+  rejectedNewRequest: "evt_rejected_new_request",
+  clarificationFields: "evt_clarification_fields",
+  submittedOverdue: "evt_submitted_overdue",
+  multiRoleOrganised: "evt_multirole_organised",
+  multiRoleCoordinated: "evt_multirole_coordinated",
+} as const;
+
+const WD = {
+  safetyAwaiting: 52,
+  safetyChanges: 55,
+  readyToConfirm: weekdayFrom(58),
+  hold: weekdayFrom(61),
+  holdApproved: weekdayFrom(64),
+  flagged: 67,
+  equipmentInReview: 70,
+  readyToReserve: 73,
+  cancellationRequested: 76,
+  noRegistration: 79,
+  draftReady: 80,
+  multiRoleOrganised: weekdayFrom(82),
+  replanning: 85,
+  multiRoleCoordinated: 88,
+  rejectedNewRequest: 90,
+  clarificationFields: 92,
+};
+
+/** 09:00–17:00 SGT on `day`, inside every venue's opening hours. */
+const workday = (day: number) => ({ startAt: at(day, 1), endAt: at(day, 9) });
+
+async function seedWorkflowEvents() {
+  const common = {
+    purpose: "Seeded so every role has work to see and act on (SCRUM-238).",
+    requiredFacilities: ["projector"],
+    accessibilityNeeds: "Step-free access to the stage.",
+    preferredLayout: "theatre",
+    equipmentRequirements: "Microphones for the speakers.",
+    organiserId: U.organiser,
+  };
+  const planned = (coordinatorId: string, day: number, attendance: number) => ({
+    ...common,
+    ...workday(day),
+    expectedAttendance: attendance,
+    coordinatorId,
+    supervisingLeadId: U.coordinatorLead,
+    submittedAt: at(-14, 3),
+    decidedAt: at(-12, 3),
+    decidedById: coordinatorId,
+  });
+
+  const events: EventSeed[] = [
+    // SCRUM-166: the Safety Officer's queue. Venue approved and equipment
+    // reserved, with a check awaiting review (an earlier one went Outdated).
+    { id: W.safetyAwaiting, name: "Safety Review — Engineering Open Day", description: "Venue and equipment in place; the safety check awaits review.", status: EventStatus.PLANNING, ...planned(U.coordinator, WD.safetyAwaiting, 150) },
+    // SCRUM-166 AC3: Changes requested, for Cara Coordinator to act on; SCRUM-170:
+    // No equipment needed recorded.
+    {
+      id: W.safetyChanges,
+      name: "Safety Changes — Robotics Showcase",
+      description: "The Safety Officer asked for changes to the stage layout.",
+      status: EventStatus.PLANNING,
+      ...planned(U.coordinator2, WD.safetyChanges, 300),
+      equipmentRequirements: null,
+      noEquipmentNeededAt: at(-5, 3),
+      noEquipmentNeededById: U.coordinator2,
+    },
+    // SCRUM-81: venue, equipment and safety check all done — ready to confirm.
+    { id: W.readyToConfirm, name: "Ready to Confirm — Alumni Networking Night", description: "Every checklist item is complete; the Coordinator can confirm it.", status: EventStatus.PLANNING, ...planned(U.coordinator, WD.readyToConfirm, 50) },
+    // SCRUM-163: a tentative hold for Venue Staff to approve, change or release,
+    // and an earlier hold that expired.
+    { id: W.hold, name: "On Hold — Design Week Kickoff", description: "The Boardroom is held while the speakers confirm.", status: EventStatus.PLANNING, ...planned(U.coordinator, WD.hold, 12) },
+    // SCRUM-163 AC7: Venue Staff approved the hold; the Coordinator confirms or releases it.
+    { id: W.holdApproved, name: "Hold Approved — Founders' Breakfast", description: "Venue Staff approved the hold; it waits for the Coordinator.", status: EventStatus.PLANNING, ...planned(U.coordinator, WD.holdApproved, 40) },
+    // SCRUM-26/128: an approved change flagged the booking and the reservation.
+    { id: W.flagged, name: "Flagged — Sustainability Forum", description: "Attendance grew after approval, so its arrangements need reconsidering.", status: EventStatus.PLANNING, ...planned(U.coordinator, WD.flagged, 350) },
+    // SCRUM-28/52/134: an equipment request in review with a short line, and a
+    // second pending venue request so the Venue Staff queue has an order.
+    { id: W.equipmentInReview, name: "Equipment In Review — Media Workshop", description: "Technical Support is reviewing its equipment.", status: EventStatus.PLANNING, ...planned(U.coordinator, WD.equipmentInReview, 120) },
+    // SCRUM-155: an approved request with nothing reserved yet.
+    { id: W.readyToReserve, name: "Ready to Reserve — Robotics Open House", description: "Equipment approved and waiting for Technical Support to reserve it.", status: EventStatus.PLANNING, ...planned(U.coordinator, WD.readyToReserve, 90) },
+    // SCRUM-41/128 AC8: a Confirmed event whose Organiser asked to cancel it.
+    {
+      id: W.cancellationRequested,
+      name: "Cancellation Requested — Spring Concert",
+      description: "Confirmed; the Organiser has asked for it to be cancelled.",
+      status: EventStatus.CONFIRMED,
+      ...planned(U.coordinator, WD.cancellationRequested, 250),
+      registrationRequired: true,
+      registrationEnabled: true,
+      registrationCapacity: 250,
+      registrationOpensAt: at(-3, 0),
+      registrationClosesAt: at(WD.cancellationRequested - 1, 12),
+    },
+    // SCRUM-171: a Confirmed event that takes no registrations.
+    { id: W.noRegistration, name: "No Registration — Staff Appreciation Lunch", description: "Confirmed, by invitation only.", status: EventStatus.CONFIRMED, ...planned(U.coordinator, WD.noRegistration, 80), registrationRequired: false, registrationEnabled: false },
+    // SCRUM-85 AC9: confirmed, then re-planned after a change; Attendees still
+    // see the last confirmed details.
+    { id: W.replanning, name: "Re-planning — Jazz Night", description: "A change moved it back into planning after it was confirmed.", status: EventStatus.PLANNING, ...planned(U.coordinator, WD.replanning, 150), registrationRequired: true, registrationEnabled: true, registrationCapacity: 150, registrationOpensAt: at(-10, 0), registrationClosesAt: at(WD.replanning - 1, 12) },
+    // SCRUM-15/16: a complete draft, ready to submit.
+    { id: W.draftReady, name: "Draft Ready — Graduate Research Showcase", description: "Every field filled in; ready to submit.", status: EventStatus.DRAFT, ...common, ...workday(WD.draftReady), expectedAttendance: 100 },
+    // SCRUM-17: a discarded draft, no longer listed.
+    { id: W.draftDiscarded, name: "Discarded Draft — Book Club Social", description: "Started, then discarded.", status: EventStatus.DRAFT, ...common, requiredFacilities: [], discardedAt: at(-3, 4) },
+    // SCRUM-126: rejected with "submit a new request" as the outcome.
+    { id: W.rejectedNewRequest, name: "Rejected (New Request) — Night Market", description: "Rejected; the Organiser needs to submit a new request.", status: EventStatus.REJECTED, ...common, ...workday(WD.rejectedNewRequest), expectedAttendance: 600, submittedAt: at(-9, 3), decidedAt: at(-7, 3), decidedById: U.coordinator, decisionReason: "An outdoor night market isn't something our venues can host; please request an indoor event instead.", rejectionOutcome: RejectionOutcome.NEW_REQUEST },
+    // SCRUM-108: a clarification naming the fields the Organiser may change.
+    { id: W.clarificationFields, name: "Clarification Asked — Community Concert", description: "The Coordinator asked about attendance and layout.", status: EventStatus.UNDER_REVIEW, ...common, ...workday(WD.clarificationFields), expectedAttendance: 450, coordinatorId: U.coordinator, supervisingLeadId: U.coordinatorLead, submittedAt: at(-5, 3) },
+    // SCRUM-82 AC10, SCRUM-165: unassigned, and its start has passed — overdue.
+    { id: W.submittedOverdue, name: "Overdue — Orientation Volunteers Briefing", description: "Submitted but never assigned, and its date has passed.", status: EventStatus.SUBMITTED, ...common, ...workday(-2), expectedAttendance: 30, submittedAt: at(-20, 3) },
+    // SCRUM-121 AC5: organised by the multi-role account, so it can't decide
+    // this event's venue request as Venue Staff.
+    { id: W.multiRoleOrganised, name: "Multi-role Organiser — Lab Tour", description: "Organised by Morgan Multirole, who is also Venue Staff.", status: EventStatus.PLANNING, ...planned(U.coordinator, WD.multiRoleOrganised, 12), organiserId: U.multiRole },
+    // SCRUM-121: coordinated by the multi-role account.
+    { id: W.multiRoleCoordinated, name: "Multi-role Coordinator — Debate Finals", description: "Coordinated by Morgan Multirole.", status: EventStatus.UNDER_REVIEW, ...common, ...workday(WD.multiRoleCoordinated), expectedAttendance: 200, coordinatorId: U.multiRole, supervisingLeadId: U.coordinatorLead2, submittedAt: at(-6, 3) },
+  ];
+
+  for (const e of events) {
+    const { id, ...data } = e;
+    await prisma.event.upsert({ where: { id }, update: data, create: { id, ...data } });
+  }
+
+  // SCRUM-85 AC9: what Attendees were last told about the re-planned event.
+  await prisma.event.update({
+    where: { id: W.replanning },
+    data: {
+      confirmedStartAt: at(WD.replanning - 1, 1),
+      confirmedEndAt: at(WD.replanning - 1, 9),
+      confirmedVenues: ["Exhibition Hall — Level 1, Block C"],
+    },
+  });
+
+  // SCRUM-131/166: a venue restriction for the Safety Officer to weigh.
+  await prisma.venue.update({
+    where: { id: V.hall },
+    data: { knownRestrictions: "Loading bay closes at 20:00; no open flames on the exhibition floor." },
+  });
+  return events.length;
+}
+
+async function seedWorkflowBookings() {
+  const approved = (id: string, eventId: string, venueId: string, day: number, attendance: number) => ({
+    id,
+    eventId,
+    venueId,
+    ...workday(day),
+    status: BookingStatus.APPROVED,
+    requestedAttendance: attendance,
+    requiredFacilities: [],
+    requestedById: U.coordinator,
+    decidedById: U.venueStaff,
+    decidedAt: at(-8, 3),
+  });
+
+  const bookings = [
+    approved("bkg_safety_awaiting", W.safetyAwaiting, V.hall, WD.safetyAwaiting, 150),
+    { ...approved("bkg_safety_changes", W.safetyChanges, V.auditorium, WD.safetyChanges, 300), requestedById: U.coordinator2 },
+    approved("bkg_ready_to_confirm", W.readyToConfirm, V.seminar, WD.readyToConfirm, 50),
+    // SCRUM-163: held until five days from now.
+    {
+      id: "bkg_held",
+      eventId: W.hold,
+      venueId: V.boardroom,
+      ...workday(WD.hold),
+      status: BookingStatus.HELD,
+      requestedAttendance: 12,
+      requiredFacilities: ["video-conferencing"],
+      requestedById: U.coordinator,
+      heldAt: at(-1, 3),
+      holdExpiresAt: at(5, 4),
+      holdNote: "Held while the keynote speakers confirm their dates.",
+    },
+    // SCRUM-163 AC4: an earlier hold that ran out.
+    {
+      id: "bkg_expired",
+      eventId: W.hold,
+      venueId: V.hall,
+      ...workday(WD.hold),
+      status: BookingStatus.EXPIRED,
+      requestedAttendance: 12,
+      requiredFacilities: [],
+      requestedById: U.coordinator,
+      heldAt: at(-9, 3),
+      holdExpiresAt: at(-2, 3),
+      holdNote: "Held as a fallback while the Boardroom was checked.",
+    },
+    // SCRUM-163 AC7: approved by Venue Staff, waiting for the Coordinator.
+    {
+      id: "bkg_hold_approved",
+      eventId: W.holdApproved,
+      venueId: V.seminar,
+      ...workday(WD.holdApproved),
+      status: BookingStatus.HELD,
+      requestedAttendance: 40,
+      requiredFacilities: ["whiteboard"],
+      requestedById: U.coordinator,
+      heldAt: at(-4, 3),
+      holdExpiresAt: at(6, 4),
+      holdNote: "Held for the founders' breakfast; caterer to confirm numbers.",
+      holdApprovedAt: at(-2, 3),
+      holdApprovedById: U.venueStaff,
+    },
+    // SCRUM-26/128 AC4: flagged when the attendance change was approved.
+    {
+      ...approved("bkg_flagged", W.flagged, V.auditorium, WD.flagged, 250),
+      needsReconsideration: true,
+      reconsiderationFlaggedAt: at(-1, 5),
+      reconsiderationReason: "Expected attendance changed from 250 to 350 by an approved change request.",
+    },
+    // SCRUM-52/134: a second pending request, newer than bkg_pending.
+    {
+      id: "bkg_pending_2",
+      eventId: W.equipmentInReview,
+      venueId: V.hall,
+      ...workday(WD.equipmentInReview),
+      status: BookingStatus.PENDING,
+      requestedAttendance: 120,
+      requiredFacilities: ["sound-system"],
+      requestedLayout: "theatre",
+      requestedById: U.coordinator,
+    },
+    approved("bkg_cancellation_requested", W.cancellationRequested, V.auditorium, WD.cancellationRequested, 250),
+    approved("bkg_no_registration", W.noRegistration, V.hall, WD.noRegistration, 80),
+    approved("bkg_replanning", W.replanning, V.hall, WD.replanning, 150),
+    // SCRUM-121 AC5: Morgan Multirole can't decide this one, as its Organiser.
+    {
+      id: "bkg_multirole_pending",
+      eventId: W.multiRoleOrganised,
+      venueId: V.boardroom,
+      ...workday(WD.multiRoleOrganised),
+      status: BookingStatus.PENDING,
+      requestedAttendance: 12,
+      requiredFacilities: [],
+      requestedById: U.coordinator,
+    },
+  ];
+  for (const b of bookings) {
+    const { id, ...data } = b;
+    await prisma.booking.upsert({ where: { id }, update: data, create: { id, ...data } });
+  }
+
+  // SCRUM-163 AC9: the hold's deadline was moved once.
+  const change = { bookingId: "bkg_held", oldExpiresAt: at(3, 4), newExpiresAt: at(5, 4), changedById: U.venueStaff, changedAt: at(-1, 6) };
+  await prisma.holdExpiryChange.upsert({ where: { id: "hxc_held_1" }, update: change, create: { id: "hxc_held_1", ...change } });
+  return bookings.length;
+}
+
+async function seedWorkflowEquipment() {
+  const requests = [
+    { id: "eqr_safety_awaiting", eventId: W.safetyAwaiting, requestedById: U.coordinator, status: EquipmentRequestStatus.APPROVED, notes: "Microphones for the demo stations.", decidedAt: at(-7, 3) },
+    { id: "eqr_ready_to_confirm", eventId: W.readyToConfirm, requestedById: U.coordinator, status: EquipmentRequestStatus.APPROVED, notes: "Laptops for the sign-in desk.", decidedAt: at(-7, 3) },
+    { id: "eqr_flagged", eventId: W.flagged, requestedById: U.coordinator, status: EquipmentRequestStatus.APPROVED, notes: "Microphones for the panel.", decidedAt: at(-6, 3) },
+    // SCRUM-28: in review, with a line short of stock and an alternative suggested.
+    { id: "eqr_in_review", eventId: W.equipmentInReview, requestedById: U.coordinator, status: EquipmentRequestStatus.IN_REVIEW, notes: "Projectors for every breakout room." },
+    // SCRUM-28: closed requests on the same event, before the current one.
+    { id: "eqr_rejected", eventId: W.equipmentInReview, requestedById: U.coordinator, status: EquipmentRequestStatus.REJECTED, notes: "First attempt.", decidedAt: at(-9, 3) },
+    { id: "eqr_cancelled", eventId: W.equipmentInReview, requestedById: U.coordinator, status: EquipmentRequestStatus.CANCELLED, notes: "Withdrawn by the Coordinator." },
+    // SCRUM-155: approved, nothing reserved yet.
+    { id: "eqr_ready_to_reserve", eventId: W.readyToReserve, requestedById: U.coordinator, status: EquipmentRequestStatus.APPROVED, notes: "PA for the demo arena.", decidedAt: at(-2, 3) },
+  ];
+  for (const r of requests) {
+    const { id, ...data } = r;
+    await prisma.equipmentRequest.upsert({ where: { id }, update: data, create: { id, ...data } });
+  }
+
+  const lines = [
+    { id: "eql_safety_mic", requestId: "eqr_safety_awaiting", equipmentId: EQ.mic, quantity: 2 },
+    { id: "eql_ready_laptop", requestId: "eqr_ready_to_confirm", equipmentId: EQ.laptop, quantity: 2 },
+    { id: "eql_flagged_mic", requestId: "eqr_flagged", equipmentId: EQ.mic, quantity: 3 },
+    { id: "eql_in_review_projector", requestId: "eqr_in_review", equipmentId: EQ.projector, quantity: 12, technicalRequirements: "One per breakout room.", suggestedAlternativeId: EQ.laptop },
+    { id: "eql_in_review_mic", requestId: "eqr_in_review", equipmentId: EQ.mic, quantity: 4 },
+    // SCRUM-142: a line the Coordinator took off the request.
+    { id: "eql_in_review_speaker", requestId: "eqr_in_review", equipmentId: EQ.speaker, quantity: 2, removedAt: at(-1, 3) },
+    { id: "eql_rejected_speaker", requestId: "eqr_rejected", equipmentId: EQ.speaker, quantity: 10 },
+    { id: "eql_cancelled_laptop", requestId: "eqr_cancelled", equipmentId: EQ.laptop, quantity: 5 },
+    { id: "eql_ready_speaker", requestId: "eqr_ready_to_reserve", equipmentId: EQ.speaker, quantity: 2 },
+    { id: "eql_ready_mic", requestId: "eqr_ready_to_reserve", equipmentId: EQ.mic, quantity: 3 },
+  ];
+  for (const l of lines) {
+    const { id, ...data } = l;
+    await prisma.equipmentRequestLine.upsert({ where: { id }, update: data, create: { id, ...data } });
+  }
+
+  const updates = [
+    { id: "equ_in_review_1", requestId: "eqr_in_review", actorId: U.techSupport, fromStatus: EquipmentRequestStatus.PENDING_REVIEW, toStatus: EquipmentRequestStatus.IN_REVIEW, note: "Checking projector stock.", createdAt: at(-1, 4) },
+    { id: "equ_in_review_2", requestId: "eqr_in_review", actorId: U.techSupport, note: "Suggested Laptop instead of Projector (only 10 exist).", createdAt: at(-1, 5) },
+    { id: "equ_rejected_1", requestId: "eqr_rejected", actorId: U.techSupport, fromStatus: EquipmentRequestStatus.IN_REVIEW, toStatus: EquipmentRequestStatus.REJECTED, note: "Ten PA speakers is more than we own; please ask for at most seven.", createdAt: at(-9, 3) },
+    { id: "equ_cancelled_1", requestId: "eqr_cancelled", actorId: U.coordinator, fromStatus: EquipmentRequestStatus.PENDING_REVIEW, toStatus: EquipmentRequestStatus.CANCELLED, note: "Withdrawn by the Coordinator.", createdAt: at(-8, 3) },
+    { id: "equ_ready_1", requestId: "eqr_ready_to_reserve", actorId: U.techSupport, fromStatus: EquipmentRequestStatus.IN_REVIEW, toStatus: EquipmentRequestStatus.APPROVED, note: "Approved; to be reserved.", createdAt: at(-2, 3) },
+  ];
+  for (const u of updates) {
+    const { id, ...data } = u;
+    await prisma.equipmentRequestUpdate.upsert({ where: { id }, update: data, create: { id, ...data } });
+  }
+
+  const reservation = (id: string, eventId: string, requestId: string, equipmentId: string, quantity: number, day: number) => ({
+    id, eventId, requestId, equipmentId, quantity, ...workday(day), status: ReservationStatus.CONFIRMED, reservedById: U.techSupport,
+  });
+  const reservations = [
+    reservation("res_safety_mic", W.safetyAwaiting, "eqr_safety_awaiting", EQ.mic, 2, WD.safetyAwaiting),
+    reservation("res_ready_laptop", W.readyToConfirm, "eqr_ready_to_confirm", EQ.laptop, 2, WD.readyToConfirm),
+    // SCRUM-32/26: Technical Support reported it can't be provided.
+    {
+      ...reservation("res_flagged_mic", W.flagged, "eqr_flagged", EQ.mic, 3, WD.flagged),
+      needsReconsideration: true,
+      reconsiderationFlaggedAt: at(-1, 6),
+      reconsiderationReason: "Two of the three microphones are booked for a graduation on the same day.",
+    },
+  ];
+  for (const r of reservations) {
+    const { id, ...data } = r;
+    await prisma.reservation.upsert({ where: { id }, update: data, create: { id, ...data } });
+  }
+  return { requests: requests.length, lines: lines.length, reservations: reservations.length };
+}
+
+/** SCRUM-166 — a check in every state, with the arrangements it covered. */
+async function seedSafetyChecks() {
+  const checks = [
+    { id: "sfc_outdated", eventId: W.safetyAwaiting, status: SafetyCheckStatus.OUTDATED, requestedById: U.coordinator, outdatedAt: at(-3, 3), createdAt: at(-5, 3) },
+    { id: "sfc_awaiting", eventId: W.safetyAwaiting, status: SafetyCheckStatus.AWAITING_REVIEW, requestedById: U.coordinator, createdAt: at(-2, 3) },
+    { id: "sfc_changes", eventId: W.safetyChanges, status: SafetyCheckStatus.CHANGES_REQUESTED, requestedById: U.coordinator2, note: "Move the robot arena 3 m back from the front row and add a barrier.", decidedById: U.safetyOfficer, decidedAt: at(-1, 3), createdAt: at(-4, 3) },
+    { id: "sfc_rejected", eventId: W.readyToConfirm, status: SafetyCheckStatus.REJECTED, requestedById: U.coordinator, note: "The first plan blocked a fire exit.", decidedById: U.safetyOfficer2, decidedAt: at(-6, 3), createdAt: at(-7, 3) },
+    { id: "sfc_approved", eventId: W.readyToConfirm, status: SafetyCheckStatus.APPROVED, requestedById: U.coordinator, decidedById: U.safetyOfficer, decidedAt: at(-2, 3), createdAt: at(-3, 3) },
+  ];
+  for (const c of checks) {
+    const { id, ...data } = c;
+    await prisma.safetyCheck.upsert({ where: { id }, update: data, create: { id, ...data } });
+  }
+  const arrangements = [
+    { id: "sfa_awaiting_booking", checkId: "sfc_awaiting", bookingId: "bkg_safety_awaiting" },
+    { id: "sfa_awaiting_reservation", checkId: "sfc_awaiting", reservationId: "res_safety_mic" },
+    { id: "sfa_changes_booking", checkId: "sfc_changes", bookingId: "bkg_safety_changes" },
+    { id: "sfa_approved_booking", checkId: "sfc_approved", bookingId: "bkg_ready_to_confirm" },
+    { id: "sfa_approved_reservation", checkId: "sfc_approved", reservationId: "res_ready_laptop" },
+  ];
+  for (const a of arrangements) {
+    const { id, ...data } = a;
+    await prisma.safetyCheckArrangement.upsert({ where: { id }, update: data, create: { id, ...data } });
+  }
+  return checks.length;
+}
+
+async function seedWorkflowRegistrations() {
+  const registrations = [
+    // SCRUM-85 AC9: Attendees of the re-planned event.
+    { id: "reg_replanning_1", eventId: W.replanning, userId: U.attendee, status: RegistrationStatus.REGISTERED, registeredAt: at(-8, 4) },
+    { id: "reg_replanning_2", eventId: W.replanning, userId: U.attendee2, status: RegistrationStatus.REGISTERED, registeredAt: at(-8, 5) },
+    // SCRUM-76: a registration for an event that has taken place.
+    { id: "reg_completed_1", eventId: E.completed, userId: U.attendee2, status: RegistrationStatus.REGISTERED, registeredAt: at(-40, 4) },
+    // SCRUM-128 AC8: registrations a cancellation would cancel.
+    { id: "reg_cancellation_1", eventId: W.cancellationRequested, userId: U.attendee, status: RegistrationStatus.REGISTERED, registeredAt: at(-2, 4) },
+  ];
+  for (const r of registrations) {
+    const { id, ...data } = r;
+    await prisma.registration.upsert({ where: { id }, update: data, create: { id, ...data } });
+  }
+  return registrations.length;
+}
+
+async function seedWorkflowRequests() {
+  const clarifications = [
+    // SCRUM-108: names the fields the Organiser may change in the answer.
+    { id: "clr_editable", eventId: W.clarificationFields, requestedById: U.coordinator, message: "450 people in a theatre layout won't fit the Hall. Can you lower the attendance or choose another layout?", editableFields: ["expectedAttendance", "preferredLayout"], status: ClarificationStatus.OPEN, createdAt: at(-2, 3) },
+    // SCRUM-18 AC5: earlier questions on the same event, answered and closed.
+    { id: "clr_answered", eventId: W.readyToConfirm, requestedById: U.coordinator, message: "Do you need a coat check?", editableFields: [], status: ClarificationStatus.ANSWERED, response: "Yes, for about 50 coats.", respondedAt: at(-13, 5), createdAt: at(-13, 3) },
+    { id: "clr_closed", eventId: W.flagged, requestedById: U.coordinator, message: "Is the panel livestreamed?", editableFields: [], status: ClarificationStatus.CLOSED, response: "No livestream.", respondedAt: at(-13, 6), createdAt: at(-13, 4) },
+  ];
+  for (const c of clarifications) {
+    const { id, ...data } = c;
+    await prisma.clarificationRequest.upsert({ where: { id }, update: data, create: { id, ...data } });
+  }
+
+  const changeRequests = [
+    // SCRUM-128 AC4: approved, and it flagged the event's arrangements.
+    { id: "chg_flagged_approved", eventId: W.flagged, requestedById: U.organiser, status: ChangeRequestStatus.APPROVED, reason: "Registrations from partner schools pushed attendance up.", decidedById: U.coordinator, decidedAt: at(-1, 5) },
+    // SCRUM-128 AC3: rejected with a reason.
+    { id: "chg_rejected", eventId: W.readyToConfirm, requestedById: U.organiser, status: ChangeRequestStatus.REJECTED, reason: "Could we move it to the Auditorium?", decidedById: U.coordinator, decidedAt: at(-4, 3), decisionReason: "The Auditorium is booked that evening." },
+    // SCRUM-41 AC10, SCRUM-128 AC8: the Organiser asks to cancel a Confirmed event.
+    { id: "chg_cancellation", eventId: W.cancellationRequested, requestedById: U.organiser, status: ChangeRequestStatus.PENDING_REVIEW, reason: "The headline act pulled out.", requestsCancellation: true },
+  ];
+  for (const c of changeRequests) {
+    const { id, ...data } = c;
+    await prisma.eventChangeRequest.upsert({ where: { id }, update: data, create: { id, ...data } });
+  }
+  const fields = [
+    { id: "chgf_flagged_attendance", changeRequestId: "chg_flagged_approved", fieldName: "expectedAttendance", oldValue: "250", newValue: "350", isMajor: true },
+    { id: "chgf_rejected_venue", changeRequestId: "chg_rejected", fieldName: "venueRequirements", oldValue: "Seminar Room 2.1", newValue: "Grand Auditorium", isMajor: true },
+  ];
+  for (const f of fields) {
+    const { id, ...data } = f;
+    await prisma.changeRequestField.upsert({ where: { id }, update: data, create: { id, ...data } });
+  }
+
+  // SCRUM-172: notes can't be edited or deleted, so they are only ever added.
+  await prisma.eventOperationalNote.createMany({
+    skipDuplicates: true,
+    data: [
+      { id: "note_planning_coordinator", eventId: E.planning, authorId: U.coordinator, body: "The dean's office wants the projector tested the day before.", createdAt: at(-3, 3) },
+      { id: "note_planning_venue", eventId: E.planning, authorId: U.venueStaff, body: "Seminar Room 2.1's aircon is serviced on day 15; fine for this date.", createdAt: at(-2, 3) },
+      { id: "note_planning_tech", eventId: E.planning, authorId: U.techSupport, body: "Two spare microphone batteries will be at the desk.", createdAt: at(-1, 3) },
+    ],
+  });
+  return { clarifications: clarifications.length, changeRequests: changeRequests.length };
+}
+
+/** SCRUM-37/30 — unavailability for every reason, well clear of every booking. */
+async function seedWorkflowUnavailability() {
+  const venueRows = [
+    { id: "vun_auditorium_failure", venueId: V.auditorium, startAt: at(95, 0), endAt: at(96, 0), reason: VenueUnavailabilityReason.EQUIPMENT_FAILURE, note: "Stage lift out of order.", recordedById: U.venueStaff },
+    { id: "vun_hall_renovation", venueId: V.hall, startAt: at(96, 0), endAt: at(99, 0), reason: VenueUnavailabilityReason.RENOVATION, note: "Floor resurfacing.", recordedById: U.venueStaff },
+    { id: "vun_boardroom_safety", venueId: V.boardroom, startAt: at(weekdayFrom(100), 0), endAt: at(weekdayFrom(100) + 1, 0), reason: VenueUnavailabilityReason.SAFETY_CONCERN, note: "Ceiling tile inspection.", recordedById: U.venueStaff2 },
+    { id: "vun_seminar_other", venueId: V.seminar, startAt: at(weekdayFrom(103), 0), endAt: at(weekdayFrom(103) + 1, 0), reason: VenueUnavailabilityReason.OTHER, note: "Reserved for faculty exams.", recordedById: U.venueStaff2 },
+  ];
+  for (const r of venueRows) {
+    await prisma.venueUnavailability.upsert({ where: { id: r.id }, update: r, create: r });
+  }
+  const equipmentRows = [
+    { id: "eun_laptop_closure", equipmentId: EQ.laptop, quantity: 15, startAt: at(95, 0), endAt: at(96, 0), reason: UnavailabilityReason.CLOSURE, note: "Store closed for stocktake.", recordedById: U.techSupport },
+    { id: "eun_mic_other", equipmentId: EQ.mic, quantity: 2, startAt: at(97, 0), endAt: at(98, 0), reason: UnavailabilityReason.OTHER, note: "Lent to the library's open day.", recordedById: U.techSupport },
+  ];
+  for (const r of equipmentRows) {
+    await prisma.equipmentUnavailability.upsert({ where: { id: r.id }, update: r, create: r });
+  }
+  return venueRows.length + equipmentRows.length;
+}
+
+/** SCRUM-45/48/85/124 — every notification type, for the person who'd get it. */
+async function seedWorkflowNotifications() {
+  const T = NotificationType;
+  const rows = [
+    { id: "ntf_reassigned", userId: U.organiser, type: T.COORDINATOR_REASSIGNED, title: "Your event has a new coordinator", message: "Morgan Multirole now coordinates Multi-role Coordinator — Debate Finals.", eventId: W.multiRoleCoordinated, createdAt: at(-5, 3) },
+    { id: "ntf_equipment_updated", userId: U.coordinator, type: T.EQUIPMENT_REQUEST_UPDATED, title: "Equipment request in review", message: "Technical Support suggested Laptop instead of Projector for Equipment In Review — Media Workshop.", eventId: W.equipmentInReview, createdAt: at(-1, 5) },
+    { id: "ntf_reservation_cancelled", userId: U.coordinator, type: T.RESERVATION_CANCELLED, title: "A reservation was cancelled", message: "Laptop × 2 for Cancelled — Winter Workshop was released.", eventId: E.cancelled, createdAt: at(-1, 3), readAt: at(-1, 4) },
+    { id: "ntf_change_outcome", userId: U.organiser, type: T.CHANGE_REQUEST_OUTCOME, title: "Change request approved", message: "Your change to Flagged — Sustainability Forum was approved.", eventId: W.flagged, createdAt: at(-1, 5) },
+    { id: "ntf_event_changed", userId: U.attendee, type: T.REGISTERED_EVENT_CHANGED, title: "An event you registered for has changed", message: "Re-planning — Jazz Night is being re-planned; we'll tell you when it's confirmed again.", eventId: W.replanning, createdAt: at(-2, 3) },
+    { id: "ntf_event_changed_2", userId: U.attendee2, type: T.REGISTERED_EVENT_CHANGED, title: "An event you registered for has changed", message: "Re-planning — Jazz Night is being re-planned; we'll tell you when it's confirmed again.", eventId: W.replanning, createdAt: at(-2, 3) },
+    { id: "ntf_booking_requested", userId: U.venueStaff, type: T.BOOKING_REQUESTED, title: "New venue request", message: "Exhibition Hall is requested for Equipment In Review — Media Workshop.", eventId: W.equipmentInReview, bookingId: "bkg_pending_2", createdAt: at(-2, 3) },
+    { id: "ntf_equipment_submitted", userId: U.techSupport, type: T.EQUIPMENT_REQUEST_SUBMITTED, title: "New equipment request", message: "Equipment In Review — Media Workshop asks for projectors and microphones.", eventId: W.equipmentInReview, createdAt: at(-3, 3), readAt: at(-1, 4) },
+    { id: "ntf_equipment_changed", userId: U.techSupport, type: T.EQUIPMENT_REQUEST_CHANGED, title: "Equipment request changed", message: "PA Speaker was taken off the request for Equipment In Review — Media Workshop.", eventId: W.equipmentInReview, createdAt: at(-1, 3) },
+    { id: "ntf_booking_withdrawn", userId: U.venueStaff, type: T.BOOKING_REQUEST_WITHDRAWN, title: "Venue request withdrawn", message: "A request for Cancelled — Winter Workshop was withdrawn.", eventId: E.cancelled, createdAt: at(-1, 3), readAt: at(-1, 4) },
+    { id: "ntf_equipment_withdrawn", userId: U.techSupport, type: T.EQUIPMENT_REQUEST_WITHDRAWN, title: "Equipment request withdrawn", message: "The Laptop request for Equipment In Review — Media Workshop was withdrawn.", eventId: W.equipmentInReview, createdAt: at(-8, 3), readAt: at(-8, 4) },
+    { id: "ntf_booking_held", userId: U.coordinator, type: T.BOOKING_HELD, title: "Venue held", message: "Executive Boardroom is held for On Hold — Design Week Kickoff; Venue Staff will decide before the hold expires.", eventId: W.hold, bookingId: "bkg_held", createdAt: at(-1, 3) },
+    // SCRUM-124 AC5: shown from 24 hours before the hold expires.
+    { id: "ntf_hold_reminder", userId: U.coordinator, type: T.HOLD_EXPIRY_REMINDER, title: "Hold expires tomorrow", message: "The hold on Executive Boardroom for On Hold — Design Week Kickoff expires tomorrow.", eventId: W.hold, bookingId: "bkg_held", createdAt: at(-1, 3), showFromAt: at(4, 4) },
+    { id: "ntf_hold_expired", userId: U.coordinator, type: T.HOLD_EXPIRED, title: "Hold expired", message: "The hold on Exhibition Hall for On Hold — Design Week Kickoff expired.", eventId: W.hold, bookingId: "bkg_expired", createdAt: at(-9, 3), showFromAt: at(-2, 3) },
+    { id: "ntf_hold_approved", userId: U.coordinator, type: T.HOLD_APPROVED, title: "Hold approved", message: "Venue Staff approved the hold on Seminar Room 2.1 for Hold Approved — Founders' Breakfast. Confirm or release it.", eventId: W.holdApproved, bookingId: "bkg_hold_approved", createdAt: at(-2, 3) },
+    { id: "ntf_hold_confirmed", userId: U.venueStaff, type: T.HOLD_CONFIRMED, title: "Hold confirmed", message: "The Coordinator confirmed the hold for Ready to Confirm — Alumni Networking Night.", eventId: W.readyToConfirm, createdAt: at(-8, 3), readAt: at(-8, 4) },
+    { id: "ntf_hold_released", userId: U.venueStaff, type: T.HOLD_RELEASED, title: "Hold released", message: "The Coordinator released the hold on Exhibition Hall for On Hold — Design Week Kickoff.", eventId: W.hold, createdAt: at(-3, 3), readAt: at(-3, 4) },
+    { id: "ntf_change_submitted", userId: U.coordinator, type: T.CHANGE_REQUEST_SUBMITTED, title: "Cancellation requested", message: "The Organiser asked to cancel Cancellation Requested — Spring Concert.", eventId: W.cancellationRequested, createdAt: at(-1, 3) },
+    { id: "ntf_flagged_venue", userId: U.venueStaff, type: T.ARRANGEMENT_FLAGGED, title: "A booking needs reconsideration", message: "Grand Auditorium for Flagged — Sustainability Forum: attendance rose to 350.", eventId: W.flagged, bookingId: "bkg_flagged", createdAt: at(-1, 5) },
+    { id: "ntf_flagged_coordinator", userId: U.coordinator, type: T.ARRANGEMENT_FLAGGED, title: "Arrangements need reconsideration", message: "Flagged — Sustainability Forum has a booking and a reservation to reconsider.", eventId: W.flagged, createdAt: at(-1, 6) },
+    { id: "ntf_flag_resolved", userId: U.techSupport, type: T.ARRANGEMENT_FLAG_RESOLVED, title: "Flag resolved", message: "The Coordinator kept the reservation for Ready to Confirm — Alumni Networking Night.", eventId: W.readyToConfirm, createdAt: at(-6, 3), readAt: at(-6, 4) },
+    { id: "ntf_awaiting_lead", userId: U.coordinatorLead, type: T.REQUEST_AWAITING_ASSIGNMENT, title: "A request needs a coordinator", message: "Submitted — Alumni Homecoming is waiting to be assigned.", eventId: E.submitted, createdAt: at(-2, 3) },
+    { id: "ntf_awaiting_lead_2", userId: U.coordinatorLead2, type: T.REQUEST_AWAITING_ASSIGNMENT, title: "A request needs a coordinator", message: "Overdue — Orientation Volunteers Briefing is waiting to be assigned.", eventId: W.submittedOverdue, createdAt: at(-20, 3) },
+    { id: "ntf_safety_requested", userId: U.safetyOfficer, type: T.SAFETY_CHECK_REQUESTED, title: "Safety check requested", message: "Safety Review — Engineering Open Day is ready for its safety check.", eventId: W.safetyAwaiting, createdAt: at(-2, 3) },
+    { id: "ntf_safety_requested_2", userId: U.safetyOfficer2, type: T.SAFETY_CHECK_REQUESTED, title: "Safety check requested", message: "Safety Review — Engineering Open Day is ready for its safety check.", eventId: W.safetyAwaiting, createdAt: at(-2, 3) },
+    { id: "ntf_safety_outcome", userId: U.coordinator2, type: T.SAFETY_CHECK_OUTCOME, title: "Safety check: changes requested", message: "Move the robot arena 3 m back from the front row and add a barrier.", eventId: W.safetyChanges, createdAt: at(-1, 3) },
+    // SCRUM-163 AC5: a notice withdrawn when the hold it was about went away.
+    { id: "ntf_withdrawn_reminder", userId: U.coordinator, type: T.HOLD_EXPIRY_REMINDER, title: "Hold expires tomorrow", message: "The hold on Exhibition Hall for On Hold — Design Week Kickoff expires tomorrow.", eventId: W.hold, bookingId: "bkg_expired", createdAt: at(-9, 3), showFromAt: at(-3, 3), withdrawnAt: at(-3, 2) },
+  ];
+  for (const n of rows) {
+    const { id, ...data } = n;
+    await prisma.notification.upsert({ where: { id }, update: data, create: { id, ...data } });
+  }
+  return rows.length;
+}
+
+// ---------------------------------------------------------------------------
 
 async function main() {
   const passwordHash = await bcrypt.hash(DEV_PASSWORD, 10);
@@ -984,6 +1473,17 @@ async function main() {
   const notifications = await seedNotifications();
   const audit = await seedAuditLog();
 
+  // SCRUM-238: the scenarios that give every role work to see and act on.
+  const workflowEvents = await seedWorkflowEvents();
+  const workflowBookings = await seedWorkflowBookings();
+  await seedConfirmedDetails();
+  const workflowEquipment = await seedWorkflowEquipment();
+  const safetyChecks = await seedSafetyChecks();
+  const workflowRegistrations = await seedWorkflowRegistrations();
+  const workflowRequests = await seedWorkflowRequests();
+  const workflowUnavailability = await seedWorkflowUnavailability();
+  const workflowNotifications = await seedWorkflowNotifications();
+
   console.log("Seed complete:");
   console.log(`  ${users} users (one for each of the ${Object.values(Role).length} roles, plus extra organisers, coordinators and attendees)`);
   console.log(`  ${venues} venues, ${venueUnavail} venue unavailability period(s)`);
@@ -995,6 +1495,11 @@ async function main() {
   console.log(`  ${registrations} registrations`);
   console.log(`  ${clarifications} clarification request(s), 1 change request with ${changeFields} fields`);
   console.log(`  ${notifications} notifications, ${audit} audit entries`);
+  console.log("Every role's work (SCRUM-238):");
+  console.log(`  ${workflowEvents} events, ${workflowBookings} venue bookings (held, expired, flagged, pending), ${workflowUnavailability} unavailability periods`);
+  console.log(`  ${workflowEquipment.requests} equipment requests, ${workflowEquipment.lines} lines, ${workflowEquipment.reservations} reservations; ${safetyChecks} safety checks`);
+  console.log(`  ${workflowRegistrations} registrations, ${workflowRequests.clarifications} clarifications, ${workflowRequests.changeRequests} change requests, 3 operational notes`);
+  console.log(`  ${workflowNotifications} notifications, covering every notification type`);
   console.log("");
   console.log(`  Every user's password is: ${DEV_PASSWORD}`);
   console.log("  Sign in as organiser@test.local to see the organiser's view.");
