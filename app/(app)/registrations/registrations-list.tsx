@@ -2,19 +2,16 @@ import Link from "next/link";
 import { CalendarDays, MapPin, Ticket } from "lucide-react";
 import type { EventStatus, RegistrationStatus } from "@prisma/client";
 
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { RegistrationStateBadge } from "@/components/events/registration-state-badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { formatEventTime } from "@/lib/datetime";
 import { isBeingReplanned, venueLabel } from "@/lib/confirmed-details";
+import { canWithdrawRegistration } from "@/lib/registration-summary";
 import { REGISTRATION_STATUS_LABEL } from "@/lib/status-labels";
 import { REPLANNING_LABEL } from "../events/replanning-event-detail";
+import { WithdrawButton } from "../events/withdraw-button";
 import type { MyRegistration } from "./queries";
-
-const STATUS_BADGE_VARIANT = {
-  REGISTERED: "success",
-  WITHDRAWN: "muted",
-  CANCELLED: "destructive",
-} as const;
 
 /**
  * SCRUM-76 AC3: once ConnectSphere cancels the event, the registration reads
@@ -32,30 +29,33 @@ export function RegistrationsList({
 }: {
   registrations: MyRegistration[];
 }) {
+  // SCRUM-212 AC2, SCRUM-207 AC3: says why the list is empty and what to do.
   if (registrations.length === 0) {
     return (
-      <Card>
+      <Card data-testid="registrations-empty">
         <CardContent className="flex flex-col items-center gap-2 py-12 text-center">
           <Ticket className="h-8 w-8 text-muted-foreground" />
           <p className="text-sm font-medium text-foreground">
-            No registrations yet
+            You haven&apos;t registered for any events yet
           </p>
           <p className="text-xs text-muted-foreground">
-            Events you register for will appear here.{" "}
-            <Link href="/events" className="font-medium text-primary">
-              Browse events
-            </Link>
+            When you register for an event, it appears here with your status.
           </p>
+          <Button asChild variant="outline" className="mt-2 h-11 sm:h-10">
+            <Link href="/events">Browse Events</Link>
+          </Button>
         </CardContent>
       </Card>
     );
   }
 
+  // SCRUM-212 AC2: one short row per registration: the event, its date and
+  // venue, my status, and what I can do about it.
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <ul className="space-y-3">
       {registrations.map(({ id, status, event }) => {
         const shown = shownRegistrationStatus(status, event.status);
-        // SCRUM-85 AC8, AC9: while a registered event is re-planned, its card
+        // SCRUM-85 AC8, AC9: while a registered event is re-planned, its row
         // says so, never "Planning", and shows what was last confirmed.
         const replanning = status === "REGISTERED" && isBeingReplanned(event);
         const venues = replanning
@@ -63,59 +63,78 @@ export function RegistrationsList({
           : event.bookings.map((b) => venueLabel(b.venue));
         // A Confirmed event has an Attendee detail page (SCRUM-72), and so
         // does one being re-planned, for this Attendee (SCRUM-85 AC9).
-        const title =
-          event.status === "CONFIRMED" || replanning ? (
-            <Link href={`/events/${event.id}`} className="hover:underline">
-              {event.name}
-            </Link>
-          ) : (
-            event.name
-          );
+        const viewable = event.status === "CONFIRMED" || replanning;
+        const withdrawable = canWithdrawRegistration(status, event);
 
         return (
-          <Card
-            key={id}
-            data-testid="registration-card"
-            data-status={shown}
-            className="h-full"
-          >
-            <CardHeader className="space-y-1.5">
-              <div className="flex items-start justify-between gap-2">
-                <CardTitle className="text-base font-semibold leading-tight">
-                  {title}
-                </CardTitle>
-                <Badge
-                  variant={replanning ? "warning" : STATUS_BADGE_VARIANT[shown]}
-                  data-testid="registration-status"
-                >
-                  {replanning ? REPLANNING_LABEL : REGISTRATION_STATUS_LABEL[shown]}
-                </Badge>
+          <li key={id}>
+            <Card
+              data-testid="registration-card"
+              data-status={shown}
+              className="flex flex-col gap-3 p-4 sm:flex-row sm:items-start sm:justify-between"
+            >
+              <div className="min-w-0 space-y-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h2 className="text-base font-semibold leading-tight">
+                    {event.name}
+                  </h2>
+                  <RegistrationStateBadge
+                    kind={replanning ? "PAUSED" : shown}
+                    label={
+                      replanning
+                        ? REPLANNING_LABEL
+                        : REGISTRATION_STATUS_LABEL[shown]
+                    }
+                    testId="registration-status"
+                  />
+                </div>
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <CalendarDays className="h-3.5 w-3.5 shrink-0" />
+                  <span data-testid="event-date">
+                    {replanning
+                      ? formatEventTime(
+                          event.confirmedStartAt,
+                          event.confirmedEndAt,
+                        )
+                      : formatEventTime(event.startAt, event.endAt)}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <MapPin className="h-3.5 w-3.5 shrink-0" />
+                  <span data-testid="venue">
+                    {venues.length > 0
+                      ? venues.join("; ")
+                      : "Venue to be confirmed"}
+                  </span>
+                </div>
+                {event.status === "CANCELLED" && event.cancellationReason && (
+                  <p
+                    data-testid="cancellation-reason"
+                    className="text-xs text-foreground"
+                  >
+                    Cancelled: {event.cancellationReason}
+                  </p>
+                )}
               </div>
-            </CardHeader>
-            <CardContent className="space-y-2 text-xs text-muted-foreground">
-              <div className="flex items-center gap-1.5">
-                <CalendarDays className="h-3.5 w-3.5 shrink-0" />
-                <span data-testid="event-date">
-                  {replanning
-                    ? formatEventTime(event.confirmedStartAt, event.confirmedEndAt)
-                    : formatEventTime(event.startAt, event.endAt)}
-                </span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <MapPin className="h-3.5 w-3.5 shrink-0" />
-                <span data-testid="venue">
-                  {venues.length > 0 ? venues.join("; ") : "Venue to be confirmed"}
-                </span>
-              </div>
-              {event.status === "CANCELLED" && event.cancellationReason && (
-                <p data-testid="cancellation-reason" className="text-foreground">
-                  Cancelled: {event.cancellationReason}
-                </p>
+              {(viewable || withdrawable) && (
+                <div className="flex flex-col gap-2 sm:shrink-0 sm:flex-row">
+                  {viewable && (
+                    <Button asChild variant="outline" className="h-11 sm:h-10">
+                      <Link href={`/events/${event.id}`}>View event</Link>
+                    </Button>
+                  )}
+                  {withdrawable && (
+                    <WithdrawButton
+                      registrationId={id}
+                      eventName={event.name}
+                    />
+                  )}
+                </div>
               )}
-            </CardContent>
-          </Card>
+            </Card>
+          </li>
         );
       })}
-    </div>
+    </ul>
   );
 }
