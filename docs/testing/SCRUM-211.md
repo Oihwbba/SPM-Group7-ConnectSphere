@@ -192,7 +192,9 @@ an error message): 1 "This request is already assigned to Cara Coordinator.";
 2 "An earlier request for … is still waiting …" (SCRUM-134 AC2); 3 "Give the
 coordinator a reason for rejecting the request.", beside the note; 4 "This
 check is already Approved by Sasha Safety on …; nothing was changed." The
-item stays open, and nothing it holds changes.
+item stays open, and nothing it holds changes. Where someone else decided it
+meanwhile (1, 4), the panel then shows what they decided, e.g. "Assigned to
+Cara Coordinator.", while the error message stays on screen.
 
 *Automated:* `e2e/work-queues.spec.ts` › "SCRUM-211 [AC3] TC-211-09: …",
 "SCRUM-211 [AC3] TC-211-09, SCRUM-134 [AC2]: …", "SCRUM-211 [AC3] TC-211-09,

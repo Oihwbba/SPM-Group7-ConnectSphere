@@ -230,17 +230,26 @@ test.describe("SCRUM-211 — One layout for every work queue", () => {
       const page = await signedIn(browser, "lead@test.local");
       await page.goto(`/queue?open=${id}`);
       await expectOpened(page, name);
-      // Another Lead assigns it first.
+      // Another Lead assigns it first, as the assign action would.
       await prisma.event.update({
         where: { id },
-        data: { coordinatorId: "usr_coordinator_2", status: "UNDER_REVIEW" },
+        data: {
+          coordinatorId: "usr_coordinator_2",
+          supervisingLeadId: "usr_coordinatorlead_2",
+          status: "UNDER_REVIEW",
+        },
       });
 
       await page.getByTestId("assign-button").click();
-      await expect(page.getByTestId("decision-refused")).toHaveText(
-        "This request is already assigned to Cara Coordinator.",
-      );
+      await expect(
+        page.getByText("This request is already assigned to Cara Coordinator.").first(),
+      ).toBeVisible();
+      // It stays open, and once refreshed shows what the other Lead decided.
       await expect(page).toHaveURL(new RegExp(`open=${id}`));
+      await expect(page.getByTestId("queue-item-name")).toHaveText(name);
+      await expect(page.getByTestId("queue-decision")).toContainText(
+        "Assigned to Cara Coordinator.",
+      );
       expect(
         await prisma.event.findUniqueOrThrow({ where: { id }, select: { coordinatorId: true } }),
       ).toEqual({ coordinatorId: "usr_coordinator_2" });
