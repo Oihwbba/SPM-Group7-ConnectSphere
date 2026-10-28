@@ -545,28 +545,16 @@ describe.skipIf(!usesLocalDatabase)(
       });
 
       it("SCRUM-50 TC-50-09: the form offers only approved events the coordinator may act on, exactly as can() allows", async () => {
-        const before = new Date();
         const offered = await getBookableEvents("usr_coordinator");
-        const ids = offered.map((e) => e.id);
 
-        expect(ids).toEqual(
+        expect(offered.map((e) => e.id)).toEqual(
           expect.arrayContaining([APPROVED_EVENT, PLANNING_EVENT]),
         );
-        // Other suites run alongside and may confirm one of these events
-        // after the list was read; only rows unchanged since then are judged.
-        const rows = await prisma.event.findMany({
-          where: { id: { in: ids }, updatedAt: { lt: before } },
-          select: {
-            id: true,
-            organiserId: true,
-            coordinatorId: true,
-            status: true,
-          },
-        });
-        expect(rows.map((row) => row.id)).toEqual(
-          expect.arrayContaining([APPROVED_EVENT, PLANNING_EVENT]),
-        );
-        for (const row of rows) {
+        // Judged as offered, from the same read: other suites run alongside
+        // and may confirm one of these events a moment later, and Prisma
+        // stamps updatedAt when it builds that write, not when it commits, so
+        // reading the rows again can't tell a change apart from an old row.
+        for (const row of offered) {
           expect(
             can(COORDINATOR.user, "booking:request", { kind: "event", ...row }),
           ).toBe(true);
