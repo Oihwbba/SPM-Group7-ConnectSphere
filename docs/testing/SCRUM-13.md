@@ -190,7 +190,7 @@ unless the case says otherwise. "A start a month from now" is any future time.
 | Test Data | Strings of the lengths given |
 | Expected Result | Each is refused with its limit, for example "Keep the name under 200 characters." and "Keep description under 5000 characters.", and nothing is created. |
 
-**Automated by:** `tests/unit/events.test.ts` › "SCRUM-13 [AC1, AC11] TC-13-11: [/Input Constraint] rejects event name (AC11, max 200), purpose (AC1 field schema, max 1000), and description and special request (AC11, max 5000) that exceed their character limits"
+**Automated by:** `tests/unit/events.test.ts` › "SCRUM-13 [AC1, AC11] TC-13-11: [Input Constraint] rejects event name (AC11, max 200), purpose (AC1 field schema, max 1000), and description and special request (AC11, max 5000) that exceed their character limits"
 
 ### TC-13-12
 

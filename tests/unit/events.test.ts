@@ -626,7 +626,7 @@ describe("User Story 13 — Event Request Creation", () => {
       expect(mockCreate).not.toHaveBeenCalled();
     });
 
-    it("SCRUM-13 [AC1, AC11] TC-13-11: [/Input Constraint] rejects event name (AC11, max 200), purpose (AC1 field schema, max 1000), and description and special request (AC11, max 5000) that exceed their character limits", async () => {
+    it("SCRUM-13 [AC1, AC11] TC-13-11: [Input Constraint] rejects event name (AC11, max 200), purpose (AC1 field schema, max 1000), and description and special request (AC11, max 5000) that exceed their character limits", async () => {
       mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
 
       const result = await submitEventRequest({
