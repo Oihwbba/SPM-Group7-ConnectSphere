@@ -16,7 +16,10 @@
 
 ---
 
-**Superseded in part:** AC6's second sentence no longer holds since SCRUM-75's 2026-10-08 refinement: the Organiser doesn't set an opening or closing time, so registration opens at confirmation and closes at the event's start (SCRUM-75 AC4), and the Organiser can close and reopen it (SCRUM-75 AC6). AC6's first sentence is narrowed by SCRUM-171 AC4: confirming an event whose Registration needed is No doesn't open registration. The criteria below are kept as accepted in Sprint 2.
+**Superseded in part** (the criteria below are kept as accepted in Sprint 2):
+
+* **AC6's second sentence, superseded by SCRUM-75's 2026-10-08 refinement:** the Organiser doesn't set an opening or closing time, so registration opens at confirmation and closes at the event's start (SCRUM-75 AC4), and the Organiser can close and reopen it (SCRUM-75 AC6).
+* **AC6's first sentence, narrowed by SCRUM-171 AC4:** confirming an event whose Registration needed is No doesn't open registration.
 
 **User story:** As an Attendee, I want to register for an event, so that my place is recorded and the organisers know to expect me.
 
@@ -36,5 +39,6 @@
 
 * 2026-10-01 (audit): written as one numbered list. "Enabled when registration needs is Yes" is replaced by "opens when the event is Confirmed (SCRUM-81)": the request form's registration needs is free text, and nothing in the code switched registration on, so only seeded events could take registrations. The cut-off at the event's start moved to SCRUM-75 AC8, which already states it; the merged code doesn't check it yet.
 * 2026-10-29 (SCRUM-239, PO approval pending): marked AC6 as superseded in part by SCRUM-75's 8 Oct refinement (no window is set) and narrowed by SCRUM-171 AC4 (Registration needed: No). The Business rule now says how Organiser discretion works since that refinement. Criteria unchanged; story stays Done.
+* 2026-10-29 (SCRUM-239, PO approval pending): the Superseded in part note lists one change per bullet, to be easier to read; what it says is unchanged. Criteria unchanged.
 
 Functionality Area: Attendee Registration
