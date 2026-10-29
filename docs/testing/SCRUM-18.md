@@ -165,7 +165,7 @@ with `coordinator@test.local` (both `Password123!`).
 | Test Data | The request's and clarification's ids |
 | Expected Result | Each is refused. Steps 3 get "not found", revealing nothing; step 4 is refused as not signed in. Nothing is written. |
 
-**Automated by:** `tests/unit/clarification.test.ts` › "SCRUM-18 TC-18-10: [Negative] Security gate: an Organiser cannot request clarification on their own event", "SCRUM-18 TC-18-10: [Negative] a Coordinator cannot respond on the organiser's behalf", "SCRUM-18 TC-18-10, SCRUM-67 [AC4] TC-67-05: [Negative] SCRUM-68: another coordinator's event is indistinguishable from a missing one", "SCRUM-18 TC-18-10, SCRUM-68 [AC2, AC3, AC5] TC-68-02: [Negative] another organiser's clarification is indistinguishable from a missing one", "SCRUM-18 TC-18-10: [Negative] an unrelated user gets not-found, never the clarification content", "SCRUM-18 TC-18-10: [Negative] a signed-out caller is refused"
+**Automated by:** `tests/unit/clarification.test.ts` › "SCRUM-18 TC-18-10: [Negative] Security gate: an Organiser cannot request clarification on their own event", "SCRUM-18 TC-18-10: [Negative] a Coordinator cannot respond on the organiser's behalf", "SCRUM-18 TC-18-10, SCRUM-67 [AC4] TC-67-05: [Negative] another coordinator's event is indistinguishable from a missing one (SCRUM-68)", "SCRUM-18 TC-18-10, SCRUM-68 [AC2, AC3, AC5] TC-68-02: [Negative] another organiser's clarification is indistinguishable from a missing one", "SCRUM-18 TC-18-10: [Negative] an unrelated user gets not-found, never the clarification content", "SCRUM-18 TC-18-10: [Negative] a signed-out caller is refused"
 
 ### TC-18-11
 

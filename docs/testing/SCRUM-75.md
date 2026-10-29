@@ -86,7 +86,7 @@ SCRUM-128 applies (TC-75-14).
 | Test Data | `attendee4@test.local` |
 | Expected Result | 1: "Registration closed"; Register is disabled. 2: refused, and nothing is written. At the closing instant itself, it is already closed. |
 
-**Automated by:** `tests/unit/registration-state.test.ts` › "SCRUM-75 [AC7] TC-75-04: [Boundary] SCRUM-75 AC7: registrationClosesAt exactly now counts as already closed (<=, not <)"; `tests/unit/registration-actions.test.ts` › "SCRUM-73 [AC5] TC-73-03, SCRUM-75 [AC7] TC-75-04: [Negative] an expired registration period is refused"
+**Automated by:** `tests/unit/registration-state.test.ts` › "SCRUM-75 [AC7] TC-75-04: [Boundary] registrationClosesAt exactly now counts as already closed (<=, not <)"; `tests/unit/registration-actions.test.ts` › "SCRUM-73 [AC5] TC-73-03, SCRUM-75 [AC7] TC-75-04: [Negative] an expired registration period is refused"
 
 ### TC-75-05
 
@@ -99,7 +99,7 @@ SCRUM-128 applies (TC-75-14).
 | Test Data | — |
 | Expected Result | Refused both times, even with places left; the period shows the start as the close. |
 
-**Automated by:** `tests/unit/registration-state.test.ts` › "SCRUM-72 [AC5] TC-72-04, SCRUM-75 [AC8] TC-75-05: no period set, at the exact start instant → closed", "SCRUM-75 [AC8] TC-75-05: a closing time later than the start is ignored once the event has started", "SCRUM-75 [AC8] TC-75-05: an event that has started is closed even when it is also full" and "SCRUM-75 [AC8] TC-75-05: a closing time after the start shows the start as the close"; `tests/unit/registration-actions.test.ts` › "SCRUM-73 [AC5] TC-73-04, SCRUM-75 [AC8] TC-75-05: [Negative] AC5 / SCRUM-75 AC8: registration is refused once the event has started, even with no window set"
+**Automated by:** `tests/unit/registration-state.test.ts` › "SCRUM-72 [AC5] TC-72-04, SCRUM-75 [AC8] TC-75-05: no period set, at the exact start instant → closed", "SCRUM-75 [AC8] TC-75-05: a closing time later than the start is ignored once the event has started", "SCRUM-75 [AC8] TC-75-05: an event that has started is closed even when it is also full" and "SCRUM-75 [AC8] TC-75-05: a closing time after the start shows the start as the close"; `tests/unit/registration-actions.test.ts` › "SCRUM-73 [AC5] TC-73-04, SCRUM-75 [AC8] TC-75-05: [Negative] registration is refused once the event has started, even with no window set"
 
 ### TC-75-06
 

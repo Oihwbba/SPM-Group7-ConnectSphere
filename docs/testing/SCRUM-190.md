@@ -121,7 +121,7 @@ unless the case says otherwise.
 | Test Data | 09:00 SGT to 17:00 SGT the following day |
 | Expected Result | Both are refused with "An event starts and ends on the same day. Choose one date with a start and an end time." against the end. No request is created and the rejected one is unchanged. |
 
-**Automated by:** `tests/unit/events.test.ts` › "SCRUM-190 [AC3] TC-190-06: a request running from one day into the next can't be submitted, and nothing is created"; `tests/unit/clarification-and-amend.test.ts` › "SCRUM-190 [AC3] TC-190-06: an amended request running across two days can't be resubmitted, and nothing is written"; `tests/unit/event-one-day.test.ts` › "SCRUM-190 [AC3] TC-190-06, TC-190-07, TC-190-08, TC-190-09, TC-190-10: SCRUM-190 [AC3] TC-190-06: submitting (SCRUM-14) refuses an event running into the next day"
+**Automated by:** `tests/unit/events.test.ts` › "SCRUM-190 [AC3] TC-190-06: a request running from one day into the next can't be submitted, and nothing is created"; `tests/unit/clarification-and-amend.test.ts` › "SCRUM-190 [AC3] TC-190-06: an amended request running across two days can't be resubmitted, and nothing is written"; `tests/unit/event-one-day.test.ts` › "SCRUM-190 [AC3] TC-190-06: submitting (SCRUM-14) refuses an event running into the next day"
 
 ### TC-190-07
 
@@ -134,7 +134,7 @@ unless the case says otherwise.
 | Test Data | 09:00 SGT to 17:00 SGT the following day |
 | Expected Result | "Please fix the highlighted fields." with "An event starts and ends on the same day. Choose one date with a start and an end time." against the end. The clarification and the event are neither read nor written. |
 
-**Automated by:** `tests/unit/clarification-and-amend.test.ts` › "SCRUM-190 [AC3] TC-190-07: an answer moving the event across two days is refused against the end, and nothing is read or written"; `tests/unit/event-one-day.test.ts` › "SCRUM-190 [AC3] TC-190-06, TC-190-07, TC-190-08, TC-190-09, TC-190-10: SCRUM-190 [AC3] TC-190-07: a clarification answer (SCRUM-108) refuses an event running into the next day"
+**Automated by:** `tests/unit/clarification-and-amend.test.ts` › "SCRUM-190 [AC3] TC-190-07: an answer moving the event across two days is refused against the end, and nothing is read or written"; `tests/unit/event-one-day.test.ts` › "SCRUM-190 [AC3] TC-190-07: a clarification answer (SCRUM-108) refuses an event running into the next day"
 
 ### TC-190-08
 
@@ -147,7 +147,7 @@ unless the case says otherwise.
 | Test Data | An end 24 hours after the start |
 | Expected Result | Refused with "An event starts and ends on the same day. Choose one date with a start and an end time." No change request or audit entry is written. |
 
-**Automated by:** `tests/unit/change-requests.test.ts` › "SCRUM-190 [AC3] TC-190-08: a change request moving the event across two days is refused against the end, and nothing is written"; `tests/unit/event-one-day.test.ts` › "SCRUM-190 [AC3] TC-190-06, TC-190-07, TC-190-08, TC-190-09, TC-190-10: SCRUM-190 [AC3] TC-190-08: a change request (SCRUM-41 AC4) refuses an event running into the next day"
+**Automated by:** `tests/unit/change-requests.test.ts` › "SCRUM-190 [AC3] TC-190-08: a change request moving the event across two days is refused against the end, and nothing is written"; `tests/unit/event-one-day.test.ts` › "SCRUM-190 [AC3] TC-190-08: a change request (SCRUM-41 AC4) refuses an event running into the next day"
 
 ### TC-190-09
 
@@ -160,7 +160,7 @@ unless the case says otherwise.
 | Test Data | An end 24 hours after the stored end |
 | Expected Result | "An event starts and ends on the same day. Choose one date with a start and an end time." Nothing is read or saved. |
 
-**Automated by:** `tests/unit/event-edit.test.ts` › "SCRUM-190 [AC3] TC-190-09: an end on the next day is refused as not one day, and nothing is read or written"; `tests/unit/event-one-day.test.ts` › "SCRUM-190 [AC3] TC-190-06, TC-190-07, TC-190-08, TC-190-09, TC-190-10: SCRUM-190 [AC3] TC-190-09: the Coordinator's edit (SCRUM-25 AC3) refuses an event running into the next day"
+**Automated by:** `tests/unit/event-edit.test.ts` › "SCRUM-190 [AC3] TC-190-09: an end on the next day is refused as not one day, and nothing is read or written"; `tests/unit/event-one-day.test.ts` › "SCRUM-190 [AC3] TC-190-09: the Coordinator's edit (SCRUM-25 AC3) refuses an event running into the next day"
 
 ### TC-190-10
 
@@ -173,7 +173,7 @@ unless the case says otherwise.
 | Test Data | Name only |
 | Expected Result | The draft is saved. Reopened, **Event Date**, **Start Time** and **End Time** are empty. A time entered without a date gives no start or end. A draft whose dates are given still follows the one-day rule (SCRUM-15 AC 4). |
 
-**Automated by:** `tests/unit/event-one-day.test.ts` › "SCRUM-190 [AC3] TC-190-10: a draft can still be saved without a date or times", "SCRUM-190 [AC1, AC3] TC-190-10: without the date there is no start or end, so a draft saves without them", "SCRUM-190 [AC1, AC3] TC-190-10: a draft with no date or times shows empty fields"; `tests/unit/events.test.ts` › "SCRUM-15 [AC4], SCRUM-190 [AC3] TC-190-10: [Validation Rule] a draft with $rule is refused, because dates that are provided must still be valid" (the "end on a later day than the start" row); `tests/unit/event-one-day.test.ts` › "SCRUM-190 [AC3] TC-190-06, TC-190-07, TC-190-08, TC-190-09, TC-190-10: SCRUM-190 [AC3] TC-190-10: saving a draft (SCRUM-15) refuses an event running into the next day"
+**Automated by:** `tests/unit/event-one-day.test.ts` › "SCRUM-190 [AC3] TC-190-10: a draft can still be saved without a date or times", "SCRUM-190 [AC1, AC3] TC-190-10: without the date there is no start or end, so a draft saves without them", "SCRUM-190 [AC1, AC3] TC-190-10: a draft with no date or times shows empty fields"; `tests/unit/events.test.ts` › "SCRUM-15 [AC4], SCRUM-190 [AC3] TC-190-10: [Validation Rule] a draft with $rule is refused, because dates that are provided must still be valid" (the "end on a later day than the start" row); `tests/unit/event-one-day.test.ts` › "SCRUM-190 [AC3] TC-190-10: saving a draft (SCRUM-15) refuses an event running into the next day"
 
 ### TC-190-11
 

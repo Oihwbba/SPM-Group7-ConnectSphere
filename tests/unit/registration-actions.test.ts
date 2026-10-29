@@ -188,7 +188,7 @@ describe("registerForEvent — SCRUM-73", () => {
     expect(tx.registration.upsert).not.toHaveBeenCalled();
   });
 
-  it("SCRUM-74 [AC5] TC-74-05: [Negative] SCRUM-74 AC: a full event refuses a direct registration request and creates nothing", async () => {
+  it("SCRUM-74 [AC5] TC-74-05: [Negative] a full event refuses a direct registration request and creates nothing", async () => {
     mockAuth.mockResolvedValue(sessionFor("ATTENDEE", "usr_attendee"));
     tx.event.findUniqueOrThrow.mockResolvedValue(
       eventRow({ expectedAttendance: 5 }),
@@ -202,7 +202,7 @@ describe("registerForEvent — SCRUM-73", () => {
     expect(tx.registration.upsert).not.toHaveBeenCalled();
   });
 
-  it("SCRUM-73 [AC1, AC2, AC4] TC-73-01, SCRUM-74 [AC2] TC-74-02: [Negative] SCRUM-74 AC: registration is accepted with capacity remaining, decreasing it by exactly one", async () => {
+  it("SCRUM-73 [AC1, AC2, AC4] TC-73-01, SCRUM-74 [AC2] TC-74-02: [Positive] registration is accepted with capacity remaining, decreasing it by exactly one", async () => {
     mockAuth.mockResolvedValue(sessionFor("ATTENDEE", "usr_attendee"));
     tx.event.findUniqueOrThrow.mockResolvedValue(
       eventRow({ expectedAttendance: 5 }),
@@ -253,7 +253,7 @@ describe("registerForEvent — SCRUM-73", () => {
     );
   });
 
-  it("SCRUM-73 [AC5] TC-73-04, SCRUM-75 [AC8] TC-75-05: [Negative] AC5 / SCRUM-75 AC8: registration is refused once the event has started, even with no window set", async () => {
+  it("SCRUM-73 [AC5] TC-73-04, SCRUM-75 [AC8] TC-75-05: [Negative] registration is refused once the event has started, even with no window set", async () => {
     mockAuth.mockResolvedValue(sessionFor("ATTENDEE", "usr_attendee"));
     tx.event.findUniqueOrThrow.mockResolvedValue(
       eventRow({ startAt: new Date("2000-01-01") }),
@@ -328,7 +328,7 @@ describe("registerForEvent — SCRUM-73", () => {
 });
 
 describe("withdrawRegistration — SCRUM-74/77", () => {
-  it("SCRUM-74 [AC2] TC-74-06, SCRUM-77 [AC1, AC7] TC-77-01, TC-77-09: SCRUM-74 AC, SCRUM-77 [AC1, AC7] TC-77-01, TC-77-09: [Positive] withdrawing a REGISTERED registration flips it to WITHDRAWN, keeping the row", async () => {
+  it("SCRUM-74 [AC2] TC-74-06, SCRUM-77 [AC1, AC7] TC-77-01, TC-77-09: [Positive] withdrawing a REGISTERED registration flips it to WITHDRAWN, keeping the row", async () => {
     mockAuth.mockResolvedValue(sessionFor("ATTENDEE", "usr_attendee"));
     tx.registration.findUnique.mockResolvedValue({
       id: "reg1",
@@ -348,7 +348,7 @@ describe("withdrawRegistration — SCRUM-74/77", () => {
     );
   });
 
-  it("SCRUM-74 [AC2] TC-74-06: [Positive] SCRUM-74 AC: withdrawal locks the Event row before writing, so a concurrent registration for the freed place cannot interleave", async () => {
+  it("SCRUM-74 [AC2] TC-74-06: [Positive] withdrawal locks the Event row before writing, so a concurrent registration for the freed place cannot interleave", async () => {
     mockAuth.mockResolvedValue(sessionFor("ATTENDEE", "usr_attendee"));
     tx.registration.findUnique.mockResolvedValue({
       id: "reg1",

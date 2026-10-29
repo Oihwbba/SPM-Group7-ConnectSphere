@@ -36,7 +36,7 @@ otherwise.
 | Test Data | Draft "US16 Draft"; submitted "US16 Submitted" |
 | Expected Result | The draft row shows a Draft badge (since the shared page conventions, the badge is the one Draft marker; the second "Draft — Incomplete" tag is gone), and a **Resume Draft** button; the submitted row shows its own status badge. **Drafts** shows only the draft, **Submitted** only the other. The draft's detail shows the Draft status too. |
 
-**Automated by:** `tests/unit/events.test.ts` › "SCRUM-16 [AC1, AC2] TC-16-01: [, Happy Path] creates event with status DRAFT ensuring visual and logical separation from SUBMITTED"; `e2e/events.spec.ts` › "SCRUM-16 [AC7] TC-16-04: organiser can visually distinguish draft requests from submitted ones side-by-side and filter by status"
+**Automated by:** `tests/unit/events.test.ts` › "SCRUM-16 [AC1, AC2] TC-16-01: [Happy Path] creates event with status DRAFT ensuring visual and logical separation from SUBMITTED"; `e2e/events.spec.ts` › "SCRUM-16 [AC7] TC-16-04: organiser can visually distinguish draft requests from submitted ones side-by-side and filter by status"
 
 ### TC-16-02
 

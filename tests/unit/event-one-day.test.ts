@@ -164,7 +164,7 @@ describe.each([
     endAt: endAt.toISOString(),
   });
 
-  it(`SCRUM-190 [AC3] TC-190-06, TC-190-07, TC-190-08, TC-190-09, TC-190-10: SCRUM-190 [AC3] ${tc}: ${path} refuses an event running into the next day`, () => {
+  it(`SCRUM-190 [AC3] ${tc}: ${path} refuses an event running into the next day`, () => {
     expect(endErrors(schema, period(NINE_AM, FIVE_PM_NEXT_DAY))).toEqual([NOT_ONE_DAY]);
   });
 

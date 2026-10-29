@@ -48,7 +48,7 @@ assigned to `coordinator@test.local` (both `Password123!`).
 
 **Superseded in part** on 20 Oct 2026 by SCRUM-165 AC 8 ([TC-165-11](SCRUM-165.md#tc-165-11)): a Coordinator could also open a submitted request nobody had picked up; it now waits in the Lead's queue.
 
-**Automated by:** `tests/unit/coordinator-events-access.test.ts` › "SCRUM-17 [AC2] TC-17-02: [Positive] AC, SCRUM-165 [AC8] TC-165-11: queries only the events assigned to this coordinator" and "SCRUM-17 [AC2] TC-17-02: [Negative] SCRUM-165 [AC8] TC-165-11: an unclaimed Submitted event is not viewable by a coordinator; it waits in the Lead's queue"
+**Automated by:** `tests/unit/coordinator-events-access.test.ts` › "SCRUM-17 [AC2] TC-17-02, SCRUM-165 [AC8] TC-165-11: [Positive] queries only the events assigned to this coordinator" and "SCRUM-17 [AC2] TC-17-02, SCRUM-165 [AC8] TC-165-11: [Negative] an unclaimed Submitted event is not viewable by a coordinator; it waits in the Lead's queue"
 
 ### TC-17-03
 
@@ -61,4 +61,4 @@ assigned to `coordinator@test.local` (both `Password123!`).
 | Test Data | The request's id |
 | Expected Result | Each is refused as if the request didn't exist, so it reveals nothing. |
 
-**Automated by:** `tests/unit/coordinator-events-access.test.ts` › "SCRUM-17 [AC2] TC-17-03: [Negative] AC/SCRUM-68 parity: the query's OR condition matches can()'s relationship rule exactly for an event assigned to a DIFFERENT coordinator", "SCRUM-17 [AC2] TC-17-03: [Boundary] AC/SCRUM-68 parity: an unclaimed DRAFT is NOT viewable — the query explicitly excludes DRAFT from the null-coordinator branch"; `tests/unit/event-status.test.ts` › "SCRUM-17 [AC2] TC-17-03, SCRUM-67 [AC4] TC-67-05: another coordinator's event is indistinguishable from a missing one". Step 3 is SCRUM-68's (see its spec).
+**Automated by:** `tests/unit/coordinator-events-access.test.ts` › "SCRUM-17 [AC2] TC-17-03: [Negative] the query's OR condition matches can()'s relationship rule (SCRUM-68) exactly for an event assigned to a DIFFERENT coordinator", "SCRUM-17 [AC2] TC-17-03: [Boundary] as in SCRUM-68, an unclaimed DRAFT is NOT viewable — the query explicitly excludes DRAFT from the null-coordinator branch"; `tests/unit/event-status.test.ts` › "SCRUM-17 [AC2] TC-17-03, SCRUM-67 [AC4] TC-67-05: another coordinator's event is indistinguishable from a missing one". Step 3 is SCRUM-68's (see its spec).

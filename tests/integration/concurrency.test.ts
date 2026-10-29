@@ -772,7 +772,7 @@ describe.skipIf(!usesLocalDatabase)("event submission — repeat submission (SCR
     await prisma.event.deleteMany({ where: { id: { in: ids } } });
   });
 
-  it("SCRUM-14 [AC3] TC-14-04: SCRUM-14 AC: submitting the same event again is refused, creates no second request and sends no additional notification", async () => {
+  it("SCRUM-14 [AC3] TC-14-04: submitting the same event again is refused, creates no second request and sends no additional notification", async () => {
     const first = await submitEventRequest(submission(eventId, name));
     expect(first.ok).toBe(true);
 
@@ -785,7 +785,7 @@ describe.skipIf(!usesLocalDatabase)("event submission — repeat submission (SCR
     expect(await prisma.notification.count({ where: { eventId } })).toBe(notificationsBefore);
   });
 
-  it("SCRUM-124 [AC10] TC-124-10, SCRUM-14 [AC3] TC-14-05, SCRUM-45 [AC1] TC-45-01: SCRUM-14 AC: two simultaneous submissions of one draft succeed once and notify once", async () => {
+  it("SCRUM-124 [AC10] TC-124-10, SCRUM-14 [AC3] TC-14-05, SCRUM-45 [AC1] TC-45-01: two simultaneous submissions of one draft succeed once and notify once", async () => {
     const raceName = `${name} (simultaneous)`;
     const draft = await prisma.event.create({
       data: { name: raceName, status: "DRAFT", organiserId: "usr_organiser" },

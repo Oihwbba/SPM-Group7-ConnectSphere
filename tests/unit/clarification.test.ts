@@ -215,7 +215,7 @@ describe("requestClarification — SCRUM-18", () => {
     expect(tx.clarificationRequest.create).not.toHaveBeenCalled();
   });
 
-  it("SCRUM-18 TC-18-10, SCRUM-67 [AC4] TC-67-05: [Negative] SCRUM-68: another coordinator's event is indistinguishable from a missing one", async () => {
+  it("SCRUM-18 TC-18-10, SCRUM-67 [AC4] TC-67-05: [Negative] another coordinator's event is indistinguishable from a missing one (SCRUM-68)", async () => {
     mockAuth.mockResolvedValue(sessionFor("COORDINATOR", "usr_other_coord"));
     mockEventFindUnique.mockResolvedValue(
       eventRow({ coordinatorId: "usr_coord" }),

@@ -132,7 +132,7 @@ describe("computeRegistrationState — precedence and each state", () => {
     ).toBe("EXPIRED");
   });
 
-  it("SCRUM-75 [AC7] TC-75-04: [Boundary] SCRUM-75 AC7: registrationClosesAt exactly now counts as already closed (<=, not <)", () => {
+  it("SCRUM-75 [AC7] TC-75-04: [Boundary] registrationClosesAt exactly now counts as already closed (<=, not <)", () => {
     expect(
       computeRegistrationState(
         baseEvent({ registrationClosesAt: now }),

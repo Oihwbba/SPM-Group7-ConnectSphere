@@ -44,7 +44,7 @@ The seed has a Confirmed event with registration open and places left.
 | Test Data | The seeded open event |
 | Expected Result | The Attendee immediately sees themselves as Registered; there is no approval queue. The event now has 39 places left. |
 
-**Automated by:** `tests/unit/registration-actions.test.ts` › "SCRUM-73 [AC1, AC2, AC4] TC-73-01: [Positive] registering creates a REGISTERED registration for the caller", "SCRUM-73 [AC2] TC-73-01: [Positive] places are first come, first served — the registration is REGISTERED at once, with no approval step", "SCRUM-73 [AC1, AC2, AC4] TC-73-01, SCRUM-74 [AC2] TC-74-02: [Negative] SCRUM-74 AC: registration is accepted with capacity remaining, decreasing it by exactly one"; `e2e/registration.spec.ts` › "SCRUM-73 [AC1, AC2, AC4] TC-73-01, SCRUM-74 [AC2] TC-74-02: registering shows as registered immediately, and capacity decreases by one"
+**Automated by:** `tests/unit/registration-actions.test.ts` › "SCRUM-73 [AC1, AC2, AC4] TC-73-01: [Positive] registering creates a REGISTERED registration for the caller", "SCRUM-73 [AC2] TC-73-01: [Positive] places are first come, first served — the registration is REGISTERED at once, with no approval step", "SCRUM-73 [AC1, AC2, AC4] TC-73-01, SCRUM-74 [AC2] TC-74-02: [Positive] registration is accepted with capacity remaining, decreasing it by exactly one"; `e2e/registration.spec.ts` › "SCRUM-73 [AC1, AC2, AC4] TC-73-01, SCRUM-74 [AC2] TC-74-02: registering shows as registered immediately, and capacity decreases by one"
 
 ### TC-73-02
 
@@ -83,7 +83,7 @@ The seed has a Confirmed event with registration open and places left.
 | Test Data | The event's id |
 | Expected Result | Refused, and nothing is created. The start is read under the lock, so a page left open can't get round it. |
 
-**Automated by:** `tests/unit/registration-actions.test.ts` › "SCRUM-73 [AC5] TC-73-04, SCRUM-75 [AC8] TC-75-05: [Negative] AC5 / SCRUM-75 AC8: registration is refused once the event has started, even with no window set", "SCRUM-73 [AC5] TC-73-04: [Positive] the event's start is read inside the lock, so the start cut-off is enforced server-side"
+**Automated by:** `tests/unit/registration-actions.test.ts` › "SCRUM-73 [AC5] TC-73-04, SCRUM-75 [AC8] TC-75-05: [Negative] registration is refused once the event has started, even with no window set", "SCRUM-73 [AC5] TC-73-04: [Positive] the event's start is read inside the lock, so the start cut-off is enforced server-side"
 
 ### TC-73-05
 

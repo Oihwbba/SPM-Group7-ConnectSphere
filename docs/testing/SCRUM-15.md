@@ -63,7 +63,7 @@ unless the case says otherwise.
 | Test Data | Attendance 0; a name of 201 characters |
 | Expected Result | Both saves are refused at the field: "Attendance must be a positive whole number." and "Keep the name under 200 characters.". Leaving the field empty is allowed (TC-15-01); an invalid value is not. |
 
-**Automated by:** `tests/unit/events.test.ts` › "SCRUM-15 [AC4] TC-15-02: [Validation Rule] draft schema rejects 0 attendance when attendance is provided in draft", "SCRUM-15 [AC4] TC-15-02: SCRUM-15 [AC4] / SCRUM-13 [AC11 - Draft Path Input Constraint]: createDraftEvent schema enforces character limits on over-limit draft fields (name max 200, purpose max 1000, description max 5000, programme max 5000, specialRequests max 5000)"
+**Automated by:** `tests/unit/events.test.ts` › "SCRUM-15 [AC4] TC-15-02: [Validation Rule] draft schema rejects 0 attendance when attendance is provided in draft", "SCRUM-15 [AC4] TC-15-02: [Draft Path Input Constraint] createDraftEvent schema enforces SCRUM-13 AC11's character limits on over-limit draft fields (name max 200, purpose max 1000, description max 5000, programme max 5000, specialRequests max 5000)"
 
 ### TC-15-03
 
@@ -76,7 +76,7 @@ unless the case says otherwise.
 | Test Data | Start 20 Nov 2027 10:00, end 20 Nov 2027 18:00 |
 | Expected Result | "Resume Draft Event Request" opens with the saved name, and the schedule reads Event Date 2027-11-20, Start Time 10:00 and End Time 18:00 (SCRUM-190). The review step shows "Date: 20 Nov 2027" and "Time: 10:00 am SGT – 6:00 pm SGT". |
 
-**Automated by:** `tests/unit/events.test.ts` › "SCRUM-15 [AC2] TC-15-03: [Happy Path] retains existing field values when updating an existing draft request", "SCRUM-15 [AC1, AC2] TC-15-03: [, Data retention] a new draft saved with both proposed dates persists them as UTC instants"; `e2e/events.spec.ts` › "SCRUM-15 [AC3] TC-15-05: organiser saves partial draft, locates and resumes draft with preserved fields, then completes and submits"
+**Automated by:** `tests/unit/events.test.ts` › "SCRUM-15 [AC2] TC-15-03: [Happy Path] retains existing field values when updating an existing draft request", "SCRUM-15 [AC1, AC2] TC-15-03: [Data retention] a new draft saved with both proposed dates persists them as UTC instants"; `e2e/events.spec.ts` › "SCRUM-15 [AC3] TC-15-05: organiser saves partial draft, locates and resumes draft with preserved fields, then completes and submits"
 
 ### TC-15-04
 
@@ -89,7 +89,7 @@ unless the case says otherwise.
 | Test Data | A draft with a start at 10:00 SGT |
 | Expected Result | After each save the start is the same instant, with no drift. In step 2 the end is saved and the start stays empty. |
 
-**Automated by:** `tests/unit/events.test.ts` › "SCRUM-15 [AC2] TC-15-04: [Cross-Cutting / Timezone] preserves exact UTC datetime without offset drift across multiple draft updates", "SCRUM-15 [AC2, AC7] TC-15-04, TC-15-09: [, Data retention on re-save] updating a draft with only an end date persists that end and leaves the start empty"
+**Automated by:** `tests/unit/events.test.ts` › "SCRUM-15 [AC2] TC-15-04: [Cross-Cutting / Timezone] preserves exact UTC datetime without offset drift across multiple draft updates", "SCRUM-15 [AC2, AC7] TC-15-04, TC-15-09: [Data retention on re-save] updating a draft with only an end date persists that end and leaves the start empty"
 
 ### TC-15-05
 
@@ -154,7 +154,7 @@ unless the case says otherwise.
 | Test Data | A new purpose |
 | Expected Result | "Draft event request updated successfully." There is still one draft, holding the new value. |
 
-**Automated by:** `e2e/events.spec.ts` › "SCRUM-15 [AC2, AC7] TC-15-09: saving an existing draft a second time updates the record in-place without creating duplicate rows"; `tests/unit/events.test.ts` › "SCRUM-15 [AC2, AC7] TC-15-04, TC-15-09: [, Data retention on re-save] updating a draft with only an end date persists that end and leaves the start empty"
+**Automated by:** `e2e/events.spec.ts` › "SCRUM-15 [AC2, AC7] TC-15-09: saving an existing draft a second time updates the record in-place without creating duplicate rows"; `tests/unit/events.test.ts` › "SCRUM-15 [AC2, AC7] TC-15-04, TC-15-09: [Data retention on re-save] updating a draft with only an end date persists that end and leaves the start empty"
 
 ### TC-15-10
 
@@ -167,7 +167,7 @@ unless the case says otherwise.
 | Test Data | Venue requirements naming a retired venue |
 | Expected Result | The draft opens with the saved text unchanged. |
 
-**Automated by:** `tests/unit/events.test.ts` › "SCRUM-15 [AC2, AC9] TC-15-10: [, Inactive Catalogue Reference Retention] draft saves and reopens successfully when venue or equipment fields contain references to inactive catalogue items (stored as free text, no FK constraint)"
+**Automated by:** `tests/unit/events.test.ts` › "SCRUM-15 [AC2, AC9] TC-15-10: [Inactive Catalogue Reference Retention] draft saves and reopens successfully when venue or equipment fields contain references to inactive catalogue items (stored as free text, no FK constraint)"
 
 ### TC-15-11
 

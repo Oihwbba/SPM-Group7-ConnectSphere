@@ -89,7 +89,7 @@ and the app is running. Every seeded account's password is `Password123!`.
 | Test Data | The request's id; a made-up id |
 | Expected Result | Both get the same "not found" answer, so the refusal reveals nothing about the request. |
 
-**Automated by:** `tests/unit/event-status.test.ts` › "SCRUM-17 [AC2] TC-17-03, SCRUM-67 [AC4] TC-67-05: another coordinator's event is indistinguishable from a missing one"; `tests/unit/clarification.test.ts` › "SCRUM-18 TC-18-10, SCRUM-67 [AC4] TC-67-05: [Negative] SCRUM-68: another coordinator's event is indistinguishable from a missing one"; `e2e/access-control.spec.ts` › "SCRUM-208 [AC5] TC-208-13: another organiser's event and a made-up id are the same 404"; `e2e/event-page.spec.ts` › "SCRUM-208 [AC5] TC-208-13: another Coordinator's event is the same 404 as one that doesn't exist"
+**Automated by:** `tests/unit/event-status.test.ts` › "SCRUM-17 [AC2] TC-17-03, SCRUM-67 [AC4] TC-67-05: another coordinator's event is indistinguishable from a missing one"; `tests/unit/clarification.test.ts` › "SCRUM-18 TC-18-10, SCRUM-67 [AC4] TC-67-05: [Negative] another coordinator's event is indistinguishable from a missing one (SCRUM-68)"; `e2e/access-control.spec.ts` › "SCRUM-208 [AC5] TC-208-13: another organiser's event and a made-up id are the same 404"; `e2e/event-page.spec.ts` › "SCRUM-208 [AC5] TC-208-13: another Coordinator's event is the same 404 as one that doesn't exist"
 
 ### TC-67-06
 

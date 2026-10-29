@@ -39,7 +39,7 @@ unless the case says otherwise.
 | Test Data | organiser2's seeded "Another Client's Event — Product Launch"; organiser@test.local's "Draft — Annual Tech Summit" |
 | Expected Result | "Another Client's Event — Product Launch" is listed. Nothing of organiser@test.local's, such as "Draft — Annual Tech Summit", appears anywhere on the page. |
 
-**Automated by:** `tests/unit/events.test.ts` › "SCRUM-84 [AC1, AC2] TC-84-01, TC-84-02, SCRUM-68 [AC1, AC5] TC-68-01: [, Happy Path / Ownership Isolation] executes organiser query filtering only events belonging to logged-in organiser"; `e2e/events.spec.ts` › "SCRUM-68 [AC1, AC5] TC-68-01, SCRUM-84 [AC1] TC-84-01: enforces ownership isolation: organiser2 sees only their own events"
+**Automated by:** `tests/unit/events.test.ts` › "SCRUM-84 [AC1, AC2] TC-84-01, TC-84-02, SCRUM-68 [AC1, AC5] TC-68-01: [Happy Path / Ownership Isolation] executes organiser query filtering only events belonging to logged-in organiser"; `e2e/events.spec.ts` › "SCRUM-68 [AC1, AC5] TC-68-01, SCRUM-84 [AC1] TC-84-01: enforces ownership isolation: organiser2 sees only their own events"
 
 ### TC-84-02
 
@@ -52,7 +52,7 @@ unless the case says otherwise.
 | Test Data | The seeded events |
 | Expected Result | **All** lists every one. **Drafts** lists only the drafts; **Submitted** lists every non-draft, in any later status. |
 
-**Automated by:** `tests/unit/events.test.ts` › "SCRUM-84 [AC1, AC2] TC-84-01, TC-84-02, SCRUM-68 [AC1, AC5] TC-68-01: [, Happy Path / Ownership Isolation] executes organiser query filtering only events belonging to logged-in organiser", "SCRUM-84 [AC2] TC-84-02: given events in DRAFT, SUBMITTED, UNDER_REVIEW, APPROVED, REJECTED and COMPLETED, activeTab …", "SCRUM-84 [AC2] TC-84-02: an organiser's second tab still holds everything they have sent"
+**Automated by:** `tests/unit/events.test.ts` › "SCRUM-84 [AC1, AC2] TC-84-01, TC-84-02, SCRUM-68 [AC1, AC5] TC-68-01: [Happy Path / Ownership Isolation] executes organiser query filtering only events belonging to logged-in organiser", "SCRUM-84 [AC2] TC-84-02: given events in DRAFT, SUBMITTED, UNDER_REVIEW, APPROVED, REJECTED and COMPLETED, activeTab …", "SCRUM-84 [AC2] TC-84-02: an organiser's second tab still holds everything they have sent"
 
 ### TC-84-03
 

@@ -60,7 +60,7 @@ unless the case says otherwise. "A start a month from now" is any future time.
 | Test Data | Name "Regional Innovation Summit", attendance 250, layout "Theatre", a date a month from now, 10:00 to 12:00 |
 | Expected Result | **Review Entered Details** shows every value entered, including the accessibility needs. After submitting, the request is on **My Events**. |
 
-**Automated by:** `tests/unit/events.test.ts` › "SCRUM-13 [AC1, AC10] TC-13-01, SCRUM-14 [AC1] TC-14-01: [, Happy Path] successfully creates complete event request when all mandatory and optional fields are valid"; `e2e/events.spec.ts` › "SCRUM-13 [AC1, AC3, AC10] TC-13-01, TC-13-04, SCRUM-14 [AC1] TC-14-01: organiser fills event request sections, reviews details, and submits request"
+**Automated by:** `tests/unit/events.test.ts` › "SCRUM-13 [AC1, AC10] TC-13-01, SCRUM-14 [AC1] TC-14-01: [Happy Path] successfully creates complete event request when all mandatory and optional fields are valid"; `e2e/events.spec.ts` › "SCRUM-13 [AC1, AC3, AC10] TC-13-01, TC-13-04, SCRUM-14 [AC1] TC-14-01: organiser fills event request sections, reviews details, and submits request"
 
 ### TC-13-02
 
@@ -177,7 +177,7 @@ unless the case says otherwise. "A start a month from now" is any future time.
 | Test Data | A start yesterday; a start a minute ago |
 | Expected Result | Step 1 stays on the date step with an inline error. Step 2 is refused with "Proposed date cannot be in the past." and nothing is created. |
 
-**Automated by:** `tests/unit/events.test.ts` › "SCRUM-13 [AC9] TC-13-10: [Domain Boundary] rejects submission when proposed start date is in the past", "SCRUM-13 [AC9] TC-13-10: SCRUM-13 [AC9] × SCRUM-129 [AC4]: rejects a UTC ISO start datetime that represents a past moment, confirming converted Singapore wall-times are rejected at the schema layer"; `e2e/events.spec.ts` › "SCRUM-13 [AC9] TC-13-10: entering a past start date on Step 2 blocks navigation to Step 3 and shows an inline error"
+**Automated by:** `tests/unit/events.test.ts` › "SCRUM-13 [AC9] TC-13-10: [Domain Boundary] rejects submission when proposed start date is in the past", "SCRUM-13 [AC9] TC-13-10: rejects a UTC ISO start datetime that represents a past moment, confirming converted Singapore wall-times (SCRUM-129 AC4) are rejected at the schema layer"; `e2e/events.spec.ts` › "SCRUM-13 [AC9] TC-13-10: entering a past start date on Step 2 blocks navigation to Step 3 and shows an inline error"
 
 ### TC-13-11
 

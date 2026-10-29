@@ -137,13 +137,13 @@ describe("formatEventTime — SCRUM-72 AC2, SCRUM-76 AC1: an event's date with i
   const sameDayEnd = new Date("2031-06-01T08:00:00Z"); // 4:00 pm SGT
   const nextDayEnd = new Date("2031-06-02T02:00:00Z");
 
-  it("SCRUM-72 [AC1, AC2] TC-72-01: [Positive] SCRUM-72 AC2: a same-day event shows its date, start time and end time", () => {
+  it("SCRUM-72 [AC1, AC2] TC-72-01: [Positive] a same-day event shows its date, start time and end time", () => {
     expect(formatEventTime(start, sameDayEnd)).toBe(
       `${formatDateTime(start)} – ${formatTime(sameDayEnd)}`,
     );
   });
 
-  it("SCRUM-72 [AC1, AC2] TC-72-01: [Positive] SCRUM-72 AC2: an event that ends on a later day shows the full end date", () => {
+  it("SCRUM-72 [AC1, AC2] TC-72-01: [Positive] an event that ends on a later day shows the full end date", () => {
     expect(formatEventTime(start, nextDayEnd)).toBe(
       `${formatDateTime(start)} – ${formatDateTime(nextDayEnd)}`,
     );
