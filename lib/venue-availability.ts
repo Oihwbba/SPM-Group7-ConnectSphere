@@ -484,7 +484,8 @@ export function closedHours(
       continue;
     }
     if (opens > 0) closed(0, opens, "before");
-    if (closes < DAY_MINUTES) closed(closes, DAY_MINUTES, "after");
+    // A closing time is at most 23:59 (SCRUM-34 AC3), so there is always one.
+    closed(closes, DAY_MINUTES, "after");
   }
   return stretches;
 }
