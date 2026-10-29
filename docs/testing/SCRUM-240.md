@@ -62,13 +62,13 @@ live app after the fix is deployed.
 | Item | Content |
 |---|---|
 | Test Case ID | TC-240-03 |
-| Test Scenario | [Negative] AC 1: a host that only starts with "localhost" is not treated as local |
-| Pre-conditions | `DATABASE_URL` names a remote host beginning with `localhost` |
-| Test Steps | 1. Load the shared Prisma client. |
+| Test Scenario | [Negative] AC 1: a database not known to be local is capped |
+| Pre-conditions | Step 1: `DATABASE_URL` names a remote host beginning with `localhost`. Step 2: `DATABASE_URL` is not set. |
+| Test Steps | 1. Load the shared Prisma client. <br> 2. Load it again with no `DATABASE_URL`. |
 | Test Data | `postgresql://user:…@localhost.example.com:5432/postgres` |
-| Expected Result | The Pool is created with `max: 3`. |
+| Expected Result | Both times the Pool is created with `max: 3`. |
 
-**Automated by:** `tests/unit/db.test.ts` › "SCRUM-240 [AC1] TC-240-03: a host that only starts with localhost is not local"
+**Automated by:** `tests/unit/db.test.ts` › "SCRUM-240 [AC1] TC-240-03: a host that only starts with localhost is not local", "SCRUM-240 [AC1] TC-240-03: with no DATABASE_URL, the database isn't known to be local, so the pool is capped"
 
 ### TC-240-04
 

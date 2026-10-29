@@ -24,7 +24,7 @@ async function loadDb(nodeEnv: string) {
 const SUPABASE_URL =
   "postgresql://postgres.ref:secret@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres";
 
-async function poolOptionsFor(databaseUrl: string) {
+async function poolOptionsFor(databaseUrl: string | undefined) {
   vi.stubEnv("DATABASE_URL", databaseUrl);
   await loadDb("production");
   return Pool.mock.calls[0][0];
@@ -60,6 +60,10 @@ describe("database pool size — SCRUM-240", () => {
     const url = "postgresql://user:secret@localhost.example.com:5432/postgres";
 
     expect(await poolOptionsFor(url)).toEqual({ connectionString: url, max: 3 });
+  });
+
+  it("SCRUM-240 [AC1] TC-240-03: with no DATABASE_URL, the database isn't known to be local, so the pool is capped", async () => {
+    expect(await poolOptionsFor(undefined)).toEqual({ connectionString: undefined, max: 3 });
   });
 });
 
