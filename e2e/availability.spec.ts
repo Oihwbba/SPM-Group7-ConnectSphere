@@ -166,15 +166,18 @@ test.describe("SCRUM-36 / SCRUM-37 — venue availability calendar and recorded 
     ).toBeVisible();
 
     // SCRUM-36 AC3 — the Coordinator sees it as unavailable, labelled as
-    // maintenance rather than a booking.
+    // maintenance rather than a booking. The Auditorium opens 07:00–23:00, so
+    // the night either side reads as closed (SCRUM-241).
     await coordinator.goto(calendarFor(AUDITORIUM, DAY));
     expect(await stretches(coordinator, DAY)).toEqual([
-      ["free", "Available midnight to 1:00 pm SGT"],
+      ["closed", "Closed midnight to 7:00 am SGT"],
+      ["free", "Available 7:00 am SGT to 1:00 pm SGT"],
       [
         "unavailability",
         "Unavailable (maintenance) 1:00 pm SGT to 5:00 pm SGT",
       ],
-      ["free", "Available 5:00 pm SGT to midnight"],
+      ["free", "Available 5:00 pm SGT to 11:00 pm SGT"],
+      ["closed", "Closed 11:00 pm SGT to midnight"],
     ]);
 
     // SCRUM-37 AC2 — a request over it is refused, like a booking clash.
@@ -211,13 +214,15 @@ test.describe("SCRUM-36 / SCRUM-37 — venue availability calendar and recorded 
     // calendar at once, flush against the maintenance: no gap between them.
     await coordinator.goto(calendarFor(AUDITORIUM, DAY));
     expect(await stretches(coordinator, DAY)).toEqual([
-      ["free", "Available midnight to 9:00 am SGT"],
+      ["closed", "Closed midnight to 7:00 am SGT"],
+      ["free", "Available 7:00 am SGT to 9:00 am SGT"],
       ["booking", "Booked 9:00 am SGT to 1:00 pm SGT"],
       [
         "unavailability",
         "Unavailable (maintenance) 1:00 pm SGT to 5:00 pm SGT",
       ],
-      ["free", "Available 5:00 pm SGT to midnight"],
+      ["free", "Available 5:00 pm SGT to 11:00 pm SGT"],
+      ["closed", "Closed 11:00 pm SGT to midnight"],
     ]);
 
     // Tall enough to show the whole working day in the screenshots.
@@ -349,26 +354,49 @@ test.describe("SCRUM-36 / SCRUM-37 — venue availability calendar and recorded 
     );
   });
 
-  test("SCRUM-36 [AC6] TC-36-04: a venue with nothing in the week reads as available throughout, not blank", async ({
+  test("SCRUM-36 [AC6] TC-36-04, SCRUM-241 [AC1, AC2, AC3] TC-241-08: a venue with nothing in the week reads as available in its opening hours and closed outside them, never blank", async ({
     browser,
   }) => {
     const coordinator = await signedIn(browser, "coordinator@test.local");
+    // The Executive Boardroom opens Mon–Fri 09:00–18:00 and is Closed at the
+    // weekend (seed); nothing is booked in the week of 2 to 8 Jun 2036.
     await coordinator.goto(calendarFor("ven_boardroom", "2036-06-04"));
 
-    // Every day says so at the top of its column, rather than reading as blank.
-    const freeAllDay = coordinator.locator(
-      '[data-view="week"] li[data-day] [data-free-all-day]',
-    );
-    await expect(freeAllDay).toHaveCount(7);
-    await expect(freeAllDay.first()).toHaveText("Available all day");
     await expect(
       coordinator.locator('[data-view="week"] li[data-day]'),
     ).toHaveCount(7);
-    for (const day of ["2036-06-02", "2036-06-08"]) {
+    // A weekday is available exactly from opening to closing, and closed
+    // either side of it.
+    for (const day of ["2036-06-02", "2036-06-06"]) {
       expect(await stretches(coordinator, day)).toEqual([
-        ["free", "Available all day"],
+        ["closed", "Closed midnight to 9:00 am SGT"],
+        ["free", "Available 9:00 am SGT to 6:00 pm SGT"],
+        ["closed", "Closed 6:00 pm SGT to midnight"],
       ]);
     }
+    // The weekend says so at the top of its columns, rather than reading as
+    // blank or as available.
+    const closedAllDay = coordinator.locator(
+      '[data-view="week"] li[data-day] [data-closed-all-day]',
+    );
+    await expect(closedAllDay).toHaveCount(2);
+    await expect(closedAllDay.first()).toHaveText("Closed all day");
+    for (const day of ["2036-06-07", "2036-06-08"]) {
+      expect(await stretches(coordinator, day)).toEqual([
+        ["closed", "Closed all day"],
+      ]);
+    }
+    // Closed hours look like neither a booking nor unavailability, and the
+    // legend names them.
+    await expect(
+      coordinator.getByRole("list", { name: "Legend" }),
+    ).toContainText("Closed");
+    const fill = (kind: string) =>
+      coordinator
+        .locator(`[data-view="week"] li[data-day="2036-06-02"] li[data-kind="${kind}"] > div`)
+        .first()
+        .evaluate((el) => getComputedStyle(el).backgroundColor);
+    expect(await fill("closed")).not.toBe("rgba(0, 0, 0, 0)");
   });
 
   test("SCRUM-36 [AC1] TC-36-05: the calendar shows a week, Monday to Sunday, and moves between weeks", async ({

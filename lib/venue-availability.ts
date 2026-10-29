@@ -9,10 +9,12 @@ import { formatDateTime, parseSingaporeDateTime } from "@/lib/datetime";
 import { overlapping, overlaps, type Period } from "@/lib/period";
 import { UNAVAILABILITY_REASON_LABEL } from "@/lib/schemas/unavailability";
 import { MAX_SETUP_TURNAROUND_MINUTES } from "@/lib/schemas/venue";
+import type { OpeningDay } from "@/lib/venue-hours";
 
 type Db = PrismaClient | Prisma.TransactionClient;
 
 const MINUTE_MS = 60 * 1000;
+const DAY_MINUTES = 24 * 60;
 
 /** A venue's, or a booking's, setup and turnaround time in minutes. */
 export type SetupTurnaround = {
@@ -129,8 +131,19 @@ export type SetupTurnaroundStretch =
   | (StretchAroundBooking & { kind: "setup" })
   | (StretchAroundBooking & { kind: "turnaround" });
 
+/**
+ * SCRUM-241 — a stretch of a day when the venue is outside its opening hours
+ * (SCRUM-34), so no booking can start or end in it (SCRUM-34 AC7).
+ */
+export type ClosedStretch = {
+  kind: "closed";
+  id: string;
+  startAt: Date;
+  endAt: Date;
+};
+
 /** One entry on the availability calendar. */
-export type CalendarEntry = VenueBlocker | SetupTurnaroundStretch;
+export type CalendarEntry = VenueBlocker | SetupTurnaroundStretch | ClosedStretch;
 
 function heldUntil(booking: {
   status: string;
@@ -411,12 +424,17 @@ export interface AvailabilityDay {
   segments: DaySegment[];
 }
 
-/** Where blockers overlap, the lower number is shown (SCRUM-161). */
+/**
+ * Where blockers overlap, the lower number is shown (SCRUM-161). Closed hours
+ * come last: a turnaround may run past closing (SCRUM-159 AC9), and anything
+ * recorded at night says more than "Closed" does (SCRUM-241).
+ */
 const PRECEDENCE: Record<CalendarEntry["kind"], number> = {
   unavailability: 0,
   booking: 1,
   setup: 2,
   turnaround: 2,
+  closed: 3,
 };
 
 /** Midnight at the start of a Singapore calendar day, as a UTC instant. */
@@ -428,6 +446,48 @@ export function startOfSgDay(day: string): Date {
 export function addDays(day: string, offset: number): string {
   const [y, m, d] = day.split("-").map(Number);
   return new Date(Date.UTC(y, m - 1, d + offset)).toISOString().slice(0, 10);
+}
+
+/**
+ * SCRUM-241 — the hours from `fromDay` to `toDay` (inclusive) when the venue
+ * is closed: before opening and after closing each day, and the whole of a
+ * day marked Closed. As for booking (SCRUM-34 AC7), a weekday with no row is
+ * Closed, a venue with no hours recorded is closed at no time (AC4), and
+ * opening and closing are boundaries, so the stretches end exactly at opening
+ * and start exactly at closing (AC3).
+ */
+export function closedHours(
+  hours: OpeningDay[],
+  fromDay: string,
+  toDay: string,
+): ClosedStretch[] {
+  if (hours.length === 0) return [];
+  const stretches: ClosedStretch[] = [];
+  for (let day = fromDay; day <= toDay; day = addDays(day, 1)) {
+    const midnight = startOfSgDay(day).getTime();
+    const minute = (m: number) => new Date(midnight + m * MINUTE_MS);
+    const [y, m, d] = day.split("-").map(Number);
+    const weekday = ((new Date(Date.UTC(y, m - 1, d)).getUTCDay() + 6) % 7) + 1;
+    const row = hours.find((h) => h.weekday === weekday);
+    const opens = row?.opensMinute ?? null;
+    const closes = row?.closesMinute ?? null;
+    const closed = (startMinute: number, endMinute: number, part: string) =>
+      stretches.push({
+        kind: "closed",
+        id: `closed-${day}-${part}`,
+        startAt: minute(startMinute),
+        endAt: minute(endMinute),
+      });
+
+    if (opens === null || closes === null) {
+      closed(0, DAY_MINUTES, "all-day");
+      continue;
+    }
+    if (opens > 0) closed(0, opens, "before");
+    // A closing time is at most 23:59 (SCRUM-34 AC3), so there is always one.
+    closed(closes, DAY_MINUTES, "after");
+  }
+  return stretches;
 }
 
 /**
