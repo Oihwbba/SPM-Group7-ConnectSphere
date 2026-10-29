@@ -273,3 +273,4 @@ _7 stories, 11 points_
 | [SCRUM-235](SCRUM-235.md) | Chore: Re-sync docs/backlog from Jira (28 Oct) | SCRUM Sprint 4 | To Do |
 | [SCRUM-236](SCRUM-236.md) | Chore: Name every unit and integration test after the story, criteria and test case it proves, and fix the test-case docs' format | SCRUM Sprint 4 | To Do |
 | [SCRUM-237](SCRUM-237.md) | Chore: Say on the website and in the README that it is the team's development environment, not a service for customers | SCRUM Sprint 4 | In Progress |
+| [SCRUM-238](SCRUM-238.md) | Chore: Seed data that lets every role see and try every function | SCRUM Sprint 4 | In Progress |
