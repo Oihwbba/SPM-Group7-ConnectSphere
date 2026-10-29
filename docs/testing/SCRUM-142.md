@@ -20,7 +20,7 @@ venue requests; the suite removes them.
 | [TC-142-06](#tc-142-06) | Negative | AC 3 | Integration |
 | [TC-142-07](#tc-142-07) | Positive, Negative | AC 4, AC 7, AC 8 | Unit, integration, e2e |
 | [TC-142-08](#tc-142-08) | Positive | AC 4 | Integration |
-| [TC-142-09](#tc-142-09) | Negative | AC 5 | Unit, integration |
+| [TC-142-09](#tc-142-09) | Negative | AC 5 | Unit, integration, e2e |
 | [TC-142-10](#tc-142-10) | Negative | AC 6 | Integration |
 | [TC-142-11](#tc-142-11) | Negative | AC 7 | Unit, integration |
 | [TC-142-12](#tc-142-12) | Positive, Negative | AC 9 | Integration |
@@ -149,7 +149,7 @@ venue requests; the suite removes them.
 | Test Data | — |
 | Expected Result | Each: "This event is confirmed, so its arrangements change through a change request." Nothing changes. For an event that isn't being planned at all (e.g. Rejected): "This event isn't being planned, …". |
 
-**Automated by:** `tests/integration/change-or-withdraw.test.ts` › "SCRUM-142 [AC5] TC-142-09: …"; `tests/unit/change-or-withdraw.test.ts` › the "TC-142-09" tests
+**Automated by:** `tests/integration/change-or-withdraw.test.ts` › "SCRUM-142 [AC5] TC-142-09: …"; `tests/unit/change-or-withdraw.test.ts` › the "TC-142-09" tests; `e2e/change-or-withdraw.spec.ts` › "SCRUM-142 [AC5] TC-142-09: once the event is Confirmed, its Coordinator is offered no way to change or withdraw its equipment or venue requests, and nothing changes"
 
 ### TC-142-10
 

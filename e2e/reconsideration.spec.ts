@@ -122,12 +122,16 @@ test.describe("SCRUM-26 — Flag and resolve arrangements affected by a change",
     // A test that failed before creating its event has nothing to remove. An
     // undefined id would empty the filters below and delete every booking.
     if (!eventId) return;
-    const bookings = await prisma.booking.findMany({
-      where: { eventId },
-      select: { id: true },
-    });
+    const where = { where: { eventId }, select: { id: true } };
+    const bookings = await prisma.booking.findMany(where);
+    // Resolving a flagged reservation logs against the reservation (TC-26-08).
+    const reservations = await prisma.reservation.findMany(where);
     await prisma.auditLog.deleteMany({
-      where: { entityId: { in: [eventId, ...bookings.map((b) => b.id)] } },
+      where: {
+        entityId: {
+          in: [eventId, ...[...bookings, ...reservations].map((row) => row.id)],
+        },
+      },
     });
     // TC-131-05's reservations go first: they reference its equipment request.
     await prisma.reservation.deleteMany({ where: { eventId } });
@@ -282,5 +286,71 @@ test.describe("SCRUM-26 — Flag and resolve arrangements affected by a change",
       "Needs Reconsideration",
     );
     await expect(equipment).not.toContainText("Confirmed");
+  });
+
+  test("SCRUM-26 [AC8, AC9] TC-26-08, TC-26-10: a flagged reservation that no longer covers its request can't stand, and Cancel arrangement releases it", async ({
+    page,
+  }) => {
+    const name = `SCRUM-26 Reservation ${Date.now()}`;
+    ({ eventId } = await eventWithFlaggedBooking(name, "PLANNING", false));
+    // The request needs 3 projectors; only 2 are reserved, and Technical
+    // Support has reported them, as SCRUM-32 does (SCRUM-234).
+    const { id: requestId } = await prisma.equipmentRequest.create({
+      data: {
+        eventId,
+        requestedById: "usr_coordinator",
+        status: "APPROVED",
+        decidedAt: new Date(),
+        lines: { create: [{ equipmentId: "eqp_projector", quantity: 3 }] },
+      },
+      select: { id: true },
+    });
+    const { id: reservationId } = await prisma.reservation.create({
+      data: {
+        eventId,
+        requestId,
+        equipmentId: "eqp_projector",
+        quantity: 2,
+        startAt: START,
+        endAt: END,
+        status: "CONFIRMED",
+        reservedById: "usr_techsupport",
+        needsReconsideration: true,
+        reconsiderationFlaggedAt: new Date(),
+        reconsiderationReason: EQUIPMENT_REASON,
+      },
+      select: { id: true },
+    });
+    const reservation = () =>
+      prisma.reservation.findUniqueOrThrow({
+        where: { id: reservationId },
+        select: { status: true, needsReconsideration: true },
+      });
+
+    await signIn(page, "coordinator@test.local");
+    const panel = (await openDetails(page, name)).getByTestId("reconsideration-panel");
+    const flagged = panel.getByTestId("flagged-reservation");
+    await expect(flagged).toContainText("Projector × 2");
+    await expect(flagged).toContainText(EQUIPMENT_REASON);
+
+    // AC8: the reservation no longer covers what the request needs, so it can't stand.
+    await flagged.getByRole("button", { name: "Still stands" }).click();
+    await expect(
+      page.getByText(
+        "It can't stand as it is: Only 2 Projector reserved for the event's period; its requests need 3. Cancel the arrangement and request again.",
+      ),
+    ).toBeVisible();
+    expect(await reservation()).toEqual({ status: "CONFIRMED", needsReconsideration: true });
+
+    // AC9: cancelling it releases the stock, and the flag is resolved.
+    await flagged.getByRole("button", { name: "Cancel arrangement" }).click();
+    await page
+      .getByRole("dialog", { name: /Cancel Projector × 2/ })
+      .getByRole("button", { name: "Cancel arrangement" })
+      .click();
+    await expect(
+      page.getByText("Projector × 2 was cancelled. Technical Support will reserve it again."),
+    ).toBeVisible();
+    expect(await reservation()).toEqual({ status: "CANCELLED", needsReconsideration: false });
   });
 });
