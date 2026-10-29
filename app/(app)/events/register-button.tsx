@@ -36,6 +36,7 @@ export function RegisterButton({
   return (
     <Button
       disabled={disabled || isPending}
+      className="h-11 sm:h-10"
       onClick={handleRegister}
       data-testid="register-button"
     >

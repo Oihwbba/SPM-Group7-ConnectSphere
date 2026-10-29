@@ -2,18 +2,16 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { CalendarDays, CheckCircle2, Clock, MapPin, Users } from "lucide-react";
+import { CalendarDays, Clock, MapPin, Users } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { RegistrationStateBadge } from "@/components/events/registration-state-badge";
 import {
-  computeRegistrationState,
   remainingCapacity,
   totalCapacity,
   registrationPeriodText,
-  REGISTRATION_STATE_LABEL,
-  type RegistrationState,
 } from "@/lib/registration-state";
+import { registrationSummary } from "@/lib/registration-summary";
 import { formatEventTime } from "@/lib/datetime";
 
 type Booking = {
@@ -41,17 +39,6 @@ export type BrowsableEvent = {
   _count: { registrations: number };
 };
 
-const STATE_BADGE_VARIANT: Record<
-  RegistrationState,
-  "success" | "destructive" | "warning" | "muted"
-> = {
-  OPEN: "success",
-  FULL: "destructive",
-  NOT_YET_OPEN: "warning",
-  CLOSED: "muted",
-  EXPIRED: "muted",
-};
-
 /** SCRUM-72 review: keep events whose name or description contains the
  * keyword, ignoring case. A blank keyword keeps everything. */
 export function filterBrowsableEvents<
@@ -69,7 +56,9 @@ export function filterBrowsableEvents<
 /** SCRUM-72 — the attendee's browse list. Confirmed, non-Cancelled events
  * (already filtered by the query), each shown regardless of registration
  * state per the AC: a full or not-yet-open event stays visible, marked with
- * why registering isn't available right now, rather than disappearing. */
+ * why registering isn't available right now, rather than disappearing.
+ * SCRUM-212 AC1: each card reads its state at a glance, in the same badge and
+ * line as the event page. */
 export function AttendeeEventsClient({ events }: { events: BrowsableEvent[] }) {
   const [keyword, setKeyword] = useState("");
   const shown = filterBrowsableEvents(events, keyword);
@@ -99,7 +88,7 @@ export function AttendeeEventsClient({ events }: { events: BrowsableEvent[] }) {
         placeholder="Search events by name or description..."
         value={keyword}
         onChange={(e) => setKeyword(e.target.value)}
-        className="flex h-9 w-full max-w-sm rounded-md border border-input bg-background px-3 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+        className="flex h-11 w-full max-w-sm rounded-md border border-input bg-background px-3 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring sm:h-9"
       />
       {shown.length === 0 ? (
         <p
@@ -111,23 +100,22 @@ export function AttendeeEventsClient({ events }: { events: BrowsableEvent[] }) {
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {shown.map((event) => {
-            const state = computeRegistrationState(
-              event,
-              event._count.registrations,
-            );
             const remaining = remainingCapacity(
               event,
               event._count.registrations,
             );
-            const isRegistered =
-              event.registrations[0]?.status === "REGISTERED";
+            const summary = registrationSummary(
+              event,
+              event._count.registrations,
+              event.registrations[0]?.status === "REGISTERED",
+            );
 
             return (
               <Link
                 key={event.id}
                 href={`/events/${event.id}`}
                 data-testid="browsable-event-card"
-                data-registration-state={state}
+                data-registration-state={summary.state}
                 className="block rounded-lg transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <Card className="h-full">
@@ -136,13 +124,17 @@ export function AttendeeEventsClient({ events }: { events: BrowsableEvent[] }) {
                       <CardTitle className="text-base font-semibold leading-tight">
                         {event.name}
                       </CardTitle>
-                      <Badge
-                        variant={STATE_BADGE_VARIANT[state]}
-                        data-testid="registration-state-badge"
-                      >
-                        {REGISTRATION_STATE_LABEL[state]}
-                      </Badge>
+                      <RegistrationStateBadge
+                        kind={summary.state}
+                        label={summary.badge}
+                      />
                     </div>
+                    <p
+                      className="text-sm font-medium text-foreground"
+                      data-testid="registration-state-line"
+                    >
+                      {summary.line}
+                    </p>
                     {event.description && (
                       <p className="line-clamp-2 text-xs text-muted-foreground">
                         {event.description}
@@ -165,7 +157,9 @@ export function AttendeeEventsClient({ events }: { events: BrowsableEvent[] }) {
                       <span data-testid="venue">
                         {event.bookings.length > 0
                           ? event.bookings
-                              .map((b) => `${b.venue.name} — ${b.venue.location}`)
+                              .map(
+                                (b) => `${b.venue.name} — ${b.venue.location}`,
+                              )
                               .join("; ")
                           : "Venue to be confirmed"}
                       </span>
@@ -182,15 +176,6 @@ export function AttendeeEventsClient({ events }: { events: BrowsableEvent[] }) {
                         {registrationPeriodText(event)}
                       </span>
                     </div>
-                    {isRegistered && (
-                      <div
-                        className="flex items-center gap-1.5 font-medium text-success"
-                        data-testid="already-registered"
-                      >
-                        <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
-                        <span>You&apos;re registered</span>
-                      </div>
-                    )}
                   </CardContent>
                 </Card>
               </Link>
