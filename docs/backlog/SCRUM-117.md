@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-09. Jira is the source of truth.
+     Synced from Jira on 2026-10-29. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-117 - Reject an event that can't be fulfilled
@@ -15,6 +15,8 @@
 | **Jira** | https://smu-spm-group7.atlassian.net/browse/SCRUM-117 |
 
 ---
+
+**Superseded in part:** AC3's single venue booking is superseded by SCRUM-162 AC5 and SCRUM-163: rejecting cancels every venue booking, hold and pending venue request of the event in one operation. Rejecting also makes a safety check that is awaiting review or Approved Outdated (SCRUM-166 AC13). The criteria below are kept as accepted in Sprint 2.
 
 **User story:** As an Event Coordinator, I want to reject an event in Planning when its essential arrangements can't be secured, so that it doesn't sit pending indefinitely.
 
@@ -33,5 +35,6 @@
 
 * 2026-10-01 (story not started): limited to events never Confirmed; added the outcome choice (SCRUM-126) and the change-request rule. The transition is listed in SCRUM-135.
 * 2026-10-01 (audit): AC3 names reservations and open equipment requests, matching the built equipment model. SCRUM-126 moved into Sprint 2, since AC2 depends on it.
+* 2026-10-29 (SCRUM-243, PO approval pending): added the Superseded in part note for SCRUM-162, SCRUM-163 and SCRUM-166. Criteria unchanged.
 
 Functionality Area: Event Review and Approval

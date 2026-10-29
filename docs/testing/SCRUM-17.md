@@ -46,7 +46,7 @@ assigned to `coordinator@test.local` (both `Password123!`).
 | Test Data | The seeded events |
 | Expected Result | The assigned request opens; the unassigned one is refused as if it didn't exist. The list holds exactly the events assigned to this Coordinator. |
 
-**Superseded in part** on 20 Oct 2026 by SCRUM-165 AC 8 ([TC-165-11](SCRUM-165.md#tc-165-11)): a Coordinator could also open a submitted request nobody had picked up; it now waits in the Lead's queue.
+**Superseded in part** on 20 Oct 2026 by SCRUM-165 AC 8 ([TC-165-11](SCRUM-165.md#tc-165-11)): a Coordinator could also open a submitted request nobody had picked up; it now waits in the Lead's queue. AC 2's "only Coordinators and the Organiser" is also widened, read-only, for other roles: Coordinators, the Lead, Venue Staff and Technical Support see every event in the all-events list (SCRUM-141, tested by its own cases), the Lead sees the Unassigned queue (SCRUM-165 AC 3), and a Safety Officer sees the arrangements of an event whose safety check they review (SCRUM-166 AC 2).
 
 **Automated by:** `tests/unit/coordinator-events-access.test.ts` › "[Positive] AC, SCRUM-165 [AC8] TC-165-11: queries only the events assigned to this coordinator" and "[Negative] SCRUM-165 [AC8] TC-165-11: an unclaimed Submitted event is not viewable by a coordinator; it waits in the Lead's queue"
 

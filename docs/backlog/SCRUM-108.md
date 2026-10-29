@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-09. Jira is the source of truth.
+     Synced from Jira on 2026-10-29. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-108 - Answer a clarification, or amend and resubmit a rejected request
@@ -15,6 +15,8 @@
 | **Jira** | https://smu-spm-group7.atlassian.net/browse/SCRUM-108 |
 
 ---
+
+**Superseded in part:** AC11's automatic assignment is superseded by SCRUM-165 AC9 and SCRUM-135 AC6: a resubmitted request keeps its Coordinator, and if that Coordinator no longer holds the role it waits, Submitted, in the Lead's Unassigned queue. AC11's last sentence no longer applies: a request with no Coordinator can't be rejected (SCRUM-135 AC4), so no Coordinator takes one over by rejecting it. The criteria below are kept as accepted in Sprint 2.
 
 **User story:** As an Event Organiser, I want to answer my Coordinator's clarification request and, when allowed, amend and resubmit a rejected request, so that I can fix what was raised without starting again.
 
@@ -35,8 +37,6 @@
 13. Only the event's Organiser can answer or amend (SCRUM-67).
 14. Responses, amendments and resubmissions are recorded with who and when.
 
-**Related:** the Sprint 1 code already offers Amend & Resubmit on every rejected request and runs automatic assignment again on resubmission; AC7, AC8 and AC11 change that. The answer's notification (AC3) and closing on a decision (AC6) are already built.
-
 **Customer basis:** "Rejected events may be resubmitted after appropriate changes are made; rejection is not necessarily final." "Only edits via Coordinator and the co-ordinator also decide whether it calls for a new submission." "Organiser cannot directly edit after submission; must request via Coordinator."
 
 **Change log**
@@ -44,5 +44,6 @@
 * 2026-10-01 (backlog refinement, story not started): clarification edits limited to the named fields; the Coordinator's choice of outcome moved to SCRUM-126; added the same-Coordinator rule; re-estimated from 3 to 5 after the SCRUM-109 merge.
 * 2026-10-01 (audit): AC1 adds the Coordinator's side of naming fields, because the clarification built in Sprint 1 is a free-text question with no field list. AC6 states what the code already does when a request is decided. AC11 covers a request rejected before any Coordinator was assigned, which the code allows (SCRUM-135 AC4). Group headings removed. SCRUM-126 moved into Sprint 2 because AC7 and AC8 depend on it.
 * 2026-10-04: AC11 makes the rejecting Coordinator the coordinator of an unassigned request, so the rejected request leaves other Coordinators' lists and comes back to them on resubmission (PO decision, raised by Hann Qian).
+* 2026-10-29 (SCRUM-243, PO approval pending): added the Superseded in part note for SCRUM-135 and SCRUM-165. Removed the Related note, which described the Sprint 1 code before this story was built. Criteria unchanged.
 
 Functionality Area: Event Review and Approval

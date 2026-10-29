@@ -11,7 +11,8 @@ Written on 2026-10-12 from the acceptance criteria, then mapped to the tests
 that already existed (SCRUM-176). The tests predate the `SCRUM-n [ACx] TC-n-xx`
 title format, so each case names them by their current titles.
 
-Two criteria were overtaken by later stories:
+Later stories overtook these criteria (the story's "Superseded in part" note
+lists them too):
 
 - **AC 1, AC 4 and AC 6 (event timezone):** SCRUM-129 made every event
   Singapore time. The form has no timezone field; it states its times are SGT,
@@ -25,6 +26,10 @@ Two criteria were overtaken by later stories:
   text. The form offers the active venue and equipment catalogues as
   suggestions (TC-13-02); choosing from a catalogue was SCRUM-127, which was
   dropped (SCRUM-170 keeps the requirements free text).
+- **AC 1 and AC 4 (registration needs):** SCRUM-171 AC 1 and AC 2 replaced
+  the free-text answer with Registration needed: Yes or No, required to
+  submit, plus an optional note. SCRUM-171's own cases test it
+  ([TC-171-01](SCRUM-171.md#tc-171-01)).
 
 **Shared pre-conditions for every case:** the database is migrated and seeded
 and the app is running. Signed in as `organiser@test.local` (`Password123!`),

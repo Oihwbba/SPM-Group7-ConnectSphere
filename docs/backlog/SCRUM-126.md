@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-09. Jira is the source of truth.
+     Synced from Jira on 2026-10-29. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-126 - Coordinator decides whether a rejected request is amended or submitted as new
@@ -28,6 +28,8 @@
 6. The outcome is recorded in the event history with who and when.
 7. Rejections recorded before this story was delivered are treated as Amend and resubmit.
 
+**Supersedes:** SCRUM-19 AC3 (a rejection records only a reason) and AC4 (every Rejected request can be amended and resubmitted), which now holds only when the Coordinator chose Amend and resubmit.
+
 **Customer basis:** "Only edits via Coordinator and the co-ordinator also decide whether it calls for a new submission." (Event Review and Approval). "Rejected events may be resubmitted after appropriate changes are made; rejection is not necessarily final."
 
 **Why this is a new story:** SCRUM-19 (Sprint 1, Done) records a rejection without this choice, and the Sprint 1 code offers Amend & Resubmit on every rejected request. Done stories are not reopened, so the change lives here.
@@ -35,5 +37,6 @@
 **Change log**
 
 * 2026-10-01 (audit): moved into Sprint 2 because SCRUM-108 and SCRUM-117 depend on it. AC4 names equipment requests and reservations (the built equipment model).
+* 2026-10-29 (SCRUM-243, PO approval pending): added the Supersedes line for SCRUM-19 AC3 and AC4, which AC1 to AC3 already changed; SCRUM-19 now carries a matching note. Criteria unchanged.
 
 Functionality Area: Event Review and Approval

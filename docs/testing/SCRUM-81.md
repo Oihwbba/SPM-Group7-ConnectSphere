@@ -13,7 +13,15 @@ and the app is running. Unless the case says otherwise, the event is owned by
 `organiser@test.local` and assigned to `coordinator@test.local` (both
 `Password123!`), and runs 09:00–17:00 on one day in 2031. "Ready" means its
 SCRUM-110 checklist is complete: an approved venue booking covering the event
-and, if equipment was requested, every line reserved in full.
+(SCRUM-162 AC8); Equipment decided, either No equipment needed or a request
+with every line reserved in full (SCRUM-170 AC4); and an Approved safety check
+(SCRUM-166 AC9).
+
+Later stories superseded parts of the story (its "Superseded in part" note):
+AC 2 by SCRUM-165 and SCRUM-135 AC 3, since a Submitted request with no
+Coordinator can't be approved (TC-135-03); AC 3 and AC 4 by SCRUM-166 AC 9,
+which adds the safety check to "Ready"; and AC 6 by SCRUM-162 AC 7, so the
+Organiser sees every Approved venue.
 
 | ID                    | Type        | Criterion                                  | Automated              |
 | --------------------- | ----------- | ------------------------------------------ | ---------------------- |
