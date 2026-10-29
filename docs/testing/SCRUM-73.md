@@ -99,6 +99,8 @@ The seed has a Confirmed event with registration open and places left.
 | Test Data | The two events |
 | Expected Result | The first is open at once and says "Opens on confirmation". The second is open from its exact opening instant. |
 
+**Superseded in part** by SCRUM-75's 8 Oct refinement ([TC-75-01](SCRUM-75.md#tc-75-01)): the Organiser no longer sets an opening time, so the second event's window comes only from the seed data; the code still honours it. Confirming an event whose Registration needed is No doesn't open registration (SCRUM-171 AC 4, [TC-171-05](SCRUM-171.md#tc-171-05)).
+
 **Automated by:** `tests/unit/registration-state.test.ts` › "[Positive] AC: open, unfilled, no period configured → OPEN", "[Boundary] registrationOpensAt exactly now already counts as open (not NOT_YET_OPEN)", "SCRUM-72 AC5: no window set shows the default — opens on confirmation, closes at the start"
 
 ### TC-73-06
