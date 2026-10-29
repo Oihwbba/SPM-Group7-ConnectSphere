@@ -1,11 +1,11 @@
-# SCRUM-245 — Stop two integration tests failing when another test file runs at the same time: test cases
+# SCRUM-245 — Stop three integration tests failing when another test file runs at the same time: test cases
 
 SCRUM-245 is a Chore task in Jira, found on 29 Oct running `npm run
 test:coverage` against the local database. Vitest runs the integration files
-in parallel against one database, and two tests read rows another file was
+in parallel against one database, and three tests read rows another file was
 writing at the same moment. The tests they fix keep their stories' titles and
-cases, [TC-21-02](SCRUM-21.md#tc-21-02) and
-[TC-160-13](SCRUM-160.md#tc-160-13).
+cases, [TC-21-02](SCRUM-21.md#tc-21-02), [TC-160-13](SCRUM-160.md#tc-160-13)
+and [TC-50-09](SCRUM-50.md#tc-50-09).
 
 Format and conventions: [README.md](README.md).
 
@@ -16,7 +16,8 @@ and seeded with `npm run db:seed`, as in CI's `build-and-test`.
 |---|---|---|---|
 | [TC-245-01](#tc-245-01) | Positive | AC 1 | Integration |
 | [TC-245-02](#tc-245-02) | Positive, Negative | AC 2 | Integration |
-| [TC-245-03](#tc-245-03) | Positive | AC 3 | The whole suite, locally and in CI |
+| [TC-245-03](#tc-245-03) | Positive, Negative | AC 3 | Integration |
+| [TC-245-04](#tc-245-04) | Positive | AC 4 | The whole suite, locally and in CI |
 
 ---
 
@@ -51,10 +52,23 @@ and seeded with `npm run db:seed`, as in CI's `build-and-test`.
 | Item | Content |
 |---|---|
 | Test Case ID | TC-245-03 |
-| Test Scenario | [Positive] AC 3: nothing else in either test is weakened, and the suite passes |
+| Test Scenario | [Positive, Negative] AC 3: TC-50-09 judges the events as the booking form's query returned them |
+| Pre-conditions | Seeded. |
+| Test Steps | 1. Another file confirms one of `usr_coordinator`'s Planning events while TC-50-09 runs. <br> 2. Separately, `BOOKABLE_EVENT_STATUSES` is made to offer Confirmed events too. |
+| Test Data | `usr_coordinator`; `evt_approved`, `evt_planning` |
+| Expected Result | 1. TC-50-09 passes: it checks each offered event's status, Organiser and Coordinator as read, so a later confirmation doesn't reach it. 2. TC-50-09 fails ("expected [ 'APPROVED', 'PLANNING' ] to include 'CONFIRMED'"), so an event the form shouldn't offer is still caught. |
+
+**Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-50 TC-50-09: the form offers only approved events the coordinator may act on, exactly as can() allows". Step 2 was checked by hand on 30 Oct and the list restored.
+
+### TC-245-04
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-245-04 |
+| Test Scenario | [Positive] AC 4: nothing else in the three tests is weakened, and the suite passes |
 | Pre-conditions | As above. |
 | Test Steps | 1. Read the diff. <br> 2. Run `npm run test:coverage` against the local database, and let CI run. |
 | Test Data | — |
-| Expected Result | 1. Only the cleanup's notification filter and TC-160-13's filter to seeded rows change. 2. Both pass. |
+| Expected Result | 1. Only the cleanup's notification filter, TC-160-13's filter to seeded rows and TC-50-09's single read change. 2. Both pass. |
 
 **Automated by:** the whole suite, `npm run test:coverage` locally and CI's `build-and-test`.
