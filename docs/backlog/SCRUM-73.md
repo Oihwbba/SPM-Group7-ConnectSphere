@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-09. Jira is the source of truth.
+     Synced from Jira on 2026-10-29. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-73 - Register for an event
@@ -16,6 +16,8 @@
 
 ---
 
+**Superseded in part:** AC6's second sentence no longer holds since SCRUM-75's 2026-10-08 refinement: the Organiser doesn't set an opening or closing time, so registration opens at confirmation and closes at the event's start (SCRUM-75 AC4), and the Organiser can close and reopen it (SCRUM-75 AC6). AC6's first sentence is narrowed by SCRUM-171 AC4: confirming an event whose Registration needed is No doesn't open registration. The criteria below are kept as accepted in Sprint 2.
+
 **User story:** As an Attendee, I want to register for an event, so that my place is recorded and the organisers know to expect me.
 
 **Acceptance criteria**
@@ -28,10 +30,11 @@
 6. Registration opens when the event is Confirmed (SCRUM-81). An opening time later than confirmation, and when registration closes, are set in SCRUM-75.
 7. Given the event goes back to Planning after an approved change, then new registrations are refused until it is Confirmed again; existing registrations stay.
 
-**Business rule:** Organiser discretion controls the registration window through SCRUM-75, not individual attendee approval.
+**Business rule:** Organiser discretion controls registration by closing and reopening it (SCRUM-75 AC6), not by individual attendee approval.
 
 **Change log**
 
 * 2026-10-01 (audit): written as one numbered list. "Enabled when registration needs is Yes" is replaced by "opens when the event is Confirmed (SCRUM-81)": the request form's registration needs is free text, and nothing in the code switched registration on, so only seeded events could take registrations. The cut-off at the event's start moved to SCRUM-75 AC8, which already states it; the merged code doesn't check it yet.
+* 2026-10-29 (SCRUM-239, PO approval pending): marked AC6 as superseded in part by SCRUM-75's 8 Oct refinement (no window is set) and narrowed by SCRUM-171 AC4 (Registration needed: No). The Business rule now says how Organiser discretion works since that refinement. Criteria unchanged; story stays Done.
 
 Functionality Area: Attendee Registration

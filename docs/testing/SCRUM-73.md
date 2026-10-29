@@ -11,8 +11,11 @@ Written on 2026-10-12 from the acceptance criteria, then mapped to the tests
 that already existed (SCRUM-176). The tests predate the `SCRUM-n [ACx] TC-n-xx`
 title format, so each case names them by their current titles.
 
-**AC 6:** registration opens at confirmation; a later opening time, and the
-close, are set through SCRUM-75 (TC-75-01 to TC-75-14). AC 7's return to
+**AC 6:** registration opens at confirmation and closes at the event's start
+(SCRUM-75 AC 4, TC-75-01). Since SCRUM-75's 8 Oct refinement no opening or
+closing time is set; the Organiser closes and reopens registration instead
+(TC-75-06 to TC-75-11). Confirming an event that doesn't need registration
+doesn't open it (SCRUM-171 AC 4, TC-171-05). AC 7's return to
 Planning is SCRUM-128's (TC-128-05); the refusal itself is tested here
 (TC-73-07).
 
