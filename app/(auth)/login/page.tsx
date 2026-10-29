@@ -1,6 +1,7 @@
 import { AnimatedSphere } from "@/components/auth/animated-sphere";
 import { SphereLogo } from "@/components/app/sphere-logo";
 import { LoginForm } from "@/components/auth/login-form";
+import { DevelopmentNotice } from "@/components/app/development-notice";
 
 export default function LoginPage() {
   return (
@@ -29,6 +30,8 @@ export default function LoginPage() {
           </div>
 
           <LoginForm />
+
+          <DevelopmentNotice variant="panel" />
 
           {/* Demo-account hint — a local/dev convenience only. NEVER rendered in
               production: the shared Supabase database is seeded there too, so
