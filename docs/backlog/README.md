@@ -163,7 +163,7 @@ _13 stories, 31 points_
 
 ## SCRUM-11 - Attendee Registration
 
-_10 stories, 21 points_
+_11 stories, 22 points_
 
 | Story | Summary | Pts | Priority | Sprint | Status |
 |---|---|---|---|---|---|
@@ -177,10 +177,11 @@ _10 stories, 21 points_
 | [SCRUM-80](SCRUM-80.md) | Record attendance per registration on the day | 3 | Low | Backlog | To Do |
 | [SCRUM-115](SCRUM-115.md) | Find an event to attend | 3 | Low | Backlog | To Do |
 | [SCRUM-133](SCRUM-133.md) | [MERGED INTO SCRUM-85] Attendees see a clear status while a registered event is being re-planned | 0 | Medium | Backlog | Done |
+| [SCRUM-212](SCRUM-212.md) | Attendee pages show registration state at a glance | 1 | Medium | SCRUM Sprint 4 | In Review |
 
 ## Stories with no epic
 
-_7 stories, 11 points_
+_6 stories, 10 points_
 
 | Story | Summary | Pts | Priority | Sprint | Status |
 |---|---|---|---|---|---|
@@ -190,7 +191,6 @@ _7 stories, 11 points_
 | [SCRUM-209](SCRUM-209.md) | Arrange venues, equipment and the safety check from the event page | 2 | High | SCRUM Sprint 4 | In Review |
 | [SCRUM-210](SCRUM-210.md) | Menus grouped by task | 1 | High | SCRUM Sprint 4 | In Review |
 | [SCRUM-211](SCRUM-211.md) | One layout for every work queue | 1 | Medium | SCRUM Sprint 4 | In Progress |
-| [SCRUM-212](SCRUM-212.md) | Attendee pages show registration state at a glance | 1 | Medium | SCRUM Sprint 4 | To Do |
 
 ## Tasks (technical work, no customer-facing story)
 
@@ -274,4 +274,4 @@ _7 stories, 11 points_
 | [SCRUM-236](SCRUM-236.md) | Chore: Name every unit and integration test after the story, criteria and test case it proves, and fix the test-case docs' format | SCRUM Sprint 4 | To Do |
 | [SCRUM-237](SCRUM-237.md) | Chore: Say on the website and in the README that it is the team's development environment, not a service for customers | SCRUM Sprint 4 | In Progress |
 | [SCRUM-238](SCRUM-238.md) | Chore: Seed data that lets every role see and try every function | SCRUM Sprint 4 | In Progress |
-| [SCRUM-242](SCRUM-242.md) | Chore: List SCRUM-70 under its Access Control epic in product-context's Release 1 feature table | SCRUM Sprint 4 | In Progress |
+| [SCRUM-242](SCRUM-242.md) | Chore: Match the docs to Jira's epics for SCRUM-70 (Access Control) and SCRUM-212 (Attendee Registration) | SCRUM Sprint 4 | In Progress |

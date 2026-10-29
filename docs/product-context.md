@@ -138,7 +138,7 @@ to an epic in Jira; the stories carry the acceptance criteria.
 | 15 | Equipment request management | SCRUM-10 Equipment Management | 27, 28, 142 |
 | 16 | Equipment availability checking | SCRUM-10 | 29, 30 |
 | 17 | Equipment reservation | SCRUM-10 | 31, 155, 156, 32 |
-| 18 | Attendee registration | SCRUM-11 Attendee Registration | 72, 73, 74, 75, 76, 77 |
+| 18 | Attendee registration | SCRUM-11 Attendee Registration | 72, 73, 74, 75, 76, 77, 212 |
 | 19 | Event change requests | SCRUM-8 Event Change & Notifications | 41, 128, 26 |
 | 20 | Notification system | SCRUM-8 | 45, 48, 85, 124 |
 
