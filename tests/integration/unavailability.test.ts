@@ -712,7 +712,7 @@ describe.skipIf(!usesLocalDatabase)(
         ).resolves.toBeDefined();
       });
 
-      it("a pending request over recorded maintenance is still allowed to exist — only approval is refused", async () => {
+      it("SCRUM-37: a pending request over recorded maintenance is still allowed to exist — only approval is refused", async () => {
         await record(at(13, 1), at(13, 9));
 
         await expect(

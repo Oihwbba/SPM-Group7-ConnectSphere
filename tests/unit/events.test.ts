@@ -135,7 +135,7 @@ describe("User Story 13 — Event Request Creation", () => {
   // SUBMISSION VALIDATION TESTS (submitEventRequest)
   // --------------------------------------------------------------------------
   describe("submitEventRequest — Validation Rules", () => {
-    it("SCRUM-13 [AC1, AC10 - Happy Path]: successfully creates complete event request when all mandatory and optional fields are valid", async () => {
+    it("SCRUM-13 [AC1, AC10] TC-13-01, SCRUM-14 [AC1] TC-14-01: [, Happy Path] successfully creates complete event request when all mandatory and optional fields are valid", async () => {
       // 1. Mock logged-in user as Event Organiser
       mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
       mockCreate.mockResolvedValue({ id: "evt_sub_1" });
@@ -209,7 +209,7 @@ describe("User Story 13 — Event Request Creation", () => {
       expect(mockCreate).not.toHaveBeenCalled();
     });
 
-    it("SCRUM-13 [AC3 - Happy Path]: accepts request when optional fields (programme, special requests) are omitted", async () => {
+    it("SCRUM-13 [AC3] TC-13-04: [Happy Path] accepts request when optional fields (programme, special requests) are omitted", async () => {
       mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
       mockCreate.mockResolvedValue({ id: "evt_no_optionals" });
 
@@ -231,7 +231,7 @@ describe("User Story 13 — Event Request Creation", () => {
       );
     });
 
-    it("SCRUM-13 [AC3 - Happy Path]: successfully submits request with optional programme and special requests populated", async () => {
+    it("SCRUM-13 [AC3] TC-13-04: [Happy Path] successfully submits request with optional programme and special requests populated", async () => {
       mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
       mockCreate.mockResolvedValue({ id: "evt_full_optional" });
 
@@ -253,7 +253,7 @@ describe("User Story 13 — Event Request Creation", () => {
       );
     });
 
-    it("SCRUM-13 [AC7 - Domain Boundary]: rejects submission when expected attendance is 0", async () => {
+    it("SCRUM-13 [AC7] TC-13-08: [Domain Boundary] rejects submission when expected attendance is 0", async () => {
       mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
 
       // Attendance = 0 (invalid)
@@ -284,7 +284,7 @@ describe("User Story 13 — Event Request Creation", () => {
       );
     });
 
-    it("SCRUM-13 [AC7 - Domain Boundary]: rejects submission when expected attendance is a negative number", async () => {
+    it("SCRUM-13 [AC7] TC-13-08: [Domain Boundary] rejects submission when expected attendance is a negative number", async () => {
       mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
 
       // Attendance = -20 (invalid)
@@ -303,7 +303,7 @@ describe("User Story 13 — Event Request Creation", () => {
       expect(mockCreate).not.toHaveBeenCalled();
     });
 
-    it("SCRUM-13 [AC9 - Domain Boundary]: rejects submission when proposed start date is in the past", async () => {
+    it("SCRUM-13 [AC9] TC-13-10: [Domain Boundary] rejects submission when proposed start date is in the past", async () => {
       mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
 
       // Start date set to past
@@ -322,7 +322,7 @@ describe("User Story 13 — Event Request Creation", () => {
       expect(mockCreate).not.toHaveBeenCalled();
     });
 
-    it("SCRUM-13 [AC9] × SCRUM-129 [AC4]: rejects a UTC ISO start datetime that represents a past moment, confirming converted Singapore wall-times are rejected at the schema layer", async () => {
+    it("SCRUM-13 [AC9] TC-13-10: SCRUM-13 [AC9] × SCRUM-129 [AC4]: rejects a UTC ISO start datetime that represents a past moment, confirming converted Singapore wall-times are rejected at the schema layer", async () => {
       mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
 
       const oneHourAgoUtcIso = new Date(Date.now() - 3_600_000).toISOString();
@@ -341,7 +341,7 @@ describe("User Story 13 — Event Request Creation", () => {
       expect(mockCreate).not.toHaveBeenCalled();
     });
 
-    it("SCRUM-13 [AC8 - Domain Boundary]: rejects submission when proposed end date is equal to start date (zero-duration)", async () => {
+    it("SCRUM-13 [AC8] TC-13-09: [Domain Boundary] rejects submission when proposed end date is equal to start date (zero-duration)", async () => {
       mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
 
       // End date same as start date (invalid period)
@@ -361,7 +361,7 @@ describe("User Story 13 — Event Request Creation", () => {
       expect(mockCreate).not.toHaveBeenCalled();
     });
 
-    it("SCRUM-13 [AC8 - Domain Boundary]: rejects submission when proposed end date is earlier than start date", async () => {
+    it("SCRUM-13 [AC8] TC-13-09, SCRUM-190 [AC2] TC-190-04: [Domain Boundary] rejects submission when proposed end date is earlier than start date", async () => {
       mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
 
       // End date earlier than start date
@@ -406,7 +406,7 @@ describe("User Story 13 — Event Request Creation", () => {
       { field: "startAt", message: "Invalid start date format." },
       { field: "endAt", message: "Invalid end date format." },
     ] as const)(
-      "SCRUM-13 [AC8, AC9 - Date validity]: an unreadable $field is reported as an invalid date and nothing is created",
+      "SCRUM-13 [AC8, AC9]: [, Date validity] an unreadable $field is reported as an invalid date and nothing is created",
       async ({ field, message }) => {
         mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
 
@@ -423,7 +423,7 @@ describe("User Story 13 — Event Request Creation", () => {
 
     // A cleared date input arrives as "" rather than being left out, so the
     // date checks must stand aside and let the "required" messages speak.
-    it("SCRUM-13 [AC4 - Business-Rule Negative]: blank start and end dates are reported as required, not as invalid dates", async () => {
+    it("SCRUM-13 [AC4] TC-13-05, SCRUM-171 [AC2] TC-171-02: [Business-Rule Negative] blank start and end dates are reported as required, not as invalid dates", async () => {
       mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
 
       const result = await submitEventRequest({
@@ -465,7 +465,7 @@ describe("User Story 13 — Event Request Creation", () => {
       expect(mockCreate).not.toHaveBeenCalled();
     });
 
-    it("SCRUM-13 [AC4 - Business-Rule Negative]: returns field errors when any mandatory field is missing upon submission", async () => {
+    it("SCRUM-13 [AC4] TC-13-05, SCRUM-14 [AC2] TC-14-03, SCRUM-171 [AC2] TC-171-02: [Business-Rule Negative] returns field errors when any mandatory field is missing upon submission", async () => {
       mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
 
       // Submit payload with empty compulsory fields
@@ -512,7 +512,7 @@ describe("User Story 13 — Event Request Creation", () => {
     // still DRAFT/REJECTED and owned by the caller, so every other case
     // (someone else's event, a missing id, an already-submitted event) lands
     // on the same refusal.
-    it("SCRUM-14 AC: submitting an id that is not the caller's DRAFT/REJECTED event is refused and writes nothing", async () => {
+    it("SCRUM-14 [AC3] TC-14-04: SCRUM-14 AC: submitting an id that is not the caller's DRAFT/REJECTED event is refused and writes nothing", async () => {
       mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
       mockFindFirst.mockResolvedValue(null);
 
@@ -565,7 +565,7 @@ describe("User Story 13 — Event Request Creation", () => {
       },
     );
 
-    it("SCRUM-14 AC: the draft row is locked BEFORE its status is checked, so two simultaneous submissions cannot both pass", async () => {
+    it("SCRUM-14 [AC3] TC-14-05: SCRUM-14 AC: the draft row is locked BEFORE its status is checked, so two simultaneous submissions cannot both pass", async () => {
       mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
       mockFindFirst.mockResolvedValue({
         id: "evt_draft_race",
@@ -582,7 +582,7 @@ describe("User Story 13 — Event Request Creation", () => {
       );
     });
 
-    it("SCRUM-21, SCRUM-165 [AC9] TC-165-12: resubmitting a rejected event whose coordinator lost the role returns it to the queue, recording who held it", async () => {
+    it("SCRUM-165 [AC9] TC-165-12: resubmitting a rejected event whose coordinator lost the role returns it to the queue, recording who held it", async () => {
       mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
       mockFindFirst.mockResolvedValue({
         id: "evt_rejected",
@@ -606,7 +606,7 @@ describe("User Story 13 — Event Request Creation", () => {
       });
     });
 
-    it("SCRUM-13 [AC4 - Business-Rule Negative]: rejects whitespace-only values for mandatory string fields", async () => {
+    it("SCRUM-13 [AC4] TC-13-05, SCRUM-171 [AC2] TC-171-02: [Business-Rule Negative] rejects whitespace-only values for mandatory string fields", async () => {
       mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
 
       // Submit payload with whitespace-only required fields
@@ -626,7 +626,7 @@ describe("User Story 13 — Event Request Creation", () => {
       expect(mockCreate).not.toHaveBeenCalled();
     });
 
-    it("SCRUM-13 [AC1/AC11 - Input Constraint]: rejects event name (AC11, max 200), purpose (AC1 field schema, max 1000), and description and special request (AC11, max 5000) that exceed their character limits", async () => {
+    it("SCRUM-13 [AC1, AC11] TC-13-11: [/Input Constraint] rejects event name (AC11, max 200), purpose (AC1 field schema, max 1000), and description and special request (AC11, max 5000) that exceed their character limits", async () => {
       mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
 
       const result = await submitEventRequest({
@@ -647,7 +647,7 @@ describe("User Story 13 — Event Request Creation", () => {
       expect(mockCreate).not.toHaveBeenCalled();
     });
 
-    it("SCRUM-13 [AC11 - Script Injection Sanitisation & React Escaping]: preserves text content safely while trim-sanitising input strings, relying on React's automatic context-aware DOM escaping to prevent script execution", async () => {
+    it("SCRUM-13 [AC11] TC-13-12: [Script Injection Sanitisation & React Escaping] preserves text content safely while trim-sanitising input strings, relying on React's automatic context-aware DOM escaping to prevent script execution", async () => {
       mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
       mockCreate.mockResolvedValue({ id: "evt_script_test" });
 
@@ -671,7 +671,7 @@ describe("User Story 13 — Event Request Creation", () => {
       );
     });
 
-    it("SCRUM-13 [AC11 - Cross-Cutting / Input Constraint]: trims leading and trailing whitespace from string fields upon schema parsing", async () => {
+    it("SCRUM-13 [AC11] TC-13-12: [Cross-Cutting / Input Constraint] trims leading and trailing whitespace from string fields upon schema parsing", async () => {
       mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
       mockCreate.mockResolvedValue({ id: "evt_trimmed" });
 
@@ -690,7 +690,7 @@ describe("User Story 13 — Event Request Creation", () => {
       );
     });
 
-    it("SCRUM-13 [Security Gate]: denies non-organiser user role (e.g. ATTENDEE) from submitting event requests", async () => {
+    it("SCRUM-13 TC-13-13: [Security Gate] denies non-organiser user role (e.g. ATTENDEE) from submitting event requests", async () => {
       // Mock logged-in user as ATTENDEE instead of ORGANISER
       mockAuth.mockResolvedValue(sessionFor("ATTENDEE", "usr_attendee"));
 
@@ -704,7 +704,7 @@ describe("User Story 13 — Event Request Creation", () => {
       expect(mockCreate).not.toHaveBeenCalled();
     });
 
-    it("SCRUM-13 [Security Gate]: refuses signed-out callers for createDraftEvent and submitEventRequest", async () => {
+    it("SCRUM-13 TC-13-13: [Security Gate] refuses signed-out callers for createDraftEvent and submitEventRequest", async () => {
       // Mock signed-out caller
       mockAuth.mockResolvedValue(null);
 
@@ -757,7 +757,7 @@ describe("User Story 15 — Save an event request as draft", () => {
   const futureStart = sgtPeriod(1).startAt.toISOString();
   const futureEnd = sgtPeriod(1).endAt.toISOString();
 
-  it("SCRUM-15 [AC1 - Happy Path]: allows saving a draft with mandatory submission fields left empty", async () => {
+  it("SCRUM-15 [AC1] TC-15-01, SCRUM-13 [AC5] TC-13-06: [Happy Path] allows saving a draft with mandatory submission fields left empty", async () => {
     mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
     mockCreate.mockResolvedValue({ id: "evt_draft_1" });
 
@@ -810,7 +810,7 @@ describe("User Story 15 — Save an event request as draft", () => {
     );
   });
 
-  it("SCRUM-129 [AC1 - Singapore timezone]: a new draft and an updated draft are stored as Asia/Singapore events", async () => {
+  it("SCRUM-129 [AC1] TC-129-01: [Singapore timezone] a new draft and an updated draft are stored as Asia/Singapore events", async () => {
     mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
     mockCreate.mockResolvedValue({ id: "evt_draft_sg" });
 
@@ -841,7 +841,7 @@ describe("User Story 15 — Save an event request as draft", () => {
     );
   });
 
-  it("SCRUM-129 [AC1 - Singapore timezone]: a new submission and a submitted draft are stored as Asia/Singapore events", async () => {
+  it("SCRUM-129 [AC1] TC-129-01: [Singapore timezone] a new submission and a submitted draft are stored as Asia/Singapore events", async () => {
     mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
     mockCreate.mockResolvedValue({ id: "evt_submit_sg" });
 
@@ -896,7 +896,7 @@ describe("User Story 15 — Save an event request as draft", () => {
     );
   });
 
-  it("SCRUM-129 [AC4 - UTC storage]: the submitted UTC instants are stored exactly as sent", async () => {
+  it("SCRUM-129 [AC4] TC-129-04: [UTC storage] the submitted UTC instants are stored exactly as sent", async () => {
     mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
     mockCreate.mockResolvedValue({ id: "evt_utc" });
 
@@ -918,7 +918,7 @@ describe("User Story 15 — Save an event request as draft", () => {
     );
   });
 
-  it("SCRUM-15 [AC4 - Relaxation Rule]: allows saving a draft with missing mandatory fields (dates/venue/equipment/attendance omitted)", async () => {
+  it("SCRUM-15 [AC4] TC-15-01: [Relaxation Rule] allows saving a draft with missing mandatory fields (dates/venue/equipment/attendance omitted)", async () => {
     mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
     mockCreate.mockResolvedValue({ id: "evt_draft_relaxed" });
 
@@ -939,7 +939,7 @@ describe("User Story 15 — Save an event request as draft", () => {
     );
   });
 
-  it("SCRUM-15 [AC4 - Validation Rule]: draft schema rejects 0 attendance when attendance is provided in draft", async () => {
+  it("SCRUM-15 [AC4] TC-15-02: [Validation Rule] draft schema rejects 0 attendance when attendance is provided in draft", async () => {
     mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
 
     // Expected attendance = 0 provided to draft
@@ -993,7 +993,7 @@ describe("User Story 15 — Save an event request as draft", () => {
         "An event starts and ends on the same day. Choose one date with a start and an end time.",
     },
   ] as const)(
-    "SCRUM-15 [AC4 - Validation Rule]: a draft with $rule is refused, because dates that are provided must still be valid",
+    "SCRUM-15 [AC4], SCRUM-190 [AC3] TC-190-10: [Validation Rule] a draft with $rule is refused, because dates that are provided must still be valid",
     async ({ dates, field, message }) => {
       mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
 
@@ -1005,7 +1005,7 @@ describe("User Story 15 — Save an event request as draft", () => {
     },
   );
 
-  it("SCRUM-15 [AC3 - Business-Rule Negative]: returns field error when attempting to save a draft without an event name", async () => {
+  it("SCRUM-15 [AC3] TC-15-06: [Business-Rule Negative] returns field error when attempting to save a draft without an event name", async () => {
     mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
 
     const result = await createDraftEvent({ name: "" });
@@ -1017,7 +1017,7 @@ describe("User Story 15 — Save an event request as draft", () => {
     expect(mockCreate).not.toHaveBeenCalled();
   });
 
-  it("SCRUM-14 [AC4 - Business-Rule Negative]: refuses to edit a caller's own event as a draft once it has been submitted", async () => {
+  it("SCRUM-14 [AC4] TC-14-06, SCRUM-16 [AC7] TC-16-04: [Business-Rule Negative] refuses to edit a caller's own event as a draft once it has been submitted", async () => {
     mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
     // Own event, but no longer DRAFT — the write's status condition excludes
     // it, same as if it belonged to someone else or didn't exist.
@@ -1039,7 +1039,7 @@ describe("User Story 15 — Save an event request as draft", () => {
     expect(mockUpdate).not.toHaveBeenCalled();
   });
 
-  it("SCRUM-15 [AC2 - Happy Path]: retains existing field values when updating an existing draft request", async () => {
+  it("SCRUM-15 [AC2] TC-15-03: [Happy Path] retains existing field values when updating an existing draft request", async () => {
     mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
     // Update existing draft with additional fields
     const result = await createDraftEvent({
@@ -1065,7 +1065,7 @@ describe("User Story 15 — Save an event request as draft", () => {
     );
   });
 
-  it("SCRUM-15 [AC2 - Cross-Cutting / Timezone]: preserves exact UTC datetime without offset drift across multiple draft updates", async () => {
+  it("SCRUM-15 [AC2] TC-15-04: [Cross-Cutting / Timezone] preserves exact UTC datetime without offset drift across multiple draft updates", async () => {
     const fixedUtcIso = "2026-11-20T10:00:00.000Z";
     mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
     // Re-save draft with startAt to ensure UTC timestamp stability
@@ -1086,7 +1086,7 @@ describe("User Story 15 — Save an event request as draft", () => {
     );
   });
 
-  it("SCRUM-15 [AC1, AC2 - Data retention]: a new draft saved with both proposed dates persists them as UTC instants", async () => {
+  it("SCRUM-15 [AC1, AC2] TC-15-03: [, Data retention] a new draft saved with both proposed dates persists them as UTC instants", async () => {
     mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
     mockCreate.mockResolvedValue({ id: "evt_draft_dated" });
 
@@ -1108,7 +1108,7 @@ describe("User Story 15 — Save an event request as draft", () => {
     );
   });
 
-  it("SCRUM-15 [AC2, AC7 - Data retention on re-save]: updating a draft with only an end date persists that end and leaves the start empty", async () => {
+  it("SCRUM-15 [AC2, AC7] TC-15-04, TC-15-09: [, Data retention on re-save] updating a draft with only an end date persists that end and leaves the start empty", async () => {
     mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
     const result = await createDraftEvent({
       id: "evt_draft_end_only",
@@ -1129,7 +1129,7 @@ describe("User Story 15 — Save an event request as draft", () => {
     );
   });
 
-  it("SCRUM-15 [AC5 - State Transition]: transitions draft status from DRAFT to SUBMITTED when draft is fully completed and submitted", async () => {
+  it("SCRUM-15 [AC5] TC-15-07, SCRUM-14 [AC1] TC-14-01: [State Transition] transitions draft status from DRAFT to SUBMITTED when draft is fully completed and submitted", async () => {
     mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
     mockFindFirst.mockResolvedValue({
       id: "evt_draft_resumed",
@@ -1206,7 +1206,7 @@ describe("User Story 15 — Save an event request as draft", () => {
     );
   });
 
-  it("SCRUM-15 [Security Gate / Ownership Isolation]: refuses to update or submit a draft owned by another organiser", async () => {
+  it("SCRUM-15 [AC1] TC-15-12: [Security Gate / Ownership Isolation] refuses to update or submit a draft owned by another organiser", async () => {
     mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_other_organiser"));
     // The draft belongs to a different organiser, so the conditional write,
     // scoped to the caller, matches nothing.
@@ -1229,7 +1229,7 @@ describe("User Story 15 — Save an event request as draft", () => {
     expect(mockUpdate).not.toHaveBeenCalled();
   });
 
-  it("SCRUM-15 [Throw Path / Update]: rethrows unexpected persistence errors when updating an existing draft — covers update-path exit point of createDraftEvent", async () => {
+  it("SCRUM-15: [Throw Path / Update] rethrows unexpected persistence errors when updating an existing draft — covers update-path exit point of createDraftEvent", async () => {
     const dbFailure = new Error("update draft write failed");
     mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
     mockUpdateMany.mockRejectedValueOnce(dbFailure);
@@ -1242,7 +1242,7 @@ describe("User Story 15 — Save an event request as draft", () => {
     ).rejects.toThrow("update draft write failed");
   });
 
-  it("SCRUM-15 [Throw Path / Submit Update]: rethrows unexpected persistence errors when submitting an existing draft — covers draft-update exit point of submitEventRequest", async () => {
+  it("SCRUM-15: [Throw Path / Submit Update] rethrows unexpected persistence errors when submitting an existing draft — covers draft-update exit point of submitEventRequest", async () => {
     const dbFailure = new Error("submit draft update failed");
     mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
     mockFindFirst.mockResolvedValue({
@@ -1274,7 +1274,7 @@ describe("User Story 15 — Save an event request as draft", () => {
     ).rejects.toThrow("submit draft update failed");
   });
 
-  it("SCRUM-15 [AC2, AC9 - Inactive Catalogue Reference Retention]: draft saves and reopens successfully when venue or equipment fields contain references to inactive catalogue items (stored as free text, no FK constraint)", async () => {
+  it("SCRUM-15 [AC2, AC9] TC-15-10: [, Inactive Catalogue Reference Retention] draft saves and reopens successfully when venue or equipment fields contain references to inactive catalogue items (stored as free text, no FK constraint)", async () => {
     mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
     const result = await createDraftEvent({
       id: "evt_draft_inactive_ref",
@@ -1299,7 +1299,7 @@ describe("User Story 15 — Save an event request as draft", () => {
     );
   });
 
-  it("SCRUM-15 [AC4] / SCRUM-13 [AC11 - Draft Path Input Constraint]: createDraftEvent schema enforces character limits on over-limit draft fields (name max 200, purpose max 1000, description max 5000, programme max 5000, specialRequests max 5000)", async () => {
+  it("SCRUM-15 [AC4] TC-15-02: SCRUM-15 [AC4] / SCRUM-13 [AC11 - Draft Path Input Constraint]: createDraftEvent schema enforces character limits on over-limit draft fields (name max 200, purpose max 1000, description max 5000, programme max 5000, specialRequests max 5000)", async () => {
     mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
 
     const result = await createDraftEvent({
@@ -1326,7 +1326,7 @@ describe("User Story 15 — Save an event request as draft", () => {
 // USER STORY 16 UNIT TESTS — Distinguish drafts from submitted requests
 // ============================================================================
 describe("User Story 16 — Distinguish drafts from submitted requests", () => {
-  it("SCRUM-16 [AC1, AC2 - Happy Path]: creates event with status DRAFT ensuring visual and logical separation from SUBMITTED", async () => {
+  it("SCRUM-16 [AC1, AC2] TC-16-01: [, Happy Path] creates event with status DRAFT ensuring visual and logical separation from SUBMITTED", async () => {
     mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
     mockCreate.mockResolvedValue({ id: "evt_draft_distinguish", status: "DRAFT" });
 
@@ -1345,7 +1345,7 @@ describe("User Story 16 — Distinguish drafts from submitted requests", () => {
     );
   });
 
-  it("SCRUM-16 [AC2 - State Transition]: updates status from DRAFT to SUBMITTED upon submission, removing draft state", async () => {
+  it("SCRUM-16 [AC2], SCRUM-14 [AC1] TC-14-01: [State Transition] updates status from DRAFT to SUBMITTED upon submission, removing draft state", async () => {
     mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
     mockFindFirst.mockResolvedValue({
       id: "evt_draft_to_submit",
@@ -1384,7 +1384,7 @@ describe("User Story 16 — Distinguish drafts from submitted requests", () => {
     );
   });
 
-  it("SCRUM-16 [AC4 - Coordinator View Exclusion], SCRUM-165 [AC8] TC-165-11: the coordinator query lists only their own events, so no draft or unassigned request", async () => {
+  it("SCRUM-16 [AC4] TC-16-03, SCRUM-165 [AC8] TC-165-11, SCRUM-15 [AC8] TC-15-11: [Coordinator View Exclusion] the coordinator query lists only their own events, so no draft or unassigned request", async () => {
     const mockFindMany = vi.fn().mockResolvedValue([
       { id: "evt_sub", status: "SUBMITTED" },
     ]);
@@ -1417,7 +1417,7 @@ describe("User Story 84 — Organiser views their own event requests", () => {
     "REJECTED",
   ];
 
-  it("SCRUM-84 [AC1, AC2 - Happy Path / Ownership Isolation]: executes organiser query filtering only events belonging to logged-in organiser", async () => {
+  it("SCRUM-84 [AC1, AC2] TC-84-01, TC-84-02, SCRUM-68 [AC1, AC5] TC-68-01: [, Happy Path / Ownership Isolation] executes organiser query filtering only events belonging to logged-in organiser", async () => {
     const mockEventsList = allStatuses.map((status, idx) => ({
       id: `evt_us84_${idx}`,
       name: `Event ${status}`,
@@ -1438,7 +1438,7 @@ describe("User Story 84 — Organiser views their own event requests", () => {
     expect(events).toHaveLength(9);
   });
 
-  it("SCRUM-84 [AC3 - Implicit Rule / Default Sort]: filterAndSortEvents orders list by updatedAt descending by default", () => {
+  it("SCRUM-84 [AC3] TC-84-03: [Implicit Rule / Default Sort] filterAndSortEvents orders list by updatedAt descending by default", () => {
     const events = [
       { id: "1", name: "Older Event", status: "DRAFT", updatedAt: new Date("2026-08-01T10:00:00Z") },
       { id: "2", name: "Newer Event", status: "DRAFT", updatedAt: new Date("2026-09-15T12:00:00Z") },
@@ -1450,7 +1450,7 @@ describe("User Story 84 — Organiser views their own event requests", () => {
     expect(sorted[1].id).toBe("1");
   });
 
-  it("SCRUM-84 [AC3 - Happy Path]: exposes event name and current status badge properties for list display", async () => {
+  it("SCRUM-84 [AC3] TC-84-03, SCRUM-23 [AC2] TC-23-02: [Happy Path] exposes event name and current status badge properties for list display", async () => {
     const sampleEvent = {
       id: "evt_sample_1",
       name: "Annual Regional Conference",
@@ -1467,7 +1467,7 @@ describe("User Story 84 — Organiser views their own event requests", () => {
     expect(events[0].status).toBe("APPROVED");
   });
 
-  it("SCRUM-84 [AC4 - Happy Path]: retrieves full detail model when selecting a specific event request", async () => {
+  it("SCRUM-84 [AC4] TC-84-03: [Happy Path] retrieves full detail model when selecting a specific event request", async () => {
     const detailedDraftEvent = {
       id: "evt_draft_detail",
       name: "Draft Detail Event",
@@ -1496,7 +1496,7 @@ describe("User Story 84 — Organiser views their own event requests", () => {
     expect(result?.name).toBe("Draft Detail Event");
   });
 
-  it("SCRUM-84 [AC5 - Edge Case / Empty State]: returns an empty array when an organiser has not created any event requests", async () => {
+  it("SCRUM-84 [AC5] TC-84-04: [Edge Case / Empty State] returns an empty array when an organiser has not created any event requests", async () => {
     prisma.event.findMany = vi.fn().mockResolvedValue([]);
 
     const results = await getOrganiserEvents("usr_new_organiser");
@@ -1505,7 +1505,7 @@ describe("User Story 84 — Organiser views their own event requests", () => {
     expect(results.length).toBe(0);
   });
 
-  it("SCRUM-84 [AC6 - Happy Path / Search Filter]: filters event list by search query matching event name or purpose via filterAndSortEvents", () => {
+  it("SCRUM-84 [AC6] TC-84-05: [Happy Path / Search Filter] filters event list by search query matching event name or purpose via filterAndSortEvents", () => {
     const events = [
       { id: "1", name: "Annual Tech Conference", purpose: "Tech networking", status: "APPROVED", updatedAt: "2026-09-01T10:00:00Z" },
       { id: "2", name: "Internal Team Retreat", purpose: "Team building", status: "DRAFT", updatedAt: "2026-09-02T10:00:00Z" },
@@ -1520,7 +1520,7 @@ describe("User Story 84 — Organiser views their own event requests", () => {
     expect(filteredByPurpose[0].id).toBe("2");
   });
 
-  it("SCRUM-84 [AC7 - Default & Custom Sorting]: orders event list by updatedAt descending by default and by name asc when specified", () => {
+  it("SCRUM-84 [AC7] TC-84-06: [Default & Custom Sorting] orders event list by updatedAt descending by default and by name asc when specified", () => {
     const events = [
       { id: "1", name: "Zebra Expo", status: "DRAFT", updatedAt: new Date("2026-08-01T10:00:00Z") },
       { id: "2", name: "Alpha Summit", status: "DRAFT", updatedAt: new Date("2026-09-15T12:00:00Z") },
@@ -1535,7 +1535,7 @@ describe("User Story 84 — Organiser views their own event requests", () => {
     expect(sortedByNameAsc[1].id).toBe("1");
   });
 
-  it("SCRUM-84 [AC8 - Multi-Criteria Filtering Combination]: filters events by active tab AND status filter AND search query simultaneously", () => {
+  it("SCRUM-84 [AC8] TC-84-07: [Multi-Criteria Filtering Combination] filters events by active tab AND status filter AND search query simultaneously", () => {
     const events = [
       { id: "1", name: "Annual Tech Conference", purpose: "Networking", status: "DRAFT", updatedAt: new Date() },
       { id: "2", name: "Tech Workshop", purpose: "Training", status: "APPROVED", updatedAt: new Date() },
@@ -1552,7 +1552,7 @@ describe("User Story 84 — Organiser views their own event requests", () => {
     expect(filtered[0].id).toBe("1");
   });
 
-  it("SCRUM-84 [AC9 - Search Cleared State & Partial Matches]: matches partial string and restores list when search is cleared", () => {
+  it("SCRUM-84 [AC9] TC-84-05: [Search Cleared State & Partial Matches] matches partial string and restores list when search is cleared", () => {
     const events = [
       { id: "1", name: "Annual Hackathon", status: "SUBMITTED", updatedAt: new Date() },
       { id: "2", name: "Quarterly Review", status: "SUBMITTED", updatedAt: new Date() },
@@ -1568,7 +1568,7 @@ describe("User Story 84 — Organiser views their own event requests", () => {
     expect(clearedFiltered).toHaveLength(2);
   });
 
-  it("SCRUM-84: given events in DRAFT, SUBMITTED, UNDER_REVIEW, APPROVED, REJECTED and COMPLETED, activeTab \"SUBMITTED\" returns all non-drafts and excludes DRAFT, and activeTab \"DRAFT\" returns only drafts", () => {
+  it("SCRUM-84 [AC2] TC-84-02: given events in DRAFT, SUBMITTED, UNDER_REVIEW, APPROVED, REJECTED and COMPLETED, activeTab \"SUBMITTED\" returns all non-drafts and excludes DRAFT, and activeTab \"DRAFT\" returns only drafts", () => {
     const events = [
       { id: "1", name: "Draft Event", status: "DRAFT" },
       { id: "2", name: "Submitted Event", status: "SUBMITTED" },
@@ -1617,7 +1617,7 @@ describe("User Story 84 — Organiser views their own event requests", () => {
     ]);
   });
 
-  it("SCRUM-84: an organiser's second tab still holds everything they have sent", () => {
+  it("SCRUM-84 [AC2] TC-84-02: an organiser's second tab still holds everything they have sent", () => {
     const events = [
       { id: "1", name: "Draft Event", status: "DRAFT" },
       { id: "2", name: "Approved Event", status: "APPROVED" },
@@ -1644,7 +1644,7 @@ describe("getFormCatalogues — permission gate", () => {
   const mockVenues = prisma.venue.findMany as unknown as Mock;
   const mockEquipment = prisma.equipment.findMany as unknown as Mock;
 
-  it("SCRUM-13 [AC2 - Happy Path]: returns the venue and equipment catalogue to an organiser", async () => {
+  it("SCRUM-13 [AC2] TC-13-02: [Happy Path] returns the venue and equipment catalogue to an organiser", async () => {
     mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
     mockVenues.mockResolvedValue([
       { id: "ven1", name: "Hall A", capacity: 200, facilities: ["projector"] },
@@ -1689,7 +1689,7 @@ describe("getFormCatalogues — permission gate", () => {
     ]);
   });
 
-  it("SCRUM-13 [AC2 - Catalogue Dependencies]: queries only active venue and equipment catalogue entries", async () => {
+  it("SCRUM-13 [AC2] TC-13-02: [Catalogue Dependencies] queries only active venue and equipment catalogue entries", async () => {
     mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
     mockVenues.mockResolvedValue([]);
     mockEquipment.mockResolvedValue([]);
@@ -1714,7 +1714,7 @@ describe("getFormCatalogues — permission gate", () => {
     });
   });
 
-  it("SCRUM-13 [AC2 - Throw Path]: rethrows unexpected catalogue lookup failures", async () => {
+  it("SCRUM-13 [AC2] TC-13-03: [Throw Path] rethrows unexpected catalogue lookup failures", async () => {
     const catalogueFailure = new Error("catalogue unavailable");
     mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
     mockVenues.mockRejectedValueOnce(catalogueFailure);
@@ -1723,7 +1723,7 @@ describe("getFormCatalogues — permission gate", () => {
   });
 
   it.each(["ATTENDEE", "VENUE_STAFF", "TECH_SUPPORT", "COORDINATOR"] as Role[])(
-    "SCRUM-13 [AC2 - Security Gate]: refuses %s and never queries the catalogue",
+    "SCRUM-13 [AC2]: [Security Gate] refuses %s and never queries the catalogue",
     async (role) => {
       mockAuth.mockResolvedValue(sessionFor(role, `usr_${role.toLowerCase()}`));
 
@@ -1735,7 +1735,7 @@ describe("getFormCatalogues — permission gate", () => {
     },
   );
 
-  it("SCRUM-13 [AC2 - Security Gate]: refuses a signed-out caller", async () => {
+  it("SCRUM-13 [AC2] TC-13-03: [Security Gate] refuses a signed-out caller", async () => {
     mockAuth.mockResolvedValue(null);
 
     const result = await getFormCatalogues();
@@ -1746,7 +1746,7 @@ describe("getFormCatalogues — permission gate", () => {
 
   // Coverage note: the catch block only special-cases PermissionError.
   // This forces a non-permission error to prove it is rethrown.
-  it("SCRUM-13 [AC2 - Throw Path]: rethrows unexpected permission-gate failures", async () => {
+  it("SCRUM-13 [AC2] TC-13-03: [Throw Path] rethrows unexpected permission-gate failures", async () => {
     mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
     (requirePermission as unknown as Mock).mockImplementationOnce(() => {
       throw new Error("permission dependency failed");

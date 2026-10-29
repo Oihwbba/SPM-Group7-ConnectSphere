@@ -142,7 +142,7 @@ describe("BookingQueue", () => {
     expect(html).toMatch(/<button[^>]*>.*?Approve<\/button>/);
   });
 
-  it("SCRUM-53 — the Approve and Reject controls render only for a user who may decide", () => {
+  it("SCRUM-53: the Approve and Reject controls render only for a user who may decide", () => {
     const withControls = renderToStaticMarkup(
       <BookingDetails booking={row} canDecide />,
     );

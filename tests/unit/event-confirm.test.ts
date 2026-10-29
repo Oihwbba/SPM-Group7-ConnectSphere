@@ -421,7 +421,7 @@ describe("confirmEvent — SCRUM-81", () => {
     expect(mockFindUnique).not.toHaveBeenCalled();
   });
 
-  it("SCRUM-81 [Exit path]: an unexpected database failure propagates instead of being reported as a refusal", async () => {
+  it("SCRUM-81: [Exit path] an unexpected database failure propagates instead of being reported as a refusal", async () => {
     mockTransaction.mockRejectedValue(new Error("connection lost"));
 
     await expect(confirmEvent({ eventId: "evt1" })).rejects.toThrow(

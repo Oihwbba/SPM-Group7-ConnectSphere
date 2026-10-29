@@ -51,6 +51,7 @@ and the app is running. Unless the case says otherwise, the event is owned by
 
 | Item            | Content                                                                                                                                                                                                                                                                                                                |
 | --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Test Case ID | TC-108-02 |
 | Test Scenario   | [Positive] AC 2, AC 3, AC 14: the answer changes the named fields; only changed values are written and each change is recorded with who; the event stays Under Review and the Coordinator is notified                                                                                                                  |
 | Pre-conditions  | An open clarification naming Expected attendance and Room layout. Signed in as the Organiser.                                                                                                                                                                                                                          |
 | Test Steps      | 1. Open the event. <br> 2. Change the named fields, write a response, send.                                                                                                                                                                                                                                            |
@@ -63,6 +64,7 @@ and the app is running. Unless the case says otherwise, the event is owned by
 
 | Item            | Content                                                                                                         |
 | --------------- | --------------------------------------------------------------------------------------------------------------- |
+| Test Case ID | TC-108-03 |
 | Test Scenario   | [Boundary] AC 4: saving the same answer again changes nothing                                                   |
 | Pre-conditions  | The clarification was answered "Theatre layout."                                                                |
 | Test Steps      | 1. Send the same answer again. <br> 2. Send a different answer.                                                 |
@@ -75,6 +77,7 @@ and the app is running. Unless the case says otherwise, the event is owned by
 
 | Item            | Content                                                                                                                            |
 | --------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| Test Case ID | TC-108-04 |
 | Test Scenario   | [Negative] AC 5: a field the clarification didn't name can't be changed through the answer                                         |
 | Pre-conditions  | An open clarification naming Expected attendance and Room layout.                                                                  |
 | Test Steps      | 1. Send an answer that also changes the event name (direct request).                                                               |
@@ -87,6 +90,7 @@ and the app is running. Unless the case says otherwise, the event is owned by
 
 | Item            | Content                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Test Case ID | TC-108-05 |
 | Test Scenario   | [Positive] AC 9, AC 11, AC 14: the amended request goes back Under Review to the same Coordinator, without automatic assignment, and the resubmission is recorded                                                                                                                                                                                                                                                          |
 | Pre-conditions  | The event was rejected with Amend and resubmit; its Coordinator still holds the role.                                                                                                                                                                                                                                                                                                                                      |
 | Test Steps      | 1. Amend and resubmit it, changing the description and the expected attendance.                                                                                                                                                                                                                                                                                                                                            |
@@ -99,7 +103,7 @@ and the app is running. Unless the case says otherwise, the event is owned by
 
 **Superseded** on 20 Oct 2026 by SCRUM-165 AC 9 ([TC-165-12](SCRUM-165.md#tc-165-12)). When the previous Coordinator no longer held the role, or there was none, automatic assignment picked the least-loaded Coordinator. Automatic assignment no longer exists: the resubmitted request waits in the Lead's queue, Submitted with no Coordinator.
 
-**Automated by** (SCRUM-165's tests): `tests/unit/clarification-and-amend.test.ts` › "SCRUM-165 [AC9] TC-165-12 (supersedes SCRUM-108 AC11): when $when, the resubmitted request waits in the Lead's queue, Submitted with no Coordinator" (both cases)
+**Automated by** (SCRUM-165's tests): `tests/unit/clarification-and-amend.test.ts` › "SCRUM-165 [AC9] TC-165-12, SCRUM-135 [AC2, AC6] TC-135-02: [supersedes SCRUM-108 AC11] when $when, the resubmitted request waits in the Lead's queue, Submitted with no Coordinator" (both cases)
 
 ### TC-108-07
 
@@ -112,6 +116,7 @@ can no longer be rejected, so nobody becomes its coordinator that way. See
 
 | Item            | Content                                                                                             |
 | --------------- | --------------------------------------------------------------------------------------------------- |
+| Test Case ID | TC-108-08 |
 | Test Scenario   | [Negative] AC 12: resubmitting twice creates no duplicate submission, history entry or notification |
 | Pre-conditions  | The event was already resubmitted.                                                                  |
 | Test Steps      | 1. Send the resubmission again (e.g. a double-click or an older tab).                               |
@@ -124,6 +129,7 @@ can no longer be rejected, so nobody becomes its coordinator that way. See
 
 | Item            | Content                                                          |
 | --------------- | ---------------------------------------------------------------- |
+| Test Case ID | TC-108-09 |
 | Test Scenario   | [Negative] AC 13: only the event's Organiser can answer or amend |
 | Pre-conditions  | Signed in as a Coordinator.                                      |
 | Test Steps      | 1. Send an answer. <br> 2. Send a resubmission.                  |
@@ -136,6 +142,7 @@ can no longer be rejected, so nobody becomes its coordinator that way. See
 
 | Item            | Content                                                                                                                                                                                                                                                                                                                                                                             |
 | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Test Case ID | TC-108-10 |
 | Test Scenario   | [Positive] AC 1, AC 2, AC 3, AC 14: the whole clarification journey with one named field                                                                                                                                                                                                                                                                                            |
 | Pre-conditions  | The event is Under Review with 400 expected attendees, classroom layout.                                                                                                                                                                                                                                                                                                            |
 | Test Steps      | 1. As the Coordinator, **Ask**, tick **Expected attendance**, send. <br> 2. As the Organiser, open the event, first try attendance 0, then change it to 300 and respond.                                                                                                                                                                                                            |
@@ -148,6 +155,7 @@ can no longer be rejected, so nobody becomes its coordinator that way. See
 
 | Item            | Content                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Test Case ID | TC-108-11 |
 | Test Scenario   | [Positive] AC 7, AC 9, AC 10, AC 11, AC 14: amending shows the rejection reason throughout, and the request returns to the same Coordinator                                                                                                                                                                                                                                                                                                                                         |
 | Pre-conditions  | The event was rejected by `coordinator@test.local` with Amend and resubmit and a reason.                                                                                                                                                                                                                                                                                                                                                                                            |
 | Test Steps      | 1. As the Organiser, click **Amend & Resubmit**. <br> 2. First enter a start date in the past (refused), then the original dates; change the venue requirements and submit.                                                                                                                                                                                                                                                                                                         |
@@ -160,18 +168,20 @@ can no longer be rejected, so nobody becomes its coordinator that way. See
 
 | Item            | Content                                                                                                                                                                             |
 | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Test Case ID | TC-108-12 |
 | Test Scenario   | [Positive] AC 6, AC 8, AC 10: behaviour already built by earlier stories                                                                                                            |
 | Pre-conditions  | —                                                                                                                                                                                   |
 | Test Steps      | —                                                                                                                                                                                   |
 | Test Data       | —                                                                                                                                                                                   |
 | Expected Result | AC 6: a decision closes any open clarification. AC 8: after Submit as a new request, Amend & Resubmit isn't offered. AC 10: resubmitting applies the first submission's validation. |
 
-**Automated by:** AC 6: `tests/unit/event-status.test.ts` › "SCRUM-18: deciding an event closes its still-OPEN clarification …". AC 8: `tests/unit/rejection-outcome.test.ts` › "SCRUM-126 [AC3] TC-126-04: …" and `e2e/rejection-outcome.spec.ts` › TC-126-08. AC 10: `e2e/clarification-and-amend.spec.ts` › "SCRUM-108 [AC7, AC9, AC10, AC11, AC14] TC-108-11: …" (an amended request with a start in the past is stopped with "Proposed date cannot be in the past.", as a first submission is).
+**Automated by:** AC 6: `tests/unit/event-status.test.ts` › "SCRUM-18 [AC1] TC-18-09, SCRUM-108 [AC6, AC8, AC10] TC-108-12: deciding an event closes its still-OPEN clarification …". AC 8: `tests/unit/rejection-outcome.test.ts` › "SCRUM-126 [AC3] TC-126-04: …" and `e2e/rejection-outcome.spec.ts` › TC-126-08. AC 10: `e2e/clarification-and-amend.spec.ts` › "SCRUM-108 [AC7, AC9, AC10, AC11, AC14] TC-108-11: …" (an amended request with a start in the past is stopped with "Proposed date cannot be in the past.", as a first submission is).
 
 ### TC-108-13
 
 | Item            | Content                                                                                                                                                                                                                                |
 | --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Test Case ID | TC-108-13 |
 | Test Scenario   | [Boundary] AC 9, AC 11, AC 14: a rejected request resubmitted without changing any field                                                                                                                                               |
 | Pre-conditions  | The event was rejected with Amend and resubmit; its Coordinator still holds the role.                                                                                                                                                  |
 | Test Steps      | 1. Amend and resubmit it, leaving every field as it was.                                                                                                                                                                               |
@@ -184,6 +194,7 @@ can no longer be rejected, so nobody becomes its coordinator that way. See
 
 | Item            | Content                                                                                                                                                                                                                                                              |
 | --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Test Case ID | TC-108-14 |
 | Test Scenario   | [Boundary] AC 11, AC 14: the previous Coordinator no longer holds the role and no Coordinator can be assigned                                                                                                                                                        |
 | Pre-conditions  | The event was rejected with Amend and resubmit; its Coordinator has since lost the role, and no user holds it.                                                                                                                                                       |
 | Test Steps      | 1. Amend and resubmit it.                                                                                                                                                                                                                                            |

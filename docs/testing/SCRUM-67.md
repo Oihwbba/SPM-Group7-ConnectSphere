@@ -37,7 +37,7 @@ and the app is running. Every seeded account's password is `Password123!`.
 
 **Superseded in part** on 20 Oct 2026 by SCRUM-34 AC 2 ([TC-34-02](SCRUM-34.md#tc-34-02)): Venue Staff opening the catalogue was refused; every internal user, Venue Staff included, now reads it, and only the external roles are refused (`venue:read` in [lib/auth/can.ts](../../lib/auth/can.ts)). Step 3 checks that refusal instead.
 
-**Automated by:** `tests/unit/auth.test.ts` › "does not let an attendee create events", "does not let a venue-staff member review events", "SCRUM-34 [AC2] TC-34-02: %s, an external user, doesn't read the venue catalogue", "lets a coordinator read the venue catalogue", "lets a coordinator create and list equipment requests"; the Venue Staff half by "SCRUM-34 [AC2] TC-34-02: %s, an internal user, reads the venue catalogue"
+**Automated by:** `tests/unit/auth.test.ts` › "SCRUM-67 [AC1] TC-67-01: does not let an attendee create events", "SCRUM-67 [AC1] TC-67-01: does not let a venue-staff member review events", "SCRUM-34 [AC2] TC-34-02: %s, an external user, doesn't read the venue catalogue", "SCRUM-67 [AC1] TC-67-01: lets a coordinator read the venue catalogue", "SCRUM-67 [AC1] TC-67-01: lets a coordinator create and list equipment requests"; the Venue Staff half by "SCRUM-34 [AC2] TC-34-02: %s, an internal user, reads the venue catalogue"
 
 ### TC-67-02
 
@@ -50,7 +50,7 @@ and the app is running. Every seeded account's password is `Password123!`.
 | Test Data | The request; a registration |
 | Expected Result | Each is refused. The request's own Organiser and its assigned Coordinator may read it. |
 
-**Automated by:** `tests/unit/auth.test.ts` › "lets an organiser read their own event", "does not let a different organiser read someone else's event", "lets the assigned coordinator read the event", "does not let an unassigned coordinator read the event", "lets a coordinator request equipment only for an event they coordinate", "lets an attendee read only their own registration", "gives no event relationship to a role that holds an event action but isn't the organiser or coordinator"
+**Automated by:** `tests/unit/auth.test.ts` › "SCRUM-67 [AC1] TC-67-02: lets an organiser read their own event", "SCRUM-67 [AC1] TC-67-02, SCRUM-68 [AC2, AC3, AC4, AC5] TC-68-02, TC-68-03: does not let a different organiser read someone else's event", "SCRUM-67 [AC1] TC-67-02: lets the assigned coordinator read the event", "SCRUM-67 [AC1] TC-67-02: does not let an unassigned coordinator read the event", "SCRUM-67 [AC1] TC-67-02: lets a coordinator request equipment only for an event they coordinate", "SCRUM-67 [AC1] TC-67-02: lets an attendee read only their own registration", "SCRUM-67 [AC1] TC-67-02: gives no event relationship to a role that holds an event action but isn't the organiser or coordinator"
 
 ### TC-67-03
 
@@ -63,7 +63,7 @@ and the app is running. Every seeded account's password is `Password123!`.
 | Test Data | A draft |
 | Expected Result | Each refused call leaves the number of events unchanged. The Organiser's call creates the draft. |
 
-**Automated by:** `tests/integration/permission-guard.test.ts` › "SCRUM-67 — createDraftEvent is guarded for every role", "still lets an ORGANISER create a draft (the permitted path works)"
+**Automated by:** `tests/integration/permission-guard.test.ts` › "SCRUM-67 — createDraftEvent is guarded for every role", "SCRUM-67 [AC2] TC-67-03: still lets an ORGANISER create a draft (the permitted path works)"
 
 ### TC-67-04
 
@@ -76,7 +76,7 @@ and the app is running. Every seeded account's password is `Password123!`.
 | Test Data | `/bookings`, `/equipment` |
 | Expected Result | Step 1 is refused by the server. Step 2 returns "not found": no event has its own page. Step 3 sends the visitor to `/login`. |
 
-**Automated by:** `tests/unit/auth-guard.test.ts` › "redirects to /login when there is no session (deny path)", "redirects to /login when the session has no user (deny path)", "returns the session and does not redirect when signed in (allow path)"; `e2e/access-control.spec.ts` › "SCRUM-67 — typing another role's URL directly is refused", "SCRUM-67 — signed-out access to a protected URL redirects to login"; `e2e/access-control.spec.ts` › "SCRUM-208 [AC5] TC-208-13: another organiser's event and a made-up id are the same 404"; `e2e/event-page.spec.ts` › "SCRUM-208 [AC5] TC-208-13: another Coordinator's event is the same 404 as one that doesn't exist"
+**Automated by:** `tests/unit/auth-guard.test.ts` › "SCRUM-65 [AC4, AC5] TC-65-04, SCRUM-67 [AC3] TC-67-04: redirects to /login when there is no session (deny path)", "SCRUM-67 [AC3] TC-67-04: redirects to /login when the session has no user (deny path)", "SCRUM-67 [AC3] TC-67-04: returns the session and does not redirect when signed in (allow path)"; `e2e/access-control.spec.ts` › "SCRUM-67 — typing another role's URL directly is refused", "SCRUM-67 — signed-out access to a protected URL redirects to login"; `e2e/access-control.spec.ts` › "SCRUM-208 [AC5] TC-208-13: another organiser's event and a made-up id are the same 404"; `e2e/event-page.spec.ts` › "SCRUM-208 [AC5] TC-208-13: another Coordinator's event is the same 404 as one that doesn't exist"
 
 ### TC-67-05
 
@@ -89,7 +89,7 @@ and the app is running. Every seeded account's password is `Password123!`.
 | Test Data | The request's id; a made-up id |
 | Expected Result | Both get the same "not found" answer, so the refusal reveals nothing about the request. |
 
-**Automated by:** `tests/unit/event-status.test.ts` › "SCRUM-68: another coordinator's event is indistinguishable from a missing one"; `tests/unit/clarification.test.ts` › "[Negative] SCRUM-68: another coordinator's event is indistinguishable from a missing one"; `e2e/access-control.spec.ts` › "SCRUM-208 [AC5] TC-208-13: another organiser's event and a made-up id are the same 404"; `e2e/event-page.spec.ts` › "SCRUM-208 [AC5] TC-208-13: another Coordinator's event is the same 404 as one that doesn't exist"
+**Automated by:** `tests/unit/event-status.test.ts` › "SCRUM-17 [AC2] TC-17-03, SCRUM-67 [AC4] TC-67-05: another coordinator's event is indistinguishable from a missing one"; `tests/unit/clarification.test.ts` › "SCRUM-18 TC-18-10, SCRUM-67 [AC4] TC-67-05: [Negative] SCRUM-68: another coordinator's event is indistinguishable from a missing one"; `e2e/access-control.spec.ts` › "SCRUM-208 [AC5] TC-208-13: another organiser's event and a made-up id are the same 404"; `e2e/event-page.spec.ts` › "SCRUM-208 [AC5] TC-208-13: another Coordinator's event is the same 404 as one that doesn't exist"
 
 ### TC-67-06
 
@@ -102,4 +102,4 @@ and the app is running. Every seeded account's password is `Password123!`.
 | Test Data | `const ALLOWED_ROLES: Role[] = ["TECH_SUPPORT"]` with a check on `session.user.role` |
 | Expected Result | The scan reports the role check outside `can()`, so the reviewer can reject it (CONTRIBUTING.md). |
 
-**Automated by:** `tests/unit/ai-review.test.ts` › "scans the branch for role checks outside can(), hard deletes and inline …"
+**Automated by:** `tests/unit/ai-review.test.ts` › "SCRUM-67 [AC5] TC-67-06: scans the branch for role checks outside can(), hard deletes and inline …"

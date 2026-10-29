@@ -102,7 +102,7 @@ describe("notificationHref — SCRUM-48 AC5", () => {
     ["never registered", replanned([])],
     ["sees an event never confirmed", { ...event("PLANNING"), confirmedStartAt: null, registrations: [{ status: "REGISTERED" }] }],
   ])(
-    "SCRUM-85 [AC5, AC9] TC-85-08: an Attendee who %s gets no link to an event in Planning, which they can't open",
+    "SCRUM-85 [AC5, AC7, AC9] TC-85-08: an Attendee who %s gets no link to an event in Planning, which they can't open",
     (_, planningEvent) => {
       expect(
         notificationHref(user("ATTENDEE"), { link: null, event: planningEvent }),
@@ -315,7 +315,7 @@ describe("markNotificationRead — SCRUM-48 AC2", () => {
     },
   );
 
-  it("SCRUM-48 [AC6] TC-48-15: a signed-out caller is refused, and nothing is read or written", async () => {
+  it("SCRUM-48 [AC2] TC-48-15: a signed-out caller is refused, and nothing is read or written", async () => {
     mockAuth.mockResolvedValue(null);
 
     expect(await markNotificationRead({ id: "ntf_1" })).toEqual({

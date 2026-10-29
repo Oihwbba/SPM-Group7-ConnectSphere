@@ -41,7 +41,7 @@ beforeEach(() => {
 });
 
 describe("authenticate — SCRUM-65", () => {
-  it("returns a generic message when credentials are rejected (no account enumeration)", async () => {
+  it("SCRUM-65 [AC2] TC-65-02: returns a generic message when credentials are rejected (no account enumeration)", async () => {
     mockSignIn.mockRejectedValue(authErrorOfType("CredentialsSignin"));
 
     const result = await authenticate(undefined, loginForm());
@@ -53,7 +53,7 @@ describe("authenticate — SCRUM-65", () => {
     );
   });
 
-  it("returns a fallback message for any other auth error", async () => {
+  it("SCRUM-65 [AC2] TC-65-03: returns a fallback message for any other auth error", async () => {
     mockSignIn.mockRejectedValue(authErrorOfType("Configuration"));
 
     const result = await authenticate(undefined, loginForm());
@@ -61,14 +61,14 @@ describe("authenticate — SCRUM-65", () => {
     expect(result).toBe("Something went wrong signing in. Please try again.");
   });
 
-  it("re-throws a non-auth error (the NEXT_REDIRECT thrown on a successful sign-in)", async () => {
+  it("SCRUM-65 [AC1, AC3] TC-65-01: re-throws a non-auth error (the NEXT_REDIRECT thrown on a successful sign-in)", async () => {
     const redirect = new Error("NEXT_REDIRECT");
     mockSignIn.mockRejectedValue(redirect);
 
     await expect(authenticate(undefined, loginForm())).rejects.toBe(redirect);
   });
 
-  it("returns undefined when signIn resolves without throwing", async () => {
+  it("SCRUM-65: returns undefined when signIn resolves without throwing", async () => {
     mockSignIn.mockResolvedValue(undefined);
 
     const result = await authenticate(undefined, loginForm());
@@ -78,7 +78,7 @@ describe("authenticate — SCRUM-65", () => {
 });
 
 describe("signOutAction — SCRUM-65", () => {
-  it("signs the user out and sends them back to /login", async () => {
+  it("SCRUM-65 [AC4, AC5] TC-65-04: signs the user out and sends them back to /login", async () => {
     mockSignOut.mockResolvedValue(undefined);
 
     await signOutAction();

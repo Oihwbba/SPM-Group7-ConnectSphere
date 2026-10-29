@@ -85,7 +85,7 @@ beforeEach(() => {
 });
 
 describe("requestClarification — SCRUM-18", () => {
-  it("[Positive] AC: coordinator requests clarification, event status is untouched, organiser is notified", async () => {
+  it("SCRUM-18 [AC1, AC6] TC-18-01, SCRUM-24 [AC3] TC-24-02: [Positive] coordinator requests clarification, event status is untouched, organiser is notified", async () => {
     mockAuth.mockResolvedValue(sessionFor("COORDINATOR", "usr_coord"));
     mockEventFindUnique.mockResolvedValue(eventRow());
 
@@ -114,7 +114,7 @@ describe("requestClarification — SCRUM-18", () => {
     );
   });
 
-  it("[Negative] AC: a blank message is rejected and nothing is written", async () => {
+  it("SCRUM-18 [AC2] TC-18-03: [Negative] a blank message is rejected and nothing is written", async () => {
     mockAuth.mockResolvedValue(sessionFor("COORDINATOR", "usr_coord"));
 
     const result = await requestClarification({
@@ -126,7 +126,7 @@ describe("requestClarification — SCRUM-18", () => {
     expect(tx.clarificationRequest.create).not.toHaveBeenCalled();
   });
 
-  it("[Negative] Security gate: an Organiser cannot request clarification on their own event", async () => {
+  it("SCRUM-18 TC-18-10: [Negative] Security gate: an Organiser cannot request clarification on their own event", async () => {
     mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_org"));
 
     const result = await requestClarification({
@@ -139,7 +139,7 @@ describe("requestClarification — SCRUM-18", () => {
     expect(mockEventFindUnique).not.toHaveBeenCalled();
   });
 
-  it("[Boundary] AC: no second open clarification is created for the same event", async () => {
+  it("SCRUM-18 [AC5] TC-18-07: [Boundary] no second open clarification is created for the same event", async () => {
     mockAuth.mockResolvedValue(sessionFor("COORDINATOR", "usr_coord"));
     mockEventFindUnique.mockResolvedValue(eventRow());
     tx.clarificationRequest.findFirst.mockResolvedValue({
@@ -158,7 +158,7 @@ describe("requestClarification — SCRUM-18", () => {
     expect(tx.notification.create).not.toHaveBeenCalled();
   });
 
-  it("[Boundary] AC: the open-clarification check runs under a lock on the Event row, so a simultaneous second request sees the first", async () => {
+  it("SCRUM-18 [AC4, AC5] TC-18-08: [Boundary] the open-clarification check runs under a lock on the Event row, so a simultaneous second request sees the first", async () => {
     mockAuth.mockResolvedValue(sessionFor("COORDINATOR", "usr_coord"));
     mockEventFindUnique.mockResolvedValue(eventRow());
 
@@ -173,7 +173,7 @@ describe("requestClarification — SCRUM-18", () => {
     expect(checkOrder).toBeLessThan(createOrder);
   });
 
-  it("[Boundary] a decision that commits before the lock is taken is honoured: no clarification is created on a decided event", async () => {
+  it("SCRUM-18: [Boundary] a decision that commits before the lock is taken is honoured: no clarification is created on a decided event", async () => {
     mockAuth.mockResolvedValue(sessionFor("COORDINATOR", "usr_coord"));
     // Read as UNDER_REVIEW above the transaction, but APPROVED by the time
     // the row lock is acquired.
@@ -191,7 +191,7 @@ describe("requestClarification — SCRUM-18", () => {
     expect(tx.notification.create).not.toHaveBeenCalled();
   });
 
-  it("[Negative] a request cannot be clarified while it is still DRAFT", async () => {
+  it("SCRUM-18 [AC1] TC-18-09: [Negative] a request cannot be clarified while it is still DRAFT", async () => {
     mockAuth.mockResolvedValue(sessionFor("COORDINATOR", "usr_coord"));
     // coordinatorId matches the caller, so can()'s relationship check passes
     // regardless of status — isolating the DRAFT refusal (line 62) from the
@@ -215,7 +215,7 @@ describe("requestClarification — SCRUM-18", () => {
     expect(tx.clarificationRequest.create).not.toHaveBeenCalled();
   });
 
-  it("[Negative] SCRUM-68: another coordinator's event is indistinguishable from a missing one", async () => {
+  it("SCRUM-18 TC-18-10, SCRUM-67 [AC4] TC-67-05: [Negative] SCRUM-68: another coordinator's event is indistinguishable from a missing one", async () => {
     mockAuth.mockResolvedValue(sessionFor("COORDINATOR", "usr_other_coord"));
     mockEventFindUnique.mockResolvedValue(
       eventRow({ coordinatorId: "usr_coord" }),
@@ -233,7 +233,7 @@ describe("requestClarification — SCRUM-18", () => {
   // Coverage note: the catch block only special-cases PermissionError —
   // everything else must propagate, not be swallowed into a friendly
   // ActionResult.
-  it("[Exit path] rethrows an unexpected (non-permission) error instead of swallowing it", async () => {
+  it("SCRUM-18: [Exit path] rethrows an unexpected (non-permission) error instead of swallowing it", async () => {
     mockAuth.mockResolvedValue(sessionFor("COORDINATOR", "usr_coord"));
     mockEventFindUnique.mockRejectedValueOnce(new Error("DB unavailable"));
 
@@ -260,7 +260,7 @@ describe("respondToClarification — SCRUM-18", () => {
     };
   }
 
-  it("[Positive] AC: organiser responds, clarification is marked answered, coordinator is notified", async () => {
+  it("SCRUM-18 [AC4, AC6] TC-18-05, SCRUM-45 [AC8, AC14] TC-45-05: [Positive] organiser responds, clarification is marked answered, coordinator is notified", async () => {
     mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_org"));
     mockClarificationFindUnique.mockResolvedValue(clarificationRow());
 
@@ -289,7 +289,7 @@ describe("respondToClarification — SCRUM-18", () => {
     });
   });
 
-  it("[Positive] AC: a question asked on an unclaimed event still notifies the coordinator who asked", async () => {
+  it("SCRUM-18 [AC4, AC6] TC-18-05: [Positive] a question asked on an unclaimed event still notifies the coordinator who asked", async () => {
     mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_org"));
     mockClarificationFindUnique.mockResolvedValue(
       clarificationRow({
@@ -309,7 +309,7 @@ describe("respondToClarification — SCRUM-18", () => {
     });
   });
 
-  it("[Positive] after a reassignment both the asker and the current coordinator are notified", async () => {
+  it("SCRUM-18: [Positive] after a reassignment both the asker and the current coordinator are notified", async () => {
     mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_org"));
     mockClarificationFindUnique.mockResolvedValue(
       clarificationRow({
@@ -331,7 +331,7 @@ describe("respondToClarification — SCRUM-18", () => {
     });
   });
 
-  it("[Negative] AC: an empty response is rejected", async () => {
+  it("SCRUM-18 [AC4] TC-18-06: [Negative] an empty response is rejected", async () => {
     mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_org"));
 
     const result = await respondToClarification({
@@ -343,7 +343,7 @@ describe("respondToClarification — SCRUM-18", () => {
     expect(tx.clarificationRequest.updateMany).not.toHaveBeenCalled();
   });
 
-  it("[Negative] a Coordinator cannot respond on the organiser's behalf", async () => {
+  it("SCRUM-18 TC-18-10: [Negative] a Coordinator cannot respond on the organiser's behalf", async () => {
     mockAuth.mockResolvedValue(sessionFor("COORDINATOR", "usr_coord"));
 
     const result = await respondToClarification({
@@ -356,7 +356,7 @@ describe("respondToClarification — SCRUM-18", () => {
     expect(mockClarificationFindUnique).not.toHaveBeenCalled();
   });
 
-  it("[Negative] Boundary: an already-answered clarification cannot be answered again", async () => {
+  it("SCRUM-18 [AC4] TC-18-06: [Negative] Boundary: an already-answered clarification cannot be answered again", async () => {
     mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_org"));
     mockClarificationFindUnique.mockResolvedValue(
       clarificationRow({ status: "ANSWERED" }),
@@ -371,7 +371,7 @@ describe("respondToClarification — SCRUM-18", () => {
     expect(tx.clarificationRequest.updateMany).not.toHaveBeenCalled();
   });
 
-  it("[Boundary] AC: when two replies race, the loser is refused and the coordinator is notified only once", async () => {
+  it("SCRUM-18 [AC4, AC5] TC-18-08: [Boundary] when two replies race, the loser is refused and the coordinator is notified only once", async () => {
     mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_org"));
     // Both replies passed the OPEN pre-check, but the other one claimed the
     // row first, so the conditional update matches nothing.
@@ -388,7 +388,7 @@ describe("respondToClarification — SCRUM-18", () => {
     expect(tx.notification.createMany).not.toHaveBeenCalled();
   });
 
-  it("[Negative] another organiser's clarification is indistinguishable from a missing one", async () => {
+  it("SCRUM-18 TC-18-10, SCRUM-68 [AC2, AC3, AC5] TC-68-02: [Negative] another organiser's clarification is indistinguishable from a missing one", async () => {
     mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_other_org"));
     mockClarificationFindUnique.mockResolvedValue(clarificationRow());
 
@@ -405,7 +405,7 @@ describe("respondToClarification — SCRUM-18", () => {
   // Coverage note: the catch block only special-cases PermissionError —
   // everything else must propagate, not be swallowed into a friendly
   // ActionResult.
-  it("[Exit path] rethrows an unexpected (non-permission) error instead of swallowing it", async () => {
+  it("SCRUM-18: [Exit path] answering rethrows an unexpected (non-permission) error instead of swallowing it", async () => {
     mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_org"));
     mockClarificationFindUnique.mockRejectedValueOnce(
       new Error("DB unavailable"),
@@ -418,7 +418,7 @@ describe("respondToClarification — SCRUM-18", () => {
 });
 
 describe("getClarificationForEvent — SCRUM-18/17 read path", () => {
-  it("[Negative] a signed-out caller is refused", async () => {
+  it("SCRUM-18 TC-18-10: [Negative] a signed-out caller is refused", async () => {
     mockAuth.mockResolvedValue(null);
 
     const result = await getClarificationForEvent("evt1");
@@ -428,7 +428,7 @@ describe("getClarificationForEvent — SCRUM-18/17 read path", () => {
     expect(mockEventFindUnique).not.toHaveBeenCalled();
   });
 
-  it("[Positive] returns the latest clarification thread for a related user", async () => {
+  it("SCRUM-18: [Positive] returns the latest clarification thread for a related user", async () => {
     mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_org"));
     mockEventFindUnique.mockResolvedValue(eventRow());
     mockClarificationFindFirst.mockResolvedValue({
@@ -476,7 +476,7 @@ describe("getClarificationForEvent — SCRUM-18/17 read path", () => {
     );
   });
 
-  it("[Positive] returns null when the event has never had a clarification", async () => {
+  it("SCRUM-18: [Positive] returns null when the event has never had a clarification", async () => {
     mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_org"));
     mockEventFindUnique.mockResolvedValue(eventRow());
     mockClarificationFindFirst.mockResolvedValue(null);
@@ -489,7 +489,7 @@ describe("getClarificationForEvent — SCRUM-18/17 read path", () => {
     expect(mockClarificationFindMany).not.toHaveBeenCalled();
   });
 
-  it("[Negative] an unrelated user gets not-found, never the clarification content", async () => {
+  it("SCRUM-18 TC-18-10: [Negative] an unrelated user gets not-found, never the clarification content", async () => {
     mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_stranger"));
     mockEventFindUnique.mockResolvedValue(eventRow());
 

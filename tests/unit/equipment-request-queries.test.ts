@@ -90,7 +90,7 @@ describe("getEventEquipmentRequests — SCRUM-209 AC2", () => {
 });
 
 describe("getCoordinatorEquipmentRequests — SCRUM-27", () => {
-  it("lists requests for this coordinator's events only, newest first, with their lines", async () => {
+  it("SCRUM-27: lists requests for this coordinator's events only, newest first, with their lines", async () => {
     await getCoordinatorEquipmentRequests("usr_coord");
 
     const query = db.equipmentRequest.findMany.mock.calls[0][0];

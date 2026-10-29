@@ -47,7 +47,7 @@ SCRUM-128 applies (TC-75-14).
 | Test Data | `coordinator@test.local`, `attendee4@test.local` |
 | Expected Result | 1: Confirmed, with registration enabled. 2: "Open", with "Opens on confirmation · Closes" and the start time. |
 
-**Automated by:** `tests/unit/event-confirm.test.ts` › "SCRUM-81 [AC5] TC-81-13: with Registration needed $needed, confirming opens registration: $opens"; `tests/unit/registration-state.test.ts` › "SCRUM-72 AC5: no period set, before the event starts → OPEN" and "SCRUM-72 AC5: no window set shows the default — opens on confirmation, closes at the start"
+**Automated by:** `tests/unit/event-confirm.test.ts` › "SCRUM-81 [AC5] TC-81-13: with Registration needed $needed, confirming opens registration: $opens"; `tests/unit/registration-state.test.ts` › "SCRUM-72 [AC5] TC-72-04, SCRUM-75 [AC2, AC4] TC-75-01: no period set, before the event starts → OPEN" and "SCRUM-72 [AC5] TC-72-04, SCRUM-73 [AC6] TC-73-05, SCRUM-75 [AC2, AC4] TC-75-01: no window set shows the default — opens on confirmation, closes at the start"
 
 ### TC-75-02
 
@@ -60,7 +60,7 @@ SCRUM-128 applies (TC-75-14).
 | Test Data | `attendee4@test.local` |
 | Expected Result | Refused with "This event is not open for registration."; no registration is written, and existing ones are untouched. |
 
-**Automated by:** `tests/unit/registration-actions.test.ts` › "[Negative] AC: registration is refused for an event that is not Confirmed" and "[Negative] AC7: an event back in Planning refuses new registrations and leaves existing ones untouched"; `tests/integration/registration-period.test.ts` › "SCRUM-75 [AC9] TC-75-12: closed registration stays closed when the event returns to Planning and is confirmed again, until it is reopened" (step 2)
+**Automated by:** `tests/unit/registration-actions.test.ts` › "SCRUM-73 [AC5] TC-73-03, SCRUM-75 [AC2, AC9] TC-75-02: [Negative] registration is refused for an event that is not Confirmed" and "SCRUM-73 [AC7] TC-73-07, SCRUM-75 [AC2, AC9] TC-75-02: [Negative] an event back in Planning refuses new registrations and leaves existing ones untouched"; `tests/integration/registration-period.test.ts` › "SCRUM-75 [AC9] TC-75-12: closed registration stays closed when the event returns to Planning and is confirmed again, until it is reopened" (step 2)
 
 ### TC-75-03
 
@@ -73,7 +73,7 @@ SCRUM-128 applies (TC-75-14).
 | Test Data | `attendee4@test.local` |
 | Expected Result | 1: "Registration not yet open", with "Opens" and the opening time; Register is disabled. 2: refused with "Registration for this event is not currently open." At the opening instant itself, it is open. |
 
-**Automated by:** `tests/unit/registration-state.test.ts` › "[Negative] AC: registrationOpensAt in the future → NOT_YET_OPEN", "[Boundary] registrationOpensAt exactly now already counts as open (not NOT_YET_OPEN)" and "SCRUM-72 AC3: a set window shows its opening and closing times"; `tests/unit/registration-actions.test.ts` › "[Negative] a not-yet-open registration period is refused"
+**Automated by:** `tests/unit/registration-state.test.ts` › "SCRUM-72 [AC4] TC-72-03, SCRUM-75 [AC7] TC-75-03: [Negative] registrationOpensAt in the future → NOT_YET_OPEN", "SCRUM-73 [AC6] TC-73-05, SCRUM-75 [AC7] TC-75-03: [Boundary] registrationOpensAt exactly now already counts as open (not NOT_YET_OPEN)" and "SCRUM-72 [AC3] TC-72-02, SCRUM-75 [AC7, AC10] TC-75-03, TC-75-13: a set window shows its opening and closing times"; `tests/unit/registration-actions.test.ts` › "SCRUM-73 [AC5] TC-73-03, SCRUM-75 [AC7] TC-75-03: [Negative] a not-yet-open registration period is refused"
 
 ### TC-75-04
 
@@ -86,7 +86,7 @@ SCRUM-128 applies (TC-75-14).
 | Test Data | `attendee4@test.local` |
 | Expected Result | 1: "Registration closed"; Register is disabled. 2: refused, and nothing is written. At the closing instant itself, it is already closed. |
 
-**Automated by:** `tests/unit/registration-state.test.ts` › "[Boundary] SCRUM-75 AC7: registrationClosesAt exactly now counts as already closed (<=, not <)"; `tests/unit/registration-actions.test.ts` › "[Negative] an expired registration period is refused"
+**Automated by:** `tests/unit/registration-state.test.ts` › "SCRUM-75 [AC7] TC-75-04: [Boundary] SCRUM-75 AC7: registrationClosesAt exactly now counts as already closed (<=, not <)"; `tests/unit/registration-actions.test.ts` › "SCRUM-73 [AC5] TC-73-03, SCRUM-75 [AC7] TC-75-04: [Negative] an expired registration period is refused"
 
 ### TC-75-05
 
@@ -99,7 +99,7 @@ SCRUM-128 applies (TC-75-14).
 | Test Data | — |
 | Expected Result | Refused both times, even with places left; the period shows the start as the close. |
 
-**Automated by:** `tests/unit/registration-state.test.ts` › "SCRUM-72 AC5: no period set, at the exact start instant → closed", "SCRUM-75 AC8: a closing time later than the start is ignored once the event has started", "SCRUM-75 AC8: an event that has started is closed even when it is also full" and "SCRUM-75 AC8: a closing time after the start shows the start as the close"; `tests/unit/registration-actions.test.ts` › "[Negative] AC5 / SCRUM-75 AC8: registration is refused once the event has started, even with no window set"
+**Automated by:** `tests/unit/registration-state.test.ts` › "SCRUM-72 [AC5] TC-72-04, SCRUM-75 [AC8] TC-75-05: no period set, at the exact start instant → closed", "SCRUM-75 [AC8] TC-75-05: a closing time later than the start is ignored once the event has started", "SCRUM-75 [AC8] TC-75-05: an event that has started is closed even when it is also full" and "SCRUM-75 [AC8] TC-75-05: a closing time after the start shows the start as the close"; `tests/unit/registration-actions.test.ts` › "SCRUM-73 [AC5] TC-73-04, SCRUM-75 [AC8] TC-75-05: [Negative] AC5 / SCRUM-75 AC8: registration is refused once the event has started, even with no window set"
 
 ### TC-75-06
 
@@ -203,7 +203,7 @@ SCRUM-128 applies (TC-75-14).
 | Test Data | `attendee4@test.local` |
 | Expected Result | The period reads "Opens … SGT · Closes … SGT", formatted by `formatDateTime`. |
 
-**Automated by:** `tests/unit/registration-state.test.ts` › "SCRUM-72 AC3: a set window shows its opening and closing times"; `tests/unit/datetime.test.ts` › "SCRUM-129 [AC3 - SGT label]: every displayed time is labelled SGT"
+**Automated by:** `tests/unit/registration-state.test.ts` › "SCRUM-72 [AC3] TC-72-02, SCRUM-75 [AC7, AC10] TC-75-03, TC-75-13: a set window shows its opening and closing times"; `tests/unit/datetime.test.ts` › "SCRUM-129 [AC3] TC-129-04, SCRUM-75 [AC10] TC-75-13: [SGT label] every displayed time is labelled SGT"
 
 ### TC-75-14
 

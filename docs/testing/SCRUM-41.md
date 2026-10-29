@@ -29,7 +29,7 @@ and the app is running. Unless the case says otherwise, the event is owned by
 | --------------------- | ----------- | ------------------ | ------------------------ |
 | [TC-41-01](#tc-41-01) | Positive    | AC 1, AC 5, AC 6   | Unit, integration        |
 | [TC-41-02](#tc-41-02) | Positive    | AC 1               | Unit, e2e                |
-| [TC-41-03](#tc-41-03) | Negative    | AC 1               | Unit, integration        |
+| [TC-41-03](#tc-41-03) | Negative    | AC 1               | Unit, integration, e2e |
 | [TC-41-04](#tc-41-04) | Positive    | AC 1               | Unit                     |
 | [TC-41-05](#tc-41-05) | Negative    | AC 2               | Unit                     |
 | [TC-41-06](#tc-41-06) | Negative    | AC 3               | Unit, integration        |

@@ -18,8 +18,8 @@ are Singapore time.
 | [TC-37-01](#tc-37-01) | — | Moved to [TC-36-09](SCRUM-36.md#tc-36-09) | — |
 | [TC-37-02](#tc-37-02) | Positive | AC 1, AC 2 (the calendar shows it) | Unit, integration, e2e |
 | [TC-37-03](#tc-37-03) | Negative | AC 1, AC 6 (valid period, reason, Venue Staff only) | Unit, integration, e2e |
-| [TC-37-04](#tc-37-04) | Negative | AC 2 | Integration, e2e |
-| [TC-37-05](#tc-37-05) | Negative | AC 3 | Unit, integration, e2e |
+| [TC-37-04](#tc-37-04) | Negative | AC 2 | Unit, integration, e2e |
+| [TC-37-05](#tc-37-05) | Negative | AC 3 | Unit, integration |
 | [TC-37-06](#tc-37-06) | Concurrency | AC 4 | Unit, integration |
 | [TC-37-07](#tc-37-07) | Boundary | AC 5 | Integration, e2e |
 

@@ -22,7 +22,7 @@ unassigned Submitted one.
 
 | ID | Type | Criterion | Automated |
 |---|---|---|---|
-| [TC-69-01](#tc-69-01) | Positive | AC 1, AC 4 | Unit, e2e |
+| [TC-69-01](#tc-69-01) | Positive | AC 1 | Unit, e2e |
 | [TC-69-02](#tc-69-02) | Negative | AC 1 | Unit, e2e |
 | [TC-69-03](#tc-69-03) | Positive | AC 2 | Unit, e2e |
 | [TC-69-04](#tc-69-04) | Positive | AC 3 | Unit, e2e |
@@ -43,7 +43,7 @@ unassigned Submitted one.
 
 **Superseded in part** on 20 Oct 2026 by SCRUM-165 AC 8 ([TC-165-11](SCRUM-165.md#tc-165-11)): the list also held the unassigned Submitted events, in every Coordinator's list; they now wait in the Lead's queue.
 
-**Automated by:** `tests/unit/coordinator-assigned-events.test.ts` › "[Positive] AC1, SCRUM-165 [AC8] TC-165-11: my list is exactly the events assigned to me", "[Positive] AC1: an event assigned to me is one I can open" and "[Negative] SCRUM-165 [AC8] TC-165-11 (supersedes AC4): a Submitted event with no Coordinator is in no Coordinator's list; it waits for the Lead"; `e2e/coordinator-assigned-events.spec.ts` › "SCRUM-69 [AC1, AC4] TC-69-01, TC-69-02, SCRUM-165 [AC8] TC-165-11: my default list shows my events, not another Coordinator's and not unassigned requests (they wait for the Lead)" and "SCRUM-69 [AC1, AC4] TC-69-01, TC-69-05, SCRUM-135 [AC3, AC4, AC11] TC-135-03, SCRUM-165 [AC4, AC8] TC-165-11: an unassigned Submitted event is in no Coordinator's list"
+**Automated by:** `tests/unit/coordinator-assigned-events.test.ts` › "SCRUM-69 [AC1] TC-69-01: [Positive] AC1, SCRUM-165 [AC8] TC-165-11: my list is exactly the events assigned to me", "SCRUM-69 [AC1] TC-69-01: [Positive] an event assigned to me is one I can open" and "SCRUM-69 [AC1] TC-69-01: [Negative] SCRUM-165 [AC8] TC-165-11 (supersedes AC4): a Submitted event with no Coordinator is in no Coordinator's list; it waits for the Lead"; `e2e/coordinator-assigned-events.spec.ts` › "SCRUM-69 [AC1, AC4] TC-69-01, TC-69-02, SCRUM-165 [AC8] TC-165-11: my default list shows my events, not another Coordinator's and not unassigned requests (they wait for the Lead)" and "SCRUM-69 [AC1] TC-69-01, SCRUM-135 [AC3, AC4, AC11] TC-135-03, SCRUM-165 [AC4, AC8] TC-165-11: an unassigned Submitted event is in no Coordinator's list"
 
 ### TC-69-02
 
@@ -56,7 +56,7 @@ unassigned Submitted one.
 | Test Data | Their ids |
 | Expected Result | Neither is listed, and both reads are refused. |
 
-**Automated by:** `tests/unit/coordinator-assigned-events.test.ts` › "[Negative] AC1: an event assigned to another Coordinator is neither listed nor openable", "[Negative] AC1: an unassigned draft is not in any Coordinator's list"; `e2e/coordinator-assigned-events.spec.ts` › "SCRUM-69 [AC1, AC4] TC-69-01, TC-69-02, SCRUM-165 [AC8] TC-165-11: my default list shows my events, not another Coordinator's and not unassigned requests (they wait for the Lead)"
+**Automated by:** `tests/unit/coordinator-assigned-events.test.ts` › "SCRUM-69 [AC1] TC-69-02: [Negative] an event assigned to another Coordinator is neither listed nor openable", "SCRUM-15 [AC1, AC8] TC-15-11, SCRUM-16 [AC4] TC-16-03, SCRUM-68 [AC4] TC-68-03, SCRUM-69 [AC1] TC-69-02: [Negative] an unassigned draft is not in any Coordinator's list"; `e2e/coordinator-assigned-events.spec.ts` › "SCRUM-69 [AC1, AC4] TC-69-01, TC-69-02, SCRUM-165 [AC8] TC-165-11: my default list shows my events, not another Coordinator's and not unassigned requests (they wait for the Lead)"
 
 ### TC-69-03
 
@@ -69,7 +69,7 @@ unassigned Submitted one.
 | Test Data | The seeded events |
 | Expected Result | Each row shows the name, proposed date and status. Each step keeps only the matching events, and sorting orders them by proposed date. The awaiting-review tab holds the events this Coordinator can still decide. |
 
-**Automated by:** `tests/unit/coordinator-assigned-events.test.ts` › "[Positive] AC2: searching by name keeps only matching events, ignoring case", "[Positive] AC2: filtering by status keeps only that status", "[Positive] AC2: the Awaiting review tab keeps the events a Coordinator can still decide", "[Positive] AC2: sorting by start date orders by proposed date"; `e2e/coordinator-assigned-events.spec.ts` › "SCRUM-69 [AC2] TC-69-03, SCRUM-168 [AC2] TC-168-02: the list shows each event's name, proposed date and status, and can be searched"
+**Automated by:** `tests/unit/coordinator-assigned-events.test.ts` › "SCRUM-69 [AC2] TC-69-03: [Positive] searching by name keeps only matching events, ignoring case", "SCRUM-69 [AC2] TC-69-03: [Positive] filtering by status keeps only that status", "SCRUM-69 [AC2] TC-69-03: [Positive] the Awaiting review tab keeps the events a Coordinator can still decide", "SCRUM-69 [AC2] TC-69-03: [Positive] sorting by start date orders by proposed date"; `e2e/coordinator-assigned-events.spec.ts` › "SCRUM-69 [AC2] TC-69-03, SCRUM-168 [AC2] TC-168-02: the list shows each event's name, proposed date and status, and can be searched"
 
 ### TC-69-04
 
@@ -82,10 +82,10 @@ unassigned Submitted one.
 | Test Data | The event |
 | Expected Result | It is gone from this Coordinator's list and is in the other's. |
 
-**Automated by:** `tests/unit/coordinator-assigned-events.test.ts` › "[Positive] AC3: after a handover the event leaves my list and is in the new Coordinator's"; `e2e/coordinator-assigned-events.spec.ts` › "SCRUM-69 [AC3] TC-69-04: an event handed to another Coordinator leaves my list and appears in theirs"
+**Automated by:** `tests/unit/coordinator-assigned-events.test.ts` › "SCRUM-69 [AC3] TC-69-04: [Positive] after a handover the event leaves my list and is in the new Coordinator's"; `e2e/coordinator-assigned-events.spec.ts` › "SCRUM-69 [AC3] TC-69-04: an event handed to another Coordinator leaves my list and appears in theirs"
 
 ### TC-69-05
 
 **Superseded** on 20 Oct 2026 by SCRUM-165 AC 8 ([TC-165-11](SCRUM-165.md#tc-165-11)) and SCRUM-135 AC 3 ([TC-135-03](SCRUM-135.md#tc-135-03)). The Coordinator who approved an unassigned Submitted event became its Coordinator, and it left the others' lists. No Coordinator sees or can approve an unassigned request now; the Lead assigns it (TC-165-07).
 
-**Automated by** (SCRUM-165's tests): `tests/unit/event-status.test.ts` › "SCRUM-165 [AC8] TC-165-11: a Coordinator can't approve a request nobody has been assigned to; it waits for the Lead"; `e2e/coordinator-assigned-events.spec.ts` › "SCRUM-69 [AC1, AC4] TC-69-01, TC-69-05, SCRUM-135 [AC3, AC4, AC11] TC-135-03, SCRUM-165 [AC4, AC8] TC-165-11: an unassigned Submitted event is in no Coordinator's list"
+**Automated by** (SCRUM-165's tests): `tests/unit/event-status.test.ts` › "SCRUM-165 [AC8] TC-165-11: a Coordinator can't approve a request nobody has been assigned to; it waits for the Lead"; `e2e/coordinator-assigned-events.spec.ts` › "SCRUM-69 [AC1] TC-69-01, SCRUM-135 [AC3, AC4, AC11] TC-135-03, SCRUM-165 [AC4, AC8] TC-165-11: an unassigned Submitted event is in no Coordinator's list"

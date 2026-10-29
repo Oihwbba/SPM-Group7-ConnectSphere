@@ -123,7 +123,7 @@ describe("getEquipmentAvailability — SCRUM-31", () => {
 
   // SCRUM-29 AC 7 — an invalid check is rejected and shows no result at all,
   // not a zero that could be mistaken for "none available".
-  it("SCRUM-29 AC 7: rejects an end before the start with field errors and reads nothing", async () => {
+  it("SCRUM-29 [AC7] TC-29-06: rejects an end before the start with field errors and reads nothing", async () => {
     const result = await getEquipmentAvailability({
       ...validInput,
       startAt: END,
@@ -138,7 +138,7 @@ describe("getEquipmentAvailability — SCRUM-31", () => {
     expect(tx.equipment.findFirst).not.toHaveBeenCalled();
   });
 
-  it("SCRUM-29 AC 1: reports an unknown or retired equipment type rather than a count", async () => {
+  it("SCRUM-29 [AC1] TC-29-07: reports an unknown or retired equipment type rather than a count", async () => {
     tx.equipment.findFirst.mockResolvedValueOnce(null);
 
     const result = await getEquipmentAvailability(validInput);
@@ -147,7 +147,7 @@ describe("getEquipmentAvailability — SCRUM-31", () => {
     expect(tx.reservation.findMany).not.toHaveBeenCalled();
   });
 
-  it("rethrows a database failure instead of reporting it as a refusal", async () => {
+  it("SCRUM-31: rethrows a database failure instead of reporting it as a refusal", async () => {
     tx.equipment.findFirst.mockRejectedValueOnce(new Error("connection reset"));
 
     await expect(getEquipmentAvailability(validInput)).rejects.toThrow(
@@ -157,7 +157,7 @@ describe("getEquipmentAvailability — SCRUM-31", () => {
 });
 
 describe("getAllEquipmentAvailability — SCRUM-31", () => {
-  it("calculates live period availability across all equipment types", async () => {
+  it("SCRUM-31: calculates live period availability across all equipment types", async () => {
     mockAuth.mockResolvedValue(sessionFor("TECH_SUPPORT", "usr_tech"));
     tx.equipment.findMany.mockResolvedValue([
       { id: "eq1", type: "Lectern", totalQuantity: 10 },
@@ -209,7 +209,7 @@ describe("getAllEquipmentAvailability — SCRUM-31", () => {
     expect(tx.equipment.findMany).not.toHaveBeenCalled();
   });
 
-  it("refuses a role without equipment:read", async () => {
+  it("SCRUM-31 TC-31-11: the every-type check refuses a role without equipment:read", async () => {
     mockAuth.mockResolvedValue(sessionFor("ATTENDEE", "usr_attendee"));
 
     const result = await getAllEquipmentAvailability({
@@ -222,7 +222,7 @@ describe("getAllEquipmentAvailability — SCRUM-31", () => {
     expect(tx.equipment.findMany).not.toHaveBeenCalled();
   });
 
-  it("refuses non-date strings for startAt and endAt with explicit field errors", async () => {
+  it("SCRUM-31: refuses non-date strings for startAt and endAt with explicit field errors", async () => {
     mockAuth.mockResolvedValue(sessionFor("TECH_SUPPORT", "usr_tech"));
 
     const result = await getAllEquipmentAvailability({
@@ -237,7 +237,7 @@ describe("getAllEquipmentAvailability — SCRUM-31", () => {
     }
   });
 
-  it("rethrows non-PermissionError exceptions", async () => {
+  it("SCRUM-31: rethrows non-PermissionError exceptions", async () => {
     mockAuth.mockResolvedValue(sessionFor("TECH_SUPPORT", "usr_tech"));
     tx.equipment.findMany.mockRejectedValue(new Error("db error"));
 

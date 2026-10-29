@@ -24,7 +24,7 @@ beforeEach(() => {
 });
 
 describe("CoordinatorEvents — SCRUM-17 access scope", () => {
-  it("[Positive] AC, SCRUM-165 [AC8] TC-165-11: queries only the events assigned to this coordinator", async () => {
+  it("SCRUM-17 [AC2] TC-17-02: [Positive] AC, SCRUM-165 [AC8] TC-165-11: queries only the events assigned to this coordinator", async () => {
     await CoordinatorEvents({ coordinatorId: "usr_coord" });
 
     expect(mockFindMany).toHaveBeenCalledWith({
@@ -33,7 +33,7 @@ describe("CoordinatorEvents — SCRUM-17 access scope", () => {
     });
   });
 
-  it("[Positive] the fetched events and isCoordinator flag are passed to the client list", async () => {
+  it("SCRUM-17: [Positive] the fetched events and isCoordinator flag are passed to the client list", async () => {
     const events = [{ id: "evt1", name: "Career Fair", status: "SUBMITTED" }];
     mockFindMany.mockResolvedValue(events);
 
@@ -43,7 +43,7 @@ describe("CoordinatorEvents — SCRUM-17 access scope", () => {
     expect(result.props.isCoordinator).toBe(true);
   });
 
-  it("[Negative] AC/SCRUM-68 parity: the query's OR condition matches can()'s relationship rule exactly for an event assigned to a DIFFERENT coordinator", () => {
+  it("SCRUM-17 [AC2] TC-17-03: [Negative] AC/SCRUM-68 parity: the query's OR condition matches can()'s relationship rule exactly for an event assigned to a DIFFERENT coordinator", () => {
     // This event would NOT be returned by the query above (its coordinatorId
     // is neither "usr_coord" nor null), and can() independently agrees it is
     // not viewable by usr_coord — the two must never disagree, or a
@@ -60,7 +60,7 @@ describe("CoordinatorEvents — SCRUM-17 access scope", () => {
     ).toBe(false);
   });
 
-  it("[Negative] SCRUM-165 [AC8] TC-165-11: an unclaimed Submitted event is not viewable by a coordinator; it waits in the Lead's queue", () => {
+  it("SCRUM-17 [AC2] TC-17-02: [Negative] SCRUM-165 [AC8] TC-165-11: an unclaimed Submitted event is not viewable by a coordinator; it waits in the Lead's queue", () => {
     const unclaimedSubmitted = {
       kind: "event" as const,
       organiserId: "usr_org",
@@ -73,7 +73,7 @@ describe("CoordinatorEvents — SCRUM-17 access scope", () => {
     ).toBe(false);
   });
 
-  it("[Boundary] AC/SCRUM-68 parity: an unclaimed DRAFT is NOT viewable — the query explicitly excludes DRAFT from the null-coordinator branch", () => {
+  it("SCRUM-17 [AC2] TC-17-03: [Boundary] AC/SCRUM-68 parity: an unclaimed DRAFT is NOT viewable — the query explicitly excludes DRAFT from the null-coordinator branch", () => {
     const unclaimedDraft = {
       kind: "event" as const,
       organiserId: "usr_org",

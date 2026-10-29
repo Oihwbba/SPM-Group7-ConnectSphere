@@ -46,13 +46,14 @@ SCRUM-40's reasons. Opened from an event, the Coordinator's own judgement
 | [TC-38-09](#tc-38-09) | Positive | AC 8 | Unit, e2e |
 | [TC-38-10](#tc-38-10) | Positive | AC 9 | Unit, integration, e2e |
 | [TC-38-11](#tc-38-11) | Positive | AC 10 | e2e |
-| [TC-38-12](#tc-38-12) | Positive | AC 11, AC 13 | Unit, integration |
+| [TC-38-12](#tc-38-12) | Positive | AC 11, AC 13 | Unit, integration, e2e |
 | [TC-38-13](#tc-38-13) | Boundary | AC 12 | Unit |
 | [TC-38-14](#tc-38-14) | Positive | AC 14 | e2e |
 | [TC-38-15](#tc-38-15) | Negative, Boundary | AC 4 | Unit, integration, e2e |
 | [TC-38-16](#tc-38-16) | Boundary | AC 15 | Unit, integration |
 | [TC-38-17](#tc-38-17) | Negative | AC 1, AC 2 | Unit, e2e |
 | [TC-38-18](#tc-38-18) | Positive | AC 1 | Unit, e2e |
+| [TC-38-19](#tc-38-19) | Retired | — | — |
 | [TC-38-20](#tc-38-20) | Negative | AC 4 | Unit, integration, e2e |
 | [TC-38-21](#tc-38-21) | Positive | AC 2 | Unit, e2e |
 

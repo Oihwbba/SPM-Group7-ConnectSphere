@@ -235,7 +235,7 @@ are signed in as `coordinator@test.local`, approvals as
 | Test Data | 2:00–4:00 pm with 30 and 45 minutes; with 0 and 15; with 0 and 0 |
 | Expected Result | "already booked from 1:30 pm … to 4:45 pm …, including setup and turnaround"; "… 2:00 pm … to 4:15 pm …, including setup and turnaround"; and, with neither, exactly as before: "already booked from 2:00 pm … to 4:00 pm …". The other booking's event is never named. |
 
-**Automated by:** `tests/unit/venue-availability.test.ts` › "SCRUM-159 [AC3] TC-159-14: names a booking with setup or turnaround by the whole time it occupies the venue, so the refusal explains itself" and "SCRUM-159: a booking with no setup or turnaround reads exactly as before"
+**Automated by:** `tests/unit/venue-availability.test.ts` › "SCRUM-159 [AC3] TC-159-14: names a booking with setup or turnaround by the whole time it occupies the venue, so the refusal explains itself" and "SCRUM-159 [AC3] TC-159-14: a booking with no setup or turnaround reads exactly as before"
 
 ### TC-159-15
 

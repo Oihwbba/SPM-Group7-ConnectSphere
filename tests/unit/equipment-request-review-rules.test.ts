@@ -19,7 +19,7 @@ describe("canMoveRequest — SCRUM-28 [AC2, AC3]", () => {
     ["PENDING_REVIEW", "IN_REVIEW"],
     ["IN_REVIEW", "APPROVED"],
     ["IN_REVIEW", "REJECTED"],
-  ])("allows %s → %s", (from, to) => {
+  ])("SCRUM-28 [AC2] TC-28-02: allows %s → %s", (from, to) => {
     expect(canMoveRequest(from, to)).toBe(true);
   });
 
@@ -32,7 +32,7 @@ describe("canMoveRequest — SCRUM-28 [AC2, AC3]", () => {
     ["REJECTED", "APPROVED"],
     ["APPROVED", "IN_REVIEW"],
     ["CANCELLED", "IN_REVIEW"],
-  ])("refuses %s → %s", (from, to) => {
+  ])("SCRUM-28 [AC2, AC3] TC-28-05: refuses %s → %s", (from, to) => {
     expect(canMoveRequest(from, to)).toBe(false);
   });
 });
@@ -99,7 +99,7 @@ describe("reviewLine — SCRUM-28 [AC1, AC4]", () => {
     );
   });
 
-  it("never offers a type whose availability is unknown", () => {
+  it("SCRUM-28 [AC1]: never offers a type whose availability is unknown", () => {
     const withNewType = [...catalogue, { id: "eqp_new", type: "Camera" }];
     const line = reviewLine(
       { equipmentId: "eqp_projector", quantity: 3 },
@@ -109,7 +109,7 @@ describe("reviewLine — SCRUM-28 [AC1, AC4]", () => {
     expect(line.alternatives.map((item) => item.id)).not.toContain("eqp_new");
   });
 
-  it("treats a type that is no longer in the pool as having nothing free", () => {
+  it("SCRUM-28 [AC1]: treats a type that is no longer in the pool as having nothing free", () => {
     expect(
       reviewLine({ equipmentId: "eqp_retired", quantity: 1 }, free, catalogue),
     ).toMatchObject({ available: 0, total: 0, shortfall: 1 });
@@ -117,7 +117,7 @@ describe("reviewLine — SCRUM-28 [AC1, AC4]", () => {
 });
 
 describe("formatEventPeriod — SCRUM-27 AC 1", () => {
-  it("shows the event's start and end in Singapore time", () => {
+  it("SCRUM-27 [AC1]: shows the event's start and end in Singapore time", () => {
     expect(
       formatEventPeriod({
         startAt: new Date("2031-02-03T01:00:00.000Z"),
@@ -126,7 +126,7 @@ describe("formatEventPeriod — SCRUM-27 AC 1", () => {
     ).toBe("3 Feb 2031, 9:00 am SGT – 3 Feb 2031, 5:30 pm SGT");
   });
 
-  it("says the dates are still to come when an event has none", () => {
+  it("SCRUM-27 [AC1]: says the dates are still to come when an event has none", () => {
     expect(formatEventPeriod({ startAt: null, endAt: null })).toBe(
       "Dates to be confirmed",
     );
@@ -134,7 +134,7 @@ describe("formatEventPeriod — SCRUM-27 AC 1", () => {
 });
 
 describe("reviewEquipmentRequestSchema — SCRUM-28 [AC2, AC3]", () => {
-  it("accepts starting a review with no note", () => {
+  it("SCRUM-28 [AC2]: accepts starting a review with no note", () => {
     const parsed = reviewEquipmentRequestSchema.safeParse({
       requestId: "eqr_1",
       toStatus: "IN_REVIEW",
@@ -146,7 +146,7 @@ describe("reviewEquipmentRequestSchema — SCRUM-28 [AC2, AC3]", () => {
     });
   });
 
-  it("accepts approval with an optional note", () => {
+  it("SCRUM-28 [AC2]: accepts approval with an optional note", () => {
     const parsed = reviewEquipmentRequestSchema.safeParse({
       requestId: "eqr_1",
       toStatus: "APPROVED",
@@ -169,7 +169,7 @@ describe("reviewEquipmentRequestSchema — SCRUM-28 [AC2, AC3]", () => {
     }
   });
 
-  it("refuses a status Technical Support can't set", () => {
+  it("SCRUM-28 [AC2]: refuses a status Technical Support can't set", () => {
     expect(
       reviewEquipmentRequestSchema.safeParse({
         requestId: "eqr_1",
@@ -180,7 +180,7 @@ describe("reviewEquipmentRequestSchema — SCRUM-28 [AC2, AC3]", () => {
 });
 
 describe("suggestAlternativeSchema — SCRUM-28 [AC4]", () => {
-  it("needs the request, the line and the alternative", () => {
+  it("SCRUM-28 [AC4]: needs the request, the line and the alternative", () => {
     const parsed = suggestAlternativeSchema.safeParse({
       requestId: "eqr_1",
       lineId: "eql_1",

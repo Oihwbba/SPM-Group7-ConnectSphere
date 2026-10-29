@@ -60,7 +60,7 @@ reservations and maintenance holds at the busiest moment.
 | Test Data | Seeded `eqr_planning` |
 | Expected Result | "Review started. The coordinator has been notified." The status becomes **In Review**, and the note, **Approve** and **Reject** appear. |
 
-**Automated by:** `e2e/equipment-request-review.spec.ts` › "SCRUM-28 [AC2, AC3, AC5, AC6] TC-28-02, TC-28-03, TC-28-09, TC-28-10, SCRUM-207 TC-207-24: reviewing then approving updates the status, notifies the coordinator and logs each change"; `tests/integration/equipment-request-review.test.ts` › "SCRUM-28 [AC2, AC3, AC5, AC6] TC-28-02, TC-28-03, TC-28-09, TC-28-10: review then approval each move the request, log one entry and notify the coordinator once"; `tests/unit/equipment-request-review.test.ts` › "SCRUM-28 [AC2, AC5, AC6] TC-28-02, TC-28-09, TC-28-10: takes a pending request into review, records it and tells the coordinator"; `tests/unit/equipment-request-review-rules.test.ts` › "allows %s → %s" (PENDING_REVIEW → IN_REVIEW)
+**Automated by:** `e2e/equipment-request-review.spec.ts` › "SCRUM-28 [AC2, AC3, AC5, AC6] TC-28-02, TC-28-03, TC-28-09, TC-28-10, SCRUM-207 TC-207-24: reviewing then approving updates the status, notifies the coordinator and logs each change"; `tests/integration/equipment-request-review.test.ts` › "SCRUM-28 [AC2, AC3, AC5, AC6] TC-28-02, TC-28-03, TC-28-09, TC-28-10: review then approval each move the request, log one entry and notify the coordinator once"; `tests/unit/equipment-request-review.test.ts` › "SCRUM-28 [AC2, AC5, AC6] TC-28-02, TC-28-09, TC-28-10: takes a pending request into review, records it and tells the coordinator"; `tests/unit/equipment-request-review-rules.test.ts` › "SCRUM-28 [AC2] TC-28-02: allows %s → %s" (PENDING_REVIEW → IN_REVIEW)
 
 ### TC-28-03
 
@@ -99,7 +99,7 @@ reservations and maintenance holds at the busiest moment.
 | Test Data | Pending Review → Approved; Pending Review → Rejected; Approved → Rejected; Rejected → In Review |
 | Expected Result | Each is refused with "This request is &lt;current&gt;, so it can't be marked &lt;new&gt;." and nothing is written. |
 
-**Automated by:** `tests/unit/equipment-request-review.test.ts` › "SCRUM-28 [AC2, AC3] TC-28-05: refuses %s → %s, and writes nothing"; `tests/unit/equipment-request-review-rules.test.ts` › "refuses %s → %s"; `tests/integration/equipment-request-review.test.ts` › "SCRUM-28 [AC2, AC3] TC-28-05: a request cannot be approved before it is reviewed, and stays Pending Review"
+**Automated by:** `tests/unit/equipment-request-review.test.ts` › "SCRUM-28 [AC2, AC3] TC-28-05: refuses %s → %s, and writes nothing"; `tests/unit/equipment-request-review-rules.test.ts` › "SCRUM-28 [AC2, AC3] TC-28-05: refuses %s → %s"; `tests/integration/equipment-request-review.test.ts` › "SCRUM-28 [AC2, AC3] TC-28-05: a request cannot be approved before it is reviewed, and stays Pending Review"
 
 ### TC-28-06
 
@@ -179,7 +179,7 @@ A suggestion is an update too: TC-28-12 and TC-28-13 cover two suggestions, and 
 | Test Data | Roles: ORGANISER, COORDINATOR, VENUE_STAFF, ATTENDEE |
 | Expected Result | Each call is refused with "You do not have permission to do that." before anything is read. The coordinator's page shows the request with no **Start review**, **Approve** or **Reject**. |
 
-**Automated by:** `tests/unit/equipment-request-review.test.ts` › "refuses %s before reading anything" (both actions, all four roles); `tests/unit/auth.test.ts` › "SCRUM-28 TC-28-11: does not let %s review an equipment request"; `e2e/equipment-request-review.spec.ts` › "SCRUM-28 [AC4, AC5, AC6] TC-28-07, TC-28-09, TC-28-10, SCRUM-207 TC-207-24: …" (coordinator view)
+**Automated by:** `tests/unit/equipment-request-review.test.ts` › "SCRUM-28 TC-28-11: refuses %s before reading anything" (both actions, all four roles); `tests/unit/auth.test.ts` › "SCRUM-28 TC-28-11: does not let %s review an equipment request"; `e2e/equipment-request-review.spec.ts` › "SCRUM-28 [AC4, AC5, AC6] TC-28-07, TC-28-09, TC-28-10, SCRUM-207 TC-207-24: …" (coordinator view)
 
 ### TC-28-12
 
@@ -192,7 +192,7 @@ A suggestion is an update too: TC-28-12 and TC-28-13 cover two suggestions, and 
 | Test Data | Lectern × 3; 2 of 4 Lecterns already reserved for the event's period |
 | Expected Result | The first suggestion is saved. The second session gets "Someone else updated this request first. Refresh to see its current status." The line suggests Projector, and the request has one suggestion entry in its history and the coordinator one notice for it, not two. |
 
-**Automated by:** `tests/integration/equipment-request-review.test.ts` › "SCRUM-227 [AC1, AC3] SCRUM-28 [AC7] TC-28-12: two suggestions on the same request at once — the first is saved, the second is told, nothing is doubled"; `tests/unit/equipment-request-review.test.ts` › "SCRUM-227 [AC1] SCRUM-28 [AC7] TC-28-12: when the request left review or was suggested on in the meantime, says so and records nothing"
+**Automated by:** `tests/integration/equipment-request-review.test.ts` › "SCRUM-227 [AC1, AC3], SCRUM-28 [AC7] TC-28-12: two suggestions on the same request at once — the first is saved, the second is told, nothing is doubled"; `tests/unit/equipment-request-review.test.ts` › "SCRUM-227 [AC1], SCRUM-28 [AC7] TC-28-12: when the request left review or was suggested on in the meantime, says so and records nothing"
 
 ### TC-28-13
 
@@ -205,4 +205,4 @@ A suggestion is an update too: TC-28-12 and TC-28-13 cover two suggestions, and 
 | Test Data | As TC-28-12 |
 | Expected Result | The suggestion is saved. The approval gets "Someone else updated this request first. Refresh to see its current status." The request stays In Review with no decision time, so the approver sees the suggestion before deciding. One history entry and one notice are written, not two. |
 
-**Automated by:** `tests/integration/equipment-request-review.test.ts` › "SCRUM-227 [AC1, AC3] SCRUM-28 [AC7] TC-28-13: a suggestion and an approval at once — the suggestion is saved, the approval is told, the request stays In Review"; `tests/unit/equipment-request-review.test.ts` › "SCRUM-28 [AC7] TC-28-06: when another reviewer changes the request first, says so and records nothing"
+**Automated by:** `tests/integration/equipment-request-review.test.ts` › "SCRUM-227 [AC1, AC3], SCRUM-28 [AC7] TC-28-13: a suggestion and an approval at once — the suggestion is saved, the approval is told, the request stays In Review"; `tests/unit/equipment-request-review.test.ts` › "SCRUM-28 [AC7] TC-28-06: when another reviewer changes the request first, says so and records nothing"

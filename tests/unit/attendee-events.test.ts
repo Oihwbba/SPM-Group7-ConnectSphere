@@ -77,7 +77,7 @@ describe("getBrowsableEvent — SCRUM-72 attendee detail read", () => {
     });
   });
 
-  it("[Positive] AC: an Attendee can load a Confirmed event by id", async () => {
+  it("SCRUM-72: [Positive] an Attendee can load a Confirmed event by id", async () => {
     mockAuth.mockResolvedValue(sessionFor("ATTENDEE", "usr_attendee"));
     mockFindUnique.mockResolvedValue(eventRow());
 
@@ -138,28 +138,28 @@ describe("getBrowsableEvent — SCRUM-72 attendee detail read", () => {
     },
   );
 
-  it("[Negative] AC: a non-Confirmed event (e.g. Planning) is not browsable — same null as missing", async () => {
+  it("SCRUM-72 [AC7] TC-72-06: [Negative] a non-Confirmed event (e.g. Planning) is not browsable — same null as missing", async () => {
     mockAuth.mockResolvedValue(sessionFor("ATTENDEE", "usr_attendee"));
     mockFindUnique.mockResolvedValue(eventRow({ status: "PLANNING" }));
 
     expect(await getBrowsableEvent("evt1")).toBeNull();
   });
 
-  it("[Negative] AC: a Cancelled event is not browsable", async () => {
+  it("SCRUM-72 [AC7] TC-72-06: [Negative] a Cancelled event is not browsable", async () => {
     mockAuth.mockResolvedValue(sessionFor("ATTENDEE", "usr_attendee"));
     mockFindUnique.mockResolvedValue(eventRow({ status: "CANCELLED" }));
 
     expect(await getBrowsableEvent("evt1")).toBeNull();
   });
 
-  it("[Negative] a missing id returns null without distinguishing it from a not-yet-visible one", async () => {
+  it("SCRUM-72 [AC8] TC-72-07: [Negative] a missing id returns null without distinguishing it from a not-yet-visible one", async () => {
     mockAuth.mockResolvedValue(sessionFor("ATTENDEE", "usr_attendee"));
     mockFindUnique.mockResolvedValue(null);
 
     expect(await getBrowsableEvent("evt_missing")).toBeNull();
   });
 
-  it("[Security gate] a role without event:browse (e.g. VENUE_STAFF) is refused before the query even runs", async () => {
+  it("SCRUM-72 [AC8] TC-72-07: [Security gate] a role without event:browse (e.g. VENUE_STAFF) is refused before the query even runs", async () => {
     mockAuth.mockResolvedValue(sessionFor("VENUE_STAFF", "usr_venuestaff"));
 
     const result = await getBrowsableEvent("evt1");
@@ -168,7 +168,7 @@ describe("getBrowsableEvent — SCRUM-72 attendee detail read", () => {
     expect(mockFindUnique).not.toHaveBeenCalled();
   });
 
-  it("[Negative] a signed-out caller is refused", async () => {
+  it("SCRUM-72 [AC8] TC-72-07: [Negative] a signed-out caller is refused", async () => {
     mockAuth.mockResolvedValue(null);
 
     expect(await getBrowsableEvent("evt1")).toBeNull();
@@ -185,7 +185,7 @@ describe("getBrowsableEvent — SCRUM-72 attendee detail read", () => {
     "CANCELLED",
     "REJECTED",
   ])(
-    "[Negative] AC7, AC8: opening a %s event directly returns the same null as a missing one",
+    "SCRUM-72 [AC7, AC8]: [Negative] opening a %s event directly returns the same null as a missing one",
     async (status) => {
       mockAuth.mockResolvedValue(sessionFor("ATTENDEE", "usr_attendee"));
       mockFindUnique.mockResolvedValue(eventRow({ status }));
@@ -195,7 +195,7 @@ describe("getBrowsableEvent — SCRUM-72 attendee detail read", () => {
   );
 
   it.each(["ORGANISER", "COORDINATOR", "VENUE_STAFF", "TECH_SUPPORT"] as const)(
-    "[Security gate] AC8: a %s opening a Confirmed event's attendee URL gets null, before the query runs",
+    "SCRUM-72 [AC8]: [Security gate] a %s opening a Confirmed event's attendee URL gets null, before the query runs",
     async (role) => {
       mockAuth.mockResolvedValue(sessionFor(role, "usr_other"));
       mockFindUnique.mockResolvedValue(eventRow());
@@ -207,7 +207,7 @@ describe("getBrowsableEvent — SCRUM-72 attendee detail read", () => {
 });
 
 describe("getBrowsableEvents — SCRUM-72 browse list", () => {
-  it("SCRUM-171 [AC4] TC-171-06, [Positive] AC: queries only CONFIRMED events that take registrations, ordered by start date", async () => {
+  it("SCRUM-171 [AC4] TC-171-06, SCRUM-72 [AC1, AC2] TC-72-01: [Positive] queries only CONFIRMED events that take registrations, ordered by start date", async () => {
     mockFindMany.mockResolvedValue([eventRow()]);
 
     const events = await getBrowsableEvents("usr_attendee");
@@ -225,7 +225,7 @@ describe("getBrowsableEvents — SCRUM-72 browse list", () => {
     );
   });
 
-  it("SCRUM-162 [AC7] TC-162-11, [Positive] AC: fetches every approved booking's venue, the caller's own registration, and the active-registration count for each event", async () => {
+  it("SCRUM-162 [AC7] TC-162-11, SCRUM-72 [AC1, AC2] TC-72-01: [Positive] fetches every approved booking's venue, the caller's own registration, and the active-registration count for each event", async () => {
     mockFindMany.mockResolvedValue([]);
 
     await getBrowsableEvents("usr_attendee");

@@ -54,4 +54,4 @@ suite's `afterAll` can delete its booking before the test's `finally` runs.
 | Test Data | — |
 | Expected Result | Step 2: the test times out. Step 3: no venue is listed. With the cleanup before this fix, one `SCRUM-142 AC10 venue …` is left. |
 
-**Manual:** a timeout can't be forced from inside the suite without slowing it. Run on 19 Oct 2026: no venue left in three runs with the fix; one left with `main`'s cleanup.
+**Automated by:** Manual. A timeout can't be forced from inside the suite without slowing it. Run on 19 Oct 2026: no venue left in three runs with the fix; one left with `main`'s cleanup.

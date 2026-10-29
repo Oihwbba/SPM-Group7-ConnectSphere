@@ -25,7 +25,7 @@ otherwise. Times are shown in Singapore time.
 | ----------------------- | -------------------------- | ---------------------------- | ---------------------------- |
 | [TC-124-01](#tc-124-01) | Positive, Negative         | AC 1, AC 12–15               | Unit, integration, e2e       |
 | [TC-124-02](#tc-124-02) | Positive, Negative         | AC 2, AC 12–14               | Unit, integration            |
-| [TC-124-03](#tc-124-03) | Positive                   | AC 3, AC 13                  | Unit, integration            |
+| [TC-124-03](#tc-124-03) | Positive                   | AC 3, AC 13                  | Integration |
 | [TC-124-04](#tc-124-04) | Positive, Negative         | AC 4, AC 12, AC 14, AC 15    | Unit, integration, e2e       |
 | [TC-124-05](#tc-124-05) | Positive, Boundary         | AC 5                         | Unit, integration            |
 | [TC-124-06](#tc-124-06) | Positive, Negative         | AC 6, AC 12–14               | Unit, integration            |
@@ -165,7 +165,7 @@ otherwise. Times are shown in Singapore time.
 | Test Data | — |
 | Expected Result | Each Lead has one notice, "A request is waiting to be assigned", that opens the request in the Unassigned queue. A resubmission that returns to the queue tells them too; one that goes back to its Coordinator, or a refused submission, tells no Lead. |
 
-**Automated by:** `tests/unit/submission-queue.test.ts` › "SCRUM-124 [AC10, AC12, AC14] TC-124-10: every Lead is told once that the request is waiting in the Unassigned queue, and the notice opens it there" and "SCRUM-124 [AC10] TC-124-10: a refused submission tells no Lead"; `tests/unit/clarification-and-amend.test.ts` › "SCRUM-108 [AC14] TC-108-14, SCRUM-165 [AC9] TC-165-12: …" (a resubmission back in the queue); `tests/integration/staff-notifications.test.ts` › "SCRUM-124 [AC10, AC12, AC14] TC-124-10: a submitted request tells every Lead once that it waits in the Unassigned queue, and opens it there"; `tests/integration/concurrency.test.ts` › "SCRUM-14 AC: two simultaneous submissions of one draft succeed once and notify once" (each Lead once)
+**Automated by:** `tests/unit/submission-queue.test.ts` › "SCRUM-124 [AC10, AC12, AC14] TC-124-10: every Lead is told once that the request is waiting in the Unassigned queue, and the notice opens it there" and "SCRUM-124 [AC10] TC-124-10: a refused submission tells no Lead"; `tests/unit/clarification-and-amend.test.ts` › "SCRUM-108 [AC14] TC-108-14, SCRUM-165 [AC9] TC-165-12: …" (a resubmission back in the queue); `tests/integration/staff-notifications.test.ts` › "SCRUM-124 [AC10, AC12, AC14] TC-124-10: a submitted request tells every Lead once that it waits in the Unassigned queue, and opens it there"; `tests/integration/concurrency.test.ts` › "SCRUM-124 [AC10] TC-124-10, SCRUM-14 [AC3] TC-14-05, SCRUM-45 [AC1] TC-45-01: SCRUM-14 AC: two simultaneous submissions of one draft succeed once and notify once" (each Lead once)
 
 ### TC-124-11
 

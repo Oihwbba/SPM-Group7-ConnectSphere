@@ -29,7 +29,7 @@ beforeEach(() => {
 });
 
 describe("requireSession — SCRUM-67", () => {
-  it("returns the session and does not redirect when signed in (allow path)", async () => {
+  it("SCRUM-67 [AC3] TC-67-04: returns the session and does not redirect when signed in (allow path)", async () => {
     mockAuth.mockResolvedValue(signedIn);
 
     const result = await requireSession();
@@ -38,14 +38,14 @@ describe("requireSession — SCRUM-67", () => {
     expect(mockRedirect).not.toHaveBeenCalled();
   });
 
-  it("redirects to /login when there is no session (deny path)", async () => {
+  it("SCRUM-65 [AC4, AC5] TC-65-04, SCRUM-67 [AC3] TC-67-04: redirects to /login when there is no session (deny path)", async () => {
     mockAuth.mockResolvedValue(null);
 
     await expect(requireSession()).rejects.toThrow("REDIRECT:/login");
     expect(mockRedirect).toHaveBeenCalledWith("/login");
   });
 
-  it("redirects to /login when the session has no user (deny path)", async () => {
+  it("SCRUM-67 [AC3] TC-67-04: redirects to /login when the session has no user (deny path)", async () => {
     mockAuth.mockResolvedValue({
       expires: "2999-01-01T00:00:00.000Z",
     } as unknown as Session);

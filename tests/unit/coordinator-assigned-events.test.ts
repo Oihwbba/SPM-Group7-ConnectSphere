@@ -34,7 +34,7 @@ beforeEach(() => {
 // SCRUM-165 supersedes SCRUM-69 AC1 and AC4: an unassigned request no longer
 // shows in every Coordinator's list; it waits in the Lead's queue.
 describe("SCRUM-69 — View only the events assigned to me", () => {
-  it("[Positive] AC1, SCRUM-165 [AC8] TC-165-11: my list is exactly the events assigned to me", async () => {
+  it("SCRUM-69 [AC1] TC-69-01: [Positive] AC1, SCRUM-165 [AC8] TC-165-11: my list is exactly the events assigned to me", async () => {
     await getCoordinatorEvents(cody.id);
 
     expect(mockFindMany.mock.calls[0][0].where).toEqual({
@@ -42,11 +42,11 @@ describe("SCRUM-69 — View only the events assigned to me", () => {
     });
   });
 
-  it("[Positive] AC1: an event assigned to me is one I can open", () => {
+  it("SCRUM-69 [AC1] TC-69-01: [Positive] an event assigned to me is one I can open", () => {
     expect(can(cody, "event:read", eventFor(cody.id))).toBe(true);
   });
 
-  it("[Negative] AC1: an event assigned to another Coordinator is neither listed nor openable", async () => {
+  it("SCRUM-69 [AC1] TC-69-02: [Negative] an event assigned to another Coordinator is neither listed nor openable", async () => {
     await getCoordinatorEvents(cody.id);
 
     expect(mockFindMany.mock.calls[0][0].where).not.toEqual({
@@ -55,11 +55,11 @@ describe("SCRUM-69 — View only the events assigned to me", () => {
     expect(can(cody, "event:read", eventFor(cara.id))).toBe(false);
   });
 
-  it("[Negative] AC1: an unassigned draft is not in any Coordinator's list", () => {
+  it("SCRUM-15 [AC1, AC8] TC-15-11, SCRUM-16 [AC4] TC-16-03, SCRUM-68 [AC4] TC-68-03, SCRUM-69 [AC1] TC-69-02: [Negative] an unassigned draft is not in any Coordinator's list", () => {
     expect(can(cody, "event:read", eventFor(null, "DRAFT"))).toBe(false);
   });
 
-  it("[Positive] AC3: after a handover the event leaves my list and is in the new Coordinator's", async () => {
+  it("SCRUM-69 [AC3] TC-69-04: [Positive] after a handover the event leaves my list and is in the new Coordinator's", async () => {
     const handedOver = eventFor(cara.id);
 
     await getCoordinatorEvents(cody.id);
@@ -75,7 +75,7 @@ describe("SCRUM-69 — View only the events assigned to me", () => {
     expect(can(cara, "event:read", handedOver)).toBe(true);
   });
 
-  it("[Negative] SCRUM-165 [AC8] TC-165-11 (supersedes AC4): a Submitted event with no Coordinator is in no Coordinator's list; it waits for the Lead", () => {
+  it("SCRUM-69 [AC1] TC-69-01: [Negative] SCRUM-165 [AC8] TC-165-11 (supersedes AC4): a Submitted event with no Coordinator is in no Coordinator's list; it waits for the Lead", () => {
     const unassigned = eventFor(null, "SUBMITTED");
 
     for (const coordinator of [cody, cara]) {
@@ -106,13 +106,13 @@ describe("SCRUM-69 AC2: the list is searched, filtered and sorted like My Event 
     },
   ];
 
-  it("[Positive] AC2: searching by name keeps only matching events, ignoring case", () => {
+  it("SCRUM-69 [AC2] TC-69-03: [Positive] searching by name keeps only matching events, ignoring case", () => {
     expect(
       filterAndSortEvents(events, { searchQuery: "GALA" }).map((e) => e.name),
     ).toEqual(["Charity Gala"]);
   });
 
-  it("[Positive] AC2: filtering by status keeps only that status", () => {
+  it("SCRUM-69 [AC2] TC-69-03: [Positive] filtering by status keeps only that status", () => {
     expect(
       filterAndSortEvents(events, { statusFilter: "PLANNING" }).map(
         (e) => e.name,
@@ -120,7 +120,7 @@ describe("SCRUM-69 AC2: the list is searched, filtered and sorted like My Event 
     ).toEqual(["Charity Gala"]);
   });
 
-  it("[Positive] AC2: the Awaiting review tab keeps the events a Coordinator can still decide", () => {
+  it("SCRUM-69 [AC2] TC-69-03: [Positive] the Awaiting review tab keeps the events a Coordinator can still decide", () => {
     expect(
       filterAndSortEvents(events, {
         activeTab: "SUBMITTED",
@@ -131,7 +131,7 @@ describe("SCRUM-69 AC2: the list is searched, filtered and sorted like My Event 
     ).toEqual(["Alumni Homecoming", "Career Fair"]);
   });
 
-  it("[Positive] AC2: sorting by start date orders by proposed date", () => {
+  it("SCRUM-69 [AC2] TC-69-03: [Positive] sorting by start date orders by proposed date", () => {
     expect(
       filterAndSortEvents(events, {
         sortField: "startAt",

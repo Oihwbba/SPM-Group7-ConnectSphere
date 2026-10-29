@@ -707,7 +707,7 @@ describe("updateEventDetails — SCRUM-25", () => {
     expect(db.auditLog.createMany).not.toHaveBeenCalled();
   });
 
-  it("does not swallow an unexpected database error", async () => {
+  it("SCRUM-25: does not swallow an unexpected database error", async () => {
     const failure = new Error("connection reset");
     db.$transaction.mockRejectedValue(failure);
 
@@ -979,7 +979,7 @@ describe("operational notes — SCRUM-25 AC6", () => {
     expect(await getOperationalNotes("evt_1")).toEqual({ ok: false, error: DENIED });
   });
 
-  it("does not swallow an unexpected database error", async () => {
+  it("SCRUM-25 [AC6]: does not swallow an unexpected database error", async () => {
     const failure = new Error("connection reset");
     db.event.findUnique.mockRejectedValue(failure);
 

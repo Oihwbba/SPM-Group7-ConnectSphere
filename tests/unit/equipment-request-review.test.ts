@@ -223,7 +223,7 @@ describe("updateEquipmentRequestStatus — SCRUM-28", () => {
     expect(revalidatePath).not.toHaveBeenCalled();
   });
 
-  it("reports a request that doesn't exist", async () => {
+  it("SCRUM-28: reports a request that doesn't exist", async () => {
     db.equipmentRequest.findUnique.mockResolvedValue(null);
 
     const result = await updateEquipmentRequestStatus({
@@ -237,7 +237,7 @@ describe("updateEquipmentRequestStatus — SCRUM-28", () => {
     });
   });
 
-  it("refuses a status Technical Support can't set", async () => {
+  it("SCRUM-28: refuses a status Technical Support can't set", async () => {
     const result = await updateEquipmentRequestStatus({
       requestId: "eqr_1",
       toStatus: "CANCELLED",
@@ -247,7 +247,7 @@ describe("updateEquipmentRequestStatus — SCRUM-28", () => {
     expect(db.equipmentRequest.findUnique).not.toHaveBeenCalled();
   });
 
-  it.each(denied)("refuses %s before reading anything", async (role) => {
+  it.each(denied)("SCRUM-28 TC-28-11: refuses %s before reading anything", async (role) => {
     mockAuth.mockResolvedValue(sessionFor(role));
 
     const result = await updateEquipmentRequestStatus({
@@ -262,7 +262,7 @@ describe("updateEquipmentRequestStatus — SCRUM-28", () => {
     expect(db.equipmentRequest.findUnique).not.toHaveBeenCalled();
   });
 
-  it("rethrows an unexpected database failure", async () => {
+  it("SCRUM-28: rethrows an unexpected database failure", async () => {
     db.equipmentRequest.findUnique.mockRejectedValue(
       new Error("connection lost"),
     );
@@ -417,7 +417,7 @@ describe("suggestAlternativeEquipment — SCRUM-28 [AC4]", () => {
 
   // regression (GLM review of #95): a type deactivated between the lookup and
   // the availability read is missing from the pool, and used to crash here.
-  it("regression: an alternative missing from the availability snapshot is refused as having nothing free", async () => {
+  it("SCRUM-28 [AC4]: regression: an alternative missing from the availability snapshot is refused as having nothing free", async () => {
     mockPool.mockResolvedValue({ eqp_lectern: { available: 1, total: 4 } });
 
     const result = await suggestAlternativeEquipment(input);
@@ -458,7 +458,7 @@ describe("suggestAlternativeEquipment — SCRUM-28 [AC4]", () => {
     expect(db.$transaction).not.toHaveBeenCalled();
   });
 
-  it("can't check an event without dates", async () => {
+  it("SCRUM-28 [AC4]: can't check an event without dates", async () => {
     db.equipmentRequest.findUnique.mockResolvedValue({
       ...stored("IN_REVIEW", [shortLine]),
       event: { ...event, startAt: null, endAt: null },
@@ -472,7 +472,7 @@ describe("suggestAlternativeEquipment — SCRUM-28 [AC4]", () => {
     });
   });
 
-  it("reports a line that isn't on the request, or a missing request, as not found", async () => {
+  it("SCRUM-28 [AC4]: reports a line that isn't on the request, or a missing request, as not found", async () => {
     db.equipmentRequest.findUnique.mockResolvedValue(stored("IN_REVIEW", []));
     await expect(suggestAlternativeEquipment(input)).resolves.toMatchObject({
       error: "Equipment request not found.",
@@ -484,7 +484,7 @@ describe("suggestAlternativeEquipment — SCRUM-28 [AC4]", () => {
     });
   });
 
-  it("SCRUM-227 [AC1] SCRUM-28 [AC7] TC-28-12: when the request left review or was suggested on in the meantime, says so and records nothing", async () => {
+  it("SCRUM-227 [AC1], SCRUM-28 [AC7] TC-28-12: when the request left review or was suggested on in the meantime, says so and records nothing", async () => {
     tx.equipmentRequest.updateMany.mockResolvedValue({ count: 0 });
 
     const result = await suggestAlternativeEquipment(input);
@@ -498,7 +498,7 @@ describe("suggestAlternativeEquipment — SCRUM-28 [AC4]", () => {
     expect(tx.notification.create).not.toHaveBeenCalled();
   });
 
-  it("refuses an incomplete suggestion before reading anything", async () => {
+  it("SCRUM-28 TC-28-11: refuses an incomplete suggestion before reading anything", async () => {
     const result = await suggestAlternativeEquipment({
       ...input,
       alternativeId: "",
@@ -511,7 +511,7 @@ describe("suggestAlternativeEquipment — SCRUM-28 [AC4]", () => {
     expect(db.equipmentRequest.findUnique).not.toHaveBeenCalled();
   });
 
-  it.each(denied)("refuses %s before reading anything", async (role) => {
+  it.each(denied)("SCRUM-28 TC-28-11: refuses %s before reading anything", async (role) => {
     mockAuth.mockResolvedValue(sessionFor(role));
 
     const result = await suggestAlternativeEquipment(input);
@@ -523,7 +523,7 @@ describe("suggestAlternativeEquipment — SCRUM-28 [AC4]", () => {
     expect(db.equipmentRequest.findUnique).not.toHaveBeenCalled();
   });
 
-  it("rethrows an unexpected database failure", async () => {
+  it("SCRUM-28 [AC4]: rethrows an unexpected database failure", async () => {
     db.$transaction.mockRejectedValue(new Error("connection lost"));
 
     await expect(suggestAlternativeEquipment(input)).rejects.toThrow(

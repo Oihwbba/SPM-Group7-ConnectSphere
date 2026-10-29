@@ -287,7 +287,7 @@ describe("createEquipmentRequest — SCRUM-27", () => {
     expect(revalidatePath).toHaveBeenCalledWith("/equipment-requests");
   });
 
-  it("rethrows a unique violation that no open request explains, rather than hiding it", async () => {
+  it("SCRUM-27: rethrows a unique violation that no open request explains, rather than hiding it", async () => {
     db.$transaction.mockRejectedValue(uniqueViolation());
 
     await expect(createEquipmentRequest(input())).rejects.toThrow(
@@ -295,7 +295,7 @@ describe("createEquipmentRequest — SCRUM-27", () => {
     );
   });
 
-  it("rethrows an unexpected database failure", async () => {
+  it("SCRUM-27: rethrows an unexpected database failure", async () => {
     db.$transaction.mockRejectedValue(new Error("connection lost"));
 
     await expect(createEquipmentRequest(input())).rejects.toThrow(

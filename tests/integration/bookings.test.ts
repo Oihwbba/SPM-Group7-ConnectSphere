@@ -503,7 +503,7 @@ describe.skipIf(!usesLocalDatabase)(
         expect(result.ok && result.data.created).toBe(true);
       });
 
-      it("SCRUM-50 TC-50-10: attendance over the venue's capacity is refused and nothing is written; exactly at capacity is accepted", async () => {
+      it("SCRUM-50 [AC6] TC-50-10: attendance over the venue's capacity is refused and nothing is written; exactly at capacity is accepted", async () => {
         const setCapacity = (capacity: number) =>
           prisma.venue.update({ where: { id: venueId }, data: { capacity } });
         try {
@@ -544,7 +544,7 @@ describe.skipIf(!usesLocalDatabase)(
         expect(await bookingCount()).toBe(0);
       });
 
-      it("SCRUM-50 TC-50-09: the form offers only approved events the coordinator may act on, exactly as can() allows", async () => {
+      it("SCRUM-50 [AC7] TC-50-09: the form offers only approved events the coordinator may act on, exactly as can() allows", async () => {
         const before = new Date();
         const offered = await getBookableEvents("usr_coordinator");
         const ids = offered.map((e) => e.id);
@@ -675,13 +675,13 @@ describe.skipIf(!usesLocalDatabase)(
         });
       });
 
-      it("SCRUM-50 TC-50-13: the check writes nothing", async () => {
+      it("SCRUM-50 [AC3, AC4, AC5] TC-50-13: the check writes nothing", async () => {
         const before = await bookingCount();
         await check(fromStart(0), fromEnd(0));
         expect(await bookingCount()).toBe(before);
       });
 
-      it("SCRUM-50 TC-50-13: a retired venue reads as not found, as it does on submit", async () => {
+      it("SCRUM-50 [AC3, AC4, AC5] TC-50-13: a retired venue reads as not found, as it does on submit", async () => {
         await prisma.venue.update({
           where: { id: venueId },
           data: { isActive: false },

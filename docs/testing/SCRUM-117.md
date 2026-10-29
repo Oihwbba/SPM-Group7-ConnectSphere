@@ -31,6 +31,7 @@ and the app is running. Unless the case says otherwise, the event is in
 
 | Item            | Content                                                                                          |
 | --------------- | ------------------------------------------------------------------------------------------------ |
+| Test Case ID | TC-117-01 |
 | Test Scenario   | [Positive] AC 1, AC 2: rejecting a Planning event with a reason and an outcome makes it Rejected |
 | Pre-conditions  | Signed in as the assigned Coordinator.                                                           |
 | Test Steps      | 1. Open the event. <br> 2. Click **Reject event**, give a reason, choose an outcome, confirm.    |
@@ -43,18 +44,20 @@ and the app is running. Unless the case says otherwise, the event is in
 
 | Item            | Content                                                                                                                                                                                  |
 | --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Test Case ID | TC-117-02 |
 | Test Scenario   | [Negative] AC 2: the reason and the outcome are both required                                                                                                                            |
 | Pre-conditions  | As TC-117-01.                                                                                                                                                                            |
 | Test Steps      | 1. Try to reject with a blank reason, with no outcome, or (directly) with an outcome that isn't one of the two.                                                                          |
 | Test Data       | —                                                                                                                                                                                        |
 | Expected Result | The dialog's **Reject event** stays disabled; direct requests are refused ("A rejection reason is required." / "Choose what the organiser can do next.") and nothing is read or written. |
 
-**Automated by:** `tests/unit/reject-planning.test.ts` › "SCRUM-117 [AC2] TC-117-02: …" and "SCRUM-117 [AC2]: an outcome that isn't one of the two choices …"; `e2e/reject-planning.spec.ts` › TC-117-09 (disabled without an outcome)
+**Automated by:** `tests/unit/reject-planning.test.ts` › "SCRUM-117 [AC2] TC-117-02: …" and "SCRUM-117 [AC2] TC-117-02: an outcome that isn't one of the two choices …"; `e2e/reject-planning.spec.ts` › TC-117-09 (disabled without an outcome)
 
 ### TC-117-03
 
 | Item            | Content                                                                                                                                                                                                                                                                                              |
 | --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Test Case ID | TC-117-03 |
 | Test Scenario   | [Positive] AC 3: rejecting releases everything held for the event, in the same operation                                                                                                                                                                                                             |
 | Pre-conditions  | The event has venue bookings (Pending, Approved), equipment reservations, an open equipment request and a submitted change request.                                                                                                                                                                  |
 | Test Steps      | 1. Reject it.                                                                                                                                                                                                                                                                                        |
@@ -67,6 +70,7 @@ and the app is running. Unless the case says otherwise, the event is in
 
 | Item            | Content                                                                     |
 | --------------- | --------------------------------------------------------------------------- |
+| Test Case ID | TC-117-04 |
 | Test Scenario   | [Negative] AC 1: only a Planning event can be rejected this way             |
 | Pre-conditions  | The event is Under Review, Confirmed, Rejected or Cancelled.                |
 | Test Steps      | 1. Send a reject request for it.                                            |
@@ -79,6 +83,7 @@ and the app is running. Unless the case says otherwise, the event is in
 
 | Item            | Content                                                                                                                                                         |
 | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Test Case ID | TC-117-05 |
 | Test Scenario   | [Negative] AC 4: an event that was ever Confirmed can't be rejected; it is cancelled instead                                                                    |
 | Pre-conditions  | The event's history has a Planning → Confirmed entry.                                                                                                           |
 | Test Steps      | 1. Open it as the Coordinator. <br> 2. Send a reject request directly.                                                                                          |
@@ -91,6 +96,7 @@ and the app is running. Unless the case says otherwise, the event is in
 
 | Item            | Content                                                                                                                                                                |
 | --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Test Case ID | TC-117-06 |
 | Test Scenario   | [Positive] AC 6: the Organiser is notified and the rejection is recorded with who and when                                                                             |
 | Pre-conditions  | As TC-117-01.                                                                                                                                                          |
 | Test Steps      | 1. Reject the event.                                                                                                                                                   |
@@ -103,18 +109,20 @@ and the app is running. Unless the case says otherwise, the event is in
 
 | Item            | Content                                                                                                                                                                   |
 | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Test Case ID | TC-117-07 |
 | Test Scenario   | [Negative] AC 5: only the event's assigned Coordinator can reject it                                                                                                      |
 | Pre-conditions  | —                                                                                                                                                                         |
 | Test Steps      | 1. Send a reject request as each user below.                                                                                                                              |
 | Test Data       | The Organiser; Technical Support; signed out; another Coordinator; any Coordinator when nobody is assigned; a missing event; an event reassigned while the request waited |
 | Expected Result | Refused every time (no permission, "Event not found." or "updated by another user"); only the assigned Coordinator is offered the button.                                 |
 
-**Automated by:** `tests/unit/reject-planning.test.ts` › "SCRUM-117 [AC5] TC-117-07: …" and "SCRUM-117 [AC5]: an event reassigned …"; `tests/unit/auth.test.ts` › "SCRUM-117 [AC5] TC-117-07: …"; `tests/unit/readiness-actions.test.ts` › "SCRUM-117 [AC5] TC-117-07: …"; `e2e/reject-planning.spec.ts` › "SCRUM-117 [AC4, AC5] TC-117-10: Reject isn't offered on an event that was Confirmed before, nor to its Organiser"
+**Automated by:** `tests/unit/reject-planning.test.ts` › "SCRUM-117 [AC5] TC-117-07: …" and "SCRUM-117 [AC5] TC-117-07: an event reassigned …"; `tests/unit/auth.test.ts` › "SCRUM-117 [AC5] TC-117-07: …"; `tests/unit/readiness-actions.test.ts` › "SCRUM-117 [AC5] TC-117-07: …"; `e2e/reject-planning.spec.ts` › "SCRUM-117 [AC4, AC5] TC-117-10: Reject isn't offered on an event that was Confirmed before, nor to its Organiser"
 
 ### TC-117-08
 
 | Item            | Content                                                                                                                                                                                                                                                                                                     |
 | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Test Case ID | TC-117-08 |
 | Test Scenario   | [Positive] AC 1, AC 3, AC 6: against a real database, everything is released together and the stock returns                                                                                                                                                                                                 |
 | Pre-conditions  | A Planning event with an approved booking, an approved equipment request with 2 Projectors reserved, and a submitted change request.                                                                                                                                                                        |
 | Test Steps      | 1. Reject it.                                                                                                                                                                                                                                                                                               |
@@ -127,6 +135,7 @@ and the app is running. Unless the case says otherwise, the event is in
 
 | Item            | Content                                                                                                                                                                                |
 | --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Test Case ID | TC-117-09 |
 | Test Scenario   | [Positive] AC 1, AC 2, AC 3, AC 6: the whole journey                                                                                                                                   |
 | Pre-conditions  | A Planning event with an approved booking and a Projector reserved.                                                                                                                    |
 | Test Steps      | 1. As the Coordinator, open the event, click **Reject event**, enter a reason (Reject stays disabled), choose **Submit as a new request**, confirm. <br> 2. As the Organiser, open it. |
@@ -139,6 +148,7 @@ and the app is running. Unless the case says otherwise, the event is in
 
 | Item            | Content                                                                                                 |
 | --------------- | ------------------------------------------------------------------------------------------------------- |
+| Test Case ID | TC-117-10 |
 | Test Scenario   | [Negative] AC 4, AC 5: Reject isn't offered on an event that was Confirmed before, nor to its Organiser |
 | Pre-conditions  | A Planning event whose history has a Planning → Confirmed entry.                                        |
 | Test Steps      | 1. Open it as the Coordinator, then as the Organiser.                                                   |
