@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-28. Jira is the source of truth.
+     Synced from Jira on 2026-10-29. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-155 - Reserve an approved equipment request in one step, pre-filled from the Coordinator's request (follow-up to SCRUM-31)
@@ -46,5 +46,6 @@
 * 2026-10-04 (review of PR #130): AC 1 excludes events that have already started; AC 2 requires the period to cover the whole event; AC 6 counts reservations made with the one-type form; AC 7 adds a retired type and an uncovered period.
 * 2026-10-05 (PO decision on SCRUM-156): this card will be the only way to reserve, and SCRUM-156 makes the one-type form availability-only. AC 6 no longer mentions the one-type form.
 * 2026-10-05 (PR #130): AC 2 also shows who raised the request, its notes and each line's technical requirements, with a link back to the request (team feedback: Technical Support had nothing to refer back to). AC 7 adds the 20-row and 1,000-unit limits (GLM review of #130).
+* 2026-10-29 (SCRUM-233, PO approval pending): AC 1's "Approved" event no longer applies. No event rests in Approved, because approval saves Planning (SCRUM-81 AC1). RESERVABLE_EVENT_STATUSES (lib/schemas/reservation.ts) follows the statuses that can take an equipment request (SCRUM-27 AC1), and since SCRUM-233 that is Planning only, so only requests for Planning events are offered. Criteria unchanged; this story stays Done.
 
 **Related:** SCRUM-31 (reserve equipment), SCRUM-28 (review and approve a request), SCRUM-110 (the readiness checklist counts these reservations), SCRUM-142 (changing lines before confirmation), SCRUM-156 (make the one-type form availability-only).
