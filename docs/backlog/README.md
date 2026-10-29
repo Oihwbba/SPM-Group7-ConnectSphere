@@ -37,7 +37,7 @@ either covered by a test or visibly not done yet. Reviewers do the same.
 | | |
 |---|---|
 | Stories | **97** |
-| Tasks | **78** |
+| Tasks | **79** |
 | Subtasks | **18** |
 | Total story points | **267** |
 | Points committed to Sprint 1 | **37** |
@@ -274,5 +274,5 @@ _6 stories, 10 points_
 | [SCRUM-236](SCRUM-236.md) | Chore: Name every unit and integration test after the story, criteria and test case it proves, and fix the test-case docs' format | SCRUM Sprint 4 | To Do |
 | [SCRUM-237](SCRUM-237.md) | Chore: Say on the website and in the README that it is the team's development environment, not a service for customers | SCRUM Sprint 4 | In Progress |
 | [SCRUM-238](SCRUM-238.md) | Chore: Seed data that lets every role see and try every function | SCRUM Sprint 4 | In Progress |
-| [SCRUM-239](SCRUM-239.md) | Chore: Record which later stories supersede the Attendee Registration stories (SCRUM-72 to 77) | SCRUM Sprint 4 | In Progress |
-| [SCRUM-242](SCRUM-242.md) | Chore: Match the docs to Jira after the SCRUM-11 epic check (SCRUM-70, 80, 115, 212) | SCRUM Sprint 4 | In Review |
+| [SCRUM-239](SCRUM-239.md) | Chore: Fix what the SCRUM-11 epic check found in the docs and Jira notes | SCRUM Sprint 4 | In Review |
+| [SCRUM-242](SCRUM-242.md) | [MERGED INTO SCRUM-239] Chore: Match the docs to Jira after the SCRUM-11 epic check (SCRUM-70, 80, 115, 212) | SCRUM Sprint 4 | Done |
