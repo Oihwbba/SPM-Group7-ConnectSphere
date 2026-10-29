@@ -469,6 +469,10 @@ re-sync rather than editing those files (see `docs/backlog/README.md`).
     IPv4-only network (most homes and campus Wi-Fi) it times out silently;
   - the transaction pooler (port `6543`, `?pgbouncer=true`) breaks the
     prepared statements the `pg` driver adapter relies on.
+- The session pooler accepts **15 connections in all**, shared by every Vercel
+  instance and every dev server pointed at the shared database. So each copy
+  of the app opens at most 3 (`lib/db.ts`, ADR 0022). `EMAXCONNSESSION: max
+  clients reached` in the logs means that limit was hit.
 - Production needs exactly three variables: `DATABASE_URL`, `DIRECT_URL` and
   `AUTH_SECRET`. **Paste them without quotes.** The quotes in `.env.example`
   are dotenv syntax, and Vercel stores them literally.
