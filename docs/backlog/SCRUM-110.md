@@ -16,7 +16,7 @@
 
 ---
 
-**Superseded in part:** AC1 and AC2's single venue booking is superseded by SCRUM-162 AC8: the Venue item lists each booking and is complete only when at least one is Approved, none is Pending or Held, every Approved booking covers the event's period, and none is flagged. AC2 also shows Held and Expired bookings (SCRUM-163 AC6). AC3 is superseded by SCRUM-170 AC4: Equipment is always listed for a Planning event, and shows Not decided until the Coordinator creates an equipment request or records No equipment needed. AC5 is superseded by SCRUM-166 AC9: the checklist also has a Safety check item, and Ready to confirm needs it Approved. The criteria below are kept as accepted in Sprint 2.
+**Superseded in part:** AC1 and AC2's single venue booking is superseded by SCRUM-162 AC8: the Venue item lists each booking and is complete only when at least one is Approved, none is Pending or Held, every Approved booking covers the event's period, and none is flagged. AC2 also shows Held and Expired bookings (SCRUM-163 AC6). AC3 is superseded by SCRUM-170 AC4: Equipment is always listed for a Planning event, and shows Not decided until the Coordinator creates an equipment request or records No equipment needed. AC3 is also extended by SCRUM-26 AC12 and SCRUM-142 AC10: a flagged booking or reservation is incomplete, and so is Equipment while a request awaits Technical Support's review, shown as "Awaiting Technical Support review" when every line is already reserved. AC5 is superseded by SCRUM-166 AC9: the checklist also has a Safety check item, and Ready to confirm needs it Approved. The criteria below are kept as accepted in Sprint 2.
 
 **User story:** As an Event Coordinator, I want to see a readiness checklist of an event's essential arrangements, so that I know exactly what is outstanding before I can confirm it.
 
@@ -29,8 +29,6 @@
 5. Given every item is complete, then the checklist shows Ready to confirm, which enables the Confirm action in SCRUM-81.
 6. The assigned Coordinator sees the checklist on the event page. The Organiser sees the item names and states but not internal reasons.
 
-**Extended by later stories (not part of this one):** Equipment shown as "Not decided" until the Coordinator creates an equipment request or records No equipment needed (SCRUM-170 AC4); flagged bookings or reservations counted as incomplete (SCRUM-26); a request still awaiting Technical Support's review counted as incomplete, shown as "Awaiting Technical Support review" when every line is already reserved (SCRUM-142 AC10).
-
 **Change log**
 
 * 2026-10-01 (mid-sprint correction, no new scope): removed the "Projector 3/5 reserved" example and said approval is all-or-nothing (withdrawn below).
@@ -40,5 +38,6 @@
 * 2026-10-07: the "Not requested yet" extension points to SCRUM-170, which took it over when SCRUM-127 was split.
 * 2026-10-12: the extension list adds SCRUM-142 AC10 (a request awaiting re-check blocks Confirm).
 * 2026-10-29 (SCRUM-243, PO approval pending): added the Superseded in part note for SCRUM-162, SCRUM-163, SCRUM-166 and SCRUM-170. The SCRUM-170 extension says "Not decided", as SCRUM-170 AC4 does, instead of "Not requested yet". Criteria unchanged.
+* 2026-10-29 (SCRUM-243, PO approval pending): merged the "Extended by later stories" list into the Superseded in part note, as on SCRUM-13 and SCRUM-76; SCRUM-170 AC4 was listed in both. Criteria unchanged.
 
 Functionality Area: Event Status Management
