@@ -29,8 +29,6 @@
 5. Only the assigned Coordinator can reject (SCRUM-67).
 6. The Organiser is notified (SCRUM-45) and the rejection is recorded with who and when.
 
-**Customer basis:** "If essential requirements cannot be fulfilled, the event gets rejected rather than sitting pending indefinitely." "If an event remains incomplete or unfulfilled (e.g., no venue found at all), the request gets rejected."
-
 **Change log**
 
 * 2026-10-01 (story not started): limited to events never Confirmed; added the outcome choice (SCRUM-126) and the change-request rule. The transition is listed in SCRUM-135.

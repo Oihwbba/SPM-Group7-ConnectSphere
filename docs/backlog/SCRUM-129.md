@@ -28,7 +28,7 @@
 
 **Supersedes:** SCRUM-13 AC1, AC4 and AC6 (the Organiser chooses the event's timezone, which is mandatory and used to display its times).
 
-**Customer basis:** ConnectSphere "operates and owns several event facilities within Singapore" (briefing §1). Team decision; confirm at the next customer Q&A.
+**Customer basis:** ConnectSphere "operates and owns several event facilities within Singapore" (customer briefing).
 
 **Why this is a new story:** SCRUM-13 (Sprint 1, Done) lets the Organiser pick any timezone. Venue opening hours (SCRUM-34) are in Singapore time, so an event entered in another timezone shows its times and the venue's hours on different clocks.
 

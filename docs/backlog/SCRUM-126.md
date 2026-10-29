@@ -30,7 +30,7 @@
 
 **Supersedes:** SCRUM-19 AC3 (a rejection records only a reason) and AC4 (every Rejected request can be amended and resubmitted), which now holds only when the Coordinator chose Amend and resubmit.
 
-**Customer basis:** "Only edits via Coordinator and the co-ordinator also decide whether it calls for a new submission." (Event Review and Approval). "Rejected events may be resubmitted after appropriate changes are made; rejection is not necessarily final."
+**Customer basis:** "Organiser cannot directly edit after submission; must request via Coordinator." "Rejected events may be resubmitted after appropriate changes are made; rejection is not necessarily final."
 
 **Why this is a new story:** SCRUM-19 (Sprint 1, Done) records a rejection without this choice, and the Sprint 1 code offers Amend & Resubmit on every rejected request. Done stories are not reopened, so the change lives here.
 
