@@ -47,7 +47,7 @@ request ask for it.
 | Test Data | — |
 | Expected Result | Refused with "Choose whether the event needs registration." beside the choice; the review shows Registration Needed as "Missing (Required to Submit)". Nothing is created. |
 
-**Automated by:** `tests/unit/events.test.ts` › "SCRUM-171 [AC2] TC-171-02: …" and "SCRUM-13 [AC4 - Business-Rule Negative]: …"
+**Automated by:** `tests/unit/events.test.ts` › "SCRUM-171 [AC2] TC-171-02: …" and "SCRUM-13 [AC4] TC-13-05, SCRUM-171 [AC2] TC-171-02: …" and "SCRUM-13 [AC4] TC-13-05, SCRUM-14 [AC2] TC-14-03, SCRUM-171 [AC2] TC-171-02: …"
 
 ### TC-171-03
 
@@ -99,7 +99,7 @@ request ask for it.
 | Test Data | `attendee@test.local` |
 | Expected Result | 1: Yes and unanswered are listed; No isn't. 2: not found, the same as an event that doesn't exist. |
 
-**Automated by:** `tests/unit/attendee-events.test.ts` › "SCRUM-171 [AC4] TC-171-06: …" (4 tests); `tests/unit/organiser-attendee-events-access.test.ts` › "[Positive] AC: queries only Confirmed events, earliest-starting first"; `tests/unit/registration-state.test.ts` › "SCRUM-171 [AC4] TC-171-06: …"; `tests/integration/registration-needed.test.ts` › "SCRUM-171 [AC4] TC-171-06: …"; `e2e/registration-needed.spec.ts` › "SCRUM-171 [AC4] TC-171-06: …"
+**Automated by:** `tests/unit/attendee-events.test.ts` › "SCRUM-171 [AC4] TC-171-06: …" (4 tests); `tests/unit/organiser-attendee-events-access.test.ts` › "SCRUM-171 [AC4] TC-171-06: [Positive] queries only Confirmed events, earliest-starting first"; `tests/unit/registration-state.test.ts` › "SCRUM-171 [AC4] TC-171-06: …"; `tests/integration/registration-needed.test.ts` › "SCRUM-171 [AC4] TC-171-06: …"; `e2e/registration-needed.spec.ts` › "SCRUM-171 [AC4] TC-171-06: …"
 
 ### TC-171-07
 

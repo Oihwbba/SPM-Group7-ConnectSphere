@@ -423,7 +423,7 @@ describe("bookingStillStandsRefusal — SCRUM-26 AC8", () => {
     expect(await bookingStillStandsRefusal(db, booking, event)).toBeNull();
   });
 
-  it("SCRUM-26 [AC8] TC-26-07: refused when it no longer covers the event's whole period", async () => {
+  it("SCRUM-26 [AC8] TC-26-07: a booking is refused when it no longer covers the event's whole period", async () => {
     const { db } = clientWith();
     const moved = {
       ...event,
@@ -582,7 +582,7 @@ describe("reservationStillStandsRefusal — SCRUM-26 AC8", () => {
     });
   });
 
-  it("SCRUM-26 [AC8] TC-26-07: refused when it no longer covers the event's whole period", async () => {
+  it("SCRUM-26 [AC8] TC-26-07: a reservation is refused when it no longer covers the event's whole period", async () => {
     const { db } = clientWith([], []);
 
     expect(

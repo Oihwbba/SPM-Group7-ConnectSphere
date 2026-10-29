@@ -14,11 +14,11 @@ describe("can — role gate", () => {
     expect(can(organiserA, "event:create")).toBe(true);
   });
 
-  it("does not let an attendee create events", () => {
+  it("SCRUM-67 [AC1] TC-67-01: does not let an attendee create events", () => {
     expect(can(attendee, "event:create")).toBe(false);
   });
 
-  it("does not let a venue-staff member review events", () => {
+  it("SCRUM-67 [AC1] TC-67-01: does not let a venue-staff member review events", () => {
     expect(can({ id: "vs", role: "VENUE_STAFF" }, "event:review")).toBe(false);
   });
 
@@ -38,13 +38,13 @@ describe("can — role gate", () => {
     },
   );
 
-  it("lets a coordinator read the venue catalogue", () => {
+  it("SCRUM-67 [AC1] TC-67-01: lets a coordinator read the venue catalogue", () => {
     expect(can(coordinator, "venue:read")).toBe(true);
   });
 
   // SCRUM-27 — "As an Event Coordinator, I want to create an equipment
   // request". Only coordinators raise requests; Technical Support reviews them.
-  it("lets a coordinator create and list equipment requests", () => {
+  it("SCRUM-67 [AC1] TC-67-01: lets a coordinator create and list equipment requests", () => {
     expect(can(coordinator, "equipment-request:create")).toBe(true);
     expect(can(coordinator, "equipment-request:list")).toBe(true);
   });
@@ -80,19 +80,19 @@ describe("can — relationship gate", () => {
     status: "SUBMITTED" as const,
   };
 
-  it("lets an organiser read their own event", () => {
+  it("SCRUM-67 [AC1] TC-67-02: lets an organiser read their own event", () => {
     expect(can(organiserA, "event:read", eventOwnedByA)).toBe(true);
   });
 
-  it("does not let a different organiser read someone else's event", () => {
+  it("SCRUM-67 [AC1] TC-67-02, SCRUM-68 [AC2, AC3, AC4, AC5] TC-68-02, TC-68-03: does not let a different organiser read someone else's event", () => {
     expect(can(organiserB, "event:read", eventOwnedByA)).toBe(false);
   });
 
-  it("lets the assigned coordinator read the event", () => {
+  it("SCRUM-67 [AC1] TC-67-02: lets the assigned coordinator read the event", () => {
     expect(can(coordinator, "event:read", eventOwnedByA)).toBe(true);
   });
 
-  it("does not let an unassigned coordinator read the event", () => {
+  it("SCRUM-67 [AC1] TC-67-02: does not let an unassigned coordinator read the event", () => {
     expect(
       can({ id: "other", role: "COORDINATOR" }, "event:read", eventOwnedByA),
     ).toBe(false);
@@ -104,7 +104,7 @@ describe("can — relationship gate", () => {
     expect(can(coordinator, "event:review", unassigned)).toBe(false);
   });
 
-  it("hides an unassigned draft from coordinators", () => {
+  it("SCRUM-68 [AC4] TC-68-03: hides an unassigned draft from coordinators", () => {
     const draft = {
       ...eventOwnedByA,
       coordinatorId: null,
@@ -113,7 +113,7 @@ describe("can — relationship gate", () => {
     expect(can(coordinator, "event:read", draft)).toBe(false);
   });
 
-  it("lets an attendee read only their own registration", () => {
+  it("SCRUM-67 [AC1] TC-67-02: lets an attendee read only their own registration", () => {
     const ownReg = { kind: "registration" as const, userId: "att" };
     const otherReg = { kind: "registration" as const, userId: "someone" };
     expect(can(attendee, "registration:read", ownReg)).toBe(true);
@@ -129,7 +129,7 @@ describe("can — relationship gate", () => {
 
   // SCRUM-27 — a request is raised for the coordinator's own event, so the
   // create action carries the same event relationship as reading it.
-  it("lets a coordinator request equipment only for an event they coordinate", () => {
+  it("SCRUM-67 [AC1] TC-67-02: lets a coordinator request equipment only for an event they coordinate", () => {
     expect(can(coordinator, "equipment-request:create", eventOwnedByA)).toBe(true);
     expect(
       can(
@@ -140,7 +140,7 @@ describe("can — relationship gate", () => {
     ).toBe(false);
   });
 
-  it("gives no event relationship to a role that holds an event action but isn't the organiser or coordinator", () => {
+  it("SCRUM-67 [AC1] TC-67-02: gives no event relationship to a role that holds an event action but isn't the organiser or coordinator", () => {
     // ATTENDEE holds event:browse, so the role gate passes and the event
     // relationship check runs — and must return false (the security fallback).
     expect(
@@ -172,7 +172,7 @@ describe("can — confirming an event (SCRUM-81)", () => {
     expect(can(attendee, "event:confirm", planning)).toBe(false);
   });
 
-  it("SCRUM-81, SCRUM-165 [AC8] TC-165-11: no Coordinator may confirm or open an event nobody is assigned to", () => {
+  it("SCRUM-81 [AC7] TC-81-07, SCRUM-165 [AC8] TC-165-11: no Coordinator may confirm or open an event nobody is assigned to", () => {
     const unassigned = { ...planning, coordinatorId: null };
     expect(can(coordinator, "event:confirm", unassigned)).toBe(false);
     expect(can(coordinator, "event:read", unassigned)).toBe(false);
@@ -259,11 +259,11 @@ describe("can — venue booking capabilities (SCRUM-50/52/53)", () => {
     status: "APPROVED" as const,
   };
 
-  it("SCRUM-50 TC-50-09: a coordinator may request a venue for an event assigned to them", () => {
+  it("SCRUM-50 [AC7] TC-50-09: a coordinator may request a venue for an event assigned to them", () => {
     expect(can(coordinator, "booking:request", assignedEvent)).toBe(true);
   });
 
-  it("SCRUM-50 TC-50-09: a coordinator may not request a venue for another coordinator's event", () => {
+  it("SCRUM-50 [AC7] TC-50-09: a coordinator may not request a venue for another coordinator's event", () => {
     expect(
       can(coordinator, "booking:request", {
         ...assignedEvent,
@@ -272,7 +272,7 @@ describe("can — venue booking capabilities (SCRUM-50/52/53)", () => {
     ).toBe(false);
   });
 
-  it("SCRUM-50 TC-50-09: no other role may request a venue", () => {
+  it("SCRUM-50 [AC7] TC-50-09: no other role may request a venue", () => {
     for (const user of [organiserA, venueStaff, techSupport, attendee]) {
       expect(can(user, "booking:request")).toBe(false);
     }

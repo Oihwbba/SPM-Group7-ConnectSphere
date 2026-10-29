@@ -34,7 +34,7 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-129 — event timezone is always Asia
     await prisma.$disconnect();
   });
 
-  it("SCRUM-129 [AC1 - Singapore timezone]: a new event with no timezone given is stored as Asia/Singapore", async () => {
+  it("SCRUM-129 [AC1] TC-129-01: [Singapore timezone] a new event with no timezone given is stored as Asia/Singapore", async () => {
     const event = await prisma.event.create({
       data: { name: "SCRUM-129 default zone", organiserId: "usr_organiser" },
       select: { id: true, timezone: true },
@@ -46,7 +46,7 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-129 — event timezone is always Asia
     }
   });
 
-  it("SCRUM-129 [AC1 - Singapore timezone]: the database refuses an event stored with any other timezone", async () => {
+  it("SCRUM-129 [AC1] TC-129-02: [Singapore timezone] the database refuses an event stored with any other timezone", async () => {
     await expect(
       prisma.event.create({
         data: { name: "SCRUM-129 other zone", organiserId: "usr_organiser", timezone: "UTC" },
@@ -54,7 +54,7 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-129 — event timezone is always Asia
     ).rejects.toThrow(/event_timezone_singapore/);
   });
 
-  it("SCRUM-129 [AC1 - Singapore timezone]: the database refuses an event with no timezone", async () => {
+  it("SCRUM-129 [AC1] TC-129-02: [Singapore timezone] the database refuses an event with no timezone", async () => {
     await expect(
       prisma.$executeRaw`
         INSERT INTO "Event" ("id", "name", "status", "organiserId", "timezone", "updatedAt")
@@ -62,7 +62,7 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-129 — event timezone is always Asia
     ).rejects.toThrow(/null/i);
   });
 
-  it("SCRUM-129 [AC2 - Existing events]: the migration relabels an event saved under another timezone and keeps its stored instants", async () => {
+  it("SCRUM-129 [AC2] TC-129-03: [Existing events] the migration relabels an event saved under another timezone and keeps its stored instants", async () => {
     const startAt = new Date("2031-08-01T13:00:00.000Z");
     const endAt = new Date("2031-08-01T21:00:00.000Z");
     let migrated: { timezone: string; startAt: Date | null; endAt: Date | null } | null = null;

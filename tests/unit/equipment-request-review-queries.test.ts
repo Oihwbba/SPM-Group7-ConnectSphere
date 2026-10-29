@@ -61,7 +61,7 @@ beforeEach(() => {
 });
 
 describe("getPoolAvailability — SCRUM-28 [AC1, AC4]", () => {
-  it("reports each active type's busiest instant in the period, counting confirmed reservations and outages", async () => {
+  it("SCRUM-28 [AC1]: reports each active type's busiest instant in the period, counting confirmed reservations and outages", async () => {
     db.reservation.findMany.mockResolvedValue([
       { equipmentId: "eqp_lectern", startAt: START, endAt: END, quantity: 2 },
     ]);
@@ -146,7 +146,7 @@ describe("getEquipmentRequestQueue — SCRUM-28", () => {
     });
   });
 
-  it("checks availability once per open request, and not at all for decided ones", async () => {
+  it("SCRUM-28: checks availability once per open request, and not at all for decided ones", async () => {
     db.equipmentRequest.findMany.mockResolvedValueOnce([
       request({ id: "eqr_open" }),
       request({ id: "eqr_done", status: "APPROVED" }),
@@ -160,7 +160,7 @@ describe("getEquipmentRequestQueue — SCRUM-28", () => {
     ).toBeNull();
   });
 
-  it("leaves availability unknown for an event without dates", async () => {
+  it("SCRUM-28: leaves availability unknown for an event without dates", async () => {
     db.equipmentRequest.findMany.mockResolvedValueOnce([
       request({
         event: { id: "evt_x", name: "TBC", startAt: null, endAt: null },

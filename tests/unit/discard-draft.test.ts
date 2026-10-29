@@ -269,7 +269,7 @@ describe("discardDraftEvent — SCRUM-130", () => {
     ["a non-string event id", { eventId: 42 }],
     ["no input at all", undefined],
   ])(
-    "SCRUM-130 [Validation]: %s is refused before anything is read",
+    "SCRUM-130: [Validation] %s is refused before anything is read",
     async (_label, input) => {
       mockAuth.mockResolvedValue(owner());
 
@@ -282,7 +282,7 @@ describe("discardDraftEvent — SCRUM-130", () => {
     },
   );
 
-  it("SCRUM-130 [Exit path]: an unexpected failure reading the event propagates instead of being reported as a refusal", async () => {
+  it("SCRUM-130: [Exit path] an unexpected failure reading the event propagates instead of being reported as a refusal", async () => {
     mockAuth.mockResolvedValue(owner());
     tx.event.findUnique.mockRejectedValue(new Error("connection lost"));
 
@@ -291,7 +291,7 @@ describe("discardDraftEvent — SCRUM-130", () => {
     );
   });
 
-  it("SCRUM-130 [Exit path]: a failure writing the history entry propagates, so the transaction rolls the discard back", async () => {
+  it("SCRUM-130: [Exit path] a failure writing the history entry propagates, so the transaction rolls the discard back", async () => {
     mockAuth.mockResolvedValue(owner());
     tx.event.findUnique.mockResolvedValue(draftRow());
     tx.auditLog.create.mockRejectedValue(new Error("audit write failed"));

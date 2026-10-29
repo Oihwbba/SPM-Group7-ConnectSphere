@@ -191,7 +191,7 @@ and the app is running. The event is in Planning, assigned to
 | Test Data | — |
 | Expected Result | One is saved; the other is told "This check is already Approved by … on …; nothing was changed." One history entry. |
 
-**Automated by:** `tests/unit/safety-check-outcome.test.ts` › "SCRUM-166 [AC7, AC8] TC-166-11: …", "SCRUM-166 [AC15] TC-166-11: …"; `tests/integration/safety-check.test.ts` › "SCRUM-166 [AC8] TC-166-11: …"
+**Automated by:** `tests/unit/safety-check-outcome.test.ts` › "SCRUM-166 [AC7, AC8] TC-166-11: …", "SCRUM-166 [AC7, AC15] TC-166-11: …"; `tests/integration/safety-check.test.ts` › "SCRUM-166 [AC8] TC-166-11: …"
 
 ### TC-166-12
 

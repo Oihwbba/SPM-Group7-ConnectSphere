@@ -41,19 +41,19 @@ describe("the calendar's week", () => {
 });
 
 describe("formatWeekRange — the week shown between the arrows", () => {
-  it("names the month and year once when the week is inside one month", () => {
+  it("SCRUM-36: names the month and year once when the week is inside one month", () => {
     expect(formatWeekRange("2026-10-12", "2026-10-18")).toBe(
       "12 – 18 Oct 2026",
     );
   });
 
-  it("names both months when the week crosses into the next", () => {
+  it("SCRUM-36: names both months when the week crosses into the next", () => {
     expect(formatWeekRange("2026-09-28", "2026-10-04")).toMatch(
       /^28 Sep.? – 4 Oct 2026$/,
     );
   });
 
-  it("names both years when the week crosses into the next", () => {
+  it("SCRUM-36: names both years when the week crosses into the next", () => {
     expect(formatWeekRange("2035-12-31", "2036-01-06")).toBe(
       "31 Dec 2035 – 6 Jan 2036",
     );

@@ -30,7 +30,7 @@ Reassignment's notices (AC10) are SCRUM-21's; TC-45-13 cites its tests. Every cr
 | [TC-45-09](#tc-45-09) | Positive, Negative | AC 5, AC 12, AC 13 | Unit, integration, e2e |
 | [TC-45-10](#tc-45-10) | Positive, Negative | AC 7, AC 12, AC 13 | Unit, integration, e2e |
 | [TC-45-11](#tc-45-11) | Positive | AC 6 | Unit, integration (SCRUM-82's) |
-| [TC-45-12](#tc-45-12) | Positive | AC 9 | Unit, integration (SCRUM-128's) |
+| [TC-45-12](#tc-45-12) | Positive | AC 9 | Unit (SCRUM-128's) |
 | [TC-45-13](#tc-45-13) | Positive, Concurrency | AC 10, AC 13 | Unit, integration, e2e (SCRUM-21's) |
 
 AC 15 (no duplicates of SCRUM-85's or SCRUM-124's notices) holds by
@@ -49,7 +49,7 @@ construction: every notice here goes to the event's Organiser or Coordinator.
 | Test Data | — |
 | Expected Result | Step 1: the Organiser gets "Request submitted": "\"Career Fair\" was submitted and is waiting to be assigned to a Coordinator." No assignment notice is sent yet: the request waits for the Lead. Step 2: it goes straight back to its Coordinator, so no submission notice. Step 3: one submission, with one set of notices. Step 4: the Organiser and the assigned Coordinator are each told. |
 
-**Automated by:** `tests/unit/submission-queue.test.ts` › "SCRUM-45 [AC1, AC12] TC-45-01: the Organiser is told the request was submitted and is waiting to be assigned; no assignment notice is sent until the Lead assigns"; `tests/unit/lead-queue.test.ts` › "SCRUM-165 [AC5] TC-165-07: [Positive] the Coordinator and the Organiser are notified" (step 4); `tests/unit/clarification-and-amend.test.ts` › "SCRUM-108 [AC9, AC11, AC14] TC-108-05, SCRUM-165 [AC9] TC-165-12: the amended request goes back to the same Coordinator, and the resubmission is recorded", "SCRUM-108 [AC14] TC-108-14, SCRUM-165 [AC9] TC-165-12: when its Coordinator lost the role, the resubmitted request returns to the queue and the history records who held it" and "SCRUM-108 [AC12] TC-108-08: …"; `tests/integration/concurrency.test.ts` › "SCRUM-14 AC: two simultaneous submissions of one draft succeed once and notify once"
+**Automated by:** `tests/unit/submission-queue.test.ts` › "SCRUM-45 [AC1, AC12] TC-45-01: the Organiser is told the request was submitted and is waiting to be assigned; no assignment notice is sent until the Lead assigns"; `tests/unit/lead-queue.test.ts` › "SCRUM-165 [AC5] TC-165-07: [Positive] the Coordinator and the Organiser are notified" (step 4); `tests/unit/clarification-and-amend.test.ts` › "SCRUM-108 [AC9, AC11, AC14] TC-108-05, SCRUM-165 [AC9] TC-165-12: the amended request goes back to the same Coordinator, and the resubmission is recorded", "SCRUM-108 [AC14] TC-108-14, SCRUM-165 [AC9] TC-165-12: when its Coordinator lost the role, the resubmitted request returns to the queue and the history records who held it" and "SCRUM-108 [AC12] TC-108-08: …"; `tests/integration/concurrency.test.ts` › "SCRUM-124 [AC10] TC-124-10, SCRUM-14 [AC3] TC-14-05, SCRUM-45 [AC1] TC-45-01: two simultaneous submissions of one draft succeed once and notify once"
 
 ### TC-45-02
 
@@ -101,7 +101,7 @@ construction: every notice here goes to the event's Organiser or Coordinator.
 | Test Data | — |
 | Expected Result | Step 1: the Organiser's only notice is "Clarification requested": "Your coordinator has asked a question about \"…\": Which room layout do you need?"; no Event status notice. Step 2: the Coordinator gets "Clarification answered". |
 
-**Automated by:** `tests/integration/workflow-notifications.test.ts` › "SCRUM-45 [AC8, AC14] TC-45-05: a clarification question tells the Organiser what is needed, and writes no status notice"; `tests/unit/clarification.test.ts` › "[Positive] AC: organiser responds, clarification is marked answered, coordinator is notified"
+**Automated by:** `tests/integration/workflow-notifications.test.ts` › "SCRUM-45 [AC8, AC14] TC-45-05: a clarification question tells the Organiser what is needed, and writes no status notice"; `tests/unit/clarification.test.ts` › "SCRUM-18 [AC4, AC6] TC-18-05, SCRUM-45 [AC8, AC14] TC-45-05: [Positive] organiser responds, clarification is marked answered, coordinator is notified"
 
 ### TC-45-06
 

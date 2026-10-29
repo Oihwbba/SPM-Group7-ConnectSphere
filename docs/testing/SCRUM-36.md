@@ -69,7 +69,7 @@ phone and to a screen reader, where a grid of every venue would not.
 | Test Data | — |
 | Expected Result | The day lists, in order: Available midnight to 9:00 am, Booked 9:00 am to 1:00 pm, Unavailable (maintenance) 1:00 pm to 5:00 pm, Available 5:00 pm to midnight. There is no "Available" between the two, and each stretch starts where the last ended. A period crossing midnight splits between the two days; one ending at midnight does not spill into the next. |
 
-**Automated by:** `tests/unit/venue-availability.test.ts` › "SCRUM-36 [AC5] TC-36-03: two periods meeting at an endpoint show no gap, and no moment is counted twice" and "SCRUM-36 — a period across midnight is split between the two days; one ending at midnight does not spill over"; `e2e/availability.spec.ts` › journey
+**Automated by:** `tests/unit/venue-availability.test.ts` › "SCRUM-36 [AC5] TC-36-03: two periods meeting at an endpoint show no gap, and no moment is counted twice" and "SCRUM-36 [AC5] TC-36-03: a period across midnight is split between the two days; one ending at midnight does not spill over"; `e2e/availability.spec.ts` › journey
 
 ### TC-36-04
 
@@ -134,7 +134,7 @@ phone and to a screen reader, where a grid of every venue would not.
 | Test Data | — |
 | Expected Result | On the calendar, the booking is a card showing "9:00 am – 1:00 pm", the event, the requester's initials and the attendance; the maintenance is a striped card showing "1:00 pm – 5:00 pm", "Maintenance" and its note. Step 1: a card with the event ("Approved — Research Symposium"), "Booked", the whole period, "Requested by Cody Coordinator", the expected attendance and the layout. Step 2: a card with the reason ("Maintenance"), "Unavailable", the whole period, the note and "Recorded by Vera Venue"; the booking's card closes. Step 3: the same card as step 1, and a screen reader reads it as the block's description. A period that crosses midnight shows its whole span, not just that day's part. The calendar is for internal staff only, so the event is named. |
 
-**Automated by:** `e2e/availability.spec.ts` › "SCRUM-37 [AC1, AC2, AC5] TC-37-02, SCRUM-36 [AC2, AC3, AC5] TC-36-01, TC-36-08, TC-36-09: maintenance is recorded, seen, refused over, and sat flush against a booking" (hover steps); `tests/unit/venue-availability.test.ts` › "SCRUM-36 — carries what a hover shows: the booking's event, requester and needs; the unavailability's note and recorder" and "SCRUM-36 — a stretch clipped to one day keeps the whole period in its details"
+**Automated by:** `e2e/availability.spec.ts` › "SCRUM-37 [AC1, AC2, AC5] TC-37-02, SCRUM-36 [AC2, AC3, AC5] TC-36-01, TC-36-08, TC-36-09: maintenance is recorded, seen, refused over, and sat flush against a booking" (hover steps); `tests/unit/venue-availability.test.ts` › "SCRUM-36 TC-36-08: carries what a hover shows: the booking's event, requester and needs; the unavailability's note and recorder" and "SCRUM-36 TC-36-08: a stretch clipped to one day keeps the whole period in its details"
 
 ### TC-36-09
 

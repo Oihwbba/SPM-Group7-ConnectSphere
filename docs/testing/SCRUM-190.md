@@ -69,7 +69,7 @@ unless the case says otherwise.
 | Test Data | 2027-11-20, 10:00, 18:00 |
 | Expected Result | **Event Date** is 2027-11-20, **Start Time** 10:00 and **End Time** 18:00. The Review step shows "Date: 20 Nov 2027" and "Time: 10:00 am SGT – 6:00 pm SGT". |
 
-**Automated by:** `tests/unit/event-one-day.test.ts` › "SCRUM-190 [AC1] TC-190-02: a stored period is shown as its Singapore date and times", "SCRUM-190 [AC1] TC-190-02: a draft with only an end keeps that end's date"; `e2e/events.spec.ts` › "organiser saves partial draft, locates and resumes draft with preserved fields, then completes and submits"
+**Automated by:** `tests/unit/event-one-day.test.ts` › "SCRUM-190 [AC1] TC-190-02: a stored period is shown as its Singapore date and times", "SCRUM-190 [AC1] TC-190-02: a draft with only an end keeps that end's date"; `e2e/events.spec.ts` › "SCRUM-15 [AC3] TC-15-05: organiser saves partial draft, locates and resumes draft with preserved fields, then completes and submits"
 
 ### TC-190-03
 
@@ -95,7 +95,7 @@ unless the case says otherwise.
 | Test Data | A future date, 17:00, 09:00 |
 | Expected Result | "The end time must be after the start time." against the end, and nothing is created. Every place the period is set refuses it the same way (AC 3). |
 
-**Automated by:** `tests/unit/event-one-day.test.ts` › "SCRUM-190 [AC2] TC-190-04: an end before the start is refused as an invalid time range" and, for each of submitting, saving a draft, a clarification answer, a change request and the Coordinator's edit, "SCRUM-190 [AC2, AC3] TC-190-04: … refuses an end before the start"; `tests/unit/events.test.ts` › "SCRUM-13 [AC8 - Domain Boundary]: rejects submission when proposed end date is earlier than start date"; `e2e/events.spec.ts` › "SCRUM-190 [AC1, AC2] TC-190-01, TC-190-04: the form asks for one date with a start and an end time, and an end time not after the start stops it at Step 2"
+**Automated by:** `tests/unit/event-one-day.test.ts` › "SCRUM-190 [AC2] TC-190-04: an end before the start is refused as an invalid time range" and, for each of submitting, saving a draft, a clarification answer, a change request and the Coordinator's edit, "SCRUM-190 [AC2, AC3] TC-190-04: … refuses an end before the start"; `tests/unit/events.test.ts` › "SCRUM-13 [AC8] TC-13-09, SCRUM-190 [AC2] TC-190-04: [Domain Boundary] rejects submission when proposed end date is earlier than start date"; `e2e/events.spec.ts` › "SCRUM-190 [AC1, AC2] TC-190-01, TC-190-04: the form asks for one date with a start and an end time, and an end time not after the start stops it at Step 2"
 
 ### TC-190-05
 
@@ -173,7 +173,7 @@ unless the case says otherwise.
 | Test Data | Name only |
 | Expected Result | The draft is saved. Reopened, **Event Date**, **Start Time** and **End Time** are empty. A time entered without a date gives no start or end. A draft whose dates are given still follows the one-day rule (SCRUM-15 AC 4). |
 
-**Automated by:** `tests/unit/event-one-day.test.ts` › "SCRUM-190 [AC3] TC-190-10: a draft can still be saved without a date or times", "SCRUM-190 [AC1, AC3] TC-190-10: without the date there is no start or end, so a draft saves without them", "SCRUM-190 [AC1, AC3] TC-190-10: a draft with no date or times shows empty fields"; `tests/unit/events.test.ts` › "SCRUM-15 [AC4 - Validation Rule]: a draft with $rule is refused, because dates that are provided must still be valid" (the "end on a later day than the start" row); `tests/unit/event-one-day.test.ts` › "SCRUM-190 [AC3] TC-190-10: saving a draft (SCRUM-15) refuses an event running into the next day"
+**Automated by:** `tests/unit/event-one-day.test.ts` › "SCRUM-190 [AC3] TC-190-10: a draft can still be saved without a date or times", "SCRUM-190 [AC1, AC3] TC-190-10: without the date there is no start or end, so a draft saves without them", "SCRUM-190 [AC1, AC3] TC-190-10: a draft with no date or times shows empty fields"; `tests/unit/events.test.ts` › "SCRUM-15 [AC4], SCRUM-190 [AC3] TC-190-10: [Validation Rule] a draft with $rule is refused, because dates that are provided must still be valid" (the "end on a later day than the start" row); `tests/unit/event-one-day.test.ts` › "SCRUM-190 [AC3] TC-190-10: saving a draft (SCRUM-15) refuses an event running into the next day"
 
 ### TC-190-11
 

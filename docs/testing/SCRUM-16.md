@@ -36,7 +36,7 @@ otherwise.
 | Test Data | Draft "US16 Draft"; submitted "US16 Submitted" |
 | Expected Result | The draft row shows a Draft badge (since the shared page conventions, the badge is the one Draft marker; the second "Draft — Incomplete" tag is gone), and a **Resume Draft** button; the submitted row shows its own status badge. **Drafts** shows only the draft, **Submitted** only the other. The draft's detail shows the Draft status too. |
 
-**Automated by:** `tests/unit/events.test.ts` › "SCRUM-16 [AC1, AC2 - Happy Path]: creates event with status DRAFT ensuring visual and logical separation from SUBMITTED"; `e2e/events.spec.ts` › "SCRUM-16 [AC7] TC-16-04: organiser can visually distinguish draft requests from submitted ones side-by-side and filter by status"
+**Automated by:** `tests/unit/events.test.ts` › "SCRUM-16 [AC1, AC2] TC-16-01: [Happy Path] creates event with status DRAFT ensuring visual and logical separation from SUBMITTED"; `e2e/events.spec.ts` › "SCRUM-16 [AC7] TC-16-04: organiser can visually distinguish draft requests from submitted ones side-by-side and filter by status"
 
 ### TC-16-02
 
@@ -49,7 +49,7 @@ otherwise.
 | Test Data | Draft, Submitted, Under Review, Approved, Planning, Confirmed, Completed, Cancelled, Rejected |
 | Expected Result | Each badge has a distinct icon and colour pair and a label in words, not the stored value. The Draft badge is muted and never looks like Under Review. |
 
-**Automated by:** `tests/unit/status-badge.test.ts` › "covers every one of the nine statuses", "gives every status its own icon, so colour is never the only signal", "gives every status a distinct icon and colour pair", "SCRUM-16: a draft is muted, and never shares a look with a request under review", "labels each status in words a user reads, not the enum value"
+**Automated by:** `tests/unit/status-badge.test.ts` › "SCRUM-16 [AC2, AC5] TC-16-02, SCRUM-23 [AC1] TC-23-01, SCRUM-24 [AC1, AC2] TC-24-01: covers every one of the nine statuses", "SCRUM-16 [AC2, AC5] TC-16-02: gives every status its own icon, so colour is never the only signal", "SCRUM-16 [AC2, AC5] TC-16-02: gives every status a distinct icon and colour pair", "SCRUM-16 [AC2, AC5] TC-16-02: a draft is muted, and never shares a look with a request under review", "SCRUM-16 [AC2, AC5] TC-16-02, SCRUM-23 [AC1] TC-23-01: labels each status in words a user reads, not the enum value"
 
 ### TC-16-03
 
@@ -62,7 +62,7 @@ otherwise.
 | Test Data | The Organiser's draft |
 | Expected Result | The draft isn't listed; the Coordinator's list never includes Draft events. |
 
-**Automated by:** `tests/unit/events.test.ts` › "SCRUM-16 [AC4 - Coordinator View Exclusion], SCRUM-165 [AC8] TC-165-11: the coordinator query lists only their own events, so no draft or unassigned request"; `tests/unit/coordinator-assigned-events.test.ts` › "[Negative] AC1: an unassigned draft is not in any Coordinator's list"
+**Automated by:** `tests/unit/events.test.ts` › "SCRUM-16 [AC4] TC-16-03, SCRUM-165 [AC8] TC-165-11, SCRUM-15 [AC8] TC-15-11: [Coordinator View Exclusion] the coordinator query lists only their own events, so no draft or unassigned request"; `tests/unit/coordinator-assigned-events.test.ts` › "SCRUM-15 [AC1, AC8] TC-15-11, SCRUM-16 [AC4] TC-16-03, SCRUM-68 [AC4] TC-68-03, SCRUM-69 [AC1] TC-69-02: [Negative] an unassigned draft is not in any Coordinator's list"
 
 ### TC-16-04
 
@@ -75,7 +75,7 @@ otherwise.
 | Test Data | The submitted request's id |
 | Expected Result | Only the draft row offers **Resume Draft**. Saving the submitted request as a draft is refused with "Draft event not found or cannot be modified." A rejected request offers **Amend & Resubmit** instead, which SCRUM-108 permits. |
 
-**Automated by:** `e2e/events.spec.ts` › "SCRUM-16 [AC7] TC-16-04: organiser can visually distinguish draft requests from submitted ones side-by-side and filter by status"; `tests/unit/events.test.ts` › "SCRUM-14 [AC4 - Business-Rule Negative]: refuses to edit a caller's own event as a draft once it has been submitted"
+**Automated by:** `e2e/events.spec.ts` › "SCRUM-16 [AC7] TC-16-04: organiser can visually distinguish draft requests from submitted ones side-by-side and filter by status"; `tests/unit/events.test.ts` › "SCRUM-14 [AC4] TC-14-06, SCRUM-16 [AC7] TC-16-04: [Business-Rule Negative] refuses to edit a caller's own event as a draft once it has been submitted"
 
 ### TC-16-05
 

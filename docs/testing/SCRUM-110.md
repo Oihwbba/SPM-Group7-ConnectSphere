@@ -160,7 +160,7 @@ the reason after "Rejected".
 | Test Data       | (a) one CANCELLED request <br> (b) one REJECTED request <br> (c) a REJECTED request for 2 Projectors, then a new APPROVED request for 1 Laptop, with 1 Laptop reserved <br> (d) two APPROVED requests that both ask for Projectors (2 and 3), with 3 and then 5 reserved                                                                                                                                     |
 | Expected Result | (a) Since SCRUM-170 AC 4, Equipment is "Not decided" and incomplete until the Coordinator decides (TC-170-07). (b) "Equipment — Rejected", incomplete, until the Coordinator requests again. (c) The rejected request is ignored: 1 Laptop reserved completes Equipment. (d) The two requests add up to 5 Projectors: 3 reserved is "Not fully reserved: Projector" (named once), 5 reserved is complete. A request still awaiting Technical Support's review is SCRUM-142 AC 10 (TC-142-18). |
 
-**Automated by:** `tests/unit/event-readiness.test.ts` › "SCRUM-110 TC-110-09, SCRUM-170 [AC4] TC-170-07: …", "SCRUM-110 [AC4] TC-110-09: …" and "SCRUM-110 [AC3] TC-110-09: …"
+**Automated by:** `tests/unit/event-readiness.test.ts` › "SCRUM-110 [AC3, AC4] TC-110-09, SCRUM-170 [AC4] TC-170-07: …", "SCRUM-110 [AC4] TC-110-09: …" and "SCRUM-110 [AC3] TC-110-09: …"
 
 ### TC-110-10
 
@@ -199,7 +199,7 @@ the reason after "Rejected".
 | Test Data       | —                                                                                                                  |
 | Expected Result | "Venue booking — Rejected" and "Equipment — Not fully reserved: Projector" are shown; the rejection reason is not. |
 
-**Automated by:** `tests/unit/readiness-actions.test.ts` › "SCRUM-110 [AC6] TC-110-12: …"; `e2e/readiness.spec.ts` › "SCRUM-110 [AC2, AC3, AC6] TC-110-04, TC-110-07, TC-110-11, TC-110-12: …"
+**Automated by:** `tests/unit/readiness-actions.test.ts` › "SCRUM-110 [AC6] TC-110-12: …"; `tests/unit/event-readiness.test.ts` › "SCRUM-110 [AC6] TC-110-12, SCRUM-162 [AC8] TC-162-12: the Organiser sees each booking's state, but not a flag's internal reason"; `e2e/readiness.spec.ts` › "SCRUM-110 [AC2, AC3, AC6] TC-110-04, TC-110-07, TC-110-11, TC-110-12: …"
 
 ### TC-110-13
 

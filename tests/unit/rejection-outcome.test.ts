@@ -413,7 +413,7 @@ describe("startRequestFromRejected — SCRUM-126 AC4", () => {
     expect(tx.event.findFirst).not.toHaveBeenCalled();
   });
 
-  it("SCRUM-126 [Exit path]: an unexpected database failure propagates instead of being reported as a refusal", async () => {
+  it("SCRUM-126: [Exit path] an unexpected database failure propagates instead of being reported as a refusal", async () => {
     mockAuth.mockResolvedValue(organiser());
     tx.event.findFirst.mockRejectedValue(new Error("connection lost"));
 

@@ -226,7 +226,7 @@ test.describe("SCRUM-85 — Attendees are kept informed", () => {
     await attendee.waitForURL(`**/events/${event.id}`);
   });
 
-  test("SCRUM-85 [AC5, AC9] TC-85-07, TC-85-08: an event being re-planned is a 404 to an Attendee not registered for it, and a withdrawn Attendee's old notice no longer links to it", async ({
+  test("SCRUM-85 [AC5, AC7, AC9, AC10] TC-85-07, TC-85-08: an event being re-planned is a 404 to an Attendee not registered for it, and a withdrawn Attendee's old notice no longer links to it", async ({
     browser,
   }) => {
     const name = `${PREFIX} Film Night ${Date.now()}`;

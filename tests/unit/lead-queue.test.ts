@@ -398,7 +398,7 @@ describe("assignCoordinator — SCRUM-165", () => {
     },
   );
 
-  it("[Exit path] rethrows an unexpected error instead of swallowing it", async () => {
+  it("SCRUM-165: [Exit path] rethrows an unexpected error instead of swallowing it", async () => {
     mockAuth.mockResolvedValue(lead());
     mockTransaction.mockRejectedValue(new Error("db down"));
 

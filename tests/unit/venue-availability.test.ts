@@ -309,7 +309,7 @@ describe("describeBlocker", () => {
     );
   });
 
-  it("SCRUM-159: a booking with no setup or turnaround reads exactly as before", () => {
+  it("SCRUM-159 [AC3] TC-159-14: a booking with no setup or turnaround reads exactly as before", () => {
     expect(
       describeBlocker({
         kind: "booking",
@@ -437,7 +437,7 @@ describe("availabilityByDay — SCRUM-36", () => {
     expect(covered).toBe(86_400_000);
   });
 
-  it("SCRUM-36 — a period across midnight is split between the two days; one ending at midnight does not spill over", () => {
+  it("SCRUM-36 [AC5] TC-36-03: a period across midnight is split between the two days; one ending at midnight does not spill over", () => {
     const days = availabilityByDay(
       [
         maintenance(sg("2035-03-10", "22:00"), sg("2035-03-11", "02:00")),
@@ -462,7 +462,7 @@ describe("availabilityByDay — SCRUM-36", () => {
     expect(days[2].segments.map((s) => s.kind)).toEqual(["free"]);
   });
 
-  it("walks the range across a month end", () => {
+  it("SCRUM-36: walks the range across a month end", () => {
     const days = availabilityByDay([], "2035-02-27", "2035-03-02");
     expect(days.map((d) => d.day)).toEqual([
       "2035-02-27",
@@ -515,7 +515,7 @@ describe("findVenueCalendar — SCRUM-36 hover details", () => {
     );
   });
 
-  it("SCRUM-36 — carries what a hover shows: the booking's event, requester and needs; the unavailability's note and recorder", async () => {
+  it("SCRUM-36 TC-36-08: carries what a hover shows: the booking's event, requester and needs; the unavailability's note and recorder", async () => {
     // The week of 5–11 Mar 2035, which holds both.
     const entries = await findVenueCalendar(
       stubDb([booked], [closed]) as never,
@@ -547,7 +547,7 @@ describe("findVenueCalendar — SCRUM-36 hover details", () => {
     });
   });
 
-  it("SCRUM-36 — a stretch clipped to one day keeps the whole period in its details", async () => {
+  it("SCRUM-36 TC-36-08: a stretch clipped to one day keeps the whole period in its details", async () => {
     const entries = await findVenueCalendar(
       stubDb([], [closed]) as never,
       "ven_1",

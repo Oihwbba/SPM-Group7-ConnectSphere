@@ -72,29 +72,29 @@ function baseEvent(
 }
 
 describe("totalCapacity — SCRUM-73/74: expected attendance IS the capacity", () => {
-  it("returns expectedAttendance directly", () => {
+  it("SCRUM-74 [AC1] TC-74-01: returns expectedAttendance directly", () => {
     expect(totalCapacity(baseEvent({ expectedAttendance: 50 }))).toBe(50);
   });
 
-  it("treats a null expectedAttendance as zero capacity rather than throwing", () => {
+  it("SCRUM-74 [AC1] TC-74-01: treats a null expectedAttendance as zero capacity rather than throwing", () => {
     expect(totalCapacity(baseEvent({ expectedAttendance: null }))).toBe(0);
   });
 });
 
 describe("remainingCapacity", () => {
-  it("AC: subtracts active registrations from the total", () => {
+  it("SCRUM-72 [AC3] TC-72-02, SCRUM-74 [AC2] TC-74-02: subtracts active registrations from the total", () => {
     expect(remainingCapacity(baseEvent({ expectedAttendance: 100 }), 40)).toBe(
       60,
     );
   });
 
-  it("Boundary: exactly at capacity returns zero, not negative", () => {
+  it("SCRUM-74 [AC4] TC-74-04: Boundary: exactly at capacity returns zero, not negative", () => {
     expect(remainingCapacity(baseEvent({ expectedAttendance: 10 }), 10)).toBe(
       0,
     );
   });
 
-  it("Boundary: over capacity (a pre-existing data anomaly) still floors at zero", () => {
+  it("SCRUM-74 [AC4] TC-74-04: Boundary: over capacity (a pre-existing data anomaly) still floors at zero", () => {
     expect(remainingCapacity(baseEvent({ expectedAttendance: 10 }), 15)).toBe(
       0,
     );
@@ -108,11 +108,11 @@ describe("remainingCapacity", () => {
 describe("computeRegistrationState — precedence and each state", () => {
   const now = new Date("2031-06-01T12:00:00Z");
 
-  it("[Positive] AC: open, unfilled, no period configured → OPEN", () => {
+  it("SCRUM-73 [AC6] TC-73-05: [Positive] open, unfilled, no period configured → OPEN", () => {
     expect(computeRegistrationState(baseEvent(), 0, now)).toBe("OPEN");
   });
 
-  it("[Negative] AC: registrationEnabled false → CLOSED, regardless of capacity or period", () => {
+  it("SCRUM-72 [AC4] TC-72-03: [Negative] registrationEnabled false → CLOSED, regardless of capacity or period", () => {
     expect(
       computeRegistrationState(
         baseEvent({ registrationEnabled: false }),
@@ -122,7 +122,7 @@ describe("computeRegistrationState — precedence and each state", () => {
     ).toBe("CLOSED");
   });
 
-  it("[Negative] AC: registrationClosesAt in the past → EXPIRED", () => {
+  it("SCRUM-72 [AC4] TC-72-03: [Negative] registrationClosesAt in the past → EXPIRED", () => {
     expect(
       computeRegistrationState(
         baseEvent({ registrationClosesAt: new Date("2031-05-01T00:00:00Z") }),
@@ -132,7 +132,7 @@ describe("computeRegistrationState — precedence and each state", () => {
     ).toBe("EXPIRED");
   });
 
-  it("[Boundary] SCRUM-75 AC7: registrationClosesAt exactly now counts as already closed (<=, not <)", () => {
+  it("SCRUM-75 [AC7] TC-75-04: [Boundary] registrationClosesAt exactly now counts as already closed (<=, not <)", () => {
     expect(
       computeRegistrationState(
         baseEvent({ registrationClosesAt: now }),
@@ -142,7 +142,7 @@ describe("computeRegistrationState — precedence and each state", () => {
     ).toBe("EXPIRED");
   });
 
-  it("[Negative] AC: registrationOpensAt in the future → NOT_YET_OPEN", () => {
+  it("SCRUM-72 [AC4] TC-72-03, SCRUM-75 [AC7] TC-75-03: [Negative] registrationOpensAt in the future → NOT_YET_OPEN", () => {
     expect(
       computeRegistrationState(
         baseEvent({ registrationOpensAt: new Date("2031-07-01T00:00:00Z") }),
@@ -152,19 +152,19 @@ describe("computeRegistrationState — precedence and each state", () => {
     ).toBe("NOT_YET_OPEN");
   });
 
-  it("[Boundary] registrationOpensAt exactly now already counts as open (not NOT_YET_OPEN)", () => {
+  it("SCRUM-73 [AC6] TC-73-05, SCRUM-75 [AC7] TC-75-03: [Boundary] registrationOpensAt exactly now already counts as open (not NOT_YET_OPEN)", () => {
     expect(
       computeRegistrationState(baseEvent({ registrationOpensAt: now }), 0, now),
     ).toBe("OPEN");
   });
 
-  it("[Negative] AC: remaining capacity zero → FULL", () => {
+  it("SCRUM-72 [AC6] TC-72-05, SCRUM-74 [AC4] TC-74-04: [Negative] remaining capacity zero → FULL", () => {
     expect(
       computeRegistrationState(baseEvent({ expectedAttendance: 5 }), 5, now),
     ).toBe("FULL");
   });
 
-  it("[Boundary] AC: one remaining place → OPEN, not FULL", () => {
+  it("SCRUM-72 [AC6] TC-72-05, SCRUM-74 [AC4] TC-74-04: [Boundary] one remaining place → OPEN, not FULL", () => {
     expect(
       computeRegistrationState(baseEvent({ expectedAttendance: 5 }), 4, now),
     ).toBe("OPEN");
@@ -247,7 +247,7 @@ describe("SCRUM-75 AC6, AC8: which registration can be closed or reopened", () =
 });
 
 describe("REGISTRATION_STATE_LABEL", () => {
-  it("has a human label for every state (exhaustive at the type level too)", () => {
+  it("SCRUM-72 [AC4] TC-72-03: has a human label for every state (exhaustive at the type level too)", () => {
     const states: Array<keyof typeof REGISTRATION_STATE_LABEL> = [
       "OPEN",
       "FULL",
@@ -269,11 +269,11 @@ describe("SCRUM-129 [AC5 - One period convention]: the registration window inclu
     registrationClosesAt: closesAt,
   });
 
-  it("SCRUM-129 [AC5 - One period convention]: registration is open at the exact opening instant", () => {
+  it("SCRUM-129 [AC5] TC-129-06: [One period convention] registration is open at the exact opening instant", () => {
     expect(computeRegistrationState(windowEvent, 0, opensAt)).toBe("OPEN");
   });
 
-  it("SCRUM-129 [AC5 - One period convention]: registration is no longer open at the exact closing instant", () => {
+  it("SCRUM-129 [AC5] TC-129-06: [One period convention] registration is no longer open at the exact closing instant", () => {
     expect(computeRegistrationState(windowEvent, 0, closesAt)).toBe("EXPIRED");
   });
 });
@@ -283,25 +283,25 @@ describe("SCRUM-72 AC5 / SCRUM-75 AC4, AC8: registration closes at the event's s
   const before = new Date("2031-06-09T01:00:00Z");
   const after = new Date("2031-06-10T02:00:00Z");
 
-  it("SCRUM-72 AC5: no period set, before the event starts → OPEN", () => {
+  it("SCRUM-72 [AC5] TC-72-04, SCRUM-75 [AC2, AC4] TC-75-01: no period set, before the event starts → OPEN", () => {
     expect(computeRegistrationState(baseEvent({ startAt }), 0, before)).toBe(
       "OPEN",
     );
   });
 
-  it("SCRUM-72 AC5: no period set, at the exact start instant → closed", () => {
+  it("SCRUM-72 [AC5] TC-72-04, SCRUM-75 [AC8] TC-75-05: no period set, at the exact start instant → closed", () => {
     expect(computeRegistrationState(baseEvent({ startAt }), 0, startAt)).toBe(
       "EXPIRED",
     );
   });
 
-  it("SCRUM-72 AC5: no period set, after the event starts → closed", () => {
+  it("SCRUM-72 [AC5] TC-72-04: no period set, after the event starts → closed", () => {
     expect(computeRegistrationState(baseEvent({ startAt }), 0, after)).toBe(
       "EXPIRED",
     );
   });
 
-  it("SCRUM-75 AC8: a closing time later than the start is ignored once the event has started", () => {
+  it("SCRUM-75 [AC8] TC-75-05: a closing time later than the start is ignored once the event has started", () => {
     const stale = baseEvent({
       startAt,
       registrationClosesAt: new Date("2031-06-12T01:00:00Z"),
@@ -309,7 +309,7 @@ describe("SCRUM-72 AC5 / SCRUM-75 AC4, AC8: registration closes at the event's s
     expect(computeRegistrationState(stale, 0, after)).toBe("EXPIRED");
   });
 
-  it("SCRUM-75 AC8: an event that has started is closed even when it is also full", () => {
+  it("SCRUM-75 [AC8] TC-75-05: an event that has started is closed even when it is also full", () => {
     expect(
       computeRegistrationState(
         baseEvent({ startAt, expectedAttendance: 5 }),
@@ -361,7 +361,7 @@ describe("SCRUM-72 AC3: registrationPeriodText — the period an Attendee sees",
   const opensAt = new Date("2031-06-01T01:00:00Z");
   const closesAt = new Date("2031-06-08T01:00:00Z");
 
-  it("SCRUM-72 AC3: a set window shows its opening and closing times", () => {
+  it("SCRUM-72 [AC3] TC-72-02, SCRUM-75 [AC7, AC10] TC-75-03, TC-75-13: a set window shows its opening and closing times", () => {
     expect(
       registrationPeriodText({
         registrationOpensAt: opensAt,
@@ -373,7 +373,7 @@ describe("SCRUM-72 AC3: registrationPeriodText — the period an Attendee sees",
     );
   });
 
-  it("SCRUM-72 AC5: no window set shows the default — opens on confirmation, closes at the start", () => {
+  it("SCRUM-72 [AC5] TC-72-04, SCRUM-73 [AC6] TC-73-05, SCRUM-75 [AC2, AC4] TC-75-01: no window set shows the default — opens on confirmation, closes at the start", () => {
     expect(
       registrationPeriodText({
         registrationOpensAt: null,
@@ -383,7 +383,7 @@ describe("SCRUM-72 AC3: registrationPeriodText — the period an Attendee sees",
     ).toBe(`Opens on confirmation · Closes ${formatDateTime(startAt)}`);
   });
 
-  it("SCRUM-75 AC8: a closing time after the start shows the start as the close", () => {
+  it("SCRUM-75 [AC8] TC-75-05: a closing time after the start shows the start as the close", () => {
     expect(
       registrationPeriodText({
         registrationOpensAt: opensAt,
@@ -395,7 +395,7 @@ describe("SCRUM-72 AC3: registrationPeriodText — the period an Attendee sees",
     );
   });
 
-  it("omits the close when neither a closing time nor a start is set", () => {
+  it("SCRUM-72 [AC3]: omits the close when neither a closing time nor a start is set", () => {
     expect(
       registrationPeriodText({
         registrationOpensAt: null,

@@ -171,7 +171,7 @@ time.
 | Test Data | — |
 | Expected Result | Step 1: **Venue bookings** lists all three, oldest first, each with its venue, attendance, period and status; an expired hold reads Expired. Step 2: Confirmed arrangements lists both approved venues. Step 3: both approved venues' names and locations show. Step 4: "Event not found." and nothing is read. |
 
-**Automated by:** `tests/unit/event-readiness.test.ts` › "SCRUM-162 [AC7] TC-162-11: lists every booking of the event, …" and "SCRUM-81 [AC6] TC-81-06, SCRUM-162 [AC7] TC-162-11: when two approved bookings cover the event, the Organiser sees both venues, oldest first"; `tests/unit/readiness-actions.test.ts` › "SCRUM-162 [AC7] TC-162-11: $who sees every venue booking of the event" (2 tests) and "… is told the event was not found, and no booking is read" (4 tests); `tests/unit/attendee-events.test.ts` › "SCRUM-162 [AC7] TC-162-11: the detail read brings every approved venue's name and location, in the order requested" and "SCRUM-162 [AC7] TC-162-11, [Positive] AC: fetches every approved booking's venue, …"
+**Automated by:** `tests/unit/event-readiness.test.ts` › "SCRUM-162 [AC7] TC-162-11: lists every booking of the event, …" and "SCRUM-81 [AC6] TC-81-06, SCRUM-162 [AC7] TC-162-11: when two approved bookings cover the event, the Organiser sees both venues, oldest first"; `tests/unit/readiness-actions.test.ts` › "SCRUM-162 [AC7] TC-162-11: $who sees every venue booking of the event" (2 tests) and "… is told the event was not found, and no booking is read" (4 tests); `tests/unit/attendee-events.test.ts` › "SCRUM-162 [AC7] TC-162-11: the detail read brings every approved venue's name and location, in the order requested" and "SCRUM-162 [AC7] TC-162-11, SCRUM-72 [AC1, AC2] TC-72-01: [Positive] fetches every approved booking's venue, …"
 
 ### TC-162-12
 
@@ -184,7 +184,7 @@ time.
 | Test Data | — |
 | Expected Result | Venue booking reads "Approved" and is complete; it lists the two approved venues, oldest first, each with its attendance. Ended bookings aren't listed. The Organiser sees the same states but not a flag's reason. |
 
-**Automated by:** `tests/unit/event-readiness.test.ts` › "SCRUM-162 [AC8] TC-162-12: every booking approved for the whole event completes the item, …", "SCRUM-162 [AC8] TC-162-12: a rejected, cancelled or expired booking isn't listed …" and "SCRUM-162 [AC8], SCRUM-110 [AC6] TC-162-12: the Organiser sees each booking's state, but not a flag's internal reason"
+**Automated by:** `tests/unit/event-readiness.test.ts` › "SCRUM-162 [AC8] TC-162-12: every booking approved for the whole event completes the item, …", "SCRUM-162 [AC8] TC-162-12: a rejected, cancelled or expired booking isn't listed …" and "SCRUM-110 [AC6] TC-110-12, SCRUM-162 [AC8] TC-162-12: the Organiser sees each booking's state, but not a flag's internal reason"
 
 ### TC-162-13
 

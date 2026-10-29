@@ -30,19 +30,19 @@ describe("shared Prisma client — SCRUM-125", () => {
     delete globalForPrisma.prisma;
   });
 
-  it("logs warnings as well as errors in development", async () => {
+  it("SCRUM-125: logs warnings as well as errors in development", async () => {
     const prisma = await loadDb("development");
 
     expect(prisma.options.log).toEqual(["error", "warn"]);
   });
 
-  it("logs only errors in production", async () => {
+  it("SCRUM-125: logs only errors in production", async () => {
     const prisma = await loadDb("production");
 
     expect(prisma.options.log).toEqual(["error"]);
   });
 
-  it("keeps the client across hot reloads outside production", async () => {
+  it("SCRUM-125: keeps the client across hot reloads outside production", async () => {
     const first = await loadDb("development");
     const second = await loadDb("development");
 
@@ -50,7 +50,7 @@ describe("shared Prisma client — SCRUM-125", () => {
     expect(PrismaClient).toHaveBeenCalledTimes(1);
   });
 
-  it("does not cache the client globally in production", async () => {
+  it("SCRUM-125: does not cache the client globally in production", async () => {
     const prisma = await loadDb("production");
 
     expect(prisma).toBeDefined();

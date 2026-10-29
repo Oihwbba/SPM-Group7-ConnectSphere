@@ -236,7 +236,7 @@ describe.skipIf(!usesLocalDatabase)(
       expect(offeredToOther).not.toContain(eventId);
     });
 
-    it("lists a request for its coordinator only", async () => {
+    it("SCRUM-27: lists a request for its coordinator only", async () => {
       const created = await createEquipmentRequest(request(eventId));
       if (!created.ok) throw new Error(created.error);
 
@@ -261,7 +261,7 @@ describe.skipIf(!usesLocalDatabase)(
       expect(theirs.map((row) => row.id)).not.toContain(created.data.id);
     });
 
-    it("SCRUM-229 [AC3] SCRUM-165 [AC8] TC-27-18: an event with no Coordinator is neither offered nor listed to a Coordinator", async () => {
+    it("SCRUM-229 [AC3], SCRUM-165 [AC8], SCRUM-27 [AC1] TC-27-18: an event with no Coordinator is neither offered nor listed to a Coordinator", async () => {
       // Its own name, so suites counting events by name aren't disturbed.
       const unassigned = await prisma.event.create({
         data: {

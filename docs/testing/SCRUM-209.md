@@ -40,196 +40,173 @@ safety check" open the tab at that section.
 | [TC-209-12](#tc-209-12) | Positive | AC 1 | e2e |
 | [TC-209-13](#tc-209-13) | Negative | AC 2 | Unit |
 
-## TC-209-01
-
-**Find a venue opens venue search for this event.**
-
-1. As the Coordinator, open the event's Arrangements tab.
-2. The Venues section says "No venues requested yet." and has **Find a venue**.
-3. Select it.
-
-**Expected:** venue search opens for this event ("For <event name>", with the
-event's period), as SCRUM-38 AC1 does. **Back to event** returns to the
-event's Arrangements tab. Find a venue is offered only to the assigned
-Coordinator, while the event is Approved or Planning.
-
-*Automated:* `tests/unit/readiness-actions.test.ts` "SCRUM-209 [AC1, AC4] TC-209-01";
-`e2e/arrange-from-event-page.spec.ts` "SCRUM-209 [AC1] TC-209-01, TC-209-02, TC-209-10".
-
-## TC-209-02
-
-**Requesting a venue from the search returns to the event.**
-
-1. From TC-209-01, search, pick the Theatre layout and select **Request this
-   venue** on Grand Auditorium.
-2. On Request a venue, submit the request.
-
-**Expected:** the browser returns to the event's Arrangements tab with
-"Venue requested: Grand Auditorium. It is pending Venue Staff approval.", and
-the Venues section lists Grand Auditorium as Pending. One Pending booking is
-written. Find a replacement venue (on a flagged booking) also returns there.
-
-*Automated:* `e2e/arrange-from-event-page.spec.ts` "SCRUM-209 [AC1] TC-209-01, TC-209-02, TC-209-10".
-
-## TC-209-03
-
-**Request equipment in place, for this event only.**
-
-1. The event has an approved venue. In the Equipment section, select
-   **Request equipment**.
-2. The form says "For <event name>." and has no event dropdown. Add one
-   Projector and submit.
-
-**Expected:** the page stays open; the section shows the request, Pending
-Review, with its line. Request equipment is no longer offered. Only the
-assigned Coordinator is offered it, while the event is Approved or Planning
-(SCRUM-27).
-
-*Automated:* `tests/unit/readiness-actions.test.ts` every "SCRUM-209 [AC2] TC-209-03"
-test and "SCRUM-209 [AC2, AC4] TC-209-03"; `tests/unit/equipment-request-queries.test.ts`
-"SCRUM-209 [AC2] TC-209-03"; `e2e/arrange-from-event-page.spec.ts` "SCRUM-209 [AC2] TC-209-03, TC-209-04, TC-209-10".
-
-## TC-209-04
-
-**Change lines and Withdraw, with SCRUM-142's rules.**
-
-1. From TC-209-03, Technical Support approves the request.
-2. Select **Change lines**, remove the Projector, add 3 Wireless Microphones
-   and save.
-3. Select **Withdraw**, then **Keep it**.
-
-**Expected:** after the change the request is back to Pending Review, on the
-same page, and lists the Wireless Microphone. Withdraw asks "Withdraw this equipment request?" first; keeping it
-changes nothing. The request's history (Technical Support's updates) shows
-under it for the Coordinator.
-
-*Automated:* `e2e/arrange-from-event-page.spec.ts` "SCRUM-209 [AC2] TC-209-03, TC-209-04, TC-209-10".
-
-## TC-209-05
-
-**No equipment needed, without leaving the page.**
-
-1. The event has an approved venue. In the Equipment section, select **No
-   equipment needed**.
-
-**Expected:** "Recorded: no equipment needed."; the section reads No equipment
-needed, with "To change this, request equipment: the request replaces it."
-SCRUM-170 has no undo; a later equipment request replaces the record.
-
-*Automated:* `e2e/arrange-from-event-page.spec.ts` "SCRUM-209 [AC2, AC3] TC-209-05, TC-209-06, TC-209-07".
-
-## TC-209-06
-
-**Request safety check is not offered before the checklist allows it.**
-
-1. The event has an approved venue, and equipment not yet decided.
-
-**Expected:** the Safety check section reads Not requested and "Request once a
-venue is approved and equipment is settled.", with no button (not a greyed-out
-one).
-
-*Automated:* `e2e/arrange-from-event-page.spec.ts` "SCRUM-209 [AC2, AC3] TC-209-05, TC-209-06, TC-209-07".
-
-## TC-209-07
-
-**Request safety check appears once allowed, and works.**
-
-1. From TC-209-05, the venue is approved and equipment settled.
-2. Select **Request safety check**.
-
-**Expected:** the button was offered (SCRUM-166 AC1); after it, the section
-reads Awaiting review and "Waiting for a Safety Officer to review it.", the
-button is gone, and one check Awaiting review is written. Changes requested
-and Rejected show with the officer's note for the Coordinator.
-
-*Automated:* `e2e/arrange-from-event-page.spec.ts` "SCRUM-209 [AC2, AC3] TC-209-05, TC-209-06, TC-209-07".
-
-## TC-209-08
-
-**Negative — the Organiser sees the sections read-only.**
-
-1. As the Organiser, open the event's Arrangements tab.
-2. Open `/bookings/new?event=<id>&venue=ven_auditorium&return=event`.
-
-**Expected:** the three sections show, with no button and no Find a venue
-link; the equipment request shows its lines and status, without Technical
-Support's notes or history. The request form refuses the Organiser. Nothing
-is written.
-
-*Automated:* `tests/unit/readiness-actions.test.ts` "SCRUM-209 [AC4] TC-209-08";
-`e2e/arrange-from-event-page.spec.ts` "SCRUM-209 [AC4] TC-209-08, TC-209-09".
-
-## TC-209-09
-
-**Negative — a Coordinator not assigned to the event is refused, and nothing is written.**
-
-1. As `coordinator2@test.local`, open `/events/<id>?tab=arrangements`.
-2. Open `/bookings/new?event=<id>&venue=ven_auditorium&return=event`.
-
-**Expected:** the event page is not found (SCRUM-208 AC5); the request form
-doesn't take the event, and has no Back to event. No booking, equipment
-request, safety check or No equipment needed is written. The actions' own
-refusals are unchanged and keep their tests: not the assigned Coordinator
-(TC-50-16, TC-27-17, TC-142-11), a second active equipment request (TC-27-09,
-TC-142-14, TC-170-10), a venue already requested (TC-38-01), and a safety check
-before the checklist allows it (TC-166-02).
-
-*Automated:* `tests/unit/readiness-actions.test.ts` "SCRUM-209 [AC4] TC-209-09";
-`e2e/arrange-from-event-page.spec.ts` "SCRUM-209 [AC4] TC-209-08, TC-209-09".
-
-## TC-209-10
-
-**The Next step opens Arrangements at the right section.**
-
-1. As the Coordinator, open an event with no venue; then one with a venue
-   approved and equipment not decided; then one with both settled and no check.
-
-**Expected:** the banner's button reads "Request a venue", "Settle equipment"
-and "Request the safety check" respectively, and opens the Arrangements tab at
-Venues, Equipment and Safety check.
-
-*Automated:* `tests/unit/event-next-step.test.ts` "SCRUM-209 [AC1, AC2, AC3] TC-209-10";
-`e2e/arrange-from-event-page.spec.ts` "SCRUM-209 [AC1] TC-209-01, TC-209-02, TC-209-10",
-"SCRUM-209 [AC2] TC-209-03, TC-209-04, TC-209-10".
-
-## TC-209-11
-
-**Every live equipment request is shown, each with its own actions (GLM review of #282).**
-
-1. The event has two live requests from before SCRUM-186: one Approved
-   (Projector), one Pending Review (Wireless Microphone).
-2. As the Coordinator, open Arrangements; on the Wireless Microphone request,
-   choose **Withdraw**, then **Withdraw request**.
-
-**Expected:** 1: both requests are shown, each with its lines, status and
-history, and its own **Change lines** and **Withdraw** (SCRUM-142 rules). 2: the
-withdrawn request becomes Cancelled and leaves the section; the Projector
-request stays, still Approved. With no live request, the newest decided one is
-shown instead.
-
-*Automated:* `e2e/arrange-from-event-page.spec.ts` "SCRUM-209 [AC2] TC-209-11, SCRUM-186 [AC5]".
-
-## TC-209-12
-
-**Reset on a venue search opened from the event still leads back to it (GLM review of #282).**
-
-1. From the event, open venue search; change the attendance; choose **Reset**.
-
-**Expected:** the search opens again for the event with `return=event` kept,
-so **Back to event** and a later venue request still return to the event.
-
-*Automated:* `e2e/arrange-from-event-page.spec.ts` "SCRUM-209 [AC1] TC-209-12".
-
-## TC-209-13
-
-**Negative — a list not read yet, or that couldn't be read, doesn't say nothing was requested (GLM review of #282).**
-
-1. Open Arrangements while the venue and equipment lists load; and when one
-   can't be read.
-
-**Expected:** "Loading…" while loading; "Couldn't load the venue requests." or
-"Couldn't load the equipment requests." on a failure; "No venues requested
-yet." / "No equipment requested yet." only once read and empty. A list read
-again keeps what it showed until it answers.
-
-*Automated:* `tests/unit/list-state.test.tsx` every "SCRUM-209 [AC2] TC-209-13" test.
+---
+
+### TC-209-01
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-209-01 |
+| Test Scenario | [Positive] AC 1: Find a venue opens venue search for this event |
+| Pre-conditions | As the shared pre-conditions. |
+| Test Steps | 1. As the Coordinator, open the event's Arrangements tab. <br> 2. The Venues section says "No venues requested yet." and has **Find a venue**. <br> 3. Select it. |
+| Test Data | `coordinator@test.local` |
+| Expected Result | Venue search opens for this event ("For <event name>", with the event's period), as SCRUM-38 AC1 does. **Back to event** returns to the event's Arrangements tab. Find a venue is offered only to the assigned Coordinator, while the event is Approved or Planning. |
+
+**Automated by:** `tests/unit/readiness-actions.test.ts` › "SCRUM-209 [AC1, AC4] TC-209-01: Find a venue for $who is offered: $offered"; `e2e/arrange-from-event-page.spec.ts` › "SCRUM-209 [AC1] TC-209-01, TC-209-02, TC-209-10: Find a venue, request one, and come back to the event with the new Pending booking"
+
+### TC-209-02
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-209-02 |
+| Test Scenario | [Positive] AC 1: requesting a venue from the search returns to the event |
+| Pre-conditions | As TC-209-01, on venue search for the event. |
+| Test Steps | 1. Search, pick the Theatre layout and select **Request this venue** on Grand Auditorium. <br> 2. On Request a venue, submit the request. |
+| Test Data | Grand Auditorium, Theatre layout |
+| Expected Result | The browser returns to the event's Arrangements tab with "Venue requested: Grand Auditorium. It is pending Venue Staff approval.", and the Venues section lists Grand Auditorium as Pending. One Pending booking is written. Find a replacement venue (on a flagged booking) also returns there. |
+
+**Automated by:** `e2e/arrange-from-event-page.spec.ts` › "SCRUM-209 [AC1] TC-209-01, TC-209-02, TC-209-10: Find a venue, request one, and come back to the event with the new Pending booking"
+
+### TC-209-03
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-209-03 |
+| Test Scenario | [Positive] AC 2: request equipment in place, for this event only |
+| Pre-conditions | The event has an approved venue. |
+| Test Steps | 1. In the Equipment section, select **Request equipment**. <br> 2. The form says "For <event name>." and has no event dropdown. Add one Projector and submit. |
+| Test Data | Projector × 1 |
+| Expected Result | The page stays open; the section shows the request, Pending Review, with its line. Request equipment is no longer offered. Only the assigned Coordinator is offered it, while the event is Approved or Planning (SCRUM-27). |
+
+**Automated by:** `tests/unit/readiness-actions.test.ts` › every "SCRUM-209 [AC2] TC-209-03: …" test and "SCRUM-209 [AC2, AC4] TC-209-03: at $status, a new request offered is $offered (SCRUM-27's own rule)"; `tests/unit/equipment-request-queries.test.ts` › "SCRUM-209 [AC2] TC-209-03: lists one event's requests, newest first, read as the Equipment Requests page reads them"; `e2e/arrange-from-event-page.spec.ts` › "SCRUM-209 [AC2] TC-209-03, TC-209-04, TC-209-10: …"
+
+### TC-209-04
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-209-04 |
+| Test Scenario | [Positive] AC 2: Change lines and Withdraw, with SCRUM-142's rules |
+| Pre-conditions | As TC-209-03, and Technical Support has approved the request. |
+| Test Steps | 1. Select **Change lines**, remove the Projector, add 3 Wireless Microphones and save. <br> 2. Select **Withdraw**, then **Keep it**. |
+| Test Data | Wireless Microphone × 3 |
+| Expected Result | After the change the request is back to Pending Review, on the same page, and lists the Wireless Microphone. Withdraw asks "Withdraw this equipment request?" first; keeping it changes nothing. The request's history (Technical Support's updates) shows under it for the Coordinator. |
+
+**Automated by:** `e2e/arrange-from-event-page.spec.ts` › "SCRUM-209 [AC2] TC-209-03, TC-209-04, TC-209-10: …"
+
+### TC-209-05
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-209-05 |
+| Test Scenario | [Positive] AC 2: No equipment needed, without leaving the page |
+| Pre-conditions | The event has an approved venue. |
+| Test Steps | 1. In the Equipment section, select **No equipment needed**. |
+| Test Data | — |
+| Expected Result | "Recorded: no equipment needed."; the section reads No equipment needed, with "To change this, request equipment: the request replaces it." SCRUM-170 has no undo; a later equipment request replaces the record. |
+
+**Automated by:** `e2e/arrange-from-event-page.spec.ts` › "SCRUM-209 [AC2, AC3] TC-209-05, TC-209-06, TC-209-07: …"
+
+### TC-209-06
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-209-06 |
+| Test Scenario | [Negative] AC 3: Request safety check is not offered before the checklist allows it |
+| Pre-conditions | The event has an approved venue, and equipment not yet decided. |
+| Test Steps | 1. As the Coordinator, open the event's Arrangements tab. |
+| Test Data | — |
+| Expected Result | The Safety check section reads Not requested and "Request once a venue is approved and equipment is settled.", with no button (not a greyed-out one). |
+
+**Automated by:** `e2e/arrange-from-event-page.spec.ts` › "SCRUM-209 [AC2, AC3] TC-209-05, TC-209-06, TC-209-07: …"
+
+### TC-209-07
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-209-07 |
+| Test Scenario | [Positive] AC 3: Request safety check appears once allowed, and works |
+| Pre-conditions | As TC-209-05: the venue is approved and equipment settled. |
+| Test Steps | 1. Select **Request safety check**. |
+| Test Data | — |
+| Expected Result | The button was offered (SCRUM-166 AC1); after it, the section reads Awaiting review and "Waiting for a Safety Officer to review it.", the button is gone, and one check Awaiting review is written. Changes requested and Rejected show with the officer's note for the Coordinator. |
+
+**Automated by:** `e2e/arrange-from-event-page.spec.ts` › "SCRUM-209 [AC2, AC3] TC-209-05, TC-209-06, TC-209-07: …"
+
+### TC-209-08
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-209-08 |
+| Test Scenario | [Negative] AC 4: the Organiser sees the sections read-only |
+| Pre-conditions | As the shared pre-conditions. |
+| Test Steps | 1. As the Organiser, open the event's Arrangements tab. <br> 2. Open `/bookings/new?event=<id>&venue=ven_auditorium&return=event`. |
+| Test Data | `organiser@test.local` |
+| Expected Result | The three sections show, with no button and no Find a venue link; the equipment request shows its lines and status, without Technical Support's notes or history. The request form refuses the Organiser. Nothing is written. |
+
+**Automated by:** `tests/unit/readiness-actions.test.ts` › "SCRUM-209 [AC4] TC-209-08: the Organiser reads the lines and status only: no notes, no history, no catalogue, no actions"; `e2e/arrange-from-event-page.spec.ts` › "SCRUM-209 [AC4] TC-209-08, TC-209-09: …"
+
+### TC-209-09
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-209-09 |
+| Test Scenario | [Negative] AC 4: a Coordinator not assigned to the event is refused, and nothing is written |
+| Pre-conditions | As the shared pre-conditions. |
+| Test Steps | 1. As `coordinator2@test.local`, open `/events/<id>?tab=arrangements`. <br> 2. Open `/bookings/new?event=<id>&venue=ven_auditorium&return=event`. |
+| Test Data | `coordinator2@test.local` |
+| Expected Result | The event page is not found (SCRUM-208 AC5); the request form doesn't take the event, and has no Back to event. No booking, equipment request, safety check or No equipment needed is written. The actions' own refusals are unchanged and keep their tests: not the assigned Coordinator (TC-50-16, TC-27-17, TC-142-11), a second active equipment request (TC-27-09, TC-142-14, TC-170-10), a venue already requested (TC-38-01), and a safety check before the checklist allows it (TC-166-02). |
+
+**Automated by:** `tests/unit/readiness-actions.test.ts` › "SCRUM-209 [AC4] TC-209-09: $who is told the event was not found, and no request is read"; `e2e/arrange-from-event-page.spec.ts` › "SCRUM-209 [AC4] TC-209-08, TC-209-09: …"
+
+### TC-209-10
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-209-10 |
+| Test Scenario | [Positive] AC 1, AC 2, AC 3: the Next step opens Arrangements at the right section |
+| Pre-conditions | Three events: one with no venue; one with a venue approved and equipment not decided; one with both settled and no check. |
+| Test Steps | 1. As the Coordinator, open each event in turn. <br> 2. Select the Next step banner's button. |
+| Test Data | `coordinator@test.local` |
+| Expected Result | The banner's button reads "Request a venue", "Settle equipment" and "Request the safety check" respectively, and opens the Arrangements tab at Venues, Equipment and Safety check. |
+
+**Automated by:** `tests/unit/event-next-step.test.ts` › every "SCRUM-209 [AC1, AC2, AC3] TC-209-10: …" test; `e2e/arrange-from-event-page.spec.ts` › "SCRUM-209 [AC1] TC-209-01, TC-209-02, TC-209-10: …" and "SCRUM-209 [AC2] TC-209-03, TC-209-04, TC-209-10: …"
+
+### TC-209-11
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-209-11 |
+| Test Scenario | [Positive] AC 2: every live equipment request is shown, each with its own actions (GLM review of #282) |
+| Pre-conditions | The event has two live requests from before SCRUM-186: one Approved (Projector), one Pending Review (Wireless Microphone). |
+| Test Steps | 1. As the Coordinator, open Arrangements. <br> 2. On the Wireless Microphone request, choose **Withdraw**, then **Withdraw request**. |
+| Test Data | `coordinator@test.local` |
+| Expected Result | 1: both requests are shown, each with its lines, status and history, and its own **Change lines** and **Withdraw** (SCRUM-142 rules). 2: the withdrawn request becomes Cancelled and leaves the section; the Projector request stays, still Approved. With no live request, the newest decided one is shown instead. |
+
+**Automated by:** `e2e/arrange-from-event-page.spec.ts` › "SCRUM-209 [AC2] TC-209-11, SCRUM-186 [AC5]: …"
+
+### TC-209-12
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-209-12 |
+| Test Scenario | [Positive] AC 1: Reset on a venue search opened from the event still leads back to it (GLM review of #282) |
+| Pre-conditions | Venue search opened from the event (as TC-209-01). |
+| Test Steps | 1. Change the attendance. <br> 2. Choose **Reset**. |
+| Test Data | — |
+| Expected Result | The search opens again for the event with `return=event` kept, so **Back to event** and a later venue request still return to the event. |
+
+**Automated by:** `e2e/arrange-from-event-page.spec.ts` › "SCRUM-209 [AC1] TC-209-12: Reset on a venue search opened from the event still leads back to it"
+
+### TC-209-13
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-209-13 |
+| Test Scenario | [Negative] AC 2: a list not read yet, or that couldn't be read, doesn't say nothing was requested (GLM review of #282) |
+| Pre-conditions | As the shared pre-conditions. |
+| Test Steps | 1. Open Arrangements while the venue and equipment lists load. <br> 2. Open it when one can't be read. |
+| Test Data | — |
+| Expected Result | "Loading…" while loading; "Couldn't load the venue requests." or "Couldn't load the equipment requests." on a failure; "No venues requested yet." / "No equipment requested yet." only once read and empty. A list read again keeps what it showed until it answers. |
+
+**Automated by:** `tests/unit/list-state.test.tsx` › "SCRUM-209 [AC2] TC-209-13: while the list loads, it says Loading…, not that nothing was requested", "SCRUM-209 [AC2] TC-209-13: a list that couldn't be read says so" and "SCRUM-209 [AC2] TC-209-13: once read and empty, it says nothing was requested"

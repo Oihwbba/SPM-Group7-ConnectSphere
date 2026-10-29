@@ -59,6 +59,16 @@ Copy this block for each case:
 - **The test's title** starts with the story, the criteria and the case:
   `SCRUM-31 [AC1, AC2] TC-31-01: what must happen`. The reviewer finds tests
   by the key, and the graders trace story → criterion → case → test by it.
+  - A test of several stories names each, in groups separated by ", ":
+    `SCRUM-72 [AC6] TC-72-05, SCRUM-74 [AC4] TC-74-04: …`. Each case sits
+    under its own story's key, and the criteria named overlap the case's.
+  - A case tied to no criterion is named without one: `SCRUM-207 TC-207-16: …`.
+  - A bug or chore task whose cases live in another story's doc names its
+    own key and criteria, then that story's case:
+    `SCRUM-226 [AC2], SCRUM-155 [AC5, AC6] TC-155-17: …`.
+  - A test that automates no documented case still carries its story's or
+    chore's key, and its criterion where one applies: `SCRUM-178 [AC1]: …`.
+    A helper that belongs to no story or chore keeps a plain title.
 
 ## Execution records
 
@@ -90,8 +100,9 @@ defect, e.g. `regression: a blank rejection reason was accepted`.
 These Sprint 1 and 2 stories, and the Sprint 3 task SCRUM-168, were Done
 before they had a specification. Each was written on 2026-10-12 (SCRUM-168 on
 2026-10-13) from its acceptance criteria, and maps every criterion to the
-tests that already existed, by their current titles. Those titles predate the `SCRUM-n [ACx] TC-n-xx` format; renaming them waits until
-the open pull requests that change the same test files have merged.
+tests that already existed, by their current titles. Those titles predated
+the `SCRUM-n [ACx] TC-n-xx` format; SCRUM-232 renamed the e2e tests and
+SCRUM-236 the unit and integration tests, with every citation updated.
 
 | Story | Owner | Test cases | Status |
 |---|---|---|---|
@@ -161,7 +172,7 @@ the open pull requests that change the same test files have merged.
 | [SCRUM-187](SCRUM-187.md) | Jun Bin | 3 | A Bug task: the clarification answer form stuck on "Sending…"; automated by e2e (TC-187-03 by SCRUM-108's TC-108-10) |
 | [SCRUM-155](SCRUM-155.md) | Jin Hong | 17 | Every case automated (unit, integration for all-or-nothing and the races, e2e for the journey). TC-155-17 added by SCRUM-226 |
 | [SCRUM-156](SCRUM-156.md) | Jin Hong | 8 | Every case automated; TC-155-16 retired and the SCRUM-31 reserve cases mapped to SCRUM-155 |
-| [SCRUM-190](SCRUM-190.md) | Felicia Or | 10 | Every case automated (unit, e2e for the form); supersedes SCRUM-13 AC 1 and TC-13-09 step 3 |
+| [SCRUM-190](SCRUM-190.md) | Felicia Or | 12 | Every case automated (unit, e2e for the form); supersedes SCRUM-13 AC 1 and TC-13-09 step 3 |
 | [SCRUM-161](SCRUM-161.md) | Felicia Or | 17 | Every current case automated; TC-161-08 to TC-161-11 retired with former AC 5 and AC 6; supersedes TC-37-05 step 1 and TC-37-06 |
 | [SCRUM-159](SCRUM-159.md) | Jun Bin | 19 | Every case automated (unit, integration for the database's range and the simultaneous approvals, e2e for the calendar and the request form); AC 1's form is SCRUM-34's and AC 3's search SCRUM-38's |
 | [SCRUM-170](SCRUM-170.md) | Felicia Or | 13 | Every case automated (unit, integration for the No equipment needed decision racing a new request, e2e for the Organiser's answers on each form and review queue); TC-170-12 and TC-170-13 are automated by SCRUM-25's, SCRUM-128's and SCRUM-38's tests |
@@ -184,7 +195,7 @@ the open pull requests that change the same test files have merged.
 | [SCRUM-160](SCRUM-160.md) | Jun Bin | 13 | Every case automated (unit, integration for flagging through SCRUM-34's venue edit against real bookings and the seed, e2e for the Venue Staff list) |
 | [SCRUM-188](SCRUM-188.md) | Felicia Or | 6 | Every case automated (unit for the period and the server's boundary, integration for search and the request agreeing against real bookings, e2e from the form and from venue search); supersedes TC-50-15's rounding |
 | [SCRUM-186](SCRUM-186.md) | Jin Hong | 8 | Every case automated (unit for the check under the event's lock, integration for each active status, the Rejected and Cancelled boundary, simultaneous submissions and legacy requests, e2e for the Approved request shown); AC 3 is SCRUM-142's tests and AC 5's checklist and reserving SCRUM-110's and SCRUM-156's |
-| [SCRUM-202](SCRUM-202.md) | Jun Bin | 3 | A Bug task: a venue edit deadlocking with a booking decision; automated (unit for the retry, integration for a forced deadlock and a real race) |
+| [SCRUM-202](SCRUM-202.md) | Jun Bin | 4 | A Bug task: a venue edit deadlocking with a booking decision; automated (unit for the retry, integration for a forced deadlock and a real race) |
 | [SCRUM-207](SCRUM-207.md) | Caylern Goh | 24 | Part of the story: AC 2, AC 3 and the shared confirmation automated (unit for the shared badge and empty states, e2e for the submit and approve pop-ups), and the customer's page-by-page changes automated (TC-207-11 to TC-207-24); TC-207-01, -02 and -09 (AC 1, AC 4 across every page) are still to do, marked Manual; TC-207-10 (AC 5): the shared confirmation dialog is built and used for Attendee Withdraw (SCRUM-212), the other irreversible actions still to do |
 | [SCRUM-208](SCRUM-208.md) | Caylern Goh | 20 | Every case automated (unit for the Next step, the tab chosen, the progress and the stat strips, e2e for the page, its link and tabs, the answer box, not found, the phone layout, the Attendee page and the live view); the panels' own rules stay with their stories' tests |
 | [SCRUM-209](SCRUM-209.md) | Caylern Goh | 13 | Every case automated (unit for who is offered Find a venue and the equipment actions, and the Next step's sections; e2e for the venue round trip, equipment in place, No equipment needed, the safety check, and the read-only and refused views); the actions' own refusals stay with their stories' tests |
@@ -192,5 +203,6 @@ the open pull requests that change the same test files have merged.
 | [SCRUM-212](SCRUM-212.md) | Caylern Goh | 12 | Every case automated (unit for the state mapping and its boundaries, the My Registrations row, Withdraw shown and hidden, and the empty state; e2e for each state on Browse Events and the event page, withdrawing through the shared dialog, and the three pages at 360 px) |
 | [SCRUM-225](SCRUM-225.md) | Jin Hong | 5 | A Chore task: the GLM review skipped with a passing check on its quota or rate limit; automated by unit tests except TC-225-05, a document check |
 | [SCRUM-234](SCRUM-234.md) | Jin Hong | 3 | A Chore task: the e2e journeys for SCRUM-142 AC5 and SCRUM-26's flagged reservation; automated by e2e except TC-234-03, a document check |
+| [SCRUM-236](SCRUM-236.md) | Jin Hong | 6 | A Chore task: every unit and integration test titled after its story, criteria and case; checked by the audit in #313, and TC-236-04 by SCRUM-196's citation check once it merges |
 | [SCRUM-237](SCRUM-237.md) | Jin Hong | 4 | A Chore task: the development-environment notice on the sign-in page and every signed-in page; automated (unit, e2e for each role and at phone width) except TC-237-04, a document check |
 | [SCRUM-238](SCRUM-238.md) | Jin Hong | 5 | A Chore task: seed data for every role and status; automated (integration for statuses, notification types and each role's work; the whole suite for the records tests rely on) except TC-238-03's re-run and TC-238-05, the shared database |

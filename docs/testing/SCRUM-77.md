@@ -40,7 +40,7 @@ and Amir (`attendee2@test.local`) is Registered. Every account's password is
 | Test Data | — |
 | Expected Result | "You've withdrawn from this event."; the registration is Withdrawn and the event shows "5 of 5 places remaining". |
 
-**Automated by:** `tests/unit/registration-actions.test.ts` › "SCRUM-74 AC, SCRUM-77 [AC1, AC7] TC-77-01, TC-77-09: …"; `e2e/withdraw-registration.spec.ts` › "SCRUM-77 [AC1, AC4, AC7] TC-77-01, TC-77-06, TC-77-09: …"
+**Automated by:** `tests/unit/registration-actions.test.ts` › "SCRUM-74 [AC2] TC-74-06, SCRUM-77 [AC1, AC7] TC-77-01, TC-77-09: …"; `e2e/withdraw-registration.spec.ts` › "SCRUM-77 [AC1, AC4, AC7] TC-77-01, TC-77-06, TC-77-09: …"
 
 ### TC-77-02
 
@@ -144,4 +144,4 @@ and Amir (`attendee2@test.local`) is Registered. Every account's password is
 | Test Data | — |
 | Expected Result | Only the status changes to Withdrawn; Amir is still listed, under Withdrawn. |
 
-**Automated by:** `tests/unit/registration-actions.test.ts` › "SCRUM-74 AC, SCRUM-77 [AC1, AC7] TC-77-01, TC-77-09: …"; `e2e/withdraw-registration.spec.ts` › "… TC-77-09 …"
+**Automated by:** `tests/unit/registration-actions.test.ts` › "SCRUM-74 [AC2] TC-74-06, SCRUM-77 [AC1, AC7] TC-77-01, TC-77-09: …"; `e2e/withdraw-registration.spec.ts` › "… TC-77-09 …"

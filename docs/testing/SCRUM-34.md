@@ -245,7 +245,7 @@ SCRUM-40's suitability. AC12's warning is SCRUM-159 AC9.
 | Test Data | — |
 | Expected Result | 1: the venue is saved with the tags `projector`, `sound-system`, `rooftop-bar`; `wheelchair-access`, `tactile-paving`; `theatre`, `garden-party`, each once however it was typed, and its details show them. 2: Rooftop bar, Tactile paving and Garden party are offered, not selected, after the predefined options. 3: Garden party is a layout preset, and Tactile paving an accessibility quick-pick (SCRUM-13). The options come from active venues only, so a retired venue's own values drop out. |
 
-**Automated by:** `tests/unit/venue-options.test.ts` › "SCRUM-34 [AC3, AC6] TC-34-18: …", "SCRUM-34 [AC3] TC-34-18: …", "SCRUM-34 [AC6, AC8] TC-34-18: …", "SCRUM-34 [AC1] TC-34-18: …"; `tests/unit/venue-catalogue.test.ts` › "SCRUM-34 [AC3, AC6] TC-34-18: …"; `e2e/venue-catalogue.spec.ts` › "SCRUM-34 [AC1, AC2, AC3, AC4, AC6, AC9] …", "SCRUM-34 [AC6] TC-34-18: …"
+**Automated by:** `tests/unit/venue-options.test.ts` › "SCRUM-34 [AC3, AC6] TC-34-18: …", "SCRUM-34 [AC3] TC-34-18: …", "SCRUM-34 [AC6, AC8] TC-34-18: …", "SCRUM-34 [AC1, AC3] TC-34-18: …"; `tests/unit/venue-catalogue.test.ts` › "SCRUM-34 [AC3, AC6] TC-34-18: …"; `e2e/venue-catalogue.spec.ts` › "SCRUM-34 [AC1, AC2, AC3, AC4, AC6, AC9] …", "SCRUM-34 [AC6] TC-34-18: …"
 
 ### TC-34-19
 

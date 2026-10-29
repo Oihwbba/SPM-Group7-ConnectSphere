@@ -89,7 +89,7 @@ either holds no such role, or is seeded instead.
 | Test Data | — |
 | Expected Result | Step 1: it judges only rows unchanged since the list was read, and both of its own events are among them. Step 2: it fails. |
 
-**Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-50 TC-50-09: the form offers only approved events the coordinator may act on, exactly as can() allows" (step 2 is the PR's mutation check)
+**Automated by:** `tests/integration/bookings.test.ts` › "SCRUM-50 [AC7] TC-50-09: the form offers only approved events the coordinator may act on, exactly as can() allows" (step 2 is the PR's mutation check)
 
 ### TC-191-05
 
