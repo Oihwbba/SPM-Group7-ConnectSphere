@@ -182,14 +182,22 @@ Every scenario exists so a specific acceptance criterion can be
 **demonstrated**, not just described. If you add seed data, say in a comment
 which story needs it.
 
-**Events:** one in each of the nine statuses (SCRUM-23), plus:
+**Events:** one in each status an event can rest in, plus the cases below.
+That is SCRUM-23's nine statuses except Approved: approval saves Planning
+(SCRUM-81), so Approved appears only in an event's history (SCRUM-233). Every
+seeded event is within one Singapore day (SCRUM-190), and every Confirmed one
+has what confirming needs: an approved venue covering it, equipment reserved
+or "No equipment needed", an Approved safety check, and its approval recorded
+(SCRUM-110, SCRUM-233).
 
 | Event | What it demonstrates |
 |---|---|
+| `evt_approved` | "Planning — Research Symposium": its venue is booked and it has no equipment request. The id is older than the rule that no event stays Approved, and tests use it; its history shows the approval and the move to Planning (SCRUM-233). |
 | `evt_full` | Expected attendance 3, which is its registration capacity, with three active registrations: **full** (SCRUM-74) |
 | `evt_last_seat` | Expected attendance 3 with two registrations: **exactly one place left**. The simultaneous-registration test uses it, and `attendee4` is free to take it. |
-| `evt_reg_not_open` | Registration opens in a week (SCRUM-75) |
-| `evt_reg_closed` | Registration closed yesterday (SCRUM-75) |
+| `evt_reg_not_open` | Registration opens in a week (SCRUM-75). Exhibition Hall is booked; No equipment needed. |
+| `evt_reg_closed` | Registration closed yesterday (SCRUM-75). Exhibition Hall is booked; No equipment needed. |
+| `evt_cancelled` | Confirmed with registration open, then cancelled by its Coordinator: its booking, reservation (from an approved request) and registration were cancelled with it (SCRUM-82) |
 | `evt_other_organiser` | Owned by `organiser2`. Loading it as `organiser` must look exactly like "not found" (SCRUM-68). |
 | `evt_draft` | No dates and no attendance, which proves those columns really are optional (SCRUM-15) |
 
@@ -209,7 +217,9 @@ never simply `totalQuantity` (SCRUM-29/30).
 **Also seeded:** an open clarification request; a pending change request with
 three changed fields (two major, one not); venue bookings that are approved,
 pending, rejected and cancelled; an approved and a pending equipment request
-with a status history; read and unread notifications; and audit entries.
+with a status history; read and unread notifications; and audit entries
+written as the actions write them (approval, the system's move to Planning,
+confirmation by the Coordinator, reassignment by the Lead, cancellation).
 
 **Every role's work** (SCRUM-238): each role has something to see and to act
 on, and every status has a row. These events sit 50 or more days out:
@@ -233,7 +243,7 @@ unavailability has a row for every reason.
 > **To demo reserving equipment** (SCRUM-155): sign in as Technical Support
 > and reserve "Ready to Reserve — Robotics Open House" on **Equipment**. Or
 > start from the beginning: review and approve the pending "Planning —
-> Freshman Orientation" request first. "Approved — Research Symposium" has no
+> Freshman Orientation" request first. "Planning — Research Symposium" has no
 > equipment request on purpose: SCRUM-27's tests need it to have none.
 
 Dates are **relative to today**, not hard-coded, so "registration closes next

@@ -241,7 +241,7 @@ test.describe("SCRUM-156 [AC1] TC-156-02: View Equipment Conflicts", () => {
 
     await expect(during(page).getByTestId("schedule-entry")).toHaveCount(1);
     await expect(during(page).getByTestId("schedule-entry")).toContainText(
-      "Approved — Research Symposium",
+      "Planning — Research Symposium",
     );
     await expect(during(page).getByTestId("schedule-entry")).toContainText("2 unit(s)");
     await expect(other(page).getByTestId("schedule-entry")).toHaveCount(2);

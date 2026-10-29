@@ -49,7 +49,7 @@ const TECH_SUPPORT: Session = {
 
 // Seeded APPROVED event and its name (prisma/seed.ts).
 const APPROVED_EVENT_ID = "evt_approved";
-const APPROVED_EVENT_NAME = "Approved — Research Symposium";
+const APPROVED_EVENT_NAME = "Planning — Research Symposium";
 
 // A fixed far-future day, so no seeded commitment can overlap it and the
 // schema's "start cannot be in the past" rule never trips.

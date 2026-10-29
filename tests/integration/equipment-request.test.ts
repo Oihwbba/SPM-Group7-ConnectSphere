@@ -26,7 +26,7 @@ import {
 // submissions racing — the unique line per type (AC 4), and that the
 // coordinator's reads return exactly the rows can() allows.
 //
-// They use the seeded "Approved — Research Symposium". The seed gives that
+// They use the seeded "Planning — Research Symposium". The seed gives that
 // event no request; each test removes the ones it created. The one test that
 // needs an unassigned event makes its own under a name nobody else uses and
 // removes it: suites running in parallel count events by name
@@ -45,7 +45,7 @@ const usesLocalDatabase = /@(localhost|127\.0\.0\.1)[:/]/.test(
 // Seeded accounts, events and equipment (prisma/seed.ts).
 const COORDINATOR = "usr_coordinator";
 const OTHER_COORDINATOR = "usr_coordinator_2";
-const eventId = "evt_approved"; // APPROVED, coordinated by COORDINATOR
+const eventId = "evt_approved"; // PLANNING, coordinated by COORDINATOR
 const UNDER_REVIEW_EVENT = "evt_under_review"; // also COORDINATOR's
 
 const coordinatorSession = (id: string): Session => ({

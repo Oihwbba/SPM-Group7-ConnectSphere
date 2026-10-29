@@ -43,9 +43,14 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-238 — the seed covers every role an
       equipmentUnavailability: [Object.values(UnavailabilityReason), valuesOf(prisma.equipmentUnavailability.findMany({ where: seeded("eun_"), select: { reason: true } }).then((r) => r.map((x) => ({ v: x.reason }))))],
     } as const;
 
+    // SCRUM-233: no event rests in Approved, since approval saves Planning
+    // (SCRUM-81 AC1); the status shows only in history.
+    const unseeded: Record<string, string[]> = { event: [EventStatus.APPROVED] };
     for (const [record, [all, present]] of Object.entries(statuses)) {
       const found = await present;
-      const missing = (all as string[]).filter((value) => !found.has(value as never));
+      const missing = (all as string[]).filter(
+        (value) => !found.has(value as never) && !unseeded[record]?.includes(value),
+      );
       expect(missing, `${record} statuses with no seeded row`).toEqual([]);
     }
   });

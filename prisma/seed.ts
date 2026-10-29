@@ -80,6 +80,8 @@ const PLANNING_MOVED_DAY = weekdayFrom(PLANNING_DAY + 1);
 // The two Boardroom bookings, on different days so they never overlap.
 const FULL_DAY = weekdayFrom(12);
 const LAST_SEAT_DAY = weekdayFrom(Math.max(14, FULL_DAY + 1));
+// SCRUM-233: the cancelled event's Seminar Room booking, on a weekday.
+const CANCELLED_DAY = weekdayFrom(25);
 
 // --- Stable ids ------------------------------------------------------------
 
@@ -353,8 +355,10 @@ async function seedEquipmentUnavailability() {
 }
 
 // ---------------------------------------------------------------------------
-// Events — one per status (SCRUM-23's nine values), plus the boundary cases
-// the registration stories need.
+// Events — one per status an event can rest in, plus the boundary cases the
+// registration stories need. Approved is not one: approval saves Planning
+// (SCRUM-81 AC1, SCRUM-135 AC12), so it shows only in an event's history
+// (SCRUM-233).
 // ---------------------------------------------------------------------------
 
 type EventSeed = Parameters<typeof prisma.event.create>[0]["data"] & { id: string };
@@ -366,7 +370,22 @@ async function seedEvents() {
     accessibilityNeeds: "Step-free access to the stage.",
     preferredLayout: "theatre",
     equipmentRequirements: "Projector and two wireless microphones.",
+    // SCRUM-13/14: submitting requires Venue Requirements (SCRUM-233).
+    venueRequirements: "A hall with a stage and step-free access.",
   };
+  // SCRUM-233, SCRUM-81: a Confirmed event was submitted and approved first.
+  const approvedBy = (submittedDay: number) => ({
+    submittedAt: at(submittedDay, 3),
+    decidedAt: at(submittedDay + 2, 3),
+    decidedById: U.coordinator,
+  });
+  // SCRUM-170: these events need no equipment, so their readiness checklist
+  // records that decision instead of a reservation (SCRUM-233).
+  const noEquipment = (recordedDay: number) => ({
+    equipmentRequirements: null,
+    noEquipmentNeededAt: at(recordedDay, 3),
+    noEquipmentNeededById: U.coordinator,
+  });
 
   const events: EventSeed[] = [
     // --- One per status -----------------------------------------------------
@@ -406,10 +425,13 @@ async function seedEvents() {
       submittedAt: at(-4, 3),
     },
     {
+      // SCRUM-81 AC1, SCRUM-135 AC12: approval saves Planning, so no event
+      // stays Approved; its history shows the approval (SCRUM-233). The id is
+      // kept because the equipment and booking tests use it.
       id: E.approved,
-      name: "Approved — Research Symposium",
-      description: "Approved; no venue booked yet.",
-      status: EventStatus.APPROVED,
+      name: "Planning — Research Symposium",
+      description: "Approved and in planning; its venue is booked.",
+      status: EventStatus.PLANNING,
       ...common,
       startAt: at(40, 1),
       endAt: at(40, 7),
@@ -475,20 +497,26 @@ async function seedEvents() {
       completedAt: at(-30, 11),
     },
     {
-      // SCRUM-82: a cancellation reason is recorded and visible.
+      // SCRUM-82: a cancellation reason is recorded and visible. It was
+      // Confirmed with registration open, so it could take a registration
+      // (SCRUM-73), and its assigned Coordinator cancelled it (SCRUM-82 AC1).
       id: E.cancelled,
       name: "Cancelled — Winter Workshop",
-      description: "Called off by the organiser.",
+      description: "Called off after the speaker withdrew.",
       status: EventStatus.CANCELLED,
       ...common,
-      startAt: at(25, 1),
-      endAt: at(25, 6),
+      startAt: at(CANCELLED_DAY, 1),
+      endAt: at(CANCELLED_DAY, 6),
       expectedAttendance: 40,
       organiserId: U.organiser,
       coordinatorId: U.coordinator,
-      submittedAt: at(-15, 3),
+      ...approvedBy(-15),
+      registrationEnabled: true,
+      registrationCapacity: 40,
+      registrationOpensAt: at(-12, 0),
+      registrationClosesAt: at(CANCELLED_DAY - 1, 12),
       cancelledAt: at(-1, 3),
-      cancelledById: U.organiser,
+      cancelledById: U.coordinator,
       cancellationReason: "Speaker withdrew and no replacement was available.",
     },
     {
@@ -503,6 +531,8 @@ async function seedEvents() {
       endAt: at(28, 14),
       expectedAttendance: 2000,
       organiserId: U.organiser,
+      // SCRUM-135 AC4: only a request with a Coordinator can be rejected.
+      coordinatorId: U.coordinator,
       submittedAt: at(-9, 3),
       decidedAt: at(-8, 3),
       decidedById: U.coordinator,
@@ -525,6 +555,8 @@ async function seedEvents() {
       expectedAttendance: 3,
       organiserId: U.organiser,
       coordinatorId: U.coordinator,
+      ...approvedBy(-12),
+      ...noEquipment(-8),
       registrationEnabled: true,
       registrationCapacity: 3,
       registrationOpensAt: at(-5, 0),
@@ -543,6 +575,8 @@ async function seedEvents() {
       expectedAttendance: 3,
       organiserId: U.organiser,
       coordinatorId: U.coordinator,
+      ...approvedBy(-12),
+      ...noEquipment(-8),
       registrationEnabled: true,
       registrationCapacity: 3,
       registrationOpensAt: at(-5, 0),
@@ -560,6 +594,10 @@ async function seedEvents() {
       expectedAttendance: 80,
       organiserId: U.organiser,
       coordinatorId: U.coordinator,
+      ...approvedBy(-10),
+      // equipment-request-review.test.ts writes and removes this event's
+      // requests and reservations, so it needs none of its own.
+      ...noEquipment(-6),
       registrationEnabled: true,
       registrationCapacity: 80,
       registrationOpensAt: at(7, 0),
@@ -577,6 +615,8 @@ async function seedEvents() {
       expectedAttendance: 30,
       organiserId: U.organiser,
       coordinatorId: U.coordinator,
+      ...approvedBy(-26),
+      ...noEquipment(-22),
       registrationEnabled: true,
       registrationCapacity: 30,
       registrationOpensAt: at(-20, 0),
@@ -677,15 +717,19 @@ async function seedBookings() {
       decisionReason: "Boardroom seats 14; the event expects 55 attendees.",
     },
     {
-      // SCRUM-82: cancelling an event releases its booking.
+      // SCRUM-82: cancelling an event releases its booking. It was approved
+      // before the event was cancelled.
       id: "bkg_cancelled",
       eventId: E.cancelled,
       venueId: V.seminar,
-      startAt: at(25, 1),
-      endAt: at(25, 6),
+      startAt: at(CANCELLED_DAY, 1),
+      endAt: at(CANCELLED_DAY, 6),
       status: BookingStatus.CANCELLED,
+      requestedAttendance: 40,
       requiredFacilities: [],
       requestedById: U.coordinator,
+      decidedById: U.venueStaff,
+      decidedAt: at(-13, 3),
     },
     {
       id: "bkg_full_event",
@@ -712,6 +756,36 @@ async function seedBookings() {
       requestedById: U.coordinator,
       decidedById: U.venueStaff,
       decidedAt: at(-4, 3),
+    },
+    // SCRUM-233: every Confirmed event has an approved venue covering it, so
+    // Attendees see where it is (SCRUM-85).
+    {
+      id: "bkg_reg_not_open",
+      eventId: E.regNotOpen,
+      venueId: V.hall,
+      startAt: at(45, 1),
+      endAt: at(45, 9),
+      status: BookingStatus.APPROVED,
+      requestedAttendance: 80,
+      requiredFacilities: [],
+      requestedLayout: "theatre",
+      requestedById: U.coordinator,
+      decidedById: U.venueStaff,
+      decidedAt: at(-8, 3),
+    },
+    {
+      id: "bkg_reg_closed",
+      eventId: E.regClosed,
+      venueId: V.hall,
+      startAt: at(5, 1),
+      endAt: at(5, 9),
+      status: BookingStatus.APPROVED,
+      requestedAttendance: 30,
+      requiredFacilities: [],
+      requestedLayout: "theatre",
+      requestedById: U.coordinator,
+      decidedById: U.venueStaff,
+      decidedAt: at(-24, 3),
     },
   ];
 
@@ -763,6 +837,16 @@ async function seedEquipmentRequests() {
       status: EquipmentRequestStatus.PENDING_REVIEW,
       notes: "Orientation needs a projector and two mics.",
     },
+    // SCRUM-155: the cancelled event's laptops were reserved from an approved
+    // request, which cancelling the event then cancelled (SCRUM-82).
+    {
+      id: "eqr_winter_workshop",
+      eventId: E.cancelled,
+      requestedById: U.coordinator,
+      status: EquipmentRequestStatus.CANCELLED,
+      notes: "Laptops for the workshop exercises.",
+      decidedAt: at(-12, 3),
+    },
   ];
   for (const r of requests) {
     const { id, ...data } = r;
@@ -774,6 +858,7 @@ async function seedEquipmentRequests() {
     { id: "eql_confirmed_mic", requestId: "eqr_confirmed", equipmentId: EQ.mic, quantity: 4, technicalRequirements: "Two handheld, two lapel if available." },
     { id: "eql_planning_projector", requestId: "eqr_planning", equipmentId: EQ.projector, quantity: 1 },
     { id: "eql_planning_mic", requestId: "eqr_planning", equipmentId: EQ.mic, quantity: 2 },
+    { id: "eql_winter_workshop_laptop", requestId: "eqr_winter_workshop", equipmentId: EQ.laptop, quantity: 2 },
   ];
   for (const l of lines) {
     const { id, ...data } = l;
@@ -784,6 +869,9 @@ async function seedEquipmentRequests() {
   const updates = [
     { id: "equ_1", requestId: "eqr_confirmed", actorId: U.techSupport, fromStatus: EquipmentRequestStatus.PENDING_REVIEW, toStatus: EquipmentRequestStatus.IN_REVIEW, note: "Checking mic availability for that evening." },
     { id: "equ_2", requestId: "eqr_confirmed", actorId: U.techSupport, fromStatus: EquipmentRequestStatus.IN_REVIEW, toStatus: EquipmentRequestStatus.APPROVED, note: "All items available and reserved." },
+    { id: "equ_winter_workshop_1", requestId: "eqr_winter_workshop", actorId: U.techSupport, fromStatus: EquipmentRequestStatus.PENDING_REVIEW, toStatus: EquipmentRequestStatus.IN_REVIEW, note: "Checking laptop stock.", createdAt: at(-12, 2) },
+    { id: "equ_winter_workshop_2", requestId: "eqr_winter_workshop", actorId: U.techSupport, fromStatus: EquipmentRequestStatus.IN_REVIEW, toStatus: EquipmentRequestStatus.APPROVED, note: "Two laptops available.", createdAt: at(-12, 3) },
+    { id: "equ_winter_workshop_3", requestId: "eqr_winter_workshop", actorId: U.coordinator, fromStatus: EquipmentRequestStatus.APPROVED, toStatus: EquipmentRequestStatus.CANCELLED, note: "Cancelled because the event was cancelled: Speaker withdrew and no replacement was available.", createdAt: at(-1, 3) },
   ];
   for (const u of updates) {
     const { id, ...data } = u;
@@ -823,9 +911,10 @@ async function seedReservations() {
       id: "res_cancelled",
       eventId: E.cancelled,
       equipmentId: EQ.laptop,
+      requestId: "eqr_winter_workshop",
       quantity: 2,
-      startAt: at(25, 1),
-      endAt: at(25, 6),
+      startAt: at(CANCELLED_DAY, 1),
+      endAt: at(CANCELLED_DAY, 6),
       status: ReservationStatus.CANCELLED,
       cancelledAt: at(-1, 3),
       reservedById: U.techSupport,
@@ -836,6 +925,51 @@ async function seedReservations() {
     await prisma.reservation.upsert({ where: { id }, update: data, create: { id, ...data } });
   }
   return reservations.length;
+}
+
+/**
+ * SCRUM-233 — SCRUM-81 confirms only an event whose readiness checklist is
+ * complete (SCRUM-110), which includes an Approved safety check (SCRUM-166).
+ * Each check names the arrangements it reviewed.
+ */
+async function seedConfirmedSafetyChecks() {
+  const approved = (id: string, eventId: string, decidedDay: number) => ({
+    id,
+    eventId,
+    status: SafetyCheckStatus.APPROVED,
+    requestedById: U.coordinator,
+    decidedById: U.safetyOfficer,
+    decidedAt: at(decidedDay, 3),
+    createdAt: at(decidedDay - 1, 3),
+  });
+  const checks = [
+    approved("sfc_confirmed", E.confirmed, -15),
+    approved("sfc_full", E.full, -6),
+    approved("sfc_last_seat", E.lastSeat, -6),
+    approved("sfc_reg_not_open", E.regNotOpen, -5),
+    approved("sfc_reg_closed", E.regClosed, -21),
+    approved("sfc_winter_workshop", E.cancelled, -12),
+  ];
+  for (const c of checks) {
+    const { id, ...data } = c;
+    await prisma.safetyCheck.upsert({ where: { id }, update: data, create: { id, ...data } });
+  }
+  const arrangements = [
+    { id: "sfa_confirmed_booking", checkId: "sfc_confirmed", bookingId: "bkg_confirmed" },
+    { id: "sfa_confirmed_projector", checkId: "sfc_confirmed", reservationId: "res_confirmed_projector" },
+    { id: "sfa_confirmed_mic", checkId: "sfc_confirmed", reservationId: "res_confirmed_mic" },
+    { id: "sfa_full_booking", checkId: "sfc_full", bookingId: "bkg_full_event" },
+    { id: "sfa_last_seat_booking", checkId: "sfc_last_seat", bookingId: "bkg_last_seat_event" },
+    { id: "sfa_reg_not_open_booking", checkId: "sfc_reg_not_open", bookingId: "bkg_reg_not_open" },
+    { id: "sfa_reg_closed_booking", checkId: "sfc_reg_closed", bookingId: "bkg_reg_closed" },
+    { id: "sfa_winter_workshop_booking", checkId: "sfc_winter_workshop", bookingId: "bkg_cancelled" },
+    { id: "sfa_winter_workshop_laptop", checkId: "sfc_winter_workshop", reservationId: "res_cancelled" },
+  ];
+  for (const a of arrangements) {
+    const { id, ...data } = a;
+    await prisma.safetyCheckArrangement.upsert({ where: { id }, update: data, create: { id, ...data } });
+  }
+  return checks.length;
 }
 
 // ---------------------------------------------------------------------------
@@ -883,7 +1017,7 @@ async function seedClarifications() {
       eventId: E.underReview,
       requestedById: U.coordinator,
       message:
-        "Your expected attendance is 400 but you have asked for a classroom layout. Can you confirm the layout you need?",
+        "Your expected attendance is 400 in a theatre layout, which only the Grand Auditorium can seat. Can you confirm the attendance, so we can check the Auditorium for your date?",
       status: ClarificationStatus.OPEN,
     },
   ];
@@ -932,7 +1066,8 @@ async function seedNotifications() {
   const rows = [
     { id: "ntf_1", userId: U.organiser, type: NotificationType.COORDINATOR_ASSIGNED, title: "A coordinator was assigned", message: "Cody Coordinator is now the coordinator for Under Review — Career Fair.", eventId: E.underReview, createdAt: at(-4, 3), readAt: at(-4, 4) },
     { id: "ntf_2", userId: U.organiser, type: NotificationType.CLARIFICATION_REQUESTED, title: "Clarification requested", message: "Your coordinator has asked a question about Under Review — Career Fair.", eventId: E.underReview, createdAt: at(-3, 3) },
-    { id: "ntf_3", userId: U.organiser, type: NotificationType.EVENT_STATUS_CHANGED, title: "Event rejected", message: "Rejected — Overcapacity Concert was rejected.", eventId: E.rejected, createdAt: at(-8, 3) },
+    // SCRUM-45 AC3: as transitionEventStatus words it, with the reason and the next step.
+    { id: "ntf_3", userId: U.organiser, type: NotificationType.EVENT_STATUS_CHANGED, title: "Your request was rejected", message: "\"Rejected — Overcapacity Concert\" was rejected: Expected attendance of 2000 exceeds the capacity of every venue in the catalogue (largest is 500). What you can do next: Amend and resubmit.", eventId: E.rejected, createdAt: at(-8, 3) },
     { id: "ntf_4", userId: U.coordinator, type: NotificationType.BOOKING_DECISION, title: "Booking rejected", message: "Executive Boardroom was rejected for Planning — Freshman Orientation: capacity 14 is below 55 attendees.", eventId: E.planning, createdAt: at(-2, 3) },
     { id: "ntf_5", userId: U.attendee, type: NotificationType.REGISTRATION_CONFIRMED, title: "You are registered", message: "Your place at Confirmed — Charity Gala is confirmed.", eventId: E.confirmed, createdAt: at(-6, 4) },
     { id: "ntf_6", userId: U.attendee, type: NotificationType.REGISTERED_EVENT_CANCELLED, title: "An event you registered for was cancelled", message: "Cancelled — Winter Workshop will no longer go ahead.", eventId: E.cancelled, createdAt: at(-1, 3) },
@@ -951,9 +1086,19 @@ async function seedNotifications() {
 
 async function seedAuditLog() {
   const rows = [
-    { id: "aud_1", entityType: "Event", entityId: E.confirmed, action: "STATUS_CHANGED", actorId: U.coordinator, fieldName: "status", oldValue: "APPROVED", newValue: "PLANNING", createdAt: at(-18, 3) },
-    { id: "aud_2", entityType: "Event", entityId: E.confirmed, action: "STATUS_CHANGED", actorId: null, fieldName: "status", oldValue: "PLANNING", newValue: "CONFIRMED", summary: "Venue booked and equipment reserved.", createdAt: at(-15, 4) },
-    { id: "aud_3", entityType: "Event", entityId: E.underReview, action: "REASSIGNED", actorId: U.coordinator2, fieldName: "coordinatorId", oldValue: U.coordinator2, newValue: U.coordinator, summary: "Reassigned on return from leave.", createdAt: at(-4, 2) },
+    // SCRUM-233, ADR 0012: approving writes the Coordinator's approval and the
+    // system's move to Planning (no actor); confirming records the Coordinator.
+    // The move is a second later, so the history lists them in order.
+    { id: "aud_confirmed_approved", entityType: "Event", entityId: E.confirmed, action: "STATUS_CHANGED", actorId: U.coordinator, fieldName: "status", oldValue: "UNDER_REVIEW", newValue: "APPROVED", createdAt: at(-18, 3) },
+    { id: "aud_1", entityType: "Event", entityId: E.confirmed, action: "STATUS_CHANGED", actorId: null, fieldName: "status", oldValue: "APPROVED", newValue: "PLANNING", summary: "Moved to Planning on approval (SCRUM-81)", createdAt: new Date(at(-18, 3).getTime() + 1000) },
+    { id: "aud_2", entityType: "Event", entityId: E.confirmed, action: "STATUS_CHANGED", actorId: U.coordinator, fieldName: "status", oldValue: "PLANNING", newValue: "CONFIRMED", summary: "Confirmed by the assigned coordinator (SCRUM-81)", createdAt: at(-15, 4) },
+    { id: "aud_approved_approved", entityType: "Event", entityId: E.approved, action: "STATUS_CHANGED", actorId: U.coordinator, fieldName: "status", oldValue: "UNDER_REVIEW", newValue: "APPROVED", createdAt: at(-6, 3) },
+    { id: "aud_approved_planning", entityType: "Event", entityId: E.approved, action: "STATUS_CHANGED", actorId: null, fieldName: "status", oldValue: "APPROVED", newValue: "PLANNING", summary: "Moved to Planning on approval (SCRUM-81)", createdAt: new Date(at(-6, 3).getTime() + 1000) },
+    // SCRUM-21: reassigning is the Lead's action.
+    { id: "aud_3", entityType: "Event", entityId: E.underReview, action: "REASSIGNED", actorId: U.coordinatorLead, fieldName: "coordinatorId", oldValue: U.coordinator2, newValue: U.coordinator, summary: "Reassigned by the Lead from Cara Coordinator to Cody Coordinator (SCRUM-21)", createdAt: at(-4, 2) },
+    // SCRUM-82: what cancelInTransaction writes when the Coordinator cancels.
+    { id: "aud_cancelled_status", entityType: "Event", entityId: E.cancelled, action: "STATUS_CHANGED", actorId: U.coordinator, fieldName: "status", oldValue: "CONFIRMED", newValue: "CANCELLED", summary: "Speaker withdrew and no replacement was available.", createdAt: at(-1, 3) },
+    { id: "aud_cancelled_released", entityType: "Event", entityId: E.cancelled, action: "ARRANGEMENTS_RELEASED", actorId: U.coordinator, summary: "Cancelled (SCRUM-82): 1 venue booking(s), 1 equipment reservation(s), 1 equipment request(s) and 1 registration(s) cancelled; 0 safety check(s) outdated; 0 change request(s) rejected.", createdAt: at(-1, 3) },
     { id: "aud_4", entityType: "Booking", entityId: "bkg_rejected", action: "REJECTED", actorId: U.venueStaff, summary: "Capacity 14 below expected attendance 55.", createdAt: at(-2, 3) },
   ];
   for (const a of rows) {
@@ -1022,8 +1167,11 @@ async function seedWorkflowEvents() {
     accessibilityNeeds: "Step-free access to the stage.",
     preferredLayout: "theatre",
     equipmentRequirements: "Microphones for the speakers.",
+    venueRequirements: "A room with a projector and step-free access.",
     organiserId: U.organiser,
   };
+  // SCRUM-233: the Confirmed events below need no equipment (SCRUM-170).
+  const noEquipment = { equipmentRequirements: null, noEquipmentNeededAt: at(-10, 3), noEquipmentNeededById: U.coordinator };
   const planned = (coordinatorId: string, day: number, attendance: number) => ({
     ...common,
     ...workday(day),
@@ -1072,6 +1220,7 @@ async function seedWorkflowEvents() {
       description: "Confirmed; the Organiser has asked for it to be cancelled.",
       status: EventStatus.CONFIRMED,
       ...planned(U.coordinator, WD.cancellationRequested, 250),
+      ...noEquipment,
       registrationRequired: true,
       registrationEnabled: true,
       registrationCapacity: 250,
@@ -1079,7 +1228,7 @@ async function seedWorkflowEvents() {
       registrationClosesAt: at(WD.cancellationRequested - 1, 12),
     },
     // SCRUM-171: a Confirmed event that takes no registrations.
-    { id: W.noRegistration, name: "No Registration — Staff Appreciation Lunch", description: "Confirmed, by invitation only.", status: EventStatus.CONFIRMED, ...planned(U.coordinator, WD.noRegistration, 80), registrationRequired: false, registrationEnabled: false },
+    { id: W.noRegistration, name: "No Registration — Staff Appreciation Lunch", description: "Confirmed, by invitation only.", status: EventStatus.CONFIRMED, ...planned(U.coordinator, WD.noRegistration, 80), ...noEquipment, registrationRequired: false, registrationEnabled: false },
     // SCRUM-85 AC9: confirmed, then re-planned after a change; Attendees still
     // see the last confirmed details.
     { id: W.replanning, name: "Re-planning — Jazz Night", description: "A change moved it back into planning after it was confirmed.", status: EventStatus.PLANNING, ...planned(U.coordinator, WD.replanning, 150), registrationRequired: true, registrationEnabled: true, registrationCapacity: 150, registrationOpensAt: at(-10, 0), registrationClosesAt: at(WD.replanning - 1, 12) },
@@ -1088,7 +1237,7 @@ async function seedWorkflowEvents() {
     // SCRUM-17: a discarded draft, no longer listed.
     { id: W.draftDiscarded, name: "Discarded Draft — Book Club Social", description: "Started, then discarded.", status: EventStatus.DRAFT, ...common, requiredFacilities: [], discardedAt: at(-3, 4) },
     // SCRUM-126: rejected with "submit a new request" as the outcome.
-    { id: W.rejectedNewRequest, name: "Rejected (New Request) — Night Market", description: "Rejected; the Organiser needs to submit a new request.", status: EventStatus.REJECTED, ...common, ...workday(WD.rejectedNewRequest), expectedAttendance: 600, submittedAt: at(-9, 3), decidedAt: at(-7, 3), decidedById: U.coordinator, decisionReason: "An outdoor night market isn't something our venues can host; please request an indoor event instead.", rejectionOutcome: RejectionOutcome.NEW_REQUEST },
+    { id: W.rejectedNewRequest, name: "Rejected (New Request) — Night Market", description: "Rejected; the Organiser needs to submit a new request.", status: EventStatus.REJECTED, ...common, ...workday(WD.rejectedNewRequest), expectedAttendance: 600, coordinatorId: U.coordinator, submittedAt: at(-9, 3), decidedAt: at(-7, 3), decidedById: U.coordinator, decisionReason: "An outdoor night market isn't something our venues can host; please request an indoor event instead.", rejectionOutcome: RejectionOutcome.NEW_REQUEST },
     // SCRUM-108: a clarification naming the fields the Organiser may change.
     { id: W.clarificationFields, name: "Clarification Asked — Community Concert", description: "The Coordinator asked about attendance and layout.", status: EventStatus.UNDER_REVIEW, ...common, ...workday(WD.clarificationFields), expectedAttendance: 450, coordinatorId: U.coordinator, supervisingLeadId: U.coordinatorLead, submittedAt: at(-5, 3) },
     // SCRUM-82 AC10, SCRUM-165: unassigned, and its start has passed — overdue.
@@ -1307,6 +1456,9 @@ async function seedSafetyChecks() {
     { id: "sfc_changes", eventId: W.safetyChanges, status: SafetyCheckStatus.CHANGES_REQUESTED, requestedById: U.coordinator2, note: "Move the robot arena 3 m back from the front row and add a barrier.", decidedById: U.safetyOfficer, decidedAt: at(-1, 3), createdAt: at(-4, 3) },
     { id: "sfc_rejected", eventId: W.readyToConfirm, status: SafetyCheckStatus.REJECTED, requestedById: U.coordinator, note: "The first plan blocked a fire exit.", decidedById: U.safetyOfficer2, decidedAt: at(-6, 3), createdAt: at(-7, 3) },
     { id: "sfc_approved", eventId: W.readyToConfirm, status: SafetyCheckStatus.APPROVED, requestedById: U.coordinator, decidedById: U.safetyOfficer, decidedAt: at(-2, 3), createdAt: at(-3, 3) },
+    // SCRUM-233: the Confirmed events passed their safety check first.
+    { id: "sfc_cancellation_requested", eventId: W.cancellationRequested, status: SafetyCheckStatus.APPROVED, requestedById: U.coordinator, decidedById: U.safetyOfficer2, decidedAt: at(-6, 3), createdAt: at(-7, 3) },
+    { id: "sfc_no_registration", eventId: W.noRegistration, status: SafetyCheckStatus.APPROVED, requestedById: U.coordinator, decidedById: U.safetyOfficer2, decidedAt: at(-6, 3), createdAt: at(-7, 3) },
   ];
   for (const c of checks) {
     const { id, ...data } = c;
@@ -1318,6 +1470,8 @@ async function seedSafetyChecks() {
     { id: "sfa_changes_booking", checkId: "sfc_changes", bookingId: "bkg_safety_changes" },
     { id: "sfa_approved_booking", checkId: "sfc_approved", bookingId: "bkg_ready_to_confirm" },
     { id: "sfa_approved_reservation", checkId: "sfc_approved", reservationId: "res_ready_laptop" },
+    { id: "sfa_cancellation_requested_booking", checkId: "sfc_cancellation_requested", bookingId: "bkg_cancellation_requested" },
+    { id: "sfa_no_registration_booking", checkId: "sfc_no_registration", bookingId: "bkg_no_registration" },
   ];
   for (const a of arrangements) {
     const { id, ...data } = a;
@@ -1468,6 +1622,7 @@ async function main() {
   await seedConfirmedDetails();
   const eq = await seedEquipmentRequests();
   const reservations = await seedReservations();
+  const confirmedSafetyChecks = await seedConfirmedSafetyChecks();
   const registrations = await seedRegistrations();
   const clarifications = await seedClarifications();
   const changeFields = await seedChangeRequests();
@@ -1489,10 +1644,10 @@ async function main() {
   console.log(`  ${users} users (one for each of the ${Object.values(Role).length} roles, plus extra organisers, coordinators and attendees)`);
   console.log(`  ${venues} venues, ${venueUnavail} venue unavailability period(s)`);
   console.log(`  ${equipment} equipment types, ${equipUnavail} equipment unavailability period(s)`);
-  console.log(`  ${events} events (one per status, plus registration boundary cases)`);
+  console.log(`  ${events} events (one per status except Approved, plus registration boundary cases)`);
   console.log(`  ${bookings} venue bookings`);
   console.log(`  ${eq.requests} equipment requests, ${eq.lines} lines, ${eq.updates} history entries`);
-  console.log(`  ${reservations} equipment reservations`);
+  console.log(`  ${reservations} equipment reservations, ${confirmedSafetyChecks} safety checks for the events that reached Confirmed`);
   console.log(`  ${registrations} registrations`);
   console.log(`  ${clarifications} clarification request(s), 1 change request with ${changeFields} fields`);
   console.log(`  ${notifications} notifications, ${audit} audit entries`);

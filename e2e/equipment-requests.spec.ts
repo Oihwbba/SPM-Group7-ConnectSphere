@@ -6,7 +6,7 @@ import { selectFrom, optionsOf, openEquipmentRequest } from "./helpers";
  * SCRUM-27 — Create Equipment Request. An Event Coordinator asks Technical
  * Support for equipment for one of their events.
  *
- * Each test builds its own APPROVED event (the "rig"), so tests never share a
+ * Each test builds its own PLANNING event (the "rig"), so tests never share a
  * request and a CI retry starts clean: one event can hold only one open
  * request (AC 7). Rigs are removed afterwards, and their requests go with them.
  * They write to the database, so they only run against a localhost one.
@@ -36,7 +36,7 @@ async function makeRig(label: string) {
   return prisma.event.create({
     data: {
       name: `${RIG} ${label} ${Date.now()}`,
-      status: "APPROVED",
+      status: "PLANNING",
       startAt: new Date("2032-08-20T01:00:00.000Z"),
       endAt: new Date("2032-08-20T09:30:00.000Z"),
       organiserId: "usr_organiser",

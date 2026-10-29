@@ -30,7 +30,7 @@ sit 50 or more days out, on venue and day pairs nothing else uses.
 | Pre-conditions | Freshly seeded. |
 | Test Steps | 1. For each workflow record, list the statuses of the rows with seeded ids (`evt_`, `bkg_`, `eqr_`, `res_`, `reg_`, `clr_`, `chg_`, `sfc_`), and the reasons of seeded unavailability (`vun_`, `eun_`). <br> 2. List the types of the seeded notifications (`ntf_`), and who each is for. |
 | Test Data | — |
-| Expected Result | 1. Every value of every status enum, both rejection outcomes and every unavailability reason appears. <br> 2. All 28 notification types appear. Each staff-only type is for a user holding that role: a new venue request for Venue Staff, a new equipment request for Technical Support, a request awaiting assignment for a Lead, a requested safety check for a Safety Officer, and a changed registered event for an Attendee. |
+| Expected Result | 1. Every value of every status enum, both rejection outcomes and every unavailability reason appears, except the event status Approved, which no event stays in (SCRUM-233). <br> 2. All 28 notification types appear. Each staff-only type is for a user holding that role: a new venue request for Venue Staff, a new equipment request for Technical Support, a request awaiting assignment for a Lead, a requested safety check for a Safety Officer, and a changed registered event for an Attendee. |
 
 **Automated by:** `tests/integration/seed-coverage.test.ts` › "SCRUM-238 [AC2] TC-238-01: every status of every workflow record has a seeded row" and "SCRUM-238 [AC2] TC-238-01: every notification type is seeded, for a person who holds the role that receives it"
 

@@ -47,7 +47,7 @@ unless the case says otherwise.
 |---|---|
 | Test Case ID | TC-84-02 |
 | Test Scenario | [Positive] AC 2: requests in every status are listed |
-| Pre-conditions | The Organiser has requests that are Draft, Submitted, Under Review, Approved, Rejected and Completed. |
+| Pre-conditions | The Organiser has requests that are Draft, Submitted, Under Review, Planning, Rejected and Completed. No event rests in Approved (SCRUM-81 AC 1, SCRUM-233), so the seed has none; the unit test still lists an APPROVED row to show the list doesn't drop that status. |
 | Test Steps | 1. Open **My Events** on **All**. <br> 2. Click **Drafts**, then **Submitted**. |
 | Test Data | The seeded events |
 | Expected Result | **All** lists every one. **Drafts** lists only the drafts; **Submitted** lists every non-draft, in any later status. |

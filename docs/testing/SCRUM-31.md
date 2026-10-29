@@ -47,7 +47,7 @@ needs them.
 |---|---|
 | Test Case ID | TC-31-01 |
 | Test Scenario | [Positive] AC 1, AC 7: a quantity within availability is reserved as Confirmed, and availability drops by exactly that quantity |
-| Pre-conditions | Signed in as Technical Support. The event "Approved — Research Symposium" is APPROVED. No reservation or maintenance hold overlaps the test period for Lectern. |
+| Pre-conditions | Signed in as Technical Support. The event "Planning — Research Symposium" is PLANNING. No reservation or maintenance hold overlaps the test period for Lectern. |
 | Test Steps | Superseded by [TC-155-04](SCRUM-155.md#tc-155-04). SCRUM-156 moved reserving from the one-type form to the "Reserve an approved request" card, so follow that case's steps; this case's intent (the scenario above) is unchanged. |
 | Test Data | As in TC-155-04. |
 | Expected Result | As in TC-155-04. |
@@ -62,7 +62,7 @@ needs them.
 | Test Scenario | [Positive] AC 2: a reservation is permanently linked to the event it was made for |
 | Pre-conditions | As TC-31-01. |
 | Test Steps | 1. Reserve 1 Lectern for the approved event, as in TC-31-01. <br> 2. Look up the new reservation in the database (or the event's reservations). |
-| Test Data | Event ID: `evt_approved` (Approved — Research Symposium) <br> Equipment type: Lectern <br> Start: 2031-05-11 09:00 <br> End: 2031-05-11 17:00 <br> Quantity: 1 |
+| Test Data | Event ID: `evt_approved` (Planning — Research Symposium) <br> Equipment type: Lectern <br> Start: 2031-05-11 09:00 <br> End: 2031-05-11 17:00 <br> Quantity: 1 |
 | Expected Result | The reservation's `eventId` is `evt_approved`, `reservedById` is the Technical Support user, and the reservation offers no way to move it to another event. |
 
 **Automated by:** `tests/unit/request-reservation.test.ts` › "SCRUM-155 [AC3] TC-155-04: rows that all fit are reserved together, each Confirmed and linked to the event and the request"; `tests/integration/request-reservation.test.ts` › "SCRUM-155 [AC3] TC-155-04: reserves every row together, Confirmed and linked to the event and the request"
@@ -163,7 +163,7 @@ needs them.
 | Item | Content |
 |---|---|
 | Test Case ID | TC-31-10 |
-| Test Scenario | [Positive, Negative] equipment can be reserved for an APPROVED or PLANNING event, and no other |
+| Test Scenario | [Positive, Negative] equipment can be reserved for a PLANNING event, and no other (APPROVED was dropped by SCRUM-233: no event stays in it) |
 | Pre-conditions | Signed in as Technical Support. The seeded events "Planning — Freshman Orientation" (PLANNING) and "Confirmed — Charity Gala" (CONFIRMED) exist. |
 | Test Steps | Superseded by [TC-155-10](SCRUM-155.md#tc-155-10). SCRUM-156 moved reserving from the one-type form to the "Reserve an approved request" card, so follow that case's steps; this case's intent (the scenario above) is unchanged. |
 | Test Data | As in TC-155-10. |
