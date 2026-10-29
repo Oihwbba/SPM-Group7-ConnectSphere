@@ -180,6 +180,6 @@ workflow; case 11 is the check on this repository.
 | Pre-conditions | This branch: `main` with SCRUM-236's renamed titles. |
 | Test Steps | 1. Run `npm run check:citations`. |
 | Test Data | — |
-| Expected Result | No citation is broken: 2,301 in 95 documents on this branch, this one included. Three were fixed for it. SCRUM-72's TC-72-03 cited a title with quote marks in it, so it is now shortened with "…". SCRUM-124's TC-124-08 quoted a notice in prose, which is now read as text. SCRUM-70's titles are built in a loop, and now match as templates. Two citations inside parentheses, in SCRUM-124 and SCRUM-163, are now checked as well. The check runs inside `build-and-test`, which `main` already requires. |
+| Expected Result | No citation is broken: 2,301 in 96 documents on this branch, this one included. Three were fixed for it. SCRUM-72's TC-72-03 cited a title with quote marks in it, so it is now shortened with "…". SCRUM-124's TC-124-08 quoted a notice in prose, which is now read as text. SCRUM-70's titles are built in a loop, and now match as templates. Two citations inside parentheses, in SCRUM-124 and SCRUM-163, are now checked as well. The check runs inside `build-and-test`, which `main` already requires. |
 
 **Automated by:** the **Check test-case citations** step of `build-and-test`, on this pull request and every one after it.
