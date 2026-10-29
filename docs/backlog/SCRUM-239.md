@@ -26,6 +26,7 @@ Found during the SCRUM-218 epic check (AC2, AC3, AC4). SCRUM-242 was merged into
 * SCRUM-75's 8 Oct refinement removed setting the registration window, but SCRUM-73 AC6 and its Business rule, and docs/testing/SCRUM-73.md, still say the window is set in SCRUM-75.
 * SCRUM-76 and SCRUM-77 carry Related notes that are no longer true (the SCRUM-42 page name, fixed by SCRUM-146; AC3, AC4 and AC6 "remain", though the story is Done).
 * docs/testing TC-75-14 is retired for SCRUM-128 AC11 but doesn't cite the case that replaced it (TC-128-16), as SCRUM-203 AC1 asks.
+* docs/testing TC-72-06, TC-72-07, TC-73-05 and TC-76-01 test the superseded criteria without saying what changed them or which case tests the change. Their automated tests are still correct (they test an Attendee who isn't registered, a seeded window, and so on), so only the test cases are out of date.
 
 Done stories are not reopened: only notes, Supersedes lines and change logs are edited, never a Done story's user story, criteria or title.
 
@@ -45,7 +46,7 @@ Out of scope: SCRUM-212 AC1 lists four registration states, while SCRUM-75 AC7 a
 2. SCRUM-171 and SCRUM-85 carry a Supersedes line for the criteria they changed, and SCRUM-162's names SCRUM-76 AC1.
 3. The out-of-date Related sentences in SCRUM-76 and SCRUM-77 are removed.
 4. Every edit has a dated change-log line, and the Product Owner (Hann Qian) approves the wording.
-5. docs/testing/SCRUM-75.md TC-75-14 cites TC-128-16, docs/testing/SCRUM-73.md no longer says the window is set in SCRUM-75, and docs/backlog is re-synced from Jira for every item changed; the PR is docs-only.
+5. docs/testing/SCRUM-75.md TC-75-14 cites TC-128-16, docs/testing/SCRUM-73.md no longer says the window is set in SCRUM-75, the test cases of the superseded criteria (TC-72-06, TC-72-07, TC-73-05 and TC-76-01) say what changed and cite the case that tests it now, and docs/backlog is re-synced from Jira for every item changed; the PR is docs-only.
 6. In docs/product-context.md's Release 1 feature table, SCRUM-70 is listed under feature #1 (SCRUM-9 Access Control) and no longer under feature #18 (SCRUM-11 Attendee Registration).
 7. The same table lists SCRUM-212 under feature #18 (SCRUM-11).
 8. docs/backlog/SCRUM-212.md is re-synced from Jira, and the backlog index lists SCRUM-212 under SCRUM-11 instead of "Stories with no epic".
@@ -58,3 +59,4 @@ Out of scope: SCRUM-212 AC1 lists four registration states, while SCRUM-75 AC7 a
 * 2026-10-29: SCRUM-212 AC1 taken out of scope, to be raised with Caylern and Hann Qian instead; its Jira edit was reverted.
 * 2026-10-29: a second pass of the epic added SCRUM-76 AC1 (SCRUM-162), SCRUM-85's changes to SCRUM-72 and SCRUM-76, and the SCRUM-73 test-doc note.
 * 2026-10-29: SCRUM-242 merged in as AC6 to AC11 (its AC1 to AC6, in the same order); renamed from "Record which later stories supersede the Attendee Registration stories (SCRUM-72 to 77)". AC1 to AC5 are unchanged.
+* 2026-10-29: AC5 extended to the test cases of the superseded criteria (TC-72-06, TC-72-07, TC-73-05, TC-76-01), found when checking that the superseded stories' tests still test the right thing. Their tests needed no change.
