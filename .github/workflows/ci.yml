@@ -93,6 +93,10 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      # Every docs/testing citation names a test that exists (SCRUM-196).
+      - name: Check test-case citations
+        run: npm run check:citations
+
       - name: Unit + integration tests (with coverage)
         run: npm run test:coverage
 
