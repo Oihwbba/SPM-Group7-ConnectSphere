@@ -1,11 +1,20 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 
 import { AvailabilityCalendar } from "@/app/(app)/venues/availability/availability-calendar";
-import { availabilityByDay } from "@/lib/venue-availability";
+import { availabilityByDay, closedHours } from "@/lib/venue-availability";
 import { formatDateTime } from "@/lib/datetime";
+import type { OpeningDay } from "@/lib/venue-hours";
 
 // SCRUM-36 — what the week grid says about a day. Rendering only.
+
+// The grid opens scrolled in the browser; here where it opens is markup.
+vi.mock("@/app/(app)/venues/availability/week-scroll", () => ({
+  WeekScroll: ({ top, children }: { top: number; children: React.ReactNode }) => (
+    <div data-scroll-top={top}>{children}</div>
+  ),
+}));
+
 const sg = (day: string, hhmm: string) => new Date(`${day}T${hhmm}:00+08:00`);
 
 /** The part of the week grid's markup for one day's column. */
@@ -192,5 +201,77 @@ describe("AvailabilityCalendar — SCRUM-36", () => {
     expect(withTimes).toContain("Turnaround: 12:00 pm SGT to 12:45 pm SGT (45 min)");
     expect(without).not.toContain("Setup:");
     expect(without).not.toContain("Turnaround:");
+  });
+});
+
+describe("AvailabilityCalendar — closed hours (SCRUM-241)", () => {
+  // Mon 12 to Sun 18 Mar 2035: Mon–Fri 09:00–18:00, Saturday Closed, no row for Sunday.
+  const hours: OpeningDay[] = [
+    ...[1, 2, 3, 4, 5].map((weekday) => ({ weekday, opensMinute: 9 * 60, closesMinute: 18 * 60 })),
+    { weekday: 6, opensMinute: null, closesMinute: null },
+  ];
+  const week = (extra: Parameters<typeof availabilityByDay>[0] = []) =>
+    render(
+      availabilityByDay(
+        [...closedHours(hours, "2035-03-12", "2035-03-18"), ...extra],
+        "2035-03-12",
+        "2035-03-18",
+      ),
+    );
+  const list = (html: string, day: string) => {
+    const phone = html.slice(html.indexOf('data-view="list"'));
+    const start = phone.indexOf(`data-day="${day}"`);
+    const end = phone.indexOf("data-day=", start + 1);
+    return phone.slice(start, end === -1 ? undefined : end);
+  };
+
+  it("SCRUM-241 [AC1] TC-241-06: an open day reads as closed, then available in its opening hours, then closed, on the grid and on a phone", () => {
+    const html = week();
+
+    for (const view of [column(html, "2035-03-12"), list(html, "2035-03-12")]) {
+      expect(view).toContain("Closed midnight to 9:00 am SGT");
+      expect(view).toContain("Available 9:00 am SGT to 6:00 pm SGT");
+      expect(view).toContain("Closed 6:00 pm SGT to midnight");
+    }
+    // An open day is not "Available all day" any more.
+    expect(column(html, "2035-03-12")).not.toContain("data-free-all-day");
+  });
+
+  it("SCRUM-241 [AC1] TC-241-06: a Closed day says Closed all day at the top of its column, and never Available", () => {
+    const html = week();
+
+    for (const day of ["2035-03-17", "2035-03-18"]) {
+      expect(column(html, day)).toContain("data-closed-all-day");
+      expect(column(html, day)).toContain("Closed all day");
+      expect(column(html, day)).not.toContain("Available");
+      expect(list(html, day)).toContain("Closed all day");
+    }
+    expect(html.match(/data-closed-all-day/g)).toHaveLength(2);
+  });
+
+  it("SCRUM-241 [AC2] TC-241-07: closed hours are their own kind, with their own label and icon in the legend, and nothing to open", () => {
+    const html = week([
+      { kind: "booking", id: "bkg_1", startAt: sg("2035-03-12", "10:00"), endAt: sg("2035-03-12", "12:00") },
+      { kind: "unavailability", id: "vun_1", startAt: sg("2035-03-13", "10:00"), endAt: sg("2035-03-13", "12:00"), reason: "MAINTENANCE" },
+    ]);
+    const monday = column(html, "2035-03-12");
+    const closed = monday.match(/<li data-kind="closed"[^>]*>/g) ?? [];
+    const booked = monday.match(/<li data-kind="booking"[^>]*>/g) ?? [];
+
+    expect(closed).toHaveLength(2);
+    // Greyed, not the booking's or the unavailability's colour.
+    expect(closed[0]).not.toEqual(booked[0]);
+    expect(monday).not.toMatch(/data-kind="closed"[^>]*>\s*<button/);
+    const legend = html.slice(html.indexOf('aria-label="Legend"'), html.indexOf("</ul>", html.indexOf('aria-label="Legend"')));
+    expect(legend).toContain("Closed");
+    expect(legend).toContain("Booked");
+    expect(legend).toContain("Unavailable");
+    expect(legend).toContain("lucide-door-closed");
+  });
+
+  it("SCRUM-241 [AC1] TC-241-06: closed hours from midnight don't scroll the grid to midnight; it still opens at 7 am", () => {
+    const html = week();
+
+    expect(html).toContain(`data-scroll-top="${(7 - 0.5) * 56}"`);
   });
 });
