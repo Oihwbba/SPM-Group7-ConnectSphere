@@ -48,9 +48,11 @@ unless the case says otherwise.
 | Test Case ID | TC-84-02 |
 | Test Scenario | [Positive] AC 2: requests in every status are listed |
 | Pre-conditions | The Organiser has requests that are Draft, Submitted, Under Review, Approved, Rejected and Completed. |
-| Test Steps | 1. Open **My Events** on **All**. <br> 2. Click **Drafts**, then **Submitted**. |
+| Test Steps | 1. Open **My Events** on **All**. <br> 2. Click **Drafts**, then **Sent**. |
 | Test Data | The seeded events |
-| Expected Result | **All** lists every one. **Drafts** lists only the drafts; **Submitted** lists every non-draft, in any later status. |
+| Expected Result | **All** lists every one. **Drafts** lists only the drafts; **Sent** lists every non-draft, in any later status. |
+
+**Superseded in part** by SCRUM-131 AC 1 ([TC-131-01](SCRUM-131.md#tc-131-01)): the tab of every request that isn't a draft is named **Sent**, not **Submitted**, so it isn't mistaken for the Submitted status, and the statuses use the nine agreed names.
 
 **Automated by:** `tests/unit/events.test.ts` › "SCRUM-84 [AC1, AC2 - Happy Path / Ownership Isolation]: executes organiser query filtering only events belonging to logged-in organiser", "SCRUM-84: given events in DRAFT, SUBMITTED, UNDER_REVIEW, APPROVED, REJECTED and COMPLETED, activeTab …", "SCRUM-84: an organiser's second tab still holds everything they have sent"
 

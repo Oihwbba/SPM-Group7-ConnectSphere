@@ -117,6 +117,8 @@ Organiser sees every Approved venue.
 | Test Data       | —                                                                                                              |
 | Expected Result | A "Confirmed arrangements" section: Venue "Exhibition Hall", the event's date and time, and "Projector × 2".   |
 
+**Superseded in part** by SCRUM-162 AC 7 ([TC-162-11](SCRUM-162.md#tc-162-11)): with several Approved venues, the Organiser sees every one, oldest first. This case keeps one venue.
+
 **Automated by:** `tests/unit/event-readiness.test.ts` › "SCRUM-81 [AC6] TC-81-06: …"; `tests/unit/readiness-actions.test.ts` › "SCRUM-81 [AC6] TC-81-06: …"; `e2e/confirm.spec.ts` › "SCRUM-81 [AC3, AC5, AC6, AC7] …"
 
 ### TC-81-07

@@ -61,4 +61,6 @@ assigned to `coordinator@test.local` (both `Password123!`).
 | Test Data | The request's id |
 | Expected Result | Each is refused as if the request didn't exist, so it reveals nothing. |
 
+**Superseded in part** by SCRUM-141 AC 1 and AC 3 ([TC-141-05](SCRUM-141.md#tc-141-05)): step 1's other Coordinator can now see the request read-only in **All events**. They still can't open it from their own Events list or decide it, which is what the tests below check.
+
 **Automated by:** `tests/unit/coordinator-events-access.test.ts` › "[Negative] AC/SCRUM-68 parity: the query's OR condition matches can()'s relationship rule exactly for an event assigned to a DIFFERENT coordinator", "[Boundary] AC/SCRUM-68 parity: an unclaimed DRAFT is NOT viewable — the query explicitly excludes DRAFT from the null-coordinator branch"; `tests/unit/event-status.test.ts` › "SCRUM-68: another coordinator's event is indistinguishable from a missing one". Step 3 is SCRUM-68's (see its spec).

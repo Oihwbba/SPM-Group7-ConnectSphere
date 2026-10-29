@@ -16,14 +16,25 @@ event's details window: **Events** → the event's row → **View Details**.
 
 **What the checklist shows**
 
-| Item          | Shown                                                              | States                                                                                              |
-| ------------- | ------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------- |
-| Venue booking | Always                                                             | Approved (complete) · Pending · Approved for a different time · Rejected – _reason_ · Not requested |
-| Equipment     | Only when the event has an equipment request that is not cancelled | Reserved (complete) · Not fully reserved: _items_ · Rejected                                        |
+| Item          | Shown                                                                     | States                                                                                                                                                     |
+| ------------- | ------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Venue booking | Always; each Pending, Held or Approved booking is listed (SCRUM-162 AC 8) | Approved (complete) · Pending · Held until _time_ – confirm to secure · Approved for a different time · Rejected – _reason_ · Hold expired · Not requested |
+| Equipment     | Always (SCRUM-170 AC 4)                                                   | Reserved (complete) · No equipment needed (complete) · Not fully reserved: _items_ · Awaiting Technical Support review · Rejected · Not decided            |
+| Safety check  | Always (SCRUM-166 AC 9)                                                   | Approved (complete) · Awaiting review · Changes requested · Rejected · Outdated · Not requested                                                            |
 
 When every item is complete and the event is in Planning, the checklist shows
 **Ready to confirm**. The Organiser sees the same items and states, without
 the reason after "Rejected".
+
+Later stories superseded parts of the story (its "Superseded in part" note):
+AC 1 and AC 2's single booking by SCRUM-162 AC 8, which lists every booking
+([TC-162-12](SCRUM-162.md#tc-162-12), [TC-162-13](SCRUM-162.md#tc-162-13));
+AC 2's states by SCRUM-163 AC 6, which adds Held and Expired
+([TC-163-11](SCRUM-163.md#tc-163-11)); AC 3 by SCRUM-170 AC 4, so Equipment
+is always listed ([TC-170-07](SCRUM-170.md#tc-170-07)); and AC 5 by SCRUM-166
+AC 9, so Ready to confirm also needs an Approved safety check
+([TC-166-10](SCRUM-166.md#tc-166-10)). The cases below keep the original
+criteria where they still hold, and note where they don't.
 
 | ID                      | Type     | Criterion        | Automated |
 | ----------------------- | -------- | ---------------- | --------- |
@@ -50,11 +61,11 @@ the reason after "Rejected".
 | Item            | Content                                                                                                                                                         |
 | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Test Case ID    | TC-110-01                                                                                                                                                       |
-| Test Scenario   | [Positive] AC 1, AC 3, AC 5: with the venue booking approved and no equipment request, the checklist shows only Venue booking, complete, and "Ready to confirm" |
-| Pre-conditions  | Signed in as the assigned Coordinator. The event has one approved venue booking and no equipment request.                                                       |
+| Test Scenario   | [Positive] AC 1, AC 3, AC 5: with the venue booking approved, No equipment needed recorded and the safety check Approved, every item is complete and the checklist shows "Ready to confirm" |
+| Pre-conditions  | Signed in as the assigned Coordinator. The event has one approved venue booking, No equipment needed recorded and an Approved safety check (SCRUM-166 AC 9). |
 | Test Steps      | 1. Open the event's details. <br> 2. Read the Readiness checklist.                                                                                              |
 | Test Data       | Booking status APPROVED                                                                                                                                         |
-| Expected Result | "Venue booking — Approved", marked complete. Since SCRUM-170 AC 4 (which supersedes AC 3), Equipment is always listed: with No equipment needed recorded it is complete, and without a decision it is "Not decided" and the event is not ready (TC-170-07, TC-170-08). "Ready to confirm" is shown. |
+| Expected Result | "Venue booking — Approved", marked complete. Since SCRUM-170 AC 4 (which supersedes AC 3), Equipment is always listed: with No equipment needed recorded it is complete, and without a decision it is "Not decided" and the event is not ready (TC-170-07, TC-170-08). "Safety check — Approved", complete (SCRUM-166 AC 9). "Ready to confirm" is shown. |
 
 **Automated by:** `tests/unit/event-readiness.test.ts` › "SCRUM-110 [AC1, AC5] TC-110-01, SCRUM-170 [AC4] TC-170-08, SCRUM-166 [AC9]: …"; `e2e/readiness.spec.ts` › "SCRUM-110 [AC3, AC5, AC6] TC-110-01, TC-110-06: …"
 

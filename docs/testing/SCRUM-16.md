@@ -32,9 +32,9 @@ otherwise.
 | Test Case ID | TC-16-01 |
 | Test Scenario | [Positive] AC 1, AC 3, AC 6: a draft looks different from a submitted request on My Events, and offers to resume |
 | Pre-conditions | Signed in as the Organiser, with a draft and a submitted request. |
-| Test Steps | 1. Open **My Events**. <br> 2. Compare the two rows. <br> 3. Click **Drafts**, then **Submitted**, then **All**. <br> 4. Open the draft. |
+| Test Steps | 1. Open **My Events**. <br> 2. Compare the two rows. <br> 3. Click **Drafts**, then **Sent**, then **All**. <br> 4. Open the draft. |
 | Test Data | Draft "US16 Draft"; submitted "US16 Submitted" |
-| Expected Result | The draft row shows a Draft badge (since the shared page conventions, the badge is the one Draft marker; the second "Draft — Incomplete" tag is gone), and a **Resume Draft** button; the submitted row shows its own status badge. **Drafts** shows only the draft, **Submitted** only the other. The draft's detail shows the Draft status too. |
+| Expected Result | The draft row shows a Draft badge (since the shared page conventions, the badge is the one Draft marker; the second "Draft — Incomplete" tag is gone), and a **Resume Draft** button; the submitted row shows its own status badge. **Drafts** shows only the draft, **Sent** only the other (SCRUM-131 AC 1 renamed the **Submitted** tab, [TC-131-01](SCRUM-131.md#tc-131-01)). The draft's detail shows the Draft status too. |
 
 **Automated by:** `tests/unit/events.test.ts` › "SCRUM-16 [AC1, AC2 - Happy Path]: creates event with status DRAFT ensuring visual and logical separation from SUBMITTED"; `e2e/events.spec.ts` › "SCRUM-16 [AC7] TC-16-04: organiser can visually distinguish draft requests from submitted ones side-by-side and filter by status"
 
@@ -84,7 +84,7 @@ otherwise.
 | Test Case ID | TC-16-05 |
 | Test Scenario | [Negative] AC 8: showing, filtering and resuming a draft change nothing |
 | Pre-conditions | Signed in as the Organiser, with a draft. |
-| Test Steps | 1. Open **My Events**, switch between **Drafts**, **Submitted** and **All**, and open the draft. <br> 2. Click **Resume Draft** and close the form without saving. <br> 3. Check the draft's status and history. |
+| Test Steps | 1. Open **My Events**, switch between **Drafts**, **Sent** and **All**, and open the draft. <br> 2. Click **Resume Draft** and close the form without saving. <br> 3. Check the draft's status and history. |
 | Test Data | One draft |
 | Expected Result | The draft is still a Draft, with no new history entry. |
 
