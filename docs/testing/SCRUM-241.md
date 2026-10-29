@@ -123,10 +123,10 @@ nothing.
 |---|---|
 | Test Case ID | TC-241-07 |
 | Test Scenario | [Positive] AC 2: closed hours look different from bookings and from unavailability |
-| Pre-conditions | The shared opening hours, a booking on Monday and maintenance on Tuesday |
+| Pre-conditions | The shared opening hours; on Monday, a booking from 10:00 to 12:00 and maintenance from 13:00 to 15:00, each with its hover details so it is drawn as a card |
 | Test Steps | 1. Render the calendar. <br> 2. Read the legend. |
 | Test Data | — |
-| Expected Result | Closed hours are their own kind, greyed out and styled differently from the booking, with nothing to hover or open. The legend lists "Closed" with its own door icon, beside "Booked" and "Unavailable". |
+| Expected Result | Closed hours are their own kind, with a grey (muted) card whose style differs from both the booking's card and the maintenance card, and nothing to hover or open. The legend lists "Closed" with its own door icon, beside "Booked" and "Unavailable". |
 
 **Automated by:** `tests/unit/availability-calendar.test.tsx` › "SCRUM-241 [AC2] TC-241-07: closed hours are their own kind, with their own label and icon in the legend, and nothing to open"
 

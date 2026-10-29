@@ -250,17 +250,56 @@ describe("AvailabilityCalendar — closed hours (SCRUM-241)", () => {
   });
 
   it("SCRUM-241 [AC2] TC-241-07: closed hours are their own kind, with their own label and icon in the legend, and nothing to open", () => {
+    const at = (day: string, from: string, to: string) => ({
+      startAt: sg(day, from),
+      endAt: sg(day, to),
+    });
+    // With their hover details, so each is drawn as its card.
     const html = week([
-      { kind: "booking", id: "bkg_1", startAt: sg("2035-03-12", "10:00"), endAt: sg("2035-03-12", "12:00") },
-      { kind: "unavailability", id: "vun_1", startAt: sg("2035-03-13", "10:00"), endAt: sg("2035-03-13", "12:00"), reason: "MAINTENANCE" },
+      {
+        kind: "booking",
+        id: "bkg_1",
+        ...at("2035-03-12", "10:00", "12:00"),
+        details: {
+          kind: "booking",
+          ...at("2035-03-12", "10:00", "12:00"),
+          heldUntil: null,
+          eventName: "Board Meeting",
+          requestedBy: "Cody Coordinator",
+          attendance: 10,
+          layout: null,
+          setupMinutes: 0,
+          turnaroundMinutes: 0,
+        },
+      },
+      {
+        kind: "unavailability",
+        id: "vun_1",
+        ...at("2035-03-12", "13:00", "15:00"),
+        reason: "MAINTENANCE",
+        details: {
+          kind: "unavailability",
+          ...at("2035-03-12", "13:00", "15:00"),
+          note: null,
+          recordedBy: "Vera Venue",
+        },
+      },
     ]);
     const monday = column(html, "2035-03-12");
-    const closed = monday.match(/<li data-kind="closed"[^>]*>/g) ?? [];
-    const booked = monday.match(/<li data-kind="booking"[^>]*>/g) ?? [];
+    /** The style of the card drawn for each stretch of one kind. */
+    const cards = (kind: string) =>
+      [...monday.matchAll(new RegExp(`<li data-kind="${kind}"[^>]*>\\s*<(?:div|button)[^>]*style="([^"]*)"`, "g"))].map(
+        (m) => m[1],
+      );
 
-    expect(closed).toHaveLength(2);
-    // Greyed, not the booking's or the unavailability's colour.
-    expect(closed[0]).not.toEqual(booked[0]);
+    expect(cards("closed")).toHaveLength(2);
+    // Greyed out, unlike the booking's and the unavailability's cards.
+    const [closed] = cards("closed");
+    expect(closed).toContain("--muted-foreground");
+    expect(cards("booking")).toHaveLength(1);
+    expect(cards("unavailability")).toHaveLength(1);
+    expect(closed).not.toEqual(cards("booking")[0]);
+    expect(closed).not.toEqual(cards("unavailability")[0]);
     expect(monday).not.toMatch(/data-kind="closed"[^>]*>\s*<button/);
     const legend = html.slice(html.indexOf('aria-label="Legend"'), html.indexOf("</ul>", html.indexOf('aria-label="Legend"')));
     expect(legend).toContain("Closed");
