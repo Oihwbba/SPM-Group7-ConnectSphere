@@ -103,6 +103,9 @@ CI and review round.
 - [ ] Every acceptance criterion in `docs/backlog/SCRUM-n.md` is covered by a
       test, or the PR says plainly that it is still to do.
 - [ ] `docs/testing/SCRUM-n.md` lists the cases and which test automates each.
+      `npm run check:citations` (part of `npm run verify`, and a step of
+      `build-and-test`) fails on any citation of a file or title that no
+      longer exists, in any story's document (SCRUM-196).
 
 **Security and data**
 
