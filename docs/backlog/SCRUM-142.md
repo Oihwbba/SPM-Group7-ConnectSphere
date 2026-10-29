@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-21. Jira is the source of truth.
+     Synced from Jira on 2026-10-29. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-142 - Change equipment lines or withdraw a venue request before confirmation
@@ -31,7 +31,7 @@
 9. Given a safety check was approved or is awaiting review, then a change or withdrawal here makes it Outdated (SCRUM-166).
 10. Given an equipment request for my event is Pending Review or In Review, for example after a change in AC1, then the readiness checklist (SCRUM-110) shows Equipment as incomplete, so the event can't be Confirmed (SCRUM-81) until Technical Support approves it again. When every requested line is already reserved, Equipment shows "Awaiting Technical Support review".
 
-**Customer basis:** "Can Coordinator add/remove equipment line items anytime before confirmation? Yes, changes allowed; Technical Support Staff re-check suitability." "Co-ordinator can submit booking request based on per event that he is assigned." Week 7 change 3: "Changes or cancellation of one venue arrangement should not automatically remove the other venue bookings unless this is explicitly required."
+**Customer basis:** Week 7 change 3: "Changes or cancellation of one venue arrangement should not automatically remove the other venue bookings unless this is explicitly required."
 
 **Why this is a new story:** SCRUM-27 (Sprint 2, Done) creates an equipment request but has no way to change or withdraw it, and SCRUM-50 (Sprint 2, Done) has no way to withdraw a pending venue request, so a wrong request stays in the Venue Staff queue until it is rejected. Both are added here rather than re-scoping Done stories.
 

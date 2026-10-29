@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-20. Jira is the source of truth.
+     Synced from Jira on 2026-10-29. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-124 - Staff and arrangement notifications
@@ -38,7 +38,7 @@
 
 **Related:** the Coordinator's notification when Technical Support reviews an equipment request is already sent by SCRUM-28, so it isn't repeated here. Assignment and reassignment notices to the Coordinator and Organiser are SCRUM-45.
 
-**Customer basis:** "Changes trigger notifications to staff." Briefing §6 examples: "A venue booking is requested, approved, rejected, or changed." "Requested equipment is confirmed or found to be unavailable." "The Event Organiser requests a significant change." Week 7 change 2: "the relevant Event Coordinators informed that alternative arrangements are required." Week 7 change 4: "The Event Coordinator should be informed before or when the hold expires." Week 7 change 5: "Relevant users should be notified when assignments or reassignments occur."
+**Customer basis:** Briefing section 6. examples: "A venue booking is requested, approved, rejected, or changed." "Requested equipment is confirmed or found to be unavailable." "The Event Organiser requests a significant change." Week 7 change 2: "the relevant Event Coordinators informed that alternative arrangements are required." Week 7 change 4: "The Event Coordinator should be informed before or when the hold expires." Week 7 change 5: "Relevant users should be notified when assignments or reassignments occur."
 
 **Change log**
 
