@@ -33,6 +33,11 @@ Some terms used across these records:
   then.
 - **Points:** the estimate in Jira today. A sprint record says where an
   estimate changed during the sprint.
+- **Reopened and closed again:** the item went back from Done in Jira, for
+  example for a gap found in review or an audit, and was moved to Done again
+  once fixed. The reason is in the item's Jira comments; [Sprint 3](sprint-3.md)
+  lists the gaps behind its 20 Oct reopens and the pull requests that fixed
+  them.
 
 Times are Singapore time (SGT).
 
