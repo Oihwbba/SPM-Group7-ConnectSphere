@@ -26,13 +26,13 @@ and seeded with `npm run db:seed`, as in CI's `build-and-test`.
 | Item | Content |
 |---|---|
 | Test Case ID | TC-245-01 |
-| Test Scenario | [Positive] AC 1: the SCRUM-21 file's cleanup succeeds even when another file has notified its second Lead |
-| Pre-conditions | `tests/integration/reassign.test.ts` has created its second Lead. |
-| Test Steps | 1. While it exists, another file's action notifies every Lead about its own event. <br> 2. The file's cleanup runs. |
+| Test Scenario | [Positive] AC 1: the SCRUM-21 file creates and deletes no user, so its cleanup succeeds whatever another file sends the Leads |
+| Pre-conditions | `tests/integration/reassign.test.ts` runs its concurrency test as the seeded Leads, `usr_coordinatorlead` and `usr_coordinatorlead_2` (`lead2@test.local`). |
+| Test Steps | 1. While the file runs, another file's action notifies every Lead about its own event. <br> 2. The file's cleanup runs. |
 | Test Data | — |
-| Expected Result | Every notification to the second Lead is deleted with the file's own, so the Lead is deleted and the file passes. Before the fix the delete failed on `Notification_userId_fkey`. |
+| Expected Result | The cleanup deletes only the file's own event and its notifications and history; no user is deleted, so no notification another file sent can fail it. Before the fix, deleting the file's throwaway Lead failed on `Notification_userId_fkey`. |
 
-**Automated by:** `tests/integration/reassign.test.ts` (its `afterAll`, which fails the file if it can't clean up)
+**Automated by:** `tests/integration/reassign.test.ts` (its `afterAll`, which fails the file if it can't clean up), with no `prisma.user` write in the file
 
 ### TC-245-02
 

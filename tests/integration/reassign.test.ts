@@ -5,8 +5,9 @@ import { prisma } from "@/lib/db";
 import { reassignCoordinator } from "@/app/(app)/all-events/actions";
 
 // SCRUM-21 against a real Postgres: only the session is mocked. It writes a
-// throwaway event and a second Lead, so it runs only against a localhost
-// database (CI's, or the Docker one), never the shared Supabase one.
+// throwaway event, so it runs only against a localhost database (CI's, or the
+// Docker one), never the shared Supabase one. The second Lead is the seeded
+// one, so no user is created or deleted while other files notify every Lead.
 vi.mock("@/auth", () => ({ auth: vi.fn() }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
@@ -21,47 +22,29 @@ const asLead = (id: string) => ({
 
 describe.skipIf(!usesLocalDatabase)("SCRUM-21 — reassigning against a real database", () => {
   let eventId: string;
-  let secondLeadId: string;
 
   beforeAll(async () => {
-    const [event, lead] = await Promise.all([
-      prisma.event.create({
-        data: {
-          name: `SCRUM-21 Reassign Event ${Date.now()}`,
-          status: "PLANNING",
-          organiserId: "usr_organiser",
-          coordinatorId: "usr_coordinator",
-        },
-        select: { id: true },
-      }),
-      prisma.user.create({
-        data: {
-          email: `reassign-lead-${Date.now()}@test.local`,
-          name: "Second Lead",
-          role: "COORDINATOR_LEAD",
-          passwordHash: "not-used-in-this-test",
-        },
-        select: { id: true },
-      }),
-    ]);
-    eventId = event.id;
-    secondLeadId = lead.id;
+    ({ id: eventId } = await prisma.event.create({
+      data: {
+        name: `SCRUM-21 Reassign Event ${Date.now()}`,
+        status: "PLANNING",
+        organiserId: "usr_organiser",
+        coordinatorId: "usr_coordinator",
+      },
+      select: { id: true },
+    }));
   });
 
   afterAll(async () => {
-    // Another file can notify every Lead while this one exists.
-    await prisma.notification.deleteMany({
-      where: { OR: [{ eventId }, { userId: secondLeadId }] },
-    });
+    await prisma.notification.deleteMany({ where: { eventId } });
     await prisma.auditLog.deleteMany({ where: { entityId: eventId } });
     await prisma.event.delete({ where: { id: eventId } });
-    await prisma.user.delete({ where: { id: secondLeadId } });
   });
 
   it("SCRUM-21 [AC2, AC9] TC-21-02: [Concurrency] two Leads reassign the same event at the same moment: exactly one is saved, the event has one Coordinator, and one history entry exists", async () => {
     (auth as unknown as Mock)
       .mockResolvedValueOnce(asLead("usr_coordinatorlead"))
-      .mockResolvedValueOnce(asLead(secondLeadId));
+      .mockResolvedValueOnce(asLead("usr_coordinatorlead_2"));
 
     const results = await Promise.all([
       reassignCoordinator({ eventId, coordinatorId: "usr_coordinator_2" }),
