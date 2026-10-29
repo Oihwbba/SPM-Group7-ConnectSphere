@@ -208,4 +208,51 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-233 — the seed follows the event li
     expect(notice.message).toContain(notice.event!.decisionReason!);
     expect(notice.message).toContain("What you can do next: Amend and resubmit.");
   });
+
+  it("SCRUM-233 [AC13] TC-233-13: every seeded registration was taken while its event's registration was open, and every seeded capacity is the expected attendance", async () => {
+    const registrations = await prisma.registration.findMany({
+      where: { id: { startsWith: "reg_" } },
+      select: {
+        id: true,
+        registeredAt: true,
+        event: {
+          select: {
+            registrationEnabled: true,
+            registrationOpensAt: true,
+            registrationClosesAt: true,
+            decidedAt: true,
+            startAt: true,
+          },
+        },
+      },
+    });
+    expect(registrations.length).toBeGreaterThan(0);
+    // SCRUM-73 AC5, SCRUM-75 AC2, AC4, AC7, AC8: after approval and any
+    // opening time, before any closing time and before the start.
+    const outside = registrations
+      .filter(({ registeredAt: at, event: e }) => {
+        const open =
+          e.registrationEnabled &&
+          e.decidedAt !== null &&
+          at >= e.decidedAt &&
+          (e.registrationOpensAt === null || at >= e.registrationOpensAt) &&
+          (e.registrationClosesAt === null || at < e.registrationClosesAt) &&
+          e.startAt !== null &&
+          at < e.startAt;
+        return !open;
+      })
+      .map((r) => r.id);
+    expect(outside).toEqual([]);
+
+    // SCRUM-74: the expected attendance is the capacity.
+    const capacities = await prisma.event.findMany({
+      where: { ...seeded, registrationCapacity: { not: null } },
+      select: { id: true, registrationCapacity: true, expectedAttendance: true },
+    });
+    expect(
+      capacities
+        .filter((e) => e.registrationCapacity !== e.expectedAttendance)
+        .map((e) => e.id),
+    ).toEqual([]);
+  });
 });

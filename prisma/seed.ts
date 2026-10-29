@@ -475,7 +475,8 @@ async function seedEvents() {
       decidedAt: at(-18, 3),
       decidedById: U.coordinator,
       registrationEnabled: true,
-      registrationCapacity: 100,
+      // SCRUM-74: the capacity is the expected attendance (SCRUM-233).
+      registrationCapacity: 120,
       registrationOpensAt: at(-7, 0),
       registrationClosesAt: at(9, 12),
     },
@@ -494,6 +495,12 @@ async function seedEvents() {
       submittedAt: at(-60, 3),
       decidedAt: at(-58, 3),
       decidedById: U.coordinator,
+      // SCRUM-73, SCRUM-75: its registration was taken while open, after
+      // approval and before the start; completing leaves it enabled (SCRUM-233).
+      registrationEnabled: true,
+      registrationCapacity: 90,
+      registrationOpensAt: at(-50, 0),
+      registrationClosesAt: at(-31, 12),
       completedAt: at(-30, 11),
     },
     {

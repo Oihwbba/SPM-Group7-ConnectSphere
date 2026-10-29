@@ -26,6 +26,7 @@ integration cases read only rows with the seed's fixed ids (`evt_`, `aud_`,
 | [TC-233-10](#tc-233-10) | Positive | AC 10 | The whole suite, on a freshly reset local database and in CI |
 | [TC-233-11](#tc-233-11) | Positive | AC 11 | Manual (the shared database, after the merge) |
 | [TC-233-12](#tc-233-12) | Negative | AC 12 | Unit |
+| [TC-233-13](#tc-233-13) | Positive, Negative | AC 13 | Integration |
 
 ---
 
@@ -184,3 +185,16 @@ integration cases read only rows with the seed's fixed ids (`evt_`, `aud_`,
 | Expected Result | 1. Planning only. 2. Refused with "Choose one of your approved events."; nothing is written. 3. Request equipment isn't offered. |
 
 **Automated by:** `tests/unit/equipment-request-queries.test.ts` › "SCRUM-27 [AC1] TC-27-01: treats only planning events as ones equipment can be requested for"; `tests/unit/equipment-request.test.ts` › "SCRUM-27 [AC1] TC-27-02: refuses %s with the same message, and saves nothing" (an event left in Approved); `tests/unit/readiness-actions.test.ts` › "SCRUM-209 [AC2, AC4] TC-209-03: at $status, a new request offered is $offered (SCRUM-27's own rule)" (APPROVED, false)
+
+### TC-233-13
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-233-13 |
+| Test Scenario | [Positive, Negative] AC 13: every seeded registration was taken while its event's registration was open, and every seeded capacity is the expected attendance (SCRUM-73, SCRUM-74, SCRUM-75) |
+| Pre-conditions | Freshly seeded. |
+| Test Steps | 1. For each seeded registration (`reg_`), compare when it was made with its event's registration: enabled, approved, the opening and closing times, and the start. <br> 2. For each seeded event with a capacity, compare it with the expected attendance. |
+| Test Data | Includes `reg_completed_1` on `evt_completed` "Completed — Hackathon", and `evt_confirmed` "Confirmed — Charity Gala" |
+| Expected Result | 1. Every registration was made with registration enabled, at or after the approval and any opening time, before any closing time and before the start. `evt_completed`'s window opens after its approval and closes the evening before it ran. 2. Every capacity equals the expected attendance; the Charity Gala's is 120. Before the fix the test named `reg_completed_1` and, with the Gala's capacity at 100, `evt_confirmed`. |
+
+**Automated by:** `tests/integration/seed-lifecycle.test.ts` › "SCRUM-233 [AC13] TC-233-13: every seeded registration was taken while its event's registration was open, and every seeded capacity is the expected attendance"
