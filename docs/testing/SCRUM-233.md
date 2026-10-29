@@ -166,9 +166,9 @@ integration cases read only rows with the seed's fixed ids (`evt_`, `aud_`,
 | Test Case ID | TC-233-11 |
 | Test Scenario | [Positive] AC 11: after the merge, the shared database follows the lifecycle |
 | Pre-conditions | Merged. A backup of the shared database taken first (see the pull request). |
-| Test Steps | 1. Run `npm run db:seed` on the shared database. <br> 2. Run read-only queries for Approved events, events spanning two Singapore days, and each Confirmed event's readiness. |
+| Test Steps | 1. Run `npm run db:seed` on the shared database. <br> 2. Run read-only queries for every Approved event, seeded or not, events spanning two Singapore days, and each Confirmed event's readiness. |
 | Test Data | — |
-| Expected Result | No Approved events, none spanning two days, and every Confirmed event passing readiness. The seed removes no row, so nothing needs deleting by hand. Rows created through the app are reported, not changed. |
+| Expected Result | No seeded event is Approved, none spans two days, and every seeded Confirmed event passes readiness. The seed removes no row, so nothing needs deleting by hand. Rows created through the app are reported, not changed: in particular, any event left Approved from before approval saved Planning (#120) is counted and listed for the PO, since it can no longer take an equipment request or reservation or be found by a status filter; it can still be cancelled (SCRUM-135 AC 9). |
 
 **Automated by:** Manual (the shared database, after the merge).
 
