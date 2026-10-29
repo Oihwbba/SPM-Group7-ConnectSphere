@@ -6,6 +6,11 @@ built by Group 7 for IS212 Software Project Management.
 **Live app:** <https://spm-group7-connect-sphere.vercel.app> (deployed from
 `main`; sign in with a seeded account below).
 
+The live app is the team's development environment: it is where we build,
+test and coordinate the project, and it holds only seeded test accounts and
+demo events. It isn't a service for customers, and every page says so
+(SCRUM-237).
+
 ## What it does
 
 ConnectSphere replaces event planning by email and spreadsheets with one

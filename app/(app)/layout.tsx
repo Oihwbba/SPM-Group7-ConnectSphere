@@ -7,6 +7,7 @@ import { Sidebar } from "@/components/app/sidebar";
 import { SphereLogo } from "@/components/app/sphere-logo";
 import { UserMenu } from "@/components/app/user-menu";
 import { NotificationBell } from "@/components/app/notification-bell";
+import { DevelopmentNotice } from "@/components/app/development-notice";
 import { getMyUnreadCount } from "./notifications/queries";
 
 /**
@@ -36,6 +37,8 @@ export default async function AppLayout({
 
   return (
     <div className="flex min-h-screen flex-col">
+      {/* Scrolls away with the page, so the sticky top bar keeps its height. */}
+      <DevelopmentNotice variant="strip" />
       {/* Top section — spans the full width, above everything else. */}
       <header className="sticky top-0 z-50 flex h-16 items-center gap-4 bg-background/70 px-4 backdrop-blur-glass sm:px-6">
         <div className="flex items-center gap-2">
