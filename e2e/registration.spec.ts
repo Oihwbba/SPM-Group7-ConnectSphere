@@ -77,14 +77,15 @@ test.describe("SCRUM-73/74 — Attendee registers for an event", () => {
       "1 of 2 places remaining",
     );
 
-    // Back on the list, the same event now shows "you're registered" too.
+    // Back on the list, the same event now shows "you're registered" too,
+    // in its state badge (SCRUM-212 AC1).
     await page.goto("/events");
     const registeredCard = page.getByTestId("browsable-event-card").filter({
       hasText: eventName,
     });
     await expect(
-      registeredCard.getByTestId("already-registered"),
-    ).toBeVisible();
+      registeredCard.getByTestId("registration-state-badge"),
+    ).toHaveText("You're registered");
     await expect(registeredCard.getByTestId("remaining-capacity")).toHaveText(
       "1 of 2 places remaining",
     );
@@ -173,11 +174,13 @@ test.describe("SCRUM-74/77 — Attendee withdraws from an event", () => {
     await page.getByRole("button", { name: "Sign in" }).click();
     await page.waitForURL("**/events");
 
+    // The event is full, but the Attendee's own place is what their card
+    // shows first (SCRUM-212 AC1); "0 of 1" below still shows it is full.
     const card = page.getByTestId("browsable-event-card").filter({
       hasText: eventName,
     });
     await expect(card.getByTestId("registration-state-badge")).toHaveText(
-      "Full",
+      "You're registered",
     );
     await card.click();
 
@@ -188,6 +191,11 @@ test.describe("SCRUM-74/77 — Attendee withdraws from an event", () => {
     );
 
     await page.getByTestId("withdraw-button").click();
+    // SCRUM-212 AC2, SCRUM-207 AC5: asked first in the shared dialog.
+    await page
+      .getByTestId("withdraw-dialog")
+      .getByRole("button", { name: "Withdraw", exact: true })
+      .click();
     await expect(
       page.getByText("You've withdrawn from this event."),
     ).toBeVisible();

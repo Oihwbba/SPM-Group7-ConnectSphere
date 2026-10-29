@@ -372,4 +372,63 @@ test.describe("SCRUM-142 — Change equipment lines or withdraw a venue request"
       }),
     ).toEqual([{ status: "CONFIRMED" }]);
   });
+
+  test("SCRUM-142 [AC5] TC-142-09: once the event is Confirmed, its Coordinator is offered no way to change or withdraw its equipment or venue requests, and nothing changes", async ({
+    browser,
+  }) => {
+    // A Confirmed event with a reserved equipment request and a pending venue
+    // request (SCRUM-234): changes now go through a change request.
+    const request = await reservedRequest("Confirmed");
+    await prisma.event.update({
+      where: { id: request.id },
+      data: { status: "CONFIRMED" },
+    });
+    const venue = await prisma.venue.create({
+      data: { name: `SCRUM-142 confirmed venue ${STAMP}`, location: "Test block", capacity: 100 },
+      select: { id: true },
+    });
+    venueIds.push(venue.id);
+    const { id: bookingId } = await prisma.booking.create({
+      data: {
+        eventId: request.id,
+        venueId: venue.id,
+        ...PERIOD,
+        status: "PENDING",
+        requestedAttendance: 40,
+        requestedById: "usr_coordinator",
+      },
+      select: { id: true },
+    });
+
+    const page = await signedIn(browser, "coordinator@test.local");
+    await page.goto("/equipment-requests");
+    // The request is there, with its lines, but offers no change.
+    const details = await openEquipmentRequest(page, request.name);
+    await expect(details.getByTestId("request-line")).toContainText("Projector");
+    await expect(details.getByRole("button", { name: "Change lines" })).toHaveCount(0);
+    await expect(details.getByRole("button", { name: "Withdraw request" })).toHaveCount(0);
+    await page.keyboard.press("Escape");
+
+    // The event page lists what is secured, read-only: no checklist to withdraw from.
+    const event = await openEvent(page, request.name, "Arrangements");
+    await expect(event.getByTestId("confirmed-arrangements")).toBeVisible();
+    await expect(event.getByRole("button", { name: "Withdraw request" })).toHaveCount(0);
+    await expect(event.getByRole("button", { name: "Change lines" })).toHaveCount(0);
+
+    expect(
+      await prisma.equipmentRequest.findUniqueOrThrow({
+        where: { id: request.requestId },
+        select: { status: true },
+      }),
+    ).toEqual({ status: "APPROVED" });
+    expect(
+      await prisma.reservation.findMany({
+        where: { eventId: request.id },
+        select: { status: true },
+      }),
+    ).toEqual([{ status: "CONFIRMED" }]);
+    expect(
+      await prisma.booking.findUniqueOrThrow({ where: { id: bookingId }, select: { status: true } }),
+    ).toEqual({ status: "PENDING" });
+  });
 });
