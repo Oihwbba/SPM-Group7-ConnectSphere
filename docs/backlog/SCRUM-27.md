@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-29. Jira is the source of truth.
+     Synced from Jira on 2026-10-28. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-27 - Create an equipment request
@@ -40,6 +40,5 @@
 * 2026-10-16 (PO decision): AC7 is extended by SCRUM-186: a second request is also refused while the first is Approved; more equipment is added by changing lines (SCRUM-142). This story stays Done; the change is built and tested under SCRUM-186.
 * 2026-10-27 (PO decision, Hann Qian): known item for AC1. REQUESTABLE_EVENT_STATUSES in lib/equipment/requests.ts still accepts Approved as well as Planning. No event can reach Approved any more, only the seeded evt_approved, so it is left as it is: SCRUM-233 makes that event Planning and removes APPROVED from the list in the same chore.
 * 2026-10-27 (PO decision, Hann Qian): since SCRUM-207, the lines, rejection reason, alternative and history are shown in the request's details dialog, one click from the list.
-* 2026-10-29 (SCRUM-233, PO approval pending): the 27 Oct known item for AC1 is resolved. REQUESTABLE_EVENT_STATUSES accepts only Planning, and the seeded evt_approved is now Planning ("Planning — Research Symposium"). Criteria unchanged; this story stays Done.
 
 Functionality Area: Equipment Request Management
