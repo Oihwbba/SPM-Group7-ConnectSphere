@@ -194,3 +194,4 @@ the open pull requests that change the same test files have merged.
 | [SCRUM-234](SCRUM-234.md) | Jin Hong | 3 | A Chore task: the e2e journeys for SCRUM-142 AC5 and SCRUM-26's flagged reservation; automated by e2e except TC-234-03, a document check |
 | [SCRUM-237](SCRUM-237.md) | Jin Hong | 4 | A Chore task: the development-environment notice on the sign-in page and every signed-in page; automated (unit, e2e for each role and at phone width) except TC-237-04, a document check |
 | [SCRUM-238](SCRUM-238.md) | Jin Hong | 5 | A Chore task: seed data for every role and status; automated (integration for statuses, notification types and each role's work; the whole suite for the records tests rely on) except TC-238-03's re-run and TC-238-05, the shared database |
+| [SCRUM-245](SCRUM-245.md) | Felicia Or | 3 | A Chore task: two integration tests that read rows another file wrote at the same time; automated (integration) and the whole suite |

@@ -49,7 +49,10 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-21 — reassigning against a real dat
   });
 
   afterAll(async () => {
-    await prisma.notification.deleteMany({ where: { eventId } });
+    // Another file can notify every Lead while this one exists.
+    await prisma.notification.deleteMany({
+      where: { OR: [{ eventId }, { userId: secondLeadId }] },
+    });
     await prisma.auditLog.deleteMany({ where: { entityId: eventId } });
     await prisma.event.delete({ where: { id: eventId } });
     await prisma.user.delete({ where: { id: secondLeadId } });

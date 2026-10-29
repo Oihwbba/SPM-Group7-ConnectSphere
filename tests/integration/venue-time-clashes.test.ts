@@ -260,8 +260,15 @@ describe.skipIf(!usesLocalDatabase)(
         where: { id: { in: ["ven_auditorium", "ven_seminar", "ven_hall", "ven_boardroom"] } },
         select: { id: true, setupMinutes: true, turnaroundMinutes: true },
       });
+      // Other files write bookings on these venues at the same time, so only
+      // clashes between seeded rows count here.
+      const isSeeded = (id: string) => id.startsWith("bkg_") || id.startsWith("vun_");
       for (const venue of seeded) {
-        expect(await findTimeClashes(prisma, venue.id, venue), venue.id).toEqual([]);
+        const clashes = await findTimeClashes(prisma, venue.id, venue);
+        expect(
+          clashes.filter((c) => isSeeded(c.booking.id) && isSeeded(c.with.id)),
+          venue.id,
+        ).toEqual([]);
       }
     });
   },
