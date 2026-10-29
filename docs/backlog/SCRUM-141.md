@@ -30,7 +30,7 @@
 
 **Supersedes:** SCRUM-17 AC2 (only Coordinators and the request's Organiser can view a request), read-only, for Coordinators, the Lead, Venue Staff and Technical Support Staff.
 
-**Customer basis:** "Multiple roles possible. Coordinator can view other events for planning purpose but should not be able to edit events not assigned to them." "Calendar view allows viewing of the event. Previous co-ordinator cannot edit the info." "The event calendar should have all the events under a single view and should be available to the event co-ordinator and the technical/Venue approval person for planning purpose." Week 7 change 5: "the Event Coordinator Lead should be able to view all coordinator assignments and active events under their supervision."
+**Customer basis:** "Multiple roles possible." "The event calendar should have all the events under a single view and should be available to the event co-ordinator and the technical/Venue approval person for planning purpose." Week 7 change 5: "the Event Coordinator Lead should be able to view all coordinator assignments and active events under their supervision."
 
 **Why this is a new story:** the customer wants Coordinators, Venue Staff and Technical Support to see all events for planning, and previous Coordinators to keep read-only access. The event calendar that covered this (SCRUM-120) is on the Week 4 list of features not required for Release 1, so it is beyond Release 1; this plain list keeps the access rule without the calendar. For these roles it supersedes SCRUM-17's viewing rule (Sprint 1, Done), read-only. For the Lead (SCRUM-164), it is the view of all assignments and active events that Week 7 change 5 asks for.
 
