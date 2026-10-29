@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-20. Jira is the source of truth.
+     Synced from Jira on 2026-10-29. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-32 - Report reserved equipment that can no longer be provided
@@ -26,7 +26,7 @@
 4. Technical Support cannot cancel a reservation or change its quantity or period. The Coordinator resolves the flag (SCRUM-26), which may cancel the reservation and return its stock.
 5. The report and its resolution are recorded with who and when. The Coordinator is notified (SCRUM-124).
 
-**Customer basis:** "Reserved equipment may become unavailable because of damage or maintenance" (briefing). "Changes require arrangements to be reviewed again; staff decide offline and coordinator update the system on the decision whether to cancel." "Adjustments must be handled manually by staff rather than through automatic un-booking."
+**Customer basis:** "Reserved equipment may become unavailable because of damage or maintenance" (briefing). "Changes require arrangements to be reviewed again; staff decide offline and coordinator update the system on the decision whether to cancel." 
 
 **Change log**
 

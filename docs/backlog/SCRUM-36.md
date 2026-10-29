@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-09. Jira is the source of truth.
+     Synced from Jira on 2026-10-29. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-36 - View venue availability
@@ -28,11 +28,12 @@
 6. Given the venue has no bookings or unavailability in the selected range, then the whole range shows as available rather than as an empty view.
 7. Coordinators and Venue Staff can open this view; other roles cannot (SCRUM-67).
 
-**Customer basis:** "Venue Availability Calendar should reflect bookings and other recorded unavailability (e.g. maintenance)." "Calendar may be single view or per-venue." "Confirmed bookings block availability."
+**Customer basis:** "Venue Availability Calendar should reflect bookings and other recorded unavailability (e.g. maintenance)." "Calendar may be single view or per-venue."
 
 **Change log**
 
 * 2026-10-01: team chose the per-venue view (the customer allowed either). Venue Staff added as viewers. Removed the 2026-09-13 decision record saying unavailability management was outside Release 1, which contradicted SCRUM-37 and the customer's answer above. Stated that Pending requests don't appear as unavailable.
 * 2026-10-01 (audit): checked against the merged code, which matches. Summary in sentence case. Status moved to In Review because the code was merged on 29 Sep (PR #99).
+* 2026-10-29 (epic check, SCRUM-214): removed "Confirmed bookings block availability." from the Customer basis. It is the G3 answer to Li Shiyin's question, not a G4 one. No criterion changes.
 
 Functionality Area: Venue Availability Calendar
