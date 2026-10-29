@@ -520,7 +520,7 @@ async function seedEvents() {
       ...approvedBy(-15),
       registrationEnabled: true,
       registrationCapacity: 40,
-      registrationOpensAt: at(-12, 0),
+      registrationOpensAt: at(-11, 0),
       registrationClosesAt: at(CANCELLED_DAY - 1, 12),
       cancelledAt: at(-1, 3),
       cancelledById: U.coordinator,
@@ -749,7 +749,7 @@ async function seedBookings() {
       requiredFacilities: [],
       requestedById: U.coordinator,
       decidedById: U.venueStaff,
-      decidedAt: at(-4, 3),
+      decidedAt: at(-8, 3),
     },
     {
       id: "bkg_last_seat_event",
@@ -762,7 +762,7 @@ async function seedBookings() {
       requiredFacilities: [],
       requestedById: U.coordinator,
       decidedById: U.venueStaff,
-      decidedAt: at(-4, 3),
+      decidedAt: at(-8, 3),
     },
     // SCRUM-233: every Confirmed event has an approved venue covering it, so
     // Attendees see where it is (SCRUM-85).
@@ -985,7 +985,7 @@ async function seedConfirmedSafetyChecks() {
 
 async function seedRegistrations() {
   const registrations = [
-    // Confirmed gala: a few places taken out of 100, including one withdrawal
+    // Confirmed gala: a few places taken out of 120, including one withdrawal
     // so the Attendee's list shows more than one status (SCRUM-76).
     { id: "reg_gala_1", eventId: E.confirmed, userId: U.attendee, status: RegistrationStatus.REGISTERED, registeredAt: at(-6, 4) },
     { id: "reg_gala_2", eventId: E.confirmed, userId: U.attendee2, status: RegistrationStatus.REGISTERED, registeredAt: at(-6, 5) },
@@ -1092,6 +1092,13 @@ async function seedNotifications() {
 // ---------------------------------------------------------------------------
 
 async function seedAuditLog() {
+  // SCRUM-233: each Confirmed event's history shows how it got there, once
+  // its arrangements and safety check were in place.
+  const confirmedHistory = (prefix: string, eventId: string, approvedAt: Date, confirmedAt: Date) => [
+    { id: `${prefix}_approved`, entityType: "Event", entityId: eventId, action: "STATUS_CHANGED", actorId: U.coordinator, fieldName: "status", oldValue: "UNDER_REVIEW", newValue: "APPROVED", createdAt: approvedAt },
+    { id: `${prefix}_planning`, entityType: "Event", entityId: eventId, action: "STATUS_CHANGED", actorId: null, fieldName: "status", oldValue: "APPROVED", newValue: "PLANNING", summary: "Moved to Planning on approval (SCRUM-81)", createdAt: new Date(approvedAt.getTime() + 1000) },
+    { id: `${prefix}_confirmed`, entityType: "Event", entityId: eventId, action: "STATUS_CHANGED", actorId: U.coordinator, fieldName: "status", oldValue: "PLANNING", newValue: "CONFIRMED", summary: "Confirmed by the assigned coordinator (SCRUM-81)", createdAt: confirmedAt },
+  ];
   const rows = [
     // SCRUM-233, ADR 0012: approving writes the Coordinator's approval and the
     // system's move to Planning (no actor); confirming records the Coordinator.
@@ -1101,6 +1108,11 @@ async function seedAuditLog() {
     { id: "aud_2", entityType: "Event", entityId: E.confirmed, action: "STATUS_CHANGED", actorId: U.coordinator, fieldName: "status", oldValue: "PLANNING", newValue: "CONFIRMED", summary: "Confirmed by the assigned coordinator (SCRUM-81)", createdAt: at(-15, 4) },
     { id: "aud_approved_approved", entityType: "Event", entityId: E.approved, action: "STATUS_CHANGED", actorId: U.coordinator, fieldName: "status", oldValue: "UNDER_REVIEW", newValue: "APPROVED", createdAt: at(-6, 3) },
     { id: "aud_approved_planning", entityType: "Event", entityId: E.approved, action: "STATUS_CHANGED", actorId: null, fieldName: "status", oldValue: "APPROVED", newValue: "PLANNING", summary: "Moved to Planning on approval (SCRUM-81)", createdAt: new Date(at(-6, 3).getTime() + 1000) },
+    ...confirmedHistory("aud_full", E.full, at(-10, 3), at(-6, 4)),
+    ...confirmedHistory("aud_last_seat", E.lastSeat, at(-10, 3), at(-6, 4)),
+    ...confirmedHistory("aud_reg_not_open", E.regNotOpen, at(-8, 3), at(-5, 4)),
+    ...confirmedHistory("aud_reg_closed", E.regClosed, at(-24, 3), at(-21, 4)),
+    ...confirmedHistory("aud_cancelled", E.cancelled, at(-13, 3), at(-12, 4)),
     // SCRUM-21: reassigning is the Lead's action.
     { id: "aud_3", entityType: "Event", entityId: E.underReview, action: "REASSIGNED", actorId: U.coordinatorLead, fieldName: "coordinatorId", oldValue: U.coordinator2, newValue: U.coordinator, summary: "Reassigned by the Lead from Cara Coordinator to Cody Coordinator (SCRUM-21)", createdAt: at(-4, 2) },
     // SCRUM-82: what cancelInTransaction writes when the Coordinator cancels.

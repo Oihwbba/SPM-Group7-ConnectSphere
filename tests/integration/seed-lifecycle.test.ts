@@ -173,6 +173,32 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-233 — the seed follows the event li
       expect(entry.actorId, entry.id).toBe(coordinatorId);
     }
 
+    // Each event that reached Confirmed was approved, moved to Planning and
+    // confirmed, and confirmed only once its booking and safety check were
+    // approved (SCRUM-110).
+    for (const id of ["evt_confirmed", "evt_full", "evt_last_seat", "evt_reg_not_open", "evt_reg_closed", "evt_cancelled"]) {
+      const steps = await prisma.auditLog.findMany({
+        where: { entityId: id, id: { startsWith: "aud_" }, fieldName: "status" },
+        orderBy: { createdAt: "asc" },
+        select: { oldValue: true, newValue: true, createdAt: true },
+      });
+      expect(steps.slice(0, 3).map((s) => `${s.oldValue} → ${s.newValue}`), id).toEqual([
+        "UNDER_REVIEW → APPROVED",
+        "APPROVED → PLANNING",
+        "PLANNING → CONFIRMED",
+      ]);
+      const { bookings, safetyChecks } = await prisma.event.findUniqueOrThrow({
+        where: { id },
+        select: {
+          bookings: { where: { id: { startsWith: "bkg_" } }, select: { decidedAt: true } },
+          safetyChecks: { where: { id: { startsWith: "sfc_" }, status: "APPROVED" }, select: { decidedAt: true } },
+        },
+      });
+      for (const decided of [...bookings, ...safetyChecks]) {
+        expect(decided.decidedAt!.getTime(), id).toBeLessThan(steps[2].createdAt.getTime());
+      }
+    }
+
     expect(reassigning.length).toBeGreaterThan(0);
     for (const entry of reassigning) {
       const actor = await prisma.user.findUniqueOrThrow({

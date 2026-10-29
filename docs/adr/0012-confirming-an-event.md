@@ -172,4 +172,7 @@ The seed's other history entries now match what the actions write, as the
 Decision above sets out: the move to Planning has no actor and follows the
 Coordinator's approval, and the confirmation names the assigned Coordinator,
 not an automatic confirmation, which Alternatives rejected. Every seeded
-Confirmed event also passes the readiness checklist that confirming re-checks.
+Confirmed event also passes the readiness checklist that confirming re-checks,
+and the events in the seed's first section that reached Confirmed, the
+cancelled Winter Workshop included, carry all three entries: approval, the move
+to Planning, and the confirmation after their booking and safety check.
