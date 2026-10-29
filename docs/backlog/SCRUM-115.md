@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-09. Jira is the source of truth.
+     Synced from Jira on 2026-10-29. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-115 - Find an event to attend
@@ -16,7 +16,7 @@
 
 ---
 
-**Beyond Release 1** (label `beyond-release-1`): kept in the backlog; do not pull into a sprint without customer confirmation.
+**Beyond Release 1** (label `beyond-release-1`): kept in the backlog; do not pull into a sprint without customer confirmation. Not specifically required by customer, but would aid attendee in navigation.
 
 **User story:** As an Attendee, I want to search, filter and sort the events I can register for, so that I can find one quickly without scrolling the whole list.
 
@@ -38,5 +38,6 @@
 **Change log**
 
 * 2026-10-01: "\[not required\]" prefix replaced by the `beyond-release-1` label; waiting-list reference removed (SCRUM-79 is now in Release 1 and unaffected).
+* 2026-10-29: Justify why `beyond-release-1` label was used. Note on 2026-01-01 change log: SCRUM-79 is not in release 1.
 
 Functionality Area: Attendee Registration (beyond first release)
