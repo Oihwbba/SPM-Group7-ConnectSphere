@@ -37,7 +37,7 @@ either covered by a test or visibly not done yet. Reviewers do the same.
 | | |
 |---|---|
 | Stories | **97** |
-| Tasks | **79** |
+| Tasks | **80** |
 | Subtasks | **18** |
 | Total story points | **267** |
 | Points committed to Sprint 1 | **37** |
@@ -248,7 +248,7 @@ _6 stories, 10 points_
 | [SCRUM-204](SCRUM-204.md) | Bug: A venue or equipment request can be created for an event that was just confirmed, closed or reassigned | SCRUM Sprint 3 | Done |
 | [SCRUM-205](SCRUM-205.md) | Bug: Accessibility and error-page gaps found in the 20 Oct audit | SCRUM Sprint 3 | Done |
 | [SCRUM-206](SCRUM-206.md) | Chore: Automate the test cases still run by hand on Done stories | SCRUM Sprint 3 | Done |
-| [SCRUM-213](SCRUM-213.md) | Chore: Epic check for SCRUM-6 Event Request Lifecycle | SCRUM Sprint 4 | To Do |
+| [SCRUM-213](SCRUM-213.md) | Chore: Epic check for SCRUM-6 Event Request Lifecycle | SCRUM Sprint 4 | In Progress |
 | [SCRUM-214](SCRUM-214.md) | Chore: Epic check for SCRUM-7 Venue Management | SCRUM Sprint 4 | To Do |
 | [SCRUM-215](SCRUM-215.md) | Chore: Epic check for SCRUM-8 Event Change & Notifications | SCRUM Sprint 4 | To Do |
 | [SCRUM-216](SCRUM-216.md) | Chore: Epic check for SCRUM-9 Access Control | SCRUM Sprint 4 | To Do |
@@ -276,3 +276,4 @@ _6 stories, 10 points_
 | [SCRUM-238](SCRUM-238.md) | Chore: Seed data that lets every role see and try every function | SCRUM Sprint 4 | In Progress |
 | [SCRUM-239](SCRUM-239.md) | Chore: Fix what the SCRUM-11 epic check found in the docs and Jira notes | SCRUM Sprint 4 | In Review |
 | [SCRUM-242](SCRUM-242.md) | [MERGED INTO SCRUM-239] Chore: Match the docs to Jira after the SCRUM-11 epic check (SCRUM-70, 80, 115, 212) | SCRUM Sprint 4 | Done |
+| [SCRUM-243](SCRUM-243.md) | Chore: Fix what the SCRUM-6 epic check found in the docs and Jira notes | SCRUM Sprint 4 | In Review |
