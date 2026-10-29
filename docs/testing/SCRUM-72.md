@@ -104,6 +104,8 @@ events in other statuses, including a Cancelled one.
 | Test Data | The seeded Cancelled and Planning events |
 | Expected Result | Neither appears. |
 
+**Superseded in part** by SCRUM-85 AC 9 and AC 10 ([TC-85-07](SCRUM-85.md#tc-85-07)): an Attendee registered for an event that returns to Planning can still open it from their registrations or a notification, though it stays out of this list. An Attendee who isn't registered still can't, and the tests below use one.
+
 **Automated by:** `tests/unit/attendee-events.test.ts` › "[Negative] AC: a non-Confirmed event (e.g. Planning) is not browsable — same null as missing", "[Negative] AC: a Cancelled event is not browsable"; `e2e/attendee-events.spec.ts` › "SCRUM-72 [AC1, AC2, AC7] TC-72-01, TC-72-06: the browse list shows Confirmed events with venue, capacity and registration state, and excludes Cancelled ones"
 
 ### TC-72-07
@@ -116,6 +118,8 @@ events in other statuses, including a Cancelled one.
 | Test Steps | 1. As the Attendee, go to the address of a Cancelled event, a Planning event, and an id that doesn't exist. <br> 2. As an Organiser, go to a Confirmed event's Attendee page. |
 | Test Data | The events' ids; a made-up id |
 | Expected Result | Step 1: each returns "not found", the same for a hidden event as for a missing one. Step 2 is superseded by SCRUM-208 (TC-208-15): the Organiser at their own Confirmed event's address gets their event page, never the Attendee's view. |
+
+**Superseded in part** by SCRUM-171 AC 4 ([TC-171-06](SCRUM-171.md#tc-171-06)): a Confirmed event whose Registration needed is No is also "not found" by its address. SCRUM-85 AC 9 ([TC-85-07](SCRUM-85.md#tc-85-07)) is the one exception: an Attendee registered for an event being re-planned can open it.
 
 **Automated by:** `tests/unit/attendee-events.test.ts` › "[Negative] a missing id returns null without distinguishing it from a not-yet-visible one", "[Security gate] a role without event:browse (e.g. VENUE_STAFF) is refused before the query even runs", "[Negative] a signed-out caller is refused"; `e2e/attendee-events.spec.ts` › "SCRUM-72 [AC8] TC-72-07: direct event URLs do not bypass visibility rules — a Cancelled event 404s for an Attendee", "SCRUM-72 [AC8] TC-72-07: a non-existent event id 404s the same way as a real but invisible one"; `e2e/attendee-events.spec.ts` › "SCRUM-72 [AC7, AC8] TC-72-07: going straight to /events/${id} (not Confirmed) 404s", run for a Draft, a Planning and a Completed event; step 2, as SCRUM-208 changed it: `e2e/attendee-events.spec.ts` › "SCRUM-208 [AC1] TC-208-15: the Organiser at their Confirmed event's URL gets their own event page, never the attendee view"
 

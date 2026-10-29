@@ -113,11 +113,11 @@ the open pull requests that change the same test files have merged.
 | [SCRUM-67](SCRUM-67.md) | Caylern Goh | 6 | Every case automated; TC-67-01's Venue Staff catalogue step superseded by SCRUM-34 AC 2 |
 | [SCRUM-68](SCRUM-68.md) | Caylern Goh | 3 | Every case automated |
 | [SCRUM-69](SCRUM-69.md) | Hann Qian | 5 | Every current case automated; TC-69-05, and TC-69-01's unassigned events, superseded by SCRUM-165 |
-| [SCRUM-72](SCRUM-72.md) | Hann Qian | 8 | Every case automated |
-| [SCRUM-73](SCRUM-73.md) | Hann Qian | 8 | Every case automated |
+| [SCRUM-72](SCRUM-72.md) | Hann Qian | 8 | Every case automated; TC-72-06 and TC-72-07 note SCRUM-85 AC 9 and SCRUM-171 AC 4 |
+| [SCRUM-73](SCRUM-73.md) | Hann Qian | 8 | Every case automated; TC-73-05's opening time comes only from the seed since SCRUM-75's 8 Oct refinement |
 | [SCRUM-74](SCRUM-74.md) | Hann Qian | 6 | Every case automated |
 | [SCRUM-75](SCRUM-75.md) | Felicia Or | 14 | Automated (unit, integration for closing against real registrations, a close racing a registration and a new confirmation, e2e for the journey). TC-75-14 is retired: AC 11 moved to SCRUM-128 AC11 |
-| [SCRUM-76](SCRUM-76.md) | Hann Qian | 5 | Every case automated |
+| [SCRUM-76](SCRUM-76.md) | Hann Qian | 5 | Every case automated; TC-76-01 notes SCRUM-162 AC 7 and SCRUM-85 AC 8 |
 | [SCRUM-84](SCRUM-84.md) | Felicia Or | 9 | Every case automated |
 | [SCRUM-129](SCRUM-129.md) | Felicia Or | 6 | Every case automated |
 | [SCRUM-168](SCRUM-168.md) | Felicia Or | 3 | Automated at phone width; TC-168-01 at desktop width is manual |

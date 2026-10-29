@@ -36,6 +36,8 @@ who has registrations in the seed.
 | Test Data | The seeded registrations |
 | Expected Result | Each row shows the event's name, date, time and venue, and the status "Registered" or "Withdrawn", soonest event first. When the event has two venues, each approved venue is shown, in the order requested (SCRUM-162 AC 7, which superseded showing only the one in use at its start). |
 
+**Superseded in part** by SCRUM-85 AC 8 ([TC-85-06](SCRUM-85.md#tc-85-06)): AC 2's statuses are extended, so a registration for an event being re-planned shows "Details being updated – registration paused", never "Planning".
+
 **Automated by:** `tests/unit/my-registrations.test.ts` › "[Positive] AC1: fetches the event name, date, time, venue and the registration status", "SCRUM-162 [AC7], SCRUM-85 [AC8] TC-85-06: every approved venue is read, in the order requested, with what was last confirmed for an event being re-planned", "[Positive] lists the soonest event first"; `e2e/my-registrations.spec.ts` › "SCRUM-76 [AC1, AC2] TC-76-01: my list shows each event's name, date, venue and status"
 
 ### TC-76-02
