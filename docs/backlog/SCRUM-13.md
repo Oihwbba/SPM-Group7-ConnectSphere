@@ -16,7 +16,12 @@
 
 ---
 
-**Superseded in part:** AC1, AC4 and AC6's event timezone is superseded by SCRUM-129 AC1: every event is in Singapore time and the form has no timezone selector; times are still stored as UTC (SCRUM-129 AC4). AC1's separate proposed start and end date/time is superseded by SCRUM-190 AC1, and AC8 is extended by SCRUM-190 AC2: an event is one date with a start and an end time, within one Singapore day. AC1 and AC4's free-text registration needs is superseded by SCRUM-171 AC1 and AC2: the Organiser chooses Registration needed: Yes or No, which is required to submit, and can add a note about registration. The criteria below are kept as accepted in Sprint 1.
+**Superseded in part** (the criteria below are kept as accepted in Sprint 1):
+
+* **AC1, AC4 and AC6, superseded by SCRUM-129 AC1:** every event is in Singapore time and the form has no timezone selector; times are still stored as UTC (SCRUM-129 AC4).
+* **AC1, superseded by SCRUM-190 AC1:** the separate proposed start and end date/time become one date with a start and an end time.
+* **AC8, extended by SCRUM-190 AC2:** an event starts and ends within one Singapore day.
+* **AC1 and AC4, superseded by SCRUM-171 AC1 and AC2:** instead of free-text registration needs, the Organiser chooses Registration needed: Yes or No, which is required to submit, and can add a note about registration.
 
 _As an Event Organiser_, I want to enter my event's details into a request form, so that ConnectSphere has everything it needs to start planning my event.
 
@@ -39,3 +44,4 @@ _Note:_ SCRUM-13 owns the form and field-level input behaviour. SCRUM-15 owns dr
 **Change log**
 
 * 2026-10-29 (SCRUM-243, PO approval pending): added the Superseded in part note for SCRUM-129, SCRUM-171 and SCRUM-190. Criteria unchanged.
+* 2026-10-29 (SCRUM-243, PO approval pending): the Superseded in part note lists one change per bullet, to be easier to read; what it says is unchanged. Criteria unchanged.

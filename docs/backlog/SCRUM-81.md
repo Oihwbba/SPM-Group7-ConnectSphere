@@ -16,7 +16,11 @@
 
 ---
 
-**Superseded in part:** AC2 is superseded by SCRUM-165 and SCRUM-135 AC3: a Submitted request with no Coordinator can't be approved; the Lead assigns a Coordinator first. AC3 and AC4 are superseded by SCRUM-166 AC9: Ready to confirm also needs an Approved safety check. AC6's single booked venue is superseded by SCRUM-162 AC7: once the event is Confirmed, the Organiser sees every Approved venue. The criteria below are kept as accepted in Sprint 2.
+**Superseded in part** (the criteria below are kept as accepted in Sprint 2):
+
+* **AC2, superseded by SCRUM-165 and SCRUM-135 AC3:** a Submitted request with no Coordinator can't be approved; the Lead assigns a Coordinator first.
+* **AC3 and AC4, superseded by SCRUM-166 AC9:** Ready to confirm also needs an Approved safety check.
+* **AC6, superseded by SCRUM-162 AC7:** once the event is Confirmed, the Organiser sees every Approved venue.
 
 **User story:** As an Event Coordinator, I want to confirm an event once all its essential arrangements are approved, so that the Organiser knows the event will go ahead and Attendees can register.
 
@@ -39,5 +43,6 @@
 * 2026-10-01 (audit): AC2 states what the branch already does for an unassigned request. AC6 says reserved equipment, as the branch shows. AC5 adds opening registration on confirmation, one line in the confirm action (set the event's registration as enabled). Without it, an event that went through the app could never take registrations, which the Sprint 2 goal needs.
 * 2026-10-07: AC5 points the Registration needed choice to SCRUM-171, which took it over when SCRUM-127 was split.
 * 2026-10-29 (SCRUM-243, PO approval pending): added the Superseded in part note for SCRUM-135, SCRUM-162, SCRUM-165 and SCRUM-166. The Related note no longer says SCRUM-81 and SCRUM-110 must merge together; both were merged in Sprint 2. Criteria unchanged.
+* 2026-10-29 (SCRUM-243, PO approval pending): the Superseded in part note lists one change per bullet, to be easier to read; what it says is unchanged. Criteria unchanged.
 
 Functionality Area: Event Status Management

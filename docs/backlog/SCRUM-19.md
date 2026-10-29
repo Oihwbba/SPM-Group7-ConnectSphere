@@ -16,7 +16,12 @@
 
 ---
 
-**Superseded in part:** AC1 no longer leaves the event Approved: approving moves it to Planning in the same action, and Approved is kept in its history (SCRUM-81 AC1, SCRUM-135 AC3 and AC12). AC3's rejection also records an outcome, and AC4's amend and resubmit is offered only when the Coordinator chose Amend and resubmit (SCRUM-126 AC1 to AC3, SCRUM-108 AC7 and AC8). Only the event's assigned Coordinator approves or rejects it; a Submitted request with no Coordinator waits for the Lead and can't be decided (SCRUM-165 AC8, SCRUM-135 AC3 and AC4). The criteria below are kept as accepted in Sprint 1.
+**Superseded in part** (the criteria below are kept as accepted in Sprint 1):
+
+* **AC1, superseded by SCRUM-81 AC1 and SCRUM-135 AC3 and AC12:** approving moves the event to Planning in the same action, and Approved is kept in its history.
+* **AC3, superseded by SCRUM-126 AC1:** a rejection also records an outcome.
+* **AC4, superseded by SCRUM-126 AC2 and AC3 and SCRUM-108 AC7 and AC8:** amend and resubmit is offered only when the Coordinator chose Amend and resubmit.
+* **Who decides, superseded by SCRUM-165 AC8 and SCRUM-135 AC3 and AC4:** only the event's assigned Coordinator approves or rejects it; a Submitted request with no Coordinator waits for the Lead and can't be decided.
 
 **As an Event Coordinator**, I want to approve or reject an event request, so that the Organiser knows whether the request can proceed.
 
@@ -34,3 +39,4 @@
 **Change log**
 
 * 2026-10-29 (SCRUM-243, PO approval pending): added the Superseded in part note for SCRUM-81, SCRUM-126, SCRUM-135 and SCRUM-165. Criteria unchanged.
+* 2026-10-29 (SCRUM-243, PO approval pending): the Superseded in part note lists one change per bullet, to be easier to read; what it says is unchanged. Criteria unchanged.
