@@ -16,7 +16,10 @@
 
 ---
 
-**Superseded in part:** AC1's single venue is superseded by SCRUM-162 AC7: an event can book several venues, and each Approved venue is shown. AC2's statuses are extended by SCRUM-85 AC8: a registration for an event being re-planned shows "Details being updated – registration paused", never "Planning". The criteria below are kept as accepted in Sprint 2.
+**Superseded in part** (the criteria below are kept as accepted in Sprint 2):
+
+* **AC1, superseded by SCRUM-162 AC7:** an event can book several venues, and each Approved venue is shown.
+* **AC2, extended by SCRUM-85 AC8:** a registration for an event being re-planned shows "Details being updated – registration paused", never "Planning".
 
 **User story:** As an Attendee, I want to see the events I'm registered for and the status of each, so that I know what I've committed to attending.
 
@@ -36,5 +39,6 @@
 * 2026-10-01 (audit): Waitlisted removed, because the waiting list (SCRUM-79) is beyond Release 1.
 * 2026-10-07: the Related note points to SCRUM-85, which SCRUM-133 was merged into.
 * 2026-10-29 (SCRUM-239, PO approval pending): removed the Related note's sentence that the My Registrations page still names SCRUM-42; SCRUM-146 fixed that. Marked AC1 as superseded in part by SCRUM-162 AC7 and AC2 as extended by SCRUM-85 AC8. Criteria unchanged; story stays Done.
+* 2026-10-29 (SCRUM-239, PO approval pending): the Superseded in part note lists one change per bullet, to be easier to read; what it says is unchanged. Criteria unchanged.
 
 Functionality Area: Attendee Registration

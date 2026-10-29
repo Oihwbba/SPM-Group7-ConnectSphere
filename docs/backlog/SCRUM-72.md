@@ -16,7 +16,11 @@
 
 ---
 
-**Superseded in part:** AC2's single venue name and location is superseded by SCRUM-162 AC7: an event can book several venues, and Attendees see the name and location of every Approved venue. AC1 and AC8 are narrowed by SCRUM-171 AC4: an event whose Registration needed is No isn't listed to Attendees or opened by its URL. AC7 and AC8 have one exception from SCRUM-85 AC9: an Attendee registered for an event that returns to Planning can still open its Attendee view from their registrations or a notification, though it stays out of the list (SCRUM-85 AC10). The criteria below are kept as accepted in Sprint 2.
+**Superseded in part** (the criteria below are kept as accepted in Sprint 2):
+
+* **AC2, superseded by SCRUM-162 AC7:** an event can book several venues, and Attendees see the name and location of every Approved venue.
+* **AC1 and AC8, narrowed by SCRUM-171 AC4:** an event whose Registration needed is No isn't listed to Attendees or opened by its URL.
+* **AC7 and AC8, one exception from SCRUM-85 AC9:** an Attendee registered for an event that returns to Planning can still open its Attendee view from their registrations or a notification, though it stays out of the list (SCRUM-85 AC10).
 
 **User story:** As an Attendee, I want to browse confirmed events and see whether registration is available, so that I can decide whether to attend.
 
@@ -40,5 +44,6 @@
 * 2026-10-07: the Boundary note points hiding events that don't need registration to SCRUM-171, which took the Registration needed choice over when SCRUM-127 was split.
 * 2026-10-07: the Boundary note points to SCRUM-85, which SCRUM-133 was merged into.
 * 2026-10-29 (SCRUM-239, PO approval pending): marked AC2 as superseded in part by SCRUM-162 AC7, which already names SCRUM-72 AC2 in its Supersedes line; AC1 and AC8 as narrowed by SCRUM-171 AC4; and AC7 and AC8's exception for an event being re-planned (SCRUM-85 AC9). Criteria unchanged; story stays Done.
+* 2026-10-29 (SCRUM-239, PO approval pending): the Superseded in part note lists one change per bullet, to be easier to read; what it says is unchanged. Criteria unchanged.
 
 Functionality Area: Attendee Registration
