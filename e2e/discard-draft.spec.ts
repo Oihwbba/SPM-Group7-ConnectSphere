@@ -19,6 +19,16 @@ async function signInAsOrganiser(page: Page) {
 
 const DAY = 86_400_000;
 
+// 10:00 Singapore time (02:00 UTC), `days` from today. A draft made at the
+// current time of day would cross midnight when the suite runs after 22:00
+// SGT, and SCRUM-190 then clears its dates (SCRUM-233).
+function tenAmSgt(days: number) {
+  const day = new Date(Date.now() + days * DAY);
+  return new Date(
+    Date.UTC(day.getUTCFullYear(), day.getUTCMonth(), day.getUTCDate(), 2),
+  );
+}
+
 test.describe("SCRUM-130 — Discard a draft request", () => {
   test.skip(!usesLocalDatabase, "writes its own events; local database only");
 
@@ -129,8 +139,8 @@ test.describe("SCRUM-130 — Discard a draft request", () => {
   }) => {
     const pastName = `${prefix} past dates`;
     const futureName = `${prefix} future dates`;
-    await draft(pastName, new Date(Date.now() - 7 * DAY));
-    await draft(futureName, new Date(Date.now() + 30 * DAY));
+    await draft(pastName, tenAmSgt(-7));
+    await draft(futureName, tenAmSgt(30));
     await signInAsOrganiser(page);
 
     const warning = page
