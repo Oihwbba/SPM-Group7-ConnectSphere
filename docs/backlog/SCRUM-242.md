@@ -2,7 +2,7 @@
      Synced from Jira on 2026-10-29. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
-# SCRUM-242 - Chore: Match the docs to Jira's epics for SCRUM-70 (Access Control) and SCRUM-212 (Attendee Registration)
+# SCRUM-242 - Chore: Match the docs to Jira after the SCRUM-11 epic check (SCRUM-70, 80, 115, 212)
 
 | | |
 |---|---|
@@ -10,7 +10,7 @@
 | **Epic** | SCRUM-11 - Attendee Registration |
 | **Priority** | Medium |
 | **Story points** | - |
-| **Status in Jira** | In Progress |
+| **Status in Jira** | In Review |
 | **Sprint** | SCRUM Sprint 4 |
 | **Jira** | https://smu-spm-group7.atlassian.net/browse/SCRUM-242 |
 
@@ -40,3 +40,4 @@ Out of scope: docs/data-model.md's story-to-table map keeps SCRUM-70 against the
 
 * 2026-10-29: SCRUM-212 added (AC2, AC3); the old AC2 and AC3 are now AC4 and AC5.
 * 2026-10-29: SCRUM-80 and SCRUM-115 re-sync added (AC6), after their beyond-release-1 reasons were written in Jira.
+* 2026-10-29: renamed from "Match the docs to Jira's epics for SCRUM-70 (Access Control) and SCRUM-212 (Attendee Registration)", because AC6 isn't about epics.

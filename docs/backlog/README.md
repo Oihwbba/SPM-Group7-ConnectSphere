@@ -275,4 +275,4 @@ _6 stories, 10 points_
 | [SCRUM-237](SCRUM-237.md) | Chore: Say on the website and in the README that it is the team's development environment, not a service for customers | SCRUM Sprint 4 | In Progress |
 | [SCRUM-238](SCRUM-238.md) | Chore: Seed data that lets every role see and try every function | SCRUM Sprint 4 | In Progress |
 | [SCRUM-239](SCRUM-239.md) | Chore: Record which later stories supersede the Attendee Registration stories (SCRUM-72 to 77) | SCRUM Sprint 4 | In Progress |
-| [SCRUM-242](SCRUM-242.md) | Chore: Match the docs to Jira's epics for SCRUM-70 (Access Control) and SCRUM-212 (Attendee Registration) | SCRUM Sprint 4 | In Progress |
+| [SCRUM-242](SCRUM-242.md) | Chore: Match the docs to Jira after the SCRUM-11 epic check (SCRUM-70, 80, 115, 212) | SCRUM Sprint 4 | In Review |
