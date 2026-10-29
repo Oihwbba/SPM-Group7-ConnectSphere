@@ -65,7 +65,7 @@ events in other statuses, including a Cancelled one.
 | Test Data | The three events |
 | Expected Result | All three are listed. Each shows its state ("Registration not yet open" or "Registration closed") with **Register** disabled. |
 
-**Automated by:** `tests/unit/registration-state.test.ts` › "SCRUM-72 [AC4] TC-72-03, SCRUM-75 [AC7] TC-75-03: [Negative] registrationOpensAt in the future → NOT_YET_OPEN", "SCRUM-72 [AC4] TC-72-03: [Negative] registrationEnabled false → CLOSED, regardless of capacity or period", "SCRUM-72 [AC4] TC-72-03: [Negative] registrationClosesAt in the past → EXPIRED", "SCRUM-72 [AC4] TC-72-03: has a human label for every state (exhaustive at the type level too)"; `e2e/attendee-events.spec.ts` › "SCRUM-72 [AC4, AC8] TC-72-03: going straight to /events/${id} shows "${label}" with Register disabled"
+**Automated by:** `tests/unit/registration-state.test.ts` › "SCRUM-72 [AC4] TC-72-03, SCRUM-75 [AC7] TC-75-03: [Negative] registrationOpensAt in the future → NOT_YET_OPEN", "SCRUM-72 [AC4] TC-72-03: [Negative] registrationEnabled false → CLOSED, regardless of capacity or period", "SCRUM-72 [AC4] TC-72-03: [Negative] registrationClosesAt in the past → EXPIRED", "SCRUM-72 [AC4] TC-72-03: has a human label for every state (exhaustive at the type level too)"; `e2e/attendee-events.spec.ts` › "SCRUM-72 [AC4, AC8] TC-72-03: going straight to /events/${id} shows … with Register disabled"
 
 ### TC-72-04
 
