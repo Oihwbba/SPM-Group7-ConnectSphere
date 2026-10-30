@@ -8,7 +8,11 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ConfirmDialog } from "@/components/app/confirm-dialog";
-import { DECISION_BUTTON } from "@/components/queues/decision-button";
+import {
+  DECISION_BUTTON,
+  DECISION_PANEL,
+  DECISION_ROW,
+} from "@/components/queues/decision-button";
 import { recordSafetyCheckOutcome } from "./actions";
 
 type Outcome = "APPROVED" | "CHANGES_REQUESTED" | "REJECTED";
@@ -95,10 +99,7 @@ export function OutcomeDecision({
   );
 
   return (
-    <div
-      className="space-y-3 rounded-xl border bg-card p-4"
-      data-testid="safety-check-outcome"
-    >
+    <div className={DECISION_PANEL} data-testid="safety-check-outcome">
       <h2 className="text-sm font-semibold">Record the outcome</h2>
       {refusal && (
         <p
@@ -110,7 +111,7 @@ export function OutcomeDecision({
         </p>
       )}
       {noteField("safety-note", false)}
-      <div className="flex flex-col gap-2">
+      <div className={DECISION_ROW}>
         <Button
           variant="outline"
           disabled={saving}

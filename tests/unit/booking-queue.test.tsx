@@ -165,20 +165,24 @@ describe("BookingQueue", () => {
     expect(html.match(/aria-label="does not meet"/g)).toHaveLength(2);
     expect(
       renderToStaticMarkup(
-        <BookingDecision booking={{ ...row, hoursWarning: warning }} canDecide nextHref="/bookings" />,
+        <BookingDecision booking={{ ...row, hoursWarning: warning }} canDecide nextHref="/bookings"
+        listHref="/bookings" />,
       ),
     ).toMatch(/<button[^>]*>.*?Approve<\/button>/);
   });
 
   it("SCRUM-53, SCRUM-211 [AC3] TC-211-06: the decision controls render only for a user who may decide, positive first, Reject last", () => {
     const withControls = renderToStaticMarkup(
-      <BookingDecision booking={row} canDecide nextHref="/bookings" />,
+      <BookingDecision booking={row} canDecide nextHref="/bookings"
+        listHref="/bookings" />,
     );
     const withHold = renderToStaticMarkup(
-      <BookingDecision booking={row} canDecide canHold nextHref="/bookings" />,
+      <BookingDecision booking={row} canDecide canHold nextHref="/bookings"
+        listHref="/bookings" />,
     );
     const withoutControls = renderToStaticMarkup(
-      <BookingDecision booking={row} canDecide={false} nextHref="/bookings" />,
+      <BookingDecision booking={row} canDecide={false} nextHref="/bookings"
+        listHref="/bookings" />,
     );
 
     // Match the buttons, not text: the event's own name contains "Approve".
@@ -189,6 +193,48 @@ describe("BookingQueue", () => {
     expect(buttons(withControls)).toEqual(["Approve", "Reject"]);
     expect(buttons(withHold)).toEqual(["Approve", "Hold", "Reject"]);
     expect(buttons(withoutControls)).toEqual([]);
+  });
+
+  it("SCRUM-211 [AC3] TC-211-16: a decided request shows how it was decided, above the same buttons, all disabled; a pending one's are enabled", () => {
+    const buttonTags = (html: string) => [...html.matchAll(/<button[^>]*>/g)].map((m) => m[0]);
+    const pendingHtml = renderToStaticMarkup(
+      <BookingDecision booking={row} canDecide canHold nextHref="/bookings" listHref="/bookings" />,
+    );
+    const decidedHtml = renderToStaticMarkup(
+      <BookingDecision
+        booking={{ ...row, status: "APPROVED" }}
+        canDecide
+        canHold
+        decided="Approved by Vera Venue on 1 Mar 2035, 9:00 am SGT."
+        nextHref="/bookings"
+        listHref="/bookings"
+      />,
+    );
+
+    expect(decidedHtml).toMatch(
+      /data-testid="decided-note"[^>]*>Approved by Vera Venue on 1 Mar 2035, 9:00 am SGT\.</,
+    );
+    expect(decidedHtml).toContain(">Decided</h2>");
+    expect(buttonTags(decidedHtml)).toHaveLength(3);
+    expect(buttonTags(decidedHtml).every((tag) => tag.includes('disabled=""'))).toBe(true);
+    expect(pendingHtml).not.toContain('data-testid="decided-note"');
+    expect(buttonTags(pendingHtml)).toHaveLength(3);
+    expect(buttonTags(pendingHtml).some((tag) => tag.includes('disabled=""'))).toBe(false);
+  });
+
+  it("SCRUM-211 [AC3] TC-211-17: the decision buttons sit side by side in one row, with no card behind them", () => {
+    const html = renderToStaticMarkup(
+      <BookingDecision booking={row} canDecide canHold nextHref="/bookings" listHref="/bookings" />,
+    );
+    const panel = html.match(/<div[^>]*data-testid="booking-decision"[^>]*>/)?.[0] ?? "";
+    expect(panel).not.toMatch(/bg-card|border/);
+    // The buttons' row: a flex row, not a column.
+    const buttonRow = html.match(/<div class="([^"]*)"><button/)?.[1] ?? "";
+    expect(buttonRow.split(" ")).toContain("flex");
+    expect(buttonRow).not.toContain("flex-col");
+    for (const tag of html.match(/<button[^>]*>/g) ?? []) {
+      expect(tag).toContain("flex-1");
+    }
   });
 
   it("SCRUM-163 [AC7] TC-163-17: a hold Venue Staff haven't approved offers Approve and Reject; once approved it reads 'Approved by Venue Staff – awaiting confirmation' and offers Reject only", () => {
@@ -205,7 +251,8 @@ describe("BookingQueue", () => {
 
     const decision = (booking: PendingBookingRow) =>
       renderToStaticMarkup(
-        <BookingDecision booking={booking} canDecide canHold nextHref="/bookings" />,
+        <BookingDecision booking={booking} canDecide canHold nextHref="/bookings"
+        listHref="/bookings" />,
       );
     const unapproved = renderToStaticMarkup(<BookingDetails booking={hold} />);
     expect(unapproved).toContain("Held until 5 Mar 2035, 10:00 am SGT");

@@ -100,10 +100,14 @@ test.describe("SCRUM-134 — competing venue requests, first come, first served"
 
     // The earlier one is approved; the later then conflicts, and can be rejected (AC6).
     await (await card(names[0])).getByRole("button", { name: "Approve" }).click();
-    await expect(staff.getByText(/^Approved: Exhibition Hall is now booked/)).toBeVisible();
+    const done = staff.getByTestId("decision-done");
+    await expect(done.getByText(/^Approved: Exhibition Hall is now booked/)).toBeVisible();
+    await done.getByRole("button", { name: "Back to booking requests" }).click();
+    await staff.waitForURL((url) => !url.searchParams.has("open"));
     await (await card(names[1])).getByRole("button", { name: "Reject" }).click();
     await staff.getByLabel("Rejection reason").fill("The hall went to an earlier request.");
     await staff.getByRole("button", { name: "Reject request" }).click();
+    await done.getByRole("button", { name: "Back to booking requests" }).click();
     await expect(
       staff.getByTestId("queue-row").filter({ hasText: names[1] }),
     ).toHaveCount(0);

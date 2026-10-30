@@ -40,7 +40,12 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { DateTimeField } from "@/components/app/date-time-field";
 import { ConfirmDialog } from "@/components/app/confirm-dialog";
-import { DECISION_BUTTON } from "@/components/queues/decision-button";
+import { SubmittedDialog } from "@/components/app/submitted-dialog";
+import {
+  DECISION_BUTTON,
+  DECISION_PANEL,
+  DECISION_ROW,
+} from "@/components/queues/decision-button";
 import { Label } from "@/components/ui/label";
 import {
   formatDateTime,
@@ -63,24 +68,46 @@ export function BookingDetails({ booking }: { booking: PendingBookingRow }) {
   return <RequestOverview booking={booking} />;
 }
 
+/** What the decision needs to know about a request, pending or decided. */
+type DecisionBooking = Pick<PendingBookingRow, "id" | "status" | "startAt"> & {
+  holdApprovedAt?: Date | null;
+  hoursWarning?: string | null;
+  event: { name: string };
+  venue: { name: string };
+};
+
 /**
- * SCRUM-53, SCRUM-163, SCRUM-211 AC3, AC4 — the decision, on the right of the
+ * SCRUM-53, SCRUM-163, SCRUM-211 AC3 — the decision, on the right of the
  * opened item, in the order every queue uses: Approve, then Hold, then
- * Reject. Reject asks first, with its required reason. Once decided, the next
- * waiting request opens (`nextHref`); a refusal (an earlier competing
- * request, a clash) is shown here and the request stays open, unchanged.
+ * Reject, side by side. Reject asks first, with its required reason. An
+ * approval or a rejection ends in a pop-up that leads back to the list
+ * (`listHref`) or stays on this request, which now shows its status with the
+ * buttons disabled (`decided`). A hold opens the next waiting request
+ * (`nextHref`). A refusal (an earlier competing request, a clash) is shown
+ * here and the request stays open, unchanged.
  */
 export function BookingDecision({
   booking,
   canDecide,
   canHold = false,
+  decided,
   nextHref,
+  listHref,
 }: {
-  booking: PendingBookingRow;
+  booking: DecisionBooking;
   canDecide: boolean;
   canHold?: boolean;
+  /** How the request was decided, once it has been; its buttons are then disabled. */
+  decided?: React.ReactNode;
   nextHref: string;
+  listHref: string;
 }) {
+  // The pop-up after an approval or a rejection. It outlives the refresh that
+  // turns this request into a decided one, since the same panel shows both.
+  const [outcome, setOutcome] = useState<{
+    decision: "APPROVED" | "REJECTED";
+    message: string;
+  } | null>(null);
   const [rejecting, setRejecting] = useState(false);
   const [reason, setReason] = useState("");
   // SCRUM-163 AC1: the hold's expiry and note.
@@ -134,23 +161,17 @@ export function BookingDecision({
       router.refresh();
       return;
     }
-    if (decision === "REJECTED") {
-      toast.success(`Rejected the request for ${booking.event.name}.`);
-    } else {
-      // A way straight to the event, as the approval pop-up had.
-      toast.success(
-        booking.status === "HELD"
-          ? `Approved the hold: ${booking.event.name}'s Coordinator can now confirm it.`
-          : `Approved: ${booking.venue.name} is now booked for ${booking.event.name}.`,
-        {
-          action: {
-            label: "View event",
-            onClick: () => router.push(`/all-events/${booking.eventId}`),
-          },
-        },
-      );
-    }
-    router.push(nextHref);
+    setOutcome({
+      decision,
+      message:
+        decision === "REJECTED"
+          ? `Rejected the request for ${booking.event.name}.`
+          : booking.status === "HELD"
+            ? `Approved the hold: ${booking.event.name}'s Coordinator can now confirm it.`
+            : `Approved: ${booking.venue.name} is now booked for ${booking.event.name}.`,
+    });
+    // This request, now decided: its status, with the buttons disabled.
+    router.refresh();
   }
 
   function decide(decision: "APPROVED" | "REJECTED") {
@@ -159,15 +180,23 @@ export function BookingDecision({
 
   // SCRUM-163 AC7: a held request is approved here once, then confirmed by
   // its Coordinator (AC3); it isn't held again.
-  const canApprove = booking.status === "PENDING" || !booking.holdApprovedAt;
-  const canHoldIt = booking.status === "PENDING" && canHold;
+  // Once decided, every button stays, disabled.
+  const canApprove =
+    Boolean(decided) || booking.status === "PENDING" || !booking.holdApprovedAt;
+  const canHoldIt =
+    canHold && (Boolean(decided) || booking.status === "PENDING");
+  const off = isPending || Boolean(decided);
 
   return (
-    <div
-      className="space-y-3 rounded-xl border bg-card p-4"
-      data-testid="booking-decision"
-    >
-      <h2 className="text-sm font-semibold">Decision</h2>
+    <div className={DECISION_PANEL} data-testid="booking-decision">
+      <h2 className="text-sm font-semibold">
+        {decided ? "Decided" : "Decision"}
+      </h2>
+      {decided && (
+        <p className="text-sm text-muted-foreground" data-testid="decided-note">
+          {decided}
+        </p>
+      )}
       {refusal && (
         <p
           role="alert"
@@ -177,11 +206,11 @@ export function BookingDecision({
           {refusal}
         </p>
       )}
-      <div className="flex flex-col gap-2">
+      <div className={DECISION_ROW}>
         {canApprove && (
           <Button
             variant="outline"
-            disabled={isPending}
+            disabled={off}
             className={DECISION_BUTTON.positive}
             onClick={() => decide("APPROVED")}
           >
@@ -191,7 +220,7 @@ export function BookingDecision({
         {canHoldIt && (
           <Button
             variant="outline"
-            disabled={isPending}
+            disabled={off}
             className={DECISION_BUTTON.middle}
             onClick={() => {
               setHolding(true);
@@ -205,7 +234,7 @@ export function BookingDecision({
         )}
         <Button
           variant="outline"
-          disabled={isPending}
+          disabled={off}
           className={DECISION_BUTTON.negative}
           onClick={() => {
             setRejecting(true);
@@ -234,6 +263,25 @@ export function BookingDecision({
           aria-label="Rejection reason"
         />
       </ConfirmDialog>
+
+      <SubmittedDialog
+        open={outcome !== null}
+        title={
+          outcome?.decision === "REJECTED"
+            ? "Request rejected"
+            : "Request approved"
+        }
+        onClose={() => setOutcome(null)}
+        closeLabel="View this booking"
+        action={{
+          label: "Back to booking requests",
+          onClick: () => router.push(listHref),
+          prominent: true,
+        }}
+        testId="decision-done"
+      >
+        {outcome?.message}
+      </SubmittedDialog>
 
       <Dialog open={holding} onOpenChange={setHolding}>
         <DialogContent>

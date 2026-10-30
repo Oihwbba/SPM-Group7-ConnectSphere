@@ -28,6 +28,7 @@ import {
   type QueueState,
 } from "@/lib/queues";
 import { cn } from "@/lib/utils";
+import { DECISION_PANEL } from "./decision-button";
 import { QueueControls } from "./queue-controls";
 
 const BADGE_VARIANT = {
@@ -355,12 +356,10 @@ export function DecisionCard({
   children: React.ReactNode;
 }) {
   return (
-    <Card>
-      <CardContent className="space-y-3 p-4">
-        <h2 className="text-sm font-semibold">{title}</h2>
-        {children}
-      </CardContent>
-    </Card>
+    <div className={DECISION_PANEL}>
+      <h2 className="text-sm font-semibold">{title}</h2>
+      {children}
+    </div>
   );
 }
 

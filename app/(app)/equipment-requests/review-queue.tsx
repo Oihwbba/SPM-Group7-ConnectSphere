@@ -24,7 +24,11 @@ import {
   ConfirmDialog,
   type ConfirmOutcome,
 } from "@/components/app/confirm-dialog";
-import { DECISION_BUTTON } from "@/components/queues/decision-button";
+import {
+  DECISION_BUTTON,
+  DECISION_PANEL,
+  DECISION_ROW,
+} from "@/components/queues/decision-button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import type { QueuedEquipmentRequest } from "@/lib/equipment/request-queries";
@@ -136,7 +140,7 @@ export function ReviewDecision({
 
   if (!isOpenRequest(request)) {
     return (
-      <div className="space-y-2 rounded-xl border bg-card p-4">
+      <div className={DECISION_PANEL}>
         <h2 className="text-sm font-semibold">Decided</h2>
         <p className="text-sm text-muted-foreground" data-testid="decided-note">
           {EQUIPMENT_REQUEST_STATUS_LABEL[request.status]}
@@ -184,10 +188,7 @@ export function ReviewDecision({
     });
 
   return (
-    <div
-      className="space-y-3 rounded-xl border bg-card p-4"
-      data-testid="review-decision"
-    >
+    <div className={DECISION_PANEL} data-testid="review-decision">
       <h2 className="text-sm font-semibold">Decision</h2>
       {refusal && (
         <p
@@ -234,12 +235,12 @@ export function ReviewDecision({
               </p>
             )}
           </div>
-          <div className="flex flex-col gap-2">
+          <div className={DECISION_ROW}>
             <Button
               variant="outline"
               onClick={() => move("APPROVED")}
               disabled={pending}
-              className={`${DECISION_BUTTON.positive} gap-2`}
+              className={DECISION_BUTTON.positive}
             >
               {pending ? <Loader2 className="animate-spin" /> : <Check />}
               Approve
@@ -251,7 +252,7 @@ export function ReviewDecision({
               title={
                 shortLines.length === 0 ? "Every line is available." : undefined
               }
-              className={`${DECISION_BUTTON.middle} gap-2`}
+              className={DECISION_BUTTON.middle}
             >
               <Repeat />
               Suggest alternative
@@ -260,7 +261,7 @@ export function ReviewDecision({
               variant="outline"
               onClick={() => setRejecting(true)}
               disabled={pending}
-              className={`${DECISION_BUTTON.negative} gap-2`}
+              className={DECISION_BUTTON.negative}
             >
               <X />
               Reject

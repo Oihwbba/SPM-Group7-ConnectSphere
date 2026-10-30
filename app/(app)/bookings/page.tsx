@@ -79,6 +79,22 @@ export default async function BookingsPage({
 
   const pending = queue.find((booking) => booking.id === state.open?.id);
   const done = decided.find((booking) => booking.id === state.open?.id);
+  const canDecide = can(session.user, "booking:decide");
+  const canHold = can(session.user, "booking:hold");
+  const doneNote = done && (
+    <>
+      {BOOKING_STATUS_LABEL[done.status]}
+      {done.decidedBy && ` by ${done.decidedBy.name}`}
+      {done.decidedAt && ` on ${formatDateTime(done.decidedAt)}`}.
+      {!done.decidedAt &&
+        done.heldAt &&
+        ` Held on ${formatDateTime(done.heldAt)}.`}
+      {!done.decidedAt &&
+        !done.heldAt &&
+        ` Cancelled before a decision, on ${formatDateTime(done.updatedAt)}.`}
+      {done.decisionReason && ` Reason: ${done.decisionReason}`}
+    </>
+  );
 
   return (
     <WorkQueue
@@ -122,23 +138,26 @@ export default async function BookingsPage({
         pending ? (
           <BookingDecision
             booking={pending}
-            canDecide={can(session.user, "booking:decide")}
-            canHold={can(session.user, "booking:hold")}
+            canDecide={canDecide}
+            canHold={canHold}
             nextHref={state.nextHref}
+            listHref={state.listHref}
           />
-        ) : done ? (
-          <DecidedNote>
-            {BOOKING_STATUS_LABEL[done.status]}
-            {done.decidedBy && ` by ${done.decidedBy.name}`}
-            {done.decidedAt && ` on ${formatDateTime(done.decidedAt)}`}.
-            {!done.decidedAt &&
-              done.heldAt &&
-              ` Held on ${formatDateTime(done.heldAt)}.`}
-            {!done.decidedAt &&
-              !done.heldAt &&
-              ` Cancelled before a decision, on ${formatDateTime(done.updatedAt)}.`}
-            {done.decisionReason && ` Reason: ${done.decisionReason}`}
-          </DecidedNote>
+        ) : done && doneNote ? (
+          // The same panel as a pending request's, so the pop-up after a
+          // decision outlives the refresh; its buttons are now disabled.
+          canDecide ? (
+            <BookingDecision
+              booking={done}
+              canDecide
+              canHold={canHold}
+              decided={doneNote}
+              nextHref={state.nextHref}
+              listHref={state.listHref}
+            />
+          ) : (
+            <DecidedNote>{doneNote}</DecidedNote>
+          )
         ) : null
       }
       after={<TimeClashFlags flags={timeClashFlags} />}

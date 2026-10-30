@@ -183,10 +183,12 @@ test.describe("SCRUM-50 / 52 / 53 — venue booking request, review and decision
 
     // SCRUM-53 AC1 — approve.
     await card.getByRole("button", { name: "Approve" }).click();
-    // Approving says so, with a way to the event (SCRUM-211 AC4: the
-    // request leaves the page for the next one).
-    await expect(staff.getByText(/Approved: Exhibition Hall is now booked/)).toBeVisible();
-    await expect(staff.getByRole("button", { name: "View event" })).toBeVisible();
+    // Approving says so in the shared pop-up (SCRUM-207 AC4), which leads
+    // back to the list or stays on the request (SCRUM-211).
+    const done = staff.getByTestId("decision-done");
+    await expect(done.getByText(/Approved: Exhibition Hall is now booked/)).toBeVisible();
+    await expect(done.getByRole("button", { name: "View this booking" })).toBeVisible();
+    await done.getByRole("button", { name: "Back to booking requests" }).click();
     await expect(card).toHaveCount(0);
 
     // SCRUM-53 AC4 / SCRUM-50 AC3 — an event overlapping that period now
@@ -399,7 +401,9 @@ test.describe("SCRUM-50 / 52 / 53 — venue booking request, review and decision
       .getByLabel("Rejection reason")
       .fill("The hall is set for an exhibition that week.");
     await confirm.click();
-    await expect(staff.getByText("Rejected the request for")).toBeVisible();
+    const done = staff.getByTestId("decision-done");
+    await expect(done.getByText("Rejected the request for")).toBeVisible();
+    await done.getByRole("button", { name: "Back to booking requests" }).click();
     await expect(card).toHaveCount(0);
 
     const saved = await prisma.booking.findFirstOrThrow({

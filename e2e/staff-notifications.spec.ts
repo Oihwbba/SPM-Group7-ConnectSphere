@@ -90,7 +90,9 @@ test.describe("SCRUM-124 — staff and arrangement notifications", () => {
     await staff.waitForURL(/\/bookings$/);
     const card = await openBooking(staff, event.name);
     await card.getByRole("button", { name: "Approve" }).click();
-    await expect(staff.getByText(/^Approved: Exhibition Hall is now booked/)).toBeVisible();
+    await expect(
+      staff.getByTestId("decision-done").getByText(/^Approved: Exhibition Hall is now booked/),
+    ).toBeVisible();
 
     // AC4, AC15: the Coordinator's own list, opening the event.
     await coordinator.goto("/notifications");
@@ -127,7 +129,9 @@ test.describe("SCRUM-124 — staff and arrangement notifications", () => {
     await card.getByRole("button", { name: "Reject" }).click();
     await staff.getByLabel("Rejection reason").fill("The hall is closed for repairs.");
     await staff.getByRole("button", { name: "Reject request" }).click();
-    await expect(staff.getByText("Rejected the request for")).toBeVisible();
+    await expect(
+      staff.getByTestId("decision-done").getByText("Rejected the request for"),
+    ).toBeVisible();
 
     const coordinator = await signedIn(browser, "coordinator@test.local");
     await coordinator.goto("/notifications");
