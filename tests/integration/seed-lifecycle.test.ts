@@ -149,7 +149,7 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-233 — the seed follows the event li
   it("SCRUM-233 [AC7] TC-233-07: seeded history matches the actions: the system moves an event to Planning, the assigned Coordinator confirms it, and a Lead reassigns it", async () => {
     const entries = await prisma.auditLog.findMany({
       where: { id: { startsWith: "aud_" }, entityType: "Event" },
-      select: { id: true, entityId: true, action: true, actorId: true, oldValue: true, newValue: true },
+      select: { id: true, entityId: true, action: true, actorId: true, oldValue: true, newValue: true, createdAt: true },
     });
     const toPlanning = entries.filter((e) => e.oldValue === "APPROVED" && e.newValue === "PLANNING");
     const confirming = entries.filter((e) => e.newValue === "CONFIRMED");
@@ -227,6 +227,12 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-233 — the seed follows the event li
         select: { role: true, additionalRoles: true },
       });
       expect([actor.role, ...actor.additionalRoles], entry.id).toContain("COORDINATOR_LEAD");
+      // Only a submitted request has a Coordinator to reassign (SCRUM-21).
+      const { submittedAt } = await prisma.event.findUniqueOrThrow({
+        where: { id: entry.entityId },
+        select: { submittedAt: true },
+      });
+      expect(entry.createdAt.getTime(), entry.id).toBeGreaterThan(submittedAt!.getTime());
     }
   });
 

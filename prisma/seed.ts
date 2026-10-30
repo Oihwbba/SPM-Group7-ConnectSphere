@@ -422,7 +422,7 @@ async function seedEvents() {
       expectedAttendance: 400,
       organiserId: U.organiser,
       coordinatorId: U.coordinator,
-      submittedAt: at(-4, 3),
+      submittedAt: at(-5, 3),
     },
     {
       // SCRUM-81 AC1, SCRUM-135 AC12: approval saves Planning, so no event
