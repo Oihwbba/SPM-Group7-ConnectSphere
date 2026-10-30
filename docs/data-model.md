@@ -222,7 +222,8 @@ the event's expected attendance; no separate registration-capacity field is
 maintained." Registration therefore counts against `Event.expectedAttendance`,
 under a lock on the `Event` row (decision 4.4). The leftover
 `Event.registrationCapacity` column — from the earlier wording where capacity
-was a separate number — is unused.
+was a separate number — is no longer read or written (`@ignore`, SCRUM-254)
+and is dropped in a later migration.
 
 ### 4.6 Display names follow one convention (SCRUM-131)
 
@@ -230,7 +231,7 @@ Stored values need not read as the user sees them. The agreed display names:
 
 | Domain | Shown as |
 |---|---|
-| Event | Draft, Submitted, Under Review, Approved, Planning, Confirmed, Completed, Cancelled, Rejected |
+| Event | Draft, Submitted, Under Review, Approved (a name in history only: no event is stored as Approved, SCRUM-254), Planning, Confirmed, Completed, Cancelled, Rejected |
 | Booking | Pending, Held, Approved, Rejected, Expired, Cancelled |
 | Equipment request | Pending Review, In Review, Approved, Rejected, Cancelled |
 | Reservation | **Reserved** or Cancelled — never "Confirmed" (a reservation's stored `CONFIRMED` status collides with the event's Confirmed) |

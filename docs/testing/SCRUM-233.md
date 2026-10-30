@@ -170,7 +170,7 @@ integration cases read only rows with the seed's fixed ids (`evt_`, `aud_`,
 | Pre-conditions | Merged. |
 | Test Steps | 1. Run `npm run db:seed` on the shared database. <br> 2. Run read-only queries for every Approved event, seeded or not, events spanning two Singapore days, and each Confirmed event's readiness. |
 | Test Data | — |
-| Expected Result | No seeded event is Approved, none spans two days, and every seeded Confirmed event passes readiness. The seed removes no row, so nothing needs deleting by hand. Rows created through the app are reported, not changed: in particular, any event left Approved from before approval saved Planning (#120) is counted and listed for the PO, since it can no longer take an equipment request or reservation or be found by a status filter; it can still be cancelled (SCRUM-135 AC 9). |
+| Expected Result | No seeded event is Approved, none spans two days, and every seeded Confirmed event passes readiness. The seed removes no row, so nothing needs deleting by hand. Rows created through the app are reported, not changed: in particular, any event left Approved from before approval saved Planning (#120) is counted and listed for the PO. SCRUM-254's migration then moves such events to Planning ([TC-254-01](SCRUM-254.md#tc-254-01)). |
 
 **Automated by:** Manual (the shared database, after the merge).
 
@@ -194,9 +194,9 @@ integration cases read only rows with the seed's fixed ids (`evt_`, `aud_`,
 | Test Case ID | TC-233-13 |
 | Test Scenario | [Positive, Negative] AC 13: every seeded registration was taken while its event's registration was open, and every seeded capacity is the expected attendance (SCRUM-73, SCRUM-74, SCRUM-75) |
 | Pre-conditions | Freshly seeded. |
-| Test Steps | 1. For each seeded registration (`reg_`), compare when it was made with its event's registration: enabled, approved, the opening and closing times, and the start. <br> 2. For each seeded event with a capacity, compare it with the expected attendance. |
+| Test Steps | 1. For each seeded registration (`reg_`), compare when it was made with its event's registration: enabled, approved, the opening and closing times, and the start. <br> 2. For each seeded event, read its separate registration capacity column. |
 | Test Data | Includes `reg_completed_1` on `evt_completed` "Completed — Hackathon", and `evt_confirmed` "Confirmed — Charity Gala" |
-| Expected Result | 1. Every registration was made with registration enabled, at or after the approval and any opening time, before any closing time and before the start. `evt_completed`'s window opens after its approval and closes the evening before it ran. 2. Every capacity equals the expected attendance; the Charity Gala's is 120. Before the fix the test named `reg_completed_1` and, with the Gala's capacity at 100, `evt_confirmed`. |
+| Expected Result | 1. Every registration was made with registration enabled, at or after the approval and any opening time, before any closing time and before the start. `evt_completed`'s window opens after its approval and closes the evening before it ran. 2. None has one: the expected attendance is the capacity, and since SCRUM-254 the seed writes no separate value. Before the fix the test named `reg_completed_1` and, with the Gala's capacity at 100, `evt_confirmed`. |
 
 **Automated by:** `tests/integration/seed-lifecycle.test.ts` › "SCRUM-233 [AC13] TC-233-13: every seeded registration was taken while its event's registration was open, and every seeded capacity is the expected attendance"
 

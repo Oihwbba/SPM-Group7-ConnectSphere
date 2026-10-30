@@ -53,7 +53,7 @@ organised by `organiser@test.local`. Every account's password is
 | Test Data | Reason "The keynote speaker withdrew." |
 | Expected Result | "Event cancelled. Its arrangements and registrations were released." The event is Cancelled with the reason, who and when, and a history entry. |
 
-**Automated by:** `tests/unit/cancel-event.test.ts` › "SCRUM-82 [AC1] TC-82-01: …" (3 tests); `tests/unit/event-lifecycle.test.ts` › "SCRUM-135 [AC9] TC-135-09: an event can be cancelled from Under Review, Planning or Confirmed (and a legacy Approved row)"
+**Automated by:** `tests/unit/cancel-event.test.ts` › "SCRUM-82 [AC1] TC-82-01: …" (3 tests); `tests/unit/event-lifecycle.test.ts` › "SCRUM-135 [AC9] TC-135-09: an event can be cancelled from Under Review, Planning or Confirmed"
 
 ### TC-82-02
 

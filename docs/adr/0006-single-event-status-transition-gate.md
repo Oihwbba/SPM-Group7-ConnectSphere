@@ -163,3 +163,15 @@ and SCRUM-108 AC11 had allowed).
 - Refusals read the same everywhere.
 - A Submitted request no Coordinator was assigned to waits in the Lead's
   Unassigned queue (SCRUM-165).
+
+## Addendum (2026-10-30) — No event is stored as Approved (SCRUM-254)
+
+Decision 4 of the 2026-10-14 addendum kept one move out of Approved, to
+Cancelled, for a row left Approved from before approval moved straight to
+Planning. SCRUM-254 removes that case instead of carrying it: a migration
+moves any such event to Planning, the move approval makes, and records it in
+the event's history as a system change; the CHECK `event_never_rests_approved`
+refuses an event stored as Approved; and the table offers no move into or out
+of it. Approved stays in the enum as a name in history (SCRUM-135 AC12). The
+event page reads Planning, not Approved, for its checklist, next step and
+Arrangements tab.

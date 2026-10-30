@@ -102,9 +102,9 @@ every action asks it.
 | Pre-conditions | — |
 | Test Steps | Read the statuses an event can be cancelled from. |
 | Test Data | — |
-| Expected Result | Under Review, Planning and Confirmed (and a row left Approved from before approval moved straight to Planning, so it isn't stuck holding its arrangements; nothing moves it on to Planning). The **Cancel event** button uses the same list. |
+| Expected Result | Under Review, Planning and Confirmed. No event is stored as Approved (SCRUM-254), so there is no Approved row to cancel. The **Cancel event** button uses the same list. |
 
-**Automated by:** `tests/unit/event-lifecycle.test.ts` › "SCRUM-135 [AC9] TC-135-09: …"; `tests/unit/cancel-event.test.ts` › "SCRUM-82 [AC1] TC-82-01: …" and "SCRUM-82 [AC1, AC3] TC-82-01, SCRUM-135 [AC9, AC12] TC-135-09: a legacy Approved event can be cancelled, and its arrangements are released"
+**Automated by:** `tests/unit/event-lifecycle.test.ts` › "SCRUM-135 [AC9] TC-135-09: …"; `tests/unit/cancel-event.test.ts` › "SCRUM-82 [AC1] TC-82-01: …" and "SCRUM-254 [AC3] TC-254-03: an event read as Approved can't be cancelled, and nothing is written"
 
 ### TC-135-11
 
