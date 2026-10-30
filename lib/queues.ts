@@ -33,6 +33,11 @@ export type QueueItem = {
   eventStart: Date | null;
   /** One short line: what the item asks for. */
   asked: string;
+  /**
+   * More words the search box matches besides the event's name, for a queue
+   * that searched them before: Bookings' venue and Coordinator (SCRUM-52).
+   */
+  searchText?: string;
   requestedAt: Date;
   waiting: boolean;
   /**
@@ -124,7 +129,9 @@ export function arrangeQueue(items: QueueItem[], view: QueueView): QueueItem[] {
     (item) =>
       (view.status === "all" ||
         (!item.onlyInAll && item.waiting === (view.status === "waiting"))) &&
-      words.every((word) => item.event.toLowerCase().includes(word)),
+      words.every((word) =>
+        `${item.event} ${item.searchText ?? ""}`.toLowerCase().includes(word),
+      ),
   );
   const sign = view.dir === "asc" ? 1 : -1;
   const key = (item: QueueItem) =>

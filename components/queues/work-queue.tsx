@@ -50,6 +50,7 @@ export function WorkQueue({
   defaults,
   testId,
   noun = "requests",
+  searchLabel,
   detail,
   decision,
   before,
@@ -63,6 +64,8 @@ export function WorkQueue({
   /** Names the open item's container for tests and links. */
   testId?: string;
   noun?: string;
+  /** The search box's name, where the queue searches more than the event's. */
+  searchLabel?: string;
   detail?: React.ReactNode;
   decision?: React.ReactNode;
   before?: React.ReactNode;
@@ -90,7 +93,12 @@ export function WorkQueue({
         <p className="text-sm text-muted-foreground">{description}</p>
       </div>
 
-      <QueueControls base={base} view={view} defaults={defaults} />
+      <QueueControls
+        base={base}
+        view={view}
+        defaults={defaults}
+        searchLabel={searchLabel}
+      />
 
       {view.open ? (
         <section aria-label="Open request" className="space-y-4">

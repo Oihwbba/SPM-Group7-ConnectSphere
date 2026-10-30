@@ -377,11 +377,13 @@ test.describe("SCRUM-50 / 52 / 53 — venue booking request, review and decision
 
     const staff = await signedIn(browser, "venuestaff@test.local");
     await staff.goto("/bookings");
-    // SCRUM-52, SCRUM-211 AC2 — search narrows the queue by event name.
-    const search = staff.getByLabel("Search by event name");
+    // SCRUM-52 — search narrows the queue to matching requests, by any of
+    // their words: here the tag in the request's notes (SCRUM-211 AC2 keeps
+    // the one shared box).
+    const search = staff.getByLabel("Search by event, venue or coordinator");
     await search.fill("no-such-request-anywhere");
     await expect(staff.getByText(/^No requests match/)).toBeVisible();
-    await search.fill(eventName("rejected"));
+    await search.fill(tag);
     await expect(staff.getByTestId("queue-row")).toHaveCount(1);
     const card = await openBooking(staff, eventName("rejected"));
     await expect(card).toContainText(tag);

@@ -13,6 +13,7 @@ import { formatDateTime } from "@/lib/datetime";
 import { queueState, type QueueDefaults, type QueueItem } from "@/lib/queues";
 import { BOOKING_STATUS_LABEL } from "@/lib/status-labels";
 import { getDecidedBookings, getPendingBookingQueue } from "./queries";
+import { bookingSearchText } from "./search";
 import { BookingDecision, BookingDetails } from "./booking-queue";
 import { TimeClashFlags } from "./time-clash-flags";
 
@@ -48,6 +49,7 @@ export default async function BookingsPage({
       event: booking.event.name,
       eventStart: booking.startAt,
       asked: asked(booking.venue.name, booking.requestedAttendance),
+      searchText: bookingSearchText(booking),
       requestedAt: booking.createdAt,
       waiting: true,
       badges: [
@@ -65,6 +67,7 @@ export default async function BookingsPage({
       event: booking.event.name,
       eventStart: booking.startAt,
       asked: asked(booking.venue.name, booking.requestedAttendance),
+      searchText: bookingSearchText(booking),
       requestedAt: booking.createdAt,
       waiting: false,
       badges: booking.needsReconsideration
@@ -85,6 +88,7 @@ export default async function BookingsPage({
       state={state}
       defaults={DEFAULTS}
       testId={state.open ? `booking-${state.open.id}` : undefined}
+      searchLabel="Search by event, venue or coordinator"
       detail={
         pending ? (
           <>

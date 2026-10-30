@@ -308,6 +308,26 @@ test.describe("SCRUM-211 — One layout for every work queue", () => {
       await expect(rows(page).first().getByTestId("asked")).toHaveText("Seminar Room 2.1 for 40");
     });
 
+    test("SCRUM-211 [AC2] TC-211-15, SCRUM-52 [AC1] TC-52-05: the one search box finds a request by its venue and by its Coordinator", async ({
+      browser,
+    }) => {
+      const page = await signedIn(browser, "venuestaff@test.local");
+      const names = async () =>
+        (await rows(page).getByRole("link").allTextContents()).map((t) => t.trim());
+
+      // By venue: A asks for the Exhibition Hall, B the Seminar Room, C the Auditorium.
+      await searchFor(page, "/bookings", `${P} seminar`);
+      expect(await names()).toEqual([B]);
+      await searchFor(page, "/bookings", `${P} auditorium`);
+      expect(await names()).toEqual([C]);
+      // By Coordinator: Cody asked for all three, Cara for none.
+      await searchFor(page, "/bookings", `${P} cody`);
+      expect(await names()).toEqual([B, C, A]);
+      await searchFor(page, "/bookings", `${P} cara`);
+      await expect(page.getByText(/^No requests match/)).toBeVisible();
+      await expect(page.getByLabel("Search by event, venue or coordinator")).toHaveValue(`${P} cara`);
+    });
+
     test("SCRUM-211 [AC3, AC4] TC-211-06, TC-211-07, TC-211-08: Approve, Hold, Reject in that order; each decision opens the next, until all are caught up", async ({
       browser,
     }) => {

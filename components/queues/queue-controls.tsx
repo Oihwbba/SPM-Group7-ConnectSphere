@@ -30,10 +30,13 @@ export function QueueControls({
   base,
   view,
   defaults,
+  searchLabel = "Search by event name",
 }: {
   base: string;
   view: QueueView;
   defaults: QueueDefaults;
+  /** What the box matches, where a queue searches more than the event's name. */
+  searchLabel?: string;
 }) {
   const router = useRouter();
   const [query, setQuery] = useState(view.q);
@@ -95,8 +98,8 @@ export function QueueControls({
         />
         <Input
           type="search"
-          aria-label="Search by event name"
-          placeholder="Search by event name…"
+          aria-label={searchLabel}
+          placeholder={`${searchLabel}…`}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           className="pl-9"

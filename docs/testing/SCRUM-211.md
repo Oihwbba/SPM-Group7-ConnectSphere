@@ -18,7 +18,8 @@ the review queue) and **Safety Checks** (`safety@test.local`).
 
 **How every queue is laid out.** The title with how many items wait, then the
 same controls: **Waiting** (the default), **Decided** and **All**, and a search
-box that matches the event's name. Then the list in four columns, **Event**,
+box that matches the event's name (in Bookings, also its venue, Coordinator and
+the other words SCRUM-52 searched). Then the list in four columns, **Event**,
 **Event date**, **What's asked** and **Requested** (e.g. "23 Oct (3 days ago)",
 "Today (2 hours ago)"), with any mark (Overdue, Held, Earlier request first,
 In Review, Competing requests, Needs Reconsideration) as a small badge beside
@@ -43,6 +44,7 @@ with the same rules, permissions, locks, notifications and messages.
 | [TC-211-12](#tc-211-12) | Positive, Boundary | AC 2 | Integration |
 | [TC-211-13](#tc-211-13) | Positive, Boundary | AC 2 | Integration |
 | [TC-211-14](#tc-211-14) | Positive, Negative | AC 2 | Unit, integration |
+| [TC-211-15](#tc-211-15) | Positive, Negative | AC 2 | Unit, e2e |
 
 ## TC-211-01
 
@@ -100,13 +102,17 @@ TC-211-03, TC-211-04: …" tests.
 
 ## TC-211-04
 
-**The same search box: it matches the event's name.**
+**The same search box: it matches the event's name, and in Bookings the words
+SCRUM-52 searched too.**
 
 1. Type words from an event's name; then a word no event has.
 
 **Expected:** only items for matching events are listed; every word must
-match, and case doesn't matter. Nothing else (what's asked, the venue, the
-coordinator) is searched. The search is kept in the link.
+match, and case doesn't matter. In the Unassigned Queue, Equipment Requests and
+Safety Checks the rows show no person or venue, so only the event's name is
+searched. Bookings also matches the venue and its location, the Coordinator
+and their email, the layout, notes, facilities and dates, as SCRUM-52 did
+(TC-52-05, TC-211-15); its box says so. The search is kept in the link.
 
 *Automated:* `tests/unit/queues.test.ts` › "SCRUM-211 [AC2] TC-211-04: …";
 `e2e/work-queues.spec.ts` › the four "SCRUM-211 [AC1, AC2] TC-211-01, TC-211-02,
@@ -292,3 +298,25 @@ neither waiting nor decided, like a check outdated before review, is only
 under All"; `tests/integration/work-queues.test.ts` › "SCRUM-211 [AC2]
 TC-211-14: a check outdated before anyone reviewed it isn't under Decided; it
 is read for All, while one approved and then outdated stays decided".
+
+## TC-211-15
+
+**Bookings' search box finds a request by its venue and by its Coordinator.**
+
+*Pre-conditions:* three pending requests Cody Coordinator made, for the
+Exhibition Hall, the Seminar Room and the Auditorium.
+
+1. In **Bookings**, type "seminar" into **Search by event, venue or
+   coordinator**; then "auditorium".
+2. Type "Cody"; then "Cara".
+
+**Expected:** "seminar" lists only the Seminar Room request, and "auditorium"
+only the Auditorium one. "Cody" lists all three; "Cara", who asked for none,
+lists nothing: "No requests match …". It is the one box every queue shares
+(AC2); Bookings searches more than the event's name because SCRUM-52 did.
+
+*Automated:* `tests/unit/booking-search.test.ts` › "SCRUM-211 [AC2] TC-211-15:
+the Bookings search finds a request by its venue and by its Coordinator, and
+not another's"; `e2e/work-queues.spec.ts` › "SCRUM-211 [AC2] TC-211-15,
+SCRUM-52 [AC1] TC-52-05: the one search box finds a request by its venue and
+by its Coordinator".

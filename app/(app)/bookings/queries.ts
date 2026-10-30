@@ -222,10 +222,11 @@ export async function getDecidedBookings(now = new Date()) {
       decidedAt: true,
       decisionReason: true,
       needsReconsideration: true,
+      requestNotes: true,
       decidedBy: { select: { name: true } },
-      requestedBy: { select: { name: true } },
+      requestedBy: { select: { name: true, email: true } },
       event: { select: { name: true } },
-      venue: { select: { name: true, capacity: true } },
+      venue: { select: { name: true, capacity: true, location: true } },
     },
   });
   // A cancelled request isn't changed again, so its last update is when it
