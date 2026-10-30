@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
+import { Role } from "@prisma/client";
 
 // SCRUM-164 AC5 — the product overview names every role. Read from the file
 // itself, so removing a role's row turns this red.
@@ -24,5 +25,9 @@ describe("SCRUM-164 AC5 — the product overview", () => {
       "Event Coordinator Lead",
       "Safety Officer",
     ]);
+  });
+
+  it("SCRUM-164 [AC5] TC-164-06: the overview has a row for every role the app has, so a new role can't be left out", () => {
+    expect(rows).toHaveLength(Object.values(Role).length);
   });
 });

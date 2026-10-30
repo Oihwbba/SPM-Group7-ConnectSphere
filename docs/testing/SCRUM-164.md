@@ -96,4 +96,4 @@ Lead) and `safety@test.local` (Safety Officer). Every account's password is
 | Test Data | — |
 | Expected Result | Seven roles are listed, including the Event Coordinator Lead and the Safety Officer. |
 
-**Automated by:** `tests/unit/product-context.test.ts` › "SCRUM-164 [AC5] TC-164-06: the product overview lists all seven roles" (reads the "Who uses it" table of `docs/product-context.md`)
+**Automated by:** `tests/unit/product-context.test.ts` › "SCRUM-164 [AC5] TC-164-06: the product overview lists all seven roles" and "SCRUM-164 [AC5] TC-164-06: the overview has a row for every role the app has, so a new role can't be left out" (both read the "Who uses it" table of `docs/product-context.md`; the second counts its rows against the `Role` enum)
