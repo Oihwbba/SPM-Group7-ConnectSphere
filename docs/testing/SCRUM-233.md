@@ -117,7 +117,7 @@ integration cases read only rows with the seed's fixed ids (`evt_`, `aud_`,
 | Pre-conditions | Freshly seeded. |
 | Test Steps | 1. Read the seeded event history entries (`aud_`). <br> 2. For each event that reached Confirmed, read its status history, booking and safety check. |
 | Test Data | — |
-| Expected Result | Every Approved → Planning entry has no actor and follows the Coordinator's approval of the same event; every → Confirmed entry names the event's assigned Coordinator; each of `evt_confirmed`, `evt_full`, `evt_last_seat`, `evt_reg_not_open`, `evt_reg_closed` and `evt_cancelled` shows Under Review → Approved → Planning → Confirmed, confirmed after its booking and safety check were approved; every reassignment is by a user holding the Lead role. |
+| Expected Result | Every Approved → Planning entry has no actor and follows the Coordinator's approval of the same event; every → Confirmed entry names the event's assigned Coordinator; each of `evt_confirmed`, `evt_full`, `evt_last_seat`, `evt_reg_not_open`, `evt_reg_closed` and `evt_cancelled` shows Under Review → Approved → Planning → Confirmed, confirmed after its booking and safety check were approved; `evt_completed` shows Under Review → Approved → Planning → Confirmed → Completed, the last with no actor at its `completedAt`; every reassignment is by a user holding the Lead role. |
 
 **Automated by:** `tests/integration/seed-lifecycle.test.ts` › "SCRUM-233 [AC7] TC-233-07: seeded history matches the actions: the system moves an event to Planning, the assigned Coordinator confirms it, and a Lead reassigns it"
 

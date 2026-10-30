@@ -1113,6 +1113,9 @@ async function seedAuditLog() {
     ...confirmedHistory("aud_reg_not_open", E.regNotOpen, at(-8, 3), at(-5, 4)),
     ...confirmedHistory("aud_reg_closed", E.regClosed, at(-24, 3), at(-21, 4)),
     ...confirmedHistory("aud_cancelled", E.cancelled, at(-13, 3), at(-12, 4)),
+    // SCRUM-82: what completeFinishedEvents writes once a Confirmed event ends.
+    ...confirmedHistory("aud_completed", E.completed, at(-58, 3), at(-52, 4)),
+    { id: "aud_completed_completed", entityType: "Event", entityId: E.completed, action: "STATUS_CHANGED", actorId: null, fieldName: "status", oldValue: "CONFIRMED", newValue: "COMPLETED", summary: "Completed after its end time (SCRUM-82)", createdAt: at(-30, 11) },
     // SCRUM-21: reassigning is the Lead's action.
     { id: "aud_3", entityType: "Event", entityId: E.underReview, action: "REASSIGNED", actorId: U.coordinatorLead, fieldName: "coordinatorId", oldValue: U.coordinator2, newValue: U.coordinator, summary: "Reassigned by the Lead from Cara Coordinator to Cody Coordinator (SCRUM-21)", createdAt: at(-4, 2) },
     // SCRUM-82: what cancelInTransaction writes when the Coordinator cancels.

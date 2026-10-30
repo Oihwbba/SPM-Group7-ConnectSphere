@@ -175,4 +175,6 @@ not an automatic confirmation, which Alternatives rejected. Every seeded
 Confirmed event also passes the readiness checklist that confirming re-checks,
 and the events in the seed's first section that reached Confirmed, the
 cancelled Winter Workshop included, carry all three entries: approval, the move
-to Planning, and the confirmation after their booking and safety check.
+to Planning, and the confirmation after their booking and safety check. The
+completed Hackathon carries the same three, then the system's move to
+Completed after its end time; it has no seeded booking or safety check.

@@ -199,6 +199,26 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-233 — the seed follows the event li
       }
     }
 
+    // The Hackathon reached Confirmed too, and the system completed it after
+    // its end time (SCRUM-82).
+    const hackathon = await prisma.auditLog.findMany({
+      where: { entityId: "evt_completed", id: { startsWith: "aud_" }, fieldName: "status" },
+      orderBy: { createdAt: "asc" },
+      select: { actorId: true, oldValue: true, newValue: true, createdAt: true },
+    });
+    const { completedAt } = await prisma.event.findUniqueOrThrow({
+      where: { id: "evt_completed" },
+      select: { completedAt: true },
+    });
+    expect(hackathon.map((s) => `${s.oldValue} → ${s.newValue}`)).toEqual([
+      "UNDER_REVIEW → APPROVED",
+      "APPROVED → PLANNING",
+      "PLANNING → CONFIRMED",
+      "CONFIRMED → COMPLETED",
+    ]);
+    expect(hackathon[3].actorId).toBeNull();
+    expect(hackathon[3].createdAt).toEqual(completedAt);
+
     expect(reassigning.length).toBeGreaterThan(0);
     for (const entry of reassigning) {
       const actor = await prisma.user.findUniqueOrThrow({

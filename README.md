@@ -219,7 +219,8 @@ three changed fields (two major, one not); venue bookings that are approved,
 pending, rejected and cancelled; an approved and a pending equipment request
 with a status history; read and unread notifications; and audit entries
 written as the actions write them (approval, the system's move to Planning,
-confirmation by the Coordinator, reassignment by the Lead, cancellation).
+confirmation by the Coordinator, reassignment by the Lead, cancellation,
+completion).
 
 **Every role's work** (SCRUM-238): each role has something to see and to act
 on, and every status has a row. These events sit 50 or more days out:
