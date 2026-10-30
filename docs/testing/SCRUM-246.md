@@ -24,7 +24,6 @@ unit cases mock the database.
 | [TC-246-01](#tc-246-01) | Positive | AC 1 | E2E |
 | [TC-246-02](#tc-246-02) | Positive | AC 2 | Unit, E2E |
 | [TC-246-03](#tc-246-03) | Boundary | AC 2 | Unit, E2E |
-| [TC-246-04](#tc-246-04) | Negative | AC 3 | E2E (SCRUM-207's) |
 
 ---
 
@@ -59,23 +58,10 @@ unit cases mock the database.
 | Item | Content |
 |---|---|
 | Test Case ID | TC-246-03 |
-| Test Scenario | [Boundary] AC 2: a venue with no opening hours recorded shows its capacity only |
+| Test Scenario | [Boundary] AC 2: a venue with no opening hours recorded shows its capacity only, not a week of Closed days, because such a venue is closed on no day (`closedOn`) and booking refuses no period for it |
 | Pre-conditions | Shared pre-conditions; for the e2e case, a local database, where the test adds an active venue with no hours and removes it afterwards |
 | Test Steps | 1. Open Create Event Request. <br> 2. Go to step 3 - Venue. <br> 3. Open Venue Requirements. |
 | Test Data | "SCRUM-246 no hours &lt;time&gt;", capacity 12, no opening-hours rows |
 | Expected Result | The venue shows capacity 12 and no hours. `describeWeek` returns no days for it. |
 
 **Automated by:** `tests/unit/venue-hours.test.ts` › "SCRUM-246 [AC2] TC-246-03: a venue with no hours recorded lists no days"; `e2e/request-form-catalogue.spec.ts` › "SCRUM-246 [AC2] TC-246-03: a venue with no opening hours recorded shows its capacity only"
-
-### TC-246-04
-
-| Item | Content |
-|---|---|
-| Test Case ID | TC-246-04 |
-| Test Scenario | [Negative] AC 3: nothing else changes; no warning, nothing refused, and the answers are saved as free text as before (SCRUM-207 AC9) |
-| Pre-conditions | Shared pre-conditions; a local database |
-| Test Steps | 1. Fill in a request choosing Seminar Room 2.1 and Projector. <br> 2. Submit it. |
-| Test Data | As in SCRUM-207's TC-207-07 |
-| Expected Result | The request is submitted with no warning about the venue's hours or the stock. Its venue requirements are saved as "Preferred venue: Seminar Room 2.1" and its equipment requirements as "Requested equipment: Projector". |
-
-**Automated by:** `e2e/shared-conventions.spec.ts` › "SCRUM-207 [AC4] TC-207-07: submitting shows a confirmation pop-up whose View Details opens the request", which chooses both from the lists and reads both answers back from the database
