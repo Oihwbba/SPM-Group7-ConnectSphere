@@ -55,26 +55,36 @@ export function SubmittedDialog({
         </div>
         <DialogTitle className="text-xl">{title}</DialogTitle>
         <DialogDescription>{children}</DialogDescription>
-        <DialogFooter className="gap-2 sm:justify-center">
-          <Button
-            variant={action ? "outline" : "default"}
-            onClick={onClose}
-            className="w-full sm:w-auto"
-          >
-            {closeLabel}
-          </Button>
-          {action && (
-            <Button
-              onClick={action.onClick}
-              size={action.prominent ? "lg" : "default"}
-              className={
-                action.prominent ? "w-full sm:min-w-56" : "w-full sm:w-auto"
-              }
-            >
+        {action?.prominent ? (
+          // The main way on, full width, and the other as a link below it.
+          <div className="flex flex-col items-center gap-1">
+            <Button onClick={action.onClick} size="lg" className="w-full">
               {action.label}
             </Button>
-          )}
-        </DialogFooter>
+            <Button
+              variant="link"
+              onClick={onClose}
+              className="text-foreground underline"
+            >
+              {closeLabel}
+            </Button>
+          </div>
+        ) : (
+          <DialogFooter className="gap-2 sm:justify-center">
+            <Button
+              variant={action ? "outline" : "default"}
+              onClick={onClose}
+              className="w-full sm:w-auto"
+            >
+              {closeLabel}
+            </Button>
+            {action && (
+              <Button onClick={action.onClick} className="w-full sm:w-auto">
+                {action.label}
+              </Button>
+            )}
+          </DialogFooter>
+        )}
       </DialogContent>
     </Dialog>
   );
