@@ -193,7 +193,7 @@ Inline only: **Venue Search** and the sign-in page. Toast only: **Booking Reques
 | Test Data | Every seeded account |
 | Expected Result | Each asks in the same dialog, with the same layout and buttons; the way back changes nothing. |
 
-**Automated by:** the shared dialog is `components/app/confirm-dialog.tsx` (SCRUM-212's pull request). `tests/unit/confirm-dialog.test.tsx` › "SCRUM-207 [AC5] TC-207-10: …" (eight tests: its wording, way back, red button for a destructive action, pending state, and a refusal shown inside it without closing); an Attendee withdrawing a registration uses it, on the event page and on **My Registrations**: `e2e/registration-at-a-glance.spec.ts` › "SCRUM-212 [AC2] TC-212-09, SCRUM-207 [AC5] TC-207-10: …".
+**Automated by:** the shared dialog is `components/app/confirm-dialog.tsx` (SCRUM-212's pull request). `tests/unit/confirm-dialog.test.tsx` › "SCRUM-207 [AC5] TC-207-10: …" (eleven tests: its wording, way back, red button for a destructive action, pending state, a refusal shown inside it without closing, a field the action needs asked for inside it, an action that shows its own outcome on the page, and a dialog the page opens); an Attendee withdrawing a registration uses it, on the event page and on **My Registrations**: `e2e/registration-at-a-glance.spec.ts` › "SCRUM-212 [AC2] TC-212-09, SCRUM-207 [AC5] TC-207-10: …".
 
 **Still to do** (Manual) on these pages (audited 23 Oct): each irreversible action asks in a dialog of its own, built separately, and one doesn't ask at all (marked *no confirmation*). They all need to move to the shared dialog:
 
