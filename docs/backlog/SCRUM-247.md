@@ -18,7 +18,7 @@
 
 Expected attendance is the event's registration capacity, and an event must not be oversubscribed (SCRUM-74). When an impactful change request is approved, a Confirmed event goes back to Planning and its registrations stay Registered (SCRUM-128 AC5). In Planning, the assigned Coordinator can change expected attendance directly (SCRUM-25 AC3).
 
-The change-request route refuses an attendance below the number of active registrations (SCRUM-128 AC7, `change-decision-actions.ts:254`). The direct edit (`app/(app)/events/edit-actions.ts`) does not.
+The limit can be changed in two ways, and only one is guarded. A change request refuses an attendance below the number of active registrations (SCRUM-128 AC7, `change-decision-actions.ts:254`). The direct edit (`app/(app)/events/edit-actions.ts`) does not: SCRUM-25's criteria never asked for that guard when SCRUM-128 AC7 added it for change requests. SCRUM-74's own criteria, which cover registering, still hold.
 
 **Example:** 50 Attendees are registered. The event is re-planned, the Coordinator edits attendance to 30 and re-confirms. The event now has 50 registrations for 30 places.
 
@@ -31,3 +31,4 @@ The change-request route refuses an attendance below the number of active regist
 
 * 2026-10-30: created in Sprint 4 from a code and UI review of the Event Request Lifecycle and Attendee Registration epics, confirmed against the seeded app running locally.
 * 2026-10-30: removed the Registrations-tab wording change (it would contradict SCRUM-70 AC3, which shows remaining capacity) and the test-naming criterion, which the Definition of Done already covers.
+* 2026-10-30: the description says where the gap is: SCRUM-25 AC3 never carried the guard SCRUM-128 AC7 added for change requests. SCRUM-25's and SCRUM-74's criteria were met as written. Criteria unchanged.
