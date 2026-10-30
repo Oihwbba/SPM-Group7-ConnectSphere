@@ -153,11 +153,11 @@ criterion.
 | Item | Content |
 |---|---|
 | Test Case ID | TC-207-08 |
-| Test Scenario | [Positive] AC 4: approving a booking request confirms it in the same pop-up, with a way to the event |
+| Test Scenario | [Positive] AC 4: approving a booking request confirms it in the same pop-up, with a way back to the list or to the request |
 | Pre-conditions | Signed in as Venue Staff; one booking request is Pending. |
 | Test Steps | 1. Open the request's details from the queue and choose **Approve**. |
 | Test Data | `venuestaff@test.local` |
-| Expected Result | A success message, where every queue shows one, saying "Approved: … is now booked", with **View event**; the next waiting request then opens (SCRUM-211 AC4). |
+| Expected Result | The shared animated pop-up, "Request approved", saying "Approved: … is now booked", with **Back to booking requests** (the larger button) and **View this booking** (SCRUM-211 TC-211-18). |
 
 **Automated by:** `e2e/bookings.spec.ts` › "SCRUM-50 [AC1, AC2] TC-50-01, SCRUM-52 [AC1, AC2] TC-52-01, SCRUM-53 [AC1, AC4] TC-53-01, SCRUM-162 [AC2] TC-162-02, SCRUM-207 [AC3, AC4] TC-207-06, TC-207-08: a coordinator requests, staff approve, and the venue becomes unavailable"
 
