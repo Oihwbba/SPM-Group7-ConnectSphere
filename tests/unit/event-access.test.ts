@@ -44,7 +44,6 @@ function eventRow(
     organiserId: "orgA",
     coordinatorId: "coord",
     registrationEnabled: false,
-    registrationCapacity: null,
     registrationOpensAt: null,
     registrationClosesAt: null,
     createdAt: new Date(),

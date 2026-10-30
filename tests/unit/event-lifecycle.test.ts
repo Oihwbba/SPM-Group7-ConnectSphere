@@ -60,8 +60,6 @@ describe("canTransition — SCRUM-135", () => {
 
   it("SCRUM-135 [AC11] TC-135-11: every pair not in the table is refused", () => {
     const allowed = new Set(ALLOWED.map(([from, to]) => `${from}>${to}`));
-    // The legacy Approved row may still move on (see lib/event-lifecycle.ts).
-    allowed.add("APPROVED>CANCELLED");
     for (const from of ALL) {
       for (const to of ALL) {
         if (from === "REJECTED" && to === "SUBMITTED") continue;
@@ -78,6 +76,12 @@ describe("canTransition — SCRUM-135", () => {
     }
   });
 
+  it("SCRUM-254 [AC3] TC-254-03: nothing moves an event out of Approved either, not even to Cancelled", () => {
+    for (const to of ALL) {
+      expect(canTransition("APPROVED", to), `APPROVED → ${to}`).toBe(false);
+    }
+  });
+
   it("SCRUM-135 [AC13] TC-135-13: Completed and Cancelled are final", () => {
     for (const to of ALL) {
       expect(canTransition("COMPLETED", to)).toBe(false);
@@ -85,9 +89,9 @@ describe("canTransition — SCRUM-135", () => {
     }
   });
 
-  it("SCRUM-135 [AC9] TC-135-09: an event can be cancelled from Under Review, Planning or Confirmed (and a legacy Approved row)", () => {
+  it("SCRUM-135 [AC9] TC-135-09: an event can be cancelled from Under Review, Planning or Confirmed", () => {
     expect([...CANCELLABLE].sort()).toEqual(
-      ["APPROVED", "CONFIRMED", "PLANNING", "UNDER_REVIEW"].sort(),
+      ["CONFIRMED", "PLANNING", "UNDER_REVIEW"].sort(),
     );
   });
 });

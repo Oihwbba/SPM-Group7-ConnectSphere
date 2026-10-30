@@ -68,7 +68,7 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-208 — the event page's data, agains
         reconsiderationReason: "The attendance changed.",
       },
     });
-    await event("approved", { status: "APPROVED", coordinatorId: "usr_coordinator" });
+    await event("unbooked", { status: "PLANNING", coordinatorId: "usr_coordinator" });
     const question = await event("question", { status: "UNDER_REVIEW", coordinatorId: "usr_coordinator" });
     await prisma.clarificationRequest.create({
       data: { eventId: question, requestedById: "usr_coordinator", message: "Which hall?" },
@@ -143,8 +143,8 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-208 — the event page's data, agains
     });
   });
 
-  it("SCRUM-208 [AC2] TC-208-05: an Approved event's next step comes from its checklist too", async () => {
-    expect(await getEventPageData(coordinator, ids.approved)).toMatchObject({
+  it("SCRUM-208 [AC2] TC-208-05: an event just approved, in Planning with nothing booked, has its next step from its checklist", async () => {
+    expect(await getEventPageData(coordinator, ids.unbooked)).toMatchObject({
       step: { kind: "yours", text: "Your turn: request a venue" },
     });
   });
@@ -193,7 +193,7 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-208 — the event page's data, agains
 
   it("SCRUM-208 [AC4] TC-208-19: an event with nothing flagged counts none, for either viewer", async () => {
     for (const user of [organiser, coordinator]) {
-      expect((await getEventPageData(user, ids.approved))?.attention).toMatchObject({
+      expect((await getEventPageData(user, ids.unbooked))?.attention).toMatchObject({
         unresolvedFlags: 0,
         flaggedArrangements: 0,
       });

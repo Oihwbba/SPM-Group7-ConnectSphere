@@ -323,7 +323,7 @@ describe.skipIf(!usesLocalDatabase)(
         { equipmentId: roomy, quantity: 1 },
         { equipmentId: scarce, quantity: 1 },
       ]);
-      const second = await approvedRequest(await event("APPROVED"), [
+      const second = await approvedRequest(await event("PLANNING"), [
         { equipmentId: scarce, quantity: 1 },
         { equipmentId: roomy, quantity: 1 },
       ]);
@@ -382,7 +382,7 @@ describe.skipIf(!usesLocalDatabase)(
         { equipmentId: roomy, quantity: 1 },
       ]);
       const inReview = await approvedRequest(
-        await event("APPROVED"),
+        await event("PLANNING"),
         [{ equipmentId: roomy, quantity: 1 }],
         "IN_REVIEW",
       );

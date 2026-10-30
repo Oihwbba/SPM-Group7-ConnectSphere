@@ -297,16 +297,12 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-233 — the seed follows the event li
       .map((r) => r.id);
     expect(outside).toEqual([]);
 
-    // SCRUM-74: the expected attendance is the capacity.
-    const capacities = await prisma.event.findMany({
-      where: { ...seeded, registrationCapacity: { not: null } },
-      select: { id: true, registrationCapacity: true, expectedAttendance: true },
-    });
-    expect(
-      capacities
-        .filter((e) => e.registrationCapacity !== e.expectedAttendance)
-        .map((e) => e.id),
-    ).toEqual([]);
+    // SCRUM-74: the expected attendance is the capacity, so the seed writes
+    // no separate one (SCRUM-254 AC4). The client no longer reads the column.
+    const withCapacity = await prisma.$queryRaw<{ id: string }[]>`
+      SELECT "id" FROM "Event"
+       WHERE left("id", 4) = 'evt_' AND "registrationCapacity" IS NOT NULL`;
+    expect(withCapacity.map((e) => e.id)).toEqual([]);
   });
 
   it("SCRUM-233 [AC4, AC6, AC7] TC-233-14: what users see of the seed: an Attendee sees a venue for every Confirmed event, the cancellation notices give the reason, and the cancelled event's progress stops at Confirmed", async () => {

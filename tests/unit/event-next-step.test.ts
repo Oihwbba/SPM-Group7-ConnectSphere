@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 
 import {
+  ARRANGEMENT_STATUSES,
   defaultTab,
   isEventTab,
   nextStep,
@@ -114,7 +115,7 @@ describe("SCRUM-208 — the Next step, step by step", () => {
   });
 
   it("SCRUM-208 [AC2] TC-208-05: with no checklist read yet, confirming is all that is shown", () => {
-    expect(nextStep(facts({ status: "APPROVED", viewer: "coordinator", checklist: null }))).toMatchObject({
+    expect(nextStep(facts({ status: "PLANNING", viewer: "coordinator", checklist: null }))).toMatchObject({
       kind: "yours",
       text: "Your turn: confirm the event",
     });
@@ -182,6 +183,16 @@ describe("SCRUM-208 — the Next step, step by step", () => {
       kind: "waiting",
       text: "Nothing is waiting.",
       tab: null,
+    });
+  });
+});
+
+describe("no event is Approved — SCRUM-254 AC3", () => {
+  it("SCRUM-254 [AC3] TC-254-03: Arrangements and the next step start at Planning, not Approved", () => {
+    expect(ARRANGEMENT_STATUSES).toEqual(["PLANNING", "CONFIRMED", "COMPLETED", "CANCELLED"]);
+    expect(nextStep(facts({ status: "APPROVED", viewer: "coordinator" }))).toMatchObject({
+      kind: "waiting",
+      text: "Nothing is waiting.",
     });
   });
 });
