@@ -22,8 +22,9 @@ import { AppSelect } from "@/components/app/app-select";
 import { AuditTrail } from "@/components/app/audit-trail";
 import {
   ConfirmDialog,
-  DECISION_BUTTON,
-} from "@/components/queues/confirm-dialog";
+  type ConfirmOutcome,
+} from "@/components/app/confirm-dialog";
+import { DECISION_BUTTON } from "@/components/queues/decision-button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import type { QueuedEquipmentRequest } from "@/lib/equipment/request-queries";
@@ -145,31 +146,41 @@ export function ReviewDecision({
     );
   }
 
+  // The reject dialog (SCRUM-207 AC5) awaits this. A refusal is shown on the
+  // page, next to the note it concerns, so the dialog closes; only a request
+  // that never reached the server keeps it open to try again.
+  async function moveNow(
+    toStatus: keyof typeof DONE_MESSAGE,
+  ): Promise<ConfirmOutcome> {
+    try {
+      const result = await updateEquipmentRequestStatus({
+        requestId: request.id,
+        toStatus,
+        note,
+      });
+      if (!result.ok) {
+        setRejecting(false);
+        setNoteError(result.fieldErrors?.note?.[0] ?? null);
+        setRefusal(result.fieldErrors?.note ? null : result.error);
+        toast.error(result.error);
+        router.refresh();
+        return;
+      }
+      toast.success(DONE_MESSAGE[toStatus]);
+      setNote("");
+      setNoteError(null);
+      setRefusal(null);
+      if (toStatus === "IN_REVIEW") router.refresh();
+      else router.push(nextHref);
+    } catch {
+      toast.error(OFFLINE);
+      return { ok: false, error: OFFLINE };
+    }
+  }
+
   const move = (toStatus: keyof typeof DONE_MESSAGE) =>
     startTransition(async () => {
-      try {
-        const result = await updateEquipmentRequestStatus({
-          requestId: request.id,
-          toStatus,
-          note,
-        });
-        if (!result.ok) {
-          setRejecting(false);
-          setNoteError(result.fieldErrors?.note?.[0] ?? null);
-          setRefusal(result.fieldErrors?.note ? null : result.error);
-          toast.error(result.error);
-          router.refresh();
-          return;
-        }
-        toast.success(DONE_MESSAGE[toStatus]);
-        setNote("");
-        setNoteError(null);
-        setRefusal(null);
-        if (toStatus === "IN_REVIEW") router.refresh();
-        else router.push(nextHref);
-      } catch {
-        toast.error(OFFLINE);
-      }
+      await moveNow(toStatus);
     });
 
   return (
@@ -262,14 +273,15 @@ export function ReviewDecision({
         open={rejecting}
         onOpenChange={setRejecting}
         title="Reject this equipment request?"
-        description={
+        message={
           note.trim()
             ? `The coordinator is told why: “${note.trim()}”`
             : "A note for the coordinator is required: say why, so they can adjust the request."
         }
         confirmLabel="Reject request"
-        pending={pending}
-        onConfirm={() => move("REJECTED")}
+        pendingLabel="Rejecting…"
+        destructive
+        onConfirm={() => moveNow("REJECTED")}
       />
 
       <Dialog open={suggesting} onOpenChange={setSuggesting}>

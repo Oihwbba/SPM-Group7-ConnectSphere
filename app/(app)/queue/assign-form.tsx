@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import type { CoordinatorLoad } from "@/lib/coordinator-assignment";
 import { assignCoordinator } from "./actions";
 import { AppSelect } from "@/components/app/app-select";
-import { DECISION_BUTTON } from "@/components/queues/confirm-dialog";
+import { DECISION_BUTTON } from "@/components/queues/decision-button";
 
 /** SCRUM-165 AC4 — choose one Coordinator; each shows their active events,
  * and the least-loaded is pre-selected and marked as suggested. SCRUM-211

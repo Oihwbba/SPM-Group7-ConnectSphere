@@ -39,10 +39,8 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { DateTimeField } from "@/components/app/date-time-field";
-import {
-  ConfirmDialog,
-  DECISION_BUTTON,
-} from "@/components/queues/confirm-dialog";
+import { ConfirmDialog } from "@/components/app/confirm-dialog";
+import { DECISION_BUTTON } from "@/components/queues/decision-button";
 import { Label } from "@/components/ui/label";
 import {
   formatDateTime,
@@ -118,39 +116,45 @@ export function BookingDecision({
   }
 
   // SCRUM-53 — the server action decides; a conflict or an already-decided
-  // request comes back as an error, shown here, and nothing changes.
-  function decide(decision: "APPROVED" | "REJECTED", decisionReason?: string) {
-    startTransition(async () => {
-      const result = await decideBookingRequest({
-        bookingId: booking.id,
-        decision,
-        reason: decisionReason,
-      });
-      if (!result.ok) {
-        setRejecting(false);
-        setRefusal(result.error);
-        toast.error(result.error);
-        router.refresh();
-        return;
-      }
-      if (decision === "REJECTED") {
-        toast.success(`Rejected the request for ${booking.event.name}.`);
-      } else {
-        // A way straight to the event, as the approval pop-up had.
-        toast.success(
-          booking.status === "HELD"
-            ? `Approved the hold: ${booking.event.name}'s Coordinator can now confirm it.`
-            : `Approved: ${booking.venue.name} is now booked for ${booking.event.name}.`,
-          {
-            action: {
-              label: "View event",
-              onClick: () => router.push(`/all-events/${booking.eventId}`),
-            },
-          },
-        );
-      }
-      router.push(nextHref);
+  // request comes back as an error, shown here, and nothing changes. The
+  // reject dialog (SCRUM-207 AC5) awaits it, and closes on a refusal.
+  async function decideNow(
+    decision: "APPROVED" | "REJECTED",
+    decisionReason?: string,
+  ) {
+    const result = await decideBookingRequest({
+      bookingId: booking.id,
+      decision,
+      reason: decisionReason,
     });
+    if (!result.ok) {
+      setRejecting(false);
+      setRefusal(result.error);
+      toast.error(result.error);
+      router.refresh();
+      return;
+    }
+    if (decision === "REJECTED") {
+      toast.success(`Rejected the request for ${booking.event.name}.`);
+    } else {
+      // A way straight to the event, as the approval pop-up had.
+      toast.success(
+        booking.status === "HELD"
+          ? `Approved the hold: ${booking.event.name}'s Coordinator can now confirm it.`
+          : `Approved: ${booking.venue.name} is now booked for ${booking.event.name}.`,
+        {
+          action: {
+            label: "View event",
+            onClick: () => router.push(`/all-events/${booking.eventId}`),
+          },
+        },
+      );
+    }
+    router.push(nextHref);
+  }
+
+  function decide(decision: "APPROVED" | "REJECTED") {
+    startTransition(() => decideNow(decision));
   }
 
   // SCRUM-163 AC7: a held request is approved here once, then confirmed by
@@ -216,11 +220,12 @@ export function BookingDecision({
         open={rejecting}
         onOpenChange={setRejecting}
         title="Reject booking request"
-        description="A reason is required. Give the coordinator enough to continue planning, such as what would make the request acceptable."
+        message="A reason is required. Give the coordinator enough to continue planning, such as what would make the request acceptable."
         confirmLabel="Reject request"
-        pending={isPending}
+        pendingLabel="Rejecting…"
+        destructive
         ready={reason.trim() !== ""}
-        onConfirm={() => decide("REJECTED", reason)}
+        onConfirm={() => decideNow("REJECTED", reason)}
       >
         <Textarea
           value={reason}

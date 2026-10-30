@@ -7,10 +7,8 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  ConfirmDialog,
-  DECISION_BUTTON,
-} from "@/components/queues/confirm-dialog";
+import { ConfirmDialog } from "@/components/app/confirm-dialog";
+import { DECISION_BUTTON } from "@/components/queues/decision-button";
 import { recordSafetyCheckOutcome } from "./actions";
 
 type Outcome = "APPROVED" | "CHANGES_REQUESTED" | "REJECTED";
@@ -52,30 +50,34 @@ export function OutcomeDecision({
     );
   }
 
-  function save(outcome: Outcome) {
-    startSave(async () => {
-      const chosen = outcome === "CHANGES_REQUESTED" ? picked : [];
-      const result = await recordSafetyCheckOutcome({
-        checkId,
-        outcome,
-        note,
-        bookingIds: arrangements
-          .filter((a) => a.kind === "booking" && chosen.includes(a.id))
-          .map((a) => a.id),
-        reservationIds: arrangements
-          .filter((a) => a.kind === "reservation" && chosen.includes(a.id))
-          .map((a) => a.id),
-      });
-      setAsking(null);
-      if (!result.ok) {
-        setRefusal(result.error);
-        toast.error(result.error);
-        router.refresh();
-        return;
-      }
-      toast.success("Outcome recorded. The Coordinator has been notified.");
-      router.push(nextHref);
+  // The confirmation dialogs (SCRUM-207 AC5) await this. A refusal is shown
+  // here, beside the decision, so the dialog closes either way.
+  async function saveNow(outcome: Outcome) {
+    const chosen = outcome === "CHANGES_REQUESTED" ? picked : [];
+    const result = await recordSafetyCheckOutcome({
+      checkId,
+      outcome,
+      note,
+      bookingIds: arrangements
+        .filter((a) => a.kind === "booking" && chosen.includes(a.id))
+        .map((a) => a.id),
+      reservationIds: arrangements
+        .filter((a) => a.kind === "reservation" && chosen.includes(a.id))
+        .map((a) => a.id),
     });
+    setAsking(null);
+    if (!result.ok) {
+      setRefusal(result.error);
+      toast.error(result.error);
+      router.refresh();
+      return;
+    }
+    toast.success("Outcome recorded. The Coordinator has been notified.");
+    router.push(nextHref);
+  }
+
+  function save(outcome: Outcome) {
+    startSave(() => saveNow(outcome));
   }
 
   const noteField = (id: string, required: boolean) => (
@@ -139,12 +141,11 @@ export function OutcomeDecision({
         open={asking === "CHANGES_REQUESTED"}
         onOpenChange={(open) => !open && setAsking(null)}
         title="Request changes"
-        description="The arrangements you pick are flagged for the Coordinator to revisit."
+        message="The arrangements you pick are flagged for the Coordinator to revisit."
         confirmLabel="Request changes"
-        destructive={false}
-        pending={saving}
+        pendingLabel="Requesting changes…"
         ready={note.trim() !== "" && picked.length > 0}
-        onConfirm={() => save("CHANGES_REQUESTED")}
+        onConfirm={() => saveNow("CHANGES_REQUESTED")}
       >
         <fieldset className="space-y-2 text-sm">
           <legend className="mb-1 font-medium">
@@ -169,11 +170,12 @@ export function OutcomeDecision({
         open={asking === "REJECTED"}
         onOpenChange={(open) => !open && setAsking(null)}
         title="Reject this safety check?"
-        description="Every arrangement is flagged; the event stays in Planning."
+        message="Every arrangement is flagged; the event stays in Planning."
         confirmLabel="Reject"
-        pending={saving}
+        pendingLabel="Rejecting…"
+        destructive
         ready={note.trim() !== ""}
-        onConfirm={() => save("REJECTED")}
+        onConfirm={() => saveNow("REJECTED")}
       >
         {noteField("safety-reject-note", true)}
       </ConfirmDialog>
