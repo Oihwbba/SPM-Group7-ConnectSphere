@@ -25,6 +25,7 @@ import {
 import {
   ARRANGEMENT_FIELDS,
   arrangementsFlaggedReason,
+  attendanceBelowRegistrationsMessage,
   CHANGED_WHILE_EDITING_MESSAGE,
   CONFIRMATION_OUT_OF_DATE_MESSAGE,
   CONFIRMED_NOT_EDITABLE_MESSAGE,
@@ -87,6 +88,8 @@ function stored(
  *   With nothing booked or reserved, or Under Review, they save directly. A
  *   change to the date, time or expected attendance also makes a requested
  *   safety check Outdated (SCRUM-166 AC13).
+ * - The expected attendance can't fall below the active registrations,
+ *   counted under the same lock (SCRUM-247).
  * - The Organiser, a previous Coordinator and every other user are refused
  *   with nothing changed (AC4, AC7); a Confirmed event can't be edited
  *   directly by anyone (AC5).
@@ -190,6 +193,20 @@ export async function updateEventDetails(
         if (active > 0) {
           const message = registrationStillNeededMessage(active);
           throw new EditError(message, { registrationRequired: [message] });
+        }
+      }
+
+      // SCRUM-247: nor can the expected attendance, which is the
+      // registration capacity (SCRUM-74), fall below the places taken: an
+      // event re-planned after an approved change keeps its registrations
+      // (SCRUM-128 AC5). Exactly that many still saves.
+      if (changes.some(({ field }) => field === "expectedAttendance")) {
+        const active = await tx.registration.count({
+          where: { eventId, status: "REGISTERED" },
+        });
+        if (data.expectedAttendance < active) {
+          const message = attendanceBelowRegistrationsMessage(active);
+          throw new EditError(message, { expectedAttendance: [message] });
         }
       }
 
