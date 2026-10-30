@@ -29,7 +29,7 @@ Out of scope: events from before SCRUM-186 with two approved equipment requests 
 
 1. A migration moves any event stored as Approved to Planning, the move approval now makes (SCRUM-81), and records the move in the event's history as a system change.
 2. The database refuses an event stored as Approved.
-3. The lifecycle has no move out of Approved: the exception that let an old Approved event be cancelled is removed. Approved stays as a name in the event's history (SCRUM-135 AC12).
+3. The lifecycle has no move out of Approved: the exception that let an old Approved event be cancelled is removed. No page treats an event as Approved either: the event page shows the readiness checklist, the next step and the Arrangements tab from Planning on (SCRUM-208, SCRUM-110). Approved stays as a name in the event's history (SCRUM-135 AC12).
 4. The app and the seed no longer read or write `Event.registrationCapacity`. The column is dropped in a second pull request once the first is deployed (README, "Migration rules").
 5. Tests no longer create events stored as Approved.
 
@@ -38,3 +38,4 @@ Builds on SCRUM-233 (PR #321), which stops the seed storing an Approved event, s
 **Change log**
 
 * 2026-10-30: created from the review of PR #323 (SCRUM-246).
+* 2026-10-30: AC3 also covers the event page's Approved branches (readiness checklist, next step, Arrangements tab), found while building it (Felicia Or).
