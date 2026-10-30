@@ -1,4 +1,4 @@
-import type { SafetyCheckStatus } from "@prisma/client";
+import type { Prisma, SafetyCheckStatus } from "@prisma/client";
 
 import { prisma } from "@/lib/db";
 import { can, type SessionUser } from "@/lib/auth/can";
@@ -59,6 +59,78 @@ export async function getSafetyCheckQueue(
         expectedAttendance: c.event.expectedAttendance,
       },
     }));
+}
+
+/**
+ * The checks that are no longer waiting, matching `where`, for events this
+ * officer may review (AC6). Read-only.
+ */
+async function checksNoLongerWaiting(
+  user: SessionUser,
+  where: Prisma.SafetyCheckWhereInput,
+  orderBy: Prisma.SafetyCheckOrderByWithRelationInput,
+): Promise<(QueuedSafetyCheck & { status: SafetyCheckStatus })[]> {
+  const checks = await prisma.safetyCheck.findMany({
+    where,
+    orderBy,
+    select: {
+      id: true,
+      status: true,
+      createdAt: true,
+      requestedBy: { select: { name: true } },
+      event: {
+        select: {
+          name: true,
+          startAt: true,
+          endAt: true,
+          expectedAttendance: true,
+          organiserId: true,
+          coordinatorId: true,
+          status: true,
+        },
+      },
+    },
+  });
+  return checks
+    .filter((c) => can(user, "safety-check:review", { kind: "event", ...c.event }))
+    .map((c) => ({
+      id: c.id,
+      status: c.status,
+      requestedAt: c.createdAt,
+      requestedBy: c.requestedBy.name,
+      event: {
+        name: c.event.name,
+        startAt: c.event.startAt,
+        endAt: c.event.endAt,
+        expectedAttendance: c.event.expectedAttendance,
+      },
+    }));
+}
+
+/**
+ * SCRUM-211 AC2 — the queue's Decided filter: checks with an outcome
+ * recorded (Approved, Changes requested or Rejected), most recently decided
+ * first. One approved and later Outdated keeps its decision, so it stays here.
+ */
+export async function getDecidedSafetyChecks(user: SessionUser) {
+  return checksNoLongerWaiting(
+    user,
+    { decidedAt: { not: null } },
+    { decidedAt: "desc" },
+  );
+}
+
+/**
+ * SCRUM-211 AC2 — checks that went Outdated before anyone reviewed them
+ * (SCRUM-166 AC13). Nothing was decided, so they aren't under Decided; the
+ * page lists them under All only, most recently requested first.
+ */
+export async function getOutdatedUndecidedSafetyChecks(user: SessionUser) {
+  return checksNoLongerWaiting(
+    user,
+    { status: "OUTDATED", decidedAt: null },
+    { createdAt: "desc" },
+  );
 }
 
 export interface SafetyCheckReview {

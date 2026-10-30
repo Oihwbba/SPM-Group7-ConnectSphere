@@ -105,9 +105,9 @@ criterion.
 | Pre-conditions | Signed in as Technical Support; no request is waiting for review. |
 | Test Steps | 1. Open **Equipment Requests**. |
 | Test Data | `techsupport@test.local` |
-| Expected Result | "No requests waiting for review", and "New equipment requests from coordinators appear here." No table is shown. |
+| Expected Result | "Nothing waiting. You're all caught up.", the empty state every queue shares since SCRUM-211. No table is shown. |
 
-**Automated by:** `tests/unit/shared-conventions-lists.test.tsx` › "SCRUM-207 [AC3] TC-207-04: …"
+**Automated by:** `tests/unit/shared-conventions-lists.test.tsx` › "SCRUM-207 [AC3] TC-207-04, SCRUM-211 [AC2] TC-211-05: …"
 
 ### TC-207-05
 
@@ -153,11 +153,11 @@ criterion.
 | Item | Content |
 |---|---|
 | Test Case ID | TC-207-08 |
-| Test Scenario | [Positive] AC 4: approving a booking request confirms it in the same pop-up, with a way to the event |
+| Test Scenario | [Positive] AC 4: approving a booking request confirms it in the same pop-up, with a way back to the list or to the request |
 | Pre-conditions | Signed in as Venue Staff; one booking request is Pending. |
 | Test Steps | 1. Open the request's details from the queue and choose **Approve**. |
 | Test Data | `venuestaff@test.local` |
-| Expected Result | The same pop-up as TC-207-07, saying "Approved: … is now booked", with **View event**. |
+| Expected Result | The shared animated pop-up, "Request approved", saying "Approved: … is now booked", with **Back to booking requests** (the larger button) and **View this booking** (SCRUM-211 TC-211-18). |
 
 **Automated by:** `e2e/bookings.spec.ts` › "SCRUM-50 [AC1, AC2] TC-50-01, SCRUM-52 [AC1, AC2] TC-52-01, SCRUM-53 [AC1, AC4] TC-53-01, SCRUM-162 [AC2] TC-162-02, SCRUM-207 [AC3, AC4] TC-207-06, TC-207-08: a coordinator requests, staff approve, and the venue becomes unavailable"
 
@@ -193,7 +193,7 @@ Inline only: **Venue Search** and the sign-in page. Toast only: **Booking Reques
 | Test Data | Every seeded account |
 | Expected Result | Each asks in the same dialog, with the same layout and buttons; the way back changes nothing. |
 
-**Automated by:** the shared dialog is `components/app/confirm-dialog.tsx` (SCRUM-212's pull request). `tests/unit/confirm-dialog.test.tsx` › "SCRUM-207 [AC5] TC-207-10: …" (eight tests: its wording, way back, red button for a destructive action, pending state, and a refusal shown inside it without closing); an Attendee withdrawing a registration uses it, on the event page and on **My Registrations**: `e2e/registration-at-a-glance.spec.ts` › "SCRUM-212 [AC2] TC-212-09, SCRUM-207 [AC5] TC-207-10: …".
+**Automated by:** the shared dialog is `components/app/confirm-dialog.tsx` (SCRUM-212's pull request). `tests/unit/confirm-dialog.test.tsx` › "SCRUM-207 [AC5] TC-207-10: …" (eleven tests: its wording, way back, red button for a destructive action, pending state, a refusal shown inside it without closing, a field the action needs asked for inside it, an action that shows its own outcome on the page, and a dialog the page opens); an Attendee withdrawing a registration uses it, on the event page and on **My Registrations**: `e2e/registration-at-a-glance.spec.ts` › "SCRUM-212 [AC2] TC-212-09, SCRUM-207 [AC5] TC-207-10: …".
 
 **Still to do** (Manual) on these pages (audited 23 Oct): each irreversible action asks in a dialog of its own, built separately, and one doesn't ask at all (marked *no confirmation*). They all need to move to the shared dialog:
 
@@ -327,11 +327,11 @@ Inline only: **Venue Search** and the sign-in page. Toast only: **Booking Reques
 | Test Case ID | TC-207-20 |
 | Test Scenario | [Positive] User story: the booking queue is a table of key facts, and requests are decided only in their details |
 | Pre-conditions | Signed in as Venue Staff with a Pending request. |
-| Test Steps | 1. Open **Booking Requests**. <br> 2. Choose the eye on a row. |
+| Test Steps | 1. Open **Booking Requests**. <br> 2. Choose a row. |
 | Test Data | `venuestaff@test.local` |
-| Expected Result | 1: the row shows the key facts and an eye, but no Approve, Reject or Hold. 2: the details offer them. |
+| Expected Result | 1: the row shows the four columns every queue shares (SCRUM-211), with no Approve, Reject or Hold. 2: the request opens on the same page, and its decision offers them. |
 
-**Automated by:** `tests/unit/booking-queue.test.tsx` › "SCRUM-207 TC-207-20: …"
+**Automated by:** `tests/unit/booking-queue.test.tsx` › "SCRUM-207 TC-207-20, SCRUM-211 [AC1] TC-211-01: …"
 
 ### TC-207-21
 
@@ -377,10 +377,10 @@ Inline only: **Venue Search** and the sign-in page. Toast only: **Booking Reques
 | Item | Content |
 |---|---|
 | Test Case ID | TC-207-24 |
-| Test Scenario | [Positive] User story: equipment requests are a table, and each opens in a pop-up with its details and its history |
+| Test Scenario | [Positive] User story: equipment requests are a table, and each opens with its details and its history |
 | Pre-conditions | A rig request waiting for review. |
 | Test Steps | 1. As Technical Support, open the request from its row and review it. <br> 2. As the Coordinator, open it from their table and choose **History**. |
 | Test Data | `techsupport@test.local`, `coordinator@test.local` |
-| Expected Result | Both open a pop-up with a **Details** tab (lines and actions) and a **History** tab (the timeline of every change). |
+| Expected Result | 1: the request opens on the queue's page (SCRUM-211), its lines and history on the left and the decision on the right. 2: the Coordinator's pop-up has a **Details** tab (lines and actions) and a **History** tab (the timeline of every change). |
 
 **Automated by:** `e2e/equipment-request-review.spec.ts` › "SCRUM-28 [AC2, AC3, AC5, AC6] TC-28-02, TC-28-03, TC-28-09, TC-28-10, SCRUM-207 TC-207-24: …" and "SCRUM-28 [AC4, AC5, AC6] TC-28-07, TC-28-09, TC-28-10, SCRUM-207 TC-207-24: …"

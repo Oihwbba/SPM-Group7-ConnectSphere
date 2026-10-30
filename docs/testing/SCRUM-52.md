@@ -80,11 +80,11 @@ seed holds one pending request (`bkg_pending`, Seminar Room 2.1).
 | Test Case ID | TC-52-05 |
 | Test Scenario | [Positive] AC 1: Venue Staff search the queue to find a request |
 | Pre-conditions | Several pending requests. |
-| Test Steps | 1. Type a word from a request (event, venue, location, coordinator, email, facility, layout, notes or a date such as "10 Mar 2035") into **Search pending requests**. <br> 2. Add a second word that no request has. <br> 3. Click **Clear search**. |
+| Test Steps | 1. Type a word from a request (event, venue, location, coordinator, email, facility, layout, notes or a date such as "10 Mar 2035") into **Search by event, venue or coordinator**. <br> 2. Add a second word that no request has. <br> 3. Click **Clear search**. |
 | Test Data | "seminar"; "seminar boardroom" |
-| Expected Result | Step 1: only matching requests are listed, with "Showing N of M requests". Step 2: "No requests match …" with a **Clear search** button, because every word must match. Step 3: the full queue returns. Case does not matter. |
+| Expected Result | Step 1: only matching requests are listed. Step 2: "No requests match …" with a **Clear search** button, because every word must match. Step 3: the full queue returns. Case does not matter. The box is the one every queue shares (SCRUM-211 AC2). |
 
-**Automated by:** `tests/unit/booking-queue.test.tsx` › the three "SCRUM-52 [AC1] TC-52-05: …" matchesSearch cases; `e2e/bookings.spec.ts` › "SCRUM-53 [AC2] TC-53-02, TC-53-03: rejecting needs a written reason, and the reason is saved" (search step)
+**Automated by:** `tests/unit/booking-search.test.ts` › the four "SCRUM-52 [AC1] TC-52-05: …" cases; `e2e/bookings.spec.ts` › "SCRUM-53 [AC2] TC-53-02, TC-53-03: rejecting needs a written reason, and the reason is saved" (search step); `e2e/work-queues.spec.ts` › "SCRUM-211 [AC2] TC-211-15, SCRUM-52 [AC1] TC-52-05: the one search box finds a request by its venue and by its Coordinator"
 
 ### TC-52-06
 
@@ -95,6 +95,6 @@ seed holds one pending request (`bkg_pending`, Seminar Room 2.1).
 | Pre-conditions | No booking request is Pending. |
 | Test Steps | 1. Open **Bookings**. |
 | Test Data | — |
-| Expected Result | "No pending requests" and "New venue booking requests from Coordinators will appear here." are shown, and no request is offered to **Approve**. |
+| Expected Result | "Nothing waiting. You're all caught up." is shown (the empty state every queue shares, SCRUM-211), and no request is offered to **Approve**. |
 
-**Automated by:** `tests/unit/booking-queue.test.tsx` › "SCRUM-52 [AC4] TC-52-06: an empty queue says there is nothing pending rather than rendering nothing"
+**Automated by:** `tests/unit/booking-queue.test.tsx` › "SCRUM-52 [AC4] TC-52-06, SCRUM-211 [AC2] TC-211-05: …"

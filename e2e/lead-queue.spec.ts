@@ -102,32 +102,30 @@ test.describe("SCRUM-165 — Lead assigns new requests from an unassigned queue"
       },
     });
 
-    // AC2: the Lead lands on the queue and sees it with its Organiser.
+    // AC2: the Lead lands on the queue and sees it waiting (SCRUM-211: in
+    // the four columns every queue shares; the Organiser is in its details).
     await signInAs(page, "lead@test.local");
     await expect(page).toHaveURL(/\/queue$/);
-    const entry = page
-      .getByTestId("queue-request")
-      .filter({ hasText: eventName });
-    await expect(entry).toContainText("Olivia Organiser");
-    await expect(entry).toContainText("50 expected");
-    await expect(entry.getByTestId("overdue")).toHaveCount(0);
+    const entry = page.getByTestId("queue-row").filter({ hasText: eventName });
+    await expect(entry.getByTestId("asked")).toHaveText("Needs a Coordinator");
+    await expect(entry.getByTestId("event-date")).toHaveText("1 Nov 2031");
+    await expect(entry.getByTestId("queue-badge")).toHaveCount(0);
 
     // AC2: oldest submission first, and the one whose start has passed is Overdue.
-    const overdueEntry = page
-      .getByTestId("queue-request")
-      .filter({ hasText: overdueName });
-    await expect(overdueEntry.getByTestId("overdue")).toHaveText("Overdue");
-    const cards = await page.getByTestId("queue-request").allTextContents();
-    const position = (name: string) => cards.findIndex((t) => t.includes(name));
+    const overdueEntry = page.getByTestId("queue-row").filter({ hasText: overdueName });
+    await expect(overdueEntry.getByTestId("queue-badge")).toHaveText("Overdue");
+    const rows = await page.getByTestId("queue-row").allTextContents();
+    const position = (name: string) => rows.findIndex((t) => t.includes(name));
     expect(position(overdueName)).toBeGreaterThanOrEqual(0);
     expect(position(overdueName)).toBeLessThan(position(eventName));
 
-    // AC3: opening it shows its basic information.
-    await entry.click();
+    // AC3: opening it shows its basic information, on the same page.
+    await entry.getByRole("link").click();
     await expect(page.getByRole("heading", { name: eventName })).toBeVisible();
     await expect(page.getByTestId("request-details")).toContainText(
       "Verify the Lead's queue.",
     );
+    await expect(page.getByTestId("request-details")).toContainText("Olivia Organiser");
 
     // AC4: each Coordinator shows their active events, and the least loaded
     // is pre-selected and marked as suggested; pick Cody.
@@ -139,10 +137,11 @@ test.describe("SCRUM-165 — Lead assigns new requests from an unassigned queue"
     await expect(choice).toHaveAttribute("data-value", suggested[0].value);
     await selectFrom(choice, "usr_coordinator");
     await page.getByTestId("assign-button").click();
-    await page.waitForURL("**/queue");
-    await expect(
-      page.getByTestId("queue-request").filter({ hasText: eventName }),
-    ).toHaveCount(0);
+    // SCRUM-211 AC4: the next waiting request opens.
+    await expect(page.getByText("Assigned to Cody Coordinator.")).toBeVisible();
+    await expect(page.getByRole("heading", { name: eventName })).toHaveCount(0);
+    await page.goto("/queue");
+    await expect(page.getByTestId("queue-row").filter({ hasText: eventName })).toHaveCount(0);
 
     // AC5, AC11: assigned, Under Review, with this Lead as supervisor.
     const assigned = await prisma.event.findFirstOrThrow({

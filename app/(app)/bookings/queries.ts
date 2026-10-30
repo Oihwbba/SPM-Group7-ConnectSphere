@@ -6,7 +6,7 @@ import {
   occupiedPeriod,
   submittedBefore,
 } from "@/lib/venue-availability";
-import { liveHoldWhere } from "@/lib/booking-holds";
+import { bookingStatusAt, liveHoldWhere } from "@/lib/booking-holds";
 import { openingHoursRefusal, setupTurnaroundWarning } from "@/lib/venue-hours";
 
 /**
@@ -185,6 +185,60 @@ export async function getPendingBookingQueue(now = new Date()) {
     }),
   );
 }
+
+/**
+ * SCRUM-211 AC2 — the queue's Decided filter: requests Venue Staff have
+ * decided and that have left the queue (approved, rejected, or a hold that
+ * ended), most recently decided first. A hold that was released (Cancelled)
+ * or expired has no decision, so it counts from when it was held; one whose
+ * expiry has passed is here even before anything marks it Expired, as it
+ * leaves the queue at that moment (SCRUM-163 AC7). A request cancelled before
+ * any decision or hold (withdrawn by its Coordinator, SCRUM-142, or released
+ * with its event) counts from when it was cancelled. Read-only; the page asks
+ * `can()` for `booking:review` before reading it, as for the queue itself.
+ */
+export async function getDecidedBookings(now = new Date()) {
+  const decided = await prisma.booking.findMany({
+    where: {
+      OR: [
+        { decidedAt: { not: null }, status: { notIn: ["PENDING", "HELD"] } },
+        { heldAt: { not: null }, status: { in: ["CANCELLED", "EXPIRED"] } },
+        { status: "HELD", holdExpiresAt: { lte: now } },
+        { status: "CANCELLED", decidedAt: null, heldAt: null },
+      ],
+    },
+    select: {
+      id: true,
+      status: true,
+      heldAt: true,
+      holdExpiresAt: true,
+      startAt: true,
+      endAt: true,
+      requestedAttendance: true,
+      requestedLayout: true,
+      requiredFacilities: true,
+      createdAt: true,
+      updatedAt: true,
+      decidedAt: true,
+      decisionReason: true,
+      needsReconsideration: true,
+      requestNotes: true,
+      decidedBy: { select: { name: true } },
+      requestedBy: { select: { name: true, email: true } },
+      event: { select: { name: true } },
+      venue: { select: { name: true, capacity: true, location: true } },
+    },
+  });
+  // A cancelled request isn't changed again, so its last update is when it
+  // was cancelled.
+  const since = (booking: (typeof decided)[number]) =>
+    (booking.decidedAt ?? booking.heldAt ?? booking.updatedAt).getTime();
+  return decided
+    .map((booking) => ({ ...booking, status: bookingStatusAt(booking, now) }))
+    .sort((a, b) => since(b) - since(a));
+}
+
+export type DecidedBookingRow = Awaited<ReturnType<typeof getDecidedBookings>>[number];
 
 export type PendingBookingRow = Awaited<
   ReturnType<typeof getPendingBookingQueue>

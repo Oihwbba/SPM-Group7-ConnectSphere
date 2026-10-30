@@ -8,19 +8,25 @@ import { Button } from "@/components/ui/button";
 import type { CoordinatorLoad } from "@/lib/coordinator-assignment";
 import { assignCoordinator } from "./actions";
 import { AppSelect } from "@/components/app/app-select";
+import { DECISION_BUTTON } from "@/components/queues/decision-button";
 
 /** SCRUM-165 AC4 — choose one Coordinator; each shows their active events,
- * and the least-loaded is pre-selected and marked as suggested. */
+ * and the least-loaded is pre-selected and marked as suggested. SCRUM-211
+ * AC4: once assigned, the next waiting request opens (`nextHref`); a refusal
+ * is shown here, on the same request. */
 export function AssignForm({
   eventId,
   coordinators,
   suggestedId,
+  nextHref,
 }: {
   eventId: string;
   coordinators: CoordinatorLoad[];
   suggestedId: string | null;
+  nextHref: string;
 }) {
   const [coordinatorId, setCoordinatorId] = useState(suggestedId ?? "");
+  const [refusal, setRefusal] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
 
@@ -36,17 +42,27 @@ export function AssignForm({
     startTransition(async () => {
       const result = await assignCoordinator({ eventId, coordinatorId });
       if (!result.ok) {
+        setRefusal(result.error);
         toast.error(result.error);
         router.refresh();
         return;
       }
       toast.success(`Assigned to ${result.data.coordinatorName}.`);
-      router.push("/queue");
+      router.push(nextHref);
     });
   }
 
   return (
-    <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+    <div className="flex flex-col gap-3">
+      {refusal && (
+        <p
+          role="alert"
+          className="text-sm text-destructive"
+          data-testid="decision-refused"
+        >
+          {refusal}
+        </p>
+      )}
       <label className="flex flex-1 flex-col gap-1 text-sm">
         <span className="font-medium">Coordinator</span>
         <AppSelect
@@ -66,6 +82,8 @@ export function AssignForm({
         onClick={handleAssign}
         disabled={isPending || !coordinatorId}
         data-testid="assign-button"
+        variant="outline"
+        className={DECISION_BUTTON.positive}
       >
         {isPending ? "Assigning..." : "Assign"}
       </Button>

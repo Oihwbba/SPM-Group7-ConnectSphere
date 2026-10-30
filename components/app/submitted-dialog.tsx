@@ -30,8 +30,11 @@ export function SubmittedDialog({
   children: React.ReactNode;
   onClose: () => void;
   closeLabel?: string;
-  /** A second button, e.g. "View Details". */
-  action?: { label: string; onClick: () => void };
+  /**
+   * A second button, e.g. "View Details". `prominent` makes it the larger,
+   * main way on, where it is what most people will choose next.
+   */
+  action?: { label: string; onClick: () => void; prominent?: boolean };
   testId?: string;
 }) {
   return (
@@ -52,20 +55,36 @@ export function SubmittedDialog({
         </div>
         <DialogTitle className="text-xl">{title}</DialogTitle>
         <DialogDescription>{children}</DialogDescription>
-        <DialogFooter className="gap-2 sm:justify-center">
-          <Button
-            variant={action ? "outline" : "default"}
-            onClick={onClose}
-            className="w-full sm:w-auto"
-          >
-            {closeLabel}
-          </Button>
-          {action && (
-            <Button onClick={action.onClick} className="w-full sm:w-auto">
+        {action?.prominent ? (
+          // The main way on, full width, and the other as a link below it.
+          <div className="flex flex-col items-center gap-1">
+            <Button onClick={action.onClick} size="lg" className="w-full">
               {action.label}
             </Button>
-          )}
-        </DialogFooter>
+            <Button
+              variant="link"
+              onClick={onClose}
+              className="text-foreground underline"
+            >
+              {closeLabel}
+            </Button>
+          </div>
+        ) : (
+          <DialogFooter className="gap-2 sm:justify-center">
+            <Button
+              variant={action ? "outline" : "default"}
+              onClick={onClose}
+              className="w-full sm:w-auto"
+            >
+              {closeLabel}
+            </Button>
+            {action && (
+              <Button onClick={action.onClick} className="w-full sm:w-auto">
+                {action.label}
+              </Button>
+            )}
+          </DialogFooter>
+        )}
       </DialogContent>
     </Dialog>
   );

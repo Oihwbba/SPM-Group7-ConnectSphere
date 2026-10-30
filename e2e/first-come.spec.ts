@@ -82,8 +82,7 @@ test.describe("SCRUM-134 — competing venue requests, first come, first served"
     const staff = await signedIn(browser, "venuestaff@test.local");
     await staff.goto("/bookings");
     // By its own event name, as each row shows it.
-    const card = (name: string) =>
-      openBooking(staff, new RegExp(`^${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}Requested by`));
+    const card = (name: string) => openBooking(staff, name);
 
     // AC1: the later request names the earlier one, and when it was submitted.
     const later = await card(names[1]);
@@ -91,22 +90,24 @@ test.describe("SCRUM-134 — competing venue requests, first come, first served"
     await expect(competing).toContainText(`“${names[0]}”, submitted 1 Jan 2036, 9:00 am`);
     await expect(competing).toContainText("earlier, so decide it first");
 
-    // AC2: approving the later one is refused, and it stays in the queue.
+    // AC2: approving the later one is refused, and it stays open, in the
+    // queue (SCRUM-211: the refusal is shown in the decision).
     await later.getByRole("button", { name: "Approve" }).click();
-    await expect(staff.getByText(/^An earlier request for Exhibition Hall/)).toBeVisible();
+    await expect(later.getByTestId("decision-refused")).toHaveText(
+      /^An earlier request for Exhibition Hall/,
+    );
     await expect(later).toHaveCount(1);
-    await staff.keyboard.press("Escape");
 
     // The earlier one is approved; the later then conflicts, and can be rejected (AC6).
     await (await card(names[0])).getByRole("button", { name: "Approve" }).click();
-    await expect(staff.getByText(/^Approved: Exhibition Hall is now booked/)).toBeVisible();
-    await staff
-      .getByTestId("venue-approved")
-      .getByRole("button", { name: "Close" })
-      .click();
+    const done = staff.getByTestId("decision-done");
+    await expect(done.getByText(/^Approved: Exhibition Hall is now booked/)).toBeVisible();
+    await done.getByRole("button", { name: "Back to booking requests" }).click();
+    await staff.waitForURL((url) => !url.searchParams.has("open"));
     await (await card(names[1])).getByRole("button", { name: "Reject" }).click();
     await staff.getByLabel("Rejection reason").fill("The hall went to an earlier request.");
     await staff.getByRole("button", { name: "Reject request" }).click();
+    await done.getByRole("button", { name: "Back to booking requests" }).click();
     await expect(
       staff.getByTestId("queue-row").filter({ hasText: names[1] }),
     ).toHaveCount(0);

@@ -9,8 +9,14 @@ import {
   getEquipmentRequestQueue,
   getRequestableEvents,
 } from "@/lib/equipment/request-queries";
+import { WorkQueue } from "@/components/queues/work-queue";
+import { queueState, type QueueDefaults, type QueueItem } from "@/lib/queues";
 import { CoordinatorRequests } from "./coordinator-requests";
-import { ReviewQueue } from "./review-queue";
+import { isOpenRequest } from "@/lib/equipment/requests";
+import { ReviewDecision, ReviewDetails } from "./review-queue";
+
+// SCRUM-28: oldest request first.
+const DEFAULTS: QueueDefaults = { sort: "requested", dir: "asc" };
 
 // SCRUM-27/28. Access follows lib/auth/can.ts, not a role list here (SCRUM-66
 // / SCRUM-67), and uses the same action the nav binds this route to
@@ -33,17 +39,51 @@ export default async function EquipmentRequestsPage({
 
   const canReview = can(user, "equipment-request:review");
   const canCreate = can(user, "equipment-request:create");
-  const { view } = await searchParams;
+  const params = await searchParams;
+  const { view } = params;
   const switcher = canReview && canCreate && (
     <ViewSwitch current={view === "mine" ? "mine" : "queue"} />
   );
 
   if (canReview && !(switcher && view === "mine")) {
+    // SCRUM-211: Technical Support's queue, in the layout every queue shares.
+    const requests = await getEquipmentRequestQueue();
+    const items: QueueItem[] = requests.map((request) => ({
+      id: request.id,
+      event: request.event.name,
+      eventStart: request.event.startAt,
+      asked: request.lines
+        .map((line) => `${line.equipment.type} ×${line.quantity}`)
+        .join(", "),
+      requestedAt: request.createdAt,
+      waiting: isOpenRequest(request),
+      badges: [
+        ...(request.status === "IN_REVIEW"
+          ? [{ label: "In Review", tone: "info" as const }]
+          : []),
+        // SCRUM-134 AC4: other open requests want the same stock.
+        ...(isOpenRequest(request) &&
+        request.lines.some((line) => line.competing.length > 0)
+          ? [{ label: "Competing requests", tone: "warning" as const }]
+          : []),
+      ],
+    }));
+    const state = queueState("/equipment-requests", items, params, DEFAULTS);
+    const open = requests.find((request) => request.id === state.open?.id);
     return (
-      <>
-        {switcher}
-        <ReviewQueue requests={await getEquipmentRequestQueue()} />
-      </>
+      <WorkQueue
+        title="Equipment requests"
+        description="Oldest request first. Open one to check each line against what is free, suggest alternatives and decide."
+        base="/equipment-requests"
+        state={state}
+        defaults={DEFAULTS}
+        testId="review-item"
+        before={switcher}
+        detail={open && <ReviewDetails request={open} />}
+        decision={
+          open && <ReviewDecision request={open} listHref={state.listHref} />
+        }
+      />
     );
   }
 
@@ -73,7 +113,10 @@ const VIEWS = [
 
 function ViewSwitch({ current }: { current: (typeof VIEWS)[number]["view"] }) {
   return (
-    <nav aria-label="Equipment requests view" className="mb-4 flex flex-wrap gap-2 text-sm">
+    <nav
+      aria-label="Equipment requests view"
+      className="mb-4 flex flex-wrap gap-2 text-sm"
+    >
       {VIEWS.map(({ view, href, label }) => (
         <Link
           key={view}

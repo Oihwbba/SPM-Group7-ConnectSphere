@@ -183,12 +183,12 @@ test.describe("SCRUM-50 / 52 / 53 — venue booking request, review and decision
 
     // SCRUM-53 AC1 — approve.
     await card.getByRole("button", { name: "Approve" }).click();
-    // Approving shows a tick and a way to the event.
-    const approved = staff.getByTestId("venue-approved");
-    await expect(approved).toContainText(
-      /Approved: Exhibition Hall is now booked/,
-    );
-    await expect(approved.getByRole("button", { name: "View event" })).toBeVisible();
+    // Approving says so in the shared pop-up (SCRUM-207 AC4), which leads
+    // back to the list or stays on the request (SCRUM-211).
+    const done = staff.getByTestId("decision-done");
+    await expect(done.getByText(/Approved: Exhibition Hall is now booked/)).toBeVisible();
+    await expect(done.getByRole("button", { name: "View this booking" })).toBeVisible();
+    await done.getByRole("button", { name: "Back to booking requests" }).click();
     await expect(card).toHaveCount(0);
 
     // SCRUM-53 AC4 / SCRUM-50 AC3 — an event overlapping that period now
@@ -379,8 +379,10 @@ test.describe("SCRUM-50 / 52 / 53 — venue booking request, review and decision
 
     const staff = await signedIn(browser, "venuestaff@test.local");
     await staff.goto("/bookings");
-    // SCRUM-52 — search narrows the queue to matching requests.
-    const search = staff.getByLabel("Search pending requests");
+    // SCRUM-52 — search narrows the queue to matching requests, by any of
+    // their words: here the tag in the request's notes (SCRUM-211 AC2 keeps
+    // the one shared box).
+    const search = staff.getByLabel("Search by event, venue or coordinator");
     await search.fill("no-such-request-anywhere");
     await expect(staff.getByText(/^No requests match/)).toBeVisible();
     await search.fill(tag);
@@ -399,7 +401,9 @@ test.describe("SCRUM-50 / 52 / 53 — venue booking request, review and decision
       .getByLabel("Rejection reason")
       .fill("The hall is set for an exhibition that week.");
     await confirm.click();
-    await expect(staff.getByText("Rejected the request for")).toBeVisible();
+    const done = staff.getByTestId("decision-done");
+    await expect(done.getByText("Rejected the request for")).toBeVisible();
+    await done.getByRole("button", { name: "Back to booking requests" }).click();
     await expect(card).toHaveCount(0);
 
     const saved = await prisma.booking.findFirstOrThrow({

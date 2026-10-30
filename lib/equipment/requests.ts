@@ -50,6 +50,10 @@ export const OPEN_REQUEST_STATUSES = [
   "IN_REVIEW",
 ] as const satisfies readonly EquipmentRequestStatus[];
 
+/** A request still waiting for Technical Support's decision (SCRUM-211). */
+export const isOpenRequest = (request: { status: EquipmentRequestStatus }) =>
+  (OPEN_REQUEST_STATUSES as readonly EquipmentRequestStatus[]).includes(request.status);
+
 /** The words the stories use: "Pending Review", "In Review", "Approved"… */
 export const EQUIPMENT_REQUEST_STATUS_LABEL: Record<
   EquipmentRequestStatus,

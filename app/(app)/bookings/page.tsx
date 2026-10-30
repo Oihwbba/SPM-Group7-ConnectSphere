@@ -3,51 +3,164 @@ import { can } from "@/lib/auth/can";
 import { prisma } from "@/lib/db";
 import { listTimeClashFlags } from "@/lib/venue-time-clashes";
 import { Forbidden } from "@/components/app/forbidden";
-import { getPendingBookingQueue } from "./queries";
-import { BookingQueue } from "./booking-queue";
+import { OperationalNotes } from "@/components/events/operational-notes";
+import {
+  DecidedNote,
+  QueueFact,
+  WorkQueue,
+} from "@/components/queues/work-queue";
+import { formatDateTime } from "@/lib/datetime";
+import { queueState, type QueueDefaults, type QueueItem } from "@/lib/queues";
+import { BOOKING_STATUS_LABEL } from "@/lib/status-labels";
+import { getDecidedBookings, getPendingBookingQueue } from "./queries";
+import { bookingSearchText } from "./search";
+import { BookingDecision, BookingDetails } from "./booking-queue";
 import { TimeClashFlags } from "./time-clash-flags";
 
-// SCRUM-52 — Venue Staff's queue of pending booking requests. Access is
-// decided by lib/auth/can.ts (the single gate), not a role list here, so a
-// Coordinator typing /bookings gets the server-rendered refusal (SCRUM-67).
-export default async function BookingsPage() {
+// SCRUM-52 AC1: soonest event first.
+const DEFAULTS: QueueDefaults = { sort: "event", dir: "asc" };
+
+const asked = (venue: string, attendance: number | null) =>
+  attendance === null ? venue : `${venue} for ${attendance}`;
+
+// SCRUM-52 — Venue Staff's queue of pending booking requests, in the layout
+// every queue shares (SCRUM-211). Access is decided by lib/auth/can.ts (the
+// single gate), not a role list here, so a Coordinator typing /bookings gets
+// the server-rendered refusal (SCRUM-67).
+export default async function BookingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const session = await requireSession();
   if (!can(session.user, "booking:review")) {
     return <Forbidden />;
   }
 
-  const [queue, timeClashFlags] = await Promise.all([
+  const [queue, decided, timeClashFlags, params] = await Promise.all([
     getPendingBookingQueue(),
+    getDecidedBookings(),
     listTimeClashFlags(prisma),
+    searchParams,
   ]);
+  const items: QueueItem[] = [
+    ...queue.map((booking) => ({
+      id: booking.id,
+      event: booking.event.name,
+      eventStart: booking.startAt,
+      asked: asked(booking.venue.name, booking.requestedAttendance),
+      searchText: bookingSearchText(booking),
+      requestedAt: booking.createdAt,
+      waiting: true,
+      badges: [
+        ...(booking.status === "HELD"
+          ? [{ label: "Held", tone: "info" as const }]
+          : []),
+        // SCRUM-134 AC2: an earlier competing request is decided first.
+        ...(booking.competing.some((other) => other.earlier)
+          ? [{ label: "Earlier request first", tone: "warning" as const }]
+          : []),
+      ],
+    })),
+    ...decided.map((booking) => ({
+      id: booking.id,
+      event: booking.event.name,
+      eventStart: booking.startAt,
+      asked: asked(booking.venue.name, booking.requestedAttendance),
+      searchText: bookingSearchText(booking),
+      requestedAt: booking.createdAt,
+      waiting: false,
+      badges: booking.needsReconsideration
+        ? [{ label: "Needs Reconsideration", tone: "warning" as const }]
+        : [],
+    })),
+  ];
+  const state = queueState("/bookings", items, params, DEFAULTS);
+
+  const pending = queue.find((booking) => booking.id === state.open?.id);
+  const done = decided.find((booking) => booking.id === state.open?.id);
+  const canDecide = can(session.user, "booking:decide");
+  const canHold = can(session.user, "booking:hold");
+  const doneNote = done && (
+    <>
+      {BOOKING_STATUS_LABEL[done.status]}
+      {done.decidedBy && ` by ${done.decidedBy.name}`}
+      {done.decidedAt && ` on ${formatDateTime(done.decidedAt)}`}.
+      {!done.decidedAt &&
+        done.heldAt &&
+        ` Held on ${formatDateTime(done.heldAt)}.`}
+      {!done.decidedAt &&
+        !done.heldAt &&
+        ` Cancelled before a decision, on ${formatDateTime(done.updatedAt)}.`}
+      {done.decisionReason && ` Reason: ${done.decisionReason}`}
+    </>
+  );
 
   return (
-    <div className="space-y-6">
-      <div className="space-y-1">
-        {/* Change 12: how many are pending or held, beside the title. */}
-        <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
-          Pending booking requests
-          <span
-            data-testid="queue-count"
-            aria-label={`${queue.length} pending or held`}
-            className="rounded-full bg-primary/10 px-2.5 py-0.5 text-sm font-medium text-primary"
-          >
-            {queue.length}
-          </span>
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          Soonest first, with held requests until they are confirmed, released
-          or expire. Each request is shown beside the venue it asks for, so
-          you can check capacity, facilities, layout and availability before you
-          decide. Times are Singapore time.
-        </p>
-      </div>
-      <BookingQueue
-        queue={queue}
-        canDecide={can(session.user, "booking:decide")}
-        canHold={can(session.user, "booking:hold")}
-      />
-      <TimeClashFlags flags={timeClashFlags} />
-    </div>
+    <WorkQueue
+      title="Booking requests"
+      description="Soonest event first, with held requests until they are confirmed, released or expire. Open one to see it beside the venue it asks for and decide. Times are Singapore time."
+      base="/bookings"
+      state={state}
+      defaults={DEFAULTS}
+      testId={state.open ? `booking-${state.open.id}` : undefined}
+      searchLabel="Search by event, venue or coordinator"
+      detail={
+        pending ? (
+          <>
+            <BookingDetails booking={pending} />
+            {/* SCRUM-25 AC6: Venue Staff add notes once the event has a booking. */}
+            <OperationalNotes eventId={pending.eventId} />
+          </>
+        ) : done ? (
+          <dl className="grid gap-4 sm:grid-cols-2">
+            <QueueFact label="Venue">{done.venue.name}</QueueFact>
+            <QueueFact label="When">
+              {formatDateTime(done.startAt)} to {formatDateTime(done.endAt)}
+            </QueueFact>
+            <QueueFact label="Attendance">
+              {done.requestedAttendance ?? "Not stated"} expected · venue holds{" "}
+              {done.venue.capacity}
+            </QueueFact>
+            <QueueFact label="Layout">
+              {done.requestedLayout ?? "No preference"}
+            </QueueFact>
+            <QueueFact label="Facilities needed">
+              {done.requiredFacilities.join(", ") || "None stated"}
+            </QueueFact>
+            <QueueFact label="Requested by">
+              {done.requestedBy.name}, {formatDateTime(done.createdAt)}
+            </QueueFact>
+          </dl>
+        ) : null
+      }
+      decision={
+        pending ? (
+          <BookingDecision
+            booking={pending}
+            canDecide={canDecide}
+            canHold={canHold}
+            nextHref={state.nextHref}
+            listHref={state.listHref}
+          />
+        ) : done && doneNote ? (
+          // The same panel as a pending request's, so the pop-up after a
+          // decision outlives the refresh; its buttons are now disabled.
+          canDecide ? (
+            <BookingDecision
+              booking={done}
+              canDecide
+              canHold={canHold}
+              decided={doneNote}
+              nextHref={state.nextHref}
+              listHref={state.listHref}
+            />
+          ) : (
+            <DecidedNote>{doneNote}</DecidedNote>
+          )
+        ) : null
+      }
+      after={<TimeClashFlags flags={timeClashFlags} />}
+    />
   );
 }
