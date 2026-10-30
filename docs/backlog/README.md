@@ -37,7 +37,7 @@ either covered by a test or visibly not done yet. Reviewers do the same.
 | | |
 |---|---|
 | Stories | **97** |
-| Tasks | **78** |
+| Tasks | **79** |
 | Subtasks | **18** |
 | Total story points | **267** |
 | Points committed to Sprint 1 | **37** |
@@ -275,3 +275,4 @@ _7 stories, 11 points_
 | [SCRUM-237](SCRUM-237.md) | Chore: Say on the website and in the README that it is the team's development environment, not a service for customers | SCRUM Sprint 4 | In Progress |
 | [SCRUM-238](SCRUM-238.md) | Chore: Seed data that lets every role see and try every function | SCRUM Sprint 4 | In Progress |
 | [SCRUM-246](SCRUM-246.md) | Bug: The event request form shows equipment stock as "available" and doesn't show venues' opening hours | SCRUM Sprint 4 | To Do |
+| [SCRUM-247](SCRUM-247.md) | Bug: A Coordinator's edit during re-planning can set expected attendance below the people already registered, overbooking the event | SCRUM Sprint 4 | To Do |
