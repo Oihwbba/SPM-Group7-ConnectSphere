@@ -24,6 +24,7 @@ import {
 } from "@/app/(app)/bookings/actions";
 import { getPendingBookingQueue } from "@/app/(app)/bookings/queries";
 import { rejectPlanningEvent } from "@/app/(app)/events/actions";
+import { withHours } from "../venue-hours-fixture";
 
 // SCRUM-163 against a real, seeded Postgres: what holding, confirming,
 // releasing and rejecting write, what a live or lapsed hold blocks, and two
@@ -180,6 +181,7 @@ describe.skipIf(!usesLocalDatabase)(
             name: `Hold test venue ${Date.now()}`,
             location: "Test block",
             capacity: 500,
+            ...withHours,
           },
         })
       ).id;

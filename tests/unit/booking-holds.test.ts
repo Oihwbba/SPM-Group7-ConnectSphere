@@ -19,6 +19,7 @@ import {
   holdBookingRequest,
   releaseHold,
 } from "@/app/(app)/bookings/actions";
+import { OPEN_ALL_WEEK } from "../venue-hours-fixture";
 
 // SCRUM-163 — tentative venue holds, with the database mocked: every refusal
 // branch, and exactly what each action writes. The same rules against a real
@@ -164,7 +165,7 @@ describe("holdBookingRequest — SCRUM-163 AC1, AC2, AC5", () => {
     status: "PENDING",
     holdExpiresAt: null,
     // SCRUM-159: the venue's setup and turnaround, which a hold copies (AC8).
-    venue: { name: "Hall", setupMinutes: 0, turnaroundMinutes: 0 },
+    venue: { name: "Hall", setupMinutes: 0, turnaroundMinutes: 0, openingHours: OPEN_ALL_WEEK },
     requestedById: "usr_requester",
     event: { id: "evt_1", name: "Symposium", coordinatorId: "usr_cody" },
     ...overrides,
@@ -395,7 +396,7 @@ describe("holdBookingRequest — SCRUM-163 AC1, AC2, AC5", () => {
   });
 
   it("SCRUM-159 [AC3, AC8] TC-159-17: a hold is refused where only setup or turnaround clash, and otherwise keeps the venue's minutes", async () => {
-    const withTimes = { name: "Hall", setupMinutes: 30, turnaroundMinutes: 45 };
+    const withTimes = { name: "Hall", setupMinutes: 30, turnaroundMinutes: 45, openingHours: OPEN_ALL_WEEK };
     db.booking.findUnique.mockResolvedValue(pending({ venue: withTimes }));
     // Ends 20 minutes before the request starts: inside its 30 minutes' setup.
     db.booking.findMany.mockResolvedValue([
@@ -507,8 +508,8 @@ describe("confirmHold and releaseHold — SCRUM-163 AC3, AC4, AC7, AC8", () => {
     endAt: fromNow(4 * HOUR),
     holdExpiresAt: fromNow(HOUR),
     holdApprovedAt: fromNow(-HOUR),
-    // SCRUM-34 AC7: no hours recorded, so confirming isn't refused for them.
-    venue: { name: "Hall A", openingHours: [] },
+    // Open all week, so confirming isn't refused for its hours (SCRUM-34 AC7).
+    venue: { name: "Hall A", openingHours: OPEN_ALL_WEEK },
     event: {
       id: "evt_1",
       name: "Expo",
@@ -818,7 +819,7 @@ describe("decideBookingRequest on a hold — SCRUM-163 AC7", () => {
     holdExpiresAt,
     holdApprovedAt: null,
     requestedById: "usr_requester",
-    venue: { name: "Hall", setupMinutes: 0, turnaroundMinutes: 0 },
+    venue: { name: "Hall", setupMinutes: 0, turnaroundMinutes: 0, openingHours: OPEN_ALL_WEEK },
     event: { id: "evt_1", name: "Symposium", coordinatorId: "usr_cody" },
     ...overrides,
   });
@@ -1225,7 +1226,7 @@ describe("hold notices — SCRUM-124 AC4, AC6", () => {
     holdApprovedAt: fromNow(-HOUR),
     needsReconsideration: false,
     requestedById: "usr_requester",
-    venue: { name: "Hall A", setupMinutes: 0, turnaroundMinutes: 0 },
+    venue: { name: "Hall A", setupMinutes: 0, turnaroundMinutes: 0, openingHours: OPEN_ALL_WEEK },
     event: {
       id: "evt_1",
       name: "Expo",

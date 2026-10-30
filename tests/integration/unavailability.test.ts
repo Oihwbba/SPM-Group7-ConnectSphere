@@ -17,6 +17,7 @@ import { eventBookingPeriod } from "@/lib/schemas/booking";
 import { createPlanningEvents, removeEvents } from "./test-events";
 import { recordUnavailability } from "@/app/(app)/venues/availability/actions";
 import { submitBookingRequest } from "@/app/(app)/bookings/actions";
+import { withHours } from "../venue-hours-fixture";
 
 // SCRUM-37 and SCRUM-161 against a real, seeded Postgres: recording
 // unavailability, what it does to requests and approvals, how it flags the
@@ -242,7 +243,7 @@ describe.skipIf(!usesLocalDatabase)(
 
       venueName = `Unavailability test venue ${Date.now()}`;
       const venue = await prisma.venue.create({
-        data: { name: venueName, location: "Test block", capacity: 500 },
+        data: { name: venueName, location: "Test block", capacity: 500, ...withHours },
       });
       venueId = venue.id;
     });

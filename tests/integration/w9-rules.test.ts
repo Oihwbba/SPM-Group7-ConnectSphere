@@ -2,6 +2,7 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 
 import { prisma } from "@/lib/db";
 import { createPlanningEvents, removeEvents } from "./test-events";
+import { withHours } from "../venue-hours-fixture";
 
 // SCRUM-172 AC12 to AC14 against a real Postgres: the data the Week 9
 // clarifications add, written directly as the stories that build on it will
@@ -66,6 +67,7 @@ describe.skipIf(!usesLocalDatabase)(
             name: `Week 9 test venue ${stamp}`,
             location: "Test block",
             capacity: 200,
+            ...withHours,
           },
         })
       ).id;

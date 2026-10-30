@@ -31,6 +31,7 @@ import {
 import { decideBookingRequest } from "@/app/(app)/bookings/actions";
 import { createPlanningEvents, removeEvents } from "./test-events";
 import { recordUnavailability } from "@/app/(app)/venues/availability/actions";
+import { withHours } from "../venue-hours-fixture";
 
 // The "at the same moment" cases (SCRUM-31/53/74). These are the acceptance
 // criteria the database constraints and row locks exist to satisfy, so each one
@@ -278,6 +279,7 @@ describe.skipIf(!usesLocalDatabase)(
           name: `Concurrency test venue ${Date.now()}`,
           location: "Test block",
           capacity: 50,
+          ...withHours,
         },
         select: { id: true },
       });
@@ -503,6 +505,7 @@ describe.skipIf(!usesLocalDatabase)(
           name: `Occupancy race venue ${Date.now()}`,
           location: "Test block",
           capacity: 50,
+          ...withHours,
         },
         select: { id: true },
       });

@@ -19,6 +19,7 @@ import { getMyNotifications } from "@/app/(app)/notifications/queries";
 import { getQueueRequest } from "@/app/(app)/queue/queries";
 import { assignCoordinator } from "@/app/(app)/queue/actions";
 import { reassignCoordinator } from "@/app/(app)/all-events/actions";
+import { withHours } from "../venue-hours-fixture";
 
 // SCRUM-121 against a real, seeded Postgres: an account holds several roles,
 // existing accounts hold none extra, staff notices reach a role held as an
@@ -106,7 +107,7 @@ describe.skipIf(!usesLocalDatabase)("several roles on one account — real datab
     }
     venueId = (
       await prisma.venue.create({
-        data: { name: `Several roles venue ${STAMP}`, location: "Test block", capacity: 500 },
+        data: { name: `Several roles venue ${STAMP}`, location: "Test block", capacity: 500, ...withHours },
         select: { id: true },
       })
     ).id;

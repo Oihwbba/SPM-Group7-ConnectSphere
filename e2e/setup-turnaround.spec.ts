@@ -2,6 +2,7 @@ import { test, expect, type Page } from "@playwright/test";
 import { prisma } from "@/lib/db";
 
 import { choose, signedIn, usesLocalDatabase, openBooking } from "./helpers";
+import { withHours } from "../tests/venue-hours-fixture";
 
 /**
  * SCRUM-159 — a venue's setup and turnaround time in a real browser: the
@@ -103,6 +104,7 @@ test.describe("SCRUM-159 — setup and turnaround time", () => {
         supportedLayouts: ["theatre"],
         setupMinutes: 30,
         turnaroundMinutes: 45,
+        ...withHours,
       },
       select: { id: true },
     });

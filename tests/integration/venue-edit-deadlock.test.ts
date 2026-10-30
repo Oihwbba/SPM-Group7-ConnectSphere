@@ -141,7 +141,6 @@ describe.skipIf(!usesLocalDatabase)(
     afterAll(async () => {
       await clear();
       await removeEvents([eventId]);
-      await prisma.venueOpeningHours.deleteMany({ where: { venueId } });
       await prisma.venue.delete({ where: { id: venueId } });
     });
 

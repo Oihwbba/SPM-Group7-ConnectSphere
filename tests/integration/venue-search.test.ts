@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { searchVenues, type VenueSearch } from "@/lib/venue-search";
 import { getSearchEvent } from "@/app/(app)/venues/search/queries";
 import { createPlanningEvents, removeEvents } from "./test-events";
+import { withHours } from "../venue-hours-fixture";
 
 // SCRUM-38 against a real, seeded Postgres: which venues a search finds once
 // bookings, holds and recorded unavailability are real rows, with setup and
@@ -41,6 +42,7 @@ describe.skipIf(!usesLocalDatabase)(
             accessibilityFeatures: ["wheelchair-access"],
             supportedLayouts: ["classroom"],
             ...data,
+            ...withHours,
           },
           select: { id: true },
         });
@@ -114,24 +116,15 @@ describe.skipIf(!usesLocalDatabase)(
         expect(await found(between("16:15", "17:00"))).toEqual([
           "IT-38 Plain Room",
         ]);
-        // AC2: a period over several days that takes in the booking.
+        // A period that takes in the whole booking (a search covers one day,
+        // AC2, and the venues are open all day, SCRUM-253).
+        expect(await found(between("08:00", "20:00"))).toEqual(["IT-38 Plain Room"]);
+        // …and one that ends at 13:00: with Busy's 30 minutes' turnaround it
+        // occupies Busy until 13:30, when the booking's setup begins, so the
+        // two only touch.
         expect(
           await found({
-            period: {
-              startAt: new Date("2033-03-14T18:00:00+08:00"),
-              endAt: new Date("2033-03-16T12:00:00+08:00"),
-            },
-          }),
-        ).toEqual(["IT-38 Plain Room"]);
-        // …and one over two days that ends at 13:00: with Busy's 30 minutes'
-        // turnaround it occupies Busy until 13:30, when the booking's setup
-        // begins, so the two only touch.
-        expect(
-          await found({
-            period: {
-              startAt: new Date("2033-03-14T18:00:00+08:00"),
-              endAt: sg("13:00"),
-            },
+            period: { startAt: sg("08:00"), endAt: sg("13:00") },
           }),
         ).toEqual(["IT-38 Busy Room", "IT-38 Plain Room"]);
       } finally {

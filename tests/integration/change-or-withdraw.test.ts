@@ -26,6 +26,7 @@ import {
 import { eventBookingPeriod } from "@/lib/schemas/booking";
 import { reserveEquipmentRequest } from "@/app/(app)/equipment/actions";
 import { getReservableRequests } from "@/lib/equipment/request-queries";
+import { withHours } from "../venue-hours-fixture";
 
 // SCRUM-142 against a real, seeded Postgres: what changing or withdrawing an
 // equipment request, and withdrawing a venue request, write — the lines, the
@@ -206,6 +207,7 @@ describe.skipIf(!usesLocalDatabase)(
             name: `SCRUM-142 venue ${STAMP}`,
             location: "Test block",
             capacity: 500,
+            ...withHours,
           },
         })
       ).id;
@@ -883,6 +885,7 @@ describe.skipIf(!usesLocalDatabase)(
             name: venueName,
             location: "Test block",
             capacity: 100,
+            ...withHours,
           },
           select: { id: true },
         });

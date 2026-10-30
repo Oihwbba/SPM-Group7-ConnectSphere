@@ -16,6 +16,7 @@ import { decideBookingRequest } from "@/app/(app)/bookings/actions";
 import { getPendingBookingQueue } from "@/app/(app)/bookings/queries";
 import { reserveEquipmentRequest } from "@/app/(app)/equipment/actions";
 import { getEquipmentRequestQueue } from "@/lib/equipment/request-queries";
+import { withHours } from "../venue-hours-fixture";
 
 // SCRUM-134 against a real, seeded Postgres: competing venue requests and
 // competing equipment requests are settled in the order they were made. Only
@@ -125,7 +126,7 @@ describe.skipIf(!usesLocalDatabase)(
       }
       venueId = (
         await prisma.venue.create({
-          data: { name: `First-come venue ${STAMP}`, location: "Test block", capacity: 500 },
+          data: { name: `First-come venue ${STAMP}`, location: "Test block", capacity: 500, ...withHours },
           select: { id: true },
         })
       ).id;

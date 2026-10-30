@@ -21,6 +21,7 @@ import {
 } from "@/app/(app)/bookings/actions";
 import { recordUnavailability } from "@/app/(app)/venues/availability/actions";
 import { createPlanningEvents, removeEvents } from "./test-events";
+import { withHours } from "../venue-hours-fixture";
 
 // SCRUM-159 against a real, seeded Postgres: a venue's setup and turnaround
 // time count wherever availability is checked, an approval keeps the minutes
@@ -118,6 +119,7 @@ describe.skipIf(!usesLocalDatabase)(
           name: `Setup and turnaround test venue ${Date.now()}`,
           location: "Test block",
           capacity: 100,
+          ...withHours,
         },
         select: { id: true },
       });

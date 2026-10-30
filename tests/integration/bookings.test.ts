@@ -25,6 +25,7 @@ import {
   getPendingBookingQueue,
   getRequestableVenues,
 } from "@/app/(app)/bookings/queries";
+import { withHours } from "../venue-hours-fixture";
 
 // SCRUM-50 / SCRUM-53 against a real, seeded Postgres. The session is the only
 // thing mocked, so "not created" and "the first decision stands" are proven by
@@ -141,6 +142,7 @@ describe.skipIf(!usesLocalDatabase)(
           capacity: 500,
           facilities: ["projector"],
           supportedLayouts: ["classroom"],
+          ...withHours,
         },
       });
       venueId = venue.id;
@@ -149,6 +151,7 @@ describe.skipIf(!usesLocalDatabase)(
           name: `Booking test venue (other) ${Date.now()}`,
           location: "Test block",
           capacity: 500,
+          ...withHours,
         },
       });
       otherVenueId = otherVenue.id;
@@ -587,6 +590,7 @@ describe.skipIf(!usesLocalDatabase)(
             location: "Test block",
             capacity: 30,
             isActive: false,
+            ...withHours,
           },
         });
         try {

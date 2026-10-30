@@ -7,6 +7,7 @@ import {
   utcToSgWallTime,
 } from "@/lib/datetime";
 import { setTime, signedIn, usesLocalDatabase, openBooking, openEvent } from "./helpers";
+import { withHours } from "../tests/venue-hours-fixture";
 
 /**
  * SCRUM-163 — Venue Staff hold a pending request until a deadline and approve
@@ -34,7 +35,7 @@ const heldUntil = `Held until ${formatDateTime(parseSingaporeDateTime(EXPIRY)!)}
 async function pendingRequest(label: string) {
   const name = `SCRUM-163 ${label} ${STAMP}`;
   const venue = await prisma.venue.create({
-    data: { name: `${name} venue`, location: "Test block", capacity: 200 },
+    data: { name: `${name} venue`, location: "Test block", capacity: 200, ...withHours },
     select: { id: true },
   });
   const event = await prisma.event.create({

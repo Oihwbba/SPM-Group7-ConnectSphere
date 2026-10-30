@@ -7,6 +7,7 @@ import {
   type CatalogueVenue,
 } from "@/lib/venue-changes";
 import type { OpeningDay } from "@/lib/venue-hours";
+import { OPEN_ALL_WEEK } from "../venue-hours-fixture";
 
 // SCRUM-34 AC10, AC12 — which future bookings a venue edit would stop
 // fitting. 4 March 2036 is a Tuesday.
@@ -117,10 +118,10 @@ describe("what a venue edit stops fitting — SCRUM-34 AC10", () => {
     ).toEqual(["Missing facility: projector"]);
   });
 
-  it("SCRUM-34 [AC10] TC-34-12: hours recorded for the first time count against a booking outside them", () => {
-    const noHoursYet = { ...venue, openingHours: [] };
+  it("SCRUM-253 [AC1] TC-253-03: real hours set on an old venue given 00:00–23:59 count against a booking outside them", () => {
+    const givenAllWeek = { ...venue, openingHours: OPEN_ALL_WEEK };
     expect(
-      newlyUnfit(noHoursYet, { ...venue, openingHours: everyDay(12 * 60, 18 * 60) }, booking),
+      newlyUnfit(givenAllWeek, { ...venue, openingHours: everyDay(12 * 60, 18 * 60) }, booking),
     ).toEqual(["Outside opening hours (Tuesday 12:00–18:00)"]);
   });
 });

@@ -26,6 +26,7 @@ import { getMyNotifications } from "@/app/(app)/notifications/queries";
 import { submitEventRequest } from "@/app/(app)/events/actions";
 import { requestSafetyCheck } from "@/app/(app)/events/safety-check-actions";
 import { recordSafetyCheckOutcome } from "@/app/(app)/safety-checks/actions";
+import { withHours } from "../venue-hours-fixture";
 
 // SCRUM-124 against a real, seeded Postgres: each trigger writes exactly one
 // notice for each person it concerns, even when the same action arrives twice
@@ -151,6 +152,7 @@ describe.skipIf(!usesLocalDatabase)(
             name: `Staff notice venue ${STAMP}`,
             location: "Test block",
             capacity: 500,
+            ...withHours,
           },
         })
       ).id;

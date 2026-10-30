@@ -20,6 +20,7 @@ import {
 } from "@/app/(app)/bookings/actions";
 import { getPendingBookingQueue } from "@/app/(app)/bookings/queries";
 import { reserveEquipmentRequest } from "@/app/(app)/equipment/actions";
+import { OPEN_ALL_WEEK } from "../venue-hours-fixture";
 
 // SCRUM-134 — competing venue and equipment requests settled in the order
 // they were made, with the database mocked. Against a real Postgres:
@@ -163,7 +164,7 @@ describe("approving or holding with an earlier request pending — SCRUM-134 AC2
     needsReconsideration: false,
     createdAt: SUBMITTED,
     requestedById: "usr_coord",
-    venue: { name: "Hall A", setupMinutes: 0, turnaroundMinutes: 0 },
+    venue: { name: "Hall A", setupMinutes: 0, turnaroundMinutes: 0, openingHours: OPEN_ALL_WEEK },
     event: { id: "evt_1", name: "Expo", coordinatorId: "usr_coord" },
   };
   const earlier = competitor("bkg_first", at("2035-12-31T09:00:00.000Z"), START, END, "First Fair");
@@ -228,7 +229,7 @@ describe("the pending queue — SCRUM-134 AC1", () => {
     setupMinutes: 0,
     turnaroundMinutes: 0,
     createdAt: SUBMITTED,
-    venue: { id: "ven_1", name: "Hall A", setupMinutes: 0, turnaroundMinutes: 0 },
+    venue: { id: "ven_1", name: "Hall A", setupMinutes: 0, turnaroundMinutes: 0, openingHours: OPEN_ALL_WEEK },
   });
 
   it("SCRUM-134 [AC1] TC-134-01: each pending request carries its competitors, marked earlier or later; a hold carries none", async () => {

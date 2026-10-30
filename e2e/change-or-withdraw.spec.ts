@@ -2,6 +2,7 @@ import { test, expect } from "@playwright/test";
 
 import { prisma } from "@/lib/db";
 import { signedIn, usesLocalDatabase, selectFrom, openEquipmentRequest, openEvent } from "./helpers";
+import { withHours } from "../tests/venue-hours-fixture";
 
 /**
  * SCRUM-142 — while an event is being planned, its Coordinator changes an
@@ -148,6 +149,7 @@ test.describe("SCRUM-142 — Change equipment lines or withdraw a venue request"
         name: `SCRUM-142 venue ${STAMP}`,
         location: "Test block",
         capacity: 100,
+        ...withHours,
       },
       select: { id: true },
     });
@@ -198,6 +200,7 @@ test.describe("SCRUM-142 — Change equipment lines or withdraw a venue request"
         name: `SCRUM-142 recheck venue ${STAMP}`,
         location: "Test block",
         capacity: 100,
+        ...withHours,
       },
       select: { id: true },
     });
@@ -384,7 +387,7 @@ test.describe("SCRUM-142 — Change equipment lines or withdraw a venue request"
       data: { status: "CONFIRMED" },
     });
     const venue = await prisma.venue.create({
-      data: { name: `SCRUM-142 confirmed venue ${STAMP}`, location: "Test block", capacity: 100 },
+      data: { name: `SCRUM-142 confirmed venue ${STAMP}`, location: "Test block", capacity: 100, ...withHours },
       select: { id: true },
     });
     venueIds.push(venue.id);

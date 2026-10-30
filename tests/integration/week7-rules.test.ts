@@ -3,6 +3,7 @@ import { Prisma, type BookingStatus } from "@prisma/client";
 
 import { prisma } from "@/lib/db";
 import { createPlanningEvents, removeEvents } from "./test-events";
+import { withHours } from "../venue-hours-fixture";
 
 // SCRUM-172 against a real Postgres: the columns, tables and booking rules the
 // Week 7 migration adds, written directly as the stories that build on it
@@ -126,6 +127,7 @@ describe.skipIf(!usesLocalDatabase)(
             name: `${name} ${Date.now()}`,
             location: "Test block",
             capacity: 200,
+            ...withHours,
           },
         });
       venueId = (await venue("Week 7 test venue")).id;

@@ -1,6 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import { prisma } from "@/lib/db";
 import { TIMES_CHANGED_REASON } from "@/lib/venue-time-clashes";
+import { withHours } from "../tests/venue-hours-fixture";
 
 // Writes its own venue, events and bookings, so it runs only against a local
 // database (CI's).
@@ -37,7 +38,7 @@ test.describe("SCRUM-160 — Bookings that clash after a setup or turnaround cha
   test.beforeAll(async () => {
     venueId = (
       await prisma.venue.create({
-        data: { name: venueName, location: "Test block", capacity: 100, setupMinutes: 30, turnaroundMinutes: 45 },
+        data: { name: venueName, location: "Test block", capacity: 100, setupMinutes: 30, turnaroundMinutes: 45, ...withHours },
         select: { id: true },
       })
     ).id;
@@ -196,7 +197,6 @@ test.describe("SCRUM-160 — Lengthening a turnaround in the venue edit form", (
     await prisma.auditLog.deleteMany({ where: { entityId: { in: [venueId, ...bookingIds] } } });
     await prisma.booking.deleteMany({ where: { id: { in: bookingIds } } });
     await prisma.event.deleteMany({ where: { id: { in: eventIds } } });
-    await prisma.venueOpeningHours.deleteMany({ where: { venueId } });
     await prisma.venue.delete({ where: { id: venueId } });
   });
 

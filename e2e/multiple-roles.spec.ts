@@ -2,6 +2,7 @@ import { test, expect } from "@playwright/test";
 
 import { prisma } from "@/lib/db";
 import { signedIn, usesLocalDatabase, openBooking, openMenuGroup } from "./helpers";
+import { withHours } from "../tests/venue-hours-fixture";
 
 /**
  * SCRUM-121 — one account with several roles in a real browser, as the seeded
@@ -149,7 +150,7 @@ test.describe("SCRUM-121 — accounts with several roles", () => {
     const event = await planningEvent(`Own booking ${testInfo.retry}`, "usr_organiser_2", ME);
     eventIds.push(event.id);
     const { id: venueId } = await prisma.venue.create({
-      data: { name: `SCRUM-121 E2E venue ${STAMP} ${testInfo.retry}`, location: "Test block", capacity: 500 },
+      data: { name: `SCRUM-121 E2E venue ${STAMP} ${testInfo.retry}`, location: "Test block", capacity: 500, ...withHours },
       select: { id: true },
     });
     venueIds.push(venueId);

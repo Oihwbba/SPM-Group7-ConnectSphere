@@ -25,6 +25,7 @@ import {
   registerForEvent,
   withdrawRegistration,
 } from "@/app/(app)/events/registration-actions";
+import { withHours } from "../venue-hours-fixture";
 
 // SCRUM-45 against a real, seeded Postgres: which notices each workflow step
 // writes, to whom, and that repeating a step writes none. Only the session is
@@ -99,6 +100,7 @@ describe.skipIf(!usesLocalDatabase)(
             name: `SCRUM-45 venue ${STAMP}`,
             location: "Test block",
             capacity: 500,
+            ...withHours,
           },
         })
       ).id;

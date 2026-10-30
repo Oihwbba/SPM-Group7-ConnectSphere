@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { matchesFilters, searchVenues } from "@/lib/venue-search";
 import { findVenueBlockers } from "@/lib/venue-availability";
+import { OPEN_ALL_WEEK } from "../venue-hours-fixture";
 
 // SCRUM-38 — the search itself, against a stubbed database. Whether a venue
 // is free is findVenueBlockers' rule (tested in venue-availability.test.ts);
@@ -24,8 +25,8 @@ const venue = (id: string, overrides: Record<string, unknown> = {}) => ({
   supportedLayouts: ["classroom", "theatre"],
   setupMinutes: 0,
   turnaroundMinutes: 0,
-  // No hours recorded: such a venue is closed at no time (SCRUM-34 AC7).
-  openingHours: [],
+  // Open all week, so only the tests about hours are about hours (SCRUM-34 AC7).
+  openingHours: OPEN_ALL_WEEK,
   ...overrides,
 });
 
@@ -290,7 +291,7 @@ describe("searchVenues and opening hours — SCRUM-38 AC4, AC15", () => {
       await searchVenues(
         stubDb([
           venue("ven_hours", { openingHours: weekdayHours }),
-          venue("ven_no_hours"),
+          venue("ven_all_week"),
         ]) as never,
         search,
         NOW,
@@ -298,16 +299,17 @@ describe("searchVenues and opening hours — SCRUM-38 AC4, AC15", () => {
     ).map((r) => r.id);
 
   it.each([
-    ["starts a minute before opening", "2031-06-03T08:59", "2031-06-03T12:00"],
-    ["ends a minute after closing", "2031-06-03T15:00", "2031-06-03T18:01"],
-    ["falls on a day it is Closed", "2031-06-07T10:00", "2031-06-07T12:00"],
-    ["runs past midnight", "2031-06-03T17:00", "2031-06-04T10:00"],
+    ["starts a minute before opening", "2031-06-03T08:59", "2031-06-03T12:00", ["ven_all_week"]],
+    ["ends a minute after closing", "2031-06-03T15:00", "2031-06-03T18:01", ["ven_all_week"]],
+    ["falls on a day it is Closed", "2031-06-07T10:00", "2031-06-07T12:00", ["ven_all_week"]],
+    // Even 00:00–23:59 ends before midnight (SCRUM-34 AC7).
+    ["runs past midnight", "2031-06-03T17:00", "2031-06-04T10:00", []],
   ])(
-    "SCRUM-38 [AC4] TC-38-15: a venue whose booking period %s is excluded; one with no hours recorded is kept",
-    async (_label, start, end) => {
+    "SCRUM-38 [AC4] TC-38-15: a venue whose booking period %s is excluded; one open 00:00–23:59 every day is kept within the day",
+    async (_label, start, end, kept) => {
       expect(
         await ids({ period: sgPeriod(start, end), filters: noFilters }),
-      ).toEqual(["ven_no_hours"]);
+      ).toEqual(kept);
     },
   );
 
@@ -317,7 +319,7 @@ describe("searchVenues and opening hours — SCRUM-38 AC4, AC15", () => {
         period: sgPeriod("2031-06-03T09:00", "2031-06-03T18:00"),
         filters: noFilters,
       }),
-    ).toEqual(["ven_hours", "ven_no_hours"]);
+    ).toEqual(["ven_hours", "ven_all_week"]);
   });
 
   it("SCRUM-38 [AC15] TC-38-16: setup and turnaround outside the hours don't exclude the venue", async () => {
@@ -353,7 +355,7 @@ describe("searchVenues and opening hours — SCRUM-38 AC4, AC15", () => {
         bookingPeriod: false,
         filters: noFilters,
       }),
-    ).toEqual(["ven_hours", "ven_no_hours"]);
+    ).toEqual(["ven_hours", "ven_all_week"]);
   });
 
   it("SCRUM-38 [AC4] TC-38-20: a date search on a day it is Closed excludes the venue", async () => {
@@ -363,7 +365,7 @@ describe("searchVenues and opening hours — SCRUM-38 AC4, AC15", () => {
         bookingPeriod: false,
         filters: noFilters,
       }),
-    ).toEqual(["ven_no_hours"]);
+    ).toEqual(["ven_all_week"]);
   });
 
   it("SCRUM-38 [AC4] TC-38-15: a venue closed for the search isn't checked for availability", async () => {
@@ -375,7 +377,7 @@ describe("searchVenues and opening hours — SCRUM-38 AC4, AC15", () => {
     expect(mockBlockers).toHaveBeenCalledTimes(1);
     expect(mockBlockers).toHaveBeenCalledWith(
       expect.anything(),
-      "ven_no_hours",
+      "ven_all_week",
       expect.anything(),
       NOW,
     );

@@ -343,32 +343,6 @@ test.describe("SCRUM-34 — browse and maintain the venue catalogue", () => {
     await expect(submit).toBeEnabled();
   });
 
-  test("SCRUM-34 [AC3] TC-34-20: editing a venue whose hours were never recorded asks for them instead of saving 09:00–18:00", async ({
-    browser,
-  }) => {
-    test.skip(!usesLocalDatabase, "adds its own venue");
-    const name = `${PREFIX} Old Annex`;
-    const venue = await prisma.venue.create({
-      data: { name, location: "Annex", capacity: 50 },
-      select: { id: true },
-    });
-
-    const staff = await signedIn(browser, "venuestaff@test.local");
-    await openVenue(staff, name);
-    await staff.getByRole("button", { name: "Edit venue" }).click();
-    const edit = staff.getByRole("dialog", { name: `Edit ${name}` });
-    await expect(edit).toContainText("This venue's opening hours aren't recorded yet.");
-    await expect(edit.getByLabel("Monday opens")).toHaveAttribute("data-value", "");
-
-    await edit.getByLabel("Capacity *").fill("60");
-    await edit.getByRole("button", { name: "Save venue" }).click();
-    await expect(edit.getByText("Enter an opening and a closing time, or mark the day Closed.").first()).toBeVisible();
-    expect(await prisma.venue.findUniqueOrThrow({ where: { id: venue.id } })).toMatchObject({
-      capacity: 50,
-    });
-    expect(await prisma.venueOpeningHours.count({ where: { venueId: venue.id } })).toBe(0);
-  });
-
   // The catalogue's loading skeleton must not wrap the detail route, or the
   // response would already be a streamed 200 when notFound() runs.
   test("SCRUM-34 [AC2] TC-34-22: a venue that doesn't exist answers 404; a real one opens", async ({

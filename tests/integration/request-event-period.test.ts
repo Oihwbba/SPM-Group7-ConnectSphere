@@ -20,6 +20,7 @@ import {
   submitBookingRequest,
 } from "@/app/(app)/bookings/actions";
 import { createPlanningEvents, removeEvents } from "./test-events";
+import { withHours } from "../venue-hours-fixture";
 
 // SCRUM-188 against a real, seeded Postgres: a venue search lists as free for
 // an event is requested for the same period, so the request agrees with the
@@ -64,6 +65,7 @@ describe.skipIf(!usesLocalDatabase)(
             name: `IT-188 Room ${Date.now()}`,
             location: LOCATION,
             capacity: 60,
+            ...withHours,
           },
           select: { id: true },
         })

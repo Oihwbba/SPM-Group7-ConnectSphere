@@ -19,6 +19,7 @@ import {
   decideBookingRequest,
   submitBookingRequest,
 } from "@/app/(app)/bookings/actions";
+import { OPEN_ALL_WEEK } from "../venue-hours-fixture";
 
 // SCRUM-50 / SCRUM-53 server actions with the database mocked: permission,
 // validation and every refusal branch. The same criteria are proven against a
@@ -101,7 +102,7 @@ const summaryRow = {
   startAt: new Date(START),
   endAt: new Date(END),
   status: "PENDING",
-  venue: { name: "Seminar Room" },
+  venue: { name: "Seminar Room", openingHours: OPEN_ALL_WEEK },
 };
 const summary = {
   id: "bkg_1",
@@ -133,6 +134,7 @@ beforeEach(() => {
     capacity: 60,
     setupMinutes: 0,
     turnaroundMinutes: 0,
+    openingHours: OPEN_ALL_WEEK,
   });
   db.booking.findFirst.mockResolvedValue(null);
   db.booking.findMany.mockResolvedValue([]);
@@ -199,6 +201,7 @@ describe("submitBookingRequest — SCRUM-50", () => {
       capacity: 39,
       setupMinutes: 0,
       turnaroundMinutes: 0,
+      openingHours: OPEN_ALL_WEEK,
     });
 
     const result = await submitBookingRequest(validRequest);
@@ -219,6 +222,7 @@ describe("submitBookingRequest — SCRUM-50", () => {
       capacity: 40,
       setupMinutes: 0,
       turnaroundMinutes: 0,
+      openingHours: OPEN_ALL_WEEK,
     });
 
     const result = await submitBookingRequest(validRequest);
@@ -598,6 +602,7 @@ describe("submitBookingRequest — SCRUM-50", () => {
         capacity: 60,
         setupMinutes: 30,
         turnaroundMinutes: 45,
+        openingHours: OPEN_ALL_WEEK,
       });
       db.booking.findMany.mockResolvedValue([endsBefore]);
 
@@ -618,6 +623,7 @@ describe("submitBookingRequest — SCRUM-50", () => {
         capacity: 60,
         setupMinutes: 30,
         turnaroundMinutes: 45,
+        openingHours: OPEN_ALL_WEEK,
       });
 
       await submitBookingRequest(validRequest);
@@ -640,6 +646,7 @@ describe("submitBookingRequest — SCRUM-50", () => {
         capacity: 60,
         setupMinutes: 15,
         turnaroundMinutes: 45,
+        openingHours: OPEN_ALL_WEEK,
       });
       db.booking.findMany.mockResolvedValue([endsBefore]);
 
@@ -737,6 +744,7 @@ describe("SCRUM-50 [AC3, AC4, AC5] TC-50-13: checkVenueAvailability, the live ch
       id: "ven_1",
       setupMinutes: 30,
       turnaroundMinutes: 45,
+      openingHours: OPEN_ALL_WEEK,
     });
     // Ends at 1:45 pm SGT; the 2:00–4:00 pm period's setup starts at 1:30 pm.
     db.booking.findMany.mockResolvedValue([
@@ -844,7 +852,7 @@ describe("decideBookingRequest — SCRUM-53", () => {
     startAt: new Date(START),
     endAt: new Date(END),
     status: "PENDING",
-    venue: { name: "Seminar Room", setupMinutes: 0, turnaroundMinutes: 0 },
+    venue: { name: "Seminar Room", setupMinutes: 0, turnaroundMinutes: 0, openingHours: OPEN_ALL_WEEK },
     requestedById: "usr_coord",
     event: { id: "evt_1", name: "Graduation", coordinatorId: "usr_coord" },
   };
@@ -905,7 +913,7 @@ describe("decideBookingRequest — SCRUM-53", () => {
   describe("SCRUM-159 — approving with setup and turnaround", () => {
     const withTimes = {
       ...pendingBooking,
-      venue: { name: "Seminar Room", setupMinutes: 30, turnaroundMinutes: 45 },
+      venue: { name: "Seminar Room", setupMinutes: 30, turnaroundMinutes: 45, openingHours: OPEN_ALL_WEEK },
     };
 
     beforeEach(() => {
@@ -1359,6 +1367,7 @@ describe("staff and Coordinator notices — SCRUM-124 AC1, AC4", () => {
         capacity: 30,
         setupMinutes: 0,
         turnaroundMinutes: 0,
+        openingHours: OPEN_ALL_WEEK,
       });
 
       expect((await submitBookingRequest(validRequest)).ok).toBe(false);
@@ -1375,7 +1384,7 @@ describe("staff and Coordinator notices — SCRUM-124 AC1, AC4", () => {
       endAt: new Date(END),
       status: "PENDING",
       needsReconsideration: false,
-      venue: { name: "Seminar Room", setupMinutes: 0, turnaroundMinutes: 0 },
+      venue: { name: "Seminar Room", setupMinutes: 0, turnaroundMinutes: 0, openingHours: OPEN_ALL_WEEK },
       requestedById: "usr_requester",
       event: { id: "evt_1", name: "Graduation", coordinatorId },
     });
@@ -1471,7 +1480,7 @@ describe("staff and Coordinator notices — SCRUM-124 AC1, AC4", () => {
           setupMinutes: 0,
           turnaroundMinutes: 0,
           holdExpiresAt: null,
-          venue: { setupMinutes: 0, turnaroundMinutes: 0 },
+          venue: { setupMinutes: 0, turnaroundMinutes: 0, openingHours: OPEN_ALL_WEEK },
         },
       ]);
 

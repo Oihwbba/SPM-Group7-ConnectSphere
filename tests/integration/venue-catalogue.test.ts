@@ -289,26 +289,6 @@ describe.skipIf(!usesLocalDatabase)("venue catalogue — real database (SCRUM-34
     }
   });
 
-  it("SCRUM-34 [AC7] TC-34-08: a venue with no hours recorded is requested at any time", async () => {
-    const legacy = await prisma.venue.create({
-      data: { name: `SCRUM-34 Legacy ${Date.now()}`, location: "Annex", capacity: 50 },
-      select: { id: true },
-    });
-    venueIds.push(legacy.id);
-    asCoordinator();
-    const eventId = await event(`${SUNDAY}T03:00`, `${SUNDAY}T05:00`);
-
-    expect(
-      await submitBookingRequest({
-        eventId,
-        venueId: legacy.id,
-        startAt: sg(`${SUNDAY}T03:00`).toISOString(),
-        endAt: sg(`${SUNDAY}T05:00`).toISOString(),
-        requestedAttendance: 40,
-      }),
-    ).toMatchObject({ ok: true, data: { created: true } });
-  });
-
   it("SCRUM-34 [AC7] TC-34-09: a request outside opening hours can't be held or approved, and stays Pending", async () => {
     const id = await addVenue("AC7 decide");
     const pending = await booking(id, `${SUNDAY}T12:00`, `${SUNDAY}T14:00`);

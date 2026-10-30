@@ -51,27 +51,82 @@ describe("opening hours — SCRUM-34 AC7", () => {
     );
   });
 
-  it("SCRUM-34 [AC7] TC-34-08: a day with no row counts as Closed, once a venue has hours", () => {
+  it("SCRUM-34 [AC7] TC-34-08: a day with no row counts as Closed", () => {
     const weekdaysOnly = boardroom.filter((d) => d.weekday <= 5);
     expect(
       dayOutsideOpeningHours(period("2036-03-09T10:00", "2036-03-09T12:00"), weekdaysOnly),
     ).toEqual({ weekday: 7, opensMinute: null, closesMinute: null });
   });
 
-  it("SCRUM-34 [AC7] TC-34-08: a venue with no hours recorded refuses nothing", () => {
-    expect(dayOutsideOpeningHours(period("2036-03-08T03:00", "2036-03-08T05:00"), [])).toBeNull();
+  it("SCRUM-253 [AC3] TC-253-06: no rows at all read as Closed, not as a venue with no hours that refuses nothing", () => {
+    expect(dayOutsideOpeningHours(period("2036-03-08T03:00", "2036-03-08T05:00"), [])).toEqual({
+      weekday: 6,
+      opensMinute: null,
+      closesMinute: null,
+    });
+    expect(
+      openingHoursRefusal(period("2036-03-08T10:00", "2036-03-08T12:00"), {
+        name: "Annex",
+        openingHours: [],
+      }),
+    ).toBe("Annex is closed on Saturdays, so it can't be booked then.");
   });
 
-  it("SCRUM-34 [AC7] TC-34-08: the refusal names the venue and that day's hours, or is null within them or with no hours recorded", () => {
+  describe("SCRUM-253 AC1 — the 00:00–23:59 week an old venue with no hours is given", () => {
+    const allDay: OpeningDay[] = [1, 2, 3, 4, 5, 6, 7].map((weekday) => ({
+      weekday,
+      opensMinute: 0,
+      closesMinute: 1439,
+    }));
+
+    it.each([
+      ["a weekend morning", "2036-03-08T03:00", "2036-03-08T05:00"],
+      ["the latest an event can run, 00:00 to 23:59 (SCRUM-190)", "2036-03-08T00:00", "2036-03-08T23:59"],
+      ["a weekday evening", "2036-03-04T19:00", "2036-03-04T23:59"],
+    ])("SCRUM-253 [AC1] TC-253-02: refuses no period within one day: %s", (_label, start, end) => {
+      expect(
+        openingHoursRefusal(period(start, end), { name: "Annex", openingHours: allDay }),
+      ).toBeNull();
+    });
+
+    it("SCRUM-253 [AC1] TC-253-02: is closed on no day", () => {
+      for (const day of ["2036-03-02", "2036-03-04", "2036-03-08"]) {
+        expect(closedOn(at(`${day}T00:00`), allDay)).toBeNull();
+      }
+    });
+
+    it("SCRUM-253 [AC3] TC-253-06: its setup and turnaround are warned of like any venue's: none up to 23:59, one after (SCRUM-159 AC9)", () => {
+      const venue = { name: "Annex", openingHours: allDay };
+      const hour = { setupMinutes: 60, turnaroundMinutes: 60 };
+      expect(
+        setupTurnaroundWarning(period("2036-03-04T01:00", "2036-03-04T22:59"), hour, venue),
+      ).toBeNull();
+      expect(
+        setupTurnaroundWarning(period("2036-03-04T01:00", "2036-03-04T23:00"), hour, venue),
+      ).toBe(
+        "The turnaround time (60 minutes, until 00:00) falls outside Annex's opening hours, 00:00–23:59 on Tuesdays. You can still hold or approve it.",
+      );
+    });
+
+    it.each([
+      ["ends at midnight", "2036-03-08T23:00", "2036-03-09T00:00"],
+      ["runs past midnight", "2036-03-08T23:00", "2036-03-09T01:00"],
+    ])("SCRUM-253 [AC1] TC-253-02: a period that %s is outside, one minute past what an event can reach (SCRUM-34 AC7, SCRUM-190)", (_label, start, end) => {
+      expect(dayOutsideOpeningHours(period(start, end), allDay)).toEqual({
+        weekday: 6,
+        opensMinute: 0,
+        closesMinute: 1439,
+      });
+    });
+  });
+
+  it("SCRUM-34 [AC7] TC-34-08: the refusal names the venue and that day's hours, or is null within them", () => {
     const venue = { name: "Executive Boardroom", openingHours: boardroom };
 
     expect(openingHoursRefusal(period("2036-03-08T10:00", "2036-03-08T12:00"), venue)).toBe(
       "Executive Boardroom is closed on Saturdays, so it can't be booked then.",
     );
     expect(openingHoursRefusal(period("2036-03-04T09:00", "2036-03-04T18:00"), venue)).toBeNull();
-    expect(
-      openingHoursRefusal(period("2036-03-08T10:00", "2036-03-08T12:00"), { name: "Annex" }),
-    ).toBeNull();
   });
 
   describe("SCRUM-159 AC9 — setup or turnaround outside opening hours", () => {
@@ -106,12 +161,7 @@ describe("opening hours — SCRUM-34 AC7", () => {
       ).toBeNull();
     });
 
-    it("SCRUM-159 [AC9] TC-159-19: no warning with no hours recorded, or when the booking itself is outside them (SCRUM-34 AC7 refuses it instead)", () => {
-      expect(
-        setupTurnaroundWarning(period("2036-03-04T09:00", "2036-03-04T12:00"), thirtyAndFortyFive, {
-          name: "Annex",
-        }),
-      ).toBeNull();
+    it("SCRUM-159 [AC9] TC-159-19: no warning when the booking itself is outside the hours (SCRUM-34 AC7 refuses it instead)", () => {
       expect(
         setupTurnaroundWarning(period("2036-03-08T10:00", "2036-03-08T12:00"), thirtyAndFortyFive, venue),
       ).toBeNull();
@@ -156,14 +206,21 @@ describe("the closed day in a search without times — SCRUM-38 AC4", () => {
     expect(closedOn(at("2036-03-07T23:30"), boardroom)).toBeNull();
   });
 
-  it("SCRUM-38 [AC4] TC-38-20: a weekday with no row is Closed, and a venue with no hours is never closed", () => {
+  it("SCRUM-38 [AC4] TC-38-20: a weekday with no row is Closed", () => {
     const weekdaysOnly = boardroom.filter((d) => d.weekday <= 5);
     expect(closedOn(at("2036-03-08T00:00"), weekdaysOnly)).toEqual({
       weekday: 6,
       opensMinute: null,
       closesMinute: null,
     });
-    expect(closedOn(at("2036-03-08T00:00"), [])).toBeNull();
+  });
+
+  it("SCRUM-253 [AC3] TC-253-06: no rows at all read as Closed in a search too", () => {
+    expect(closedOn(at("2036-03-08T00:00"), [])).toEqual({
+      weekday: 6,
+      opensMinute: null,
+      closesMinute: null,
+    });
   });
 });
 
