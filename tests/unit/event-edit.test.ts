@@ -104,6 +104,7 @@ beforeEach(() => {
   db.safetyCheck.updateMany.mockResolvedValue({ count: 0 });
   db.event.findMany.mockResolvedValue([]);
   db.user.findMany.mockResolvedValue([]);
+  db.registration.count.mockResolvedValue(0);
 });
 
 describe("updateEventDetails — SCRUM-171 AC5, Registration needed", () => {
@@ -211,6 +212,93 @@ describe("updateEventDetails — SCRUM-171 AC5, Registration needed", () => {
       data: { changed: [], safetyCheckOutdated: false, flagged: 0 },
     });
     expect(db.event.updateMany).not.toHaveBeenCalled();
+  });
+});
+
+describe("updateEventDetails — SCRUM-247, expected attendance and active registrations", () => {
+  // A re-planned event (SCRUM-128 AC5) keeps its 50 registrations; the
+  // expected attendance is its registration capacity (SCRUM-74).
+  beforeEach(() => {
+    db.event.findUnique.mockResolvedValue(stored({ expectedAttendance: 60 }));
+    db.registration.count.mockResolvedValue(50);
+  });
+
+  it.each([30, 49])(
+    "SCRUM-247 [AC1] TC-247-01: with 50 active registrations, an attendance of %i is refused with the number shown, and nothing is written",
+    async (attendance) => {
+      const message =
+        "This event has 50 active registrations, so the expected attendance can't be lower than 50.";
+
+      const result = await updateEventDetails({
+        ...unchanged,
+        expectedAttendance: String(attendance),
+      });
+
+      expect(result).toEqual({
+        ok: false,
+        error: message,
+        fieldErrors: { expectedAttendance: [message] },
+      });
+      expect(db.registration.count).toHaveBeenCalledWith({
+        where: { eventId: "evt_1", status: "REGISTERED" },
+      });
+      expect(db.event.updateMany).not.toHaveBeenCalled();
+      expect(db.auditLog.createMany).not.toHaveBeenCalled();
+      expect(db.booking.updateManyAndReturn).not.toHaveBeenCalled();
+      expect(db.reservation.updateManyAndReturn).not.toHaveBeenCalled();
+      expect(db.safetyCheck.updateMany).not.toHaveBeenCalled();
+    },
+  );
+
+  it("SCRUM-247 [AC1] TC-247-02: an attendance of exactly the 50 active registrations is saved and audited", async () => {
+    const result = await updateEventDetails({
+      ...unchanged,
+      expectedAttendance: "50",
+    });
+
+    expect(result).toEqual({
+      ok: true,
+      data: {
+        changed: ["expectedAttendance"],
+        safetyCheckOutdated: false,
+        flagged: 0,
+      },
+    });
+    expect(db.event.updateMany).toHaveBeenCalledWith({
+      where: { id: "evt_1", status: "PLANNING", coordinatorId: "usr_coord" },
+      data: { expectedAttendance: 50 },
+    });
+    expect(db.auditLog.createMany).toHaveBeenCalledWith({
+      data: [
+        expect.objectContaining({
+          fieldName: "expectedAttendance",
+          oldValue: "60",
+          newValue: "50",
+        }),
+      ],
+    });
+  });
+
+  it("SCRUM-247 [AC2] TC-247-03: the registrations are counted after the event row is locked, inside the edit's transaction", async () => {
+    await updateEventDetails({ ...unchanged, expectedAttendance: "30" });
+
+    expect(db.$transaction).toHaveBeenCalledTimes(1);
+    const [lock] = db.$queryRaw.mock.calls[0] as [TemplateStringsArray];
+    expect(lock.join("?")).toMatch(/FROM "Event" WHERE "id" = \? FOR UPDATE/);
+    expect(db.$queryRaw.mock.invocationCallOrder[0]).toBeLessThan(
+      db.registration.count.mock.invocationCallOrder[0],
+    );
+  });
+
+  it("SCRUM-247 [AC1] TC-247-04: an edit that leaves the attendance alone doesn't count registrations", async () => {
+    const result = await updateEventDetails({
+      ...unchanged,
+      expectedAttendance: "60",
+      name: "Annual Gala 2036",
+    });
+
+    expect(result.ok).toBe(true);
+    expect(db.registration.count).not.toHaveBeenCalled();
   });
 });
 
