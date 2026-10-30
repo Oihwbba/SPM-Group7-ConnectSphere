@@ -145,6 +145,8 @@ test.describe("SCRUM-128 — Decide a change request and apply it in one step", 
       .getByTestId("change-request-decision")
       .getByRole("button", { name: "Approve" })
       .click();
+    // SCRUM-207 AC5: asked first, in the shared dialog.
+    await page.getByTestId("confirm-dialog-confirm").click();
     await expect(page.getByText("Change request approved and applied.")).toBeVisible();
 
     // It stays Confirmed and registration opens, as confirming would open it.
@@ -184,6 +186,8 @@ test.describe("SCRUM-128 — Decide a change request and apply it in one step", 
     );
 
     await decision.getByRole("button", { name: "Approve" }).click();
+    // SCRUM-207 AC5: asked first, in the shared dialog.
+    await page.getByTestId("confirm-dialog-confirm").click();
     await expect(
       page.getByText(
         "Change request approved. The event is back in Planning and its arrangements are flagged.",
@@ -226,10 +230,12 @@ test.describe("SCRUM-128 — Decide a change request and apply it in one step", 
     dialog = await openDetails(page, name);
     const decision = dialog.getByTestId("change-request-decision");
     await decision.getByRole("button", { name: "Reject" }).click();
-    const confirmReject = decision.getByRole("button", { name: "Reject change request" });
+    // SCRUM-207 AC5: the reason is asked for in the shared dialog.
+    const rejectDialog = page.getByRole("dialog", { name: "Reject this change request?" });
+    const confirmReject = rejectDialog.getByRole("button", { name: "Reject change request" });
     // Failure path (AC3): no reason, no rejection.
     await expect(confirmReject).toBeDisabled();
-    await decision.getByLabel("Reason for rejecting the change request").fill(REASON);
+    await rejectDialog.getByLabel("Reason for rejecting the change request").fill(REASON);
     await confirmReject.click();
     await expect(
       page.getByText("Change request rejected. The organiser has been told why."),
@@ -260,6 +266,7 @@ test.describe("SCRUM-128 — Decide a change request and apply it in one step", 
     );
 
     await decision.getByRole("button", { name: "Approve" }).click();
+    await page.getByTestId("confirm-dialog-confirm").click();
     await expect(
       page.getByText("Change request approved. The event is cancelled."),
     ).toBeVisible();
@@ -329,9 +336,12 @@ test.describe("SCRUM-128 — Decide a change request and apply it in one step", 
         : route.continue(),
     );
     await decision.getByRole("button", { name: "Approve" }).click();
+    await page.getByTestId("confirm-dialog-confirm").click();
+    // SCRUM-207 AC4, AC5: the failure is shown in the dialog, which stays open.
     await expect(
-      page.getByText("The decision couldn't be sent. If the request above isn't decided, try again."),
-    ).toBeVisible();
+      page.getByTestId("confirm-dialog-error"),
+    ).toHaveText("The decision couldn't be sent. If the request above isn't decided, try again.");
+    await page.getByTestId("confirm-dialog-cancel").click();
     expect((await prisma.event.findUniqueOrThrow({ where: { id: eventId } })).expectedAttendance).toBe(40);
     await page.unroute("**/events**");
     // The request list is read again after the failure; let that finish (it
@@ -346,7 +356,10 @@ test.describe("SCRUM-128 — Decide a change request and apply it in one step", 
       data: { status: "REJECTED", decidedById: "usr_coordinator", decidedAt: new Date(), decisionReason: "Decided in another tab." },
     });
     await decision.getByRole("button", { name: "Approve" }).click();
+    await page.getByTestId("confirm-dialog-confirm").click();
     await expect(page.getByText(/already Rejected; nothing was changed/)).toBeVisible();
+    // SCRUM-207 AC5: the refusal is read in the shared dialog; closing it reads the list again.
+    await page.getByTestId("confirm-dialog-cancel").click();
     await expect(dialog.getByTestId("change-request")).toHaveAttribute("data-status", "REJECTED");
     await expect(dialog.getByTestId("change-request-decision")).toHaveCount(0);
   });

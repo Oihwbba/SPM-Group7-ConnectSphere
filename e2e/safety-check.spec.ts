@@ -117,6 +117,8 @@ test.describe("SCRUM-166 — Operational safety check", () => {
     // AC3: Approve needs no note (SCRUM-211: the first of the three
     // decisions; the next waiting check then opens).
     await page.getByRole("button", { name: "Approve" }).click();
+    // SCRUM-207 AC5: asked first, in the shared dialog.
+    await page.getByTestId("confirm-dialog-confirm").click();
     await expect(
       page.getByText("Outcome recorded. The Coordinator has been notified."),
     ).toBeVisible();

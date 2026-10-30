@@ -44,14 +44,12 @@ import { ReviewDecision } from "@/components/events/review-decision";
 import { AppSelect } from "@/components/app/app-select";
 import { SubmittedDialog } from "@/components/app/submitted-dialog";
 import { discardDraftEvent, startRequestFromRejected } from "./actions";
+import { PageHeader } from "@/components/app/page-header";
+import { ActionError } from "@/components/app/action-error";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  ConfirmDialog,
+  type ConfirmOutcome,
+} from "@/components/app/confirm-dialog";
 
 interface EventsClientProps {
   events: Event[];
@@ -186,6 +184,8 @@ export function EventsClient({
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
   // Which row's Start New Request is in flight, so only that button says so.
   const [startingFrom, setStartingFrom] = useState<string | null>(null);
+  // SCRUM-207 AC4: an action on a row that failed, shown under the title.
+  const [listError, setListError] = useState<string | null>(null);
   // The draft just started from a rejection, opened once the refreshed list
   // has it. A request already submitted from it can't be edited, only found.
   const [draftToOpen, setDraftToOpen] = useState<string | null>(null);
@@ -225,10 +225,8 @@ export function EventsClient({
     startTransition(async () => {
       try {
         const result = await startRequestFromRejected({ eventId: event.id });
-        if (!result.ok) {
-          toast.error(result.error);
-          return;
-        }
+        setListError(result.ok ? null : result.error);
+        if (!result.ok) return;
         toast.success(
           result.data.created
             ? "A new draft was started from this request."
@@ -245,18 +243,13 @@ export function EventsClient({
     });
   }
 
-  // SCRUM-130 AC1: runs only after the confirmation dialog's Discard Draft.
-  function discardDraft(event: Event) {
-    startTransition(async () => {
-      const result = await discardDraftEvent({ eventId: event.id });
-      setDiscardingEvent(null);
-      if (result.ok) {
-        toast.success(`"${event.name}" was discarded.`);
-      } else {
-        toast.error(result.error);
-      }
-      router.refresh();
-    });
+  // SCRUM-130 AC1: runs only after the shared dialog's Discard Draft
+  // (SCRUM-207 AC5), which shows a refusal inside itself.
+  async function discardDraft(event: Event): Promise<ConfirmOutcome> {
+    const result = await discardDraftEvent({ eventId: event.id });
+    if (!result.ok) return result;
+    toast.success(`"${event.name}" was discarded.`);
+    router.refresh();
   }
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -406,29 +399,26 @@ export function EventsClient({
 
   return (
     <div className="space-y-4 md:space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-2 md:gap-3">
-        <div className="space-y-1">
-          <h1 className="text-xl font-semibold tracking-tight md:text-2xl">
-            {isCoordinator ? "Submitted Event Requests" : "My Events"}
-          </h1>
-          {/* Onboarding subtitle — hidden on phones to keep the header compact
-              and leave more room for the list. */}
-          <p className="hidden text-sm text-muted-foreground sm:block">
-            {isCoordinator
-              ? "Review submitted event requests requiring coordinator review and planning."
-              : "Create and track your event requests through their lifecycle."}
-          </p>
-        </div>
-        {!isCoordinator && (
-          <Button
-            className="h-8 gap-1.5 px-3 text-xs md:h-10 md:gap-2 md:px-4 md:text-sm"
-            onClick={() => setCreateDialogOpen(true)}
-          >
-            <Plus className="h-4 w-4" />
-            Create Event Request
-          </Button>
-        )}
-      </div>
+      <PageHeader
+        title={isCoordinator ? "Submitted Event Requests" : "My Events"}
+        description={
+          isCoordinator
+            ? "Review submitted event requests requiring coordinator review and planning."
+            : "Create and track your event requests through their lifecycle."
+        }
+        actions={
+          !isCoordinator && (
+            <Button
+              className="h-8 gap-1.5 px-3 text-xs md:h-10 md:gap-2 md:px-4 md:text-sm"
+              onClick={() => setCreateDialogOpen(true)}
+            >
+              <Plus className="h-4 w-4" />
+              Create Event Request
+            </Button>
+          )
+        }
+      />
+      <ActionError message={listError} />
 
       {/* Filter Tabs & Interactive Search Bar for SCRUM-84 AC6-AC9 */}
       {events.length > 0 && (
@@ -840,35 +830,24 @@ export function EventsClient({
       </SubmittedDialog>
 
       {/* SCRUM-130 AC1/AC2: nothing is discarded until this is confirmed. */}
-      <Dialog
+      <ConfirmDialog
         open={!!discardingEvent}
         onOpenChange={(open) => !open && setDiscardingEvent(null)}
-      >
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Discard this draft?</DialogTitle>
-            <DialogDescription>
-              &ldquo;{discardingEvent?.name}&rdquo; will be removed from your
-              events. A discarded draft can&rsquo;t be reopened.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="secondary"
-              onClick={() => setDiscardingEvent(null)}
-            >
-              Keep Draft
-            </Button>
-            <Button
-              variant="destructive"
-              disabled={isPending}
-              onClick={() => discardingEvent && discardDraft(discardingEvent)}
-            >
-              {isPending ? "Discarding…" : "Discard Draft"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        title="Discard this draft?"
+        message={
+          <>
+            &ldquo;{discardingEvent?.name}&rdquo; will be removed from your
+            events. A discarded draft can&rsquo;t be reopened.
+          </>
+        }
+        confirmLabel="Discard Draft"
+        pendingLabel="Discarding…"
+        cancelLabel="Keep Draft"
+        destructive
+        onConfirm={async () =>
+          discardingEvent ? discardDraft(discardingEvent) : undefined
+        }
+      />
     </div>
   );
 }

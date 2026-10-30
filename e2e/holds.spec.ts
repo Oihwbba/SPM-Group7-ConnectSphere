@@ -234,6 +234,8 @@ test.describe("SCRUM-163 — Hold a venue tentatively until a deadline", () => {
     await expect(venueItem).toContainText(`${heldUntil} – confirm to secure`);
 
     await venueItem.getByRole("button", { name: "Release hold" }).click();
+    // SCRUM-207 AC5: asked first, in the shared dialog.
+    await coordinator.getByTestId("confirm-dialog-confirm").click();
 
     await expect(venueItem).toContainText("Not requested");
     expect(

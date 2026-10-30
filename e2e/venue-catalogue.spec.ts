@@ -267,7 +267,7 @@ test.describe("SCRUM-34 — browse and maintain the venue catalogue", () => {
     await staff.getByRole("button", { name: "Retire venue" }).click();
     const retire = staff.getByRole("dialog", { name: `Retire ${name}?` });
     await retire.getByRole("button", { name: "Retire venue" }).click();
-    await expect(retire.getByTestId("retire-error")).toContainText("Nothing is retired yet");
+    await expect(retire.getByTestId("confirm-dialog-error")).toContainText("Nothing is retired yet");
     await expect(retire.getByTestId("affected-bookings")).toContainText("(Approved)");
     expect((await prisma.venue.findUniqueOrThrow({ where: { id: venue.id } })).isActive).toBe(true);
 
