@@ -500,35 +500,47 @@ test.describe("SCRUM-211 — One layout for every work queue", () => {
       );
     });
 
-    test("SCRUM-211 [AC3, AC4] TC-211-06, TC-211-07, TC-211-08: in review, Approve, Suggest alternative, Reject in that order; each decision opens the next, until all are caught up", async ({
+    test("SCRUM-211 [AC3] TC-211-06, TC-211-16, TC-211-18: in review, Approve, Suggest alternative, Reject side by side; approving or rejecting ends in the pop-up, which leads back to the list or stays on the request, now decided", async ({
       browser,
     }) => {
       const page = await signedIn(browser, "techsupport@test.local");
-      await searchFor(page, "/equipment-requests", P);
-      await rows(page).first().getByRole("link").click();
+      const done = page.getByTestId("decision-done");
 
-      for (const [now, next] of [
-        [A, B],
-        [B, C],
-        [C, null],
-      ] as const) {
-        await expectOpened(page, now);
+      for (const name of [A, B, C]) {
+        await searchFor(page, "/equipment-requests", P);
+        await rows(page).filter({ hasText: name }).getByRole("link").click();
+        await expectOpened(page, name);
         // Starting the review keeps the request open, as before.
         await page.getByRole("button", { name: "Start review" }).click();
         await expect(page.getByTestId("queue-details").getByTestId("request-status")).toHaveText(
           "In Review",
         );
         expect(await decisionButtons(page)).toEqual(["Approve", "Suggest alternative", "Reject"]);
-        if (now === B) {
+        if (name === B) {
           await page.getByLabel("Note for the coordinator").fill("No microphones that day.");
           await page.getByRole("button", { name: "Reject" }).click();
           await page.getByRole("button", { name: "Reject request" }).click();
+          await expect(done.getByRole("heading", { name: "Request rejected" })).toBeVisible();
         } else {
           await page.getByRole("button", { name: "Approve" }).click();
+          await expect(done.getByRole("heading", { name: "Request approved" })).toBeVisible();
         }
-        if (next) await expectOpened(page, next);
+        if (name === A) {
+          // View this request: it stays open, decided, its buttons disabled.
+          await done.getByRole("button", { name: "View this request" }).click();
+          await expect(done).toHaveCount(0);
+          await expectOpened(page, A);
+          await expect(page.getByTestId("decided-note")).toContainText("Approved");
+          for (const button of await page.getByTestId("review-decision").getByRole("button").all()) {
+            await expect(button).toBeDisabled();
+          }
+        } else {
+          await done.getByRole("button", { name: "Back to equipment requests" }).click();
+          await expect(page.getByTestId("queue-item-name")).toHaveCount(0);
+        }
       }
-      await expectCaughtUp(page);
+      // Back to the list as it was searched: none of these is waiting now.
+      await expect(page.getByTestId("queue-empty")).toHaveAttribute("data-reason", "search");
       const decided = await prisma.equipmentRequest.findMany({
         where: { event: { name: { in: [A, B, C] } } },
         select: { status: true, event: { select: { name: true } } },

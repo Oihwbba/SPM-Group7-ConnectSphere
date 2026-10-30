@@ -81,7 +81,7 @@ export default async function EquipmentRequestsPage({
         before={switcher}
         detail={open && <ReviewDetails request={open} />}
         decision={
-          open && <ReviewDecision request={open} nextHref={state.nextHref} />
+          open && <ReviewDecision request={open} listHref={state.listHref} />
         }
       />
     );

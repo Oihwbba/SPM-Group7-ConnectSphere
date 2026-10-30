@@ -140,12 +140,14 @@ test.describe("SCRUM-28 — Review and Update Equipment Request", () => {
       .getByLabel("Note for the coordinator")
       .fill("Lecterns swapped for laptops.");
     await request.getByRole("button", { name: "Approve" }).click();
+    const done = page.getByTestId("decision-done");
     await expect(
-      page.getByText("Request approved. The coordinator has been notified."),
+      done.getByText("Request approved. The coordinator has been notified."),
     ).toBeVisible();
 
-    // SCRUM-211 AC4: the request leaves the page for the next one; it is
-    // under Decided, with its history.
+    // SCRUM-211: the pop-up leads back to the list; the request is under
+    // Decided, with its history.
+    await done.getByRole("button", { name: "Back to equipment requests" }).click();
     await expect(request).toHaveCount(0);
     await page.getByRole("link", { name: "Decided", exact: true }).click();
     await page.waitForURL(/status=decided/);

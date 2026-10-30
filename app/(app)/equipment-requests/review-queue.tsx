@@ -24,6 +24,7 @@ import {
   ConfirmDialog,
   type ConfirmOutcome,
 } from "@/components/app/confirm-dialog";
+import { SubmittedDialog } from "@/components/app/submitted-dialog";
 import {
   DECISION_BUTTON,
   DECISION_PANEL,
@@ -118,16 +119,21 @@ export function ReviewDetails({
  * item. A request waiting for review is started first, as before (the
  * coordinator sees it is In Review). In review, the buttons come in the order
  * every queue uses: Approve, Suggest alternative, Reject. Reject asks first;
- * its note stays required. Once approved or rejected, the next waiting
- * request opens; a refusal is shown here and the request stays open.
+ * its note stays required. Approving or rejecting ends in a pop-up that leads
+ * back to the list (`listHref`) or stays on this request, which then shows
+ * its status with the buttons disabled; a refusal is shown here and the
+ * request stays open.
  */
 export function ReviewDecision({
   request,
-  nextHref,
+  listHref,
 }: {
   request: QueuedEquipmentRequest;
-  nextHref: string;
+  listHref: string;
 }) {
+  // The pop-up after an approval or a rejection. The same component shows the
+  // request once decided, so it outlives the refresh.
+  const [outcome, setOutcome] = useState<"APPROVED" | "REJECTED" | null>(null);
   const [note, setNote] = useState("");
   const [noteError, setNoteError] = useState<string | null>(null);
   const [refusal, setRefusal] = useState<string | null>(null);
@@ -138,17 +144,7 @@ export function ReviewDecision({
   const noteId = `note-${request.id}`;
   const shortLines = request.lines.filter((line) => line.review?.shortfall);
 
-  if (!isOpenRequest(request)) {
-    return (
-      <div className={DECISION_PANEL}>
-        <h2 className="text-sm font-semibold">Decided</h2>
-        <p className="text-sm text-muted-foreground" data-testid="decided-note">
-          {EQUIPMENT_REQUEST_STATUS_LABEL[request.status]}
-          {request.decidedAt && ` on ${formatDateTime(request.decidedAt)}`}.
-        </p>
-      </div>
-    );
-  }
+  const decided = !isOpenRequest(request);
 
   // The reject dialog (SCRUM-207 AC5) awaits this. A refusal is shown on the
   // page, next to the note it concerns, so the dialog closes; only a request
@@ -170,12 +166,13 @@ export function ReviewDecision({
         router.refresh();
         return;
       }
-      toast.success(DONE_MESSAGE[toStatus]);
       setNote("");
       setNoteError(null);
       setRefusal(null);
-      if (toStatus === "IN_REVIEW") router.refresh();
-      else router.push(nextHref);
+      if (toStatus === "IN_REVIEW") toast.success(DONE_MESSAGE[toStatus]);
+      else setOutcome(toStatus);
+      // This request, as it now stands.
+      router.refresh();
     } catch {
       toast.error(OFFLINE);
       return { ok: false, error: OFFLINE };
@@ -189,7 +186,15 @@ export function ReviewDecision({
 
   return (
     <div className={DECISION_PANEL} data-testid="review-decision">
-      <h2 className="text-sm font-semibold">Decision</h2>
+      <h2 className="text-sm font-semibold">
+        {decided ? "Decided" : "Decision"}
+      </h2>
+      {decided && (
+        <p className="text-sm text-muted-foreground" data-testid="decided-note">
+          {EQUIPMENT_REQUEST_STATUS_LABEL[request.status]}
+          {request.decidedAt && ` on ${formatDateTime(request.decidedAt)}`}.
+        </p>
+      )}
       {refusal && (
         <p
           role="alert"
@@ -199,7 +204,7 @@ export function ReviewDecision({
           {refusal}
         </p>
       )}
-      {request.status === "PENDING_REVIEW" ? (
+      {!decided && request.status === "PENDING_REVIEW" ? (
         <>
           <Button
             onClick={() => move("IN_REVIEW")}
@@ -215,31 +220,33 @@ export function ReviewDecision({
         </>
       ) : (
         <>
-          <div className="space-y-1">
-            <Label htmlFor={noteId}>Note for the coordinator</Label>
-            <Textarea
-              id={noteId}
-              rows={3}
-              value={note}
-              placeholder="Required when rejecting: say why, so they can adjust the request."
-              aria-invalid={Boolean(noteError)}
-              aria-describedby={noteError ? `${noteId}-error` : undefined}
-              onChange={(e) => {
-                setNote(e.target.value);
-                setNoteError(null);
-              }}
-            />
-            {noteError && (
-              <p id={`${noteId}-error`} className="text-xs text-destructive">
-                {noteError}
-              </p>
-            )}
-          </div>
+          {!decided && (
+            <div className="space-y-1">
+              <Label htmlFor={noteId}>Note for the coordinator</Label>
+              <Textarea
+                id={noteId}
+                rows={3}
+                value={note}
+                placeholder="Required when rejecting: say why, so they can adjust the request."
+                aria-invalid={Boolean(noteError)}
+                aria-describedby={noteError ? `${noteId}-error` : undefined}
+                onChange={(e) => {
+                  setNote(e.target.value);
+                  setNoteError(null);
+                }}
+              />
+              {noteError && (
+                <p id={`${noteId}-error`} className="text-xs text-destructive">
+                  {noteError}
+                </p>
+              )}
+            </div>
+          )}
           <div className={DECISION_ROW}>
             <Button
               variant="outline"
               onClick={() => move("APPROVED")}
-              disabled={pending}
+              disabled={pending || decided}
               className={DECISION_BUTTON.positive}
             >
               {pending ? <Loader2 className="animate-spin" /> : <Check />}
@@ -248,7 +255,7 @@ export function ReviewDecision({
             <Button
               variant="outline"
               onClick={() => setSuggesting(true)}
-              disabled={pending || shortLines.length === 0}
+              disabled={pending || decided || shortLines.length === 0}
               title={
                 shortLines.length === 0 ? "Every line is available." : undefined
               }
@@ -260,7 +267,7 @@ export function ReviewDecision({
             <Button
               variant="outline"
               onClick={() => setRejecting(true)}
-              disabled={pending}
+              disabled={pending || decided}
               className={DECISION_BUTTON.negative}
             >
               <X />
@@ -284,6 +291,21 @@ export function ReviewDecision({
         destructive
         onConfirm={() => moveNow("REJECTED")}
       />
+
+      <SubmittedDialog
+        open={outcome !== null}
+        title={outcome === "REJECTED" ? "Request rejected" : "Request approved"}
+        onClose={() => setOutcome(null)}
+        closeLabel="View this request"
+        action={{
+          label: "Back to equipment requests",
+          onClick: () => router.push(listHref),
+          prominent: true,
+        }}
+        testId="decision-done"
+      >
+        {outcome && DONE_MESSAGE[outcome]}
+      </SubmittedDialog>
 
       <Dialog open={suggesting} onOpenChange={setSuggesting}>
         <DialogContent className="max-w-lg">
