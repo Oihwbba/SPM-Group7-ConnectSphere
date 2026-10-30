@@ -545,32 +545,23 @@ describe.skipIf(!usesLocalDatabase)(
       });
 
       it("SCRUM-50 TC-50-09: the form offers only approved events the coordinator may act on, exactly as can() allows", async () => {
-        const before = new Date();
         const offered = await getBookableEvents("usr_coordinator");
-        const ids = offered.map((e) => e.id);
 
-        expect(ids).toEqual(
+        expect(offered.map((e) => e.id)).toEqual(
           expect.arrayContaining([APPROVED_EVENT, PLANNING_EVENT]),
         );
-        // Other suites run alongside and may confirm one of these events
-        // after the list was read; only rows unchanged since then are judged.
-        const rows = await prisma.event.findMany({
-          where: { id: { in: ids }, updatedAt: { lt: before } },
-          select: {
-            id: true,
-            organiserId: true,
-            coordinatorId: true,
-            status: true,
-          },
-        });
-        expect(rows.map((row) => row.id)).toEqual(
-          expect.arrayContaining([APPROVED_EVENT, PLANNING_EVENT]),
-        );
-        for (const row of rows) {
+        // Judged as the form read them: other files running alongside may
+        // confirm one of these events afterwards.
+        for (const { organiserId, coordinatorId, status } of offered) {
           expect(
-            can(COORDINATOR.user, "booking:request", { kind: "event", ...row }),
+            can(COORDINATOR.user, "booking:request", {
+              kind: "event",
+              organiserId,
+              coordinatorId,
+              status,
+            }),
           ).toBe(true);
-          expect(["APPROVED", "PLANNING"]).toContain(row.status);
+          expect(["APPROVED", "PLANNING"]).toContain(status);
         }
 
         // Another coordinator is never offered usr_coordinator's events.
