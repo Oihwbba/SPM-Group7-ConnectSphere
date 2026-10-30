@@ -51,9 +51,7 @@ type CapacityInput = Pick<Event, "expectedAttendance">;
 
 /**
  * SCRUM-73/74: "the event's expected attendance IS the registration
- * capacity; there is no separate attendee-capacity value." Deliberately does
- * NOT read `Event.registrationCapacity` — that column predates this
- * clarification and must not be treated as a second source of truth.
+ * capacity; there is no separate attendee-capacity value."
  */
 export function totalCapacity(event: CapacityInput): number {
   return event.expectedAttendance ?? 0;

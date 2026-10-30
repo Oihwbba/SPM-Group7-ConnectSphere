@@ -65,6 +65,9 @@ enum EventStatus {
   DRAFT
   SUBMITTED
   UNDER_REVIEW
+  /// A name in an event's history only: approval moves an event straight to
+  /// Planning, and no event is stored as Approved (SCRUM-135 AC12, CHECK
+  /// event_never_rests_approved).
   APPROVED
   PLANNING
   CONFIRMED
@@ -389,7 +392,10 @@ model Event {
   // SCRUM-72/73/74/75 — registration is per-event and explicitly NOT assumed
   // to equal the venue's capacity (SCRUM-74's last criterion).
   registrationEnabled  Boolean   @default(false)
-  registrationCapacity Int?
+  /// Predates SCRUM-73/74: the expected attendance is the registration
+  /// capacity. No longer read or written (SCRUM-254 AC4); the column is
+  /// dropped in a later migration, once no deployed build selects it.
+  registrationCapacity Int?      @ignore
   registrationOpensAt  DateTime?
   registrationClosesAt DateTime?
 

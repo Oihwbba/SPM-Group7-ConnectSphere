@@ -476,7 +476,6 @@ async function seedEvents() {
       decidedById: U.coordinator,
       registrationEnabled: true,
       // SCRUM-74: the capacity is the expected attendance (SCRUM-233).
-      registrationCapacity: 120,
       registrationOpensAt: at(-7, 0),
       registrationClosesAt: at(9, 12),
     },
@@ -498,7 +497,6 @@ async function seedEvents() {
       // SCRUM-73, SCRUM-75: its registration was taken while open, after
       // approval and before the start; completing leaves it enabled (SCRUM-233).
       registrationEnabled: true,
-      registrationCapacity: 90,
       registrationOpensAt: at(-50, 0),
       registrationClosesAt: at(-31, 12),
       completedAt: at(-30, 11),
@@ -519,7 +517,6 @@ async function seedEvents() {
       coordinatorId: U.coordinator,
       ...approvedBy(-15),
       registrationEnabled: true,
-      registrationCapacity: 40,
       registrationOpensAt: at(-11, 0),
       registrationClosesAt: at(CANCELLED_DAY - 1, 12),
       cancelledAt: at(-1, 3),
@@ -565,7 +562,6 @@ async function seedEvents() {
       ...approvedBy(-12),
       ...noEquipment(-8),
       registrationEnabled: true,
-      registrationCapacity: 3,
       registrationOpensAt: at(-5, 0),
       registrationClosesAt: at(11, 12),
     },
@@ -585,7 +581,6 @@ async function seedEvents() {
       ...approvedBy(-12),
       ...noEquipment(-8),
       registrationEnabled: true,
-      registrationCapacity: 3,
       registrationOpensAt: at(-5, 0),
       registrationClosesAt: at(13, 12),
     },
@@ -604,7 +599,6 @@ async function seedEvents() {
       ...approvedBy(-10),
       ...noEquipment(-6),
       registrationEnabled: true,
-      registrationCapacity: 80,
       registrationOpensAt: at(7, 0),
       registrationClosesAt: at(44, 12),
     },
@@ -623,7 +617,6 @@ async function seedEvents() {
       ...approvedBy(-26),
       ...noEquipment(-22),
       registrationEnabled: true,
-      registrationCapacity: 30,
       registrationOpensAt: at(-20, 0),
       registrationClosesAt: at(-1, 12),
     },
@@ -1248,7 +1241,6 @@ async function seedWorkflowEvents() {
       ...noEquipment,
       registrationRequired: true,
       registrationEnabled: true,
-      registrationCapacity: 250,
       registrationOpensAt: at(-3, 0),
       registrationClosesAt: at(WD.cancellationRequested - 1, 12),
     },
@@ -1256,7 +1248,7 @@ async function seedWorkflowEvents() {
     { id: W.noRegistration, name: "No Registration — Staff Appreciation Lunch", description: "Confirmed, by invitation only.", status: EventStatus.CONFIRMED, ...planned(U.coordinator, WD.noRegistration, 80), ...noEquipment, registrationRequired: false, registrationEnabled: false },
     // SCRUM-85 AC9: confirmed, then re-planned after a change; Attendees still
     // see the last confirmed details.
-    { id: W.replanning, name: "Re-planning — Jazz Night", description: "A change moved it back into planning after it was confirmed.", status: EventStatus.PLANNING, ...planned(U.coordinator, WD.replanning, 150), registrationRequired: true, registrationEnabled: true, registrationCapacity: 150, registrationOpensAt: at(-10, 0), registrationClosesAt: at(WD.replanning - 1, 12) },
+    { id: W.replanning, name: "Re-planning — Jazz Night", description: "A change moved it back into planning after it was confirmed.", status: EventStatus.PLANNING, ...planned(U.coordinator, WD.replanning, 150), registrationRequired: true, registrationEnabled: true, registrationOpensAt: at(-10, 0), registrationClosesAt: at(WD.replanning - 1, 12) },
     // SCRUM-15/16: a complete draft, ready to submit.
     { id: W.draftReady, name: "Draft Ready — Graduate Research Showcase", description: "Every field filled in; ready to submit.", status: EventStatus.DRAFT, ...common, ...workday(WD.draftReady), expectedAttendance: 100 },
     // SCRUM-17: a discarded draft, no longer listed.

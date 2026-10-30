@@ -80,7 +80,7 @@ export async function getEventPageData(
       prisma.reservation.count({
         where: { eventId, needsReconsideration: true, status: "CONFIRMED" },
       }),
-      event.status === "PLANNING" || event.status === "APPROVED"
+      event.status === "PLANNING"
         ? getReadinessChecklist(prisma, eventId, now)
         : null,
       event.status === "CANCELLED"

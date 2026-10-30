@@ -150,7 +150,7 @@ export function EventPage({
       content: ARRANGEMENT_STATUSES.includes(event.status) ? (
         <div className="space-y-4">
           {/* SCRUM-110: venue, equipment and the safety check, in that order. */}
-          {(event.status === "PLANNING" || event.status === "APPROVED") && (
+          {event.status === "PLANNING" && (
             <ReadinessChecklist
               key={`checklist-${reloads}`}
               eventId={event.id}

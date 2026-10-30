@@ -256,7 +256,6 @@ export function nextStep(facts: NextStepFacts): NextStep {
             text: `Waiting for ${coordinator(facts)} to review the request`,
             tab: null,
           };
-    case "APPROVED":
     case "PLANNING":
       return planningStep(facts);
     case "CONFIRMED":
@@ -276,7 +275,6 @@ export function defaultTab(step: NextStep): EventTab {
 
 /** AC3: Arrangements start once the request is approved. */
 export const ARRANGEMENT_STATUSES: EventStatus[] = [
-  "APPROVED",
   "PLANNING",
   "CONFIRMED",
   "COMPLETED",

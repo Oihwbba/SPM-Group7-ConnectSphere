@@ -44,15 +44,16 @@ export const EVENT_STATUS_LABEL: Record<EventStatus, string> = {
  * - Rejected → Submitted only when the outcome was Amend and resubmit (AC6,
  *   AC13).
  * - Completed and Cancelled are final (AC13).
- * - Approved is never a resting status (AC12). A row left Approved from before
- *   approval moved straight to Planning can still be cancelled, so it isn't
- *   stuck holding its arrangements; no action moves it on to Planning.
+ * - Approved is never a resting status (AC12): no move leads into or out of
+ *   it, and the database refuses an event stored as Approved
+ *   (event_never_rests_approved, SCRUM-254). It is still a name in an
+ *   event's history.
  */
 const NEXT: Record<EventStatus, readonly EventStatus[]> = {
   DRAFT: ["SUBMITTED"],
   SUBMITTED: ["UNDER_REVIEW"],
   UNDER_REVIEW: ["PLANNING", "REJECTED", "CANCELLED"],
-  APPROVED: ["CANCELLED"],
+  APPROVED: [],
   PLANNING: ["CONFIRMED", "REJECTED", "CANCELLED"],
   CONFIRMED: ["PLANNING", "CANCELLED", "COMPLETED"],
   REJECTED: ["SUBMITTED"],
