@@ -51,6 +51,24 @@ export function describeDay(day: OpeningDay): string {
   return `${WEEKDAYS[day.weekday - 1]} ${describeHours(day)}`;
 }
 
+/**
+ * SCRUM-246 AC2 — a venue's week as the request form lists it: every day,
+ * Monday first, in `describeDay`'s words, a day with no row Closed (as
+ * `closedOn` reads it). Nothing for a venue with no hours recorded.
+ */
+export function describeWeek(hours: OpeningDay[]): string[] {
+  if (hours.length === 0) return [];
+  return WEEKDAYS.map((_, i) =>
+    describeDay(
+      hours.find((h) => h.weekday === i + 1) ?? {
+        weekday: i + 1,
+        opensMinute: null,
+        closesMinute: null,
+      },
+    ),
+  );
+}
+
 /** The SGT weekday (1–7) and midnight, as an instant, of the day `at` falls on. */
 function sgDay(at: Date): { weekday: number; midnight: number } {
   const shifted = new Date(at.getTime() + SG_OFFSET_MS);

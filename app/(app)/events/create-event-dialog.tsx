@@ -232,6 +232,7 @@ export function CreateEventDialog({
       name: string;
       capacity: number;
       facilities: string[];
+      hours: string[];
     }[];
     equipment: { id: string; type: string; totalQuantity: number }[];
     options: VenueOptions;
@@ -758,10 +759,24 @@ export function CreateEventDialog({
                 placeholder="Select venues"
                 options={catalogues.venues.map((v) => ({
                   value: v.name,
+                  // SCRUM-246 AC2: its hours too, so a closed day shows now
+                  // rather than as a refused booking in Planning.
                   label: (
-                    <span className="flex w-full items-center justify-between gap-3">
-                      {v.name}
-                      <CapacityTag capacity={v.capacity} />
+                    <span className="flex w-full flex-col gap-1">
+                      <span className="flex items-center justify-between gap-3">
+                        {v.name}
+                        <CapacityTag capacity={v.capacity} />
+                      </span>
+                      {v.hours.length > 0 && (
+                        <span
+                          data-testid="venue-hours"
+                          className="grid gap-x-4 text-xs text-muted-foreground sm:grid-flow-col sm:grid-rows-4"
+                        >
+                          {v.hours.map((day) => (
+                            <span key={day}>{day}</span>
+                          ))}
+                        </span>
+                      )}
                     </span>
                   ),
                 }))}
@@ -865,13 +880,15 @@ export function CreateEventDialog({
               <PillSelect
                 id="equipmentRequirements"
                 placeholder="Select equipment"
+                // SCRUM-246 AC1: the total held, not what is free on the
+                // event's dates, which depends on reservations.
                 options={catalogues.equipment.map((eq) => ({
                   value: eq.type,
                   label: (
                     <span className="flex w-full items-center justify-between gap-3">
                       {eq.type}
                       <span className="text-xs text-muted-foreground">
-                        {eq.totalQuantity} available
+                        {eq.totalQuantity} in stock
                       </span>
                     </span>
                   ),
