@@ -111,9 +111,9 @@ SCRUM-40's suitability. AC12's warning is SCRUM-159 AC9.
 | Test Case ID | TC-34-08 |
 | Test Scenario | [Negative] [Boundary] AC 7: a venue request outside opening hours |
 | Pre-conditions | Signed in as a Coordinator; Executive Boardroom (09:00–18:00 weekdays, Closed weekends). |
-| Test Steps | 1. Request it for a weekday 09:00–18:00. <br> 2. For 08:30–12:00, 15:00–18:30, a Saturday, or 17:00 to 01:00 the next day. <br> 3. Request a venue with no hours recorded at 03:00. |
+| Test Steps | 1. Request it for a weekday 09:00–18:00. <br> 2. For 08:30–12:00, 15:00–18:30, a Saturday, or 17:00 to 01:00 the next day. |
 | Test Data | — |
-| Expected Result | 1 is accepted: exactly at opening and closing is within. 2 is refused with that day's hours, e.g. "Executive Boardroom is open 09:00–18:00 on Tuesdays. The booking must start and end within those hours on the same day." or "Executive Boardroom is closed on Saturdays, so it can't be booked then."; no booking is written, and the form's availability check says the same, with Submit disabled. 3 is accepted. Every seeded Pending, Held or Approved booking is within its venue's hours, whatever day the seed runs. |
+| Expected Result | 1 is accepted: exactly at opening and closing is within. 2 is refused with that day's hours, e.g. "Executive Boardroom is open 09:00–18:00 on Tuesdays. The booking must start and end within those hours on the same day." or "Executive Boardroom is closed on Saturdays, so it can't be booked then."; no booking is written, and the form's availability check says the same, with Submit disabled. Every seeded Pending, Held or Approved booking is within its venue's hours, whatever day the seed runs. |
 
 **Automated by:** `tests/unit/venue-hours.test.ts` › "SCRUM-34 [AC7] TC-34-08: …"; `tests/integration/venue-catalogue.test.ts` › "SCRUM-34 [AC7] TC-34-08: …"; `e2e/venue-catalogue.spec.ts` › "SCRUM-34 [AC7] TC-34-08: the request form refuses a period outside the venue's opening hours, naming them, and accepts one exactly within them"
 
@@ -230,7 +230,7 @@ SCRUM-40's suitability. AC12's warning is SCRUM-159 AC9.
 | Pre-conditions | A database with every migration before `20261015120000_venue_opening_hours`, and venues whose hours are "Mon–Sun 07:00–23:00", "Mon–Fri 09:00–18:00", "By arrangement" or none. |
 | Test Steps | 1. Run the migration. |
 | Test Data | — |
-| Expected Result | The Mon–Sun venue opens 07:00–23:00 every day. The Mon–Fri venue opens 09:00–18:00 on weekdays and is Closed at weekends. The other two have no hours recorded, so no booking is refused for them. The free-text column is kept, with its text. |
+| Expected Result | The Mon–Sun venue opens 07:00–23:00 every day. The Mon–Fri venue opens 09:00–18:00 on weekdays and is Closed at weekends. The other two are left with no hours rows; SCRUM-253's migration then gives them 00:00–23:59 every day ([TC-253-01](SCRUM-253.md#tc-253-01)). The free-text column is kept, with its text. |
 
 **Automated by:** `tests/integration/venue-opening-hours-migration.test.ts` › "SCRUM-34 [AC3] TC-34-17: …"
 
@@ -262,16 +262,9 @@ SCRUM-40's suitability. AC12's warning is SCRUM-159 AC9.
 
 ### TC-34-20
 
-| Item | Content |
-|---|---|
-| Test Case ID | TC-34-20 |
-| Test Scenario | [Negative] AC 3: editing a venue whose opening hours were never recorded |
-| Pre-conditions | Signed in as Venue Staff; a venue added before SCRUM-34, with no opening hours. |
-| Test Steps | 1. Open it and choose Edit venue. <br> 2. Change only its capacity. Save. |
-| Test Data | `venuestaff@test.local` |
-| Expected Result | 1: the dialog says "This venue's opening hours aren't recorded yet. Enter them for each day, or mark the day Closed.", and every day is blank, not 09:00–18:00. 2: refused against each day with "Enter an opening and a closing time, or mark the day Closed."; the capacity and the hours are unchanged, so no hours anyone didn't choose start refusing bookings (AC7). |
+**Superseded** on 30 Oct 2026 by SCRUM-253 AC 1 and AC 2 ([TC-253-01](SCRUM-253.md#tc-253-01), [TC-253-04](SCRUM-253.md#tc-253-04)). Editing a venue whose opening hours were never recorded asked for them, with every day blank, rather than saving 09:00–18:00. No venue is without hours any more: the migration gave those venues 00:00–23:59 every day, which the form shows and saves like any other hours, and the database refuses a venue without its seven days.
 
-**Automated by:** `e2e/venue-catalogue.spec.ts` › "SCRUM-34 [AC3] TC-34-20: editing a venue whose hours were never recorded asks for them instead of saving 09:00–18:00"
+**Automated by** (SCRUM-253's tests): `tests/integration/every-venue-has-hours.test.ts` › "SCRUM-253 [AC1] TC-253-01: a venue with no hours gets 00:00–23:59 on all seven days" and "SCRUM-253 [AC2] TC-253-04: …"
 
 ### TC-34-21
 

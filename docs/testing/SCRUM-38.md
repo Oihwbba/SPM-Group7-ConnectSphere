@@ -247,7 +247,7 @@ SCRUM-40's reasons. Opened from an event, the Coordinator's own judgement
 | Pre-conditions | SCRUM-34's opening hours; a venue open 09:00 to 18:00 on weekdays and Closed at weekends; seeded venues. |
 | Test Steps | 1. Search a Tuesday 15:00 to 18:01. <br> 2. 08:59 to 12:00. <br> 3. 09:00 to 18:00. <br> 4. A Saturday 10:00 to 12:00. <br> 5. Seeded venues, a Tuesday 07:30 to 09:00. |
 | Test Data | — |
-| Expected Result | 1, 2, 4: excluded. 3: included: exactly at opening and closing is within (SCRUM-34 AC7). A venue with no hours recorded is included in every case. 5: Exhibition Hall (opens 06:00) and Grand Auditorium (07:00); not Seminar Room 2.1 (08:00) or the Executive Boardroom (09:00). |
+| Expected Result | 1, 2, 4: excluded. 3: included: exactly at opening and closing is within (SCRUM-34 AC7). A venue open 00:00–23:59 every day, as SCRUM-253 gave old venues that had no hours, is included in 1 to 4. 5: Exhibition Hall (opens 06:00) and Grand Auditorium (07:00); not Seminar Room 2.1 (08:00) or the Executive Boardroom (09:00). |
 
 **Automated by:** `tests/unit/venue-search.test.ts` › "SCRUM-38 [AC4] TC-38-15: …"; `tests/integration/venue-search.test.ts` › "SCRUM-38 [AC4, AC15] TC-38-15, TC-38-16: …"; `e2e/venue-search.spec.ts` › "SCRUM-38 [AC4, AC15] TC-38-15, TC-38-20: …"
 

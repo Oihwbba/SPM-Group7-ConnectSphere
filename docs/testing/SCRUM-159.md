@@ -294,10 +294,10 @@ are signed in as `coordinator@test.local`, approvals as
 | Item | Content |
 |---|---|
 | Test Case ID | TC-159-19 |
-| Test Scenario | [Boundary, Negative] AC 9: no warning when setup and turnaround fit exactly, when no hours are recorded, or when the booking itself is outside the hours |
+| Test Scenario | [Boundary, Negative] AC 9: no warning when setup and turnaround fit exactly, or when the booking itself is outside the hours |
 | Pre-conditions | The venue is open 09:00–18:00 on weekdays and Closed at weekends, with 30 and 45 minutes. |
-| Test Steps | Read the warning for: 1. Tuesday 09:30–17:15. <br> 2. The same at a venue with no hours recorded. <br> 3. Saturday 10:00–12:00. |
+| Test Steps | Read the warning for: 1. Tuesday 09:30–17:15. <br> 2. Saturday 10:00–12:00. |
 | Test Data | — |
-| Expected Result | No warning in each case. 1. Setup ends exactly at opening and turnaround exactly at closing. 3. The request is refused instead (SCRUM-34 AC7). |
+| Expected Result | No warning in each case. 1. Setup ends exactly at opening and turnaround exactly at closing. 2. The request is refused instead (SCRUM-34 AC7). Every venue has hours (SCRUM-253), so there is no case without them. |
 
 **Automated by:** `tests/unit/venue-hours.test.ts` › "SCRUM-159 [AC9] TC-159-19: …" (2 tests)
