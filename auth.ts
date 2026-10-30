@@ -8,6 +8,14 @@ import { authConfig } from "@/auth.config";
 import { loginSchema } from "@/lib/schemas/auth";
 
 /**
+ * SCRUM-255 — the hash a password is compared against when the email has no
+ * account, so an unknown email is refused as slowly as a wrong password and
+ * the timing doesn't tell which accounts exist. Made once, from a random
+ * value, at the seed's cost (10); no password can match it.
+ */
+const DUMMY_PASSWORD_HASH = bcrypt.hashSync(crypto.randomUUID(), 10);
+
+/**
  * Node-runtime Auth.js instance. This is where Prisma and bcrypt live, so it
  * must never be imported into middleware (use auth.config.ts there instead).
  *
@@ -33,15 +41,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         const { email, password } = parsed.data;
         const user = await prisma.user.findUnique({ where: { email } });
-        if (!user) {
-          return null;
-        }
-
+        // SCRUM-255: compare even when there is no account, so an unknown
+        // email takes as long to refuse as a wrong password.
         const passwordMatches = await bcrypt.compare(
           password,
-          user.passwordHash,
+          user?.passwordHash ?? DUMMY_PASSWORD_HASH,
         );
-        if (!passwordMatches) {
+        if (!user || !passwordMatches) {
           return null;
         }
 
