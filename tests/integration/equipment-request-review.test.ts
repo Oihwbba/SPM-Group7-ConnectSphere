@@ -43,11 +43,14 @@ const usesLocalDatabase = /@(localhost|127\.0\.0\.1)[:/]/.test(
   process.env.DATABASE_URL ?? "",
 );
 
-// Seeded accounts, event and equipment (prisma/seed.ts). Lectern has 4 units
-// and nothing seeded against it.
+// Seeded accounts and equipment (prisma/seed.ts). Lectern has 4 units and
+// nothing seeded against it. The event is this file's own, so suites reading
+// the seeded events alongside never see its requests (SCRUM-233).
 const TECH = "usr_techsupport";
 const COORDINATOR = "usr_coordinator";
-const eventId = "evt_reg_not_open"; // CONFIRMED, coordinated by COORDINATOR
+const START = new Date("2033-05-10T01:00:00.000Z");
+const END = new Date("2033-05-10T09:00:00.000Z");
+let eventId: string;
 
 const techSession: Session = {
   user: {
@@ -64,10 +67,6 @@ describe.skipIf(!usesLocalDatabase)(
   () => {
     let requestId: string;
     let lecternLineId: string;
-    // The event's own period: the queue and suggestions check availability
-    // against it, so the reservations below must fall inside it.
-    let START: Date;
-    let END: Date;
 
     // Lines and history cascade with their request.
     const cleanUp = async () => {
@@ -80,12 +79,19 @@ describe.skipIf(!usesLocalDatabase)(
 
     beforeAll(async () => {
       (auth as unknown as Mock).mockResolvedValue(techSession);
-      const event = await prisma.event.findUniqueOrThrow({
-        where: { id: eventId },
-        select: { startAt: true, endAt: true },
-      });
-      START = event.startAt!;
-      END = event.endAt!;
+      // The queue and suggestions check availability against the event's
+      // period, so the reservations below fall inside it.
+      ({ id: eventId } = await prisma.event.create({
+        data: {
+          name: `SCRUM-28 review ${Date.now()}`,
+          status: "CONFIRMED",
+          organiserId: "usr_organiser",
+          coordinatorId: COORDINATOR,
+          startAt: START,
+          endAt: END,
+        },
+        select: { id: true },
+      }));
     });
 
     beforeEach(async () => {
@@ -120,6 +126,8 @@ describe.skipIf(!usesLocalDatabase)(
     afterEach(cleanUp);
 
     afterAll(async () => {
+      await prisma.notification.deleteMany({ where: { eventId } });
+      await prisma.event.delete({ where: { id: eventId } });
       await prisma.$disconnect();
     });
 

@@ -602,8 +602,6 @@ async function seedEvents() {
       organiserId: U.organiser,
       coordinatorId: U.coordinator,
       ...approvedBy(-10),
-      // equipment-request-review.test.ts writes and removes this event's
-      // requests and reservations, so it needs none of its own.
       ...noEquipment(-6),
       registrationEnabled: true,
       registrationCapacity: 80,

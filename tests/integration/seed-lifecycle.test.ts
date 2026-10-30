@@ -84,15 +84,9 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-233 — the seed follows the event li
       // SCRUM-85: Attendees see where it is.
       expect(event.confirmedVenues.length, event.id).toBeGreaterThan(0);
 
-      // equipment-request-review.test.ts writes requests to evt_reg_not_open
-      // while it runs; only a request the seed didn't write is set aside.
-      const othersRequests = await prisma.equipmentRequest.count({
-        where: { eventId: event.id, NOT: { id: { startsWith: "eqr_" } } },
-      });
       const checklist = await getReadinessChecklist(prisma, event.id);
       const outstanding = checklist!.items
         .filter((item) => !item.complete)
-        .filter((item) => !(item.name === "Equipment" && othersRequests > 0))
         .map((item) => `${item.name}: ${item.state}`);
       expect(outstanding, event.id).toEqual([]);
     }
