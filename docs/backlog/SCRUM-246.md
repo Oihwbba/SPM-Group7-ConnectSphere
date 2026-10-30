@@ -10,7 +10,7 @@
 | **Epic** | SCRUM-6 - Event Request Lifecycle |
 | **Priority** | High |
 | **Story points** | - |
-| **Status in Jira** | To Do |
+| **Status in Jira** | In Progress |
 | **Sprint** | SCRUM Sprint 4 |
 | **Jira** | https://smu-spm-group7.atlassian.net/browse/SCRUM-246 |
 
@@ -27,8 +27,7 @@ The Organiser's event request form (SCRUM-13, SCRUM-207 AC9) misleads the Organi
 **Acceptance criteria**
 
 1. Each equipment option shows its total as "N in stock", not "N available".
-2. Each venue option shows its capacity and its opening hours for every day, with Closed days shown as Closed. It uses `describeDay` from `lib/venue-hours.ts`, so the hours read the same as on the venue catalogue. A venue with no opening hours recorded shows its capacity only.
-3. Nothing else changes: no warning, nothing is refused, and the answers are saved as free text as before (SCRUM-207 AC9).
+2. Each venue option shows its capacity and its opening hours for every day, with Closed days shown as Closed. It uses `describeDay` from `lib/venue-hours.ts`, so the hours read the same as on the venue catalogue.
 
 **Change log**
 
