@@ -1,11 +1,12 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { registerForEvent } from "./registration-actions";
+import { ActionError } from "@/components/app/action-error";
 
 /** SCRUM-73 — the working half of the Register button the detail page
  * renders. Split into its own client component because attendee-event-
@@ -19,28 +20,33 @@ export function RegisterButton({
   disabled: boolean;
 }) {
   const [isPending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
   function handleRegister() {
     startTransition(async () => {
       const result = await registerForEvent({ eventId });
       if (!result.ok) {
-        toast.error(result.error);
+        setError(result.error);
         return;
       }
+      setError(null);
       toast.success("You're registered for this event.");
       router.refresh();
     });
   }
 
   return (
-    <Button
-      disabled={disabled || isPending}
-      className="h-11 sm:h-10"
-      onClick={handleRegister}
-      data-testid="register-button"
-    >
-      {isPending ? "Registering..." : "Register"}
-    </Button>
+    <div className="space-y-2">
+      <Button
+        disabled={disabled || isPending}
+        className="h-11 sm:h-10"
+        onClick={handleRegister}
+        data-testid="register-button"
+      >
+        {isPending ? "Registering..." : "Register"}
+      </Button>
+      <ActionError message={error} />
+    </div>
   );
 }

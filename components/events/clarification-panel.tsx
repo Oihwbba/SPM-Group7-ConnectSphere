@@ -27,6 +27,7 @@ import {
   type EventPeriodFields,
 } from "@/lib/datetime";
 import { cn } from "@/lib/utils";
+import { ActionError } from "@/components/app/action-error";
 
 interface ClarificationPanelProps {
   /** The event as currently stored, to pre-fill the fields the answer may change. */
@@ -132,6 +133,7 @@ export function ClarificationPanel({
   const [errors, setErrors] = useState<Record<string, string[]>>({});
   const [submitting, setSubmitting] = useState(false);
   const [sendFailed, setSendFailed] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
   // Bumped after a send that got no reply, so the thread is read again.
   const [version, setVersion] = useState(0);
   const router = useRouter();
@@ -189,10 +191,11 @@ export function ClarificationPanel({
     }
     if (!result.ok) {
       setErrors(result.fieldErrors ?? {});
-      toast.error(result.error);
+      setFormError(result.fieldErrors ? null : result.error);
       return;
     }
     setErrors({});
+    setFormError(null);
     toast.success("Response sent to the coordinator.");
     setClarification({
       ...clarification,
@@ -342,6 +345,7 @@ export function ClarificationPanel({
               {SEND_FAILED_MESSAGE}
             </p>
           )}
+          <ActionError message={formError} />
           <div className="flex justify-end">
             <Button
               size="sm"

@@ -246,6 +246,8 @@ test.describe("SCRUM-211 — One layout for every work queue", () => {
       ).toBeVisible();
       // It stays open, and once refreshed shows what the other Lead decided.
       await expect(page).toHaveURL(new RegExp(`open=${id}`));
+      // SCRUM-207 AC4: the refusal stays at the button until the page is refreshed.
+      await page.reload();
       await expect(page.getByTestId("queue-item-name")).toHaveText(name);
       await expect(page.getByTestId("queue-decision")).toContainText(
         "Assigned to Cara Coordinator.",
@@ -632,6 +634,8 @@ test.describe("SCRUM-211 — One layout for every work queue", () => {
       expect(await decisionButtons(page)).toEqual(["Approve", "Request changes", "Reject"]);
 
       await page.getByRole("button", { name: "Approve" }).click();
+      // SCRUM-207 AC5: asked first, in the shared dialog.
+      await page.getByTestId("confirm-dialog-confirm").click();
       await expectOpened(page, B);
       // Reject asks first, with its required note.
       await page.getByRole("button", { name: "Reject" }).click();
@@ -641,6 +645,7 @@ test.describe("SCRUM-211 — One layout for every work queue", () => {
       await dialog.getByRole("button", { name: "Reject" }).click();
       await expectOpened(page, C);
       await page.getByRole("button", { name: "Approve" }).click();
+      await page.getByTestId("confirm-dialog-confirm").click();
       await expectCaughtUp(page);
 
       const decided = await prisma.safetyCheck.findMany({
@@ -669,6 +674,7 @@ test.describe("SCRUM-211 — One layout for every work queue", () => {
       });
 
       await page.getByRole("button", { name: "Approve" }).click();
+      await page.getByTestId("confirm-dialog-confirm").click();
       await expect(page.getByText(/^This check is already Approved by Sasha Safety/).first()).toBeVisible();
       await expect(page).toHaveURL(new RegExp(`open=${id}`));
       expect(await prisma.auditLog.count({ where: { entityId: id } })).toBe(0);

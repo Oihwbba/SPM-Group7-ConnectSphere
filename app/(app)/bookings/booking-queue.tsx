@@ -56,6 +56,7 @@ import { describeBlocker } from "@/lib/venue-availability";
 import { OrganiserVenueAnswers } from "@/components/events/organiser-answers";
 import { decideBookingRequest, holdBookingRequest } from "./actions";
 import type { PendingBookingRow } from "./queries";
+import { ActionError } from "@/components/app/action-error";
 
 /**
  * SCRUM-52, SCRUM-211 AC3 — a request's details, on the left of the opened
@@ -115,6 +116,7 @@ export function BookingDecision({
   const [holdExpiry, setHoldExpiry] = useState("");
   const [holdNote, setHoldNote] = useState("");
   const [holdErrors, setHoldErrors] = useState<Record<string, string[]>>({});
+  const [holdError, setHoldError] = useState<string | null>(null);
   const [refusal, setRefusal] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
@@ -136,7 +138,8 @@ export function BookingDecision({
         router.push(nextHref);
       } else {
         setHoldErrors(result.fieldErrors ?? {});
-        toast.error(result.error);
+        // Shown in the hold dialog, beside its fields.
+        setHoldError(result.fieldErrors ? null : result.error);
         router.refresh();
       }
     });
@@ -157,7 +160,6 @@ export function BookingDecision({
     if (!result.ok) {
       setRejecting(false);
       setRefusal(result.error);
-      toast.error(result.error);
       router.refresh();
       return;
     }
@@ -197,15 +199,7 @@ export function BookingDecision({
           {decided}
         </p>
       )}
-      {refusal && (
-        <p
-          role="alert"
-          className="text-sm text-destructive"
-          data-testid="decision-refused"
-        >
-          {refusal}
-        </p>
-      )}
+      <ActionError message={refusal} testId="decision-refused" />
       <div className={DECISION_ROW}>
         {canApprove && (
           <Button
@@ -224,6 +218,7 @@ export function BookingDecision({
             className={DECISION_BUTTON.middle}
             onClick={() => {
               setHolding(true);
+              setHoldError(null);
               setHoldExpiry("");
               setHoldNote("");
               setHoldErrors({});
@@ -332,6 +327,7 @@ export function BookingDecision({
                 </p>
               )}
             </div>
+            <ActionError message={holdError} testId="hold-error" />
             <DialogFooter>
               <Button
                 type="button"

@@ -33,6 +33,7 @@ import {
 import { createVenue, updateVenue } from "./actions";
 import { OptionPicker } from "./option-picker";
 import type { VenueDetail } from "./queries";
+import { ActionError } from "@/components/app/action-error";
 
 type Day = { weekday: number; closed: boolean; opensAt: string; closesAt: string };
 type Errors = Record<string, string[] | undefined>;
@@ -92,6 +93,8 @@ export function VenueFormDialog({
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(() => formFrom(venue));
   const [errors, setErrors] = useState<Errors>({});
+  // SCRUM-207 AC4: the form's own error, shown above its buttons.
+  const [formError, setFormError] = useState<string | null>(null);
   const [affected, setAffected] = useState<Affected>(NONE_AFFECTED);
   const [pending, startTransition] = useTransition();
   const editing = Boolean(venue);
@@ -134,11 +137,13 @@ export function VenueFormDialog({
     const checked = (venue ? venueUpdateSchema : venueSchema).safeParse(payload);
     if (!checked.success) {
       setErrors(checked.error.flatten().fieldErrors);
-      toast.error("Please fix the highlighted fields.");
+      setFormError("Please fix the highlighted fields.");
       return;
     }
 
     startTransition(async () => {
+
+      setFormError(null);
       try {
         const result: ActionResult<{ id: string; flagged?: number }> = venue
           ? await updateVenue(payload)
@@ -148,7 +153,7 @@ export function VenueFormDialog({
             result.fieldErrors ?? {};
           setErrors(fieldErrors);
           setAffected({ lines: affectedBookings ?? [], ids: affectedBookingIds ?? [] });
-          toast.error(result.error);
+          setFormError(result.error);
           return;
         }
         toast.success(
@@ -158,7 +163,7 @@ export function VenueFormDialog({
         if (venue) router.refresh();
         else router.push(`/venues/${result.data.id}`);
       } catch {
-        toast.error("Couldn't save the venue. Check your connection and try again.");
+        setFormError("Couldn't save the venue. Check your connection and try again.");
       }
     });
   }
@@ -320,6 +325,7 @@ export function VenueFormDialog({
           <AffectedBookings bookings={affected.lines} />
         </div>
 
+        <ActionError message={formError} />
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => changeOpen(false)} disabled={pending}>
             Cancel

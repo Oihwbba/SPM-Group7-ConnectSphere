@@ -9,6 +9,7 @@ import type { CoordinatorLoad } from "@/lib/coordinator-assignment";
 import { assignCoordinator } from "./actions";
 import { AppSelect } from "@/components/app/app-select";
 import { DECISION_BUTTON } from "@/components/queues/decision-button";
+import { ActionError } from "@/components/app/action-error";
 
 /** SCRUM-165 AC4 — choose one Coordinator; each shows their active events,
  * and the least-loaded is pre-selected and marked as suggested. SCRUM-211
@@ -42,9 +43,9 @@ export function AssignForm({
     startTransition(async () => {
       const result = await assignCoordinator({ eventId, coordinatorId });
       if (!result.ok) {
+        // Kept here, at the button that failed (SCRUM-207 AC4): reading the
+        // page again would replace this form, and the reason with it.
         setRefusal(result.error);
-        toast.error(result.error);
-        router.refresh();
         return;
       }
       toast.success(`Assigned to ${result.data.coordinatorName}.`);
@@ -54,15 +55,11 @@ export function AssignForm({
 
   return (
     <div className="flex flex-col gap-3">
-      {refusal && (
-        <p
-          role="alert"
-          className="text-sm text-destructive"
-          data-testid="decision-refused"
-        >
-          {refusal}
-        </p>
-      )}
+      <ActionError
+        message={refusal}
+        next="Refresh the page to see who has it now."
+        testId="decision-refused"
+      />
       <label className="flex flex-1 flex-col gap-1 text-sm">
         <span className="font-medium">Coordinator</span>
         <AppSelect
