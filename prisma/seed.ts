@@ -1077,7 +1077,8 @@ async function seedNotifications() {
     { id: "ntf_3", userId: U.organiser, type: NotificationType.EVENT_STATUS_CHANGED, title: "Your request was rejected", message: "\"Rejected — Overcapacity Concert\" was rejected: Expected attendance of 2000 exceeds the capacity of every venue in the catalogue (largest is 500). What you can do next: Amend and resubmit.", eventId: E.rejected, createdAt: at(-8, 3) },
     { id: "ntf_4", userId: U.coordinator, type: NotificationType.BOOKING_DECISION, title: "Booking rejected", message: "Executive Boardroom was rejected for Planning — Freshman Orientation: capacity 14 is below 55 attendees.", eventId: E.planning, createdAt: at(-2, 3) },
     { id: "ntf_5", userId: U.attendee, type: NotificationType.REGISTRATION_CONFIRMED, title: "You are registered", message: "Your place at Confirmed — Charity Gala is confirmed.", eventId: E.confirmed, createdAt: at(-6, 4) },
-    { id: "ntf_6", userId: U.attendee, type: NotificationType.REGISTERED_EVENT_CANCELLED, title: "An event you registered for was cancelled", message: "Cancelled — Winter Workshop will no longer go ahead.", eventId: E.cancelled, createdAt: at(-1, 3) },
+    // SCRUM-82: the notice cancelInTransaction sends, with its reason (SCRUM-233).
+    { id: "ntf_6", userId: U.attendee, type: NotificationType.REGISTERED_EVENT_CANCELLED, title: "An event you registered for was cancelled", message: "\"Cancelled — Winter Workshop\" was cancelled: Speaker withdrew and no replacement was available.", eventId: E.cancelled, createdAt: at(-1, 3) },
   ];
   for (const n of rows) {
     const { id, ...data } = n;

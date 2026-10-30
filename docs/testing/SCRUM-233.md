@@ -27,6 +27,7 @@ integration cases read only rows with the seed's fixed ids (`evt_`, `aud_`,
 | [TC-233-11](#tc-233-11) | Positive | AC 11 | Manual (the shared database, after the merge) |
 | [TC-233-12](#tc-233-12) | Negative | AC 12 | Unit |
 | [TC-233-13](#tc-233-13) | Positive, Negative | AC 13 | Integration |
+| [TC-233-14](#tc-233-14) | Positive | AC 4, AC 6, AC 7 | Integration |
 
 ---
 
@@ -198,3 +199,16 @@ integration cases read only rows with the seed's fixed ids (`evt_`, `aud_`,
 | Expected Result | 1. Every registration was made with registration enabled, at or after the approval and any opening time, before any closing time and before the start. `evt_completed`'s window opens after its approval and closes the evening before it ran. 2. Every capacity equals the expected attendance; the Charity Gala's is 120. Before the fix the test named `reg_completed_1` and, with the Gala's capacity at 100, `evt_confirmed`. |
 
 **Automated by:** `tests/integration/seed-lifecycle.test.ts` › "SCRUM-233 [AC13] TC-233-13: every seeded registration was taken while its event's registration was open, and every seeded capacity is the expected attendance"
+
+### TC-233-14
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-233-14 |
+| Test Scenario | [Positive] AC 4, AC 6, AC 7: the seed as users see it: an Attendee sees a venue for every Confirmed event, the cancellation notice gives the reason, and the cancelled event's progress stops at Confirmed |
+| Pre-conditions | Freshly seeded. |
+| Test Steps | 1. As `usr_attendee`, open each seeded Confirmed event through `getBrowsableEvent`, the attendee pages' read. <br> 2. Read `ntf_6`, the notice to the Attendee registered for `evt_cancelled`. <br> 3. As `usr_coordinator`, read `evt_cancelled`'s page data, which the progress bar uses. |
+| Test Data | `evt_reg_not_open`, `evt_reg_closed`, `ntf_6`, `evt_cancelled` |
+| Expected Result | 1. Every event the Attendee can open, `evt_reg_not_open` and `evt_reg_closed` among them, has an approved booking, so no page says "Venue to be confirmed". An event that takes no registration isn't opened (SCRUM-171 AC 4). 2. The message is the one `cancelInTransaction` sends: `"Cancelled — Winter Workshop" was cancelled: Speaker withdrew and no replacement was available.` 3. Cancelled from Confirmed. With `bkg_reg_closed` pending, the notice's old wording, or `aud_cancelled_status` deleted, the test failed. |
+
+**Automated by:** `tests/integration/seed-lifecycle.test.ts` › "SCRUM-233 [AC4, AC6, AC7] TC-233-14: what users see of the seed: an Attendee sees a venue for every Confirmed event, the cancellation notice gives the reason, and the cancelled event's progress stops at Confirmed"

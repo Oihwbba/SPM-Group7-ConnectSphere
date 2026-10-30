@@ -1,6 +1,11 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, type Mock } from "vitest";
+import type { Session } from "next-auth";
 
+import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
+import type { SessionUser } from "@/lib/auth/can";
+import { getEventPageData } from "@/app/(app)/events/[id]/event-page-data";
+import { getBrowsableEvent } from "@/app/(app)/events/queries";
 import { getReadinessChecklist } from "@/lib/event-readiness";
 import { eventPeriodError } from "@/lib/schemas/event";
 
@@ -11,6 +16,8 @@ import { eventPeriodError } from "@/lib/schemas/event";
 const usesLocalDatabase = /@(localhost|127\.0\.0\.1)[:/]/.test(
   process.env.DATABASE_URL ?? "",
 );
+
+vi.mock("@/auth", () => ({ auth: vi.fn() }));
 
 const seeded = { id: { startsWith: "evt_" } };
 const HOUR_MS = 60 * 60 * 1000;
@@ -300,5 +307,33 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-233 — the seed follows the event li
         .filter((e) => e.registrationCapacity !== e.expectedAttendance)
         .map((e) => e.id),
     ).toEqual([]);
+  });
+
+  it("SCRUM-233 [AC4, AC6, AC7] TC-233-14: what users see of the seed: an Attendee sees a venue for every Confirmed event, the cancellation notice gives the reason, and the cancelled event's progress stops at Confirmed", async () => {
+    const attendee = { id: "usr_attendee", role: "ATTENDEE", name: "Test", email: "attendee@test.local" } as SessionUser;
+    (auth as unknown as Mock).mockResolvedValue({ user: attendee, expires: "2999-01-01T00:00:00.000Z" } as Session);
+    const confirmed = await prisma.event.findMany({ where: { ...seeded, status: "CONFIRMED" }, select: { id: true } });
+    expect(confirmed.length).toBeGreaterThan(0);
+    const shown: string[] = [];
+    const withoutVenue: string[] = [];
+    for (const { id } of confirmed) {
+      // SCRUM-171 AC4: an event that takes no registration isn't shown at all.
+      const event = await getBrowsableEvent(id);
+      if (!event) continue;
+      shown.push(id);
+      // The attendee pages say "Venue to be confirmed" when this is empty.
+      if (event.bookings.length === 0) withoutVenue.push(id);
+    }
+    expect(shown).toEqual(expect.arrayContaining(["evt_reg_not_open", "evt_reg_closed"]));
+    expect(withoutVenue).toEqual([]);
+
+    // SCRUM-82: the words cancelInTransaction sends a registered Attendee.
+    const notice = await prisma.notification.findUniqueOrThrow({ where: { id: "ntf_6" }, select: { message: true } });
+    expect(notice.message).toBe(
+      '"Cancelled — Winter Workshop" was cancelled: Speaker withdrew and no replacement was available.',
+    );
+
+    const coordinator = { id: "usr_coordinator", role: "COORDINATOR", name: "Test", email: "coordinator@test.local" } as SessionUser;
+    expect((await getEventPageData(coordinator, "evt_cancelled"))?.cancelledFrom).toBe("CONFIRMED");
   });
 });
