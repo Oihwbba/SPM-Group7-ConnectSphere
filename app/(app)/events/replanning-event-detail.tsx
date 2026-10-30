@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ArrowLeft, CalendarDays, CheckCircle2, MapPin } from "lucide-react";
 
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { RegistrationStateBadge } from "@/components/events/registration-state-badge";
 import { formatEventTime } from "@/lib/datetime";
 import { canWithdrawNow } from "@/lib/registration-state";
 import { WithdrawButton } from "./withdraw-button";
@@ -42,13 +42,15 @@ export function ReplanningEventDetail({
 
       <Card data-testid="replanning-event">
         <CardHeader className="space-y-2">
-          <div className="flex items-start justify-between gap-3">
+          <div className="flex flex-wrap items-start justify-between gap-3">
             <h1 className="text-xl font-bold leading-none tracking-tight">
               {event.name}
             </h1>
-            <Badge variant="warning" data-testid="replanning-status">
-              {REPLANNING_LABEL}
-            </Badge>
+            <RegistrationStateBadge
+              kind="PAUSED"
+              label={REPLANNING_LABEL}
+              testId="replanning-status"
+            />
           </div>
           {event.description && (
             <p className="whitespace-pre-wrap text-sm text-muted-foreground">
@@ -58,8 +60,8 @@ export function ReplanningEventDetail({
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground" role="status">
-            This event&apos;s details are being updated. You&apos;ll be told
-            if anything changes. Below are the details as last confirmed.
+            This event&apos;s details are being updated. You&apos;ll be told if
+            anything changes. Below are the details as last confirmed.
           </p>
           <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
             <div className="flex items-start gap-2">
@@ -69,7 +71,10 @@ export function ReplanningEventDetail({
                   Date &amp; time
                 </p>
                 <p className="text-foreground" data-testid="event-date">
-                  {formatEventTime(event.confirmedStartAt, event.confirmedEndAt)}
+                  {formatEventTime(
+                    event.confirmedStartAt,
+                    event.confirmedEndAt,
+                  )}
                 </p>
               </div>
             </div>
@@ -80,7 +85,11 @@ export function ReplanningEventDetail({
                   {event.confirmedVenues.length > 1 ? "Venues" : "Venue"}
                 </p>
                 {event.confirmedVenues.map((venue) => (
-                  <p key={venue} className="text-foreground" data-testid="venue">
+                  <p
+                    key={venue}
+                    className="text-foreground"
+                    data-testid="venue"
+                  >
                     {venue}
                   </p>
                 ))}
@@ -88,7 +97,7 @@ export function ReplanningEventDetail({
             </div>
           </div>
           {registration && (
-            <div className="flex items-center justify-between rounded-lg border border-border bg-muted/30 p-3">
+            <div className="flex flex-col gap-3 rounded-lg border border-border bg-muted/30 p-3 sm:flex-row sm:items-center sm:justify-between">
               <span
                 className="flex items-center gap-1.5 text-sm font-medium text-success"
                 data-testid="already-registered"
@@ -101,6 +110,7 @@ export function ReplanningEventDetail({
               {canWithdrawNow(event) ? (
                 <WithdrawButton
                   registrationId={registration.id}
+                  eventName={event.name}
                   afterWithdrawHref="/registrations"
                 />
               ) : (

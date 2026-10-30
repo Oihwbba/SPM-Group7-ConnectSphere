@@ -50,9 +50,9 @@ SCRUM-166, which test their own; see below). Every account's password is `Passwo
 | [TC-26-05](#tc-26-05) | Negative | AC 7 | Unit |
 | [TC-26-06](#tc-26-06) | Positive | AC 7, AC 8 | Unit, integration |
 | [TC-26-07](#tc-26-07) | Negative | AC 8 | Unit |
-| [TC-26-08](#tc-26-08) | Negative, Boundary | AC 8 | Unit, integration |
+| [TC-26-08](#tc-26-08) | Negative, Boundary | AC 8 | Unit, integration, e2e |
 | [TC-26-09](#tc-26-09) | Negative | AC 5 | Unit, integration |
-| [TC-26-10](#tc-26-10) | Positive, Negative | AC 9 | Unit |
+| [TC-26-10](#tc-26-10) | Positive, Negative | AC 9 | Unit, e2e |
 | [TC-26-11](#tc-26-11) | Positive | AC 10 | Unit, integration |
 | [TC-26-12](#tc-26-12) | Positive | AC 2, AC 6, AC 11, AC 13 | Integration |
 | [TC-26-13](#tc-26-13) | Negative | AC 12 | Unit, e2e |
@@ -161,7 +161,7 @@ SCRUM-166, which test their own; see below). Every account's password is `Passwo
 | Test Data | Booking with 30 minutes' setup and 45 minutes' turnaround; a Pending booking is judged with the venue's current minutes. |
 | Expected Result | Refused with "Exhibition Hall has been retired.", "It is for 40 attendees, more than the event's expected 30.", "… more than Exhibition Hall's capacity of 35.", "Exhibition Hall is already booked from …" / "unavailable (maintenance) from …", or "Only 2 Projector reserved for the event's period; its requests need 3." The flag stays. |
 
-**Automated by:** `tests/unit/reconsideration.test.ts` › "SCRUM-26 [AC8] TC-26-08: …" (7 tests); `tests/unit/reconsideration-actions.test.ts` › "SCRUM-26 [AC8] TC-26-08: …"; `tests/integration/reconsideration.test.ts` › "SCRUM-26 [AC8] TC-26-08: …"
+**Automated by:** `tests/unit/reconsideration.test.ts` › "SCRUM-26 [AC8] TC-26-08: …" (7 tests); `tests/unit/reconsideration-actions.test.ts` › "SCRUM-26 [AC8] TC-26-08: …"; `tests/integration/reconsideration.test.ts` › "SCRUM-26 [AC8] TC-26-08: …"; `e2e/reconsideration.spec.ts` › "SCRUM-26 [AC8, AC9] TC-26-08, TC-26-10: a flagged reservation that no longer covers its request can't stand, and Cancel arrangement releases it" (the reservation held short of its request)
 
 ### TC-26-09
 
@@ -187,7 +187,7 @@ SCRUM-166, which test their own; see below). Every account's password is `Passwo
 | Test Data | — |
 | Expected Result | 1. The booking (or reservation, with its cancelled time) is Cancelled, its flag off, who and when saved, with a status history entry; the event's other arrangements are untouched. The confirm dialog and the message say what happens next: "Request a venue again when you're ready." for a booking, "Technical Support will reserve it again." for a reservation, whose equipment request stays Approved. The readiness checklist's venue item reads "Not requested", even if an older request was rejected: the newer cancellation replaces the old reason. 2. "This arrangement no longer needs reconsideration. Refresh to see where it stands." Nothing is written. The venue item then reads by whichever booking ended last, not whichever was requested last (PO, 19 Oct): a booking cancelled after another was rejected reads "Not requested"; one rejected after another was cancelled reads "Rejected". |
 
-**Automated by:** `tests/unit/reconsideration-actions.test.ts` › "SCRUM-26 [AC9] TC-26-10: …" (5 tests); `tests/unit/reconsideration-panel.test.tsx` › "SCRUM-26 [AC9] TC-26-10: …" (2 tests); `tests/unit/event-readiness.test.ts` › "SCRUM-110 [AC1, AC2] TC-110-05: with $when, the venue item reads as the most advanced booking" (when: "a rejection then a newer cancelled booking", "an older request rejected after a newer one was cancelled" and "an older request cancelled after a newer one was rejected"); `e2e/reconsideration.spec.ts` (TC-26-14, the booking's message)
+**Automated by:** `tests/unit/reconsideration-actions.test.ts` › "SCRUM-26 [AC9] TC-26-10: …" (5 tests); `tests/unit/reconsideration-panel.test.tsx` › "SCRUM-26 [AC9] TC-26-10: …" (2 tests); `tests/unit/event-readiness.test.ts` › "SCRUM-110 [AC1, AC2] TC-110-05: with $when, the venue item reads as the most advanced booking" (when: "a rejection then a newer cancelled booking", "an older request rejected after a newer one was cancelled" and "an older request cancelled after a newer one was rejected"); `e2e/reconsideration.spec.ts` (TC-26-14, the booking's message); `e2e/reconsideration.spec.ts` › "SCRUM-26 [AC8, AC9] TC-26-08, TC-26-10: a flagged reservation that no longer covers its request can't stand, and Cancel arrangement releases it" (cancelling a flagged reservation)
 
 ### TC-26-11
 

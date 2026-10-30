@@ -168,6 +168,13 @@ these unless the backlog brings them back:
   layouts as records, and reporting. (Tentative holds were on this list until
   Week 7 change 4 brought them in: SCRUM-163.)
 
+## The deployed site
+
+The app deployed from `main` is the team's development environment: where
+the team builds, tests and coordinates the project, with only seeded test
+accounts and demo events. It isn't a service for customers, and the sign-in
+page and every signed-in page say so (SCRUM-237).
+
 
 ## Words that are easy to mix up
 
