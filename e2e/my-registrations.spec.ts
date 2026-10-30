@@ -77,12 +77,13 @@ test.describe("SCRUM-76 — Attendee views their registration status", () => {
     await signInAs(page, "attendee4@test.local");
     await page.goto("/registrations");
 
-    await expect(page.getByText("No registrations yet")).toBeVisible();
+    const empty = page.getByTestId("registrations-empty");
+    await expect(
+      empty.getByText("You haven't registered for any events yet"),
+    ).toBeVisible();
     await expect(page.getByTestId("registration-card")).toHaveCount(0);
-    // exact: the sidebar also has a "Browse Events" link.
-    await page
-      .getByRole("link", { name: "Browse events", exact: true })
-      .click();
+    // Within the empty state: the sidebar also has a "Browse Events" link.
+    await empty.getByRole("link", { name: "Browse Events" }).click();
     await page.waitForURL("**/events");
   });
 

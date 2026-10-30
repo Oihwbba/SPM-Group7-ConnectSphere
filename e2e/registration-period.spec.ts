@@ -84,11 +84,11 @@ test.describe("SCRUM-75 — Control and enforce the registration period", () => 
     await signIn(page, "attendee4@test.local");
     const card = page.getByTestId("browsable-event-card").filter({ hasText: name });
     await expect(card.getByTestId("registration-state-badge")).toHaveText(
-      "Registration closed",
+      "Closed",
     );
     await page.goto(`/events/${id}`);
     await expect(page.getByTestId("registration-state-badge")).toHaveText(
-      "Registration closed",
+      "Closed",
     );
     await expect(page.getByTestId("register-button")).toBeDisabled();
 

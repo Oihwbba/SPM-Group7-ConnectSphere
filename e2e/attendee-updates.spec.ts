@@ -107,7 +107,7 @@ test.describe("SCRUM-85 — Attendees are kept informed", () => {
     await expect(card).not.toContainText("Planning");
 
     // AC9: opening it shows what was last confirmed, not the internal plan.
-    await card.getByRole("link", { name }).click();
+    await card.getByRole("link", { name: "View event" }).click();
     const replanning = attendee.getByTestId("replanning-event");
     await expect(replanning).toContainText("A summer evening in the garden.");
     await expect(replanning.getByTestId("event-date")).toContainText(/7 Sept? 2038/);
@@ -177,6 +177,11 @@ test.describe("SCRUM-85 — Attendees are kept informed", () => {
     const attendee = await signedIn(browser, "attendee2@test.local");
     await attendee.goto(`/events/${event.id}`);
     await attendee.getByTestId("withdraw-button").click();
+    // SCRUM-212 AC2, SCRUM-207 AC5: asked first in the shared dialog.
+    await attendee
+      .getByTestId("withdraw-dialog")
+      .getByRole("button", { name: "Withdraw", exact: true })
+      .click();
 
     await attendee.waitForURL("**/registrations");
     await expect(

@@ -32,6 +32,19 @@ test.describe("SCRUM-72 — Attendee browses confirmed events", () => {
   test("SCRUM-72 [AC1, AC2, AC7] TC-72-01, TC-72-06: the browse list shows Confirmed events with venue, capacity and registration state, and excludes Cancelled ones", async ({
     page,
   }) => {
+    // SCRUM-212: an Attendee's own registration replaces the event's state on
+    // its card, and attendee@test.local holds places at the gala, the full
+    // event and the last-place one. attendee4 holds none, so every card shows
+    // the event's own state.
+    await page.context().clearCookies();
+    await page.goto("/login");
+    await page
+      .getByLabel("Email", { exact: true })
+      .fill("attendee4@test.local");
+    await page.getByLabel("Password", { exact: true }).fill("Password123!");
+    await page.getByRole("button", { name: "Sign in" }).click();
+    await page.waitForURL("**/events");
+
     const galaCard = page.getByTestId("browsable-event-card").filter({
       hasText: "Confirmed — Charity Gala",
     });
@@ -82,7 +95,7 @@ test.describe("SCRUM-72 — Attendee browses confirmed events", () => {
     });
     await expect(
       notOpenCard.getByTestId("registration-state-badge"),
-    ).toHaveText("Registration not yet open");
+    ).toHaveText("Not open yet");
     await expect(notOpenCard.getByTestId("registration-period")).toContainText(
       "Opens",
     );
@@ -91,7 +104,7 @@ test.describe("SCRUM-72 — Attendee browses confirmed events", () => {
       hasText: "Registration Closed — Leadership Retreat",
     });
     await expect(closedCard.getByTestId("registration-state-badge")).toHaveText(
-      "Registration closed",
+      "Closed",
     );
     await expect(closedCard.getByTestId("registration-period")).toContainText(
       "Closes",
@@ -185,8 +198,8 @@ test.describe("SCRUM-72 — Attendee browses confirmed events", () => {
   }
 
   for (const { id, label } of [
-    { id: "evt_reg_closed", label: "Registration closed" },
-    { id: "evt_reg_not_open", label: "Registration not yet open" },
+    { id: "evt_reg_closed", label: "Closed" },
+    { id: "evt_reg_not_open", label: "Not open yet" },
   ]) {
     test(`SCRUM-72 [AC4, AC8] TC-72-03: going straight to /events/${id} shows "${label}" with Register disabled`, async ({
       page,

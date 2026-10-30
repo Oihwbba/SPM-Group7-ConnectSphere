@@ -67,6 +67,11 @@ test.describe("SCRUM-77 — Withdraw my registration", () => {
     await signIn(page, "attendee2@test.local");
     await page.goto(`/events/${eventId}`);
     await page.getByTestId("withdraw-button").click();
+    // SCRUM-212 AC2, SCRUM-207 AC5: asked first in the shared dialog.
+    await page
+      .getByTestId("withdraw-dialog")
+      .getByRole("button", { name: "Withdraw", exact: true })
+      .click();
     await expect(
       page.getByText("You've withdrawn from this event."),
     ).toBeVisible();
