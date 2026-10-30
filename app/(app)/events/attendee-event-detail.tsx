@@ -1,6 +1,4 @@
-import Link from "next/link";
 import {
-  ArrowLeft,
   CalendarDays,
   CheckCircle2,
   Clock,
@@ -23,6 +21,7 @@ import { formatEventTime } from "@/lib/datetime";
 import { RegisterButton } from "./register-button";
 import { WithdrawButton } from "./withdraw-button";
 import type { BrowsableEvent } from "./attendee-events-client";
+import { PageHeader } from "@/components/app/page-header";
 
 /** SCRUM-72/73/74 — the event detail view: read-only display plus the
  * working Register and Withdraw actions (./register-button.tsx,
@@ -44,27 +43,24 @@ export function AttendeeEventDetail({ event }: { event: BrowsableEvent }) {
 
   return (
     <div className="mx-auto max-w-2xl space-y-4">
-      <Link
-        href="/events"
-        className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground"
-      >
-        <ArrowLeft className="h-3.5 w-3.5" /> Back to events
-      </Link>
-
-      <Card>
-        <CardHeader className="space-y-2">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            {/* A real heading, not CardTitle's <div> — this is the page's
-                only h1, both for screen-reader navigation and so an
-                automated check can locate the event by name. */}
-            <h1 className="text-xl font-bold leading-none tracking-tight">
-              {event.name}
-            </h1>
+      {/* The page's only h1 is the event's name, both for screen-reader
+          navigation and so an automated check can locate the event. */}
+      <PageHeader
+        title={
+          <>
+            {event.name}
             <RegistrationStateBadge
               kind={summary.state}
               label={summary.badge}
             />
-          </div>
+          </>
+        }
+        description="A confirmed event: when and where it is, and whether you can register."
+        back={{ href: "/events", to: "Browse Events" }}
+      />
+
+      <Card>
+        <CardHeader className="space-y-2">
           <p
             className="text-sm font-medium text-foreground"
             data-testid="registration-state-line"

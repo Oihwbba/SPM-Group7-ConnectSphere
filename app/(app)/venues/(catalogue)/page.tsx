@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/table";
 import { getVenueCatalogue, getVenueOptions } from "../queries";
 import { VenueFormDialog } from "../venue-form-dialog";
+import { PageHeader } from "@/components/app/page-header";
 
 type Venue = Awaited<ReturnType<typeof getVenueCatalogue>>[number];
 
@@ -70,15 +71,11 @@ export default async function VenuesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="space-y-1">
-          <h1 className="text-2xl font-semibold tracking-tight">Venue Catalogue</h1>
-          <p className="text-sm text-muted-foreground">
-            Each venue&apos;s capacity, facilities, opening hours and restrictions.
-          </p>
-        </div>
-        {options && <VenueFormDialog options={options} />}
-      </div>
+      <PageHeader
+        title="Venue Catalogue"
+        description="Each venue's capacity, facilities, opening hours and restrictions."
+        actions={options && <VenueFormDialog options={options} />}
+      />
 
       {active.length === 0 ? (
         <Card>

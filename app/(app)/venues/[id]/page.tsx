@@ -1,10 +1,9 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
 
 import { requireSession } from "@/lib/auth/guard";
 import { can } from "@/lib/auth/can";
 import { Forbidden } from "@/components/app/forbidden";
+import { PageHeader } from "@/components/app/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { describeHours, WEEKDAYS } from "@/lib/venue-hours";
@@ -64,28 +63,24 @@ export default async function VenueDetailPage({
 
   return (
     <div className="space-y-6">
-      <Link
-        href="/venues"
-        className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-      >
-        <ArrowLeft className="h-4 w-4" /> Venue Catalogue
-      </Link>
-
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="space-y-1">
-          <h1 className="flex flex-wrap items-center gap-2 text-2xl font-semibold tracking-tight">
+      <PageHeader
+        title={
+          <>
             {venue.name}
             {!venue.isActive && <Badge variant="muted">Retired</Badge>}
-          </h1>
-          <p className="text-sm text-muted-foreground">{venue.location}</p>
-        </div>
-        {options && (
-          <div className="flex flex-wrap gap-2">
-            <VenueFormDialog venue={venue} options={options} />
-            <RetireVenueDialog venue={venue} />
-          </div>
-        )}
-      </div>
+          </>
+        }
+        description={`${venue.location}: its capacity, facilities, opening hours and bookings.`}
+        back={{ href: "/venues", to: "Venue Catalogue" }}
+        actions={
+          options && (
+            <>
+              <VenueFormDialog venue={venue} options={options} />
+              <RetireVenueDialog venue={venue} />
+            </>
+          )
+        }
+      />
 
       <div className="grid gap-6 md:grid-cols-2">
         <Card>

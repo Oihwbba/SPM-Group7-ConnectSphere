@@ -28,6 +28,7 @@ import {
   type QueueState,
 } from "@/lib/queues";
 import { cn } from "@/lib/utils";
+import { PageHeader } from "@/components/app/page-header";
 import { DECISION_PANEL } from "./decision-button";
 import { QueueControls } from "./queue-controls";
 
@@ -80,19 +81,21 @@ export function WorkQueue({
   return (
     <div className="space-y-6">
       {before}
-      <div className="space-y-1">
-        <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
-          {title}
-          <span
-            data-testid="queue-count"
-            aria-label={`${state.waitingCount} waiting`}
-            className="rounded-full bg-primary/10 px-2.5 py-0.5 text-sm font-medium text-primary"
-          >
-            {state.waitingCount}
-          </span>
-        </h1>
-        <p className="text-sm text-muted-foreground">{description}</p>
-      </div>
+      <PageHeader
+        title={
+          <>
+            {title}
+            <span
+              data-testid="queue-count"
+              aria-label={`${state.waitingCount} waiting`}
+              className="rounded-full bg-primary/10 px-2.5 py-0.5 text-sm font-medium text-primary"
+            >
+              {state.waitingCount}
+            </span>
+          </>
+        }
+        description={description}
+      />
 
       <QueueControls
         base={base}

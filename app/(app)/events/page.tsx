@@ -9,6 +9,7 @@ import { ROLE_LABEL } from "@/lib/nav";
 import { prisma } from "@/lib/db";
 import { completeFinishedEvents } from "@/lib/event-closing";
 import { Forbidden } from "@/components/app/forbidden";
+import { PageHeader } from "@/components/app/page-header";
 import {
   OrganiserEvents,
   CoordinatorEvents,
@@ -101,10 +102,13 @@ async function EventsRoleView({
       );
     case "ATTENDEE":
       return (
-        <>
-          <h1 className="sr-only">Browse Events</h1>
+        <div className="space-y-6">
+          <PageHeader
+            title="Browse Events"
+            description="Confirmed events you can register for, and where registration stands for each."
+          />
           <AttendeeEvents attendeeId={userId} />
-        </>
+        </div>
       );
     default:
       return <Forbidden />;
