@@ -41,6 +41,7 @@ with the same rules, permissions, locks, notifications and messages.
 | [TC-211-10](#tc-211-10) | Negative | AC 3 | e2e |
 | [TC-211-11](#tc-211-11) | Positive | AC 3 | e2e |
 | [TC-211-12](#tc-211-12) | Positive, Boundary | AC 2 | Integration |
+| [TC-211-13](#tc-211-13) | Positive, Boundary | AC 2 | Integration |
 
 ## TC-211-01
 
@@ -247,3 +248,24 @@ held.
 
 *Automated:* `tests/integration/work-queues.test.ts` › both "SCRUM-211 [AC2]
 TC-211-12: …" tests.
+
+## TC-211-13
+
+**A request cancelled before any decision is under Decided in Bookings, not lost.**
+
+*Pre-conditions:* a pending venue request its Coordinator withdrew (SCRUM-142)
+2 days ago, one released when its event was cancelled 6 days ago, and a hold
+the Coordinator released, held 3 days ago (TC-211-12).
+
+1. In **Bookings**, choose **Waiting**, then **Decided**.
+2. Open the withdrawn request.
+
+**Expected:** both cancelled requests (Cancelled) are under Decided and not
+under Waiting. With no decision or hold, each counts from when it was
+cancelled, newest first among everything decided: the withdrawn request, then
+the released hold, then the one cancelled with its event. Opened, it says
+"Cancelled before a decision, on" the date it ended.
+
+*Automated:* `tests/integration/work-queues.test.ts` › "SCRUM-211 [AC2]
+TC-211-13: a request withdrawn, or cancelled with its event, before any
+decision is under Decided, by when it ended, and no longer waiting".

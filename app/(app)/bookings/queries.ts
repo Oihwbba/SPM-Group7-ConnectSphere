@@ -192,7 +192,9 @@ export async function getPendingBookingQueue(now = new Date()) {
  * ended), most recently decided first. A hold that was released (Cancelled)
  * or expired has no decision, so it counts from when it was held; one whose
  * expiry has passed is here even before anything marks it Expired, as it
- * leaves the queue at that moment (SCRUM-163 AC7). Read-only; the page asks
+ * leaves the queue at that moment (SCRUM-163 AC7). A request cancelled before
+ * any decision or hold (withdrawn by its Coordinator, SCRUM-142, or released
+ * with its event) counts from when it was cancelled. Read-only; the page asks
  * `can()` for `booking:review` before reading it, as for the queue itself.
  */
 export async function getDecidedBookings(now = new Date()) {
@@ -202,6 +204,7 @@ export async function getDecidedBookings(now = new Date()) {
         { decidedAt: { not: null }, status: { notIn: ["PENDING", "HELD"] } },
         { heldAt: { not: null }, status: { in: ["CANCELLED", "EXPIRED"] } },
         { status: "HELD", holdExpiresAt: { lte: now } },
+        { status: "CANCELLED", decidedAt: null, heldAt: null },
       ],
     },
     select: {
@@ -215,6 +218,7 @@ export async function getDecidedBookings(now = new Date()) {
       requestedLayout: true,
       requiredFacilities: true,
       createdAt: true,
+      updatedAt: true,
       decidedAt: true,
       decisionReason: true,
       needsReconsideration: true,
@@ -224,8 +228,10 @@ export async function getDecidedBookings(now = new Date()) {
       venue: { select: { name: true, capacity: true } },
     },
   });
+  // A cancelled request isn't changed again, so its last update is when it
+  // was cancelled.
   const since = (booking: (typeof decided)[number]) =>
-    (booking.decidedAt ?? booking.heldAt)!.getTime();
+    (booking.decidedAt ?? booking.heldAt ?? booking.updatedAt).getTime();
   return decided
     .map((booking) => ({ ...booking, status: bookingStatusAt(booking, now) }))
     .sort((a, b) => since(b) - since(a));

@@ -115,6 +115,31 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-211 — what each queue's Decided fil
     ids.lapsed = (await hold("HELD", "ven_auditorium", daysAgo(4), daysAgo(1))).id;
     ids.liveHold = (await hold("HELD", "ven_boardroom", daysAgo(1), daysAgo(-3))).id;
 
+    // Requests cancelled before any decision or hold: one its Coordinator
+    // withdrew (SCRUM-142) 2 days ago, and one released with its cancelled
+    // event 6 days ago. A cancelled row is never updated again, so its
+    // updatedAt is when it ended.
+    const cancelled = (eventId: string, venueId: string, endedAt: Date) =>
+      prisma.booking.create({
+        data: {
+          eventId,
+          venueId,
+          startAt: new Date("2033-03-07T02:00:00Z"),
+          endAt: new Date("2033-03-07T04:00:00Z"),
+          status: "CANCELLED",
+          requestedAttendance: 40,
+          requestedById: "usr_coordinator_2",
+          updatedAt: endedAt,
+        },
+        select: { id: true },
+      });
+    ids.withdrawn = (await cancelled(planning, "ven_hall", daysAgo(2))).id;
+    const closed = await event("closed", {
+      status: "CANCELLED",
+      coordinatorId: "usr_coordinator_2",
+    });
+    ids.cancelledWithEvent = (await cancelled(closed, "ven_seminar", daysAgo(6))).id;
+
     // A check this officer may review, decided; one awaiting review; and a
     // decided one for an event the officer coordinates, which they may not see.
     const check = (eventId: string, status: "APPROVED" | "AWAITING_REVIEW") =>
@@ -135,7 +160,7 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-211 — what each queue's Decided fil
 
   afterAll(async () => {
     const eventIds = Object.entries(ids)
-      .filter(([key]) => ["assigned", "waiting", "planning", "own"].includes(key))
+      .filter(([key]) => ["assigned", "waiting", "planning", "own", "closed"].includes(key))
       .map(([, id]) => id);
     await prisma.safetyCheck.deleteMany({ where: { eventId: { in: eventIds } } });
     await prisma.booking.deleteMany({ where: { eventId: { in: eventIds } } });
@@ -190,6 +215,24 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-211 — what each queue's Decided fil
     // The other side: a hold still live waits, and is not decided.
     expect(waiting).toContain(ids.liveHold);
     expect(decided.map((b) => b.id)).not.toContain(ids.liveHold);
+  });
+
+  it("SCRUM-211 [AC2] TC-211-13: a request withdrawn, or cancelled with its event, before any decision is under Decided, by when it ended, and no longer waiting", async () => {
+    const decided = await getDecidedBookings();
+    const order = decided.map((b) => b.id);
+    const waiting = (await getPendingBookingQueue()).map((b) => b.id);
+
+    for (const id of [ids.withdrawn, ids.cancelledWithEvent]) {
+      expect(decided.find((b) => b.id === id)).toMatchObject({
+        status: "CANCELLED",
+        decidedAt: null,
+        heldAt: null,
+      });
+      expect(waiting).not.toContain(id);
+    }
+    // Ended 2 days ago, a hold held 3 days ago, ended 6 days ago: newest first.
+    expect(order.indexOf(ids.withdrawn)).toBeLessThan(order.indexOf(ids.released));
+    expect(order.indexOf(ids.released)).toBeLessThan(order.indexOf(ids.cancelledWithEvent));
   });
 
   it("SCRUM-211 [AC2] TC-211-12: a decided request ranks by its decision, before a hold placed earlier", async () => {

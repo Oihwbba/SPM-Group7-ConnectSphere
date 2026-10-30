@@ -130,6 +130,9 @@ export default async function BookingsPage({
             {!done.decidedAt &&
               done.heldAt &&
               ` Held on ${formatDateTime(done.heldAt)}.`}
+            {!done.decidedAt &&
+              !done.heldAt &&
+              ` Cancelled before a decision, on ${formatDateTime(done.updatedAt)}.`}
             {done.decisionReason && ` Reason: ${done.decisionReason}`}
           </DecidedNote>
         ) : null
