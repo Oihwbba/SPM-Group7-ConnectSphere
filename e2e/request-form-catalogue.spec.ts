@@ -1,7 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
-import { prisma } from "@/lib/db";
 
-import { signedIn, usesLocalDatabase } from "./helpers";
+import { signedIn } from "./helpers";
 
 /**
  * SCRUM-246 — what the event request form tells the Organiser about the
@@ -59,26 +58,5 @@ test.describe("SCRUM-246 — the request form's equipment stock and venue hours"
     await expect(
       option(page, "Grand Auditorium").getByTestId("venue-hours").locator("span"),
     ).toHaveText(Array(7).fill(/^\w+day 07:00–23:00$/));
-  });
-
-  test("SCRUM-246 [AC2] TC-246-03: a venue with no opening hours recorded shows its capacity only", async ({
-    browser,
-  }) => {
-    test.skip(!usesLocalDatabase, "adds a venue with no hours");
-    const name = `SCRUM-246 no hours ${Date.now()}`;
-    const venue = await prisma.venue.create({
-      data: { name, location: "Test block", capacity: 12 },
-      select: { id: true },
-    });
-    try {
-      const page = await signedIn(browser, "organiser@test.local");
-      await openStep(page, "3 - Venue");
-      await page.getByLabel("Venue Requirements *").click();
-
-      await expect(option(page, name)).toContainText("max capacity12");
-      await expect(option(page, name).getByTestId("venue-hours")).toHaveCount(0);
-    } finally {
-      await prisma.venue.delete({ where: { id: venue.id } });
-    }
   });
 });

@@ -767,16 +767,14 @@ export function CreateEventDialog({
                         {v.name}
                         <CapacityTag capacity={v.capacity} />
                       </span>
-                      {v.hours.length > 0 && (
-                        <span
-                          data-testid="venue-hours"
-                          className="grid gap-x-4 text-xs text-muted-foreground sm:grid-flow-col sm:grid-rows-4"
-                        >
-                          {v.hours.map((day) => (
-                            <span key={day}>{day}</span>
-                          ))}
-                        </span>
-                      )}
+                      <span
+                        data-testid="venue-hours"
+                        className="grid gap-x-4 text-xs text-muted-foreground sm:grid-flow-col sm:grid-rows-4"
+                      >
+                        {v.hours.map((day) => (
+                          <span key={day}>{day}</span>
+                        ))}
+                      </span>
                     </span>
                   ),
                 }))}

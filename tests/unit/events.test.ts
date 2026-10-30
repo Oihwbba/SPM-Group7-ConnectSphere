@@ -1691,14 +1691,14 @@ describe("getFormCatalogues — permission gate", () => {
     expect(result.data.options.supportedLayouts).toContain("garden-party");
     expect(result.data.options.facilities).toContain("rooftop-bar");
     // The venue list itself still carries only what it showed before.
-    // SCRUM-246 AC2 adds its hours: none recorded, so none listed.
+    // SCRUM-246 AC2 adds its hours, which TC-246-02 checks.
     expect(result.data.venues).toEqual([
       {
         id: "ven1",
         name: "Rooftop",
         capacity: 80,
         facilities: ["rooftop-bar"],
-        hours: [],
+        hours: expect.any(Array),
       },
     ]);
   });

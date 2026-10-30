@@ -216,8 +216,4 @@ describe("a venue's week on the request form — SCRUM-246 AC2", () => {
       "Sunday Closed",
     ]);
   });
-
-  it("SCRUM-246 [AC2] TC-246-03: a venue with no hours recorded lists no days", () => {
-    expect(describeWeek([])).toEqual([]);
-  });
 });

@@ -53,15 +53,3 @@ unit cases mock the database.
 
 **Automated by:** `tests/unit/venue-hours.test.ts` › "SCRUM-246 [AC2] TC-246-02: every day is listed, Monday first, with Closed days as Closed", "SCRUM-246 [AC2] TC-246-02: rows in any order read the same, and a day with no row is Closed"; `tests/unit/events.test.ts` › "SCRUM-246 [AC2] TC-246-02: each venue comes with its capacity and every day's opening hours, a Closed day as Closed"; `e2e/request-form-catalogue.spec.ts` › "SCRUM-246 [AC2] TC-246-02: each venue shows its capacity and every day's hours, Closed days as Closed"
 
-### TC-246-03
-
-| Item | Content |
-|---|---|
-| Test Case ID | TC-246-03 |
-| Test Scenario | [Boundary] AC 2: a venue with no opening hours recorded shows its capacity only, not a week of Closed days, because such a venue is closed on no day (`closedOn`) and booking refuses no period for it |
-| Pre-conditions | Shared pre-conditions; for the e2e case, a local database, where the test adds an active venue with no hours and removes it afterwards |
-| Test Steps | 1. Open Create Event Request. <br> 2. Go to step 3 - Venue. <br> 3. Open Venue Requirements. |
-| Test Data | "SCRUM-246 no hours &lt;time&gt;", capacity 12, no opening-hours rows |
-| Expected Result | The venue shows capacity 12 and no hours. `describeWeek` returns no days for it. |
-
-**Automated by:** `tests/unit/venue-hours.test.ts` › "SCRUM-246 [AC2] TC-246-03: a venue with no hours recorded lists no days"; `e2e/request-form-catalogue.spec.ts` › "SCRUM-246 [AC2] TC-246-03: a venue with no opening hours recorded shows its capacity only"
