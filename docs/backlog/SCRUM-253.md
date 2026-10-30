@@ -29,7 +29,7 @@ The GLM reviewer flagged the inconsistency on PR #323 (SCRUM-246). Found on 30 O
 
 **Acceptance criteria**
 
-1. A migration gives every venue that has no opening hours rows 00:00–24:00 on all seven days, which keeps how it was treated (nothing refused). Venue Staff can then set its real hours in the venue form. A venue that already has rows is unchanged.
+1. A migration gives every venue that has no opening hours rows 00:00–23:59 on all seven days, the widest hours the venue form can show and save, so it can still be edited normally. That keeps how it was treated (nothing refused): an event's end time is on its start date and no later than 23:59 (SCRUM-190). Venue Staff can then set its real hours in the venue form. A venue that already has rows is unchanged.
 2. The database refuses, when a transaction commits, any venue that doesn't have an hours row for each of the seven days: a venue created without them, or a day's row deleted.
 3. No code treats a venue as having no opening hours. Booking (SCRUM-34 AC7), venue search (SCRUM-38 AC4), the setup and turnaround warning (SCRUM-159 AC9), the venue page and the venue form read every venue's hours the same way, and a weekday without a row reads as Closed.
 4. The app and the seed no longer read or write the old free-text `Venue.operatingHours`. The column itself is dropped in a second pull request once the first is deployed, because migrations reach the shared database while the previous build is still serving (README, "Migration rules").
@@ -38,3 +38,4 @@ The GLM reviewer flagged the inconsistency on PR #323 (SCRUM-246). Found on 30 O
 **Change log**
 
 * 2026-10-30: created from the review of PR #323 (SCRUM-246).
+* 2026-10-30: AC1 changed from 00:00–24:00 to 00:00–23:59, because the venue form only accepts times up to 23:59 and would refuse any edit to a venue closing at 24:00 (Felicia Or).
