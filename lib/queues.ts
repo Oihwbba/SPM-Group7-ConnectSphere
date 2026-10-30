@@ -35,6 +35,11 @@ export type QueueItem = {
   asked: string;
   requestedAt: Date;
   waiting: boolean;
+  /**
+   * Neither waiting nor decided, so shown only under All: e.g. a safety
+   * check that went Outdated before anyone reviewed it.
+   */
+  onlyInAll?: boolean;
   badges: QueueBadge[];
 };
 
@@ -117,7 +122,8 @@ export function arrangeQueue(items: QueueItem[], view: QueueView): QueueItem[] {
   const words = view.q.toLowerCase().split(/\s+/).filter(Boolean);
   const shown = items.filter(
     (item) =>
-      (view.status === "all" || item.waiting === (view.status === "waiting")) &&
+      (view.status === "all" ||
+        (!item.onlyInAll && item.waiting === (view.status === "waiting"))) &&
       words.every((word) => item.event.toLowerCase().includes(word)),
   );
   const sign = view.dir === "asc" ? 1 : -1;

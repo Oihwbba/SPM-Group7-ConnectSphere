@@ -141,6 +141,14 @@ describe("SCRUM-211 — filter, search and sort (AC1, AC2)", () => {
     expect(ids(arrangeQueue(ITEMS, view({ status: "all" })))).toEqual(["a", "b", "c", "d"]);
   });
 
+  it("SCRUM-211 [AC2] TC-211-14: an item neither waiting nor decided, like a check outdated before review, is only under All", () => {
+    const outdated = item("o", { requestedAt: day(5), waiting: false, onlyInAll: true });
+    const items = [...ITEMS, outdated];
+    expect(ids(arrangeQueue(items, view({ status: "decided" })))).toEqual(["d"]);
+    expect(ids(arrangeQueue(items, view({ status: "waiting" })))).toEqual(["a", "b", "c"]);
+    expect(ids(arrangeQueue(items, view({ status: "all" })))).toEqual(["a", "b", "c", "d", "o"]);
+  });
+
   it("SCRUM-211 [AC2] TC-211-04: the search matches the event's name, every word, ignoring case", () => {
     const items = [item("g", { event: "Spring Gala Dinner" }), item("f", { event: "Freshman Fair" })];
     expect(ids(arrangeQueue(items, view({ q: "gala" })))).toEqual(["g"]);

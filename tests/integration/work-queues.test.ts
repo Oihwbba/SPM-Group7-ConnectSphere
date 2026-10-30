@@ -8,7 +8,10 @@ import {
   getDecidedBookings,
   getPendingBookingQueue,
 } from "@/app/(app)/bookings/queries";
-import { getDecidedSafetyChecks } from "@/app/(app)/safety-checks/queries";
+import {
+  getDecidedSafetyChecks,
+  getOutdatedUndecidedSafetyChecks,
+} from "@/app/(app)/safety-checks/queries";
 
 // SCRUM-211 AC2 — the Decided filter's reads against a real database: what
 // each queue lists once decided, and who may read it. Only the session is
@@ -142,13 +145,18 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-211 — what each queue's Decided fil
 
     // A check this officer may review, decided; one awaiting review; and a
     // decided one for an event the officer coordinates, which they may not see.
-    const check = (eventId: string, status: "APPROVED" | "AWAITING_REVIEW") =>
+    const check = (
+      eventId: string,
+      status: "APPROVED" | "AWAITING_REVIEW" | "OUTDATED",
+      decided = status === "APPROVED",
+    ) =>
       prisma.safetyCheck.create({
         data: {
           eventId,
           status,
           requestedById: "usr_coordinator_2",
-          ...(status === "APPROVED" ? { decidedById: "usr_safetyofficer_2", decidedAt: new Date() } : {}),
+          ...(decided ? { decidedById: "usr_safetyofficer_2", decidedAt: new Date() } : {}),
+          ...(status === "OUTDATED" ? { outdatedAt: new Date() } : {}),
         },
         select: { id: true },
       });
@@ -156,6 +164,11 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-211 — what each queue's Decided fil
     ids.checkWaiting = (await check(planning, "AWAITING_REVIEW")).id;
     const own = await event("own", { status: "PLANNING", coordinatorId: "usr_safetyofficer" });
     ids.checkOwn = (await check(own, "APPROVED")).id;
+    // SCRUM-166 AC13: one outdated before anyone reviewed it, one approved and
+    // then outdated, and one outdated for the officer's own event.
+    ids.checkOutdatedUndecided = (await check(planning, "OUTDATED", false)).id;
+    ids.checkOutdatedAfterApproval = (await check(planning, "OUTDATED", true)).id;
+    ids.checkOwnOutdated = (await check(own, "OUTDATED", false)).id;
   });
 
   afterAll(async () => {
@@ -255,5 +268,23 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-211 — what each queue's Decided fil
     });
     expect(mine).not.toContain(ids.checkWaiting);
     expect(mine).not.toContain(ids.checkOwn);
+  });
+
+  it("SCRUM-211 [AC2] TC-211-14: a check outdated before anyone reviewed it isn't under Decided; it is read for All, while one approved and then outdated stays decided", async () => {
+    const officer = { id: "usr_safetyofficer", role: "SAFETY_OFFICER" } as const;
+    const decided = (await getDecidedSafetyChecks(officer)).map((c) => c.id);
+    const outdated = await getOutdatedUndecidedSafetyChecks(officer);
+
+    expect(decided).not.toContain(ids.checkOutdatedUndecided);
+    expect(decided).toContain(ids.checkOutdatedAfterApproval);
+    expect(outdated.find((c) => c.id === ids.checkOutdatedUndecided)).toMatchObject({
+      status: "OUTDATED",
+      requestedBy: "Cara Coordinator",
+    });
+    // Only never-decided ones, and never for the officer's own event (SCRUM-166 AC6).
+    const read = outdated.map((c) => c.id);
+    expect(read).not.toContain(ids.checkOutdatedAfterApproval);
+    expect(read).not.toContain(ids.checkDecided);
+    expect(read).not.toContain(ids.checkOwnOutdated);
   });
 });

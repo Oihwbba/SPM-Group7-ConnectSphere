@@ -7,6 +7,7 @@ import { queueState, type QueueDefaults, type QueueItem } from "@/lib/queues";
 import { SAFETY_CHECK_LABEL } from "@/lib/safety-checks";
 import {
   getDecidedSafetyChecks,
+  getOutdatedUndecidedSafetyChecks,
   getSafetyCheckQueue,
   getSafetyCheckReview,
 } from "./queries";
@@ -33,9 +34,10 @@ export default async function SafetyChecksPage({
     return <Forbidden />;
   }
 
-  const [queue, decided, params] = await Promise.all([
+  const [queue, decided, outdated, params] = await Promise.all([
     getSafetyCheckQueue(session.user),
     getDecidedSafetyChecks(session.user),
+    getOutdatedUndecidedSafetyChecks(session.user),
     searchParams,
   ]);
   const items: QueueItem[] = [
@@ -56,6 +58,17 @@ export default async function SafetyChecksPage({
       requestedAt: check.requestedAt,
       waiting: false,
       badges: [],
+    })),
+    // Outdated before anyone reviewed it: nothing decided, so under All only.
+    ...outdated.map((check) => ({
+      id: check.id,
+      event: check.event.name,
+      eventStart: check.event.startAt,
+      asked: asked(check.event.expectedAttendance),
+      requestedAt: check.requestedAt,
+      waiting: false,
+      onlyInAll: true,
+      badges: [{ label: "Outdated", tone: "warning" as const }],
     })),
   ];
   const state = queueState("/safety-checks", items, params, DEFAULTS);

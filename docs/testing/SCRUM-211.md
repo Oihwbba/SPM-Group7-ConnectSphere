@@ -42,6 +42,7 @@ with the same rules, permissions, locks, notifications and messages.
 | [TC-211-11](#tc-211-11) | Positive | AC 3 | e2e |
 | [TC-211-12](#tc-211-12) | Positive, Boundary | AC 2 | Integration |
 | [TC-211-13](#tc-211-13) | Positive, Boundary | AC 2 | Integration |
+| [TC-211-14](#tc-211-14) | Positive, Negative | AC 2 | Unit, integration |
 
 ## TC-211-01
 
@@ -269,3 +270,25 @@ the released hold, then the one cancelled with its event. Opened, it says
 *Automated:* `tests/integration/work-queues.test.ts` › "SCRUM-211 [AC2]
 TC-211-13: a request withdrawn, or cancelled with its event, before any
 decision is under Decided, by when it ended, and no longer waiting".
+
+## TC-211-14
+
+**Safety Checks' Decided lists only checks with a recorded outcome.**
+
+*Pre-conditions:* for an event in Planning, a check approved by a Safety
+Officer, a check that went Outdated before anyone reviewed it, and one that
+was approved and then went Outdated (SCRUM-166 AC13); and an Outdated check
+for an event the officer coordinates.
+
+1. In **Safety Checks**, choose **Decided**, then **All**.
+
+**Expected:** Decided lists the approved check and the one approved and then
+outdated (it keeps its decision, shown as Outdated), and not the check that
+went Outdated before review. That one is listed under All only, marked
+Outdated. The officer's own event's check is in neither (SCRUM-166 AC6).
+
+*Automated:* `tests/unit/queues.test.ts` › "SCRUM-211 [AC2] TC-211-14: an item
+neither waiting nor decided, like a check outdated before review, is only
+under All"; `tests/integration/work-queues.test.ts` › "SCRUM-211 [AC2]
+TC-211-14: a check outdated before anyone reviewed it isn't under Decided; it
+is read for All, while one approved and then outdated stays decided".

@@ -1,4 +1,4 @@
-import type { SafetyCheckStatus } from "@prisma/client";
+import type { Prisma, SafetyCheckStatus } from "@prisma/client";
 
 import { prisma } from "@/lib/db";
 import { can, type SessionUser } from "@/lib/auth/can";
@@ -62,16 +62,17 @@ export async function getSafetyCheckQueue(
 }
 
 /**
- * SCRUM-211 AC2 — the queue's Decided filter: checks with an outcome
- * recorded, most recently decided first, for events this officer may review
- * (AC6). Read-only.
+ * The checks that are no longer waiting, matching `where`, for events this
+ * officer may review (AC6). Read-only.
  */
-export async function getDecidedSafetyChecks(
+async function checksNoLongerWaiting(
   user: SessionUser,
+  where: Prisma.SafetyCheckWhereInput,
+  orderBy: Prisma.SafetyCheckOrderByWithRelationInput,
 ): Promise<(QueuedSafetyCheck & { status: SafetyCheckStatus })[]> {
   const checks = await prisma.safetyCheck.findMany({
-    where: { status: { not: "AWAITING_REVIEW" } },
-    orderBy: { decidedAt: "desc" },
+    where,
+    orderBy,
     select: {
       id: true,
       status: true,
@@ -104,6 +105,32 @@ export async function getDecidedSafetyChecks(
         expectedAttendance: c.event.expectedAttendance,
       },
     }));
+}
+
+/**
+ * SCRUM-211 AC2 — the queue's Decided filter: checks with an outcome
+ * recorded (Approved, Changes requested or Rejected), most recently decided
+ * first. One approved and later Outdated keeps its decision, so it stays here.
+ */
+export async function getDecidedSafetyChecks(user: SessionUser) {
+  return checksNoLongerWaiting(
+    user,
+    { decidedAt: { not: null } },
+    { decidedAt: "desc" },
+  );
+}
+
+/**
+ * SCRUM-211 AC2 — checks that went Outdated before anyone reviewed them
+ * (SCRUM-166 AC13). Nothing was decided, so they aren't under Decided; the
+ * page lists them under All only, most recently requested first.
+ */
+export async function getOutdatedUndecidedSafetyChecks(user: SessionUser) {
+  return checksNoLongerWaiting(
+    user,
+    { status: "OUTDATED", decidedAt: null },
+    { createdAt: "desc" },
+  );
 }
 
 export interface SafetyCheckReview {
