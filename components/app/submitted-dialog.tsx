@@ -30,8 +30,11 @@ export function SubmittedDialog({
   children: React.ReactNode;
   onClose: () => void;
   closeLabel?: string;
-  /** A second button, e.g. "View Details". */
-  action?: { label: string; onClick: () => void };
+  /**
+   * A second button, e.g. "View Details". `prominent` makes it the larger,
+   * main way on, where it is what most people will choose next.
+   */
+  action?: { label: string; onClick: () => void; prominent?: boolean };
   testId?: string;
 }) {
   return (
@@ -61,7 +64,13 @@ export function SubmittedDialog({
             {closeLabel}
           </Button>
           {action && (
-            <Button onClick={action.onClick} className="w-full sm:w-auto">
+            <Button
+              onClick={action.onClick}
+              size={action.prominent ? "lg" : "default"}
+              className={
+                action.prominent ? "w-full sm:min-w-56" : "w-full sm:w-auto"
+              }
+            >
               {action.label}
             </Button>
           )}
