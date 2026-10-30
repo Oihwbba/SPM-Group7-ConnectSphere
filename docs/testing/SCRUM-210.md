@@ -54,7 +54,7 @@ stands alone)
 | Venue Staff | Bookings · **Venues**: Availability, Venue Catalogue · All Events |
 | Technical Support | **My work**: Equipment, Equipment Requests · Venue Catalogue · All Events |
 | Safety Officer | Safety Checks · Venue Catalogue |
-| Attendee | **My work**: Browse Events, My Registrations |
+| Attendee | Browse Events · My Registrations (no heading since SCRUM-248: Attendees aren't staff) |
 
 Every link keeps the address it had. The catalogue link reads "Venue
 Catalogue", as its page does.
@@ -115,7 +115,7 @@ of My work to its own Equipment group.
 **Expected:** Organiser `/events` (My Events), Coordinator `/events` (Events),
 Event Coordinator Lead `/queue`, Venue Staff `/bookings`, Technical Support
 `/equipment` (not Equipment Requests), Safety Officer `/safety-checks`,
-Attendee `/events` (Browse Events): each the first link of its My work.
+Attendee `/events` (Browse Events): each the first link of its My work (an Attendee's first link, which has no heading since SCRUM-248).
 
 *Automated:* `tests/unit/nav-groups.test.ts` every "SCRUM-210 [AC3] TC-210-06" test;
 `e2e/menu-groups.spec.ts` every "SCRUM-210 [AC1, AC3, AC4] TC-210-01, TC-210-06, TC-210-08" test.

@@ -24,6 +24,10 @@ const STEP_OF: Record<EventStatus, number> = {
  * are ticked, the current one glows in the site's primary colour, and a Rejected request is marked
  * where it stopped. A Cancelled event shows how far it got, then Cancelled.
  * Carries the status for tests and screen readers as the badge did.
+ *
+ * SCRUM-248 AC2: one row of labelled steps doesn't fit a phone, so below
+ * `md` each label sits under its dot and the line runs between the dots,
+ * above the labels; from `md` up, label and line follow the dot on one row.
  */
 export function EventProgress({
   status,
@@ -46,7 +50,7 @@ export function EventProgress({
     >
       <p className="sr-only">Status: {EVENT_STATUS_LABEL[status]}</p>
       <ol
-        className="flex items-center gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className="flex items-start overflow-x-auto [scrollbar-width:none] md:items-center md:gap-1 [&::-webkit-scrollbar]:hidden"
         aria-label="Progress"
       >
         {STEPS.map((step, i) => {
@@ -56,10 +60,10 @@ export function EventProgress({
           return (
             <li
               key={step}
-              className="flex min-w-0 flex-1 items-center gap-1 last:flex-none"
+              className="relative flex min-w-0 flex-1 flex-col items-center md:flex-row md:gap-1 md:last:flex-none"
               aria-current={here ? "step" : undefined}
             >
-              <span className="flex shrink-0 items-center gap-2">
+              <span className="flex shrink-0 flex-col items-center gap-1 md:flex-row md:gap-2">
                 <span
                   aria-hidden
                   className={cn(
@@ -80,8 +84,9 @@ export function EventProgress({
                   )}
                 </span>
                 <span
+                  data-testid="progress-label"
                   className={cn(
-                    "whitespace-nowrap text-sm",
+                    "whitespace-nowrap text-[11px] md:text-sm",
                     here ? "font-semibold text-primary" : "text-muted-foreground",
                     stopped && "text-destructive",
                   )}
@@ -92,8 +97,11 @@ export function EventProgress({
               {i < STEPS.length - 1 && (
                 <span
                   aria-hidden
+                  data-testid="progress-line"
                   className={cn(
-                    "mx-2 h-0.5 min-w-4 flex-1 rounded-full",
+                    // Phone: from beside this dot to beside the next one.
+                    "absolute left-[calc(50%+0.875rem)] right-[calc(-50%+0.875rem)] top-[9px] h-0.5 rounded-full",
+                    "md:static md:mx-2 md:min-w-4 md:flex-1",
                     i < current || finished ? "bg-primary" : "bg-muted-foreground/20",
                   )}
                 />

@@ -56,7 +56,8 @@ describe("SCRUM-210 — menus grouped by task", () => {
         [null, ["All Events"]],
       ],
     ],
-    ["ATTENDEE", [["My work", ["Browse Events", "My Registrations"]]]],
+    // SCRUM-248 AC1: Attendees aren't staff; their links have no heading.
+    ["ATTENDEE", [[null, ["Browse Events", "My Registrations"]]]],
     [
       "COORDINATOR_LEAD",
       [
@@ -89,11 +90,11 @@ describe("SCRUM-210 — menus grouped by task", () => {
     ]);
   });
 
-  it("SCRUM-210 [AC1] TC-210-02: a group with a single link shows no heading; one with more has its heading", () => {
+  it("SCRUM-210 [AC1] TC-210-02: a group with a single link shows no heading; one with more has its heading, except an Attendee's (SCRUM-248)", () => {
     for (const role of ALL_ROLES) {
       for (const group of navGroupsFor(role)) {
         expect(group.heading === null, `${role}: ${group.heading}`).toBe(
-          group.items.length === 1,
+          group.items.length === 1 || group.id === "attending",
         );
       }
     }
@@ -192,5 +193,50 @@ describe("SCRUM-210 — the grouped menu follows the permission table", () => {
       [null, ["Equipment Requests"]],
       [null, ["All Events"]],
     ]);
+  });
+});
+
+// SCRUM-248 AC1 — an Attendee's menu has no "My work" heading; staff menus,
+// including a staff user who is also an Attendee, are as SCRUM-210 left them.
+describe("SCRUM-248 — an Attendee's menu", () => {
+  it("SCRUM-248 [AC1] TC-248-01: an Attendee's two links have no heading, each shown on its own, and nothing is headed My work", () => {
+    const groups = navGroupsFor("ATTENDEE");
+    expect(groups).toEqual([
+      {
+        id: "attending",
+        heading: null,
+        items: [
+          { href: "/events", label: "Browse Events" },
+          { href: "/registrations", label: "My Registrations" },
+        ],
+      },
+    ]);
+    expect(groups.map((group) => group.heading)).not.toContain("My work");
+    expect(LANDING_ROUTE_BY_ROLE.ATTENDEE).toBe("/events");
+  });
+
+  it.each<[Role[], ReturnType<typeof shape>]>([
+    [
+      ["COORDINATOR", "ATTENDEE"],
+      [
+        ["My work", ["Events", "My Registrations"]],
+        ["Venues", ["Venue Search", "Request Venue", "Availability", "Venue Catalogue"]],
+        [null, ["Equipment Requests"]],
+        [null, ["All Events"]],
+      ],
+    ],
+    [
+      ["ATTENDEE", "SAFETY_OFFICER"],
+      [
+        ["My work", ["Browse Events", "Safety Checks", "My Registrations"]],
+        [null, ["Venue Catalogue"]],
+      ],
+    ],
+    [
+      ["ORGANISER", "ATTENDEE"],
+      [["My work", ["My Events", "My Registrations"]]],
+    ],
+  ])("SCRUM-248 [AC1] TC-248-02: %j keeps the staff menu, with the Attendee's links in My work as before", (roles, expected) => {
+    expect(shape(navGroupsForRoles(roles))).toEqual(expected);
   });
 });

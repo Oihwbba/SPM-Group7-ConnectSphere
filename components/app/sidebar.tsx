@@ -50,6 +50,8 @@ const ICON_BY_HREF: Record<string, LucideIcon> = {
 // SCRUM-210: the icon of a group that opens to show its links.
 const ICON_BY_GROUP: Record<GroupId, LucideIcon> = {
   work: Briefcase,
+  // SCRUM-248: never shown, as an Attendee's links have no heading.
+  attending: Ticket,
   venues: Building2,
   equipment: Wrench,
   planning: LayoutList,
@@ -195,16 +197,17 @@ export function Sidebar({ roles }: { roles: Role[] }) {
         )}
       >
         {groups.map((group) => {
+          // A single link, or an Attendee's links (SCRUM-248): each its own
+          // item on the rail and the phone's bar.
           if (!group.heading) {
-            const item = group.items[0];
-            return (
+            return group.items.map((item) => (
               <NavLink
                 key={item.href}
                 item={item}
                 active={item.href === activeHref}
                 collapsed={collapsed}
               />
-            );
+            ));
           }
           const open = opened[group.id] ?? holdsActive(group.items);
           const Icon = ICON_BY_GROUP[group.id];

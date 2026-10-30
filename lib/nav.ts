@@ -32,13 +32,18 @@ export type NavItem = {
 /**
  * SCRUM-210 — the tasks the menu is grouped by, in the order they appear.
  * "work" is the role's own lists, where it lands.
+ *
+ * SCRUM-248 — "attending" is an Attendee's lists. Attendees aren't staff,
+ * so it has no heading and each link shows on its own. A user whose other
+ * roles have work of their own keeps these links in My work, as before.
  */
-export type GroupId = "work" | "venues" | "equipment" | "planning";
+export type GroupId = "work" | "attending" | "venues" | "equipment" | "planning";
 
-const GROUP_ORDER: GroupId[] = ["work", "venues", "equipment", "planning"];
+const GROUP_ORDER: GroupId[] = ["work", "attending", "venues", "equipment", "planning"];
 
-const GROUP_HEADING: Record<GroupId, string> = {
+const GROUP_HEADING: Record<GroupId, string | null> = {
   work: "My work",
+  attending: null,
   venues: "Venues",
   equipment: "Equipment",
   planning: "Planning",
@@ -46,8 +51,8 @@ const GROUP_HEADING: Record<GroupId, string> = {
 
 /**
  * A group of links under its heading. A group with one link has no heading,
- * since a heading over a single link says nothing (SCRUM-210 AC1): the menu
- * shows that link on its own.
+ * since a heading over a single link says nothing (SCRUM-210 AC1), and nor
+ * does an Attendee's (SCRUM-248): the menu shows each link on its own.
  */
 export type NavGroup = {
   id: GroupId;
@@ -80,7 +85,7 @@ const NAV_ROUTES: NavRoute[] = [
     action: "event:browse",
     href: "/events",
     label: "Browse Events",
-    group: "work",
+    group: "attending",
   },
   {
     action: "venue:search",
@@ -143,7 +148,7 @@ const NAV_ROUTES: NavRoute[] = [
     action: "registration:read",
     href: "/registrations",
     label: "My Registrations",
-    group: "work",
+    group: "attending",
   },
   // Notifications are reached from the bell beside the user's name, the one
   // way in (shared page conventions, change 9), not from this menu.
@@ -182,6 +187,12 @@ const linkFor = (route: NavRoute, role: Role): NavItem => ({
  * as the first of them names it. Groups left empty are not shown.
  */
 export function navGroupsForRoles(roles: Role[]): NavGroup[] {
+  const holds = (action: Action) =>
+    roles.some((held) => roleAllows(held, action));
+  // SCRUM-248: with work of their own, an Attendee's links stay in My work.
+  const hasWork = NAV_ROUTES.some(
+    (route) => route.group === "work" && holds(route.action),
+  );
   const hrefs = new Set<string>();
   const byGroup = new Map<GroupId, NavItem[]>();
   for (const route of NAV_ROUTES) {
@@ -189,7 +200,8 @@ export function navGroupsForRoles(roles: Role[]): NavGroup[] {
     if (!role || hrefs.has(route.href)) continue;
     hrefs.add(route.href);
     const group =
-      route.workWhen && roles.some((held) => roleAllows(held, route.workWhen!))
+      (route.workWhen && holds(route.workWhen)) ||
+      (route.group === "attending" && hasWork)
         ? "work"
         : route.group;
     byGroup.set(group, [...(byGroup.get(group) ?? []), linkFor(route, role)]);
