@@ -78,3 +78,37 @@ and the table, not by writing a new conditional in a feature.
 - A page with a view per role offers each one the user holds: the events
   page a view per role that has one (ADR 0001's addendum), and Equipment
   Requests the review queue and your own requests when your roles do both.
+
+## Addendum (2026-10-29) — Ownership scoped in the query (SCRUM-216)
+
+The SCRUM-216 epic check found six Server Actions whose relationship check is
+made by the query that reads or writes the row (its `where` clause, or a
+comparison with the row it just read), not by a call to `can()` with a
+resource. This is deliberate, and the rule is:
+
+- **Role permission always goes through `can()`.** Each of these actions
+  starts with `requirePermission()` for its action, like every other.
+- **When the only relationship is "this row is mine" (or, for the Lead, "this
+  request is still waiting"), the query scopes it.** A row that isn't the
+  caller's, or doesn't exist, reads as the same "not found", so ids can't be
+  probed (SCRUM-67 AC4, SCRUM-68).
+- **Any relationship that depends on a role** (organiser or assigned
+  Coordinator, a staff decision on an arrangement) **goes through `can()`
+  with a resource**, as before.
+
+The six actions:
+
+| Action | Permission (`can()`) | Scoped in the query |
+|---|---|---|
+| `withdrawRegistration` (`app/(app)/events/registration-actions.ts`) | `registration:withdraw` | the registration it reads must have the caller's `userId` |
+| `markNotificationRead` (`app/(app)/notifications/actions.ts`) | `notification:read` | `visibleNotificationsWhere(caller)` |
+| `assignCoordinator` (`app/(app)/queue/actions.ts`) | `event:assign` | the conditional write claims only a request still Submitted with no Coordinator; that same condition stops two Leads both assigning it (SCRUM-165 AC6) |
+| `startRequestFromRejected` (`app/(app)/events/actions.ts`) | `event:create` | `organiserId` is the caller's |
+| `createDraftEvent` (`app/(app)/events/actions.ts`) | `event:create` | saving over a draft needs `organiserId` to be the caller's |
+| `submitEventRequest` (`app/(app)/events/actions.ts`) | `event:create` | submitting a draft needs `organiserId` to be the caller's |
+
+Why not `can()` with a resource here: these queries need the ownership
+condition anyway, to read or claim the row atomically, so a second check
+through `can()` would read the row twice for the same answer. A new action
+that acts only on the caller's own rows may follow the same pattern; anything
+else goes through `can()`.
