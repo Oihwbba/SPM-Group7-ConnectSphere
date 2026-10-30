@@ -112,20 +112,14 @@ export default async function VenueDetailPage({
             <CardTitle className="text-base">Opening hours (SGT)</CardTitle>
           </CardHeader>
           <CardContent>
-            {venue.openingHours.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                Not recorded yet{venue.operatingHours ? ` (previously noted: ${venue.operatingHours})` : ""}.
-              </p>
-            ) : (
-              <ul className="space-y-1 text-sm" data-testid="opening-hours">
-                {venue.openingHours.map((day) => (
-                  <li key={day.weekday} className="flex justify-between gap-4">
-                    <span>{WEEKDAYS[day.weekday - 1]}</span>
-                    <span>{describeHours(day)}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
+            <ul className="space-y-1 text-sm" data-testid="opening-hours">
+              {venue.openingHours.map((day) => (
+                <li key={day.weekday} className="flex justify-between gap-4">
+                  <span>{WEEKDAYS[day.weekday - 1]}</span>
+                  <span>{describeHours(day)}</span>
+                </li>
+              ))}
+            </ul>
           </CardContent>
         </Card>
 

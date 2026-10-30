@@ -215,7 +215,6 @@ async function seedVenues() {
       facilities: ["stage", "projector", "sound-system", "livestream"],
       accessibilityFeatures: ["wheelchair-access", "hearing-loop", "accessible-restroom"],
       supportedLayouts: ["theatre"],
-      operatingHours: "Mon–Sun 07:00–23:00",
       notes: "Requires a technician on site for any livestreamed event.",
     },
     {
@@ -226,7 +225,6 @@ async function seedVenues() {
       facilities: ["projector", "whiteboard"],
       accessibilityFeatures: ["wheelchair-access"],
       supportedLayouts: ["classroom", "u-shape", "boardroom"],
-      operatingHours: "Mon–Fri 08:00–20:00",
     },
     {
       id: V.hall,
@@ -236,7 +234,6 @@ async function seedVenues() {
       facilities: ["open-floor", "loading-bay", "sound-system"],
       accessibilityFeatures: ["wheelchair-access", "accessible-restroom"],
       supportedLayouts: ["banquet", "exhibition", "theatre"],
-      operatingHours: "Mon–Sun 06:00–22:00",
     },
     {
       // SCRUM-40: deliberately small and sparsely equipped, so the suitability
@@ -248,17 +245,12 @@ async function seedVenues() {
       facilities: ["video-conferencing", "whiteboard"],
       accessibilityFeatures: [],
       supportedLayouts: ["boardroom"],
-      operatingHours: "Mon–Fri 09:00–18:00",
     },
   ];
 
-  for (const v of venues) {
-    await prisma.venue.upsert({ where: { id: v.id }, update: v, create: v });
-  }
-
-  // SCRUM-34 AC3: the hours above as an opening and a closing time per day
-  // (minutes after midnight SGT), or Closed. Booking periods are refused
-  // outside them (AC7).
+  // SCRUM-34 AC3: each venue's opening and closing time per day (minutes
+  // after midnight SGT), or Closed. Booking periods are refused outside them
+  // (AC7).
   const open = (opens: string, closes: string) => ({
     opensMinute: Number(opens.slice(0, 2)) * 60 + Number(opens.slice(3)),
     closesMinute: Number(closes.slice(0, 2)) * 60 + Number(closes.slice(3)),
@@ -270,15 +262,20 @@ async function seedVenues() {
     [V.hall]: () => open("06:00", "22:00"),
     [V.boardroom]: (d) => (d <= 5 ? open("09:00", "18:00") : closed),
   };
-  for (const [venueId, hoursOn] of Object.entries(weekHours)) {
-    for (let weekday = 1; weekday <= 7; weekday++) {
-      const hours = hoursOn(weekday);
-      await prisma.venueOpeningHours.upsert({
-        where: { venueId_weekday: { venueId, weekday } },
-        update: hours,
-        create: { venueId, weekday, ...hours },
-      });
-    }
+  // A venue and its seven days in one transaction: the database refuses a
+  // venue without them when the transaction commits (SCRUM-253 AC2).
+  for (const v of venues) {
+    await prisma.$transaction([
+      prisma.venue.upsert({ where: { id: v.id }, update: v, create: v }),
+      ...[1, 2, 3, 4, 5, 6, 7].map((weekday) => {
+        const hours = weekHours[v.id](weekday);
+        return prisma.venueOpeningHours.upsert({
+          where: { venueId_weekday: { venueId: v.id, weekday } },
+          update: hours,
+          create: { venueId: v.id, weekday, ...hours },
+        });
+      }),
+    ]);
   }
   return venues.length;
 }

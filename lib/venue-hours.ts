@@ -70,15 +70,13 @@ function sgDay(at: Date): { weekday: number; midnight: number } {
  * before closing on the day it starts (AC7's boundary: exactly at opening or
  * closing is within). A period running past midnight, or on a Closed day, is
  * outside. Setup and turnaround are not part of the booking period, so they
- * never make it outside (SCRUM-159 AC9 warns about them instead).
- *
- * A venue with no hours recorded (from before SCRUM-34) refuses nothing.
+ * never make it outside (SCRUM-159 AC9 warns about them instead). Every
+ * venue has a row for each day (SCRUM-253), so a day with no row is Closed.
  */
 export function dayOutsideOpeningHours(
   period: Period,
   hours: OpeningDay[],
 ): OpeningDay | null {
-  if (hours.length === 0) return null;
   const { weekday, midnight } = sgDay(period.startAt);
   const day = hours.find((h) => h.weekday === weekday) ?? {
     weekday,
@@ -98,10 +96,9 @@ export function dayOutsideOpeningHours(
  * SCRUM-38 AC4 — for a search with no booking period (a date without both
  * times): the SGT day `at` falls on, if the venue is Closed then, or null. A
  * search covers one day (AC2), so its start names the day. A weekday
- * with no row is Closed; a venue with no hours recorded is closed on no day.
+ * with no row is Closed.
  */
 export function closedOn(at: Date, hours: OpeningDay[]): OpeningDay | null {
-  if (hours.length === 0) return null;
   const { weekday } = sgDay(at);
   const day = hours.find((h) => h.weekday === weekday);
   if (!day) return { weekday, opensMinute: null, closesMinute: null };
@@ -127,9 +124,9 @@ export function outsideOpeningHoursMessage(
  */
 export function openingHoursRefusal(
   period: Period,
-  venue: { name: string; openingHours?: OpeningDay[] },
+  venue: { name: string; openingHours: OpeningDay[] },
 ): string | null {
-  const day = dayOutsideOpeningHours(period, venue.openingHours ?? []);
+  const day = dayOutsideOpeningHours(period, venue.openingHours);
   return day && outsideOpeningHoursMessage(venue.name, day);
 }
 
@@ -147,10 +144,10 @@ function clock(minutes: number): string {
 export function setupTurnaroundWarning(
   period: Period,
   minutes: { setupMinutes: number; turnaroundMinutes: number },
-  venue: { name: string; openingHours?: OpeningDay[] },
+  venue: { name: string; openingHours: OpeningDay[] },
 ): string | null {
-  const hours = venue.openingHours ?? [];
-  if (hours.length === 0 || dayOutsideOpeningHours(period, hours)) return null;
+  const hours = venue.openingHours;
+  if (dayOutsideOpeningHours(period, hours)) return null;
 
   // Within the hours, so that day is open.
   const { weekday, midnight } = sgDay(period.startAt);

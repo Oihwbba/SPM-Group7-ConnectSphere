@@ -39,7 +39,6 @@ export async function getVenueDetail(id: string) {
       setupMinutes: true,
       turnaroundMinutes: true,
       knownRestrictions: true,
-      operatingHours: true,
       isActive: true,
       openingHours: {
         select: { weekday: true, opensMinute: true, closesMinute: true },

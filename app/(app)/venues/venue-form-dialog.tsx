@@ -37,20 +37,12 @@ import type { VenueDetail } from "./queries";
 type Day = { weekday: number; closed: boolean; opensAt: string; closesAt: string };
 type Errors = Record<string, string[] | undefined>;
 
-/** A venue from before SCRUM-34, whose opening hours were never recorded. */
-function hoursUnrecorded(venue?: VenueDetail): boolean {
-  return venue !== undefined && venue.openingHours.length === 0;
-}
-
 function formFrom(venue?: VenueDetail) {
   const hours: Day[] = WEEKDAYS.map((_, i) => {
     const weekday = i + 1;
     if (!venue) return { weekday, closed: false, opensAt: "09:00", closesAt: "18:00" };
-    // Left blank, so Venue Staff choose them: a default saved by an unrelated
-    // edit would start refusing bookings (AC7) nobody decided to refuse.
-    if (hoursUnrecorded(venue)) return { weekday, closed: false, opensAt: "", closesAt: "" };
     const saved = venue.openingHours.find((d) => d.weekday === weekday);
-    // A day with no row is Closed once a venue has hours (AC7).
+    // A day with no row is Closed (AC7).
     return !saved || saved.opensMinute === null || saved.closesMinute === null
       ? { weekday, closed: true, opensAt: "", closesAt: "" }
       : {
@@ -237,12 +229,6 @@ export function VenueFormDialog({
 
           <fieldset className="space-y-2">
             <legend className="text-sm font-medium">Opening hours (SGT) *</legend>
-            {hoursUnrecorded(venue) && (
-              <p className="text-sm text-muted-foreground">
-                This venue&apos;s opening hours aren&apos;t recorded yet. Enter them for each
-                day, or mark the day Closed.
-              </p>
-            )}
             <div className="space-y-2">
               {form.hours.map((day) => {
                 const name = WEEKDAYS[day.weekday - 1];

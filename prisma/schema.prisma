@@ -489,7 +489,10 @@ model Venue {
   facilities            String[] @default([]) // e.g. ["projector", "sound-system"]
   accessibilityFeatures String[] @default([]) // e.g. ["wheelchair-access", "hearing-loop"]
   supportedLayouts      String[] @default([]) // e.g. ["theatre", "banquet", "classroom"]
-  operatingHours        String?
+  /// The free-text hours from before SCRUM-34, replaced by `openingHours`.
+  /// No longer read or written (SCRUM-253 AC4); the column is dropped in a
+  /// later migration, once no deployed build selects it.
+  operatingHours        String?  @ignore
   notes                 String?
 
   /// SCRUM-159 AC1 — minutes the venue needs before a booking to set up and
@@ -517,10 +520,9 @@ model Venue {
 /// SCRUM-34 AC3 — a venue's opening hours for one day of the week, in SGT:
 /// an opening and a closing time in minutes after midnight, or neither when
 /// the venue is Closed that day. Closing is after opening (AC5, CHECK
-/// venue_opening_hours_valid). A venue with no rows has no hours recorded
-/// yet (only venues from before SCRUM-34 whose hours couldn't be read), and
-/// no booking is refused for them (AC7). `operatingHours` on Venue is the
-/// older free text, kept for existing data.
+/// venue_opening_hours_valid). Every venue has one row for each day of the
+/// week, checked when a transaction commits (SCRUM-253 AC2, trigger
+/// venue_has_week_of_hours), so a venue always has opening hours.
 model VenueOpeningHours {
   id           String @id @default(cuid())
   venueId      String

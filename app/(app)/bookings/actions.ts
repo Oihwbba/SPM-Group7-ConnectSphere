@@ -100,7 +100,7 @@ const openingHoursSelect = {
 function venueRefusal(booking: {
   startAt: Date;
   endAt: Date;
-  venue: { name: string; isActive?: boolean; openingHours?: OpeningDay[] };
+  venue: { name: string; isActive?: boolean; openingHours: OpeningDay[] };
 }): string | null {
   if (booking.venue.isActive === false) {
     return `${booking.venue.name} has been retired, so it can't be booked.`;
