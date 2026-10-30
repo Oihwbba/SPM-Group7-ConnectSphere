@@ -309,7 +309,7 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-233 — the seed follows the event li
     ).toEqual([]);
   });
 
-  it("SCRUM-233 [AC4, AC6, AC7] TC-233-14: what users see of the seed: an Attendee sees a venue for every Confirmed event, the cancellation notice gives the reason, and the cancelled event's progress stops at Confirmed", async () => {
+  it("SCRUM-233 [AC4, AC6, AC7] TC-233-14: what users see of the seed: an Attendee sees a venue for every Confirmed event, the cancellation notices give the reason, and the cancelled event's progress stops at Confirmed", async () => {
     const attendee = { id: "usr_attendee", role: "ATTENDEE", name: "Test", email: "attendee@test.local" } as SessionUser;
     (auth as unknown as Mock).mockResolvedValue({ user: attendee, expires: "2999-01-01T00:00:00.000Z" } as Session);
     const confirmed = await prisma.event.findMany({ where: { ...seeded, status: "CONFIRMED" }, select: { id: true } });
@@ -327,11 +327,19 @@ describe.skipIf(!usesLocalDatabase)("SCRUM-233 — the seed follows the event li
     expect(shown).toEqual(expect.arrayContaining(["evt_reg_not_open", "evt_reg_closed"]));
     expect(withoutVenue).toEqual([]);
 
-    // SCRUM-82: the words cancelInTransaction sends a registered Attendee.
-    const notice = await prisma.notification.findUniqueOrThrow({ where: { id: "ntf_6" }, select: { message: true } });
-    expect(notice.message).toBe(
-      '"Cancelled — Winter Workshop" was cancelled: Speaker withdrew and no replacement was available.',
-    );
+    // SCRUM-82: what cancelInTransaction sends the Organiser, the Coordinator
+    // who cancelled, and each registered Attendee.
+    const notices = await prisma.notification.findMany({
+      where: { eventId: "evt_cancelled", id: { startsWith: "ntf_" }, type: { in: ["EVENT_STATUS_CHANGED", "REGISTERED_EVENT_CANCELLED"] } },
+      orderBy: { userId: "asc" },
+      select: { userId: true, title: true, message: true },
+    });
+    const reason = '"Cancelled — Winter Workshop" was cancelled: Speaker withdrew and no replacement was available.';
+    expect(notices).toEqual([
+      { userId: "usr_attendee", title: "An event you registered for was cancelled", message: reason },
+      { userId: "usr_coordinator", title: "Event cancelled", message: reason },
+      { userId: "usr_organiser", title: "Event cancelled", message: reason },
+    ]);
 
     const coordinator = { id: "usr_coordinator", role: "COORDINATOR", name: "Test", email: "coordinator@test.local" } as SessionUser;
     expect((await getEventPageData(coordinator, "evt_cancelled"))?.cancelledFrom).toBe("CONFIRMED");
