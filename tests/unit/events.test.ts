@@ -1647,7 +1647,13 @@ describe("getFormCatalogues — permission gate", () => {
   it("SCRUM-13 [AC2 - Happy Path]: returns the venue and equipment catalogue to an organiser", async () => {
     mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
     mockVenues.mockResolvedValue([
-      { id: "ven1", name: "Hall A", capacity: 200, facilities: ["projector"] },
+      {
+        id: "ven1",
+        name: "Hall A",
+        capacity: 200,
+        facilities: ["projector"],
+        openingHours: [],
+      },
     ]);
     mockEquipment.mockResolvedValue([
       { id: "eq1", type: "Microphone", totalQuantity: 10 },
@@ -1672,6 +1678,7 @@ describe("getFormCatalogues — permission gate", () => {
         facilities: ["rooftop-bar"],
         accessibilityFeatures: ["tactile-paving"],
         supportedLayouts: ["garden-party"],
+        openingHours: [],
       },
     ]);
     mockEquipment.mockResolvedValue([]);
@@ -1684,9 +1691,55 @@ describe("getFormCatalogues — permission gate", () => {
     expect(result.data.options.supportedLayouts).toContain("garden-party");
     expect(result.data.options.facilities).toContain("rooftop-bar");
     // The venue list itself still carries only what it showed before.
+    // SCRUM-246 AC2 adds its hours, which TC-246-02 checks.
     expect(result.data.venues).toEqual([
-      { id: "ven1", name: "Rooftop", capacity: 80, facilities: ["rooftop-bar"] },
+      {
+        id: "ven1",
+        name: "Rooftop",
+        capacity: 80,
+        facilities: ["rooftop-bar"],
+        hours: expect.any(Array),
+      },
     ]);
+  });
+
+  it("SCRUM-246 [AC2] TC-246-02: each venue comes with its capacity and every day's opening hours, a Closed day as Closed", async () => {
+    mockAuth.mockResolvedValue(sessionFor("ORGANISER", "usr_organiser"));
+    // Seminar Room 2.1 as seeded: weekdays 08:00–20:00, closed at weekends.
+    mockVenues.mockResolvedValue([
+      {
+        id: "ven_seminar",
+        name: "Seminar Room 2.1",
+        capacity: 60,
+        facilities: [],
+        accessibilityFeatures: [],
+        supportedLayouts: [],
+        openingHours: [1, 2, 3, 4, 5, 6, 7].map((weekday) =>
+          weekday <= 5
+            ? { weekday, opensMinute: 480, closesMinute: 1200 }
+            : { weekday, opensMinute: null, closesMinute: null },
+        ),
+      },
+    ]);
+    mockEquipment.mockResolvedValue([]);
+
+    const result = await getFormCatalogues();
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.data.venues[0]).toMatchObject({
+      name: "Seminar Room 2.1",
+      capacity: 60,
+      hours: [
+        "Monday 08:00–20:00",
+        "Tuesday 08:00–20:00",
+        "Wednesday 08:00–20:00",
+        "Thursday 08:00–20:00",
+        "Friday 08:00–20:00",
+        "Saturday Closed",
+        "Sunday Closed",
+      ],
+    });
   });
 
   it("SCRUM-13 [AC2 - Catalogue Dependencies]: queries only active venue and equipment catalogue entries", async () => {
@@ -1706,6 +1759,9 @@ describe("getFormCatalogues — permission gate", () => {
         facilities: true,
         accessibilityFeatures: true,
         supportedLayouts: true,
+        openingHours: {
+          select: { weekday: true, opensMinute: true, closesMinute: true },
+        },
       },
     });
     expect(mockEquipment).toHaveBeenCalledWith({

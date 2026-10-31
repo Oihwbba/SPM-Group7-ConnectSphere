@@ -4,6 +4,7 @@ import {
   closedOn,
   dayOutsideOpeningHours,
   describeDay,
+  describeWeek,
   minutesToTime,
   openingHoursRefusal,
   outsideOpeningHoursMessage,
@@ -187,5 +188,32 @@ describe("reading and writing opening hours — SCRUM-34 AC3", () => {
   it("SCRUM-34 [AC1] TC-34-01: a day reads as its hours, or Closed", () => {
     expect(describeDay(boardroom[0])).toBe("Monday 09:00–18:00");
     expect(describeDay(boardroom[6])).toBe("Sunday Closed");
+  });
+});
+
+describe("a venue's week on the request form — SCRUM-246 AC2", () => {
+  it("SCRUM-246 [AC2] TC-246-02: every day is listed, Monday first, with Closed days as Closed", () => {
+    expect(describeWeek(boardroom)).toEqual([
+      "Monday 09:00–18:00",
+      "Tuesday 09:00–18:00",
+      "Wednesday 09:00–18:00",
+      "Thursday 09:00–18:00",
+      "Friday 09:00–18:00",
+      "Saturday Closed",
+      "Sunday Closed",
+    ]);
+  });
+
+  it("SCRUM-246 [AC2] TC-246-02: rows in any order read the same, and a day with no row is Closed", () => {
+    const shuffled = [boardroom[4], boardroom[0], boardroom[2]];
+    expect(describeWeek(shuffled)).toEqual([
+      "Monday 09:00–18:00",
+      "Tuesday Closed",
+      "Wednesday 09:00–18:00",
+      "Thursday Closed",
+      "Friday 09:00–18:00",
+      "Saturday Closed",
+      "Sunday Closed",
+    ]);
   });
 });

@@ -27,6 +27,7 @@ import { asSentence, notifyAboutEvent } from "@/lib/event-notifications";
 import { notifyRole } from "@/lib/staff-notifications";
 import { effectiveClosesAt } from "@/lib/registration-state";
 import { venueOptions, type VenueOptions } from "@/lib/venue-options";
+import { describeWeek } from "@/lib/venue-hours";
 import { canTransition, transitionRefusal } from "@/lib/event-lifecycle";
 import { outdateSafetyChecks } from "@/lib/safety-checks";
 
@@ -465,7 +466,8 @@ export async function submitEventRequest(
 /**
  * Fetch available venue list and equipment catalogue for form recommendations,
  * and the accessibility features and layouts venues offer, including any
- * Venue Staff added (SCRUM-34 AC6).
+ * Venue Staff added (SCRUM-34 AC6). Each venue comes with its week of opening
+ * hours, so the Organiser sees which days it is closed (SCRUM-246 AC2).
  * Gated like the create actions: a "use server" export is a public endpoint,
  * so only a user who can create an event request may read the catalogue.
  */
@@ -476,6 +478,7 @@ export async function getFormCatalogues(): Promise<
       name: string;
       capacity: number;
       facilities: string[];
+      hours: string[];
     }[];
     equipment: { id: string; type: string; totalQuantity: number }[];
     options: VenueOptions;
@@ -501,6 +504,9 @@ export async function getFormCatalogues(): Promise<
       facilities: true,
       accessibilityFeatures: true,
       supportedLayouts: true,
+      openingHours: {
+        select: { weekday: true, opensMinute: true, closesMinute: true },
+      },
     },
   });
 
@@ -510,11 +516,12 @@ export async function getFormCatalogues(): Promise<
   });
 
   return ok({
-    venues: venues.map(({ id, name, capacity, facilities }) => ({
+    venues: venues.map(({ id, name, capacity, facilities, openingHours }) => ({
       id,
       name,
       capacity,
       facilities,
+      hours: describeWeek(openingHours),
     })),
     equipment,
     options: venueOptions(venues),
