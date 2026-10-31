@@ -279,7 +279,7 @@ test.describe("SCRUM-34 — browse and maintain the venue catalogue", () => {
     ).toBe("APPROVED");
     await staff.goto("/venues");
     await expect(
-      staff.getByRole("table", { name: "Retired venues" }).getByRole("link", { name }),
+      staff.getByRole("table", { name: "Retired venues" }).getByRole("link", { name, exact: true }),
     ).toBeVisible();
 
     const coordinator = await signedIn(browser, "coordinator@test.local");

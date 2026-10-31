@@ -1,4 +1,17 @@
 import { notFound } from "next/navigation";
+import {
+  Accessibility,
+  AlertTriangle,
+  Clock,
+  Info,
+  LayoutGrid,
+  MapPin,
+  Repeat,
+  Sparkles,
+  Timer,
+  Users,
+  type LucideIcon,
+} from "lucide-react";
 
 import { requireSession } from "@/lib/auth/guard";
 import { can } from "@/lib/auth/can";
@@ -14,7 +27,15 @@ import { VenueFormDialog } from "../venue-form-dialog";
 /** "wheelchair-access" -> "wheelchair access" */
 const readable = (tag: string) => tag.replace(/-/g, " ");
 
-function Tags({ values, empty }: { values: string[]; empty: string }) {
+function Tags({
+  values,
+  empty,
+  variant,
+}: {
+  values: string[];
+  empty: string;
+  variant: "info" | "success" | "secondary";
+}) {
   if (values.length === 0) {
     return <p className="text-sm text-muted-foreground">{empty}</p>;
   }
@@ -22,20 +43,65 @@ function Tags({ values, empty }: { values: string[]; empty: string }) {
     <ul className="flex flex-wrap gap-2">
       {values.map((value) => (
         <li key={value}>
-          <Badge variant="secondary">{readable(value)}</Badge>
+          <Badge variant={variant}>{readable(value)}</Badge>
         </li>
       ))}
     </ul>
   );
 }
 
-function Fact({ label, children }: { label: string; children: React.ReactNode }) {
+/** A detail with its icon in a tinted chip, so the main points stand out. */
+function Fact({
+  label,
+  icon: Icon,
+  tone = "bg-primary/10 text-primary",
+  children,
+}: {
+  label: string;
+  icon: LucideIcon;
+  tone?: string;
+  children: React.ReactNode;
+}) {
   return (
-    <div className="space-y-1">
-      <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-        {label}
-      </dt>
-      <dd className="text-sm">{children}</dd>
+    <div className="flex items-start gap-3">
+      <span
+        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${tone}`}
+        aria-hidden
+      >
+        <Icon className="h-4 w-4" />
+      </span>
+      <div className="space-y-0.5">
+        <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          {label}
+        </dt>
+        <dd className="text-sm font-medium">{children}</dd>
+      </div>
+    </div>
+  );
+}
+
+function CardHeading({ icon: Icon, children }: { icon: LucideIcon; children: React.ReactNode }) {
+  return (
+    <CardTitle className="flex items-center gap-2 text-base">
+      <Icon className="h-4 w-4 text-primary" aria-hidden />
+      {children}
+    </CardTitle>
+  );
+}
+
+function TagGroup({ icon: Icon, tone, title, children }: {
+  icon: LucideIcon;
+  tone: string;
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="space-y-2">
+      <h2 className="flex items-center gap-2 text-sm font-medium">
+        <Icon className={`h-4 w-4 ${tone}`} aria-hidden />
+        {title}
+      </h2>
+      {children}
     </div>
   );
 }
@@ -85,15 +151,25 @@ export default async function VenueDetailPage({
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Details</CardTitle>
+            <CardHeading icon={Info}>Details</CardHeading>
           </CardHeader>
           <CardContent>
             <dl className="space-y-4" data-testid="venue-details">
-              <Fact label="Location">{venue.location}</Fact>
-              <Fact label="Capacity">{venue.capacity}</Fact>
-              <Fact label="Setup time">{venue.setupMinutes} minutes</Fact>
-              <Fact label="Turnaround time">{venue.turnaroundMinutes} minutes</Fact>
-              <Fact label="Known restrictions">
+              <Fact label="Location" icon={MapPin}>{venue.location}</Fact>
+              <Fact label="Capacity" icon={Users} tone="bg-info/10 text-info">
+                {venue.capacity}
+              </Fact>
+              <Fact label="Setup time" icon={Timer} tone="bg-success/10 text-success">
+                {venue.setupMinutes} minutes
+              </Fact>
+              <Fact label="Turnaround time" icon={Repeat} tone="bg-success/10 text-success">
+                {venue.turnaroundMinutes} minutes
+              </Fact>
+              <Fact
+                label="Known restrictions"
+                icon={AlertTriangle}
+                tone="bg-warning/10 text-warning"
+              >
                 {venue.knownRestrictions ?? (
                   <span className="text-muted-foreground">None recorded</span>
                 )}
@@ -104,7 +180,7 @@ export default async function VenueDetailPage({
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Opening hours (SGT)</CardTitle>
+            <CardHeading icon={Clock}>Opening hours (SGT)</CardHeading>
           </CardHeader>
           <CardContent>
             {venue.openingHours.length === 0 ? (
@@ -126,21 +202,18 @@ export default async function VenueDetailPage({
 
         <Card className="md:col-span-2">
           <CardHeader>
-            <CardTitle className="text-base">What the venue offers</CardTitle>
+            <CardHeading icon={Sparkles}>What the venue offers</CardHeading>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <h2 className="text-sm font-medium">Facilities</h2>
-              <Tags values={venue.facilities} empty="None recorded" />
-            </div>
-            <div className="space-y-2">
-              <h2 className="text-sm font-medium">Accessibility features</h2>
-              <Tags values={venue.accessibilityFeatures} empty="None recorded" />
-            </div>
-            <div className="space-y-2">
-              <h2 className="text-sm font-medium">Supported layouts</h2>
-              <Tags values={venue.supportedLayouts} empty="None recorded" />
-            </div>
+            <TagGroup icon={Sparkles} tone="text-info" title="Facilities">
+              <Tags values={venue.facilities} empty="None recorded" variant="info" />
+            </TagGroup>
+            <TagGroup icon={Accessibility} tone="text-success" title="Accessibility features">
+              <Tags values={venue.accessibilityFeatures} empty="None recorded" variant="success" />
+            </TagGroup>
+            <TagGroup icon={LayoutGrid} tone="text-primary" title="Supported layouts">
+              <Tags values={venue.supportedLayouts} empty="None recorded" variant="secondary" />
+            </TagGroup>
           </CardContent>
         </Card>
       </div>

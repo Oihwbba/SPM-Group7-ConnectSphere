@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Eye, Users } from "lucide-react";
 
 import { requireSession } from "@/lib/auth/guard";
 import { can } from "@/lib/auth/can";
@@ -28,6 +29,9 @@ function VenueTable({ venues, caption }: { venues: Venue[]; caption: string }) {
             <TableHead>Venue</TableHead>
             <TableHead>Location</TableHead>
             <TableHead className="text-right">Capacity</TableHead>
+            <TableHead className="w-24 text-right">
+              <span className="sr-only">Open</span>
+            </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -44,7 +48,22 @@ function VenueTable({ venues, caption }: { venues: Venue[]; caption: string }) {
                 )}
               </TableCell>
               <TableCell>{venue.location}</TableCell>
-              <TableCell className="text-right">{venue.capacity}</TableCell>
+              <TableCell className="text-right">
+                <span className="inline-flex items-center gap-1.5 tabular-nums">
+                  <Users className="h-4 w-4 text-muted-foreground" aria-hidden />
+                  {venue.capacity}
+                </span>
+              </TableCell>
+              <TableCell className="text-right">
+                <Link
+                  href={`/venues/${venue.id}`}
+                  aria-label={`View ${venue.name}`}
+                  className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
+                >
+                  <Eye className="h-4 w-4" aria-hidden />
+                  View
+                </Link>
+              </TableCell>
             </TableRow>
           ))}
         </TableBody>
