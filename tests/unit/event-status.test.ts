@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from "vitest";
 import type { Session } from "next-auth";
 import type { EventStatus, Role } from "@prisma/client";
 
@@ -27,6 +27,7 @@ import { sgtPeriod } from "../one-day-period";
 const tx = vi.hoisted(() => ({
   event: {
     findUnique: vi.fn(),
+    findUniqueOrThrow: vi.fn(),
     findFirst: vi.fn(),
     update: vi.fn(),
     create: vi.fn(),
@@ -78,6 +79,8 @@ function eventRow(
 beforeEach(() => {
   vi.clearAllMocks();
   tx.event.updateMany.mockResolvedValue({ count: 1 });
+  // SCRUM-249: what approval reads under the lock; no start, so not overdue.
+  tx.event.findUniqueOrThrow.mockResolvedValue({ status: "UNDER_REVIEW", startAt: null });
   tx.auditLog.create.mockResolvedValue({});
   tx.clarificationRequest.updateMany.mockResolvedValue({ count: 0 });
   tx.user.findMany.mockResolvedValue([]);
@@ -432,6 +435,62 @@ describe("submitEventRequest — SCRUM-19/24 rejected → submitted", () => {
           decisionReason: null,
         }),
       }),
+    );
+  });
+});
+
+// SCRUM-249 — an overdue request can't be approved. Test cases:
+// docs/testing/SCRUM-249.md. Only Date is faked, so the mocked transaction's
+// promises still run.
+describe("transitionEventStatus — an overdue request, SCRUM-249", () => {
+  const NOW = new Date("2031-06-01T02:00:00.000Z");
+
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["Date"], now: NOW });
+    mockAuth.mockResolvedValue(sessionFor("COORDINATOR", "usr_coord"));
+    mockFindUnique.mockResolvedValue(eventRow());
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  const startingAt = (startAt: Date) =>
+    tx.event.findUniqueOrThrow.mockResolvedValue({ status: "UNDER_REVIEW", startAt });
+
+  it("SCRUM-249 [AC1, AC3] TC-249-05: one millisecond past its start, approval is refused and nothing is written", async () => {
+    startingAt(new Date(NOW.getTime() - 1));
+
+    expect(await transitionEventStatus({ eventId: "evt1", nextStatus: "APPROVED" })).toEqual({
+      ok: false,
+      error: "This event is overdue: its start time has passed. It can be rejected or cancelled.",
+      fieldErrors: undefined,
+    });
+    expect(tx.event.updateMany).not.toHaveBeenCalled();
+    expect(tx.auditLog.create).not.toHaveBeenCalled();
+    expect(tx.notification.createMany).not.toHaveBeenCalled();
+    expect(tx.clarificationRequest.updateMany).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["exactly now", NOW],
+    ["later", new Date(NOW.getTime() + 1)],
+  ])("SCRUM-249 [AC3] TC-249-06: a request starting %s can still be approved", async (_, startAt) => {
+    startingAt(startAt);
+
+    expect(await transitionEventStatus({ eventId: "evt1", nextStatus: "APPROVED" })).toEqual({
+      ok: true,
+      data: { status: "PLANNING" },
+    });
+    expect(tx.event.updateMany).toHaveBeenCalledTimes(1);
+  });
+
+  it("SCRUM-249 [AC3] TC-249-05: the check reads the event after locking its row", async () => {
+    startingAt(new Date(NOW.getTime() - 1));
+
+    await transitionEventStatus({ eventId: "evt1", nextStatus: "APPROVED" });
+
+    expect(tx.$queryRaw.mock.invocationCallOrder[0]).toBeLessThan(
+      tx.event.findUniqueOrThrow.mock.invocationCallOrder[0],
     );
   });
 });

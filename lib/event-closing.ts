@@ -174,6 +174,10 @@ export function isOverdue(
   );
 }
 
+/** SCRUM-249 AC1, AC2: why an overdue event can't be approved or confirmed. */
+export const OVERDUE_REFUSAL =
+  "This event is overdue: its start time has passed. It can be rejected or cancelled.";
+
 /** AC11: why a change request still Submitted when its event completes is rejected. */
 export const EVENT_TOOK_PLACE = "The event has already taken place.";
 
