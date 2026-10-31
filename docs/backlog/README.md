@@ -190,7 +190,7 @@ _7 stories, 11 points_
 | [SCRUM-209](SCRUM-209.md) | Arrange venues, equipment and the safety check from the event page | 2 | High | SCRUM Sprint 4 | In Review |
 | [SCRUM-210](SCRUM-210.md) | Menus grouped by task | 1 | High | SCRUM Sprint 4 | In Review |
 | [SCRUM-211](SCRUM-211.md) | One layout for every work queue | 1 | Medium | SCRUM Sprint 4 | In Progress |
-| [SCRUM-212](SCRUM-212.md) | Attendee pages show registration state at a glance | 1 | Medium | SCRUM Sprint 4 | To Do |
+| [SCRUM-212](SCRUM-212.md) | Attendee pages show registration state at a glance | 1 | Medium | SCRUM Sprint 4 | Done |
 
 ## Tasks (technical work, no customer-facing story)
 
@@ -268,9 +268,9 @@ _7 stories, 11 points_
 | [SCRUM-230](SCRUM-230.md) | Chore: Raise the CI job limit from 20 to 30 minutes | SCRUM Sprint 4 | Done |
 | [SCRUM-231](SCRUM-231.md) | Chore: Raise the CI build-and-test job's time limit from 20 to 35 minutes | SCRUM Sprint 4 | In Review |
 | [SCRUM-232](SCRUM-232.md) | Chore: Name every e2e test after the story, criteria and test case it proves | SCRUM Sprint 4 | In Review |
-| [SCRUM-233](SCRUM-233.md) | Chore: Bring the seed in line with the event lifecycle: no event left in Approved, every event within one day | SCRUM Sprint 4 | To Do |
+| [SCRUM-233](SCRUM-233.md) | Chore: Bring the seed in line with the event lifecycle: no event left in Approved, every event within one day | SCRUM Sprint 4 | In Review |
 | [SCRUM-234](SCRUM-234.md) | Chore: Add the missing e2e journeys for SCRUM-142 AC5 and SCRUM-26's flagged reservation | SCRUM Sprint 4 | In Review |
 | [SCRUM-235](SCRUM-235.md) | Chore: Re-sync docs/backlog from Jira (28 Oct) | SCRUM Sprint 4 | To Do |
 | [SCRUM-236](SCRUM-236.md) | Chore: Name every unit and integration test after the story, criteria and test case it proves, and fix the test-case docs' format | SCRUM Sprint 4 | To Do |
 | [SCRUM-237](SCRUM-237.md) | Chore: Say on the website and in the README that it is the team's development environment, not a service for customers | SCRUM Sprint 4 | In Progress |
-| [SCRUM-238](SCRUM-238.md) | Chore: Seed data that lets every role see and try every function | SCRUM Sprint 4 | In Progress |
+| [SCRUM-238](SCRUM-238.md) | Chore: Seed data that lets every role see and try every function | SCRUM Sprint 4 | In Review |
