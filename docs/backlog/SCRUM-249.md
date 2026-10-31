@@ -10,7 +10,7 @@
 | **Epic** | SCRUM-6 - Event Request Lifecycle |
 | **Priority** | High |
 | **Story points** | - |
-| **Status in Jira** | In Progress |
+| **Status in Jira** | In Review |
 | **Sprint** | SCRUM Sprint 4 |
 | **Jira** | https://smu-spm-group7.atlassian.net/browse/SCRUM-249 |
 

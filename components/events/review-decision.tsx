@@ -16,6 +16,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { isOverdue } from "@/lib/event-closing";
 import { EVENT_STATUS_LABEL } from "@/lib/status-labels";
 import { REJECTION_OUTCOME_LABEL } from "@/lib/schemas/event";
 import {
@@ -38,7 +39,7 @@ export function ReviewDecision({
   event,
   buttonClassName,
 }: {
-  event: { id: string; status: EventStatus };
+  event: { id: string; status: EventStatus; startAt: Date | null };
   buttonClassName?: string;
 }) {
   const [rejecting, setRejecting] = useState(false);
@@ -116,7 +117,8 @@ export function ReviewDecision({
       >
         <MessageCircleQuestion className="h-3.5 w-3.5" /> Ask
       </Button>
-      {event.status === "UNDER_REVIEW" && (
+      {/* SCRUM-249 AC1: the server refuses this too; it just isn't offered. */}
+      {event.status === "UNDER_REVIEW" && !isOverdue(event) && (
         <Button
           variant="ghost"
           size="sm"
