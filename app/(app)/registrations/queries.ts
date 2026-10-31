@@ -1,9 +1,11 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { can } from "@/lib/auth/can";
+import { shownEventTime } from "@/lib/confirmed-details";
 
 /**
- * SCRUM-76 — the signed-in Attendee's own registrations, soonest event first.
+ * SCRUM-76 — the signed-in Attendee's own registrations, soonest event first,
+ * by the date each row shows (SCRUM-252 AC2).
  *
  * Filtered by the caller's id from the session, never by an id passed in, so
  * the list can only ever contain the caller's registrations (AC5). The event,
@@ -16,7 +18,7 @@ export async function getMyRegistrations() {
     return [];
   }
 
-  return prisma.registration.findMany({
+  const registrations = await prisma.registration.findMany({
     where: { userId: session.user.id },
     select: {
       id: true,
@@ -45,6 +47,12 @@ export async function getMyRegistrations() {
     },
     orderBy: { event: { startAt: "asc" } },
   });
+
+  // In the application, not the query: a re-planned row shows the last
+  // confirmed date, which SQL can't order by without knowing the row's rule.
+  const shownStart = ({ status, event }: (typeof registrations)[number]) =>
+    shownEventTime(status, event).startAt?.getTime() ?? Number.MAX_SAFE_INTEGER;
+  return registrations.sort((a, b) => shownStart(a) - shownStart(b));
 }
 
 export type MyRegistration = Awaited<

@@ -6,7 +6,7 @@ import { RegistrationStateBadge } from "@/components/events/registration-state-b
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatEventTime } from "@/lib/datetime";
-import { isBeingReplanned, venueLabel } from "@/lib/confirmed-details";
+import { shownEventTime, showsLastConfirmed, venueLabel } from "@/lib/confirmed-details";
 import { canWithdrawRegistration } from "@/lib/registration-summary";
 import { REGISTRATION_STATUS_LABEL } from "@/lib/status-labels";
 import { REPLANNING_LABEL } from "../events/replanning-event-detail";
@@ -57,10 +57,14 @@ export function RegistrationsList({
         const shown = shownRegistrationStatus(status, event.status);
         // SCRUM-85 AC8, AC9: while a registered event is re-planned, its row
         // says so, never "Planning", and shows what was last confirmed.
-        const replanning = status === "REGISTERED" && isBeingReplanned(event);
-        const venues = replanning
-          ? event.confirmedVenues
-          : event.bookings.map((b) => venueLabel(b.venue));
+        const replanning = showsLastConfirmed(status, event);
+        const { startAt, endAt } = shownEventTime(status, event);
+        // SCRUM-252 AC1: cancelling released its bookings (SCRUM-82 AC3), so a
+        // cancelled event's venues are the ones it was last confirmed with.
+        const venues =
+          replanning || event.status === "CANCELLED"
+            ? event.confirmedVenues
+            : event.bookings.map((b) => venueLabel(b.venue));
         // A Confirmed event has an Attendee detail page (SCRUM-72), and so
         // does one being re-planned, for this Attendee (SCRUM-85 AC9).
         const viewable = event.status === "CONFIRMED" || replanning;
@@ -91,12 +95,7 @@ export function RegistrationsList({
                 <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                   <CalendarDays className="h-3.5 w-3.5 shrink-0" />
                   <span data-testid="event-date">
-                    {replanning
-                      ? formatEventTime(
-                          event.confirmedStartAt,
-                          event.confirmedEndAt,
-                        )
-                      : formatEventTime(event.startAt, event.endAt)}
+                    {formatEventTime(startAt, endAt)}
                   </span>
                 </div>
                 <div className="flex items-center gap-1.5 text-xs text-muted-foreground">

@@ -1,4 +1,4 @@
-import type { EventStatus } from "@prisma/client";
+import type { EventStatus, RegistrationStatus } from "@prisma/client";
 
 /**
  * SCRUM-85 — what Attendees were last told about an event, and whether that
@@ -43,4 +43,34 @@ export function isBeingReplanned(event: {
   confirmedStartAt: Date | null;
 }): boolean {
   return event.status === "PLANNING" && event.confirmedStartAt !== null;
+}
+
+/**
+ * AC8, AC9 — a registration still active is shown what was last confirmed
+ * while its event is re-planned. One that was withdrawn is not (AC5).
+ */
+export function showsLastConfirmed(
+  status: RegistrationStatus,
+  event: { status: EventStatus; confirmedStartAt: Date | null },
+): boolean {
+  return status === "REGISTERED" && isBeingReplanned(event);
+}
+
+/**
+ * The date and time a My Registrations row shows. The row and the list's order
+ * both ask here, so a row is never ordered by a date it doesn't show (SCRUM-252 AC2).
+ */
+export function shownEventTime(
+  status: RegistrationStatus,
+  event: {
+    status: EventStatus;
+    startAt: Date | null;
+    endAt: Date | null;
+    confirmedStartAt: Date | null;
+    confirmedEndAt: Date | null;
+  },
+): { startAt: Date | null; endAt: Date | null } {
+  return showsLastConfirmed(status, event)
+    ? { startAt: event.confirmedStartAt, endAt: event.confirmedEndAt }
+    : { startAt: event.startAt, endAt: event.endAt };
 }

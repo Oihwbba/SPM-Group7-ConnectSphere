@@ -46,6 +46,33 @@ const render = (...rows: MyRegistration[]) =>
 const testId = (html: string, id: string) =>
   html.match(new RegExp(`data-testid="${id}"[^>]*>([\\s\\S]*?)</`))?.[1];
 
+describe("My Registrations — what a row shows, SCRUM-252", () => {
+  const cancelled = {
+    status: "CANCELLED" as const,
+    bookings: [],
+    confirmedVenues: ["Main Hall — Level 1", "Room 2 — Level 2"],
+  };
+
+  it("SCRUM-252 [AC1] TC-252-01: a cancelled event's row shows every venue it was last confirmed with", () => {
+    const html = render(registration("CANCELLED", cancelled));
+    expect(testId(html, "venue")).toBe("Main Hall — Level 1; Room 2 — Level 2");
+    expect(html).not.toContain("Venue to be confirmed");
+  });
+
+  it("SCRUM-252 [AC1] TC-252-01: so does a registration I had withdrawn, or one the cancellation didn't update", () => {
+    for (const status of ["WITHDRAWN", "REGISTERED"] as const) {
+      expect(testId(render(registration(status, cancelled)), "venue")).toBe(
+        "Main Hall — Level 1; Room 2 — Level 2",
+      );
+    }
+  });
+
+  it("SCRUM-252 [AC1] TC-252-02: an event that isn't cancelled still shows its approved venues, not what was last confirmed", () => {
+    const html = render(registration("REGISTERED", { confirmedVenues: ["Old Hall — Level 9"] }));
+    expect(testId(html, "venue")).toBe("Main Hall — Level 1");
+  });
+});
+
 describe("SCRUM-212 AC2 — My Registrations", () => {
   it("SCRUM-212 [AC2] TC-212-08: a row shows the event, its date and time, its venue, my status and a link to the event", () => {
     const html = render(registration("REGISTERED"));

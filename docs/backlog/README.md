@@ -274,4 +274,4 @@ _7 stories, 11 points_
 | [SCRUM-236](SCRUM-236.md) | Chore: Name every unit and integration test after the story, criteria and test case it proves, and fix the test-case docs' format | SCRUM Sprint 4 | To Do |
 | [SCRUM-237](SCRUM-237.md) | Chore: Say on the website and in the README that it is the team's development environment, not a service for customers | SCRUM Sprint 4 | In Progress |
 | [SCRUM-238](SCRUM-238.md) | Chore: Seed data that lets every role see and try every function | SCRUM Sprint 4 | In Progress |
-| [SCRUM-252](SCRUM-252.md) | Bug: My Registrations shows "Venue to be confirmed" for a cancelled event, and orders a re-planned event by a date it doesn't show | SCRUM Sprint 4 | In Progress |
+| [SCRUM-252](SCRUM-252.md) | Bug: My Registrations shows "Venue to be confirmed" for a cancelled event, and orders a re-planned event by a date it doesn't show | SCRUM Sprint 4 | In Review |

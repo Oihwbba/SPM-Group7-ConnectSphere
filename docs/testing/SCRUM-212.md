@@ -34,7 +34,8 @@ Withdraw is on the event page and on **My Registrations**, not on the Browse
 Events cards, which open the event page. It asks first in the shared
 confirmation dialog (SCRUM-207 AC5): **Withdraw** (red) or **Keep my place**.
 A venue with no approved booking reads "Venue to be confirmed" on all three
-pages. The registration period and "x of y places remaining" stay on each
+pages, except that a cancelled event on **My Registrations** shows the venues
+it was last confirmed with (SCRUM-252 AC1). The registration period and "x of y places remaining" stay on each
 event as SCRUM-72 AC3 requires.
 
 | ID | Type | Criterion | Automated |

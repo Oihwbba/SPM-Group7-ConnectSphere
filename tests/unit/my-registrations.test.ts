@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
 import type { Session } from "next-auth";
-import type { Role } from "@prisma/client";
+import type { EventStatus, RegistrationStatus, Role } from "@prisma/client";
 
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
@@ -134,5 +134,62 @@ describe("shownRegistrationStatus — SCRUM-76 AC2, AC3", () => {
     expect(shownRegistrationStatus("REGISTERED", "PLANNING")).toBe(
       "REGISTERED",
     );
+  });
+});
+
+// SCRUM-252 AC2 — test cases: docs/testing/SCRUM-252.md.
+describe("getMyRegistrations — ordered by the date each row shows, SCRUM-252", () => {
+  const day = (n: number) => new Date(Date.UTC(2034, 0, n, 2));
+  const row = (
+    id: string,
+    status: RegistrationStatus,
+    event: { status: EventStatus; startAt: Date | null; confirmedStartAt?: Date },
+  ) => ({
+    id,
+    status,
+    event: { endAt: null, confirmedEndAt: null, confirmedStartAt: null, ...event },
+  });
+  const order = async (rows: ReturnType<typeof row>[]) => {
+    mockAuth.mockResolvedValue(sessionFor("ATTENDEE", "usr_attendee"));
+    mockFindMany.mockResolvedValue(rows);
+    return (await getMyRegistrations()).map(({ id }) => id);
+  };
+
+  it("SCRUM-252 [AC2] TC-252-04: a re-planned event is placed by its last confirmed date, before and after an event that isn't", async () => {
+    expect(
+      await order([
+        row("moved earlier", "REGISTERED", { status: "PLANNING", startAt: day(5), confirmedStartAt: day(20) }),
+        row("confirmed", "REGISTERED", { status: "CONFIRMED", startAt: day(10) }),
+        row("moved later", "REGISTERED", { status: "PLANNING", startAt: day(30), confirmedStartAt: day(1) }),
+      ]),
+    ).toEqual(["moved later", "confirmed", "moved earlier"]);
+  });
+
+  it("SCRUM-252 [AC2] TC-252-05: a withdrawn registration shows the event's own date, so it is placed by that date", async () => {
+    expect(
+      await order([
+        row("confirmed", "REGISTERED", { status: "CONFIRMED", startAt: day(10) }),
+        row("withdrawn", "WITHDRAWN", { status: "PLANNING", startAt: day(30), confirmedStartAt: day(1) }),
+      ]),
+    ).toEqual(["confirmed", "withdrawn"]);
+  });
+
+  it("SCRUM-252 [AC2] TC-252-05: an event never confirmed, in Planning, is placed by its own date", async () => {
+    expect(
+      await order([
+        row("later", "REGISTERED", { status: "PLANNING", startAt: day(30) }),
+        row("sooner", "REGISTERED", { status: "CONFIRMED", startAt: day(10) }),
+      ]),
+    ).toEqual(["sooner", "later"]);
+  });
+
+  it("SCRUM-252 [AC2] TC-252-06: equal dates keep the query's order, and an event with no date comes last", async () => {
+    expect(
+      await order([
+        row("no date", "REGISTERED", { status: "CONFIRMED", startAt: null }),
+        row("first", "REGISTERED", { status: "CONFIRMED", startAt: day(10) }),
+        row("second", "REGISTERED", { status: "PLANNING", startAt: day(30), confirmedStartAt: day(10) }),
+      ]),
+    ).toEqual(["first", "second", "no date"]);
   });
 });

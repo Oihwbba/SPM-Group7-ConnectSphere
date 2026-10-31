@@ -9,6 +9,7 @@ import {
 } from "@/app/(app)/events/replanning-event-detail";
 import type { MyRegistration } from "@/app/(app)/registrations/queries";
 import {
+  shownEventTime,
   confirmedDetailsChanged,
   isBeingReplanned,
   venueLabel,
@@ -181,6 +182,24 @@ describe("confirmed details — SCRUM-85", () => {
     expect(isBeingReplanned({ status: "PLANNING", confirmedStartAt: CONFIRMED_AT })).toBe(true);
     expect(isBeingReplanned({ status: "PLANNING", confirmedStartAt: null })).toBe(false);
     expect(isBeingReplanned({ status: "CONFIRMED", confirmedStartAt: CONFIRMED_AT })).toBe(false);
+  });
+
+  it("SCRUM-252 [AC2] TC-252-05: the row's date and the list's order agree: the last confirmed date while re-planned and still registered, the event's own otherwise", () => {
+    const own = { startAt: new Date("2034-03-02T02:00:00Z"), endAt: new Date("2034-03-02T06:00:00Z") };
+    const confirmed = { startAt: new Date("2034-03-01T02:00:00Z"), endAt: new Date("2034-03-01T06:00:00Z") };
+    const event = { ...own, confirmedStartAt: confirmed.startAt, confirmedEndAt: confirmed.endAt };
+
+    expect(shownEventTime("REGISTERED", { ...event, status: "PLANNING" })).toEqual(confirmed);
+    expect(shownEventTime("WITHDRAWN", { ...event, status: "PLANNING" })).toEqual(own);
+    expect(shownEventTime("REGISTERED", { ...event, status: "CONFIRMED" })).toEqual(own);
+    expect(
+      shownEventTime("REGISTERED", {
+        ...own,
+        status: "PLANNING",
+        confirmedStartAt: null,
+        confirmedEndAt: null,
+      }),
+    ).toEqual(own);
   });
 
   it("lists a venue as its name and location", () => {
