@@ -62,6 +62,8 @@ the customer where it matters, so you rarely need to open the folder.
 | Add a column or table | [`docs/data-model.md`](docs/data-model.md) |
 | See each sprint's commitment and outcome, how we estimate, and the Definition of Done | [`docs/scrum/`](docs/scrum/README.md) |
 | Work with an AI coding assistant | [`CLAUDE.md`](CLAUDE.md) |
+| Know how the team uses AI, what a person always decides, and the value the team added beyond AI | [`docs/ai-usage.md`](docs/ai-usage.md) |
+| Know who explains each epic, area of the code and ADR | [`docs/ownership.md`](docs/ownership.md) |
 
 ## Stack
 
@@ -447,6 +449,8 @@ docs/
   data-model.md               What each table is for and which story needs it
   adr/                        Architecture Decision Records, with an index
   scrum/                      Sprint records, estimation and the Definition of Done
+  ai-usage.md                 How the team uses AI, and the value it added beyond AI
+  ownership.md                Who explains each epic, area of the code and ADR
   evidence/                   Screenshots and CI logs captured for sprint reviews
 .github/
   workflows/                  CI, the GLM review, its memory, and deploys
