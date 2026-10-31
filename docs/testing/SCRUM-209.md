@@ -82,8 +82,8 @@ written. Find a replacement venue (on a flagged booking) also returns there.
 
 **Expected:** the page stays open; the section shows the request, Pending
 Review, with its line. Request equipment is no longer offered. Only the
-assigned Coordinator is offered it, while the event is Approved or Planning
-(SCRUM-27).
+assigned Coordinator is offered it, while the event is Planning (SCRUM-27;
+Approved was dropped by SCRUM-233, since no event stays in it).
 
 *Automated:* `tests/unit/readiness-actions.test.ts` every "SCRUM-209 [AC2] TC-209-03"
 test and "SCRUM-209 [AC2, AC4] TC-209-03"; `tests/unit/equipment-request-queries.test.ts`

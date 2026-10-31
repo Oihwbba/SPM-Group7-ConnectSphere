@@ -41,7 +41,7 @@ async function makeRig(label: string) {
   const event = await prisma.event.create({
     data: {
       name: `${RIG} ${label} ${Date.now()}`,
-      status: "APPROVED",
+      status: "PLANNING",
       startAt: new Date("2033-09-10T01:00:00.000Z"),
       endAt: new Date("2033-09-10T09:00:00.000Z"),
       organiserId: "usr_organiser",

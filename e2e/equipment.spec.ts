@@ -108,7 +108,7 @@ test.describe("SCRUM-156 — the one-type form only checks availability", () => 
 /**
  * SCRUM-29 and SCRUM-30 need commitments of a known shape, so they build a
  * throwaway equipment row (the "rig") instead of mutating seeded data:
- * deleting seeded reservations would leave "Confirmed — Charity Gala" with no
+ * deleting seeded reservations would leave "Confirmed: Registration Open — Charity Gala" with no
  * equipment for every later run and for the sprint demo.
  *
  * Times are Singapore wall time, because that is what the form takes and
@@ -241,7 +241,7 @@ test.describe("SCRUM-156 [AC1] TC-156-02: View Equipment Conflicts", () => {
 
     await expect(during(page).getByTestId("schedule-entry")).toHaveCount(1);
     await expect(during(page).getByTestId("schedule-entry")).toContainText(
-      "Approved — Research Symposium",
+      "Planning: Venue Booked — Research Symposium",
     );
     await expect(during(page).getByTestId("schedule-entry")).toContainText("2 unit(s)");
     await expect(other(page).getByTestId("schedule-entry")).toHaveCount(2);

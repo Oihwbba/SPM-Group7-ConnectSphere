@@ -115,8 +115,8 @@ AC8 cases write those rows directly. Times are UTC.
 | Test Scenario | [Positive] AC 5: an Organiser opening a notification lands on the event |
 | Pre-conditions | As TC-48-02. |
 | Test Steps | 1. Open the newest notification. |
-| Test Data | `organiser@test.local`, "Under Review — Career Fair" |
-| Expected Result | The address is `/events/evt_under_review` and the event's own page for "Under Review — Career Fair" opens (SCRUM-208); there is no dialog to close. |
+| Test Data | `organiser@test.local`, "Under Review: Clarification Open — Career Fair" |
+| Expected Result | The address is `/events/evt_under_review` and the event's own page for "Under Review: Clarification Open — Career Fair" opens (SCRUM-208); there is no dialog to close. |
 
 **Automated by:** `e2e/notifications.spec.ts` › "SCRUM-48 [AC1, AC2, AC3, AC5] TC-48-02, TC-48-04, TC-48-07: …"
 

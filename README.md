@@ -104,8 +104,8 @@ cp .env.example .env
 # 3. Apply any pending migrations to the shared database
 npm run db:deploy
 
-# 4. Load the seed data (idempotent: deletes nothing, but resets every
-#    seeded row to its seed values)
+# 4. Load the seed data (idempotent: touches only seeded rows, resetting each
+#    to its seed values)
 npm run db:seed
 
 # 5. Run the app
@@ -182,63 +182,104 @@ Every scenario exists so a specific acceptance criterion can be
 **demonstrated**, not just described. If you add seed data, say in a comment
 which story needs it.
 
-**Events:** one in each of the nine statuses (SCRUM-23), plus:
+**Events:** one in each status an event can rest in, plus the cases below.
+Each is named `Status: Scenario — Event`, for example "Confirmed: Registration
+Full — Wine Tasting Evening", so the name says what state it is in and what to
+try on it, and a list sorted by name groups the states together. Every
+submitted event has every answer the request form requires.
+That is SCRUM-23's nine statuses except Approved: approval saves Planning
+(SCRUM-81), so Approved appears only in an event's history (SCRUM-233). Every
+seeded event is within one Singapore day (SCRUM-190), and every Confirmed one
+has what confirming needs: an approved venue covering it, equipment reserved
+or "No equipment needed", an Approved safety check, and its approval recorded
+(SCRUM-110, SCRUM-233). The one flag on a Confirmed event is on "Confirmed:
+Reservation Reported": Technical Support reported its projector after it was
+confirmed (SCRUM-32).
 
 | Event | What it demonstrates |
 |---|---|
+| `evt_approved` | "Planning: Venue Booked — Research Symposium": its venue is booked and it has no equipment request. The id is older than the rule that no event stays Approved, and tests use it; its history shows the approval and the move to Planning (SCRUM-233). |
 | `evt_full` | Expected attendance 3, which is its registration capacity, with three active registrations: **full** (SCRUM-74) |
 | `evt_last_seat` | Expected attendance 3 with two registrations: **exactly one place left**. The simultaneous-registration test uses it, and `attendee4` is free to take it. |
-| `evt_reg_not_open` | Registration opens in a week (SCRUM-75) |
-| `evt_reg_closed` | Registration closed yesterday (SCRUM-75) |
+| `evt_reg_not_open` | Registration opens five days before the event (SCRUM-75), 40 days after seeding: the only seeded opening time. Re-seed once it has passed. Exhibition Hall is booked; No equipment needed. |
+| `evt_reg_closed` | Its Coordinator closed registration yesterday (SCRUM-75). Exhibition Hall is booked; No equipment needed. |
+| `evt_cancelled` | Confirmed with registration open, then cancelled by its Coordinator: its booking, reservation (from an approved request) and registration were cancelled with it (SCRUM-82) |
+| `evt_completed` | "Completed: Took Place — Hackathon": confirmed with Exhibition Hall booked, No equipment needed and an Approved safety check, then completed by the system after its end (SCRUM-82, SCRUM-233) |
 | `evt_other_organiser` | Owned by `organiser2`. Loading it as `organiser` must look exactly like "not found" (SCRUM-68). |
 | `evt_draft` | No dates and no attendance, which proves those columns really are optional (SCRUM-15) |
 
-**Venues:** four. The Executive Boardroom (capacity 14, few facilities) gives
+**Venues:** five, and one retired ("Old Lecture Theatre", offered nowhere,
+SCRUM-34). The Black Box Studio has 30 minutes' setup and 45 minutes'
+turnaround (SCRUM-159); the other venues have none. The Executive Boardroom (capacity 14, few facilities) gives
 the suitability check something to mark *not suitable* (SCRUM-40). The Grand
 Auditorium and Exhibition Hall already have approved bookings, so availability
 and search have a real clash to exclude (SCRUM-36/38). Seminar Room 2.1 has a
 maintenance period that is **not** a booking (SCRUM-36/37). Each venue has
 opening hours per weekday in Singapore time (SCRUM-34): the Auditorium
-07:00–23:00 and the Hall 06:00–22:00 every day; Seminar Room 2.1 08:00–20:00
+07:00–23:00, the Hall 06:00–22:00 and the Studio 08:00–22:00 every day; Seminar Room 2.1 08:00–20:00
 and the Boardroom 09:00–18:00 on weekdays, both closed at weekends.
 
-**Equipment:** five pooled types. Three of the ten projectors are in for
+**Equipment:** five pooled types, and one retired (Overhead Projector). Three of the ten projectors are in for
 maintenance and one PA speaker is written off, so the available quantity is
 never simply `totalQuantity` (SCRUM-29/30).
 
 **Also seeded:** an open clarification request; a pending change request with
 three changed fields (two major, one not); venue bookings that are approved,
 pending, rejected and cancelled; an approved and a pending equipment request
-with a status history; read and unread notifications; and audit entries.
+with a status history; read and unread notifications; and audit entries
+written as the actions write them (approval, the system's move to Planning,
+confirmation by the Coordinator, reassignment by the Lead, cancellation,
+completion, a return to Planning). Every event that reached Confirmed has its
+arrangements dated in the order the app allows, and rows are dated before
+their own next step, not when the seed ran (SCRUM-233). Notifications and
+equipment request histories read as the actions word them, and each live hold
+has the reminder and expiry notice holding it writes ahead. Each live booking
+is at a venue with the facilities its event asks for, and no open equipment
+request asks for more than the pool owns.
+
+**Only the seed can supply these:** the accounts, the equipment list and its
+unavailability, since nothing in the app creates them, and the one later
+opening time, on "Confirmed: Registration Not Open" (SCRUM-75 AC 1). Every other
+seeded value is one the app could have written. Registration otherwise opens on
+confirmation and closes at the start. Reservation cancelled is the one
+notification type without a row, because nothing sends it.
 
 **Every role's work** (SCRUM-238): each role has something to see and to act
-on, and every status has a row. These events sit 50 or more days out:
+on, and every status an event can rest in has a row. These events sit 50 or
+more days out, except the overdue ones, whose dates have passed:
 
 | Signed in as | What's waiting |
 |---|---|
-| Coordinator (`coordinator@`) | "Ready to Confirm — Alumni Networking Night" (venue, equipment and safety check done); "Flagged — Sustainability Forum" (a flagged booking and reservation to resolve); "Hold Approved — Founders' Breakfast" (a hold to confirm or release); "Cancellation Requested — Spring Concert" (a cancellation to decide) |
-| Cara Coordinator (`coordinator2@`) | "Safety Changes — Robotics Showcase": the Safety Officer asked for changes; No equipment needed recorded |
-| Lead (`lead@`) | "Overdue — Orientation Volunteers Briefing", unassigned with a past start, plus the other Submitted requests |
-| Venue Staff (`venuestaff@`) | two pending requests (oldest first), a held Boardroom whose deadline was moved, an expired hold, and a flagged booking |
-| Technical Support (`techsupport@`) | a request in review with a line short of stock and Laptop suggested instead, an approved request ready to reserve ("Ready to Reserve — Robotics Open House"), a flagged reservation, and rejected and cancelled requests |
-| Safety Officer (`safety@`) | a check awaiting review ("Safety Review — Engineering Open Day"), with checks that were approved, rejected, sent back for changes and outdated; the Exhibition Hall has a known restriction |
+| Coordinator (`coordinator@`) | "Planning: Ready to Confirm — Alumni Networking Night" (venue, equipment and safety check done); "Planning: Arrangements Flagged — Sustainability Forum" (a booking flagged by a change and a reservation Technical Support reported, to resolve); "Planning: Hold Approved — Founders' Breakfast" (a hold to confirm or release); "Confirmed: Cancellation Requested — Spring Concert" (a cancellation to decide); "Confirmed: Reservation Reported — Film Screening" (a reported reservation to resolve: Cancel arrangement returns the event to Planning, SCRUM-26 AC10) |
+| Cara Coordinator (`coordinator2@`) | "Planning: Safety Changes Requested — Robotics Showcase": the Safety Officer asked for changes; No equipment needed recorded |
+| Lead (`lead@`) | "Submitted: Overdue — Orientation Volunteers Briefing", unassigned with a past start, plus the other Submitted requests |
+| Venue Staff (`venuestaff@`) | three pending requests (oldest first), a held Boardroom whose deadline was moved, an expired hold, a released hold, a withdrawn request, and three flagged bookings |
+| Technical Support (`techsupport@`) | a request in review with a line short of stock and Laptop suggested instead, an approved request ready to reserve ("Planning: Ready to Reserve — Robotics Open House"), two reservations reported as no longer available (SCRUM-32), and rejected and cancelled requests |
+| Safety Officer (`safety@`) | a check awaiting review ("Planning: Safety Check Awaiting — Engineering Open Day"), with checks that were approved, rejected, sent back for changes and outdated; the Exhibition Hall has a known restriction |
 | Organiser (`organiser@`) | a complete draft ready to submit, a discarded draft, a rejection that asks for a new request, a clarification naming the fields to change, and approved and rejected change requests |
-| Attendee (`attendee@`, `attendee2@`) | "Re-planning — Jazz Night", still showing its last confirmed details; a Confirmed event that takes no registrations |
-| Multi-role (`multirole@`) | organises "Multi-role Organiser — Lab Tour", so it can't decide that venue request as Venue Staff; coordinates "Multi-role Coordinator — Debate Finals" |
+| Attendee (`attendee@`, `attendee2@`) | "Planning: Back From Confirmed — Jazz Night", still showing its last confirmed details: an approved change moved it a day later, so its original booking is cancelled, the new date is booked and its safety check is Outdated (SCRUM-128); a Confirmed event that takes no registrations |
+| Anyone trying one state by hand | "Confirmed: Two Venues", "Confirmed: Re-confirmed With New Details", "Confirmed: Change Pending", "Planning: Safety Check Rejected", "Planning: Every Optional Answer", "Under Review: Overdue", "Planning: Overdue", "Planning: Overdue, Checklist Complete" (every readiness item done, and its date has passed), "Confirmed: Reservation Reported", "Rejected: From Planning", "Under Review: Clarification Answered" |
+| Multi-role (`multirole@`) | organises "Planning: Multi-role Organiser — Lab Tour", so it can't decide that venue request as Venue Staff; coordinates "Under Review: Multi-role Coordinator — Debate Finals" |
 
-Every notification type is seeded for the person who would receive it, some
-read, one shown only from tomorrow and one withdrawn. Venue and equipment
+Every notification type an action writes is seeded for the person who would
+receive it, some read, one shown only from tomorrow and one withdrawn. Venue and equipment
 unavailability has a row for every reason.
 
 > **To demo reserving equipment** (SCRUM-155): sign in as Technical Support
-> and reserve "Ready to Reserve — Robotics Open House" on **Equipment**. Or
-> start from the beginning: review and approve the pending "Planning —
-> Freshman Orientation" request first. "Approved — Research Symposium" has no
+> and reserve "Planning: Ready to Reserve — Robotics Open House" on **Equipment**. Or
+> start from the beginning: review and approve the pending "Planning: Venue Pending —
+> Freshman Orientation" request first. "Planning: Venue Booked — Research Symposium" has no
 > equipment request on purpose: SCRUM-27's tests need it to have none.
 
 Dates are **relative to today**, not hard-coded, so "registration closes next
 week" stays true all term. Row IDs are fixed and tests use them directly, so
 don't rename one without updating its callers.
+
+Re-seed whenever seeded dates have gone stale: "Confirmed: Registration Closed"
+is Completed after 5 days, for example, and a re-seed restores it. The run is
+one transaction. If a row made through the app now sits on a slot a seeded row
+moves to, the run stops, names the constraint and changes nothing (SCRUM-233);
+settle that row and run it again.
 
 For a scripted walkthrough of every core workflow on this seed, with a
 conflict, change or failure in each, see [`docs/demo.md`](docs/demo.md).
@@ -359,7 +400,7 @@ to make once any of them reaches a few thousand rows.
 | `npm run test:coverage` | All Vitest tests with the 100% coverage check that CI runs: **local database only** |
 | `npm run test:e2e` | Playwright: builds and serves the app, then runs the specs: **local database only** |
 | `npm run db:deploy` | Apply pending migrations; the only migration command for the shared database |
-| `npm run db:seed` | Re-run the idempotent seed on the shared database: deletes nothing, but resets seeded rows to their seed values |
+| `npm run db:seed` | Re-run the idempotent seed on the shared database: resets every seeded row to its seed values and today's dates, all or nothing, and leaves rows made through the app, which can still affect a seeded event or stop the run on a constraint |
 | `npm run db:migrate` | Create and apply a new migration: **local database only** |
 | `npm run db:reset` | Drop, migrate and seed: **local Docker only** |
 | `npm run db:generate` | Regenerate the Prisma client |

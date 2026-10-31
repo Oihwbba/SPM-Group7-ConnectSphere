@@ -9,7 +9,8 @@ Format and conventions: [README.md](README.md).
 
 **Shared pre-conditions:** a local PostgreSQL migrated with `npm run db:deploy`
 and seeded with `npm run db:seed`, as in CI's `build-and-test`. The new rows
-sit 50 or more days out, on venue and day pairs nothing else uses.
+sit 50 or more days out, or in the past for the overdue one, on venue and day
+pairs nothing else uses.
 
 | ID | Type | Criterion | Automated |
 |---|---|---|---|
@@ -26,11 +27,11 @@ sit 50 or more days out, on venue and day pairs nothing else uses.
 | Item | Content |
 |---|---|
 | Test Case ID | TC-238-01 |
-| Test Scenario | [Positive] AC 2: every status, and every notification type, has a seeded row |
+| Test Scenario | [Positive] AC 2: every status, and every notification type an action writes, has a seeded row (nothing writes Reservation cancelled, SCRUM-233) |
 | Pre-conditions | Freshly seeded. |
 | Test Steps | 1. For each workflow record, list the statuses of the rows with seeded ids (`evt_`, `bkg_`, `eqr_`, `res_`, `reg_`, `clr_`, `chg_`, `sfc_`), and the reasons of seeded unavailability (`vun_`, `eun_`). <br> 2. List the types of the seeded notifications (`ntf_`), and who each is for. |
 | Test Data | — |
-| Expected Result | 1. Every value of every status enum, both rejection outcomes and every unavailability reason appears. <br> 2. All 28 notification types appear. Each staff-only type is for a user holding that role: a new venue request for Venue Staff, a new equipment request for Technical Support, a request awaiting assignment for a Lead, a requested safety check for a Safety Officer, and a changed registered event for an Attendee. |
+| Expected Result | 1. Every value of every status enum, both rejection outcomes and every unavailability reason appears, except the event status Approved, which no event stays in (SCRUM-233). <br> 2. Of the 28 notification types, the 27 an action writes appear, and Reservation cancelled doesn't. Each staff-only type is for a user holding that role: a new venue request for Venue Staff, a new equipment request for Technical Support, a request awaiting assignment for a Lead, a requested safety check for a Safety Officer, and a changed registered event for an Attendee. |
 
 **Automated by:** `tests/integration/seed-coverage.test.ts` › "SCRUM-238 [AC2] TC-238-01: every status of every workflow record has a seeded row" and "SCRUM-238 [AC2] TC-238-01: every notification type is seeded, for a person who holds the role that receives it"
 
@@ -69,7 +70,7 @@ sit 50 or more days out, on venue and day pairs nothing else uses.
 | Pre-conditions | Freshly seeded. |
 | Test Steps | 1. Run the unit, integration and e2e suites. |
 | Test Data | — |
-| Expected Result | Everything passes. The existing rows and ids are untouched; the new rows avoid the dates, venues and equipment the tests use (no new active venue, nothing on the Lectern, nothing reserved on the projector). |
+| Expected Result | Everything passes. The ids the tests use are kept; SCRUM-233 changed some of those rows, removed `ntf_reservation_cancelled` and added the Black Box Studio, and updated the tests with them. This story's rows avoid the dates, venues and equipment the tests use (nothing on the Lectern, nothing reserved on the projector). |
 
 **Automated by:** the whole suite, in CI's `build-and-test`.
 
@@ -82,6 +83,6 @@ sit 50 or more days out, on venue and day pairs nothing else uses.
 | Pre-conditions | — |
 | Test Steps | 1. Read the README's "Every role's work" table and the note in `docs/demo.md`. <br> 2. After the merge, run `npm run db:deploy` and `npm run db:seed` on the shared database, and sign in to the live site as `safety@test.local`. |
 | Test Data | — |
-| Expected Result | 1. Both describe the new data by account. 2. The Safety Officer sees "Safety Review — Engineering Open Day" awaiting review. |
+| Expected Result | 1. Both describe the new data by account. 2. The Safety Officer sees "Planning: Safety Check Awaiting — Engineering Open Day" awaiting review. |
 
 **Automated by:** Manual (a document check, and a check of the shared database after the merge).

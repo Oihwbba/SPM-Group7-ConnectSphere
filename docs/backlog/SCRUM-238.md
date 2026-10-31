@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-28. Jira is the source of truth.
+     Synced from Jira on 2026-10-31. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-238 - Chore: Seed data that lets every role see and try every function
@@ -10,7 +10,7 @@
 | **Epic** | - |
 | **Priority** | Medium |
 | **Story points** | 0 |
-| **Status in Jira** | In Progress |
+| **Status in Jira** | In Review |
 | **Sprint** | SCRUM Sprint 4 |
 | **Jira** | https://smu-spm-group7.atlassian.net/browse/SCRUM-238 |
 
@@ -34,3 +34,7 @@ Anyone demonstrating or testing the app, including the customer and the graders,
 4. Every existing seeded account and record that the tests rely on is unchanged, and the unit, integration and e2e suites still pass.
 5. `README.md` ("What the seed gives you") and `docs/demo.md` describe the new data.
 6. Once merged, the shared database is seeded with it.
+
+**Change log**
+
+* 2026-10-31 (SCRUM-233, PR #329, PO approval pending): two values in AC 2 no longer get a seeded row. The event status Approved has none, because no event rests in Approved: approval saves Planning (SCRUM-81 AC1, SCRUM-135 AC12). The notification type Reservation cancelled has none, because no action writes it. TC-238-01 follows both exceptions. Criteria unchanged.

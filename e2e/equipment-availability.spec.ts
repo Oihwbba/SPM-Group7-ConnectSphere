@@ -29,7 +29,7 @@ const usesLocalDatabase = /@(localhost|127\.0\.0\.1)[:/]/.test(
 /**
  * SCRUM-29 and SCRUM-30 need commitments of a known shape, so they build a
  * throwaway equipment row (the "rig") instead of mutating seeded data:
- * deleting seeded reservations would leave "Confirmed — Charity Gala" with no
+ * deleting seeded reservations would leave "Confirmed: Registration Open — Charity Gala" with no
  * equipment for every later run and for the sprint demo.
  *
  * Times are Singapore wall time, because that is what the form takes and
