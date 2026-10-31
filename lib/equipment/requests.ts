@@ -15,10 +15,10 @@ export function formatEventPeriod(event: {
  * SCRUM-27 AC 1 — an equipment request is raised for an event that is going
  * ahead but whose details can still change. Earlier statuses may still be
  * rejected, the later ones are finished, and a Confirmed event's details are
- * fixed, so equipment has to be arranged before then.
+ * fixed, so equipment has to be arranged before then. Approved is not listed:
+ * approval saves Planning, so no event stays in it (SCRUM-81 AC1, SCRUM-233).
  */
 export const REQUESTABLE_EVENT_STATUSES = [
-  "APPROVED",
   "PLANNING",
 ] as const satisfies readonly EventStatus[];
 

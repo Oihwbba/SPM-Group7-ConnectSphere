@@ -41,10 +41,10 @@ function sessionFor(role: Role, id = "usr_coord"): Session {
   };
 }
 
-const approvedEvent = {
+const planningEvent = {
   organiserId: "usr_org",
   coordinatorId: "usr_coord",
-  status: "APPROVED",
+  status: "PLANNING",
 };
 
 const input = (overrides: Record<string, unknown> = {}) => ({
@@ -70,7 +70,7 @@ const uniqueViolation = () =>
 beforeEach(() => {
   vi.clearAllMocks();
   mockAuth.mockResolvedValue(sessionFor("COORDINATOR"));
-  db.event.findUnique.mockResolvedValue(approvedEvent);
+  db.event.findUnique.mockResolvedValue(planningEvent);
   db.equipment.findMany.mockResolvedValue([
     { id: "eqp_projector" },
     { id: "eqp_mic" },
@@ -307,16 +307,19 @@ describe("createEquipmentRequest — SCRUM-27", () => {
     ["an event that does not exist", null],
     [
       "another coordinator's event",
-      { ...approvedEvent, coordinatorId: "usr_other" },
+      { ...planningEvent, coordinatorId: "usr_other" },
     ],
     [
       "an event still under review",
-      { ...approvedEvent, status: "UNDER_REVIEW" },
+      { ...planningEvent, status: "UNDER_REVIEW" },
     ],
-    ["a cancelled event", { ...approvedEvent, status: "CANCELLED" }],
+    ["a cancelled event", { ...planningEvent, status: "CANCELLED" }],
+    // SCRUM-233: approval saves Planning (SCRUM-81 AC1), so an event left in
+    // Approved by older data is not one of the Coordinator's approved events.
+    ["an event left in Approved", { ...planningEvent, status: "APPROVED" }],
     // AC 1 limits requests to a Planning event: once an event is Confirmed its
     // details are fixed, so equipment must be arranged before then.
-    ["a confirmed event", { ...approvedEvent, status: "CONFIRMED" }],
+    ["a confirmed event", { ...planningEvent, status: "CONFIRMED" }],
   ])(
     "SCRUM-27 [AC1] TC-27-02: refuses %s with the same message, and saves nothing",
     async (_label, event) => {
@@ -335,7 +338,7 @@ describe("createEquipmentRequest — SCRUM-27", () => {
 
   it("SCRUM-27 [AC1] TC-27-01: accepts a Planning event", async () => {
     db.event.findUnique.mockResolvedValue({
-      ...approvedEvent,
+      ...planningEvent,
       status: "PLANNING",
     });
 
@@ -375,7 +378,7 @@ describe("createEquipmentRequest — SCRUM-27", () => {
 // docs/testing/SCRUM-124.md.
 describe("the submission notice — SCRUM-124 AC2", () => {
   beforeEach(() => {
-    db.event.findUnique.mockResolvedValue({ ...approvedEvent, name: "Graduation" });
+    db.event.findUnique.mockResolvedValue({ ...planningEvent, name: "Graduation" });
     db.equipment.findMany.mockResolvedValue([
       { id: "eqp_projector", type: "Projector" },
       { id: "eqp_mic", type: "Wireless Microphone" },
