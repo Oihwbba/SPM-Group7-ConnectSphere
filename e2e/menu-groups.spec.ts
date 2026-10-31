@@ -69,7 +69,11 @@ const MENUS: Record<string, Expected> = {
   Attendee: {
     email: "attendee@test.local",
     landing: /\/events$/,
-    groups: [["My work", ["Browse Events", "My Registrations"]]],
+    // SCRUM-210: one group, so its links stand alone, without My work.
+    groups: [
+      [null, ["Browse Events"]],
+      [null, ["My Registrations"]],
+    ],
   },
   // SCRUM-121: Venue Staff first, then Technical Support, Coordinator and
   // Organiser; it lands where Venue Staff does.

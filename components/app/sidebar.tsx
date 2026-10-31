@@ -195,16 +195,17 @@ export function Sidebar({ roles }: { roles: Role[] }) {
         )}
       >
         {groups.map((group) => {
+          // No heading: its links stand on their own (a menu that is one
+          // group, SCRUM-210, or a group of one link).
           if (!group.heading) {
-            const item = group.items[0];
-            return (
+            return group.items.map((item) => (
               <NavLink
                 key={item.href}
                 item={item}
                 active={item.href === activeHref}
                 collapsed={collapsed}
               />
-            );
+            ));
           }
           const open = opened[group.id] ?? holdsActive(group.items);
           const Icon = ICON_BY_GROUP[group.id];

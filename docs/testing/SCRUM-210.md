@@ -54,7 +54,7 @@ stands alone)
 | Venue Staff | Bookings · **Venues**: Availability, Venue Catalogue · All Events |
 | Technical Support | **My work**: Equipment, Equipment Requests · Venue Catalogue · All Events |
 | Safety Officer | Safety Checks · Venue Catalogue |
-| Attendee | **My work**: Browse Events, My Registrations |
+| Attendee | Browse Events · My Registrations (SCRUM-248: a menu that is one group has no heading) |
 
 Every link keeps the address it had. The catalogue link reads "Venue
 Catalogue", as its page does.
@@ -64,12 +64,14 @@ Catalogue", as its page does.
 
 ## TC-210-02
 
-**Boundary — a group with one link has no heading.**
+**Boundary — a group with one link has no heading, nor does a menu that is one group.**
 
 **Expected:** for every role, a group has a heading exactly when it has more
-than one link.
+than one link and the menu has more than one group. An Attendee's two links
+stand on their own, without "My work" (defect SCRUM-248, found in the
+SCRUM-216 epic check).
 
-*Automated:* `tests/unit/nav-groups.test.ts` "SCRUM-210 [AC1] TC-210-02".
+*Automated:* `tests/unit/nav-groups.test.ts` "SCRUM-210 [AC1] TC-210-02: a group with a single link, or a menu that is one group, shows no heading; any other group has its heading".
 
 ## TC-210-03
 
