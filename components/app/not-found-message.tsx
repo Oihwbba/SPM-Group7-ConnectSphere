@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft, SearchX } from "lucide-react";
+import { Home, SearchX } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 
@@ -23,12 +23,14 @@ export function NotFoundMessage() {
           </p>
         </div>
       </div>
-      <Button asChild>
-        <Link href="/">
-          <ArrowLeft className="h-4 w-4" aria-hidden />
-          Go to my home page
-        </Link>
-      </Button>
+      <div className="flex justify-center">
+        <Button asChild>
+          <Link href="/">
+            <Home className="h-4 w-4" aria-hidden />
+            Go to my home page
+          </Link>
+        </Button>
+      </div>
     </div>
   );
 }
