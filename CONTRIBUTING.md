@@ -22,7 +22,7 @@ reference, and `app/(app)/equipment-requests` is a smaller, newer example.
 | File | Role |
 |---|---|
 | `page.tsx` | Server component. Guards the role, fetches the data this user may see, renders it. |
-| `loading.tsx` | Skeleton shown while the page fetches (see `equipment-requests/loading.tsx`). |
+| `loading.tsx` | Don't add one. The current page stays on screen until the new one is ready, and the clicked menu link shows a spinner, so nothing flashes between pages (SCRUM-207). A unit test fails if one is added. |
 | `actions.ts` | Server actions: the only place data changes. |
 | `queries.ts` | Read functions shared by the page and the tests, when the page's reads are more than one query. Rules several routes share go in `lib/<domain>/`. |
 | `*-dialog.tsx`, `*-client.tsx` | Client components: a form that calls an action and shows the result. |
@@ -82,8 +82,8 @@ Say you're building **Approve or reject a booking request** (SCRUM-53) in
    `lib/auth/can.ts` and grant it to the right role in `ROLE_ACTIONS`. **Never**
    write a role check anywhere else (see the rules below).
 6. **Page.** A server component that guards the role, fetches only what this
-   user may see, and renders it, with a real empty state, an error state and a
-   `loading.tsx`.
+   user may see, and renders it, with a real empty state and an error state.
+   No `loading.tsx` (see the table above).
 7. **Tests.** Unit tests for the action (happy, invalid, denied); an
    integration test if it relies on locks, transactions or constraints; a
    Playwright spec for the journey. Name each after the criterion it proves
