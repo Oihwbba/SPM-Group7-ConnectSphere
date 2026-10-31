@@ -11,8 +11,11 @@ Written on 2026-10-12 from the acceptance criteria, then mapped to the tests
 that already existed (SCRUM-176). The tests predate the `SCRUM-n [ACx] TC-n-xx`
 title format, so each case names them by their current titles.
 
-**AC 6:** registration opens at confirmation; a later opening time, and the
-close, are set through SCRUM-75 (TC-75-01 to TC-75-14). AC 7's return to
+**AC 6:** registration opens at confirmation and closes at the event's start
+(SCRUM-75 AC 4, TC-75-01). Since SCRUM-75's 8 Oct refinement no opening or
+closing time is set; the Organiser closes and reopens registration instead
+(TC-75-06 to TC-75-11). Confirming an event that doesn't need registration
+doesn't open it (SCRUM-171 AC 4, TC-171-05). AC 7's return to
 Planning is SCRUM-128's (TC-128-05); the refusal itself is tested here
 (TC-73-07).
 
@@ -95,6 +98,8 @@ The seed has a Confirmed event with registration open and places left.
 | Test Steps | 1. Open each event. |
 | Test Data | The two events |
 | Expected Result | The first is open at once and says "Opens on confirmation". The second is open from its exact opening instant. |
+
+**Superseded in part** by SCRUM-75's 8 Oct refinement ([TC-75-01](SCRUM-75.md#tc-75-01)): the Organiser no longer sets an opening time, so the second event's window comes only from the seed data; the code still honours it. Confirming an event whose Registration needed is No doesn't open registration (SCRUM-171 AC 4, [TC-171-05](SCRUM-171.md#tc-171-05)).
 
 **Automated by:** `tests/unit/registration-state.test.ts` › "[Positive] AC: open, unfilled, no period configured → OPEN", "[Boundary] registrationOpensAt exactly now already counts as open (not NOT_YET_OPEN)", "SCRUM-72 AC5: no window set shows the default — opens on confirmation, closes at the start"
 

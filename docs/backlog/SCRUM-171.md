@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-20. Jira is the source of truth.
+     Synced from Jira on 2026-10-29. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-171 - Record whether an event needs registration
@@ -28,6 +28,8 @@
 
 **Related:** SCRUM-75 (registration window) applies only to events that need registration. The Event table already has a registrationRequired column that the form never sets.
 
+**Supersedes:** SCRUM-72 AC1 and AC8 (every Confirmed event is listed and can be opened) and SCRUM-73 AC6 (registration opens when the event is Confirmed), for events whose Registration needed is No.
+
 **Customer basis:** "compulsory fields include name, description, purpose, dates/times, attendance, venue, accessibility, equipment, layout, registration etc." Step 11: "Where registration is required, Attendees can register for the confirmed event during the permitted registration period and subject to the applicable capacity."
 
 **Why this is a new story:** SCRUM-13 (Sprint 1, Done) stores registration needs so nothing records whether an event needs registration. SCRUM-81 skips opening registration only for events marked as not needing it, and since the form never sets that, every Confirmed event opens registration and is listed (SCRUM-72).
@@ -39,5 +41,6 @@
 * 2026-10-10: Reword SCRUM-171 AC5 such that coordinator cannot edit the routine registration field (SCRUM-25) while registrations are active.
 * 2026-10-14 (PO approved): AC4 drops the sentence about closed events staying listed (owned by SCRUM-75 AC6 and SCRUM-72 AC4). AC5's last sentence, opening registration when a Confirmed event changes to Yes, moved to SCRUM-75 AC11.
 * 2026-10-17 (PO approved): AC5's change-request case moved to SCRUM-128 AC11, which applies change requests; this story keeps the rule for a direct edit (built in #209). No re-estimate: the rule and its message were built here and are reused by SCRUM-128.
+* 2026-10-29 (SCRUM-239, PO approval pending): added the Supersedes line for SCRUM-72 AC1 and AC8 and SCRUM-73 AC6, which AC4 already changed; both stories now carry a matching note. Criteria unchanged.
 
 Functionality Area: Event Request Creation, Attendee Registration
