@@ -124,13 +124,13 @@ test.describe("SCRUM-48 — User views their notification list", () => {
     await account(ORGANISER, "ORGANISER", "Nell Notified");
     const page = await signedIn(browser, `${ORGANISER}@test.local`);
 
-    // The seeded "Under Review — Career Fair" belongs to organiser@test.local.
+    // The seeded "Under Review: Clarification Open — Career Fair" belongs to organiser@test.local.
     for (const id of ["evt_under_review", "evt_does_not_exist"]) {
       // An old link goes to the event's page, which is "not found" for both
       // (SCRUM-68, SCRUM-208 AC5).
       const response = await page.goto(`/events?event=${id}`);
       expect(response?.status()).toBe(404);
-      await expect(page.getByText("Under Review — Career Fair")).toHaveCount(0);
+      await expect(page.getByText("Under Review: Clarification Open — Career Fair")).toHaveCount(0);
     }
   });
 

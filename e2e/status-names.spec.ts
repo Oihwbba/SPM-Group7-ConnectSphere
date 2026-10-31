@@ -7,7 +7,7 @@ import { signedIn, optionsOf } from "./helpers";
  * the seeded organiser's events and writes nothing.
  */
 test.describe("SCRUM-131 agreed status names", () => {
-  test("SCRUM-131 [AC1] TC-131-01: the Organiser's tab of every request that isn't a draft reads Sent, and the status filter offers the nine agreed names", async ({
+  test("SCRUM-131 [AC1] TC-131-01: the Organiser's tab of every request that isn't a draft reads Sent, and the status filter offers the agreed names an event can rest in", async ({
     browser,
   }) => {
     const page = await signedIn(browser, "organiser@test.local");
@@ -24,7 +24,7 @@ test.describe("SCRUM-131 agreed status names", () => {
       "Draft",
       "Submitted",
       "Under Review",
-      "Approved",
+      // SCRUM-233: no event stays Approved (SCRUM-81 AC1), so it isn't offered.
       "Planning",
       "Confirmed",
       "Completed",

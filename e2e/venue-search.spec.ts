@@ -159,6 +159,7 @@ test.describe("SCRUM-38 — Search and filter venues", () => {
     ).toContainText(eventPeriod);
     // The Executive Boardroom holds 14, under 40.
     expect(await resultNames(page)).toEqual([
+      "Black Box Studio",
       "Exhibition Hall",
       "Grand Auditorium",
       "Seminar Room 2.1",
@@ -488,12 +489,14 @@ test.describe("SCRUM-38 — opening hours, suitability and the Organiser's answe
     ).toBeChecked();
     await page.getByRole("button", { name: "Search", exact: true }).click();
     expect(await resultNames(page)).toEqual([
+      "Black Box Studio",
       "Exhibition Hall",
       "Grand Auditorium",
       "Seminar Room 2.1",
     ]);
     // AC8: every venue that passed the filters is Suitable, with no reasons.
     await expect(page.getByTestId("suitability-result")).toHaveText([
+      "Suitable",
       "Suitable",
       "Suitable",
       "Suitable",
@@ -514,7 +517,7 @@ test.describe("SCRUM-38 — opening hours, suitability and the Organiser's answe
     await expect(boardroom.getByTestId("suitability-reason")).toHaveText([
       "Capacity 14 < attendance 40",
     ]);
-    expect(await resultNames(page)).toHaveLength(4);
+    expect(await resultNames(page)).toHaveLength(5);
 
     // AC14: changing the attendance keeps the filters off.
     await page.getByLabel("Attendance").fill("10");
@@ -553,6 +556,7 @@ test.describe("SCRUM-38 — opening hours, suitability and the Organiser's answe
     await page.getByRole("button", { name: "Search" }).click();
     await expect(page).toHaveURL(/date=2034-11-11/);
     expect(await resultNames(page)).toEqual([
+      "Black Box Studio",
       "Exhibition Hall",
       "Grand Auditorium",
     ]);
@@ -562,6 +566,7 @@ test.describe("SCRUM-38 — opening hours, suitability and the Organiser's answe
     await page.getByRole("button", { name: "Search" }).click();
     await expect(page).toHaveURL(/date=2034-11-14/);
     expect(await resultNames(page)).toEqual([
+      "Black Box Studio",
       "Executive Boardroom",
       "Exhibition Hall",
       "Grand Auditorium",

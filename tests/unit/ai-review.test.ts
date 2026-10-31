@@ -658,9 +658,9 @@ describe("findChangedAssertions and renderChangedAssertions", () => {
   it("pairs a narrowed assertion with the lines that replaced it (#41)", () => {
     const diff = diffOf("e2e/events.spec.ts", "@@ -10,3 +10,5 @@", [
       " test(\"isolation\", async ({ page }) => {",
-      '-  await expect(page.getByText("Draft — Annual Tech Summit")).not.toBeVisible();',
+      '-  await expect(page.getByText("Draft: Missing Details — Annual Tech Summit")).not.toBeVisible();',
       "+  await expect(",
-      '+    page.getByRole("cell", { name: "Draft — Annual Tech Summit" }),',
+      '+    page.getByRole("cell", { name: "Draft: Missing Details — Annual Tech Summit" }),',
       "+  ).not.toBeVisible();",
       " });",
     ]);
@@ -712,15 +712,15 @@ describe("findChangedAssertions and renderChangedAssertions", () => {
   it("catches a locator narrowed inside an unchanged multi-line expect (#43 review)", () => {
     const diff = diffOf("e2e/events.spec.ts", "@@ -20,3 +20,3 @@", [
       "   await expect(",
-      '-    page.getByText("Draft — Annual Tech Summit"),',
-      '+    page.getByRole("cell", { name: "Draft — Annual Tech Summit" }),',
+      '-    page.getByText("Draft: Missing Details — Annual Tech Summit"),',
+      '+    page.getByRole("cell", { name: "Draft: Missing Details — Annual Tech Summit" }),',
       "   ).not.toBeVisible();",
     ]);
 
     const { changes } = findChangedAssertions(diff);
 
     expect(changes).toHaveLength(1);
-    expect(changes[0].removed).toEqual(['    page.getByText("Draft — Annual Tech Summit"),']);
+    expect(changes[0].removed).toEqual(['    page.getByText("Draft: Missing Details — Annual Tech Summit"),']);
     expect(renderChangedAssertions({ changes, skips: [] })).toContain("Replaced by:");
   });
 

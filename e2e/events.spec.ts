@@ -432,16 +432,16 @@ test.describe("User Story 84 — Organiser Views Their Own Event Requests Journe
     await page.waitForURL("**/events");
     await expect(page.getByRole("heading", { name: "My Events" })).toBeVisible();
 
-    // 2. Organiser 2 sees their own seeded event (evt_other_organiser: "Another Client's Event — Product Launch").
+    // 2. Organiser 2 sees their own seeded event (evt_other_organiser: "Submitted: Other Organiser — Product Launch").
     await expect(
-      page.getByText("Another Client's Event — Product Launch"),
+      page.getByText("Submitted: Other Organiser — Product Launch"),
     ).toBeVisible();
 
     // 3. Organiser 2 does NOT see events belonging to organiser@test.local
     //    ANYWHERE on the page (not just inside the table): a whole-page check so
     //    a leak into any other region would fail the test too.
     await expect(
-      page.getByText("Draft — Annual Tech Summit"),
+      page.getByText("Draft: Missing Details — Annual Tech Summit"),
     ).not.toBeVisible();
   });
 });
@@ -507,7 +507,7 @@ test.describe("User Story 84 — Events list on mobile (375x812)", () => {
     expect(overflowsX).toBe(false);
 
     // Tapping a draft card's Resume Draft opens the resume dialog. The seeded
-    // "Draft — Annual Tech Summit" guarantees at least one draft card exists.
+    // "Draft: Missing Details — Annual Tech Summit" guarantees at least one draft card exists.
     await page.getByTestId("resume-draft-button").first().click();
     await expect(page.getByRole("dialog")).toBeVisible();
     await expect(
@@ -814,7 +814,7 @@ test.describe("User Story 129, 13 & 84 — Singapore time, unsaved changes and l
     await page.getByRole("button", { name: "Clear Filters" }).click();
     await expect(searchInput).toHaveValue("");
     await expect(
-      page.getByText("Another Client's Event"),
+      page.getByText("Product Launch"),
     ).toBeVisible();
   });
 });
@@ -888,7 +888,7 @@ test.describe("User Story 23 & 24 — Event Status View & Consistency Journey", 
     await expect(page.getByRole("heading", { name: "Event Requests" })).toBeVisible();
 
     // 3. Verify status badge consistency on list view and detail modal for an assigned event
-    const underReviewRow = page.getByRole("row", { name: /Under Review — Career Fair/i });
+    const underReviewRow = page.getByRole("row", { name: /Under Review: Clarification Open — Career Fair/i });
     await expect(underReviewRow).toBeVisible();
     await expect(underReviewRow.getByTestId("status-badge")).toHaveAttribute("data-status", "UNDER_REVIEW");
 
@@ -900,7 +900,7 @@ test.describe("User Story 23 & 24 — Event Status View & Consistency Journey", 
 
     // 4. SCRUM-135 AC3, AC4: an unassigned Submitted request offers no
     // decision; the Under Review one assigned to this Coordinator is rejected.
-    const submittedRow = page.getByRole("row", { name: /Submitted — Alumni Homecoming/i });
+    const submittedRow = page.getByRole("row", { name: /Submitted: Awaiting Lead — Alumni Homecoming/i });
     await expect(submittedRow).toBeVisible();
     await expect(submittedRow.getByTestId("status-badge")).toHaveAttribute("data-status", "SUBMITTED");
     await expect(submittedRow.getByRole("button", { name: "Reject", exact: true })).toHaveCount(0);
@@ -942,7 +942,7 @@ test.describe("User Story 23 & 24 — Event Status View & Consistency Journey", 
     await expect(page.getByRole("heading", { name: "Event Requests" })).toBeVisible();
 
     // 3. Locate the Under Review event and verify its current status
-    const underReviewRow = page.getByRole("row", { name: /Under Review — Career Fair/i });
+    const underReviewRow = page.getByRole("row", { name: /Under Review: Clarification Open — Career Fair/i });
     await expect(underReviewRow).toBeVisible();
     await expect(underReviewRow.getByTestId("status-badge")).toHaveAttribute("data-status", "UNDER_REVIEW");
 
@@ -1068,7 +1068,7 @@ test.describe("User Story 23 & 24 — Event Status View & Consistency Journey", 
     await page.waitForURL("**/events");
 
     // 2. Open the page of an event currently visible in the review queue
-    const submittedRow = page.getByRole("row", { name: /Submitted — Alumni Homecoming/i });
+    const submittedRow = page.getByRole("row", { name: /Submitted: Awaiting Lead — Alumni Homecoming/i });
     await expect(submittedRow).toBeVisible();
     await submittedRow.getByTestId("view-details-button").click();
 

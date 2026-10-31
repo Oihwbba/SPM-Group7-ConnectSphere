@@ -33,7 +33,7 @@ test.describe("SCRUM-76 — Attendee views their registration status", () => {
       page.getByRole("heading", { name: "My Registrations" }),
     ).toBeVisible();
 
-    const full = card(page, "Full — Wine Tasting Evening");
+    const full = card(page, "Confirmed: Registration Full — Wine Tasting Evening");
     await expect(full.getByTestId("registration-status")).toHaveText(
       "Registered",
     );
@@ -43,7 +43,7 @@ test.describe("SCRUM-76 — Attendee views their registration status", () => {
     await expect(full.getByTestId("event-date")).toContainText("SGT");
 
     await expect(
-      card(page, "Confirmed — Charity Gala").getByTestId("registration-status"),
+      card(page, "Confirmed: Registration Open — Charity Gala").getByTestId("registration-status"),
     ).toHaveText("Withdrawn");
   });
 
@@ -53,7 +53,7 @@ test.describe("SCRUM-76 — Attendee views their registration status", () => {
 
     await expect(page.getByTestId("registration-card")).toHaveCount(2);
     // attendee and attendee2 hold places here; attendee3 does not.
-    await expect(card(page, "One Place Left — Studio Masterclass")).toHaveCount(
+    await expect(card(page, "Confirmed: One Place Left — Studio Masterclass")).toHaveCount(
       0,
     );
   });
@@ -65,7 +65,7 @@ test.describe("SCRUM-76 — Attendee views their registration status", () => {
     await page.goto("/registrations");
 
     await expect(
-      card(page, "Cancelled — Winter Workshop").getByTestId(
+      card(page, "Cancelled: After Confirmation — Winter Workshop").getByTestId(
         "registration-status",
       ),
     ).toHaveText("Cancelled");
