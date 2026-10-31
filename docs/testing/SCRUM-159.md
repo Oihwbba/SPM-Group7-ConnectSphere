@@ -87,8 +87,8 @@ are signed in as `coordinator@test.local`, approvals as
 |---|---|
 | Test Case ID | TC-159-03 |
 | Test Scenario | [Positive] AC 1: venues that existed before this story start at 0 and 0 |
-| Pre-conditions | The seeded venues (Grand Auditorium, Seminar Room 2.1, Exhibition Hall, Executive Boardroom). |
-| Test Steps | 1. Read each seeded venue's setup and turnaround time. |
+| Pre-conditions | The four seeded venues from before this story (Grand Auditorium, Seminar Room 2.1, Exhibition Hall, Executive Boardroom). The Black Box Studio, seeded later with times of its own (SCRUM-233), isn't one of them. |
+| Test Steps | 1. Read each of the four venues' setup and turnaround time. |
 | Test Data | — |
 | Expected Result | All four have 0 minutes' setup and 0 minutes' turnaround. |
 

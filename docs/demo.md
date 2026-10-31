@@ -8,9 +8,9 @@ e2e spec that automates the same steps. Created for SCRUM-198.
 ## Before you start
 
 1. **Reset the seed** so every seeded row is as described here:
-   `npm run db:seed`. It deletes nothing, but puts every seeded row back
-   (README, "What the seed gives you"). On the shared Supabase database, tell
-   the team first: it resets their seeded rows too.
+   `npm run db:seed`. It puts every seeded row back and leaves rows made through
+   the app (README, "What the seed gives you"). On the shared Supabase
+   database, tell the team first: it resets their seeded rows too.
 2. Every account's password is `Password123!`. The accounts are listed in the
    README under "Sign in".
 3. Use two browser windows (one private) where a step needs two people at once.
@@ -19,7 +19,7 @@ e2e spec that automates the same steps. Created for SCRUM-198.
    **Changes**.
    "Switch to *account*" means sign out and sign in as that account.
 
-The seeded dates are relative to the day you seed. **Planning — Freshman
+The seeded dates are relative to the day you seed. **Planning: Venue Pending — Freshman
 Orientation** is about three weeks away, 09:00–17:00, for 55 people, with a
 pending Seminar Room 2.1 request, a rejected Executive Boardroom request, a
 pending equipment request (a projector and two microphones) and a pending
@@ -29,8 +29,8 @@ Every role also has work waiting that this script doesn't touch (SCRUM-238):
 a safety check to review, a hold to approve or confirm, flagged arrangements,
 an equipment request in review and one ready to reserve, an overdue request
 for the Lead, and more. The README's "Every role's work" table lists them by
-account. They sit 50 or more days out, so they never clash with the steps
-below.
+account. They sit 50 or more days out, or in the past for the overdue ones,
+so they never clash with the steps below.
 
 ---
 
@@ -52,7 +52,7 @@ below.
 4. **Failure:** as **`coordinator@test.local`**, type `/queue` in the address
    bar. The page says **Access denied**: only the Lead assigns (SCRUM-165
    AC10).
-5. Open the seeded **Under Review — Career Fair** and its **Clarification**
+5. Open the seeded **Under Review: Clarification Open — Career Fair** and its **Clarification**
    tab. The question is **Waiting for the organiser's response**: the event
    stays Under Review, as clarification is not a status (SCRUM-18).
 6. Switch to **`organiser@test.local`**, open the Career Fair's
@@ -71,7 +71,7 @@ below.
 | **Automated by** | `e2e/bookings.spec.ts`, `e2e/venue-suitability.spec.ts`, `e2e/setup-turnaround.spec.ts`, `e2e/several-venues.spec.ts` |
 
 1. As **`coordinator@test.local`**, click **Request Venue**, pick
-   **Planning — Freshman Orientation**, choose the **Boardroom** layout (only
+   **Planning: Venue Pending — Freshman Orientation**, choose the **Boardroom** layout (only
    venues that support the layout are offered, SCRUM-50 AC1), then the
    **Executive Boardroom**. **Failure:** its capacity, 14, is below the
    event's 55, so the form says so and **Submit request** stays disabled
@@ -136,14 +136,14 @@ below.
 | **Stories** | SCRUM-72 (browse), SCRUM-73, SCRUM-74 (register, capacity), SCRUM-77 (withdraw), SCRUM-75 (registration period) |
 | **Automated by** | `e2e/attendee-events.spec.ts`, `e2e/registration.spec.ts`, `e2e/withdraw-registration.spec.ts`, `e2e/registration-period.spec.ts` |
 
-1. As **`attendee4@test.local`**, open **One Place Left — Studio
+1. As **`attendee4@test.local`**, open **Confirmed: One Place Left — Studio
    Masterclass** and register ("You're registered for this event."). It is
    now full.
-2. **Conflict:** as **`attendee@test.local`**, open **Full — Wine Tasting
+2. **Conflict:** as **`attendee@test.local`**, open **Confirmed: Registration Full — Wine Tasting
    Evening**. It is full, so there is no **Register** button, and a direct
    request is refused (SCRUM-74).
-3. **Failure:** open **Registration Not Yet Open — Summer Camp** and
-   **Registration Closed — Leadership Retreat**: neither has a **Register**
+3. **Failure:** open **Confirmed: Registration Not Open — Summer Camp** and
+   **Confirmed: Registration Closed — Leadership Retreat**: neither has a **Register**
    button (SCRUM-75).
 4. Switch back to **`attendee4@test.local`** and withdraw from the
    Masterclass ("You've withdrawn from this event."). The place is free again
@@ -215,11 +215,11 @@ below.
    cancelled. Its arrangements and registrations were released." Every
    booking, hold, reservation and open request is released in the same step
    (SCRUM-82 AC3).
-2. Open **Completed — Hackathon**: it is Completed, with no status actions
+2. Open **Completed: Took Place — Hackathon**: it is Completed, with no status actions
    left. A Confirmed event becomes Completed by itself the first time it is
    read after its end time, with no scheduled job (SCRUM-82 AC7).
-3. As **`organiser@test.local`**, open **My Events**. **Another Client's
-   Event — Product Launch**, owned by `organiser2@test.local`, isn't listed:
+3. As **`organiser@test.local`**, open **My Events**. **Submitted: Other
+   Organiser — Product Launch**, owned by `organiser2@test.local`, isn't listed:
    an organiser sees only their own events (SCRUM-84 AC1, SCRUM-68).
 4. **Failure:** still as the organiser, type `/bookings` in the address bar.
    The page says **Access denied**: the server refuses it, not just the menu
@@ -233,7 +233,7 @@ registrations back, but not everything the demo changes:
 - **The seeded change request** stays Approved: the seed creates it but never
   resets it.
 - **The Grand Auditorium's turnaround time** stays as you set it in section 7:
-  the seed doesn't set venue setup or turnaround times. Set it back in
+  of the seeded venues only the Black Box Studio has setup and turnaround times. Set it back in
   **Edit venue**.
 - **What the demo created** stays: the new request from section 1, the safety
   check, reservations and second Seminar Room request on the Freshman
@@ -244,4 +244,6 @@ registrations back, but not everything the demo changes:
 So a second run on the same database needs those cleared first.
 
 Last run end to end on 27 Oct 2026, on a freshly seeded database, with every
-step above checked in the app and in the database (SCRUM-198 AC3).
+step above checked in the app and in the database (SCRUM-198 AC3). SCRUM-233
+then renamed the seeded events. The seeded details named here were checked
+against the new seed, but the steps haven't been run in the app since.

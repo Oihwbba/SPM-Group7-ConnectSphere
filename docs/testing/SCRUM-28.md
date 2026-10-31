@@ -8,7 +8,7 @@ Format and conventions: [README.md](README.md).
 signs in as Technical Support (`techsupport@test.local` / `Password123!`)
 unless the case says otherwise. Requests are reviewed on the **Equipment
 Requests** page (`/equipment-requests`). The seed has one request waiting for
-review: `eqr_planning`, for "Planning — Freshman Orientation", in Pending
+review: `eqr_planning`, for "Planning: Venue Pending — Freshman Orientation", in Pending
 Review.
 
 **How a review runs.** A request is raised as **Pending Review** (SCRUM-27).

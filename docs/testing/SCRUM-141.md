@@ -5,9 +5,9 @@ Format and conventions: [README.md](README.md). The Lead's role and assignment
 are SCRUM-164 and SCRUM-165.
 
 **Shared pre-conditions for every case:** the database is migrated and seeded
-and the app is running. "Confirmed — Charity Gala" is Cody's
-(`coordinator@test.local`) with Exhibition Hall booked; "Submitted — Alumni
-Homecoming" has no Coordinator; "Draft — Annual Tech Summit" is a draft. Cara
+and the app is running. "Confirmed: Registration Open — Charity Gala" is Cody's
+(`coordinator@test.local`) with Exhibition Hall booked; "Submitted: Awaiting Lead — Alumni
+Homecoming" has no Coordinator; "Draft: Missing Details — Annual Tech Summit" is a draft. Cara
 is `coordinator2@test.local`, the Lead `lead@test.local`. Every account's
 password is `Password123!`.
 
