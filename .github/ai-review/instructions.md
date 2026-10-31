@@ -132,8 +132,10 @@ Report real defects, in this order of importance:
    case marked **Manual** is a test still to be written, not a broken
    citation. If the pull request claims a story and has no test-case document
    for it, that is a `low` finding (CLAUDE.md requires one).
-7. **UI and UX**, as far as the code shows it, in pages and components: a
-   `loading.tsx` or skeleton for data the page fetches; a real empty state and
+7. **UI and UX**, as far as the code shows it, in pages and components: no
+   `loading.tsx` or skeleton screen for a page, because the current page stays
+   on screen until the next is ready and the clicked menu link shows a spinner
+   (SCRUM-207), so a page that adds one is a `low` finding; a real empty state and
    a visible error state, never a blank screen; every form control has a label
    (`<label>`, `aria-label` or `aria-labelledby`); icon-only buttons have an
    accessible name; submit buttons are disabled while pending and show

@@ -1,4 +1,3 @@
-import { Suspense } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { Role } from "@prisma/client";
@@ -14,7 +13,6 @@ import {
   CoordinatorEvents,
   AttendeeEvents,
 } from "./role-views";
-import { EventsListLoading } from "./events-list-skeleton";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
@@ -26,12 +24,11 @@ type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 // names Next.js recognises (default, metadata, generateStaticParams, ...),
 // so anything else must live elsewhere to be testable or reused.
 //
-// The loading skeleton is an explicit <Suspense> around just this dispatch,
-// not a folder-level loading.tsx. A loading.tsx here would also wrap every
-// nested route under events/ — including events/[id] (SCRUM-72) — in the
-// same Suspense boundary, which forces Next.js to stream a 200 shell before
-// that route's notFound() can resolve, so a genuinely-missing or -forbidden
-// event would 200 with a not-found body instead of a real 404.
+// No loading skeleton (SCRUM-207): the current page stays on screen until
+// this one is ready, so moving between pages doesn't flash a placeholder.
+// Never add a loading.tsx here either: it would also wrap events/[id]
+// (SCRUM-72) in a Suspense boundary, so a missing or forbidden event would
+// return 200 with a not-found body instead of a real 404.
 export default async function EventsPage({
   searchParams,
 }: {
@@ -73,9 +70,7 @@ export default async function EventsPage({
           ))}
         </nav>
       )}
-      <Suspense fallback={<EventsListLoading />}>
-        <EventsRoleView role={role} userId={session.user.id} />
-      </Suspense>
+      <EventsRoleView role={role} userId={session.user.id} />
     </>
   );
 }

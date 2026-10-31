@@ -42,6 +42,7 @@ that remain.
 | [TC-207-22](#tc-207-22) | Boundary | User story | Unit |
 | [TC-207-23](#tc-207-23) | Positive | User story | e2e |
 | [TC-207-24](#tc-207-24) | Positive | User story | e2e |
+| [TC-207-25](#tc-207-25) | Positive | User story | Unit, e2e |
 
 "User story" cases check the customer's page-by-page changes that make pages
 look and behave the same; each supports the story as a whole rather than one
@@ -384,3 +385,16 @@ Inline only: **Venue Search** and the sign-in page. Toast only: **Booking Reques
 | Expected Result | Both open a pop-up with a **Details** tab (lines and actions) and a **History** tab (the timeline of every change). |
 
 **Automated by:** `e2e/equipment-request-review.spec.ts` › "SCRUM-28 [AC2, AC3, AC5, AC6] TC-28-02, TC-28-03, TC-28-09, TC-28-10, SCRUM-207 TC-207-24: …" and "SCRUM-28 [AC4, AC5, AC6] TC-28-07, TC-28-09, TC-28-10, SCRUM-207 TC-207-24: …"
+
+### TC-207-25
+
+| Item | Content |
+|---|---|
+| Test Case ID | TC-207-25 |
+| Test Scenario | [Positive] User story: moving between pages from the menu keeps the current page on screen until the next is ready, with no loading placeholder in between |
+| Pre-conditions | Signed in as the Coordinator, on Events. |
+| Test Steps | 1. Choose **Equipment Requests**, then **All Events**, then **Events** from the menu. <br> 2. Open the **Venues** group and choose **Availability**. <br> 3. Watch the clicked menu link while the next page loads. |
+| Test Data | `coordinator@test.local` |
+| Expected Result | Each page replaces the previous one in a single step: no grey placeholder blocks appear in between. While a page loads, the clicked link's icon is a spinner (still, for anyone who prefers reduced motion). No page behind sign-in has a `loading.tsx`. |
+
+**Automated by:** `e2e/page-to-page.spec.ts` › "SCRUM-207 TC-207-25: a menu click keeps the current page until the next is ready, with no loading placeholder in between"; `tests/unit/page-to-page.test.tsx` › "SCRUM-207 TC-207-25: no page behind sign-in has a loading skeleton, so none can flash between pages", "SCRUM-207 TC-207-25: a menu link shows its own icon while nothing is loading", "SCRUM-207 TC-207-25: while its page loads, the clicked link's icon becomes a spinner, which stays still for anyone who prefers reduced motion"
