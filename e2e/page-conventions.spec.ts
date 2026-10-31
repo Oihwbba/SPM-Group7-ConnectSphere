@@ -124,6 +124,26 @@ test.describe("SCRUM-207 [AC1] every page's title, description and back link", (
  * SCRUM-207 AC4 — an error appears inline, at the form that failed, and says
  * what to do next; it is not only a toast in the corner.
  */
+test.describe("SCRUM-207 [AC1] the app's own not-found page", () => {
+  for (const [what, path] of [
+    ["an address that matches no page", "/no-such-page"],
+    ["a venue that doesn't exist, inside the app", "/venues/no-such-venue"],
+  ]) {
+    test(`SCRUM-207 [AC1] TC-207-01: ${what} shows one title, says what to do, and leads home`, async ({
+      browser,
+    }) => {
+      const page = await signedIn(browser, "venuestaff@test.local");
+      const response = await page.goto(path);
+      expect(response?.status()).toBe(404);
+      const notFound = page.getByTestId("not-found");
+      await expect(notFound.getByRole("heading", { level: 1 })).toHaveText("This page doesn't exist");
+      await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
+      await notFound.getByRole("link", { name: "Go to my home page" }).click();
+      await expect(page).toHaveURL(/\/bookings$/);
+    });
+  }
+});
+
 test.describe("SCRUM-207 [AC4] messages in one place", () => {
   test("SCRUM-207 [AC4] TC-207-09: a form's error appears inline, in the form, saying what to do next", async ({
     browser,
