@@ -23,7 +23,6 @@ unit cases mock the database.
 |---|---|---|---|
 | [TC-246-01](#tc-246-01) | Positive | AC 1 | E2E |
 | [TC-246-02](#tc-246-02) | Positive | AC 2 | Unit, E2E |
-| [TC-246-03](#tc-246-03) | Boundary | AC 2 | Unit, E2E |
 
 ---
 
