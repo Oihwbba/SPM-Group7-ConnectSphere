@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-21. Jira is the source of truth.
+     Synced from Jira on 2026-10-29. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-20 - Auto-assign a coordinator to a submitted event
@@ -31,8 +31,6 @@
 * Given assignment succeeds, when it completes, then the event's status moves to "under review" and the Organiser and assigned Coordinator are notified through SCRUM-46.
 * There is no accept-or-decline step on initial assignment. A Coordinator who cannot take an event uses reassignment instead (SCRUM-21).
 * Given no Coordinator account exists when an event is submitted, then the event remains **Submitted**, is not treated as Under Review, and stays visible to Coordinators rather than failing silently.
-
-**Customer clarification (2026-09-13):** _"Event co-ordinator are auto-assigned by the system and only 1 co-ordinator can be assigned to a specific event. Detail implementation is up to the team as long as it is fair and technically possible."_ And, on whether a Coordinator may decline: _"No acceptance step; decline handled outside system as changing co-ordinator."_
 
 **Note (2026-09-23):** criteria updated to match the delivered behaviour.
 

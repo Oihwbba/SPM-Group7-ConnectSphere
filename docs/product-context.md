@@ -122,7 +122,7 @@ to an epic in Jira; the stories carry the acceptance criteria.
 | # | Feature | Epic | Main stories |
 |---|---|---|---|
 | 1 | User authorisation and authentication | SCRUM-9 Access Control | 65, 66, 67, 68, 69, 70, 164, 121 |
-| 2 | Event request creation | SCRUM-6 Event Request Lifecycle | 13, 14, 171 |
+| 2 | Event request creation | SCRUM-6 Event Request Lifecycle | 13, 14, 171, 129, 190 |
 | 3 | Draft event requests | SCRUM-6 | 15, 16, 130 |
 | 4 | Event review and approval | SCRUM-6 | 17, 18, 19, 108, 126 |
 | 5 | Coordinator assignment | SCRUM-6 | 20, 21, 165, 141 |

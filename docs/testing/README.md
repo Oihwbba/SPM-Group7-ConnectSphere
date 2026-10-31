@@ -95,14 +95,14 @@ the open pull requests that change the same test files have merged.
 
 | Story | Owner | Test cases | Status |
 |---|---|---|---|
-| [SCRUM-13](SCRUM-13.md) | Felicia Or | 14 | Every case automated; notes what SCRUM-129 and SCRUM-170 changed in AC 1, 2, 4 and 6 |
+| [SCRUM-13](SCRUM-13.md) | Felicia Or | 14 | Every case automated; notes what SCRUM-129, SCRUM-170, SCRUM-171 and SCRUM-190 changed in AC 1, 2, 4, 6 and 8 |
 | [SCRUM-14](SCRUM-14.md) | Hann Qian | 6 | Every current case automated; TC-14-02, and TC-14-01's assignment step, superseded by SCRUM-165 |
 | [SCRUM-15](SCRUM-15.md) | Felicia Or | 12 | Every case automated; AC 9's marking for correction isn't built, since the requirements are free text |
-| [SCRUM-16](SCRUM-16.md) | Felicia Or | 5 | Every case automated (TC-16-05 by e2e) |
-| [SCRUM-17](SCRUM-17.md) | Hann Qian | 3 | Every case automated; TC-17-02's unassigned request superseded by SCRUM-165 |
+| [SCRUM-16](SCRUM-16.md) | Felicia Or | 5 | Every case automated (TC-16-05 by e2e); the second tab is Sent since SCRUM-131 AC 1 |
+| [SCRUM-17](SCRUM-17.md) | Hann Qian | 3 | Every case automated; TC-17-02's unassigned request superseded by SCRUM-165, and TC-17-03's other Coordinator sees the request read-only in All events (SCRUM-141) |
 | [SCRUM-18](SCRUM-18.md) | Hann Qian | 11 | Every case automated |
 | [SCRUM-183](SCRUM-183.md) | Jun Bin | 1 | A Chore task: SCRUM-18's clarification spec waits for each dialog to close; automated (the whole suite, in CI) |
-| [SCRUM-19](SCRUM-19.md) | Hann Qian | 6 | Every case automated; approval now ends in Planning (SCRUM-81) |
+| [SCRUM-19](SCRUM-19.md) | Hann Qian | 6 | Every case automated; approval now ends in Planning (SCRUM-81), the outcome is SCRUM-126's and unassigned requests wait for the Lead (SCRUM-165) |
 | [SCRUM-20](SCRUM-20.md) | Hann Qian | 5 | TC-20-01 to TC-20-04 superseded by SCRUM-165, citing its tests; TC-20-05 automated |
 | [SCRUM-23](SCRUM-23.md) | Jun Bin | 2 | Every case automated |
 | [SCRUM-24](SCRUM-24.md) | Jun Bin | 6 | Every case automated; TC-24-06 tests the refusals, and AC 5's two ways back to Planning are SCRUM-128's and SCRUM-26's tests |
@@ -118,7 +118,7 @@ the open pull requests that change the same test files have merged.
 | [SCRUM-74](SCRUM-74.md) | Hann Qian | 6 | Every case automated |
 | [SCRUM-75](SCRUM-75.md) | Felicia Or | 14 | Automated (unit, integration for closing against real registrations, a close racing a registration and a new confirmation, e2e for the journey). TC-75-14 is retired: AC 11 moved to SCRUM-128 AC11 |
 | [SCRUM-76](SCRUM-76.md) | Hann Qian | 5 | Every case automated; TC-76-01 notes SCRUM-162 AC 7 and SCRUM-85 AC 8 |
-| [SCRUM-84](SCRUM-84.md) | Felicia Or | 9 | Every case automated |
+| [SCRUM-84](SCRUM-84.md) | Felicia Or | 9 | Every case automated; TC-84-02's tab is Sent since SCRUM-131 AC 1 |
 | [SCRUM-129](SCRUM-129.md) | Felicia Or | 6 | Every case automated |
 | [SCRUM-168](SCRUM-168.md) | Felicia Or | 3 | Automated at phone width; TC-168-01 at desktop width is manual |
 
@@ -142,8 +142,8 @@ the open pull requests that change the same test files have merged.
 | [SCRUM-50](SCRUM-50.md) | Caylern Goh | 16 | Every case automated |
 | [SCRUM-52](SCRUM-52.md) | Caylern Goh | 6 | Every case automated |
 | [SCRUM-53](SCRUM-53.md) | Caylern Goh | 9 | Every case automated; AC 3 and AC 10 point to other cases |
-| [SCRUM-81](SCRUM-81.md) | Jun Bin | 13 | Every case automated (unit, integration for the simultaneous confirm, e2e for the journey) |
-| [SCRUM-110](SCRUM-110.md) | Jun Bin | 15 | Every case automated (unit, and e2e for the page); AC 3 is superseded by SCRUM-170 AC 4 (TC-110-01 and TC-110-09 note it) |
+| [SCRUM-81](SCRUM-81.md) | Jun Bin | 13 | Every case automated (unit, integration for the simultaneous confirm, e2e for the journey); AC 2, 3, 4 and 6 superseded in part by SCRUM-135, SCRUM-165, SCRUM-166 and SCRUM-162 |
+| [SCRUM-110](SCRUM-110.md) | Jun Bin | 15 | Every case automated (unit, and e2e for the page); AC 1, 2, 3 and 5 superseded in part by SCRUM-162, SCRUM-163, SCRUM-170 and SCRUM-166 (the spec's header names the cases that test them) |
 | [SCRUM-108](SCRUM-108.md) | Jun Bin | 14 | Every current case automated (unit, e2e for both journeys); AC 6, 8 and 10 point to existing tests; TC-108-06 superseded by SCRUM-165 and TC-108-07 by SCRUM-135 |
 | [SCRUM-134](SCRUM-134.md) | Jin Hong | 6 | Written with the story; every case automated |
 | [SCRUM-135](SCRUM-135.md) | Jun Bin | 12 | Every case automated (unit for the lifecycle table and every action asking it, integration for a repeated transition recorded once and a reassignment leaving the status alone, e2e through SCRUM-165's Lead queue and assigned-events journeys) |
@@ -151,7 +151,7 @@ the open pull requests that change the same test files have merged.
 | [SCRUM-124](SCRUM-124.md) | Jin Hong | 11 | Every case automated (unit, integration); the unavailability notices are SCRUM-161's and the safety check's SCRUM-166's own tests |
 | [SCRUM-126](SCRUM-126.md) | Jun Bin | 10 | Every case automated (unit, integration for the constraint, migration and simultaneous clicks, e2e for the journey) |
 | [SCRUM-130](SCRUM-130.md) | Felicia Or | 12 | Every case automated (unit, integration, e2e) |
-| [SCRUM-117](SCRUM-117.md) | Jun Bin | 10 | Every case automated (unit, integration for releasing arrangements in one transaction, e2e for both journeys) |
+| [SCRUM-117](SCRUM-117.md) | Jun Bin | 10 | Every case automated (unit, integration for releasing arrangements in one transaction, e2e for both journeys); TC-117-03 notes the holds and safety check SCRUM-162, SCRUM-163 and SCRUM-166 added |
 | [SCRUM-163](SCRUM-163.md) | Jin Hong | 17 | Every case automated; TC-163-13's cancel and flag halves are SCRUM-82's and SCRUM-161's tests |
 | [SCRUM-142](SCRUM-142.md) | Jin Hong | 19 | Every case automated (unit, integration for what each change writes and two withdrawals at once, e2e for the Coordinator's journeys) |
 | [SCRUM-191](SCRUM-191.md) | Jin Hong | 6 | A Bug task: the suites that raced each other, and the docs; automated except TC-191-06, a documentation check |

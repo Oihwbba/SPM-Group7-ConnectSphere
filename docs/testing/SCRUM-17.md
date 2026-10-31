@@ -46,7 +46,7 @@ assigned to `coordinator@test.local` (both `Password123!`).
 | Test Data | The seeded events |
 | Expected Result | The assigned request opens; the unassigned one is refused as if it didn't exist. The list holds exactly the events assigned to this Coordinator. |
 
-**Superseded in part** on 20 Oct 2026 by SCRUM-165 AC 8 ([TC-165-11](SCRUM-165.md#tc-165-11)): a Coordinator could also open a submitted request nobody had picked up; it now waits in the Lead's queue.
+**Superseded in part** on 20 Oct 2026 by SCRUM-165 AC 8 ([TC-165-11](SCRUM-165.md#tc-165-11)): a Coordinator could also open a submitted request nobody had picked up; it now waits in the Lead's queue. AC 2's "only Coordinators and the Organiser" is also widened, read-only, for other roles: Coordinators, the Lead, Venue Staff and Technical Support see every event in the all-events list (SCRUM-141, tested by its own cases), the Lead sees the Unassigned queue (SCRUM-165 AC 3), and a Safety Officer sees the arrangements of an event whose safety check they review (SCRUM-166 AC 2).
 
 **Automated by:** `tests/unit/coordinator-events-access.test.ts` › "[Positive] AC, SCRUM-165 [AC8] TC-165-11: queries only the events assigned to this coordinator" and "[Negative] SCRUM-165 [AC8] TC-165-11: an unclaimed Submitted event is not viewable by a coordinator; it waits in the Lead's queue"
 
@@ -60,5 +60,7 @@ assigned to `coordinator@test.local` (both `Password123!`).
 | Test Steps | 1. As the other seeded Coordinator, open the request's details directly. <br> 2. As a Coordinator, open an unassigned Draft. <br> 3. As `organiser2@test.local`, open the request. |
 | Test Data | The request's id |
 | Expected Result | Each is refused as if the request didn't exist, so it reveals nothing. |
+
+**Superseded in part** by SCRUM-141 AC 1 and AC 3 ([TC-141-05](SCRUM-141.md#tc-141-05)): step 1's other Coordinator can now see the request read-only in **All events**. They still can't open it from their own Events list or decide it, which is what the tests below check.
 
 **Automated by:** `tests/unit/coordinator-events-access.test.ts` › "[Negative] AC/SCRUM-68 parity: the query's OR condition matches can()'s relationship rule exactly for an event assigned to a DIFFERENT coordinator", "[Boundary] AC/SCRUM-68 parity: an unclaimed DRAFT is NOT viewable — the query explicitly excludes DRAFT from the null-coordinator branch"; `tests/unit/event-status.test.ts` › "SCRUM-68: another coordinator's event is indistinguishable from a missing one". Step 3 is SCRUM-68's (see its spec).

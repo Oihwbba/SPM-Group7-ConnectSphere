@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-09. Jira is the source of truth.
+     Synced from Jira on 2026-10-29. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-71 - Record who changed what and when
@@ -16,7 +16,7 @@
 
 ---
 
-**Beyond Release 1** (label `beyond-release-1`): Activity/Change History is on the Week 4 list of features not required for Release 1, and the team descoped this story on 29 Sep. For Release 1, recording who did what and when stays a Definition of Done rule for every story (Confluence §11). The code already records Coordinator assignment, approval and rejection, and venue booking decisions, and the SCRUM-81 branch adds the move to Planning and confirmation. This story adds the remaining entries and the timeline.
+**Beyond Release 1** (label `beyond-release-1`): Activity/Change History is on the Week 4 list of features not required for Release 1, and the team descoped this story on 29 Sep. For Release 1, recording who did what and when stays a Definition of Done rule for every story (Confluence §11). The code already records Coordinator assignment, approval and rejection, venue booking decisions, and the move to Planning and confirmation (SCRUM-81). This story adds the remaining entries and the timeline.
 
 **User story:** As an Event Coordinator or Event Organiser, I want to see who made each important change to an event and when, so that we can understand how the event reached its current state and settle disagreements about what was agreed.
 
@@ -37,5 +37,6 @@
 * 2026-10-01: back in scope (the "descoped" label was removed). The customer requires it, and SCRUM-21, SCRUM-26, SCRUM-81, SCRUM-108 and SCRUM-126 depend on it. Moved from the Access Control epic to Event Request Lifecycle. Visibility narrowed to the Organiser and Coordinators, as the customer said. Re-estimated from 4 (not on the scale) to 5.
 * 2026-10-01 (audit): beyond Release 1 again (label `beyond-release-1`), following the Week 4 not-required list and the team's 29 Sep decision. The stories that depended on it only need their actions recorded, which the Definition of Done already requires. Waiting-list actions removed from AC1 (SCRUM-79 is beyond Release 1); the equipment entries match the built request-and-reservation model; AC7 names what the code already records.
 * 2026-10-07 (Week 7 changes 4 to 6): AC1 records assignment and reassignment by the Lead instead of a handover, holds, and safety checks.
+* 2026-10-29 (SCRUM-243, PO approval pending): the Beyond Release 1 note says the code records the move to Planning and confirmation (SCRUM-81, merged in Sprint 2) instead of "the SCRUM-81 branch adds". Criteria unchanged.
 
 Functionality Area: Event Information Management (Auditability)
