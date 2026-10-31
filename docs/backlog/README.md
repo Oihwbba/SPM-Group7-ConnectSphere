@@ -177,7 +177,7 @@ _11 stories, 22 points_
 | [SCRUM-80](SCRUM-80.md) | Record attendance per registration on the day | 3 | Low | Backlog | To Do |
 | [SCRUM-115](SCRUM-115.md) | Find an event to attend | 3 | Low | Backlog | To Do |
 | [SCRUM-133](SCRUM-133.md) | [MERGED INTO SCRUM-85] Attendees see a clear status while a registered event is being re-planned | 0 | Medium | Backlog | Done |
-| [SCRUM-212](SCRUM-212.md) | Attendee pages show registration state at a glance | 1 | Medium | SCRUM Sprint 4 | In Review |
+| [SCRUM-212](SCRUM-212.md) | Attendee pages show registration state at a glance | 1 | Medium | SCRUM Sprint 4 | Done |
 
 ## Stories with no epic
 

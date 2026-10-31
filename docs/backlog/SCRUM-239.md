@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-29. Jira is the source of truth.
+     Synced from Jira on 2026-10-31. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-239 - Chore: Fix what the SCRUM-11 epic check found in the docs and Jira notes
@@ -38,7 +38,7 @@ Done stories are not reopened: only notes, Supersedes lines and change logs are 
 
 Decision (29 Oct, Felicia): SCRUM-70 stays in SCRUM-9, because its point is who may see an event's registrations, which is authorisation. SCRUM-212 stays in SCRUM-11. Jira is right in both cases, so the documents are fixed to match it.
 
-Out of scope: SCRUM-212 AC1 lists four registration states, while SCRUM-75 AC7 and the merged code (#310) also show "Not open yet" with the opening time. That is raised with the story's owner (Caylern) and the PO (Hann Qian) separately. docs/data-model.md's story-to-table map keeps SCRUM-70 against the Registration table, because that map is about which stories use a table, not which epic they belong to.
+Out of scope: SCRUM-212 AC1, which listed four registration states while SCRUM-75 AC7 and the merged code (#310) also show "Not open yet" with the opening time. That was raised with the story's owner (Caylern) and the PO (Hann Qian) separately, and the PO approved adding it to AC1 on 30 Oct (see SCRUM-212's change log). docs/data-model.md's story-to-table map keeps SCRUM-70 against the Registration table, because that map is about which stories use a table, not which epic they belong to.
 
 **Acceptance criteria**
 
@@ -60,3 +60,4 @@ Out of scope: SCRUM-212 AC1 lists four registration states, while SCRUM-75 AC7 a
 * 2026-10-29: a second pass of the epic added SCRUM-76 AC1 (SCRUM-162), SCRUM-85's changes to SCRUM-72 and SCRUM-76, and the SCRUM-73 test-doc note.
 * 2026-10-29: SCRUM-242 merged in as AC6 to AC11 (its AC1 to AC6, in the same order); renamed from "Record which later stories supersede the Attendee Registration stories (SCRUM-72 to 77)". AC1 to AC5 are unchanged.
 * 2026-10-29: AC5 extended to the test cases of the superseded criteria (TC-72-06, TC-72-07, TC-73-05, TC-76-01), found when checking that the superseded stories' tests still test the right thing. Their tests needed no change.
+* 2026-10-31 (PR #312): the out-of-scope note says how SCRUM-212 AC1 was settled: the PO approved the wording on 30 Oct. Criteria unchanged.
