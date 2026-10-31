@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
 
 import { requireSession } from "@/lib/auth/guard";
+import { PageHeader } from "@/components/app/page-header";
 import { StatusBadge } from "@/components/events/status-badge";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { formatEventTime } from "@/lib/datetime";
 import { getEventForPlanning } from "../queries";
 import { ReassignForm } from "./reassign-form";
@@ -56,28 +56,25 @@ export default async function PlanningEventPage({
 
   return (
     <div className="mx-auto max-w-2xl space-y-4">
-      <Link
-        href="/all-events"
-        className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground"
-      >
-        <ArrowLeft className="h-3.5 w-3.5" /> Back to all events
-      </Link>
-
-      <Card>
-        <CardHeader className="space-y-2">
-          <div className="flex items-start justify-between gap-3">
-            <h1 className="text-xl font-bold leading-none tracking-tight">
-              {event.name}
-            </h1>
+      <PageHeader
+        title={
+          <>
+            {event.name}
             <StatusBadge status={event.status} />
-          </div>
-          <p className="text-xs text-muted-foreground" data-testid="read-only">
+          </>
+        }
+        description={
+          <span data-testid="read-only">
             {canEdit
               ? "You coordinate this event; edit it from your Events page."
               : "Read-only: only the event's assigned Coordinator can change it."}
-          </p>
-        </CardHeader>
-        <CardContent className="space-y-4">
+          </span>
+        }
+        back={{ href: "/all-events", to: "All Events" }}
+      />
+
+      <Card>
+        <CardContent className="space-y-4 pt-6">
           <dl
             className="grid grid-cols-1 gap-x-4 gap-y-2 text-sm sm:grid-cols-[auto_1fr]"
             data-testid="event-details"

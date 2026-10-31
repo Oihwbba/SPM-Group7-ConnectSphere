@@ -56,7 +56,8 @@ describe("SCRUM-210 — menus grouped by task", () => {
         [null, ["All Events"]],
       ],
     ],
-    ["ATTENDEE", [["My work", ["Browse Events", "My Registrations"]]]],
+    // SCRUM-210: a menu that is one group shows its links without a heading.
+    ["ATTENDEE", [[null, ["Browse Events", "My Registrations"]]]],
     [
       "COORDINATOR_LEAD",
       [
@@ -89,14 +90,27 @@ describe("SCRUM-210 — menus grouped by task", () => {
     ]);
   });
 
-  it("SCRUM-210 [AC1] TC-210-02: a group with a single link shows no heading; one with more has its heading", () => {
+  it("SCRUM-210 [AC1] TC-210-02: a group with a single link, or a menu that is one group, shows no heading; any other group has its heading", () => {
     for (const role of ALL_ROLES) {
-      for (const group of navGroupsFor(role)) {
+      const groups = navGroupsFor(role);
+      for (const group of groups) {
         expect(group.heading === null, `${role}: ${group.heading}`).toBe(
-          group.items.length === 1,
+          group.items.length === 1 || groups.length === 1,
         );
       }
     }
+  });
+
+  it("SCRUM-210 [AC1] TC-210-02: an Attendee's menu has no group heading; staff menus keep theirs", () => {
+    const attendee = navGroupsFor("ATTENDEE");
+    expect(attendee.map((group) => group.heading)).toEqual([null]);
+    expect(attendee[0].items.map((item) => item.label)).toEqual(["Browse Events", "My Registrations"]);
+    expect(navGroupsFor("TECH_SUPPORT").map((group) => group.heading)).toEqual(["My work", null, null]);
+    expect(navGroupsFor("COORDINATOR").map((group) => group.heading)).toEqual([null, "Venues", null, null]);
+    expect(navGroupsFor("VENUE_STAFF").map((group) => group.heading)).toEqual([null, "Venues", null]);
+    expect(navGroupsForRoles(["VENUE_STAFF", "TECH_SUPPORT", "COORDINATOR", "ORGANISER"])[0].heading).toBe(
+      "My work",
+    );
   });
 
   it("SCRUM-210 [AC1] TC-210-03: Notifications is in no role's menu, alone or combined; it is reached from the bell", () => {

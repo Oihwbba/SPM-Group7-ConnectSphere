@@ -20,14 +20,6 @@ import type { RejectionOutcome } from "@prisma/client";
 import { badgeVariants } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { confirmEvent, rejectPlanningEvent } from "@/app/(app)/events/actions";
 import {
@@ -64,6 +56,11 @@ import {
   NEEDS_RECONSIDERATION,
 } from "@/lib/status-labels";
 import { cn } from "@/lib/utils";
+import { ActionError } from "@/components/app/action-error";
+import {
+  ConfirmDialog,
+  type ConfirmOutcome,
+} from "@/components/app/confirm-dialog";
 
 /**
  * SCRUM-110 — the readiness checklist on a Planning event's page, as the
@@ -155,7 +152,6 @@ export function ReadinessChecklist({
   const [withdrawingRequest, setWithdrawingRequest] = useState<string | null>(
     null,
   );
-  const [withdrawingEquipment, startWithdrawEquipment] = useTransition();
   const [loadFailed, setLoadFailed] = useState(false);
   // Bumped after a hold is settled or a safety check requested, so the
   // checklist is read again.
@@ -165,8 +161,15 @@ export function ReadinessChecklist({
   const [settlingHow, setSettlingHow] = useState<string | null>(null);
   const [requesting, startRequest] = useTransition();
   const [confirming, startConfirm] = useTransition();
-  const [rejecting, startReject] = useTransition();
+  // SCRUM-207 AC4: each action's error, beside the button that failed.
+  const [confirmError, setConfirmError] = useState<string | null>(null);
+  const [checkError, setCheckError] = useState<string | null>(null);
   const [rejectOpen, setRejectOpen] = useState(false);
+  // SCRUM-207 AC5: the held booking asked about before it is released.
+  const [releasing, setReleasing] = useState<string | null>(null);
+  // SCRUM-207 AC4: errors beside the hold's and the equipment's buttons.
+  const [holdError, setHoldError] = useState<string | null>(null);
+  const [equipmentError, setEquipmentError] = useState<string | null>(null);
   const [deciding, startDecide] = useTransition();
   // SCRUM-142 AC4: the pending venue request waiting to be confirmed withdrawn.
   const [withdrawing, setWithdrawing] = useState<string | null>(null);
@@ -211,10 +214,8 @@ export function ReadinessChecklist({
   function requestCheck() {
     startRequest(async () => {
       const result = await requestSafetyCheck({ eventId });
-      if (!result.ok) {
-        toast.error(result.error);
-        return;
-      }
+      setCheckError(result.ok ? null : result.error);
+      if (!result.ok) return;
       toast.success(
         result.data.existing
           ? "A safety check is already awaiting review."
@@ -231,16 +232,28 @@ export function ReadinessChecklist({
     release: [releaseHold, "Hold released: the venue is free again."],
     withdraw: [withdrawBookingRequest, "Venue request withdrawn."],
   } as const;
-  function settleHold(bookingId: string, how: keyof typeof SETTLE) {
+  // Releasing and withdrawing are awaited by the shared dialog (SCRUM-207
+  // AC5), which shows a refusal inside itself.
+  async function settleNow(
+    bookingId: string,
+    how: keyof typeof SETTLE,
+  ): Promise<ConfirmOutcome> {
     const [action, done] = SETTLE[how];
-    setSettlingHow(how);
+    const result = await action({ bookingId });
+    setLoads((n) => n + 1);
+    onBookingsChanged?.();
+    router.refresh();
+    if (!result.ok) return result;
+    toast.success(done);
+  }
+
+  // Confirming a hold isn't undone, so it asks nothing; its refusal is shown
+  // beside the hold's buttons (SCRUM-207 AC4).
+  function confirmHoldNow(bookingId: string) {
+    setSettlingHow("confirm");
     startSettle(async () => {
-      const result = await action({ bookingId });
-      if (!result.ok) toast.error(result.error);
-      else toast.success(done);
-      setLoads((n) => n + 1);
-      onBookingsChanged?.();
-      router.refresh();
+      const result = await settleNow(bookingId, "confirm");
+      setHoldError(result && !result.ok ? result.error : null);
     });
   }
 
@@ -248,8 +261,8 @@ export function ReadinessChecklist({
   function recordNoEquipment() {
     startDecide(async () => {
       const result = await recordNoEquipmentNeeded({ eventId });
-      if (!result.ok) toast.error(result.error);
-      else toast.success("Recorded: no equipment needed.");
+      setEquipmentError(result.ok ? null : result.error);
+      if (result.ok) toast.success("Recorded: no equipment needed.");
       setLoads((n) => n + 1);
       router.refresh();
     });
@@ -258,31 +271,22 @@ export function ReadinessChecklist({
   function confirm() {
     startConfirm(async () => {
       const result = await confirmEvent({ eventId });
-      if (!result.ok) {
-        toast.error(result.error);
-        return;
-      }
+      setConfirmError(result.ok ? null : result.error);
+      if (!result.ok) return;
       toast.success("Event confirmed.");
       router.refresh();
     });
   }
 
-  function reject() {
-    if (!outcome) return;
-    startReject(async () => {
-      const result = await rejectPlanningEvent({
-        eventId,
-        decisionReason: reason,
-        rejectionOutcome: outcome,
-      });
-      if (!result.ok) {
-        toast.error(result.error);
-        return;
-      }
-      toast.success("Event rejected. Its arrangements were released.");
-      setRejectOpen(false);
-      router.refresh();
+  async function reject(): Promise<ConfirmOutcome> {
+    const result = await rejectPlanningEvent({
+      eventId,
+      decisionReason: reason,
+      rejectionOutcome: outcome!,
     });
+    if (!result.ok) return result;
+    toast.success("Event rejected. Its arrangements were released.");
+    router.refresh();
   }
 
   // SCRUM-209 AC2: the event's equipment requests, changed or withdrawn here.
@@ -306,18 +310,12 @@ export function ReadinessChecklist({
       request.event.status,
     );
 
-  function withdrawRequest(requestId: string) {
-    startWithdrawEquipment(async () => {
-      const result = await withdrawEquipmentRequest({ requestId });
-      if (result.ok) {
-        toast.success("Request withdrawn. Its reserved equipment is released.");
-      } else {
-        toast.error(result.error);
-      }
-      setWithdrawingRequest(null);
-      setLoads((n) => n + 1);
-      router.refresh();
-    });
+  async function withdrawRequest(requestId: string): Promise<ConfirmOutcome> {
+    const result = await withdrawEquipmentRequest({ requestId });
+    setLoads((n) => n + 1);
+    router.refresh();
+    if (!result.ok) return result;
+    toast.success("Request withdrawn. Its reserved equipment is released.");
   }
 
   function equipmentDone() {
@@ -419,7 +417,6 @@ export function ReadinessChecklist({
                     setOutcome(null);
                     setRejectOpen(true);
                   }}
-                  disabled={rejecting}
                 >
                   Reject event
                 </Button>
@@ -437,6 +434,7 @@ export function ReadinessChecklist({
                 </Button>
               )}
             </div>
+            <ActionError message={confirmError} />
           </div>
         </CardContent>
       </Card>
@@ -533,7 +531,7 @@ export function ReadinessChecklist({
                       <div className="flex flex-wrap gap-2">
                         <Button
                           size="sm"
-                          onClick={() => settleHold(line.id, "confirm")}
+                          onClick={() => confirmHoldNow(line.id)}
                           disabled={settling || !line.holdApproved}
                         >
                           {settling && settlingHow === "confirm"
@@ -543,14 +541,15 @@ export function ReadinessChecklist({
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => settleHold(line.id, "release")}
+                          onClick={() => setReleasing(line.id)}
                           disabled={settling}
                         >
-                          {settling && settlingHow === "release"
-                            ? "Releasing…"
-                            : "Release hold"}
+                          Release hold
                         </Button>
                       </div>
+                    )}
+                    {line?.held && checklist.canSettleHold && (
+                      <ActionError message={holdError} />
                     )}
                     {line?.pending && checklist.canWithdrawBooking && (
                       <Button
@@ -603,6 +602,7 @@ export function ReadinessChecklist({
                       {deciding ? "Recording…" : "No equipment needed"}
                     </Button>
                   )}
+                <ActionError message={equipmentError} />
               </div>
             )
           }
@@ -688,14 +688,17 @@ export function ReadinessChecklist({
           item={safety}
           action={
             checklist.canRequestSafetyCheck && (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={requestCheck}
-                disabled={requesting}
-              >
-                {requesting ? "Requesting…" : "Request safety check"}
-              </Button>
+              <div className="space-y-1">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={requestCheck}
+                  disabled={requesting}
+                >
+                  {requesting ? "Requesting…" : "Request safety check"}
+                </Button>
+                <ActionError message={checkError} />
+              </div>
             )
           }
         >
@@ -750,119 +753,87 @@ export function ReadinessChecklist({
         />
       )}
 
-      <Dialog
+      <ConfirmDialog
         open={withdrawingRequest !== null}
         onOpenChange={(open) => !open && setWithdrawingRequest(null)}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Withdraw this equipment request?</DialogTitle>
-            <DialogDescription>
-              It becomes Cancelled and any equipment reserved for it is
-              released. You can raise a new request later.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="secondary"
-              onClick={() => setWithdrawingRequest(null)}
-            >
-              Keep it
-            </Button>
-            <Button
-              variant="destructive"
-              disabled={withdrawingEquipment}
-              onClick={() =>
-                withdrawingRequest && withdrawRequest(withdrawingRequest)
-              }
-            >
-              Withdraw request
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        title="Withdraw this equipment request?"
+        message="It becomes Cancelled and any equipment reserved for it is released. You can raise a new request later."
+        confirmLabel="Withdraw request"
+        pendingLabel="Withdrawing…"
+        cancelLabel="Keep it"
+        destructive
+        onConfirm={async () =>
+          withdrawingRequest ? withdrawRequest(withdrawingRequest) : undefined
+        }
+      />
 
-      <Dialog
+      <ConfirmDialog
         open={withdrawing !== null}
         onOpenChange={(open) => !open && setWithdrawing(null)}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Withdraw this venue request?</DialogTitle>
-            <DialogDescription>
-              It leaves the Venue Staff queue and Venue Staff are told. You can
-              request a venue again afterwards.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="secondary" onClick={() => setWithdrawing(null)}>
-              Keep it
-            </Button>
-            <Button
-              variant="destructive"
-              disabled={settling}
-              onClick={() => {
-                if (withdrawing) settleHold(withdrawing, "withdraw");
-                setWithdrawing(null);
-              }}
-            >
-              Withdraw request
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        title="Withdraw this venue request?"
+        message="It leaves the Venue Staff queue and Venue Staff are told. You can request a venue again afterwards."
+        confirmLabel="Withdraw request"
+        pendingLabel="Withdrawing…"
+        cancelLabel="Keep it"
+        destructive
+        onConfirm={async () =>
+          withdrawing ? settleNow(withdrawing, "withdraw") : undefined
+        }
+      />
 
-      <Dialog open={rejectOpen} onOpenChange={setRejectOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Reject this event</DialogTitle>
-            <DialogDescription>
-              Use this when the event&apos;s arrangements can&apos;t be secured.
-              Its venue bookings, equipment reservations and open requests are
-              released, and the organiser is told why.
-            </DialogDescription>
-          </DialogHeader>
-          <Textarea
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-            placeholder="Why can't it go ahead?"
-            aria-label="Rejection reason"
-          />
-          {/* SCRUM-117 AC2: an outcome is chosen as for any rejection (SCRUM-126). */}
-          <fieldset className="space-y-2 text-sm">
-            <legend className="mb-1 font-medium">
-              What can the organiser do next?
-            </legend>
-            {(Object.keys(REJECTION_OUTCOME_LABEL) as RejectionOutcome[]).map(
-              (option) => (
-                <label key={option} className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                    name="planning-rejection-outcome"
-                    value={option}
-                    checked={outcome === option}
-                    onChange={() => setOutcome(option)}
-                    className="accent-primary"
-                  />
-                  {REJECTION_OUTCOME_LABEL[option]}
-                </label>
-              ),
-            )}
-          </fieldset>
-          <DialogFooter>
-            <Button variant="secondary" onClick={() => setRejectOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              disabled={rejecting || !reason.trim() || !outcome}
-              onClick={reject}
-            >
-              {rejecting ? "Rejecting…" : "Reject event"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConfirmDialog
+        open={releasing !== null}
+        onOpenChange={(open) => !open && setReleasing(null)}
+        title="Release this hold?"
+        message="The venue is freed for other events and this request is cancelled. To use it again, request the venue again."
+        confirmLabel="Release hold"
+        pendingLabel="Releasing…"
+        cancelLabel="Keep the hold"
+        destructive
+        onConfirm={async () =>
+          releasing ? settleNow(releasing, "release") : undefined
+        }
+      />
+
+      <ConfirmDialog
+        open={rejectOpen}
+        onOpenChange={setRejectOpen}
+        title="Reject this event"
+        message="Use this when the event's arrangements can't be secured. Its venue bookings, equipment reservations and open requests are released, and the organiser is told why."
+        confirmLabel="Reject event"
+        pendingLabel="Rejecting…"
+        destructive
+        ready={Boolean(reason.trim() && outcome)}
+        onConfirm={reject}
+      >
+        <Textarea
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          placeholder="Why can't it go ahead?"
+          aria-label="Rejection reason"
+        />
+        {/* SCRUM-117 AC2: an outcome is chosen as for any rejection (SCRUM-126). */}
+        <fieldset className="space-y-2 text-sm">
+          <legend className="mb-1 font-medium">
+            What can the organiser do next?
+          </legend>
+          {(Object.keys(REJECTION_OUTCOME_LABEL) as RejectionOutcome[]).map(
+            (option) => (
+              <label key={option} className="flex items-center gap-2">
+                <input
+                  type="radio"
+                  name="planning-rejection-outcome"
+                  value={option}
+                  checked={outcome === option}
+                  onChange={() => setOutcome(option)}
+                  className="accent-primary"
+                />
+                {REJECTION_OUTCOME_LABEL[option]}
+              </label>
+            ),
+          )}
+        </fieldset>
+      </ConfirmDialog>
     </div>
   );
 }

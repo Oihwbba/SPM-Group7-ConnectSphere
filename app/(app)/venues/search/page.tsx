@@ -2,7 +2,6 @@ import Form from "next/form";
 import Link from "next/link";
 import {
   AlertCircle,
-  ArrowLeft,
   Building2,
   CalendarRange,
   CircleCheck,
@@ -21,6 +20,7 @@ import { can } from "@/lib/auth/can";
 import { AppSelect } from "@/components/app/app-select";
 import { DateTimePicker } from "@/components/app/date-time-picker";
 import { Forbidden } from "@/components/app/forbidden";
+import { PageHeader } from "@/components/app/page-header";
 import { OrganiserVenueAnswers } from "@/components/events/organiser-answers";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -200,22 +200,20 @@ function SearchShell({
 }) {
   return (
     <div className="space-y-6">
-      {backToEvent && (
-        <Link
-          href={`/events/${backToEvent}?tab=arrangements`}
-          className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground"
-        >
-          <ArrowLeft className="h-4 w-4" aria-hidden /> Back to event
-        </Link>
-      )}
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Venue search</h1>
-        <p className="text-sm text-muted-foreground">
-          Find venues that are free and fit. A venue is free when nothing booked
-          or recorded there overlaps the period, counting its setup and
-          turnaround time. Times are Singapore time.
-        </p>
-      </div>
+      <PageHeader
+        title="Venue search"
+        description="Find venues that are free and fit what an event needs."
+        back={
+          backToEvent
+            ? { href: `/events/${backToEvent}?tab=arrangements`, to: "the event" }
+            : undefined
+        }
+      />
+      <p className="text-xs text-muted-foreground">
+        A venue is free when nothing booked or recorded there overlaps the
+        period, counting its setup and turnaround time. Times are Singapore
+        time.
+      </p>
       {children}
     </div>
   );

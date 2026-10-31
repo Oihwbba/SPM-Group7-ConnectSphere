@@ -47,7 +47,8 @@ const GROUP_HEADING: Record<GroupId, string> = {
 /**
  * A group of links under its heading. A group with one link has no heading,
  * since a heading over a single link says nothing (SCRUM-210 AC1): the menu
- * shows that link on its own.
+ * shows that link on its own. Nor does a menu that is a single group, such as
+ * an Attendee's: a heading over the whole menu says nothing either.
  */
 export type NavGroup = {
   id: GroupId;
@@ -194,12 +195,12 @@ export function navGroupsForRoles(roles: Role[]): NavGroup[] {
         : route.group;
     byGroup.set(group, [...(byGroup.get(group) ?? []), linkFor(route, role)]);
   }
+  const alone = byGroup.size === 1;
   return GROUP_ORDER.flatMap((id) => {
     const items = byGroup.get(id);
     if (!items) return [];
-    return [
-      { id, heading: items.length > 1 ? GROUP_HEADING[id] : null, items },
-    ];
+    const heading = items.length > 1 && !alone ? GROUP_HEADING[id] : null;
+    return [{ id, heading, items }];
   });
 }
 

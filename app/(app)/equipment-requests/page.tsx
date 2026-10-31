@@ -73,7 +73,7 @@ export default async function EquipmentRequestsPage({
     return (
       <WorkQueue
         title="Equipment requests"
-        description="Oldest request first. Open one to check each line against what is free, suggest alternatives and decide."
+        description="Equipment requests to check against what is free and decide, oldest request first."
         base="/equipment-requests"
         state={state}
         defaults={DEFAULTS}

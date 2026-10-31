@@ -42,6 +42,7 @@ import {
   suggestAlternativeEquipment,
   updateEquipmentRequestStatus,
 } from "./actions";
+import { ActionError } from "@/components/app/action-error";
 
 type QueuedLine = QueuedEquipmentRequest["lines"][number];
 
@@ -162,7 +163,6 @@ export function ReviewDecision({
         setRejecting(false);
         setNoteError(result.fieldErrors?.note?.[0] ?? null);
         setRefusal(result.fieldErrors?.note ? null : result.error);
-        toast.error(result.error);
         router.refresh();
         return;
       }
@@ -174,7 +174,8 @@ export function ReviewDecision({
       // This request, as it now stands.
       router.refresh();
     } catch {
-      toast.error(OFFLINE);
+      // Inline: in the reject dialog, or beside the decision.
+      setRefusal(OFFLINE);
       return { ok: false, error: OFFLINE };
     }
   }
@@ -195,15 +196,7 @@ export function ReviewDecision({
           {request.decidedAt && ` on ${formatDateTime(request.decidedAt)}`}.
         </p>
       )}
-      {refusal && (
-        <p
-          role="alert"
-          className="text-sm text-destructive"
-          data-testid="decision-refused"
-        >
-          {refusal}
-        </p>
-      )}
+      <ActionError message={refusal} testId="decision-refused" />
       {!decided && request.status === "PENDING_REVIEW" ? (
         <>
           <Button
@@ -407,8 +400,7 @@ function LineSuggestion({
           alternativeId,
         });
         if (!result.ok) {
-          setError(result.fieldErrors?.alternativeId?.[0] ?? null);
-          toast.error(result.error);
+          setError(result.fieldErrors?.alternativeId?.[0] ?? result.error);
           return;
         }
         const type = alternatives.find(
@@ -419,7 +411,7 @@ function LineSuggestion({
         setError(null);
         router.refresh();
       } catch {
-        toast.error(OFFLINE);
+        setError(OFFLINE);
       }
     });
 

@@ -26,6 +26,7 @@ import {
 } from "@/lib/schemas/equipment-request";
 import { changeEquipmentRequest, createEquipmentRequest } from "./actions";
 import { OrganiserEquipmentAnswer } from "@/components/events/organiser-answers";
+import { ActionError } from "@/components/app/action-error";
 
 export type EventOption = {
   id: string;
@@ -101,6 +102,8 @@ export function NewRequestDialog({
   const [draft, setDraft] = useState(EMPTY_DRAFT);
   const [draftErrors, setDraftErrors] = useState<Errors>({});
   const [errors, setErrors] = useState<Errors>({});
+  // SCRUM-207 AC4: the form's own error, shown above its buttons.
+  const [formError, setFormError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
   const typeOf = (id: string) =>
@@ -162,15 +165,16 @@ export function NewRequestDialog({
     const checked = changeEquipmentRequestSchema.safeParse(payload);
     if (!checked.success) {
       setErrors(fieldErrorsByPath(checked.error));
-      toast.error("Please fix the highlighted fields.");
+      setFormError("Please fix the highlighted fields.");
       return;
     }
     startTransition(async () => {
+      setFormError(null);
       try {
         const result = await changeEquipmentRequest(payload);
         if (!result.ok) {
           setErrors(result.fieldErrors ?? {});
-          toast.error(result.error);
+          setFormError(result.error);
           return;
         }
         toast.success(
@@ -180,7 +184,7 @@ export function NewRequestDialog({
         );
         onDone(requestId);
       } catch {
-        toast.error(
+        setFormError(
           "Couldn't save the changes. Check your connection and try again.",
         );
       }
@@ -205,16 +209,18 @@ export function NewRequestDialog({
     const checked = createEquipmentRequestSchema.safeParse(payload);
     if (!checked.success) {
       setErrors(fieldErrorsByPath(checked.error));
-      toast.error("Please fix the highlighted fields.");
+      setFormError("Please fix the highlighted fields.");
       return;
     }
 
     startTransition(async () => {
+
+      setFormError(null);
       try {
         const result = await createEquipmentRequest(payload);
         if (!result.ok) {
           setErrors(result.fieldErrors ?? {});
-          toast.error(result.error);
+          setFormError(result.error);
           return;
         }
         if (result.data.existing) {
@@ -227,7 +233,7 @@ export function NewRequestDialog({
         reset();
         onDone(result.data.id);
       } catch {
-        toast.error(
+        setFormError(
           "Couldn't submit the request. Check your connection and try again.",
         );
       }
@@ -463,6 +469,7 @@ export function NewRequestDialog({
           </div>
         </div>
 
+        <ActionError message={formError} />
         <DialogFooter>
           <Button
             type="button"

@@ -23,6 +23,7 @@ import {
   getAllEvents,
   parseAllEventsFilters,
 } from "../queries";
+import { PageHeader } from "@/components/app/page-header";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
@@ -45,12 +46,10 @@ export default async function AllEventsPage({
 
   return (
     <div className="space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">All Events</h1>
-        <p className="text-sm text-muted-foreground">
-          Every event except drafts, soonest first, read-only for planning.
-        </p>
-      </div>
+      <PageHeader
+        title="All Events"
+        description="Every event except drafts, soonest first, read-only for planning."
+      />
 
       {isLead && (
         <Card data-testid="coordinator-loads">

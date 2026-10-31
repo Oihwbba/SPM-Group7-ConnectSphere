@@ -7,27 +7,30 @@ Format and conventions: [README.md](README.md).
 (`npm run db:deploy && npm run db:seed`), the app is running, and every seeded
 account signs in with `Password123!`.
 
-**What this pull request delivers.** The first part of the story: the shared
-pieces every page now uses (one status badge, empty states on the lists it
+**What the pull requests delivered.** The first (#273, #274) built the shared
+pieces every page uses (one status badge, empty states on the lists it
 changed, one confirmation pop-up for submitting a request and approving a
-booking), and the customer's page-by-page changes built on them (TC-207-11 to
-TC-207-24). **AC 1, AC 4 and AC 5 are not yet met across every page:**
-TC-207-01, TC-207-02, TC-207-09 and TC-207-10 are still to do, marked Manual
-until a later pull request builds and automates them; each lists the pages
-that remain.
+booking) and the customer's page-by-page changes built on them (TC-207-11 to
+TC-207-24). The last (SCRUM-207 final) meets AC 1, AC 4 and AC 5 on every
+page: one page header with a title, a one-line description and, off the
+menu, a back link (`components/app/page-header.tsx`); errors inline where
+they happened, saying what to do next, and successes as a toast
+(`components/app/action-error.tsx`, `lib/action-message.ts`); and every
+action that can't be undone asking in the shared confirmation dialog
+(`components/app/confirm-dialog.tsx`). Every case is now automated.
 
 | ID | Type | Criterion | Automated |
 |---|---|---|---|
-| [TC-207-01](#tc-207-01) | Positive | AC 1 | **Still to do** (Manual) |
-| [TC-207-02](#tc-207-02) | Positive | AC 1 | **Still to do** (Manual) |
+| [TC-207-01](#tc-207-01) | Positive | AC 1 | e2e |
+| [TC-207-02](#tc-207-02) | Positive | AC 1 | e2e |
 | [TC-207-03](#tc-207-03) | Positive | AC 2 | Unit |
 | [TC-207-04](#tc-207-04) | Positive | AC 3 | Unit |
 | [TC-207-05](#tc-207-05) | Positive | AC 3 | Unit |
 | [TC-207-06](#tc-207-06) | Negative | AC 3 | e2e |
 | [TC-207-07](#tc-207-07) | Positive | AC 4 | e2e |
 | [TC-207-08](#tc-207-08) | Positive | AC 4 | e2e |
-| [TC-207-09](#tc-207-09) | Positive, Negative | AC 4 | **Still to do** (Manual) |
-| [TC-207-10](#tc-207-10) | Positive | AC 5 | Unit, e2e for Attendee Withdraw; **still to do** elsewhere (Manual) |
+| [TC-207-09](#tc-207-09) | Positive, Negative | AC 4 | Unit, e2e |
+| [TC-207-10](#tc-207-10) | Positive | AC 5 | Unit, e2e |
 | [TC-207-11](#tc-207-11) | Positive | User story | e2e |
 | [TC-207-12](#tc-207-12) | Positive | User story | e2e |
 | [TC-207-13](#tc-207-13) | Positive | User story | e2e |
@@ -60,12 +63,7 @@ criterion.
 | Test Data | Every seeded account |
 | Expected Result | Each page shows exactly one title (level-1 heading) and, under it, one line saying what the page is for. |
 
-**Automated by:** Manual. **Still to do** on these pages (audited 23 Oct):
-
-- **Equipment** (`/equipment`) and **Browse Events** (`/events` as an Attendee): the title is for screen readers only, with no visible title or description.
-- **Booking Requests** (`/bookings`) and **Venue Search** (`/venues/search`): the description runs to several sentences, not one line.
-- **An unassigned request** (`/queue/[id]`) and **an event's page for Attendees** (`/events/[id]`): a title, but no line saying what the page is for.
-- The event pop-up on **My Events** has no description line; SCRUM-208 replaces it with a page.
+**Automated by:** `e2e/page-conventions.spec.ts` › "SCRUM-207 [AC1] TC-207-01, TC-207-02: …" (every role's menu pages, and every page reached from one): each page has exactly one visible level-1 heading and a one-sentence description. Every page under `app/(app)` uses `components/app/page-header.tsx`; the four work queues through their shared layout (SCRUM-211). Fixed since the 23 Oct audit: **Equipment** and **Browse Events** have a visible title and description; **Booking Requests**, **Venue Search**, **Venue availability**, **Equipment Requests** and **Safety Checks** have a one-sentence description, with any longer help moved below it; **an event's page** (for its Organiser, its Coordinator, or an Attendee) and **a venue's page** say what the page is for. `/queue/[id]` and `/safety-checks/[id]` now open the item in its queue (SCRUM-211), so they have no page of their own.
 
 ### TC-207-02
 
@@ -78,10 +76,7 @@ criterion.
 | Test Data | `lead@test.local`, `coordinator@test.local` |
 | Expected Result | Each page reached from a menu page has a back link to the page it came from; menu pages have none. |
 
-**Automated by:** Manual. **Still to do** on these pages (audited 23 Oct):
-
-- Every detail page has a back link, but they read and look different: "Back to all events" (`/all-events/[id]`), "Back to the queue" (`/queue/[id]`), "Safety checks" (`/safety-checks/[id]`), "Venue Catalogue" (`/venues/[id]`), "Back to events" and "Back to my registrations" (`/events/[id]`). They need one wording and one style.
-- **Notifications** (`/notifications`), reached from the bell, has no back link.
+**Automated by:** `e2e/page-conventions.spec.ts` › "SCRUM-207 [AC1] TC-207-01, TC-207-02: …": every menu page has no back link; **Notifications** (for an Organiser and for Venue Staff), **an event's page** (for its Organiser, its Coordinator and an Attendee), **an event in All Events** and **a venue's page** each have one back link, worded "Back to" and the page's name ("Back to My Events", "Back to Events", "Back to Browse Events", "Back to All Events", "Back to Venue Catalogue", "Back to Bookings"), which leads back to that page. Notifications leads back to the page the user lands on. An event being re-planned leads "Back to My Registrations"; **Request a venue** and **Venue search**, opened from an event, lead "Back to the event".
 
 ### TC-207-03
 
@@ -172,15 +167,9 @@ criterion.
 | Test Data | Every seeded account |
 | Expected Result | Every success and every error shows in the same place, and every error message ends with what to do next. |
 
-**Automated by:** Manual. **Still to do** on these pages (audited 23 Oct): messages show either as a toast in the corner or inline beside the form, depending on the page. Toast and inline messages are mixed on:
+**Automated by:** `tests/unit/action-message.test.ts` › "SCRUM-207 [AC4] TC-207-09: …" (nine tests: a message that already says what to do is shown as it is; any other gets the next step added, the action's own or by default to refresh and try again); `e2e/page-conventions.spec.ts` › "SCRUM-207 [AC4] TC-207-09: a form's error appears inline, in the form, saying what to do next".
 
-- **My Events**, whose request form shows its errors inline and everything else as a toast;
-- **Request a Venue** (`/bookings/new`);
-- **Equipment** (`/equipment`), the reserve card and the schedule panel;
-- **Venues** and **Venue Availability**, the venue form, Retire and Record unavailability;
-- the event pop-up's panels: clarification, change request, change decision, reconsideration, readiness checklist, registration control and notes.
-
-Inline only: **Venue Search** and the sign-in page. Toast only: **Booking Requests**, **Equipment Requests**, the unassigned queue, **All Events** (reassign) and **Safety Checks** (outcome). Every error message has still to be checked for what to do next.
+The rule, on every page: an error appears inline, beside the form or button that failed (`components/app/action-error.tsx`), and says what to do next; a success is a toast. No action shows an error only as a toast any more: the request form, the equipment request and venue forms, the work queues, reassigning, registering, opening a notification, starting a new request, answering a clarification, and the readiness checklist's Confirm, Request safety check, Confirm hold and No equipment needed all show theirs inline. An error from an irreversible action shows inside its confirmation dialog (TC-207-10). The actions' own messages and refusal rules are unchanged.
 
 ### TC-207-10
 
@@ -193,15 +182,19 @@ Inline only: **Venue Search** and the sign-in page. Toast only: **Booking Reques
 | Test Data | Every seeded account |
 | Expected Result | Each asks in the same dialog, with the same layout and buttons; the way back changes nothing. |
 
-**Automated by:** the shared dialog is `components/app/confirm-dialog.tsx` (SCRUM-212's pull request). `tests/unit/confirm-dialog.test.tsx` › "SCRUM-207 [AC5] TC-207-10: …" (eleven tests: its wording, way back, red button for a destructive action, pending state, a refusal shown inside it without closing, a field the action needs asked for inside it, an action that shows its own outcome on the page, and a dialog the page opens); an Attendee withdrawing a registration uses it, on the event page and on **My Registrations**: `e2e/registration-at-a-glance.spec.ts` › "SCRUM-212 [AC2] TC-212-09, SCRUM-207 [AC5] TC-207-10: …".
+**Automated by:** `tests/unit/confirm-dialog.test.tsx` › "SCRUM-207 [AC5] TC-207-10: …" (eleven tests: its wording, way back, red button for a destructive action, pending state, a refusal shown inside it without closing, a field the action needs asked for inside it, an action that shows its own outcome on the page, and a dialog the page opens); `e2e/page-conventions.spec.ts` › the five "SCRUM-207 [AC5] TC-207-10: …" tests, which open each action's dialog, choose its way back, and check the record is unchanged; `e2e/registration-at-a-glance.spec.ts` › "SCRUM-212 [AC2] TC-212-09, SCRUM-207 [AC5] TC-207-10: …" (an Attendee's Withdraw, confirmed).
 
-**Still to do** (Manual) on these pages (audited 23 Oct): each irreversible action asks in a dialog of its own, built separately, and one doesn't ask at all (marked *no confirmation*). They all need to move to the shared dialog:
+Every irreversible action asks in `components/app/confirm-dialog.tsx`, with the same layout and buttons, and any reason, note or choice it needs inside it:
 
-- **My Events**: discard a draft, reject a request;
-- **Equipment Requests**: withdraw a request (Coordinator); reject a request (Technical Support, *no confirmation*);
-- **Booking Requests**: reject a request;
-- the event pop-up: cancel the event, withdraw or release a venue booking (readiness checklist), decide a change request, the reconsideration choices;
-- **Venues**: retire a venue.
+- **My Events**: discard a draft; the Coordinator's Reject on a request;
+- **Equipment Requests**: the Coordinator's Withdraw; Technical Support's Reject;
+- **Booking Requests**: Reject;
+- **Safety Checks**: Approve (which used to record at once), Request changes and Reject;
+- an event's page: Cancel event; Reject event, Release hold (which used to release at once), and Withdraw a venue or equipment request in the readiness checklist; Approve and Reject a change request; Cancel arrangement for a flagged one;
+- **Venues**: Retire venue, which lists the bookings it would flag inside the dialog before retiring;
+- an Attendee's Withdraw (SCRUM-212).
+
+Not in the dialog, deliberately: Record unavailability, which already asks again listing every booking it would flag (SCRUM-161), and reporting reserved equipment as unprovidable, which needs its reason written first; neither was in the 23 Oct audit.
 
 ### TC-207-11
 

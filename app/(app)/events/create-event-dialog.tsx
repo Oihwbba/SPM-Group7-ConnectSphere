@@ -65,6 +65,7 @@ import {
   withVenueLayouts,
   type VenueOptions,
 } from "@/lib/venue-options";
+import { ActionError } from "@/components/app/action-error";
 
 interface FormState {
   name: string;
@@ -226,6 +227,8 @@ export function CreateEventDialog({
   );
   const [isPending, startTransition] = useTransition();
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
+  // SCRUM-207 AC4: the form's own error, shown above its buttons.
+  const [formError, setFormError] = useState<string | null>(null);
   const [catalogues, setCatalogues] = useState<{
     venues: {
       id: string;
@@ -385,6 +388,7 @@ export function CreateEventDialog({
   async function handleSaveDraft() {
     setSavingDraft(true);
     startTransition(async () => {
+      setFormError(null);
       const payload = {
         id: eventId,
         ...formData,
@@ -418,12 +422,13 @@ export function CreateEventDialog({
       }
 
       setFieldErrors(result.fieldErrors ?? {});
-      toast.error(result.error);
+      setFormError(result.error);
     });
   }
 
   async function handleSubmitForReview() {
     startTransition(async () => {
+      setFormError(null);
       const payload = {
         id: eventId,
         ...formData,
@@ -446,7 +451,7 @@ export function CreateEventDialog({
       }
 
       setFieldErrors(result.fieldErrors ?? {});
-      toast.error(
+      setFormError(
         result.error ||
           "Please complete all mandatory fields before submitting.",
       );
@@ -1240,6 +1245,7 @@ export function CreateEventDialog({
           </div>
         )}
 
+        <ActionError message={formError} />
         <DialogFooter className="flex flex-col items-center justify-between gap-2 border-t pt-4 sm:flex-row">
           <div className="flex w-full items-center justify-start gap-2 sm:w-auto">
             {step > 1 && (

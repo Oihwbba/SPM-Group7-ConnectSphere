@@ -99,7 +99,7 @@ export default async function BookingsPage({
   return (
     <WorkQueue
       title="Booking requests"
-      description="Soonest event first, with held requests until they are confirmed, released or expire. Open one to see it beside the venue it asks for and decide. Times are Singapore time."
+      description="Venue requests to decide, soonest event first, with held ones until they are confirmed, released or expire."
       base="/bookings"
       state={state}
       defaults={DEFAULTS}

@@ -1,5 +1,6 @@
-import Link from "next/link";
-import { ArrowLeft, CalendarDays, CheckCircle2, MapPin } from "lucide-react";
+import { CalendarDays, CheckCircle2, MapPin } from "lucide-react";
+
+import { PageHeader } from "@/components/app/page-header";
 
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { RegistrationStateBadge } from "@/components/events/registration-state-badge";
@@ -33,25 +34,23 @@ export function ReplanningEventDetail({
 
   return (
     <div className="mx-auto max-w-2xl space-y-4">
-      <Link
-        href="/registrations"
-        className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground"
-      >
-        <ArrowLeft className="h-3.5 w-3.5" /> Back to my registrations
-      </Link>
-
-      <Card data-testid="replanning-event">
-        <CardHeader className="space-y-2">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <h1 className="text-xl font-bold leading-none tracking-tight">
-              {event.name}
-            </h1>
+      <PageHeader
+        title={
+          <>
+            {event.name}
             <RegistrationStateBadge
               kind="PAUSED"
               label={REPLANNING_LABEL}
               testId="replanning-status"
             />
-          </div>
+          </>
+        }
+        description="An event you're registered for, while its details are being updated."
+        back={{ href: "/registrations", to: "My Registrations" }}
+      />
+
+      <Card data-testid="replanning-event">
+        <CardHeader className="space-y-2">
           {event.description && (
             <p className="whitespace-pre-wrap text-sm text-muted-foreground">
               {event.description}
