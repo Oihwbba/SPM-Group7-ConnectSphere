@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-28. Jira is the source of truth.
+     Synced from Jira on 2026-10-29. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-211 - One layout for every work queue
@@ -25,6 +25,8 @@
 3. Opening an item shows the decision on the same side of the page, with the same buttons in the same order.
 4. After a decision, the next item in the queue opens.
 
+**Supersedes:** SCRUM-165 AC2's columns (name, dates, expected attendance, Organiser and submission time) for the Unassigned queue (AC1). Its oldest-first order stays.
+
 **Customer basis:** Briefing, usability: "all user groups should manage common activities without extensive training." First come, first served: "Conflicts are handled on a first-come, first-served basis for venue/resources" (SCRUM-134), which is why the requested date stays visible.
 
 **Why this is a new story:** the Unassigned Queue, Bookings, Equipment Requests and Safety Checks were built by different stories and each lays out and orders its items differently. Done stories are not reopened.
@@ -35,5 +37,6 @@
 
 * 2026-10-21: created at Sprint 3 review for Sprint 4 (UI revamp U5). Owner Caylern.
 * 2026-10-27 (PO approved, Hann Qian): AC1 reworded. "Oldest item first" conflicted with SCRUM-52 AC1 (Bookings: soonest event first), so each queue keeps its current default order and users can sort. "Waiting since" becomes "requested" (date and how long ago), which still shows the submission time first-come-first-served needs (SCRUM-134). The table is limited to four columns so it stays easy to scan; other details move to the opened item. No re-estimate.
+* 2026-10-29 (SCRUM-243, PO approval pending): added the Supersedes line for SCRUM-165 AC2 (decision by Felicia, 29 Oct); SCRUM-165 now carries a matching note. Criteria unchanged.
 
 Functionality Area: Venue Booking Approval, Equipment Request Management, Coordinator Assignment
