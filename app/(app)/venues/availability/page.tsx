@@ -6,6 +6,7 @@ import { utcToSgWallTime } from "@/lib/datetime";
 import {
   addDays,
   availabilityByDay,
+  closedHours,
   findVenueCalendar,
   startOfSgDay,
 } from "@/lib/venue-availability";
@@ -24,7 +25,8 @@ const one = (value: string | string[] | undefined) =>
  * venue would not.
  *
  * Only approved bookings and recorded unavailability are shown as taken; a
- * pending request blocks nobody (lib/venue-availability.ts).
+ * pending request blocks nobody (lib/venue-availability.ts). Hours outside
+ * the venue's opening hours are greyed out as closed (SCRUM-241).
  */
 export default async function AvailabilityPage({
   searchParams,
@@ -47,12 +49,19 @@ export default async function AvailabilityPage({
   const today = utcToSgWallTime(new Date()).slice(0, 10);
   const { from, to } = parseWeek(one(params.week), today);
 
-  const blockers = venue
-    ? await findVenueCalendar(prisma, venue.id, {
-        startAt: startOfSgDay(from),
-        endAt: startOfSgDay(addDays(to, 1)),
-      })
-    : [];
+  const [blockers, openingHours] = venue
+    ? await Promise.all([
+        findVenueCalendar(prisma, venue.id, {
+          startAt: startOfSgDay(from),
+          endAt: startOfSgDay(addDays(to, 1)),
+        }),
+        // SCRUM-241: greyed out outside them.
+        prisma.venueOpeningHours.findMany({
+          where: { venueId: venue.id },
+          select: { weekday: true, opensMinute: true, closesMinute: true },
+        }),
+      ])
+    : [[], []];
 
   return (
     <div className="space-y-6">
@@ -61,8 +70,8 @@ export default async function AvailabilityPage({
           Venue availability
         </h1>
         <p className="text-sm text-muted-foreground">
-          When a venue is free, booked, or unavailable for another reason, a
-          week at a time. Hover or tap a booking for more. A booking&apos;s
+          When a venue is free, booked, closed, or unavailable for another
+          reason, a week at a time. Hover or tap a booking for more. A booking&apos;s
           setup and turnaround time are shown hatched on either side of it.
           Times are Singapore time.
         </p>
@@ -93,7 +102,11 @@ export default async function AvailabilityPage({
           {/* Row 3 (the legend) and the calendar itself. */}
           <AvailabilityCalendar
             venueName={venue.name}
-            days={availabilityByDay(blockers, from, to)}
+            days={availabilityByDay(
+              [...blockers, ...closedHours(openingHours, from, to)],
+              from,
+              to,
+            )}
             today={today}
           />
         </div>

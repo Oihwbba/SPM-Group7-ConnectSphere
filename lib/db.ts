@@ -16,8 +16,22 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
 
+/**
+ * Supabase's session pooler accepts 15 connections shared by every copy of the
+ * app: each Vercel instance and each teammate's dev server. pg's default of 10
+ * per pool let two copies exhaust it (SCRUM-240, ADR 0022). A local database
+ * has no such limit, so it keeps the default.
+ */
+const SUPABASE_POOL_MAX = 3;
+const LOCAL_DATABASE = /@(localhost|127\.0\.0\.1)[:/]/;
+
 function createPrismaClient() {
-  const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+  const connectionString = process.env.DATABASE_URL;
+  const pool = new Pool(
+    LOCAL_DATABASE.test(connectionString ?? "")
+      ? { connectionString }
+      : { connectionString, max: SUPABASE_POOL_MAX },
+  );
   const adapter = new PrismaPg(pool);
   return new PrismaClient({
     adapter,
