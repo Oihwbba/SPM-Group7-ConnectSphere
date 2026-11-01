@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-20. Jira is the source of truth.
+     Synced from Jira on 2026-10-29. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-45 - Organiser and Coordinator workflow notifications
@@ -38,7 +38,7 @@
 
 **Already built:** the Sprint 1 code sends one combined submission-and-assignment notice, which AC1 replaces, and both halves of AC8.
 
-**Customer basis:** "Notifications cover event submission, approval, registration updates, confirmation, cancellation." Briefing §6 trigger list. "No specific requirement, the team can decide what is the best approach" (recipients). Week 7 change 5: "Relevant users should be notified when assignments or reassignments occur."
+**Customer basis:** "Notifications cover event submission, approval, registration updates, confirmation, cancellation." Week 7 change 5: "Relevant users should be notified when assignments or reassignments occur."
 
 **Change log**
 
