@@ -210,7 +210,7 @@ describe("recordUnavailability — SCRUM-37 behaviour that still stands", () => 
     expect(db.venueUnavailability.create).toHaveBeenCalledTimes(5);
   });
 
-  it("does not swallow an unexpected database error", async () => {
+  it("SCRUM-37: does not swallow an unexpected database error", async () => {
     db.venueUnavailability.create.mockRejectedValue(
       new Error("connection lost"),
     );

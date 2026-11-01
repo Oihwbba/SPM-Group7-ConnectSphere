@@ -2,6 +2,7 @@ import type { CSSProperties } from "react";
 import {
   CalendarCheck,
   CircleCheck,
+  DoorClosed,
   Hourglass,
   TimerReset,
   Users,
@@ -44,6 +45,7 @@ const DAY_STARTS = 7;
  * unavailability is striped where a booking is plain. A booking's setup and
  * turnaround (SCRUM-159 AC7) are hatched with a dashed edge, so they read as
  * part of the booking's time at the venue but not as the event itself.
+ * Closed hours (SCRUM-241) are greyed out: plain grey, with their own icon.
  */
 const SETUP_TURNAROUND_CARD: CSSProperties = {
   backgroundImage:
@@ -103,6 +105,13 @@ const KIND: Record<
       borderLeftColor: "hsl(var(--warning))",
     },
     accent: "text-warning-foreground",
+  },
+  closed: {
+    label: "Closed",
+    icon: DoorClosed,
+    iconClass: "text-muted-foreground",
+    card: { backgroundColor: "hsl(var(--muted-foreground) / 0.14)" },
+    accent: "text-muted-foreground",
   },
 };
 
@@ -207,12 +216,13 @@ function WeekGrid({
   days: AvailabilityDay[];
   today: string;
 }) {
-  // Open at the working day, or earlier if something starts earlier.
+  // Open at the working day, or earlier if something starts earlier. Closed
+  // hours from midnight don't count, or every open venue would open there.
   const earliest = Math.min(
     DAY_STARTS,
     ...days.flatMap(({ day, segments }) =>
       segments
-        .filter((s) => s.kind !== "free")
+        .filter((s) => s.kind !== "free" && s.kind !== "closed")
         .map((s) =>
           Math.floor(
             (s.startAt.getTime() - startOfSgDay(day).getTime()) / HOUR_MS,
@@ -297,6 +307,17 @@ function WeekGrid({
                         Available all day
                       </li>
                     )}
+                    {/* SCRUM-241: so does a Closed day, which starts out of view. */}
+                    {segments.length === 1 && segments[0].kind === "closed" && (
+                      <li
+                        aria-hidden
+                        data-closed-all-day
+                        className="sticky top-16 z-10 flex items-center gap-1 px-2 py-1.5 text-[11px] font-medium text-muted-foreground"
+                      >
+                        <DoorClosed className="h-3 w-3 shrink-0" />
+                        Closed all day
+                      </li>
+                    )}
                     {segments.map((segment) => {
                       const offset =
                         segment.startAt.getTime() - startOfSgDay(day).getTime();
@@ -355,6 +376,41 @@ function Stretch({
   style: CSSProperties;
 }) {
   const words = summary(segment, day, wholeDay);
+
+  // SCRUM-241: closed hours, greyed out. The label sits by the opening time
+  // (at the foot of the morning's stretch), where the eye looks for it.
+  if (segment.kind === "closed") {
+    const { card, accent, icon: Icon, label } = KIND.closed;
+    const beforeOpening =
+      segment.startAt.getTime() === startOfSgDay(day).getTime();
+    return (
+      <li data-kind="closed" style={style}>
+        <div
+          className={cn(
+            "flex h-full w-full overflow-hidden px-2 py-1",
+            beforeOpening ? "items-end" : "items-start",
+          )}
+          style={card}
+        >
+          <span className="sr-only" data-summary>
+            {words}
+          </span>
+          {hours >= 0.4 && !wholeDay && (
+            <span
+              aria-hidden
+              className={cn(
+                "flex items-center gap-1 text-[11px] font-medium",
+                accent,
+              )}
+            >
+              <Icon className="h-3 w-3 shrink-0" />
+              {label}
+            </span>
+          )}
+        </div>
+      </li>
+    );
+  }
 
   // SCRUM-159 AC7: a booking's setup or turnaround, drawn beside the booking.
   if (segment.kind === "setup" || segment.kind === "turnaround") {
@@ -510,6 +566,7 @@ function DayList({
               const id = `list-${segmentKey(day, segment)}`;
               if (
                 segment.kind === "free" ||
+                segment.kind === "closed" ||
                 segment.kind === "setup" ||
                 segment.kind === "turnaround" ||
                 !segment.details
@@ -651,7 +708,7 @@ function Legend() {
   return (
     <ul aria-label="Legend" className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
       {(
-        ["free", "booking", "setup", "turnaround", "unavailability"] as const
+        ["free", "booking", "setup", "turnaround", "unavailability", "closed"] as const
       ).map((kind) => {
         const { label, icon: Icon, iconClass, card } = KIND[kind];
         return (

@@ -25,6 +25,19 @@ show as smaller, indented icons. The group holding the page being viewed
 starts open. On a phone the bar shows the single links and the groups; a
 group opens its links in a panel just above the bar.
 
+**Each role's menu** (a group in bold, with the links it opens to; a link
+without one stands alone):
+
+| Role | Menu |
+|---|---|
+| Organiser | My Events |
+| Coordinator | Events · **Venues**: Venue Search, Request Venue, Availability, Venue Catalogue · Equipment Requests · All Events |
+| Event Coordinator Lead | Unassigned Queue · Venue Catalogue · All Events |
+| Venue Staff | Bookings · **Venues**: Availability, Venue Catalogue · All Events |
+| Technical Support | **My work**: Equipment, Equipment Requests · Venue Catalogue · All Events |
+| Safety Officer | Safety Checks · Venue Catalogue |
+| Attendee | **My work**: Browse Events, My Registrations |
+
 | ID | Type | Criterion | Automated |
 |---|---|---|---|
 | [TC-210-01](#tc-210-01) | Positive | AC 1 | Unit, e2e |
@@ -37,134 +50,121 @@ group opens its links in a panel just above the bar.
 | [TC-210-08](#tc-210-08) | Positive | AC 3, AC 4 | Unit, e2e |
 | [TC-210-09](#tc-210-09) | Positive | AC 1 | e2e |
 
-## TC-210-01
+---
 
-**Each role's menu is grouped by task.**
+### TC-210-01
 
-1. Sign in as each role in turn and look at the side menu.
-
-**Expected:** (a group in bold, with the links it opens to; a link without one
-stands alone)
-
-| Role | Menu |
+| Item | Content |
 |---|---|
-| Organiser | My Events |
-| Coordinator | Events · **Venues**: Venue Search, Request Venue, Availability, Venue Catalogue · Equipment Requests · All Events |
-| Event Coordinator Lead | Unassigned Queue · Venue Catalogue · All Events |
-| Venue Staff | Bookings · **Venues**: Availability, Venue Catalogue · All Events |
-| Technical Support | **My work**: Equipment, Equipment Requests · Venue Catalogue · All Events |
-| Safety Officer | Safety Checks · Venue Catalogue |
-| Attendee | **My work**: Browse Events, My Registrations |
+| Test Case ID | TC-210-01 |
+| Test Scenario | [Positive] AC 1: each role's menu is grouped by task |
+| Pre-conditions | As the shared pre-conditions. |
+| Test Steps | 1. Sign in as each role in turn and look at the side menu. |
+| Test Data | Every seeded role's account |
+| Expected Result | Each role's menu is as the table above. Every link keeps the address it had. The catalogue link reads "Venue Catalogue", as its page does. |
 
-Every link keeps the address it had. The catalogue link reads "Venue
-Catalogue", as its page does.
+**Automated by:** `tests/unit/nav-groups.test.ts` › "SCRUM-210 [AC1] TC-210-01: %s sees its links grouped by task, in order" and "SCRUM-210 [AC1] TC-210-01: every link keeps its address, Request Venue and Equipment Requests included"; `e2e/menu-groups.spec.ts` › "SCRUM-210 [AC1, AC3, AC4] TC-210-01, TC-210-06, TC-210-08: ${who} lands on its own list, with its menu grouped by task" (every role)
 
-*Automated:* `tests/unit/nav-groups.test.ts` every "SCRUM-210 [AC1] TC-210-01" test;
-`e2e/menu-groups.spec.ts` every "SCRUM-210 [AC1, AC3, AC4] TC-210-01, TC-210-06, TC-210-08" test.
+### TC-210-02
 
-## TC-210-02
+| Item | Content |
+|---|---|
+| Test Case ID | TC-210-02 |
+| Test Scenario | [Boundary] AC 1: a group with one link has no heading |
+| Pre-conditions | As the shared pre-conditions. |
+| Test Steps | 1. Build each role's menu. |
+| Test Data | — |
+| Expected Result | For every role, a group has a heading exactly when it has more than one link. |
 
-**Boundary — a group with one link has no heading.**
+**Automated by:** `tests/unit/nav-groups.test.ts` › "SCRUM-210 [AC1] TC-210-02: a group with a single link shows no heading; one with more has its heading"
 
-**Expected:** for every role, a group has a heading exactly when it has more
-than one link.
+### TC-210-03
 
-*Automated:* `tests/unit/nav-groups.test.ts` "SCRUM-210 [AC1] TC-210-02".
+| Item | Content |
+|---|---|
+| Test Case ID | TC-210-03 |
+| Test Scenario | [Negative] AC 1: Notifications is in no menu |
+| Pre-conditions | As the shared pre-conditions. |
+| Test Steps | 1. Build every role's menu, alone and combined with every other role. |
+| Test Data | — |
+| Expected Result | No role's menu, alone or combined with every other role, links to `/notifications`; the bell does. |
 
-## TC-210-03
+**Automated by:** `tests/unit/nav-groups.test.ts` › "SCRUM-210 [AC1] TC-210-03: Notifications is in no role's menu, alone or combined; it is reached from the bell"; `e2e/menu-groups.spec.ts` › "SCRUM-210 [AC1, AC3, AC4] TC-210-01, TC-210-06, TC-210-08: ${who} lands on its own list, with its menu grouped by task" (every role)
 
-**Negative — Notifications is in no menu.**
+### TC-210-04
 
-**Expected:** no role's menu, alone or combined with every other role, links
-to `/notifications`; the bell does.
+| Item | Content |
+|---|---|
+| Test Case ID | TC-210-04 |
+| Test Scenario | [Positive] AC 2: removing a permission removes its link, and nothing else is edited |
+| Pre-conditions | The Coordinator's `venue:availability` taken away in the permission table (a test change). |
+| Test Steps | 1. Build the Coordinator's menu. |
+| Test Data | — |
+| Expected Result | Availability leaves the Venues group; the group keeps Venue Search, Request Venue and Venue Catalogue. |
 
-*Automated:* `tests/unit/nav-groups.test.ts` "SCRUM-210 [AC1] TC-210-03";
-`e2e/menu-groups.spec.ts` every "SCRUM-210 [AC1, AC3, AC4] TC-210-01, TC-210-06, TC-210-08" test.
+**Automated by:** `tests/unit/nav-groups.test.ts` › "SCRUM-210 [AC2] TC-210-04: removing a permission removes its link, and the group keeps the rest"
 
-## TC-210-04
+### TC-210-05
 
-**Removing a permission removes its link, and nothing else is edited.**
+| Item | Content |
+|---|---|
+| Test Case ID | TC-210-05 |
+| Test Scenario | [Boundary] AC 2: a group left empty disappears; one left with a single link loses its heading |
+| Pre-conditions | As the shared pre-conditions, with the permission table changed for each step (a test change). |
+| Test Steps | 1. Take Venue Staff's `venue:availability` and `venue:read` away. <br> 2. Separately, take only `venue:availability` away. <br> 3. Separately, take Technical Support's `equipment-request:review` away. |
+| Test Data | — |
+| Expected Result | 1: no Venues group (Bookings and All Events only). 2: Venue Catalogue alone, without the Venues heading. 3: Equipment Requests moves out of My work to its own Equipment group. |
 
-1. Take the Coordinator's `venue:availability` away in the permission table.
+**Automated by:** `tests/unit/nav-groups.test.ts` › "SCRUM-210 [AC2] TC-210-05: a group left empty disappears, and one left with a single link loses its heading" and "SCRUM-210 [AC2] TC-210-05: Equipment Requests joins My work only while the role may review them"
 
-**Expected:** Availability leaves the Venues group; the group keeps Venue
-Search, Request Venue and Venue Catalogue.
+### TC-210-06
 
-*Automated:* `tests/unit/nav-groups.test.ts` "SCRUM-210 [AC2] TC-210-04".
+| Item | Content |
+|---|---|
+| Test Case ID | TC-210-06 |
+| Test Scenario | [Positive] AC 3: every role lands on the same page as before |
+| Pre-conditions | As the shared pre-conditions. |
+| Test Steps | 1. Sign in as each role. |
+| Test Data | Every seeded role's account |
+| Expected Result | Organiser `/events` (My Events), Coordinator `/events` (Events), Event Coordinator Lead `/queue`, Venue Staff `/bookings`, Technical Support `/equipment` (not Equipment Requests), Safety Officer `/safety-checks`, Attendee `/events` (Browse Events): each the first link of its My work. |
 
-## TC-210-05
+**Automated by:** `tests/unit/nav-groups.test.ts` › "SCRUM-210 [AC3] TC-210-06: %s still lands on %s, the first link of its My work"; `e2e/menu-groups.spec.ts` › "SCRUM-210 [AC1, AC3, AC4] TC-210-01, TC-210-06, TC-210-08: ${who} lands on its own list, with its menu grouped by task" (every role)
 
-**Boundary — a group left empty disappears; one left with a single link loses its heading.**
+### TC-210-07
 
-1. Take Venue Staff's `venue:availability` and `venue:read` away.
-2. Separately, take only `venue:availability` away.
-3. Separately, take Technical Support's `equipment-request:review` away.
+| Item | Content |
+|---|---|
+| Test Case ID | TC-210-07 |
+| Test Scenario | [Positive] AC 4: a Coordinator who is also Venue Staff sees each group once |
+| Pre-conditions | An account holding the Coordinator and Venue Staff roles. |
+| Test Steps | 1. Build its menu. |
+| Test Data | — |
+| Expected Result | My work: Events, Bookings; Venues: Venue Search, Request Venue, Availability, Venue Catalogue (once); Equipment Requests; All Events. No link appears twice. |
 
-**Expected:** 1: no Venues group (Bookings and All Events only). 2: Venue
-Catalogue alone, without the Venues heading. 3: Equipment Requests moves out
-of My work to its own Equipment group.
+**Automated by:** `tests/unit/nav-groups.test.ts` › "SCRUM-210 [AC4] TC-210-07: a Coordinator who is also Venue Staff sees each group once, Venues merged, no link twice"
 
-*Automated:* `tests/unit/nav-groups.test.ts` both "SCRUM-210 [AC2] TC-210-05" tests.
+### TC-210-08
 
-## TC-210-06
+| Item | Content |
+|---|---|
+| Test Case ID | TC-210-08 |
+| Test Scenario | [Positive] AC 3, AC 4: the seeded several-role user |
+| Pre-conditions | As the shared pre-conditions. |
+| Test Steps | 1. Sign in as `multirole@test.local` (Venue Staff, then Technical Support, Coordinator and Organiser). |
+| Test Data | `multirole@test.local` |
+| Expected Result | Lands on `/bookings`, Venue Staff's page, as before (the app root sends a user where their primary role lands). Menu: My work: Events, Bookings, Equipment, Equipment Requests; Venues: Venue Search, Request Venue, Availability, Venue Catalogue; All Events. |
 
-**Every role lands on the same page as before.**
+**Automated by:** `tests/unit/nav-groups.test.ts` › "SCRUM-210 [AC4] TC-210-08: the seeded several-role user (Venue Staff, Technical Support, Coordinator, Organiser) sees one menu, and lands where Venue Staff does"; `e2e/menu-groups.spec.ts` › "SCRUM-210 [AC1, AC3, AC4] TC-210-01, TC-210-06, TC-210-08: ${who} lands on its own list, with its menu grouped by task" (for "Several roles")
 
-1. Sign in as each role.
+### TC-210-09
 
-**Expected:** Organiser `/events` (My Events), Coordinator `/events` (Events),
-Event Coordinator Lead `/queue`, Venue Staff `/bookings`, Technical Support
-`/equipment` (not Equipment Requests), Safety Officer `/safety-checks`,
-Attendee `/events` (Browse Events): each the first link of its My work.
+| Item | Content |
+|---|---|
+| Test Case ID | TC-210-09 |
+| Test Scenario | [Positive] AC 1: a group opens to show its links, on a desktop and on a phone (SCRUM-132) |
+| Pre-conditions | As the shared pre-conditions. |
+| Test Steps | 1. As the Coordinator on Events, look at the rail; select **Expand navigation**, then **Venues**, then **Venues** again. <br> 2. Open Availability. <br> 3. At 360 px wide, select **Venues** in the bottom bar, then Venue Search. <br> 4. At 360 px wide, sign in as Technical Support, then select **My work** twice. |
+| Test Data | `coordinator@test.local`, `techsupport@test.local` |
+| Expected Result | 1: Venues starts closed; selected, it opens Venue Search, Request Venue, Availability and Venue Catalogue beneath it, indented; selected again, it closes. 2: on one of its pages, Venues starts open, with that page marked current. 3: the bar shows Events, Venues, Equipment Requests and All Events; Venues opens its four links in a panel above the bar, and its button reads as expanded while the panel is open; the panel closes once a link is chosen. The page doesn't scroll sideways. 4: on Equipment, My work reads as collapsed and shows as the current page's group; selected, its panel opens with Equipment marked current and it reads as expanded; selected again, it reads as collapsed. |
 
-*Automated:* `tests/unit/nav-groups.test.ts` every "SCRUM-210 [AC3] TC-210-06" test;
-`e2e/menu-groups.spec.ts` every "SCRUM-210 [AC1, AC3, AC4] TC-210-01, TC-210-06, TC-210-08" test.
-
-## TC-210-07
-
-**A Coordinator who is also Venue Staff sees each group once.**
-
-**Expected:** My work: Events, Bookings; Venues: Venue Search, Request Venue,
-Availability, Venue Catalogue (once); Equipment Requests; All Events. No link
-appears twice.
-
-*Automated:* `tests/unit/nav-groups.test.ts` "SCRUM-210 [AC4] TC-210-07".
-
-## TC-210-08
-
-**The seeded several-role user.**
-
-1. Sign in as `multirole@test.local` (Venue Staff, then Technical Support,
-   Coordinator and Organiser).
-
-**Expected:** lands on `/bookings`, Venue Staff's page, as before (the app
-root sends a user where their primary role lands). Menu: My work: Events,
-Bookings, Equipment, Equipment Requests; Venues: Venue Search, Request Venue,
-Availability, Venue Catalogue; All Events.
-
-*Automated:* `tests/unit/nav-groups.test.ts` "SCRUM-210 [AC4] TC-210-08";
-`e2e/menu-groups.spec.ts` "SCRUM-210 [AC1, AC3, AC4] TC-210-01, TC-210-06, TC-210-08" for "Several roles".
-
-## TC-210-09
-
-**A group opens to show its links, on a desktop and on a phone (SCRUM-132).**
-
-1. As the Coordinator on Events, look at the rail; select **Expand
-   navigation**, then **Venues**, then **Venues** again.
-2. Open Availability.
-3. At 360 px wide, select **Venues** in the bottom bar, then Venue Search.
-4. At 360 px wide, sign in as Technical Support, then select **My work**
-   twice.
-
-**Expected:** 1: Venues starts closed; selected, it opens Venue Search,
-Request Venue, Availability and Venue Catalogue beneath it, indented; selected
-again, it closes. 2: on one of its pages, Venues starts open, with that page
-marked current. 3: the bar shows Events, Venues, Equipment Requests and All
-Events; Venues opens its four links in a panel above the bar, and its
-button reads as expanded while the panel is open; the panel closes once a
-link is chosen. The page doesn't scroll sideways. 4: on Equipment, My work
-reads as collapsed and shows as the current page's group; selected, its panel
-opens with Equipment marked current and it reads as expanded; selected again,
-it reads as collapsed.
-
-*Automated:* `e2e/menu-groups.spec.ts` the three "SCRUM-210 [AC1] TC-210-09" tests.
+**Automated by:** `e2e/menu-groups.spec.ts` › "SCRUM-210 [AC1] TC-210-09: a group opens to show its links beneath it, indented, and the group of the page being viewed starts open", "SCRUM-210 [AC1] TC-210-09: on a phone (SCRUM-132) a group opens its links in a panel above the bar" and "SCRUM-210 [AC1] TC-210-09: on a phone, the group holding the current page reads closed until it is opened"

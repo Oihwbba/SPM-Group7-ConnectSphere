@@ -132,13 +132,13 @@ describe("reservationVersion — SCRUM-226", () => {
     { equipmentId: "eq_mic", outstanding: 3 },
   ];
 
-  it("SCRUM-226 [AC2] TC-155-17: is the same for the same request and outstanding lines, in any order", () => {
+  it("SCRUM-226 [AC2], SCRUM-155 [AC5, AC6] TC-155-17: is the same for the same request and outstanding lines, in any order", () => {
     expect(reservationVersion(AT, both)).toBe(
       reservationVersion(AT, [...both].reverse()),
     );
   });
 
-  it("SCRUM-226 [AC1] TC-155-17: changes when the request changes, or when what is left to reserve does", () => {
+  it("SCRUM-226 [AC1], SCRUM-155 [AC5, AC6] TC-155-17: changes when the request changes, or when what is left to reserve does", () => {
     const before = reservationVersion(AT, both);
 
     expect(reservationVersion(new Date(AT.getTime() + 1), both)).not.toBe(before);
@@ -155,7 +155,7 @@ describe("reserveEquipmentRequest — SCRUM-226", () => {
     { equipmentId: "eq_projector", outstanding: 2 },
     { equipmentId: "eq_mic", outstanding: 3 },
   ]);
-  it("SCRUM-226 [AC1] TC-155-17: a form opened before someone else reserved part of the request is refused, and nothing is reserved", async () => {
+  it("SCRUM-226 [AC1], SCRUM-155 [AC5, AC6] TC-155-17: a form opened before someone else reserved part of the request is refused, and nothing is reserved", async () => {
     approvedRequestWithStock({
       // Since the form opened, the projectors were reserved for this request.
       reservations: [
@@ -185,7 +185,7 @@ describe("reserveEquipmentRequest — SCRUM-226", () => {
     expect(revalidatePath).toHaveBeenCalledWith("/equipment");
   });
 
-  it("SCRUM-226 [AC2] TC-155-17: a form whose version still matches reserves as before, with its rows edited", async () => {
+  it("SCRUM-226 [AC2], SCRUM-155 [AC5, AC6] TC-155-17: a form whose version still matches reserves as before, with its rows edited", async () => {
     approvedRequestWithStock();
 
     const result = await reserveEquipmentRequest({
@@ -299,7 +299,7 @@ describe("reserveEquipmentRequest — SCRUM-155", () => {
     expect(tx.reservation.createMany).not.toHaveBeenCalled();
   });
 
-  it("SCRUM-155 [AC4] counts every type's commitments in two queries, not three per row", async () => {
+  it("SCRUM-155 [AC4]: counts every type's commitments in two queries, not three per row", async () => {
     approvedRequestWithStock();
 
     await reserveEquipmentRequest(validInput);
@@ -388,7 +388,7 @@ describe("reserveEquipmentRequest — SCRUM-155", () => {
     });
   });
 
-  it("SCRUM-155 [AC6] TC-155-07, TC-155-12: a request whose every line is already covered is refused and nothing is written", async () => {
+  it("SCRUM-155 [AC5, AC6] TC-155-07, TC-155-12: a request whose every line is already covered is refused and nothing is written", async () => {
     const whole = { startAt: new Date(START), endAt: new Date(END) };
     approvedRequestWithStock({
       reservations: [
@@ -443,7 +443,7 @@ describe("reserveEquipmentRequest — SCRUM-155", () => {
   });
 
   describe("SCRUM-155 [AC2] TC-155-13: the period may grow but must cover the whole event", () => {
-    it("refuses a period that starts after the event begins, on the start field", async () => {
+    it("SCRUM-155 [AC2]: refuses a period that starts after the event begins, on the start field", async () => {
       approvedRequestWithStock();
 
       const result = await reserveEquipmentRequest({
@@ -464,7 +464,7 @@ describe("reserveEquipmentRequest — SCRUM-155", () => {
       expect(tx.reservation.createMany).not.toHaveBeenCalled();
     });
 
-    it("refuses a period that ends before the event ends, on the end field", async () => {
+    it("SCRUM-155 [AC2]: refuses a period that ends before the event ends, on the end field", async () => {
       approvedRequestWithStock();
 
       const result = await reserveEquipmentRequest({
@@ -482,7 +482,7 @@ describe("reserveEquipmentRequest — SCRUM-155", () => {
       expect(tx.reservation.createMany).not.toHaveBeenCalled();
     });
 
-    it("accepts a period that extends past both ends, for set-up and pack-down", async () => {
+    it("SCRUM-155 [AC2]: accepts a period that extends past both ends, for set-up and pack-down", async () => {
       approvedRequestWithStock();
 
       const result = await reserveEquipmentRequest({
@@ -494,7 +494,7 @@ describe("reserveEquipmentRequest — SCRUM-155", () => {
       expect(result).toEqual({ ok: true, data: { reserved: 2 } });
     });
 
-    it("has nothing to check against when the event has no end date", async () => {
+    it("SCRUM-155 [AC2]: has nothing to check against when the event has no end date", async () => {
       approvedRequestWithStock({
         event: { startAt: new Date(START), endAt: null },
       });
@@ -504,7 +504,7 @@ describe("reserveEquipmentRequest — SCRUM-155", () => {
       expect(result).toEqual({ ok: true, data: { reserved: 2 } });
     });
 
-    it("has nothing to check against when the event has no start date", async () => {
+    it("SCRUM-155 [AC2]: has nothing to check against when the event has no start date", async () => {
       approvedRequestWithStock({
         event: { startAt: null, endAt: new Date(END) },
       });
@@ -581,7 +581,7 @@ describe("reserveEquipmentRequest — SCRUM-155", () => {
       [{ endAt: START }, "endAt", /after the start/],
       [{ startAt: "2020-01-01T01:00:00.000Z" }, "startAt", /in the past/],
       [{ requestId: "" }, "requestId", /approved request/],
-    ])("%j → %s", async (change, path, message) => {
+    ])("SCRUM-155 [AC7]: %j → %s", async (change, path, message) => {
       const result = await reserveEquipmentRequest({
         ...validInput,
         ...change,
@@ -592,7 +592,7 @@ describe("reserveEquipmentRequest — SCRUM-155", () => {
       expect(mockTransaction).not.toHaveBeenCalled();
     });
 
-    it("keeps every message for a field, e.g. a blank start is both missing and unreadable", async () => {
+    it("SCRUM-155 [AC7]: keeps every message for a field, e.g. a blank start is both missing and unreadable", async () => {
       const result = await reserveEquipmentRequest({
         ...validInput,
         startAt: "",
@@ -607,7 +607,7 @@ describe("reserveEquipmentRequest — SCRUM-155", () => {
     });
   });
 
-  it("refuses a role without equipment:reserve before reading anything", async () => {
+  it("SCRUM-31 TC-31-11: refuses a role without equipment:reserve before reading anything", async () => {
     mockAuth.mockResolvedValue(sessionFor("COORDINATOR", "usr_coord"));
 
     const result = await reserveEquipmentRequest(validInput);
@@ -617,7 +617,7 @@ describe("reserveEquipmentRequest — SCRUM-155", () => {
     expect(mockTransaction).not.toHaveBeenCalled();
   });
 
-  it("refuses a session with a permitted role but no user id before any write", async () => {
+  it("SCRUM-155: refuses a session with a permitted role but no user id before any write", async () => {
     mockAuth.mockResolvedValue({
       user: { role: "TECH_SUPPORT", name: "Test User" },
       expires: "2999-01-01T00:00:00.000Z",
@@ -630,7 +630,7 @@ describe("reserveEquipmentRequest — SCRUM-155", () => {
     expect(mockTransaction).not.toHaveBeenCalled();
   });
 
-  it("a database failure while saving propagates instead of being reported as a refusal", async () => {
+  it("SCRUM-155: a database failure while saving propagates instead of being reported as a refusal", async () => {
     approvedRequestWithStock();
     tx.reservation.createMany.mockRejectedValue(new Error("connection lost"));
 
