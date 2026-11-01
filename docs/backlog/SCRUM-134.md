@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-20. Jira is the source of truth.
+     Synced from Jira on 2026-10-29. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-134 - Decide competing venue and equipment requests in the order they were made
@@ -26,8 +26,6 @@
 4. Given I open an equipment request (SCRUM-28), then for each line I see the other open requests (Pending Review, In Review or Approved) for the same type whose events overlap it, with each request's submission time and how much is already reserved for it.
 5. Given reserving stock (SCRUM-31) for a later request would leave too little of that type for an earlier open request whose event overlaps, when I try to reserve it, then the reservation is refused until the earlier request has been reserved in full, rejected or cancelled.
 6. Rejecting a request is never blocked by this rule.
-
-**Customer basis:** "Conflicts are handled on a first-come, first-served basis for venue/resources." "Confirmed bookings block availability. Pending conflicts are only resolved outside of system currently; the team can also propose and implement other mechanism."
 
 **Why this is a new story:** Pending requests don't block a venue (SCRUM-50), and SCRUM-52 shows only approved overlaps, so staff could approve the later of two competing requests. Approving an equipment request holds no stock; reserving does (SCRUM-31), so a later request could be reserved first. SCRUM-52 and SCRUM-28 (Sprint 2) and SCRUM-31 (Sprint 1) are Done, so this behaviour is added here rather than re-scoping them.
 
