@@ -279,14 +279,14 @@ export function EventsClient({
     // SCRUM-126 AC2/AC3: the Coordinator's choice decides which way back the
     // Organiser is offered.
     const startsAgain = event.rejectionOutcome === "NEW_REQUEST";
-    // On a card the actions gather at the bottom right, thumb-sized; from lg
-    // up they are the compact inline row the desktop table has always had.
-    const actionButton = "h-11 gap-1.5 text-sm lg:h-8 lg:text-xs";
+    // On a card the actions gather on one line at the bottom right, so they
+    // are kept narrow enough that four of them still fit a 320px screen.
+    const actionButton = "h-9 gap-1 px-2 text-[11px] sm:text-xs lg:h-8";
     // Change 3: actions whose icon says it all are icon-only, named for
     // screen readers and with a tooltip.
-    const iconButton = "h-11 w-11 lg:h-8 lg:w-8 lg:p-0";
+    const iconButton = "h-9 w-9 p-0 lg:h-8 lg:w-8";
     return (
-      <div className="flex flex-wrap items-center justify-end gap-2 lg:flex-nowrap lg:gap-1.5">
+      <div className="flex flex-nowrap items-center justify-end gap-1.5">
         {isDraft && (
           <Button
             variant="ghost"
