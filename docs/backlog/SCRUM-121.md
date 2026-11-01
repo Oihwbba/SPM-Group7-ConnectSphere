@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-20. Jira is the source of truth.
+     Synced from Jira on 2026-10-29. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-121 - Accounts can hold multiple roles
@@ -28,7 +28,7 @@
 
 **Supersedes:** the single-role wording in SCRUM-65 ("the signed-in user's role") and SCRUM-66 ("their role"), both Sprint 1 and Done.
 
-**Customer basis:** "Multiple roles possible. Coordinator can view other events for planning purpose but should not be able to edit events not assigned to them."
+**Customer basis:** "Multiple roles possible."
 
 **Change log**
 
