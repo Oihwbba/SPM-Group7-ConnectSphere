@@ -44,7 +44,7 @@ otherwise. Every account's password is `Password123!`.
 |---|---|
 | Test Case ID | TC-21-02 |
 | Test Scenario | [Concurrency] AC 2, AC 9: two Leads reassign the same event at the same moment; exactly one reassignment is saved |
-| Pre-conditions | Real PostgreSQL; a second Lead. |
+| Pre-conditions | Real PostgreSQL; the seeded second Lead (`lead2@test.local`). |
 | Test Steps | 1. Both Leads reassign the event to Cara at once. |
 | Test Data | — |
 | Expected Result | One reassignment is saved: the event has one Coordinator, Cara, one REASSIGNED history entry (Cody to Cara) and one set of notices. The other Lead is told the event was just changed and where it is now, and nothing of theirs is written. |
