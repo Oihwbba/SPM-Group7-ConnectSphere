@@ -58,7 +58,7 @@ beforeEach(() => {
 });
 
 describe("getEventForUser — SCRUM-68 own-events-only", () => {
-  it("returns the event to its owning organiser", async () => {
+  it("SCRUM-68: returns the event to its owning organiser", async () => {
     mockAuth.mockResolvedValue(sessionFor("ORGANISER", "orgA"));
     mockFind.mockResolvedValue(eventRow({ organiserId: "orgA" }));
 
@@ -67,21 +67,21 @@ describe("getEventForUser — SCRUM-68 own-events-only", () => {
     expect(event?.id).toBe("evt1");
   });
 
-  it("returns null for another organiser's event — identical to not-found", async () => {
+  it("SCRUM-68: returns null for another organiser's event — identical to not-found", async () => {
     mockAuth.mockResolvedValue(sessionFor("ORGANISER", "orgB"));
     mockFind.mockResolvedValue(eventRow({ organiserId: "orgA" }));
 
     expect(await getEventForUser("evt1")).toBeNull();
   });
 
-  it("returns null when the event does not exist (same as above)", async () => {
+  it("SCRUM-68: returns null when the event does not exist (same as above)", async () => {
     mockAuth.mockResolvedValue(sessionFor("ORGANISER", "orgA"));
     mockFind.mockResolvedValue(null);
 
     expect(await getEventForUser("missing")).toBeNull();
   });
 
-  it("hides a draft from everyone but its creator", async () => {
+  it("SCRUM-68: hides a draft from everyone but its creator", async () => {
     // A draft has no coordinator, so an otherwise-privileged coordinator
     // must not be able to read it.
     mockAuth.mockResolvedValue(sessionFor("COORDINATOR", "coord"));
@@ -92,14 +92,14 @@ describe("getEventForUser — SCRUM-68 own-events-only", () => {
     expect(await getEventForUser("evt1")).toBeNull();
   });
 
-  it("returns a submitted event to its assigned coordinator", async () => {
+  it("SCRUM-68: returns a submitted event to its assigned coordinator", async () => {
     mockAuth.mockResolvedValue(sessionFor("COORDINATOR", "coord"));
     mockFind.mockResolvedValue(eventRow({ coordinatorId: "coord" }));
 
     expect((await getEventForUser("evt1"))?.id).toBe("evt1");
   });
 
-  it("returns null (and never queries) when nobody is signed in", async () => {
+  it("SCRUM-68: returns null (and never queries) when nobody is signed in", async () => {
     mockAuth.mockResolvedValue(null);
 
     expect(await getEventForUser("evt1")).toBeNull();

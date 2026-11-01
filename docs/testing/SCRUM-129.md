@@ -36,7 +36,7 @@ unless the case says otherwise.
 | Test Data | Any future times |
 | Expected Result | The form has no timezone field and says its times are SGT. Both the draft and the submitted request are stored with the timezone Asia/Singapore. |
 
-**Automated by:** `tests/unit/datetime.test.ts` › "SCRUM-129 [AC1 - Singapore timezone]: the event timezone is Asia/Singapore (UTC+8)"; `tests/unit/events.test.ts` › "SCRUM-129 [AC1 - Singapore timezone]: a new draft and an updated draft are stored as Asia/Singapore events", "SCRUM-129 [AC1 - Singapore timezone]: a new submission and a submitted draft are stored as Asia/Singapore events"; `tests/integration/event-timezone.test.ts` › "SCRUM-129 [AC1 - Singapore timezone]: a new event with no timezone given is stored as Asia/Singapore"; `e2e/events.spec.ts` › "SCRUM-13 [AC6] TC-13-07, SCRUM-129 [AC1] TC-129-01: the request form has no timezone selector and states its times are SGT"
+**Automated by:** `tests/unit/datetime.test.ts` › "SCRUM-129 [AC1] TC-129-01: [Singapore timezone] the event timezone is Asia/Singapore (UTC+8)"; `tests/unit/events.test.ts` › "SCRUM-129 [AC1] TC-129-01: [Singapore timezone] a new draft and an updated draft are stored as Asia/Singapore events", "SCRUM-129 [AC1] TC-129-01: [Singapore timezone] a new submission and a submitted draft are stored as Asia/Singapore events"; `tests/integration/event-timezone.test.ts` › "SCRUM-129 [AC1] TC-129-01: [Singapore timezone] a new event with no timezone given is stored as Asia/Singapore"; `e2e/events.spec.ts` › "SCRUM-13 [AC6] TC-13-07, SCRUM-129 [AC1] TC-129-01: the request form has no timezone selector and states its times are SGT"
 
 ### TC-129-02
 
@@ -49,7 +49,7 @@ unless the case says otherwise.
 | Test Data | As above |
 | Expected Result | Both inserts are refused, and no event is saved. |
 
-**Automated by:** `tests/integration/event-timezone.test.ts` › "SCRUM-129 [AC1 - Singapore timezone]: the database refuses an event stored with any other timezone", "SCRUM-129 [AC1 - Singapore timezone]: the database refuses an event with no timezone"
+**Automated by:** `tests/integration/event-timezone.test.ts` › "SCRUM-129 [AC1] TC-129-02: [Singapore timezone] the database refuses an event stored with any other timezone", "SCRUM-129 [AC1] TC-129-02: [Singapore timezone] the database refuses an event with no timezone"
 
 ### TC-129-03
 
@@ -62,7 +62,7 @@ unless the case says otherwise.
 | Test Data | An event entered as 09:00 New York time (EDT), stored as 13:00 UTC |
 | Expected Result | The event is now Asia/Singapore, and its stored instants are unchanged. It is shown at the same moment in Singapore time: 9:00 pm SGT. |
 
-**Automated by:** `tests/unit/datetime.test.ts` › "SCRUM-129 [AC2 - Existing events]: an instant stored under another timezone is shown in Singapore time, unchanged"; `tests/integration/event-timezone.test.ts` › "SCRUM-129 [AC2 - Existing events]: the migration relabels an event saved under another timezone and keeps its stored instants"
+**Automated by:** `tests/unit/datetime.test.ts` › "SCRUM-129 [AC2] TC-129-03: [Existing events] an instant stored under another timezone is shown in Singapore time, unchanged"; `tests/integration/event-timezone.test.ts` › "SCRUM-129 [AC2] TC-129-03: [Existing events] the migration relabels an event saved under another timezone and keeps its stored instants"
 
 ### TC-129-04
 
@@ -75,7 +75,7 @@ unless the case says otherwise.
 | Test Data | A start stored as 02:00 UTC |
 | Expected Result | The list and details show 10:00 am SGT. A date shown without a time carries no label. |
 
-**Automated by:** `tests/unit/datetime.test.ts` › "SCRUM-129 [AC3 - SGT label]: every displayed time is labelled SGT", "SCRUM-129 [AC3 - SGT label]: date-only formats carry no time, so no label", "SCRUM-129 [AC4 - UTC storage]: a Singapore wall time round-trips through the UTC instant it is stored as"; `tests/unit/events.test.ts` › "SCRUM-129 [AC4 - UTC storage]: the submitted UTC instants are stored exactly as sent"; `e2e/events.spec.ts` › "SCRUM-129 [AC3, AC4] TC-129-04: the list and details show the stored UTC instants in SGT"
+**Automated by:** `tests/unit/datetime.test.ts` › "SCRUM-129 [AC3] TC-129-04, SCRUM-75 [AC10] TC-75-13: [SGT label] every displayed time is labelled SGT", "SCRUM-129 [AC3] TC-129-04: [SGT label] date-only formats carry no time, so no label", "SCRUM-129 [AC4] TC-129-04, SCRUM-13 [AC6] TC-13-07: [UTC storage] a Singapore wall time round-trips through the UTC instant it is stored as"; `tests/unit/events.test.ts` › "SCRUM-129 [AC4] TC-129-04: [UTC storage] the submitted UTC instants are stored exactly as sent"; `e2e/events.spec.ts` › "SCRUM-129 [AC3, AC4] TC-129-04: the list and details show the stored UTC instants in SGT"
 
 ### TC-129-05
 
@@ -88,7 +88,7 @@ unless the case says otherwise.
 | Test Data | 06:00 SGT on 1 Dec |
 | Expected Result | The start is stored as 22:00 UTC on 30 Nov, and shown again as 06:00 SGT on 1 Dec. |
 
-**Automated by:** `tests/unit/datetime.test.ts` › "SCRUM-129 [AC1 - Singapore timezone]: an early-morning Singapore time lands on the previous UTC day"
+**Automated by:** `tests/unit/datetime.test.ts` › "SCRUM-129 [AC1] TC-129-05: [Singapore timezone] an early-morning Singapore time lands on the previous UTC day"
 
 ### TC-129-06
 
@@ -101,4 +101,4 @@ unless the case says otherwise.
 | Test Data | The periods above; a registration window |
 | Expected Result | The two periods don't overlap. 10:00 is inside the first period and 12:00 is not. Registration is open at the opening instant and closed at the closing instant. The database filter uses the same bounds. |
 
-**Automated by:** `tests/unit/period.test.ts` › "SCRUM-129 [AC5 - One period convention]: periods that only touch do not overlap, in either order", "SCRUM-129 [AC5 - One period convention]: the start instant is inside the period and the end instant is not", "SCRUM-129 [AC5 - One period convention]: the database filter uses the same bounds"; `tests/unit/registration-state.test.ts` › "SCRUM-129 [AC5 - One period convention]: registration is open at the exact opening instant", "SCRUM-129 [AC5 - One period convention]: registration is no longer open at the exact closing instant"
+**Automated by:** `tests/unit/period.test.ts` › "SCRUM-129 [AC5] TC-129-06: [One period convention] periods that only touch do not overlap, in either order", "SCRUM-129 [AC5] TC-129-06: [One period convention] the start instant is inside the period and the end instant is not", "SCRUM-129 [AC5] TC-129-06: [One period convention] the database filter uses the same bounds"; `tests/unit/registration-state.test.ts` › "SCRUM-129 [AC5] TC-129-06: [One period convention] registration is open at the exact opening instant", "SCRUM-129 [AC5] TC-129-06: [One period convention] registration is no longer open at the exact closing instant"

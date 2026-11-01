@@ -24,7 +24,7 @@ beforeEach(() => {
 });
 
 describe("OrganiserEvents — the reference feature's own-events scope", () => {
-  it("[Positive] AC: queries only events owned by this organiser, newest-updated first", async () => {
+  it("SCRUM-68 [AC1, AC5] TC-68-01: [Positive] queries only events owned by this organiser, newest-updated first", async () => {
     await OrganiserEvents({ organiserId: "usr_organiser" });
 
     expect(mockFindMany).toHaveBeenCalledWith({
@@ -47,7 +47,7 @@ describe("OrganiserEvents — the reference feature's own-events scope", () => {
 });
 
 describe("AttendeeEvents — SCRUM-72 browse list", () => {
-  it("[Positive] AC: queries only Confirmed events, earliest-starting first", async () => {
+  it("SCRUM-171 [AC4] TC-171-06: [Positive] queries only Confirmed events, earliest-starting first", async () => {
     await AttendeeEvents({ attendeeId: "usr_attendee" });
 
     const call = mockFindMany.mock.calls[0][0];
@@ -59,7 +59,7 @@ describe("AttendeeEvents — SCRUM-72 browse list", () => {
     expect(call.orderBy).toEqual({ startAt: "asc" });
   });
 
-  it("[Positive] scopes the caller's own registration row to the given attendeeId", async () => {
+  it("SCRUM-72: [Positive] scopes the caller's own registration row to the given attendeeId", async () => {
     await AttendeeEvents({ attendeeId: "usr_attendee" });
 
     const call = mockFindMany.mock.calls[0][0];
@@ -68,7 +68,7 @@ describe("AttendeeEvents — SCRUM-72 browse list", () => {
     });
   });
 
-  it("[Positive] the fetched events are passed to the attendee client list", async () => {
+  it("SCRUM-72: [Positive] the fetched events are passed to the attendee client list", async () => {
     const events = [{ id: "evt1", name: "Career Fair", status: "CONFIRMED" }];
     mockFindMany.mockResolvedValue(events);
 

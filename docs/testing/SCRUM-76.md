@@ -36,7 +36,7 @@ who has registrations in the seed.
 | Test Data | The seeded registrations |
 | Expected Result | Each row shows the event's name, date, time and venue, and the status "Registered" or "Withdrawn", soonest event first. When the event has two venues, each approved venue is shown, in the order requested (SCRUM-162 AC 7, which superseded showing only the one in use at its start). |
 
-**Automated by:** `tests/unit/my-registrations.test.ts` › "[Positive] AC1: fetches the event name, date, time, venue and the registration status", "SCRUM-162 [AC7], SCRUM-85 [AC8] TC-85-06: every approved venue is read, in the order requested, with what was last confirmed for an event being re-planned", "[Positive] lists the soonest event first"; `e2e/my-registrations.spec.ts` › "SCRUM-76 [AC1, AC2] TC-76-01: my list shows each event's name, date, venue and status"
+**Automated by:** `tests/unit/my-registrations.test.ts` › "SCRUM-76 [AC1] TC-76-01: [Positive] fetches the event name, date, time, venue and the registration status", "SCRUM-162 [AC7], SCRUM-85 [AC8] TC-85-06: every approved venue is read, in the order requested, with what was last confirmed for an event being re-planned", "SCRUM-76 [AC1, AC2] TC-76-01: [Positive] lists the soonest event first"; `e2e/my-registrations.spec.ts` › "SCRUM-76 [AC1, AC2] TC-76-01: my list shows each event's name, date, venue and status"
 
 ### TC-76-02
 
@@ -62,7 +62,7 @@ who has registrations in the seed.
 | Test Data | The new time |
 | Expected Result | The row shows the new time. |
 
-**Automated by:** `tests/unit/my-registrations.test.ts` › "[Positive] AC4: event details are read live from the event, not from a copy on the registration"
+**Automated by:** `tests/unit/my-registrations.test.ts` › "SCRUM-76 [AC4] TC-76-03: [Positive] event details are read live from the event, not from a copy on the registration"
 
 ### TC-76-04
 
@@ -75,7 +75,7 @@ who has registrations in the seed.
 | Test Data | The other Attendee's registrations |
 | Expected Result | Step 1 lists only this Attendee's registrations. Step 2 is refused. Step 3 returns nothing. |
 
-**Automated by:** `tests/unit/my-registrations.test.ts` › "[Positive] AC5: the list contains only my registrations — filtered by the session's user id", "[Negative] a signed-out caller gets an empty list, before the query runs"; `e2e/my-registrations.spec.ts` › "SCRUM-76 [AC5] TC-76-04: the list contains only my registrations", "SCRUM-76 [AC5] TC-76-04: an Organiser typing /registrations directly is refused"
+**Automated by:** `tests/unit/my-registrations.test.ts` › "SCRUM-76 [AC5] TC-76-04: [Positive] the list contains only my registrations — filtered by the session's user id", "SCRUM-76 [AC5] TC-76-04: [Negative] a signed-out caller gets an empty list, before the query runs"; `e2e/my-registrations.spec.ts` › "SCRUM-76 [AC5] TC-76-04: the list contains only my registrations", "SCRUM-76 [AC5] TC-76-04: an Organiser typing /registrations directly is refused"
 
 ### TC-76-05
 

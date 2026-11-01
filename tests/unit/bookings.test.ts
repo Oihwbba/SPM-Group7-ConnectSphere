@@ -163,7 +163,7 @@ describe("submitBookingRequest — SCRUM-50", () => {
     );
   });
 
-  it('SCRUM-50 AC1 — a layout or notes left blank ("No preference") is stored as not stated', async () => {
+  it('SCRUM-50 [AC1]: a layout or notes left blank ("No preference") is stored as not stated', async () => {
     await submitBookingRequest({
       ...validRequest,
       requestedLayout: "",
@@ -193,7 +193,7 @@ describe("submitBookingRequest — SCRUM-50", () => {
     expect(db.booking.create).not.toHaveBeenCalled();
   });
 
-  it("SCRUM-50 TC-50-10: expected attendance above the venue's capacity is refused against the attendance field, and nothing is written", async () => {
+  it("SCRUM-50 [AC6] TC-50-10: expected attendance above the venue's capacity is refused against the attendance field, and nothing is written", async () => {
     db.venue.findFirst.mockResolvedValue({
       name: "Seminar Room",
       capacity: 39,
@@ -213,7 +213,7 @@ describe("submitBookingRequest — SCRUM-50", () => {
     expect(db.booking.create).not.toHaveBeenCalled();
   });
 
-  it("SCRUM-50 TC-50-10: expected attendance exactly equal to the venue's capacity fits", async () => {
+  it("SCRUM-50 [AC6] TC-50-10: expected attendance exactly equal to the venue's capacity fits", async () => {
     db.venue.findFirst.mockResolvedValue({
       name: "Seminar Room",
       capacity: 40,
@@ -430,7 +430,7 @@ describe("submitBookingRequest — SCRUM-50", () => {
     });
   });
 
-  it("SCRUM-50 TC-50-09: every role except Event Coordinator is refused before anything is read", async () => {
+  it("SCRUM-50 [AC7] TC-50-09: every role except Event Coordinator is refused before anything is read", async () => {
     for (const role of [
       "ORGANISER",
       "VENUE_STAFF",
@@ -479,7 +479,7 @@ describe("submitBookingRequest — SCRUM-50", () => {
     });
   });
 
-  it("SCRUM-50 TC-50-09: an event that does not exist, or is another coordinator's, reads as not found", async () => {
+  it("SCRUM-50 [AC7] TC-50-09: an event that does not exist, or is another coordinator's, reads as not found", async () => {
     db.event.findUnique.mockResolvedValueOnce(null);
     expect(await submitBookingRequest(validRequest)).toEqual({
       ok: false,
@@ -498,7 +498,7 @@ describe("submitBookingRequest — SCRUM-50", () => {
     expect(db.booking.create).not.toHaveBeenCalled();
   });
 
-  it("SCRUM-50 TC-50-09: a venue cannot be requested for an event that has not been approved", async () => {
+  it("SCRUM-50 [AC7] TC-50-09: a venue cannot be requested for an event that has not been approved", async () => {
     db.event.findUnique.mockResolvedValue({
       organiserId: "usr_org",
       coordinatorId: "usr_coord",
@@ -673,7 +673,7 @@ describe("submitBookingRequest — SCRUM-50", () => {
     expect(db.booking.create).toHaveBeenCalledTimes(2);
   });
 
-  it("does not swallow a second deadlock, a vanished winner, or any other database error", async () => {
+  it("SCRUM-50: does not swallow a second deadlock, a vanished winner, or any other database error", async () => {
     db.booking.create.mockRejectedValue(deadlock());
     await expect(submitBookingRequest(validRequest)).rejects.toThrow(
       "deadlock detected",
@@ -791,7 +791,7 @@ describe("SCRUM-50 [AC3, AC4, AC5] TC-50-13: checkVenueAvailability, the live ch
     expect(db.booking.findMany).not.toHaveBeenCalled();
   });
 
-  it("SCRUM-50 TC-50-13: without a venue there is nothing to check", async () => {
+  it("SCRUM-50 [AC3, AC4, AC5] TC-50-13: without a venue there is nothing to check", async () => {
     expect(
       await checkVenueAvailability({ ...period, venueId: "" }),
     ).toMatchObject({ ok: false, error: "Choose a venue." });
@@ -801,7 +801,7 @@ describe("SCRUM-50 [AC3, AC4, AC5] TC-50-13: checkVenueAvailability, the live ch
     expect(db.venue.findFirst).not.toHaveBeenCalled();
   });
 
-  it("SCRUM-50 TC-50-13: a retired or unknown venue reads as not found, exactly as submitting it would", async () => {
+  it("SCRUM-50 [AC3, AC4, AC5] TC-50-13: a retired or unknown venue reads as not found, exactly as submitting it would", async () => {
     db.venue.findFirst.mockResolvedValue(null);
 
     expect(await checkVenueAvailability(period)).toEqual({
@@ -814,7 +814,7 @@ describe("SCRUM-50 [AC3, AC4, AC5] TC-50-13: checkVenueAvailability, the live ch
     expect(db.booking.findMany).not.toHaveBeenCalled();
   });
 
-  it("SCRUM-50 TC-50-09: every role except Event Coordinator is refused before anything is read", async () => {
+  it("SCRUM-50 [AC7] TC-50-09: the live check refuses every role except Event Coordinator before anything is read", async () => {
     for (const role of [
       "ORGANISER",
       "VENUE_STAFF",
@@ -829,7 +829,7 @@ describe("SCRUM-50 [AC3, AC4, AC5] TC-50-13: checkVenueAvailability, the live ch
     expect(db.booking.findMany).not.toHaveBeenCalled();
   });
 
-  it("does not swallow an unexpected database error", async () => {
+  it("SCRUM-50 [AC3]: does not swallow an unexpected database error", async () => {
     db.booking.findMany.mockRejectedValue(new Error("connection lost"));
     await expect(checkVenueAvailability(period)).rejects.toThrow(
       "connection lost",
@@ -1075,7 +1075,7 @@ describe("decideBookingRequest — SCRUM-53", () => {
     expect(db.booking.updateMany).not.toHaveBeenCalled();
   });
 
-  it("SCRUM-53 — a malformed decision is refused", async () => {
+  it("SCRUM-53: a malformed decision is refused", async () => {
     const result = await decideBookingRequest({
       bookingId: "bkg_1",
       decision: "MAYBE",
@@ -1107,7 +1107,7 @@ describe("decideBookingRequest — SCRUM-53", () => {
     expect(db.booking.updateMany).not.toHaveBeenCalled();
   });
 
-  it("SCRUM-53 — an unknown request is reported as not found", async () => {
+  it("SCRUM-53: an unknown request is reported as not found", async () => {
     db.booking.findUnique.mockResolvedValue(null);
 
     expect(
@@ -1275,7 +1275,7 @@ describe("decideBookingRequest — SCRUM-53", () => {
     expect(revalidatePath).not.toHaveBeenCalledWith("/venues/availability");
   });
 
-  it("does not swallow an unexpected database error", async () => {
+  it("SCRUM-53: does not swallow an unexpected database error", async () => {
     db.$transaction.mockRejectedValue(new Error("connection lost"));
 
     await expect(

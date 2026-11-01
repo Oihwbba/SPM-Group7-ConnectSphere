@@ -30,7 +30,7 @@ unless the case says otherwise.
 | Test Data | Draft, Submitted, Under Review, Approved, Planning, Confirmed, Completed, Cancelled, Rejected |
 | Expected Result | Each of the nine has its own badge, labelled in words. |
 
-**Automated by:** `tests/unit/status-badge.test.ts` › "covers every one of the nine statuses", "labels each status in words a user reads, not the enum value"
+**Automated by:** `tests/unit/status-badge.test.ts` › "SCRUM-16 [AC2, AC5] TC-16-02, SCRUM-23 [AC1] TC-23-01, SCRUM-24 [AC1, AC2] TC-24-01: covers every one of the nine statuses", "SCRUM-16 [AC2, AC5] TC-16-02, SCRUM-23 [AC1] TC-23-01: labels each status in words a user reads, not the enum value"
 
 ### TC-23-02
 
@@ -43,4 +43,4 @@ unless the case says otherwise.
 | Test Data | The Under Review request |
 | Expected Result | Both see "Under Review" on the list and on the details, without asking anyone. |
 
-**Automated by:** `tests/unit/events.test.ts` › "SCRUM-84 [AC3 - Happy Path]: exposes event name and current status badge properties for list display"; `e2e/events.spec.ts` › "SCRUM-23 [AC2] TC-23-02, SCRUM-24 [AC7] TC-24-05: coordinator views assigned event status and status remains consistent across views"
+**Automated by:** `tests/unit/events.test.ts` › "SCRUM-84 [AC3] TC-84-03, SCRUM-23 [AC2] TC-23-02: [Happy Path] exposes event name and current status badge properties for list display"; `e2e/events.spec.ts` › "SCRUM-23 [AC2] TC-23-02, SCRUM-24 [AC7] TC-24-05: coordinator views assigned event status and status remains consistent across views"

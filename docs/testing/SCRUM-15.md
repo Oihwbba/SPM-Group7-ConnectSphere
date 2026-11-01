@@ -50,7 +50,7 @@ unless the case says otherwise.
 | Test Data | Name "Partial planning draft" |
 | Expected Result | "Draft event request saved successfully." The draft is listed with a **Resume Draft** button, its dates, attendance, venue and equipment still empty. |
 
-**Automated by:** `tests/unit/events.test.ts` › "SCRUM-15 [AC1 - Happy Path]: allows saving a draft with mandatory submission fields left empty", "SCRUM-15 [AC4 - Relaxation Rule]: allows saving a draft with missing mandatory fields (dates/venue/equipment/attendance omitted)"; `e2e/events.spec.ts` › "SCRUM-15 [AC3] TC-15-05: organiser saves partial draft, locates and resumes draft with preserved fields, then completes and submits"
+**Automated by:** `tests/unit/events.test.ts` › "SCRUM-15 [AC1] TC-15-01, SCRUM-13 [AC5] TC-13-06: [Happy Path] allows saving a draft with mandatory submission fields left empty", "SCRUM-15 [AC4] TC-15-01: [Relaxation Rule] allows saving a draft with missing mandatory fields (dates/venue/equipment/attendance omitted)"; `e2e/events.spec.ts` › "SCRUM-15 [AC3] TC-15-05: organiser saves partial draft, locates and resumes draft with preserved fields, then completes and submits"
 
 ### TC-15-02
 
@@ -63,7 +63,7 @@ unless the case says otherwise.
 | Test Data | Attendance 0; a name of 201 characters |
 | Expected Result | Both saves are refused at the field: "Attendance must be a positive whole number." and "Keep the name under 200 characters.". Leaving the field empty is allowed (TC-15-01); an invalid value is not. |
 
-**Automated by:** `tests/unit/events.test.ts` › "SCRUM-15 [AC4 - Validation Rule]: draft schema rejects 0 attendance when attendance is provided in draft", "SCRUM-15 [AC4] / SCRUM-13 [AC11 - Draft Path Input Constraint]: createDraftEvent schema enforces character limits on over-limit draft fields (name max 200, purpose max 1000, description max 5000, programme max 5000, specialRequests max 5000)"
+**Automated by:** `tests/unit/events.test.ts` › "SCRUM-15 [AC4] TC-15-02: [Validation Rule] draft schema rejects 0 attendance when attendance is provided in draft", "SCRUM-15 [AC4] TC-15-02: [Draft Path Input Constraint] createDraftEvent schema enforces SCRUM-13 AC11's character limits on over-limit draft fields (name max 200, purpose max 1000, description max 5000, programme max 5000, specialRequests max 5000)"
 
 ### TC-15-03
 
@@ -76,7 +76,7 @@ unless the case says otherwise.
 | Test Data | Start 20 Nov 2027 10:00, end 20 Nov 2027 18:00 |
 | Expected Result | "Resume Draft Event Request" opens with the saved name, and the schedule reads Event Date 2027-11-20, Start Time 10:00 and End Time 18:00 (SCRUM-190). The review step shows "Date: 20 Nov 2027" and "Time: 10:00 am SGT – 6:00 pm SGT". |
 
-**Automated by:** `tests/unit/events.test.ts` › "SCRUM-15 [AC2 - Happy Path]: retains existing field values when updating an existing draft request", "SCRUM-15 [AC1, AC2 - Data retention]: a new draft saved with both proposed dates persists them as UTC instants"; `e2e/events.spec.ts` › "SCRUM-15 [AC3] TC-15-05: organiser saves partial draft, locates and resumes draft with preserved fields, then completes and submits"
+**Automated by:** `tests/unit/events.test.ts` › "SCRUM-15 [AC2] TC-15-03: [Happy Path] retains existing field values when updating an existing draft request", "SCRUM-15 [AC1, AC2] TC-15-03: [Data retention] a new draft saved with both proposed dates persists them as UTC instants"; `e2e/events.spec.ts` › "SCRUM-15 [AC3] TC-15-05: organiser saves partial draft, locates and resumes draft with preserved fields, then completes and submits"
 
 ### TC-15-04
 
@@ -89,7 +89,7 @@ unless the case says otherwise.
 | Test Data | A draft with a start at 10:00 SGT |
 | Expected Result | After each save the start is the same instant, with no drift. In step 2 the end is saved and the start stays empty. |
 
-**Automated by:** `tests/unit/events.test.ts` › "SCRUM-15 [AC2 - Cross-Cutting / Timezone]: preserves exact UTC datetime without offset drift across multiple draft updates", "SCRUM-15 [AC2, AC7 - Data retention on re-save]: updating a draft with only an end date persists that end and leaves the start empty"
+**Automated by:** `tests/unit/events.test.ts` › "SCRUM-15 [AC2] TC-15-04: [Cross-Cutting / Timezone] preserves exact UTC datetime without offset drift across multiple draft updates", "SCRUM-15 [AC2, AC7] TC-15-04, TC-15-09: [Data retention on re-save] updating a draft with only an end date persists that end and leaves the start empty"
 
 ### TC-15-05
 
@@ -115,7 +115,7 @@ unless the case says otherwise.
 | Test Data | Every field empty |
 | Expected Result | Saving is refused with "Give the event a name." at the name field, and nothing is created. |
 
-**Automated by:** `tests/unit/events.test.ts` › "SCRUM-15 [AC3 - Business-Rule Negative]: returns field error when attempting to save a draft without an event name"
+**Automated by:** `tests/unit/events.test.ts` › "SCRUM-15 [AC3] TC-15-06: [Business-Rule Negative] returns field error when attempting to save a draft without an event name"
 
 ### TC-15-07
 
@@ -128,7 +128,7 @@ unless the case says otherwise.
 | Test Data | A complete set of values |
 | Expected Result | After step 1 it is still a Draft. After step 2 it is no longer a Draft: it is Submitted, or Under Review once a Coordinator is assigned (SCRUM-20). |
 
-**Automated by:** `tests/unit/events.test.ts` › "SCRUM-15 [AC5 - State Transition]: transitions draft status from DRAFT to SUBMITTED when draft is fully completed and submitted"; `e2e/events.spec.ts` › "SCRUM-15 [AC3] TC-15-05: organiser saves partial draft, locates and resumes draft with preserved fields, then completes and submits"
+**Automated by:** `tests/unit/events.test.ts` › "SCRUM-15 [AC5] TC-15-07, SCRUM-14 [AC1] TC-14-01: [State Transition] transitions draft status from DRAFT to SUBMITTED when draft is fully completed and submitted"; `e2e/events.spec.ts` › "SCRUM-15 [AC3] TC-15-05: organiser saves partial draft, locates and resumes draft with preserved fields, then completes and submits"
 
 ### TC-15-08
 
@@ -154,7 +154,7 @@ unless the case says otherwise.
 | Test Data | A new purpose |
 | Expected Result | "Draft event request updated successfully." There is still one draft, holding the new value. |
 
-**Automated by:** `e2e/events.spec.ts` › "SCRUM-15 [AC2, AC7] TC-15-09: saving an existing draft a second time updates the record in-place without creating duplicate rows"; `tests/unit/events.test.ts` › "SCRUM-15 [AC2, AC7 - Data retention on re-save]: updating a draft with only an end date persists that end and leaves the start empty"
+**Automated by:** `e2e/events.spec.ts` › "SCRUM-15 [AC2, AC7] TC-15-09: saving an existing draft a second time updates the record in-place without creating duplicate rows"; `tests/unit/events.test.ts` › "SCRUM-15 [AC2, AC7] TC-15-04, TC-15-09: [Data retention on re-save] updating a draft with only an end date persists that end and leaves the start empty"
 
 ### TC-15-10
 
@@ -167,7 +167,7 @@ unless the case says otherwise.
 | Test Data | Venue requirements naming a retired venue |
 | Expected Result | The draft opens with the saved text unchanged. |
 
-**Automated by:** `tests/unit/events.test.ts` › "SCRUM-15 [AC2, AC9 - Inactive Catalogue Reference Retention]: draft saves and reopens successfully when venue or equipment fields contain references to inactive catalogue items (stored as free text, no FK constraint)"
+**Automated by:** `tests/unit/events.test.ts` › "SCRUM-15 [AC2, AC9] TC-15-10: [Inactive Catalogue Reference Retention] draft saves and reopens successfully when venue or equipment fields contain references to inactive catalogue items (stored as free text, no FK constraint)"
 
 ### TC-15-11
 
@@ -180,7 +180,7 @@ unless the case says otherwise.
 | Test Data | The Organiser's draft |
 | Expected Result | The draft is not on the Coordinator's list; their list never includes Draft events. |
 
-**Automated by:** `tests/unit/events.test.ts` › "SCRUM-16 [AC4 - Coordinator View Exclusion], SCRUM-165 [AC8] TC-165-11: the coordinator query lists only their own events, so no draft or unassigned request"; `tests/unit/coordinator-assigned-events.test.ts` › "[Negative] AC1: an unassigned draft is not in any Coordinator's list"
+**Automated by:** `tests/unit/events.test.ts` › "SCRUM-16 [AC4] TC-16-03, SCRUM-165 [AC8] TC-165-11, SCRUM-15 [AC8] TC-15-11: [Coordinator View Exclusion] the coordinator query lists only their own events, so no draft or unassigned request"; `tests/unit/coordinator-assigned-events.test.ts` › "SCRUM-15 [AC1, AC8] TC-15-11, SCRUM-16 [AC4] TC-16-03, SCRUM-68 [AC4] TC-68-03, SCRUM-69 [AC1] TC-69-02: [Negative] an unassigned draft is not in any Coordinator's list"
 
 ### TC-15-12
 
@@ -193,4 +193,4 @@ unless the case says otherwise.
 | Test Data | The other draft's id |
 | Expected Result | Both are refused ("Draft event not found or cannot be modified." and "Draft or rejected event not found or cannot be submitted."), and the draft is unchanged. |
 
-**Automated by:** `tests/unit/events.test.ts` › "SCRUM-15 [Security Gate / Ownership Isolation]: refuses to update or submit a draft owned by another organiser"
+**Automated by:** `tests/unit/events.test.ts` › "SCRUM-15 [AC1] TC-15-12: [Security Gate / Ownership Isolation] refuses to update or submit a draft owned by another organiser"

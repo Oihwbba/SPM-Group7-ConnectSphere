@@ -174,7 +174,7 @@ describe("SCRUM-50 [AC3, AC4, AC5] TC-50-13: liveAnswer, the live check", () => 
     }
   });
 
-  it("SCRUM-50 TC-50-13: a check that failed, or was refused for another reason, is an error that leaves Submit to the server", () => {
+  it("SCRUM-50 [AC3, AC4, AC5] TC-50-13: a check that failed, or was refused for another reason, is an error that leaves Submit to the server", () => {
     expect(liveAnswer(null)).toEqual({
       state: "error",
       message: LIVE_CHECK_FAILED_MESSAGE,
@@ -209,7 +209,7 @@ describe("venuesForLayout — SCRUM-50", () => {
 });
 
 describe("the half-hour time grid — SCRUM-163", () => {
-  it("offers every half hour of the day, and nothing in between", () => {
+  it("SCRUM-163: offers every half hour of the day, and nothing in between", () => {
     expect(HALF_HOUR_TIMES).toHaveLength(48);
     expect(HALF_HOUR_TIMES.slice(0, 3)).toEqual(["00:00", "00:30", "01:00"]);
     expect(HALF_HOUR_TIMES.at(-1)).toBe("23:30");
