@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-09. Jira is the source of truth.
+     Synced from Jira on 2026-10-29. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-16 - Distinguish drafts from submitted requests
@@ -39,7 +39,11 @@
 * NEW AC7 (Draft action boundary): Draft requests display a “Resume Editing” action only in Organiser-owned views. Submitted and later lifecycle states do not open the draft editing flow unless another story explicitly permits editing for that status.
 * NEW AC8 (No lifecycle side effect): Applying Draft styling, labels, or actions does not change the event status and does not introduce any lifecycle transition outside SCRUM-24.
 
-**Dependency note:** this assumes a "my requests" list view already exists to apply the marking to. No story in this epic currently builds that list view explicitly — it's implicitly required by this story and by "Save an event request as a draft" (its AC: "Organiser can find and resume any of their saved drafts"). Confirm during backlog refinement whether a basic list view should be its own story, or folded into one of these two.
+**Dependency note:** the "my requests" list this story marks is My Event Requests, built by SCRUM-84.
+
+**Change log**
+
+* 2026-10-29 (SCRUM-243, PO approval pending): the dependency note names SCRUM-84, which built the list; it used to say no story built it and asked backlog refinement to decide. Criteria unchanged.
 
 
 Functionality Area: Draft Event Requests & Event Status Management
