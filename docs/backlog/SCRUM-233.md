@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-31. Jira is the source of truth.
+     Synced from Jira on 2026-11-01. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-233 - Chore: Bring the seed in line with the event lifecycle: no event left in Approved, every event within one day
@@ -49,7 +49,6 @@ The seed (`prisma/seed.ts`) breaks rules the stories and ADRs set, so a database
     * The open clarification (`clr_career_fair`) asks about "a classroom layout", but the event's preferred layout is theatre.
     * The seeded non-draft events have no Venue Requirements, which submitting requires (SCRUM-13, SCRUM-14). A blank Registration needed is allowed for older requests (SCRUM-171 AC3).
     * The rejection notification `ntf_3` gives no reason or next step (SCRUM-45 AC3).
-
 
 **Decision taken here:** the seed follows SCRUM-81 and SCRUM-135. This overrules ADR 0012's choice to keep the seeded Approved event. Approved remains visible in each event's history, which is where SCRUM-23's "approved" now appears.
 
@@ -108,9 +107,7 @@ The seed (`prisma/seed.ts`) breaks rules the stories and ADRs set, so a database
     * assigned events record their supervising Lead (SCRUM-165, SCRUM-21), completed and cancelled events keep their confirmed details (SCRUM-85), and each row is dated before its own next step;
     * every submitted event has every compulsory answer (SCRUM-13, SCRUM-171), and histories and notifications read as the actions write them. `RESERVATION_CANCELLED` has no seeded row, because no action writes it, and TC-238-01 allows for that.
 
-
     Values only the seed can supply stay: the accounts, the equipment list and its unavailability, which nothing in the app creates, and `evt_reg_not_open`'s opening time (SCRUM-75 AC1).
-
 
 15. The seed has a row for each state testers need to try by hand: a retired venue and equipment type (TC-13-02), a venue with setup and turnaround (SCRUM-159), a suitability judgement (SCRUM-40), an event at two venues (SCRUM-162), an event confirmed again with new details (SCRUM-85), a change waiting on a Confirmed event (SCRUM-128), a latest safety check Rejected (SCRUM-166), every optional answer filled in, overdue events in Under Review and Planning (SCRUM-82 AC10), an overdue event in Planning with its readiness checklist complete (SCRUM-82 AC10, SCRUM-110), a Confirmed event with a registration and a reservation Technical Support reported, flagged and the only incomplete item on its checklist (SCRUM-32, SCRUM-26 AC10, AC12), an event rejected from Planning (SCRUM-117), and a clarification answered on an event Under Review (SCRUM-18). Events are named `Status: Scenario — Event`.
 
@@ -120,8 +117,8 @@ SCRUM-190 (PR #300) must be merged first, for the one-day rule and its TC-190-11
 
 ## Change log
 
-* 2026-10-30 (PR #321, PO approval pending): item 13 added after checking the seeded registration windows against SCRUM-73, SCRUM-74 and SCRUM-75.
-* 2026-10-30 (PO approval pending): item 14 added after checking every seeded row against what the app's actions accept. The work moved from PR #321 to PR #329 with a cleaner history.
-* 2026-10-30 (PR #329, PO approval pending): item 13 narrowed to what the app produces, so the seed stores no capacity and only the two windows it needs; item 15 added for the states testers need; item 11 names the one seeded row to delete by hand.
-* 2026-10-31 (PR #329, PO approval pending): item 13 says when `evt_reg_not_open`'s opening time falls. Seeded a week after the seed ran, it stopped showing "Not open yet" on a database not seeded again within seven days.
-* 2026-10-31 (PR #329, PO approval pending): item 15 adds an overdue event with its readiness checklist complete and a Confirmed event with a reported reservation; items 4 and 11 allow for that reservation.
+* 2026-10-30 (PR #321, PO approved 2026-11-01): item 13 added after checking the seeded registration windows against SCRUM-73, SCRUM-74 and SCRUM-75.
+* 2026-10-30 (PO approved 2026-11-01): item 14 added after checking every seeded row against what the app's actions accept. The work moved from PR #321 to PR #329 with a cleaner history.
+* 2026-10-30 (PR #329, PO approved 2026-11-01): item 13 narrowed to what the app produces, so the seed stores no capacity and only the two windows it needs; item 15 added for the states testers need; item 11 names the one seeded row to delete by hand.
+* 2026-10-31 (PR #329, PO approved 2026-11-01): item 13 says when `evt_reg_not_open`'s opening time falls. Seeded a week after the seed ran, it stopped showing "Not open yet" on a database not seeded again within seven days.
+* 2026-10-31 (PR #329, PO approved 2026-11-01): item 15 adds an overdue event with its readiness checklist complete and a Confirmed event with a reported reservation; items 4 and 11 allow for that reservation.

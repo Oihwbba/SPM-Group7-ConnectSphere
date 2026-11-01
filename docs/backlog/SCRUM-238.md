@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT BY HAND.
-     Synced from Jira on 2026-10-31. Jira is the source of truth.
+     Synced from Jira on 2026-11-01. Jira is the source of truth.
      To refresh: see docs/backlog/README.md -->
 
 # SCRUM-238 - Chore: Seed data that lets every role see and try every function
@@ -37,4 +37,4 @@ Anyone demonstrating or testing the app, including the customer and the graders,
 
 **Change log**
 
-* 2026-10-31 (SCRUM-233, PR #329, PO approval pending): two values in AC 2 no longer get a seeded row. The event status Approved has none, because no event rests in Approved: approval saves Planning (SCRUM-81 AC1, SCRUM-135 AC12). The notification type Reservation cancelled has none, because no action writes it. TC-238-01 follows both exceptions. Criteria unchanged.
+* 2026-10-31 (SCRUM-233, PR #329, PO approved 2026-11-01): two values in AC 2 no longer get a seeded row. The event status Approved has none, because no event rests in Approved: approval saves Planning (SCRUM-81 AC1, SCRUM-135 AC12). The notification type Reservation cancelled has none, because no action writes it. TC-238-01 follows both exceptions. Criteria unchanged.
