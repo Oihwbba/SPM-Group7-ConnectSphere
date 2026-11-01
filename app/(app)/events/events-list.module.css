@@ -1,23 +1,53 @@
 /*
  * One events table, two layouts. On tablet and up it is an ordinary aligned
- * table (unchanged). Below the `md` breakpoint (768px) the same rows restyle
+ * table (unchanged). Below the `lg` breakpoint (1024px) the same rows restyle
  * into stacked cards, so every event — and every action control — exists
  * exactly once in the DOM. No hidden duplicate list, no "mobile-" testid split.
  *
- * `md` here matches Tailwind's default 768px breakpoint used elsewhere.
+ * `lg` matches Tailwind's 1024px breakpoint: below it, the five columns need
+ * more room than a tablet has (SCRUM-207).
  */
 
-@media (max-width: 767.98px) {
+@media (max-width: 1023.98px) {
   /* Collapse the table wrapper so rows can stack. */
   .list,
   .list tbody {
     display: block;
   }
 
-  /* The column header only reads correctly in the aligned table; on a card the
-     per-field labels below replace it. */
+  /* The column headings become a bar of sort buttons above the cards, so a
+     phone can sort as a desktop does (SCRUM-207); the per-field labels below
+     name each value. "Actions" has no control and is kept for screen readers. */
   .list thead {
-    display: none;
+    display: block;
+    margin-bottom: 0.5rem;
+  }
+
+  .list thead tr {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 0.75rem;
+    border: 0;
+  }
+
+  .list thead th {
+    display: block;
+    height: auto;
+    padding: 0;
+  }
+
+  .list thead th button {
+    min-height: 2.75rem;
+  }
+
+  .list thead th:not(:has(button)) {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
   }
 
   /* Each row becomes a card laid out with grid areas:
@@ -65,6 +95,16 @@
 
   .list td[data-col="name"] {
     grid-area: name;
+  }
+
+  /* A long name gets two lines on a card before it is cut short. */
+  .list td[data-col="name"] a {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    white-space: normal;
+    padding-block: 0.375rem;
   }
   .list td[data-col="status"] {
     grid-area: status;

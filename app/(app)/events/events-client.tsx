@@ -291,12 +291,12 @@ export function EventsClient({
     // On a phone the actions are a two-column grid of full-width, thumb-sized
     // buttons, so a fourth button no longer wraps alone onto a second line; from
     // md up they are the compact inline row the desktop table has always had.
-    const actionButton = "h-10 w-full gap-1.5 text-xs md:h-8 md:w-auto";
+    const actionButton = "h-11 w-full gap-1.5 text-sm lg:h-8 lg:w-auto lg:text-xs";
     // Change 3: actions whose icon says it all are icon-only, named for
     // screen readers and with a tooltip.
-    const iconButton = "h-10 w-full md:h-8 md:w-8 md:p-0";
+    const iconButton = "h-11 w-full lg:h-8 lg:w-8 lg:p-0";
     return (
-      <div className="grid grid-cols-2 gap-2 md:flex md:flex-nowrap md:items-center md:justify-end md:gap-1.5 [&>*:only-child]:col-span-2 md:[&>*:only-child]:col-span-1">
+      <div className="grid grid-cols-2 gap-2 lg:flex lg:flex-nowrap lg:items-center lg:justify-end lg:gap-1.5 [&>*:only-child]:col-span-2 lg:[&>*:only-child]:col-span-1">
         {isDraft && (
           <Button
             variant="ghost"
@@ -409,7 +409,7 @@ export function EventsClient({
         actions={
           !isCoordinator && (
             <Button
-              className="h-8 gap-1.5 px-3 text-xs md:h-10 md:gap-2 md:px-4 md:text-sm"
+              className="h-11 gap-2 px-4 text-sm md:h-10"
               onClick={() => setCreateDialogOpen(true)}
             >
               <Plus className="h-4 w-4" />
@@ -423,14 +423,14 @@ export function EventsClient({
       {/* Filter Tabs & Interactive Search Bar for SCRUM-84 AC6-AC9 */}
       {events.length > 0 && (
         <div className="flex flex-wrap items-center justify-between gap-3 border-b pb-3">
-          {/* Horizontal scroll below md keeps the phone layout free of overflow
-              (SCRUM-84 mobile e2e), wrapping normally from md up. */}
-          <div className="flex w-full flex-nowrap items-center gap-1.5 overflow-x-auto md:w-auto md:flex-wrap md:gap-2 md:overflow-visible">
+          {/* SCRUM-207: the tabs wrap onto a second line on a phone, so every
+              one is in view without scrolling sideways. */}
+          <div className="flex w-full flex-wrap items-center gap-1.5 md:w-auto md:gap-2">
             <Filter className="mr-0.5 h-4 w-4 shrink-0 text-muted-foreground md:mr-1" />
             <Button
               variant={activeTab === "ALL" ? "secondary" : "ghost"}
               size="sm"
-              className="h-8 shrink-0 text-xs font-medium"
+              className="h-11 shrink-0 text-sm font-medium md:h-8 md:text-xs"
               onClick={() => {
                 setActiveTab("ALL");
                 setStatusFilter("ALL");
@@ -443,7 +443,7 @@ export function EventsClient({
                 variant={activeTab === "DRAFT" ? "secondary" : "ghost"}
                 size="sm"
                 className={cn(
-                  "h-8 shrink-0 gap-1.5 text-xs font-medium",
+                  "h-11 shrink-0 gap-1.5 text-sm font-medium md:h-8 md:text-xs",
                   activeTab === "DRAFT" && "font-semibold",
                 )}
                 onClick={() => {
@@ -459,7 +459,7 @@ export function EventsClient({
               variant={activeTab === "SUBMITTED" ? "secondary" : "ghost"}
               size="sm"
               className={cn(
-                "h-8 shrink-0 gap-1.5 text-xs font-medium",
+                "h-11 shrink-0 gap-1.5 text-sm font-medium md:h-8 md:text-xs",
                 activeTab === "SUBMITTED" && "font-semibold",
               )}
               onClick={() => {
@@ -481,7 +481,7 @@ export function EventsClient({
                 variant={activeTab === "ACTION" ? "secondary" : "ghost"}
                 size="sm"
                 className={cn(
-                  "h-8 shrink-0 gap-1.5 text-xs font-medium",
+                  "h-11 shrink-0 gap-1.5 text-sm font-medium md:h-8 md:text-xs",
                   activeTab === "ACTION" && "font-semibold",
                 )}
                 onClick={() => {
@@ -495,12 +495,12 @@ export function EventsClient({
             )}
           </div>
 
-          <div className="flex items-center gap-2 w-full max-w-sm">
+          <div className="flex w-full flex-col gap-2 sm:max-w-sm sm:flex-row sm:items-center">
             <AppSelect
               value={statusFilter}
               onValueChange={setStatusFilter}
               aria-label="Filter by status"
-              className="h-9 w-40 shrink-0 text-xs"
+              className="h-11 w-full text-base sm:h-9 sm:w-40 sm:shrink-0 sm:text-xs"
               options={[
                 { value: "ALL", label: "All Statuses" },
                 ...Object.entries(EVENT_STATUS_LABEL).map(([value, label]) => ({
@@ -515,7 +515,7 @@ export function EventsClient({
               placeholder="Search by name or purpose..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="flex h-8 w-full rounded-md border border-input bg-background px-3 text-xs shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              className="flex h-11 w-full rounded-md border border-input bg-background px-3 text-base shadow-sm sm:h-8 sm:text-xs transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             />
           </div>
         </div>
@@ -569,10 +569,10 @@ export function EventsClient({
           </CardContent>
         </Card>
       ) : (
-        <Card className="max-md:rounded-none max-md:border-0 max-md:bg-transparent max-md:shadow-none max-md:backdrop-blur-none">
+        <Card className="max-lg:rounded-none max-lg:border-0 max-lg:bg-transparent max-lg:shadow-none max-lg:backdrop-blur-none">
           <CardContent className="p-0">
             {/* A single table that restyles into a stacked card per row below
-                the `md` breakpoint (events-list.module.css). Each event — and
+                the `lg` breakpoint (events-list.module.css). Each event — and
                 each action control — exists exactly once in the DOM; there is
                 no hidden duplicate list and no "mobile-" testid split.
 
@@ -718,7 +718,7 @@ export function EventsClient({
                         data-col="name"
                         // Change 6: the name takes the room left and is cut
                         // short, so the other columns never wrap or shift.
-                        className="font-medium md:w-full md:max-w-0"
+                        className="font-medium lg:w-full lg:max-w-0"
                       >
                         <div className="flex items-center gap-2">
                           <Link
@@ -753,7 +753,7 @@ export function EventsClient({
                         {/* On mobile the column header is gone, so carry a real
                             (screen-reader-announced) label; hidden on desktop
                             where the table header supplies it. */}
-                        <span className="mb-0.5 block text-xs md:hidden">
+                        <span className="mb-0.5 block text-xs lg:hidden">
                           Starts
                         </span>
                         {event.startAt
@@ -765,7 +765,7 @@ export function EventsClient({
                         data-col="created"
                         className="text-muted-foreground"
                       >
-                        <span className="mb-0.5 block text-xs md:hidden">
+                        <span className="mb-0.5 block text-xs lg:hidden">
                           Last Updated
                         </span>
                         {formatDate(event.updatedAt || event.createdAt)}
