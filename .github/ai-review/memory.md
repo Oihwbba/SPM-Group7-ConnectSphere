@@ -26,16 +26,16 @@ Rules for a lesson:
   not re-landed. *Deployed to Production* shows on merge commits, never on a
   pull request branch.
 
-- (2026-10-04, #101; #141, #145, #164; tightened 2026-10-15, #172) Story
+- (2026-10-04, #101; #141, #145, #164; tightened 2026-10-15, #172; #269) Story
 files under `docs/backlog` lag Jira: PO decisions, sprint planning and
-reworded ACs land as separate sync pull requests, and reviews (#101,
-#162) have flagged code against stale wording a sync later settled — check
-a story file's change log before reporting a code/story mismatch. Syncs
-regenerate from Jira untouched: a story in two sprints counts towards
-both, a dropped issue loses its file (SCRUM-127), and a partial re-sync
-(#164, like #159/#163) leaves the README's "last synced" date at the last
-full sync — an older date over newer files is deliberate. The fix belongs
-in Jira, never a hand edit.
+reworded ACs land as sync PRs, and reviews (#101, #162) flagged code
+against stale wording a sync later settled — check a story's change log
+before reporting a mismatch. Syncs regenerate from Jira untouched: a story
+in two sprints counts towards both, a dropped issue loses its file
+(SCRUM-127), and a partial re-sync (#164, like #159/#163) leaves
+the README's "last synced" date and a story's index status at the last full
+sync — older over newer is deliberate. The fix belongs in Jira, never a
+hand edit.
 
 ## Dependencies
 
@@ -43,9 +43,6 @@ in Jira, never a hand edit.
   6.19.3, the newest 6.x, still asks for 7.x, which has a high-severity
   advisory; Prisma validates, generates and seeds with 8. Remove the override
   when moving to Prisma 7.
-- (2026-09-15, #32) Vitest stays on 4.x on purpose: 5.0 changes defaults (such
-  as clearing mocks before each test) and broke the build. `vite` is pinned to
-  6.4.3 because `@vitejs/plugin-react` 4.3.4 supports vite 6 at most.
 
 ## Database and migrations
 
@@ -87,9 +84,12 @@ still display; capture stayed off when SCRUM-38/40 landed (#216,
 - (2026-09-25, #87) The `?? null` fallbacks on optional draft fields in
 `app/(app)/events/actions.ts` are deliberate: on update, `null` clears a
 field the organiser emptied, while `undefined` would keep the old value.
-- (2026-09-28, #90) `app/(app)/events/[id]/` has no `loading.tsx` on purpose:
-a loading boundary would stream a 200 shell and `notFound()` would stop
-returning a real 404, which the e2e pins.
+- (2026-11-01, #332) SCRUM-249's overdue refusals leave two things
+deliberate: Approve is hidden for an overdue request, but Confirm stays
+visible on Arrangements for a ready overdue Planning event and fails only
+on click (SCRUM-81 AC3 ties the button to the readiness checklist, which
+ignores Overdue); and moving the start later (SCRUM-25) makes the event
+no longer overdue (ADR 0012's addendum).
 
 ## Equipment
 
@@ -110,32 +110,38 @@ the earlier request, not a defect.
 ## Tests
 
 - (2026-09-15, #27; 2026-09-30, SCRUM-125) Integration tests in
-  `tests/integration/` use `describe.skipIf(!usesLocalDatabase)` on purpose:
-  they write data, so they run only against CI's Postgres or local Docker,
-  never Supabase. Skipping locally isn't missing coverage, except that
-  `npm run test:coverage` then fails its 100% threshold, as expected.
+`tests/integration/` use `describe.skipIf(!usesLocalDatabase)` on purpose:
+they write data, so they run only against CI's Postgres or local Docker,
+never Supabase. Skipping locally isn't missing coverage, except that
+`npm run test:coverage` then fails its 100% threshold, as expected.
 - (2026-09-25, #88; 2026-09-30, SCRUM-125) Coverage measures every `.ts` file
-  under `lib/` and `app/` (not the Auth.js route re-export), in a `node`
-  environment with no jsdom, so `.tsx` components never appear in it;
-  Playwright journeys exercise them. Measuring components needs new tooling
-  (SCRUM-87), a team decision. CI fails when a measured file drops below 100%,
-  so a "100% coverage" claim refers to the measured files only.
-- (2026-10-09, #146) `docs/testing/*.md` cite test titles verbatim in
-  'Automated by' lines (not shown to this review), so a rename must update
-  the citing spec too; titles still in the old inline form match their specs.
+under `lib/` and `app/` (not the Auth.js route re-export), in a `node`
+environment with no jsdom, so `.tsx` components never appear in it;
+Playwright journeys exercise them. Measuring components needs new tooling
+(SCRUM-87), a team decision. CI fails when a measured file drops below 100%,
+so a "100% coverage" claim refers to the measured files only.
+- (2026-10-09, #146; 2026-10-28, #302; 2026-11-01, #311; 2026-11-02, #318)
+  `docs/testing/*.md` cite test titles in 'Automated by' lines; since #318
+  `npm run check:citations` (required in CI, and in `npm run verify`)
+  fails a citation whose file is missing or whose title no test in it has,
+  so a stale citation can no longer merge. Matching is lenient on purpose
+  — "…", `${x}`, `%s`, `$x` and a title's own template parts stand for any
+  text — so `${who}` titles cited by their runtime expansion and
+  "…"-shortened prefixes pass. Outside its scope, still deliberate: 15 e2e
+  titles carry a TC but no `[ACx]` (their docs tie them to no criterion),
+  a Manual (Jira) row names a criterion only Jira can prove (SCRUM-216),
+  and a citation outside an 'Automated by' paragraph is not checked at
+  all.
 - (2026-10-19, #222; #251) Vitest runs the integration files in parallel,
-  so every suite owns its data: no reading rows a sibling suite may delete
-  (#251) and no mid-run role-account churn (#222) — SCRUM-165/166 use the
-  seeded `lead2@test.local` and `safety2@test.local`, never throwaways.
+so every suite owns its data: no reading rows a sibling suite may delete
+(#251) and no mid-run role-account churn (#222) — SCRUM-165/166 use the
+seeded `lead2@test.local` and `safety2@test.local`, never throwaways.
 
 ## Known open gaps
 
 Gaps found by reviews (the #11 replay, 2026-09-14, and later merges), still
 true until a pull request fixes them. Raise one only when a pull request
 touches that code or claims that story, and say it was already known.
-
-- (2026-09-29, #99) Recorded unavailability can't be removed or shortened
-in the app. Known when a pull request touches unavailability.
 
 - (2026-10-04, #120; 2026-10-19, #226) Events approved before #120 sit in
 APPROVED with no way out: approval now writes PLANNING directly,
@@ -149,30 +155,14 @@ touches the status lifecycle, reassignment or the seed.
 - (2026-10-13, #154; the holds-release low closed with #180's Cancel, per
 #181) SCRUM-163 merged with AC9 partial and one review low open. Recording
 unavailability over a live hold is refused rather than flagging it
-(SCRUM-161), the same refusal as over an approved booking. A hold on an
+  (SCRUM-161), the same refusal as over an approved booking. A hold on an
 APPROVED-status event has no Confirm/Release surface anywhere: the readiness
 checklist renders for Planning events only, legacy APPROVED rows cannot
 reach Planning (#120), and `BOOKABLE_EVENT_STATUSES` still includes APPROVED
-— so such a hold can only lapse. The calendar's "Held until" label and the
+  — so such a hold can only lapse. The calendar's "Held until" label and the
 post-expiry surfaces have no e2e (PO follow-up). Known when a pull request
 touches holds, booking statuses or unavailability, or claims
 SCRUM-82/SCRUM-161.
-
-- (2026-10-14, #191) #162's stuck-"Submitting…" defect is fixed for the
-change-request panel only: `ClarificationPanel`
-(`components/events/clarification-panel.tsx`) has the same shape knowingly
-left to SCRUM-108 — `submitResponse()` resets its state only after a reply,
-so a failed submission strands that form the same way. And the review's one
-low merged open: nothing pins the catch's `reload()` (the e2e aborts before
-the server, so the "saved but the answer was lost" half is untested). Known
-when a pull request touches either panel or claims SCRUM-108.
-
-- (2026-10-14, #190) SCRUM-124 AC4 is half-delivered: approving a hold
-notifies the Coordinator (or venue requester) with the deadline, but a
-booking Venue Staff approve or reject still writes no notice — that half
-is SCRUM-53's — and confirming or releasing a hold still tells Venue
-Staff nothing (AC6). Known when a pull request touches booking decisions
-or hold settlement, or claims SCRUM-53/SCRUM-124.
 
 - (2026-10-15, #172; callers 2026-10-18 #181, 2026-10-19 #214; SCRUM-34's
 venue-edit flags since #203, accessibility added 2026-10-19, #230)
@@ -181,28 +171,37 @@ AC1 warning screen is still SCRUM-25's and the other AC3 sources
 (SCRUM-160/161/166) raise none. Known when a pull request touches
 reconsideration or claims those stories.
 
-- (2026-10-18, #216) SCRUM-190 (an event takes place within one day) is
-deferred past Release 1 with no customer answer, so a multi-day event
-stays requestable but can never be booked or confirmed — search covers
-one day and a date without times excludes only venues Closed that day
-(both PO-approved, SCRUM-38's change log), and a booking must fit one
-day's opening hours (SCRUM-34 AC7). Known when a pull request touches
-event periods, venue search or booking hours, or claims SCRUM-190.
-
 - (2026-10-18, #181; SCRUM-128's notice half closed by #227 and its
 Registration-needed half by #221, 2026-10-19) An event completing with a
 change request still Submitted leaves it Submitted (SCRUM-82 AC11 will
 reject it). Known when a pull request touches change requests or claims
 SCRUM-82.
 
-- (2026-10-19, #227; Withdraw-after-start and the e2e failure path closed
-by #250 the same day) SCRUM-85's last low is still open: the
-confirmed-details backfill covers Confirmed events only, so events in
-Planning at deploy show Attendees nothing last-confirmed. Known when a
-pull request touches the re-planned view.
+- (2026-10-28, #300; retires #216) SCRUM-190 is delivered: every schema
+that sets a period refuses one running into a second Singapore day. The
+residue is rows stored across two days before #300:
+`decideChangeRequest` (SCRUM-128) still applies a pending change request
+carrying one without re-validating it, and the two-days warnings (Edit
+details, the request form's re-enter message) have no rendered test
+(#300's one low, open). Known when a pull request touches change-request
+decisions or claims SCRUM-190/SCRUM-128.
 
-- (2026-10-19, #214) The Equipment schedule's "Reported as not
-providable" label shows for every Needs Reconsideration flag: the flag is SCRUM-26's and shared — #181's
-change request already raises it on reservations — so one flagged another
-way reads as a Technical Support report that never happened. Known when a
-pull request touches the equipment schedule panel or the flag sources.
+- (2026-10-29, #309) SCRUM-238's seed edits three long-lived rows although
+its AC4 and the README say nothing existing changes (#309's one low,
+merged open): the shared Exhibition Hall's `knownRestrictions`, three
+operational notes on `evt_planning`, and `attendee2`'s registration on
+`evt_completed` — a spec assuming the old values now depends on the
+seed. Known when a pull request touches the seed or claims SCRUM-238.
+
+- (2026-11-01, #328) SCRUM-255 merged with its one review low open: the
+cost 10 of `DUMMY_PASSWORD_HASH` in `auth.ts` duplicates the seed's by
+hand, and no test reads the seed's cost — raising it would quietly
+reopen the timing gap. Known when a pull request touches sign-in, the
+seed's hashing, or claims SCRUM-255.
+
+- (2026-11-02, #323) SCRUM-246's form shows a venue with no recorded
+hours as Closed every day (`describeWeek`'s fallback) although booking
+refuses nothing for it — the pre-SCRUM-34 rows the rest of
+`lib/venue-hours.ts` guards. #323 dropped TC-246-03 and the guard on
+purpose: the fix is SCRUM-253's, #326 closed unmerged. Known when a
+pull request touches `describeWeek` or claims SCRUM-246/SCRUM-253.
